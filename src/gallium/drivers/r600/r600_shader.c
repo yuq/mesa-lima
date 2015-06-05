@@ -617,98 +617,100 @@ static int tgsi_declaration(struct r600_shader_ctx *ctx)
 
 	switch (d->Declaration.File) {
 	case TGSI_FILE_INPUT:
-		i = ctx->shader->ninput;
-                assert(i < Elements(ctx->shader->input));
+		for (j = 0; j < count; j++) {
+			i = ctx->shader->ninput + j;
+			assert(i < Elements(ctx->shader->input));
+			ctx->shader->input[i].name = d->Semantic.Name;
+			ctx->shader->input[i].sid = d->Semantic.Index + j;
+			ctx->shader->input[i].interpolate = d->Interp.Interpolate;
+			ctx->shader->input[i].interpolate_location = d->Interp.Location;
+			ctx->shader->input[i].gpr = ctx->file_offset[TGSI_FILE_INPUT] + d->Range.First + j;
+			if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
+				ctx->shader->input[i].spi_sid = r600_spi_sid(&ctx->shader->input[i]);
+				switch (ctx->shader->input[i].name) {
+				case TGSI_SEMANTIC_FACE:
+					if (ctx->face_gpr != -1)
+						ctx->shader->input[i].gpr = ctx->face_gpr; /* already allocated by allocate_system_value_inputs */
+					else
+						ctx->face_gpr = ctx->shader->input[i].gpr;
+					break;
+				case TGSI_SEMANTIC_COLOR:
+					ctx->colors_used++;
+					break;
+				case TGSI_SEMANTIC_POSITION:
+					ctx->fragcoord_input = i;
+					break;
+				case TGSI_SEMANTIC_PRIMID:
+					/* set this for now */
+					ctx->shader->gs_prim_id_input = true;
+					ctx->shader->ps_prim_id_input = i;
+					break;
+				}
+				if (ctx->bc->chip_class >= EVERGREEN) {
+					if ((r = evergreen_interp_input(ctx, i)))
+						return r;
+				}
+			} else if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+				/* FIXME probably skip inputs if they aren't passed in the ring */
+				ctx->shader->input[i].ring_offset = ctx->next_ring_offset;
+				ctx->next_ring_offset += 16;
+				if (ctx->shader->input[i].name == TGSI_SEMANTIC_PRIMID)
+					ctx->shader->gs_prim_id_input = true;
+			}
+		}
 		ctx->shader->ninput += count;
-		ctx->shader->input[i].name = d->Semantic.Name;
-		ctx->shader->input[i].sid = d->Semantic.Index;
-		ctx->shader->input[i].interpolate = d->Interp.Interpolate;
-		ctx->shader->input[i].interpolate_location = d->Interp.Location;
-		ctx->shader->input[i].gpr = ctx->file_offset[TGSI_FILE_INPUT] + d->Range.First;
-		if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
-			ctx->shader->input[i].spi_sid = r600_spi_sid(&ctx->shader->input[i]);
-			switch (ctx->shader->input[i].name) {
-			case TGSI_SEMANTIC_FACE:
-				if (ctx->face_gpr != -1)
-					ctx->shader->input[i].gpr = ctx->face_gpr; /* already allocated by allocate_system_value_inputs */
-				else
-					ctx->face_gpr = ctx->shader->input[i].gpr;
-				break;
-			case TGSI_SEMANTIC_COLOR:
-				ctx->colors_used++;
-				break;
-			case TGSI_SEMANTIC_POSITION:
-				ctx->fragcoord_input = i;
-				break;
-			case TGSI_SEMANTIC_PRIMID:
-				/* set this for now */
-				ctx->shader->gs_prim_id_input = true;
-				ctx->shader->ps_prim_id_input = i;
-				break;
-			}
-			if (ctx->bc->chip_class >= EVERGREEN) {
-				if ((r = evergreen_interp_input(ctx, i)))
-					return r;
-			}
-		} else if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
-			/* FIXME probably skip inputs if they aren't passed in the ring */
-			ctx->shader->input[i].ring_offset = ctx->next_ring_offset;
-			ctx->next_ring_offset += 16;
-			if (ctx->shader->input[i].name == TGSI_SEMANTIC_PRIMID)
-				ctx->shader->gs_prim_id_input = true;
-		}
-		for (j = 1; j < count; ++j) {
-			ctx->shader->input[i + j] = ctx->shader->input[i];
-			ctx->shader->input[i + j].gpr += j;
-		}
 		break;
 	case TGSI_FILE_OUTPUT:
-		i = ctx->shader->noutput++;
-                assert(i < Elements(ctx->shader->output));
-		ctx->shader->output[i].name = d->Semantic.Name;
-		ctx->shader->output[i].sid = d->Semantic.Index;
-		ctx->shader->output[i].gpr = ctx->file_offset[TGSI_FILE_OUTPUT] + d->Range.First;
-		ctx->shader->output[i].interpolate = d->Interp.Interpolate;
-		ctx->shader->output[i].write_mask = d->Declaration.UsageMask;
-		if (ctx->type == TGSI_PROCESSOR_VERTEX ||
-				ctx->type == TGSI_PROCESSOR_GEOMETRY) {
-			ctx->shader->output[i].spi_sid = r600_spi_sid(&ctx->shader->output[i]);
-			switch (d->Semantic.Name) {
-			case TGSI_SEMANTIC_CLIPDIST:
-				ctx->shader->clip_dist_write |= d->Declaration.UsageMask << (d->Semantic.Index << 2);
-				break;
-			case TGSI_SEMANTIC_PSIZE:
-				ctx->shader->vs_out_misc_write = 1;
-				ctx->shader->vs_out_point_size = 1;
-				break;
-			case TGSI_SEMANTIC_EDGEFLAG:
-				ctx->shader->vs_out_misc_write = 1;
-				ctx->shader->vs_out_edgeflag = 1;
-				ctx->edgeflag_output = i;
-				break;
-			case TGSI_SEMANTIC_VIEWPORT_INDEX:
-				ctx->shader->vs_out_misc_write = 1;
-				ctx->shader->vs_out_viewport = 1;
-				break;
-			case TGSI_SEMANTIC_LAYER:
-				ctx->shader->vs_out_misc_write = 1;
-				ctx->shader->vs_out_layer = 1;
-				break;
-			case TGSI_SEMANTIC_CLIPVERTEX:
-				ctx->clip_vertex_write = TRUE;
-				ctx->cv_output = i;
-				break;
-			}
-			if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
-				ctx->gs_out_ring_offset += 16;
-			}
-		} else if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
-			switch (d->Semantic.Name) {
-			case TGSI_SEMANTIC_COLOR:
-				ctx->shader->nr_ps_max_color_exports++;
-				break;
+		for (j = 0; j < count; j++) {
+			i = ctx->shader->noutput + j;
+			assert(i < Elements(ctx->shader->output));
+			ctx->shader->output[i].name = d->Semantic.Name;
+			ctx->shader->output[i].sid = d->Semantic.Index + j;
+			ctx->shader->output[i].gpr = ctx->file_offset[TGSI_FILE_OUTPUT] + d->Range.First + j;
+			ctx->shader->output[i].interpolate = d->Interp.Interpolate;
+			ctx->shader->output[i].write_mask = d->Declaration.UsageMask;
+			if (ctx->type == TGSI_PROCESSOR_VERTEX ||
+			    ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+				ctx->shader->output[i].spi_sid = r600_spi_sid(&ctx->shader->output[i]);
+				switch (d->Semantic.Name) {
+				case TGSI_SEMANTIC_CLIPDIST:
+					ctx->shader->clip_dist_write |= d->Declaration.UsageMask <<
+									((d->Semantic.Index + j) << 2);
+					break;
+				case TGSI_SEMANTIC_PSIZE:
+					ctx->shader->vs_out_misc_write = 1;
+					ctx->shader->vs_out_point_size = 1;
+					break;
+				case TGSI_SEMANTIC_EDGEFLAG:
+					ctx->shader->vs_out_misc_write = 1;
+					ctx->shader->vs_out_edgeflag = 1;
+					ctx->edgeflag_output = i;
+					break;
+				case TGSI_SEMANTIC_VIEWPORT_INDEX:
+					ctx->shader->vs_out_misc_write = 1;
+					ctx->shader->vs_out_viewport = 1;
+					break;
+				case TGSI_SEMANTIC_LAYER:
+					ctx->shader->vs_out_misc_write = 1;
+					ctx->shader->vs_out_layer = 1;
+					break;
+				case TGSI_SEMANTIC_CLIPVERTEX:
+					ctx->clip_vertex_write = TRUE;
+					ctx->cv_output = i;
+					break;
+				}
+				if (ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+					ctx->gs_out_ring_offset += 16;
+				}
+			} else if (ctx->type == TGSI_PROCESSOR_FRAGMENT) {
+				switch (d->Semantic.Name) {
+				case TGSI_SEMANTIC_COLOR:
+					ctx->shader->nr_ps_max_color_exports++;
+					break;
+				}
 			}
 		}
+		ctx->shader->noutput += count;
 		break;
 	case TGSI_FILE_TEMPORARY:
 		if (ctx->info.indirect_files & (1 << TGSI_FILE_TEMPORARY)) {
