@@ -63,7 +63,7 @@ get_gl_override(gl_api api, int *version, bool *fwd_context,
    static bool compat_suffix = false;
 
    if (api == API_OPENGLES)
-      return;
+      goto exit;
 
    if (override_version < 0) {
       override_version = 0;
@@ -93,6 +93,7 @@ get_gl_override(gl_api api, int *version, bool *fwd_context,
       }
    }
 
+exit:
    *version = override_version;
    *fwd_context = fc_suffix;
    *compat_context = compat_suffix;
