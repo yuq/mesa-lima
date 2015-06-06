@@ -470,14 +470,14 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
  * see if we can actually use MRFs to do spills without overwriting normal MRF
  * contents.
  */
-void
-fs_visitor::get_used_mrfs(bool *mrf_used)
+static void
+get_used_mrfs(fs_visitor *v, bool *mrf_used)
 {
-   int reg_width = dispatch_width / 8;
+   int reg_width = v->dispatch_width / 8;
 
    memset(mrf_used, 0, BRW_MAX_MRF * sizeof(bool));
 
-   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+   foreach_block_and_inst(block, fs_inst, inst, v->cfg) {
       if (inst->dst.file == MRF) {
          int reg = inst->dst.reg & ~BRW_MRF_COMPR4;
          mrf_used[reg] = true;
@@ -491,7 +491,7 @@ fs_visitor::get_used_mrfs(bool *mrf_used)
       }
 
       if (inst->mlen > 0) {
-	 for (int i = 0; i < implied_mrf_writes(inst); i++) {
+	 for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
             mrf_used[inst->base_mrf + i] = true;
          }
       }
@@ -502,12 +502,12 @@ fs_visitor::get_used_mrfs(bool *mrf_used)
  * Sets interference between virtual GRFs and usage of the high GRFs for SEND
  * messages (treated as MRFs in code generation).
  */
-void
-fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node,
-                                        int *first_used_mrf)
+static void
+setup_mrf_hack_interference(fs_visitor *v, struct ra_graph *g,
+                            int first_mrf_node, int *first_used_mrf)
 {
    bool mrf_used[BRW_MAX_MRF];
-   get_used_mrfs(mrf_used);
+   get_used_mrfs(v, mrf_used);
 
    *first_used_mrf = BRW_MAX_MRF;
    for (int i = 0; i < BRW_MAX_MRF; i++) {
@@ -525,7 +525,7 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node,
          if (i < *first_used_mrf)
             *first_used_mrf = i;
 
-         for (unsigned j = 0; j < this->alloc.count; j++) {
+         for (unsigned j = 0; j < v->alloc.count; j++) {
             ra_add_node_interference(g, first_mrf_node + i, j);
          }
       }
@@ -592,7 +592,8 @@ fs_visitor::assign_regs(bool allow_spilling)
    setup_payload_interference(g, payload_node_count, first_payload_node);
    if (devinfo->gen >= 7) {
       int first_used_mrf = BRW_MAX_MRF;
-      setup_mrf_hack_interference(g, first_mrf_hack_node, &first_used_mrf);
+      setup_mrf_hack_interference(this, g, first_mrf_hack_node,
+                                  &first_used_mrf);
 
       foreach_block_and_inst(block, fs_inst, inst, cfg) {
          /* When we do send-from-GRF for FB writes, we need to ensure that
@@ -853,7 +854,7 @@ fs_visitor::spill_reg(int spill_reg)
     */
    if (!spilled_any_registers) {
       bool mrf_used[BRW_MAX_MRF];
-      get_used_mrfs(mrf_used);
+      get_used_mrfs(this, mrf_used);
 
       for (int i = spill_base_mrf; i < BRW_MAX_MRF; i++) {
          if (mrf_used[i]) {
