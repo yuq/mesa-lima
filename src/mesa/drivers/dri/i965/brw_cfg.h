@@ -90,6 +90,8 @@ struct bblock_t {
    struct exec_list parents;
    struct exec_list children;
    int num;
+
+   unsigned cycle_count;
 };
 
 static inline struct backend_instruction *
@@ -285,6 +287,8 @@ struct cfg_t {
    int num_blocks;
 
    bool idom_dirty;
+
+   unsigned cycle_count;
 };
 
 /* Note that this is implemented with a double for loop -- break will

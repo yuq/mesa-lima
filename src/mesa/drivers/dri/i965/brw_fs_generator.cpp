@@ -2269,9 +2269,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
    if (unlikely(debug_flag)) {
       fprintf(stderr, "Native code for %s\n"
-              "SIMD%d shader: %d instructions. %d loops. %d:%d spills:fills. Promoted %u constants. Compacted %d to %d"
+              "SIMD%d shader: %d instructions. %d loops. %u cycles. %d:%d spills:fills. Promoted %u constants. Compacted %d to %d"
               " bytes (%.0f%%)\n",
-              shader_name, dispatch_width, before_size / 16, loop_count,
+              shader_name, dispatch_width, before_size / 16, loop_count, cfg->cycle_count,
               spill_count, fill_count, promoted_constants, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
@@ -2281,12 +2281,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    }
 
    compiler->shader_debug_log(log_data,
-                              "%s SIMD%d shader: %d inst, %d loops, "
+                              "%s SIMD%d shader: %d inst, %d loops, %u cycles, "
                               "%d:%d spills:fills, Promoted %u constants, "
                               "compacted %d to %d bytes.\n",
                               stage_abbrev, dispatch_width, before_size / 16,
-                              loop_count, spill_count, fill_count,
-                              promoted_constants, before_size, after_size);
+                              loop_count, cfg->cycle_count, spill_count,
+                              fill_count, promoted_constants, before_size,
+                              after_size);
 
    return start_offset;
 }

@@ -1558,10 +1558,10 @@ generate_code(struct brw_codegen *p,
               nir->info.label ? nir->info.label : "unnamed",
               _mesa_shader_stage_to_string(nir->stage), nir->info.name);
 
-      fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. Compacted %d to %d"
-                      " bytes (%.0f%%)\n",
+      fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. %u cycles."
+                      "Compacted %d to %d bytes (%.0f%%)\n",
               stage_abbrev,
-              before_size / 16, loop_count, before_size, after_size,
+              before_size / 16, loop_count, cfg->cycle_count, before_size, after_size,
               100.0f * (before_size - after_size) / before_size);
 
       dump_assembly(p->store, annotation.ann_count, annotation.ann,
@@ -1570,9 +1570,10 @@ generate_code(struct brw_codegen *p,
    }
 
    compiler->shader_debug_log(log_data,
-                              "%s vec4 shader: %d inst, %d loops, "
+                              "%s vec4 shader: %d inst, %d loops, %u cycles, "
                               "compacted %d to %d bytes.\n",
-                              stage_abbrev, before_size / 16, loop_count,
+                              stage_abbrev, before_size / 16,
+                              loop_count, cfg->cycle_count,
                               before_size, after_size);
 }
 
