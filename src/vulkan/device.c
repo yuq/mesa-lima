@@ -3042,10 +3042,10 @@ static struct anv_state
 anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                              uint32_t *a, uint32_t dwords, uint32_t alignment)
 {
-   struct anv_device *device = cmd_buffer->device;
    struct anv_state state;
 
-   state = anv_state_pool_alloc(&device->dynamic_state_pool, dwords * 4, alignment);
+   state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
+                                  dwords * 4, alignment);
    memcpy(state.map, a, dwords * 4);
 
    return state;
@@ -3053,13 +3053,14 @@ anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
 
 static struct anv_state
 anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
-                             uint32_t *a, uint32_t *b, uint32_t dwords, uint32_t alignment)
+                             uint32_t *a, uint32_t *b,
+                             uint32_t dwords, uint32_t alignment)
 {
-   struct anv_device *device = cmd_buffer->device;
    struct anv_state state;
    uint32_t *p;
 
-   state = anv_state_pool_alloc(&device->dynamic_state_pool, dwords * 4, alignment);
+   state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
+                                  dwords * 4, alignment);
    p = state.map;
    for (uint32_t i = 0; i < dwords; i++)
       p[i] = a[i] | b[i];
