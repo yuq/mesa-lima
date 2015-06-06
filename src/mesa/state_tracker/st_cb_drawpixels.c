@@ -33,6 +33,7 @@
 #include "main/imports.h"
 #include "main/image.h"
 #include "main/bufferobj.h"
+#include "main/blit.h"
 #include "main/format_pack.h"
 #include "main/macros.h"
 #include "main/mtypes.h"
@@ -1313,31 +1314,6 @@ st_get_color_read_renderbuffer(struct gl_context *ctx)
 
 
 /**
- * \return TRUE if two regions overlap, FALSE otherwise
- */
-static boolean
-regions_overlap(int srcX0, int srcY0,
-                int srcX1, int srcY1,
-                int dstX0, int dstY0,
-                int dstX1, int dstY1)
-{
-   if (MAX2(srcX0, srcX1) < MIN2(dstX0, dstX1))
-      return FALSE; /* src completely left of dst */
-
-   if (MAX2(dstX0, dstX1) < MIN2(srcX0, srcX1))
-      return FALSE; /* dst completely left of src */
-
-   if (MAX2(srcY0, srcY1) < MIN2(dstY0, dstY1))
-      return FALSE; /* src completely above dst */
-
-   if (MAX2(dstY0, dstY1) < MIN2(srcY0, srcY1))
-      return FALSE; /* dst completely above src */
-
-   return TRUE; /* some overlap */
-}
-
-
-/**
  * Try to do a glCopyPixels for simple cases with a blit by calling
  * pipe->blit().
  *
@@ -1420,8 +1396,8 @@ blit_copy_pixels(struct gl_context *ctx, GLint srcx, GLint srcy,
       }
 
       if (rbRead != rbDraw ||
-          !regions_overlap(readX, readY, readX + readW, readY + readH,
-                           drawX, drawY, drawX + drawW, drawY + drawH)) {
+          !_mesa_regions_overlap(readX, readY, readX + readW, readY + readH,
+                                 drawX, drawY, drawX + drawW, drawY + drawH)) {
          struct pipe_blit_info blit;
 
          memset(&blit, 0, sizeof(blit));
