@@ -37,6 +37,7 @@
 #include "framebuffer.h"
 #include "glformats.h"
 #include "mtypes.h"
+#include "macros.h"
 #include "state.h"
 
 
@@ -55,6 +56,31 @@ find_attachment(const struct gl_framebuffer *fb,
          return &fb->Attachment[i];
    }
    return NULL;
+}
+
+
+/**
+ * \return true if two regions overlap, false otherwise
+ */
+bool
+_mesa_regions_overlap(int srcX0, int srcY0,
+                      int srcX1, int srcY1,
+                      int dstX0, int dstY0,
+                      int dstX1, int dstY1)
+{
+   if (MAX2(srcX0, srcX1) < MIN2(dstX0, dstX1))
+      return false; /* dst completely right of src */
+
+   if (MAX2(dstX0, dstX1) < MIN2(srcX0, srcX1))
+      return false; /* dst completely left of src */
+
+   if (MAX2(srcY0, srcY1) < MIN2(dstY0, dstY1))
+      return false; /* dst completely above src */
+
+   if (MAX2(dstY0, dstY1) < MIN2(srcY0, srcY1))
+      return false; /* dst completely below src */
+
+   return true; /* some overlap */
 }
 
 
