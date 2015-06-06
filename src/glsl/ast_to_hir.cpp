@@ -2729,7 +2729,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
     *    GL_ARB_conservative_depth
     *    GL_ARB_gpu_shader5
     *    GL_ARB_separate_shader_objects
-    *    GL_ARB_tesselation_shader
+    *    GL_ARB_tessellation_shader
     *    GL_ARB_transform_feedback3
     *    GL_ARB_uniform_buffer_object
     *
