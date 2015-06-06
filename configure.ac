@@ -1929,7 +1929,7 @@ if test "x$enable_gallium_llvm" = xyes; then
             LLVM_COMPONENTS="${LLVM_COMPONENTS} all-targets ipo linker instrumentation"
             LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader option objcarcopts profiledata"
         fi
-        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DLLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
+        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
 
         dnl Check for Clang internal headers
