@@ -4979,8 +4979,7 @@ fs_visitor::allocate_registers()
    if (failed)
       return;
 
-   if (!allocated_without_spills)
-      schedule_instructions(SCHEDULE_POST);
+   schedule_instructions(SCHEDULE_POST);
 
    if (last_scratch > 0)
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
