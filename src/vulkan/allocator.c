@@ -663,6 +663,13 @@ anv_bo_pool_finish(struct anv_bo_pool *pool)
    struct bo_pool_bo_link *link = PFL_PTR(pool->free_list);
    while (link != NULL) {
       struct bo_pool_bo_link link_copy = VG_NOACCESS_READ(link);
+
+      /* The anv_gem_m[un]map() functions are also valgrind-safe so they
+       * act as an alloc/free.  In order to avoid a double-free warning, we
+       * need to mark thiss as malloc'd before we unmap it.
+       */
+      VG(VALGRIND_MALLOCLIKE_BLOCK(link_copy.bo.map, pool->bo_size, 0, false));
+
       anv_gem_munmap(link_copy.bo.map, pool->bo_size);
       anv_gem_close(pool->device, link_copy.bo.gem_handle);
       link = link_copy.next;
@@ -700,10 +707,10 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
    }
 
-   /* We don't need to call VALGRIND_MALLOCLIKE_BLOCK here because valgrind
-    * already picks up on the gem_mmap and treats that as a malloc.  If we
-    * really want to be pedantic we could do a VALGRIND_FREELIKE_BLOCK
-    * right after the mmap, but there's no good reason.
+   /* We don't need to call VALGRIND_MALLOCLIKE_BLOCK here because gem_mmap
+    * calls it for us.  If we really want to be pedantic we could do a
+    * VALGRIND_FREELIKE_BLOCK right after the mmap, but there's no good
+    * reason.
     */
 
    *bo = new_bo;
