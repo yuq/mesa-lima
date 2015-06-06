@@ -3124,16 +3124,16 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       if (cmd_buffer->ds_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
                                              cmd_buffer->cb_state->state_color_calc,
-                                             GEN8_COLOR_CALC_STATE_length, 32);
+                                             GEN8_COLOR_CALC_STATE_length, 64);
       else if (cmd_buffer->cb_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
                                              cmd_buffer->ds_state->state_color_calc,
-                                             GEN8_COLOR_CALC_STATE_length, 32);
+                                             GEN8_COLOR_CALC_STATE_length, 64);
       else
          state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
                                               cmd_buffer->ds_state->state_color_calc,
                                               cmd_buffer->cb_state->state_color_calc,
-                                              GEN8_COLOR_CALC_STATE_length, 32);
+                                              GEN8_COLOR_CALC_STATE_length, 64);
 
       anv_batch_emit(&cmd_buffer->batch,
                      GEN8_3DSTATE_CC_STATE_POINTERS,
