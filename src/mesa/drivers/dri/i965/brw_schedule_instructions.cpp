@@ -927,10 +927,10 @@ fs_instruction_scheduler::calculate_deps()
          if (inst->src[i].file == GRF) {
             if (post_reg_alloc) {
                for (int r = 0; r < inst->regs_read(i); r++)
-                  add_dep(n, last_grf_write[inst->src[i].reg + r]);
+                  add_dep(n, last_grf_write[inst->src[i].reg + r], 0);
             } else {
                for (int r = 0; r < inst->regs_read(i); r++) {
-                  add_dep(n, last_grf_write[inst->src[i].reg * 16 + inst->src[i].reg_offset + r]);
+                  add_dep(n, last_grf_write[inst->src[i].reg * 16 + inst->src[i].reg_offset + r], 0);
                }
             }
          } else if (inst->src[i].file == HW_REG &&
@@ -941,12 +941,12 @@ fs_instruction_scheduler::calculate_deps()
                if (inst->src[i].fixed_hw_reg.vstride == BRW_VERTICAL_STRIDE_0)
                   size = 1;
                for (int r = 0; r < size; r++)
-                  add_dep(n, last_grf_write[inst->src[i].fixed_hw_reg.nr + r]);
+                  add_dep(n, last_grf_write[inst->src[i].fixed_hw_reg.nr + r], 0);
             } else {
-               add_dep(n, last_fixed_grf_write);
+               add_dep(n, last_fixed_grf_write, 0);
             }
          } else if (inst->src[i].is_accumulator()) {
-            add_dep(n, last_accumulator_write);
+            add_dep(n, last_accumulator_write, 0);
          } else if (inst->src[i].file != BAD_FILE &&
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
