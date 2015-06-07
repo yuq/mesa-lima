@@ -30,6 +30,7 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := \
 	$(C_SOURCES) \
+	$(NIR_SOURCES) \
 	$(VL_STUB_SOURCES)
 
 LOCAL_C_INCLUDES := \
@@ -43,7 +44,9 @@ LOCAL_SRC_FILES += \
 LOCAL_CPPFLAGS := -std=c++11
 endif
 
+# We need libmesa_glsl to get NIR's generated include directories.
 LOCAL_MODULE := libmesa_gallium
+LOCAL_STATIC_LIBRARIES += libmesa_glsl
 
 # generate sources
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
