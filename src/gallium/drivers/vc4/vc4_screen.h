@@ -27,7 +27,7 @@
 #include "pipe/p_screen.h"
 #include "os/os_thread.h"
 #include "state_tracker/drm_driver.h"
-#include "vc4_qir.h"
+#include "util/list.h"
 
 struct vc4_bo;
 
