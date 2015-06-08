@@ -70,10 +70,6 @@ namespace brw {
 class fs_visitor : public backend_shader
 {
 public:
-   const fs_reg reg_null_f;
-   const fs_reg reg_null_d;
-   const fs_reg reg_null_ud;
-
    fs_visitor(struct brw_context *brw,
               void *mem_ctx,
               gl_shader_stage stage,
@@ -86,7 +82,6 @@ public:
    ~fs_visitor();
 
    fs_reg vgrf(const glsl_type *const type);
-   fs_reg vgrf(int num_components);
    void import_uniforms(fs_visitor *v);
    void setup_uniform_clipplane_values();
    void compute_clip_distance();
@@ -95,64 +90,10 @@ public:
    void swizzle_result(ir_texture_opcode op, int dest_components,
                        fs_reg orig_val, uint32_t sampler);
 
-   fs_inst *emit(fs_inst *inst);
-   void emit(exec_list list);
-
-   fs_inst *emit(enum opcode opcode);
-   fs_inst *emit(enum opcode opcode, const fs_reg &dst);
-   fs_inst *emit(enum opcode opcode, const fs_reg &dst, const fs_reg &src0);
-   fs_inst *emit(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
-                 const fs_reg &src1);
-   fs_inst *emit(enum opcode opcode, const fs_reg &dst,
-                 const fs_reg &src0, const fs_reg &src1, const fs_reg &src2);
-   fs_inst *emit(enum opcode opcode, const fs_reg &dst,
-                 fs_reg src[], int sources);
-
-   fs_inst *MOV(const fs_reg &dst, const fs_reg &src);
-   fs_inst *NOT(const fs_reg &dst, const fs_reg &src);
-   fs_inst *RNDD(const fs_reg &dst, const fs_reg &src);
-   fs_inst *RNDE(const fs_reg &dst, const fs_reg &src);
-   fs_inst *RNDZ(const fs_reg &dst, const fs_reg &src);
-   fs_inst *FRC(const fs_reg &dst, const fs_reg &src);
-   fs_inst *ADD(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *MUL(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *MACH(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *MAC(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *SHL(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *SHR(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *ASR(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *AND(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *OR(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *XOR(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *IF(enum brw_predicate predicate);
-   fs_inst *IF(const fs_reg &src0, const fs_reg &src1,
-               enum brw_conditional_mod condition);
-   fs_inst *CMP(fs_reg dst, fs_reg src0, fs_reg src1,
-                enum brw_conditional_mod condition);
-   fs_inst *LRP(const fs_reg &dst, const fs_reg &a, const fs_reg &y,
-                const fs_reg &x);
-   fs_inst *BFREV(const fs_reg &dst, const fs_reg &value);
-   fs_inst *BFE(const fs_reg &dst, const fs_reg &bits, const fs_reg &offset,
-                const fs_reg &value);
-   fs_inst *BFI1(const fs_reg &dst, const fs_reg &bits, const fs_reg &offset);
-   fs_inst *BFI2(const fs_reg &dst, const fs_reg &bfi1_dst,
-                 const fs_reg &insert, const fs_reg &base);
-   fs_inst *FBH(const fs_reg &dst, const fs_reg &value);
-   fs_inst *FBL(const fs_reg &dst, const fs_reg &value);
-   fs_inst *CBIT(const fs_reg &dst, const fs_reg &value);
-   fs_inst *MAD(const fs_reg &dst, const fs_reg &c, const fs_reg &b,
-                const fs_reg &a);
-   fs_inst *ADDC(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *SUBB(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-   fs_inst *SEL(const fs_reg &dst, const fs_reg &src0, const fs_reg &src1);
-
    int type_size(const struct glsl_type *type);
    fs_inst *get_instruction_generating_reg(fs_inst *start,
 					   fs_inst *end,
 					   const fs_reg &reg);
-
-   fs_inst *LOAD_PAYLOAD(const fs_reg &dst, fs_reg *src, int sources,
-                         int header_size);
 
    void VARYING_PULL_CONSTANT_LOAD(const brw::fs_builder &bld,
                                    const fs_reg &dst,
@@ -284,14 +225,7 @@ public:
    fs_reg emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
    void resolve_source_modifiers(fs_reg *src);
-   fs_reg fix_math_operand(fs_reg src);
-   fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0);
-   fs_inst *emit_math(enum opcode op, fs_reg dst, fs_reg src0, fs_reg src1);
-   fs_inst *emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
-                     const fs_reg &a);
    void emit_discard_jump();
-   /** Copy any live channel from \p src to the first channel of \p dst. */
-   void emit_uniformize(const fs_reg &dst, const fs_reg &src);
    bool try_replace_with_sel();
    bool opt_peephole_sel();
    bool opt_peephole_predicated_break();
@@ -354,8 +288,6 @@ public:
    void emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
                                   fs_reg offset);
 
-   void resolve_ud_negate(fs_reg *reg);
-
    fs_reg get_timestamp(const brw::fs_builder &bld);
 
    struct brw_reg interp_reg(int location, int channel);
@@ -416,11 +348,6 @@ public:
    fs_reg nir_inputs;
    fs_reg nir_outputs;
    fs_reg *nir_system_values;
-
-   /** @{ debug annotation info */
-   const char *current_annotation;
-   const void *base_ir;
-   /** @} */
 
    bool failed;
    char *fail_msg;

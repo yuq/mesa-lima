@@ -444,7 +444,6 @@ void
 fs_visitor::nir_emit_instr(nir_instr *instr)
 {
    const fs_builder abld = bld.annotate(NULL, instr);
-   this->base_ir = instr;
 
    switch (instr->type) {
    case nir_instr_type_alu:
@@ -472,8 +471,6 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
    default:
       unreachable("unknown instruction type");
    }
-
-   this->base_ir = NULL;
 }
 
 static brw_reg_type

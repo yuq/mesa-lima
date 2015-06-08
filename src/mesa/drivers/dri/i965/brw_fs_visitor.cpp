@@ -78,44 +78,6 @@ fs_visitor::emit_vs_system_value(int location)
 }
 
 fs_inst *
-fs_visitor::emit_lrp(const fs_reg &dst, const fs_reg &x, const fs_reg &y,
-                     const fs_reg &a)
-{
-   if (devinfo->gen < 6) {
-      /* We can't use the LRP instruction.  Emit x*(1-a) + y*a. */
-      fs_reg y_times_a           = vgrf(glsl_type::float_type);
-      fs_reg one_minus_a         = vgrf(glsl_type::float_type);
-      fs_reg x_times_one_minus_a = vgrf(glsl_type::float_type);
-
-      emit(MUL(y_times_a, y, a));
-
-      fs_reg negative_a = a;
-      negative_a.negate = !a.negate;
-      emit(ADD(one_minus_a, negative_a, fs_reg(1.0f)));
-      emit(MUL(x_times_one_minus_a, x, one_minus_a));
-
-      return emit(ADD(dst, x_times_one_minus_a, y_times_a));
-   } else {
-      /* The LRP instruction actually does op1 * op0 + op2 * (1 - op0), so
-       * we need to reorder the operands.
-       */
-      return emit(LRP(dst, a, y, x));
-   }
-}
-
-void
-fs_visitor::emit_uniformize(const fs_reg &dst, const fs_reg &src)
-{
-   const fs_reg chan_index = vgrf(glsl_type::uint_type);
-
-   emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, component(chan_index, 0))
-      ->force_writemask_all = true;
-   emit(SHADER_OPCODE_BROADCAST, component(dst, 0),
-        src, component(chan_index, 0))
-      ->force_writemask_all = true;
-}
-
-fs_inst *
 fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
                               fs_reg coordinate, int coord_components,
                               fs_reg shadow_c,
@@ -1264,29 +1226,6 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
    inst->mlen = mlen;
 }
 
-fs_inst *
-fs_visitor::emit(fs_inst *inst)
-{
-   if (dispatch_width == 16 && inst->exec_size == 8)
-      inst->force_uncompressed = true;
-
-   inst->annotation = this->current_annotation;
-   inst->ir = this->base_ir;
-
-   this->instructions.push_tail(inst);
-
-   return inst;
-}
-
-void
-fs_visitor::emit(exec_list list)
-{
-   foreach_in_list_safe(fs_inst, inst, &list) {
-      inst->exec_node::remove();
-      emit(inst);
-   }
-}
-
 /** Emits a dummy fragment shader consisting of magenta for bringup purposes. */
 void
 fs_visitor::emit_dummy_fs()
@@ -1993,18 +1932,6 @@ fs_visitor::emit_urb_writes()
 }
 
 void
-fs_visitor::resolve_ud_negate(fs_reg *reg)
-{
-   if (reg->type != BRW_REGISTER_TYPE_UD ||
-       !reg->negate)
-      return;
-
-   fs_reg temp = vgrf(glsl_type::uint_type);
-   emit(MOV(temp, *reg));
-   *reg = temp;
-}
-
-void
 fs_visitor::emit_cs_terminate()
 {
    assert(brw->gen >= 7);
@@ -2034,9 +1961,6 @@ fs_visitor::fs_visitor(struct brw_context *brw,
                        struct gl_program *prog,
                        unsigned dispatch_width)
    : backend_shader(brw, shader_prog, prog, prog_data, stage),
-     reg_null_f(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_F)),
-     reg_null_d(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_D)),
-     reg_null_ud(retype(brw_null_vec(dispatch_width), BRW_REGISTER_TYPE_UD)),
      key(key), prog_data(prog_data),
      dispatch_width(dispatch_width), promoted_constants(0),
      bld(fs_builder(this, dispatch_width).at_end())
@@ -2072,9 +1996,6 @@ fs_visitor::fs_visitor(struct brw_context *brw,
    this->runtime_check_aads_emit = false;
    this->first_non_payload_grf = 0;
    this->max_grf = devinfo->gen >= 7 ? GEN7_MRF_HACK_START : BRW_MAX_GRF;
-
-   this->current_annotation = NULL;
-   this->base_ir = NULL;
 
    this->virtual_grf_start = NULL;
    this->virtual_grf_end = NULL;
