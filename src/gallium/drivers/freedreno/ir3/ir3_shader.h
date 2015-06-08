@@ -86,10 +86,6 @@ struct ir3_shader_key {
 	 * shader:
 	 */
 	uint16_t fsaturate_s, fsaturate_t, fsaturate_r;
-
-	/* bitmask of sampler which produces integer outputs:
-	 */
-	uint16_t vinteger_s, finteger_s;
 };
 
 static inline bool

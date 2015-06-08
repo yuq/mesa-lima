@@ -57,9 +57,6 @@ struct ir3_compile {
 	struct ir3 *ir;
 	struct ir3_shader_variant *so;
 
-	/* bitmask of which samplers are integer: */
-	uint16_t integer_s;
-
 	struct ir3_block *block;      /* the current block */
 	struct ir3_block *in_block;   /* block created for shader inputs */
 
@@ -232,16 +229,6 @@ compile_init(struct ir3_compiler *compiler,
 		/* no special handling for "flat" */
 		ctx->flat_bypass = false;
 		ctx->levels_add_one = true;
-	}
-
-	switch (so->type) {
-	case SHADER_FRAGMENT:
-	case SHADER_COMPUTE:
-		ctx->integer_s = so->key.finteger_s;
-		break;
-	case SHADER_VERTEX:
-		ctx->integer_s = so->key.vinteger_s;
-		break;
 	}
 
 	ctx->compiler = compiler;
