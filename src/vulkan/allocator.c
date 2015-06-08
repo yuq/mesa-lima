@@ -583,7 +583,7 @@ anv_state_stream_finish(struct anv_state_stream *stream)
    uint32_t block, next_block;
 
    block = stream->current_block;
-   while (block != 1) {
+   while (block != NULL_BLOCK) {
       sb = stream->block_pool->map + block;
       next_block = VG_NOACCESS_READ(&sb->next);
       VG(VALGRIND_FREELIKE_BLOCK(VG_NOACCESS_READ(&sb->_vg_ptr), 0));
