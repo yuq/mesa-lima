@@ -239,6 +239,7 @@ public:
    st_src_reg sampler; /**< sampler register */
    int sampler_array_size; /**< 1-based size of sampler array, 1 if not array */
    int tex_target; /**< One of TEXTURE_*_INDEX */
+   glsl_base_type tex_type;
    GLboolean tex_shadow;
 
    st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
@@ -345,6 +346,8 @@ public:
 
    int num_address_regs;
    int samplers_used;
+   glsl_base_type sampler_types[PIPE_MAX_SAMPLERS];
+   int sampler_targets[PIPE_MAX_SAMPLERS];   /**< One of TGSI_TEXTURE_* */
    bool indirect_addr_consts;
    int wpos_transform_const;
 
@@ -579,6 +582,10 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    inst->src[3] = src3;
    inst->ir = ir;
    inst->dead_mask = 0;
+   /* default to float, for paths where this is not initialized
+    * (since 0==UINT which is likely wrong):
+    */
+   inst->tex_type = GLSL_TYPE_FLOAT;
 
    inst->function = NULL;
 
@@ -3324,6 +3331,8 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
       assert(!"Should not get here.");
    }
 
+   inst->tex_type = ir->type->base_type;
+
    this->result = result_src;
 }
 
@@ -3476,7 +3485,13 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
    foreach_in_list(glsl_to_tgsi_instruction, inst, &v->instructions) {
       if (is_tex_instruction(inst->op)) {
          for (int i = 0; i < inst->sampler_array_size; i++) {
-            v->samplers_used |= 1 << (inst->sampler.index + i);
+            unsigned idx = inst->sampler.index + i;
+            v->samplers_used |= 1 << idx;
+
+            debug_assert(idx < (int)ARRAY_SIZE(v->sampler_types));
+            v->sampler_types[idx] = inst->tex_type;
+            v->sampler_targets[idx] =
+               st_translate_texture_target(inst->tex_target, inst->tex_shadow);
 
             if (inst->tex_shadow) {
                prog->ShadowSamplers |= 1 << (inst->sampler.index + i);
@@ -5536,7 +5551,26 @@ st_translate_program(
    /* texture samplers */
    for (i = 0; i < ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits; i++) {
       if (program->samplers_used & (1 << i)) {
+         unsigned type;
+
          t->samplers[i] = ureg_DECL_sampler(ureg, i);
+
+         switch (program->sampler_types[i]) {
+         case GLSL_TYPE_INT:
+            type = TGSI_RETURN_TYPE_SINT;
+            break;
+         case GLSL_TYPE_UINT:
+            type = TGSI_RETURN_TYPE_UINT;
+            break;
+         case GLSL_TYPE_FLOAT:
+            type = TGSI_RETURN_TYPE_FLOAT;
+            break;
+         default:
+            unreachable("not reached");
+         }
+
+         ureg_DECL_sampler_view( ureg, i, program->sampler_targets[i],
+                                 type, type, type, type );
       }
    }
 
