@@ -1006,8 +1006,6 @@ anv_compiler_free(struct anv_pipeline *pipeline)
    for (uint32_t stage = 0; stage < VK_NUM_SHADER_STAGE; stage++)
       if (pipeline->prog_data[stage])
          free(pipeline->prog_data[stage]->map_entries);
-
-   anv_state_stream_finish(&pipeline->program_stream);
 }
 
 }

@@ -379,6 +379,7 @@ anv_pipeline_destroy(struct anv_device *device,
 
    anv_compiler_free(pipeline);
    anv_reloc_list_finish(&pipeline->batch.relocs, pipeline->device);
+   anv_state_stream_finish(&pipeline->program_stream);
    anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_device_free(pipeline->device, pipeline);
 }
