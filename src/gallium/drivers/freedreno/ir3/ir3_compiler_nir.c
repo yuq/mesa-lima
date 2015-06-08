@@ -109,6 +109,11 @@ struct ir3_compile {
 	 */
 	bool levels_add_one;
 
+	/* on a3xx, we need to scale up integer coords for isaml based
+	 * on LoD:
+	 */
+	bool unminify_coords;
+
 	/* for looking up which system value is which */
 	unsigned sysval_semantics[8];
 
@@ -225,10 +230,12 @@ compile_init(struct ir3_compiler *compiler,
 		/* need special handling for "flat" */
 		ctx->flat_bypass = true;
 		ctx->levels_add_one = false;
+		ctx->unminify_coords = false;
 	} else {
 		/* no special handling for "flat" */
 		ctx->flat_bypass = false;
 		ctx->levels_add_one = true;
+		ctx->unminify_coords = true;
 	}
 
 	ctx->compiler = compiler;
@@ -1592,11 +1599,12 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	tex_info(tex, &flags, &coords);
 
 	/* scale up integer coords for TXF based on the LOD */
-	if (opc == OPC_ISAML) {
+	if (ctx->unminify_coords && (opc == OPC_ISAML)) {
 		assert(has_lod);
 		for (i = 0; i < coords; i++)
 			coord[i] = ir3_SHL_B(b, coord[i], 0, lod, 0);
 	}
+
 	/*
 	 * lay out the first argument in the proper order:
 	 *  - actual coordinates first
