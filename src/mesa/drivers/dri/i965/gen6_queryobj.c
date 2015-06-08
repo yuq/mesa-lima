@@ -246,7 +246,7 @@ gen6_queryobj_get_results(struct gl_context *ctx,
        * and correctly emitted the number of pixel shader invocations, but,
        * whomever forgot to undo the multiply by 4.
        */
-      if (brw->gen >= 8 || brw->is_haswell)
+      if (brw->gen == 8 || brw->is_haswell)
          query->Base.Result /= 4;
       break;
 
