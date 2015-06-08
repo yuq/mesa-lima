@@ -1678,6 +1678,10 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
       case GL_LUMINANCE:
       case GL_ALPHA:
          return GL_NO_ERROR;
+      case GL_RG:
+      case GL_RED:
+	 if (_mesa_is_gles3(ctx) || ctx->Extensions.ARB_texture_rg)
+            return GL_NO_ERROR;
       default:
          return GL_INVALID_OPERATION;
       }
