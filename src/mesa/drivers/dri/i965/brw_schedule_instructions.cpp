@@ -26,6 +26,7 @@
  */
 
 #include "brw_fs.h"
+#include "brw_fs_live_variables.h"
 #include "brw_vec4.h"
 #include "brw_cfg.h"
 #include "brw_shader.h"
@@ -400,22 +401,49 @@ schedule_node::set_latency_gen7(bool is_haswell)
 class instruction_scheduler {
 public:
    instruction_scheduler(backend_shader *s, int grf_count,
+                         int hw_reg_count, int block_count,
                          instruction_scheduler_mode mode)
    {
       this->bs = s;
       this->mem_ctx = ralloc_context(NULL);
       this->grf_count = grf_count;
+      this->hw_reg_count = hw_reg_count;
       this->instructions.make_empty();
       this->instructions_to_schedule = 0;
       this->post_reg_alloc = (mode == SCHEDULE_POST);
       this->mode = mode;
       this->time = 0;
       if (!post_reg_alloc) {
-         this->remaining_grf_uses = rzalloc_array(mem_ctx, int, grf_count);
-         this->grf_active = rzalloc_array(mem_ctx, bool, grf_count);
+         this->reg_pressure_in = rzalloc_array(mem_ctx, int, block_count);
+
+         this->livein = ralloc_array(mem_ctx, BITSET_WORD *, block_count);
+         for (int i = 0; i < block_count; i++)
+            this->livein[i] = rzalloc_array(mem_ctx, BITSET_WORD,
+                                            BITSET_WORDS(grf_count));
+
+         this->liveout = ralloc_array(mem_ctx, BITSET_WORD *, block_count);
+         for (int i = 0; i < block_count; i++)
+            this->liveout[i] = rzalloc_array(mem_ctx, BITSET_WORD,
+                                             BITSET_WORDS(grf_count));
+
+         this->hw_liveout = ralloc_array(mem_ctx, BITSET_WORD *, block_count);
+         for (int i = 0; i < block_count; i++)
+            this->hw_liveout[i] = rzalloc_array(mem_ctx, BITSET_WORD,
+                                                BITSET_WORDS(hw_reg_count));
+
+         this->written = rzalloc_array(mem_ctx, bool, grf_count);
+
+         this->reads_remaining = rzalloc_array(mem_ctx, int, grf_count);
+
+         this->hw_reads_remaining = rzalloc_array(mem_ctx, int, hw_reg_count);
       } else {
-         this->remaining_grf_uses = NULL;
-         this->grf_active = NULL;
+         this->reg_pressure_in = NULL;
+         this->livein = NULL;
+         this->liveout = NULL;
+         this->hw_liveout = NULL;
+         this->written = NULL;
+         this->reads_remaining = NULL;
+         this->hw_reads_remaining = NULL;
       }
    }
 
@@ -442,7 +470,8 @@ public:
     */
    virtual int issue_time(backend_instruction *inst) = 0;
 
-   virtual void count_remaining_grf_uses(backend_instruction *inst) = 0;
+   virtual void count_reads_remaining(backend_instruction *inst) = 0;
+   virtual void setup_liveness(cfg_t *cfg) = 0;
    virtual void update_register_pressure(backend_instruction *inst) = 0;
    virtual int get_register_pressure_benefit(backend_instruction *inst) = 0;
 
@@ -453,33 +482,63 @@ public:
    bool post_reg_alloc;
    int instructions_to_schedule;
    int grf_count;
+   int hw_reg_count;
    int time;
+   int reg_pressure;
+   int block_idx;
    exec_list instructions;
    backend_shader *bs;
 
    instruction_scheduler_mode mode;
 
-   /**
-    * Number of instructions left to schedule that reference each vgrf.
-    *
-    * Used so that we can prefer scheduling instructions that will end the
-    * live intervals of multiple variables, to reduce register pressure.
+   /*
+    * The register pressure at the beginning of each basic block.
     */
-   int *remaining_grf_uses;
 
-   /**
-    * Tracks whether each VGRF has had an instruction scheduled that uses it.
-    *
-    * This is used to estimate whether scheduling a new instruction will
-    * increase register pressure.
+   int *reg_pressure_in;
+
+   /*
+    * The virtual GRF's whose range overlaps the beginning of each basic block.
     */
-   bool *grf_active;
+
+   BITSET_WORD **livein;
+
+   /*
+    * The virtual GRF's whose range overlaps the end of each basic block.
+    */
+
+   BITSET_WORD **liveout;
+
+   /*
+    * The hardware GRF's whose range overlaps the end of each basic block.
+    */
+
+   BITSET_WORD **hw_liveout;
+
+   /*
+    * Whether we've scheduled a write for this virtual GRF yet.
+    */
+
+   bool *written;
+
+   /*
+    * How many reads we haven't scheduled for this virtual GRF yet.
+    */
+
+   int *reads_remaining;
+
+   /*
+    * How many reads we haven't scheduled for this hardware GRF yet.
+    */
+
+   int *hw_reads_remaining;
 };
 
 class fs_instruction_scheduler : public instruction_scheduler
 {
 public:
-   fs_instruction_scheduler(fs_visitor *v, int grf_count,
+   fs_instruction_scheduler(fs_visitor *v, int grf_count, int hw_reg_count,
+                            int block_count,
                             instruction_scheduler_mode mode);
    void calculate_deps();
    bool is_compressed(fs_inst *inst);
@@ -487,35 +546,109 @@ public:
    int issue_time(backend_instruction *inst);
    fs_visitor *v;
 
-   void count_remaining_grf_uses(backend_instruction *inst);
+   void count_reads_remaining(backend_instruction *inst);
+   void setup_liveness(cfg_t *cfg);
    void update_register_pressure(backend_instruction *inst);
    int get_register_pressure_benefit(backend_instruction *inst);
 };
 
 fs_instruction_scheduler::fs_instruction_scheduler(fs_visitor *v,
-                                                   int grf_count,
+                                                   int grf_count, int hw_reg_count,
+                                                   int block_count,
                                                    instruction_scheduler_mode mode)
-   : instruction_scheduler(v, grf_count, mode),
+   : instruction_scheduler(v, grf_count, hw_reg_count, block_count, mode),
      v(v)
 {
 }
 
+static bool
+is_src_duplicate(fs_inst *inst, int src)
+{
+   for (int i = 0; i < src; i++)
+     if (inst->src[i].equals(inst->src[src]))
+       return true;
+
+  return false;
+}
+
 void
-fs_instruction_scheduler::count_remaining_grf_uses(backend_instruction *be)
+fs_instruction_scheduler::count_reads_remaining(backend_instruction *be)
 {
    fs_inst *inst = (fs_inst *)be;
 
-   if (!remaining_grf_uses)
+   if (!reads_remaining)
       return;
 
-   if (inst->dst.file == GRF)
-      remaining_grf_uses[inst->dst.reg]++;
-
    for (int i = 0; i < inst->sources; i++) {
-      if (inst->src[i].file != GRF)
+      if (is_src_duplicate(inst, i))
          continue;
 
-      remaining_grf_uses[inst->src[i].reg]++;
+      if (inst->src[i].file == GRF) {
+         reads_remaining[inst->src[i].reg]++;
+      } else if (inst->src[i].file == HW_REG &&
+               inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+         if (inst->src[i].fixed_hw_reg.nr >= hw_reg_count)
+            continue;
+
+         for (int j = 0; j < inst->regs_read(i); j++)
+            hw_reads_remaining[inst->src[i].fixed_hw_reg.nr + j]++;
+      }
+   }
+}
+
+void
+fs_instruction_scheduler::setup_liveness(cfg_t *cfg)
+{
+   /* First, compute liveness on a per-GRF level using the in/out sets from
+    * liveness calculation.
+    */
+   for (int block = 0; block < cfg->num_blocks; block++) {
+      for (int i = 0; i < v->live_intervals->num_vars; i++) {
+         if (BITSET_TEST(v->live_intervals->block_data[block].livein, i)) {
+            int vgrf = v->live_intervals->vgrf_from_var[i];
+            if (!BITSET_TEST(livein[block], vgrf)) {
+               reg_pressure_in[block] += v->alloc.sizes[vgrf];
+               BITSET_SET(livein[block], vgrf);
+            }
+         }
+
+         if (BITSET_TEST(v->live_intervals->block_data[block].liveout, i))
+            BITSET_SET(liveout[block], v->live_intervals->vgrf_from_var[i]);
+      }
+   }
+
+   /* Now, extend the live in/live out sets for when a range crosses a block
+    * boundary, which matches what our register allocator/interference code
+    * does to account for force_writemask_all and incompatible exec_mask's.
+    */
+   for (int block = 0; block < cfg->num_blocks - 1; block++) {
+      for (int i = 0; i < grf_count; i++) {
+         if (v->virtual_grf_start[i] <= cfg->blocks[block]->end_ip &&
+             v->virtual_grf_end[i] >= cfg->blocks[block + 1]->start_ip) {
+            if (!BITSET_TEST(livein[block + 1], i)) {
+                reg_pressure_in[block + 1] += v->alloc.sizes[i];
+                BITSET_SET(livein[block + 1], i);
+            }
+
+            BITSET_SET(liveout[block], i);
+         }
+      }
+   }
+
+   int payload_last_use_ip[hw_reg_count];
+   v->calculate_payload_ranges(hw_reg_count, payload_last_use_ip);
+
+   for (int i = 0; i < hw_reg_count; i++) {
+      if (payload_last_use_ip[i] == -1)
+         continue;
+
+      for (int block = 0; block < cfg->num_blocks; block++) {
+         if (cfg->blocks[block]->start_ip <= payload_last_use_ip[i])
+            reg_pressure_in[block]++;
+
+         if (cfg->blocks[block]->end_ip <= payload_last_use_ip[i])
+            BITSET_SET(hw_liveout[block], i);
+      }
    }
 }
 
@@ -524,18 +657,24 @@ fs_instruction_scheduler::update_register_pressure(backend_instruction *be)
 {
    fs_inst *inst = (fs_inst *)be;
 
-   if (!remaining_grf_uses)
+   if (!reads_remaining)
       return;
 
    if (inst->dst.file == GRF) {
-      remaining_grf_uses[inst->dst.reg]--;
-      grf_active[inst->dst.reg] = true;
+      written[inst->dst.reg] = true;
    }
 
    for (int i = 0; i < inst->sources; i++) {
+      if (is_src_duplicate(inst, i))
+          continue;
+
       if (inst->src[i].file == GRF) {
-         remaining_grf_uses[inst->src[i].reg]--;
-         grf_active[inst->src[i].reg] = true;
+         reads_remaining[inst->src[i].reg]--;
+      } else if (inst->src[i].file == HW_REG &&
+                 inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE &&
+                 inst->src[i].fixed_hw_reg.nr < hw_reg_count) {
+         for (int off = 0; off < inst->regs_read(i); off++)
+            hw_reads_remaining[inst->src[i].fixed_hw_reg.nr + off]--;
       }
    }
 }
@@ -547,20 +686,31 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
    int benefit = 0;
 
    if (inst->dst.file == GRF) {
-      if (remaining_grf_uses[inst->dst.reg] == 1)
-         benefit += v->alloc.sizes[inst->dst.reg];
-      if (!grf_active[inst->dst.reg])
+      if (!BITSET_TEST(livein[block_idx], inst->dst.reg) &&
+          !written[inst->dst.reg])
          benefit -= v->alloc.sizes[inst->dst.reg];
    }
 
    for (int i = 0; i < inst->sources; i++) {
-      if (inst->src[i].file != GRF)
+      if (is_src_duplicate(inst, i))
          continue;
 
-      if (remaining_grf_uses[inst->src[i].reg] == 1)
+      if (inst->src[i].file == GRF &&
+          !BITSET_TEST(liveout[block_idx], inst->src[i].reg) &&
+          reads_remaining[inst->src[i].reg] == 1)
          benefit += v->alloc.sizes[inst->src[i].reg];
-      if (!grf_active[inst->src[i].reg])
-         benefit -= v->alloc.sizes[inst->src[i].reg];
+
+      if (inst->src[i].file == HW_REG &&
+          inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE &&
+          inst->src[i].fixed_hw_reg.nr < hw_reg_count) {
+         for (int off = 0; off < inst->regs_read(i); off++) {
+            int reg = inst->src[i].fixed_hw_reg.nr + off;
+            if (!BITSET_TEST(hw_liveout[block_idx], reg) &&
+                hw_reads_remaining[reg] == 1) {
+               benefit++;
+            }
+         }
+      }
    }
 
    return benefit;
@@ -575,20 +725,26 @@ public:
    int issue_time(backend_instruction *inst);
    vec4_visitor *v;
 
-   void count_remaining_grf_uses(backend_instruction *inst);
+   void count_reads_remaining(backend_instruction *inst);
+   void setup_liveness(cfg_t *cfg);
    void update_register_pressure(backend_instruction *inst);
    int get_register_pressure_benefit(backend_instruction *inst);
 };
 
 vec4_instruction_scheduler::vec4_instruction_scheduler(vec4_visitor *v,
                                                        int grf_count)
-   : instruction_scheduler(v, grf_count, SCHEDULE_POST),
+   : instruction_scheduler(v, grf_count, 0, 0, SCHEDULE_POST),
      v(v)
 {
 }
 
 void
-vec4_instruction_scheduler::count_remaining_grf_uses(backend_instruction *be)
+vec4_instruction_scheduler::count_reads_remaining(backend_instruction *be)
+{
+}
+
+void
+vec4_instruction_scheduler::setup_liveness(cfg_t *cfg)
 {
 }
 
@@ -1387,6 +1543,9 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
    const struct brw_device_info *devinfo = bs->devinfo;
    backend_instruction *inst = block->end();
    time = 0;
+   if (!post_reg_alloc)
+      reg_pressure = reg_pressure_in[block->num];
+   block_idx = block->num;
 
    /* Remove non-DAG heads from the list. */
    foreach_in_list_safe(schedule_node, n, &instructions) {
@@ -1403,7 +1562,11 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
       chosen->remove();
       inst->insert_before(block, chosen->inst);
       instructions_to_schedule--;
-      update_register_pressure(chosen->inst);
+
+      if (!post_reg_alloc) {
+         reg_pressure -= get_register_pressure_benefit(chosen->inst);
+         update_register_pressure(chosen->inst);
+      }
 
       /* If we expected a delay for scheduling, then bump the clock to reflect
        * that.  In reality, the hardware will switch to another hyperthread
@@ -1421,6 +1584,8 @@ instruction_scheduler::schedule_instructions(bblock_t *block)
       if (debug) {
          fprintf(stderr, "clock %4d, scheduled: ", time);
          bs->dump_instruction(chosen->inst);
+         if (!post_reg_alloc)
+            fprintf(stderr, "(register pressure %d)\n", reg_pressure);
       }
 
       /* Now that we've scheduled a new instruction, some of its
@@ -1490,24 +1655,29 @@ static unsigned get_cycle_count(cfg_t *cfg)
 void
 instruction_scheduler::run(cfg_t *cfg)
 {
-   if (debug) {
+   if (debug && !post_reg_alloc) {
       fprintf(stderr, "\nInstructions before scheduling (reg_alloc %d)\n",
               post_reg_alloc);
-      bs->dump_instructions();
+         bs->dump_instructions();
    }
 
-   /* Populate the remaining GRF uses array to improve the pre-regalloc
-    * scheduling.
-    */
-   if (remaining_grf_uses) {
-      foreach_block_and_inst(block, backend_instruction, inst, cfg) {
-         count_remaining_grf_uses(inst);
-      }
-   }
+   if (!post_reg_alloc)
+      setup_liveness(cfg);
 
    foreach_block(block, cfg) {
       if (block->end_ip - block->start_ip <= 1)
          continue;
+
+      if (reads_remaining) {
+         memset(reads_remaining, 0,
+                grf_count * sizeof(*reads_remaining));
+         memset(hw_reads_remaining, 0,
+                hw_reg_count * sizeof(*hw_reads_remaining));
+         memset(written, 0, grf_count * sizeof(*written));
+
+         foreach_inst_in_block(fs_inst, inst, block)
+            count_reads_remaining(inst);
+      }
 
       add_insts_from_block(block);
 
@@ -1520,7 +1690,7 @@ instruction_scheduler::run(cfg_t *cfg)
       schedule_instructions(block);
    }
 
-   if (debug) {
+   if (debug && !post_reg_alloc) {
       fprintf(stderr, "\nInstructions after scheduling (reg_alloc %d)\n",
               post_reg_alloc);
       bs->dump_instructions();
@@ -1532,13 +1702,16 @@ instruction_scheduler::run(cfg_t *cfg)
 void
 fs_visitor::schedule_instructions(instruction_scheduler_mode mode)
 {
+   calculate_live_intervals();
+
    int grf_count;
    if (mode == SCHEDULE_POST)
       grf_count = grf_used;
    else
       grf_count = alloc.count;
 
-   fs_instruction_scheduler sched(this, grf_count, mode);
+   fs_instruction_scheduler sched(this, grf_count, first_non_payload_grf,
+                                  cfg->num_blocks, mode);
    sched.run(cfg);
 
    if (unlikely(debug_enabled) && mode == SCHEDULE_POST) {
