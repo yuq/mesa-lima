@@ -64,6 +64,24 @@ static const struct anv_tile_info {
    [WMAJOR] = { 128, 32, 4096 },
 };
 
+static uint32_t
+anv_image_choose_tile_mode(const VkImageCreateInfo *vk_info,
+                           const struct anv_image_create_info *anv_info)
+{
+   if (anv_info)
+      return anv_info->tile_mode;
+
+   switch (vk_info->tiling) {
+   case VK_IMAGE_TILING_LINEAR:
+      return LINEAR;
+   case VK_IMAGE_TILING_OPTIMAL:
+      return YMAJOR;
+   default:
+      assert(!"bad VKImageTiling");
+      return LINEAR;
+   }
+}
+
 VkResult anv_image_create(
     VkDevice                                    _device,
     const VkImageCreateInfo*                    pCreateInfo,
@@ -89,25 +107,11 @@ VkResult anv_image_create(
    image->format = pCreateInfo->format;
    image->extent = pCreateInfo->extent;
    image->swap_chain = NULL;
+   image->tile_mode = anv_image_choose_tile_mode(pCreateInfo, extra);
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);
    assert(image->extent.depth > 0);
-
-   switch (pCreateInfo->tiling) {
-   case VK_IMAGE_TILING_LINEAR:
-      image->tile_mode = LINEAR;
-      break;
-   case VK_IMAGE_TILING_OPTIMAL:
-      image->tile_mode = YMAJOR;
-      break;
-   default:
-      assert(!"bad VKImageTiling");
-      break;
-   }
-
-   if (extra)
-      image->tile_mode = extra->tile_mode;
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[image->tile_mode];
