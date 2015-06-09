@@ -338,6 +338,15 @@ static const uint32_t vk_to_gen_stencil_op[] = {
 static void
 emit_ds_state(struct anv_pipeline *pipeline, VkPipelineDsStateCreateInfo *info)
 {
+   if (info == NULL) {
+      /* We're going to OR this together with the dynamic state.  We need
+       * to make sure it's initialized to something useful.
+       */
+      memset(pipeline->state_wm_depth_stencil, 0,
+             sizeof(pipeline->state_wm_depth_stencil));
+      return;
+   }
+
    /* bool32_t depthBoundsEnable;          // optional (depth_bounds_test) */
 
    struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
@@ -479,11 +488,7 @@ anv_pipeline_create(
    emit_ia_state(pipeline, ia_info, extra);
    assert(rs_info);
    emit_rs_state(pipeline, rs_info, extra);
-   /* ds_info is optional if we're not using depth or stencil buffers, ps is
-    * optional for depth-only rendering. */
-   if (ds_info)
-      emit_ds_state(pipeline, ds_info);
-
+   emit_ds_state(pipeline, ds_info);
    emit_cb_state(pipeline, cb_info);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
