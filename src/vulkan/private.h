@@ -756,6 +756,8 @@ struct anv_image {
 };
 
 struct anv_surface_view {
+   struct anv_object                            base;
+
    struct anv_state                             surface_state;
    struct anv_bo *                              bo;
    uint32_t                                     offset;
@@ -782,6 +784,9 @@ void anv_color_attachment_view_init(struct anv_surface_view *view,
                                     struct anv_device *device,
                                     const VkColorAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
+
+void anv_surface_view_destroy(struct anv_device *device,
+                              struct anv_object *obj, VkObjectType obj_type);
 
 struct anv_sampler {
    uint32_t state[4];

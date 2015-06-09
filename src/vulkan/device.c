@@ -1080,10 +1080,7 @@ VkResult anv_DestroyObject(
       return VK_SUCCESS;
 
    case VK_OBJECT_TYPE_BUFFER:
-   case VK_OBJECT_TYPE_BUFFER_VIEW:
    case VK_OBJECT_TYPE_IMAGE:
-   case VK_OBJECT_TYPE_IMAGE_VIEW:
-   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
    case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
    case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
@@ -1104,6 +1101,9 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_FENCE:
    case VK_OBJECT_TYPE_QUERY_POOL:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
+   case VK_OBJECT_TYPE_BUFFER_VIEW:
+   case VK_OBJECT_TYPE_IMAGE_VIEW:
+   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
 
@@ -1541,6 +1541,8 @@ VkResult anv_CreateBufferView(
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   view->base.destructor = anv_surface_view_destroy;
 
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;

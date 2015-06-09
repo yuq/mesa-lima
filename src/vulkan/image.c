@@ -163,6 +163,21 @@ VkResult anv_GetImageSubresourceInfo(
 }
 
 void
+anv_surface_view_destroy(struct anv_device *device,
+                         struct anv_object *obj, VkObjectType obj_type)
+{
+   struct anv_surface_view *view = (struct anv_surface_view *)obj;
+
+   assert(obj_type == VK_OBJECT_TYPE_BUFFER_VIEW ||
+          obj_type == VK_OBJECT_TYPE_IMAGE_VIEW ||
+          obj_type == VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
+
+   anv_state_pool_free(&device->surface_state_pool, view->surface_state);
+
+   anv_device_free(device, view);
+}
+
+void
 anv_image_view_init(struct anv_surface_view *view,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
@@ -268,6 +283,8 @@ VkResult anv_CreateImageView(
 
    anv_image_view_init(view, device, pCreateInfo, NULL);
 
+   view->base.destructor = anv_surface_view_destroy;
+
    *pView = (VkImageView) view;
 
    return VK_SUCCESS;
@@ -351,6 +368,8 @@ VkResult anv_CreateColorAttachmentView(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
+
+   view->base.destructor = anv_surface_view_destroy;
 
    *pView = (VkColorAttachmentView) view;
 
