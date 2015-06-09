@@ -2322,6 +2322,7 @@ VkResult anv_CreateCommandBuffer(
    cmd_buffer->rs_state = NULL;
    cmd_buffer->vp_state = NULL;
    cmd_buffer->cb_state = NULL;
+   cmd_buffer->ds_state = NULL;
    memset(&cmd_buffer->descriptors, 0, sizeof(cmd_buffer->descriptors));
 
    result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
@@ -2657,6 +2658,11 @@ VkResult anv_ResetCommandBuffer(
 
    cmd_buffer->surface_next = 1;
    cmd_buffer->surface_relocs.num_relocs = 0;
+
+   cmd_buffer->rs_state = NULL;
+   cmd_buffer->vp_state = NULL;
+   cmd_buffer->cb_state = NULL;
+   cmd_buffer->ds_state = NULL;
 
    return VK_SUCCESS;
 }
