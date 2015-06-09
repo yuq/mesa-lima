@@ -267,39 +267,6 @@ anv_block_pool_init(struct anv_block_pool *pool,
    anv_block_pool_grow(pool);
 }
 
-/** Initializes a block pool that is a slave of another
- *
- * The newly initialized pool is not a block pool on its own but it rather
- * takes a fixed number of blocks from the master pool and hands them out.
- * In some sense, it's nothing more than a glorified free list.  However,
- * since it is a block pool, it can be used to back a pool or stream.
- */
-void
-anv_block_pool_init_slave(struct anv_block_pool *pool,
-                          struct anv_block_pool *master_pool,
-                          uint32_t num_blocks)
-{
-   pool->device = NULL;
-
-   /* We don't have backing storage */
-   pool->bo.gem_handle = 0;
-   pool->bo.offset = 0;
-   pool->size = 0;
-   pool->next_block = 0;
-
-   pool->block_size = master_pool->block_size;
-   pool->free_list = ANV_FREE_LIST_EMPTY;
-   anv_vector_init(&pool->mmap_cleanups,
-                   round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
-
-   /* Pull N blocks off the master pool and put them on this pool */
-   for (uint32_t i = 0; i < num_blocks; i++) {
-      uint32_t block = anv_block_pool_alloc(master_pool);
-      pool->map = master_pool->map;
-      anv_block_pool_free(pool, block);
-   }
-}
-
 /* The memfd path lets us create a map for an fd and lets us grow and remap
  * without copying.  It breaks valgrind however, so we have a MAP_ANONYMOUS
  * path we can take for valgrind debugging. */
@@ -332,12 +299,6 @@ anv_block_pool_grow(struct anv_block_pool *pool)
    void *map;
    int gem_handle;
    struct anv_mmap_cleanup *cleanup;
-
-   /* If we don't have a device then we can't resize the pool.  This can be
-    * the case if the pool is a slave pool.
-    */
-   if (pool->device == NULL)
-      return -1;
 
    if (pool->size == 0) {
       size = 32 * pool->block_size;

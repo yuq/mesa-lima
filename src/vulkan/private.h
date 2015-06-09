@@ -234,9 +234,6 @@ struct anv_state_stream {
 
 void anv_block_pool_init(struct anv_block_pool *pool,
                          struct anv_device *device, uint32_t block_size);
-void anv_block_pool_init_slave(struct anv_block_pool *pool,
-                               struct anv_block_pool *master_pool,
-                               uint32_t num_blocks);
 void anv_block_pool_finish(struct anv_block_pool *pool);
 uint32_t anv_block_pool_alloc(struct anv_block_pool *pool);
 void anv_block_pool_free(struct anv_block_pool *pool, uint32_t offset);
