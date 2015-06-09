@@ -88,7 +88,8 @@ vk_error(VkResult error)
    return error;
 }
 
-void __anv_finishme(const char *file, int line, const char *format, ...);
+void __anv_finishme(const char *file, int line, const char *format, ...)
+   anv_printflike(3, 4);
 
 /**
  * Print a FINISHME message, including its source location.
