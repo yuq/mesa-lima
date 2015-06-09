@@ -29,8 +29,6 @@
 
 #include "private.h"
 
-// Image functions
-
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,
