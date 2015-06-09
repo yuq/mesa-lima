@@ -46,6 +46,8 @@
 extern "C" {
 #endif
 
+#define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
+
 static inline uint32_t
 ALIGN_U32(uint32_t v, uint32_t a)
 {
