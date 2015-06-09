@@ -1003,9 +1003,13 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 void
 anv_compiler_free(struct anv_pipeline *pipeline)
 {
-   for (uint32_t stage = 0; stage < VK_NUM_SHADER_STAGE; stage++)
-      if (pipeline->prog_data[stage])
+   for (uint32_t stage = 0; stage < VK_NUM_SHADER_STAGE; stage++) {
+      if (pipeline->prog_data[stage]) {
          free(pipeline->prog_data[stage]->map_entries);
+         ralloc_free(pipeline->prog_data[stage]->param);
+         ralloc_free(pipeline->prog_data[stage]->pull_param);
+      }
+   }
 }
 
 }
