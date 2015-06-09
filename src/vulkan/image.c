@@ -31,6 +31,18 @@
 
 // Image functions
 
+static const uint8_t anv_halign[] = {
+    [4] = HALIGN4,
+    [8] = HALIGN8,
+    [16] = HALIGN16,
+};
+
+static const uint8_t anv_valign[] = {
+    [4] = VALIGN4,
+    [8] = VALIGN8,
+    [16] = VALIGN16,
+};
+
 static const struct anv_tile_mode_info {
    int32_t tile_width;
    int32_t tile_height;
@@ -85,6 +97,10 @@ VkResult anv_image_create(
 
    if (extra)
       image->tile_mode = extra->tile_mode;
+
+   /* FINISHME: Stop hardcoding miptree image alignment */
+   image->h_align = 4;
+   image->v_align = 4;
 
    if (image->tile_mode == LINEAR) {
       /* Linear depth buffers must be 64 byte aligned, which is the strictest
@@ -192,8 +208,8 @@ anv_image_view_init(struct anv_surface_view *view,
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = false,
       .SurfaceFormat = format,
-      .SurfaceVerticalAlignment = VALIGN4,
-      .SurfaceHorizontalAlignment = HALIGN4,
+      .SurfaceVerticalAlignment = anv_valign[image->v_align],
+      .SurfaceHorizontalAlignment = anv_halign[image->h_align],
       .TileMode = tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
@@ -283,8 +299,8 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = false,
       .SurfaceFormat = format->format,
-      .SurfaceVerticalAlignment = VALIGN4,
-      .SurfaceHorizontalAlignment = HALIGN4,
+      .SurfaceVerticalAlignment = anv_valign[image->v_align],
+      .SurfaceHorizontalAlignment = anv_halign[image->h_align],
       .TileMode = image->tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,

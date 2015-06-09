@@ -738,6 +738,21 @@ struct anv_image {
    VkDeviceSize                                 offset;
 
    struct anv_swap_chain *                      swap_chain;
+
+   /**
+    * \name Alignment of miptree images, in units of pixels.
+    *
+    * These fields contain the actual alignment values, not the values the
+    * hardware expects. For example, if h_align is 4, then program the hardware
+    * with HALIGN_4.
+    *
+    * \see RENDER_SURFACE_STATE.SurfaceHorizontalAlignment
+    * \see RENDER_SURFACE_STATE.SurfaceVerticalAlignment
+    * \{
+    */
+   uint8_t h_align;
+   uint8_t v_align;
+   /** \} */
 };
 
 struct anv_surface_view {
