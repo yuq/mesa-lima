@@ -2881,6 +2881,7 @@ struct gl_shader_compiler_options
    GLboolean EmitNoIndirectOutput;  /**< No indirect addressing of outputs */
    GLboolean EmitNoIndirectTemp;    /**< No indirect addressing of temps */
    GLboolean EmitNoIndirectUniform; /**< No indirect addressing of constants */
+   GLboolean EmitNoIndirectSampler; /**< No indirect addressing of samplers */
    /*@}*/
 
    GLuint MaxIfDepth;               /**< Maximum nested IF blocks */
