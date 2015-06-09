@@ -1317,30 +1317,33 @@ VOID CiAddrLib::HwlSetupTileInfo(
         *pTileInfo = m_tileTable[8].info;
     }
 
-    // Turn off tcCompatible for color surface if tileSplit happens. Depth/stencil is
-    // handled at tileIndex selecting time.
-    if (pOut->tcCompatible && (inTileType != ADDR_DEPTH_SAMPLE_ORDER))
+    if (pOut->tcCompatible)
     {
         if (IsMacroTiled(tileMode))
         {
-            INT_32 tileIndex = pOut->tileIndex;
-
-            if ((tileIndex == TileIndexInvalid) && (IsTileInfoAllZero(pTileInfo) == FALSE))
+            if (inTileType != ADDR_DEPTH_SAMPLE_ORDER)
             {
-                tileIndex = HwlPostCheckTileIndex(pTileInfo, tileMode, inTileType, tileIndex);
-            }
+                // Turn off tcCompatible for color surface if tileSplit happens. Depth/stencil
+                // tileSplit case was handled at tileIndex selecting time.
+                INT_32 tileIndex = pOut->tileIndex;
 
-            if (tileIndex != TileIndexInvalid)
-            {
-                ADDR_ASSERT(static_cast<UINT_32>(tileIndex) < TileTableSize);
-                // Non-depth entries store a split factor
-                UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
-                UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
-                UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
-
-                if (m_rowSize < colorTileSplit)
+                if ((tileIndex == TileIndexInvalid) && (IsTileInfoAllZero(pTileInfo) == FALSE))
                 {
-                    pOut->tcCompatible = FALSE;
+                    tileIndex = HwlPostCheckTileIndex(pTileInfo, tileMode, inTileType, tileIndex);
+                }
+
+                if (tileIndex != TileIndexInvalid)
+                {
+                    ADDR_ASSERT(static_cast<UINT_32>(tileIndex) < TileTableSize);
+                    // Non-depth entries store a split factor
+                    UINT_32 sampleSplit = m_tileTable[tileIndex].info.tileSplitBytes;
+                    UINT_32 tileBytes1x = BITS_TO_BYTES(bpp * MicroTilePixels * thickness);
+                    UINT_32 colorTileSplit = Max(256u, sampleSplit * tileBytes1x);
+
+                    if (m_rowSize < colorTileSplit)
+                    {
+                        pOut->tcCompatible = FALSE;
+                    }
                 }
             }
         }
