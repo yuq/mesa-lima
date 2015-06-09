@@ -1154,6 +1154,8 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 	if (info->has_dest) {
 		dst = get_dst(ctx, &intr->dest, intr->num_components);
+	} else {
+		dst = NULL;
 	}
 
 	switch (intr->intrinsic) {
@@ -1314,6 +1316,8 @@ tex_info(nir_tex_instr *tex, unsigned *flagsp, unsigned *coordsp)
 		coords = 3;
 		flags |= IR3_INSTR_3D;
 		break;
+	default:
+		unreachable("bad sampler_dim");
 	}
 
 	if (tex->is_shadow)
@@ -1336,7 +1340,10 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	unsigned i, coords, flags;
 	unsigned nsrc0 = 0, nsrc1 = 0;
 	type_t type;
-	opc_t opc;
+	opc_t opc = 0;
+
+	coord = off = ddx = ddy = NULL;
+	lod = proj = compare = NULL;
 
 	/* TODO: might just be one component for gathers? */
 	dst = get_dst(ctx, &tex->dest, 4);
@@ -1480,6 +1487,8 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 	case nir_type_bool:
 		type = TYPE_U32;
 		break;
+	default:
+		unreachable("bad dest_type");
 	}
 
 	sam = ir3_SAM(b, opc, type, TGSI_WRITEMASK_XYZW,
