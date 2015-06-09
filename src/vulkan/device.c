@@ -410,6 +410,7 @@ VkResult anv_DestroyDevice(
 
    anv_compiler_destroy(device->compiler);
 
+   anv_device_finish_meta(device);
 
    anv_bo_pool_finish(&device->batch_bo_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);

@@ -411,15 +411,13 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    anv_CreateDescriptorSetLayout((VkDevice) device, &ds_layout_info,
                                  &device->meta_state.blit.ds_layout);
 
-   VkPipelineLayoutCreateInfo pipeline_layout_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-      .descriptorSetCount = 1,
-      .pSetLayouts = &device->meta_state.blit.ds_layout,
-   };
-
-   VkPipelineLayout pipeline_layout;
-   anv_CreatePipelineLayout((VkDevice) device, &pipeline_layout_info,
-                            &pipeline_layout);
+   anv_CreatePipelineLayout((VkDevice) device,
+      &(VkPipelineLayoutCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+         .descriptorSetCount = 1,
+         .pSetLayouts = &device->meta_state.blit.ds_layout,
+      },
+      &device->meta_state.blit.pipeline_layout);
 
    VkPipelineRsStateCreateInfo rs_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
@@ -445,7 +443,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
       .pNext = &cb_create_info,
       .flags = 0,
-      .layout = pipeline_layout,
+      .layout = device->meta_state.blit.pipeline_layout,
    };
 
    anv_pipeline_create((VkDevice) device, &pipeline_info,
@@ -647,6 +645,14 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
 
    anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+
+   /* At the point where we emit the draw call, all data from the
+    * descriptor sets, etc. has been used.  We are free to delete it.
+    */
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_DESCRIPTOR_SET, set);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_FRAMEBUFFER,
+                     (VkFramebuffer) fb);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_RENDER_PASS, pass);
 }
 
 static void
@@ -756,6 +762,9 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   &dest_view,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 });
+
+   anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, (VkImage) src_image);
+   anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, (VkImage) dest_image);
 }
 
 void anv_CmdCopyBuffer(
@@ -1049,6 +1058,8 @@ void anv_CmdCopyBufferToImage(
                      &dest_view,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent);
+
+      anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, (VkImage) src_image);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1139,6 +1150,8 @@ void anv_CmdCopyImageToBuffer(
                      &dest_view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
+
+      anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, (VkImage) dest_image);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1232,4 +1245,28 @@ anv_device_init_meta(struct anv_device *device)
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
       },
       &device->meta_state.shared.ds_state);
+}
+
+void
+anv_device_finish_meta(struct anv_device *device)
+{
+   /* Clear */
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_PIPELINE,
+                     device->meta_state.clear.pipeline);
+
+   /* Blit */
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_PIPELINE,
+                     device->meta_state.blit.pipeline);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                     device->meta_state.blit.pipeline_layout);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+                     device->meta_state.blit.ds_layout);
+
+   /* Shared */
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_DYNAMIC_RS_STATE,
+                     device->meta_state.shared.rs_state);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_DYNAMIC_CB_STATE,
+                     device->meta_state.shared.cb_state);
+   anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_DYNAMIC_DS_STATE,
+                     device->meta_state.shared.ds_state);
 }

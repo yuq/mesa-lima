@@ -302,6 +302,7 @@ struct anv_meta_state {
 
    struct {
       VkPipeline                                pipeline;
+      VkPipelineLayout                          pipeline_layout;
       VkDescriptorSetLayout                     ds_layout;
    } blit;
 
@@ -832,6 +833,7 @@ struct anv_render_pass {
 };
 
 void anv_device_init_meta(struct anv_device *device);
+void anv_device_finish_meta(struct anv_device *device);
 
 void
 anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
