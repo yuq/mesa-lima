@@ -3423,25 +3423,25 @@ VkResult anv_CreateFramebuffer(
    framebuffer->layers = pCreateInfo->layers;
 
    vkCreateDynamicViewportState((VkDevice) device,
-                                &(VkDynamicVpStateCreateInfo) {
-                                   .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
-                                   .viewportAndScissorCount = 1,
-                                   .pViewports = (VkViewport[]) {
-                                      {
-                                         .originX = 0,
-                                         .originY = 0,
-                                         .width = pCreateInfo->width,
-                                         .height = pCreateInfo->height,
-                                         .minDepth = 0,
-                                         .maxDepth = 1
-                                      },
-                                   },
-                                   .pScissors = (VkRect[]) {
-                                      { {  0,  0 },
-                                        { pCreateInfo->width, pCreateInfo->height } },
-                                   }
-                                },
-                                &framebuffer->vp_state);
+      &(VkDynamicVpStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
+         .viewportAndScissorCount = 1,
+         .pViewports = (VkViewport[]) {
+            {
+               .originX = 0,
+               .originY = 0,
+               .width = pCreateInfo->width,
+               .height = pCreateInfo->height,
+               .minDepth = 0,
+               .maxDepth = 1
+            },
+         },
+         .pScissors = (VkRect[]) {
+            { {  0,  0 },
+              { pCreateInfo->width, pCreateInfo->height } },
+         }
+      },
+      &framebuffer->vp_state);
 
    *pFramebuffer = (VkFramebuffer) framebuffer;
 
