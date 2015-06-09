@@ -29,6 +29,7 @@
 #include "util/u_math.h"
 #include "util/register_allocate.h"
 #include "util/ralloc.h"
+#include "util/bitset.h"
 
 #include "ir3.h"
 #include "ir3_compiler.h"
@@ -255,6 +256,14 @@ struct ir3_ra_ctx {
 	unsigned *def, *use;     /* def/use table */
 };
 
+/* additional block-data (per-block) */
+struct ir3_ra_block_data {
+	BITSET_WORD *def;        /* variables defined before used in block */
+	BITSET_WORD *use;        /* variables used before defined in block */
+	BITSET_WORD *livein;     /* which defs reach entry point of block */
+	BITSET_WORD *liveout;    /* which defs reach exit point of block */
+};
+
 static bool
 is_half(struct ir3_instruction *instr)
 {
@@ -369,7 +378,39 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 			*sz = util_last_bit(instr->regs[0]->wrmask);
 		}
 		*off = 0;
-		return instr;
+		d = instr;
+	}
+
+	if (d->regs[0]->flags & IR3_REG_PHI_SRC) {
+		struct ir3_instruction *phi = d->regs[0]->instr;
+		struct ir3_instruction *dd;
+		int dsz, doff;
+
+		dd = get_definer(phi, &dsz, &doff);
+
+		*sz = MAX2(*sz, dsz);
+		*off = doff;
+
+		if (dd->ip < d->ip) {
+			d = dd;
+		}
+	}
+
+	if (is_meta(d) && (d->opc == OPC_META_PHI)) {
+		/* we have already inserted parallel-copies into
+		 * the phi, so we don't need to chase definers
+		 */
+		struct ir3_register *src;
+
+		/* note: don't use foreach_ssa_src as this gets called once
+		 * while assigning regs (which clears SSA flag)
+		 */
+		foreach_src(src, d) {
+			if (!src->instr)
+				continue;
+			if (src->instr->ip < d->ip)
+				d = src->instr;
+		}
 	}
 
 	if (is_meta(d) && (d->opc == OPC_META_FO)) {
@@ -396,12 +437,10 @@ static void
 ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 {
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		instr->ip = ctx->instr_cnt++;
-	}
-
-	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *defn;
 		int cls, sz, off;
+
+		ctx->instr_cnt++;
 
 		if (instr->regs_count == 0)
 			continue;
@@ -431,8 +470,11 @@ static void
 ra_init(struct ir3_ra_ctx *ctx)
 {
 	ir3_clear_mark(ctx->ir);
+	ir3_count_instructions(ctx->ir);
 
-	ra_block_name_instructions(ctx, ctx->ir->block);
+	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
+		ra_block_name_instructions(ctx, block);
+	}
 
 	/* figure out the base register name for each class.  The
 	 * actual ra name is class_base[cls] + instr->name;
@@ -448,6 +490,16 @@ ra_init(struct ir3_ra_ctx *ctx)
 	ctx->use = rzalloc_array(ctx->g, unsigned, ctx->alloc_count);
 }
 
+static unsigned
+ra_name(struct ir3_ra_ctx *ctx, int cls, struct ir3_instruction *defn)
+{
+	unsigned name;
+	debug_assert(cls >= 0);
+	name = ctx->class_base[cls] + defn->name;
+	debug_assert(name < ctx->alloc_count);
+	return name;
+}
+
 static void
 ra_destroy(struct ir3_ra_ctx *ctx)
 {
@@ -457,6 +509,18 @@ ra_destroy(struct ir3_ra_ctx *ctx)
 static void
 ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 {
+	struct ir3_ra_block_data *bd;
+	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
+
+	bd = rzalloc(ctx->g, struct ir3_ra_block_data);
+
+	bd->def     = rzalloc_array(bd, BITSET_WORD, bitset_words);
+	bd->use     = rzalloc_array(bd, BITSET_WORD, bitset_words);
+	bd->livein  = rzalloc_array(bd, BITSET_WORD, bitset_words);
+	bd->liveout = rzalloc_array(bd, BITSET_WORD, bitset_words);
+
+	block->bd = bd;
+
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *src;
 
@@ -474,7 +538,15 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		 * fanin: used to collect values from lower class and assemble
 		 *     them together into a higher class, for example arguments
 		 *     to texture sample instructions;  We consider these to be
-		 *     defined at the fanin node.
+		 *     defined at the earliest fanin source.
+		 *
+		 * phi: used to merge values from different flow control paths
+		 *     to the same reg.  Consider defined at earliest phi src,
+		 *     and update all the other phi src's (which may come later
+		 *     in the program) as users to extend the var's live range.
+		 *
+		 * Most of this, other than phi, is completely handled in the
+		 * get_definer() helper.
 		 *
 		 * In either case, we trace the instruction back to the original
 		 * definer and consider that as the def/use ip.
@@ -491,11 +563,15 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				 */
 				cls = size_to_class(sz, is_half(defn));
 				if (cls >= 0) {
-					unsigned name = ctx->class_base[cls] + defn->name;
+					unsigned name = ra_name(ctx, cls, defn);
+
 					ctx->def[name] = defn->ip;
 					ctx->use[name] = defn->ip;
 
-					debug_assert(name < ctx->alloc_count);
+					/* since we are in SSA at this point: */
+					debug_assert(!BITSET_TEST(bd->use, name));
+
+					BITSET_SET(bd->def, name);
 
 					if (is_half(defn)) {
 						ra_set_node_class(ctx->g, name,
@@ -503,6 +579,24 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 					} else {
 						ra_set_node_class(ctx->g, name,
 								ctx->set->classes[cls]);
+					}
+
+					/* extend the live range for phi srcs, which may come
+					 * from the bottom of the loop
+					 */
+					if (defn->regs[0]->flags & IR3_REG_PHI_SRC) {
+						struct ir3_instruction *phi = defn->regs[0]->instr;
+						foreach_ssa_src(src, phi) {
+							/* if src is after phi, then we need to extend
+							 * the liverange to the end of src's block:
+							 */
+							if (src->ip > phi->ip) {
+								struct ir3_instruction *last =
+									list_last_entry(&src->block->instr_list,
+										struct ir3_instruction, node);
+								ctx->use[name] = MAX2(ctx->use[name], last->ip);
+							}
+						}
 					}
 				}
 			}
@@ -516,12 +610,59 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 				srcdefn = get_definer(src, &sz, &off);
 				cls = size_to_class(sz, is_half(srcdefn));
 				if (cls >= 0) {
-					unsigned name = ctx->class_base[cls] + srcdefn->name;
-					ctx->use[name] = instr->ip;
+					unsigned name = ra_name(ctx, cls, srcdefn);
+					ctx->use[name] = MAX2(ctx->use[name], instr->ip);
+					if (!BITSET_TEST(bd->def, name))
+						BITSET_SET(bd->use, name);
 				}
 			}
 		}
 	}
+}
+
+static bool
+ra_compute_livein_liveout(struct ir3_ra_ctx *ctx)
+{
+	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
+	bool progress = false;
+
+	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
+		struct ir3_ra_block_data *bd = block->bd;
+
+		/* update livein: */
+		for (unsigned i = 0; i < bitset_words; i++) {
+			BITSET_WORD new_livein =
+				(bd->use[i] | (bd->liveout[i] & ~bd->def[i]));
+
+			if (new_livein & ~bd->livein[i]) {
+				bd->livein[i] |= new_livein;
+				progress = true;
+			}
+		}
+
+		/* update liveout: */
+		for (unsigned j = 0; j < ARRAY_SIZE(block->successors); j++) {
+			struct ir3_block *succ = block->successors[j];
+			struct ir3_ra_block_data *succ_bd;
+
+			if (!succ)
+				continue;
+
+			succ_bd = succ->bd;
+
+			for (unsigned i = 0; i < bitset_words; i++) {
+				BITSET_WORD new_liveout =
+					(succ_bd->livein[i] & ~bd->liveout[i]);
+
+				if (new_liveout) {
+					bd->liveout[i] |= new_liveout;
+					progress = true;
+				}
+			}
+		}
+	}
+
+	return progress;
 }
 
 static void
@@ -529,7 +670,34 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 {
 	struct ir3 *ir = ctx->ir;
 
-	ra_block_compute_live_ranges(ctx, ctx->ir->block);
+	/* compute live ranges (use/def) on a block level, also updating
+	 * block's def/use bitmasks (used below to calculate per-block
+	 * livein/liveout):
+	 */
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		ra_block_compute_live_ranges(ctx, block);
+	}
+
+	/* update per-block livein/liveout: */
+	while (ra_compute_livein_liveout(ctx)) {}
+
+	/* extend start/end ranges based on livein/liveout info from cfg: */
+	unsigned bitset_words = BITSET_WORDS(ctx->alloc_count);
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		struct ir3_ra_block_data *bd = block->bd;
+
+		for (unsigned i = 0; i < bitset_words; i++) {
+			if (BITSET_TEST(bd->livein, i)) {
+				ctx->def[i] = MIN2(ctx->def[i], block->start_ip);
+				ctx->use[i] = MAX2(ctx->use[i], block->start_ip);
+			}
+
+			if (BITSET_TEST(bd->liveout, i)) {
+				ctx->def[i] = MIN2(ctx->def[i], block->end_ip);
+				ctx->use[i] = MAX2(ctx->use[i], block->end_ip);
+			}
+		}
+	}
 
 	/* need to fix things up to keep outputs live: */
 	for (unsigned i = 0; i < ir->noutputs; i++) {
@@ -540,7 +708,7 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 		defn = get_definer(instr, &sz, &off);
 		cls = size_to_class(sz, is_half(defn));
 		if (cls >= 0) {
-			unsigned name = ctx->class_base[cls] + defn->name;
+			unsigned name = ra_name(ctx, cls, defn);
 			ctx->use[name] = ctx->instr_cnt;
 		}
 	}
@@ -552,23 +720,6 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 				ra_add_node_interference(ctx->g, i, j);
 			}
 		}
-	}
-}
-
-static type_t half_type(type_t type)
-{
-	switch (type) {
-	case TYPE_F32: return TYPE_F16;
-	case TYPE_U32: return TYPE_U16;
-	case TYPE_S32: return TYPE_S16;
-	/* instructions may already be fixed up: */
-	case TYPE_F16:
-	case TYPE_U16:
-	case TYPE_S16:
-		return type;
-	default:
-		assert(0);
-		return ~0;
 	}
 }
 
@@ -633,7 +784,7 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 	defn = get_definer(instr, &sz, &off);
 	cls = size_to_class(sz, is_half(defn));
 	if (cls >= 0) {
-		unsigned name = ctx->class_base[cls] + defn->name;
+		unsigned name = ra_name(ctx, cls, defn);
 		unsigned r = ra_get_node_reg(ctx->g, name);
 		unsigned num = ctx->set->ra_reg_to_gpr[r] + off;
 
@@ -641,7 +792,7 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 			num += reg->offset;
 
 		reg->num = num;
-		reg->flags &= ~IR3_REG_SSA;
+		reg->flags &= ~(IR3_REG_SSA | IR3_REG_PHI_SRC);
 
 		if (is_half(defn))
 			reg->flags |= IR3_REG_HALF;
@@ -686,8 +837,8 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 		unsigned i = 0, j;
 		if (ctx->frag_face && (i < ir->ninputs) && ir->inputs[i]) {
 			struct ir3_instruction *instr = ir->inputs[i];
-			unsigned cls = size_to_class(1, true);
-			unsigned name = ctx->class_base[cls] + instr->name;
+			int cls = size_to_class(1, true);
+			unsigned name = ra_name(ctx, cls, instr);
 			unsigned reg = ctx->set->gpr_to_ra_reg[cls][0];
 
 			/* if we have frag_face, it gets hr0.x */
@@ -706,8 +857,7 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 					unsigned name, reg;
 
 					cls = size_to_class(sz, is_half(defn));
-					debug_assert(cls >= 0);
-					name = ctx->class_base[cls] + defn->name;
+					name = ra_name(ctx, cls, defn);
 					reg = ctx->set->gpr_to_ra_reg[cls][j];
 
 					ra_set_node_reg(ctx->g, name, reg);
@@ -720,7 +870,9 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 	if (!ra_allocate(ctx->g))
 		return -1;
 
-	ra_block_alloc(ctx, ctx->ir->block);
+	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
+		ra_block_alloc(ctx, block);
+	}
 
 	return 0;
 }

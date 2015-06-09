@@ -80,6 +80,8 @@ struct ir3 * ir3_create(struct ir3_compiler *compiler,
 	shader->noutputs = nout;
 	shader->outputs = ir3_alloc(shader, sizeof(shader->outputs[0]) * nout);
 
+	list_inithead(&shader->block_list);
+
 	return shader;
 }
 
@@ -548,7 +550,6 @@ static int (*emit[])(struct ir3_instruction *instr, void *ptr,
 void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 		uint32_t gpu_id)
 {
-	struct ir3_block *block = shader->block;
 	uint32_t *ptr, *dwords;
 
 	info->gpu_id        = gpu_id;
@@ -558,8 +559,10 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 	info->instrs_count  = 0;
 	info->sizedwords    = 0;
 
-	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		info->sizedwords += 2;
+	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			info->sizedwords += 2;
+		}
 	}
 
 	/* need a integer number of instruction "groups" (sets of 16
@@ -574,12 +577,14 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 
 	ptr = dwords = calloc(4, info->sizedwords);
 
-	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		int ret = emit[instr->category](instr, dwords, info);
-		if (ret)
-			goto fail;
-		info->instrs_count += 1 + instr->repeat;
-		dwords += 2;
+	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			int ret = emit[instr->category](instr, dwords, info);
+			if (ret)
+				goto fail;
+			info->instrs_count += 1 + instr->repeat;
+			dwords += 2;
+		}
 	}
 
 	return ptr;
@@ -617,7 +622,12 @@ static void insert_instr(struct ir3_block *block,
 struct ir3_block * ir3_block_create(struct ir3 *shader)
 {
 	struct ir3_block *block = ir3_alloc(shader, sizeof(*block));
+#ifdef DEBUG
+	static uint32_t serialno = 0;
+	block->serialno = ++serialno;
+#endif
 	block->shader = shader;
+	list_inithead(&block->node);
 	list_inithead(&block->instr_list);
 	return block;
 }
@@ -688,10 +698,40 @@ struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags)
 {
-	struct ir3_register *reg = reg_create(instr->block->shader, num, flags);
+	struct ir3 *shader = instr->block->shader;
+	struct ir3_register *reg = reg_create(shader, num, flags);
 #ifdef DEBUG
 	debug_assert(instr->regs_count < instr->regs_max);
 #endif
 	instr->regs[instr->regs_count++] = reg;
 	return reg;
+}
+
+void
+ir3_block_clear_mark(struct ir3_block *block)
+{
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node)
+		instr->flags &= ~IR3_INSTR_MARK;
+}
+
+void
+ir3_clear_mark(struct ir3 *ir)
+{
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		ir3_block_clear_mark(block);
+	}
+}
+
+/* note: this will destroy instr->depth, don't do it until after sched! */
+void
+ir3_count_instructions(struct ir3 *ir)
+{
+	unsigned ip = 0;
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			instr->ip = ip++;
+		}
+		block->start_ip = list_first_entry(&block->instr_list, struct ir3_instruction, node)->ip;
+		block->end_ip = list_last_entry(&block->instr_list, struct ir3_instruction, node)->ip;
+	}
 }

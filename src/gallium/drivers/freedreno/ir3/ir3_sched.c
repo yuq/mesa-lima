@@ -205,6 +205,16 @@ instr_eligibility(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 	struct ir3_instruction *src;
 	unsigned delay = 0;
 
+	/* Phi instructions can have a dependency on something not
+	 * scheduled yet (for ex, loops).  But OTOH we don't really
+	 * care.  By definition phi's should appear at the top of
+	 * the block, and it's sources should be values from the
+	 * previously executing block, so they are always ready to
+	 * be scheduled:
+	 */
+	if (is_meta(instr) && (instr->opc == OPC_META_PHI))
+		return 0;
+
 	foreach_ssa_src(src, instr) {
 		/* if dependency not scheduled, we aren't ready yet: */
 		if (!is_scheduled(src))
@@ -422,13 +432,87 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 			}
 		}
 	}
+
+	/* And lastly, insert branch/jump instructions to take us to
+	 * the next block.  Later we'll strip back out the branches
+	 * that simply jump to next instruction.
+	 */
+	if (block->successors[1]) {
+		/* if/else, conditional branches to "then" or "else": */
+		struct ir3_instruction *br;
+		unsigned delay = 6;
+
+		debug_assert(ctx->pred);
+		debug_assert(block->condition);
+
+		delay -= distance(ctx, ctx->pred, delay);
+
+		while (delay > 0) {
+			ir3_NOP(block);
+			delay--;
+		}
+
+		/* create "else" branch first (since "then" block should
+		 * frequently/always end up being a fall-thru):
+		 */
+		br = ir3_BR(block);
+		br->cat0.inv = true;
+		br->cat0.target = block->successors[1];
+
+		/* NOTE: we have to hard code delay of 6 above, since
+		 * we want to insert the nop's before constructing the
+		 * branch.  Throw in an assert so we notice if this
+		 * ever breaks on future generation:
+		 */
+		debug_assert(ir3_delayslots(ctx->pred, br, 0) == 6);
+
+		br = ir3_BR(block);
+		br->cat0.target = block->successors[0];
+
+	} else if (block->successors[0]) {
+		/* otherwise unconditional jump to next block: */
+		struct ir3_instruction *jmp;
+
+		jmp = ir3_JUMP(block);
+		jmp->cat0.target = block->successors[0];
+	}
+
+	/* NOTE: if we kept track of the predecessors, we could do a better
+	 * job w/ (jp) flags.. every node w/ > predecessor is a join point.
+	 * Note that as we eliminate blocks which contain only an unconditional
+	 * jump we probably need to propagate (jp) flag..
+	 */
+}
+
+/* this is needed to ensure later RA stage succeeds: */
+static void
+sched_insert_parallel_copies(struct ir3_block *block)
+{
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+		if (is_meta(instr) && (instr->opc == OPC_META_PHI)) {
+			struct ir3_register *reg;
+			foreach_src(reg, instr) {
+				struct ir3_instruction *src = reg->instr;
+				struct ir3_instruction *mov =
+					ir3_MOV(src->block, src, TYPE_U32);
+				mov->regs[0]->flags |= IR3_REG_PHI_SRC;
+				mov->regs[0]->instr = instr;
+				reg->instr = mov;
+			}
+		}
+	}
 }
 
 int ir3_sched(struct ir3 *ir)
 {
 	struct ir3_sched_ctx ctx = {0};
-	ir3_clear_mark(ir->block->shader);
-	sched_block(&ctx, ir->block);
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		sched_insert_parallel_copies(block);
+	}
+	ir3_clear_mark(ir);
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		sched_block(&ctx, block);
+	}
 	if (ctx.error)
 		return -1;
 	return 0;

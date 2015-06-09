@@ -54,6 +54,13 @@ static bool is_eligible_mov(struct ir3_instruction *instr, bool allow_flags)
 		/* TODO: remove this hack: */
 		if (is_meta(src_instr) && (src_instr->opc == OPC_META_FO))
 			return false;
+		/* TODO: we currently don't handle left/right neighbors
+		 * very well when inserting parallel-copies into phi..
+		 * to avoid problems don't eliminate a mov coming out
+		 * of phi..
+		 */
+		if (is_meta(src_instr) && (src_instr->opc == OPC_META_PHI))
+			return false;
 		return true;
 	}
 	return false;
@@ -390,7 +397,7 @@ instr_cp(struct ir3_instruction *instr, unsigned *flags)
 void
 ir3_cp(struct ir3 *ir)
 {
-	ir3_clear_mark(ir->block->shader);
+	ir3_clear_mark(ir);
 
 	for (unsigned i = 0; i < ir->noutputs; i++) {
 		if (ir->outputs[i]) {
@@ -399,5 +406,10 @@ ir3_cp(struct ir3 *ir)
 
 			ir->outputs[i] = out;
 		}
+	}
+
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		if (block->condition)
+			block->condition = instr_cp(block->condition, NULL);
 	}
 }

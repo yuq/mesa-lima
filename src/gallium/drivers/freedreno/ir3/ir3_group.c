@@ -116,6 +116,10 @@ restart:
 			conflict = conflicts(instr->cp.left, left) ||
 				conflicts(instr->cp.right, right);
 
+			/* RA can't yet deal very well w/ group'd phi's: */
+			if (is_meta(instr) && (instr->opc == OPC_META_PHI))
+				conflict = true;
+
 			/* we also can't have an instr twice in the group: */
 			for (j = i + 1; (j < n) && !conflict; j++)
 				if (ops->get(arr, j) == instr)
@@ -226,7 +230,6 @@ find_neighbors(struct ir3 *ir)
 	for (i = 0; i < ir->noutputs; i += 4)
 		group_n(&arr_ops_out, &ir->outputs[i], 4);
 
-
 	for (i = 0; i < ir->noutputs; i++) {
 		if (ir->outputs[i]) {
 			struct ir3_instruction *instr = ir->outputs[i];
@@ -238,6 +241,6 @@ find_neighbors(struct ir3 *ir)
 void
 ir3_group(struct ir3 *ir)
 {
-	ir3_clear_mark(ir->block->shader);
+	ir3_clear_mark(ir);
 	find_neighbors(ir);
 }

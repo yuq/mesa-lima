@@ -137,6 +137,16 @@ tab(int lvl)
 		printf("\t");
 }
 
+static uint32_t
+block_id(struct ir3_block *block)
+{
+#ifdef DEBUG
+	return block->serialno;
+#else
+	return (uint32_t)(uint64_t)block;
+#endif
+}
+
 static void
 print_instr(struct ir3_instruction *instr, int lvl)
 {
@@ -173,6 +183,14 @@ print_instr(struct ir3_instruction *instr, int lvl)
 		}
 	}
 
+	if (is_flow(instr) && instr->cat0.target) {
+		/* the predicate register src is implied: */
+		if (instr->opc == OPC_BR) {
+			printf(" %sp0.x", instr->cat0.inv ? "!" : "");
+		}
+		printf(", target=block%u", block_id(instr->cat0.target));
+	}
+
 	printf("\n");
 }
 
@@ -184,9 +202,22 @@ void ir3_print_instr(struct ir3_instruction *instr)
 static void
 print_block(struct ir3_block *block, int lvl)
 {
-	tab(lvl); printf("block {\n");
+	tab(lvl); printf("block%u {\n", block_id(block));
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		print_instr(instr, lvl+1);
+	}
+	if (block->successors[1]) {
+		/* leading into if/else: */
+		tab(lvl+1);
+		printf("/* succs: if _[");
+		print_instr_name(block->condition);
+		printf("] block%u; else block%u; */\n",
+				block_id(block->successors[0]),
+				block_id(block->successors[1]));
+	} else if (block->successors[0]) {
+		tab(lvl+1);
+		printf("/* succs: block%u; */\n",
+				block_id(block->successors[0]));
 	}
 	tab(lvl); printf("}\n");
 }
@@ -194,9 +225,8 @@ print_block(struct ir3_block *block, int lvl)
 void
 ir3_print(struct ir3 *ir)
 {
-	struct ir3_block *block = ir->block;
-
-	print_block(block, 0);
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node)
+		print_block(block, 0);
 
 	for (unsigned i = 0; i < ir->noutputs; i++) {
 		if (!ir->outputs[i])

@@ -48,8 +48,6 @@
 #include "ir3.h"
 
 
-static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
-
 struct ir3_compile {
 	struct ir3_compiler *compiler;
 
@@ -62,7 +60,10 @@ struct ir3_compile {
 	/* bitmask of which samplers are integer: */
 	uint16_t integer_s;
 
-	struct ir3_block *block;
+	struct ir3_block *block;      /* the current block */
+	struct ir3_block *in_block;   /* block created for shader inputs */
+
+	nir_function_impl *impl;
 
 	/* For fragment shaders, from the hw perspective the only
 	 * actual input is r0.xy position register passed to bary.f.
@@ -94,6 +95,11 @@ struct ir3_compile {
 	 */
 	struct hash_table *addr_ht;
 
+	/* maps nir_block to ir3_block, mostly for the purposes of
+	 * figuring out the blocks successors
+	 */
+	struct hash_table *block_ht;
+
 	/* for calculating input/output positions/linkages: */
 	unsigned next_inloc;
 
@@ -119,6 +125,9 @@ struct ir3_compile {
 	bool error;
 };
 
+
+static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
+static struct ir3_block * get_block(struct ir3_compile *ctx, nir_block *nblock);
 
 static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 {
@@ -148,6 +157,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 
 		nir_lower_vars_to_ssa(s);
 		nir_lower_alu_to_scalar(s);
+		nir_lower_phis_to_scalar(s);
 
 		progress |= nir_copy_prop(s);
 		progress |= nir_opt_dce(s);
@@ -244,6 +254,8 @@ compile_init(struct ir3_compiler *compiler,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 	ctx->addr_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
+	ctx->block_ht = _mesa_hash_table_create(ctx,
+			_mesa_hash_pointer, _mesa_key_pointer_equal);
 
 	lowered_tokens = lower_tgsi(ctx, tokens, so);
 	if (!lowered_tokens)
@@ -287,33 +299,206 @@ compile_free(struct ir3_compile *ctx)
 	ralloc_free(ctx);
 }
 
-
+/* global per-array information: */
 struct ir3_array {
 	unsigned length, aid;
+};
+
+/* per-block array state: */
+struct ir3_array_value {
+	/* TODO drop length/aid, and just have ptr back to ir3_array */
+	unsigned length, aid;
+	/* initial array element values are phi's, other than for the
+	 * entry block.  The phi src's get added later in a resolve step
+	 * after we have visited all the blocks, to account for back
+	 * edges in the cfg.
+	 */
+	struct ir3_instruction **phis;
+	/* current array element values (as block is processed).  When
+	 * the array phi's are resolved, it will contain the array state
+	 * at exit of block, so successor blocks can use it to add their
+	 * phi srcs.
+	 */
 	struct ir3_instruction *arr[];
 };
+
+/* track array assignments per basic block.  When an array is read
+ * outside of the same basic block, we can use NIR's dominance-frontier
+ * information to figure out where phi nodes are needed.
+ */
+struct ir3_nir_block_data {
+	unsigned foo;
+	/* indexed by array-id (aid): */
+	struct ir3_array_value *arrs[];
+};
+
+static struct ir3_nir_block_data *
+get_block_data(struct ir3_compile *ctx, struct ir3_block *block)
+{
+	if (!block->bd) {
+		struct ir3_nir_block_data *bd = ralloc_size(ctx, sizeof(*bd) +
+				((ctx->num_arrays + 1) * sizeof(bd->arrs[0])));
+		block->bd = bd;
+	}
+	return block->bd;
+}
 
 static void
 declare_var(struct ir3_compile *ctx, nir_variable *var)
 {
 	unsigned length = glsl_get_length(var->type) * 4;  /* always vec4, at least with ttn */
-	struct ir3_array *arr = ralloc_size(ctx, sizeof(*arr) +
-			(length * sizeof(arr->arr[0])));
+	struct ir3_array *arr = ralloc(ctx, struct ir3_array);
 	arr->length = length;
 	arr->aid = ++ctx->num_arrays;
-	/* Some shaders end up reading array elements without first writing..
-	 * so initialize things to prevent null instr ptrs later:
-	 */
-	for (unsigned i = 0; i < length; i++)
-		arr->arr[i] = create_immed(ctx->block, 0);
 	_mesa_hash_table_insert(ctx->var_ht, var, arr);
 }
 
-static struct ir3_array *
+static nir_block *
+nir_block_pred(nir_block *block)
+{
+	assert(block->predecessors->entries < 2);
+	if (block->predecessors->entries == 0)
+		return NULL;
+	return (nir_block *)_mesa_set_next_entry(block->predecessors, NULL)->key;
+}
+
+static struct ir3_array_value *
 get_var(struct ir3_compile *ctx, nir_variable *var)
 {
 	struct hash_entry *entry = _mesa_hash_table_search(ctx->var_ht, var);
-	return entry->data;
+	struct ir3_block *block = ctx->block;
+	struct ir3_nir_block_data *bd = get_block_data(ctx, block);
+	struct ir3_array *arr = entry->data;
+
+	if (!bd->arrs[arr->aid]) {
+		struct ir3_array_value *av = ralloc_size(bd, sizeof(*av) +
+				(arr->length * sizeof(av->arr[0])));
+		struct ir3_array_value *defn = NULL;
+		nir_block *pred_block;
+
+		av->length = arr->length;
+		av->aid = arr->aid;
+
+		/* For loops, we have to consider that we have not visited some
+		 * of the blocks who should feed into the phi (ie. back-edges in
+		 * the cfg).. for example:
+		 *
+		 *   loop {
+		 *      block { load_var; ... }
+		 *      if then block {} else block {}
+		 *      block { store_var; ... }
+		 *      if then block {} else block {}
+		 *      block {...}
+		 *   }
+		 *
+		 * We can skip the phi if we can chase the block predecessors
+		 * until finding the block previously defining the array without
+		 * crossing a block that has more than one predecessor.
+		 *
+		 * Otherwise create phi's and resolve them as a post-pass after
+		 * all the blocks have been visited (to handle back-edges).
+		 */
+
+		for (pred_block = block->nblock;
+				pred_block && (pred_block->predecessors->entries < 2) && !defn;
+				pred_block = nir_block_pred(pred_block)) {
+			struct ir3_block *pblock = get_block(ctx, pred_block);
+			struct ir3_nir_block_data *pbd = pblock->bd;
+			if (!pbd)
+				continue;
+			defn = pbd->arrs[arr->aid];
+		}
+
+		if (defn) {
+			/* only one possible definer: */
+			for (unsigned i = 0; i < arr->length; i++)
+				av->arr[i] = defn->arr[i];
+		} else if (pred_block) {
+			/* not the first block, and multiple potential definers: */
+			av->phis = ralloc_size(av, arr->length * sizeof(av->phis[0]));
+
+			for (unsigned i = 0; i < arr->length; i++) {
+				struct ir3_instruction *phi;
+
+				phi = ir3_instr_create2(block, -1, OPC_META_PHI,
+						1 + ctx->impl->num_blocks);
+				ir3_reg_create(phi, 0, 0);         /* dst */
+
+				/* phi's should go at head of block: */
+				list_delinit(&phi->node);
+				list_add(&phi->node, &block->instr_list);
+
+				av->phis[i] = av->arr[i] = phi;
+			}
+		} else {
+			/* Some shaders end up reading array elements without
+			 * first writing.. so initialize things to prevent null
+			 * instr ptrs later:
+			 */
+			for (unsigned i = 0; i < arr->length; i++)
+				av->arr[i] = create_immed(block, 0);
+		}
+
+		bd->arrs[arr->aid] = av;
+	}
+
+	return bd->arrs[arr->aid];
+}
+
+static void
+add_array_phi_srcs(struct ir3_compile *ctx, nir_block *nblock,
+		struct ir3_array_value *av, BITSET_WORD *visited)
+{
+	struct ir3_block *block;
+	struct ir3_nir_block_data *bd;
+
+	if (BITSET_TEST(visited, nblock->index))
+		return;
+
+	BITSET_SET(visited, nblock->index);
+
+	block = get_block(ctx, nblock);
+	bd = block->bd;
+
+	if (bd && bd->arrs[av->aid]) {
+		struct ir3_array_value *dav = bd->arrs[av->aid];
+		for (unsigned i = 0; i < av->length; i++) {
+			ir3_reg_create(av->phis[i], 0, IR3_REG_SSA)->instr =
+					dav->arr[i];
+		}
+	} else {
+		/* didn't find defn, recurse predecessors: */
+		struct set_entry *entry;
+		set_foreach(nblock->predecessors, entry) {
+			add_array_phi_srcs(ctx, (nir_block *)entry->key, av, visited);
+		}
+	}
+}
+
+static void
+resolve_array_phis(struct ir3_compile *ctx, struct ir3_block *block)
+{
+	struct ir3_nir_block_data *bd = block->bd;
+	unsigned bitset_words = BITSET_WORDS(ctx->impl->num_blocks);
+
+	if (!bd)
+		return;
+
+	/* TODO use nir dom_frontier to help us with this? */
+
+	for (unsigned i = 1; i <= ctx->num_arrays; i++) {
+		struct ir3_array_value *av = bd->arrs[i];
+		BITSET_WORD visited[bitset_words];
+		struct set_entry *entry;
+
+		if (!(av && av->phis))
+			continue;
+
+		memset(visited, 0, sizeof(visited));
+		set_foreach(block->nblock->predecessors, entry) {
+			add_array_phi_srcs(ctx, (nir_block *)entry->key, av, visited);
+		}
+	}
 }
 
 /* allocate a n element value array (to be populated by caller) and
@@ -414,6 +599,22 @@ get_addr(struct ir3_compile *ctx, struct ir3_instruction *src)
 	_mesa_hash_table_insert(ctx->addr_ht, src, addr);
 
 	return addr;
+}
+
+static struct ir3_instruction *
+get_predicate(struct ir3_compile *ctx, struct ir3_instruction *src)
+{
+	struct ir3_block *b = ctx->block;
+	struct ir3_instruction *cond;
+
+	/* NOTE: only cmps.*.* can write p0.x: */
+	cond = ir3_CMPS_S(b, src, 0, create_immed(b, 0), 0);
+	cond->cat2.condition = IR3_COND_NE;
+
+	/* condition always goes in predicate register: */
+	cond->regs[0]->num = regid(REG_P0, 0);
+
+	return cond;
 }
 
 static struct ir3_instruction *
@@ -1029,7 +1230,7 @@ emit_intrinisic_load_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 {
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
-	struct ir3_array *arr = get_var(ctx, dvar->var);
+	struct ir3_array_value *arr = get_var(ctx, dvar->var);
 
 	compile_assert(ctx, dvar->deref.child &&
 		(dvar->deref.child->deref_type == nir_deref_type_array));
@@ -1069,7 +1270,7 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 {
 	nir_deref_var *dvar = intr->variables[0];
 	nir_deref_array *darr = nir_deref_as_array(dvar->deref.child);
-	struct ir3_array *arr = get_var(ctx, dvar->var);
+	struct ir3_array_value *arr = get_var(ctx, dvar->var);
 	struct ir3_instruction **src;
 
 	compile_assert(ctx, dvar->deref.child &&
@@ -1245,6 +1446,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			cond = create_immed(b, 1);
 		}
 
+		/* NOTE: only cmps.*.* can write p0.x: */
 		cond = ir3_CMPS_S(b, cond, 0, create_immed(b, 0), 0);
 		cond->cat2.condition = IR3_COND_NE;
 
@@ -1558,6 +1760,71 @@ emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 }
 
 static void
+emit_phi(struct ir3_compile *ctx, nir_phi_instr *nphi)
+{
+	struct ir3_instruction *phi, **dst;
+
+	/* NOTE: phi's should be lowered to scalar at this point */
+	compile_assert(ctx, nphi->dest.ssa.num_components == 1);
+
+	dst = get_dst(ctx, &nphi->dest, 1);
+
+	phi = ir3_instr_create2(ctx->block, -1, OPC_META_PHI,
+			1 + exec_list_length(&nphi->srcs));
+	ir3_reg_create(phi, 0, 0);         /* dst */
+	phi->phi.nphi = nphi;
+
+	dst[0] = phi;
+}
+
+/* phi instructions are left partially constructed.  We don't resolve
+ * their srcs until the end of the block, since (eg. loops) one of
+ * the phi's srcs might be defined after the phi due to back edges in
+ * the CFG.
+ */
+static void
+resolve_phis(struct ir3_compile *ctx, struct ir3_block *block)
+{
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+		nir_phi_instr *nphi;
+
+		/* phi's only come at start of block: */
+		if (!(is_meta(instr) && (instr->opc == OPC_META_PHI)))
+			break;
+
+		if (!instr->phi.nphi)
+			break;
+
+		nphi = instr->phi.nphi;
+		instr->phi.nphi = NULL;
+
+		foreach_list_typed(nir_phi_src, nsrc, node, &nphi->srcs) {
+			struct ir3_instruction *src = get_src(ctx, &nsrc->src)[0];
+			ir3_reg_create(instr, 0, IR3_REG_SSA)->instr = src;
+		}
+	}
+
+	resolve_array_phis(ctx, block);
+}
+
+static void
+emit_jump(struct ir3_compile *ctx, nir_jump_instr *jump)
+{
+	switch (jump->type) {
+	case nir_jump_break:
+	case nir_jump_continue:
+		/* I *think* we can simply just ignore this, and use the
+		 * successor block link to figure out where we need to
+		 * jump to for break/continue
+		 */
+		break;
+	default:
+		compile_error(ctx, "Unhandled NIR jump type: %d\n", jump->type);
+		break;
+	}
+}
+
+static void
 emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 {
 	switch (instr->type) {
@@ -1590,42 +1857,109 @@ emit_instr(struct ir3_compile *ctx, nir_instr *instr)
 		}
 		break;
 	}
-	case nir_instr_type_call:
-	case nir_instr_type_jump:
 	case nir_instr_type_phi:
+		emit_phi(ctx, nir_instr_as_phi(instr));
+		break;
+	case nir_instr_type_jump:
+		emit_jump(ctx, nir_instr_as_jump(instr));
+		break;
+	case nir_instr_type_call:
 	case nir_instr_type_parallel_copy:
 		compile_error(ctx, "Unhandled NIR instruction type: %d\n", instr->type);
 		break;
 	}
 }
 
-static void
-emit_block(struct ir3_compile *ctx, nir_block *block)
+static struct ir3_block *
+get_block(struct ir3_compile *ctx, nir_block *nblock)
 {
-	nir_foreach_instr(block, instr) {
+	struct ir3_block *block;
+	struct hash_entry *entry;
+	entry = _mesa_hash_table_search(ctx->block_ht, nblock);
+	if (entry)
+		return entry->data;
+
+	block = ir3_block_create(ctx->ir);
+	block->nblock = nblock;
+	_mesa_hash_table_insert(ctx->block_ht, nblock, block);
+
+	return block;
+}
+
+static void
+emit_block(struct ir3_compile *ctx, nir_block *nblock)
+{
+	struct ir3_block *block = get_block(ctx, nblock);
+
+	for (int i = 0; i < ARRAY_SIZE(block->successors); i++) {
+		if (nblock->successors[i]) {
+			block->successors[i] =
+				get_block(ctx, nblock->successors[i]);
+		}
+	}
+
+	ctx->block = block;
+	list_addtail(&block->node, &ctx->ir->block_list);
+
+	nir_foreach_instr(nblock, instr) {
 		emit_instr(ctx, instr);
 		if (ctx->error)
 			return;
 	}
 }
 
+static void emit_cf_list(struct ir3_compile *ctx, struct exec_list *list);
+
 static void
-emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
+emit_if(struct ir3_compile *ctx, nir_if *nif)
 {
-	foreach_list_typed(nir_cf_node, node, node, &impl->body) {
+	struct ir3_instruction *condition = get_src(ctx, &nif->condition)[0];
+
+	ctx->block->condition =
+		get_predicate(ctx, ir3_b2n(condition->block, condition));
+
+	emit_cf_list(ctx, &nif->then_list);
+	emit_cf_list(ctx, &nif->else_list);
+}
+
+static void
+emit_loop(struct ir3_compile *ctx, nir_loop *nloop)
+{
+	emit_cf_list(ctx, &nloop->body);
+}
+
+static void
+emit_cf_list(struct ir3_compile *ctx, struct exec_list *list)
+{
+	foreach_list_typed(nir_cf_node, node, node, list) {
 		switch (node->type) {
 		case nir_cf_node_block:
 			emit_block(ctx, nir_cf_node_as_block(node));
 			break;
 		case nir_cf_node_if:
+			emit_if(ctx, nir_cf_node_as_if(node));
+			break;
 		case nir_cf_node_loop:
+			emit_loop(ctx, nir_cf_node_as_loop(node));
+			break;
 		case nir_cf_node_function:
 			compile_error(ctx, "TODO\n");
 			break;
 		}
-		if (ctx->error)
-			return;
 	}
+}
+
+static void
+emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
+{
+	emit_cf_list(ctx, &impl->body);
+	emit_block(ctx, impl->end_block);
+
+	/* at this point, we should have a single empty block,
+	 * into which we emit the 'end' instruction.
+	 */
+	compile_assert(ctx, list_empty(&ctx->block->instr_list));
+	ir3_END(ctx->block);
 }
 
 static void
@@ -1787,8 +2121,19 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 static void
 emit_instructions(struct ir3_compile *ctx)
 {
-	unsigned ninputs  = exec_list_length(&ctx->s->inputs) * 4;
-	unsigned noutputs = exec_list_length(&ctx->s->outputs) * 4;
+	unsigned ninputs, noutputs;
+	nir_function_impl *fxn = NULL;
+
+	/* Find the main function: */
+	nir_foreach_overload(ctx->s, overload) {
+		compile_assert(ctx, strcmp(overload->function->name, "main") == 0);
+		compile_assert(ctx, overload->impl);
+		fxn = overload->impl;
+		break;
+	}
+
+	ninputs  = exec_list_length(&ctx->s->inputs) * 4;
+	noutputs = exec_list_length(&ctx->s->outputs) * 4;
 
 	/* we need to allocate big enough outputs array so that
 	 * we can stuff the kill's at the end.  Likewise for vtx
@@ -1801,8 +2146,11 @@ emit_instructions(struct ir3_compile *ctx)
 	}
 
 	ctx->ir = ir3_create(ctx->compiler, ninputs, noutputs);
-	ctx->block = ir3_block_create(ctx->ir);
-	ctx->ir->block = ctx->block;
+
+	/* Create inputs in first block: */
+	ctx->block = get_block(ctx, fxn->start_block);
+	ctx->in_block = ctx->block;
+	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
 	if (ctx->so->type == SHADER_FRAGMENT) {
 		ctx->ir->noutputs -= ARRAY_SIZE(ctx->kill);
@@ -1838,13 +2186,12 @@ emit_instructions(struct ir3_compile *ctx)
 		declare_var(ctx, var);
 	}
 
-	/* Find the main function and emit the body: */
-	nir_foreach_overload(ctx->s, overload) {
-		compile_assert(ctx, strcmp(overload->function->name, "main") == 0);
-		compile_assert(ctx, overload->impl);
-		emit_function(ctx, overload->impl);
-		if (ctx->error)
-			return;
+	/* And emit the body: */
+	ctx->impl = fxn;
+	emit_function(ctx, fxn);
+
+	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
+		resolve_phis(ctx, block);
 	}
 }
 
@@ -1906,13 +2253,13 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 	so->pos_regid = regid;
 
 	/* r0.x */
-	instr = create_input(ctx->block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, NULL, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[1]->instr = instr;
 
 	/* r0.y */
-	instr = create_input(ctx->block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, NULL, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[2]->instr = instr;
@@ -1998,6 +2345,10 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 				out = out->regs[1]->instr;
 				out->regs[0]->flags |= IR3_REG_HALF;
 			}
+
+			if (out->category == 1) {
+				out->cat1.dst_type = half_type(out->cat1.dst_type);
+			}
 		}
 	}
 
@@ -2057,6 +2408,11 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	}
 
 	ir3_legalize(ir, &so->has_samp, &max_bary);
+
+	if (fd_mesa_debug & FD_DBG_OPTMSGS) {
+		printf("AFTER LEGALIZE:\n");
+		ir3_print(ir);
+	}
 
 	/* fixup input/outputs: */
 	for (i = 0; i < so->outputs_count; i++) {

@@ -83,7 +83,8 @@ struct ir3_register {
 		 * before register assignment is done:
 		 */
 		IR3_REG_SSA    = 0x2000,   /* 'instr' is ptr to assigning instr */
-		IR3_REG_IA     = 0x4000,   /* meta-input dst is "assigned" */
+		IR3_REG_PHI_SRC= 0x4000,   /* phi src, regs[0]->instr points to phi */
+
 	} flags;
 	union {
 		/* normal registers:
@@ -187,6 +188,7 @@ struct ir3_instruction {
 			char inv;
 			char comp;
 			int  immed;
+			struct ir3_block *target;
 		} cat0;
 		struct {
 			type_t src_type, dst_type;
@@ -220,14 +222,14 @@ struct ir3_instruction {
 			int aid;
 		} fi;
 		struct {
-			struct ir3_block *if_block, *else_block;
-		} flow;
+			/* used to temporarily hold reference to nir_phi_instr
+			 * until we resolve the phi srcs
+			 */
+			void *nphi;
+		} phi;
 		struct {
 			struct ir3_block *block;
 		} inout;
-
-		/* XXX keep this as big as all other union members! */
-		uint32_t info[3];
 	};
 
 	/* transient values used during various algorithms: */
@@ -363,16 +365,40 @@ struct ir3 {
 	unsigned predicates_count, predicates_sz;
 	struct ir3_instruction **predicates;
 
-	struct ir3_block *block;
+	/* List of blocks: */
+	struct list_head block_list;
+
 	unsigned heap_idx;
 	struct ir3_heap_chunk *chunk;
 };
 
+typedef struct nir_block nir_block;
+
 struct ir3_block {
+	struct list_head node;
 	struct ir3 *shader;
-	/* only a single address register: */
-	struct ir3_instruction *address;
-	struct list_head instr_list;
+
+	nir_block *nblock;
+
+	struct list_head instr_list;  /* list of ir3_instruction */
+
+	/* each block has either one or two successors.. in case of
+	 * two successors, 'condition' decides which one to follow.
+	 * A block preceding an if/else has two successors.
+	 */
+	struct ir3_instruction *condition;
+	struct ir3_block *successors[2];
+
+	uint16_t start_ip, end_ip;
+
+	/* used for per-pass extra block data.  Mainly used right
+	 * now in RA step to track livein/liveout.
+	 */
+	void *bd;
+
+#ifdef DEBUG
+	uint32_t serialno;
+#endif
 };
 
 struct ir3 * ir3_create(struct ir3_compiler *compiler,
@@ -394,7 +420,6 @@ const char *ir3_instr_name(struct ir3_instruction *instr);
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags);
 
-
 static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 {
 	if (instr->flags & IR3_INSTR_MARK)
@@ -403,19 +428,10 @@ static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 	return false;
 }
 
-static inline void ir3_clear_mark(struct ir3 *shader)
-{
-	/* TODO would be nice to drop the instruction array.. for
-	 * new compiler, _clear_mark() is all we use it for, and
-	 * we could probably manage a linked list instead..
-	 *
-	 * Also, we'll probably want to mark instructions within
-	 * a block, so tracking the list of instrs globally is
-	 * unlikely to be what we want.
-	 */
-	list_for_each_entry (struct ir3_instruction, instr, &shader->block->instr_list, node)
-		instr->flags &= ~IR3_INSTR_MARK;
-}
+void ir3_block_clear_mark(struct ir3_block *block);
+void ir3_clear_mark(struct ir3 *shader);
+
+void ir3_count_instructions(struct ir3 *ir);
 
 static inline int ir3_instr_regno(struct ir3_instruction *instr,
 		struct ir3_register *reg)
@@ -591,6 +607,22 @@ static inline bool reg_gpr(struct ir3_register *r)
 	if ((reg_num(r) == REG_A0) || (reg_num(r) == REG_P0))
 		return false;
 	return true;
+}
+
+static inline type_t half_type(type_t type)
+{
+	switch (type) {
+	case TYPE_F32: return TYPE_F16;
+	case TYPE_U32: return TYPE_U16;
+	case TYPE_S32: return TYPE_S16;
+	case TYPE_F16:
+	case TYPE_U16:
+	case TYPE_S16:
+		return type;
+	default:
+		assert(0);
+		return ~0;
+	}
 }
 
 /* some cat2 instructions (ie. those which are not float) can embed an
@@ -837,6 +869,15 @@ ir3_NOP(struct ir3_block *block)
 	return ir3_instr_create(block, 0, OPC_NOP);
 }
 
+#define INSTR0(CAT, name)                                                \
+static inline struct ir3_instruction *                                   \
+ir3_##name(struct ir3_block *block)                                      \
+{                                                                        \
+	struct ir3_instruction *instr =                                      \
+		ir3_instr_create(block, CAT, OPC_##name);                        \
+	return instr;                                                        \
+}
+
 #define INSTR1(CAT, name)                                                \
 static inline struct ir3_instruction *                                   \
 ir3_##name(struct ir3_block *block,                                      \
@@ -880,7 +921,10 @@ ir3_##name(struct ir3_block *block,                                      \
 }
 
 /* cat0 instructions: */
+INSTR0(0, BR);
+INSTR0(0, JUMP);
 INSTR1(0, KILL);
+INSTR0(0, END);
 
 /* cat2 instructions, most 2 src but some 1 src: */
 INSTR2(2, ADD_F)
