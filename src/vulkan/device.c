@@ -2210,7 +2210,7 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    /* Destroy all of the batch buffers */
    struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
-   while (bbo->prev_batch_bo) {
+   while (bbo) {
       struct anv_batch_bo *prev = bbo->prev_batch_bo;
       anv_batch_bo_destroy(bbo, device);
       bbo = prev;
@@ -2219,7 +2219,7 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    /* Destroy all of the surface state buffers */
    bbo = cmd_buffer->surface_batch_bo;
-   while (bbo->prev_batch_bo) {
+   while (bbo) {
       struct anv_batch_bo *prev = bbo->prev_batch_bo;
       anv_batch_bo_destroy(bbo, device);
       bbo = prev;
