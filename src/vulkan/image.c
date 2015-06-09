@@ -133,7 +133,7 @@ VkResult anv_image_create(
 
    if (info->has_stencil) {
       const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
-      image->stencil_offset = ALIGN_U32(image->size, 4096);
+      image->stencil_offset = ALIGN_U32(image->size, w_info->surface_alignment);
       image->stencil_stride = ALIGN_I32(image->extent.width, w_info->width);
       aligned_height = ALIGN_I32(image->extent.height, w_info->height);
       stencil_size = image->stencil_stride * aligned_height;
