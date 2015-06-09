@@ -687,6 +687,7 @@ anv_compiler_create(struct anv_device *device)
 void
 anv_compiler_destroy(struct anv_compiler *compiler)
 {
+   _mesa_free_errors_data(&compiler->brw->ctx);
    ralloc_free(compiler);
 }
 
