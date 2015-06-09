@@ -27,6 +27,7 @@
 #include "main/context.h"
 #include "main/condrender.h"
 #include "main/macros.h"
+#include "main/blit.h"
 #include "main/pixeltransfer.h"
 #include "main/imports.h"
 
@@ -52,19 +53,8 @@ regions_overlap(GLint srcx, GLint srcy,
                 GLfloat zoomX, GLfloat zoomY)
 {
    if (zoomX == 1.0 && zoomY == 1.0) {
-      /* no zoom */
-      if (srcx >= dstx + width || (srcx + width <= dstx)) {
-         return GL_FALSE;
-      }
-      else if (srcy < dsty) { /* this is OK */
-         return GL_FALSE;
-      }
-      else if (srcy > dsty + height) {
-         return GL_FALSE;
-      }
-      else {
-         return GL_TRUE;
-      }
+      return _mesa_regions_overlap(srcx, srcy, srcx + width, srcy + height,
+                                   dstx, dsty, dstx + width, dsty + height);
    }
    else {
       /* add one pixel of slop when zooming, just to be safe */
