@@ -313,6 +313,26 @@ struct anv_meta_state {
    } shared;
 };
 
+struct anv_queue {
+    struct anv_device *                         device;
+
+    struct anv_state_pool *                     pool;
+
+    /**
+     * Serial number of the most recently completed batch executed on the
+     * engine.
+     */
+    struct anv_state                            completed_serial;
+
+    /**
+     * The next batch submitted to the engine will be assigned this serial
+     * number.
+     */
+    uint32_t                                    next_serial;
+
+    uint32_t                                    last_collected_serial;
+};
+
 struct anv_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
@@ -336,29 +356,11 @@ struct anv_device {
     struct anv_state                            float_border_colors;
     struct anv_state                            uint32_border_colors;
 
+    struct anv_queue                            queue;
+
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
     pthread_mutex_t                             mutex;
-};
-
-struct anv_queue {
-    struct anv_device *                         device;
-
-    struct anv_state_pool *                     pool;
-
-    /**
-     * Serial number of the most recently completed batch executed on the
-     * engine.
-     */
-    struct anv_state                            completed_serial;
-
-    /**
-     * The next batch submitted to the engine will be assigned this serial
-     * number.
-     */
-    uint32_t                                    next_serial;
-
-    uint32_t                                    last_collected_serial;
 };
 
 void *

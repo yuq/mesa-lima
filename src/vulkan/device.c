@@ -303,6 +303,33 @@ parse_debug_flags(struct anv_device *device)
    }
 }
 
+static VkResult
+anv_queue_init(struct anv_device *device, struct anv_queue *queue)
+{
+   queue->device = device;
+   queue->pool = &device->surface_state_pool;
+
+   queue->completed_serial = anv_state_pool_alloc(queue->pool, 4, 4);
+   if (queue->completed_serial.map == NULL)
+      return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+
+   *(uint32_t *)queue->completed_serial.map = 0;
+   queue->next_serial = 1;
+
+   return VK_SUCCESS;
+}
+
+static void
+anv_queue_finish(struct anv_queue *queue)
+{
+#ifdef HAVE_VALGRIND
+   /* This gets torn down with the device so we only need to do this if
+    * valgrind is present.
+    */
+   anv_state_pool_free(queue->pool, queue->completed_serial);
+#endif
+}
+
 static void
 anv_device_init_border_colors(struct anv_device *device)
 {
@@ -384,6 +411,8 @@ VkResult anv_CreateDevice(
 
    pthread_mutex_init(&device->mutex, NULL);
 
+   anv_queue_init(device, &device->queue);
+
    anv_device_init_meta(device);
 
    anv_device_init_border_colors(device);
@@ -409,6 +438,8 @@ VkResult anv_DestroyDevice(
    return VK_UNSUPPORTED;
 
    anv_compiler_destroy(device->compiler);
+
+   anv_queue_finish(&device->queue);
 
    anv_device_finish_meta(device);
 
@@ -516,23 +547,10 @@ VkResult anv_GetDeviceQueue(
     VkQueue*                                    pQueue)
 {
    struct anv_device *device = (struct anv_device *) _device;
-   struct anv_queue *queue;
 
-   /* FIXME: Should allocate these at device create time. */
+   assert(queueIndex == 0);
 
-   queue = anv_device_alloc(device, sizeof(*queue), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (queue == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   queue->device = device;
-   queue->pool = &device->surface_state_pool;
-
-   queue->completed_serial = anv_state_pool_alloc(queue->pool, 4, 4);
-   *(uint32_t *)queue->completed_serial.map = 0;
-   queue->next_serial = 1;
-
-   *pQueue = (VkQueue) queue;
+   *pQueue = (VkQueue) &device->queue;
 
    return VK_SUCCESS;
 }
