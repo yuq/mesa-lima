@@ -381,48 +381,47 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    char *exts = dpy->ExtensionsString;
 
-   _EGL_CHECK_EXTENSION(MESA_drm_display);
-   _EGL_CHECK_EXTENSION(MESA_drm_image);
-   _EGL_CHECK_EXTENSION(MESA_configless_context);
-
-   _EGL_CHECK_EXTENSION(WL_bind_wayland_display);
-   _EGL_CHECK_EXTENSION(WL_create_wayland_buffer_from_image);
-
-   _EGL_CHECK_EXTENSION(KHR_image_base);
-   _EGL_CHECK_EXTENSION(KHR_image_pixmap);
-   if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
-      _eglAppendExtension(&exts, "EGL_KHR_image");
-
-   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
-   _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_2D_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_renderbuffer_image);
-
-   _EGL_CHECK_EXTENSION(KHR_reusable_sync);
-   _EGL_CHECK_EXTENSION(KHR_fence_sync);
-   _EGL_CHECK_EXTENSION(KHR_wait_sync);
-   _EGL_CHECK_EXTENSION(KHR_cl_event2);
-
-   _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
-   _EGL_CHECK_EXTENSION(KHR_create_context);
-
-   _EGL_CHECK_EXTENSION(NOK_swap_region);
-   _EGL_CHECK_EXTENSION(NOK_texture_from_pixmap);
-
+   /* Please keep these sorted alphabetically. */
    _EGL_CHECK_EXTENSION(ANDROID_image_native_buffer);
 
    _EGL_CHECK_EXTENSION(CHROMIUM_sync_control);
 
-   _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
    _EGL_CHECK_EXTENSION(EXT_buffer_age);
-   _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
+   _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import);
+   _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
+
+   _EGL_CHECK_EXTENSION(KHR_cl_event2);
+   _EGL_CHECK_EXTENSION(KHR_create_context);
+   _EGL_CHECK_EXTENSION(KHR_fence_sync);
+   _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
+   _EGL_CHECK_EXTENSION(KHR_gl_colorspace);
+   _EGL_CHECK_EXTENSION(KHR_gl_renderbuffer_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_2D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
+   if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
+      _eglAppendExtension(&exts, "EGL_KHR_image");
+   _EGL_CHECK_EXTENSION(KHR_image_base);
+   _EGL_CHECK_EXTENSION(KHR_image_pixmap);
+   _EGL_CHECK_EXTENSION(KHR_reusable_sync);
+   _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
+   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
+   _EGL_CHECK_EXTENSION(KHR_wait_sync);
+
+   _EGL_CHECK_EXTENSION(MESA_configless_context);
+   _EGL_CHECK_EXTENSION(MESA_drm_display);
+   _EGL_CHECK_EXTENSION(MESA_drm_image);
+   _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
+
+   _EGL_CHECK_EXTENSION(NOK_swap_region);
+   _EGL_CHECK_EXTENSION(NOK_texture_from_pixmap);
 
    _EGL_CHECK_EXTENSION(NV_post_sub_buffer);
 
-   _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
+   _EGL_CHECK_EXTENSION(WL_bind_wayland_display);
+   _EGL_CHECK_EXTENSION(WL_create_wayland_buffer_from_image);
+
 #undef _EGL_CHECK_EXTENSION
 }
 
