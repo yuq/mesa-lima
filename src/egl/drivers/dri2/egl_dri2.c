@@ -397,7 +397,7 @@ dri2_open_driver(_EGLDisplay *disp)
 
    dri2_dpy->driver = NULL;
    end = search_paths + strlen(search_paths);
-   for (p = search_paths; p < end && dri2_dpy->driver == NULL; p = next + 1) {
+   for (p = search_paths; p < end; p = next + 1) {
       int len;
       next = strchr(p, ':');
       if (next == NULL)
