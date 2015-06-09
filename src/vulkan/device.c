@@ -412,6 +412,16 @@ VkResult anv_DestroyDevice(
 
    anv_device_finish_meta(device);
 
+#ifdef HAVE_VALGRIND
+   /* We only need to free these to prevent valgrind errors.  The backing
+    * BO will go away in a couple of lines so we don't actually leak.
+    */
+   anv_state_pool_free(&device->dynamic_state_pool,
+                       device->float_border_colors);
+   anv_state_pool_free(&device->dynamic_state_pool,
+                       device->uint32_border_colors);
+#endif
+
    anv_bo_pool_finish(&device->batch_bo_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
