@@ -3422,7 +3422,7 @@ VkResult anv_CreateFramebuffer(
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
 
-   vkCreateDynamicViewportState((VkDevice) device,
+   anv_CreateDynamicViewportState((VkDevice) device,
       &(VkDynamicVpStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
          .viewportAndScissorCount = 1,
