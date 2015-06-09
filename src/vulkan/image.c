@@ -41,14 +41,27 @@ static const uint8_t anv_valign[] = {
     [16] = VALIGN16,
 };
 
-static const struct anv_tile_mode_info {
-   int32_t tile_width;
-   int32_t tile_height;
-} tile_mode_info[] = {
-   [LINEAR] = {   1,  1 },
-   [XMAJOR] = { 512,  8 },
-   [YMAJOR] = { 128, 32 },
-   [WMAJOR] = { 128, 32 }
+static const struct anv_tile_info {
+   uint32_t width;
+   uint32_t height;
+
+   /**
+    * Alignment for RENDER_SURFACE_STATE.SurfaceBaseAddress.
+    *
+    * To simplify calculations, the alignments defined in the table are
+    * sometimes larger than required.  For example, Skylake requires that X and
+    * Y tiled buffers be aligned to 4K, but Broadwell permits smaller
+    * alignment. We choose 4K to accomodate both chipsets.  The alignment of
+    * a linear buffer depends on its element type and usage. Linear depth
+    * buffers have the largest alignment, 64B, so we choose that for all linear
+    * buffers.
+    */
+   uint32_t surface_alignment;
+} anv_tile_info_table[] = {
+   [LINEAR] = {   1,  1,   64 },
+   [XMAJOR] = { 512,  8, 4096 },
+   [YMAJOR] = { 128, 32, 4096 },
+   [WMAJOR] = { 128, 32, 4096 },
 };
 
 VkResult anv_image_create(
@@ -96,27 +109,22 @@ VkResult anv_image_create(
    if (extra)
       image->tile_mode = extra->tile_mode;
 
+   const struct anv_tile_info *tile_info =
+       &anv_tile_info_table[image->tile_mode];
+
+   image->alignment = tile_info->surface_alignment;
+
    /* FINISHME: Stop hardcoding miptree image alignment */
    image->h_align = 4;
    image->v_align = 4;
-
-   if (image->tile_mode == LINEAR) {
-      /* Linear depth buffers must be 64 byte aligned, which is the strictest
-       * requirement for all kinds of linear surfaces.
-       */
-      image->alignment = 64;
-   } else {
-      image->alignment = 4096;
-   }
 
    info = anv_format_for_vk_format(pCreateInfo->format);
    assert(info->cpp > 0 || info->has_stencil);
 
    if (info->cpp > 0) {
       image->stride = ALIGN_I32(image->extent.width * info->cpp,
-                                tile_mode_info[image->tile_mode].tile_width);
-      aligned_height = ALIGN_I32(image->extent.height,
-                                 tile_mode_info[image->tile_mode].tile_height);
+                                tile_info->width);
+      aligned_height = ALIGN_I32(image->extent.height, tile_info->height);
       image->size = image->stride * aligned_height;
    } else {
       image->size = 0;
@@ -124,11 +132,10 @@ VkResult anv_image_create(
    }
 
    if (info->has_stencil) {
+      const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
       image->stencil_offset = ALIGN_U32(image->size, 4096);
-      image->stencil_stride = ALIGN_I32(image->extent.width,
-                                        tile_mode_info[WMAJOR].tile_width);
-      aligned_height = ALIGN_I32(image->extent.height,
-                                 tile_mode_info[WMAJOR].tile_height);
+      image->stencil_stride = ALIGN_I32(image->extent.width, w_info->width);
+      aligned_height = ALIGN_I32(image->extent.height, w_info->height);
       stencil_size = image->stencil_stride * aligned_height;
       image->size = image->stencil_offset + stencil_size;
    } else {
