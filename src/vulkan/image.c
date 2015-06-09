@@ -73,9 +73,16 @@ anv_image_choose_tile_mode(const VkImageCreateInfo *vk_info,
 
    switch (vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
+      if (unlikely(vk_info->format == VK_FORMAT_S8_UINT)) {
+         anv_abortf("requested linear stencil buffer");
+      }
       return LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
-      return YMAJOR;
+      if (unlikely(vk_info->format == VK_FORMAT_S8_UINT)) {
+         return WMAJOR;
+      } else {
+         return YMAJOR;
+      }
    default:
       assert(!"bad VKImageTiling");
       return LINEAR;
