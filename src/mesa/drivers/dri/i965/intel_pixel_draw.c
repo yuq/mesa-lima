@@ -78,6 +78,8 @@ do_blit_drawpixels(struct gl_context * ctx,
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
 
    mesa_format src_format = _mesa_format_from_format_and_type(format, type);
+   if (_mesa_format_is_mesa_array_format(src_format))
+      src_format = _mesa_format_from_array_format(src_format);
    mesa_format dst_format = irb->mt->format;
 
    /* We can safely discard sRGB encode/decode for the DrawPixels interface */
