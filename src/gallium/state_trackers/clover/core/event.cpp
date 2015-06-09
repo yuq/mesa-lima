@@ -44,19 +44,16 @@ event::trigger_self() {
    if (!--_wait_count)
       std::swap(_chain, evs);
 
+   cv.notify_all();
    return evs;
 }
 
 void
 event::trigger() {
-   auto evs = trigger_self();
-
-   if (signalled()) {
+   if (wait_count() == 1)
       action_ok(*this);
-      cv.notify_all();
-   }
 
-   for (event &ev : evs)
+   for (event &ev : trigger_self())
       ev.trigger();
 }
 
@@ -73,11 +70,9 @@ event::abort_self(cl_int status) {
 
 void
 event::abort(cl_int status) {
-   auto evs = abort_self(status);
-
    action_fail(*this);
 
-   for (event &ev : evs)
+   for (event &ev : abort_self(status))
       ev.abort(status);
 }
 
@@ -112,12 +107,17 @@ event::chain(event &ev) {
 }
 
 void
+event::wait_signalled() const {
+   std::unique_lock<std::mutex> lock(mutex);
+   cv.wait(lock, [=]{ return !_wait_count; });
+}
+
+void
 event::wait() const {
    for (event &ev : deps)
       ev.wait();
 
-   std::unique_lock<std::mutex> lock(mutex);
-   cv.wait(lock, [=]{ return !_wait_count; });
+   wait_signalled();
 }
 
 hard_event::hard_event(command_queue &q, cl_command_type command,
