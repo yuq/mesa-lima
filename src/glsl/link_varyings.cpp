@@ -128,7 +128,17 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
       return;
    }
 
-   if (input->data.interpolation != output->data.interpolation) {
+   /* GLSL >= 4.40 removes text requiring interpolation qualifiers
+    * to match cross stage, they must only match within the same stage.
+    *
+    * From page 84 (page 90 of the PDF) of the GLSL 4.40 spec:
+    *
+    *     "It is a link-time error if, within the same stage, the interpolation
+    *     qualifiers of variables of the same name do not match.
+    *
+    */
+   if (input->data.interpolation != output->data.interpolation &&
+       prog->Version < 440) {
       linker_error(prog,
                    "%s shader output `%s' specifies %s "
                    "interpolation qualifier, "
