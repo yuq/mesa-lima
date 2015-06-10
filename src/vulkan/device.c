@@ -659,6 +659,7 @@ anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 {
    assert(batch->start == bbo->bo.map);
    bbo->length = batch->next - batch->start;
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(batch->start, bbo->length));
    bbo->num_relocs = batch->relocs.num_relocs - bbo->first_reloc;
 }
 
@@ -3070,6 +3071,8 @@ anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                   dwords * 4, alignment);
    memcpy(state.map, a, dwords * 4);
 
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(state.map, dwords * 4));
+
    return state;
 }
 
@@ -3086,6 +3089,8 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
    p = state.map;
    for (uint32_t i = 0; i < dwords; i++)
       p[i] = a[i] | b[i];
+
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(p, dwords * 4));
 
    return state;
 }

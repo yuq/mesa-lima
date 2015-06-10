@@ -488,6 +488,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       };                                                                \
       void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       cmd ## _pack(batch, __dst, &__template);                          \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, (cmd ## _length) * 4));   \
    } while (0)
 
 #define anv_batch_emitn(batch, n, cmd, ...) ({          \
@@ -509,6 +510,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       dw = anv_batch_emit_dwords((batch), ARRAY_SIZE(dwords0));         \
       for (uint32_t i = 0; i < ARRAY_SIZE(dwords0); i++)                \
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\
    } while (0)
 
 #define GEN8_MOCS {                                     \
