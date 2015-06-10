@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
-
 if HAVE_LOADER_GALLIUM
 SUBDIRS := pipe-loader
 endif

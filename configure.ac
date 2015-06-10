@@ -44,7 +44,7 @@ AC_INIT([Mesa], [MESA_VERSION],
 AC_CONFIG_AUX_DIR([bin])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([foreign tar-ustar dist-xz])
+AM_INIT_AUTOMAKE([foreign tar-ustar dist-xz subdir-objects])
 
 dnl We only support native Windows builds (MinGW/MSVC) through SCons.
 case "$host_os" in

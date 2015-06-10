@@ -1,5 +1,3 @@
-AUTOMAKE_OPTIONS = subdir-objects
-
 include $(top_srcdir)/src/gallium/Automake.inc
 
 lib_LTLIBRARIES = lib@OPENCL_LIBNAME@.la
