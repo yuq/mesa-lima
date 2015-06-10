@@ -37,9 +37,6 @@
 #include "private.h"
 
 #ifdef HAVE_VALGRIND
-#include <valgrind.h>
-#include <memcheck.h>
-#define VG(x) x
 #define VG_NOACCESS_READ(__ptr) ({                       \
    VALGRIND_MAKE_MEM_DEFINED((__ptr), sizeof(*(__ptr))); \
    __typeof(*(__ptr)) __val = *(__ptr);                  \
@@ -52,7 +49,6 @@
    VALGRIND_MAKE_MEM_NOACCESS((__ptr), sizeof(*(__ptr)));   \
 })
 #else
-#define VG(x)
 #define VG_NOACCESS_READ(__ptr) (*(__ptr))
 #define VG_NOACCESS_WRITE(__ptr, __val) (*(__ptr) = (__val))
 #endif

@@ -32,14 +32,6 @@
 
 #include "private.h"
 
-#ifdef HAVE_VALGRIND
-#include <valgrind.h>
-#include <memcheck.h>
-#define VG(x) x
-#else
-#define VG(x)
-#endif
-
 #define VG_CLEAR(s) VG(memset(&s, 0, sizeof(s)))
 
 static int

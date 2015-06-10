@@ -30,6 +30,14 @@
 #include <assert.h>
 #include <i915_drm.h>
 
+#ifdef HAVE_VALGRIND
+#include <valgrind.h>
+#include <memcheck.h>
+#define VG(x) x
+#else
+#define VG(x)
+#endif
+
 #include "brw_device_info.h"
 #include "util/macros.h"
 
