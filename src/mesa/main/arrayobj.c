@@ -200,10 +200,6 @@ _mesa_reference_vao_(struct gl_context *ctx,
       mtx_lock(&oldObj->Mutex);
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
-#if 0
-      printf("ArrayObj %p %d DECR to %d\n",
-             (void *) oldObj, oldObj->Name, oldObj->RefCount);
-#endif
       deleteFlag = (oldObj->RefCount == 0);
       mtx_unlock(&oldObj->Mutex);
 
@@ -227,10 +223,6 @@ _mesa_reference_vao_(struct gl_context *ctx,
       }
       else {
          vao->RefCount++;
-#if 0
-         printf("ArrayObj %p %d INCR to %d\n",
-                (void *) vao, vao->Name, vao->RefCount);
-#endif
          *ptr = vao;
       }
       mtx_unlock(&vao->Mutex);

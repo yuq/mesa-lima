@@ -465,13 +465,6 @@ _mesa_reference_program_(struct gl_context *ctx,
       GLboolean deleteFlag;
 
       /*mtx_lock(&(*ptr)->Mutex);*/
-#if 0
-      printf("Program %p ID=%u Target=%s  Refcount-- to %d\n",
-             *ptr, (*ptr)->Id,
-             ((*ptr)->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              ((*ptr)->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
-             (*ptr)->RefCount - 1);
-#endif
       assert((*ptr)->RefCount > 0);
       (*ptr)->RefCount--;
 
@@ -490,13 +483,6 @@ _mesa_reference_program_(struct gl_context *ctx,
    if (prog) {
       /*mtx_lock(&prog->Mutex);*/
       prog->RefCount++;
-#if 0
-      printf("Program %p ID=%u Target=%s  Refcount++ to %d\n",
-             prog, prog->Id,
-             (prog->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              (prog->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
-             prog->RefCount);
-#endif
       /*mtx_unlock(&prog->Mutex);*/
    }
 

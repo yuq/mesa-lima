@@ -450,23 +450,10 @@ _mesa_reference_buffer_object_(struct gl_context *ctx,
       mtx_lock(&oldObj->Mutex);
       assert(oldObj->RefCount > 0);
       oldObj->RefCount--;
-#if 0
-      printf("BufferObj %p %d DECR to %d\n",
-             (void *) oldObj, oldObj->Name, oldObj->RefCount);
-#endif
       deleteFlag = (oldObj->RefCount == 0);
       mtx_unlock(&oldObj->Mutex);
 
       if (deleteFlag) {
-
-         /* some sanity checking: don't delete a buffer still in use */
-#if 0
-         /* unfortunately, these tests are invalid during context tear-down */
-	 assert(ctx->Array.ArrayBufferObj != bufObj);
-	 assert(ctx->Array.VAO->IndexBufferObj != bufObj);
-	 assert(ctx->Array.VAO->Vertex.BufferObj != bufObj);
-#endif
-
 	 assert(ctx->Driver.DeleteBuffer);
          ctx->Driver.DeleteBuffer(ctx, oldObj);
       }
@@ -486,10 +473,6 @@ _mesa_reference_buffer_object_(struct gl_context *ctx,
       }
       else {
          bufObj->RefCount++;
-#if 0
-         printf("BufferObj %p %d INCR to %d\n",
-                (void *) bufObj, bufObj->Name, bufObj->RefCount);
-#endif
          *ptr = bufObj;
       }
       mtx_unlock(&bufObj->Mutex);

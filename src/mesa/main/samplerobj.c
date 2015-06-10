@@ -91,10 +91,6 @@ _mesa_reference_sampler_object_(struct gl_context *ctx,
       /*mtx_lock(&oldSamp->Mutex);*/
       assert(oldSamp->RefCount > 0);
       oldSamp->RefCount--;
-#if 0
-      printf("SamplerObj %p %d DECR to %d\n",
-             (void *) oldSamp, oldSamp->Name, oldSamp->RefCount);
-#endif
       deleteFlag = (oldSamp->RefCount == 0);
       /*mtx_unlock(&oldSamp->Mutex);*/
 
@@ -118,10 +114,6 @@ _mesa_reference_sampler_object_(struct gl_context *ctx,
       }
       else {
          samp->RefCount++;
-#if 0
-         printf("SamplerObj %p %d INCR to %d\n",
-                (void *) samp, samp->Name, samp->RefCount);
-#endif
          *ptr = samp;
       }
       /*mtx_unlock(&samp->Mutex);*/
