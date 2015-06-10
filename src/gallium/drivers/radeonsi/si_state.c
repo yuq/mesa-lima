@@ -3190,10 +3190,10 @@ static void si_init_config(struct si_context *sctx)
 			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x0000002a);
 			break;
 		case CHIP_ICELAND:
-		case CHIP_CARRIZO:
 			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000002);
 			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
 			break;
+		case CHIP_CARRIZO:
 		case CHIP_KAVERI:
 			if (num_rb > 1)
 				si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000002);
