@@ -1599,7 +1599,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    bool is_cube_array = instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
                         instr->is_array;
 
-   int lod_components = 0, offset_components = 0;
+   int lod_components = 0;
+   int UNUSED offset_components = 0;
 
    fs_reg coordinate, shadow_comparitor, lod, lod2, sample_index, mcs, tex_offset;
 
