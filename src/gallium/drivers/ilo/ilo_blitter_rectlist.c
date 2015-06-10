@@ -25,7 +25,6 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "core/ilo_state_3d.h"
 #include "util/u_draw.h"
 #include "util/u_pack_color.h"
 

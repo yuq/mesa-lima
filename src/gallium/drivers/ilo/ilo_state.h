@@ -28,7 +28,6 @@
 #ifndef ILO_STATE_H
 #define ILO_STATE_H
 
-#include "core/ilo_state_3d.h"
 #include "core/ilo_state_cc.h"
 #include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
@@ -44,6 +43,19 @@
 #include "util/u_dynarray.h"
 
 #include "ilo_common.h"
+
+/**
+ * \see brw_context.h
+ */
+#define ILO_MAX_DRAW_BUFFERS    8
+#define ILO_MAX_CONST_BUFFERS   (1 + 12)
+#define ILO_MAX_SAMPLER_VIEWS   16
+#define ILO_MAX_SAMPLERS        16
+#define ILO_MAX_SO_BINDINGS     64
+#define ILO_MAX_SO_BUFFERS      4
+#define ILO_MAX_VIEWPORTS       1
+
+#define ILO_MAX_SURFACES        256
 
 /**
  * States that we track.
@@ -131,6 +143,7 @@ enum ilo_dirty_flags {
 };
 
 struct ilo_context;
+struct ilo_shader_state;
 
 struct ilo_ve_state {
    unsigned vb_mapping[PIPE_MAX_ATTRIBS];
@@ -141,6 +154,24 @@ struct ilo_ve_state {
    uint32_t vf_data[PIPE_MAX_ATTRIBS][2];
    struct ilo_state_vf_params_info vf_params;
    struct ilo_state_vf vf;
+};
+
+struct ilo_vb_state {
+   struct pipe_vertex_buffer states[PIPE_MAX_ATTRIBS];
+   uint32_t enabled_mask;
+};
+
+struct ilo_ib_state {
+   struct pipe_resource *buffer;
+   const void *user_buffer;
+   unsigned offset;
+   unsigned index_size;
+
+   /* these are not valid until the state is finalized */
+   struct pipe_resource *hw_resource;
+   unsigned hw_index_size;
+   /* an offset to be added to pipe_draw_info::start */
+   int64_t draw_start_offset;
 };
 
 struct ilo_cbuf_cso {
@@ -188,6 +219,14 @@ struct ilo_view_state {
    unsigned count;
 };
 
+struct ilo_so_state {
+   struct pipe_stream_output_target *states[ILO_MAX_SO_BUFFERS];
+   unsigned count;
+   unsigned append_bitmask;
+
+   bool enabled;
+};
+
 struct ilo_rasterizer_state {
    struct pipe_rasterizer_state state;
 
@@ -206,6 +245,39 @@ struct ilo_viewport_state {
 
    struct ilo_state_viewport vp;
    uint32_t vp_data[20 * ILO_MAX_VIEWPORTS];
+};
+
+struct ilo_surface_cso {
+   struct pipe_surface base;
+
+   bool is_rt;
+   union {
+      struct ilo_state_surface rt;
+      struct ilo_state_zs zs;
+   } u;
+};
+
+struct ilo_fb_state {
+   struct pipe_framebuffer_state state;
+
+   struct ilo_state_surface null_rt;
+   struct ilo_state_zs null_zs;
+
+   struct ilo_fb_blend_caps {
+      bool is_unorm;
+      bool is_integer;
+      bool force_dst_alpha_one;
+
+      bool can_logicop;
+      bool can_blend;
+      bool can_alpha_test;
+   } blend_caps[PIPE_MAX_COLOR_BUFS];
+
+   unsigned num_samples;
+
+   bool has_integer_rt;
+   bool has_hiz;
+   enum gen_depth_format depth_offset_format;
 };
 
 struct ilo_dsa_state {

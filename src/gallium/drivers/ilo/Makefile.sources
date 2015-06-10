@@ -20,8 +20,6 @@ C_SOURCES := \
 	core/ilo_fence.h \
 	core/ilo_image.c \
 	core/ilo_image.h \
-	core/ilo_state_3d.h \
-	core/ilo_state_3d_bottom.c \
 	core/ilo_state_cc.c \
 	core/ilo_state_cc.h \
 	core/ilo_state_raster.c \

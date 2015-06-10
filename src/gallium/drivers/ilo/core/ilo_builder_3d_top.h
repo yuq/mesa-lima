@@ -30,11 +30,11 @@
 
 #include "genhw/genhw.h"
 #include "../ilo_resource.h"
+#include "../ilo_state.h"
 #include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
-#include "ilo_state_3d.h"
 #include "ilo_state_sampler.h"
 #include "ilo_state_shader.h"
 #include "ilo_state_sol.h"
