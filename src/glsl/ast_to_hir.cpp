@@ -5847,6 +5847,17 @@ ast_interface_block::hir(exec_list *instructions,
          const glsl_type *block_array_type =
             process_array_type(&loc, block_type, this->array_specifier, state);
 
+          /* From section 4.3.9 (Interface Blocks) of the GLSL ES 3.10 spec:
+          *
+          *     * Arrays of arrays of blocks are not allowed
+          */
+         if (state->es_shader && block_array_type->is_array() &&
+             block_array_type->fields.array->is_array()) {
+            _mesa_glsl_error(&loc, state,
+                             "arrays of arrays interface blocks are "
+                             "not allowed");
+         }
+
          var = new(state) ir_variable(block_array_type,
                                       this->instance_name,
                                       var_mode);
