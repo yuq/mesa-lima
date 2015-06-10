@@ -3143,6 +3143,7 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 
 static void si_init_config(struct si_context *sctx)
 {
+	unsigned num_rb = sctx->screen->b.info.r600_num_backends;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
 	if (pm4 == NULL)
@@ -3194,14 +3195,17 @@ static void si_init_config(struct si_context *sctx)
 			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
 			break;
 		case CHIP_KAVERI:
-			/* XXX todo */
+			if (num_rb > 1)
+				si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000002);
+			else
+				si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000000);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
+			break;
 		case CHIP_KABINI:
-			/* XXX todo */
 		case CHIP_MULLINS:
-			/* XXX todo */
 		default:
-			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0);
-			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0);
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG, 0x00000000);
+			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1, 0x00000000);
 			break;
 		}
 	} else {
