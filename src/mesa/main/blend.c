@@ -930,12 +930,10 @@ void _mesa_init_color( struct gl_context * ctx )
    ctx->Color._ClampFragmentColor = GL_FALSE;
    ctx->Color.ClampReadColor = GL_FIXED_ONLY_ARB;
 
-   if (ctx->API == API_OPENGLES2) {
-      /* GLES 3 behaves as though GL_FRAMEBUFFER_SRGB is always enabled. */
-      ctx->Color.sRGBEnabled = GL_TRUE;
-   } else {
-      ctx->Color.sRGBEnabled = GL_FALSE;
-   }
+   /* GLES 1/2/3 behaves as though GL_FRAMEBUFFER_SRGB is always enabled
+    * if EGL_KHR_gl_colorspace has been used to request sRGB.
+    */
+   ctx->Color.sRGBEnabled = _mesa_is_gles(ctx);
 }
 
 /*@}*/
