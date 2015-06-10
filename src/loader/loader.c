@@ -128,26 +128,36 @@ static void *udev_handle = NULL;
 static void *
 udev_dlopen_handle(void)
 {
-   if (!udev_handle) {
-      udev_handle = dlopen("libudev.so.1", RTLD_LOCAL | RTLD_LAZY);
+   char name[80];
+   unsigned flags = RTLD_NOLOAD | RTLD_LOCAL | RTLD_LAZY;
+   int version;
 
-      if (!udev_handle) {
-         /* libudev.so.1 changed the return types of the two unref functions
-          * from voids to pointers.  We don't use those return values, and the
-          * only ABI I've heard that cares about this kind of change (calling
-          * a function with a void * return that actually only returns void)
-          * might be ia64.
-          */
-         udev_handle = dlopen("libudev.so.0", RTLD_LOCAL | RTLD_LAZY);
+   /* libudev.so.1 changed the return types of the two unref functions
+    * from voids to pointers.  We don't use those return values, and the
+    * only ABI I've heard that cares about this kind of change (calling
+    * a function with a void * return that actually only returns void)
+    * might be ia64.
+    */
 
-         if (!udev_handle) {
-            log_(_LOADER_WARNING, "Couldn't dlopen libudev.so.1 or "
-                 "libudev.so.0, driver detection may be broken.\n");
-         }
+   /* First try opening an already linked libudev, then try loading one */
+   do {
+      for (version = 1; version >= 0; version--) {
+         snprintf(name, sizeof(name), "libudev.so.%d", version);
+         udev_handle = dlopen(name, flags);
+         if (udev_handle)
+            return udev_handle;
       }
-   }
 
-   return udev_handle;
+      if ((flags & RTLD_NOLOAD) == 0)
+         break;
+
+      flags &= ~RTLD_NOLOAD;
+   } while (1);
+
+   log_(_LOADER_WARNING,
+        "Couldn't dlopen libudev.so.1 or "
+        "libudev.so.0, driver detection may be broken.\n");
+   return NULL;
 }
 
 static int dlsym_failed = 0;
