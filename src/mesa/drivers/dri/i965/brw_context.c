@@ -442,6 +442,13 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.LineWidthGranularity = 0.5;
    }
 
+   /* For non-antialiased lines, we have to round the line width to the
+    * nearest whole number. Make sure that we don't advertise a line
+    * width that, when rounded, will be beyond the actual hardware
+    * maximum.
+    */
+   assert(roundf(ctx->Const.MaxLineWidth) <= ctx->Const.MaxLineWidth);
+
    ctx->Const.MinPointSize = 1.0;
    ctx->Const.MinPointSizeAA = 1.0;
    ctx->Const.MaxPointSize = 255.0;

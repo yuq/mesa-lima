@@ -192,11 +192,7 @@ upload_sf_state(struct brw_context *brw)
 
    /* _NEW_LINE */
    {
-      /* OpenGL dictates that line width should be rounded to the nearest
-       * integer
-       */
-      float line_width =
-         roundf(CLAMP(ctx->Line.Width, 0.0, ctx->Const.MaxLineWidth));
+      float line_width = brw_get_line_width(brw);
       uint32_t line_width_u3_7 = U_FIXED(line_width, 7);
       /* Line width of 0 is not allowed when MSAA enabled */
       if (ctx->Multisample._Enabled) {

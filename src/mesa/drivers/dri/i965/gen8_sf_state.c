@@ -154,11 +154,7 @@ upload_sf(struct brw_context *brw)
        dw1 |= GEN6_SF_VIEWPORT_TRANSFORM_ENABLE;
 
    /* _NEW_LINE */
-   /* OpenGL dictates that line width should be rounded to the nearest
-    * integer
-    */
-   float line_width =
-      roundf(CLAMP(ctx->Line.Width, 0.0, ctx->Const.MaxLineWidth));
+   float line_width = brw_get_line_width(brw);
    uint32_t line_width_u3_7 = U_FIXED(line_width, 7);
    if (line_width_u3_7 == 0)
       line_width_u3_7 = 1;
