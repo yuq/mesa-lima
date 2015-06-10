@@ -1437,6 +1437,11 @@ typedef struct __DRIDriverVtableExtensionRec {
 #define __DRI2_RENDERER_OPENGL_COMPATIBILITY_PROFILE_VERSION  0x0008
 #define __DRI2_RENDERER_OPENGL_ES_PROFILE_VERSION             0x0009
 #define __DRI2_RENDERER_OPENGL_ES2_PROFILE_VERSION            0x000a
+#define __DRI2_RENDERER_HAS_TEXTURE_3D                        0x000b
+/* Whether there is an sRGB format support for every supported 32-bit UNORM
+ * color format.
+ */
+#define __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB                  0x000c
 
 typedef struct __DRI2rendererQueryExtensionRec __DRI2rendererQueryExtension;
 struct __DRI2rendererQueryExtensionRec {

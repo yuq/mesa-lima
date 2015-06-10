@@ -525,6 +525,19 @@ dri2_load_driver_swrast(_EGLDisplay *disp)
    return EGL_TRUE;
 }
 
+static unsigned
+dri2_renderer_query_integer(struct dri2_egl_display *dri2_dpy, int param)
+{
+   const __DRI2rendererQueryExtension *rendererQuery = dri2_dpy->rendererQuery;
+   unsigned int value = 0;
+
+   if (!rendererQuery ||
+       rendererQuery->queryInteger(dri2_dpy->dri_screen, param, &value) == -1)
+      return 0;
+
+   return value;
+}
+
 void
 dri2_setup_screen(_EGLDisplay *disp)
 {
@@ -554,6 +567,10 @@ dri2_setup_screen(_EGLDisplay *disp)
    assert(dri2_dpy->dri2 || dri2_dpy->swrast);
    disp->Extensions.KHR_surfaceless_context = EGL_TRUE;
    disp->Extensions.MESA_configless_context = EGL_TRUE;
+
+   if (dri2_renderer_query_integer(dri2_dpy,
+                                   __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))
+      disp->Extensions.KHR_gl_colorspace = EGL_TRUE;
 
    if (dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) {
       disp->Extensions.KHR_create_context = EGL_TRUE;
@@ -592,6 +609,9 @@ dri2_setup_screen(_EGLDisplay *disp)
          disp->Extensions.KHR_gl_texture_2D_image = EGL_TRUE;
          disp->Extensions.KHR_gl_texture_cubemap_image = EGL_TRUE;
       }
+      if (dri2_renderer_query_integer(dri2_dpy,
+                                      __DRI2_RENDERER_HAS_TEXTURE_3D))
+         disp->Extensions.KHR_gl_texture_3D_image = EGL_TRUE;
 #ifdef HAVE_LIBDRM
       if (dri2_dpy->image->base.version >= 8 &&
           dri2_dpy->image->createImageFromDmaBufs) {
@@ -668,6 +688,9 @@ dri2_create_screen(_EGLDisplay *disp)
       }
       if (strcmp(extensions[i]->name, __DRI2_FENCE) == 0) {
          dri2_dpy->fence = (__DRI2fenceExtension *) extensions[i];
+      }
+      if (strcmp(extensions[i]->name, __DRI2_RENDERER_QUERY) == 0) {
+         dri2_dpy->rendererQuery = (__DRI2rendererQueryExtension *) extensions[i];
       }
    }
 

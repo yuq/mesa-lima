@@ -166,6 +166,7 @@ struct dri2_egl_display
    const __DRIrobustnessExtension *robustness;
    const __DRI2configQueryExtension *config;
    const __DRI2fenceExtension *fence;
+   const __DRI2rendererQueryExtension *rendererQuery;
    int                       fd;
 
    int                       own_device;
