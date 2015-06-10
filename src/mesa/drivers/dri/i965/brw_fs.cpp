@@ -3234,7 +3234,7 @@ fs_visitor::lower_integer_multiplication()
          ibld.ADD(dst, low, high);
 
          if (inst->conditional_mod) {
-            fs_reg null(retype(brw_null_reg(), inst->dst.type));
+            fs_reg null(retype(ibld.null_reg_f(), inst->dst.type));
             set_condmod(inst->conditional_mod,
                         ibld.MOV(null, inst->dst));
          }
