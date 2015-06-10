@@ -814,10 +814,10 @@ reloc_tex(struct vc4_exec_info *exec,
 	uint32_t p3 = (sample->p_offset[3] != ~0 ?
 		       *(uint32_t *)(uniform_data_u + sample->p_offset[3]) : 0);
 	uint32_t *validated_p0 = exec->uniforms_v + sample->p_offset[0];
-	uint32_t offset = p0 & ~0xfff;
-	uint32_t miplevels = (p0 & 15);
-	uint32_t width = (p1 >> 8) & 2047;
-	uint32_t height = (p1 >> 20) & 2047;
+	uint32_t offset = p0 & VC4_TEX_P0_OFFSET_MASK;
+	uint32_t miplevels = VC4_GET_FIELD(p0, VC4_TEX_P0_MIPLVLS);
+	uint32_t width = VC4_GET_FIELD(p1, VC4_TEX_P1_WIDTH);
+	uint32_t height = VC4_GET_FIELD(p1, VC4_TEX_P1_HEIGHT);
 	uint32_t cpp, tiling_format, utile_w, utile_h;
 	uint32_t i;
 	uint32_t cube_map_stride = 0;
@@ -845,16 +845,18 @@ reloc_tex(struct vc4_exec_info *exec,
 	if (height == 0)
 		height = 2048;
 
-	if (p0 & (1 << 9)) {
-		if ((p2 & (3 << 30)) == (1 << 30))
-			cube_map_stride = p2 & 0x3ffff000;
-		if ((p3 & (3 << 30)) == (1 << 30)) {
+	if (p0 & VC4_TEX_P0_CMMODE_MASK) {
+		if (VC4_GET_FIELD(p2, VC4_TEX_P2_PTYPE) ==
+		    VC4_TEX_P2_PTYPE_CUBE_MAP_STRIDE)
+			cube_map_stride = p2 & VC4_TEX_P2_CMST_MASK;
+		if (VC4_GET_FIELD(p3, VC4_TEX_P2_PTYPE) ==
+		    VC4_TEX_P2_PTYPE_CUBE_MAP_STRIDE) {
 			if (cube_map_stride) {
 				DRM_ERROR("Cube map stride set twice\n");
 				return false;
 			}
 
-			cube_map_stride = p3 & 0x3ffff000;
+			cube_map_stride = p3 & VC4_TEX_P2_CMST_MASK;
 		}
 		if (!cube_map_stride) {
 			DRM_ERROR("Cube map stride not set\n");
@@ -862,7 +864,8 @@ reloc_tex(struct vc4_exec_info *exec,
 		}
 	}
 
-	type = ((p0 >> 4) & 15) | ((p1 >> 31) << 4);
+	type = (VC4_GET_FIELD(p0, VC4_TEX_P0_TYPE) |
+		(VC4_GET_FIELD(p1, VC4_TEX_P1_TYPE4) << 4));
 
 	switch (type) {
 	case VC4_TEXTURE_TYPE_RGBA8888:
