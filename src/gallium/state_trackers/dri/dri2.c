@@ -1483,7 +1483,7 @@ dri2_init_screen(__DRIscreen * sPriv)
       }
    }
 
-   if (pscreen->get_param(pscreen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY)) {
+   if (pscreen && pscreen->get_param(pscreen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY)) {
       sPriv->extensions = dri_robust_screen_extensions;
       screen->has_reset_status_query = true;
    }
