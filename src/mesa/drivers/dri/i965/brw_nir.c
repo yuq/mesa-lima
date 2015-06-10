@@ -167,6 +167,12 @@ brw_create_nir(struct brw_context *brw,
    nir_validate_shader(nir);
 
    if (unlikely(debug_enabled)) {
+      /* Re-index SSA defs so we print more sensible numbers. */
+      nir_foreach_overload(nir, overload) {
+         if (overload->impl)
+            nir_index_ssa_defs(overload->impl);
+      }
+
       fprintf(stderr, "NIR (SSA form) for %s shader:\n",
               _mesa_shader_stage_to_string(stage));
       nir_print_shader(nir, stderr);
