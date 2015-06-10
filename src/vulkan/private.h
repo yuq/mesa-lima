@@ -34,6 +34,7 @@
 #include <valgrind.h>
 #include <memcheck.h>
 #define VG(x) x
+#define __gen_validate_value(x) VALGRIND_CHECK_MEM_IS_DEFINED(&(x), sizeof(x))
 #else
 #define VG(x)
 #endif
@@ -488,7 +489,6 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       };                                                                \
       void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       cmd ## _pack(batch, __dst, &__template);                          \
-      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, (cmd ## _length) * 4));   \
    } while (0)
 
 #define anv_batch_emitn(batch, n, cmd, ...) ({          \
