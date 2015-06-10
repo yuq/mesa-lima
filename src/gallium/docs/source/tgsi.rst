@@ -2965,6 +2965,18 @@ resource can be one of BUFFER, 1D, 2D, 3D, 1DArray and 2DArray.
 type must be 1 or 4 entries (if specifying on a per-component
 level) out of UNORM, SNORM, SINT, UINT and FLOAT.
 
+For TEX\* style texture sample opcodes (as opposed to SAMPLE\* opcodes
+which take an explicit SVIEW[#] source register), there may be optionally
+SVIEW[#] declarations.  In this case, the SVIEW index is implied by the
+SAMP index, and there must be a corresponding SVIEW[#] declaration for
+each SAMP[#] declaration.  Drivers are free to ignore this if they wish.
+But note in particular that some drivers need to know the sampler type
+(float/int/unsigned) in order to generate the correct code, so cases
+where integer textures are sampled, SVIEW[#] declarations should be
+used.
+
+NOTE: It is NOT legal to mix SAMPLE\* style opcodes and TEX\* opcodes
+in the same shader.
 
 Declaration Resource
 ^^^^^^^^^^^^^^^^^^^^
