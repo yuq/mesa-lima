@@ -26,87 +26,7 @@
 #include "util/u_blitter.h"
 #include "vc4_context.h"
 
-static void
-vc4_tile_blit_color_rcl(struct vc4_context *vc4,
-                        struct vc4_surface *dst_surf,
-                        struct vc4_surface *src_surf)
-{
-        struct vc4_resource *src = vc4_resource(src_surf->base.texture);
-        struct vc4_resource *dst = vc4_resource(dst_surf->base.texture);
-
-        uint32_t min_x_tile = 0;
-        uint32_t min_y_tile = 0;
-        uint32_t max_x_tile = (dst_surf->base.width - 1) / 64;
-        uint32_t max_y_tile = (dst_surf->base.height - 1) / 64;
-        uint32_t xtiles = max_x_tile - min_x_tile + 1;
-        uint32_t ytiles = max_y_tile - min_y_tile + 1;
-        cl_ensure_space(&vc4->rcl,
-                        (VC4_PACKET_TILE_RENDERING_MODE_CONFIG_SIZE +
-                         VC4_PACKET_GEM_HANDLES_SIZE) +
-                        xtiles * ytiles * ((VC4_PACKET_LOAD_TILE_BUFFER_GENERAL_SIZE +
-                                            VC4_PACKET_GEM_HANDLES_SIZE) * 2 +
-                                           VC4_PACKET_TILE_COORDINATES_SIZE));
-        cl_ensure_space(&vc4->bo_handles, 2 * sizeof(uint32_t));
-        cl_ensure_space(&vc4->bo_pointers, 2 * sizeof(struct vc4_bo *));
-
-        cl_start_reloc(&vc4->rcl, 1);
-        cl_u8(&vc4->rcl, VC4_PACKET_TILE_RENDERING_MODE_CONFIG);
-        cl_reloc(vc4, &vc4->rcl, dst->bo, dst_surf->offset);
-        cl_u16(&vc4->rcl, dst_surf->base.width);
-        cl_u16(&vc4->rcl, dst_surf->base.height);
-        cl_u16(&vc4->rcl,
-               VC4_SET_FIELD(dst_surf->tiling,
-                             VC4_RENDER_CONFIG_MEMORY_FORMAT) |
-               VC4_SET_FIELD(vc4_rt_format_is_565(dst_surf->base.format) ?
-                             VC4_RENDER_CONFIG_FORMAT_BGR565 :
-                             VC4_RENDER_CONFIG_FORMAT_RGBA8888,
-                             VC4_RENDER_CONFIG_FORMAT));
-
-        uint32_t src_hindex = vc4_gem_hindex(vc4, src->bo);
-
-        for (int y = min_y_tile; y <= max_y_tile; y++) {
-                for (int x = min_x_tile; x <= max_x_tile; x++) {
-                        bool end_of_frame = (x == max_x_tile &&
-                                             y == max_y_tile);
-
-                        cl_start_reloc(&vc4->rcl, 1);
-                        cl_u8(&vc4->rcl, VC4_PACKET_LOAD_TILE_BUFFER_GENERAL);
-                        cl_u16(&vc4->rcl,
-                               VC4_SET_FIELD(VC4_LOADSTORE_TILE_BUFFER_COLOR,
-                                             VC4_LOADSTORE_TILE_BUFFER_BUFFER) |
-                               VC4_SET_FIELD(src_surf->tiling,
-                                             VC4_LOADSTORE_TILE_BUFFER_TILING) |
-                               VC4_SET_FIELD(vc4_rt_format_is_565(src_surf->base.format) ?
-                                             VC4_LOADSTORE_TILE_BUFFER_BGR565 :
-                                             VC4_LOADSTORE_TILE_BUFFER_RGBA8888,
-                                             VC4_LOADSTORE_TILE_BUFFER_FORMAT));
-                        cl_reloc_hindex(&vc4->rcl, src_hindex,
-                                        src_surf->offset);
-
-                        cl_u8(&vc4->rcl, VC4_PACKET_TILE_COORDINATES);
-                        cl_u8(&vc4->rcl, x);
-                        cl_u8(&vc4->rcl, y);
-
-                        if (end_of_frame) {
-                                cl_u8(&vc4->rcl,
-                                      VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF);
-                        } else {
-                                cl_u8(&vc4->rcl,
-                                      VC4_PACKET_STORE_MS_TILE_BUFFER);
-                        }
-                }
-        }
-
-        vc4->draw_min_x = 0;
-        vc4->draw_min_y = 0;
-        vc4->draw_max_x = dst_surf->base.width;
-        vc4->draw_max_y = dst_surf->base.height;
-
-        dst->writes++;
-        vc4->needs_flush = true;
-}
-
-static struct vc4_surface *
+static struct pipe_surface *
 vc4_get_blit_surface(struct pipe_context *pctx,
                      struct pipe_resource *prsc, unsigned level)
 {
@@ -118,7 +38,7 @@ vc4_get_blit_surface(struct pipe_context *pctx,
         tmpl.u.tex.first_layer = 0;
         tmpl.u.tex.last_layer = 0;
 
-        return vc4_surface(pctx->create_surface(pctx, prsc, &tmpl));
+        return pctx->create_surface(pctx, prsc, &tmpl);
 }
 
 static bool
@@ -142,17 +62,28 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         if (info->dst.resource->format != info->src.resource->format)
                 return false;
 
-        struct vc4_surface *dst_surf =
+        vc4_flush(pctx);
+
+        struct pipe_surface *dst_surf =
                 vc4_get_blit_surface(pctx, info->dst.resource, info->dst.level);
-        struct vc4_surface *src_surf =
+        struct pipe_surface *src_surf =
                 vc4_get_blit_surface(pctx, info->src.resource, info->src.level);
 
-        vc4_flush(pctx);
-        vc4_tile_blit_color_rcl(vc4, dst_surf, src_surf);
+        pipe_surface_reference(&vc4->color_read, src_surf);
+        pipe_surface_reference(&vc4->color_write, dst_surf);
+        pipe_surface_reference(&vc4->zs_read, NULL);
+        pipe_surface_reference(&vc4->zs_write, NULL);
+        vc4->draw_min_x = 0;
+        vc4->draw_min_y = 0;
+        vc4->draw_max_x = dst_surf->width;
+        vc4->draw_max_y = dst_surf->height;
+        vc4->draw_width = dst_surf->width;
+        vc4->draw_height = dst_surf->height;
+        vc4->needs_flush = true;
         vc4_job_submit(vc4);
 
-        pctx->surface_destroy(pctx, &dst_surf->base);
-        pctx->surface_destroy(pctx, &src_surf->base);
+        pipe_surface_reference(&dst_surf, NULL);
+        pipe_surface_reference(&src_surf, NULL);
 
         return true;
 }

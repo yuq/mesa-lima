@@ -129,6 +129,8 @@ vc4_start_draw(struct vc4_context *vc4)
 
         vc4->needs_flush = true;
         vc4->draw_call_queued = true;
+        vc4->draw_width = width;
+        vc4->draw_height = height;
 }
 
 static void

@@ -2,6 +2,7 @@ C_SOURCES := \
 	kernel/vc4_drv.h \
 	kernel/vc4_gem.c \
 	kernel/vc4_packet.h \
+	kernel/vc4_render_cl.c \
 	kernel/vc4_validate.c \
 	kernel/vc4_validate_shaders.c \
 	vc4_blit.c \
