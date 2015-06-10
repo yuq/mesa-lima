@@ -26,7 +26,7 @@
 #define VC4_RESOURCE_H
 
 #include "vc4_screen.h"
-#include "vc4_packet.h"
+#include "kernel/vc4_packet.h"
 #include "util/u_transfer.h"
 
 struct vc4_transfer {
