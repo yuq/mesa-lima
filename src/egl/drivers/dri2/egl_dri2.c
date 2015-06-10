@@ -28,6 +28,7 @@
 #define WL_HIDE_DEPRECATED
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -109,6 +110,18 @@ EGLint dri2_to_egl_attribute_map[] = {
    0,				/* __DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE */
 };
 
+const __DRIconfig *
+dri2_get_dri_config(struct dri2_egl_config *conf, EGLint surface_type,
+                    EGLenum colorspace)
+{
+   if (colorspace == EGL_GL_COLORSPACE_SRGB_KHR)
+      return surface_type == EGL_WINDOW_BIT ? conf->dri_srgb_double_config :
+                                              conf->dri_srgb_single_config;
+   else
+      return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config :
+                                              conf->dri_single_config;
+}
+
 static EGLBoolean
 dri2_match_config(const _EGLConfig *conf, const _EGLConfig *criteria)
 {
@@ -130,6 +143,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    struct dri2_egl_display *dri2_dpy;
    _EGLConfig base;
    unsigned int attrib, value, double_buffer;
+   bool srgb = false;
    EGLint key, bind_to_texture_rgb, bind_to_texture_rgba;
    unsigned int dri_masks[4] = { 0, 0, 0, 0 };
    _EGLConfig *matching_config;
@@ -204,6 +218,10 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
             return NULL;
          break;
 
+      case __DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE:
+         srgb = value != 0;
+         break;
+
       default:
 	 key = dri2_to_egl_attribute_map[attrib];
 	 if (key != 0)
@@ -249,28 +267,35 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    if (num_configs == 1) {
       conf = (struct dri2_egl_config *) matching_config;
 
-      if (double_buffer && !conf->dri_double_config)
+      if (double_buffer && srgb && !conf->dri_srgb_double_config)
+         conf->dri_srgb_double_config = dri_config;
+      else if (double_buffer && !srgb && !conf->dri_double_config)
          conf->dri_double_config = dri_config;
-      else if (!double_buffer && !conf->dri_single_config)
+      else if (!double_buffer && srgb && !conf->dri_srgb_single_config)
+         conf->dri_srgb_single_config = dri_config;
+      else if (!double_buffer && !srgb && !conf->dri_single_config)
          conf->dri_single_config = dri_config;
       else
          /* a similar config type is already added (unlikely) => discard */
          return NULL;
    }
    else if (num_configs == 0) {
-      conf = malloc(sizeof *conf);
+      conf = calloc(1, sizeof *conf);
       if (conf == NULL)
          return NULL;
 
       memcpy(&conf->base, &base, sizeof base);
       if (double_buffer) {
-         conf->dri_double_config = dri_config;
-         conf->dri_single_config = NULL;
+         if (srgb)
+            conf->dri_srgb_double_config = dri_config;
+         else
+            conf->dri_double_config = dri_config;
       } else {
-         conf->dri_single_config = dri_config;
-         conf->dri_double_config = NULL;
+         if (srgb)
+            conf->dri_srgb_single_config = dri_config;
+         else
+            conf->dri_single_config = dri_config;
       }
-      conf->base.SurfaceType = 0;
       conf->base.ConfigID = config_id;
 
       _eglLinkConfig(&conf->base);

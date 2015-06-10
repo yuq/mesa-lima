@@ -243,12 +243,12 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    }
 
    if (dri2_dpy->dri2) {
-      dri2_surf->dri_drawable = 
-	 (*dri2_dpy->dri2->createNewDrawable) (dri2_dpy->dri_screen,
-					       type == EGL_WINDOW_BIT ?
-					       dri2_conf->dri_double_config : 
-					       dri2_conf->dri_single_config,
-					       dri2_surf);
+      const __DRIconfig *config =
+         dri2_get_dri_config(dri2_conf, type, dri2_surf->base.GLColorspace);
+
+      dri2_surf->dri_drawable =
+	 (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
+					      dri2_surf);
    } else {
       assert(dri2_dpy->swrast);
       dri2_surf->dri_drawable = 
