@@ -86,7 +86,9 @@ block_check_for_allowed_instrs(nir_block *block)
          nir_alu_instr *mov = nir_instr_as_alu(instr);
          if (mov->op != nir_op_fmov && mov->op != nir_op_imov &&
              mov->op != nir_op_fneg && mov->op != nir_op_ineg &&
-             mov->op != nir_op_fabs && mov->op != nir_op_iabs)
+             mov->op != nir_op_fabs && mov->op != nir_op_iabs &&
+             mov->op != nir_op_vec2 && mov->op != nir_op_vec3 &&
+             mov->op != nir_op_vec4)
             return false;
 
          /* Can't handle saturate */
