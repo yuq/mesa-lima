@@ -112,23 +112,19 @@ vc4_setup_rcl(struct vc4_context *vc4)
                 resolve_uncleared);
 #endif
 
-        uint32_t reloc_size = 9;
-        uint32_t clear_size = 14;
-        uint32_t config_size = 11 + reloc_size;
-        uint32_t loadstore_size = 7 + reloc_size;
-        uint32_t tilecoords_size = 3;
-        uint32_t branch_size = 5 + reloc_size;
-        uint32_t color_store_size = 1;
-        uint32_t semaphore_size = 1;
         cl_ensure_space(&vc4->rcl,
-                        clear_size +
-                        config_size +
-                        loadstore_size +
-                        semaphore_size +
-                        xtiles * ytiles * (loadstore_size * 4 +
-                                           tilecoords_size * 3 +
-                                           branch_size +
-                                           color_store_size));
+                        VC4_PACKET_CLEAR_COLORS_SIZE +
+                        (VC4_PACKET_TILE_RENDERING_MODE_CONFIG_SIZE +
+                         VC4_PACKET_GEM_HANDLES_SIZE) +
+                        (VC4_PACKET_STORE_TILE_BUFFER_GENERAL_SIZE +
+                         VC4_PACKET_TILE_RENDERING_MODE_CONFIG_SIZE) +
+                        VC4_PACKET_WAIT_ON_SEMAPHORE_SIZE +
+                        xtiles * ytiles * ((VC4_PACKET_STORE_TILE_BUFFER_GENERAL_SIZE +
+                                            VC4_PACKET_GEM_HANDLES_SIZE) * 4 +
+                                           VC4_PACKET_TILE_COORDINATES_SIZE * 3 +
+                                           (VC4_PACKET_BRANCH_TO_SUB_LIST_SIZE +
+                                            VC4_PACKET_GEM_HANDLES_SIZE) +
+                                           VC4_PACKET_STORE_MS_TILE_BUFFER_SIZE));
 
         if (vc4->cleared) {
                 cl_u8(&vc4->rcl, VC4_PACKET_CLEAR_COLORS);

@@ -633,6 +633,9 @@ validate_gem_handles(VALIDATE_ARGS)
 	return 0;
 }
 
+#define VC4_DEFINE_PACKET(packet, bin, render, name, func) \
+	[packet] = { bin, render, packet ## _SIZE, name, func }
+
 static const struct cmd_info {
 	bool bin;
 	bool render;
@@ -641,59 +644,59 @@ static const struct cmd_info {
 	int (*func)(struct vc4_exec_info *exec, void *validated,
 		    void *untrusted);
 } cmd_info[] = {
-	[VC4_PACKET_HALT] = { 1, 1, 1, "halt", NULL },
-	[VC4_PACKET_NOP] = { 1, 1, 1, "nop", NULL },
-	[VC4_PACKET_FLUSH] = { 1, 1, 1, "flush", NULL },
-	[VC4_PACKET_FLUSH_ALL] = { 1, 0, 1, "flush all state", validate_flush_all },
-	[VC4_PACKET_START_TILE_BINNING] = { 1, 0, 1, "start tile binning", validate_start_tile_binning },
-	[VC4_PACKET_INCREMENT_SEMAPHORE] = { 1, 0, 1, "increment semaphore", validate_increment_semaphore },
-	[VC4_PACKET_WAIT_ON_SEMAPHORE] = { 0, 1, 1, "wait on semaphore", validate_wait_on_semaphore },
+	VC4_DEFINE_PACKET(VC4_PACKET_HALT, 1, 1, "halt", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_NOP, 1, 1, "nop", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH, 1, 1, "flush", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH_ALL, 1, 0, "flush all state", validate_flush_all),
+	VC4_DEFINE_PACKET(VC4_PACKET_START_TILE_BINNING, 1, 0, "start tile binning", validate_start_tile_binning),
+	VC4_DEFINE_PACKET(VC4_PACKET_INCREMENT_SEMAPHORE, 1, 0, "increment semaphore", validate_increment_semaphore),
+	VC4_DEFINE_PACKET(VC4_PACKET_WAIT_ON_SEMAPHORE, 0, 1, "wait on semaphore", validate_wait_on_semaphore),
 	/* BRANCH_TO_SUB_LIST is actually supported in the binner as well, but
 	 * we only use it from the render CL in order to jump into the tile
 	 * allocation BO.
 	 */
-	[VC4_PACKET_BRANCH_TO_SUB_LIST] = { 0, 1, 5, "branch to sublist", validate_branch_to_sublist },
-	[VC4_PACKET_STORE_MS_TILE_BUFFER] = { 0, 1, 1, "store MS resolved tile color buffer", NULL },
-	[VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF] = { 0, 1, 1, "store MS resolved tile color buffer and EOF", NULL },
+	VC4_DEFINE_PACKET(VC4_PACKET_BRANCH_TO_SUB_LIST, 0, 1, "branch to sublist", validate_branch_to_sublist),
+	VC4_DEFINE_PACKET(VC4_PACKET_STORE_MS_TILE_BUFFER, 0, 1, "store MS resolved tile color buffer", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF, 0, 1, "store MS resolved tile color buffer and EOF", NULL),
 
-	[VC4_PACKET_STORE_TILE_BUFFER_GENERAL] = { 0, 1, 7, "Store Tile Buffer General", validate_loadstore_tile_buffer_general },
-	[VC4_PACKET_LOAD_TILE_BUFFER_GENERAL] = { 0, 1, 7, "Load Tile Buffer General", validate_loadstore_tile_buffer_general },
+	VC4_DEFINE_PACKET(VC4_PACKET_STORE_TILE_BUFFER_GENERAL, 0, 1, "Store Tile Buffer General", validate_loadstore_tile_buffer_general),
+	VC4_DEFINE_PACKET(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL, 0, 1, "Load Tile Buffer General", validate_loadstore_tile_buffer_general),
 
-	[VC4_PACKET_GL_INDEXED_PRIMITIVE] = { 1, 1, 14, "Indexed Primitive List", validate_indexed_prim_list },
+	VC4_DEFINE_PACKET(VC4_PACKET_GL_INDEXED_PRIMITIVE, 1, 1, "Indexed Primitive List", validate_indexed_prim_list),
 
-	[VC4_PACKET_GL_ARRAY_PRIMITIVE] = { 1, 1, 10, "Vertex Array Primitives", validate_gl_array_primitive },
+	VC4_DEFINE_PACKET(VC4_PACKET_GL_ARRAY_PRIMITIVE, 1, 1, "Vertex Array Primitives", validate_gl_array_primitive),
 
 	/* This is only used by clipped primitives (packets 48 and 49), which
 	 * we don't support parsing yet.
 	 */
-	[VC4_PACKET_PRIMITIVE_LIST_FORMAT] = { 1, 1, 2, "primitive list format", NULL },
+	VC4_DEFINE_PACKET(VC4_PACKET_PRIMITIVE_LIST_FORMAT, 1, 1, "primitive list format", NULL),
 
-	[VC4_PACKET_GL_SHADER_STATE] = { 1, 1, 5, "GL Shader State", validate_gl_shader_state },
-	[VC4_PACKET_NV_SHADER_STATE] = { 1, 1, 5, "NV Shader State", validate_nv_shader_state },
+	VC4_DEFINE_PACKET(VC4_PACKET_GL_SHADER_STATE, 1, 1, "GL Shader State", validate_gl_shader_state),
+	VC4_DEFINE_PACKET(VC4_PACKET_NV_SHADER_STATE, 1, 1, "NV Shader State", validate_nv_shader_state),
 
-	[VC4_PACKET_CONFIGURATION_BITS] = { 1, 1, 4, "configuration bits", NULL },
-	[VC4_PACKET_FLAT_SHADE_FLAGS] = { 1, 1, 5, "flat shade flags", NULL },
-	[VC4_PACKET_POINT_SIZE] = { 1, 1, 5, "point size", NULL },
-	[VC4_PACKET_LINE_WIDTH] = { 1, 1, 5, "line width", NULL },
-	[VC4_PACKET_RHT_X_BOUNDARY] = { 1, 1, 3, "RHT X boundary", NULL },
-	[VC4_PACKET_DEPTH_OFFSET] = { 1, 1, 5, "Depth Offset", NULL },
-	[VC4_PACKET_CLIP_WINDOW] = { 1, 1, 9, "Clip Window", NULL },
-	[VC4_PACKET_VIEWPORT_OFFSET] = { 1, 1, 5, "Viewport Offset", NULL },
-	[VC4_PACKET_CLIPPER_XY_SCALING] = { 1, 1, 9, "Clipper XY Scaling", NULL },
+	VC4_DEFINE_PACKET(VC4_PACKET_CONFIGURATION_BITS, 1, 1, "configuration bits", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_FLAT_SHADE_FLAGS, 1, 1, "flat shade flags", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_POINT_SIZE, 1, 1, "point size", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_LINE_WIDTH, 1, 1, "line width", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_RHT_X_BOUNDARY, 1, 1, "RHT X boundary", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_DEPTH_OFFSET, 1, 1, "Depth Offset", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_CLIP_WINDOW, 1, 1, "Clip Window", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_VIEWPORT_OFFSET, 1, 1, "Viewport Offset", NULL),
+	VC4_DEFINE_PACKET(VC4_PACKET_CLIPPER_XY_SCALING, 1, 1, "Clipper XY Scaling", NULL),
 	/* Note: The docs say this was also 105, but it was 106 in the
 	 * initial userland code drop.
 	 */
-	[VC4_PACKET_CLIPPER_Z_SCALING] = { 1, 1, 9, "Clipper Z Scale and Offset", NULL },
+	VC4_DEFINE_PACKET(VC4_PACKET_CLIPPER_Z_SCALING, 1, 1, "Clipper Z Scale and Offset", NULL),
 
-	[VC4_PACKET_TILE_BINNING_MODE_CONFIG] = { 1, 0, 16, "tile binning configuration", validate_tile_binning_config },
+	VC4_DEFINE_PACKET(VC4_PACKET_TILE_BINNING_MODE_CONFIG, 1, 0, "tile binning configuration", validate_tile_binning_config),
 
-	[VC4_PACKET_TILE_RENDERING_MODE_CONFIG] = { 0, 1, 11, "tile rendering mode configuration", validate_tile_rendering_mode_config},
+	VC4_DEFINE_PACKET(VC4_PACKET_TILE_RENDERING_MODE_CONFIG, 0, 1, "tile rendering mode configuration", validate_tile_rendering_mode_config),
 
-	[VC4_PACKET_CLEAR_COLORS] = { 0, 1, 14, "Clear Colors", NULL },
+	VC4_DEFINE_PACKET(VC4_PACKET_CLEAR_COLORS, 0, 1, "Clear Colors", NULL),
 
-	[VC4_PACKET_TILE_COORDINATES] = { 0, 1, 3, "Tile Coordinates", validate_tile_coordinates },
+	VC4_DEFINE_PACKET(VC4_PACKET_TILE_COORDINATES, 0, 1, "Tile Coordinates", validate_tile_coordinates),
 
-	[VC4_PACKET_GEM_HANDLES] = { 1, 1, 9, "GEM handles", validate_gem_handles },
+	VC4_DEFINE_PACKET(VC4_PACKET_GEM_HANDLES, 1, 1, "GEM handles", validate_gem_handles),
 };
 
 int

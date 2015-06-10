@@ -40,14 +40,12 @@ vc4_tile_blit_color_rcl(struct vc4_context *vc4,
         uint32_t max_y_tile = (dst_surf->base.height - 1) / 64;
         uint32_t xtiles = max_x_tile - min_x_tile + 1;
         uint32_t ytiles = max_y_tile - min_y_tile + 1;
-        uint32_t reloc_size = 9;
-        uint32_t config_size = 11 + reloc_size;
-        uint32_t loadstore_size = 7 + reloc_size;
-        uint32_t tilecoords_size = 3;
         cl_ensure_space(&vc4->rcl,
-                        config_size +
-                        xtiles * ytiles * (loadstore_size * 2 +
-                                           tilecoords_size * 1));
+                        (VC4_PACKET_TILE_RENDERING_MODE_CONFIG_SIZE +
+                         VC4_PACKET_GEM_HANDLES_SIZE) +
+                        xtiles * ytiles * ((VC4_PACKET_LOAD_TILE_BUFFER_GENERAL_SIZE +
+                                            VC4_PACKET_GEM_HANDLES_SIZE) * 2 +
+                                           VC4_PACKET_TILE_COORDINATES_SIZE));
         cl_ensure_space(&vc4->bo_handles, 2 * sizeof(uint32_t));
         cl_ensure_space(&vc4->bo_pointers, 2 * sizeof(struct vc4_bo *));
 
