@@ -3686,7 +3686,7 @@ ast_declarator_list::hir(exec_list *instructions,
             if (check_type->is_record() || check_type->is_matrix())
                _mesa_glsl_error(&loc, state,
                                 "fragment shader output "
-                                "cannot have struct or array type");
+                                "cannot have struct or matrix type");
             switch (check_type->base_type) {
             case GLSL_TYPE_UINT:
             case GLSL_TYPE_INT:
