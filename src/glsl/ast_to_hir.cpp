@@ -3653,6 +3653,55 @@ ast_declarator_list::hir(exec_list *instructions,
                                 "type %s", check_type->name);
             }
          }
+
+         /* From section 4.3.6 (Output Variables) of the GLSL ES 3.10 spec:
+          *
+          *     It is a compile-time error to declare a vertex shader output
+          *     with, or that contains, any of the following types:
+          *
+          *     * A boolean type
+          *     * An opaque type
+          *     * An array of arrays
+          *     * An array of structures
+          *     * A structure containing an array
+          *     * A structure containing a structure
+          *
+          *     It is a compile-time error to declare a fragment shader output
+          *     with, or that contains, any of the following types:
+          *
+          *     * A boolean type
+          *     * An opaque type
+          *     * A matrix
+          *     * A structure
+          *     * An array of array
+          */
+         if (state->es_shader) {
+            if (var->type->is_array() &&
+                var->type->fields.array->is_array()) {
+               _mesa_glsl_error(&loc, state,
+                                "%s shader output "
+                                "cannot have an array of arrays",
+                                _mesa_shader_stage_to_string(state->stage));
+            }
+            if (state->stage == MESA_SHADER_VERTEX) {
+               if (var->type->is_array() &&
+                   var->type->fields.array->is_record()) {
+                  _mesa_glsl_error(&loc, state,
+                                   "vertex shader output "
+                                   "cannot have an array of structs");
+               }
+               if (var->type->is_record()) {
+                  for (unsigned i = 0; i < var->type->length; i++) {
+                     if (var->type->fields.structure[i].type->is_array() ||
+                         var->type->fields.structure[i].type->is_record())
+                        _mesa_glsl_error(&loc, state,
+                                         "vertex shader output cannot have a "
+                                         "struct that contains an "
+                                         "array or struct");
+                  }
+               }
+            }
+         }
       }
 
       /* Integer fragment inputs must be qualified with 'flat'.  In GLSL ES,
