@@ -1566,9 +1566,15 @@ dri2_create_image_khr_texture(_EGLDisplay *disp, _EGLContext *ctx,
       gl_target = GL_TEXTURE_2D;
       break;
    case EGL_GL_TEXTURE_3D_KHR:
-      depth = attrs.GLTextureZOffset;
-      gl_target = GL_TEXTURE_3D;
-      break;
+      if (disp->Extensions.KHR_gl_texture_3D_image) {
+         depth = attrs.GLTextureZOffset;
+         gl_target = GL_TEXTURE_3D;
+         break;
+      }
+      else {
+         _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
+         return EGL_NO_IMAGE_KHR;
+      }
    case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_X_KHR:
    case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_X_KHR:
    case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Y_KHR:
@@ -1868,6 +1874,14 @@ dri2_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
    case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Z_KHR:
    case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_KHR:
       return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
+   case EGL_GL_TEXTURE_3D_KHR:
+      if (disp->Extensions.KHR_gl_texture_3D_image) {
+         return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
+      }
+      else {
+         _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
+         return EGL_NO_IMAGE_KHR;
+      }
    case EGL_GL_RENDERBUFFER_KHR:
       return dri2_create_image_khr_renderbuffer(disp, ctx, buffer, attr_list);
 #ifdef HAVE_LIBDRM
