@@ -923,8 +923,6 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       assert(pipeline->shaders[i]->size % 4 == 0);
    }
 
-   assert(pipeline->shaders[VK_SHADER_STAGE_FRAGMENT] != NULL);
-
    if (all_spirv) {
       for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
          if (pipeline->shaders[i])
