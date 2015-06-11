@@ -304,8 +304,7 @@ init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 	_eglLog(_EGL_DEBUG,"Add configs");
     haiku_add_configs_for_visuals(dpy);
 
-	dpy->VersionMajor=1;
-	dpy->VersionMinor=4;
+	dpy->Version = 14;
    
    //dpy->Extensions.KHR_create_context = true;
 
