@@ -1221,7 +1221,7 @@ VkResult anv_GetObjectInfo(
       return VK_SUCCESS;
 
    default:
-      return VK_UNSUPPORTED;
+      return vk_error(VK_UNSUPPORTED);
    }
 
 }

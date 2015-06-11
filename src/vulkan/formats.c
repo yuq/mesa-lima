@@ -302,6 +302,6 @@ VkResult anv_GetFormatInfo(
       return VK_SUCCESS;
 
    default:
-      return VK_ERROR_INVALID_VALUE;
+      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
