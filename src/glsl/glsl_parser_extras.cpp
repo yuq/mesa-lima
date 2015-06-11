@@ -87,6 +87,8 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
 
    this->extensions = &ctx->Extensions;
 
+   this->ARB_compute_shader_enable = true;
+
    this->Const.MaxLights = ctx->Const.MaxLights;
    this->Const.MaxClipPlanes = ctx->Const.MaxClipPlanes;
    this->Const.MaxTextureUnits = ctx->Const.MaxTextureUnits;

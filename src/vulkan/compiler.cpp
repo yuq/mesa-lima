@@ -32,6 +32,7 @@
 
 #include <brw_vs.h>
 #include <brw_gs.h>
+#include <brw_cs.h>
 
 #include <mesa/main/shaderobj.h>
 #include <mesa/main/fbobject.h>
@@ -603,6 +604,68 @@ really_do_gs_prog(struct brw_context *brw,
    return true;
 }
 
+static bool
+brw_codegen_cs_prog(struct brw_context *brw,
+                    struct gl_shader_program *prog,
+                    struct brw_compute_program *cp,
+                    struct brw_cs_prog_key *key, struct anv_pipeline *pipeline)
+{
+   struct gl_context *ctx = &brw->ctx;
+   const GLuint *program;
+   void *mem_ctx = ralloc_context(NULL);
+   GLuint program_size;
+   struct brw_cs_prog_data prog_data;
+
+   struct gl_shader *cs = prog->_LinkedShaders[MESA_SHADER_COMPUTE];
+   assert (cs);
+
+   memset(&prog_data, 0, sizeof(prog_data));
+
+   /* Allocate the references to the uniforms that will end up in the
+    * prog_data associated with the compiled program, and which will be freed
+    * by the state cache.
+    */
+   int param_count = cs->num_uniform_components;
+
+   /* The backend also sometimes adds params for texture size. */
+   param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
+   prog_data.base.param =
+      rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.pull_param =
+      rzalloc_array(NULL, const gl_constant_value *, param_count);
+   prog_data.base.nr_params = param_count;
+
+   program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
+                         &cp->program, prog, &program_size);
+   if (program == NULL) {
+      ralloc_free(mem_ctx);
+      return false;
+   }
+
+   if (unlikely(INTEL_DEBUG & DEBUG_CS))
+      fprintf(stderr, "\n");
+
+   struct anv_state cs_state = anv_state_stream_alloc(&pipeline->program_stream,
+                                                      program_size, 64);
+   memcpy(cs_state.map, program, program_size);
+
+   pipeline->cs_simd = cs_state.offset;
+
+   ralloc_free(mem_ctx);
+
+   return true;
+}
+
+static void
+brw_cs_populate_key(struct brw_context *brw,
+                    struct brw_compute_program *bcp, struct brw_cs_prog_key *key)
+{
+   memset(key, 0, sizeof(*key));
+
+   /* The unique compute program ID */
+   key->program_string_id = bcp->id;
+}
+
 static void
 fail_on_compile_error(int status, const char *msg)
 {
@@ -652,6 +715,22 @@ anv_compiler_create(struct anv_device *device)
    compiler->brw->is_baytrail = devinfo->is_baytrail;
    compiler->brw->is_haswell = devinfo->is_haswell;
    compiler->brw->is_cherryview = devinfo->is_cherryview;
+
+   /* We need this at least for CS, which will check brw->max_cs_threads
+    * against the work group size. */
+   compiler->brw->max_vs_threads = devinfo->max_vs_threads;
+   compiler->brw->max_hs_threads = devinfo->max_hs_threads;
+   compiler->brw->max_ds_threads = devinfo->max_ds_threads;
+   compiler->brw->max_gs_threads = devinfo->max_gs_threads;
+   compiler->brw->max_wm_threads = devinfo->max_wm_threads;
+   compiler->brw->max_cs_threads = devinfo->max_cs_threads;
+   compiler->brw->urb.size = devinfo->urb.size;
+   compiler->brw->urb.min_vs_entries = devinfo->urb.min_vs_entries;
+   compiler->brw->urb.max_vs_entries = devinfo->urb.max_vs_entries;
+   compiler->brw->urb.max_hs_entries = devinfo->urb.max_hs_entries;
+   compiler->brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
+   compiler->brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
+
    compiler->brw->intelScreen = compiler->screen;
    compiler->screen->devinfo = &device->info;
 
@@ -990,6 +1069,20 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       fail_if(!success, "do_wm_prog failed\n");
       pipeline->prog_data[VK_SHADER_STAGE_FRAGMENT] = &pipeline->wm_prog_data.base;
       pipeline->active_stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+   }
+
+   if (pipeline->shaders[VK_SHADER_STAGE_COMPUTE]) {
+      struct brw_cs_prog_key cs_key;
+      struct gl_compute_program *cp = (struct gl_compute_program *)
+         program->_LinkedShaders[MESA_SHADER_COMPUTE]->Program;
+      struct brw_compute_program *bcp = brw_compute_program(cp);
+
+      brw_cs_populate_key(brw, bcp, &cs_key);
+
+      success = brw_codegen_cs_prog(brw, program, bcp, &cs_key, pipeline);
+      fail_if(!success, "brw_codegen_cs_prog failed\n");
+      pipeline->prog_data[VK_SHADER_STAGE_COMPUTE] = &pipeline->cs_prog_data.base;
+      pipeline->active_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
    }
 
    brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);

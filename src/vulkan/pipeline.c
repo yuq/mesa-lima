@@ -718,11 +718,61 @@ VkResult anv_CreateGraphicsPipelineDerivative(
 }
 
 VkResult anv_CreateComputePipeline(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)
 {
-   stub_return(VK_UNSUPPORTED);
+   struct anv_device *device = (struct anv_device *) _device;
+   struct anv_pipeline *pipeline;
+   VkResult result;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO);
+
+   pipeline = anv_device_alloc(device, sizeof(*pipeline), 8,
+                               VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (pipeline == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   pipeline->base.destructor = anv_pipeline_destroy;
+   pipeline->device = device;
+   pipeline->layout = (struct anv_pipeline_layout *) pCreateInfo->layout;
+
+   result = anv_reloc_list_init(&pipeline->batch.relocs, device);
+   if (result != VK_SUCCESS) {
+      anv_device_free(device, pipeline);
+      return result;
+   }
+   pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
+   pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
+
+   anv_state_stream_init(&pipeline->program_stream,
+                         &device->instruction_block_pool);
+
+   memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
+
+   pipeline->shaders[VK_SHADER_STAGE_COMPUTE] =
+      (struct anv_shader *) pCreateInfo->cs.shader;
+
+   pipeline->use_repclear = false;
+
+   anv_compiler_run(device->compiler, pipeline);
+
+   anv_batch_emit(&pipeline->batch, GEN8_MEDIA_VFE_STATE,
+                  .ScratchSpaceBasePointer = 0, /* FIXME: Scratch bo, this should be a reloc? */
+                  .StackSize = 0,
+                  .PerThreadScratchSpace = 0,
+                  .ScratchSpaceBasePointerHigh = 0,
+
+                  .MaximumNumberofThreads = device->info.max_cs_threads - 1,
+                  .NumberofURBEntries = 2,
+                  .ResetGatewayTimer = true,
+                  .BypassGatewayControl = true,
+                  .URBEntryAllocationSize = 2,
+                  .CURBEAllocationSize = 0);
+
+   *pPipeline = (VkPipeline) pipeline;
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_StorePipeline(

@@ -653,8 +653,10 @@ struct anv_cmd_buffer {
    uint32_t                                     current_pipeline;
    uint32_t                                     vb_dirty;
    uint32_t                                     dirty;
+   uint32_t                                     compute_dirty;
    uint32_t                                     descriptors_dirty;
    struct anv_pipeline *                        pipeline;
+   struct anv_pipeline *                        compute_pipeline;
    struct anv_framebuffer *                     framebuffer;
    struct anv_dynamic_rs_state *                rs_state;
    struct anv_dynamic_ds_state *                ds_state;
@@ -692,6 +694,7 @@ struct anv_pipeline {
    struct brw_vs_prog_data                      vs_prog_data;
    struct brw_wm_prog_data                      wm_prog_data;
    struct brw_gs_prog_data                      gs_prog_data;
+   struct brw_cs_prog_data                      cs_prog_data;
    struct brw_stage_prog_data *                 prog_data[VK_NUM_SHADER_STAGE];
    struct {
       uint32_t                                  vs_start;
@@ -705,6 +708,7 @@ struct anv_pipeline {
    struct anv_bo                                vs_scratch_bo;
    struct anv_bo                                ps_scratch_bo;
    struct anv_bo                                gs_scratch_bo;
+   struct anv_bo                                cs_scratch_bo;
 
    uint32_t                                     active_stages;
    struct anv_state_stream                      program_stream;
@@ -714,6 +718,7 @@ struct anv_pipeline {
    uint32_t                                     ps_simd16;
    uint32_t                                     gs_vec4;
    uint32_t                                     gs_vertex_count;
+   uint32_t                                     cs_simd;
 
    uint32_t                                     vb_used;
    uint32_t                                     binding_stride[MAX_VBS];

@@ -2650,9 +2650,22 @@ void anv_CmdBindPipeline(
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
    struct anv_pipeline *pipeline = (struct anv_pipeline *) _pipeline;
 
-   cmd_buffer->pipeline = pipeline;
-   cmd_buffer->vb_dirty |= pipeline->vb_used;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+   switch (pipelineBindPoint) {
+   case VK_PIPELINE_BIND_POINT_COMPUTE:
+      cmd_buffer->compute_pipeline = pipeline;
+      cmd_buffer->compute_dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      break;
+
+   case VK_PIPELINE_BIND_POINT_GRAPHICS:
+      cmd_buffer->pipeline = pipeline;
+      cmd_buffer->vb_dirty |= pipeline->vb_used;
+      cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      break;
+
+   default:
+      assert(!"invalid bind point");
+      break;
+   }
 }
 
 void anv_CmdBindDynamicStateObject(
@@ -2818,11 +2831,15 @@ void anv_CmdBindVertexBuffers(
 
 static VkResult
 cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
-                              unsigned stage)
+                              unsigned stage, struct anv_state *bt_state)
 {
-   struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
+   struct anv_pipeline_layout *layout;
    uint32_t color_attachments, bias, size;
-   struct anv_state bt_state;
+
+   if (stage == VK_SHADER_STAGE_COMPUTE)
+      layout = cmd_buffer->compute_pipeline->layout;
+   else
+      layout = cmd_buffer->pipeline->layout;
 
    if (stage == VK_SHADER_STAGE_FRAGMENT) {
       bias = MAX_RTS;
@@ -2841,25 +2858,11 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
 
    size = (bias + surface_count) * sizeof(uint32_t);
-   bt_state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
-   uint32_t *bt_map = bt_state.map;
+   *bt_state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
+   uint32_t *bt_map = bt_state->map;
 
-   if (bt_state.map == NULL)
+   if (bt_state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-
-   static const uint32_t binding_table_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 38,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 39,
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 40,
-      [VK_SHADER_STAGE_GEOMETRY]                = 41,
-      [VK_SHADER_STAGE_FRAGMENT]                = 42,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
-   };
-
-   anv_batch_emit(&cmd_buffer->batch,
-                  GEN8_3DSTATE_BINDING_TABLE_POINTERS_VS,
-                  ._3DCommandSubOpcode  = binding_table_opcodes[stage],
-                  .PointertoVSBindingTable = bt_state.offset);
 
    for (uint32_t ca = 0; ca < color_attachments; ca++) {
       const struct anv_surface_view *view =
@@ -2935,38 +2938,26 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static VkResult
-cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
+cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
+                         unsigned stage, struct anv_state *state)
 {
-   struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
-   struct anv_state state;
+   struct anv_pipeline_layout *layout;
+   uint32_t sampler_count;
 
-   if (!layout)
-      return VK_SUCCESS;
+   if (stage == VK_SHADER_STAGE_COMPUTE)
+      layout = cmd_buffer->compute_pipeline->layout;
+   else
+      layout = cmd_buffer->pipeline->layout;
 
-   uint32_t sampler_count = layout->stage[stage].sampler_count;
-
+   sampler_count = layout ? layout->stage[stage].sampler_count : 0;
    if (sampler_count == 0)
       return VK_SUCCESS;
 
    uint32_t size = sampler_count * 16;
-   state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
+   *state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
 
-   if (state.map == NULL)
+   if (state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-
-   static const uint32_t sampler_state_opcodes[] = {
-      [VK_SHADER_STAGE_VERTEX]                  = 43,
-      [VK_SHADER_STAGE_TESS_CONTROL]            = 44, /* HS */
-      [VK_SHADER_STAGE_TESS_EVALUATION]         = 45, /* DS */
-      [VK_SHADER_STAGE_GEOMETRY]                = 46,
-      [VK_SHADER_STAGE_FRAGMENT]                = 47,
-      [VK_SHADER_STAGE_COMPUTE]                 = 0,
-   };
-
-   anv_batch_emit(&cmd_buffer->batch,
-                  GEN8_3DSTATE_SAMPLER_STATE_POINTERS_VS,
-                  ._3DCommandSubOpcode  = sampler_state_opcodes[stage],
-                  .PointertoVSSamplerState = state.offset);
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
       struct anv_descriptor_set_binding *d = &cmd_buffer->descriptors[set];
@@ -2983,9 +2974,57 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer, unsigned stage)
          if (!sampler)
             continue;
 
-         memcpy(state.map + (start + b) * 16,
+         memcpy(state->map + (start + b) * 16,
                 sampler->state, sizeof(sampler->state));
       }
+   }
+
+   return VK_SUCCESS;
+}
+
+static VkResult
+flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, uint32_t stage)
+{
+   struct anv_state surfaces = { 0, }, samplers = { 0, };
+   VkResult result;
+
+   result = cmd_buffer_emit_samplers(cmd_buffer, stage, &samplers);
+   if (result != VK_SUCCESS)
+      return result;
+   result = cmd_buffer_emit_binding_table(cmd_buffer, stage, &surfaces);
+   if (result != VK_SUCCESS)
+      return result;
+
+   static const uint32_t sampler_state_opcodes[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = 43,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 44, /* HS */
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 45, /* DS */
+      [VK_SHADER_STAGE_GEOMETRY]                = 46,
+      [VK_SHADER_STAGE_FRAGMENT]                = 47,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+   };
+
+   static const uint32_t binding_table_opcodes[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = 38,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 39,
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 40,
+      [VK_SHADER_STAGE_GEOMETRY]                = 41,
+      [VK_SHADER_STAGE_FRAGMENT]                = 42,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+   };
+
+   if (samplers.alloc_size > 0) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN8_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                     ._3DCommandSubOpcode  = sampler_state_opcodes[stage],
+                     .PointertoVSSamplerState = samplers.offset);
+   }
+
+   if (surfaces.alloc_size > 0) {
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN8_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                     ._3DCommandSubOpcode  = binding_table_opcodes[stage],
+                     .PointertoVSBindingTable = surfaces.offset);
    }
 
    return VK_SUCCESS;
@@ -2999,11 +3038,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
    VkResult result;
    for_each_bit(s, dirty) {
-      result = cmd_buffer_emit_binding_table(cmd_buffer, s);
-      if (result != VK_SUCCESS)
-         break;
-
-      result = cmd_buffer_emit_samplers(cmd_buffer, s);
+      result = flush_descriptor_set(cmd_buffer, s);
       if (result != VK_SUCCESS)
          break;
    }
@@ -3016,12 +3051,11 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 
       /* Re-emit all active binding tables */
       for_each_bit(s, cmd_buffer->pipeline->active_stages) {
-         result = cmd_buffer_emit_binding_table(cmd_buffer, s);
-         result = cmd_buffer_emit_samplers(cmd_buffer, s);
-      }
+         result = flush_descriptor_set(cmd_buffer, s);
 
-      /* It had better succeed this time */
-      assert(result == VK_SUCCESS);
+         /* It had better succeed this time */
+         assert(result == VK_SUCCESS);
+      }
    }
 
    cmd_buffer->descriptors_dirty &= ~cmd_buffer->pipeline->active_stages;
@@ -3059,6 +3093,78 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(p, dwords * 4));
 
    return state;
+}
+
+static VkResult
+flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_device *device = cmd_buffer->device;
+   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct anv_state surfaces = { 0, }, samplers = { 0, };
+   VkResult result;
+
+   result = cmd_buffer_emit_samplers(cmd_buffer,
+                                     VK_SHADER_STAGE_COMPUTE, &samplers);
+   if (result != VK_SUCCESS)
+      return result;
+   result = cmd_buffer_emit_binding_table(cmd_buffer,
+                                          VK_SHADER_STAGE_COMPUTE, &surfaces);
+   if (result != VK_SUCCESS)
+      return result;
+
+   struct GEN8_INTERFACE_DESCRIPTOR_DATA desc = {
+      .KernelStartPointer = pipeline->cs_simd,
+      .KernelStartPointerHigh = 0,
+      .BindingTablePointer = surfaces.offset,
+      .BindingTableEntryCount = 0,
+      .SamplerStatePointer = samplers.offset,
+      .SamplerCount = 0,
+      .NumberofThreadsinGPGPUThreadGroup = 0 /* FIXME: Really? */
+   };
+
+   uint32_t size = GEN8_INTERFACE_DESCRIPTOR_DATA_length * sizeof(uint32_t);
+   struct anv_state state =
+      anv_state_pool_alloc(&device->dynamic_state_pool, size, 64);
+
+   GEN8_INTERFACE_DESCRIPTOR_DATA_pack(NULL, state.map, &desc);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_INTERFACE_DESCRIPTOR_LOAD,
+                  .InterfaceDescriptorTotalLength = size,
+                  .InterfaceDescriptorDataStartAddress = state.offset);
+
+   return VK_SUCCESS;
+}
+
+static void
+anv_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   VkResult result;
+
+   assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
+
+   if (cmd_buffer->current_pipeline != GPGPU) {
+      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
+                     .PipelineSelection = GPGPU);
+      cmd_buffer->current_pipeline = GPGPU;
+   }
+
+   if (cmd_buffer->compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
+      anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
+
+   if ((cmd_buffer->descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
+       (cmd_buffer->compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)) {
+      result = flush_compute_descriptor_set(cmd_buffer);
+      if (result != VK_SUCCESS) {
+         result = anv_cmd_buffer_new_surface_state_bo(cmd_buffer);
+         assert(result == VK_SUCCESS);
+         result = flush_compute_descriptor_set(cmd_buffer);
+         assert(result == VK_SUCCESS);
+      }
+      cmd_buffer->descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
+   }
+
+   cmd_buffer->compute_dirty = 0;
 }
 
 static void
@@ -3278,15 +3384,80 @@ void anv_CmdDispatch(
     uint32_t                                    y,
     uint32_t                                    z)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   uint32_t size = SIMD8; /* FIXME */
+   uint32_t right_mask = 0; /* FIXME */
+   uint32_t thread_width_max = 0; /* FIXME */
+
+   anv_cmd_buffer_flush_compute_state(cmd_buffer);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
+
+                  .InterfaceDescriptorOffset = 0,
+                  .IndirectDataLength = 0,
+                  .IndirectDataStartAddress = 0,
+
+                  .SIMDSize = size,
+
+                  .ThreadDepthCounterMaximum = 0,
+                  .ThreadHeightCounterMaximum = 0,
+                  .ThreadWidthCounterMaximum = thread_width_max,
+
+                  .ThreadGroupIDStartingX = 0,
+                  .ThreadGroupIDXDimension = x,
+                  .ThreadGroupIDStartingY = 0,
+                  .ThreadGroupIDYDimension = y,
+                  .ThreadGroupIDStartingResumeZ = 0,
+                  .ThreadGroupIDZDimension = z,
+                  .RightExecutionMask = right_mask,
+                  .BottomExecutionMask = 0xffffffff);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);
 }
+
+#define GPGPU_DISPATCHDIMX 0x2500
+#define GPGPU_DISPATCHDIMY 0x2504
+#define GPGPU_DISPATCHDIMZ 0x2508
 
 void anv_CmdDispatchIndirect(
     VkCmdBuffer                                 cmdBuffer,
-    VkBuffer                                    buffer,
+    VkBuffer                                    _buffer,
     VkDeviceSize                                offset)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
+   struct anv_bo *bo = buffer->bo;
+   uint32_t bo_offset = buffer->offset + offset;
+
+   anv_cmd_buffer_flush_compute_state(cmd_buffer);
+
+   anv_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMX, bo, bo_offset);
+   anv_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
+   anv_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
+
+   uint32_t size = SIMD8; /* FIXME */
+   uint32_t right_mask = 0; /* FIXME */
+   uint32_t thread_width_max = 0; /* FIXME */
+
+   /* FIXME: We can't compute thread_width_max for indirect, looks like it
+    * depends on DIMX. */
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
+                  .IndirectParameterEnable = true,
+                  .InterfaceDescriptorOffset = 0,
+                  .IndirectDataLength = 0,
+                  .IndirectDataStartAddress = 0,
+
+                  .SIMDSize = size,
+
+                  .ThreadDepthCounterMaximum = 0,
+                  .ThreadHeightCounterMaximum = 0,
+                  .ThreadWidthCounterMaximum = thread_width_max,
+
+                  .RightExecutionMask = right_mask,
+                  .BottomExecutionMask = 0xffffffff);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);
 }
 
 void anv_CmdSetEvent(

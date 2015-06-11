@@ -41,6 +41,15 @@ bool brw_cs_prog_data_compare(const void *a, const void *b);
 void
 brw_upload_cs_prog(struct brw_context *brw);
 
+const unsigned *
+brw_cs_emit(struct brw_context *brw,
+            void *mem_ctx,
+            const struct brw_cs_prog_key *key,
+            struct brw_cs_prog_data *prog_data,
+            struct gl_compute_program *cp,
+            struct gl_shader_program *prog,
+            unsigned *final_assembly_size);
+
 #ifdef __cplusplus
 }
 #endif

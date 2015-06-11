@@ -55,7 +55,7 @@ brw_cs_prog_data_compare(const void *in_a, const void *in_b)
 }
 
 
-static const unsigned *
+const unsigned *
 brw_cs_emit(struct brw_context *brw,
             void *mem_ctx,
             const struct brw_cs_prog_key *key,
