@@ -1004,14 +1004,14 @@ struct GEN8_3DSTATE_AA_LINE_PARAMETERS {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     AAPointCoverageBias;
-   uint32_t                                     AACoverageBias;
-   uint32_t                                     AAPointCoverageSlope;
-   uint32_t                                     AACoverageSlope;
-   uint32_t                                     AAPointCoverageEndCapBias;
-   uint32_t                                     AACoverageEndCapBias;
-   uint32_t                                     AAPointCoverageEndCapSlope;
-   uint32_t                                     AACoverageEndCapSlope;
+   float                                        AAPointCoverageBias;
+   float                                        AACoverageBias;
+   float                                        AAPointCoverageSlope;
+   float                                        AACoverageSlope;
+   float                                        AAPointCoverageEndCapBias;
+   float                                        AACoverageEndCapBias;
+   float                                        AAPointCoverageEndCapSlope;
+   float                                        AACoverageEndCapSlope;
 };
 
 static inline void
@@ -1029,17 +1029,17 @@ GEN8_3DSTATE_AA_LINE_PARAMETERS_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->AAPointCoverageBias, 24, 31) |
-      __gen_field(values->AACoverageBias, 16, 23) |
-      __gen_field(values->AAPointCoverageSlope, 8, 15) |
-      __gen_field(values->AACoverageSlope, 0, 7) |
+      __gen_field(values->AAPointCoverageBias * (1 << 8), 24, 31) |
+      __gen_field(values->AACoverageBias * (1 << 8), 16, 23) |
+      __gen_field(values->AAPointCoverageSlope * (1 << 8), 8, 15) |
+      __gen_field(values->AACoverageSlope * (1 << 8), 0, 7) |
       0;
 
    dw[2] =
-      __gen_field(values->AAPointCoverageEndCapBias, 24, 31) |
-      __gen_field(values->AACoverageEndCapBias, 16, 23) |
-      __gen_field(values->AAPointCoverageEndCapSlope, 8, 15) |
-      __gen_field(values->AACoverageEndCapSlope, 0, 7) |
+      __gen_field(values->AAPointCoverageEndCapBias * (1 << 8), 24, 31) |
+      __gen_field(values->AACoverageEndCapBias * (1 << 8), 16, 23) |
+      __gen_field(values->AAPointCoverageEndCapSlope * (1 << 8), 8, 15) |
+      __gen_field(values->AACoverageEndCapSlope * (1 << 8), 0, 7) |
       0;
 
 }
@@ -1738,8 +1738,8 @@ struct GEN8_3DSTATE_CLIP {
    uint32_t                                     TriangleStripListProvokingVertexSelect;
    uint32_t                                     LineStripListProvokingVertexSelect;
    uint32_t                                     TriangleFanProvokingVertexSelect;
-   uint32_t                                     MinimumPointWidth;
-   uint32_t                                     MaximumPointWidth;
+   float                                        MinimumPointWidth;
+   float                                        MaximumPointWidth;
    uint32_t                                     ForceZeroRTAIndexEnable;
    uint32_t                                     MaximumVPIndex;
 };
@@ -1783,8 +1783,8 @@ GEN8_3DSTATE_CLIP_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[3] =
-      __gen_field(values->MinimumPointWidth, 17, 27) |
-      __gen_field(values->MaximumPointWidth, 6, 16) |
+      __gen_field(values->MinimumPointWidth * (1 << 3), 17, 27) |
+      __gen_field(values->MaximumPointWidth * (1 << 3), 6, 16) |
       __gen_field(values->ForceZeroRTAIndexEnable, 5, 5) |
       __gen_field(values->MaximumVPIndex, 0, 3) |
       0;
@@ -3040,7 +3040,7 @@ struct GEN8_3DSTATE_LINE_STIPPLE {
    uint32_t                                     CurrentRepeatCounter;
    uint32_t                                     CurrentStippleIndex;
    uint32_t                                     LineStipplePattern;
-   uint32_t                                     LineStippleInverseRepeatCount;
+   float                                        LineStippleInverseRepeatCount;
    uint32_t                                     LineStippleRepeatCount;
 };
 
@@ -3066,7 +3066,7 @@ GEN8_3DSTATE_LINE_STIPPLE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[2] =
-      __gen_field(values->LineStippleInverseRepeatCount, 15, 31) |
+      __gen_field(values->LineStippleInverseRepeatCount * (1 << 16), 15, 31) |
       __gen_field(values->LineStippleRepeatCount, 0, 8) |
       0;
 
@@ -4139,36 +4139,36 @@ struct GEN8_3DSTATE_SAMPLE_PATTERN {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     _8xSample7XOffset;
-   uint32_t                                     _8xSample7YOffset;
-   uint32_t                                     _8xSample6XOffset;
-   uint32_t                                     _8xSample6YOffset;
-   uint32_t                                     _8xSample5XOffset;
-   uint32_t                                     _8xSample5YOffset;
-   uint32_t                                     _8xSample4XOffset;
-   uint32_t                                     _8xSample4YOffset;
-   uint32_t                                     _8xSample3XOffset;
-   uint32_t                                     _8xSample3YOffset;
-   uint32_t                                     _8xSample2XOffset;
-   uint32_t                                     _8xSample2YOffset;
-   uint32_t                                     _8xSample1XOffset;
-   uint32_t                                     _8xSample1YOffset;
-   uint32_t                                     _8xSample0XOffset;
-   uint32_t                                     _8xSample0YOffset;
-   uint32_t                                     _4xSample3XOffset;
-   uint32_t                                     _4xSample3YOffset;
-   uint32_t                                     _4xSample2XOffset;
-   uint32_t                                     _4xSample2YOffset;
-   uint32_t                                     _4xSample1XOffset;
-   uint32_t                                     _4xSample1YOffset;
-   uint32_t                                     _4xSample0XOffset;
-   uint32_t                                     _4xSample0YOffset;
-   uint32_t                                     _1xSample0XOffset;
-   uint32_t                                     _1xSample0YOffset;
-   uint32_t                                     _2xSample1XOffset;
-   uint32_t                                     _2xSample1YOffset;
-   uint32_t                                     _2xSample0XOffset;
-   uint32_t                                     _2xSample0YOffset;
+   float                                        _8xSample7XOffset;
+   float                                        _8xSample7YOffset;
+   float                                        _8xSample6XOffset;
+   float                                        _8xSample6YOffset;
+   float                                        _8xSample5XOffset;
+   float                                        _8xSample5YOffset;
+   float                                        _8xSample4XOffset;
+   float                                        _8xSample4YOffset;
+   float                                        _8xSample3XOffset;
+   float                                        _8xSample3YOffset;
+   float                                        _8xSample2XOffset;
+   float                                        _8xSample2YOffset;
+   float                                        _8xSample1XOffset;
+   float                                        _8xSample1YOffset;
+   float                                        _8xSample0XOffset;
+   float                                        _8xSample0YOffset;
+   float                                        _4xSample3XOffset;
+   float                                        _4xSample3YOffset;
+   float                                        _4xSample2XOffset;
+   float                                        _4xSample2YOffset;
+   float                                        _4xSample1XOffset;
+   float                                        _4xSample1YOffset;
+   float                                        _4xSample0XOffset;
+   float                                        _4xSample0YOffset;
+   float                                        _1xSample0XOffset;
+   float                                        _1xSample0YOffset;
+   float                                        _2xSample1XOffset;
+   float                                        _2xSample1YOffset;
+   float                                        _2xSample0XOffset;
+   float                                        _2xSample0YOffset;
 };
 
 static inline void
@@ -4189,45 +4189,45 @@ GEN8_3DSTATE_SAMPLE_PATTERN_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[5] =
-      __gen_field(values->_8xSample7XOffset, 28, 31) |
-      __gen_field(values->_8xSample7YOffset, 24, 27) |
-      __gen_field(values->_8xSample6XOffset, 20, 23) |
-      __gen_field(values->_8xSample6YOffset, 16, 19) |
-      __gen_field(values->_8xSample5XOffset, 12, 15) |
-      __gen_field(values->_8xSample5YOffset, 8, 11) |
-      __gen_field(values->_8xSample4XOffset, 4, 7) |
-      __gen_field(values->_8xSample4YOffset, 0, 3) |
+      __gen_field(values->_8xSample7XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->_8xSample7YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->_8xSample6XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->_8xSample6YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->_8xSample5XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->_8xSample5YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->_8xSample4XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->_8xSample4YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[6] =
-      __gen_field(values->_8xSample3XOffset, 28, 31) |
-      __gen_field(values->_8xSample3YOffset, 24, 27) |
-      __gen_field(values->_8xSample2XOffset, 20, 23) |
-      __gen_field(values->_8xSample2YOffset, 16, 19) |
-      __gen_field(values->_8xSample1XOffset, 12, 15) |
-      __gen_field(values->_8xSample1YOffset, 8, 11) |
-      __gen_field(values->_8xSample0XOffset, 4, 7) |
-      __gen_field(values->_8xSample0YOffset, 0, 3) |
+      __gen_field(values->_8xSample3XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->_8xSample3YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->_8xSample2XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->_8xSample2YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->_8xSample1XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->_8xSample1YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->_8xSample0XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->_8xSample0YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[7] =
-      __gen_field(values->_4xSample3XOffset, 28, 31) |
-      __gen_field(values->_4xSample3YOffset, 24, 27) |
-      __gen_field(values->_4xSample2XOffset, 20, 23) |
-      __gen_field(values->_4xSample2YOffset, 16, 19) |
-      __gen_field(values->_4xSample1XOffset, 12, 15) |
-      __gen_field(values->_4xSample1YOffset, 8, 11) |
-      __gen_field(values->_4xSample0XOffset, 4, 7) |
-      __gen_field(values->_4xSample0YOffset, 0, 3) |
+      __gen_field(values->_4xSample3XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->_4xSample3YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->_4xSample2XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->_4xSample2YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->_4xSample1XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->_4xSample1YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->_4xSample0XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->_4xSample0YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[8] =
-      __gen_field(values->_1xSample0XOffset, 20, 23) |
-      __gen_field(values->_1xSample0YOffset, 16, 19) |
-      __gen_field(values->_2xSample1XOffset, 12, 15) |
-      __gen_field(values->_2xSample1YOffset, 8, 11) |
-      __gen_field(values->_2xSample0XOffset, 4, 7) |
-      __gen_field(values->_2xSample0YOffset, 0, 3) |
+      __gen_field(values->_1xSample0XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->_1xSample0YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->_2xSample1XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->_2xSample1YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->_2xSample0XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->_2xSample0YOffset * (1 << 4), 0, 3) |
       0;
 
 }
@@ -4476,7 +4476,7 @@ struct GEN8_3DSTATE_SF {
    uint32_t                                     LegacyGlobalDepthBiasEnable;
    uint32_t                                     StatisticsEnable;
    uint32_t                                     ViewportTransformEnable;
-   uint32_t                                     LineWidth;
+   float                                        LineWidth;
 #define     _05pixels                                          0
 #define     _10pixels                                          1
 #define     _20pixels                                          2
@@ -4493,7 +4493,7 @@ struct GEN8_3DSTATE_SF {
 #define     Vertex                                             0
 #define     State                                              1
    uint32_t                                     PointWidthSource;
-   uint32_t                                     PointWidth;
+   float                                        PointWidth;
 };
 
 static inline void
@@ -4517,7 +4517,7 @@ GEN8_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[2] =
-      __gen_field(values->LineWidth, 18, 27) |
+      __gen_field(values->LineWidth * (1 << 7), 18, 27) |
       __gen_field(values->LineEndCapAntialiasingRegionWidth, 16, 17) |
       0;
 
@@ -4530,7 +4530,7 @@ GEN8_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SmoothPointEnable, 13, 13) |
       __gen_field(values->VertexSubPixelPrecisionSelect, 12, 12) |
       __gen_field(values->PointWidthSource, 11, 11) |
-      __gen_field(values->PointWidth, 0, 10) |
+      __gen_field(values->PointWidth * (1 << 3), 0, 10) |
       0;
 
 }
@@ -8245,7 +8245,7 @@ struct GEN8_RENDER_SURFACE_STATE {
    uint32_t                                     CubeFaceEnablePositiveX;
    uint32_t                                     CubeFaceEnableNegativeX;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      MemoryObjectControlState;
-   uint32_t                                     BaseMipLevel;
+   float                                        BaseMipLevel;
    uint32_t                                     SurfaceQPitch;
    uint32_t                                     Height;
    uint32_t                                     Width;
@@ -8292,7 +8292,7 @@ struct GEN8_RENDER_SURFACE_STATE {
    uint32_t                                     ShaderChannelSelectGreen;
    uint32_t                                     ShaderChannelSelectBlue;
    uint32_t                                     ShaderChannelSelectAlpha;
-   uint32_t                                     ResourceMinLOD;
+   float                                        ResourceMinLOD;
    __gen_address_type                           SurfaceBaseAddress;
    uint32_t                                     XOffsetforVPlane;
    uint32_t                                     YOffsetforVPlane;
@@ -8330,7 +8330,7 @@ GEN8_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
    GEN8_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_MemoryObjectControlState, &values->MemoryObjectControlState);
    dw[1] =
       __gen_field(dw_MemoryObjectControlState, 24, 30) |
-      __gen_field(values->BaseMipLevel, 19, 23) |
+      __gen_field(values->BaseMipLevel * (1 << 1), 19, 23) |
       __gen_field(values->SurfaceQPitch, 0, 14) |
       0;
 
@@ -8380,7 +8380,7 @@ GEN8_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->ShaderChannelSelectGreen, 22, 24) |
       __gen_field(values->ShaderChannelSelectBlue, 19, 21) |
       __gen_field(values->ShaderChannelSelectAlpha, 16, 18) |
-      __gen_field(values->ResourceMinLOD, 0, 11) |
+      __gen_field(values->ResourceMinLOD * (1 << 8), 0, 11) |
       0;
 
    uint32_t dw8 =
@@ -8428,7 +8428,7 @@ struct GEN8_SAMPLER_STATE {
 #define     CLAMP_NONE                                         0
 #define     CLAMP_OGL                                          2
    uint32_t                                     LODPreClampMode;
-   uint32_t                                     BaseMipLevel;
+   float                                        BaseMipLevel;
 #define     MIPFILTER_NONE                                     0
 #define     MIPFILTER_NEAREST                                  1
 #define     MIPFILTER_LINEAR                                   3
@@ -8447,8 +8447,8 @@ struct GEN8_SAMPLER_STATE {
 #define     LEGACY                                             0
 #define     EWAApproximation                                   1
    uint32_t                                     AnisotropicAlgorithm;
-   uint32_t                                     MinLOD;
-   uint32_t                                     MaxLOD;
+   float                                        MinLOD;
+   float                                        MaxLOD;
    uint32_t                                     ChromaKeyEnable;
    uint32_t                                     ChromaKeyIndex;
 #define     KEYFILTER_KILL_ON_ANY_MATCH                        0
@@ -8506,7 +8506,7 @@ GEN8_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SamplerDisable, 31, 31) |
       __gen_field(values->TextureBorderColorMode, 29, 29) |
       __gen_field(values->LODPreClampMode, 27, 28) |
-      __gen_field(values->BaseMipLevel, 22, 26) |
+      __gen_field(values->BaseMipLevel * (1 << 1), 22, 26) |
       __gen_field(values->MipModeFilter, 20, 21) |
       __gen_field(values->MagModeFilter, 17, 19) |
       __gen_field(values->MinModeFilter, 14, 16) |
@@ -8515,8 +8515,8 @@ GEN8_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->MinLOD, 20, 31) |
-      __gen_field(values->MaxLOD, 8, 19) |
+      __gen_field(values->MinLOD * (1 << 8), 20, 31) |
+      __gen_field(values->MaxLOD * (1 << 8), 8, 19) |
       __gen_field(values->ChromaKeyEnable, 7, 7) |
       __gen_field(values->ChromaKeyIndex, 5, 6) |
       __gen_field(values->ChromaKeyMode, 4, 4) |

@@ -616,10 +616,10 @@ struct GEN75_3DSTATE_AA_LINE_PARAMETERS {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     AACoverageBias;
-   uint32_t                                     AACoverageSlope;
-   uint32_t                                     AACoverageEndCapBias;
-   uint32_t                                     AACoverageEndCapSlope;
+   float                                        AACoverageBias;
+   float                                        AACoverageSlope;
+   float                                        AACoverageEndCapBias;
+   float                                        AACoverageEndCapSlope;
 };
 
 static inline void
@@ -637,13 +637,13 @@ GEN75_3DSTATE_AA_LINE_PARAMETERS_pack(__gen_user_data *data, void * restrict dst
       0;
 
    dw[1] =
-      __gen_field(values->AACoverageBias, 16, 23) |
-      __gen_field(values->AACoverageSlope, 0, 7) |
+      __gen_field(values->AACoverageBias * (1 << 8), 16, 23) |
+      __gen_field(values->AACoverageSlope * (1 << 8), 0, 7) |
       0;
 
    dw[2] =
-      __gen_field(values->AACoverageEndCapBias, 16, 23) |
-      __gen_field(values->AACoverageEndCapSlope, 0, 7) |
+      __gen_field(values->AACoverageEndCapBias * (1 << 8), 16, 23) |
+      __gen_field(values->AACoverageEndCapSlope * (1 << 8), 0, 7) |
       0;
 
 }
@@ -1340,8 +1340,8 @@ struct GEN75_3DSTATE_CLIP {
 #define     Vertex1                                            1
 #define     Vertex2                                            2
    uint32_t                                     TriangleFanProvokingVertexSelect;
-   uint32_t                                     MinimumPointWidth;
-   uint32_t                                     MaximumPointWidth;
+   float                                        MinimumPointWidth;
+   float                                        MaximumPointWidth;
    uint32_t                                     ForceZeroRTAIndexEnable;
    uint32_t                                     MaximumVPIndex;
 };
@@ -1385,8 +1385,8 @@ GEN75_3DSTATE_CLIP_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[3] =
-      __gen_field(values->MinimumPointWidth, 17, 27) |
-      __gen_field(values->MaximumPointWidth, 6, 16) |
+      __gen_field(values->MinimumPointWidth * (1 << 3), 17, 27) |
+      __gen_field(values->MaximumPointWidth * (1 << 3), 6, 16) |
       __gen_field(values->ForceZeroRTAIndexEnable, 5, 5) |
       __gen_field(values->MaximumVPIndex, 0, 3) |
       0;
@@ -2584,7 +2584,7 @@ struct GEN75_3DSTATE_LINE_STIPPLE {
    uint32_t                                     CurrentRepeatCounter;
    uint32_t                                     CurrentStippleIndex;
    uint32_t                                     LineStipplePattern;
-   uint32_t                                     LineStippleInverseRepeatCount;
+   float                                        LineStippleInverseRepeatCount;
    uint32_t                                     LineStippleRepeatCount;
 };
 
@@ -2610,7 +2610,7 @@ GEN75_3DSTATE_LINE_STIPPLE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[2] =
-      __gen_field(values->LineStippleInverseRepeatCount, 15, 31) |
+      __gen_field(values->LineStippleInverseRepeatCount * (1 << 16), 15, 31) |
       __gen_field(values->LineStippleRepeatCount, 0, 8) |
       0;
 
@@ -2679,22 +2679,22 @@ struct GEN75_3DSTATE_MULTISAMPLE {
 #define     NUMSAMPLES_4                                       2
 #define     NUMSAMPLES_8                                       3
    uint32_t                                     NumberofMultisamples;
-   uint32_t                                     Sample3XOffset;
-   uint32_t                                     Sample3YOffset;
-   uint32_t                                     Sample2XOffset;
-   uint32_t                                     Sample2YOffset;
-   uint32_t                                     Sample1XOffset;
-   uint32_t                                     Sample1YOffset;
-   uint32_t                                     Sample0XOffset;
-   uint32_t                                     Sample0YOffset;
-   uint32_t                                     Sample7XOffset;
-   uint32_t                                     Sample7YOffset;
-   uint32_t                                     Sample6XOffset;
-   uint32_t                                     Sample6YOffset;
-   uint32_t                                     Sample5XOffset;
-   uint32_t                                     Sample5YOffset;
-   uint32_t                                     Sample4XOffset;
-   uint32_t                                     Sample4YOffset;
+   float                                        Sample3XOffset;
+   float                                        Sample3YOffset;
+   float                                        Sample2XOffset;
+   float                                        Sample2YOffset;
+   float                                        Sample1XOffset;
+   float                                        Sample1YOffset;
+   float                                        Sample0XOffset;
+   float                                        Sample0YOffset;
+   float                                        Sample7XOffset;
+   float                                        Sample7YOffset;
+   float                                        Sample6XOffset;
+   float                                        Sample6YOffset;
+   float                                        Sample5XOffset;
+   float                                        Sample5YOffset;
+   float                                        Sample4XOffset;
+   float                                        Sample4YOffset;
 };
 
 static inline void
@@ -2718,25 +2718,25 @@ GEN75_3DSTATE_MULTISAMPLE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[2] =
-      __gen_field(values->Sample3XOffset, 28, 31) |
-      __gen_field(values->Sample3YOffset, 24, 27) |
-      __gen_field(values->Sample2XOffset, 20, 23) |
-      __gen_field(values->Sample2YOffset, 16, 19) |
-      __gen_field(values->Sample1XOffset, 12, 15) |
-      __gen_field(values->Sample1YOffset, 8, 11) |
-      __gen_field(values->Sample0XOffset, 4, 7) |
-      __gen_field(values->Sample0YOffset, 0, 3) |
+      __gen_field(values->Sample3XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample3YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample2XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample2YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample1XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample1YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample0XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample0YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[3] =
-      __gen_field(values->Sample7XOffset, 28, 31) |
-      __gen_field(values->Sample7YOffset, 24, 27) |
-      __gen_field(values->Sample6XOffset, 20, 23) |
-      __gen_field(values->Sample6YOffset, 16, 19) |
-      __gen_field(values->Sample5XOffset, 12, 15) |
-      __gen_field(values->Sample5YOffset, 8, 11) |
-      __gen_field(values->Sample4XOffset, 4, 7) |
-      __gen_field(values->Sample4YOffset, 0, 3) |
+      __gen_field(values->Sample7XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample7YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample6XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample6YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample5XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample5YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample4XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample4YOffset * (1 << 4), 0, 3) |
       0;
 
 }
@@ -3175,38 +3175,38 @@ struct GEN75_3DSTATE_RAST_MULTISAMPLE {
 #define     NRM_NUMRASTSAMPLES_8                               3
 #define     NRM_NUMRASTSAMPLES_16                              4
    uint32_t                                     NumberofRasterizationMultisamples;
-   uint32_t                                     Sample3XOffset;
-   uint32_t                                     Sample3YOffset;
-   uint32_t                                     Sample2XOffset;
-   uint32_t                                     Sample2YOffset;
-   uint32_t                                     Sample1XOffset;
-   uint32_t                                     Sample1YOffset;
-   uint32_t                                     Sample0XOffset;
-   uint32_t                                     Sample0YOffset;
-   uint32_t                                     Sample7XOffset;
-   uint32_t                                     Sample7YOffset;
-   uint32_t                                     Sample6XOffset;
-   uint32_t                                     Sample6YOffset;
-   uint32_t                                     Sample5XOffset;
-   uint32_t                                     Sample5YOffset;
-   uint32_t                                     Sample4XOffset;
-   uint32_t                                     Sample4YOffset;
-   uint32_t                                     Sample11XOffset;
-   uint32_t                                     Sample11YOffset;
-   uint32_t                                     Sample10XOffset;
-   uint32_t                                     Sample10YOffset;
-   uint32_t                                     Sample9XOffset;
-   uint32_t                                     Sample9YOffset;
-   uint32_t                                     Sample8XOffset;
-   uint32_t                                     Sample8YOffset;
-   uint32_t                                     Sample15XOffset;
-   uint32_t                                     Sample15YOffset;
-   uint32_t                                     Sample14XOffset;
-   uint32_t                                     Sample14YOffset;
-   uint32_t                                     Sample13XOffset;
-   uint32_t                                     Sample13YOffset;
-   uint32_t                                     Sample12XOffset;
-   uint32_t                                     Sample12YOffset;
+   float                                        Sample3XOffset;
+   float                                        Sample3YOffset;
+   float                                        Sample2XOffset;
+   float                                        Sample2YOffset;
+   float                                        Sample1XOffset;
+   float                                        Sample1YOffset;
+   float                                        Sample0XOffset;
+   float                                        Sample0YOffset;
+   float                                        Sample7XOffset;
+   float                                        Sample7YOffset;
+   float                                        Sample6XOffset;
+   float                                        Sample6YOffset;
+   float                                        Sample5XOffset;
+   float                                        Sample5YOffset;
+   float                                        Sample4XOffset;
+   float                                        Sample4YOffset;
+   float                                        Sample11XOffset;
+   float                                        Sample11YOffset;
+   float                                        Sample10XOffset;
+   float                                        Sample10YOffset;
+   float                                        Sample9XOffset;
+   float                                        Sample9YOffset;
+   float                                        Sample8XOffset;
+   float                                        Sample8YOffset;
+   float                                        Sample15XOffset;
+   float                                        Sample15YOffset;
+   float                                        Sample14XOffset;
+   float                                        Sample14YOffset;
+   float                                        Sample13XOffset;
+   float                                        Sample13YOffset;
+   float                                        Sample12XOffset;
+   float                                        Sample12YOffset;
 };
 
 static inline void
@@ -3228,47 +3228,47 @@ GEN75_3DSTATE_RAST_MULTISAMPLE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[2] =
-      __gen_field(values->Sample3XOffset, 28, 31) |
-      __gen_field(values->Sample3YOffset, 24, 27) |
-      __gen_field(values->Sample2XOffset, 20, 23) |
-      __gen_field(values->Sample2YOffset, 16, 19) |
-      __gen_field(values->Sample1XOffset, 12, 15) |
-      __gen_field(values->Sample1YOffset, 8, 11) |
-      __gen_field(values->Sample0XOffset, 4, 7) |
-      __gen_field(values->Sample0YOffset, 0, 3) |
+      __gen_field(values->Sample3XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample3YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample2XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample2YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample1XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample1YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample0XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample0YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[3] =
-      __gen_field(values->Sample7XOffset, 28, 31) |
-      __gen_field(values->Sample7YOffset, 24, 27) |
-      __gen_field(values->Sample6XOffset, 20, 23) |
-      __gen_field(values->Sample6YOffset, 16, 19) |
-      __gen_field(values->Sample5XOffset, 12, 15) |
-      __gen_field(values->Sample5YOffset, 8, 11) |
-      __gen_field(values->Sample4XOffset, 4, 7) |
-      __gen_field(values->Sample4YOffset, 0, 3) |
+      __gen_field(values->Sample7XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample7YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample6XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample6YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample5XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample5YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample4XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample4YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[4] =
-      __gen_field(values->Sample11XOffset, 28, 31) |
-      __gen_field(values->Sample11YOffset, 24, 27) |
-      __gen_field(values->Sample10XOffset, 20, 23) |
-      __gen_field(values->Sample10YOffset, 16, 19) |
-      __gen_field(values->Sample9XOffset, 12, 15) |
-      __gen_field(values->Sample9YOffset, 8, 11) |
-      __gen_field(values->Sample8XOffset, 4, 7) |
-      __gen_field(values->Sample8YOffset, 0, 3) |
+      __gen_field(values->Sample11XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample11YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample10XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample10YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample9XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample9YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample8XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample8YOffset * (1 << 4), 0, 3) |
       0;
 
    dw[5] =
-      __gen_field(values->Sample15XOffset, 28, 31) |
-      __gen_field(values->Sample15YOffset, 24, 27) |
-      __gen_field(values->Sample14XOffset, 20, 23) |
-      __gen_field(values->Sample14YOffset, 16, 19) |
-      __gen_field(values->Sample13XOffset, 12, 15) |
-      __gen_field(values->Sample13YOffset, 8, 11) |
-      __gen_field(values->Sample12XOffset, 4, 7) |
-      __gen_field(values->Sample12YOffset, 0, 3) |
+      __gen_field(values->Sample15XOffset * (1 << 4), 28, 31) |
+      __gen_field(values->Sample15YOffset * (1 << 4), 24, 27) |
+      __gen_field(values->Sample14XOffset * (1 << 4), 20, 23) |
+      __gen_field(values->Sample14YOffset * (1 << 4), 16, 19) |
+      __gen_field(values->Sample13XOffset * (1 << 4), 12, 15) |
+      __gen_field(values->Sample13YOffset * (1 << 4), 8, 11) |
+      __gen_field(values->Sample12XOffset * (1 << 4), 4, 7) |
+      __gen_field(values->Sample12YOffset * (1 << 4), 0, 3) |
       0;
 
 }
@@ -3814,7 +3814,7 @@ struct GEN75_3DSTATE_SF {
 #define     CULLMODE_FRONT                                     2
 #define     CULLMODE_BACK                                      3
    uint32_t                                     CullMode;
-   uint32_t                                     LineWidth;
+   float                                        LineWidth;
    uint32_t                                     LineEndCapAntialiasingRegionWidth;
    uint32_t                                     LineStippleEnable;
    uint32_t                                     ScissorRectangleEnable;
@@ -3834,7 +3834,7 @@ struct GEN75_3DSTATE_SF {
    uint32_t                                     AALineDistanceMode;
    uint32_t                                     VertexSubPixelPrecisionSelect;
    uint32_t                                     UsePointWidthState;
-   uint32_t                                     PointWidth;
+   float                                        PointWidth;
    uint32_t                                     GlobalDepthOffsetConstant;
    uint32_t                                     GlobalDepthOffsetScale;
    uint32_t                                     GlobalDepthOffsetClamp;
@@ -3870,7 +3870,7 @@ GEN75_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
    dw[2] =
       __gen_field(values->AntiAliasingEnable, 31, 31) |
       __gen_field(values->CullMode, 29, 30) |
-      __gen_field(values->LineWidth, 18, 27) |
+      __gen_field(values->LineWidth * (1 << 7), 18, 27) |
       __gen_field(values->LineEndCapAntialiasingRegionWidth, 16, 17) |
       __gen_field(values->LineStippleEnable, 14, 14) |
       __gen_field(values->ScissorRectangleEnable, 11, 11) |
@@ -3886,7 +3886,7 @@ GEN75_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->AALineDistanceMode, 14, 14) |
       __gen_field(values->VertexSubPixelPrecisionSelect, 12, 12) |
       __gen_field(values->UsePointWidthState, 11, 11) |
-      __gen_field(values->PointWidth, 0, 10) |
+      __gen_field(values->PointWidth * (1 << 3), 0, 10) |
       0;
 
    dw[4] =
@@ -7548,7 +7548,7 @@ struct GEN75_RENDER_SURFACE_STATE {
    uint32_t                                     ShaderChannelSelectG;
    uint32_t                                     ShaderChannelSelectB;
    uint32_t                                     ShaderChannelSelectA;
-   uint32_t                                     ResourceMinLOD;
+   float                                        ResourceMinLOD;
 };
 
 static inline void
@@ -7627,7 +7627,7 @@ GEN75_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->ShaderChannelSelectG, 22, 24) |
       __gen_field(values->ShaderChannelSelectB, 19, 21) |
       __gen_field(values->ShaderChannelSelectA, 16, 18) |
-      __gen_field(values->ResourceMinLOD, 0, 11) |
+      __gen_field(values->ResourceMinLOD * (1 << 8), 0, 11) |
       0;
 
 }
@@ -7694,7 +7694,7 @@ struct GEN75_SAMPLER_STATE {
    uint32_t                                     TextureBorderColorMode;
 #define     OGL                                                1
    uint32_t                                     LODPreClampEnable;
-   uint32_t                                     BaseMipLevel;
+   float                                        BaseMipLevel;
 #define     MIPFILTER_NONE                                     0
 #define     MIPFILTER_NEAREST                                  1
 #define     MIPFILTER_LINEAR                                   3
@@ -7713,8 +7713,8 @@ struct GEN75_SAMPLER_STATE {
 #define     LEGACY                                             0
 #define     EWAApproximation                                   1
    uint32_t                                     AnisotropicAlgorithm;
-   uint32_t                                     MinLOD;
-   uint32_t                                     MaxLOD;
+   float                                        MinLOD;
+   float                                        MaxLOD;
 #define     PREFILTEROPALWAYS                                  0
 #define     PREFILTEROPNEVER                                   1
 #define     PREFILTEROPLESS                                    2
@@ -7769,7 +7769,7 @@ GEN75_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SamplerDisable, 31, 31) |
       __gen_field(values->TextureBorderColorMode, 29, 29) |
       __gen_field(values->LODPreClampEnable, 28, 28) |
-      __gen_field(values->BaseMipLevel, 22, 26) |
+      __gen_field(values->BaseMipLevel * (1 << 1), 22, 26) |
       __gen_field(values->MipModeFilter, 20, 21) |
       __gen_field(values->MagModeFilter, 17, 19) |
       __gen_field(values->MinModeFilter, 14, 16) |
@@ -7778,8 +7778,8 @@ GEN75_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->MinLOD, 20, 31) |
-      __gen_field(values->MaxLOD, 8, 19) |
+      __gen_field(values->MinLOD * (1 << 8), 20, 31) |
+      __gen_field(values->MaxLOD * (1 << 8), 8, 19) |
       __gen_field(values->ShadowFunction, 1, 3) |
       __gen_field(values->CubeSurfaceControlMode, 0, 0) |
       0;
