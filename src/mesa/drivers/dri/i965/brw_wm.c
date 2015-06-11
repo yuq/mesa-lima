@@ -1,34 +1,28 @@
 /*
- Copyright (C) Intel Corp.  2006.  All Rights Reserved.
- Intel funded Tungsten Graphics to
- develop this 3D driver.
-
- Permission is hereby granted, free of charge, to any person obtaining
- a copy of this software and associated documentation files (the
- "Software"), to deal in the Software without restriction, including
- without limitation the rights to use, copy, modify, merge, publish,
- distribute, sublicense, and/or sell copies of the Software, and to
- permit persons to whom the Software is furnished to do so, subject to
- the following conditions:
-
- The above copyright notice and this permission notice (including the
- next paragraph) shall be included in all copies or substantial
- portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- IN NO EVENT SHALL THE COPYRIGHT OWNER(S) AND/OR ITS SUPPLIERS BE
- LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
- **********************************************************************/
- /*
-  * Authors:
-  *   Keith Whitwell <keithw@vmware.com>
-  */
-
+ * Copyright (C) Intel Corp.  2006.  All Rights Reserved.
+ * Intel funded Tungsten Graphics to
+ * develop this 3D driver.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the
+ * next paragraph) shall be included in all copies or substantial
+ * portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE COPYRIGHT OWNER(S) AND/OR ITS SUPPLIERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 #include "brw_context.h"
 #include "brw_wm.h"
 #include "brw_state.h"
@@ -350,13 +344,15 @@ static uint8_t
 gen6_gather_workaround(GLenum internalformat)
 {
    switch (internalformat) {
-      case GL_R8I: return WA_SIGN | WA_8BIT;
-      case GL_R8UI: return WA_8BIT;
-      case GL_R16I: return WA_SIGN | WA_16BIT;
-      case GL_R16UI: return WA_16BIT;
-      /* note that even though GL_R32I and GL_R32UI have format overrides
-       * in the surface state, there is no shader w/a required */
-      default: return 0;
+   case GL_R8I: return WA_SIGN | WA_8BIT;
+   case GL_R8UI: return WA_8BIT;
+   case GL_R16I: return WA_SIGN | WA_16BIT;
+   case GL_R16UI: return WA_16BIT;
+   default:
+      /* Note that even though GL_R32I and GL_R32UI have format overrides in
+       * the surface state, there is no shader w/a required.
+       */
+      return 0;
    }
 }
 
@@ -403,8 +399,9 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
 	       key->gl_clamp_mask[2] |= 1 << s;
 	 }
 
-         /* gather4's channel select for green from RG32F is broken;
-          * requires a shader w/a on IVB; fixable with just SCS on HSW. */
+         /* gather4's channel select for green from RG32F is broken; requires
+          * a shader w/a on IVB; fixable with just SCS on HSW.
+          */
          if (brw->gen == 7 && !brw->is_haswell && prog->UsesGather) {
             if (img->InternalFormat == GL_RG32F)
                key->gather_channel_quirk_mask |= 1 << s;
@@ -453,13 +450,13 @@ brw_wm_state_dirty (struct brw_context *brw)
                           BRW_NEW_VUE_MAP_GEOM_OUT);
 }
 
-static void brw_wm_populate_key( struct brw_context *brw,
-				 struct brw_wm_prog_key *key )
+static void
+brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct brw_fragment_program *fp =
-      (struct brw_fragment_program *)brw->fragment_program;
+      (struct brw_fragment_program *) brw->fragment_program;
    const struct gl_program *prog = (struct gl_program *) brw->fragment_program;
    GLuint lookup = 0;
    GLuint line_aa;
@@ -605,7 +602,8 @@ static void brw_wm_populate_key( struct brw_context *brw,
     * like GL requires.  Fix that by building the alpha test into the
     * shader, and we'll skip enabling the fixed function alpha test.
     */
-   if (brw->gen < 6 && ctx->DrawBuffer->_NumColorDrawBuffers > 1 && ctx->Color.AlphaEnabled) {
+   if (brw->gen < 6 && ctx->DrawBuffer->_NumColorDrawBuffers > 1 &&
+       ctx->Color.AlphaEnabled) {
       key->alpha_test_func = ctx->Color.AlphaFunc;
       key->alpha_test_ref = ctx->Color.AlphaRef;
    }
