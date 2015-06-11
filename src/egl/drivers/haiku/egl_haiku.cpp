@@ -284,10 +284,10 @@ haiku_make_current(_EGLDriver* drv, _EGLDisplay* dpy, _EGLSurface *dsurf,
 {
 	CALLED();
 
-	struct haiku_egl_context* cont=haiku_egl_context(ctx);
-	struct haiku_egl_surface* surf=haiku_egl_surface(dsurf);
+	struct haiku_egl_context* cont = haiku_egl_context(ctx);
+	struct haiku_egl_surface* surf = haiku_egl_surface(dsurf);
 	_EGLContext *old_ctx;
-    _EGLSurface *old_dsurf, *old_rsurf;
+	_EGLSurface *old_dsurf, *old_rsurf;
 
 	if (!_eglBindContext(ctx, dsurf, rsurf, &old_ctx, &old_dsurf, &old_rsurf))
 		return EGL_FALSE;
@@ -302,7 +302,8 @@ extern "C"
 EGLBoolean
 haiku_swap_buffers(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSurface *surf)
 {
-	struct haiku_egl_surface* surface=haiku_egl_surface(surf);
+	struct haiku_egl_surface* surface = haiku_egl_surface(surf);
+
 	surface->gl->SwapBuffers();
 	//gl->Render();
 	return EGL_TRUE;
