@@ -1948,7 +1948,8 @@ fs_visitor::emit_cs_terminate()
    bld.exec_all().MOV(payload, g0);
 
    /* Send a message to the thread spawner to terminate the thread. */
-   fs_inst *inst = bld.emit(CS_OPCODE_CS_TERMINATE, reg_undef, payload);
+   fs_inst *inst = bld.exec_all()
+                      .emit(CS_OPCODE_CS_TERMINATE, reg_undef, payload);
    inst->eot = true;
 }
 
