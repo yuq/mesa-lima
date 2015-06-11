@@ -86,10 +86,18 @@ static void init_r600_target()
 {
 	static unsigned initialized = 0;
 	if (!initialized) {
+#if HAVE_LLVM < 0x0307
 		LLVMInitializeR600TargetInfo();
 		LLVMInitializeR600Target();
 		LLVMInitializeR600TargetMC();
 		LLVMInitializeR600AsmPrinter();
+#else
+		LLVMInitializeAMDGPUTargetInfo();
+		LLVMInitializeAMDGPUTarget();
+		LLVMInitializeAMDGPUTargetMC();
+		LLVMInitializeAMDGPUAsmPrinter();
+
+#endif
 		initialized = 1;
 	}
 }

@@ -2048,16 +2048,19 @@ require_egl_drm() {
 }
 
 radeon_llvm_check() {
+    if test ${LLVM_VERSION_INT} -lt 307; then
+        amdgpu_llvm_target_name='r600'
+    else
+        amdgpu_llvm_target_name='amdgpu'
+    fi
     if test "x$enable_gallium_llvm" != "xyes"; then
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
     llvm_check_version_for "3" "4" "2" $1 
-    if test true && $LLVM_CONFIG --targets-built | grep -qvw 'R600' ; then
-        AC_MSG_ERROR([LLVM R600 Target not enabled.  You can enable it when building the LLVM
-                      sources with the --enable-experimental-targets=R600
-                      configure flag])
+    if test true && $LLVM_CONFIG --targets-built | grep -iqvw $amdgpu_llvm_target_name ; then
+        AC_MSG_ERROR([LLVM $amdgpu_llvm_target_name not enabled in your LLVM build.])
     fi
-    LLVM_COMPONENTS="${LLVM_COMPONENTS} r600 bitreader ipo"
+    LLVM_COMPONENTS="${LLVM_COMPONENTS} $amdgpu_llvm_target_name bitreader ipo"
     NEED_RADEON_LLVM=yes
     if test "x$have_libelf" != xyes; then
        AC_MSG_ERROR([$1 requires libelf when using llvm])
