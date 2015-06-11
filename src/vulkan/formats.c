@@ -246,16 +246,11 @@ VkResult anv_validate_GetFormatInfo(
    return anv_GetFormatInfo(_device, _format, infoType, pDataSize, pData);
 }
 
-VkResult anv_GetFormatInfo(
-    VkDevice                                    _device,
-    VkFormat                                    _format,
-    VkFormatInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+static void
+anv_format_get_properties(struct anv_device *device,
+                          const struct anv_format *format,
+                          VkFormatProperties *properties)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   VkFormatProperties *properties;
-   const struct anv_format *format;
    const struct surface_format_info *info;
    int gen;
 
@@ -263,14 +258,12 @@ VkResult anv_GetFormatInfo(
    if (device->info.is_haswell)
       gen += 5;
 
-   format = anv_format_for_vk_format(_format);
-   if (format == 0)
-      return vk_error(VK_ERROR_INVALID_VALUE);
    if (format->format == UNSUPPORTED)
-      return VK_UNSUPPORTED;
+      goto unsupported;
+
    info = &surface_formats[format->format];
    if (!info->exists)
-      return VK_UNSUPPORTED;
+      goto unsupported;
 
    uint32_t linear = 0, tiled = 0;
    if (info->sampling <= gen) {
@@ -289,16 +282,39 @@ VkResult anv_GetFormatInfo(
       linear |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
    }
 
+   properties->linearTilingFeatures = linear;
+   properties->optimalTilingFeatures = tiled;
+   return;
+
+ unsupported:
+   properties->linearTilingFeatures = 0;
+   properties->optimalTilingFeatures = 0;
+}
+
+VkResult anv_GetFormatInfo(
+    VkDevice                                    _device,
+    VkFormat                                    _format,
+    VkFormatInfoType                            infoType,
+    size_t*                                     pDataSize,
+    void*                                       pData)
+{
+   struct anv_device *device = (struct anv_device *) _device;
+   const struct anv_format *format;
+   VkFormatProperties *properties;
+
+   format = anv_format_for_vk_format(_format);
+   if (format == 0)
+      return vk_error(VK_ERROR_INVALID_VALUE);
+
    switch (infoType) {
    case VK_FORMAT_INFO_TYPE_PROPERTIES:
-      properties = pData;
+      properties = (VkFormatProperties *)pData;
 
       *pDataSize = sizeof(*properties);
       if (pData == NULL)
          return VK_SUCCESS;
 
-      properties->linearTilingFeatures = linear;
-      properties->optimalTilingFeatures = tiled;
+      anv_format_get_properties(device, format, properties);
       return VK_SUCCESS;
 
    default:
