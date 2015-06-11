@@ -491,6 +491,28 @@ anv_pipeline_create(
    emit_ds_state(pipeline, ds_info);
    emit_cb_state(pipeline, cb_info);
 
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_STATISTICS,
+                   .StatisticsEnable = true);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_HS, .Enable = false);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_TE, .TEEnable = false);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_DS, .FunctionEnable = false);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_STREAMOUT, .SOFunctionEnable = false);
+
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_VS,
+                  .ConstantBufferOffset = 0,
+                  .ConstantBufferSize = 4);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_GS,
+                  .ConstantBufferOffset = 4,
+                  .ConstantBufferSize = 4);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_PS,
+                  .ConstantBufferOffset = 8,
+                  .ConstantBufferSize = 4);
+
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_WM_CHROMAKEY,
+                  .ChromaKeyKillEnable = false);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE_SWIZ);
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_AA_LINE_PARAMETERS);
+
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
                   .ClipEnable = true,
                   .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),

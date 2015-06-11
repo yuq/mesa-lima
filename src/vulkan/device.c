@@ -2429,28 +2429,6 @@ VkResult anv_BeginCommandBuffer(
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VF_STATISTICS,
-                   .StatisticsEnable = true);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_HS, .Enable = false);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_TE, .TEEnable = false);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DS, .FunctionEnable = false);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STREAMOUT, .SOFunctionEnable = false);
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_VS,
-                  .ConstantBufferOffset = 0,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_GS,
-                  .ConstantBufferOffset = 4,
-                  .ConstantBufferSize = 4);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_PUSH_CONSTANT_ALLOC_PS,
-                  .ConstantBufferOffset = 8,
-                  .ConstantBufferSize = 4);
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_WM_CHROMAKEY,
-                  .ChromaKeyKillEnable = false);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SBE_SWIZ);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_AA_LINE_PARAMETERS);
-
    return VK_SUCCESS;
 }
 
