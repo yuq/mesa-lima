@@ -438,7 +438,8 @@ _mesa_format_from_array_format(uint32_t array_format)
    call_once(&format_array_format_table_exists, format_array_format_table_init);
 
    if (!format_array_format_table) {
-      format_array_format_table_exists = ONCE_FLAG_INIT;
+      static const once_flag once_flag_init = ONCE_FLAG_INIT;
+      format_array_format_table_exists = once_flag_init;
       return MESA_FORMAT_NONE;
    }
 
