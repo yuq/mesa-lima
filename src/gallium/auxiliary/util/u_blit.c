@@ -65,7 +65,7 @@ struct blit_state
    struct pipe_vertex_element velem[2];
 
    void *vs;
-   void *fs[PIPE_MAX_TEXTURE_TYPES][TGSI_WRITEMASK_XYZW + 1];
+   void *fs[PIPE_MAX_TEXTURE_TYPES][TGSI_WRITEMASK_XYZW + 1][3];
 
    struct pipe_resource *vbuf;  /**< quad vertices */
    unsigned vbuf_slot;
@@ -135,15 +135,17 @@ void
 util_destroy_blit(struct blit_state *ctx)
 {
    struct pipe_context *pipe = ctx->pipe;
-   unsigned i, j;
+   unsigned i, j, k;
 
    if (ctx->vs)
       pipe->delete_vs_state(pipe, ctx->vs);
 
    for (i = 0; i < Elements(ctx->fs); i++) {
       for (j = 0; j < Elements(ctx->fs[i]); j++) {
-         if (ctx->fs[i][j])
-            pipe->delete_fs_state(pipe, ctx->fs[i][j]);
+         for (k = 0; k < Elements(ctx->fs[i][j]); k++) {
+            if (ctx->fs[i][j][k])
+               pipe->delete_fs_state(pipe, ctx->fs[i][j][k]);
+         }
       }
    }
 
@@ -158,18 +160,34 @@ util_destroy_blit(struct blit_state *ctx)
  */
 static INLINE void
 set_fragment_shader(struct blit_state *ctx, uint writemask,
+                    enum pipe_format format,
                     enum pipe_texture_target pipe_tex)
 {
-   if (!ctx->fs[pipe_tex][writemask]) {
-      unsigned tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
+   enum tgsi_return_type stype;
+   unsigned idx;
 
-      ctx->fs[pipe_tex][writemask] =
-         util_make_fragment_tex_shader_writemask(ctx->pipe, tgsi_tex,
-                                                 TGSI_INTERPOLATE_LINEAR,
-                                                 writemask);
+   if (util_format_is_pure_uint(format)) {
+      stype = TGSI_RETURN_TYPE_UINT;
+      idx = 0;
+   } else if (util_format_is_pure_sint(format)) {
+      stype = TGSI_RETURN_TYPE_SINT;
+      idx = 1;
+   } else {
+      stype = TGSI_RETURN_TYPE_FLOAT;
+      idx = 2;
    }
 
-   cso_set_fragment_shader_handle(ctx->cso, ctx->fs[pipe_tex][writemask]);
+   if (!ctx->fs[pipe_tex][writemask][idx]) {
+      unsigned tgsi_tex = util_pipe_tex_to_tgsi_tex(pipe_tex, 0);
+
+      ctx->fs[pipe_tex][writemask][idx] =
+         util_make_fragment_tex_shader_writemask(ctx->pipe, tgsi_tex,
+                                                 TGSI_INTERPOLATE_LINEAR,
+                                                 writemask,
+                                                 stype);
+   }
+
+   cso_set_fragment_shader_handle(ctx->cso, ctx->fs[pipe_tex][writemask][idx]);
 }
 
 
@@ -571,6 +589,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
 
    /* shaders */
    set_fragment_shader(ctx, TGSI_WRITEMASK_XYZW,
+                       src_sampler_view->format,
                        src_sampler_view->texture->target);
    set_vertex_shader(ctx);
    cso_set_tessctrl_shader_handle(ctx->cso, NULL);
