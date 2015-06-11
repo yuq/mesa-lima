@@ -44,6 +44,15 @@
 
 #define CALLOC_STRUCT(T)   (struct T *) calloc(1, sizeof(struct T))
 
+#ifdef DEBUG
+#	define TRACE(x...) printf("egl_haiku: " x)
+#	define CALLED() TRACE("CALLED: %s\n", __PRETTY_FUNCTION__)
+#else
+#	define TRACE(x...)
+#	define CALLED()
+#endif
+#define ERROR(x...) printf("egl_haiku: " x)
+
 
 _EGL_DRIVER_STANDARD_TYPECASTS(haiku_egl)
 
@@ -114,23 +123,25 @@ static _EGLSurface *
 haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	_EGLConfig *conf, void *native_window, const EGLint *attrib_list)
 {
+	CALLED();
+
 	struct haiku_egl_surface* surface;
 	surface = (struct haiku_egl_surface*)calloc(1,sizeof (*surface));
 
 	_eglInitSurface(&surface->surf, disp, EGL_WINDOW_BIT, conf, attrib_list);
 	(&surface->surf)->SwapInterval = 1;
 
-	_eglLog(_EGL_DEBUG, "Creating window");
+	TRACE("Creating window\n");
 	BWindow* win = (BWindow*)native_window;
 
-	_eglLog(_EGL_DEBUG, "Creating GL view");
+	TRACE("Creating GL view\n");
 	surface->gl = new BGLView(win->Bounds(), "OpenGL", B_FOLLOW_ALL_SIDES, 0,
 		BGL_RGB | BGL_DOUBLE | BGL_ALPHA);
 
-	_eglLog(_EGL_DEBUG, "Adding GL");
+	TRACE("Adding GL\n");
 	win->AddChild(surface->gl);
 
-	_eglLog(_EGL_DEBUG, "Showing window");
+	TRACE("Showing window\n");
 	win->Show();
 	return &surface->surf;
 }
@@ -162,13 +173,14 @@ haiku_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 static EGLBoolean
 haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 {
-	printf("Adding configs\n");
+	CALLED();
 
 	struct haiku_egl_config* conf;
 	conf = CALLOC_STRUCT(haiku_egl_config);
 
 	_eglInitConfig(&conf->base, dpy, 1);
-	_eglLog(_EGL_DEBUG,"Config inited\n");
+	TRACE("Config inited\n");
+
 	_eglSetConfigKey(&conf->base, EGL_RED_SIZE, 8);
 	_eglSetConfigKey(&conf->base, EGL_BLUE_SIZE, 8);
 	_eglSetConfigKey(&conf->base, EGL_GREEN_SIZE, 8);
@@ -199,19 +211,19 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 	_eglSetConfigKey(&conf->base, EGL_MAX_PBUFFER_PIXELS, 0); // TODO: How to get the right value ?
 	_eglSetConfigKey(&conf->base, EGL_SURFACE_TYPE, EGL_WINDOW_BIT /*| EGL_PIXMAP_BIT | EGL_PBUFFER_BIT*/);
 
-	printf("Config configuated\n");
+	TRACE("Config configuated\n");
 	if (!_eglValidateConfig(&conf->base, EGL_FALSE)) {
-		_eglLog(_EGL_DEBUG, "Haiku failed to validate config");
+		_eglLog(_EGL_DEBUG, "Haiku: failed to validate config");
 		return EGL_FALSE;
 	}
-	printf("Validated config\n");
+	TRACE("Validated config\n");
    
 	_eglLinkConfig(&conf->base);
 	if (!_eglGetArraySize(dpy->Configs)) {
 		_eglLog(_EGL_WARNING, "Haiku: failed to create any config");
 		return EGL_FALSE;
 	}
-	printf("Config successful!\n");
+	TRACE("Config successfull\n");
    
 	return EGL_TRUE;
 }
@@ -220,22 +232,18 @@ extern "C"
 EGLBoolean
 init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 {
-	_eglLog(_EGL_DEBUG,"\nInitializing Haiku EGL\n");
+	CALLED();
 
-	printf("Initializing Haiku EGL\n");
 	_eglSetLogProc(haiku_log);
 
 	loader_set_logger(_eglLog);
 
-	_eglLog(_EGL_DEBUG,"Add configs");
-    haiku_add_configs_for_visuals(dpy);
+	TRACE("Add configs\n");
+	haiku_add_configs_for_visuals(dpy);
 
 	dpy->Version = 14;
    
-   //dpy->Extensions.KHR_create_context = true;
-
-	//dri2_dpy->vtbl = &dri2_haiku_display_vtbl;
-	_eglLog(_EGL_DEBUG, "Initialization finished");
+	TRACE("Initialization finished\n");
 
 	return EGL_TRUE;
 }
@@ -254,12 +262,15 @@ _EGLContext*
 haiku_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
 	_EGLContext *share_list, const EGLint *attrib_list)
 {
-	_eglLog(_EGL_DEBUG,"Creating context");
+	CALLED();
+
 	struct haiku_egl_context* context;
 	context=(struct haiku_egl_context*)calloc(1,sizeof (*context));
-	if(!_eglInitContext(&context->ctx, disp, conf, attrib_list))
-		printf("ERROR creating context");
-	_eglLog(_EGL_DEBUG, "Context created");
+
+	if (!_eglInitContext(&context->ctx, disp, conf, attrib_list))
+		ERROR("ERROR creating context");
+
+	TRACE("Context created\n");
 	return &context->ctx;
 }
 
@@ -278,6 +289,8 @@ EGLBoolean
 haiku_make_current(_EGLDriver* drv, _EGLDisplay* dpy, _EGLSurface *dsurf,
 		  _EGLSurface *rsurf, _EGLContext *ctx)
 {
+	CALLED();
+
 	struct haiku_egl_context* cont=haiku_egl_context(ctx);
 	struct haiku_egl_surface* surf=haiku_egl_surface(dsurf);
 	_EGLContext *old_ctx;
@@ -316,7 +329,8 @@ extern "C"
 _EGLDriver*
 _eglBuiltInDriverHaiku(const char *args)
 {
-	_eglLog(_EGL_DEBUG,"Driver loaded");
+	CALLED();
+
 	struct haiku_egl_driver* driver;
 	driver=(struct haiku_egl_driver*)calloc(1,sizeof(*driver));
 	_eglInitDriverFallbacks(&driver->base);
@@ -335,7 +349,7 @@ _eglBuiltInDriverHaiku(const char *args)
 	driver->base.Name = "Haiku";
 	driver->base.Unload = haiku_unload;
 
-	_eglLog(_EGL_DEBUG, "API Calls defined");
-	
+	TRACE("API Calls defined\n");
+
 	return &driver->base;
 }
