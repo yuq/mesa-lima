@@ -9,7 +9,6 @@ env.Append(CPPDEFINES = [
 env.Append(CPPPATH = [
 	'#/include',
 	'#/src/egl/main',
-	'#/src/loader',
 ])
 
 sources = [
@@ -21,10 +20,6 @@ if env['platform'] == 'haiku':
 		'HAVE_HAIKU_PLATFORM',
 		'_EGL_NATIVE_PLATFORM=haiku',
 	])
-
-env.Prepend(LIBS = [
-	libloader,
-])
 
 egl_haiku = env.ConvenienceLibrary(
 	target = 'egl_haiku',

@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "loader.h"
 #include "eglconfig.h"
 #include "eglcontext.h"
 #include "egldisplay.h"
@@ -243,8 +242,6 @@ init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 	CALLED();
 
 	_eglSetLogProc(haiku_log);
-
-	loader_set_logger(_eglLog);
 
 	TRACE("Add configs\n");
 	haiku_add_configs_for_visuals(dpy);
