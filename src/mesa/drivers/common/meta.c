@@ -3159,9 +3159,16 @@ decompress_texture_image(struct gl_context *ctx,
        * returned as red and two-channel texture values are returned as
        * red/alpha.
        */
-      if ((baseTexFormat == GL_LUMINANCE ||
-           baseTexFormat == GL_LUMINANCE_ALPHA ||
-           baseTexFormat == GL_INTENSITY) ||
+      if (((baseTexFormat == GL_LUMINANCE ||
+            baseTexFormat == GL_LUMINANCE_ALPHA ||
+            baseTexFormat == GL_INTENSITY) &&
+           (destBaseFormat == GL_RGBA ||
+            destBaseFormat == GL_RGB ||
+            destBaseFormat == GL_RG ||
+            destBaseFormat == GL_GREEN ||
+            destBaseFormat == GL_BLUE ||
+            destBaseFormat == GL_BGRA ||
+            destBaseFormat == GL_BGR)) ||
           /* If we're reading back an RGB(A) texture (using glGetTexImage) as
 	   * luminance then we need to return L=tex(R).
 	   */
