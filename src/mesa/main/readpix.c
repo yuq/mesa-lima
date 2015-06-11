@@ -60,6 +60,24 @@ _mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
            format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
 }
 
+/**
+ * Return true if the conversion L,I to RGB conversion is needed.
+ */
+GLboolean
+_mesa_need_luminance_to_rgb_conversion(GLenum srcBaseFormat,
+                                       GLenum dstBaseFormat)
+{
+   return (srcBaseFormat == GL_LUMINANCE ||
+           srcBaseFormat == GL_LUMINANCE_ALPHA ||
+           srcBaseFormat == GL_INTENSITY) &&
+          (dstBaseFormat == GL_GREEN ||
+           dstBaseFormat == GL_BLUE ||
+           dstBaseFormat == GL_RG ||
+           dstBaseFormat == GL_RGB ||
+           dstBaseFormat == GL_BGR ||
+           dstBaseFormat == GL_RGBA ||
+           dstBaseFormat == GL_BGRA);
+}
 
 /**
  * Return transfer op flags for this ReadPixels operation.
