@@ -108,6 +108,13 @@ VkResult anv_image_create(
    if (image == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   /* XXX: We don't handle any of these */
+   anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D);
+   anv_assert(pCreateInfo->mipLevels == 1);
+   anv_assert(pCreateInfo->arraySize == 1);
+   anv_assert(pCreateInfo->samples == 1);
+   anv_assert(pCreateInfo->extent.depth == 1);
+
    image->bo = NULL;
    image->offset = 0;
    image->type = pCreateInfo->imageType;
@@ -203,6 +210,13 @@ anv_image_view_init(struct anv_surface_view *view,
    const struct anv_format *info =
       anv_format_for_vk_format(pCreateInfo->format);
    uint32_t tile_mode, format;
+
+   /* XXX: We don't handle any of these */
+   anv_assert(pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D);
+   anv_assert(pCreateInfo->subresourceRange.baseMipLevel == 0);
+   anv_assert(pCreateInfo->subresourceRange.mipLevels == 1);
+   anv_assert(pCreateInfo->subresourceRange.baseArraySlice == 0);
+   anv_assert(pCreateInfo->subresourceRange.arraySize == 1);
 
    view->bo = image->bo;
    switch (pCreateInfo->subresourceRange.aspect) {
@@ -316,6 +330,12 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
+   /* XXX: We don't handle any of these */
+   anv_assert(pCreateInfo->mipLevel == 0);
+   anv_assert(pCreateInfo->baseArraySlice == 0);
+   anv_assert(pCreateInfo->arraySize == 1);
+   anv_assert(pCreateInfo->msaaResolveImage == 0);
+
    view->bo = image->bo;
    view->offset = image->offset;
    view->extent = image->extent;
@@ -409,6 +429,12 @@ VkResult anv_CreateDepthStencilView(
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   /* XXX: We don't handle any of these */
+   anv_assert(pCreateInfo->mipLevel == 0);
+   anv_assert(pCreateInfo->baseArraySlice == 0);
+   anv_assert(pCreateInfo->arraySize == 1);
+   anv_assert(pCreateInfo->msaaResolveImage == 0);
 
    view->bo = image->bo;
 
