@@ -32,6 +32,10 @@
 #include <stdio.h>
 #include <assert.h>
 
+#ifndef __gen_validate_value
+#define __gen_validate_value(x)
+#endif
+
 #ifndef __gen_field_functions
 #define __gen_field_functions
 
@@ -43,6 +47,7 @@ union __gen_value {
 static inline uint64_t
 __gen_field(uint64_t v, uint32_t start, uint32_t end)
 {
+   __gen_validate_value(v);
 #if DEBUG
    if (end - start + 1 < 64)
       assert(v < 1ul << (end - start + 1));
@@ -54,6 +59,7 @@ __gen_field(uint64_t v, uint32_t start, uint32_t end)
 static inline uint64_t
 __gen_offset(uint64_t v, uint32_t start, uint32_t end)
 {
+   __gen_validate_value(v);
 #if DEBUG
    uint64_t mask = (~0ul >> (64 - (end - start + 1))) << start;
 
@@ -66,6 +72,7 @@ __gen_offset(uint64_t v, uint32_t start, uint32_t end)
 static inline uint32_t
 __gen_float(float v)
 {
+   __gen_validate_value(v);
    return ((union __gen_value) { .f = (v) }).dw;
 }
 
