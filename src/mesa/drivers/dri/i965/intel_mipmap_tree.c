@@ -1211,8 +1211,10 @@ intel_miptree_copy_slice(struct brw_context *brw,
    assert(src_mt->format == dst_mt->format);
 
    if (dst_mt->compressed) {
-      height = ALIGN(height, dst_mt->align_h) / dst_mt->align_h;
-      width = ALIGN(width, dst_mt->align_w);
+      unsigned int i, j;
+      _mesa_get_format_block_size(dst_mt->format, &i, &j);
+      height = ALIGN(height, j) / j;
+      width = ALIGN(width, i);
    }
 
    /* If it's a packed depth/stencil buffer with separate stencil, the blit
