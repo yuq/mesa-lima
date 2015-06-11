@@ -76,28 +76,6 @@ struct haiku_egl_surface
 };
 
 
-static void
-haiku_log(EGLint level, const char *msg)
-{
-	switch (level) {
-		case _EGL_DEBUG:
-			fprintf(stderr,"%s", msg);
-			break;
-		case _EGL_INFO:
-			fprintf(stderr,"%s", msg);
-			break;
-		case _EGL_WARNING:
-			fprintf(stderr,"%s", msg);
-			break;
-		case _EGL_FATAL:
-			fprintf(stderr,"%s", msg);
-			break;
-		default:
-			break;
-	}
-}
-
-
 /**
  * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
  */
@@ -240,8 +218,6 @@ EGLBoolean
 init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 {
 	CALLED();
-
-	_eglSetLogProc(haiku_log);
 
 	TRACE("Add configs\n");
 	haiku_add_configs_for_visuals(dpy);
