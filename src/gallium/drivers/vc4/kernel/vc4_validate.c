@@ -311,17 +311,18 @@ validate_branch_to_sublist(VALIDATE_ARGS)
 static int
 validate_loadstore_tile_buffer_general(VALIDATE_ARGS)
 {
-	uint32_t packet_b0 = *(uint8_t *)(untrusted + 0);
-	uint32_t packet_b1 = *(uint8_t *)(untrusted + 1);
+	uint16_t packet_b01 = *(uint16_t *)(untrusted + 0);
 	struct drm_gem_cma_object *fbo;
-	uint32_t buffer_type = packet_b0 & 0xf;
+	uint32_t buffer_type = VC4_GET_FIELD(packet_b01,
+					     VC4_LOADSTORE_TILE_BUFFER_BUFFER);
 	uint32_t untrusted_address, offset, cpp;
 
 	switch (buffer_type) {
 	case VC4_LOADSTORE_TILE_BUFFER_NONE:
 		return 0;
 	case VC4_LOADSTORE_TILE_BUFFER_COLOR:
-		if ((packet_b1 & VC4_LOADSTORE_TILE_BUFFER_MASK) ==
+		if (VC4_GET_FIELD(packet_b01,
+				  VC4_LOADSTORE_TILE_BUFFER_FORMAT) ==
 		    VC4_LOADSTORE_TILE_BUFFER_RGBA8888) {
 			cpp = 4;
 		} else {
@@ -346,9 +347,8 @@ validate_loadstore_tile_buffer_general(VALIDATE_ARGS)
 	offset = untrusted_address & ~0xf;
 
 	if (!check_tex_size(exec, fbo, offset,
-			    ((packet_b0 &
-			      VC4_LOADSTORE_TILE_BUFFER_FORMAT_MASK) >>
-			     VC4_LOADSTORE_TILE_BUFFER_FORMAT_SHIFT),
+			    VC4_GET_FIELD(packet_b01,
+					  VC4_LOADSTORE_TILE_BUFFER_TILING),
 			    exec->fb_width, exec->fb_height, cpp)) {
 		return -EINVAL;
 	}
@@ -590,7 +590,7 @@ validate_tile_rendering_mode_config(VALIDATE_ARGS)
 	exec->fb_height = *(uint16_t *)(untrusted + 6);
 
 	flags = *(uint16_t *)(untrusted + 8);
-	if ((flags & VC4_RENDER_CONFIG_FORMAT_MASK) ==
+	if (VC4_GET_FIELD(flags, VC4_RENDER_CONFIG_FORMAT) ==
 	    VC4_RENDER_CONFIG_FORMAT_RGBA8888) {
 		cpp = 4;
 	} else {
@@ -599,9 +599,8 @@ validate_tile_rendering_mode_config(VALIDATE_ARGS)
 
 	offset = *(uint32_t *)untrusted;
 	if (!check_tex_size(exec, fbo, offset,
-			    ((flags &
-			      VC4_RENDER_CONFIG_MEMORY_FORMAT_MASK) >>
-			     VC4_RENDER_CONFIG_MEMORY_FORMAT_SHIFT),
+			    VC4_GET_FIELD(flags,
+					  VC4_RENDER_CONFIG_MEMORY_FORMAT),
 			    exec->fb_width, exec->fb_height, cpp)) {
 		return -EINVAL;
 	}
