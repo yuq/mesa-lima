@@ -58,10 +58,6 @@ _EGL_DRIVER_STANDARD_TYPECASTS(haiku_egl)
 struct haiku_egl_driver
 {
 	_EGLDriver base;
-
-	void *handle;
-	_EGLProc (*get_proc_address)(const char *procname);
-	void (*glFlush)(void);
 };
 
 struct haiku_egl_config
