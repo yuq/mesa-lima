@@ -192,18 +192,22 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 	TRACE("Config configuated\n");
 	if (!_eglValidateConfig(&conf->base, EGL_FALSE)) {
 		_eglLog(_EGL_DEBUG, "Haiku: failed to validate config");
-		return EGL_FALSE;
+		goto cleanup;
 	}
 	TRACE("Validated config\n");
    
 	_eglLinkConfig(&conf->base);
 	if (!_eglGetArraySize(dpy->Configs)) {
 		_eglLog(_EGL_WARNING, "Haiku: failed to create any config");
-		return EGL_FALSE;
+		goto cleanup;
 	}
 	TRACE("Config successfull\n");
-   
+
 	return EGL_TRUE;
+
+cleanup:
+	free(conf);
+	return EGL_FALSE;
 }
 
 extern "C"
@@ -213,7 +217,8 @@ init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 	CALLED();
 
 	TRACE("Add configs\n");
-	haiku_add_configs_for_visuals(dpy);
+	if (!haiku_add_configs_for_visuals(dpy))
+		return EGL_FALSE;
 
 	dpy->Version = 14;
    
@@ -246,10 +251,14 @@ haiku_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
 	}
 
 	if (!_eglInitContext(&context->ctx, disp, conf, attrib_list))
-		ERROR("ERROR creating context");
+		goto cleanup;
 
 	TRACE("Context created\n");
 	return &context->ctx;
+
+cleanup:
+	free(context);
+	return NULL;
 }
 
 
@@ -257,7 +266,13 @@ extern "C"
 EGLBoolean
 haiku_destroy_context(_EGLDriver* drv, _EGLDisplay *disp, _EGLContext* ctx)
 {
-	ctx=NULL;
+	struct haiku_egl_context* context = haiku_egl_context(ctx);
+
+	if (_eglPutContext(ctx)) {
+		// XXX: teardown the context ?
+		free(context);
+		ctx = NULL
+	}
 	return EGL_TRUE;
 }
 
@@ -273,7 +288,10 @@ haiku_make_current(_EGLDriver* drv, _EGLDisplay* dpy, _EGLSurface *dsurf,
 	struct haiku_egl_surface* surf=haiku_egl_surface(dsurf);
 	_EGLContext *old_ctx;
     _EGLSurface *old_dsurf, *old_rsurf;
-	_eglBindContext(ctx, dsurf, rsurf, &old_ctx, &old_dsurf, &old_rsurf);
+
+	if (!_eglBindContext(ctx, dsurf, rsurf, &old_ctx, &old_dsurf, &old_rsurf))
+		return EGL_FALSE;
+
 	//cont->ctx.DrawSurface=&surf->surf;
 	surf->gl->LockGL();
 	return EGL_TRUE;
