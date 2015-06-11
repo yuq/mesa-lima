@@ -107,6 +107,16 @@ void __anv_finishme(const char *file, int line, const char *format, ...)
 #define anv_finishme(format, ...) \
    __anv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__);
 
+/* A non-fatal assert.  Useful for debugging. */
+#ifdef DEBUG
+#define anv_assert(x) ({ \
+   if (unlikely(!(x))) \
+      fprintf(stderr, "%s:%d ASSERT: %s\n", __FILE__, __LINE__, #x); \
+})
+#else
+#define anv_assert(x)
+#endif
+
 void anv_abortf(const char *format, ...) anv_noreturn anv_printflike(1, 2);
 void anv_abortfv(const char *format, va_list va) anv_noreturn;
 
