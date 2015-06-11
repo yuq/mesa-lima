@@ -578,8 +578,6 @@ anv_pipeline_create(
                      .VertexURBEntryOutputReadOffset = offset,
                      .VertexURBEntryOutputLength = length);
 
-   //trp_generate_blend_hw_cmds(batch, pipeline);
-
    const struct brw_vue_prog_data *vue_prog_data = &pipeline->vs_prog_data.base;
    /* Skip the VUE header and position slots */
    offset = 1;
