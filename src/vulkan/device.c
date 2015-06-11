@@ -2424,10 +2424,8 @@ VkResult anv_BeginCommandBuffer(
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
-                  .PipelineSelection = _3D);
-
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+   cmd_buffer->current_pipeline = UINT32_MAX;
 
    return VK_SUCCESS;
 }
@@ -3070,6 +3068,14 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    uint32_t *p;
 
    uint32_t vb_emit = cmd_buffer->vb_dirty & pipeline->vb_used;
+
+   assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
+
+   if (cmd_buffer->current_pipeline != _3D) {
+      anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
+                     .PipelineSelection = _3D);
+      cmd_buffer->current_pipeline = _3D;
+   }
 
    if (vb_emit) {
       const uint32_t num_buffers = __builtin_popcount(vb_emit);

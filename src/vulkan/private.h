@@ -650,6 +650,7 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      dynamic_state_stream;
 
    /* State required while building cmd buffer */
+   uint32_t                                     current_pipeline;
    uint32_t                                     vb_dirty;
    uint32_t                                     dirty;
    uint32_t                                     descriptors_dirty;
