@@ -42,8 +42,6 @@
 #include <OpenGLKit.h>
 
 
-#define CALLOC_STRUCT(T)   (struct T *) calloc(1, sizeof(struct T))
-
 #ifdef DEBUG
 #	define TRACE(x...) printf("egl_haiku: " x)
 #	define CALLED() TRACE("CALLED: %s\n", __PRETTY_FUNCTION__)
@@ -126,9 +124,15 @@ haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	CALLED();
 
 	struct haiku_egl_surface* surface;
-	surface = (struct haiku_egl_surface*)calloc(1,sizeof (*surface));
+	surface = (struct haiku_egl_surface*) calloc(1, sizeof (*surface));
+	if (!surface) {
+		_eglError(EGL_BAD_ALLOC, "haiku_create_window_surface");
+		return NULL;
+	}
 
-	_eglInitSurface(&surface->surf, disp, EGL_WINDOW_BIT, conf, attrib_list);
+	if (!_eglInitSurface(&surface->surf, disp, EGL_WINDOW_BIT, conf, attrib_list))
+		goto cleanup_surface;
+
 	(&surface->surf)->SwapInterval = 1;
 
 	TRACE("Creating window\n");
@@ -144,6 +148,10 @@ haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	TRACE("Showing window\n");
 	win->Show();
 	return &surface->surf;
+
+cleanup_surface:
+	free(surface);
+	return NULL;
 }
 
 
@@ -176,7 +184,11 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 	CALLED();
 
 	struct haiku_egl_config* conf;
-	conf = CALLOC_STRUCT(haiku_egl_config);
+	conf = (struct haiku_egl_config*) calloc(1, sizeof (*conf));
+	if (!conf) {
+		_eglError(EGL_BAD_ALLOC, "haiku_add_configs_for_visuals");
+		return NULL;
+	}
 
 	_eglInitConfig(&conf->base, dpy, 1);
 	TRACE("Config inited\n");
@@ -265,7 +277,11 @@ haiku_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
 	CALLED();
 
 	struct haiku_egl_context* context;
-	context=(struct haiku_egl_context*)calloc(1,sizeof (*context));
+	context = (struct haiku_egl_context*) calloc(1, sizeof (*context));
+	if (!context) {
+		_eglError(EGL_BAD_ALLOC, "haiku_create_context");
+		return NULL;
+	}
 
 	if (!_eglInitContext(&context->ctx, disp, conf, attrib_list))
 		ERROR("ERROR creating context");
@@ -332,7 +348,12 @@ _eglBuiltInDriverHaiku(const char *args)
 	CALLED();
 
 	struct haiku_egl_driver* driver;
-	driver=(struct haiku_egl_driver*)calloc(1,sizeof(*driver));
+	driver = (struct haiku_egl_driver*) calloc(1, sizeof(*driver));
+	if (!driver) {
+		_eglError(EGL_BAD_ALLOC, "_eglBuiltInDriverHaiku");
+		return NULL;
+	}
+
 	_eglInitDriverFallbacks(&driver->base);
 	driver->base.API.Initialize = init_haiku;
 	driver->base.API.Terminate = haiku_terminate;
