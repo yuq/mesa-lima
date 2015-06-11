@@ -944,18 +944,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    }
 
    bool success;
-   struct brw_wm_prog_key wm_key;
-   struct gl_fragment_program *fp = (struct gl_fragment_program *)
-      program->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;
-   struct brw_fragment_program *bfp = brw_fragment_program(fp);
-
-   brw_wm_populate_key(brw, bfp, &wm_key);
-
-   success = really_do_wm_prog(brw, program, bfp, &wm_key, pipeline);
-   fail_if(!success, "do_wm_prog failed\n");
-   pipeline->prog_data[VK_SHADER_STAGE_FRAGMENT] = &pipeline->wm_prog_data.base;
-   pipeline->active_stages = VK_SHADER_STAGE_FRAGMENT_BIT;
-
+   pipeline->active_stages = 0;
 
    if (pipeline->shaders[VK_SHADER_STAGE_VERTEX]) {
       struct brw_vs_prog_key vs_key;
@@ -989,6 +978,20 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       pipeline->prog_data[VK_SHADER_STAGE_GEOMETRY] = &pipeline->gs_prog_data.base.base;
    } else {
       pipeline->gs_vec4 = NO_KERNEL;
+   }
+
+   if (pipeline->shaders[VK_SHADER_STAGE_FRAGMENT]) {
+      struct brw_wm_prog_key wm_key;
+      struct gl_fragment_program *fp = (struct gl_fragment_program *)
+         program->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program;
+      struct brw_fragment_program *bfp = brw_fragment_program(fp);
+
+      brw_wm_populate_key(brw, bfp, &wm_key);
+
+      success = really_do_wm_prog(brw, program, bfp, &wm_key, pipeline);
+      fail_if(!success, "do_wm_prog failed\n");
+      pipeline->prog_data[VK_SHADER_STAGE_FRAGMENT] = &pipeline->wm_prog_data.base;
+      pipeline->active_stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
    }
 
    brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
