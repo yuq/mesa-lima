@@ -617,6 +617,7 @@ struct anv_buffer {
 #define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
 #define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
 #define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
+#define ANV_CMD_BUFFER_VP_DIRTY                 (1 << 5)
 
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;

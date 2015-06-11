@@ -2663,20 +2663,11 @@ void anv_CmdBindDynamicStateObject(
     VkDynamicStateObject                        dynamicState)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_dynamic_vp_state *vp_state;
 
    switch (stateBindPoint) {
    case VK_STATE_BIND_POINT_VIEWPORT:
-      vp_state = (struct anv_dynamic_vp_state *) dynamicState;
-      /* We emit state immediately, but set cmd_buffer->vp_state to indicate
-       * that vp state has been set in this command buffer. */
-      cmd_buffer->vp_state = vp_state;
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
-                     .ScissorRectPointer = vp_state->scissor.offset);
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
-                     .CCViewportPointer = vp_state->cc_vp.offset);
-      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
-                     .SFClipViewportPointer = vp_state->sf_clip_vp.offset);
+      cmd_buffer->vp_state = (struct anv_dynamic_vp_state *) dynamicState;
+      cmd_buffer->dirty |= ANV_CMD_BUFFER_VP_DIRTY;
       break;
    case VK_STATE_BIND_POINT_RASTER:
       cmd_buffer->rs_state = (struct anv_dynamic_rs_state *) dynamicState;
@@ -3110,6 +3101,15 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->descriptors_dirty)
       flush_descriptor_sets(cmd_buffer);
+
+   if (cmd_buffer->dirty & ANV_CMD_BUFFER_VP_DIRTY) {
+      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
+                     .ScissorRectPointer = cmd_buffer->vp_state->scissor.offset);
+      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+                     .CCViewportPointer = cmd_buffer->vp_state->cc_vp.offset);
+      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
+                     .SFClipViewportPointer = cmd_buffer->vp_state->sf_clip_vp.offset);
+   }
 
    if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
