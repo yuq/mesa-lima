@@ -2426,7 +2426,6 @@ VkResult anv_BeginCommandBuffer(
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
                   .PipelineSelection = _3D);
-   anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_SIP);
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
