@@ -493,7 +493,9 @@ anv_pipeline_create(
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
                   .ClipEnable = true,
-                  .ViewportXYClipTestEnable = !(extra && extra->disable_viewport));
+                  .ViewportXYClipTestEnable = !(extra && extra->disable_viewport),
+                  .MinimumPointWidth = 0.125,
+                  .MaximumPointWidth = 255.875);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_WM,
                   .StatisticsEnable = true,
