@@ -2637,7 +2637,9 @@ add_interface_variables(struct gl_shader_program *shProg,
          continue;
       };
 
-      if (!add_program_resource(shProg, programInterface, var,
+      /* Clone ir_variable data so that backend is able to free memory. */
+      if (!add_program_resource(shProg, programInterface,
+                                var->clone(shProg->ProgramResourceList, NULL),
                                 build_stageref(shProg, var->name) | mask))
          return false;
    }
