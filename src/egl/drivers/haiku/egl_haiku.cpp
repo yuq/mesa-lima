@@ -80,17 +80,6 @@ struct haiku_egl_surface
  * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
  */
 static _EGLSurface *
-haiku_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
-	_EGLConfig *conf, void *native_surface, const EGLint *attrib_list)
-{
-	return NULL;
-}
-
-
-/**
- * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
- */
-static _EGLSurface *
 haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	_EGLConfig *conf, void *native_window, const EGLint *attrib_list)
 {
@@ -147,6 +136,10 @@ haiku_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *disp,
 static EGLBoolean
 haiku_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 {
+	if (_eglPutSurface(surf)) {
+		// XXX: detach haiku_egl_surface::gl from the native window and destroy it
+		free(surf);
+        }
 	return EGL_TRUE;
 }
 
