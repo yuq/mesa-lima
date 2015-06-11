@@ -190,19 +190,6 @@ for type, name, args, num, h in entrypoints:
     print "%s vk%s%s\n   __attribute__ ((ifunc (\"resolve_%s\"), visibility (\"default\")));\n" % (type, name, args, name)
 
 
-logger = """%s __attribute__ ((weak)) anv_validate_%s%s
-{
-    fprintf(stderr, "%%s\\n", strings + %d);
-    void *args = __builtin_apply_args();
-    void *result = __builtin_apply((void *) anv_%s, args, 100);
-    __builtin_return(result);
-}
-"""
-
-for type, name, args, num, h in entrypoints:
-    print logger % (type, name, args, offsets[num], name)
-
-
 # Now generate the hash table used for entry point look up.  This is a
 # uint16_t table of entry point indices. We use 0xffff to indicate an entry
 # in the hash table is empty.
