@@ -2761,11 +2761,16 @@ void anv_CmdBindDescriptorSets(
     const uint32_t*                             pDynamicOffsets)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_pipeline_layout *layout = cmd_buffer->pipeline->layout;
+   struct anv_pipeline_layout *layout;
    struct anv_descriptor_set *set;
    struct anv_descriptor_set_layout *set_layout;
 
    assert(firstSet + setCount < MAX_SETS);
+
+   if (pipelineBindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS)
+      layout = cmd_buffer->pipeline->layout;
+   else
+      layout = cmd_buffer->compute_pipeline->layout;
 
    uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < setCount; i++) {
