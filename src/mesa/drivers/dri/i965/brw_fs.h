@@ -145,6 +145,8 @@ public:
    void assign_vs_urb_setup();
    bool assign_regs(bool allow_spilling);
    void assign_regs_trivial();
+   void calculate_payload_ranges(int payload_node_count,
+                                 int *payload_last_use_ip);
    void setup_payload_interference(struct ra_graph *g, int payload_reg_count,
                                    int first_payload_node);
    int choose_spill_reg(struct ra_graph *g);

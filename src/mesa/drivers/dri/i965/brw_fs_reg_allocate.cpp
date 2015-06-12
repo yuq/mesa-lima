@@ -330,32 +330,12 @@ count_to_loop_end(const bblock_t *block)
    unreachable("not reached");
 }
 
-/**
- * Sets up interference between thread payload registers and the virtual GRFs
- * to be allocated for program temporaries.
- *
- * We want to be able to reallocate the payload for our virtual GRFs, notably
- * because the setup coefficients for a full set of 16 FS inputs takes up 8 of
- * our 128 registers.
- *
- * The layout of the payload registers is:
- *
- * 0..payload.num_regs-1: fixed function setup (including bary coordinates).
- * payload.num_regs..payload.num_regs+curb_read_lengh-1: uniform data
- * payload.num_regs+curb_read_lengh..first_non_payload_grf-1: setup coefficients.
- *
- * And we have payload_node_count nodes covering these registers in order
- * (note that in SIMD16, a node is two registers).
- */
-void
-fs_visitor::setup_payload_interference(struct ra_graph *g,
-                                       int payload_node_count,
-                                       int first_payload_node)
+void fs_visitor::calculate_payload_ranges(int payload_node_count,
+                                          int *payload_last_use_ip)
 {
    int loop_depth = 0;
    int loop_end_ip = 0;
 
-   int payload_last_use_ip[payload_node_count];
    for (int i = 0; i < payload_node_count; i++)
       payload_last_use_ip[i] = -1;
 
@@ -426,6 +406,33 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
 
       ip++;
    }
+}
+
+
+/**
+ * Sets up interference between thread payload registers and the virtual GRFs
+ * to be allocated for program temporaries.
+ *
+ * We want to be able to reallocate the payload for our virtual GRFs, notably
+ * because the setup coefficients for a full set of 16 FS inputs takes up 8 of
+ * our 128 registers.
+ *
+ * The layout of the payload registers is:
+ *
+ * 0..payload.num_regs-1: fixed function setup (including bary coordinates).
+ * payload.num_regs..payload.num_regs+curb_read_lengh-1: uniform data
+ * payload.num_regs+curb_read_lengh..first_non_payload_grf-1: setup coefficients.
+ *
+ * And we have payload_node_count nodes covering these registers in order
+ * (note that in SIMD16, a node is two registers).
+ */
+void
+fs_visitor::setup_payload_interference(struct ra_graph *g,
+                                       int payload_node_count,
+                                       int first_payload_node)
+{
+   int payload_last_use_ip[payload_node_count];
+   calculate_payload_ranges(payload_node_count, payload_last_use_ip);
 
    for (int i = 0; i < payload_node_count; i++) {
       if (payload_last_use_ip[i] == -1)
