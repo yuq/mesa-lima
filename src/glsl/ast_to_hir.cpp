@@ -3607,6 +3607,51 @@ ast_declarator_list::hir(exec_list *instructions,
             }
 
             handle_geometry_shader_input_decl(state, loc, var);
+         } else if (state->stage == MESA_SHADER_FRAGMENT) {
+            /* From section 4.3.4 (Input Variables) of the GLSL ES 3.10 spec:
+             *
+             *     It is a compile-time error to declare a fragment shader
+             *     input with, or that contains, any of the following types:
+             *
+             *     * A boolean type
+             *     * An opaque type
+             *     * An array of arrays
+             *     * An array of structures
+             *     * A structure containing an array
+             *     * A structure containing a structure
+             */
+            if (state->es_shader) {
+               const glsl_type *check_type = var->type->without_array();
+               if (check_type->is_boolean() ||
+                   check_type->contains_opaque()) {
+                  _mesa_glsl_error(&loc, state,
+                                   "fragment shader input cannot have type %s",
+                                   check_type->name);
+               }
+               if (var->type->is_array() &&
+                   var->type->fields.array->is_array()) {
+                  _mesa_glsl_error(&loc, state,
+                                   "%s shader output "
+                                   "cannot have an array of arrays",
+                                   _mesa_shader_stage_to_string(state->stage));
+               }
+               if (var->type->is_array() &&
+                   var->type->fields.array->is_record()) {
+                  _mesa_glsl_error(&loc, state,
+                                   "fragment shader input "
+                                   "cannot have an array of structs");
+               }
+               if (var->type->is_record()) {
+                  for (unsigned i = 0; i < var->type->length; i++) {
+                     if (var->type->fields.structure[i].type->is_array() ||
+                         var->type->fields.structure[i].type->is_record())
+                        _mesa_glsl_error(&loc, state,
+                                         "fragement shader input cannot have "
+                                         "a struct that contains an "
+                                         "array or struct");
+                  }
+               }
+            }
          }
       } else if (var->data.mode == ir_var_shader_out) {
          const glsl_type *check_type = var->type->without_array();
