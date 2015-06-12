@@ -667,6 +667,13 @@ dri2_initialize(_EGLDriver *drv, _EGLDisplay *disp)
       return EGL_FALSE;
 
    switch (disp->Platform) {
+#ifdef HAVE_SURFACELESS_PLATFORM
+   case _EGL_PLATFORM_SURFACELESS:
+      if (disp->Options.TestOnly)
+         return EGL_TRUE;
+      return dri2_initialize_surfaceless(drv, disp);
+#endif
+
 #ifdef HAVE_X11_PLATFORM
    case _EGL_PLATFORM_X11:
       if (disp->Options.TestOnly)
