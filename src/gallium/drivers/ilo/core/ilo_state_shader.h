@@ -123,6 +123,54 @@ struct ilo_state_gs_info {
    bool stats_enable;
 };
 
+struct ilo_state_ps_io_info {
+   /* inputs */
+   enum gen_position_offset posoffset;
+   uint8_t attr_count;
+   bool use_z;
+   bool use_w;
+   bool use_coverage_mask;
+
+   /* outputs */
+   enum gen_pscdepth_mode pscdepth;
+   bool has_rt_write;
+   bool write_pixel_mask;
+   bool write_omask;
+};
+
+struct ilo_state_ps_params_info {
+   /* compatibility with raster states */
+   uint32_t sample_mask;
+   bool earlyz_control_psexec;
+
+   /* compatibility with cc states */
+   bool alpha_may_kill;
+   bool dual_source_blending;
+   bool has_writeable_rt;
+};
+
+struct ilo_state_ps_info {
+   struct ilo_state_shader_kernel_info kernel_8;
+   struct ilo_state_shader_kernel_info kernel_16;
+   struct ilo_state_shader_kernel_info kernel_32;
+   struct ilo_state_shader_resource_info resource;
+
+   struct ilo_state_ps_io_info io;
+   struct ilo_state_ps_params_info params;
+
+   /* bitmask of GEN6_PS_DISPATCH_x */
+   uint8_t valid_kernels;
+   bool per_sample_dispatch;
+   bool sample_count_one;
+   bool cv_per_sample_interp;
+   bool cv_has_earlyz_op;
+
+   bool rt_clear_enable;
+   bool rt_resolve_enable;
+
+   bool cv_has_depth_buffer;
+};
+
 struct ilo_state_vs {
    uint32_t vs[5];
 };
@@ -138,6 +186,20 @@ struct ilo_state_ds {
 
 struct ilo_state_gs {
    uint32_t gs[5];
+};
+
+struct ilo_state_ps {
+   uint32_t ps[8];
+
+   struct ilo_state_ps_dispatch_conds {
+      bool ps_valid;
+
+      bool has_rt_write;
+      bool write_odepth;
+      bool write_ostencil;
+      bool has_uav_write;
+      bool ps_may_kill;
+   } conds;
 };
 
 bool
@@ -176,5 +238,19 @@ ilo_state_gs_init(struct ilo_state_gs *gs,
 bool
 ilo_state_gs_init_disabled(struct ilo_state_gs *gs,
                            const struct ilo_dev *dev);
+
+bool
+ilo_state_ps_init(struct ilo_state_ps *ps,
+                  const struct ilo_dev *dev,
+                  const struct ilo_state_ps_info *info);
+
+bool
+ilo_state_ps_init_disabled(struct ilo_state_ps *ps,
+                           const struct ilo_dev *dev);
+
+bool
+ilo_state_ps_set_params(struct ilo_state_ps *ps,
+                        const struct ilo_dev *dev,
+                        const struct ilo_state_ps_params_info *params);
 
 #endif /* ILO_STATE_SHADER_H */

@@ -32,6 +32,7 @@ C_SOURCES := \
 	core/ilo_state_sbe.c \
 	core/ilo_state_sbe.h \
 	core/ilo_state_shader.c \
+	core/ilo_state_shader_ps.c \
 	core/ilo_state_shader.h \
 	core/ilo_state_sol.c \
 	core/ilo_state_sol.h \
