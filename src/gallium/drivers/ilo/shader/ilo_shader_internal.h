@@ -94,7 +94,7 @@ struct ilo_kernel_routing {
 struct ilo_shader {
    struct ilo_shader_variant variant;
 
-   struct ilo_shader_cso cso;
+   union ilo_shader_cso cso;
 
    struct {
       int semantic_names[PIPE_MAX_SHADER_INPUTS];

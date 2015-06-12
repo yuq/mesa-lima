@@ -217,14 +217,14 @@ gen6_3DSTATE_WM(struct ilo_builder *builder,
    dw6 = rs->raster[2];
 
    if (fs) {
-      const struct ilo_shader_cso *cso;
+      const union ilo_shader_cso *cso;
 
       cso = ilo_shader_get_kernel_cso(fs);
       /* see fs_init_cso_gen6() */
-      dw2 |= cso->payload[0];
-      dw4 |= cso->payload[1];
-      dw5 |= cso->payload[2];
-      dw6 |= cso->payload[3];
+      dw2 |= cso->ps_payload[0];
+      dw4 |= cso->ps_payload[1];
+      dw5 |= cso->ps_payload[2];
+      dw6 |= cso->ps_payload[3];
    } else {
       const int max_threads = (builder->dev->gt == 2) ? 80 : 40;
 
@@ -271,11 +271,11 @@ gen7_3DSTATE_WM(struct ilo_builder *builder,
    dw1 = rs->wm[0];
 
    if (fs) {
-      const struct ilo_shader_cso *cso;
+      const union ilo_shader_cso *cso;
 
       cso = ilo_shader_get_kernel_cso(fs);
       /* see fs_init_cso_gen7() */
-      dw1 |= cso->payload[3];
+      dw1 |= cso->ps_payload[3];
    }
 
    if (cc_may_kill)
@@ -383,16 +383,16 @@ gen7_3DSTATE_PS(struct ilo_builder *builder,
                 bool dual_blend)
 {
    const uint8_t cmd_len = 8;
-   const struct ilo_shader_cso *cso;
+   const union ilo_shader_cso *cso;
    uint32_t dw2, dw4, dw5, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 7, 7.5);
 
    /* see fs_init_cso_gen7() */
    cso = ilo_shader_get_kernel_cso(fs);
-   dw2 = cso->payload[0];
-   dw4 = cso->payload[1];
-   dw5 = cso->payload[2];
+   dw2 = cso->ps_payload[0];
+   dw4 = cso->ps_payload[1];
+   dw5 = cso->ps_payload[2];
 
    if (dual_blend)
       dw4 |= GEN7_PS_DW4_DUAL_SOURCE_BLEND;
@@ -452,16 +452,16 @@ gen8_3DSTATE_PS(struct ilo_builder *builder,
                 const struct ilo_shader_state *fs)
 {
    const uint8_t cmd_len = 12;
-   const struct ilo_shader_cso *cso;
+   const union ilo_shader_cso *cso;
    uint32_t dw3, dw6, dw7, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
    /* see fs_init_cso_gen8() */
    cso = ilo_shader_get_kernel_cso(fs);
-   dw3 = cso->payload[0];
-   dw6 = cso->payload[1];
-   dw7 = cso->payload[2];
+   dw3 = cso->ps_payload[0];
+   dw6 = cso->ps_payload[1];
+   dw7 = cso->ps_payload[2];
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
@@ -485,14 +485,14 @@ gen8_3DSTATE_PS_EXTRA(struct ilo_builder *builder,
                       bool cc_may_kill, bool per_sample)
 {
    const uint8_t cmd_len = 2;
-   const struct ilo_shader_cso *cso;
+   const union ilo_shader_cso *cso;
    uint32_t dw1, *dw;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
    /* see fs_init_cso_gen8() */
    cso = ilo_shader_get_kernel_cso(fs);
-   dw1 = cso->payload[3];
+   dw1 = cso->ps_payload[3];
 
    if (cc_may_kill)
       dw1 |= GEN8_PSX_DW1_VALID | GEN8_PSX_DW1_KILL_PIXEL;

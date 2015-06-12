@@ -313,14 +313,14 @@ gen7_draw_vs(struct ilo_render *r,
    }
 
    /* 3DSTATE_VS */
-   if (ilo_dev_gen(r->dev) >= ILO_GEN(8)) {
-      if (emit_3dstate_vs || DIRTY(RASTERIZER)) {
-         gen8_3DSTATE_VS(r->builder, vec->vs,
-               vec->rasterizer->state.clip_plane_enable);
-      }
-   } else {
-      if (emit_3dstate_vs)
-         gen6_3DSTATE_VS(r->builder, vec->vs);
+   if (emit_3dstate_vs) {
+      const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->vs);
+      const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->vs);
+
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         gen8_3DSTATE_VS(r->builder, &cso->vs, kernel_offset);
+      else
+         gen6_3DSTATE_VS(r->builder, &cso->vs, kernel_offset);
    }
 }
 
@@ -331,8 +331,15 @@ gen7_draw_hs(struct ilo_render *r,
 {
    /* 3DSTATE_CONSTANT_HS and 3DSTATE_HS */
    if (r->hw_ctx_changed) {
+      const struct ilo_state_hs *hs = &vec->disabled_hs;
+      const uint32_t kernel_offset = 0;
+
       gen7_3DSTATE_CONSTANT_HS(r->builder, 0, 0, 0);
-      gen7_disable_3DSTATE_HS(r->builder);
+
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         gen8_3DSTATE_HS(r->builder, hs, kernel_offset);
+      else
+         gen7_3DSTATE_HS(r->builder, hs, kernel_offset);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_HS */
@@ -346,8 +353,10 @@ gen7_draw_te(struct ilo_render *r,
              struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_TE */
-   if (r->hw_ctx_changed)
-      gen7_3DSTATE_TE(r->builder);
+   if (r->hw_ctx_changed) {
+      const struct ilo_state_ds *ds = &vec->disabled_ds;
+      gen7_3DSTATE_TE(r->builder, ds);
+   }
 }
 
 void
@@ -357,8 +366,15 @@ gen7_draw_ds(struct ilo_render *r,
 {
    /* 3DSTATE_CONSTANT_DS and 3DSTATE_DS */
    if (r->hw_ctx_changed) {
+      const struct ilo_state_ds *ds = &vec->disabled_ds;
+      const uint32_t kernel_offset = 0;
+
       gen7_3DSTATE_CONSTANT_DS(r->builder, 0, 0, 0);
-      gen7_disable_3DSTATE_DS(r->builder);
+
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         gen8_3DSTATE_DS(r->builder, ds, kernel_offset);
+      else
+         gen7_3DSTATE_DS(r->builder, ds, kernel_offset);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_DS */
@@ -374,8 +390,15 @@ gen7_draw_gs(struct ilo_render *r,
 {
    /* 3DSTATE_CONSTANT_GS and 3DSTATE_GS */
    if (r->hw_ctx_changed) {
+      const struct ilo_state_gs *gs = &vec->disabled_gs;
+      const uint32_t kernel_offset = 0;
+
       gen7_3DSTATE_CONSTANT_GS(r->builder, 0, 0, 0);
-      gen7_disable_3DSTATE_GS(r->builder);
+
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+         gen8_3DSTATE_GS(r->builder, gs, kernel_offset);
+      else
+         gen7_3DSTATE_GS(r->builder, gs, kernel_offset);
    }
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_GS */
@@ -663,18 +686,18 @@ gen7_rectlist_vs_to_sf(struct ilo_render *r,
                        const struct ilo_blitter *blitter)
 {
    gen7_3DSTATE_CONSTANT_VS(r->builder, NULL, NULL, 0);
-   gen6_disable_3DSTATE_VS(r->builder);
+   gen6_3DSTATE_VS(r->builder, &blitter->vs, 0);
 
    gen7_3DSTATE_CONSTANT_HS(r->builder, NULL, NULL, 0);
-   gen7_disable_3DSTATE_HS(r->builder);
+   gen7_3DSTATE_HS(r->builder, &blitter->hs, 0);
 
-   gen7_3DSTATE_TE(r->builder);
+   gen7_3DSTATE_TE(r->builder, &blitter->ds);
 
    gen7_3DSTATE_CONSTANT_DS(r->builder, NULL, NULL, 0);
-   gen7_disable_3DSTATE_DS(r->builder);
+   gen7_3DSTATE_DS(r->builder, &blitter->ds, 0);
 
    gen7_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
-   gen7_disable_3DSTATE_GS(r->builder);
+   gen7_3DSTATE_GS(r->builder, &blitter->gs, 0);
 
    gen7_3DSTATE_STREAMOUT(r->builder, &blitter->sol);
 

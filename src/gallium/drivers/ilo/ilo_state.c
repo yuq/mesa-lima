@@ -2146,6 +2146,10 @@ ilo_state_vector_init(const struct ilo_dev *dev,
    vec->viewport.params.matrices = vec->viewport.matrices;
    vec->viewport.params.scissors = vec->viewport.scissors;
 
+   ilo_state_hs_init_disabled(&vec->disabled_hs, dev);
+   ilo_state_ds_init_disabled(&vec->disabled_ds, dev);
+   ilo_state_gs_init_disabled(&vec->disabled_gs, dev);
+
    ilo_state_surface_init_for_null(&vec->fb.null_rt, dev);
    ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);
 

@@ -557,6 +557,104 @@ ilo_shader_state_search_variant(struct ilo_shader_state *state,
 }
 
 static void
+init_shader_urb(const struct ilo_shader *kernel,
+                const struct ilo_shader_state *state,
+                struct ilo_state_shader_urb_info *urb)
+{
+   urb->cv_input_attr_count = kernel->in.count;
+   urb->read_base = 0;
+   urb->read_count = kernel->in.count;
+
+   urb->output_attr_count = kernel->out.count;
+   urb->user_cull_enables = 0x0;
+   urb->user_clip_enables = 0x0;
+}
+
+static void
+init_shader_kernel(const struct ilo_shader *kernel,
+                   const struct ilo_shader_state *state,
+                   struct ilo_state_shader_kernel_info *kern)
+{
+   kern->offset = 0;
+   kern->grf_start = kernel->in.start_grf;
+   kern->pcb_attr_count =
+      (kernel->pcb.cbuf0_size + kernel->pcb.clip_state_size + 15) / 16;
+   kern->scratch_size = 0;
+}
+
+static void
+init_shader_resource(const struct ilo_shader *kernel,
+                     const struct ilo_shader_state *state,
+                     struct ilo_state_shader_resource_info *resource)
+{
+   resource->sampler_count = state->info.num_samplers;
+   resource->surface_count = 0;
+   resource->has_uav = false;
+}
+
+static void
+init_vs(struct ilo_shader *kernel,
+        const struct ilo_shader_state *state)
+{
+   struct ilo_state_vs_info info;
+
+   memset(&info, 0, sizeof(info));
+
+   init_shader_urb(kernel, state, &info.urb);
+   init_shader_kernel(kernel, state, &info.kernel);
+   init_shader_resource(kernel, state, &info.resource);
+   info.dispatch_enable = true;
+   info.stats_enable = true;
+
+   if (ilo_dev_gen(state->info.dev) == ILO_GEN(6) && kernel->stream_output) {
+      struct ilo_state_gs_info gs_info;
+
+      memset(&gs_info, 0, sizeof(gs_info));
+
+      gs_info.urb.cv_input_attr_count = kernel->out.count;
+      gs_info.urb.read_count = kernel->out.count;
+      gs_info.kernel.grf_start = kernel->gs_start_grf;
+      gs_info.sol.sol_enable = true;
+      gs_info.sol.stats_enable = true;
+      gs_info.sol.render_disable = kernel->variant.u.vs.rasterizer_discard;
+      gs_info.sol.svbi_post_inc = kernel->svbi_post_inc;
+      gs_info.sol.tristrip_reorder = GEN7_REORDER_LEADING;
+      gs_info.dispatch_enable = true;
+      gs_info.stats_enable = true;
+
+      ilo_state_vs_init(&kernel->cso.vs_sol.vs, state->info.dev, &info);
+      ilo_state_gs_init(&kernel->cso.vs_sol.sol, state->info.dev, &gs_info);
+   } else {
+      ilo_state_vs_init(&kernel->cso.vs, state->info.dev, &info);
+   }
+}
+
+static void
+init_gs(struct ilo_shader *kernel,
+        const struct ilo_shader_state *state)
+{
+   const struct pipe_stream_output_info *so_info = &state->info.stream_output;
+   struct ilo_state_gs_info info;
+
+   memset(&info, 0, sizeof(info));
+
+   init_shader_urb(kernel, state, &info.urb);
+   init_shader_kernel(kernel, state, &info.kernel);
+   init_shader_resource(kernel, state, &info.resource);
+   info.dispatch_enable = true;
+   info.stats_enable = true;
+
+   if (so_info->num_outputs > 0) {
+      info.sol.sol_enable = true;
+      info.sol.stats_enable = true;
+      info.sol.render_disable = kernel->variant.u.gs.rasterizer_discard;
+      info.sol.tristrip_reorder = GEN7_REORDER_LEADING;
+   }
+
+   ilo_state_gs_init(&kernel->cso.gs, state->info.dev, &info);
+}
+
+static void
 init_sol(struct ilo_shader *kernel,
          const struct ilo_dev *dev,
          const struct pipe_stream_output_info *so_info,
@@ -733,10 +831,10 @@ ilo_shader_state_use_variant(struct ilo_shader_state *state,
    if (construct_cso) {
       switch (state->info.type) {
       case PIPE_SHADER_VERTEX:
-         ilo_gpe_init_vs_cso(state->info.dev, state, &sh->cso);
+         init_vs(sh, state);
          break;
       case PIPE_SHADER_GEOMETRY:
-         ilo_gpe_init_gs_cso(state->info.dev, state, &sh->cso);
+         init_gs(sh, state);
          break;
       case PIPE_SHADER_FRAGMENT:
          ilo_gpe_init_fs_cso(state->info.dev, state, &sh->cso);
@@ -1225,7 +1323,7 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
 /**
  * Return the CSO of the selected kernel.
  */
-const struct ilo_shader_cso *
+const union ilo_shader_cso *
 ilo_shader_get_kernel_cso(const struct ilo_shader_state *shader)
 {
    const struct ilo_shader *kernel = shader->shader;

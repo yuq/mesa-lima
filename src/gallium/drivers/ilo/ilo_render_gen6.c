@@ -472,10 +472,17 @@ gen6_draw_vs(struct ilo_render *r,
 
    /* 3DSTATE_VS */
    if (DIRTY(VS) || r->instruction_bo_changed) {
+      const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->vs);
+      const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->vs);
+
       if (ilo_dev_gen(r->dev) == ILO_GEN(6))
          gen6_wa_pre_3dstate_vs_toggle(r);
 
-      gen6_3DSTATE_VS(r->builder, vec->vs);
+      if (ilo_dev_gen(r->dev) == ILO_GEN(6) &&
+          ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_GEN6_SO))
+         gen6_3DSTATE_VS(r->builder, &cso->vs_sol.vs, kernel_offset);
+      else
+         gen6_3DSTATE_VS(r->builder, &cso->vs, kernel_offset);
    }
 }
 
@@ -491,14 +498,39 @@ gen6_draw_gs(struct ilo_render *r,
    /* 3DSTATE_GS */
    if (DIRTY(GS) || DIRTY(VS) ||
        session->prim_changed || r->instruction_bo_changed) {
+      const union ilo_shader_cso *cso;
+      uint32_t kernel_offset;
+
       if (vec->gs) {
-         gen6_3DSTATE_GS(r->builder, vec->gs);
-      } else if (vec->vs &&
+         cso = ilo_shader_get_kernel_cso(vec->gs);
+         kernel_offset = ilo_shader_get_kernel_offset(vec->gs);
+
+         gen6_3DSTATE_GS(r->builder, &cso->gs, kernel_offset);
+      } else if (ilo_dev_gen(r->dev) == ILO_GEN(6) &&
             ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_GEN6_SO)) {
-         const int verts_per_prim = u_vertices_per_prim(session->reduced_prim);
-         gen6_so_3DSTATE_GS(r->builder, vec->vs, verts_per_prim);
+         const int verts_per_prim =
+            u_vertices_per_prim(session->reduced_prim);
+         enum ilo_kernel_param param;
+
+         switch (verts_per_prim) {
+         case 1:
+            param = ILO_KERNEL_VS_GEN6_SO_POINT_OFFSET;
+            break;
+         case 2:
+            param = ILO_KERNEL_VS_GEN6_SO_LINE_OFFSET;
+            break;
+         default:
+            param = ILO_KERNEL_VS_GEN6_SO_TRI_OFFSET;
+            break;
+         }
+
+         cso = ilo_shader_get_kernel_cso(vec->vs);
+         kernel_offset = ilo_shader_get_kernel_offset(vec->vs) +
+            ilo_shader_get_kernel_param(vec->vs, param);
+
+         gen6_3DSTATE_GS(r->builder, &cso->vs_sol.sol, kernel_offset);
       } else {
-         gen6_disable_3DSTATE_GS(r->builder);
+         gen6_3DSTATE_GS(r->builder, &vec->disabled_gs, 0);
       }
    }
 }
@@ -792,10 +824,10 @@ gen6_rectlist_vs_to_sf(struct ilo_render *r,
    gen6_wa_post_3dstate_constant_vs(r);
 
    gen6_wa_pre_3dstate_vs_toggle(r);
-   gen6_disable_3DSTATE_VS(r->builder);
+   gen6_3DSTATE_VS(r->builder, &blitter->vs, 0);
 
    gen6_3DSTATE_CONSTANT_GS(r->builder, NULL, NULL, 0);
-   gen6_disable_3DSTATE_GS(r->builder);
+   gen6_3DSTATE_GS(r->builder, &blitter->gs, 0);
 
    gen6_3DSTATE_CLIP(r->builder, &blitter->fb.rs);
    gen6_3DSTATE_SF(r->builder, &blitter->fb.rs, &blitter->sbe);

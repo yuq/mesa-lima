@@ -33,6 +33,7 @@
 #include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_sbe.h"
+#include "core/ilo_state_shader.h"
 #include "core/ilo_state_sol.h"
 #include "core/ilo_state_surface.h"
 #include "core/ilo_state_urb.h"
@@ -268,6 +269,10 @@ struct ilo_state_vector {
 
    struct ilo_shader_state *vs;
    struct ilo_shader_state *gs;
+
+   struct ilo_state_hs disabled_hs;
+   struct ilo_state_ds disabled_ds;
+   struct ilo_state_gs disabled_gs;
 
    struct ilo_so_state so;
 

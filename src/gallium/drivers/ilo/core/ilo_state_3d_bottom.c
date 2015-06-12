@@ -37,7 +37,7 @@
 static void
 fs_init_cso_gen6(const struct ilo_dev *dev,
                  const struct ilo_shader_state *fs,
-                 struct ilo_shader_cso *cso)
+                 union ilo_shader_cso *cso)
 {
    int start_grf, input_count, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5, dw6;
@@ -121,11 +121,11 @@ fs_init_cso_gen6(const struct ilo_dev *dev,
    dw6 = input_count << GEN6_WM_DW6_SF_ATTR_COUNT__SHIFT |
          GEN6_POSOFFSET_NONE << GEN6_WM_DW6_PS_POSOFFSET__SHIFT;
 
-   STATIC_ASSERT(Elements(cso->payload) >= 4);
-   cso->payload[0] = dw2;
-   cso->payload[1] = dw4;
-   cso->payload[2] = dw5;
-   cso->payload[3] = dw6;
+   STATIC_ASSERT(Elements(cso->ps_payload) >= 4);
+   cso->ps_payload[0] = dw2;
+   cso->ps_payload[1] = dw4;
+   cso->ps_payload[2] = dw5;
+   cso->ps_payload[3] = dw6;
 }
 
 static uint32_t
@@ -191,7 +191,7 @@ fs_get_wm_gen7(const struct ilo_dev *dev,
 static void
 fs_init_cso_gen7(const struct ilo_dev *dev,
                  const struct ilo_shader_state *fs,
-                 struct ilo_shader_cso *cso)
+                 union ilo_shader_cso *cso)
 {
    int start_grf, sampler_count, max_threads;
    uint32_t dw2, dw4, dw5;
@@ -233,11 +233,11 @@ fs_init_cso_gen7(const struct ilo_dev *dev,
          0 << GEN7_PS_DW5_URB_GRF_START1__SHIFT |
          0 << GEN7_PS_DW5_URB_GRF_START2__SHIFT;
 
-   STATIC_ASSERT(Elements(cso->payload) >= 4);
-   cso->payload[0] = dw2;
-   cso->payload[1] = dw4;
-   cso->payload[2] = dw5;
-   cso->payload[3] = fs_get_wm_gen7(dev, fs);
+   STATIC_ASSERT(Elements(cso->ps_payload) >= 4);
+   cso->ps_payload[0] = dw2;
+   cso->ps_payload[1] = dw4;
+   cso->ps_payload[2] = dw5;
+   cso->ps_payload[3] = fs_get_wm_gen7(dev, fs);
 }
 
 static uint32_t
@@ -267,7 +267,7 @@ fs_get_psx_gen8(const struct ilo_dev *dev,
 static void
 fs_init_cso_gen8(const struct ilo_dev *dev,
                  const struct ilo_shader_state *fs,
-                 struct ilo_shader_cso *cso)
+                 union ilo_shader_cso *cso)
 {
    int start_grf, sampler_count;
    uint32_t dw3, dw6, dw7;
@@ -293,17 +293,17 @@ fs_init_cso_gen8(const struct ilo_dev *dev,
          0 << GEN8_PS_DW7_URB_GRF_START1__SHIFT |
          0 << GEN8_PS_DW7_URB_GRF_START2__SHIFT;
 
-   STATIC_ASSERT(Elements(cso->payload) >= 4);
-   cso->payload[0] = dw3;
-   cso->payload[1] = dw6;
-   cso->payload[2] = dw7;
-   cso->payload[3] = fs_get_psx_gen8(dev, fs);
+   STATIC_ASSERT(Elements(cso->ps_payload) >= 4);
+   cso->ps_payload[0] = dw3;
+   cso->ps_payload[1] = dw6;
+   cso->ps_payload[2] = dw7;
+   cso->ps_payload[3] = fs_get_psx_gen8(dev, fs);
 }
 
 void
 ilo_gpe_init_fs_cso(const struct ilo_dev *dev,
                     const struct ilo_shader_state *fs,
-                    struct ilo_shader_cso *cso)
+                    union ilo_shader_cso *cso)
 {
    if (ilo_dev_gen(dev) >= ILO_GEN(8))
       fs_init_cso_gen8(dev, fs, cso);

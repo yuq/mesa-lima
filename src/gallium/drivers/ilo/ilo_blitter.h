@@ -62,6 +62,12 @@ struct ilo_blitter {
 
    uint32_t vf_data[2];
    struct ilo_state_vf vf;
+
+   struct ilo_state_vs vs;
+   struct ilo_state_hs hs;
+   struct ilo_state_ds ds;
+   struct ilo_state_gs gs;
+
    struct ilo_state_sol sol;
 
    struct ilo_state_viewport vp;

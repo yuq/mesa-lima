@@ -59,6 +59,10 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
    ilo_state_vf_init_for_rectlist(&blitter->vf, blitter->ilo->dev,
          blitter->vf_data, sizeof(blitter->vf_data), &elem, 1);
 
+   ilo_state_vs_init_disabled(&blitter->vs, blitter->ilo->dev);
+   ilo_state_hs_init_disabled(&blitter->hs, blitter->ilo->dev);
+   ilo_state_ds_init_disabled(&blitter->ds, blitter->ilo->dev);
+   ilo_state_gs_init_disabled(&blitter->gs, blitter->ilo->dev);
    ilo_state_sol_init_disabled(&blitter->sol, blitter->ilo->dev, false);
 
    /**
