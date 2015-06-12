@@ -291,6 +291,17 @@ brw_cs_precompile(struct gl_context *ctx,
 }
 
 
+static unsigned
+get_cs_thread_count(const struct brw_cs_prog_data *cs_prog_data)
+{
+   const unsigned simd_size = cs_prog_data->simd_size;
+   unsigned group_size = cs_prog_data->local_size[0] *
+      cs_prog_data->local_size[1] * cs_prog_data->local_size[2];
+
+   return (group_size + simd_size - 1) / simd_size;
+}
+
+
 static void
 brw_upload_cs_state(struct brw_context *brw)
 {
@@ -315,6 +326,8 @@ brw_upload_cs_state(struct brw_context *brw)
    uint32_t *bind = (uint32_t*) brw_state_batch(brw, AUB_TRACE_BINDING_TABLE,
                                             prog_data->binding_table.size_bytes,
                                             32, &stage_state->bind_bo_offset);
+
+   unsigned threads = get_cs_thread_count(cs_prog_data);
 
    uint32_t dwords = brw->gen < 8 ? 8 : 9;
    BEGIN_BATCH(dwords);
@@ -365,6 +378,13 @@ brw_upload_cs_state(struct brw_context *brw)
    desc[dw++] = 0;
    desc[dw++] = 0;
    desc[dw++] = stage_state->bind_bo_offset;
+   desc[dw++] = 0;
+   const uint32_t media_threads =
+      brw->gen >= 8 ?
+      SET_FIELD(threads, GEN8_MEDIA_GPGPU_THREAD_COUNT) :
+      SET_FIELD(threads, MEDIA_GPGPU_THREAD_COUNT);
+   assert(threads <= brw->max_cs_threads);
+   desc[dw++] = media_threads;
 
    BEGIN_BATCH(4);
    OUT_BATCH(MEDIA_INTERFACE_DESCRIPTOR_LOAD << 16 | (4 - 2));
