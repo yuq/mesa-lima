@@ -3164,11 +3164,8 @@ decompress_texture_image(struct gl_context *ctx,
           /* If we're reading back an RGB(A) texture (using glGetTexImage) as
 	   * luminance then we need to return L=tex(R).
 	   */
-          ((baseTexFormat == GL_RGBA ||
-            baseTexFormat == GL_RGB  ||
-            baseTexFormat == GL_RG) &&
-          (destBaseFormat == GL_LUMINANCE ||
-           destBaseFormat == GL_LUMINANCE_ALPHA))) {
+          _mesa_need_rgb_to_luminance_conversion(baseTexFormat,
+                                                 destBaseFormat)) {
          /* Green and blue must be zero */
          _mesa_PixelTransferf(GL_GREEN_SCALE, 0.0f);
          _mesa_PixelTransferf(GL_BLUE_SCALE, 0.0f);
