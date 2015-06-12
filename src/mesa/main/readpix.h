@@ -38,7 +38,8 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
                                  GLenum type, GLboolean uses_blit);
 
 extern GLboolean
-_mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format);
+_mesa_need_rgb_to_luminance_conversion(GLenum srcBaseFormat,
+                                       GLenum dstBaseFormat);
 
 extern GLboolean
 _mesa_need_luminance_to_rgb_conversion(GLenum srcBaseFormat,

@@ -47,17 +47,14 @@
  * Return true if the conversion L=R+G+B is needed.
  */
 GLboolean
-_mesa_need_rgb_to_luminance_conversion(mesa_format texFormat, GLenum format)
+_mesa_need_rgb_to_luminance_conversion(GLenum srcBaseFormat,
+                                       GLenum dstBaseFormat)
 {
-   GLenum baseTexFormat = _mesa_get_format_base_format(texFormat);
-
-   return (baseTexFormat == GL_RG ||
-           baseTexFormat == GL_RGB ||
-           baseTexFormat == GL_RGBA) &&
-          (format == GL_LUMINANCE ||
-           format == GL_LUMINANCE_ALPHA ||
-           format == GL_LUMINANCE_INTEGER_EXT ||
-           format == GL_LUMINANCE_ALPHA_INTEGER_EXT);
+   return (srcBaseFormat == GL_RG ||
+           srcBaseFormat == GL_RGB ||
+           srcBaseFormat == GL_RGBA) &&
+          (dstBaseFormat == GL_LUMINANCE ||
+           dstBaseFormat == GL_LUMINANCE_ALPHA);
 }
 
 /**
@@ -89,6 +86,8 @@ _mesa_get_readpixels_transfer_ops(const struct gl_context *ctx,
                                   GLboolean uses_blit)
 {
    GLbitfield transferOps = ctx->_ImageTransferState;
+   GLenum srcBaseFormat = _mesa_get_format_base_format(texFormat);
+   GLenum dstBaseFormat = _mesa_unpack_format_to_base_format(format);
 
    if (format == GL_DEPTH_COMPONENT ||
        format == GL_DEPTH_STENCIL ||
@@ -125,7 +124,7 @@ _mesa_get_readpixels_transfer_ops(const struct gl_context *ctx,
     * have any effect anyway.
     */
    if (_mesa_get_format_datatype(texFormat) == GL_UNSIGNED_NORMALIZED &&
-       !_mesa_need_rgb_to_luminance_conversion(texFormat, format)) {
+       !_mesa_need_rgb_to_luminance_conversion(srcBaseFormat, dstBaseFormat)) {
       transferOps &= ~IMAGE_CLAMP_BIT;
    }
 
@@ -148,6 +147,7 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
 {
    struct gl_renderbuffer *rb =
          _mesa_get_read_renderbuffer_for_format(ctx, format);
+   GLenum dstBaseFormat = _mesa_unpack_format_to_base_format(format);
 
    assert(rb);
 
@@ -168,7 +168,8 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
 
    default:
       /* Color formats. */
-      if (_mesa_need_rgb_to_luminance_conversion(rb->Format, format)) {
+      if (_mesa_need_rgb_to_luminance_conversion(rb->_BaseFormat,
+                                                 dstBaseFormat)) {
          return GL_TRUE;
       }
 
@@ -436,6 +437,7 @@ read_rgba_pixels( struct gl_context *ctx,
    uint8_t rebase_swizzle[4];
    struct gl_framebuffer *fb = ctx->ReadBuffer;
    struct gl_renderbuffer *rb = fb->_ColorReadBuffer;
+   GLenum dstBaseFormat = _mesa_unpack_format_to_base_format(format);
 
    if (!rb)
       return;
@@ -447,7 +449,7 @@ read_rgba_pixels( struct gl_context *ctx,
    dst_stride = _mesa_image_row_stride(packing, width, format, type);
    dst_format = _mesa_format_from_format_and_type(format, type);
    convert_rgb_to_lum =
-      _mesa_need_rgb_to_luminance_conversion(rb->Format, format);
+      _mesa_need_rgb_to_luminance_conversion(rb->_BaseFormat, dstBaseFormat);
    dst = (GLubyte *) _mesa_image_address2d(packing, pixels, width, height,
                                            format, type, 0, 0);
 
