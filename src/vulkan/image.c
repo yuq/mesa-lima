@@ -73,16 +73,9 @@ anv_image_choose_tile_mode(const VkImageCreateInfo *vk_info,
 
    switch (vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
-      if (unlikely(vk_info->format == VK_FORMAT_S8_UINT)) {
-         anv_abortf("requested linear stencil buffer");
-      }
       return LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
-      if (unlikely(vk_info->format == VK_FORMAT_S8_UINT)) {
-         return WMAJOR;
-      } else {
-         return YMAJOR;
-      }
+      return YMAJOR;
    default:
       assert(!"bad VKImageTiling");
       return LINEAR;
@@ -139,6 +132,11 @@ VkResult anv_image_create(
    info = anv_format_for_vk_format(pCreateInfo->format);
    assert(info->cpp > 0 || info->has_stencil);
 
+   /* First allocate space for the color or depth buffer. info->cpp gives us
+    * the cpp of the color or depth in case of depth/stencil formats. Stencil
+    * only (VK_FORMAT_S8_UINT) has info->cpp == 0 and doesn't allocate
+    * anything here.
+    */
    if (info->cpp > 0) {
       image->stride = ALIGN_I32(image->extent.width * info->cpp,
                                 tile_info->width);
@@ -149,7 +147,13 @@ VkResult anv_image_create(
       image->stride = 0;
    }
 
-   if (info->has_stencil && pCreateInfo->format != VK_FORMAT_S8_UINT) {
+   /* Formats with a stencil buffer (either combined depth/stencil or
+    * VK_FORMAT_S8_UINT) have info->has_stencil == true. The stencil buffer is
+    * placed after the depth buffer and is a separate buffer from the GPU
+    * point of view, but as far as the API is concerned, depth and stencil are
+    * in the same image.
+    */
+   if (info->has_stencil) {
       const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
       image->stencil_offset = ALIGN_U32(image->size, w_info->surface_alignment);
       image->stencil_stride = ALIGN_I32(image->extent.width, w_info->width);
