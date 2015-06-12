@@ -52,6 +52,11 @@ struct vc4_exec_info {
 	struct vc4_bo_exec_state *bo;
 	uint32_t bo_count;
 
+	/* List of other BOs used in the job that need to be released
+	 * once the job is complete.
+	 */
+	struct list_head unref_list;
+
 	/* Current unvalidated indices into @bo loaded by the non-hardware
 	 * VC4_PACKET_GEM_HANDLES.
 	 */

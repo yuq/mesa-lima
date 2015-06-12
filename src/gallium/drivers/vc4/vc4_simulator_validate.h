@@ -64,16 +64,26 @@ struct drm_device {
         uint32_t simulator_mem_next;
 };
 
-struct drm_gem_cma_object {
-        struct vc4_bo *bo;
+struct drm_gem_object {
+        uint32_t size;
+};
 
-        struct {
-                uint32_t size;
-        } base;
+struct drm_gem_cma_object {
+        struct drm_gem_object base;
         uint32_t paddr;
         void *vaddr;
 };
 
+struct drm_vc4_bo {
+        struct drm_gem_cma_object base;
+        struct vc4_bo *bo;
+        struct list_head unref_head;
+};
+
+static inline struct drm_vc4_bo *to_vc4_bo(struct drm_gem_object *obj)
+{
+        return (struct drm_vc4_bo *)obj;
+}
 
 struct drm_gem_cma_object *
 drm_gem_cma_create(struct drm_device *dev, size_t size);

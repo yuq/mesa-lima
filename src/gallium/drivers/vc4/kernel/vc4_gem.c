@@ -114,6 +114,9 @@ vc4_cl_validate(struct drm_device *dev, struct vc4_exec_info *exec)
 	}
 #endif
 
+	list_addtail(&to_vc4_bo(&exec->exec_bo->base)->unref_head,
+		     &exec->unref_list);
+
 	exec->ct0ca = exec->exec_bo->paddr + bin_offset;
 	exec->ct1ca = exec->exec_bo->paddr + render_offset;
 
