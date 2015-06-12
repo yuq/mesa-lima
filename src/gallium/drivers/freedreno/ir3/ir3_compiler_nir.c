@@ -1076,8 +1076,14 @@ emit_alu(struct ir3_compile *ctx, nir_alu_instr *alu)
 	case nir_op_imax:
 		dst[0] = ir3_MAX_S(b, src[0], 0, src[1], 0);
 		break;
+	case nir_op_umax:
+		dst[0] = ir3_MAX_U(b, src[0], 0, src[1], 0);
+		break;
 	case nir_op_imin:
 		dst[0] = ir3_MIN_S(b, src[0], 0, src[1], 0);
+		break;
+	case nir_op_umin:
+		dst[0] = ir3_MIN_U(b, src[0], 0, src[1], 0);
 		break;
 	case nir_op_imul:
 		/*
@@ -2451,7 +2457,8 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 out:
 	if (ret) {
-		ir3_destroy(so->ir);
+		if (so->ir)
+			ir3_destroy(so->ir);
 		so->ir = NULL;
 	}
 	compile_free(ctx);
