@@ -219,6 +219,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
+	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:

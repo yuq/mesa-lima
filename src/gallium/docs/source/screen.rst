@@ -254,6 +254,10 @@ The integer capabilities:
   and size must be page-aligned.
 * ``PIPE_CAP_DEVICE_RESET_STATUS_QUERY``:
   Whether pipe_context::get_device_reset_status is implemented.
+* ``PIPE_CAP_MAX_SHADER_PATCH_VARYINGS``:
+  How many per-patch outputs and inputs are supported between tessellation
+  control and tessellation evaluation shaders, not counting in TESSINNER and
+  TESSOUTER. The minimum allowed value for OpenGL is 30.
 
 
 .. _pipe_capf:
