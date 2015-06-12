@@ -944,6 +944,7 @@ typedef enum
  */
 struct gl_sampler_object
 {
+   mtx_t Mutex;
    GLuint Name;
    GLint RefCount;
    GLchar *Label;               /**< GL_KHR_debug */
