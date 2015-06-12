@@ -1278,6 +1278,50 @@ _mesa_is_compressed_format(const struct gl_context *ctx, GLenum format)
    }
 }
 
+/**
+ * Convert various unpack formats to the corresponding base format.
+ */
+GLenum
+_mesa_unpack_format_to_base_format(GLenum format)
+{
+   switch(format) {
+   case GL_RED_INTEGER:
+      return GL_RED;
+   case GL_GREEN_INTEGER:
+      return GL_GREEN;
+   case GL_BLUE_INTEGER:
+      return GL_BLUE;
+   case GL_ALPHA_INTEGER:
+      return GL_ALPHA;
+   case GL_RG_INTEGER:
+      return GL_RG;
+   case GL_RGB_INTEGER:
+      return GL_RGB;
+   case GL_RGBA_INTEGER:
+      return GL_RGBA;
+   case GL_BGR_INTEGER:
+      return GL_BGR;
+   case GL_BGRA_INTEGER:
+      return GL_BGRA;
+   case GL_LUMINANCE_INTEGER_EXT:
+      return GL_LUMINANCE;
+   case GL_LUMINANCE_ALPHA_INTEGER_EXT:
+      return GL_LUMINANCE_ALPHA;
+   case GL_RED:
+   case GL_GREEN:
+   case GL_BLUE:
+   case GL_RG:
+   case GL_RGB:
+   case GL_RGBA:
+   case GL_BGR:
+   case GL_BGRA:
+   case GL_ALPHA:
+   case GL_LUMINANCE:
+   case GL_LUMINANCE_ALPHA:
+   default:
+      return format;
+   }
+}
 
 /**
  * Convert various base formats to the cooresponding integer format.
