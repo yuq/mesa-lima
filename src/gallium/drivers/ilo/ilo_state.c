@@ -698,6 +698,7 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
 {
    ilo->state_vector.draw = draw;
 
+   finalize_blend(ilo);
    finalize_shader_states(&ilo->state_vector);
    finalize_constant_buffers(ilo);
    finalize_index_buffer(ilo);
@@ -706,7 +707,6 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    finalize_urb(ilo);
    finalize_rasterizer(ilo);
    finalize_viewport(ilo);
-   finalize_blend(ilo);
 
    u_upload_unmap(ilo->uploader);
 }

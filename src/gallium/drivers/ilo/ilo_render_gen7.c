@@ -499,12 +499,12 @@ gen7_draw_wm(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
 {
+   const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->fs);
+   const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->fs);
+
    /* 3DSTATE_WM */
-   if (DIRTY(FS) || DIRTY(BLEND) ||
-       (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM)) {
-      gen7_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs,
-            vec->blend->alpha_may_kill);
-   }
+   if (DIRTY(FS) || (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM))
+      gen7_3DSTATE_WM(r->builder, &vec->rasterizer->rs, &cso->ps);
 
    /* 3DSTATE_BINDING_TABLE_POINTERS_PS */
    if (session->binding_table_fs_changed) {
@@ -527,13 +527,11 @@ gen7_draw_wm(struct ilo_render *r,
    }
 
    /* 3DSTATE_PS */
-   if (DIRTY(FS) || DIRTY(BLEND) || r->instruction_bo_changed) {
-      const bool dual_blend = vec->blend->dual_blend;
-
+   if (DIRTY(FS) || r->instruction_bo_changed) {
       if (r->hw_ctx_changed)
          gen7_wa_pre_3dstate_ps_max_threads(r);
 
-      gen7_3DSTATE_PS(r->builder, vec->fs, dual_blend);
+      gen7_3DSTATE_PS(r->builder, &cso->ps, kernel_offset);
    }
 
    /* 3DSTATE_SCISSOR_STATE_POINTERS */
@@ -714,12 +712,12 @@ static void
 gen7_rectlist_wm(struct ilo_render *r,
                  const struct ilo_blitter *blitter)
 {
-   gen7_3DSTATE_WM(r->builder, &blitter->fb.rs, NULL, false);
+   gen7_3DSTATE_WM(r->builder, &blitter->fb.rs, &blitter->ps);
 
    gen7_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
    gen7_wa_pre_3dstate_ps_max_threads(r);
-   gen7_disable_3DSTATE_PS(r->builder);
+   gen7_3DSTATE_PS(r->builder, &blitter->ps, 0);
 }
 
 static void

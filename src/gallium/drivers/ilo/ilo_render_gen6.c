@@ -666,14 +666,17 @@ gen6_draw_wm(struct ilo_render *r,
    }
 
    /* 3DSTATE_WM */
-   if (DIRTY(FS) || DIRTY(BLEND) ||
+   if (DIRTY(FS) ||
        (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM) ||
        r->instruction_bo_changed) {
+      const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->fs);
+      const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->fs);
+
       if (ilo_dev_gen(r->dev) == ILO_GEN(6) && r->hw_ctx_changed)
          gen6_wa_pre_3dstate_wm_max_threads(r);
 
-      gen6_3DSTATE_WM(r->builder, &vec->rasterizer->rs, vec->fs,
-            vec->blend->dual_blend, vec->blend->alpha_may_kill);
+      gen6_3DSTATE_WM(r->builder, &vec->rasterizer->rs,
+            &cso->ps, kernel_offset);
    }
 }
 
@@ -840,7 +843,7 @@ gen6_rectlist_wm(struct ilo_render *r,
    gen6_3DSTATE_CONSTANT_PS(r->builder, NULL, NULL, 0);
 
    gen6_wa_pre_3dstate_wm_max_threads(r);
-   gen6_3DSTATE_WM(r->builder, &blitter->fb.rs, NULL, false, false);
+   gen6_3DSTATE_WM(r->builder, &blitter->fb.rs, &blitter->ps, 0);
 }
 
 static void

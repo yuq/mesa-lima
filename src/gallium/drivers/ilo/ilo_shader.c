@@ -27,7 +27,6 @@
 
 #include "genhw/genhw.h" /* for SBE setup */
 #include "core/ilo_builder.h"
-#include "core/ilo_state_3d.h"
 #include "core/intel_winsys.h"
 #include "shader/ilo_shader_internal.h"
 #include "tgsi/tgsi_parse.h"
@@ -655,6 +654,60 @@ init_gs(struct ilo_shader *kernel,
 }
 
 static void
+init_ps(struct ilo_shader *kernel,
+        const struct ilo_shader_state *state)
+{
+   struct ilo_state_ps_info info;
+
+   memset(&info, 0, sizeof(info));
+
+   init_shader_kernel(kernel, state, &info.kernel_8);
+   init_shader_resource(kernel, state, &info.resource);
+
+   info.io.has_rt_write = true;
+   info.io.posoffset = GEN6_POSOFFSET_NONE;
+   info.io.attr_count = kernel->in.count;
+   info.io.use_z = kernel->in.has_pos;
+   info.io.use_w = kernel->in.has_pos;
+   info.io.use_coverage_mask = false;
+   info.io.pscdepth = (kernel->out.has_pos) ?
+      GEN7_PSCDEPTH_ON : GEN7_PSCDEPTH_OFF;
+   info.io.write_pixel_mask = kernel->has_kill;
+   info.io.write_omask = false;
+
+   info.params.sample_mask = 0x1;
+   info.params.earlyz_control_psexec = false;
+   info.params.alpha_may_kill = false;
+   info.params.dual_source_blending = false;
+   info.params.has_writeable_rt = true;
+
+   info.valid_kernels = GEN6_PS_DISPATCH_8;
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 284:
+    *
+    *     "(MSDISPMODE_PERSAMPLE) This is the high-quality multisample mode
+    *      where (over and above PERPIXEL mode) the PS is run for each covered
+    *      sample. This mode is also used for "normal" non-multisample
+    *      rendering (aka 1X), given Number of Multisamples is programmed to
+    *      NUMSAMPLES_1."
+    */
+   info.per_sample_dispatch = true;
+
+   info.rt_clear_enable = false;
+   info.rt_resolve_enable = false;
+   info.cv_per_sample_interp = false;
+   info.cv_has_earlyz_op = false;
+   info.sample_count_one = true;
+   info.cv_has_depth_buffer = true;
+
+   ilo_state_ps_init(&kernel->cso.ps, state->info.dev, &info);
+
+   /* remember current parameters */
+   kernel->ps_params = info.params;
+}
+
+static void
 init_sol(struct ilo_shader *kernel,
          const struct ilo_dev *dev,
          const struct pipe_stream_output_info *so_info,
@@ -837,7 +890,7 @@ ilo_shader_state_use_variant(struct ilo_shader_state *state,
          init_gs(sh, state);
          break;
       case PIPE_SHADER_FRAGMENT:
-         ilo_gpe_init_fs_cso(state->info.dev, state, &sh->cso);
+         init_ps(sh, state);
          break;
       default:
          break;
@@ -955,16 +1008,33 @@ ilo_shader_select_kernel(struct ilo_shader_state *shader,
                          const struct ilo_state_vector *vec,
                          uint32_t dirty)
 {
-   const struct ilo_shader * const cur = shader->shader;
    struct ilo_shader_variant variant;
+   bool changed = false;
 
-   if (!(shader->info.non_orthogonal_states & dirty))
-      return false;
+   if (shader->info.non_orthogonal_states & dirty) {
+      const struct ilo_shader * const old = shader->shader;
 
-   ilo_shader_variant_init(&variant, &shader->info, vec);
-   ilo_shader_state_use_variant(shader, &variant);
+      ilo_shader_variant_init(&variant, &shader->info, vec);
+      ilo_shader_state_use_variant(shader, &variant);
+      changed = (shader->shader != old);
+   }
 
-   return (shader->shader != cur);
+   if (shader->info.type == PIPE_SHADER_FRAGMENT) {
+      struct ilo_shader *kernel = shader->shader;
+
+      if (kernel->ps_params.sample_mask != vec->sample_mask ||
+          kernel->ps_params.alpha_may_kill != vec->blend->alpha_may_kill) {
+         kernel->ps_params.sample_mask = vec->sample_mask;
+         kernel->ps_params.alpha_may_kill = vec->blend->alpha_may_kill;
+
+         ilo_state_ps_set_params(&kernel->cso.ps, shader->info.dev,
+               &kernel->ps_params);
+
+         changed = true;
+      }
+   }
+
+   return changed;
 }
 
 static int
@@ -1063,8 +1133,8 @@ ilo_shader_select_kernel_sbe(struct ilo_shader_state *shader,
    assert(kernel->in.count <= Elements(swizzles));
    dst_len = MIN2(kernel->in.count, Elements(swizzles));
 
-   memset(&info, 0, sizeof(info));
    memset(&swizzles, 0, sizeof(swizzles));
+   memset(&info, 0, sizeof(info));
 
    info.attr_count = dst_len;
    info.cv_vue_attr_count = src_skip + src_len;

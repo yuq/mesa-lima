@@ -77,6 +77,7 @@ struct ilo_shader_variant {
 
 struct ilo_kernel_routing {
    bool initialized;
+
    bool is_point;
    bool light_twoside;
    uint32_t sprite_coord_enable;
@@ -140,6 +141,7 @@ struct ilo_shader {
    int kernel_size;
 
    struct ilo_kernel_routing routing;
+   struct ilo_state_ps_params_info ps_params;
 
    /* what does the push constant buffer consist of? */
    struct {

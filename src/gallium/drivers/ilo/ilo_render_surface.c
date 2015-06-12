@@ -29,6 +29,7 @@
 
 #include "ilo_common.h"
 #include "ilo_blitter.h"
+#include "ilo_shader.h"
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 

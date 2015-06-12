@@ -114,25 +114,6 @@ struct ilo_fb_state {
    enum gen_depth_format depth_offset_format;
 };
 
-union ilo_shader_cso {
-   struct ilo_state_vs vs;
-   struct ilo_state_hs hs;
-   struct ilo_state_ds ds;
-   struct ilo_state_gs gs;
-
-   uint32_t ps_payload[5];
-
-   struct {
-      struct ilo_state_vs vs;
-      struct ilo_state_gs sol;
-   } vs_sol;
-};
-
-void
-ilo_gpe_init_fs_cso(const struct ilo_dev *dev,
-                    const struct ilo_shader_state *fs,
-                    union ilo_shader_cso *cso);
-
 void
 ilo_gpe_set_fb(const struct ilo_dev *dev,
                const struct pipe_framebuffer_state *state,

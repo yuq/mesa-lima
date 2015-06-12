@@ -28,6 +28,8 @@
 #ifndef ILO_SHADER_H
 #define ILO_SHADER_H
 
+#include "core/ilo_state_shader.h"
+
 #include "ilo_common.h"
 
 enum ilo_kernel_param {
@@ -89,6 +91,19 @@ struct ilo_shader_state;
 struct ilo_state_sbe;
 struct ilo_state_sol;
 struct ilo_state_vector;
+
+union ilo_shader_cso {
+   struct ilo_state_vs vs;
+   struct ilo_state_hs hs;
+   struct ilo_state_ds ds;
+   struct ilo_state_gs gs;
+   struct ilo_state_ps ps;
+
+   struct {
+      struct ilo_state_vs vs;
+      struct ilo_state_gs sol;
+   } vs_sol;
+};
 
 struct ilo_shader_cache *
 ilo_shader_cache_create(void);

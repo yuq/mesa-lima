@@ -86,6 +86,9 @@ gen8_draw_wm(struct ilo_render *r,
              const struct ilo_state_vector *vec,
              struct ilo_render_draw_session *session)
 {
+   const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->fs);
+   const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->fs);
+
    /* 3DSTATE_WM */
    if (session->rs_delta.dirty & ILO_STATE_RASTER_3DSTATE_WM)
       gen8_3DSTATE_WM(r->builder, &vec->rasterizer->rs);
@@ -121,13 +124,11 @@ gen8_draw_wm(struct ilo_render *r,
 
    /* 3DSTATE_PS */
    if (DIRTY(FS) || r->instruction_bo_changed)
-      gen8_3DSTATE_PS(r->builder, vec->fs);
+      gen8_3DSTATE_PS(r->builder, &cso->ps, kernel_offset);
 
    /* 3DSTATE_PS_EXTRA */
-   if (DIRTY(FS) || DIRTY(BLEND)) {
-      gen8_3DSTATE_PS_EXTRA(r->builder, vec->fs,
-            vec->blend->alpha_may_kill, false);
-   }
+   if (DIRTY(FS))
+      gen8_3DSTATE_PS_EXTRA(r->builder, &cso->ps);
 
    /* 3DSTATE_PS_BLEND */
    if (session->cc_delta.dirty & ILO_STATE_CC_3DSTATE_PS_BLEND)
