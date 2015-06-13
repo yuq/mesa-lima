@@ -621,6 +621,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    memset(prog_data, 0, sizeof(*prog_data));
 
+   set_binding_table_layout(&prog_data->base, pipeline, VK_SHADER_STAGE_COMPUTE);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
