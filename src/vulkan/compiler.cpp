@@ -614,12 +614,13 @@ brw_codegen_cs_prog(struct brw_context *brw,
    const GLuint *program;
    void *mem_ctx = ralloc_context(NULL);
    GLuint program_size;
-   struct brw_cs_prog_data prog_data;
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
    struct gl_shader *cs = prog->_LinkedShaders[MESA_SHADER_COMPUTE];
    assert (cs);
 
-   memset(&prog_data, 0, sizeof(prog_data));
+   memset(prog_data, 0, sizeof(*prog_data));
+
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
@@ -629,13 +630,13 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
-   prog_data.base.param =
+   prog_data->base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.pull_param =
+   prog_data->base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.nr_params = param_count;
+   prog_data->base.nr_params = param_count;
 
-   program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
+   program = brw_cs_emit(brw, mem_ctx, key, prog_data,
                          &cp->program, prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
