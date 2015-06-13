@@ -2367,7 +2367,10 @@ validate_explicit_location(const struct ast_type_qualifier *qual,
          case MESA_SHADER_TESS_CTRL:
          case MESA_SHADER_TESS_EVAL:
          case MESA_SHADER_GEOMETRY:
-            var->data.location = qual->location + VARYING_SLOT_VAR0;
+            if (var->data.patch)
+               var->data.location = qual->location + VARYING_SLOT_PATCH0;
+            else
+               var->data.location = qual->location + VARYING_SLOT_VAR0;
             break;
 
          case MESA_SHADER_FRAGMENT:

@@ -103,10 +103,26 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
    for (int i = 0; i < len; i++) {
       bool dual_slot = is_dual_slot(var);
       int idx = var->data.location + var->data.index + offset + i;
-      GLbitfield64 bitfield = BITFIELD64_BIT(idx);
+      bool is_patch_generic = var->data.patch &&
+                              idx != VARYING_SLOT_TESS_LEVEL_INNER &&
+                              idx != VARYING_SLOT_TESS_LEVEL_OUTER;
+      GLbitfield64 bitfield;
+
+      if (is_patch_generic) {
+         assert(idx >= VARYING_SLOT_PATCH0 && idx < VARYING_SLOT_TESS_MAX);
+         bitfield = BITFIELD64_BIT(idx - VARYING_SLOT_PATCH0);
+      }
+      else {
+         assert(idx < VARYING_SLOT_MAX);
+         bitfield = BITFIELD64_BIT(idx);
+      }
 
       if (var->data.mode == ir_var_shader_in) {
-         prog->InputsRead |= bitfield;
+         if (is_patch_generic)
+            prog->PatchInputsRead |= bitfield;
+         else
+            prog->InputsRead |= bitfield;
+
          if (dual_slot)
             prog->DoubleInputsRead |= bitfield;
          if (is_fragment_shader) {
@@ -122,7 +138,10 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          prog->SystemValuesRead |= bitfield;
       } else {
          assert(var->data.mode == ir_var_shader_out);
-	 prog->OutputsWritten |= bitfield;
+         if (is_patch_generic)
+            prog->PatchOutputsWritten |= bitfield;
+         else
+            prog->OutputsWritten |= bitfield;
       }
    }
 }
@@ -406,6 +425,8 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
 
    prog->InputsRead = 0;
    prog->OutputsWritten = 0;
+   prog->PatchInputsRead = 0;
+   prog->PatchOutputsWritten = 0;
    prog->SystemValuesRead = 0;
    if (shader_stage == MESA_SHADER_FRAGMENT) {
       gl_fragment_program *fprog = (gl_fragment_program *) prog;

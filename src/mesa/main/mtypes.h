@@ -243,7 +243,9 @@ typedef enum
    VARYING_SLOT_TESS_LEVEL_OUTER, /* Only appears as TCS output. */
    VARYING_SLOT_TESS_LEVEL_INNER, /* Only appears as TCS output. */
    VARYING_SLOT_VAR0, /* First generic varying slot */
-   VARYING_SLOT_MAX = VARYING_SLOT_VAR0 + MAX_VARYING
+   VARYING_SLOT_MAX = VARYING_SLOT_VAR0 + MAX_VARYING,
+   VARYING_SLOT_PATCH0 = VARYING_SLOT_MAX,
+   VARYING_SLOT_TESS_MAX = VARYING_SLOT_PATCH0 + MAX_VARYING
 } gl_varying_slot;
 
 
@@ -2103,6 +2105,8 @@ struct gl_program
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
    GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
+   GLbitfield PatchInputsRead;  /**< VAR[0..31] usage for patch inputs (user-defined only) */
+   GLbitfield PatchOutputsWritten; /**< VAR[0..31] usage for patch outputs (user-defined only) */
    GLbitfield SystemValuesRead;   /**< Bitmask of SYSTEM_VALUE_x inputs used */
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
    GLbitfield SamplersUsed;   /**< Bitfield of which samplers are used */

@@ -985,8 +985,17 @@ varying_matches::assign_locations()
          &varying_matches::match_comparator);
 
    unsigned generic_location = 0;
+   unsigned generic_patch_location = MAX_VARYING*4;
 
    for (unsigned i = 0; i < this->num_matches; i++) {
+      unsigned *location = &generic_location;
+
+      if ((this->matches[i].consumer_var &&
+           this->matches[i].consumer_var->data.patch) ||
+          (this->matches[i].producer_var &&
+           this->matches[i].producer_var->data.patch))
+         location = &generic_patch_location;
+
       /* Advance to the next slot if this varying has a different packing
        * class than the previous one, and we're not already on a slot
        * boundary.
@@ -994,12 +1003,12 @@ varying_matches::assign_locations()
       if (i > 0 &&
           this->matches[i - 1].packing_class
           != this->matches[i].packing_class) {
-         generic_location = ALIGN(generic_location, 4);
+         *location = ALIGN(*location, 4);
       }
 
-      this->matches[i].generic_location = generic_location;
+      this->matches[i].generic_location = *location;
 
-      generic_location += this->matches[i].num_components;
+      *location += this->matches[i].num_components;
    }
 
    return (generic_location + 3) / 4;
@@ -1213,11 +1222,11 @@ bool
 populate_consumer_input_sets(void *mem_ctx, exec_list *ir,
                              hash_table *consumer_inputs,
                              hash_table *consumer_interface_inputs,
-                             ir_variable *consumer_inputs_with_locations[VARYING_SLOT_MAX])
+                             ir_variable *consumer_inputs_with_locations[VARYING_SLOT_TESS_MAX])
 {
    memset(consumer_inputs_with_locations,
           0,
-          sizeof(consumer_inputs_with_locations[0]) * VARYING_SLOT_MAX);
+          sizeof(consumer_inputs_with_locations[0]) * VARYING_SLOT_TESS_MAX);
 
    foreach_in_list(ir_instruction, node, ir) {
       ir_variable *const input_var = node->as_variable();
@@ -1273,7 +1282,7 @@ get_matching_input(void *mem_ctx,
                    const ir_variable *output_var,
                    hash_table *consumer_inputs,
                    hash_table *consumer_interface_inputs,
-                   ir_variable *consumer_inputs_with_locations[VARYING_SLOT_MAX])
+                   ir_variable *consumer_inputs_with_locations[VARYING_SLOT_TESS_MAX])
 {
    ir_variable *input_var;
 
@@ -1414,7 +1423,7 @@ assign_varying_locations(struct gl_context *ctx,
       = hash_table_ctor(0, hash_table_string_hash, hash_table_string_compare);
    hash_table *consumer_interface_inputs
       = hash_table_ctor(0, hash_table_string_hash, hash_table_string_compare);
-   ir_variable *consumer_inputs_with_locations[VARYING_SLOT_MAX] = {
+   ir_variable *consumer_inputs_with_locations[VARYING_SLOT_TESS_MAX] = {
       NULL,
    };
 
