@@ -174,11 +174,29 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
     *   TRIANGLES_ADJACENCY_ARB and <mode> is not
     *   TRIANGLES_ADJACENCY_ARB or TRIANGLE_STRIP_ADJACENCY_ARB.
     *
+    * The GL spec doesn't mention any interaction with tessellation, which
+    * is clearly a spec bug. The same rule should apply, but instead of
+    * the draw primitive mode, the tessellation evaluation shader primitive
+    * mode should be used for the checking.
    */
    if (ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]) {
       const GLenum geom_mode =
          ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY]->Geom.InputType;
-      switch (mode) {
+      struct gl_shader_program *tes =
+         ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_EVAL];
+      GLenum mode_before_gs = mode;
+
+      if (tes) {
+         if (tes->TessEval.PointMode)
+            mode_before_gs = GL_POINTS;
+         else if (tes->TessEval.PrimitiveMode == GL_ISOLINES)
+            mode_before_gs = GL_LINES;
+         else
+            /* the GL_QUADS mode generates triangles too */
+            mode_before_gs = GL_TRIANGLES;
+      }
+
+      switch (mode_before_gs) {
       case GL_POINTS:
          valid_enum = (geom_mode == GL_POINTS);
          break;
@@ -213,7 +231,7 @@ _mesa_valid_prim_mode(struct gl_context *ctx, GLenum mode, const char *name)
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "%s(mode=%s vs geometry shader input %s)",
                      name,
-                     _mesa_lookup_prim_by_nr(mode),
+                     _mesa_lookup_prim_by_nr(mode_before_gs),
                      _mesa_lookup_prim_by_nr(geom_mode));
          return GL_FALSE;
       }
