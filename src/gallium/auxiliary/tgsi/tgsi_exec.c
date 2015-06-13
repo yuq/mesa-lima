@@ -4401,8 +4401,12 @@ exec_instruction(
          mach->BreakStack[mach->BreakStackTop++] = mach->BreakType;
          mach->FuncStack[mach->FuncStackTop++] = mach->FuncMask;
 
-         /* Finally, jump to the subroutine */
+         /* Finally, jump to the subroutine.  The label is a pointer
+          * (an instruction number) to the BGNSUB instruction.
+          */
          *pc = inst->Label.Label;
+         assert(mach->Instructions[*pc].Instruction.Opcode
+                == TGSI_OPCODE_BGNSUB);
       }
       break;
 
