@@ -139,7 +139,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
 
    dri2_dpy = disp->DriverData;
    _eglInitConfig(&base, disp, id);
-   
+
    i = 0;
    double_buffer = 0;
    bind_to_texture_rgb = 0;
@@ -155,7 +155,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
 	 else
 	    return NULL;
 	 _eglSetConfigKey(&base, EGL_COLOR_BUFFER_TYPE, value);
-	 break;	 
+	 break;
 
       case __DRI_ATTRIB_CONFIG_CAVEAT:
          if (value & __DRI_ATTRIB_NON_CONFORMANT_CONFIG)
@@ -365,7 +365,7 @@ dri2_bind_extensions(struct dri2_egl_display *dri2_dpy,
 	 }
       }
    }
-   
+
    for (j = 0; matches[j].name; j++) {
       field = ((char *) dri2_dpy + matches[j].offset);
       if (*(const __DRIextension **) field == NULL) {
@@ -624,7 +624,7 @@ dri2_create_screen(_EGLDisplay *disp)
    dri2_dpy->own_dri_screen = 1;
 
    extensions = dri2_dpy->core->getExtensions(dri2_dpy->dri_screen);
-   
+
    if (dri2_dpy->dri2) {
       if (!dri2_bind_extensions(dri2_dpy, dri2_core_extensions, extensions))
          goto cleanup_dri_screen;
@@ -1970,7 +1970,7 @@ dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
    if (attrs.DRMBufferUseMESA & EGL_DRM_BUFFER_USE_CURSOR_MESA)
       dri_use |= __DRI_IMAGE_USE_CURSOR;
 
-   dri2_img->dri_image = 
+   dri2_img->dri_image =
       dri2_dpy->image->createImage(dri2_dpy->dri_screen,
 				   attrs.Width, attrs.Height,
                                    format, dri_use, dri2_img);

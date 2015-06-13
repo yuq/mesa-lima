@@ -138,7 +138,7 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
       _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
       return NULL;
    }
-   
+
    if (!_eglInitSurface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf, attrib_list))
       goto cleanup_surf;
 
@@ -157,7 +157,7 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->base.Width =  -1;
    dri2_surf->base.Height = -1;
 
-   dri2_surf->dri_drawable = 
+   dri2_surf->dri_drawable =
       (*dri2_dpy->dri2->createNewDrawable) (dri2_dpy->dri_screen,
 					    dri2_conf->dri_double_config,
 					    dri2_surf);
@@ -361,7 +361,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    }
 
    if (dri2_surf->back->dri_image == NULL) {
-      dri2_surf->back->dri_image = 
+      dri2_surf->back->dri_image =
          dri2_dpy->image->createImage(dri2_dpy->dri_screen,
                                       dri2_surf->base.Width,
                                       dri2_surf->base.Height,
@@ -1220,7 +1220,7 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    wl_event_queue_destroy(dri2_dpy->wl_queue);
  cleanup_dpy:
    free(dri2_dpy);
-   
+
    return EGL_FALSE;
 }
 

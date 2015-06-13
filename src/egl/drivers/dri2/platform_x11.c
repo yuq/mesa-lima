@@ -56,7 +56,7 @@ swrastCreateDrawable(struct dri2_egl_display * dri2_dpy,
    uint32_t           mask;
    const uint32_t     function = GXcopy;
    uint32_t           valgc[2];
-   
+
    /* create GC's */
    dri2_surf->gc = xcb_generate_id(dri2_dpy->conn);
    mask = XCB_GC_FUNCTION;

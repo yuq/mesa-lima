@@ -120,9 +120,9 @@ struct dri2_egl_display_vtbl {
    EGLBoolean (*swap_buffers)(_EGLDriver *drv, _EGLDisplay *dpy,
                               _EGLSurface *surf);
 
-   EGLBoolean (*swap_buffers_with_damage)(_EGLDriver *drv, _EGLDisplay *dpy,     
-                                          _EGLSurface *surface,                  
-                                          const EGLint *rects, EGLint n_rects);  
+   EGLBoolean (*swap_buffers_with_damage)(_EGLDriver *drv, _EGLDisplay *dpy,
+                                          _EGLSurface *surface,
+                                          const EGLint *rects, EGLint n_rects);
 
    EGLBoolean (*swap_buffers_region)(_EGLDriver *drv, _EGLDisplay *dpy,
                                      _EGLSurface *surf, EGLint numRects,
