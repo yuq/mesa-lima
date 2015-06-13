@@ -424,6 +424,8 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 
 		*sz = MAX2(*sz, dsz);
 
+		/* Fanout's are grouped, so *off should already valid */
+
 		d = dd;
 	}
 

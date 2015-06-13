@@ -822,10 +822,10 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
  */
 static void
 split_dest(struct ir3_block *block, struct ir3_instruction **dst,
-		struct ir3_instruction *src)
+		struct ir3_instruction *src, unsigned n)
 {
 	struct ir3_instruction *prev = NULL;
-	for (int i = 0, j = 0; i < 4; i++) {
+	for (int i = 0, j = 0; i < n; i++) {
 		struct ir3_instruction *split =
 				ir3_instr_create(block, -1, OPC_META_FO);
 		ir3_reg_create(split, 0, IR3_REG_SSA);
@@ -1699,7 +1699,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			create_collect(b, src0, nsrc0),
 			create_collect(b, src1, nsrc1));
 
-	split_dest(b, dst, sam);
+	split_dest(b, dst, sam, 4);
 }
 
 static void
@@ -1716,7 +1716,7 @@ emit_tex_query_levels(struct ir3_compile *ctx, nir_tex_instr *tex)
 	/* even though there is only one component, since it ends
 	 * up in .z rather than .x, we need a split_dest()
 	 */
-	split_dest(b, dst, sam);
+	split_dest(b, dst, sam, 3);
 
 	/* The # of levels comes from getinfo.z. We need to add 1 to it, since
 	 * the value in TEX_CONST_0 is zero-based.
@@ -1744,7 +1744,7 @@ emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 	sam = ir3_SAM(b, OPC_GETSIZE, TYPE_U32, TGSI_WRITEMASK_XYZW, flags,
 			tex->sampler_index, tex->sampler_index, lod, NULL);
 
-	split_dest(b, dst, sam);
+	split_dest(b, dst, sam, 4);
 
 	/* Array size actually ends up in .w rather than .z. This doesn't
 	 * matter for miplevel 0, but for higher mips the value in z is
