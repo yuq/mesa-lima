@@ -4161,6 +4161,11 @@ struct gl_driver_flags
     * gl_context::ImageUnits
     */
    uint64_t NewImageUnits;
+
+   /**
+    * gl_context::TessCtrlProgram::patch_default_*
+    */
+   uint64_t NewDefaultTessLevels;
 };
 
 struct gl_uniform_buffer_binding

@@ -1999,13 +1999,53 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 extern void GLAPIENTRY
 _mesa_PatchParameteri(GLenum pname, GLint value)
 {
-   /* STUB */
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!_mesa_has_tessellation(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glPatchParameteri");
+      return;
+   }
+
+   if (pname != GL_PATCH_VERTICES) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glPatchParameteri");
+      return;
+   }
+
+   if (value <= 0 || value > ctx->Const.MaxPatchVertices) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glPatchParameteri");
+      return;
+   }
+
+   ctx->TessCtrlProgram.patch_vertices = value;
 }
 
 
 extern void GLAPIENTRY
 _mesa_PatchParameterfv(GLenum pname, const GLfloat *values)
 {
-   /* STUB */
+   GET_CURRENT_CONTEXT(ctx);
+
+   if (!_mesa_has_tessellation(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glPatchParameterfv");
+      return;
+   }
+
+   switch(pname) {
+   case GL_PATCH_DEFAULT_OUTER_LEVEL:
+      FLUSH_VERTICES(ctx, 0);
+      memcpy(ctx->TessCtrlProgram.patch_default_outer_level, values,
+             4 * sizeof(GLfloat));
+      ctx->NewDriverState |= ctx->DriverFlags.NewDefaultTessLevels;
+      return;
+   case GL_PATCH_DEFAULT_INNER_LEVEL:
+      FLUSH_VERTICES(ctx, 0);
+      memcpy(ctx->TessCtrlProgram.patch_default_inner_level, values,
+             2 * sizeof(GLfloat));
+      ctx->NewDriverState |= ctx->DriverFlags.NewDefaultTessLevels;
+      return;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM, "glPatchParameterfv");
+      return;
+   }
 }
 
