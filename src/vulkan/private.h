@@ -726,6 +726,9 @@ struct anv_pipeline {
    uint32_t                                     state_sf[GEN8_3DSTATE_SF_length];
    uint32_t                                     state_raster[GEN8_3DSTATE_RASTER_length];
    uint32_t                                     state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+
+   uint32_t                                     cs_thread_width_max;
+   uint32_t                                     cs_right_mask;
 };
 
 struct anv_pipeline_create_info {

@@ -3390,31 +3390,20 @@ void anv_CmdDispatch(
     uint32_t                                    z)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   uint32_t size = SIMD8; /* FIXME */
-   uint32_t right_mask = 0; /* FIXME */
-   uint32_t thread_width_max = 0; /* FIXME */
+   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
    anv_cmd_buffer_flush_compute_state(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
-
-                  .InterfaceDescriptorOffset = 0,
-                  .IndirectDataLength = 0,
-                  .IndirectDataStartAddress = 0,
-
-                  .SIMDSize = size,
-
+                  .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = thread_width_max,
-
-                  .ThreadGroupIDStartingX = 0,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max,
                   .ThreadGroupIDXDimension = x,
-                  .ThreadGroupIDStartingY = 0,
                   .ThreadGroupIDYDimension = y,
-                  .ThreadGroupIDStartingResumeZ = 0,
                   .ThreadGroupIDZDimension = z,
-                  .RightExecutionMask = right_mask,
+                  .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);
@@ -3430,6 +3419,8 @@ void anv_CmdDispatchIndirect(
     VkDeviceSize                                offset)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
    struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
@@ -3440,26 +3431,13 @@ void anv_CmdDispatchIndirect(
    anv_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMY, bo, bo_offset + 4);
    anv_batch_lrm(&cmd_buffer->batch, GPGPU_DISPATCHDIMZ, bo, bo_offset + 8);
 
-   uint32_t size = SIMD8; /* FIXME */
-   uint32_t right_mask = 0; /* FIXME */
-   uint32_t thread_width_max = 0; /* FIXME */
-
-   /* FIXME: We can't compute thread_width_max for indirect, looks like it
-    * depends on DIMX. */
-
    anv_batch_emit(&cmd_buffer->batch, GEN8_GPGPU_WALKER,
                   .IndirectParameterEnable = true,
-                  .InterfaceDescriptorOffset = 0,
-                  .IndirectDataLength = 0,
-                  .IndirectDataStartAddress = 0,
-
-                  .SIMDSize = size,
-
+                  .SIMDSize = prog_data->simd_size / 16,
                   .ThreadDepthCounterMaximum = 0,
                   .ThreadHeightCounterMaximum = 0,
-                  .ThreadWidthCounterMaximum = thread_width_max,
-
-                  .RightExecutionMask = right_mask,
+                  .ThreadWidthCounterMaximum = pipeline->cs_thread_width_max,
+                  .RightExecutionMask = pipeline->cs_right_mask,
                   .BottomExecutionMask = 0xffffffff);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_MEDIA_STATE_FLUSH);

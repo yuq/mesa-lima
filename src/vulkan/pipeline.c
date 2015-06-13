@@ -770,6 +770,18 @@ VkResult anv_CreateComputePipeline(
                   .URBEntryAllocationSize = 2,
                   .CURBEAllocationSize = 0);
 
+   struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
+   uint32_t group_size = prog_data->local_size[0] *
+      prog_data->local_size[1] * prog_data->local_size[2];
+   pipeline->cs_thread_width_max = DIV_ROUND_UP(group_size, prog_data->simd_size);
+   uint32_t remainder = group_size & (prog_data->simd_size - 1);
+
+   if (remainder > 0)
+      pipeline->cs_right_mask = ~0u >> (32 - remainder);
+   else
+      pipeline->cs_right_mask = ~0u >> (32 - prog_data->simd_size);
+
+
    *pPipeline = (VkPipeline) pipeline;
 
    return VK_SUCCESS;
