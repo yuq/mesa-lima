@@ -6199,6 +6199,179 @@ GEN7_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
 
 #define GEN7_PALETTE_ENTRY_length 0x00000001
 
+#define GEN7_BINDING_TABLE_STATE_length 0x00000001
+
+struct GEN7_BINDING_TABLE_STATE {
+   uint32_t                                     SurfaceStatePointer;
+};
+
+static inline void
+GEN7_BINDING_TABLE_STATE_pack(__gen_user_data *data, void * restrict dst,
+                             const struct GEN7_BINDING_TABLE_STATE * restrict values)
+{
+   uint32_t *dw = (uint32_t * restrict) dst;
+
+   dw[0] =
+      __gen_offset(values->SurfaceStatePointer, 5, 31) |
+      0;
+
+}
+
+#define GEN7_RENDER_SURFACE_STATE_length 0x00000008
+
+struct GEN7_RENDER_SURFACE_STATE {
+#define     SURFTYPE_1D                                        0
+#define     SURFTYPE_2D                                        1
+#define     SURFTYPE_3D                                        2
+#define     SURFTYPE_CUBE                                      3
+#define     SURFTYPE_BUFFER                                    4
+#define     SURFTYPE_STRBUF                                    5
+#define     SURFTYPE_NULL                                      7
+   uint32_t                                     SurfaceType;
+   uint32_t                                     SurfaceArray;
+   uint32_t                                     SurfaceFormat;
+   uint32_t                                     SurfaceVerticalAlignment;
+#define     HALIGN_4                                           0
+#define     HALIGN_8                                           1
+   uint32_t                                     SurfaceHorizontalAlignment;
+   uint32_t                                     TiledSurface;
+#define     TILEWALK_XMAJOR                                    0
+#define     TILEWALK_YMAJOR                                    1
+   uint32_t                                     TileWalk;
+   uint32_t                                     VerticalLineStride;
+   uint32_t                                     VerticalLineStrideOffset;
+#define     ARYSPC_FULL                                        0
+#define     ARYSPC_LOD0                                        1
+   uint32_t                                     SurfaceArraySpacing;
+   uint32_t                                     RenderCacheReadWriteMode;
+#define     NORMAL_MODE                                        0
+#define     PROGRESSIVE_FRAME                                  2
+#define     INTERLACED_FRAME                                   3
+   uint32_t                                     MediaBoundaryPixelMode;
+   uint32_t                                     CubeFaceEnables;
+   uint32_t                                     SurfaceBaseAddress;
+   uint32_t                                     Height;
+   uint32_t                                     Width;
+   uint32_t                                     Depth;
+   uint32_t                                     SurfacePitch;
+#define     RTROTATE_0DEG                                      0
+#define     RTROTATE_90DEG                                     1
+#define     RTROTATE_270DEG                                    3
+   uint32_t                                     RenderTargetRotation;
+   uint32_t                                     MinimumArrayElement;
+   uint32_t                                     RenderTargetViewExtent;
+#define     MSFMT_MSS                                          0
+#define     MSFMT_DEPTH_STENCIL                                1
+   uint32_t                                     MultisampledSurfaceStorageFormat;
+#define     MULTISAMPLECOUNT_1                                 0
+#define     MULTISAMPLECOUNT_4                                 2
+#define     MULTISAMPLECOUNT_8                                 3
+   uint32_t                                     NumberofMultisamples;
+   uint32_t                                     MultisamplePositionPaletteIndex;
+   uint32_t                                     MinimumArrayElement0;
+   uint32_t                                     XOffset;
+   uint32_t                                     YOffset;
+   uint32_t                                     SurfaceObjectControlState;
+   uint32_t                                     SurfaceMinLOD;
+   uint32_t                                     MIPCountLOD;
+   uint32_t                                     MCSBaseAddress;
+   uint32_t                                     MCSSurfacePitch;
+   uint32_t                                     AppendCounterAddress;
+   uint32_t                                     AppendCounterEnable;
+   uint32_t                                     MCSEnable;
+   uint32_t                                     ReservedMBZ;
+   uint32_t                                     XOffsetforUVPlane;
+   uint32_t                                     YOffsetforUVPlane;
+#define     CC_ZERO                                            0
+#define     CC_ONE                                             1
+   uint32_t                                     RedClearColor;
+#define     CC_ZERO                                            0
+#define     CC_ONE                                             1
+   uint32_t                                     GreenClearColor;
+#define     CC_ZERO                                            0
+#define     CC_ONE                                             1
+   uint32_t                                     BlueClearColor;
+#define     CC_ZERO                                            0
+#define     CC_ONE                                             1
+   uint32_t                                     AlphaClearColor;
+   uint32_t                                     ResourceMinLOD;
+};
+
+static inline void
+GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
+                              const struct GEN7_RENDER_SURFACE_STATE * restrict values)
+{
+   uint32_t *dw = (uint32_t * restrict) dst;
+
+   dw[0] =
+      __gen_field(values->SurfaceType, 29, 31) |
+      __gen_field(values->SurfaceArray, 28, 28) |
+      __gen_field(values->SurfaceFormat, 18, 26) |
+      __gen_field(values->SurfaceVerticalAlignment, 16, 17) |
+      __gen_field(values->SurfaceHorizontalAlignment, 15, 15) |
+      __gen_field(values->TiledSurface, 14, 14) |
+      __gen_field(values->TileWalk, 13, 13) |
+      __gen_field(values->VerticalLineStride, 12, 12) |
+      __gen_field(values->VerticalLineStrideOffset, 11, 11) |
+      __gen_field(values->SurfaceArraySpacing, 10, 10) |
+      __gen_field(values->RenderCacheReadWriteMode, 8, 8) |
+      __gen_field(values->MediaBoundaryPixelMode, 6, 7) |
+      __gen_field(values->CubeFaceEnables, 0, 5) |
+      0;
+
+   dw[1] =
+      __gen_field(values->SurfaceBaseAddress, 0, 31) |
+      0;
+
+   dw[2] =
+      __gen_field(values->Height, 16, 29) |
+      __gen_field(values->Width, 0, 13) |
+      0;
+
+   dw[3] =
+      __gen_field(values->Depth, 21, 31) |
+      __gen_field(values->SurfacePitch, 0, 17) |
+      0;
+
+   dw[4] =
+      __gen_field(values->RenderTargetRotation, 29, 30) |
+      __gen_field(values->MinimumArrayElement, 18, 28) |
+      __gen_field(values->RenderTargetViewExtent, 7, 17) |
+      __gen_field(values->MultisampledSurfaceStorageFormat, 6, 6) |
+      __gen_field(values->NumberofMultisamples, 3, 5) |
+      __gen_field(values->MultisamplePositionPaletteIndex, 0, 2) |
+      __gen_field(values->MinimumArrayElement, 0, 26) |
+      0;
+
+   dw[5] =
+      __gen_field(values->XOffset, 25, 31) |
+      __gen_field(values->YOffset, 20, 23) |
+      __gen_field(values->SurfaceObjectControlState, 16, 19) |
+      __gen_field(values->SurfaceMinLOD, 4, 7) |
+      __gen_field(values->MIPCountLOD, 0, 3) |
+      0;
+
+   dw[6] =
+      __gen_field(values->MCSBaseAddress, 12, 31) |
+      __gen_field(values->MCSSurfacePitch, 3, 11) |
+      __gen_field(values->AppendCounterAddress, 6, 31) |
+      __gen_field(values->AppendCounterEnable, 1, 1) |
+      __gen_field(values->MCSEnable, 0, 0) |
+      __gen_field(values->ReservedMBZ, 30, 31) |
+      __gen_field(values->XOffsetforUVPlane, 16, 29) |
+      __gen_field(values->YOffsetforUVPlane, 0, 13) |
+      0;
+
+   dw[7] =
+      __gen_field(values->RedClearColor, 31, 31) |
+      __gen_field(values->GreenClearColor, 30, 30) |
+      __gen_field(values->BlueClearColor, 29, 29) |
+      __gen_field(values->AlphaClearColor, 28, 28) |
+      __gen_field(values->ResourceMinLOD, 0, 11) |
+      0;
+
+}
+
 #define GEN7_SAMPLER_BORDER_COLOR_STATE_length 0x00000004
 
 struct GEN7_SAMPLER_BORDER_COLOR_STATE {

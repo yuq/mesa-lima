@@ -7472,6 +7472,24 @@ GEN75_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
 
 #define GEN75_PALETTE_ENTRY_length 0x00000001
 
+#define GEN75_BINDING_TABLE_STATE_length 0x00000001
+
+struct GEN75_BINDING_TABLE_STATE {
+   uint32_t                                     SurfaceStatePointer;
+};
+
+static inline void
+GEN75_BINDING_TABLE_STATE_pack(__gen_user_data *data, void * restrict dst,
+                             const struct GEN75_BINDING_TABLE_STATE * restrict values)
+{
+   uint32_t *dw = (uint32_t * restrict) dst;
+
+   dw[0] =
+      __gen_offset(values->SurfaceStatePointer, 5, 31) |
+      0;
+
+}
+
 #define GEN75_RENDER_SURFACE_STATE_length 0x00000008
 
 struct GEN75_RENDER_SURFACE_STATE {

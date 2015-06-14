@@ -8202,6 +8202,24 @@ GEN8_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
 
 #define GEN8_PALETTE_ENTRY_length 0x00000001
 
+#define GEN8_BINDING_TABLE_STATE_length 0x00000001
+
+struct GEN8_BINDING_TABLE_STATE {
+   uint32_t                                     SurfaceStatePointer;
+};
+
+static inline void
+GEN8_BINDING_TABLE_STATE_pack(__gen_user_data *data, void * restrict dst,
+                             const struct GEN8_BINDING_TABLE_STATE * restrict values)
+{
+   uint32_t *dw = (uint32_t * restrict) dst;
+
+   dw[0] =
+      __gen_offset(values->SurfaceStatePointer, 6, 31) |
+      0;
+
+}
+
 #define GEN8_RENDER_SURFACE_STATE_length 0x00000010
 
 struct GEN8_RENDER_SURFACE_STATE {
