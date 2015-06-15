@@ -104,7 +104,7 @@ struct rvce_encoder {
 	struct pipe_h264_enc_picture_desc pic;
 	bool				use_vm;
 	bool				use_vui;
-	bool				use_2p;
+	bool				dual_pipe;
 };
 
 /* CPB handling functions */

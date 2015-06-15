@@ -106,6 +106,19 @@ static void encode(struct rvce_encoder *enc)
 	RVCE_CS(enc->bs_size); // videoBitstreamRingSize
 	RVCE_END();
 
+	if (enc->dual_pipe) {
+		unsigned aux_offset = enc->cpb.res->buf->size -
+			RVCE_MAX_AUX_BUFFER_NUM * RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE * 2;
+		RVCE_BEGIN(0x05000002); // auxiliary buffer
+		for (i = 0; i < 8; ++i) {
+			RVCE_CS(aux_offset);
+			aux_offset += RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE;
+		}
+		for (i = 0; i < 8; ++i)
+			RVCE_CS(RVCE_MAX_BITSTREAM_OUTPUT_ROW_SIZE);
+		RVCE_END();
+	}
+
 	RVCE_BEGIN(0x03000001); // encode
 	RVCE_CS(enc->pic.frame_num ? 0x0 : 0x11); // insertHeaders
 	RVCE_CS(0x00000000); // pictureStructure
@@ -121,7 +134,10 @@ static void encode(struct rvce_encoder *enc)
 	RVCE_CS(align(enc->luma->npix_y, 16)); // encInputFrameYPitch
 	RVCE_CS(enc->luma->level[0].pitch_bytes); // encInputPicLumaPitch
 	RVCE_CS(enc->chroma->level[0].pitch_bytes); // encInputPicChromaPitch
-	RVCE_CS(0x00010000); // encInputPic(Addr|Array)Mode,encDisable(TwoPipeMode|MBOffloading)
+	if (enc->dual_pipe)
+		RVCE_CS(0x00000000); // encInputPic(Addr|Array)Mode,encDisable(TwoPipeMode|MBOffloading)
+	else
+		RVCE_CS(0x00010000); // encInputPic(Addr|Array)Mode,encDisable(TwoPipeMode|MBOffloading)
 	RVCE_CS(0x00000000); // encInputPicTileConfig
 	RVCE_CS(enc->pic.picture_type); // encPicType
 	RVCE_CS(enc->pic.picture_type == PIPE_H264_ENC_PICTURE_TYPE_IDR); // encIdrFlag
