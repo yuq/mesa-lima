@@ -354,7 +354,8 @@ struct ilo_state_vector {
 
    struct ilo_rasterizer_state *rasterizer;
 
-   struct pipe_poly_stipple poly_stipple;
+   struct ilo_state_line_stipple line_stipple;
+   struct ilo_state_poly_stipple poly_stipple;
    unsigned sample_mask;
 
    struct ilo_shader_state *fs;

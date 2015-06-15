@@ -219,6 +219,23 @@ struct ilo_state_sample_pattern {
    uint8_t pattern_16x[16];
 };
 
+struct ilo_state_line_stipple_info {
+   uint16_t pattern;
+   uint16_t repeat_count;
+};
+
+struct ilo_state_line_stipple {
+   uint32_t stipple[2];
+};
+
+struct ilo_state_poly_stipple_info {
+   uint32_t pattern[32];
+};
+
+struct ilo_state_poly_stipple {
+   uint32_t stipple[32];
+};
+
 bool
 ilo_state_raster_init(struct ilo_state_raster *rs,
                       const struct ilo_dev *dev,
@@ -271,5 +288,14 @@ ilo_state_sample_pattern_get_offset(const struct ilo_state_sample_pattern *patte
                                     const struct ilo_dev *dev,
                                     uint8_t sample_count, uint8_t sample_index,
                                     uint8_t *x, uint8_t *y);
+bool
+ilo_state_line_stipple_set_info(struct ilo_state_line_stipple *stipple,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_line_stipple_info *info);
+
+bool
+ilo_state_poly_stipple_set_info(struct ilo_state_poly_stipple *stipple,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_poly_stipple_info *info);
 
 #endif /* ILO_STATE_RASTER_H */

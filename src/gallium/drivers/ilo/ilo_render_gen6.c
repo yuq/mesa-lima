@@ -754,10 +754,8 @@ gen6_draw_wm_raster(struct ilo_render *r,
       if (ilo_dev_gen(r->dev) == ILO_GEN(6))
          gen6_wa_pre_non_pipelined(r);
 
-      gen6_3DSTATE_POLY_STIPPLE_PATTERN(r->builder,
-            &vec->poly_stipple);
-
-      gen6_3DSTATE_POLY_STIPPLE_OFFSET(r->builder, 0, 0);
+      gen6_3DSTATE_POLY_STIPPLE_PATTERN(r->builder, &vec->poly_stipple);
+      gen6_3DSTATE_POLY_STIPPLE_OFFSET(r->builder, &vec->poly_stipple);
    }
 
    /* 3DSTATE_LINE_STIPPLE */
@@ -765,9 +763,7 @@ gen6_draw_wm_raster(struct ilo_render *r,
       if (ilo_dev_gen(r->dev) == ILO_GEN(6))
          gen6_wa_pre_non_pipelined(r);
 
-      gen6_3DSTATE_LINE_STIPPLE(r->builder,
-            vec->rasterizer->state.line_stipple_pattern,
-            vec->rasterizer->state.line_stipple_factor + 1);
+      gen6_3DSTATE_LINE_STIPPLE(r->builder, &vec->line_stipple);
    }
 
    /* 3DSTATE_AA_LINE_PARAMETERS */

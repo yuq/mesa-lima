@@ -33,7 +33,6 @@
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
-#include "ilo_format.h"
 #include "ilo_state_cc.h"
 #include "ilo_state_raster.h"
 #include "ilo_state_sbe.h"
@@ -576,74 +575,51 @@ gen6_3DSTATE_DRAWING_RECTANGLE(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_POLY_STIPPLE_OFFSET(struct ilo_builder *builder,
-                                 int x_offset, int y_offset)
+                                 const struct ilo_state_poly_stipple *stipple)
 {
    const uint8_t cmd_len = 2;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   assert(x_offset >= 0 && x_offset <= 31);
-   assert(y_offset >= 0 && y_offset <= 31);
-
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_POLY_STIPPLE_OFFSET) | (cmd_len - 2);
-   dw[1] = x_offset << 8 | y_offset;
+   /* constant */
+   dw[1] = 0;
 }
 
 static inline void
 gen6_3DSTATE_POLY_STIPPLE_PATTERN(struct ilo_builder *builder,
-                                  const struct pipe_poly_stipple *pattern)
+                                  const struct ilo_state_poly_stipple *stipple)
 {
    const uint8_t cmd_len = 33;
    uint32_t *dw;
-   int i;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_POLY_STIPPLE_PATTERN) | (cmd_len - 2);
-   dw++;
-
-   STATIC_ASSERT(Elements(pattern->stipple) == 32);
-   for (i = 0; i < 32; i++)
-      dw[i] = pattern->stipple[i];
+   /* see poly_stipple_set_gen6_3DSTATE_POLY_STIPPLE_PATTERN() */
+   memcpy(&dw[1], stipple->stipple, sizeof(stipple->stipple));
 }
 
 static inline void
 gen6_3DSTATE_LINE_STIPPLE(struct ilo_builder *builder,
-                          unsigned pattern, unsigned factor)
+                          const struct ilo_state_line_stipple *stipple)
 {
    const uint8_t cmd_len = 3;
-   unsigned inverse;
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   assert((pattern & 0xffff) == pattern);
-   assert(factor >= 1 && factor <= 256);
-
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_LINE_STIPPLE) | (cmd_len - 2);
-   dw[1] = pattern;
-
-   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) {
-      /* in U1.16 */
-      inverse = 65536 / factor;
-
-      dw[2] = inverse << GEN7_LINE_STIPPLE_DW2_INVERSE_REPEAT_COUNT__SHIFT |
-              factor;
-   }
-   else {
-      /* in U1.13 */
-      inverse = 8192 / factor;
-
-      dw[2] = inverse << GEN6_LINE_STIPPLE_DW2_INVERSE_REPEAT_COUNT__SHIFT |
-              factor;
-   }
+   /* see line_stipple_set_gen6_3DSTATE_LINE_STIPPLE() */
+   dw[1] = stipple->stipple[0];
+   dw[2] = stipple->stipple[1];
 }
 
 static inline void

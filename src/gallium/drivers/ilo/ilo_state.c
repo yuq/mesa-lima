@@ -1088,9 +1088,19 @@ ilo_create_rasterizer_state(struct pipe_context *pipe,
 static void
 ilo_bind_rasterizer_state(struct pipe_context *pipe, void *state)
 {
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    vec->rasterizer = state;
+
+   if (vec->rasterizer) {
+      struct ilo_state_line_stipple_info info;
+
+      info.pattern = vec->rasterizer->state.line_stipple_pattern;
+      info.repeat_count = vec->rasterizer->state.line_stipple_factor + 1;
+
+      ilo_state_line_stipple_set_info(&vec->line_stipple, dev, &info);
+   }
 
    vec->dirty |= ILO_DIRTY_RASTERIZER;
 }
@@ -1610,9 +1620,15 @@ static void
 ilo_set_polygon_stipple(struct pipe_context *pipe,
                         const struct pipe_poly_stipple *state)
 {
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
+   struct ilo_state_poly_stipple_info info;
+   int i;
 
-   vec->poly_stipple = *state;
+   for (i = 0; i < 32; i++)
+      info.pattern[i] = state->stipple[i];
+
+   ilo_state_poly_stipple_set_info(&vec->poly_stipple, dev, &info);
 
    vec->dirty |= ILO_DIRTY_POLY_STIPPLE;
 }

@@ -900,6 +900,37 @@ sample_pattern_get_gen6_packed_offsets(const struct ilo_dev *dev,
 }
 
 static bool
+line_stipple_set_gen6_3DSTATE_LINE_STIPPLE(struct ilo_state_line_stipple *stipple,
+                                           const struct ilo_dev *dev,
+                                           const struct ilo_state_line_stipple_info *info)
+{
+   uint32_t dw1, dw2;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   assert(info->repeat_count >= 1 && info->repeat_count <= 256);
+
+   dw1 = info->pattern;
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      /* in U1.16 */
+      const uint32_t inverse = 65536 / info->repeat_count;
+      dw2 = inverse << GEN7_LINE_STIPPLE_DW2_INVERSE_REPEAT_COUNT__SHIFT |
+            info->repeat_count << GEN6_LINE_STIPPLE_DW2_REPEAT_COUNT__SHIFT;
+   } else {
+      /* in U1.13 */
+      const uint16_t inverse = 8192 / info->repeat_count;
+      dw2 = inverse << GEN6_LINE_STIPPLE_DW2_INVERSE_REPEAT_COUNT__SHIFT |
+            info->repeat_count << GEN6_LINE_STIPPLE_DW2_REPEAT_COUNT__SHIFT;
+   }
+
+   STATIC_ASSERT(ARRAY_SIZE(stipple->stipple) >= 2);
+   stipple->stipple[0] = dw1;
+   stipple->stipple[1] = dw2;
+
+   return true;
+}
+
+static bool
 sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_state_sample_pattern *pattern,
                                                const struct ilo_dev *dev,
                                                const struct ilo_state_sample_pattern_info *info)
@@ -923,6 +954,19 @@ sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_state_sample_pattern *
            sample_pattern_get_gen6_packed_offsets(dev, 16,
               info->pattern_16x, pattern->pattern_16x));
 
+}
+
+static bool
+poly_stipple_set_gen6_3DSTATE_POLY_STIPPLE_PATTERN(struct ilo_state_poly_stipple *stipple,
+                                                   const struct ilo_dev *dev,
+                                                   const struct ilo_state_poly_stipple_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   STATIC_ASSERT(ARRAY_SIZE(stipple->stipple) >= 32);
+   memcpy(stipple->stipple, info->pattern, sizeof(info->pattern));
+
+   return true;
 }
 
 bool
@@ -1169,4 +1213,40 @@ ilo_state_sample_pattern_get_offset(const struct ilo_state_sample_pattern *patte
 
    *x = (packed[sample_index] >> 4) & 0xf;
    *y = packed[sample_index] & 0xf;
+}
+
+/**
+ * No need to initialize first.
+ */
+bool
+ilo_state_line_stipple_set_info(struct ilo_state_line_stipple *stipple,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_line_stipple_info *info)
+{
+   bool ret = true;
+
+   ret &= line_stipple_set_gen6_3DSTATE_LINE_STIPPLE(stipple,
+         dev, info);
+
+   assert(ret);
+
+   return ret;
+}
+
+/**
+ * No need to initialize first.
+ */
+bool
+ilo_state_poly_stipple_set_info(struct ilo_state_poly_stipple *stipple,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_poly_stipple_info *info)
+{
+   bool ret = true;
+
+   ret &= poly_stipple_set_gen6_3DSTATE_POLY_STIPPLE_PATTERN(stipple,
+         dev, info);
+
+   assert(ret);
+
+   return ret;
 }
