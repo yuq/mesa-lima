@@ -45,7 +45,6 @@ struct vc4_resource_slice {
 struct vc4_surface {
         struct pipe_surface base;
         uint32_t offset;
-        uint32_t stride;
         uint8_t tiling;
 };
 
