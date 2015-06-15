@@ -41,6 +41,7 @@ enum ilo_state_raster_dirty_bits {
    ILO_STATE_RASTER_3DSTATE_SAMPLE_MASK            = (1 << 4),
    ILO_STATE_RASTER_3DSTATE_WM                     = (1 << 5),
    ILO_STATE_RASTER_3DSTATE_WM_HZ_OP               = (1 << 6),
+   ILO_STATE_RASTER_3DSTATE_AA_LINE_PARAMETERS     = (1 << 7),
 };
 
 enum ilo_state_raster_earlyz_op {

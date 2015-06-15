@@ -985,7 +985,8 @@ ilo_state_raster_full_delta(const struct ilo_state_raster *rs,
                   ILO_STATE_RASTER_3DSTATE_SF |
                   ILO_STATE_RASTER_3DSTATE_MULTISAMPLE |
                   ILO_STATE_RASTER_3DSTATE_SAMPLE_MASK |
-                  ILO_STATE_RASTER_3DSTATE_WM;
+                  ILO_STATE_RASTER_3DSTATE_WM |
+                  ILO_STATE_RASTER_3DSTATE_AA_LINE_PARAMETERS;
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
       delta->dirty |= ILO_STATE_RASTER_3DSTATE_RASTER |

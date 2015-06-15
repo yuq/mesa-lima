@@ -646,18 +646,22 @@ gen6_3DSTATE_LINE_STIPPLE(struct ilo_builder *builder,
 }
 
 static inline void
-gen6_3DSTATE_AA_LINE_PARAMETERS(struct ilo_builder *builder)
+gen6_3DSTATE_AA_LINE_PARAMETERS(struct ilo_builder *builder,
+                                const struct ilo_state_raster *rs)
 {
    const uint8_t cmd_len = 3;
-   const uint32_t dw[3] = {
-      GEN6_RENDER_CMD(3D, 3DSTATE_AA_LINE_PARAMETERS) | (cmd_len - 2),
-      0 << GEN6_AA_LINE_DW1_BIAS__SHIFT | 0,
-      0 << GEN6_AA_LINE_DW2_CAP_BIAS__SHIFT | 0,
-   };
+   uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
-   ilo_builder_batch_write(builder, cmd_len, dw);
+   ilo_builder_batch_pointer(builder, cmd_len, &dw);
+
+   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_AA_LINE_PARAMETERS) | (cmd_len - 2);
+   /* constant */
+   dw[1] = 0 << GEN6_AA_LINE_DW1_BIAS__SHIFT |
+           0 << GEN6_AA_LINE_DW1_SLOPE__SHIFT;
+   dw[2] = 0 << GEN6_AA_LINE_DW2_CAP_BIAS__SHIFT |
+           0 << GEN6_AA_LINE_DW2_CAP_SLOPE__SHIFT;
 }
 
 static inline void

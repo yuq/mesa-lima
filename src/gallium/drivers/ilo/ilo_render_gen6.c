@@ -774,11 +774,12 @@ gen6_draw_wm_raster(struct ilo_render *r,
    }
 
    /* 3DSTATE_AA_LINE_PARAMETERS */
-   if (DIRTY(RASTERIZER) && vec->rasterizer->state.line_smooth) {
+   if (session->rs_delta.dirty &
+         ILO_STATE_RASTER_3DSTATE_AA_LINE_PARAMETERS) {
       if (ilo_dev_gen(r->dev) == ILO_GEN(6))
          gen6_wa_pre_non_pipelined(r);
 
-      gen6_3DSTATE_AA_LINE_PARAMETERS(r->builder);
+      gen6_3DSTATE_AA_LINE_PARAMETERS(r->builder, &vec->rasterizer->rs);
    }
 }
 
