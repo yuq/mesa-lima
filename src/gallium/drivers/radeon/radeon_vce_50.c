@@ -78,8 +78,8 @@ static void rate_control(struct rvce_encoder *enc)
 
 static void encode(struct rvce_encoder *enc)
 {
+	signed luma_offset, chroma_offset;
 	int i;
-	unsigned luma_offset, chroma_offset;
 
 	enc->task_info(enc, 0x00000003, 0, 0, 0);
 

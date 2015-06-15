@@ -217,7 +217,7 @@ struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc)
  * Calculate the offsets into the CPB
  */
 void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
-		       unsigned *luma_offset, unsigned *chroma_offset)
+		       signed *luma_offset, signed *chroma_offset)
 {
 	unsigned pitch = align(enc->luma->level[0].pitch_bytes, 128);
 	unsigned vpitch = align(enc->luma->npix_y, 16);
@@ -501,7 +501,7 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
  */
 void rvce_add_buffer(struct rvce_encoder *enc, struct radeon_winsys_cs_handle *buf,
                      enum radeon_bo_usage usage, enum radeon_bo_domain domain,
-                     uint32_t offset)
+                     signed offset)
 {
 	int reloc_idx;
 
