@@ -431,19 +431,21 @@ gen7_draw_sol(struct ilo_render *r,
    /* 3DSTATE_SO_BUFFER */
    if ((DIRTY(SO) || dirty_sh || r->batch_bo_changed) &&
        vec->so.enabled) {
-      const struct pipe_stream_output_info *so_info;
       int i;
 
-      so_info = ilo_shader_get_kernel_so_info(shader);
+      for (i = 0; i < ILO_STATE_SOL_MAX_BUFFER_COUNT; i++) {
+         const struct pipe_stream_output_target *target =
+            (i < vec->so.count && vec->so.states[i]) ?
+            vec->so.states[i] : NULL;
+         const struct ilo_state_sol_buffer *sb = (target) ?
+            &((const struct ilo_stream_output_target *) target)->sb :
+            &vec->so.dummy_sb;
 
-      for (i = 0; i < vec->so.count; i++) {
-         const int stride = so_info->stride[i] * 4; /* in bytes */
-
-         gen7_3DSTATE_SO_BUFFER(r->builder, i, stride, vec->so.states[i]);
+         if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
+            gen8_3DSTATE_SO_BUFFER(r->builder, sol, sb, i);
+         else
+            gen7_3DSTATE_SO_BUFFER(r->builder, sol, sb, i);
       }
-
-      for (; i < 4; i++)
-         gen7_disable_3DSTATE_SO_BUFFER(r->builder, i);
    }
 
    /* 3DSTATE_SO_DECL_LIST */

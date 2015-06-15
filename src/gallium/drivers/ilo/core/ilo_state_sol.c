@@ -26,6 +26,7 @@
  */
 
 #include "ilo_debug.h"
+#include "ilo_buffer.h"
 #include "ilo_state_sol.h"
 
 static bool
@@ -134,7 +135,7 @@ sol_validate_gen7(const struct ilo_dev *dev,
 }
 
 static bool
-sol_set_gen7_3DSTATE_STREAMOUT(struct ilo_state_sol *so,
+sol_set_gen7_3DSTATE_STREAMOUT(struct ilo_state_sol *sol,
                                const struct ilo_dev *dev,
                                const struct ilo_state_sol_info *info)
 {
@@ -176,12 +177,10 @@ sol_set_gen7_3DSTATE_STREAMOUT(struct ilo_state_sol *so,
       dw1 |= GEN7_SO_DW1_STATISTICS;
 
    if (ilo_dev_gen(dev) < ILO_GEN(8)) {
-      const uint8_t buffer_enables =
-         ((bool) info->buffer_strides[3]) << 3 |
-         ((bool) info->buffer_strides[2]) << 2 |
-         ((bool) info->buffer_strides[1]) << 1 |
-         ((bool) info->buffer_strides[0]);
-
+      const uint8_t buffer_enables = ((bool) info->buffer_strides[3]) << 3 |
+                                     ((bool) info->buffer_strides[2]) << 2 |
+                                     ((bool) info->buffer_strides[1]) << 1 |
+                                     ((bool) info->buffer_strides[0]);
       dw1 |= buffer_enables << GEN7_SO_DW1_BUFFER_ENABLES__SHIFT;
    }
 
@@ -194,27 +193,17 @@ sol_set_gen7_3DSTATE_STREAMOUT(struct ilo_state_sol *so,
          vue_read[0].offset << GEN7_SO_DW2_STREAM0_READ_OFFSET__SHIFT |
          vue_read[0].len << GEN7_SO_DW2_STREAM0_READ_LEN__SHIFT;
 
-   STATIC_ASSERT(ARRAY_SIZE(so->so) >= 4);
-   so->so[0] = dw1;
-   so->so[1] = dw2;
+   STATIC_ASSERT(ARRAY_SIZE(sol->streamout) >= 2);
+   sol->streamout[0] = dw1;
+   sol->streamout[1] = dw2;
 
-   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
-      uint32_t dw3, dw4;
-
-      dw3 = info->buffer_strides[1] << GEN8_SO_DW3_BUFFER1_PITCH__SHIFT |
-            info->buffer_strides[0] << GEN8_SO_DW3_BUFFER0_PITCH__SHIFT;
-      dw4 = info->buffer_strides[3] << GEN8_SO_DW4_BUFFER3_PITCH__SHIFT |
-            info->buffer_strides[2] << GEN8_SO_DW4_BUFFER2_PITCH__SHIFT;
-
-      so->so[2] = dw3;
-      so->so[3] = dw4;
-   }
+   memcpy(sol->strides, info->buffer_strides, sizeof(sol->strides));
 
    return true;
 }
 
 static bool
-sol_set_gen7_3DSTATE_SO_DECL_LIST(struct ilo_state_sol *so,
+sol_set_gen7_3DSTATE_SO_DECL_LIST(struct ilo_state_sol *sol,
                                   const struct ilo_dev *dev,
                                   const struct ilo_state_sol_info *info,
                                   uint8_t max_decl_count)
@@ -264,25 +253,146 @@ sol_set_gen7_3DSTATE_SO_DECL_LIST(struct ilo_state_sol *so,
          decl_counts[1] << GEN7_SO_DECL_DW2_STREAM1_ENTRY_COUNT__SHIFT |
          decl_counts[0] << GEN7_SO_DECL_DW2_STREAM0_ENTRY_COUNT__SHIFT;
 
-   STATIC_ASSERT(ARRAY_SIZE(so->so) >= 6);
-   so->so[4] = dw1;
-   so->so[5] = dw2;
+   STATIC_ASSERT(ARRAY_SIZE(sol->so_decl) >= 2);
+   sol->so_decl[0] = dw1;
+   sol->so_decl[1] = dw2;
 
-   STATIC_ASSERT(ARRAY_SIZE(so->decl[0]) == 2);
-   memcpy(so->decl, decl_list, sizeof(so->decl[0]) * max_decl_count);
-   so->decl_count = max_decl_count;
+   STATIC_ASSERT(ARRAY_SIZE(sol->decl[0]) == 2);
+   memcpy(sol->decl, decl_list, sizeof(sol->decl[0]) * max_decl_count);
+   sol->decl_count = max_decl_count;
+
+   return true;
+}
+
+static bool
+sol_buffer_validate_gen7(const struct ilo_dev *dev,
+                         const struct ilo_state_sol_buffer_info *info)
+{
+   ILO_DEV_ASSERT(dev, 7, 8);
+
+   if (info->buf)
+      assert(info->offset < info->buf->bo_size && info->size);
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 208:
+    *
+    *     "(Surface Base Address) This field specifies the starting DWord
+    *      address..."
+    */
+   assert(info->offset % 4 == 0);
+
+   /* Gen8+ only */
+   if (info->write_offset_load || info->write_offset_save)
+      assert(ilo_dev_gen(dev) >= ILO_GEN(8));
+
+   /*
+    * From the Broadwell PRM, volume 2b, page 206:
+    *
+    *     "This field (Stream Offset) specifies the Offset in stream output
+    *      buffer to start at, or whether to append to the end of an existing
+    *      buffer. The Offset must be DWORD aligned."
+    */
+   if (info->write_offset_imm_enable) {
+      assert(info->write_offset_load);
+      assert(info->write_offset_imm % 4 == 0);
+   }
+
+   return true;
+}
+
+static uint32_t
+sol_buffer_get_gen6_size(const struct ilo_dev *dev,
+                         const struct ilo_state_sol_buffer_info *info)
+{
+   uint32_t size;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!info->buf)
+      return 0;
+
+   size = (info->offset + info->size <= info->buf->bo_size) ? info->size :
+      info->buf->bo_size - info->offset;
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 208:
+    *
+    *     "(Surface End Address) This field specifies the ending DWord
+    *      address..."
+    */
+   size &= ~3;
+
+   return size;
+}
+
+static bool
+sol_buffer_set_gen7_3dstate_so_buffer(struct ilo_state_sol_buffer *sb,
+                                      const struct ilo_dev *dev,
+                                      const struct ilo_state_sol_buffer_info *info)
+{
+   const uint32_t size = sol_buffer_get_gen6_size(dev, info);
+
+   ILO_DEV_ASSERT(dev, 7, 7.5);
+
+   if (!sol_buffer_validate_gen7(dev, info))
+      return false;
+
+   STATIC_ASSERT(ARRAY_SIZE(sb->so_buf) >= 2);
+   sb->so_buf[0] = info->offset;
+   sb->so_buf[1] = (size) ? info->offset + size : 0;
+
+   return true;
+}
+
+static bool
+sol_buffer_set_gen8_3dstate_so_buffer(struct ilo_state_sol_buffer *sb,
+                                      const struct ilo_dev *dev,
+                                      const struct ilo_state_sol_buffer_info *info)
+{
+   const uint32_t size = sol_buffer_get_gen6_size(dev, info);
+   uint32_t dw1;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   if (!sol_buffer_validate_gen7(dev, info))
+      return false;
+
+   dw1 = 0;
+
+   if (info->buf)
+      dw1 |= GEN8_SO_BUF_DW1_ENABLE;
+   if (info->write_offset_load)
+      dw1 |= GEN8_SO_BUF_DW1_OFFSET_WRITE_ENABLE;
+   if (info->write_offset_save)
+      dw1 |= GEN8_SO_BUF_DW1_OFFSET_ENABLE;
+
+   STATIC_ASSERT(ARRAY_SIZE(sb->so_buf) >= 4);
+   sb->so_buf[0] = dw1;
+   sb->so_buf[1] = info->offset;
+
+   /*
+    * From the Broadwell PRM, volume 2b, page 205:
+    *
+    *     "This field (Surface Size) specifies the size of buffer in number
+    *      DWords minus 1 of the buffer in Graphics Memory."
+    */
+   sb->so_buf[2] = (size) ? size / 4 - 1 : 0;
+
+   /* load from imm or sb->write_offset_bo */
+   sb->so_buf[3] = (info->write_offset_imm_enable) ?
+      info->write_offset_imm : ~0u;
 
    return true;
 }
 
 bool
-ilo_state_sol_init(struct ilo_state_sol *so,
+ilo_state_sol_init(struct ilo_state_sol *sol,
                    const struct ilo_dev *dev,
                    const struct ilo_state_sol_info *info)
 {
    bool ret = true;
 
-   assert(ilo_is_zeroed(so, sizeof(*so)));
+   assert(ilo_is_zeroed(sol, sizeof(*sol)));
    assert(ilo_is_zeroed(info->data, info->data_size));
 
    if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
@@ -295,10 +405,10 @@ ilo_state_sol_init(struct ilo_state_sol *so,
       }
 
       assert(ilo_state_sol_data_size(dev, max_decl_count) <= info->data_size);
-      so->decl = (uint32_t (*)[2]) info->data;
+      sol->decl = (uint32_t (*)[2]) info->data;
 
-      ret &= sol_set_gen7_3DSTATE_STREAMOUT(so, dev, info);
-      ret &= sol_set_gen7_3DSTATE_SO_DECL_LIST(so, dev, info, max_decl_count);
+      ret &= sol_set_gen7_3DSTATE_STREAMOUT(sol, dev, info);
+      ret &= sol_set_gen7_3DSTATE_SO_DECL_LIST(sol, dev, info, max_decl_count);
    }
 
    assert(ret);
@@ -317,4 +427,38 @@ ilo_state_sol_init_disabled(struct ilo_state_sol *sol,
    info.render_disable = render_disable;
 
    return ilo_state_sol_init(sol, dev, &info);
+}
+
+bool
+ilo_state_sol_buffer_init(struct ilo_state_sol_buffer *sb,
+                          const struct ilo_dev *dev,
+                          const struct ilo_state_sol_buffer_info *info)
+{
+   bool ret = true;
+
+   assert(ilo_is_zeroed(sb, sizeof(*sb)));
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      ret &= sol_buffer_set_gen8_3dstate_so_buffer(sb, dev, info);
+   else
+      ret &= sol_buffer_set_gen7_3dstate_so_buffer(sb, dev, info);
+
+   sb->need_bo = (info->size > 0);
+   sb->need_write_offset_bo = (info->write_offset_save ||
+         (info->write_offset_load && !info->write_offset_imm_enable));
+
+   assert(ret);
+
+   return ret;
+}
+
+bool
+ilo_state_sol_buffer_init_disabled(struct ilo_state_sol_buffer *sb,
+                                   const struct ilo_dev *dev)
+{
+   struct ilo_state_sol_buffer_info info;
+
+   memset(&info, 0, sizeof(info));
+
+   return ilo_state_sol_buffer_init(sb, dev, &info);
 }

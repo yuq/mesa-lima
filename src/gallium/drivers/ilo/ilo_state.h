@@ -217,10 +217,18 @@ struct ilo_view_state {
    unsigned count;
 };
 
+struct ilo_stream_output_target {
+   struct pipe_stream_output_target base;
+
+   struct ilo_state_sol_buffer sb;
+};
+
 struct ilo_so_state {
    struct pipe_stream_output_target *states[ILO_MAX_SO_BUFFERS];
    unsigned count;
    unsigned append_bitmask;
+
+   struct ilo_state_sol_buffer dummy_sb;
 
    bool enabled;
 };

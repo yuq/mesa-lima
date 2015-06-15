@@ -1899,19 +1899,28 @@ ilo_create_stream_output_target(struct pipe_context *pipe,
                                 unsigned buffer_offset,
                                 unsigned buffer_size)
 {
-   struct pipe_stream_output_target *target;
+   const struct ilo_dev *dev = ilo_context(pipe)->dev;
+   struct ilo_stream_output_target *target;
+   struct ilo_state_sol_buffer_info info;
 
-   target = MALLOC_STRUCT(pipe_stream_output_target);
+   target = CALLOC_STRUCT(ilo_stream_output_target);
    assert(target);
 
-   pipe_reference_init(&target->reference, 1);
-   target->buffer = NULL;
-   pipe_resource_reference(&target->buffer, res);
-   target->context = pipe;
-   target->buffer_offset = buffer_offset;
-   target->buffer_size = buffer_size;
+   pipe_reference_init(&target->base.reference, 1);
+   pipe_resource_reference(&target->base.buffer, res);
+   target->base.context = pipe;
+   target->base.buffer_offset = buffer_offset;
+   target->base.buffer_size = buffer_size;
 
-   return target;
+   memset(&info, 0, sizeof(info));
+   info.buf = ilo_buffer(res);
+   info.offset = buffer_offset;
+   info.size = buffer_size;
+
+   ilo_state_sol_buffer_init(&target->sb, dev, &info);
+   target->sb.bo = info.buf->bo;
+
+   return &target->base;
 }
 
 static void
@@ -2338,6 +2347,8 @@ ilo_state_vector_init(const struct ilo_dev *dev,
    ilo_state_ds_init_disabled(&vec->disabled_ds, dev);
    ilo_state_gs_init_disabled(&vec->disabled_gs, dev);
 
+   ilo_state_sol_buffer_init_disabled(&vec->so.dummy_sb, dev);
+
    ilo_state_surface_init_for_null(&vec->fb.null_rt, dev);
    ilo_state_zs_init_for_null(&vec->fb.null_zs, dev);
 
@@ -2439,6 +2450,10 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
 
       for (i = 0; i < vec->so.count; i++) {
          if (vec->so.states[i]->buffer == res) {
+            struct ilo_stream_output_target *target =
+               (struct ilo_stream_output_target *) vec->so.states[i];
+
+            target->sb.bo = ilo_buffer(res)->bo;
             states |= ILO_DIRTY_SO;
             break;
          }

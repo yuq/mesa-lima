@@ -99,10 +99,41 @@ struct ilo_state_sol_info {
 };
 
 struct ilo_state_sol {
-   uint32_t so[6];
+   uint32_t streamout[2];
+   uint16_t strides[4];
 
+   uint32_t so_decl[2];
    uint32_t (*decl)[2];
    uint8_t decl_count;
+};
+
+struct ilo_buffer;
+
+struct ilo_state_sol_buffer_info {
+   const struct ilo_buffer *buf;
+   uint32_t offset;
+   uint32_t size;
+
+   /*
+    * Gen8+ only.  When enabled, require a write offset bo of at least
+    * (sizeof(uint32_t) * ILO_STATE_SOL_MAX_BUFFER_COUNT) bytes
+    */
+   bool write_offset_load;
+   bool write_offset_save;
+
+   bool write_offset_imm_enable;
+   uint32_t write_offset_imm;
+};
+
+struct ilo_state_sol_buffer {
+   uint32_t so_buf[4];
+
+   bool need_bo;
+   bool need_write_offset_bo;
+
+   /* managed by users */
+   struct intel_bo *bo;
+   struct intel_bo *write_offset_bo;
 };
 
 static inline size_t
@@ -122,5 +153,14 @@ bool
 ilo_state_sol_init_disabled(struct ilo_state_sol *sol,
                             const struct ilo_dev *dev,
                             bool render_disable);
+
+bool
+ilo_state_sol_buffer_init(struct ilo_state_sol_buffer *sb,
+                          const struct ilo_dev *dev,
+                          const struct ilo_state_sol_buffer_info *info);
+
+bool
+ilo_state_sol_buffer_init_disabled(struct ilo_state_sol_buffer *sb,
+                                   const struct ilo_dev *dev);
 
 #endif /* ILO_STATE_SOL_H */
