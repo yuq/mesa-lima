@@ -2355,6 +2355,13 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    unsigned total_uniform_blocks = 0;
 
    for (unsigned i = 0; i < prog->NumUniformBlocks; i++) {
+      if (prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
+         linker_error(prog, "Uniform block %s too big (%d/%d)\n",
+                      prog->UniformBlocks[i].Name,
+                      prog->UniformBlocks[i].UniformBufferSize,
+                      ctx->Const.MaxUniformBlockSize);
+      }
+
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
 	 if (prog->UniformBlockStageIndex[j][i] != -1) {
 	    blocks[j]++;
