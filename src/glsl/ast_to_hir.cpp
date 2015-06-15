@@ -3943,15 +3943,7 @@ ast_declarator_list::hir(exec_list *instructions,
                           decl->identifier);
       }
 
-      /* GLSL ES 3.10 removes the restriction on unsized arrays.
-       *
-       * Section 4.1.9 (Arrays) of the GLSL ES 3.10 spec says:
-       *
-       *    "Variables of the same type can be aggregated into arrays by
-       *     declaring a name followed by brackets ([ ]) enclosing an
-       *     optional size."
-       */
-      if (state->es_shader && state->language_version < 310) {
+      if (state->es_shader) {
          const glsl_type *const t = (earlier == NULL)
             ? var->type : earlier->type;
 
