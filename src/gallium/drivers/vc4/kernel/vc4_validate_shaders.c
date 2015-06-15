@@ -77,6 +77,24 @@ waddr_to_live_reg_index(uint32_t waddr, bool is_b)
 	}
 }
 
+static uint32_t
+raddr_add_a_to_live_reg_index(uint64_t inst)
+{
+	uint32_t add_a = QPU_GET_FIELD(inst, QPU_ADD_A);
+	uint32_t raddr_a = QPU_GET_FIELD(inst, QPU_RADDR_A);
+	uint32_t raddr_b = QPU_GET_FIELD(inst, QPU_RADDR_B);
+
+	if (add_a == QPU_MUX_A) {
+		return raddr_a;
+	} else if (add_a == QPU_MUX_B) {
+		return 32 + raddr_b;
+	} else if (add_a <= QPU_MUX_R4) {
+		return 64 + add_a;
+	} else {
+		return ~0;
+	}
+}
+
 static bool
 is_tmu_submit(uint32_t waddr)
 {
@@ -136,9 +154,8 @@ check_tmu_write(uint64_t inst,
 	uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
 
 	if (is_direct) {
-		uint32_t add_a = QPU_GET_FIELD(inst, QPU_ADD_A);
 		uint32_t add_b = QPU_GET_FIELD(inst, QPU_ADD_B);
-		uint32_t clamp_offset = ~0;
+		uint32_t clamp_reg, clamp_offset;
 
 		if (sig == QPU_SIG_SMALL_IMM) {
 			DRM_ERROR("direct TMU read used small immediate\n");
@@ -159,14 +176,13 @@ check_tmu_write(uint64_t inst,
 		 * This is arbitrary, but simpler than supporting flipping the
 		 * two either way.
 		 */
-		if (add_a == QPU_MUX_A) {
-			clamp_offset = validation_state->live_clamp_offsets[raddr_a];
-		} else if (add_a == QPU_MUX_B) {
-			clamp_offset = validation_state->live_clamp_offsets[32 + raddr_b];
-		} else if (add_a <= QPU_MUX_R4) {
-			clamp_offset = validation_state->live_clamp_offsets[64 + add_a];
+		clamp_reg = raddr_add_a_to_live_reg_index(inst);
+		if (clamp_reg == ~0) {
+			DRM_ERROR("direct TMU load wasn't clamped\n");
+			return false;
 		}
 
+		clamp_offset = validation_state->live_clamp_offsets[clamp_reg];
 		if (clamp_offset == ~0) {
 			DRM_ERROR("direct TMU load wasn't clamped\n");
 			return false;
