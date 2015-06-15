@@ -197,6 +197,28 @@ struct ilo_state_raster_delta {
    uint32_t dirty;
 };
 
+struct ilo_state_sample_pattern_offset_info {
+   /* in U0.4 */
+   uint8_t x;
+   uint8_t y;
+};
+
+struct ilo_state_sample_pattern_info {
+   struct ilo_state_sample_pattern_offset_info pattern_1x[1];
+   struct ilo_state_sample_pattern_offset_info pattern_2x[2];
+   struct ilo_state_sample_pattern_offset_info pattern_4x[4];
+   struct ilo_state_sample_pattern_offset_info pattern_8x[8];
+   struct ilo_state_sample_pattern_offset_info pattern_16x[16];
+};
+
+struct ilo_state_sample_pattern {
+   uint8_t pattern_1x[1];
+   uint8_t pattern_2x[2];
+   uint8_t pattern_4x[4];
+   uint8_t pattern_8x[8];
+   uint8_t pattern_16x[16];
+};
+
 bool
 ilo_state_raster_init(struct ilo_state_raster *rs,
                       const struct ilo_dev *dev,
@@ -229,5 +251,25 @@ ilo_state_raster_get_delta(const struct ilo_state_raster *rs,
                            const struct ilo_dev *dev,
                            const struct ilo_state_raster *old,
                            struct ilo_state_raster_delta *delta);
+
+bool
+ilo_state_sample_pattern_init(struct ilo_state_sample_pattern *pattern,
+                              const struct ilo_dev *dev,
+                              const struct ilo_state_sample_pattern_info *info);
+
+bool
+ilo_state_sample_pattern_init_default(struct ilo_state_sample_pattern *pattern,
+                                      const struct ilo_dev *dev);
+
+const uint8_t *
+ilo_state_sample_pattern_get_packed_offsets(const struct ilo_state_sample_pattern *pattern,
+                                            const struct ilo_dev *dev,
+                                            uint8_t sample_count);
+
+void
+ilo_state_sample_pattern_get_offset(const struct ilo_state_sample_pattern *pattern,
+                                    const struct ilo_dev *dev,
+                                    uint8_t sample_count, uint8_t sample_index,
+                                    uint8_t *x, uint8_t *y);
 
 #endif /* ILO_STATE_RASTER_H */

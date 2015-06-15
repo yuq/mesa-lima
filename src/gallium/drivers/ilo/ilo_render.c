@@ -35,76 +35,10 @@
 #include "ilo_query.h"
 #include "ilo_render_gen.h"
 
-/* in S1.3 */
-struct sample_position {
-   int8_t x, y;
-};
-
-static const struct sample_position ilo_sample_pattern_1x[1] = {
-   {  0,  0 },
-};
-
-static const struct sample_position ilo_sample_pattern_2x[2] = {
-   { -4, -4 },
-   {  4,  4 },
-};
-
-static const struct sample_position ilo_sample_pattern_4x[4] = {
-   { -2, -6 },
-   {  6, -2 },
-   { -6,  2 },
-   {  2,  6 },
-};
-
-/* \see brw_multisample_positions_8x */
-static const struct sample_position ilo_sample_pattern_8x[8] = {
-   { -1,  1 },
-   {  1,  5 },
-   {  3, -5 },
-   {  5,  3 },
-   { -7, -1 },
-   { -3, -7 },
-   {  7, -3 },
-   { -5,  7 },
-};
-
-static const struct sample_position ilo_sample_pattern_16x[16] = {
-   {  0,  2 },
-   {  3,  0 },
-   { -3, -2 },
-   { -2, -4 },
-   {  4,  3 },
-   {  5,  1 },
-   {  6, -1 },
-   {  2, -6 },
-   { -4,  5 },
-   { -5, -5 },
-   { -1, -7 },
-   {  7, -3 },
-   { -7,  4 },
-   {  1, -8 },
-   { -6,  6 },
-   { -8,  7 },
-};
-
-static uint8_t
-pack_sample_position(const struct sample_position *pos)
-{
-   return (pos->x + 8) << 4 | (pos->y + 8);
-}
-
-static void
-get_sample_position(const struct sample_position *pos, float *x, float *y)
-{
-   *x = (float) (pos->x + 8) / 16.0f;
-   *y = (float) (pos->y + 8) / 16.0f;
-}
-
 struct ilo_render *
 ilo_render_create(struct ilo_builder *builder)
 {
    struct ilo_render *render;
-   int i;
 
    render = CALLOC_STRUCT(ilo_render);
    if (!render)
@@ -121,29 +55,8 @@ ilo_render_create(struct ilo_builder *builder)
       return NULL;
    }
 
-   /* pack into dwords */
-   render->sample_pattern_1x = pack_sample_position(ilo_sample_pattern_1x);
-   render->sample_pattern_2x =
-      pack_sample_position(&ilo_sample_pattern_2x[1]) << 8 |
-      pack_sample_position(&ilo_sample_pattern_2x[0]);
-   for (i = 0; i < 4; i++) {
-      render->sample_pattern_4x |=
-         pack_sample_position(&ilo_sample_pattern_4x[i]) << (8 * i);
-
-      render->sample_pattern_8x[0] |=
-         pack_sample_position(&ilo_sample_pattern_8x[i]) << (8 * i);
-      render->sample_pattern_8x[1] |=
-         pack_sample_position(&ilo_sample_pattern_8x[i + 4]) << (8 * i);
-
-      render->sample_pattern_16x[0] |=
-         pack_sample_position(&ilo_sample_pattern_16x[i]) << (8 * i);
-      render->sample_pattern_16x[1] |=
-         pack_sample_position(&ilo_sample_pattern_16x[i + 4]) << (8 * i);
-      render->sample_pattern_16x[2] |=
-         pack_sample_position(&ilo_sample_pattern_16x[i + 8]) << (8 * i);
-      render->sample_pattern_16x[3] |=
-         pack_sample_position(&ilo_sample_pattern_16x[i + 12]) << (8 * i);
-   }
+   ilo_state_sample_pattern_init_default(&render->sample_pattern,
+         render->dev);
 
    ilo_render_invalidate_hw(render);
    ilo_render_invalidate_builder(render);
@@ -164,38 +77,13 @@ ilo_render_get_sample_position(const struct ilo_render *render,
                                unsigned sample_index,
                                float *x, float *y)
 {
-   const struct sample_position *pattern;
+   uint8_t off_x, off_y;
 
-   switch (sample_count) {
-   case 1:
-      assert(sample_index < Elements(ilo_sample_pattern_1x));
-      pattern = ilo_sample_pattern_1x;
-      break;
-   case 2:
-      assert(sample_index < Elements(ilo_sample_pattern_2x));
-      pattern = ilo_sample_pattern_2x;
-      break;
-   case 4:
-      assert(sample_index < Elements(ilo_sample_pattern_4x));
-      pattern = ilo_sample_pattern_4x;
-      break;
-   case 8:
-      assert(sample_index < Elements(ilo_sample_pattern_8x));
-      pattern = ilo_sample_pattern_8x;
-      break;
-   case 16:
-      assert(sample_index < Elements(ilo_sample_pattern_16x));
-      pattern = ilo_sample_pattern_16x;
-      break;
-   default:
-      assert(!"unknown sample count");
-      *x = 0.5f;
-      *y = 0.5f;
-      return;
-      break;
-   }
+   ilo_state_sample_pattern_get_offset(&render->sample_pattern, render->dev,
+         sample_count, sample_index, &off_x, &off_y);
 
-   get_sample_position(&pattern[sample_index], x, y);
+   *x = (float) off_x / 16.0f;
+   *y = (float) off_y / 16.0f;
 }
 
 void

@@ -862,6 +862,69 @@ raster_set_gen8_3dstate_wm_hz_op(struct ilo_state_raster *rs,
    return true;
 }
 
+static bool
+sample_pattern_get_gen6_packed_offsets(const struct ilo_dev *dev,
+                                       uint8_t sample_count,
+                                       const struct ilo_state_sample_pattern_offset_info *in,
+                                       uint8_t *out)
+{
+   uint8_t max_dist, i;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   max_dist = 0;
+   for (i = 0; i < sample_count; i++) {
+      const int8_t dist_x = (int8_t) in[i].x - 8;
+      const int8_t dist_y = (int8_t) in[i].y - 8;
+      const uint8_t dist = dist_x * dist_x + dist_y * dist_y;
+
+      /*
+       * From the Sandy Bridge PRM, volume 2 part 1, page 305:
+       *
+       *     "Programming Note: When programming the sample offsets (for
+       *      NUMSAMPLES_4 or _8 and MSRASTMODE_xxx_PATTERN), the order of the
+       *      samples 0 to 3 (or 7 for 8X) must have monotonically increasing
+       *      distance from the pixel center. This is required to get the
+       *      correct centroid computation in the device."
+       */
+      assert(dist >= max_dist);
+      max_dist = dist;
+
+      assert(in[i].x < 16);
+      assert(in[i].y < 16);
+
+      out[i] = in[i].x << 4 | in[i].y;
+   }
+
+   return true;
+}
+
+static bool
+sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_state_sample_pattern *pattern,
+                                               const struct ilo_dev *dev,
+                                               const struct ilo_state_sample_pattern_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   STATIC_ASSERT(ARRAY_SIZE(pattern->pattern_1x) >= 1);
+   STATIC_ASSERT(ARRAY_SIZE(pattern->pattern_2x) >= 2);
+   STATIC_ASSERT(ARRAY_SIZE(pattern->pattern_4x) >= 4);
+   STATIC_ASSERT(ARRAY_SIZE(pattern->pattern_8x) >= 8);
+   STATIC_ASSERT(ARRAY_SIZE(pattern->pattern_16x) >= 16);
+
+   return (sample_pattern_get_gen6_packed_offsets(dev, 1,
+              info->pattern_1x, pattern->pattern_1x) &&
+           sample_pattern_get_gen6_packed_offsets(dev, 2,
+              info->pattern_2x, pattern->pattern_2x) &&
+           sample_pattern_get_gen6_packed_offsets(dev, 4,
+              info->pattern_4x, pattern->pattern_4x) &&
+           sample_pattern_get_gen6_packed_offsets(dev, 8,
+              info->pattern_8x, pattern->pattern_8x) &&
+           sample_pattern_get_gen6_packed_offsets(dev, 16,
+              info->pattern_16x, pattern->pattern_16x));
+
+}
+
 bool
 ilo_state_raster_init(struct ilo_state_raster *rs,
                       const struct ilo_dev *dev,
@@ -1026,4 +1089,84 @@ ilo_state_raster_get_delta(const struct ilo_state_raster *rs,
       if (ilo_dev_gen(dev) >= ILO_GEN(8))
          delta->dirty |= ILO_STATE_RASTER_3DSTATE_WM_HZ_OP;
    }
+}
+
+bool
+ilo_state_sample_pattern_init(struct ilo_state_sample_pattern *pattern,
+                              const struct ilo_dev *dev,
+                              const struct ilo_state_sample_pattern_info *info)
+{
+   bool ret = true;
+
+   ret &= sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN(pattern, dev, info);
+
+   assert(ret);
+
+   return ret;
+}
+
+bool
+ilo_state_sample_pattern_init_default(struct ilo_state_sample_pattern *pattern,
+                                      const struct ilo_dev *dev)
+{
+   static const struct ilo_state_sample_pattern_info default_info = {
+      .pattern_1x = {
+         {  8,  8 },
+      },
+
+      .pattern_2x = {
+         {  4,  4 }, { 12, 12 },
+      },
+
+      .pattern_4x = {
+         {  6,  2 }, { 14,  6 }, {  2, 10 }, { 10, 14 },
+      },
+
+      /* \see brw_multisample_positions_8x */
+      .pattern_8x = {
+         {  7,  9 }, {  9, 13 }, { 11,  3 }, { 13, 11 },
+         {  1,  7 }, {  5,  1 }, { 15,  5 }, {  3, 15 },
+      },
+
+      .pattern_16x = {
+         {  8, 10 }, { 11,  8 }, {  5,  6 }, {  6,  4 },
+         { 12, 11 }, { 13,  9 }, { 14,  7 }, { 10,  2 },
+         {  4, 13 }, {  3,  3 }, {  7,  1 }, { 15,  5 },
+         {  1, 12 }, {  9,  0 }, {  2, 14 }, {  0, 15 },
+      },
+   };
+
+   return ilo_state_sample_pattern_init(pattern, dev, &default_info);
+}
+
+const uint8_t *
+ilo_state_sample_pattern_get_packed_offsets(const struct ilo_state_sample_pattern *pattern,
+                                            const struct ilo_dev *dev,
+                                            uint8_t sample_count)
+{
+   switch (sample_count) {
+   case 1:  return pattern->pattern_1x;
+   case 2:  return pattern->pattern_2x;
+   case 4:  return pattern->pattern_4x;
+   case 8:  return pattern->pattern_8x;
+   case 16: return pattern->pattern_16x;
+   default:
+      assert(!"unknown sample count");
+      return NULL;
+   }
+}
+
+void
+ilo_state_sample_pattern_get_offset(const struct ilo_state_sample_pattern *pattern,
+                                    const struct ilo_dev *dev,
+                                    uint8_t sample_count, uint8_t sample_index,
+                                    uint8_t *x, uint8_t *y)
+{
+   const const uint8_t *packed =
+      ilo_state_sample_pattern_get_packed_offsets(pattern, dev, sample_count);
+
+   assert(sample_index < sample_count);
+
+   *x = (packed[sample_index] >> 4) & 0xf;
+   *y = packed[sample_index] & 0xf;
 }

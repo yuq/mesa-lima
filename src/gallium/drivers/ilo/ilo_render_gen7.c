@@ -598,22 +598,13 @@ gen7_draw_wm_multisample(struct ilo_render *r,
    /* 3DSTATE_MULTISAMPLE */
    if (DIRTY(FB) || (session->rs_delta.dirty &
             ILO_STATE_RASTER_3DSTATE_MULTISAMPLE)) {
-      const uint32_t *pattern;
-      int pattern_len;
+      const uint8_t sample_count = (vec->fb.num_samples > 4) ? 8 :
+                                   (vec->fb.num_samples > 1) ? 4 : 1;
 
       gen7_wa_pre_3dstate_multisample(r);
 
-      if (vec->fb.num_samples > 4) {
-         pattern = r->sample_pattern_8x;
-         pattern_len = ARRAY_SIZE(r->sample_pattern_8x);
-      } else {
-         pattern = (vec->fb.num_samples > 1) ?
-            &r->sample_pattern_4x : &r->sample_pattern_1x;
-         pattern_len = 1;
-      }
-
       gen6_3DSTATE_MULTISAMPLE(r->builder, &vec->rasterizer->rs,
-            pattern, pattern_len);
+            &r->sample_pattern, sample_count);
    }
 
    /* 3DSTATE_SAMPLE_MASK */
@@ -748,22 +739,13 @@ static void
 gen7_rectlist_wm_multisample(struct ilo_render *r,
                              const struct ilo_blitter *blitter)
 {
-   const uint32_t *pattern;
-   int pattern_len;
-
-   if (blitter->fb.num_samples > 4) {
-      pattern = r->sample_pattern_8x;
-      pattern_len = ARRAY_SIZE(r->sample_pattern_8x);
-   } else {
-      pattern = (blitter->fb.num_samples > 1) ?
-         &r->sample_pattern_4x : &r->sample_pattern_1x;
-      pattern_len = 1;
-   }
+   const uint8_t sample_count = (blitter->fb.num_samples > 4) ? 8 :
+                                (blitter->fb.num_samples > 1) ? 4 : 1;
 
    gen7_wa_pre_3dstate_multisample(r);
 
    gen6_3DSTATE_MULTISAMPLE(r->builder, &blitter->fb.rs,
-         pattern, pattern_len);
+         &r->sample_pattern, sample_count);
 
    gen6_3DSTATE_SAMPLE_MASK(r->builder, &blitter->fb.rs);
 }

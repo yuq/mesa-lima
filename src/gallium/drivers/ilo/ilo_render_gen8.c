@@ -176,14 +176,8 @@ gen8_draw_wm_sample_pattern(struct ilo_render *r,
                             struct ilo_render_draw_session *session)
 {
    /* 3DSTATE_SAMPLE_PATTERN */
-   if (r->hw_ctx_changed) {
-      gen8_3DSTATE_SAMPLE_PATTERN(r->builder,
-            &r->sample_pattern_1x,
-            &r->sample_pattern_2x,
-            &r->sample_pattern_4x,
-            r->sample_pattern_8x,
-            r->sample_pattern_16x);
-   }
+   if (r->hw_ctx_changed)
+      gen8_3DSTATE_SAMPLE_PATTERN(r->builder, &r->sample_pattern);
 }
 
 static void

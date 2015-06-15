@@ -51,11 +51,7 @@ struct ilo_render {
 
    struct intel_bo *workaround_bo;
 
-   uint32_t sample_pattern_1x;
-   uint32_t sample_pattern_2x;
-   uint32_t sample_pattern_4x;
-   uint32_t sample_pattern_8x[2];
-   uint32_t sample_pattern_16x[4];
+   struct ilo_state_sample_pattern sample_pattern;
 
    bool hw_ctx_changed;
 

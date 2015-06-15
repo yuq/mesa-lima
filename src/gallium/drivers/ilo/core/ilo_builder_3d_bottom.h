@@ -450,9 +450,13 @@ gen7_3DSTATE_SAMPLER_STATE_POINTERS_PS(struct ilo_builder *builder,
 static inline void
 gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
                          const struct ilo_state_raster *rs,
-                         const uint32_t *pattern, int pattern_len)
+                         const struct ilo_state_sample_pattern *pattern,
+                         uint8_t sample_count)
 {
    const uint8_t cmd_len = (ilo_dev_gen(builder->dev) >= ILO_GEN(7)) ? 4 : 3;
+   const uint32_t *packed = (const uint32_t *)
+      ilo_state_sample_pattern_get_packed_offsets(pattern,
+            builder->dev, sample_count);
    uint32_t *dw;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
@@ -463,10 +467,10 @@ gen6_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
    /* see raster_set_gen8_3DSTATE_MULTISAMPLE() */
    dw[1] = rs->sample[0];
 
-   assert(pattern_len == 1 || pattern_len == 2);
-   dw[2] = pattern[0];
+   /* see sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN() */
+   dw[2] = (sample_count >= 4) ? packed[0] : 0;
    if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-      dw[3] = (pattern_len == 2) ? pattern[1] : 0;
+      dw[3] = (sample_count >= 8) ? packed[1] : 0;
 }
 
 static inline void
@@ -487,11 +491,7 @@ gen8_3DSTATE_MULTISAMPLE(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_builder *builder,
-                            const uint32_t *pattern_1x,
-                            const uint32_t *pattern_2x,
-                            const uint32_t *pattern_4x,
-                            const uint32_t *pattern_8x,
-                            const uint32_t *pattern_16x)
+                            const struct ilo_state_sample_pattern *pattern)
 {
    const uint8_t cmd_len = 9;
    uint32_t *dw;
@@ -501,15 +501,16 @@ gen8_3DSTATE_SAMPLE_PATTERN(struct ilo_builder *builder,
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN8_RENDER_CMD(3D, 3DSTATE_SAMPLE_PATTERN) | (cmd_len - 2);
-   dw[1] = pattern_16x[3];
-   dw[2] = pattern_16x[2];
-   dw[3] = pattern_16x[1];
-   dw[4] = pattern_16x[0];
-   dw[5] = pattern_8x[1];
-   dw[6] = pattern_8x[0];
-   dw[7] = pattern_4x[0];
-   dw[8] = pattern_1x[0] << 16 |
-           pattern_2x[0];
+   dw[1] = 0;
+   dw[2] = 0;
+   dw[3] = 0;
+   dw[4] = 0;
+   /* see sample_pattern_set_gen8_3DSTATE_SAMPLE_PATTERN() */
+   dw[5] = ((const uint32_t *) pattern->pattern_8x)[1];
+   dw[6] = ((const uint32_t *) pattern->pattern_8x)[0];
+   dw[7] = ((const uint32_t *) pattern->pattern_4x)[0];
+   dw[8] = pattern->pattern_1x[0] << 16 |
+           ((const uint16_t *) pattern->pattern_2x)[0];
 }
 
 static inline void
