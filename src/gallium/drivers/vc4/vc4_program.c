@@ -147,6 +147,9 @@ indirect_uniform_load(struct vc4_compile *c,
         indirect_offset = qir_ADD(c, indirect_offset,
                                   qir_uniform_ui(c, (range->dst_offset +
                                                      offset)));
+
+        /* Clamp to [0, array size).  Note that MIN/MAX are signed. */
+        indirect_offset = qir_MAX(c, indirect_offset, qir_uniform_ui(c, 0));
         indirect_offset = qir_MIN(c, indirect_offset,
                                   qir_uniform_ui(c, (range->dst_offset +
                                                      range->size - 4)));
