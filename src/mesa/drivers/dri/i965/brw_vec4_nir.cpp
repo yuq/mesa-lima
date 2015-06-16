@@ -579,10 +579,67 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 
    case nir_intrinsic_load_ubo_indirect:
+      has_indirect = true;
       /* fallthrough */
-   case nir_intrinsic_load_ubo:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_ubo: {
+      nir_const_value *const_block_index = nir_src_as_const_value(instr->src[0]);
+      src_reg surf_index;
+
+      dest = get_nir_dest(instr->dest);
+
+      if (const_block_index) {
+         /* The block index is a constant, so just emit the binding table entry
+          * as an immediate.
+          */
+         surf_index = src_reg(prog_data->base.binding_table.ubo_start +
+                              const_block_index->u[0]);
+      } else {
+         /* The block index is not a constant. Evaluate the index expression
+          * per-channel and add the base UBO index; we have to select a value
+          * from any live channel.
+          */
+         surf_index = src_reg(this, glsl_type::uint_type);
+         emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[0], nir_type_int,
+                                                   instr->num_components),
+                  src_reg(prog_data->base.binding_table.ubo_start)));
+         surf_index = emit_uniformize(surf_index);
+
+         /* Assume this may touch any UBO. It would be nice to provide
+          * a tighter bound, but the array information is already lowered away.
+          */
+         brw_mark_surface_used(&prog_data->base,
+                               prog_data->base.binding_table.ubo_start +
+                               shader_prog->NumUniformBlocks - 1);
+      }
+
+      unsigned const_offset = instr->const_index[0];
+      src_reg offset;
+
+      if (!has_indirect)  {
+         offset = src_reg(const_offset / 16);
+      } else {
+         offset = src_reg(this, glsl_type::uint_type);
+         emit(SHR(dst_reg(offset), get_nir_src(instr->src[1], nir_type_int, 1),
+                  src_reg(4u)));
+      }
+
+      src_reg packed_consts = src_reg(this, glsl_type::vec4_type);
+      packed_consts.type = dest.type;
+
+      emit_pull_constant_load_reg(dst_reg(packed_consts),
+                                  surf_index,
+                                  offset,
+                                  NULL, NULL /* before_block/inst */);
+
+      packed_consts.swizzle = brw_swizzle_for_size(instr->num_components);
+      packed_consts.swizzle += BRW_SWIZZLE4(const_offset % 16 / 4,
+                                            const_offset % 16 / 4,
+                                            const_offset % 16 / 4,
+                                            const_offset % 16 / 4);
+
+      emit(MOV(dest, packed_consts));
       break;
+   }
 
    default:
       unreachable("Unknown intrinsic");
