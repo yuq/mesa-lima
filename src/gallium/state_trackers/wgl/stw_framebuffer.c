@@ -605,15 +605,20 @@ DrvSwapBuffers(HDC hdc)
       return TRUE;
    }
 
-   /* Display the HUD */
    ctx = stw_current_context();
-   if (ctx && ctx->hud) {
-      struct pipe_resource *back =
-         stw_get_framebuffer_resource(fb->stfb, ST_ATTACHMENT_BACK_LEFT);
-      hud_draw(ctx->hud, back);
-   }
+   if (ctx) {
+      if (ctx->hud) {
+         /* Display the HUD */
+         struct pipe_resource *back =
+            stw_get_framebuffer_resource(fb->stfb, ST_ATTACHMENT_BACK_LEFT);
+         hud_draw(ctx->hud, back);
+      }
 
-   stw_flush_current_locked(fb);
+      if (ctx->current_framebuffer == fb) {
+         /* flush current context */
+         ctx->st->flush(ctx->st, ST_FLUSH_END_OF_FRAME, NULL);
+      }
+   }
 
    return stw_st_swap_framebuffer_locked(hdc, fb->stfb);
 }

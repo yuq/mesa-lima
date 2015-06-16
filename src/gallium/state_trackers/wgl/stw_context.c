@@ -473,18 +473,6 @@ fail:
    return ret;
 }
 
-/**
- * Flush the current context if it is bound to the framebuffer.
- */
-void
-stw_flush_current_locked( struct stw_framebuffer *fb )
-{
-   struct stw_context *ctx = stw_current_context();
-
-   if (ctx && ctx->current_framebuffer == fb) {
-      ctx->st->flush(ctx->st, ST_FLUSH_FRONT, NULL);
-   }
-}
 
 /**
  * Notify the current context that the framebuffer has become invalid.
