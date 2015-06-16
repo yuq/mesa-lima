@@ -282,7 +282,21 @@ vec4_visitor::nir_emit_cf_list(exec_list *list)
 void
 vec4_visitor::nir_emit_if(nir_if *if_stmt)
 {
-   /* @TODO: Not yet implemented */
+   /* First, put the condition in f0 */
+   src_reg condition = get_nir_src(if_stmt->condition, BRW_REGISTER_TYPE_D, 1);
+   vec4_instruction *inst = emit(MOV(dst_null_d(), condition));
+   inst->conditional_mod = BRW_CONDITIONAL_NZ;
+
+   emit(IF(BRW_PREDICATE_NORMAL));
+
+   nir_emit_cf_list(&if_stmt->then_list);
+
+   /* note: if the else is empty, dead CF elimination will remove it */
+   emit(BRW_OPCODE_ELSE);
+
+   nir_emit_cf_list(&if_stmt->else_list);
+
+   emit(BRW_OPCODE_ENDIF);
 }
 
 void
