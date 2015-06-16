@@ -847,6 +847,20 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fmin:
+   case nir_op_imin:
+   case nir_op_umin:
+      inst = emit_minmax(BRW_CONDITIONAL_L, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fmax:
+   case nir_op_imax:
+   case nir_op_umax:
+      inst = emit_minmax(BRW_CONDITIONAL_GE, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
