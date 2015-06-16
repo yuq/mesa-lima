@@ -572,9 +572,18 @@ vec4_visitor::visit_instructions(const exec_list *list)
    }
 }
 
-
-static int
-type_size(const struct glsl_type *type)
+/**
+ * Returns the minimum number of vec4 elements needed to pack a type.
+ *
+ * For simple types, it will return 1 (a single vec4); for matrices, the
+ * number of columns; for array and struct, the sum of the vec4_size of
+ * each of its elements; and for sampler and atomic, zero.
+ *
+ * This method is useful to calculate how much register space is needed to
+ * store a particular type.
+ */
+int
+vec4_visitor::type_size(const struct glsl_type *type)
 {
    unsigned int i;
    int size;
@@ -629,7 +638,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size(type));
+   this->reg = v->alloc.allocate(v->type_size(type));
 
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
@@ -647,7 +656,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size(type) * size);
+   this->reg = v->alloc.allocate(v->type_size(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
 
@@ -659,7 +668,7 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size(type));
+   this->reg = v->alloc.allocate(v->type_size(type));
 
    if (type->is_array() || type->is_record()) {
       this->writemask = WRITEMASK_XYZW;

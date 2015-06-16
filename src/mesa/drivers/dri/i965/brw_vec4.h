@@ -390,6 +390,8 @@ public:
 
    void visit_atomic_counter_intrinsic(ir_call *ir);
 
+   int type_size(const struct glsl_type *type);
+
    virtual void emit_nir_code();
    virtual void nir_setup_inputs(nir_shader *shader);
    virtual void nir_setup_uniforms(nir_shader *shader);
