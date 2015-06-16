@@ -411,6 +411,16 @@ public:
    virtual void nir_emit_jump(nir_jump_instr *instr);
    virtual void nir_emit_texture(nir_tex_instr *instr);
 
+   dst_reg get_nir_dest(nir_dest dest, enum brw_reg_type type);
+   dst_reg get_nir_dest(nir_dest dest, nir_alu_type type);
+   dst_reg get_nir_dest(nir_dest dest);
+   src_reg get_nir_src(nir_src src, enum brw_reg_type type,
+                       unsigned num_components = 4);
+   src_reg get_nir_src(nir_src src, nir_alu_type type,
+                       unsigned num_components = 4);
+   src_reg get_nir_src(nir_src src,
+                       unsigned num_components = 4);
+
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type) = 0;
 

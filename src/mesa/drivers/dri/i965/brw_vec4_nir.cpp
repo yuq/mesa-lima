@@ -331,6 +331,79 @@ vec4_visitor::nir_emit_instr(nir_instr *instr)
    }
 }
 
+static dst_reg
+dst_reg_for_nir_reg(vec4_visitor *v, nir_register *nir_reg,
+                    unsigned base_offset, nir_src *indirect)
+{
+   dst_reg reg;
+
+   reg = v->nir_locals[nir_reg->index];
+   reg = offset(reg, base_offset);
+   if (indirect) {
+      reg.reladdr =
+         new(v->mem_ctx) src_reg(v->get_nir_src(*indirect,
+                                                BRW_REGISTER_TYPE_D,
+                                                1));
+   }
+   return reg;
+}
+
+dst_reg
+vec4_visitor::get_nir_dest(nir_dest dest)
+{
+   assert(!dest.is_ssa);
+   return dst_reg_for_nir_reg(this, dest.reg.reg, dest.reg.base_offset,
+                              dest.reg.indirect);
+}
+
+dst_reg
+vec4_visitor::get_nir_dest(nir_dest dest, enum brw_reg_type type)
+{
+   return retype(get_nir_dest(dest), type);
+}
+
+dst_reg
+vec4_visitor::get_nir_dest(nir_dest dest, nir_alu_type type)
+{
+   return get_nir_dest(dest, brw_type_for_nir_type(type));
+}
+
+src_reg
+vec4_visitor::get_nir_src(nir_src src, enum brw_reg_type type,
+                          unsigned num_components)
+{
+   dst_reg reg;
+
+   if (src.is_ssa) {
+      assert(src.ssa != NULL);
+      reg = nir_ssa_values[src.ssa->index];
+   }
+   else {
+     reg = dst_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
+                               src.reg.indirect);
+   }
+
+   reg = retype(reg, type);
+
+   src_reg reg_as_src = src_reg(reg);
+   reg_as_src.swizzle = brw_swizzle_for_size(num_components);
+   return reg_as_src;
+}
+
+src_reg
+vec4_visitor::get_nir_src(nir_src src, nir_alu_type type,
+                          unsigned num_components)
+{
+   return get_nir_src(src, brw_type_for_nir_type(type), num_components);
+}
+
+src_reg
+vec4_visitor::get_nir_src(nir_src src, unsigned num_components)
+{
+   /* if type is not specified, default to signed int */
+   return get_nir_src(src, nir_type_int, num_components);
+}
+
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
