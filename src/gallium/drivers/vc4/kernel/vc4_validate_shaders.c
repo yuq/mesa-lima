@@ -88,7 +88,7 @@ raddr_add_a_to_live_reg_index(uint64_t inst)
 		return raddr_a;
 	} else if (add_a == QPU_MUX_B) {
 		return 32 + raddr_b;
-	} else if (add_a <= QPU_MUX_R4) {
+	} else if (add_a <= QPU_MUX_R3) {
 		return 64 + add_a;
 	} else {
 		return ~0;
