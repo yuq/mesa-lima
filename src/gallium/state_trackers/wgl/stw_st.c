@@ -96,6 +96,7 @@ stw_st_framebuffer_validate_locked(struct st_framebuffer_iface *stfb,
       case ST_ATTACHMENT_BACK_LEFT:
          format = stwfb->stvis.color_format;
          bind = PIPE_BIND_DISPLAY_TARGET |
+                PIPE_BIND_SAMPLER_VIEW |
                 PIPE_BIND_RENDER_TARGET;
          break;
       case ST_ATTACHMENT_DEPTH_STENCIL:
