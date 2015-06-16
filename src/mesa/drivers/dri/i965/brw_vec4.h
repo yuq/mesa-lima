@@ -410,6 +410,8 @@ public:
    virtual void nir_emit_jump(nir_jump_instr *instr);
    virtual void nir_emit_texture(nir_tex_instr *instr);
 
+   src_reg *nir_inputs;
+
 protected:
    void emit_vertex();
    void lower_attributes_to_hw_regs(const int *attribute_map,
