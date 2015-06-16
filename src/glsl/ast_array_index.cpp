@@ -216,6 +216,16 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
             if (v != NULL)
                v->data.max_array_access = implicit_size - 1;
          }
+         else if (state->stage == MESA_SHADER_TESS_CTRL &&
+                  array->variable_referenced()->data.mode == ir_var_shader_out &&
+                  !array->variable_referenced()->data.patch) {
+            /* Tessellation control shader output non-patch arrays are
+             * initially unsized. Despite that, they are allowed to be
+             * indexed with a non-constant expression (typically
+             * "gl_InvocationID"). The array size will be determined
+             * by the linker.
+             */
+         }
          else {
             _mesa_glsl_error(&loc, state, "unsized array index must be constant");
          }
