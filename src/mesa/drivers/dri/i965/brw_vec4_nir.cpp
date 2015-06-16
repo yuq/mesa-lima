@@ -796,6 +796,22 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_uadd_carry: {
+      struct brw_reg acc = retype(brw_acc_reg(8), BRW_REGISTER_TYPE_UD);
+
+      emit(ADDC(dst_null_ud(), op[0], op[1]));
+      emit(MOV(dst, src_reg(acc)));
+      break;
+   }
+
+   case nir_op_usub_borrow: {
+      struct brw_reg acc = retype(brw_acc_reg(8), BRW_REGISTER_TYPE_UD);
+
+      emit(SUBB(dst_null_ud(), op[0], op[1]));
+      emit(MOV(dst, src_reg(acc)));
+      break;
+   }
+
    default:
       unreachable("Unimplemented ALU operation");
    }
