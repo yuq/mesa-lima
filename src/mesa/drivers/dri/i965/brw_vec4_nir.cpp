@@ -446,13 +446,31 @@ vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 void
 vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 {
+   dst_reg dest;
+   src_reg src;
+
+   bool has_indirect = false;
+
    switch (instr->intrinsic) {
 
    case nir_intrinsic_load_input_indirect:
+      has_indirect = true;
       /* fallthrough */
-   case nir_intrinsic_load_input:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_input: {
+      int offset = instr->const_index[0];
+      src = nir_inputs[offset];
+
+      if (has_indirect) {
+         dest.reladdr = new(mem_ctx) src_reg(get_nir_src(instr->src[0],
+                                                         BRW_REGISTER_TYPE_D,
+                                                         1));
+      }
+      dest = get_nir_dest(instr->dest, src.type);
+      dest.writemask = brw_writemask_for_size(instr->num_components);
+
+      emit(MOV(dest, src));
       break;
+   }
 
    case nir_intrinsic_store_output_indirect:
       /* fallthrough */
