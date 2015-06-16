@@ -302,7 +302,11 @@ vec4_visitor::nir_emit_if(nir_if *if_stmt)
 void
 vec4_visitor::nir_emit_loop(nir_loop *loop)
 {
-   /* @TODO: Not yet implemented */
+   emit(BRW_OPCODE_DO);
+
+   nir_emit_cf_list(&loop->body);
+
+   emit(BRW_OPCODE_WHILE);
 }
 
 void
