@@ -646,10 +646,27 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 }
 
+static unsigned
+brw_swizzle_for_nir_swizzle(uint8_t swizzle[4])
+{
+   return BRW_SWIZZLE4(swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
+}
+
 void
 vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 {
-   /* @TODO: Not yet implemented */
+   dst_reg dst = get_nir_dest(instr->dest.dest,
+                              nir_op_infos[instr->op].output_type);
+   dst.writemask = instr->dest.write_mask;
+
+   src_reg op[4];
+   for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
+      op[i] = get_nir_src(instr->src[i].src,
+                          nir_op_infos[instr->op].input_types[i], 4);
+      op[i].swizzle = brw_swizzle_for_nir_swizzle(instr->src[i].swizzle);
+      op[i].abs = instr->src[i].abs;
+      op[i].negate = instr->src[i].negate;
+   }
 }
 
 void
