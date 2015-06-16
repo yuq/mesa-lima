@@ -494,17 +494,32 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
 
-   case nir_intrinsic_load_vertex_id_zero_base:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_vertex_id_zero_base: {
+      src_reg vertex_id =
+         src_reg(nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE]);
+      assert(vertex_id.file != BAD_FILE);
+      dest = get_nir_dest(instr->dest, vertex_id.type);
+      emit(MOV(dest, vertex_id));
       break;
+   }
 
-   case nir_intrinsic_load_base_vertex:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_base_vertex: {
+      src_reg base_vertex =
+         src_reg(nir_system_values[SYSTEM_VALUE_BASE_VERTEX]);
+      assert(base_vertex.file != BAD_FILE);
+      dest = get_nir_dest(instr->dest, base_vertex.type);
+      emit(MOV(dest, base_vertex));
       break;
+   }
 
-   case nir_intrinsic_load_instance_id:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_instance_id: {
+      src_reg instance_id =
+         src_reg(nir_system_values[SYSTEM_VALUE_INSTANCE_ID]);
+      assert(instance_id.file != BAD_FILE);
+      dest = get_nir_dest(instr->dest, instance_id.type);
+      emit(MOV(dest, instance_id));
       break;
+   }
 
    case nir_intrinsic_load_uniform_indirect:
       /* fallthrough */
