@@ -522,10 +522,32 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    }
 
    case nir_intrinsic_load_uniform_indirect:
+      has_indirect = true;
       /* fallthrough */
-   case nir_intrinsic_load_uniform:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_load_uniform: {
+      int uniform = instr->const_index[0];
+
+      dest = get_nir_dest(instr->dest);
+
+      if (has_indirect) {
+         /* Split addressing into uniform and offset */
+         int offset = uniform - nir_uniform_driver_location[uniform];
+         assert(offset >= 0);
+
+         uniform -= offset;
+         assert(uniform >= 0);
+
+         src = src_reg(dst_reg(UNIFORM, uniform));
+         src.reg_offset = offset;
+         src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_D, 1);
+         src.reladdr = new(mem_ctx) src_reg(tmp);
+      } else {
+         src = src_reg(dst_reg(UNIFORM, uniform));
+      }
+
+      emit(MOV(dest, src));
       break;
+   }
 
    case nir_intrinsic_atomic_counter_read:
    case nir_intrinsic_atomic_counter_inc:
