@@ -45,6 +45,7 @@ extern "C" {
 #endif
 
 #include "glsl/ir.h"
+#include "glsl/nir/nir.h"
 
 
 #ifdef __cplusplus
@@ -388,6 +389,24 @@ public:
    void dump_instruction(backend_instruction *inst, FILE *file);
 
    void visit_atomic_counter_intrinsic(ir_call *ir);
+
+   virtual void emit_nir_code();
+   virtual void nir_setup_inputs(nir_shader *shader);
+   virtual void nir_setup_uniforms(nir_shader *shader);
+   virtual void nir_setup_uniform(nir_variable *var);
+   virtual void nir_setup_builtin_uniform(nir_variable *var);
+   virtual void nir_setup_system_values(nir_shader *shader);
+   virtual void nir_emit_impl(nir_function_impl *impl);
+   virtual void nir_emit_cf_list(exec_list *list);
+   virtual void nir_emit_if(nir_if *if_stmt);
+   virtual void nir_emit_loop(nir_loop *loop);
+   virtual void nir_emit_block(nir_block *block);
+   virtual void nir_emit_instr(nir_instr *instr);
+   virtual void nir_emit_load_const(nir_load_const_instr *instr);
+   virtual void nir_emit_intrinsic(nir_intrinsic_instr *instr);
+   virtual void nir_emit_alu(nir_alu_instr *instr);
+   virtual void nir_emit_jump(nir_jump_instr *instr);
+   virtual void nir_emit_texture(nir_tex_instr *instr);
 
 protected:
    void emit_vertex();
