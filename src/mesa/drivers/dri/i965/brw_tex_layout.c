@@ -366,9 +366,8 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
    mt->total_width = mt->physical_width0;
 
-   if (mt->compressed) {
-       mt->total_width = ALIGN(mt->physical_width0, mt->align_w);
-   }
+   if (mt->compressed)
+       mt->total_width = ALIGN(mt->total_width, bw);
 
    /* May need to adjust width to accommodate the placement of
     * the 2nd mipmap.  This occurs when the alignment
