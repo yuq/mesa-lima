@@ -175,6 +175,11 @@ brw_create_nir(struct brw_context *brw,
    nir_convert_from_ssa(nir, is_scalar);
    nir_validate_shader(nir);
 
+   if (!is_scalar) {
+      nir_lower_vec_to_movs(nir);
+      nir_validate_shader(nir);
+   }
+
    /* This is the last pass we run before we start emitting stuff.  It
     * determines when we need to insert boolean resolves on Gen <= 5.  We
     * run it last because it stashes data in instr->pass_flags and we don't
