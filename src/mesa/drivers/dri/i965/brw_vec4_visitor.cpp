@@ -1266,7 +1266,7 @@ vec4_visitor::try_emit_b2f_of_compare(ir_expression *ir)
    return true;
 }
 
-void
+vec4_instruction *
 vec4_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                           src_reg src0, src_reg src1)
 {
@@ -1281,6 +1281,8 @@ vec4_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
       inst = emit(BRW_OPCODE_SEL, dst, src0, src1);
       inst->predicate = BRW_PREDICATE_NORMAL;
    }
+
+   return inst;
 }
 
 void

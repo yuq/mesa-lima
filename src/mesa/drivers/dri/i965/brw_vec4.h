@@ -291,8 +291,8 @@ public:
    void emit_bool_to_cond_code(ir_rvalue *ir, enum brw_predicate *predicate);
    void emit_if_gen6(ir_if *ir);
 
-   void emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
-                    src_reg src0, src_reg src1);
+   vec4_instruction *emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
+                                 src_reg src0, src_reg src1);
 
    void emit_lrp(const dst_reg &dst,
                  const src_reg &x, const src_reg &y, const src_reg &a);
