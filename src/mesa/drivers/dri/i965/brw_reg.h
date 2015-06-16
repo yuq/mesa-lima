@@ -950,6 +950,12 @@ brw_set_writemask(struct brw_reg reg, unsigned mask)
    return reg;
 }
 
+static inline unsigned
+brw_writemask_for_size(unsigned n)
+{
+   return (1 << n) - 1;
+}
+
 static inline struct brw_reg
 negate(struct brw_reg reg)
 {
