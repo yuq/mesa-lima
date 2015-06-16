@@ -411,6 +411,7 @@ public:
    virtual void nir_emit_texture(nir_tex_instr *instr);
 
    src_reg *nir_inputs;
+   unsigned *nir_uniform_driver_location;
 
 protected:
    void emit_vertex();

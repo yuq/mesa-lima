@@ -83,19 +83,112 @@ vec4_visitor::nir_setup_inputs(nir_shader *shader)
 void
 vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 {
-   /* @TODO: Not yet implemented */
+   uniforms = 0;
+
+   nir_uniform_driver_location =
+      rzalloc_array(mem_ctx, unsigned, this->uniform_array_size);
+
+   if (shader_prog) {
+      foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+         /* UBO's, atomics and samplers don't take up space in the
+            uniform file */
+         if (var->interface_type != NULL || var->type->contains_atomic() ||
+             type_size(var->type) == 0) {
+            continue;
+         }
+
+         assert(uniforms < uniform_array_size);
+         this->uniform_size[uniforms] = type_size(var->type);
+
+         if (strncmp(var->name, "gl_", 3) == 0)
+            nir_setup_builtin_uniform(var);
+         else
+            nir_setup_uniform(var);
+      }
+   } else {
+      /* ARB_vertex_program is not supported yet */
+      assert("Not implemented");
+   }
 }
 
 void
 vec4_visitor::nir_setup_uniform(nir_variable *var)
 {
-   /* @TODO: Not yet implemented */
+   int namelen = strlen(var->name);
+
+   /* The data for our (non-builtin) uniforms is stored in a series of
+    * gl_uniform_driver_storage structs for each subcomponent that
+    * glGetUniformLocation() could name.  We know it's been set up in the same
+    * order we'd walk the type, so walk the list of storage and find anything
+    * with our name, or the prefix of a component that starts with our name.
+    */
+    for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
+       struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
+
+       if (storage->builtin)
+          continue;
+
+       if (strncmp(var->name, storage->name, namelen) != 0 ||
+           (storage->name[namelen] != 0 &&
+            storage->name[namelen] != '.' &&
+            storage->name[namelen] != '[')) {
+          continue;
+       }
+
+       gl_constant_value *components = storage->storage;
+       unsigned vector_count = (MAX2(storage->array_elements, 1) *
+                                storage->type->matrix_columns);
+
+       for (unsigned s = 0; s < vector_count; s++) {
+          assert(uniforms < uniform_array_size);
+          uniform_vector_size[uniforms] = storage->type->vector_elements;
+
+          int i;
+          for (i = 0; i < uniform_vector_size[uniforms]; i++) {
+             stage_prog_data->param[uniforms * 4 + i] = components;
+             components++;
+          }
+          for (; i < 4; i++) {
+             static const gl_constant_value zero = { 0.0 };
+             stage_prog_data->param[uniforms * 4 + i] = &zero;
+          }
+
+          nir_uniform_driver_location[uniforms] = var->data.driver_location;
+          uniforms++;
+       }
+    }
 }
 
 void
 vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
 {
-   /* @TODO: Not yet implemented */
+   const nir_state_slot *const slots = var->state_slots;
+   assert(var->state_slots != NULL);
+
+   for (unsigned int i = 0; i < var->num_state_slots; i++) {
+      /* This state reference has already been setup by ir_to_mesa,
+       * but we'll get the same index back here.  We can reference
+       * ParameterValues directly, since unlike brw_fs.cpp, we never
+       * add new state references during compile.
+       */
+      int index = _mesa_add_state_reference(this->prog->Parameters,
+					    (gl_state_index *)slots[i].tokens);
+      gl_constant_value *values =
+         &this->prog->Parameters->ParameterValues[index][0];
+
+      assert(uniforms < uniform_array_size);
+
+      for (unsigned j = 0; j < 4; j++)
+         stage_prog_data->param[uniforms * 4 + j] =
+            &values[GET_SWZ(slots[i].swizzle, j)];
+
+      this->uniform_vector_size[uniforms] =
+         (var->type->is_scalar() || var->type->is_vector() ||
+          var->type->is_matrix() ? var->type->vector_elements : 4);
+
+      nir_uniform_driver_location[uniforms] = var->data.driver_location;
+      uniforms++;
+   }
 }
 
 void
