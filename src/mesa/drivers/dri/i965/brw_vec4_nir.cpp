@@ -551,9 +551,32 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_atomic_counter_read:
    case nir_intrinsic_atomic_counter_inc:
-   case nir_intrinsic_atomic_counter_dec:
-      /* @TODO: Not yet implemented */
+   case nir_intrinsic_atomic_counter_dec: {
+      unsigned surf_index = prog_data->base.binding_table.abo_start +
+         (unsigned) instr->const_index[0];
+      src_reg offset = get_nir_src(instr->src[0], nir_type_int,
+                                   instr->num_components);
+      dest = get_nir_dest(instr->dest);
+
+      switch (instr->intrinsic) {
+         case nir_intrinsic_atomic_counter_inc:
+            emit_untyped_atomic(BRW_AOP_INC, surf_index, dest, offset,
+                                src_reg(), src_reg());
+            break;
+         case nir_intrinsic_atomic_counter_dec:
+            emit_untyped_atomic(BRW_AOP_PREDEC, surf_index, dest, offset,
+                                src_reg(), src_reg());
+            break;
+         case nir_intrinsic_atomic_counter_read:
+            emit_untyped_surface_read(surf_index, dest, offset);
+            break;
+         default:
+            unreachable("Unreachable");
+      }
+
+      brw_mark_surface_used(stage_prog_data, surf_index);
       break;
+   }
 
    case nir_intrinsic_load_ubo_indirect:
       /* fallthrough */
