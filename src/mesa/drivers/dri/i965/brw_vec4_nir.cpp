@@ -908,6 +908,20 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fddy_fine:
       unreachable("derivatives are not valid in vertex shaders");
 
+   case nir_op_flt:
+   case nir_op_ilt:
+   case nir_op_ult:
+   case nir_op_fge:
+   case nir_op_ige:
+   case nir_op_uge:
+   case nir_op_feq:
+   case nir_op_ieq:
+   case nir_op_fne:
+   case nir_op_ine:
+      emit(CMP(dst, op[0], op[1],
+               brw_conditional_for_nir_comparison(instr->op)));
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
