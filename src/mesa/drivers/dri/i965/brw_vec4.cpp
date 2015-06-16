@@ -1709,6 +1709,9 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 bool
 vec4_visitor::run(gl_clip_plane *clip_planes)
 {
+   bool use_vec4_nir =
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions != NULL;
+
    sanity_param_count = prog->Parameters->NumParameters;
 
    if (shader_time_index >= 0)
@@ -1718,11 +1721,18 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
 
    emit_prolog();
 
-   /* Generate VS IR for main().  (the visitor only descends into
-    * functions called "main").
-    */
    if (shader) {
-      visit_instructions(shader->base.ir);
+      if (use_vec4_nir) {
+         assert(prog->nir != NULL);
+         emit_nir_code();
+         if (failed)
+            return false;
+      } else {
+         /* Generate VS IR for main().  (the visitor only descends into
+          * functions called "main").
+          */
+         visit_instructions(shader->base.ir);
+      }
    } else {
       emit_program_code();
    }
