@@ -105,6 +105,12 @@ enum gen_state_alignment {
     GEN8_ALIGNMENT_SURFACE_STATE			      = 0x40,
 };
 
+enum gen_index_format {
+    GEN6_INDEX_BYTE					      = 0x0,
+    GEN6_INDEX_WORD					      = 0x1,
+    GEN6_INDEX_DWORD					      = 0x2,
+};
+
 enum gen_vf_component {
     GEN6_VFCOMP_NOSTORE					      = 0x0,
     GEN6_VFCOMP_STORE_SRC				      = 0x1,
@@ -366,9 +372,6 @@ enum gen_msrast_mode {
 #define GEN6_IB_DW0_CUT_INDEX_ENABLE				(0x1 << 10)
 #define GEN6_IB_DW0_FORMAT__MASK				0x00000300
 #define GEN6_IB_DW0_FORMAT__SHIFT				8
-#define GEN6_IB_DW0_FORMAT_BYTE					(0x0 << 8)
-#define GEN6_IB_DW0_FORMAT_WORD					(0x1 << 8)
-#define GEN6_IB_DW0_FORMAT_DWORD				(0x2 << 8)
 
 
 
@@ -376,9 +379,6 @@ enum gen_msrast_mode {
 
 #define GEN8_IB_DW1_FORMAT__MASK				0x00000300
 #define GEN8_IB_DW1_FORMAT__SHIFT				8
-#define GEN8_IB_DW1_FORMAT_BYTE					(0x0 << 8)
-#define GEN8_IB_DW1_FORMAT_WORD					(0x1 << 8)
-#define GEN8_IB_DW1_FORMAT_DWORD				(0x2 << 8)
 #define GEN8_IB_DW1_MOCS__MASK					0x0000007f
 #define GEN8_IB_DW1_MOCS__SHIFT					0
 

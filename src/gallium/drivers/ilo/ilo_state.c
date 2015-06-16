@@ -39,6 +39,19 @@
 #include "ilo_shader.h"
 #include "ilo_state.h"
 
+static enum gen_index_format
+ilo_translate_index_size(unsigned index_size)
+{
+   switch (index_size) {
+   case 1:                             return GEN6_INDEX_BYTE;
+   case 2:                             return GEN6_INDEX_WORD;
+   case 4:                             return GEN6_INDEX_DWORD;
+   default:
+      assert(!"unknown index size");
+      return GEN6_INDEX_BYTE;
+   }
+}
+
 static enum gen_mip_filter
 ilo_translate_mip_filter(unsigned filter)
 {
@@ -375,6 +388,7 @@ finalize_index_buffer(struct ilo_context *ilo)
    if (!(vec->dirty & ILO_DIRTY_IB) && !need_upload)
       return;
 
+   /* make sure vec->ib.hw_resource changes when reallocated */
    pipe_resource_reference(&current_hw_res, vec->ib.hw_resource);
 
    if (need_upload) {
@@ -429,8 +443,8 @@ finalize_vertex_elements(struct ilo_context *ilo)
    const struct ilo_dev *dev = ilo->dev;
    struct ilo_state_vector *vec = &ilo->state_vector;
    struct ilo_ve_state *ve = vec->ve;
-   const bool is_quad = (vec->draw->mode == PIPE_PRIM_QUADS ||
-                         vec->draw->mode == PIPE_PRIM_QUAD_STRIP);
+   const enum gen_3dprim_type topology =
+      gen6_3d_translate_pipe_prim(vec->draw->mode);
    const bool last_element_edge_flag = (vec->vs &&
          ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_INPUT_EDGEFLAG));
    const bool prepend_vertexid = (vec->vs &&
@@ -438,16 +452,24 @@ finalize_vertex_elements(struct ilo_context *ilo)
    const bool prepend_instanceid = (vec->vs &&
          ilo_shader_get_kernel_param(vec->vs,
             ILO_KERNEL_VS_INPUT_INSTANCEID));
+   const enum gen_index_format index_format = (vec->draw->indexed) ?
+      ilo_translate_index_size(vec->ib.state.index_size) : GEN6_INDEX_DWORD;
 
    /* check for non-orthogonal states */
-   if (ve->vf_params.cv_is_quad != is_quad ||
+   if (ve->vf_params.cv_topology != topology ||
        ve->vf_params.prepend_vertexid != prepend_vertexid ||
        ve->vf_params.prepend_instanceid != prepend_instanceid ||
-       ve->vf_params.last_element_edge_flag != last_element_edge_flag) {
-      ve->vf_params.cv_is_quad = is_quad;
+       ve->vf_params.last_element_edge_flag != last_element_edge_flag ||
+       ve->vf_params.cv_index_format != index_format ||
+       ve->vf_params.cut_index_enable != vec->draw->primitive_restart ||
+       ve->vf_params.cut_index != vec->draw->restart_index) {
+      ve->vf_params.cv_topology = topology;
       ve->vf_params.prepend_vertexid = prepend_vertexid;
       ve->vf_params.prepend_instanceid = prepend_instanceid;
       ve->vf_params.last_element_edge_flag = last_element_edge_flag;
+      ve->vf_params.cv_index_format = index_format;
+      ve->vf_params.cut_index_enable = vec->draw->primitive_restart;
+      ve->vf_params.cut_index = vec->draw->restart_index;
 
       ilo_state_vf_set_params(&ve->vf, dev, &ve->vf_params);
 

@@ -202,14 +202,13 @@ gen8_draw_vf(struct ilo_render *r,
    int i;
 
    /* 3DSTATE_INDEX_BUFFER */
-   if (DIRTY(IB) || r->batch_bo_changed)
-      gen8_3DSTATE_INDEX_BUFFER(r->builder, &vec->ib);
+   if ((session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_INDEX_BUFFER) ||
+       DIRTY(IB) || r->batch_bo_changed)
+      gen8_3DSTATE_INDEX_BUFFER(r->builder, &vec->ve->vf, &vec->ib);
 
    /* 3DSTATE_VF */
-   if (session->primitive_restart_changed) {
-      gen75_3DSTATE_VF(r->builder, vec->draw->primitive_restart,
-            vec->draw->restart_index);
-   }
+   if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VF)
+      gen75_3DSTATE_VF(r->builder, &vec->ve->vf);
 
    /* 3DSTATE_VERTEX_BUFFERS */
    if (DIRTY(VB) || DIRTY(VE) || r->batch_bo_changed) {

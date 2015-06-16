@@ -48,6 +48,8 @@
 enum ilo_state_vf_dirty_bits {
    ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS            = (1 << 0),
    ILO_STATE_VF_3DSTATE_VF_SGVS                    = (1 << 1),
+   ILO_STATE_VF_3DSTATE_VF                         = (1 << 2),
+   ILO_STATE_VF_3DSTATE_INDEX_BUFFER               = (1 << 3),
 };
 
 /**
@@ -68,7 +70,7 @@ struct ilo_state_vf_element_info {
  * VF parameters.
  */
 struct ilo_state_vf_params_info {
-   bool cv_is_quad;
+   enum gen_3dprim_type cv_topology;
 
    /* prepend an attribute of zeros */
    bool prepend_zeros;
@@ -78,8 +80,15 @@ struct ilo_state_vf_params_info {
    bool prepend_instanceid;
 
    bool last_element_edge_flag;
+
+   enum gen_index_format cv_index_format;
+   bool cut_index_enable;
+   uint32_t cut_index;
 };
 
+/**
+ * Vertex fetch.
+ */
 struct ilo_state_vf_info {
    void *data;
    size_t data_size;
@@ -101,6 +110,8 @@ struct ilo_state_vf {
 
    uint32_t last_user_ve[2][2];
    bool edge_flag_supported;
+
+   uint32_t cut[2];
 };
 
 struct ilo_state_vf_delta {

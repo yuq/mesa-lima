@@ -334,7 +334,6 @@ draw_session_prepare(struct ilo_render *render,
       render->instruction_bo_changed = true;
 
       session->prim_changed = true;
-      session->primitive_restart_changed = true;
 
       ilo_state_urb_full_delta(&vec->urb, render->dev, &session->urb_delta);
       ilo_state_vf_full_delta(&vec->ve->vf, render->dev, &session->vf_delta);
@@ -350,8 +349,6 @@ draw_session_prepare(struct ilo_render *render,
    } else {
       session->prim_changed =
          (render->state.reduced_prim != session->reduced_prim);
-      session->primitive_restart_changed =
-         (render->state.primitive_restart != vec->draw->primitive_restart);
 
       ilo_state_urb_get_delta(&vec->urb, render->dev,
             &render->state.urb, &session->urb_delta);
@@ -390,7 +387,6 @@ draw_session_end(struct ilo_render *render,
    render->instruction_bo_changed = false;
 
    render->state.reduced_prim = session->reduced_prim;
-   render->state.primitive_restart = vec->draw->primitive_restart;
 
    render->state.urb = vec->urb;
    render->state.rs = vec->rasterizer->rs;

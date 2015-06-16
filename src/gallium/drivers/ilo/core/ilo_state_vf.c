@@ -339,6 +339,94 @@ vf_params_set_gen8_3DSTATE_VF_SGVS(struct ilo_state_vf *vf,
    return true;
 }
 
+static uint32_t
+get_gen6_fixed_cut_index(const struct ilo_dev *dev,
+                         enum gen_index_format format)
+{
+   const uint32_t fixed = ~0u;
+
+   ILO_DEV_ASSERT(dev, 6, 7);
+
+   switch (format) {
+   case GEN6_INDEX_BYTE:   return (uint8_t)  fixed;
+   case GEN6_INDEX_WORD:   return (uint16_t) fixed;
+   case GEN6_INDEX_DWORD:  return (uint32_t) fixed;
+   default:
+      assert(!"unknown index format");
+      return fixed;
+   }
+}
+
+static bool
+get_gen6_cut_index_supported(const struct ilo_dev *dev,
+                             enum gen_3dprim_type topology)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * See the Sandy Bridge PRM, volume 2 part 1, page 80 and the Haswell PRM,
+    * volume 7, page 456.
+    */
+   switch (topology) {
+   case GEN6_3DPRIM_TRIFAN:
+   case GEN6_3DPRIM_QUADLIST:
+   case GEN6_3DPRIM_QUADSTRIP:
+   case GEN6_3DPRIM_POLYGON:
+   case GEN6_3DPRIM_LINELOOP:
+      return (ilo_dev_gen(dev) >= ILO_GEN(7.5));
+   case GEN6_3DPRIM_RECTLIST:
+   case GEN6_3DPRIM_TRIFAN_NOSTIPPLE:
+      return false;
+   default:
+      return true;
+   }
+}
+
+static bool
+vf_params_set_gen6_3dstate_index_buffer(struct ilo_state_vf *vf,
+                                        const struct ilo_dev *dev,
+                                        const struct ilo_state_vf_params_info *params)
+{
+   uint32_t dw0 = 0;
+
+   ILO_DEV_ASSERT(dev, 6, 7);
+
+   /* cut index only, as in 3DSTATE_VF */
+   if (params->cut_index_enable) {
+      assert(get_gen6_cut_index_supported(dev, params->cv_topology));
+      assert(get_gen6_fixed_cut_index(dev, params->cv_index_format) ==
+            params->cut_index);
+
+      dw0 |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
+   }
+
+   STATIC_ASSERT(ARRAY_SIZE(vf->cut) >= 1);
+   vf->cut[0] = dw0;
+
+   return true;
+}
+
+static bool
+vf_params_set_gen75_3DSTATE_VF(struct ilo_state_vf *vf,
+                               const struct ilo_dev *dev,
+                               const struct ilo_state_vf_params_info *params)
+{
+   uint32_t dw0 = 0;
+
+   ILO_DEV_ASSERT(dev, 7.5, 8);
+
+   if (params->cut_index_enable) {
+      assert(get_gen6_cut_index_supported(dev, params->cv_topology));
+      dw0 |= GEN75_VF_DW0_CUT_INDEX_ENABLE;
+   }
+
+   STATIC_ASSERT(ARRAY_SIZE(vf->cut) >= 2);
+   vf->cut[0] = dw0;
+   vf->cut[1] = params->cut_index;
+
+   return true;
+}
+
 bool
 ilo_state_vf_init(struct ilo_state_vf *vf,
                   const struct ilo_dev *dev,
@@ -354,6 +442,7 @@ ilo_state_vf_init(struct ilo_state_vf *vf,
    vf->user_ve = (uint32_t (*)[2]) info->data;
 
    ret &= vf_set_gen6_3DSTATE_VERTEX_ELEMENTS(vf, dev, info);
+
    ret &= ilo_state_vf_set_params(vf, dev, &info->params);
 
    assert(ret);
@@ -429,7 +518,7 @@ ilo_state_vf_set_params(struct ilo_state_vf *vf,
    if (params->last_element_edge_flag) {
       assert(vf->edge_flag_supported);
       if (ilo_dev_gen(dev) == ILO_GEN(6))
-         assert(!params->cv_is_quad);
+         assert(params->cv_topology != GEN6_3DPRIM_QUADLIST);
    }
 
    if (vf->edge_flag_supported) {
@@ -438,6 +527,11 @@ ilo_state_vf_set_params(struct ilo_state_vf *vf,
             vf->last_user_ve[params->last_element_edge_flag],
             sizeof(vf->user_ve[vf->user_ve_count - 1]));
    }
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
+      ret &= vf_params_set_gen75_3DSTATE_VF(vf, dev, params);
+   else
+      ret &= vf_params_set_gen6_3dstate_index_buffer(vf, dev, params);
 
    assert(ret);
 
@@ -453,6 +547,11 @@ ilo_state_vf_full_delta(const struct ilo_state_vf *vf,
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8))
       delta->dirty |= ILO_STATE_VF_3DSTATE_VF_SGVS;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
+      delta->dirty |= ILO_STATE_VF_3DSTATE_VF;
+   else
+      delta->dirty |= ILO_STATE_VF_3DSTATE_INDEX_BUFFER;
 }
 
 void
@@ -477,5 +576,13 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
       if (vf->sgvs[0] != old->sgvs[0])
          delta->dirty |= ILO_STATE_VF_3DSTATE_VF_SGVS;
+   }
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7.5)) {
+      if (memcmp(vf->cut, old->cut, sizeof(vf->cut)))
+         delta->dirty |= ILO_STATE_VF_3DSTATE_VF;
+   } else {
+      if (vf->cut[0] != old->cut[0])
+         delta->dirty |= ILO_STATE_VF_3DSTATE_INDEX_BUFFER;
    }
 }

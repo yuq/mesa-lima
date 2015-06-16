@@ -190,8 +190,7 @@ gen7_3DSTATE_URB_GS(struct ilo_builder *builder,
 
 static inline void
 gen75_3DSTATE_VF(struct ilo_builder *builder,
-                 bool enable_cut_index,
-                 uint32_t cut_index)
+                 const struct ilo_state_vf *vf)
 {
    const uint8_t cmd_len = 2;
    uint32_t *dw;
@@ -200,11 +199,10 @@ gen75_3DSTATE_VF(struct ilo_builder *builder,
 
    ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = GEN75_RENDER_CMD(3D, 3DSTATE_VF) | (cmd_len - 2);
-   if (enable_cut_index)
-      dw[0] |= GEN75_VF_DW0_CUT_INDEX_ENABLE;
-
-   dw[1] = cut_index;
+   /* see vf_params_set_gen75_3DSTATE_VF() */
+   dw[0] = GEN75_RENDER_CMD(3D, 3DSTATE_VF) | (cmd_len - 2) |
+           vf->cut[0];
+   dw[1] = vf->cut[1];
 }
 
 static inline void
@@ -444,13 +442,13 @@ gen6_3DSTATE_VERTEX_ELEMENTS(struct ilo_builder *builder,
 
 static inline void
 gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
-                          const struct ilo_ib_state *ib,
-                          bool enable_cut_index)
+                          const struct ilo_state_vf *vf,
+                          const struct ilo_ib_state *ib)
 {
    const uint8_t cmd_len = 3;
    struct ilo_buffer *buf = ilo_buffer(ib->hw_resource);
    uint32_t start_offset, end_offset;
-   int format;
+   enum gen_index_format format;
    uint32_t *dw;
    unsigned pos;
 
@@ -459,23 +457,19 @@ gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
    if (!buf)
       return;
 
-   /* this is moved to the new 3DSTATE_VF */
-   if (ilo_dev_gen(builder->dev) >= ILO_GEN(7.5))
-      assert(!enable_cut_index);
-
    switch (ib->hw_index_size) {
    case 4:
-      format = GEN6_IB_DW0_FORMAT_DWORD;
+      format = GEN6_INDEX_DWORD;
       break;
    case 2:
-      format = GEN6_IB_DW0_FORMAT_WORD;
+      format = GEN6_INDEX_WORD;
       break;
    case 1:
-      format = GEN6_IB_DW0_FORMAT_BYTE;
+      format = GEN6_INDEX_BYTE;
       break;
    default:
       assert(!"unknown index size");
-      format = GEN6_IB_DW0_FORMAT_BYTE;
+      format = GEN6_INDEX_BYTE;
       break;
    }
 
@@ -494,9 +488,11 @@ gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2) |
            builder->mocs << GEN6_IB_DW0_MOCS__SHIFT |
-           format;
-   if (enable_cut_index)
-      dw[0] |= GEN6_IB_DW0_CUT_INDEX_ENABLE;
+           format << GEN6_IB_DW0_FORMAT__SHIFT;
+
+   /* see vf_params_set_gen6_3dstate_index_buffer() */
+   if (ilo_dev_gen(builder->dev) <= ILO_GEN(7))
+      dw[0] |= vf->cut[0];
 
    ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
    ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
@@ -504,6 +500,7 @@ gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
 
 static inline void
 gen8_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
+                          const struct ilo_state_vf *vf,
                           const struct ilo_ib_state *ib)
 {
    const uint8_t cmd_len = 5;
@@ -519,24 +516,24 @@ gen8_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
 
    switch (ib->hw_index_size) {
    case 4:
-      format = GEN8_IB_DW1_FORMAT_DWORD;
+      format = GEN6_INDEX_DWORD;
       break;
    case 2:
-      format = GEN8_IB_DW1_FORMAT_WORD;
+      format = GEN6_INDEX_WORD;
       break;
    case 1:
-      format = GEN8_IB_DW1_FORMAT_BYTE;
+      format = GEN6_INDEX_BYTE;
       break;
    default:
       assert(!"unknown index size");
-      format = GEN8_IB_DW1_FORMAT_BYTE;
+      format = GEN6_INDEX_BYTE;
       break;
    }
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
-   dw[1] = format |
+   dw[1] = format << GEN8_IB_DW1_FORMAT__SHIFT |
            builder->mocs << GEN8_IB_DW1_MOCS__SHIFT;
    dw[4] = buf->bo_size;
 

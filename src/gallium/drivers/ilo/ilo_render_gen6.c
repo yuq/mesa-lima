@@ -413,24 +413,18 @@ gen6_draw_vf(struct ilo_render *r,
 {
    if (ilo_dev_gen(r->dev) >= ILO_GEN(7.5)) {
       /* 3DSTATE_INDEX_BUFFER */
-      if (DIRTY(IB) || r->batch_bo_changed) {
-         gen6_3DSTATE_INDEX_BUFFER(r->builder,
-               &vec->ib, false);
-      }
+      if ((session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_INDEX_BUFFER) ||
+          DIRTY(IB) || r->batch_bo_changed)
+         gen6_3DSTATE_INDEX_BUFFER(r->builder, &vec->ve->vf, &vec->ib);
 
       /* 3DSTATE_VF */
-      if (session->primitive_restart_changed) {
-         gen75_3DSTATE_VF(r->builder, vec->draw->primitive_restart,
-               vec->draw->restart_index);
-      }
-   }
-   else {
+      if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VF)
+         gen75_3DSTATE_VF(r->builder, &vec->ve->vf);
+   } else {
       /* 3DSTATE_INDEX_BUFFER */
-      if (DIRTY(IB) || session->primitive_restart_changed ||
-          r->batch_bo_changed) {
-         gen6_3DSTATE_INDEX_BUFFER(r->builder,
-               &vec->ib, vec->draw->primitive_restart);
-      }
+      if ((session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_INDEX_BUFFER) ||
+          DIRTY(IB) || r->batch_bo_changed)
+         gen6_3DSTATE_INDEX_BUFFER(r->builder, &vec->ve->vf, &vec->ib);
    }
 
    /* 3DSTATE_VERTEX_BUFFERS */

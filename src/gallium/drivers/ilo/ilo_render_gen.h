@@ -82,7 +82,6 @@ struct ilo_render {
        */
       uint32_t deferred_pipe_control_dw1;
 
-      bool primitive_restart;
       int reduced_prim;
       int so_max_vertices;
 
@@ -143,7 +142,6 @@ struct ilo_render_draw_session {
    int reduced_prim;
 
    bool prim_changed;
-   bool primitive_restart_changed;
 
    struct ilo_state_urb_delta urb_delta;
    struct ilo_state_vf_delta vf_delta;
