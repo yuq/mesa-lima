@@ -1048,9 +1048,15 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
          goto invalid_operation;
       *val = RESOURCE_VAR(res)->data.index;
       return 1;
-
-   /* GL_ARB_tessellation_shader */
    case GL_IS_PER_PATCH:
+      switch (res->Type) {
+      case GL_PROGRAM_INPUT:
+      case GL_PROGRAM_OUTPUT:
+         *val = RESOURCE_VAR(res)->data.patch;
+         return 1;
+      default:
+         goto invalid_operation;
+      }
    default:
       goto invalid_enum;
    }
