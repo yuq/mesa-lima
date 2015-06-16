@@ -48,16 +48,63 @@ vec4_visitor::emit_nir_code()
    }
 }
 
+void
+vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
+{
+   dst_reg *reg;
+
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_vertex_id:
+      unreachable("should be lowered by lower_vertex_id().");
+
+   case nir_intrinsic_load_vertex_id_zero_base:
+      reg = &this->nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
+      if (reg->file == BAD_FILE)
+         *reg =
+            *this->make_reg_for_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
+                                             glsl_type::int_type);
+      break;
+
+   case nir_intrinsic_load_base_vertex:
+      reg = &this->nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
+      if (reg->file == BAD_FILE)
+         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_BASE_VERTEX,
+                                                 glsl_type::int_type);
+      break;
+
+   case nir_intrinsic_load_instance_id:
+      reg = &this->nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
+      if (reg->file == BAD_FILE)
+         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INSTANCE_ID,
+                                                 glsl_type::int_type);
+      break;
+
+   default:
+      break;
+   }
+}
+
 static bool
 setup_system_values_block(nir_block *block, void *void_visitor)
 {
-   /* @TODO: Not yet implemented */
+   vec4_visitor *v = (vec4_visitor *)void_visitor;
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      v->nir_setup_system_value_intrinsic(intrin);
+   }
+
    return true;
 }
 
 void
 vec4_visitor::nir_setup_system_values(nir_shader *shader)
 {
+   nir_system_values = ralloc_array(mem_ctx, dst_reg, SYSTEM_VALUE_MAX);
+
    nir_foreach_overload(shader, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
