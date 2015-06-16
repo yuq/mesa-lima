@@ -117,11 +117,11 @@ fixup_raddr_conflict(struct vc4_compile *c,
                 return;
 
         if (mux0 == QPU_MUX_A) {
-                queue(c, qpu_a_MOV(qpu_rb(31), *src1));
-                *src1 = qpu_rb(31);
+                queue(c, qpu_a_MOV(qpu_rb(31), *src0));
+                *src0 = qpu_rb(31);
         } else {
-                queue(c, qpu_a_MOV(qpu_ra(31), *src1));
-                *src1 = qpu_ra(31);
+                queue(c, qpu_a_MOV(qpu_ra(31), *src0));
+                *src0 = qpu_ra(31);
         }
 }
 
