@@ -232,7 +232,7 @@ stw_query_attrib(
       break;
 
    case WGL_SAMPLE_BUFFERS_ARB:
-      *pvalue = 1;
+      *pvalue = (pfi->stvis.samples > 1);
       break;
 
    case WGL_SAMPLES_ARB:
