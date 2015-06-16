@@ -143,7 +143,8 @@ vec4_vs_visitor::emit_prolog()
 
 
 dst_reg *
-vec4_vs_visitor::make_reg_for_system_value(ir_variable *ir)
+vec4_vs_visitor::make_reg_for_system_value(int location,
+                                           const glsl_type *type)
 {
    /* VertexID is stored by the VF as the last vertex element, but
     * we don't represent it with a flag in inputs_read, so we call
@@ -151,7 +152,7 @@ vec4_vs_visitor::make_reg_for_system_value(ir_variable *ir)
     */
    dst_reg *reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX);
 
-   switch (ir->data.location) {
+   switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->writemask = WRITEMASK_X;
       vs_prog_data->uses_vertexid = true;

@@ -76,7 +76,8 @@ public:
                    int shader_time_index);
 
 protected:
-   virtual dst_reg *make_reg_for_system_value(ir_variable *ir);
+   virtual dst_reg *make_reg_for_system_value(int location,
+                                              const glsl_type *type);
    virtual void setup_payload();
    virtual void emit_prolog();
    virtual void emit_program_code();

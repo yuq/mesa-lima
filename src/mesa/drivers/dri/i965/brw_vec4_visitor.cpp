@@ -1094,7 +1094,7 @@ vec4_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_system_value:
-      reg = make_reg_for_system_value(ir);
+      reg = make_reg_for_system_value(ir->data.location, ir->type);
       break;
 
    default:
