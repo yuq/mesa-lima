@@ -338,7 +338,7 @@ vec4_visitor::fix_math_operand(src_reg src)
    return src_reg(expanded);
 }
 
-void
+vec4_instruction *
 vec4_visitor::emit_math(enum opcode opcode,
                         const dst_reg &dst,
                         const src_reg &src0, const src_reg &src1)
@@ -350,11 +350,13 @@ vec4_visitor::emit_math(enum opcode opcode,
       /* MATH on Gen6 must be align1, so we can't do writemasks. */
       math->dst = dst_reg(this, glsl_type::vec4_type);
       math->dst.type = dst.type;
-      emit(MOV(dst, src_reg(math->dst)));
+      math = emit(MOV(dst, src_reg(math->dst)));
    } else if (devinfo->gen < 6) {
       math->base_mrf = 1;
       math->mlen = src1.file == BAD_FILE ? 1 : 2;
    }
+
+   return math;
 }
 
 void
