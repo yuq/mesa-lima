@@ -744,6 +744,58 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
+   case nir_op_frcp:
+      inst = emit_math(SHADER_OPCODE_RCP, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fexp2:
+      inst = emit_math(SHADER_OPCODE_EXP2, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_flog2:
+      inst = emit_math(SHADER_OPCODE_LOG2, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fsin:
+      inst = emit_math(SHADER_OPCODE_SIN, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fcos:
+      inst = emit_math(SHADER_OPCODE_COS, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_idiv:
+   case nir_op_udiv:
+      emit_math(SHADER_OPCODE_INT_QUOTIENT, dst, op[0], op[1]);
+      break;
+
+   case nir_op_umod:
+      emit_math(SHADER_OPCODE_INT_REMAINDER, dst, op[0], op[1]);
+      break;
+
+   case nir_op_ldexp:
+      unreachable("not reached: should be handled by ldexp_to_arith()");
+
+   case nir_op_fsqrt:
+      inst = emit_math(SHADER_OPCODE_SQRT, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_frsq:
+      inst = emit_math(SHADER_OPCODE_RSQ, dst, op[0]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fpow:
+      inst = emit_math(SHADER_OPCODE_POW, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
