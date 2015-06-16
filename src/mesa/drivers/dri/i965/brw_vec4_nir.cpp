@@ -682,6 +682,17 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_vec4:
       unreachable("not reached: should be handled by lower_vec_to_movs()");
 
+   case nir_op_i2f:
+   case nir_op_u2f:
+      inst = emit(MOV(dst, op[0]));
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_f2i:
+   case nir_op_f2u:
+      inst = emit(MOV(dst, op[0]));
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
