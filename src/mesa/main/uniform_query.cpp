@@ -1101,17 +1101,22 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
       for (unsigned i = 0; i < shProg[idx]->NumUniformStorage; i++) {
          const struct gl_uniform_storage *const storage =
             &shProg[idx]->UniformStorage[i];
-         const glsl_type *const t = (storage->type->is_array())
-            ? storage->type->fields.array : storage->type;
 
-         if (!t->is_sampler())
+         if (!storage->type->is_sampler())
             continue;
 
          active_samplers++;
 
-         const unsigned count = MAX2(1, storage->type->array_size());
+         const unsigned count = MAX2(1, storage->array_elements);
          for (unsigned j = 0; j < count; j++) {
             const unsigned unit = storage->storage[j].i;
+
+            /* FIXME: Samplers are initialized to 0 and Mesa doesn't do a
+             * great job of eliminating unused uniforms currently so for now
+             * don't throw an error if two sampler types both point to 0.
+             */
+            if (unit == 0)
+               continue;
 
             /* The types of the samplers associated with a particular texture
              * unit must be an exact match.  Page 74 (page 89 of the PDF) of
@@ -1122,13 +1127,14 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
              *     program object."
              */
             if (unit_types[unit] == NULL) {
-               unit_types[unit] = t;
-            } else if (unit_types[unit] != t) {
+               unit_types[unit] = storage->type;
+            } else if (unit_types[unit] != storage->type) {
                pipeline->InfoLog =
                   ralloc_asprintf(pipeline,
                                   "Texture unit %d is accessed both as %s "
                                   "and %s",
-                                  unit, unit_types[unit]->name, t->name);
+                                  unit, unit_types[unit]->name,
+                                  storage->type->name);
                return false;
             }
          }
