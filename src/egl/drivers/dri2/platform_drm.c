@@ -611,9 +611,9 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       char buf[64];
       int n = snprintf(buf, sizeof(buf), DRM_DEV_NAME, DRM_DIR_NAME, 0);
       if (n != -1 && n < sizeof(buf))
-         fd = open(buf, O_RDWR);
+         fd = loader_open_device(buf);
       if (fd < 0)
-         fd = open("/dev/dri/card0", O_RDWR);
+         fd = loader_open_device("/dev/dri/card0");
       dri2_dpy->own_device = 1;
       gbm = gbm_create_device(fd);
       if (gbm == NULL)

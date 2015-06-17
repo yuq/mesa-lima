@@ -97,16 +97,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       if (asprintf(&card_path, DRM_RENDER_DEV_NAME, DRM_DIR_NAME, base + i) < 0)
          continue;
 
-#ifdef O_CLOEXEC
-      dri2_dpy->fd = open(card_path, O_RDWR | O_CLOEXEC);
-      if (dri2_dpy->fd < 0 && errno == EINVAL)
-#endif
-      {
-         dri2_dpy->fd = open(card_path, O_RDWR);
-         if (dri2_dpy->fd >= 0)
-            fcntl(dri2_dpy->fd, F_SETFD, fcntl(dri2_dpy->fd, F_GETFD) |
-               FD_CLOEXEC);
-      }
+      dri2_dpy->fd = loader_open_device(card_path);
 
       free(card_path);
       if (dri2_dpy->fd < 0)
