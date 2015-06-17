@@ -989,6 +989,22 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
+   case nir_op_inot:
+      emit(NOT(dst, op[0]));
+      break;
+
+   case nir_op_ixor:
+      emit(XOR(dst, op[0], op[1]));
+      break;
+
+   case nir_op_ior:
+      emit(OR(dst, op[0], op[1]));
+      break;
+
+   case nir_op_iand:
+      emit(AND(dst, op[0], op[1]));
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
