@@ -157,6 +157,7 @@ _mesa_initialize_window_framebuffer(struct gl_framebuffer *fb,
    fb->_Status = GL_FRAMEBUFFER_COMPLETE_EXT;
    fb->_AllColorBuffersFixedPoint = !visual->floatMode;
    fb->_HasSNormOrFloatColorBuffer = visual->floatMode;
+   fb->_HasAttachments = true;
 
    compute_depth_max(fb);
 }

@@ -957,6 +957,7 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
    fb->Height = 0;
    fb->_AllColorBuffersFixedPoint = GL_TRUE;
    fb->_HasSNormOrFloatColorBuffer = GL_FALSE;
+   fb->_HasAttachments = true;
 
    /* Start at -2 to more easily loop over all attachment points.
     *  -2: depth buffer

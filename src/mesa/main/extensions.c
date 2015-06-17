@@ -117,6 +117,7 @@ static const struct extension extension_table[] = {
    { "GL_ARB_fragment_program",                    o(ARB_fragment_program),                    GLL,            2002 },
    { "GL_ARB_fragment_program_shadow",             o(ARB_fragment_program_shadow),             GLL,            2003 },
    { "GL_ARB_fragment_shader",                     o(ARB_fragment_shader),                     GL,             2002 },
+   { "GL_ARB_framebuffer_no_attachments",          o(ARB_framebuffer_no_attachments),          GL,             2012 },
    { "GL_ARB_framebuffer_object",                  o(ARB_framebuffer_object),                  GL,             2005 },
    { "GL_ARB_framebuffer_sRGB",                    o(EXT_framebuffer_sRGB),                    GL,             1998 },
    { "GL_ARB_get_program_binary",                  o(dummy_true),                              GL,             2010 },
