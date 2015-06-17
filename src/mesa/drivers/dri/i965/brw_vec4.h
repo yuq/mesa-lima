@@ -294,8 +294,8 @@ public:
    vec4_instruction *emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                                  src_reg src0, src_reg src1);
 
-   void emit_lrp(const dst_reg &dst,
-                 const src_reg &x, const src_reg &y, const src_reg &a);
+   vec4_instruction *emit_lrp(const dst_reg &dst, const src_reg &x,
+                              const src_reg &y, const src_reg &a);
 
    /**
     * Copy any live channel from \p src to the first channel of the
