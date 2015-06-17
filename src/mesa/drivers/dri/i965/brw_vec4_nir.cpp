@@ -1181,6 +1181,18 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
+   case nir_op_ishl:
+      emit(SHL(dst, op[0], op[1]));
+      break;
+
+   case nir_op_ishr:
+      emit(ASR(dst, op[0], op[1]));
+      break;
+
+   case nir_op_ushr:
+      emit(SHR(dst, op[0], op[1]));
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
