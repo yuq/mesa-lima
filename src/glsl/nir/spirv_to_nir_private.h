@@ -65,6 +65,15 @@ struct vtn_function {
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
                                         const uint32_t *, unsigned);
 
+struct vtn_ssa_value {
+   union {
+      nir_ssa_def *def;
+      struct vtn_ssa_value **elems;
+   };
+
+   const struct glsl_type *type;
+};
+
 struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
@@ -77,7 +86,7 @@ struct vtn_value {
       nir_deref_var *deref;
       struct vtn_function *func;
       struct vtn_block *block;
-      nir_ssa_def *ssa;
+      struct vtn_ssa_value *ssa;
       vtn_instruction_handler ext_handler;
    };
 };
@@ -95,6 +104,14 @@ struct vtn_builder {
    nir_shader *shader;
    nir_function_impl *impl;
    struct vtn_block *block;
+
+   /*
+    * In SPIR-V, constants are global, whereas in NIR, the load_const
+    * instruction we use is per-function. So while we parse each function, we
+    * keep a hash table of constants we've resolved to nir_ssa_value's so
+    * far, and we lazily resolve them when we see them used in a function.
+    */
+   struct hash_table *const_table;
 
    unsigned value_id_bound;
    struct vtn_value *values;
@@ -134,7 +151,7 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
    return val;
 }
 
-nir_ssa_def *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
+struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
                                           struct vtn_value *,
