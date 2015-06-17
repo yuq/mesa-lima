@@ -1242,6 +1242,23 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
+   case nir_op_fabs:
+   case nir_op_iabs:
+   case nir_op_fneg:
+   case nir_op_ineg:
+   case nir_op_fsat:
+      unreachable("not reached: should be lowered by lower_source mods");
+
+   case nir_op_fdiv:
+      unreachable("not reached: should be lowered by DIV_TO_MUL_RCP in the compiler");
+
+   case nir_op_fmod:
+      unreachable("not reached: should be lowered by MOD_TO_FLOOR in the compiler");
+
+   case nir_op_fsub:
+   case nir_op_isub:
+      unreachable("not reached: should be handled by ir_sub_to_add_neg");
+
    default:
       unreachable("Unimplemented ALU operation");
    }
