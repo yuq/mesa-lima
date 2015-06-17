@@ -1086,6 +1086,68 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       emit_pack_snorm_4x8(dst, op[0]);
       break;
 
+   case nir_op_bitfield_reverse:
+      emit(BFREV(dst, op[0]));
+      break;
+
+   case nir_op_bit_count:
+      emit(CBIT(dst, op[0]));
+      break;
+
+   case nir_op_ufind_msb:
+   case nir_op_ifind_msb: {
+      src_reg temp = src_reg(this, glsl_type::uint_type);
+
+      inst = emit(FBH(dst_reg(temp), op[0]));
+      inst->dst.writemask = WRITEMASK_XYZW;
+
+      /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
+       * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
+       * subtract the result from 31 to convert the MSB count into an LSB count.
+       */
+
+      /* FBH only supports UD type for dst, so use a MOV to convert UD to D. */
+      temp.swizzle = BRW_SWIZZLE_NOOP;
+      emit(MOV(dst, temp));
+
+      src_reg src_tmp = src_reg(dst);
+      emit(CMP(dst_null_d(), src_tmp, src_reg(-1), BRW_CONDITIONAL_NZ));
+
+      src_tmp.negate = true;
+      inst = emit(ADD(dst, src_tmp, src_reg(31)));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      break;
+   }
+
+   case nir_op_find_lsb:
+      emit(FBL(dst, op[0]));
+      break;
+
+   case nir_op_ubitfield_extract:
+   case nir_op_ibitfield_extract:
+      op[0] = fix_3src_operand(op[0]);
+      op[1] = fix_3src_operand(op[1]);
+      op[2] = fix_3src_operand(op[2]);
+
+      emit(BFE(dst, op[2], op[1], op[0]));
+      break;
+
+   case nir_op_bfm:
+      emit(BFI1(dst, op[0], op[1]));
+      break;
+
+   case nir_op_bfi:
+      op[0] = fix_3src_operand(op[0]);
+      op[1] = fix_3src_operand(op[1]);
+      op[2] = fix_3src_operand(op[2]);
+
+      emit(BFI2(dst, op[0], op[1], op[2]));
+      break;
+
+   case nir_op_bitfield_insert:
+      unreachable("not reached: should be handled by "
+                  "lower_instructions::bitfield_insert_to_bfm_bfi");
+
    default:
       unreachable("Unimplemented ALU operation");
    }
