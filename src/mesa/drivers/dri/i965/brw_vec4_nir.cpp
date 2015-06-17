@@ -1207,6 +1207,12 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_bcsel:
+      emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
+      inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
