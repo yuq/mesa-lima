@@ -1042,6 +1042,50 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_fnoise4_4:
       unreachable("not reached: should be handled by lower_noise");
 
+   case nir_op_unpack_half_2x16_split_x:
+   case nir_op_unpack_half_2x16_split_y:
+   case nir_op_pack_half_2x16_split:
+      unreachable("not reached: should not occur in vertex shader");
+
+   case nir_op_unpack_snorm_2x16:
+   case nir_op_unpack_unorm_2x16:
+   case nir_op_pack_snorm_2x16:
+   case nir_op_pack_unorm_2x16:
+      unreachable("not reached: should be handled by lower_packing_builtins");
+
+   case nir_op_unpack_half_2x16:
+      /* As NIR does not guarantee that we have a correct swizzle outside the
+       * boundaries of a vector, and the implementation of emit_unpack_half_2x16
+       * uses the source operand in an operation with WRITEMASK_Y while our
+       * source operand has only size 1, it accessed incorrect data producing
+       * regressions in Piglit. We repeat the swizzle of the first component on the
+       * rest of components to avoid regressions. In the vec4_visitor IR code path
+       * this is not needed because the operand has already the correct swizzle.
+       */
+      op[0].swizzle = brw_compose_swizzle(BRW_SWIZZLE_XXXX, op[0].swizzle);
+      emit_unpack_half_2x16(dst, op[0]);
+      break;
+
+   case nir_op_pack_half_2x16:
+      emit_pack_half_2x16(dst, op[0]);
+      break;
+
+   case nir_op_unpack_unorm_4x8:
+      emit_unpack_unorm_4x8(dst, op[0]);
+      break;
+
+   case nir_op_pack_unorm_4x8:
+      emit_pack_unorm_4x8(dst, op[0]);
+      break;
+
+   case nir_op_unpack_snorm_4x8:
+      emit_unpack_snorm_4x8(dst, op[0]);
+      break;
+
+   case nir_op_pack_snorm_4x8:
+      emit_pack_snorm_4x8(dst, op[0]);
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
