@@ -1193,6 +1193,15 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       emit(SHR(dst, op[0], op[1]));
       break;
 
+   case nir_op_ffma:
+      op[0] = fix_3src_operand(op[0]);
+      op[1] = fix_3src_operand(op[1]);
+      op[2] = fix_3src_operand(op[2]);
+
+      inst = emit(MAD(dst, op[2], op[1], op[0]));
+      inst->saturate = instr->dest.saturate;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
