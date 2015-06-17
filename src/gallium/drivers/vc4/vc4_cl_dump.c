@@ -174,6 +174,37 @@ dump_VC4_PACKET_CLIPPER_Z_SCALING(void *cl, uint32_t offset, uint32_t hw_offset)
 }
 
 static void
+dump_VC4_PACKET_TILE_BINNING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        uint32_t *tile_alloc_addr = cl + offset;
+        uint32_t *tile_alloc_size = cl + offset + 4;
+        uint32_t *tile_state_addr = cl + offset + 8;
+        uint8_t *bin_x = cl + offset + 12;
+        uint8_t *bin_y = cl + offset + 13;
+        uint8_t *flags = cl + offset + 14;
+
+        fprintf(stderr, "0x%08x 0x%08x:       tile alloc addr 0x%08x\n",
+                offset, hw_offset,
+                *tile_alloc_addr);
+
+        fprintf(stderr, "0x%08x 0x%08x:       tile alloc size %db\n",
+                offset + 4, hw_offset + 4,
+                *tile_alloc_size);
+
+        fprintf(stderr, "0x%08x 0x%08x:       tile state addr 0x%08x\n",
+                offset + 8, hw_offset + 8,
+                *tile_state_addr);
+
+        fprintf(stderr, "0x%08x 0x%08x:       tiles (%d, %d)\n",
+                offset + 12, hw_offset + 12,
+                *bin_x, *bin_y);
+
+        fprintf(stderr, "0x%08x 0x%08x:       flags 0x%02x\n",
+                offset + 14, hw_offset + 14,
+                *flags);
+}
+
+static void
 dump_VC4_PACKET_TILE_RENDERING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t hw_offset)
 {
         uint32_t *render_offset = cl + offset;
@@ -311,7 +342,7 @@ static const struct packet_info {
         PACKET_DUMP(VC4_PACKET_CLIPPER_XY_SCALING, 9),
         PACKET_DUMP(VC4_PACKET_CLIPPER_Z_SCALING, 9),
 
-        PACKET(VC4_PACKET_TILE_BINNING_MODE_CONFIG, 16),
+        PACKET_DUMP(VC4_PACKET_TILE_BINNING_MODE_CONFIG, 16),
         PACKET_DUMP(VC4_PACKET_TILE_RENDERING_MODE_CONFIG, 11),
         PACKET(VC4_PACKET_CLEAR_COLORS, 14),
         PACKET_DUMP(VC4_PACKET_TILE_COORDINATES, 3),
