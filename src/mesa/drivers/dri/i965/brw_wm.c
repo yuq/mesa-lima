@@ -36,6 +36,7 @@
 #include "main/formats.h"
 #include "main/fbobject.h"
 #include "main/samplerobj.h"
+#include "main/framebuffer.h"
 #include "program/prog_parameter.h"
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
@@ -462,7 +463,7 @@ static void brw_wm_populate_key( struct brw_context *brw,
    GLuint lookup = 0;
    GLuint line_aa;
    bool program_uses_dfdy = fp->program.UsesDFdy;
-   bool multisample_fbo = ctx->DrawBuffer->Visual.samples > 1;
+   const bool multisample_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    memset(key, 0, sizeof(*key));
 
@@ -561,7 +562,7 @@ static void brw_wm_populate_key( struct brw_context *brw,
     * drawable height in order to invert the Y axis.
     */
    if (fp->program.Base.InputsRead & VARYING_BIT_POS) {
-      key->drawable_height = ctx->DrawBuffer->Height;
+      key->drawable_height = _mesa_geometric_height(ctx->DrawBuffer);
    }
 
    if ((fp->program.Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
@@ -580,7 +581,7 @@ static void brw_wm_populate_key( struct brw_context *brw,
    key->persample_shading =
       _mesa_get_min_invocations_per_fragment(ctx, &fp->program, true) > 1;
    if (key->persample_shading)
-      key->persample_2x = ctx->DrawBuffer->Visual.samples == 2;
+      key->persample_2x = _mesa_geometric_samples(ctx->DrawBuffer) == 2;
 
    key->compute_pos_offset =
       _mesa_get_min_invocations_per_fragment(ctx, &fp->program, false) > 1 &&

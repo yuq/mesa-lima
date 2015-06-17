@@ -27,6 +27,7 @@
 #include "brw_util.h"
 #include "main/macros.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "intel_batchbuffer.h"
 
 static void
@@ -109,7 +110,7 @@ upload_sf_state(struct brw_context *brw)
    float point_size;
    /* _NEW_BUFFERS */
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
-   bool multisampled_fbo = ctx->DrawBuffer->Visual.samples > 1;
+   const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    dw1 = GEN6_SF_STATISTICS_ENABLE;
 

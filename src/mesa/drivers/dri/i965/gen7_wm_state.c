@@ -30,6 +30,7 @@
 #include "program/program.h"
 #include "program/prog_parameter.h"
 #include "program/prog_statevars.h"
+#include "main/framebuffer.h"
 #include "intel_batchbuffer.h"
 
 static void
@@ -45,7 +46,7 @@ upload_wm_state(struct brw_context *brw)
    uint32_t dw1, dw2;
 
    /* _NEW_BUFFERS */
-   bool multisampled_fbo = ctx->DrawBuffer->Visual.samples > 1;
+   const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    dw1 = dw2 = 0;
    dw1 |= GEN7_WM_STATISTICS_ENABLE;

@@ -35,6 +35,7 @@
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
 #include "program/prog_parameter.h"
+#include "main/framebuffer.h"
 
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"
@@ -738,6 +739,9 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
                                  uint32_t *surf_offset)
 {
    GLuint i;
+   const unsigned int w = _mesa_geometric_width(fb);
+   const unsigned int h = _mesa_geometric_height(fb);
+   const unsigned int s = _mesa_geometric_samples(fb);
 
    /* Update surfaces for drawing buffers */
    if (fb->_NumColorDrawBuffers >= 1) {
@@ -748,17 +752,15 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
             surf_offset[surf_index] = 
                brw->vtbl.update_renderbuffer_surface(
                   brw, fb->_ColorDrawBuffers[i],
-                  fb->MaxNumLayers > 0, i, surf_index);
+                  _mesa_geometric_layers(fb) > 0, i, surf_index);
 	 } else {
-            brw->vtbl.emit_null_surface_state(
-               brw, fb->Width, fb->Height, fb->Visual.samples,
+            brw->vtbl.emit_null_surface_state(brw, w, h, s,
                &surf_offset[surf_index]);
 	 }
       }
    } else {
       const uint32_t surf_index = render_target_start;
-      brw->vtbl.emit_null_surface_state(
-         brw, fb->Width, fb->Height, fb->Visual.samples,
+      brw->vtbl.emit_null_surface_state(brw, w, h, s,
          &surf_offset[surf_index]);
    }
 }

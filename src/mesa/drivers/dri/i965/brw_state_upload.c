@@ -41,6 +41,7 @@
 #include "brw_gs.h"
 #include "brw_wm.h"
 #include "brw_cs.h"
+#include "main/framebuffer.h"
 
 static const struct brw_tracked_state *gen4_atoms[] =
 {
@@ -660,6 +661,7 @@ brw_upload_pipeline_state(struct brw_context *brw,
    int i;
    static int dirty_count = 0;
    struct brw_state_flags state = brw->state.pipelines[pipeline];
+   unsigned int fb_samples = _mesa_geometric_samples(ctx->DrawBuffer);
 
    brw_select_pipeline(brw, pipeline);
 
@@ -696,8 +698,8 @@ brw_upload_pipeline_state(struct brw_context *brw,
       brw->ctx.NewDriverState |= BRW_NEW_META_IN_PROGRESS;
    }
 
-   if (brw->num_samples != ctx->DrawBuffer->Visual.samples) {
-      brw->num_samples = ctx->DrawBuffer->Visual.samples;
+   if (brw->num_samples != fb_samples) {
+      brw->num_samples = fb_samples;
       brw->ctx.NewDriverState |= BRW_NEW_NUM_SAMPLES;
    }
 

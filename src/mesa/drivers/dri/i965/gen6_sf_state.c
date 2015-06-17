@@ -31,6 +31,7 @@
 #include "brw_util.h"
 #include "main/macros.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "intel_batchbuffer.h"
 
 /**
@@ -273,7 +274,7 @@ upload_sf_state(struct brw_context *brw)
    int i;
    /* _NEW_BUFFER */
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
-   bool multisampled_fbo = ctx->DrawBuffer->Visual.samples > 1;
+   const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
    const int urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
    float point_size;
