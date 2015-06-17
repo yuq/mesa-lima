@@ -632,7 +632,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    if (fd < 0) {
-      fd = dup(gbm_device_get_fd(gbm));
+      fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
       if (fd < 0) {
          free(dri2_dpy);
          return EGL_FALSE;
