@@ -1117,6 +1117,7 @@ struct brw_context
    bool is_baytrail;
    bool is_haswell;
    bool is_cherryview;
+   bool is_broxton;
 
    bool has_hiz;
    bool has_separate_stencil;
