@@ -955,6 +955,40 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
+   case nir_op_bany_fnequal2:
+   case nir_op_bany_inequal2:
+   case nir_op_bany_fnequal3:
+   case nir_op_bany_inequal3:
+   case nir_op_bany_fnequal4:
+   case nir_op_bany_inequal4: {
+      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
+
+      switch (instr->op) {
+      case nir_op_bany_fnequal2:
+      case nir_op_bany_inequal2:
+         tmp.writemask = WRITEMASK_XY;
+         break;
+      case nir_op_bany_fnequal3:
+      case nir_op_bany_inequal3:
+         tmp.writemask = WRITEMASK_XYZ;
+         break;
+      case nir_op_bany_fnequal4:
+      case nir_op_bany_inequal4:
+         tmp.writemask = WRITEMASK_XYZW;
+         break;
+      default:
+         unreachable("not reached");
+      }
+
+      emit(CMP(tmp, op[0], op[1],
+               brw_conditional_for_nir_comparison(instr->op)));
+
+      emit(MOV(dst, src_reg(0)));
+      inst = emit(MOV(dst, src_reg(~0)));
+      inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
+      break;
+   }
+
    default:
       unreachable("Unimplemented ALU operation");
    }
