@@ -184,8 +184,6 @@ vc4_context_destroy(struct pipe_context *pctx)
 
         pipe_surface_reference(&vc4->framebuffer.cbufs[0], NULL);
         pipe_surface_reference(&vc4->framebuffer.zsbuf, NULL);
-        vc4_bo_unreference(&vc4->tile_alloc);
-        vc4_bo_unreference(&vc4->tile_state);
 
         vc4_program_fini(pctx);
 

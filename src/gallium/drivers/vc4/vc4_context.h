@@ -208,9 +208,6 @@ struct vc4_context {
         uint32_t draw_height;
         /** @} */
 
-        struct vc4_bo *tile_alloc;
-        struct vc4_bo *tile_state;
-
         struct util_slab_mempool transfer_pool;
         struct blitter_context *blitter;
 

@@ -45,6 +45,7 @@ vc4_wrap_bo_with_cma(struct drm_device *dev, struct vc4_bo *bo)
 
         drm_bo->bo = bo;
         obj->base.size = size;
+        obj->base.dev = dev;
         obj->vaddr = screen->simulator_mem_base + dev->simulator_mem_next;
         obj->paddr = simpenrose_hw_addr(obj->vaddr);
 

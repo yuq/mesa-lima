@@ -28,8 +28,6 @@
 
 enum vc4_bo_mode {
 	VC4_MODE_UNDECIDED,
-	VC4_MODE_TILE_ALLOC,
-	VC4_MODE_TSDA,
 	VC4_MODE_RENDER,
 	VC4_MODE_SHADER,
 };
@@ -91,7 +89,8 @@ struct vc4_exec_info {
 	bool found_start_tile_binning_packet;
 	bool found_increment_semaphore_packet;
 	uint8_t bin_tiles_x, bin_tiles_y;
-	struct drm_gem_cma_object *tile_alloc_bo;
+	struct drm_gem_cma_object *tile_bo;
+	uint32_t tile_alloc_offset;
 
 	/**
 	 * Computed addresses pointing into exec_bo where we start the
