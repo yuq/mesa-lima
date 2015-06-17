@@ -1213,6 +1213,21 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->predicate = BRW_PREDICATE_NORMAL;
       break;
 
+   case nir_op_fdot2:
+      inst = emit(BRW_OPCODE_DP2, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fdot3:
+      inst = emit(BRW_OPCODE_DP3, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
+   case nir_op_fdot4:
+      inst = emit(BRW_OPCODE_DP4, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
