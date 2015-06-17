@@ -1267,7 +1267,20 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 void
 vec4_visitor::nir_emit_jump(nir_jump_instr *instr)
 {
-   /* @TODO: Not yet implemented */
+   switch (instr->type) {
+   case nir_jump_break:
+      emit(BRW_OPCODE_BREAK);
+      break;
+
+   case nir_jump_continue:
+      emit(BRW_OPCODE_CONTINUE);
+      break;
+
+   case nir_jump_return:
+      /* fall through */
+   default:
+      unreachable("unknown jump");
+   }
 }
 
 void
