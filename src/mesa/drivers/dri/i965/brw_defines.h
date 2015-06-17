@@ -2495,8 +2495,8 @@ enum brw_wm_barycentric_interp_mode {
  * cache settings.  We still use only either write-back or write-through; and
  * rely on the documented default values.
  */
-#define SKL_MOCS_WB 9
-#define SKL_MOCS_WT 5
+#define SKL_MOCS_WB (0b001001 << 1)
+#define SKL_MOCS_WT (0b000101 << 1)
 
 #define MEDIA_VFE_STATE                         0x7000
 /* GEN7 DW2, GEN8+ DW3 */
