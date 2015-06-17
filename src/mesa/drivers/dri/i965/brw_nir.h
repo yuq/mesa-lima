@@ -83,6 +83,8 @@ nir_shader *brw_create_nir(struct brw_context *brw,
 
 enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
 
+enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
+
 #ifdef __cplusplus
 }
 #endif
