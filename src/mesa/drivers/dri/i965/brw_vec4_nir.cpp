@@ -1148,6 +1148,39 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       unreachable("not reached: should be handled by "
                   "lower_instructions::bitfield_insert_to_bfm_bfi");
 
+   case nir_op_fsign:
+      /* AND(val, 0x80000000) gives the sign bit.
+       *
+       * Predicated OR ORs 1.0 (0x3f800000) with the sign bit if val is not
+       * zero.
+       */
+      emit(CMP(dst_null_f(), op[0], src_reg(0.0f), BRW_CONDITIONAL_NZ));
+
+      op[0].type = BRW_REGISTER_TYPE_UD;
+      dst.type = BRW_REGISTER_TYPE_UD;
+      emit(AND(dst, op[0], src_reg(0x80000000u)));
+
+      inst = emit(OR(dst, src_reg(dst), src_reg(0x3f800000u)));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      dst.type = BRW_REGISTER_TYPE_F;
+
+      if (instr->dest.saturate) {
+         inst = emit(MOV(dst, src_reg(dst)));
+         inst->saturate = true;
+      }
+      break;
+
+   case nir_op_isign:
+      /*  ASR(val, 31) -> negative val generates 0xffffffff (signed -1).
+       *               -> non-negative val generates 0x00000000.
+       *  Predicated OR sets 1 if val is positive.
+       */
+      emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_G));
+      emit(ASR(dst, op[0], src_reg(31)));
+      inst = emit(OR(dst, src_reg(dst), src_reg(1)));
+      inst->predicate = BRW_PREDICATE_NORMAL;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
