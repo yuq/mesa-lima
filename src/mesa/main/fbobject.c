@@ -1156,14 +1156,48 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
       } else if (att_layer_count > max_layer_count) {
          max_layer_count = att_layer_count;
       }
+
+      /*
+       * The extension GL_ARB_framebuffer_no_attachments places additional
+       * requirement on each attachment. Those additional requirements are
+       * tighter that those of previous versions of GL. In interest of better
+       * compatibility, we will not enforce these restrictions. For the record
+       * those additional restrictions are quoted below:
+       *
+       * "The width and height of image are greater than zero and less than or
+       *  equal to the values of the implementation-dependent limits
+       *  MAX_FRAMEBUFFER_WIDTH and MAX_FRAMEBUFFER_HEIGHT, respectively."
+       *
+       * "If <image> is a three-dimensional texture or a one- or two-dimensional
+       *  array texture and the attachment is layered, the depth or layer count
+       *  of the texture is less than or equal to the implementation-dependent
+       *  limit MAX_FRAMEBUFFER_LAYERS."
+       *
+       * "If image has multiple samples, its sample count is less than or equal
+       *  to the value of the implementation-dependent limit
+       *  MAX_FRAMEBUFFER_SAMPLES."
+       *
+       * The same requirements are also in place for GL 4.5,
+       * Section 9.4.1 "Framebuffer Attachment Completeness", pg 310-311
+       */
    }
 
    fb->MaxNumLayers = max_layer_count;
 
    if (numImages == 0) {
-      fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT;
-      fbo_incomplete(ctx, "no attachments", -1);
-      return;
+      fb->_HasAttachments = false;
+
+      if (!ctx->Extensions.ARB_framebuffer_no_attachments) {
+         fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT;
+         fbo_incomplete(ctx, "no attachments", -1);
+         return;
+      }
+
+      if (fb->DefaultGeometry.Width == 0 || fb->DefaultGeometry.Height == 0) {
+         fb->_Status = GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT_EXT;
+         fbo_incomplete(ctx, "no attachments and default width or height is 0", -1);
+         return;
+      }
    }
 
    if (_mesa_is_desktop_gl(ctx) && !ctx->Extensions.ARB_ES2_compatibility) {
@@ -1228,8 +1262,10 @@ _mesa_test_framebuffer_completeness(struct gl_context *ctx,
        * renderbuffers/textures are different sizes, the framebuffer
        * width/height will be set to the smallest width/height.
        */
-      fb->Width = minWidth;
-      fb->Height = minHeight;
+      if (numImages != 0) {
+         fb->Width = minWidth;
+         fb->Height = minHeight;
+      }
 
       /* finally, update the visual info for the framebuffer */
       _mesa_update_framebuffer_visual(ctx, fb);
@@ -1335,32 +1371,129 @@ _mesa_BindRenderbufferEXT(GLenum target, GLuint renderbuffer)
    bind_renderbuffer(target, renderbuffer, true);
 }
 
+static void
+framebuffer_parameteri(struct gl_context *ctx, struct gl_framebuffer *fb,
+                       GLenum pname, GLint param, const char *func)
+{
+   switch (pname) {
+   case GL_FRAMEBUFFER_DEFAULT_WIDTH:
+      if (param < 0 || param > ctx->Const.MaxFramebufferWidth)
+        _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
+      else
+         fb->DefaultGeometry.Width = param;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_HEIGHT:
+      if (param < 0 || param > ctx->Const.MaxFramebufferHeight)
+        _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
+      else
+         fb->DefaultGeometry.Height = param;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_LAYERS:
+      if (param < 0 || param > ctx->Const.MaxFramebufferLayers)
+        _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
+      else
+         fb->DefaultGeometry.Layers = param;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_SAMPLES:
+      if (param < 0 || param > ctx->Const.MaxFramebufferSamples)
+        _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
+      else
+        fb->DefaultGeometry.NumSamples = param;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS:
+      fb->DefaultGeometry.FixedSampleLocations = param;
+      break;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "%s(pname=0x%x)", func, pname);
+   }
+}
+
 void GLAPIENTRY
 _mesa_FramebufferParameteri(GLenum target, GLenum pname, GLint param)
 {
    GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
 
-   (void) target;
-   (void) pname;
-   (void) param;
+   if (!ctx->Extensions.ARB_framebuffer_no_attachments) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glFramebufferParameteriv not supported "
+                  "(ARB_framebuffer_no_attachments not implemented)");
+      return;
+   }
 
-   _mesa_error(ctx, GL_INVALID_OPERATION,
-               "glFramebufferParameteri not supported "
-               "(ARB_framebuffer_no_attachments not implemented)");
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glFramebufferParameteri(target=0x%x)", target);
+      return;
+   }
+
+   /* check framebuffer binding */
+   if (_mesa_is_winsys_fbo(fb)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glFramebufferParameteri");
+      return;
+   }
+
+   framebuffer_parameteri(ctx, fb, pname, param, "glFramebufferParameteri");
+}
+
+static void
+get_framebuffer_parameteriv(struct gl_context *ctx, struct gl_framebuffer *fb,
+                            GLenum pname, GLint *params, const char *func)
+{
+   switch (pname) {
+   case GL_FRAMEBUFFER_DEFAULT_WIDTH:
+      *params = fb->DefaultGeometry.Width;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_HEIGHT:
+      *params = fb->DefaultGeometry.Height;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_LAYERS:
+      *params = fb->DefaultGeometry.Layers;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_SAMPLES:
+      *params = fb->DefaultGeometry.NumSamples;
+      break;
+   case GL_FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS:
+      *params = fb->DefaultGeometry.FixedSampleLocations;
+      break;
+   default:
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "%s(pname=0x%x)", func, pname);
+   }
 }
 
 void GLAPIENTRY
 _mesa_GetFramebufferParameteriv(GLenum target, GLenum pname, GLint *params)
 {
    GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
 
-   (void) target;
-   (void) pname;
-   (void) param;
+   if (!ctx->Extensions.ARB_framebuffer_no_attachments) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glGetFramebufferParameteriv not supported "
+                  "(ARB_framebuffer_no_attachments not implemented)");
+      return;
+   }
 
-   _mesa_error(ctx, GL_INVALID_OPERATION,
-               "glGetFramebufferParameteriv not supported "
-               "(ARB_framebuffer_no_attachments not implemented)");
+   fb = get_framebuffer_target(ctx, target);
+   if (!fb) {
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "glGetFramebufferParameteriv(target=0x%x)", target);
+      return;
+   }
+
+   /* check framebuffer binding */
+   if (_mesa_is_winsys_fbo(fb)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glGetFramebufferParameteriv");
+      return;
+   }
+
+   get_framebuffer_parameteriv(ctx, fb, pname, params,
+                               "glGetFramebufferParameteriv");
 }
 
 
@@ -3704,14 +3837,22 @@ _mesa_NamedFramebufferParameteri(GLuint framebuffer, GLenum pname,
                                  GLint param)
 {
    GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb = NULL;
 
-   (void) framebuffer;
-   (void) pname;
-   (void) param;
+   if (!ctx->Extensions.ARB_framebuffer_no_attachments) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glNamedFramebufferParameteri("
+                  "ARB_framebuffer_no_attachments not implemented)");
+      return;
+   }
 
-   _mesa_error(ctx, GL_INVALID_OPERATION,
-               "glNamedFramebufferParameteri not supported "
-               "(ARB_framebuffer_no_attachments not implemented)");
+   fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                     "glNamedFramebufferParameteri");
+
+   if (fb) {
+      framebuffer_parameteri(ctx, fb, pname, param,
+                             "glNamedFramebufferParameteriv");
+   }
 }
 
 
@@ -3720,14 +3861,26 @@ _mesa_GetNamedFramebufferParameteriv(GLuint framebuffer, GLenum pname,
                                      GLint *param)
 {
    GET_CURRENT_CONTEXT(ctx);
+   struct gl_framebuffer *fb;
 
-   (void) framebuffer;
-   (void) pname;
-   (void) param;
+   if (!ctx->Extensions.ARB_framebuffer_no_attachments) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "glNamedFramebufferParameteriv("
+                  "ARB_framebuffer_no_attachments not implemented)");
+      return;
+   }
 
-   _mesa_error(ctx, GL_INVALID_OPERATION,
-               "glGetNamedFramebufferParameteriv not supported "
-               "(ARB_framebuffer_no_attachments not implemented)");
+   if (framebuffer) {
+      fb = _mesa_lookup_framebuffer_err(ctx, framebuffer,
+                                        "glGetNamedFramebufferParameteriv");
+   } else {
+      fb = ctx->WinSysDrawBuffer;
+   }
+
+   if (fb) {
+      get_framebuffer_parameteriv(ctx, fb, pname, param,
+                                  "glGetNamedFramebufferParameteriv");
+   }
 }
 
 
