@@ -1202,6 +1202,11 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_flrp:
+      inst = emit_lrp(dst, op[0], op[1], op[2]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
    default:
       unreachable("Unimplemented ALU operation");
    }
