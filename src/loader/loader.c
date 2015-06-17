@@ -314,8 +314,8 @@ get_id_path_tag_from_fd(struct udev *udev, int fd)
    return id_path_tag;
 }
 
-static int
-drm_open_device(const char *device_name)
+int
+loader_open_device(const char *device_name)
 {
    int fd;
 #ifdef O_CLOEXEC
@@ -404,7 +404,7 @@ int loader_get_user_preferred_fd(int default_fd, int *different_device)
       goto default_device_clean;
    }
 
-   fd = drm_open_device(device_name);
+   fd = loader_open_device(device_name);
    if (fd >= 0) {
       close(default_fd);
    } else {
