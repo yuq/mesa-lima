@@ -804,6 +804,12 @@ descriptor=[
   [ "MIN_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MinFragmentInterpolationOffset), extra_ARB_gpu_shader5" ],
   [ "MAX_FRAGMENT_INTERPOLATION_OFFSET", "CONTEXT_FLOAT(Const.MaxFragmentInterpolationOffset), extra_ARB_gpu_shader5" ],
   [ "FRAGMENT_INTERPOLATION_OFFSET_BITS", "CONST(FRAGMENT_INTERPOLATION_OFFSET_BITS), extra_ARB_gpu_shader5" ],
+
+# GL_ARB_framebuffer_no_attachments
+  ["MAX_FRAMEBUFFER_WIDTH", "CONTEXT_INT(Const.MaxFramebufferWidth), extra_ARB_framebuffer_no_attachments"],
+  ["MAX_FRAMEBUFFER_HEIGHT", "CONTEXT_INT(Const.MaxFramebufferHeight), extra_ARB_framebuffer_no_attachments"],
+  ["MAX_FRAMEBUFFER_LAYERS", "CONTEXT_INT(Const.MaxFramebufferLayers), extra_ARB_framebuffer_no_attachments"],
+  ["MAX_FRAMEBUFFER_SAMPLES", "CONTEXT_INT(Const.MaxFramebufferSamples), extra_ARB_framebuffer_no_attachments"],
 ]},
 
 # Enums restricted to OpenGL Core profile

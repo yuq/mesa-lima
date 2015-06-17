@@ -1335,6 +1335,34 @@ _mesa_BindRenderbufferEXT(GLenum target, GLuint renderbuffer)
    bind_renderbuffer(target, renderbuffer, true);
 }
 
+void GLAPIENTRY
+_mesa_FramebufferParameteri(GLenum target, GLenum pname, GLint param)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   (void) target;
+   (void) pname;
+   (void) param;
+
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glFramebufferParameteri not supported "
+               "(ARB_framebuffer_no_attachments not implemented)");
+}
+
+void GLAPIENTRY
+_mesa_GetFramebufferParameteriv(GLenum target, GLenum pname, GLint *params)
+{
+   GET_CURRENT_CONTEXT(ctx);
+
+   (void) target;
+   (void) pname;
+   (void) param;
+
+   _mesa_error(ctx, GL_INVALID_OPERATION,
+               "glGetFramebufferParameteriv not supported "
+               "(ARB_framebuffer_no_attachments not implemented)");
+}
+
 
 /**
  * Remove the specified renderbuffer or texture from any attachment point in

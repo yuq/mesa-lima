@@ -8188,7 +8188,9 @@
     <!-- No new functions, types, enums. -->
 </category>
 
-<!-- ARB extensions #130..#131 -->
+<xi:include href="ARB_framebuffer_no_attachments.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
+
+<!-- ARB extensions #131 -->
 
 <category name="GL_ARB_explicit_uniform_location" number="128">
     <enum name="MAX_UNIFORM_LOCATIONS" count="1" value="0x826E" >

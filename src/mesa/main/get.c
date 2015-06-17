@@ -400,6 +400,7 @@ EXTRA_EXT(INTEL_performance_query);
 EXTRA_EXT(ARB_explicit_uniform_location);
 EXTRA_EXT(ARB_clip_control);
 EXTRA_EXT(EXT_polygon_offset_clamp);
+EXTRA_EXT(ARB_framebuffer_no_attachments);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {

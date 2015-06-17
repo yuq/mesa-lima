@@ -131,6 +131,7 @@ API_XML = \
 	ARB_draw_instanced.xml \
 	ARB_ES2_compatibility.xml \
 	ARB_ES3_compatibility.xml \
+	ARB_framebuffer_no_attachments.xml \
 	ARB_framebuffer_object.xml \
 	ARB_geometry_shader4.xml \
 	ARB_get_program_binary.xml \

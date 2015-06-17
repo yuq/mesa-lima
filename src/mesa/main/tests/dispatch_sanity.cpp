@@ -823,8 +823,8 @@ const struct function common_desktop_functions_possible[] = {
 // { "glVertexArrayVertexAttribIFormatEXT", 43, -1 },   // XXX: Add to xml
 // { "glVertexArrayVertexAttribBindingEXT", 43, -1 },   // XXX: Add to xml
 // { "glVertexArrayVertexBindingDivisorEXT", 43, -1 },  // XXX: Add to xml
-// { "glFramebufferParameteri", 43, -1 },               // XXX: Add to xml
-// { "glGetFramebufferParameteriv", 43, -1 },           // XXX: Add to xml
+   { "glFramebufferParameteri", 43, -1 },
+   { "glGetFramebufferParameteriv", 43, -1 },
 // { "glNamedFramebufferParameteriEXT", 43, -1 },       // XXX: Add to xml
 // { "glGetNamedFramebufferParameterivEXT", 43, -1 },   // XXX: Add to xml
 // { "glGetInternalformati64v", 43, -1 },               // XXX: Add to xml
