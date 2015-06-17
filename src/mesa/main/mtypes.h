@@ -4448,7 +4448,12 @@ enum _debug
    DEBUG_INCOMPLETE_FBO         = (1 << 3)
 };
 
-
+static inline bool
+_mesa_active_fragment_shader_has_atomic_ops(const struct gl_context *ctx)
+{
+   return ctx->Shader._CurrentFragmentProgram != NULL &&
+      ctx->Shader._CurrentFragmentProgram->NumAtomicBuffers > 0;
+}
 
 #ifdef __cplusplus
 }
