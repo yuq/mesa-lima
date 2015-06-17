@@ -614,6 +614,12 @@ brw_initialize_context_constants(struct brw_context *brw)
    /* ARB_gpu_shader5 */
    if (brw->gen >= 7)
       ctx->Const.MaxVertexStreams = MIN2(4, MAX_VERTEX_STREAMS);
+
+   /* ARB_framebuffer_no_attachments */
+   ctx->Const.MaxFramebufferWidth = ctx->Const.MaxViewportWidth;
+   ctx->Const.MaxFramebufferHeight = ctx->Const.MaxViewportHeight;
+   ctx->Const.MaxFramebufferLayers = ctx->Const.MaxArrayTextureLayers;
+   ctx->Const.MaxFramebufferSamples = max_samples;
 }
 
 static void
