@@ -3174,7 +3174,13 @@ struct gl_framebuffer
     * GL_ARB_framebuffer_no_attachments must check for the flag _HasAttachments
     * and if GL_FALSE, must then use the values in DefaultGeometry to initialize
     * its viewport, scissor and so on (in particular _Xmin, _Xmax, _Ymin and
-    * _Ymax do NOT take into account _HasAttachments being false)
+    * _Ymax do NOT take into account _HasAttachments being false). To get the
+    * geometry of the framebuffer, the  helper functions
+    *   _mesa_geometric_width(),
+    *   _mesa_geometric_height(),
+    *   _mesa_geometric_samples() and
+    *   _mesa_geometric_layers()
+    * are available that check _HasAttachments.
     */
    bool _HasAttachments;
 
