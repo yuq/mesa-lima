@@ -75,6 +75,9 @@ extern void
 _mesa_scissor_bounding_box(const struct gl_context *ctx,
                            const struct gl_framebuffer *buffer,
                            unsigned idx, int *bbox);
+extern void
+_mesa_intersect_scissor_bounding_box(const struct gl_context *ctx,
+                                     unsigned idx, int *bbox);
 
 static inline GLuint
 _mesa_geometric_width(const struct gl_framebuffer *buffer)
