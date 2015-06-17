@@ -1024,6 +1024,24 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       emit(CMP(dst, op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       break;
 
+   case nir_op_fnoise1_1:
+   case nir_op_fnoise1_2:
+   case nir_op_fnoise1_3:
+   case nir_op_fnoise1_4:
+   case nir_op_fnoise2_1:
+   case nir_op_fnoise2_2:
+   case nir_op_fnoise2_3:
+   case nir_op_fnoise2_4:
+   case nir_op_fnoise3_1:
+   case nir_op_fnoise3_2:
+   case nir_op_fnoise3_3:
+   case nir_op_fnoise3_4:
+   case nir_op_fnoise4_1:
+   case nir_op_fnoise4_2:
+   case nir_op_fnoise4_3:
+   case nir_op_fnoise4_4:
+      unreachable("not reached: should be handled by lower_noise");
+
    default:
       unreachable("Unimplemented ALU operation");
    }
