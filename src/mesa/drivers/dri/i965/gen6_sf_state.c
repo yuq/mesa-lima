@@ -60,6 +60,23 @@ get_attr_override(const struct brw_vue_map *vue_map, int urb_entry_read_offset,
    /* Find the VUE slot for this attribute. */
    int slot = vue_map->varying_to_slot[fs_attr];
 
+   /* Viewport and Layer are stored in the VUE header.  We need to override
+    * them to zero if earlier stages didn't write them, as GL requires that
+    * they read back as zero when not explicitly set.
+    */
+   if (fs_attr == VARYING_SLOT_VIEWPORT || fs_attr == VARYING_SLOT_LAYER) {
+      unsigned override =
+         ATTRIBUTE_0_OVERRIDE_X | ATTRIBUTE_0_OVERRIDE_W |
+         ATTRIBUTE_CONST_0000 << ATTRIBUTE_0_CONST_SOURCE_SHIFT;
+
+      if (!(vue_map->slots_valid & VARYING_BIT_LAYER))
+         override |= ATTRIBUTE_0_OVERRIDE_Y;
+      if (!(vue_map->slots_valid & VARYING_BIT_VIEWPORT))
+         override |= ATTRIBUTE_0_OVERRIDE_Z;
+
+      return override;
+   }
+
    /* If there was only a back color written but not front, use back
     * as the color instead of undefined
     */
@@ -168,6 +185,20 @@ calculate_attr_overrides(const struct brw_context *brw,
    *flat_enables = 0;
 
    *urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
+
+   /* BRW_NEW_FRAGMENT_PROGRAM
+    *
+    * If the fragment shader reads VARYING_SLOT_LAYER, then we need to pass in
+    * the full vertex header.  Otherwise, we can program the SF to start
+    * reading at an offset of 1 (2 varying slots) to skip unnecessary data:
+    * - VARYING_SLOT_PSIZ and BRW_VARYING_SLOT_NDC on gen4-5
+    * - VARYING_SLOT_{PSIZ,LAYER} and VARYING_SLOT_POS on gen6+
+    */
+
+   bool fs_needs_vue_header = brw->fragment_program->Base.InputsRead &
+      (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
+
+   *urb_entry_read_offset = fs_needs_vue_header ? 0 : 1;
 
    /* _NEW_LIGHT */
    bool shade_model_flat = brw->ctx.Light.ShadeModel == GL_FLAT;

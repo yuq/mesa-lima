@@ -71,6 +71,14 @@ fs_visitor::nir_setup_inputs()
                                              var->data.origin_upper_left);
          emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
                                    input, reg), 0xF);
+      } else if (var->data.location == VARYING_SLOT_LAYER) {
+         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_LAYER, 1), 3);
+         reg.type = BRW_REGISTER_TYPE_D;
+         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
+      } else if (var->data.location == VARYING_SLOT_VIEWPORT) {
+         struct brw_reg reg = suboffset(interp_reg(VARYING_SLOT_VIEWPORT, 2), 3);
+         reg.type = BRW_REGISTER_TYPE_D;
+         bld.emit(FS_OPCODE_CINTERP, retype(input, BRW_REGISTER_TYPE_D), reg);
       } else {
          emit_general_interpolation(input, var->name, var->type,
                                     (glsl_interp_qualifier) var->data.interpolation,

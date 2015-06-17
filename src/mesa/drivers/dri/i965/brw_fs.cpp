@@ -1442,6 +1442,9 @@ fs_visitor::calculate_urb_setup()
             }
          }
       } else {
+         bool include_vue_header =
+            nir->info.inputs_read & (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
+
          /* We have enough input varyings that the SF/SBE pipeline stage can't
           * arbitrarily rearrange them to suit our whim; we have to put them
           * in an order that matches the output of the previous pipeline stage
@@ -1451,7 +1454,9 @@ fs_visitor::calculate_urb_setup()
          brw_compute_vue_map(devinfo, &prev_stage_vue_map,
                              key->input_slots_valid,
                              nir->info.separate_shader);
-         int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
+         int first_slot =
+            include_vue_header ? 0 : 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
+
          assert(prev_stage_vue_map.num_slots <= first_slot + 32);
          for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
               slot++) {
