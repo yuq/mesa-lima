@@ -1856,7 +1856,7 @@ struct GEN75_3DSTATE_DS {
    uint32_t                                     AccessesUAV;
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
-   __gen_address_type                           ScratchSpaceBasePointer;
+   uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     PatchURBEntryReadLength;
@@ -1898,13 +1898,10 @@ GEN75_3DSTATE_DS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint32_t dw3 =
+   dw[3] =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->ScratchSpaceBasePointer, dw3);
 
    dw[4] =
       __gen_field(values->DispatchGRFStartRegisterForURBData, 20, 24) |
@@ -2261,7 +2258,7 @@ struct GEN75_3DSTATE_GS {
    uint32_t                                     GSaccessesUAV;
    uint32_t                                     MaskStackExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
-   __gen_address_type                           ScratchSpaceBasePointer;
+   uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     OutputVertexSize;
    uint32_t                                     OutputTopology;
@@ -2323,13 +2320,10 @@ GEN75_3DSTATE_GS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint32_t dw3 =
+   dw[3] =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->ScratchSpaceBasePointer, dw3);
 
    dw[4] =
       __gen_field(values->OutputVertexSize, 23, 28) |
@@ -2446,7 +2440,7 @@ struct GEN75_3DSTATE_HS {
    uint32_t                                     StatisticsEnable;
    uint32_t                                     InstanceCount;
    uint32_t                                     KernelStartPointer;
-   __gen_address_type                           ScratchSpaceBasePointer;
+   uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     SingleProgramFlow;
 #define     Dmask                                              0
@@ -2494,13 +2488,10 @@ GEN75_3DSTATE_HS_pack(__gen_user_data *data, void * restrict dst,
       __gen_offset(values->KernelStartPointer, 6, 31) |
       0;
 
-   uint32_t dw4 =
+   dw[4] =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[4] =
-      __gen_combine_address(data, &dw[4], values->ScratchSpaceBasePointer, dw4);
 
    dw[5] =
       __gen_field(values->SingleProgramFlow, 27, 27) |
@@ -2869,7 +2860,7 @@ struct GEN75_3DSTATE_PS {
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     MaskStackExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
-   __gen_address_type                           ScratchSpaceBasePointer;
+   uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     MaximumNumberofThreads;
    uint32_t                                     SampleMask;
@@ -2926,13 +2917,10 @@ GEN75_3DSTATE_PS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint32_t dw3 =
+   dw[3] =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->ScratchSpaceBasePointer, dw3);
 
    dw[4] =
       __gen_field(values->MaximumNumberofThreads, 23, 31) |
@@ -4741,7 +4729,7 @@ struct GEN75_3DSTATE_VS {
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     VSaccessesUAV;
    uint32_t                                     SoftwareExceptionEnable;
-   __gen_address_type                           ScratchSpaceBaseOffset;
+   uint32_t                                     ScratchSpaceBaseOffset;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterforURBData;
    uint32_t                                     VertexURBEntryReadLength;
@@ -4782,13 +4770,10 @@ GEN75_3DSTATE_VS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint32_t dw3 =
+   dw[3] =
       __gen_offset(values->ScratchSpaceBaseOffset, 10, 31) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->ScratchSpaceBaseOffset, dw3);
 
    dw[4] =
       __gen_field(values->DispatchGRFStartRegisterforURBData, 20, 24) |
@@ -5532,7 +5517,7 @@ struct GEN75_MEDIA_VFE_STATE {
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
-   __gen_address_type                           ScratchSpaceBasePointer;
+   uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     StackSize;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     MaximumNumberofThreads;
@@ -5586,14 +5571,11 @@ GEN75_MEDIA_VFE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->DwordLength, 0, 15) |
       0;
 
-   uint32_t dw1 =
+   dw[1] =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->StackSize, 4, 7) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
-
-   dw[1] =
-      __gen_combine_address(data, &dw[1], values->ScratchSpaceBasePointer, dw1);
 
    dw[2] =
       __gen_field(values->MaximumNumberofThreads, 16, 31) |
