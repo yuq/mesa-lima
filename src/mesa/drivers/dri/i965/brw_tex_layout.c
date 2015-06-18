@@ -270,9 +270,14 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
     * Where "*" means either VALIGN_2 or VALIGN_4 depending on the setting of
     * the SURFACE_STATE "Surface Vertical Alignment" field.
     */
-   if (_mesa_is_format_compressed(mt->format))
-      /* See comment above for the horizontal alignment */
-      return brw->gen >= 9 ? 16 : 4;
+    if (_mesa_is_format_compressed(mt->format)) {
+       unsigned int i, j;
+
+       _mesa_get_format_block_size(mt->format, &i, &j);
+
+       /* See comment above for the horizontal alignment */
+       return brw->gen >= 9 ? j * 4 : 4;
+    }
 
    if (mt->format == MESA_FORMAT_S_UINT8)
       return brw->gen >= 7 ? 8 : 4;
