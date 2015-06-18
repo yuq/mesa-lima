@@ -2469,7 +2469,8 @@ vec4_visitor::visit(ir_call *ir)
 }
 
 src_reg
-vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler)
+vec4_visitor::emit_mcs_fetch(const glsl_type *coordinate_type,
+                             src_reg coordinate, src_reg sampler)
 {
    vec4_instruction *inst =
       new(mem_ctx) vec4_instruction(SHADER_OPCODE_TXF_MCS,
@@ -2496,13 +2497,13 @@ vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler
    }
 
    /* parameters are: u, v, r, lod; lod will always be zero due to api restrictions */
-   int coord_mask = (1 << ir->coordinate->type->vector_elements) - 1;
+   int coord_mask = (1 << coordinate_type->vector_elements) - 1;
    int zero_mask = 0xf & ~coord_mask;
 
-   emit(MOV(dst_reg(MRF, param_base, ir->coordinate->type, coord_mask),
+   emit(MOV(dst_reg(MRF, param_base, coordinate_type, coord_mask),
             coordinate));
 
-   emit(MOV(dst_reg(MRF, param_base, ir->coordinate->type, zero_mask),
+   emit(MOV(dst_reg(MRF, param_base, coordinate_type, zero_mask),
             src_reg(0)));
 
    emit(inst);
@@ -2625,7 +2626,7 @@ vec4_visitor::visit(ir_texture *ir)
       sample_index_type = ir->lod_info.sample_index->type;
 
       if (devinfo->gen >= 7 && key->tex.compressed_multisample_layout_mask & (1<<sampler))
-         mcs = emit_mcs_fetch(ir, coordinate, sampler_reg);
+         mcs = emit_mcs_fetch(ir->coordinate->type, coordinate, sampler_reg);
       else
          mcs = src_reg(0u);
       break;

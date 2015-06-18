@@ -334,7 +334,8 @@ public:
    void emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0);
 
    uint32_t gather_channel(ir_texture *ir, uint32_t sampler);
-   src_reg emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler);
+   src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
+                          src_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
    void swizzle_result(ir_texture *ir, src_reg orig_val, uint32_t sampler);
 
