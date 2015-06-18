@@ -109,7 +109,8 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
          if (var->data.location == VARYING_SLOT_POS) {
             reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
                                                 var->data.origin_upper_left);
-            emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, input, reg), 0xF);
+            emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
+                                      input, reg), 0xF);
          } else {
             emit_general_interpolation(input, var->name, var->type,
                                        (glsl_interp_qualifier) var->data.interpolation,
@@ -1762,7 +1763,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;
    unsigned num_components = nir_tex_instr_dest_size(instr);
-   emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, dest, this->result),
+   emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
+                             dest, this->result),
                 (1 << num_components) - 1);
 }
 

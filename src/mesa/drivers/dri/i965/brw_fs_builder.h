@@ -235,7 +235,7 @@ namespace brw {
       instruction *
       emit(enum opcode opcode, const dst_reg &dst) const
       {
-         return emit(instruction(opcode, dst));
+         return emit(instruction(opcode, dst.width, dst));
       }
 
       /**

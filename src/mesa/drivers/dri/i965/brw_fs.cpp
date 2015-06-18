@@ -126,9 +126,9 @@ fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size)
    init(opcode, exec_size, reg_undef, NULL, 0);
 }
 
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst)
+fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst)
 {
-   init(opcode, 0, dst, NULL, 0);
+   init(opcode, exec_size, dst, NULL, 0);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
@@ -138,12 +138,6 @@ fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    init(opcode, exec_size, dst, src, 1);
 }
 
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0)
-{
-   const fs_reg src[1] = { src0 };
-   init(opcode, 0, dst, src, 1);
-}
-
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
                  const fs_reg &src0, const fs_reg &src1)
 {
@@ -151,31 +145,11 @@ fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    init(opcode, exec_size, dst, src, 2);
 }
 
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
-                 const fs_reg &src1)
-{
-   const fs_reg src[2] = { src0, src1 };
-   init(opcode, 0, dst, src, 2);
-}
-
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
                  const fs_reg &src0, const fs_reg &src1, const fs_reg &src2)
 {
    const fs_reg src[3] = { src0, src1, src2 };
    init(opcode, exec_size, dst, src, 3);
-}
-
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst, const fs_reg &src0,
-                 const fs_reg &src1, const fs_reg &src2)
-{
-   const fs_reg src[3] = { src0, src1, src2 };
-   init(opcode, 0, dst, src, 3);
-}
-
-fs_inst::fs_inst(enum opcode opcode, const fs_reg &dst,
-                 const fs_reg src[], unsigned sources)
-{
-   init(opcode, 0, dst, src, sources);
 }
 
 fs_inst::fs_inst(enum opcode opcode, uint8_t exec_width, const fs_reg &dst,
