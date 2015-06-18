@@ -34,6 +34,47 @@
 #include "vc4_context.h"
 #include "vc4_screen.h"
 
+static bool dump_stats = false;
+
+static void
+vc4_bo_dump_stats(struct vc4_screen *screen)
+{
+        struct vc4_bo_cache *cache = &screen->bo_cache;
+
+        fprintf(stderr, "  BOs allocated:   %d\n", screen->bo_count);
+        fprintf(stderr, "  BOs size:        %dkb\n", screen->bo_size / 102);
+        fprintf(stderr, "  BOs cached:      %d\n", cache->bo_count);
+        fprintf(stderr, "  BOs cached size: %dkb\n", cache->bo_size / 102);
+
+        if (!list_empty(&cache->time_list)) {
+                struct vc4_bo *first = LIST_ENTRY(struct vc4_bo,
+                                                  cache->time_list.next,
+                                                  time_list);
+                struct vc4_bo *last = LIST_ENTRY(struct vc4_bo,
+                                                  cache->time_list.prev,
+                                                  time_list);
+
+                fprintf(stderr, "  oldest cache time: %ld\n",
+                        (long)first->free_time);
+                fprintf(stderr, "  newest cache time: %ld\n",
+                        (long)last->free_time);
+
+                struct timespec time;
+                clock_gettime(CLOCK_MONOTONIC, &time);
+                fprintf(stderr, "  now:               %ld\n",
+                        time.tv_sec);
+        }
+}
+
+static void
+vc4_bo_remove_from_cache(struct vc4_bo_cache *cache, struct vc4_bo *bo)
+{
+        list_del(&bo->time_list);
+        list_del(&bo->size_list);
+        cache->bo_count--;
+        cache->bo_size -= bo->size;
+}
+
 static struct vc4_bo *
 vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
 {
@@ -60,8 +101,7 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
                 }
 
                 pipe_reference_init(&bo->reference, 1);
-                list_del(&bo->time_list);
-                list_del(&bo->size_list);
+                vc4_bo_remove_from_cache(cache, bo);
 
                 bo->name = name;
         }
@@ -78,8 +118,14 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
         size = align(size, 4096);
 
         bo = vc4_bo_from_cache(screen, size, name);
-        if (bo)
+        if (bo) {
+                if (dump_stats) {
+                        fprintf(stderr, "Allocated %s %dkb from cache:\n",
+                                name, size / 1024);
+                        vc4_bo_dump_stats(screen);
+                }
                 return bo;
+        }
 
         bo = CALLOC_STRUCT(vc4_bo);
         if (!bo)
@@ -114,6 +160,13 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
         if (ret != 0) {
                 fprintf(stderr, "create ioctl failure\n");
                 abort();
+        }
+
+        screen->bo_count++;
+        screen->bo_size += bo->size;
+        if (dump_stats) {
+                fprintf(stderr, "Allocated %s %dkb:\n", name, size / 1024);
+                vc4_bo_dump_stats(screen);
         }
 
         return bo;
@@ -153,6 +206,17 @@ vc4_bo_free(struct vc4_bo *bo)
         if (ret != 0)
                 fprintf(stderr, "close object %d: %s\n", bo->handle, strerror(errno));
 
+        screen->bo_count--;
+        screen->bo_size -= bo->size;
+
+        if (dump_stats) {
+                fprintf(stderr, "Freed %s%s%dkb:\n",
+                        bo->name ? bo->name : "",
+                        bo->name ? " " : "",
+                        bo->size / 1024);
+                vc4_bo_dump_stats(screen);
+        }
+
         free(bo);
 }
 
@@ -160,17 +224,28 @@ static void
 free_stale_bos(struct vc4_screen *screen, time_t time)
 {
         struct vc4_bo_cache *cache = &screen->bo_cache;
+        bool freed_any = false;
 
         list_for_each_entry_safe(struct vc4_bo, bo, &cache->time_list,
                                  time_list) {
+                if (dump_stats && !freed_any) {
+                        fprintf(stderr, "Freeing stale BOs:\n");
+                        vc4_bo_dump_stats(screen);
+                        freed_any = true;
+                }
+
                 /* If it's more than a second old, free it. */
                 if (time - bo->free_time > 2) {
-                        list_del(&bo->time_list);
-                        list_del(&bo->size_list);
+                        vc4_bo_remove_from_cache(cache, bo);
                         vc4_bo_free(bo);
                 } else {
                         break;
                 }
+        }
+
+        if (dump_stats && freed_any) {
+                fprintf(stderr, "Freed stale BOs:\n");
+                vc4_bo_dump_stats(screen);
         }
 }
 
@@ -214,6 +289,14 @@ vc4_bo_last_unreference_locked_timed(struct vc4_bo *bo, time_t time)
         bo->free_time = time;
         list_addtail(&bo->size_list, &cache->size_list[page_index]);
         list_addtail(&bo->time_list, &cache->time_list);
+        cache->bo_count++;
+        cache->bo_size += bo->size;
+        if (dump_stats) {
+                fprintf(stderr, "Freed %s %dkb to cache:\n",
+                        bo->name, bo->size / 1024);
+                vc4_bo_dump_stats(screen);
+        }
+        bo->name = NULL;
 
         free_stale_bos(screen, time);
 }
@@ -450,8 +533,12 @@ vc4_bufmgr_destroy(struct pipe_screen *pscreen)
 
         list_for_each_entry_safe(struct vc4_bo, bo, &cache->time_list,
                                  time_list) {
-                list_del(&bo->time_list);
-                list_del(&bo->size_list);
+                vc4_bo_remove_from_cache(cache, bo);
                 vc4_bo_free(bo);
+        }
+
+        if (dump_stats) {
+                fprintf(stderr, "BO stats after screen destroy:\n");
+                vc4_bo_dump_stats(screen);
         }
 }

@@ -67,7 +67,13 @@ struct vc4_screen {
                 uint32_t size_list_size;
 
                 pipe_mutex lock;
+
+                uint32_t bo_size;
+                uint32_t bo_count;
         } bo_cache;
+
+        uint32_t bo_size;
+        uint32_t bo_count;
 };
 
 static inline struct vc4_screen *
