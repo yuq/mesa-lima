@@ -2509,8 +2509,8 @@ vec4_visitor::emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler
    return src_reg(inst->dst);
 }
 
-static bool
-is_high_sampler(const struct brw_device_info *devinfo, src_reg sampler)
+bool
+vec4_visitor::is_high_sampler(src_reg sampler)
 {
    if (devinfo->gen < 8 && !devinfo->is_haswell)
       return false;
@@ -2686,7 +2686,7 @@ vec4_visitor::visit(ir_texture *ir)
    inst->header_size =
       (devinfo->gen < 5 || devinfo->gen >= 9 ||
        inst->offset != 0 || ir->op == ir_tg4 ||
-       is_high_sampler(devinfo, sampler_reg)) ? 1 : 0;
+       is_high_sampler(sampler_reg)) ? 1 : 0;
    inst->base_mrf = 2;
    inst->mlen = inst->header_size + 1; /* always at least one */
    inst->dst.writemask = WRITEMASK_XYZW;
