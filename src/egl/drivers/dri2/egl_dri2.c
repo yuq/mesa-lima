@@ -2368,6 +2368,8 @@ dri2_load(_EGLDriver *drv)
 #ifdef HAVE_SHARED_GLAPI
 #ifdef HAVE_ANDROID_PLATFORM
    const char *libname = "libglapi.so";
+#elif defined(__APPLE__)
+   const char *libname = "libglapi.0.dylib";
 #else
    const char *libname = "libglapi.so.0";
 #endif
