@@ -1317,58 +1317,6 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
 }
 
 static inline uint32_t
-gen6_so_SURFACE_STATE(struct ilo_builder *builder,
-                      const struct pipe_stream_output_target *so,
-                      const struct pipe_stream_output_info *so_info,
-                      int so_index)
-{
-   struct ilo_buffer *buf = ilo_buffer(so->buffer);
-   struct ilo_state_surface_buffer_info info;
-   struct ilo_state_surface surf;
-
-   ILO_DEV_ASSERT(builder->dev, 6, 6);
-
-   memset(&info, 0, sizeof(info));
-   info.buf = buf;
-   info.access = ILO_STATE_SURFACE_ACCESS_DP_SVB;
-
-   switch (so_info->output[so_index].num_components) {
-   case 1:
-      info.format = GEN6_FORMAT_R32_FLOAT;
-      info.format_size = 4;
-      break;
-   case 2:
-      info.format = GEN6_FORMAT_R32G32_FLOAT;
-      info.format_size = 8;
-      break;
-   case 3:
-      info.format = GEN6_FORMAT_R32G32B32_FLOAT;
-      info.format_size = 12;
-      break;
-   case 4:
-      info.format = GEN6_FORMAT_R32G32B32A32_FLOAT;
-      info.format_size = 16;
-      break;
-   default:
-      assert(!"unexpected SO components length");
-      info.format = GEN6_FORMAT_R32_FLOAT;
-      info.format_size = 4;
-      break;
-   }
-
-   info.struct_size =
-      so_info->stride[so_info->output[so_index].output_buffer] * 4;
-   info.offset = so->buffer_offset + so_info->output[so_index].dst_offset * 4;
-   info.size = so->buffer_size - so_info->output[so_index].dst_offset * 4;
-
-   memset(&surf, 0, sizeof(surf));
-   ilo_state_surface_init_for_buffer(&surf, builder->dev, &info);
-   surf.bo = info.buf->bo;
-
-   return gen6_SURFACE_STATE(builder, &surf);
-}
-
-static inline uint32_t
 gen6_SAMPLER_STATE(struct ilo_builder *builder,
                    const struct ilo_state_sampler *samplers,
                    const uint32_t *sampler_border_colors,
