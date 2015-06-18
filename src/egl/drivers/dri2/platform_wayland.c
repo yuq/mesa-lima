@@ -168,13 +168,11 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
 					    dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
-      goto cleanup_dri_drawable;
+      goto cleanup_surf;
    }
 
    return &dri2_surf->base;
 
- cleanup_dri_drawable:
-   dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
  cleanup_surf:
    free(dri2_surf);
 
