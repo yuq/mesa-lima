@@ -38,6 +38,7 @@
 #include "ilo_state_sbe.h"
 #include "ilo_state_shader.h"
 #include "ilo_state_viewport.h"
+#include "ilo_state_zs.h"
 #include "ilo_builder.h"
 #include "ilo_builder_3d_top.h"
 

@@ -33,6 +33,7 @@
 
 #include "ilo_blitter.h"
 #include "ilo_query.h"
+#include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"
 #include "ilo_render_gen.h"

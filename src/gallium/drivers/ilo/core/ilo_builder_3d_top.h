@@ -29,8 +29,6 @@
 #define ILO_BUILDER_3D_TOP_H
 
 #include "genhw/genhw.h"
-#include "../ilo_resource.h"
-#include "../ilo_state.h"
 #include "intel_winsys.h"
 
 #include "ilo_core.h"
@@ -38,6 +36,7 @@
 #include "ilo_state_sampler.h"
 #include "ilo_state_shader.h"
 #include "ilo_state_sol.h"
+#include "ilo_state_surface.h"
 #include "ilo_state_urb.h"
 #include "ilo_state_vf.h"
 #include "ilo_builder.h"
