@@ -48,7 +48,7 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
 }
 
 static struct brw_reg
-brw_reg_from_fs_reg(fs_reg *reg)
+brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg)
 {
    struct brw_reg brw_reg;
 
@@ -57,10 +57,10 @@ brw_reg_from_fs_reg(fs_reg *reg)
    case MRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
-      } else if (reg->width < 8) {
+      } else if (inst->exec_size < 8) {
          brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
-         brw_reg = stride(brw_reg, reg->width * reg->stride,
-                          reg->width, reg->stride);
+         brw_reg = stride(brw_reg, inst->exec_size * reg->stride,
+                          inst->exec_size, reg->stride);
       } else {
          /* From the Haswell PRM:
           *
@@ -414,7 +414,7 @@ fs_generator::generate_blorp_fb_write(fs_inst *inst)
    brw_fb_WRITE(p,
                 16 /* dispatch_width */,
                 brw_message_reg(inst->base_mrf),
-                brw_reg_from_fs_reg(&inst->src[0]),
+                brw_reg_from_fs_reg(inst, &inst->src[0]),
                 BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE,
                 inst->target,
                 inst->mlen,
@@ -1560,7 +1560,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 src[i] = brw_reg_from_fs_reg(&inst->src[i]);
+	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i]);
 
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1572,7 +1572,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(&inst->dst);
+      dst = brw_reg_from_fs_reg(inst, &inst->dst);
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
