@@ -87,9 +87,8 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
         struct vc4_bo *bo = NULL;
         pipe_mutex_lock(cache->lock);
         if (!list_empty(&cache->size_list[page_index])) {
-                struct vc4_bo *bo = LIST_ENTRY(struct vc4_bo,
-                                               cache->size_list[page_index].next,
-                                               size_list);
+                bo = LIST_ENTRY(struct vc4_bo, cache->size_list[page_index].next,
+                                size_list);
 
                 /* Check that the BO has gone idle.  If not, then we want to
                  * allocate something new instead, since we assume that the
