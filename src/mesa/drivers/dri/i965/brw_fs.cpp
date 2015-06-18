@@ -557,7 +557,7 @@ fs_visitor::get_timestamp(const fs_builder &bld)
    /* We want to read the 3 fields we care about even if it's not enabled in
     * the dispatch.
     */
-   bld.exec_all().MOV(dst, ts);
+   bld.group(4, 0).exec_all().MOV(dst, ts);
 
    /* The caller wants the low 32 bits of the timestamp.  Since it's running
     * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
@@ -604,17 +604,19 @@ fs_visitor::emit_shader_time_end()
    start.negate = true;
    fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
    diff.set_smear(0);
-   ibld.ADD(diff, start, shader_end_time);
+
+   const fs_builder cbld = ibld.group(1, 0);
+   cbld.group(1, 0).ADD(diff, start, shader_end_time);
 
    /* If there were no instructions between the two timestamp gets, the diff
     * is 2 cycles.  Remove that overhead, so I can forget about that when
     * trying to determine the time taken for single instructions.
     */
-   ibld.ADD(diff, diff, fs_reg(-2u));
-   SHADER_TIME_ADD(ibld, 0, diff);
-   SHADER_TIME_ADD(ibld, 1, fs_reg(1u));
+   cbld.ADD(diff, diff, fs_reg(-2u));
+   SHADER_TIME_ADD(cbld, 0, diff);
+   SHADER_TIME_ADD(cbld, 1, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ELSE);
-   SHADER_TIME_ADD(ibld, 2, fs_reg(1u));
+   SHADER_TIME_ADD(cbld, 2, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ENDIF);
 }
 
