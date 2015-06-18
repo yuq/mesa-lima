@@ -263,12 +263,6 @@ anv_block_pool_init(struct anv_block_pool *pool,
    anv_block_pool_grow(pool);
 }
 
-/* The memfd path lets us create a map for an fd and lets us grow and remap
- * without copying.  It breaks valgrind however, so we have a MAP_ANONYMOUS
- * path we can take for valgrind debugging. */
-
-#define USE_MEMFD 1
-
 void
 anv_block_pool_finish(struct anv_block_pool *pool)
 {
@@ -283,9 +277,7 @@ anv_block_pool_finish(struct anv_block_pool *pool)
 
    anv_vector_finish(&pool->mmap_cleanups);
 
-#if USE_MEMFD
    close(pool->fd);
-#endif
 }
 
 static int
@@ -307,7 +299,6 @@ anv_block_pool_grow(struct anv_block_pool *pool)
       return -1;
    *cleanup = ANV_MMAP_CLEANUP_INIT;
 
-#if USE_MEMFD
    if (pool->size == 0)
       pool->fd = memfd_create("block pool", MFD_CLOEXEC);
 
@@ -335,17 +326,6 @@ anv_block_pool_grow(struct anv_block_pool *pool)
    }
    if (map == MAP_FAILED)
       return -1;
-#else
-   /* The MAP_ANONYMOUS fallback can't grow without races, so just bail here
-    * if we're trying to grow the pool. */
-   assert(pool->size == 0);
-   map = mmap(NULL, size, PROT_READ | PROT_WRITE,
-              MAP_PRIVATE | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
-   if (map == MAP_FAILED)
-      return -1;
-   cleanup->map = map;
-   cleanup->size = size;
-#endif
 
    gem_handle = anv_gem_userptr(pool->device, map, size);
    if (gem_handle == 0)
