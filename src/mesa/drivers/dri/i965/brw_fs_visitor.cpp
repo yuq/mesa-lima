@@ -247,7 +247,7 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
                                      uint32_t sampler)
 {
    fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
-   bool has_lod = op == ir_txl || op == ir_txb || op == ir_txf;
+   bool has_lod = op == ir_txl || op == ir_txb || op == ir_txf || op == ir_txs;
 
    if (has_lod && shadow_c.file != BAD_FILE)
       no16("TXB and TXL with shadow comparison unsupported in SIMD16.");
@@ -264,14 +264,15 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
    fs_reg msg_end = offset(message, vector_elements);
 
    /* Messages other than sample and ld require all three components */
-   if (has_lod || shadow_c.file != BAD_FILE) {
+   if (vector_elements > 0 && (has_lod || shadow_c.file != BAD_FILE)) {
       for (int i = vector_elements; i < 3; i++) {
          bld.MOV(offset(message, i), fs_reg(0.0f));
       }
+      msg_end = offset(message, 3);
    }
 
    if (has_lod) {
-      fs_reg msg_lod = retype(offset(message, 3), op == ir_txf ?
+      fs_reg msg_lod = retype(msg_end, op == ir_txf ?
                               BRW_REGISTER_TYPE_UD : BRW_REGISTER_TYPE_F);
       bld.MOV(msg_lod, lod);
       msg_end = offset(msg_lod, 1);
