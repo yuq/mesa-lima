@@ -188,7 +188,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    bld.ADD(vec4_offset, varying_offset, fs_reg(const_offset & ~3));
 
    int scale = 1;
-   if (devinfo->gen == 4 && dst.width == 8) {
+   if (devinfo->gen == 4 && bld.dispatch_width() == 8) {
       /* Pre-gen5, we can either use a SIMD8 message that requires (header,
        * u, v, r) as parameters, or we can just use the SIMD16 message
        * consisting of (header, u).  We choose the second, at the cost of a
@@ -204,9 +204,9 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
       op = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
 
    assert(dst.width % 8 == 0);
-   int regs_written = 4 * (dst.width / 8) * scale;
+   int regs_written = 4 * (bld.dispatch_width() / 8) * scale;
    fs_reg vec4_result = fs_reg(GRF, alloc.allocate(regs_written),
-                               dst.type, dst.width);
+                               dst.type, bld.dispatch_width());
    fs_inst *inst = bld.emit(op, vec4_result, surf_index, vec4_offset);
    inst->regs_written = regs_written;
 
@@ -216,7 +216,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
       if (devinfo->gen == 4)
          inst->mlen = 3;
       else
-         inst->mlen = 1 + dispatch_width / 8;
+         inst->mlen = 1 + bld.dispatch_width() / 8;
    }
 
    bld.MOV(dst, offset(vec4_result, bld, (const_offset & 3) * scale));
