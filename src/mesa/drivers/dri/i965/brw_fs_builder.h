@@ -235,7 +235,7 @@ namespace brw {
       instruction *
       emit(enum opcode opcode, const dst_reg &dst) const
       {
-         return emit(instruction(opcode, dst.width, dst));
+         return emit(instruction(opcode, dispatch_width(), dst));
       }
 
       /**
@@ -253,11 +253,11 @@ namespace brw {
          case SHADER_OPCODE_SIN:
          case SHADER_OPCODE_COS:
             return fix_math_instruction(
-               emit(instruction(opcode, dst.width, dst,
+               emit(instruction(opcode, dispatch_width(), dst,
                                 fix_math_operand(src0))));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0));
+            return emit(instruction(opcode, dispatch_width(), dst, src0));
          }
       }
 
@@ -273,12 +273,12 @@ namespace brw {
          case SHADER_OPCODE_INT_QUOTIENT:
          case SHADER_OPCODE_INT_REMAINDER:
             return fix_math_instruction(
-               emit(instruction(opcode, dst.width, dst,
+               emit(instruction(opcode, dispatch_width(), dst,
                                 fix_math_operand(src0),
                                 fix_math_operand(src1))));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0, src1));
+            return emit(instruction(opcode, dispatch_width(), dst, src0, src1));
 
          }
       }
@@ -295,13 +295,14 @@ namespace brw {
          case BRW_OPCODE_BFI2:
          case BRW_OPCODE_MAD:
          case BRW_OPCODE_LRP:
-            return emit(instruction(opcode, dst.width, dst,
+            return emit(instruction(opcode, dispatch_width(), dst,
                                     fix_3src_operand(src0),
                                     fix_3src_operand(src1),
                                     fix_3src_operand(src2)));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0, src1, src2));
+            return emit(instruction(opcode, dispatch_width(), dst,
+                                    src0, src1, src2));
          }
       }
 
@@ -517,7 +518,8 @@ namespace brw {
       {
          assert(dst.width % 8 == 0);
          instruction *inst = emit(instruction(SHADER_OPCODE_LOAD_PAYLOAD,
-                                              dst.width, dst, src, sources));
+                                              dispatch_width(), dst,
+                                              src, sources));
          inst->header_size = header_size;
 
          for (unsigned i = 0; i < header_size; i++)
@@ -528,7 +530,7 @@ namespace brw {
          for (unsigned i = header_size; i < sources; ++i)
             assert(src[i].file != GRF ||
                    src[i].width == dst.width);
-         inst->regs_written += (sources - header_size) * (dst.width / 8);
+         inst->regs_written += (sources - header_size) * (dispatch_width() / 8);
 
          return inst;
       }
