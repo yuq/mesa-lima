@@ -149,6 +149,11 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
    else
       dri2_surf->format = WL_DRM_FORMAT_ARGB8888;
 
+   if (!window) {
+      _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
+      goto cleanup_surf;
+   }
+
    dri2_surf->wl_win = window;
 
    dri2_surf->wl_win->private = dri2_surf;
