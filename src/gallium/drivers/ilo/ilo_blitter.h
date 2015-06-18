@@ -60,7 +60,7 @@ struct ilo_blitter {
    float vertices[3][2];
    struct pipe_draw_info draw;
 
-   uint32_t vf_data[2];
+   uint32_t vf_data[4];
    struct ilo_state_vf vf;
 
    struct ilo_state_vs vs;

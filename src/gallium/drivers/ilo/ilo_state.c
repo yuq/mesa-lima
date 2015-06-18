@@ -1329,6 +1329,7 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
 {
    const struct ilo_dev *dev = ilo_context(pipe)->dev;
    struct ilo_state_vf_element_info vf_elements[PIPE_MAX_ATTRIBS];
+   unsigned instance_divisors[PIPE_MAX_ATTRIBS];
    struct ilo_state_vf_info vf_info;
    struct ilo_ve_state *ve;
    unsigned i;
@@ -1347,7 +1348,7 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
        */
       for (hw_idx = 0; hw_idx < ve->vb_count; hw_idx++) {
          if (ve->vb_mapping[hw_idx] == elem->vertex_buffer_index &&
-             ve->instance_divisors[hw_idx] == elem->instance_divisor)
+             instance_divisors[hw_idx] == elem->instance_divisor)
             break;
       }
 
@@ -1356,7 +1357,7 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
          hw_idx = ve->vb_count++;
 
          ve->vb_mapping[hw_idx] = elem->vertex_buffer_index;
-         ve->instance_divisors[hw_idx] = elem->instance_divisor;
+         instance_divisors[hw_idx] = elem->instance_divisor;
       }
 
       attr->buffer = hw_idx;
@@ -1367,6 +1368,9 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
       attr->is_integer = util_format_is_pure_integer(elem->src_format);
       attr->is_double = (util_format_is_float(elem->src_format) &&
          attr->format_size == attr->component_count * 8);
+
+      attr->instancing_enable = (elem->instance_divisor != 0);
+      attr->instancing_step_rate = elem->instance_divisor;
    }
 
    memset(&vf_info, 0, sizeof(vf_info));

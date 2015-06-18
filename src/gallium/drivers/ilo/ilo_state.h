@@ -147,11 +147,10 @@ struct ilo_shader_state;
 
 struct ilo_ve_state {
    unsigned vb_mapping[PIPE_MAX_ATTRIBS];
-   unsigned instance_divisors[PIPE_MAX_ATTRIBS];
    unsigned vb_count;
 
    /* these are not valid until the state is finalized */
-   uint32_t vf_data[PIPE_MAX_ATTRIBS][2];
+   uint32_t vf_data[PIPE_MAX_ATTRIBS][4];
    struct ilo_state_vf_params_info vf_params;
    struct ilo_state_vf vf;
 };

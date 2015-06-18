@@ -48,8 +48,10 @@
 enum ilo_state_vf_dirty_bits {
    ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS            = (1 << 0),
    ILO_STATE_VF_3DSTATE_VF_SGVS                    = (1 << 1),
-   ILO_STATE_VF_3DSTATE_VF                         = (1 << 2),
-   ILO_STATE_VF_3DSTATE_INDEX_BUFFER               = (1 << 3),
+   ILO_STATE_VF_3DSTATE_VF_INSTANCING              = (1 << 2),
+   ILO_STATE_VF_3DSTATE_VERTEX_BUFFERS             = (1 << 3),
+   ILO_STATE_VF_3DSTATE_VF                         = (1 << 4),
+   ILO_STATE_VF_3DSTATE_INDEX_BUFFER               = (1 << 5),
 };
 
 /**
@@ -64,6 +66,10 @@ struct ilo_state_vf_element_info {
    uint8_t component_count;
    bool is_integer;
    bool is_double;
+
+   /* must be the same for those share the same buffer before Gen8 */
+   bool instancing_enable;
+   uint32_t instancing_step_rate;
 };
 
 /**
@@ -100,16 +106,19 @@ struct ilo_state_vf_info {
 };
 
 struct ilo_state_vf {
-   /* two VEs are reserved for internal use */
-   uint32_t internal_ve[2][2];
    uint32_t (*user_ve)[2];
-   uint8_t internal_ve_count;
+   uint32_t (*user_instancing)[2];
+   int8_t vb_to_first_elem[ILO_STATE_VF_MAX_BUFFER_COUNT];
    uint8_t user_ve_count;
 
-   uint32_t sgvs[1];
-
-   uint32_t last_user_ve[2][2];
    bool edge_flag_supported;
+   uint32_t last_user_ve[2][2];
+
+   /* two VEs are reserved for internal use */
+   uint32_t internal_ve[2][2];
+   uint8_t internal_ve_count;
+
+   uint32_t sgvs[1];
 
    uint32_t cut[2];
 };
@@ -122,7 +131,8 @@ static inline size_t
 ilo_state_vf_data_size(const struct ilo_dev *dev, uint8_t element_count)
 {
    const struct ilo_state_vf *vf = NULL;
-   return sizeof(vf->user_ve[0]) * element_count;
+   return (sizeof(vf->user_ve[0]) +
+           sizeof(vf->user_instancing[0])) * element_count;
 }
 
 bool

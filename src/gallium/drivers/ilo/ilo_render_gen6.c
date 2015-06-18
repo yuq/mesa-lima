@@ -428,9 +428,10 @@ gen6_draw_vf(struct ilo_render *r,
    }
 
    /* 3DSTATE_VERTEX_BUFFERS */
-   if (DIRTY(VB) || DIRTY(VE) || r->batch_bo_changed) {
-      gen6_3DSTATE_VERTEX_BUFFERS(r->builder, &vec->vb, vec->ve->vb_mapping,
-            vec->ve->instance_divisors, vec->ve->vb_count);
+   if ((session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VERTEX_BUFFERS) ||
+       DIRTY(VB) || DIRTY(VE) || r->batch_bo_changed) {
+      gen6_3DSTATE_VERTEX_BUFFERS(r->builder, &vec->ve->vf, &vec->vb,
+            vec->ve->vb_mapping, vec->ve->vb_count);
    }
 
    /* 3DSTATE_VERTEX_ELEMENTS */

@@ -221,6 +221,66 @@ vf_set_gen6_3DSTATE_VERTEX_ELEMENTS(struct ilo_state_vf *vf,
    return true;
 }
 
+static bool
+vf_set_gen6_vertex_buffer_state(struct ilo_state_vf *vf,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_vf_info *info)
+{
+   uint8_t i;
+
+   ILO_DEV_ASSERT(dev, 6, 7.5);
+
+   memset(vf->vb_to_first_elem, -1, sizeof(vf->vb_to_first_elem));
+
+   for (i = 0; i < info->element_count; i++) {
+      const struct ilo_state_vf_element_info *elem = &info->elements[i];
+
+      STATIC_ASSERT(ARRAY_SIZE(vf->user_instancing[i]) >= 2);
+      /* instancing enable only */
+      vf->user_instancing[i][0] = (elem->instancing_enable) ?
+         GEN6_VB_DW0_ACCESS_INSTANCEDATA :
+         GEN6_VB_DW0_ACCESS_VERTEXDATA;
+      vf->user_instancing[i][1] = elem->instancing_step_rate;
+
+      /*
+       * Instancing is per VB, not per VE, before Gen8.  Set up a VB-to-VE
+       * mapping as well.
+       */
+      if (vf->vb_to_first_elem[elem->buffer] < 0) {
+         vf->vb_to_first_elem[elem->buffer] = i;
+      } else {
+         const struct ilo_state_vf_element_info *first =
+            &info->elements[vf->vb_to_first_elem[elem->buffer]];
+
+         assert(elem->instancing_enable == first->instancing_enable &&
+                elem->instancing_step_rate == first->instancing_step_rate);
+      }
+   }
+
+   return true;
+}
+
+static bool
+vf_set_gen8_3DSTATE_VF_INSTANCING(struct ilo_state_vf *vf,
+                                  const struct ilo_dev *dev,
+                                  const struct ilo_state_vf_info *info)
+{
+   uint8_t i;
+
+   ILO_DEV_ASSERT(dev, 8, 8);
+
+   for (i = 0; i < info->element_count; i++) {
+      const struct ilo_state_vf_element_info *elem = &info->elements[i];
+
+      STATIC_ASSERT(ARRAY_SIZE(vf->user_instancing[i]) >= 2);
+      vf->user_instancing[i][0] = (elem->instancing_enable) ?
+         GEN8_INSTANCING_DW1_ENABLE : 0;
+      vf->user_instancing[i][1] = elem->instancing_step_rate;
+   }
+
+   return true;
+}
+
 static uint32_t
 get_gen6_component_zeros(const struct ilo_dev *dev)
 {
@@ -254,7 +314,9 @@ vf_params_set_gen6_internal_ve(struct ilo_state_vf *vf,
 {
    const bool prepend_ids =
       (params->prepend_vertexid || params->prepend_instanceid);
-   uint8_t internal_ve_count = 0;
+   uint8_t internal_ve_count = 0, i;
+   uint32_t dw1[2];
+
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
@@ -279,29 +341,23 @@ vf_params_set_gen6_internal_ve(struct ilo_state_vf *vf,
     *
     *      - [DevILK+] Element[0] must be valid."
     */
-   if (params->prepend_zeros || (!user_ve_count && !prepend_ids)) {
-      STATIC_ASSERT(ARRAY_SIZE(vf->internal_ve[internal_ve_count]) >= 2);
-      vf->internal_ve[internal_ve_count][0] = GEN6_VE_DW0_VALID;
-      vf->internal_ve[internal_ve_count][1] = get_gen6_component_zeros(dev);
-      internal_ve_count++;
-   }
+   if (params->prepend_zeros || (!user_ve_count && !prepend_ids))
+      dw1[internal_ve_count++] = get_gen6_component_zeros(dev);
 
    if (prepend_ids) {
-      uint32_t dw1;
-
       if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
          /* placeholder for 3DSTATE_VF_SGVS */
-         dw1 = get_gen6_component_zeros(dev);
+         dw1[internal_ve_count++] = get_gen6_component_zeros(dev);
       } else {
-         dw1 = get_gen6_component_ids(dev,
-               params->prepend_vertexid,
-               params->prepend_instanceid);
+         dw1[internal_ve_count++] = get_gen6_component_ids(dev,
+               params->prepend_vertexid, params->prepend_instanceid);
       }
+   }
 
-      STATIC_ASSERT(ARRAY_SIZE(vf->internal_ve[internal_ve_count]) >= 2);
-      vf->internal_ve[internal_ve_count][0] = GEN6_VE_DW0_VALID;
-      vf->internal_ve[internal_ve_count][1] = dw1;
-      internal_ve_count++;
+   for (i = 0; i < internal_ve_count; i++) {
+      STATIC_ASSERT(ARRAY_SIZE(vf->internal_ve[i]) >= 2);
+      vf->internal_ve[i][0] = GEN6_VE_DW0_VALID;
+      vf->internal_ve[i][1] = dw1[i];
    }
 
    vf->internal_ve_count = internal_ve_count;
@@ -440,8 +496,15 @@ ilo_state_vf_init(struct ilo_state_vf *vf,
    assert(ilo_state_vf_data_size(dev, info->element_count) <=
          info->data_size);
    vf->user_ve = (uint32_t (*)[2]) info->data;
+   vf->user_instancing =
+      (uint32_t (*)[2]) (vf->user_ve + info->element_count);
 
    ret &= vf_set_gen6_3DSTATE_VERTEX_ELEMENTS(vf, dev, info);
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      ret &= vf_set_gen8_3DSTATE_VF_INSTANCING(vf, dev, info);
+   else
+      ret &= vf_set_gen6_vertex_buffer_state(vf, dev, info);
 
    ret &= ilo_state_vf_set_params(vf, dev, &info->params);
 
@@ -545,8 +608,12 @@ ilo_state_vf_full_delta(const struct ilo_state_vf *vf,
 {
    delta->dirty = ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS;
 
-   if (ilo_dev_gen(dev) >= ILO_GEN(8))
-      delta->dirty |= ILO_STATE_VF_3DSTATE_VF_SGVS;
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      delta->dirty |= ILO_STATE_VF_3DSTATE_VF_SGVS |
+                      ILO_STATE_VF_3DSTATE_VF_INSTANCING;
+   } else {
+      delta->dirty |= ILO_STATE_VF_3DSTATE_VERTEX_BUFFERS;
+   }
 
    if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
       delta->dirty |= ILO_STATE_VF_3DSTATE_VF;
@@ -561,7 +628,8 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
                        struct ilo_state_vf_delta *delta)
 {
    /* no shallow copying */
-   assert(vf->user_ve != old->user_ve);
+   assert(vf->user_ve != old->user_ve &&
+          vf->user_instancing != old->user_instancing);
 
    delta->dirty = 0;
 
@@ -572,6 +640,15 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
        memcmp(vf->user_ve, old->user_ve,
           sizeof(vf->user_ve[0]) * vf->user_ve_count))
       delta->dirty |= ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS;
+
+   if (vf->user_ve_count != old->user_ve_count ||
+       memcmp(vf->user_instancing, old->user_instancing,
+          sizeof(vf->user_instancing[0]) * vf->user_ve_count)) {
+      if (ilo_dev_gen(dev) >= ILO_GEN(8))
+         delta->dirty |= ILO_STATE_VF_3DSTATE_VF_INSTANCING;
+      else
+         delta->dirty |= ILO_STATE_VF_3DSTATE_VERTEX_BUFFERS;
+   }
 
    if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
       if (vf->sgvs[0] != old->sgvs[0])
