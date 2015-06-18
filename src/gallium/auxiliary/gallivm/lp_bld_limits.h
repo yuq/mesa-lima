@@ -51,7 +51,11 @@
 
 #define LP_MAX_TGSI_PREDS 16
 
+#define LP_MAX_TGSI_CONSTS 4096
+
 #define LP_MAX_TGSI_CONST_BUFFERS 16
+
+#define LP_MAX_TGSI_CONST_BUFFER_SIZE (LP_MAX_TGSI_CONSTS * sizeof(float[4]))
 
 /*
  * For quick access we cache registers in statically
@@ -100,7 +104,7 @@ gallivm_get_shader_param(enum pipe_shader_cap param)
    case PIPE_SHADER_CAP_MAX_OUTPUTS:
       return 32;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
-      return sizeof(float[4]) * 4096;
+      return LP_MAX_TGSI_CONST_BUFFER_SIZE;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
       return PIPE_MAX_CONSTANT_BUFFERS;
    case PIPE_SHADER_CAP_MAX_TEMPS:
