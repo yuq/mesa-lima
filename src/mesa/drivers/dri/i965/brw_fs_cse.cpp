@@ -205,7 +205,7 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       }
       for (int i = header_size; i < sources; i++) {
          payload[i] = src;
-         src = offset(src, 1);
+         src = offset(src, ubld, 1);
       }
       copy = ubld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {

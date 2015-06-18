@@ -367,10 +367,10 @@ TEST_F(saturate_propagation_test, intervening_dest_write)
    fs_reg src0 = v->vgrf(glsl_type::float_type);
    fs_reg src1 = v->vgrf(glsl_type::float_type);
    fs_reg src2 = v->vgrf(glsl_type::vec2_type);
-   bld.ADD(offset(dst0, 2), src0, src1);
+   bld.ADD(offset(dst0, bld, 2), src0, src1);
    bld.emit(SHADER_OPCODE_TEX, dst0, src2)
       ->regs_written = 4;
-   set_saturate(true, bld.MOV(dst1, offset(dst0, 2)));
+   set_saturate(true, bld.MOV(dst1, offset(dst0, bld, 2)));
 
    /* = Before =
     *

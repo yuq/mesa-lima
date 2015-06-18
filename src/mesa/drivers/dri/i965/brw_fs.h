@@ -63,7 +63,7 @@ namespace brw {
 }
 
 static inline fs_reg
-offset(fs_reg reg, unsigned delta)
+offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
 {
    switch (reg.file) {
    case BAD_FILE:
