@@ -68,28 +68,6 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
 
    assert(dst.file != IMM && dst.file != UNIFORM);
 
-   /* If exec_size == 0, try to guess it from the registers.  Since all
-    * manner of things may use hardware registers, we first try to guess
-    * based on GRF registers.  If this fails, we will go ahead and take the
-    * width from the destination register.
-    */
-   if (this->exec_size == 0) {
-      if (dst.file == GRF) {
-         this->exec_size = dst.width;
-      } else {
-         for (unsigned i = 0; i < sources; ++i) {
-            if (src[i].file != GRF && src[i].file != ATTR)
-               continue;
-
-            if (this->exec_size <= 1)
-               this->exec_size = src[i].width;
-            assert(src[i].width == 1 || src[i].width == this->exec_size);
-         }
-      }
-
-      if (this->exec_size == 0 && dst.file != BAD_FILE)
-         this->exec_size = dst.width;
-   }
    assert(this->exec_size != 0);
 
    this->conditional_mod = BRW_CONDITIONAL_NONE;
