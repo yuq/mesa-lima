@@ -715,6 +715,12 @@ fs_inst::regs_read(int arg) const
          return mlen;
       break;
 
+   case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7:
+      /* The payload is actually stored in src1 */
+      if (arg == 1)
+         return mlen;
+      break;
+
    case FS_OPCODE_LINTERP:
       if (arg == 0)
          return exec_size / 4;
