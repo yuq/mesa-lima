@@ -17,7 +17,6 @@ C_SOURCES := \
 	core/ilo_dev.h \
 	core/ilo_format.c \
 	core/ilo_format.h \
-	core/ilo_fence.h \
 	core/ilo_image.c \
 	core/ilo_image.h \
 	core/ilo_state_cc.c \
