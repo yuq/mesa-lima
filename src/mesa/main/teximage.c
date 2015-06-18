@@ -1767,7 +1767,7 @@ _mesa_test_proxy_teximage(struct gl_context *ctx, GLenum target, GLint level,
 /**
  * Return true if the format is only valid for glCompressedTexImage.
  */
-static GLboolean
+static bool
 compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
 {
    switch (format) {
@@ -1782,9 +1782,9 @@ compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
    case GL_PALETTE8_R5_G6_B5_OES:
    case GL_PALETTE8_RGBA4_OES:
    case GL_PALETTE8_RGB5_A1_OES:
-      return GL_TRUE;
+      return true;
    default:
-      return GL_FALSE;
+      return false;
    }
 }
 
