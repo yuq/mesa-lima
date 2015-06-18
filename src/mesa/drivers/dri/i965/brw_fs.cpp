@@ -2280,12 +2280,12 @@ fs_visitor::opt_register_renaming()
 
       if (depth == 0 &&
           inst->dst.file == GRF &&
-          alloc.sizes[inst->dst.reg] == inst->dst.width / 8 &&
+          alloc.sizes[inst->dst.reg] == inst->exec_size / 8 &&
           !inst->is_partial_write()) {
          if (remap[dst] == -1) {
             remap[dst] = dst;
          } else {
-            remap[dst] = alloc.allocate(inst->dst.width / 8);
+            remap[dst] = alloc.allocate(inst->exec_size / 8);
             inst->dst.reg = remap[dst];
             progress = true;
          }
@@ -2416,7 +2416,7 @@ fs_visitor::compute_to_mrf()
             /* Things returning more than one register would need us to
              * understand coalescing out more than one MOV at a time.
              */
-            if (scan_inst->regs_written > scan_inst->dst.width / 8)
+            if (scan_inst->regs_written > scan_inst->exec_size / 8)
                break;
 
 	    /* SEND instructions can't have MRF as a destination. */

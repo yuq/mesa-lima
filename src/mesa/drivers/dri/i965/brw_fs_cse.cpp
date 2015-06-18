@@ -179,7 +179,7 @@ static void
 create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
 {
    int written = inst->regs_written;
-   int dst_width = inst->dst.width / 8;
+   int dst_width = inst->exec_size / 8;
    const fs_builder ubld = bld.group(inst->exec_size, inst->force_sechalf)
                               .exec_all(inst->force_writemask_all);
    fs_inst *copy;

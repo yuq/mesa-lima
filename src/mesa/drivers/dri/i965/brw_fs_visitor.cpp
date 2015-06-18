@@ -913,7 +913,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
 
       fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
-      int components = inst->regs_written / (dst.width / 8);
+      int components = inst->regs_written / (inst->exec_size / 8);
       for (int i = 0; i < components; i++) {
          if (i == 2) {
             fixed_payload[i] = fixed_depth;
