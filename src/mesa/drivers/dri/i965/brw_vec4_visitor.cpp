@@ -2675,7 +2675,9 @@ vec4_visitor::visit(ir_texture *ir)
 
    /* Stuff the channel select bits in the top of the texture offset */
    if (ir->op == ir_tg4)
-      inst->offset |= gather_channel(ir, sampler) << 16;
+      inst->offset |=
+        gather_channel( ir->lod_info.component->as_constant()->value.i[0],
+                        sampler) << 16;
 
    /* The message header is necessary for:
     * - Gen4 (always)
@@ -2847,10 +2849,9 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
  * Set up the gather channel based on the swizzle, for gather4.
  */
 uint32_t
-vec4_visitor::gather_channel(ir_texture *ir, uint32_t sampler)
+vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
 {
-   ir_constant *chan = ir->lod_info.component->as_constant();
-   int swiz = GET_SWZ(key->tex.swizzles[sampler], chan->value.i[0]);
+   int swiz = GET_SWZ(key->tex.swizzles[sampler], gather_component);
    switch (swiz) {
       case SWIZZLE_X: return 0;
       case SWIZZLE_Y:

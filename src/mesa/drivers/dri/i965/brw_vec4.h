@@ -333,7 +333,7 @@ public:
    void emit_pack_unorm_4x8(const dst_reg &dst, const src_reg &src0);
    void emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0);
 
-   uint32_t gather_channel(ir_texture *ir, uint32_t sampler);
+   uint32_t gather_channel(unsigned gather_component, uint32_t sampler);
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
                           src_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
