@@ -701,28 +701,29 @@ fs_inst::is_partial_write() const
 int
 fs_inst::regs_read(int arg) const
 {
-   if (is_tex() && arg == 0 && src[0].file == GRF) {
-      return mlen;
-   } else if (opcode == FS_OPCODE_FB_WRITE && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_URB_WRITE_SIMD8 && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_UNTYPED_ATOMIC && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_UNTYPED_SURFACE_READ && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_UNTYPED_SURFACE_WRITE && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_TYPED_ATOMIC && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_TYPED_SURFACE_READ && arg == 0) {
-      return mlen;
-   } else if (opcode == SHADER_OPCODE_TYPED_SURFACE_WRITE && arg == 0) {
-      return mlen;
-   } else if (opcode == FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET && arg == 0) {
-      return mlen;
-   } else if (opcode == FS_OPCODE_LINTERP && arg == 0) {
-      return exec_size / 4;
+   switch (opcode) {
+   case FS_OPCODE_FB_WRITE:
+   case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+   case SHADER_OPCODE_TYPED_ATOMIC:
+   case SHADER_OPCODE_TYPED_SURFACE_READ:
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+   case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
+      if (arg == 0)
+         return mlen;
+      break;
+
+   case FS_OPCODE_LINTERP:
+      if (arg == 0)
+         return exec_size / 4;
+      break;
+
+   default:
+      if (is_tex() && arg == 0 && src[0].file == GRF)
+         return mlen;
+      break;
    }
 
    switch (src[arg].file) {
