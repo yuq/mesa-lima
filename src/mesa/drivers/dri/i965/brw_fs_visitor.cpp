@@ -1530,7 +1530,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
 
    if (payload.aa_dest_stencil_reg) {
       sources[length] = fs_reg(GRF, alloc.allocate(1));
-      bld.exec_all().annotate("FB write stencil/AA alpha")
+      bld.group(8, 0).exec_all().annotate("FB write stencil/AA alpha")
          .MOV(sources[length],
               fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
       length++;
