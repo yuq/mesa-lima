@@ -203,10 +203,8 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    else
       op = FS_OPCODE_VARYING_PULL_CONSTANT_LOAD;
 
-   assert(dst.width % 8 == 0);
    int regs_written = 4 * (bld.dispatch_width() / 8) * scale;
-   fs_reg vec4_result = fs_reg(GRF, alloc.allocate(regs_written),
-                               dst.type, bld.dispatch_width());
+   fs_reg vec4_result = fs_reg(GRF, alloc.allocate(regs_written), dst.type);
    fs_inst *inst = bld.emit(op, vec4_result, surf_index, vec4_offset);
    inst->regs_written = regs_written;
 
@@ -310,7 +308,6 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
 
    for (int i = 0; i < this->sources; i++) {
       reg.type = this->src[i].type;
-      reg.width = this->src[i].width;
       if (!this->src[i].equals(reg))
          return false;
 
@@ -366,7 +363,6 @@ fs_reg::fs_reg(float f)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_F;
    this->fixed_hw_reg.dw1.f = f;
-   this->width = 1;
 }
 
 /** Immediate value constructor. */
@@ -376,7 +372,6 @@ fs_reg::fs_reg(int32_t i)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_D;
    this->fixed_hw_reg.dw1.d = i;
-   this->width = 1;
 }
 
 /** Immediate value constructor. */
@@ -386,7 +381,6 @@ fs_reg::fs_reg(uint32_t u)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_UD;
    this->fixed_hw_reg.dw1.ud = u;
-   this->width = 1;
 }
 
 /** Vector float immediate value constructor. */
@@ -417,7 +411,6 @@ fs_reg::fs_reg(struct brw_reg fixed_hw_reg)
    this->file = HW_REG;
    this->fixed_hw_reg = fixed_hw_reg;
    this->type = fixed_hw_reg.type;
-   this->width = 1 << fixed_hw_reg.width;
 }
 
 bool
@@ -432,7 +425,6 @@ fs_reg::equals(const fs_reg &r) const
            abs == r.abs &&
            !reladdr && !r.reladdr &&
            memcmp(&fixed_hw_reg, &r.fixed_hw_reg, sizeof(fixed_hw_reg)) == 0 &&
-           width == r.width &&
            stride == r.stride);
 }
 
@@ -504,7 +496,7 @@ fs_visitor::get_timestamp(const fs_builder &bld)
                                           0),
                              BRW_REGISTER_TYPE_UD));
 
-   fs_reg dst = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 4);
+   fs_reg dst = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
 
    /* We want to read the 3 fields we care about even if it's not enabled in
     * the dispatch.
@@ -554,7 +546,7 @@ fs_visitor::emit_shader_time_end()
 
    fs_reg start = shader_start_time;
    start.negate = true;
-   fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD, 1);
+   fs_reg diff = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
    diff.set_smear(0);
 
    const fs_builder cbld = ibld.group(1, 0);
@@ -809,7 +801,7 @@ fs_visitor::vgrf(const glsl_type *const type)
 {
    int reg_width = dispatch_width / 8;
    return fs_reg(GRF, alloc.allocate(type_size(type) * reg_width),
-                 brw_type_for_base_type(type), dispatch_width);
+                 brw_type_for_base_type(type));
 }
 
 /** Fixed HW reg constructor. */
@@ -819,14 +811,6 @@ fs_reg::fs_reg(enum register_file file, int reg)
    this->file = file;
    this->reg = reg;
    this->type = BRW_REGISTER_TYPE_F;
-
-   switch (file) {
-   case UNIFORM:
-      this->width = 1;
-      break;
-   default:
-      this->width = 8;
-   }
 }
 
 /** Fixed HW reg constructor. */
@@ -836,25 +820,6 @@ fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type)
    this->file = file;
    this->reg = reg;
    this->type = type;
-
-   switch (file) {
-   case UNIFORM:
-      this->width = 1;
-      break;
-   default:
-      this->width = 8;
-   }
-}
-
-/** Fixed HW reg constructor. */
-fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type,
-               uint8_t width)
-{
-   init();
-   this->file = file;
-   this->reg = reg;
-   this->type = type;
-   this->width = width;
 }
 
 /* For SIMD16, we need to follow from the uniform setup of SIMD8 dispatch.
@@ -1863,7 +1828,6 @@ fs_visitor::demote_pull_constants()
          inst->src[i].file = GRF;
          inst->src[i].reg = dst.reg;
          inst->src[i].reg_offset = 0;
-         inst->src[i].width = dispatch_width;
       }
    }
    invalidate_live_intervals();
@@ -2951,20 +2915,17 @@ fs_visitor::lower_load_payload()
       if (dst.file == MRF)
          dst.reg = dst.reg & ~BRW_MRF_COMPR4;
 
-      dst.width = 8;
       const fs_builder hbld = bld.group(8, 0).exec_all().at(block, inst);
 
       for (uint8_t i = 0; i < inst->header_size; i++) {
          if (inst->src[i].file != BAD_FILE) {
             fs_reg mov_dst = retype(dst, BRW_REGISTER_TYPE_UD);
             fs_reg mov_src = retype(inst->src[i], BRW_REGISTER_TYPE_UD);
-            mov_src.width = 8;
             hbld.MOV(mov_dst, mov_src);
          }
          dst = offset(dst, hbld, 1);
       }
 
-      dst.width = inst->exec_size;
       const fs_builder ibld = bld.group(inst->exec_size, inst->force_sechalf)
                                  .exec_all(inst->force_writemask_all)
                                  .at(block, inst);
@@ -2998,7 +2959,6 @@ fs_visitor::lower_load_payload()
                } else {
                   /* Platform doesn't have COMPR4.  We have to fake it */
                   fs_reg mov_dst = retype(dst, inst->src[i].type);
-                  mov_dst.width = 8;
                   ibld.half(0).MOV(mov_dst, half(inst->src[i], 0));
                   mov_dst.reg += 4;
                   ibld.half(1).MOV(mov_dst, half(inst->src[i], 1));
@@ -3070,7 +3030,7 @@ fs_visitor::lower_integer_multiplication()
           inst->src[1].fixed_hw_reg.dw1.ud < (1 << 16)) {
          if (devinfo->gen < 7) {
             fs_reg imm(GRF, alloc.allocate(dispatch_width / 8),
-                       inst->dst.type, dispatch_width);
+                       inst->dst.type);
             ibld.MOV(imm, inst->src[1]);
             ibld.MUL(inst->dst, imm, inst->src[0]);
          } else {
@@ -3124,11 +3084,11 @@ fs_visitor::lower_integer_multiplication()
 
          if (inst->conditional_mod && inst->dst.is_null()) {
             inst->dst = fs_reg(GRF, alloc.allocate(dispatch_width / 8),
-                               inst->dst.type, dispatch_width);
+                               inst->dst.type);
          }
          fs_reg low = inst->dst;
          fs_reg high(GRF, alloc.allocate(dispatch_width / 8),
-                     inst->dst.type, dispatch_width);
+                     inst->dst.type);
 
          if (devinfo->gen >= 7) {
             fs_reg src1_0_w = inst->src[1];
@@ -3282,9 +3242,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    switch (inst->dst.file) {
    case GRF:
       fprintf(file, "vgrf%d", inst->dst.reg);
-      if (inst->dst.width != dispatch_width)
-         fprintf(file, "@%d", inst->dst.width);
-      if (alloc.sizes[inst->dst.reg] != inst->dst.width / 8 ||
+      if (alloc.sizes[inst->dst.reg] != inst->regs_written ||
           inst->dst.subreg_offset)
          fprintf(file, "+%d.%d",
                  inst->dst.reg_offset, inst->dst.subreg_offset);
@@ -3342,9 +3300,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       switch (inst->src[i].file) {
       case GRF:
          fprintf(file, "vgrf%d", inst->src[i].reg);
-         if (inst->src[i].width != dispatch_width)
-            fprintf(file, "@%d", inst->src[i].width);
-         if (alloc.sizes[inst->src[i].reg] != inst->src[i].width / 8 ||
+         if (alloc.sizes[inst->src[i].reg] != (unsigned)inst->regs_read(i) ||
              inst->src[i].subreg_offset)
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);

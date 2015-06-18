@@ -167,7 +167,6 @@ fs_visitor::register_coalesce()
          src_size = alloc.sizes[inst->src[0].reg];
          assert(src_size <= MAX_VGRF_SIZE);
 
-         assert(inst->src[0].width % 8 == 0);
          channels_remaining = src_size;
          memset(mov, 0, sizeof(mov));
 

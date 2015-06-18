@@ -706,10 +706,8 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
                          uint32_t spill_offset, int count)
 {
    int reg_size = 1;
-   if (dispatch_width == 16 && count % 2 == 0) {
+   if (dispatch_width == 16 && count % 2 == 0)
       reg_size = 2;
-      dst.width = 16;
-   }
 
    const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
                               .group(reg_size * 8, 0)

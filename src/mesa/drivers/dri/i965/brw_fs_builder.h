@@ -163,7 +163,7 @@ namespace brw {
          return dst_reg(GRF, shader->alloc.allocate(
                            DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
                                         REG_SIZE)),
-                        type, dispatch_width());
+                        type);
       }
 
       /**
@@ -516,21 +516,12 @@ namespace brw {
       LOAD_PAYLOAD(const dst_reg &dst, const src_reg *src,
                    unsigned sources, unsigned header_size) const
       {
-         assert(dst.width % 8 == 0);
          instruction *inst = emit(instruction(SHADER_OPCODE_LOAD_PAYLOAD,
                                               dispatch_width(), dst,
                                               src, sources));
          inst->header_size = header_size;
-
-         for (unsigned i = 0; i < header_size; i++)
-            assert(src[i].file != GRF ||
-                   src[i].width * type_sz(src[i].type) == 32);
-         inst->regs_written = header_size;
-
-         for (unsigned i = header_size; i < sources; ++i)
-            assert(src[i].file != GRF ||
-                   src[i].width == dst.width);
-         inst->regs_written += (sources - header_size) * (dispatch_width() / 8);
+         inst->regs_written = header_size +
+                              (sources - header_size) * (dispatch_width() / 8);
 
          return inst;
       }
@@ -628,8 +619,8 @@ namespace brw {
                inst->resize_sources(1);
                inst->src[0] = src0;
 
-               at(block, inst).MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type,
-                                          dispatch_width()), src1);
+               at(block, inst).MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type),
+                                   src1);
             }
          }
 

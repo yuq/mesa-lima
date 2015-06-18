@@ -44,7 +44,6 @@ public:
    fs_reg(struct brw_reg fixed_hw_reg);
    fs_reg(enum register_file file, int reg);
    fs_reg(enum register_file file, int reg, enum brw_reg_type type);
-   fs_reg(enum register_file file, int reg, enum brw_reg_type type, uint8_t width);
 
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;
@@ -59,14 +58,6 @@ public:
    int subreg_offset;
 
    fs_reg *reladdr;
-
-   /**
-    * The register width.  This indicates how many hardware values are
-    * represented by each virtual value.  Valid values are 1, 8, or 16.
-    * For immediate values, this is 1.  Most of the rest of the time, it
-    * will be equal to the dispatch width.
-    */
-   uint8_t width;
 
    /** Register region horizontal stride */
    uint8_t stride;
@@ -132,9 +123,7 @@ static inline fs_reg
 component(fs_reg reg, unsigned idx)
 {
    assert(reg.subreg_offset == 0);
-   assert(idx < reg.width);
    reg.subreg_offset = idx * type_sz(reg.type);
-   reg.width = 1;
    reg.stride = 0;
    return reg;
 }
@@ -142,7 +131,7 @@ component(fs_reg reg, unsigned idx)
 static inline bool
 is_uniform(const fs_reg &reg)
 {
-   return (reg.width == 1 || reg.stride == 0 || reg.is_null()) &&
+   return (reg.stride == 0 || reg.is_null()) &&
           (!reg.reladdr || is_uniform(*reg.reladdr));
 }
 
@@ -164,8 +153,6 @@ half(fs_reg reg, unsigned idx)
 
    case GRF:
    case MRF:
-      assert(reg.width == 16);
-      reg.width = 8;
       return horiz_offset(reg, 8 * idx);
 
    case ATTR:

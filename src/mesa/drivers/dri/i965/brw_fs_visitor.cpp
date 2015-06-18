@@ -246,7 +246,7 @@ fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
                                      fs_reg shadow_c, fs_reg lod,
                                      uint32_t sampler)
 {
-   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
+   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F);
    bool has_lod = op == ir_txl || op == ir_txb || op == ir_txf || op == ir_txs;
 
    if (has_lod && shadow_c.file != BAD_FILE)
@@ -323,7 +323,7 @@ fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
    int reg_width = dispatch_width / 8;
    unsigned header_size = 0;
 
-   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
+   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F);
    fs_reg msg_coords = message;
 
    if (has_offset) {
@@ -646,7 +646,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
       mlen = length * reg_width;
 
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_F, dispatch_width);
+                               BRW_REGISTER_TYPE_F);
    bld.LOAD_PAYLOAD(src_payload, sources, length, header_size);
 
    /* Generate the SEND */
@@ -800,7 +800,7 @@ fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
 {
    int reg_width = dispatch_width / 8;
    fs_reg payload = fs_reg(GRF, alloc.allocate(components * reg_width),
-                           BRW_REGISTER_TYPE_F, dispatch_width);
+                           BRW_REGISTER_TYPE_F);
    fs_reg dest = vgrf(glsl_type::uvec4_type);
    fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
 
@@ -1170,7 +1170,7 @@ fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
 
    int mlen = 1 + (length - 1) * reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_UD, dispatch_width);
+                               BRW_REGISTER_TYPE_UD);
    bld.LOAD_PAYLOAD(src_payload, sources, length, 1);
 
    /* Emit the instruction. */
@@ -1218,7 +1218,7 @@ fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
 
    int mlen = 1 + reg_width;
    fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_UD, dispatch_width);
+                               BRW_REGISTER_TYPE_UD);
    fs_inst *inst = bld.LOAD_PAYLOAD(src_payload, sources, 2, 1);
 
    /* Emit the instruction. */
@@ -1236,8 +1236,8 @@ fs_visitor::emit_dummy_fs()
    /* Everyone's favorite color. */
    const float color[4] = { 1.0, 0.0, 1.0, 0.0 };
    for (int i = 0; i < 4; i++) {
-      bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F,
-                     dispatch_width), fs_reg(color[i]));
+      bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F),
+              fs_reg(color[i]));
    }
 
    fs_inst *write;
@@ -1357,7 +1357,7 @@ fs_visitor::emit_interpolation_setup_gen6()
        * compute our pixel centers.
        */
       fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
-                          BRW_REGISTER_TYPE_UW, dispatch_width * 2);
+                          BRW_REGISTER_TYPE_UW);
       fs_inst *add =
          new (mem_ctx) fs_inst(BRW_OPCODE_ADD, dispatch_width * 2,
                                int_pixel_xy,
@@ -1544,7 +1544,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
        * it's unsinged single words, one vgrf is always 16-wide.
        */
       sources[length] = fs_reg(GRF, alloc.allocate(1),
-                               BRW_REGISTER_TYPE_UW, 16);
+                               BRW_REGISTER_TYPE_UW);
       bld.exec_all().annotate("FB write oMask")
          .emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
       length++;
@@ -1613,7 +1613,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    fs_inst *write;
    if (devinfo->gen >= 7) {
       /* Send from the GRF */
-      fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F, exec_size);
+      fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
       load = ubld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
       payload.reg = alloc.allocate(load->regs_written);
       load->dst = payload;
@@ -1621,7 +1621,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
       write->base_mrf = -1;
    } else {
       /* Send from the MRF */
-      load = ubld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F, exec_size),
+      load = ubld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
                                sources, length, payload_header_size);
 
       /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
@@ -1928,7 +1928,7 @@ fs_visitor::emit_urb_writes()
       if (flush) {
          fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
          fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
-                                 BRW_REGISTER_TYPE_F, dispatch_width);
+                                 BRW_REGISTER_TYPE_F);
          payload_sources[0] =
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
