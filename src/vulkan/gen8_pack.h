@@ -166,7 +166,7 @@ struct GEN8_3DSTATE_VS {
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     AccessesUAV;
    uint32_t                                     SoftwareExceptionEnable;
-   uint64_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     VertexURBEntryReadLength;
@@ -215,10 +215,13 @@ GEN8_3DSTATE_VS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint64_t qw4 =
+   uint32_t dw4 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 63) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
+
+   uint64_t qw4 =
+      __gen_combine_address(data, &dw[4], values->ScratchSpaceBasePointer, dw4);
 
    dw[4] = qw4;
    dw[5] = qw4 >> 32;
@@ -2244,7 +2247,7 @@ struct GEN8_3DSTATE_DS {
    uint32_t                                     AccessesUAV;
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
-   uint64_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     PatchURBEntryReadLength;
@@ -2294,10 +2297,13 @@ GEN8_3DSTATE_DS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint64_t qw4 =
+   uint32_t dw4 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 63) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
+
+   uint64_t qw4 =
+      __gen_combine_address(data, &dw[4], values->ScratchSpaceBasePointer, dw4);
 
    dw[4] = qw4;
    dw[5] = qw4 >> 32;
@@ -2677,7 +2683,7 @@ struct GEN8_3DSTATE_GS {
    uint32_t                                     MaskStackExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
    uint32_t                                     ExpectedVertexCount;
-   uint64_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     OutputVertexSize;
    uint32_t                                     OutputTopology;
@@ -2749,10 +2755,13 @@ GEN8_3DSTATE_GS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->ExpectedVertexCount, 0, 5) |
       0;
 
-   uint64_t qw4 =
+   uint32_t dw4 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 63) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
+
+   uint64_t qw4 =
+      __gen_combine_address(data, &dw[4], values->ScratchSpaceBasePointer, dw4);
 
    dw[4] = qw4;
    dw[5] = qw4 >> 32;
@@ -2888,7 +2897,7 @@ struct GEN8_3DSTATE_HS {
    uint32_t                                     MaximumNumberofThreads;
    uint32_t                                     InstanceCount;
    uint64_t                                     KernelStartPointer;
-   uint64_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     SingleProgramFlow;
 #define     Dmask                                              0
@@ -2938,10 +2947,13 @@ GEN8_3DSTATE_HS_pack(__gen_user_data *data, void * restrict dst,
    dw[3] = qw3;
    dw[4] = qw3 >> 32;
 
-   uint64_t qw5 =
+   uint32_t dw5 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 63) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
+
+   uint64_t qw5 =
+      __gen_combine_address(data, &dw[5], values->ScratchSpaceBasePointer, dw5);
 
    dw[5] = qw5;
    dw[6] = qw5 >> 32;
@@ -3280,7 +3292,7 @@ struct GEN8_3DSTATE_PS {
    uint32_t                                     IllegalOpcodeExceptionEnable;
    uint32_t                                     MaskStackExceptionEnable;
    uint32_t                                     SoftwareExceptionEnable;
-   uint64_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     MaximumNumberofThreadsPerPSD;
    uint32_t                                     PushConstantEnable;
@@ -3335,10 +3347,13 @@ GEN8_3DSTATE_PS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->SoftwareExceptionEnable, 7, 7) |
       0;
 
-   uint64_t qw4 =
+   uint32_t dw4 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 63) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
+
+   uint64_t qw4 =
+      __gen_combine_address(data, &dw[4], values->ScratchSpaceBasePointer, dw4);
 
    dw[4] = qw4;
    dw[5] = qw4 >> 32;
@@ -6404,10 +6419,10 @@ struct GEN8_MEDIA_VFE_STATE {
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     ScratchSpaceBasePointer;
+   __gen_address_type                           ScratchSpaceBasePointer;
    uint32_t                                     StackSize;
    uint32_t                                     PerThreadScratchSpace;
-   uint32_t                                     ScratchSpaceBasePointerHigh;
+   __gen_address_type                           ScratchSpaceBasePointerHigh;
    uint32_t                                     MaximumNumberofThreads;
    uint32_t                                     NumberofURBEntries;
 #define     Maintainingtheexistingtimestampstate               0
@@ -6458,15 +6473,21 @@ GEN8_MEDIA_VFE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->DwordLength, 0, 15) |
       0;
 
-   dw[1] =
+   uint32_t dw1 =
       __gen_offset(values->ScratchSpaceBasePointer, 10, 31) |
       __gen_field(values->StackSize, 4, 7) |
       __gen_field(values->PerThreadScratchSpace, 0, 3) |
       0;
 
-   dw[2] =
+   dw[1] =
+      __gen_combine_address(data, &dw[1], values->ScratchSpaceBasePointer, dw1);
+
+   uint32_t dw2 =
       __gen_offset(values->ScratchSpaceBasePointerHigh, 0, 15) |
       0;
+
+   dw[2] =
+      __gen_combine_address(data, &dw[2], values->ScratchSpaceBasePointerHigh, dw2);
 
    dw[3] =
       __gen_field(values->MaximumNumberofThreads, 16, 31) |
