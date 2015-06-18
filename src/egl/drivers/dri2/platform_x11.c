@@ -235,6 +235,10 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
                        dri2_surf->drawable, screen->root,
 			dri2_surf->base.Width, dri2_surf->base.Height);
    } else {
+      if (!drawable) {
+         _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
+         goto cleanup_surf;
+      }
       dri2_surf->drawable = drawable;
    }
 
