@@ -162,10 +162,7 @@ struct ilo_vb_state {
 };
 
 struct ilo_ib_state {
-   struct pipe_resource *buffer;
-   const void *user_buffer;
-   unsigned offset;
-   unsigned index_size;
+   struct pipe_index_buffer state;
 
    /* these are not valid until the state is finalized */
    struct pipe_resource *hw_resource;

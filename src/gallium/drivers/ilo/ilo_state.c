@@ -368,7 +368,8 @@ finalize_index_buffer(struct ilo_context *ilo)
 {
    struct ilo_state_vector *vec = &ilo->state_vector;
    const bool need_upload = (vec->draw->indexed &&
-         (vec->ib.user_buffer || vec->ib.offset % vec->ib.index_size));
+         (vec->ib.state.user_buffer ||
+          vec->ib.state.offset % vec->ib.state.index_size));
    struct pipe_resource *current_hw_res = NULL;
 
    if (!(vec->dirty & ILO_DIRTY_IB) && !need_upload)
@@ -377,45 +378,47 @@ finalize_index_buffer(struct ilo_context *ilo)
    pipe_resource_reference(&current_hw_res, vec->ib.hw_resource);
 
    if (need_upload) {
-      const unsigned offset = vec->ib.index_size * vec->draw->start;
-      const unsigned size = vec->ib.index_size * vec->draw->count;
+      const unsigned offset = vec->ib.state.index_size * vec->draw->start;
+      const unsigned size = vec->ib.state.index_size * vec->draw->count;
       unsigned hw_offset;
 
-      if (vec->ib.user_buffer) {
+      if (vec->ib.state.user_buffer) {
          u_upload_data(ilo->uploader, 0, size,
-               vec->ib.user_buffer + offset, &hw_offset, &vec->ib.hw_resource);
-      }
-      else {
-         u_upload_buffer(ilo->uploader, 0, vec->ib.offset + offset, size,
-               vec->ib.buffer, &hw_offset, &vec->ib.hw_resource);
+               vec->ib.state.user_buffer + offset,
+               &hw_offset, &vec->ib.hw_resource);
+      } else {
+         u_upload_buffer(ilo->uploader, 0,
+               vec->ib.state.offset + offset, size, vec->ib.state.buffer,
+               &hw_offset, &vec->ib.hw_resource);
       }
 
       /* the HW offset should be aligned */
-      assert(hw_offset % vec->ib.index_size == 0);
-      vec->ib.draw_start_offset = hw_offset / vec->ib.index_size;
+      assert(hw_offset % vec->ib.state.index_size == 0);
+      vec->ib.draw_start_offset = hw_offset / vec->ib.state.index_size;
 
       /*
        * INDEX[vec->draw->start] in the original buffer is INDEX[0] in the HW
        * resource
        */
       vec->ib.draw_start_offset -= vec->draw->start;
-   }
-   else {
-      pipe_resource_reference(&vec->ib.hw_resource, vec->ib.buffer);
+   } else {
+      pipe_resource_reference(&vec->ib.hw_resource, vec->ib.state.buffer);
 
       /* note that index size may be zero when the draw is not indexed */
-      if (vec->draw->indexed)
-         vec->ib.draw_start_offset = vec->ib.offset / vec->ib.index_size;
-      else
+      if (vec->draw->indexed) {
+         vec->ib.draw_start_offset =
+            vec->ib.state.offset / vec->ib.state.index_size;
+      } else {
          vec->ib.draw_start_offset = 0;
+      }
    }
 
    /* treat the IB as clean if the HW states do not change */
    if (vec->ib.hw_resource == current_hw_res &&
-       vec->ib.hw_index_size == vec->ib.index_size)
+       vec->ib.hw_index_size == vec->ib.state.index_size)
       vec->dirty &= ~ILO_DIRTY_IB;
    else
-      vec->ib.hw_index_size = vec->ib.index_size;
+      vec->ib.hw_index_size = vec->ib.state.index_size;
 
    pipe_resource_reference(&current_hw_res, NULL);
 }
@@ -1809,16 +1812,11 @@ ilo_set_index_buffer(struct pipe_context *pipe,
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
 
    if (state) {
-      pipe_resource_reference(&vec->ib.buffer, state->buffer);
-      vec->ib.user_buffer = state->user_buffer;
-      vec->ib.offset = state->offset;
-      vec->ib.index_size = state->index_size;
-   }
-   else {
-      pipe_resource_reference(&vec->ib.buffer, NULL);
-      vec->ib.user_buffer = NULL;
-      vec->ib.offset = 0;
-      vec->ib.index_size = 0;
+      pipe_resource_reference(&vec->ib.state.buffer, state->buffer);
+      vec->ib.state = *state;
+   } else {
+      pipe_resource_reference(&vec->ib.state.buffer, NULL);
+      memset(&vec->ib.state, 0, sizeof(vec->ib.state));
    }
 
    vec->dirty |= ILO_DIRTY_IB;
@@ -2292,7 +2290,7 @@ ilo_state_vector_cleanup(struct ilo_state_vector *vec)
          pipe_resource_reference(&vec->vb.states[i].buffer, NULL);
    }
 
-   pipe_resource_reference(&vec->ib.buffer, NULL);
+   pipe_resource_reference(&vec->ib.state.buffer, NULL);
    pipe_resource_reference(&vec->ib.hw_resource, NULL);
 
    for (i = 0; i < vec->so.count; i++)
@@ -2355,7 +2353,7 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
          }
       }
 
-      if (vec->ib.buffer == res) {
+      if (vec->ib.state.buffer == res) {
          states |= ILO_DIRTY_IB;
 
          /*
