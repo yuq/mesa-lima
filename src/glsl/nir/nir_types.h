@@ -103,6 +103,8 @@ const struct glsl_type * glsl_function_type(const struct glsl_type *return_type,
                                             const struct glsl_function_param *params,
                                             unsigned num_params);
 
+const struct glsl_type *glsl_transposed_type(const struct glsl_type *type);
+
 #ifdef __cplusplus
 }
 #endif
