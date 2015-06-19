@@ -270,3 +270,10 @@ glsl_function_type(const glsl_type *return_type,
 {
    return glsl_type::get_function_instance(return_type, params, num_params);
 }
+
+const glsl_type *
+glsl_transposed_type(const struct glsl_type *type)
+{
+   return glsl_type::get_instance(type->base_type, type->matrix_columns,
+                                  type->vector_elements);
+}
