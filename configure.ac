@@ -1507,7 +1507,6 @@ if test "x$enable_gbm" = xyes; then
     fi
 
     if test "x$enable_dri" = xyes; then
-        GBM_BACKEND_DIRS="$GBM_BACKEND_DIRS dri"
         if test "x$enable_shared_glapi" = xno; then
             AC_MSG_ERROR([gbm_dri requires --enable-shared-glapi])
         fi
