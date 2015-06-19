@@ -404,6 +404,8 @@ VkResult anv_CreateDevice(
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
 
+   anv_block_pool_init(&device->scratch_block_pool, device, 0x10000);
+
    device->info = *physicalDevice->info;
 
    device->compiler = anv_compiler_create(device);
@@ -2387,9 +2389,14 @@ static void
 anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
+   struct anv_bo *scratch_bo = NULL;
+
+   cmd_buffer->scratch_size = device->scratch_block_pool.size;
+   if (cmd_buffer->scratch_size > 0)
+      scratch_bo = &device->scratch_block_pool.bo;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_BASE_ADDRESS,
-                  .GeneralStateBaseAddress = { NULL, 0 },
+                  .GeneralStateBaseAddress = { scratch_bo, 0 },
                   .GeneralStateMemoryObjectControlState = GEN8_MOCS,
                   .GeneralStateBaseAddressModifyEnable = true,
                   .GeneralStateBufferSize = 0xfffff,
@@ -3213,8 +3220,16 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
+   if (cmd_buffer->dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY) {
+      /* If somebody compiled a pipeline after starting a command buffer the
+       * scratch bo may have grown since we started this cmd buffer (and
+       * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
+       * reemit STATE_BASE_ADDRESS so that we use the bigger scratch bo. */
+      if (cmd_buffer->scratch_size < pipeline->total_scratch)
+         anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
+   }
 
    if (cmd_buffer->descriptors_dirty)
       flush_descriptor_sets(cmd_buffer);

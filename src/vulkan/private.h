@@ -384,6 +384,8 @@ struct anv_device {
 
     struct anv_queue                            queue;
 
+    struct anv_block_pool                       scratch_block_pool;
+
     struct anv_compiler *                       compiler;
     struct anv_aub_writer *                     aub_writer;
     pthread_mutex_t                             mutex;
@@ -655,6 +657,7 @@ struct anv_cmd_buffer {
    uint32_t                                     dirty;
    uint32_t                                     compute_dirty;
    uint32_t                                     descriptors_dirty;
+   uint32_t                                     scratch_size;
    struct anv_pipeline *                        pipeline;
    struct anv_pipeline *                        compute_pipeline;
    struct anv_framebuffer *                     framebuffer;
@@ -696,6 +699,8 @@ struct anv_pipeline {
    struct brw_gs_prog_data                      gs_prog_data;
    struct brw_cs_prog_data                      cs_prog_data;
    struct brw_stage_prog_data *                 prog_data[VK_NUM_SHADER_STAGE];
+   uint32_t                                     scratch_start[VK_NUM_SHADER_STAGE];
+   uint32_t                                     total_scratch;
    struct {
       uint32_t                                  vs_start;
       uint32_t                                  vs_size;
@@ -704,11 +709,6 @@ struct anv_pipeline {
       uint32_t                                  gs_size;
       uint32_t                                  nr_gs_entries;
    } urb;
-
-   struct anv_bo                                vs_scratch_bo;
-   struct anv_bo                                ps_scratch_bo;
-   struct anv_bo                                gs_scratch_bo;
-   struct anv_bo                                cs_scratch_bo;
 
    uint32_t                                     active_stages;
    struct anv_state_stream                      program_stream;

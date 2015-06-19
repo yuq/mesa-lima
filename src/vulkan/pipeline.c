@@ -573,8 +573,8 @@ anv_pipeline_create(
                      .BindingTableEntryCount = 0,
                      .ExpectedVertexCount = pipeline->gs_vertex_count,
                         
-                     .PerThreadScratchSpace = 0,
-                     .ScratchSpaceBasePointer = 0,
+                     .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_GEOMETRY],
+                     .PerThreadScratchSpace = ffs(gs_prog_data->base.base.total_scratch / 2048),
 
                      .OutputVertexSize = gs_prog_data->output_vertex_size_hwords * 2 - 1,
                      .OutputTopology = gs_prog_data->output_topology,
@@ -628,11 +628,8 @@ anv_pipeline_create(
                      .AccessesUAV = false,
                      .SoftwareExceptionEnable = false,
 
-                     /* FIXME: pointer needs to be assigned outside as it aliases
-                      * PerThreadScratchSpace.
-                      */
-                     .ScratchSpaceBasePointer = 0,
-                     .PerThreadScratchSpace = 0,
+                     .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_VERTEX],
+                     .PerThreadScratchSpace = ffs(vue_prog_data->base.total_scratch / 2048),
 
                      .DispatchGRFStartRegisterForURBData =
                      vue_prog_data->base.dispatch_grf_start_reg,
@@ -676,8 +673,8 @@ anv_pipeline_create(
                   .VectorMaskEnable = true,
                   .SamplerCount = 1,
 
-                  .ScratchSpaceBasePointer = 0,
-                  .PerThreadScratchSpace = 0,
+                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
+                  .PerThreadScratchSpace = ffs(wm_prog_data->base.total_scratch / 2048),
                   
                   .MaximumNumberofThreadsPerPSD = 64 - 2,
                   .PositionXYOffsetSelect = wm_prog_data->uses_pos_offset ?
@@ -757,11 +754,13 @@ VkResult anv_CreateComputePipeline(
 
    anv_compiler_run(device->compiler, pipeline);
 
+   const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
+
    anv_batch_emit(&pipeline->batch, GEN8_MEDIA_VFE_STATE,
-                  .ScratchSpaceBasePointer = 0, /* FIXME: Scratch bo, this should be a reloc? */
-                  .StackSize = 0,
-                  .PerThreadScratchSpace = 0,
+                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
+                  .PerThreadScratchSpace = ffs(cs_prog_data->base.total_scratch / 2048),
                   .ScratchSpaceBasePointerHigh = 0,
+                  .StackSize = 0,
 
                   .MaximumNumberofThreads = device->info.max_cs_threads - 1,
                   .NumberofURBEntries = 2,

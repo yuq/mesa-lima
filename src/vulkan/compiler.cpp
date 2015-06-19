@@ -248,13 +248,6 @@ really_do_vs_prog(struct brw_context *brw,
 
    ralloc_free(mem_ctx);
 
-   if (stage_prog_data->total_scratch > 0)
-      if (!anv_bo_init_new(&pipeline->vs_scratch_bo,
-                           pipeline->device,
-                           stage_prog_data->total_scratch))
-         return false;
-
-
    return true;
 }
 
@@ -535,12 +528,6 @@ really_do_wm_prog(struct brw_context *brw,
 
    ralloc_free(mem_ctx);
 
-   if (prog_data->base.total_scratch > 0)
-      if (!anv_bo_init_new(&pipeline->ps_scratch_bo,
-                           pipeline->device,
-                           prog_data->base.total_scratch))
-         return false;
-
    return true;
 }
 
@@ -593,13 +580,6 @@ really_do_gs_prog(struct brw_context *brw,
    pipeline->gs_vertex_count = gp->program.VerticesIn;
 
    ralloc_free(output.mem_ctx);
-
-   if (output.prog_data.base.base.total_scratch) {
-      if (!anv_bo_init_new(&pipeline->gs_scratch_bo,
-                           pipeline->device,
-                           output.prog_data.base.base.total_scratch))
-         return false;
-   }
 
    return true;
 }
@@ -684,6 +664,7 @@ fail_on_compile_error(int status, const char *msg)
 }
 
 struct anv_compiler {
+   struct anv_device *device;
    struct intel_screen *screen;
    struct brw_context *brw;
    struct gl_pipeline_object pipeline;
@@ -709,6 +690,8 @@ anv_compiler_create(struct anv_device *device)
    compiler->brw = rzalloc(compiler, struct brw_context);
    if (compiler->brw == NULL)
       goto fail;
+
+   compiler->device = device;
 
    compiler->brw->optionCache.info = NULL;
    compiler->brw->bufmgr = NULL;
@@ -967,6 +950,28 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    unreachable("SPIR-V is not supported yet!");
 }
 
+static void
+add_compiled_stage(struct anv_pipeline *pipeline, uint32_t stage,
+                   struct brw_stage_prog_data *prog_data)
+{
+   struct brw_device_info *devinfo = &pipeline->device->info;
+   uint32_t max_threads[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = devinfo->max_vs_threads,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 0,
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 0,
+      [VK_SHADER_STAGE_GEOMETRY]                = devinfo->max_gs_threads,
+      [VK_SHADER_STAGE_FRAGMENT]                = devinfo->max_wm_threads,
+      [VK_SHADER_STAGE_COMPUTE]                 = devinfo->max_cs_threads,
+   };
+
+   pipeline->prog_data[stage] = prog_data;
+   pipeline->active_stages |= 1 << stage;
+   pipeline->scratch_start[stage] = pipeline->total_scratch;
+   pipeline->total_scratch =
+      ALIGN_U32(pipeline->total_scratch, 1024) +
+      prog_data->total_scratch * max_threads[stage];
+}
+
 int
 anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 {
@@ -978,6 +983,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
     * of various prog_data pointers.  Make them NULL by default.
     */
    memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
+   memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
 
    brw->use_rep_send = pipeline->use_repclear;
    brw->no_simd8 = pipeline->use_repclear;
@@ -1024,6 +1030,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
    bool success;
    pipeline->active_stages = 0;
+   pipeline->total_scratch = 0;
 
    if (pipeline->shaders[VK_SHADER_STAGE_VERTEX]) {
       struct brw_vs_prog_key vs_key;
@@ -1035,8 +1042,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
       success = really_do_vs_prog(brw, program, bvp, &vs_key, pipeline);
       fail_if(!success, "do_wm_prog failed\n");
-      pipeline->prog_data[VK_SHADER_STAGE_VERTEX] = &pipeline->vs_prog_data.base.base;
-      pipeline->active_stages |= VK_SHADER_STAGE_VERTEX_BIT;;
+      add_compiled_stage(pipeline, VK_SHADER_STAGE_VERTEX,
+                         &pipeline->vs_prog_data.base.base);
    } else {
       memset(&pipeline->vs_prog_data, 0, sizeof(pipeline->vs_prog_data));
       pipeline->vs_simd8 = NO_KERNEL;
@@ -1053,8 +1060,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
       success = really_do_gs_prog(brw, program, bgp, &gs_key, pipeline);
       fail_if(!success, "do_gs_prog failed\n");
-      pipeline->active_stages |= VK_SHADER_STAGE_GEOMETRY_BIT;
-      pipeline->prog_data[VK_SHADER_STAGE_GEOMETRY] = &pipeline->gs_prog_data.base.base;
+      add_compiled_stage(pipeline, VK_SHADER_STAGE_GEOMETRY,
+                         &pipeline->gs_prog_data.base.base);
    } else {
       pipeline->gs_vec4 = NO_KERNEL;
    }
@@ -1069,8 +1076,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
       success = really_do_wm_prog(brw, program, bfp, &wm_key, pipeline);
       fail_if(!success, "do_wm_prog failed\n");
-      pipeline->prog_data[VK_SHADER_STAGE_FRAGMENT] = &pipeline->wm_prog_data.base;
-      pipeline->active_stages |= VK_SHADER_STAGE_FRAGMENT_BIT;
+      add_compiled_stage(pipeline, VK_SHADER_STAGE_FRAGMENT,
+                         &pipeline->wm_prog_data.base);
    }
 
    if (pipeline->shaders[VK_SHADER_STAGE_COMPUTE]) {
@@ -1083,11 +1090,15 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
       success = brw_codegen_cs_prog(brw, program, bcp, &cs_key, pipeline);
       fail_if(!success, "brw_codegen_cs_prog failed\n");
-      pipeline->prog_data[VK_SHADER_STAGE_COMPUTE] = &pipeline->cs_prog_data.base;
-      pipeline->active_stages |= VK_SHADER_STAGE_COMPUTE_BIT;
+      add_compiled_stage(pipeline, VK_SHADER_STAGE_COMPUTE,
+                         &pipeline->cs_prog_data.base);
    }
 
    brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
+
+   struct anv_device *device = compiler->device;
+   while (device->scratch_block_pool.bo.size < pipeline->total_scratch)
+      anv_block_pool_alloc(&device->scratch_block_pool);
 
    gen7_compute_urb_partition(pipeline);
 
