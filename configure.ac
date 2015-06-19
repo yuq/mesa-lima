@@ -942,7 +942,7 @@ x*yes*yes*)
 esac
 
 # Building Xlib-GLX requires shared glapi to be disabled.
-if test "x$enable_xlib_glx" = xyes; then
+if test "x$enable_shared_glapi$enable_xlib_glx" = xyesyes; then
     AC_MSG_NOTICE([Shared GLAPI should not used with Xlib-GLX, disabling])
     enable_shared_glapi=no
 fi
