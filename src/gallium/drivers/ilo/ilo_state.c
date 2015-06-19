@@ -478,6 +478,39 @@ finalize_vertex_elements(struct ilo_context *ilo)
 }
 
 static void
+finalize_vertex_buffers(struct ilo_context *ilo)
+{
+   const struct ilo_dev *dev = ilo->dev;
+   struct ilo_state_vector *vec = &ilo->state_vector;
+   struct ilo_state_vertex_buffer_info info;
+   unsigned i;
+
+   if (!(vec->dirty & (ILO_DIRTY_VE | ILO_DIRTY_VB)))
+      return;
+
+   memset(&info, 0, sizeof(info));
+
+   for (i = 0; i < vec->ve->vb_count; i++) {
+      const unsigned pipe_idx = vec->ve->vb_mapping[i];
+      const struct pipe_vertex_buffer *cso = &vec->vb.states[pipe_idx];
+
+      if (cso->buffer) {
+         info.buf = ilo_buffer(cso->buffer);
+         info.offset = cso->buffer_offset;
+         info.size = info.buf->bo_size;
+
+         info.stride = cso->stride;
+
+         vec->vb.vb[i].bo = info.buf->bo;
+      } else {
+         memset(&info, 0, sizeof(info));
+      }
+
+      ilo_state_vertex_buffer_set_info(&vec->vb.vb[i], dev, &info);
+   }
+}
+
+static void
 finalize_urb(struct ilo_context *ilo)
 {
    const uint16_t attr_size = sizeof(uint32_t) * 4;
@@ -728,6 +761,7 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
    finalize_constant_buffers(ilo);
    finalize_index_buffer(ilo);
    finalize_vertex_elements(ilo);
+   finalize_vertex_buffers(ilo);
 
    finalize_urb(ilo);
    finalize_rasterizer(ilo);
@@ -1366,8 +1400,6 @@ ilo_create_vertex_elements_state(struct pipe_context *pipe,
       attr->format_size = util_format_get_blocksize(elem->src_format);
       attr->component_count = util_format_get_nr_components(elem->src_format);
       attr->is_integer = util_format_is_pure_integer(elem->src_format);
-      attr->is_double = (util_format_is_float(elem->src_format) &&
-         attr->format_size == attr->component_count * 8);
 
       attr->instancing_enable = (elem->instance_divisor != 0);
       attr->instancing_step_rate = elem->instance_divisor;

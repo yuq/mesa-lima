@@ -65,7 +65,6 @@ struct ilo_state_vf_element_info {
    uint8_t format_size;
    uint8_t component_count;
    bool is_integer;
-   bool is_double;
 
    /* must be the same for those share the same buffer before Gen8 */
    bool instancing_enable;
@@ -127,6 +126,29 @@ struct ilo_state_vf_delta {
    uint32_t dirty;
 };
 
+struct ilo_buffer;
+
+struct ilo_state_vertex_buffer_info {
+   const struct ilo_buffer *buf;
+   uint32_t offset;
+   uint32_t size;
+
+   uint16_t stride;
+
+   /* doubles must be at 64-bit aligned addresses */
+   bool cv_has_double;
+   uint8_t cv_double_vertex_offset_mod_8;
+};
+
+struct ilo_state_vertex_buffer {
+   uint32_t vb[3];
+
+   bool need_bo;
+
+   /* managed by users */
+   struct intel_bo *bo;
+};
+
 static inline size_t
 ilo_state_vf_data_size(const struct ilo_dev *dev, uint8_t element_count)
 {
@@ -171,5 +193,10 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
                        const struct ilo_dev *dev,
                        const struct ilo_state_vf *old,
                        struct ilo_state_vf_delta *delta);
+
+bool
+ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
+                                 const struct ilo_dev *dev,
+                                 const struct ilo_state_vertex_buffer_info *info);
 
 #endif /* ILO_STATE_VF_H */

@@ -157,6 +157,7 @@ struct ilo_ve_state {
 
 struct ilo_vb_state {
    struct pipe_vertex_buffer states[PIPE_MAX_ATTRIBS];
+   struct ilo_state_vertex_buffer vb[PIPE_MAX_ATTRIBS];
    uint32_t enabled_mask;
 };
 

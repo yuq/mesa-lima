@@ -26,6 +26,7 @@
  */
 
 #include "ilo_debug.h"
+#include "ilo_buffer.h"
 #include "ilo_state_vf.h"
 
 static bool
@@ -66,18 +67,6 @@ vf_validate_gen6_elements(const struct ilo_dev *dev,
 
       assert(elem->buffer < ILO_STATE_VF_MAX_BUFFER_COUNT);
       assert(elem->vertex_offset < max_vertex_offset);
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 86:
-       *
-       *     "64-bit floating point values must be 64-bit aligned in memory,
-       *      or UNPREDICTABLE data will be fetched. When accessing an element
-       *      containing 64-bit floating point values, the Buffer Starting
-       *      Address and Source Element Offset values must add to a 64-bit
-       *      aligned address, and BufferPitch must be a multiple of 64-bits."
-       */
-      if (elem->is_double)
-         assert(elem->vertex_offset % 8 == 0);
    }
 
    return true;
@@ -483,6 +472,89 @@ vf_params_set_gen75_3DSTATE_VF(struct ilo_state_vf *vf,
    return true;
 }
 
+static bool
+vertex_buffer_validate_gen6(const struct ilo_dev *dev,
+                            const struct ilo_state_vertex_buffer_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (info->buf)
+      assert(info->offset < info->buf->bo_size && info->size);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 86:
+    *
+    *     "(Buffer Pitch)
+    *      Range  [DevCTG+]: [0,2048] Bytes"
+    */
+   assert(info->stride <= 2048);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 86:
+    *
+    *     "64-bit floating point values must be 64-bit aligned in memory, or
+    *      UNPREDICTABLE data will be fetched. When accessing an element
+    *      containing 64-bit floating point values, the Buffer Starting
+    *      Address and Source Element Offset values must add to a 64-bit
+    *      aligned address, and BufferPitch must be a multiple of 64-bits."
+    */
+   if (info->cv_has_double) {
+      assert(info->stride % 8 == 0);
+      assert((info->offset + info->cv_double_vertex_offset_mod_8) % 8 == 0);
+   }
+
+   return true;
+}
+
+static uint32_t
+vertex_buffer_get_gen6_size(const struct ilo_dev *dev,
+                            const struct ilo_state_vertex_buffer_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!info->buf)
+      return 0;
+
+   return (info->offset + info->size <= info->buf->bo_size) ? info->size :
+      info->buf->bo_size - info->offset;
+}
+
+static bool
+vertex_buffer_set_gen8_vertex_buffer_state(struct ilo_state_vertex_buffer *vb,
+                                           const struct ilo_dev *dev,
+                                           const struct ilo_state_vertex_buffer_info *info)
+{
+   const uint32_t size = vertex_buffer_get_gen6_size(dev, info);
+   uint32_t dw0;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!vertex_buffer_validate_gen6(dev, info))
+      return false;
+
+   dw0 = info->stride << GEN6_VB_DW0_PITCH__SHIFT;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      dw0 |= GEN7_VB_DW0_ADDR_MODIFIED;
+   if (!info->buf)
+      dw0 |= GEN6_VB_DW0_IS_NULL;
+
+   STATIC_ASSERT(ARRAY_SIZE(vb->vb) >= 3);
+   vb->vb[0] = dw0;
+   vb->vb[1] = info->offset;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      vb->vb[2] = size;
+   } else {
+      /* address of the last valid byte */
+      vb->vb[2] = (size) ? info->offset + size - 1 : 0;
+   }
+
+   vb->need_bo = (info->buf != NULL);
+
+   return true;
+}
+
 bool
 ilo_state_vf_init(struct ilo_state_vf *vf,
                   const struct ilo_dev *dev,
@@ -662,4 +734,21 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
       if (vf->cut[0] != old->cut[0])
          delta->dirty |= ILO_STATE_VF_3DSTATE_INDEX_BUFFER;
    }
+}
+
+/**
+ * No need to initialize first.
+ */
+bool
+ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
+                                 const struct ilo_dev *dev,
+                                 const struct ilo_state_vertex_buffer_info *info)
+{
+   bool ret = true;
+
+   ret &= vertex_buffer_set_gen8_vertex_buffer_state(vb, dev, info);
+
+   assert(ret);
+
+   return ret;
 }

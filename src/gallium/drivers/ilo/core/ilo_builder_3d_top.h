@@ -305,13 +305,12 @@ gen8_3DSTATE_VF_SGVS(struct ilo_builder *builder,
 static inline void
 gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
                             const struct ilo_state_vf *vf,
-                            const struct ilo_vb_state *vb,
-                            const unsigned *vb_mapping,
+                            const struct ilo_state_vertex_buffer *vb,
                             unsigned vb_count)
 {
    uint8_t cmd_len;
    uint32_t *dw;
-   unsigned pos, hw_idx;
+   unsigned pos, i;
 
    ILO_DEV_ASSERT(builder->dev, 6, 8);
 
@@ -332,53 +331,40 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
    dw++;
    pos++;
 
-   for (hw_idx = 0; hw_idx < vb_count; hw_idx++) {
-      const unsigned pipe_idx = vb_mapping[hw_idx];
-      const struct pipe_vertex_buffer *cso = &vb->states[pipe_idx];
-      const int8_t elem = vf->vb_to_first_elem[hw_idx];
+   for (i = 0; i < vb_count; i++) {
+      const struct ilo_state_vertex_buffer *b = &vb[i];
 
-      dw[0] = hw_idx << GEN6_VB_DW0_INDEX__SHIFT;
+      /* see vertex_buffer_set_gen8_vertex_buffer_state() */
+      dw[0] = b->vb[0] |
+              i << GEN6_VB_DW0_INDEX__SHIFT;
 
       if (ilo_dev_gen(builder->dev) >= ILO_GEN(8))
          dw[0] |= builder->mocs << GEN8_VB_DW0_MOCS__SHIFT;
       else
          dw[0] |= builder->mocs << GEN6_VB_DW0_MOCS__SHIFT;
 
-      if (ilo_dev_gen(builder->dev) >= ILO_GEN(7))
-         dw[0] |= GEN7_VB_DW0_ADDR_MODIFIED;
-
       dw[1] = 0;
       dw[2] = 0;
       dw[3] = 0;
 
-      /* see vf_set_gen6_vertex_buffer_state() */
-      if (ilo_dev_gen(builder->dev) < ILO_GEN(8) && elem >= 0) {
-         dw[0] |= vf->user_instancing[elem][0];
-         dw[3] |= vf->user_instancing[elem][1];
-      }
-
-      /* use null vb if there is no VE/buffer or the stride is out of range */
-      if (elem < 0 || !cso->buffer || cso->stride > 2048) {
-         dw[0] |= GEN6_VB_DW0_IS_NULL;
-         continue;
-      }
-
-      dw[0] |= cso->stride << GEN6_VB_DW0_PITCH__SHIFT;
-
       if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
-         const struct ilo_buffer *buf = ilo_buffer(cso->buffer);
-         const uint32_t start_offset = cso->buffer_offset;
+         if (b->need_bo)
+            ilo_builder_batch_reloc64(builder, pos + 1, b->bo, b->vb[1], 0);
 
-         ilo_builder_batch_reloc64(builder, pos + 1,
-               buf->bo, start_offset, 0);
-         dw[3] = buf->bo_size;
+         dw[3] |= b->vb[2];
       } else {
-         const struct ilo_buffer *buf = ilo_buffer(cso->buffer);
-         const uint32_t start_offset = cso->buffer_offset;
-         const uint32_t end_offset = buf->bo_size - 1;
+         const int8_t elem = vf->vb_to_first_elem[i];
 
-         ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
-         ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
+         /* see vf_set_gen6_vertex_buffer_state() */
+         if (elem >= 0) {
+            dw[0] |= vf->user_instancing[elem][0];
+            dw[3] |= vf->user_instancing[elem][1];
+         }
+
+         if (b->need_bo) {
+            ilo_builder_batch_reloc(builder, pos + 1, b->bo, b->vb[1], 0);
+            ilo_builder_batch_reloc(builder, pos + 2, b->bo, b->vb[2], 0);
+         }
       }
 
       dw += 4;
