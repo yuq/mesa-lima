@@ -1543,6 +1543,9 @@ if test "x$enable_egl" = xyes; then
     if test "$enable_static" != yes; then
         if test "x$enable_dri" = xyes; then
             HAVE_EGL_DRIVER_DRI2=1
+            if test "x$enable_shared_glapi" = xno; then
+                AC_MSG_ERROR([egl_dri2 requires --enable-shared-glapi])
+            fi
         else
             # Avoid building an "empty" libEGL. Drop/update this
             # when other backends (haiku?) come along.
