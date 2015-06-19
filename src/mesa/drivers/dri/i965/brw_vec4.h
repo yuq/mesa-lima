@@ -85,9 +85,7 @@ public:
                 gl_shader_stage stage,
 		void *mem_ctx,
                 bool no_spills,
-                shader_time_shader_type st_base,
-                shader_time_shader_type st_written,
-                shader_time_shader_type st_reset);
+                shader_time_shader_type st_type);
    ~vec4_visitor();
 
    dst_reg dst_null_f()
@@ -345,7 +343,7 @@ public:
 
    void emit_shader_time_begin();
    void emit_shader_time_end();
-   void emit_shader_time_write(enum shader_time_shader_type type,
+   void emit_shader_time_write(int shader_time_index, int shader_time_subindex,
                                src_reg value);
 
    void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
@@ -413,9 +411,7 @@ private:
     */
    const bool no_spills;
 
-   const shader_time_shader_type st_base;
-   const shader_time_shader_type st_written;
-   const shader_time_shader_type st_reset;
+   const shader_time_shader_type st_type;
 };
 
 

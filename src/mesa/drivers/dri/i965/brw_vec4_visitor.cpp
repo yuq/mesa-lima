@@ -3688,9 +3688,7 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
                            gl_shader_stage stage,
 			   void *mem_ctx,
                            bool no_spills,
-                           shader_time_shader_type st_base,
-                           shader_time_shader_type st_written,
-                           shader_time_shader_type st_reset)
+                           shader_time_shader_type st_type)
    : backend_shader(brw, mem_ctx, shader_prog, prog, &prog_data->base, stage),
      c(c),
      key(key),
@@ -3700,9 +3698,7 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
      first_non_payload_grf(0),
      need_all_constants_in_pull_buffer(false),
      no_spills(no_spills),
-     st_base(st_base),
-     st_written(st_written),
-     st_reset(st_reset)
+     st_type(st_type)
 {
    this->failed = false;
 

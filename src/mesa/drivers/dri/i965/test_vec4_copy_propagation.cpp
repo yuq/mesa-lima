@@ -48,8 +48,7 @@ public:
                                   struct gl_shader_program *shader_prog)
       : vec4_visitor(brw, NULL, NULL, NULL, NULL, shader_prog,
                      MESA_SHADER_VERTEX, NULL,
-                     false /* no_spills */,
-                     ST_NONE, ST_NONE, ST_NONE)
+                     false /* no_spills */, ST_NONE)
    {
    }
 

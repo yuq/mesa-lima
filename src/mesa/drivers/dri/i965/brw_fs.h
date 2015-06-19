@@ -278,7 +278,8 @@ public:
    void emit_shader_time_begin();
    void emit_shader_time_end();
    void SHADER_TIME_ADD(const brw::fs_builder &bld,
-                        enum shader_time_shader_type type, fs_reg value);
+                        int shader_time_index, int shader_time_subindex,
+                        fs_reg value);
 
    void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
                             fs_reg dst, fs_reg offset, fs_reg src0,

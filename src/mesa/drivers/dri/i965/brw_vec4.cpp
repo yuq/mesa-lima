@@ -1676,20 +1676,21 @@ vec4_visitor::emit_shader_time_end()
     */
    emit(ADD(diff, src_reg(diff), src_reg(-2u)));
 
-   emit_shader_time_write(st_base, src_reg(diff));
-   emit_shader_time_write(st_written, src_reg(1u));
+   int shader_time_index =
+      brw_get_shader_time_index(brw, shader_prog, prog, st_type);
+
+   emit_shader_time_write(shader_time_index, 0, src_reg(diff));
+   emit_shader_time_write(shader_time_index, 1, src_reg(1u));
    emit(BRW_OPCODE_ELSE);
-   emit_shader_time_write(st_reset, src_reg(1u));
+   emit_shader_time_write(shader_time_index, 2, src_reg(1u));
    emit(BRW_OPCODE_ENDIF);
 }
 
 void
-vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
+vec4_visitor::emit_shader_time_write(int shader_time_index,
+                                     int shader_time_subindex,
                                      src_reg value)
 {
-   int shader_time_index =
-      brw_get_shader_time_index(brw, shader_prog, prog, type);
-
    dst_reg dst =
       dst_reg(this, glsl_type::get_array_instance(glsl_type::vec4_type, 2));
 
@@ -1698,7 +1699,8 @@ vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
    time.reg_offset++;
 
    offset.type = BRW_REGISTER_TYPE_UD;
-   emit(MOV(offset, src_reg(shader_time_index * SHADER_TIME_STRIDE)));
+   int index = shader_time_index * 3 + shader_time_subindex;
+   emit(MOV(offset, src_reg(index * SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
    emit(MOV(time, src_reg(value)));

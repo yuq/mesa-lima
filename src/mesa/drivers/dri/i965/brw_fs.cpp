@@ -578,38 +578,30 @@ fs_visitor::emit_shader_time_begin()
 void
 fs_visitor::emit_shader_time_end()
 {
-   enum shader_time_shader_type type, written_type, reset_type;
+   enum shader_time_shader_type type;
    switch (stage) {
    case MESA_SHADER_VERTEX:
       type = ST_VS;
-      written_type = ST_VS_WRITTEN;
-      reset_type = ST_VS_RESET;
       break;
    case MESA_SHADER_GEOMETRY:
       type = ST_GS;
-      written_type = ST_GS_WRITTEN;
-      reset_type = ST_GS_RESET;
       break;
    case MESA_SHADER_FRAGMENT:
       if (dispatch_width == 8) {
          type = ST_FS8;
-         written_type = ST_FS8_WRITTEN;
-         reset_type = ST_FS8_RESET;
       } else {
          assert(dispatch_width == 16);
          type = ST_FS16;
-         written_type = ST_FS16_WRITTEN;
-         reset_type = ST_FS16_RESET;
       }
       break;
    case MESA_SHADER_COMPUTE:
       type = ST_CS;
-      written_type = ST_CS_WRITTEN;
-      reset_type = ST_CS_RESET;
       break;
    default:
       unreachable("fs_visitor::emit_shader_time_end missing code");
    }
+   int shader_time_index = brw_get_shader_time_index(brw, shader_prog, prog,
+                                                     type);
 
    /* Insert our code just before the final SEND with EOT. */
    exec_node *end = this->instructions.get_tail();
@@ -639,20 +631,20 @@ fs_visitor::emit_shader_time_end()
     * trying to determine the time taken for single instructions.
     */
    ibld.ADD(diff, diff, fs_reg(-2u));
-   SHADER_TIME_ADD(ibld, type, diff);
-   SHADER_TIME_ADD(ibld, written_type, fs_reg(1u));
+   SHADER_TIME_ADD(ibld, shader_time_index, 0, diff);
+   SHADER_TIME_ADD(ibld, shader_time_index, 1, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ELSE);
-   SHADER_TIME_ADD(ibld, reset_type, fs_reg(1u));
+   SHADER_TIME_ADD(ibld, shader_time_index, 2, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ENDIF);
 }
 
 void
 fs_visitor::SHADER_TIME_ADD(const fs_builder &bld,
-                            enum shader_time_shader_type type, fs_reg value)
+                            int shader_time_index, int shader_time_subindex,
+                            fs_reg value)
 {
-   int shader_time_index =
-      brw_get_shader_time_index(brw, shader_prog, prog, type);
-   fs_reg offset = fs_reg(shader_time_index * SHADER_TIME_STRIDE);
+   int index = shader_time_index * 3 + shader_time_subindex;
+   fs_reg offset = fs_reg(index * SHADER_TIME_STRIDE);
 
    fs_reg payload;
    if (dispatch_width == 8)
