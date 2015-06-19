@@ -77,7 +77,8 @@ public:
               struct brw_stage_prog_data *prog_data,
               struct gl_shader_program *shader_prog,
               struct gl_program *prog,
-              unsigned dispatch_width);
+              unsigned dispatch_width,
+              int shader_time_index);
 
    ~fs_visitor();
 
@@ -278,7 +279,7 @@ public:
    void emit_shader_time_begin();
    void emit_shader_time_end();
    void SHADER_TIME_ADD(const brw::fs_builder &bld,
-                        int shader_time_index, int shader_time_subindex,
+                        int shader_time_subindex,
                         fs_reg value);
 
    void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
@@ -386,6 +387,8 @@ public:
    bool spilled_any_registers;
 
    const unsigned dispatch_width; /**< 8 or 16 */
+
+   int shader_time_index;
 
    unsigned promoted_constants;
    brw::fs_builder bld;

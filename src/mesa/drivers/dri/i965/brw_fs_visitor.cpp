@@ -1983,10 +1983,13 @@ fs_visitor::fs_visitor(struct brw_context *brw,
                        struct brw_stage_prog_data *prog_data,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog,
-                       unsigned dispatch_width)
+                       unsigned dispatch_width,
+                       int shader_time_index)
    : backend_shader(brw, mem_ctx, shader_prog, prog, prog_data, stage),
      key(key), prog_data(prog_data),
-     dispatch_width(dispatch_width), promoted_constants(0),
+     dispatch_width(dispatch_width),
+     shader_time_index(shader_time_index),
+     promoted_constants(0),
      bld(fs_builder(this, dispatch_width).at_end())
 {
    switch (stage) {

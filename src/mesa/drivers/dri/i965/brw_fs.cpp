@@ -578,31 +578,6 @@ fs_visitor::emit_shader_time_begin()
 void
 fs_visitor::emit_shader_time_end()
 {
-   enum shader_time_shader_type type;
-   switch (stage) {
-   case MESA_SHADER_VERTEX:
-      type = ST_VS;
-      break;
-   case MESA_SHADER_GEOMETRY:
-      type = ST_GS;
-      break;
-   case MESA_SHADER_FRAGMENT:
-      if (dispatch_width == 8) {
-         type = ST_FS8;
-      } else {
-         assert(dispatch_width == 16);
-         type = ST_FS16;
-      }
-      break;
-   case MESA_SHADER_COMPUTE:
-      type = ST_CS;
-      break;
-   default:
-      unreachable("fs_visitor::emit_shader_time_end missing code");
-   }
-   int shader_time_index = brw_get_shader_time_index(brw, shader_prog, prog,
-                                                     type);
-
    /* Insert our code just before the final SEND with EOT. */
    exec_node *end = this->instructions.get_tail();
    assert(end && ((fs_inst *) end)->eot);
@@ -631,16 +606,16 @@ fs_visitor::emit_shader_time_end()
     * trying to determine the time taken for single instructions.
     */
    ibld.ADD(diff, diff, fs_reg(-2u));
-   SHADER_TIME_ADD(ibld, shader_time_index, 0, diff);
-   SHADER_TIME_ADD(ibld, shader_time_index, 1, fs_reg(1u));
+   SHADER_TIME_ADD(ibld, 0, diff);
+   SHADER_TIME_ADD(ibld, 1, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ELSE);
-   SHADER_TIME_ADD(ibld, shader_time_index, 2, fs_reg(1u));
+   SHADER_TIME_ADD(ibld, 2, fs_reg(1u));
    ibld.emit(BRW_OPCODE_ENDIF);
 }
 
 void
 fs_visitor::SHADER_TIME_ADD(const fs_builder &bld,
-                            int shader_time_index, int shader_time_subindex,
+                            int shader_time_subindex,
                             fs_reg value)
 {
    int index = shader_time_index * 3 + shader_time_subindex;
@@ -3835,7 +3810,7 @@ fs_visitor::run_vs()
    assign_common_binding_table_offsets(0);
    setup_vs_payload();
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_begin();
 
    emit_nir_code();
@@ -3845,7 +3820,7 @@ fs_visitor::run_vs()
 
    emit_urb_writes();
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_end();
 
    calculate_cfg();
@@ -3883,7 +3858,7 @@ fs_visitor::run_fs()
    } else if (brw->use_rep_send && dispatch_width == 16) {
       emit_repclear_shader();
    } else {
-      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      if (shader_time_index >= 0)
          emit_shader_time_begin();
 
       calculate_urb_setup();
@@ -3918,7 +3893,7 @@ fs_visitor::run_fs()
 
       emit_fb_writes();
 
-      if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      if (shader_time_index >= 0)
          emit_shader_time_end();
 
       calculate_cfg();
@@ -3962,7 +3937,7 @@ fs_visitor::run_cs()
 
    setup_cs_payload();
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_begin();
 
    emit_nir_code();
@@ -3972,7 +3947,7 @@ fs_visitor::run_cs()
 
    emit_cs_terminate();
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_end();
 
    calculate_cfg();
@@ -4022,10 +3997,16 @@ brw_wm_fs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
       brw_dump_ir("fragment", prog, &shader->base, &fp->Base);
 
+   int st_index8 = -1, st_index16 = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
+      st_index8 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS8);
+      st_index16 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS16);
+   }
+
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
    fs_visitor v(brw, mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                prog, &fp->Base, 8);
+                prog, &fp->Base, 8, st_index8);
    if (!v.run_fs()) {
       if (prog) {
          prog->LinkStatus = false;
@@ -4040,7 +4021,7 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    cfg_t *simd16_cfg = NULL;
    fs_visitor v2(brw, mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                 prog, &fp->Base, 16);
+                 prog, &fp->Base, 16, st_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */

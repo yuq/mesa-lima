@@ -39,8 +39,9 @@ public:
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
                    void *mem_ctx,
-                   bool no_spills) :
-      vec4_gs_visitor(brw, c, prog, mem_ctx, no_spills) {}
+                   bool no_spills,
+                   int shader_time_index) :
+      vec4_gs_visitor(brw, c, prog, mem_ctx, no_spills, shader_time_index) {}
 
 protected:
    virtual void assign_binding_table_offsets();

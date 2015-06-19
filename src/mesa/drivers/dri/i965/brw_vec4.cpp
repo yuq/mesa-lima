@@ -1676,20 +1676,15 @@ vec4_visitor::emit_shader_time_end()
     */
    emit(ADD(diff, src_reg(diff), src_reg(-2u)));
 
-   int shader_time_index =
-      brw_get_shader_time_index(brw, shader_prog, prog, st_type);
-
-   emit_shader_time_write(shader_time_index, 0, src_reg(diff));
-   emit_shader_time_write(shader_time_index, 1, src_reg(1u));
+   emit_shader_time_write(0, src_reg(diff));
+   emit_shader_time_write(1, src_reg(1u));
    emit(BRW_OPCODE_ELSE);
-   emit_shader_time_write(shader_time_index, 2, src_reg(1u));
+   emit_shader_time_write(2, src_reg(1u));
    emit(BRW_OPCODE_ENDIF);
 }
 
 void
-vec4_visitor::emit_shader_time_write(int shader_time_index,
-                                     int shader_time_subindex,
-                                     src_reg value)
+vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 {
    dst_reg dst =
       dst_reg(this, glsl_type::get_array_instance(glsl_type::vec4_type, 2));
@@ -1715,7 +1710,7 @@ vec4_visitor::run()
 {
    sanity_param_count = prog->Parameters->NumParameters;
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_begin();
 
    assign_binding_table_offsets();
@@ -1881,6 +1876,11 @@ brw_vs_emit(struct brw_context *brw,
    if (prog)
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &c->vp->program.Base,
+                                           ST_VS);
+
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
@@ -1899,7 +1899,8 @@ brw_vs_emit(struct brw_context *brw,
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
       fs_visitor v(brw, mem_ctx, MESA_SHADER_VERTEX, &c->key,
-                   &prog_data->base.base, prog, &c->vp->program.Base, 8);
+                   &prog_data->base.base, prog, &c->vp->program.Base,
+                   8, st_index);
       if (!v.run_vs()) {
          if (prog) {
             prog->LinkStatus = false;
@@ -1937,7 +1938,7 @@ brw_vs_emit(struct brw_context *brw,
    if (!assembly) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-      vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
+      vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx, st_index);
       if (!v.run()) {
          if (prog) {
             prog->LinkStatus = false;

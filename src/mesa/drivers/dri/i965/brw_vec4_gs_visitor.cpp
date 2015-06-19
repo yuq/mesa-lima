@@ -38,10 +38,11 @@ vec4_gs_visitor::vec4_gs_visitor(struct brw_context *brw,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
-                                 bool no_spills)
+                                 bool no_spills,
+                                 int shader_time_index)
    : vec4_visitor(brw, &c->base, &c->gp->program.Base, &c->key.base,
                   &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
-                  no_spills, ST_GS),
+                  no_spills, shader_time_index),
      c(c)
 {
 }
@@ -648,6 +649,10 @@ brw_gs_emit(struct brw_context *brw,
       brw_dump_ir("geometry", prog, &shader->base, NULL);
    }
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, NULL, ST_GS);
+
    if (brw->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do
        * so without spilling. If the GS invocations count > 1, then we can't use
@@ -657,7 +662,8 @@ brw_gs_emit(struct brw_context *brw,
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(brw, c, prog, mem_ctx, true /* no_spills */);
+         vec4_gs_visitor v(brw, c, prog, mem_ctx, true /* no_spills */,
+                           st_index);
          if (v.run()) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
                                      &c->prog_data.base, mem_ctx, v.cfg,
@@ -698,9 +704,11 @@ brw_gs_emit(struct brw_context *brw,
    const unsigned *ret = NULL;
 
    if (brw->gen >= 7)
-      gs = new vec4_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */);
+      gs = new vec4_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */,
+                               st_index);
    else
-      gs = new gen6_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */);
+      gs = new gen6_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */,
+                               st_index);
 
    if (!gs->run()) {
       prog->LinkStatus = false;
