@@ -437,102 +437,63 @@ gen6_3DSTATE_VERTEX_ELEMENTS(struct ilo_builder *builder,
 static inline void
 gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
                           const struct ilo_state_vf *vf,
-                          const struct ilo_ib_state *ib)
+                          const struct ilo_state_index_buffer *ib)
 {
    const uint8_t cmd_len = 3;
-   struct ilo_buffer *buf = ilo_buffer(ib->hw_resource);
-   uint32_t start_offset, end_offset;
-   enum gen_index_format format;
-   uint32_t *dw;
+   uint32_t dw0, *dw;
    unsigned pos;
 
    ILO_DEV_ASSERT(builder->dev, 6, 7.5);
 
-   if (!buf)
-      return;
-
-   switch (ib->hw_index_size) {
-   case 4:
-      format = GEN6_INDEX_DWORD;
-      break;
-   case 2:
-      format = GEN6_INDEX_WORD;
-      break;
-   case 1:
-      format = GEN6_INDEX_BYTE;
-      break;
-   default:
-      assert(!"unknown index size");
-      format = GEN6_INDEX_BYTE;
-      break;
-   }
+   dw0 = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2) |
+         builder->mocs << GEN6_IB_DW0_MOCS__SHIFT;
 
    /*
-    * set start_offset to 0 here and adjust pipe_draw_info::start with
-    * ib->draw_start_offset in 3DPRIMITIVE
+    * see index_buffer_set_gen8_3DSTATE_INDEX_BUFFER() and
+    * vf_params_set_gen6_3dstate_index_buffer()
     */
-   start_offset = 0;
-   end_offset = buf->bo_size;
-
-   /* end_offset must also be aligned and is inclusive */
-   end_offset -= (end_offset % ib->hw_index_size);
-   end_offset--;
+   dw0 |= ib->ib[0];
+   if (ilo_dev_gen(builder->dev) <= ILO_GEN(7))
+      dw0 |= vf->cut[0];
 
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
-   dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2) |
-           builder->mocs << GEN6_IB_DW0_MOCS__SHIFT |
-           format << GEN6_IB_DW0_FORMAT__SHIFT;
-
-   /* see vf_params_set_gen6_3dstate_index_buffer() */
-   if (ilo_dev_gen(builder->dev) <= ILO_GEN(7))
-      dw[0] |= vf->cut[0];
-
-   ilo_builder_batch_reloc(builder, pos + 1, buf->bo, start_offset, 0);
-   ilo_builder_batch_reloc(builder, pos + 2, buf->bo, end_offset, 0);
+   dw[0] = dw0;
+   if (ib->need_bo) {
+      ilo_builder_batch_reloc(builder, pos + 1, ib->bo, ib->ib[1], 0);
+      ilo_builder_batch_reloc(builder, pos + 2, ib->bo, ib->ib[2], 0);
+   } else {
+      dw[1] = 0;
+      dw[2] = 0;
+   }
 }
 
 static inline void
 gen8_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
                           const struct ilo_state_vf *vf,
-                          const struct ilo_ib_state *ib)
+                          const struct ilo_state_index_buffer *ib)
 {
    const uint8_t cmd_len = 5;
-   struct ilo_buffer *buf = ilo_buffer(ib->hw_resource);
-   int format;
    uint32_t *dw;
    unsigned pos;
 
    ILO_DEV_ASSERT(builder->dev, 8, 8);
 
-   if (!buf)
-      return;
-
-   switch (ib->hw_index_size) {
-   case 4:
-      format = GEN6_INDEX_DWORD;
-      break;
-   case 2:
-      format = GEN6_INDEX_WORD;
-      break;
-   case 1:
-      format = GEN6_INDEX_BYTE;
-      break;
-   default:
-      assert(!"unknown index size");
-      format = GEN6_INDEX_BYTE;
-      break;
-   }
-
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = GEN6_RENDER_CMD(3D, 3DSTATE_INDEX_BUFFER) | (cmd_len - 2);
-   dw[1] = format << GEN8_IB_DW1_FORMAT__SHIFT |
+   /* see index_buffer_set_gen8_3DSTATE_INDEX_BUFFER() */
+   dw[1] = ib->ib[0] |
            builder->mocs << GEN8_IB_DW1_MOCS__SHIFT;
-   dw[4] = buf->bo_size;
 
-   /* ignore ib->offset here in favor of adjusting 3DPRIMITIVE */
-   ilo_builder_batch_reloc64(builder, pos + 2, buf->bo, 0, 0);
+   if (ib->need_bo) {
+      ilo_builder_batch_reloc64(builder, pos + 2, ib->bo, ib->ib[1], 0);
+   } else {
+      dw[2] = 0;
+      dw[3] = 0;
+   }
+
+   dw[4] = ib->ib[2];
 }
 
 static inline void

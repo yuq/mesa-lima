@@ -167,6 +167,7 @@ struct ilo_ib_state {
    /* these are not valid until the state is finalized */
    struct pipe_resource *hw_resource;
    unsigned hw_index_size;
+   struct ilo_state_index_buffer ib;
    /* an offset to be added to pipe_draw_info::start */
    int64_t draw_start_offset;
 };

@@ -555,6 +555,93 @@ vertex_buffer_set_gen8_vertex_buffer_state(struct ilo_state_vertex_buffer *vb,
    return true;
 }
 
+static uint32_t
+get_index_format_size(enum gen_index_format format)
+{
+   switch (format) {
+   case GEN6_INDEX_BYTE:   return 1;
+   case GEN6_INDEX_WORD:   return 2;
+   case GEN6_INDEX_DWORD:  return 4;
+   default:
+      assert(!"unknown index format");
+      return 1;
+   }
+}
+
+static bool
+index_buffer_validate_gen6(const struct ilo_dev *dev,
+                           const struct ilo_state_index_buffer_info *info)
+{
+   const uint32_t format_size = get_index_format_size(info->format);
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 79:
+    *
+    *     "This field (Buffer Starting Address) contains the size-aligned (as
+    *      specified by Index Format) Graphics Address of the first element of
+    *      interest within the index buffer."
+    */
+   assert(info->offset % format_size == 0);
+
+   if (info->buf)
+      assert(info->offset < info->buf->bo_size && info->size);
+
+   return true;
+}
+
+static uint32_t
+index_buffer_get_gen6_size(const struct ilo_dev *dev,
+                           const struct ilo_state_index_buffer_info *info)
+{
+   uint32_t size;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!info->buf)
+      return 0;
+
+   size = (info->offset + info->size <= info->buf->bo_size) ? info->size :
+      info->buf->bo_size - info->offset;
+
+   if (ilo_dev_gen(dev) < ILO_GEN(8)) {
+      const uint32_t format_size = get_index_format_size(info->format);
+      size -= (size % format_size);
+   }
+
+   return size;
+}
+
+static bool
+index_buffer_set_gen8_3DSTATE_INDEX_BUFFER(struct ilo_state_index_buffer *ib,
+                                           const struct ilo_dev *dev,
+                                           const struct ilo_state_index_buffer_info *info)
+{
+   const uint32_t size = index_buffer_get_gen6_size(dev, info);
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!index_buffer_validate_gen6(dev, info))
+      return false;
+
+   STATIC_ASSERT(ARRAY_SIZE(ib->ib) >= 3);
+   if (ilo_dev_gen(dev) >= ILO_GEN(8)) {
+      ib->ib[0] = info->format << GEN8_IB_DW1_FORMAT__SHIFT;
+      ib->ib[1] = info->offset;
+      ib->ib[2] = size;
+   } else {
+      ib->ib[0] = info->format << GEN6_IB_DW0_FORMAT__SHIFT;
+      ib->ib[1] = info->offset;
+      /* address of the last valid byte, or 0 */
+      ib->ib[2] = (size) ? info->offset + size - 1 : 0;
+   }
+
+   ib->need_bo = (info->buf != NULL);
+
+   return true;
+}
+
 bool
 ilo_state_vf_init(struct ilo_state_vf *vf,
                   const struct ilo_dev *dev,
@@ -747,6 +834,23 @@ ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
    bool ret = true;
 
    ret &= vertex_buffer_set_gen8_vertex_buffer_state(vb, dev, info);
+
+   assert(ret);
+
+   return ret;
+}
+
+/**
+ * No need to initialize first.
+ */
+bool
+ilo_state_index_buffer_set_info(struct ilo_state_index_buffer *ib,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_index_buffer_info *info)
+{
+   bool ret = true;
+
+   ret &= index_buffer_set_gen8_3DSTATE_INDEX_BUFFER(ib, dev, info);
 
    assert(ret);
 

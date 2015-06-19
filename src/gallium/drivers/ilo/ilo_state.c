@@ -379,11 +379,13 @@ finalize_constant_buffers(struct ilo_context *ilo)
 static void
 finalize_index_buffer(struct ilo_context *ilo)
 {
+   const struct ilo_dev *dev = ilo->dev;
    struct ilo_state_vector *vec = &ilo->state_vector;
    const bool need_upload = (vec->draw->indexed &&
          (vec->ib.state.user_buffer ||
           vec->ib.state.offset % vec->ib.state.index_size));
    struct pipe_resource *current_hw_res = NULL;
+   struct ilo_state_index_buffer_info info;
 
    if (!(vec->dirty & ILO_DIRTY_IB) && !need_upload)
       return;
@@ -435,6 +437,17 @@ finalize_index_buffer(struct ilo_context *ilo)
       vec->ib.hw_index_size = vec->ib.state.index_size;
 
    pipe_resource_reference(&current_hw_res, NULL);
+
+   memset(&info, 0, sizeof(info));
+   if (vec->ib.hw_resource) {
+      info.buf = ilo_buffer(vec->ib.hw_resource);
+      info.size = info.buf->bo_size;
+      info.format = ilo_translate_index_size(vec->ib.hw_index_size);
+
+      vec->ib.ib.bo = info.buf->bo;
+   }
+
+   ilo_state_index_buffer_set_info(&vec->ib.ib, dev, &info);
 }
 
 static void

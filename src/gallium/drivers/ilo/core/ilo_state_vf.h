@@ -149,6 +149,23 @@ struct ilo_state_vertex_buffer {
    struct intel_bo *bo;
 };
 
+struct ilo_state_index_buffer_info {
+   const struct ilo_buffer *buf;
+   uint32_t offset;
+   uint32_t size;
+
+   enum gen_index_format format;
+};
+
+struct ilo_state_index_buffer {
+   uint32_t ib[3];
+
+   bool need_bo;
+
+   /* managed by users */
+   struct intel_bo *bo;
+};
+
 static inline size_t
 ilo_state_vf_data_size(const struct ilo_dev *dev, uint8_t element_count)
 {
@@ -198,5 +215,10 @@ bool
 ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
                                  const struct ilo_dev *dev,
                                  const struct ilo_state_vertex_buffer_info *info);
+
+bool
+ilo_state_index_buffer_set_info(struct ilo_state_index_buffer *ib,
+                                const struct ilo_dev *dev,
+                                const struct ilo_state_index_buffer_info *info);
 
 #endif /* ILO_STATE_VF_H */

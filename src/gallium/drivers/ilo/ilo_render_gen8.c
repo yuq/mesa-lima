@@ -202,7 +202,7 @@ gen8_draw_vf(struct ilo_render *r,
    /* 3DSTATE_INDEX_BUFFER */
    if ((session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_INDEX_BUFFER) ||
        DIRTY(IB) || r->batch_bo_changed)
-      gen8_3DSTATE_INDEX_BUFFER(r->builder, &vec->ve->vf, &vec->ib);
+      gen8_3DSTATE_INDEX_BUFFER(r->builder, &vec->ve->vf, &vec->ib.ib);
 
    /* 3DSTATE_VF */
    if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VF)
