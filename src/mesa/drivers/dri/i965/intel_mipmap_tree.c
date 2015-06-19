@@ -501,7 +501,7 @@ intel_miptree_create_layout(struct brw_context *brw,
     *  6   |      ?         |        ?
     */
    if (intel_miptree_is_fast_clear_capable(brw, mt)) {
-      if (brw->gen >= 9 || (brw->gen == 8 && num_samples == 1))
+      if (brw->gen >= 9 || (brw->gen == 8 && num_samples <= 1))
          layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    } else if (brw->gen >= 9 && num_samples > 1) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
