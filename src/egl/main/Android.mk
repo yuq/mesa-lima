@@ -44,7 +44,6 @@ LOCAL_CFLAGS := \
 	-D_EGL_OS_UNIX=1
 
 LOCAL_SHARED_LIBRARIES := \
-	libglapi \
 	libdl \
 	libhardware \
 	liblog \
