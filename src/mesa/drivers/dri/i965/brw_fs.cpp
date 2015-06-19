@@ -2909,14 +2909,18 @@ fs_visitor::lower_uniform_pull_constant_loads()
          assert(const_offset_reg.file == IMM &&
                 const_offset_reg.type == BRW_REGISTER_TYPE_UD);
          const_offset_reg.fixed_hw_reg.dw1.ud /= 4;
-         fs_reg payload = fs_reg(GRF, alloc.allocate(1));
 
-         /* We have to use a message header on Skylake to get SIMD4x2 mode.
-          * Reserve space for the register.
-          */
+         fs_reg payload, offset;
          if (devinfo->gen >= 9) {
-            payload.reg_offset++;
-            alloc.sizes[payload.reg] = 2;
+            /* We have to use a message header on Skylake to get SIMD4x2
+             * mode.  Reserve space for the register.
+            */
+            offset = payload = fs_reg(GRF, alloc.allocate(2));
+            offset.reg_offset++;
+            inst->mlen = 2;
+         } else {
+            offset = payload = fs_reg(GRF, alloc.allocate(1));
+            inst->mlen = 1;
          }
 
          /* This is actually going to be a MOV, but since only the first dword
@@ -2925,7 +2929,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
           * by live variable analysis, or register allocation will explode.
           */
          fs_inst *setup = new(mem_ctx) fs_inst(FS_OPCODE_SET_SIMD4X2_OFFSET,
-                                               8, payload, const_offset_reg);
+                                               8, offset, const_offset_reg);
          setup->force_writemask_all = true;
 
          setup->ir = inst->ir;
@@ -2938,6 +2942,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
           */
          inst->opcode = FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7;
          inst->src[1] = payload;
+         inst->base_mrf = -1;
 
          invalidate_live_intervals();
       } else {

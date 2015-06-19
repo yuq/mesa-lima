@@ -1054,7 +1054,6 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                                                        struct brw_reg index,
                                                        struct brw_reg offset)
 {
-   assert(inst->mlen == 0);
    assert(index.type == BRW_REGISTER_TYPE_UD);
 
    assert(offset.file == BRW_GENERAL_REGISTER_FILE);
@@ -1069,12 +1068,10 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
    struct brw_reg src = offset;
    bool header_present = false;
-   int mlen = 1;
 
    if (devinfo->gen >= 9) {
       /* Skylake requires a message header in order to use SIMD4x2 mode. */
-      src = retype(brw_vec4_grf(offset.nr - 1, 0), BRW_REGISTER_TYPE_UD);
-      mlen = 2;
+      src = retype(brw_vec4_grf(offset.nr, 0), BRW_REGISTER_TYPE_UD);
       header_present = true;
 
       brw_push_insn_state(p);
@@ -1105,7 +1102,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                               0, /* LD message ignores sampler unit */
                               GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
                               1, /* rlen */
-                              mlen,
+                              inst->mlen,
                               header_present,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
@@ -1135,7 +1132,7 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                               0, /* LD message ignores sampler unit */
                               GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
                               1, /* rlen */
-                              mlen,
+                              inst->mlen,
                               header_present,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
