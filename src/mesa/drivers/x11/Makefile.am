@@ -42,9 +42,7 @@ AM_CPPFLAGS = \
 	$(SHARED_GLAPI_CFLAGS) \
 	$(DEFINES)
 
-if HAVE_X11_DRIVER
 lib_LTLIBRARIES = lib@GL_LIB@.la
-endif
 
 lib@GL_LIB@_la_SOURCES = \
 	glxapi.h \
