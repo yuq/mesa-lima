@@ -1457,6 +1457,8 @@ struct brw_context
        */
       drm_intel_bo *multisampled_null_render_target_bo;
       uint32_t fast_clear_op;
+
+      float offset_clamp;
    } wm;
 
    struct {

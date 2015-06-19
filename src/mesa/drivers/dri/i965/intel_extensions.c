@@ -229,6 +229,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.EXT_packed_float = true;
    ctx->Extensions.EXT_pixel_buffer_object = true;
    ctx->Extensions.EXT_point_parameters = true;
+   ctx->Extensions.EXT_polygon_offset_clamp = true;
    ctx->Extensions.EXT_provoking_vertex = true;
    ctx->Extensions.EXT_stencil_two_side = true;
    ctx->Extensions.EXT_texture_array = true;
@@ -300,7 +301,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.AMD_vertex_shader_layer = true;
       ctx->Extensions.EXT_framebuffer_multisample = true;
       ctx->Extensions.EXT_framebuffer_multisample_blit_scaled = true;
-      ctx->Extensions.EXT_polygon_offset_clamp = true;
       ctx->Extensions.EXT_transform_feedback = true;
       ctx->Extensions.OES_depth_texture_cube_map = true;
 

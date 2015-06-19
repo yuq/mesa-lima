@@ -887,14 +887,6 @@ brw_upload_invariant_state(struct brw_context *brw)
    brw_emit_select_pipeline(brw, BRW_RENDER_PIPELINE);
    brw->last_pipeline = BRW_RENDER_PIPELINE;
 
-   if (brw->gen < 6) {
-      /* Disable depth offset clamping. */
-      BEGIN_BATCH(2);
-      OUT_BATCH(_3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP << 16 | (2 - 2));
-      OUT_BATCH_F(0.0);
-      ADVANCE_BATCH();
-   }
-
    if (brw->gen >= 8) {
       BEGIN_BATCH(3);
       OUT_BATCH(CMD_STATE_SIP << 16 | (3 - 2));
