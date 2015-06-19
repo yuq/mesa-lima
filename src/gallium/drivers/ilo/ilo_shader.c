@@ -1089,6 +1089,7 @@ ilo_shader_select_kernel_sbe(struct ilo_shader_state *shader,
       src_semantics = source->shader->out.semantic_names;
       src_indices = source->shader->out.semantic_indices;
       src_len = source->shader->out.count;
+      src_skip = 0;
 
       assert(src_len >= 2 &&
              src_semantics[0] == TGSI_SEMANTIC_PSIZE &&
