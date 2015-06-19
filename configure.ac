@@ -1542,8 +1542,12 @@ if test "x$enable_egl" = xyes; then
 
     if test "$enable_static" != yes; then
         if test "x$enable_dri" = xyes; then
-	    HAVE_EGL_DRIVER_DRI2=1
-	fi
+            HAVE_EGL_DRIVER_DRI2=1
+        else
+            # Avoid building an "empty" libEGL. Drop/update this
+            # when other backends (haiku?) come along.
+            AC_MSG_ERROR([egl requires --enable-dri])
+        fi
 
     fi
 fi
