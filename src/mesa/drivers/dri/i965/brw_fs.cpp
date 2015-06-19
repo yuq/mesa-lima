@@ -701,6 +701,7 @@ fs_inst::is_partial_write() const
 int
 fs_inst::regs_read(int arg) const
 {
+   unsigned components = 1;
    switch (opcode) {
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
@@ -726,6 +727,12 @@ fs_inst::regs_read(int arg) const
          return exec_size / 4;
       break;
 
+   case FS_OPCODE_PIXEL_X:
+   case FS_OPCODE_PIXEL_Y:
+      if (arg == 0)
+         components = 1;
+      break;
+
    default:
       if (is_tex() && arg == 0 && src[0].file == GRF)
          return mlen;
@@ -742,8 +749,8 @@ fs_inst::regs_read(int arg) const
       if (src[arg].stride == 0) {
          return 1;
       } else {
-         int size = src[arg].width * src[arg].stride * type_sz(src[arg].type);
-         return (size + 31) / 32;
+         int size = components * src[arg].width * type_sz(src[arg].type);
+         return DIV_ROUND_UP(size * src[arg].stride, 32);
       }
    case MRF:
       unreachable("MRF registers are not allowed as sources");
