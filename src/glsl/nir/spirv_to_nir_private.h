@@ -71,6 +71,11 @@ struct vtn_ssa_value {
       struct vtn_ssa_value **elems;
    };
 
+   /* For matrices, a transposed version of the value, or NULL if it hasn't
+    * been computed
+    */
+   struct vtn_ssa_value *transposed;
+
    const struct glsl_type *type;
 };
 
