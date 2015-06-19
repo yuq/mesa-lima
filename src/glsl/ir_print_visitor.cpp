@@ -72,7 +72,7 @@ _mesa_print_ir(FILE *f, exec_list *instructions,
       if (ir->ir_type != ir_type_function)
 	 fprintf(f, "\n");
    }
-   fprintf(f, "\n)");
+   fprintf(f, ")\n");
 }
 
 void
