@@ -89,7 +89,7 @@ surface_set_gen7_null_SURFACE_STATE(struct ilo_state_surface *surf,
    STATIC_ASSERT(ARRAY_SIZE(surf->surface) >= 13);
    surf->surface[0] = dw0;
    memset(&surf->surface[1], 0, sizeof(uint32_t) *
-         ((ilo_dev_gen(dev) >= ILO_GEN(8)) ? 13 : 8) - 1);
+         (((ilo_dev_gen(dev) >= ILO_GEN(8)) ? 13 : 8) - 1));
 
    return true;
 }
