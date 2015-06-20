@@ -162,6 +162,8 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 /* We need to align the box to utile boundaries, since that's
                  * what load/store operate on.
                  */
+                uint32_t orig_width = ptrans->box.width;
+                uint32_t orig_height = ptrans->box.height;
                 uint32_t box_start_x = ptrans->box.x & (utile_w - 1);
                 uint32_t box_start_y = ptrans->box.y & (utile_h - 1);
                 ptrans->box.width += box_start_x;
@@ -175,7 +177,9 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                 ptrans->layer_stride = ptrans->stride;
 
                 trans->map = malloc(ptrans->stride * ptrans->box.height);
-                if (usage & PIPE_TRANSFER_READ) {
+                if (usage & PIPE_TRANSFER_READ ||
+                    ptrans->box.width != orig_width ||
+                    ptrans->box.height != orig_height) {
                         vc4_load_tiled_image(trans->map, ptrans->stride,
                                              buf + slice->offset +
                                              box->z * rsc->cube_map_stride,
