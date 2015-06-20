@@ -3837,7 +3837,7 @@ fs_visitor::run_vs()
 }
 
 bool
-fs_visitor::run_fs()
+fs_visitor::run_fs(bool do_rep_send)
 {
    brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
    brw_wm_prog_key *wm_key = (brw_wm_prog_key *) this->key;
@@ -3855,7 +3855,8 @@ fs_visitor::run_fs()
 
    if (0) {
       emit_dummy_fs();
-   } else if (brw->use_rep_send && dispatch_width == 16) {
+   } else if (do_rep_send) {
+      assert(dispatch_width == 16);
       emit_repclear_shader();
    } else {
       if (shader_time_index >= 0)
@@ -4007,7 +4008,7 @@ brw_wm_fs_emit(struct brw_context *brw,
     */
    fs_visitor v(brw, mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
                 prog, &fp->Base, 8, st_index8);
-   if (!v.run_fs()) {
+   if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
          prog->LinkStatus = false;
          ralloc_strcat(&prog->InfoLog, v.fail_msg);
@@ -4026,7 +4027,7 @@ brw_wm_fs_emit(struct brw_context *brw,
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
-         if (!v2.run_fs()) {
+         if (!v2.run_fs(brw->use_rep_send)) {
             perf_debug("SIMD16 shader failed to compile: %s", v2.fail_msg);
          } else {
             simd16_cfg = v2.cfg;

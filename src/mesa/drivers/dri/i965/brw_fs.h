@@ -103,7 +103,7 @@ public:
                                    uint32_t const_offset);
    void DEP_RESOLVE_MOV(const brw::fs_builder &bld, int grf);
 
-   bool run_fs();
+   bool run_fs(bool do_rep_send);
    bool run_vs();
    bool run_cs();
    void optimize();
