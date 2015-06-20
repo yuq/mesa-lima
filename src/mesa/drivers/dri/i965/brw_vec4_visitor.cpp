@@ -720,10 +720,8 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
 }
 
 void
-vec4_visitor::setup_uniform_clipplane_values()
+vec4_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
 {
-   gl_clip_plane *clip_planes = brw_select_clip_planes(ctx);
-
    for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
       assert(this->uniforms < uniform_array_size);
       this->uniform_vector_size[this->uniforms] = 4;

@@ -3803,7 +3803,7 @@ fs_visitor::allocate_registers()
 }
 
 bool
-fs_visitor::run_vs()
+fs_visitor::run_vs(gl_clip_plane *clip_planes)
 {
    assert(stage == MESA_SHADER_VERTEX);
 
@@ -3818,7 +3818,7 @@ fs_visitor::run_vs()
    if (failed)
       return false;
 
-   emit_urb_writes();
+   emit_urb_writes(clip_planes);
 
    if (shader_time_index >= 0)
       emit_shader_time_end();

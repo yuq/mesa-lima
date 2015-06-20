@@ -1706,7 +1706,7 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 }
 
 bool
-vec4_visitor::run()
+vec4_visitor::run(gl_clip_plane *clip_planes)
 {
    sanity_param_count = prog->Parameters->NumParameters;
 
@@ -1728,7 +1728,7 @@ vec4_visitor::run()
    base_ir = NULL;
 
    if (key->userclip_active && !prog->UsesClipDistanceOut)
-      setup_uniform_clipplane_values();
+      setup_uniform_clipplane_values(clip_planes);
 
    emit_thread_end();
 
@@ -1901,7 +1901,7 @@ brw_vs_emit(struct brw_context *brw,
       fs_visitor v(brw, mem_ctx, MESA_SHADER_VERTEX, &c->key,
                    &prog_data->base.base, prog, &c->vp->program.Base,
                    8, st_index);
-      if (!v.run_vs()) {
+      if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
             prog->LinkStatus = false;
             ralloc_strcat(&prog->InfoLog, v.fail_msg);
@@ -1939,7 +1939,7 @@ brw_vs_emit(struct brw_context *brw,
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
       vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx, st_index);
-      if (!v.run()) {
+      if (!v.run(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
             prog->LinkStatus = false;
             ralloc_strcat(&prog->InfoLog, v.fail_msg);

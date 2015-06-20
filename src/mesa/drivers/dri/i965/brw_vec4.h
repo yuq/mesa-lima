@@ -177,10 +177,10 @@ public:
 
    struct hash_table *variable_ht;
 
-   bool run(void);
+   bool run(gl_clip_plane *clip_planes);
    void fail(const char *msg, ...);
 
-   void setup_uniform_clipplane_values();
+   void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);

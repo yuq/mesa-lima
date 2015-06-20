@@ -84,8 +84,8 @@ public:
 
    fs_reg vgrf(const glsl_type *const type);
    void import_uniforms(fs_visitor *v);
-   void setup_uniform_clipplane_values();
-   void compute_clip_distance();
+   void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
+   void compute_clip_distance(gl_clip_plane *clip_planes);
 
    uint32_t gather_channel(int orig_chan, uint32_t sampler);
    void swizzle_result(ir_texture_opcode op, int dest_components,
@@ -104,7 +104,7 @@ public:
    void DEP_RESOLVE_MOV(const brw::fs_builder &bld, int grf);
 
    bool run_fs(bool do_rep_send);
-   bool run_vs();
+   bool run_vs(gl_clip_plane *clip_planes);
    bool run_cs();
    void optimize();
    void allocate_registers();
@@ -271,7 +271,7 @@ public:
                                  fs_reg src0_alpha, unsigned components,
                                  unsigned exec_size, bool use_2nd_half = false);
    void emit_fb_writes();
-   void emit_urb_writes();
+   void emit_urb_writes(gl_clip_plane *clip_planes);
    void emit_cs_terminate();
 
    void emit_barrier();

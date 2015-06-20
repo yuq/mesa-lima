@@ -1715,9 +1715,8 @@ fs_visitor::emit_fb_writes()
 }
 
 void
-fs_visitor::setup_uniform_clipplane_values()
+fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
 {
-   gl_clip_plane *clip_planes = brw_select_clip_planes(ctx);
    const struct brw_vue_prog_key *key =
       (const struct brw_vue_prog_key *) this->key;
 
@@ -1731,7 +1730,7 @@ fs_visitor::setup_uniform_clipplane_values()
    }
 }
 
-void fs_visitor::compute_clip_distance()
+void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
    struct brw_vue_prog_data *vue_prog_data =
       (struct brw_vue_prog_data *) prog_data;
@@ -1760,7 +1759,7 @@ void fs_visitor::compute_clip_distance()
    if (outputs[clip_vertex].file == BAD_FILE)
       return;
 
-   setup_uniform_clipplane_values();
+   setup_uniform_clipplane_values(clip_planes);
 
    const fs_builder abld = bld.annotate("user clip distances");
 
@@ -1781,7 +1780,7 @@ void fs_visitor::compute_clip_distance()
 }
 
 void
-fs_visitor::emit_urb_writes()
+fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
 {
    int slot, urb_offset, length;
    struct brw_vs_prog_data *vs_prog_data =
@@ -1796,7 +1795,7 @@ fs_visitor::emit_urb_writes()
 
    /* Lower legacy ff and ClipVertex clipping to clip distances */
    if (key->base.userclip_active && !prog->UsesClipDistanceOut)
-      compute_clip_distance();
+      compute_clip_distance(clip_planes);
 
    /* If we don't have any valid slots to write, just do a minimal urb write
     * send to terminate the shader. */
