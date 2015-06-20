@@ -158,6 +158,16 @@ enum vc4_packet {
 
 /** @{
  *
+ * low bits of VC4_PACKET_STORE_FULL_RES_TILE_BUFFER and
+ * VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER.
+ */
+#define VC4_LOADSTORE_FULL_RES_EOF                     (1 << 3)
+#define VC4_LOADSTORE_FULL_RES_DISABLE_CLEAR_ALL       (1 << 2)
+#define VC4_LOADSTORE_FULL_RES_DISABLE_ZS              (1 << 1)
+#define VC4_LOADSTORE_FULL_RES_DISABLE_COLOR           (1 << 0)
+
+/** @{
+ *
  * byte 2 of VC4_PACKET_STORE_TILE_BUFFER_GENERAL and
  * VC4_PACKET_LOAD_TILE_BUFFER_GENERAL (low bits of the address)
  */

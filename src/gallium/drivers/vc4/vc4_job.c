@@ -161,6 +161,8 @@ vc4_job_submit(struct vc4_context *vc4)
                                      vc4->zs_read, true, false);
         vc4_submit_setup_rcl_surface(vc4, &submit.zs_write,
                                      vc4->zs_write, true, true);
+        submit.msaa_color_write.hindex = ~0;
+        submit.msaa_zs_write.hindex = ~0;
 
         submit.bo_handles = (uintptr_t)vc4->bo_handles.base;
         submit.bo_handle_count = cl_offset(&vc4->bo_handles) / 4;
