@@ -74,6 +74,13 @@ NineDevice9Ex_PresentEx( struct NineDevice9Ex *This,
                          DWORD dwFlags );
 
 HRESULT WINAPI
+NineDevice9Ex_Present( struct NineDevice9Ex *This,
+                     const RECT *pSourceRect,
+                     const RECT *pDestRect,
+                     HWND hDestWindowOverride,
+                     const RGNDATA *pDirtyRegion );
+
+HRESULT WINAPI
 NineDevice9Ex_GetGPUThreadPriority( struct NineDevice9Ex *This,
                                     INT *pPriority );
 
@@ -142,9 +149,16 @@ NineDevice9Ex_ResetEx( struct NineDevice9Ex *This,
                        D3DDISPLAYMODEEX *pFullscreenDisplayMode );
 
 HRESULT WINAPI
+NineDevice9Ex_Reset( struct NineDevice9Ex *This,
+                     D3DPRESENT_PARAMETERS *pPresentationParameters );
+
+HRESULT WINAPI
 NineDevice9Ex_GetDisplayModeEx( struct NineDevice9Ex *This,
                                 UINT iSwapChain,
                                 D3DDISPLAYMODEEX *pMode,
                                 D3DDISPLAYROTATION *pRotation );
+
+HRESULT WINAPI
+NineDevice9Ex_TestCooperativeLevel( struct NineDevice9Ex *This );
 
 #endif /* _NINE_DEVICE9EX_H_ */

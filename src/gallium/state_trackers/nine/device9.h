@@ -137,6 +137,7 @@ struct NineDevice9
     /* dummy vbo (containing 0 0 0 0) to bind if vertex shader input
      * is not bound to anything by the vertex declaration */
     struct pipe_resource *dummy_vbo;
+    BOOL device_needs_reset;
     int minor_version_num;
 };
 static inline struct NineDevice9 *
@@ -176,6 +177,8 @@ void
 NineDevice9_dtor( struct NineDevice9 *This );
 
 /*** Nine private ***/
+void
+NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset );
 
 struct pipe_screen *
 NineDevice9_GetScreen( struct NineDevice9 *This );
