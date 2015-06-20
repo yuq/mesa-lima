@@ -29,6 +29,7 @@
 #define ILO_STATE_H
 
 #include "core/ilo_state_cc.h"
+#include "core/ilo_state_compute.h"
 #include "core/ilo_state_raster.h"
 #include "core/ilo_state_sampler.h"
 #include "core/ilo_state_sbe.h"

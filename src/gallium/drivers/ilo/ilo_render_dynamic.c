@@ -30,6 +30,7 @@
 
 #include "ilo_common.h"
 #include "ilo_blitter.h"
+#include "ilo_shader.h"
 #include "ilo_state.h"
 #include "ilo_render_gen.h"
 
@@ -522,20 +523,39 @@ gen6_emit_launch_grid_dynamic_idrt(struct ilo_render *r,
                                    struct ilo_render_launch_grid_session *session)
 {
    const struct ilo_shader_state *cs = vec->cs;
-   struct gen6_idrt_data data;
+   struct ilo_state_compute_interface_info interface;
+   struct ilo_state_compute_info info;
+   uint32_t kernel_offset;
 
    ILO_DEV_ASSERT(r->dev, 7, 7.5);
 
-   memset(&data, 0, sizeof(data));
+   memset(&interface, 0, sizeof(interface));
 
-   data.cs = cs;
-   data.sampler_offset = r->state.cs.SAMPLER_STATE;
-   data.binding_table_offset = r->state.cs.BINDING_TABLE_STATE;
+   interface.sampler_count =
+      ilo_shader_get_kernel_param(cs, ILO_KERNEL_SAMPLER_COUNT);
+   interface.surface_count =
+      ilo_shader_get_kernel_param(cs, ILO_KERNEL_SURFACE_TOTAL_COUNT);
+   interface.thread_group_size = session->thread_group_size;
+   interface.slm_size =
+      ilo_shader_get_kernel_param(cs, ILO_KERNEL_CS_LOCAL_SIZE);
+   interface.curbe_read_length = r->state.cs.PUSH_CONSTANT_BUFFER_size;
 
-   data.curbe_size = r->state.cs.PUSH_CONSTANT_BUFFER_size;
-   data.thread_group_size = session->thread_group_size;
+   memset(&info, 0, sizeof(info));
+   info.data = session->compute_data;
+   info.data_size = sizeof(session->compute_data);
+   info.interfaces = &interface;
+   info.interface_count = 1;
+   info.cv_urb_alloc_size = r->dev->urb_size;
+   info.curbe_alloc_size = r->state.cs.PUSH_CONSTANT_BUFFER_size;
 
-   session->idrt = gen6_INTERFACE_DESCRIPTOR_DATA(r->builder, &data, 1);
+   ilo_state_compute_init(&session->compute, r->dev, &info);
+
+   kernel_offset = ilo_shader_get_kernel_offset(cs);
+
+   session->idrt = gen6_INTERFACE_DESCRIPTOR_DATA(r->builder,
+         &session->compute, &kernel_offset,
+         &r->state.cs.SAMPLER_STATE, &r->state.cs.BINDING_TABLE_STATE);
+
    session->idrt_size = 32;
 }
 

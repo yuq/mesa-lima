@@ -185,6 +185,9 @@ struct ilo_render_launch_grid_session {
 
    uint32_t idrt;
    int idrt_size;
+
+   uint32_t compute_data[6];
+   struct ilo_state_compute compute;
 };
 
 int

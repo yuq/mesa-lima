@@ -21,6 +21,8 @@ C_SOURCES := \
 	core/ilo_image.h \
 	core/ilo_state_cc.c \
 	core/ilo_state_cc.h \
+	core/ilo_state_compute.c \
+	core/ilo_state_compute.h \
 	core/ilo_state_raster.c \
 	core/ilo_state_raster.h \
 	core/ilo_state_sampler.c \
