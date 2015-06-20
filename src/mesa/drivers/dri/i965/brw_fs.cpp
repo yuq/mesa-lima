@@ -3187,7 +3187,7 @@ fs_visitor::lower_integer_multiplication()
          fs_reg high(GRF, alloc.allocate(dispatch_width / 8),
                      inst->dst.type, dispatch_width);
 
-         if (brw->gen >= 7) {
+         if (devinfo->gen >= 7) {
             fs_reg src1_0_w = inst->src[1];
             fs_reg src1_1_w = inst->src[1];
 
@@ -3628,7 +3628,7 @@ fs_visitor::setup_vs_payload()
 void
 fs_visitor::setup_cs_payload()
 {
-   assert(brw->gen >= 7);
+   assert(devinfo->gen >= 7);
 
    payload.num_regs = 1;
 }

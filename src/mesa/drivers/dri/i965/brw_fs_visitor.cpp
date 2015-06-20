@@ -1344,7 +1344,7 @@ fs_visitor::emit_interpolation_setup_gen6()
    struct brw_reg g1_uw = retype(brw_vec1_grf(1, 0), BRW_REGISTER_TYPE_UW);
 
    fs_builder abld = bld.annotate("compute pixel centers");
-   if (brw->gen >= 8 || dispatch_width == 8) {
+   if (devinfo->gen >= 8 || dispatch_width == 8) {
       /* The "Register Region Restrictions" page says for BDW (and newer,
        * presumably):
        *
@@ -1623,7 +1623,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
       /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
        * will do this for us if we just give it a COMPR4 destination.
        */
-      if (brw->gen < 6 && exec_size == 16)
+      if (devinfo->gen < 6 && exec_size == 16)
          load->dst.reg |= BRW_MRF_COMPR4;
 
       write = ubld.emit(FS_OPCODE_FB_WRITE);
@@ -1934,7 +1934,7 @@ fs_visitor::emit_urb_writes()
 void
 fs_visitor::emit_cs_terminate()
 {
-   assert(brw->gen >= 7);
+   assert(devinfo->gen >= 7);
 
    /* We are getting the thread ID from the compute shader header */
    assert(stage == MESA_SHADER_COMPUTE);
@@ -1956,7 +1956,7 @@ fs_visitor::emit_cs_terminate()
 void
 fs_visitor::emit_barrier()
 {
-   assert(brw->gen >= 7);
+   assert(devinfo->gen >= 7);
 
    /* We are getting the barrier ID from the compute shader header */
    assert(stage == MESA_SHADER_COMPUTE);
