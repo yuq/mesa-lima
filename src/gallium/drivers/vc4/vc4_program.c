@@ -325,7 +325,9 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 switch (instr->src[i].src_type) {
                 case nir_tex_src_coord:
                         s = ntq_get_src(c, instr->src[i].src, 0);
-                        if (instr->sampler_dim != GLSL_SAMPLER_DIM_1D)
+                        if (instr->sampler_dim == GLSL_SAMPLER_DIM_1D)
+                                t = qir_uniform_f(c, 0.5);
+                        else
                                 t = ntq_get_src(c, instr->src[i].src, 1);
                         if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE)
                                 r = ntq_get_src(c, instr->src[i].src, 2);
