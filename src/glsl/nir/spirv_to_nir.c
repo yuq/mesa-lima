@@ -1277,7 +1277,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
    val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
-   val->ssa->type = val->type;
+   val->ssa = vtn_create_ssa_value(b, val->type);
 
    /* Collect the various SSA sources */
    unsigned num_inputs = count - 3;
