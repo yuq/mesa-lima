@@ -175,6 +175,10 @@ ilo_state_vf_data_size(const struct ilo_dev *dev, uint8_t element_count)
 }
 
 bool
+ilo_state_vf_valid_element_format(const struct ilo_dev *dev,
+                                  enum gen_surface_format format);
+
+bool
 ilo_state_vf_init(struct ilo_state_vf *vf,
                   const struct ilo_dev *dev,
                   const struct ilo_state_vf_info *info);

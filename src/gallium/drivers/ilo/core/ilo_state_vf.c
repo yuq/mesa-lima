@@ -67,6 +67,7 @@ vf_validate_gen6_elements(const struct ilo_dev *dev,
 
       assert(elem->buffer < ILO_STATE_VF_MAX_BUFFER_COUNT);
       assert(elem->vertex_offset < max_vertex_offset);
+      assert(ilo_state_vf_valid_element_format(dev, elem->format));
    }
 
    return true;
@@ -640,6 +641,131 @@ index_buffer_set_gen8_3DSTATE_INDEX_BUFFER(struct ilo_state_index_buffer *ib,
    ib->need_bo = (info->buf != NULL);
 
    return true;
+}
+
+bool
+ilo_state_vf_valid_element_format(const struct ilo_dev *dev,
+                                  enum gen_surface_format format)
+{
+   /*
+    * This table is based on:
+    *
+    *  - the Sandy Bridge PRM, volume 4 part 1, page 88-97
+    *  - the Ivy Bridge PRM, volume 2 part 1, page 97-99
+    *  - the Haswell PRM, volume 7, page 467-470
+    */
+   static const int vf_element_formats[] = {
+      [GEN6_FORMAT_R32G32B32A32_FLOAT]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_SINT]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_UINT]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_UNORM]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_SNORM]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R64G64_FLOAT]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_SSCALED]     = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_USCALED]     = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32A32_SFIXED]      = ILO_GEN(7.5),
+      [GEN6_FORMAT_R32G32B32_FLOAT]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_SINT]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_UINT]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_UNORM]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_SNORM]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_SSCALED]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_USCALED]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32B32_SFIXED]         = ILO_GEN(7.5),
+      [GEN6_FORMAT_R16G16B16A16_UNORM]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_SNORM]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_SINT]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_UINT]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_FLOAT]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_FLOAT]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_SINT]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_UINT]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_UNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_SNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R64_FLOAT]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_SSCALED]     = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16A16_USCALED]     = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_SSCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_USCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R32G32_SFIXED]            = ILO_GEN(7.5),
+      [GEN6_FORMAT_B8G8R8A8_UNORM]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R10G10B10A2_UNORM]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R10G10B10A2_UINT]         = ILO_GEN(  1),
+      [GEN6_FORMAT_R10G10B10_SNORM_A2_UNORM] = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_UNORM]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_SNORM]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_SINT]            = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_UINT]            = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_UNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_SNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_SINT]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_UINT]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_FLOAT]             = ILO_GEN(  1),
+      [GEN6_FORMAT_B10G10R10A2_UNORM]        = ILO_GEN(7.5),
+      [GEN6_FORMAT_R11G11B10_FLOAT]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_SINT]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_UINT]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_FLOAT]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_UNORM]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_SNORM]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R10G10B10X2_USCALED]      = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_SSCALED]         = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8A8_USCALED]         = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_SSCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16_USCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_SSCALED]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R32_USCALED]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_UNORM]               = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_SNORM]               = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_SINT]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_UINT]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_UNORM]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_SNORM]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_SINT]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_UINT]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_FLOAT]                = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_SSCALED]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8_USCALED]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_SSCALED]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R16_USCALED]              = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_UNORM]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_SNORM]                 = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_SINT]                  = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_UINT]                  = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_SSCALED]               = ILO_GEN(  1),
+      [GEN6_FORMAT_R8_USCALED]               = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8_UNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8_SNORM]             = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8_SSCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R8G8B8_USCALED]           = ILO_GEN(  1),
+      [GEN6_FORMAT_R64G64B64A64_FLOAT]       = ILO_GEN(  1),
+      [GEN6_FORMAT_R64G64B64_FLOAT]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16_FLOAT]          = ILO_GEN(  6),
+      [GEN6_FORMAT_R16G16B16_UNORM]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16_SNORM]          = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16_SSCALED]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16_USCALED]        = ILO_GEN(  1),
+      [GEN6_FORMAT_R16G16B16_UINT]           = ILO_GEN(7.5),
+      [GEN6_FORMAT_R16G16B16_SINT]           = ILO_GEN(7.5),
+      [GEN6_FORMAT_R32_SFIXED]               = ILO_GEN(7.5),
+      [GEN6_FORMAT_R10G10B10A2_SNORM]        = ILO_GEN(7.5),
+      [GEN6_FORMAT_R10G10B10A2_USCALED]      = ILO_GEN(7.5),
+      [GEN6_FORMAT_R10G10B10A2_SSCALED]      = ILO_GEN(7.5),
+      [GEN6_FORMAT_R10G10B10A2_SINT]         = ILO_GEN(7.5),
+      [GEN6_FORMAT_B10G10R10A2_SNORM]        = ILO_GEN(7.5),
+      [GEN6_FORMAT_B10G10R10A2_USCALED]      = ILO_GEN(7.5),
+      [GEN6_FORMAT_B10G10R10A2_SSCALED]      = ILO_GEN(7.5),
+      [GEN6_FORMAT_B10G10R10A2_UINT]         = ILO_GEN(7.5),
+      [GEN6_FORMAT_B10G10R10A2_SINT]         = ILO_GEN(7.5),
+      [GEN6_FORMAT_R8G8B8_UINT]              = ILO_GEN(7.5),
+      [GEN6_FORMAT_R8G8B8_SINT]              = ILO_GEN(7.5),
+   };
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   return (format < ARRAY_SIZE(vf_element_formats) &&
+           vf_element_formats[format] &&
+           ilo_dev_gen(dev) >= vf_element_formats[format]);
 }
 
 bool
