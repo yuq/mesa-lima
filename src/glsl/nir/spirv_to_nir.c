@@ -2095,7 +2095,7 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
          vtn_walk_blocks(b, block, new_break_block, new_cont_block, NULL);
 
          nir_builder_insert_after_cf_list(&b->nb, old_list);
-         block = break_block;
+         block = new_break_block;
          continue;
       }
 
