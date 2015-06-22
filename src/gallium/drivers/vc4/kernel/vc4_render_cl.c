@@ -36,7 +36,7 @@
 
 struct vc4_rcl_setup {
 	struct drm_gem_cma_object *color_read;
-	struct drm_gem_cma_object *color_ms_write;
+	struct drm_gem_cma_object *color_write;
 	struct drm_gem_cma_object *zs_read;
 	struct drm_gem_cma_object *zs_write;
 
@@ -146,15 +146,15 @@ static void emit_tile(struct vc4_exec_info *exec,
 	if (setup->zs_write) {
 		rcl_u8(setup, VC4_PACKET_STORE_TILE_BUFFER_GENERAL);
 		rcl_u16(setup, args->zs_write.bits |
-			(setup->color_ms_write ?
+			(setup->color_write ?
 			 VC4_STORE_TILE_BUFFER_DISABLE_COLOR_CLEAR : 0));
 		rcl_u32(setup,
 			(setup->zs_write->paddr + args->zs_write.offset) |
-			((last && !setup->color_ms_write) ?
+			((last && !setup->color_write) ?
 			 VC4_LOADSTORE_TILE_BUFFER_EOF : 0));
 	}
 
-	if (setup->color_ms_write) {
+	if (setup->color_write) {
 		if (setup->zs_write) {
 			/* Reset after previous store */
 			vc4_tile_coordinates(setup, x, y);
@@ -208,7 +208,7 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 
 	if (setup->zs_write)
 		loop_body_size += VC4_PACKET_STORE_TILE_BUFFER_GENERAL_SIZE;
-	if (setup->color_ms_write) {
+	if (setup->color_write) {
 		if (setup->zs_write)
 			loop_body_size += VC4_PACKET_TILE_COORDINATES_SIZE;
 		loop_body_size += VC4_PACKET_STORE_MS_TILE_BUFFER_SIZE;
@@ -223,13 +223,12 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 
 	rcl_u8(setup, VC4_PACKET_TILE_RENDERING_MODE_CONFIG);
 	rcl_u32(setup,
-		(setup->color_ms_write ?
-		 (setup->color_ms_write->paddr +
-		  args->color_ms_write.offset) :
+		(setup->color_write ? (setup->color_write->paddr +
+				       args->color_write.offset) :
 		 0));
 	rcl_u16(setup, args->width);
 	rcl_u16(setup, args->height);
-	rcl_u16(setup, args->color_ms_write.bits);
+	rcl_u16(setup, args->color_write.bits);
 
 	/* The tile buffer gets cleared when the previous tile is stored.  If
 	 * the clear values changed between frames, then the tile buffer has
@@ -341,9 +340,9 @@ static int vc4_rcl_surface_setup(struct vc4_exec_info *exec,
 }
 
 static int
-vc4_rcl_ms_surface_setup(struct vc4_exec_info *exec,
-			 struct drm_gem_cma_object **obj,
-			 struct drm_vc4_submit_rcl_surface *surf)
+vc4_rcl_render_config_surface_setup(struct vc4_exec_info *exec,
+				    struct drm_gem_cma_object **obj,
+				    struct drm_vc4_submit_rcl_surface *surf)
 {
 	uint8_t tiling = VC4_GET_FIELD(surf->bits,
 				       VC4_RENDER_CONFIG_MEMORY_FORMAT);
@@ -425,8 +424,8 @@ int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec)
 	if (ret)
 		return ret;
 
-	ret = vc4_rcl_ms_surface_setup(exec, &setup.color_ms_write,
-				       &args->color_ms_write);
+	ret = vc4_rcl_render_config_surface_setup(exec, &setup.color_write,
+						  &args->color_write);
 	if (ret)
 		return ret;
 
@@ -441,7 +440,7 @@ int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec)
 	/* We shouldn't even have the job submitted to us if there's no
 	 * surface to write out.
 	 */
-	if (!setup.color_ms_write && !setup.zs_write) {
+	if (!setup.color_write && !setup.zs_write) {
 		DRM_ERROR("RCL requires color or Z/S write\n");
 		return -EINVAL;
 	}

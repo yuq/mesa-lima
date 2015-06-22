@@ -111,9 +111,9 @@ vc4_submit_setup_rcl_surface(struct vc4_context *vc4,
 }
 
 static void
-vc4_submit_setup_ms_rcl_surface(struct vc4_context *vc4,
-                                struct drm_vc4_submit_rcl_surface *submit_surf,
-                                struct pipe_surface *psurf)
+vc4_submit_setup_rcl_render_config_surface(struct vc4_context *vc4,
+                                           struct drm_vc4_submit_rcl_surface *submit_surf,
+                                           struct pipe_surface *psurf)
 {
         struct vc4_surface *surf = vc4_surface(psurf);
 
@@ -155,8 +155,8 @@ vc4_job_submit(struct vc4_context *vc4)
 
         vc4_submit_setup_rcl_surface(vc4, &submit.color_read,
                                      vc4->color_read, false, false);
-        vc4_submit_setup_ms_rcl_surface(vc4, &submit.color_ms_write,
-                                        vc4->color_write);
+        vc4_submit_setup_rcl_render_config_surface(vc4, &submit.color_write,
+                                                   vc4->color_write);
         vc4_submit_setup_rcl_surface(vc4, &submit.zs_read,
                                      vc4->zs_read, true, false);
         vc4_submit_setup_rcl_surface(vc4, &submit.zs_write,
