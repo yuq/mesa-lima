@@ -757,6 +757,7 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
 }
 
 backend_shader::backend_shader(struct brw_context *brw,
+                               void *mem_ctx,
                                struct gl_shader_program *shader_prog,
                                struct gl_program *prog,
                                struct brw_stage_prog_data *stage_prog_data,
@@ -769,6 +770,7 @@ backend_shader::backend_shader(struct brw_context *brw,
      shader_prog(shader_prog),
      prog(prog),
      stage_prog_data(stage_prog_data),
+     mem_ctx(mem_ctx),
      cfg(NULL),
      stage(stage)
 {

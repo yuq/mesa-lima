@@ -1984,13 +1984,11 @@ fs_visitor::fs_visitor(struct brw_context *brw,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog,
                        unsigned dispatch_width)
-   : backend_shader(brw, shader_prog, prog, prog_data, stage),
+   : backend_shader(brw, mem_ctx, shader_prog, prog, prog_data, stage),
      key(key), prog_data(prog_data),
      dispatch_width(dispatch_width), promoted_constants(0),
      bld(fs_builder(this, dispatch_width).at_end())
 {
-   this->mem_ctx = mem_ctx;
-
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
       key_tex = &((const brw_wm_prog_key *) key)->tex;

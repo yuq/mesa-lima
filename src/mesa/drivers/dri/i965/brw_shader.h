@@ -215,6 +215,7 @@ class backend_shader {
 protected:
 
    backend_shader(struct brw_context *brw,
+                  void *mem_ctx,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
                   struct brw_stage_prog_data *stage_prog_data,
