@@ -3196,10 +3196,16 @@ fs_visitor::lower_integer_multiplication()
                src1_1_w.fixed_hw_reg.dw1.ud >>= 16;
             } else {
                src1_0_w.type = BRW_REGISTER_TYPE_UW;
-               src1_0_w.stride = 2;
+               if (src1_0_w.stride != 0) {
+                  assert(src1_0_w.stride == 1);
+                  src1_0_w.stride = 2;
+               }
 
                src1_1_w.type = BRW_REGISTER_TYPE_UW;
-               src1_1_w.stride = 2;
+               if (src1_1_w.stride != 0) {
+                  assert(src1_1_w.stride == 1);
+                  src1_1_w.stride = 2;
+               }
                src1_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
             }
             ibld.MUL(low, inst->src[0], src1_0_w);
@@ -3209,10 +3215,16 @@ fs_visitor::lower_integer_multiplication()
             fs_reg src0_1_w = inst->src[0];
 
             src0_0_w.type = BRW_REGISTER_TYPE_UW;
-            src0_0_w.stride = 2;
+            if (src0_0_w.stride != 0) {
+               assert(src0_0_w.stride == 1);
+               src0_0_w.stride = 2;
+            }
 
             src0_1_w.type = BRW_REGISTER_TYPE_UW;
-            src0_1_w.stride = 2;
+            if (src0_1_w.stride != 0) {
+               assert(src0_1_w.stride == 1);
+               src0_1_w.stride = 2;
+            }
             src0_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
 
             ibld.MUL(low, src0_0_w, inst->src[1]);
