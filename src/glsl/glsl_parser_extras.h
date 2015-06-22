@@ -129,7 +129,7 @@ struct _mesa_glsl_parse_state {
    bool check_explicit_attrib_stream_allowed(YYLTYPE *locp)
    {
       if (!this->has_explicit_attrib_stream()) {
-         const char *const requirement = "GL_ARB_gpu_shader5 extension or GLSL 400";
+         const char *const requirement = "GL_ARB_gpu_shader5 extension or GLSL 4.00";
 
          _mesa_glsl_error(locp, this, "explicit stream requires %s",
                           requirement);
@@ -144,8 +144,8 @@ struct _mesa_glsl_parse_state {
    {
       if (!this->has_explicit_attrib_location()) {
          const char *const requirement = this->es_shader
-            ? "GLSL ES 300"
-            : "GL_ARB_explicit_attrib_location extension or GLSL 330";
+            ? "GLSL ES 3.00"
+            : "GL_ARB_explicit_attrib_location extension or GLSL 3.30";
 
          _mesa_glsl_error(locp, this, "%s explicit location requires %s",
                           mode_string(var), requirement);
@@ -160,8 +160,8 @@ struct _mesa_glsl_parse_state {
    {
       if (!this->has_separate_shader_objects()) {
          const char *const requirement = this->es_shader
-            ? "GL_EXT_separate_shader_objects extension or GLSL ES 310"
-            : "GL_ARB_separate_shader_objects extension or GLSL 420";
+            ? "GL_EXT_separate_shader_objects extension or GLSL ES 3.10"
+            : "GL_ARB_separate_shader_objects extension or GLSL 4.20";
 
          _mesa_glsl_error(locp, this, "%s explicit location requires %s",
                           mode_string(var), requirement);
@@ -177,9 +177,9 @@ struct _mesa_glsl_parse_state {
       if (!this->has_explicit_attrib_location() ||
           !this->has_explicit_uniform_location()) {
          const char *const requirement = this->es_shader
-            ? "GLSL ES 310"
+            ? "GLSL ES 3.10"
             : "GL_ARB_explicit_uniform_location and either "
-              "GL_ARB_explicit_attrib_location or GLSL 330.";
+              "GL_ARB_explicit_attrib_location or GLSL 3.30.";
 
          _mesa_glsl_error(locp, this,
                           "uniform explicit location requires %s",
