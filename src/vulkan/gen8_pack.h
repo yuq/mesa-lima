@@ -45,6 +45,12 @@ union __gen_value {
 };
 
 static inline uint64_t
+__gen_mbo(uint32_t start, uint32_t end)
+{
+   return (~0ul >> (64 - (end - start + 1))) << start;
+}
+
+static inline uint64_t
 __gen_field(uint64_t v, uint32_t start, uint32_t end)
 {
    __gen_validate_value(v);

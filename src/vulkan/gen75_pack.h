@@ -45,6 +45,12 @@ union __gen_value {
 };
 
 static inline uint64_t
+__gen_mbo(uint32_t start, uint32_t end)
+{
+   return (~0ul >> (64 - (end - start + 1))) << start;
+}
+
+static inline uint64_t
 __gen_field(uint64_t v, uint32_t start, uint32_t end)
 {
    __gen_validate_value(v);
@@ -1158,6 +1164,7 @@ GEN75_3DSTATE_BLEND_STATE_POINTERS_pack(__gen_user_data *data, void * restrict d
 
    dw[1] =
       __gen_offset(values->BlendStatePointer, 6, 31) |
+      __gen_mbo(0, 0) |
       0;
 
 }
@@ -1196,6 +1203,7 @@ GEN75_3DSTATE_CC_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
 
    dw[1] =
       __gen_offset(values->ColorCalcStatePointer, 6, 31) |
+      __gen_mbo(0, 0) |
       0;
 
 }
@@ -1755,6 +1763,7 @@ GEN75_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_pack(__gen_user_data *data, void * re
 
    dw[1] =
       __gen_offset(values->PointertoDEPTH_STENCIL_STATE, 6, 31) |
+      __gen_mbo(0, 0) |
       0;
 
 }
@@ -2207,6 +2216,7 @@ GEN75_3DSTATE_GATHER_POOL_ALLOC_pack(__gen_user_data *data, void * restrict dst,
    GEN75_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_MemoryObjectControlState, &values->MemoryObjectControlState);
    uint32_t dw1 =
       __gen_field(values->GatherPoolEnable, 11, 11) |
+      __gen_mbo(4, 5) |
       __gen_field(dw_MemoryObjectControlState, 0, 3) |
       0;
 
