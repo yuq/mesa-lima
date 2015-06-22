@@ -157,7 +157,7 @@ public:
                                                      fs_inst *inst);
    void vfail(const char *msg, va_list args);
    void fail(const char *msg, ...);
-   void no16(const char *msg, ...);
+   void no16(const char *msg);
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
    bool lower_integer_multiplication();

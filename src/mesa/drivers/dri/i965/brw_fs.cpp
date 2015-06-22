@@ -703,26 +703,20 @@ fs_visitor::fail(const char *format, ...)
  * During a SIMD16 compile (if one happens anyway), this just calls fail().
  */
 void
-fs_visitor::no16(const char *format, ...)
+fs_visitor::no16(const char *msg)
 {
-   va_list va;
-
-   va_start(va, format);
-
    if (dispatch_width == 16) {
-      vfail(format, va);
+      fail("%s", msg);
    } else {
       simd16_unsupported = true;
 
       if (brw->perf_debug) {
          if (no16_msg)
-            ralloc_vasprintf_append(&no16_msg, format, va);
+            ralloc_strcat(&no16_msg, msg);
          else
-            no16_msg = ralloc_vasprintf(mem_ctx, format, va);
+            no16_msg = ralloc_strdup(mem_ctx, msg);
       }
    }
-
-   va_end(va);
 }
 
 /**
