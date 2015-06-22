@@ -45,9 +45,9 @@ ilo_blitter_set_invariants(struct ilo_blitter *blitter)
       return true;
 
    /* a rectangle has 3 vertices in a RECTLIST */
-   util_draw_init_info(&blitter->draw);
-   blitter->draw.mode = ILO_PRIM_RECTANGLES;
-   blitter->draw.count = 3;
+   blitter->draw_info.topology = GEN6_3DPRIM_RECTLIST;
+   blitter->draw_info.vertex_count = 3;
+   blitter->draw_info.instance_count = 1;
 
    memset(&elem, 0, sizeof(elem));
    /* only vertex X and Y */

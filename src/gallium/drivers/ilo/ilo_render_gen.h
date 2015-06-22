@@ -389,11 +389,8 @@ ilo_render_pipe_control(struct ilo_render *r, uint32_t dw1)
  */
 static inline void
 ilo_render_3dprimitive(struct ilo_render *r,
-                       const struct pipe_draw_info *info,
-                       const struct ilo_ib_state *ib)
+                       const struct gen6_3dprimitive_info *info)
 {
-   const int64_t start_offset = (info->indexed) ? ib->draw_start_offset : 0;
-
    ILO_DEV_ASSERT(r->dev, 6, 8);
 
    if (r->state.deferred_pipe_control_dw1)
@@ -401,9 +398,9 @@ ilo_render_3dprimitive(struct ilo_render *r,
 
    /* 3DPRIMITIVE */
    if (ilo_dev_gen(r->dev) >= ILO_GEN(7))
-      gen7_3DPRIMITIVE(r->builder, info, start_offset);
+      gen7_3DPRIMITIVE(r->builder, info);
    else
-      gen6_3DPRIMITIVE(r->builder, info, start_offset);
+      gen6_3DPRIMITIVE(r->builder, info);
 
    r->state.current_pipe_control_dw1 = 0;
    assert(!r->state.deferred_pipe_control_dw1);

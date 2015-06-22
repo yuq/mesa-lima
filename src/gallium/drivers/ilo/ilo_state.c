@@ -25,7 +25,6 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "core/ilo_builder_3d.h" /* for gen6_3d_translate_pipe_prim() */
 #include "util/u_dual_blend.h"
 #include "util/u_dynarray.h"
 #include "util/u_framebuffer.h"
@@ -38,6 +37,34 @@
 #include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"
+
+/**
+ * Translate a pipe primitive type to the matching hardware primitive type.
+ */
+static enum gen_3dprim_type
+ilo_translate_draw_mode(unsigned mode)
+{
+   static const enum gen_3dprim_type prim_mapping[PIPE_PRIM_MAX] = {
+      [PIPE_PRIM_POINTS]                     = GEN6_3DPRIM_POINTLIST,
+      [PIPE_PRIM_LINES]                      = GEN6_3DPRIM_LINELIST,
+      [PIPE_PRIM_LINE_LOOP]                  = GEN6_3DPRIM_LINELOOP,
+      [PIPE_PRIM_LINE_STRIP]                 = GEN6_3DPRIM_LINESTRIP,
+      [PIPE_PRIM_TRIANGLES]                  = GEN6_3DPRIM_TRILIST,
+      [PIPE_PRIM_TRIANGLE_STRIP]             = GEN6_3DPRIM_TRISTRIP,
+      [PIPE_PRIM_TRIANGLE_FAN]               = GEN6_3DPRIM_TRIFAN,
+      [PIPE_PRIM_QUADS]                      = GEN6_3DPRIM_QUADLIST,
+      [PIPE_PRIM_QUAD_STRIP]                 = GEN6_3DPRIM_QUADSTRIP,
+      [PIPE_PRIM_POLYGON]                    = GEN6_3DPRIM_POLYGON,
+      [PIPE_PRIM_LINES_ADJACENCY]            = GEN6_3DPRIM_LINELIST_ADJ,
+      [PIPE_PRIM_LINE_STRIP_ADJACENCY]       = GEN6_3DPRIM_LINESTRIP_ADJ,
+      [PIPE_PRIM_TRIANGLES_ADJACENCY]        = GEN6_3DPRIM_TRILIST_ADJ,
+      [PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]   = GEN6_3DPRIM_TRISTRIP_ADJ,
+   };
+
+   assert(prim_mapping[mode]);
+
+   return prim_mapping[mode];
+}
 
 static enum gen_index_format
 ilo_translate_index_size(unsigned index_size)
@@ -386,6 +413,7 @@ finalize_index_buffer(struct ilo_context *ilo)
           vec->ib.state.offset % vec->ib.state.index_size));
    struct pipe_resource *current_hw_res = NULL;
    struct ilo_state_index_buffer_info info;
+   int64_t vertex_start_bias = 0;
 
    if (!(vec->dirty & ILO_DIRTY_IB) && !need_upload)
       return;
@@ -410,24 +438,22 @@ finalize_index_buffer(struct ilo_context *ilo)
 
       /* the HW offset should be aligned */
       assert(hw_offset % vec->ib.state.index_size == 0);
-      vec->ib.draw_start_offset = hw_offset / vec->ib.state.index_size;
+      vertex_start_bias = hw_offset / vec->ib.state.index_size;
 
       /*
        * INDEX[vec->draw->start] in the original buffer is INDEX[0] in the HW
        * resource
        */
-      vec->ib.draw_start_offset -= vec->draw->start;
+      vertex_start_bias -= vec->draw->start;
    } else {
       pipe_resource_reference(&vec->ib.hw_resource, vec->ib.state.buffer);
 
       /* note that index size may be zero when the draw is not indexed */
-      if (vec->draw->indexed) {
-         vec->ib.draw_start_offset =
-            vec->ib.state.offset / vec->ib.state.index_size;
-      } else {
-         vec->ib.draw_start_offset = 0;
-      }
+      if (vec->draw->indexed)
+         vertex_start_bias = vec->ib.state.offset / vec->ib.state.index_size;
    }
+
+   vec->draw_info.vertex_start += vertex_start_bias;
 
    /* treat the IB as clean if the HW states do not change */
    if (vec->ib.hw_resource == current_hw_res &&
@@ -456,8 +482,6 @@ finalize_vertex_elements(struct ilo_context *ilo)
    const struct ilo_dev *dev = ilo->dev;
    struct ilo_state_vector *vec = &ilo->state_vector;
    struct ilo_ve_state *ve = vec->ve;
-   const enum gen_3dprim_type topology =
-      gen6_3d_translate_pipe_prim(vec->draw->mode);
    const bool last_element_edge_flag = (vec->vs &&
          ilo_shader_get_kernel_param(vec->vs, ILO_KERNEL_VS_INPUT_EDGEFLAG));
    const bool prepend_vertexid = (vec->vs &&
@@ -469,14 +493,14 @@ finalize_vertex_elements(struct ilo_context *ilo)
       ilo_translate_index_size(vec->ib.state.index_size) : GEN6_INDEX_DWORD;
 
    /* check for non-orthogonal states */
-   if (ve->vf_params.cv_topology != topology ||
+   if (ve->vf_params.cv_topology != vec->draw_info.topology ||
        ve->vf_params.prepend_vertexid != prepend_vertexid ||
        ve->vf_params.prepend_instanceid != prepend_instanceid ||
        ve->vf_params.last_element_edge_flag != last_element_edge_flag ||
        ve->vf_params.cv_index_format != index_format ||
        ve->vf_params.cut_index_enable != vec->draw->primitive_restart ||
        ve->vf_params.cut_index != vec->draw->restart_index) {
-      ve->vf_params.cv_topology = topology;
+      ve->vf_params.cv_topology = vec->draw_info.topology;
       ve->vf_params.prepend_vertexid = prepend_vertexid;
       ve->vf_params.prepend_instanceid = prepend_instanceid;
       ve->vf_params.last_element_edge_flag = last_element_edge_flag;
@@ -768,6 +792,14 @@ ilo_finalize_3d_states(struct ilo_context *ilo,
                        const struct pipe_draw_info *draw)
 {
    ilo->state_vector.draw = draw;
+
+   ilo->state_vector.draw_info.topology = ilo_translate_draw_mode(draw->mode);
+   ilo->state_vector.draw_info.indexed = draw->indexed;
+   ilo->state_vector.draw_info.vertex_count = draw->count;
+   ilo->state_vector.draw_info.vertex_start = draw->start;
+   ilo->state_vector.draw_info.instance_count = draw->instance_count;
+   ilo->state_vector.draw_info.instance_start = draw->start_instance;
+   ilo->state_vector.draw_info.vertex_base = draw->index_bias;
 
    finalize_blend(ilo);
    finalize_shader_states(&ilo->state_vector);

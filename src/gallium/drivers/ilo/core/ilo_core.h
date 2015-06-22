@@ -40,7 +40,4 @@
 #include "util/u_memory.h"
 #include "util/u_pointer.h"
 
-#define ILO_PRIM_RECTANGLES PIPE_PRIM_MAX
-#define ILO_PRIM_MAX (PIPE_PRIM_MAX + 1)
-
 #endif /* ILO_CORE_H */

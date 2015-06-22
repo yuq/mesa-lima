@@ -58,7 +58,7 @@ struct ilo_blitter {
    bool initialized;
 
    float vertices[3][2];
-   struct pipe_draw_info draw;
+   struct gen6_3dprimitive_info draw_info;
 
    uint32_t vf_data[4];
    struct ilo_state_vf vf;

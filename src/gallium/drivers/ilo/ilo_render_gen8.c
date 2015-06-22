@@ -220,8 +220,7 @@ gen8_draw_vf(struct ilo_render *r,
    if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VERTEX_ELEMENTS)
       gen6_3DSTATE_VERTEX_ELEMENTS(r->builder, &vec->ve->vf);
 
-   gen8_3DSTATE_VF_TOPOLOGY(r->builder,
-         gen6_3d_translate_pipe_prim(vec->draw->mode));
+   gen8_3DSTATE_VF_TOPOLOGY(r->builder, vec->draw_info.topology);
 
    if (session->vf_delta.dirty & ILO_STATE_VF_3DSTATE_VF_INSTANCING) {
       const uint8_t attr_count = ilo_state_vf_get_attr_count(&vec->ve->vf);
@@ -270,7 +269,7 @@ ilo_render_emit_draw_commands_gen8(struct ilo_render *render,
    gen6_draw_sf_rect(render, vec, session);
    gen8_draw_vf(render, vec, session);
 
-   ilo_render_3dprimitive(render, vec->draw, &vec->ib);
+   ilo_render_3dprimitive(render, &vec->draw_info);
 }
 
 int

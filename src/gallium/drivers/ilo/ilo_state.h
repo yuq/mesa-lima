@@ -28,6 +28,7 @@
 #ifndef ILO_STATE_H
 #define ILO_STATE_H
 
+#include "core/ilo_builder_3d.h" /* for gen6_3dprimitive_info */
 #include "core/ilo_state_cc.h"
 #include "core/ilo_state_compute.h"
 #include "core/ilo_state_raster.h"
@@ -169,8 +170,6 @@ struct ilo_ib_state {
    struct pipe_resource *hw_resource;
    unsigned hw_index_size;
    struct ilo_state_index_buffer ib;
-   /* an offset to be added to pipe_draw_info::start */
-   int64_t draw_start_offset;
 };
 
 struct ilo_cbuf_cso {
@@ -339,6 +338,7 @@ struct ilo_global_binding {
 
 struct ilo_state_vector {
    const struct pipe_draw_info *draw;
+   struct gen6_3dprimitive_info draw_info;
 
    uint32_t dirty;
 

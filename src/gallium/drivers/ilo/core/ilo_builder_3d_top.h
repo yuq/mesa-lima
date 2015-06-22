@@ -217,35 +217,6 @@ gen6_3DSTATE_VF_STATISTICS(struct ilo_builder *builder,
    ilo_builder_batch_write(builder, cmd_len, &dw0);
 }
 
-/**
- * Translate a pipe primitive type to the matching hardware primitive type.
- */
-static inline int
-gen6_3d_translate_pipe_prim(unsigned prim)
-{
-   static const int prim_mapping[ILO_PRIM_MAX] = {
-      [PIPE_PRIM_POINTS]                     = GEN6_3DPRIM_POINTLIST,
-      [PIPE_PRIM_LINES]                      = GEN6_3DPRIM_LINELIST,
-      [PIPE_PRIM_LINE_LOOP]                  = GEN6_3DPRIM_LINELOOP,
-      [PIPE_PRIM_LINE_STRIP]                 = GEN6_3DPRIM_LINESTRIP,
-      [PIPE_PRIM_TRIANGLES]                  = GEN6_3DPRIM_TRILIST,
-      [PIPE_PRIM_TRIANGLE_STRIP]             = GEN6_3DPRIM_TRISTRIP,
-      [PIPE_PRIM_TRIANGLE_FAN]               = GEN6_3DPRIM_TRIFAN,
-      [PIPE_PRIM_QUADS]                      = GEN6_3DPRIM_QUADLIST,
-      [PIPE_PRIM_QUAD_STRIP]                 = GEN6_3DPRIM_QUADSTRIP,
-      [PIPE_PRIM_POLYGON]                    = GEN6_3DPRIM_POLYGON,
-      [PIPE_PRIM_LINES_ADJACENCY]            = GEN6_3DPRIM_LINELIST_ADJ,
-      [PIPE_PRIM_LINE_STRIP_ADJACENCY]       = GEN6_3DPRIM_LINESTRIP_ADJ,
-      [PIPE_PRIM_TRIANGLES_ADJACENCY]        = GEN6_3DPRIM_TRILIST_ADJ,
-      [PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]   = GEN6_3DPRIM_TRISTRIP_ADJ,
-      [ILO_PRIM_RECTANGLES]                  = GEN6_3DPRIM_RECTLIST,
-   };
-
-   assert(prim_mapping[prim]);
-
-   return prim_mapping[prim];
-}
-
 static inline void
 gen8_3DSTATE_VF_TOPOLOGY(struct ilo_builder *builder,
                          enum gen_3dprim_type topology)

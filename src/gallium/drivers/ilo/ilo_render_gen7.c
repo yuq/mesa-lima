@@ -649,7 +649,7 @@ ilo_render_emit_draw_commands_gen7(struct ilo_render *render,
    gen6_draw_sf_rect(render, vec, session);
    gen6_draw_vf(render, vec, session);
 
-   ilo_render_3dprimitive(render, vec->draw, &vec->ib);
+   ilo_render_3dprimitive(render, &vec->draw_info);
 }
 
 static void
@@ -804,7 +804,7 @@ ilo_render_emit_rectlist_commands_gen7(struct ilo_render *r,
    if (ilo_dev_gen(r->dev) == ILO_GEN(7))
       gen7_wa_post_ps_and_later(r);
 
-   ilo_render_3dprimitive(r, &blitter->draw, NULL);
+   ilo_render_3dprimitive(r, &blitter->draw_info);
 }
 
 int
