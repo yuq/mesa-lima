@@ -51,8 +51,13 @@ static bool
 vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        int tile_width = 64;
-        int tile_height = 64;
+        bool old_msaa = vc4->msaa;
+        int old_tile_width = vc4->tile_width;
+        int old_tile_height = vc4->tile_height;
+        bool msaa = (info->src.resource->nr_samples ||
+                     info->dst.resource->nr_samples);
+        int tile_width = msaa ? 32 : 64;
+        int tile_height = msaa ? 32 : 64;
 
         if (util_format_is_depth_or_stencil(info->dst.resource->format))
                 return false;
@@ -104,9 +109,14 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
                 vc4_get_blit_surface(pctx, info->src.resource, info->src.level);
 
         pipe_surface_reference(&vc4->color_read, src_surf);
-        pipe_surface_reference(&vc4->color_write, dst_surf);
+        pipe_surface_reference(&vc4->color_write,
+                               dst_surf->texture->nr_samples ? NULL : dst_surf);
+        pipe_surface_reference(&vc4->msaa_color_write,
+                               dst_surf->texture->nr_samples ? dst_surf : NULL);
         pipe_surface_reference(&vc4->zs_read, NULL);
         pipe_surface_reference(&vc4->zs_write, NULL);
+        pipe_surface_reference(&vc4->msaa_zs_write, NULL);
+
         vc4->draw_min_x = info->dst.box.x;
         vc4->draw_min_y = info->dst.box.y;
         vc4->draw_max_x = info->dst.box.x + info->dst.box.width;
@@ -114,8 +124,16 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         vc4->draw_width = dst_surf->width;
         vc4->draw_height = dst_surf->height;
 
+        vc4->tile_width = tile_width;
+        vc4->tile_height = tile_height;
+        vc4->msaa = msaa;
         vc4->needs_flush = true;
+
         vc4_job_submit(vc4);
+
+        vc4->msaa = old_msaa;
+        vc4->tile_width = old_tile_width;
+        vc4->tile_height = old_tile_height;
 
         pipe_surface_reference(&dst_surf, NULL);
         pipe_surface_reference(&src_surf, NULL);
@@ -165,14 +183,6 @@ void
 vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
 {
         struct pipe_blit_info info = *blit_info;
-
-        if (info.src.resource->nr_samples > 1 &&
-            info.dst.resource->nr_samples <= 1 &&
-            !util_format_is_depth_or_stencil(info.src.resource->format) &&
-            !util_format_is_pure_integer(info.src.resource->format)) {
-                fprintf(stderr, "color resolve unimplemented\n");
-                return;
-        }
 
         if (vc4_tile_blit(pctx, blit_info))
                 return;

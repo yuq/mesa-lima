@@ -121,6 +121,9 @@ vc4_create_rasterizer_state(struct pipe_context *pctx,
                 so->offset_factor = float_to_187_half(cso->offset_scale);
         }
 
+        if (cso->multisample)
+                so->config_bits[0] |= VC4_CONFIG_BITS_RASTERIZER_OVERSAMPLE_4X;
+
         return so;
 }
 
@@ -456,6 +459,22 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                         (rsc->slices[cso->zsbuf->u.tex.level].stride /
                          rsc->cpp);
         }
+
+        vc4->msaa = false;
+        if (cso->cbufs[0])
+                vc4->msaa = cso->cbufs[0]->texture->nr_samples != 0;
+        else if (cso->zsbuf)
+                vc4->msaa = cso->zsbuf->texture->nr_samples != 0;
+
+        if (vc4->msaa) {
+                vc4->tile_width = 32;
+                vc4->tile_height = 32;
+        } else {
+                vc4->tile_width = 64;
+                vc4->tile_height = 64;
+        }
+        vc4->draw_tiles_x = DIV_ROUND_UP(cso->width, vc4->tile_width);
+        vc4->draw_tiles_y = DIV_ROUND_UP(cso->height, vc4->tile_height);
 
         vc4->dirty |= VC4_DIRTY_FRAMEBUFFER;
 }
