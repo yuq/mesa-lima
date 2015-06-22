@@ -92,8 +92,10 @@ get_hw_prim_for_gl_prim(int mode)
 {
    if (mode >= BRW_PRIM_OFFSET)
       return mode - BRW_PRIM_OFFSET;
-   else
+   else {
+      assert(mode < ARRAY_SIZE(prim_to_hw_prim));
       return prim_to_hw_prim[mode];
+   }
 }
 
 
