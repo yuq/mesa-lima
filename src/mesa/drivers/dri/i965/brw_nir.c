@@ -57,28 +57,6 @@ nir_optimize(nir_shader *nir)
    } while (progress);
 }
 
-static bool
-count_nir_instrs_in_block(nir_block *block, void *state)
-{
-   int *count = (int *) state;
-   nir_foreach_instr(block, instr) {
-      *count = *count + 1;
-   }
-   return true;
-}
-
-static int
-count_nir_instrs(nir_shader *nir)
-{
-   int count = 0;
-   nir_foreach_overload(nir, overload) {
-      if (!overload->impl)
-         continue;
-      nir_foreach_block(overload->impl, count_nir_instrs_in_block, &count);
-   }
-   return count;
-}
-
 nir_shader *
 brw_create_nir(struct brw_context *brw,
                const struct gl_shader_program *shader_prog,
@@ -177,15 +155,6 @@ brw_create_nir(struct brw_context *brw,
               _mesa_shader_stage_to_string(stage));
       nir_print_shader(nir, stderr);
    }
-
-   static GLuint msg_id = 0;
-   _mesa_gl_debug(&brw->ctx, &msg_id,
-                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                  MESA_DEBUG_TYPE_OTHER,
-                  MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "%s NIR shader: %d inst\n",
-                  _mesa_shader_stage_to_abbrev(stage),
-                  count_nir_instrs(nir));
 
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
