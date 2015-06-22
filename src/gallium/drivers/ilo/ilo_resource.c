@@ -443,6 +443,7 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
 {
    const struct ilo_screen *is = ilo_screen(screen);
    struct ilo_buffer_resource *buf;
+   unsigned size;
 
    buf = CALLOC_STRUCT(ilo_buffer_resource);
    if (!buf)
@@ -452,8 +453,25 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
    buf->base.screen = screen;
    pipe_reference_init(&buf->base.reference, 1);
 
-   ilo_buffer_init(&buf->buffer, &is->dev,
-         templ->width0, templ->bind, templ->flags);
+   size = templ->width0;
+
+   /*
+    * As noted in ilo_format_translate(), we treat some 3-component formats as
+    * 4-component formats to work around hardware limitations.  Imagine the
+    * case where the vertex buffer holds a single PIPE_FORMAT_R16G16B16_FLOAT
+    * vertex, and buf->bo_size is 6.  The hardware would fail to fetch it at
+    * boundary check because the vertex buffer is expected to hold a
+    * PIPE_FORMAT_R16G16B16A16_FLOAT vertex and that takes at least 8 bytes.
+    *
+    * For the workaround to work, we should add 2 to the bo size.  But that
+    * would waste a page when the bo size is already page aligned.  Let's
+    * round it to page size for now and revisit this when needed.
+    */
+   if ((templ->bind & PIPE_BIND_VERTEX_BUFFER) &&
+       ilo_dev_gen(&is->dev) < ILO_GEN(7.5))
+      size = align(size, 4096);
+
+   ilo_buffer_init(&buf->buffer, &is->dev, size, templ->bind, templ->flags);
 
    if (buf->buffer.bo_size < templ->width0 ||
        buf->buffer.bo_size > ilo_max_resource_size ||
