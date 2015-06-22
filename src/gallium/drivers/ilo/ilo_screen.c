@@ -31,10 +31,10 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "genhw/genhw.h" /* for GEN6_REG_TIMESTAMP */
-#include "core/ilo_format.h"
 #include "core/intel_winsys.h"
 
 #include "ilo_context.h"
+#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_transfer.h" /* for ILO_TRANSFER_MAP_BUFFER_ALIGNMENT */
 #include "ilo_public.h"

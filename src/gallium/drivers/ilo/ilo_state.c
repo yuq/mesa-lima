@@ -26,7 +26,6 @@
  */
 
 #include "core/ilo_builder_3d.h" /* for gen6_3d_translate_pipe_prim() */
-#include "core/ilo_format.h"
 #include "util/u_dual_blend.h"
 #include "util/u_dynarray.h"
 #include "util/u_framebuffer.h"
@@ -35,6 +34,7 @@
 #include "util/u_upload_mgr.h"
 
 #include "ilo_context.h"
+#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_shader.h"
 #include "ilo_state.h"

@@ -29,8 +29,8 @@
 #define ILO_FORMAT_H
 
 #include "genhw/genhw.h"
-#include "ilo_core.h"
-#include "ilo_dev.h"
+
+#include "ilo_common.h"
 
 bool
 ilo_format_support_vb(const struct ilo_dev *dev,

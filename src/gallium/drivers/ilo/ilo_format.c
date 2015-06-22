@@ -26,8 +26,8 @@
  */
 
 #include "genhw/genhw.h"
-#include "ilo_state_surface.h"
-#include "ilo_state_vf.h"
+#include "core/ilo_state_surface.h"
+#include "core/ilo_state_vf.h"
 #include "ilo_format.h"
 
 bool
