@@ -2069,7 +2069,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
    struct gallivm_state *gallivm = variant->gallivm;
    LLVMContextRef context = gallivm->context;
    LLVMTypeRef int32_type = LLVMInt32TypeInContext(context);
-   LLVMTypeRef arg_types[6];
+   LLVMTypeRef arg_types[7];
    LLVMTypeRef func_type;
    LLVMValueRef variant_func;
    LLVMValueRef context_ptr;
@@ -2105,6 +2105,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
    arg_types[4] = int32_type;                          /* instance_id */
    arg_types[5] = LLVMPointerType(
       LLVMVectorType(int32_type, vector_length), 0);   /* prim_id_ptr */
+   arg_types[6] = int32_type;
 
    func_type = LLVMFunctionType(int32_type, arg_types, Elements(arg_types), 0);
 
@@ -2125,6 +2126,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
    num_prims                 = LLVMGetParam(variant_func, 3);
    system_values.instance_id = LLVMGetParam(variant_func, 4);
    prim_id_ptr               = LLVMGetParam(variant_func, 5);
+   system_values.invocation_id = LLVMGetParam(variant_func, 6);
 
    lp_build_name(context_ptr, "context");
    lp_build_name(input_array, "input");
@@ -2132,6 +2134,7 @@ draw_gs_llvm_generate(struct draw_llvm *llvm,
    lp_build_name(num_prims, "num_prims");
    lp_build_name(system_values.instance_id, "instance_id");
    lp_build_name(prim_id_ptr, "prim_id_ptr");
+   lp_build_name(system_values.invocation_id, "invocation_id");
 
    variant->context_ptr = context_ptr;
    variant->io_ptr = io_ptr;

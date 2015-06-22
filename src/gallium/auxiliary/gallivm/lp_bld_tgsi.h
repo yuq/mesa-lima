@@ -165,6 +165,7 @@ struct lp_bld_tgsi_system_values {
    LLVMValueRef vertex_id_nobase;
    LLVMValueRef prim_id;
    LLVMValueRef basevertex;
+   LLVMValueRef invocation_id;
 };
 
 

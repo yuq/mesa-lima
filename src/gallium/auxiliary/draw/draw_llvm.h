@@ -298,7 +298,8 @@ typedef int
                     struct vertex_header *output,
                     unsigned num_prims,
                     unsigned instance_id,
-                    int *prim_ids);
+                    int *prim_ids,
+                    unsigned invocation_id);
 
 struct draw_llvm_variant_key
 {

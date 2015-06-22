@@ -391,7 +391,8 @@ llvm_gs_run(struct draw_geometry_shader *shader,
       (struct vertex_header*)input,
       input_primitives,
       shader->draw->instance_id,
-      shader->llvm_prim_ids);
+      shader->llvm_prim_ids,
+      shader->invocation_id);
 
    return ret;
 }

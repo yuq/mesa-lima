@@ -1532,6 +1532,11 @@ emit_fetch_system_value(
       atype = TGSI_TYPE_UNSIGNED;
       break;
 
+   case TGSI_SEMANTIC_INVOCATIONID:
+      res = lp_build_broadcast_scalar(&bld_base->uint_bld, bld->system_values.invocation_id);
+      atype = TGSI_TYPE_UNSIGNED;
+      break;
+
    default:
       assert(!"unexpected semantic in emit_fetch_system_value");
       res = bld_base->base.zero;
