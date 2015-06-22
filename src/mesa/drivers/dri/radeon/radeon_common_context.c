@@ -194,6 +194,29 @@ GLboolean radeonInitContext(radeonContextPtr radeon,
 
 	radeon_init_dma(radeon);
 
+        /* _mesa_initialize_context calls _mesa_init_queryobj which
+         * initializes all of the counter sizes to 64.  The counters on r100
+         * and r200 are only 32-bits for occlusion queries.  Those are the
+         * only counters, so set the other sizes to zero.
+         */
+        radeon->glCtx.Const.QueryCounterBits.SamplesPassed = 32;
+
+        radeon->glCtx.Const.QueryCounterBits.TimeElapsed = 0;
+        radeon->glCtx.Const.QueryCounterBits.Timestamp = 0;
+        radeon->glCtx.Const.QueryCounterBits.PrimitivesGenerated = 0;
+        radeon->glCtx.Const.QueryCounterBits.PrimitivesWritten = 0;
+        radeon->glCtx.Const.QueryCounterBits.VerticesSubmitted = 0;
+        radeon->glCtx.Const.QueryCounterBits.PrimitivesSubmitted = 0;
+        radeon->glCtx.Const.QueryCounterBits.VsInvocations = 0;
+        radeon->glCtx.Const.QueryCounterBits.TessPatches = 0;
+        radeon->glCtx.Const.QueryCounterBits.TessInvocations = 0;
+        radeon->glCtx.Const.QueryCounterBits.GsInvocations = 0;
+        radeon->glCtx.Const.QueryCounterBits.GsPrimitives = 0;
+        radeon->glCtx.Const.QueryCounterBits.FsInvocations = 0;
+        radeon->glCtx.Const.QueryCounterBits.ComputeInvocations = 0;
+        radeon->glCtx.Const.QueryCounterBits.ClInPrimitives = 0;
+        radeon->glCtx.Const.QueryCounterBits.ClOutPrimitives = 0;
+
 	return GL_TRUE;
 }
 
