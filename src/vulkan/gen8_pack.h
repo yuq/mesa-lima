@@ -169,19 +169,19 @@ struct GEN8_3DSTATE_VS {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     AccessesUAV;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         AccessesUAV;
+   bool                                         SoftwareExceptionEnable;
    uint64_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
    uint32_t                                     MaximumNumberofThreads;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     SIMD8DispatchEnable;
-   uint32_t                                     VertexCacheDisable;
-   uint32_t                                     FunctionEnable;
+   bool                                         StatisticsEnable;
+   bool                                         SIMD8DispatchEnable;
+   bool                                         VertexCacheDisable;
+   bool                                         FunctionEnable;
    uint32_t                                     VertexURBEntryOutputReadOffset;
    uint32_t                                     VertexURBEntryOutputLength;
    uint32_t                                     UserClipDistanceClipTestEnableBitmask;
@@ -539,7 +539,7 @@ GEN8_MI_SEMAPHORE_WAIT_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_STORE_REGISTER_MEM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
+   bool                                         UseGlobalGTT;
    uint32_t                                     PredicateEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     RegisterAddress;
@@ -655,28 +655,28 @@ struct GEN8_STATE_BASE_ADDRESS {
    uint32_t                                     DwordLength;
    __gen_address_type                           GeneralStateBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      GeneralStateMemoryObjectControlState;
-   uint32_t                                     GeneralStateBaseAddressModifyEnable;
+   bool                                         GeneralStateBaseAddressModifyEnable;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      StatelessDataPortAccessMemoryObjectControlState;
    __gen_address_type                           SurfaceStateBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      SurfaceStateMemoryObjectControlState;
-   uint32_t                                     SurfaceStateBaseAddressModifyEnable;
+   bool                                         SurfaceStateBaseAddressModifyEnable;
    __gen_address_type                           DynamicStateBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      DynamicStateMemoryObjectControlState;
-   uint32_t                                     DynamicStateBaseAddressModifyEnable;
+   bool                                         DynamicStateBaseAddressModifyEnable;
    __gen_address_type                           IndirectObjectBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      IndirectObjectMemoryObjectControlState;
-   uint32_t                                     IndirectObjectBaseAddressModifyEnable;
+   bool                                         IndirectObjectBaseAddressModifyEnable;
    __gen_address_type                           InstructionBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      InstructionMemoryObjectControlState;
-   uint32_t                                     InstructionBaseAddressModifyEnable;
+   bool                                         InstructionBaseAddressModifyEnable;
    uint32_t                                     GeneralStateBufferSize;
-   uint32_t                                     GeneralStateBufferSizeModifyEnable;
+   bool                                         GeneralStateBufferSizeModifyEnable;
    uint32_t                                     DynamicStateBufferSize;
-   uint32_t                                     DynamicStateBufferSizeModifyEnable;
+   bool                                         DynamicStateBufferSizeModifyEnable;
    uint32_t                                     IndirectObjectBufferSize;
-   uint32_t                                     IndirectObjectBufferSizeModifyEnable;
+   bool                                         IndirectObjectBufferSizeModifyEnable;
    uint32_t                                     InstructionBufferSize;
-   uint32_t                                     InstructionBuffersizeModifyEnable;
+   bool                                         InstructionBuffersizeModifyEnable;
 };
 
 static inline void
@@ -934,11 +934,11 @@ struct GEN8_3DPRIMITIVE {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     IndirectParameterEnable;
+   bool                                         IndirectParameterEnable;
    uint32_t                                     UAVCoherencyRequired;
-   uint32_t                                     PredicateEnable;
+   bool                                         PredicateEnable;
    uint32_t                                     DwordLength;
-   uint32_t                                     EndOffsetEnable;
+   bool                                         EndOffsetEnable;
 #define     SEQUENTIAL                                         0
 #define     RANDOM                                             1
    uint32_t                                     VertexAccessType;
@@ -1544,7 +1544,7 @@ struct GEN8_3DSTATE_BLEND_STATE_POINTERS {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     BlendStatePointer;
-   uint32_t                                     BlendStatePointerValid;
+   bool                                         BlendStatePointerValid;
 };
 
 static inline void
@@ -1584,7 +1584,7 @@ struct GEN8_3DSTATE_CC_STATE_POINTERS {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     ColorCalcStatePointer;
-   uint32_t                                     ColorCalcStatePointerValid;
+   bool                                         ColorCalcStatePointerValid;
 };
 
 static inline void
@@ -1672,7 +1672,7 @@ struct GEN8_3DSTATE_CLEAR_PARAMS {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    float                                        DepthClearValue;
-   uint32_t                                     DepthClearValueValid;
+   bool                                         DepthClearValueValid;
 };
 
 static inline void
@@ -1716,37 +1716,37 @@ struct GEN8_3DSTATE_CLIP {
    uint32_t                                     DwordLength;
 #define     Normal                                             0
 #define     Force                                              1
-   uint32_t                                     ForceUserClipDistanceCullTestEnableBitmask;
+   bool                                         ForceUserClipDistanceCullTestEnableBitmask;
 #define     _8Bit                                              0
 #define     _4Bit                                              1
    uint32_t                                     VertexSubPixelPrecisionSelect;
-   uint32_t                                     EarlyCullEnable;
+   bool                                         EarlyCullEnable;
 #define     Normal                                             0
 #define     Force                                              1
-   uint32_t                                     ForceUserClipDistanceClipTestEnableBitmask;
+   bool                                         ForceUserClipDistanceClipTestEnableBitmask;
 #define     Normal                                             0
 #define     Force                                              1
-   uint32_t                                     ForceClipMode;
-   uint32_t                                     ClipperStatisticsEnable;
+   bool                                         ForceClipMode;
+   bool                                         ClipperStatisticsEnable;
    uint32_t                                     UserClipDistanceCullTestEnableBitmask;
-   uint32_t                                     ClipEnable;
+   bool                                         ClipEnable;
 #define     API_OGL                                            0
    uint32_t                                     APIMode;
-   uint32_t                                     ViewportXYClipTestEnable;
-   uint32_t                                     GuardbandClipTestEnable;
+   bool                                         ViewportXYClipTestEnable;
+   bool                                         GuardbandClipTestEnable;
    uint32_t                                     UserClipDistanceClipTestEnableBitmask;
 #define     NORMAL                                             0
 #define     REJECT_ALL                                         3
 #define     ACCEPT_ALL                                         4
    uint32_t                                     ClipMode;
-   uint32_t                                     PerspectiveDivideDisable;
-   uint32_t                                     NonPerspectiveBarycentricEnable;
+   bool                                         PerspectiveDivideDisable;
+   bool                                         NonPerspectiveBarycentricEnable;
    uint32_t                                     TriangleStripListProvokingVertexSelect;
    uint32_t                                     LineStripListProvokingVertexSelect;
    uint32_t                                     TriangleFanProvokingVertexSelect;
    float                                        MinimumPointWidth;
    float                                        MaximumPointWidth;
-   uint32_t                                     ForceZeroRTAIndexEnable;
+   bool                                         ForceZeroRTAIndexEnable;
    uint32_t                                     MaximumVPIndex;
 };
 
@@ -2078,9 +2078,9 @@ struct GEN8_3DSTATE_DEPTH_BUFFER {
 #define     SURFTYPE_CUBE                                      3
 #define     SURFTYPE_NULL                                      7
    uint32_t                                     SurfaceType;
-   uint32_t                                     DepthWriteEnable;
-   uint32_t                                     StencilWriteEnable;
-   uint32_t                                     HierarchicalDepthBufferEnable;
+   bool                                         DepthWriteEnable;
+   bool                                         StencilWriteEnable;
+   bool                                         HierarchicalDepthBufferEnable;
 #define     D32_FLOAT                                          1
 #define     D24_UNORM_X8_UINT                                  3
 #define     D16_UNORM                                          5
@@ -2247,20 +2247,20 @@ struct GEN8_3DSTATE_DS {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     AccessesUAV;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         AccessesUAV;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint64_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     PatchURBEntryReadLength;
    uint32_t                                     PatchURBEntryReadOffset;
    uint32_t                                     MaximumNumberofThreads;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     SIMD8DispatchEnable;
-   uint32_t                                     ComputeWCoordinateEnable;
-   uint32_t                                     CacheDisable;
-   uint32_t                                     FunctionEnable;
+   bool                                         StatisticsEnable;
+   bool                                         SIMD8DispatchEnable;
+   bool                                         ComputeWCoordinateEnable;
+   bool                                         CacheDisable;
+   bool                                         FunctionEnable;
    uint32_t                                     VertexURBEntryOutputReadOffset;
    uint32_t                                     VertexURBEntryOutputLength;
    uint32_t                                     UserClipDistanceClipTestEnableBitmask;
@@ -2368,7 +2368,7 @@ struct GEN8_3DSTATE_GATHER_CONSTANT_DS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9GenerateStall;
+   bool                                         ConstantBufferDx9GenerateStall;
    /* variable length fields follow */
 };
 
@@ -2415,7 +2415,7 @@ struct GEN8_3DSTATE_GATHER_CONSTANT_GS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9GenerateStall;
+   bool                                         ConstantBufferDx9GenerateStall;
    /* variable length fields follow */
 };
 
@@ -2462,7 +2462,7 @@ struct GEN8_3DSTATE_GATHER_CONSTANT_HS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9GenerateStall;
+   bool                                         ConstantBufferDx9GenerateStall;
    /* variable length fields follow */
 };
 
@@ -2509,8 +2509,8 @@ struct GEN8_3DSTATE_GATHER_CONSTANT_PS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9GenerateStall;
-   uint32_t                                     ConstantBufferDx9Enable;
+   bool                                         ConstantBufferDx9GenerateStall;
+   bool                                         ConstantBufferDx9Enable;
    /* variable length fields follow */
 };
 
@@ -2558,8 +2558,8 @@ struct GEN8_3DSTATE_GATHER_CONSTANT_VS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9GenerateStall;
-   uint32_t                                     ConstantBufferDx9Enable;
+   bool                                         ConstantBufferDx9GenerateStall;
+   bool                                         ConstantBufferDx9Enable;
    /* variable length fields follow */
 };
 
@@ -2607,7 +2607,7 @@ struct GEN8_3DSTATE_GATHER_POOL_ALLOC {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    __gen_address_type                           GatherPoolBaseAddress;
-   uint32_t                                     GatherPoolEnable;
+   bool                                         GatherPoolEnable;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      MemoryObjectControlState;
    uint32_t                                     GatherPoolBufferSize;
 };
@@ -2678,17 +2678,17 @@ struct GEN8_3DSTATE_GS {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     AccessesUAV;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         AccessesUAV;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     ExpectedVertexCount;
    uint64_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     OutputVertexSize;
    uint32_t                                     OutputTopology;
    uint32_t                                     VertexURBEntryReadLength;
-   uint32_t                                     IncludeVertexHandles;
+   bool                                         IncludeVertexHandles;
    uint32_t                                     VertexURBEntryReadOffset;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     MaximumNumberofThreads;
@@ -2700,19 +2700,19 @@ struct GEN8_3DSTATE_GS {
 #define     DispatchModeDualObject                             2
 #define     DispatchModeSIMD8                                  3
    uint32_t                                     DispatchMode;
-   uint32_t                                     StatisticsEnable;
+   bool                                         StatisticsEnable;
    uint32_t                                     InvocationsIncrementValue;
-   uint32_t                                     IncludePrimitiveID;
+   bool                                         IncludePrimitiveID;
    uint32_t                                     Hint;
 #define     LEADING                                            0
 #define     TRAILING                                           1
    uint32_t                                     ReorderMode;
-   uint32_t                                     DiscardAdjacency;
-   uint32_t                                     Enable;
+   bool                                         DiscardAdjacency;
+   bool                                         Enable;
 #define     CUT                                                0
 #define     SID                                                1
    uint32_t                                     ControlDataFormat;
-   uint32_t                                     StaticOutput;
+   bool                                         StaticOutput;
    uint32_t                                     StaticOutputVertexCount;
    uint32_t                                     VertexURBEntryOutputReadOffset;
    uint32_t                                     VertexURBEntryOutputLength;
@@ -2887,21 +2887,21 @@ struct GEN8_3DSTATE_HS {
 #define     IEEE754                                            0
 #define     alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
-   uint32_t                                     Enable;
-   uint32_t                                     StatisticsEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
+   bool                                         Enable;
+   bool                                         StatisticsEnable;
    uint32_t                                     MaximumNumberofThreads;
    uint32_t                                     InstanceCount;
    uint64_t                                     KernelStartPointer;
    uint64_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
-   uint32_t                                     SingleProgramFlow;
+   bool                                         SingleProgramFlow;
 #define     Dmask                                              0
 #define     Vmask                                              1
    uint32_t                                     VectorMaskEnable;
-   uint32_t                                     AccessesUAV;
-   uint32_t                                     IncludeVertexHandles;
+   bool                                         AccessesUAV;
+   bool                                         IncludeVertexHandles;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
@@ -3042,7 +3042,7 @@ struct GEN8_3DSTATE_LINE_STIPPLE {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     ModifyEnableCurrentRepeatCounterCurrentStippleIndex;
+   bool                                         ModifyEnableCurrentRepeatCounterCurrentStippleIndex;
    uint32_t                                     CurrentRepeatCounter;
    uint32_t                                     CurrentStippleIndex;
    uint32_t                                     LineStipplePattern;
@@ -3283,22 +3283,22 @@ struct GEN8_3DSTATE_PS {
 #define     RD                                                 2
 #define     RTZ                                                3
    uint32_t                                     RoundingMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint64_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     MaximumNumberofThreadsPerPSD;
-   uint32_t                                     PushConstantEnable;
-   uint32_t                                     RenderTargetFastClearEnable;
-   uint32_t                                     RenderTargetResolveEnable;
+   bool                                         PushConstantEnable;
+   bool                                         RenderTargetFastClearEnable;
+   bool                                         RenderTargetResolveEnable;
 #define     POSOFFSET_NONE                                     0
 #define     POSOFFSET_CENTROID                                 2
 #define     POSOFFSET_SAMPLE                                   3
    uint32_t                                     PositionXYOffsetSelect;
-   uint32_t                                     _32PixelDispatchEnable;
-   uint32_t                                     _16PixelDispatchEnable;
-   uint32_t                                     _8PixelDispatchEnable;
+   bool                                         _32PixelDispatchEnable;
+   bool                                         _16PixelDispatchEnable;
+   bool                                         _8PixelDispatchEnable;
    uint32_t                                     DispatchGRFStartRegisterForConstantSetupData0;
    uint32_t                                     DispatchGRFStartRegisterForConstantSetupData1;
    uint32_t                                     DispatchGRFStartRegisterForConstantSetupData2;
@@ -3397,15 +3397,15 @@ struct GEN8_3DSTATE_PS_BLEND {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     AlphaToCoverageEnable;
-   uint32_t                                     HasWriteableRT;
-   uint32_t                                     ColorBufferBlendEnable;
+   bool                                         AlphaToCoverageEnable;
+   bool                                         HasWriteableRT;
+   bool                                         ColorBufferBlendEnable;
    uint32_t                                     SourceAlphaBlendFactor;
    uint32_t                                     DestinationAlphaBlendFactor;
    uint32_t                                     SourceBlendFactor;
    uint32_t                                     DestinationBlendFactor;
-   uint32_t                                     AlphaTestEnable;
-   uint32_t                                     IndependentAlphaBlendEnable;
+   bool                                         AlphaTestEnable;
+   bool                                         IndependentAlphaBlendEnable;
 };
 
 static inline void
@@ -3451,24 +3451,24 @@ struct GEN8_3DSTATE_PS_EXTRA {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     PixelShaderValid;
-   uint32_t                                     PixelShaderDoesnotwritetoRT;
-   uint32_t                                     oMaskPresenttoRenderTarget;
-   uint32_t                                     PixelShaderKillsPixel;
+   bool                                         PixelShaderValid;
+   bool                                         PixelShaderDoesnotwritetoRT;
+   bool                                         oMaskPresenttoRenderTarget;
+   bool                                         PixelShaderKillsPixel;
 #define     PSCDEPTH_OFF                                       0
 #define     PSCDEPTH_ON                                        1
 #define     PSCDEPTH_ON_GE                                     2
 #define     PSCDEPTH_ON_LE                                     3
    uint32_t                                     PixelShaderComputedDepthMode;
-   uint32_t                                     ForceComputedDepth;
-   uint32_t                                     PixelShaderUsesSourceDepth;
-   uint32_t                                     PixelShaderUsesSourceW;
+   bool                                         ForceComputedDepth;
+   bool                                         PixelShaderUsesSourceDepth;
+   bool                                         PixelShaderUsesSourceW;
    uint32_t                                     Removed;
-   uint32_t                                     AttributeEnable;
-   uint32_t                                     PixelShaderDisablesAlphaToCoverage;
-   uint32_t                                     PixelShaderIsPerSample;
-   uint32_t                                     PixelShaderHasUAV;
-   uint32_t                                     PixelShaderUsesInputCoverageMask;
+   bool                                         AttributeEnable;
+   bool                                         PixelShaderDisablesAlphaToCoverage;
+   bool                                         PixelShaderIsPerSample;
+   bool                                         PixelShaderHasUAV;
+   bool                                         PixelShaderUsesInputCoverageMask;
 };
 
 static inline void
@@ -3741,16 +3741,16 @@ struct GEN8_3DSTATE_RASTER {
 #define     Normal                                             0
 #define     Force                                              1
    uint32_t                                     ForceMultisampling;
-   uint32_t                                     SmoothPointEnable;
-   uint32_t                                     DXMultisampleRasterizationEnable;
+   bool                                         SmoothPointEnable;
+   bool                                         DXMultisampleRasterizationEnable;
 #define     MSRASTMODE_OFF_PIXEL                               0
 #define     MSRASTMODE_OFF_PATTERN                             1
 #define     MSRASTMODE_ON_PIXEL                                2
 #define     MSRASTMODE_ON_PATTERN                              3
    uint32_t                                     DXMultisampleRasterizationMode;
-   uint32_t                                     GlobalDepthOffsetEnableSolid;
-   uint32_t                                     GlobalDepthOffsetEnableWireframe;
-   uint32_t                                     GlobalDepthOffsetEnablePoint;
+   bool                                         GlobalDepthOffsetEnableSolid;
+   bool                                         GlobalDepthOffsetEnableWireframe;
+   bool                                         GlobalDepthOffsetEnablePoint;
 #define     RASTER_SOLID                                       0
 #define     RASTER_WIREFRAME                                   1
 #define     RASTER_POINT                                       2
@@ -3759,9 +3759,9 @@ struct GEN8_3DSTATE_RASTER {
 #define     RASTER_WIREFRAME                                   1
 #define     RASTER_POINT                                       2
    uint32_t                                     BackFaceFillMode;
-   uint32_t                                     AntialiasingEnable;
-   uint32_t                                     ScissorRectangleEnable;
-   uint32_t                                     ViewportZClipTestEnable;
+   bool                                         AntialiasingEnable;
+   bool                                         ScissorRectangleEnable;
+   bool                                         ViewportZClipTestEnable;
    float                                        GlobalDepthOffsetConstant;
    float                                        GlobalDepthOffsetScale;
    float                                        GlobalDepthOffsetClamp;
@@ -4253,17 +4253,17 @@ struct GEN8_3DSTATE_SBE {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     ForceVertexURBEntryReadLength;
-   uint32_t                                     ForceVertexURBEntryReadOffset;
+   bool                                         ForceVertexURBEntryReadLength;
+   bool                                         ForceVertexURBEntryReadOffset;
    uint32_t                                     NumberofSFOutputAttributes;
-   uint32_t                                     AttributeSwizzleEnable;
+   bool                                         AttributeSwizzleEnable;
 #define     UPPERLEFT                                          0
 #define     LOWERLEFT                                          1
    uint32_t                                     PointSpriteTextureCoordinateOrigin;
-   uint32_t                                     PrimitiveIDOverrideComponentW;
-   uint32_t                                     PrimitiveIDOverrideComponentZ;
-   uint32_t                                     PrimitiveIDOverrideComponentY;
-   uint32_t                                     PrimitiveIDOverrideComponentX;
+   bool                                         PrimitiveIDOverrideComponentW;
+   bool                                         PrimitiveIDOverrideComponentZ;
+   bool                                         PrimitiveIDOverrideComponentY;
+   bool                                         PrimitiveIDOverrideComponentX;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
    uint32_t                                     PrimitiveIDOverrideAttributeSelect;
@@ -4320,10 +4320,10 @@ GEN8_3DSTATE_SBE_pack(__gen_user_data *data, void * restrict dst,
    .DwordLength          =  9
 
 struct GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL {
-   uint32_t                                     ComponentOverrideW;
-   uint32_t                                     ComponentOverrideZ;
-   uint32_t                                     ComponentOverrideY;
-   uint32_t                                     ComponentOverrideX;
+   bool                                         ComponentOverrideW;
+   bool                                         ComponentOverrideZ;
+   bool                                         ComponentOverrideY;
+   bool                                         ComponentOverrideX;
    uint32_t                                     SwizzleControlMode;
 #define     CONST_0000                                         0
 #define     CONST_0001_FLOAT                                   1
@@ -4479,22 +4479,22 @@ struct GEN8_3DSTATE_SF {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     LegacyGlobalDepthBiasEnable;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     ViewportTransformEnable;
+   bool                                         LegacyGlobalDepthBiasEnable;
+   bool                                         StatisticsEnable;
+   bool                                         ViewportTransformEnable;
    float                                        LineWidth;
 #define     _05pixels                                          0
 #define     _10pixels                                          1
 #define     _20pixels                                          2
 #define     _40pixels                                          3
    uint32_t                                     LineEndCapAntialiasingRegionWidth;
-   uint32_t                                     LastPixelEnable;
+   bool                                         LastPixelEnable;
    uint32_t                                     TriangleStripListProvokingVertexSelect;
    uint32_t                                     LineStripListProvokingVertexSelect;
    uint32_t                                     TriangleFanProvokingVertexSelect;
 #define     AALINEDISTANCE_TRUE                                1
    uint32_t                                     AALineDistanceMode;
-   uint32_t                                     SmoothPointEnable;
+   bool                                         SmoothPointEnable;
    uint32_t                                     VertexSubPixelPrecisionSelect;
 #define     Vertex                                             0
 #define     State                                              1
@@ -4556,11 +4556,11 @@ struct GEN8_3DSTATE_SO_BUFFER {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     SOBufferEnable;
+   bool                                         SOBufferEnable;
    uint32_t                                     SOBufferIndex;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      SOBufferObjectControlState;
-   uint32_t                                     StreamOffsetWriteEnable;
-   uint32_t                                     StreamOutputBufferOffsetAddressEnable;
+   bool                                         StreamOffsetWriteEnable;
+   bool                                         StreamOutputBufferOffsetAddressEnable;
    __gen_address_type                           SurfaceBaseAddress;
    uint32_t                                     SurfaceSize;
    __gen_address_type                           StreamOutputBufferOffsetAddress;
@@ -4809,7 +4809,7 @@ struct GEN8_3DSTATE_STREAMOUT {
 #define     LEADING                                            0
 #define     TRAILING                                           1
    uint32_t                                     ReorderMode;
-   uint32_t                                     SOStatisticsEnable;
+   bool                                         SOStatisticsEnable;
 #define     Normal                                             0
 #define     Resreved                                           1
 #define     Force_Off                                          2
@@ -4895,9 +4895,9 @@ struct GEN8_3DSTATE_TE {
 #define     EVEN_FRACTIONAL                                    2
    uint32_t                                     Partitioning;
 #define     POINT                                              0
-#define     LINE                                               1
-#define     TRI_CW                                             2
-#define     TRI_CCW                                            3
+#define     OUTPUT_LINE                                        1
+#define     OUTPUT_TRI_CW                                      2
+#define     OUTPUT_TRI_CCW                                     3
    uint32_t                                     OutputTopology;
 #define     QUAD                                               0
 #define     TRI                                                1
@@ -4906,7 +4906,7 @@ struct GEN8_3DSTATE_TE {
 #define     HW_TESS                                            0
 #define     SW_TESS                                            1
    uint32_t                                     TEMode;
-   uint32_t                                     TEEnable;
+   bool                                         TEEnable;
    float                                        MaximumTessellationFactorOdd;
    float                                        MaximumTessellationFactorNotOdd;
 };
@@ -5080,7 +5080,7 @@ struct GEN8_VERTEX_BUFFER_STATE {
    uint32_t                                     VertexBufferIndex;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      MemoryObjectControlState;
    uint32_t                                     AddressModifyEnable;
-   uint32_t                                     NullVertexBuffer;
+   bool                                         NullVertexBuffer;
    uint32_t                                     BufferPitch;
    __gen_address_type                           BufferStartingAddress;
    uint32_t                                     BufferSize;
@@ -5152,9 +5152,9 @@ GEN8_3DSTATE_VERTEX_BUFFERS_pack(__gen_user_data *data, void * restrict dst,
 
 struct GEN8_VERTEX_ELEMENT_STATE {
    uint32_t                                     VertexBufferIndex;
-   uint32_t                                     Valid;
+   bool                                         Valid;
    uint32_t                                     SourceElementFormat;
-   uint32_t                                     EdgeFlagEnable;
+   bool                                         EdgeFlagEnable;
    uint32_t                                     SourceElementOffset;
    uint32_t                                     Component0Control;
    uint32_t                                     Component1Control;
@@ -5225,7 +5225,7 @@ struct GEN8_3DSTATE_VF {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     IndexedDrawCutIndexEnable;
+   bool                                         IndexedDrawCutIndexEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     CutIndex;
 };
@@ -5266,7 +5266,7 @@ struct GEN8_3DSTATE_VF_INSTANCING {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     InstancingEnable;
+   bool                                         InstancingEnable;
    uint32_t                                     VertexElementIndex;
    uint32_t                                     InstanceDataStepRate;
 };
@@ -5311,14 +5311,14 @@ struct GEN8_3DSTATE_VF_SGVS {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     InstanceIDEnable;
+   bool                                         InstanceIDEnable;
 #define     COMP_0                                             0
 #define     COMP_1                                             1
 #define     COMP_2                                             2
 #define     COMP_3                                             3
    uint32_t                                     InstanceIDComponentNumber;
    uint32_t                                     InstanceIDElementOffset;
-   uint32_t                                     VertexIDEnable;
+   bool                                         VertexIDEnable;
 #define     COMP_0                                             0
 #define     COMP_1                                             1
 #define     COMP_2                                             2
@@ -5365,7 +5365,7 @@ struct GEN8_3DSTATE_VF_STATISTICS {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     StatisticsEnable;
+   bool                                         StatisticsEnable;
 };
 
 static inline void
@@ -5513,11 +5513,11 @@ struct GEN8_3DSTATE_WM {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     LegacyDepthBufferClearEnable;
-   uint32_t                                     LegacyDepthBufferResolveEnable;
-   uint32_t                                     LegacyHierarchicalDepthBufferResolveEnable;
-   uint32_t                                     LegacyDiamondLineRasterization;
+   bool                                         StatisticsEnable;
+   bool                                         LegacyDepthBufferClearEnable;
+   bool                                         LegacyDepthBufferResolveEnable;
+   bool                                         LegacyHierarchicalDepthBufferResolveEnable;
+   bool                                         LegacyDiamondLineRasterization;
 #define     NORMAL                                             0
 #define     PSEXEC                                             1
 #define     PREPS                                              2
@@ -5541,8 +5541,8 @@ struct GEN8_3DSTATE_WM {
 #define     _20pixels                                          2
 #define     _40pixels                                          3
    uint32_t                                     LineAntialiasingRegionWidth;
-   uint32_t                                     PolygonStippleEnable;
-   uint32_t                                     LineStippleEnable;
+   bool                                         PolygonStippleEnable;
+   bool                                         LineStippleEnable;
 #define     RASTRULE_UPPER_LEFT                                0
 #define     RASTRULE_UPPER_RIGHT                               1
    uint32_t                                     PointRasterizationRule;
@@ -5601,7 +5601,7 @@ struct GEN8_3DSTATE_WM_CHROMAKEY {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     ChromaKeyKillEnable;
+   bool                                         ChromaKeyKillEnable;
 };
 
 static inline void
@@ -5648,13 +5648,11 @@ struct GEN8_3DSTATE_WM_DEPTH_STENCIL {
    uint32_t                                     BackfaceStencilPassDepthPassOp;
    uint32_t                                     StencilTestFunction;
    uint32_t                                     DepthTestFunction;
-#define     False                                              0
-#define     True                                               1
-   uint32_t                                     DoubleSidedStencilEnable;
-   uint32_t                                     StencilTestEnable;
-   uint32_t                                     StencilBufferWriteEnable;
-   uint32_t                                     DepthTestEnable;
-   uint32_t                                     DepthBufferWriteEnable;
+   bool                                         DoubleSidedStencilEnable;
+   bool                                         StencilTestEnable;
+   bool                                         StencilBufferWriteEnable;
+   bool                                         DepthTestEnable;
+   bool                                         DepthBufferWriteEnable;
    uint32_t                                     StencilTestMask;
    uint32_t                                     StencilWriteMask;
    uint32_t                                     BackfaceStencilTestMask;
@@ -5716,13 +5714,13 @@ struct GEN8_3DSTATE_WM_HZ_OP {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     StencilBufferClearEnable;
-   uint32_t                                     DepthBufferClearEnable;
-   uint32_t                                     ScissorRectangleEnable;
-   uint32_t                                     DepthBufferResolveEnable;
-   uint32_t                                     HierarchicalDepthBufferResolveEnable;
+   bool                                         StencilBufferClearEnable;
+   bool                                         DepthBufferClearEnable;
+   bool                                         ScissorRectangleEnable;
+   bool                                         DepthBufferResolveEnable;
+   bool                                         HierarchicalDepthBufferResolveEnable;
    uint32_t                                     PixelPositionOffsetEnable;
-   uint32_t                                     FullSurfaceDepthClear;
+   bool                                         FullSurfaceDepthClear;
    uint32_t                                     StencilClearValue;
    uint32_t                                     NumberofMultisamples;
    uint32_t                                     ClearRectangleYMin;
@@ -5788,8 +5786,8 @@ struct GEN8_GPGPU_WALKER {
    uint32_t                                     Pipeline;
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
-   uint32_t                                     IndirectParameterEnable;
-   uint32_t                                     PredicateEnable;
+   bool                                         IndirectParameterEnable;
+   bool                                         PredicateEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
    uint32_t                                     IndirectDataLength;
@@ -5992,7 +5990,7 @@ struct GEN8_MEDIA_OBJECT {
    uint32_t                                     MediaCommandSubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
+   bool                                         ChildrenPresent;
 #define     Nothreadsynchronization                            0
 #define     Threaddispatchissynchronizedbythespawnrootthreadmessage       1
    uint32_t                                     ThreadSynchronization;
@@ -6013,7 +6011,7 @@ struct GEN8_MEDIA_OBJECT {
    uint32_t                                     ScoredboardY;
    uint32_t                                     ScoreboardX;
    uint32_t                                     ScoreboardColor;
-   uint32_t                                     ScoreboardMask;
+   bool                                         ScoreboardMask;
    /* variable length fields follow */
 };
 
@@ -6096,7 +6094,7 @@ struct GEN8_MEDIA_OBJECT_GRPID {
    uint32_t                                     ScoredboardY;
    uint32_t                                     ScoreboardX;
    uint32_t                                     ScoreboardColor;
-   uint32_t                                     ScoreboardMask;
+   bool                                         ScoreboardMask;
    uint32_t                                     GroupID;
    /* variable length fields follow */
 };
@@ -6167,8 +6165,8 @@ struct GEN8_MEDIA_OBJECT_PRT {
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
-   uint32_t                                     PRT_FenceNeeded;
+   bool                                         ChildrenPresent;
+   bool                                         PRT_FenceNeeded;
 #define     Rootthreadqueue                                    0
 #define     VFEstateflush                                      1
    uint32_t                                     PRT_FenceType;
@@ -6222,7 +6220,7 @@ struct GEN8_MEDIA_OBJECT_WALKER {
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
+   bool                                         ChildrenPresent;
 #define     Nothreadsynchronization                            0
 #define     Threaddispatchissynchronizedbythespawnrootthreadmessage       1
    uint32_t                                     ThreadSynchronization;
@@ -6232,7 +6230,7 @@ struct GEN8_MEDIA_OBJECT_WALKER {
    uint32_t                                     IndirectDataLength;
    uint32_t                                     IndirectDataStartAddress;
    uint32_t                                     GroupIDLoopSelect;
-   uint32_t                                     ScoreboardMask;
+   bool                                         ScoreboardMask;
    uint32_t                                     ColorCountMinusOne;
    uint32_t                                     MiddleLoopExtraSteps;
    uint32_t                                     LocalMidLoopUnitY;
@@ -6368,7 +6366,7 @@ struct GEN8_MEDIA_STATE_FLUSH {
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     FlushtoGO;
+   bool                                         FlushtoGO;
    uint32_t                                     WatermarkRequired;
    uint32_t                                     InterfaceDescriptorOffset;
 };
@@ -6581,9 +6579,9 @@ struct GEN8_MI_BATCH_BUFFER_START {
 #define     _1stlevelbatch                                     0
 #define     _2ndlevelbatch                                     1
    uint32_t                                     _2ndLevelBatchBuffer;
-   uint32_t                                     AddOffsetEnable;
+   bool                                         AddOffsetEnable;
    uint32_t                                     PredicationEnable;
-   uint32_t                                     ResourceStreamerEnable;
+   bool                                         ResourceStreamerEnable;
 #define     ASI_GGTT                                           0
 #define     ASI_PPGTT                                          1
    uint32_t                                     AddressSpaceIndicator;
@@ -6826,7 +6824,7 @@ GEN8_MI_LOAD_REGISTER_IMM_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_LOAD_REGISTER_MEM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
+   bool                                         UseGlobalGTT;
    uint32_t                                     AsyncModeEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     RegisterAddress;
@@ -6918,7 +6916,7 @@ struct GEN8_MI_LOAD_SCAN_LINES_INCL {
 #define     NeverForward                                       0
 #define     AlwaysForward                                      1
 #define     ConditionallyForward                               2
-   uint32_t                                     ScanLineEventDoneForward;
+   bool                                         ScanLineEventDoneForward;
    uint32_t                                     DwordLength;
    uint32_t                                     StartScanLineNumber;
    uint32_t                                     EndScanLineNumber;
@@ -7033,7 +7031,7 @@ GEN8_MI_MATH_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_NOOP {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     IdentificationNumberRegisterWriteEnable;
+   bool                                         IdentificationNumberRegisterWriteEnable;
    uint32_t                                     IdentificationNumber;
 };
 
@@ -7061,9 +7059,9 @@ GEN8_MI_NOOP_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_PREDICATE {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     KEEP                                               0
-#define     LOAD                                               2
-#define     LOADINV                                            3
+#define     LOAD_KEEP                                          0
+#define     LOAD_LOAD                                          2
+#define     LOAD_LOADINV                                       3
    uint32_t                                     LoadOperation;
 #define     COMBINE_SET                                        0
 #define     COMBINE_AND                                        1
@@ -7124,8 +7122,8 @@ GEN8_MI_REPORT_HEAD_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_RS_CONTEXT {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     Restore                                            0
-#define     Save                                               1
+#define     RS_RESTORE                                         0
+#define     RS_SAVE                                            1
    uint32_t                                     ResourceStreamerSave;
 };
 
@@ -7152,8 +7150,8 @@ GEN8_MI_RS_CONTEXT_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_RS_CONTROL {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     Stop                                               0
-#define     Start                                              1
+#define     RS_STOP                                            0
+#define     RS_START                                           1
    uint32_t                                     ResourceStreamerControl;
 };
 
@@ -7228,9 +7226,9 @@ struct GEN8_MI_SET_CONTEXT {
    uint32_t                                     DwordLength;
    __gen_address_type                           LogicalContextAddress;
    uint32_t                                     ReservedMustbe1;
-   uint32_t                                     CoreModeEnable;
-   uint32_t                                     ResourceStreamerStateSaveEnable;
-   uint32_t                                     ResourceStreamerStateRestoreEnable;
+   bool                                         CoreModeEnable;
+   bool                                         ResourceStreamerStateSaveEnable;
+   bool                                         ResourceStreamerStateRestoreEnable;
    uint32_t                                     ForceRestore;
    uint32_t                                     RestoreInhibit;
 };
@@ -7306,8 +7304,8 @@ GEN8_MI_SET_PREDICATE_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_STORE_DATA_IMM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
-   uint32_t                                     StoreQword;
+   bool                                         UseGlobalGTT;
+   bool                                         StoreQword;
    uint32_t                                     DwordLength;
    __gen_address_type                           Address;
    uint32_t                                     CoreModeEnable;
@@ -7444,7 +7442,7 @@ GEN8_MI_STORE_URB_MEM_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_SUSPEND_FLUSH {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     SuspendFlush;
+   bool                                         SuspendFlush;
 };
 
 static inline void
@@ -7616,18 +7614,18 @@ GEN8_MI_USER_INTERRUPT_pack(__gen_user_data *data, void * restrict dst,
 struct GEN8_MI_WAIT_FOR_EVENT {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     DisplayPipeCVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteCFlipPendingWaitEnable;
-   uint32_t                                     DisplayPlaneCFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeCScanLineWaitEnable;
-   uint32_t                                     DisplayPipeBVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteBFlipPendingWaitEnable;
-   uint32_t                                     DisplayPlaneBFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeBScanLineWaitEnable;
-   uint32_t                                     DisplayPipeAVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteAFlipPendingWaitEnable;
-   uint32_t                                     DisplayPlaneAFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeAScanLineWaitEnable;
+   bool                                         DisplayPipeCVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteCFlipPendingWaitEnable;
+   bool                                         DisplayPlaneCFlipPendingWaitEnable;
+   bool                                         DisplayPipeCScanLineWaitEnable;
+   bool                                         DisplayPipeBVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteBFlipPendingWaitEnable;
+   bool                                         DisplayPlaneBFlipPendingWaitEnable;
+   bool                                         DisplayPipeBScanLineWaitEnable;
+   bool                                         DisplayPipeAVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteAFlipPendingWaitEnable;
+   bool                                         DisplayPlaneAFlipPendingWaitEnable;
+   bool                                         DisplayPipeAScanLineWaitEnable;
 };
 
 static inline void
@@ -7682,29 +7680,29 @@ struct GEN8_PIPE_CONTROL {
 #define     Reset                                              1
    uint32_t                                     GlobalSnapshotCountReset;
    uint32_t                                     TLBInvalidate;
-   uint32_t                                     GenericMediaStateClear;
+   bool                                         GenericMediaStateClear;
 #define     NoWrite                                            0
 #define     WriteImmediateData                                 1
 #define     WritePSDepthCount                                  2
 #define     WriteTimestamp                                     3
    uint32_t                                     PostSyncOperation;
-   uint32_t                                     DepthStallEnable;
+   bool                                         DepthStallEnable;
 #define     DisableFlush                                       0
 #define     EnableFlush                                        1
-   uint32_t                                     RenderTargetCacheFlushEnable;
-   uint32_t                                     InstructionCacheInvalidateEnable;
-   uint32_t                                     TextureCacheInvalidationEnable;
-   uint32_t                                     IndirectStatePointersDisable;
-   uint32_t                                     NotifyEnable;
-   uint32_t                                     PipeControlFlushEnable;
-   uint32_t                                     DCFlushEnable;
-   uint32_t                                     VFCacheInvalidationEnable;
-   uint32_t                                     ConstantCacheInvalidationEnable;
-   uint32_t                                     StateCacheInvalidationEnable;
-   uint32_t                                     StallAtPixelScoreboard;
+   bool                                         RenderTargetCacheFlushEnable;
+   bool                                         InstructionCacheInvalidateEnable;
+   bool                                         TextureCacheInvalidationEnable;
+   bool                                         IndirectStatePointersDisable;
+   bool                                         NotifyEnable;
+   bool                                         PipeControlFlushEnable;
+   bool                                         DCFlushEnable;
+   bool                                         VFCacheInvalidationEnable;
+   bool                                         ConstantCacheInvalidationEnable;
+   bool                                         StateCacheInvalidationEnable;
+   bool                                         StallAtPixelScoreboard;
 #define     FlushDisabled                                      0
 #define     FlushEnabled                                       1
-   uint32_t                                     DepthCacheFlushEnable;
+   bool                                         DepthCacheFlushEnable;
    __gen_address_type                           Address;
    __gen_address_type                           AddressHigh;
    uint64_t                                     ImmediateData;
@@ -7904,26 +7902,26 @@ GEN8_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
 #define GEN8_BLEND_STATE_length 0x00000011
 
 struct GEN8_BLEND_STATE_ENTRY {
-   uint32_t                                     LogicOpEnable;
+   bool                                         LogicOpEnable;
    uint32_t                                     LogicOpFunction;
    uint32_t                                     PreBlendSourceOnlyClampEnable;
 #define     COLORCLAMP_UNORM                                   0
 #define     COLORCLAMP_SNORM                                   1
 #define     COLORCLAMP_RTFORMAT                                2
    uint32_t                                     ColorClampRange;
-   uint32_t                                     PreBlendColorClampEnable;
-   uint32_t                                     PostBlendColorClampEnable;
-   uint32_t                                     ColorBufferBlendEnable;
+   bool                                         PreBlendColorClampEnable;
+   bool                                         PostBlendColorClampEnable;
+   bool                                         ColorBufferBlendEnable;
    uint32_t                                     SourceBlendFactor;
    uint32_t                                     DestinationBlendFactor;
    uint32_t                                     ColorBlendFunction;
    uint32_t                                     SourceAlphaBlendFactor;
    uint32_t                                     DestinationAlphaBlendFactor;
    uint32_t                                     AlphaBlendFunction;
-   uint32_t                                     WriteDisableAlpha;
-   uint32_t                                     WriteDisableRed;
-   uint32_t                                     WriteDisableGreen;
-   uint32_t                                     WriteDisableBlue;
+   bool                                         WriteDisableAlpha;
+   bool                                         WriteDisableRed;
+   bool                                         WriteDisableGreen;
+   bool                                         WriteDisableBlue;
 };
 
 static inline void
@@ -7955,13 +7953,13 @@ GEN8_BLEND_STATE_ENTRY_pack(__gen_user_data *data, void * restrict dst,
 }
 
 struct GEN8_BLEND_STATE {
-   uint32_t                                     AlphaToCoverageEnable;
-   uint32_t                                     IndependentAlphaBlendEnable;
-   uint32_t                                     AlphaToOneEnable;
-   uint32_t                                     AlphaToCoverageDitherEnable;
-   uint32_t                                     AlphaTestEnable;
+   bool                                         AlphaToCoverageEnable;
+   bool                                         IndependentAlphaBlendEnable;
+   bool                                         AlphaToOneEnable;
+   bool                                         AlphaToCoverageDitherEnable;
+   bool                                         AlphaTestEnable;
    uint32_t                                     AlphaTestFunction;
-   uint32_t                                     ColorDitherEnable;
+   bool                                         ColorDitherEnable;
    uint32_t                                     XDitherOffset;
    uint32_t                                     YDitherOffset;
    struct GEN8_BLEND_STATE_ENTRY                Entry;
@@ -8083,12 +8081,12 @@ struct GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS {
 #define     LLCeLLCAllowed                                     2
 #define     L3LLCeLLCAllowed                                   3
    uint32_t                                     TargetCacheTC;
-   uint32_t                                     EncryptedData;
+   bool                                         EncryptedData;
 #define     PoorChance                                         3
 #define     NormalChance                                       2
 #define     BetterChance                                       1
 #define     BestChance                                         0
-   uint32_t                                     AgeforQUADLRUAGE;
+   bool                                         AgeforQUADLRUAGE;
 };
 
 static inline void
@@ -8123,9 +8121,9 @@ struct GEN8_INTERFACE_DESCRIPTOR_DATA {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     SamplerStatePointer;
 #define     Nosamplersused                                     0
 #define     Between1and4samplersused                           1
@@ -8142,7 +8140,7 @@ struct GEN8_INTERFACE_DESCRIPTOR_DATA {
 #define     RD                                                 2
 #define     RTZ                                                3
    uint32_t                                     RoundingMode;
-   uint32_t                                     BarrierEnable;
+   bool                                         BarrierEnable;
 #define     Encodes0k                                          0
 #define     Encodes4k                                          1
 #define     Encodes8k                                          2
@@ -8237,7 +8235,7 @@ struct GEN8_RENDER_SURFACE_STATE {
 #define     SURFTYPE_STRBUF                                    5
 #define     SURFTYPE_NULL                                      7
    uint32_t                                     SurfaceType;
-   uint32_t                                     SurfaceArray;
+   bool                                         SurfaceArray;
    uint32_t                                     SurfaceFormat;
 #define     VALIGN4                                            1
 #define     VALIGN8                                            2
@@ -8254,7 +8252,7 @@ struct GEN8_RENDER_SURFACE_STATE {
    uint32_t                                     TileMode;
    uint32_t                                     VerticalLineStride;
    uint32_t                                     VerticalLineStrideOffset;
-   uint32_t                                     SamplerL2BypassModeDisable;
+   bool                                         SamplerL2BypassModeDisable;
 #define     WriteOnlyCache                                     0
 #define     ReadWriteCache                                     1
    uint32_t                                     RenderCacheReadWriteMode;
@@ -8262,12 +8260,12 @@ struct GEN8_RENDER_SURFACE_STATE {
 #define     PROGRESSIVE_FRAME                                  2
 #define     INTERLACED_FRAME                                   3
    uint32_t                                     MediaBoundaryPixelMode;
-   uint32_t                                     CubeFaceEnablePositiveZ;
-   uint32_t                                     CubeFaceEnableNegativeZ;
-   uint32_t                                     CubeFaceEnablePositiveY;
-   uint32_t                                     CubeFaceEnableNegativeY;
-   uint32_t                                     CubeFaceEnablePositiveX;
-   uint32_t                                     CubeFaceEnableNegativeX;
+   bool                                         CubeFaceEnablePositiveZ;
+   bool                                         CubeFaceEnableNegativeZ;
+   bool                                         CubeFaceEnablePositiveY;
+   bool                                         CubeFaceEnableNegativeY;
+   bool                                         CubeFaceEnablePositiveX;
+   bool                                         CubeFaceEnableNegativeX;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      MemoryObjectControlState;
    float                                        BaseMipLevel;
    uint32_t                                     SurfaceQPitch;
@@ -8292,7 +8290,7 @@ struct GEN8_RENDER_SURFACE_STATE {
    uint32_t                                     MultisamplePositionPaletteIndex;
    uint32_t                                     XOffset;
    uint32_t                                     YOffset;
-   uint32_t                                     EWADisableForCube;
+   bool                                         EWADisableForCube;
 #define     GPUcoherent                                        0
 #define     IAcoherent                                         1
    uint32_t                                     CoherencyType;
@@ -8305,7 +8303,7 @@ struct GEN8_RENDER_SURFACE_STATE {
 #define     AUX_APPEND                                         2
 #define     AUX_HIZ                                            3
    uint32_t                                     AuxiliarySurfaceMode;
-   uint32_t                                     SeparateUVPlaneEnable;
+   bool                                         SeparateUVPlaneEnable;
    uint32_t                                     XOffsetforUorUVPlane;
    uint32_t                                     YOffsetforUorUVPlane;
    uint32_t                                     RedClearColor;
@@ -8445,7 +8443,7 @@ GEN8_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define GEN8_SAMPLER_STATE_length 0x00000004
 
 struct GEN8_SAMPLER_STATE {
-   uint32_t                                     SamplerDisable;
+   bool                                         SamplerDisable;
 #define     DX10OGL                                            0
 #define     DX9                                                1
    uint32_t                                     TextureBorderColorMode;
@@ -8473,7 +8471,7 @@ struct GEN8_SAMPLER_STATE {
    uint32_t                                     AnisotropicAlgorithm;
    float                                        MinLOD;
    float                                        MaxLOD;
-   uint32_t                                     ChromaKeyEnable;
+   bool                                         ChromaKeyEnable;
    uint32_t                                     ChromaKeyIndex;
 #define     KEYFILTER_KILL_ON_ANY_MATCH                        0
 #define     KEYFILTER_REPLACE_BLACK                            1
@@ -8503,18 +8501,18 @@ struct GEN8_SAMPLER_STATE {
 #define     RATIO141                                           6
 #define     RATIO161                                           7
    uint32_t                                     MaximumAnisotropy;
-   uint32_t                                     RAddressMinFilterRoundingEnable;
-   uint32_t                                     RAddressMagFilterRoundingEnable;
-   uint32_t                                     VAddressMinFilterRoundingEnable;
-   uint32_t                                     VAddressMagFilterRoundingEnable;
-   uint32_t                                     UAddressMinFilterRoundingEnable;
-   uint32_t                                     UAddressMagFilterRoundingEnable;
+   bool                                         RAddressMinFilterRoundingEnable;
+   bool                                         RAddressMagFilterRoundingEnable;
+   bool                                         VAddressMinFilterRoundingEnable;
+   bool                                         VAddressMagFilterRoundingEnable;
+   bool                                         UAddressMinFilterRoundingEnable;
+   bool                                         UAddressMagFilterRoundingEnable;
 #define     FULL                                               0
 #define     HIGH                                               1
 #define     MED                                                2
 #define     LOW                                                3
    uint32_t                                     TrilinearFilterQuality;
-   uint32_t                                     NonnormalizedCoordinateEnable;
+   bool                                         NonnormalizedCoordinateEnable;
    uint32_t                                     TCXAddressControlMode;
    uint32_t                                     TCYAddressControlMode;
    uint32_t                                     TCZAddressControlMode;
@@ -8580,7 +8578,7 @@ GEN8_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define     _3DPRIM_QUADLIST                                   7
 #define     _3DPRIM_QUADSTRIP                                  8
 #define     _3DPRIM_LINELIST_ADJ                               9
-#define     _3DPRIM_LISTSTRIP_ADJ                             10
+#define     _3DPRIM_LINESTRIP_ADJ                             10
 #define     _3DPRIM_TRILIST_ADJ                               11
 #define     _3DPRIM_TRISTRIP_ADJ                              12
 #define     _3DPRIM_TRISTRIP_REVERSE                          13
@@ -8634,21 +8632,21 @@ GEN8_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define     VFCOMP_STORE_PID                                   7
 
 /* Enum WRAP_SHORTEST_ENABLE */
-#define     X                                                  1
-#define     Y                                                  2
-#define     XY                                                 3
-#define     Z                                                  4
-#define     XZ                                                 5
-#define     YZ                                                 6
-#define     XYZ                                                7
-#define     W                                                  8
-#define     XW                                                 9
-#define     YW                                                10
-#define     XYW                                               11
-#define     ZW                                                12
-#define     XZW                                               13
-#define     YZW                                               14
-#define     XYZW                                              15
+#define     WSE_X                                              1
+#define     WSE_Y                                              2
+#define     WSE_XY                                             3
+#define     WSE_Z                                              4
+#define     WSE_XZ                                             5
+#define     WSE_YZ                                             6
+#define     WSE_XYZ                                            7
+#define     WSE_W                                              8
+#define     WSE_XW                                             9
+#define     WSE_YW                                            10
+#define     WSE_XYW                                           11
+#define     WSE_ZW                                            12
+#define     WSE_XZW                                           13
+#define     WSE_YZW                                           14
+#define     WSE_XYZW                                          15
 
 /* Enum 3D_Stencil_Operation */
 #define     STENCILOP_KEEP                                     0

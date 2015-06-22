@@ -184,7 +184,7 @@ GEN75_GPGPU_CSR_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_STORE_REGISTER_MEM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
+   bool                                         UseGlobalGTT;
    uint32_t                                     PredicateEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     RegisterAddress;
@@ -288,27 +288,27 @@ struct GEN75_STATE_BASE_ADDRESS {
    __gen_address_type                           GeneralStateBaseAddress;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     GeneralStateMemoryObjectControlState;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     StatelessDataPortAccessMemoryObjectControlState;
-   uint32_t                                     GeneralStateBaseAddressModifyEnable;
+   bool                                         GeneralStateBaseAddressModifyEnable;
    __gen_address_type                           SurfaceStateBaseAddress;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     SurfaceStateMemoryObjectControlState;
-   uint32_t                                     SurfaceStateBaseAddressModifyEnable;
+   bool                                         SurfaceStateBaseAddressModifyEnable;
    __gen_address_type                           DynamicStateBaseAddress;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     DynamicStateMemoryObjectControlState;
-   uint32_t                                     DynamicStateBaseAddressModifyEnable;
+   bool                                         DynamicStateBaseAddressModifyEnable;
    __gen_address_type                           IndirectObjectBaseAddress;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     IndirectObjectMemoryObjectControlState;
-   uint32_t                                     IndirectObjectBaseAddressModifyEnable;
+   bool                                         IndirectObjectBaseAddressModifyEnable;
    __gen_address_type                           InstructionBaseAddress;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     InstructionMemoryObjectControlState;
-   uint32_t                                     InstructionBaseAddressModifyEnable;
+   bool                                         InstructionBaseAddressModifyEnable;
    __gen_address_type                           GeneralStateAccessUpperBound;
-   uint32_t                                     GeneralStateAccessUpperBoundModifyEnable;
+   bool                                         GeneralStateAccessUpperBoundModifyEnable;
    __gen_address_type                           DynamicStateAccessUpperBound;
-   uint32_t                                     DynamicStateAccessUpperBoundModifyEnable;
+   bool                                         DynamicStateAccessUpperBoundModifyEnable;
    __gen_address_type                           IndirectObjectAccessUpperBound;
-   uint32_t                                     IndirectObjectAccessUpperBoundModifyEnable;
+   bool                                         IndirectObjectAccessUpperBoundModifyEnable;
    __gen_address_type                           InstructionAccessUpperBound;
-   uint32_t                                     InstructionAccessUpperBoundModifyEnable;
+   bool                                         InstructionAccessUpperBoundModifyEnable;
 };
 
 static inline void
@@ -546,11 +546,11 @@ struct GEN75_3DPRIMITIVE {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     IndirectParameterEnable;
+   bool                                         IndirectParameterEnable;
    uint32_t                                     UAVCoherencyRequired;
-   uint32_t                                     PredicateEnable;
+   bool                                         PredicateEnable;
    uint32_t                                     DwordLength;
-   uint32_t                                     EndOffsetEnable;
+   bool                                         EndOffsetEnable;
 #define     SEQUENTIAL                                         0
 #define     RANDOM                                             1
    uint32_t                                     VertexAccessType;
@@ -1272,7 +1272,7 @@ struct GEN75_3DSTATE_CLEAR_PARAMS {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     DepthClearValue;
-   uint32_t                                     DepthClearValueValid;
+   bool                                         DepthClearValueValid;
 };
 
 static inline void
@@ -1316,27 +1316,27 @@ struct GEN75_3DSTATE_CLIP {
    uint32_t                                     DwordLength;
    uint32_t                                     FrontWinding;
    uint32_t                                     VertexSubPixelPrecisionSelect;
-   uint32_t                                     EarlyCullEnable;
+   bool                                         EarlyCullEnable;
 #define     CULLMODE_BOTH                                      0
 #define     CULLMODE_NONE                                      1
 #define     CULLMODE_FRONT                                     2
 #define     CULLMODE_BACK                                      3
    uint32_t                                     CullMode;
-   uint32_t                                     ClipperStatisticsEnable;
+   bool                                         ClipperStatisticsEnable;
    uint32_t                                     UserClipDistanceCullTestEnableBitmask;
-   uint32_t                                     ClipEnable;
+   bool                                         ClipEnable;
 #define     APIMODE_OGL                                        0
    uint32_t                                     APIMode;
-   uint32_t                                     ViewportXYClipTestEnable;
-   uint32_t                                     ViewportZClipTestEnable;
-   uint32_t                                     GuardbandClipTestEnable;
+   bool                                         ViewportXYClipTestEnable;
+   bool                                         ViewportZClipTestEnable;
+   bool                                         GuardbandClipTestEnable;
    uint32_t                                     UserClipDistanceClipTestEnableBitmask;
 #define     CLIPMODE_NORMAL                                    0
 #define     CLIPMODE_REJECT_ALL                                3
 #define     CLIPMODE_ACCEPT_ALL                                4
    uint32_t                                     ClipMode;
-   uint32_t                                     PerspectiveDivideDisable;
-   uint32_t                                     NonPerspectiveBarycentricEnable;
+   bool                                         PerspectiveDivideDisable;
+   bool                                         NonPerspectiveBarycentricEnable;
 #define     Vertex0                                            0
 #define     Vertex1                                            1
 #define     Vertex2                                            2
@@ -1350,7 +1350,7 @@ struct GEN75_3DSTATE_CLIP {
    uint32_t                                     TriangleFanProvokingVertexSelect;
    float                                        MinimumPointWidth;
    float                                        MaximumPointWidth;
-   uint32_t                                     ForceZeroRTAIndexEnable;
+   bool                                         ForceZeroRTAIndexEnable;
    uint32_t                                     MaximumVPIndex;
 };
 
@@ -1654,9 +1654,9 @@ struct GEN75_3DSTATE_DEPTH_BUFFER {
 #define     SURFTYPE_CUBE                                      3
 #define     SURFTYPE_NULL                                      7
    uint32_t                                     SurfaceType;
-   uint32_t                                     DepthWriteEnable;
-   uint32_t                                     StencilWriteEnable;
-   uint32_t                                     HierarchicalDepthBufferEnable;
+   bool                                         DepthWriteEnable;
+   bool                                         StencilWriteEnable;
+   bool                                         HierarchicalDepthBufferEnable;
 #define     D32_FLOAT                                          1
 #define     D24_UNORM_X8_UINT                                  3
 #define     D16_UNORM                                          5
@@ -1862,19 +1862,19 @@ struct GEN75_3DSTATE_DS {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     AccessesUAV;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         AccessesUAV;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     PatchURBEntryReadLength;
    uint32_t                                     PatchURBEntryReadOffset;
    uint32_t                                     MaximumNumberofThreads;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     ComputeWCoordinateEnable;
-   uint32_t                                     DSCacheDisable;
-   uint32_t                                     DSFunctionEnable;
+   bool                                         StatisticsEnable;
+   bool                                         ComputeWCoordinateEnable;
+   bool                                         DSCacheDisable;
+   bool                                         DSFunctionEnable;
 };
 
 static inline void
@@ -2099,7 +2099,7 @@ struct GEN75_3DSTATE_GATHER_CONSTANT_PS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9Enable;
+   bool                                         ConstantBufferDx9Enable;
    /* variable length fields follow */
 };
 
@@ -2146,7 +2146,7 @@ struct GEN75_3DSTATE_GATHER_CONSTANT_VS {
    uint32_t                                     ConstantBufferValid;
    uint32_t                                     ConstantBufferBindingTableBlock;
    uint32_t                                     GatherBufferOffset;
-   uint32_t                                     ConstantBufferDx9Enable;
+   bool                                         ConstantBufferDx9Enable;
    /* variable length fields follow */
 };
 
@@ -2193,7 +2193,7 @@ struct GEN75_3DSTATE_GATHER_POOL_ALLOC {
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
    __gen_address_type                           GatherPoolBaseAddress;
-   uint32_t                                     GatherPoolEnable;
+   bool                                         GatherPoolEnable;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     MemoryObjectControlState;
    __gen_address_type                           GatherPoolUpperBound;
 };
@@ -2264,16 +2264,16 @@ struct GEN75_3DSTATE_GS {
 #define     IEEE754                                            0
 #define     alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
    uint32_t                                     GSaccessesUAV;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     OutputVertexSize;
    uint32_t                                     OutputTopology;
    uint32_t                                     VertexURBEntryReadLength;
-   uint32_t                                     IncludeVertexHandles;
+   bool                                         IncludeVertexHandles;
    uint32_t                                     VertexURBEntryReadOffset;
    uint32_t                                     DispatchGRFStartRegisterforURBData;
    uint32_t                                     MaximumNumberofThreads;
@@ -2286,13 +2286,13 @@ struct GEN75_3DSTATE_GS {
    uint32_t                                     DispatchMode;
    uint32_t                                     GSStatisticsEnable;
    uint32_t                                     GSInvocationsIncrementValue;
-   uint32_t                                     IncludePrimitiveID;
+   bool                                         IncludePrimitiveID;
    uint32_t                                     Hint;
 #define     REORDER_LEADING                                    0
 #define     REORDER_TRAILING                                   1
    uint32_t                                     ReorderMode;
-   uint32_t                                     DiscardAdjacency;
-   uint32_t                                     GSEnable;
+   bool                                         DiscardAdjacency;
+   bool                                         GSEnable;
 #define     GSCTL_CUT                                          0
 #define     GSCTL_SID                                          1
    uint32_t                                     ControlDataFormat;
@@ -2443,11 +2443,11 @@ struct GEN75_3DSTATE_HS {
 #define     IEEE754                                            0
 #define     alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     MaximumNumberofThreads;
-   uint32_t                                     Enable;
-   uint32_t                                     StatisticsEnable;
+   bool                                         Enable;
+   bool                                         StatisticsEnable;
    uint32_t                                     InstanceCount;
    uint32_t                                     KernelStartPointer;
    uint32_t                                     ScratchSpaceBasePointer;
@@ -2456,8 +2456,8 @@ struct GEN75_3DSTATE_HS {
 #define     Dmask                                              0
 #define     Vmask                                              1
    uint32_t                                     VectorMaskEnable;
-   uint32_t                                     HSaccessesUAV;
-   uint32_t                                     IncludeVertexHandles;
+   bool                                         HSaccessesUAV;
+   bool                                         IncludeVertexHandles;
    uint32_t                                     DispatchGRFStartRegisterForURBData;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
@@ -2590,7 +2590,7 @@ struct GEN75_3DSTATE_LINE_STIPPLE {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     ModifyEnableCurrentRepeatCounterCurrentStippleIndex;
+   bool                                         ModifyEnableCurrentRepeatCounterCurrentStippleIndex;
    uint32_t                                     CurrentRepeatCounter;
    uint32_t                                     CurrentStippleIndex;
    uint32_t                                     LineStipplePattern;
@@ -2681,7 +2681,7 @@ struct GEN75_3DSTATE_MULTISAMPLE {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     MultiSampleEnable;
+   bool                                         MultiSampleEnable;
 #define     PIXLOC_CENTER                                      0
 #define     PIXLOC_UL_CORNER                                   1
    uint32_t                                     PixelLocation;
@@ -2867,27 +2867,27 @@ struct GEN75_3DSTATE_PS {
 #define     RD                                                 2
 #define     RTZ                                                3
    uint32_t                                     RoundingMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     ScratchSpaceBasePointer;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     MaximumNumberofThreads;
    uint32_t                                     SampleMask;
-   uint32_t                                     PushConstantEnable;
-   uint32_t                                     AttributeEnable;
-   uint32_t                                     oMaskPresenttoRenderTarget;
-   uint32_t                                     RenderTargetFastClearEnable;
-   uint32_t                                     DualSourceBlendEnable;
-   uint32_t                                     RenderTargetResolveEnable;
-   uint32_t                                     PSAccessesUAV;
+   bool                                         PushConstantEnable;
+   bool                                         AttributeEnable;
+   bool                                         oMaskPresenttoRenderTarget;
+   bool                                         RenderTargetFastClearEnable;
+   bool                                         DualSourceBlendEnable;
+   bool                                         RenderTargetResolveEnable;
+   bool                                         PSAccessesUAV;
 #define     POSOFFSET_NONE                                     0
 #define     POSOFFSET_CENTROID                                 2
 #define     POSOFFSET_SAMPLE                                   3
    uint32_t                                     PositionXYOffsetSelect;
-   uint32_t                                     _32PixelDispatchEnable;
-   uint32_t                                     _16PixelDispatchEnable;
-   uint32_t                                     _8PixelDispatchEnable;
+   bool                                         _32PixelDispatchEnable;
+   bool                                         _16PixelDispatchEnable;
+   bool                                         _8PixelDispatchEnable;
    uint32_t                                     DispatchGRFStartRegisterforConstantSetupData0;
    uint32_t                                     DispatchGRFStartRegisterforConstantSetupData1;
    uint32_t                                     DispatchGRFStartRegisterforConstantSetupData2;
@@ -3616,16 +3616,16 @@ struct GEN75_3DSTATE_SBE {
    uint32_t                                     DwordLength;
    uint32_t                                     AttributeSwizzleControlMode;
    uint32_t                                     NumberofSFOutputAttributes;
-   uint32_t                                     AttributeSwizzleEnable;
+   bool                                         AttributeSwizzleEnable;
 #define     UPPERLEFT                                          0
 #define     LOWERLEFT                                          1
    uint32_t                                     PointSpriteTextureCoordinateOrigin;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
-   uint32_t                                     Attribute2n1ComponentOverrideW;
-   uint32_t                                     Attribute2n1ComponentOverrideZ;
-   uint32_t                                     Attribute2n1ComponentOverrideY;
-   uint32_t                                     Attribute2n1ComponentOverrideX;
+   bool                                         Attribute2n1ComponentOverrideW;
+   bool                                         Attribute2n1ComponentOverrideZ;
+   bool                                         Attribute2n1ComponentOverrideY;
+   bool                                         Attribute2n1ComponentOverrideX;
 #define     CONST_0000                                         0
 #define     CONST_0001_FLOAT                                   1
 #define     CONST_1111_FLOAT                                   2
@@ -3637,10 +3637,10 @@ struct GEN75_3DSTATE_SBE {
 #define     INPUTATTR_FACING_W                                 3
    uint32_t                                     Attribute2n1SwizzleSelect;
    uint32_t                                     Attribute2n1SourceAttribute;
-   uint32_t                                     Attribute2nComponentOverrideW;
-   uint32_t                                     Attribute2nComponentOverrideZ;
-   uint32_t                                     Attribute2nComponentOverrideY;
-   uint32_t                                     Attribute2nComponentOverrideX;
+   bool                                         Attribute2nComponentOverrideW;
+   bool                                         Attribute2nComponentOverrideZ;
+   bool                                         Attribute2nComponentOverrideY;
+   bool                                         Attribute2nComponentOverrideX;
 #define     CONST_0000                                         0
 #define     CONST_0001_FLOAT                                   1
 #define     CONST_1111_FLOAT                                   2
@@ -3803,11 +3803,11 @@ struct GEN75_3DSTATE_SF {
 #define     D24_UNORM_X8_UINT                                  3
 #define     D16_UNORM                                          5
    uint32_t                                     DepthBufferSurfaceFormat;
-   uint32_t                                     LegacyGlobalDepthBiasEnable;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     GlobalDepthOffsetEnableSolid;
-   uint32_t                                     GlobalDepthOffsetEnableWireframe;
-   uint32_t                                     GlobalDepthOffsetEnablePoint;
+   bool                                         LegacyGlobalDepthBiasEnable;
+   bool                                         StatisticsEnable;
+   bool                                         GlobalDepthOffsetEnableSolid;
+   bool                                         GlobalDepthOffsetEnableWireframe;
+   bool                                         GlobalDepthOffsetEnablePoint;
 #define     RASTER_SOLID                                       0
 #define     RASTER_WIREFRAME                                   1
 #define     RASTER_POINT                                       2
@@ -3816,9 +3816,9 @@ struct GEN75_3DSTATE_SF {
 #define     RASTER_WIREFRAME                                   1
 #define     RASTER_POINT                                       2
    uint32_t                                     BackFaceFillMode;
-   uint32_t                                     ViewTransformEnable;
+   bool                                         ViewTransformEnable;
    uint32_t                                     FrontWinding;
-   uint32_t                                     AntiAliasingEnable;
+   bool                                         AntiAliasingEnable;
 #define     CULLMODE_BOTH                                      0
 #define     CULLMODE_NONE                                      1
 #define     CULLMODE_FRONT                                     2
@@ -3826,11 +3826,11 @@ struct GEN75_3DSTATE_SF {
    uint32_t                                     CullMode;
    float                                        LineWidth;
    uint32_t                                     LineEndCapAntialiasingRegionWidth;
-   uint32_t                                     LineStippleEnable;
-   uint32_t                                     ScissorRectangleEnable;
-   uint32_t                                     RTIndependentRasterizationEnable;
+   bool                                         LineStippleEnable;
+   bool                                         ScissorRectangleEnable;
+   bool                                         RTIndependentRasterizationEnable;
    uint32_t                                     MultisampleRasterizationMode;
-   uint32_t                                     LastPixelEnable;
+   bool                                         LastPixelEnable;
 #define     Vertex0                                            0
 #define     Vertex1                                            1
 #define     Vertex2                                            2
@@ -4153,7 +4153,7 @@ struct GEN75_3DSTATE_STREAMOUT {
 #define     LEADING                                            0
 #define     TRAILING                                           1
    uint32_t                                     ReorderMode;
-   uint32_t                                     SOStatisticsEnable;
+   bool                                         SOStatisticsEnable;
    uint32_t                                     SOBufferEnable3;
    uint32_t                                     SOBufferEnable2;
    uint32_t                                     SOBufferEnable1;
@@ -4227,9 +4227,9 @@ struct GEN75_3DSTATE_TE {
 #define     EVEN_FRACTIONAL                                    2
    uint32_t                                     Partitioning;
 #define     POINT                                              0
-#define     LINE                                               1
-#define     TRI_CW                                             2
-#define     TRI_CCW                                            3
+#define     OUTPUT_LINE                                        1
+#define     OUTPUT_TRI_CW                                      2
+#define     OUTPUT_TRI_CCW                                     3
    uint32_t                                     OutputTopology;
 #define     QUAD                                               0
 #define     TRI                                                1
@@ -4238,7 +4238,7 @@ struct GEN75_3DSTATE_TE {
 #define     HW_TESS                                            0
 #define     SW_TESS                                            1
    uint32_t                                     TEMode;
-   uint32_t                                     TEEnable;
+   bool                                         TEEnable;
    float                                        MaximumTessellationFactorOdd;
    float                                        MaximumTessellationFactorNotOdd;
 };
@@ -4415,7 +4415,7 @@ struct GEN75_VERTEX_BUFFER_STATE {
    uint32_t                                     BufferAccessType;
    struct GEN75_MEMORY_OBJECT_CONTROL_STATE     VertexBufferMemoryObjectControlState;
    uint32_t                                     AddressModifyEnable;
-   uint32_t                                     NullVertexBuffer;
+   bool                                         NullVertexBuffer;
    uint32_t                                     VertexFetchInvalidate;
    uint32_t                                     BufferPitch;
    __gen_address_type                           BufferStartingAddress;
@@ -4494,9 +4494,9 @@ GEN75_3DSTATE_VERTEX_BUFFERS_pack(__gen_user_data *data, void * restrict dst,
 
 struct GEN75_VERTEX_ELEMENT_STATE {
    uint32_t                                     VertexBufferIndex;
-   uint32_t                                     Valid;
+   bool                                         Valid;
    uint32_t                                     SourceElementFormat;
-   uint32_t                                     EdgeFlagEnable;
+   bool                                         EdgeFlagEnable;
    uint32_t                                     SourceElementOffset;
    uint32_t                                     Component0Control;
    uint32_t                                     Component1Control;
@@ -4567,7 +4567,7 @@ struct GEN75_3DSTATE_VF {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     IndexedDrawCutIndexEnable;
+   bool                                         IndexedDrawCutIndexEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     CutIndex;
 };
@@ -4606,7 +4606,7 @@ struct GEN75_3DSTATE_VF_STATISTICS {
    uint32_t                                     CommandSubType;
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
-   uint32_t                                     StatisticsEnable;
+   bool                                         StatisticsEnable;
 };
 
 static inline void
@@ -4736,18 +4736,18 @@ struct GEN75_3DSTATE_VS {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     VSaccessesUAV;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         VSaccessesUAV;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     ScratchSpaceBaseOffset;
    uint32_t                                     PerThreadScratchSpace;
    uint32_t                                     DispatchGRFStartRegisterforURBData;
    uint32_t                                     VertexURBEntryReadLength;
    uint32_t                                     VertexURBEntryReadOffset;
    uint32_t                                     MaximumNumberofThreads;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     VertexCacheDisable;
-   uint32_t                                     VSFunctionEnable;
+   bool                                         StatisticsEnable;
+   bool                                         VertexCacheDisable;
+   bool                                         VSFunctionEnable;
 };
 
 static inline void
@@ -4815,13 +4815,13 @@ struct GEN75_3DSTATE_WM {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     StatisticsEnable;
-   uint32_t                                     DepthBufferClear;
-   uint32_t                                     ThreadDispatchEnable;
-   uint32_t                                     DepthBufferResolveEnable;
-   uint32_t                                     HierarchicalDepthBufferResolveEnable;
-   uint32_t                                     LegacyDiamondLineRasterization;
-   uint32_t                                     PixelShaderKillPixel;
+   bool                                         StatisticsEnable;
+   bool                                         DepthBufferClear;
+   bool                                         ThreadDispatchEnable;
+   bool                                         DepthBufferResolveEnable;
+   bool                                         HierarchicalDepthBufferResolveEnable;
+   bool                                         LegacyDiamondLineRasterization;
+   bool                                         PixelShaderKillPixel;
 #define     PSCDEPTH_OFF                                       0
 #define     PSCDEPTH_ON                                        1
 #define     PSCDEPTH_ON_GE                                     2
@@ -4831,19 +4831,19 @@ struct GEN75_3DSTATE_WM {
 #define     EDSC_PSEXEC                                        1
 #define     EDSC_PREPS                                         2
    uint32_t                                     EarlyDepthStencilControl;
-   uint32_t                                     PixelShaderUsesSourceDepth;
-   uint32_t                                     PixelShaderUsesSourceW;
+   bool                                         PixelShaderUsesSourceDepth;
+   bool                                         PixelShaderUsesSourceW;
 #define     INTERP_PIXEL                                       0
 #define     INTERP_CENTROID                                    2
 #define     INTERP_SAMPLE                                      3
    uint32_t                                     PositionZWInterpolationMode;
    uint32_t                                     BarycentricInterpolationMode;
-   uint32_t                                     PixelShaderUsesInputCoverageMask;
+   bool                                         PixelShaderUsesInputCoverageMask;
    uint32_t                                     LineEndCapAntialiasingRegionWidth;
    uint32_t                                     LineAntialiasingRegionWidth;
-   uint32_t                                     RTIndependentRasterizationEnable;
-   uint32_t                                     PolygonStippleEnable;
-   uint32_t                                     LineStippleEnable;
+   bool                                         RTIndependentRasterizationEnable;
+   bool                                         PolygonStippleEnable;
+   bool                                         LineStippleEnable;
 #define     RASTRULE_UPPER_LEFT                                0
 #define     RASTRULE_UPPER_RIGHT                               1
    uint32_t                                     PointRasterizationRule;
@@ -4919,7 +4919,7 @@ struct GEN75_GPGPU_OBJECT {
    uint32_t                                     Pipeline;
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
-   uint32_t                                     PredicateEnable;
+   bool                                         PredicateEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     SharedLocalMemoryFixedOffset;
    uint32_t                                     InterfaceDescriptorOffset;
@@ -5004,8 +5004,8 @@ struct GEN75_GPGPU_WALKER {
    uint32_t                                     Pipeline;
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcodeA;
-   uint32_t                                     IndirectParameterEnable;
-   uint32_t                                     PredicateEnable;
+   bool                                         IndirectParameterEnable;
+   bool                                         PredicateEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
 #define     SIMD8                                              0
@@ -5192,7 +5192,7 @@ struct GEN75_MEDIA_OBJECT {
    uint32_t                                     MediaCommandSubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
+   bool                                         ChildrenPresent;
 #define     Nothreadsynchronization                            0
 #define     Threaddispatchissynchronizedbythespawnrootthreadmessage       1
    uint32_t                                     ThreadSynchronization;
@@ -5212,7 +5212,7 @@ struct GEN75_MEDIA_OBJECT {
    uint32_t                                     ScoredboardY;
    uint32_t                                     ScoreboardX;
    uint32_t                                     ScoreboardColor;
-   uint32_t                                     ScoreboardMask;
+   bool                                         ScoreboardMask;
    /* variable length fields follow */
 };
 
@@ -5278,8 +5278,8 @@ struct GEN75_MEDIA_OBJECT_PRT {
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
-   uint32_t                                     PRT_FenceNeeded;
+   bool                                         ChildrenPresent;
+   bool                                         PRT_FenceNeeded;
 #define     Rootthreadqueue                                    0
 #define     VFEstateflush                                      1
    uint32_t                                     PRT_FenceType;
@@ -5333,7 +5333,7 @@ struct GEN75_MEDIA_OBJECT_WALKER {
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
    uint32_t                                     InterfaceDescriptorOffset;
-   uint32_t                                     ChildrenPresent;
+   bool                                         ChildrenPresent;
 #define     Nothreadsynchronization                            0
 #define     Threaddispatchissynchronizedbythespawnrootthreadmessage       1
    uint32_t                                     ThreadSynchronization;
@@ -5342,10 +5342,10 @@ struct GEN75_MEDIA_OBJECT_WALKER {
    uint32_t                                     UseScoreboard;
    uint32_t                                     IndirectDataLength;
    uint32_t                                     IndirectDataStartAddress;
-   uint32_t                                     ScoreboardMask;
-   uint32_t                                     DualMode;
-   uint32_t                                     Repel;
-   uint32_t                                     QuadMode;
+   bool                                         ScoreboardMask;
+   bool                                         DualMode;
+   bool                                         Repel;
+   bool                                         QuadMode;
    uint32_t                                     ColorCountMinusOne;
    uint32_t                                     MiddleLoopExtraSteps;
    uint32_t                                     LocalMidLoopUnitY;
@@ -5483,8 +5483,8 @@ struct GEN75_MEDIA_STATE_FLUSH {
    uint32_t                                     MediaCommandOpcode;
    uint32_t                                     SubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     DisablePreemption;
-   uint32_t                                     FlushtoGO;
+   bool                                         DisablePreemption;
+   bool                                         FlushtoGO;
    uint32_t                                     WatermarkRequired;
    uint32_t                                     InterfaceDescriptorOffset;
 };
@@ -5667,7 +5667,7 @@ GEN75_MI_ARB_CHECK_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_ARB_ON_OFF {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     ArbitrationEnable;
+   bool                                         ArbitrationEnable;
 };
 
 static inline void
@@ -5721,11 +5721,11 @@ struct GEN75_MI_BATCH_BUFFER_START {
 #define     _1stlevelbatch                                     0
 #define     _2ndlevelbatch                                     1
    uint32_t                                     _2ndLevelBatchBuffer;
-   uint32_t                                     AddOffsetEnable;
-   uint32_t                                     PredicationEnable;
+   bool                                         AddOffsetEnable;
+   bool                                         PredicationEnable;
    uint32_t                                     NonPrivileged;
-   uint32_t                                     ClearCommandBufferEnable;
-   uint32_t                                     ResourceStreamerEnable;
+   bool                                         ClearCommandBufferEnable;
+   bool                                         ResourceStreamerEnable;
 #define     ASI_GGTT                                           0
 #define     ASI_PPGTT                                          1
    uint32_t                                     AddressSpaceIndicator;
@@ -5861,17 +5861,17 @@ GEN75_MI_CONDITIONAL_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restric
 struct GEN75_MI_FLUSH {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     IndirectStatePointersDisable;
-   uint32_t                                     GenericMediaStateClear;
+   bool                                         IndirectStatePointersDisable;
+   bool                                         GenericMediaStateClear;
 #define     DontReset                                          0
 #define     Reset                                              1
-   uint32_t                                     GlobalSnapshotCountReset;
+   bool                                         GlobalSnapshotCountReset;
 #define     Flush                                              0
 #define     DontFlush                                          1
-   uint32_t                                     RenderCacheFlushInhibit;
+   bool                                         RenderCacheFlushInhibit;
 #define     DontInvalidate                                     0
 #define     Invalidate                                         1
-   uint32_t                                     StateInstructionCacheInvalidate;
+   bool                                         StateInstructionCacheInvalidate;
 };
 
 static inline void
@@ -5941,7 +5941,7 @@ GEN75_MI_LOAD_REGISTER_IMM_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_LOAD_REGISTER_MEM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
+   bool                                         UseGlobalGTT;
    uint32_t                                     AsyncModeEnable;
    uint32_t                                     DwordLength;
    uint32_t                                     RegisterAddress;
@@ -6174,7 +6174,7 @@ GEN75_MI_MATH_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_NOOP {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     IdentificationNumberRegisterWriteEnable;
+   bool                                         IdentificationNumberRegisterWriteEnable;
    uint32_t                                     IdentificationNumber;
 };
 
@@ -6202,9 +6202,9 @@ GEN75_MI_NOOP_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_PREDICATE {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     KEEP                                               0
-#define     LOAD                                               2
-#define     LOADINV                                            3
+#define     LOAD_KEEP                                          0
+#define     LOAD_LOAD                                          2
+#define     LOAD_LOADINV                                       3
    uint32_t                                     LoadOperation;
 #define     COMBINE_SET                                        0
 #define     COMBINE_AND                                        1
@@ -6265,8 +6265,8 @@ GEN75_MI_REPORT_HEAD_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_RS_CONTEXT {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     Restore                                            0
-#define     Save                                               1
+#define     RS_RESTORE                                         0
+#define     RS_SAVE                                            1
    uint32_t                                     ResourceStreamerSave;
 };
 
@@ -6293,8 +6293,8 @@ GEN75_MI_RS_CONTEXT_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_RS_CONTROL {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-#define     Stop                                               0
-#define     Start                                              1
+#define     RS_STOP                                            0
+#define     RS_START                                           1
    uint32_t                                     ResourceStreamerControl;
 };
 
@@ -6412,9 +6412,9 @@ struct GEN75_MI_SET_CONTEXT {
    uint32_t                                     DwordLength;
    __gen_address_type                           LogicalContextAddress;
    uint32_t                                     ReservedMustbe1;
-   uint32_t                                     CoreModeEnable;
-   uint32_t                                     ResourceStreamerStateSaveEnable;
-   uint32_t                                     ResourceStreamerStateRestoreEnable;
+   bool                                         CoreModeEnable;
+   bool                                         ResourceStreamerStateSaveEnable;
+   bool                                         ResourceStreamerStateRestoreEnable;
    uint32_t                                     ForceRestore;
    uint32_t                                     RestoreInhibit;
 };
@@ -6459,7 +6459,7 @@ struct GEN75_MI_SET_PREDICATE {
 #define     PredicateonClear                                   1
 #define     PredicateonSet                                     2
 #define     PredicateDisable                                   3
-   uint32_t                                     PREDICATEENABLE;
+   bool                                         PREDICATEENABLE;
 };
 
 static inline void
@@ -6486,7 +6486,7 @@ GEN75_MI_SET_PREDICATE_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_STORE_DATA_IMM {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     UseGlobalGTT;
+   bool                                         UseGlobalGTT;
    uint32_t                                     DwordLength;
    uint32_t                                     Address;
    uint32_t                                     CoreModeEnable;
@@ -6615,7 +6615,7 @@ GEN75_MI_STORE_URB_MEM_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_SUSPEND_FLUSH {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     SuspendFlush;
+   bool                                         SuspendFlush;
 };
 
 static inline void
@@ -6791,23 +6791,23 @@ GEN75_MI_USER_INTERRUPT_pack(__gen_user_data *data, void * restrict dst,
 struct GEN75_MI_WAIT_FOR_EVENT {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
-   uint32_t                                     DisplayPipeCHorizontalBlankWaitEnable;
-   uint32_t                                     DisplayPipeCVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteCFlipPendingWaitEnable;
+   bool                                         DisplayPipeCHorizontalBlankWaitEnable;
+   bool                                         DisplayPipeCVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteCFlipPendingWaitEnable;
 #define     Notenabled                                         0
    uint32_t                                     ConditionCodeWaitSelect;
-   uint32_t                                     DisplayPlaneCFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeCScanLineWaitEnable;
-   uint32_t                                     DisplayPipeBHorizontalBlankWaitEnable;
-   uint32_t                                     DisplayPipeBVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteBFlipPendingWaitEnable;
-   uint32_t                                     DisplayPlaneBFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeBScanLineWaitEnable;
-   uint32_t                                     DisplayPipeAHorizontalBlankWaitEnable;
-   uint32_t                                     DisplayPipeAVerticalBlankWaitEnable;
-   uint32_t                                     DisplaySpriteAFlipPendingWaitEnable;
-   uint32_t                                     DisplayPlaneAFlipPendingWaitEnable;
-   uint32_t                                     DisplayPipeAScanLineWaitEnable;
+   bool                                         DisplayPlaneCFlipPendingWaitEnable;
+   bool                                         DisplayPipeCScanLineWaitEnable;
+   bool                                         DisplayPipeBHorizontalBlankWaitEnable;
+   bool                                         DisplayPipeBVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteBFlipPendingWaitEnable;
+   bool                                         DisplayPlaneBFlipPendingWaitEnable;
+   bool                                         DisplayPipeBScanLineWaitEnable;
+   bool                                         DisplayPipeAHorizontalBlankWaitEnable;
+   bool                                         DisplayPipeAVerticalBlankWaitEnable;
+   bool                                         DisplaySpriteAFlipPendingWaitEnable;
+   bool                                         DisplayPlaneAFlipPendingWaitEnable;
+   bool                                         DisplayPipeAScanLineWaitEnable;
 };
 
 static inline void
@@ -6866,29 +6866,29 @@ struct GEN75_PIPE_CONTROL {
 #define     Reset                                              1
    uint32_t                                     GlobalSnapshotCountReset;
    uint32_t                                     TLBInvalidate;
-   uint32_t                                     GenericMediaStateClear;
+   bool                                         GenericMediaStateClear;
 #define     NoWrite                                            0
 #define     WriteImmediateData                                 1
 #define     WritePSDepthCount                                  2
 #define     WriteTimestamp                                     3
    uint32_t                                     PostSyncOperation;
-   uint32_t                                     DepthStallEnable;
+   bool                                         DepthStallEnable;
 #define     DisableFlush                                       0
 #define     EnableFlush                                        1
-   uint32_t                                     RenderTargetCacheFlushEnable;
-   uint32_t                                     InstructionCacheInvalidateEnable;
-   uint32_t                                     TextureCacheInvalidationEnable;
-   uint32_t                                     IndirectStatePointersDisable;
-   uint32_t                                     NotifyEnable;
-   uint32_t                                     PipeControlFlushEnable;
-   uint32_t                                     DCFlushEnable;
-   uint32_t                                     VFCacheInvalidationEnable;
-   uint32_t                                     ConstantCacheInvalidationEnable;
-   uint32_t                                     StateCacheInvalidationEnable;
-   uint32_t                                     StallAtPixelScoreboard;
+   bool                                         RenderTargetCacheFlushEnable;
+   bool                                         InstructionCacheInvalidateEnable;
+   bool                                         TextureCacheInvalidationEnable;
+   bool                                         IndirectStatePointersDisable;
+   bool                                         NotifyEnable;
+   bool                                         PipeControlFlushEnable;
+   bool                                         DCFlushEnable;
+   bool                                         VFCacheInvalidationEnable;
+   bool                                         ConstantCacheInvalidationEnable;
+   bool                                         StateCacheInvalidationEnable;
+   bool                                         StallAtPixelScoreboard;
 #define     FlushDisabled                                      0
 #define     FlushEnabled                                       1
-   uint32_t                                     DepthCacheFlushEnable;
+   bool                                         DepthCacheFlushEnable;
    __gen_address_type                           Address;
    uint32_t                                     ImmediateData;
    uint32_t                                     ImmediateData0;
@@ -7064,8 +7064,8 @@ GEN75_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
 #define GEN75_BLEND_STATE_length 0x00000002
 
 struct GEN75_BLEND_STATE {
-   uint32_t                                     ColorBufferBlendEnable;
-   uint32_t                                     IndependentAlphaBlendEnable;
+   bool                                         ColorBufferBlendEnable;
+   bool                                         IndependentAlphaBlendEnable;
 #define     BLENDFUNCTION_ADD                                  0
 #define     BLENDFUNCTION_SUBTRACT                             1
 #define     BLENDFUNCTION_REVERSE_SUBTRACT                     2
@@ -7101,14 +7101,14 @@ struct GEN75_BLEND_STATE {
    uint32_t                                     ColorBlendFunction;
    uint32_t                                     SourceBlendFactor;
    uint32_t                                     DestinationBlendFactor;
-   uint32_t                                     AlphaToCoverageEnable;
-   uint32_t                                     AlphaToOneEnable;
-   uint32_t                                     AlphaToCoverageDitherEnable;
-   uint32_t                                     WriteDisableAlpha;
-   uint32_t                                     WriteDisableRed;
-   uint32_t                                     WriteDisableGreen;
-   uint32_t                                     WriteDisableBlue;
-   uint32_t                                     LogicOpEnable;
+   bool                                         AlphaToCoverageEnable;
+   bool                                         AlphaToOneEnable;
+   bool                                         AlphaToCoverageDitherEnable;
+   bool                                         WriteDisableAlpha;
+   bool                                         WriteDisableRed;
+   bool                                         WriteDisableGreen;
+   bool                                         WriteDisableBlue;
+   bool                                         LogicOpEnable;
 #define     LOGICOP_CLEAR                                      0
 #define     LOGICOP_NOR                                        1
 #define     LOGICOP_AND_INVERTED                               2
@@ -7126,7 +7126,7 @@ struct GEN75_BLEND_STATE {
 #define     LOGICOP_OR                                        14
 #define     LOGICOP_SET                                       15
    uint32_t                                     LogicOpFunction;
-   uint32_t                                     AlphaTestEnable;
+   bool                                         AlphaTestEnable;
 #define     COMPAREFUNCTION_ALWAYS                             0
 #define     COMPAREFUNCTION_NEVER                              1
 #define     COMPAREFUNCTION_LESS                               2
@@ -7136,15 +7136,15 @@ struct GEN75_BLEND_STATE {
 #define     COMPAREFUNCTION_NOTEQUAL                           6
 #define     COMPAREFUNCTION_GEQUAL                             7
    uint32_t                                     AlphaTestFunction;
-   uint32_t                                     ColorDitherEnable;
+   bool                                         ColorDitherEnable;
    uint32_t                                     XDitherOffset;
    uint32_t                                     YDitherOffset;
 #define     COLORCLAMP_UNORM                                   0
 #define     COLORCLAMP_SNORM                                   1
 #define     COLORCLAMP_RTFORMAT                                2
    uint32_t                                     ColorClampRange;
-   uint32_t                                     PreBlendColorClampEnable;
-   uint32_t                                     PostBlendColorClampEnable;
+   bool                                         PreBlendColorClampEnable;
+   bool                                         PostBlendColorClampEnable;
 };
 
 static inline void
@@ -7267,7 +7267,7 @@ GEN75_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define GEN75_DEPTH_STENCIL_STATE_length 0x00000003
 
 struct GEN75_DEPTH_STENCIL_STATE {
-   uint32_t                                     StencilTestEnable;
+   bool                                         StencilTestEnable;
 #define     COMPAREFUNCTION_ALWAYS                             0
 #define     COMPAREFUNCTION_NEVER                              1
 #define     COMPAREFUNCTION_LESS                               2
@@ -7288,8 +7288,8 @@ struct GEN75_DEPTH_STENCIL_STATE {
    uint32_t                                     StencilFailOp;
    uint32_t                                     StencilPassDepthFailOp;
    uint32_t                                     StencilPassDepthPassOp;
-   uint32_t                                     StencilBufferWriteEnable;
-   uint32_t                                     DoubleSidedStencilEnable;
+   bool                                         StencilBufferWriteEnable;
+   bool                                         DoubleSidedStencilEnable;
 #define     COMPAREFUNCTION_ALWAYS                             0
 #define     COMPAREFUNCTION_NEVER                              1
 #define     COMPAREFUNCTION_LESS                               2
@@ -7314,7 +7314,7 @@ struct GEN75_DEPTH_STENCIL_STATE {
    uint32_t                                     StencilWriteMask;
    uint32_t                                     BackfaceStencilTestMask;
    uint32_t                                     BackfaceStencilWriteMask;
-   uint32_t                                     DepthTestEnable;
+   bool                                         DepthTestEnable;
 #define     COMPAREFUNCTION_ALWAYS                             0
 #define     COMPAREFUNCTION_NEVER                              1
 #define     COMPAREFUNCTION_LESS                               2
@@ -7324,7 +7324,7 @@ struct GEN75_DEPTH_STENCIL_STATE {
 #define     COMPAREFUNCTION_NOTEQUAL                           6
 #define     COMPAREFUNCTION_GEQUAL                             7
    uint32_t                                     DepthTestFunction;
-   uint32_t                                     DepthBufferWriteEnable;
+   bool                                         DepthBufferWriteEnable;
 };
 
 static inline void
@@ -7407,9 +7407,9 @@ struct GEN75_INTERFACE_DESCRIPTOR_DATA {
 #define     IEEE754                                            0
 #define     Alternate                                          1
    uint32_t                                     FloatingPointMode;
-   uint32_t                                     IllegalOpcodeExceptionEnable;
-   uint32_t                                     MaskStackExceptionEnable;
-   uint32_t                                     SoftwareExceptionEnable;
+   bool                                         IllegalOpcodeExceptionEnable;
+   bool                                         MaskStackExceptionEnable;
+   bool                                         SoftwareExceptionEnable;
    uint32_t                                     SamplerStatePointer;
 #define     Nosamplersused                                     0
 #define     Between1and4samplersused                           1
@@ -7425,7 +7425,7 @@ struct GEN75_INTERFACE_DESCRIPTOR_DATA {
 #define     RD                                                 2
 #define     RTZ                                                3
    uint32_t                                     RoundingMode;
-   uint32_t                                     BarrierEnable;
+   bool                                         BarrierEnable;
    uint32_t                                     SharedLocalMemorySize;
    uint32_t                                     NumberofThreadsinGPGPUThreadGroup;
    uint32_t                                     CrossThreadConstantDataReadLength;
@@ -7511,7 +7511,7 @@ struct GEN75_RENDER_SURFACE_STATE {
 #define     SURFTYPE_STRBUF                                    5
 #define     SURFTYPE_NULL                                      7
    uint32_t                                     SurfaceType;
-   uint32_t                                     SurfaceArray;
+   bool                                         SurfaceArray;
    uint32_t                                     SurfaceFormat;
    uint32_t                                     SurfaceVerticalAlignment;
 #define     HALIGN_4                                           0
@@ -7561,8 +7561,8 @@ struct GEN75_RENDER_SURFACE_STATE {
    __gen_address_type                           MCSBaseAddress;
    uint32_t                                     MCSSurfacePitch;
    __gen_address_type                           AppendCounterAddress;
-   uint32_t                                     AppendCounterEnable;
-   uint32_t                                     MCSEnable;
+   bool                                         AppendCounterEnable;
+   bool                                         MCSEnable;
    uint32_t                                     ReservedMBZ;
    uint32_t                                     XOffsetforUVPlane;
    uint32_t                                     YOffsetforUVPlane;
@@ -7716,7 +7716,7 @@ GEN75_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst
 #define GEN75_SAMPLER_STATE_length 0x00000004
 
 struct GEN75_SAMPLER_STATE {
-   uint32_t                                     SamplerDisable;
+   bool                                         SamplerDisable;
 #define     DX10OGL                                            0
 #define     DX9                                                1
    uint32_t                                     TextureBorderColorMode;
@@ -7756,7 +7756,7 @@ struct GEN75_SAMPLER_STATE {
 #define     OVERRIDE                                           1
    uint32_t                                     CubeSurfaceControlMode;
    uint32_t                                     BorderColorPointer;
-   uint32_t                                     ChromaKeyEnable;
+   bool                                         ChromaKeyEnable;
    uint32_t                                     ChromaKeyIndex;
 #define     KEYFILTER_KILL_ON_ANY_MATCH                        0
 #define     KEYFILTER_REPLACE_BLACK                            1
@@ -7770,18 +7770,18 @@ struct GEN75_SAMPLER_STATE {
 #define     RATIO141                                           6
 #define     RATIO161                                           7
    uint32_t                                     MaximumAnisotropy;
-   uint32_t                                     RAddressMinFilterRoundingEnable;
-   uint32_t                                     RAddressMagFilterRoundingEnable;
-   uint32_t                                     VAddressMinFilterRoundingEnable;
-   uint32_t                                     VAddressMagFilterRoundingEnable;
-   uint32_t                                     UAddressMinFilterRoundingEnable;
-   uint32_t                                     UAddressMagFilterRoundingEnable;
+   bool                                         RAddressMinFilterRoundingEnable;
+   bool                                         RAddressMagFilterRoundingEnable;
+   bool                                         VAddressMinFilterRoundingEnable;
+   bool                                         VAddressMagFilterRoundingEnable;
+   bool                                         UAddressMinFilterRoundingEnable;
+   bool                                         UAddressMagFilterRoundingEnable;
 #define     FULL                                               0
 #define     TRIQUAL_HIGHMAG_CLAMP_MIPFILTER                    1
 #define     MED                                                2
 #define     LOW                                                3
    uint32_t                                     TrilinearFilterQuality;
-   uint32_t                                     NonnormalizedCoordinateEnable;
+   bool                                         NonnormalizedCoordinateEnable;
    uint32_t                                     TCXAddressControlMode;
    uint32_t                                     TCYAddressControlMode;
    uint32_t                                     TCZAddressControlMode;
@@ -7846,7 +7846,7 @@ GEN75_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define     _3DPRIM_QUADLIST                                   7
 #define     _3DPRIM_QUADSTRIP                                  8
 #define     _3DPRIM_LINELIST_ADJ                               9
-#define     _3DPRIM_LISTSTRIP_ADJ                             10
+#define     _3DPRIM_LINESTRIP_ADJ                             10
 #define     _3DPRIM_TRILIST_ADJ                               11
 #define     _3DPRIM_TRISTRIP_ADJ                              12
 #define     _3DPRIM_TRISTRIP_REVERSE                          13
