@@ -710,12 +710,7 @@ fs_visitor::no16(const char *msg)
    } else {
       simd16_unsupported = true;
 
-      if (brw->perf_debug) {
-         if (no16_msg)
-            ralloc_strcat(&no16_msg, msg);
-         else
-            no16_msg = ralloc_strdup(mem_ctx, msg);
-      }
+      perf_debug("SIMD16 shader failed to compile: %s", msg);
    }
 }
 
@@ -4054,14 +4049,10 @@ brw_wm_fs_emit(struct brw_context *brw,
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
          if (!v2.run_fs()) {
-            perf_debug("SIMD16 shader failed to compile, falling back to "
-                       "SIMD8 at a 10-20%% performance cost: %s", v2.fail_msg);
+            perf_debug("SIMD16 shader failed to compile: %s", v2.fail_msg);
          } else {
             simd16_cfg = v2.cfg;
          }
-      } else {
-         perf_debug("SIMD16 shader unsupported, falling back to "
-                    "SIMD8 at a 10-20%% performance cost: %s", v.no16_msg);
       }
    }
 
