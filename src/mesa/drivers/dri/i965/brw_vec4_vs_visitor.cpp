@@ -23,7 +23,6 @@
 
 
 #include "brw_vs.h"
-#include "main/context.h"
 
 
 namespace brw {
@@ -78,7 +77,7 @@ vec4_vs_visitor::emit_prolog()
             /* ES 3.0 has different rules for converting signed normalized
              * fixed-point numbers than desktop GL.
              */
-            if (_mesa_is_gles3(ctx) && (wa_flags & BRW_ATTRIB_WA_SIGN)) {
+            if ((wa_flags & BRW_ATTRIB_WA_SIGN) && !use_legacy_snorm_formula) {
                /* According to equation 2.2 of the ES 3.0 specification,
                 * signed normalization conversion is done by:
                 *
@@ -217,14 +216,16 @@ vec4_vs_visitor::vec4_vs_visitor(struct brw_context *brw,
                                  struct brw_vs_prog_data *vs_prog_data,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
-                                 int shader_time_index)
+                                 int shader_time_index,
+                                 bool use_legacy_snorm_formula)
    : vec4_visitor(brw, &vs_compile->base, &vs_compile->vp->program.Base,
                   &vs_compile->key.base, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
                   mem_ctx, false /* no_spills */,
                   shader_time_index),
      vs_compile(vs_compile),
-     vs_prog_data(vs_prog_data)
+     vs_prog_data(vs_prog_data),
+     use_legacy_snorm_formula(use_legacy_snorm_formula)
 {
 }
 
