@@ -677,8 +677,7 @@ fs_visitor::no16(const char *msg)
    } else {
       simd16_unsupported = true;
 
-      struct brw_compiler *compiler = brw->intelScreen->compiler;
-      compiler->shader_perf_log(brw,
+      compiler->shader_perf_log(log_data,
                                 "SIMD16 shader failed to compile: %s", msg);
    }
 }
@@ -3769,8 +3768,7 @@ fs_visitor::allocate_registers()
          fail("Failure to register allocate.  Reduce number of "
               "live scalar values to avoid this.");
       } else {
-         struct brw_compiler *compiler = brw->intelScreen->compiler;
-         compiler->shader_perf_log(brw,
+         compiler->shader_perf_log(log_data,
                                    "%s shader triggered register spilling.  "
                                    "Try reducing the number of live scalar "
                                    "values to improve performance.\n",
@@ -4006,7 +4004,8 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
-   fs_visitor v(brw, mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
+   fs_visitor v(brw->intelScreen->compiler, brw,
+                mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
                 prog, &fp->Base, 8, st_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
@@ -4021,7 +4020,8 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(brw, mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
+   fs_visitor v2(brw->intelScreen->compiler, brw,
+                 mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
                  prog, &fp->Base, 16, st_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {

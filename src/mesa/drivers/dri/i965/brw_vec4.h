@@ -76,7 +76,7 @@ class vec4_live_variables;
 class vec4_visitor : public backend_shader, public ir_visitor
 {
 public:
-   vec4_visitor(struct brw_context *brw,
+   vec4_visitor(const struct brw_compiler *compiler,
                 struct brw_vec4_compile *c,
                 struct gl_program *prog,
                 const struct brw_vue_prog_key *key,

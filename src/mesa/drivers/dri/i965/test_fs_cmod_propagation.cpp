@@ -32,7 +32,7 @@ class cmod_propagation_test : public ::testing::Test {
    virtual void SetUp();
 
 public:
-   struct brw_context *brw;
+   struct brw_compiler *compiler;
    struct brw_device_info *devinfo;
    struct gl_context *ctx;
    struct brw_wm_prog_data *prog_data;
@@ -44,31 +44,31 @@ public:
 class cmod_propagation_fs_visitor : public fs_visitor
 {
 public:
-   cmod_propagation_fs_visitor(struct brw_context *brw,
+   cmod_propagation_fs_visitor(struct brw_compiler *compiler,
                                struct brw_wm_prog_data *prog_data,
                                struct gl_shader_program *shader_prog)
-      : fs_visitor(brw, NULL, MESA_SHADER_FRAGMENT, NULL, &prog_data->base,
-                   shader_prog, (struct gl_program *) NULL, 8, -1) {}
+      : fs_visitor(compiler, NULL, NULL, MESA_SHADER_FRAGMENT, NULL,
+                   &prog_data->base, shader_prog,
+                   (struct gl_program *) NULL, 8, -1) {}
 };
 
 
 void cmod_propagation_test::SetUp()
 {
-   brw = (struct brw_context *)calloc(1, sizeof(*brw));
-   devinfo = (struct brw_device_info *)calloc(1, sizeof(*brw));
-   brw->intelScreen = (struct intel_screen *)calloc(1, sizeof(*brw->intelScreen));
-   brw->intelScreen->devinfo = devinfo;
-   ctx = &brw->ctx;
+   ctx = (struct gl_context *)calloc(1, sizeof(*ctx));
+   compiler = (struct brw_compiler *)calloc(1, sizeof(*compiler));
+   devinfo = (struct brw_device_info *)calloc(1, sizeof(*devinfo));
+   compiler->devinfo = devinfo;
 
    fp = ralloc(NULL, struct brw_fragment_program);
    prog_data = ralloc(NULL, struct brw_wm_prog_data);
    shader_prog = ralloc(NULL, struct gl_shader_program);
 
-   v = new cmod_propagation_fs_visitor(brw, prog_data, shader_prog);
+   v = new cmod_propagation_fs_visitor(compiler, prog_data, shader_prog);
 
    _mesa_init_fragment_program(ctx, &fp->program, GL_FRAGMENT_SHADER, 0);
 
-   brw->gen = devinfo->gen = 4;
+   devinfo->gen = 4;
 }
 
 static fs_inst *

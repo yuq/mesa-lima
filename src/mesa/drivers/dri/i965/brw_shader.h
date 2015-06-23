@@ -220,7 +220,8 @@ enum instruction_scheduler_mode {
 class backend_shader {
 protected:
 
-   backend_shader(struct brw_context *brw,
+   backend_shader(const struct brw_compiler *compiler,
+                  void *log_data,
                   void *mem_ctx,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
@@ -229,9 +230,10 @@ protected:
 
 public:
 
-   struct brw_context * const brw;
+   const struct brw_compiler *compiler;
+   void *log_data; /* Passed to compiler->*_log functions */
+
    const struct brw_device_info * const devinfo;
-   struct gl_context * const ctx;
    struct brw_shader * const shader;
    struct gl_shader_program * const shader_prog;
    struct gl_program * const prog;

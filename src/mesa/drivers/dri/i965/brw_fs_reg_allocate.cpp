@@ -535,7 +535,6 @@ setup_mrf_hack_interference(fs_visitor *v, struct ra_graph *g,
 bool
 fs_visitor::assign_regs(bool allow_spilling)
 {
-   struct brw_compiler *compiler = brw->intelScreen->compiler;
    /* Most of this allocation was written for a reg_width of 1
     * (dispatch_width == 8).  In extending to SIMD16, the code was
     * left in place and it was converted to have the hardware

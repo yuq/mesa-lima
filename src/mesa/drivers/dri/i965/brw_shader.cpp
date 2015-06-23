@@ -846,15 +846,16 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
    return false;
 }
 
-backend_shader::backend_shader(struct brw_context *brw,
+backend_shader::backend_shader(const struct brw_compiler *compiler,
+                               void *log_data,
                                void *mem_ctx,
                                struct gl_shader_program *shader_prog,
                                struct gl_program *prog,
                                struct brw_stage_prog_data *stage_prog_data,
                                gl_shader_stage stage)
-   : brw(brw),
-     devinfo(brw->intelScreen->devinfo),
-     ctx(&brw->ctx),
+   : compiler(compiler),
+     log_data(log_data),
+     devinfo(compiler->devinfo),
      shader(shader_prog ?
         (struct brw_shader *)shader_prog->_LinkedShaders[stage] : NULL),
      shader_prog(shader_prog),

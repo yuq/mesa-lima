@@ -1975,7 +1975,7 @@ fs_visitor::emit_barrier()
    bld.exec_all().emit(SHADER_OPCODE_BARRIER, reg_undef, payload);
 }
 
-fs_visitor::fs_visitor(struct brw_context *brw,
+fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        void *mem_ctx,
                        gl_shader_stage stage,
                        const void *key,
@@ -1984,7 +1984,8 @@ fs_visitor::fs_visitor(struct brw_context *brw,
                        struct gl_program *prog,
                        unsigned dispatch_width,
                        int shader_time_index)
-   : backend_shader(brw, mem_ctx, shader_prog, prog, prog_data, stage),
+   : backend_shader(compiler, log_data, mem_ctx,
+                    shader_prog, prog, prog_data, stage),
      key(key), prog_data(prog_data),
      dispatch_width(dispatch_width),
      shader_time_index(shader_time_index),

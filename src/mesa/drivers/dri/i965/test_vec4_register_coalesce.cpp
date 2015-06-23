@@ -35,7 +35,7 @@ class register_coalesce_test : public ::testing::Test {
    virtual void SetUp();
 
 public:
-   struct brw_context *brw;
+   struct brw_compiler *compiler;
    struct brw_device_info *devinfo;
    struct gl_context *ctx;
    struct gl_shader_program *shader_prog;
@@ -47,9 +47,9 @@ public:
 class register_coalesce_vec4_visitor : public vec4_visitor
 {
 public:
-   register_coalesce_vec4_visitor(struct brw_context *brw,
+   register_coalesce_vec4_visitor(struct brw_compiler *compiler,
                                   struct gl_shader_program *shader_prog)
-      : vec4_visitor(brw, NULL, NULL, NULL, NULL, shader_prog,
+      : vec4_visitor(compiler, NULL, NULL, NULL, NULL, shader_prog,
                      MESA_SHADER_VERTEX, NULL,
                      false /* no_spills */, -1)
    {
@@ -95,21 +95,20 @@ protected:
 
 void register_coalesce_test::SetUp()
 {
-   brw = (struct brw_context *)calloc(1, sizeof(*brw));
-   devinfo = (struct brw_device_info *)calloc(1, sizeof(*brw));
-   brw->intelScreen = (struct intel_screen *)calloc(1, sizeof(*brw->intelScreen));
-   brw->intelScreen->devinfo = devinfo;
-   ctx = &brw->ctx;
+   ctx = (struct gl_context *)calloc(1, sizeof(*ctx));
+   compiler = (struct brw_compiler *)calloc(1, sizeof(*compiler));
+   devinfo = (struct brw_device_info *)calloc(1, sizeof(*devinfo));
+   compiler->devinfo = devinfo;
 
    vp = ralloc(NULL, struct brw_vertex_program);
 
    shader_prog = ralloc(NULL, struct gl_shader_program);
 
-   v = new register_coalesce_vec4_visitor(brw, shader_prog);
+   v = new register_coalesce_vec4_visitor(compiler, shader_prog);
 
    _mesa_init_vertex_program(ctx, &vp->program, GL_VERTEX_SHADER, 0);
 
-   brw->gen = devinfo->gen = 4;
+   devinfo->gen = 4;
 }
 
 static void

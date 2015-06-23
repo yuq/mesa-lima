@@ -3677,7 +3677,7 @@ vec4_visitor::resolve_bool_comparison(ir_rvalue *rvalue, src_reg *reg)
    *reg = neg_result;
 }
 
-vec4_visitor::vec4_visitor(struct brw_context *brw,
+vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            struct brw_vec4_compile *c,
                            struct gl_program *prog,
                            const struct brw_vue_prog_key *key,
@@ -3687,7 +3687,8 @@ vec4_visitor::vec4_visitor(struct brw_context *brw,
 			   void *mem_ctx,
                            bool no_spills,
                            int shader_time_index)
-   : backend_shader(brw, mem_ctx, shader_prog, prog, &prog_data->base, stage),
+   : backend_shader(compiler, NULL, mem_ctx,
+                    shader_prog, prog, &prog_data->base, stage),
      c(c),
      key(key),
      prog_data(prog_data),

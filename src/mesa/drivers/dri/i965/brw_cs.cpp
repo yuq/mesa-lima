@@ -94,7 +94,8 @@ brw_cs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw, mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+   fs_visitor v8(brw->intelScreen->compiler, brw,
+                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
                  &cp->Base, 8, st_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
@@ -103,7 +104,8 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw, mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+   fs_visitor v16(brw->intelScreen->compiler, brw,
+                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
                   &cp->Base, 16, st_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&

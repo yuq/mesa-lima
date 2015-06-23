@@ -70,7 +70,7 @@ namespace brw {
 class fs_visitor : public backend_shader
 {
 public:
-   fs_visitor(struct brw_context *brw,
+   fs_visitor(const struct brw_compiler *compiler, void *log_data,
               void *mem_ctx,
               gl_shader_stage stage,
               const void *key,

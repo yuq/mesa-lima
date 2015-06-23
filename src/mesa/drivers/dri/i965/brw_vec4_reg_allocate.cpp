@@ -191,7 +191,6 @@ vec4_visitor::setup_payload_interference(struct ra_graph *g,
 bool
 vec4_visitor::reg_allocate()
 {
-   struct brw_compiler *compiler = brw->intelScreen->compiler;
    unsigned int hw_reg_mapping[alloc.count];
    int payload_reg_count = this->first_non_payload_grf;
 
