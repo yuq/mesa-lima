@@ -47,6 +47,32 @@ dump_VC4_PACKET_BRANCH_TO_SUB_LIST(void *cl, uint32_t offset, uint32_t hw_offset
 }
 
 static void
+dump_loadstore_full(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        uint32_t bits = *(uint32_t *)(cl + offset);
+
+        fprintf(stderr, "0x%08x 0x%08x:      addr 0x%08x%s%s%s%s\n",
+                offset, hw_offset,
+                bits & ~0xf,
+                (bits & VC4_LOADSTORE_FULL_RES_DISABLE_CLEAR_ALL) ? "" : " clear",
+                (bits & VC4_LOADSTORE_FULL_RES_DISABLE_ZS) ? "" : " zs",
+                (bits & VC4_LOADSTORE_FULL_RES_DISABLE_COLOR) ? "" : " color",
+                (bits & VC4_LOADSTORE_FULL_RES_EOF) ? " eof" : "");
+}
+
+static void
+dump_VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        dump_loadstore_full(cl, offset, hw_offset);
+}
+
+static void
+dump_VC4_PACKET_STORE_FULL_RES_TILE_BUFFER(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        dump_loadstore_full(cl, offset, hw_offset);
+}
+
+static void
 dump_VC4_PACKET_STORE_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw_offset)
 {
         uint8_t *bytes = cl + offset;
@@ -313,8 +339,8 @@ static const struct packet_info {
 
         PACKET(VC4_PACKET_STORE_MS_TILE_BUFFER),
         PACKET(VC4_PACKET_STORE_MS_TILE_BUFFER_AND_EOF),
-        PACKET(VC4_PACKET_STORE_FULL_RES_TILE_BUFFER),
-        PACKET(VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER),
+        PACKET_DUMP(VC4_PACKET_STORE_FULL_RES_TILE_BUFFER),
+        PACKET_DUMP(VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER),
         PACKET_DUMP(VC4_PACKET_STORE_TILE_BUFFER_GENERAL),
         PACKET(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL),
 
