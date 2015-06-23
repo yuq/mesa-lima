@@ -60,6 +60,8 @@ struct vtn_function {
 
    nir_function_overload *overload;
    struct vtn_block *start_block;
+
+   const uint32_t *end;
 };
 
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
@@ -117,6 +119,12 @@ struct vtn_builder {
     * far, and we lazily resolve them when we see them used in a function.
     */
    struct hash_table *const_table;
+
+   /*
+    * Map from nir_block to the vtn_block which ends with it -- used for
+    * handling phi nodes.
+    */
+   struct hash_table *block_table;
 
    unsigned value_id_bound;
    struct vtn_value *values;
