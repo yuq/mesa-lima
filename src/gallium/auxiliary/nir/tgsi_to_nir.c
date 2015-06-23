@@ -1078,7 +1078,12 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
       samp = 2;
       break;
    case TGSI_OPCODE_TXF:
-      op = nir_texop_txf;
+      if (tgsi_inst->Texture.Texture == TGSI_TEXTURE_2D_MSAA ||
+          tgsi_inst->Texture.Texture == TGSI_TEXTURE_2D_ARRAY_MSAA) {
+         op = nir_texop_txf_ms;
+      } else {
+         op = nir_texop_txf;
+      }
       num_srcs = 2;
       break;
    case TGSI_OPCODE_TXD:
@@ -1178,7 +1183,10 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    if (tgsi_inst->Instruction.Opcode == TGSI_OPCODE_TXF) {
       instr->src[src_number].src = nir_src_for_ssa(ttn_channel(b, src[0], W));
-      instr->src[src_number].src_type = nir_tex_src_lod;
+      if (op == nir_texop_txf_ms)
+         instr->src[src_number].src_type = nir_tex_src_ms_index;
+      else
+         instr->src[src_number].src_type = nir_tex_src_lod;
       src_number++;
    }
 
