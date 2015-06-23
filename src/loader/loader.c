@@ -64,6 +64,8 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
+#include <errno.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -71,10 +73,8 @@
 #ifdef HAVE_LIBUDEV
 #include <assert.h>
 #include <dlfcn.h>
-#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <errno.h>
 #ifdef USE_DRICONF
 #include "xmlconfig.h"
 #include "xmlpool.h"
@@ -103,6 +103,22 @@ static void default_logger(int level, const char *fmt, ...)
 }
 
 static void (*log_)(int level, const char *fmt, ...) = default_logger;
+
+int
+loader_open_device(const char *device_name)
+{
+   int fd;
+#ifdef O_CLOEXEC
+   fd = open(device_name, O_RDWR | O_CLOEXEC);
+   if (fd == -1 && errno == EINVAL)
+#endif
+   {
+      fd = open(device_name, O_RDWR);
+      if (fd != -1)
+         fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+   }
+   return fd;
+}
 
 #ifdef HAVE_LIBUDEV
 #include <libudev.h>
@@ -312,22 +328,6 @@ get_id_path_tag_from_fd(struct udev *udev, int fd)
 
    udev_device_unref(device);
    return id_path_tag;
-}
-
-int
-loader_open_device(const char *device_name)
-{
-   int fd;
-#ifdef O_CLOEXEC
-   fd = open(device_name, O_RDWR | O_CLOEXEC);
-   if (fd == -1 && errno == EINVAL)
-#endif
-   {
-      fd = open(device_name, O_RDWR);
-      if (fd != -1)
-         fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-   }
-   return fd;
 }
 
 #ifdef USE_DRICONF
