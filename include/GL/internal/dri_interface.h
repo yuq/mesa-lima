@@ -1094,12 +1094,15 @@ struct __DRIdri2ExtensionRec {
 
 
 /**
- * Four CC formats that matches with WL_DRM_FORMAT_* from wayland_drm.h
- * and GBM_FORMAT_* from gbm.h, used with createImageFromNames.
+ * Four CC formats that matches with WL_DRM_FORMAT_* from wayland_drm.h,
+ * GBM_FORMAT_* from gbm.h, and DRM_FORMAT_* from drm_fourcc.h. Used with
+ * createImageFromNames.
  *
  * \since 5
  */
 
+#define __DRI_IMAGE_FOURCC_R8		0x20203852
+#define __DRI_IMAGE_FOURCC_GR88		0x38385247
 #define __DRI_IMAGE_FOURCC_RGB565	0x36314752
 #define __DRI_IMAGE_FOURCC_ARGB8888	0x34325241
 #define __DRI_IMAGE_FOURCC_XRGB8888	0x34325258
@@ -1134,6 +1137,8 @@ struct __DRIdri2ExtensionRec {
 #define __DRI_IMAGE_COMPONENTS_Y_U_V	0x3003
 #define __DRI_IMAGE_COMPONENTS_Y_UV	0x3004
 #define __DRI_IMAGE_COMPONENTS_Y_XUXV	0x3005
+#define __DRI_IMAGE_COMPONENTS_R	0x3006
+#define __DRI_IMAGE_COMPONENTS_RG	0x3007
 
 
 /**
