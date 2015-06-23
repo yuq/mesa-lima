@@ -62,6 +62,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
       info->file_max[i] = -1;
    for (i = 0; i < Elements(info->const_file_max); i++)
       info->const_file_max[i] = -1;
+   info->properties[TGSI_PROPERTY_GS_INVOCATIONS] = 1;
 
    /**
     ** Setup to begin parsing input shader
