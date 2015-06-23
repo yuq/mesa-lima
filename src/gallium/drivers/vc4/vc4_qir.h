@@ -233,6 +233,8 @@ enum quniform_contents {
         /** A reference to a texture config parameter 2 cubemap stride uniform */
         QUNIFORM_TEXTURE_CONFIG_P2,
 
+        QUNIFORM_TEXTURE_MSAA_ADDR,
+
         QUNIFORM_UBO_ADDR,
 
         QUNIFORM_TEXRECT_SCALE_X,
@@ -287,11 +289,18 @@ struct vc4_key {
         struct vc4_uncompiled_shader *shader_state;
         struct {
                 enum pipe_format format;
-                unsigned compare_mode:1;
-                unsigned compare_func:3;
-                unsigned wrap_s:3;
-                unsigned wrap_t:3;
                 uint8_t swizzle[4];
+                union {
+                        struct {
+                                unsigned compare_mode:1;
+                                unsigned compare_func:3;
+                                unsigned wrap_s:3;
+                                unsigned wrap_t:3;
+                        };
+                        struct {
+                                uint16_t msaa_width, msaa_height;
+                        };
+                };
         } tex[VC4_MAX_TEXTURE_SAMPLERS];
         uint8_t ucp_enables;
 };
@@ -490,6 +499,7 @@ nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
                                        enum quniform_contents contents);
 nir_ssa_def *vc4_nir_get_swizzled_channel(struct nir_builder *b,
                                           nir_ssa_def **srcs, int swiz);
+void vc4_nir_lower_txf_ms(struct vc4_compile *c);
 void qir_lower_uniforms(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
