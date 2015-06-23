@@ -283,7 +283,13 @@ vc4_setup_slices(struct vc4_resource *rsc)
 
                 if (!rsc->tiled) {
                         slice->tiling = VC4_TILING_FORMAT_LINEAR;
-                        level_width = align(level_width, utile_w);
+                        if (prsc->nr_samples) {
+                                /* MSAA (4x) surfaces are stored as raw tile buffer contents. */
+                                level_width = align(level_width, 32);
+                                level_height = align(level_height, 32);
+                        } else {
+                                level_width = align(level_width, utile_w);
+                        }
                 } else {
                         if (vc4_size_is_lt(level_width, level_height,
                                            rsc->cpp)) {
@@ -300,7 +306,8 @@ vc4_setup_slices(struct vc4_resource *rsc)
                 }
 
                 slice->offset = offset;
-                slice->stride = level_width * rsc->cpp;
+                slice->stride = (level_width * rsc->cpp *
+                                 MAX2(prsc->nr_samples, 1));
                 slice->size = level_height * slice->stride;
 
                 offset += slice->size;
@@ -357,7 +364,10 @@ vc4_resource_setup(struct pipe_screen *pscreen,
         prsc->screen = pscreen;
 
         rsc->base.vtbl = &vc4_resource_vtbl;
-        rsc->cpp = util_format_get_blocksize(tmpl->format);
+        if (prsc->nr_samples == 0)
+                rsc->cpp = util_format_get_blocksize(tmpl->format);
+        else
+                rsc->cpp = sizeof(uint32_t);
 
         assert(rsc->cpp);
 
@@ -371,8 +381,12 @@ get_resource_texture_format(struct pipe_resource *prsc)
         uint8_t format = vc4_get_tex_format(prsc->format);
 
         if (!rsc->tiled) {
-                assert(format == VC4_TEXTURE_TYPE_RGBA8888);
-                return VC4_TEXTURE_TYPE_RGBA32R;
+                if (prsc->nr_samples) {
+                        return ~0;
+                } else {
+                        assert(format == VC4_TEXTURE_TYPE_RGBA8888);
+                        return VC4_TEXTURE_TYPE_RGBA32R;
+                }
         }
 
         return format;
@@ -389,6 +403,7 @@ vc4_resource_create(struct pipe_screen *pscreen,
          * communicate metadata about tiling currently.
          */
         if (tmpl->target == PIPE_BUFFER ||
+            tmpl->nr_samples ||
             (tmpl->bind & (PIPE_BIND_SCANOUT |
                            PIPE_BIND_LINEAR |
                            PIPE_BIND_SHARED |
