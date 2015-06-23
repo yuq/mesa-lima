@@ -38,6 +38,7 @@
 
 #include "vc4_screen.h"
 #include "vc4_qpu_defines.h"
+#include "kernel/vc4_packet.h"
 #include "pipe/p_state.h"
 
 struct nir_builder;
@@ -121,6 +122,7 @@ enum qop {
         QOP_TLB_STENCIL_SETUP,
         QOP_TLB_Z_WRITE,
         QOP_TLB_COLOR_WRITE,
+        QOP_TLB_COLOR_WRITE_MS,
         QOP_TLB_COLOR_READ,
         QOP_MS_MASK,
         QOP_VARY_ADD_C,
@@ -306,6 +308,10 @@ struct vc4_fs_key {
         bool alpha_test;
         bool point_coord_upper_left;
         bool light_twoside;
+        bool msaa;
+        bool sample_coverage;
+        bool sample_alpha_to_coverage;
+        bool sample_alpha_to_one;
         uint8_t alpha_test_func;
         uint8_t logicop_func;
         uint32_t point_sprite_mask;
@@ -350,6 +356,9 @@ struct vc4_compile {
          */
         struct qreg *inputs;
         struct qreg *outputs;
+        bool msaa_per_sample_output;
+        struct qreg color_reads[VC4_MAX_SAMPLES];
+        struct qreg sample_colors[VC4_MAX_SAMPLES];
         uint32_t inputs_array_size;
         uint32_t outputs_array_size;
         uint32_t uniforms_array_size;
@@ -420,6 +429,8 @@ struct vc4_compile {
  * destination color.
  */
 #define VC4_NIR_TLB_COLOR_READ_INPUT		2000000000
+
+#define VC4_NIR_MS_MASK_OUTPUT			2000000000
 
 /* Special offset for nir_load_uniform values to get a QUNIFORM_*
  * state-dependent value.
@@ -619,6 +630,7 @@ QIR_ALU0(FRAG_REV_FLAG)
 QIR_ALU0(TEX_RESULT)
 QIR_ALU0(TLB_COLOR_READ)
 QIR_NODST_1(TLB_COLOR_WRITE)
+QIR_NODST_1(TLB_COLOR_WRITE_MS)
 QIR_NODST_1(TLB_Z_WRITE)
 QIR_NODST_1(TLB_DISCARD_SETUP)
 QIR_NODST_1(TLB_STENCIL_SETUP)

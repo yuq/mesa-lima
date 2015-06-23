@@ -86,6 +86,7 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
         [QOP_TLB_COLOR_WRITE] = { "tlb_color", 0, 1, true },
+        [QOP_TLB_COLOR_WRITE_MS] = { "tlb_color_ms", 0, 1, true },
         [QOP_TLB_COLOR_READ] = { "tlb_color_read", 1, 0 },
         [QOP_MS_MASK] = { "ms_mask", 0, 1, true },
         [QOP_VARY_ADD_C] = { "vary_add_c", 1, 1 },

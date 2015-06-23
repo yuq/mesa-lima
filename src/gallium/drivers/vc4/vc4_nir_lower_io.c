@@ -226,7 +226,9 @@ vc4_nir_lower_fs_input(struct vc4_compile *c, nir_builder *b,
 {
         b->cursor = nir_before_instr(&intr->instr);
 
-        if (intr->const_index[0] == VC4_NIR_TLB_COLOR_READ_INPUT) {
+        if (intr->const_index[0] >= VC4_NIR_TLB_COLOR_READ_INPUT &&
+            intr->const_index[0] < (VC4_NIR_TLB_COLOR_READ_INPUT +
+                                    VC4_MAX_SAMPLES)) {
                 /* This doesn't need any lowering. */
                 return;
         }

@@ -1124,7 +1124,12 @@ emit_frag_end(struct vc4_compile *c)
                 qir_TLB_Z_WRITE(c, z);
         }
 
-        qir_TLB_COLOR_WRITE(c, color);
+        if (!c->msaa_per_sample_output) {
+                qir_TLB_COLOR_WRITE(c, color);
+        } else {
+                for (int i = 0; i < VC4_MAX_SAMPLES; i++)
+                        qir_TLB_COLOR_WRITE_MS(c, c->sample_colors[i]);
+        }
 }
 
 static void
@@ -1475,18 +1480,42 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 
         case nir_intrinsic_load_input:
                 assert(instr->num_components == 1);
-                if (instr->const_index[0] == VC4_NIR_TLB_COLOR_READ_INPUT) {
-                        *dest = qir_TLB_COLOR_READ(c);
+                if (instr->const_index[0] >= VC4_NIR_TLB_COLOR_READ_INPUT) {
+                        /* Reads of the per-sample color need to be done in
+                         * order.
+                         */
+                        int sample_index = (instr->const_index[0] -
+                                           VC4_NIR_TLB_COLOR_READ_INPUT);
+                        for (int i = 0; i <= sample_index; i++) {
+                                if (c->color_reads[i].file == QFILE_NULL) {
+                                        c->color_reads[i] =
+                                                qir_TLB_COLOR_READ(c);
+                                }
+                        }
+                        *dest = c->color_reads[sample_index];
                 } else {
                         *dest = c->inputs[instr->const_index[0]];
                 }
                 break;
 
         case nir_intrinsic_store_output:
-                assert(instr->num_components == 1);
-                c->outputs[instr->const_index[0]] =
-                        qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
-                c->num_outputs = MAX2(c->num_outputs, instr->const_index[0] + 1);
+                /* MSAA color outputs are the only case where we have an
+                 * output that's not lowered to being a store of a single 32
+                 * bit value.
+                 */
+                if (c->stage == QSTAGE_FRAG && instr->num_components == 4) {
+                        assert(instr->const_index[0] == c->output_color_index);
+                        for (int i = 0; i < 4; i++) {
+                                c->sample_colors[i] =
+                                        qir_MOV(c, ntq_get_src(c, instr->src[0],
+                                                               i));
+                        }
+                } else {
+                        assert(instr->num_components == 1);
+                        c->outputs[instr->const_index[0]] =
+                                qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
+                        c->num_outputs = MAX2(c->num_outputs, instr->const_index[0] + 1);
+                }
                 break;
 
         case nir_intrinsic_discard:
@@ -1963,6 +1992,11 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         } else {
                 key->logicop_func = PIPE_LOGICOP_COPY;
         }
+        key->msaa = vc4->rasterizer->base.multisample;
+        key->sample_coverage = (vc4->rasterizer->base.multisample &&
+                                vc4->sample_mask != (1 << VC4_MAX_SAMPLES) - 1);
+        key->sample_alpha_to_coverage = vc4->blend->alpha_to_coverage;
+        key->sample_alpha_to_one = vc4->blend->alpha_to_one;
         if (vc4->framebuffer.cbufs[0])
                 key->color_format = vc4->framebuffer.cbufs[0]->format;
 

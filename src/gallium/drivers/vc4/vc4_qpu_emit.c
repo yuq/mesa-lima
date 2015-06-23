@@ -438,6 +438,13 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         }
                         break;
 
+                case QOP_TLB_COLOR_WRITE_MS:
+                        queue(c, qpu_a_MOV(qpu_tlbc_ms(), src[0]));
+                        if (discard) {
+                                set_last_cond_add(c, QPU_COND_ZS);
+                        }
+                        break;
+
                 case QOP_VARY_ADD_C:
                         queue(c, qpu_a_FADD(dst, src[0], qpu_r5()) | unpack);
                         break;
