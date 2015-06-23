@@ -2033,8 +2033,8 @@ _mesa_create_shader_program(struct gl_context* ctx, GLboolean separate,
 	    }
 #endif
 	 }
-
-	 ralloc_strcat(&shProg->InfoLog, sh->InfoLog);
+         if (sh->InfoLog)
+            ralloc_strcat(&shProg->InfoLog, sh->InfoLog);
       }
 
       delete_shader(ctx, shader);
