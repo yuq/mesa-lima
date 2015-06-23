@@ -54,6 +54,22 @@
 #include "egl_dri2.h"
 #include "../util/u_atomic.h"
 
+/* The kernel header drm_fourcc.h defines the DRM formats below.  We duplicate
+ * some of the definitions here so that building Mesa won't bleeding-edge
+ * kernel headers.
+ */
+#ifndef DRM_FORMAT_R8
+#define DRM_FORMAT_R8            fourcc_code('R', '8', ' ', ' ') /* [7:0] R */
+#endif
+
+#ifndef DRM_FORMAT_RG88
+#define DRM_FORMAT_RG88          fourcc_code('R', 'G', '8', '8') /* [15:0] R:G 8:8 little endian */
+#endif
+
+#ifndef DRM_FORMAT_GR88
+#define DRM_FORMAT_GR88          fourcc_code('G', 'R', '8', '8') /* [15:0] G:R 8:8 little endian */
+#endif
+
 const __DRIuseInvalidateExtension use_invalidate = {
    .base = { __DRI_USE_INVALIDATE, 1 }
 };
@@ -1727,6 +1743,9 @@ dri2_check_dma_buf_format(const _EGLImageAttribs *attrs)
    unsigned i, plane_n;
 
    switch (attrs->DMABufFourCC.Value) {
+   case DRM_FORMAT_R8:
+   case DRM_FORMAT_RG88:
+   case DRM_FORMAT_GR88:
    case DRM_FORMAT_RGB332:
    case DRM_FORMAT_BGR233:
    case DRM_FORMAT_XRGB4444:
