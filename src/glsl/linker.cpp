@@ -2803,11 +2803,21 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    unsigned total_shader_storage_blocks = 0;
 
    for (unsigned i = 0; i < prog->NumUniformBlocks; i++) {
-      if (prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
+      /* Don't check SSBOs for Uniform Block Size */
+      if (!prog->UniformBlocks[i].IsShaderStorage &&
+          prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
          linker_error(prog, "Uniform block %s too big (%d/%d)\n",
                       prog->UniformBlocks[i].Name,
                       prog->UniformBlocks[i].UniformBufferSize,
                       ctx->Const.MaxUniformBlockSize);
+      }
+
+      if (prog->UniformBlocks[i].IsShaderStorage &&
+          prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxShaderStorageBlockSize) {
+         linker_error(prog, "Shader storage block %s too big (%d/%d)\n",
+                      prog->UniformBlocks[i].Name,
+                      prog->UniformBlocks[i].UniformBufferSize,
+                      ctx->Const.MaxShaderStorageBlockSize);
       }
 
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
