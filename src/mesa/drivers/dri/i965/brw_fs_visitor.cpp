@@ -1963,11 +1963,11 @@ fs_visitor::emit_barrier()
    fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
 
    /* Clear the message payload */
-   fs_inst *inst = bld.exec_all().MOV(payload, fs_reg(0u));
+   bld.exec_all().MOV(payload, fs_reg(0u));
 
    /* Copy bits 27:24 of r0.2 (barrier id) to the message payload reg.2 */
    fs_reg r0_2 = fs_reg(retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD));
-   inst = bld.exec_all().AND(component(payload, 2), r0_2, fs_reg(0x0f000000u));
+   bld.exec_all().AND(component(payload, 2), r0_2, fs_reg(0x0f000000u));
 
    /* Emit a gateway "barrier" message using the payload we set up, followed
     * by a wait instruction.
