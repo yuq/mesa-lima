@@ -710,7 +710,9 @@ fs_visitor::no16(const char *msg)
    } else {
       simd16_unsupported = true;
 
-      perf_debug("SIMD16 shader failed to compile: %s", msg);
+      struct brw_compiler *compiler = brw->intelScreen->compiler;
+      compiler->shader_perf_log(brw,
+                                "SIMD16 shader failed to compile: %s", msg);
    }
 }
 
@@ -3800,9 +3802,12 @@ fs_visitor::allocate_registers()
          fail("Failure to register allocate.  Reduce number of "
               "live scalar values to avoid this.");
       } else {
-         perf_debug("%s shader triggered register spilling.  "
-                    "Try reducing the number of live scalar values to "
-                    "improve performance.\n", stage_name);
+         struct brw_compiler *compiler = brw->intelScreen->compiler;
+         compiler->shader_perf_log(brw,
+                                   "%s shader triggered register spilling.  "
+                                   "Try reducing the number of live scalar "
+                                   "values to improve performance.\n",
+                                   stage_name);
       }
 
       /* Since we're out of heuristics, just go spill registers until we
