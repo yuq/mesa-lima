@@ -128,7 +128,6 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
 {
    struct gl_renderbuffer *rb =
          _mesa_get_read_renderbuffer_for_format(ctx, format);
-   GLenum srcType;
 
    assert(rb);
 
@@ -150,21 +149,6 @@ _mesa_readpixels_needs_slow_path(const struct gl_context *ctx, GLenum format,
    default:
       /* Color formats. */
       if (_mesa_need_rgb_to_luminance_conversion(rb->Format, format)) {
-         return GL_TRUE;
-      }
-
-      /* Conversion between signed and unsigned integers needs masking
-       * (it isn't just memcpy). */
-      srcType = _mesa_get_format_datatype(rb->Format);
-
-      if ((srcType == GL_INT &&
-           (type == GL_UNSIGNED_INT ||
-            type == GL_UNSIGNED_SHORT ||
-            type == GL_UNSIGNED_BYTE)) ||
-          (srcType == GL_UNSIGNED_INT &&
-           (type == GL_INT ||
-            type == GL_SHORT ||
-            type == GL_BYTE))) {
          return GL_TRUE;
       }
 
