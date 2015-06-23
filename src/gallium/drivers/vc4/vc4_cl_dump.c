@@ -73,7 +73,7 @@ dump_VC4_PACKET_STORE_FULL_RES_TILE_BUFFER(void *cl, uint32_t offset, uint32_t h
 }
 
 static void
-dump_VC4_PACKET_STORE_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw_offset)
+dump_loadstore_general(void *cl, uint32_t offset, uint32_t hw_offset)
 {
         uint8_t *bytes = cl + offset;
         uint32_t *addr = cl + offset + 2;
@@ -148,6 +148,18 @@ dump_VC4_PACKET_STORE_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw
                 offset + 2, hw_offset + 2, *addr & ~15,
                 fullcolor, fullzs, fullvg,
                 (*addr & (1 << 3)) ? " EOF" : "");
+}
+
+static void
+dump_VC4_PACKET_STORE_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        dump_loadstore_general(cl, offset, hw_offset);
+}
+
+static void
+dump_VC4_PACKET_LOAD_TILE_BUFFER_GENERAL(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        dump_loadstore_general(cl, offset, hw_offset);
 }
 
 static void
@@ -342,7 +354,7 @@ static const struct packet_info {
         PACKET_DUMP(VC4_PACKET_STORE_FULL_RES_TILE_BUFFER),
         PACKET_DUMP(VC4_PACKET_LOAD_FULL_RES_TILE_BUFFER),
         PACKET_DUMP(VC4_PACKET_STORE_TILE_BUFFER_GENERAL),
-        PACKET(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL),
+        PACKET_DUMP(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL),
 
         PACKET(VC4_PACKET_GL_INDEXED_PRIMITIVE),
         PACKET(VC4_PACKET_GL_ARRAY_PRIMITIVE),
