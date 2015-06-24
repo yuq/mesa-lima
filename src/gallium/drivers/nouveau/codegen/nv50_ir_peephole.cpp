@@ -236,6 +236,9 @@ LoadPropagation::visit(BasicBlock *bb)
       if (i->op == OP_CALL) // calls have args as sources, they must be in regs
          continue;
 
+      if (i->op == OP_PFETCH) // pfetch expects arg1 to be a reg
+         continue;
+
       if (i->srcExists(1))
          checkSwapSrc01(i);
 
@@ -278,7 +281,6 @@ private:
 
    void tryCollapseChainedMULs(Instruction *, const int s, ImmediateValue&);
 
-   // TGSI 'true' is converted to -1 by F2I(NEG(SET)), track back to SET
    CmpInstruction *findOriginForTestWithZero(Value *);
 
    unsigned int foldCount;
@@ -337,25 +339,33 @@ ConstantFolding::findOriginForTestWithZero(Value *value)
       return NULL;
    Instruction *insn = value->getInsn();
 
-   while (insn && insn->op != OP_SET) {
-      Instruction *next = NULL;
-      switch (insn->op) {
-      case OP_NEG:
-      case OP_ABS:
-      case OP_CVT:
-         next = insn->getSrc(0)->getInsn();
-         if (insn->sType != next->dType)
+   if (insn->asCmp() && insn->op != OP_SLCT)
+      return insn->asCmp();
+
+   /* Sometimes mov's will sneak in as a result of other folding. This gets
+    * cleaned up later.
+    */
+   if (insn->op == OP_MOV)
+      return findOriginForTestWithZero(insn->getSrc(0));
+
+   /* Deal with AND 1.0 here since nv50 can't fold into boolean float */
+   if (insn->op == OP_AND) {
+      int s = 0;
+      ImmediateValue imm;
+      if (!insn->src(s).getImmediate(imm)) {
+         s = 1;
+         if (!insn->src(s).getImmediate(imm))
             return NULL;
-         break;
-      case OP_MOV:
-         next = insn->getSrc(0)->getInsn();
-         break;
-      default:
-         return NULL;
       }
-      insn = next;
+      if (imm.reg.data.f32 != 1.0f)
+         return NULL;
+      /* TODO: Come up with a way to handle the condition being inverted */
+      if (insn->src(!s).mod != Modifier(0))
+         return NULL;
+      return findOriginForTestWithZero(insn->getSrc(!s));
    }
-   return insn ? insn->asCmp() : NULL;
+
+   return NULL;
 }
 
 void
@@ -574,6 +584,11 @@ ConstantFolding::expr(Instruction *i,
    case OP_POPCNT:
       res.data.u32 = util_bitcount(a->data.u32 & b->data.u32);
       break;
+   case OP_PFETCH:
+      // The two arguments to pfetch are logically added together. Normally
+      // the second argument will not be constant, but that can happen.
+      res.data.u32 = a->data.u32 + b->data.u32;
+      break;
    default:
       return;
    }
@@ -588,7 +603,9 @@ ConstantFolding::expr(Instruction *i,
 
    i->getSrc(0)->reg.data = res.data;
 
-   if (i->op == OP_MAD || i->op == OP_FMA) {
+   switch (i->op) {
+   case OP_MAD:
+   case OP_FMA: {
       i->op = OP_ADD;
 
       i->setSrc(1, i->getSrc(0));
@@ -603,8 +620,14 @@ ConstantFolding::expr(Instruction *i,
          bld.setPosition(i, false);
          i->setSrc(1, bld.loadImm(NULL, res.data.u32));
       }
-   } else {
+      break;
+   }
+   case OP_PFETCH:
+      // Leave PFETCH alone... we just folded its 2 args into 1.
+      break;
+   default:
       i->op = i->saturate ? OP_SAT : OP_MOV; /* SAT handled by unary() */
+      break;
    }
    i->subOp = 0;
 }
@@ -946,30 +969,79 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 
    case OP_SET: // TODO: SET_AND,OR,XOR
    {
+      /* This optimizes the case where the output of a set is being compared
+       * to zero. Since the set can only produce 0/-1 (int) or 0/1 (float), we
+       * can be a lot cleverer in our comparison.
+       */
       CmpInstruction *si = findOriginForTestWithZero(i->getSrc(t));
       CondCode cc, ccZ;
-      if (i->src(t).mod != Modifier(0))
-         return;
-      if (imm0.reg.data.u32 != 0 || !si || si->op != OP_SET)
+      if (imm0.reg.data.u32 != 0 || !si)
          return;
       cc = si->setCond;
       ccZ = (CondCode)((unsigned int)i->asCmp()->setCond & ~CC_U);
+      // We do everything assuming var (cmp) 0, reverse the condition if 0 is
+      // first.
       if (s == 0)
          ccZ = reverseCondCode(ccZ);
+      // If there is a negative modifier, we need to undo that, by flipping
+      // the comparison to zero.
+      if (i->src(t).mod.neg())
+         ccZ = reverseCondCode(ccZ);
+      // If this is a signed comparison, we expect the input to be a regular
+      // boolean, i.e. 0/-1. However the rest of the logic assumes that true
+      // is positive, so just flip the sign.
+      if (i->sType == TYPE_S32) {
+         assert(!isFloatType(si->dType));
+         ccZ = reverseCondCode(ccZ);
+      }
       switch (ccZ) {
-      case CC_LT: cc = CC_FL; break;
-      case CC_GE: cc = CC_TR; break;
-      case CC_EQ: cc = inverseCondCode(cc); break;
-      case CC_LE: cc = inverseCondCode(cc); break;
-      case CC_GT: break;
-      case CC_NE: break;
+      case CC_LT: cc = CC_FL; break; // bool < 0 -- this is never true
+      case CC_GE: cc = CC_TR; break; // bool >= 0 -- this is always true
+      case CC_EQ: cc = inverseCondCode(cc); break; // bool == 0 -- !bool
+      case CC_LE: cc = inverseCondCode(cc); break; // bool <= 0 -- !bool
+      case CC_GT: break; // bool > 0 -- bool
+      case CC_NE: break; // bool != 0 -- bool
       default:
          return;
       }
+
+      // Update the condition of this SET to be identical to the origin set,
+      // but with the updated condition code. The original SET should get
+      // DCE'd, ideally.
+      i->op = si->op;
       i->asCmp()->setCond = cc;
       i->setSrc(0, si->src(0));
       i->setSrc(1, si->src(1));
+      if (si->srcExists(2))
+         i->setSrc(2, si->src(2));
       i->sType = si->sType;
+   }
+      break;
+
+   case OP_AND:
+   {
+      CmpInstruction *cmp = i->getSrc(t)->getInsn()->asCmp();
+      if (!cmp || cmp->op == OP_SLCT || cmp->getDef(0)->refCount() > 1)
+         return;
+      if (!prog->getTarget()->isOpSupported(cmp->op, TYPE_F32))
+         return;
+      if (imm0.reg.data.f32 != 1.0)
+         return;
+      if (i->getSrc(t)->getInsn()->dType != TYPE_U32)
+         return;
+
+      i->getSrc(t)->getInsn()->dType = TYPE_F32;
+      if (i->src(t).mod != Modifier(0)) {
+         assert(i->src(t).mod == Modifier(NV50_IR_MOD_NOT));
+         i->src(t).mod = Modifier(0);
+         cmp->setCond = inverseCondCode(cmp->setCond);
+      }
+      i->op = OP_MOV;
+      i->setSrc(s, NULL);
+      if (t) {
+         i->setSrc(0, i->getSrc(t));
+         i->setSrc(t, NULL);
+      }
    }
       break;
 
@@ -2216,7 +2288,7 @@ FlatteningPass::visit(BasicBlock *bb)
              insn->op != OP_LINTERP && // probably just nve4
              insn->op != OP_PINTERP && // probably just nve4
              ((insn->op != OP_LOAD && insn->op != OP_STORE) ||
-              typeSizeof(insn->dType) <= 4) &&
+              (typeSizeof(insn->dType) <= 4 && !insn->src(0).isIndirect(0))) &&
              !insn->isNop()) {
             insn->join = 1;
             bb->remove(bb->getExit());

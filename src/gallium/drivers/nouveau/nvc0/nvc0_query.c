@@ -617,6 +617,7 @@ nvc0_query_pushbuf_submit(struct nouveau_pushbuf *push,
 
 #define NVC0_IB_ENTRY_1_NO_PREFETCH (1 << (31 - 8))
 
+   PUSH_REFN(push, q->bo, NOUVEAU_BO_RD | NOUVEAU_BO_GART);
    nouveau_pushbuf_space(push, 0, 0, 1);
    nouveau_pushbuf_data(push, q->bo, q->offset + result_offset, 4 |
                         NVC0_IB_ENTRY_1_NO_PREFETCH);
@@ -1407,11 +1408,14 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    count += NVC0_QUERY_DRV_STAT_COUNT;
 
    if (screen->base.device->drm_version >= 0x01000101) {
-      if (screen->base.class_3d >= NVE4_3D_CLASS) {
-         count += NVE4_PM_QUERY_COUNT;
-      } else
       if (screen->compute) {
-         count += NVC0_PM_QUERY_COUNT; /* NVC0_COMPUTE is not always enabled */
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            count += NVE4_PM_QUERY_COUNT;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            /* NVC0_COMPUTE is not always enabled */
+            count += NVC0_PM_QUERY_COUNT;
+         }
       }
    }
 
@@ -1437,19 +1441,21 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    } else
 #endif
    if (id < count) {
-      if (screen->base.class_3d >= NVE4_3D_CLASS) {
-         info->name = nve4_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
-         info->query_type = NVE4_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
-         info->max_value.u64 =
-            (id < NVE4_PM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
-         info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
-         return 1;
-      } else
       if (screen->compute) {
-         info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
-         info->query_type = NVC0_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
-         info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
-         return 1;
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            info->name = nve4_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
+            info->query_type = NVE4_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
+            info->max_value.u64 =
+               (id < NVE4_PM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
+            info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
+            return 1;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
+            info->query_type = NVC0_PM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
+            info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
+            return 1;
+         }
       }
    }
    /* user asked for info about non-existing query */
@@ -1469,10 +1475,13 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
 #endif
 
    if (screen->base.device->drm_version >= 0x01000101) {
-      if (screen->base.class_3d >= NVE4_3D_CLASS) {
-         count++;
-      } else if (screen->compute) {
-         count++; /* NVC0_COMPUTE is not always enabled */
+      if (screen->compute) {
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            count++;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            count++; /* NVC0_COMPUTE is not always enabled */
+         }
       }
    }
 
@@ -1480,25 +1489,28 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
       return count;
 
    if (id == NVC0_QUERY_MP_COUNTER_GROUP) {
-      info->name = "MP counters";
-      info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
+      if (screen->compute) {
+         info->name = "MP counters";
+         info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
 
-      if (screen->base.class_3d >= NVE4_3D_CLASS) {
-         info->num_queries = NVE4_PM_QUERY_COUNT;
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            info->num_queries = NVE4_PM_QUERY_COUNT;
 
-          /* On NVE4+, each multiprocessor have 8 hardware counters separated
-           * in two distinct domains, but we allow only one active query
-           * simultaneously because some of them use more than one hardware
-           * counter and this will result in an undefined behaviour. */
-          info->max_active_queries = 1; /* TODO: handle multiple hw counters */
-          return 1;
-      } else if (screen->compute) {
-         info->num_queries = NVC0_PM_QUERY_COUNT;
+             /* On NVE4+, each multiprocessor have 8 hardware counters separated
+              * in two distinct domains, but we allow only one active query
+              * simultaneously because some of them use more than one hardware
+              * counter and this will result in an undefined behaviour. */
+             info->max_active_queries = 1; /* TODO: handle multiple hw counters */
+             return 1;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            info->num_queries = NVC0_PM_QUERY_COUNT;
 
-         /* On NVC0:NVE4, each multiprocessor have 8 hardware counters
-          * in a single domain. */
-         info->max_active_queries = 8;
-         return 1;
+            /* On NVC0:NVE4, each multiprocessor have 8 hardware counters
+             * in a single domain. */
+            info->max_active_queries = 8;
+            return 1;
+         }
       }
    }
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS

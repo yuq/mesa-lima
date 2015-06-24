@@ -157,6 +157,7 @@ _mesa_initialize_window_framebuffer(struct gl_framebuffer *fb,
    fb->_Status = GL_FRAMEBUFFER_COMPLETE_EXT;
    fb->_AllColorBuffersFixedPoint = !visual->floatMode;
    fb->_HasSNormOrFloatColorBuffer = visual->floatMode;
+   fb->_HasAttachments = true;
 
    compute_depth_max(fb);
 }
@@ -312,7 +313,7 @@ _mesa_resize_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb,
 
    if (ctx) {
       /* update scissor / window bounds */
-      _mesa_update_draw_buffer_bounds(ctx);
+      _mesa_update_draw_buffer_bounds(ctx, ctx->DrawBuffer);
       /* Signal new buffer state so that swrast will update its clipping
        * info (the CLIP_BIT flag).
        */
@@ -356,6 +357,43 @@ update_framebuffer_size(struct gl_context *ctx, struct gl_framebuffer *fb)
 }
 
 
+
+/**
+ * Given a bounding box, intersect the bounding box with the scissor of
+ * a specified vieport.
+ *
+ * \param ctx     GL context.
+ * \param idx     Index of the desired viewport
+ * \param bbox    Bounding box for the scissored viewport.  Stored as xmin,
+ *                xmax, ymin, ymax.
+ */
+void
+_mesa_intersect_scissor_bounding_box(const struct gl_context *ctx,
+                                     unsigned idx, int *bbox)
+{
+   if (ctx->Scissor.EnableFlags & (1u << idx)) {
+      if (ctx->Scissor.ScissorArray[idx].X > bbox[0]) {
+         bbox[0] = ctx->Scissor.ScissorArray[idx].X;
+      }
+      if (ctx->Scissor.ScissorArray[idx].Y > bbox[2]) {
+         bbox[2] = ctx->Scissor.ScissorArray[idx].Y;
+      }
+      if (ctx->Scissor.ScissorArray[idx].X + ctx->Scissor.ScissorArray[idx].Width < bbox[1]) {
+         bbox[1] = ctx->Scissor.ScissorArray[idx].X + ctx->Scissor.ScissorArray[idx].Width;
+      }
+      if (ctx->Scissor.ScissorArray[idx].Y + ctx->Scissor.ScissorArray[idx].Height < bbox[3]) {
+         bbox[3] = ctx->Scissor.ScissorArray[idx].Y + ctx->Scissor.ScissorArray[idx].Height;
+      }
+      /* finally, check for empty region */
+      if (bbox[0] > bbox[1]) {
+         bbox[0] = bbox[1];
+      }
+      if (bbox[2] > bbox[3]) {
+         bbox[2] = bbox[3];
+      }
+   }
+}
+
 /**
  * Calculate the inclusive bounding box for the scissor of a specific viewport
  *
@@ -380,27 +418,7 @@ _mesa_scissor_bounding_box(const struct gl_context *ctx,
    bbox[1] = buffer->Width;
    bbox[3] = buffer->Height;
 
-   if (ctx->Scissor.EnableFlags & (1u << idx)) {
-      if (ctx->Scissor.ScissorArray[idx].X > bbox[0]) {
-         bbox[0] = ctx->Scissor.ScissorArray[idx].X;
-      }
-      if (ctx->Scissor.ScissorArray[idx].Y > bbox[2]) {
-         bbox[2] = ctx->Scissor.ScissorArray[idx].Y;
-      }
-      if (ctx->Scissor.ScissorArray[idx].X + ctx->Scissor.ScissorArray[idx].Width < bbox[1]) {
-         bbox[1] = ctx->Scissor.ScissorArray[idx].X + ctx->Scissor.ScissorArray[idx].Width;
-      }
-      if (ctx->Scissor.ScissorArray[idx].Y + ctx->Scissor.ScissorArray[idx].Height < bbox[3]) {
-         bbox[3] = ctx->Scissor.ScissorArray[idx].Y + ctx->Scissor.ScissorArray[idx].Height;
-      }
-      /* finally, check for empty region */
-      if (bbox[0] > bbox[1]) {
-         bbox[0] = bbox[1];
-      }
-      if (bbox[2] > bbox[3]) {
-         bbox[2] = bbox[3];
-      }
-   }
+   _mesa_intersect_scissor_bounding_box(ctx, idx, bbox);
 
    assert(bbox[0] <= bbox[1]);
    assert(bbox[2] <= bbox[3]);
@@ -413,9 +431,9 @@ _mesa_scissor_bounding_box(const struct gl_context *ctx,
  * \param ctx  the GL context.
  */
 void
-_mesa_update_draw_buffer_bounds(struct gl_context *ctx)
+_mesa_update_draw_buffer_bounds(struct gl_context *ctx,
+                                struct gl_framebuffer *buffer)
 {
-   struct gl_framebuffer *buffer = ctx->DrawBuffer;
    int bbox[4];
 
    if (!buffer)
@@ -652,7 +670,7 @@ update_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
        * context state (GL_READ_BUFFER too).
        */
       if (fb->ColorDrawBuffer[0] != ctx->Color.DrawBuffer[0]) {
-         _mesa_drawbuffers(ctx, ctx->Const.MaxDrawBuffers,
+         _mesa_drawbuffers(ctx, fb, ctx->Const.MaxDrawBuffers,
                            ctx->Color.DrawBuffer, NULL);
       }
    }
@@ -678,24 +696,21 @@ update_framebuffer(struct gl_context *ctx, struct gl_framebuffer *fb)
 
 
 /**
- * Update state related to the current draw/read framebuffers.
+ * Update state related to the draw/read framebuffers.
  */
 void
-_mesa_update_framebuffer(struct gl_context *ctx)
+_mesa_update_framebuffer(struct gl_context *ctx,
+                         struct gl_framebuffer *readFb,
+                         struct gl_framebuffer *drawFb)
 {
-   struct gl_framebuffer *drawFb;
-   struct gl_framebuffer *readFb;
-
    assert(ctx);
-   drawFb = ctx->DrawBuffer;
-   readFb = ctx->ReadBuffer;
 
    update_framebuffer(ctx, drawFb);
    if (readFb != drawFb)
       update_framebuffer(ctx, readFb);
 
-   _mesa_update_clamp_vertex_color(ctx);
-   _mesa_update_clamp_fragment_color(ctx);
+   _mesa_update_clamp_vertex_color(ctx, drawFb);
+   _mesa_update_clamp_fragment_color(ctx, drawFb);
 }
 
 

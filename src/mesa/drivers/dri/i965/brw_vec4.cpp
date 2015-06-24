@@ -35,6 +35,7 @@ extern "C" {
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
 }
+#include "main/context.h"
 
 #define MAX_INSTRUCTION (1 << 30)
 
@@ -1676,20 +1677,16 @@ vec4_visitor::emit_shader_time_end()
     */
    emit(ADD(diff, src_reg(diff), src_reg(-2u)));
 
-   emit_shader_time_write(st_base, src_reg(diff));
-   emit_shader_time_write(st_written, src_reg(1u));
+   emit_shader_time_write(0, src_reg(diff));
+   emit_shader_time_write(1, src_reg(1u));
    emit(BRW_OPCODE_ELSE);
-   emit_shader_time_write(st_reset, src_reg(1u));
+   emit_shader_time_write(2, src_reg(1u));
    emit(BRW_OPCODE_ENDIF);
 }
 
 void
-vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
-                                     src_reg value)
+vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 {
-   int shader_time_index =
-      brw_get_shader_time_index(brw, shader_prog, prog, type);
-
    dst_reg dst =
       dst_reg(this, glsl_type::get_array_instance(glsl_type::vec4_type, 2));
 
@@ -1698,7 +1695,8 @@ vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
    time.reg_offset++;
 
    offset.type = BRW_REGISTER_TYPE_UD;
-   emit(MOV(offset, src_reg(shader_time_index * SHADER_TIME_STRIDE)));
+   int index = shader_time_index * 3 + shader_time_subindex;
+   emit(MOV(offset, src_reg(index * SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
    emit(MOV(time, src_reg(value)));
@@ -1709,11 +1707,11 @@ vec4_visitor::emit_shader_time_write(enum shader_time_shader_type type,
 }
 
 bool
-vec4_visitor::run()
+vec4_visitor::run(gl_clip_plane *clip_planes)
 {
    sanity_param_count = prog->Parameters->NumParameters;
 
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+   if (shader_time_index >= 0)
       emit_shader_time_begin();
 
    assign_binding_table_offsets();
@@ -1731,7 +1729,7 @@ vec4_visitor::run()
    base_ir = NULL;
 
    if (key->userclip_active && !prog->UsesClipDistanceOut)
-      setup_uniform_clipplane_values();
+      setup_uniform_clipplane_values(clip_planes);
 
    emit_thread_end();
 
@@ -1768,7 +1766,7 @@ vec4_visitor::run()
          snprintf(filename, 64, "%s-%04d-%02d-%02d-" #pass,            \
                   stage_abbrev, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
                                                                        \
-         backend_visitor::dump_instructions(filename);                 \
+         backend_shader::dump_instructions(filename);                  \
       }                                                                \
                                                                        \
       progress = progress || this_progress;                            \
@@ -1781,7 +1779,7 @@ vec4_visitor::run()
       snprintf(filename, 64, "%s-%04d-00-start",
                stage_abbrev, shader_prog ? shader_prog->Name : 0);
 
-      backend_visitor::dump_instructions(filename);
+      backend_shader::dump_instructions(filename);
    }
 
    bool progress;
@@ -1868,8 +1866,6 @@ brw_vs_emit(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
    const unsigned *assembly = NULL;
-   bool use_nir =
-      brw->ctx.Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions != NULL;
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
@@ -1881,22 +1877,33 @@ brw_vs_emit(struct brw_context *brw,
    if (prog)
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &c->vp->program.Base,
+                                           ST_VS);
+
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
-   if (use_nir && !c->vp->program.Base.nir) {
-      /* Normally we generate NIR in LinkShader() or ProgramStringNotify(), but
-       * Mesa's fixed-function vertex program handling doesn't notify the driver
-       * at all.  Just do it here, at the last minute, even though it's lame.
-       */
-      assert(c->vp->program.Base.Id == 0 && prog == NULL);
-      c->vp->program.Base.nir =
-         brw_create_nir(brw, NULL, &c->vp->program.Base, MESA_SHADER_VERTEX);
-   }
+   if (brw->intelScreen->compiler->scalar_vs) {
+      if (!c->vp->program.Base.nir) {
+         /* Normally we generate NIR in LinkShader() or
+          * ProgramStringNotify(), but Mesa's fixed-function vertex program
+          * handling doesn't notify the driver at all.  Just do it here, at
+          * the last minute, even though it's lame.
+          */
+         assert(c->vp->program.Base.Id == 0 && prog == NULL);
+         c->vp->program.Base.nir =
+            brw_create_nir(brw, NULL, &c->vp->program.Base, MESA_SHADER_VERTEX);
+      }
 
-   if (brw->scalar_vs && (prog || use_nir)) {
-      fs_visitor v(brw, mem_ctx, &c->key, prog_data, prog, &c->vp->program, 8);
-      if (!v.run_vs()) {
+      prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
+
+      fs_visitor v(brw->intelScreen->compiler, brw,
+                   mem_ctx, MESA_SHADER_VERTEX, &c->key,
+                   &prog_data->base.base, prog, &c->vp->program.Base,
+                   8, st_index);
+      if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
             prog->LinkStatus = false;
             ralloc_strcat(&prog->InfoLog, v.fail_msg);
@@ -1908,7 +1915,8 @@ brw_vs_emit(struct brw_context *brw,
          return NULL;
       }
 
-      fs_generator g(brw, mem_ctx, (void *) &c->key, &prog_data->base.base,
+      fs_generator g(brw->intelScreen->compiler, brw,
+                     mem_ctx, (void *) &c->key, &prog_data->base.base,
                      &c->vp->program.Base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
@@ -1926,13 +1934,16 @@ brw_vs_emit(struct brw_context *brw,
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
 
-      prog_data->base.simd8 = true;
       c->base.last_scratch = v.last_scratch;
    }
 
    if (!assembly) {
-      vec4_vs_visitor v(brw, c, prog_data, prog, mem_ctx);
-      if (!v.run()) {
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
+
+      vec4_vs_visitor v(brw->intelScreen->compiler,
+                        c, prog_data, prog, mem_ctx, st_index,
+                        !_mesa_is_gles3(&brw->ctx));
+      if (!v.run(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
             prog->LinkStatus = false;
             ralloc_strcat(&prog->InfoLog, v.fail_msg);
@@ -1944,7 +1955,8 @@ brw_vs_emit(struct brw_context *brw,
          return NULL;
       }
 
-      vec4_generator g(brw, prog, &c->vp->program.Base, &prog_data->base,
+      vec4_generator g(brw->intelScreen->compiler, brw,
+                       prog, &c->vp->program.Base, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
       assembly = g.generate_assembly(v.cfg, final_assembly_size);
    }

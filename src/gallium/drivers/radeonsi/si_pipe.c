@@ -251,6 +251,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 	case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
+	case PIPE_CAP_TGSI_TEXCOORD:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -286,13 +287,13 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
 	case PIPE_CAP_VERTEX_COLOR_CLAMPED:
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
-	case PIPE_CAP_TGSI_TEXCOORD:
 	case PIPE_CAP_FAKE_SW_MSAA:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
+	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 		return 0;
 
 	case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
@@ -451,6 +452,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
 		return 0;
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
 		return 1;
 	}
 	return 0;

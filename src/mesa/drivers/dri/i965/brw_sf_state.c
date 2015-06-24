@@ -52,6 +52,12 @@ static void upload_sf_vp(struct brw_context *brw)
 			 sizeof(*sfv), 32, &brw->sf.vp_offset);
    memset(sfv, 0, sizeof(*sfv));
 
+   /* Accessing the fields Width and Height of gl_framebuffer to produce the
+    * values to program the viewport and scissor is fine as long as the
+    * gl_framebuffer has atleast one attachment.
+    */
+   assert(ctx->DrawBuffer->_HasAttachments);
+
    if (render_to_fbo) {
       y_scale = 1.0;
       y_bias = 0;

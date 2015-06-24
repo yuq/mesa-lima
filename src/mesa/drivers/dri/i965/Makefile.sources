@@ -18,9 +18,11 @@ i965_FILES = \
 	brw_clip_unfilled.c \
 	brw_clip_util.c \
 	brw_compute.c \
+	brw_conditional_render.c \
 	brw_context.c \
 	brw_context.h \
 	brw_cs.cpp \
+	brw_cs.h \
 	brw_cubemap_normalize.cpp \
 	brw_curbe.c \
 	brw_dead_control_flow.cpp \
@@ -40,6 +42,7 @@ i965_FILES = \
 	brw_ff_gs.c \
 	brw_ff_gs_emit.c \
 	brw_ff_gs.h \
+	brw_fs_builder.h \
 	brw_fs_channel_expressions.cpp \
 	brw_fs_cmod_propagation.cpp \
 	brw_fs_combine_constants.cpp \
@@ -47,7 +50,6 @@ i965_FILES = \
 	brw_fs.cpp \
 	brw_fs_cse.cpp \
 	brw_fs_dead_code_eliminate.cpp \
-	brw_fs_fp.cpp \
 	brw_fs_generator.cpp \
 	brw_fs.h \
 	brw_fs_live_variables.cpp \
@@ -128,6 +130,7 @@ i965_FILES = \
 	brw_vs.h \
 	brw_vs_state.c \
 	brw_vs_surface_state.c \
+	brw_vue_map.c \
 	brw_wm.c \
 	brw_wm.h \
 	brw_wm_iz.cpp \

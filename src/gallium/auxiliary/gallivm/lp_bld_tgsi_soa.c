@@ -1532,6 +1532,11 @@ emit_fetch_system_value(
       atype = TGSI_TYPE_UNSIGNED;
       break;
 
+   case TGSI_SEMANTIC_INVOCATIONID:
+      res = lp_build_broadcast_scalar(&bld_base->uint_bld, bld->system_values.invocation_id);
+      atype = TGSI_TYPE_UNSIGNED;
+      break;
+
    default:
       assert(!"unexpected semantic in emit_fetch_system_value");
       res = bld_base->base.zero;
@@ -1670,30 +1675,11 @@ emit_store_chan(
     *
     * It is always assumed to be float.
     */
-   switch( inst->Instruction.Saturate ) {
-   case TGSI_SAT_NONE:
-      break;
-
-   case TGSI_SAT_ZERO_ONE:
+   if (inst->Instruction.Saturate) {
       assert(dtype == TGSI_TYPE_FLOAT ||
              dtype == TGSI_TYPE_UNTYPED);
       value = LLVMBuildBitCast(builder, value, float_bld->vec_type, "");
       value = lp_build_clamp_zero_one_nanzero(float_bld, value);
-      break;
-
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      assert(dtype == TGSI_TYPE_FLOAT ||
-             dtype == TGSI_TYPE_UNTYPED);
-      value = LLVMBuildBitCast(builder, value, float_bld->vec_type, "");
-      /* This will give -1.0 for NaN which is probably not what we want. */
-      value = lp_build_max_ext(float_bld, value,
-                               lp_build_const_vec(gallivm, float_bld->type, -1.0),
-                               GALLIVM_NAN_RETURN_OTHER_SECOND_NONNAN);
-      value = lp_build_min(float_bld, value, float_bld->one);
-      break;
-
-   default:
-      assert(0);
    }
 
    if (reg->Register.Indirect) {

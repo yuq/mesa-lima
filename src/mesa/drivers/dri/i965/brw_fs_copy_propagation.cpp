@@ -541,8 +541,16 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
             /* Fit this constant in by commuting the operands.
              * Exception: we can't do this for 32-bit integer MUL/MACH
              * because it's asymmetric.
+             *
+             * The BSpec says for Broadwell that
+             *
+             *    "When multiplying DW x DW, the dst cannot be accumulator."
+             *
+             * Integer MUL with a non-accumulator destination will be lowered
+             * by lower_integer_multiplication(), so don't restrict it.
              */
-            if ((inst->opcode == BRW_OPCODE_MUL ||
+            if (((inst->opcode == BRW_OPCODE_MUL &&
+                  inst->dst.is_accumulator()) ||
                  inst->opcode == BRW_OPCODE_MACH) &&
                 (inst->src[1].type == BRW_REGISTER_TYPE_D ||
                  inst->src[1].type == BRW_REGISTER_TYPE_UD))

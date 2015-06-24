@@ -30,6 +30,7 @@
 #include "brw_defines.h"
 #include "intel_batchbuffer.h"
 #include "main/fbobject.h"
+#include "main/framebuffer.h"
 #include "main/viewport.h"
 
 /* The clip VP defines the guardband region where expensive clipping is skipped
@@ -93,10 +94,10 @@ gen6_upload_sf_vp(struct brw_context *brw)
    /* _NEW_BUFFERS */
    if (render_to_fbo) {
       y_scale = 1.0;
-      y_bias = 0;
+      y_bias = 0.0;
    } else {
       y_scale = -1.0;
-      y_bias = ctx->DrawBuffer->Height;
+      y_bias = (float)_mesa_geometric_height(ctx->DrawBuffer);
    }
 
    for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {

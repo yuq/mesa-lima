@@ -1098,7 +1098,7 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         if (ureg_dst_is_undef(tx->regs.oDepth))
            tx->regs.oDepth =
               ureg_DECL_output_masked(tx->ureg, TGSI_SEMANTIC_POSITION, 0,
-                                      TGSI_WRITEMASK_Z);
+                                      TGSI_WRITEMASK_Z, 0, 1);
         dst = tx->regs.oDepth; /* XXX: must write .z component */
         break;
     case D3DSPR_PREDICATE:
@@ -1966,7 +1966,7 @@ DECL_SPECIAL(DCL)
                 tx->info->position_t = TRUE;
             assert(sem.reg.idx < Elements(tx->regs.o));
             tx->regs.o[sem.reg.idx] = ureg_DECL_output_masked(
-                ureg, tgsi.Name, tgsi.Index, sem.reg.mask);
+                ureg, tgsi.Name, tgsi.Index, sem.reg.mask, 0, 1);
 
             if (tgsi.Name == TGSI_SEMANTIC_PSIZE)
                 tx->regs.oPts = tx->regs.o[sem.reg.idx];
@@ -1979,12 +1979,13 @@ DECL_SPECIAL(DCL)
                 ureg, tgsi.Name, tgsi.Index,
                 nine_tgsi_to_interp_mode(&tgsi),
                 0, /* cylwrap */
-                sem.reg.mod & NINED3DSPDM_CENTROID);
+                sem.reg.mod & NINED3DSPDM_CENTROID, 0, 1);
         } else
         if (!is_input && 0) { /* declare in COLOROUT/DEPTHOUT case */
             /* FragColor or FragDepth */
             assert(sem.reg.mask != 0);
-            ureg_DECL_output_masked(ureg, tgsi.Name, tgsi.Index, sem.reg.mask);
+            ureg_DECL_output_masked(ureg, tgsi.Name, tgsi.Index, sem.reg.mask,
+                                    0, 1);
         }
     }
     return D3D_OK;
@@ -2312,7 +2313,8 @@ DECL_SPECIAL(TEXM3x2DEPTH)
     ureg_CMP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_negate(ureg_abs(ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_Y))),
              ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_imm1f(ureg, 1.0f));
     /* replace the depth for depth testing with the result */
-    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0, TGSI_WRITEMASK_Z);
+    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                              TGSI_WRITEMASK_Z, 0, 1);
     ureg_MOV(ureg, tx->regs.oDepth, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X));
     /* note that we write nothing to the destination, since it's disallowed to use it afterward */
     return D3D_OK;
@@ -2410,7 +2412,8 @@ DECL_SPECIAL(TEXDEPTH)
     ureg_CMP(ureg, ureg_writemask(r5, TGSI_WRITEMASK_X), ureg_negate(ureg_abs(r5g)),
              r5r, ureg_imm1f(ureg, 1.0f));
     /* replace the depth for depth testing with the result */
-    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0, TGSI_WRITEMASK_Z);
+    tx->regs.oDepth = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_POSITION, 0,
+                                              TGSI_WRITEMASK_Z, 0, 1);
     ureg_MOV(ureg, tx->regs.oDepth, r5r);
 
     return D3D_OK;

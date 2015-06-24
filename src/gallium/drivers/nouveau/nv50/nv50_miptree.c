@@ -377,7 +377,7 @@ nv50_miptree_create(struct pipe_screen *pscreen,
    if (!bo_config.nv50.memtype && (pt->bind & PIPE_BIND_SHARED))
       mt->base.domain = NOUVEAU_BO_GART;
    else
-      mt->base.domain = NOUVEAU_BO_VRAM;
+      mt->base.domain = NV_VRAM_DOMAIN(nouveau_screen(pscreen));
 
    bo_flags = mt->base.domain | NOUVEAU_BO_NOSNOOP;
    if (mt->base.base.bind & (PIPE_BIND_CURSOR | PIPE_BIND_DISPLAY_TARGET))
@@ -419,7 +419,7 @@ nv50_miptree_from_handle(struct pipe_screen *pscreen,
       FREE(mt);
       return NULL;
    }
-   mt->base.domain = NOUVEAU_BO_VRAM;
+   mt->base.domain = mt->base.bo->flags & NOUVEAU_BO_APER;
    mt->base.address = mt->base.bo->offset;
 
    mt->base.base = *templ;

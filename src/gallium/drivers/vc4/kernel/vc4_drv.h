@@ -28,8 +28,6 @@
 
 enum vc4_bo_mode {
 	VC4_MODE_UNDECIDED,
-	VC4_MODE_TILE_ALLOC,
-	VC4_MODE_TSDA,
 	VC4_MODE_RENDER,
 	VC4_MODE_SHADER,
 };
@@ -51,6 +49,11 @@ struct vc4_exec_info {
 	 */
 	struct vc4_bo_exec_state *bo;
 	uint32_t bo_count;
+
+	/* List of other BOs used in the job that need to be released
+	 * once the job is complete.
+	 */
+	struct list_head unref_list;
 
 	/* Current unvalidated indices into @bo loaded by the non-hardware
 	 * VC4_PACKET_GEM_HANDLES.
@@ -83,14 +86,11 @@ struct vc4_exec_info {
 	uint32_t shader_state_count;
 
 	bool found_tile_binning_mode_config_packet;
-	bool found_tile_rendering_mode_config_packet;
 	bool found_start_tile_binning_packet;
 	bool found_increment_semaphore_packet;
-	bool found_wait_on_semaphore_packet;
 	uint8_t bin_tiles_x, bin_tiles_y;
-	uint32_t fb_width, fb_height;
-	uint32_t tile_alloc_init_block_size;
-	struct drm_gem_cma_object *tile_alloc_bo;
+	struct drm_gem_cma_object *tile_bo;
+	uint32_t tile_alloc_offset;
 
 	/**
 	 * Computed addresses pointing into exec_bo where we start the
@@ -157,18 +157,27 @@ struct vc4_validated_shader_info
 
 /* vc4_validate.c */
 int
-vc4_validate_cl(struct drm_device *dev,
-                void *validated,
-                void *unvalidated,
-                uint32_t len,
-                bool is_bin,
-                bool has_bin,
-                struct vc4_exec_info *exec);
+vc4_validate_bin_cl(struct drm_device *dev,
+		    void *validated,
+		    void *unvalidated,
+		    struct vc4_exec_info *exec);
 
 int
 vc4_validate_shader_recs(struct drm_device *dev, struct vc4_exec_info *exec);
 
 struct vc4_validated_shader_info *
 vc4_validate_shader(struct drm_gem_cma_object *shader_obj);
+
+bool vc4_use_bo(struct vc4_exec_info *exec,
+		uint32_t hindex,
+		enum vc4_bo_mode mode,
+		struct drm_gem_cma_object **obj);
+
+int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec);
+
+bool vc4_check_tex_size(struct vc4_exec_info *exec,
+			struct drm_gem_cma_object *fbo,
+			uint32_t offset, uint8_t tiling_format,
+			uint32_t width, uint32_t height, uint8_t cpp);
 
 #endif /* VC4_DRV_H */

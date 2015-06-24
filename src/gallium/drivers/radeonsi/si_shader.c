@@ -128,21 +128,10 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 	case TGSI_SEMANTIC_CLIPDIST:
 		assert(index <= 1);
 		return 2 + index;
-	case TGSI_SEMANTIC_CLIPVERTEX:
-		return 4;
-	case TGSI_SEMANTIC_COLOR:
-		assert(index <= 1);
-		return 5 + index;
-	case TGSI_SEMANTIC_BCOLOR:
-		assert(index <= 1);
-		return 7 + index;
-	case TGSI_SEMANTIC_FOG:
-		return 9;
-	case TGSI_SEMANTIC_EDGEFLAG:
-		return 10;
 	case TGSI_SEMANTIC_GENERIC:
-		assert(index <= 63-11);
-		return 11 + index;
+		assert(index <= 63-4);
+		return 4 + index;
+
 	default:
 		assert(0);
 		return 63;
@@ -1183,6 +1172,7 @@ handle_semantic:
 			continue;
 		case TGSI_SEMANTIC_PRIMID:
 		case TGSI_SEMANTIC_FOG:
+		case TGSI_SEMANTIC_TEXCOORD:
 		case TGSI_SEMANTIC_GENERIC:
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			shader->vs_output_param_offset[i] = param_count;

@@ -21,15 +21,16 @@ libfreedreno_la_SOURCES = \
 
 noinst_PROGRAMS = ir3_compiler
 
+# XXX: Required due to the C++ sources in libnir/libglsl_util
+nodist_EXTRA_ir3_compiler_SOURCES = dummy.cpp
 ir3_compiler_SOURCES = \
 	ir3/ir3_cmdline.c
 
 ir3_compiler_LDADD = \
 	libfreedreno.la \
-	../../auxiliary/libgallium.la \
+	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/glsl/libnir.la \
 	$(top_builddir)/src/libglsl_util.la \
-	-lstdc++ \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(GALLIUM_COMMON_LIB_DEPS) \
 	$(FREEDRENO_LIBS)

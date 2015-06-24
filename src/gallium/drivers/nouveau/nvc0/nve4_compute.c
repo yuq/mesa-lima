@@ -63,7 +63,7 @@ nve4_screen_compute_setup(struct nvc0_screen *screen,
       return ret;
    }
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 0, NVE4_CP_PARAM_SIZE, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 0, NVE4_CP_PARAM_SIZE, NULL,
                         &screen->parm);
    if (ret)
       return ret;

@@ -34,7 +34,7 @@ nvc0_program_update_context_state(struct nvc0_context *nvc0,
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
 
    if (prog && prog->need_tls) {
-      const uint32_t flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RDWR;
+      const uint32_t flags = NV_VRAM_DOMAIN(&nvc0->screen->base) | NOUVEAU_BO_RDWR;
       if (!nvc0->state.tls_required)
          BCTX_REFN_bo(nvc0->bufctx_3d, TLS, flags, nvc0->screen->tls);
       nvc0->state.tls_required |= 1 << stage;
@@ -262,10 +262,12 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
       if (tfb)
          targ->stride = tfb->stride[b];
 
+      buf = nv04_resource(targ->pipe.buffer);
+
+      BCTX_REFN(nvc0->bufctx_3d, TFB, buf, WR);
+
       if (!(nvc0->tfbbuf_dirty & (1 << b)))
          continue;
-
-      buf = nv04_resource(targ->pipe.buffer);
 
       if (!targ->clean)
          nvc0_query_fifo_wait(push, targ->pq);
@@ -280,7 +282,6 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
          PUSH_DATA(push, 0); /* TFB_BUFFER_OFFSET */
          targ->clean = FALSE;
       }
-      BCTX_REFN(nvc0->bufctx_3d, TFB, buf, WR);
    }
    for (; b < 4; ++b)
       IMMED_NVC0(push, NVC0_3D(TFB_BUFFER_ENABLE(b)), 0);

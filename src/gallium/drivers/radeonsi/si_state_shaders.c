@@ -182,8 +182,13 @@ static void si_shader_vs(struct si_shader *shader)
 	for (nparams = 0, i = 0 ; i < info->num_outputs; i++) {
 		switch (info->output_semantic_name[i]) {
 		case TGSI_SEMANTIC_CLIPVERTEX:
+		case TGSI_SEMANTIC_CLIPDIST:
+		case TGSI_SEMANTIC_CULLDIST:
 		case TGSI_SEMANTIC_POSITION:
 		case TGSI_SEMANTIC_PSIZE:
+		case TGSI_SEMANTIC_EDGEFLAG:
+		case TGSI_SEMANTIC_VIEWPORT_INDEX:
+		case TGSI_SEMANTIC_LAYER:
 			break;
 		default:
 			nparams++;
@@ -351,21 +356,25 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 					  union si_shader_key *key)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	unsigned i;
+
 	memset(key, 0, sizeof(*key));
 
-	if (sel->type == PIPE_SHADER_VERTEX) {
-		unsigned i;
-		if (!sctx->vertex_elements)
-			return;
-
-		for (i = 0; i < sctx->vertex_elements->count; ++i)
-			key->vs.instance_divisors[i] = sctx->vertex_elements->elements[i].instance_divisor;
+	switch (sel->type) {
+	case PIPE_SHADER_VERTEX:
+		if (sctx->vertex_elements)
+			for (i = 0; i < sctx->vertex_elements->count; ++i)
+				key->vs.instance_divisors[i] =
+					sctx->vertex_elements->elements[i].instance_divisor;
 
 		if (sctx->gs_shader) {
 			key->vs.as_es = 1;
 			key->vs.gs_used_inputs = sctx->gs_shader->gs_used_inputs;
 		}
-	} else if (sel->type == PIPE_SHADER_FRAGMENT) {
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		break;
+	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
@@ -393,11 +402,14 @@ static INLINE void si_shader_selector_key(struct pipe_context *ctx,
 		}
 
 		key->ps.alpha_func = PIPE_FUNC_ALWAYS;
-
 		/* Alpha-test should be disabled if colorbuffer 0 is integer. */
 		if (sctx->queued.named.dsa &&
 		    !sctx->framebuffer.cb0_is_integer)
 			key->ps.alpha_func = sctx->queued.named.dsa->alpha_func;
+		break;
+	}
+	default:
+		assert(0);
 	}
 }
 
@@ -580,15 +592,22 @@ static void si_delete_shader_selector(struct pipe_context *ctx,
 
 	while (p) {
 		c = p->next_variant;
-		if (sel->type == PIPE_SHADER_GEOMETRY) {
+		switch (sel->type) {
+		case PIPE_SHADER_VERTEX:
+			if (p->key.vs.as_es)
+				si_pm4_delete_state(sctx, es, p->pm4);
+			else
+				si_pm4_delete_state(sctx, vs, p->pm4);
+			break;
+		case PIPE_SHADER_GEOMETRY:
 			si_pm4_delete_state(sctx, gs, p->pm4);
 			si_pm4_delete_state(sctx, vs, p->gs_copy_shader->pm4);
-		} else if (sel->type == PIPE_SHADER_FRAGMENT)
+			break;
+		case PIPE_SHADER_FRAGMENT:
 			si_pm4_delete_state(sctx, ps, p->pm4);
-		else if (p->key.vs.as_es)
-			si_pm4_delete_state(sctx, es, p->pm4);
-		else
-			si_pm4_delete_state(sctx, vs, p->pm4);
+			break;
+		}
+
 		si_shader_destroy(ctx, p);
 		free(p);
 		p = c;
@@ -661,8 +680,9 @@ bcolor:
 		    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
 			tmp |= S_028644_FLAT_SHADE(1);
 
-		if (name == TGSI_SEMANTIC_GENERIC &&
-		    sctx->sprite_coord_enable & (1 << index)) {
+		if (name == TGSI_SEMANTIC_PCOORD ||
+		    (name == TGSI_SEMANTIC_TEXCOORD &&
+		     sctx->sprite_coord_enable & (1 << index))) {
 			tmp |= S_028644_PT_SPRITE_TEX(1);
 		}
 
@@ -835,8 +855,15 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 			si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 		if (si_update_scratch_buffer(sctx, sctx->gs_shader))
 			si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
-		if (si_update_scratch_buffer(sctx, sctx->vs_shader))
-			si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+
+		/* VS can be bound as ES or VS. */
+		if (sctx->gs_shader) {
+			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+				si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
+		} else {
+			if (si_update_scratch_buffer(sctx, sctx->vs_shader))
+				si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+		}
 	}
 
 	/* The LLVM shader backend should be reporting aligned scratch_sizes. */

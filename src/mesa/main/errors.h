@@ -76,6 +76,15 @@ extern FILE *
 _mesa_get_log_file(void);
 
 extern void
+_mesa_gl_vdebug(struct gl_context *ctx,
+                GLuint *id,
+                enum mesa_debug_source source,
+                enum mesa_debug_type type,
+                enum mesa_debug_severity severity,
+                const char *fmtString,
+                va_list args);
+
+extern void
 _mesa_gl_debug(struct gl_context *ctx,
                GLuint *id,
                enum mesa_debug_source source,

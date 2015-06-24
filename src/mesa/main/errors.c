@@ -39,6 +39,7 @@
 #include "mtypes.h"
 #include "version.h"
 #include "util/hash_table.h"
+#include "util/simple_list.h"
 
 static mtx_t DynamicIDMutex = _MTX_INITIALIZER_NP;
 static GLuint NextDynamicID = 1;
@@ -1412,6 +1413,26 @@ should_output(struct gl_context *ctx, GLenum error, const char *fmtString)
 
 
 void
+_mesa_gl_vdebug(struct gl_context *ctx,
+                GLuint *id,
+                enum mesa_debug_source source,
+                enum mesa_debug_type type,
+                enum mesa_debug_severity severity,
+                const char *fmtString,
+                va_list args)
+{
+   char s[MAX_DEBUG_MESSAGE_LENGTH];
+   int len;
+
+   debug_get_id(id);
+
+   len = _mesa_vsnprintf(s, MAX_DEBUG_MESSAGE_LENGTH, fmtString, args);
+
+   log_msg(ctx, source, type, *id, severity, len, s);
+}
+
+
+void
 _mesa_gl_debug(struct gl_context *ctx,
                GLuint *id,
                enum mesa_debug_source source,
@@ -1419,17 +1440,10 @@ _mesa_gl_debug(struct gl_context *ctx,
                enum mesa_debug_severity severity,
                const char *fmtString, ...)
 {
-   char s[MAX_DEBUG_MESSAGE_LENGTH];
-   int len;
    va_list args;
-
-   debug_get_id(id);
-
    va_start(args, fmtString);
-   len = _mesa_vsnprintf(s, MAX_DEBUG_MESSAGE_LENGTH, fmtString, args);
+   _mesa_gl_vdebug(ctx, id, source, type, severity, fmtString, args);
    va_end(args);
-
-   log_msg(ctx, source, type, *id, severity, len, s);
 }
 
 

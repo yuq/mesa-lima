@@ -190,6 +190,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_POLYGON_OFFSET_CLAMP:
         case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
         case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+        case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
             return 0;
 
         /* SWTCL-only features. */
@@ -273,6 +274,7 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
             return (is_r500 ? 256 : 32) * sizeof(float[4]);
         case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
+        case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
             return 1;
         case PIPE_SHADER_CAP_MAX_TEMPS:
             return is_r500 ? 128 : is_r400 ? 64 : 32;
@@ -332,6 +334,7 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_MAX_PREDS:
             return 0; /* unused */
         case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
+        case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
             return 1;
         case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
         case PIPE_SHADER_CAP_MAX_TEX_INDIRECTIONS:

@@ -390,7 +390,7 @@ intel_image_target_renderbuffer_storage(struct gl_context *ctx,
                                          image->height,
                                          1,
                                          image->pitch,
-                                         true /*disable_aux_buffers*/);
+                                         MIPTREE_LAYOUT_DISABLE_AUX);
    if (!irb->mt)
       return;
 
@@ -1027,10 +1027,9 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  intel_image->base.Base.Level,
                                  intel_image->base.Base.Level,
                                  width, height, depth,
-                                 true,
                                  irb->mt->num_samples,
                                  INTEL_MIPTREE_TILING_ANY,
-                                 false);
+                                 MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
 
    if (intel_miptree_wants_hiz_buffer(brw, new_mt)) {
       intel_miptree_alloc_hiz(brw, new_mt);

@@ -553,6 +553,8 @@ trace_context_delete_depth_stencil_alpha_state(struct pipe_context *_pipe,
 TRACE_SHADER_STATE(fs)
 TRACE_SHADER_STATE(vs)
 TRACE_SHADER_STATE(gs)
+TRACE_SHADER_STATE(tcs)
+TRACE_SHADER_STATE(tes)
 
 #undef TRACE_SHADER_STATE
 
@@ -1508,6 +1510,23 @@ static void trace_context_memory_barrier(struct pipe_context *_context,
 }
 
 
+static void trace_context_set_tess_state(struct pipe_context *_context,
+                                         const float default_outer_level[4],
+                                         const float default_inner_level[2])
+{
+   struct trace_context *tr_context = trace_context(_context);
+   struct pipe_context *context = tr_context->pipe;
+
+   trace_dump_call_begin("pipe_context", "set_tess_state");
+   trace_dump_arg(ptr, context);
+   trace_dump_arg_array(float, default_outer_level, 4);
+   trace_dump_arg_array(float, default_inner_level, 2);
+   trace_dump_call_end();
+
+   context->set_tess_state(context, default_outer_level, default_inner_level);
+}
+
+
 static const struct debug_named_value rbug_blocker_flags[] = {
    {"before", 1, NULL},
    {"after", 2, NULL},
@@ -1566,6 +1585,12 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(create_gs_state);
    TR_CTX_INIT(bind_gs_state);
    TR_CTX_INIT(delete_gs_state);
+   TR_CTX_INIT(create_tcs_state);
+   TR_CTX_INIT(bind_tcs_state);
+   TR_CTX_INIT(delete_tcs_state);
+   TR_CTX_INIT(create_tes_state);
+   TR_CTX_INIT(bind_tes_state);
+   TR_CTX_INIT(delete_tes_state);
    TR_CTX_INIT(create_vertex_elements_state);
    TR_CTX_INIT(bind_vertex_elements_state);
    TR_CTX_INIT(delete_vertex_elements_state);
@@ -1597,6 +1622,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(flush);
    TR_CTX_INIT(texture_barrier);
    TR_CTX_INIT(memory_barrier);
+   TR_CTX_INIT(set_tess_state);
 
    TR_CTX_INIT(transfer_map);
    TR_CTX_INIT(transfer_unmap);

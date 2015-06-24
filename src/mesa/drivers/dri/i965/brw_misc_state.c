@@ -39,6 +39,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 
+#include "main/framebuffer.h"
 #include "main/fbobject.h"
 #include "main/glformats.h"
 
@@ -46,12 +47,14 @@
 static void upload_drawing_rect(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
+   const struct gl_framebuffer *fb = ctx->DrawBuffer;
+   const unsigned int fb_width = _mesa_geometric_width(fb);
+   const unsigned int fb_height = _mesa_geometric_height(fb);
 
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_DRAWING_RECTANGLE << 16 | (4 - 2));
    OUT_BATCH(0); /* xmin, ymin */
-   OUT_BATCH(((ctx->DrawBuffer->Width - 1) & 0xffff) |
-	    ((ctx->DrawBuffer->Height - 1) << 16));
+   OUT_BATCH(((fb_width - 1) & 0xffff) | ((fb_height - 1) << 16));
    OUT_BATCH(0);
    ADVANCE_BATCH();
 }
@@ -767,7 +770,7 @@ static void upload_polygon_stipple_offset(struct brw_context *brw)
     * works just fine, and there's no window system to worry about.
     */
    if (_mesa_is_winsys_fbo(ctx->DrawBuffer))
-      OUT_BATCH((32 - (ctx->DrawBuffer->Height & 31)) & 31);
+      OUT_BATCH((32 - (_mesa_geometric_height(ctx->DrawBuffer) & 31)) & 31);
    else
       OUT_BATCH(0);
    ADVANCE_BATCH();

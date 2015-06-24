@@ -75,16 +75,50 @@ extern void
 _mesa_scissor_bounding_box(const struct gl_context *ctx,
                            const struct gl_framebuffer *buffer,
                            unsigned idx, int *bbox);
+extern void
+_mesa_intersect_scissor_bounding_box(const struct gl_context *ctx,
+                                     unsigned idx, int *bbox);
+
+static inline GLuint
+_mesa_geometric_width(const struct gl_framebuffer *buffer)
+{
+   return buffer->_HasAttachments ?
+      buffer->Width : buffer->DefaultGeometry.Width;
+}
+
+static inline GLuint
+_mesa_geometric_height(const struct gl_framebuffer *buffer)
+{
+   return buffer->_HasAttachments ?
+      buffer->Height : buffer->DefaultGeometry.Height;
+}
+
+static inline GLuint
+_mesa_geometric_samples(const struct gl_framebuffer *buffer)
+{
+   return buffer->_HasAttachments ?
+      buffer->Visual.samples : buffer->DefaultGeometry.NumSamples;
+}
+
+static inline GLuint
+_mesa_geometric_layers(const struct gl_framebuffer *buffer)
+{
+   return buffer->_HasAttachments ?
+      buffer->MaxNumLayers : buffer->DefaultGeometry.Layers;
+}
 
 extern void 
-_mesa_update_draw_buffer_bounds(struct gl_context *ctx);
+_mesa_update_draw_buffer_bounds(struct gl_context *ctx,
+                                struct gl_framebuffer *drawFb);
 
 extern void
 _mesa_update_framebuffer_visual(struct gl_context *ctx,
 				struct gl_framebuffer *fb);
 
 extern void
-_mesa_update_framebuffer(struct gl_context *ctx);
+_mesa_update_framebuffer(struct gl_context *ctx,
+                         struct gl_framebuffer *readFb,
+                         struct gl_framebuffer *drawFb);
 
 extern GLboolean
 _mesa_source_buffer_exists(struct gl_context *ctx, GLenum format);

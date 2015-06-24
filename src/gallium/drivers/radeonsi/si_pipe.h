@@ -237,6 +237,15 @@ struct si_context {
 	unsigned		spi_tmpring_size;
 };
 
+/* cik_sdma.c */
+void cik_sdma_copy(struct pipe_context *ctx,
+		   struct pipe_resource *dst,
+		   unsigned dst_level,
+		   unsigned dstx, unsigned dsty, unsigned dstz,
+		   struct pipe_resource *src,
+		   unsigned src_level,
+		   const struct pipe_box *src_box);
+
 /* si_blit.c */
 void si_init_blit_functions(struct si_context *sctx);
 void si_flush_depth_textures(struct si_context *sctx,

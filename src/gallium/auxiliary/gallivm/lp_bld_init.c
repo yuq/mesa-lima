@@ -533,6 +533,16 @@ gallivm_compile_module(struct gallivm_state *gallivm)
       if (0) {
          debug_printf("optimizing func %s...\n", LLVMGetValueName(func));
       }
+
+   /* Disable frame pointer omission on debug/profile builds */
+   /* XXX: And workaround http://llvm.org/PR21435 */
+#if HAVE_LLVM >= 0x0307 && \
+    (defined(DEBUG) || defined(PROFILE) || \
+     defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64))
+      LLVMAddTargetDependentFunctionAttr(func, "no-frame-pointer-elim", "true");
+      LLVMAddTargetDependentFunctionAttr(func, "no-frame-pointer-elim-non-leaf", "true");
+#endif
+
       LLVMRunFunctionPassManager(gallivm->passmgr, func);
       func = LLVMGetNextFunction(func);
    }

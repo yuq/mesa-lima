@@ -51,6 +51,8 @@ struct nouveau_screen {
 
 	boolean hint_buf_keep_sysmem_copy;
 
+	unsigned vram_domain;
+
 	struct {
 		unsigned profiles_checked;
 		unsigned profiles_present;
@@ -93,6 +95,8 @@ struct nouveau_screen {
    } stats;
 #endif
 };
+
+#define NV_VRAM_DOMAIN(screen) ((screen)->vram_domain)
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
 # define NOUVEAU_DRV_STAT(s, n, v) do {         \

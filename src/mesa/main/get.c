@@ -138,6 +138,7 @@ enum value_extra {
    EXTRA_API_GL_CORE,
    EXTRA_API_ES2,
    EXTRA_API_ES3,
+   EXTRA_API_ES31,
    EXTRA_NEW_BUFFERS, 
    EXTRA_NEW_FRAG_CLAMP,
    EXTRA_VALID_DRAW_BUFFER,
@@ -348,6 +349,12 @@ static const int extra_ARB_shader_image_load_store_and_geometry_shader[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_draw_indirect_es31[] = {
+   EXT(ARB_draw_indirect),
+   EXTRA_API_ES31,
+   EXTRA_END
+};
+
 EXTRA_EXT(ARB_texture_cube_map);
 EXTRA_EXT(EXT_texture_array);
 EXTRA_EXT(NV_fog_distance);
@@ -393,6 +400,7 @@ EXTRA_EXT(INTEL_performance_query);
 EXTRA_EXT(ARB_explicit_uniform_location);
 EXTRA_EXT(ARB_clip_control);
 EXTRA_EXT(EXT_polygon_offset_clamp);
+EXTRA_EXT(ARB_framebuffer_no_attachments);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -909,13 +917,13 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       break;
 
    case GL_FOG_COLOR:
-      if (_mesa_get_clamp_fragment_color(ctx))
+      if (_mesa_get_clamp_fragment_color(ctx, ctx->DrawBuffer))
          COPY_4FV(v->value_float_4, ctx->Fog.Color);
       else
          COPY_4FV(v->value_float_4, ctx->Fog.ColorUnclamped);
       break;
    case GL_COLOR_CLEAR_VALUE:
-      if (_mesa_get_clamp_fragment_color(ctx)) {
+      if (_mesa_get_clamp_fragment_color(ctx, ctx->DrawBuffer)) {
          v->value_float_4[0] = CLAMP(ctx->Color.ClearColor.f[0], 0.0F, 1.0F);
          v->value_float_4[1] = CLAMP(ctx->Color.ClearColor.f[1], 0.0F, 1.0F);
          v->value_float_4[2] = CLAMP(ctx->Color.ClearColor.f[2], 0.0F, 1.0F);
@@ -924,13 +932,13 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
          COPY_4FV(v->value_float_4, ctx->Color.ClearColor.f);
       break;
    case GL_BLEND_COLOR_EXT:
-      if (_mesa_get_clamp_fragment_color(ctx))
+      if (_mesa_get_clamp_fragment_color(ctx, ctx->DrawBuffer))
          COPY_4FV(v->value_float_4, ctx->Color.BlendColor);
       else
          COPY_4FV(v->value_float_4, ctx->Color.BlendColorUnclamped);
       break;
    case GL_ALPHA_TEST_REF:
-      if (_mesa_get_clamp_fragment_color(ctx))
+      if (_mesa_get_clamp_fragment_color(ctx, ctx->DrawBuffer))
          v->value_float = ctx->Color.AlphaRef;
       else
          v->value_float = ctx->Color.AlphaRefUnclamped;
@@ -1076,6 +1084,11 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
       case EXTRA_API_ES3:
          api_check = GL_TRUE;
          if (_mesa_is_gles3(ctx))
+            api_found = GL_TRUE;
+	 break;
+      case EXTRA_API_ES31:
+         api_check = GL_TRUE;
+         if (_mesa_is_gles31(ctx))
             api_found = GL_TRUE;
 	 break;
       case EXTRA_API_GL:
@@ -1911,6 +1924,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)
           goto invalid_value;
       v->value_int = ctx->Array.VAO->VertexBinding[VERT_ATTRIB_GENERIC(index)].Stride;
+      return TYPE_INT;
 
    /* ARB_shader_image_load_store */
    case GL_IMAGE_BINDING_NAME: {

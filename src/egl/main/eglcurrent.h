@@ -34,6 +34,10 @@
 #include "egltypedefs.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define _EGL_API_ALL_BITS \
    (EGL_OPENGL_ES_BIT   | \
     EGL_OPENVG_BIT      | \
@@ -114,5 +118,9 @@ _eglGetCurrentContext(void);
 extern EGLBoolean
 _eglError(EGLint errCode, const char *msg);
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLCURRENT_INCLUDED */

@@ -405,6 +405,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
                                aligned, base_ptr, offset, TRUE);
 
       assert(format_desc->block.bits <= vec_len);
+      (void) vec_len; /* silence unused var warning for non-debug build */
 
       packed = LLVMBuildBitCast(gallivm->builder, packed, dst_vec_type, "");
       return lp_build_format_swizzle_aos(format_desc, &bld, packed);

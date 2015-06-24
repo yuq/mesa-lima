@@ -190,6 +190,50 @@ public:
    }
 };
 
+/**
+ * Make the execution of \p inst dependent on the evaluation of a possibly
+ * inverted predicate.
+ */
+inline vec4_instruction *
+set_predicate_inv(enum brw_predicate pred, bool inverse,
+                  vec4_instruction *inst)
+{
+   inst->predicate = pred;
+   inst->predicate_inverse = inverse;
+   return inst;
+}
+
+/**
+ * Make the execution of \p inst dependent on the evaluation of a predicate.
+ */
+inline vec4_instruction *
+set_predicate(enum brw_predicate pred, vec4_instruction *inst)
+{
+   return set_predicate_inv(pred, false, inst);
+}
+
+/**
+ * Write the result of evaluating the condition given by \p mod to a flag
+ * register.
+ */
+inline vec4_instruction *
+set_condmod(enum brw_conditional_mod mod, vec4_instruction *inst)
+{
+   inst->conditional_mod = mod;
+   return inst;
+}
+
+/**
+ * Clamp the result of \p inst to the saturation range of its destination
+ * datatype.
+ */
+inline vec4_instruction *
+set_saturate(bool saturate, vec4_instruction *inst)
+{
+   inst->saturate = saturate;
+   return inst;
+}
+
 } /* namespace brw */
 
 #endif

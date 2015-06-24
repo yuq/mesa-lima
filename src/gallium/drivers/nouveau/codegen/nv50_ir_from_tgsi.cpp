@@ -1316,7 +1316,7 @@ private:
    };
 
 private:
-   const struct tgsi::Source *code;
+   const tgsi::Source *code;
    const struct nv50_ir_prog_info *info;
 
    struct {
@@ -1356,18 +1356,20 @@ Converter::srcToSym(tgsi::Instruction::SrcRegister src, int c)
 {
    const int swz = src.getSwizzle(c);
 
+   /* TODO: Use Array ID when it's available for the index */
    return makeSym(src.getFile(),
                   src.is2D() ? src.getIndex(1) : 0,
-                  src.isIndirect(0) ? -1 : src.getIndex(0), swz,
+                  src.getIndex(0), swz,
                   src.getIndex(0) * 16 + swz * 4);
 }
 
 Symbol *
 Converter::dstToSym(tgsi::Instruction::DstRegister dst, int c)
 {
+   /* TODO: Use Array ID when it's available for the index */
    return makeSym(dst.getFile(),
                   dst.is2D() ? dst.getIndex(1) : 0,
-                  dst.isIndirect(0) ? -1 : dst.getIndex(0), c,
+                  dst.getIndex(0), c,
                   dst.getIndex(0) * 16 + c * 4);
 }
 
@@ -1604,19 +1606,8 @@ Converter::storeDst(int d, int c, Value *val)
 {
    const tgsi::Instruction::DstRegister dst = tgsi.getDst(d);
 
-   switch (tgsi.getSaturate()) {
-   case TGSI_SAT_NONE:
-      break;
-   case TGSI_SAT_ZERO_ONE:
+   if (tgsi.getSaturate()) {
       mkOp1(OP_SAT, dstTy, val, val);
-      break;
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      mkOp2(OP_MAX, dstTy, val, val, mkImm(-1.0f));
-      mkOp2(OP_MIN, dstTy, val, val, mkImm(+1.0f));
-      break;
-   default:
-      assert(!"invalid saturation mode");
-      break;
    }
 
    Value *ptr = NULL;
@@ -1955,13 +1946,13 @@ isResourceSpecial(const int r)
 }
 
 static inline bool
-isResourceRaw(const struct tgsi::Source *code, const int r)
+isResourceRaw(const tgsi::Source *code, const int r)
 {
    return isResourceSpecial(r) || code->resources[r].raw;
 }
 
 static inline nv50_ir::TexTarget
-getResourceTarget(const struct tgsi::Source *code, int r)
+getResourceTarget(const tgsi::Source *code, int r)
 {
    if (isResourceSpecial(r))
       return nv50_ir::TEX_TARGET_BUFFER;

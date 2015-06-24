@@ -121,7 +121,6 @@ bool
 qir_opt_cse(struct vc4_compile *c)
 {
         bool progress = false;
-        struct simple_node *node, *t;
         uint32_t sf_count = 0, r4_count = 0;
 
         struct hash_table *ht = _mesa_hash_table_create(NULL, NULL,
@@ -129,9 +128,7 @@ qir_opt_cse(struct vc4_compile *c)
         if (!ht)
                 return false;
 
-        foreach_s(node, t, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
-
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 if (qir_has_side_effects(c, inst) ||
                     qir_has_side_effect_reads(c, inst)) {
                         continue;

@@ -28,6 +28,7 @@
 #include "main/glheader.h"
 #include "main/enums.h"
 #include "main/image.h"
+#include "main/glformats.h"
 #include "main/mtypes.h"
 #include "main/condrender.h"
 #include "main/fbobject.h"
@@ -76,8 +77,16 @@ do_blit_drawpixels(struct gl_context * ctx,
    struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[0];
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
 
-   if (!_mesa_format_matches_format_and_type(irb->mt->format, format, type,
-                                             false)) {
+   mesa_format src_format = _mesa_format_from_format_and_type(format, type);
+   if (_mesa_format_is_mesa_array_format(src_format))
+      src_format = _mesa_format_from_array_format(src_format);
+   mesa_format dst_format = irb->mt->format;
+
+   /* We can safely discard sRGB encode/decode for the DrawPixels interface */
+   src_format = _mesa_get_srgb_format_linear(src_format);
+   dst_format = _mesa_get_srgb_format_linear(dst_format);
+
+   if (!intel_miptree_blit_compatible_formats(src_format, dst_format)) {
       DBG("%s: bad format for blit\n", __func__);
       return false;
    }
@@ -112,7 +121,7 @@ do_blit_drawpixels(struct gl_context * ctx,
                                   src_offset,
                                   width, height, 1,
                                   src_stride,
-                                  false /*disable_aux_buffers*/);
+                                  0);
    if (!pbo_mt)
       return false;
 

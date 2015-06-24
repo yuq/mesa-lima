@@ -719,10 +719,9 @@ anv_compiler_create(struct anv_device *device)
    compiler->brw->intelScreen = compiler->screen;
    compiler->screen->devinfo = &device->info;
 
-   brw_process_intel_debug_variable(compiler->brw);
+   brw_process_intel_debug_variable(compiler->screen);
 
-   if (device->info.gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
-      compiler->brw->scalar_vs = true;
+   compiler->screen->compiler = brw_compiler_create(compiler, &device->info);
 
    ctx = &compiler->brw->ctx;
    _mesa_init_shader_object_functions(&ctx->Driver);
@@ -736,7 +735,6 @@ anv_compiler_create(struct anv_device *device)
    /* Set dd::NewShader */
    brwInitFragProgFuncs(&ctx->Driver);
 
-   compiler->screen->compiler = brw_compiler_create(compiler, &device->info);
    ctx->_Shader = &compiler->pipeline;
 
    compiler->brw->precompile = false;

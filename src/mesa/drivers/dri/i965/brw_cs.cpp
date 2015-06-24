@@ -88,9 +88,15 @@ brw_cs_emit(struct brw_context *brw,
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
+
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw, mem_ctx, key, prog_data, prog, cp, 8);
+   fs_visitor v8(brw->intelScreen->compiler, brw,
+                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                 &cp->Base, 8, st_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
@@ -98,7 +104,9 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw, mem_ctx, key, prog_data, prog, cp, 16);
+   fs_visitor v16(brw->intelScreen->compiler, brw,
+                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                  &cp->Base, 16, st_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * brw->max_cs_threads) {
@@ -126,7 +134,8 @@ brw_cs_emit(struct brw_context *brw,
       return NULL;
    }
 
-   fs_generator g(brw, mem_ctx, (void*) key, &prog_data->base, &cp->Base,
+   fs_generator g(brw->intelScreen->compiler, brw,
+                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
                   v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
    if (INTEL_DEBUG & DEBUG_CS) {
       char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
@@ -368,9 +377,11 @@ brw_upload_cs_state(struct brw_context *brw)
 
 extern "C"
 const struct brw_tracked_state brw_cs_state = {
-   .dirty = {
-      .mesa  = 0,
-      .brw   = BRW_NEW_CS_PROG_DATA,
+   /* explicit initialisers aren't valid C++, comment
+    * them for documentation purposes */
+   /* .dirty = */{
+      /* .mesa = */ 0,
+      /* .brw = */  BRW_NEW_CS_PROG_DATA,
    },
-   .emit = brw_upload_cs_state
+   /* .emit = */ brw_upload_cs_state
 };

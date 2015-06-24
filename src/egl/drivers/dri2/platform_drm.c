@@ -611,9 +611,9 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       char buf[64];
       int n = snprintf(buf, sizeof(buf), DRM_DEV_NAME, DRM_DIR_NAME, 0);
       if (n != -1 && n < sizeof(buf))
-         fd = open(buf, O_RDWR);
+         fd = loader_open_device(buf);
       if (fd < 0)
-         fd = open("/dev/dri/card0", O_RDWR);
+         fd = loader_open_device("/dev/dri/card0");
       dri2_dpy->own_device = 1;
       gbm = gbm_create_device(fd);
       if (gbm == NULL)
@@ -632,7 +632,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    if (fd < 0) {
-      fd = dup(gbm_device_get_fd(gbm));
+      fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
       if (fd < 0) {
          free(dri2_dpy);
          return EGL_FALSE;
@@ -714,10 +714,6 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
            disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
    }
 #endif
-
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.

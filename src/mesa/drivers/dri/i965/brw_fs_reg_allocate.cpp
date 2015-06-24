@@ -30,6 +30,8 @@
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
 
+using namespace brw;
+
 static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
@@ -468,14 +470,14 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
  * see if we can actually use MRFs to do spills without overwriting normal MRF
  * contents.
  */
-void
-fs_visitor::get_used_mrfs(bool *mrf_used)
+static void
+get_used_mrfs(fs_visitor *v, bool *mrf_used)
 {
-   int reg_width = dispatch_width / 8;
+   int reg_width = v->dispatch_width / 8;
 
    memset(mrf_used, 0, BRW_MAX_MRF * sizeof(bool));
 
-   foreach_block_and_inst(block, fs_inst, inst, cfg) {
+   foreach_block_and_inst(block, fs_inst, inst, v->cfg) {
       if (inst->dst.file == MRF) {
          int reg = inst->dst.reg & ~BRW_MRF_COMPR4;
          mrf_used[reg] = true;
@@ -489,7 +491,7 @@ fs_visitor::get_used_mrfs(bool *mrf_used)
       }
 
       if (inst->mlen > 0) {
-	 for (int i = 0; i < implied_mrf_writes(inst); i++) {
+	 for (int i = 0; i < v->implied_mrf_writes(inst); i++) {
             mrf_used[inst->base_mrf + i] = true;
          }
       }
@@ -500,12 +502,14 @@ fs_visitor::get_used_mrfs(bool *mrf_used)
  * Sets interference between virtual GRFs and usage of the high GRFs for SEND
  * messages (treated as MRFs in code generation).
  */
-void
-fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
+static void
+setup_mrf_hack_interference(fs_visitor *v, struct ra_graph *g,
+                            int first_mrf_node, int *first_used_mrf)
 {
    bool mrf_used[BRW_MAX_MRF];
-   get_used_mrfs(mrf_used);
+   get_used_mrfs(v, mrf_used);
 
+   *first_used_mrf = BRW_MAX_MRF;
    for (int i = 0; i < BRW_MAX_MRF; i++) {
       /* Mark each MRF reg node as being allocated to its physical register.
        *
@@ -518,7 +522,10 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
        * that are used as conflicting with all virtual GRFs.
        */
       if (mrf_used[i]) {
-         for (unsigned j = 0; j < this->alloc.count; j++) {
+         if (i < *first_used_mrf)
+            *first_used_mrf = i;
+
+         for (unsigned j = 0; j < v->alloc.count; j++) {
             ra_add_node_interference(g, first_mrf_node + i, j);
          }
       }
@@ -528,7 +535,6 @@ fs_visitor::setup_mrf_hack_interference(struct ra_graph *g, int first_mrf_node)
 bool
 fs_visitor::assign_regs(bool allow_spilling)
 {
-   struct brw_compiler *compiler = brw->intelScreen->compiler;
    /* Most of this allocation was written for a reg_width of 1
     * (dispatch_width == 8).  In extending to SIMD16, the code was
     * left in place and it was converted to have the hardware
@@ -584,7 +590,9 @@ fs_visitor::assign_regs(bool allow_spilling)
 
    setup_payload_interference(g, payload_node_count, first_payload_node);
    if (devinfo->gen >= 7) {
-      setup_mrf_hack_interference(g, first_mrf_hack_node);
+      int first_used_mrf = BRW_MAX_MRF;
+      setup_mrf_hack_interference(this, g, first_mrf_hack_node,
+                                  &first_used_mrf);
 
       foreach_block_and_inst(block, fs_inst, inst, cfg) {
          /* When we do send-from-GRF for FB writes, we need to ensure that
@@ -600,6 +608,13 @@ fs_visitor::assign_regs(bool allow_spilling)
          if (inst->eot) {
             int size = alloc.sizes[inst->src[0].reg];
             int reg = compiler->fs_reg_sets[rsi].class_to_ra_reg_range[size] - 1;
+
+            /* If something happened to spill, we want to push the EOT send
+             * register early enough in the register file that we don't
+             * conflict with any used MRF hack registers.
+             */
+            reg -= BRW_MAX_MRF - first_used_mrf;
+
             ra_set_node_reg(g, inst->src[0].reg, reg);
             break;
          }
@@ -696,25 +711,24 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       dst.width = 16;
    }
 
+   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
+                              .group(reg_size * 8, 0)
+                              .at(block, inst);
+
    for (int i = 0; i < count / reg_size; i++) {
       /* The gen7 descriptor-based offset is 12 bits of HWORD units. */
       bool gen7_read = devinfo->gen >= 7 && spill_offset < (1 << 12) * REG_SIZE;
-
-      fs_inst *unspill_inst =
-         new(mem_ctx) fs_inst(gen7_read ?
-                              SHADER_OPCODE_GEN7_SCRATCH_READ :
-                              SHADER_OPCODE_GEN4_SCRATCH_READ,
-                              dst);
+      fs_inst *unspill_inst = ibld.emit(gen7_read ?
+                                        SHADER_OPCODE_GEN7_SCRATCH_READ :
+                                        SHADER_OPCODE_GEN4_SCRATCH_READ,
+                                        dst);
       unspill_inst->offset = spill_offset;
-      unspill_inst->ir = inst->ir;
-      unspill_inst->annotation = inst->annotation;
       unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
          unspill_inst->base_mrf = 14;
          unspill_inst->mlen = 1; /* header contains offset */
       }
-      inst->insert_before(block, unspill_inst);
 
       dst.reg_offset += reg_size;
       spill_offset += reg_size * REG_SIZE;
@@ -732,17 +746,17 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
       reg_size = 2;
    }
 
+   const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
+                              .group(reg_size * 8, 0)
+                              .at(block, inst->next);
+
    for (int i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
-         new(mem_ctx) fs_inst(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
-                              reg_size * 8, reg_null_f, src);
+         ibld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, bld.null_reg_f(), src);
       src.reg_offset += reg_size;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
-      spill_inst->ir = inst->ir;
-      spill_inst->annotation = inst->annotation;
       spill_inst->mlen = 1 + reg_size; /* header, value */
       spill_inst->base_mrf = spill_base_mrf;
-      inst->insert_after(block, spill_inst);
    }
 }
 
@@ -839,7 +853,7 @@ fs_visitor::spill_reg(int spill_reg)
     */
    if (!spilled_any_registers) {
       bool mrf_used[BRW_MAX_MRF];
-      get_used_mrfs(mrf_used);
+      get_used_mrfs(this, mrf_used);
 
       for (int i = spill_base_mrf; i < BRW_MAX_MRF; i++) {
          if (mrf_used[i]) {

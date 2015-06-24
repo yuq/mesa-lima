@@ -50,6 +50,7 @@
 
 #include "brw_context.h"
 #include "brw_defines.h"
+#include "brw_shader.h"
 #include "brw_draw.h"
 #include "brw_state.h"
 
@@ -67,8 +68,6 @@
 #include "tnl/tnl.h"
 #include "tnl/t_pipeline.h"
 #include "util/ralloc.h"
-
-#include "glsl/nir/nir.h"
 
 /***************************************
  * Mesa's Driver Functions
@@ -289,6 +288,8 @@ brw_init_driver_functions(struct brw_context *brw,
    else
       gen4_init_queryobj_functions(functions);
    brw_init_compute_functions(functions);
+   if (brw->gen >= 7)
+      brw_init_conditional_render_functions(functions);
 
    functions->QuerySamplesForFormat = brw_query_samples_for_format;
 
@@ -427,11 +428,7 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    ctx->Const.MinLineWidth = 1.0;
    ctx->Const.MinLineWidthAA = 1.0;
-   if (brw->gen >= 9 || brw->is_cherryview) {
-      ctx->Const.MaxLineWidth = 40.0;
-      ctx->Const.MaxLineWidthAA = 40.0;
-      ctx->Const.LineWidthGranularity = 0.125;
-   } else if (brw->gen >= 6) {
+   if (brw->gen >= 6) {
       ctx->Const.MaxLineWidth = 7.375;
       ctx->Const.MaxLineWidthAA = 7.375;
       ctx->Const.LineWidthGranularity = 0.125;
@@ -440,6 +437,13 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxLineWidthAA = 7.0;
       ctx->Const.LineWidthGranularity = 0.5;
    }
+
+   /* For non-antialiased lines, we have to round the line width to the
+    * nearest whole number. Make sure that we don't advertise a line
+    * width that, when rounded, will be beyond the actual hardware
+    * maximum.
+    */
+   assert(roundf(ctx->Const.MaxLineWidth) <= ctx->Const.MaxLineWidth);
 
    ctx->Const.MinPointSize = 1.0;
    ctx->Const.MinPointSizeAA = 1.0;
@@ -544,6 +548,7 @@ brw_initialize_context_constants(struct brw_context *brw)
     */
    ctx->Const.UniformBufferOffsetAlignment = 16;
    ctx->Const.TextureBufferOffsetAlignment = 16;
+   ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;
@@ -553,50 +558,11 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxInputComponents = 128;
    }
 
-   static const nir_shader_compiler_options nir_options = {
-      .native_integers = true,
-      /* In order to help allow for better CSE at the NIR level we tell NIR
-       * to split all ffma instructions during opt_algebraic and we then
-       * re-combine them as a later step.
-       */
-      .lower_ffma = true,
-      .lower_sub = true,
-   };
-
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-      ctx->Const.ShaderCompilerOptions[i].MaxIfDepth = brw->gen < 6 ? 16 : UINT_MAX;
-      ctx->Const.ShaderCompilerOptions[i].EmitCondCodes = true;
-      ctx->Const.ShaderCompilerOptions[i].EmitNoNoise = true;
-      ctx->Const.ShaderCompilerOptions[i].EmitNoMainReturn = true;
-      ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectInput = true;
-      ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectOutput =
-	 (i == MESA_SHADER_FRAGMENT);
-      ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectTemp =
-	 (i == MESA_SHADER_FRAGMENT);
-      ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectUniform = false;
-      ctx->Const.ShaderCompilerOptions[i].LowerClipDistance = true;
+      ctx->Const.ShaderCompilerOptions[i] =
+         brw->intelScreen->compiler->glsl_compiler_options[i];
    }
-
-   ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = true;
-   ctx->Const.ShaderCompilerOptions[MESA_SHADER_GEOMETRY].OptimizeForAOS = true;
-
-   if (brw->scalar_vs) {
-      /* If we're using the scalar backend for vertex shaders, we need to
-       * configure these accordingly.
-       */
-      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoIndirectOutput = true;
-      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].EmitNoIndirectTemp = true;
-      ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS = false;
-
-      if (brw_env_var_as_boolean("INTEL_USE_NIR", true))
-         ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions = &nir_options;
-   }
-
-   if (brw_env_var_as_boolean("INTEL_USE_NIR", true))
-      ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions = &nir_options;
-
-   ctx->Const.ShaderCompilerOptions[MESA_SHADER_COMPUTE].NirOptions = &nir_options;
 
    /* ARB_viewport_array */
    if (brw->gen >= 6 && ctx->API == API_OPENGL_CORE) {
@@ -612,6 +578,12 @@ brw_initialize_context_constants(struct brw_context *brw)
    /* ARB_gpu_shader5 */
    if (brw->gen >= 7)
       ctx->Const.MaxVertexStreams = MIN2(4, MAX_VERTEX_STREAMS);
+
+   /* ARB_framebuffer_no_attachments */
+   ctx->Const.MaxFramebufferWidth = ctx->Const.MaxViewportWidth;
+   ctx->Const.MaxFramebufferHeight = ctx->Const.MaxViewportHeight;
+   ctx->Const.MaxFramebufferLayers = ctx->Const.MaxArrayTextureLayers;
+   ctx->Const.MaxFramebufferSamples = max_samples;
 }
 
 static void
@@ -814,10 +786,9 @@ brwCreateContext(gl_api api,
    _mesa_meta_init(ctx);
 
    brw_process_driconf_options(brw);
-   brw_process_intel_debug_variable(brw);
 
-   if (brw->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
-      brw->scalar_vs = true;
+   if (INTEL_DEBUG & DEBUG_PERF)
+      brw->perf_debug = true;
 
    brw_initialize_context_constants(brw);
 
@@ -893,6 +864,8 @@ brwCreateContext(gl_api api,
    brw->prim_restart.enable_cut_index = false;
    brw->gs.enabled = false;
    brw->sf.viewport_transform_enable = true;
+
+   brw->predicate.state = BRW_PREDICATE_STATE_RENDER;
 
    ctx->VertexProgram._MaintainTnlProgram = true;
    ctx->FragmentProgram._MaintainTexEnvProgram = true;

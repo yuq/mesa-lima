@@ -1399,6 +1399,10 @@ static __DRI2fenceExtension dri2FenceExtension = {
    .server_wait_sync = dri2_server_wait_sync
 };
 
+static const __DRIrobustnessExtension dri2Robustness = {
+   .base = { __DRI2_ROBUSTNESS, 1 }
+};
+
 /*
  * Backend function init_screen.
  */
@@ -1411,6 +1415,18 @@ static const __DRIextension *dri_screen_extensions[] = {
    &dri2ConfigQueryExtension.base,
    &dri2ThrottleExtension.base,
    &dri2FenceExtension.base,
+   NULL
+};
+
+static const __DRIextension *dri_robust_screen_extensions[] = {
+   &driTexBufferExtension.base,
+   &dri2FlushExtension.base,
+   &dri2ImageExtension.base,
+   &dri2RendererQueryExtension.base,
+   &dri2ConfigQueryExtension.base,
+   &dri2ThrottleExtension.base,
+   &dri2FenceExtension.base,
+   &dri2Robustness.base,
    NULL
 };
 
@@ -1467,7 +1483,12 @@ dri2_init_screen(__DRIscreen * sPriv)
       }
    }
 
-   sPriv->extensions = dri_screen_extensions;
+   if (pscreen && pscreen->get_param(pscreen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY)) {
+      sPriv->extensions = dri_robust_screen_extensions;
+      screen->has_reset_status_query = true;
+   }
+   else
+      sPriv->extensions = dri_screen_extensions;
 
    /* dri_init_screen_helper checks pscreen for us */
 

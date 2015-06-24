@@ -66,11 +66,22 @@ void * ir3_alloc(struct ir3 *shader, int sz)
 	return ptr;
 }
 
-struct ir3 * ir3_create(void)
+struct ir3 * ir3_create(struct ir3_compiler *compiler,
+		unsigned nin, unsigned nout)
 {
-	struct ir3 *shader =
-			calloc(1, sizeof(struct ir3));
+	struct ir3 *shader = calloc(1, sizeof(struct ir3));
+
 	grow_heap(shader);
+
+	shader->compiler = compiler;
+	shader->ninputs = nin;
+	shader->inputs = ir3_alloc(shader, sizeof(shader->inputs[0]) * nin);
+
+	shader->noutputs = nout;
+	shader->outputs = ir3_alloc(shader, sizeof(shader->outputs[0]) * nout);
+
+	list_inithead(&shader->block_list);
+
 	return shader;
 }
 
@@ -81,7 +92,8 @@ void ir3_destroy(struct ir3 *shader)
 		shader->chunk = chunk->next;
 		free(chunk);
 	}
-	free(shader->instrs);
+	free(shader->indirects);
+	free(shader->predicates);
 	free(shader->baryfs);
 	free(shader);
 }
@@ -142,7 +154,11 @@ static int emit_cat0(struct ir3_instruction *instr, void *ptr,
 {
 	instr_cat0_t *cat0 = ptr;
 
-	cat0->immed    = instr->cat0.immed;
+	if (info->gpu_id >= 400) {
+		cat0->a4xx.immed = instr->cat0.immed;
+	} else {
+		cat0->a3xx.immed = instr->cat0.immed;
+	}
 	cat0->repeat   = instr->repeat;
 	cat0->ss       = !!(instr->flags & IR3_INSTR_SS);
 	cat0->inv      = instr->cat0.inv;
@@ -535,32 +551,40 @@ void * ir3_assemble(struct ir3 *shader, struct ir3_info *info,
 		uint32_t gpu_id)
 {
 	uint32_t *ptr, *dwords;
-	uint32_t i;
 
+	info->gpu_id        = gpu_id;
 	info->max_reg       = -1;
 	info->max_half_reg  = -1;
 	info->max_const     = -1;
 	info->instrs_count  = 0;
+	info->sizedwords    = 0;
+
+	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			info->sizedwords += 2;
+		}
+	}
 
 	/* need a integer number of instruction "groups" (sets of 16
 	 * instructions on a4xx or sets of 4 instructions on a3xx),
 	 * so pad out w/ NOPs if needed: (NOTE each instruction is 64bits)
 	 */
 	if (gpu_id >= 400) {
-		info->sizedwords = 2 * align(shader->instrs_count, 16);
+		info->sizedwords = align(info->sizedwords, 16 * 2);
 	} else {
-		info->sizedwords = 2 * align(shader->instrs_count, 4);
+		info->sizedwords = align(info->sizedwords, 4 * 2);
 	}
 
 	ptr = dwords = calloc(4, info->sizedwords);
 
-	for (i = 0; i < shader->instrs_count; i++) {
-		struct ir3_instruction *instr = shader->instrs[i];
-		int ret = emit[instr->category](instr, dwords, info);
-		if (ret)
-			goto fail;
-		info->instrs_count += 1 + instr->repeat;
-		dwords += 2;
+	list_for_each_entry (struct ir3_block, block, &shader->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			int ret = emit[instr->category](instr, dwords, info);
+			if (ret)
+				goto fail;
+			info->instrs_count += 1 + instr->repeat;
+			dwords += 2;
+		}
 	}
 
 	return ptr;
@@ -581,50 +605,30 @@ static struct ir3_register * reg_create(struct ir3 *shader,
 	return reg;
 }
 
-static void insert_instr(struct ir3 *shader,
+static void insert_instr(struct ir3_block *block,
 		struct ir3_instruction *instr)
 {
+	struct ir3 *shader = block->shader;
 #ifdef DEBUG
 	static uint32_t serialno = 0;
 	instr->serialno = ++serialno;
 #endif
-	array_insert(shader->instrs, instr);
+	list_addtail(&instr->node, &block->instr_list);
 
 	if (is_input(instr))
 		array_insert(shader->baryfs, instr);
 }
 
-struct ir3_block * ir3_block_create(struct ir3 *shader,
-		unsigned ntmp, unsigned nin, unsigned nout)
+struct ir3_block * ir3_block_create(struct ir3 *shader)
 {
-	struct ir3_block *block;
-	unsigned size;
-	char *ptr;
-
-	size = sizeof(*block);
-	size += sizeof(block->temporaries[0]) * ntmp;
-	size += sizeof(block->inputs[0]) * nin;
-	size += sizeof(block->outputs[0]) * nout;
-
-	ptr = ir3_alloc(shader, size);
-
-	block = (void *)ptr;
-	ptr += sizeof(*block);
-
-	block->temporaries = (void *)ptr;
-	block->ntemporaries = ntmp;
-	ptr += sizeof(block->temporaries[0]) * ntmp;
-
-	block->inputs = (void *)ptr;
-	block->ninputs = nin;
-	ptr += sizeof(block->inputs[0]) * nin;
-
-	block->outputs = (void *)ptr;
-	block->noutputs = nout;
-	ptr += sizeof(block->outputs[0]) * nout;
-
+	struct ir3_block *block = ir3_alloc(shader, sizeof(*block));
+#ifdef DEBUG
+	static uint32_t serialno = 0;
+	block->serialno = ++serialno;
+#endif
 	block->shader = shader;
-
+	list_inithead(&block->node);
+	list_inithead(&block->instr_list);
 	return block;
 }
 
@@ -652,7 +656,7 @@ struct ir3_instruction * ir3_instr_create2(struct ir3_block *block,
 	instr->block = block;
 	instr->category = category;
 	instr->opc = opc;
-	insert_instr(block->shader, instr);
+	insert_instr(block, instr);
 	return instr;
 }
 
@@ -677,7 +681,7 @@ struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 	*new_instr = *instr;
 	new_instr->regs = regs;
 
-	insert_instr(instr->block->shader, new_instr);
+	insert_instr(instr->block, new_instr);
 
 	/* clone registers: */
 	new_instr->regs_count = 0;
@@ -694,10 +698,40 @@ struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags)
 {
-	struct ir3_register *reg = reg_create(instr->block->shader, num, flags);
+	struct ir3 *shader = instr->block->shader;
+	struct ir3_register *reg = reg_create(shader, num, flags);
 #ifdef DEBUG
 	debug_assert(instr->regs_count < instr->regs_max);
 #endif
 	instr->regs[instr->regs_count++] = reg;
 	return reg;
+}
+
+void
+ir3_block_clear_mark(struct ir3_block *block)
+{
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node)
+		instr->flags &= ~IR3_INSTR_MARK;
+}
+
+void
+ir3_clear_mark(struct ir3 *ir)
+{
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		ir3_block_clear_mark(block);
+	}
+}
+
+/* note: this will destroy instr->depth, don't do it until after sched! */
+void
+ir3_count_instructions(struct ir3 *ir)
+{
+	unsigned ip = 0;
+	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
+		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+			instr->ip = ip++;
+		}
+		block->start_ip = list_first_entry(&block->instr_list, struct ir3_instruction, node)->ip;
+		block->end_ip = list_last_entry(&block->instr_list, struct ir3_instruction, node)->ip;
+	}
 }

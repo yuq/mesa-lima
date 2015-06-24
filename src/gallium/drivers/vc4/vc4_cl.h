@@ -29,7 +29,7 @@
 #include "util/u_math.h"
 #include "util/macros.h"
 
-#include "vc4_packet.h"
+#include "kernel/vc4_packet.h"
 
 struct vc4_bo;
 

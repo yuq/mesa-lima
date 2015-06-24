@@ -31,11 +31,10 @@
 #include "vl/vl_decoder.h"
 #include "vl/vl_video_buffer.h"
 #include "genhw/genhw.h" /* for GEN6_REG_TIMESTAMP */
-#include "core/ilo_fence.h"
-#include "core/ilo_format.h"
 #include "core/intel_winsys.h"
 
 #include "ilo_context.h"
+#include "ilo_format.h"
 #include "ilo_resource.h"
 #include "ilo_transfer.h" /* for ILO_TRANSFER_MAP_BUFFER_ALIGNMENT */
 #include "ilo_public.h"
@@ -43,8 +42,7 @@
 
 struct pipe_fence_handle {
    struct pipe_reference reference;
-
-   struct ilo_fence fence;
+   struct intel_bo *seqno_bo;
 };
 
 static float
@@ -347,7 +345,7 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_INDEP_BLEND_FUNC:
       return true;
    case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
-      return (ilo_dev_gen(&is->dev) >= ILO_GEN(7)) ? 2048 : 512;
+      return (ilo_dev_gen(&is->dev) >= ILO_GEN(7.5)) ? 2048 : 512;
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT:
    case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
    case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
@@ -458,6 +456,7 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_SAMPLER_VIEW_TARGET:
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+   case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -641,7 +640,7 @@ ilo_screen_fence_reference(struct pipe_screen *screen,
 
    STATIC_ASSERT(&((struct pipe_fence_handle *) NULL)->reference == NULL);
    if (pipe_reference(&old->reference, &fence->reference)) {
-      ilo_fence_cleanup(&old->fence);
+      intel_bo_unref(old->seqno_bo);
       FREE(old);
    }
 }
@@ -654,10 +653,14 @@ ilo_screen_fence_finish(struct pipe_screen *screen,
    const int64_t wait_timeout = (timeout > INT64_MAX) ? -1 : timeout;
    bool signaled;
 
-   signaled = ilo_fence_wait(&fence->fence, wait_timeout);
+   signaled = (!fence->seqno_bo ||
+         intel_bo_wait(fence->seqno_bo, wait_timeout) == 0);
+
    /* XXX not thread safe */
-   if (signaled)
-      ilo_fence_set_seq_bo(&fence->fence, NULL);
+   if (signaled && fence->seqno_bo) {
+      intel_bo_unref(fence->seqno_bo);
+      fence->seqno_bo = NULL;
+   }
 
    return signaled;
 }
@@ -676,7 +679,6 @@ ilo_screen_fence_signalled(struct pipe_screen *screen,
 struct pipe_fence_handle *
 ilo_screen_fence_create(struct pipe_screen *screen, struct intel_bo *bo)
 {
-   struct ilo_screen *is = ilo_screen(screen);
    struct pipe_fence_handle *fence;
 
    fence = CALLOC_STRUCT(pipe_fence_handle);
@@ -685,8 +687,7 @@ ilo_screen_fence_create(struct pipe_screen *screen, struct intel_bo *bo)
 
    pipe_reference_init(&fence->reference, 1);
 
-   ilo_fence_init(&fence->fence, &is->dev);
-   ilo_fence_set_seq_bo(&fence->fence, bo);
+   fence->seqno_bo = intel_bo_ref(bo);
 
    return fence;
 }
@@ -696,7 +697,7 @@ ilo_screen_destroy(struct pipe_screen *screen)
 {
    struct ilo_screen *is = ilo_screen(screen);
 
-   ilo_dev_cleanup(&is->dev);
+   intel_winsys_destroy(is->dev.winsys);
 
    FREE(is);
 }

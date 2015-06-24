@@ -509,10 +509,13 @@ CodeEmitterGM107::emitBRA()
    emitCond5(0x00, CC_TR);
 
    if (!insn->srcExists(0) || insn->src(0).getFile() != FILE_MEMORY_CONST) {
+      int32_t pos = insn->target.bb->binPos;
+      if (writeIssueDelays && !(pos & 0x1f))
+         pos += 8;
       if (!insn->absolute)
-         emitField(0x14, 24, insn->target.bb->binPos - (codeSize + 8));
+         emitField(0x14, 24, pos - (codeSize + 8));
       else
-         emitField(0x14, 32, insn->target.bb->binPos);
+         emitField(0x14, 32, pos);
    } else {
       emitCBUF (0x24, gpr, 20, 16, 0, insn->src(0));
       emitField(0x05, 1, 1);
@@ -1827,6 +1830,7 @@ CodeEmitterGM107::emitISET()
    emitCond3(0x31, insn->setCond);
    emitField(0x30, 1, isSignedType(insn->sType));
    emitCC   (0x2f);
+   emitField(0x2c, 1, insn->dType == TYPE_F32);
    emitX    (0x2b);
    emitGPR  (0x08, insn->src(0));
    emitGPR  (0x00, insn->def(0));

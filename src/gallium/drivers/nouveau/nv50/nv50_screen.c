@@ -209,6 +209,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_VERTEXID_NOBASE:
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE: /* potentially supported on some hw */
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+   case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -290,6 +291,7 @@ nv50_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+   case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
       return 0;
    default:
       NOUVEAU_ERR("unknown PIPE_SHADER_CAP %d\n", param);

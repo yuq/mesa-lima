@@ -178,8 +178,8 @@ tex_create_bo(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_bo(&tex->image, bo);
-   intel_bo_unref(bo);
+   intel_bo_unref(tex->image.bo);
+   tex->image.bo = bo;
 
    return true;
 }
@@ -223,7 +223,7 @@ tex_create_hiz(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_aux_bo(&tex->image, bo);
+   tex->image.aux.bo = bo;
 
    if (tex->imported) {
       unsigned lv;
@@ -256,7 +256,7 @@ tex_create_mcs(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   ilo_image_set_aux_bo(&tex->image, bo);
+   tex->image.aux.bo = bo;
 
    return true;
 }
@@ -267,7 +267,8 @@ tex_destroy(struct ilo_texture *tex)
    if (tex->separate_s8)
       tex_destroy(tex->separate_s8);
 
-   ilo_image_cleanup(&tex->image);
+   intel_bo_unref(tex->image.bo);
+   intel_bo_unref(tex->image.aux.bo);
 
    tex_free_slices(tex);
    FREE(tex);
@@ -287,15 +288,13 @@ tex_alloc_bos(struct ilo_texture *tex)
 
    switch (tex->image.aux.type) {
    case ILO_IMAGE_AUX_HIZ:
-      if (!tex_create_hiz(tex)) {
-         /* Separate Stencil Buffer requires HiZ to be enabled */
-         if (ilo_dev_gen(&is->dev) == ILO_GEN(6) &&
-             tex->image.separate_stencil)
-            return false;
-      }
+      if (!tex_create_hiz(tex) &&
+          !ilo_image_disable_aux(&tex->image, &is->dev))
+         return false;
       break;
    case ILO_IMAGE_AUX_MCS:
-      if (!tex_create_mcs(tex))
+      if (!tex_create_mcs(tex) &&
+          !ilo_image_disable_aux(&tex->image, &is->dev))
          return false;
       break;
    default:
@@ -328,8 +327,7 @@ tex_import_handle(struct ilo_texture *tex,
       return false;
    }
 
-   ilo_image_set_bo(&tex->image, bo);
-   intel_bo_unref(bo);
+   tex->image.bo = bo;
 
    tex->imported = true;
 
@@ -427,8 +425,8 @@ buf_create_bo(struct ilo_buffer_resource *buf)
    if (!bo)
       return false;
 
-   ilo_buffer_set_bo(&buf->buffer, bo);
-   intel_bo_unref(bo);
+   intel_bo_unref(buf->buffer.bo);
+   buf->buffer.bo = bo;
 
    return true;
 }
@@ -436,7 +434,7 @@ buf_create_bo(struct ilo_buffer_resource *buf)
 static void
 buf_destroy(struct ilo_buffer_resource *buf)
 {
-   ilo_buffer_cleanup(&buf->buffer);
+   intel_bo_unref(buf->buffer.bo);
    FREE(buf);
 }
 
@@ -445,6 +443,7 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
 {
    const struct ilo_screen *is = ilo_screen(screen);
    struct ilo_buffer_resource *buf;
+   unsigned size;
 
    buf = CALLOC_STRUCT(ilo_buffer_resource);
    if (!buf)
@@ -454,8 +453,25 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
    buf->base.screen = screen;
    pipe_reference_init(&buf->base.reference, 1);
 
-   ilo_buffer_init(&buf->buffer, &is->dev,
-         templ->width0, templ->bind, templ->flags);
+   size = templ->width0;
+
+   /*
+    * As noted in ilo_format_translate(), we treat some 3-component formats as
+    * 4-component formats to work around hardware limitations.  Imagine the
+    * case where the vertex buffer holds a single PIPE_FORMAT_R16G16B16_FLOAT
+    * vertex, and buf->bo_size is 6.  The hardware would fail to fetch it at
+    * boundary check because the vertex buffer is expected to hold a
+    * PIPE_FORMAT_R16G16B16A16_FLOAT vertex and that takes at least 8 bytes.
+    *
+    * For the workaround to work, we should add 2 to the bo size.  But that
+    * would waste a page when the bo size is already page aligned.  Let's
+    * round it to page size for now and revisit this when needed.
+    */
+   if ((templ->bind & PIPE_BIND_VERTEX_BUFFER) &&
+       ilo_dev_gen(&is->dev) < ILO_GEN(7.5))
+      size = align(size, 4096);
+
+   ilo_buffer_init(&buf->buffer, &is->dev, size, templ->bind, templ->flags);
 
    if (buf->buffer.bo_size < templ->width0 ||
        buf->buffer.bo_size > ilo_max_resource_size ||

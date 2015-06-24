@@ -413,12 +413,15 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 				}
 			}
 
-			/* TODO: Figure out if there's a way to make it spit out 0's and
-			 * 1's for the .z and .w components.
+			/* Replace the .xy coordinates with S/T from the point sprite. Set
+			 * interpolation bits for .zw such that they become .01
 			 */
-			if (emit->sprite_coord_enable & (1 << sem2idx(fp->inputs[j].semantic)))
+			if (emit->sprite_coord_enable & (1 << sem2idx(fp->inputs[j].semantic))) {
 				vpsrepl[inloc / 16] |= (emit->sprite_coord_mode ? 0x0d : 0x09)
 					<< ((inloc % 16) * 2);
+				vinterp[(inloc + 2) / 16] |= 2 << (((inloc + 2) % 16) * 2);
+				vinterp[(inloc + 3) / 16] |= 3 << (((inloc + 3) % 16) * 2);
+			}
 		}
 
 		OUT_PKT0(ring, REG_A3XX_VPC_ATTR, 2);

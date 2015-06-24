@@ -43,7 +43,6 @@
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
 #include "glsl/shader_enums.h"
-#include "util/simple_list.h"	/* struct simple_node */
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 
 
@@ -398,7 +397,6 @@ struct gl_config
 {
    GLboolean rgbMode;
    GLboolean floatMode;
-   GLboolean colorIndexMode;  /* XXX is this used anywhere? */
    GLuint doubleBufferMode;
    GLuint stereoMode;
 
@@ -2099,8 +2097,6 @@ struct gl_program
    GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */
    GLbitfield64 OutputsWritten; /**< Bitmask of which output regs are written */
    GLbitfield SystemValuesRead;   /**< Bitmask of SYSTEM_VALUE_x inputs used */
-   GLbitfield InputFlags[MAX_PROGRAM_INPUTS];   /**< PROG_PARAM_BIT_x flags */
-   GLbitfield OutputFlags[MAX_PROGRAM_OUTPUTS]; /**< PROG_PARAM_BIT_x flags */
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
    GLbitfield SamplersUsed;   /**< Bitfield of which samplers are used */
    GLbitfield ShadowSamplers; /**< Texture units used for shadow sampling. */
@@ -2275,16 +2271,10 @@ struct gl_vertex_program_state
  */
 struct gl_geometry_program_state
 {
-   GLboolean Enabled;               /**< GL_ARB_GEOMETRY_SHADER4 */
-   GLboolean _Enabled;              /**< Enabled and valid program? */
-   struct gl_geometry_program *Current;  /**< user-bound geometry program */
-
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */
    struct gl_geometry_program *_Current;
-
-   GLfloat Parameters[MAX_PROGRAM_ENV_PARAMS][4]; /**< Env params */
 };
 
 /**
@@ -2320,8 +2310,6 @@ struct gl_fragment_program_state
  */
 struct gl_compute_program_state
 {
-   struct gl_compute_program *Current;  /**< user-bound compute program */
-
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */
@@ -2733,7 +2721,7 @@ struct gl_shader_program
    } Comp;
 
    /* post-link info: */
-   unsigned NumUserUniformStorage;
+   unsigned NumUniformStorage;
    unsigned NumHiddenUniforms;
    struct gl_uniform_storage *UniformStorage;
 
@@ -2831,6 +2819,8 @@ struct gl_pipeline_object
    GLint RefCount;
 
    mtx_t Mutex;
+
+   GLchar *Label;   /**< GL_KHR_debug */
 
    /**
     * Programs used for rendering
@@ -3009,7 +2999,6 @@ struct gl_shared_state
    struct _mesa_HashTable *Programs; /**< All vertex/fragment programs */
    struct gl_vertex_program *DefaultVertexProgram;
    struct gl_fragment_program *DefaultFragmentProgram;
-   struct gl_geometry_program *DefaultGeometryProgram;
    /*@}*/
 
    /* GL_ATI_fragment_shader */
@@ -3151,12 +3140,29 @@ struct gl_framebuffer
     */
    struct gl_config Visual;
 
-   GLuint Width, Height;	/**< size of frame buffer in pixels */
+   /**
+    * Size of frame buffer in pixels. If there are no attachments, then both
+    * of these are 0.
+    */
+   GLuint Width, Height;
 
-   /** \name  Drawing bounds (Intersection of buffer size and scissor box) */
+   /**
+    * In the case that the framebuffer has no attachment (i.e.
+    * GL_ARB_framebuffer_no_attachments) then the geometry of
+    * the framebuffer is specified by the default values.
+    */
+   struct {
+     GLuint Width, Height, Layers, NumSamples;
+     GLboolean FixedSampleLocations;
+   } DefaultGeometry;
+
+   /** \name  Drawing bounds (Intersection of buffer size and scissor box)
+    * The drawing region is given by [_Xmin, _Xmax) x [_Ymin, _Ymax),
+    * (inclusive for _Xmin and _Ymin while exclusive for _Xmax and _Ymax)
+    */
    /*@{*/
-   GLint _Xmin, _Xmax;  /**< inclusive */
-   GLint _Ymin, _Ymax;  /**< exclusive */
+   GLint _Xmin, _Xmax;
+   GLint _Ymin, _Ymax;
    /*@}*/
 
    /** \name  Derived Z buffer stuff */
@@ -3169,6 +3175,22 @@ struct gl_framebuffer
    /** One of the GL_FRAMEBUFFER_(IN)COMPLETE_* tokens */
    GLenum _Status;
 
+   /** Whether one of Attachment has Type != GL_NONE
+    * NOTE: the values for Width and Height are set to 0 in case of having
+    * no attachments, a backend driver supporting the extension
+    * GL_ARB_framebuffer_no_attachments must check for the flag _HasAttachments
+    * and if GL_FALSE, must then use the values in DefaultGeometry to initialize
+    * its viewport, scissor and so on (in particular _Xmin, _Xmax, _Ymin and
+    * _Ymax do NOT take into account _HasAttachments being false). To get the
+    * geometry of the framebuffer, the  helper functions
+    *   _mesa_geometric_width(),
+    *   _mesa_geometric_height(),
+    *   _mesa_geometric_samples() and
+    *   _mesa_geometric_layers()
+    * are available that check _HasAttachments.
+    */
+   bool _HasAttachments;
+
    /** Integer color values */
    GLboolean _IntegerColor;
 
@@ -3179,7 +3201,9 @@ struct gl_framebuffer
    /**
     * The maximum number of layers in the framebuffer, or 0 if the framebuffer
     * is not layered.  For cube maps and cube map arrays, each cube face
-    * counts as a layer.
+    * counts as a layer. As the case for Width, Height a backend driver
+    * supporting GL_ARB_framebuffer_no_attachments must use DefaultGeometry
+    * in the case that _HasAttachments is false
     */
    GLuint MaxNumLayers;
 
@@ -3357,6 +3381,14 @@ struct gl_constants
    GLuint MaxColorAttachments;   /**< GL_EXT_framebuffer_object */
    GLuint MaxRenderbufferSize;   /**< GL_EXT_framebuffer_object */
    GLuint MaxSamples;            /**< GL_ARB_framebuffer_object */
+
+   /**
+    * GL_ARB_framebuffer_no_attachments
+    */
+   GLuint MaxFramebufferWidth;
+   GLuint MaxFramebufferHeight;
+   GLuint MaxFramebufferLayers;
+   GLuint MaxFramebufferSamples;
 
    /** Number of varying vectors between any two shader stages. */
    GLuint MaxVarying;
@@ -3635,6 +3667,7 @@ struct gl_extensions
    GLboolean ARB_fragment_program;
    GLboolean ARB_fragment_program_shadow;
    GLboolean ARB_fragment_shader;
+   GLboolean ARB_framebuffer_no_attachments;
    GLboolean ARB_framebuffer_object;
    GLboolean ARB_explicit_attrib_location;
    GLboolean ARB_explicit_uniform_location;
@@ -4422,7 +4455,12 @@ enum _debug
    DEBUG_INCOMPLETE_FBO         = (1 << 3)
 };
 
-
+static inline bool
+_mesa_active_fragment_shader_has_atomic_ops(const struct gl_context *ctx)
+{
+   return ctx->Shader._CurrentFragmentProgram != NULL &&
+      ctx->Shader._CurrentFragmentProgram->NumAtomicBuffers > 0;
+}
 
 #ifdef __cplusplus
 }

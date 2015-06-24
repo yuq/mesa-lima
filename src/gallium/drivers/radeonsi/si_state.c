@@ -44,6 +44,21 @@ static void si_init_atom(struct r600_atom *atom, struct r600_atom **list_elem,
 	*list_elem = atom;
 }
 
+unsigned si_array_mode(unsigned mode)
+{
+	switch (mode) {
+	case RADEON_SURF_MODE_LINEAR_ALIGNED:
+		return V_009910_ARRAY_LINEAR_ALIGNED;
+	case RADEON_SURF_MODE_1D:
+		return V_009910_ARRAY_1D_TILED_THIN1;
+	case RADEON_SURF_MODE_2D:
+		return V_009910_ARRAY_2D_TILED_THIN1;
+	default:
+	case RADEON_SURF_MODE_LINEAR:
+		return V_009910_ARRAY_LINEAR_GENERAL;
+	}
+}
+
 uint32_t si_num_banks(struct si_screen *sscreen, struct r600_texture *tex)
 {
 	if (sscreen->b.chip_class == CIK &&
@@ -636,18 +651,14 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->offset_units = state->offset_units;
 	rs->offset_scale = state->offset_scale * 12.0f;
 
-	tmp = S_0286D4_FLAT_SHADE_ENA(1);
-	if (state->sprite_coord_enable) {
-		tmp |= S_0286D4_PNT_SPRITE_ENA(1) |
-			S_0286D4_PNT_SPRITE_OVRD_X(V_0286D4_SPI_PNT_SPRITE_SEL_S) |
-			S_0286D4_PNT_SPRITE_OVRD_Y(V_0286D4_SPI_PNT_SPRITE_SEL_T) |
-			S_0286D4_PNT_SPRITE_OVRD_Z(V_0286D4_SPI_PNT_SPRITE_SEL_0) |
-			S_0286D4_PNT_SPRITE_OVRD_W(V_0286D4_SPI_PNT_SPRITE_SEL_1);
-		if (state->sprite_coord_mode != PIPE_SPRITE_COORD_UPPER_LEFT) {
-			tmp |= S_0286D4_PNT_SPRITE_TOP_1(1);
-		}
-	}
-	si_pm4_set_reg(pm4, R_0286D4_SPI_INTERP_CONTROL_0, tmp);
+	si_pm4_set_reg(pm4, R_0286D4_SPI_INTERP_CONTROL_0,
+		S_0286D4_FLAT_SHADE_ENA(1) |
+		S_0286D4_PNT_SPRITE_ENA(1) |
+		S_0286D4_PNT_SPRITE_OVRD_X(V_0286D4_SPI_PNT_SPRITE_SEL_S) |
+		S_0286D4_PNT_SPRITE_OVRD_Y(V_0286D4_SPI_PNT_SPRITE_SEL_T) |
+		S_0286D4_PNT_SPRITE_OVRD_Z(V_0286D4_SPI_PNT_SPRITE_SEL_0) |
+		S_0286D4_PNT_SPRITE_OVRD_W(V_0286D4_SPI_PNT_SPRITE_SEL_1) |
+		S_0286D4_PNT_SPRITE_TOP_1(state->sprite_coord_mode != PIPE_SPRITE_COORD_UPPER_LEFT));
 
 	/* point size 12.4 fixed point */
 	tmp = (unsigned)(state->point_size * 8.0);
@@ -2910,11 +2921,16 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_polygon_stipple = si_set_polygon_stipple;
 	sctx->b.b.set_min_samples = si_set_min_samples;
 
-	sctx->b.dma_copy = si_dma_copy;
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
 	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;
 
 	sctx->b.b.draw_vbo = si_draw_vbo;
+
+	if (sctx->b.chip_class >= CIK) {
+		sctx->b.dma_copy = cik_sdma_copy;
+	} else {
+		sctx->b.dma_copy = si_dma_copy;
+	}
 }
 
 static void

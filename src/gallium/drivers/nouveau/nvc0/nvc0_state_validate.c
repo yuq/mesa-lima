@@ -439,7 +439,7 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
                BEGIN_NVC0(push, NVC0_3D(CB_BIND(s)), 1);
                PUSH_DATA (push, (0 << 4) | 1);
             }
-            nvc0_cb_push(&nvc0->base, bo, NOUVEAU_BO_VRAM,
+            nvc0_cb_push(&nvc0->base, bo, NV_VRAM_DOMAIN(&nvc0->screen->base),
                          base, nvc0->state.uniform_buffer_bound[s],
                          0, (size + 3) / 4,
                          nvc0->constbuf[s][0].u.data);
@@ -543,6 +543,8 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
 
    if (ctx_from)
       ctx_to->state = ctx_from->state;
+   else
+      ctx_to->state = ctx_to->screen->save_state;
 
    ctx_to->dirty = ~0;
    ctx_to->viewports_dirty = ~0;

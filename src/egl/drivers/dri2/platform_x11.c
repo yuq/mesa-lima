@@ -43,6 +43,7 @@
 
 #include "egl_dri2.h"
 #include "egl_dri2_fallbacks.h"
+#include "loader.h"
 
 static EGLBoolean
 dri2_x11_swap_interval(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf,
@@ -1017,15 +1018,6 @@ dri2_x11_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
    }
 }
 
-static _EGLImage*
-dri2_x11_swrast_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
-                                 _EGLContext *ctx, EGLenum target,
-                                 EGLClientBuffer buffer,
-                                 const EGLint *attr_list)
-{
-   return NULL;
-}
-
 static EGLBoolean
 dri2_x11_get_sync_values(_EGLDisplay *display, _EGLSurface *surface,
                          EGLuint64KHR *ust, EGLuint64KHR *msc,
@@ -1058,7 +1050,7 @@ static struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .create_pixmap_surface = dri2_x11_create_pixmap_surface,
    .create_pbuffer_surface = dri2_x11_create_pbuffer_surface,
    .destroy_surface = dri2_x11_destroy_surface,
-   .create_image = dri2_x11_swrast_create_image_khr,
+   .create_image = dri2_fallback_create_image_khr,
    .swap_interval = dri2_fallback_swap_interval,
    .swap_buffers = dri2_x11_swap_buffers,
    .swap_buffers_region = dri2_fallback_swap_buffers_region,
@@ -1121,7 +1113,7 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_conn;
 
    dri2_dpy->swrast_loader_extension.base.name = __DRI_SWRAST_LOADER;
-   dri2_dpy->swrast_loader_extension.base.version = __DRI_SWRAST_LOADER_VERSION;
+   dri2_dpy->swrast_loader_extension.base.version = 2;
    dri2_dpy->swrast_loader_extension.getDrawableInfo = swrastGetDrawableInfo;
    dri2_dpy->swrast_loader_extension.putImage = swrastPutImage;
    dri2_dpy->swrast_loader_extension.getImage = swrastGetImage;
@@ -1137,10 +1129,6 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
       if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
          goto cleanup_configs;
    }
-
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
@@ -1243,16 +1231,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_load_driver(disp))
       goto cleanup_conn;
 
-#ifdef O_CLOEXEC
-   dri2_dpy->fd = open(dri2_dpy->device_name, O_RDWR | O_CLOEXEC);
-   if (dri2_dpy->fd == -1 && errno == EINVAL)
-#endif
-   {
-      dri2_dpy->fd = open(dri2_dpy->device_name, O_RDWR);
-      if (dri2_dpy->fd != -1)
-         fcntl(dri2_dpy->fd, F_SETFD, fcntl(dri2_dpy->fd, F_GETFD) |
-            FD_CLOEXEC);
-   }
+   dri2_dpy->fd = loader_open_device(dri2_dpy->device_name);
    if (dri2_dpy->fd == -1) {
       _eglLog(_EGL_WARNING,
 	      "DRI2: could not open %s (%s)", dri2_dpy->device_name,
@@ -1292,11 +1271,6 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
-	 goto cleanup_configs;
-   }
-
    disp->Extensions.KHR_image_pixmap = EGL_TRUE;
    disp->Extensions.NOK_swap_region = EGL_TRUE;
    disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
@@ -1311,10 +1285,6 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
 	 goto cleanup_configs;
    }
-
-   /* we're supporting EGL 1.4 */
-   disp->VersionMajor = 1;
-   disp->VersionMinor = 4;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.

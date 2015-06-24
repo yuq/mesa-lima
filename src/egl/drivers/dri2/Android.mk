@@ -36,6 +36,7 @@ LOCAL_CFLAGS := \
 	-DHAVE_ANDROID_PLATFORM
 
 ifeq ($(MESA_LOLLIPOP_BUILD),true)
+LOCAL_CFLAGS_arm := -DDEFAULT_DRIVER_DIR=\"/system/lib/dri\"
 LOCAL_CFLAGS_x86 := -DDEFAULT_DRIVER_DIR=\"/system/lib/dri\"
 LOCAL_CFLAGS_x86_64 := -DDEFAULT_DRIVER_DIR=\"/system/lib64/dri\"
 else
@@ -45,7 +46,6 @@ endif
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/egl/main \
-	$(MESA_TOP)/src/loader \
 	$(DRM_GRALLOC_TOP)
 
 LOCAL_STATIC_LIBRARIES := \

@@ -39,6 +39,10 @@
 #include "eglarray.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum _egl_platform_type {
    _EGL_PLATFORM_WINDOWS,
    _EGL_PLATFORM_X11,
@@ -47,6 +51,7 @@ enum _egl_platform_type {
    _EGL_PLATFORM_NULL,
    _EGL_PLATFORM_ANDROID,
    _EGL_PLATFORM_HAIKU,
+   _EGL_PLATFORM_SURFACELESS,
 
    _EGL_NUM_PLATFORMS,
    _EGL_INVALID_PLATFORM = -1
@@ -86,8 +91,6 @@ struct _egl_resource
  */
 struct _egl_extensions
 {
-   EGLBoolean MESA_screen_surface;
-   EGLBoolean MESA_copy_context;
    EGLBoolean MESA_drm_display;
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_configless_context;
@@ -99,6 +102,7 @@ struct _egl_extensions
    EGLBoolean KHR_image_pixmap;
    EGLBoolean KHR_vg_parent_image;
    EGLBoolean KHR_get_all_proc_addresses;
+   EGLBoolean KHR_gl_colorspace;
    EGLBoolean KHR_gl_texture_2D_image;
    EGLBoolean KHR_gl_texture_cubemap_image;
    EGLBoolean KHR_gl_texture_3D_image;
@@ -151,8 +155,7 @@ struct _egl_display
 
    /* these fields are set by the driver during init */
    void *DriverData;          /**< Driver private data */
-   EGLint VersionMajor;       /**< EGL major version */
-   EGLint VersionMinor;       /**< EGL minor version */
+   EGLint Version;            /**< EGL version major*10+minor */
    EGLint ClientAPIs;         /**< Bitmask of APIs supported (EGL_xxx_BIT) */
    _EGLExtensions Extensions; /**< Extensions supported */
 
@@ -269,6 +272,11 @@ struct wl_display;
 _EGLDisplay*
 _eglGetWaylandDisplay(struct wl_display *native_display,
                       const EGLint *attrib_list);
+#endif
+
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* EGLDISPLAY_INCLUDED */

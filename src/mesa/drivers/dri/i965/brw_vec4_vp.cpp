@@ -381,8 +381,7 @@ vec4_vs_visitor::emit_program_code()
          break;
 
       default:
-         _mesa_problem(ctx, "Unsupported opcode %s in vertex program\n",
-                       _mesa_opcode_string(vpi->Opcode));
+         assert(!"Unsupported opcode in vertex program");
       }
 
       /* Copy the temporary back into the actual destination register. */
@@ -574,15 +573,13 @@ vec4_vs_visitor::get_vp_src_reg(const prog_src_register &src)
          break;
 
       default:
-         _mesa_problem(ctx, "bad uniform src register file: %s\n",
-                       _mesa_register_file_name((gl_register_file)src.File));
+         assert(!"Bad uniform in src register file");
          return src_reg(this, glsl_type::vec4_type);
       }
       break;
 
    default:
-      _mesa_problem(ctx, "bad src register file: %s\n",
-                    _mesa_register_file_name((gl_register_file)src.File));
+      assert(!"Bad src register file");
       return src_reg(this, glsl_type::vec4_type);
    }
 

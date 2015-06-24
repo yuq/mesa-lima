@@ -147,6 +147,9 @@ indirect_uniform_load(struct vc4_compile *c,
         indirect_offset = qir_ADD(c, indirect_offset,
                                   qir_uniform_ui(c, (range->dst_offset +
                                                      offset)));
+
+        /* Clamp to [0, array size).  Note that MIN/MAX are signed. */
+        indirect_offset = qir_MAX(c, indirect_offset, qir_uniform_ui(c, 0));
         indirect_offset = qir_MIN(c, indirect_offset,
                                   qir_uniform_ui(c, (range->dst_offset +
                                                      range->size - 4)));
@@ -322,7 +325,9 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 switch (instr->src[i].src_type) {
                 case nir_tex_src_coord:
                         s = ntq_get_src(c, instr->src[i].src, 0);
-                        if (instr->sampler_dim != GLSL_SAMPLER_DIM_1D)
+                        if (instr->sampler_dim == GLSL_SAMPLER_DIM_1D)
+                                t = qir_uniform_f(c, 0.5);
+                        else
                                 t = ntq_get_src(c, instr->src[i].src, 1);
                         if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE)
                                 r = ntq_get_src(c, instr->src[i].src, 2);
@@ -1849,8 +1854,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 
         switch (instr->intrinsic) {
         case nir_intrinsic_load_uniform:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++) {
                         dest[i] = qir_uniform(c, QUNIFORM_UNIFORM,
                                               instr->const_index[0] * 4 + i);
@@ -1858,8 +1861,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_uniform_indirect:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++) {
                         dest[i] = indirect_uniform_load(c,
                                                         ntq_get_src(c, instr->src[0], 0),
@@ -1870,8 +1871,6 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_input:
-                assert(instr->const_index[1] == 1);
-
                 for (int i = 0; i < instr->num_components; i++)
                         dest[i] = c->inputs[instr->const_index[0] * 4 + i];
 
@@ -2215,11 +2214,9 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         shader->program_id = vc4->next_compiled_program_id++;
         if (stage == QSTAGE_FRAG) {
                 bool input_live[c->num_input_semantics];
-                struct simple_node *node;
 
                 memset(input_live, 0, sizeof(input_live));
-                foreach(node, &c->instructions) {
-                        struct qinst *inst = (struct qinst *)node;
+                list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                                 if (inst->src[i].file == QFILE_VARY)
                                         input_live[inst->src[i].index] = true;

@@ -73,10 +73,10 @@ class vec4_live_variables;
  * Translates either GLSL IR or Mesa IR (for ARB_vertex_program and
  * fixed-function) into VS IR.
  */
-class vec4_visitor : public backend_visitor
+class vec4_visitor : public backend_shader, public ir_visitor
 {
 public:
-   vec4_visitor(struct brw_context *brw,
+   vec4_visitor(const struct brw_compiler *compiler,
                 struct brw_vec4_compile *c,
                 struct gl_program *prog,
                 const struct brw_vue_prog_key *key,
@@ -85,9 +85,7 @@ public:
                 gl_shader_stage stage,
 		void *mem_ctx,
                 bool no_spills,
-                shader_time_shader_type st_base,
-                shader_time_shader_type st_written,
-                shader_time_shader_type st_reset);
+                int shader_time_index);
    ~vec4_visitor();
 
    dst_reg dst_null_f()
@@ -160,6 +158,7 @@ public:
    virtual void visit(ir_if *);
    virtual void visit(ir_emit_vertex *);
    virtual void visit(ir_end_primitive *);
+   virtual void visit(ir_barrier *);
    /*@}*/
 
    src_reg result;
@@ -178,10 +177,10 @@ public:
 
    struct hash_table *variable_ht;
 
-   bool run(void);
+   bool run(gl_clip_plane *clip_planes);
    void fail(const char *msg, ...);
 
-   void setup_uniform_clipplane_values();
+   void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);
@@ -344,8 +343,7 @@ public:
 
    void emit_shader_time_begin();
    void emit_shader_time_end();
-   void emit_shader_time_write(enum shader_time_shader_type type,
-                               src_reg value);
+   void emit_shader_time_write(int shader_time_subindex, src_reg value);
 
    void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
                             dst_reg dst, src_reg offset, src_reg src0,
@@ -412,9 +410,7 @@ private:
     */
    const bool no_spills;
 
-   const shader_time_shader_type st_base;
-   const shader_time_shader_type st_written;
-   const shader_time_shader_type st_reset;
+   int shader_time_index;
 };
 
 
@@ -426,7 +422,7 @@ private:
 class vec4_generator
 {
 public:
-   vec4_generator(struct brw_context *brw,
+   vec4_generator(const struct brw_compiler *compiler, void *log_data,
                   struct gl_shader_program *shader_prog,
                   struct gl_program *prog,
                   struct brw_vue_prog_data *prog_data,
@@ -508,7 +504,9 @@ private:
                                          struct brw_reg dst);
    void generate_unpack_flags(struct brw_reg dst);
 
-   struct brw_context *brw;
+   const struct brw_compiler *compiler;
+   void *log_data; /* Passed to compiler->*_log functions */
+
    const struct brw_device_info *devinfo;
 
    struct brw_codegen *p;

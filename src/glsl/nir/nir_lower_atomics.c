@@ -78,7 +78,8 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
          nir_deref_as_array(instr->variables[0]->deref.child);
       assert(deref_array->deref.child == NULL);
 
-      offset_const->value.u[0] += deref_array->base_offset;
+      offset_const->value.u[0] +=
+         deref_array->base_offset * ATOMIC_COUNTER_SIZE;
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          nir_load_const_instr *atomic_counter_size =
@@ -108,7 +109,7 @@ lower_instr(nir_intrinsic_instr *instr, nir_function_impl *impl)
    }
 
    new_instr->src[0].is_ssa = true;
-   new_instr->src[0].ssa = offset_def;;
+   new_instr->src[0].ssa = offset_def;
 
    if (instr->dest.is_ssa) {
       nir_ssa_dest_init(&new_instr->instr, &new_instr->dest,

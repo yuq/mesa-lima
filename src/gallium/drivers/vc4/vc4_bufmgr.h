@@ -44,9 +44,9 @@ struct vc4_bo {
 #endif
 
         /** Entry in the linked list of buffers freed, by age. */
-        struct simple_node time_list;
+        struct list_head time_list;
         /** Entry in the per-page-count linked list of buffers freed (by age). */
-        struct simple_node size_list;
+        struct list_head size_list;
         /** Approximate second when the bo was freed. */
         time_t free_time;
         /**

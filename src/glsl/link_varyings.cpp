@@ -56,7 +56,7 @@ cross_validate_types_and_qualifiers(struct gl_shader_program *prog,
    const glsl_type *type_to_match = input->type;
    if (consumer_stage == MESA_SHADER_GEOMETRY) {
       assert(type_to_match->is_array()); /* Enforced by ast_to_hir */
-      type_to_match = type_to_match->element_type();
+      type_to_match = type_to_match->fields.array;
    }
    if (type_to_match != output->type) {
       /* There is a bit of a special case for gl_TexCoord.  This
@@ -1540,13 +1540,15 @@ check_against_output_limit(struct gl_context *ctx,
    const unsigned output_components = output_vectors * 4;
    if (output_components > max_output_components) {
       if (ctx->API == API_OPENGLES2 || prog->IsES)
-         linker_error(prog, "shader uses too many output vectors "
+         linker_error(prog, "%s shader uses too many output vectors "
                       "(%u > %u)\n",
+                      _mesa_shader_stage_to_string(producer->Stage),
                       output_vectors,
                       max_output_components / 4);
       else
-         linker_error(prog, "shader uses too many output components "
+         linker_error(prog, "%s shader uses too many output components "
                       "(%u > %u)\n",
+                      _mesa_shader_stage_to_string(producer->Stage),
                       output_components,
                       max_output_components);
 
@@ -1579,13 +1581,15 @@ check_against_input_limit(struct gl_context *ctx,
    const unsigned input_components = input_vectors * 4;
    if (input_components > max_input_components) {
       if (ctx->API == API_OPENGLES2 || prog->IsES)
-         linker_error(prog, "shader uses too many input vectors "
+         linker_error(prog, "%s shader uses too many input vectors "
                       "(%u > %u)\n",
+                      _mesa_shader_stage_to_string(consumer->Stage),
                       input_vectors,
                       max_input_components / 4);
       else
-         linker_error(prog, "shader uses too many input components "
+         linker_error(prog, "%s shader uses too many input components "
                       "(%u > %u)\n",
+                      _mesa_shader_stage_to_string(consumer->Stage),
                       input_components,
                       max_input_components);
 

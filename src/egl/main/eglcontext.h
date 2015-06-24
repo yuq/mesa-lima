@@ -37,6 +37,10 @@
 #include "egldisplay.h"
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * "Base" class for device driver contexts.
  */
@@ -149,5 +153,9 @@ _eglGetContextHandle(_EGLContext *ctx)
       (EGLContext) ctx : EGL_NO_CONTEXT;
 }
 
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLCONTEXT_INCLUDED */

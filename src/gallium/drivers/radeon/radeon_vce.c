@@ -44,6 +44,10 @@
 #include "radeon_video.h"
 #include "radeon_vce.h"
 
+#define FW_40_2_2 ((40 << 24) | (2 << 16) | (2 << 8))
+#define FW_50_0_1 ((50 << 24) | (0 << 16) | (1 << 8))
+#define FW_50_1_2 ((50 << 24) | (1 << 16) | (2 << 8))
+
 /**
  * flush commands to the hardware
  */
@@ -180,6 +184,44 @@ static unsigned get_cpb_num(struct rvce_encoder *enc)
 	}
 
 	return MIN2(dpb / (w * h), 16);
+}
+
+/**
+ * Get the slot for the currently encoded frame
+ */
+struct rvce_cpb_slot *current_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.prev, list);
+}
+
+/**
+ * Get the slot for L0
+ */
+struct rvce_cpb_slot *l0_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.next, list);
+}
+
+/**
+ * Get the slot for L1
+ */
+struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc)
+{
+	return LIST_ENTRY(struct rvce_cpb_slot, enc->cpb_slots.next->next, list);
+}
+
+/**
+ * Calculate the offsets into the CPB
+ */
+void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
+		       unsigned *luma_offset, unsigned *chroma_offset)
+{
+	unsigned pitch = align(enc->luma->level[0].pitch_bytes, 128);
+	unsigned vpitch = align(enc->luma->npix_y, 16);
+	unsigned fsize = pitch * (vpitch + vpitch / 2);
+
+	*luma_offset = slot->index * fsize;
+	*chroma_offset = *luma_offset + pitch * vpitch;
 }
 
 /**
@@ -406,7 +448,19 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 
 	reset_cpb(enc);
 
-	radeon_vce_40_2_2_init(enc);
+	switch (rscreen->info.vce_fw_version) {
+	case FW_40_2_2:
+		radeon_vce_40_2_2_init(enc);
+		break;
+
+	case FW_50_0_1:
+	case FW_50_1_2:
+		radeon_vce_50_init(enc);
+		break;
+
+	default:
+		goto error;
+	}
 
 	return &enc->base;
 
@@ -426,5 +480,7 @@ error:
  */
 bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 {
-	return rscreen->info.vce_fw_version == ((40 << 24) | (2 << 16) | (2 << 8));
+	return rscreen->info.vce_fw_version == FW_40_2_2 ||
+		rscreen->info.vce_fw_version == FW_50_0_1 ||
+		rscreen->info.vce_fw_version == FW_50_1_2;
 }

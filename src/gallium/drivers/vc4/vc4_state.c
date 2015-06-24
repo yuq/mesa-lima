@@ -304,24 +304,8 @@ vc4_set_index_buffer(struct pipe_context *pctx,
 
         if (ib) {
                 assert(!ib->user_buffer);
-
-                if (ib->index_size == 4) {
-                        struct pipe_resource tmpl = *ib->buffer;
-                        assert(tmpl.format == PIPE_FORMAT_R8_UNORM);
-                        assert(tmpl.height0 == 1);
-                        tmpl.width0 = (tmpl.width0 - ib->offset) / 2;
-                        struct pipe_resource *pshadow =
-                                vc4_resource_create(&vc4->screen->base, &tmpl);
-                        struct vc4_resource *shadow = vc4_resource(pshadow);
-                        pipe_resource_reference(&shadow->shadow_parent, ib->buffer);
-
-                        pipe_resource_reference(&vc4->indexbuf.buffer, NULL);
-                        vc4->indexbuf.buffer = pshadow;
-                        vc4->indexbuf.index_size = 2;
-                } else {
-                        pipe_resource_reference(&vc4->indexbuf.buffer, ib->buffer);
-                        vc4->indexbuf.index_size = ib->index_size;
-                }
+                pipe_resource_reference(&vc4->indexbuf.buffer, ib->buffer);
+                vc4->indexbuf.index_size = ib->index_size;
                 vc4->indexbuf.offset = ib->offset;
         } else {
                 pipe_resource_reference(&vc4->indexbuf.buffer, NULL);
@@ -538,6 +522,7 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 struct pipe_resource tmpl = shadow_parent->base.b;
                 struct vc4_resource *clone;
 
+                tmpl.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
                 tmpl.width0 = u_minify(tmpl.width0, so->u.tex.first_level);
                 tmpl.height0 = u_minify(tmpl.height0, so->u.tex.first_level);
                 tmpl.last_level = so->u.tex.last_level - so->u.tex.first_level;
@@ -547,6 +532,8 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                 clone->shadow_parent = &shadow_parent->base.b;
                 /* Flag it as needing update of the contents from the parent. */
                 clone->writes = shadow_parent->writes - 1;
+
+                assert(clone->vc4_format != VC4_TEXTURE_TYPE_RGBA32R);
         }
         so->texture = prsc;
         so->reference.count = 1;

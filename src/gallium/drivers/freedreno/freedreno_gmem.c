@@ -117,6 +117,7 @@ calculate_tiles(struct fd_context *ctx)
 	uint32_t i, j, t, xoff, yoff;
 	uint32_t tpp_x, tpp_y;
 	bool has_zs = !!(ctx->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL));
+	int tile_n[ARRAY_SIZE(ctx->pipe)];
 
 	if (has_zs) {
 		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
@@ -247,6 +248,7 @@ calculate_tiles(struct fd_context *ctx)
 	/* configure tiles: */
 	t = 0;
 	yoff = miny;
+	memset(tile_n, 0, sizeof(tile_n));
 	for (i = 0; i < nbins_y; i++) {
 		uint32_t bw, bh;
 
@@ -257,20 +259,17 @@ calculate_tiles(struct fd_context *ctx)
 
 		for (j = 0; j < nbins_x; j++) {
 			struct fd_tile *tile = &ctx->tile[t];
-			uint32_t n, p;
+			uint32_t p;
 
 			assert(t < ARRAY_SIZE(ctx->tile));
 
 			/* pipe number: */
 			p = ((i / tpp_y) * div_round_up(nbins_x, tpp_x)) + (j / tpp_x);
 
-			/* slot number: */
-			n = ((i % tpp_y) * tpp_x) + (j % tpp_x);
-
 			/* clip bin width: */
 			bw = MIN2(bin_w, minx + width - xoff);
 
-			tile->n = n;
+			tile->n = tile_n[p]++;
 			tile->p = p;
 			tile->bin_w = bw;
 			tile->bin_h = bh;

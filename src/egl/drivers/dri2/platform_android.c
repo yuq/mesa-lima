@@ -707,10 +707,6 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    dpy->Extensions.ANDROID_image_native_buffer = EGL_TRUE;
    dpy->Extensions.KHR_image_base = EGL_TRUE;
 
-   /* we're supporting EGL 1.4 */
-   dpy->VersionMajor = 1;
-   dpy->VersionMinor = 4;
-
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */

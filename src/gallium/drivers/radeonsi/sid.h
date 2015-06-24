@@ -4516,6 +4516,13 @@
 #define     V_009910_ADDR_SURF_8_BANK                               0x02
 #define     V_009910_ADDR_SURF_16_BANK                              0x03
 /* CIK */
+#define   S_009910_MICRO_TILE_MODE_NEW(x)                             (((x) & 0x07) << 22)
+#define   G_009910_MICRO_TILE_MODE_NEW(x)                             (((x) >> 22) & 0x07)
+#define   C_009910_MICRO_TILE_MODE_NEW(x)                             0xFE3FFFFF
+#define     V_009910_ADDR_SURF_DISPLAY_MICRO_TILING                 0x00
+#define     V_009910_ADDR_SURF_THIN_MICRO_TILING                    0x01
+#define     V_009910_ADDR_SURF_DEPTH_MICRO_TILING                   0x02
+#define     V_009910_ADDR_SURF_ROTATED_MICRO_TILING                 0x03
 #define R_00B01C_SPI_SHADER_PGM_RSRC3_PS                                0x00B01C
 #define   S_00B01C_CU_EN(x)                                           (((x) & 0xFFFF) << 0)
 #define   G_00B01C_CU_EN(x)                                           (((x) >> 0) & 0xFFFF)
@@ -8695,6 +8702,30 @@
 #define    SI_DMA_PACKET_SRBM_WRITE                0x9
 #define    SI_DMA_PACKET_CONSTANT_FILL             0xd
 #define    SI_DMA_PACKET_NOP                       0xf
+
+/* CIK async DMA packets */
+#define CIK_SDMA_PACKET(op, sub_op, n)   ((((n) & 0xFFFF) << 16) |	\
+					 (((sub_op) & 0xFF) << 8) |	\
+					 (((op) & 0xFF) << 0))
+/* CIK async DMA packet types */
+#define    CIK_SDMA_OPCODE_NOP                     0x0
+#define    CIK_SDMA_OPCODE_COPY                    0x1
+#define        CIK_SDMA_COPY_SUB_OPCODE_LINEAR            0x0
+#define        CIK_SDMA_COPY_SUB_OPCODE_TILED             0x1
+#define        CIK_SDMA_COPY_SUB_OPCODE_SOA               0x3
+#define        CIK_SDMA_COPY_SUB_OPCODE_LINEAR_SUB_WINDOW 0x4
+#define        CIK_SDMA_COPY_SUB_OPCODE_TILED_SUB_WINDOW  0x5
+#define        CIK_SDMA_COPY_SUB_OPCODE_T2T_SUB_WINDOW    0x6
+#define    CIK_SDMA_OPCODE_WRITE                   0x2
+#define        SDMA_WRITE_SUB_OPCODE_LINEAR               0x0
+#define        SDMA_WRTIE_SUB_OPCODE_TILED                0x1
+#define    CIK_SDMA_OPCODE_INDIRECT_BUFFER         0x4
+#define    CIK_SDMA_PACKET_FENCE                   0x5
+#define    CIK_SDMA_PACKET_TRAP                    0x6
+#define    CIK_SDMA_PACKET_SEMAPHORE               0x7
+#define    CIK_SDMA_PACKET_CONSTANT_FILL           0xb
+#define    CIK_SDMA_PACKET_SRBM_WRITE              0xe
+#define    CIK_SDMA_COPY_MAX_SIZE                  0x1fffff
 
 #endif /* _SID_H */
 

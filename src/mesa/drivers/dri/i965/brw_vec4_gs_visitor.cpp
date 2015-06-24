@@ -34,15 +34,15 @@ const unsigned MAX_GS_INPUT_VERTICES = 6;
 
 namespace brw {
 
-vec4_gs_visitor::vec4_gs_visitor(struct brw_context *brw,
+vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
-                                 bool no_spills)
-   : vec4_visitor(brw, &c->base, &c->gp->program.Base, &c->key.base,
+                                 bool no_spills,
+                                 int shader_time_index)
+   : vec4_visitor(compiler, &c->base, &c->gp->program.Base, &c->key.base,
                   &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
-                  no_spills,
-                  ST_GS, ST_GS_WRITTEN, ST_GS_RESET),
+                  no_spills, shader_time_index),
      c(c)
 {
 }
@@ -106,7 +106,7 @@ vec4_gs_visitor::setup_payload()
     * to be interleaved, so one register contains two attribute slots.
     */
    int attributes_per_reg =
-      c->prog_data.dispatch_mode == GEN7_GS_DISPATCH_MODE_DUAL_OBJECT ? 1 : 2;
+      c->prog_data.base.dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
 
    /* If a geometry shader tries to read from an input that wasn't written by
     * the vertex shader, that produces undefined results, but it shouldn't
@@ -629,7 +629,8 @@ generate_assembly(struct brw_context *brw,
                   const cfg_t *cfg,
                   unsigned *final_assembly_size)
 {
-   vec4_generator g(brw, shader_prog, prog, prog_data, mem_ctx,
+   vec4_generator g(brw->intelScreen->compiler, brw,
+                    shader_prog, prog, prog_data, mem_ctx,
                     INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
    return g.generate_assembly(cfg, final_assembly_size);
 }
@@ -648,6 +649,10 @@ brw_gs_emit(struct brw_context *brw,
       brw_dump_ir("geometry", prog, &shader->base, NULL);
    }
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, NULL, ST_GS);
+
    if (brw->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do
        * so without spilling. If the GS invocations count > 1, then we can't use
@@ -655,10 +660,11 @@ brw_gs_emit(struct brw_context *brw,
        */
       if (c->prog_data.invocations <= 1 &&
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
-         c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_DUAL_OBJECT;
+         c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(brw, c, prog, mem_ctx, true /* no_spills */);
-         if (v.run()) {
+         vec4_gs_visitor v(brw->intelScreen->compiler,
+                           c, prog, mem_ctx, true /* no_spills */, st_index);
+         if (v.run(NULL /* clip planes */)) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
                                      &c->prog_data.base, mem_ctx, v.cfg,
                                      final_assembly_size);
@@ -690,19 +696,23 @@ brw_gs_emit(struct brw_context *brw,
     * SINGLE mode.
     */
    if (c->prog_data.invocations <= 1 || brw->gen < 7)
-      c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_SINGLE;
+      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
    else
-      c->prog_data.dispatch_mode = GEN7_GS_DISPATCH_MODE_DUAL_INSTANCE;
+      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
 
    vec4_gs_visitor *gs = NULL;
    const unsigned *ret = NULL;
 
    if (brw->gen >= 7)
-      gs = new vec4_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */);
+      gs = new vec4_gs_visitor(brw->intelScreen->compiler,
+                               c, prog, mem_ctx, false /* no_spills */,
+                               st_index);
    else
-      gs = new gen6_gs_visitor(brw, c, prog, mem_ctx, false /* no_spills */);
+      gs = new gen6_gs_visitor(brw->intelScreen->compiler,
+                               c, prog, mem_ctx, false /* no_spills */,
+                               st_index);
 
-   if (!gs->run()) {
+   if (!gs->run(NULL /* clip planes */)) {
       prog->LinkStatus = false;
       ralloc_strcat(&prog->InfoLog, gs->fail_msg);
    } else {

@@ -38,6 +38,7 @@
       fieldval & field ## _MASK;                                        \
    })
 
+#define GET_BITS(data, high, low) ((data & INTEL_MASK((high), (low))) >> (low))
 #define GET_FIELD(word, field) (((word)  & field ## _MASK) >> field ## _SHIFT)
 
 #ifndef BRW_DEFINES_H
@@ -51,6 +52,7 @@
 # define GEN4_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL (0 << 15)
 # define GEN4_3DPRIM_VERTEXBUFFER_ACCESS_RANDOM     (1 << 15)
 # define GEN7_3DPRIM_INDIRECT_PARAMETER_ENABLE      (1 << 10)
+# define GEN7_3DPRIM_PREDICATE_ENABLE               (1 << 8)
 /* DW1 */
 # define GEN7_3DPRIM_VERTEXBUFFER_ACCESS_SEQUENTIAL (0 << 8)
 # define GEN7_3DPRIM_VERTEXBUFFER_ACCESS_RANDOM     (1 << 8)
@@ -530,9 +532,11 @@
 #define GEN7_SURFACE_ARYSPC_FULL	(0 << 10)
 #define GEN7_SURFACE_ARYSPC_LOD0	(1 << 10)
 
-/* Surface state DW0 */
+/* Surface state DW1 */
 #define GEN8_SURFACE_MOCS_SHIFT         24
 #define GEN8_SURFACE_MOCS_MASK          INTEL_MASK(30, 24)
+#define GEN8_SURFACE_QPITCH_SHIFT       0
+#define GEN8_SURFACE_QPITCH_MASK        INTEL_MASK(14, 0)
 
 /* Surface state DW2 */
 #define BRW_SURFACE_HEIGHT_SHIFT	19
@@ -590,6 +594,15 @@
 #define GEN7_SURFACE_MOCS_SHIFT                 16
 #define GEN7_SURFACE_MOCS_MASK                  INTEL_MASK(19, 16)
 
+#define GEN9_SURFACE_TRMODE_SHIFT          18
+#define GEN9_SURFACE_TRMODE_MASK           INTEL_MASK(19, 18)
+#define GEN9_SURFACE_TRMODE_NONE           0
+#define GEN9_SURFACE_TRMODE_TILEYF         1
+#define GEN9_SURFACE_TRMODE_TILEYS         2
+
+#define GEN9_SURFACE_MIP_TAIL_START_LOD_SHIFT      8
+#define GEN9_SURFACE_MIP_TAIL_START_LOD_MASK       INTEL_MASK(11, 8)
+
 /* Surface state DW6 */
 #define GEN7_SURFACE_MCS_ENABLE                 (1 << 0)
 #define GEN7_SURFACE_MCS_PITCH_SHIFT            3
@@ -606,6 +619,8 @@
 #define GEN8_SURFACE_AUX_MODE_HIZ               3
 
 /* Surface state DW7 */
+#define GEN9_SURFACE_RT_COMPRESSION_SHIFT       30
+#define GEN9_SURFACE_RT_COMPRESSION_MASK        INTEL_MASK(30, 30)
 #define GEN7_SURFACE_CLEAR_COLOR_SHIFT		28
 #define GEN7_SURFACE_SCS_R_SHIFT                25
 #define GEN7_SURFACE_SCS_R_MASK                 INTEL_MASK(27, 25)
@@ -1131,6 +1146,11 @@ enum opcode {
     * Terminate the compute shader.
     */
    CS_OPCODE_CS_TERMINATE,
+
+   /**
+    * GLSL barrier()
+    */
+   SHADER_OPCODE_BARRIER,
 };
 
 enum brw_urb_write_flags {
@@ -1592,6 +1612,14 @@ enum brw_message_target {
 #define BRW_SCRATCH_SPACE_SIZE_1M     10
 #define BRW_SCRATCH_SPACE_SIZE_2M     11
 
+#define BRW_MESSAGE_GATEWAY_SFID_OPEN_GATEWAY         0
+#define BRW_MESSAGE_GATEWAY_SFID_CLOSE_GATEWAY        1
+#define BRW_MESSAGE_GATEWAY_SFID_FORWARD_MSG          2
+#define BRW_MESSAGE_GATEWAY_SFID_GET_TIMESTAMP        3
+#define BRW_MESSAGE_GATEWAY_SFID_BARRIER_MSG          4
+#define BRW_MESSAGE_GATEWAY_SFID_UPDATE_GATEWAY_STATE 5
+#define BRW_MESSAGE_GATEWAY_SFID_MMIO_READ_WRITE      6
+
 
 #define CMD_URB_FENCE                 0x6000
 #define CMD_CS_URB_STATE              0x6001
@@ -1769,9 +1797,8 @@ enum brw_message_target {
 # define GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID		1
 # define GEN7_GS_CONTROL_DATA_HEADER_SIZE_SHIFT		20
 # define GEN7_GS_INSTANCE_CONTROL_SHIFT			15
-# define GEN7_GS_DISPATCH_MODE_SINGLE			(0 << 11)
-# define GEN7_GS_DISPATCH_MODE_DUAL_INSTANCE		(1 << 11)
-# define GEN7_GS_DISPATCH_MODE_DUAL_OBJECT		(2 << 11)
+# define GEN7_GS_DISPATCH_MODE_SHIFT                    11
+# define GEN7_GS_DISPATCH_MODE_MASK                     INTEL_MASK(12, 11)
 # define GEN6_GS_STATISTICS_ENABLE			(1 << 10)
 # define GEN6_GS_SO_STATISTICS_ENABLE			(1 << 9)
 # define GEN6_GS_RENDERING_ENABLE			(1 << 8)
@@ -2470,8 +2497,8 @@ enum brw_wm_barycentric_interp_mode {
  * cache settings.  We still use only either write-back or write-through; and
  * rely on the documented default values.
  */
-#define SKL_MOCS_WB 9
-#define SKL_MOCS_WT 5
+#define SKL_MOCS_WB (0b001001 << 1)
+#define SKL_MOCS_WT (0b000101 << 1)
 
 #define MEDIA_VFE_STATE                         0x7000
 /* GEN7 DW2, GEN8+ DW3 */

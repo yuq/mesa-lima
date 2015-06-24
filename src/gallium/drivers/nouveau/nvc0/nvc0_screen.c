@@ -193,6 +193,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
    case PIPE_CAP_VERTEXID_NOBASE:
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+   case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -296,6 +297,7 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
       return 1;
    case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+   case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
       return 0;
    case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
       return 16; /* would be 32 in linked (OpenGL-style) mode */
@@ -581,7 +583,7 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 
    size = align(size, 1 << 17);
 
-   ret = nouveau_bo_new(screen->base.device, NOUVEAU_BO_VRAM, 1 << 17, size,
+   ret = nouveau_bo_new(screen->base.device, NV_VRAM_DOMAIN(&screen->base), 1 << 17, size,
                         NULL, &bo);
    if (ret) {
       NOUVEAU_ERR("failed to allocate TLS area, size: 0x%"PRIx64"\n", size);
@@ -643,6 +645,11 @@ nvc0_screen_create(struct nouveau_device *dev)
       PIPE_BIND_COMMAND_ARGS_BUFFER;
    screen->base.sysmem_bindings |=
       PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_INDEX_BUFFER;
+
+   if (screen->base.vram_domain & NOUVEAU_BO_GART) {
+      screen->base.sysmem_bindings |= screen->base.vidmem_bindings;
+      screen->base.vidmem_bindings = 0;
+   }
 
    pscreen->destroy = nvc0_screen_destroy;
    pscreen->context_create = nvc0_create;
@@ -822,7 +829,7 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    nvc0_magic_3d_init(push, screen->eng3d->oclass);
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 1 << 17, 1 << 20, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 20, NULL,
                         &screen->text);
    if (ret)
       goto fail;
@@ -832,12 +839,12 @@ nvc0_screen_create(struct nouveau_device *dev)
     */
    nouveau_heap_init(&screen->text_heap, 0, (1 << 20) - 0x100);
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 1 << 12, 6 << 16, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 6 << 16, NULL,
                         &screen->uniform_bo);
    if (ret)
       goto fail;
 
-   PUSH_REFN (push, screen->uniform_bo, NOUVEAU_BO_VRAM | NOUVEAU_BO_WR);
+   PUSH_REFN (push, screen->uniform_bo, NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_WR);
 
    for (i = 0; i < 5; ++i) {
       /* TIC and TSC entries for each unit (nve4+ only) */
@@ -908,7 +915,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, 0);
 
    if (screen->eng3d->oclass < GM107_3D_CLASS) {
-      ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 1 << 17, 1 << 20, NULL,
+      ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 20, NULL,
                            &screen->poly_cache);
       if (ret)
          goto fail;
@@ -919,7 +926,7 @@ nvc0_screen_create(struct nouveau_device *dev)
       PUSH_DATA (push, 3);
    }
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_VRAM, 1 << 17, 1 << 17, NULL,
+   ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 17, NULL,
                         &screen->txc);
    if (ret)
       goto fail;

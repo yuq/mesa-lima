@@ -427,7 +427,7 @@ intel_framebuffer_renderbuffer(struct gl_context * ctx,
 {
    DBG("Intel FramebufferRenderbuffer %u %u\n", fb->Name, rb ? rb->Name : 0);
 
-   _mesa_framebuffer_renderbuffer(ctx, fb, attachment, rb);
+   _mesa_FramebufferRenderbuffer_sw(ctx, fb, attachment, rb);
    intel_draw_buffer(ctx);
 }
 

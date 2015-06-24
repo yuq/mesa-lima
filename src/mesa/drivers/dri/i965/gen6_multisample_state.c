@@ -26,6 +26,7 @@
 #include "brw_context.h"
 #include "brw_defines.h"
 #include "brw_multisample_state.h"
+#include "main/framebuffer.h"
 
 void
 gen6_get_sample_position(struct gl_context *ctx,
@@ -34,7 +35,7 @@ gen6_get_sample_position(struct gl_context *ctx,
 {
    uint8_t bits;
 
-   switch (fb->Visual.samples) {
+   switch (_mesa_geometric_samples(fb)) {
    case 1:
       result[0] = result[1] = 0.5f;
       return;

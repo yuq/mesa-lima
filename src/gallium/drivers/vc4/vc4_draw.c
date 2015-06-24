@@ -72,44 +72,15 @@ vc4_start_draw(struct vc4_context *vc4)
         uint32_t tilew = align(width, 64) / 64;
         uint32_t tileh = align(height, 64) / 64;
 
-        /* Tile alloc memory setup: We use an initial alloc size of 32b.  The
-         * hardware then aligns that to 256b (we use 4096, because all of our
-         * BO allocations align to that anyway), then for some reason the
-         * simulator wants an extra page available, even if you have overflow
-         * memory set up.
-         *
-         * XXX: The binner only does 28-bit addressing math, so the tile alloc
-         * and tile state should be in the same BO and that BO needs to not
-         * cross a 256MB boundary, somehow.
-         */
-        uint32_t tile_alloc_size = 32 * tilew * tileh;
-        tile_alloc_size = align(tile_alloc_size, 4096);
-        tile_alloc_size += 4096;
-        uint32_t tile_state_size = 48 * tilew * tileh;
-        if (!vc4->tile_alloc || vc4->tile_alloc->size < tile_alloc_size) {
-                vc4_bo_unreference(&vc4->tile_alloc);
-                vc4->tile_alloc = vc4_bo_alloc(vc4->screen, tile_alloc_size,
-                                               "tile_alloc");
-        }
-        if (!vc4->tile_state || vc4->tile_state->size < tile_state_size) {
-                vc4_bo_unreference(&vc4->tile_state);
-                vc4->tile_state = vc4_bo_alloc(vc4->screen, tile_state_size,
-                                               "tile_state");
-        }
-
         //   Tile state data is 48 bytes per tile, I think it can be thrown away
         //   as soon as binning is finished.
-        cl_start_reloc(&vc4->bcl, 2);
         cl_u8(&vc4->bcl, VC4_PACKET_TILE_BINNING_MODE_CONFIG);
-        cl_reloc(vc4, &vc4->bcl, vc4->tile_alloc, 0);
-        cl_u32(&vc4->bcl, vc4->tile_alloc->size);
-        cl_reloc(vc4, &vc4->bcl, vc4->tile_state, 0);
+        cl_u32(&vc4->bcl, 0); /* tile alloc addr, filled by kernel */
+        cl_u32(&vc4->bcl, 0); /* tile alloc size, filled by kernel */
+        cl_u32(&vc4->bcl, 0); /* tile state addr, filled by kernel */
         cl_u8(&vc4->bcl, tilew);
         cl_u8(&vc4->bcl, tileh);
-        cl_u8(&vc4->bcl,
-              VC4_BIN_CONFIG_AUTO_INIT_TSDA |
-              VC4_BIN_CONFIG_ALLOC_BLOCK_SIZE_32 |
-              VC4_BIN_CONFIG_ALLOC_INIT_BLOCK_SIZE_32);
+        cl_u8(&vc4->bcl, 0); /* flags, filled by kernel. */
 
         /* START_TILE_BINNING resets the statechange counters in the hardware,
          * which are what is used when a primitive is binned to a tile to
@@ -129,6 +100,8 @@ vc4_start_draw(struct vc4_context *vc4)
 
         vc4->needs_flush = true;
         vc4->draw_call_queued = true;
+        vc4->draw_width = width;
+        vc4->draw_height = height;
 }
 
 static void
@@ -266,13 +239,17 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          * definitions, up to but not including QUADS.
          */
         if (info->indexed) {
-                struct vc4_resource *rsc = vc4_resource(vc4->indexbuf.buffer);
                 uint32_t offset = vc4->indexbuf.offset;
                 uint32_t index_size = vc4->indexbuf.index_size;
-                if (rsc->shadow_parent) {
-                        vc4_update_shadow_index_buffer(pctx, &vc4->indexbuf);
-                        offset = 0;
+                struct pipe_resource *prsc;
+                if (vc4->indexbuf.index_size == 4) {
+                        prsc = vc4_get_shadow_index_buffer(pctx, &vc4->indexbuf,
+                                                           info->count, &offset);
+                        index_size = 2;
+                } else {
+                        prsc = vc4->indexbuf.buffer;
                 }
+                struct vc4_resource *rsc = vc4_resource(prsc);
 
                 cl_start_reloc(&vc4->bcl, 1);
                 cl_u8(&vc4->bcl, VC4_PACKET_GL_INDEXED_PRIMITIVE);
@@ -284,6 +261,9 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_u32(&vc4->bcl, info->count);
                 cl_reloc(vc4, &vc4->bcl, rsc->bo, offset);
                 cl_u32(&vc4->bcl, max_index);
+
+                if (vc4->indexbuf.index_size == 4)
+                        pipe_resource_reference(&prsc, NULL);
         } else {
                 cl_u8(&vc4->bcl, VC4_PACKET_GL_ARRAY_PRIMITIVE);
                 cl_u8(&vc4->bcl, info->mode);

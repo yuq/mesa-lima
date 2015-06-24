@@ -26,6 +26,7 @@
 #include "CL/cl.h"
 
 #include <stdexcept>
+#include <string>
 
 namespace clover {
    class command_queue;

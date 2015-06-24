@@ -39,6 +39,7 @@
 #include "swrast/s_renderbuffer.h"
 #include "util/ralloc.h"
 #include "brw_shader.h"
+#include "glsl/nir/nir.h"
 
 #include "utils.h"
 #include "xmlpool.h"
@@ -1372,6 +1373,8 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    if (!intelScreen->devinfo)
       return false;
 
+   brw_process_intel_debug_variable(intelScreen);
+
    intelScreen->hw_must_use_separate_stencil = intelScreen->devinfo->gen >= 7;
 
    intelScreen->hw_has_swizzling = intel_detect_swizzling(intelScreen);
@@ -1406,6 +1409,13 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
       intelScreen->has_context_reset_notification =
          (ret != -1 || errno != EINVAL);
    }
+
+   struct drm_i915_getparam getparam;
+   getparam.param = I915_PARAM_CMD_PARSER_VERSION;
+   getparam.value = &intelScreen->cmd_parser_version;
+   const int ret = drmIoctl(psp->fd, DRM_IOCTL_I915_GETPARAM, &getparam);
+   if (ret == -1)
+      intelScreen->cmd_parser_version = 0;
 
    psp->extensions = !intelScreen->has_context_reset_notification
       ? intelScreenExtensions : intelRobustScreenExtensions;

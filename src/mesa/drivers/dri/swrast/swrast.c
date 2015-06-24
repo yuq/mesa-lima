@@ -62,7 +62,9 @@
 #include "swrast/s_context.h"
 
 #include <sys/types.h>
-#include <sys/sysctl.h>
+#ifdef HAVE_SYS_SYSCTL_H
+# include <sys/sysctl.h>
+#endif
 
 const __DRIextension **__driDriverGetExtensions_swrast(void);
 
@@ -958,6 +960,7 @@ static const __DRIextension *swrast_driver_extensions[] = {
     &driCoreExtension.base,
     &driSWRastExtension.base,
     &driCopySubBufferExtension.base,
+    &dri2ConfigQueryExtension.base,
     &swrast_vtable.base,
     NULL
 };

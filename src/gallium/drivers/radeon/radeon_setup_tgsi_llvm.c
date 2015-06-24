@@ -85,8 +85,9 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 		unsigned File, const struct tgsi_ind_register *reg)
 {
 	struct radeon_llvm_context * ctx = radeon_llvm_context(bld_base);
+
 	if (File != TGSI_FILE_TEMPORARY || reg->ArrayID == 0 ||
-            reg->ArrayID > RADEON_LLVM_MAX_ARRAYS) {
+	    reg->ArrayID > bld_base->info->array_max[TGSI_FILE_TEMPORARY]) {
 		struct tgsi_declaration_range range;
 		range.First = 0;
 		range.Last = bld_base->info->file_max[File];
@@ -252,8 +253,14 @@ static void emit_declaration(
 	}
 
 	case TGSI_FILE_TEMPORARY:
-		if (decl->Declaration.Array && decl->Array.ArrayID <= RADEON_LLVM_MAX_ARRAYS)
+		if (decl->Declaration.Array) {
+			if (!ctx->arrays) {
+				int size = bld_base->info->array_max[TGSI_FILE_TEMPORARY];
+				ctx->arrays = MALLOC(sizeof(ctx->arrays[0]) * size);
+			}
+
 			ctx->arrays[decl->Array.ArrayID - 1] = decl->Range;
+		}
 		if (uses_temp_indirect_addressing(bld_base)) {
 			lp_emit_declaration_soa(bld_base, decl);
 			break;
@@ -314,6 +321,21 @@ static void emit_declaration(
 	}
 }
 
+static LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
+                                         LLVMValueRef value)
+{
+	struct lp_build_emit_data clamp_emit_data;
+
+	memset(&clamp_emit_data, 0, sizeof(clamp_emit_data));
+	clamp_emit_data.arg_count = 3;
+	clamp_emit_data.args[0] = value;
+	clamp_emit_data.args[2] = bld_base->base.one;
+	clamp_emit_data.args[1] = bld_base->base.zero;
+
+	return lp_build_emit_llvm(bld_base, TGSI_OPCODE_CLAMP,
+				  &clamp_emit_data);
+}
+
 static void
 emit_store(
 	struct lp_build_tgsi_context * bld_base,
@@ -324,7 +346,6 @@ emit_store(
 	struct radeon_llvm_context * ctx = radeon_llvm_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
-	struct lp_build_context base = bld->bld_base.base;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
 	LLVMBuilderRef builder = bld->bld_base.base.gallivm->builder;
 	LLVMValueRef temp_ptr;
@@ -350,28 +371,8 @@ emit_store(
 	TGSI_FOR_EACH_DST0_ENABLED_CHANNEL( inst, chan_index ) {
 		LLVMValueRef value = dst[chan_index];
 
-		if (inst->Instruction.Saturate != TGSI_SAT_NONE) {
-			struct lp_build_emit_data clamp_emit_data;
-
-			memset(&clamp_emit_data, 0, sizeof(clamp_emit_data));
-			clamp_emit_data.arg_count = 3;
-			clamp_emit_data.args[0] = value;
-			clamp_emit_data.args[2] = base.one;
-
-			switch(inst->Instruction.Saturate) {
-			case TGSI_SAT_ZERO_ONE:
-				clamp_emit_data.args[1] = base.zero;
-				break;
-			case TGSI_SAT_MINUS_PLUS_ONE:
-				clamp_emit_data.args[1] = LLVMConstReal(
-						base.elem_type, -1.0f);
-				break;
-			default:
-				assert(0);
-			}
-			value = lp_build_emit_llvm(bld_base, TGSI_OPCODE_CLAMP,
-						&clamp_emit_data);
-		}
+		if (inst->Instruction.Saturate)
+			value = radeon_llvm_saturate(bld_base, value);
 
 		if (reg->Register.File == TGSI_FILE_ADDRESS) {
 			temp_ptr = bld->addr[reg->Register.Index][chan_index];
@@ -1438,8 +1439,6 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	/* Allocate outputs */
 	ctx->soa.outputs = ctx->outputs;
 
-	ctx->num_arrays = 0;
-
 	/* XXX: Is there a better way to initialize all this ? */
 
 	lp_set_default_actions(bld_base);
@@ -1628,8 +1627,11 @@ void radeon_llvm_dispose(struct radeon_llvm_context * ctx)
 {
 	LLVMDisposeModule(ctx->soa.bld_base.base.gallivm->module);
 	LLVMContextDispose(ctx->soa.bld_base.base.gallivm->context);
+	FREE(ctx->arrays);
+	ctx->arrays = NULL;
 	FREE(ctx->temps);
 	ctx->temps = NULL;
+	ctx->temps_count = 0;
 	FREE(ctx->loop);
 	ctx->loop = NULL;
 	ctx->loop_depth_max = 0;

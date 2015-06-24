@@ -121,8 +121,9 @@ brw_fast_clear_depth(struct gl_context *ctx)
     * first.
     */
    if ((ctx->Scissor.EnableFlags & 1) && !noop_scissor(ctx, fb)) {
-      perf_debug("Failed to fast clear depth due to scissor being enabled.  "
-                 "Possible 5%% performance win if avoided.\n");
+      perf_debug("Failed to fast clear %dx%d depth because of scissors.  "
+                 "Possible 5%% performance win if avoided.\n",
+                 mt->logical_width0, mt->logical_height0);
       return false;
    }
 

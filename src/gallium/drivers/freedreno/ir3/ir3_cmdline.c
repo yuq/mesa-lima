@@ -30,6 +30,7 @@
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <err.h>
 
 #include "tgsi/tgsi_parse.h"
@@ -65,34 +66,34 @@ static void dump_info(struct ir3_shader_variant *so, const char *str)
 	// TODO make gpu_id configurable on cmdline
 	bin = ir3_shader_assemble(so, 320);
 	if (fd_mesa_debug & FD_DBG_DISASM) {
-		struct ir3_block *block = so->ir->block;
+		struct ir3 *ir = so->ir;
 		struct ir3_register *reg;
 		uint8_t regid;
 		unsigned i;
 
 		debug_printf("; %s: %s\n", type, str);
 
-		for (i = 0; i < block->ninputs; i++) {
-			if (!block->inputs[i]) {
+		for (i = 0; i < ir->ninputs; i++) {
+			if (!ir->inputs[i]) {
 				debug_printf("; in%d unused\n", i);
 				continue;
 			}
-			reg = block->inputs[i]->regs[0];
+			reg = ir->inputs[i]->regs[0];
 			regid = reg->num;
 			debug_printf("@in(%sr%d.%c)\tin%d\n",
 					(reg->flags & IR3_REG_HALF) ? "h" : "",
 					(regid >> 2), "xyzw"[regid & 0x3], i);
 		}
 
-		for (i = 0; i < block->noutputs; i++) {
-			if (!block->outputs[i]) {
+		for (i = 0; i < ir->noutputs; i++) {
+			if (!ir->outputs[i]) {
 				debug_printf("; out%d unused\n", i);
 				continue;
 			}
 			/* kill shows up as a virtual output.. skip it! */
-			if (is_kill(block->outputs[i]))
+			if (is_kill(ir->outputs[i]))
 				continue;
-			reg = block->outputs[i]->regs[0];
+			reg = ir->outputs[i]->regs[0];
 			regid = reg->num;
 			debug_printf("@out(%sr%d.%c)\tout%d\n",
 					(reg->flags & IR3_REG_HALF) ? "h" : "",
@@ -194,16 +195,6 @@ read_file(const char *filename, void **ptr, size_t *size)
 	return 0;
 }
 
-static void reset_variant(struct ir3_shader_variant *v, const char *msg)
-{
-	printf("; %s\n", msg);
-	v->inputs_count = 0;
-	v->outputs_count = 0;
-	v->total_in = 0;
-	v->has_samp = false;
-	v->immediates_count = 0;
-}
-
 static void print_usage(void)
 {
 	printf("Usage: ir3_compiler [OPTIONS]... FILE\n");
@@ -225,12 +216,12 @@ int main(int argc, char **argv)
 	const char *filename;
 	struct tgsi_token toks[65536];
 	struct tgsi_parse_context parse;
+	struct ir3_compiler *compiler;
 	struct ir3_shader_variant v;
 	struct ir3_shader_key key = {};
 	const char *info;
 	void *ptr;
 	size_t size;
-	int use_nir = 0;
 
 	fd_mesa_debug |= FD_DBG_DISASM;
 
@@ -243,7 +234,7 @@ int main(int argc, char **argv)
 
 	while (n < argc) {
 		if (!strcmp(argv[n], "--verbose")) {
-			fd_mesa_debug |=  FD_DBG_OPTDUMP | FD_DBG_MSGS | FD_DBG_OPTMSGS;
+			fd_mesa_debug |= FD_DBG_MSGS | FD_DBG_OPTMSGS;
 			n++;
 			continue;
 		}
@@ -290,17 +281,6 @@ int main(int argc, char **argv)
 			continue;
 		}
 
-		if (!strcmp(argv[n], "--nocp")) {
-			fd_mesa_debug |= FD_DBG_NOCP;
-			n++;
-			continue;
-		}
-		if (!strcmp(argv[n], "--nir")) {
-			use_nir = true;
-			n++;
-			continue;
-		}
-
 		if (!strcmp(argv[n], "--help")) {
 			print_usage();
 			return 0;
@@ -340,31 +320,14 @@ int main(int argc, char **argv)
 		break;
 	}
 
-	if (use_nir) {
-		info = "NIR compiler";
-		ret = ir3_compile_shader_nir(&v, toks, key);
-	} else {
-		info = "TGSI compiler";
-		ret = ir3_compile_shader(&v, toks, key, true);
-	}
+	/* TODO cmdline option to target different gpus: */
+	compiler = ir3_compiler_create(320);
 
-	if (ret) {
-		reset_variant(&v, "compiler failed, trying without copy propagation!");
-		info = "compiler (no copy propagation)";
-		ret = ir3_compile_shader(&v, toks, key, false);
-	}
-
+	info = "NIR compiler";
+	ret = ir3_compile_shader_nir(compiler, &v, toks, key);
 	if (ret) {
 		fprintf(stderr, "compiler failed!\n");
 		return ret;
 	}
 	dump_info(&v, info);
-}
-
-void _mesa_error_no_memory(const char *caller);
-
-void
-_mesa_error_no_memory(const char *caller)
-{
-	fprintf(stderr, "Mesa error: out of memory in %s", caller);
 }

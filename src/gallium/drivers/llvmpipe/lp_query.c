@@ -315,7 +315,7 @@ llvmpipe_check_render_cond(struct llvmpipe_context *lp)
 
    b = pipe->get_query_result(pipe, lp->render_cond_query, wait, (void*)&result);
    if (b)
-      return (!result == lp->render_cond_cond);
+      return ((!result) == lp->render_cond_cond);
    else
       return TRUE;
 }

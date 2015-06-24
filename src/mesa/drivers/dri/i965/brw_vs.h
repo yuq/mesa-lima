@@ -90,11 +90,13 @@ namespace brw {
 class vec4_vs_visitor : public vec4_visitor
 {
 public:
-   vec4_vs_visitor(struct brw_context *brw,
+   vec4_vs_visitor(const struct brw_compiler *compiler,
                    struct brw_vs_compile *vs_compile,
                    struct brw_vs_prog_data *vs_prog_data,
                    struct gl_shader_program *prog,
-                   void *mem_ctx);
+                   void *mem_ctx,
+                   int shader_time_index,
+                   bool use_legacy_snorm_formula);
 
 protected:
    virtual dst_reg *make_reg_for_system_value(ir_variable *ir);
@@ -115,6 +117,8 @@ private:
    struct brw_vs_prog_data * const vs_prog_data;
    src_reg *vp_temp_regs;
    src_reg vp_addr_reg;
+
+   bool use_legacy_snorm_formula;
 };
 
 } /* namespace brw */

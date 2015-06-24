@@ -323,9 +323,12 @@ intelInitExtensions(struct gl_context *ctx)
       }
    }
 
+   brw->predicate.supported = false;
+
    if (brw->gen >= 7) {
       ctx->Extensions.ARB_conservative_depth = true;
       ctx->Extensions.ARB_derivative_control = true;
+      ctx->Extensions.ARB_framebuffer_no_attachments = true;
       ctx->Extensions.ARB_gpu_shader5 = true;
       ctx->Extensions.ARB_shader_atomic_counters = true;
       ctx->Extensions.ARB_texture_compression_bptc = true;
@@ -337,6 +340,9 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback2 = true;
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
+
+         if (brw->intelScreen->cmd_parser_version >= 2)
+            brw->predicate.supported = true;
       }
 
       /* Only enable this in core profile because other parts of Mesa behave

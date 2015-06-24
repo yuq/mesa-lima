@@ -271,14 +271,30 @@ iter_declaration(
    struct tgsi_full_declaration *decl )
 {
    struct dump_ctx *ctx = (struct dump_ctx *)iter;
+   boolean patch = decl->Semantic.Name == TGSI_SEMANTIC_PATCH ||
+      decl->Semantic.Name == TGSI_SEMANTIC_TESSINNER ||
+      decl->Semantic.Name == TGSI_SEMANTIC_TESSOUTER ||
+      decl->Semantic.Name == TGSI_SEMANTIC_PRIMID;
 
    TXT( "DCL " );
 
    TXT(tgsi_file_name(decl->Declaration.File));
 
-   /* all geometry shader inputs are two dimensional */
+   /* all geometry shader inputs and non-patch tessellation shader inputs are
+    * two dimensional
+    */
    if (decl->Declaration.File == TGSI_FILE_INPUT &&
-       iter->processor.Processor == TGSI_PROCESSOR_GEOMETRY) {
+       (iter->processor.Processor == TGSI_PROCESSOR_GEOMETRY ||
+        (!patch &&
+         (iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL ||
+          iter->processor.Processor == TGSI_PROCESSOR_TESS_EVAL)))) {
+      TXT("[]");
+   }
+
+   /* all non-patch tess ctrl shader outputs are two dimensional */
+   if (decl->Declaration.File == TGSI_FILE_OUTPUT &&
+       !patch &&
+       iter->processor.Processor == TGSI_PROCESSOR_TESS_CTRL) {
       TXT("[]");
    }
 
@@ -523,17 +539,8 @@ iter_instruction(
 
    TXT( info->mnemonic );
 
-   switch (inst->Instruction.Saturate) {
-   case TGSI_SAT_NONE:
-      break;
-   case TGSI_SAT_ZERO_ONE:
+   if (inst->Instruction.Saturate) {
       TXT( "_SAT" );
-      break;
-   case TGSI_SAT_MINUS_PLUS_ONE:
-      TXT( "_SATNV" );
-      break;
-   default:
-      assert( 0 );
    }
 
    for (i = 0; i < inst->Instruction.NumDstRegs; i++) {

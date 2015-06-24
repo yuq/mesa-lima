@@ -2894,6 +2894,43 @@ and only the X component is used.
 FIXME: This right now can be either a ordinary input or a system value...
 
 
+TGSI_SEMANTIC_PATCH
+"""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates a
+generic per-patch attribute. Such semantics will not implicitly be per-vertex
+arrays.
+
+TGSI_SEMANTIC_TESSCOORD
+"""""""""""""""""""""""
+
+For tessellation evaluation shaders, this semantic label indicates the
+coordinates of the vertex being processed. This is available in XYZ; W is
+undefined.
+
+TGSI_SEMANTIC_TESSOUTER
+"""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+outer tessellation levels of the patch. Isoline tessellation will only have XY
+defined, triangle will have XYZ and quads will have XYZW defined. This
+corresponds to gl_TessLevelOuter.
+
+TGSI_SEMANTIC_TESSINNER
+"""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+inner tessellation levels of the patch. The X value is only defined for
+triangle tessellation, while quads will have XY defined. This is entirely
+undefined for isoline tessellation.
+
+TGSI_SEMANTIC_VERTICESIN
+""""""""""""""""""""""""
+
+For tessellation evaluation/control shaders, this semantic label indicates the
+number of vertices provided in the input patch. Only the X value is defined.
+
+
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2928,6 +2965,18 @@ resource can be one of BUFFER, 1D, 2D, 3D, 1DArray and 2DArray.
 type must be 1 or 4 entries (if specifying on a per-component
 level) out of UNORM, SNORM, SINT, UINT and FLOAT.
 
+For TEX\* style texture sample opcodes (as opposed to SAMPLE\* opcodes
+which take an explicit SVIEW[#] source register), there may be optionally
+SVIEW[#] declarations.  In this case, the SVIEW index is implied by the
+SAMP index, and there must be a corresponding SVIEW[#] declaration for
+each SAMP[#] declaration.  Drivers are free to ignore this if they wish.
+But note in particular that some drivers need to know the sampler type
+(float/int/unsigned) in order to generate the correct code, so cases
+where integer textures are sampled, SVIEW[#] declarations should be
+used.
+
+NOTE: It is NOT legal to mix SAMPLE\* style opcodes and TEX\* opcodes
+in the same shader.
 
 Declaration Resource
 ^^^^^^^^^^^^^^^^^^^^
@@ -3033,6 +3082,39 @@ directly taken from the 4-th component of the shader output.
 Naturally, clipping is not performed on window coordinates either.
 The effect of this property is undefined if a geometry or tessellation shader
 are in use.
+
+TCS_VERTICES_OUT
+""""""""""""""""
+
+The number of vertices written by the tessellation control shader. This
+effectively defines the patch input size of the tessellation evaluation shader
+as well.
+
+TES_PRIM_MODE
+"""""""""""""
+
+This sets the tessellation primitive mode, one of ``PIPE_PRIM_TRIANGLES``,
+``PIPE_PRIM_QUADS``, or ``PIPE_PRIM_LINES``. (Unlike in GL, there is no
+separate isolines settings, the regular lines is assumed to mean isolines.)
+
+TES_SPACING
+"""""""""""
+
+This sets the spacing mode of the tessellation generator, one of
+``PIPE_TESS_SPACING_*``.
+
+TES_VERTEX_ORDER_CW
+"""""""""""""""""""
+
+This sets the vertex order to be clockwise if the value is 1, or
+counter-clockwise if set to 0.
+
+TES_POINT_MODE
+""""""""""""""
+
+If set to a non-zero value, this turns on point mode for the tessellator,
+which means that points will be generated instead of primitives.
+
 
 Texture Sampling and Texture Formats
 ------------------------------------

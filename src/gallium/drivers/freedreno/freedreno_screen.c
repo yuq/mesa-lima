@@ -68,10 +68,7 @@ static const struct debug_named_value debug_options[] = {
 		{"fraghalf",  FD_DBG_FRAGHALF, "Use half-precision in fragment shader"},
 		{"nobin",     FD_DBG_NOBIN,  "Disable hw binning"},
 		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizer debug messages"},
-		{"optdump",   FD_DBG_OPTDUMP,"Dump shader DAG to .dot files"},
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 120 (rather than 130) on a3xx+"},
-		{"nocp",      FD_DBG_NOCP,   "Disable copy-propagation"},
-		{"nir",       FD_DBG_NIR,    "Enable experimental NIR compiler"},
 		DEBUG_NAMED_VALUE_END
 };
 
@@ -220,6 +217,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
@@ -374,6 +372,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+        case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
 		return 0;
 	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
 		return 1;
@@ -519,6 +518,7 @@ fd_screen_create(struct fd_device *dev)
 	case 220:
 		fd2_screen_init(pscreen);
 		break;
+	case 307:
 	case 320:
 	case 330:
 		fd3_screen_init(pscreen);

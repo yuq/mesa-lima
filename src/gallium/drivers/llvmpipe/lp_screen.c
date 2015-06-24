@@ -165,7 +165,7 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_DEPTH_CLIP_DISABLE:
       return 1;
    case PIPE_CAP_SHADER_STENCIL_EXPORT:
-      return 0;
+      return 1;
    case PIPE_CAP_TGSI_INSTANCEID:
    case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
    case PIPE_CAP_START_INSTANCE:
@@ -258,8 +258,9 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
       return 1;
    case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
-   case PIPE_CAP_SAMPLER_VIEW_TARGET:
       return 0;
+   case PIPE_CAP_SAMPLER_VIEW_TARGET:
+      return 1;
    case PIPE_CAP_FAKE_SW_MSAA:
       return 1;
    case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
@@ -290,6 +291,7 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1;
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
+   case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
       return 0;
    }
    /* should only get here on unhandled cases */

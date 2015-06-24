@@ -392,7 +392,7 @@ nvc0_gp_gen_header(struct nvc0_program *gp, struct nv50_ir_prog_info *info)
       break;
    }
 
-   gp->hdr[4] = info->prop.gp.maxVertices & 0x1ff;
+   gp->hdr[4] = MIN2(info->prop.gp.maxVertices, 1024);
 
    return nvc0_vtgp_gen_header(gp, info);
 }
@@ -683,11 +683,12 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
    ret = nouveau_heap_alloc(screen->text_heap, size, prog, &prog->mem);
    if (ret) {
       struct nouveau_heap *heap = screen->text_heap;
-      struct nouveau_heap *iter;
-      for (iter = heap; iter && iter->next != heap; iter = iter->next) {
-         struct nvc0_program *evict = iter->priv;
-         if (evict)
-            nouveau_heap_free(&evict->mem);
+      /* Note that the code library, which is allocated before anything else,
+       * does not have a priv pointer. We can stop once we hit it.
+       */
+      while (heap->next && heap->next->priv) {
+         struct nvc0_program *evict = heap->next->priv;
+         nouveau_heap_free(&evict->mem);
       }
       debug_printf("WARNING: out of code space, evicting all shaders.\n");
       ret = nouveau_heap_alloc(heap, size, prog, &prog->mem);
@@ -734,12 +735,12 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 
    if (!is_cp)
       nvc0->base.push_data(&nvc0->base, screen->text, prog->code_base,
-                           NOUVEAU_BO_VRAM, NVC0_SHADER_HEADER_SIZE, prog->hdr);
+                           NV_VRAM_DOMAIN(&screen->base), NVC0_SHADER_HEADER_SIZE, prog->hdr);
    nvc0->base.push_data(&nvc0->base, screen->text, code_pos,
-                        NOUVEAU_BO_VRAM, prog->code_size, prog->code);
+                        NV_VRAM_DOMAIN(&screen->base), prog->code_size, prog->code);
    if (prog->immd_size)
       nvc0->base.push_data(&nvc0->base,
-                           screen->text, prog->immd_base, NOUVEAU_BO_VRAM,
+                           screen->text, prog->immd_base, NV_VRAM_DOMAIN(&screen->base),
                            prog->immd_size, prog->immd_data);
 
    BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(MEM_BARRIER), 1);
@@ -770,7 +771,7 @@ nvc0_program_library_upload(struct nvc0_context *nvc0)
       return;
 
    nvc0->base.push_data(&nvc0->base,
-                        screen->text, screen->lib_code->start, NOUVEAU_BO_VRAM,
+                        screen->text, screen->lib_code->start, NV_VRAM_DOMAIN(&screen->base),
                         size, code);
    /* no need for a memory barrier, will be emitted with first program */
 }

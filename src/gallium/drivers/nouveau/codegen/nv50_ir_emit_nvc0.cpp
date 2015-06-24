@@ -1078,8 +1078,14 @@ CodeEmitterNVC0::emitSET(const CmpInstruction *i)
    if (!isFloatType(i->sType))
       lo = 0x3;
 
-   if (isFloatType(i->dType) || isSignedIntType(i->sType))
+   if (isSignedIntType(i->sType))
       lo |= 0x20;
+   if (isFloatType(i->dType)) {
+      if (isFloatType(i->sType))
+         lo |= 0x20;
+      else
+         lo |= 0x80;
+   }
 
    switch (i->op) {
    case OP_SET_AND: hi = 0x10000000; break;
@@ -1406,6 +1412,8 @@ CodeEmitterNVC0::emitFlow(const Instruction *i)
    } else
    if (mask & 2) {
       int32_t pcRel = f->target.bb->binPos - (codeSize + 8);
+      if (writeIssueDelays && !(f->target.bb->binPos & 0x3f))
+         pcRel += 8;
       // currently we don't want absolute branches
       assert(!f->absolute);
       code[0] |= (pcRel & 0x3f) << 26;
@@ -2712,7 +2720,6 @@ private:
 
    RegScores *score; // for current BB
    std::vector<RegScores> scoreBoards;
-   int cycle;
    int prevData;
    operation prevOp;
 

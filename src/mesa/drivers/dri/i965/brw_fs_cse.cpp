@@ -32,6 +32,8 @@
  * 13.1 (p378).
  */
 
+using namespace brw;
+
 namespace {
 struct aeb_entry : public exec_node {
    /** The instruction that generates the expression value. */
@@ -152,28 +154,34 @@ static bool
 instructions_match(fs_inst *a, fs_inst *b, bool *negate)
 {
    return a->opcode == b->opcode &&
+          a->force_writemask_all == b->force_writemask_all &&
+          a->exec_size == b->exec_size &&
+          a->force_sechalf == b->force_sechalf &&
           a->saturate == b->saturate &&
           a->predicate == b->predicate &&
           a->predicate_inverse == b->predicate_inverse &&
           a->conditional_mod == b->conditional_mod &&
+          a->flag_subreg == b->flag_subreg &&
           a->dst.type == b->dst.type &&
+          a->offset == b->offset &&
+          a->mlen == b->mlen &&
+          a->regs_written == b->regs_written &&
+          a->base_mrf == b->base_mrf &&
+          a->eot == b->eot &&
+          a->header_size == b->header_size &&
+          a->shadow_compare == b->shadow_compare &&
+          a->pi_noperspective == b->pi_noperspective &&
           a->sources == b->sources &&
-          (a->is_tex() ? (a->offset == b->offset &&
-                          a->mlen == b->mlen &&
-                          a->regs_written == b->regs_written &&
-                          a->base_mrf == b->base_mrf &&
-                          a->eot == b->eot &&
-                          a->header_size == b->header_size &&
-                          a->shadow_compare == b->shadow_compare)
-                       : true) &&
           operands_match(a, b, negate);
 }
 
-static fs_inst *
-create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
+static void
+create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
 {
    int written = inst->regs_written;
    int dst_width = inst->dst.width / 8;
+   const fs_builder ubld = bld.group(inst->exec_size, inst->force_sechalf)
+                              .exec_all(inst->force_writemask_all);
    fs_inst *copy;
 
    if (written > dst_width) {
@@ -189,7 +197,7 @@ create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
       }
 
       assert(src.file == GRF);
-      payload = ralloc_array(v->mem_ctx, fs_reg, sources);
+      payload = ralloc_array(bld.shader->mem_ctx, fs_reg, sources);
       for (int i = 0; i < header_size; i++) {
          payload[i] = src;
          payload[i].width = 8;
@@ -199,15 +207,12 @@ create_copy_instr(fs_visitor *v, fs_inst *inst, fs_reg src, bool negate)
          payload[i] = src;
          src = offset(src, 1);
       }
-      copy = v->LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
+      copy = ubld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
-      copy = v->MOV(inst->dst, src);
-      copy->force_writemask_all = inst->force_writemask_all;
+      copy = ubld.MOV(inst->dst, src);
       copy->src[0].negate = negate;
    }
    assert(copy->regs_written == written);
-
-   return copy;
 }
 
 bool
@@ -261,9 +266,8 @@ fs_visitor::opt_cse_local(bblock_t *block)
                                    entry->generator->dst.type,
                                    entry->generator->dst.width);
 
-               fs_inst *copy = create_copy_instr(this, entry->generator,
-                                                 entry->tmp, false);
-               entry->generator->insert_after(block, copy);
+               create_copy_instr(bld.at(block, entry->generator->next),
+                                 entry->generator, entry->tmp, false);
 
                entry->generator->dst = entry->tmp;
             }
@@ -274,9 +278,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
                assert(inst->dst.width == entry->generator->dst.width);
                assert(inst->dst.type == entry->tmp.type);
 
-               fs_inst *copy = create_copy_instr(this, inst,
-                                                 entry->tmp, negate);
-               inst->insert_before(block, copy);
+               create_copy_instr(bld.at(block, inst), inst, entry->tmp, negate);
             }
 
             /* Set our iterator so that next time through the loop inst->next

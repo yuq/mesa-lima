@@ -143,6 +143,27 @@ tgsi_transform_sampler_decl(struct tgsi_transform_context *ctx,
    ctx->emit_declaration(ctx, &decl);
 }
 
+static INLINE void
+tgsi_transform_sampler_view_decl(struct tgsi_transform_context *ctx,
+                                 unsigned index,
+                                 unsigned target,
+                                 enum tgsi_return_type type)
+{
+   struct tgsi_full_declaration decl;
+
+   decl = tgsi_default_full_declaration();
+   decl.Declaration.File = TGSI_FILE_SAMPLER_VIEW;
+   decl.Declaration.UsageMask = 0xf;
+   decl.Range.First =
+   decl.Range.Last = index;
+   decl.SamplerView.Resource = target;
+   decl.SamplerView.ReturnTypeX = type;
+   decl.SamplerView.ReturnTypeY = type;
+   decl.SamplerView.ReturnTypeZ = type;
+   decl.SamplerView.ReturnTypeW = type;
+
+   ctx->emit_declaration(ctx, &decl);
+}
 
 static INLINE void
 tgsi_transform_immediate_decl(struct tgsi_transform_context *ctx,

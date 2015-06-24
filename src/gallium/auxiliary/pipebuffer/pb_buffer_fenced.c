@@ -376,6 +376,7 @@ fenced_buffer_finish_locked(struct fenced_manager *fenced_mgr,
          /* TODO: remove consequents buffers with the same fence? */
 
          assert(!destroyed);
+         (void) destroyed; /* silence unused var warning for non-debug build */
 
          fenced_buf->flags &= ~PB_USAGE_GPU_READ_WRITE;
 

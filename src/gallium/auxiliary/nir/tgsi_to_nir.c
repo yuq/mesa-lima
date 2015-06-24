@@ -58,6 +58,9 @@ struct ttn_compile {
    struct ttn_reg_info *temp_regs;
    nir_ssa_def **imm_defs;
 
+   unsigned num_samp_types;
+   nir_alu_type *samp_types;
+
    nir_register *addr_reg;
 
    /**
@@ -156,6 +159,30 @@ ttn_emit_declaration(struct ttn_compile *c)
       /* Nothing to record for system values. */
    } else if (file == TGSI_FILE_SAMPLER) {
       /* Nothing to record for samplers. */
+   } else if (file == TGSI_FILE_SAMPLER_VIEW) {
+      struct tgsi_declaration_sampler_view *sview = &decl->SamplerView;
+      nir_alu_type type;
+
+      assert((sview->ReturnTypeX == sview->ReturnTypeY) &&
+             (sview->ReturnTypeX == sview->ReturnTypeZ) &&
+             (sview->ReturnTypeX == sview->ReturnTypeW));
+
+      switch (sview->ReturnTypeX) {
+      case TGSI_RETURN_TYPE_SINT:
+         type = nir_type_int;
+         break;
+      case TGSI_RETURN_TYPE_UINT:
+         type = nir_type_unsigned;
+         break;
+      case TGSI_RETURN_TYPE_FLOAT:
+      default:
+         type = nir_type_float;
+         break;
+      }
+
+      for (i = 0; i < array_size; i++) {
+         c->samp_types[decl->Range.First + i] = type;
+      }
    } else {
       nir_variable *var;
       assert(file == TGSI_FILE_INPUT ||
@@ -401,7 +428,6 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
 
       load->num_components = 4;
       load->const_index[0] = index;
-      load->const_index[1] = 1;
       if (dim) {
          if (dimind) {
             load->src[srcn] =
@@ -1027,7 +1053,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    struct tgsi_full_instruction *tgsi_inst = &c->token->FullInstruction;
    nir_tex_instr *instr;
    nir_texop op;
-   unsigned num_srcs, samp = 1, i;
+   unsigned num_srcs, samp = 1, sview, i;
 
    switch (tgsi_inst->Instruction.Opcode) {
    case TGSI_OPCODE_TEX:
@@ -1105,6 +1131,18 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
 
    assert(tgsi_inst->Src[samp].Register.File == TGSI_FILE_SAMPLER);
    instr->sampler_index = tgsi_inst->Src[samp].Register.Index;
+
+   /* TODO if we supported any opc's which take an explicit SVIEW
+    * src, we would use that here instead.  But for the "legacy"
+    * texture opc's the SVIEW index is same as SAMP index:
+    */
+   sview = instr->sampler_index;
+
+   if (sview < c->num_samp_types) {
+      instr->dest_type = c->samp_types[sview];
+   } else {
+      instr->dest_type = nir_type_float;
+   }
 
    unsigned src_number = 0;
 
@@ -1286,6 +1324,7 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_SEQ] = nir_op_seq,
    [TGSI_OPCODE_SGT] = 0,
    [TGSI_OPCODE_SIN] = nir_op_fsin,
+   [TGSI_OPCODE_SNE] = nir_op_sne,
    [TGSI_OPCODE_SLE] = 0,
    [TGSI_OPCODE_TEX] = 0,
    [TGSI_OPCODE_TXD] = 0,
@@ -1625,7 +1664,6 @@ ttn_emit_instruction(struct ttn_compile *c)
    }
 
    if (tgsi_inst->Instruction.Saturate) {
-      assert(tgsi_inst->Instruction.Saturate == TGSI_SAT_ZERO_ONE);
       assert(!dest.dest.is_ssa);
       ttn_move_dest(b, dest, nir_fsat(b, ttn_src_for_dest(b, &dest)));
    }
@@ -1672,7 +1710,6 @@ ttn_add_output_stores(struct ttn_compile *c)
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_output);
          store->num_components = 4;
          store->const_index[0] = var->data.driver_location + i;
-         store->const_index[1] = 1;
          store->src[0].reg.reg = c->output_regs[var->data.driver_location].reg;
          nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
       }
@@ -1712,6 +1749,9 @@ tgsi_to_nir(const void *tgsi_tokens,
                                 scan.file_max[TGSI_FILE_TEMPORARY] + 1);
    c->imm_defs = rzalloc_array(c, nir_ssa_def *,
                                scan.file_max[TGSI_FILE_IMMEDIATE] + 1);
+
+   c->num_samp_types = scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1;
+   c->samp_types = rzalloc_array(c, nir_alu_type, c->num_samp_types);
 
    c->if_stack = rzalloc_array(c, struct exec_list *,
                                (scan.opcode_count[TGSI_OPCODE_IF] +

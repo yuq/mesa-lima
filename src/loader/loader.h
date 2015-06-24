@@ -27,10 +27,17 @@
 #ifndef LOADER_H
 #define LOADER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Helpers to figure out driver and device name, eg. from pci-id, etc. */
 
 #define _LOADER_DRI          (1 << 0)
 #define _LOADER_GALLIUM      (1 << 1)
+
+int
+loader_open_device(const char *);
 
 int
 loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id);
@@ -60,5 +67,10 @@ loader_get_user_preferred_fd(int default_fd, int *different_device);
 
 void
 loader_set_logger(void (*logger)(int level, const char *fmt, ...));
+
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LOADER_H */

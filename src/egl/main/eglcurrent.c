@@ -282,14 +282,6 @@ _eglError(EGLint errCode, const char *msg)
       case EGL_NOT_INITIALIZED:
          s = "EGL_NOT_INITIALIZED";
          break;
-#ifdef EGL_MESA_screen_surface
-      case EGL_BAD_SCREEN_MESA:
-         s = "EGL_BAD_SCREEN_MESA";
-         break;
-      case EGL_BAD_MODE_MESA:
-         s = "EGL_BAD_MODE_MESA";
-         break;
-#endif
       default:
          s = "other EGL error";
       }

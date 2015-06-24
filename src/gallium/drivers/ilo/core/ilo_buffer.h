@@ -31,11 +31,13 @@
 #include "intel_winsys.h"
 
 #include "ilo_core.h"
+#include "ilo_debug.h"
 #include "ilo_dev.h"
 
 struct ilo_buffer {
    unsigned bo_size;
 
+   /* managed by users */
    struct intel_bo *bo;
 };
 
@@ -43,6 +45,8 @@ static inline void
 ilo_buffer_init(struct ilo_buffer *buf, const struct ilo_dev *dev,
                 unsigned size, uint32_t bind, uint32_t flags)
 {
+   assert(ilo_is_zeroed(buf, sizeof(*buf)));
+
    buf->bo_size = size;
 
    /*
@@ -55,36 +59,6 @@ ilo_buffer_init(struct ilo_buffer *buf, const struct ilo_dev *dev,
     */
    if (bind & PIPE_BIND_SAMPLER_VIEW)
       buf->bo_size = align(buf->bo_size, 256) + 16;
-
-   if ((bind & PIPE_BIND_VERTEX_BUFFER) && ilo_dev_gen(dev) < ILO_GEN(7.5)) {
-      /*
-       * As noted in ilo_format_translate(), we treat some 3-component formats
-       * as 4-component formats to work around hardware limitations.  Imagine
-       * the case where the vertex buffer holds a single
-       * PIPE_FORMAT_R16G16B16_FLOAT vertex, and buf->bo_size is 6.  The
-       * hardware would fail to fetch it at boundary check because the vertex
-       * buffer is expected to hold a PIPE_FORMAT_R16G16B16A16_FLOAT vertex
-       * and that takes at least 8 bytes.
-       *
-       * For the workaround to work, we should add 2 to the bo size.  But that
-       * would waste a page when the bo size is already page aligned.  Let's
-       * round it to page size for now and revisit this when needed.
-       */
-      buf->bo_size = align(buf->bo_size, 4096);
-   }
-}
-
-static inline void
-ilo_buffer_cleanup(struct ilo_buffer *buf)
-{
-   intel_bo_unref(buf->bo);
-}
-
-static inline void
-ilo_buffer_set_bo(struct ilo_buffer *buf, struct intel_bo *bo)
-{
-   intel_bo_unref(buf->bo);
-   buf->bo = intel_bo_ref(bo);
 }
 
 #endif /* ILO_BUFFER_H */

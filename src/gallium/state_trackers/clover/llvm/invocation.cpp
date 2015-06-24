@@ -709,7 +709,7 @@ clover::compile_program_llvm(const std::string &source,
    llvm_ctx.setDiagnosticHandler(diagnostic_handler, &r_log);
 
    if (get_debug_flags() & DBG_CLC)
-      debug_log(source, ".cl");
+      debug_log("// Build options: " + opts + '\n' + source, ".cl");
 
    // The input file name must have the .cl extension in order for the
    // CompilerInvocation class to recognize it as an OpenCL source file.

@@ -139,8 +139,12 @@ nvc0_destroy(struct pipe_context *pipe)
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
 
-   if (nvc0->screen->cur_ctx == nvc0)
+   if (nvc0->screen->cur_ctx == nvc0) {
       nvc0->screen->cur_ctx = NULL;
+      nvc0->screen->save_state = nvc0->state;
+      nvc0->screen->save_state.tfb = NULL;
+   }
+
    /* Unset bufctx, we don't want to revalidate any resources after the flush.
     * Other contexts will always set their bufctx again on action calls.
     */
@@ -303,6 +307,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
    pipe->get_sample_position = nvc0_context_get_sample_position;
 
    if (!screen->cur_ctx) {
+      nvc0->state = screen->save_state;
       screen->cur_ctx = nvc0;
       nouveau_pushbuf_bufctx(screen->base.pushbuf, nvc0->bufctx);
    }
@@ -324,7 +329,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
 
    /* add permanently resident buffers to bufctxts */
 
-   flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RD;
+   flags = NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RD;
 
    BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->text);
    BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->uniform_bo);
@@ -335,7 +340,7 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
       BCTX_REFN_bo(nvc0->bufctx_cp, CP_SCREEN, flags, screen->parm);
    }
 
-   flags = NOUVEAU_BO_VRAM | NOUVEAU_BO_RDWR;
+   flags = NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RDWR;
 
    if (screen->poly_cache)
       BCTX_REFN_bo(nvc0->bufctx_3d, SCREEN, flags, screen->poly_cache);

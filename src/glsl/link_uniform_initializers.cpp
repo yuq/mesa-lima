@@ -104,7 +104,7 @@ void
 set_sampler_binding(gl_shader_program *prog, const char *name, int binding)
 {
    struct gl_uniform_storage *const storage =
-      get_storage(prog->UniformStorage, prog->NumUserUniformStorage, name);
+      get_storage(prog->UniformStorage, prog->NumUniformStorage, name);
 
    if (storage == NULL) {
       assert(storage != NULL);
@@ -194,7 +194,7 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 
    struct gl_uniform_storage *const storage =
       get_storage(prog->UniformStorage,
-		  prog->NumUserUniformStorage,
+                  prog->NumUniformStorage,
 		  name);
    if (storage == NULL) {
       assert(storage != NULL);

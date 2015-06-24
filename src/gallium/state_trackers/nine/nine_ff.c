@@ -422,13 +422,15 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     oCol[1] = ureg_saturate(ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 1));
 
     if (key->vertexpointsize || key->pointscale) {
-        oPsz = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_PSIZE, 0, TGSI_WRITEMASK_X);
+        oPsz = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_PSIZE, 0,
+                                       TGSI_WRITEMASK_X, 0, 1);
         oPsz = ureg_writemask(oPsz, TGSI_WRITEMASK_X);
     }
     if (key->fog_mode) {
         /* We apply fog to the vertex colors, oFog is for programmable shaders only ?
          */
-        oFog = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_FOG, 0, TGSI_WRITEMASK_X);
+        oFog = ureg_DECL_output_masked(ureg, TGSI_SEMANTIC_FOG, 0,
+                                       TGSI_WRITEMASK_X, 0, 1);
         oFog = ureg_writemask(oFog, TGSI_WRITEMASK_X);
     }
 

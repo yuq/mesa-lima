@@ -22,7 +22,6 @@
  */
 
 #include "util/u_memory.h"
-#include "util/simple_list.h"
 #include "util/ralloc.h"
 
 #include "vc4_qir.h"
@@ -301,10 +300,7 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 void
 qir_dump(struct vc4_compile *c)
 {
-        struct simple_node *node;
-
-        foreach(node, &c->instructions) {
-                struct qinst *inst = (struct qinst *)node;
+        list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 qir_dump_inst(c, inst);
                 fprintf(stderr, "\n");
         }
@@ -370,7 +366,7 @@ qir_emit(struct vc4_compile *c, struct qinst *inst)
         if (inst->dst.file == QFILE_TEMP)
                 c->defs[inst->dst.index] = inst;
 
-        insert_at_tail(&c->instructions, &inst->link);
+        list_addtail(&inst->link, &c->instructions);
 }
 
 bool
@@ -384,7 +380,7 @@ qir_compile_init(void)
 {
         struct vc4_compile *c = rzalloc(NULL, struct vc4_compile);
 
-        make_empty_list(&c->instructions);
+        list_inithead(&c->instructions);
 
         c->output_position_index = -1;
         c->output_clipvertex_index = -1;
@@ -403,7 +399,7 @@ qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst)
         if (qinst->dst.file == QFILE_TEMP)
                 c->defs[qinst->dst.index] = NULL;
 
-        remove_from_list(&qinst->link);
+        list_del(&qinst->link);
         free(qinst->src);
         free(qinst);
 }
@@ -420,9 +416,9 @@ qir_follow_movs(struct vc4_compile *c, struct qreg reg)
 void
 qir_compile_destroy(struct vc4_compile *c)
 {
-        while (!is_empty_list(&c->instructions)) {
+        while (!list_empty(&c->instructions)) {
                 struct qinst *qinst =
-                        (struct qinst *)first_elem(&c->instructions);
+                        (struct qinst *)c->instructions.next;
                 qir_remove_instruction(c, qinst);
         }
 
@@ -478,7 +474,7 @@ void
 qir_SF(struct vc4_compile *c, struct qreg src)
 {
         struct qinst *last_inst = NULL;
-        if (!is_empty_list(&c->instructions))
+        if (!list_empty(&c->instructions))
                 last_inst = (struct qinst *)c->instructions.prev;
 
         if (!last_inst ||

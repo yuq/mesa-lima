@@ -30,9 +30,17 @@
 #ifndef EGLCOMPILER_INCLUDED
 #define EGLCOMPILER_INCLUDED
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STATIC_ASSERT(COND) \
    do { \
       (void) sizeof(char [1 - 2*!(COND)]); \
    } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* EGLCOMPILER_INCLUDED */

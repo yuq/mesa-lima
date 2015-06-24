@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-SUBDIRS = kernel
+AUTOMAKE_OPTIONS = subdir-objects
 
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
@@ -39,5 +39,5 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libvc4.la
 
 libvc4_la_SOURCES = $(C_SOURCES)
-libvc4_la_LIBADD = $(SIM_LIB) kernel/libvc4_kernel.la
+libvc4_la_LIBADD = $(SIM_LIB)
 libvc4_la_LDFLAGS = $(SIM_LDFLAGS)

@@ -47,8 +47,10 @@ intel_update_max_level(struct intel_texture_object *intelObj,
 {
    struct gl_texture_object *tObj = &intelObj->base;
 
-   if (sampler->MinFilter == GL_NEAREST ||
-       sampler->MinFilter == GL_LINEAR) {
+   if (!tObj->_MipmapComplete ||
+       (tObj->_RenderToTexture &&
+        (sampler->MinFilter == GL_NEAREST ||
+         sampler->MinFilter == GL_LINEAR))) {
       intelObj->_MaxLevel = tObj->BaseLevel;
    } else {
       intelObj->_MaxLevel = tObj->_MaxLevel;
@@ -142,10 +144,9 @@ intel_finalize_mipmap_tree(struct brw_context *brw, GLuint unit)
                                           width,
                                           height,
                                           depth,
-					  true,
                                           0 /* num_samples */,
                                           INTEL_MIPTREE_TILING_ANY,
-                                          false);
+                                          MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
       if (!intelObj->mt)
          return false;
    }

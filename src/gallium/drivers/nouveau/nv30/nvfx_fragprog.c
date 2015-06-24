@@ -327,6 +327,8 @@ nv40_fp_rep(struct nvfx_fpc *fpc, unsigned count, unsigned target)
         //util_dynarray_append(&fpc->loop_stack, unsigned, target);
 }
 
+#if 0
+/* documentation only */
 /* warning: this only works forward, and probably only if not inside any IF */
 static void
 nv40_fp_bra(struct nvfx_fpc *fpc, unsigned target)
@@ -352,6 +354,7 @@ nv40_fp_bra(struct nvfx_fpc *fpc, unsigned target)
         reloc.location = fpc->inst_offset + 3;
         util_dynarray_append(&fpc->label_relocs, struct nvfx_relocation, reloc);
 }
+#endif
 
 static void
 nv40_fp_brk(struct nvfx_fpc *fpc)
@@ -528,7 +531,7 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
 
    dst  = tgsi_dst(fpc, &finst->Dst[0]);
    mask = tgsi_mask(finst->Dst[0].Register.WriteMask);
-   sat  = (finst->Instruction.Saturate == TGSI_SAT_ZERO_ONE);
+   sat  = finst->Instruction.Saturate;
 
    switch (finst->Instruction.Opcode) {
    case TGSI_OPCODE_ABS:
@@ -1200,18 +1203,4 @@ out_err:
    _debug_printf("Error: failed to compile this fragment program:\n");
    tgsi_dump(fp->pipe.tokens, 0);
    goto out;
-}
-
-static inline void
-nvfx_fp_memcpy(void* dst, const void* src, size_t len)
-{
-#ifndef PIPE_ARCH_BIG_ENDIAN
-   memcpy(dst, src, len);
-#else
-   size_t i;
-   for(i = 0; i < len; i += 4) {
-      uint32_t v = *(uint32_t*)((char*)src + i);
-      *(uint32_t*)((char*)dst + i) = (v >> 16) | (v << 16);
-   }
-#endif
 }

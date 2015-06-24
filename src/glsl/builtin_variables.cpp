@@ -764,7 +764,8 @@ builtin_variable_generator::generate_constants()
 void
 builtin_variable_generator::generate_uniforms()
 {
-   add_uniform(int_t, "gl_NumSamples");
+   if (state->is_version(400, 0) || state->ARB_sample_shading_enable)
+      add_uniform(int_t, "gl_NumSamples");
    add_uniform(type("gl_DepthRangeParameters"), "gl_DepthRange");
    add_uniform(array(vec4_t, VERT_ATTRIB_MAX), "gl_CurrentAttribVertMESA");
    add_uniform(array(vec4_t, VARYING_SLOT_MAX), "gl_CurrentAttribFragMESA");
@@ -876,9 +877,9 @@ void
 builtin_variable_generator::generate_gs_special_vars()
 {
    add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
-   if (state->ARB_viewport_array_enable)
+   if (state->is_version(410, 0) || state->ARB_viewport_array_enable)
       add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
-   if (state->ARB_gpu_shader5_enable)
+   if (state->is_version(400, 0) || state->ARB_gpu_shader5_enable)
       add_system_value(SYSTEM_VALUE_INVOCATION_ID, int_t, "gl_InvocationID");
 
    /* Although gl_PrimitiveID appears in tessellation control and tessellation
@@ -946,7 +947,7 @@ builtin_variable_generator::generate_fs_special_vars()
          var->enable_extension_warning("GL_AMD_shader_stencil_export");
    }
 
-   if (state->ARB_sample_shading_enable) {
+   if (state->is_version(400, 0) || state->ARB_sample_shading_enable) {
       add_system_value(SYSTEM_VALUE_SAMPLE_ID, int_t, "gl_SampleID");
       add_system_value(SYSTEM_VALUE_SAMPLE_POS, vec2_t, "gl_SamplePosition");
       /* From the ARB_sample_shading specification:
@@ -959,11 +960,11 @@ builtin_variable_generator::generate_fs_special_vars()
       add_output(FRAG_RESULT_SAMPLE_MASK, array(int_t, 1), "gl_SampleMask");
    }
 
-   if (state->ARB_gpu_shader5_enable) {
+   if (state->is_version(400, 0) || state->ARB_gpu_shader5_enable) {
       add_system_value(SYSTEM_VALUE_SAMPLE_MASK_IN, array(int_t, 1), "gl_SampleMaskIn");
    }
 
-   if (state->ARB_fragment_layer_viewport_enable) {
+   if (state->is_version(430, 0) || state->ARB_fragment_layer_viewport_enable) {
       add_input(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       add_input(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
    }

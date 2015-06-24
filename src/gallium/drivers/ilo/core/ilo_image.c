@@ -675,9 +675,12 @@ img_init_size_and_format(struct ilo_image *img,
    enum pipe_format format = templ->format;
    bool require_separate_stencil = false;
 
+   img->target = templ->target;
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;
+   img->array_size = templ->array_size;
+   img->level_count = templ->last_level + 1;
    img->sample_count = (templ->nr_samples) ? templ->nr_samples : 1;
 
    /*
@@ -792,6 +795,10 @@ img_want_hiz(const struct ilo_image *img,
       util_format_description(templ->format);
 
    if (ilo_debug & ILO_DEBUG_NOHIZ)
+      return false;
+
+   /* we want 8x4 aligned levels */
+   if (templ->target == PIPE_TEXTURE_1D)
       return false;
 
    if (!(templ->bind & PIPE_BIND_DEPTH_STENCIL))
@@ -1343,9 +1350,12 @@ img_init_for_transfer(struct ilo_image *img,
 
    img->aux.type = ILO_IMAGE_AUX_NONE;
 
+   img->target = templ->target;
    img->width0 = templ->width0;
    img->height0 = templ->height0;
    img->depth0 = templ->depth0;
+   img->array_size = templ->array_size;
+   img->level_count = 1;
    img->sample_count = 1;
 
    img->format = templ->format;
@@ -1386,6 +1396,8 @@ void ilo_image_init(struct ilo_image *img,
    struct ilo_image_params params;
    bool transfer_only;
 
+   assert(ilo_is_zeroed(img, sizeof(*img)));
+
    /* use transfer layout when the texture is never bound to GPU */
    transfer_only = !(templ->bind & ~(PIPE_BIND_TRANSFER_WRITE |
                                      PIPE_BIND_TRANSFER_READ));
@@ -1411,6 +1423,8 @@ ilo_image_init_for_imported(struct ilo_image *img,
 {
    struct ilo_image_params params;
 
+   assert(ilo_is_zeroed(img, sizeof(*img)));
+
    if ((tiling == GEN6_TILING_X && bo_stride % 512) ||
        (tiling == GEN6_TILING_Y && bo_stride % 128) ||
        (tiling == GEN8_TILING_W && bo_stride % 64))
@@ -1432,6 +1446,25 @@ ilo_image_init_for_imported(struct ilo_image *img,
    /* assume imported RTs are also scanouts */
    if (!img->scanout)
       img->scanout = (templ->bind & PIPE_BIND_RENDER_TARGET);
+
+   return true;
+}
+
+bool
+ilo_image_disable_aux(struct ilo_image *img, const struct ilo_dev *dev)
+{
+   /* HiZ is required for separate stencil on Gen6 */
+   if (ilo_dev_gen(dev) == ILO_GEN(6) &&
+       img->aux.type == ILO_IMAGE_AUX_HIZ &&
+       img->separate_stencil)
+      return false;
+
+   /* MCS is required for multisample images */
+   if (img->aux.type == ILO_IMAGE_AUX_MCS &&
+       img->sample_count > 1)
+      return false;
+
+   img->aux.enables = 0x0;
 
    return true;
 }

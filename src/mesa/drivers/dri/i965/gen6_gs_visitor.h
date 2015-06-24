@@ -35,12 +35,13 @@ namespace brw {
 class gen6_gs_visitor : public vec4_gs_visitor
 {
 public:
-   gen6_gs_visitor(struct brw_context *brw,
+   gen6_gs_visitor(const struct brw_compiler *comp,
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
                    void *mem_ctx,
-                   bool no_spills) :
-      vec4_gs_visitor(brw, c, prog, mem_ctx, no_spills) {}
+                   bool no_spills,
+                   int shader_time_index) :
+      vec4_gs_visitor(comp, c, prog, mem_ctx, no_spills, shader_time_index) {}
 
 protected:
    virtual void assign_binding_table_offsets();

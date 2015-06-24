@@ -72,7 +72,7 @@ _mesa_print_ir(FILE *f, exec_list *instructions,
       if (ir->ir_type != ir_type_function)
 	 fprintf(f, "\n");
    }
-   fprintf(f, "\n)");
+   fprintf(f, ")\n");
 }
 
 void
@@ -161,6 +161,10 @@ void ir_print_visitor::visit(ir_variable *ir)
 {
    fprintf(f, "(declare ");
 
+   char loc[256] = {0};
+   if (ir->data.location != -1)
+      snprintf(loc, sizeof(loc), "location=%i ", ir->data.location);
+
    const char *const cent = (ir->data.centroid) ? "centroid " : "";
    const char *const samp = (ir->data.sample) ? "sample " : "";
    const char *const inv = (ir->data.invariant) ? "invariant " : "";
@@ -172,8 +176,8 @@ void ir_print_visitor::visit(ir_variable *ir)
    const char *const interp[] = { "", "smooth", "flat", "noperspective" };
    STATIC_ASSERT(ARRAY_SIZE(interp) == INTERP_QUALIFIER_COUNT);
 
-   fprintf(f, "(%s%s%s%s%s%s) ",
-           cent, samp, inv, mode[ir->data.mode],
+   fprintf(f, "(%s%s%s%s%s%s%s) ",
+           loc, cent, samp, inv, mode[ir->data.mode],
            stream[ir->data.stream],
            interp[ir->data.interpolation]);
 
@@ -573,5 +577,10 @@ ir_print_visitor::visit(ir_end_primitive *ir)
    fprintf(f, "(end-primitive ");
    ir->stream->accept(this);
    fprintf(f, ")\n");
+}
 
+void
+ir_print_visitor::visit(ir_barrier *ir)
+{
+   fprintf(f, "(barrier)\n");
 }
