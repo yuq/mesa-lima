@@ -840,6 +840,12 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     memset(&desc, 0, sizeof(desc));
     desc.base.alignment = alignment;
 
+    /* Align size to page size. This is the minimum alignment for normal
+     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
+     * like constant/uniform buffers, can benefit from better and more reuse.
+     */
+    size = align(size, 4096);
+
     /* Only set one usage bit each for domains and flags, or the cache manager
      * might consider different sets of domains / flags compatible
      */
