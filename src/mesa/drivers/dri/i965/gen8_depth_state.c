@@ -100,7 +100,7 @@ emit_depth_packets(struct brw_context *brw,
    }
 
    if (stencil_mt == NULL) {
-     BEGIN_BATCH(5);
+      BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_STENCIL_BUFFER << 16 | (5 - 2));
       OUT_BATCH(0);
       OUT_BATCH(0);
