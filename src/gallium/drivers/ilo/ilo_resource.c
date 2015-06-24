@@ -178,8 +178,8 @@ tex_create_bo(struct ilo_texture *tex)
    if (!bo)
       return false;
 
-   intel_bo_unref(tex->image.bo);
-   tex->image.bo = bo;
+   intel_bo_unref(tex->vma.bo);
+   ilo_vma_set_bo(&tex->vma, &is->dev, bo, 0);
 
    return true;
 }
@@ -215,15 +215,16 @@ static bool
 tex_create_hiz(struct ilo_texture *tex)
 {
    const struct pipe_resource *templ = &tex->base;
+   const uint32_t size = tex->image.aux.bo_stride * tex->image.aux.bo_height;
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    struct intel_bo *bo;
 
-   bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture",
-         tex->image.aux.bo_stride * tex->image.aux.bo_height, false);
+   bo = intel_winsys_alloc_bo(is->dev.winsys, "hiz texture", size, false);
    if (!bo)
       return false;
 
-   tex->image.aux.bo = bo;
+   ilo_vma_init(&tex->aux_vma, &is->dev, size, 4096);
+   ilo_vma_set_bo(&tex->aux_vma, &is->dev, bo, 0);
 
    if (tex->imported) {
       unsigned lv;
@@ -246,17 +247,18 @@ tex_create_hiz(struct ilo_texture *tex)
 static bool
 tex_create_mcs(struct ilo_texture *tex)
 {
+   const uint32_t size = tex->image.aux.bo_stride * tex->image.aux.bo_height;
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    struct intel_bo *bo;
 
    assert(tex->image.aux.enables == (1 << (tex->base.last_level + 1)) - 1);
 
-   bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture",
-         tex->image.aux.bo_stride * tex->image.aux.bo_height, false);
+   bo = intel_winsys_alloc_bo(is->dev.winsys, "mcs texture", size, false);
    if (!bo)
       return false;
 
-   tex->image.aux.bo = bo;
+   ilo_vma_init(&tex->aux_vma, &is->dev, size, 4096);
+   ilo_vma_set_bo(&tex->aux_vma, &is->dev, bo, 0);
 
    return true;
 }
@@ -267,8 +269,8 @@ tex_destroy(struct ilo_texture *tex)
    if (tex->separate_s8)
       tex_destroy(tex->separate_s8);
 
-   intel_bo_unref(tex->image.bo);
-   intel_bo_unref(tex->image.aux.bo);
+   intel_bo_unref(tex->vma.bo);
+   intel_bo_unref(tex->aux_vma.bo);
 
    tex_free_slices(tex);
    FREE(tex);
@@ -327,7 +329,9 @@ tex_import_handle(struct ilo_texture *tex,
       return false;
    }
 
-   tex->image.bo = bo;
+   ilo_vma_init(&tex->vma, &is->dev,
+         tex->image.bo_stride * tex->image.bo_height, 4096);
+   ilo_vma_set_bo(&tex->vma, &is->dev, bo, 0);
 
    tex->imported = true;
 
@@ -347,6 +351,8 @@ tex_init_image(struct ilo_texture *tex,
          return false;
    } else {
       ilo_image_init(img, &is->dev, templ);
+      ilo_vma_init(&tex->vma, &is->dev,
+            img->bo_stride * img->bo_height, 4096);
    }
 
    if (img->bo_height > ilo_max_resource_size / img->bo_stride)
@@ -406,7 +412,7 @@ tex_get_handle(struct ilo_texture *tex, struct winsys_handle *handle)
    else
       tiling = surface_to_winsys_tiling(tex->image.tiling);
 
-   err = intel_winsys_export_handle(is->dev.winsys, tex->image.bo, tiling,
+   err = intel_winsys_export_handle(is->dev.winsys, tex->vma.bo, tiling,
          tex->image.bo_stride, tex->image.bo_height, handle);
 
    return !err;
@@ -425,8 +431,8 @@ buf_create_bo(struct ilo_buffer_resource *buf)
    if (!bo)
       return false;
 
-   intel_bo_unref(buf->buffer.bo);
-   buf->buffer.bo = bo;
+   intel_bo_unref(buf->vma.bo);
+   ilo_vma_set_bo(&buf->vma, &is->dev, bo, 0);
 
    return true;
 }
@@ -434,7 +440,7 @@ buf_create_bo(struct ilo_buffer_resource *buf)
 static void
 buf_destroy(struct ilo_buffer_resource *buf)
 {
-   intel_bo_unref(buf->buffer.bo);
+   intel_bo_unref(buf->vma.bo);
    FREE(buf);
 }
 
@@ -472,6 +478,7 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
       size = align(size, 4096);
 
    ilo_buffer_init(&buf->buffer, &is->dev, size, templ->bind, templ->flags);
+   ilo_vma_init(&buf->vma, &is->dev, buf->buffer.bo_size, 4096);
 
    if (buf->buffer.bo_size < templ->width0 ||
        buf->buffer.bo_size > ilo_max_resource_size ||

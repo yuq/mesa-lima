@@ -107,17 +107,17 @@ struct ilo_state_sol {
    uint8_t decl_count;
 };
 
-struct ilo_buffer;
+struct ilo_vma;
 
 struct ilo_state_sol_buffer_info {
-   const struct ilo_buffer *buf;
+   const struct ilo_vma *vma;
    uint32_t offset;
    uint32_t size;
 
-   /*
-    * Gen8+ only.  When enabled, require a write offset bo of at least
-    * (sizeof(uint32_t) * ILO_STATE_SOL_MAX_BUFFER_COUNT) bytes
-    */
+   /* Gen8+ only; at least sizeof(uint32_t) bytes */
+   const struct ilo_vma *write_offset_vma;
+   uint32_t write_offset_offset;
+
    bool write_offset_load;
    bool write_offset_save;
 
@@ -126,14 +126,10 @@ struct ilo_state_sol_buffer_info {
 };
 
 struct ilo_state_sol_buffer {
-   uint32_t so_buf[4];
+   uint32_t so_buf[5];
 
-   bool need_bo;
-   bool need_write_offset_bo;
-
-   /* managed by users */
-   struct intel_bo *bo;
-   struct intel_bo *write_offset_bo;
+   const struct ilo_vma *vma;
+   const struct ilo_vma *write_offset_vma;
 };
 
 static inline size_t

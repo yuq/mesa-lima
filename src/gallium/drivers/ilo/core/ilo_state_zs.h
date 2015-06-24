@@ -29,28 +29,30 @@
 #define ILO_STATE_ZS_H
 
 #include "genhw/genhw.h"
-#include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
 
+struct ilo_vma;
 struct ilo_image;
 
 struct ilo_state_zs_info {
-   /* both are optional */
+   /* both optional */
    const struct ilo_image *z_img;
    const struct ilo_image *s_img;
+   uint8_t level;
+   uint16_t slice_base;
+   uint16_t slice_count;
+
+   const struct ilo_vma *z_vma;
+   const struct ilo_vma *s_vma;
+   const struct ilo_vma *hiz_vma;
 
    /* ignored prior to Gen7 */
    bool z_readonly;
    bool s_readonly;
 
-   bool hiz_enable;
    bool is_cube_map;
-
-   uint8_t level;
-   uint16_t slice_base;
-   uint16_t slice_count;
 };
 
 struct ilo_state_zs {
@@ -58,16 +60,15 @@ struct ilo_state_zs {
    uint32_t stencil[3];
    uint32_t hiz[3];
 
+   const struct ilo_vma *z_vma;
+   const struct ilo_vma *s_vma;
+   const struct ilo_vma *hiz_vma;
+
    /* TODO move this to ilo_image */
    enum gen_depth_format depth_format;
 
    bool z_readonly;
    bool s_readonly;
-
-   /* managed by users */
-   struct intel_bo *depth_bo;
-   struct intel_bo *stencil_bo;
-   struct intel_bo *hiz_bo;
 };
 
 bool

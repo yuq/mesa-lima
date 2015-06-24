@@ -39,6 +39,7 @@
 #include "ilo_state_shader.h"
 #include "ilo_state_viewport.h"
 #include "ilo_state_zs.h"
+#include "ilo_vma.h"
 #include "ilo_builder.h"
 #include "ilo_builder_3d_top.h"
 
@@ -674,9 +675,10 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
 
       dw[5] |= builder->mocs << GEN8_DEPTH_DW5_MOCS__SHIFT;
 
-      if (zs->depth_bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2, zs->depth_bo,
-               zs->depth[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->z_vma) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->z_vma->bo,
+               zs->z_vma->bo_offset + zs->depth[1],
+               (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
       dw[1] = zs->depth[0];
@@ -691,9 +693,10 @@ gen6_3DSTATE_DEPTH_BUFFER(struct ilo_builder *builder,
       else
          dw[6] |= builder->mocs << GEN6_DEPTH_DW6_MOCS__SHIFT;
 
-      if (zs->depth_bo) {
-         ilo_builder_batch_reloc(builder, pos + 2, zs->depth_bo,
-               zs->depth[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->z_vma) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->z_vma->bo,
+               zs->z_vma->bo_offset + zs->depth[1],
+               (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }
@@ -724,9 +727,10 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
 
       dw[1] |= builder->mocs << GEN8_STENCIL_DW1_MOCS__SHIFT;
 
-      if (zs->stencil_bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2, zs->stencil_bo,
-               zs->stencil[1], (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->s_vma) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->s_vma->bo,
+               zs->s_vma->bo_offset + zs->stencil[1],
+               (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
       dw[1] = zs->stencil[0];
@@ -734,9 +738,10 @@ gen6_3DSTATE_STENCIL_BUFFER(struct ilo_builder *builder,
 
       dw[1] |= builder->mocs << GEN6_STENCIL_DW1_MOCS__SHIFT;
 
-      if (zs->stencil_bo) {
-         ilo_builder_batch_reloc(builder, pos + 2, zs->stencil_bo,
-               zs->stencil[1], (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->s_vma) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->s_vma->bo,
+               zs->s_vma->bo_offset + zs->stencil[1],
+               (zs->s_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }
@@ -767,9 +772,10 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
 
       dw[1] |= builder->mocs << GEN8_HIZ_DW1_MOCS__SHIFT;
 
-      if (zs->hiz_bo) {
-         ilo_builder_batch_reloc64(builder, pos + 2, zs->hiz_bo,
-               zs->hiz[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->hiz_vma) {
+         ilo_builder_batch_reloc64(builder, pos + 2, zs->hiz_vma->bo,
+               zs->hiz_vma->bo_offset + zs->hiz[1],
+               (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
       dw[1] = zs->hiz[0];
@@ -777,9 +783,10 @@ gen6_3DSTATE_HIER_DEPTH_BUFFER(struct ilo_builder *builder,
 
       dw[1] |= builder->mocs << GEN6_HIZ_DW1_MOCS__SHIFT;
 
-      if (zs->hiz_bo) {
-         ilo_builder_batch_reloc(builder, pos + 2, zs->hiz_bo,
-               zs->hiz[1], (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
+      if (zs->hiz_vma) {
+         ilo_builder_batch_reloc(builder, pos + 2, zs->hiz_vma->bo,
+               zs->hiz_vma->bo_offset + zs->hiz[1],
+               (zs->z_readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 }

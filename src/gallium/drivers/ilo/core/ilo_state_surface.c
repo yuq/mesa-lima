@@ -26,8 +26,8 @@
  */
 
 #include "ilo_debug.h"
-#include "ilo_buffer.h"
 #include "ilo_image.h"
+#include "ilo_vma.h"
 #include "ilo_state_surface.h"
 
 static bool
@@ -104,7 +104,7 @@ surface_validate_gen6_buffer(const struct ilo_dev *dev,
    if (ilo_dev_gen(dev) >= ILO_GEN(7))
       assert(info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB);
 
-   if (info->offset + info->size > info->buf->bo_size) {
+   if (info->offset + info->size > info->vma->vm_size) {
       ilo_warn("invalid buffer range\n");
       return false;
    }
@@ -155,7 +155,8 @@ surface_validate_gen6_buffer(const struct ilo_dev *dev,
    if (info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB) {
       assert(info->struct_size % info->format_size == 0);
 
-      if (info->offset % info->struct_size) {
+      if (info->offset % info->struct_size ||
+          info->vma->vm_alignment % info->struct_size) {
          ilo_warn("bad buffer offset\n");
          return false;
       }
@@ -177,7 +178,7 @@ surface_validate_gen6_buffer(const struct ilo_dev *dev,
        * Nothing is said about Untyped* messages, but I guess they require the
        * base address to be DWord aligned.
        */
-      if (info->offset % 4) {
+      if (info->offset % 4 || info->vma->vm_alignment % 4) {
          ilo_warn("bad RAW buffer offset\n");
          return false;
       }
@@ -406,6 +407,17 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
    default:
       assert(!"unsupported surface access");
       break;
+   }
+
+   assert(info->img && info->vma);
+
+   if (info->img->tiling != GEN6_TILING_NONE)
+      assert(info->vma->vm_alignment % 4096 == 0);
+
+   if (info->aux_vma) {
+      assert(ilo_image_can_enable_aux(info->img, info->level_base));
+      /* always tiled */
+      assert(info->aux_vma->vm_alignment % 4096 == 0);
    }
 
    /*
@@ -1107,6 +1119,7 @@ ilo_state_surface_init_for_null(struct ilo_state_surface *surf,
    else
       ret &= surface_set_gen6_null_SURFACE_STATE(surf, dev);
 
+   surf->vma = NULL;
    surf->type = GEN6_SURFTYPE_NULL;
    surf->readonly = true;
 
@@ -1129,6 +1142,7 @@ ilo_state_surface_init_for_buffer(struct ilo_state_surface *surf,
    else
       ret &= surface_set_gen6_buffer_SURFACE_STATE(surf, dev, info);
 
+   surf->vma = info->vma;
    surf->readonly = info->readonly;
 
    assert(ret);
@@ -1149,6 +1163,9 @@ ilo_state_surface_init_for_image(struct ilo_state_surface *surf,
       ret &= surface_set_gen7_image_SURFACE_STATE(surf, dev, info);
    else
       ret &= surface_set_gen6_image_SURFACE_STATE(surf, dev, info);
+
+   surf->vma = info->vma;
+   surf->aux_vma = info->aux_vma;
 
    surf->is_integer = info->is_integer;
    surf->readonly = info->readonly;

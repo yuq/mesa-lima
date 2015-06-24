@@ -39,6 +39,7 @@
 #include "ilo_state_surface.h"
 #include "ilo_state_urb.h"
 #include "ilo_state_vf.h"
+#include "ilo_vma.h"
 #include "ilo_builder.h"
 
 static inline void
@@ -318,8 +319,10 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
       dw[3] = 0;
 
       if (ilo_dev_gen(builder->dev) >= ILO_GEN(8)) {
-         if (b->need_bo)
-            ilo_builder_batch_reloc64(builder, pos + 1, b->bo, b->vb[1], 0);
+         if (b->vma) {
+            ilo_builder_batch_reloc64(builder, pos + 1, b->vma->bo,
+                  b->vma->bo_offset + b->vb[1], 0);
+         }
 
          dw[3] |= b->vb[2];
       } else {
@@ -331,9 +334,11 @@ gen6_3DSTATE_VERTEX_BUFFERS(struct ilo_builder *builder,
             dw[3] |= vf->user_instancing[elem][1];
          }
 
-         if (b->need_bo) {
-            ilo_builder_batch_reloc(builder, pos + 1, b->bo, b->vb[1], 0);
-            ilo_builder_batch_reloc(builder, pos + 2, b->bo, b->vb[2], 0);
+         if (b->vma) {
+            ilo_builder_batch_reloc(builder, pos + 1, b->vma->bo,
+                  b->vma->bo_offset + b->vb[1], 0);
+            ilo_builder_batch_reloc(builder, pos + 2, b->vma->bo,
+                  b->vma->bo_offset + b->vb[2], 0);
          }
       }
 
@@ -429,9 +434,11 @@ gen6_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
    pos = ilo_builder_batch_pointer(builder, cmd_len, &dw);
 
    dw[0] = dw0;
-   if (ib->need_bo) {
-      ilo_builder_batch_reloc(builder, pos + 1, ib->bo, ib->ib[1], 0);
-      ilo_builder_batch_reloc(builder, pos + 2, ib->bo, ib->ib[2], 0);
+   if (ib->vma) {
+      ilo_builder_batch_reloc(builder, pos + 1, ib->vma->bo,
+            ib->vma->bo_offset + ib->ib[1], 0);
+      ilo_builder_batch_reloc(builder, pos + 2, ib->vma->bo,
+            ib->vma->bo_offset + ib->ib[2], 0);
    } else {
       dw[1] = 0;
       dw[2] = 0;
@@ -456,8 +463,9 @@ gen8_3DSTATE_INDEX_BUFFER(struct ilo_builder *builder,
    dw[1] = ib->ib[0] |
            builder->mocs << GEN8_IB_DW1_MOCS__SHIFT;
 
-   if (ib->need_bo) {
-      ilo_builder_batch_reloc64(builder, pos + 2, ib->bo, ib->ib[1], 0);
+   if (ib->vma) {
+      ilo_builder_batch_reloc64(builder, pos + 2, ib->vma->bo,
+            ib->vma->bo_offset + ib->ib[1], 0);
    } else {
       dw[2] = 0;
       dw[3] = 0;
@@ -801,11 +809,11 @@ gen7_3DSTATE_SO_BUFFER(struct ilo_builder *builder,
            builder->mocs << GEN7_SO_BUF_DW1_MOCS__SHIFT |
            sol->strides[buffer] << GEN7_SO_BUF_DW1_PITCH__SHIFT;
 
-   if (sb->need_bo) {
-      ilo_builder_batch_reloc(builder, pos + 2, sb->bo,
-            sb->so_buf[0], INTEL_RELOC_WRITE);
-      ilo_builder_batch_reloc(builder, pos + 3, sb->bo,
-            sb->so_buf[1], INTEL_RELOC_WRITE);
+   if (sb->vma) {
+      ilo_builder_batch_reloc(builder, pos + 2, sb->vma->bo,
+            sb->vma->bo_offset + sb->so_buf[0], INTEL_RELOC_WRITE);
+      ilo_builder_batch_reloc(builder, pos + 3, sb->vma->bo,
+            sb->vma->bo_offset + sb->so_buf[1], INTEL_RELOC_WRITE);
    } else {
       dw[2] = 0;
       dw[3] = 0;
@@ -832,9 +840,9 @@ gen8_3DSTATE_SO_BUFFER(struct ilo_builder *builder,
            buffer << GEN7_SO_BUF_DW1_INDEX__SHIFT |
            builder->mocs << GEN8_SO_BUF_DW1_MOCS__SHIFT;
 
-   if (sb->need_bo) {
-      ilo_builder_batch_reloc64(builder, pos + 2, sb->bo,
-            sb->so_buf[1], INTEL_RELOC_WRITE);
+   if (sb->vma) {
+      ilo_builder_batch_reloc64(builder, pos + 2, sb->vma->bo,
+            sb->vma->bo_offset + sb->so_buf[1], INTEL_RELOC_WRITE);
    } else {
       dw[2] = 0;
       dw[3] = 0;
@@ -842,9 +850,10 @@ gen8_3DSTATE_SO_BUFFER(struct ilo_builder *builder,
 
    dw[4] = sb->so_buf[2];
 
-   if (sb->need_write_offset_bo) {
-      ilo_builder_batch_reloc64(builder, pos + 5, sb->write_offset_bo,
-            sizeof(uint32_t) * buffer, INTEL_RELOC_WRITE);
+   if (sb->write_offset_vma) {
+      ilo_builder_batch_reloc64(builder, pos + 5, sb->write_offset_vma->bo,
+            sb->write_offset_vma->bo_offset + sizeof(uint32_t) * buffer,
+            INTEL_RELOC_WRITE);
    } else {
       dw[5] = 0;
       dw[6] = 0;
@@ -1254,14 +1263,15 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
             ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
       memcpy(dw, surf->surface, state_len << 2);
 
-      if (surf->bo) {
+      if (surf->vma) {
          const uint32_t mocs = (surf->scanout) ?
             (GEN8_MOCS_MT_PTE | GEN8_MOCS_CT_L3) : builder->mocs;
 
          dw[1] |= mocs << GEN8_SURFACE_DW1_MOCS__SHIFT;
 
-         ilo_builder_surface_reloc64(builder, state_offset, 8, surf->bo,
-               surf->surface[8], (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
+         ilo_builder_surface_reloc64(builder, state_offset, 8, surf->vma->bo,
+               surf->vma->bo_offset + surf->surface[8],
+               (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    } else {
       state_align = 32;
@@ -1271,15 +1281,16 @@ gen6_SURFACE_STATE(struct ilo_builder *builder,
             ILO_BUILDER_ITEM_SURFACE, state_align, state_len, &dw);
       memcpy(dw, surf->surface, state_len << 2);
 
-      if (surf->bo) {
+      if (surf->vma) {
          /*
           * For scanouts, we should not enable caching in LLC.  Since we only
           * enable that on Gen8+, we are fine here.
           */
          dw[5] |= builder->mocs << GEN6_SURFACE_DW5_MOCS__SHIFT;
 
-         ilo_builder_surface_reloc(builder, state_offset, 1, surf->bo,
-               surf->surface[1], (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
+         ilo_builder_surface_reloc(builder, state_offset, 1, surf->vma->bo,
+               surf->vma->bo_offset + surf->surface[1],
+               (surf->readonly) ? 0 : INTEL_RELOC_WRITE);
       }
    }
 

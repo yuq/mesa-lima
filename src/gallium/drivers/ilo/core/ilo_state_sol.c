@@ -26,7 +26,7 @@
  */
 
 #include "ilo_debug.h"
-#include "ilo_buffer.h"
+#include "ilo_vma.h"
 #include "ilo_state_sol.h"
 
 static bool
@@ -270,9 +270,6 @@ sol_buffer_validate_gen7(const struct ilo_dev *dev,
 {
    ILO_DEV_ASSERT(dev, 7, 8);
 
-   if (info->buf)
-      assert(info->offset < info->buf->bo_size && info->size);
-
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 208:
     *
@@ -281,9 +278,17 @@ sol_buffer_validate_gen7(const struct ilo_dev *dev,
     */
    assert(info->offset % 4 == 0);
 
+   if (info->vma) {
+      assert(info->vma->vm_alignment % 4 == 0);
+      assert(info->size && info->offset + info->size <= info->vma->vm_size);
+   }
+
    /* Gen8+ only */
-   if (info->write_offset_load || info->write_offset_save)
-      assert(ilo_dev_gen(dev) >= ILO_GEN(8));
+   if (info->write_offset_load || info->write_offset_save) {
+      assert(ilo_dev_gen(dev) >= ILO_GEN(8) && info->write_offset_vma);
+      assert(info->write_offset_offset + sizeof(uint32_t) <=
+            info->write_offset_vma->vm_size);
+   }
 
    /*
     * From the Broadwell PRM, volume 2b, page 206:
@@ -304,15 +309,7 @@ static uint32_t
 sol_buffer_get_gen6_size(const struct ilo_dev *dev,
                          const struct ilo_state_sol_buffer_info *info)
 {
-   uint32_t size;
-
    ILO_DEV_ASSERT(dev, 6, 8);
-
-   if (!info->buf)
-      return 0;
-
-   size = (info->offset + info->size <= info->buf->bo_size) ? info->size :
-      info->buf->bo_size - info->offset;
 
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 208:
@@ -320,9 +317,7 @@ sol_buffer_get_gen6_size(const struct ilo_dev *dev,
     *     "(Surface End Address) This field specifies the ending DWord
     *      address..."
     */
-   size &= ~3;
-
-   return size;
+   return (info->vma) ? info->size & ~3 : 0;
 }
 
 static bool
@@ -359,7 +354,7 @@ sol_buffer_set_gen8_3dstate_so_buffer(struct ilo_state_sol_buffer *sb,
 
    dw1 = 0;
 
-   if (info->buf)
+   if (info->vma)
       dw1 |= GEN8_SO_BUF_DW1_ENABLE;
    if (info->write_offset_load)
       dw1 |= GEN8_SO_BUF_DW1_OFFSET_WRITE_ENABLE;
@@ -443,9 +438,8 @@ ilo_state_sol_buffer_init(struct ilo_state_sol_buffer *sb,
    else
       ret &= sol_buffer_set_gen7_3dstate_so_buffer(sb, dev, info);
 
-   sb->need_bo = (info->size > 0);
-   sb->need_write_offset_bo = (info->write_offset_save ||
-         (info->write_offset_load && !info->write_offset_imm_enable));
+   sb->vma = info->vma;
+   sb->write_offset_vma = info->write_offset_vma;
 
    assert(ret);
 

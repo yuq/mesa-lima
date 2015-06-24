@@ -444,6 +444,7 @@ draw_vbo_with_sw_restart(struct ilo_context *ilo,
                          const struct pipe_draw_info *info)
 {
    const struct ilo_ib_state *ib = &ilo->state_vector.ib;
+   const struct ilo_vma *vma;
    union {
       const void *ptr;
       const uint8_t *u8;
@@ -453,10 +454,12 @@ draw_vbo_with_sw_restart(struct ilo_context *ilo,
 
    /* we will draw with IB mapped */
    if (ib->state.buffer) {
-      u.ptr = intel_bo_map(ilo_buffer(ib->state.buffer)->bo, false);
+      vma = ilo_resource_get_vma(ib->state.buffer);
+      u.ptr = intel_bo_map(vma->bo, false);
       if (u.ptr)
-         u.u8 += ib->state.offset;
+         u.u8 += vma->bo_offset + ib->state.offset;
    } else {
+      vma = NULL;
       u.ptr = ib->state.user_buffer;
    }
 
@@ -500,8 +503,8 @@ draw_vbo_with_sw_restart(struct ilo_context *ilo,
 
 #undef DRAW_VBO_WITH_SW_RESTART
 
-   if (ib->state.buffer)
-      intel_bo_unmap(ilo_buffer(ib->state.buffer)->bo);
+   if (vma)
+      intel_bo_unmap(vma->bo);
 }
 
 static bool

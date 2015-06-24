@@ -29,7 +29,6 @@
 #define ILO_IMAGE_H
 
 #include "genhw/genhw.h"
-#include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
@@ -141,13 +140,7 @@ struct ilo_image {
       unsigned walk_layer_height;
       unsigned bo_stride;
       unsigned bo_height;
-
-      /* managed by users */
-      struct intel_bo *bo;
    } aux;
-
-   /* managed by users */
-   struct intel_bo *bo;
 };
 
 struct pipe_resource;
