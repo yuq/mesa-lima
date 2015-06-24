@@ -130,7 +130,8 @@ qir_opt_cse(struct vc4_compile *c)
 
         list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 if (qir_has_side_effects(c, inst) ||
-                    qir_has_side_effect_reads(c, inst)) {
+                    qir_has_side_effect_reads(c, inst) ||
+                    inst->op == QOP_TLB_COLOR_READ) {
                         continue;
                 }
 
