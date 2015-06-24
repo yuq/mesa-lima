@@ -94,15 +94,127 @@ surface_set_gen7_null_SURFACE_STATE(struct ilo_state_surface *surf,
    return true;
 }
 
+static uint32_t
+surface_get_gen6_buffer_offset_alignment(const struct ilo_dev *dev,
+                                         const struct ilo_state_surface_buffer_info *info)
+{
+   uint32_t alignment;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * From the Ivy Bridge PRM, volume 4 part 1, page 68:
+    *
+    *     "The Base Address for linear render target surfaces and surfaces
+    *      accessed with the typed surface read/write data port messages must
+    *      be element-size aligned, for non-YUV surface formats, or a multiple
+    *      of 2 element-sizes for YUV surface formats.  Other linear surfaces
+    *      have no alignment requirements (byte alignment is sufficient)."
+    *
+    *     "Certain message types used to access surfaces have more stringent
+    *      alignment requirements. Please refer to the specific message
+    *      documentation for additional restrictions."
+    */
+   switch (info->access) {
+   case ILO_STATE_SURFACE_ACCESS_SAMPLER:
+      /* no alignment requirements */
+      alignment = 1;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_RENDER:
+   case ILO_STATE_SURFACE_ACCESS_DP_TYPED:
+      /* element-size aligned */
+      alignment = info->format_size;
+
+      assert(info->struct_size % alignment == 0);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_UNTYPED:
+      /*
+       * Nothing is said about Untyped* messages, but I think they require the
+       * base address to be DWord aligned.
+       */
+      alignment = 4;
+
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 70:
+       *
+       *     "For linear surfaces with Surface Type of SURFTYPE_STRBUF, the
+       *      pitch must be a multiple of 4 bytes."
+       */
+      if (info->struct_size > 1)
+         assert(info->struct_size % alignment == 0);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_DATA:
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, and 237:
+       *
+       *     "the surface base address must be OWord aligned"
+       *
+       * for OWord Block Read/Write, Unaligned OWord Block Read, and OWord
+       * Dual Block Read/Write.
+       *
+       * From the Ivy Bridge PRM, volume 4 part 1, page 246 and 249:
+       *
+       *     "The surface base address must be DWord aligned"
+       *
+       * for DWord Scattered Read/Write and Byte Scattered Read/Write.
+       */
+      alignment = (info->format_size > 4) ? 16 : 4;
+
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, 237, and
+       * 246:
+       *
+       *     "the surface pitch is ignored, the surface is treated as a
+       *      1-dimensional surface. An element size (pitch) of 16 bytes is
+       *      used to determine the size of the buffer for out-of-bounds
+       *      checking if using the surface state model."
+       *
+       * for OWord Block Read/Write, Unaligned OWord Block Read, OWord
+       * Dual Block Read/Write, and DWord Scattered Read/Write.
+       *
+       * From the Ivy Bridge PRM, volume 4 part 1, page 248:
+       *
+       *     "The surface pitch is ignored, the surface is treated as a
+       *      1-dimensional surface. An element size (pitch) of 4 bytes is
+       *      used to determine the size of the buffer for out-of-bounds
+       *      checking if using the surface state model."
+       *
+       * for Byte Scattered Read/Write.
+       *
+       * It is programmable on Gen7.5+.
+       */
+      if (ilo_dev_gen(dev) < ILO_GEN(7.5)) {
+         const int fixed = (info->format_size > 1) ? 16 : 4;
+         assert(info->struct_size == fixed);
+      }
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_SVB:
+      /*
+       * From the Sandy Bridge PRM, volume 4 part 1, page 259:
+       *
+       *     "Both the surface base address and surface pitch must be DWord
+       *      aligned."
+       */
+      alignment = 4;
+
+      assert(info->struct_size % alignment == 0);
+      break;
+   default:
+      assert(!"unknown access");
+      alignment = 1;
+      break;
+   }
+
+   return alignment;
+}
+
 static bool
 surface_validate_gen6_buffer(const struct ilo_dev *dev,
                              const struct ilo_state_surface_buffer_info *info)
 {
-   ILO_DEV_ASSERT(dev, 6, 8);
+   uint32_t alignment;
 
-   /* SVB writes are Gen6-only */
-   if (ilo_dev_gen(dev) >= ILO_GEN(7))
-      assert(info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    if (info->offset + info->size > info->vma->vm_size) {
       ilo_warn("invalid buffer range\n");
@@ -120,88 +232,34 @@ surface_validate_gen6_buffer(const struct ilo_dev *dev,
       return false;
    }
 
+   alignment = surface_get_gen6_buffer_offset_alignment(dev, info);
+   if (info->offset % alignment || info->vma->vm_alignment % alignment) {
+      ilo_warn("bad buffer offset\n");
+      return false;
+   }
+
+   /* no STRBUF on Gen6 */
+   if (info->format == GEN6_FORMAT_RAW && info->struct_size > 1)
+      assert(ilo_dev_gen(dev) >= ILO_GEN(7));
+
+   /* SVB writes are Gen6 only */
+   if (info->access == ILO_STATE_SURFACE_ACCESS_DP_SVB)
+      assert(ilo_dev_gen(dev) == ILO_GEN(6));
+
    /*
-    * From the Ivy Bridge PRM, volume 4 part 1, page 68:
+    * From the Ivy Bridge PRM, volume 4 part 1, page 83:
     *
-    *     "The Base Address for linear render target surfaces and surfaces
-    *      accessed with the typed surface read/write data port messages must
-    *      be element-size aligned, for non-YUV surface formats, or a multiple
-    *      of 2 element-sizes for YUV surface formats.  Other linear surfaces
-    *      have no alignment requirements (byte alignment is sufficient)."
+    *     "NOTE: "RAW" is supported only with buffers and structured buffers
+    *      accessed via the untyped surface read/write and untyped atomic
+    *      operation messages, which do not have a column in the table."
     *
-    *     "Certain message types used to access surfaces have more stringent
-    *      alignment requirements. Please refer to the specific message
-    *      documentation for additional restrictions."
+    * From the Ivy Bridge PRM, volume 4 part 1, page 252:
     *
-    * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, and 237:
-    *
-    *     "the surface base address must be OWord aligned"
-    *
-    * for OWord Block Read/Write, Unaligned OWord Block Read, and OWord Dual
-    * Block Read/Write.
-    *
-    * From the Ivy Bridge PRM, volume 4 part 1, page 246 and 249:
-    *
-    *     "The surface base address must be DWord aligned"
-    *
-    * for DWord Scattered Read/Write and Byte Scattered Read/Write.
-    *
-    * We have to rely on users to correctly set info->struct_size here.  DWord
-    * Scattered Read/Write has conflicting pitch and alignment, but we do not
-    * use them yet so we are fine.
-    *
-    * It is unclear if sampling engine surfaces require aligned offsets.
+    *     "For untyped messages, the Surface Format must be RAW and the
+    *      Surface Type must be SURFTYPE_BUFFER or SURFTYPE_STRBUF."
     */
-   if (info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB) {
-      assert(info->struct_size % info->format_size == 0);
-
-      if (info->offset % info->struct_size ||
-          info->vma->vm_alignment % info->struct_size) {
-         ilo_warn("bad buffer offset\n");
-         return false;
-      }
-   }
-
-   if (info->format == GEN6_FORMAT_RAW) {
-      /*
-       * From the Sandy Bridge PRM, volume 4 part 1, page 97:
-       *
-       *     ""RAW" is supported only with buffers and structured buffers
-       *      accessed via the untyped surface read/write and untyped atomic
-       *      operation messages, which do not have a column in the table."
-       *
-       * We do not have a specific access mode for untyped messages.
-       */
-      assert(info->access == ILO_STATE_SURFACE_ACCESS_DP_UNTYPED);
-
-      /*
-       * Nothing is said about Untyped* messages, but I guess they require the
-       * base address to be DWord aligned.
-       */
-      if (info->offset % 4 || info->vma->vm_alignment % 4) {
-         ilo_warn("bad RAW buffer offset\n");
-         return false;
-      }
-
-      if (info->struct_size > 1) {
-         /* no STRBUF on Gen6 */
-         if (ilo_dev_gen(dev) == ILO_GEN(6)) {
-            ilo_warn("no STRBUF support\n");
-            return false;
-         }
-
-         /*
-          * From the Ivy Bridge PRM, volume 4 part 1, page 70:
-          *
-          *     "For linear surfaces with Surface Type of SURFTYPE_STRBUF, the
-          *      pitch must be a multiple of 4 bytes."
-          */
-         if (info->struct_size % 4) {
-            ilo_warn("bad STRBUF pitch\n");
-            return false;
-         }
-      }
-   }
+   assert((info->access == ILO_STATE_SURFACE_ACCESS_DP_UNTYPED) ==
+          (info->format == GEN6_FORMAT_RAW));
 
    return true;
 }
@@ -216,8 +274,7 @@ surface_get_gen6_buffer_struct_count(const struct ilo_dev *dev,
    ILO_DEV_ASSERT(dev, 6, 8);
 
    c = info->size / info->struct_size;
-   if (info->access == ILO_STATE_SURFACE_ACCESS_DP_SVB &&
-       info->format_size < info->size - info->struct_size * c)
+   if (info->format_size < info->size - info->struct_size * c)
       c++;
 
    /*

@@ -52,6 +52,7 @@ struct ilo_state_surface_buffer_info {
 
    enum ilo_state_surface_access access;
 
+   /* format_size may be less than, equal to, or greater than struct_size */
    enum gen_surface_format format;
    uint8_t format_size;
 
