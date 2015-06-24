@@ -62,7 +62,8 @@ query_new_value(struct hud_graph *gr)
    uint64_t now = os_time_get();
 
    if (info->last_time) {
-      pipe->end_query(pipe, info->query[info->head]);
+      if (info->query[info->head])
+         pipe->end_query(pipe, info->query[info->head]);
 
       /* read query results */
       while (1) {
@@ -70,7 +71,7 @@ query_new_value(struct hud_graph *gr)
          union pipe_query_result result;
          uint64_t *res64 = (uint64_t *)&result;
 
-         if (pipe->get_query_result(pipe, query, FALSE, &result)) {
+         if (query && pipe->get_query_result(pipe, query, FALSE, &result)) {
             info->results_cumulative += res64[info->result_index];
             info->num_results++;
 
@@ -88,7 +89,8 @@ query_new_value(struct hud_graph *gr)
                        "gallium_hud: all queries are busy after %i frames, "
                        "can't add another query\n",
                        NUM_QUERIES);
-               pipe->destroy_query(pipe, info->query[info->head]);
+               if (info->query[info->head])
+                  pipe->destroy_query(pipe, info->query[info->head]);
                info->query[info->head] =
                      pipe->create_query(pipe, info->query_type, 0);
             }
@@ -113,15 +115,15 @@ query_new_value(struct hud_graph *gr)
          info->results_cumulative = 0;
          info->num_results = 0;
       }
-
-      pipe->begin_query(pipe, info->query[info->head]);
    }
    else {
       /* initialize */
       info->last_time = now;
       info->query[info->head] = pipe->create_query(pipe, info->query_type, 0);
-      pipe->begin_query(pipe, info->query[info->head]);
    }
+
+   if (info->query[info->head])
+      pipe->begin_query(pipe, info->query[info->head]);
 }
 
 static void
