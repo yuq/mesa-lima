@@ -157,9 +157,6 @@ ilo_image_init_for_imported(struct ilo_image *img,
                             enum gen_surface_tiling tiling,
                             unsigned bo_stride);
 
-bool
-ilo_image_disable_aux(struct ilo_image *img, const struct ilo_dev *dev);
-
 static inline bool
 ilo_image_can_enable_aux(const struct ilo_image *img, unsigned level)
 {

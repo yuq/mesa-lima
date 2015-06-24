@@ -1449,22 +1449,3 @@ ilo_image_init_for_imported(struct ilo_image *img,
 
    return true;
 }
-
-bool
-ilo_image_disable_aux(struct ilo_image *img, const struct ilo_dev *dev)
-{
-   /* HiZ is required for separate stencil on Gen6 */
-   if (ilo_dev_gen(dev) == ILO_GEN(6) &&
-       img->aux.type == ILO_IMAGE_AUX_HIZ &&
-       img->separate_stencil)
-      return false;
-
-   /* MCS is required for multisample images */
-   if (img->aux.type == ILO_IMAGE_AUX_MCS &&
-       img->sample_count > 1)
-      return false;
-
-   img->aux.enables = 0x0;
-
-   return true;
-}

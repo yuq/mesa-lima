@@ -283,8 +283,6 @@ tex_destroy(struct ilo_texture *tex)
 static bool
 tex_alloc_bos(struct ilo_texture *tex)
 {
-   struct ilo_screen *is = ilo_screen(tex->base.screen);
-
    if (!tex->imported && !tex_create_bo(tex))
       return false;
 
@@ -294,13 +292,11 @@ tex_alloc_bos(struct ilo_texture *tex)
 
    switch (tex->image.aux.type) {
    case ILO_IMAGE_AUX_HIZ:
-      if (!tex_create_hiz(tex) &&
-          !ilo_image_disable_aux(&tex->image, &is->dev))
+      if (!tex_create_hiz(tex))
          return false;
       break;
    case ILO_IMAGE_AUX_MCS:
-      if (!tex_create_mcs(tex) &&
-          !ilo_image_disable_aux(&tex->image, &is->dev))
+      if (!tex_create_mcs(tex))
          return false;
       break;
    default:
