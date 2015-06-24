@@ -2048,7 +2048,7 @@ ilo_create_sampler_view(struct pipe_context *pipe,
       info.type = tex->image.type;
 
       if (templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
-          tex->image.separate_stencil) {
+          tex->separate_s8) {
          info.format = ilo_format_translate_texture(dev,
                PIPE_FORMAT_Z32_FLOAT);
       } else {

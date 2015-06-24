@@ -119,6 +119,8 @@ struct ilo_image_lod {
 struct ilo_image {
    enum gen_surface_type type;
 
+   enum pipe_format format;
+
    /* size, format, etc for programming hardware states */
    unsigned width0;
    unsigned height0;
@@ -126,8 +128,6 @@ struct ilo_image {
    unsigned array_size;
    unsigned level_count;
    unsigned sample_count;
-   enum pipe_format format;
-   bool separate_stencil;
 
    /*
     * width, height, and size of pixel blocks for conversion between pixel

@@ -671,56 +671,36 @@ img_init_size_and_format(struct ilo_image *img,
                          struct ilo_image_params *params)
 {
    const struct ilo_image_info *info = params->info;
-   enum pipe_format format = info->format;
-   bool require_separate_stencil = false;
 
    img->type = info->type;
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 314:
+    *
+    *     "The separate stencil buffer is always enabled, thus the field in
+    *      3DSTATE_DEPTH_BUFFER to explicitly enable the separate stencil
+    *      buffer has been removed Surface formats with interleaved depth and
+    *      stencil are no longer supported"
+    */
+   if (ilo_dev_gen(params->dev) >= ILO_GEN(7) && info->bind_zs) {
+      const struct util_format_description *desc =
+         util_format_description(info->format);
+
+      assert(info->format == PIPE_FORMAT_S8_UINT ||
+             !util_format_has_stencil(desc));
+   }
+
+   img->format = info->format;
+   img->block_width = util_format_get_blockwidth(info->format);
+   img->block_height = util_format_get_blockheight(info->format);
+   img->block_size = util_format_get_blocksize(info->format);
+
    img->width0 = info->width;
    img->height0 = info->height;
    img->depth0 = info->depth;
    img->array_size = info->array_size;
    img->level_count = info->level_count;
    img->sample_count = info->sample_count;
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 317:
-    *
-    *     "This field (Separate Stencil Buffer Enable) must be set to the same
-    *      value (enabled or disabled) as Hierarchical Depth Buffer Enable."
-    *
-    * GEN7+ requires separate stencil buffers.
-    */
-   if (info->bind_zs) {
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-         require_separate_stencil = true;
-      else
-         require_separate_stencil = (img->aux.type == ILO_IMAGE_AUX_HIZ);
-   }
-
-   switch (format) {
-   case PIPE_FORMAT_ETC1_RGB8:
-      format = PIPE_FORMAT_R8G8B8X8_UNORM;
-      break;
-   case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-      if (require_separate_stencil) {
-         format = PIPE_FORMAT_Z24X8_UNORM;
-         img->separate_stencil = true;
-      }
-      break;
-   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-      if (require_separate_stencil) {
-         format = PIPE_FORMAT_Z32_FLOAT;
-         img->separate_stencil = true;
-      }
-      break;
-   default:
-      break;
-   }
-
-   img->format = format;
-   img->block_width = util_format_get_blockwidth(format);
-   img->block_height = util_format_get_blockheight(format);
-   img->block_size = util_format_get_blocksize(format);
 
    params->valid_tilings = img_get_valid_tilings(img, params);
    params->compressed = util_format_is_compressed(img->format);
@@ -805,19 +785,7 @@ img_want_hiz(const struct ilo_image *img,
    if (!info->bind_zs)
       return false;
 
-   if (!util_format_has_depth(desc))
-      return false;
-
-   /*
-    * As can be seen in img_calculate_hiz_size(), HiZ may not be enabled
-    * for every level.  This is generally fine except on GEN6, where HiZ and
-    * separate stencil are enabled and disabled at the same time.  When the
-    * format is PIPE_FORMAT_Z32_FLOAT_S8X24_UINT, enabling and disabling HiZ
-    * can result in incompatible formats.
-    */
-   if (ilo_dev_gen(params->dev) == ILO_GEN(6) &&
-       info->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
-       info->level_count > 1)
+   if (!util_format_has_depth(desc) || util_format_has_stencil(desc))
       return false;
 
    return true;
@@ -1303,8 +1271,8 @@ img_init(struct ilo_image *img,
 {
    /* there are hard dependencies between every function here */
 
-   img_init_aux(img, params);
    img_init_size_and_format(img, params);
+   img_init_aux(img, params);
    img_init_walk(img, params);
    img_init_tiling(img, params);
    img_init_alignments(img, params);
