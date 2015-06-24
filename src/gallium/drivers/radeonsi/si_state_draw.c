@@ -139,6 +139,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    (info->indirect || info->instance_count > 1))
 			wd_switch_on_eop = true;
 
+		/* USE_OPAQUE doesn't work when WD_SWITCH_ON_EOP is 0. */
+		if (info->count_from_stream_output)
+			wd_switch_on_eop = true;
+
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
