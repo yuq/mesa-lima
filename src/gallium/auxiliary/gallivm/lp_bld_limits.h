@@ -100,7 +100,7 @@ gallivm_get_shader_param(enum pipe_shader_cap param)
    case PIPE_SHADER_CAP_MAX_CONTROL_FLOW_DEPTH:
       return LP_MAX_TGSI_NESTING;
    case PIPE_SHADER_CAP_MAX_INPUTS:
-      return PIPE_MAX_SHADER_INPUTS;
+      return 32;
    case PIPE_SHADER_CAP_MAX_OUTPUTS:
       return 32;
    case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:

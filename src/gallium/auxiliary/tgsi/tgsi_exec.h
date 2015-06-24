@@ -213,7 +213,7 @@ struct tgsi_sampler
  * input register files, this is the stride between two 1D
  * arrays.
  */
-#define TGSI_EXEC_MAX_INPUT_ATTRIBS PIPE_MAX_SHADER_INPUTS
+#define TGSI_EXEC_MAX_INPUT_ATTRIBS 32
 
 /* The maximum number of bytes per constant buffer.
  */
