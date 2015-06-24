@@ -113,6 +113,10 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 	 (i == MESA_SHADER_FRAGMENT);
       compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
       compiler->glsl_compiler_options[i].LowerClipDistance = true;
+
+      /* !ARB_gpu_shader5 */
+      if (devinfo->gen < 7)
+         compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
    }
 
    compiler->glsl_compiler_options[MESA_SHADER_VERTEX].OptimizeForAOS = true;
