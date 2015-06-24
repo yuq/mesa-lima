@@ -2026,6 +2026,7 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    this->no16_msg = NULL;
 
    this->nir_locals = NULL;
+   this->nir_ssa_values = NULL;
    this->nir_globals = NULL;
 
    memset(&this->payload, 0, sizeof(this->payload));

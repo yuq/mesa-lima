@@ -366,6 +366,9 @@ fs_visitor::nir_emit_impl(nir_function_impl *impl)
       nir_locals[reg->index] = bld.vgrf(BRW_REGISTER_TYPE_F, size);
    }
 
+   nir_ssa_values = reralloc(mem_ctx, nir_ssa_values, fs_reg,
+                             impl->ssa_alloc);
+
    nir_emit_cf_list(&impl->body);
 }
 
@@ -464,6 +467,10 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
        */
       break;
 
+   case nir_instr_type_ssa_undef:
+      nir_emit_undef(abld, nir_instr_as_ssa_undef(instr));
+      break;
+
    case nir_instr_type_jump:
       nir_emit_jump(abld, nir_instr_as_jump(instr));
       break;
@@ -495,17 +502,12 @@ bool
 fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
                                          const fs_reg &result)
 {
-   if (instr->src[0].src.is_ssa ||
-       !instr->src[0].src.reg.reg ||
-       !instr->src[0].src.reg.reg->parent_instr)
-      return false;
-
-   if (instr->src[0].src.reg.reg->parent_instr->type !=
-       nir_instr_type_intrinsic)
+   if (!instr->src[0].src.is_ssa ||
+       instr->src[0].src.ssa->parent_instr->type != nir_instr_type_intrinsic)
       return false;
 
    nir_intrinsic_instr *src0 =
-      nir_instr_as_intrinsic(instr->src[0].src.reg.reg->parent_instr);
+      nir_instr_as_intrinsic(instr->src[0].src.ssa->parent_instr);
 
    if (src0->intrinsic != nir_intrinsic_load_front_face)
       return false;
@@ -1146,6 +1148,13 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    }
 }
 
+void
+fs_visitor::nir_emit_undef(const fs_builder &bld, nir_ssa_undef_instr *instr)
+{
+   nir_ssa_values[instr->def.index] = bld.vgrf(BRW_REGISTER_TYPE_D,
+                                               instr->def.num_components);
+}
+
 static fs_reg
 fs_reg_for_nir_reg(fs_visitor *v, nir_register *nir_reg,
                    unsigned base_offset, nir_src *indirect)
@@ -1171,30 +1180,39 @@ fs_reg_for_nir_reg(fs_visitor *v, nir_register *nir_reg,
 fs_reg
 fs_visitor::get_nir_src(nir_src src)
 {
+   fs_reg reg;
    if (src.is_ssa) {
-      assert(src.ssa->parent_instr->type == nir_instr_type_load_const);
-      nir_load_const_instr *load = nir_instr_as_load_const(src.ssa->parent_instr);
-      fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_D, src.ssa->num_components);
+      if (src.ssa->parent_instr->type == nir_instr_type_load_const) {
+         nir_load_const_instr *load =
+            nir_instr_as_load_const(src.ssa->parent_instr);
+         reg = bld.vgrf(BRW_REGISTER_TYPE_D, src.ssa->num_components);
 
-      for (unsigned i = 0; i < src.ssa->num_components; ++i)
-         bld.MOV(offset(reg, i), fs_reg(load->value.i[i]));
-
-      return reg;
+         for (unsigned i = 0; i < src.ssa->num_components; ++i)
+            bld.MOV(offset(reg, i), fs_reg(load->value.i[i]));
+      } else {
+         reg = nir_ssa_values[src.ssa->index];
+      }
    } else {
-      fs_reg reg = fs_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
-                                      src.reg.indirect);
-
-      /* to avoid floating-point denorm flushing problems, set the type by
-       * default to D - instructions that need floating point semantics will set
-       * this to F if they need to
-       */
-      return retype(reg, BRW_REGISTER_TYPE_D);
+      reg = fs_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
+                               src.reg.indirect);
    }
+
+   /* to avoid floating-point denorm flushing problems, set the type by
+    * default to D - instructions that need floating point semantics will set
+    * this to F if they need to
+    */
+   return retype(reg, BRW_REGISTER_TYPE_D);
 }
 
 fs_reg
 fs_visitor::get_nir_dest(nir_dest dest)
 {
+   if (dest.is_ssa) {
+      nir_ssa_values[dest.ssa.index] = bld.vgrf(BRW_REGISTER_TYPE_F,
+                                                dest.ssa.num_components);
+      return nir_ssa_values[dest.ssa.index];
+   }
+
    return fs_reg_for_nir_reg(this, dest.reg.reg, dest.reg.base_offset,
                              dest.reg.indirect);
 }

@@ -43,8 +43,8 @@
 static uint8_t
 get_resolve_status_for_src(nir_src *src)
 {
-   nir_instr *src_instr = nir_src_get_parent_instr(src);
-   if (src_instr) {
+   if (src->is_ssa) {
+      nir_instr *src_instr = src->ssa->parent_instr;
       uint8_t resolve_status = src_instr->pass_flags & BRW_NIR_BOOLEAN_MASK;
 
       /* If the source instruction needs resolve, then from the perspective
@@ -66,8 +66,8 @@ get_resolve_status_for_src(nir_src *src)
 static bool
 src_mark_needs_resolve(nir_src *src, void *void_state)
 {
-   nir_instr *src_instr = nir_src_get_parent_instr(src);
-   if (src_instr) {
+   if (src->is_ssa) {
+      nir_instr *src_instr = src->ssa->parent_instr;
       uint8_t resolve_status = src_instr->pass_flags & BRW_NIR_BOOLEAN_MASK;
 
       /* If the source instruction is unresolved, then mark it as needing
@@ -172,11 +172,11 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
             resolve_status = BRW_NIR_NON_BOOLEAN;
          }
 
-         /* If the destination is SSA-like, go ahead allow unresolved booleans.
+         /* If the destination is SSA, go ahead allow unresolved booleans.
           * If the destination register doesn't have a well-defined parent_instr
           * we need to resolve immediately.
           */
-         if (alu->dest.dest.reg.reg->parent_instr == NULL &&
+         if (!alu->dest.dest.is_ssa &&
              resolve_status == BRW_NIR_BOOLEAN_UNRESOLVED) {
             resolve_status = BRW_NIR_BOOLEAN_NEEDS_RESOLVE;
          }
