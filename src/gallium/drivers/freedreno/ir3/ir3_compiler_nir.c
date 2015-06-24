@@ -1372,6 +1372,11 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			dst[i] = create_uniform_indirect(ctx, n,
 					get_addr(ctx, src[0]));
 		}
+		/* NOTE: if relative addressing is used, we set constlen in
+		 * the compiler (to worst-case value) since we don't know in
+		 * the assembler what the max addr reg value can be:
+		 */
+		ctx->so->constlen = ctx->s->num_uniforms;
 		break;
 	case nir_intrinsic_load_ubo:
 	case nir_intrinsic_load_ubo_indirect:
