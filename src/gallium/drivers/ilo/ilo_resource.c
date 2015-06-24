@@ -87,6 +87,38 @@ resource_get_cpu_init(const struct pipe_resource *templ)
                           PIPE_BIND_STREAM_OUTPUT)) ? false : true;
 }
 
+static void
+resource_get_image_info(const struct pipe_resource *templ,
+                        const struct ilo_dev *dev,
+                        enum pipe_format image_format,
+                        struct ilo_image_info *info)
+{
+   memset(info, 0, sizeof(*info));
+
+   info->target = templ->target;
+   info->format = image_format;
+
+   info->width = templ->width0;
+   info->height = templ->height0;
+   info->depth = templ->depth0;
+   info->array_size = templ->array_size;
+   info->level_count = templ->last_level + 1;
+   info->sample_count = (templ->nr_samples) ? templ->nr_samples : 1;
+
+   info->aux_disable = (templ->usage == PIPE_USAGE_STAGING);
+
+   if (templ->bind & PIPE_BIND_LINEAR)
+      info->valid_tilings = 1 << GEN6_TILING_NONE;
+
+   info->bind_surface_sampler = (templ->bind & PIPE_BIND_SAMPLER_VIEW);
+   info->bind_surface_dp_render = (templ->bind & PIPE_BIND_RENDER_TARGET);
+   info->bind_surface_dp_typed = (templ->bind &
+         (PIPE_BIND_SHADER_RESOURCE | PIPE_BIND_COMPUTE_RESOURCE));
+   info->bind_zs = (templ->bind & PIPE_BIND_DEPTH_STENCIL);
+   info->bind_scanout = (templ->bind & PIPE_BIND_SCANOUT);
+   info->bind_cursor = (templ->bind & PIPE_BIND_CURSOR);
+}
+
 static enum gen_surface_tiling
 winsys_to_surface_tiling(enum intel_tiling_mode tiling)
 {
@@ -306,9 +338,10 @@ tex_alloc_bos(struct ilo_texture *tex)
    return true;
 }
 
-static bool
+static struct intel_bo *
 tex_import_handle(struct ilo_texture *tex,
-                  const struct winsys_handle *handle)
+                  const struct winsys_handle *handle,
+                  struct ilo_image_info *info)
 {
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const struct pipe_resource *templ = &tex->base;
@@ -319,23 +352,24 @@ tex_import_handle(struct ilo_texture *tex,
 
    bo = intel_winsys_import_handle(is->dev.winsys, name, handle,
          tex->image.bo_height, &tiling, &pitch);
-   if (!bo)
-      return false;
+   /* modify image info */
+   if (bo) {
+      const uint8_t valid_tilings = 1 << winsys_to_surface_tiling(tiling);
 
-   if (!ilo_image_init_for_imported(&tex->image, &is->dev, templ,
-            winsys_to_surface_tiling(tiling), pitch)) {
-      ilo_err("failed to import handle for texture\n");
-      intel_bo_unref(bo);
-      return false;
+      if (info->valid_tilings && !(info->valid_tilings & valid_tilings)) {
+         intel_bo_unref(bo);
+         return NULL;
+      }
+
+      info->valid_tilings = valid_tilings;
+      info->force_bo_stride = pitch;
+
+      /* assume imported RTs are also scanouts */
+      if (!info->bind_scanout)
+         info->bind_scanout = (templ->usage & PIPE_BIND_RENDER_TARGET);
    }
 
-   ilo_vma_init(&tex->vma, &is->dev,
-         tex->image.bo_stride * tex->image.bo_height, 4096);
-   ilo_vma_set_bo(&tex->vma, &is->dev, bo, 0);
-
-   tex->imported = true;
-
-   return true;
+   return bo;
 }
 
 static bool
@@ -345,18 +379,33 @@ tex_init_image(struct ilo_texture *tex,
    struct ilo_screen *is = ilo_screen(tex->base.screen);
    const struct pipe_resource *templ = &tex->base;
    struct ilo_image *img = &tex->image;
+   struct intel_bo *imported_bo = NULL;;
+   struct ilo_image_info info;
+
+   resource_get_image_info(templ, &is->dev, templ->format, &info);
 
    if (handle) {
-      if (!tex_import_handle(tex, handle))
+      imported_bo = tex_import_handle(tex, handle, &info);
+      if (!imported_bo)
          return false;
-   } else {
-      ilo_image_init(img, &is->dev, templ);
-      ilo_vma_init(&tex->vma, &is->dev,
-            img->bo_stride * img->bo_height, 4096);
    }
 
-   if (img->bo_height > ilo_max_resource_size / img->bo_stride)
+   if (!ilo_image_init(img, &is->dev, &info)) {
+      intel_bo_unref(imported_bo);
       return false;
+   }
+
+   if (img->bo_height > ilo_max_resource_size / img->bo_stride ||
+       !ilo_vma_init(&tex->vma, &is->dev, img->bo_stride * img->bo_height,
+          4096)) {
+      intel_bo_unref(imported_bo);
+      return false;
+   }
+
+   if (imported_bo) {
+      ilo_vma_set_bo(&tex->vma, &is->dev, imported_bo, 0);
+      tex->imported = true;
+   }
 
    if (templ->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT) {
       /* require on-the-fly tiling/untiling or format conversion */
@@ -500,13 +549,17 @@ static boolean
 ilo_can_create_resource(struct pipe_screen *screen,
                         const struct pipe_resource *templ)
 {
+   struct ilo_screen *is = ilo_screen(screen);
+   struct ilo_image_info info;
    struct ilo_image img;
 
    if (templ->target == PIPE_BUFFER)
       return (templ->width0 <= ilo_max_resource_size);
 
+   resource_get_image_info(templ, &is->dev, templ->format, &info);
+
    memset(&img, 0, sizeof(img));
-   ilo_image_init(&img, &ilo_screen(screen)->dev, templ);
+   ilo_image_init(&img, &ilo_screen(screen)->dev, &info);
 
    return (img.bo_height <= ilo_max_resource_size / img.bo_stride);
 }

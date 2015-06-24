@@ -67,6 +67,36 @@ enum ilo_image_walk_type {
    ILO_IMAGE_WALK_3D,
 };
 
+struct ilo_image_info {
+   enum pipe_texture_target target;
+
+   enum pipe_format format;
+
+   /* image size */
+   uint16_t width;
+   uint16_t height;
+   uint16_t depth;
+   uint16_t array_size;
+   uint8_t level_count;
+   uint8_t sample_count;
+
+   /* disable optional aux */
+   bool aux_disable;
+
+   /* tilings to consider, if any bit is set */
+   uint8_t valid_tilings;
+
+   /* force a stride */
+   uint32_t force_bo_stride;
+
+   bool bind_surface_sampler;
+   bool bind_surface_dp_render;
+   bool bind_surface_dp_typed;
+   bool bind_zs;
+   bool bind_scanout;
+   bool bind_cursor;
+};
+
 /*
  * When the walk type is ILO_IMAGE_WALK_LAYER, there is only a slice in each
  * LOD and this is used to describe LODs in the first array layer.  Otherwise,
@@ -143,19 +173,10 @@ struct ilo_image {
    } aux;
 };
 
-struct pipe_resource;
-
-void
+bool
 ilo_image_init(struct ilo_image *img,
                const struct ilo_dev *dev,
-               const struct pipe_resource *templ);
-
-bool
-ilo_image_init_for_imported(struct ilo_image *img,
-                            const struct ilo_dev *dev,
-                            const struct pipe_resource *templ,
-                            enum gen_surface_tiling tiling,
-                            unsigned bo_stride);
+               const struct ilo_image_info *info);
 
 static inline bool
 ilo_image_can_enable_aux(const struct ilo_image *img, unsigned level)
