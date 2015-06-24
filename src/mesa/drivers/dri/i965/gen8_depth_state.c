@@ -41,7 +41,6 @@ emit_depth_packets(struct brw_context *brw,
                    bool depth_writable,
                    struct intel_mipmap_tree *stencil_mt,
                    bool stencil_writable,
-                   uint32_t stencil_offset,
                    bool hiz,
                    uint32_t width,
                    uint32_t height,
@@ -127,8 +126,7 @@ emit_depth_packets(struct brw_context *brw,
       OUT_BATCH(HSW_STENCIL_ENABLED | mocs_wb << 22 |
                 (2 * stencil_mt->pitch - 1));
       OUT_RELOC64(stencil_mt->bo,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                  stencil_offset);
+                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
       OUT_BATCH(stencil_mt ? stencil_mt->qpitch >> 2 : 0);
       ADVANCE_BATCH();
    }
@@ -220,7 +218,6 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
    emit_depth_packets(brw, depth_mt, brw_depthbuffer_format(brw), surftype,
                       ctx->Depth.Mask != 0,
                       stencil_mt, ctx->Stencil._WriteEnabled,
-                      brw->depthstencil.stencil_offset,
                       hiz, width, height, depth, lod, min_array_element);
 }
 
@@ -439,7 +436,7 @@ gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                       brw_depth_format(brw, mt->format),
                       BRW_SURFACE_2D,
                       true, /* depth writes */
-                      NULL, false, 0, /* no stencil for now */
+                      NULL, false, /* no stencil for now */
                       true, /* hiz */
                       surface_width,
                       surface_height,
