@@ -1515,7 +1515,7 @@ emit_frag_end(struct vc4_compile *c)
                 qir_TLB_Z_WRITE(c, z);
         }
 
-        qir_emit(c, qir_inst(QOP_TLB_COLOR_WRITE, c->undef, color, c->undef));
+        qir_TLB_COLOR_WRITE(c, color);
 }
 
 static void
