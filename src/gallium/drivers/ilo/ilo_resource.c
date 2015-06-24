@@ -87,6 +87,28 @@ resource_get_cpu_init(const struct pipe_resource *templ)
                           PIPE_BIND_STREAM_OUTPUT)) ? false : true;
 }
 
+static enum gen_surface_type
+get_surface_type(enum pipe_texture_target target)
+{
+   switch (target) {
+   case PIPE_TEXTURE_1D:
+   case PIPE_TEXTURE_1D_ARRAY:
+      return GEN6_SURFTYPE_1D;
+   case PIPE_TEXTURE_2D:
+   case PIPE_TEXTURE_RECT:
+   case PIPE_TEXTURE_2D_ARRAY:
+      return GEN6_SURFTYPE_2D;
+   case PIPE_TEXTURE_3D:
+      return GEN6_SURFTYPE_3D;
+   case PIPE_TEXTURE_CUBE:
+   case PIPE_TEXTURE_CUBE_ARRAY:
+      return GEN6_SURFTYPE_CUBE;
+   default:
+      assert(!"unknown texture target");
+      return GEN6_SURFTYPE_NULL;
+   }
+}
+
 static void
 resource_get_image_info(const struct pipe_resource *templ,
                         const struct ilo_dev *dev,
@@ -95,7 +117,7 @@ resource_get_image_info(const struct pipe_resource *templ,
 {
    memset(info, 0, sizeof(*info));
 
-   info->target = templ->target;
+   info->type = get_surface_type(templ->target);
    info->format = image_format;
 
    info->width = templ->width0;

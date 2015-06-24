@@ -514,7 +514,7 @@ img_init_walk_gen7(struct ilo_image *img,
        *     "note that the depth buffer and stencil buffer have an implied
        *      value of ARYSPC_FULL"
        */
-      img->walk = (info->target == PIPE_TEXTURE_3D) ?
+      img->walk = (info->type == GEN6_SURFTYPE_3D) ?
          ILO_IMAGE_WALK_3D : ILO_IMAGE_WALK_LAYER;
 
       img->interleaved_samples = true;
@@ -533,7 +533,7 @@ img_init_walk_gen7(struct ilo_image *img,
          assert(info->level_count == 1);
 
       img->walk =
-         (info->target == PIPE_TEXTURE_3D) ? ILO_IMAGE_WALK_3D :
+         (info->type == GEN6_SURFTYPE_3D) ? ILO_IMAGE_WALK_3D :
          (info->level_count > 1) ? ILO_IMAGE_WALK_LAYER :
          ILO_IMAGE_WALK_LOD;
 
@@ -557,7 +557,7 @@ img_init_walk_gen6(struct ilo_image *img,
     * GEN6 does not support compact spacing otherwise.
     */
    img->walk =
-      (params->info->target == PIPE_TEXTURE_3D) ? ILO_IMAGE_WALK_3D :
+      (params->info->type == GEN6_SURFTYPE_3D) ? ILO_IMAGE_WALK_3D :
       (img->format == PIPE_FORMAT_S8_UINT) ? ILO_IMAGE_WALK_LOD :
       ILO_IMAGE_WALK_LAYER;
 
@@ -674,7 +674,7 @@ img_init_size_and_format(struct ilo_image *img,
    enum pipe_format format = info->format;
    bool require_separate_stencil = false;
 
-   img->target = info->target;
+   img->type = info->type;
    img->width0 = info->width;
    img->height0 = info->height;
    img->depth0 = info->depth;
@@ -737,7 +737,7 @@ img_want_mcs(const struct ilo_image *img,
    if (ilo_dev_gen(params->dev) < ILO_GEN(7))
       return false;
 
-   if (info->target != PIPE_TEXTURE_2D || !info->bind_surface_dp_render)
+   if (info->type != GEN6_SURFTYPE_2D || !info->bind_surface_dp_render)
       return false;
 
    /*
@@ -799,7 +799,7 @@ img_want_hiz(const struct ilo_image *img,
       return false;
 
    /* we want 8x4 aligned levels */
-   if (info->target == PIPE_TEXTURE_1D)
+   if (info->type == GEN6_SURFTYPE_1D)
       return false;
 
    if (!info->bind_zs)
@@ -865,7 +865,7 @@ img_align(struct ilo_image *img, struct ilo_image_params *params)
       align_w = MAX2(align_w, img->align_i);
       align_h = MAX2(align_h, img->align_j);
 
-      if (info->target == PIPE_TEXTURE_CUBE)
+      if (info->type == GEN6_SURFTYPE_CUBE)
          pad_h += 2;
 
       if (params->compressed)
@@ -1339,7 +1339,7 @@ img_init_for_transfer(struct ilo_image *img,
                       const struct ilo_dev *dev,
                       const struct ilo_image_info *info)
 {
-   const unsigned num_layers = (info->target == PIPE_TEXTURE_3D) ?
+   const unsigned num_layers = (info->type == GEN6_SURFTYPE_3D) ?
       info->depth : info->array_size;
    unsigned layer_width, layer_height;
 
@@ -1348,7 +1348,7 @@ img_init_for_transfer(struct ilo_image *img,
 
    img->aux.type = ILO_IMAGE_AUX_NONE;
 
-   img->target = info->target;
+   img->type = info->type;
    img->width0 = info->width;
    img->height0 = info->height;
    img->depth0 = info->depth;

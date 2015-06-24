@@ -60,29 +60,6 @@ zs_set_gen6_null_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    return true;
 }
 
-static enum gen_surface_type
-get_gen6_surface_type(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   switch (img->target) {
-   case PIPE_TEXTURE_1D:
-   case PIPE_TEXTURE_1D_ARRAY:
-      return GEN6_SURFTYPE_1D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_RECT:
-   case PIPE_TEXTURE_2D_ARRAY:
-   case PIPE_TEXTURE_CUBE_ARRAY:
-      return GEN6_SURFTYPE_2D;
-   case PIPE_TEXTURE_3D:
-      return GEN6_SURFTYPE_3D;
-   default:
-      assert(!"unknown texture target");
-      return GEN6_SURFTYPE_NULL;
-   }
-}
-
 static enum gen_depth_format
 get_gen6_depth_format(const struct ilo_dev *dev, const struct ilo_image *img)
 {
@@ -148,50 +125,52 @@ zs_validate_gen6(const struct ilo_dev *dev,
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 315:
     *
-    *      The stencil buffer has a format of S8_UINT, and shares Surface
+    *     "The stencil buffer has a format of S8_UINT, and shares Surface
     *      Type, Height, Width, and Depth, Minimum Array Element, Render
     *      Target View Extent, Depth Coordinate Offset X/Y, LOD, and Depth
-    *      Buffer Object Control State fields of the depth buffer.
+    *      Buffer Object Control State fields of the depth buffer."
     */
-   if (info->z_img == info->s_img) {
-      assert(info->z_img->target == info->s_img->target &&
-             info->z_img->width0 == info->s_img->width0 &&
+   if (info->z_img && info->s_img && info->z_img != info->s_img) {
+      assert(info->z_img->type == info->s_img->type &&
              info->z_img->height0 == info->s_img->height0 &&
              info->z_img->depth0 == info->s_img->depth0);
+   }
+
+   if (info->type != img->type) {
+      assert(info->type == GEN6_SURFTYPE_2D &&
+             img->type == GEN6_SURFTYPE_CUBE);
    }
 
    assert(info->level < img->level_count);
    assert(img->bo_stride);
 
-   if (info->is_cube_map) {
-      assert(get_gen6_surface_type(dev, img) == GEN6_SURFTYPE_2D);
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 323:
-       *
-       *     "For cube maps, Width must be set equal to Height."
-       */
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 323:
+    *
+    *     "For cube maps, Width must be set equal to Height."
+    */
+   if (info->type == GEN6_SURFTYPE_CUBE)
       assert(img->width0 == img->height0);
-   }
 
    return true;
 }
 
 static void
-get_gen6_max_extent(const struct ilo_dev *dev,
-                    const struct ilo_image *img,
-                    uint16_t *max_w, uint16_t *max_h)
+zs_get_gen6_max_extent(const struct ilo_dev *dev,
+                       const struct ilo_state_zs_info *info,
+                       uint16_t *max_w, uint16_t *max_h)
 {
    const uint16_t max_size = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 16384 : 8192;
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
       *max_w = max_size;
       *max_h = 1;
       break;
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       *max_w = max_size;
       *max_h = max_size;
       break;
@@ -297,7 +276,7 @@ zs_get_gen6_depth_extent(const struct ilo_dev *dev,
       h = align(h, align_h);
    }
 
-   get_gen6_max_extent(dev, img, &max_w, &max_h);
+   zs_get_gen6_max_extent(dev, info, &max_w, &max_h);
    assert(w && h && w <= max_w && h <= max_h);
 
    *width = w - 1;
@@ -326,16 +305,17 @@ zs_get_gen6_depth_slices(const struct ilo_dev *dev,
     *      surfaces. If the volume texture is MIP-mapped, this field specifies
     *      the depth of the base MIP level."
     */
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       max_slice = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 2048 : 512;
 
       assert(img->array_size <= max_slice);
       max_slice = img->array_size;
 
       d = info->slice_count;
-      if (info->is_cube_map) {
+      if (info->type == GEN6_SURFTYPE_CUBE) {
          /*
           * Minumum Array Element and Depth must be 0; Render Target View
           * Extent is ignored.
@@ -415,7 +395,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_state_zs_info *info)
 {
    uint16_t width, height, depth, array_base, view_extent;
-   enum gen_surface_type type;
    enum gen_depth_format format;
    uint32_t dw1, dw2, dw3, dw4;
 
@@ -426,10 +405,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
        !zs_get_gen6_depth_slices(dev, info, &depth, &array_base,
                                  &view_extent))
       return false;
-
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-          (info->z_img) ? get_gen6_surface_type(dev, info->z_img) :
-                          get_gen6_surface_type(dev, info->s_img);
 
    format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
       GEN6_ZFORMAT_D32_FLOAT;
@@ -450,7 +425,7 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
       format = GEN6_ZFORMAT_D24_UNORM_S8_UINT;
 
    /* info->z_readonly and info->s_readonly are ignored on Gen6 */
-   dw1 = type << GEN6_DEPTH_DW1_TYPE__SHIFT |
+   dw1 = info->type << GEN6_DEPTH_DW1_TYPE__SHIFT |
          GEN6_TILING_Y << GEN6_DEPTH_DW1_TILING__SHIFT |
          format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
 
@@ -488,7 +463,6 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_dev *dev,
                                  const struct ilo_state_zs_info *info)
 {
-   enum gen_surface_type type;
    enum gen_depth_format format;
    uint16_t width, height, depth;
    uint16_t array_base, view_extent;
@@ -502,14 +476,10 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  &view_extent))
       return false;
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-          (info->z_img) ? get_gen6_surface_type(dev, info->z_img) :
-                          get_gen6_surface_type(dev, info->s_img);
-
    format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
       GEN6_ZFORMAT_D32_FLOAT;
 
-   dw1 = type << GEN7_DEPTH_DW1_TYPE__SHIFT |
+   dw1 = info->type << GEN7_DEPTH_DW1_TYPE__SHIFT |
          format << GEN7_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info->z_img) {
@@ -714,6 +684,7 @@ ilo_state_zs_init_for_null(struct ilo_state_zs *zs,
    struct ilo_state_zs_info info;
 
    memset(&info, 0, sizeof(info));
+   info.type = GEN6_SURFTYPE_NULL;
 
    return ilo_state_zs_init(zs, dev, &info);
 }

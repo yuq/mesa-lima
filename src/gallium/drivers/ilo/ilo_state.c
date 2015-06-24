@@ -2045,6 +2045,7 @@ ilo_create_sampler_view(struct pipe_context *pipe,
 
       info.vma = &tex->vma;
       info.access = ILO_STATE_SURFACE_ACCESS_SAMPLER;
+      info.type = tex->image.type;
 
       if (templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
           tex->image.separate_stencil) {
@@ -2054,8 +2055,6 @@ ilo_create_sampler_view(struct pipe_context *pipe,
          info.format = ilo_format_translate_texture(dev, templ->format);
       }
 
-      info.is_cube_map = (tex->image.target == PIPE_TEXTURE_CUBE ||
-                          tex->image.target == PIPE_TEXTURE_CUBE_ARRAY);
       info.is_array = util_resource_is_array_texture(&tex->base);
       info.readonly = true;
 
@@ -2116,6 +2115,10 @@ ilo_create_surface(struct pipe_context *pipe,
          info.aux_vma = &tex->aux_vma;
 
       info.access = ILO_STATE_SURFACE_ACCESS_DP_RENDER;
+
+      info.type = (tex->image.type == GEN6_SURFTYPE_CUBE) ?
+         GEN6_SURFTYPE_2D : tex->image.type;
+
       info.format = ilo_format_translate_render(dev, templ->format);
       info.is_array = util_resource_is_array_texture(&tex->base);
 
@@ -2147,6 +2150,9 @@ ilo_create_surface(struct pipe_context *pipe,
       info.slice_base = templ->u.tex.first_layer;
       info.slice_count = templ->u.tex.last_layer -
          templ->u.tex.first_layer + 1;
+
+      info.type = (tex->image.type == GEN6_SURFTYPE_CUBE) ?
+         GEN6_SURFTYPE_2D : tex->image.type;
 
       ilo_state_zs_init(&surf->u.zs, dev, &info);
    }

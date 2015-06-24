@@ -68,7 +68,7 @@ enum ilo_image_walk_type {
 };
 
 struct ilo_image_info {
-   enum pipe_texture_target target;
+   enum gen_surface_type type;
 
    enum pipe_format format;
 
@@ -117,7 +117,7 @@ struct ilo_image_lod {
  * Texture layout.
  */
 struct ilo_image {
-   enum pipe_texture_target target;
+   enum gen_surface_type type;
 
    /* size, format, etc for programming hardware states */
    unsigned width0;

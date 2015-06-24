@@ -48,11 +48,11 @@ struct ilo_state_zs_info {
    const struct ilo_vma *s_vma;
    const struct ilo_vma *hiz_vma;
 
+   enum gen_surface_type type;
+
    /* ignored prior to Gen7 */
    bool z_readonly;
    bool s_readonly;
-
-   bool is_cube_map;
 };
 
 struct ilo_state_zs {

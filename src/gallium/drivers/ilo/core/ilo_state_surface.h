@@ -72,11 +72,12 @@ struct ilo_state_surface_image_info {
 
    enum ilo_state_surface_access access;
 
+   enum gen_surface_type type;
+
    enum gen_surface_format format;
    bool is_integer;
 
    bool readonly;
-   bool is_cube_map;
    bool is_array;
 };
 

@@ -425,29 +425,6 @@ surface_set_gen7_buffer_SURFACE_STATE(struct ilo_state_surface *surf,
    return true;
 }
 
-static enum gen_surface_type
-get_gen6_surface_type(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   switch (img->target) {
-   case PIPE_TEXTURE_1D:
-   case PIPE_TEXTURE_1D_ARRAY:
-      return GEN6_SURFTYPE_1D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_RECT:
-   case PIPE_TEXTURE_2D_ARRAY:
-   case PIPE_TEXTURE_CUBE_ARRAY:
-      return GEN6_SURFTYPE_2D;
-   case PIPE_TEXTURE_3D:
-      return GEN6_SURFTYPE_3D;
-   default:
-      assert(!"unknown texture target");
-      return GEN6_SURFTYPE_NULL;
-   }
-}
-
 static bool
 surface_validate_gen6_image(const struct ilo_dev *dev,
                             const struct ilo_state_surface_image_info *info)
@@ -487,16 +464,18 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
    assert(info->img->bo_stride && info->img->bo_stride <= 512 * 1024 &&
           info->img->width0 <= info->img->bo_stride);
 
-   if (info->is_cube_map) {
-      assert(get_gen6_surface_type(dev, info->img) == GEN6_SURFTYPE_2D);
-
-      /*
-       * From the Sandy Bridge PRM, volume 4 part 1, page 78:
-       *
-       *     "For cube maps, Width must be set equal to the Height."
-       */
-      assert(info->img->width0 == info->img->height0);
+   if (info->type != info->img->type) {
+      assert(info->type == GEN6_SURFTYPE_2D &&
+             info->img->type == GEN6_SURFTYPE_CUBE);
    }
+
+   /*
+    * From the Sandy Bridge PRM, volume 4 part 1, page 78:
+    *
+    *     "For cube maps, Width must be set equal to the Height."
+    */
+   if (info->type == GEN6_SURFTYPE_CUBE)
+      assert(info->img->width0 == info->img->height0);
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 72:
@@ -532,20 +511,21 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
 }
 
 static void
-get_gen6_max_extent(const struct ilo_dev *dev,
-                    const struct ilo_image *img,
-                    uint16_t *max_w, uint16_t *max_h)
+surface_get_gen6_image_max_extent(const struct ilo_dev *dev,
+                                  const struct ilo_state_surface_image_info *info,
+                                  uint16_t *max_w, uint16_t *max_h)
 {
    const uint16_t max_size = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 16384 : 8192;
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
       *max_w = max_size;
       *max_h = 1;
       break;
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       *max_w = max_size;
       *max_h = max_size;
       break;
@@ -573,7 +553,7 @@ surface_get_gen6_image_extent(const struct ilo_dev *dev,
    w = info->img->width0;
    h = info->img->height0;
 
-   get_gen6_max_extent(dev, info->img, &max_w, &max_h);
+   surface_get_gen6_image_max_extent(dev, info, &max_w, &max_h);
    assert(w && h && w <= max_w && h <= max_h);
 
    *width = w - 1;
@@ -624,16 +604,17 @@ surface_get_gen6_image_slices(const struct ilo_dev *dev,
     * layers to (86 * 6), about 512.
     */
 
-   switch (get_gen6_surface_type(dev, info->img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       max_slice = (ilo_dev_gen(dev) >= ILO_GEN(7.5)) ? 2048 : 512;
 
       assert(info->img->array_size <= max_slice);
       max_slice = info->img->array_size;
 
       d = info->slice_count;
-      if (info->is_cube_map) {
+      if (info->type == GEN6_SURFTYPE_CUBE) {
          if (info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER) {
             if (!d || d % 6) {
                ilo_warn("invalid cube slice count\n");
@@ -946,7 +927,6 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    uint8_t min_lod, mip_count;
    enum gen_sample_count sample_count;
    uint32_t alignments;
-   enum gen_surface_type type;
    uint32_t dw0, dw2, dw3, dw4, dw5;
 
    ILO_DEV_ASSERT(dev, 6, 6);
@@ -966,10 +946,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    if (info->img->sample_count > 1)
       assert(info->img->interleaved_samples);
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-      get_gen6_surface_type(dev, info->img);
-
-   dw0 = type << GEN6_SURFACE_DW0_TYPE__SHIFT |
+   dw0 = info->type << GEN6_SURFACE_DW0_TYPE__SHIFT |
          info->format << GEN6_SURFACE_DW0_FORMAT__SHIFT |
          GEN6_SURFACE_DW0_MIPLAYOUT_BELOW;
 
@@ -996,7 +973,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
     *     "When TEXCOORDMODE_CLAMP is used when accessing a cube map, this
     *      field must be programmed to 111111b (all faces enabled)."
     */
-   if (info->is_cube_map &&
+   if (info->type == GEN6_SURFTYPE_CUBE &&
        info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER) {
       dw0 |= GEN6_SURFACE_DW0_CUBE_MAP_CORNER_MODE_AVERAGE |
              GEN6_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
@@ -1025,7 +1002,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    surf->surface[4] = dw4;
    surf->surface[5] = dw5;
 
-   surf->type = type;
+   surf->type = info->type;
    surf->min_lod = min_lod;
    surf->mip_count = mip_count;
 
@@ -1041,7 +1018,6 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
    uint8_t min_lod, mip_count;
    uint32_t alignments;
    enum gen_sample_count sample_count;
-   enum gen_surface_type type;
    uint32_t dw0, dw1, dw2, dw3, dw4, dw5, dw7;
 
    ILO_DEV_ASSERT(dev, 7, 8);
@@ -1055,10 +1031,7 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
        !surface_get_gen6_image_alignments(dev, info, &alignments))
       return false;
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-      get_gen6_surface_type(dev, info->img);
-
-   dw0 = type << GEN7_SURFACE_DW0_TYPE__SHIFT |
+   dw0 = info->type << GEN7_SURFACE_DW0_TYPE__SHIFT |
          info->format << GEN7_SURFACE_DW0_FORMAT__SHIFT |
          alignments;
 
@@ -1092,7 +1065,7 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
     *      field must be programmed to 111111b (all faces enabled). This field
     *      is ignored unless the Surface Type is SURFTYPE_CUBE."
     */
-   if (info->is_cube_map &&
+   if (info->type == GEN6_SURFTYPE_CUBE &&
        info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER)
       dw0 |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
@@ -1156,7 +1129,7 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
       surf->surface[12] = 0;
    }
 
-   surf->type = type;
+   surf->type = info->type;
    surf->min_lod = min_lod;
    surf->mip_count = mip_count;
 
