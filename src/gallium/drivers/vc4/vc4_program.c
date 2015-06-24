@@ -1371,12 +1371,13 @@ vc4_logicop(struct vc4_compile *c, struct qreg src, struct qreg dst)
         }
 }
 
-static void
-emit_frag_end(struct vc4_compile *c)
+/**
+ * Applies the GL blending pipeline and returns the packed (8888) output
+ * color.
+ */
+static struct qreg
+blend_pipeline(struct vc4_compile *c)
 {
-        clip_distance_discard(c);
-        alpha_test_discard(c);
-
         enum pipe_format color_format = c->fs_key->color_format;
         const uint8_t *format_swiz = vc4_get_format_swizzle(color_format);
         struct qreg tlb_read_color[4] = { c->undef, c->undef, c->undef, c->undef };
@@ -1408,14 +1409,16 @@ emit_frag_end(struct vc4_compile *c)
                 packed_dst_color = qir_MOV(c, r4);
         }
 
+        struct qreg undef_array[4] = { c->undef, c->undef, c->undef, c->undef };
+        const struct qreg *output_colors = (c->output_color_index != -1 ?
+                                            c->outputs + c->output_color_index :
+                                            undef_array);
+        struct qreg blend_src_color[4];
+        for (int i = 0; i < 4; i++)
+                blend_src_color[i] = output_colors[i];
+
         struct qreg blend_color[4];
-        struct qreg undef_array[4] = {
-                c->undef, c->undef, c->undef, c->undef
-        };
-        vc4_blend(c, blend_color, linear_dst_color,
-                  (c->output_color_index != -1 ?
-                   c->outputs + c->output_color_index :
-                   undef_array));
+        vc4_blend(c, blend_color, linear_dst_color, blend_src_color);
 
         if (util_format_is_srgb(color_format)) {
                 for (int i = 0; i < 3; i++)
@@ -1437,30 +1440,6 @@ emit_frag_end(struct vc4_compile *c)
         for (int i = 0; i < 4; i++) {
                 swizzled_outputs[i] = get_swizzled_channel(c, blend_color,
                                                            format_swiz[i]);
-        }
-
-        if (c->discard.file != QFILE_NULL)
-                qir_TLB_DISCARD_SETUP(c, c->discard);
-
-        if (c->fs_key->stencil_enabled) {
-                qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 0));
-                if (c->fs_key->stencil_twoside) {
-                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 1));
-                }
-                if (c->fs_key->stencil_full_writemasks) {
-                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 2));
-                }
-        }
-
-        if (c->fs_key->depth_enabled) {
-                struct qreg z;
-                if (c->output_position_index != -1) {
-                        z = qir_FTOI(c, qir_FMUL(c, c->outputs[c->output_position_index + 2],
-                                                 qir_uniform_f(c, 0xffffff)));
-                } else {
-                        z = qir_FRAG_Z(c);
-                }
-                qir_TLB_Z_WRITE(c, z);
         }
 
         struct qreg packed_color = c->undef;
@@ -1502,8 +1481,41 @@ emit_frag_end(struct vc4_compile *c)
                                               qir_uniform_ui(c, ~colormask)));
         }
 
-        qir_emit(c, qir_inst(QOP_TLB_COLOR_WRITE, c->undef,
-                             packed_color, c->undef));
+        return packed_color;
+}
+
+static void
+emit_frag_end(struct vc4_compile *c)
+{
+        clip_distance_discard(c);
+        alpha_test_discard(c);
+        struct qreg color = blend_pipeline(c);
+
+        if (c->discard.file != QFILE_NULL)
+                qir_TLB_DISCARD_SETUP(c, c->discard);
+
+        if (c->fs_key->stencil_enabled) {
+                qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 0));
+                if (c->fs_key->stencil_twoside) {
+                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 1));
+                }
+                if (c->fs_key->stencil_full_writemasks) {
+                        qir_TLB_STENCIL_SETUP(c, qir_uniform(c, QUNIFORM_STENCIL, 2));
+                }
+        }
+
+        if (c->fs_key->depth_enabled) {
+                struct qreg z;
+                if (c->output_position_index != -1) {
+                        z = qir_FTOI(c, qir_FMUL(c, c->outputs[c->output_position_index + 2],
+                                                 qir_uniform_f(c, 0xffffff)));
+                } else {
+                        z = qir_FRAG_Z(c);
+                }
+                qir_TLB_Z_WRITE(c, z);
+        }
+
+        qir_emit(c, qir_inst(QOP_TLB_COLOR_WRITE, c->undef, color, c->undef));
 }
 
 static void
