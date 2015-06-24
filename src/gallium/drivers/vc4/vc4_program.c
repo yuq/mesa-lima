@@ -2102,7 +2102,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 
         nir_remove_dead_variables(c->s);
 
-        nir_convert_from_ssa(c->s);
+        nir_convert_from_ssa(c->s, false);
 
         if (vc4_debug & VC4_DEBUG_SHADERDB) {
                 fprintf(stderr, "SHADER-DB: %s prog %d/%d: %d NIR instructions\n",
