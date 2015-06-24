@@ -551,10 +551,12 @@ intel_renderbuffer_update_wrapper(struct brw_context *brw,
 
    irb->mt_layer = layer_multiplier * layer;
 
-   if (layered) {
-      irb->layer_count = image->TexObject->NumLayers ?: mt->level[level].depth / layer_multiplier;
-   } else {
+   if (!layered) {
       irb->layer_count = 1;
+   } else if (image->TexObject->NumLayers > 0) {
+      irb->layer_count = image->TexObject->NumLayers;
+   } else {
+      irb->layer_count = mt->level[level].depth / layer_multiplier;
    }
 
    intel_miptree_reference(&irb->mt, mt);
