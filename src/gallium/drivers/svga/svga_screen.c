@@ -443,7 +443,9 @@ static int svga_get_shader_param(struct pipe_screen *screen, unsigned shader, en
       return 0;
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_COMPUTE:
-      /* no support for geometry or compute shaders at this time */
+   case PIPE_SHADER_TESS_CTRL:
+   case PIPE_SHADER_TESS_EVAL:
+      /* no support for geometry, tess or compute shaders at this time */
       return 0;
    default:
       debug_printf("Unexpected shader type (%u) query\n", shader);
