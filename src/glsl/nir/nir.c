@@ -57,7 +57,6 @@ reg_create(void *mem_ctx, struct exec_list *list)
 {
    nir_register *reg = ralloc(mem_ctx, nir_register);
 
-   reg->parent_instr = NULL;
    list_inithead(&reg->uses);
    list_inithead(&reg->defs);
    list_inithead(&reg->if_uses);

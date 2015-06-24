@@ -496,14 +496,6 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
       reg->name = def->name;
       reg->num_components = def->num_components;
       reg->num_array_elems = 0;
-
-      /* This register comes from an SSA definition that is defined and not
-       * part of a phi-web.  Therefore, we know it has a single unique
-       * definition that dominates all of its uses; we can copy the
-       * parent_instr from the SSA def safely.
-       */
-      if (def->parent_instr->type != nir_instr_type_ssa_undef)
-         reg->parent_instr = def->parent_instr;
    }
 
    nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg), state->mem_ctx);
