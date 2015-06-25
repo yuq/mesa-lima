@@ -532,6 +532,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       var->name = ralloc_strdup(var, val->name);
 
       switch ((SpvStorageClass)w[3]) {
+      case SpvStorageClassUniform:
       case SpvStorageClassUniformConstant:
          var->data.mode = nir_var_uniform;
          var->data.read_only = true;
@@ -549,7 +550,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassFunction:
          var->data.mode = nir_var_local;
          break;
-      case SpvStorageClassUniform:
       case SpvStorageClassWorkgroupLocal:
       case SpvStorageClassWorkgroupGlobal:
       case SpvStorageClassGeneric:
