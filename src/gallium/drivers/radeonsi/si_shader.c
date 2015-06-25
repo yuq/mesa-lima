@@ -133,8 +133,12 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		return 4 + index;
 
 	default:
-		assert(0);
-		return 63;
+		/* Don't fail here. The result of this function is only used
+		 * for LS, TCS, TES, and GS, where legacy GL semantics can't
+		 * occur, but this function is called for all vertex shaders
+		 * before it's known whether LS will be compiled or not.
+		 */
+		return 0;
 	}
 }
 
