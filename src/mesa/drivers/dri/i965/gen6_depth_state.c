@@ -73,7 +73,7 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
    rb = (struct gl_renderbuffer*) irb;
 
    if (rb) {
-      depth = MAX2(rb->Depth, 1);
+      depth = MAX2(irb->layer_count, 1);
       if (rb->TexImage)
          gl_target = rb->TexImage->TexObject->Target;
    }
@@ -89,6 +89,10 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
       surftype = BRW_SURFACE_2D;
       depth *= 6;
       break;
+   case GL_TEXTURE_3D:
+      assert(mt);
+      depth = MAX2(mt->logical_depth0, 1);
+      /* fallthrough */
    default:
       surftype = translate_tex_target(gl_target);
       break;
