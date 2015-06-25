@@ -225,6 +225,8 @@ int rvid_get_video_param(struct pipe_screen *screen,
         	        return false;
 	        case PIPE_VIDEO_CAP_SUPPORTS_PROGRESSIVE:
         	        return true;
+	        case PIPE_VIDEO_CAP_STACKED_FRAMES:
+			return (rscreen->family < CHIP_TONGA) ? 1 : 2;
 	        default:
         	        return 0;
 		}
