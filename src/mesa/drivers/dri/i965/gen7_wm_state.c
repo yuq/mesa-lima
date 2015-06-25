@@ -127,7 +127,7 @@ const struct brw_tracked_state gen7_wm_state = {
    .emit = upload_wm_state,
 };
 
-void
+static void
 gen7_upload_ps_state(struct brw_context *brw,
                      const struct gl_fragment_program *fp,
                      const struct brw_stage_state *stage_state,
