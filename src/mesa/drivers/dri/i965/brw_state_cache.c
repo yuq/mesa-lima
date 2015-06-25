@@ -248,18 +248,17 @@ brw_try_upload_using_copy(struct brw_cache *cache,
    return false;
 }
 
-static void
-brw_upload_item_data(struct brw_cache *cache,
-		     struct brw_cache_item *item,
-		     const void *data)
+static uint32_t
+brw_alloc_item_data(struct brw_cache *cache, uint32_t size)
 {
+   uint32_t offset;
    struct brw_context *brw = cache->brw;
 
    /* Allocate space in the cache BO for our new program. */
-   if (cache->next_offset + item->size > cache->bo->size) {
+   if (cache->next_offset + size > cache->bo->size) {
       uint32_t new_size = cache->bo->size * 2;
 
-      while (cache->next_offset + item->size > new_size)
+      while (cache->next_offset + size > new_size)
 	 new_size *= 2;
 
       brw_cache_new_bo(cache, new_size);
@@ -273,10 +272,12 @@ brw_upload_item_data(struct brw_cache *cache,
       brw_cache_new_bo(cache, cache->bo->size);
    }
 
-   item->offset = cache->next_offset;
+   offset = cache->next_offset;
 
    /* Programs are always 64-byte aligned, so set up the next one now */
-   cache->next_offset = ALIGN(item->offset + item->size, 64);
+   cache->next_offset = ALIGN(offset + size, 64);
+
+   return offset;
 }
 
 void
@@ -312,7 +313,7 @@ brw_upload_cache(struct brw_cache *cache,
     * compile to the thing in our backend.
     */
    if (!brw_try_upload_using_copy(cache, item, data, aux)) {
-      brw_upload_item_data(cache, item, data);
+      item->offset = brw_alloc_item_data(cache, data_size);
    }
 
    /* Set up the memory containing the key and aux_data */
