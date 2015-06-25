@@ -72,7 +72,7 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
    case MRF:
    case ATTR:
       return byte_offset(reg,
-                         delta * MAX2(reg.width * reg.stride, 1) *
+                         delta * MAX2(bld.dispatch_width() * reg.stride, 1) *
                          type_sz(reg.type));
    case UNIFORM:
       reg.reg_offset += delta;
