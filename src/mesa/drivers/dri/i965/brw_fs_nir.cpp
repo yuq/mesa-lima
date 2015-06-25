@@ -462,9 +462,7 @@ fs_visitor::nir_emit_instr(nir_instr *instr)
       break;
 
    case nir_instr_type_load_const:
-      /* We can hit these, but we do nothing now and use them as
-       * immediates later.
-       */
+      nir_emit_load_const(abld, nir_instr_as_load_const(instr));
       break;
 
    case nir_instr_type_ssa_undef:
@@ -1149,6 +1147,18 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 }
 
 void
+fs_visitor::nir_emit_load_const(const fs_builder &bld,
+                                nir_load_const_instr *instr)
+{
+   fs_reg reg = bld.vgrf(BRW_REGISTER_TYPE_D, instr->def.num_components);
+
+   for (unsigned i = 0; i < instr->def.num_components; i++)
+      bld.MOV(offset(reg, i), fs_reg(instr->value.i[i]));
+
+   nir_ssa_values[instr->def.index] = reg;
+}
+
+void
 fs_visitor::nir_emit_undef(const fs_builder &bld, nir_ssa_undef_instr *instr)
 {
    nir_ssa_values[instr->def.index] = bld.vgrf(BRW_REGISTER_TYPE_D,
@@ -1182,16 +1192,7 @@ fs_visitor::get_nir_src(nir_src src)
 {
    fs_reg reg;
    if (src.is_ssa) {
-      if (src.ssa->parent_instr->type == nir_instr_type_load_const) {
-         nir_load_const_instr *load =
-            nir_instr_as_load_const(src.ssa->parent_instr);
-         reg = bld.vgrf(BRW_REGISTER_TYPE_D, src.ssa->num_components);
-
-         for (unsigned i = 0; i < src.ssa->num_components; ++i)
-            bld.MOV(offset(reg, i), fs_reg(load->value.i[i]));
-      } else {
-         reg = nir_ssa_values[src.ssa->index];
-      }
+      reg = nir_ssa_values[src.ssa->index];
    } else {
       reg = fs_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
                                src.reg.indirect);
