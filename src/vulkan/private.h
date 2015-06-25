@@ -72,6 +72,14 @@ ALIGN_I32(int32_t v, int32_t a)
    return (v + a - 1) & ~(a - 1);
 }
 
+/** Alignment must be a power of 2. */
+static inline bool
+anv_is_aligned(uintmax_t n, uintmax_t a)
+{
+   assert(a == (a & -a));
+   return (n & (a - 1)) == 0;
+}
+
 static inline uint32_t
 anv_minify(uint32_t n, uint32_t levels)
 {
