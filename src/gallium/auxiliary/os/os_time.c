@@ -33,11 +33,13 @@
  */
 
 
-#include "pipe/p_config.h"
+#include "pipe/p_defines.h"
+#include "util/u_atomic.h"
 
 #if defined(PIPE_OS_UNIX)
 #  include <time.h> /* timeval */
 #  include <sys/time.h> /* timeval */
+#  include <sched.h> /* sched_yield */
 #elif defined(PIPE_SUBSYSTEM_WINDOWS_USER)
 #  include <windows.h>
 #else
@@ -92,3 +94,37 @@ os_time_sleep(int64_t usecs)
 }
 
 #endif
+
+
+bool
+os_wait_until_zero(volatile int *var, uint64_t timeout)
+{
+   if (!p_atomic_read(var))
+      return true;
+
+   if (!timeout)
+      return false;
+
+   if (timeout == PIPE_TIMEOUT_INFINITE) {
+      while (p_atomic_read(var)) {
+#if defined(PIPE_OS_UNIX)
+         sched_yield();
+#endif
+      }
+      return true;
+   }
+   else {
+      int64_t start_time = os_time_get_nano();
+      int64_t end_time = start_time + timeout;
+
+      while (p_atomic_read(var)) {
+         if (os_time_timeout(start_time, end_time, os_time_get_nano()))
+            return false;
+
+#if defined(PIPE_OS_UNIX)
+         sched_yield();
+#endif
+      }
+      return true;
+   }
+}

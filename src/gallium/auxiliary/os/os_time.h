@@ -94,6 +94,17 @@ os_time_timeout(int64_t start,
 }
 
 
+/**
+ * Wait until the variable at the given memory location is zero.
+ *
+ * \param var           variable
+ * \param timeout       timeout in ns, can be anything from 0 (no wait) to
+ *                      PIPE_TIME_INFINITE (wait forever)
+ * \return     true if the variable is zero
+ */
+bool
+os_wait_until_zero(volatile int *var, uint64_t timeout);
+
 #ifdef	__cplusplus
 }
 #endif
