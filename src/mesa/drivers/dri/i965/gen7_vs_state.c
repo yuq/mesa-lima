@@ -62,6 +62,7 @@ gen7_upload_constant_state(struct brw_context *brw,
       OUT_BATCH(active ? stage_state->push_const_size : 0);
       OUT_BATCH(0);
    }
+
    /* Pointer to the constant buffer.  Covered by the set of state flags
     * from gen6_prepare_wm_contants
     */
@@ -95,14 +96,13 @@ gen7_upload_constant_state(struct brw_context *brw,
 
    ADVANCE_BATCH();
 
-  /* On SKL+ the new constants don't take effect until the next corresponding
-   * 3DSTATE_BINDING_TABLE_POINTER_* command is parsed so we need to ensure
-   * that is sent
-   */
+   /* On SKL+ the new constants don't take effect until the next corresponding
+    * 3DSTATE_BINDING_TABLE_POINTER_* command is parsed so we need to ensure
+    * that is sent
+    */
    if (brw->gen >= 9)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
-
 
 static void
 upload_vs_state(struct brw_context *brw)
