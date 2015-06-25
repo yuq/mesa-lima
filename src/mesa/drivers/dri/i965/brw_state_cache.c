@@ -314,6 +314,13 @@ brw_upload_cache(struct brw_cache *cache,
     */
    if (!brw_try_upload_using_copy(cache, item, data, aux)) {
       item->offset = brw_alloc_item_data(cache, data_size);
+
+      /* Copy data to the buffer */
+      if (brw->has_llc) {
+         memcpy((char *)cache->bo->virtual + item->offset, data, data_size);
+      } else {
+         drm_intel_bo_subdata(cache->bo, item->offset, data_size, data);
+      }
    }
 
    /* Set up the memory containing the key and aux_data */
@@ -331,13 +338,6 @@ brw_upload_cache(struct brw_cache *cache,
    item->next = cache->items[hash];
    cache->items[hash] = item;
    cache->n_items++;
-
-   /* Copy data to the buffer */
-   if (brw->has_llc) {
-      memcpy((char *) cache->bo->virtual + item->offset, data, data_size);
-   } else {
-      drm_intel_bo_subdata(cache->bo, item->offset, data_size, data);
-   }
 
    *out_offset = item->offset;
    *(void **)out_aux = (void *)((char *)item->key + item->key_size);
