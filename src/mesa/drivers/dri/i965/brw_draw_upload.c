@@ -649,7 +649,8 @@ emit_vertex_buffer_state(struct brw_context *brw,
 }
 #define EMIT_VERTEX_BUFFER_STATE(...) __map = emit_vertex_buffer_state(__VA_ARGS__, __map)
 
-static void brw_emit_vertices(struct brw_context *brw)
+static void
+brw_emit_vertices(struct brw_context *brw)
 {
    GLuint i;
 
@@ -859,7 +860,8 @@ const struct brw_tracked_state brw_vertices = {
    .emit = brw_emit_vertices,
 };
 
-static void brw_upload_indices(struct brw_context *brw)
+static void
+brw_upload_indices(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct _mesa_index_buffer *index_buffer = brw->ib.ib;
@@ -939,7 +941,8 @@ const struct brw_tracked_state brw_indices = {
    .emit = brw_upload_indices,
 };
 
-static void brw_emit_index_buffer(struct brw_context *brw)
+static void
+brw_emit_index_buffer(struct brw_context *brw)
 {
    const struct _mesa_index_buffer *index_buffer = brw->ib.ib;
    GLuint cut_index_setting;
