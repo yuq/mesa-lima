@@ -106,11 +106,14 @@ struct rvce_encoder {
 	struct rvid_buffer		*fb;
 	struct rvid_buffer		cpb;
 	struct pipe_h264_enc_picture_desc pic;
+
 	unsigned			task_info_idx;
+	unsigned			bs_idx;
 
 	bool				use_vm;
 	bool				use_vui;
 	bool				dual_pipe;
+	bool				dual_inst;
 };
 
 /* CPB handling functions */

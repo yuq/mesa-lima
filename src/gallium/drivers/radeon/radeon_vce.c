@@ -57,6 +57,7 @@ static void flush(struct rvce_encoder *enc)
 {
 	enc->ws->cs_flush(enc->cs, RADEON_FLUSH_ASYNC, NULL, 0);
 	enc->task_info_idx = 0;
+	enc->bs_idx = 0;
 }
 
 #if 0
@@ -310,7 +311,8 @@ static void rvce_encode_bitstream(struct pipe_video_codec *encoder,
 		RVID_ERR("Can't create feedback buffer.\n");
 		return;
 	}
-	enc->session(enc);
+	if (!enc->cs->cdw)
+		enc->session(enc);
 	enc->encode(enc);
 	enc->feedback(enc);
 }
@@ -323,7 +325,8 @@ static void rvce_end_frame(struct pipe_video_codec *encoder,
 	struct rvce_cpb_slot *slot = LIST_ENTRY(
 		struct rvce_cpb_slot, enc->cpb_slots.prev, list);
 
-	flush(enc);
+	if (!enc->dual_inst || enc->bs_idx > 1)
+		flush(enc);
 
 	/* update the CPB backtrack with the just encoded frame */
 	slot->picture_type = enc->pic.picture_type;
@@ -362,6 +365,9 @@ static void rvce_get_feedback(struct pipe_video_codec *encoder,
  */
 static void rvce_flush(struct pipe_video_codec *encoder)
 {
+	struct rvce_encoder *enc = (struct rvce_encoder*)encoder;
+
+	flush(enc);
 }
 
 static void rvce_cs_flush(void *ctx, unsigned flags,
@@ -401,6 +407,9 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		enc->use_vui = true;
 	if (rscreen->info.family >= CHIP_TONGA)
 		enc->dual_pipe = true;
+	/* TODO enable B frame with dual instance */
+	if ((rscreen->info.family >= CHIP_TONGA) && (templ->max_references == 1))
+		enc->dual_inst = true;
 
 	enc->base = *templ;
 	enc->base.context = context;

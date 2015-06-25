@@ -78,17 +78,30 @@ static void rate_control(struct rvce_encoder *enc)
 
 static void encode(struct rvce_encoder *enc)
 {
-	signed luma_offset, chroma_offset;
+	signed luma_offset, chroma_offset, bs_offset;
+	unsigned dep, bs_idx = enc->bs_idx++;
 	int i;
 
-	enc->task_info(enc, 0x00000003, 0, 0, 0);
+	if (enc->dual_inst) {
+		if (bs_idx == 0)
+			dep = 1;
+		else if (enc->pic.picture_type == PIPE_H264_ENC_PICTURE_TYPE_IDR)
+			dep = 0;
+		else
+			dep = 2;
+	} else
+		dep = 0;
+
+	enc->task_info(enc, 0x00000003, dep, 0, bs_idx);
 
 	RVCE_BEGIN(0x05000001); // context buffer
 	RVCE_READWRITE(enc->cpb.res->cs_buf, enc->cpb.res->domains, 0); // encodeContextAddressHi/Lo
 	RVCE_END();
 
+	bs_offset = -(signed)(bs_idx * enc->bs_size);
+
 	RVCE_BEGIN(0x05000004); // video bitstream buffer
-	RVCE_WRITE(enc->bs_handle, RADEON_DOMAIN_GTT, 0); // videoBitstreamRingAddressHi/Lo
+	RVCE_WRITE(enc->bs_handle, RADEON_DOMAIN_GTT, bs_offset); // videoBitstreamRingAddressHi/Lo
 	RVCE_CS(enc->bs_size); // videoBitstreamRingSize
 	RVCE_END();
 
