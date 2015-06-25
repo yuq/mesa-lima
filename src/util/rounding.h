@@ -21,6 +21,9 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef _ROUNDING_H
+#define _ROUNDING_H
+
 #include <math.h>
 
 #ifdef __SSE4_1__
@@ -76,3 +79,25 @@ _mesa_roundeven(double x)
    return rint(x);
 #endif
 }
+
+/**
+ * \brief Rounds \c x to the nearest integer, with ties to the even integer,
+ * and returns the value as a long int.
+ */
+static inline long
+_mesa_lroundevenf(float x)
+{
+   return lrintf(x);
+}
+
+/**
+ * \brief Rounds \c x to the nearest integer, with ties to the even integer,
+ * and returns the value as a long int.
+ */
+static inline long
+_mesa_lroundeven(double x)
+{
+   return lrint(x);
+}
+
+#endif

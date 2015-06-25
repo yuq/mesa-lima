@@ -33,6 +33,7 @@
 
 #include "imports.h"
 #include "macros.h"
+#include "util/rounding.h"
 
 extern const mesa_array_format RGBA32_FLOAT;
 extern const mesa_array_format RGBA8_UBYTE;
@@ -84,7 +85,7 @@ _mesa_float_to_unorm(float x, unsigned dst_bits)
    else if (x > 1.0f)
       return MAX_UINT(dst_bits);
    else
-      return F_TO_I(x * MAX_UINT(dst_bits));
+      return _mesa_lroundevenf(x * MAX_UINT(dst_bits));
 }
 
 static inline unsigned
@@ -128,7 +129,7 @@ _mesa_float_to_snorm(float x, unsigned dst_bits)
    else if (x > 1.0f)
       return MAX_INT(dst_bits);
    else
-      return F_TO_I(x * MAX_INT(dst_bits));
+      return _mesa_lroundevenf(x * MAX_INT(dst_bits));
 }
 
 static inline int

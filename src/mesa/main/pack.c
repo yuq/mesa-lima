@@ -470,7 +470,7 @@ extract_uint_indexes(GLuint n, GLuint indexes[],
 static inline GLuint
 clamp_float_to_uint(GLfloat f)
 {
-   return f < 0.0F ? 0 : F_TO_I(f);
+   return f < 0.0F ? 0 : _mesa_lroundevenf(f);
 }
 
 
@@ -478,7 +478,7 @@ static inline GLuint
 clamp_half_to_uint(GLhalfARB h)
 {
    GLfloat f = _mesa_half_to_float(h);
-   return f < 0.0F ? 0 : F_TO_I(f);
+   return f < 0.0F ? 0 : _mesa_lroundevenf(f);
 }
 
 
