@@ -776,15 +776,13 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTextureGather:
    case SpvOpTextureGatherOffset:
    case SpvOpTextureGatherOffsets:
-   case SpvOpTextureQueryLod: {
+   case SpvOpTextureQueryLod:
       /* All these types have the coordinate as their first real argument */
-      struct vtn_value *coord = vtn_value(b, w[4], vtn_value_type_ssa);
-      coord_components = glsl_get_vector_elements(coord->type);
-      p->src = nir_src_for_ssa(coord->ssa);
+      coord_components = glsl_get_vector_elements(b->values[w[4]].type);
+      p->src = nir_src_for_ssa(vtn_ssa_value(b, w[4]));
       p->src_type = nir_tex_src_coord;
       p++;
       break;
-   }
    default:
       break;
    }
