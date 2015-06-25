@@ -415,6 +415,74 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
       var->data.explicit_binding = true;
       var->data.binding = dec->literals[0];
       break;
+   case SpvDecorationDescriptorSet:
+      var->data.descriptor_set = dec->literals[0];
+      break;
+   case SpvDecorationBuiltIn:
+      var->data.read_only = true;
+      switch ((SpvBuiltIn)dec->literals[0]) {
+      case SpvBuiltInFrontFacing:
+         var->data.location = SYSTEM_VALUE_FRONT_FACE;
+         break;
+      case SpvBuiltInVertexId:
+         var->data.location = SYSTEM_VALUE_VERTEX_ID;
+         break;
+      case SpvBuiltInInstanceId:
+         var->data.location = SYSTEM_VALUE_INSTANCE_ID;
+         break;
+      case SpvBuiltInSampleId:
+         var->data.location = SYSTEM_VALUE_SAMPLE_ID;
+         break;
+      case SpvBuiltInSamplePosition:
+         var->data.location = SYSTEM_VALUE_SAMPLE_POS;
+         break;
+      case SpvBuiltInSampleMask:
+         var->data.location = SYSTEM_VALUE_SAMPLE_MASK_IN;
+         break;
+      case SpvBuiltInInvocationId:
+         var->data.location = SYSTEM_VALUE_INVOCATION_ID;
+         break;
+      case SpvBuiltInPrimitiveId:
+      case SpvBuiltInPosition:
+      case SpvBuiltInPointSize:
+      case SpvBuiltInClipVertex:
+      case SpvBuiltInClipDistance:
+      case SpvBuiltInCullDistance:
+      case SpvBuiltInLayer:
+      case SpvBuiltInViewportIndex:
+      case SpvBuiltInTessLevelOuter:
+      case SpvBuiltInTessLevelInner:
+      case SpvBuiltInTessCoord:
+      case SpvBuiltInPatchVertices:
+      case SpvBuiltInFragCoord:
+      case SpvBuiltInPointCoord:
+      case SpvBuiltInFragColor:
+      case SpvBuiltInFragDepth:
+      case SpvBuiltInHelperInvocation:
+      case SpvBuiltInNumWorkgroups:
+      case SpvBuiltInWorkgroupSize:
+      case SpvBuiltInWorkgroupId:
+      case SpvBuiltInLocalInvocationId:
+      case SpvBuiltInGlobalInvocationId:
+      case SpvBuiltInLocalInvocationIndex:
+      case SpvBuiltInWorkDim:
+      case SpvBuiltInGlobalSize:
+      case SpvBuiltInEnqueuedWorkgroupSize:
+      case SpvBuiltInGlobalOffset:
+      case SpvBuiltInGlobalLinearId:
+      case SpvBuiltInWorkgroupLinearId:
+      case SpvBuiltInSubgroupSize:
+      case SpvBuiltInSubgroupMaxSize:
+      case SpvBuiltInNumSubgroups:
+      case SpvBuiltInNumEnqueuedSubgroups:
+      case SpvBuiltInSubgroupId:
+      case SpvBuiltInSubgroupLocalInvocationId:
+         unreachable("Unhandled builtin enum");
+      }
+      break;
+   case SpvDecorationNoStaticUse:
+      /* This can safely be ignored */
+      break;
    case SpvDecorationBlock:
    case SpvDecorationBufferBlock:
    case SpvDecorationRowMajor:
@@ -431,16 +499,13 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
    case SpvDecorationNonreadable:
    case SpvDecorationUniform:
       /* This is really nice but we have no use for it right now. */
-   case SpvDecorationNoStaticUse:
    case SpvDecorationCPacked:
    case SpvDecorationSaturatedConversion:
    case SpvDecorationStream:
-   case SpvDecorationDescriptorSet:
    case SpvDecorationOffset:
    case SpvDecorationAlignment:
    case SpvDecorationXfbBuffer:
    case SpvDecorationStride:
-   case SpvDecorationBuiltIn:
    case SpvDecorationFuncParamAttr:
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
