@@ -129,27 +129,6 @@ horiz_offset(fs_reg reg, unsigned delta)
 }
 
 static inline fs_reg
-offset(fs_reg reg, unsigned delta)
-{
-   switch (reg.file) {
-   case BAD_FILE:
-      break;
-   case GRF:
-   case MRF:
-   case ATTR:
-      return byte_offset(reg,
-                         delta * MAX2(reg.width * reg.stride, 1) *
-                         type_sz(reg.type));
-   case UNIFORM:
-      reg.reg_offset += delta;
-      break;
-   default:
-      assert(delta == 0);
-   }
-   return reg;
-}
-
-static inline fs_reg
 component(fs_reg reg, unsigned idx)
 {
    assert(reg.subreg_offset == 0);
