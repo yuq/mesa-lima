@@ -27,15 +27,19 @@
 #include "program/prog_to_nir.h"
 
 static void
-nir_optimize(nir_shader *nir)
+nir_optimize(nir_shader *nir, bool is_scalar)
 {
    bool progress;
    do {
       progress = false;
       nir_lower_vars_to_ssa(nir);
       nir_validate_shader(nir);
-      nir_lower_alu_to_scalar(nir);
-      nir_validate_shader(nir);
+
+      if (is_scalar) {
+         nir_lower_alu_to_scalar(nir);
+         nir_validate_shader(nir);
+      }
+
       progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);
       nir_lower_phis_to_scalar(nir);
@@ -92,14 +96,14 @@ brw_create_nir(struct brw_context *brw,
    nir_split_var_copies(nir);
    nir_validate_shader(nir);
 
-   nir_optimize(nir);
+   nir_optimize(nir, is_scalar);
 
    /* Lower a bunch of stuff */
    nir_lower_var_copies(nir);
    nir_validate_shader(nir);
 
    /* Get rid of split copies */
-   nir_optimize(nir);
+   nir_optimize(nir, is_scalar);
 
    if (is_scalar) {
       nir_assign_var_locations_direct_first(nir, &nir->uniforms,
@@ -135,7 +139,7 @@ brw_create_nir(struct brw_context *brw,
    nir_lower_atomics(nir);
    nir_validate_shader(nir);
 
-   nir_optimize(nir);
+   nir_optimize(nir, is_scalar);
 
    if (brw->gen >= 6) {
       /* Try and fuse multiply-adds */
