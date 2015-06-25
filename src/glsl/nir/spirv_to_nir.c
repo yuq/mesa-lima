@@ -571,7 +571,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          exec_list_push_tail(&b->shader->globals, &var->node);
       }
 
-      val->deref = nir_deref_var_create(b->shader, var);
+      val->deref = nir_deref_var_create(b, var);
 
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
       break;
@@ -846,7 +846,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    instr->is_array = glsl_sampler_type_is_array(sampler_type);
    instr->is_shadow = glsl_sampler_type_is_shadow(sampler_type);
 
-   instr->sampler = sampler;
+   instr->sampler = nir_deref_as_var(nir_copy_deref(instr, &sampler->deref));
 
    nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
    val->ssa = &instr->dest.ssa;
