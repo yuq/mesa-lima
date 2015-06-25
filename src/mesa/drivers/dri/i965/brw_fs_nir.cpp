@@ -1774,6 +1774,12 @@ fs_visitor::nir_emit_jump(const fs_builder &bld, nir_jump_instr *instr)
       bld.emit(BRW_OPCODE_CONTINUE);
       break;
    case nir_jump_return:
+      /* This has to be the last block in the shader.  We don't handle
+       * early returns.
+       */
+      assert(nir_cf_node_next(&instr->instr.block->cf_node) == NULL &&
+             instr->instr.block->cf_node.parent->type == nir_cf_node_function);
+      break;
    default:
       unreachable("unknown jump");
    }
