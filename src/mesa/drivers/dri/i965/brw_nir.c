@@ -89,7 +89,6 @@ brw_create_nir(struct brw_context *brw,
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
    struct gl_shader *shader = shader_prog ? shader_prog->_LinkedShaders[stage] : NULL;
-   bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    nir_shader *nir;
 
    /* First, lower the GLSL IR or Mesa IR to NIR */
@@ -100,6 +99,28 @@ brw_create_nir(struct brw_context *brw,
       nir_convert_to_ssa(nir); /* turn registers into SSA */
    }
    nir_validate_shader(nir);
+
+   brw_process_nir(nir, brw->intelScreen->devinfo, shader_prog, stage);
+
+   static GLuint msg_id = 0;
+   _mesa_gl_debug(&brw->ctx, &msg_id,
+                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
+                  MESA_DEBUG_TYPE_OTHER,
+                  MESA_DEBUG_SEVERITY_NOTIFICATION,
+                  "%s NIR shader: %d inst\n",
+                  _mesa_shader_stage_to_abbrev(stage),
+                  count_nir_instrs(nir));
+
+   return nir;
+}
+
+void
+brw_process_nir(nir_shader *nir,
+                const struct brw_device_info *devinfo,
+                const struct gl_shader_program *shader_prog,
+                gl_shader_stage stage)
+{
+   bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
 
    nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
@@ -135,9 +156,11 @@ brw_create_nir(struct brw_context *brw,
    nir_validate_shader(nir);
 
    if (shader_prog) {
+      nir_lower_samplers(nir, shader_prog, stage);
+   } else {
       nir_lower_samplers_for_vk(nir);
-      nir_validate_shader(nir);
    }
+   nir_validate_shader(nir);
 
    nir_lower_system_values(nir);
    nir_validate_shader(nir);
@@ -147,7 +170,7 @@ brw_create_nir(struct brw_context *brw,
 
    nir_optimize(nir);
 
-   if (brw->gen >= 6) {
+   if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
       nir_opt_peephole_ffma(nir);
       nir_validate_shader(nir);
@@ -178,15 +201,6 @@ brw_create_nir(struct brw_context *brw,
       nir_print_shader(nir, stderr);
    }
 
-   static GLuint msg_id = 0;
-   _mesa_gl_debug(&brw->ctx, &msg_id,
-                  MESA_DEBUG_SOURCE_SHADER_COMPILER,
-                  MESA_DEBUG_TYPE_OTHER,
-                  MESA_DEBUG_SEVERITY_NOTIFICATION,
-                  "%s NIR shader: %d inst\n",
-                  _mesa_shader_stage_to_abbrev(stage),
-                  count_nir_instrs(nir));
-
    nir_convert_from_ssa(nir);
    nir_validate_shader(nir);
 
@@ -195,7 +209,7 @@ brw_create_nir(struct brw_context *brw,
     * run it last because it stashes data in instr->pass_flags and we don't
     * want that to be squashed by other NIR passes.
     */
-   if (brw->gen <= 5)
+   if (devinfo->gen <= 5)
       brw_nir_analyze_boolean_resolves(nir);
 
    nir_sweep(nir);
@@ -205,6 +219,4 @@ brw_create_nir(struct brw_context *brw,
               _mesa_shader_stage_to_string(stage));
       nir_print_shader(nir, stderr);
    }
-
-   return nir;
 }

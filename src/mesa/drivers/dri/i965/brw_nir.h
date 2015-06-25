@@ -79,6 +79,12 @@ nir_shader *brw_create_nir(struct brw_context *brw,
                            const struct gl_program *prog,
                            gl_shader_stage stage);
 
+void
+brw_process_nir(nir_shader *nir,
+                const struct brw_device_info *devinfo,
+                const struct gl_shader_program *shader_prog,
+                gl_shader_stage stage);
+
 #ifdef __cplusplus
 }
 #endif
