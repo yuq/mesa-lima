@@ -92,6 +92,7 @@ struct ilo_texture {
 
    bool imported;
 
+   enum pipe_format image_format;
    struct ilo_image image;
    struct ilo_vma vma;
    struct ilo_vma aux_vma;

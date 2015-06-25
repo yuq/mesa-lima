@@ -1699,10 +1699,11 @@ ilo_set_framebuffer_state(struct pipe_context *pipe,
    if (state->zsbuf) {
       const struct ilo_surface_cso *cso =
          (const struct ilo_surface_cso *) state->zsbuf;
+      const struct ilo_texture *tex = ilo_texture(cso->base.texture);
 
       fb->has_hiz = cso->u.zs.hiz_vma;
       fb->depth_offset_format =
-         ilo_state_zs_get_depth_format(&cso->u.zs, dev);
+         ilo_format_translate_depth(dev, tex->image_format);
    } else {
       fb->has_hiz = false;
       fb->depth_offset_format = GEN6_ZFORMAT_D32_FLOAT;
@@ -2153,6 +2154,11 @@ ilo_create_surface(struct pipe_context *pipe,
 
       info.type = (tex->image.type == GEN6_SURFTYPE_CUBE) ?
          GEN6_SURFTYPE_2D : tex->image.type;
+
+      info.format = ilo_format_translate_depth(dev, tex->image_format);
+      if (ilo_dev_gen(dev) == ILO_GEN(6) && !info.hiz_vma &&
+          tex->image_format == PIPE_FORMAT_Z24X8_UNORM)
+         info.format = GEN6_ZFORMAT_D24_UNORM_S8_UINT;
 
       ilo_state_zs_init(&surf->u.zs, dev, &info);
    }

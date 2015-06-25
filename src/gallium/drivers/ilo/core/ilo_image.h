@@ -70,7 +70,14 @@ enum ilo_image_walk_type {
 struct ilo_image_info {
    enum gen_surface_type type;
 
-   enum pipe_format format;
+   enum gen_surface_format format;
+   bool interleaved_stencil;
+   bool is_integer;
+   /* width, height and size of pixel blocks */
+   bool compressed;
+   unsigned block_width;
+   unsigned block_height;
+   unsigned block_size;
 
    /* image size */
    uint16_t width;
@@ -119,7 +126,8 @@ struct ilo_image_lod {
 struct ilo_image {
    enum gen_surface_type type;
 
-   enum pipe_format format;
+   enum gen_surface_format format;
+   bool interleaved_stencil;
 
    /* size, format, etc for programming hardware states */
    unsigned width0;

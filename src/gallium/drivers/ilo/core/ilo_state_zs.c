@@ -55,45 +55,7 @@ zs_set_gen6_null_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[3] = 0;
    zs->depth[4] = 0;
 
-   zs->depth_format = format;
-
    return true;
-}
-
-static enum gen_depth_format
-get_gen6_depth_format(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      switch (img->format) {
-      case PIPE_FORMAT_Z32_FLOAT:
-         return GEN6_ZFORMAT_D32_FLOAT;
-      case PIPE_FORMAT_Z24X8_UNORM:
-         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-      case PIPE_FORMAT_Z16_UNORM:
-         return GEN6_ZFORMAT_D16_UNORM;
-      default:
-         assert(!"unknown depth format");
-         return GEN6_ZFORMAT_D32_FLOAT;
-      }
-   } else {
-      switch (img->format) {
-      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-         return GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
-      case PIPE_FORMAT_Z32_FLOAT:
-         return GEN6_ZFORMAT_D32_FLOAT;
-      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-         return GEN6_ZFORMAT_D24_UNORM_S8_UINT;
-      case PIPE_FORMAT_Z24X8_UNORM:
-         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-      case PIPE_FORMAT_Z16_UNORM:
-         return GEN6_ZFORMAT_D16_UNORM;
-      default:
-         assert(!"unknown depth format");
-         return GEN6_ZFORMAT_D32_FLOAT;
-      }
-   }
 }
 
 static bool
@@ -139,6 +101,35 @@ zs_validate_gen6(const struct ilo_dev *dev,
    if (info->type != img->type) {
       assert(info->type == GEN6_SURFTYPE_2D &&
              img->type == GEN6_SURFTYPE_CUBE);
+   }
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      switch (info->format) {
+      case GEN6_ZFORMAT_D32_FLOAT:
+      case GEN6_ZFORMAT_D24_UNORM_X8_UINT:
+      case GEN6_ZFORMAT_D16_UNORM:
+         break;
+      default:
+         assert(!"unknown depth format");
+         break;
+      }
+   } else {
+      /*
+       * From the Ironlake PRM, volume 2 part 1, page 330:
+       *
+       *     "If this field (Separate Stencil Buffer Enable) is disabled, the
+       *      Surface Format of the depth buffer cannot be D24_UNORM_X8_UINT."
+       *
+       * From the Sandy Bridge PRM, volume 2 part 1, page 321:
+       *
+       *     "[DevSNB]: This field (Separate Stencil Buffer Enable) must be
+       *      set to the same value (enabled or disabled) as Hierarchical
+       *      Depth Buffer Enable."
+       */
+      if (info->hiz_vma)
+         assert(info->format != GEN6_ZFORMAT_D24_UNORM_S8_UINT);
+      else
+         assert(info->format != GEN6_ZFORMAT_D24_UNORM_X8_UINT);
    }
 
    assert(info->level < img->level_count);
@@ -395,7 +386,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_state_zs_info *info)
 {
    uint16_t width, height, depth, array_base, view_extent;
-   enum gen_depth_format format;
    uint32_t dw1, dw2, dw3, dw4;
 
    ILO_DEV_ASSERT(dev, 6, 6);
@@ -406,28 +396,10 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  &view_extent))
       return false;
 
-   format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
-      GEN6_ZFORMAT_D32_FLOAT;
-
-   /*
-    * From the Ironlake PRM, volume 2 part 1, page 330:
-    *
-    *     "If this field (Separate Stencil Buffer Enable) is disabled, the
-    *      Surface Format of the depth buffer cannot be D24_UNORM_X8_UINT."
-    *
-    * From the Sandy Bridge PRM, volume 2 part 1, page 321:
-    *
-    *     "[DevSNB]: This field (Separate Stencil Buffer Enable) must be set
-    *      to the same value (enabled or disabled) as Hierarchical Depth
-    *      Buffer Enable."
-    */
-   if (!info->hiz_vma && format == GEN6_ZFORMAT_D24_UNORM_X8_UINT)
-      format = GEN6_ZFORMAT_D24_UNORM_S8_UINT;
-
    /* info->z_readonly and info->s_readonly are ignored on Gen6 */
    dw1 = info->type << GEN6_DEPTH_DW1_TYPE__SHIFT |
          GEN6_TILING_Y << GEN6_DEPTH_DW1_TILING__SHIFT |
-         format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
+         info->format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info->z_img)
       dw1 |= (info->z_img->bo_stride - 1) << GEN6_DEPTH_DW1_PITCH__SHIFT;
@@ -453,8 +425,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[3] = dw4;
    zs->depth[4] = 0;
 
-   zs->depth_format = format;
-
    return true;
 }
 
@@ -463,7 +433,6 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_dev *dev,
                                  const struct ilo_state_zs_info *info)
 {
-   enum gen_depth_format format;
    uint16_t width, height, depth;
    uint16_t array_base, view_extent;
    uint32_t dw1, dw2, dw3, dw4, dw6;
@@ -476,11 +445,8 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  &view_extent))
       return false;
 
-   format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
-      GEN6_ZFORMAT_D32_FLOAT;
-
    dw1 = info->type << GEN7_DEPTH_DW1_TYPE__SHIFT |
-         format << GEN7_DEPTH_DW1_FORMAT__SHIFT;
+         info->format << GEN7_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info->z_img) {
       if (!info->z_readonly)
@@ -515,8 +481,6 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[2] = dw3;
    zs->depth[3] = dw4;
    zs->depth[4] = dw6;
-
-   zs->depth_format = format;
 
    return true;
 }
@@ -685,6 +649,7 @@ ilo_state_zs_init_for_null(struct ilo_state_zs *zs,
 
    memset(&info, 0, sizeof(info));
    info.type = GEN6_SURFTYPE_NULL;
+   info.format = GEN6_ZFORMAT_D32_FLOAT;
 
    return ilo_state_zs_init(zs, dev, &info);
 }

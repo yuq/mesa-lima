@@ -45,8 +45,6 @@ struct ilo_image_params {
    const struct ilo_image_info *info;
    unsigned valid_tilings;
 
-   bool compressed;
-
    unsigned h0, h1;
    unsigned max_x, max_y;
 };
@@ -261,7 +259,7 @@ img_init_lods(struct ilo_image *img,
 
          /* every LOD begins at tile boundaries */
          if (info->level_count > 1) {
-            assert(img->format == PIPE_FORMAT_S8_UINT);
+            assert(img->format == GEN6_FORMAT_R8_UINT);
             cur_x = align(cur_x, 64);
             cur_y = align(cur_y, 64);
          }
@@ -334,7 +332,7 @@ img_init_alignments(struct ilo_image *img,
     *
     *                                  align_i        align_j
     *   compressed formats             block width    block height
-    *   PIPE_FORMAT_S8_UINT            4              2
+    *   GEN6_FORMAT_R8_UINT            4              2
     *   other depth/stencil formats    4              4
     *   4x multisampled                4              4
     *   bpp 96                         4              2
@@ -382,27 +380,27 @@ img_init_alignments(struct ilo_image *img,
     *
     *                                  align_i        align_j
     *  compressed formats              block width    block height
-    *  PIPE_FORMAT_Z16_UNORM           8              4
-    *  PIPE_FORMAT_S8_UINT             8              8
+    *  GEN6_FORMAT_R16_UNORM           8              4
+    *  GEN6_FORMAT_R8_UINT             8              8
     *  other depth/stencil formats     4              4
     *  2x or 4x multisampled           4 or 8         4
     *  tiled Y                         4 or 8         4 (if rt)
-    *  PIPE_FORMAT_R32G32B32_FLOAT     4 or 8         2
+    *  GEN6_FORMAT_R32G32B32_FLOAT     4 or 8         2
     *  others                          4 or 8         2 or 4
     */
 
-   if (params->compressed) {
+   if (info->compressed) {
       /* this happens to be the case */
       img->align_i = img->block_width;
       img->align_j = img->block_height;
    } else if (info->bind_zs) {
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7)) {
          switch (img->format) {
-         case PIPE_FORMAT_Z16_UNORM:
+         case GEN6_FORMAT_R16_UNORM:
             img->align_i = 8;
             img->align_j = 4;
             break;
-         case PIPE_FORMAT_S8_UINT:
+         case GEN6_FORMAT_R8_UINT:
             img->align_i = 8;
             img->align_j = 8;
             break;
@@ -413,7 +411,7 @@ img_init_alignments(struct ilo_image *img,
          }
       } else {
          switch (img->format) {
-         case PIPE_FORMAT_S8_UINT:
+         case GEN6_FORMAT_R8_UINT:
             img->align_i = 4;
             img->align_j = 2;
             break;
@@ -433,7 +431,7 @@ img_init_alignments(struct ilo_image *img,
 
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
           ilo_dev_gen(params->dev) <= ILO_GEN(7.5) && valign_4)
-         assert(img->format != PIPE_FORMAT_R32G32B32_FLOAT);
+         assert(img->format != GEN6_FORMAT_R32G32B32_FLOAT);
 
       img->align_i = 4;
       img->align_j = (valign_4) ? 4 : 2;
@@ -558,7 +556,7 @@ img_init_walk_gen6(struct ilo_image *img,
     */
    img->walk =
       (params->info->type == GEN6_SURFTYPE_3D) ? ILO_IMAGE_WALK_3D :
-      (img->format == PIPE_FORMAT_S8_UINT) ? ILO_IMAGE_WALK_LOD :
+      (img->format == GEN6_FORMAT_R8_UINT) ? ILO_IMAGE_WALK_LOD :
       ILO_IMAGE_WALK_LAYER;
 
    /* GEN6 supports only interleaved samples */
@@ -580,7 +578,6 @@ img_get_valid_tilings(const struct ilo_image *img,
                       const struct ilo_image_params *params)
 {
    const struct ilo_image_info *info = params->info;
-   const enum pipe_format format = img->format;
    unsigned valid_tilings = params->valid_tilings;
 
    /*
@@ -614,8 +611,8 @@ img_get_valid_tilings(const struct ilo_image *img,
     *     "W-Major Tile Format is used for separate stencil."
     */
    if (info->bind_zs) {
-      switch (format) {
-      case PIPE_FORMAT_S8_UINT:
+      switch (info->format) {
+      case GEN6_FORMAT_R8_UINT:
          valid_tilings &= IMAGE_TILING_W;
          break;
       default:
@@ -649,7 +646,7 @@ img_get_valid_tilings(const struct ilo_image *img,
        */
       if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
           ilo_dev_gen(params->dev) <= ILO_GEN(7.5) &&
-          img->format == PIPE_FORMAT_R32G32B32_FLOAT)
+          img->format == GEN6_FORMAT_R32G32B32_FLOAT)
          valid_tilings &= ~IMAGE_TILING_Y;
 
       valid_tilings &= ~IMAGE_TILING_W;
@@ -682,18 +679,13 @@ img_init_size_and_format(struct ilo_image *img,
     *      buffer has been removed Surface formats with interleaved depth and
     *      stencil are no longer supported"
     */
-   if (ilo_dev_gen(params->dev) >= ILO_GEN(7) && info->bind_zs) {
-      const struct util_format_description *desc =
-         util_format_description(info->format);
-
-      assert(info->format == PIPE_FORMAT_S8_UINT ||
-             !util_format_has_stencil(desc));
-   }
+   if (ilo_dev_gen(params->dev) >= ILO_GEN(7) && info->bind_zs)
+      assert(!info->interleaved_stencil);
 
    img->format = info->format;
-   img->block_width = util_format_get_blockwidth(info->format);
-   img->block_height = util_format_get_blockheight(info->format);
-   img->block_size = util_format_get_blocksize(info->format);
+   img->block_width = info->block_width;
+   img->block_height = info->block_height;
+   img->block_size = info->block_size;
 
    img->width0 = info->width;
    img->height0 = info->height;
@@ -703,7 +695,6 @@ img_init_size_and_format(struct ilo_image *img,
    img->sample_count = info->sample_count;
 
    params->valid_tilings = img_get_valid_tilings(img, params);
-   params->compressed = util_format_is_compressed(img->format);
 }
 
 static bool
@@ -730,7 +721,7 @@ img_want_mcs(const struct ilo_image *img,
     *     "This field must be set to 0 for all SINT MSRTs when all RT channels
     *      are not written"
     */
-   if (info->sample_count > 1 && !util_format_is_pure_sint(info->format)) {
+   if (info->sample_count > 1 && !info->is_integer) {
       want_mcs = true;
    } else if (info->sample_count == 1 && !info->aux_disable) {
       /*
@@ -769,8 +760,6 @@ img_want_hiz(const struct ilo_image *img,
              const struct ilo_image_params *params)
 {
    const struct ilo_image_info *info = params->info;
-   const struct util_format_description *desc =
-      util_format_description(info->format);
 
    if (ilo_debug & ILO_DEBUG_NOHIZ)
       return false;
@@ -785,10 +774,17 @@ img_want_hiz(const struct ilo_image *img,
    if (!info->bind_zs)
       return false;
 
-   if (!util_format_has_depth(desc) || util_format_has_stencil(desc))
+   if (info->interleaved_stencil)
       return false;
 
-   return true;
+   switch (info->format) {
+   case GEN6_FORMAT_R32_FLOAT:
+   case GEN6_FORMAT_R24_UNORM_X8_TYPELESS:
+   case GEN6_FORMAT_R16_UNORM:
+      return true;
+   default:
+      return false;
+   }
 }
 
 static void
@@ -836,7 +832,7 @@ img_align(struct ilo_image *img, struct ilo_image_params *params)
       if (info->type == GEN6_SURFTYPE_CUBE)
          pad_h += 2;
 
-      if (params->compressed)
+      if (info->compressed)
          align_h = MAX2(align_h, img->align_j * 2);
    }
 
@@ -1325,9 +1321,9 @@ img_init_for_transfer(struct ilo_image *img,
    img->sample_count = 1;
 
    img->format = info->format;
-   img->block_width = util_format_get_blockwidth(info->format);
-   img->block_height = util_format_get_blockheight(info->format);
-   img->block_size = util_format_get_blocksize(info->format);
+   img->block_width = info->block_width;
+   img->block_height = info->block_height;
+   img->block_size = info->block_size;
 
    img->walk = ILO_IMAGE_WALK_LOD;
 

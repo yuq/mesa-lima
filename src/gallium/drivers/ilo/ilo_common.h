@@ -28,6 +28,9 @@
 #ifndef ILO_COMMON_H
 #define ILO_COMMON_H
 
+#include "pipe/p_format.h"
+#include "util/u_format.h"
+
 #include "core/ilo_core.h"
 #include "core/ilo_debug.h"
 #include "core/ilo_dev.h"

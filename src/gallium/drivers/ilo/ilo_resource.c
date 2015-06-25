@@ -30,6 +30,7 @@
 #include "core/ilo_state_surface.h"
 
 #include "ilo_screen.h"
+#include "ilo_format.h"
 #include "ilo_resource.h"
 
 /*
@@ -148,6 +149,26 @@ resource_get_image_format(const struct pipe_resource *templ,
    return format;
 }
 
+static inline enum gen_surface_format
+pipe_to_surface_format(const struct ilo_dev *dev, enum pipe_format format)
+{
+   switch (format) {
+   case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+      return GEN6_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+   case PIPE_FORMAT_Z32_FLOAT:
+      return GEN6_FORMAT_R32_FLOAT;
+   case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+   case PIPE_FORMAT_Z24X8_UNORM:
+      return GEN6_FORMAT_R24_UNORM_X8_TYPELESS;
+   case PIPE_FORMAT_Z16_UNORM:
+      return GEN6_FORMAT_R16_UNORM;
+   case PIPE_FORMAT_S8_UINT:
+      return GEN6_FORMAT_R8_UINT;
+   default:
+      return ilo_format_translate_color(dev, format);
+   }
+}
+
 static void
 resource_get_image_info(const struct pipe_resource *templ,
                         const struct ilo_dev *dev,
@@ -157,7 +178,14 @@ resource_get_image_info(const struct pipe_resource *templ,
    memset(info, 0, sizeof(*info));
 
    info->type = get_surface_type(templ->target);
-   info->format = image_format;
+
+   info->format = pipe_to_surface_format(dev, image_format);
+   info->interleaved_stencil = util_format_is_depth_and_stencil(image_format);
+   info->is_integer = util_format_is_pure_integer(image_format);
+   info->compressed = util_format_is_compressed(image_format);
+   info->block_width = util_format_get_blockwidth(image_format);
+   info->block_height = util_format_get_blockheight(image_format);
+   info->block_size = util_format_get_blocksize(image_format);
 
    info->width = templ->width0;
    info->height = templ->height0;
@@ -303,7 +331,7 @@ tex_create_separate_stencil(struct ilo_texture *tex)
 
    tex->separate_s8 = ilo_texture(s8);
 
-   assert(tex->separate_s8->image.format == PIPE_FORMAT_S8_UINT);
+   assert(tex->separate_s8->image_format == PIPE_FORMAT_S8_UINT);
 
    return true;
 }
@@ -438,12 +466,11 @@ tex_init_image(struct ilo_texture *tex,
    const struct pipe_resource *templ = &tex->base;
    struct ilo_image *img = &tex->image;
    struct intel_bo *imported_bo = NULL;;
-   enum pipe_format image_format;
    struct ilo_image_info info;
 
-   image_format = resource_get_image_format(templ,
+   tex->image_format = resource_get_image_format(templ,
          &is->dev, separate_stencil);
-   resource_get_image_info(templ, &is->dev, image_format, &info);
+   resource_get_image_info(templ, &is->dev, tex->image_format, &info);
 
    if (handle) {
       imported_bo = tex_import_handle(tex, handle, &info);
@@ -469,10 +496,11 @@ tex_init_image(struct ilo_texture *tex,
     */
    if (ilo_dev_gen(&is->dev) == ILO_GEN(6) &&
        templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
-       image_format == PIPE_FORMAT_Z32_FLOAT &&
+       tex->image_format == PIPE_FORMAT_Z32_FLOAT &&
        img->aux.enables != (1 << templ->last_level)) {
-      image_format = templ->format;
-      info.format = image_format;
+      tex->image_format = templ->format;
+      info.format = pipe_to_surface_format(&is->dev, tex->image_format);
+      info.interleaved_stencil = true;
 
       memset(img, 0, sizeof(*img));
       if (!ilo_image_init(img, &is->dev, &info)) {
@@ -496,7 +524,7 @@ tex_init_image(struct ilo_texture *tex,
    if (templ->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT) {
       /* require on-the-fly tiling/untiling or format conversion */
       if (img->tiling == GEN8_TILING_W || *separate_stencil ||
-          image_format != templ->format)
+          tex->image_format != templ->format)
          return false;
    }
 
@@ -656,7 +684,8 @@ ilo_can_create_resource(struct pipe_screen *screen,
        templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
        image_format == PIPE_FORMAT_Z32_FLOAT &&
        img.aux.enables != (1 << templ->last_level)) {
-      info.format = templ->format;
+      info.format = pipe_to_surface_format(&is->dev, templ->format);
+      info.interleaved_stencil = true;
       memset(&img, 0, sizeof(img));
       ilo_image_init(&img, &ilo_screen(screen)->dev, &info);
    }

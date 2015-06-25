@@ -49,6 +49,7 @@ struct ilo_state_zs_info {
    const struct ilo_vma *hiz_vma;
 
    enum gen_surface_type type;
+   enum gen_depth_format format;
 
    /* ignored prior to Gen7 */
    bool z_readonly;
@@ -63,9 +64,6 @@ struct ilo_state_zs {
    const struct ilo_vma *z_vma;
    const struct ilo_vma *s_vma;
    const struct ilo_vma *hiz_vma;
-
-   /* TODO move this to ilo_image */
-   enum gen_depth_format depth_format;
 
    bool z_readonly;
    bool s_readonly;
@@ -83,12 +81,5 @@ ilo_state_zs_init_for_null(struct ilo_state_zs *zs,
 bool
 ilo_state_zs_disable_hiz(struct ilo_state_zs *zs,
                          const struct ilo_dev *dev);
-
-static inline enum gen_depth_format
-ilo_state_zs_get_depth_format(const struct ilo_state_zs *zs,
-                              const struct ilo_dev *dev)
-{
-   return zs->depth_format;
-}
 
 #endif /* ILO_STATE_ZS_H */

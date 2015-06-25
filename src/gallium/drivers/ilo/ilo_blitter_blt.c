@@ -300,7 +300,7 @@ tex_copy_region(struct ilo_blitter *blitter,
                 const struct pipe_box *src_box)
 {
    const struct util_format_description *desc =
-      util_format_description(dst_tex->image.format);
+      util_format_description(dst_tex->image_format);
    const unsigned max_extent = 32767; /* INT16_MAX */
    const uint8_t rop = 0xcc; /* SRCCOPY */
    struct ilo_builder *builder = &blitter->ilo->cp->builder;

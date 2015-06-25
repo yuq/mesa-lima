@@ -100,7 +100,7 @@ resource_get_transfer_method(struct pipe_resource *res,
             m = ILO_TRANSFER_MAP_SW_ZS;
             need_convert = true;
          }
-      } else if (tex->image.format != tex->base.format) {
+      } else if (tex->image_format != tex->base.format) {
          m = ILO_TRANSFER_MAP_SW_CONVERT;
          need_convert = true;
       }
@@ -601,7 +601,7 @@ tex_staging_sys_zs_read(struct ilo_texture *tex,
       s8_tile_offset = tex_tile_choose_offset_func(s8_tex, &s8_tiles_per_row);
 
       if (tex->base.format == PIPE_FORMAT_Z24_UNORM_S8_UINT) {
-         assert(tex->image.format == PIPE_FORMAT_Z24X8_UNORM);
+         assert(tex->image_format == PIPE_FORMAT_Z24X8_UNORM);
 
          dst_cpp = 4;
          dst_s8_pos = 3;
@@ -609,7 +609,7 @@ tex_staging_sys_zs_read(struct ilo_texture *tex,
       }
       else {
          assert(tex->base.format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT);
-         assert(tex->image.format == PIPE_FORMAT_Z32_FLOAT);
+         assert(tex->image_format == PIPE_FORMAT_Z32_FLOAT);
 
          dst_cpp = 8;
          dst_s8_pos = 4;
@@ -655,7 +655,7 @@ tex_staging_sys_zs_read(struct ilo_texture *tex,
       tex_staging_sys_unmap_bo(s8_tex);
    }
    else {
-      assert(tex->image.format == PIPE_FORMAT_S8_UINT);
+      assert(tex->image_format == PIPE_FORMAT_S8_UINT);
 
       for (slice = 0; slice < box->depth; slice++) {
          unsigned mem_x, mem_y;
@@ -728,7 +728,7 @@ tex_staging_sys_zs_write(struct ilo_texture *tex,
       s8_tile_offset = tex_tile_choose_offset_func(s8_tex, &s8_tiles_per_row);
 
       if (tex->base.format == PIPE_FORMAT_Z24_UNORM_S8_UINT) {
-         assert(tex->image.format == PIPE_FORMAT_Z24X8_UNORM);
+         assert(tex->image_format == PIPE_FORMAT_Z24X8_UNORM);
 
          src_cpp = 4;
          src_s8_pos = 3;
@@ -736,7 +736,7 @@ tex_staging_sys_zs_write(struct ilo_texture *tex,
       }
       else {
          assert(tex->base.format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT);
-         assert(tex->image.format == PIPE_FORMAT_Z32_FLOAT);
+         assert(tex->image_format == PIPE_FORMAT_Z32_FLOAT);
 
          src_cpp = 8;
          src_s8_pos = 4;
@@ -782,7 +782,7 @@ tex_staging_sys_zs_write(struct ilo_texture *tex,
       tex_staging_sys_unmap_bo(s8_tex);
    }
    else {
-      assert(tex->image.format == PIPE_FORMAT_S8_UINT);
+      assert(tex->image_format == PIPE_FORMAT_S8_UINT);
 
       for (slice = 0; slice < box->depth; slice++) {
          unsigned mem_x, mem_y;
@@ -840,8 +840,8 @@ tex_staging_sys_convert_write(struct ilo_texture *tex,
    else
       dst_slice_stride = 0;
 
-   if (unlikely(tex->image.format == tex->base.format)) {
-      util_copy_box(dst, tex->image.format, tex->image.bo_stride,
+   if (unlikely(tex->image_format == tex->base.format)) {
+      util_copy_box(dst, tex->image_format, tex->image.bo_stride,
             dst_slice_stride, 0, 0, 0, box->width, box->height, box->depth,
             xfer->staging.sys, xfer->base.stride, xfer->base.layer_stride,
             0, 0, 0);
@@ -853,7 +853,7 @@ tex_staging_sys_convert_write(struct ilo_texture *tex,
 
    switch (tex->base.format) {
    case PIPE_FORMAT_ETC1_RGB8:
-      assert(tex->image.format == PIPE_FORMAT_R8G8B8X8_UNORM);
+      assert(tex->image_format == PIPE_FORMAT_R8G8B8X8_UNORM);
 
       for (slice = 0; slice < box->depth; slice++) {
          const void *src =

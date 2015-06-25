@@ -165,4 +165,39 @@ ilo_format_translate_vertex(const struct ilo_dev *dev,
    return ilo_format_translate(dev, format, PIPE_BIND_VERTEX_BUFFER);
 }
 
+static inline enum gen_depth_format
+ilo_format_translate_depth(const struct ilo_dev *dev,
+                           enum pipe_format format)
+{
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      switch (format) {
+      case PIPE_FORMAT_Z32_FLOAT:
+         return GEN6_ZFORMAT_D32_FLOAT;
+      case PIPE_FORMAT_Z24X8_UNORM:
+         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
+      case PIPE_FORMAT_Z16_UNORM:
+         return GEN6_ZFORMAT_D16_UNORM;
+      default:
+         assert(!"unknown depth format");
+         return GEN6_ZFORMAT_D32_FLOAT;
+      }
+   } else {
+      switch (format) {
+      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+         return GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
+      case PIPE_FORMAT_Z32_FLOAT:
+         return GEN6_ZFORMAT_D32_FLOAT;
+      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
+         return GEN6_ZFORMAT_D24_UNORM_S8_UINT;
+      case PIPE_FORMAT_Z24X8_UNORM:
+         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
+      case PIPE_FORMAT_Z16_UNORM:
+         return GEN6_ZFORMAT_D16_UNORM;
+      default:
+         assert(!"unknown depth format");
+         return GEN6_ZFORMAT_D32_FLOAT;
+      }
+   }
+}
+
 #endif /* ILO_FORMAT_H */
