@@ -143,7 +143,6 @@ gen6_emit_3dstate_multisample(struct brw_context *brw,
    ADVANCE_BATCH();
 }
 
-
 unsigned
 gen6_determine_sample_mask(struct brw_context *brw)
 {
@@ -176,7 +175,6 @@ gen6_determine_sample_mask(struct brw_context *brw)
    }
 }
 
-
 /**
  * 3DSTATE_SAMPLE_MASK
  */
@@ -189,14 +187,13 @@ gen6_emit_3dstate_sample_mask(struct brw_context *brw, unsigned mask)
    ADVANCE_BATCH();
 }
 
-
-static void upload_multisample_state(struct brw_context *brw)
+static void
+upload_multisample_state(struct brw_context *brw)
 {
    /* BRW_NEW_NUM_SAMPLES */
    gen6_emit_3dstate_multisample(brw, brw->num_samples);
    gen6_emit_3dstate_sample_mask(brw, gen6_determine_sample_mask(brw));
 }
-
 
 const struct brw_tracked_state gen6_multisample_state = {
    .dirty = {
