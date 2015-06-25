@@ -187,8 +187,6 @@ static void si_shader_vs(struct si_shader *shader)
 		case TGSI_SEMANTIC_POSITION:
 		case TGSI_SEMANTIC_PSIZE:
 		case TGSI_SEMANTIC_EDGEFLAG:
-		case TGSI_SEMANTIC_VIEWPORT_INDEX:
-		case TGSI_SEMANTIC_LAYER:
 			break;
 		default:
 			nparams++;

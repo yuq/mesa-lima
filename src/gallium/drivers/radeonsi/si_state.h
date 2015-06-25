@@ -92,8 +92,8 @@ union si_state {
 		struct si_pm4_state		*blend_color;
 		struct si_pm4_state		*clip;
 		struct si_state_sample_mask	*sample_mask;
-		struct si_state_scissor		*scissor;
-		struct si_state_viewport	*viewport;
+		struct si_state_scissor		*scissor[16];
+		struct si_state_viewport	*viewport[16];
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*fb_rs;

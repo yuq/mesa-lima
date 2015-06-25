@@ -1132,7 +1132,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 				&si_shader_ctx->radeon_bld.soa.bld_base.uint_bld;
 	LLVMValueRef args[9];
 	LLVMValueRef pos_args[4][9] = { { 0 } };
-	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL;
+	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	unsigned semantic_name, semantic_index;
 	unsigned target;
 	unsigned param_count = 0;
@@ -1158,7 +1158,12 @@ handle_semantic:
 			continue;
 		case TGSI_SEMANTIC_LAYER:
 			layer_value = outputs[i].values[0];
-			continue;
+			semantic_name = TGSI_SEMANTIC_GENERIC;
+			goto handle_semantic;
+		case TGSI_SEMANTIC_VIEWPORT_INDEX:
+			viewport_index_value = outputs[i].values[0];
+			semantic_name = TGSI_SEMANTIC_GENERIC;
+			goto handle_semantic;
 		case TGSI_SEMANTIC_POSITION:
 			target = V_008DFC_SQ_EXP_POS;
 			break;
@@ -1224,11 +1229,13 @@ handle_semantic:
 	/* Write the misc vector (point size, edgeflag, layer, viewport). */
 	if (shader->selector->info.writes_psize ||
 	    shader->selector->info.writes_edgeflag ||
+	    shader->selector->info.writes_viewport_index ||
 	    shader->selector->info.writes_layer) {
 		pos_args[1][0] = lp_build_const_int32(base->gallivm, /* writemask */
 						      shader->selector->info.writes_psize |
 						      (shader->selector->info.writes_edgeflag << 1) |
-						      (shader->selector->info.writes_layer << 2));
+						      (shader->selector->info.writes_layer << 2) |
+						      (shader->selector->info.writes_viewport_index << 3));
 		pos_args[1][1] = uint->zero; /* EXEC mask */
 		pos_args[1][2] = uint->zero; /* last export? */
 		pos_args[1][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS + 1);
@@ -1259,6 +1266,9 @@ handle_semantic:
 
 		if (shader->selector->info.writes_layer)
 			pos_args[1][7] = layer_value;
+
+		if (shader->selector->info.writes_viewport_index)
+			pos_args[1][8] = viewport_index_value;
 	}
 
 	for (i = 0; i < 4; i++)
@@ -1299,10 +1309,15 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
 			si_shader_ctx->radeon_bld.soa.outputs[i];
-		int param_index = get_param_index(info->output_semantic_name[i],
-						  info->output_semantic_index[i],
-						  es->key.vs.gs_used_inputs);
+		int param_index;
 
+		if (info->output_semantic_name[i] == TGSI_SEMANTIC_VIEWPORT_INDEX ||
+		    info->output_semantic_name[i] == TGSI_SEMANTIC_LAYER)
+			continue;
+
+		param_index = get_param_index(info->output_semantic_name[i],
+					      info->output_semantic_index[i],
+					      es->key.vs.gs_used_inputs);
 		if (param_index < 0)
 			continue;
 

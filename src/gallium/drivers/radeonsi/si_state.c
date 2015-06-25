@@ -489,11 +489,13 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 		S_02881C_USE_VTX_POINT_SIZE(info->writes_psize) |
 		S_02881C_USE_VTX_EDGE_FLAG(info->writes_edgeflag) |
 		S_02881C_USE_VTX_RENDER_TARGET_INDX(info->writes_layer) |
+	        S_02881C_USE_VTX_VIEWPORT_INDX(info->writes_viewport_index) |
 		S_02881C_VS_OUT_CCDIST0_VEC_ENA((clipdist_mask & 0x0F) != 0) |
 		S_02881C_VS_OUT_CCDIST1_VEC_ENA((clipdist_mask & 0xF0) != 0) |
 		S_02881C_VS_OUT_MISC_VEC_ENA(info->writes_psize ||
 					    info->writes_edgeflag ||
-					    info->writes_layer) |
+					    info->writes_layer ||
+					     info->writes_viewport_index) |
 		(sctx->queued.named.rasterizer->clip_plane_enable &
 		 clipdist_mask));
 	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
@@ -509,20 +511,26 @@ static void si_set_scissor_states(struct pipe_context *ctx,
                                   const struct pipe_scissor_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_state_scissor *scissor = CALLOC_STRUCT(si_state_scissor);
-	struct si_pm4_state *pm4 = &scissor->pm4;
+	struct si_state_scissor *scissor;
+	struct si_pm4_state *pm4;
+	int i;
 
-	if (scissor == NULL)
-		return;
+	for (i = start_slot; i < start_slot + num_scissors; i++) {
+		int idx = i - start_slot;
+		int offset = i * 4 * 2;
 
-	scissor->scissor = *state;
-	si_pm4_set_reg(pm4, R_028250_PA_SC_VPORT_SCISSOR_0_TL,
-		       S_028250_TL_X(state->minx) | S_028250_TL_Y(state->miny) |
-		       S_028250_WINDOW_OFFSET_DISABLE(1));
-	si_pm4_set_reg(pm4, R_028254_PA_SC_VPORT_SCISSOR_0_BR,
-		       S_028254_BR_X(state->maxx) | S_028254_BR_Y(state->maxy));
-
-	si_pm4_set_state(sctx, scissor, scissor);
+		scissor = CALLOC_STRUCT(si_state_scissor);
+		if (scissor == NULL)
+			return;
+		pm4 = &scissor->pm4;
+		scissor->scissor = state[idx];
+		si_pm4_set_reg(pm4, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset,
+			       S_028250_TL_X(state[idx].minx) | S_028250_TL_Y(state[idx].miny) |
+			       S_028250_WINDOW_OFFSET_DISABLE(1));
+		si_pm4_set_reg(pm4, R_028254_PA_SC_VPORT_SCISSOR_0_BR + offset,
+			       S_028254_BR_X(state[idx].maxx) | S_028254_BR_Y(state[idx].maxy));
+		si_pm4_set_state(sctx, scissor[i], scissor);
+	}
 }
 
 static void si_set_viewport_states(struct pipe_context *ctx,
@@ -531,21 +539,29 @@ static void si_set_viewport_states(struct pipe_context *ctx,
                                    const struct pipe_viewport_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_state_viewport *viewport = CALLOC_STRUCT(si_state_viewport);
-	struct si_pm4_state *pm4 = &viewport->pm4;
+	struct si_state_viewport *viewport;
+	struct si_pm4_state *pm4;
+	int i;
 
-	if (viewport == NULL)
-		return;
+	for (i = start_slot; i < start_slot + num_viewports; i++) {
+		int idx = i - start_slot;
+		int offset = i * 4 * 6;
 
-	viewport->viewport = *state;
-	si_pm4_set_reg(pm4, R_02843C_PA_CL_VPORT_XSCALE_0, fui(state->scale[0]));
-	si_pm4_set_reg(pm4, R_028440_PA_CL_VPORT_XOFFSET_0, fui(state->translate[0]));
-	si_pm4_set_reg(pm4, R_028444_PA_CL_VPORT_YSCALE_0, fui(state->scale[1]));
-	si_pm4_set_reg(pm4, R_028448_PA_CL_VPORT_YOFFSET_0, fui(state->translate[1]));
-	si_pm4_set_reg(pm4, R_02844C_PA_CL_VPORT_ZSCALE_0, fui(state->scale[2]));
-	si_pm4_set_reg(pm4, R_028450_PA_CL_VPORT_ZOFFSET_0, fui(state->translate[2]));
+		viewport = CALLOC_STRUCT(si_state_viewport);
+		if (!viewport)
+			return;
+		pm4 = &viewport->pm4;
 
-	si_pm4_set_state(sctx, viewport, viewport);
+		viewport->viewport = state[idx];
+		si_pm4_set_reg(pm4, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, fui(state[idx].scale[0]));
+		si_pm4_set_reg(pm4, R_028440_PA_CL_VPORT_XOFFSET_0 + offset, fui(state[idx].translate[0]));
+		si_pm4_set_reg(pm4, R_028444_PA_CL_VPORT_YSCALE_0 + offset, fui(state[idx].scale[1]));
+		si_pm4_set_reg(pm4, R_028448_PA_CL_VPORT_YOFFSET_0 + offset, fui(state[idx].translate[1]));
+		si_pm4_set_reg(pm4, R_02844C_PA_CL_VPORT_ZSCALE_0 + offset, fui(state[idx].scale[2]));
+		si_pm4_set_reg(pm4, R_028450_PA_CL_VPORT_ZOFFSET_0 + offset, fui(state[idx].translate[2]));
+
+		si_pm4_set_state(sctx, viewport[i], viewport);
+	}
 }
 
 /*
