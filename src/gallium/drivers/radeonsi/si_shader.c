@@ -630,6 +630,11 @@ static void declare_system_value(
 				     SI_PARAM_BASE_VERTEX);
 		break;
 
+	case TGSI_SEMANTIC_INVOCATIONID:
+		value = LLVMGetParam(radeon_bld->main_fn,
+				     SI_PARAM_GS_INSTANCE_ID);
+		break;
+
 	case TGSI_SEMANTIC_SAMPLEID:
 		value = get_sample_id(radeon_bld);
 		break;

@@ -76,6 +76,7 @@ static void si_shader_gs(struct si_shader *shader)
 	unsigned gs_vert_itemsize = shader->selector->info.num_outputs * (16 >> 2);
 	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
 	unsigned gsvs_itemsize = gs_vert_itemsize * gs_max_vert_out;
+	unsigned gs_num_invocations = shader->selector->gs_num_invocations;
 	unsigned cut_mode;
 	struct si_pm4_state *pm4;
 	unsigned num_sgprs, num_user_sgprs;
@@ -117,6 +118,10 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, gs_max_vert_out);
 
 	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, gs_vert_itemsize);
+
+	si_pm4_set_reg(pm4, R_028B90_VGT_GS_INSTANCE_CNT,
+		       S_028B90_CNT(MIN2(gs_num_invocations, 127)) |
+		       S_028B90_ENABLE(gs_num_invocations > 0));
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
@@ -490,6 +495,8 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 			sel->info.properties[TGSI_PROPERTY_GS_OUTPUT_PRIM];
 		sel->gs_max_out_vertices =
 			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
+		sel->gs_num_invocations =
+			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
 
 		for (i = 0; i < sel->info.num_inputs; i++) {
 			unsigned name = sel->info.input_semantic_name[i];
