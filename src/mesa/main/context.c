@@ -377,13 +377,12 @@ one_time_init( struct gl_context *ctx )
    if (!api_init_mask) {
       GLuint i;
 
-      /* do some implementation tests */
-      assert( sizeof(GLbyte) == 1 );
-      assert( sizeof(GLubyte) == 1 );
-      assert( sizeof(GLshort) == 2 );
-      assert( sizeof(GLushort) == 2 );
-      assert( sizeof(GLint) == 4 );
-      assert( sizeof(GLuint) == 4 );
+      STATIC_ASSERT(sizeof(GLbyte) == 1);
+      STATIC_ASSERT(sizeof(GLubyte) == 1);
+      STATIC_ASSERT(sizeof(GLshort) == 2);
+      STATIC_ASSERT(sizeof(GLushort) == 2);
+      STATIC_ASSERT(sizeof(GLint) == 4);
+      STATIC_ASSERT(sizeof(GLuint) == 4);
 
       _mesa_locale_init();
 
