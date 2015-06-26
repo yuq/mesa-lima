@@ -151,19 +151,14 @@ VkResult anv_image_create(
 
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
-   assert(format_info->cpp > 0 || format_info->has_stencil);
 
    uint32_t image_stride = 0;
    uint32_t image_size = 0;
    uint32_t stencil_offset = 0;
    uint32_t stencil_stride = 0;
 
-   /* First allocate space for the color or depth buffer. info->cpp gives us
-    * the cpp of the color or depth in case of depth/stencil formats. Stencil
-    * only (VK_FORMAT_S8_UINT) has info->cpp == 0 and doesn't allocate
-    * anything here.
-    */
-   if (format_info->cpp > 0) {
+   if (!format_info->has_stencil || format_info->depth_format) {
+      /* The format has a color or depth component. Calculate space for it. */
       uint32_t aligned_height;
 
       image_stride = ALIGN_I32(extent->width * format_info->cpp,
@@ -172,13 +167,12 @@ VkResult anv_image_create(
       image_size = image_stride * aligned_height;
    }
 
-   /* Formats with a stencil buffer (either combined depth/stencil or
-    * VK_FORMAT_S8_UINT) have info->has_stencil == true. The stencil buffer is
-    * placed after the depth buffer and is a separate buffer from the GPU
-    * point of view, but as far as the API is concerned, depth and stencil are
-    * in the same image.
-    */
    if (format_info->has_stencil) {
+      /* From the GPU's perspective, the depth buffer and stencil buffer are
+       * separate buffers.  From Vulkan's perspective, though, depth and
+       * stencil reside in the same image.  To satisfy Vulkan and the GPU, we
+       * place the depth and stencil buffers in the same bo.
+       */
       const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
       uint32_t aligned_height;
       uint32_t stencil_size;
