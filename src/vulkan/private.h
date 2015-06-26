@@ -863,9 +863,11 @@ struct anv_depth_stencil_view {
    uint32_t depth_offset; /**< Offset into bo. */
    uint32_t depth_stride; /**< 3DSTATE_DEPTH_BUFFER.SurfacePitch */
    uint32_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
+   uint16_t depth_qpitch; /**< 3DSTATE_DEPTH_BUFFER.SurfaceQPitch */
 
    uint32_t stencil_offset; /**< Offset into bo. */
    uint32_t stencil_stride; /**< 3DSTATE_STENCIL_BUFFER.SurfacePitch */
+   uint16_t stencil_qpitch; /**< 3DSTATE_DEPTH_BUFFER.SurfaceQPitch */
 };
 
 struct anv_framebuffer {

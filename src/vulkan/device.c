@@ -3779,7 +3779,7 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
                   .MinimumArrayElement = 0,
                   .DepthBufferObjectControlState = GEN8_MOCS,
                   .RenderTargetViewExtent = 1 - 1,
-                  .SurfaceQPitch = 0);
+                  .SurfaceQPitch = view->depth_qpitch >> 2);
 
    /* Disable hierarchial depth buffers. */
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_HIER_DEPTH_BUFFER);
@@ -3789,7 +3789,7 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
                   .StencilBufferObjectControlState = GEN8_MOCS,
                   .SurfacePitch = view->stencil_stride > 0 ? view->stencil_stride - 1 : 0,
                   .SurfaceBaseAddress = { view->bo, view->stencil_offset },
-                  .SurfaceQPitch = 0);
+                  .SurfaceQPitch = view->stencil_qpitch >> 2);
 
    /* Clear the clear params. */
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CLEAR_PARAMS);
