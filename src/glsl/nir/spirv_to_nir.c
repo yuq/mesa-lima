@@ -571,6 +571,17 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
 
+      if (b->execution_model == SpvExecutionModelFragment &&
+          var->data.mode == nir_var_shader_out) {
+         var->data.location += FRAG_RESULT_DATA0;
+      } else if (b->execution_model == SpvExecutionModelVertex &&
+                 var->data.mode == nir_var_shader_in) {
+         var->data.location += VERT_ATTRIB_GENERIC0;
+      } else if (var->data.mode == nir_var_shader_in ||
+                 var->data.mode == nir_var_shader_out) {
+         var->data.location += VARYING_SLOT_VAR0;
+      }
+
       switch (var->data.mode) {
       case nir_var_shader_in:
          exec_list_push_tail(&b->shader->inputs, &var->node);
