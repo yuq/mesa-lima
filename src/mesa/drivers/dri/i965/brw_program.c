@@ -574,10 +574,13 @@ brw_dump_ir(const char *stage, struct gl_shader_program *shader_prog,
             struct gl_shader *shader, struct gl_program *prog)
 {
    if (shader_prog) {
-      fprintf(stderr,
-              "GLSL IR for native %s shader %d:\n", stage, shader_prog->Name);
-      _mesa_print_ir(stderr, shader->ir, NULL);
-      fprintf(stderr, "\n\n");
+      if (shader->ir) {
+         fprintf(stderr,
+                 "GLSL IR for native %s shader %d:\n",
+                 stage, shader_prog->Name);
+         _mesa_print_ir(stderr, shader->ir, NULL);
+         fprintf(stderr, "\n\n");
+      }
    } else {
       fprintf(stderr, "ARB_%s_program %d ir for native %s shader\n",
               stage, prog->Id, stage);
