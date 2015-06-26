@@ -1324,7 +1324,7 @@ _mesa_unpack_format_to_base_format(GLenum format)
 }
 
 /**
- * Convert various base formats to the cooresponding integer format.
+ * Convert various base formats to the corresponding integer format.
  */
 GLenum
 _mesa_base_format_to_integer_format(GLenum format)
