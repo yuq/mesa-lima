@@ -132,6 +132,8 @@ VkResult anv_image_create(
    anv_assert(pCreateInfo->mipLevels == 1);
    anv_assert(pCreateInfo->arraySize == 1);
    anv_assert(pCreateInfo->samples == 1);
+   anv_assert(pCreateInfo->extent.width > 0);
+   anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth == 1);
 
    image->bo = NULL;
@@ -147,10 +149,6 @@ VkResult anv_image_create(
 
    const struct anv_surf_type_limits *limits =
       &anv_surf_type_limits[image->surf_type];
-
-   assert(image->extent.width > 0);
-   assert(image->extent.height > 0);
-   assert(image->extent.depth > 0);
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[image->tile_mode];
