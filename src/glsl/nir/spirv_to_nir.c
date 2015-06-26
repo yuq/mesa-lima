@@ -537,6 +537,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassUniformConstant:
          var->data.mode = nir_var_uniform;
          var->data.read_only = true;
+         var->interface_type = type;
          break;
       case SpvStorageClassInput:
          var->data.mode = nir_var_shader_in;
