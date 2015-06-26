@@ -271,7 +271,7 @@ public:
                                  fs_reg src0_alpha, unsigned components,
                                  unsigned exec_size, bool use_2nd_half = false);
    void emit_fb_writes();
-   void emit_urb_writes(gl_clip_plane *clip_planes);
+   void emit_urb_writes();
    void emit_cs_terminate();
 
    void emit_barrier();

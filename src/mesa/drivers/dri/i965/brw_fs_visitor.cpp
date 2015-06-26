@@ -1731,12 +1731,22 @@ fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
    }
 }
 
+/**
+ * Lower legacy fixed-function and gl_ClipVertex clipping to clip distances.
+ *
+ * This does nothing if the shader uses gl_ClipDistance or user clipping is
+ * disabled altogether.
+ */
 void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
    struct brw_vue_prog_data *vue_prog_data =
       (struct brw_vue_prog_data *) prog_data;
    const struct brw_vue_prog_key *key =
       (const struct brw_vue_prog_key *) this->key;
+
+   /* Bail unless some sort of legacy clipping is enabled */
+   if (!key->userclip_active || prog->UsesClipDistanceOut)
+      return;
 
    /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
     *
@@ -1781,7 +1791,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 }
 
 void
-fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
+fs_visitor::emit_urb_writes()
 {
    int slot, urb_offset, length;
    struct brw_vs_prog_data *vs_prog_data =
@@ -1793,10 +1803,6 @@ fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
    const struct brw_vue_map *vue_map = &vs_prog_data->base.vue_map;
    bool flush;
    fs_reg sources[8];
-
-   /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->base.userclip_active && !prog->UsesClipDistanceOut)
-      compute_clip_distance(clip_planes);
 
    /* If we don't have any valid slots to write, just do a minimal urb write
     * send to terminate the shader.  This includes 1 slot of undefined data,

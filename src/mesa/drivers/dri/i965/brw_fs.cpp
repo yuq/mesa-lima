@@ -3816,7 +3816,9 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
    if (failed)
       return false;
 
-   emit_urb_writes(clip_planes);
+   compute_clip_distance(clip_planes);
+
+   emit_urb_writes();
 
    if (shader_time_index >= 0)
       emit_shader_time_end();
