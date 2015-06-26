@@ -116,7 +116,7 @@ VkResult anv_image_create(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_image *image;
-   const struct anv_format *info;
+   const struct anv_format *format_info;
    int32_t aligned_height;
    uint32_t stencil_size;
 
@@ -171,16 +171,16 @@ VkResult anv_image_create(
    image->h_align = 4;
    image->v_align = 4;
 
-   info = anv_format_for_vk_format(pCreateInfo->format);
-   assert(info->cpp > 0 || info->has_stencil);
+   format_info = anv_format_for_vk_format(pCreateInfo->format);
+   assert(format_info->cpp > 0 || format_info->has_stencil);
 
    /* First allocate space for the color or depth buffer. info->cpp gives us
     * the cpp of the color or depth in case of depth/stencil formats. Stencil
     * only (VK_FORMAT_S8_UINT) has info->cpp == 0 and doesn't allocate
     * anything here.
     */
-   if (info->cpp > 0) {
-      image->stride = ALIGN_I32(image->extent.width * info->cpp,
+   if (format_info->cpp > 0) {
+      image->stride = ALIGN_I32(image->extent.width * format_info->cpp,
                                 tile_info->width);
       aligned_height = ALIGN_I32(image->extent.height, tile_info->height);
       image->size = image->stride * aligned_height;
@@ -195,7 +195,7 @@ VkResult anv_image_create(
     * point of view, but as far as the API is concerned, depth and stencil are
     * in the same image.
     */
-   if (info->has_stencil) {
+   if (format_info->has_stencil) {
       const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
       image->stencil_offset = ALIGN_U32(image->size, w_info->surface_alignment);
       image->stencil_stride = ALIGN_I32(image->extent.width, w_info->width);
