@@ -785,22 +785,22 @@ const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
 
 struct anv_image {
-   VkImageType                                  type;
-   VkExtent3D                                   extent;
-   VkFormat                                     format;
-   uint32_t                                     tile_mode;
-   VkDeviceSize                                 size;
-   uint32_t                                     alignment;
-   uint32_t                                     stride;
+   VkImageType type;
+   VkExtent3D extent;
+   VkFormat format;
+   uint32_t tile_mode;
+   VkDeviceSize size;
+   uint32_t alignment;
+   uint32_t stride;
 
-   uint32_t                                     stencil_offset;
-   uint32_t                                     stencil_stride;
+   uint32_t stencil_offset;
+   uint32_t stencil_stride;
 
    /* Set when bound */
-   struct anv_bo *                              bo;
-   VkDeviceSize                                 offset;
+   struct anv_bo *bo;
+   VkDeviceSize offset;
 
-   struct anv_swap_chain *                      swap_chain;
+   struct anv_swap_chain *swap_chain;
 
    /**
     * \name Alignment of miptree images, in units of pixels.
