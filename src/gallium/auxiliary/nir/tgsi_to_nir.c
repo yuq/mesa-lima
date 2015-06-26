@@ -1491,7 +1491,7 @@ ttn_emit_instruction(struct ttn_compile *c)
       return;
 
    nir_ssa_def *src[TGSI_FULL_MAX_SRC_REGISTERS];
-   for (i = 0; i < TGSI_FULL_MAX_SRC_REGISTERS; i++) {
+   for (i = 0; i < tgsi_inst->Instruction.NumSrcRegs; i++) {
       src[i] = ttn_get_src(c, &tgsi_inst->Src[i]);
    }
    nir_alu_dest dest = ttn_get_dest(c, tgsi_dst);
