@@ -419,6 +419,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
       var->data.descriptor_set = dec->literals[0];
       break;
    case SpvDecorationBuiltIn:
+      var->data.mode = nir_var_system_value;
       var->data.read_only = true;
       switch ((SpvBuiltIn)dec->literals[0]) {
       case SpvBuiltInFrontFacing:
