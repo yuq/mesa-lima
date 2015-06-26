@@ -184,7 +184,8 @@ ttn_emit_declaration(struct ttn_compile *c)
          c->samp_types[decl->Range.First + i] = type;
       }
    } else {
-      nir_variable *var;
+      bool is_array = (array_size > 1);
+
       assert(file == TGSI_FILE_INPUT ||
              file == TGSI_FILE_OUTPUT ||
              file == TGSI_FILE_CONSTANT);
@@ -193,76 +194,94 @@ ttn_emit_declaration(struct ttn_compile *c)
       if ((file == TGSI_FILE_CONSTANT) && decl->Declaration.Dimension)
          return;
 
-      var = rzalloc(b->shader, nir_variable);
-      var->data.driver_location = decl->Range.First;
-
-      var->type = glsl_vec4_type();
-      if (array_size > 1)
-         var->type = glsl_array_type(var->type, array_size);
-
-      switch (file) {
-      case TGSI_FILE_INPUT:
-         var->data.read_only = true;
-         var->data.mode = nir_var_shader_in;
-         var->name = ralloc_asprintf(var, "in_%d", decl->Range.First);
-
-         /* We should probably translate to a VERT_ATTRIB_* or VARYING_SLOT_*
-          * instead, but nothing in NIR core is looking at the value
-          * currently, and this is less change to drivers.
-          */
-         var->data.location = decl->Semantic.Name;
-         var->data.index = decl->Semantic.Index;
-
-         /* We definitely need to translate the interpolation field, because
-          * nir_print will decode it.
-          */
-         switch (decl->Interp.Interpolate) {
-         case TGSI_INTERPOLATE_CONSTANT:
-            var->data.interpolation = INTERP_QUALIFIER_FLAT;
-            break;
-         case TGSI_INTERPOLATE_LINEAR:
-            var->data.interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
-            break;
-         case TGSI_INTERPOLATE_PERSPECTIVE:
-            var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
-            break;
-         }
-
-         exec_list_push_tail(&b->shader->inputs, &var->node);
-         break;
-      case TGSI_FILE_OUTPUT: {
-         /* Since we can't load from outputs in the IR, we make temporaries
-          * for the outputs and emit stores to the real outputs at the end of
-          * the shader.
-          */
-         nir_register *reg = nir_local_reg_create(b->impl);
-         reg->num_components = 4;
-         if (array_size > 1)
-            reg->num_array_elems = array_size;
-
-         var->data.mode = nir_var_shader_out;
-         var->name = ralloc_asprintf(var, "out_%d", decl->Range.First);
-
-         var->data.location = decl->Semantic.Name;
-         var->data.index = decl->Semantic.Index;
-
-         for (i = 0; i < array_size; i++) {
-            c->output_regs[decl->Range.First + i].offset = i;
-            c->output_regs[decl->Range.First + i].reg = reg;
-         }
-
-         exec_list_push_tail(&b->shader->outputs, &var->node);
+      if ((file == TGSI_FILE_INPUT) || (file == TGSI_FILE_OUTPUT)) {
+         is_array = (is_array && decl->Declaration.Array &&
+                     (decl->Array.ArrayID != 0));
       }
-         break;
-      case TGSI_FILE_CONSTANT:
-         var->data.mode = nir_var_uniform;
-         var->name = ralloc_asprintf(var, "uniform_%d", decl->Range.First);
 
-         exec_list_push_tail(&b->shader->uniforms, &var->node);
-         break;
-      default:
-         unreachable("bad declaration file");
-         return;
+      for (i = 0; i < array_size; i++) {
+         unsigned idx = decl->Range.First + i;
+         nir_variable *var = rzalloc(b->shader, nir_variable);
+
+         var->data.driver_location = idx;
+
+         var->type = glsl_vec4_type();
+         if (is_array)
+            var->type = glsl_array_type(var->type, array_size);
+
+         switch (file) {
+         case TGSI_FILE_INPUT:
+            var->data.read_only = true;
+            var->data.mode = nir_var_shader_in;
+            var->name = ralloc_asprintf(var, "in_%d", idx);
+
+            /* We should probably translate to a VERT_ATTRIB_* or VARYING_SLOT_*
+             * instead, but nothing in NIR core is looking at the value
+             * currently, and this is less change to drivers.
+             */
+            var->data.location = decl->Semantic.Name;
+            var->data.index = decl->Semantic.Index;
+
+            /* We definitely need to translate the interpolation field, because
+             * nir_print will decode it.
+             */
+            switch (decl->Interp.Interpolate) {
+            case TGSI_INTERPOLATE_CONSTANT:
+               var->data.interpolation = INTERP_QUALIFIER_FLAT;
+               break;
+            case TGSI_INTERPOLATE_LINEAR:
+               var->data.interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
+               break;
+            case TGSI_INTERPOLATE_PERSPECTIVE:
+               var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+               break;
+            }
+
+            exec_list_push_tail(&b->shader->inputs, &var->node);
+            break;
+         case TGSI_FILE_OUTPUT: {
+            /* Since we can't load from outputs in the IR, we make temporaries
+             * for the outputs and emit stores to the real outputs at the end of
+             * the shader.
+             */
+            nir_register *reg = nir_local_reg_create(b->impl);
+            reg->num_components = 4;
+            if (is_array)
+               reg->num_array_elems = array_size;
+
+            var->data.mode = nir_var_shader_out;
+            var->name = ralloc_asprintf(var, "out_%d", idx);
+
+            var->data.location = decl->Semantic.Name;
+            var->data.index = decl->Semantic.Index;
+
+            if (is_array) {
+               unsigned j;
+               for (j = 0; j < array_size; j++) {
+                  c->output_regs[idx + j].offset = i + j;
+                  c->output_regs[idx + j].reg = reg;
+               }
+            } else {
+               c->output_regs[idx].offset = i;
+               c->output_regs[idx].reg = reg;
+            }
+
+            exec_list_push_tail(&b->shader->outputs, &var->node);
+         }
+            break;
+         case TGSI_FILE_CONSTANT:
+            var->data.mode = nir_var_uniform;
+            var->name = ralloc_asprintf(var, "uniform_%d", idx);
+
+            exec_list_push_tail(&b->shader->uniforms, &var->node);
+            break;
+         default:
+            unreachable("bad declaration file");
+            return;
+         }
+
+         if (is_array)
+            break;
       }
 
    }
