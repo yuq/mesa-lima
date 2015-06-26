@@ -211,6 +211,8 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_B10G10R10A2_SINT,        B10G10R10A2_SINT,       .cpp = 4,   .num_channels = 4)
 };
 
+#undef fmt
+
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format)
 {
