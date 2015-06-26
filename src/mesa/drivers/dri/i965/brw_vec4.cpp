@@ -1882,7 +1882,7 @@ brw_vs_emit(struct brw_context *brw,
       st_index = brw_get_shader_time_index(brw, prog, &c->vp->program.Base,
                                            ST_VS);
 
-   if (unlikely(INTEL_DEBUG & DEBUG_VS))
+   if (unlikely(INTEL_DEBUG & DEBUG_VS) && shader->base.ir)
       brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
 
    if (brw->intelScreen->compiler->scalar_vs) {

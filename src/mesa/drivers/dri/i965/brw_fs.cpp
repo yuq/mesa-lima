@@ -4015,7 +4015,7 @@ brw_wm_fs_emit(struct brw_context *brw,
    if (prog)
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
-   if (unlikely(INTEL_DEBUG & DEBUG_WM))
+   if (unlikely(INTEL_DEBUG & DEBUG_WM) && shader->base.ir)
       brw_dump_ir("fragment", prog, &shader->base, &fp->Base);
 
    int st_index8 = -1, st_index16 = -1;
