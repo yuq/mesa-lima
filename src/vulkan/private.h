@@ -773,7 +773,7 @@ void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
    const char *name;
-   uint16_t format;
+   uint16_t surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    uint8_t cpp;
    uint8_t num_channels;
    bool has_stencil;

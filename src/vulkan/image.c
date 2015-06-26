@@ -276,7 +276,7 @@ anv_image_view_init(struct anv_surface_view *view,
    case VK_IMAGE_ASPECT_COLOR:
       view->offset = image->offset;
       tile_mode = image->tile_mode;
-      format = info->format;
+      format = info->surface_format;
       break;
    default:
       unreachable("");
@@ -397,7 +397,7 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = false,
-      .SurfaceFormat = format->format,
+      .SurfaceFormat = format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[image->v_align],
       .SurfaceHorizontalAlignment = anv_halign[image->h_align],
       .TileMode = image->tile_mode,
@@ -486,7 +486,7 @@ VkResult anv_CreateDepthStencilView(
 
    view->depth_stride = image->stride;
    view->depth_offset = image->offset;
-   view->depth_format = format->format;
+   view->depth_format = format->surface_format;
 
    view->stencil_stride = image->stencil_stride;
    view->stencil_offset = image->offset + image->stencil_offset;

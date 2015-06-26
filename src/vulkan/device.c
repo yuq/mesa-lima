@@ -1517,7 +1517,7 @@ fill_buffer_surface_state(void *state, VkFormat format,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_BUFFER,
       .SurfaceArray = false,
-      .SurfaceFormat = info->format,
+      .SurfaceFormat = info->surface_format,
       .SurfaceVerticalAlignment = VALIGN4,
       .SurfaceHorizontalAlignment = HALIGN4,
       .TileMode = LINEAR,

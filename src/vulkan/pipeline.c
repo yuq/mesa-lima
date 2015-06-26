@@ -96,7 +96,7 @@ emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputCreateInfo
       struct GEN8_VERTEX_ELEMENT_STATE element = {
          .VertexBufferIndex = desc->binding,
          .Valid = true,
-         .SourceElementFormat = format->format,
+         .SourceElementFormat = format->surface_format,
          .EdgeFlagEnable = false,
          .SourceElementOffset = desc->offsetInBytes,
          .Component0Control = VFCOMP_STORE_SRC,
