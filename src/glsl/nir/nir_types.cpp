@@ -240,7 +240,7 @@ glsl_vector_type(enum glsl_base_type base_type, unsigned components)
 const glsl_type *
 glsl_matrix_type(enum glsl_base_type base_type, unsigned rows, unsigned columns)
 {
-   assert(rows > 1 && rows <= 4 && columns > 1 && columns <= 4);
+   assert(rows >= 1 && rows <= 4 && columns >= 1 && columns <= 4);
    return glsl_type::get_instance(base_type, rows, columns);
 }
 
@@ -269,4 +269,11 @@ glsl_function_type(const glsl_type *return_type,
                    const glsl_function_param *params, unsigned num_params)
 {
    return glsl_type::get_function_instance(return_type, params, num_params);
+}
+
+const glsl_type *
+glsl_transposed_type(const struct glsl_type *type)
+{
+   return glsl_type::get_instance(type->base_type, type->matrix_columns,
+                                  type->vector_elements);
 }
