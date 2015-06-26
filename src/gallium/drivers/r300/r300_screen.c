@@ -660,14 +660,6 @@ static void r300_fence_reference(struct pipe_screen *screen,
     rws->fence_reference(ptr, fence);
 }
 
-static boolean r300_fence_signalled(struct pipe_screen *screen,
-                                    struct pipe_fence_handle *fence)
-{
-    struct radeon_winsys *rws = r300_screen(screen)->rws;
-
-    return rws->fence_wait(rws, fence, 0);
-}
-
 static boolean r300_fence_finish(struct pipe_screen *screen,
                                  struct pipe_fence_handle *fence,
                                  uint64_t timeout)
@@ -712,7 +704,6 @@ struct pipe_screen* r300_screen_create(struct radeon_winsys *rws)
     r300screen->screen.is_video_format_supported = vl_video_buffer_is_format_supported;
     r300screen->screen.context_create = r300_create_context;
     r300screen->screen.fence_reference = r300_fence_reference;
-    r300screen->screen.fence_signalled = r300_fence_signalled;
     r300screen->screen.fence_finish = r300_fence_finish;
 
     r300_init_screen_resource_functions(r300screen);

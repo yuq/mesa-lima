@@ -463,15 +463,6 @@ i915_fence_reference(struct pipe_screen *screen,
 }
 
 static boolean
-i915_fence_signalled(struct pipe_screen *screen,
-                     struct pipe_fence_handle *fence)
-{
-   struct i915_screen *is = i915_screen(screen);
-
-   return is->iws->fence_signalled(is->iws, fence) == 1;
-}
-
-static boolean
 i915_fence_finish(struct pipe_screen *screen,
                   struct pipe_fence_handle *fence,
                   uint64_t timeout)
@@ -568,7 +559,6 @@ i915_screen_create(struct i915_winsys *iws)
    is->base.context_create = i915_create_context;
 
    is->base.fence_reference = i915_fence_reference;
-   is->base.fence_signalled = i915_fence_signalled;
    is->base.fence_finish = i915_fence_finish;
 
    i915_init_screen_resource_functions(is);

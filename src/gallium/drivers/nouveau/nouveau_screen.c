@@ -68,13 +68,6 @@ nouveau_screen_fence_ref(struct pipe_screen *pscreen,
 }
 
 static boolean
-nouveau_screen_fence_signalled(struct pipe_screen *screen,
-                               struct pipe_fence_handle *pfence)
-{
-        return nouveau_fence_signalled(nouveau_fence(pfence));
-}
-
-static boolean
 nouveau_screen_fence_finish(struct pipe_screen *screen,
 			    struct pipe_fence_handle *pfence,
                             uint64_t timeout)
@@ -206,7 +199,6 @@ nouveau_screen_init(struct nouveau_screen *screen, struct nouveau_device *dev)
 	pscreen->get_timestamp = nouveau_screen_get_timestamp;
 
 	pscreen->fence_reference = nouveau_screen_fence_ref;
-	pscreen->fence_signalled = nouveau_screen_fence_signalled;
 	pscreen->fence_finish = nouveau_screen_fence_finish;
 
 	util_format_s3tc_init();

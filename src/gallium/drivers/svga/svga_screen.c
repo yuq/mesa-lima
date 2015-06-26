@@ -545,15 +545,6 @@ svga_fence_reference(struct pipe_screen *screen,
 
 
 static boolean
-svga_fence_signalled(struct pipe_screen *screen,
-                     struct pipe_fence_handle *fence)
-{
-   struct svga_winsys_screen *sws = svga_screen(screen)->sws;
-   return sws->fence_signalled(sws, fence, 0) == 0;
-}
-
-
-static boolean
 svga_fence_finish(struct pipe_screen *screen,
                   struct pipe_fence_handle *fence,
                   uint64_t timeout)
@@ -650,7 +641,6 @@ svga_screen_create(struct svga_winsys_screen *sws)
    screen->is_format_supported = svga_is_format_supported;
    screen->context_create = svga_context_create;
    screen->fence_reference = svga_fence_reference;
-   screen->fence_signalled = svga_fence_signalled;
    screen->fence_finish = svga_fence_finish;
    screen->get_driver_query_info = svga_get_driver_query_info;
    svgascreen->sws = sws;

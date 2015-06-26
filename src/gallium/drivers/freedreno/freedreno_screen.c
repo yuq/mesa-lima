@@ -546,7 +546,6 @@ fd_screen_create(struct fd_device *dev)
 	pscreen->get_timestamp = fd_screen_get_timestamp;
 
 	pscreen->fence_reference = fd_screen_fence_ref;
-	pscreen->fence_signalled = fd_screen_fence_signalled;
 	pscreen->fence_finish = fd_screen_fence_finish;
 
 	util_format_s3tc_init();

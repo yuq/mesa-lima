@@ -529,18 +529,6 @@ llvmpipe_fence_reference(struct pipe_screen *screen,
 
 
 /**
- * Has the fence been executed/finished?
- */
-static boolean
-llvmpipe_fence_signalled(struct pipe_screen *screen,
-                         struct pipe_fence_handle *fence)
-{
-   struct lp_fence *f = (struct lp_fence *) fence;
-   return lp_fence_signalled(f);
-}
-
-
-/**
  * Wait for the fence to finish.
  */
 static boolean
@@ -604,7 +592,6 @@ llvmpipe_create_screen(struct sw_winsys *winsys)
    screen->base.context_create = llvmpipe_create_context;
    screen->base.flush_frontbuffer = llvmpipe_flush_frontbuffer;
    screen->base.fence_reference = llvmpipe_fence_reference;
-   screen->base.fence_signalled = llvmpipe_fence_signalled;
    screen->base.fence_finish = llvmpipe_fence_finish;
 
    screen->base.get_timestamp = llvmpipe_get_timestamp;
