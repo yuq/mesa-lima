@@ -29,6 +29,7 @@
 
 #include <brw_context.h>
 #include <brw_wm.h> /* brw_new_shader_program is here */
+#include <brw_nir.h>
 
 #include <brw_vs.h>
 #include <brw_gs.h>
@@ -39,6 +40,14 @@
 #include <mesa/main/context.h>
 #include <mesa/program/program.h>
 #include <glsl/program.h>
+
+/* XXX: We need this to keep symbols in nir.h from conflicting with the
+ * generated GEN command packing headers.  We need to fix *both* to not
+ * define something as generic as LOAD.
+ */
+#undef LOAD
+
+#include <glsl/nir/nir_spirv.h>
 
 #define SPIR_V_MAGIC_NUMBER 0x07230203
 
@@ -883,14 +892,15 @@ gen7_compute_urb_partition(struct anv_pipeline *pipeline)
 
 static const struct {
    uint32_t token;
+   gl_shader_stage stage;
    const char *name;
 } stage_info[] = {
-   { GL_VERTEX_SHADER, "vertex" },
-   { GL_TESS_CONTROL_SHADER, "tess control" },
-   { GL_TESS_EVALUATION_SHADER, "tess evaluation" },
-   { GL_GEOMETRY_SHADER, "geometry" },
-   { GL_FRAGMENT_SHADER, "fragment" },
-   { GL_COMPUTE_SHADER, "compute" },
+   { GL_VERTEX_SHADER, MESA_SHADER_VERTEX, "vertex" },
+   { GL_TESS_CONTROL_SHADER, (gl_shader_stage)-1,"tess control" },
+   { GL_TESS_EVALUATION_SHADER, (gl_shader_stage)-1, "tess evaluation" },
+   { GL_GEOMETRY_SHADER, MESA_SHADER_GEOMETRY, "geometry" },
+   { GL_FRAGMENT_SHADER, MESA_SHADER_FRAGMENT, "fragment" },
+   { GL_COMPUTE_SHADER, MESA_SHADER_COMPUTE, "compute" },
 };
 
 struct spirv_header{
@@ -945,7 +955,38 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
                          struct gl_shader_program *program,
                          struct anv_pipeline *pipeline, uint32_t stage)
 {
-   unreachable("SPIR-V is not supported yet!");
+   struct brw_context *brw = compiler->brw;
+   struct anv_shader *shader = pipeline->shaders[stage];
+   struct gl_shader *mesa_shader;
+   int name = 0;
+
+   mesa_shader = brw_new_shader(&brw->ctx, name, stage_info[stage].token);
+   fail_if(mesa_shader == NULL,
+           "failed to create %s shader\n", stage_info[stage].name);
+
+   mesa_shader->Program = rzalloc(mesa_shader, struct gl_program);
+   mesa_shader->Type = stage_info[stage].token;
+   mesa_shader->Stage = stage_info[stage].stage;
+
+   assert(shader->size % 4 == 0);
+
+   struct gl_shader_compiler_options *glsl_options =
+      &compiler->screen->compiler->glsl_compiler_options[stage_info[stage].stage];
+
+   mesa_shader->Program->nir =
+      spirv_to_nir((uint32_t *)shader->data, shader->size / 4,
+                   glsl_options->NirOptions);
+   nir_validate_shader(mesa_shader->Program->nir);
+
+   brw_process_nir(mesa_shader->Program->nir,
+                   compiler->screen->devinfo,
+                   NULL, mesa_shader->Stage);
+
+   fail_if(mesa_shader->Program->nir == NULL,
+           "failed to translate SPIR-V to NIR\n");
+
+   program->Shaders[program->NumShaders] = mesa_shader;
+   program->NumShaders++;
 }
 
 static void
@@ -1014,7 +1055,10 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
             anv_compile_shader_spirv(compiler, program, pipeline, i);
       }
 
-      /* TODO: nir_link_shader? */
+      for (unsigned i = 0; i < program->NumShaders; i++) {
+         struct gl_shader *shader = program->Shaders[i];
+         program->_LinkedShaders[shader->Stage] = shader;
+      }
    } else {
       for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
          if (pipeline->shaders[i])
@@ -1092,7 +1136,11 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
                          &pipeline->cs_prog_data.base);
    }
 
-   brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
+   /* XXX: Deleting the shader is broken with our current SPIR-V hacks.  We
+    * need to fix this ASAP.
+    */
+   if (!all_spirv)
+      brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
 
    struct anv_device *device = compiler->device;
    while (device->scratch_block_pool.bo.size < pipeline->total_scratch)
