@@ -223,15 +223,19 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd4_pipe_sampler_view *view = tex->textures[i] ?
 					fd4_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
-			struct fd_resource *rsc = fd_resource(view->base.texture);
 			unsigned start = view->base.u.tex.first_level;
-			uint32_t offset = fd_resource_offset(rsc, start, 0);
 
 			OUT_RING(ring, view->texconst0);
 			OUT_RING(ring, view->texconst1);
 			OUT_RING(ring, view->texconst2);
 			OUT_RING(ring, view->texconst3);
-			OUT_RELOC(ring, rsc->bo, offset, view->textconst4, 0);
+			if (view->base.texture) {
+				struct fd_resource *rsc = fd_resource(view->base.texture);
+				uint32_t offset = fd_resource_offset(rsc, start, 0);
+				OUT_RELOC(ring, rsc->bo, offset, view->textconst4, 0);
+			} else {
+				OUT_RING(ring, 0x00000000);
+			}
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);
 			OUT_RING(ring, 0x00000000);
