@@ -1,5 +1,4 @@
 C_SOURCES := \
-	core/ilo_buffer.h \
 	core/ilo_builder.c \
 	core/ilo_builder.h \
 	core/ilo_builder_3d.h \

@@ -150,6 +150,10 @@ ilo_state_sol_init_disabled(struct ilo_state_sol *sol,
                             const struct ilo_dev *dev,
                             bool render_disable);
 
+uint32_t
+ilo_state_sol_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                          uint32_t *alignment);
+
 bool
 ilo_state_sol_buffer_init(struct ilo_state_sol_buffer *sb,
                           const struct ilo_dev *dev,

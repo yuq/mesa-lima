@@ -29,7 +29,6 @@
 #define ILO_RESOURCE_H
 
 #include "core/intel_winsys.h"
-#include "core/ilo_buffer.h"
 #include "core/ilo_image.h"
 #include "core/ilo_vma.h"
 
@@ -106,7 +105,7 @@ struct ilo_texture {
 struct ilo_buffer_resource {
    struct pipe_resource base;
 
-   struct ilo_buffer buffer;
+   uint32_t bo_size;
    struct ilo_vma vma;
 };
 

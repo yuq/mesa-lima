@@ -209,10 +209,18 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
                        const struct ilo_state_vf *old,
                        struct ilo_state_vf_delta *delta);
 
+uint32_t
+ilo_state_vertex_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                             uint32_t *alignment);
+
 bool
 ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
                                  const struct ilo_dev *dev,
                                  const struct ilo_state_vertex_buffer_info *info);
+
+uint32_t
+ilo_state_index_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                            uint32_t *alignment);
 
 bool
 ilo_state_index_buffer_set_info(struct ilo_state_index_buffer *ib,

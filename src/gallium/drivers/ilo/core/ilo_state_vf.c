@@ -947,6 +947,15 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
    }
 }
 
+uint32_t
+ilo_state_vertex_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                             uint32_t *alignment)
+{
+   /* align for doubles without padding */
+   *alignment = 8;
+   return size;
+}
+
 /**
  * No need to initialize first.
  */
@@ -962,6 +971,15 @@ ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
    assert(ret);
 
    return ret;
+}
+
+uint32_t
+ilo_state_index_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                            uint32_t *alignment)
+{
+   /* align for the worst case without padding */
+   *alignment = get_index_format_size(GEN6_INDEX_DWORD);
+   return size;
 }
 
 /**

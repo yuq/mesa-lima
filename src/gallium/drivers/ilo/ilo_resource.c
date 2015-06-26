@@ -25,6 +25,10 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
+#include "core/ilo_state_vf.h"
+#include "core/ilo_state_sol.h"
+#include "core/ilo_state_surface.h"
+
 #include "ilo_screen.h"
 #include "ilo_resource.h"
 
@@ -426,8 +430,7 @@ buf_create_bo(struct ilo_buffer_resource *buf)
    const bool cpu_init = resource_get_cpu_init(&buf->base);
    struct intel_bo *bo;
 
-   bo = intel_winsys_alloc_bo(is->dev.winsys, name,
-         buf->buffer.bo_size, cpu_init);
+   bo = intel_winsys_alloc_bo(is->dev.winsys, name, buf->bo_size, cpu_init);
    if (!bo)
       return false;
 
@@ -449,6 +452,7 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
 {
    const struct ilo_screen *is = ilo_screen(screen);
    struct ilo_buffer_resource *buf;
+   uint32_t alignment;
    unsigned size;
 
    buf = CALLOC_STRUCT(ilo_buffer_resource);
@@ -477,11 +481,17 @@ buf_create(struct pipe_screen *screen, const struct pipe_resource *templ)
        ilo_dev_gen(&is->dev) < ILO_GEN(7.5))
       size = align(size, 4096);
 
-   ilo_buffer_init(&buf->buffer, &is->dev, size, templ->bind, templ->flags);
-   ilo_vma_init(&buf->vma, &is->dev, buf->buffer.bo_size, 4096);
+   if (templ->bind & PIPE_BIND_VERTEX_BUFFER)
+      size = ilo_state_vertex_buffer_size(&is->dev, size, &alignment);
+   if (templ->bind & PIPE_BIND_INDEX_BUFFER)
+      size = ilo_state_index_buffer_size(&is->dev, size, &alignment);
+   if (templ->bind & PIPE_BIND_STREAM_OUTPUT)
+      size = ilo_state_sol_buffer_size(&is->dev, size, &alignment);
 
-   if (buf->buffer.bo_size < templ->width0 ||
-       buf->buffer.bo_size > ilo_max_resource_size ||
+   buf->bo_size = size;
+   ilo_vma_init(&buf->vma, &is->dev, buf->bo_size, 4096);
+
+   if (buf->bo_size < templ->width0 || buf->bo_size > ilo_max_resource_size ||
        !buf_create_bo(buf)) {
       FREE(buf);
       return NULL;

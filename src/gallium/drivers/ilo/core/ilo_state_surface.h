@@ -99,6 +99,11 @@ ilo_state_surface_valid_format(const struct ilo_dev *dev,
                                enum ilo_state_surface_access access,
                                enum gen_surface_format format);
 
+uint32_t
+ilo_state_surface_buffer_size(const struct ilo_dev *dev,
+                              enum ilo_state_surface_access access,
+                              uint32_t size, uint32_t *alignment);
+
 bool
 ilo_state_surface_init_for_null(struct ilo_state_surface *surf,
                                 const struct ilo_dev *dev);

@@ -1106,6 +1106,54 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
    return true;
 }
 
+uint32_t
+ilo_state_surface_buffer_size(const struct ilo_dev *dev,
+                              enum ilo_state_surface_access access,
+                              uint32_t size, uint32_t *alignment)
+{
+   switch (access) {
+   case ILO_STATE_SURFACE_ACCESS_SAMPLER:
+      /*
+       * From the Sandy Bridge PRM, volume 1 part 1, page 118:
+       *
+       *     "For buffers, which have no inherent "height," padding
+       *      requirements are different. A buffer must be padded to the next
+       *      multiple of 256 array elements, with an additional 16 bytes
+       *      added beyond that to account for the L1 cache line."
+       *
+       * Assuming tightly packed GEN6_FORMAT_R32G32B32A32_FLOAT, the size
+       * needs to be padded to 4096 (= 16 * 256).
+       */
+      *alignment = 1;
+      size = align(size, 4096) + 16;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_RENDER:
+   case ILO_STATE_SURFACE_ACCESS_DP_TYPED:
+      /* element-size aligned for worst cases */
+      *alignment = 16;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_UNTYPED:
+      /* DWord aligned? */
+      *alignment = 4;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_DATA:
+      /* OWord aligned */
+      *alignment = 16;
+      size = align(size, 16);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_SVB:
+      /* always DWord aligned */
+      *alignment = 4;
+      break;
+   default:
+      assert(!"unknown access");
+      *alignment = 1;
+      break;
+   }
+
+   return size;
+}
+
 bool
 ilo_state_surface_init_for_null(struct ilo_state_surface *surf,
                                 const struct ilo_dev *dev)

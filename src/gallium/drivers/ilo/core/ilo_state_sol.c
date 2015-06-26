@@ -424,6 +424,15 @@ ilo_state_sol_init_disabled(struct ilo_state_sol *sol,
    return ilo_state_sol_init(sol, dev, &info);
 }
 
+uint32_t
+ilo_state_sol_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                          uint32_t *alignment)
+{
+   /* DWord aligned without padding */
+   *alignment = 4;
+   return size;
+}
+
 bool
 ilo_state_sol_buffer_init(struct ilo_state_sol_buffer *sb,
                           const struct ilo_dev *dev,
