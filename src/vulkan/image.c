@@ -115,17 +115,9 @@ VkResult anv_image_create(
     VkImage*                                    pImage)
 {
    struct anv_device *device = (struct anv_device *) _device;
-   struct anv_image *image;
-   const struct anv_format *format_info;
-   int32_t aligned_height;
-   uint32_t stencil_size;
+   const VkExtent3D *restrict extent = &pCreateInfo->extent;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
-
-   image = anv_device_alloc(device, sizeof(*image), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (image == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    /* XXX: We don't handle any of these */
    anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D);
@@ -136,41 +128,35 @@ VkResult anv_image_create(
    anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth == 1);
 
-   image->bo = NULL;
-   image->offset = 0;
-   image->type = pCreateInfo->imageType;
-   image->format = pCreateInfo->format;
-   image->extent = pCreateInfo->extent;
-   image->swap_chain = NULL;
-   image->tile_mode = anv_image_choose_tile_mode(pCreateInfo, extra);
+   const uint32_t tile_mode =
+      anv_image_choose_tile_mode(pCreateInfo, extra);
 
    /* TODO(chadv): How should we validate inputs? */
-   image->surf_type = anv_surf_type_from_image_type[pCreateInfo->imageType];
+   const uint8_t surf_type =
+      anv_surf_type_from_image_type[pCreateInfo->imageType];
 
    const struct anv_surf_type_limits *limits =
-      &anv_surf_type_limits[image->surf_type];
+      &anv_surf_type_limits[surf_type];
 
    const struct anv_tile_info *tile_info =
-       &anv_tile_info_table[image->tile_mode];
+       &anv_tile_info_table[tile_mode];
 
-   if (image->extent.width > limits->width ||
-       image->extent.height > limits->height ||
-       image->extent.depth > limits->depth) {
-      anv_loge("image extent is too large");
-      free(image);
-
+   if (extent->width > limits->width ||
+       extent->height > limits->height ||
+       extent->depth > limits->depth) {
       /* TODO(chadv): What is the correct error? */
+      anv_loge("image extent is too large");
       return vk_error(VK_ERROR_INVALID_MEMORY_SIZE);
    }
 
-   image->alignment = tile_info->surface_alignment;
-
-   /* FINISHME: Stop hardcoding miptree image alignment */
-   image->h_align = 4;
-   image->v_align = 4;
-
-   format_info = anv_format_for_vk_format(pCreateInfo->format);
+   const struct anv_format *format_info =
+      anv_format_for_vk_format(pCreateInfo->format);
    assert(format_info->cpp > 0 || format_info->has_stencil);
+
+   uint32_t image_stride = 0;
+   uint32_t image_size = 0;
+   uint32_t stencil_offset = 0;
+   uint32_t stencil_stride = 0;
 
    /* First allocate space for the color or depth buffer. info->cpp gives us
     * the cpp of the color or depth in case of depth/stencil formats. Stencil
@@ -178,13 +164,12 @@ VkResult anv_image_create(
     * anything here.
     */
    if (format_info->cpp > 0) {
-      image->stride = ALIGN_I32(image->extent.width * format_info->cpp,
-                                tile_info->width);
-      aligned_height = ALIGN_I32(image->extent.height, tile_info->height);
-      image->size = image->stride * aligned_height;
-   } else {
-      image->size = 0;
-      image->stride = 0;
+      uint32_t aligned_height;
+
+      image_stride = ALIGN_I32(extent->width * format_info->cpp,
+                               tile_info->width);
+      aligned_height = ALIGN_I32(extent->height, tile_info->height);
+      image_size = image_stride * aligned_height;
    }
 
    /* Formats with a stencil buffer (either combined depth/stencil or
@@ -195,15 +180,49 @@ VkResult anv_image_create(
     */
    if (format_info->has_stencil) {
       const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
-      image->stencil_offset = ALIGN_U32(image->size, w_info->surface_alignment);
-      image->stencil_stride = ALIGN_I32(image->extent.width, w_info->width);
-      aligned_height = ALIGN_I32(image->extent.height, w_info->height);
-      stencil_size = image->stencil_stride * aligned_height;
-      image->size = image->stencil_offset + stencil_size;
-   } else {
-      image->stencil_offset = 0;
-      image->stencil_stride = 0;
+      uint32_t aligned_height;
+      uint32_t stencil_size;
+
+      stencil_offset = ALIGN_U32(image_size, w_info->surface_alignment);
+      stencil_stride = ALIGN_I32(extent->width, w_info->width);
+      aligned_height = ALIGN_I32(extent->height, w_info->height);
+      stencil_size = stencil_stride * aligned_height;
+      image_size = stencil_offset + stencil_size;
    }
+
+   struct anv_image *image = anv_device_alloc(device, sizeof(*image), 8,
+                                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (!image)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   /* To eliminate the risk of using unitialized struct members above, fill the
+    * image struct here at the function bottom instead of piecemeal throughout
+    * the function body.
+    */
+   *image = (struct anv_image) {
+      .type = pCreateInfo->imageType,
+      .extent = pCreateInfo->extent,
+      .format = pCreateInfo->format,
+
+      .size = image_size,
+      .alignment = tile_info->surface_alignment,
+      .stride = image_stride,
+
+      .bo = NULL,
+      .offset = 0,
+
+      .stencil_offset = stencil_offset,
+      .stencil_stride = stencil_stride,
+
+      .tile_mode = tile_mode,
+      .surf_type = surf_type,
+
+      /* FINISHME: Stop hardcoding miptree image alignment */
+      .h_align = 4,
+      .v_align = 4,
+
+      .swap_chain = NULL,
+   };
 
    *pImage = (VkImage) image;
 
