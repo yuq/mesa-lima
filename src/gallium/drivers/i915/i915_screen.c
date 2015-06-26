@@ -478,6 +478,9 @@ i915_fence_finish(struct pipe_screen *screen,
 {
    struct i915_screen *is = i915_screen(screen);
 
+   if (!timeout)
+      return is->iws->fence_signalled(is->iws, fence) == 1;
+
    return is->iws->fence_finish(is->iws, fence) == 1;
 }
 

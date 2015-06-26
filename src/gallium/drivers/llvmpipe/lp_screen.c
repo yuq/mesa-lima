@@ -550,6 +550,9 @@ llvmpipe_fence_finish(struct pipe_screen *screen,
 {
    struct lp_fence *f = (struct lp_fence *) fence_handle;
 
+   if (!timeout)
+      return lp_fence_signalled(f);
+
    lp_fence_wait(f);
    return TRUE;
 }

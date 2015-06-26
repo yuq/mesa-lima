@@ -79,6 +79,9 @@ nouveau_screen_fence_finish(struct pipe_screen *screen,
 			    struct pipe_fence_handle *pfence,
                             uint64_t timeout)
 {
+	if (!timeout)
+		return nouveau_fence_signalled(nouveau_fence(pfence));
+
 	return nouveau_fence_wait(nouveau_fence(pfence));
 }
 

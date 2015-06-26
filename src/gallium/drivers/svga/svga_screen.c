@@ -560,6 +560,9 @@ svga_fence_finish(struct pipe_screen *screen,
 {
    struct svga_winsys_screen *sws = svga_screen(screen)->sws;
 
+   if (!timeout)
+      return sws->fence_signalled(sws, fence, 0) == 0;
+
    SVGA_DBG(DEBUG_DMA|DEBUG_PERF, "%s fence_ptr %p\n",
             __FUNCTION__, fence);
 
