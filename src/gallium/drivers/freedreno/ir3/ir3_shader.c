@@ -46,7 +46,8 @@ delete_variant(struct ir3_shader_variant *v)
 {
 	if (v->ir)
 		ir3_destroy(v->ir);
-	fd_bo_del(v->bo);
+	if (v->bo)
+		fd_bo_del(v->bo);
 	free(v);
 }
 
@@ -228,8 +229,10 @@ ir3_shader_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 
 	/* compile new variant if it doesn't exist already: */
 	v = create_variant(shader, key);
-	v->next = shader->variants;
-	shader->variants = v;
+	if (v) {
+		v->next = shader->variants;
+		shader->variants = v;
+	}
 
 	return v;
 }

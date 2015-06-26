@@ -48,6 +48,9 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 {
 	const struct pipe_draw_info *info = emit->info;
 
+	if (!(fd4_emit_get_vp(emit) && fd4_emit_get_fp(emit)))
+		return;
+
 	fd4_emit_state(ctx, ring, emit);
 
 	if (emit->dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
