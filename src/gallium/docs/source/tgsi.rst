@@ -2603,6 +2603,7 @@ not relative to the specified declaration
 If no ArrayID is specified with an indirect addressing operand the whole
 register file might be accessed by this operand. This is strongly discouraged
 and will prevent packing of scalar/vec2 arrays and effective alias analysis.
+This is only legal for TEMP and CONST register files.
 
 Declaration Semantic
 ^^^^^^^^^^^^^^^^^^^^^^^^
