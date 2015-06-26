@@ -775,7 +775,7 @@ struct anv_format {
    const char *name;
    uint16_t format;
    uint8_t cpp;
-   uint8_t channels;
+   uint8_t num_channels;
    bool has_stencil;
 };
 

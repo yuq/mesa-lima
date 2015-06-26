@@ -100,9 +100,9 @@ emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputCreateInfo
          .EdgeFlagEnable = false,
          .SourceElementOffset = desc->offsetInBytes,
          .Component0Control = VFCOMP_STORE_SRC,
-         .Component1Control = format->channels >= 2 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
-         .Component2Control = format->channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
-         .Component3Control = format->channels >= 4 ? VFCOMP_STORE_SRC : VFCOMP_STORE_1_FP
+         .Component1Control = format->num_channels >= 2 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
+         .Component2Control = format->num_channels >= 3 ? VFCOMP_STORE_SRC : VFCOMP_STORE_0,
+         .Component3Control = format->num_channels >= 4 ? VFCOMP_STORE_SRC : VFCOMP_STORE_1_FP
       };
       GEN8_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + i * 2], &element);
 
