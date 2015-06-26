@@ -33,6 +33,13 @@
 #include "ilo_core.h"
 #include "ilo_dev.h"
 
+/*
+ * From the Ivy Bridge PRM, volume 4 part 1, page 75:
+ *
+ *     "(MIP Count / LOD) representing [1,15] MIP levels"
+ */
+#define ILO_IMAGE_MAX_LEVEL_COUNT 15
+
 enum ilo_image_aux_type {
    ILO_IMAGE_AUX_NONE,
    ILO_IMAGE_AUX_HIZ,
@@ -154,7 +161,7 @@ struct ilo_image {
    unsigned align_i;
    unsigned align_j;
 
-   struct ilo_image_lod lods[PIPE_MAX_TEXTURE_LEVELS];
+   struct ilo_image_lod lods[ILO_IMAGE_MAX_LEVEL_COUNT];
 
    /* physical layer height for ILO_IMAGE_WALK_LAYER */
    unsigned walk_layer_height;
@@ -173,7 +180,7 @@ struct ilo_image {
       unsigned enables;
 
       /* LOD offsets for ILO_IMAGE_WALK_LOD */
-      unsigned walk_lod_offsets[PIPE_MAX_TEXTURE_LEVELS];
+      unsigned walk_lod_offsets[ILO_IMAGE_MAX_LEVEL_COUNT];
 
       unsigned walk_layer_height;
       unsigned bo_stride;

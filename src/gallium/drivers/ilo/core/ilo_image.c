@@ -1029,8 +1029,8 @@ img_calculate_hiz_size(struct ilo_image *img,
       break;
    case ILO_IMAGE_WALK_LOD:
       {
-         unsigned lod_tx[PIPE_MAX_TEXTURE_LEVELS];
-         unsigned lod_ty[PIPE_MAX_TEXTURE_LEVELS];
+         unsigned lod_tx[ILO_IMAGE_MAX_LEVEL_COUNT];
+         unsigned lod_ty[ILO_IMAGE_MAX_LEVEL_COUNT];
          unsigned cur_tx, cur_ty;
 
          /* figure out the tile offsets of LODs */

@@ -29,7 +29,12 @@
 #define ILO_COMMON_H
 
 #include "pipe/p_format.h"
+#include "pipe/p_defines.h"
+
+#include "util/list.h"
 #include "util/u_format.h"
+#include "util/u_inlines.h"
+#include "util/u_pointer.h"
 
 #include "core/ilo_core.h"
 #include "core/ilo_debug.h"
