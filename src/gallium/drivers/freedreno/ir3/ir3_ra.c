@@ -403,6 +403,7 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		 * the phi, so we don't need to chase definers
 		 */
 		struct ir3_register *src;
+		struct ir3_instruction *dd = d;
 
 		/* note: don't use foreach_ssa_src as this gets called once
 		 * while assigning regs (which clears SSA flag)
@@ -410,9 +411,11 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		foreach_src(src, d) {
 			if (!src->instr)
 				continue;
-			if (src->instr->ip < d->ip)
-				d = src->instr;
+			if (src->instr->ip < dd->ip)
+				dd = src->instr;
 		}
+
+		d = dd;
 	}
 
 	if (is_meta(d) && (d->opc == OPC_META_FO)) {
