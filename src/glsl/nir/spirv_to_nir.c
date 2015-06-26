@@ -565,15 +565,30 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             vtn_value(b, w[4], vtn_value_type_constant)->constant;
       }
 
-      if (var->data.mode == nir_var_local) {
-         exec_list_push_tail(&b->impl->locals, &var->node);
-      } else {
-         exec_list_push_tail(&b->shader->globals, &var->node);
-      }
-
       val->deref = nir_deref_var_create(b, var);
 
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
+
+      switch (var->data.mode) {
+      case nir_var_shader_in:
+         exec_list_push_tail(&b->shader->inputs, &var->node);
+         break;
+      case nir_var_shader_out:
+         exec_list_push_tail(&b->shader->outputs, &var->node);
+         break;
+      case nir_var_global:
+         exec_list_push_tail(&b->shader->globals, &var->node);
+         break;
+      case nir_var_local:
+         exec_list_push_tail(&b->impl->locals, &var->node);
+         break;
+      case nir_var_uniform:
+         exec_list_push_tail(&b->shader->uniforms, &var->node);
+         break;
+      case nir_var_system_value:
+         exec_list_push_tail(&b->shader->system_values, &var->node);
+         break;
+      }
       break;
    }
 
