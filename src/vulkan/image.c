@@ -161,9 +161,9 @@ VkResult anv_image_create(
       /* The format has a color or depth component. Calculate space for it. */
       uint32_t aligned_height;
 
-      image_stride = ALIGN_I32(extent->width * format_info->cpp,
+      image_stride = align_i32(extent->width * format_info->cpp,
                                tile_info->width);
-      aligned_height = ALIGN_I32(extent->height, tile_info->height);
+      aligned_height = align_i32(extent->height, tile_info->height);
       image_size = image_stride * aligned_height;
    }
 
@@ -177,9 +177,9 @@ VkResult anv_image_create(
       uint32_t aligned_height;
       uint32_t stencil_size;
 
-      stencil_offset = ALIGN_U32(image_size, w_info->surface_alignment);
-      stencil_stride = ALIGN_I32(extent->width, w_info->width);
-      aligned_height = ALIGN_I32(extent->height, w_info->height);
+      stencil_offset = align_u32(image_size, w_info->surface_alignment);
+      stencil_stride = align_i32(extent->width, w_info->width);
+      aligned_height = align_i32(extent->height, w_info->height);
       stencil_size = stencil_stride * aligned_height;
       image_size = stencil_offset + stencil_size;
    }

@@ -149,7 +149,7 @@ aub_write_trace_block(struct anv_aub_writer *writer, uint32_t type,
               type | AUB_TRACE_OP_DATA_WRITE);
       aub_out(writer, subtype);
       aub_out(writer, gtt_offset + offset);
-      aub_out(writer, ALIGN_U32(block_size, 4));
+      aub_out(writer, align_u32(block_size, 4));
       if (writer->gen >= 8)
          aub_out(writer, 0);
 
@@ -258,7 +258,7 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
          aub_bos[i].map = anv_gem_mmap(device, bo->gem_handle, 0, bo->size);
       aub_bos[i].relocated = aub_bos[i].map;
       aub_bos[i].offset = offset;
-      offset = ALIGN_U32(offset + bo->size + 4095, 4096);
+      offset = align_u32(offset + bo->size + 4095, 4096);
    }
 
    struct anv_batch_bo *first_bbo;

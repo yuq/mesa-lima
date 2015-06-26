@@ -2710,7 +2710,7 @@ anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_state state;
 
-   state.offset = ALIGN_U32(cmd_buffer->surface_next, alignment);
+   state.offset = align_u32(cmd_buffer->surface_next, alignment);
    if (state.offset + size > cmd_buffer->surface_batch_bo->bo.size)
       return (struct anv_state) { 0 };
 

@@ -108,7 +108,7 @@ anv_vector_add(struct anv_vector *vector)
       data = malloc(size);
       if (data == NULL)
          return NULL;
-      split = ALIGN_U32(vector->tail, vector->size);
+      split = align_u32(vector->tail, vector->size);
       tail = vector->tail & (vector->size - 1);
       if (vector->head - split < vector->size) {
          memcpy(data + tail,

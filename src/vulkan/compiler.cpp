@@ -1007,7 +1007,7 @@ add_compiled_stage(struct anv_pipeline *pipeline, uint32_t stage,
    pipeline->active_stages |= 1 << stage;
    pipeline->scratch_start[stage] = pipeline->total_scratch;
    pipeline->total_scratch =
-      ALIGN_U32(pipeline->total_scratch, 1024) +
+      align_u32(pipeline->total_scratch, 1024) +
       prog_data->total_scratch * max_threads[stage];
 }
 

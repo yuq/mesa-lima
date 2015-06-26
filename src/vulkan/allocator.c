@@ -537,7 +537,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
    struct anv_state state;
    uint32_t block;
 
-   state.offset = ALIGN_U32(stream->next, alignment);
+   state.offset = align_u32(stream->next, alignment);
    if (state.offset + size > stream->end) {
       block = anv_block_pool_alloc(stream->block_pool);
       void *current_map = stream->block_pool->map;
@@ -548,7 +548,7 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
       stream->current_block = block;
       stream->next = block + sizeof(*sb);
       stream->end = block + stream->block_pool->block_size;
-      state.offset = ALIGN_U32(stream->next, alignment);
+      state.offset = align_u32(stream->next, alignment);
       assert(state.offset + size <= stream->end);
    }
 
