@@ -858,14 +858,14 @@ struct anv_sampler {
 };
 
 struct anv_depth_stencil_view {
-   struct anv_bo *                              bo;
+   struct anv_bo *bo;
 
-   uint32_t                                     depth_offset;
-   uint32_t                                     depth_stride;
-   uint32_t                                     depth_format;
+   uint32_t depth_offset; /**< Offset into bo. */
+   uint32_t depth_stride; /**< 3DSTATE_DEPTH_BUFFER.SurfacePitch */
+   uint32_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
 
-   uint32_t                                     stencil_offset;
-   uint32_t                                     stencil_stride;
+   uint32_t stencil_offset; /**< Offset into bo. */
+   uint32_t stencil_stride; /**< 3DSTATE_STENCIL_BUFFER.SurfacePitch */
 };
 
 struct anv_framebuffer {
