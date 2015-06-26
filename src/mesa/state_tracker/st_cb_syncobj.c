@@ -81,7 +81,7 @@ static void st_check_sync(struct gl_context *ctx, struct gl_sync_object *obj)
    struct pipe_screen *screen = st_context(ctx)->pipe->screen;
    struct st_sync_object *so = (struct st_sync_object*)obj;
 
-   if (so->fence && screen->fence_signalled(screen, so->fence)) {
+   if (so->fence && screen->fence_finish(screen, so->fence, 0)) {
       screen->fence_reference(screen, &so->fence, NULL);
       so->b.StatusFlag = GL_TRUE;
    }
