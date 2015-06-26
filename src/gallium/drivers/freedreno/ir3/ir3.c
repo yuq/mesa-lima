@@ -669,7 +669,6 @@ struct ir3_instruction * ir3_instr_create(struct ir3_block *block,
 	return ir3_instr_create2(block, category, opc, 4);
 }
 
-/* only used by old compiler: */
 struct ir3_instruction * ir3_instr_clone(struct ir3_instruction *instr)
 {
 	struct ir3_instruction *new_instr = instr_create(instr->block,

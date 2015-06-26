@@ -1307,7 +1307,7 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			 * store_output_indirect? or move this into
 			 * create_indirect_store()?
 			 */
-			for (int j = i; j < arr->length; j += 4) {
+			for (int j = i; j < arr->length; j += intr->num_components) {
 				struct ir3_instruction *split;
 
 				split = ir3_instr_create(ctx->block, -1, OPC_META_FO);
@@ -1317,6 +1317,13 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 				arr->arr[j] = split;
 			}
+		}
+		/* fixup fanout/split neighbors: */
+		for (int i = 0; i < arr->length; i++) {
+			arr->arr[i]->cp.right = (i < (arr->length - 1)) ?
+					arr->arr[i+1] : NULL;
+			arr->arr[i]->cp.left = (i > 0) ?
+					arr->arr[i-1] : NULL;
 		}
 		break;
 	}

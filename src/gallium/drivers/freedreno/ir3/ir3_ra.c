@@ -291,8 +291,6 @@ is_temp(struct ir3_register *reg)
 {
 	if (reg->flags & (IR3_REG_CONST | IR3_REG_IMMED))
 		return false;
-	if (reg->flags & IR3_REG_RELATIV) // TODO
-		return false;
 	if ((reg->num == regid(REG_A0, 0)) ||
 			(reg->num == regid(REG_P0, 0)))
 		return false;
@@ -312,6 +310,10 @@ static struct ir3_instruction *
 get_definer(struct ir3_instruction *instr, int *sz, int *off)
 {
 	struct ir3_instruction *d = NULL;
+
+	if (instr->fanin)
+		return get_definer(instr->fanin, sz, off);
+
 	if (is_meta(instr) && (instr->opc == OPC_META_FI)) {
 		/* What about the case where collect is subset of array, we
 		 * need to find the distance between where actual array starts
