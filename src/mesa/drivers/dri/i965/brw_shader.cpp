@@ -79,6 +79,8 @@ is_scalar_shader_stage(const struct brw_compiler *compiler, int stage)
    case MESA_SHADER_FRAGMENT:
    case MESA_SHADER_COMPUTE:
       return true;
+   case MESA_SHADER_GEOMETRY:
+      return compiler->scalar_gs;
    case MESA_SHADER_VERTEX:
       return compiler->scalar_vs;
    default:
@@ -100,6 +102,9 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    if (devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
       compiler->scalar_vs = true;
+
+   if (devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false))
+      compiler->scalar_gs = true;
 
    nir_shader_compiler_options *nir_options =
       rzalloc(compiler, nir_shader_compiler_options);

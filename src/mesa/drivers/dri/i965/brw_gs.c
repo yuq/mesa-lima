@@ -57,6 +57,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     struct brw_geometry_program *gp,
                     struct brw_gs_prog_key *key)
 {
+   struct brw_compiler *compiler = brw->intelScreen->compiler;
    struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_data prog_data;
@@ -86,7 +87,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    prog_data.base.base.nr_image_params = gs->NumImages;
 
    brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
-                               &prog_data.base.base, false);
+                               &prog_data.base.base, compiler->scalar_gs);
 
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 
