@@ -778,9 +778,7 @@ static void radeon_bo_set_tiling(struct pb_buffer *_buf,
         cs->flush_cs(cs->flush_data, 0, NULL);
     }
 
-    while (p_atomic_read(&bo->num_active_ioctls)) {
-        sched_yield();
-    }
+    os_wait_until_zero(&bo->num_active_ioctls, PIPE_TIMEOUT_INFINITE);
 
     if (microtiled == RADEON_LAYOUT_TILED)
         args.tiling_flags |= RADEON_TILING_MICRO;
