@@ -53,7 +53,7 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_R8G8_SINT,               R8G8_SINT,              .cpp = 2,   .num_channels = 2),
    fmt(VK_FORMAT_R8G8_SRGB,               UNSUPPORTED), /* L8A8_UNORM_SRGB */
    fmt(VK_FORMAT_R8G8B8_UNORM,            R8G8B8X8_UNORM,         .cpp = 3,   .num_channels = 3),
-   fmt(VK_FORMAT_R8G8B8_SNORM,            R8G8B8_SNORM,           .cpp = 4),
+   fmt(VK_FORMAT_R8G8B8_SNORM,            R8G8B8_SNORM,           .cpp = 3,   .num_channels = 3),
    fmt(VK_FORMAT_R8G8B8_USCALED,          R8G8B8_USCALED,         .cpp = 3,   .num_channels = 3),
    fmt(VK_FORMAT_R8G8B8_SSCALED,          R8G8B8_SSCALED,         .cpp = 3,   .num_channels = 3),
    fmt(VK_FORMAT_R8G8B8_UINT,             R8G8B8_UINT,            .cpp = 3,   .num_channels = 3),
