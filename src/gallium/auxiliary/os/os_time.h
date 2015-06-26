@@ -95,6 +95,17 @@ os_time_timeout(int64_t start,
 
 
 /**
+ * Convert a relative timeout in nanoseconds into an absolute timeout,
+ * in other words, it returns current time + timeout.
+ * os_time_get_nano() must be monotonic.
+ * PIPE_TIMEOUT_INFINITE is passed through unchanged. If the calculation
+ * overflows, PIPE_TIMEOUT_INFINITE is returned.
+ */
+int64_t
+os_time_get_absolute_timeout(uint64_t timeout);
+
+
+/**
  * Wait until the variable at the given memory location is zero.
  *
  * \param var           variable
@@ -104,6 +115,21 @@ os_time_timeout(int64_t start,
  */
 bool
 os_wait_until_zero(volatile int *var, uint64_t timeout);
+
+
+/**
+ * Wait until the variable at the given memory location is zero.
+ * The timeout is the absolute time when the waiting should stop. If it is
+ * less than or equal to the current time, it only returns the status and
+ * doesn't wait. PIPE_TIME_INFINITE waits forever. This requires that
+ * os_time_get_nano is monotonic.
+ *
+ * \param var       variable
+ * \param timeout   the time in ns when the waiting should stop
+ * \return     true if the variable is zero
+ */
+bool
+os_wait_until_zero_abs_timeout(volatile int *var, int64_t timeout);
 
 #ifdef	__cplusplus
 }
