@@ -776,6 +776,7 @@ struct anv_format {
    uint16_t surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    uint8_t cpp;
    uint8_t num_channels;
+   uint8_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    bool has_stencil;
 };
 

@@ -486,7 +486,7 @@ VkResult anv_CreateDepthStencilView(
 
    view->depth_stride = image->stride;
    view->depth_offset = image->offset;
-   view->depth_format = format->surface_format;
+   view->depth_format = format->depth_format;
 
    view->stencil_stride = image->stencil_stride;
    view->stencil_offset = image->offset + image->stencil_offset;
