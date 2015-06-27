@@ -107,10 +107,10 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    }
 }
 
-VkResult anv_image_create(
-    VkDevice                                    _device,
-    const struct anv_image_create_info *        create_info,
-    VkImage*                                    pImage)
+VkResult
+anv_image_create(VkDevice _device,
+                 const struct anv_image_create_info *create_info,
+                 VkImage *pImage)
 {
    struct anv_device *device = (struct anv_device *) _device;
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
@@ -221,10 +221,10 @@ VkResult anv_image_create(
    return VK_SUCCESS;
 }
 
-VkResult anv_CreateImage(
-    VkDevice                                    device,
-    const VkImageCreateInfo*                    pCreateInfo,
-    VkImage*                                    pImage)
+VkResult
+anv_CreateImage(VkDevice device,
+                const VkImageCreateInfo *pCreateInfo,
+                VkImage *pImage)
 {
    return anv_image_create(device,
       &(struct anv_image_create_info) {
@@ -233,13 +233,13 @@ VkResult anv_CreateImage(
       pImage);
 }
 
-VkResult anv_GetImageSubresourceInfo(
-    VkDevice                                    device,
-    VkImage                                     image,
-    const VkImageSubresource*                   pSubresource,
-    VkSubresourceInfoType                       infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+VkResult
+anv_GetImageSubresourceInfo(VkDevice device,
+                            VkImage image,
+                            const VkImageSubresource *pSubresource,
+                            VkSubresourceInfoType infoType,
+                            size_t *pDataSize,
+                            void *pData)
 {
    stub_return(VK_UNSUPPORTED);
 }
@@ -352,10 +352,10 @@ anv_image_view_init(struct anv_surface_view *view,
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
-VkResult anv_CreateImageView(
-    VkDevice                                    _device,
-    const VkImageViewCreateInfo*                pCreateInfo,
-    VkImageView*                                pView)
+VkResult
+anv_CreateImageView(VkDevice _device,
+                    const VkImageViewCreateInfo *pCreateInfo,
+                    VkImageView *pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_surface_view *view;
@@ -444,10 +444,10 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
-VkResult anv_CreateColorAttachmentView(
-    VkDevice                                    _device,
-    const VkColorAttachmentViewCreateInfo*      pCreateInfo,
-    VkColorAttachmentView*                      pView)
+VkResult
+anv_CreateColorAttachmentView(VkDevice _device,
+                              const VkColorAttachmentViewCreateInfo *pCreateInfo,
+                              VkColorAttachmentView *pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_surface_view *view;
@@ -468,10 +468,10 @@ VkResult anv_CreateColorAttachmentView(
    return VK_SUCCESS;
 }
 
-VkResult anv_CreateDepthStencilView(
-    VkDevice                                    _device,
-    const VkDepthStencilViewCreateInfo*         pCreateInfo,
-    VkDepthStencilView*                         pView)
+VkResult
+anv_CreateDepthStencilView(VkDevice _device,
+                           const VkDepthStencilViewCreateInfo *pCreateInfo,
+                           VkDepthStencilView *pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_depth_stencil_view *view;
