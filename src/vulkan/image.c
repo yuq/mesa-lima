@@ -278,10 +278,8 @@ anv_image_view_init(struct anv_surface_view *view,
    view->bo = image->bo;
    switch (pCreateInfo->subresourceRange.aspect) {
    case VK_IMAGE_ASPECT_STENCIL:
-      /* FIXME: How is stencil texturing formed? */
-      view->offset = image->offset + image->stencil_offset;
-      tile_mode = WMAJOR;
-      format = R8_UINT;
+      anv_finishme("stencil image views");
+      abort();
       break;
    case VK_IMAGE_ASPECT_DEPTH:
    case VK_IMAGE_ASPECT_COLOR:
