@@ -719,17 +719,19 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
 		{"VRAM-usage", R600_QUERY_VRAM_USAGE, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
 		{"GTT-usage", R600_QUERY_GTT_USAGE, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
+		{"GPU-load", R600_QUERY_GPU_LOAD, {100}},
 		{"temperature", R600_QUERY_GPU_TEMPERATURE, {100}},
 		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
 		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
-		{"GPU-load", R600_QUERY_GPU_LOAD, {100}}
 	};
 	unsigned num_queries;
 
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
 		num_queries = Elements(list);
+	else if (rscreen->info.drm_major == 3)
+		num_queries = Elements(list) - 3;
 	else
-		num_queries = 9;
+		num_queries = Elements(list) - 4;
 
 	if (!info)
 		return num_queries;
