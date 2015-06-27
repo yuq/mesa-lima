@@ -137,6 +137,7 @@ struct si_context {
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
 	struct si_pm4_state		*init_config;
+	struct pipe_fence_handle	*last_gfx_fence;
 
 	union {
 		struct {

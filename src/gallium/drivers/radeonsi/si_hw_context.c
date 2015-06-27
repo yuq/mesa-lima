@@ -82,9 +82,15 @@ void si_context_gfx_flush(void *context, unsigned flags,
 {
 	struct si_context *ctx = context;
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
+	struct radeon_winsys *ws = ctx->b.ws;
 
-	if (cs->cdw == ctx->b.initial_gfx_cs_size && !fence)
+	if (cs->cdw == ctx->b.initial_gfx_cs_size) {
+		if (fence)
+			ws->fence_reference(fence, ctx->last_gfx_fence);
+		if (!(flags & RADEON_FLUSH_ASYNC))
+			ws->cs_sync_flush(cs);
 		return;
+	}
 
 	ctx->b.rings.gfx.flushing = true;
 
@@ -101,8 +107,12 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
 	/* Flush the CS. */
-	ctx->b.ws->cs_flush(cs, flags, fence, ctx->screen->b.cs_count++);
+	ws->cs_flush(cs, flags, &ctx->last_gfx_fence,
+		     ctx->screen->b.cs_count++);
 	ctx->b.rings.gfx.flushing = false;
+
+	if (fence)
+		ws->fence_reference(fence, ctx->last_gfx_fence);
 
 #if SI_TRACE_CS
 	if (ctx->screen->b.trace_bo) {
@@ -111,7 +121,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 		for (i = 0; i < 10; i++) {
 			usleep(5);
-			if (!ctx->b.ws->buffer_is_busy(sscreen->b.trace_bo->buf, RADEON_USAGE_READWRITE)) {
+			if (!ws->buffer_is_busy(sscreen->b.trace_bo->buf, RADEON_USAGE_READWRITE)) {
 				break;
 			}
 		}
