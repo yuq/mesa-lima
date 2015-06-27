@@ -65,13 +65,19 @@ VkResult anv_CreateDmaBufImageINTEL(
       goto fail_mem;
    }
 
-   image->bo = &mem->bo;
-   image->offset = 0;
-   image->type = VK_IMAGE_TYPE_2D;
-   image->extent = pCreateInfo->extent;
-   image->tile_mode = XMAJOR;
-   image->stride = pCreateInfo->strideInBytes;
-   image->size = mem->bo.size;
+   *image = (struct anv_image) {
+      .bo = &mem->bo,
+      .offset = 0,
+      .type = VK_IMAGE_TYPE_2D,
+      .extent = pCreateInfo->extent,
+      .size = mem->bo.size,
+
+      .primary_surface = {
+         .offset = 0,
+         .stride = pCreateInfo->strideInBytes,
+         .tile_mode = XMAJOR,
+      },
+   };
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);

@@ -104,6 +104,7 @@ VkResult anv_CreateSwapChainWSI(
 
    for (uint32_t i = 0; i < chain->count; i++) {
       struct anv_image *image;
+      struct anv_surface *surface;
       struct anv_device_memory *memory;
 
       anv_image_create((VkDevice) device,
@@ -130,6 +131,8 @@ VkResult anv_CreateSwapChainWSI(
          }},
          (VkImage *) &image);
 
+      surface = &image->primary_surface;
+
       anv_AllocMemory((VkDevice) device,
                       &(VkMemoryAllocInfo) {
                          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
@@ -143,7 +146,7 @@ VkResult anv_CreateSwapChainWSI(
                                 (VkDeviceMemory) memory, 0);
 
       ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
-                               image->stride, I915_TILING_X);
+                               surface->stride, I915_TILING_X);
       if (ret) {
          result = vk_error(VK_ERROR_UNKNOWN);
          goto fail;
@@ -166,7 +169,7 @@ VkResult anv_CreateSwapChainWSI(
                                              image->size,
                                              pCreateInfo->imageExtent.width,
                                              pCreateInfo->imageExtent.height,
-                                             image->stride,
+                                             surface->stride,
                                              depth, bpp, fd);
 
       chain->images[i].image = image;

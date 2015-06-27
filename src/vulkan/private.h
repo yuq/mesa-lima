@@ -784,17 +784,38 @@ struct anv_format {
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
 
+/**
+ * A proxy for the color surfaces, depth surfaces, and stencil surfaces.
+ */
+struct anv_surface {
+   /**
+    * Offset from VkImage's base address, as bound by vkBindImageMemory().
+    */
+   uint32_t offset;
+
+   uint32_t stride; /**< RENDER_SURFACE_STATE.SurfacePitch */
+
+   /**
+    * \name Alignment of miptree images, in units of pixels.
+    *
+    * These fields contain the real alignment values, not the values to be
+    * given to the GPU.  For example, if h_align is 4, then program the GPU
+    * with HALIGN_4.
+    * \{
+    */
+   uint8_t h_align; /**< RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
+   uint8_t v_align; /**< RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
+   /** \} */
+
+   uint8_t tile_mode; /**< RENDER_SURFACE_STATE.TileMode */
+};
+
 struct anv_image {
    VkImageType type;
    VkExtent3D extent;
    VkFormat format;
-   uint32_t tile_mode;
    VkDeviceSize size;
    uint32_t alignment;
-   uint32_t stride;
-
-   uint32_t stencil_offset;
-   uint32_t stencil_stride;
 
    /* Set when bound */
    struct anv_bo *bo;
@@ -802,23 +823,14 @@ struct anv_image {
 
    struct anv_swap_chain *swap_chain;
 
-   /**
-    * \name Alignment of miptree images, in units of pixels.
-    *
-    * These fields contain the actual alignment values, not the values the
-    * hardware expects. For example, if h_align is 4, then program the hardware
-    * with HALIGN_4.
-    *
-    * \see RENDER_SURFACE_STATE.SurfaceHorizontalAlignment
-    * \see RENDER_SURFACE_STATE.SurfaceVerticalAlignment
-    * \{
-    */
-   uint8_t h_align;
-   uint8_t v_align;
-   /** \} */
-
    /** RENDER_SURFACE_STATE.SurfaceType */
    uint8_t surf_type;
+
+   /** Primary surface is either color or depth. */
+   struct anv_surface primary_surface;
+
+   /** Stencil surface is optional. */
+   struct anv_surface stencil_surface;
 };
 
 struct anv_surface_view {

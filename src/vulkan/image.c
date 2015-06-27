@@ -96,6 +96,9 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    if (anv_info->force_tile_mode)
       return anv_info->tile_mode;
 
+   if (anv_info->vk_info->format == VK_FORMAT_S8_UINT)
+      return WMAJOR;
+
    switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
       return LINEAR;
@@ -107,6 +110,43 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    }
 }
 
+static void
+anv_image_make_surface(const struct anv_image_create_info *create_info,
+                       uint64_t *inout_image_size,
+                       uint32_t *inout_image_alignment,
+                       struct anv_surface *out_surface)
+{
+   const VkExtent3D *restrict extent = &create_info->vk_info->extent;
+
+   const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
+
+   const struct anv_tile_info *tile_info =
+       &anv_tile_info_table[tile_mode];
+
+   const struct anv_format *format_info =
+      anv_format_for_vk_format(create_info->vk_info->format);
+
+   uint32_t stride = align_u32(extent->width * format_info->cpp,
+                               tile_info->width);
+   uint32_t size = stride * align_u32(extent->height, tile_info->height);
+   uint32_t offset = align_u32(*inout_image_size,
+                               tile_info->surface_alignment);
+
+   *inout_image_size = offset + size;
+   *inout_image_alignment = MAX(*inout_image_alignment,
+                                tile_info->surface_alignment);
+
+   *out_surface = (struct anv_surface) {
+      .offset = offset,
+      .stride = stride,
+      .tile_mode = tile_mode,
+
+      /* FINISHME: Stop hardcoding miptree subimage alignment */
+      .h_align = 4,
+      .v_align = 4,
+   };
+}
+
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -115,6 +155,7 @@ anv_image_create(VkDevice _device,
    struct anv_device *device = (struct anv_device *) _device;
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    const VkExtent3D *restrict extent = &pCreateInfo->extent;
+   struct anv_image *image;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
@@ -127,17 +168,12 @@ anv_image_create(VkDevice _device,
    anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth == 1);
 
-   const uint32_t tile_mode = anv_image_choose_tile_mode(create_info);
-
    /* TODO(chadv): How should we validate inputs? */
    const uint8_t surf_type =
       anv_surf_type_from_image_type[pCreateInfo->imageType];
 
    const struct anv_surf_type_limits *limits =
       &anv_surf_type_limits[surf_type];
-
-   const struct anv_tile_info *tile_info =
-       &anv_tile_info_table[tile_mode];
 
    if (extent->width > limits->width ||
        extent->height > limits->height ||
@@ -150,19 +186,21 @@ anv_image_create(VkDevice _device,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   uint32_t image_stride = 0;
-   uint32_t image_size = 0;
-   uint32_t stencil_offset = 0;
-   uint32_t stencil_stride = 0;
+   image = anv_device_alloc(device, sizeof(*image), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (!image)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   if (!format_info->has_stencil || format_info->depth_format) {
-      /* The format has a color or depth component. Calculate space for it. */
-      uint32_t aligned_height;
+   memset(image, 0, sizeof(*image));
+   image->type = pCreateInfo->imageType;
+   image->extent = pCreateInfo->extent;
+   image->format = pCreateInfo->format;
+   image->surf_type = surf_type;
 
-      image_stride = align_i32(extent->width * format_info->cpp,
-                               tile_info->width);
-      aligned_height = align_i32(extent->height, tile_info->height);
-      image_size = image_stride * aligned_height;
+   if (likely(!format_info->has_stencil || format_info->depth_format)) {
+      /* The image's primary surface is a color or depth surface. */
+      anv_image_make_surface(create_info, &image->size, &image->alignment,
+                             &image->primary_surface);
    }
 
    if (format_info->has_stencil) {
@@ -171,50 +209,15 @@ anv_image_create(VkDevice _device,
        * stencil reside in the same image.  To satisfy Vulkan and the GPU, we
        * place the depth and stencil buffers in the same bo.
        */
-      const struct anv_tile_info *w_info = &anv_tile_info_table[WMAJOR];
-      uint32_t aligned_height;
-      uint32_t stencil_size;
+      VkImageCreateInfo stencil_info = *pCreateInfo;
+      stencil_info.format = VK_FORMAT_S8_UINT;
 
-      stencil_offset = align_u32(image_size, w_info->surface_alignment);
-      stencil_stride = align_i32(extent->width, w_info->width);
-      aligned_height = align_i32(extent->height, w_info->height);
-      stencil_size = stencil_stride * aligned_height;
-      image_size = stencil_offset + stencil_size;
+      anv_image_make_surface(
+         &(struct anv_image_create_info) {
+            .vk_info = &stencil_info,
+         },
+         &image->size, &image->alignment, &image->stencil_surface);
    }
-
-   struct anv_image *image = anv_device_alloc(device, sizeof(*image), 8,
-                                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (!image)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   /* To eliminate the risk of using unitialized struct members above, fill the
-    * image struct here at the function bottom instead of piecemeal throughout
-    * the function body.
-    */
-   *image = (struct anv_image) {
-      .type = pCreateInfo->imageType,
-      .extent = pCreateInfo->extent,
-      .format = pCreateInfo->format,
-
-      .size = image_size,
-      .alignment = tile_info->surface_alignment,
-      .stride = image_stride,
-
-      .bo = NULL,
-      .offset = 0,
-
-      .stencil_offset = stencil_offset,
-      .stencil_stride = stencil_stride,
-
-      .tile_mode = tile_mode,
-      .surf_type = surf_type,
-
-      /* FINISHME: Stop hardcoding miptree image alignment */
-      .h_align = 4,
-      .v_align = 4,
-
-      .swap_chain = NULL,
-   };
 
    *pImage = (VkImage) image;
 
@@ -266,6 +269,7 @@ anv_image_view_init(struct anv_surface_view *view,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   struct anv_surface *surface = NULL;
 
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
@@ -287,11 +291,14 @@ anv_image_view_init(struct anv_surface_view *view,
    case VK_IMAGE_ASPECT_DEPTH:
    case VK_IMAGE_ASPECT_COLOR:
       view->offset = image->offset;
+      surface = &image->primary_surface;
       break;
    default:
       unreachable("");
       break;
    }
+
+   view->offset = image->offset + surface->offset;
 
    /* TODO: Miplevels */
    view->extent = image->extent;
@@ -309,9 +316,9 @@ anv_image_view_init(struct anv_surface_view *view,
       .SurfaceType = anv_surf_type_from_image_view_type[pCreateInfo->viewType],
       .SurfaceArray = false,
       .SurfaceFormat = format_info->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[image->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[image->h_align],
-      .TileMode = image->tile_mode,
+      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
+      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+      .TileMode = surface->tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
@@ -322,7 +329,7 @@ anv_image_view_init(struct anv_surface_view *view,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
       .Depth = image->extent.depth - 1,
-      .SurfacePitch = image->stride - 1,
+      .SurfacePitch = surface->stride - 1,
       .MinimumArrayElement = 0,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
@@ -383,6 +390,7 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
                                struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   struct anv_surface *surface = &image->primary_surface;
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
@@ -408,9 +416,9 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = false,
       .SurfaceFormat = format->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[image->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[image->h_align],
-      .TileMode = image->tile_mode,
+      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
+      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+      .TileMode = surface->tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
@@ -421,7 +429,7 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
       .Depth = image->extent.depth - 1,
-      .SurfacePitch = image->stride - 1,
+      .SurfacePitch = surface->stride - 1,
       .MinimumArrayElement = 0,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
@@ -476,6 +484,8 @@ anv_CreateDepthStencilView(VkDevice _device,
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_depth_stencil_view *view;
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   struct anv_surface *depth_surface = &image->primary_surface;
+   struct anv_surface *stencil_surface = &image->stencil_surface;
    const struct anv_format *format =
       anv_format_for_vk_format(image->format);
 
@@ -494,13 +504,13 @@ anv_CreateDepthStencilView(VkDevice _device,
 
    view->bo = image->bo;
 
-   view->depth_stride = image->stride;
-   view->depth_offset = image->offset;
+   view->depth_stride = depth_surface->stride;
+   view->depth_offset = image->offset + depth_surface->offset;
    view->depth_format = format->depth_format;
    view->depth_qpitch = 0; /* FINISHME: QPitch */
 
-   view->stencil_stride = image->stencil_stride;
-   view->stencil_offset = image->offset + image->stencil_offset;
+   view->stencil_stride = stencil_surface->stride;
+   view->stencil_offset = image->offset + stencil_surface->offset;
    view->stencil_qpitch = 0; /* FINISHME: QPitch */
 
    *pView = (VkDepthStencilView) view;
