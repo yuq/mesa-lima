@@ -93,7 +93,7 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 	num_dw += 10;
 
 	/* Flush if there's not enough space. */
-	if (num_dw > RADEON_MAX_CMDBUF_DWORDS) {
+	if (num_dw > ctx->b.rings.gfx.cs->max_dw) {
 		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 	}
 }

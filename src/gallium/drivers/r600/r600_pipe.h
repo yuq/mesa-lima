@@ -493,7 +493,7 @@ struct r600_context {
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
 					    struct r600_command_buffer *cb)
 {
-	assert(cs->cdw + cb->num_dw <= RADEON_MAX_CMDBUF_DWORDS);
+	assert(cs->cdw + cb->num_dw <= cs->max_dw);
 	memcpy(cs->buf + cs->cdw, cb->buf, 4 * cb->num_dw);
 	cs->cdw += cb->num_dw;
 }
@@ -826,7 +826,7 @@ static inline void r600_write_compute_context_reg_seq(struct radeon_winsys_cs *c
 static inline void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
-	assert(cs->cdw+2+num <= RADEON_MAX_CMDBUF_DWORDS);
+	assert(cs->cdw+2+num <= cs->max_dw);
 	cs->buf[cs->cdw++] = PKT3(PKT3_SET_CTL_CONST, num, 0);
 	cs->buf[cs->cdw++] = (reg - R600_CTL_CONST_OFFSET) >> 2;
 }

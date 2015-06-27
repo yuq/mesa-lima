@@ -108,9 +108,9 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw)
 {
 	/* Flush if there's not enough space. */
-	if ((num_dw + ctx->rings.dma.cs->cdw) > RADEON_MAX_CMDBUF_DWORDS) {
+	if ((num_dw + ctx->rings.dma.cs->cdw) > ctx->rings.dma.cs->max_dw) {
 		ctx->rings.dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
-		assert((num_dw + ctx->rings.dma.cs->cdw) <= RADEON_MAX_CMDBUF_DWORDS);
+		assert((num_dw + ctx->rings.dma.cs->cdw) <= ctx->rings.dma.cs->max_dw);
 	}
 }
 

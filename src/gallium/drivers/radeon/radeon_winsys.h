@@ -42,8 +42,6 @@
 
 #include "pipebuffer/pb_buffer.h"
 
-#define RADEON_MAX_CMDBUF_DWORDS (16 * 1024)
-
 #define RADEON_FLUSH_ASYNC		(1 << 0)
 #define RADEON_FLUSH_KEEP_TILING_FLAGS	(1 << 1) /* needs DRM 2.12.0 */
 #define RADEON_FLUSH_COMPUTE		(1 << 2)
@@ -196,6 +194,7 @@ struct radeon_winsys_cs_handle;
 
 struct radeon_winsys_cs {
     unsigned                    cdw;  /* Number of used dwords. */
+    unsigned                    max_dw; /* Maximum number of dwords. */
     uint32_t                    *buf; /* The command buffer. */
     enum ring_type              ring_type;
 };

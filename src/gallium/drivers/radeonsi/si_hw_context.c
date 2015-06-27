@@ -86,7 +86,7 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 #endif
 
 	/* Flush if there's not enough space. */
-	if (num_dw > RADEON_MAX_CMDBUF_DWORDS) {
+	if (num_dw > ctx->b.rings.gfx.cs->max_dw) {
 		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 	}
 }

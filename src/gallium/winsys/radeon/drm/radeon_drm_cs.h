@@ -30,7 +30,7 @@
 #include "radeon_drm_bo.h"
 
 struct radeon_cs_context {
-    uint32_t                    buf[RADEON_MAX_CMDBUF_DWORDS];
+    uint32_t                    buf[16 * 1024];
 
     int                         fd;
     struct drm_radeon_cs        cs;

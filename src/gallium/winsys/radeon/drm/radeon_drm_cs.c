@@ -188,6 +188,7 @@ radeon_drm_cs_create(struct radeon_winsys *rws,
     cs->cst = &cs->csc2;
     cs->base.buf = cs->csc->buf;
     cs->base.ring_type = ring_type;
+    cs->base.max_dw = ARRAY_SIZE(cs->csc->buf);
 
     p_atomic_inc(&ws->num_cs);
     return &cs->base;
@@ -467,7 +468,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
         break;
     }
 
-    if (rcs->cdw > RADEON_MAX_CMDBUF_DWORDS) {
+    if (rcs->cdw > rcs->max_dw) {
        fprintf(stderr, "radeon: command stream overflowed\n");
     }
 
@@ -486,7 +487,7 @@ static void radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
     cs->cst->cs_trace_id = cs_trace_id;
 
     /* If the CS is not empty or overflowed, emit it in a separate thread. */
-    if (cs->base.cdw && cs->base.cdw <= RADEON_MAX_CMDBUF_DWORDS && !debug_get_option_noop()) {
+    if (cs->base.cdw && cs->base.cdw <= cs->base.max_dw && !debug_get_option_noop()) {
         unsigned i, crelocs;
 
         crelocs = cs->cst->crelocs;
