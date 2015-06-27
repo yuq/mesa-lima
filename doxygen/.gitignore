@@ -1,3 +1,4 @@
+*.db
 *.tag
 *.tmp
 agpgart
