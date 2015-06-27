@@ -794,6 +794,7 @@ struct anv_surface {
    uint32_t offset;
 
    uint32_t stride; /**< RENDER_SURFACE_STATE.SurfacePitch */
+   uint16_t qpitch; /**< RENDER_SURFACE_STATE.QPitch */
 
    /**
     * \name Alignment of miptree images, in units of pixels.
@@ -814,6 +815,9 @@ struct anv_image {
    VkImageType type;
    VkExtent3D extent;
    VkFormat format;
+   uint32_t levels;
+   uint32_t array_size;
+
    VkDeviceSize size;
    uint32_t alignment;
 

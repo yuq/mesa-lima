@@ -110,13 +110,19 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    }
 }
 
-static void
+static VkResult
 anv_image_make_surface(const struct anv_image_create_info *create_info,
                        uint64_t *inout_image_size,
                        uint32_t *inout_image_alignment,
                        struct anv_surface *out_surface)
 {
+   /* See RENDER_SURFACE_STATE.SurfaceQPitch */
+   static const uint16_t min_qpitch UNUSED = 0x4;
+   static const uint16_t max_qpitch UNUSED = 0x1ffc;
+
    const VkExtent3D *restrict extent = &create_info->vk_info->extent;
+   const uint32_t levels = create_info->vk_info->mipLevels;
+   const uint32_t array_size = create_info->vk_info->arraySize;
 
    const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
 
@@ -126,11 +132,47 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const struct anv_format *format_info =
       anv_format_for_vk_format(create_info->vk_info->format);
 
-   uint32_t stride = align_u32(extent->width * format_info->cpp,
-                               tile_info->width);
-   uint32_t size = stride * align_u32(extent->height, tile_info->height);
-   uint32_t offset = align_u32(*inout_image_size,
-                               tile_info->surface_alignment);
+   const uint32_t i = 4; /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t j = 4; /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t w0 = align_u32(extent->width, i);
+   const uint32_t h0 = align_u32(extent->height, j);
+
+   uint16_t qpitch;
+   uint32_t mt_width;
+   uint32_t mt_height;
+
+   if (levels == 1 && array_size == 1) {
+      qpitch = min_qpitch;
+      mt_width = w0;
+      mt_height = h0;
+   } else {
+      uint32_t w1 = align_u32(anv_minify(extent->width, 1), i);
+      uint32_t h1 = align_u32(anv_minify(extent->height, 1), j);
+      uint32_t w2 = align_u32(anv_minify(extent->width, 2), i);
+
+      qpitch = h0 + h1 + 11 * j;
+      mt_width = MAX(w0, w1 + w2);
+      mt_height = array_size * qpitch;
+   }
+
+   assert(qpitch >= min_qpitch);
+   if (qpitch > max_qpitch) {
+      anv_loge("image qpitch > 0x%x\n", max_qpitch);
+      return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+   }
+
+   /* From the Broadwell PRM, RENDER_SURFACE_STATE.SurfaceQpitch:
+    *
+    *   This field must be set an integer multiple of the Surface Vertical
+    *   Alignment.
+    */
+   assert(anv_is_aligned(qpitch, j));
+
+   const uint32_t stride = align_u32(mt_width * format_info->cpp,
+                                     tile_info->width);
+   const uint32_t size = stride * align_u32(mt_height, tile_info->height);
+   const uint32_t offset = align_u32(*inout_image_size,
+                                     tile_info->surface_alignment);
 
    *inout_image_size = offset + size;
    *inout_image_alignment = MAX(*inout_image_alignment,
@@ -140,11 +182,12 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
       .offset = offset,
       .stride = stride,
       .tile_mode = tile_mode,
-
-      /* FINISHME: Stop hardcoding miptree subimage alignment */
-      .h_align = 4,
-      .v_align = 4,
+      .qpitch = qpitch,
+      .h_align = i,
+      .v_align = j,
    };
+
+   return VK_SUCCESS;
 }
 
 VkResult
@@ -155,18 +198,19 @@ anv_image_create(VkDevice _device,
    struct anv_device *device = (struct anv_device *) _device;
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    const VkExtent3D *restrict extent = &pCreateInfo->extent;
-   struct anv_image *image;
+   struct anv_image *image = NULL;
+   VkResult r;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
    /* XXX: We don't handle any of these */
    anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D);
-   anv_assert(pCreateInfo->mipLevels == 1);
-   anv_assert(pCreateInfo->arraySize == 1);
+   anv_assert(pCreateInfo->mipLevels > 0);
+   anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->samples == 1);
    anv_assert(pCreateInfo->extent.width > 0);
    anv_assert(pCreateInfo->extent.height > 0);
-   anv_assert(pCreateInfo->extent.depth == 1);
+   anv_assert(pCreateInfo->extent.depth > 0);
 
    /* TODO(chadv): How should we validate inputs? */
    const uint8_t surf_type =
@@ -195,12 +239,16 @@ anv_image_create(VkDevice _device,
    image->type = pCreateInfo->imageType;
    image->extent = pCreateInfo->extent;
    image->format = pCreateInfo->format;
+   image->levels = pCreateInfo->mipLevels;
+   image->array_size = pCreateInfo->arraySize;
    image->surf_type = surf_type;
 
    if (likely(!format_info->has_stencil || format_info->depth_format)) {
       /* The image's primary surface is a color or depth surface. */
-      anv_image_make_surface(create_info, &image->size, &image->alignment,
-                             &image->primary_surface);
+      r = anv_image_make_surface(create_info, &image->size, &image->alignment,
+                                 &image->primary_surface);
+      if (r != VK_SUCCESS)
+         goto fail;
    }
 
    if (format_info->has_stencil) {
@@ -212,16 +260,25 @@ anv_image_create(VkDevice _device,
       VkImageCreateInfo stencil_info = *pCreateInfo;
       stencil_info.format = VK_FORMAT_S8_UINT;
 
-      anv_image_make_surface(
-         &(struct anv_image_create_info) {
-            .vk_info = &stencil_info,
-         },
-         &image->size, &image->alignment, &image->stencil_surface);
+      r = anv_image_make_surface(
+            &(struct anv_image_create_info) {
+               .vk_info = &stencil_info,
+            },
+            &image->size, &image->alignment, &image->stencil_surface);
+
+      if (r != VK_SUCCESS)
+         goto fail;
    }
 
    *pImage = (VkImage) image;
 
    return VK_SUCCESS;
+
+fail:
+   if (image)
+      anv_device_free(device, image);
+
+   return r;
 }
 
 VkResult
@@ -268,20 +325,20 @@ anv_image_view_init(struct anv_surface_view *view,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer)
 {
+   const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
-   struct anv_surface *surface = NULL;
+   struct anv_surface *surface;
 
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D);
-   anv_assert(pCreateInfo->subresourceRange.baseMipLevel == 0);
-   anv_assert(pCreateInfo->subresourceRange.mipLevels == 1);
-   anv_assert(pCreateInfo->subresourceRange.baseArraySlice == 0);
-   anv_assert(pCreateInfo->subresourceRange.arraySize == 1);
+   anv_assert(range->mipLevels > 0);
+   anv_assert(range->arraySize > 0);
+   anv_assert(range->baseMipLevel + range->mipLevels <= image->levels);
+   anv_assert(range->baseArraySlice + range->arraySize <= image->array_size);
 
-   view->bo = image->bo;
+   if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
+      anv_finishme("non-2D image views");
 
    switch (pCreateInfo->subresourceRange.aspect) {
    case VK_IMAGE_ASPECT_STENCIL:
@@ -298,10 +355,22 @@ anv_image_view_init(struct anv_surface_view *view,
       break;
    }
 
+   view->bo = image->bo;
    view->offset = image->offset + surface->offset;
+   view->format = pCreateInfo->format;
 
-   /* TODO: Miplevels */
-   view->extent = image->extent;
+   view->extent = (VkExtent3D) {
+      .width = anv_minify(image->extent.width, range->baseMipLevel),
+      .height = anv_minify(image->extent.height, range->baseMipLevel),
+      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
+   };
+
+   uint32_t depth = 1;
+   if (range->arraySize > 1) {
+      depth = range->arraySize;
+   } else if (image->extent.depth > 1) {
+      depth = image->extent.depth;
+   }
 
    static const uint32_t vk_to_gen_swizzle[] = {
       [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
@@ -314,7 +383,7 @@ anv_image_view_init(struct anv_surface_view *view,
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = anv_surf_type_from_image_view_type[pCreateInfo->viewType],
-      .SurfaceArray = false,
+      .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
@@ -324,18 +393,24 @@ anv_image_view_init(struct anv_surface_view *view,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
       .MemoryObjectControlState = GEN8_MOCS,
-      .BaseMipLevel = 0.0,
-      .SurfaceQPitch = 0,
+      .BaseMipLevel = (float) pCreateInfo->minLod,
+      .SurfaceQPitch = surface->qpitch >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
-      .Depth = image->extent.depth - 1,
+      .Depth = depth - 1,
       .SurfacePitch = surface->stride - 1,
-      .MinimumArrayElement = 0,
+      .MinimumArrayElement = range->baseArraySlice,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
       .YOffset = 0,
-      .SurfaceMinLOD = 0,
-      .MIPCountLOD = 0,
+
+      /* For sampler surfaces, the hardware interprets field MIPCount/LOD as
+       * MIPCount.  The range of levels accessible by the sampler engine is
+       * [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
+       */
+      .MIPCountLOD = range->mipLevels - 1,
+      .SurfaceMinLOD = range->baseMipLevel,
+
       .AuxiliarySurfaceMode = AUX_NONE,
       .RedClearColor = 0,
       .GreenClearColor = 0,
@@ -391,19 +466,32 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
 {
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
    struct anv_surface *surface = &image->primary_surface;
-   const struct anv_format *format =
+   const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->mipLevel == 0);
-   anv_assert(pCreateInfo->baseArraySlice == 0);
-   anv_assert(pCreateInfo->arraySize == 1);
-   anv_assert(pCreateInfo->msaaResolveImage == 0);
+   anv_assert(pCreateInfo->arraySize > 0);
+   anv_assert(pCreateInfo->mipLevel < image->levels);
+   anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
+
+   if (pCreateInfo->msaaResolveImage)
+      anv_finishme("msaaResolveImage");
 
    view->bo = image->bo;
-   view->offset = image->offset;
-   view->extent = image->extent;
+   view->offset = image->offset + surface->offset;
    view->format = pCreateInfo->format;
+
+   view->extent = (VkExtent3D) {
+      .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
+      .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
+      .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
+   };
+
+   uint32_t depth = 1;
+   if (pCreateInfo->arraySize > 1) {
+      depth = pCreateInfo->arraySize;
+   } else if (image->extent.depth > 1) {
+      depth = image->extent.depth;
+   }
 
    if (cmd_buffer)
       view->surface_state =
@@ -414,8 +502,8 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
-      .SurfaceArray = false,
-      .SurfaceFormat = format->surface_format,
+      .SurfaceArray = image->array_size > 1,
+      .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
       .TileMode = surface->tile_mode,
@@ -425,17 +513,25 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
       .RenderCacheReadWriteMode = WriteOnlyCache,
       .MemoryObjectControlState = GEN8_MOCS,
       .BaseMipLevel = 0.0,
-      .SurfaceQPitch = 0,
+      .SurfaceQPitch = surface->qpitch >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
-      .Depth = image->extent.depth - 1,
+      .Depth = depth - 1,
       .SurfacePitch = surface->stride - 1,
-      .MinimumArrayElement = 0,
+      .MinimumArrayElement = pCreateInfo->baseArraySlice,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
       .YOffset = 0,
+
+      /* For render target surfaces, the hardware interprets field MIPCount/LOD as
+       * LOD. The Broadwell PRM says:
+       *
+       *    MIPCountLOD defines the LOD that will be rendered into.
+       *    SurfaceMinLOD is ignored.
+       */
       .SurfaceMinLOD = 0,
-      .MIPCountLOD = 0,
+      .MIPCountLOD = pCreateInfo->mipLevel,
+
       .AuxiliarySurfaceMode = AUX_NONE,
       .RedClearColor = 0,
       .GreenClearColor = 0,
