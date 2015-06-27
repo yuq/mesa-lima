@@ -1783,6 +1783,12 @@ ntq_setup_outputs(struct vc4_compile *c)
 
                 assert(array_len == 1);
 
+                /* NIR hack to pass through
+                 * TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS */
+                if (semantic_name == TGSI_SEMANTIC_COLOR &&
+                    semantic_index == -1)
+                        semantic_index = 0;
+
                 for (int i = 0; i < 4; i++) {
                         add_output(c,
                                    loc + i,

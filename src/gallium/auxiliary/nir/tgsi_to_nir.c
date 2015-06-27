@@ -253,7 +253,12 @@ ttn_emit_declaration(struct ttn_compile *c)
             var->name = ralloc_asprintf(var, "out_%d", idx);
 
             var->data.location = decl->Semantic.Name;
-            var->data.index = decl->Semantic.Index;
+            if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
+                decl->Semantic.Index == 0 &&
+                c->scan->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+               var->data.index = -1;
+            else
+               var->data.index = decl->Semantic.Index;
 
             if (is_array) {
                unsigned j;

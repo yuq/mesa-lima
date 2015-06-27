@@ -2110,6 +2110,10 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 			so->writes_pos = true;
 			break;
 		case TGSI_SEMANTIC_COLOR:
+			if (semantic_index == -1) {
+				semantic_index = 0;
+				so->color0_mrt = 1;
+			}
 			break;
 		default:
 			compile_error(ctx, "unknown FS semantic name: %s\n",
