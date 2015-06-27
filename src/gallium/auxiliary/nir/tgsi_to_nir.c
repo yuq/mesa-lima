@@ -1716,9 +1716,11 @@ ttn_add_output_stores(struct ttn_compile *c)
       for (i = 0; i < array_len; i++) {
          nir_intrinsic_instr *store =
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_output);
+         unsigned loc = var->data.driver_location + i;
          store->num_components = 4;
-         store->const_index[0] = var->data.driver_location + i;
-         store->src[0].reg.reg = c->output_regs[var->data.driver_location].reg;
+         store->const_index[0] = loc;
+         store->src[0].reg.reg = c->output_regs[loc].reg;
+         store->src[0].reg.base_offset = c->output_regs[loc].offset;
          nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
       }
    }
