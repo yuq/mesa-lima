@@ -3763,6 +3763,7 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer->framebuffer->depth_stencil;
 
    /* FIXME: Implement the PMA stall W/A */
+   /* FIXME: Width and Height are wrong */
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
                   .SurfaceType = SURFTYPE_2D,
