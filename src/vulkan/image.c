@@ -264,9 +264,9 @@ anv_image_view_init(struct anv_surface_view *view,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_image *image = (struct anv_image *) pCreateInfo->image;
-   const struct anv_format *info =
+
+   const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
-   uint32_t tile_mode, format;
 
    /* XXX: We don't handle any of these */
    anv_assert(pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_2D);
@@ -276,6 +276,7 @@ anv_image_view_init(struct anv_surface_view *view,
    anv_assert(pCreateInfo->subresourceRange.arraySize == 1);
 
    view->bo = image->bo;
+
    switch (pCreateInfo->subresourceRange.aspect) {
    case VK_IMAGE_ASPECT_STENCIL:
       anv_finishme("stencil image views");
@@ -284,8 +285,6 @@ anv_image_view_init(struct anv_surface_view *view,
    case VK_IMAGE_ASPECT_DEPTH:
    case VK_IMAGE_ASPECT_COLOR:
       view->offset = image->offset;
-      tile_mode = image->tile_mode;
-      format = info->surface_format;
       break;
    default:
       unreachable("");
@@ -307,10 +306,10 @@ anv_image_view_init(struct anv_surface_view *view,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = anv_surf_type_from_image_view_type[pCreateInfo->viewType],
       .SurfaceArray = false,
-      .SurfaceFormat = format,
+      .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[image->v_align],
       .SurfaceHorizontalAlignment = anv_halign[image->h_align],
-      .TileMode = tile_mode,
+      .TileMode = image->tile_mode,
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .SamplerL2BypassModeDisable = true,
