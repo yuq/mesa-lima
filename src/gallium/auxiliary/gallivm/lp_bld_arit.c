@@ -1997,6 +1997,12 @@ lp_build_floor(struct lp_build_context *bld,
       LLVMTypeRef int_vec_type = bld->int_vec_type;
       LLVMTypeRef vec_type = bld->vec_type;
 
+      if (type.width != 32) {
+         char intrinsic[32];
+         util_snprintf(intrinsic, sizeof intrinsic, "llvm.floor.v%uf%u", type.length, type.width);
+         return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
+      }
+
       assert(type.width == 32); /* might want to handle doubles at some point */
 
       inttype = type;
@@ -2065,6 +2071,12 @@ lp_build_ceil(struct lp_build_context *bld,
       LLVMValueRef trunc, res, anosign, mask, tmp;
       LLVMTypeRef int_vec_type = bld->int_vec_type;
       LLVMTypeRef vec_type = bld->vec_type;
+
+      if (type.width != 32) {
+         char intrinsic[32];
+         util_snprintf(intrinsic, sizeof intrinsic, "llvm.ceil.v%uf%u", type.length, type.width);
+         return lp_build_intrinsic_unary(builder, intrinsic, vec_type, a);
+      }
 
       assert(type.width == 32); /* might want to handle doubles at some point */
 
