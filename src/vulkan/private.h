@@ -833,12 +833,13 @@ struct anv_surface_view {
 };
 
 struct anv_image_create_info {
-   uint32_t                                     tile_mode;
+   const VkImageCreateInfo *vk_info;
+   bool force_tile_mode;
+   uint8_t tile_mode;
 };
 
 VkResult anv_image_create(VkDevice _device,
-                          const VkImageCreateInfo *pCreateInfo,
-                          const struct anv_image_create_info *extra,
+                          const struct anv_image_create_info *info,
                           VkImage *pImage);
 
 void anv_image_view_init(struct anv_surface_view *view,

@@ -91,13 +91,12 @@ static const struct anv_tile_info {
 };
 
 static uint32_t
-anv_image_choose_tile_mode(const VkImageCreateInfo *vk_info,
-                           const struct anv_image_create_info *anv_info)
+anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 {
-   if (anv_info)
+   if (anv_info->force_tile_mode)
       return anv_info->tile_mode;
 
-   switch (vk_info->tiling) {
+   switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
       return LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
@@ -110,11 +109,11 @@ anv_image_choose_tile_mode(const VkImageCreateInfo *vk_info,
 
 VkResult anv_image_create(
     VkDevice                                    _device,
-    const VkImageCreateInfo*                    pCreateInfo,
-    const struct anv_image_create_info *        extra,
+    const struct anv_image_create_info *        create_info,
     VkImage*                                    pImage)
 {
    struct anv_device *device = (struct anv_device *) _device;
+   const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    const VkExtent3D *restrict extent = &pCreateInfo->extent;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
@@ -128,8 +127,7 @@ VkResult anv_image_create(
    anv_assert(pCreateInfo->extent.height > 0);
    anv_assert(pCreateInfo->extent.depth == 1);
 
-   const uint32_t tile_mode =
-      anv_image_choose_tile_mode(pCreateInfo, extra);
+   const uint32_t tile_mode = anv_image_choose_tile_mode(create_info);
 
    /* TODO(chadv): How should we validate inputs? */
    const uint8_t surf_type =
@@ -228,7 +226,11 @@ VkResult anv_CreateImage(
     const VkImageCreateInfo*                    pCreateInfo,
     VkImage*                                    pImage)
 {
-   return anv_image_create(device, pCreateInfo, NULL, pImage);
+   return anv_image_create(device,
+      &(struct anv_image_create_info) {
+         .vk_info = pCreateInfo,
+      },
+      pImage);
 }
 
 VkResult anv_GetImageSubresourceInfo(

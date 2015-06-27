@@ -107,27 +107,28 @@ VkResult anv_CreateSwapChainWSI(
       struct anv_device_memory *memory;
 
       anv_image_create((VkDevice) device,
-                       &(VkImageCreateInfo) {
-                          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-                          .imageType = VK_IMAGE_TYPE_2D,
-                          .format = pCreateInfo->imageFormat,
-                          .extent = {
-                             .width = pCreateInfo->imageExtent.width,
-                             .height = pCreateInfo->imageExtent.height,
-                             .depth = 1
-                          },
-                          .mipLevels = 1,
-                          .arraySize = 1,
-                          .samples = 1,
-                          /* FIXME: Need a way to use X tiling to allow scanout */
-                          .tiling = VK_IMAGE_TILING_OPTIMAL,
-                          .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                          .flags = 0,
-                       },
-                       &(struct anv_image_create_info) {
-                          .tile_mode = XMAJOR
-                       },
-                       (VkImage *) &image);
+         &(struct anv_image_create_info) {
+            .force_tile_mode = true,
+            .tile_mode = XMAJOR,
+            .vk_info =
+         &(VkImageCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .imageType = VK_IMAGE_TYPE_2D,
+            .format = pCreateInfo->imageFormat,
+            .extent = {
+               .width = pCreateInfo->imageExtent.width,
+               .height = pCreateInfo->imageExtent.height,
+               .depth = 1
+            },
+            .mipLevels = 1,
+            .arraySize = 1,
+            .samples = 1,
+            /* FIXME: Need a way to use X tiling to allow scanout */
+            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .flags = 0,
+         }},
+         (VkImage *) &image);
 
       anv_AllocMemory((VkDevice) device,
                       &(VkMemoryAllocInfo) {
