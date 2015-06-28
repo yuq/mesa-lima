@@ -40,7 +40,7 @@
 //                               Static Const Member
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const AddrTileModeFlags AddrLib1::m_modeFlags[ADDR_TM_COUNT] =
+const AddrTileModeFlags AddrLib1::ModeFlags[ADDR_TM_COUNT] =
 {// T   L  1  2  3  P  Pr B
     {1, 1, 0, 0, 0, 0, 0, 0}, // ADDR_TM_LINEAR_GENERAL
     {1, 1, 0, 0, 0, 0, 0, 0}, // ADDR_TM_LINEAR_ALIGNED
@@ -1211,7 +1211,7 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 UINT_32 AddrLib1::Thickness(
     AddrTileMode tileMode)    ///< [in] tile mode
 {
-    return m_modeFlags[tileMode].thickness;
+    return ModeFlags[tileMode].thickness;
 }
 
 
@@ -3370,7 +3370,7 @@ UINT_32 AddrLib1::HwlPostHandleBaseLvl3xPitch(
 BOOL_32 AddrLib1::IsMacroTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
-   return m_modeFlags[tileMode].isMacro;
+   return ModeFlags[tileMode].isMacro;
 }
 
 /**
@@ -3387,7 +3387,7 @@ BOOL_32 AddrLib1::IsMacroTiled(
 BOOL_32 AddrLib1::IsMacro3dTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
-    return m_modeFlags[tileMode].isMacro3d;
+    return ModeFlags[tileMode].isMacro3d;
 }
 
 /**
@@ -3404,7 +3404,7 @@ BOOL_32 AddrLib1::IsMacro3dTiled(
 BOOL_32 AddrLib1::IsMicroTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
-    return m_modeFlags[tileMode].isMicro;
+    return ModeFlags[tileMode].isMicro;
 }
 
 /**
@@ -3421,7 +3421,7 @@ BOOL_32 AddrLib1::IsMicroTiled(
 BOOL_32 AddrLib1::IsLinear(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
-    return m_modeFlags[tileMode].isLinear;
+    return ModeFlags[tileMode].isLinear;
 }
 
 /**
@@ -3437,7 +3437,7 @@ BOOL_32 AddrLib1::IsLinear(
 BOOL_32 AddrLib1::IsPrtNoRotationTileMode(
     AddrTileMode tileMode)
 {
-    return m_modeFlags[tileMode].isPrtNoRotation;
+    return ModeFlags[tileMode].isPrtNoRotation;
 }
 
 /**
@@ -3453,7 +3453,7 @@ BOOL_32 AddrLib1::IsPrtNoRotationTileMode(
 BOOL_32 AddrLib1::IsPrtTileMode(
     AddrTileMode tileMode)
 {
-    return m_modeFlags[tileMode].isPrt;
+    return ModeFlags[tileMode].isPrt;
 }
 
 /**

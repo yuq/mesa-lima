@@ -111,18 +111,17 @@ enum AddrChipFamily
 
 /**
 ***************************************************************************************************
-* ADDR_CONFIG_FLAGS
+* AddrConfigFlags
 *
 *   @brief
-*       This structure is used to set addr configuration flags.
+*       This structure is used to set configuration flags.
 ***************************************************************************************************
 */
-union ADDR_CONFIG_FLAGS
+union AddrConfigFlags
 {
     struct
     {
-        /// Clients do not need to set these flags except forceLinearAligned.
-        /// There flags are set up by AddrLib inside thru AddrInitGlobalParamsFromRegister
+        /// These flags are set up internally thru AddrLib::Create() based on ADDR_CREATE_FLAGS
         UINT_32 optimalBankSwap        : 1;    ///< New bank tiling for RV770 only
         UINT_32 noCubeMipSlicesPad     : 1;    ///< Disables faces padding for cubemap mipmaps
         UINT_32 fillSizeFields         : 1;    ///< If clients fill size fields in all input and

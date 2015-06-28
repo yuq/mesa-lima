@@ -249,7 +249,7 @@ protected:
     //
     // Global parameters
     //
-    ADDR_CONFIG_FLAGS   m_configFlags;  ///< Global configuration flags. Note this is setup by
+    AddrConfigFlags   m_configFlags;  ///< Global configuration flags. Note this is setup by
                                         ///  AddrLib instead of Client except forceLinearAligned
 
     UINT_32             m_pipes;        ///< Number of pipes

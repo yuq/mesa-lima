@@ -429,7 +429,7 @@ protected:
     //
     // Misc helper
     //
-    static const AddrTileModeFlags m_modeFlags[ADDR_TM_COUNT];
+    static const AddrTileModeFlags ModeFlags[ADDR_TM_COUNT];
 
     static UINT_32 Thickness(
         AddrTileMode tileMode);

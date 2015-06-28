@@ -231,7 +231,7 @@ public:
     }
 
     /// Sets m_configFlags, copied from AddrLib
-    VOID    SetConfigFlags(ADDR_CONFIG_FLAGS flags)
+    VOID    SetConfigFlags(AddrConfigFlags flags)
     {
         m_configFlags = flags;
     }
@@ -262,7 +262,7 @@ private:
     UINT_32             m_fp16ExportNorm;   ///< If allow FP16 to be reported as EXPORT_NORM
     AddrDepthPlanarType m_depthPlanarType;
 
-    ADDR_CONFIG_FLAGS   m_configFlags;      ///< Copy of AddrLib's configFlags
+    AddrConfigFlags   m_configFlags;      ///< Copy of AddrLib's configFlags
     AddrLib* const      m_pAddrLib;         ///< Pointer to parent addrlib instance
 };
 
