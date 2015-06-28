@@ -346,6 +346,16 @@ _mesa_destroy_visual( struct gl_config *vis )
 mtx_t OneTimeLock = _MTX_INITIALIZER_NP;
 
 
+/**
+ * Calls all the various one-time-fini functions in Mesa
+ */
+
+static void
+one_time_fini(void)
+{
+   _mesa_destroy_shader_compiler();
+   _mesa_locale_fini();
+}
 
 /**
  * Calls all the various one-time-init functions in Mesa.
@@ -385,7 +395,7 @@ one_time_init( struct gl_context *ctx )
          _mesa_ubyte_to_float_color_tab[i] = (float) i / 255.0F;
       }
 
-      atexit(_mesa_destroy_shader_compiler);
+      atexit(one_time_fini);
 
 #if defined(DEBUG) && defined(__DATE__) && defined(__TIME__)
       if (MESA_VERBOSE != 0) {

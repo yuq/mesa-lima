@@ -34,6 +34,9 @@ extern "C" {
 extern void
 _mesa_locale_init(void);
 
+extern void
+_mesa_locale_fini(void);
+
 extern double
 _mesa_strtod(const char *s, char **end);
 

@@ -45,6 +45,14 @@ _mesa_locale_init(void)
 #endif
 }
 
+void
+_mesa_locale_fini(void)
+{
+#if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
+   freelocale(loc);
+#endif
+}
+
 /**
  * Wrapper around strtod which uses the "C" locale so the decimal
  * point is always '.'
