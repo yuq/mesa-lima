@@ -324,8 +324,10 @@ const glsl_type *glsl_type::get_scalar_type() const
 void
 _mesa_glsl_release_types(void)
 {
-   mtx_lock(&glsl_type::mutex);
-
+   /* Should only be called during atexit (either when unloading shared
+    * object, or if process terminates), so no mutex-locking should be
+    * necessary.
+    */
    if (glsl_type::array_types != NULL) {
       hash_table_dtor(glsl_type::array_types);
       glsl_type::array_types = NULL;
@@ -335,8 +337,6 @@ _mesa_glsl_release_types(void)
       hash_table_dtor(glsl_type::record_types);
       glsl_type::record_types = NULL;
    }
-
-   mtx_unlock(&glsl_type::mutex);
 }
 
 
