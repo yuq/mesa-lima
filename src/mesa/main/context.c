@@ -338,31 +338,6 @@ _mesa_destroy_visual( struct gl_config *vis )
 
 
 /**
- * This is lame.  gdb only seems to recognize enum types that are
- * actually used somewhere.  We want to be able to print/use enum
- * values such as TEXTURE_2D_INDEX in gdb.  But we don't actually use
- * the gl_texture_index type anywhere.  Thus, this lame function.
- */
-static void
-dummy_enum_func(void)
-{
-   gl_buffer_index bi = BUFFER_FRONT_LEFT;
-   gl_face_index fi = FACE_POS_X;
-   gl_frag_result fr = FRAG_RESULT_DEPTH;
-   gl_texture_index ti = TEXTURE_2D_ARRAY_INDEX;
-   gl_vert_attrib va = VERT_ATTRIB_POS;
-   gl_varying_slot vs = VARYING_SLOT_POS;
-
-   (void) bi;
-   (void) fi;
-   (void) fr;
-   (void) ti;
-   (void) va;
-   (void) vs;
-}
-
-
-/**
  * One-time initialization mutex lock.
  *
  * \sa Used by one_time_init().
@@ -434,8 +409,6 @@ one_time_init( struct gl_context *ctx )
     * #ifdef tests here.
     */
    atexit(_mesa_destroy_shader_compiler);
-
-   dummy_enum_func();
 }
 
 
