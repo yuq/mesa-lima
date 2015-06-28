@@ -492,6 +492,10 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     if (ws->gen >= DRV_R600) {
         radeon_surface_manager_free(ws->surf_man);
     }
+
+    if (ws->fd)
+        close(ws->fd);
+
     FREE(rws);
 }
 
@@ -708,7 +712,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         return NULL;
     }
 
-    ws->fd = fd;
+    ws->fd = dup(fd);
 
     if (!do_winsys_init(ws))
         goto fail;
@@ -724,7 +728,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         goto fail;
 
     if (ws->gen >= DRV_R600) {
-        ws->surf_man = radeon_surface_manager_new(fd);
+        ws->surf_man = radeon_surface_manager_new(ws->fd);
         if (!ws->surf_man)
             goto fail;
     }
@@ -765,7 +769,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         return NULL;
     }
 
-    util_hash_table_set(fd_tab, intptr_to_pointer(fd), ws);
+    util_hash_table_set(fd_tab, intptr_to_pointer(ws->fd), ws);
 
     /* We must unlock the mutex once the winsys is fully initialized, so that
      * other threads attempting to create the winsys from the same fd will
@@ -782,6 +786,9 @@ fail:
         ws->kman->destroy(ws->kman);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
+    if (ws->fd)
+        close(ws->fd);
+
     FREE(ws);
     return NULL;
 }
