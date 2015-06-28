@@ -382,6 +382,8 @@ one_time_init( struct gl_context *ctx )
          _mesa_ubyte_to_float_color_tab[i] = (float) i / 255.0F;
       }
 
+      atexit(_mesa_destroy_shader_compiler);
+
 #if defined(DEBUG) && defined(__DATE__) && defined(__TIME__)
       if (MESA_VERBOSE != 0) {
 	 _mesa_debug(ctx, "Mesa %s DEBUG build %s %s\n",
@@ -404,11 +406,6 @@ one_time_init( struct gl_context *ctx )
    api_init_mask |= 1 << ctx->API;
 
    mtx_unlock(&OneTimeLock);
-
-   /* Hopefully atexit() is widely available.  If not, we may need some
-    * #ifdef tests here.
-    */
-   atexit(_mesa_destroy_shader_compiler);
 }
 
 
