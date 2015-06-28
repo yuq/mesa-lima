@@ -176,9 +176,12 @@ public:
    void fail(const char *msg, ...);
 
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
+   virtual void setup_vector_uniform_values(const gl_constant_value *values,
+                                            unsigned n);
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);
+
    bool reg_allocate_trivial();
    bool reg_allocate();
    void evaluate_spill_costs(float *spill_costs, bool *no_spill);

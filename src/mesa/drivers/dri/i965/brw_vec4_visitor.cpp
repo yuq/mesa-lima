@@ -670,6 +670,21 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    this->type = brw_type_for_base_type(type);
 }
 
+void
+vec4_visitor::setup_vector_uniform_values(const gl_constant_value *values,
+                                          unsigned n)
+{
+   static const gl_constant_value zero = { 0 };
+
+   for (unsigned i = 0; i < n; ++i)
+      stage_prog_data->param[4 * uniforms + i] = &values[i];
+
+   for (unsigned i = n; i < 4; ++i)
+      stage_prog_data->param[4 * uniforms + i] = &zero;
+
+   uniform_vector_size[uniforms++] = n;
+}
+
 /* Our support for uniforms is piggy-backed on the struct
  * gl_fragment_program, because that's where the values actually
  * get stored, rather than in some global gl_shader_program uniform
@@ -699,26 +714,13 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
          continue;
       }
 
-      gl_constant_value *components = storage->storage;
-      unsigned vector_count = (MAX2(storage->array_elements, 1) *
-                               storage->type->matrix_columns);
+      const unsigned vector_count = (MAX2(storage->array_elements, 1) *
+                                     storage->type->matrix_columns);
+      const unsigned vector_size = storage->type->vector_elements;
 
-      for (unsigned s = 0; s < vector_count; s++) {
-         assert(uniforms < uniform_array_size);
-         uniform_vector_size[uniforms] = storage->type->vector_elements;
-
-         int i;
-         for (i = 0; i < uniform_vector_size[uniforms]; i++) {
-            stage_prog_data->param[uniforms * 4 + i] = components;
-            components++;
-         }
-         for (; i < 4; i++) {
-            static gl_constant_value zero = { 0.0 };
-            stage_prog_data->param[uniforms * 4 + i] = &zero;
-         }
-
-         uniforms++;
-      }
+      for (unsigned s = 0; s < vector_count; s++)
+         setup_vector_uniform_values(&storage->storage[s * vector_size],
+                                     vector_size);
    }
 }
 
