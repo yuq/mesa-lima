@@ -30,18 +30,20 @@
 #include <locale.h>
 #ifdef HAVE_XLOCALE_H
 #include <xlocale.h>
+static locale_t loc;
 #endif
 #endif
 
 #include "strtod.h"
 
 
+void
+_mesa_locale_init(void)
+{
 #if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
-static struct locale_initializer {
-   locale_initializer() { loc = newlocale(LC_CTYPE_MASK, "C", NULL); }
-   locale_t loc;
-} loc_init;
+   loc = newlocale(LC_CTYPE_MASK, "C", NULL);
 #endif
+}
 
 /**
  * Wrapper around strtod which uses the "C" locale so the decimal
@@ -51,7 +53,7 @@ double
 _mesa_strtod(const char *s, char **end)
 {
 #if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
-   return strtod_l(s, end, loc_init.loc);
+   return strtod_l(s, end, loc);
 #else
    return strtod(s, end);
 #endif
@@ -66,7 +68,7 @@ float
 _mesa_strtof(const char *s, char **end)
 {
 #if defined(_GNU_SOURCE) && defined(HAVE_XLOCALE_H)
-   return strtof_l(s, end, loc_init.loc);
+   return strtof_l(s, end, loc);
 #elif defined(HAVE_STRTOF)
    return strtof(s, end);
 #else

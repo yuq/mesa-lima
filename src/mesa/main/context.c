@@ -120,6 +120,7 @@
 #include "shaderobj.h"
 #include "shaderimage.h"
 #include "util/simple_list.h"
+#include "util/strtod.h"
 #include "state.h"
 #include "stencil.h"
 #include "texcompress_s3tc.h"
@@ -373,6 +374,8 @@ one_time_init( struct gl_context *ctx )
       assert( sizeof(GLushort) == 2 );
       assert( sizeof(GLint) == 4 );
       assert( sizeof(GLuint) == 4 );
+
+      _mesa_locale_init();
 
       _mesa_one_time_init_extension_overrides();
 
