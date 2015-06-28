@@ -264,6 +264,7 @@ public:
                       nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);
    fs_reg get_nir_dest(nir_dest dest);
+   fs_reg get_nir_image_deref(const nir_deref_var *deref);
    void emit_percomp(const brw::fs_builder &bld, const fs_inst &inst,
                      unsigned wr_mask);
 
