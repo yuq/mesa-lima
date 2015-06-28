@@ -320,19 +320,25 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		 * and fanin..  that probably doesn't happen currently.
 		 */
 		struct ir3_register *src;
+		int dsz, doff;
 
 		/* note: don't use foreach_ssa_src as this gets called once
 		 * while assigning regs (which clears SSA flag)
 		 */
-		foreach_src(src, instr) {
+		foreach_src_n(src, n, instr) {
+			struct ir3_instruction *dd;
 			if (!src->instr)
 				continue;
-			if ((!d) || (src->instr->ip < d->ip))
-				d = src->instr;
+
+			dd = get_definer(src->instr, &dsz, &doff);
+
+			if ((!d) || (dd->ip < d->ip)) {
+				d = dd;
+				*sz = dsz;
+				*off = doff - n;
+			}
 		}
 
-		*sz = instr->regs_count - 1;
-		*off = 0;
 
 	} else if (instr->cp.right || instr->cp.left) {
 		/* covers also the meta:fo case, which ends up w/ single
@@ -446,6 +452,10 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
 		struct ir3_instruction *defn;
 		int cls, sz, off;
+
+#ifdef DEBUG
+		instr->name = ~0;
+#endif
 
 		ctx->instr_cnt++;
 
