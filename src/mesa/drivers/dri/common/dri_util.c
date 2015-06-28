@@ -46,7 +46,6 @@
 #include "dri_util.h"
 #include "utils.h"
 #include "xmlpool.h"
-#include "../glsl/glsl_parser_extras.h"
 #include "main/mtypes.h"
 #include "main/version.h"
 #include "main/errors.h"
@@ -237,8 +236,6 @@ static void driDestroyScreen(__DRIscreen *psp)
 	 * routine is called after XCloseDisplay, so there is no protocol
 	 * stream open to the X-server anymore.
 	 */
-
-       _mesa_destroy_shader_compiler();
 
 	psp->driver->DestroyScreen(psp);
 
