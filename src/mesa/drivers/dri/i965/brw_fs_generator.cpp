@@ -2252,6 +2252,13 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
    brw_set_uip_jip(p);
    annotation_finalize(&annotation, p->next_insn_offset);
 
+#ifndef NDEBUG
+   bool validated = brw_validate_instructions(p, start_offset, &annotation);
+#else
+   if (unlikely(debug_flag))
+      brw_validate_instructions(p, start_offset, &annotation);
+#endif
+
    int before_size = p->next_insn_offset - start_offset;
    brw_compact_instructions(p, start_offset, annotation.ann_count,
                             annotation.ann);
@@ -2269,6 +2276,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
                     p->devinfo);
       ralloc_free(annotation.mem_ctx);
    }
+   assert(validated);
 
    compiler->shader_debug_log(log_data,
                               "%s SIMD%d shader: %d inst, %d loops, %u cycles, "

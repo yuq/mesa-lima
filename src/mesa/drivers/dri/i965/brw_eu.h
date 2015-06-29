@@ -522,6 +522,10 @@ bool brw_try_compact_instruction(const struct brw_device_info *devinfo,
 void brw_debug_compact_uncompact(const struct brw_device_info *devinfo,
                                  brw_inst *orig, brw_inst *uncompacted);
 
+/* brw_eu_validate.c */
+bool brw_validate_instructions(const struct brw_codegen *p, int start_offset,
+                               struct annotation_info *annotation);
+
 static inline int
 next_offset(const struct brw_device_info *devinfo, void *store, int offset)
 {

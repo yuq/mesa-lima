@@ -1543,6 +1543,13 @@ generate_code(struct brw_codegen *p,
    brw_set_uip_jip(p);
    annotation_finalize(&annotation, p->next_insn_offset);
 
+#ifndef NDEBUG
+   bool validated = brw_validate_instructions(p, 0, &annotation);
+#else
+   if (unlikely(debug_flag))
+      brw_validate_instructions(p, 0, &annotation);
+#endif
+
    int before_size = p->next_insn_offset;
    brw_compact_instructions(p, 0, annotation.ann_count, annotation.ann);
    int after_size = p->next_insn_offset;
@@ -1562,6 +1569,7 @@ generate_code(struct brw_codegen *p,
                     p->devinfo);
       ralloc_free(annotation.mem_ctx);
    }
+   assert(validated);
 
    compiler->shader_debug_log(log_data,
                               "%s vec4 shader: %d inst, %d loops, %u cycles, "

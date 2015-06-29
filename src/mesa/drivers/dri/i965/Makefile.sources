@@ -14,6 +14,7 @@ i965_compiler_FILES = \
 	brw_eu_emit.c \
 	brw_eu.h \
 	brw_eu_util.c \
+	brw_eu_validate.c \
 	brw_fs_builder.h \
 	brw_fs_channel_expressions.cpp \
 	brw_fs_cmod_propagation.cpp \
