@@ -212,6 +212,7 @@ struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
 void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);
+void ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin);
 
 /*
  * Helper/util:

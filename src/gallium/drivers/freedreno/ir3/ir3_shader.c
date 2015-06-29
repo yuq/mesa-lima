@@ -140,6 +140,13 @@ assemble_variant(struct ir3_shader_variant *v)
 
 	memcpy(fd_bo_map(v->bo), bin, sz);
 
+	if (fd_mesa_debug & FD_DBG_DISASM) {
+		struct ir3_shader_key key = v->key;
+		DBG("disassemble: type=%d, k={bp=%u,cts=%u,hp=%u}", v->type,
+			key.binning_pass, key.color_two_side, key.half_precision);
+		ir3_shader_disasm(v, bin);
+	}
+
 	free(bin);
 
 	/* no need to keep the ir around beyond this point: */
@@ -177,12 +184,6 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 	if (!v->bo) {
 		debug_error("assemble failed!");
 		goto fail;
-	}
-
-	if (fd_mesa_debug & FD_DBG_DISASM) {
-		DBG("disassemble: type=%d, k={bp=%u,cts=%u,hp=%u}", v->type,
-			key.binning_pass, key.color_two_side, key.half_precision);
-		disasm_a3xx(fd_bo_map(v->bo), v->info.sizedwords, 0, v->type);
 	}
 
 	return v;
@@ -261,4 +262,118 @@ ir3_shader_create(struct pipe_context *pctx, const struct tgsi_token *tokens,
 	shader->type = type;
 	shader->tokens = tgsi_dup_tokens(tokens);
 	return shader;
+}
+
+static void dump_reg(const char *name, uint32_t r)
+{
+	if (r != regid(63,0))
+		debug_printf("; %s: r%d.%c\n", name, r >> 2, "xyzw"[r & 0x3]);
+}
+
+static void dump_semantic(struct ir3_shader_variant *so,
+		unsigned sem, const char *name)
+{
+	uint32_t regid;
+	regid = ir3_find_output_regid(so, ir3_semantic_name(sem, 0));
+	dump_reg(name, regid);
+}
+
+void
+ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
+{
+	struct ir3 *ir = so->ir;
+	struct ir3_register *reg;
+	const char *type = (so->type == SHADER_VERTEX) ? "VERT" : "FRAG";
+	uint8_t regid;
+	unsigned i;
+
+	for (i = 0; i < ir->ninputs; i++) {
+		if (!ir->inputs[i]) {
+			debug_printf("; in%d unused\n", i);
+			continue;
+		}
+		reg = ir->inputs[i]->regs[0];
+		regid = reg->num;
+		debug_printf("@in(%sr%d.%c)\tin%d\n",
+				(reg->flags & IR3_REG_HALF) ? "h" : "",
+				(regid >> 2), "xyzw"[regid & 0x3], i);
+	}
+
+	for (i = 0; i < ir->noutputs; i++) {
+		if (!ir->outputs[i]) {
+			debug_printf("; out%d unused\n", i);
+			continue;
+		}
+		/* kill shows up as a virtual output.. skip it! */
+		if (is_kill(ir->outputs[i]))
+			continue;
+		reg = ir->outputs[i]->regs[0];
+		regid = reg->num;
+		debug_printf("@out(%sr%d.%c)\tout%d\n",
+				(reg->flags & IR3_REG_HALF) ? "h" : "",
+				(regid >> 2), "xyzw"[regid & 0x3], i);
+	}
+
+	for (i = 0; i < so->immediates_count; i++) {
+		debug_printf("@const(c%d.x)\t", so->first_immediate + i);
+		debug_printf("0x%08x, 0x%08x, 0x%08x, 0x%08x\n",
+				so->immediates[i].val[0],
+				so->immediates[i].val[1],
+				so->immediates[i].val[2],
+				so->immediates[i].val[3]);
+	}
+
+	disasm_a3xx(bin, so->info.sizedwords, 0, so->type);
+
+	debug_printf("; %s: outputs:", type);
+	for (i = 0; i < so->outputs_count; i++) {
+		uint8_t regid = so->outputs[i].regid;
+		ir3_semantic sem = so->outputs[i].semantic;
+		debug_printf(" r%d.%c (%u:%u)",
+				(regid >> 2), "xyzw"[regid & 0x3],
+				sem2name(sem), sem2idx(sem));
+	}
+	debug_printf("\n");
+	debug_printf("; %s: inputs:", type);
+	for (i = 0; i < so->inputs_count; i++) {
+		uint8_t regid = so->inputs[i].regid;
+		ir3_semantic sem = so->inputs[i].semantic;
+		debug_printf(" r%d.%c (%u:%u,cm=%x,il=%u,b=%u)",
+				(regid >> 2), "xyzw"[regid & 0x3],
+				sem2name(sem), sem2idx(sem),
+				so->inputs[i].compmask,
+				so->inputs[i].inloc,
+				so->inputs[i].bary);
+	}
+	debug_printf("\n");
+
+	/* print generic shader info: */
+	debug_printf("; %s: %u instructions, %d half, %d full\n", type,
+			so->info.instrs_count,
+			so->info.max_half_reg + 1,
+			so->info.max_reg + 1);
+
+	/* print shader type specific info: */
+	switch (so->type) {
+	case SHADER_VERTEX:
+		dump_semantic(so, TGSI_SEMANTIC_POSITION, "pos");
+		dump_semantic(so, TGSI_SEMANTIC_PSIZE, "psize");
+		break;
+	case SHADER_FRAGMENT:
+		dump_reg("pos (bary)", so->pos_regid);
+		dump_semantic(so, TGSI_SEMANTIC_POSITION, "posz");
+		dump_semantic(so, TGSI_SEMANTIC_COLOR, "color");
+		/* these two are hard-coded since we don't know how to
+		 * program them to anything but all 0's...
+		 */
+		if (so->frag_coord)
+			debug_printf("; fragcoord: r0.x\n");
+		if (so->frag_face)
+			debug_printf("; fragface: hr0.x\n");
+		break;
+	case SHADER_COMPUTE:
+		break;
+	}
+
+	debug_printf("\n");
 }
