@@ -25,6 +25,12 @@
 #define _ROUNDING_H
 
 #include <math.h>
+#include <limits.h>
+
+#ifdef __x86_64__
+#include <xmmintrin.h>
+#include <emmintrin.h>
+#endif
 
 #ifdef __SSE4_1__
 #include <smmintrin.h>
@@ -87,7 +93,15 @@ _mesa_roundeven(double x)
 static inline long
 _mesa_lroundevenf(float x)
 {
+#ifdef __x86_64__
+#if LONG_BIT == 64
+   return _mm_cvtss_si64(_mm_load_ss(&x));
+#elif LONG_BIT == 32
+   return _mm_cvtss_si32(_mm_load_ss(&x));
+#endif
+#else
    return lrintf(x);
+#endif
 }
 
 /**
@@ -97,7 +111,15 @@ _mesa_lroundevenf(float x)
 static inline long
 _mesa_lroundeven(double x)
 {
+#ifdef __x86_64__
+#if LONG_BIT == 64
+   return _mm_cvtsd_si64(_mm_load_sd(&x));
+#elif LONG_BIT == 32
+   return _mm_cvtsd_si32(_mm_load_sd(&x));
+#endif
+#else
    return lrint(x);
+#endif
 }
 
 #endif
