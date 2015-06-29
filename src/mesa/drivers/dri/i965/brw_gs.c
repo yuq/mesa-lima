@@ -268,10 +268,6 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    /* Scratch space is used for register spilling */
    if (c.base.last_scratch) {
-      perf_debug("Geometry shader triggered register spilling.  "
-                 "Try reducing the number of live vec4 values to "
-                 "improve performance.\n");
-
       c.prog_data.base.base.total_scratch
          = brw_get_scratch_size(c.base.last_scratch*REG_SIZE);
 

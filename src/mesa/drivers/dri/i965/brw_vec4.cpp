@@ -1827,9 +1827,19 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
       }
    }
 
-   while (!reg_allocate()) {
-      if (failed)
-         return false;
+   bool allocated_without_spills = reg_allocate();
+
+   if (!allocated_without_spills) {
+      compiler->shader_perf_log(log_data,
+                                "%s shader triggered register spilling.  "
+                                "Try reducing the number of live vec4 values "
+                                "to improve performance.\n",
+                                stage_name);
+
+      while (!reg_allocate()) {
+         if (failed)
+            return false;
+      }
    }
 
    opt_schedule_instructions();
