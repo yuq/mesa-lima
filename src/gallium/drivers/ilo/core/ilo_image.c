@@ -765,6 +765,72 @@ image_get_gen6_walk_layer_heights(const struct ilo_dev *dev,
 }
 
 static void
+image_get_gen6_monolithic_size(const struct ilo_dev *dev,
+                               const struct ilo_image_info *info,
+                               struct ilo_image_layout *layout,
+                               int max_x, int max_y)
+{
+   int align_w = 1, align_h = 1, pad_h = 0;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 1, page 118:
+    *
+    *     "To determine the necessary padding on the bottom and right side of
+    *      the surface, refer to the table in Section 7.18.3.4 for the i and j
+    *      parameters for the surface format in use. The surface must then be
+    *      extended to the next multiple of the alignment unit size in each
+    *      dimension, and all texels contained in this extended surface must
+    *      have valid GTT entries."
+    *
+    *     "For cube surfaces, an additional two rows of padding are required
+    *      at the bottom of the surface. This must be ensured regardless of
+    *      whether the surface is stored tiled or linear.  This is due to the
+    *      potential rotation of cache line orientation from memory to cache."
+    *
+    *     "For compressed textures (BC* and FXT1 surface formats), padding at
+    *      the bottom of the surface is to an even compressed row, which is
+    *      equal to a multiple of 8 uncompressed texel rows. Thus, for padding
+    *      purposes, these surfaces behave as if j = 8 only for surface
+    *      padding purposes. The value of 4 for j still applies for mip level
+    *      alignment and QPitch calculation."
+    */
+   if (info->bind_surface_sampler) {
+      align_w = MAX2(align_w, layout->align_i);
+      align_h = MAX2(align_h, layout->align_j);
+
+      if (info->type == GEN6_SURFTYPE_CUBE)
+         pad_h += 2;
+
+      if (info->compressed)
+         align_h = MAX2(align_h, layout->align_j * 2);
+   }
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 1, page 118:
+    *
+    *     "If the surface contains an odd number of rows of data, a final row
+    *      below the surface must be allocated."
+    */
+   if (info->bind_surface_dp_render)
+      align_h = MAX2(align_h, 2);
+
+   /*
+    * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  Pad to allow HiZ
+    * for unaligned non-mipmapped and non-array images.
+    */
+   if (layout->aux == ILO_IMAGE_AUX_HIZ &&
+       info->level_count == 1 && info->array_size == 1 && info->depth == 1) {
+      align_w = MAX2(align_w, 8);
+      align_h = MAX2(align_h, 4);
+   }
+
+   layout->monolithic_width = align(max_x, align_w);
+   layout->monolithic_height = align(max_y + pad_h, align_h);
+}
+
+static void
 image_get_gen6_lods(const struct ilo_dev *dev,
                     const struct ilo_image_info *info,
                     struct ilo_image_layout *layout)
@@ -852,8 +918,7 @@ image_get_gen6_lods(const struct ilo_dev *dev,
       layout->walk_layer_height = 0;
    }
 
-   layout->monolithic_width = max_x;
-   layout->monolithic_height = max_y;
+   image_get_gen6_monolithic_size(dev, info, layout, max_x, max_y);
 }
 
 static bool
@@ -920,70 +985,6 @@ img_init_size_and_format(struct ilo_image *img,
    img->array_size = info->array_size;
    img->level_count = info->level_count;
    img->sample_count = info->sample_count;
-}
-
-static void
-img_align(struct ilo_image *img, struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-   int align_w = 1, align_h = 1, pad_h = 0;
-
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 1, page 118:
-    *
-    *     "To determine the necessary padding on the bottom and right side of
-    *      the surface, refer to the table in Section 7.18.3.4 for the i and j
-    *      parameters for the surface format in use. The surface must then be
-    *      extended to the next multiple of the alignment unit size in each
-    *      dimension, and all texels contained in this extended surface must
-    *      have valid GTT entries."
-    *
-    *     "For cube surfaces, an additional two rows of padding are required
-    *      at the bottom of the surface. This must be ensured regardless of
-    *      whether the surface is stored tiled or linear.  This is due to the
-    *      potential rotation of cache line orientation from memory to cache."
-    *
-    *     "For compressed textures (BC* and FXT1 surface formats), padding at
-    *      the bottom of the surface is to an even compressed row, which is
-    *      equal to a multiple of 8 uncompressed texel rows. Thus, for padding
-    *      purposes, these surfaces behave as if j = 8 only for surface
-    *      padding purposes. The value of 4 for j still applies for mip level
-    *      alignment and QPitch calculation."
-    */
-   if (info->bind_surface_sampler) {
-      align_w = MAX2(align_w, img->align_i);
-      align_h = MAX2(align_h, img->align_j);
-
-      if (info->type == GEN6_SURFTYPE_CUBE)
-         pad_h += 2;
-
-      if (info->compressed)
-         align_h = MAX2(align_h, img->align_j * 2);
-   }
-
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 1, page 118:
-    *
-    *     "If the surface contains an odd number of rows of data, a final row
-    *      below the surface must be allocated."
-    */
-   if (info->bind_surface_dp_render)
-      align_h = MAX2(align_h, 2);
-
-   /*
-    * Depth Buffer Clear/Resolve works in 8x4 sample blocks.  Pad to allow HiZ
-    * for unaligned non-mipmapped and non-array images.
-    */
-   if (img->aux.type == ILO_IMAGE_AUX_HIZ &&
-       info->level_count == 1 &&
-       info->array_size == 1 &&
-       info->depth == 1) {
-      align_w = MAX2(align_w, 8);
-      align_h = MAX2(align_h, 4);
-   }
-
-   params->max_x = align(params->max_x, align_w);
-   params->max_y = align(params->max_y + pad_h, align_h);
 }
 
 /* note that this may force the texture to be linear */
@@ -1419,7 +1420,6 @@ img_init(struct ilo_image *img,
    params->h1 = layout.walk_layer_h1;
    img->walk_layer_height = layout.walk_layer_height;
 
-   img_align(img, params);
    img_calculate_bo_size(img, params);
 
    img->scanout = params->info->bind_scanout;
