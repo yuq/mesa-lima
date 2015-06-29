@@ -953,11 +953,9 @@ dnl
 dnl Driver specific build directories
 dnl
 
-case "x$enable_glx$enable_xlib_glx" in
-xyesyes)
+if test -n "$with_gallium_drivers" -a "x$enable_glx$enable_xlib_glx" = xyesyes; then
     NEED_WINSYS_XLIB="yes"
-    ;;
-esac
+fi
 
 if test "x$enable_dri" = xyes; then
     enable_gallium_loader="$enable_shared_pipe_drivers"
@@ -1806,9 +1804,6 @@ else
     EGL_NATIVE_PLATFORM="_EGL_INVALID_PLATFORM"
 fi
 
-if echo "$egl_platforms" | grep -q 'x11'; then
-    NEED_WINSYS_XLIB=yes
-fi
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
@@ -2232,10 +2227,6 @@ AM_CONDITIONAL(HAVE_GALLIUM_STATIC_TARGETS, test "x$enable_shared_pipe_drivers" 
 #       use by XA tracker in particular, but could be used in any case
 #       where communication with xserver is not desired).
 if test "x$enable_gallium_loader" = xyes; then
-    if test "x$NEED_WINSYS_XLIB" = xyes; then
-        GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_XLIB"
-    fi
-
     if test "x$enable_dri" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRI"
     fi
