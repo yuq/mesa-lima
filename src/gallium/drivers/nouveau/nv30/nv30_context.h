@@ -51,6 +51,7 @@ struct nv30_context {
       unsigned rt_enable;
       unsigned scissor_off;
       unsigned num_vtxelts;
+      int index_bias;
       boolean  prim_restart;
       struct nv30_fragprog *fragprog;
    } state;

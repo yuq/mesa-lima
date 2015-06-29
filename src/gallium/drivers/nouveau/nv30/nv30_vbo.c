@@ -461,13 +461,11 @@ nv30_draw_elements(struct nv30_context *nv30, boolean shorten,
    struct nouveau_object *eng3d = nv30->screen->eng3d;
    unsigned prim = nv30_prim_gl(mode);
 
-#if 0 /*XXX*/
-   if (index_bias != nv30->state.index_bias) {
-      BEGIN_NV04(push, NV30_3D(VB_ELEMENT_BASE), 1);
+   if (eng3d->oclass >= NV40_3D_CLASS && index_bias != nv30->state.index_bias) {
+      BEGIN_NV04(push, NV40_3D(VB_ELEMENT_BASE), 1);
       PUSH_DATA (push, index_bias);
       nv30->state.index_bias = index_bias;
    }
-#endif
 
    if (eng3d->oclass == NV40_3D_CLASS && index_size > 1 &&
        nv30->idxbuf.buffer) {
