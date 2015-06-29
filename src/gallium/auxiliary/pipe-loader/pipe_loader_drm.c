@@ -35,12 +35,6 @@
 #include <xf86drm.h>
 #include <unistd.h>
 
-#ifdef HAVE_PIPE_LOADER_XCB
-
-#include <xcb/dri2.h>
-
-#endif
-
 #include "loader.h"
 #include "state_tracker/drm_driver.h"
 #include "pipe_loader_priv.h"
@@ -64,78 +58,8 @@ struct pipe_loader_drm_device {
 
 static struct pipe_loader_ops pipe_loader_drm_ops;
 
-#ifdef HAVE_PIPE_LOADER_XCB
-
-static xcb_screen_t *
-get_xcb_screen(xcb_screen_iterator_t iter, int screen)
-{
-    for (; iter.rem; --screen, xcb_screen_next(&iter))
-        if (screen == 0)
-            return iter.data;
-
-    return NULL;
-}
-
-#endif
-
-static void
-pipe_loader_drm_x_auth(int fd)
-{
-#ifdef HAVE_PIPE_LOADER_XCB
-   /* Try authenticate with the X server to give us access to devices that X
-    * is running on. */
-   xcb_connection_t *xcb_conn;
-   const xcb_setup_t *xcb_setup;
-   xcb_screen_iterator_t s;
-   xcb_dri2_connect_cookie_t connect_cookie;
-   xcb_dri2_connect_reply_t *connect;
-   drm_magic_t magic;
-   xcb_dri2_authenticate_cookie_t authenticate_cookie;
-   xcb_dri2_authenticate_reply_t *authenticate;
-   int screen;
-
-   xcb_conn = xcb_connect(NULL, &screen);
-
-   if(!xcb_conn)
-      return;
-
-   xcb_setup = xcb_get_setup(xcb_conn);
-
-  if (!xcb_setup)
-    goto disconnect;
-
-   s = xcb_setup_roots_iterator(xcb_setup);
-   connect_cookie = xcb_dri2_connect_unchecked(xcb_conn,
-                                               get_xcb_screen(s, screen)->root,
-                                               XCB_DRI2_DRIVER_TYPE_DRI);
-   connect = xcb_dri2_connect_reply(xcb_conn, connect_cookie, NULL);
-
-   if (!connect || connect->driver_name_length
-                   + connect->device_name_length == 0) {
-
-      goto disconnect;
-   }
-
-   if (drmGetMagic(fd, &magic))
-      goto disconnect;
-
-   authenticate_cookie = xcb_dri2_authenticate_unchecked(xcb_conn,
-                                                         s.data->root,
-                                                         magic);
-   authenticate = xcb_dri2_authenticate_reply(xcb_conn,
-                                              authenticate_cookie,
-                                              NULL);
-   FREE(authenticate);
-
-disconnect:
-   xcb_disconnect(xcb_conn);
-
-#endif
-}
-
 bool
-pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd,
-                         boolean auth_x)
+pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
 {
    struct pipe_loader_drm_device *ddev = CALLOC_STRUCT(pipe_loader_drm_device);
    int vendor_id, chip_id;
@@ -152,9 +76,6 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd,
    }
    ddev->base.ops = &pipe_loader_drm_ops;
    ddev->fd = fd;
-
-   if (auth_x)
-      pipe_loader_drm_x_auth(fd);
 
    ddev->base.driver_name = loader_get_driver_for_fd(fd, _LOADER_GALLIUM);
    if (!ddev->base.driver_name)
@@ -190,7 +111,7 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev)
       if (fd < 0)
          continue;
 
-      if (!pipe_loader_drm_probe_fd(&dev, fd, false)) {
+      if (!pipe_loader_drm_probe_fd(&dev, fd)) {
          close(fd);
          continue;
       }

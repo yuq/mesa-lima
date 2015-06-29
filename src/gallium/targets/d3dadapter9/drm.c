@@ -243,7 +243,7 @@ drm_create_adapter( int fd,
     ctx->base.hal = dd_create_screen(fd);
 #else
     /* use pipe-loader to dlopen appropriate drm driver */
-    if (!pipe_loader_drm_probe_fd(&ctx->dev, fd, FALSE)) {
+    if (!pipe_loader_drm_probe_fd(&ctx->dev, fd)) {
         ERR("Failed to probe drm fd %d.\n", fd);
         FREE(ctx);
         close(fd);
