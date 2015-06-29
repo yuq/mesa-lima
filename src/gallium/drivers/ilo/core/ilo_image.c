@@ -57,6 +57,9 @@ struct ilo_image_layout {
    enum gen_surface_tiling tiling;
 
    enum ilo_image_aux_type aux;
+
+   int align_i;
+   int align_j;
 };
 
 static enum ilo_image_walk_type
@@ -382,6 +385,154 @@ image_get_gen7_mcs_enable(const struct ilo_dev *dev,
    }
 }
 
+static void
+image_get_gen6_alignments(const struct ilo_dev *dev,
+                          const struct ilo_image_info *info,
+                          int *align_i, int *align_j)
+{
+   ILO_DEV_ASSERT(dev, 6, 6);
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 1, page 113:
+    *
+    *     "surface format           align_i     align_j
+    *      YUV 4:2:2 formats        4           *see below
+    *      BC1-5                    4           4
+    *      FXT1                     8           4
+    *      all other formats        4           *see below"
+    *
+    *     "- align_j = 4 for any depth buffer
+    *      - align_j = 2 for separate stencil buffer
+    *      - align_j = 4 for any render target surface is multisampled (4x)
+    *      - align_j = 4 for any render target surface with Surface Vertical
+    *        Alignment = VALIGN_4
+    *      - align_j = 2 for any render target surface with Surface Vertical
+    *        Alignment = VALIGN_2
+    *      - align_j = 2 for all other render target surface
+    *      - align_j = 2 for any sampling engine surface with Surface Vertical
+    *        Alignment = VALIGN_2
+    *      - align_j = 4 for any sampling engine surface with Surface Vertical
+    *        Alignment = VALIGN_4"
+    *
+    * From the Sandy Bridge PRM, volume 4 part 1, page 86:
+    *
+    *     "This field (Surface Vertical Alignment) must be set to VALIGN_2 if
+    *      the Surface Format is 96 bits per element (BPE)."
+    *
+    * They can be rephrased as
+    *
+    *                                  align_i        align_j
+    *   compressed formats             block width    block height
+    *   GEN6_FORMAT_R8_UINT            4              2
+    *   other depth/stencil formats    4              4
+    *   4x multisampled                4              4
+    *   bpp 96                         4              2
+    *   others                         4              2 or 4
+    */
+
+   *align_i = (info->compressed) ? info->block_width : 4;
+   if (info->compressed) {
+      *align_j = info->block_height;
+   } else if (info->bind_zs) {
+      *align_j = (info->format == GEN6_FORMAT_R8_UINT) ? 2 : 4;
+   } else {
+      *align_j = (info->sample_count > 1 || info->block_size != 12) ? 4 : 2;
+   }
+}
+
+static void
+image_get_gen7_alignments(const struct ilo_dev *dev,
+                          const struct ilo_image_info *info,
+                          enum gen_surface_tiling tiling,
+                          int *align_i, int *align_j)
+{
+   int i, j;
+
+   ILO_DEV_ASSERT(dev, 7, 8);
+
+   /*
+    * From the Ivy Bridge PRM, volume 1 part 1, page 110:
+    *
+    *     "surface defined by      surface format     align_i     align_j
+    *      3DSTATE_DEPTH_BUFFER    D16_UNORM          8           4
+    *                              not D16_UNORM      4           4
+    *      3DSTATE_STENCIL_BUFFER  N/A                8           8
+    *      SURFACE_STATE           BC*, ETC*, EAC*    4           4
+    *                              FXT1               8           4
+    *                              all others         (set by SURFACE_STATE)"
+    *
+    * From the Ivy Bridge PRM, volume 4 part 1, page 63:
+    *
+    *     "- This field (Surface Vertical Aligment) is intended to be set to
+    *        VALIGN_4 if the surface was rendered as a depth buffer, for a
+    *        multisampled (4x) render target, or for a multisampled (8x)
+    *        render target, since these surfaces support only alignment of 4.
+    *      - Use of VALIGN_4 for other surfaces is supported, but uses more
+    *        memory.
+    *      - This field must be set to VALIGN_4 for all tiled Y Render Target
+    *        surfaces.
+    *      - Value of 1 is not supported for format YCRCB_NORMAL (0x182),
+    *        YCRCB_SWAPUVY (0x183), YCRCB_SWAPUV (0x18f), YCRCB_SWAPY (0x190)
+    *      - If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
+    *        must be set to VALIGN_4."
+    *      - VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
+    *
+    *     "- This field (Surface Horizontal Aligment) is intended to be set to
+    *        HALIGN_8 only if the surface was rendered as a depth buffer with
+    *        Z16 format or a stencil buffer, since these surfaces support only
+    *        alignment of 8.
+    *      - Use of HALIGN_8 for other surfaces is supported, but uses more
+    *        memory.
+    *      - This field must be set to HALIGN_4 if the Surface Format is BC*.
+    *      - This field must be set to HALIGN_8 if the Surface Format is
+    *        FXT1."
+    *
+    * They can be rephrased as
+    *
+    *                                  align_i        align_j
+    *  compressed formats              block width    block height
+    *  GEN6_FORMAT_R16_UNORM           8              4
+    *  GEN6_FORMAT_R8_UINT             8              8
+    *  other depth/stencil formats     4              4
+    *  2x or 4x multisampled           4 or 8         4
+    *  tiled Y                         4 or 8         4 (if rt)
+    *  GEN6_FORMAT_R32G32B32_FLOAT     4 or 8         2
+    *  others                          4 or 8         2 or 4
+    */
+   if (info->compressed) {
+      i = info->block_width;
+      j = info->block_height;
+   } else if (info->bind_zs) {
+      switch (info->format) {
+      case GEN6_FORMAT_R16_UNORM:
+         i = 8;
+         j = 4;
+         break;
+      case GEN6_FORMAT_R8_UINT:
+         i = 8;
+         j = 8;
+         break;
+      default:
+         i = 4;
+         j = 4;
+         break;
+      }
+   } else {
+      const bool valign_4 =
+         (info->sample_count > 1 || ilo_dev_gen(dev) >= ILO_GEN(8) ||
+          (tiling == GEN6_TILING_Y && info->bind_surface_dp_render));
+
+      if (ilo_dev_gen(dev) < ILO_GEN(8) && valign_4)
+         assert(info->format != GEN6_FORMAT_R32G32B32_FLOAT);
+
+      i = 4;
+      j = (valign_4) ? 4 : 2;
+   }
+
+   *align_i = i;
+   *align_j = j;
+}
+
 static bool
 image_get_gen6_layout(const struct ilo_dev *dev,
                       const struct ilo_image_info *info,
@@ -410,6 +561,29 @@ image_get_gen6_layout(const struct ilo_dev *dev,
       layout->aux = ILO_IMAGE_AUX_MCS;
    else
       layout->aux = ILO_IMAGE_AUX_NONE;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      image_get_gen7_alignments(dev, info, layout->tiling,
+            &layout->align_i, &layout->align_j);
+   } else {
+      image_get_gen6_alignments(dev, info,
+            &layout->align_i, &layout->align_j);
+   }
+
+   /*
+    * the fact that align i and j are multiples of block width and height
+    * respectively is what makes the size of the bo a multiple of the block
+    * size, slices start at block boundaries, and many of the computations
+    * work.
+    */
+   assert(layout->align_i % info->block_width == 0);
+   assert(layout->align_j % info->block_height == 0);
+
+   /* make sure align() works */
+   assert(util_is_power_of_two(layout->align_i) &&
+          util_is_power_of_two(layout->align_j));
+   assert(util_is_power_of_two(info->block_width) &&
+          util_is_power_of_two(info->block_height));
 
    return true;
 }
@@ -658,164 +832,6 @@ img_init_lods(struct ilo_image *img,
       else
          img_get_slice_size(img, params, 1, &cur_x, &params->h1);
    }
-}
-
-static void
-img_init_alignments(struct ilo_image *img,
-                    const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 1, page 113:
-    *
-    *     "surface format           align_i     align_j
-    *      YUV 4:2:2 formats        4           *see below
-    *      BC1-5                    4           4
-    *      FXT1                     8           4
-    *      all other formats        4           *see below"
-    *
-    *     "- align_j = 4 for any depth buffer
-    *      - align_j = 2 for separate stencil buffer
-    *      - align_j = 4 for any render target surface is multisampled (4x)
-    *      - align_j = 4 for any render target surface with Surface Vertical
-    *        Alignment = VALIGN_4
-    *      - align_j = 2 for any render target surface with Surface Vertical
-    *        Alignment = VALIGN_2
-    *      - align_j = 2 for all other render target surface
-    *      - align_j = 2 for any sampling engine surface with Surface Vertical
-    *        Alignment = VALIGN_2
-    *      - align_j = 4 for any sampling engine surface with Surface Vertical
-    *        Alignment = VALIGN_4"
-    *
-    * From the Sandy Bridge PRM, volume 4 part 1, page 86:
-    *
-    *     "This field (Surface Vertical Alignment) must be set to VALIGN_2 if
-    *      the Surface Format is 96 bits per element (BPE)."
-    *
-    * They can be rephrased as
-    *
-    *                                  align_i        align_j
-    *   compressed formats             block width    block height
-    *   GEN6_FORMAT_R8_UINT            4              2
-    *   other depth/stencil formats    4              4
-    *   4x multisampled                4              4
-    *   bpp 96                         4              2
-    *   others                         4              2 or 4
-    */
-
-   /*
-    * From the Ivy Bridge PRM, volume 1 part 1, page 110:
-    *
-    *     "surface defined by      surface format     align_i     align_j
-    *      3DSTATE_DEPTH_BUFFER    D16_UNORM          8           4
-    *                              not D16_UNORM      4           4
-    *      3DSTATE_STENCIL_BUFFER  N/A                8           8
-    *      SURFACE_STATE           BC*, ETC*, EAC*    4           4
-    *                              FXT1               8           4
-    *                              all others         (set by SURFACE_STATE)"
-    *
-    * From the Ivy Bridge PRM, volume 4 part 1, page 63:
-    *
-    *     "- This field (Surface Vertical Aligment) is intended to be set to
-    *        VALIGN_4 if the surface was rendered as a depth buffer, for a
-    *        multisampled (4x) render target, or for a multisampled (8x)
-    *        render target, since these surfaces support only alignment of 4.
-    *      - Use of VALIGN_4 for other surfaces is supported, but uses more
-    *        memory.
-    *      - This field must be set to VALIGN_4 for all tiled Y Render Target
-    *        surfaces.
-    *      - Value of 1 is not supported for format YCRCB_NORMAL (0x182),
-    *        YCRCB_SWAPUVY (0x183), YCRCB_SWAPUV (0x18f), YCRCB_SWAPY (0x190)
-    *      - If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
-    *        must be set to VALIGN_4."
-    *      - VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
-    *
-    *     "- This field (Surface Horizontal Aligment) is intended to be set to
-    *        HALIGN_8 only if the surface was rendered as a depth buffer with
-    *        Z16 format or a stencil buffer, since these surfaces support only
-    *        alignment of 8.
-    *      - Use of HALIGN_8 for other surfaces is supported, but uses more
-    *        memory.
-    *      - This field must be set to HALIGN_4 if the Surface Format is BC*.
-    *      - This field must be set to HALIGN_8 if the Surface Format is
-    *        FXT1."
-    *
-    * They can be rephrased as
-    *
-    *                                  align_i        align_j
-    *  compressed formats              block width    block height
-    *  GEN6_FORMAT_R16_UNORM           8              4
-    *  GEN6_FORMAT_R8_UINT             8              8
-    *  other depth/stencil formats     4              4
-    *  2x or 4x multisampled           4 or 8         4
-    *  tiled Y                         4 or 8         4 (if rt)
-    *  GEN6_FORMAT_R32G32B32_FLOAT     4 or 8         2
-    *  others                          4 or 8         2 or 4
-    */
-
-   if (info->compressed) {
-      /* this happens to be the case */
-      img->align_i = img->block_width;
-      img->align_j = img->block_height;
-   } else if (info->bind_zs) {
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7)) {
-         switch (img->format) {
-         case GEN6_FORMAT_R16_UNORM:
-            img->align_i = 8;
-            img->align_j = 4;
-            break;
-         case GEN6_FORMAT_R8_UINT:
-            img->align_i = 8;
-            img->align_j = 8;
-            break;
-         default:
-            img->align_i = 4;
-            img->align_j = 4;
-            break;
-         }
-      } else {
-         switch (img->format) {
-         case GEN6_FORMAT_R8_UINT:
-            img->align_i = 4;
-            img->align_j = 2;
-            break;
-         default:
-            img->align_i = 4;
-            img->align_j = 4;
-            break;
-         }
-      }
-   } else {
-      const bool valign_4 =
-         (info->sample_count > 1) ||
-         (ilo_dev_gen(params->dev) >= ILO_GEN(8)) ||
-         (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
-          img->tiling == GEN6_TILING_Y &&
-          info->bind_surface_dp_render);
-
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
-          ilo_dev_gen(params->dev) <= ILO_GEN(7.5) && valign_4)
-         assert(img->format != GEN6_FORMAT_R32G32B32_FLOAT);
-
-      img->align_i = 4;
-      img->align_j = (valign_4) ? 4 : 2;
-   }
-
-   /*
-    * the fact that align i and j are multiples of block width and height
-    * respectively is what makes the size of the bo a multiple of the block
-    * size, slices start at block boundaries, and many of the computations
-    * work.
-    */
-   assert(img->align_i % img->block_width == 0);
-   assert(img->align_j % img->block_height == 0);
-
-   /* make sure align() works */
-   assert(util_is_power_of_two(img->align_i) &&
-          util_is_power_of_two(img->align_j));
-   assert(util_is_power_of_two(img->block_width) &&
-          util_is_power_of_two(img->block_height));
 }
 
 static void
@@ -1337,7 +1353,9 @@ img_init(struct ilo_image *img,
 
    img->aux.type = layout.aux;
 
-   img_init_alignments(img, params);
+   img->align_i = layout.align_i;
+   img->align_j = layout.align_j;
+
    img_init_lods(img, params);
    img_init_layer_height(img, params);
 
