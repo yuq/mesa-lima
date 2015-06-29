@@ -1097,20 +1097,24 @@ img_calculate_bo_size(struct ilo_image *img,
    }
 }
 
-static void
-img_calculate_hiz_size(struct ilo_image *img,
-                       const struct ilo_image_params *params)
+static bool
+image_set_gen6_hiz(struct ilo_image *img,
+                   const struct ilo_dev *dev,
+                   const struct ilo_image_info *info,
+                   const struct ilo_image_layout *layout)
 {
-   const struct ilo_image_info *info = params->info;
-   const unsigned hz_align_j = 8;
+   const int hz_align_j = 8;
    enum ilo_image_walk_type hz_walk;
-   unsigned hz_width, hz_height, lv;
-   unsigned hz_clear_w, hz_clear_h;
+   int hz_width, hz_height;
+   int hz_clear_w, hz_clear_h;
+   uint8_t lv;
 
-   assert(img->aux.type == ILO_IMAGE_AUX_HIZ);
+   ILO_DEV_ASSERT(dev, 6, 8);
 
-   assert(img->walk == ILO_IMAGE_WALK_LAYER ||
-          img->walk == ILO_IMAGE_WALK_3D);
+   assert(layout->aux == ILO_IMAGE_AUX_HIZ);
+
+   assert(layout->walk == ILO_IMAGE_WALK_LAYER ||
+          layout->walk == ILO_IMAGE_WALK_3D);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 312:
@@ -1123,8 +1127,8 @@ img_calculate_hiz_size(struct ilo_image *img,
     *
     * We will put all LODs in a single bo with ILO_IMAGE_WALK_LOD.
     */
-   if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-      hz_walk = img->walk;
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      hz_walk = layout->walk;
    else
       hz_walk = ILO_IMAGE_WALK_LOD;
 
@@ -1138,16 +1142,16 @@ img_calculate_hiz_size(struct ilo_image *img,
    switch (hz_walk) {
    case ILO_IMAGE_WALK_LAYER:
       {
-         const unsigned h0 = align(params->h0, hz_align_j);
-         const unsigned h1 = align(params->h1, hz_align_j);
-         const unsigned htail =
-            ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
-         const unsigned hz_qpitch = h0 + h1 + htail;
+         const int h0 = align(layout->walk_layer_h0, hz_align_j);
+         const int h1 = align(layout->walk_layer_h1, hz_align_j);
+         const int htail =
+            ((ilo_dev_gen(dev) >= ILO_GEN(7)) ? 12 : 11) * hz_align_j;
+         const int hz_qpitch = h0 + h1 + htail;
 
-         hz_width = align(img->lods[0].slice_width, 16);
+         hz_width = align(layout->lods[0].slice_width, 16);
 
          hz_height = hz_qpitch * info->array_size / 2;
-         if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
+         if (ilo_dev_gen(dev) >= ILO_GEN(7))
             hz_height = align(hz_height, 8);
 
          img->aux.walk_layer_height = hz_qpitch;
@@ -1155,9 +1159,9 @@ img_calculate_hiz_size(struct ilo_image *img,
       break;
    case ILO_IMAGE_WALK_LOD:
       {
-         unsigned lod_tx[ILO_IMAGE_MAX_LEVEL_COUNT];
-         unsigned lod_ty[ILO_IMAGE_MAX_LEVEL_COUNT];
-         unsigned cur_tx, cur_ty;
+         int lod_tx[ILO_IMAGE_MAX_LEVEL_COUNT];
+         int lod_ty[ILO_IMAGE_MAX_LEVEL_COUNT];
+         int cur_tx, cur_ty;
 
          /* figure out the tile offsets of LODs */
          hz_width = 0;
@@ -1165,17 +1169,17 @@ img_calculate_hiz_size(struct ilo_image *img,
          cur_tx = 0;
          cur_ty = 0;
          for (lv = 0; lv < info->level_count; lv++) {
-            unsigned tw, th;
+            int tw, th;
 
             lod_tx[lv] = cur_tx;
             lod_ty[lv] = cur_ty;
 
-            tw = align(img->lods[lv].slice_width, 16);
-            th = align(img->lods[lv].slice_height, hz_align_j) *
+            tw = align(layout->lods[lv].slice_width, 16);
+            th = align(layout->lods[lv].slice_height, hz_align_j) *
                info->array_size / 2;
             /* convert to Y-tiles */
-            tw = align(tw, 128) / 128;
-            th = align(th, 32) / 32;
+            tw = (tw + 127) / 128;
+            th = (th + 31) / 32;
 
             if (hz_width < cur_tx + tw)
                hz_width = cur_tx + tw;
@@ -1193,16 +1197,17 @@ img_calculate_hiz_size(struct ilo_image *img,
             img->aux.walk_lod_offsets[lv] =
                (lod_ty[lv] * hz_width + lod_tx[lv]) * 4096;
          }
+
          hz_width *= 128;
          hz_height *= 32;
       }
       break;
    case ILO_IMAGE_WALK_3D:
-      hz_width = align(img->lods[0].slice_width, 16);
+      hz_width = align(layout->lods[0].slice_width, 16);
 
       hz_height = 0;
       for (lv = 0; lv < info->level_count; lv++) {
-         const unsigned h = align(img->lods[lv].slice_height, hz_align_j);
+         const int h = align(layout->lods[lv].slice_height, hz_align_j);
          /* according to the formula, slices are packed together vertically */
          hz_height += h * u_minify(info->depth, lv);
       }
@@ -1245,30 +1250,35 @@ img_calculate_hiz_size(struct ilo_image *img,
    }
 
    for (lv = 0; lv < info->level_count; lv++) {
-      if (u_minify(img->width0, lv) % hz_clear_w ||
-          u_minify(img->height0, lv) % hz_clear_h)
+      if (u_minify(info->width, lv) % hz_clear_w ||
+          u_minify(info->height, lv) % hz_clear_h)
          break;
       img->aux.enables |= 1 << lv;
    }
 
-   /* we padded to allow this in img_align() */
+   /* we padded to allow this in image_get_gen6_monolithic_size() */
    if (info->level_count == 1 && info->array_size == 1 && info->depth == 1)
       img->aux.enables |= 0x1;
 
    /* align to Y-tile */
    img->aux.bo_stride = align(hz_width, 128);
    img->aux.bo_height = align(hz_height, 32);
+
+   return true;
 }
 
-static void
-img_calculate_mcs_size(struct ilo_image *img,
-                       const struct ilo_image_params *params)
+static bool
+image_set_gen7_mcs(struct ilo_image *img,
+                   const struct ilo_dev *dev,
+                   const struct ilo_image_info *info,
+                   const struct ilo_image_layout *layout)
 {
-   const struct ilo_image_info *info = params->info;
    int mcs_width, mcs_height, mcs_cpp;
    int downscale_x, downscale_y;
 
-   assert(img->aux.type == ILO_IMAGE_AUX_MCS);
+   ILO_DEV_ASSERT(dev, 7, 8);
+
+   assert(layout->aux == ILO_IMAGE_AUX_MCS);
 
    if (info->sample_count > 1) {
       /*
@@ -1303,7 +1313,7 @@ img_calculate_mcs_size(struct ilo_image *img,
          break;
       default:
          assert(!"unsupported sample count");
-         return;
+         return false;
          break;
       }
 
@@ -1312,8 +1322,8 @@ img_calculate_mcs_size(struct ilo_image *img,
        * clear rectangle cannot be masked.  The scale-down clear rectangle
        * thus must be aligned to 2x2, and we need to pad.
        */
-      mcs_width = align(img->width0, downscale_x * 2);
-      mcs_height = align(img->height0, downscale_y * 2);
+      mcs_width = align(info->width, downscale_x * 2);
+      mcs_height = align(info->height, downscale_y * 2);
    } else {
       /*
        * From the Ivy Bridge PRM, volume 2 part 1, page 327:
@@ -1348,18 +1358,18 @@ img_calculate_mcs_size(struct ilo_image *img,
        * anything except for the size of the allocated MCS.  Let's see if we
        * hit out-of-bound access.
        */
-      switch (img->tiling) {
+      switch (layout->tiling) {
       case GEN6_TILING_X:
-         downscale_x = 64 / img->block_size;
+         downscale_x = 64 / info->block_size;
          downscale_y = 2;
          break;
       case GEN6_TILING_Y:
-         downscale_x = 32 / img->block_size;
+         downscale_x = 32 / info->block_size;
          downscale_y = 4;
          break;
       default:
          assert(!"unsupported tiling mode");
-         return;
+         return false;
          break;
       }
 
@@ -1376,8 +1386,8 @@ img_calculate_mcs_size(struct ilo_image *img,
        * The scaled-down clear rectangle must be aligned to 4x4 instead of
        * 2x2, and we need to pad.
        */
-      mcs_width = align(img->width0, downscale_x * 4) / downscale_x;
-      mcs_height = align(img->height0, downscale_y * 4) / downscale_y;
+      mcs_width = align(info->width, downscale_x * 4) / downscale_x;
+      mcs_height = align(info->height, downscale_y * 4) / downscale_y;
       mcs_cpp = 16; /* an OWord */
    }
 
@@ -1385,6 +1395,8 @@ img_calculate_mcs_size(struct ilo_image *img,
    /* align to Y-tile */
    img->aux.bo_stride = align(mcs_width * mcs_cpp, 128);
    img->aux.bo_height = align(mcs_height, 32);
+
+   return true;
 }
 
 static bool
@@ -1424,12 +1436,12 @@ img_init(struct ilo_image *img,
 
    img->scanout = params->info->bind_scanout;
 
-   switch (img->aux.type) {
+   switch (layout.aux) {
    case ILO_IMAGE_AUX_HIZ:
-      img_calculate_hiz_size(img, params);
+      image_set_gen6_hiz(img, params->dev, params->info, &layout);
       break;
    case ILO_IMAGE_AUX_MCS:
-      img_calculate_mcs_size(img, params);
+      image_set_gen7_mcs(img, params->dev, params->info, &layout);
       break;
    default:
       break;
