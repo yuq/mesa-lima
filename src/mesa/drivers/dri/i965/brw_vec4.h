@@ -47,10 +47,6 @@ extern "C" {
 #include "glsl/ir.h"
 
 
-struct brw_vec4_compile {
-   GLuint last_scratch; /**< measured in 32-byte (register size) units */
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -78,7 +74,6 @@ class vec4_visitor : public backend_shader, public ir_visitor
 public:
    vec4_visitor(const struct brw_compiler *compiler,
                 void *log_data,
-                struct brw_vec4_compile *c,
                 struct gl_program *prog,
                 const struct brw_vue_prog_key *key,
                 struct brw_vue_prog_data *prog_data,
@@ -104,7 +99,6 @@ public:
       return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
    }
 
-   struct brw_vec4_compile * const c;
    const struct brw_vue_prog_key * const key;
    struct brw_vue_prog_data * const prog_data;
    unsigned int sanity_param_count;
@@ -412,6 +406,8 @@ private:
    const bool no_spills;
 
    int shader_time_index;
+
+   unsigned last_scratch; /**< measured in 32-byte (register size) units */
 };
 
 

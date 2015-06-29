@@ -3484,16 +3484,16 @@ vec4_visitor::move_grf_array_access_to_scratch()
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       if (inst->dst.file == GRF && inst->dst.reladdr) {
          if (scratch_loc[inst->dst.reg] == -1) {
-            scratch_loc[inst->dst.reg] = c->last_scratch;
-            c->last_scratch += this->alloc.sizes[inst->dst.reg];
+            scratch_loc[inst->dst.reg] = last_scratch;
+            last_scratch += this->alloc.sizes[inst->dst.reg];
          }
 
          for (src_reg *iter = inst->dst.reladdr;
               iter->reladdr;
               iter = iter->reladdr) {
             if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = c->last_scratch;
-               c->last_scratch += this->alloc.sizes[iter->reg];
+               scratch_loc[iter->reg] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->reg];
             }
          }
       }
@@ -3503,8 +3503,8 @@ vec4_visitor::move_grf_array_access_to_scratch()
               iter->reladdr;
               iter = iter->reladdr) {
             if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = c->last_scratch;
-               c->last_scratch += this->alloc.sizes[iter->reg];
+               scratch_loc[iter->reg] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->reg];
             }
          }
       }
@@ -3679,7 +3679,6 @@ vec4_visitor::resolve_bool_comparison(ir_rvalue *rvalue, src_reg *reg)
 
 vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            void *log_data,
-                           struct brw_vec4_compile *c,
                            struct gl_program *prog,
                            const struct brw_vue_prog_key *key,
                            struct brw_vue_prog_data *prog_data,
@@ -3690,7 +3689,6 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx,
                     shader_prog, prog, &prog_data->base, stage),
-     c(c),
      key(key),
      prog_data(prog_data),
      sanity_param_count(0),
@@ -3698,7 +3696,8 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
      first_non_payload_grf(0),
      need_all_constants_in_pull_buffer(false),
      no_spills(no_spills),
-     shader_time_index(shader_time_index)
+     shader_time_index(shader_time_index),
+     last_scratch(0)
 {
    this->failed = false;
 

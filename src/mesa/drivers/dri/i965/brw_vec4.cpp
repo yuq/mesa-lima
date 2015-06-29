@@ -1846,9 +1846,9 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
 
    opt_set_dependency_control();
 
-   if (c->last_scratch > 0) {
+   if (last_scratch > 0) {
       prog_data->base.total_scratch =
-         brw_get_scratch_size(c->last_scratch * REG_SIZE);
+         brw_get_scratch_size(last_scratch * REG_SIZE);
    }
 
    /* If any state parameters were appended, then ParameterValues could have

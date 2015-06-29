@@ -339,7 +339,7 @@ void
 vec4_visitor::spill_reg(int spill_reg_nr)
 {
    assert(alloc.sizes[spill_reg_nr] == 1);
-   unsigned int spill_offset = c->last_scratch++;
+   unsigned int spill_offset = last_scratch++;
 
    /* Generate spill/unspill instructions for the objects being spilled. */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {

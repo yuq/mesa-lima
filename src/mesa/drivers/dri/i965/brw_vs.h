@@ -51,7 +51,6 @@
 #define BRW_ATTRIB_WA_SCALE         64  /* interpret as scaled in shader */
 
 struct brw_vs_compile {
-   struct brw_vec4_compile base;
    struct brw_vs_prog_key key;
 
    struct brw_vertex_program *vp;

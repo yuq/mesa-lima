@@ -220,7 +220,7 @@ vec4_vs_visitor::vec4_vs_visitor(const struct brw_compiler *compiler,
                                  int shader_time_index,
                                  bool use_legacy_snorm_formula)
    : vec4_visitor(compiler, log_data,
-                  &vs_compile->base, &vs_compile->vp->program.Base,
+                  &vs_compile->vp->program.Base,
                   &vs_compile->key.base, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
                   mem_ctx, false /* no_spills */,
