@@ -65,4 +65,26 @@ vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
       }
    }
 }
+
+void
+vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
+{
+   dst_reg dest;
+   src_reg src;
+
+   switch (instr->intrinsic) {
+   case nir_intrinsic_emit_vertex: {
+      int stream_id = instr->const_index[0];
+      gs_emit_vertex(stream_id);
+      break;
+   }
+
+   case nir_intrinsic_end_primitive:
+      gs_end_primitive();
+      break;
+
+   default:
+      vec4_visitor::nir_emit_intrinsic(instr);
+   }
+}
 }

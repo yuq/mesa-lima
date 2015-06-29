@@ -91,6 +91,7 @@ protected:
    virtual void visit(ir_end_primitive *);
    virtual void gs_emit_vertex(int stream_id);
    virtual void gs_end_primitive();
+   virtual void nir_emit_intrinsic(nir_intrinsic_instr *instr);
 
 protected:
    int setup_varying_inputs(int payload_reg, int *attribute_map,
