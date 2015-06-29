@@ -165,6 +165,12 @@ nv30_context_destroy(struct pipe_context *pipe)
    if (nv30->draw)
       draw_destroy(nv30->draw);
 
+   if (nv30->blit_vp)
+      nouveau_heap_free(&nv30->blit_vp);
+
+   if (nv30->blit_fp)
+      pipe_resource_reference(&nv30->blit_fp, NULL);
+
    if (nv30->screen->base.pushbuf->user_priv == &nv30->bufctx)
       nv30->screen->base.pushbuf->user_priv = NULL;
 
