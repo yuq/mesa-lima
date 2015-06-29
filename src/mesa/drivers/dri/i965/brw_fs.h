@@ -286,13 +286,6 @@ public:
                         int shader_time_subindex,
                         fs_reg value);
 
-   void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                            fs_reg dst, fs_reg offset, fs_reg src0,
-                            fs_reg src1);
-
-   void emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
-                                  fs_reg offset);
-
    fs_reg get_timestamp(const brw::fs_builder &bld);
 
    struct brw_reg interp_reg(int location, int channel);

@@ -1269,20 +1269,17 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       /* Emit a surface read or atomic op. */
       switch (instr->intrinsic) {
       case nir_intrinsic_atomic_counter_read:
-         tmp = surface_access::emit_untyped_read(
-            bld, fs_reg(surface), offset, 1, 1);
+         tmp = emit_untyped_read(bld, fs_reg(surface), offset, 1, 1);
          break;
 
       case nir_intrinsic_atomic_counter_inc:
-         tmp = surface_access::emit_untyped_atomic(
-            bld, fs_reg(surface), offset, fs_reg(),
-            fs_reg(), 1, 1, BRW_AOP_INC);
+         tmp = emit_untyped_atomic(bld, fs_reg(surface), offset, fs_reg(),
+                                   fs_reg(), 1, 1, BRW_AOP_INC);
          break;
 
       case nir_intrinsic_atomic_counter_dec:
-         tmp = surface_access::emit_untyped_atomic(
-            bld, fs_reg(surface), offset, fs_reg(),
-            fs_reg(), 1, 1, BRW_AOP_PREDEC);
+         tmp = emit_untyped_atomic(bld, fs_reg(surface), offset, fs_reg(),
+                                   fs_reg(), 1, 1, BRW_AOP_PREDEC);
          break;
 
       default:
