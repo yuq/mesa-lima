@@ -2245,7 +2245,6 @@ if test "x$enable_gallium_loader" = xyes; then
     fi
 
     AC_SUBST([GALLIUM_PIPE_LOADER_DEFINES])
-    AC_SUBST([GALLIUM_PIPE_LOADER_LIBS])
 fi
 
 AM_CONDITIONAL(HAVE_I915_DRI, test x$HAVE_I915_DRI = xyes)

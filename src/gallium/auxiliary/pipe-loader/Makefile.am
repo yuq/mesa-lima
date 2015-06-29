@@ -14,9 +14,6 @@ noinst_LTLIBRARIES = libpipe_loader.la
 libpipe_loader_la_SOURCES = \
 	$(COMMON_SOURCES)
 
-libpipe_loader_la_LIBADD  = $(COMMON_LIBADD) \
-	$(GALLIUM_PIPE_LOADER_LIBS)
-
 if HAVE_DRM_LOADER_GALLIUM
 AM_CFLAGS += \
 	$(LIBDRM_CFLAGS)
