@@ -195,10 +195,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    /* Scratch space is used for register spilling */
-   if (c.base.last_scratch) {
-      prog_data.base.base.total_scratch
-         = brw_get_scratch_size(c.base.last_scratch*REG_SIZE);
-
+   if (prog_data.base.base.total_scratch) {
       brw_get_scratch_bo(brw, &brw->vs.base.scratch_bo,
 			 prog_data.base.base.total_scratch *
                          brw->max_vs_threads);

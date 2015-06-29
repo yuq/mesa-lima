@@ -267,10 +267,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    }
 
    /* Scratch space is used for register spilling */
-   if (c.base.last_scratch) {
-      c.prog_data.base.base.total_scratch
-         = brw_get_scratch_size(c.base.last_scratch*REG_SIZE);
-
+   if (c.prog_data.base.base.total_scratch) {
       brw_get_scratch_bo(brw, &stage_state->scratch_bo,
 			 c.prog_data.base.base.total_scratch *
                          brw->max_gs_threads);

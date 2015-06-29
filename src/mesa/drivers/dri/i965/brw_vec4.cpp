@@ -1846,6 +1846,11 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
 
    opt_set_dependency_control();
 
+   if (c->last_scratch > 0) {
+      prog_data->base.total_scratch =
+         brw_get_scratch_size(c->last_scratch * REG_SIZE);
+   }
+
    /* If any state parameters were appended, then ParameterValues could have
     * been realloced, in which case the driver uniform storage set up by
     * _mesa_associate_uniform_storage() would point to freed memory.  Make
@@ -1943,8 +1948,6 @@ brw_vs_emit(struct brw_context *brw,
       }
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
-
-      c->base.last_scratch = v.last_scratch;
    }
 
    if (!assembly) {
