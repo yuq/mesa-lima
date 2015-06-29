@@ -43,7 +43,6 @@ enum {
 struct ilo_image_params {
    const struct ilo_dev *dev;
    const struct ilo_image_info *info;
-   unsigned valid_tilings;
 
    unsigned h0, h1;
    unsigned max_x, max_y;
@@ -295,7 +294,8 @@ image_get_gen6_tiling(const struct ilo_dev *dev,
                                  info->bind_surface_dp_typed))
          return GEN6_TILING_NONE;
 
-      if (estimated_size <= 64)
+      if (estimated_size <= 64 ||
+          estimated_size > info->prefer_linear_threshold)
          return GEN6_TILING_NONE;
 
       if (estimated_size <= 2048)
@@ -987,114 +987,87 @@ img_init_size_and_format(struct ilo_image *img,
    img->sample_count = info->sample_count;
 }
 
-/* note that this may force the texture to be linear */
-static void
-img_calculate_bo_size(struct ilo_image *img,
-                      const struct ilo_image_params *params)
+static bool
+image_set_gen6_bo_size(struct ilo_image *img,
+                       const struct ilo_dev *dev,
+                       const struct ilo_image_info *info,
+                       const struct ilo_image_layout *layout)
 {
-   assert(params->max_x % img->block_width == 0);
-   assert(params->max_y % img->block_height == 0);
-   assert(img->walk_layer_height % img->block_height == 0);
+   int stride, height;
+   int align_w, align_h;
 
-   img->bo_stride =
-      (params->max_x / img->block_width) * img->block_size;
-   img->bo_height = params->max_y / img->block_height;
+   ILO_DEV_ASSERT(dev, 6, 8);
 
-   while (true) {
-      unsigned w = img->bo_stride, h = img->bo_height;
-      unsigned align_w, align_h;
+   stride = (layout->monolithic_width / info->block_width) * info->block_size;
+   height = layout->monolithic_height / info->block_height;
 
+   /*
+    * From the Haswell PRM, volume 5, page 163:
+    *
+    *     "For linear surfaces, additional padding of 64 bytes is required
+    *      at the bottom of the surface. This is in addition to the padding
+    *      required above."
+    */
+   if (ilo_dev_gen(dev) >= ILO_GEN(7.5) && info->bind_surface_sampler &&
+       layout->tiling == GEN6_TILING_NONE)
+      height += (64 + stride - 1) / stride;
+
+   /*
+    * From the Sandy Bridge PRM, volume 4 part 1, page 81:
+    *
+    *     "- For linear render target surfaces, the pitch must be a multiple
+    *        of the element size for non-YUV surface formats.  Pitch must be a
+    *        multiple of 2 * element size for YUV surface formats.
+    *
+    *      - For other linear surfaces, the pitch can be any multiple of
+    *        bytes.
+    *      - For tiled surfaces, the pitch must be a multiple of the tile
+    *        width."
+    *
+    * Different requirements may exist when the image is used in different
+    * places, but our alignments here should be good enough that we do not
+    * need to check info->bind_x.
+    */
+   switch (layout->tiling) {
+   case GEN6_TILING_X:
+      align_w = 512;
+      align_h = 8;
+      break;
+   case GEN6_TILING_Y:
+      align_w = 128;
+      align_h = 32;
+      break;
+   case GEN8_TILING_W:
       /*
-       * From the Haswell PRM, volume 5, page 163:
+       * From the Sandy Bridge PRM, volume 1 part 2, page 22:
        *
-       *     "For linear surfaces, additional padding of 64 bytes is required
-       *      at the bottom of the surface. This is in addition to the padding
-       *      required above."
+       *     "A 4KB tile is subdivided into 8-high by 8-wide array of
+       *      Blocks for W-Major Tiles (W Tiles). Each Block is 8 rows by 8
+       *      bytes."
        */
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7.5) &&
-          params->info->bind_surface_sampler &&
-          img->tiling == GEN6_TILING_NONE)
-         h += (64 + img->bo_stride - 1) / img->bo_stride;
-
-      /*
-       * From the Sandy Bridge PRM, volume 4 part 1, page 81:
-       *
-       *     "- For linear render target surfaces, the pitch must be a
-       *        multiple of the element size for non-YUV surface formats.
-       *        Pitch must be a multiple of 2 * element size for YUV surface
-       *        formats.
-       *      - For other linear surfaces, the pitch can be any multiple of
-       *        bytes.
-       *      - For tiled surfaces, the pitch must be a multiple of the tile
-       *        width."
-       *
-       * Different requirements may exist when the bo is used in different
-       * places, but our alignments here should be good enough that we do not
-       * need to check params->info->bind_x.
-       */
-      switch (img->tiling) {
-      case GEN6_TILING_X:
-         align_w = 512;
-         align_h = 8;
-         break;
-      case GEN6_TILING_Y:
-         align_w = 128;
-         align_h = 32;
-         break;
-      case GEN8_TILING_W:
-         /*
-          * From the Sandy Bridge PRM, volume 1 part 2, page 22:
-          *
-          *     "A 4KB tile is subdivided into 8-high by 8-wide array of
-          *      Blocks for W-Major Tiles (W Tiles). Each Block is 8 rows by 8
-          *      bytes."
-          */
-         align_w = 64;
-         align_h = 64;
-         break;
-      default:
-         assert(img->tiling == GEN6_TILING_NONE);
-         /* some good enough values */
-         align_w = 64;
-         align_h = 2;
-         break;
-      }
-
-      w = align(w, align_w);
-      h = align(h, align_h);
-
-      /* make sure the bo is mappable */
-      if (img->tiling != GEN6_TILING_NONE) {
-         /*
-          * Usually only the first 256MB of the GTT is mappable.
-          *
-          * See also how intel_context::max_gtt_map_object_size is calculated.
-          */
-         const size_t mappable_gtt_size = 256 * 1024 * 1024;
-
-         /*
-          * Be conservative.  We may be able to switch from VALIGN_4 to
-          * VALIGN_2 if the image was Y-tiled, but let's keep it simple.
-          */
-         if (mappable_gtt_size / w / 4 < h) {
-            if (params->valid_tilings & IMAGE_TILING_NONE) {
-               img->tiling = GEN6_TILING_NONE;
-               /* MCS support for non-MSRTs is limited to tiled RTs */
-               if (img->aux.type == ILO_IMAGE_AUX_MCS &&
-                   params->info->sample_count == 1)
-                  img->aux.type = ILO_IMAGE_AUX_NONE;
-
-               continue;
-            } else {
-               ilo_warn("cannot force texture to be linear\n");
-            }
-         }
-      }
-
-      img->bo_stride = w;
-      img->bo_height = h;
+      align_w = 64;
+      align_h = 64;
+      break;
+   default:
+      assert(layout->tiling == GEN6_TILING_NONE);
+      /* some good enough values */
+      align_w = 64;
+      align_h = 2;
       break;
    }
+
+   if (info->force_bo_stride) {
+      if (info->force_bo_stride % align_w || info->force_bo_stride < stride)
+         return false;
+
+      img->bo_stride = info->force_bo_stride;
+   } else {
+      img->bo_stride = align(stride, align_w);
+   }
+
+   img->bo_height = align(height, align_h);
+
+   return true;
 }
 
 static bool
@@ -1411,14 +1384,11 @@ img_init(struct ilo_image *img,
    if (!image_get_gen6_layout(params->dev, params->info, &layout))
       return false;
 
-   /* there are hard dependencies between every function here */
-
    img_init_size_and_format(img, params);
 
    img->walk = layout.walk;
    img->interleaved_samples = layout.interleaved_samples;
 
-   params->valid_tilings = layout.valid_tilings;
    img->tiling = layout.tiling;
 
    img->aux.type = layout.aux;
@@ -1432,7 +1402,8 @@ img_init(struct ilo_image *img,
    params->h1 = layout.walk_layer_h1;
    img->walk_layer_height = layout.walk_layer_height;
 
-   img_calculate_bo_size(img, params);
+   if (!image_set_gen6_bo_size(img, params->dev, params->info, &layout))
+      return false;
 
    img->scanout = params->info->bind_scanout;
 
@@ -1538,23 +1509,9 @@ ilo_image_init(struct ilo_image *img,
    memset(&params, 0, sizeof(params));
    params.dev = dev;
    params.info = info;
-   params.valid_tilings = (info->valid_tilings) ?
-      info->valid_tilings : IMAGE_TILING_ALL;
 
    if (!img_init(img, &params))
       return false;
-
-   if (info->force_bo_stride) {
-      if ((img->tiling == GEN6_TILING_X && info->force_bo_stride % 512) ||
-          (img->tiling == GEN6_TILING_Y && info->force_bo_stride % 128) ||
-          (img->tiling == GEN8_TILING_W && info->force_bo_stride % 64))
-         return false;
-
-      if (img->bo_stride > info->force_bo_stride)
-         return false;
-
-      img->bo_stride = info->force_bo_stride;
-   }
 
    return true;
 }

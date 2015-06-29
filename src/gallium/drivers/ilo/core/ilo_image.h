@@ -100,7 +100,13 @@ struct ilo_image_info {
    /* tilings to consider, if any bit is set */
    uint8_t valid_tilings;
 
-   /* force a stride */
+   /*
+    * prefer GEN6_TILING_NONE when the (estimated) image size exceeds the
+    * threshold
+    */
+   uint32_t prefer_linear_threshold;
+
+   /* force a stride when non-zero */
    uint32_t force_bo_stride;
 
    bool bind_surface_sampler;

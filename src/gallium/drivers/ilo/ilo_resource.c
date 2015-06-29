@@ -199,6 +199,14 @@ resource_get_image_info(const struct pipe_resource *templ,
    if (templ->bind & PIPE_BIND_LINEAR)
       info->valid_tilings = 1 << GEN6_TILING_NONE;
 
+   /*
+    * Tiled images must be mapped via GTT to get a linear view.  Prefer linear
+    * images when the image size is greater than one-fourth of the mappable
+    * aperture.
+    */
+   if (templ->bind & (PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_TRANSFER_READ))
+      info->prefer_linear_threshold = dev->aperture_mappable / 4;
+
    info->bind_surface_sampler = (templ->bind & PIPE_BIND_SAMPLER_VIEW);
    info->bind_surface_dp_render = (templ->bind & PIPE_BIND_RENDER_TARGET);
    info->bind_surface_dp_typed = (templ->bind &
