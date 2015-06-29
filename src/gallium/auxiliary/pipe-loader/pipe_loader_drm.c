@@ -95,7 +95,7 @@ open_drm_render_node_minor(int minor)
    char path[PATH_MAX];
    snprintf(path, sizeof(path), DRM_RENDER_NODE_DEV_NAME_FORMAT, DRM_DIR_NAME,
             minor);
-   return open(path, O_RDWR, 0);
+   return loader_open_device(path);
 }
 
 int
