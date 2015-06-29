@@ -241,6 +241,21 @@ ir3_ra_alloc_reg_set(void *memctx)
 	return set;
 }
 
+/* additional block-data (per-block) */
+struct ir3_ra_block_data {
+	BITSET_WORD *def;        /* variables defined before used in block */
+	BITSET_WORD *use;        /* variables used before defined in block */
+	BITSET_WORD *livein;     /* which defs reach entry point of block */
+	BITSET_WORD *liveout;    /* which defs reach exit point of block */
+};
+
+/* additional instruction-data (per-instruction) */
+struct ir3_ra_instr_data {
+	/* cached instruction 'definer' info: */
+	struct ir3_instruction *defn;
+	int off, sz, cls;
+};
+
 /* register-assign context, per-shader */
 struct ir3_ra_ctx {
 	struct ir3 *ir;
@@ -254,14 +269,7 @@ struct ir3_ra_ctx {
 	unsigned class_base[total_class_count];
 	unsigned instr_cnt;
 	unsigned *def, *use;     /* def/use table */
-};
-
-/* additional block-data (per-block) */
-struct ir3_ra_block_data {
-	BITSET_WORD *def;        /* variables defined before used in block */
-	BITSET_WORD *use;        /* variables used before defined in block */
-	BITSET_WORD *livein;     /* which defs reach entry point of block */
-	BITSET_WORD *liveout;    /* which defs reach exit point of block */
+	struct ir3_ra_instr_data *instrd;
 };
 
 static bool
@@ -307,12 +315,20 @@ writes_gpr(struct ir3_instruction *instr)
 }
 
 static struct ir3_instruction *
-get_definer(struct ir3_instruction *instr, int *sz, int *off)
+get_definer(struct ir3_ra_ctx *ctx, struct ir3_instruction *instr,
+		int *sz, int *off)
 {
+	struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 	struct ir3_instruction *d = NULL;
 
 	if (instr->fanin)
-		return get_definer(instr->fanin, sz, off);
+		return get_definer(ctx, instr->fanin, sz, off);
+
+	if (id->defn) {
+		*sz = id->sz;
+		*off = id->off;
+		return id->defn;
+	}
 
 	if (is_meta(instr) && (instr->opc == OPC_META_FI)) {
 		/* What about the case where collect is subset of array, we
@@ -330,7 +346,7 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 			if (!src->instr)
 				continue;
 
-			dd = get_definer(src->instr, &dsz, &doff);
+			dd = get_definer(ctx, src->instr, &dsz, &doff);
 
 			if ((!d) || (dd->ip < d->ip)) {
 				d = dd;
@@ -338,7 +354,6 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 				*off = doff - n;
 			}
 		}
-
 
 	} else if (instr->cp.right || instr->cp.left) {
 		/* covers also the meta:fo case, which ends up w/ single
@@ -394,7 +409,7 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		struct ir3_instruction *dd;
 		int dsz, doff;
 
-		dd = get_definer(phi, &dsz, &doff);
+		dd = get_definer(ctx, phi, &dsz, &doff);
 
 		*sz = MAX2(*sz, dsz);
 		*off = doff;
@@ -428,7 +443,7 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		struct ir3_instruction *dd;
 		int dsz, doff;
 
-		dd = get_definer(d->regs[1]->instr, &dsz, &doff);
+		dd = get_definer(ctx, d->regs[1]->instr, &dsz, &doff);
 
 		/* by definition, should come before: */
 		debug_assert(dd->ip < d->ip);
@@ -440,7 +455,23 @@ get_definer(struct ir3_instruction *instr, int *sz, int *off)
 		d = dd;
 	}
 
+	id->defn = d;
+	id->sz = *sz;
+	id->off = *off;
+
 	return d;
+}
+
+static void
+ra_block_find_definers(struct ir3_ra_ctx *ctx, struct ir3_block *block)
+{
+	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
+		struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
+		if (instr->regs_count == 0)
+			continue;
+		id->defn = get_definer(ctx, instr, &id->sz, &id->off);
+		id->cls = size_to_class(id->sz, is_half(id->defn));
+	}
 }
 
 /* give each instruction a name (and ip), and count up the # of names
@@ -450,8 +481,7 @@ static void
 ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 {
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-		struct ir3_instruction *defn;
-		int cls, sz, off;
+		struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
 #ifdef DEBUG
 		instr->name = ~0;
@@ -465,9 +495,7 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		if (!writes_gpr(instr))
 			continue;
 
-		defn = get_definer(instr, &sz, &off);
-
-		if (defn != instr)
+		if (id->defn != instr)
 			continue;
 
 		/* arrays which don't fit in one of the pre-defined class
@@ -475,9 +503,8 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		 *
 		 * TODO but we still need to allocate names for them, don't we??
 		 */
-		cls = size_to_class(sz, is_half(defn));
-		if (cls >= 0) {
-			instr->name = ctx->class_alloc_count[cls]++;
+		if (id->cls >= 0) {
+			instr->name = ctx->class_alloc_count[id->cls]++;
 			ctx->alloc_count++;
 		}
 	}
@@ -486,8 +513,16 @@ ra_block_name_instructions(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 static void
 ra_init(struct ir3_ra_ctx *ctx)
 {
+	unsigned n;
+
 	ir3_clear_mark(ctx->ir);
-	ir3_count_instructions(ctx->ir);
+	n = ir3_count_instructions(ctx->ir);
+
+	ctx->instrd = rzalloc_array(NULL, struct ir3_ra_instr_data, n);
+
+	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
+		ra_block_find_definers(ctx, block);
+	}
 
 	list_for_each_entry (struct ir3_block, block, &ctx->ir->block_list, node) {
 		ra_block_name_instructions(ctx, block);
@@ -503,6 +538,7 @@ ra_init(struct ir3_ra_ctx *ctx)
 	}
 
 	ctx->g = ra_alloc_interference_graph(ctx->set->regs, ctx->alloc_count);
+	ralloc_steal(ctx->g, ctx->instrd);
 	ctx->def = rzalloc_array(ctx->g, unsigned, ctx->alloc_count);
 	ctx->use = rzalloc_array(ctx->g, unsigned, ctx->alloc_count);
 }
@@ -570,39 +606,36 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		 */
 
 		if (writes_gpr(instr)) {
-			struct ir3_instruction *defn;
-			int cls, sz, off;
+			struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-			defn = get_definer(instr, &sz, &off);
-			if (defn == instr) {
+			if (id->defn == instr) {
 				/* arrays which don't fit in one of the pre-defined class
 				 * sizes are pre-colored:
 				 */
-				cls = size_to_class(sz, is_half(defn));
-				if (cls >= 0) {
-					unsigned name = ra_name(ctx, cls, defn);
+				if (id->cls >= 0) {
+					unsigned name = ra_name(ctx, id->cls, id->defn);
 
-					ctx->def[name] = defn->ip;
-					ctx->use[name] = defn->ip;
+					ctx->def[name] = id->defn->ip;
+					ctx->use[name] = id->defn->ip;
 
 					/* since we are in SSA at this point: */
 					debug_assert(!BITSET_TEST(bd->use, name));
 
 					BITSET_SET(bd->def, name);
 
-					if (is_half(defn)) {
+					if (is_half(id->defn)) {
 						ra_set_node_class(ctx->g, name,
-								ctx->set->half_classes[cls - class_count]);
+								ctx->set->half_classes[id->cls - class_count]);
 					} else {
 						ra_set_node_class(ctx->g, name,
-								ctx->set->classes[cls]);
+								ctx->set->classes[id->cls]);
 					}
 
 					/* extend the live range for phi srcs, which may come
 					 * from the bottom of the loop
 					 */
-					if (defn->regs[0]->flags & IR3_REG_PHI_SRC) {
-						struct ir3_instruction *phi = defn->regs[0]->instr;
+					if (id->defn->regs[0]->flags & IR3_REG_PHI_SRC) {
+						struct ir3_instruction *phi = id->defn->regs[0]->instr;
 						foreach_ssa_src(src, phi) {
 							/* if src is after phi, then we need to extend
 							 * the liverange to the end of src's block:
@@ -621,13 +654,10 @@ ra_block_compute_live_ranges(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 
 		foreach_ssa_src(src, instr) {
 			if (writes_gpr(src)) {
-				struct ir3_instruction *srcdefn;
-				int cls, sz, off;
+				struct ir3_ra_instr_data *id = &ctx->instrd[src->ip];
 
-				srcdefn = get_definer(src, &sz, &off);
-				cls = size_to_class(sz, is_half(srcdefn));
-				if (cls >= 0) {
-					unsigned name = ra_name(ctx, cls, srcdefn);
+				if (id->cls >= 0) {
+					unsigned name = ra_name(ctx, id->cls, id->defn);
 					ctx->use[name] = MAX2(ctx->use[name], instr->ip);
 					if (!BITSET_TEST(bd->def, name))
 						BITSET_SET(bd->use, name);
@@ -719,13 +749,10 @@ ra_add_interference(struct ir3_ra_ctx *ctx)
 	/* need to fix things up to keep outputs live: */
 	for (unsigned i = 0; i < ir->noutputs; i++) {
 		struct ir3_instruction *instr = ir->outputs[i];
-		struct ir3_instruction *defn;
-		int cls, sz, off;
+		struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-		defn = get_definer(instr, &sz, &off);
-		cls = size_to_class(sz, is_half(defn));
-		if (cls >= 0) {
-			unsigned name = ra_name(ctx, cls, defn);
+		if (id->cls >= 0) {
+			unsigned name = ra_name(ctx, id->cls, id->defn);
 			ctx->use[name] = ctx->instr_cnt;
 		}
 	}
@@ -795,15 +822,12 @@ static void
 reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 		struct ir3_instruction *instr)
 {
-	struct ir3_instruction *defn;
-	int cls, sz, off;
+	struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-	defn = get_definer(instr, &sz, &off);
-	cls = size_to_class(sz, is_half(defn));
-	if (cls >= 0) {
-		unsigned name = ra_name(ctx, cls, defn);
+	if (id->cls >= 0) {
+		unsigned name = ra_name(ctx, id->cls, id->defn);
 		unsigned r = ra_get_node_reg(ctx->g, name);
-		unsigned num = ctx->set->ra_reg_to_gpr[r] + off;
+		unsigned num = ctx->set->ra_reg_to_gpr[r] + id->off;
 
 		if (reg->flags & IR3_REG_RELATIV)
 			num += reg->offset;
@@ -811,7 +835,7 @@ reg_assign(struct ir3_ra_ctx *ctx, struct ir3_register *reg,
 		reg->num = num;
 		reg->flags &= ~(IR3_REG_SSA | IR3_REG_PHI_SRC);
 
-		if (is_half(defn))
+		if (is_half(id->defn))
 			reg->flags |= IR3_REG_HALF;
 	}
 }
@@ -866,19 +890,16 @@ ra_alloc(struct ir3_ra_ctx *ctx)
 		for (j = 0; i < ir->ninputs; i++) {
 			struct ir3_instruction *instr = ir->inputs[i];
 			if (instr) {
-				struct ir3_instruction *defn;
-				int cls, sz, off;
+				struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 
-				defn = get_definer(instr, &sz, &off);
-				if (defn == instr) {
+				if (id->defn == instr) {
 					unsigned name, reg;
 
-					cls = size_to_class(sz, is_half(defn));
-					name = ra_name(ctx, cls, defn);
-					reg = ctx->set->gpr_to_ra_reg[cls][j];
+					name = ra_name(ctx, id->cls, id->defn);
+					reg = ctx->set->gpr_to_ra_reg[id->cls][j];
 
 					ra_set_node_reg(ctx->g, name, reg);
-					j += sz;
+					j += id->sz;
 				}
 			}
 		}

@@ -431,7 +431,7 @@ static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 void ir3_block_clear_mark(struct ir3_block *block);
 void ir3_clear_mark(struct ir3 *shader);
 
-void ir3_count_instructions(struct ir3 *ir);
+unsigned ir3_count_instructions(struct ir3 *ir);
 
 static inline int ir3_instr_regno(struct ir3_instruction *instr,
 		struct ir3_register *reg)

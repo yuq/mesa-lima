@@ -722,15 +722,16 @@ ir3_clear_mark(struct ir3 *ir)
 }
 
 /* note: this will destroy instr->depth, don't do it until after sched! */
-void
+unsigned
 ir3_count_instructions(struct ir3 *ir)
 {
-	unsigned ip = 0;
+	unsigned cnt = 0;
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node) {
-			instr->ip = ip++;
+			instr->ip = cnt++;
 		}
 		block->start_ip = list_first_entry(&block->instr_list, struct ir3_instruction, node)->ip;
 		block->end_ip = list_last_entry(&block->instr_list, struct ir3_instruction, node)->ip;
 	}
+	return cnt;
 }
