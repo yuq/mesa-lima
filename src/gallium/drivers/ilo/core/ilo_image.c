@@ -60,6 +60,13 @@ struct ilo_image_layout {
 
    int align_i;
    int align_j;
+
+   struct ilo_image_lod *lods;
+   int walk_layer_h0;
+   int walk_layer_h1;
+   int walk_layer_height;
+   int monolithic_width;
+   int monolithic_height;
 };
 
 static enum ilo_image_walk_type
@@ -534,9 +541,9 @@ image_get_gen7_alignments(const struct ilo_dev *dev,
 }
 
 static bool
-image_get_gen6_layout(const struct ilo_dev *dev,
-                      const struct ilo_image_info *info,
-                      struct ilo_image_layout *layout)
+image_init_gen6_hardware_layout(const struct ilo_dev *dev,
+                                const struct ilo_image_info *info,
+                                struct ilo_image_layout *layout)
 {
    ILO_DEV_ASSERT(dev, 6, 8);
 
@@ -570,34 +577,22 @@ image_get_gen6_layout(const struct ilo_dev *dev,
             &layout->align_i, &layout->align_j);
    }
 
-   /*
-    * the fact that align i and j are multiples of block width and height
-    * respectively is what makes the size of the bo a multiple of the block
-    * size, slices start at block boundaries, and many of the computations
-    * work.
-    */
-   assert(layout->align_i % info->block_width == 0);
-   assert(layout->align_j % info->block_height == 0);
-
-   /* make sure align() works */
-   assert(util_is_power_of_two(layout->align_i) &&
-          util_is_power_of_two(layout->align_j));
-   assert(util_is_power_of_two(info->block_width) &&
-          util_is_power_of_two(info->block_height));
-
    return true;
 }
 
 static void
-img_get_slice_size(const struct ilo_image *img,
-                   const struct ilo_image_params *params,
-                   unsigned level, unsigned *width, unsigned *height)
+image_get_gen6_slice_size(const struct ilo_dev *dev,
+                          const struct ilo_image_info *info,
+                          const struct ilo_image_layout *layout,
+                          uint8_t level,
+                          int *width, int *height)
 {
-   const struct ilo_image_info *info = params->info;
-   unsigned w, h;
+   int w, h;
 
-   w = u_minify(img->width0, level);
-   h = u_minify(img->height0, level);
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   w = u_minify(info->width, level);
+   h = u_minify(info->height, level);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 114:
@@ -606,8 +601,8 @@ img_get_slice_size(const struct ilo_image *img,
     *      sizing algorithm presented in Non-Power-of-Two Mipmaps above. Then,
     *      if necessary, they are padded out to compression block boundaries."
     */
-   w = align(w, img->block_width);
-   h = align(h, img->block_height);
+   w = align(w, info->block_width);
+   h = align(h, info->block_height);
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 111:
@@ -648,7 +643,7 @@ img_get_slice_size(const struct ilo_image *img,
     *   w = align(w, 2) * 2;
     *   y = align(y, 2) * 2;
     */
-   if (img->interleaved_samples) {
+   if (layout->interleaved_samples) {
       switch (info->sample_count) {
       case 1:
          break;
@@ -682,40 +677,50 @@ img_get_slice_size(const struct ilo_image *img,
     * To make things easier (for transfer), we will just double the stencil
     * stride in 3DSTATE_STENCIL_BUFFER.
     */
-   w = align(w, img->align_i);
-   h = align(h, img->align_j);
+   w = align(w, layout->align_i);
+   h = align(h, layout->align_j);
 
    *width = w;
    *height = h;
 }
 
-static unsigned
-img_get_num_layers(const struct ilo_image *img,
-                   const struct ilo_image_params *params)
+static int
+image_get_gen6_layer_count(const struct ilo_dev *dev,
+                           const struct ilo_image_info *info,
+                           const struct ilo_image_layout *layout)
 {
-   const struct ilo_image_info *info = params->info;
-   unsigned num_layers = info->array_size;
+   int count = info->array_size;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    /* samples of the same index are stored in a layer */
-   if (info->sample_count > 1 && !img->interleaved_samples)
-      num_layers *= info->sample_count;
+   if (!layout->interleaved_samples)
+      count *= info->sample_count;
 
-   return num_layers;
+   return count;
 }
 
 static void
-img_init_layer_height(struct ilo_image *img,
-                      struct ilo_image_params *params)
+image_get_gen6_walk_layer_heights(const struct ilo_dev *dev,
+                                  const struct ilo_image_info *info,
+                                  struct ilo_image_layout *layout)
 {
-   const struct ilo_image_info *info = params->info;
-   unsigned num_layers;
+   ILO_DEV_ASSERT(dev, 6, 8);
 
-   if (img->walk != ILO_IMAGE_WALK_LAYER)
-      return;
+   layout->walk_layer_h0 = layout->lods[0].slice_height;
 
-   num_layers = img_get_num_layers(img, params);
-   if (num_layers <= 1)
+   if (info->level_count > 1) {
+      layout->walk_layer_h1 = layout->lods[1].slice_height;
+   } else {
+      int dummy;
+      image_get_gen6_slice_size(dev, info, layout, 1,
+            &dummy, &layout->walk_layer_h1);
+   }
+
+   if (image_get_gen6_layer_count(dev, info, layout) == 1) {
+      layout->walk_layer_height = 0;
       return;
+   }
 
    /*
     * From the Sandy Bridge PRM, volume 1 part 1, page 115:
@@ -751,38 +756,44 @@ img_init_layer_height(struct ilo_image *img,
     * slices.  Since we use texel rows everywhere, we do not need to divide
     * QPitch by 4.
     */
-   img->walk_layer_height = params->h0 + params->h1 +
-      ((ilo_dev_gen(params->dev) >= ILO_GEN(7)) ? 12 : 11) * img->align_j;
+   layout->walk_layer_height = layout->walk_layer_h0 + layout->walk_layer_h1 +
+      ((ilo_dev_gen(dev) >= ILO_GEN(7)) ? 12 : 11) * layout->align_j;
 
-   if (ilo_dev_gen(params->dev) == ILO_GEN(6) && info->sample_count > 1 &&
-       img->height0 % 4 == 1)
-      img->walk_layer_height += 4;
-
-   params->max_y += img->walk_layer_height * (num_layers - 1);
+   if (ilo_dev_gen(dev) == ILO_GEN(6) && info->sample_count > 1 &&
+       info->height % 4 == 1)
+      layout->walk_layer_height += 4;
 }
 
 static void
-img_init_lods(struct ilo_image *img,
-              struct ilo_image_params *params)
+image_get_gen6_lods(const struct ilo_dev *dev,
+                    const struct ilo_image_info *info,
+                    struct ilo_image_layout *layout)
 {
-   const struct ilo_image_info *info = params->info;
-   unsigned cur_x, cur_y;
-   unsigned lv;
+   const int layer_count = image_get_gen6_layer_count(dev, info, layout);
+   int cur_x, cur_y, max_x, max_y;
+   uint8_t lv;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
 
    cur_x = 0;
    cur_y = 0;
+   max_x = 0;
+   max_y = 0;
    for (lv = 0; lv < info->level_count; lv++) {
-      unsigned lod_w, lod_h;
+      int slice_w, slice_h, lod_w, lod_h;
 
-      img_get_slice_size(img, params, lv, &lod_w, &lod_h);
+      image_get_gen6_slice_size(dev, info, layout, lv, &slice_w, &slice_h);
 
-      img->lods[lv].x = cur_x;
-      img->lods[lv].y = cur_y;
-      img->lods[lv].slice_width = lod_w;
-      img->lods[lv].slice_height = lod_h;
+      layout->lods[lv].x = cur_x;
+      layout->lods[lv].y = cur_y;
+      layout->lods[lv].slice_width = slice_w;
+      layout->lods[lv].slice_height = slice_h;
 
-      switch (img->walk) {
+      switch (layout->walk) {
       case ILO_IMAGE_WALK_LAYER:
+         lod_w = slice_w;
+         lod_h = slice_h;
+
          /* MIPLAYOUT_BELOW */
          if (lv == 1)
             cur_x += lod_w;
@@ -790,7 +801,9 @@ img_init_lods(struct ilo_image *img,
             cur_y += lod_h;
          break;
       case ILO_IMAGE_WALK_LOD:
-         lod_h *= img_get_num_layers(img, params);
+         lod_w = slice_w;
+         lod_h = slice_h * layer_count;
+
          if (lv == 1)
             cur_x += lod_w;
          else
@@ -798,40 +811,83 @@ img_init_lods(struct ilo_image *img,
 
          /* every LOD begins at tile boundaries */
          if (info->level_count > 1) {
-            assert(img->format == GEN6_FORMAT_R8_UINT);
+            assert(info->format == GEN6_FORMAT_R8_UINT);
             cur_x = align(cur_x, 64);
             cur_y = align(cur_y, 64);
          }
          break;
       case ILO_IMAGE_WALK_3D:
          {
-            const unsigned num_slices = u_minify(info->depth, lv);
-            const unsigned num_slices_per_row = 1 << lv;
-            const unsigned num_rows =
-               (num_slices + num_slices_per_row - 1) / num_slices_per_row;
+            const int slice_count = u_minify(info->depth, lv);
+            const int slice_count_per_row = 1 << lv;
+            const int row_count =
+               (slice_count + slice_count_per_row - 1) / slice_count_per_row;
 
-            lod_w *= num_slices_per_row;
-            lod_h *= num_rows;
-
-            cur_y += lod_h;
+            lod_w = slice_w * slice_count_per_row;
+            lod_h = slice_h * row_count;
          }
+
+         cur_y += lod_h;
+         break;
+      default:
+         assert(!"unknown walk type");
+         lod_w = 0;
+         lod_h = 0;
          break;
       }
 
-      if (params->max_x < img->lods[lv].x + lod_w)
-         params->max_x = img->lods[lv].x + lod_w;
-      if (params->max_y < img->lods[lv].y + lod_h)
-         params->max_y = img->lods[lv].y + lod_h;
+      if (max_x < layout->lods[lv].x + lod_w)
+         max_x = layout->lods[lv].x + lod_w;
+      if (max_y < layout->lods[lv].y + lod_h)
+         max_y = layout->lods[lv].y + lod_h;
    }
 
-   if (img->walk == ILO_IMAGE_WALK_LAYER) {
-      params->h0 = img->lods[0].slice_height;
-
-      if (info->level_count > 1)
-         params->h1 = img->lods[1].slice_height;
-      else
-         img_get_slice_size(img, params, 1, &cur_x, &params->h1);
+   if (layout->walk == ILO_IMAGE_WALK_LAYER) {
+      image_get_gen6_walk_layer_heights(dev, info, layout);
+      if (layer_count > 1)
+         max_y += layout->walk_layer_height * (layer_count - 1);
+   } else {
+      layout->walk_layer_h0 = 0;
+      layout->walk_layer_h1 = 0;
+      layout->walk_layer_height = 0;
    }
+
+   layout->monolithic_width = max_x;
+   layout->monolithic_height = max_y;
+}
+
+static bool
+image_get_gen6_layout(const struct ilo_dev *dev,
+                      const struct ilo_image_info *info,
+                      struct ilo_image_layout *layout)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!image_init_gen6_hardware_layout(dev, info, layout))
+      return false;
+
+   /*
+    * the fact that align i and j are multiples of block width and height
+    * respectively is what makes the size of the bo a multiple of the block
+    * size, slices start at block boundaries, and many of the computations
+    * work.
+    */
+   assert(layout->align_i % info->block_width == 0);
+   assert(layout->align_j % info->block_height == 0);
+
+   /* make sure align() works */
+   assert(util_is_power_of_two(layout->align_i) &&
+          util_is_power_of_two(layout->align_j));
+   assert(util_is_power_of_two(info->block_width) &&
+          util_is_power_of_two(info->block_height));
+
+   image_get_gen6_lods(dev, info, layout);
+
+   assert(layout->walk_layer_height % info->block_height == 0);
+   assert(layout->monolithic_width % info->block_width == 0);
+   assert(layout->monolithic_height % info->block_height == 0);
+
+   return true;
 }
 
 static void
@@ -1337,6 +1393,7 @@ img_init(struct ilo_image *img,
    struct ilo_image_layout layout;
 
    memset(&layout, 0, sizeof(layout));
+   layout.lods = img->lods;
 
    if (!image_get_gen6_layout(params->dev, params->info, &layout))
       return false;
@@ -1356,8 +1413,11 @@ img_init(struct ilo_image *img,
    img->align_i = layout.align_i;
    img->align_j = layout.align_j;
 
-   img_init_lods(img, params);
-   img_init_layer_height(img, params);
+   params->max_x = layout.monolithic_width;
+   params->max_y = layout.monolithic_height;
+   params->h0 = layout.walk_layer_h0;
+   params->h1 = layout.walk_layer_h1;
+   img->walk_layer_height = layout.walk_layer_height;
 
    img_align(img, params);
    img_calculate_bo_size(img, params);
