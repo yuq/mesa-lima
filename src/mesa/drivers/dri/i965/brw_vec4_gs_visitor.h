@@ -87,6 +87,8 @@ protected:
    virtual int compute_array_stride(ir_dereference_array *ir);
    virtual void visit(ir_emit_vertex *);
    virtual void visit(ir_end_primitive *);
+   virtual void gs_emit_vertex(int stream_id);
+   virtual void gs_end_primitive();
 
 protected:
    int setup_varying_inputs(int payload_reg, int *attribute_map,

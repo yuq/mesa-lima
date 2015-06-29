@@ -2994,10 +2994,23 @@ vec4_visitor::visit(ir_if *ir)
 }
 
 void
+vec4_visitor::gs_emit_vertex(int stream_id)
+{
+   unreachable("not reached");
+}
+
+void
 vec4_visitor::visit(ir_emit_vertex *)
 {
    unreachable("not reached");
 }
+
+void
+vec4_visitor::gs_end_primitive()
+{
+   unreachable("not reached");
+}
+
 
 void
 vec4_visitor::visit(ir_end_primitive *)
