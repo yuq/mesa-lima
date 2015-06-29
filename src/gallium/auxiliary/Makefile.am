@@ -8,6 +8,7 @@ include $(top_srcdir)/src/gallium/Automake.inc
 noinst_LTLIBRARIES = libgallium.la
 
 AM_CFLAGS = \
+	-I$(top_srcdir)/src/loader \
 	-I$(top_builddir)/src/glsl/nir \
 	-I$(top_srcdir)/src/gallium/auxiliary/util \
 	$(GALLIUM_CFLAGS) \

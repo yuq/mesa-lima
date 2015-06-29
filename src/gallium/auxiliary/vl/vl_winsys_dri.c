@@ -37,6 +37,8 @@
 #include <xf86drm.h>
 #include <errno.h>
 
+#include "loader.h"
+
 #include "pipe/p_screen.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
@@ -361,7 +363,7 @@ vl_screen_create(Display *display, int screen)
    if (!device_name)
       goto free_connect;
    memcpy(device_name, xcb_dri2_connect_device_name(connect), device_name_length);
-   fd = open(device_name, O_RDWR);
+   fd = loader_open_device(device_name);
    free(device_name);
 
    if (fd < 0)
