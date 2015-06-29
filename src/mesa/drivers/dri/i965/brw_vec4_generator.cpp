@@ -1560,7 +1560,7 @@ generate_code(struct brw_codegen *p,
 
       dump_assembly(p->store, annotation.ann_count, annotation.ann,
                     p->devinfo);
-      ralloc_free(annotation.ann);
+      ralloc_free(annotation.mem_ctx);
    }
 
    compiler->shader_debug_log(log_data,

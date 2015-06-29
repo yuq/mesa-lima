@@ -86,6 +86,9 @@ void annotate(const struct brw_device_info *devinfo,
               struct annotation_info *annotation, const struct cfg_t *cfg,
               struct backend_instruction *inst, unsigned offset)
 {
+   if (annotation->mem_ctx == NULL)
+      annotation->mem_ctx = ralloc_context(NULL);
+
    if (annotation->ann_size <= annotation->ann_count) {
       int old_size = annotation->ann_size;
       annotation->ann_size = MAX2(1024, annotation->ann_size * 2);
