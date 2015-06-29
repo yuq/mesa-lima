@@ -290,7 +290,7 @@ const char *
 brw_instruction_name(enum opcode op)
 {
    switch (op) {
-   case BRW_OPCODE_MOV ... BRW_OPCODE_NOP:
+   case BRW_OPCODE_ILLEGAL ... BRW_OPCODE_NOP:
       assert(opcode_descs[op].name);
       return opcode_descs[op].name;
    case FS_OPCODE_FB_WRITE:

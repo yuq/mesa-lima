@@ -34,6 +34,7 @@
 
 const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_MOV]      = { .name = "mov",     .nsrc = 1, .ndst = 1 },
+   [BRW_OPCODE_MOVI]     = { .name = "movi",    .nsrc = 2, .ndst = 1 },
    [BRW_OPCODE_FRC]      = { .name = "frc",     .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_RNDU]     = { .name = "rndu",    .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_RNDD]     = { .name = "rndd",    .nsrc = 1, .ndst = 1 },
@@ -83,6 +84,9 @@ const struct opcode_desc opcode_descs[128] = {
 
    [BRW_OPCODE_SEND]     = { .name = "send",    .nsrc = 1, .ndst = 1 },
    [BRW_OPCODE_SENDC]    = { .name = "sendc",   .nsrc = 1, .ndst = 1 },
+   [BRW_OPCODE_SENDS]    = { .name = "sends",   .nsrc = 2, .ndst = 1 },
+   [BRW_OPCODE_SENDSC]   = { .name = "sendsc",  .nsrc = 2, .ndst = 1 },
+   [BRW_OPCODE_ILLEGAL]  = { .name = "illegal", .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_NOP]      = { .name = "nop",     .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_NENOP]    = { .name = "nenop",   .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_JMPI]     = { .name = "jmpi",    .nsrc = 0, .ndst = 0 },
@@ -93,10 +97,10 @@ const struct opcode_desc opcode_descs[128] = {
    [BRW_OPCODE_BREAK]    = { .name = "break",   .nsrc = 2, .ndst = 0 },
    [BRW_OPCODE_CONTINUE] = { .name = "cont",    .nsrc = 1, .ndst = 0 },
    [BRW_OPCODE_HALT]     = { .name = "halt",    .nsrc = 1, .ndst = 0 },
-   [BRW_OPCODE_MSAVE]    = { .name = "msave",   .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_PUSH]     = { .name = "push",    .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_MRESTORE] = { .name = "mrest",   .nsrc = 1, .ndst = 1 },
-   [BRW_OPCODE_POP]      = { .name = "pop",     .nsrc = 2, .ndst = 0 },
+   // [BRW_OPCODE_MSAVE]    = { .name = "msave",   .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_PUSH]     = { .name = "push",    .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_MREST]    = { .name = "mrest",   .nsrc = 1, .ndst = 1 },
+   // [BRW_OPCODE_POP]      = { .name = "pop",     .nsrc = 2, .ndst = 0 },
    [BRW_OPCODE_WAIT]     = { .name = "wait",    .nsrc = 1, .ndst = 0 },
    [BRW_OPCODE_DO]       = { .name = "do",      .nsrc = 0, .ndst = 0 },
    [BRW_OPCODE_ENDIF]    = { .name = "endif",   .nsrc = 2, .ndst = 0 },
@@ -137,8 +141,8 @@ has_branch_ctrl(const struct brw_device_info *devinfo, enum opcode opcode)
       return false;
 
    return opcode == BRW_OPCODE_IF ||
-          opcode == BRW_OPCODE_ELSE ||
-          opcode == BRW_OPCODE_GOTO;
+          opcode == BRW_OPCODE_ELSE;
+          /* opcode == BRW_OPCODE_GOTO; */
 }
 
 static bool
