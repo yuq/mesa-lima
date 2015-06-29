@@ -49,6 +49,102 @@ struct ilo_image_params {
    unsigned max_x, max_y;
 };
 
+struct ilo_image_layout {
+   enum ilo_image_walk_type walk;
+   bool interleaved_samples;
+};
+
+static enum ilo_image_walk_type
+image_get_gen6_walk(const struct ilo_dev *dev,
+                    const struct ilo_image_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 6);
+
+   /* TODO we want LODs to be page-aligned */
+   if (info->type == GEN6_SURFTYPE_3D)
+      return ILO_IMAGE_WALK_3D;
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 1, page 115:
+    *
+    *     "The separate stencil buffer does not support mip mapping, thus the
+    *      storage for LODs other than LOD 0 is not needed. The following
+    *      QPitch equation applies only to the separate stencil buffer:
+    *
+    *        QPitch = h_0"
+    *
+    * Use ILO_IMAGE_WALK_LOD and manually offset to the (page-aligned) levels
+    * when bound.
+    */
+   if (info->bind_zs && info->format == GEN6_FORMAT_R8_UINT)
+      return ILO_IMAGE_WALK_LOD;
+
+   /* compact spacing is not supported otherwise */
+   return ILO_IMAGE_WALK_LAYER;
+}
+
+static enum ilo_image_walk_type
+image_get_gen7_walk(const struct ilo_dev *dev,
+                    const struct ilo_image_info *info)
+{
+   ILO_DEV_ASSERT(dev, 7, 8);
+
+   if (info->type == GEN6_SURFTYPE_3D)
+      return ILO_IMAGE_WALK_3D;
+
+   /*
+    * From the Ivy Bridge PRM, volume 1 part 1, page 111:
+    *
+    *     "note that the depth buffer and stencil buffer have an implied value
+    *      of ARYSPC_FULL"
+    *
+    * From the Ivy Bridge PRM, volume 4 part 1, page 66:
+    *
+    *     "If Multisampled Surface Storage Format is MSFMT_MSS and Number of
+    *      Multisamples is not MULTISAMPLECOUNT_1, this field (Surface Array
+    *      Spacing) must be set to ARYSPC_LOD0."
+    */
+   if (info->sample_count > 1)
+      assert(info->level_count == 1);
+   return (info->bind_zs || info->level_count > 1) ?
+      ILO_IMAGE_WALK_LAYER : ILO_IMAGE_WALK_LOD;
+}
+
+static bool
+image_get_gen6_interleaved_samples(const struct ilo_dev *dev,
+                                   const struct ilo_image_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * Gen6 supports only interleaved samples.  It is not explicitly stated,
+    * but on Gen7+, render targets are expected to be UMS/CMS (samples
+    * non-interleaved) and depth/stencil buffers are expected to be IMS
+    * (samples interleaved).
+    *
+    * See "Multisampled Surface Storage Format" field of SURFACE_STATE.
+    */
+   return (ilo_dev_gen(dev) == ILO_GEN(6) || info->bind_zs);
+}
+
+static bool
+image_get_gen6_layout(const struct ilo_dev *dev,
+                      const struct ilo_image_info *info,
+                      struct ilo_image_layout *layout)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7))
+      layout->walk = image_get_gen7_walk(dev, info);
+   else
+      layout->walk = image_get_gen6_walk(dev, info);
+
+   layout->interleaved_samples =
+      image_get_gen6_interleaved_samples(dev, info);
+
+   return true;
+}
+
 static void
 img_get_slice_size(const struct ilo_image *img,
                    const struct ilo_image_params *params,
@@ -490,87 +586,6 @@ img_init_tiling(struct ilo_image *img,
       img->tiling = GEN8_TILING_W;
    else
       img->tiling = GEN6_TILING_NONE;
-}
-
-static void
-img_init_walk_gen7(struct ilo_image *img,
-                   const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-
-   /*
-    * It is not explicitly states, but render targets are expected to be
-    * UMS/CMS (samples non-interleaved) and depth/stencil buffers are expected
-    * to be IMS (samples interleaved).
-    *
-    * See "Multisampled Surface Storage Format" field of SURFACE_STATE.
-    */
-   if (info->bind_zs) {
-      /*
-       * From the Ivy Bridge PRM, volume 1 part 1, page 111:
-       *
-       *     "note that the depth buffer and stencil buffer have an implied
-       *      value of ARYSPC_FULL"
-       */
-      img->walk = (info->type == GEN6_SURFTYPE_3D) ?
-         ILO_IMAGE_WALK_3D : ILO_IMAGE_WALK_LAYER;
-
-      img->interleaved_samples = true;
-   } else {
-      /*
-       * From the Ivy Bridge PRM, volume 4 part 1, page 66:
-       *
-       *     "If Multisampled Surface Storage Format is MSFMT_MSS and Number
-       *      of Multisamples is not MULTISAMPLECOUNT_1, this field (Surface
-       *      Array Spacing) must be set to ARYSPC_LOD0."
-       *
-       * As multisampled resources are not mipmapped, we never use
-       * ARYSPC_FULL for them.
-       */
-      if (info->sample_count > 1)
-         assert(info->level_count == 1);
-
-      img->walk =
-         (info->type == GEN6_SURFTYPE_3D) ? ILO_IMAGE_WALK_3D :
-         (info->level_count > 1) ? ILO_IMAGE_WALK_LAYER :
-         ILO_IMAGE_WALK_LOD;
-
-      img->interleaved_samples = false;
-   }
-}
-
-static void
-img_init_walk_gen6(struct ilo_image *img,
-                   const struct ilo_image_params *params)
-{
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 1, page 115:
-    *
-    *     "The separate stencil buffer does not support mip mapping, thus the
-    *      storage for LODs other than LOD 0 is not needed. The following
-    *      QPitch equation applies only to the separate stencil buffer:
-    *
-    *        QPitch = h_0"
-    *
-    * GEN6 does not support compact spacing otherwise.
-    */
-   img->walk =
-      (params->info->type == GEN6_SURFTYPE_3D) ? ILO_IMAGE_WALK_3D :
-      (img->format == GEN6_FORMAT_R8_UINT) ? ILO_IMAGE_WALK_LOD :
-      ILO_IMAGE_WALK_LAYER;
-
-   /* GEN6 supports only interleaved samples */
-   img->interleaved_samples = true;
-}
-
-static void
-img_init_walk(struct ilo_image *img,
-              const struct ilo_image_params *params)
-{
-   if (ilo_dev_gen(params->dev) >= ILO_GEN(7))
-      img_init_walk_gen7(img, params);
-   else
-      img_init_walk_gen6(img, params);
 }
 
 static unsigned
@@ -1265,11 +1280,21 @@ static bool
 img_init(struct ilo_image *img,
          struct ilo_image_params *params)
 {
+   struct ilo_image_layout layout;
+
+   memset(&layout, 0, sizeof(layout));
+
+   if (!image_get_gen6_layout(params->dev, params->info, &layout))
+      return false;
+
    /* there are hard dependencies between every function here */
 
    img_init_size_and_format(img, params);
    img_init_aux(img, params);
-   img_init_walk(img, params);
+
+   img->walk = layout.walk;
+   img->interleaved_samples = layout.interleaved_samples;
+
    img_init_tiling(img, params);
    img_init_alignments(img, params);
    img_init_lods(img, params);
