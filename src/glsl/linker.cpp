@@ -2624,9 +2624,17 @@ build_stageref(struct gl_shader_program *shProg, const char *name)
       struct gl_shader *sh = shProg->_LinkedShaders[i];
       if (!sh)
          continue;
-      ir_variable *var = sh->symbols->get_variable(name);
-      if (var)
-         stages |= (1 << i);
+
+      /* Shader symbol table may contain variables that have
+       * been optimized away. Search IR for the variable instead.
+       */
+      foreach_in_list(ir_instruction, node, sh->ir) {
+         ir_variable *var = node->as_variable();
+         if (var && strcmp(var->name, name) == 0) {
+            stages |= (1 << i);
+            break;
+         }
+      }
    }
    return stages;
 }
