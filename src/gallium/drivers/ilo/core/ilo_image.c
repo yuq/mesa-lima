@@ -40,14 +40,6 @@ enum {
                         IMAGE_TILING_W)
 };
 
-struct ilo_image_params {
-   const struct ilo_dev *dev;
-   const struct ilo_image_info *info;
-
-   unsigned h0, h1;
-   unsigned max_x, max_y;
-};
-
 struct ilo_image_layout {
    enum ilo_image_walk_type walk;
    bool interleaved_samples;
@@ -952,11 +944,34 @@ image_bind_gpu(const struct ilo_image_info *info)
 }
 
 static bool
+image_validate_gen6(const struct ilo_dev *dev,
+                    const struct ilo_image_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 314:
+    *
+    *     "The separate stencil buffer is always enabled, thus the field in
+    *      3DSTATE_DEPTH_BUFFER to explicitly enable the separate stencil
+    *      buffer has been removed Surface formats with interleaved depth and
+    *      stencil are no longer supported"
+    */
+   if (ilo_dev_gen(dev) >= ILO_GEN(7) && info->bind_zs)
+      assert(!info->interleaved_stencil);
+
+   return true;
+}
+
+static bool
 image_get_gen6_layout(const struct ilo_dev *dev,
                       const struct ilo_image_info *info,
                       struct ilo_image_layout *layout)
 {
    ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (!image_validate_gen6(dev, info))
+      return false;
 
    if (image_bind_gpu(info) || info->level_count > 1) {
       if (!image_init_gen6_hardware_layout(dev, info, layout))
@@ -988,38 +1003,6 @@ image_get_gen6_layout(const struct ilo_dev *dev,
    assert(layout->monolithic_height % info->block_height == 0);
 
    return true;
-}
-
-static void
-img_init_size_and_format(struct ilo_image *img,
-                         struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-
-   img->type = info->type;
-
-   /*
-    * From the Ivy Bridge PRM, volume 2 part 1, page 314:
-    *
-    *     "The separate stencil buffer is always enabled, thus the field in
-    *      3DSTATE_DEPTH_BUFFER to explicitly enable the separate stencil
-    *      buffer has been removed Surface formats with interleaved depth and
-    *      stencil are no longer supported"
-    */
-   if (ilo_dev_gen(params->dev) >= ILO_GEN(7) && info->bind_zs)
-      assert(!info->interleaved_stencil);
-
-   img->format = info->format;
-   img->block_width = info->block_width;
-   img->block_height = info->block_height;
-   img->block_size = info->block_size;
-
-   img->width0 = info->width;
-   img->height0 = info->height;
-   img->depth0 = info->depth;
-   img->array_size = info->array_size;
-   img->level_count = info->level_count;
-   img->sample_count = info->sample_count;
 }
 
 static bool
@@ -1407,19 +1390,34 @@ image_set_gen7_mcs(struct ilo_image *img,
    return true;
 }
 
-static bool
-img_init(struct ilo_image *img,
-         struct ilo_image_params *params)
+bool
+ilo_image_init(struct ilo_image *img,
+               const struct ilo_dev *dev,
+               const struct ilo_image_info *info)
 {
    struct ilo_image_layout layout;
+
+   assert(ilo_is_zeroed(img, sizeof(*img)));
 
    memset(&layout, 0, sizeof(layout));
    layout.lods = img->lods;
 
-   if (!image_get_gen6_layout(params->dev, params->info, &layout))
+   if (!image_get_gen6_layout(dev, info, &layout))
       return false;
 
-   img_init_size_and_format(img, params);
+   img->type = info->type;
+
+   img->format = info->format;
+   img->block_width = info->block_width;
+   img->block_height = info->block_height;
+   img->block_size = info->block_size;
+
+   img->width0 = info->width;
+   img->height0 = info->height;
+   img->depth0 = info->depth;
+   img->array_size = info->array_size;
+   img->level_count = info->level_count;
+   img->sample_count = info->sample_count;
 
    img->walk = layout.walk;
    img->interleaved_samples = layout.interleaved_samples;
@@ -1431,49 +1429,23 @@ img_init(struct ilo_image *img,
    img->align_i = layout.align_i;
    img->align_j = layout.align_j;
 
-   params->max_x = layout.monolithic_width;
-   params->max_y = layout.monolithic_height;
-   params->h0 = layout.walk_layer_h0;
-   params->h1 = layout.walk_layer_h1;
    img->walk_layer_height = layout.walk_layer_height;
 
-   if (!image_set_gen6_bo_size(img, params->dev, params->info, &layout))
+   if (!image_set_gen6_bo_size(img, dev, info, &layout))
       return false;
 
-   img->scanout = params->info->bind_scanout;
+   img->scanout = info->bind_scanout;
 
    switch (layout.aux) {
    case ILO_IMAGE_AUX_HIZ:
-      image_set_gen6_hiz(img, params->dev, params->info, &layout);
+      image_set_gen6_hiz(img, dev, info, &layout);
       break;
    case ILO_IMAGE_AUX_MCS:
-      image_set_gen7_mcs(img, params->dev, params->info, &layout);
+      image_set_gen7_mcs(img, dev, info, &layout);
       break;
    default:
       break;
    }
-
-   return true;
-}
-
-/**
- * Initialize the image.  Callers should zero-initialize \p img first.
- */
-bool
-ilo_image_init(struct ilo_image *img,
-               const struct ilo_dev *dev,
-               const struct ilo_image_info *info)
-{
-   struct ilo_image_params params;
-
-   assert(ilo_is_zeroed(img, sizeof(*img)));
-
-   memset(&params, 0, sizeof(params));
-   params.dev = dev;
-   params.info = info;
-
-   if (!img_init(img, &params))
-      return false;
 
    return true;
 }
