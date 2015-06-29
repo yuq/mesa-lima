@@ -52,6 +52,9 @@ struct ilo_image_params {
 struct ilo_image_layout {
    enum ilo_image_walk_type walk;
    bool interleaved_samples;
+
+   uint8_t valid_tilings;
+   enum gen_surface_tiling tiling;
 };
 
 static enum ilo_image_walk_type
@@ -127,6 +130,171 @@ image_get_gen6_interleaved_samples(const struct ilo_dev *dev,
    return (ilo_dev_gen(dev) == ILO_GEN(6) || info->bind_zs);
 }
 
+static uint8_t
+image_get_gen6_valid_tilings(const struct ilo_dev *dev,
+                             const struct ilo_image_info *info)
+{
+   uint8_t valid_tilings = IMAGE_TILING_ALL;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (info->valid_tilings)
+      valid_tilings &= info->valid_tilings;
+
+   /*
+    * From the Sandy Bridge PRM, volume 1 part 2, page 32:
+    *
+    *     "Display/Overlay   Y-Major not supported.
+    *                        X-Major required for Async Flips"
+    */
+   if (unlikely(info->bind_scanout))
+      valid_tilings &= IMAGE_TILING_X;
+
+   /*
+    * From the Sandy Bridge PRM, volume 3 part 2, page 158:
+    *
+    *     "The cursor surface address must be 4K byte aligned. The cursor must
+    *      be in linear memory, it cannot be tiled."
+    */
+   if (unlikely(info->bind_cursor))
+      valid_tilings &= IMAGE_TILING_NONE;
+
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 318:
+    *
+    *     "[DevSNB+]: This field (Tiled Surface) must be set to TRUE. Linear
+    *      Depth Buffer is not supported."
+    *
+    *     "The Depth Buffer, if tiled, must use Y-Major tiling."
+    *
+    * From the Sandy Bridge PRM, volume 1 part 2, page 22:
+    *
+    *     "W-Major Tile Format is used for separate stencil."
+    */
+   if (info->bind_zs) {
+      if (info->format == GEN6_FORMAT_R8_UINT)
+         valid_tilings &= IMAGE_TILING_W;
+      else
+         valid_tilings &= IMAGE_TILING_Y;
+   }
+
+   if (info->bind_surface_sampler ||
+       info->bind_surface_dp_render ||
+       info->bind_surface_dp_typed) {
+      /*
+       * From the Haswell PRM, volume 2d, page 233:
+       *
+       *     "If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
+       *      (Tiled Surface) must be TRUE."
+       */
+      if (info->sample_count > 1)
+         valid_tilings &= ~IMAGE_TILING_NONE;
+
+      if (ilo_dev_gen(dev) < ILO_GEN(8))
+         valid_tilings &= ~IMAGE_TILING_W;
+   }
+
+   if (info->bind_surface_dp_render) {
+      /*
+       * From the Sandy Bridge PRM, volume 1 part 2, page 32:
+       *
+       *     "NOTE: 128BPE Format Color buffer ( render target ) MUST be
+       *      either TileX or Linear."
+       *
+       * From the Haswell PRM, volume 5, page 32:
+       *
+       *     "NOTE: 128 BPP format color buffer (render target) supports
+       *      Linear, TiledX and TiledY."
+       */
+      if (ilo_dev_gen(dev) < ILO_GEN(7.5) && info->block_size == 16)
+         valid_tilings &= ~IMAGE_TILING_Y;
+
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 63:
+       *
+       *     "This field (Surface Vertical Aligment) must be set to VALIGN_4
+       *      for all tiled Y Render Target surfaces."
+       *
+       *     "VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
+       *
+       * R32G32B32_FLOAT is not renderable and we only need an assert() here.
+       */
+      if (ilo_dev_gen(dev) >= ILO_GEN(7) && ilo_dev_gen(dev) <= ILO_GEN(7.5))
+         assert(info->format != GEN6_FORMAT_R32G32B32_FLOAT);
+   }
+
+   return valid_tilings;
+}
+
+static uint64_t
+image_get_gen6_estimated_size(const struct ilo_dev *dev,
+                              const struct ilo_image_info *info)
+{
+   /* padding not considered */
+   const uint64_t slice_size = info->width * info->height *
+      info->block_size / (info->block_width * info->block_height);
+   const uint64_t slice_count =
+      info->depth * info->array_size * info->sample_count;
+   const uint64_t estimated_size = slice_size * slice_count;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   if (info->level_count == 1)
+      return estimated_size;
+   else
+      return estimated_size * 4 / 3;
+}
+
+static enum gen_surface_tiling
+image_get_gen6_tiling(const struct ilo_dev *dev,
+                      const struct ilo_image_info *info,
+                      uint8_t valid_tilings)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   switch (valid_tilings) {
+   case IMAGE_TILING_NONE:
+      return GEN6_TILING_NONE;
+   case IMAGE_TILING_X:
+      return GEN6_TILING_X;
+   case IMAGE_TILING_Y:
+      return GEN6_TILING_Y;
+   case IMAGE_TILING_W:
+      return GEN8_TILING_W;
+   default:
+      break;
+   }
+
+   /*
+    * X-tiling has the property that vertically adjacent pixels are usually in
+    * the same page.  When the image size is less than a page, the image
+    * height is 1, or when the image is not accessed in blocks, there is no
+    * reason to tile.
+    *
+    * Y-tiling is similar, where vertically adjacent pixels are usually in the
+    * same cacheline.
+    */
+   if (valid_tilings & IMAGE_TILING_NONE) {
+      const uint64_t estimated_size =
+         image_get_gen6_estimated_size(dev, info);
+
+      if (info->height == 1 || !(info->bind_surface_sampler ||
+                                 info->bind_surface_dp_render ||
+                                 info->bind_surface_dp_typed))
+         return GEN6_TILING_NONE;
+
+      if (estimated_size <= 64)
+         return GEN6_TILING_NONE;
+
+      if (estimated_size <= 2048)
+         valid_tilings &= ~IMAGE_TILING_X;
+   }
+
+   return (valid_tilings & IMAGE_TILING_Y) ? GEN6_TILING_Y :
+          (valid_tilings & IMAGE_TILING_X) ? GEN6_TILING_X :
+          GEN6_TILING_NONE;
+}
+
 static bool
 image_get_gen6_layout(const struct ilo_dev *dev,
                       const struct ilo_image_info *info,
@@ -141,6 +309,12 @@ image_get_gen6_layout(const struct ilo_dev *dev,
 
    layout->interleaved_samples =
       image_get_gen6_interleaved_samples(dev, info);
+
+   layout->valid_tilings = image_get_gen6_valid_tilings(dev, info);
+   if (!layout->valid_tilings)
+      return false;
+
+   layout->tiling = image_get_gen6_tiling(dev, info, layout->valid_tilings);
 
    return true;
 }
@@ -550,135 +724,6 @@ img_init_alignments(struct ilo_image *img,
 }
 
 static void
-img_init_tiling(struct ilo_image *img,
-                const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-   unsigned preferred_tilings = params->valid_tilings;
-
-   /* no fencing nor BLT support */
-   if (preferred_tilings & ~IMAGE_TILING_W)
-      preferred_tilings &= ~IMAGE_TILING_W;
-
-   if (info->bind_surface_dp_render || info->bind_surface_sampler) {
-      /*
-       * heuristically set a minimum width/height for enabling tiling
-       */
-      if (img->width0 < 64 && (preferred_tilings & ~IMAGE_TILING_X))
-         preferred_tilings &= ~IMAGE_TILING_X;
-
-      if ((img->width0 < 32 || img->height0 < 16) &&
-          (img->width0 < 16 || img->height0 < 32) &&
-          (preferred_tilings & ~IMAGE_TILING_Y))
-         preferred_tilings &= ~IMAGE_TILING_Y;
-   } else {
-      /* force linear if we are not sure where the texture is bound to */
-      if (preferred_tilings & IMAGE_TILING_NONE)
-         preferred_tilings &= IMAGE_TILING_NONE;
-   }
-
-   /* prefer tiled over linear */
-   if (preferred_tilings & IMAGE_TILING_Y)
-      img->tiling = GEN6_TILING_Y;
-   else if (preferred_tilings & IMAGE_TILING_X)
-      img->tiling = GEN6_TILING_X;
-   else if (preferred_tilings & IMAGE_TILING_W)
-      img->tiling = GEN8_TILING_W;
-   else
-      img->tiling = GEN6_TILING_NONE;
-}
-
-static unsigned
-img_get_valid_tilings(const struct ilo_image *img,
-                      const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-   unsigned valid_tilings = params->valid_tilings;
-
-   /*
-    * From the Sandy Bridge PRM, volume 1 part 2, page 32:
-    *
-    *     "Display/Overlay   Y-Major not supported.
-    *                        X-Major required for Async Flips"
-    */
-   if (unlikely(info->bind_scanout))
-      valid_tilings &= IMAGE_TILING_X;
-
-   /*
-    * From the Sandy Bridge PRM, volume 3 part 2, page 158:
-    *
-    *     "The cursor surface address must be 4K byte aligned. The cursor must
-    *      be in linear memory, it cannot be tiled."
-    */
-   if (unlikely(info->bind_cursor))
-      valid_tilings &= IMAGE_TILING_NONE;
-
-   /*
-    * From the Sandy Bridge PRM, volume 2 part 1, page 318:
-    *
-    *     "[DevSNB+]: This field (Tiled Surface) must be set to TRUE. Linear
-    *      Depth Buffer is not supported."
-    *
-    *     "The Depth Buffer, if tiled, must use Y-Major tiling."
-    *
-    * From the Sandy Bridge PRM, volume 1 part 2, page 22:
-    *
-    *     "W-Major Tile Format is used for separate stencil."
-    */
-   if (info->bind_zs) {
-      switch (info->format) {
-      case GEN6_FORMAT_R8_UINT:
-         valid_tilings &= IMAGE_TILING_W;
-         break;
-      default:
-         valid_tilings &= IMAGE_TILING_Y;
-         break;
-      }
-   }
-
-   if (info->bind_surface_dp_render) {
-      /*
-       * From the Sandy Bridge PRM, volume 1 part 2, page 32:
-       *
-       *     "NOTE: 128BPE Format Color buffer ( render target ) MUST be
-       *      either TileX or Linear."
-       *
-       * From the Haswell PRM, volume 5, page 32:
-       *
-       *     "NOTE: 128 BPP format color buffer (render target) supports
-       *      Linear, TiledX and TiledY."
-       */
-      if (ilo_dev_gen(params->dev) < ILO_GEN(7.5) && img->block_size == 16)
-         valid_tilings &= ~IMAGE_TILING_Y;
-
-      /*
-       * From the Ivy Bridge PRM, volume 4 part 1, page 63:
-       *
-       *     "This field (Surface Vertical Aligment) must be set to VALIGN_4
-       *      for all tiled Y Render Target surfaces."
-       *
-       *     "VALIGN_4 is not supported for surface format R32G32B32_FLOAT."
-       */
-      if (ilo_dev_gen(params->dev) >= ILO_GEN(7) &&
-          ilo_dev_gen(params->dev) <= ILO_GEN(7.5) &&
-          img->format == GEN6_FORMAT_R32G32B32_FLOAT)
-         valid_tilings &= ~IMAGE_TILING_Y;
-
-      valid_tilings &= ~IMAGE_TILING_W;
-   }
-
-   if (info->bind_surface_sampler) {
-      if (ilo_dev_gen(params->dev) < ILO_GEN(8))
-         valid_tilings &= ~IMAGE_TILING_W;
-   }
-
-   /* no conflicting binding flags */
-   assert(valid_tilings);
-
-   return valid_tilings;
-}
-
-static void
 img_init_size_and_format(struct ilo_image *img,
                          struct ilo_image_params *params)
 {
@@ -708,8 +753,6 @@ img_init_size_and_format(struct ilo_image *img,
    img->array_size = info->array_size;
    img->level_count = info->level_count;
    img->sample_count = info->sample_count;
-
-   params->valid_tilings = img_get_valid_tilings(img, params);
 }
 
 static bool
@@ -1295,7 +1338,9 @@ img_init(struct ilo_image *img,
    img->walk = layout.walk;
    img->interleaved_samples = layout.interleaved_samples;
 
-   img_init_tiling(img, params);
+   params->valid_tilings = layout.valid_tilings;
+   img->tiling = layout.tiling;
+
    img_init_alignments(img, params);
    img_init_lods(img, params);
    img_init_layer_height(img, params);
