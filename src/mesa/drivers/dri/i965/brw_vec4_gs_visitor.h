@@ -75,6 +75,8 @@ public:
                    bool no_spills,
                    int shader_time_index);
 
+   virtual void nir_setup_inputs(nir_shader *shader);
+
 protected:
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type);
