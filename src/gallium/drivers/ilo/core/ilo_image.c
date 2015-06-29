@@ -580,6 +580,25 @@ image_init_gen6_hardware_layout(const struct ilo_dev *dev,
    return true;
 }
 
+static bool
+image_init_gen6_transfer_layout(const struct ilo_dev *dev,
+                                const struct ilo_image_info *info,
+                                struct ilo_image_layout *layout)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /* we can define our own layout to save space */
+   layout->walk = ILO_IMAGE_WALK_LOD;
+   layout->interleaved_samples = false;
+   layout->valid_tilings = IMAGE_TILING_NONE;
+   layout->tiling = GEN6_TILING_NONE;
+   layout->aux = ILO_IMAGE_AUX_NONE;
+   layout->align_i = info->block_width;
+   layout->align_j = info->block_height;
+
+   return true;
+}
+
 static void
 image_get_gen6_slice_size(const struct ilo_dev *dev,
                           const struct ilo_image_info *info,
@@ -922,14 +941,30 @@ image_get_gen6_lods(const struct ilo_dev *dev,
 }
 
 static bool
+image_bind_gpu(const struct ilo_image_info *info)
+{
+   return (info->bind_surface_sampler ||
+           info->bind_surface_dp_render ||
+           info->bind_surface_dp_typed ||
+           info->bind_zs ||
+           info->bind_scanout ||
+           info->bind_cursor);
+}
+
+static bool
 image_get_gen6_layout(const struct ilo_dev *dev,
                       const struct ilo_image_info *info,
                       struct ilo_image_layout *layout)
 {
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   if (!image_init_gen6_hardware_layout(dev, info, layout))
-      return false;
+   if (image_bind_gpu(info) || info->level_count > 1) {
+      if (!image_init_gen6_hardware_layout(dev, info, layout))
+         return false;
+   } else {
+      if (!image_init_gen6_transfer_layout(dev, info, layout))
+         return false;
+   }
 
    /*
     * the fact that align i and j are multiples of block width and height
@@ -1422,71 +1457,6 @@ img_init(struct ilo_image *img,
 }
 
 /**
- * The texutre is for transfer only.  We can define our own layout to save
- * space.
- */
-static void
-img_init_for_transfer(struct ilo_image *img,
-                      const struct ilo_dev *dev,
-                      const struct ilo_image_info *info)
-{
-   const unsigned num_layers = (info->type == GEN6_SURFTYPE_3D) ?
-      info->depth : info->array_size;
-   unsigned layer_width, layer_height;
-
-   assert(info->level_count == 1);
-   assert(info->sample_count == 1);
-
-   img->aux.type = ILO_IMAGE_AUX_NONE;
-
-   img->type = info->type;
-   img->width0 = info->width;
-   img->height0 = info->height;
-   img->depth0 = info->depth;
-   img->array_size = info->array_size;
-   img->level_count = 1;
-   img->sample_count = 1;
-
-   img->format = info->format;
-   img->block_width = info->block_width;
-   img->block_height = info->block_height;
-   img->block_size = info->block_size;
-
-   img->walk = ILO_IMAGE_WALK_LOD;
-
-   img->tiling = GEN6_TILING_NONE;
-
-   img->align_i = img->block_width;
-   img->align_j = img->block_height;
-
-   assert(util_is_power_of_two(img->block_width) &&
-          util_is_power_of_two(img->block_height));
-
-   /* use packed layout */
-   layer_width = align(info->width, img->align_i);
-   layer_height = align(info->height, img->align_j);
-
-   img->lods[0].slice_width = layer_width;
-   img->lods[0].slice_height = layer_height;
-
-   img->bo_stride = (layer_width / img->block_width) * img->block_size;
-   img->bo_stride = align(img->bo_stride, 64);
-
-   img->bo_height = (layer_height / img->block_height) * num_layers;
-}
-
-static bool
-img_is_bind_gpu(const struct ilo_image_info *info)
-{
-   return (info->bind_surface_sampler ||
-           info->bind_surface_dp_render ||
-           info->bind_surface_dp_typed ||
-           info->bind_zs ||
-           info->bind_scanout ||
-           info->bind_cursor);
-}
-
-/**
  * Initialize the image.  Callers should zero-initialize \p img first.
  */
 bool
@@ -1497,14 +1467,6 @@ ilo_image_init(struct ilo_image *img,
    struct ilo_image_params params;
 
    assert(ilo_is_zeroed(img, sizeof(*img)));
-
-   /* use transfer layout when the texture is never bound to GPU */
-   if (!img_is_bind_gpu(info) &&
-       info->level_count == 1 &&
-       info->sample_count == 1) {
-      img_init_for_transfer(img, dev, info);
-      return true;
-   }
 
    memset(&params, 0, sizeof(params));
    params.dev = dev;
