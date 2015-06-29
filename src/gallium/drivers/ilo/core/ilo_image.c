@@ -55,6 +55,8 @@ struct ilo_image_layout {
 
    uint8_t valid_tilings;
    enum gen_surface_tiling tiling;
+
+   enum ilo_image_aux_type aux;
 };
 
 static enum ilo_image_walk_type
@@ -296,6 +298,91 @@ image_get_gen6_tiling(const struct ilo_dev *dev,
 }
 
 static bool
+image_get_gen6_hiz_enable(const struct ilo_dev *dev,
+                          const struct ilo_image_info *info)
+{
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /* depth buffer? */
+   if (!info->bind_zs ||
+       info->format == GEN6_FORMAT_R8_UINT ||
+       info->interleaved_stencil)
+      return false;
+
+   /* we want to be able to force 8x4 alignments */
+   if (info->type == GEN6_SURFTYPE_1D)
+      return false;
+
+   if (info->aux_disable)
+      return false;
+
+   if (ilo_debug & ILO_DEBUG_NOHIZ)
+      return false;
+
+   return true;
+}
+
+static bool
+image_get_gen7_mcs_enable(const struct ilo_dev *dev,
+                          const struct ilo_image_info *info,
+                          enum gen_surface_tiling tiling)
+{
+   ILO_DEV_ASSERT(dev, 7, 8);
+
+   if (!info->bind_surface_sampler && !info->bind_surface_dp_render)
+      return false;
+
+   /*
+    * From the Ivy Bridge PRM, volume 4 part 1, page 77:
+    *
+    *     "For Render Target and Sampling Engine Surfaces:If the surface is
+    *      multisampled (Number of Multisamples any value other than
+    *      MULTISAMPLECOUNT_1), this field (MCS Enable) must be enabled."
+    *
+    *     "This field must be set to 0 for all SINT MSRTs when all RT channels
+    *      are not written"
+    */
+   if (info->sample_count > 1) {
+      if (ilo_dev_gen(dev) < ILO_GEN(8))
+         assert(!info->is_integer);
+      return true;
+   }
+
+   if (info->aux_disable)
+      return false;
+
+   /*
+    * From the Ivy Bridge PRM, volume 2 part 1, page 326:
+    *
+    *     "When MCS is buffer is used for color clear of non-multisampler
+    *      render target, the following restrictions apply.
+    *      - Support is limited to tiled render targets.
+    *      - Support is for non-mip-mapped and non-array surface types only.
+    *      - Clear is supported only on the full RT; i.e., no partial clear or
+    *        overlapping clears.
+    *      - MCS buffer for non-MSRT is supported only for RT formats 32bpp,
+    *        64bpp and 128bpp.
+    *      ..."
+    *
+    * How about SURFTYPE_3D?
+    */
+   if (!info->bind_surface_dp_render ||
+       tiling == GEN6_TILING_NONE ||
+       info->level_count > 1 ||
+       info->array_size > 1)
+      return false;
+
+   switch (info->block_size) {
+   case 4:
+   case 8:
+   case 16:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static bool
 image_get_gen6_layout(const struct ilo_dev *dev,
                       const struct ilo_image_info *info,
                       struct ilo_image_layout *layout)
@@ -315,6 +402,14 @@ image_get_gen6_layout(const struct ilo_dev *dev,
       return false;
 
    layout->tiling = image_get_gen6_tiling(dev, info, layout->valid_tilings);
+
+   if (image_get_gen6_hiz_enable(dev, info))
+      layout->aux = ILO_IMAGE_AUX_HIZ;
+   else if (ilo_dev_gen(dev) >= ILO_GEN(7) &&
+            image_get_gen7_mcs_enable(dev, info, layout->tiling))
+      layout->aux = ILO_IMAGE_AUX_MCS;
+   else
+      layout->aux = ILO_IMAGE_AUX_NONE;
 
    return true;
 }
@@ -753,106 +848,6 @@ img_init_size_and_format(struct ilo_image *img,
    img->array_size = info->array_size;
    img->level_count = info->level_count;
    img->sample_count = info->sample_count;
-}
-
-static bool
-img_want_mcs(const struct ilo_image *img,
-             const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-   bool want_mcs = false;
-
-   /* MCS is for RT on GEN7+ */
-   if (ilo_dev_gen(params->dev) < ILO_GEN(7))
-      return false;
-
-   if (info->type != GEN6_SURFTYPE_2D || !info->bind_surface_dp_render)
-      return false;
-
-   /*
-    * From the Ivy Bridge PRM, volume 4 part 1, page 77:
-    *
-    *     "For Render Target and Sampling Engine Surfaces:If the surface is
-    *      multisampled (Number of Multisamples any value other than
-    *      MULTISAMPLECOUNT_1), this field (MCS Enable) must be enabled."
-    *
-    *     "This field must be set to 0 for all SINT MSRTs when all RT channels
-    *      are not written"
-    */
-   if (info->sample_count > 1 && !info->is_integer) {
-      want_mcs = true;
-   } else if (info->sample_count == 1 && !info->aux_disable) {
-      /*
-       * From the Ivy Bridge PRM, volume 2 part 1, page 326:
-       *
-       *     "When MCS is buffer is used for color clear of non-multisampler
-       *      render target, the following restrictions apply.
-       *      - Support is limited to tiled render targets.
-       *      - Support is for non-mip-mapped and non-array surface types
-       *        only.
-       *      - Clear is supported only on the full RT; i.e., no partial clear
-       *        or overlapping clears.
-       *      - MCS buffer for non-MSRT is supported only for RT formats
-       *        32bpp, 64bpp and 128bpp.
-       *      ..."
-       */
-      if (img->tiling != GEN6_TILING_NONE &&
-          info->level_count == 1 && info->array_size == 1) {
-         switch (img->block_size) {
-         case 4:
-         case 8:
-         case 16:
-            want_mcs = true;
-            break;
-         default:
-            break;
-         }
-      }
-   }
-
-   return want_mcs;
-}
-
-static bool
-img_want_hiz(const struct ilo_image *img,
-             const struct ilo_image_params *params)
-{
-   const struct ilo_image_info *info = params->info;
-
-   if (ilo_debug & ILO_DEBUG_NOHIZ)
-      return false;
-
-   if (info->aux_disable)
-      return false;
-
-   /* we want 8x4 aligned levels */
-   if (info->type == GEN6_SURFTYPE_1D)
-      return false;
-
-   if (!info->bind_zs)
-      return false;
-
-   if (info->interleaved_stencil)
-      return false;
-
-   switch (info->format) {
-   case GEN6_FORMAT_R32_FLOAT:
-   case GEN6_FORMAT_R24_UNORM_X8_TYPELESS:
-   case GEN6_FORMAT_R16_UNORM:
-      return true;
-   default:
-      return false;
-   }
-}
-
-static void
-img_init_aux(struct ilo_image *img,
-             const struct ilo_image_params *params)
-{
-   if (img_want_hiz(img, params))
-      img->aux.type = ILO_IMAGE_AUX_HIZ;
-   else if (img_want_mcs(img, params))
-      img->aux.type = ILO_IMAGE_AUX_MCS;
 }
 
 static void
@@ -1333,13 +1328,14 @@ img_init(struct ilo_image *img,
    /* there are hard dependencies between every function here */
 
    img_init_size_and_format(img, params);
-   img_init_aux(img, params);
 
    img->walk = layout.walk;
    img->interleaved_samples = layout.interleaved_samples;
 
    params->valid_tilings = layout.valid_tilings;
    img->tiling = layout.tiling;
+
+   img->aux.type = layout.aux;
 
    img_init_alignments(img, params);
    img_init_lods(img, params);
