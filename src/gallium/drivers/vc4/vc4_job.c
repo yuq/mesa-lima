@@ -207,7 +207,7 @@ vc4_job_submit(struct vc4_context *vc4)
 
         if (vc4_debug & VC4_DEBUG_ALWAYS_SYNC) {
                 if (!vc4_wait_seqno(vc4->screen, vc4->last_emit_seqno,
-                                    PIPE_TIMEOUT_INFINITE)) {
+                                    PIPE_TIMEOUT_INFINITE, "sync")) {
                         fprintf(stderr, "Wait failed.\n");
                         abort();
                 }

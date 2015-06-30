@@ -113,10 +113,11 @@ void *
 vc4_bo_map_unsynchronized(struct vc4_bo *bo);
 
 bool
-vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns);
+vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns, const char *reason);
 
 bool
-vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns);
+vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns,
+               const char *reason);
 
 void
 vc4_bufmgr_destroy(struct pipe_screen *pscreen);
