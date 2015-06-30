@@ -775,7 +775,7 @@ void anv_compiler_free(struct anv_pipeline *pipeline);
 struct anv_format {
    const char *name;
    uint16_t surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
-   uint8_t cpp;
+   uint8_t cpp; /**< Bytes-per-pixel of anv_format::surface_format. */
    uint8_t num_channels;
    uint8_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    bool has_stencil;
