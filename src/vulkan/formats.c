@@ -122,7 +122,7 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_D16_UNORM,               R16_UNORM,              .cpp = 2,   .num_channels = 1, .depth_format = D16_UNORM),
    fmt(VK_FORMAT_D24_UNORM,               R24_UNORM_X8_TYPELESS,  .cpp = 4,   .num_channels = 1, .depth_format = D24_UNORM_X8_UINT),
    fmt(VK_FORMAT_D32_SFLOAT,              R32_FLOAT,              .cpp = 4,   .num_channels = 1, .depth_format = D32_FLOAT),
-   fmt(VK_FORMAT_S8_UINT,                 UNSUPPORTED,            .cpp = 1,   .num_channels = 1,                                       .has_stencil = true),
+   fmt(VK_FORMAT_S8_UINT,                 R8_UINT,                .cpp = 1,   .num_channels = 1,                                       .has_stencil = true),
    fmt(VK_FORMAT_D16_UNORM_S8_UINT,       R16_UNORM,              .cpp = 2,   .num_channels = 2, .depth_format = D16_UNORM,            .has_stencil = true),
    fmt(VK_FORMAT_D24_UNORM_S8_UINT,       R24_UNORM_X8_TYPELESS,  .cpp = 4,   .num_channels = 2, .depth_format = D24_UNORM_X8_UINT,    .has_stencil = true),
    fmt(VK_FORMAT_D32_SFLOAT_S8_UINT,      R32_FLOAT,              .cpp = 4,   .num_channels = 2, .depth_format = D32_FLOAT,            .has_stencil = true),
