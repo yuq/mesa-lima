@@ -389,26 +389,6 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
 
       /* Special case instructions which have extra implied registers used. */
       switch (inst->opcode) {
-      case FS_OPCODE_LINTERP:
-         /* On gen6+ in SIMD16, there are 4 adjacent registers used by
-          * PLN's sourcing of the deltas, while we list only the first one
-          * in the arguments.  Pre-gen6, the deltas are computed in normal
-          * VGRFs.
-          */
-         if (devinfo->gen >= 6) {
-            int delta_x_arg = 0;
-            if (inst->src[delta_x_arg].file == HW_REG &&
-                inst->src[delta_x_arg].fixed_hw_reg.file ==
-                BRW_GENERAL_REGISTER_FILE) {
-               for (int i = 1; i < 4; ++i) {
-                  int node = inst->src[delta_x_arg].fixed_hw_reg.nr + i;
-                  assert(node < payload_node_count);
-                  payload_last_use_ip[node] = use_ip;
-               }
-            }
-         }
-         break;
-
       case CS_OPCODE_CS_TERMINATE:
          payload_last_use_ip[0] = use_ip;
          break;
