@@ -242,8 +242,8 @@ nv30_miptree_transfer_map(struct pipe_context *pipe, struct pipe_resource *pt,
    tx->base.level = level;
    tx->base.usage = usage;
    tx->base.box = *box;
-   tx->base.stride = util_format_get_nblocksx(pt->format, box->width) *
-                     util_format_get_blocksize(pt->format);
+   tx->base.stride = align(util_format_get_nblocksx(pt->format, box->width) *
+                           util_format_get_blocksize(pt->format), 64);
    tx->base.layer_stride = util_format_get_nblocksy(pt->format, box->height) *
                            tx->base.stride;
 
