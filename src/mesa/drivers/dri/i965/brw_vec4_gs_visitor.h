@@ -69,6 +69,7 @@ class vec4_gs_visitor : public vec4_visitor
 {
 public:
    vec4_gs_visitor(const struct brw_compiler *compiler,
+                   void *log_data,
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
                    void *mem_ctx,

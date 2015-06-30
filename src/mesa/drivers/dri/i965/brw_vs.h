@@ -91,6 +91,7 @@ class vec4_vs_visitor : public vec4_visitor
 {
 public:
    vec4_vs_visitor(const struct brw_compiler *compiler,
+                   void *log_data,
                    struct brw_vs_compile *vs_compile,
                    struct brw_vs_prog_data *vs_prog_data,
                    struct gl_shader_program *prog,

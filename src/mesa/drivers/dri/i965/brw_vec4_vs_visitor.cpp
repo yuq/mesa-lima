@@ -212,13 +212,15 @@ vec4_vs_visitor::emit_thread_end()
 
 
 vec4_vs_visitor::vec4_vs_visitor(const struct brw_compiler *compiler,
+                                 void *log_data,
                                  struct brw_vs_compile *vs_compile,
                                  struct brw_vs_prog_data *vs_prog_data,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
                                  int shader_time_index,
                                  bool use_legacy_snorm_formula)
-   : vec4_visitor(compiler, &vs_compile->base, &vs_compile->vp->program.Base,
+   : vec4_visitor(compiler, log_data,
+                  &vs_compile->base, &vs_compile->vp->program.Base,
                   &vs_compile->key.base, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
                   mem_ctx, false /* no_spills */,

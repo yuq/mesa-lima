@@ -35,12 +35,14 @@ const unsigned MAX_GS_INPUT_VERTICES = 6;
 namespace brw {
 
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
+                                 void *log_data,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
-   : vec4_visitor(compiler, &c->base, &c->gp->program.Base, &c->key.base,
+   : vec4_visitor(compiler, log_data,
+                  &c->base, &c->gp->program.Base, &c->key.base,
                   &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
                   no_spills, shader_time_index),
      c(c)
@@ -662,7 +664,7 @@ brw_gs_emit(struct brw_context *brw,
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(brw->intelScreen->compiler,
+         vec4_gs_visitor v(brw->intelScreen->compiler, brw,
                            c, prog, mem_ctx, true /* no_spills */, st_index);
          if (v.run(NULL /* clip planes */)) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
@@ -704,11 +706,11 @@ brw_gs_emit(struct brw_context *brw,
    const unsigned *ret = NULL;
 
    if (brw->gen >= 7)
-      gs = new vec4_gs_visitor(brw->intelScreen->compiler,
+      gs = new vec4_gs_visitor(brw->intelScreen->compiler, brw,
                                c, prog, mem_ctx, false /* no_spills */,
                                st_index);
    else
-      gs = new gen6_gs_visitor(brw->intelScreen->compiler,
+      gs = new gen6_gs_visitor(brw->intelScreen->compiler, brw,
                                c, prog, mem_ctx, false /* no_spills */,
                                st_index);
 
