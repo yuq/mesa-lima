@@ -202,6 +202,9 @@ nv30_vbo_validate(struct nv30_context *nv30)
       return;
 
    redefine = MAX2(vertex->num_elements, nv30->state.num_vtxelts);
+   if (redefine == 0)
+      return;
+
    BEGIN_NV04(push, NV30_3D(VTXFMT(0)), redefine);
 
    for (i = 0; i < vertex->num_elements; i++) {
@@ -253,8 +256,6 @@ nv30_vertex_state_create(struct pipe_context *pipe, unsigned num_elements,
     struct nv30_vertex_stateobj *so;
     struct translate_key transkey;
     unsigned i;
-
-    assert(num_elements);
 
     so = MALLOC(sizeof(*so) + sizeof(*so->element) * num_elements);
     if (!so)
