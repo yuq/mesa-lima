@@ -614,6 +614,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    struct nouveau_pushbuf *push;
    uint64_t value;
    uint32_t obj_class;
+   uint32_t flags;
    int ret;
    unsigned i;
 
@@ -669,8 +670,11 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->base.base.get_video_param = nouveau_vp3_screen_get_video_param;
    screen->base.base.is_video_format_supported = nouveau_vp3_screen_video_supported;
 
-   ret = nouveau_bo_new(dev, NOUVEAU_BO_GART | NOUVEAU_BO_MAP, 0, 4096, NULL,
-                        &screen->fence.bo);
+   flags = NOUVEAU_BO_GART | NOUVEAU_BO_MAP;
+   if (dev->drm_version >= 0x01000202)
+      flags |= NOUVEAU_BO_COHERENT;
+
+   ret = nouveau_bo_new(dev, flags, 0, 4096, NULL, &screen->fence.bo);
    if (ret)
       goto fail;
    nouveau_bo_map(screen->fence.bo, 0, NULL);
