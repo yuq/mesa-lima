@@ -91,8 +91,9 @@ class vec4_vs_visitor : public vec4_visitor
 public:
    vec4_vs_visitor(const struct brw_compiler *compiler,
                    void *log_data,
-                   struct brw_vs_compile *vs_compile,
+                   const struct brw_vs_prog_key *key,
                    struct brw_vs_prog_data *vs_prog_data,
+                   struct gl_vertex_program *vp,
                    struct gl_shader_program *prog,
                    void *mem_ctx,
                    int shader_time_index,
@@ -113,8 +114,9 @@ private:
    dst_reg get_vp_dst_reg(const prog_dst_register &dst);
    src_reg get_vp_src_reg(const prog_src_register &src);
 
-   struct brw_vs_compile * const vs_compile;
+   const struct brw_vs_prog_key *const key;
    struct brw_vs_prog_data * const vs_prog_data;
+   struct gl_vertex_program *const vp;
    src_reg *vp_temp_regs;
    src_reg vp_addr_reg;
 

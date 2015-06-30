@@ -1953,8 +1953,8 @@ brw_vs_emit(struct brw_context *brw,
    if (!assembly) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-      vec4_vs_visitor v(brw->intelScreen->compiler, brw,
-                        c, prog_data, prog, mem_ctx, st_index,
+      vec4_vs_visitor v(brw->intelScreen->compiler, brw, &c->key, prog_data,
+                        &c->vp->program, prog, mem_ctx, st_index,
                         !_mesa_is_gles3(&brw->ctx));
       if (!v.run(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
