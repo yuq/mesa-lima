@@ -341,7 +341,9 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
    int loop_end_ip = 0;
 
    int payload_last_use_ip[payload_node_count];
-   memset(payload_last_use_ip, 0, sizeof(payload_last_use_ip));
+   for (int i = 0; i < payload_node_count; i++)
+      payload_last_use_ip[i] = -1;
+
    int ip = 0;
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       switch (inst->opcode) {
@@ -411,6 +413,9 @@ fs_visitor::setup_payload_interference(struct ra_graph *g,
    }
 
    for (int i = 0; i < payload_node_count; i++) {
+      if (payload_last_use_ip[i] == -1)
+         continue;
+
       /* Mark the payload node as interfering with any virtual grf that is
        * live between the start of the program and our last use of the payload
        * node.
