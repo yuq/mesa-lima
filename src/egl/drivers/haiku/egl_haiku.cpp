@@ -92,8 +92,11 @@ haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 		return NULL;
 	}
 
-	if (!_eglInitSurface(&surface->surf, disp, EGL_WINDOW_BIT, conf, attrib_list))
-		goto cleanup_surface;
+	if (!_eglInitSurface(&surface->surf, disp, EGL_WINDOW_BIT,
+		conf, attrib_list)) {
+		free(surface);
+		return NULL;
+	}
 
 	(&surface->surf)->SwapInterval = 1;
 
@@ -110,10 +113,6 @@ haiku_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 	TRACE("Showing window\n");
 	win->Show();
 	return &surface->surf;
-
-cleanup_surface:
-	free(surface);
-	return NULL;
 }
 
 
@@ -139,7 +138,7 @@ haiku_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 	if (_eglPutSurface(surf)) {
 		// XXX: detach haiku_egl_surface::gl from the native window and destroy it
 		free(surf);
-        }
+	}
 	return EGL_TRUE;
 }
 
@@ -153,7 +152,7 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 	conf = (struct haiku_egl_config*) calloc(1, sizeof (*conf));
 	if (!conf) {
 		_eglError(EGL_BAD_ALLOC, "haiku_add_configs_for_visuals");
-		return NULL;
+		return EGL_FALSE;
 	}
 
 	_eglInitConfig(&conf->base, dpy, 1);
@@ -165,7 +164,7 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 	_eglSetConfigKey(&conf->base, EGL_LUMINANCE_SIZE, 0);
 	_eglSetConfigKey(&conf->base, EGL_ALPHA_SIZE, 8);
 	_eglSetConfigKey(&conf->base, EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-	EGLint r = (_eglGetConfigKey(&conf->base, EGL_RED_SIZE) 
+	EGLint r = (_eglGetConfigKey(&conf->base, EGL_RED_SIZE)
 		+ _eglGetConfigKey(&conf->base, EGL_GREEN_SIZE)
 		+ _eglGetConfigKey(&conf->base, EGL_BLUE_SIZE)
 		+ _eglGetConfigKey(&conf->base, EGL_ALPHA_SIZE));
@@ -195,7 +194,7 @@ haiku_add_configs_for_visuals(_EGLDisplay *dpy)
 		goto cleanup;
 	}
 	TRACE("Validated config\n");
-   
+
 	_eglLinkConfig(&conf->base);
 	if (!_eglGetArraySize(dpy->Configs)) {
 		_eglLog(_EGL_WARNING, "Haiku: failed to create any config");
@@ -210,6 +209,7 @@ cleanup:
 	return EGL_FALSE;
 }
 
+
 extern "C"
 EGLBoolean
 init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
@@ -221,7 +221,7 @@ init_haiku(_EGLDriver *drv, _EGLDisplay *dpy)
 		return EGL_FALSE;
 
 	dpy->Version = 14;
-   
+
 	TRACE("Initialization finished\n");
 
 	return EGL_TRUE;
@@ -271,7 +271,7 @@ haiku_destroy_context(_EGLDriver* drv, _EGLDisplay *disp, _EGLContext* ctx)
 	if (_eglPutContext(ctx)) {
 		// XXX: teardown the context ?
 		free(context);
-		ctx = NULL
+		ctx = NULL;
 	}
 	return EGL_TRUE;
 }
@@ -280,7 +280,7 @@ haiku_destroy_context(_EGLDriver* drv, _EGLDisplay *disp, _EGLContext* ctx)
 extern "C"
 EGLBoolean
 haiku_make_current(_EGLDriver* drv, _EGLDisplay* dpy, _EGLSurface *dsurf,
-		  _EGLSurface *rsurf, _EGLContext *ctx)
+	_EGLSurface *rsurf, _EGLContext *ctx)
 {
 	CALLED();
 
@@ -314,7 +314,7 @@ extern "C"
 void
 haiku_unload(_EGLDriver* drv)
 {
-	
+
 }
 
 
