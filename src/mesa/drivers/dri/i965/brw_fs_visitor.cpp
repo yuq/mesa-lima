@@ -41,6 +41,7 @@
 #include "brw_wm.h"
 #include "brw_cs.h"
 #include "brw_vec4.h"
+#include "brw_vec4_gs_visitor.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
 #include "glsl/nir/glsl_types.h"
@@ -1085,11 +1086,33 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        unsigned dispatch_width,
                        int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),
-     key(key), prog_data(prog_data), prog(prog),
+     key(key), gs_compile(NULL), prog_data(prog_data), prog(prog),
      dispatch_width(dispatch_width),
      shader_time_index(shader_time_index),
-     promoted_constants(0),
      bld(fs_builder(this, dispatch_width).at_end())
+{
+   init();
+}
+
+fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
+                       void *mem_ctx,
+                       struct brw_gs_compile *c,
+                       struct brw_gs_prog_data *prog_data,
+                       const nir_shader *shader)
+   : backend_shader(compiler, log_data, mem_ctx, shader,
+                    &prog_data->base.base),
+     key(&c->key), gs_compile(c),
+     prog_data(&prog_data->base.base), prog(NULL),
+     dispatch_width(8),
+     shader_time_index(ST_GS),
+     bld(fs_builder(this, dispatch_width).at_end())
+{
+   init();
+}
+
+
+void
+fs_visitor::init()
 {
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
@@ -1107,6 +1130,8 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    default:
       unreachable("unhandled shader stage");
    }
+
+   this->prog_data = this->stage_prog_data;
 
    this->failed = false;
    this->simd16_unsupported = false;
@@ -1132,6 +1157,8 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    this->last_scratch = 0;
    this->pull_constant_loc = NULL;
    this->push_constant_loc = NULL;
+
+   this->promoted_constants = 0,
 
    this->spilled_any_registers = false;
    this->do_dual_src = false;
