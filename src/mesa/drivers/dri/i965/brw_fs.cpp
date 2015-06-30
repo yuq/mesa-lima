@@ -733,6 +733,11 @@ fs_inst::regs_read(int arg) const
          components = 1;
       break;
 
+   case SHADER_OPCODE_LOAD_PAYLOAD:
+      if (arg < this->header_size)
+         return 1;
+      break;
+
    default:
       if (is_tex() && arg == 0 && src[0].file == GRF)
          return mlen;
