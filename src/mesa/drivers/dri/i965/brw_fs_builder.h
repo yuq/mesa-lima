@@ -99,8 +99,8 @@ namespace brw {
       fs_builder
       group(unsigned n, unsigned i) const
       {
-         assert(n <= dispatch_width() &&
-                i < dispatch_width() / n);
+         assert(force_writemask_all ||
+                (n <= dispatch_width() && i < dispatch_width() / n));
          fs_builder bld = *this;
          bld._dispatch_width = n;
          bld._group += i * n;
