@@ -401,8 +401,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
       irb->mt_layer : (irb->mt_layer / MAX2(mt->num_samples, 1));
    GLenum gl_target =
       rb->TexImage ? rb->TexImage->TexObject->Target : GL_TEXTURE_2D;
-   /* FINISHME: Use PTE MOCS on Skylake. */
-   uint32_t mocs = brw->gen >= 9 ? SKL_MOCS_WT : BDW_MOCS_PTE;
+   const uint32_t mocs = brw->gen >= 9 ? SKL_MOCS_PTE : BDW_MOCS_PTE;
 
    intel_miptree_used_for_rendering(mt);
 

@@ -2492,12 +2492,13 @@ enum brw_wm_barycentric_interp_mode {
 #define BDW_MOCS_WT  0x58
 #define BDW_MOCS_PTE 0x18
 
-/* Skylake: MOCS is now an index into an array of 64 different configurable
- * cache settings.  We still use only either write-back or write-through; and
- * rely on the documented default values.
+/* Skylake: MOCS is now an index into an array of 62 different caching
+ * configurations programmed by the kernel.
  */
-#define SKL_MOCS_WB (0b001001 << 1)
-#define SKL_MOCS_WT (0b000101 << 1)
+/* TC=LLC/eLLC, LeCC=WB, LRUM=3, L3CC=WB */
+#define SKL_MOCS_WB  (2 << 1)
+/* TC=LLC/eLLC, LeCC=PTE, LRUM=3, L3CC=WB */
+#define SKL_MOCS_PTE (1 << 1)
 
 #define MEDIA_VFE_STATE                         0x7000
 /* GEN7 DW2, GEN8+ DW3 */
