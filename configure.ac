@@ -1421,7 +1421,7 @@ if test -n "$with_dri_drivers"; then
             ;;
         xnouveau)
             HAVE_NOUVEAU_DRI=yes;
-            PKG_CHECK_MODULES([NOUVEAU], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
+            PKG_CHECK_MODULES([NVVIEUX], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
             ;;
         xradeon)
             HAVE_RADEON_DRI=yes;
