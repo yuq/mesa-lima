@@ -381,6 +381,7 @@ tgsi_opcode_infer_type( uint opcode )
       return TGSI_TYPE_SIGNED;
    case TGSI_OPCODE_DADD:
    case TGSI_OPCODE_DABS:
+   case TGSI_OPCODE_DFMA:
    case TGSI_OPCODE_DNEG:
    case TGSI_OPCODE_DMUL:
    case TGSI_OPCODE_DMAX:
