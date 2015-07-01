@@ -76,6 +76,7 @@ public:
                    int shader_time_index);
 
    virtual void nir_setup_inputs(nir_shader *shader);
+   virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
 
 protected:
    virtual dst_reg *make_reg_for_system_value(int location,

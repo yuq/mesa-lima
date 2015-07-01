@@ -67,6 +67,25 @@ vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
 }
 
 void
+vec4_gs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
+{
+   dst_reg *reg;
+
+   switch (instr->intrinsic) {
+   case nir_intrinsic_load_invocation_id:
+      reg = &this->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
+      if (reg->file == BAD_FILE)
+         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INVOCATION_ID,
+                                                 glsl_type::int_type);
+      break;
+
+   default:
+      vec4_visitor::nir_setup_system_value_intrinsic(instr);
+   }
+
+}
+
+void
 vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 {
    dst_reg dest;
@@ -82,6 +101,15 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_end_primitive:
       gs_end_primitive();
       break;
+
+   case nir_intrinsic_load_invocation_id: {
+      src_reg invocation_id =
+         src_reg(nir_system_values[SYSTEM_VALUE_INVOCATION_ID]);
+      assert(invocation_id.file != BAD_FILE);
+      dest = get_nir_dest(instr->dest, invocation_id.type);
+      emit(MOV(dest, invocation_id));
+      break;
+   }
 
    default:
       vec4_visitor::nir_emit_intrinsic(instr);
