@@ -147,18 +147,18 @@ void nir_src_copy(nir_src *dest, const nir_src *src, void *mem_ctx)
 
 void nir_dest_copy(nir_dest *dest, const nir_dest *src, void *mem_ctx)
 {
-   dest->is_ssa = src->is_ssa;
-   if (src->is_ssa) {
-      dest->ssa = src->ssa;
+   /* Copying an SSA definition makes no sense whatsoever. */
+   assert(!src->is_ssa);
+
+   dest->is_ssa = false;
+
+   dest->reg.base_offset = src->reg.base_offset;
+   dest->reg.reg = src->reg.reg;
+   if (src->reg.indirect) {
+      dest->reg.indirect = ralloc(mem_ctx, nir_src);
+      nir_src_copy(dest->reg.indirect, src->reg.indirect, mem_ctx);
    } else {
-      dest->reg.base_offset = src->reg.base_offset;
-      dest->reg.reg = src->reg.reg;
-      if (src->reg.indirect) {
-         dest->reg.indirect = ralloc(mem_ctx, nir_src);
-         nir_src_copy(dest->reg.indirect, src->reg.indirect, mem_ctx);
-      } else {
-         dest->reg.indirect = NULL;
-      }
+      dest->reg.indirect = NULL;
    }
 }
 
