@@ -100,6 +100,7 @@ struct vtn_value {
 
 struct vtn_decoration {
    struct vtn_decoration *next;
+   int member; /* -1 if not a member decoration */
    const uint32_t *literals;
    struct vtn_value *group;
    SpvDecoration decoration;
@@ -168,6 +169,7 @@ struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
                                           struct vtn_value *,
+                                          int member,
                                           const struct vtn_decoration *,
                                           void *);
 

@@ -180,15 +180,21 @@ vtn_handle_extension(struct vtn_builder *b, SpvOp opcode,
 static void
 _foreach_decoration_helper(struct vtn_builder *b,
                            struct vtn_value *base_value,
+                           int member,
                            struct vtn_value *value,
                            vtn_decoration_foreach_cb cb, void *data)
 {
    for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
+      if (dec->member >= 0) {
+         assert(member == -1);
+         member = dec->member;
+      }
+
       if (dec->group) {
          assert(dec->group->value_type == vtn_value_type_decoration_group);
-         _foreach_decoration_helper(b, base_value, dec->group, cb, data);
+         _foreach_decoration_helper(b, base_value, member, dec->group, cb, data);
       } else {
-         cb(b, base_value, dec, data);
+         cb(b, base_value, member, dec, data);
       }
    }
 }
@@ -203,24 +209,33 @@ void
 vtn_foreach_decoration(struct vtn_builder *b, struct vtn_value *value,
                        vtn_decoration_foreach_cb cb, void *data)
 {
-   _foreach_decoration_helper(b, value, value, cb, data);
+   _foreach_decoration_helper(b, value, -1, value, cb, data);
 }
 
 static void
 vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
                       const uint32_t *w, unsigned count)
 {
+   const uint32_t *w_end = w + count;
+   const uint32_t target = w[1];
+   w += 2;
+
+   int member = -1;
    switch (opcode) {
    case SpvOpDecorationGroup:
-      vtn_push_value(b, w[1], vtn_value_type_undef);
+      vtn_push_value(b, target, vtn_value_type_undef);
       break;
 
+   case SpvOpMemberDecorate:
+      member = *(w++);
+      /* fallthrough */
    case SpvOpDecorate: {
-      struct vtn_value *val = &b->values[w[1]];
+      struct vtn_value *val = &b->values[target];
 
       struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
-      dec->decoration = w[2];
-      dec->literals = &w[3];
+      dec->member = member;
+      dec->decoration = *(w++);
+      dec->literals = w;
 
       /* Link into the list */
       dec->next = val->decoration;
@@ -228,13 +243,17 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   case SpvOpGroupMemberDecorate:
+      member = *(w++);
+      /* fallthrough */
    case SpvOpGroupDecorate: {
-      struct vtn_value *group = &b->values[w[1]];
+      struct vtn_value *group = &b->values[target];
       assert(group->value_type == vtn_value_type_decoration_group);
 
-      for (unsigned i = 2; i < count; i++) {
-         struct vtn_value *val = &b->values[w[i]];
+      for (; w < w_end; w++) {
+         struct vtn_value *val = &b->values[*w];
          struct vtn_decoration *dec = rzalloc(b, struct vtn_decoration);
+         dec->member = member;
          dec->group = group;
 
          /* Link into the list */
@@ -243,10 +262,6 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
       }
       break;
    }
-
-   case SpvOpGroupMemberDecorate:
-      assert(!"Bad instruction.  Khronos Bug #13513");
-      break;
 
    default:
       unreachable("Unhandled opcode");
@@ -432,7 +447,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
-var_decoration_cb(struct vtn_builder *b, struct vtn_value *val,
+var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                   const struct vtn_decoration *dec, void *void_var)
 {
    assert(val->value_type == vtn_value_type_deref);
