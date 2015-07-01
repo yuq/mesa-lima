@@ -268,48 +268,57 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 }
 
-static const struct glsl_type *
+static void
 vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
-                const uint32_t *args, unsigned count)
+                const uint32_t *w, unsigned count)
 {
+   struct vtn_value *val = vtn_push_value(b, w[1], vtn_value_type_type);
+
    switch (opcode) {
    case SpvOpTypeVoid:
-      return glsl_void_type();
+      val->type = glsl_void_type();
+      return;
    case SpvOpTypeBool:
-      return glsl_bool_type();
+      val->type = glsl_bool_type();
+      return;
    case SpvOpTypeInt:
-      return glsl_int_type();
+      val->type = glsl_int_type();
+      return;
    case SpvOpTypeFloat:
-      return glsl_float_type();
+      val->type = glsl_float_type();
+      return;
 
    case SpvOpTypeVector: {
       const struct glsl_type *base =
-         vtn_value(b, args[0], vtn_value_type_type)->type;
-      unsigned elems = args[1];
+         vtn_value(b, w[2], vtn_value_type_type)->type;
+      unsigned elems = w[3];
 
       assert(glsl_type_is_scalar(base));
-      return glsl_vector_type(glsl_get_base_type(base), elems);
+      val->type = glsl_vector_type(glsl_get_base_type(base), elems);
+      return;
    }
 
    case SpvOpTypeMatrix: {
       const struct glsl_type *base =
-         vtn_value(b, args[0], vtn_value_type_type)->type;
-      unsigned columns = args[1];
+         vtn_value(b, w[2], vtn_value_type_type)->type;
+      unsigned columns = w[3];
 
       assert(glsl_type_is_vector(base));
-      return glsl_matrix_type(glsl_get_base_type(base),
-                              glsl_get_vector_elements(base),
-                              columns);
+      val->type = glsl_matrix_type(glsl_get_base_type(base),
+                                  glsl_get_vector_elements(base),
+                                  columns);
+      return;
    }
 
    case SpvOpTypeArray:
-      return glsl_array_type(b->values[args[0]].type, args[1]);
+      val->type = glsl_array_type(b->values[w[2]].type, w[3]);
+      return;
 
    case SpvOpTypeStruct: {
       NIR_VLA(struct glsl_struct_field, fields, count);
-      for (unsigned i = 0; i < count; i++) {
+      for (unsigned i = 0; i < count - 2; i++) {
          /* TODO: Handle decorators */
-         fields[i].type = vtn_value(b, args[i], vtn_value_type_type)->type;
+         fields[i].type = vtn_value(b, w[i + 2], vtn_value_type_type)->type;
          fields[i].name = ralloc_asprintf(b, "field%d", i);
          fields[i].location = -1;
          fields[i].interpolation = 0;
@@ -318,20 +327,22 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          fields[i].matrix_layout = 2;
          fields[i].stream = -1;
       }
-      return glsl_struct_type(fields, count, "struct");
+      val->type = glsl_struct_type(fields, count, "struct");
+      return;
    }
 
    case SpvOpTypeFunction: {
-      const struct glsl_type *return_type = b->values[args[0]].type;
-      NIR_VLA(struct glsl_function_param, params, count - 1);
-      for (unsigned i = 1; i < count; i++) {
-         params[i - 1].type = vtn_value(b, args[i], vtn_value_type_type)->type;
+      const struct glsl_type *return_type = b->values[w[2]].type;
+      NIR_VLA(struct glsl_function_param, params, count - 3);
+      for (unsigned i = 0; i < count - 3; i++) {
+         params[i].type = vtn_value(b, w[i + 3], vtn_value_type_type)->type;
 
          /* FIXME: */
-         params[i - 1].in = true;
-         params[i - 1].out = true;
+         params[i].in = true;
+         params[i].out = true;
       }
-      return glsl_function_type(return_type, params, count - 1);
+      val->type = glsl_function_type(return_type, params, count - 3);
+      return;
    }
 
    case SpvOpTypePointer:
@@ -339,16 +350,17 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * the same type.  The validator should ensure that the proper number
        * of dereferences happen
        */
-      return vtn_value(b, args[1], vtn_value_type_type)->type;
+      val->type = vtn_value(b, w[3], vtn_value_type_type)->type;
+      return;
 
    case SpvOpTypeSampler: {
       const struct glsl_type *sampled_type =
-         vtn_value(b, args[0], vtn_value_type_type)->type;
+         vtn_value(b, w[2], vtn_value_type_type)->type;
 
       assert(glsl_type_is_vector_or_scalar(sampled_type));
 
       enum glsl_sampler_dim dim;
-      switch ((SpvDim)args[1]) {
+      switch ((SpvDim)w[3]) {
       case SpvDim1D:       dim = GLSL_SAMPLER_DIM_1D;    break;
       case SpvDim2D:       dim = GLSL_SAMPLER_DIM_2D;    break;
       case SpvDim3D:       dim = GLSL_SAMPLER_DIM_3D;    break;
@@ -360,15 +372,16 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       }
 
       /* TODO: Handle the various texture image/filter options */
-      (void)args[2];
+      (void)w[4];
 
-      bool is_array = args[3];
-      bool is_shadow = args[4];
+      bool is_array = w[5];
+      bool is_shadow = w[6];
 
-      assert(args[5] == 0 && "FIXME: Handl multi-sampled textures");
+      assert(w[7] == 0 && "FIXME: Handl multi-sampled textures");
 
-      return glsl_sampler_type(dim, is_shadow, is_array,
-                               glsl_get_base_type(sampled_type));
+      val->type = glsl_sampler_type(dim, is_shadow, is_array,
+                                    glsl_get_base_type(sampled_type));
+      return;
    }
 
    case SpvOpTypeRuntimeArray:
@@ -1974,8 +1987,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeReserveId:
    case SpvOpTypeQueue:
    case SpvOpTypePipe:
-      vtn_push_value(b, w[1], vtn_value_type_type)->type =
-         vtn_handle_type(b, opcode, &w[2], count - 2);
+      vtn_handle_type(b, opcode, w, count);
       break;
 
    case SpvOpConstantTrue:
