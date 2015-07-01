@@ -269,6 +269,44 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+struct_member_decoration_cb(struct vtn_builder *b,
+                            struct vtn_value *val, int member,
+                            const struct vtn_decoration *dec, void *void_fields)
+{
+   struct glsl_struct_field *fields = void_fields;
+
+   if (member < 0)
+      return;
+
+   switch (dec->decoration) {
+   case SpvDecorationPrecisionLow:
+   case SpvDecorationPrecisionMedium:
+   case SpvDecorationPrecisionHigh:
+      break; /* FIXME: Do nothing with these for now. */
+   case SpvDecorationSmooth:
+      fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
+      break;
+   case SpvDecorationNoperspective:
+      fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
+      break;
+   case SpvDecorationFlat:
+      fields[member].interpolation = INTERP_QUALIFIER_FLAT;
+      break;
+   case SpvDecorationCentroid:
+      fields[member].centroid = true;
+      break;
+   case SpvDecorationSample:
+      fields[member].sample = true;
+      break;
+   case SpvDecorationLocation:
+      fields[member].location = dec->literals[0];
+      break;
+   default:
+      unreachable("Unhandled member decoration");
+   }
+}
+
+static void
 vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
                 const uint32_t *w, unsigned count)
 {
@@ -327,7 +365,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          fields[i].matrix_layout = 2;
          fields[i].stream = -1;
       }
-      val->type = glsl_struct_type(fields, count, "struct");
+
+      vtn_foreach_decoration(b, val, struct_member_decoration_cb, fields);
+
+      const char *name = val->name ? val->name : "struct";
+
+      val->type = glsl_struct_type(fields, count, name);
       return;
    }
 
