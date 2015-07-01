@@ -685,7 +685,8 @@ fs_inst::regs_read(int arg) const
    case FS_OPCODE_LINTERP:
       if (arg == 0)
          return exec_size / 4;
-      break;
+      else
+         return 1;
 
    case FS_OPCODE_PIXEL_X:
    case FS_OPCODE_PIXEL_Y:
