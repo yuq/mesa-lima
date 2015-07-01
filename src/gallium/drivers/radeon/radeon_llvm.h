@@ -146,6 +146,8 @@ static inline LLVMTypeRef tgsi2llvmtype(
 	case TGSI_TYPE_UNSIGNED:
 	case TGSI_TYPE_SIGNED:
 		return LLVMInt32TypeInContext(ctx);
+	case TGSI_TYPE_DOUBLE:
+		return LLVMDoubleTypeInContext(ctx);
 	case TGSI_TYPE_UNTYPED:
 	case TGSI_TYPE_FLOAT:
 		return LLVMFloatTypeInContext(ctx);
@@ -205,6 +207,9 @@ build_tgsi_intrinsic_nomem(
 		struct lp_build_tgsi_context * bld_base,
 		struct lp_build_emit_data * emit_data);
 
-
+LLVMValueRef
+radeon_llvm_emit_fetch_double(struct lp_build_tgsi_context *bld_base,
+			      LLVMValueRef ptr,
+			      LLVMValueRef ptr2);
 
 #endif /* RADEON_LLVM_H */

@@ -703,8 +703,15 @@ static LLVMValueRef fetch_constant(
 	buf = reg->Register.Dimension ? reg->Dimension.Index : 0;
 	idx = reg->Register.Index * 4 + swizzle;
 
-	if (!reg->Register.Indirect)
-		return bitcast(bld_base, type, si_shader_ctx->constants[buf][idx]);
+	if (!reg->Register.Indirect) {
+		if (type != TGSI_TYPE_DOUBLE)
+			return bitcast(bld_base, type, si_shader_ctx->constants[buf][idx]);
+		else {
+			return radeon_llvm_emit_fetch_double(bld_base,
+							     si_shader_ctx->constants[buf][idx],
+							     si_shader_ctx->constants[buf][idx + 1]);
+		}
+	}
 
 	addr = si_shader_ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
 	addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
@@ -713,9 +720,25 @@ static LLVMValueRef fetch_constant(
 			    lp_build_const_int32(base->gallivm, idx * 4));
 
 	result = buffer_load_const(base->gallivm->builder, si_shader_ctx->const_resource[buf],
-			    addr, base->elem_type);
+				   addr, bld_base->base.elem_type);
 
-	return bitcast(bld_base, type, result);
+	if (type != TGSI_TYPE_DOUBLE)
+		result = bitcast(bld_base, type, result);
+	else {
+		LLVMValueRef addr2, result2;
+		addr2 = si_shader_ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle + 1];
+		addr2 = LLVMBuildLoad(base->gallivm->builder, addr2, "load addr reg2");
+		addr2 = lp_build_mul_imm(&bld_base->uint_bld, addr2, 16);
+		addr2 = lp_build_add(&bld_base->uint_bld, addr2,
+				     lp_build_const_int32(base->gallivm, idx * 4));
+
+		result2 = buffer_load_const(base->gallivm->builder, si_shader_ctx->const_resource[buf],
+				   addr2, bld_base->base.elem_type);
+
+		result = radeon_llvm_emit_fetch_double(bld_base,
+					               result, result2);
+	}
+	return result;
 }
 
 /* Initialize arguments for the shader export intrinsic */
