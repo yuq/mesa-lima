@@ -48,10 +48,17 @@ VkResult anv_GetDisplayInfoWSI(
    switch (infoType) {
    case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI:
       size = sizeof(properties[0]) * ARRAY_SIZE(formats);
-      if (pData && *pDataSize < size)
+
+      if (pData == NULL) {
+         *pDataSize = size;
+         return VK_SUCCESS;
+      }
+
+      if (*pDataSize < size)
          return vk_error(VK_ERROR_INVALID_VALUE);
 
       *pDataSize = size;
+
       for (uint32_t i = 0; i < ARRAY_SIZE(formats); i++)
          properties[i].swapChainFormat = formats[i];
 
