@@ -1191,7 +1191,7 @@ void anv_CmdClearColorImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
-    const VkClearColor*                         color,
+    VkClearColor                                color,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
