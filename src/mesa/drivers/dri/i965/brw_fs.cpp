@@ -681,7 +681,7 @@ fs_inst::regs_read(int arg) const
    case FS_OPCODE_PIXEL_X:
    case FS_OPCODE_PIXEL_Y:
       if (arg == 0)
-         components = 1;
+         components = 2;
       break;
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
