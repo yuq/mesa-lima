@@ -135,6 +135,10 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions = nir_options;
    }
 
+   if (brw_env_var_as_boolean("INTEL_USE_NIR", false)) {
+      compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].NirOptions = nir_options;
+   }
+
    compiler->glsl_compiler_options[MESA_SHADER_FRAGMENT].NirOptions = nir_options;
    compiler->glsl_compiler_options[MESA_SHADER_COMPUTE].NirOptions = nir_options;
 

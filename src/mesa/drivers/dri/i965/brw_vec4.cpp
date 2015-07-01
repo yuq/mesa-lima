@@ -1721,7 +1721,7 @@ bool
 vec4_visitor::run(gl_clip_plane *clip_planes)
 {
    bool use_vec4_nir =
-      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions != NULL;
+      compiler->glsl_compiler_options[stage].NirOptions != NULL;
 
    sanity_param_count = prog->Parameters->NumParameters;
 
