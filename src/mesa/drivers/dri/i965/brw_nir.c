@@ -165,7 +165,7 @@ brw_create_nir(struct brw_context *brw,
       nir_print_shader(nir, stderr);
    }
 
-   nir_convert_from_ssa(nir, true);
+   nir_convert_from_ssa(nir, is_scalar);
    nir_validate_shader(nir);
 
    /* This is the last pass we run before we start emitting stuff.  It

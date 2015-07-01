@@ -250,6 +250,8 @@ vec4_visitor::nir_emit_impl(nir_function_impl *impl)
       nir_locals[reg->index] = dst_reg(GRF, alloc.allocate(array_elems));
    }
 
+   nir_ssa_values = ralloc_array(mem_ctx, dst_reg, impl->ssa_alloc);
+
    nir_emit_cf_list(&impl->body);
 }
 
@@ -332,7 +334,22 @@ vec4_visitor::nir_emit_instr(nir_instr *instr)
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
-   /* @TODO: Not yet implemented */
+   dst_reg reg = dst_reg(GRF, alloc.allocate(1));
+   reg.type =  BRW_REGISTER_TYPE_F;
+
+   /* @FIXME: consider emitting vector operations to save some MOVs in
+    * cases where the components are representable in 8 bits.
+    * By now, we emit a MOV for each component.
+    */
+   for (unsigned i = 0; i < instr->def.num_components; ++i) {
+      reg.writemask = 1 << i;
+      emit(MOV(reg, src_reg(instr->value.f[i])));
+   }
+
+   /* Set final writemask */
+   reg.writemask = brw_writemask_for_size(instr->def.num_components);
+
+   nir_ssa_values[instr->def.index] = reg;
 }
 
 void
