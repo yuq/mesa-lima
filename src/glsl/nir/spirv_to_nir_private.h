@@ -117,7 +117,10 @@ struct vtn_value {
          nir_constant *constant;
          const struct glsl_type *const_type;
       };
-      nir_deref_var *deref;
+      struct {
+         nir_deref_var *deref;
+         struct vtn_type *deref_type;
+      };
       struct vtn_function *func;
       struct vtn_block *block;
       struct vtn_ssa_value *ssa;

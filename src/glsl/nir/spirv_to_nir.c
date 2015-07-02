@@ -398,14 +398,15 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    }
 
    case SpvOpTypeMatrix: {
-      const struct glsl_type *base =
-         vtn_value(b, w[2], vtn_value_type_type)->type->type;
+      struct vtn_type *base =
+         vtn_value(b, w[2], vtn_value_type_type)->type;
       unsigned columns = w[3];
 
-      assert(glsl_type_is_vector(base));
-      val->type->type = glsl_matrix_type(glsl_get_base_type(base),
-                                         glsl_get_vector_elements(base),
+      assert(glsl_type_is_vector(base->type));
+      val->type->type = glsl_matrix_type(glsl_get_base_type(base->type),
+                                         glsl_get_vector_elements(base->type),
                                          columns);
+      val->type->array_element = base;
       val->type->row_major = false;
       val->type->stride = 0;
       return;
@@ -942,13 +943,13 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 {
    switch (opcode) {
    case SpvOpVariable: {
-      const struct glsl_type *type =
-         vtn_value(b, w[1], vtn_value_type_type)->type->type;
+      struct vtn_type *type =
+         vtn_value(b, w[1], vtn_value_type_type)->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
 
       nir_variable *var = ralloc(b->shader, nir_variable);
 
-      var->type = type;
+      var->type = type->type;
       var->name = ralloc_strdup(var, val->name);
 
       switch ((SpvStorageClass)w[3]) {
@@ -956,7 +957,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassUniformConstant:
          var->data.mode = nir_var_uniform;
          var->data.read_only = true;
-         var->interface_type = type;
+         var->interface_type = type->type;
          break;
       case SpvStorageClassInput:
          var->data.mode = nir_var_shader_in;
@@ -987,6 +988,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       }
 
       val->deref = nir_deref_var_create(b, var);
+      val->deref_type = type;
 
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
 
@@ -1029,6 +1031,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
       nir_deref_var *base = vtn_value(b, w[3], vtn_value_type_deref)->deref;
       val->deref = nir_deref_as_var(nir_copy_deref(b, &base->deref));
+      val->deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
       nir_deref *tail = &val->deref->deref;
       while (tail->child)
@@ -1047,14 +1050,16 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          case GLSL_TYPE_BOOL:
          case GLSL_TYPE_ARRAY: {
             nir_deref_array *deref_arr = nir_deref_array_create(b);
-            if (base_type == GLSL_TYPE_ARRAY) {
-               deref_arr->deref.type = glsl_get_array_element(tail->type);
-            } else if (glsl_type_is_matrix(tail->type)) {
-               deref_arr->deref.type = glsl_get_column_type(tail->type);
+            if (base_type == GLSL_TYPE_ARRAY ||
+                glsl_type_is_matrix(tail->type)) {
+               val->deref_type = val->deref_type->array_element;
             } else {
                assert(glsl_type_is_vector(tail->type));
-               deref_arr->deref.type = glsl_scalar_type(base_type);
+               val->deref_type = ralloc(b, struct vtn_type);
+               val->deref_type->type = glsl_scalar_type(base_type);
             }
+
+            deref_arr->deref.type = val->deref_type->type;
 
             if (idx_val->value_type == vtn_value_type_constant) {
                unsigned idx = idx_val->constant->value.u[0];
@@ -1074,8 +1079,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          case GLSL_TYPE_STRUCT: {
             assert(idx_val->value_type == vtn_value_type_constant);
             unsigned idx = idx_val->constant->value.u[0];
+            val->deref_type = val->deref_type->members[idx];
             nir_deref_struct *deref_struct = nir_deref_struct_create(b, idx);
-            deref_struct->deref.type = glsl_get_struct_field(tail->type, idx);
+            deref_struct->deref.type = val->deref_type->type;
             tail->child = &deref_struct->deref;
             break;
          }
