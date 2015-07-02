@@ -299,6 +299,8 @@ add_eligible_instrs(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 			bool ready = false;
 			for (unsigned i = 0; (i < ir->indirects_count) && !ready; i++) {
 				struct ir3_instruction *indirect = ir->indirects[i];
+				if (!indirect)
+					continue;
 				if (indirect->address != instr)
 					continue;
 				ready = could_sched(indirect, instr);
@@ -337,6 +339,9 @@ split_addr(struct ir3_sched_ctx *ctx)
 
 	for (i = 0; i < ir->indirects_count; i++) {
 		struct ir3_instruction *indirect = ir->indirects[i];
+
+		if (!indirect)
+			continue;
 
 		/* skip instructions already scheduled: */
 		if (is_scheduled(indirect))

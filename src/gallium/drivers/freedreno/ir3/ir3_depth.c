@@ -167,6 +167,15 @@ ir3_depth(struct ir3 *ir)
 		remove_unused_by_block(block);
 	}
 
+	/* note that we can end up with unused indirects, but we should
+	 * not end up with unused predicates.
+	 */
+	for (i = 0; i < ir->indirects_count; i++) {
+		struct ir3_instruction *instr = ir->indirects[i];
+		if (instr->depth == DEPTH_UNUSED)
+			ir->indirects[i] = NULL;
+	}
+
 	/* cleanup unused inputs: */
 	for (i = 0; i < ir->ninputs; i++) {
 		struct ir3_instruction *in = ir->inputs[i];
