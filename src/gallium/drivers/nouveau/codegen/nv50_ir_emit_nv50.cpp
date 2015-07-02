@@ -550,7 +550,7 @@ CodeEmitterNV50::emitForm_MUL(const Instruction *i)
 }
 
 // usual immediate form
-// - 1 to 3 sources where last is immediate (rir, gir)
+// - 1 to 3 sources where second is immediate (rir, gir)
 // - no address or predicate possible
 void
 CodeEmitterNV50::emitForm_IMM(const Instruction *i)
@@ -566,7 +566,7 @@ CodeEmitterNV50::emitForm_IMM(const Instruction *i)
    if (Target::operationSrcNr[i->op] > 1) {
       setSrc(i, 0, 0);
       setImmediate(i, 1);
-      setSrc(i, 2, 1);
+      // If there is another source, it has to be the same as the dest reg.
    } else {
       setImmediate(i, 0);
    }
