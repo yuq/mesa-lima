@@ -348,11 +348,6 @@ vec4_gs_visitor::emit_control_data_bits()
    if (c->control_data_header_size_bits > 128)
       urb_write_flags = urb_write_flags | BRW_URB_WRITE_PER_SLOT_OFFSET;
 
-   /* If vertex_count is 0, then no control data bits have been accumulated
-    * yet, so we should do nothing.
-    */
-   emit(CMP(dst_null_d(), this->vertex_count, 0u, BRW_CONDITIONAL_NEQ));
-   emit(IF(BRW_PREDICATE_NORMAL));
    {
       /* If we are using either channel masks or a per-slot offset, then we
        * need to figure out which DWORD we are trying to write to, using the
@@ -431,7 +426,6 @@ vec4_gs_visitor::emit_control_data_bits()
       inst->base_mrf = base_mrf;
       inst->mlen = 2;
    }
-   emit(BRW_OPCODE_ENDIF);
 }
 
 void
@@ -531,9 +525,17 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
             emit(AND(dst_null_d(), this->vertex_count,
                      (uint32_t) (32 / c->control_data_bits_per_vertex - 1)));
          inst->conditional_mod = BRW_CONDITIONAL_Z;
+
          emit(IF(BRW_PREDICATE_NORMAL));
          {
+            /* If vertex_count is 0, then no control data bits have been
+             * accumulated yet, so we skip emitting them.
+             */
+            emit(CMP(dst_null_d(), this->vertex_count, 0u,
+                     BRW_CONDITIONAL_NEQ));
+            emit(IF(BRW_PREDICATE_NORMAL));
             emit_control_data_bits();
+            emit(BRW_OPCODE_ENDIF);
 
             /* Reset control_data_bits to 0 so we can start accumulating a new
              * batch.
