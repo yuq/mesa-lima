@@ -85,11 +85,14 @@ struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
    struct vtn_decoration *decoration;
-   const struct glsl_type *type;
    union {
       void *ptr;
       char *str;
-      nir_constant *constant;
+      const struct glsl_type *type;
+      struct {
+         nir_constant *constant;
+         const struct glsl_type *const_type;
+      };
       nir_deref_var *deref;
       struct vtn_function *func;
       struct vtn_block *block;
