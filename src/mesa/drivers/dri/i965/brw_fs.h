@@ -151,6 +151,7 @@ public:
    void invalidate_live_intervals();
    void calculate_live_intervals();
    void calculate_register_pressure();
+   void validate();
    bool opt_algebraic();
    bool opt_redundant_discard_jumps();
    bool opt_cse();

@@ -4781,6 +4781,9 @@ fs_visitor::calculate_register_pressure()
 void
 fs_visitor::optimize()
 {
+   /* Start by validating the shader we currently have. */
+   validate();
+
    /* bld is the common builder object pointing at the end of the program we
     * used to translate it into i965 IR.  For the optimization and lowering
     * passes coming next, any code added after the end of the program without
@@ -4797,7 +4800,10 @@ fs_visitor::optimize()
    assign_constant_locations();
    demote_pull_constants();
 
+   validate();
+
    split_virtual_grfs();
+   validate();
 
 #define OPT(pass, args...) ({                                           \
       pass_num++;                                                       \
@@ -4810,6 +4816,8 @@ fs_visitor::optimize()
                                                                         \
          backend_shader::dump_instructions(filename);                   \
       }                                                                 \
+                                                                        \
+      validate();                                                       \
                                                                         \
       progress = progress || this_progress;                             \
       this_progress;                                                    \
@@ -4872,6 +4880,8 @@ fs_visitor::optimize()
    OPT(lower_integer_multiplication);
 
    lower_uniform_pull_constant_loads();
+
+   validate();
 }
 
 /**
