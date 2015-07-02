@@ -72,11 +72,11 @@ fd_invalidate_resource(struct fd_context *ctx, struct pipe_resource *prsc)
 
 	/* Textures */
 	for (i = 0; i < ctx->verttex.num_textures && !(ctx->dirty & FD_DIRTY_VERTTEX); i++) {
-		if (ctx->verttex.textures[i]->texture == prsc)
+		if (ctx->verttex.textures[i] && (ctx->verttex.textures[i]->texture == prsc))
 			ctx->dirty |= FD_DIRTY_VERTTEX;
 	}
 	for (i = 0; i < ctx->fragtex.num_textures && !(ctx->dirty & FD_DIRTY_FRAGTEX); i++) {
-		if (ctx->fragtex.textures[i]->texture == prsc)
+		if (ctx->fragtex.textures[i] && (ctx->fragtex.textures[i]->texture == prsc))
 			ctx->dirty |= FD_DIRTY_FRAGTEX;
 	}
 }
