@@ -462,6 +462,10 @@ parse_program_resource_name(const GLchar *name,
    if (array_index < 0)
       return -1;
 
+   /* Check for leading zero */
+   if (name[i] == '0' && name[i+1] != ']')
+      return -1;
+
    *out_base_name_end = name + (i - 1);
    return array_index;
 }
