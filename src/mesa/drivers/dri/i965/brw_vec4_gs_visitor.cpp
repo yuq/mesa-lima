@@ -348,84 +348,82 @@ vec4_gs_visitor::emit_control_data_bits()
    if (c->control_data_header_size_bits > 128)
       urb_write_flags = urb_write_flags | BRW_URB_WRITE_PER_SLOT_OFFSET;
 
-   {
-      /* If we are using either channel masks or a per-slot offset, then we
-       * need to figure out which DWORD we are trying to write to, using the
-       * formula:
-       *
-       *     dword_index = (vertex_count - 1) * bits_per_vertex / 32
-       *
-       * Since bits_per_vertex is a power of two, and is known at compile
-       * time, this can be optimized to:
-       *
-       *     dword_index = (vertex_count - 1) >> (6 - log2(bits_per_vertex))
-       */
-      src_reg dword_index(this, glsl_type::uint_type);
-      if (urb_write_flags) {
-         src_reg prev_count(this, glsl_type::uint_type);
-         emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
-         unsigned log2_bits_per_vertex =
-            _mesa_fls(c->control_data_bits_per_vertex);
-         emit(SHR(dst_reg(dword_index), prev_count,
-                  (uint32_t) (6 - log2_bits_per_vertex)));
-      }
-
-      /* Start building the URB write message.  The first MRF gets a copy of
-       * R0.
-       */
-      int base_mrf = 1;
-      dst_reg mrf_reg(MRF, base_mrf);
-      src_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
-      vec4_instruction *inst = emit(MOV(mrf_reg, r0));
-      inst->force_writemask_all = true;
-
-      if (urb_write_flags & BRW_URB_WRITE_PER_SLOT_OFFSET) {
-         /* Set the per-slot offset to dword_index / 4, to that we'll write to
-          * the appropriate OWORD within the control data header.
-          */
-         src_reg per_slot_offset(this, glsl_type::uint_type);
-         emit(SHR(dst_reg(per_slot_offset), dword_index, 2u));
-         emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset, 1u);
-      }
-
-      if (urb_write_flags & BRW_URB_WRITE_USE_CHANNEL_MASKS) {
-         /* Set the channel masks to 1 << (dword_index % 4), so that we'll
-          * write to the appropriate DWORD within the OWORD.  We need to do
-          * this computation with force_writemask_all, otherwise garbage data
-          * from invocation 0 might clobber the mask for invocation 1 when
-          * GS_OPCODE_PREPARE_CHANNEL_MASKS tries to OR the two masks
-          * together.
-          */
-         src_reg channel(this, glsl_type::uint_type);
-         inst = emit(AND(dst_reg(channel), dword_index, 3u));
-         inst->force_writemask_all = true;
-         src_reg one(this, glsl_type::uint_type);
-         inst = emit(MOV(dst_reg(one), 1u));
-         inst->force_writemask_all = true;
-         src_reg channel_mask(this, glsl_type::uint_type);
-         inst = emit(SHL(dst_reg(channel_mask), one, channel));
-         inst->force_writemask_all = true;
-         emit(GS_OPCODE_PREPARE_CHANNEL_MASKS, dst_reg(channel_mask),
-                                               channel_mask);
-         emit(GS_OPCODE_SET_CHANNEL_MASKS, mrf_reg, channel_mask);
-      }
-
-      /* Store the control data bits in the message payload and send it. */
-      dst_reg mrf_reg2(MRF, base_mrf + 1);
-      inst = emit(MOV(mrf_reg2, this->control_data_bits));
-      inst->force_writemask_all = true;
-      inst = emit(GS_OPCODE_URB_WRITE);
-      inst->urb_write_flags = urb_write_flags;
-      /* We need to increment Global Offset by 256-bits to make room for
-       * Broadwell's extra "Vertex Count" payload at the beginning of the
-       * URB entry.  Since this is an OWord message, Global Offset is counted
-       * in 128-bit units, so we must set it to 2.
-       */
-      if (devinfo->gen >= 8)
-         inst->offset = 2;
-      inst->base_mrf = base_mrf;
-      inst->mlen = 2;
+   /* If we are using either channel masks or a per-slot offset, then we
+    * need to figure out which DWORD we are trying to write to, using the
+    * formula:
+    *
+    *     dword_index = (vertex_count - 1) * bits_per_vertex / 32
+    *
+    * Since bits_per_vertex is a power of two, and is known at compile
+    * time, this can be optimized to:
+    *
+    *     dword_index = (vertex_count - 1) >> (6 - log2(bits_per_vertex))
+    */
+   src_reg dword_index(this, glsl_type::uint_type);
+   if (urb_write_flags) {
+      src_reg prev_count(this, glsl_type::uint_type);
+      emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
+      unsigned log2_bits_per_vertex =
+         _mesa_fls(c->control_data_bits_per_vertex);
+      emit(SHR(dst_reg(dword_index), prev_count,
+               (uint32_t) (6 - log2_bits_per_vertex)));
    }
+
+   /* Start building the URB write message.  The first MRF gets a copy of
+    * R0.
+    */
+   int base_mrf = 1;
+   dst_reg mrf_reg(MRF, base_mrf);
+   src_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+   vec4_instruction *inst = emit(MOV(mrf_reg, r0));
+   inst->force_writemask_all = true;
+
+   if (urb_write_flags & BRW_URB_WRITE_PER_SLOT_OFFSET) {
+      /* Set the per-slot offset to dword_index / 4, to that we'll write to
+       * the appropriate OWORD within the control data header.
+       */
+      src_reg per_slot_offset(this, glsl_type::uint_type);
+      emit(SHR(dst_reg(per_slot_offset), dword_index, 2u));
+      emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset, 1u);
+   }
+
+   if (urb_write_flags & BRW_URB_WRITE_USE_CHANNEL_MASKS) {
+      /* Set the channel masks to 1 << (dword_index % 4), so that we'll
+       * write to the appropriate DWORD within the OWORD.  We need to do
+       * this computation with force_writemask_all, otherwise garbage data
+       * from invocation 0 might clobber the mask for invocation 1 when
+       * GS_OPCODE_PREPARE_CHANNEL_MASKS tries to OR the two masks
+       * together.
+       */
+      src_reg channel(this, glsl_type::uint_type);
+      inst = emit(AND(dst_reg(channel), dword_index, 3u));
+      inst->force_writemask_all = true;
+      src_reg one(this, glsl_type::uint_type);
+      inst = emit(MOV(dst_reg(one), 1u));
+      inst->force_writemask_all = true;
+      src_reg channel_mask(this, glsl_type::uint_type);
+      inst = emit(SHL(dst_reg(channel_mask), one, channel));
+      inst->force_writemask_all = true;
+      emit(GS_OPCODE_PREPARE_CHANNEL_MASKS, dst_reg(channel_mask),
+                                            channel_mask);
+      emit(GS_OPCODE_SET_CHANNEL_MASKS, mrf_reg, channel_mask);
+   }
+
+   /* Store the control data bits in the message payload and send it. */
+   dst_reg mrf_reg2(MRF, base_mrf + 1);
+   inst = emit(MOV(mrf_reg2, this->control_data_bits));
+   inst->force_writemask_all = true;
+   inst = emit(GS_OPCODE_URB_WRITE);
+   inst->urb_write_flags = urb_write_flags;
+   /* We need to increment Global Offset by 256-bits to make room for
+    * Broadwell's extra "Vertex Count" payload at the beginning of the
+    * URB entry.  Since this is an OWord message, Global Offset is counted
+    * in 128-bit units, so we must set it to 2.
+    */
+   if (devinfo->gen >= 8)
+      inst->offset = 2;
+   inst->base_mrf = base_mrf;
+   inst->mlen = 2;
 }
 
 void
