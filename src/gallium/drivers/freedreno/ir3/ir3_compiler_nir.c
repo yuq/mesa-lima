@@ -637,9 +637,8 @@ create_uniform_indirect(struct ir3_compile *ctx, unsigned n,
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
 	ir3_reg_create(mov, n, IR3_REG_CONST | IR3_REG_RELATIV);
-	mov->address = address;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
@@ -677,9 +676,8 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	src->instr = collect;
 	src->size  = arrsz;
 	src->offset = n;
-	mov->address = address;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
@@ -700,10 +698,9 @@ create_indirect_store(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	dst->size  = arrsz;
 	dst->offset = n;
 	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = src;
-	mov->address = address;
 	mov->fanin = collect;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }

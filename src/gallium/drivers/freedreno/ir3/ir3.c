@@ -707,6 +707,17 @@ struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 }
 
 void
+ir3_instr_set_address(struct ir3_instruction *instr,
+		struct ir3_instruction *addr)
+{
+	if (instr->address != addr) {
+		struct ir3 *ir = instr->block->shader;
+		instr->address = addr;
+		array_insert(ir->indirects, instr);
+	}
+}
+
+void
 ir3_block_clear_mark(struct ir3_block *block)
 {
 	list_for_each_entry (struct ir3_instruction, instr, &block->instr_list, node)

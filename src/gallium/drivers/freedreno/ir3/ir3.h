@@ -285,6 +285,8 @@ struct ir3_instruction {
 
 	/* an instruction can reference at most one address register amongst
 	 * it's src/dst registers.  Beyond that, you need to insert mov's.
+	 *
+	 * NOTE: do not write this directly, use ir3_instr_set_address()
 	 */
 	struct ir3_instruction *address;
 
@@ -419,6 +421,9 @@ const char *ir3_instr_name(struct ir3_instruction *instr);
 
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags);
+
+void ir3_instr_set_address(struct ir3_instruction *instr,
+		struct ir3_instruction *addr);
 
 static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 {
