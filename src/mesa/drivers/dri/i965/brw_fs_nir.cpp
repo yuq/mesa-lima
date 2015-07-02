@@ -1481,12 +1481,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_interp_var_at_centroid:
    case nir_intrinsic_interp_var_at_sample:
    case nir_intrinsic_interp_var_at_offset: {
-      /* in SIMD16 mode, the pixel interpolator returns coords interleaved
-       * 8 channels at a time, same as the barycentric coords presented in
-       * the FS payload. this requires a bit of extra work to support.
-       */
-      no16("interpolate_at_* not yet supported in SIMD16 mode.");
-
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
 
       /* For most messages, we need one reg of ignored data; the hardware
@@ -1551,7 +1545,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                            bld.SEL(offset(src, bld, i), itemp, fs_reg(7)));
             }
 
-            mlen = 2;
+            mlen = 2 * dispatch_width / 8;
             inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
                             fs_reg(0u));
          }
@@ -1563,7 +1557,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       inst->mlen = mlen;
-      inst->regs_written = 2; /* 2 floats per slot returned */
+      /* 2 floats per slot returned */
+      inst->regs_written = 2 * dispatch_width / 8;
       inst->pi_noperspective = instr->variables[0]->var->data.interpolation ==
                                INTERP_QUALIFIER_NOPERSPECTIVE;
 
