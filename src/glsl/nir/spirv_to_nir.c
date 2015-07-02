@@ -268,12 +268,64 @@ vtn_handle_decoration(struct vtn_builder *b, SpvOp opcode,
    }
 }
 
+struct member_decoration_ctx {
+   struct glsl_struct_field *fields;
+   struct vtn_type *type;
+};
+
+/* does a shallow copy of a vtn_type */
+
+static struct vtn_type *
+vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
+{
+   struct vtn_type *dest = ralloc(b, struct vtn_type);
+   dest->type = src->type;
+   dest->is_builtin = src->is_builtin;
+   if (src->is_builtin)
+      dest->builtin = src->builtin;
+
+   if (!glsl_type_is_vector_or_scalar(src->type)) {
+      switch (glsl_get_base_type(src->type)) {
+      case GLSL_TYPE_ARRAY:
+         dest->array_element = src->array_element;
+         dest->stride = src->stride;
+         break;
+
+      case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT:
+      case GLSL_TYPE_BOOL:
+      case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_DOUBLE:
+         /* matrices */
+         dest->row_major = src->row_major;
+         dest->stride = src->stride;
+         break;
+
+      case GLSL_TYPE_STRUCT: {
+         unsigned elems = glsl_get_length(src->type);
+
+         dest->members = ralloc_array(b, struct vtn_type *, elems);
+         memcpy(dest->members, src->members, elems * sizeof(struct vtn_type *));
+
+         dest->offsets = ralloc_array(b, unsigned, elems);
+         memcpy(dest->offsets, src->offsets, elems * sizeof(unsigned));
+         break;
+      }
+
+      default:
+         unreachable("unhandled type");
+      }
+   }
+
+   return dest;
+}
+
 static void
 struct_member_decoration_cb(struct vtn_builder *b,
                             struct vtn_value *val, int member,
-                            const struct vtn_decoration *dec, void *void_fields)
+                            const struct vtn_decoration *dec, void *void_ctx)
 {
-   struct glsl_struct_field *fields = void_fields;
+   struct member_decoration_ctx *ctx = void_ctx;
 
    if (member < 0)
       return;
@@ -284,22 +336,28 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationPrecisionHigh:
       break; /* FIXME: Do nothing with these for now. */
    case SpvDecorationSmooth:
-      fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
+      ctx->fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
       break;
    case SpvDecorationNoperspective:
-      fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
+      ctx->fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
       break;
    case SpvDecorationFlat:
-      fields[member].interpolation = INTERP_QUALIFIER_FLAT;
+      ctx->fields[member].interpolation = INTERP_QUALIFIER_FLAT;
       break;
    case SpvDecorationCentroid:
-      fields[member].centroid = true;
+      ctx->fields[member].centroid = true;
       break;
    case SpvDecorationSample:
-      fields[member].sample = true;
+      ctx->fields[member].sample = true;
       break;
    case SpvDecorationLocation:
-      fields[member].location = dec->literals[0];
+      ctx->fields[member].location = dec->literals[0];
+      break;
+   case SpvDecorationBuiltIn:
+      ctx->type->members[member] = vtn_type_copy(b,
+                                                 ctx->type->members[member]);
+      ctx->type->members[member]->is_builtin = true;
+      ctx->type->members[member]->builtin = dec->literals[0];
       break;
    default:
       unreachable("Unhandled member decoration");
@@ -381,7 +439,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          fields[i].stream = -1;
       }
 
-      vtn_foreach_decoration(b, val, struct_member_decoration_cb, fields);
+      struct member_decoration_ctx ctx = {
+         .fields = fields,
+         .type = val->type
+      };
+
+      vtn_foreach_decoration(b, val, struct_member_decoration_cb, &ctx);
 
       const char *name = val->name ? val->name : "struct";
 
