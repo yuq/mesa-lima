@@ -81,6 +81,30 @@ struct vtn_ssa_value {
    const struct glsl_type *type;
 };
 
+struct vtn_type {
+   const struct glsl_type *type;
+
+   /* for matrices, whether the matrix is stored row-major */
+   bool row_major;
+
+   /* for structs, the offset of each member */
+   unsigned *offsets;
+
+   /* for arrays and matrices, the array stride */
+   unsigned stride;
+
+   /* for arrays, the vtn_type for the elements of the array */
+   struct vtn_type *array_element;
+
+   /* for structures, the vtn_type for each member */
+   struct vtn_type **members;
+
+   /* Whether this type, or a parent type, has been decorated as a builtin */
+   bool is_builtin;
+
+   SpvBuiltIn builtin;
+};
+
 struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
@@ -88,7 +112,7 @@ struct vtn_value {
    union {
       void *ptr;
       char *str;
-      const struct glsl_type *type;
+      struct vtn_type *type;
       struct {
          nir_constant *constant;
          const struct glsl_type *const_type;

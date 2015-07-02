@@ -312,51 +312,66 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 {
    struct vtn_value *val = vtn_push_value(b, w[1], vtn_value_type_type);
 
+   val->type = ralloc(b, struct vtn_type);
+   val->type->is_builtin = false;
+
    switch (opcode) {
    case SpvOpTypeVoid:
-      val->type = glsl_void_type();
+      val->type->type = glsl_void_type();
       return;
    case SpvOpTypeBool:
-      val->type = glsl_bool_type();
+      val->type->type = glsl_bool_type();
       return;
    case SpvOpTypeInt:
-      val->type = glsl_int_type();
+      val->type->type = glsl_int_type();
       return;
    case SpvOpTypeFloat:
-      val->type = glsl_float_type();
+      val->type->type = glsl_float_type();
       return;
 
    case SpvOpTypeVector: {
       const struct glsl_type *base =
-         vtn_value(b, w[2], vtn_value_type_type)->type;
+         vtn_value(b, w[2], vtn_value_type_type)->type->type;
       unsigned elems = w[3];
 
       assert(glsl_type_is_scalar(base));
-      val->type = glsl_vector_type(glsl_get_base_type(base), elems);
+      val->type->type = glsl_vector_type(glsl_get_base_type(base), elems);
       return;
    }
 
    case SpvOpTypeMatrix: {
       const struct glsl_type *base =
-         vtn_value(b, w[2], vtn_value_type_type)->type;
+         vtn_value(b, w[2], vtn_value_type_type)->type->type;
       unsigned columns = w[3];
 
       assert(glsl_type_is_vector(base));
-      val->type = glsl_matrix_type(glsl_get_base_type(base),
-                                  glsl_get_vector_elements(base),
-                                  columns);
+      val->type->type = glsl_matrix_type(glsl_get_base_type(base),
+                                         glsl_get_vector_elements(base),
+                                         columns);
+      val->type->row_major = false;
+      val->type->stride = 0;
       return;
    }
 
-   case SpvOpTypeArray:
-      val->type = glsl_array_type(b->values[w[2]].type, w[3]);
+   case SpvOpTypeArray: {
+      struct vtn_type *array_element =
+         vtn_value(b, w[2], vtn_value_type_type)->type;
+      val->type->type = glsl_array_type(array_element->type, w[3]);
+      val->type->array_element = array_element;
+      val->type->stride = 0;
       return;
+   }
 
    case SpvOpTypeStruct: {
+      unsigned num_fields = count - 2;
+      val->type->members = ralloc_array(b, struct vtn_type *, num_fields);
+
       NIR_VLA(struct glsl_struct_field, fields, count);
-      for (unsigned i = 0; i < count - 2; i++) {
+      for (unsigned i = 0; i < num_fields; i++) {
          /* TODO: Handle decorators */
-         fields[i].type = vtn_value(b, w[i + 2], vtn_value_type_type)->type;
+         val->type->members[i] =
+            vtn_value(b, w[i + 2], vtn_value_type_type)->type;
+         fields[i].type = val->type->members[i]->type;
          fields[i].name = ralloc_asprintf(b, "field%d", i);
          fields[i].location = -1;
          fields[i].interpolation = 0;
@@ -370,21 +385,22 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       const char *name = val->name ? val->name : "struct";
 
-      val->type = glsl_struct_type(fields, count, name);
+      val->type->type = glsl_struct_type(fields, count, name);
       return;
    }
 
    case SpvOpTypeFunction: {
-      const struct glsl_type *return_type = b->values[w[2]].type;
+      const struct glsl_type *return_type =
+         vtn_value(b, w[2], vtn_value_type_type)->type->type;
       NIR_VLA(struct glsl_function_param, params, count - 3);
       for (unsigned i = 0; i < count - 3; i++) {
-         params[i].type = vtn_value(b, w[i + 3], vtn_value_type_type)->type;
+         params[i].type = vtn_value(b, w[i + 3], vtn_value_type_type)->type->type;
 
          /* FIXME: */
          params[i].in = true;
          params[i].out = true;
       }
-      val->type = glsl_function_type(return_type, params, count - 3);
+      val->type->type = glsl_function_type(return_type, params, count - 3);
       return;
    }
 
@@ -398,7 +414,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpTypeSampler: {
       const struct glsl_type *sampled_type =
-         vtn_value(b, w[2], vtn_value_type_type)->type;
+         vtn_value(b, w[2], vtn_value_type_type)->type->type;
 
       assert(glsl_type_is_vector_or_scalar(sampled_type));
 
@@ -422,8 +438,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       assert(w[7] == 0 && "FIXME: Handl multi-sampled textures");
 
-      val->type = glsl_sampler_type(dim, is_shadow, is_array,
-                                    glsl_get_base_type(sampled_type));
+      val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
+                                          glsl_get_base_type(sampled_type));
       return;
    }
 
@@ -444,7 +460,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                     const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_constant);
-   val->const_type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   val->const_type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
    val->constant = ralloc(b, nir_constant);
    switch (opcode) {
    case SpvOpConstantTrue:
@@ -864,7 +880,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    switch (opcode) {
    case SpvOpVariable: {
       const struct glsl_type *type =
-         vtn_value(b, w[1], vtn_value_type_type)->type;
+         vtn_value(b, w[1], vtn_value_type_type)->type->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
 
       nir_variable *var = ralloc(b->shader, nir_variable);
@@ -1442,7 +1458,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
    const struct glsl_type *type =
-      vtn_value(b, w[1], vtn_value_type_type)->type;
+      vtn_value(b, w[1], vtn_value_type_type)->type->type;
    val->ssa = vtn_create_ssa_value(b, type);
 
    /* Collect the various SSA sources */
@@ -1792,7 +1808,8 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
                      const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   const struct glsl_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   const struct glsl_type *type =
+      vtn_value(b, w[1], vtn_value_type_type)->type->type;
    val->ssa = vtn_create_ssa_value(b, type);
 
    switch (opcode) {
@@ -1880,7 +1897,8 @@ static void
 vtn_handle_phi_first_pass(struct vtn_builder *b, const uint32_t *w)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   const struct glsl_type *type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   const struct glsl_type *type =
+      vtn_value(b, w[1], vtn_value_type_type)->type->type;
    val->ssa = vtn_phi_node_create(b, type);
 }
 
@@ -2068,10 +2086,10 @@ vtn_handle_first_cfg_pass_instruction(struct vtn_builder *b, SpvOp opcode,
       b->func = rzalloc(b, struct vtn_function);
 
       const struct glsl_type *result_type =
-         vtn_value(b, w[1], vtn_value_type_type)->type;
+         vtn_value(b, w[1], vtn_value_type_type)->type->type;
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_function);
       const struct glsl_type *func_type =
-         vtn_value(b, w[4], vtn_value_type_type)->type;
+         vtn_value(b, w[4], vtn_value_type_type)->type->type;
 
       assert(glsl_get_function_return_type(func_type) == result_type);
 

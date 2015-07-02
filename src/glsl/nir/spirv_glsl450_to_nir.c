@@ -139,9 +139,8 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
                    const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
    val->ssa = rzalloc(b, struct vtn_ssa_value);
-   val->ssa->type = val->type;
+   val->ssa->type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
 
    /* Collect the various SSA sources */
    unsigned num_inputs = count - 5;
@@ -257,7 +256,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
 
    nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
-                     glsl_get_vector_elements(val->type), val->name);
+                     glsl_get_vector_elements(val->ssa->type), val->name);
    val->ssa->def = &instr->dest.dest.ssa;
 
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
