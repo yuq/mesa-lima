@@ -1202,13 +1202,97 @@ void anv_CmdFillBuffer(
 
 void anv_CmdClearColorImage(
     VkCmdBuffer                                 cmdBuffer,
-    VkImage                                     image,
+    VkImage                                     _image,
     VkImageLayout                               imageLayout,
     VkClearColor                                color,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
-   stub();
+   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   struct anv_image *image = (struct anv_image *)_image;
+   struct anv_saved_state saved_state;
+
+   anv_cmd_buffer_save(cmd_buffer, &saved_state);
+
+   for (uint32_t r = 0; r < rangeCount; r++) {
+      for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
+         for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
+            struct anv_surface_view view;
+            anv_color_attachment_view_init(&view, cmd_buffer->device,
+               &(VkColorAttachmentViewCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+                  .image = _image,
+                  .format = image->format,
+                  .mipLevel = pRanges[r].baseMipLevel + l,
+                  .baseArraySlice = pRanges[r].baseArraySlice + s,
+                  .arraySize = 1,
+               },
+               cmd_buffer);
+
+            VkFramebuffer fb;
+            anv_CreateFramebuffer((VkDevice) cmd_buffer->device,
+               &(VkFramebufferCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                  .colorAttachmentCount = 1,
+                  .pColorAttachments = (VkColorAttachmentBindInfo[]) {
+                     {
+                        .view = (VkColorAttachmentView) &view,
+                        .layout = VK_IMAGE_LAYOUT_GENERAL
+                     }
+                  },
+                  .pDepthStencilAttachment = NULL,
+                  .sampleCount = 1,
+                  .width = view.extent.width,
+                  .height = view.extent.height,
+                  .layers = 1
+               }, &fb);
+
+            VkRenderPass pass;
+            anv_CreateRenderPass((VkDevice) cmd_buffer->device,
+               &(VkRenderPassCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+                  .renderArea = { { 0, 0 }, { view.extent.width, view.extent.height } },
+                  .colorAttachmentCount = 1,
+                  .extent = { 0, },
+                  .sampleCount = 1,
+                  .layers = 1,
+                  .pColorFormats = (VkFormat[]) { image->format },
+                  .pColorLayouts = (VkImageLayout[]) { imageLayout },
+                  .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_DONT_CARE },
+                  .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
+                  .pColorLoadClearValues = &color,
+                  .depthStencilFormat = VK_FORMAT_UNDEFINED,
+               }, &pass);
+
+            anv_CmdBeginRenderPass((VkCmdBuffer) cmd_buffer,
+               &(VkRenderPassBegin) {
+                  .renderPass = pass,
+                  .framebuffer = (VkFramebuffer) fb,
+               });
+
+            struct clear_instance_data instance_data = {
+               .vue_header = {
+                  .RTAIndex = 0,
+                  .ViewportIndex = 0,
+                  .PointWidth = 0.0
+               },
+               .color = {
+                  color.color.floatColor[0],
+                  color.color.floatColor[1],
+                  color.color.floatColor[2],
+                  color.color.floatColor[3],
+               }
+            };
+
+            meta_emit_clear(cmd_buffer, 1, &instance_data);
+
+            anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+         }
+      }
+   }
+
+   /* Restore API state */
+   anv_cmd_buffer_restore(cmd_buffer, &saved_state);
 }
 
 void anv_CmdClearDepthStencil(
