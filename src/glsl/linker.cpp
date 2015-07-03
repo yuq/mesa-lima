@@ -2431,6 +2431,25 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
 	 }
       }
 
+      /* From GL4.5 core spec, section 15.2 (Shader Execution):
+       *
+       *     "Output binding assignments will cause LinkProgram to fail:
+       *     ...
+       *     If the program has an active output assigned to a location greater
+       *     than or equal to the value of MAX_DUAL_SOURCE_DRAW_BUFFERS and has
+       *     an active output assigned an index greater than or equal to one;"
+       */
+      if (target_index == MESA_SHADER_FRAGMENT && var->data.index >= 1 &&
+          var->data.location - generic_base >=
+          (int) constants->MaxDualSourceDrawBuffers) {
+         linker_error(prog,
+                      "output location %d >= GL_MAX_DUAL_SOURCE_DRAW_BUFFERS "
+                      "with index %u for %s\n",
+                      var->data.location - generic_base, var->data.index,
+                      var->name);
+         return false;
+      }
+
       const unsigned slots = var->type->count_attribute_slots();
 
       /* From GL4.5 core spec, section 11.1.1 (Vertex Attributes):
