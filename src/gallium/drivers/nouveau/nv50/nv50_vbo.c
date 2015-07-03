@@ -317,7 +317,6 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
          if (buf && buf->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
             buf->status &= ~NOUVEAU_BUFFER_STATUS_GPU_WRITING;
             nv50->base.vbo_dirty = true;
-            break;
          }
       }
    }
