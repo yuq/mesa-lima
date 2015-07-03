@@ -101,10 +101,16 @@ brw_create_nir(struct brw_context *brw,
    /* Get rid of split copies */
    nir_optimize(nir);
 
-   nir_assign_var_locations_direct_first(nir, &nir->uniforms,
-                                         &nir->num_direct_uniforms,
-                                         &nir->num_uniforms,
-                                         is_scalar);
+   if (is_scalar) {
+      nir_assign_var_locations_direct_first(nir, &nir->uniforms,
+                                            &nir->num_direct_uniforms,
+                                            &nir->num_uniforms,
+                                            is_scalar);
+   } else {
+      nir_assign_var_locations(&nir->uniforms,
+                               &nir->num_uniforms,
+                               is_scalar);
+   }
    nir_assign_var_locations(&nir->inputs, &nir->num_inputs, is_scalar);
    nir_assign_var_locations(&nir->outputs, &nir->num_outputs, is_scalar);
 
