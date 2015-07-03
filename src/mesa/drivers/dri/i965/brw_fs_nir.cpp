@@ -1481,6 +1481,10 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_interp_var_at_centroid:
    case nir_intrinsic_interp_var_at_sample:
    case nir_intrinsic_interp_var_at_offset: {
+      assert(stage == MESA_SHADER_FRAGMENT);
+
+      ((struct brw_wm_prog_data *) prog_data)->pulls_bary = true;
+
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
 
       /* For most messages, we need one reg of ignored data; the hardware

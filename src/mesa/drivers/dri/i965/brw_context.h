@@ -415,6 +415,7 @@ struct brw_wm_prog_data {
    bool uses_pos_offset;
    bool uses_omask;
    bool uses_kill;
+   bool pulls_bary;
    uint32_t prog_offset_16;
 
    /**

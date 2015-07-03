@@ -58,6 +58,9 @@ gen8_upload_ps_extra(struct brw_context *brw,
    if (prog_data->uses_omask)
       dw1 |= GEN8_PSX_OMASK_TO_RENDER_TARGET;
 
+   if (brw->gen >= 9 && prog_data->pulls_bary)
+      dw1 |= GEN9_PSX_SHADER_PULLS_BARY;
+
    if (_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx))
       dw1 |= GEN8_PSX_SHADER_HAS_UAV;
 
