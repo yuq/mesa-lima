@@ -434,7 +434,6 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_USLT:
    case TGSI_OPCODE_USNE:
    case TGSI_OPCODE_USHR:
-   case TGSI_OPCODE_UCMP:
    case TGSI_OPCODE_ATOMUADD:
    case TGSI_OPCODE_ATOMXCHG:
    case TGSI_OPCODE_ATOMCAS:
@@ -2570,6 +2569,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    case TGSI_OPCODE_UCMP:
+      srcTy = TYPE_U32;
+      /* fallthrough */
    case TGSI_OPCODE_CMP:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = fetchSrc(0, c);
