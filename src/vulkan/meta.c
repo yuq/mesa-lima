@@ -189,23 +189,20 @@ struct vue_header {
    float PointWidth;
 };
 
-void
-anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
-                     struct anv_render_pass *pass)
+struct clear_instance_data {
+   struct vue_header vue_header;
+   float color[4];
+};
+
+static void
+meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
+                int num_instances,
+                struct clear_instance_data *instance_data)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_framebuffer *fb = cmd_buffer->framebuffer;
-   struct anv_saved_state saved_state;
    struct anv_state state;
    uint32_t size;
-
-   struct instance_data {
-      struct vue_header vue_header;
-      float color[4];
-   } *instance_data;
-
-   if (pass->num_clear_layers == 0)
-      return;
 
    const float vertex_data[] = {
       /* Rect-list coordinates */
@@ -217,29 +214,13 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
             0.0,        0.0,
    };
 
-   size = sizeof(vertex_data) + pass->num_clear_layers * sizeof(instance_data[0]);
+   size = sizeof(vertex_data) + num_instances * sizeof(*instance_data);
    state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 16);
 
+   /* Copy in the vertex and instance data */
    memcpy(state.map, vertex_data, sizeof(vertex_data));
-   instance_data = state.map + sizeof(vertex_data);
-
-   for (uint32_t i = 0; i < pass->num_layers; i++) {
-      if (pass->layers[i].color_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         *instance_data++ = (struct instance_data) {
-            .vue_header = {
-               .RTAIndex = i,
-               .ViewportIndex = 0,
-               .PointWidth = 0.0
-            },
-            .color = {
-               pass->layers[i].clear_color.color.floatColor[0],
-               pass->layers[i].clear_color.color.floatColor[1],
-               pass->layers[i].clear_color.color.floatColor[2],
-               pass->layers[i].clear_color.color.floatColor[3],
-            }
-         };
-      }
-   }
+   memcpy(state.map + sizeof(vertex_data), instance_data,
+          num_instances * sizeof(*instance_data));
 
    struct anv_buffer vertex_buffer = {
       .device = cmd_buffer->device,
@@ -247,8 +228,6 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
       .bo = &device->surface_state_block_pool.bo,
       .offset = state.offset
    };
-
-   anv_cmd_buffer_save(cmd_buffer, &saved_state);
 
    anv_CmdBindVertexBuffers((VkCmdBuffer) cmd_buffer, 0, 2,
       (VkBuffer[]) {
@@ -286,11 +265,45 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                                     VK_STATE_BIND_POINT_COLOR_BLEND,
                                     device->meta_state.shared.cb_state);
 
-   anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, pass->num_clear_layers);
+   anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, num_instances);
+}
+
+void
+anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
+                     struct anv_render_pass *pass)
+{
+   struct anv_saved_state saved_state;
+
+   int num_clear_layers = 0;
+   struct clear_instance_data instance_data[MAX_RTS];
+
+   for (uint32_t i = 0; i < pass->num_layers; i++) {
+      if (pass->layers[i].color_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+         instance_data[num_clear_layers++] = (struct clear_instance_data) {
+            .vue_header = {
+               .RTAIndex = i,
+               .ViewportIndex = 0,
+               .PointWidth = 0.0
+            },
+            .color = {
+               pass->layers[i].clear_color.color.floatColor[0],
+               pass->layers[i].clear_color.color.floatColor[1],
+               pass->layers[i].clear_color.color.floatColor[2],
+               pass->layers[i].clear_color.color.floatColor[3],
+            }
+         };
+      }
+   }
+
+   if (num_clear_layers == 0)
+      return;
+
+   anv_cmd_buffer_save(cmd_buffer, &saved_state);
+
+   meta_emit_clear(cmd_buffer, num_clear_layers, instance_data);
 
    /* Restore API state */
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
-
 }
 
 static void
