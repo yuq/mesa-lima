@@ -787,8 +787,6 @@ program_resource_location(struct gl_shader_program *shProg,
 
 /**
  * Function implements following location queries:
- *    glGetAttribLocation
- *    glGetFragDataLocation
  *    glGetUniformLocation
  */
 GLint
