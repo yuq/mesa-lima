@@ -787,12 +787,92 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    }
 }
 
+static nir_variable *
+get_builtin_variable(struct vtn_builder *b,
+                     const struct glsl_type *type,
+                     SpvBuiltIn builtin)
+{
+   nir_variable *var = b->builtins[builtin];
+
+   if (!var) {
+      var = ralloc(b->shader, nir_variable);
+      var->type = type;
+      
+      nir_variable_mode mode;
+      vtn_get_builtin_location(builtin, &var->data.location, &mode);
+      var->data.mode = mode;
+      var->name = ralloc_strdup(b->shader, "builtin");
+
+      switch (mode) {
+      case nir_var_shader_in:
+         exec_list_push_tail(&b->shader->inputs, &var->node);
+         break;
+      case nir_var_shader_out:
+         exec_list_push_tail(&b->shader->outputs, &var->node);
+         break;
+      case nir_var_system_value:
+         exec_list_push_tail(&b->shader->system_values, &var->node);
+         break;
+      default:
+         unreachable("bad builtin mode");
+      }
+
+      b->builtins[builtin] = var;
+   }
+
+   return var;
+}
+
+static void
+vtn_builtin_load(struct vtn_builder *b,
+                 struct vtn_ssa_value *val,
+                 SpvBuiltIn builtin)
+{
+   assert(glsl_type_is_vector_or_scalar(val->type));
+
+   nir_variable *var = get_builtin_variable(b, val->type, builtin);
+
+   nir_intrinsic_instr *load =
+      nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
+   nir_ssa_dest_init(&load->instr, &load->dest,
+                     glsl_get_vector_elements(val->type), NULL);
+
+   load->variables[0] = nir_deref_var_create(b->shader, var);
+   load->num_components = glsl_get_vector_elements(val->type);
+   nir_builder_instr_insert(&b->nb, &load->instr);
+   val->def = &load->dest.ssa;
+}
+
+static void
+vtn_builtin_store(struct vtn_builder *b,
+                  struct vtn_ssa_value *val,
+                  SpvBuiltIn builtin)
+{
+   assert(glsl_type_is_vector_or_scalar(val->type));
+
+   nir_variable *var = get_builtin_variable(b, val->type, builtin);
+
+   nir_intrinsic_instr *store =
+      nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
+
+   store->variables[0] = nir_deref_var_create(b->shader, var);
+   store->num_components = glsl_get_vector_elements(val->type);
+   store->src[0] = nir_src_for_ssa(val->def);
+   nir_builder_instr_insert(&b->nb, &store->instr);
+}
+
 static struct vtn_ssa_value *
 _vtn_variable_load(struct vtn_builder *b,
-                   nir_deref_var *src_deref, nir_deref *src_deref_tail)
+                   nir_deref_var *src_deref, struct vtn_type *src_type,
+                   nir_deref *src_deref_tail)
 {
    struct vtn_ssa_value *val = rzalloc(b, struct vtn_ssa_value);
    val->type = src_deref_tail->type;
+
+   if (src_type->is_builtin) {
+      vtn_builtin_load(b, val, src_type->builtin);
+      return val;
+   }
 
    /* The deref tail may contain a deref to select a component of a vector (in
     * other words, it might not be an actual tail) so we have to save it away
@@ -830,7 +910,9 @@ _vtn_variable_load(struct vtn_builder *b,
       src_deref_tail->child = &deref->deref;
       for (unsigned i = 0; i < elems; i++) {
          deref->base_offset = i;
-         val->elems[i] = _vtn_variable_load(b, src_deref, &deref->deref);
+         val->elems[i] = _vtn_variable_load(b, src_deref,
+                                            src_type->array_element,
+                                            &deref->deref);
       }
    } else {
       assert(glsl_get_base_type(val->type) == GLSL_TYPE_STRUCT);
@@ -842,7 +924,9 @@ _vtn_variable_load(struct vtn_builder *b,
       for (unsigned i = 0; i < elems; i++) {
          deref->index = i;
          deref->deref.type = glsl_get_struct_field(val->type, i);
-         val->elems[i] = _vtn_variable_load(b, src_deref, &deref->deref);
+         val->elems[i] = _vtn_variable_load(b, src_deref,
+                                            src_type->members[i],
+                                            &deref->deref);
       }
    }
 
@@ -852,9 +936,15 @@ _vtn_variable_load(struct vtn_builder *b,
 }
 
 static void
-_vtn_variable_store(struct vtn_builder *b, nir_deref_var *dest_deref,
-                    nir_deref *dest_deref_tail, struct vtn_ssa_value *src)
+_vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
+                    nir_deref_var *dest_deref, nir_deref *dest_deref_tail,
+                    struct vtn_ssa_value *src)
 {
+   if (dest_type->is_builtin) {
+      vtn_builtin_store(b, src, dest_type->builtin);
+      return;
+   }
+
    nir_deref *old_child = dest_deref_tail->child;
 
    if (glsl_type_is_vector_or_scalar(src->type)) {
@@ -875,7 +965,8 @@ _vtn_variable_store(struct vtn_builder *b, nir_deref_var *dest_deref,
       dest_deref_tail->child = &deref->deref;
       for (unsigned i = 0; i < elems; i++) {
          deref->base_offset = i;
-         _vtn_variable_store(b, dest_deref, &deref->deref, src->elems[i]);
+         _vtn_variable_store(b, dest_type->array_element, dest_deref,
+                             &deref->deref, src->elems[i]);
       }
    } else {
       assert(glsl_get_base_type(src->type) == GLSL_TYPE_STRUCT);
@@ -886,7 +977,8 @@ _vtn_variable_store(struct vtn_builder *b, nir_deref_var *dest_deref,
       for (unsigned i = 0; i < elems; i++) {
          deref->index = i;
          deref->deref.type = glsl_get_struct_field(src->type, i);
-         _vtn_variable_store(b, dest_deref, &deref->deref, src->elems[i]);
+         _vtn_variable_store(b, dest_type->members[i], dest_deref,
+                             &deref->deref, src->elems[i]);
       }
    }
 
@@ -917,10 +1009,11 @@ static nir_ssa_def *vtn_vector_extract_dynamic(struct vtn_builder *b,
                                                nir_ssa_def *index);
 
 static struct vtn_ssa_value *
-vtn_variable_load(struct vtn_builder *b, nir_deref_var *src)
+vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
+                  struct vtn_type *src_type)
 {
    nir_deref *src_tail = get_deref_tail(src);
-   struct vtn_ssa_value *val = _vtn_variable_load(b, src, src_tail);
+   struct vtn_ssa_value *val = _vtn_variable_load(b, src, src_type, src_tail);
 
    if (src_tail->child) {
       nir_deref_array *vec_deref = nir_deref_as_array(src_tail->child);
@@ -946,11 +1039,12 @@ static nir_ssa_def * vtn_vector_insert_dynamic(struct vtn_builder *b,
                                                nir_ssa_def *index);
 static void
 vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
-                   nir_deref_var *dest)
+                   nir_deref_var *dest, struct vtn_type *dest_type)
 {
    nir_deref *dest_tail = get_deref_tail(dest);
    if (dest_tail->child) {
-      struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_tail);
+      struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_type,
+                                                     dest_tail);
       nir_deref_array *deref = nir_deref_as_array(dest_tail->child);
       assert(deref->deref.child == NULL);
       if (deref->deref_array_type == nir_deref_array_type_direct)
@@ -959,22 +1053,22 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
       else
          val->def = vtn_vector_insert_dynamic(b, val->def, src->def,
                                               deref->indirect.ssa);
-      _vtn_variable_store(b, dest, dest_tail, val);
+      _vtn_variable_store(b, dest_type, dest, dest_tail, val);
    } else {
-      _vtn_variable_store(b, dest, dest_tail, src);
+      _vtn_variable_store(b, dest_type, dest, dest_tail, src);
    }
 }
 
 static void
 vtn_variable_copy(struct vtn_builder *b, nir_deref_var *src,
-                  nir_deref_var *dest)
+                  nir_deref_var *dest, struct vtn_type *type)
 {
    nir_deref *src_tail = get_deref_tail(src);
 
    if (src_tail->child) {
       assert(get_deref_tail(dest)->child);
-      struct vtn_ssa_value *val = vtn_variable_load(b, src);
-      vtn_variable_store(b, val, dest);
+      struct vtn_ssa_value *val = vtn_variable_load(b, src, type);
+      vtn_variable_store(b, val, dest, type);
    } else {
       nir_intrinsic_instr *copy =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_copy_var);
@@ -1144,29 +1238,34 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
    case SpvOpCopyMemory: {
       nir_deref_var *dest = vtn_value(b, w[1], vtn_value_type_deref)->deref;
       nir_deref_var *src = vtn_value(b, w[2], vtn_value_type_deref)->deref;
+      struct vtn_type *type =
+         vtn_value(b, w[1], vtn_value_type_deref)->deref_type;
 
-      vtn_variable_copy(b, src, dest);
+      vtn_variable_copy(b, src, dest, type);
       break;
    }
 
    case SpvOpLoad: {
       nir_deref_var *src = vtn_value(b, w[3], vtn_value_type_deref)->deref;
-      const struct glsl_type *src_type = nir_deref_tail(&src->deref)->type;
+      struct vtn_type *src_type =
+         vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
-      if (glsl_get_base_type(src_type) == GLSL_TYPE_SAMPLER) {
+      if (glsl_get_base_type(src_type->type) == GLSL_TYPE_SAMPLER) {
          vtn_push_value(b, w[2], vtn_value_type_deref)->deref = src;
          return;
       }
 
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-      val->ssa = vtn_variable_load(b, src);
+      val->ssa = vtn_variable_load(b, src, src_type);
       break;
    }
 
    case SpvOpStore: {
       nir_deref_var *dest = vtn_value(b, w[1], vtn_value_type_deref)->deref;
+      struct vtn_type *dest_type =
+         vtn_value(b, w[1], vtn_value_type_deref)->deref_type;
       struct vtn_ssa_value *src = vtn_ssa_value(b, w[2]);
-      vtn_variable_store(b, src, dest);
+      vtn_variable_store(b, src, dest, dest_type);
       break;
    }
 
