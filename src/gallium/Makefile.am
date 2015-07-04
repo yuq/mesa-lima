@@ -11,6 +11,7 @@ SUBDIRS += auxiliary
 ##
 
 SUBDIRS += \
+	drivers/ddebug \
 	drivers/noop \
 	drivers/trace \
 	drivers/rbug
