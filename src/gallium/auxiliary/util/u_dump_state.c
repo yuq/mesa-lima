@@ -426,7 +426,6 @@ util_dump_clip_state(FILE *stream, const struct pipe_clip_state *state)
 void
 util_dump_shader_state(FILE *stream, const struct pipe_shader_state *state)
 {
-   char str[8192];
    unsigned i;
 
    if(!state) {
@@ -434,12 +433,12 @@ util_dump_shader_state(FILE *stream, const struct pipe_shader_state *state)
       return;
    }
 
-   tgsi_dump_str(state->tokens, 0, str, sizeof(str));
-
    util_dump_struct_begin(stream, "pipe_shader_state");
 
    util_dump_member_begin(stream, "tokens");
-   util_dump_string(stream, str);
+   fprintf(stream, "\"\n");
+   tgsi_dump_to_file(state->tokens, 0, stream);
+   fprintf(stream, "\"");
    util_dump_member_end(stream);
 
    util_dump_member_begin(stream, "stream_output");

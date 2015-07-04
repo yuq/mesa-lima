@@ -48,6 +48,7 @@ struct dump_ctx
    int indent;
    
    uint indentation;
+   FILE *file;
 
    void (*dump_printf)(struct dump_ctx *ctx, const char *format, ...);
 };
@@ -58,7 +59,10 @@ dump_ctx_printf(struct dump_ctx *ctx, const char *format, ...)
    va_list ap;
    (void)ctx;
    va_start(ap, format);
-   _debug_vprintf(format, ap);
+   if (ctx->file)
+      vfprintf(ctx->file, format, ap);
+   else
+      _debug_vprintf(format, ap);
    va_end(ap);
 }
 
@@ -659,9 +663,7 @@ prolog(
 }
 
 void
-tgsi_dump(
-   const struct tgsi_token *tokens,
-   uint flags )
+tgsi_dump_to_file(const struct tgsi_token *tokens, uint flags, FILE *file)
 {
    struct dump_ctx ctx;
 
@@ -677,8 +679,15 @@ tgsi_dump(
    ctx.indent = 0;
    ctx.dump_printf = dump_ctx_printf;
    ctx.indentation = 0;
+   ctx.file = file;
 
    tgsi_iterate_shader( tokens, &ctx.iter );
+}
+
+void
+tgsi_dump(const struct tgsi_token *tokens, uint flags)
+{
+   tgsi_dump_to_file(tokens, flags, NULL);
 }
 
 struct str_dump_ctx
@@ -733,6 +742,7 @@ tgsi_dump_str(
    ctx.base.indent = 0;
    ctx.base.dump_printf = &str_dump_ctx_printf;
    ctx.base.indentation = 0;
+   ctx.base.file = NULL;
 
    ctx.str = str;
    ctx.str[0] = 0;
@@ -756,6 +766,7 @@ tgsi_dump_instruction_str(
    ctx.base.indent = 0;
    ctx.base.dump_printf = &str_dump_ctx_printf;
    ctx.base.indentation = 0;
+   ctx.base.file = NULL;
 
    ctx.str = str;
    ctx.str[0] = 0;
