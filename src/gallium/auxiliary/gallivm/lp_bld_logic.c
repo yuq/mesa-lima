@@ -81,7 +81,7 @@ lp_build_compare_ext(struct gallivm_state *gallivm,
                      boolean ordered)
 {
    LLVMBuilderRef builder = gallivm->builder;
-   LLVMTypeRef int_vec_type = lp_build_int_vec_type(gallivm, lp_type_int_vec(32, 32 * type.length));
+   LLVMTypeRef int_vec_type = lp_build_int_vec_type(gallivm, type);
    LLVMValueRef zeros = LLVMConstNull(int_vec_type);
    LLVMValueRef ones = LLVMConstAllOnes(int_vec_type);
    LLVMValueRef cond;

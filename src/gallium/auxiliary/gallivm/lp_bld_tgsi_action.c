@@ -1961,8 +1961,11 @@ dset_emit_cpu(
    struct lp_build_emit_data * emit_data,
    unsigned pipe_func)
 {
+   LLVMBuilderRef builder = bld_base->base.gallivm->builder;
    LLVMValueRef cond = lp_build_cmp(&bld_base->dbl_bld, pipe_func,
                                     emit_data->args[0], emit_data->args[1]);
+   /* arguments were 64 bit but store as 32 bit */
+   cond = LLVMBuildTrunc(builder, cond, bld_base->int_bld.int_vec_type, "");
    emit_data->output[emit_data->chan] = cond;
 }
 
