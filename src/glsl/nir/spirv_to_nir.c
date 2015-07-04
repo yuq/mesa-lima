@@ -184,17 +184,20 @@ _foreach_decoration_helper(struct vtn_builder *b,
                            struct vtn_value *value,
                            vtn_decoration_foreach_cb cb, void *data)
 {
+   int new_member = member;
+
    for (struct vtn_decoration *dec = value->decoration; dec; dec = dec->next) {
       if (dec->member >= 0) {
          assert(member == -1);
-         member = dec->member;
+         new_member = dec->member;
       }
 
       if (dec->group) {
          assert(dec->group->value_type == vtn_value_type_decoration_group);
-         _foreach_decoration_helper(b, base_value, member, dec->group, cb, data);
+         _foreach_decoration_helper(b, base_value, new_member, dec->group,
+                                    cb, data);
       } else {
-         cb(b, base_value, member, dec, data);
+         cb(b, base_value, new_member, dec, data);
       }
    }
 }
