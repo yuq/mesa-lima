@@ -452,7 +452,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       const char *name = val->name ? val->name : "struct";
 
-      val->type->type = glsl_struct_type(fields, count, name);
+      val->type->type = glsl_struct_type(fields, num_fields, name);
       return;
    }
 
