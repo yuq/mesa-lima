@@ -583,6 +583,104 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+vtn_get_builtin_location(SpvBuiltIn builtin, int *location,
+                         nir_variable_mode *mode)
+{
+   switch (builtin) {
+   case SpvBuiltInPosition:
+      *location = VARYING_SLOT_POS;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInPointSize:
+      *location = VARYING_SLOT_PSIZ;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInClipVertex:
+      *location = VARYING_SLOT_CLIP_VERTEX;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInClipDistance:
+      *location = VARYING_SLOT_CLIP_DIST0; /* XXX CLIP_DIST1? */
+      *mode = nir_var_shader_in;
+      break;
+   case SpvBuiltInCullDistance:
+      /* XXX figure this out */
+      unreachable("unhandled builtin");
+   case SpvBuiltInVertexId:
+      *location = SYSTEM_VALUE_VERTEX_ID;
+      *mode = nir_var_system_value;
+      break;
+   case SpvBuiltInInstanceId:
+      *location = SYSTEM_VALUE_INSTANCE_ID;
+      *mode = nir_var_system_value;
+      break;
+   case SpvBuiltInPrimitiveId:
+      *location = VARYING_SLOT_PRIMITIVE_ID;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInInvocationId:
+      *location = SYSTEM_VALUE_INVOCATION_ID;
+      *mode = nir_var_system_value;
+      break;
+   case SpvBuiltInLayer:
+      *location = VARYING_SLOT_LAYER;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInTessLevelOuter:
+   case SpvBuiltInTessLevelInner:
+   case SpvBuiltInTessCoord:
+   case SpvBuiltInPatchVertices:
+      unreachable("no tessellation support");
+   case SpvBuiltInFragCoord:
+      *location = VARYING_SLOT_POS;
+      *mode = nir_var_shader_in;
+      break;
+   case SpvBuiltInPointCoord:
+      *location = VARYING_SLOT_PNTC;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInFrontFacing:
+      *location = VARYING_SLOT_FACE;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInSampleId:
+      *location = SYSTEM_VALUE_SAMPLE_ID;
+      *mode = nir_var_shader_in;
+      break;
+   case SpvBuiltInSamplePosition:
+      *location = SYSTEM_VALUE_SAMPLE_POS;
+      *mode = nir_var_shader_in;
+      break;
+   case SpvBuiltInSampleMask:
+      *location = SYSTEM_VALUE_SAMPLE_MASK_IN; /* XXX out? */
+      *mode = nir_var_shader_in;
+      break;
+   case SpvBuiltInFragColor:
+      *location = FRAG_RESULT_COLOR;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInFragDepth:
+      *location = FRAG_RESULT_DEPTH;
+      *mode = nir_var_shader_out;
+      break;
+   case SpvBuiltInHelperInvocation:
+      unreachable("unsupported builtin"); /* XXX */
+      break;
+   case SpvBuiltInNumWorkgroups:
+   case SpvBuiltInWorkgroupSize:
+      /* these are constants, need to be handled specially */
+      unreachable("unsupported builtin");
+   case SpvBuiltInWorkgroupId:
+   case SpvBuiltInLocalInvocationId:
+   case SpvBuiltInGlobalInvocationId:
+   case SpvBuiltInLocalInvocationIndex:
+      unreachable("no compute shader support");
+   default:
+      unreachable("unsupported builtin");
+   }
+}
+
+static void
 var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                   const struct vtn_decoration *dec, void *void_var)
 {
@@ -639,69 +737,16 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationDescriptorSet:
       var->data.descriptor_set = dec->literals[0];
       break;
-   case SpvDecorationBuiltIn:
-      var->data.mode = nir_var_system_value;
-      var->data.read_only = true;
-      switch ((SpvBuiltIn)dec->literals[0]) {
-      case SpvBuiltInFrontFacing:
-         var->data.location = SYSTEM_VALUE_FRONT_FACE;
-         break;
-      case SpvBuiltInVertexId:
-         var->data.location = SYSTEM_VALUE_VERTEX_ID;
-         break;
-      case SpvBuiltInInstanceId:
-         var->data.location = SYSTEM_VALUE_INSTANCE_ID;
-         break;
-      case SpvBuiltInSampleId:
-         var->data.location = SYSTEM_VALUE_SAMPLE_ID;
-         break;
-      case SpvBuiltInSamplePosition:
-         var->data.location = SYSTEM_VALUE_SAMPLE_POS;
-         break;
-      case SpvBuiltInSampleMask:
-         var->data.location = SYSTEM_VALUE_SAMPLE_MASK_IN;
-         break;
-      case SpvBuiltInInvocationId:
-         var->data.location = SYSTEM_VALUE_INVOCATION_ID;
-         break;
-      case SpvBuiltInPrimitiveId:
-      case SpvBuiltInPosition:
-      case SpvBuiltInPointSize:
-      case SpvBuiltInClipVertex:
-      case SpvBuiltInClipDistance:
-      case SpvBuiltInCullDistance:
-      case SpvBuiltInLayer:
-      case SpvBuiltInViewportIndex:
-      case SpvBuiltInTessLevelOuter:
-      case SpvBuiltInTessLevelInner:
-      case SpvBuiltInTessCoord:
-      case SpvBuiltInPatchVertices:
-      case SpvBuiltInFragCoord:
-      case SpvBuiltInPointCoord:
-      case SpvBuiltInFragColor:
-      case SpvBuiltInFragDepth:
-      case SpvBuiltInHelperInvocation:
-      case SpvBuiltInNumWorkgroups:
-      case SpvBuiltInWorkgroupSize:
-      case SpvBuiltInWorkgroupId:
-      case SpvBuiltInLocalInvocationId:
-      case SpvBuiltInGlobalInvocationId:
-      case SpvBuiltInLocalInvocationIndex:
-      case SpvBuiltInWorkDim:
-      case SpvBuiltInGlobalSize:
-      case SpvBuiltInEnqueuedWorkgroupSize:
-      case SpvBuiltInGlobalOffset:
-      case SpvBuiltInGlobalLinearId:
-      case SpvBuiltInWorkgroupLinearId:
-      case SpvBuiltInSubgroupSize:
-      case SpvBuiltInSubgroupMaxSize:
-      case SpvBuiltInNumSubgroups:
-      case SpvBuiltInNumEnqueuedSubgroups:
-      case SpvBuiltInSubgroupId:
-      case SpvBuiltInSubgroupLocalInvocationId:
-         unreachable("Unhandled builtin enum");
-      }
+   case SpvDecorationBuiltIn: {
+      nir_variable_mode mode;
+      vtn_get_builtin_location(dec->literals[0], &var->data.location,
+                               &mode);
+      var->data.mode = mode;
+      if (mode == nir_var_shader_in || mode == nir_var_system_value)
+         var->data.read_only = true;
+      b->builtins[dec->literals[0]] = var;
       break;
+   }
    case SpvDecorationNoStaticUse:
       /* This can safely be ignored */
       break;
