@@ -589,7 +589,7 @@ ir_algebraic_visitor::handle_expression(ir_expression *ir)
                continue;
 
             ir_constant *point_five = add_expr->operands[1 - j]->as_constant();
-            if (!point_five->is_value(0.5, 0))
+            if (!point_five || !point_five->is_value(0.5, 0))
                continue;
 
             if (abs_expr->operands[0]->equals(sign_expr->operands[0])) {
