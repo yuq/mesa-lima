@@ -3129,9 +3129,19 @@ build_stageref(struct gl_shader_program *shProg, const char *name)
        */
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
-         if (var && strcmp(var->name, name) == 0) {
-            stages |= (1 << i);
-            break;
+         if (var) {
+            unsigned baselen = strlen(var->name);
+            if (strncmp(var->name, name, baselen) == 0) {
+               /* Check for exact name matches but also check for arrays and
+                * structs.
+                */
+               if (name[baselen] == '\0' ||
+                   name[baselen] == '[' ||
+                   name[baselen] == '.') {
+                  stages |= (1 << i);
+                  break;
+               }
+            }
          }
       }
    }
