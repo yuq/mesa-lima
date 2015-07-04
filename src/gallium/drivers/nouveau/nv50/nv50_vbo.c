@@ -836,10 +836,6 @@ nv50_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
          nv50->base.vbo_dirty = true;
    }
 
-   if (!nv50->base.vbo_dirty && nv50->idxbuf.buffer &&
-       nv50->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT)
-      nv50->base.vbo_dirty = true;
-
    if (nv50->base.vbo_dirty) {
       BEGIN_NV04(push, NV50_3D(VERTEX_ARRAY_FLUSH), 1);
       PUSH_DATA (push, 0);
