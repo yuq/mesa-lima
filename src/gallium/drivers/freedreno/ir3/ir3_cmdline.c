@@ -46,7 +46,7 @@
 static void dump_info(struct ir3_shader_variant *so, const char *str)
 {
 	uint32_t *bin;
-	const char *type = (so->type == SHADER_VERTEX) ? "VERT" : "FRAG";
+	const char *type = ir3_shader_stage(so->shader);
 	// TODO make gpu_id configurable on cmdline
 	bin = ir3_shader_assemble(so, 320);
 	debug_printf("; %s: %s\n", type, str);
@@ -106,6 +106,7 @@ int main(int argc, char **argv)
 	struct tgsi_parse_context parse;
 	struct ir3_compiler *compiler;
 	struct ir3_shader_variant v;
+	struct ir3_shader s;
 	struct ir3_shader_key key = {};
 	const char *info;
 	void *ptr;
@@ -182,6 +183,7 @@ int main(int argc, char **argv)
 
 	memset(&v, 0, sizeof(v));
 	v.key = key;
+	v.shader = &s;
 
 	ret = read_file(filename, &ptr, &size);
 	if (ret) {
@@ -198,13 +200,13 @@ int main(int argc, char **argv)
 	tgsi_parse_init(&parse, toks);
 	switch (parse.FullHeader.Processor.Processor) {
 	case TGSI_PROCESSOR_FRAGMENT:
-		v.type = SHADER_FRAGMENT;
+		s.type = v.type = SHADER_FRAGMENT;
 		break;
 	case TGSI_PROCESSOR_VERTEX:
-		v.type = SHADER_VERTEX;
+		s.type = v.type = SHADER_VERTEX;
 		break;
 	case TGSI_PROCESSOR_COMPUTE:
-		v.type = SHADER_COMPUTE;
+		s.type = v.type = SHADER_COMPUTE;
 		break;
 	}
 

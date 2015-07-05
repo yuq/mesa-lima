@@ -1983,7 +1983,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	unsigned semantic_index = in->data.index;
 	unsigned n = in->data.driver_location;
 
-	DBG("; in: %u:%u, len=%ux%u, loc=%u\n",
+	DBG("; in: %u:%u, len=%ux%u, loc=%u",
 			semantic_name, semantic_index, array_len,
 			ncomp, n);
 
@@ -2078,7 +2078,7 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 	unsigned n = out->data.driver_location;
 	unsigned comp = 0;
 
-	DBG("; out: %u:%u, len=%ux%u, loc=%u\n",
+	DBG("; out: %u:%u, len=%ux%u, loc=%u",
 			semantic_name, semantic_index, array_len,
 			ncomp, n);
 

@@ -69,6 +69,7 @@ static const struct debug_named_value debug_options[] = {
 		{"nobin",     FD_DBG_NOBIN,  "Disable hw binning"},
 		{"optmsgs",   FD_DBG_OPTMSGS,"Enable optimizer debug messages"},
 		{"glsl120",   FD_DBG_GLSL120,"Temporary flag to force GLSL 1.20 (rather than 1.30) on a3xx+"},
+		{"shaderdb",  FD_DBG_SHADERDB, "Enable shaderdb output"},
 		DEBUG_NAMED_VALUE_END
 };
 

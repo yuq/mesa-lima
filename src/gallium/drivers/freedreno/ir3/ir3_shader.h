@@ -100,6 +100,9 @@ ir3_shader_key_equal(struct ir3_shader_key *a, struct ir3_shader_key *b)
 struct ir3_shader_variant {
 	struct fd_bo *bo;
 
+	/* variant id (for debug) */
+	uint32_t id;
+
 	struct ir3_shader_key key;
 
 	struct ir3_info info;
@@ -192,6 +195,10 @@ struct ir3_shader_variant {
 struct ir3_shader {
 	enum shader_t type;
 
+	/* shader id (for debug): */
+	uint32_t id;
+	uint32_t variant_count;
+
 	struct ir3_compiler *compiler;
 
 	struct pipe_context *pctx;
@@ -213,6 +220,19 @@ void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);
 void ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin);
+
+static inline const char *
+ir3_shader_stage(struct ir3_shader *shader)
+{
+	switch (shader->type) {
+	case SHADER_VERTEX:     return "VERT";
+	case SHADER_FRAGMENT:   return "FRAG";
+	case SHADER_COMPUTE:    return "CL";
+	default:
+		unreachable("invalid type");
+		return NULL;
+	}
+}
 
 /*
  * Helper/util:

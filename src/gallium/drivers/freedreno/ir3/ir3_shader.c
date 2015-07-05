@@ -147,6 +147,25 @@ assemble_variant(struct ir3_shader_variant *v)
 		ir3_shader_disasm(v, bin);
 	}
 
+	if (fd_mesa_debug & FD_DBG_SHADERDB) {
+		/* print generic shader info: */
+		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u instructions, %u dwords\n",
+				ir3_shader_stage(v->shader),
+				v->shader->id, v->id,
+				v->info.instrs_count,
+				v->info.sizedwords);
+		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u half, %u full\n",
+				ir3_shader_stage(v->shader),
+				v->shader->id, v->id,
+				v->info.max_half_reg + 1,
+				v->info.max_reg + 1);
+		fprintf(stderr, "SHADER-DB: %s prog %d/%d: %u const, %u constlen\n",
+				ir3_shader_stage(v->shader),
+				v->shader->id, v->id,
+				v->info.max_const + 1,
+				v->constlen);
+	}
+
 	free(bin);
 
 	/* no need to keep the ir around beyond this point: */
@@ -164,6 +183,7 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 	if (!v)
 		return NULL;
 
+	v->id = ++shader->variant_count;
 	v->shader = shader;
 	v->key = key;
 	v->type = shader->type;
@@ -258,9 +278,18 @@ ir3_shader_create(struct pipe_context *pctx, const struct tgsi_token *tokens,
 {
 	struct ir3_shader *shader = CALLOC_STRUCT(ir3_shader);
 	shader->compiler = fd_context(pctx)->screen->compiler;
+	shader->id = ++shader->compiler->shader_count;
 	shader->pctx = pctx;
 	shader->type = type;
 	shader->tokens = tgsi_dup_tokens(tokens);
+	if (fd_mesa_debug & FD_DBG_SHADERDB) {
+		/* if shader-db run, create a standard variant immediately
+		 * (as otherwise nothing will trigger the shader to be
+		 * actually compiled)
+		 */
+		static struct ir3_shader_key key = {};
+		ir3_shader_variant(shader, key);
+	}
 	return shader;
 }
 
@@ -283,7 +312,7 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 {
 	struct ir3 *ir = so->ir;
 	struct ir3_register *reg;
-	const char *type = (so->type == SHADER_VERTEX) ? "VERT" : "FRAG";
+	const char *type = ir3_shader_stage(so->shader);
 	uint8_t regid;
 	unsigned i;
 
@@ -348,10 +377,15 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 	debug_printf("\n");
 
 	/* print generic shader info: */
-	debug_printf("; %s: %u instructions, %d half, %d full\n", type,
+	debug_printf("; %s prog %d/%d: %u instructions, %d half, %d full\n",
+			type, so->shader->id, so->id,
 			so->info.instrs_count,
 			so->info.max_half_reg + 1,
 			so->info.max_reg + 1);
+
+	debug_printf("; %d const, %u constlen\n",
+			so->info.max_const + 1,
+			so->constlen);
 
 	/* print shader type specific info: */
 	switch (so->type) {
