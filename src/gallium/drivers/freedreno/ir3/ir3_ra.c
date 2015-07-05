@@ -469,6 +469,11 @@ ra_block_find_definers(struct ir3_ra_ctx *ctx, struct ir3_block *block)
 		struct ir3_ra_instr_data *id = &ctx->instrd[instr->ip];
 		if (instr->regs_count == 0)
 			continue;
+		/* couple special cases: */
+		if (writes_addr(instr) || writes_pred(instr)) {
+			id->cls = -1;
+			continue;
+		}
 		id->defn = get_definer(ctx, instr, &id->sz, &id->off);
 		id->cls = size_to_class(id->sz, is_half(id->defn));
 	}
