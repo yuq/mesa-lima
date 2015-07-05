@@ -547,7 +547,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
    cso_save_sample_mask(ctx->cso);
    cso_save_min_samples(ctx->cso);
    cso_save_samplers(ctx->cso, PIPE_SHADER_FRAGMENT);
-   cso_save_sampler_views(ctx->cso, PIPE_SHADER_FRAGMENT);
+   cso_save_fragment_sampler_views(ctx->cso);
    cso_save_stream_outputs(ctx->cso);
    cso_save_viewport(ctx->cso);
    cso_save_framebuffer(ctx->cso);
@@ -629,7 +629,7 @@ util_blit_pixels_tex(struct blit_state *ctx,
    cso_restore_sample_mask(ctx->cso);
    cso_restore_min_samples(ctx->cso);
    cso_restore_samplers(ctx->cso, PIPE_SHADER_FRAGMENT);
-   cso_restore_sampler_views(ctx->cso, PIPE_SHADER_FRAGMENT);
+   cso_restore_fragment_sampler_views(ctx->cso);
    cso_restore_viewport(ctx->cso);
    cso_restore_framebuffer(ctx->cso);
    cso_restore_fragment_shader(ctx->cso);

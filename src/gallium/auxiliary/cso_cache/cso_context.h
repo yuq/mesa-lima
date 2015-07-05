@@ -210,10 +210,10 @@ cso_set_sampler_views(struct cso_context *cso,
                       struct pipe_sampler_view **views);
 
 void
-cso_save_sampler_views(struct cso_context *cso, unsigned shader_stage);
+cso_save_fragment_sampler_views(struct cso_context *ctx);
 
 void
-cso_restore_sampler_views(struct cso_context *cso, unsigned shader_stage);
+cso_restore_fragment_sampler_views(struct cso_context *ctx);
 
 
 /* constant buffers */

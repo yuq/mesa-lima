@@ -66,12 +66,6 @@ struct sampler_info
 
    void *samplers_saved[PIPE_MAX_SAMPLERS];
    unsigned nr_samplers_saved;
-
-   struct pipe_sampler_view *views[PIPE_MAX_SHADER_SAMPLER_VIEWS];
-   unsigned nr_views;
-
-   struct pipe_sampler_view *views_saved[PIPE_MAX_SHADER_SAMPLER_VIEWS];
-   unsigned nr_views_saved;
 };
 
 
@@ -84,6 +78,12 @@ struct cso_context {
    boolean has_geometry_shader;
    boolean has_tessellation;
    boolean has_streamout;
+
+   struct pipe_sampler_view *fragment_views[PIPE_MAX_SHADER_SAMPLER_VIEWS];
+   unsigned nr_fragment_views;
+
+   struct pipe_sampler_view *fragment_views_saved[PIPE_MAX_SHADER_SAMPLER_VIEWS];
+   unsigned nr_fragment_views_saved;
 
    struct sampler_info samplers[PIPE_SHADER_TYPES];
 
@@ -297,7 +297,7 @@ out:
  */
 void cso_destroy_context( struct cso_context *ctx )
 {
-   unsigned i, shader;
+   unsigned i;
 
    if (ctx->pipe) {
       ctx->pipe->set_index_buffer(ctx->pipe, NULL);
@@ -347,13 +347,9 @@ void cso_destroy_context( struct cso_context *ctx )
          ctx->pipe->set_stream_output_targets(ctx->pipe, 0, NULL, NULL);
    }
 
-   /* free sampler views for each shader stage */
-   for (shader = 0; shader < Elements(ctx->samplers); shader++) {
-      struct sampler_info *info = &ctx->samplers[shader];
-      for (i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
-         pipe_sampler_view_reference(&info->views[i], NULL);
-         pipe_sampler_view_reference(&info->views_saved[i], NULL);
-      }
+   for (i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
+      pipe_sampler_view_reference(&ctx->fragment_views[i], NULL);
+      pipe_sampler_view_reference(&ctx->fragment_views_saved[i], NULL);
    }
 
    util_unreference_framebuffer_state(&ctx->fb);
@@ -1281,71 +1277,74 @@ cso_set_sampler_views(struct cso_context *ctx,
                       unsigned count,
                       struct pipe_sampler_view **views)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
-   unsigned i;
-   boolean any_change = FALSE;
+   if (shader_stage == PIPE_SHADER_FRAGMENT) {
+      unsigned i;
+      boolean any_change = FALSE;
 
-   /* reference new views */
-   for (i = 0; i < count; i++) {
-      any_change |= info->views[i] != views[i];
-      pipe_sampler_view_reference(&info->views[i], views[i]);
-   }
-   /* unref extra old views, if any */
-   for (; i < info->nr_views; i++) {
-      any_change |= info->views[i] != NULL;
-      pipe_sampler_view_reference(&info->views[i], NULL);
-   }
+      /* reference new views */
+      for (i = 0; i < count; i++) {
+         any_change |= ctx->fragment_views[i] != views[i];
+         pipe_sampler_view_reference(&ctx->fragment_views[i], views[i]);
+      }
+      /* unref extra old views, if any */
+      for (; i < ctx->nr_fragment_views; i++) {
+         any_change |= ctx->fragment_views[i] != NULL;
+         pipe_sampler_view_reference(&ctx->fragment_views[i], NULL);
+      }
 
-   /* bind the new sampler views */
-   if (any_change) {
-      ctx->pipe->set_sampler_views(ctx->pipe, shader_stage, 0,
-                                   MAX2(info->nr_views, count),
-                                   info->views);
-   }
+      /* bind the new sampler views */
+      if (any_change) {
+         ctx->pipe->set_sampler_views(ctx->pipe, shader_stage, 0,
+                                      MAX2(ctx->nr_fragment_views, count),
+                                      ctx->fragment_views);
+      }
 
-   info->nr_views = count;
+      ctx->nr_fragment_views = count;
+   }
+   else
+      ctx->pipe->set_sampler_views(ctx->pipe, shader_stage, 0, count, views);
 }
 
 
 void
-cso_save_sampler_views(struct cso_context *ctx, unsigned shader_stage)
+cso_save_fragment_sampler_views(struct cso_context *ctx)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
    unsigned i;
 
-   info->nr_views_saved = info->nr_views;
+   ctx->nr_fragment_views_saved = ctx->nr_fragment_views;
 
-   for (i = 0; i < info->nr_views; i++) {
-      assert(!info->views_saved[i]);
-      pipe_sampler_view_reference(&info->views_saved[i], info->views[i]);
+   for (i = 0; i < ctx->nr_fragment_views; i++) {
+      assert(!ctx->fragment_views_saved[i]);
+      pipe_sampler_view_reference(&ctx->fragment_views_saved[i],
+                                  ctx->fragment_views[i]);
    }
 }
 
 
 void
-cso_restore_sampler_views(struct cso_context *ctx, unsigned shader_stage)
+cso_restore_fragment_sampler_views(struct cso_context *ctx)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
-   unsigned i, nr_saved = info->nr_views_saved;
+   unsigned i, nr_saved = ctx->nr_fragment_views_saved;
    unsigned num;
 
    for (i = 0; i < nr_saved; i++) {
-      pipe_sampler_view_reference(&info->views[i], NULL);
+      pipe_sampler_view_reference(&ctx->fragment_views[i], NULL);
       /* move the reference from one pointer to another */
-      info->views[i] = info->views_saved[i];
-      info->views_saved[i] = NULL;
+      ctx->fragment_views[i] = ctx->fragment_views_saved[i];
+      ctx->fragment_views_saved[i] = NULL;
    }
-   for (; i < info->nr_views; i++) {
-      pipe_sampler_view_reference(&info->views[i], NULL);
+   for (; i < ctx->nr_fragment_views; i++) {
+      pipe_sampler_view_reference(&ctx->fragment_views[i], NULL);
    }
 
-   num = MAX2(info->nr_views, nr_saved);
+   num = MAX2(ctx->nr_fragment_views, nr_saved);
 
    /* bind the old/saved sampler views */
-   ctx->pipe->set_sampler_views(ctx->pipe, shader_stage, 0, num, info->views);
+   ctx->pipe->set_sampler_views(ctx->pipe, PIPE_SHADER_FRAGMENT, 0, num,
+                                ctx->fragment_views);
 
-   info->nr_views = nr_saved;
-   info->nr_views_saved = 0;
+   ctx->nr_fragment_views = nr_saved;
+   ctx->nr_fragment_views_saved = 0;
 }
 
 
