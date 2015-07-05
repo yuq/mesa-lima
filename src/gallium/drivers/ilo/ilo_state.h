@@ -202,7 +202,7 @@ struct ilo_cbuf_state {
 };
 
 struct ilo_resource_state {
-   struct pipe_surface *states[PIPE_MAX_SHADER_RESOURCES];
+   struct pipe_surface *states[PIPE_MAX_SHADER_IMAGES];
    unsigned count;
 };
 

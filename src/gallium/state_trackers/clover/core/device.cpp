@@ -89,12 +89,12 @@ device::vendor_id() const {
 
 size_t
 device::max_images_read() const {
-   return PIPE_MAX_SHADER_RESOURCES;
+   return PIPE_MAX_SHADER_IMAGES;
 }
 
 size_t
 device::max_images_write() const {
-   return PIPE_MAX_SHADER_RESOURCES;
+   return PIPE_MAX_SHADER_IMAGES;
 }
 
 cl_uint
