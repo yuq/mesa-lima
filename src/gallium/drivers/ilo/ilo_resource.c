@@ -210,7 +210,7 @@ resource_get_image_info(const struct pipe_resource *templ,
    info->bind_surface_sampler = (templ->bind & PIPE_BIND_SAMPLER_VIEW);
    info->bind_surface_dp_render = (templ->bind & PIPE_BIND_RENDER_TARGET);
    info->bind_surface_dp_typed = (templ->bind &
-         (PIPE_BIND_SHADER_RESOURCE | PIPE_BIND_COMPUTE_RESOURCE));
+         (PIPE_BIND_SHADER_IMAGE | PIPE_BIND_COMPUTE_RESOURCE));
    info->bind_zs = (templ->bind & PIPE_BIND_DEPTH_STENCIL);
    info->bind_scanout = (templ->bind & PIPE_BIND_SCANOUT);
    info->bind_cursor = (templ->bind & PIPE_BIND_CURSOR);
