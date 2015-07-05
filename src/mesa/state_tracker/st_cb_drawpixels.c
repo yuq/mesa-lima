@@ -757,6 +757,8 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    /* texture sampling state: */
    {
       struct pipe_sampler_state sampler;
+      const struct pipe_sampler_state *states[2] = {&sampler, &sampler};
+
       memset(&sampler, 0, sizeof(sampler));
       sampler.wrap_s = PIPE_TEX_WRAP_CLAMP;
       sampler.wrap_t = PIPE_TEX_WRAP_CLAMP;
@@ -766,11 +768,8 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       sampler.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
       sampler.normalized_coords = normalized;
 
-      cso_single_sampler(cso, PIPE_SHADER_FRAGMENT, 0, &sampler);
-      if (num_sampler_view > 1) {
-         cso_single_sampler(cso, PIPE_SHADER_FRAGMENT, 1, &sampler);
-      }
-      cso_single_sampler_done(cso, PIPE_SHADER_FRAGMENT);
+      cso_set_samplers(cso, PIPE_SHADER_FRAGMENT,
+                       num_sampler_view > 1 ? 2 : 1, states);
    }
 
    /* viewport state: viewport matching window dims */

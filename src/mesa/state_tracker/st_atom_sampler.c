@@ -245,6 +245,7 @@ update_shader_samplers(struct st_context *st,
    GLuint unit;
    GLbitfield samplers_used;
    const GLuint old_max = *num_samplers;
+   const struct pipe_sampler_state *states[PIPE_MAX_SAMPLERS];
 
    samplers_used = prog->SamplersUsed;
 
@@ -261,13 +262,11 @@ update_shader_samplers(struct st_context *st,
          const GLuint texUnit = prog->SamplerUnits[unit];
 
          convert_sampler(st, sampler, texUnit);
-
+         states[unit] = sampler;
          *num_samplers = unit + 1;
-
-         cso_single_sampler(st->cso_context, shader_stage, unit, sampler);
       }
       else if (samplers_used != 0 || unit < old_max) {
-         cso_single_sampler(st->cso_context, shader_stage, unit, NULL);
+         states[unit] = NULL;
       }
       else {
          /* if we've reset all the old samplers and we have no more new ones */
@@ -275,7 +274,7 @@ update_shader_samplers(struct st_context *st,
       }
    }
 
-   cso_single_sampler_done(st->cso_context, shader_stage);
+   cso_set_samplers(st->cso_context, shader_stage, *num_samplers, states);
 }
 
 
