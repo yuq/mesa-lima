@@ -1069,11 +1069,9 @@ unsigned cso_get_aux_vertex_buffer_slot(struct cso_context *ctx)
 
 /**************** fragment/vertex sampler view state *************************/
 
-static enum pipe_error
-single_sampler(struct cso_context *ctx,
-               struct sampler_info *info,
-               unsigned idx,
-               const struct pipe_sampler_state *templ)
+enum pipe_error
+cso_single_sampler(struct cso_context *ctx, unsigned shader_stage,
+                   unsigned idx, const struct pipe_sampler_state *templ)
 {
    void *handle = NULL;
 
@@ -1109,24 +1107,13 @@ single_sampler(struct cso_context *ctx,
       }
    }
 
-   info->samplers[idx] = handle;
-
+   ctx->samplers[shader_stage].samplers[idx] = handle;
    return PIPE_OK;
 }
 
-enum pipe_error
-cso_single_sampler(struct cso_context *ctx,
-                   unsigned shader_stage,
-                   unsigned idx,
-                   const struct pipe_sampler_state *templ)
-{
-   return single_sampler(ctx, &ctx->samplers[shader_stage], idx, templ);
-}
 
-
-
-static void
-single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
+void
+cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
 {
    struct sampler_info *info = &ctx->samplers[shader_stage];
    unsigned i;
@@ -1140,12 +1127,6 @@ single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
    info->nr_samplers = i;
    ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0, i,
                                   info->samplers);
-}
-
-void
-cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
-{
-   single_sampler_done(ctx, shader_stage);
 }
 
 
@@ -1168,18 +1149,18 @@ cso_set_samplers(struct cso_context *ctx,
     */
 
    for (i = 0; i < nr; i++) {
-      temp = single_sampler(ctx, info, i, templates[i]);
+      temp = cso_single_sampler(ctx, shader_stage, i, templates[i]);
       if (temp != PIPE_OK)
          error = temp;
    }
 
    for ( ; i < info->nr_samplers; i++) {
-      temp = single_sampler(ctx, info, i, NULL);
+      temp = cso_single_sampler(ctx, shader_stage, i, NULL);
       if (temp != PIPE_OK)
          error = temp;
    }
 
-   single_sampler_done(ctx, shader_stage);
+   cso_single_sampler_done(ctx, shader_stage);
 
    return error;
 }
@@ -1203,7 +1184,7 @@ cso_restore_fragment_samplers(struct cso_context *ctx)
    info->nr_samplers = ctx->nr_fragment_samplers_saved;
    memcpy(info->samplers, ctx->fragment_samplers_saved,
           sizeof(info->samplers));
-   single_sampler_done(ctx, PIPE_SHADER_FRAGMENT);
+   cso_single_sampler_done(ctx, PIPE_SHADER_FRAGMENT);
 }
 
 

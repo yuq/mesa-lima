@@ -81,10 +81,8 @@ cso_restore_fragment_samplers(struct cso_context *cso);
  * samplers one at a time:
  */
 enum pipe_error
-cso_single_sampler(struct cso_context *cso,
-                   unsigned shader_stage,
-                   unsigned count,
-                   const struct pipe_sampler_state *states);
+cso_single_sampler(struct cso_context *cso, unsigned shader_stage,
+                   unsigned idx, const struct pipe_sampler_state *states);
 
 void
 cso_single_sampler_done(struct cso_context *cso, unsigned shader_stage);
