@@ -58,9 +58,6 @@ struct sampler_info
 {
    void *samplers[PIPE_MAX_SAMPLERS];
    unsigned nr_samplers;
-
-   void *samplers_saved[PIPE_MAX_SAMPLERS];
-   unsigned nr_samplers_saved;
 };
 
 
@@ -79,6 +76,9 @@ struct cso_context {
 
    struct pipe_sampler_view *fragment_views_saved[PIPE_MAX_SHADER_SAMPLER_VIEWS];
    unsigned nr_fragment_views_saved;
+
+   void *fragment_samplers_saved[PIPE_MAX_SAMPLERS];
+   unsigned nr_fragment_samplers_saved;
 
    struct sampler_info samplers[PIPE_SHADER_TYPES];
 
@@ -1229,21 +1229,25 @@ cso_set_samplers(struct cso_context *ctx,
 }
 
 void
-cso_save_samplers(struct cso_context *ctx, unsigned shader_stage)
+cso_save_fragment_samplers(struct cso_context *ctx)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
-   info->nr_samplers_saved = info->nr_samplers;
-   memcpy(info->samplers_saved, info->samplers, sizeof(info->samplers));
+   struct sampler_info *info = &ctx->samplers[PIPE_SHADER_FRAGMENT];
+
+   ctx->nr_fragment_samplers_saved = info->nr_samplers;
+   memcpy(ctx->fragment_samplers_saved, info->samplers,
+          sizeof(info->samplers));
 }
 
 
 void
-cso_restore_samplers(struct cso_context *ctx, unsigned shader_stage)
+cso_restore_fragment_samplers(struct cso_context *ctx)
 {
-   struct sampler_info *info = &ctx->samplers[shader_stage];
-   info->nr_samplers = info->nr_samplers_saved;
-   memcpy(info->samplers, info->samplers_saved, sizeof(info->samplers));
-   single_sampler_done(ctx, shader_stage);
+   struct sampler_info *info = &ctx->samplers[PIPE_SHADER_FRAGMENT];
+
+   info->nr_samplers = ctx->nr_fragment_samplers_saved;
+   memcpy(info->samplers, ctx->fragment_samplers_saved,
+          sizeof(info->samplers));
+   single_sampler_done(ctx, PIPE_SHADER_FRAGMENT);
 }
 
 

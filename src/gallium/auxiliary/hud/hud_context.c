@@ -438,7 +438,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_save_depth_stencil_alpha(cso);
    cso_save_fragment_shader(cso);
    cso_save_fragment_sampler_views(cso);
-   cso_save_samplers(cso, PIPE_SHADER_FRAGMENT);
+   cso_save_fragment_samplers(cso);
    cso_save_rasterizer(cso);
    cso_save_viewport(cso);
    cso_save_stream_outputs(cso);
@@ -568,7 +568,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_restore_depth_stencil_alpha(cso);
    cso_restore_fragment_shader(cso);
    cso_restore_fragment_sampler_views(cso);
-   cso_restore_samplers(cso, PIPE_SHADER_FRAGMENT);
+   cso_restore_fragment_samplers(cso);
    cso_restore_rasterizer(cso);
    cso_restore_viewport(cso);
    cso_restore_stream_outputs(cso);

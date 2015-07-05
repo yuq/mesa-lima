@@ -72,10 +72,10 @@ cso_set_samplers(struct cso_context *cso,
                  const struct pipe_sampler_state **states);
 
 void
-cso_save_samplers(struct cso_context *cso, unsigned shader_stage);
+cso_save_fragment_samplers(struct cso_context *cso);
 
 void
-cso_restore_samplers(struct cso_context *cso, unsigned shader_stage);
+cso_restore_fragment_samplers(struct cso_context *cso);
 
 /* Alternate interface to support state trackers that like to modify
  * samplers one at a time:
