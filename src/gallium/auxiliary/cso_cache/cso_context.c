@@ -56,11 +56,6 @@
  */
 struct sampler_info
 {
-   struct {
-      void *samplers[PIPE_MAX_SAMPLERS];
-      unsigned nr_samplers;
-   } hw;
-
    void *samplers[PIPE_MAX_SAMPLERS];
    unsigned nr_samplers;
 
@@ -1187,27 +1182,8 @@ single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
    }
 
    info->nr_samplers = i;
-
-   if (info->hw.nr_samplers != info->nr_samplers ||
-       memcmp(info->hw.samplers,
-              info->samplers,
-              info->nr_samplers * sizeof(void *)) != 0)
-   {
-      memcpy(info->hw.samplers,
-             info->samplers,
-             info->nr_samplers * sizeof(void *));
-
-      /* set remaining slots/pointers to null */
-      for (i = info->nr_samplers; i < info->hw.nr_samplers; i++)
-         info->samplers[i] = NULL;
-
-      ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0,
-                                     MAX2(info->nr_samplers,
-                                          info->hw.nr_samplers),
-                                     info->samplers);
-
-      info->hw.nr_samplers = info->nr_samplers;
-   }
+   ctx->pipe->bind_sampler_states(ctx->pipe, shader_stage, 0, i,
+                                  info->samplers);
 }
 
 void
