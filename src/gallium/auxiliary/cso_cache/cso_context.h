@@ -188,19 +188,6 @@ void cso_save_render_condition(struct cso_context *cso);
 void cso_restore_render_condition(struct cso_context *cso);
 
 
-/* clip state */
-
-void
-cso_set_clip(struct cso_context *cso,
-             const struct pipe_clip_state *clip);
-
-void
-cso_save_clip(struct cso_context *cso);
-
-void
-cso_restore_clip(struct cso_context *cso);
-
-
 /* sampler view state */
 
 void

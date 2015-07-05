@@ -111,9 +111,6 @@ struct cso_context {
    uint render_condition_mode, render_condition_mode_saved;
    boolean render_condition_cond, render_condition_cond_saved;
 
-   struct pipe_clip_state clip;
-   struct pipe_clip_state clip_saved;
-
    struct pipe_framebuffer_state fb, fb_saved;
    struct pipe_viewport_state vp, vp_saved;
    struct pipe_blend_color blend_color;
@@ -908,47 +905,6 @@ void cso_restore_tesseval_shader(struct cso_context *ctx)
       ctx->tesseval_shader = ctx->tesseval_shader_saved;
    }
    ctx->tesseval_shader_saved = NULL;
-}
-
-/* clip state */
-
-static inline void
-clip_state_cpy(struct pipe_clip_state *dst,
-               const struct pipe_clip_state *src)
-{
-   memcpy(dst->ucp, src->ucp, sizeof(dst->ucp));
-}
-
-static inline int
-clip_state_cmp(const struct pipe_clip_state *a,
-               const struct pipe_clip_state *b)
-{
-   return memcmp(a->ucp, b->ucp, sizeof(a->ucp));
-}
-
-void
-cso_set_clip(struct cso_context *ctx,
-             const struct pipe_clip_state *clip)
-{
-   if (clip_state_cmp(&ctx->clip, clip)) {
-      clip_state_cpy(&ctx->clip, clip);
-      ctx->pipe->set_clip_state(ctx->pipe, clip);
-   }
-}
-
-void
-cso_save_clip(struct cso_context *ctx)
-{
-   clip_state_cpy(&ctx->clip_saved, &ctx->clip);
-}
-
-void
-cso_restore_clip(struct cso_context *ctx)
-{
-   if (clip_state_cmp(&ctx->clip, &ctx->clip_saved)) {
-      clip_state_cpy(&ctx->clip, &ctx->clip_saved);
-      ctx->pipe->set_clip_state(ctx->pipe, &ctx->clip_saved);
-   }
 }
 
 enum pipe_error
