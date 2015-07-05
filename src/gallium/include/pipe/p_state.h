@@ -389,6 +389,31 @@ struct pipe_sampler_view
 
 
 /**
+ * A view into a writable buffer or texture that can be bound to a shader
+ * stage.
+ */
+struct pipe_image_view
+{
+   struct pipe_reference reference;
+   struct pipe_resource *resource; /**< resource into which this is a view  */
+   struct pipe_context *context; /**< context this view belongs to */
+   enum pipe_format format;      /**< typed PIPE_FORMAT_x */
+
+   union {
+      struct {
+         unsigned first_layer:16;     /**< first layer to use for array textures */
+         unsigned last_layer:16;      /**< last layer to use for array textures */
+         unsigned level:8;            /**< mipmap level to use */
+      } tex;
+      struct {
+         unsigned first_element;
+         unsigned last_element;
+      } buf;
+   } u;
+};
+
+
+/**
  * Subregion of 1D/2D/3D image resource.
  */
 struct pipe_box

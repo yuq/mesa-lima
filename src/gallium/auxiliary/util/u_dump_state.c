@@ -672,6 +672,33 @@ util_dump_surface(FILE *stream, const struct pipe_surface *state)
 
 
 void
+util_dump_image_view(FILE *stream, const struct pipe_image_view *state)
+{
+   if (!state) {
+      util_dump_null(stream);
+      return;
+   }
+
+   util_dump_struct_begin(stream, "pipe_image_view");
+
+   util_dump_member(stream, ptr, state, resource);
+   util_dump_member(stream, format, state, format);
+
+   if (state->resource->target == PIPE_BUFFER) {
+      util_dump_member(stream, uint, state, u.buf.first_element);
+      util_dump_member(stream, uint, state, u.buf.last_element);
+   }
+   else {
+      util_dump_member(stream, uint, state, u.tex.first_layer);
+      util_dump_member(stream, uint, state, u.tex.last_layer);
+      util_dump_member(stream, uint, state, u.tex.level);
+   }
+
+   util_dump_struct_end(stream);
+}
+
+
+void
 util_dump_transfer(FILE *stream, const struct pipe_transfer *state)
 {
    if(!state) {

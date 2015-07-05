@@ -154,6 +154,9 @@ util_dump_surface(FILE *stream,
                   const struct pipe_surface *state);
 
 void
+util_dump_image_view(FILE *stream, const struct pipe_image_view *state);
+
+void
 util_dump_transfer(FILE *stream,
                    const struct pipe_transfer *state);
 

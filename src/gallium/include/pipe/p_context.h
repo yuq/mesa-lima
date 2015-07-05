@@ -48,6 +48,7 @@ struct pipe_depth_stencil_alpha_state;
 struct pipe_draw_info;
 struct pipe_fence_handle;
 struct pipe_framebuffer_state;
+struct pipe_image_view;
 struct pipe_index_buffer;
 struct pipe_query;
 struct pipe_poly_stipple;
@@ -236,20 +237,21 @@ struct pipe_context {
                           const float default_inner_level[2]);
 
    /**
-    * Bind an array of shader resources that will be used by the
-    * graphics pipeline.  Any resources that were previously bound to
-    * the specified range will be unbound after this call.
+    * Bind an array of images that will be used by a shader.
+    * Any images that were previously bound to the specified range
+    * will be unbound.
     *
-    * \param start      first resource to bind.
-    * \param count      number of consecutive resources to bind.
-    * \param resources  array of pointers to the resources to bind, it
+    * \param shader     selects shader stage
+    * \param start_slot first image slot to bind.
+    * \param count      number of consecutive images to bind.
+    * \param buffers    array of pointers to the images to bind, it
     *                   should contain at least \a count elements
-    *                   unless it's NULL, in which case no new
-    *                   resources will be bound.
+    *                   unless it's NULL, in which case no images will
+    *                   be bound.
     */
-   void (*set_shader_resources)(struct pipe_context *,
-                                unsigned start, unsigned count,
-                                struct pipe_surface **resources);
+   void (*set_shader_images)(struct pipe_context *, unsigned shader,
+                             unsigned start_slot, unsigned count,
+                             struct pipe_image_view **images);
 
    void (*set_vertex_buffers)( struct pipe_context *,
                                unsigned start_slot,
@@ -396,6 +398,17 @@ struct pipe_context {
 
    void (*surface_destroy)(struct pipe_context *ctx,
                            struct pipe_surface *);
+
+   /**
+    * Create an image view into a buffer or texture to be used with load,
+    * store, and atomic instructions by a shader stage.
+    */
+   struct pipe_image_view * (*create_image_view)(struct pipe_context *ctx,
+                                                 struct pipe_resource *texture,
+                                                 const struct pipe_image_view *templat);
+
+   void (*image_view_destroy)(struct pipe_context *ctx,
+                              struct pipe_image_view *view);
 
    /**
     * Map a resource.

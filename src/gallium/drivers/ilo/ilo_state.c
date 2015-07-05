@@ -1849,10 +1849,11 @@ ilo_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 }
 
 static void
-ilo_set_shader_resources(struct pipe_context *pipe,
-                         unsigned start, unsigned count,
-                         struct pipe_surface **surfaces)
+ilo_set_shader_images(struct pipe_context *pipe, unsigned shader,
+                      unsigned start, unsigned count,
+                      struct pipe_image_view **views)
 {
+#if 0
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
    struct ilo_resource_state *dst = &vec->resource;
    unsigned i;
@@ -1881,6 +1882,7 @@ ilo_set_shader_resources(struct pipe_context *pipe,
    }
 
    vec->dirty |= ILO_DIRTY_RESOURCE;
+#endif
 }
 
 static void
@@ -2345,7 +2347,7 @@ ilo_init_state_functions(struct ilo_context *ilo)
    ilo->base.set_scissor_states = ilo_set_scissor_states;
    ilo->base.set_viewport_states = ilo_set_viewport_states;
    ilo->base.set_sampler_views = ilo_set_sampler_views;
-   ilo->base.set_shader_resources = ilo_set_shader_resources;
+   ilo->base.set_shader_images = ilo_set_shader_images;
    ilo->base.set_vertex_buffers = ilo_set_vertex_buffers;
    ilo->base.set_index_buffer = ilo_set_index_buffer;
 

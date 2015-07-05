@@ -1125,13 +1125,15 @@ nvc0_set_compute_resources(struct pipe_context *pipe,
 }
 
 static void
-nvc0_set_shader_resources(struct pipe_context *pipe,
+nvc0_set_shader_images(struct pipe_context *pipe,
                           unsigned start, unsigned nr,
-                          struct pipe_surface **resources)
+                          struct pipe_image_view **views)
 {
-   nvc0_bind_surfaces_range(nvc0_context(pipe), 0, start, nr, resources);
+#if 0
+   nvc0_bind_surfaces_range(nvc0_context(pipe), 0, start, nr, views);
 
    nvc0_context(pipe)->dirty |= NVC0_NEW_SURFACES;
+#endif
 }
 
 static INLINE void
@@ -1253,7 +1255,7 @@ nvc0_init_state_functions(struct nvc0_context *nvc0)
 
    pipe->set_global_binding = nvc0_set_global_bindings;
    pipe->set_compute_resources = nvc0_set_compute_resources;
-   pipe->set_shader_resources = nvc0_set_shader_resources;
+   pipe->set_shader_images = nvc0_set_shader_images;
 
    nvc0->sample_mask = ~0;
    nvc0->min_samples = 1;
