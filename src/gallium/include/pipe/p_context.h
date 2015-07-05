@@ -58,6 +58,7 @@ struct pipe_resource;
 struct pipe_sampler_state;
 struct pipe_sampler_view;
 struct pipe_scissor_state;
+struct pipe_shader_buffer;
 struct pipe_shader_state;
 struct pipe_stencil_ref;
 struct pipe_stream_output_target;
@@ -235,6 +236,23 @@ struct pipe_context {
    void (*set_tess_state)(struct pipe_context *,
                           const float default_outer_level[4],
                           const float default_inner_level[2]);
+
+   /**
+    * Bind an array of shader buffers that will be used by a shader.
+    * Any buffers that were previously bound to the specified range
+    * will be unbound.
+    *
+    * \param shader     selects shader stage
+    * \param start_slot first buffer slot to bind.
+    * \param count      number of consecutive buffers to bind.
+    * \param buffers    array of pointers to the buffers to bind, it
+    *                   should contain at least \a count elements
+    *                   unless it's NULL, in which case no buffers will
+    *                   be bound.
+    */
+   void (*set_shader_buffers)(struct pipe_context *, unsigned shader,
+                              unsigned start_slot, unsigned count,
+                              struct pipe_shader_buffer *buffers);
 
    /**
     * Bind an array of images that will be used by a shader.

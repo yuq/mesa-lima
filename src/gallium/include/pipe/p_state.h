@@ -494,6 +494,16 @@ struct pipe_constant_buffer
 
 
 /**
+ * An untyped shader buffer supporting loads, stores, and atomics.
+ */
+struct pipe_shader_buffer {
+   struct pipe_resource *buffer; /**< the actual buffer */
+   unsigned buffer_offset; /**< offset to start of data in buffer, in bytes */
+   unsigned buffer_size;   /**< how much data can be read in shader */
+};
+
+
+/**
  * A stream output target. The structure specifies the range vertices can
  * be written to.
  *
