@@ -149,7 +149,8 @@ program_resource_visitor::process(ir_variable *var)
       recursion(var->type, &name, strlen(name), row_major, NULL, packing,
                 false, record_array_count);
       ralloc_free(name);
-   } else if (t->without_array()->is_record()) {
+   } else if (t_without_array->is_record() ||
+              (t->is_array() && t->fields.array->is_array())) {
       char *name = ralloc_strdup(NULL, var->name);
       recursion(var->type, &name, strlen(name), row_major, NULL, packing,
                 false, record_array_count);
@@ -231,7 +232,8 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          this->leave_record(t, *name, row_major, packing);
       }
    } else if (t->without_array()->is_record() ||
-              t->without_array()->is_interface()) {
+              t->without_array()->is_interface() ||
+              (t->is_array() && t->fields.array->is_array())) {
       if (record_type == NULL && t->fields.array->is_record())
          record_type = t->fields.array;
 
@@ -387,6 +389,7 @@ private:
    {
       assert(!type->without_array()->is_record());
       assert(!type->without_array()->is_interface());
+      assert(!(type->is_array() && type->fields.array->is_array()));
 
       (void) row_major;
 
@@ -712,6 +715,7 @@ private:
    {
       assert(!type->without_array()->is_record());
       assert(!type->without_array()->is_interface());
+      assert(!(type->is_array() && type->fields.array->is_array()));
 
       unsigned id;
       bool found = this->map->get(id, name);
@@ -804,10 +808,11 @@ private:
          if (type->is_array()) {
             if (packing == GLSL_INTERFACE_PACKING_STD430)
                this->uniforms[id].array_stride =
-                  type->fields.array->std430_array_stride(row_major);
+                  type->without_array()->std430_array_stride(row_major);
             else
                this->uniforms[id].array_stride =
-                  glsl_align(type->fields.array->std140_size(row_major), 16);
+                  glsl_align(type->without_array()->std140_size(row_major),
+                             16);
 	 } else {
 	    this->uniforms[id].array_stride = 0;
 	 }
@@ -966,7 +971,8 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
 
       if (var->type->is_record()) {
          sentinel = '.';
-      } else if (var->type->without_array()->is_record()) {
+      } else if (var->type->is_array() && (var->type->fields.array->is_array()
+                 || var->type->without_array()->is_record())) {
          sentinel = '[';
       }
 

@@ -179,6 +179,7 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 			const char *name, const glsl_type *type,
                         ir_constant *val, unsigned int boolean_true)
 {
+   const glsl_type *t_without_array = type->without_array();
    if (type->is_record()) {
       ir_constant *field_constant;
 
@@ -193,7 +194,8 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
 	 field_constant = (ir_constant *)field_constant->next;
       }
       return;
-   } else if (type->is_array() && type->fields.array->is_record()) {
+   } else if (t_without_array->is_record() ||
+              (type->is_array() && type->fields.array->is_array())) {
       const glsl_type *const element_type = type->fields.array;
 
       for (unsigned int i = 0; i < type->length; i++) {
