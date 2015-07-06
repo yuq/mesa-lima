@@ -382,6 +382,11 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
       if (nv50->vbo_user & (1 << b)) {
          address = addrs[b] + ve->pipe.src_offset;
          limit = addrs[b] + limits[b];
+      } else
+      if (!vb->buffer) {
+         BEGIN_NV04(push, NV50_3D(VERTEX_ARRAY_FETCH(i)), 1);
+         PUSH_DATA (push, 0);
+         continue;
       } else {
          struct nv04_resource *buf = nv04_resource(vb->buffer);
          if (!(refd & (1 << b))) {
