@@ -1170,16 +1170,6 @@ void anv_CmdCopyImageToBuffer(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
-void anv_CmdCloneImageData(
-    VkCmdBuffer                                 cmdBuffer,
-    VkImage                                     srcImage,
-    VkImageLayout                               srcImageLayout,
-    VkImage                                     destImage,
-    VkImageLayout                               destImageLayout)
-{
-   stub();
-}
-
 void anv_CmdUpdateBuffer(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    destBuffer,
