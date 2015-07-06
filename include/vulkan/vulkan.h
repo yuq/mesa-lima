@@ -2633,6 +2633,16 @@ VkResult VKAPI vkCreateDynamicDepthStencilState(
     const VkDynamicDsStateCreateInfo*           pCreateInfo,
     VkDynamicDsState*                           pState);
 
+VkResult VKAPI vkCreateFramebuffer(
+    VkDevice                                    device,
+    const VkFramebufferCreateInfo*              pCreateInfo,
+    VkFramebuffer*                              pFramebuffer);
+
+VkResult VKAPI vkCreateRenderPass(
+    VkDevice                                    device,
+    const VkRenderPassCreateInfo*               pCreateInfo,
+    VkRenderPass*                               pRenderPass);
+
 VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                    device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -2866,16 +2876,6 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceSize                                destOffset,
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags);
-
-VkResult VKAPI vkCreateFramebuffer(
-    VkDevice                                    device,
-    const VkFramebufferCreateInfo*              pCreateInfo,
-    VkFramebuffer*                              pFramebuffer);
-
-VkResult VKAPI vkCreateRenderPass(
-    VkDevice                                    device,
-    const VkRenderPassCreateInfo*               pCreateInfo,
-    VkRenderPass*                               pRenderPass);
 
 void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
