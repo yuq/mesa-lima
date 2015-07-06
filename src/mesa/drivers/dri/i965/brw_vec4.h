@@ -333,6 +333,20 @@ public:
    void emit_pack_unorm_4x8(const dst_reg &dst, const src_reg &src0);
    void emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0);
 
+   void emit_texture(ir_texture_opcode op,
+                     dst_reg dest,
+                     const glsl_type *dest_type,
+                     src_reg coordinate,
+                     int coord_components,
+                     src_reg shadow_comparitor,
+                     src_reg lod, src_reg lod2,
+                     src_reg sample_index,
+                     uint32_t constant_offset,
+                     src_reg offset_value,
+                     src_reg mcs,
+                     bool is_cube_array,
+                     uint32_t sampler, src_reg sampler_reg);
+
    uint32_t gather_channel(unsigned gather_component, uint32_t sampler);
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
                           src_reg sampler);

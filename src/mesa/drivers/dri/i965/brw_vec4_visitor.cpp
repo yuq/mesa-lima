@@ -2520,6 +2520,183 @@ vec4_visitor::is_high_sampler(src_reg sampler)
 }
 
 void
+vec4_visitor::emit_texture(ir_texture_opcode op,
+                           dst_reg dest,
+                           const glsl_type *dest_type,
+                           src_reg coordinate,
+                           int coord_components,
+                           src_reg shadow_comparitor,
+                           src_reg lod, src_reg lod2,
+                           src_reg sample_index,
+                           uint32_t constant_offset,
+                           src_reg offset_value,
+                           src_reg mcs,
+                           bool is_cube_array,
+                           uint32_t sampler,
+                           src_reg sampler_reg)
+{
+   enum opcode opcode;
+   switch (op) {
+   case ir_tex: opcode = SHADER_OPCODE_TXL; break;
+   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
+   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
+   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
+   case ir_txf_ms: opcode = SHADER_OPCODE_TXF_CMS; break;
+   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
+   case ir_tg4: opcode = offset_value.file != BAD_FILE
+                         ? SHADER_OPCODE_TG4_OFFSET : SHADER_OPCODE_TG4; break;
+   case ir_query_levels: opcode = SHADER_OPCODE_TXS; break;
+   case ir_txb:
+      unreachable("TXB is not valid for vertex shaders.");
+   case ir_lod:
+      unreachable("LOD is not valid for vertex shaders.");
+   default:
+      unreachable("Unrecognized tex op");
+   }
+
+   vec4_instruction *inst = new(mem_ctx) vec4_instruction(
+      opcode, dst_reg(this, dest_type));
+
+   inst->offset = constant_offset;
+
+   /* The message header is necessary for:
+    * - Gen4 (always)
+    * - Gen9+ for selecting SIMD4x2
+    * - Texel offsets
+    * - Gather channel selection
+    * - Sampler indices too large to fit in a 4-bit value.
+    */
+   inst->header_size =
+      (devinfo->gen < 5 || devinfo->gen >= 9 ||
+       inst->offset != 0 || op == ir_tg4 ||
+       is_high_sampler(sampler_reg)) ? 1 : 0;
+   inst->base_mrf = 2;
+   inst->mlen = inst->header_size + 1; /* always at least one */
+   inst->dst.writemask = WRITEMASK_XYZW;
+   inst->shadow_compare = shadow_comparitor.file != BAD_FILE;
+
+   inst->src[1] = sampler_reg;
+
+   /* MRF for the first parameter */
+   int param_base = inst->base_mrf + inst->header_size;
+
+   if (op == ir_txs || op == ir_query_levels) {
+      int writemask = devinfo->gen == 4 ? WRITEMASK_W : WRITEMASK_X;
+      emit(MOV(dst_reg(MRF, param_base, lod.type, writemask), lod));
+   } else {
+      /* Load the coordinate */
+      /* FINISHME: gl_clamp_mask and saturate */
+      int coord_mask = (1 << coord_components) - 1;
+      int zero_mask = 0xf & ~coord_mask;
+
+      emit(MOV(dst_reg(MRF, param_base, coordinate.type, coord_mask),
+               coordinate));
+
+      if (zero_mask != 0) {
+         emit(MOV(dst_reg(MRF, param_base, coordinate.type, zero_mask),
+                  src_reg(0)));
+      }
+      /* Load the shadow comparitor */
+      if (shadow_comparitor.file != BAD_FILE && op != ir_txd && (op != ir_tg4 || offset_value.file == BAD_FILE)) {
+	 emit(MOV(dst_reg(MRF, param_base + 1, shadow_comparitor.type,
+			  WRITEMASK_X),
+		  shadow_comparitor));
+	 inst->mlen++;
+      }
+
+      /* Load the LOD info */
+      if (op == ir_tex || op == ir_txl) {
+	 int mrf, writemask;
+	 if (devinfo->gen >= 5) {
+	    mrf = param_base + 1;
+	    if (shadow_comparitor.file != BAD_FILE) {
+	       writemask = WRITEMASK_Y;
+	       /* mlen already incremented */
+	    } else {
+	       writemask = WRITEMASK_X;
+	       inst->mlen++;
+	    }
+	 } else /* devinfo->gen == 4 */ {
+	    mrf = param_base;
+	    writemask = WRITEMASK_W;
+	 }
+         lod.swizzle = BRW_SWIZZLE_XXXX;
+	 emit(MOV(dst_reg(MRF, mrf, lod.type, writemask), lod));
+      } else if (op == ir_txf) {
+         emit(MOV(dst_reg(MRF, param_base, lod.type, WRITEMASK_W), lod));
+      } else if (op == ir_txf_ms) {
+         emit(MOV(dst_reg(MRF, param_base + 1, sample_index.type, WRITEMASK_X),
+                  sample_index));
+         if (devinfo->gen >= 7) {
+            /* MCS data is in the first channel of `mcs`, but we need to get it into
+             * the .y channel of the second vec4 of params, so replicate .x across
+             * the whole vec4 and then mask off everything except .y
+             */
+            mcs.swizzle = BRW_SWIZZLE_XXXX;
+            emit(MOV(dst_reg(MRF, param_base + 1, glsl_type::uint_type, WRITEMASK_Y),
+                     mcs));
+         }
+         inst->mlen++;
+      } else if (op == ir_txd) {
+         const brw_reg_type type = lod.type;
+
+	 if (devinfo->gen >= 5) {
+	    lod.swizzle = BRW_SWIZZLE4(SWIZZLE_X,SWIZZLE_X,SWIZZLE_Y,SWIZZLE_Y);
+	    lod2.swizzle = BRW_SWIZZLE4(SWIZZLE_X,SWIZZLE_X,SWIZZLE_Y,SWIZZLE_Y);
+	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_XZ), lod));
+	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_YW), lod2));
+	    inst->mlen++;
+
+	    if (dest_type->vector_elements == 3 || shadow_comparitor.file != BAD_FILE) {
+	       lod.swizzle = BRW_SWIZZLE_ZZZZ;
+	       lod2.swizzle = BRW_SWIZZLE_ZZZZ;
+	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_X), lod));
+	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_Y), lod2));
+	       inst->mlen++;
+
+               if (shadow_comparitor.file != BAD_FILE) {
+                  emit(MOV(dst_reg(MRF, param_base + 2,
+                                   shadow_comparitor.type, WRITEMASK_Z),
+                           shadow_comparitor));
+               }
+	    }
+	 } else /* devinfo->gen == 4 */ {
+	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_XYZ), lod));
+	    emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_XYZ), lod2));
+	    inst->mlen += 2;
+	 }
+      } else if (op == ir_tg4 && offset_value.file != BAD_FILE) {
+         if (shadow_comparitor.file != BAD_FILE) {
+            emit(MOV(dst_reg(MRF, param_base, shadow_comparitor.type, WRITEMASK_W),
+                     shadow_comparitor));
+         }
+
+         emit(MOV(dst_reg(MRF, param_base + 1, glsl_type::ivec2_type, WRITEMASK_XY),
+                  offset_value));
+         inst->mlen++;
+      }
+   }
+
+   emit(inst);
+
+   /* fixup num layers (z) for cube arrays: hardware returns faces * layers;
+    * spec requires layers.
+    */
+   if (op == ir_txs && is_cube_array) {
+      emit_math(SHADER_OPCODE_INT_QUOTIENT,
+                writemask(inst->dst, WRITEMASK_Z),
+                src_reg(inst->dst), src_reg(6));
+   }
+
+   if (devinfo->gen == 6 && op == ir_tg4) {
+      emit_gen6_gather_wa(key->tex.gen6_gather_wa[sampler], inst->dst);
+   }
+
+   swizzle_result(op, dest,
+                  src_reg(inst->dst), sampler, dest_type);
+}
+
+void
 vec4_visitor::visit(ir_texture *ir)
 {
    uint32_t sampler =
@@ -2584,7 +2761,9 @@ vec4_visitor::visit(ir_texture *ir)
     * generating these values may involve SEND messages that need the MRFs.
     */
    src_reg coordinate;
+   int coord_components = 0;
    if (ir->coordinate) {
+      coord_components = ir->coordinate->type->vector_elements;
       ir->coordinate->accept(this);
       coordinate = this->result;
    }
@@ -2602,28 +2781,23 @@ vec4_visitor::visit(ir_texture *ir)
       offset_value = src_reg(this->result);
    }
 
-   const glsl_type *lod_type = NULL, *sample_index_type = NULL;
-   src_reg lod, dPdx, dPdy, sample_index, mcs;
+   src_reg lod, lod2, sample_index, mcs;
    switch (ir->op) {
    case ir_tex:
       lod = src_reg(0.0f);
-      lod_type = glsl_type::float_type;
       break;
    case ir_txf:
    case ir_txl:
    case ir_txs:
       ir->lod_info.lod->accept(this);
       lod = this->result;
-      lod_type = ir->lod_info.lod->type;
       break;
    case ir_query_levels:
       lod = src_reg(0);
-      lod_type = glsl_type::int_type;
       break;
    case ir_txf_ms:
       ir->lod_info.sample_index->accept(this);
       sample_index = this->result;
-      sample_index_type = ir->lod_info.sample_index->type;
 
       if (devinfo->gen >= 7 && key->tex.compressed_multisample_layout_mask & (1<<sampler))
          mcs = emit_mcs_fetch(ir->coordinate->type, coordinate, sampler_reg);
@@ -2632,12 +2806,10 @@ vec4_visitor::visit(ir_texture *ir)
       break;
    case ir_txd:
       ir->lod_info.grad.dPdx->accept(this);
-      dPdx = this->result;
+      lod = this->result;
 
       ir->lod_info.grad.dPdy->accept(this);
-      dPdy = this->result;
-
-      lod_type = ir->lod_info.grad.dPdx->type;
+      lod2 = this->result;
       break;
    case ir_txb:
    case ir_lod:
@@ -2645,181 +2817,31 @@ vec4_visitor::visit(ir_texture *ir)
       break;
    }
 
-   enum opcode opcode;
-   switch (ir->op) {
-   case ir_tex: opcode = SHADER_OPCODE_TXL; break;
-   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
-   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
-   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
-   case ir_txf_ms: opcode = SHADER_OPCODE_TXF_CMS; break;
-   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
-   case ir_tg4: opcode = has_nonconstant_offset
-                         ? SHADER_OPCODE_TG4_OFFSET : SHADER_OPCODE_TG4; break;
-   case ir_query_levels: opcode = SHADER_OPCODE_TXS; break;
-   case ir_txb:
-      unreachable("TXB is not valid for vertex shaders.");
-   case ir_lod:
-      unreachable("LOD is not valid for vertex shaders.");
-   default:
-      unreachable("Unrecognized tex op");
-   }
-
-   vec4_instruction *inst = new(mem_ctx) vec4_instruction(
-      opcode, dst_reg(this, ir->type));
-
+   uint32_t constant_offset = 0;
    if (ir->offset != NULL && !has_nonconstant_offset) {
-      inst->offset =
+      constant_offset  =
          brw_texture_offset(ir->offset->as_constant()->value.i,
                             ir->offset->type->vector_elements);
    }
 
    /* Stuff the channel select bits in the top of the texture offset */
    if (ir->op == ir_tg4)
-      inst->offset |=
-        gather_channel( ir->lod_info.component->as_constant()->value.i[0],
-                        sampler) << 16;
+      constant_offset |=
+         gather_channel( ir->lod_info.component->as_constant()->value.i[0],
+                         sampler) << 16;
 
-   /* The message header is necessary for:
-    * - Gen4 (always)
-    * - Gen9+ for selecting SIMD4x2
-    * - Texel offsets
-    * - Gather channel selection
-    * - Sampler indices too large to fit in a 4-bit value.
-    */
-   inst->header_size =
-      (devinfo->gen < 5 || devinfo->gen >= 9 ||
-       inst->offset != 0 || ir->op == ir_tg4 ||
-       is_high_sampler(sampler_reg)) ? 1 : 0;
-   inst->base_mrf = 2;
-   inst->mlen = inst->header_size + 1; /* always at least one */
-   inst->dst.writemask = WRITEMASK_XYZW;
-   inst->shadow_compare = ir->shadow_comparitor != NULL;
-
-   inst->src[1] = sampler_reg;
-
-   /* MRF for the first parameter */
-   int param_base = inst->base_mrf + inst->header_size;
-
-   if (ir->op == ir_txs || ir->op == ir_query_levels) {
-      int writemask = devinfo->gen == 4 ? WRITEMASK_W : WRITEMASK_X;
-      emit(MOV(dst_reg(MRF, param_base, lod_type, writemask), lod));
-   } else {
-      /* Load the coordinate */
-      /* FINISHME: gl_clamp_mask and saturate */
-      int coord_mask = (1 << ir->coordinate->type->vector_elements) - 1;
-      int zero_mask = 0xf & ~coord_mask;
-
-      emit(MOV(dst_reg(MRF, param_base, ir->coordinate->type, coord_mask),
-               coordinate));
-
-      if (zero_mask != 0) {
-         emit(MOV(dst_reg(MRF, param_base, ir->coordinate->type, zero_mask),
-                  src_reg(0)));
-      }
-      /* Load the shadow comparitor */
-      if (ir->shadow_comparitor && ir->op != ir_txd && (ir->op != ir_tg4 || !has_nonconstant_offset)) {
-	 emit(MOV(dst_reg(MRF, param_base + 1, ir->shadow_comparitor->type,
-			  WRITEMASK_X),
-		  shadow_comparitor));
-	 inst->mlen++;
-      }
-
-      /* Load the LOD info */
-      if (ir->op == ir_tex || ir->op == ir_txl) {
-	 int mrf, writemask;
-	 if (devinfo->gen >= 5) {
-	    mrf = param_base + 1;
-	    if (ir->shadow_comparitor) {
-	       writemask = WRITEMASK_Y;
-	       /* mlen already incremented */
-	    } else {
-	       writemask = WRITEMASK_X;
-	       inst->mlen++;
-	    }
-	 } else /* devinfo->gen == 4 */ {
-	    mrf = param_base;
-	    writemask = WRITEMASK_W;
-	 }
-	 emit(MOV(dst_reg(MRF, mrf, lod_type, writemask), lod));
-      } else if (ir->op == ir_txf) {
-         emit(MOV(dst_reg(MRF, param_base, lod_type, WRITEMASK_W), lod));
-      } else if (ir->op == ir_txf_ms) {
-         emit(MOV(dst_reg(MRF, param_base + 1, sample_index_type, WRITEMASK_X),
-                  sample_index));
-         if (devinfo->gen >= 7) {
-            /* MCS data is in the first channel of `mcs`, but we need to get it into
-             * the .y channel of the second vec4 of params, so replicate .x across
-             * the whole vec4 and then mask off everything except .y
-             */
-            mcs.swizzle = BRW_SWIZZLE_XXXX;
-            emit(MOV(dst_reg(MRF, param_base + 1, glsl_type::uint_type, WRITEMASK_Y),
-                     mcs));
-         }
-         inst->mlen++;
-      } else if (ir->op == ir_txd) {
-	 const glsl_type *type = lod_type;
-
-	 if (devinfo->gen >= 5) {
-	    dPdx.swizzle = BRW_SWIZZLE4(SWIZZLE_X,SWIZZLE_X,SWIZZLE_Y,SWIZZLE_Y);
-	    dPdy.swizzle = BRW_SWIZZLE4(SWIZZLE_X,SWIZZLE_X,SWIZZLE_Y,SWIZZLE_Y);
-	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_XZ), dPdx));
-	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_YW), dPdy));
-	    inst->mlen++;
-
-	    if (ir->type->vector_elements == 3 || ir->shadow_comparitor) {
-	       dPdx.swizzle = BRW_SWIZZLE_ZZZZ;
-	       dPdy.swizzle = BRW_SWIZZLE_ZZZZ;
-	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_X), dPdx));
-	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_Y), dPdy));
-	       inst->mlen++;
-
-               if (ir->shadow_comparitor) {
-                  emit(MOV(dst_reg(MRF, param_base + 2,
-                                   ir->shadow_comparitor->type, WRITEMASK_Z),
-                           shadow_comparitor));
-               }
-	    }
-	 } else /* devinfo->gen == 4 */ {
-	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_XYZ), dPdx));
-	    emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_XYZ), dPdy));
-	    inst->mlen += 2;
-	 }
-      } else if (ir->op == ir_tg4 && has_nonconstant_offset) {
-         if (ir->shadow_comparitor) {
-            emit(MOV(dst_reg(MRF, param_base, ir->shadow_comparitor->type, WRITEMASK_W),
-                     shadow_comparitor));
-         }
-
-         emit(MOV(dst_reg(MRF, param_base + 1, glsl_type::ivec2_type, WRITEMASK_XY),
-                  offset_value));
-         inst->mlen++;
-      }
-   }
-
-   emit(inst);
-
-   /* fixup num layers (z) for cube arrays: hardware returns faces * layers;
-    * spec requires layers.
-    */
-   if (ir->op == ir_txs) {
-      glsl_type const *type = ir->sampler->type;
-      if (type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
-          type->sampler_array) {
-         emit_math(SHADER_OPCODE_INT_QUOTIENT,
-                   writemask(inst->dst, WRITEMASK_Z),
-                   src_reg(inst->dst), src_reg(6));
-      }
-   }
-
-   if (devinfo->gen == 6 && ir->op == ir_tg4) {
-      emit_gen6_gather_wa(key->tex.gen6_gather_wa[sampler], inst->dst);
-   }
+   glsl_type const *type = ir->sampler->type;
+   bool is_cube_array = type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
+      type->sampler_array;
 
    this->result = src_reg(this, ir->type);
    dst_reg dest = dst_reg(this->result);
 
-   swizzle_result(ir->op, dest, src_reg(inst->dst),
-                  sampler, ir->type);
+   emit_texture(ir->op, dest, ir->type, coordinate, coord_components,
+                shadow_comparitor,
+                lod, lod2, sample_index,
+                constant_offset, offset_value,
+                mcs, is_cube_array, sampler, sampler_reg);
 }
 
 /**
