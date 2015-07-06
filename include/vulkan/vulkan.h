@@ -1260,7 +1260,6 @@ typedef struct {
     VkQueueFlags                                queueFlags;
     uint32_t                                    queueCount;
     bool32_t                                    supportsTimestamps;
-    uint32_t                                    maxMemReferences;
 } VkPhysicalDeviceQueueProperties;
 
 typedef struct {
@@ -2003,8 +2002,6 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice 
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
-typedef VkResult (VKAPI *PFN_vkQueueAddMemReferences)(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems);
-typedef VkResult (VKAPI *PFN_vkQueueRemoveMemReferences)(VkQueue queue, uint32_t count, const VkDeviceMemory* pMems);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
@@ -2170,16 +2167,6 @@ VkResult VKAPI vkQueueSubmit(
     uint32_t                                    cmdBufferCount,
     const VkCmdBuffer*                          pCmdBuffers,
     VkFence                                     fence);
-
-VkResult VKAPI vkQueueAddMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems);
-
-VkResult VKAPI vkQueueRemoveMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems);
 
 VkResult VKAPI vkQueueWaitIdle(
     VkQueue                                     queue);

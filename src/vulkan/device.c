@@ -238,7 +238,6 @@ VkResult anv_GetPhysicalDeviceInfo(
       queue_properties->queueFlags = 0;
       queue_properties->queueCount = 1;
       queue_properties->supportsTimestamps = true;
-      queue_properties->maxMemReferences = 256;
       return VK_SUCCESS;
 
    case VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES:
@@ -793,22 +792,6 @@ VkResult anv_QueueSubmit(
       }
    }
 
-   return VK_SUCCESS;
-}
-
-VkResult anv_QueueAddMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems)
-{
-   return VK_SUCCESS;
-}
-
-VkResult anv_QueueRemoveMemReferences(
-    VkQueue                                     queue,
-    uint32_t                                    count,
-    const VkDeviceMemory*                       pMems)
-{
    return VK_SUCCESS;
 }
 
