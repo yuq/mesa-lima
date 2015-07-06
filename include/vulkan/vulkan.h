@@ -118,390 +118,114 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 // ------------------------------------------------------------------------------------------------
 // Enumerations
 
-typedef enum VkImageLayout_
+typedef enum VkResult_
 {
-    VK_IMAGE_LAYOUT_UNDEFINED                               = 0x00000000,   // Implicit layout an image is when its contents are undefined due to various reasons (e.g. right after creation)
-    VK_IMAGE_LAYOUT_GENERAL                                 = 0x00000001,   // General layout when image can be used for any kind of access
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL                = 0x00000002,   // Optimal layout when image is only used for color attachment read/write
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL        = 0x00000003,   // Optimal layout when image is only used for depth/stencil attachment read/write
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL         = 0x00000004,   // Optimal layout when image is used for read only depth/stencil attachment and shader access
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL                = 0x00000005,   // Optimal layout when image is used for read only shader access
-    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL                           = 0x00000006,   // Optimal layout when image is used only for clear operations
-    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                 = 0x00000007,   // Optimal layout when image is used only as source of transfer operations
-    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL            = 0x00000008,   // Optimal layout when image is used only as destination of transfer operations
+    // Return codes for successful operation execution (> = 0)
+    VK_SUCCESS                                              = 0x0000000,
+    VK_UNSUPPORTED                                          = 0x0000001,
+    VK_NOT_READY                                            = 0x0000002,
+    VK_TIMEOUT                                              = 0x0000003,
+    VK_EVENT_SET                                            = 0x0000004,
+    VK_EVENT_RESET                                          = 0x0000005,
 
-    VK_ENUM_RANGE(IMAGE_LAYOUT, UNDEFINED, TRANSFER_DESTINATION_OPTIMAL)
-} VkImageLayout;
+    // Error codes (negative values)
+    VK_ERROR_UNKNOWN                                        = -(0x00000001),
+    VK_ERROR_UNAVAILABLE                                    = -(0x00000002),
+    VK_ERROR_INITIALIZATION_FAILED                          = -(0x00000003),
+    VK_ERROR_OUT_OF_HOST_MEMORY                             = -(0x00000004),
+    VK_ERROR_OUT_OF_DEVICE_MEMORY                           = -(0x00000005),
+    VK_ERROR_DEVICE_ALREADY_CREATED                         = -(0x00000006),
+    VK_ERROR_DEVICE_LOST                                    = -(0x00000007),
+    VK_ERROR_INVALID_POINTER                                = -(0x00000008),
+    VK_ERROR_INVALID_VALUE                                  = -(0x00000009),
+    VK_ERROR_INVALID_HANDLE                                 = -(0x0000000A),
+    VK_ERROR_INVALID_ORDINAL                                = -(0x0000000B),
+    VK_ERROR_INVALID_MEMORY_SIZE                            = -(0x0000000C),
+    VK_ERROR_INVALID_EXTENSION                              = -(0x0000000D),
+    VK_ERROR_INVALID_FLAGS                                  = -(0x0000000E),
+    VK_ERROR_INVALID_ALIGNMENT                              = -(0x0000000F),
+    VK_ERROR_INVALID_FORMAT                                 = -(0x00000010),
+    VK_ERROR_INVALID_IMAGE                                  = -(0x00000011),
+    VK_ERROR_INVALID_DESCRIPTOR_SET_DATA                    = -(0x00000012),
+    VK_ERROR_INVALID_QUEUE_TYPE                             = -(0x00000013),
+    VK_ERROR_INVALID_OBJECT_TYPE                            = -(0x00000014),
+    VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION                  = -(0x00000015),
+    VK_ERROR_BAD_SHADER_CODE                                = -(0x00000016),
+    VK_ERROR_BAD_PIPELINE_DATA                              = -(0x00000017),
+    VK_ERROR_TOO_MANY_MEMORY_REFERENCES                     = -(0x00000018),
+    VK_ERROR_NOT_MAPPABLE                                   = -(0x00000019),
+    VK_ERROR_MEMORY_MAP_FAILED                              = -(0x0000001A),
+    VK_ERROR_MEMORY_UNMAP_FAILED                            = -(0x0000001B),
+    VK_ERROR_INCOMPATIBLE_DEVICE                            = -(0x0000001C),
+    VK_ERROR_INCOMPATIBLE_DRIVER                            = -(0x0000001D),
+    VK_ERROR_INCOMPLETE_COMMAND_BUFFER                      = -(0x0000001E),
+    VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001F),
+    VK_ERROR_MEMORY_NOT_BOUND                               = -(0x00000020),
+    VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000021),
+    VK_ERROR_NOT_SHAREABLE                                  = -(0x00000022),
 
-typedef enum VkPipeEvent_
+    VK_MAX_ENUM(RESULT)
+} VkResult;
+
+// Structure type enumerant
+typedef enum VkStructureType_
 {
-    VK_PIPE_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the device starts processing subsequent command
-    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
-    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE        = 0x00000003,   // Set event when all pending fragment shader executions are complete, within each fragment location
-    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE              = 0x00000004,   // Set event when all pending fragment shader executions are complete
-    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE                = 0x00000005,   // Set event when all pending graphics operations are complete
-    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000006,   // Set event when all pending compute operations are complete
-    VK_PIPE_EVENT_TRANSFER_COMPLETE                         = 0x00000007,   // Set event when all pending transfer operations are complete
-    VK_PIPE_EVENT_COMMANDS_COMPLETE                         = 0x00000008,   // Set event when all pending work is complete
-
-    VK_ENUM_RANGE(PIPE_EVENT, TOP_OF_PIPE, COMMANDS_COMPLETE)
-} VkPipeEvent;
-
-typedef enum VkWaitEvent_
-{
-    VK_WAIT_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Wait event before the device starts processing subsequent commands
-    VK_WAIT_EVENT_BEFORE_RASTERIZATION                      = 0x00000002,   // Wait event before rasterizing subsequent primitives
-
-    VK_ENUM_RANGE(WAIT_EVENT, TOP_OF_PIPE, BEFORE_RASTERIZATION)
-} VkWaitEvent;
-
-typedef enum VkAttachmentLoadOp_
-{
-    VK_ATTACHMENT_LOAD_OP_LOAD                              = 0x00000000,
-    VK_ATTACHMENT_LOAD_OP_CLEAR                             = 0x00000001,
-    VK_ATTACHMENT_LOAD_OP_DONT_CARE                         = 0x00000002,
-
-    VK_ENUM_RANGE(ATTACHMENT_LOAD_OP, LOAD, DONT_CARE)
-} VkAttachmentLoadOp;
-
-typedef enum VkAttachmentStoreOp_
-{
-    VK_ATTACHMENT_STORE_OP_STORE                            = 0x00000000,
-    VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA                     = 0x00000001,
-    VK_ATTACHMENT_STORE_OP_DONT_CARE                        = 0x00000002,
-
-    VK_ENUM_RANGE(ATTACHMENT_STORE_OP, STORE, DONT_CARE)
-} VkAttachmentStoreOp;
-
-typedef enum VkImageType_
-{
-    VK_IMAGE_TYPE_1D                                        = 0x00000000,
-    VK_IMAGE_TYPE_2D                                        = 0x00000001,
-    VK_IMAGE_TYPE_3D                                        = 0x00000002,
-
-    VK_ENUM_RANGE(IMAGE_TYPE, 1D, 3D)
-} VkImageType;
-
-typedef enum VkImageTiling_
-{
-    VK_IMAGE_TILING_LINEAR                                  = 0x00000000,
-    VK_IMAGE_TILING_OPTIMAL                                 = 0x00000001,
-
-    VK_ENUM_RANGE(IMAGE_TILING, LINEAR, OPTIMAL)
-} VkImageTiling;
-
-typedef enum VkImageViewType_
-{
-    VK_IMAGE_VIEW_TYPE_1D                                   = 0x00000000,
-    VK_IMAGE_VIEW_TYPE_2D                                   = 0x00000001,
-    VK_IMAGE_VIEW_TYPE_3D                                   = 0x00000002,
-    VK_IMAGE_VIEW_TYPE_CUBE                                 = 0x00000003,
-
-    VK_ENUM_RANGE(IMAGE_VIEW_TYPE, 1D, CUBE)
-} VkImageViewType;
-
-typedef enum VkImageAspect_
-{
-    VK_IMAGE_ASPECT_COLOR                                   = 0x00000000,
-    VK_IMAGE_ASPECT_DEPTH                                   = 0x00000001,
-    VK_IMAGE_ASPECT_STENCIL                                 = 0x00000002,
-
-    VK_ENUM_RANGE(IMAGE_ASPECT, COLOR, STENCIL)
-} VkImageAspect;
-
-typedef enum VkBufferViewType_
-{
-    VK_BUFFER_VIEW_TYPE_RAW                                 = 0x00000000,   // Raw buffer without special structure (UBO, SSBO)
-    VK_BUFFER_VIEW_TYPE_FORMATTED                           = 0x00000001,   // Buffer with format (TBO, IBO)
-
-    VK_ENUM_RANGE(BUFFER_VIEW_TYPE, RAW, FORMATTED)
-} VkBufferViewType;
-
-typedef enum VkChannelSwizzle_
-{
-    VK_CHANNEL_SWIZZLE_ZERO                                 = 0x00000000,
-    VK_CHANNEL_SWIZZLE_ONE                                  = 0x00000001,
-    VK_CHANNEL_SWIZZLE_R                                    = 0x00000002,
-    VK_CHANNEL_SWIZZLE_G                                    = 0x00000003,
-    VK_CHANNEL_SWIZZLE_B                                    = 0x00000004,
-    VK_CHANNEL_SWIZZLE_A                                    = 0x00000005,
-
-    VK_ENUM_RANGE(CHANNEL_SWIZZLE, ZERO, A)
-} VkChannelSwizzle;
-
-typedef enum VkDescriptorType_
-{
-    VK_DESCRIPTOR_TYPE_SAMPLER                              = 0x00000000,
-    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER               = 0x00000001,
-    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE                        = 0x00000002,
-    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE                        = 0x00000003,
-    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER                 = 0x00000004,
-    VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER                 = 0x00000005,
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER                       = 0x00000006,
-    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER                       = 0x00000007,
-    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC               = 0x00000008,
-    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC               = 0x00000009,
-
-    VK_ENUM_RANGE(DESCRIPTOR_TYPE, SAMPLER, STORAGE_BUFFER_DYNAMIC)
-} VkDescriptorType;
-
-typedef enum VkDescriptorPoolUsage_
-{
-    VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT                       = 0x00000000,
-    VK_DESCRIPTOR_POOL_USAGE_DYNAMIC                        = 0x00000001,
-
-    VK_ENUM_RANGE(DESCRIPTOR_POOL_USAGE, ONE_SHOT, DYNAMIC)
-} VkDescriptorPoolUsage;
-
-typedef enum VkDescriptorUpdateMode_
-{
-    VK_DESCRIPTOR_UPDATE_MODE_COPY                          = 0x00000000,
-    VK_DESCRIPTOR_UPDATE_MODE_FASTEST                       = 0x00000001,
-
-    VK_ENUM_RANGE(DESCRIPTOR_UPDATE_MODE, COPY, FASTEST)
-} VkDescriptorUpdateMode;
-
-typedef enum VkDescriptorSetUsage_
-{
-    VK_DESCRIPTOR_SET_USAGE_ONE_SHOT                        = 0x00000000,
-    VK_DESCRIPTOR_SET_USAGE_STATIC                          = 0x00000001,
-
-    VK_ENUM_RANGE(DESCRIPTOR_SET_USAGE, ONE_SHOT, STATIC)
-} VkDescriptorSetUsage;
-
-typedef enum VkQueryType_
-{
-    VK_QUERY_TYPE_OCCLUSION                                 = 0x00000000,
-    VK_QUERY_TYPE_PIPELINE_STATISTICS                       = 0x00000001, // Optional
-
-    VK_ENUM_RANGE(QUERY_TYPE, OCCLUSION, PIPELINE_STATISTICS)
-} VkQueryType;
-
-typedef enum VkTimestampType_
-{
-    VK_TIMESTAMP_TYPE_TOP                                   = 0x00000000,
-    VK_TIMESTAMP_TYPE_BOTTOM                                = 0x00000001,
-
-    VK_ENUM_RANGE(TIMESTAMP_TYPE, TOP, BOTTOM)
-} VkTimestampType;
-
-typedef enum VkBorderColor_
-{
-    VK_BORDER_COLOR_OPAQUE_WHITE                            = 0x00000000,
-    VK_BORDER_COLOR_TRANSPARENT_BLACK                       = 0x00000001,
-    VK_BORDER_COLOR_OPAQUE_BLACK                            = 0x00000002,
-
-    VK_ENUM_RANGE(BORDER_COLOR, OPAQUE_WHITE, OPAQUE_BLACK)
-} VkBorderColor;
-
-typedef enum VkPipelineBindPoint_
-{
-    VK_PIPELINE_BIND_POINT_COMPUTE                          = 0x00000000,
-    VK_PIPELINE_BIND_POINT_GRAPHICS                         = 0x00000001,
-
-    VK_ENUM_RANGE(PIPELINE_BIND_POINT, COMPUTE, GRAPHICS)
-} VkPipelineBindPoint;
-
-typedef enum VkStateBindPoint_
-{
-    VK_STATE_BIND_POINT_VIEWPORT                            = 0x00000000,
-    VK_STATE_BIND_POINT_RASTER                              = 0x00000001,
-    VK_STATE_BIND_POINT_COLOR_BLEND                         = 0x00000002,
-    VK_STATE_BIND_POINT_DEPTH_STENCIL                       = 0x00000003,
-
-    VK_ENUM_RANGE(STATE_BIND_POINT, VIEWPORT, DEPTH_STENCIL)
-} VkStateBindPoint;
-
-typedef enum VkPrimitiveTopology_
-{
-    VK_PRIMITIVE_TOPOLOGY_POINT_LIST                        = 0x00000000,
-    VK_PRIMITIVE_TOPOLOGY_LINE_LIST                         = 0x00000001,
-    VK_PRIMITIVE_TOPOLOGY_LINE_STRIP                        = 0x00000002,
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST                     = 0x00000003,
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP                    = 0x00000004,
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN                      = 0x00000005,
-    VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ                     = 0x00000006,
-    VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ                    = 0x00000007,
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ                 = 0x00000008,
-    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ                = 0x00000009,
-    VK_PRIMITIVE_TOPOLOGY_PATCH                             = 0x0000000a,
-
-    VK_ENUM_RANGE(PRIMITIVE_TOPOLOGY, POINT_LIST, PATCH)
-} VkPrimitiveTopology;
-
-typedef enum VkIndexType_
-{
-    VK_INDEX_TYPE_UINT8                                     = 0x00000000,
-    VK_INDEX_TYPE_UINT16                                    = 0x00000001,
-    VK_INDEX_TYPE_UINT32                                    = 0x00000002,
-
-    VK_ENUM_RANGE(INDEX_TYPE, UINT8, UINT32)
-} VkIndexType;
-
-typedef enum VkTexFilter_
-{
-    VK_TEX_FILTER_NEAREST                                   = 0x00000000,
-    VK_TEX_FILTER_LINEAR                                    = 0x00000001,
-
-    VK_ENUM_RANGE(TEX_FILTER, NEAREST, LINEAR)
-} VkTexFilter;
-
-typedef enum VkTexMipmapMode_
-{
-    VK_TEX_MIPMAP_MODE_BASE                                 = 0x00000000,   // Always choose base level
-    VK_TEX_MIPMAP_MODE_NEAREST                              = 0x00000001,   // Choose nearest mip level
-    VK_TEX_MIPMAP_MODE_LINEAR                               = 0x00000002,   // Linear filter between mip levels
-
-    VK_ENUM_RANGE(TEX_MIPMAP_MODE, BASE, LINEAR)
-} VkTexMipmapMode;
-
-typedef enum VkTexAddress_
-{
-    VK_TEX_ADDRESS_WRAP                                     = 0x00000000,
-    VK_TEX_ADDRESS_MIRROR                                   = 0x00000001,
-    VK_TEX_ADDRESS_CLAMP                                    = 0x00000002,
-    VK_TEX_ADDRESS_MIRROR_ONCE                              = 0x00000003,
-    VK_TEX_ADDRESS_CLAMP_BORDER                             = 0x00000004,
-
-    VK_ENUM_RANGE(TEX_ADDRESS, WRAP, CLAMP_BORDER)
-} VkTexAddress;
-
-typedef enum VkCompareOp_
-{
-    VK_COMPARE_OP_NEVER                                     = 0x00000000,
-    VK_COMPARE_OP_LESS                                      = 0x00000001,
-    VK_COMPARE_OP_EQUAL                                     = 0x00000002,
-    VK_COMPARE_OP_LESS_EQUAL                                = 0x00000003,
-    VK_COMPARE_OP_GREATER                                   = 0x00000004,
-    VK_COMPARE_OP_NOT_EQUAL                                 = 0x00000005,
-    VK_COMPARE_OP_GREATER_EQUAL                             = 0x00000006,
-    VK_COMPARE_OP_ALWAYS                                    = 0x00000007,
-
-    VK_ENUM_RANGE(COMPARE_OP, NEVER, ALWAYS)
-} VkCompareOp;
-
-typedef enum VkFillMode_
-{
-    VK_FILL_MODE_POINTS                                     = 0x00000000,
-    VK_FILL_MODE_WIREFRAME                                  = 0x00000001,
-    VK_FILL_MODE_SOLID                                      = 0x00000002,
-
-    VK_ENUM_RANGE(FILL_MODE, POINTS, SOLID)
-} VkFillMode;
-
-typedef enum VkCullMode_
-{
-    VK_CULL_MODE_NONE                                       = 0x00000000,
-    VK_CULL_MODE_FRONT                                      = 0x00000001,
-    VK_CULL_MODE_BACK                                       = 0x00000002,
-    VK_CULL_MODE_FRONT_AND_BACK                             = 0x00000003,
-
-    VK_ENUM_RANGE(CULL_MODE, NONE, FRONT_AND_BACK)
-} VkCullMode;
-
-typedef enum VkFrontFace_
-{
-    VK_FRONT_FACE_CCW                                       = 0x00000000,
-    VK_FRONT_FACE_CW                                        = 0x00000001,
-
-    VK_ENUM_RANGE(FRONT_FACE, CCW, CW)
-} VkFrontFace;
-
-typedef enum VkProvokingVertex_
-{
-    VK_PROVOKING_VERTEX_FIRST                               = 0x00000000,
-    VK_PROVOKING_VERTEX_LAST                                = 0x00000001,
-
-    VK_ENUM_RANGE(PROVOKING_VERTEX, FIRST, LAST)
-} VkProvokingVertex;
-
-typedef enum VkCoordinateOrigin_
-{
-    VK_COORDINATE_ORIGIN_UPPER_LEFT                         = 0x00000000,
-    VK_COORDINATE_ORIGIN_LOWER_LEFT                         = 0x00000001,
-
-    VK_ENUM_RANGE(COORDINATE_ORIGIN, UPPER_LEFT, LOWER_LEFT)
-} VkCoordinateOrigin;
-
-typedef enum VkDepthMode_
-{
-    VK_DEPTH_MODE_ZERO_TO_ONE                               = 0x00000000,
-    VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE                       = 0x00000001,
-
-    VK_ENUM_RANGE(DEPTH_MODE, ZERO_TO_ONE, NEGATIVE_ONE_TO_ONE)
-} VkDepthMode;
-
-typedef enum VkBlend_
-{
-    VK_BLEND_ZERO                                           = 0x00000000,
-    VK_BLEND_ONE                                            = 0x00000001,
-    VK_BLEND_SRC_COLOR                                      = 0x00000002,
-    VK_BLEND_ONE_MINUS_SRC_COLOR                            = 0x00000003,
-    VK_BLEND_DEST_COLOR                                     = 0x00000004,
-    VK_BLEND_ONE_MINUS_DEST_COLOR                           = 0x00000005,
-    VK_BLEND_SRC_ALPHA                                      = 0x00000006,
-    VK_BLEND_ONE_MINUS_SRC_ALPHA                            = 0x00000007,
-    VK_BLEND_DEST_ALPHA                                     = 0x00000008,
-    VK_BLEND_ONE_MINUS_DEST_ALPHA                           = 0x00000009,
-    VK_BLEND_CONSTANT_COLOR                                 = 0x0000000a,
-    VK_BLEND_ONE_MINUS_CONSTANT_COLOR                       = 0x0000000b,
-    VK_BLEND_CONSTANT_ALPHA                                 = 0x0000000c,
-    VK_BLEND_ONE_MINUS_CONSTANT_ALPHA                       = 0x0000000d,
-    VK_BLEND_SRC_ALPHA_SATURATE                             = 0x0000000e,
-    VK_BLEND_SRC1_COLOR                                     = 0x0000000f,
-    VK_BLEND_ONE_MINUS_SRC1_COLOR                           = 0x00000010,
-    VK_BLEND_SRC1_ALPHA                                     = 0x00000011,
-    VK_BLEND_ONE_MINUS_SRC1_ALPHA                           = 0x00000012,
-
-    VK_ENUM_RANGE(BLEND, ZERO, ONE_MINUS_SRC1_ALPHA)
-} VkBlend;
-
-typedef enum VkBlendOp_
-{
-    VK_BLEND_OP_ADD                                         = 0x00000000,
-    VK_BLEND_OP_SUBTRACT                                    = 0x00000001,
-    VK_BLEND_OP_REVERSE_SUBTRACT                            = 0x00000002,
-    VK_BLEND_OP_MIN                                         = 0x00000003,
-    VK_BLEND_OP_MAX                                         = 0x00000004,
-
-    VK_ENUM_RANGE(BLEND_OP, ADD, MAX)
-} VkBlendOp;
-
-typedef enum VkStencilOp_
-{
-    VK_STENCIL_OP_KEEP                                      = 0x00000000,
-    VK_STENCIL_OP_ZERO                                      = 0x00000001,
-    VK_STENCIL_OP_REPLACE                                   = 0x00000002,
-    VK_STENCIL_OP_INC_CLAMP                                 = 0x00000003,
-    VK_STENCIL_OP_DEC_CLAMP                                 = 0x00000004,
-    VK_STENCIL_OP_INVERT                                    = 0x00000005,
-    VK_STENCIL_OP_INC_WRAP                                  = 0x00000006,
-    VK_STENCIL_OP_DEC_WRAP                                  = 0x00000007,
-
-    VK_ENUM_RANGE(STENCIL_OP, KEEP, DEC_WRAP)
-} VkStencilOp;
-
-typedef enum VkLogicOp_
-{
-    VK_LOGIC_OP_COPY                                        = 0x00000000,
-    VK_LOGIC_OP_CLEAR                                       = 0x00000001,
-    VK_LOGIC_OP_AND                                         = 0x00000002,
-    VK_LOGIC_OP_AND_REVERSE                                 = 0x00000003,
-    VK_LOGIC_OP_AND_INVERTED                                = 0x00000004,
-    VK_LOGIC_OP_NOOP                                        = 0x00000005,
-    VK_LOGIC_OP_XOR                                         = 0x00000006,
-    VK_LOGIC_OP_OR                                          = 0x00000007,
-    VK_LOGIC_OP_NOR                                         = 0x00000008,
-    VK_LOGIC_OP_EQUIV                                       = 0x00000009,
-    VK_LOGIC_OP_INVERT                                      = 0x0000000a,
-    VK_LOGIC_OP_OR_REVERSE                                  = 0x0000000b,
-    VK_LOGIC_OP_COPY_INVERTED                               = 0x0000000c,
-    VK_LOGIC_OP_OR_INVERTED                                 = 0x0000000d,
-    VK_LOGIC_OP_NAND                                        = 0x0000000e,
-    VK_LOGIC_OP_SET                                         = 0x0000000f,
-
-    VK_ENUM_RANGE(LOGIC_OP, COPY, SET)
-} VkLogicOp;
+    VK_STRUCTURE_TYPE_APPLICATION_INFO                      = 0,
+    VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO                    = 1,
+    VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                     = 2,
+    VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO                      = 3,
+    VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                 = 4,
+    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 5,
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 6,
+    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 7,
+    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 8,
+    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 9,
+    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 10,
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 11,
+    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 12,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 13,
+    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 14,
+    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 15,
+    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 16,
+    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 17,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 18,
+    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 19,
+    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 20,
+    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 21,
+    VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO                   = 22,
+    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 24,
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO     = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 27,
+    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 28,
+    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 29,
+    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 30,
+    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 31,
+    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 32,
+    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 33,
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 34,
+    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 35,
+    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 36,
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 37,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 38,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 39,
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 40,
+    VK_STRUCTURE_TYPE_LAYER_CREATE_INFO                     = 41,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 42,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 43,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 44,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 45,
+    VK_STRUCTURE_TYPE_UPDATE_SAMPLERS                       = 46,
+    VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES               = 47,
+    VK_STRUCTURE_TYPE_UPDATE_IMAGES                         = 48,
+    VK_STRUCTURE_TYPE_UPDATE_BUFFERS                        = 49,
+    VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 50,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 51,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 52,
+
+    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, PIPELINE_LAYOUT_CREATE_INFO)
+} VkStructureType;
 
 typedef enum VkSystemAllocType_
 {
@@ -513,71 +237,6 @@ typedef enum VkSystemAllocType_
 
     VK_ENUM_RANGE(SYSTEM_ALLOC_TYPE, API_OBJECT, DEBUG)
 } VkSystemAllocType;
-
-typedef enum VkPhysicalDeviceType_
-{
-    VK_PHYSICAL_DEVICE_TYPE_OTHER                           = 0x00000000,
-    VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU                  = 0x00000001,
-    VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU                    = 0x00000002,
-    VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU                     = 0x00000003,
-    VK_PHYSICAL_DEVICE_TYPE_CPU                             = 0x00000004,
-
-    VK_ENUM_RANGE(PHYSICAL_DEVICE_TYPE, OTHER, CPU)
-} VkPhysicalDeviceType;
-
-typedef enum VkPhysicalDeviceInfoType_
-{
-    // Info type for vkGetPhysicalDeviceInfo()
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES                 = 0x00000000,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE                = 0x00000001,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES           = 0x00000002,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES          = 0x00000003,
-
-    VK_ENUM_RANGE(PHYSICAL_DEVICE_INFO_TYPE, PROPERTIES, MEMORY_PROPERTIES)
-} VkPhysicalDeviceInfoType;
-
-typedef enum VkExtensionInfoType_
-{
-    // Info type for vkGetGlobalExtensionInfo() and vkGetPhysicalDeviceExtensionInfo()
-    VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
-    VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
-
-    VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
-} VkExtensionInfoType;
-
-typedef enum VkFormatInfoType_
-{
-    // Info type for vkGetFormatInfo()
-    VK_FORMAT_INFO_TYPE_PROPERTIES                          = 0x00000000,
-
-    VK_ENUM_RANGE(FORMAT_INFO_TYPE, PROPERTIES, PROPERTIES)
-} VkFormatInfoType;
-
-typedef enum VkSubresourceInfoType_
-{
-    // Info type for vkGetImageSubresourceInfo()
-    VK_SUBRESOURCE_INFO_TYPE_LAYOUT                         = 0x00000000,
-
-    VK_ENUM_RANGE(SUBRESOURCE_INFO_TYPE, LAYOUT, LAYOUT)
-} VkSubresourceInfoType;
-
-typedef enum VkObjectInfoType_
-{
-    // Info type for vkGetObjectInfo()
-    VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT             = 0x00000000,
-    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS                 = 0x00000001,
-
-    VK_ENUM_RANGE(OBJECT_INFO_TYPE, MEMORY_ALLOCATION_COUNT, MEMORY_REQUIREMENTS)
-} VkObjectInfoType;
-
-typedef enum VkVertexInputStepRate_
-{
-    VK_VERTEX_INPUT_STEP_RATE_VERTEX                        = 0x0,
-    VK_VERTEX_INPUT_STEP_RATE_INSTANCE                      = 0x1,
-    VK_VERTEX_INPUT_STEP_RATE_DRAW                          = 0x2,  //Optional
-
-    VK_ENUM_RANGE(VERTEX_INPUT_STEP_RATE, VERTEX, DRAW)
-} VkVertexInputStepRate;
 
 // Vulkan format definitions
 typedef enum VkFormat_
@@ -760,78 +419,16 @@ typedef enum VkFormat_
     VK_ENUM_RANGE(FORMAT, UNDEFINED, B10G10R10A2_SINT)
 } VkFormat;
 
-// Shader stage enumerant
-typedef enum VkShaderStage_
+typedef enum VkPhysicalDeviceType_
 {
-    VK_SHADER_STAGE_VERTEX                                  = 0,
-    VK_SHADER_STAGE_TESS_CONTROL                            = 1,
-    VK_SHADER_STAGE_TESS_EVALUATION                         = 2,
-    VK_SHADER_STAGE_GEOMETRY                                = 3,
-    VK_SHADER_STAGE_FRAGMENT                                = 4,
-    VK_SHADER_STAGE_COMPUTE                                 = 5,
+    VK_PHYSICAL_DEVICE_TYPE_OTHER                           = 0x00000000,
+    VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU                  = 0x00000001,
+    VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU                    = 0x00000002,
+    VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU                     = 0x00000003,
+    VK_PHYSICAL_DEVICE_TYPE_CPU                             = 0x00000004,
 
-    VK_ENUM_RANGE(SHADER_STAGE, VERTEX, COMPUTE)
-} VkShaderStage;
-
-// Structure type enumerant
-typedef enum VkStructureType_
-{
-    VK_STRUCTURE_TYPE_APPLICATION_INFO                      = 0,
-    VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO                    = 1,
-    VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO                     = 2,
-    VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO                      = 3,
-    VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO                 = 4,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO               = 5,
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO                = 6,
-    VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO                = 7,
-    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO     = 8,
-    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO        = 9,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO                    = 10,
-    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO          = 11,
-    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO                   = 12,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO     = 13,
-    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO          = 14,
-    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO          = 15,
-    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO          = 16,
-    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO          = 17,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO                = 18,
-    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO                     = 19,
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO                     = 20,
-    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO                 = 21,
-    VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO                   = 22,
-    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO                = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO     = 24,
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO         = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO     = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO         = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO       = 28,
-    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO         = 29,
-    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO         = 30,
-    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO         = 31,
-    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO         = 32,
-    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO         = 33,
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO                     = 34,
-    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO                    = 35,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO               = 36,
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO               = 37,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO                 = 38,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_GRAPHICS_BEGIN_INFO        = 39,
-    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO               = 40,
-    VK_STRUCTURE_TYPE_LAYER_CREATE_INFO                     = 41,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER                        = 42,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER                 = 43,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER                  = 44,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO           = 45,
-    VK_STRUCTURE_TYPE_UPDATE_SAMPLERS                       = 46,
-    VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES               = 47,
-    VK_STRUCTURE_TYPE_UPDATE_IMAGES                         = 48,
-    VK_STRUCTURE_TYPE_UPDATE_BUFFERS                        = 49,
-    VK_STRUCTURE_TYPE_UPDATE_AS_COPY                        = 50,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO                  = 51,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO           = 52,
-
-    VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, PIPELINE_LAYOUT_CREATE_INFO)
-} VkStructureType;
+    VK_ENUM_RANGE(PHYSICAL_DEVICE_TYPE, OTHER, CPU)
+} VkPhysicalDeviceType;
 
 // Object type enumerant
 typedef enum VkObjectType_
@@ -873,68 +470,405 @@ typedef enum VkObjectType_
     VK_MAX_ENUM(VkObjectType)
 } VkObjectType;
 
-// ------------------------------------------------------------------------------------------------
-// Error and return codes
-
-typedef enum VkResult_
+typedef enum VkImageAspect_
 {
-    // Return codes for successful operation execution (> = 0)
-    VK_SUCCESS                                              = 0x0000000,
-    VK_UNSUPPORTED                                          = 0x0000001,
-    VK_NOT_READY                                            = 0x0000002,
-    VK_TIMEOUT                                              = 0x0000003,
-    VK_EVENT_SET                                            = 0x0000004,
-    VK_EVENT_RESET                                          = 0x0000005,
+    VK_IMAGE_ASPECT_COLOR                                   = 0x00000000,
+    VK_IMAGE_ASPECT_DEPTH                                   = 0x00000001,
+    VK_IMAGE_ASPECT_STENCIL                                 = 0x00000002,
 
-    // Error codes (negative values)
-    VK_ERROR_UNKNOWN                                        = -(0x00000001),
-    VK_ERROR_UNAVAILABLE                                    = -(0x00000002),
-    VK_ERROR_INITIALIZATION_FAILED                          = -(0x00000003),
-    VK_ERROR_OUT_OF_HOST_MEMORY                             = -(0x00000004),
-    VK_ERROR_OUT_OF_DEVICE_MEMORY                           = -(0x00000005),
-    VK_ERROR_DEVICE_ALREADY_CREATED                         = -(0x00000006),
-    VK_ERROR_DEVICE_LOST                                    = -(0x00000007),
-    VK_ERROR_INVALID_POINTER                                = -(0x00000008),
-    VK_ERROR_INVALID_VALUE                                  = -(0x00000009),
-    VK_ERROR_INVALID_HANDLE                                 = -(0x0000000A),
-    VK_ERROR_INVALID_ORDINAL                                = -(0x0000000B),
-    VK_ERROR_INVALID_MEMORY_SIZE                            = -(0x0000000C),
-    VK_ERROR_INVALID_EXTENSION                              = -(0x0000000D),
-    VK_ERROR_INVALID_FLAGS                                  = -(0x0000000E),
-    VK_ERROR_INVALID_ALIGNMENT                              = -(0x0000000F),
-    VK_ERROR_INVALID_FORMAT                                 = -(0x00000010),
-    VK_ERROR_INVALID_IMAGE                                  = -(0x00000011),
-    VK_ERROR_INVALID_DESCRIPTOR_SET_DATA                    = -(0x00000012),
-    VK_ERROR_INVALID_QUEUE_TYPE                             = -(0x00000013),
-    VK_ERROR_INVALID_OBJECT_TYPE                            = -(0x00000014),
-    VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION                  = -(0x00000015),
-    VK_ERROR_BAD_SHADER_CODE                                = -(0x00000016),
-    VK_ERROR_BAD_PIPELINE_DATA                              = -(0x00000017),
-    VK_ERROR_TOO_MANY_MEMORY_REFERENCES                     = -(0x00000018),
-    VK_ERROR_NOT_MAPPABLE                                   = -(0x00000019),
-    VK_ERROR_MEMORY_MAP_FAILED                              = -(0x0000001A),
-    VK_ERROR_MEMORY_UNMAP_FAILED                            = -(0x0000001B),
-    VK_ERROR_INCOMPATIBLE_DEVICE                            = -(0x0000001C),
-    VK_ERROR_INCOMPATIBLE_DRIVER                            = -(0x0000001D),
-    VK_ERROR_INCOMPLETE_COMMAND_BUFFER                      = -(0x0000001E),
-    VK_ERROR_BUILDING_COMMAND_BUFFER                        = -(0x0000001F),
-    VK_ERROR_MEMORY_NOT_BOUND                               = -(0x00000020),
-    VK_ERROR_INCOMPATIBLE_QUEUE                             = -(0x00000021),
-    VK_ERROR_NOT_SHAREABLE                                  = -(0x00000022),
+    VK_ENUM_RANGE(IMAGE_ASPECT, COLOR, STENCIL)
+} VkImageAspect;
 
-    VK_MAX_ENUM(RESULT)
-} VkResult;
-
-// ------------------------------------------------------------------------------------------------
-// Flags
-
-// Device creation flags
-typedef VkFlags VkDeviceCreateFlags;
-typedef enum VkDeviceCreateFlagBits_
+typedef enum VkQueryType_
 {
-    VK_DEVICE_CREATE_VALIDATION_BIT                         = VK_BIT(0),
-    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(1),
-} VkDeviceCreateFlagBits;
+    VK_QUERY_TYPE_OCCLUSION                                 = 0x00000000,
+    VK_QUERY_TYPE_PIPELINE_STATISTICS                       = 0x00000001, // Optional
+
+    VK_ENUM_RANGE(QUERY_TYPE, OCCLUSION, PIPELINE_STATISTICS)
+} VkQueryType;
+
+typedef enum VkBufferViewType_
+{
+    VK_BUFFER_VIEW_TYPE_RAW                                 = 0x00000000,   // Raw buffer without special structure (UBO, SSBO)
+    VK_BUFFER_VIEW_TYPE_FORMATTED                           = 0x00000001,   // Buffer with format (TBO, IBO)
+
+    VK_ENUM_RANGE(BUFFER_VIEW_TYPE, RAW, FORMATTED)
+} VkBufferViewType;
+
+typedef enum VkImageType_
+{
+    VK_IMAGE_TYPE_1D                                        = 0x00000000,
+    VK_IMAGE_TYPE_2D                                        = 0x00000001,
+    VK_IMAGE_TYPE_3D                                        = 0x00000002,
+
+    VK_ENUM_RANGE(IMAGE_TYPE, 1D, 3D)
+} VkImageType;
+
+typedef enum VkImageTiling_
+{
+    VK_IMAGE_TILING_LINEAR                                  = 0x00000000,
+    VK_IMAGE_TILING_OPTIMAL                                 = 0x00000001,
+
+    VK_ENUM_RANGE(IMAGE_TILING, LINEAR, OPTIMAL)
+} VkImageTiling;
+
+typedef enum VkImageViewType_
+{
+    VK_IMAGE_VIEW_TYPE_1D                                   = 0x00000000,
+    VK_IMAGE_VIEW_TYPE_2D                                   = 0x00000001,
+    VK_IMAGE_VIEW_TYPE_3D                                   = 0x00000002,
+    VK_IMAGE_VIEW_TYPE_CUBE                                 = 0x00000003,
+
+    VK_ENUM_RANGE(IMAGE_VIEW_TYPE, 1D, CUBE)
+} VkImageViewType;
+
+typedef enum VkChannelSwizzle_
+{
+    VK_CHANNEL_SWIZZLE_ZERO                                 = 0x00000000,
+    VK_CHANNEL_SWIZZLE_ONE                                  = 0x00000001,
+    VK_CHANNEL_SWIZZLE_R                                    = 0x00000002,
+    VK_CHANNEL_SWIZZLE_G                                    = 0x00000003,
+    VK_CHANNEL_SWIZZLE_B                                    = 0x00000004,
+    VK_CHANNEL_SWIZZLE_A                                    = 0x00000005,
+
+    VK_ENUM_RANGE(CHANNEL_SWIZZLE, ZERO, A)
+} VkChannelSwizzle;
+
+// Shader stage enumerant
+typedef enum VkShaderStage_
+{
+    VK_SHADER_STAGE_VERTEX                                  = 0,
+    VK_SHADER_STAGE_TESS_CONTROL                            = 1,
+    VK_SHADER_STAGE_TESS_EVALUATION                         = 2,
+    VK_SHADER_STAGE_GEOMETRY                                = 3,
+    VK_SHADER_STAGE_FRAGMENT                                = 4,
+    VK_SHADER_STAGE_COMPUTE                                 = 5,
+
+    VK_ENUM_RANGE(SHADER_STAGE, VERTEX, COMPUTE)
+} VkShaderStage;
+
+typedef enum VkVertexInputStepRate_
+{
+    VK_VERTEX_INPUT_STEP_RATE_VERTEX                        = 0x0,
+    VK_VERTEX_INPUT_STEP_RATE_INSTANCE                      = 0x1,
+    VK_VERTEX_INPUT_STEP_RATE_DRAW                          = 0x2,  //Optional
+
+    VK_ENUM_RANGE(VERTEX_INPUT_STEP_RATE, VERTEX, DRAW)
+} VkVertexInputStepRate;
+
+typedef enum VkPrimitiveTopology_
+{
+    VK_PRIMITIVE_TOPOLOGY_POINT_LIST                        = 0x00000000,
+    VK_PRIMITIVE_TOPOLOGY_LINE_LIST                         = 0x00000001,
+    VK_PRIMITIVE_TOPOLOGY_LINE_STRIP                        = 0x00000002,
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST                     = 0x00000003,
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP                    = 0x00000004,
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN                      = 0x00000005,
+    VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ                     = 0x00000006,
+    VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ                    = 0x00000007,
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ                 = 0x00000008,
+    VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ                = 0x00000009,
+    VK_PRIMITIVE_TOPOLOGY_PATCH                             = 0x0000000a,
+
+    VK_ENUM_RANGE(PRIMITIVE_TOPOLOGY, POINT_LIST, PATCH)
+} VkPrimitiveTopology;
+
+typedef enum VkFillMode_
+{
+    VK_FILL_MODE_POINTS                                     = 0x00000000,
+    VK_FILL_MODE_WIREFRAME                                  = 0x00000001,
+    VK_FILL_MODE_SOLID                                      = 0x00000002,
+
+    VK_ENUM_RANGE(FILL_MODE, POINTS, SOLID)
+} VkFillMode;
+
+typedef enum VkCullMode_
+{
+    VK_CULL_MODE_NONE                                       = 0x00000000,
+    VK_CULL_MODE_FRONT                                      = 0x00000001,
+    VK_CULL_MODE_BACK                                       = 0x00000002,
+    VK_CULL_MODE_FRONT_AND_BACK                             = 0x00000003,
+
+    VK_ENUM_RANGE(CULL_MODE, NONE, FRONT_AND_BACK)
+} VkCullMode;
+
+typedef enum VkFrontFace_
+{
+    VK_FRONT_FACE_CCW                                       = 0x00000000,
+    VK_FRONT_FACE_CW                                        = 0x00000001,
+
+    VK_ENUM_RANGE(FRONT_FACE, CCW, CW)
+} VkFrontFace;
+
+typedef enum VkCompareOp_
+{
+    VK_COMPARE_OP_NEVER                                     = 0x00000000,
+    VK_COMPARE_OP_LESS                                      = 0x00000001,
+    VK_COMPARE_OP_EQUAL                                     = 0x00000002,
+    VK_COMPARE_OP_LESS_EQUAL                                = 0x00000003,
+    VK_COMPARE_OP_GREATER                                   = 0x00000004,
+    VK_COMPARE_OP_NOT_EQUAL                                 = 0x00000005,
+    VK_COMPARE_OP_GREATER_EQUAL                             = 0x00000006,
+    VK_COMPARE_OP_ALWAYS                                    = 0x00000007,
+
+    VK_ENUM_RANGE(COMPARE_OP, NEVER, ALWAYS)
+} VkCompareOp;
+
+typedef enum VkStencilOp_
+{
+    VK_STENCIL_OP_KEEP                                      = 0x00000000,
+    VK_STENCIL_OP_ZERO                                      = 0x00000001,
+    VK_STENCIL_OP_REPLACE                                   = 0x00000002,
+    VK_STENCIL_OP_INC_CLAMP                                 = 0x00000003,
+    VK_STENCIL_OP_DEC_CLAMP                                 = 0x00000004,
+    VK_STENCIL_OP_INVERT                                    = 0x00000005,
+    VK_STENCIL_OP_INC_WRAP                                  = 0x00000006,
+    VK_STENCIL_OP_DEC_WRAP                                  = 0x00000007,
+
+    VK_ENUM_RANGE(STENCIL_OP, KEEP, DEC_WRAP)
+} VkStencilOp;
+
+typedef enum VkLogicOp_
+{
+    VK_LOGIC_OP_COPY                                        = 0x00000000,
+    VK_LOGIC_OP_CLEAR                                       = 0x00000001,
+    VK_LOGIC_OP_AND                                         = 0x00000002,
+    VK_LOGIC_OP_AND_REVERSE                                 = 0x00000003,
+    VK_LOGIC_OP_AND_INVERTED                                = 0x00000004,
+    VK_LOGIC_OP_NOOP                                        = 0x00000005,
+    VK_LOGIC_OP_XOR                                         = 0x00000006,
+    VK_LOGIC_OP_OR                                          = 0x00000007,
+    VK_LOGIC_OP_NOR                                         = 0x00000008,
+    VK_LOGIC_OP_EQUIV                                       = 0x00000009,
+    VK_LOGIC_OP_INVERT                                      = 0x0000000a,
+    VK_LOGIC_OP_OR_REVERSE                                  = 0x0000000b,
+    VK_LOGIC_OP_COPY_INVERTED                               = 0x0000000c,
+    VK_LOGIC_OP_OR_INVERTED                                 = 0x0000000d,
+    VK_LOGIC_OP_NAND                                        = 0x0000000e,
+    VK_LOGIC_OP_SET                                         = 0x0000000f,
+
+    VK_ENUM_RANGE(LOGIC_OP, COPY, SET)
+} VkLogicOp;
+
+typedef enum VkBlend_
+{
+    VK_BLEND_ZERO                                           = 0x00000000,
+    VK_BLEND_ONE                                            = 0x00000001,
+    VK_BLEND_SRC_COLOR                                      = 0x00000002,
+    VK_BLEND_ONE_MINUS_SRC_COLOR                            = 0x00000003,
+    VK_BLEND_DEST_COLOR                                     = 0x00000004,
+    VK_BLEND_ONE_MINUS_DEST_COLOR                           = 0x00000005,
+    VK_BLEND_SRC_ALPHA                                      = 0x00000006,
+    VK_BLEND_ONE_MINUS_SRC_ALPHA                            = 0x00000007,
+    VK_BLEND_DEST_ALPHA                                     = 0x00000008,
+    VK_BLEND_ONE_MINUS_DEST_ALPHA                           = 0x00000009,
+    VK_BLEND_CONSTANT_COLOR                                 = 0x0000000a,
+    VK_BLEND_ONE_MINUS_CONSTANT_COLOR                       = 0x0000000b,
+    VK_BLEND_CONSTANT_ALPHA                                 = 0x0000000c,
+    VK_BLEND_ONE_MINUS_CONSTANT_ALPHA                       = 0x0000000d,
+    VK_BLEND_SRC_ALPHA_SATURATE                             = 0x0000000e,
+    VK_BLEND_SRC1_COLOR                                     = 0x0000000f,
+    VK_BLEND_ONE_MINUS_SRC1_COLOR                           = 0x00000010,
+    VK_BLEND_SRC1_ALPHA                                     = 0x00000011,
+    VK_BLEND_ONE_MINUS_SRC1_ALPHA                           = 0x00000012,
+
+    VK_ENUM_RANGE(BLEND, ZERO, ONE_MINUS_SRC1_ALPHA)
+} VkBlend;
+
+typedef enum VkBlendOp_
+{
+    VK_BLEND_OP_ADD                                         = 0x00000000,
+    VK_BLEND_OP_SUBTRACT                                    = 0x00000001,
+    VK_BLEND_OP_REVERSE_SUBTRACT                            = 0x00000002,
+    VK_BLEND_OP_MIN                                         = 0x00000003,
+    VK_BLEND_OP_MAX                                         = 0x00000004,
+
+    VK_ENUM_RANGE(BLEND_OP, ADD, MAX)
+} VkBlendOp;
+
+typedef enum VkTexFilter_
+{
+    VK_TEX_FILTER_NEAREST                                   = 0x00000000,
+    VK_TEX_FILTER_LINEAR                                    = 0x00000001,
+
+    VK_ENUM_RANGE(TEX_FILTER, NEAREST, LINEAR)
+} VkTexFilter;
+
+typedef enum VkTexMipmapMode_
+{
+    VK_TEX_MIPMAP_MODE_BASE                                 = 0x00000000,   // Always choose base level
+    VK_TEX_MIPMAP_MODE_NEAREST                              = 0x00000001,   // Choose nearest mip level
+    VK_TEX_MIPMAP_MODE_LINEAR                               = 0x00000002,   // Linear filter between mip levels
+
+    VK_ENUM_RANGE(TEX_MIPMAP_MODE, BASE, LINEAR)
+} VkTexMipmapMode;
+
+typedef enum VkTexAddress_
+{
+    VK_TEX_ADDRESS_WRAP                                     = 0x00000000,
+    VK_TEX_ADDRESS_MIRROR                                   = 0x00000001,
+    VK_TEX_ADDRESS_CLAMP                                    = 0x00000002,
+    VK_TEX_ADDRESS_MIRROR_ONCE                              = 0x00000003,
+    VK_TEX_ADDRESS_CLAMP_BORDER                             = 0x00000004,
+
+    VK_ENUM_RANGE(TEX_ADDRESS, WRAP, CLAMP_BORDER)
+} VkTexAddress;
+
+typedef enum VkBorderColor_
+{
+    VK_BORDER_COLOR_OPAQUE_WHITE                            = 0x00000000,
+    VK_BORDER_COLOR_TRANSPARENT_BLACK                       = 0x00000001,
+    VK_BORDER_COLOR_OPAQUE_BLACK                            = 0x00000002,
+
+    VK_ENUM_RANGE(BORDER_COLOR, OPAQUE_WHITE, OPAQUE_BLACK)
+} VkBorderColor;
+
+typedef enum VkDescriptorType_
+{
+    VK_DESCRIPTOR_TYPE_SAMPLER                              = 0x00000000,
+    VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER               = 0x00000001,
+    VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE                        = 0x00000002,
+    VK_DESCRIPTOR_TYPE_STORAGE_IMAGE                        = 0x00000003,
+    VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER                 = 0x00000004,
+    VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER                 = 0x00000005,
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER                       = 0x00000006,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER                       = 0x00000007,
+    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC               = 0x00000008,
+    VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC               = 0x00000009,
+
+    VK_ENUM_RANGE(DESCRIPTOR_TYPE, SAMPLER, STORAGE_BUFFER_DYNAMIC)
+} VkDescriptorType;
+
+typedef enum VkDescriptorPoolUsage_
+{
+    VK_DESCRIPTOR_POOL_USAGE_ONE_SHOT                       = 0x00000000,
+    VK_DESCRIPTOR_POOL_USAGE_DYNAMIC                        = 0x00000001,
+
+    VK_ENUM_RANGE(DESCRIPTOR_POOL_USAGE, ONE_SHOT, DYNAMIC)
+} VkDescriptorPoolUsage;
+
+typedef enum VkDescriptorUpdateMode_
+{
+    VK_DESCRIPTOR_UPDATE_MODE_COPY                          = 0x00000000,
+    VK_DESCRIPTOR_UPDATE_MODE_FASTEST                       = 0x00000001,
+
+    VK_ENUM_RANGE(DESCRIPTOR_UPDATE_MODE, COPY, FASTEST)
+} VkDescriptorUpdateMode;
+
+typedef enum VkDescriptorSetUsage_
+{
+    VK_DESCRIPTOR_SET_USAGE_ONE_SHOT                        = 0x00000000,
+    VK_DESCRIPTOR_SET_USAGE_STATIC                          = 0x00000001,
+
+    VK_ENUM_RANGE(DESCRIPTOR_SET_USAGE, ONE_SHOT, STATIC)
+} VkDescriptorSetUsage;
+
+typedef enum VkImageLayout_
+{
+    VK_IMAGE_LAYOUT_UNDEFINED                               = 0x00000000,   // Implicit layout an image is when its contents are undefined due to various reasons (e.g. right after creation)
+    VK_IMAGE_LAYOUT_GENERAL                                 = 0x00000001,   // General layout when image can be used for any kind of access
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL                = 0x00000002,   // Optimal layout when image is only used for color attachment read/write
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL        = 0x00000003,   // Optimal layout when image is only used for depth/stencil attachment read/write
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL         = 0x00000004,   // Optimal layout when image is used for read only depth/stencil attachment and shader access
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL                = 0x00000005,   // Optimal layout when image is used for read only shader access
+    VK_IMAGE_LAYOUT_CLEAR_OPTIMAL                           = 0x00000006,   // Optimal layout when image is used only for clear operations
+    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL                 = 0x00000007,   // Optimal layout when image is used only as source of transfer operations
+    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL            = 0x00000008,   // Optimal layout when image is used only as destination of transfer operations
+
+    VK_ENUM_RANGE(IMAGE_LAYOUT, UNDEFINED, TRANSFER_DESTINATION_OPTIMAL)
+} VkImageLayout;
+
+typedef enum VkAttachmentLoadOp_
+{
+    VK_ATTACHMENT_LOAD_OP_LOAD                              = 0x00000000,
+    VK_ATTACHMENT_LOAD_OP_CLEAR                             = 0x00000001,
+    VK_ATTACHMENT_LOAD_OP_DONT_CARE                         = 0x00000002,
+
+    VK_ENUM_RANGE(ATTACHMENT_LOAD_OP, LOAD, DONT_CARE)
+} VkAttachmentLoadOp;
+
+typedef enum VkAttachmentStoreOp_
+{
+    VK_ATTACHMENT_STORE_OP_STORE                            = 0x00000000,
+    VK_ATTACHMENT_STORE_OP_RESOLVE_MSAA                     = 0x00000001,
+    VK_ATTACHMENT_STORE_OP_DONT_CARE                        = 0x00000002,
+
+    VK_ENUM_RANGE(ATTACHMENT_STORE_OP, STORE, DONT_CARE)
+} VkAttachmentStoreOp;
+
+typedef enum VkPipelineBindPoint_
+{
+    VK_PIPELINE_BIND_POINT_COMPUTE                          = 0x00000000,
+    VK_PIPELINE_BIND_POINT_GRAPHICS                         = 0x00000001,
+
+    VK_ENUM_RANGE(PIPELINE_BIND_POINT, COMPUTE, GRAPHICS)
+} VkPipelineBindPoint;
+
+typedef enum VkStateBindPoint_
+{
+    VK_STATE_BIND_POINT_VIEWPORT                            = 0x00000000,
+    VK_STATE_BIND_POINT_RASTER                              = 0x00000001,
+    VK_STATE_BIND_POINT_COLOR_BLEND                         = 0x00000002,
+    VK_STATE_BIND_POINT_DEPTH_STENCIL                       = 0x00000003,
+
+    VK_ENUM_RANGE(STATE_BIND_POINT, VIEWPORT, DEPTH_STENCIL)
+} VkStateBindPoint;
+
+typedef enum VkIndexType_
+{
+    VK_INDEX_TYPE_UINT8                                     = 0x00000000,
+    VK_INDEX_TYPE_UINT16                                    = 0x00000001,
+    VK_INDEX_TYPE_UINT32                                    = 0x00000002,
+
+    VK_ENUM_RANGE(INDEX_TYPE, UINT8, UINT32)
+} VkIndexType;
+
+typedef enum VkPipeEvent_
+{
+    VK_PIPE_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Set event before the device starts processing subsequent command
+    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE                = 0x00000002,   // Set event when all pending vertex processing is complete
+    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE        = 0x00000003,   // Set event when all pending fragment shader executions are complete, within each fragment location
+    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE              = 0x00000004,   // Set event when all pending fragment shader executions are complete
+    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE                = 0x00000005,   // Set event when all pending graphics operations are complete
+    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE                 = 0x00000006,   // Set event when all pending compute operations are complete
+    VK_PIPE_EVENT_TRANSFER_COMPLETE                         = 0x00000007,   // Set event when all pending transfer operations are complete
+    VK_PIPE_EVENT_COMMANDS_COMPLETE                         = 0x00000008,   // Set event when all pending work is complete
+
+    VK_ENUM_RANGE(PIPE_EVENT, TOP_OF_PIPE, COMMANDS_COMPLETE)
+} VkPipeEvent;
+
+typedef enum VkWaitEvent_
+{
+    VK_WAIT_EVENT_TOP_OF_PIPE                               = 0x00000001,   // Wait event before the device starts processing subsequent commands
+    VK_WAIT_EVENT_BEFORE_RASTERIZATION                      = 0x00000002,   // Wait event before rasterizing subsequent primitives
+
+    VK_ENUM_RANGE(WAIT_EVENT, TOP_OF_PIPE, BEFORE_RASTERIZATION)
+} VkWaitEvent;
+
+typedef enum VkTimestampType_
+{
+    VK_TIMESTAMP_TYPE_TOP                                   = 0x00000000,
+    VK_TIMESTAMP_TYPE_BOTTOM                                = 0x00000001,
+
+    VK_ENUM_RANGE(TIMESTAMP_TYPE, TOP, BOTTOM)
+} VkTimestampType;
+
+// Format capability flags
+typedef VkFlags VkFormatFeatureFlags;
+typedef enum VkFormatFeatureFlagBits_
+{
+    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT                     = VK_BIT(0),    // Format can be used for sampled images (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
+    VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT                     = VK_BIT(1),    // Format can be used for storage images (STORAGE_IMAGE descriptor type)
+    VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT              = VK_BIT(2),    // Format supports atomic operations in case it's used for storage images
+    VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT              = VK_BIT(3),    // Format can be used for uniform texel buffers (TBOs)
+    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT              = VK_BIT(4),    // Format can be used for storage texel buffers (IBOs)
+    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT       = VK_BIT(5),    // Format supports atomic operations in case it's used for storage texel buffers
+    VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT                     = VK_BIT(6),    // Format can be used for vertex buffers (VBOs)
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT                  = VK_BIT(7),    // Format can be used for color attachment images
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT            = VK_BIT(8),    // Format supports blending in case it's used for color attachment images
+    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT          = VK_BIT(9),    // Format can be used for depth/stencil attachment images
+    VK_FORMAT_FEATURE_CONVERSION_BIT                        = VK_BIT(10),   // Format can be used as the source or destination of format converting blits
+} VkFormatFeatureFlagBits;
 
 // Queue capabilities
 typedef VkFlags VkQueueFlags;
@@ -960,31 +894,61 @@ typedef enum VkMemoryPropertyFlagBits_
     VK_MEMORY_PROPERTY_SHAREABLE_BIT                        = VK_BIT(5),
 } VkMemoryPropertyFlagBits;
 
-// Memory output flags passed to resource transition commands
-typedef VkFlags VkMemoryOutputFlags;
-typedef enum VkMemoryOutputFlagBits_
+// Device creation flags
+typedef VkFlags VkDeviceCreateFlags;
+typedef enum VkDeviceCreateFlagBits_
 {
-    VK_MEMORY_OUTPUT_CPU_WRITE_BIT                          = VK_BIT(0),    // Controls output coherency of CPU writes
-    VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = VK_BIT(1),    // Controls output coherency of generic shader writes
-    VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = VK_BIT(2),    // Controls output coherency of color attachment writes
-    VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = VK_BIT(3),    // Controls output coherency of depth/stencil attachment writes
-    VK_MEMORY_OUTPUT_TRANSFER_BIT                           = VK_BIT(4),    // Controls output coherency of transfer operations
-} VkMemoryOutputFlagBits;
+    VK_DEVICE_CREATE_VALIDATION_BIT                         = VK_BIT(0),
+    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(1),
+} VkDeviceCreateFlagBits;
 
-// Memory input flags passed to resource transition commands
-typedef VkFlags VkMemoryInputFlags;
-typedef enum VkMemoryInputFlagBits_
+// Memory mapping flags
+typedef VkFlags VkMemoryMapFlags;
+
+// Fence creation flags
+typedef VkFlags VkFenceCreateFlags;
+typedef enum VkFenceCreateFlagBits_
 {
-    VK_MEMORY_INPUT_CPU_READ_BIT                            = VK_BIT(0),    // Controls input coherency of CPU reads
-    VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT                    = VK_BIT(1),    // Controls input coherency of indirect command reads
-    VK_MEMORY_INPUT_INDEX_FETCH_BIT                         = VK_BIT(2),    // Controls input coherency of index fetches
-    VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT              = VK_BIT(3),    // Controls input coherency of vertex attribute fetches
-    VK_MEMORY_INPUT_UNIFORM_READ_BIT                        = VK_BIT(4),    // Controls input coherency of uniform buffer reads
-    VK_MEMORY_INPUT_SHADER_READ_BIT                         = VK_BIT(5),    // Controls input coherency of generic shader reads
-    VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = VK_BIT(6),    // Controls input coherency of color attachment reads
-    VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = VK_BIT(7),    // Controls input coherency of depth/stencil attachment reads
-    VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(8),    // Controls input coherency of transfer operations
-} VkMemoryInputFlagBits;
+    VK_FENCE_CREATE_SIGNALED_BIT                            = VK_BIT(0),
+} VkFenceCreateFlagBits;
+
+// Semaphore creation flags
+typedef VkFlags VkSemaphoreCreateFlags;
+typedef enum VkSemaphoreCreateFlagBits_
+{
+    VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = VK_BIT(0),
+} VkSemaphoreCreateFlagBits;
+
+// Event creation flags
+typedef VkFlags VkEventCreateFlags;
+
+// Pipeline statistics flags
+typedef VkFlags VkQueryPipelineStatisticFlags;
+typedef enum VkQueryPipelineStatisticFlagBits_ {
+    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT             = VK_BIT(0),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT           = VK_BIT(1),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT          = VK_BIT(2),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT          = VK_BIT(3),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT           = VK_BIT(4),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT           = VK_BIT(5),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT            = VK_BIT(6),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT          = VK_BIT(7),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT             = VK_BIT(8),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT         = VK_BIT(9),  // Optional
+    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT          = VK_BIT(10), // Optional
+} VkQueryPipelineStatisticFlagBits;
+
+// Query result flags
+typedef VkFlags VkQueryResultFlags;
+typedef enum VkQueryResultFlagBits_
+{
+    VK_QUERY_RESULT_32_BIT                                  = 0,           // Results of the queries are written to the destination buffer as 32-bit values
+    VK_QUERY_RESULT_64_BIT                                  = VK_BIT(0),   // Results of the queries are written to the destination buffer as 64-bit values
+    VK_QUERY_RESULT_NO_WAIT_BIT                             = 0,           // Results of the queries aren't waited on before proceeding with the result copy
+    VK_QUERY_RESULT_WAIT_BIT                                = VK_BIT(1),   // Results of the queries are waited on before proceeding with the result copy
+    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
+    VK_QUERY_RESULT_PARTIAL_BIT                             = VK_BIT(3),   // Copy the partial results of the query even if the final results aren't available
+} VkQueryResultFlagBits;
 
 // Buffer usage flags
 typedef VkFlags VkBufferUsageFlags;
@@ -1009,20 +973,6 @@ typedef enum VkBufferCreateFlagBits_
     VK_BUFFER_CREATE_SHAREABLE_BIT                          = VK_BIT(0),    // Buffer should be shareable
     VK_BUFFER_CREATE_SPARSE_BIT                             = VK_BIT(1),    // Buffer should support sparse backing
 } VkBufferCreateFlagBits;
-
-// Shader stage flags
-typedef VkFlags VkShaderStageFlags;
-typedef enum VkShaderStageFlagBits_
-{
-    VK_SHADER_STAGE_VERTEX_BIT                              = VK_BIT(0),
-    VK_SHADER_STAGE_TESS_CONTROL_BIT                        = VK_BIT(1),
-    VK_SHADER_STAGE_TESS_EVALUATION_BIT                     = VK_BIT(2),
-    VK_SHADER_STAGE_GEOMETRY_BIT                            = VK_BIT(3),
-    VK_SHADER_STAGE_FRAGMENT_BIT                            = VK_BIT(4),
-    VK_SHADER_STAGE_COMPUTE_BIT                             = VK_BIT(5),
-
-    VK_SHADER_STAGE_ALL                                     = 0x7FFFFFFF,
-} VkShaderStageFlagBits;
 
 // Image usage flags
 typedef VkFlags VkImageUsageFlags;
@@ -1058,13 +1008,8 @@ typedef enum VkDepthStencilViewCreateFlagBits_
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT      = VK_BIT(1),
 } VkDepthStencilViewCreateFlagBits;
 
-// Pipeline creation flags
-typedef VkFlags VkPipelineCreateFlags;
-typedef enum VkPipelineCreateFlagBits_
-{
-    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = VK_BIT(0),
-    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = VK_BIT(1),
-} VkPipelineCreateFlagBits;
+// Shader creation flags
+typedef VkFlags VkShaderCreateFlags;
 
 // Channel flags
 typedef VkFlags VkChannelFlags;
@@ -1076,74 +1021,27 @@ typedef enum VkChannelFlagBits_
     VK_CHANNEL_A_BIT                                        = VK_BIT(3),
 } VkChannelFlagBits;
 
-// Fence creation flags
-typedef VkFlags VkFenceCreateFlags;
-typedef enum VkFenceCreateFlagBits_
+// Pipeline creation flags
+typedef VkFlags VkPipelineCreateFlags;
+typedef enum VkPipelineCreateFlagBits_
 {
-    VK_FENCE_CREATE_SIGNALED_BIT                            = VK_BIT(0),
-} VkFenceCreateFlagBits;
+    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = VK_BIT(0),
+    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = VK_BIT(1),
+} VkPipelineCreateFlagBits;
 
-// Semaphore creation flags
-typedef VkFlags VkSemaphoreCreateFlags;
-typedef enum VkSemaphoreCreateFlagBits_
+// Shader stage flags
+typedef VkFlags VkShaderStageFlags;
+typedef enum VkShaderStageFlagBits_
 {
-    VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = VK_BIT(0),
-} VkSemaphoreCreateFlagBits;
+    VK_SHADER_STAGE_VERTEX_BIT                              = VK_BIT(0),
+    VK_SHADER_STAGE_TESS_CONTROL_BIT                        = VK_BIT(1),
+    VK_SHADER_STAGE_TESS_EVALUATION_BIT                     = VK_BIT(2),
+    VK_SHADER_STAGE_GEOMETRY_BIT                            = VK_BIT(3),
+    VK_SHADER_STAGE_FRAGMENT_BIT                            = VK_BIT(4),
+    VK_SHADER_STAGE_COMPUTE_BIT                             = VK_BIT(5),
 
-// Format capability flags
-typedef VkFlags VkFormatFeatureFlags;
-typedef enum VkFormatFeatureFlagBits_
-{
-    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT                     = VK_BIT(0),    // Format can be used for sampled images (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
-    VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT                     = VK_BIT(1),    // Format can be used for storage images (STORAGE_IMAGE descriptor type)
-    VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT              = VK_BIT(2),    // Format supports atomic operations in case it's used for storage images
-    VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT              = VK_BIT(3),    // Format can be used for uniform texel buffers (TBOs)
-    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT              = VK_BIT(4),    // Format can be used for storage texel buffers (IBOs)
-    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT       = VK_BIT(5),    // Format supports atomic operations in case it's used for storage texel buffers
-    VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT                     = VK_BIT(6),    // Format can be used for vertex buffers (VBOs)
-    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT                  = VK_BIT(7),    // Format can be used for color attachment images
-    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT            = VK_BIT(8),    // Format supports blending in case it's used for color attachment images
-    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT          = VK_BIT(9),    // Format can be used for depth/stencil attachment images
-    VK_FORMAT_FEATURE_CONVERSION_BIT                        = VK_BIT(10),   // Format can be used as the source or destination of format converting blits
-} VkFormatFeatureFlagBits;
-
-// Query control flags
-typedef VkFlags VkQueryControlFlags;
-typedef enum VkQueryControlFlagBits_
-{
-    VK_QUERY_CONTROL_CONSERVATIVE_BIT                       = VK_BIT(0),    // Allow conservative results to be collected by the query
-} VkQueryControlFlagBits;
-
-// Query result flags
-typedef VkFlags VkQueryResultFlags;
-typedef enum VkQueryResultFlagBits_
-{
-    VK_QUERY_RESULT_32_BIT                                  = 0,           // Results of the queries are written to the destination buffer as 32-bit values
-    VK_QUERY_RESULT_64_BIT                                  = VK_BIT(0),   // Results of the queries are written to the destination buffer as 64-bit values
-    VK_QUERY_RESULT_NO_WAIT_BIT                             = 0,           // Results of the queries aren't waited on before proceeding with the result copy
-    VK_QUERY_RESULT_WAIT_BIT                                = VK_BIT(1),   // Results of the queries are waited on before proceeding with the result copy
-    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
-    VK_QUERY_RESULT_PARTIAL_BIT                             = VK_BIT(3),   // Copy the partial results of the query even if the final results aren't available
-} VkQueryResultFlagBits;
-
-// Physical device compatibility flags
-typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
-typedef enum VkPhysicalDeviceCompatibilityFlagBits_
-{
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT           = VK_BIT(0),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT           = VK_BIT(1),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT      = VK_BIT(2),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT      = VK_BIT(3),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_SYNC_BIT        = VK_BIT(4),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT = VK_BIT(5),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT = VK_BIT(6),
-} VkPhysicalDeviceCompatibilityFlagBits;
-
-// Shader creation flags
-typedef VkFlags VkShaderCreateFlags;
-
-// Event creation flags
-typedef VkFlags VkEventCreateFlags;
+    VK_SHADER_STAGE_ALL                                     = 0x7FFFFFFF,
+} VkShaderStageFlagBits;
 
 // Command buffer creation flags
 typedef VkFlags VkCmdBufferCreateFlags;
@@ -1158,24 +1056,121 @@ typedef enum VkCmdBufferOptimizeFlagBits_
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = VK_BIT(3),
 } VkCmdBufferOptimizeFlagBits;
 
-// Pipeline statistics flags
-typedef VkFlags VkQueryPipelineStatisticFlags;
-typedef enum VkQueryPipelineStatisticFlagBits_ {
-    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT             = VK_BIT(0),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT           = VK_BIT(1),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT          = VK_BIT(2),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT          = VK_BIT(3),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT           = VK_BIT(4),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT           = VK_BIT(5),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT            = VK_BIT(6),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT          = VK_BIT(7),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT             = VK_BIT(8),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT         = VK_BIT(9),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT          = VK_BIT(10), // Optional
-} VkQueryPipelineStatisticFlagBits;
+// Query control flags
+typedef VkFlags VkQueryControlFlags;
+typedef enum VkQueryControlFlagBits_
+{
+    VK_QUERY_CONTROL_CONSERVATIVE_BIT                       = VK_BIT(0),    // Allow conservative results to be collected by the query
+} VkQueryControlFlagBits;
 
-// Memory mapping flags
-typedef VkFlags VkMemoryMapFlags;
+// Memory output flags passed to resource transition commands
+typedef VkFlags VkMemoryOutputFlags;
+typedef enum VkMemoryOutputFlagBits_
+{
+    VK_MEMORY_OUTPUT_CPU_WRITE_BIT                          = VK_BIT(0),    // Controls output coherency of CPU writes
+    VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = VK_BIT(1),    // Controls output coherency of generic shader writes
+    VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = VK_BIT(2),    // Controls output coherency of color attachment writes
+    VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = VK_BIT(3),    // Controls output coherency of depth/stencil attachment writes
+    VK_MEMORY_OUTPUT_TRANSFER_BIT                           = VK_BIT(4),    // Controls output coherency of transfer operations
+} VkMemoryOutputFlagBits;
+
+// Memory input flags passed to resource transition commands
+typedef VkFlags VkMemoryInputFlags;
+typedef enum VkMemoryInputFlagBits_
+{
+    VK_MEMORY_INPUT_CPU_READ_BIT                            = VK_BIT(0),    // Controls input coherency of CPU reads
+    VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT                    = VK_BIT(1),    // Controls input coherency of indirect command reads
+    VK_MEMORY_INPUT_INDEX_FETCH_BIT                         = VK_BIT(2),    // Controls input coherency of index fetches
+    VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT              = VK_BIT(3),    // Controls input coherency of vertex attribute fetches
+    VK_MEMORY_INPUT_UNIFORM_READ_BIT                        = VK_BIT(4),    // Controls input coherency of uniform buffer reads
+    VK_MEMORY_INPUT_SHADER_READ_BIT                         = VK_BIT(5),    // Controls input coherency of generic shader reads
+    VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = VK_BIT(6),    // Controls input coherency of color attachment reads
+    VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = VK_BIT(7),    // Controls input coherency of depth/stencil attachment reads
+    VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(8),    // Controls input coherency of transfer operations
+} VkMemoryInputFlagBits;
+
+typedef enum VkProvokingVertex_
+{
+    VK_PROVOKING_VERTEX_FIRST                               = 0x00000000,
+    VK_PROVOKING_VERTEX_LAST                                = 0x00000001,
+
+    VK_ENUM_RANGE(PROVOKING_VERTEX, FIRST, LAST)
+} VkProvokingVertex;
+
+typedef enum VkCoordinateOrigin_
+{
+    VK_COORDINATE_ORIGIN_UPPER_LEFT                         = 0x00000000,
+    VK_COORDINATE_ORIGIN_LOWER_LEFT                         = 0x00000001,
+
+    VK_ENUM_RANGE(COORDINATE_ORIGIN, UPPER_LEFT, LOWER_LEFT)
+} VkCoordinateOrigin;
+
+typedef enum VkDepthMode_
+{
+    VK_DEPTH_MODE_ZERO_TO_ONE                               = 0x00000000,
+    VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE                       = 0x00000001,
+
+    VK_ENUM_RANGE(DEPTH_MODE, ZERO_TO_ONE, NEGATIVE_ONE_TO_ONE)
+} VkDepthMode;
+
+typedef enum VkPhysicalDeviceInfoType_
+{
+    // Info type for vkGetPhysicalDeviceInfo()
+    VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES                 = 0x00000000,
+    VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE                = 0x00000001,
+    VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES           = 0x00000002,
+    VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES          = 0x00000003,
+
+    VK_ENUM_RANGE(PHYSICAL_DEVICE_INFO_TYPE, PROPERTIES, MEMORY_PROPERTIES)
+} VkPhysicalDeviceInfoType;
+
+typedef enum VkExtensionInfoType_
+{
+    // Info type for vkGetGlobalExtensionInfo() and vkGetPhysicalDeviceExtensionInfo()
+    VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
+    VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
+
+    VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
+} VkExtensionInfoType;
+
+typedef enum VkFormatInfoType_
+{
+    // Info type for vkGetFormatInfo()
+    VK_FORMAT_INFO_TYPE_PROPERTIES                          = 0x00000000,
+
+    VK_ENUM_RANGE(FORMAT_INFO_TYPE, PROPERTIES, PROPERTIES)
+} VkFormatInfoType;
+
+typedef enum VkSubresourceInfoType_
+{
+    // Info type for vkGetImageSubresourceInfo()
+    VK_SUBRESOURCE_INFO_TYPE_LAYOUT                         = 0x00000000,
+
+    VK_ENUM_RANGE(SUBRESOURCE_INFO_TYPE, LAYOUT, LAYOUT)
+} VkSubresourceInfoType;
+
+typedef enum VkObjectInfoType_
+{
+    // Info type for vkGetObjectInfo()
+    VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT             = 0x00000000,
+    VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS                 = 0x00000001,
+
+    VK_ENUM_RANGE(OBJECT_INFO_TYPE, MEMORY_ALLOCATION_COUNT, MEMORY_REQUIREMENTS)
+} VkObjectInfoType;
+
+
+// Physical device compatibility flags
+typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
+typedef enum VkPhysicalDeviceCompatibilityFlagBits_
+{
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT           = VK_BIT(0),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT           = VK_BIT(1),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT      = VK_BIT(2),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT      = VK_BIT(3),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_SYNC_BIT        = VK_BIT(4),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT = VK_BIT(5),
+    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT = VK_BIT(6),
+} VkPhysicalDeviceCompatibilityFlagBits;
 
 // ------------------------------------------------------------------------------------------------
 // Vulkan structures
