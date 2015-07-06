@@ -118,18 +118,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 // ------------------------------------------------------------------------------------------------
 // Enumerations
 
-typedef enum VkMemoryPriority_
-{
-    VK_MEMORY_PRIORITY_UNUSED                               = 0x00000000,
-    VK_MEMORY_PRIORITY_VERY_LOW                             = 0x00000001,
-    VK_MEMORY_PRIORITY_LOW                                  = 0x00000002,
-    VK_MEMORY_PRIORITY_NORMAL                               = 0x00000003,
-    VK_MEMORY_PRIORITY_HIGH                                 = 0x00000004,
-    VK_MEMORY_PRIORITY_VERY_HIGH                            = 0x00000005,
-
-    VK_ENUM_RANGE(MEMORY_PRIORITY, UNUSED, VERY_HIGH)
-} VkMemoryPriority;
-
 typedef enum VkImageLayout_
 {
     VK_IMAGE_LAYOUT_UNDEFINED                               = 0x00000000,   // Implicit layout an image is when its contents are undefined due to various reasons (e.g. right after creation)
@@ -1292,7 +1280,6 @@ typedef struct {
     const void*                                 pNext;
     VkDeviceSize                                allocationSize;
     VkMemoryPropertyFlags                       memProps;
-    VkMemoryPriority                            memPriority;
 } VkMemoryAllocInfo;
 
 typedef struct {
@@ -2006,7 +1993,6 @@ typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAllocInfo* pAllocInfo, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkDevice device, VkDeviceMemory mem);
-typedef VkResult (VKAPI *PFN_vkSetMemoryPriority)(VkDevice device, VkDeviceMemory mem, VkMemoryPriority priority);
 typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
@@ -2182,11 +2168,6 @@ VkResult VKAPI vkAllocMemory(
 VkResult VKAPI vkFreeMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem);
-
-VkResult VKAPI vkSetMemoryPriority(
-    VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkMemoryPriority                            priority);
 
 VkResult VKAPI vkMapMemory(
     VkDevice                                    device,

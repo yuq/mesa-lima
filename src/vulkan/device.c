@@ -954,14 +954,6 @@ VkResult anv_FreeMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_SetMemoryPriority(
-    VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkMemoryPriority                            priority)
-{
-   return VK_SUCCESS;
-}
-
 VkResult anv_MapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem,
