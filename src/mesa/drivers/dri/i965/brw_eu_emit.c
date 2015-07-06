@@ -1584,8 +1584,8 @@ brw_ENDIF(struct brw_codegen *p)
    }
 
    if (devinfo->gen < 6) {
-      brw_set_dest(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
-      brw_set_src0(p, insn, retype(brw_vec4_grf(0,0), BRW_REGISTER_TYPE_UD));
+      brw_set_dest(p, insn, retype(brw_null_reg(), BRW_REGISTER_TYPE_D));
+      brw_set_src0(p, insn, retype(brw_null_reg(), BRW_REGISTER_TYPE_D));
       brw_set_src1(p, insn, brw_imm_d(0x0));
    } else if (devinfo->gen == 6) {
       brw_set_dest(p, insn, brw_imm_w(0));
