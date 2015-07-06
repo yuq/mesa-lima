@@ -1869,7 +1869,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 break;
 
       case BRW_OPCODE_DO:
-	 brw_DO(p, BRW_EXECUTE_8);
+	 brw_DO(p, dispatch_width == 16 ? BRW_EXECUTE_16 : BRW_EXECUTE_8);
 	 break;
 
       case BRW_OPCODE_BREAK:
