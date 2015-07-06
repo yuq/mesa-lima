@@ -2815,7 +2815,11 @@ vec4_visitor::visit(ir_texture *ir)
       emit_gen6_gather_wa(key->tex.gen6_gather_wa[sampler], inst->dst);
    }
 
-   swizzle_result(ir, src_reg(inst->dst), sampler);
+   this->result = src_reg(this, ir->type);
+   dst_reg dest = dst_reg(this->result);
+
+   swizzle_result(ir->op, dest, src_reg(inst->dst),
+                  sampler, ir->type);
 }
 
 /**
@@ -2869,22 +2873,23 @@ vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
 }
 
 void
-vec4_visitor::swizzle_result(ir_texture *ir, src_reg orig_val, uint32_t sampler)
+vec4_visitor::swizzle_result(ir_texture_opcode op, dst_reg dest,
+                             src_reg orig_val, uint32_t sampler,
+                             const glsl_type *dest_type)
 {
    int s = key->tex.swizzles[sampler];
 
-   this->result = src_reg(this, ir->type);
-   dst_reg swizzled_result(this->result);
+   dst_reg swizzled_result = dest;
 
-   if (ir->op == ir_query_levels) {
+   if (op == ir_query_levels) {
       /* # levels is in .w */
       orig_val.swizzle = BRW_SWIZZLE4(SWIZZLE_W, SWIZZLE_W, SWIZZLE_W, SWIZZLE_W);
       emit(MOV(swizzled_result, orig_val));
       return;
    }
 
-   if (ir->op == ir_txs || ir->type == glsl_type::float_type
-			|| s == SWIZZLE_NOOP || ir->op == ir_tg4) {
+   if (op == ir_txs || dest_type == glsl_type::float_type
+			|| s == SWIZZLE_NOOP || op == ir_tg4) {
       emit(MOV(swizzled_result, orig_val));
       return;
    }

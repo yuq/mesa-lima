@@ -337,7 +337,9 @@ public:
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
                           src_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
-   void swizzle_result(ir_texture *ir, src_reg orig_val, uint32_t sampler);
+   void swizzle_result(ir_texture_opcode op, dst_reg dest,
+                       src_reg orig_val, uint32_t sampler,
+                       const glsl_type *dest_type);
 
    void emit_ndc_computation();
    void emit_psiz_and_flags(dst_reg reg);
