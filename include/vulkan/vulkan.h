@@ -1348,7 +1348,6 @@ typedef struct VkPhysicalDeviceQueueProperties_
 {
     VkQueueFlags                                queueFlags;                 // Queue flags
     uint32_t                                    queueCount;
-    uint32_t                                    maxAtomicCounters;
     bool32_t                                    supportsTimestamps;
     uint32_t                                    maxMemReferences;           // Tells how many memory references can be active for the given queue
 } VkPhysicalDeviceQueueProperties;
@@ -2218,9 +2217,6 @@ typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool query
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
 typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
-typedef void (VKAPI *PFN_vkCmdInitAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, const uint32_t* pData);
-typedef void (VKAPI *PFN_vkCmdLoadAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer srcBuffer, VkDeviceSize srcOffset);
-typedef void (VKAPI *PFN_vkCmdSaveAtomicCounters)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, uint32_t startCounter, uint32_t counterCount, VkBuffer destBuffer, VkDeviceSize destOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
@@ -2870,29 +2866,6 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceSize                                destOffset,
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags);
-
-void VKAPI vkCmdInitAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    const uint32_t*                             pData);
-
-void VKAPI vkCmdLoadAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                    srcBuffer,
-    VkDeviceSize                                srcOffset);
-
-void VKAPI vkCmdSaveAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset);
 
 VkResult VKAPI vkCreateFramebuffer(
     VkDevice                                    device,

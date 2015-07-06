@@ -237,7 +237,6 @@ VkResult anv_GetPhysicalDeviceInfo(
 
       queue_properties->queueFlags = 0;
       queue_properties->queueCount = 1;
-      queue_properties->maxAtomicCounters = 0;
       queue_properties->supportsTimestamps = true;
       queue_properties->maxMemReferences = 256;
       return VK_SUCCESS;
@@ -3606,38 +3605,6 @@ void anv_CmdPipelineBarrier(
 
    dw = anv_batch_emit_dwords(&cmd_buffer->batch, GEN8_PIPE_CONTROL_length);
    GEN8_PIPE_CONTROL_pack(&cmd_buffer->batch, dw, &cmd);
-}
-
-void anv_CmdInitAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    const uint32_t*                             pData)
-{
-   stub();
-}
-
-void anv_CmdLoadAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                    srcBuffer,
-    VkDeviceSize                                srcOffset)
-{
-   stub();
-}
-
-void anv_CmdSaveAtomicCounters(
-    VkCmdBuffer                                 cmdBuffer,
-    VkPipelineBindPoint                         pipelineBindPoint,
-    uint32_t                                    startCounter,
-    uint32_t                                    counterCount,
-    VkBuffer                                    destBuffer,
-    VkDeviceSize                                destOffset)
-{
-   stub();
 }
 
 static void
