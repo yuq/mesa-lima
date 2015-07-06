@@ -1817,20 +1817,6 @@ VkResult anv_CreateDescriptorSetLayout(
    return VK_SUCCESS;
 }
 
-VkResult anv_BeginDescriptorPoolUpdate(
-    VkDevice                                    device,
-    VkDescriptorUpdateMode                      updateMode)
-{
-   return VK_SUCCESS;
-}
-
-VkResult anv_EndDescriptorPoolUpdate(
-    VkDevice                                    device,
-    VkCmdBuffer                                 cmd)
-{
-   return VK_SUCCESS;
-}
-
 VkResult anv_CreateDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPoolUsage                       poolUsage,
