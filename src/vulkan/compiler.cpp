@@ -1029,12 +1029,12 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 
    program = brw->ctx.Driver.NewShaderProgram(name);
    program->Shaders = (struct gl_shader **)
-      calloc(VK_NUM_SHADER_STAGE, sizeof(struct gl_shader *));
+      calloc(VK_SHADER_STAGE_NUM, sizeof(struct gl_shader *));
    fail_if(program == NULL || program->Shaders == NULL,
            "failed to create program\n");
 
    bool all_spirv = true;
-   for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+   for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
       if (pipeline->shaders[i] == NULL)
          continue;
 
@@ -1050,7 +1050,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    }
 
    if (all_spirv) {
-      for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+      for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
          if (pipeline->shaders[i])
             anv_compile_shader_spirv(compiler, program, pipeline, i);
       }
@@ -1060,7 +1060,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
          program->_LinkedShaders[shader->Stage] = shader;
       }
    } else {
-      for (unsigned i = 0; i < VK_NUM_SHADER_STAGE; i++) {
+      for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
          if (pipeline->shaders[i])
             anv_compile_shader_glsl(compiler, program, pipeline, i);
       }
@@ -1157,7 +1157,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
 void
 anv_compiler_free(struct anv_pipeline *pipeline)
 {
-   for (uint32_t stage = 0; stage < VK_NUM_SHADER_STAGE; stage++) {
+   for (uint32_t stage = 0; stage < VK_SHADER_STAGE_NUM; stage++) {
       if (pipeline->prog_data[stage]) {
          free(pipeline->prog_data[stage]->map_entries);
          ralloc_free(pipeline->prog_data[stage]->param);

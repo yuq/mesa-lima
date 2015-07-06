@@ -833,10 +833,10 @@ VkResult anv_CreatePipelineLayout(
 
    layout->num_sets = pCreateInfo->descriptorSetCount;
 
-   uint32_t surface_start[VK_NUM_SHADER_STAGE] = { 0, };
-   uint32_t sampler_start[VK_NUM_SHADER_STAGE] = { 0, };
+   uint32_t surface_start[VK_SHADER_STAGE_NUM] = { 0, };
+   uint32_t sampler_start[VK_SHADER_STAGE_NUM] = { 0, };
 
-   for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
       layout->stage[s].surface_count = 0;
       layout->stage[s].sampler_count = 0;
    }
@@ -846,7 +846,7 @@ VkResult anv_CreatePipelineLayout(
          (struct anv_descriptor_set_layout *) pCreateInfo->pSetLayouts[i];
 
       layout->set[i].layout = set_layout;
-      for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+      for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
          layout->set[i].surface_start[s] = surface_start[s];
          surface_start[s] += set_layout->stage[s].surface_count;
          layout->set[i].sampler_start[s] = sampler_start[s];

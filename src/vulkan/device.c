@@ -1635,8 +1635,8 @@ VkResult anv_CreateDescriptorSetLayout(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
-   uint32_t sampler_count[VK_NUM_SHADER_STAGE] = { 0, };
-   uint32_t surface_count[VK_NUM_SHADER_STAGE] = { 0, };
+   uint32_t sampler_count[VK_SHADER_STAGE_NUM] = { 0, };
+   uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
    uint32_t num_dynamic_buffers = 0;
    uint32_t count = 0;
    uint32_t stages = 0;
@@ -1685,7 +1685,7 @@ VkResult anv_CreateDescriptorSetLayout(
 
    uint32_t sampler_total = 0;
    uint32_t surface_total = 0;
-   for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
       sampler_total += sampler_count[s];
       surface_total += surface_count[s];
    }
@@ -1702,9 +1702,9 @@ VkResult anv_CreateDescriptorSetLayout(
    set_layout->shader_stages = stages;
 
    struct anv_descriptor_slot *p = set_layout->entries;
-   struct anv_descriptor_slot *sampler[VK_NUM_SHADER_STAGE];
-   struct anv_descriptor_slot *surface[VK_NUM_SHADER_STAGE];
-   for (uint32_t s = 0; s < VK_NUM_SHADER_STAGE; s++) {
+   struct anv_descriptor_slot *sampler[VK_SHADER_STAGE_NUM];
+   struct anv_descriptor_slot *surface[VK_SHADER_STAGE_NUM];
+   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
       set_layout->stage[s].surface_count = surface_count[s];
       set_layout->stage[s].surface_start = surface[s] = p;
       p += surface_count[s];

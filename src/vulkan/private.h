@@ -592,7 +592,7 @@ struct anv_descriptor_set_layout {
       struct anv_descriptor_slot *surface_start;
       uint32_t sampler_count;
       struct anv_descriptor_slot *sampler_start;
-   } stage[VK_NUM_SHADER_STAGE];
+   } stage[VK_SHADER_STAGE_NUM];
 
    uint32_t count;
    uint32_t num_dynamic_buffers;
@@ -616,8 +616,8 @@ struct anv_descriptor_set {
 struct anv_pipeline_layout {
    struct {
       struct anv_descriptor_set_layout *layout;
-      uint32_t surface_start[VK_NUM_SHADER_STAGE];
-      uint32_t sampler_start[VK_NUM_SHADER_STAGE];
+      uint32_t surface_start[VK_SHADER_STAGE_NUM];
+      uint32_t sampler_start[VK_SHADER_STAGE_NUM];
    } set[MAX_SETS];
 
    uint32_t num_sets;
@@ -625,7 +625,7 @@ struct anv_pipeline_layout {
    struct {
       uint32_t surface_count;
       uint32_t sampler_count;
-   } stage[VK_NUM_SHADER_STAGE];
+   } stage[VK_SHADER_STAGE_NUM];
 };
 
 struct anv_buffer {
@@ -712,7 +712,7 @@ struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
    uint32_t                                     batch_data[256];
-   struct anv_shader *                          shaders[VK_NUM_SHADER_STAGE];
+   struct anv_shader *                          shaders[VK_SHADER_STAGE_NUM];
    struct anv_pipeline_layout *                 layout;
    bool                                         use_repclear;
 
@@ -720,8 +720,8 @@ struct anv_pipeline {
    struct brw_wm_prog_data                      wm_prog_data;
    struct brw_gs_prog_data                      gs_prog_data;
    struct brw_cs_prog_data                      cs_prog_data;
-   struct brw_stage_prog_data *                 prog_data[VK_NUM_SHADER_STAGE];
-   uint32_t                                     scratch_start[VK_NUM_SHADER_STAGE];
+   struct brw_stage_prog_data *                 prog_data[VK_SHADER_STAGE_NUM];
+   uint32_t                                     scratch_start[VK_SHADER_STAGE_NUM];
    uint32_t                                     total_scratch;
    struct {
       uint32_t                                  vs_start;
