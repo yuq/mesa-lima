@@ -165,6 +165,7 @@ struct si_shader {
 
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
+	unsigned		nr_param_exports;
 	bool			is_gs_copy_shader;
 	bool			dx10_clamp_mode; /* convert NaNs to 0 */
 };

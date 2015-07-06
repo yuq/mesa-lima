@@ -1218,6 +1218,8 @@ handle_semantic:
 		}
 	}
 
+	shader->nr_param_exports = param_count;
+
 	/* We need to add the position output manually if it's missing. */
 	if (!pos_args[0][0]) {
 		pos_args[0][0] = lp_build_const_int32(base->gallivm, 0xf); /* writemask */
