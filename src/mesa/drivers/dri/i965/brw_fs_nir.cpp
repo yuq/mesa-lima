@@ -417,18 +417,12 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
 
    bld.emit(BRW_OPCODE_ENDIF);
 
-   if (!try_replace_with_sel() && devinfo->gen < 6) {
-      no16("Can't support (non-uniform) control flow on SIMD16\n");
-   }
+   try_replace_with_sel();
 }
 
 void
 fs_visitor::nir_emit_loop(nir_loop *loop)
 {
-   if (devinfo->gen < 6) {
-      no16("Can't support (non-uniform) control flow on SIMD16\n");
-   }
-
    bld.emit(BRW_OPCODE_DO);
 
    nir_emit_cf_list(&loop->body);
