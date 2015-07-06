@@ -189,7 +189,7 @@ nvc0_2d_texture_do_copy(struct nouveau_pushbuf *push,
    PUSH_DATA (push, 0);
    PUSH_DATA (push, sx << src->ms_x);
    PUSH_DATA (push, 0);
-   PUSH_DATA (push, sy << src->ms_x);
+   PUSH_DATA (push, sy << src->ms_y);
 
    return 0;
 }
