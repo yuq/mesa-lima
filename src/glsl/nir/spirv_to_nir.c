@@ -837,7 +837,7 @@ vtn_builtin_load(struct vtn_builder *b,
    nir_ssa_dest_init(&load->instr, &load->dest,
                      glsl_get_vector_elements(val->type), NULL);
 
-   load->variables[0] = nir_deref_var_create(b->shader, var);
+   load->variables[0] = nir_deref_var_create(load, var);
    load->num_components = glsl_get_vector_elements(val->type);
    nir_builder_instr_insert(&b->nb, &load->instr);
    val->def = &load->dest.ssa;
@@ -855,7 +855,7 @@ vtn_builtin_store(struct vtn_builder *b,
    nir_intrinsic_instr *store =
       nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
 
-   store->variables[0] = nir_deref_var_create(b->shader, var);
+   store->variables[0] = nir_deref_var_create(store, var);
    store->num_components = glsl_get_vector_elements(val->type);
    store->src[0] = nir_src_for_ssa(val->def);
    nir_builder_instr_insert(&b->nb, &store->instr);
@@ -952,6 +952,7 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->variables[0] =
          nir_deref_as_var(nir_copy_deref(store, &dest_deref->deref));
+      store->num_components = glsl_get_vector_elements(src->type);
       store->src[0] = nir_src_for_ssa(src->def);
 
       nir_builder_instr_insert(&b->nb, &store->instr);
@@ -1460,6 +1461,7 @@ create_vec(void *mem_ctx, unsigned num_components)
 
    nir_alu_instr *vec = nir_alu_instr_create(mem_ctx, op);
    nir_ssa_dest_init(&vec->instr, &vec->dest.dest, num_components, NULL);
+   vec->dest.write_mask = (1 << num_components) - 1;
 
    return vec;
 }
@@ -2048,7 +2050,6 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpCompositeConstruct: {
-      val->ssa = rzalloc(b, struct vtn_ssa_value);
       unsigned elems = count - 3;
       if (glsl_type_is_vector_or_scalar(type)) {
          nir_ssa_def *srcs[4];
