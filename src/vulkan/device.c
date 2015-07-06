@@ -1873,14 +1873,6 @@ VkResult anv_AllocDescriptorSets(
    return VK_SUCCESS;
 }
 
-void anv_ClearDescriptorSets(
-    VkDevice                                    device,
-    VkDescriptorPool                            descriptorPool,
-    uint32_t                                    count,
-    const VkDescriptorSet*                      pDescriptorSets)
-{
-}
-
 void anv_UpdateDescriptors(
     VkDevice                                    _device,
     VkDescriptorSet                             descriptorSet,

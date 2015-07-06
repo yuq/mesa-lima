@@ -2041,7 +2041,6 @@ typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
-typedef void     (VKAPI *PFN_vkClearDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, uint32_t count, const VkDescriptorSet* pDescriptorSets);
 typedef void     (VKAPI *PFN_vkUpdateDescriptors)(VkDevice device, VkDescriptorSet descriptorSet, uint32_t updateCount, const void** ppUpdateArray);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState);
@@ -2441,12 +2440,6 @@ VkResult VKAPI vkAllocDescriptorSets(
     const VkDescriptorSetLayout*                pSetLayouts,
     VkDescriptorSet*                            pDescriptorSets,
     uint32_t*                                   pCount);
-
-void VKAPI vkClearDescriptorSets(
-    VkDevice                                    device,
-    VkDescriptorPool                            descriptorPool,
-    uint32_t                                    count,
-    const VkDescriptorSet*                      pDescriptorSets);
 
 void VKAPI vkUpdateDescriptors(
     VkDevice                                    device,
