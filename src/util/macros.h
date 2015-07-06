@@ -182,6 +182,12 @@ do {                       \
 #define UNUSED
 #endif
 
+#ifdef HAVE_FUNC_ATTRIBUTE_WARN_UNUSED_RESULT
+#define MUST_CHECK __attribute__((warn_unused_result))
+#else
+#define MUST_CHECK
+#endif
+
 /** Compute ceiling of integer quotient of A divided by B. */
 #define DIV_ROUND_UP( A, B )  ( (A) % (B) == 0 ? (A)/(B) : (A)/(B)+1 )
 
