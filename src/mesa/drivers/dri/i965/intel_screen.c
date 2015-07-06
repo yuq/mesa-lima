@@ -1330,11 +1330,6 @@ set_max_gl_versions(struct intel_screen *screen)
    }
 }
 
-/* drop when libdrm 2.4.61 is released */
-#ifndef I915_PARAM_REVISION
-#define I915_PARAM_REVISION 32
-#endif
-
 static int
 brw_get_revision(int fd)
 {
