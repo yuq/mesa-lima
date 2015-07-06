@@ -1997,11 +1997,6 @@ typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, V
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
 typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem);
-typedef VkResult (VKAPI *PFN_vkGetMultiDeviceCompatibility)(VkPhysicalDevice physicalDevice0, VkPhysicalDevice physicalDevice1, VkPhysicalDeviceCompatibilityInfo* pInfo);
-typedef VkResult (VKAPI *PFN_vkOpenSharedMemory)(VkDevice device, const VkMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
-typedef VkResult (VKAPI *PFN_vkOpenSharedSemaphore)(VkDevice device, const VkSemaphoreOpenInfo* pOpenInfo, VkSemaphore* pSemaphore);
-typedef VkResult (VKAPI *PFN_vkOpenPeerMemory)(VkDevice device, const VkPeerMemoryOpenInfo* pOpenInfo, VkDeviceMemory* pMem);
-typedef VkResult (VKAPI *PFN_vkOpenPeerImage)(VkDevice device, const VkPeerImageOpenInfo* pOpenInfo, VkImage* pImage, VkDeviceMemory* pMem);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
@@ -2187,32 +2182,6 @@ VkResult VKAPI vkPinSystemMemory(
     VkDevice                                    device,
     const void*                                 pSysMem,
     size_t                                      memSize,
-    VkDeviceMemory*                             pMem);
-
-VkResult VKAPI vkGetMultiDeviceCompatibility(
-    VkPhysicalDevice                            physicalDevice0,
-    VkPhysicalDevice                            physicalDevice1,
-    VkPhysicalDeviceCompatibilityInfo*          pInfo);
-
-VkResult VKAPI vkOpenSharedMemory(
-    VkDevice                                    device,
-    const VkMemoryOpenInfo*                     pOpenInfo,
-    VkDeviceMemory*                             pMem);
-
-VkResult VKAPI vkOpenSharedSemaphore(
-    VkDevice                                    device,
-    const VkSemaphoreOpenInfo*                  pOpenInfo,
-    VkSemaphore*                                pSemaphore);
-
-VkResult VKAPI vkOpenPeerMemory(
-    VkDevice                                    device,
-    const VkPeerMemoryOpenInfo*                 pOpenInfo,
-    VkDeviceMemory*                             pMem);
-
-VkResult VKAPI vkOpenPeerImage(
-    VkDevice                                    device,
-    const VkPeerImageOpenInfo*                  pOpenInfo,
-    VkImage*                                    pImage,
     VkDeviceMemory*                             pMem);
 
 VkResult VKAPI vkDestroyObject(

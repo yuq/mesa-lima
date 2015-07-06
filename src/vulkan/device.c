@@ -1010,47 +1010,6 @@ VkResult anv_PinSystemMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetMultiDeviceCompatibility(
-    VkPhysicalDevice                            physicalDevice0,
-    VkPhysicalDevice                            physicalDevice1,
-    VkPhysicalDeviceCompatibilityInfo*          pInfo)
-{
-   return VK_UNSUPPORTED;
-}
-
-VkResult anv_OpenSharedMemory(
-    VkDevice                                    device,
-    const VkMemoryOpenInfo*                     pOpenInfo,
-    VkDeviceMemory*                             pMem)
-{
-   return VK_UNSUPPORTED;
-}
-
-VkResult anv_OpenSharedSemaphore(
-    VkDevice                                    device,
-    const VkSemaphoreOpenInfo*                  pOpenInfo,
-    VkSemaphore*                                pSemaphore)
-{
-   return VK_UNSUPPORTED;
-}
-
-VkResult anv_OpenPeerMemory(
-    VkDevice                                    device,
-    const VkPeerMemoryOpenInfo*                 pOpenInfo,
-    VkDeviceMemory*                             pMem)
-{
-   return VK_UNSUPPORTED;
-}
-
-VkResult anv_OpenPeerImage(
-    VkDevice                                    device,
-    const VkPeerImageOpenInfo*                  pOpenInfo,
-    VkImage*                                    pImage,
-    VkDeviceMemory*                             pMem)
-{
-   return VK_UNSUPPORTED;
-}
-
 VkResult anv_DestroyObject(
     VkDevice                                    _device,
     VkObjectType                                objType,
