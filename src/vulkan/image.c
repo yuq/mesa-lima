@@ -332,11 +332,6 @@ anv_image_view_init(struct anv_surface_view *view,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   anv_assert(range->mipLevels > 0);
-   anv_assert(range->arraySize > 0);
-   anv_assert(range->baseMipLevel + range->mipLevels <= image->levels);
-   anv_assert(range->baseArraySlice + range->arraySize <= image->array_size);
-
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
 
@@ -435,14 +430,35 @@ anv_image_view_init(struct anv_surface_view *view,
 }
 
 VkResult
+anv_validate_CreateImageView(VkDevice _device,
+                             const VkImageViewCreateInfo *pCreateInfo,
+                             VkImageView *pView)
+{
+   const struct anv_image *image;
+   const VkImageSubresourceRange *range;
+
+   assert(pCreateInfo);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
+   assert(pView);
+
+   image = (struct anv_image *) pCreateInfo->image;
+   range = &pCreateInfo->subresourceRange;
+
+   assert(range->mipLevels > 0);
+   assert(range->arraySize > 0);
+   assert(range->baseMipLevel + range->mipLevels <= image->levels);
+   assert(range->baseArraySlice + range->arraySize <= image->array_size);
+
+   return anv_CreateImageView(_device, pCreateInfo, pView);
+}
+
+VkResult
 anv_CreateImageView(VkDevice _device,
                     const VkImageViewCreateInfo *pCreateInfo,
                     VkImageView *pView)
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_surface_view *view;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
 
    view = anv_device_alloc(device, sizeof(*view), 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
