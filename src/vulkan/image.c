@@ -29,6 +29,12 @@
 
 #include "private.h"
 
+struct anv_image_view_info {
+   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
+   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
+   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
+};
+
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,
@@ -45,13 +51,20 @@ static const uint8_t anv_surf_type_from_image_type[] = {
    [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
    [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
    [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
+
 };
 
-static const uint8_t anv_surf_type_from_image_view_type[] = {
-   [VK_IMAGE_VIEW_TYPE_1D]    = SURFTYPE_1D,
-   [VK_IMAGE_VIEW_TYPE_2D]    = SURFTYPE_2D,
-   [VK_IMAGE_VIEW_TYPE_3D]    = SURFTYPE_3D,
-   [VK_IMAGE_VIEW_TYPE_CUBE]  = SURFTYPE_CUBE,
+static const struct anv_image_view_info
+anv_image_view_info_table[] = {
+   #define INFO(s, ...) { .surface_type = s, __VA_ARGS__ }
+   [VK_IMAGE_VIEW_TYPE_1D]          = INFO(SURFTYPE_1D),
+   [VK_IMAGE_VIEW_TYPE_2D]          = INFO(SURFTYPE_2D),
+   [VK_IMAGE_VIEW_TYPE_3D]          = INFO(SURFTYPE_3D),
+   [VK_IMAGE_VIEW_TYPE_CUBE]        = INFO(SURFTYPE_CUBE,                  .is_cube = 1),
+   [VK_IMAGE_VIEW_TYPE_1D_ARRAY]    = INFO(SURFTYPE_1D,     .is_array = 1),
+   [VK_IMAGE_VIEW_TYPE_2D_ARRAY]    = INFO(SURFTYPE_2D,     .is_array = 1),
+   [VK_IMAGE_VIEW_TYPE_CUBE_ARRAY]  = INFO(SURFTYPE_CUBE,   .is_array = 1, .is_cube = 1),
+   #undef INFO
 };
 
 static const struct anv_surf_type_limits {
@@ -332,6 +345,9 @@ anv_image_view_init(struct anv_surface_view *view,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
+   const struct anv_image_view_info *view_type_info
+      = &anv_image_view_info_table[pCreateInfo->viewType];
+
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
 
@@ -377,7 +393,7 @@ anv_image_view_init(struct anv_surface_view *view,
    };
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = anv_surf_type_from_image_view_type[pCreateInfo->viewType],
+      .SurfaceType = view_type_info->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
