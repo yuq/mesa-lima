@@ -477,6 +477,10 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 			if (new_instr) {
 				list_del(&new_instr->node);
 				list_addtail(&new_instr->node, &unscheduled_list);
+				/* the original instr that wrote addr/pred may have
+				 * originated from a different block:
+				 */
+				new_instr->block = block;
 			}
 
 		} else {
