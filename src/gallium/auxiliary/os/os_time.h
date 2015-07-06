@@ -45,7 +45,7 @@
 #include "pipe/p_compiler.h"
 
 
-#ifdef	__cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -61,8 +61,9 @@ os_time_get_nano(void);
  * Get the current time in microseconds from an unknown base.
  */
 static INLINE int64_t
-os_time_get(void) {
-    return os_time_get_nano() / 1000;
+os_time_get(void)
+{
+   return os_time_get_nano() / 1000;
 }
 
 
@@ -87,7 +88,7 @@ os_time_timeout(int64_t start,
                 int64_t end,
                 int64_t curr)
 {
-   if(start <= end)
+   if (start <= end)
       return !(start <= curr && curr < end);
    else
       return !((start <= curr) || (curr < end));
@@ -131,7 +132,7 @@ os_wait_until_zero(volatile int *var, uint64_t timeout);
 bool
 os_wait_until_zero_abs_timeout(volatile int *var, int64_t timeout);
 
-#ifdef	__cplusplus
+#ifdef __cplusplus
 }
 #endif
 
