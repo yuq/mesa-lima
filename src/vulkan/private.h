@@ -90,6 +90,17 @@ anv_minify(uint32_t n, uint32_t levels)
       return MAX(n >> levels, 1);
 }
 
+static inline bool
+anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
+{
+   if (*inout_mask & clear_mask) {
+      *inout_mask &= ~clear_mask;
+      return true;
+   } else {
+      return false;
+   }
+}
+
 #define for_each_bit(b, dword)                          \
    for (uint32_t __dword = (dword);                     \
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
