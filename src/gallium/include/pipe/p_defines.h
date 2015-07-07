@@ -788,11 +788,12 @@ union pipe_color_union
 
 enum pipe_driver_query_type
 {
-   PIPE_DRIVER_QUERY_TYPE_UINT64     = 0,
-   PIPE_DRIVER_QUERY_TYPE_UINT       = 1,
-   PIPE_DRIVER_QUERY_TYPE_FLOAT      = 2,
-   PIPE_DRIVER_QUERY_TYPE_PERCENTAGE = 3,
-   PIPE_DRIVER_QUERY_TYPE_BYTES      = 4,
+   PIPE_DRIVER_QUERY_TYPE_UINT64       = 0,
+   PIPE_DRIVER_QUERY_TYPE_UINT         = 1,
+   PIPE_DRIVER_QUERY_TYPE_FLOAT        = 2,
+   PIPE_DRIVER_QUERY_TYPE_PERCENTAGE   = 3,
+   PIPE_DRIVER_QUERY_TYPE_BYTES        = 4,
+   PIPE_DRIVER_QUERY_TYPE_MICROSECONDS = 5,
 };
 
 enum pipe_driver_query_group_type

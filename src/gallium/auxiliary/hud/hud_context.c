@@ -238,8 +238,9 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       {"", " KB", " MB", " GB", " TB", " PB", " EB"};
    static const char *metric_units[] =
       {"", " k", " M", " G", " T", " P", " E"};
-   const char **units =
-      (type == PIPE_DRIVER_QUERY_TYPE_BYTES) ? byte_units : metric_units;
+   static const char *time_units[] =
+      {" us", " ms", " s"};  /* based on microseconds */
+   const char *suffix;
    double divisor = (type == PIPE_DRIVER_QUERY_TYPE_BYTES) ? 1024 : 1000;
    int unit = 0;
    double d = num;
@@ -249,12 +250,26 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       unit++;
    }
 
+   switch (type) {
+   case PIPE_DRIVER_QUERY_TYPE_MICROSECONDS:
+      assert(unit < ARRAY_SIZE(time_units));
+      suffix = time_units[unit];
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_BYTES:
+      assert(unit < ARRAY_SIZE(byte_units));
+      suffix = byte_units[unit];
+      break;
+   default:
+      assert(unit < ARRAY_SIZE(metric_units));
+      suffix = metric_units[unit];
+   }
+
    if (d >= 100 || d == (int)d)
-      sprintf(out, "%.0f%s", d, units[unit]);
+      sprintf(out, "%.0f%s", d, suffix);
    else if (d >= 10 || d*10 == (int)(d*10))
-      sprintf(out, "%.1f%s", d, units[unit]);
+      sprintf(out, "%.1f%s", d, suffix);
    else
-      sprintf(out, "%.2f%s", d, units[unit]);
+      sprintf(out, "%.2f%s", d, suffix);
 }
 
 static void
