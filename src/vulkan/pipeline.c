@@ -538,6 +538,9 @@ anv_pipeline_create(
                   .PixelLocation = CENTER,
                   .NumberofMultisamples = log2_samples);
 
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SAMPLE_MASK,
+                  .SampleMask = 0xffff);
+
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_URB_VS,
                   .VSURBStartingAddress = pipeline->urb.vs_start,
                   .VSURBEntryAllocationSize = pipeline->urb.vs_size - 1,
