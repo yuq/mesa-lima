@@ -3070,12 +3070,8 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
-   /* FINISHME: The value of the max_attribute_index parameter is
-    * FINISHME: implementation dependent based on the value of
-    * FINISHME: GL_MAX_VERTEX_ATTRIBS.  GL_MAX_VERTEX_ATTRIBS must be
-    * FINISHME: at least 16, so hardcode 16 for now.
-    */
-   if (!assign_attribute_or_color_locations(prog, MESA_SHADER_VERTEX, 16)) {
+   if (!assign_attribute_or_color_locations(prog, MESA_SHADER_VERTEX,
+                                            ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)) {
       goto done;
    }
 
