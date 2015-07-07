@@ -1637,8 +1637,6 @@ typedef struct {
     float                                       depthBias;
     float                                       depthBiasClamp;
     float                                       slopeScaledDepthBias;
-    float                                       pointSize;
-    float                                       pointFadeThreshold;
     float                                       lineWidth;
 } VkDynamicRsStateCreateInfo;
 

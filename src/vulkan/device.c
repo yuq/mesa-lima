@@ -2031,15 +2031,10 @@ VkResult anv_CreateDynamicRasterState(
    if (state == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   /* Missing these:
-    * float                                       pointFadeThreshold;
-    *                            // optional (GL45) - Size of point fade threshold
-    */
-
    struct GEN8_3DSTATE_SF sf = {
       GEN8_3DSTATE_SF_header,
       .LineWidth = pCreateInfo->lineWidth,
-      .PointWidth = pCreateInfo->pointSize,
+      .PointWidth = 1.0,
    };
 
    GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
