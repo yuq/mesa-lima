@@ -3469,7 +3469,7 @@ void anv_CmdPipelineBarrier(
 
    for_each_bit(b, out_flags) {
       switch ((VkMemoryOutputFlags)(1 << b)) {
-      case VK_MEMORY_OUTPUT_CPU_WRITE_BIT:
+      case VK_MEMORY_OUTPUT_HOST_WRITE_BIT:
          break; /* FIXME: Little-core systems */
       case VK_MEMORY_OUTPUT_SHADER_WRITE_BIT:
          cmd.DCFlushEnable = true;
@@ -3491,7 +3491,7 @@ void anv_CmdPipelineBarrier(
 
    for_each_bit(b, out_flags) {
       switch ((VkMemoryInputFlags)(1 << b)) {
-      case VK_MEMORY_INPUT_CPU_READ_BIT:
+      case VK_MEMORY_INPUT_HOST_READ_BIT:
          break; /* FIXME: Little-core systems */
       case VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT:
       case VK_MEMORY_INPUT_INDEX_FETCH_BIT:
