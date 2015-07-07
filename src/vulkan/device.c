@@ -3405,10 +3405,9 @@ void anv_CmdWaitEvents(
 void anv_CmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkWaitEvent                                 waitEvent,
-    uint32_t                                    pipeEventCount,
-    const VkPipeEvent*                          pPipeEvents,
+    VkPipeEventFlags                            pipeEventMask,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers)
+    const void* const*                          ppMemBarriers)
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
    uint32_t b, *dw;
@@ -3420,26 +3419,32 @@ void anv_CmdPipelineBarrier(
 
    /* XXX: I think waitEvent is a no-op on our HW.  We should verify that. */
 
-   for (uint32_t i = 0; i < pipeEventCount; i++) {
-      switch (pPipeEvents[i]) {
-      case VK_PIPE_EVENT_TOP_OF_PIPE:
-         /* This is just what PIPE_CONTROL does */
-         break;
-      case VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE:
-      case VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE:
-      case VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE:
-         cmd.StallAtPixelScoreboard = true;
-         break;
-      case VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE:
-      case VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE:
-      case VK_PIPE_EVENT_TRANSFER_COMPLETE:
-      case VK_PIPE_EVENT_COMMANDS_COMPLETE:
-         cmd.CommandStreamerStallEnable = true;
-         break;
-      default:
-         unreachable("Invalid VkPipeEvent");
-      }
+   if (anv_clear_mask(&pipeEventMask, VK_PIPE_EVENT_TOP_OF_PIPE_BIT)) {
+      /* This is just what PIPE_CONTROL does */
    }
+
+   if (anv_clear_mask(&pipeEventMask,
+                      VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE_BIT |
+                      VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE_BIT |
+                      VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE_BIT)) {
+      cmd.StallAtPixelScoreboard = true;
+   }
+
+
+   if (anv_clear_mask(&pipeEventMask,
+                      VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE_BIT |
+                      VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE_BIT |
+                      VK_PIPE_EVENT_TRANSFER_COMPLETE_BIT |
+                      VK_PIPE_EVENT_COMMANDS_COMPLETE_BIT)) {
+      cmd.CommandStreamerStallEnable = true;
+   }
+
+   if (anv_clear_mask(&pipeEventMask, VK_PIPE_EVENT_CPU_SIGNAL_BIT)) {
+      anv_finishme("VK_PIPE_EVENT_CPU_SIGNAL_BIT");
+   }
+
+   /* We checked all known VkPipeEventFlags. */
+   anv_assert(pipeEventMask == 0);
 
    /* XXX: Right now, we're really dumb and just flush whatever categories
     * the app asks for.  One of these days we may make this a bit better

@@ -1035,6 +1035,19 @@ typedef enum {
 typedef VkFlags VkCmdBufferOptimizeFlags;
 
 typedef enum {
+    VK_PIPE_EVENT_TOP_OF_PIPE_BIT = 0x00000001,
+    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE_BIT = 0x00000002,
+    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE_BIT = 0x00000004,
+    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE_BIT = 0x00000008,
+    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE_BIT = 0x00000010,
+    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE_BIT = 0x00000020,
+    VK_PIPE_EVENT_TRANSFER_COMPLETE_BIT = 0x00000040,
+    VK_PIPE_EVENT_COMMANDS_COMPLETE_BIT = 0x00000080,
+    VK_PIPE_EVENT_CPU_SIGNAL_BIT = 0x00000100,
+} VkPipeEventFlagBits;
+typedef VkFlags VkPipeEventFlags;
+
+typedef enum {
     VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
 } VkQueryControlFlagBits;
 typedef VkFlags VkQueryControlFlags;
@@ -1974,7 +1987,7 @@ typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcIm
 typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
 typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
 typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
-typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t pipeEventCount, const VkPipeEvent* pPipeEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, VkPipeEventFlags pipeEventMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
 typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
@@ -2536,10 +2549,9 @@ void VKAPI vkCmdWaitEvents(
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
     VkWaitEvent                                 waitEvent,
-    uint32_t                                    pipeEventCount,
-    const VkPipeEvent*                          pPipeEvents,
+    VkPipeEventFlags                            pipeEventMask,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers);
+    const void* const*                          ppMemBarriers);
 
 void VKAPI vkCmdBeginQuery(
     VkCmdBuffer                                 cmdBuffer,
