@@ -1743,6 +1743,11 @@ typedef struct {
 } VkBufferImageCopy;
 
 typedef struct {
+    VkOffset3D                                  offset;
+    VkExtent3D                                  extent;
+} VkRect3D;
+
+typedef struct {
     VkImageSubresource                          srcSubresource;
     VkOffset3D                                  srcOffset;
     VkImageSubresource                          destSubresource;
