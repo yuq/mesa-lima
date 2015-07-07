@@ -2717,7 +2717,6 @@ void anv_CmdBindIndexBuffer(
    struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
 
    static const uint32_t vk_to_gen_index_type[] = {
-      [VK_INDEX_TYPE_UINT8]                     = INDEX_BYTE,
       [VK_INDEX_TYPE_UINT16]                    = INDEX_WORD,
       [VK_INDEX_TYPE_UINT32]                    = INDEX_DWORD,
    };
