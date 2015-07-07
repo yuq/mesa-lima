@@ -283,7 +283,7 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                .ViewportIndex = 0,
                .PointWidth = 0.0
             },
-            .color = pass->layers[i].clear_color.color,
+            .color = pass->layers[i].clear_color,
          };
       }
    }
@@ -627,8 +627,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .pColorLayouts = (VkImageLayout[]) { VK_IMAGE_LAYOUT_GENERAL },
          .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_LOAD },
          .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
-         .pColorLoadClearValues = (VkClearColor[]) {
-            { .color = { .floatColor = { 1.0, 0.0, 0.0, 1.0 } }, .useRawValue = false }
+         .pColorLoadClearValues = (VkClearColorValue[]) {
+            { .f32 = { 1.0, 0.0, 0.0, 1.0 } }
          },
          .depthStencilFormat = VK_FORMAT_UNDEFINED,
       }, &pass);
@@ -1185,7 +1185,7 @@ void anv_CmdClearColorImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     _image,
     VkImageLayout                               imageLayout,
-    VkClearColor                                color,
+    const VkClearColorValue*                    pColor,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
@@ -1241,7 +1241,7 @@ void anv_CmdClearColorImage(
                   .pColorLayouts = (VkImageLayout[]) { imageLayout },
                   .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_DONT_CARE },
                   .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
-                  .pColorLoadClearValues = &color,
+                  .pColorLoadClearValues = pColor,
                   .depthStencilFormat = VK_FORMAT_UNDEFINED,
                }, &pass);
 
@@ -1257,7 +1257,7 @@ void anv_CmdClearColorImage(
                   .ViewportIndex = 0,
                   .PointWidth = 0.0
                },
-               .color = color.color,
+               .color = *pColor,
             };
 
             meta_emit_clear(cmd_buffer, 1, &instance_data);

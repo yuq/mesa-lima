@@ -920,7 +920,7 @@ struct anv_framebuffer {
 
 struct anv_render_pass_layer {
    VkAttachmentLoadOp                           color_load_op;
-   VkClearColor                                 clear_color;
+   VkClearColorValue                            clear_color;
 };
 
 struct anv_render_pass {

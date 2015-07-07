@@ -1671,16 +1671,11 @@ typedef struct {
     uint32_t                                    layers;
 } VkFramebufferCreateInfo;
 
-typedef union VkClearColorValue_
-{
-    float                                       floatColor[4];
-    uint32_t                                    rawColor[4];
+typedef union {
+    float                                       f32[4];
+    int32_t                                     s32[4];
+    uint32_t                                    u32[4];
 } VkClearColorValue;
-
-typedef struct {
-    VkClearColorValue                           color;
-    bool32_t                                    useRawValue;
-} VkClearColor;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1694,7 +1689,7 @@ typedef struct {
     const VkImageLayout*                        pColorLayouts;
     const VkAttachmentLoadOp*                   pColorLoadOps;
     const VkAttachmentStoreOp*                  pColorStoreOps;
-    const VkClearColor*                         pColorLoadClearValues;
+    const VkClearColorValue*                    pColorLoadClearValues;
     VkFormat                                    depthStencilFormat;
     VkImageLayout                               depthStencilLayout;
     VkAttachmentLoadOp                          depthLoadOp;
@@ -1992,7 +1987,7 @@ typedef void (VKAPI *PFN_vkCmdCopyBufferToImage)(VkCmdBuffer cmdBuffer, VkBuffer
 typedef void (VKAPI *PFN_vkCmdCopyImageToBuffer)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkBuffer destBuffer, uint32_t regionCount, const VkBufferImageCopy* pRegions);
 typedef void (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize dataSize, const uint32_t* pData);
 typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
-typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI *PFN_vkCmdClearColorAttachment)(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
 typedef void (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCmdBuffer cmdBuffer, VkImageAspectFlags imageAspectMask, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rectCount, const VkRect3D* pRects);
@@ -2521,7 +2516,7 @@ void VKAPI vkCmdClearColorImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
-    VkClearColor                                color,
+    const VkClearColorValue*                    pColor,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges);
 
