@@ -926,7 +926,7 @@ typedef VkFlags VkFenceCreateFlags;
 typedef VkFlags VkSemaphoreCreateFlags;
 typedef VkFlags VkEventCreateFlags;
 
-typedef enum VkQueryPipelineStatisticFlagBits_ {
+typedef enum {
     VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT = 0x00000001,
     VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT = 0x00000002,
     VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT = 0x00000004,
