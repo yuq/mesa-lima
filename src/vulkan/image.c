@@ -451,19 +451,82 @@ anv_validate_CreateImageView(VkDevice _device,
                              VkImageView *pView)
 {
    const struct anv_image *image;
-   const VkImageSubresourceRange *range;
+   const VkImageSubresourceRange *subresource;
+   const struct anv_image_view_info *view_info;
+   const struct anv_format *view_format_info;
+   const struct anv_format *image_format_info;
 
+   /* Validate structure type before dereferencing it. */
    assert(pCreateInfo);
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
+   subresource = &pCreateInfo->subresourceRange;
+
+   /* Validate image pointer before dereferencing it. */
+   assert(pCreateInfo->image != 0);
+   image = (struct anv_image *) pCreateInfo->image;
+
+   /* Validate viewType is in range before using it. */
+   assert(pCreateInfo->viewType >= VK_IMAGE_VIEW_TYPE_BEGIN_RANGE);
+   assert(pCreateInfo->viewType <= VK_IMAGE_VIEW_TYPE_END_RANGE);
+   view_info = &anv_image_view_info_table[pCreateInfo->viewType];
+
+   /* Validate format is in range before using it. */
+   assert(pCreateInfo->format >= VK_FORMAT_BEGIN_RANGE);
+   assert(pCreateInfo->format <= VK_FORMAT_END_RANGE);
+   image_format_info = anv_format_for_vk_format(image->format);
+   view_format_info = anv_format_for_vk_format(pCreateInfo->format);
+
+   /* Validate channel swizzles. */
+   assert(pCreateInfo->channels.r >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->channels.r <= VK_CHANNEL_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->channels.g >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->channels.g <= VK_CHANNEL_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->channels.b >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->channels.b <= VK_CHANNEL_SWIZZLE_END_RANGE);
+   assert(pCreateInfo->channels.a >= VK_CHANNEL_SWIZZLE_BEGIN_RANGE);
+   assert(pCreateInfo->channels.a <= VK_CHANNEL_SWIZZLE_END_RANGE);
+
+   /* Validate subresource. */
+   assert(subresource->aspect >= VK_IMAGE_ASPECT_BEGIN_RANGE);
+   assert(subresource->aspect <= VK_IMAGE_ASPECT_END_RANGE);
+   assert(subresource->mipLevels > 0);
+   assert(subresource->arraySize > 0);
+   assert(subresource->baseMipLevel < image->levels);
+   assert(subresource->baseMipLevel + subresource->mipLevels <= image->levels);
+   assert(subresource->baseArraySlice < image->array_size);
+   assert(subresource->baseArraySlice + subresource->arraySize <= image->array_size);
+   assert(pCreateInfo->minLod >= 0);
+   assert(pCreateInfo->minLod < image->levels);
    assert(pView);
 
-   image = (struct anv_image *) pCreateInfo->image;
-   range = &pCreateInfo->subresourceRange;
+   if (view_info->is_cube) {
+      assert(subresource->baseArraySlice % 6 == 0);
+      assert(subresource->arraySize % 6 == 0);
+   }
 
-   assert(range->mipLevels > 0);
-   assert(range->arraySize > 0);
-   assert(range->baseMipLevel + range->mipLevels <= image->levels);
-   assert(range->baseArraySlice + range->arraySize <= image->array_size);
+   /* Validate format. */
+   switch (subresource->aspect) {
+   case VK_IMAGE_ASPECT_COLOR:
+      assert(!image_format_info->depth_format);
+      assert(!image_format_info->has_stencil);
+      assert(!view_format_info->depth_format);
+      assert(!view_format_info->has_stencil);
+      assert(view_format_info->cpp == image_format_info->cpp);
+      break;
+   case VK_IMAGE_ASPECT_DEPTH:
+      assert(image_format_info->depth_format);
+      assert(view_format_info->depth_format);
+      assert(view_format_info->cpp == image_format_info->cpp);
+      break;
+   case VK_IMAGE_ASPECT_STENCIL:
+      /* FINISHME: Is it legal to have an R8 view of S8? */
+      assert(image_format_info->has_stencil);
+      assert(view_format_info->has_stencil);
+      break;
+   default:
+      assert(!"bad VkImageAspect");
+      break;
+   }
 
    return anv_CreateImageView(_device, pCreateInfo, pView);
 }
