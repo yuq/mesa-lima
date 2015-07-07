@@ -85,7 +85,7 @@ gallium_DRIVERS += libmesa_winsys_radeon libmesa_pipe_radeon
 LOCAL_SHARED_LIBRARIES += libdrm_radeon
 endif
 ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_pipe_softpipe libmesa_winsys_sw_dri libmesa_winsys_sw_kms_dri
+gallium_DRIVERS += libmesa_pipe_softpipe libmesa_winsys_sw_dri
 LOCAL_CFLAGS += -DGALLIUM_SOFTPIPE
 endif
 ifneq ($(filter vc4,$(MESA_GPU_DRIVERS)),)
