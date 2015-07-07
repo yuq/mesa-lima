@@ -1558,6 +1558,7 @@ typedef struct {
     VkTexAddress                                addressW;
     float                                       mipLodBias;
     uint32_t                                    maxAnisotropy;
+    bool32_t                                    compareEnable;
     VkCompareOp                                 compareOp;
     float                                       minLod;
     float                                       maxLod;
