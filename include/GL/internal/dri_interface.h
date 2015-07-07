@@ -40,14 +40,7 @@
 #ifndef DRI_INTERFACE_H
 #define DRI_INTERFACE_H
 
-/* For archs with no drm.h */
-#if defined(__APPLE__) || defined(__CYGWIN__) || defined(__GNU__)
-#ifndef __NOT_HAVE_DRM_H
-#define __NOT_HAVE_DRM_H
-#endif
-#endif
-
-#ifndef __NOT_HAVE_DRM_H
+#ifdef HAVE_LIBDRM
 #include <drm.h>
 #else
 typedef unsigned int drm_context_t;
