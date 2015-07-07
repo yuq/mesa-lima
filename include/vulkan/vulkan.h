@@ -1993,6 +1993,7 @@ typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool query
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
 typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
+typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
@@ -2585,6 +2586,14 @@ void VKAPI vkCmdCopyQueryPoolResults(
     VkDeviceSize                                destOffset,
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags);
+
+void VKAPI vkCmdPushConstants(
+    VkCmdBuffer                                 cmdBuffer,
+    VkPipelineLayout                            layout,
+    VkShaderStageFlags                          stageFlags,
+    uint32_t                                    start,
+    uint32_t                                    length,
+    const void*                                 values);
 
 void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,

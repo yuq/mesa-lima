@@ -3686,6 +3686,17 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CLEAR_PARAMS);
 }
 
+void anv_CmdPushConstants(
+    VkCmdBuffer                                 cmdBuffer,
+    VkPipelineLayout                            layout,
+    VkShaderStageFlags                          stageFlags,
+    uint32_t                                    start,
+    uint32_t                                    length,
+    const void*                                 values)
+{
+   stub();
+}
+
 void anv_CmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBegin*                    pRenderPassBegin)
