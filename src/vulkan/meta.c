@@ -189,7 +189,7 @@ struct vue_header {
 
 struct clear_instance_data {
    struct vue_header vue_header;
-   float color[4];
+   VkClearColorValue color;
 };
 
 static void
@@ -283,12 +283,7 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
                .ViewportIndex = 0,
                .PointWidth = 0.0
             },
-            .color = {
-               pass->layers[i].clear_color.color.floatColor[0],
-               pass->layers[i].clear_color.color.floatColor[1],
-               pass->layers[i].clear_color.color.floatColor[2],
-               pass->layers[i].clear_color.color.floatColor[3],
-            }
+            .color = pass->layers[i].clear_color.color,
          };
       }
    }
@@ -1262,12 +1257,7 @@ void anv_CmdClearColorImage(
                   .ViewportIndex = 0,
                   .PointWidth = 0.0
                },
-               .color = {
-                  color.color.floatColor[0],
-                  color.color.floatColor[1],
-                  color.color.floatColor[2],
-                  color.color.floatColor[3],
-               }
+               .color = color.color,
             };
 
             meta_emit_clear(cmd_buffer, 1, &instance_data);
