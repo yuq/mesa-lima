@@ -56,8 +56,13 @@ extern "C" {
 
 
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
+#define VK_UUID_LENGTH                    16
 #define VK_MAX_EXTENSION_NAME             256
+#define VK_MAX_MEMORY_TYPES               32
+#define VK_MAX_MEMORY_HEAPS               16
 #define VK_LOD_CLAMP_NONE                 MAX_FLOAT
+#define VK_LAST_MIP_LEVEL                 UINT32_MAX
+#define VK_LAST_ARRAY_SLICE               UINT32_MAX
 #define VK_WHOLE_SIZE                     UINT64_MAX
 #define VK_TRUE                           1
 #define VK_FALSE                          0
