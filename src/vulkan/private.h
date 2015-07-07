@@ -733,6 +733,7 @@ struct anv_pipeline {
    struct brw_wm_prog_data                      wm_prog_data;
    struct brw_gs_prog_data                      gs_prog_data;
    struct brw_cs_prog_data                      cs_prog_data;
+   bool                                         writes_point_size;
    struct brw_stage_prog_data *                 prog_data[VK_SHADER_STAGE_NUM];
    uint32_t                                     scratch_start[VK_SHADER_STAGE_NUM];
    uint32_t                                     total_scratch;

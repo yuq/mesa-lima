@@ -1018,6 +1018,8 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    int name = 0;
    struct brw_context *brw = compiler->brw;
 
+   pipeline->writes_point_size = false;
+
    /* When we free the pipeline, we detect stages based on the NULL status
     * of various prog_data pointers.  Make them NULL by default.
     */
@@ -1086,6 +1088,9 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       fail_if(!success, "do_wm_prog failed\n");
       add_compiled_stage(pipeline, VK_SHADER_STAGE_VERTEX,
                          &pipeline->vs_prog_data.base.base);
+
+      if (vp->Base.OutputsWritten & VARYING_SLOT_PSIZ)
+         pipeline->writes_point_size = true;
    } else {
       memset(&pipeline->vs_prog_data, 0, sizeof(pipeline->vs_prog_data));
       pipeline->vs_simd8 = NO_KERNEL;
@@ -1104,6 +1109,9 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
       fail_if(!success, "do_gs_prog failed\n");
       add_compiled_stage(pipeline, VK_SHADER_STAGE_GEOMETRY,
                          &pipeline->gs_prog_data.base.base);
+
+      if (gp->Base.OutputsWritten & VARYING_SLOT_PSIZ)
+         pipeline->writes_point_size = true;
    } else {
       pipeline->gs_vec4 = NO_KERNEL;
    }

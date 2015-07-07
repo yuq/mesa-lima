@@ -1469,7 +1469,6 @@ typedef struct {
     const void*                                 pNext;
     bool32_t                                    depthClipEnable;
     bool32_t                                    rasterizerDiscardEnable;
-    bool32_t                                    programPointSize;
     VkFillMode                                  fillMode;
     VkCullMode                                  cullMode;
     VkFrontFace                                 frontFace;

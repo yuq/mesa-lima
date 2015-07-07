@@ -184,7 +184,8 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
       .TriangleStripListProvokingVertexSelect = 0,
       .LineStripListProvokingVertexSelect = 0,
       .TriangleFanProvokingVertexSelect = 0,
-      .PointWidthSource = info->programPointSize ? Vertex : State,
+      .PointWidthSource = pipeline->writes_point_size ? Vertex : State,
+      .PointWidth = 1.0,
    };
 
    /* FINISHME: bool32_t rasterizerDiscardEnable; */

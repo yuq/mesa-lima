@@ -2034,7 +2034,6 @@ VkResult anv_CreateDynamicRasterState(
    struct GEN8_3DSTATE_SF sf = {
       GEN8_3DSTATE_SF_header,
       .LineWidth = pCreateInfo->lineWidth,
-      .PointWidth = 1.0,
    };
 
    GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
