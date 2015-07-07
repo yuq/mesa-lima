@@ -162,10 +162,7 @@ GLboolean radeonInitContext(radeonContextPtr radeon,
 	_mesa_meta_init(ctx);
 
 	/* DRI fields */
-	radeon->dri.context = driContextPriv;
-	radeon->dri.screen = sPriv;
-	radeon->dri.fd = sPriv->fd;
-	radeon->dri.drmMinor = sPriv->drm_version.minor;
+	radeon->driContext = driContextPriv;
 
 	/* Setup IRQs */
 	fthrottle_mode = driQueryOptioni(&radeon->optionCache, "fthrottle_mode");
@@ -325,7 +322,7 @@ radeon_bits_per_pixel(const struct radeon_renderbuffer *rb)
  */
 void radeon_prepare_render(radeonContextPtr radeon)
 {
-    __DRIcontext *driContext = radeon->dri.context;
+    __DRIcontext *driContext = radeon->driContext;
     __DRIdrawable *drawable;
     __DRIscreen *screen;
 
