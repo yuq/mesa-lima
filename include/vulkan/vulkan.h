@@ -1277,7 +1277,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    initialCount;
     VkSemaphoreCreateFlags                      flags;
 } VkSemaphoreCreateInfo;
 
