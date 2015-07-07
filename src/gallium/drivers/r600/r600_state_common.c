@@ -407,6 +407,11 @@ static void r600_bind_sampler_states(struct pipe_context *pipe,
 
 	assert(start == 0); /* XXX fix below */
 
+	if (!states) {
+		disable_mask = ~0u;
+		count = 0;
+	}
+
 	for (i = 0; i < count; i++) {
 		struct r600_pipe_sampler_state *rstate = rstates[i];
 
@@ -596,9 +601,9 @@ static void r600_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 
 	assert(start == 0); /* XXX fix below */
 
-	if (shader == PIPE_SHADER_COMPUTE) {
-		evergreen_set_cs_sampler_view(pipe, start, count, views);
-		return;
+	if (!views) {
+		disable_mask = ~0u;
+		count = 0;
 	}
 
 	remaining_mask = dst->views.enabled_mask & disable_mask;

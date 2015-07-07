@@ -487,6 +487,12 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 	/* Emit constant buffer state */
 	r600_emit_atom(ctx, &ctx->constbuf_state[PIPE_SHADER_COMPUTE].atom);
 
+	/* Emit sampler state */
+	r600_emit_atom(ctx, &ctx->samplers[PIPE_SHADER_COMPUTE].states.atom);
+
+	/* Emit sampler view (texture resource) state */
+	r600_emit_atom(ctx, &ctx->samplers[PIPE_SHADER_COMPUTE].views.atom);
+
 	/* Emit compute shader state */
 	r600_emit_atom(ctx, &ctx->cs_shader_state.atom);
 
@@ -654,25 +660,6 @@ static void evergreen_set_compute_resources(struct pipe_context * ctx_,
 		}
 	}
 }
-
-void evergreen_set_cs_sampler_view(struct pipe_context *ctx_,
-		unsigned start_slot, unsigned count,
-		struct pipe_sampler_view **views)
-{
-	struct r600_pipe_sampler_view **resource =
-		(struct r600_pipe_sampler_view **)views;
-
-	for (unsigned i = 0; i < count; i++)	{
-		if (resource[i]) {
-			assert(i+1 < 12);
-			/* XXX: Implement */
-			assert(!"Compute samplers not implemented.");
-			///FETCH0 = VTX0 (param buffer),
-			//FETCH1 = VTX1 (global buffer pool), FETCH2... = TEX
-		}
-	}
-}
-
 
 static void evergreen_set_global_binding(
 	struct pipe_context *ctx_, unsigned first, unsigned n,

@@ -1984,7 +1984,7 @@ static void evergreen_emit_cs_constant_buffers(struct r600_context *rctx, struct
 
 static void evergreen_emit_sampler_views(struct r600_context *rctx,
 					 struct r600_samplerview_state *state,
-					 unsigned resource_id_base)
+					 unsigned resource_id_base, unsigned pkt_flags)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	uint32_t dirty_mask = state->dirty_mask;
@@ -1997,7 +1997,7 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 		rview = state->views[resource_index];
 		assert(rview);
 
-		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 8, 0));
+		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 8, 0) | pkt_flags);
 		radeon_emit(cs, (resource_id_base + resource_index) * 8);
 		radeon_emit_array(cs, rview->tex_resource_words, 8);
 
@@ -2006,11 +2006,11 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 					      rview->tex_resource->b.b.nr_samples > 1 ?
 						      RADEON_PRIO_SHADER_TEXTURE_MSAA :
 						      RADEON_PRIO_SHADER_TEXTURE_RO);
-		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
 		radeon_emit(cs, reloc);
 
 		if (!rview->skip_mip_address_reloc) {
-			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+			radeon_emit(cs, PKT3(PKT3_NOP, 0, 0) | pkt_flags);
 			radeon_emit(cs, reloc);
 		}
 	}
@@ -2019,23 +2019,33 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 
 static void evergreen_emit_vs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views, 176 + R600_MAX_CONST_BUFFERS);
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views,
+	                             176 + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_gs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views, 336 + R600_MAX_CONST_BUFFERS);
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views,
+	                             336 + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_ps_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views, R600_MAX_CONST_BUFFERS);
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views,
+	                             R600_MAX_CONST_BUFFERS, 0);
+}
+
+static void evergreen_emit_cs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].views,
+	                             816 + 2, RADEON_CP_PACKET3_COMPUTE_MODE);
 }
 
 static void evergreen_emit_sampler_states(struct r600_context *rctx,
 				struct r600_textures_info *texinfo,
 				unsigned resource_id_base,
-				unsigned border_index_reg)
+				unsigned border_index_reg,
+				unsigned pkt_flags)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	uint32_t dirty_mask = texinfo->states.dirty_mask;
@@ -2047,7 +2057,7 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 		rstate = texinfo->states.states[i];
 		assert(rstate);
 
-		radeon_emit(cs, PKT3(PKT3_SET_SAMPLER, 3, 0));
+		radeon_emit(cs, PKT3(PKT3_SET_SAMPLER, 3, 0) | pkt_flags);
 		radeon_emit(cs, (resource_id_base + i) * 3);
 		radeon_emit_array(cs, rstate->tex_sampler_words, 3);
 
@@ -2062,17 +2072,27 @@ static void evergreen_emit_sampler_states(struct r600_context *rctx,
 
 static void evergreen_emit_vs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_VERTEX], 18, R_00A414_TD_VS_SAMPLER0_BORDER_INDEX);
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_VERTEX], 18,
+	                              R_00A414_TD_VS_SAMPLER0_BORDER_INDEX, 0);
 }
 
 static void evergreen_emit_gs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY], 36, R_00A428_TD_GS_SAMPLER0_BORDER_INDEX);
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY], 36,
+	                              R_00A428_TD_GS_SAMPLER0_BORDER_INDEX, 0);
 }
 
 static void evergreen_emit_ps_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT], 0, R_00A400_TD_PS_SAMPLER0_BORDER_INDEX);
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT], 0,
+	                              R_00A400_TD_PS_SAMPLER0_BORDER_INDEX, 0);
+}
+
+static void evergreen_emit_cs_sampler_states(struct r600_context *rctx, struct r600_atom *atom)
+{
+	evergreen_emit_sampler_states(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE], 90,
+	                              R_00A464_TD_CS_SAMPLER0_BORDER_INDEX,
+	                              RADEON_CP_PACKET3_COMPUTE_MODE);
 }
 
 static void evergreen_emit_sample_mask(struct r600_context *rctx, struct r600_atom *a)
@@ -3435,12 +3455,14 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].states.atom, id++, evergreen_emit_vs_sampler_states, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].states.atom, id++, evergreen_emit_gs_sampler_states, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].states.atom, id++, evergreen_emit_ps_sampler_states, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].states.atom, id++, evergreen_emit_cs_sampler_states, 0);
 	/* resources */
 	r600_init_atom(rctx, &rctx->vertex_buffer_state.atom, id++, evergreen_fs_emit_vertex_buffers, 0);
 	r600_init_atom(rctx, &rctx->cs_vertex_buffer_state.atom, id++, evergreen_cs_emit_vertex_buffers, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views.atom, id++, evergreen_emit_vs_sampler_views, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views.atom, id++, evergreen_emit_gs_sampler_views, 0);
 	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views.atom, id++, evergreen_emit_ps_sampler_views, 0);
+	r600_init_atom(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].views.atom, id++, evergreen_emit_cs_sampler_views, 0);
 
 	r600_init_atom(rctx, &rctx->vgt_state.atom, id++, r600_emit_vgt_state, 10);
 
