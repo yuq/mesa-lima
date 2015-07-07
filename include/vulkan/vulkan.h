@@ -1995,6 +1995,8 @@ typedef void (VKAPI *PFN_vkCmdUpdateBuffer)(VkCmdBuffer cmdBuffer, VkBuffer dest
 typedef void (VKAPI *PFN_vkCmdFillBuffer)(VkCmdBuffer cmdBuffer, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize fillSize, uint32_t data);
 typedef void (VKAPI *PFN_vkCmdClearColorImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, VkClearColor color, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
 typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkImage image, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rangeCount, const VkImageSubresourceRange* pRanges);
+typedef void (VKAPI *PFN_vkCmdClearColorAttachment)(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
+typedef void (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCmdBuffer cmdBuffer, VkImageAspectFlags imageAspectMask, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rectCount, const VkRect3D* pRects);
 typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
 typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
@@ -2532,6 +2534,23 @@ void VKAPI vkCmdClearDepthStencilImage(
     uint32_t                                    stencil,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges);
+
+void VKAPI vkCmdClearColorAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    colorAttachment,
+    VkImageLayout                               imageLayout,
+    const VkClearColorValue*                    pColor,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects);
+
+void VKAPI vkCmdClearDepthStencilAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    VkImageAspectFlags                          imageAspectMask,
+    VkImageLayout                               imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects);
 
 void VKAPI vkCmdResolveImage(
     VkCmdBuffer                                 cmdBuffer,

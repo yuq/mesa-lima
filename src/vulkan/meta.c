@@ -1293,6 +1293,29 @@ void anv_CmdClearDepthStencilImage(
    stub();
 }
 
+void anv_CmdClearColorAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    colorAttachment,
+    VkImageLayout                               imageLayout,
+    const VkClearColorValue*                    pColor,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+   stub();
+}
+
+void anv_CmdClearDepthStencilAttachment(
+    VkCmdBuffer                                 cmdBuffer,
+    VkImageAspectFlags                          imageAspectMask,
+    VkImageLayout                               imageLayout,
+    float                                       depth,
+    uint32_t                                    stencil,
+    uint32_t                                    rectCount,
+    const VkRect3D*                             pRects)
+{
+   stub();
+}
+
 void anv_CmdResolveImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     srcImage,
