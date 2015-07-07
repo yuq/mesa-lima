@@ -1062,27 +1062,6 @@ typedef enum {
 typedef VkFlags VkMemoryInputFlags;
 
 typedef enum {
-    VK_PROVOKING_VERTEX_FIRST                               = 0x00000000,
-    VK_PROVOKING_VERTEX_LAST                                = 0x00000001,
-
-    VK_ENUM_RANGE(PROVOKING_VERTEX, FIRST, LAST)
-} VkProvokingVertex;
-
-typedef enum {
-    VK_COORDINATE_ORIGIN_UPPER_LEFT                         = 0x00000000,
-    VK_COORDINATE_ORIGIN_LOWER_LEFT                         = 0x00000001,
-
-    VK_ENUM_RANGE(COORDINATE_ORIGIN, UPPER_LEFT, LOWER_LEFT)
-} VkCoordinateOrigin;
-
-typedef enum {
-    VK_DEPTH_MODE_ZERO_TO_ONE                               = 0x00000000,
-    VK_DEPTH_MODE_NEGATIVE_ONE_TO_ONE                       = 0x00000001,
-
-    VK_ENUM_RANGE(DEPTH_MODE, ZERO_TO_ONE, NEGATIVE_ONE_TO_ONE)
-} VkDepthMode;
-
-typedef enum {
     // Info type for vkGetPhysicalDeviceInfo()
     VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES                 = 0x00000000,
     VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE                = 0x00000001,
@@ -1450,7 +1429,6 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkPrimitiveTopology                         topology;
-    bool32_t                                    disableVertexReuse;
     bool32_t                                    primitiveRestartEnable;
 } VkPipelineIaStateCreateInfo;
 
@@ -1464,8 +1442,6 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    viewportCount;
-    VkCoordinateOrigin                          clipOrigin;
-    VkDepthMode                                 depthMode;
 } VkPipelineVpStateCreateInfo;
 
 typedef struct {
@@ -1474,8 +1450,6 @@ typedef struct {
     bool32_t                                    depthClipEnable;
     bool32_t                                    rasterizerDiscardEnable;
     bool32_t                                    programPointSize;
-    VkCoordinateOrigin                          pointOrigin;
-    VkProvokingVertex                           provokingVertex;
     VkFillMode                                  fillMode;
     VkCullMode                                  cullMode;
     VkFrontFace                                 frontFace;

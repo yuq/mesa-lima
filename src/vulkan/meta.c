@@ -36,7 +36,6 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    VkPipelineIaStateCreateInfo ia_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-      .disableVertexReuse = false,
       .primitiveRestartEnable = false,
    };
 
@@ -311,7 +310,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    VkPipelineIaStateCreateInfo ia_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-      .disableVertexReuse = false,
       .primitiveRestartEnable = false,
    };
 

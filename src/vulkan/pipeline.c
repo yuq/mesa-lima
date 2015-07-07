@@ -177,21 +177,13 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
       [VK_FRONT_FACE_CCW]                       = CounterClockwise,
       [VK_FRONT_FACE_CW]                        = Clockwise
    };
-   
-   static const uint32_t vk_to_gen_coordinate_origin[] = {
-      [VK_COORDINATE_ORIGIN_UPPER_LEFT]         = UPPERLEFT,
-      [VK_COORDINATE_ORIGIN_LOWER_LEFT]         = LOWERLEFT
-   };
 
    struct GEN8_3DSTATE_SF sf = {
       GEN8_3DSTATE_SF_header,
       .ViewportTransformEnable = !(extra && extra->disable_viewport),
-      .TriangleStripListProvokingVertexSelect =
-         info->provokingVertex == VK_PROVOKING_VERTEX_FIRST ? 0 : 2,
-      .LineStripListProvokingVertexSelect =
-         info->provokingVertex == VK_PROVOKING_VERTEX_FIRST ? 0 : 1,
-      .TriangleFanProvokingVertexSelect =
-         info->provokingVertex == VK_PROVOKING_VERTEX_FIRST ? 0 : 2,
+      .TriangleStripListProvokingVertexSelect = 0,
+      .LineStripListProvokingVertexSelect = 0,
+      .TriangleFanProvokingVertexSelect = 0,
       .PointWidthSource = info->programPointSize ? Vertex : State,
    };
 
@@ -214,8 +206,7 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
                   .ForceVertexURBEntryReadLength = false,
                   .ForceVertexURBEntryReadOffset = false,
-                  .PointSpriteTextureCoordinateOrigin =
-                     vk_to_gen_coordinate_origin[info->pointOrigin],
+                  .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
                   .NumberofSFOutputAttributes =
                      pipeline->wm_prog_data.num_varying_inputs);
 
@@ -645,7 +636,7 @@ anv_pipeline_create(
                      .MaximumNumberofThreads = device->info.max_vs_threads - 1,
                      .StatisticsEnable = false,
                      .SIMD8DispatchEnable = true,
-                     .VertexCacheDisable = ia_info->disableVertexReuse,
+                     .VertexCacheDisable = false,
                      .FunctionEnable = true,
 
                      .VertexURBEntryOutputReadOffset = offset,
