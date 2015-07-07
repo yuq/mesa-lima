@@ -559,14 +559,14 @@ intel_lower_compressed_format(struct brw_context *brw, mesa_format format)
 }
 
 /* This function computes Yf/Ys tiled bo size, alignment and pitch. */
-static uint64_t
+static unsigned long
 intel_get_yf_ys_bo_size(struct intel_mipmap_tree *mt, unsigned *alignment,
-                        uint64_t *pitch)
+                        unsigned long *pitch)
 {
    const uint32_t bpp = mt->cpp * 8;
    const uint32_t aspect_ratio = (bpp == 16 || bpp == 64) ? 2 : 1;
    uint32_t tile_width, tile_height;
-   uint64_t stride, size, aligned_y;
+   unsigned long stride, size, aligned_y;
 
    assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
