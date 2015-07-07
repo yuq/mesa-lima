@@ -1281,7 +1281,7 @@ void anv_CmdClearColorImage(
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
 }
 
-void anv_CmdClearDepthStencil(
+void anv_CmdClearDepthStencilImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
