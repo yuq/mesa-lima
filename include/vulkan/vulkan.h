@@ -234,7 +234,6 @@ typedef enum {
     VK_SYSTEM_ALLOC_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkSystemAllocType;
 
-// Vulkan format definitions
 typedef enum {
     VK_FORMAT_UNDEFINED = 0,
     VK_FORMAT_R4G4_UNORM = 1,
@@ -881,222 +880,193 @@ typedef enum {
     VK_TIMESTAMP_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkTimestampType;
 
-// Format capability flags
-typedef VkFlags VkFormatFeatureFlags;
 typedef enum {
-    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT                     = VK_BIT(0),    // Format can be used for sampled images (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
-    VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT                     = VK_BIT(1),    // Format can be used for storage images (STORAGE_IMAGE descriptor type)
-    VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT              = VK_BIT(2),    // Format supports atomic operations in case it's used for storage images
-    VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT              = VK_BIT(3),    // Format can be used for uniform texel buffers (TBOs)
-    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT              = VK_BIT(4),    // Format can be used for storage texel buffers (IBOs)
-    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT       = VK_BIT(5),    // Format supports atomic operations in case it's used for storage texel buffers
-    VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT                     = VK_BIT(6),    // Format can be used for vertex buffers (VBOs)
-    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT                  = VK_BIT(7),    // Format can be used for color attachment images
-    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT            = VK_BIT(8),    // Format supports blending in case it's used for color attachment images
-    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT          = VK_BIT(9),    // Format can be used for depth/stencil attachment images
-    VK_FORMAT_FEATURE_CONVERSION_BIT                        = VK_BIT(10),   // Format can be used as the source or destination of format converting blits
+    VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT = 0x00000001,
+    VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT = 0x00000002,
+    VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT = 0x00000004,
+    VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT = 0x00000008,
+    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT = 0x00000010,
+    VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT = 0x00000020,
+    VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT = 0x00000040,
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT = 0x00000080,
+    VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT = 0x00000100,
+    VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000200,
+    VK_FORMAT_FEATURE_CONVERSION_BIT = 0x00000400,
 } VkFormatFeatureFlagBits;
+typedef VkFlags VkFormatFeatureFlags;
 
-// Queue capabilities
-typedef VkFlags VkQueueFlags;
 typedef enum {
-    VK_QUEUE_GRAPHICS_BIT                                   = VK_BIT(0),    // Queue supports graphics operations
-    VK_QUEUE_COMPUTE_BIT                                    = VK_BIT(1),    // Queue supports compute operations
-    VK_QUEUE_DMA_BIT                                        = VK_BIT(2),    // Queue supports DMA operations
-    VK_QUEUE_MEMMGR_BIT                                     = VK_BIT(3),    // Queue supports memory management operations
-    VK_QUEUE_EXTENDED_BIT                                   = VK_BIT(30),   // Extended queue
+    VK_QUEUE_GRAPHICS_BIT = 0x00000001,
+    VK_QUEUE_COMPUTE_BIT = 0x00000002,
+    VK_QUEUE_DMA_BIT = 0x00000004,
+    VK_QUEUE_SPARSE_MEMMGR_BIT = 0x00000008,
+    VK_QUEUE_EXTENDED_BIT = 0x40000000,
 } VkQueueFlagBits;
+typedef VkFlags VkQueueFlags;
 
-// Memory properties passed into vkAllocMemory().
-typedef VkFlags VkMemoryPropertyFlags;
 typedef enum {
-    VK_MEMORY_PROPERTY_DEVICE_ONLY                          = 0,            // If otherwise stated, then allocate memory on device
-    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT                     = VK_BIT(0),    // Memory should be mappable by host
-    VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT             = VK_BIT(1),    // Memory should be coherent between host and device accesses
-    VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT                    = VK_BIT(2),    // Memory should not be cached by the host
-    VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT              = VK_BIT(3),    // Memory should support host write combining
-    VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL                    = VK_BIT(4),    // If set, prefer host access
-    VK_MEMORY_PROPERTY_SHAREABLE_BIT                        = VK_BIT(5),
+    VK_MEMORY_PROPERTY_DEVICE_ONLY = 0,
+    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT = 0x00000001,
+    VK_MEMORY_PROPERTY_HOST_DEVICE_COHERENT_BIT = 0x00000002,
+    VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT = 0x00000004,
+    VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT = 0x00000008,
+    VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL = 0x00000010,
+    VK_MEMORY_PROPERTY_SHAREABLE_BIT = 0x00000011,
 } VkMemoryPropertyFlagBits;
+typedef VkFlags VkMemoryPropertyFlags;
 
-// Device creation flags
-typedef VkFlags VkDeviceCreateFlags;
 typedef enum {
-    VK_DEVICE_CREATE_VALIDATION_BIT                         = VK_BIT(0),
-    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT              = VK_BIT(1),
+    VK_DEVICE_CREATE_VALIDATION_BIT = 0x00000001,
+    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT = 0x00000002,
 } VkDeviceCreateFlagBits;
-
-// Memory mapping flags
+typedef VkFlags VkDeviceCreateFlags;
 typedef VkFlags VkMemoryMapFlags;
 
-// Fence creation flags
-typedef VkFlags VkFenceCreateFlags;
 typedef enum {
-    VK_FENCE_CREATE_SIGNALED_BIT                            = VK_BIT(0),
+    VK_FENCE_CREATE_SIGNALED_BIT = 0x00000001,
 } VkFenceCreateFlagBits;
+typedef VkFlags VkFenceCreateFlags;
 
-// Semaphore creation flags
-typedef VkFlags VkSemaphoreCreateFlags;
 typedef enum {
-    VK_SEMAPHORE_CREATE_SHAREABLE_BIT                       = VK_BIT(0),
+    VK_SEMAPHORE_CREATE_SHAREABLE_BIT = 0x00000001,
 } VkSemaphoreCreateFlagBits;
-
-// Event creation flags
+typedef VkFlags VkSemaphoreCreateFlags;
 typedef VkFlags VkEventCreateFlags;
 
-// Pipeline statistics flags
-typedef VkFlags VkQueryPipelineStatisticFlags;
 typedef enum VkQueryPipelineStatisticFlagBits_ {
-    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT             = VK_BIT(0),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT           = VK_BIT(1),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT          = VK_BIT(2),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT          = VK_BIT(3),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT           = VK_BIT(4),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT           = VK_BIT(5),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT            = VK_BIT(6),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT          = VK_BIT(7),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT             = VK_BIT(8),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT         = VK_BIT(9),  // Optional
-    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT          = VK_BIT(10), // Optional
+    VK_QUERY_PIPELINE_STATISTIC_IA_VERTICES_BIT = 0x00000001,
+    VK_QUERY_PIPELINE_STATISTIC_IA_PRIMITIVES_BIT = 0x00000002,
+    VK_QUERY_PIPELINE_STATISTIC_VS_INVOCATIONS_BIT = 0x00000004,
+    VK_QUERY_PIPELINE_STATISTIC_GS_INVOCATIONS_BIT = 0x00000008,
+    VK_QUERY_PIPELINE_STATISTIC_GS_PRIMITIVES_BIT = 0x00000010,
+    VK_QUERY_PIPELINE_STATISTIC_C_INVOCATIONS_BIT = 0x00000020,
+    VK_QUERY_PIPELINE_STATISTIC_C_PRIMITIVES_BIT = 0x00000040,
+    VK_QUERY_PIPELINE_STATISTIC_FS_INVOCATIONS_BIT = 0x00000080,
+    VK_QUERY_PIPELINE_STATISTIC_TCS_PATCHES_BIT = 0x00000100,
+    VK_QUERY_PIPELINE_STATISTIC_TES_INVOCATIONS_BIT = 0x00000200,
+    VK_QUERY_PIPELINE_STATISTIC_CS_INVOCATIONS_BIT = 0x00000400,
 } VkQueryPipelineStatisticFlagBits;
+typedef VkFlags VkQueryPipelineStatisticFlags;
 
-// Query result flags
-typedef VkFlags VkQueryResultFlags;
 typedef enum {
-    VK_QUERY_RESULT_32_BIT                                  = 0,           // Results of the queries are written to the destination buffer as 32-bit values
-    VK_QUERY_RESULT_64_BIT                                  = VK_BIT(0),   // Results of the queries are written to the destination buffer as 64-bit values
-    VK_QUERY_RESULT_NO_WAIT_BIT                             = 0,           // Results of the queries aren't waited on before proceeding with the result copy
-    VK_QUERY_RESULT_WAIT_BIT                                = VK_BIT(1),   // Results of the queries are waited on before proceeding with the result copy
-    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT                   = VK_BIT(2),   // Besides the results of the query, the availability of the results is also written
-    VK_QUERY_RESULT_PARTIAL_BIT                             = VK_BIT(3),   // Copy the partial results of the query even if the final results aren't available
+    VK_QUERY_RESULT_32_BIT = 0,
+    VK_QUERY_RESULT_64_BIT = 0x00000001,
+    VK_QUERY_RESULT_NO_WAIT_BIT = 0,
+    VK_QUERY_RESULT_WAIT_BIT = 0x00000002,
+    VK_QUERY_RESULT_WITH_AVAILABILITY_BIT = 0x00000004,
+    VK_QUERY_RESULT_PARTIAL_BIT = 0x00000008,
 } VkQueryResultFlagBits;
+typedef VkFlags VkQueryResultFlags;
 
-// Buffer usage flags
-typedef VkFlags VkBufferUsageFlags;
 typedef enum {
-    VK_BUFFER_USAGE_GENERAL                                 = 0,            // No special usage
-    VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT                     = VK_BIT(0),    // Can be used as a source of transfer operations
-    VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT                = VK_BIT(1),    // Can be used as a destination of transfer operations
-    VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT                = VK_BIT(2),    // Can be used as TBO
-    VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT                = VK_BIT(3),    // Can be used as IBO
-    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT                      = VK_BIT(4),    // Can be used as UBO
-    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT                      = VK_BIT(5),    // Can be used as SSBO
-    VK_BUFFER_USAGE_INDEX_BUFFER_BIT                        = VK_BIT(6),    // Can be used as source of fixed function index fetch (index buffer)
-    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT                       = VK_BIT(7),    // Can be used as source of fixed function vertex fetch (VBO)
-    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT                     = VK_BIT(8),    // Can be the source of indirect parameters (e.g. indirect buffer, parameter buffer)
+    VK_BUFFER_USAGE_GENERAL = 0,
+    VK_BUFFER_USAGE_TRANSFER_SOURCE_BIT = 0x00000001,
+    VK_BUFFER_USAGE_TRANSFER_DESTINATION_BIT = 0x00000002,
+    VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT = 0x00000004,
+    VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT = 0x00000008,
+    VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT = 0x00000010,
+    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT = 0x00000020,
+    VK_BUFFER_USAGE_INDEX_BUFFER_BIT = 0x00000040,
+    VK_BUFFER_USAGE_VERTEX_BUFFER_BIT = 0x00000080,
+    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT = 0x00000100,
 } VkBufferUsageFlagBits;
+typedef VkFlags VkBufferUsageFlags;
 
-// Buffer creation flags
-typedef VkFlags VkBufferCreateFlags;
 typedef enum {
-    VK_BUFFER_CREATE_SHAREABLE_BIT                          = VK_BIT(0),    // Buffer should be shareable
-    VK_BUFFER_CREATE_SPARSE_BIT                             = VK_BIT(1),    // Buffer should support sparse backing
+    VK_BUFFER_CREATE_SHAREABLE_BIT = 0x00000001,
+    VK_BUFFER_CREATE_SPARSE_BIT = 0x00000002,
 } VkBufferCreateFlagBits;
+typedef VkFlags VkBufferCreateFlags;
 
-// Image usage flags
-typedef VkFlags VkImageUsageFlags;
 typedef enum {
-    VK_IMAGE_USAGE_GENERAL                                  = 0,            // No special usage
-    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT                      = VK_BIT(0),    // Can be used as a source of transfer operations
-    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT                 = VK_BIT(1),    // Can be used as a destination of transfer operations
-    VK_IMAGE_USAGE_SAMPLED_BIT                              = VK_BIT(2),    // Can be sampled from (SAMPLED_IMAGE and COMBINED_IMAGE_SAMPLER descriptor types)
-    VK_IMAGE_USAGE_STORAGE_BIT                              = VK_BIT(3),    // Can be used as storage image (STORAGE_IMAGE descriptor type)
-    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT                     = VK_BIT(4),    // Can be used as framebuffer color attachment
-    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT                        = VK_BIT(5),    // Can be used as framebuffer depth/stencil attachment
-    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT                 = VK_BIT(6),    // Image data not needed outside of rendering
+    VK_IMAGE_USAGE_GENERAL = 0,
+    VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT = 0x00000001,
+    VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT = 0x00000002,
+    VK_IMAGE_USAGE_SAMPLED_BIT = 0x00000004,
+    VK_IMAGE_USAGE_STORAGE_BIT = 0x00000008,
+    VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT = 0x00000010,
+    VK_IMAGE_USAGE_DEPTH_STENCIL_BIT = 0x00000020,
+    VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT = 0x00000040,
 } VkImageUsageFlagBits;
+typedef VkFlags VkImageUsageFlags;
 
-// Image creation flags
-typedef VkFlags VkImageCreateFlags;
 typedef enum {
-    VK_IMAGE_CREATE_INVARIANT_DATA_BIT                      = VK_BIT(0),
-    VK_IMAGE_CREATE_CLONEABLE_BIT                           = VK_BIT(1),
-    VK_IMAGE_CREATE_SHAREABLE_BIT                           = VK_BIT(2),    // Image should be shareable
-    VK_IMAGE_CREATE_SPARSE_BIT                              = VK_BIT(3),    // Image should support sparse backing
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT                      = VK_BIT(4),    // Allows image views to have different format than the base image
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT                     = VK_BIT(5),    // Allows creating image views with cube type from the created image
+    VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000001,
+    VK_IMAGE_CREATE_CLONEABLE_BIT = 0x00000002,
+    VK_IMAGE_CREATE_SHAREABLE_BIT = 0x00000004,
+    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000008,
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
 } VkImageCreateFlagBits;
+typedef VkFlags VkImageCreateFlags;
 
-// Depth-stencil view creation flags
-typedef VkFlags VkDepthStencilViewCreateFlags;
 typedef enum {
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT        = VK_BIT(0),
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT      = VK_BIT(1),
+    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
+    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
 } VkDepthStencilViewCreateFlagBits;
-
-// Shader creation flags
+typedef VkFlags VkDepthStencilViewCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
-// Channel flags
-typedef VkFlags VkChannelFlags;
 typedef enum {
-    VK_CHANNEL_R_BIT                                        = VK_BIT(0),
-    VK_CHANNEL_G_BIT                                        = VK_BIT(1),
-    VK_CHANNEL_B_BIT                                        = VK_BIT(2),
-    VK_CHANNEL_A_BIT                                        = VK_BIT(3),
+    VK_CHANNEL_R_BIT = 0x00000001,
+    VK_CHANNEL_G_BIT = 0x00000002,
+    VK_CHANNEL_B_BIT = 0x00000004,
+    VK_CHANNEL_A_BIT = 0x00000008,
 } VkChannelFlagBits;
+typedef VkFlags VkChannelFlags;
 
-// Pipeline creation flags
-typedef VkFlags VkPipelineCreateFlags;
 typedef enum {
-    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT             = VK_BIT(0),
-    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT                = VK_BIT(1),
+    VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
+    VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
 } VkPipelineCreateFlagBits;
+typedef VkFlags VkPipelineCreateFlags;
 
-// Shader stage flags
-typedef VkFlags VkShaderStageFlags;
 typedef enum {
-    VK_SHADER_STAGE_VERTEX_BIT                              = VK_BIT(0),
-    VK_SHADER_STAGE_TESS_CONTROL_BIT                        = VK_BIT(1),
-    VK_SHADER_STAGE_TESS_EVALUATION_BIT                     = VK_BIT(2),
-    VK_SHADER_STAGE_GEOMETRY_BIT                            = VK_BIT(3),
-    VK_SHADER_STAGE_FRAGMENT_BIT                            = VK_BIT(4),
-    VK_SHADER_STAGE_COMPUTE_BIT                             = VK_BIT(5),
-
-    VK_SHADER_STAGE_ALL                                     = 0x7FFFFFFF,
+    VK_SHADER_STAGE_VERTEX_BIT = 0x00000001,
+    VK_SHADER_STAGE_TESS_CONTROL_BIT = 0x00000002,
+    VK_SHADER_STAGE_TESS_EVALUATION_BIT = 0x00000004,
+    VK_SHADER_STAGE_GEOMETRY_BIT = 0x00000008,
+    VK_SHADER_STAGE_FRAGMENT_BIT = 0x00000010,
+    VK_SHADER_STAGE_COMPUTE_BIT = 0x00000020,
+    VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
-
-// Command buffer creation flags
+typedef VkFlags VkShaderStageFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
 
-// Command buffer optimization flags
-typedef VkFlags VkCmdBufferOptimizeFlags;
 typedef enum {
-    VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT                  = VK_BIT(0),
-    VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT              = VK_BIT(1),
-    VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT              = VK_BIT(2),
-    VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT        = VK_BIT(3),
+    VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
+    VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT = 0x00000002,
+    VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
+    VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
 } VkCmdBufferOptimizeFlagBits;
+typedef VkFlags VkCmdBufferOptimizeFlags;
 
-// Query control flags
-typedef VkFlags VkQueryControlFlags;
 typedef enum {
-    VK_QUERY_CONTROL_CONSERVATIVE_BIT                       = VK_BIT(0),    // Allow conservative results to be collected by the query
+    VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
 } VkQueryControlFlagBits;
+typedef VkFlags VkQueryControlFlags;
 
-// Memory output flags passed to resource transition commands
-typedef VkFlags VkMemoryOutputFlags;
 typedef enum {
-    VK_MEMORY_OUTPUT_CPU_WRITE_BIT                          = VK_BIT(0),    // Controls output coherency of CPU writes
-    VK_MEMORY_OUTPUT_SHADER_WRITE_BIT                       = VK_BIT(1),    // Controls output coherency of generic shader writes
-    VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT                   = VK_BIT(2),    // Controls output coherency of color attachment writes
-    VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT           = VK_BIT(3),    // Controls output coherency of depth/stencil attachment writes
-    VK_MEMORY_OUTPUT_TRANSFER_BIT                           = VK_BIT(4),    // Controls output coherency of transfer operations
+    VK_MEMORY_OUTPUT_CPU_WRITE_BIT = 0x00000001,
+    VK_MEMORY_OUTPUT_SHADER_WRITE_BIT = 0x00000002,
+    VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT = 0x00000004,
+    VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000008,
+    VK_MEMORY_OUTPUT_TRANSFER_BIT = 0x00000010,
 } VkMemoryOutputFlagBits;
+typedef VkFlags VkMemoryOutputFlags;
 
-// Memory input flags passed to resource transition commands
-typedef VkFlags VkMemoryInputFlags;
 typedef enum {
-    VK_MEMORY_INPUT_CPU_READ_BIT                            = VK_BIT(0),    // Controls input coherency of CPU reads
-    VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT                    = VK_BIT(1),    // Controls input coherency of indirect command reads
-    VK_MEMORY_INPUT_INDEX_FETCH_BIT                         = VK_BIT(2),    // Controls input coherency of index fetches
-    VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT              = VK_BIT(3),    // Controls input coherency of vertex attribute fetches
-    VK_MEMORY_INPUT_UNIFORM_READ_BIT                        = VK_BIT(4),    // Controls input coherency of uniform buffer reads
-    VK_MEMORY_INPUT_SHADER_READ_BIT                         = VK_BIT(5),    // Controls input coherency of generic shader reads
-    VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT                    = VK_BIT(6),    // Controls input coherency of color attachment reads
-    VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT            = VK_BIT(7),    // Controls input coherency of depth/stencil attachment reads
-    VK_MEMORY_INPUT_TRANSFER_BIT                            = VK_BIT(8),    // Controls input coherency of transfer operations
+    VK_MEMORY_INPUT_CPU_READ_BIT = 0x00000001,
+    VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT = 0x00000002,
+    VK_MEMORY_INPUT_INDEX_FETCH_BIT = 0x00000004,
+    VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT = 0x00000008,
+    VK_MEMORY_INPUT_UNIFORM_READ_BIT = 0x00000010,
+    VK_MEMORY_INPUT_SHADER_READ_BIT = 0x00000020,
+    VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT = 0x00000040,
+    VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000080,
+    VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000100,
 } VkMemoryInputFlagBits;
+typedef VkFlags VkMemoryInputFlags;
 
 typedef enum {
     VK_PROVOKING_VERTEX_FIRST                               = 0x00000000,
