@@ -85,7 +85,7 @@
 #endif
 #include "loader.h"
 
-#ifndef __NOT_HAVE_DRM_H
+#ifdef HAVE_LIBDRM
 #include <xf86drm.h>
 #endif
 
@@ -505,7 +505,7 @@ sysfs_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 }
 #endif
 
-#if !defined(__NOT_HAVE_DRM_H)
+#if defined(HAVE_LIBDRM)
 /* for i915 */
 #include <i915_drm.h>
 /* for radeon */
@@ -588,7 +588,7 @@ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
    if (sysfs_get_pci_id_for_fd(fd, vendor_id, chip_id))
       return 1;
 #endif
-#if !defined(__NOT_HAVE_DRM_H)
+#if HAVE_LIBDRM
    if (drm_get_pci_id_for_fd(fd, vendor_id, chip_id))
       return 1;
 #endif
@@ -699,7 +699,7 @@ loader_get_driver_for_fd(int fd, unsigned driver_types)
 
    if (!loader_get_pci_id_for_fd(fd, &vendor_id, &chip_id)) {
 
-#ifndef __NOT_HAVE_DRM_H
+#if HAVE_LIBDRM
       /* fallback to drmGetVersion(): */
       drmVersionPtr version = drmGetVersion(fd);
 
