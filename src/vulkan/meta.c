@@ -415,7 +415,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .pBinding = (VkDescriptorSetLayoutBinding[]) {
          {
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .count = 1,
+            .arraySize = 1,
             .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
             .pImmutableSamplers = NULL
          },

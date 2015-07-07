@@ -1645,7 +1645,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            sampler_count[s] += pCreateInfo->pBinding[i].count;
+            sampler_count[s] += pCreateInfo->pBinding[i].arraySize;
          break;
       default:
          break;
@@ -1662,7 +1662,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            surface_count[s] += pCreateInfo->pBinding[i].count;
+            surface_count[s] += pCreateInfo->pBinding[i].arraySize;
          break;
       default:
          break;
@@ -1671,14 +1671,14 @@ VkResult anv_CreateDescriptorSetLayout(
       switch (pCreateInfo->pBinding[i].descriptorType) {
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-         num_dynamic_buffers += pCreateInfo->pBinding[i].count;
+         num_dynamic_buffers += pCreateInfo->pBinding[i].arraySize;
          break;
       default:
          break;
       }
 
       stages |= pCreateInfo->pBinding[i].stageFlags;
-      count += pCreateInfo->pBinding[i].count;
+      count += pCreateInfo->pBinding[i].arraySize;
    }
 
    uint32_t sampler_total = 0;
@@ -1719,7 +1719,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].count; j++) {
+            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
                sampler[s]->index = descriptor + j;
                sampler[s]->dynamic_slot = -1;
                sampler[s]++;
@@ -1750,7 +1750,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].count; j++) {
+            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
                surface[s]->index = descriptor + j;
                if (is_dynamic)
                   surface[s]->dynamic_slot = dynamic_slot + j;
@@ -1764,9 +1764,9 @@ VkResult anv_CreateDescriptorSetLayout(
       }
 
       if (is_dynamic)
-         dynamic_slot += pCreateInfo->pBinding[i].count;
+         dynamic_slot += pCreateInfo->pBinding[i].arraySize;
 
-      descriptor += pCreateInfo->pBinding[i].count;
+      descriptor += pCreateInfo->pBinding[i].arraySize;
    }
 
    *pSetLayout = (VkDescriptorSetLayout) set_layout;

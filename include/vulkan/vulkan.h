@@ -1573,7 +1573,7 @@ typedef struct {
 
 typedef struct {
     VkDescriptorType                            descriptorType;
-    uint32_t                                    count;
+    uint32_t                                    arraySize;
     VkShaderStageFlags                          stageFlags;
     const VkSampler*                            pImmutableSamplers;
 } VkDescriptorSetLayoutBinding;
