@@ -2010,7 +2010,7 @@ typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLa
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
-typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer, VkRenderPass renderPass);
+typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
 typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
 
 #ifdef VK_PROTOTYPES
@@ -2632,8 +2632,7 @@ void VKAPI vkCmdBeginRenderPass(
     const VkRenderPassBegin*                    pRenderPassBegin);
 
 void VKAPI vkCmdEndRenderPass(
-    VkCmdBuffer                                 cmdBuffer,
-    VkRenderPass                                renderPass);
+    VkCmdBuffer                                 cmdBuffer);
 
 void VKAPI vkCmdExecuteCommands(
     VkCmdBuffer                                 cmdBuffer,

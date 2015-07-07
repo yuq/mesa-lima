@@ -653,7 +653,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
 
    anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
 
-   anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+   anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer);
 
    /* At the point where we emit the draw call, all data from the
     * descriptor sets, etc. has been used.  We are free to delete it.
@@ -1272,7 +1272,7 @@ void anv_CmdClearColorImage(
 
             meta_emit_clear(cmd_buffer, 1, &instance_data);
 
-            anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer, pass);
+            anv_CmdEndRenderPass((VkCmdBuffer) cmd_buffer);
          }
       }
    }

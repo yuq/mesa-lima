@@ -3726,8 +3726,7 @@ void anv_CmdBeginRenderPass(
 }
 
 void anv_CmdEndRenderPass(
-    VkCmdBuffer                                 cmdBuffer,
-    VkRenderPass                                renderPass)
+    VkCmdBuffer                                 cmdBuffer)
 {
    /* Emit a flushing pipe control at the end of a pass.  This is kind of a
     * hack but it ensures that render targets always actually get written.
