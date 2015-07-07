@@ -35,17 +35,15 @@ endif
 
 LOCAL_SRC_FILES := target.c
 
-LOCAL_CFLAGS := -DDRI_TARGET -DHAVE_LIBDRM
+LOCAL_CFLAGS := -DDRI_TARGET
 
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
 	libglapi \
 	libexpat \
 
-# swrast only?
-ifeq ($(MESA_GPU_DRIVERS),swrast)
-LOCAL_CFLAGS += -D__NOT_HAVE_DRM_H
-else
+ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
+LOCAL_CFLAGS += -DHAVE_LIBDRM
 LOCAL_SHARED_LIBRARIES += libdrm
 endif
 
