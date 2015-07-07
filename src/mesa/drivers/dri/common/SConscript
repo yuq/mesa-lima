@@ -32,10 +32,7 @@ drienv.AppendUnique(LIBS = [
     'expat',
 ])
 
-# if HAVE_DRI2
 drienv.PkgUseModules('DRM')
-# else
-#env.Append(CPPDEFINES = ['__NOT_HAVE_DRM_H'])
 
 sources = drienv.ParseSourceList('Makefile.sources', ['DRI_COMMON_FILES', 'XMLCONFIG_FILES' ])
 
@@ -57,7 +54,6 @@ env.Append(CPPPATH = [
 ])
 
 env.Append(CPPDEFINES = [
-    '__NOT_HAVE_DRM_H',
     'HAVE_DLADDR',
 ])
 

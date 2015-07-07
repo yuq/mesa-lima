@@ -40,7 +40,7 @@
 
 
 #include <stdbool.h>
-#ifndef __NOT_HAVE_DRM_H
+#ifdef HAVE_LIBDRM
 #include <xf86drm.h>
 #endif
 #include "dri_util.h"
@@ -137,7 +137,7 @@ driCreateNewScreen2(int scrn, int fd,
 
     setupLoaderExtensions(psp, extensions);
 
-#ifndef __NOT_HAVE_DRM_H
+#ifdef HAVE_LIBDRM
     if (fd != -1) {
        drmVersionPtr version = drmGetVersion(fd);
        if (version) {
