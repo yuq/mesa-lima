@@ -1236,12 +1236,6 @@ typedef struct {
 } VkMemoryAllocInfo;
 
 typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceMemory                              sharedMem;
-} VkMemoryOpenInfo;
-
-typedef struct {
     VkDeviceSize                                size;
     VkDeviceSize                                alignment;
     VkDeviceSize                                granularity;
@@ -1289,12 +1283,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkSemaphore                                 sharedSemaphore;
-} VkSemaphoreOpenInfo;
-
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     VkEventCreateFlags                          flags;
 } VkEventCreateInfo;
 
@@ -1337,10 +1325,6 @@ typedef struct {
     VkImageUsageFlags                           usage;
     VkImageCreateFlags                          flags;
 } VkImageCreateInfo;
-
-typedef struct {
-    VkImage                                     originalImage;
-} VkPeerImageOpenInfo;
 
 typedef struct {
     VkDeviceSize                                offset;
