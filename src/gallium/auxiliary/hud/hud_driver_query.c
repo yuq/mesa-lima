@@ -150,7 +150,7 @@ void
 hud_pipe_query_install(struct hud_pane *pane, struct pipe_context *pipe,
                        const char *name, unsigned query_type,
                        unsigned result_index,
-                       uint64_t max_value, boolean uses_byte_units)
+                       uint64_t max_value, enum pipe_driver_query_type type)
 {
    struct hud_graph *gr;
    struct query_info *info;
@@ -178,8 +178,7 @@ hud_pipe_query_install(struct hud_pane *pane, struct pipe_context *pipe,
    hud_pane_add_graph(pane, gr);
    if (pane->max_value < max_value)
       hud_pane_set_max_value(pane, max_value);
-   if (uses_byte_units)
-      pane->uses_byte_units = TRUE;
+   pane->type = type;
 }
 
 boolean
@@ -189,7 +188,6 @@ hud_driver_query_install(struct hud_pane *pane, struct pipe_context *pipe,
    struct pipe_screen *screen = pipe->screen;
    struct pipe_driver_query_info query;
    unsigned num_queries, i;
-   boolean uses_byte_units;
    boolean found = FALSE;
 
    if (!screen->get_driver_query_info)
@@ -208,9 +206,8 @@ hud_driver_query_install(struct hud_pane *pane, struct pipe_context *pipe,
    if (!found)
       return FALSE;
 
-   uses_byte_units = query.type == PIPE_DRIVER_QUERY_TYPE_BYTES;
    hud_pipe_query_install(pane, pipe, query.name, query.query_type, 0,
-                          query.max_value.u64, uses_byte_units);
+                          query.max_value.u64, query.type);
 
    return TRUE;
 }
