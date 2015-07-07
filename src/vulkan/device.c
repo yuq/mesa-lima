@@ -1956,7 +1956,7 @@ VkResult anv_CreateDynamicViewportState(
 
    for (uint32_t i = 0; i < pCreateInfo->viewportAndScissorCount; i++) {
       const VkViewport *vp = &pCreateInfo->pViewports[i];
-      const VkRect *s = &pCreateInfo->pScissors[i];
+      const VkRect2D *s = &pCreateInfo->pScissors[i];
 
       struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
          .ViewportMatrixElementm00 = vp->width / 2,
@@ -3585,7 +3585,7 @@ VkResult anv_CreateFramebuffer(
                .maxDepth = 1
             },
          },
-         .pScissors = (VkRect[]) {
+         .pScissors = (VkRect2D[]) {
             { {  0,  0 },
               { pCreateInfo->width, pCreateInfo->height } },
          }

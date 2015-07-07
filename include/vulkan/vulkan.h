@@ -1619,14 +1619,14 @@ typedef struct {
 typedef struct {
     VkOffset2D                                  offset;
     VkExtent2D                                  extent;
-} VkRect;
+} VkRect2D;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    viewportAndScissorCount;
     const VkViewport*                           pViewports;
-    const VkRect*                               pScissors;
+    const VkRect2D*                             pScissors;
 } VkDynamicVpStateCreateInfo;
 
 typedef struct {
@@ -1694,8 +1694,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-
-    VkRect                                      renderArea;
+    VkRect2D                                    renderArea;
     uint32_t                                    colorAttachmentCount;
     VkExtent2D                                  extent;
     uint32_t                                    sampleCount;

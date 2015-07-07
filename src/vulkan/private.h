@@ -909,7 +909,7 @@ struct anv_render_pass_layer {
 };
 
 struct anv_render_pass {
-   VkRect                                       render_area;
+   VkRect2D                                     render_area;
 
    uint32_t                                     num_clear_layers;
    uint32_t                                     num_layers;
