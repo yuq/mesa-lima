@@ -159,7 +159,7 @@ void anv_abortfv(const char *format, va_list va) anv_noreturn;
       return (v); \
    } while (0)
 
-#define stub(v) \
+#define stub() \
    do { \
       anv_finishme("stub %s", __func__); \
       return; \
