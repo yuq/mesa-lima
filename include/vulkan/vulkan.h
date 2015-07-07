@@ -1986,7 +1986,7 @@ typedef void (VKAPI *PFN_vkCmdClearDepthStencil)(VkCmdBuffer cmdBuffer, VkImage 
 typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
 typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
 typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
-typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, uint32_t memBarrierCount, const void** ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, VkPipeEventFlags pipeEventMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
 typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, VkPipeEventFlags pipeEventMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
 typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
@@ -2544,8 +2544,9 @@ void VKAPI vkCmdWaitEvents(
     VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
+    VkPipeEventFlags                            pipeEventMask,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers);
+    const void* const*                          ppMemBarriers);
 
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,

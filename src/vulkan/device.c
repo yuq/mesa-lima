@@ -3396,8 +3396,9 @@ void anv_CmdWaitEvents(
     VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
+    VkPipeEventFlags                            pipeEventMask,
     uint32_t                                    memBarrierCount,
-    const void**                                ppMemBarriers)
+    const void* const*                          ppMemBarriers)
 {
    stub();
 }
