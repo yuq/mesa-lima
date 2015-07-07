@@ -24,7 +24,6 @@
 include Makefile.sources
 
 AM_CFLAGS = \
-	-D__NOT_HAVE_DRM_H \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/ \
 	-I$(top_srcdir)/src/mapi \
