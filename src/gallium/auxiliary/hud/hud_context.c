@@ -255,6 +255,9 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       assert(unit < ARRAY_SIZE(time_units));
       suffix = time_units[unit];
       break;
+   case PIPE_DRIVER_QUERY_TYPE_PERCENTAGE:
+      suffix = "%";
+      break;
    case PIPE_DRIVER_QUERY_TYPE_BYTES:
       assert(unit < ARRAY_SIZE(byte_units));
       suffix = byte_units[unit];
