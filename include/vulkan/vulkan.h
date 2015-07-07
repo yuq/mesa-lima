@@ -122,9 +122,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 // This is a helper macro to define the value of flag bit enum values.
 #define VK_BIT(bit)     (1 << (bit))
 
-// ------------------------------------------------------------------------------------------------
-// Enumerations
-
 typedef enum {
     VK_SUCCESS = 0,
     VK_UNSUPPORTED = 1,
@@ -170,7 +167,6 @@ typedef enum {
     VK_RESULT_MAX_ENUM = 0x7FFFFFFF
 } VkResult;
 
-// Structure type enumerant
 typedef enum {
     VK_STRUCTURE_TYPE_APPLICATION_INFO = 0,
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 1,
@@ -1139,9 +1135,6 @@ typedef enum {
     VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT = VK_BIT(6),
 } VkPhysicalDeviceCompatibilityFlagBits;
 
-// ------------------------------------------------------------------------------------------------
-// Vulkan structures
-
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1686,7 +1679,6 @@ typedef struct {
     uint32_t                                    layers;
 } VkFramebufferCreateInfo;
 
-// Union allowing specification of floating point or raw color data. Actual value selected is based on image being cleared.
 typedef union VkClearColorValue_
 {
     float                                       floatColor[4];
@@ -1819,7 +1811,6 @@ typedef struct {
     VkImageSubresourceRange                     subresourceRange;
 } VkImageMemoryBarrier;
 
-// can be added to VkDeviceCreateInfo via pNext
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1918,8 +1909,6 @@ typedef struct {
     VkRenderPassBegin                           renderPassContinue;
 } VkCmdBufferGraphicsBeginInfo;
 
-// ------------------------------------------------------------------------------------------------
-// API functions
 typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
@@ -2045,8 +2034,6 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
 void * VKAPI vkGetProcAddr(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pName);
-
-// Device functions
 
 VkResult VKAPI vkCreateDevice(
     VkPhysicalDevice                            physicalDevice,
@@ -2260,8 +2247,6 @@ VkResult VKAPI vkGetImageSubresourceInfo(
     VkSubresourceInfoType                       infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
-
-// Image view functions
 
 VkResult VKAPI vkCreateImageView(
     VkDevice                                    device,
