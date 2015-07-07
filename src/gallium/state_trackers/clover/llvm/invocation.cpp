@@ -108,7 +108,7 @@ namespace {
          name, llvm::MemoryBuffer::getMemBuffer(source));
 
       if (!c.ExecuteAction(act))
-         throw build_error(log);
+         throw compile_error(log);
    }
 
    module
@@ -256,7 +256,7 @@ namespace {
       r_log = log;
 
       if (!ExecSuccess)
-         throw build_error();
+         throw compile_error();
 
       // Get address spaces map to be able to find kernel argument address space
       memcpy(address_spaces, c.getTarget().getAddressSpaceMap(),
@@ -485,7 +485,7 @@ namespace {
       LLVMDisposeMessage(err_message);
 
       if (err) {
-         throw build_error();
+         throw compile_error();
       }
    }
 
@@ -505,7 +505,7 @@ namespace {
       if (LLVMGetTargetFromTriple(triple.c_str(), &target, &error_message)) {
          r_log = std::string(error_message);
          LLVMDisposeMessage(error_message);
-         throw build_error();
+         throw compile_error();
       }
 
       LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
@@ -514,7 +514,7 @@ namespace {
 
       if (!tm) {
          r_log = "Could not create TargetMachine: " + triple;
-         throw build_error();
+         throw compile_error();
       }
 
       if (dump_asm) {
@@ -567,7 +567,7 @@ namespace {
             const char *name;
             if (gelf_getshdr(section, &symtab_header) != &symtab_header) {
                r_log = "Failed to read ELF section header.";
-               throw build_error();
+               throw compile_error();
             }
             name = elf_strptr(elf, section_str_index, symtab_header.sh_name);
            if (!strcmp(name, ".symtab")) {
@@ -577,9 +577,9 @@ namespace {
          }
          if (!symtab) {
             r_log = "Unable to find symbol table.";
-            throw build_error();
+            throw compile_error();
          }
-      } catch (build_error &e) {
+      } catch (compile_error &e) {
          elf_end(elf);
          throw e;
       }
@@ -650,7 +650,7 @@ namespace {
          stream.flush();
          *(std::string*)data = message;
 
-         throw build_error();
+         throw compile_error();
       }
    }
 
