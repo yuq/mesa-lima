@@ -64,6 +64,8 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 dnl Set internal versions
 OSMESA_VERSION=8
 AC_SUBST([OSMESA_VERSION])
+OPENCL_VERSION=1
+AC_SUBST([OPENCL_VERSION])
 
 dnl Versions for external dependencies
 LIBDRM_REQUIRED=2.4.60
@@ -2336,6 +2338,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/targets/libgl-xlib/Makefile
 		src/gallium/targets/omx/Makefile
 		src/gallium/targets/opencl/Makefile
+		src/gallium/targets/opencl/mesa.icd
 		src/gallium/targets/osmesa/Makefile
 		src/gallium/targets/osmesa/osmesa.pc
 		src/gallium/targets/pipe-loader/Makefile

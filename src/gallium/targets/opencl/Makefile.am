@@ -5,7 +5,7 @@ lib_LTLIBRARIES = lib@OPENCL_LIBNAME@.la
 lib@OPENCL_LIBNAME@_la_LDFLAGS = \
 	$(LLVM_LDFLAGS) \
 	-no-undefined \
-	-version-number 1:0 \
+	-version-number @OPENCL_VERSION@:0 \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
