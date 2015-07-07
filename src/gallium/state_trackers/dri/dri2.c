@@ -554,7 +554,7 @@ dri2_allocate_textures(struct dri_context *ctx,
 
          if (drawable->textures[statt]) {
             templ.format = drawable->textures[statt]->format;
-            templ.bind = drawable->textures[statt]->bind;
+            templ.bind = drawable->textures[statt]->bind & ~PIPE_BIND_SCANOUT;
             templ.nr_samples = drawable->stvis.samples;
 
             /* Try to reuse the resource.
