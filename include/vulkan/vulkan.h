@@ -1649,8 +1649,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    float                                       minDepth;
-    float                                       maxDepth;
+    float                                       minDepthBounds;
+    float                                       maxDepthBounds;
     uint32_t                                    stencilReadMask;
     uint32_t                                    stencilWriteMask;
     uint32_t                                    stencilFrontRef;
