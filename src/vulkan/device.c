@@ -3746,6 +3746,14 @@ void anv_CmdEndRenderPass(
                   .CommandStreamerStallEnable = true);
 }
 
+void anv_CmdExecuteCommands(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers)
+{
+   stub();
+}
+
 void vkCmdDbgMarkerBegin(
     VkCmdBuffer                              cmdBuffer,
     const char*                                 pMarker)

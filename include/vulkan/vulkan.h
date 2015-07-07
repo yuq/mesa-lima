@@ -1998,6 +1998,7 @@ typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFrame
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
 typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer, VkRenderPass renderPass);
+typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
 
 #ifdef VK_PROTOTYPES
 VkResult VKAPI vkCreateInstance(
@@ -2604,6 +2605,10 @@ void VKAPI vkCmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     VkRenderPass                                renderPass);
 
+void VKAPI vkCmdExecuteCommands(
+    VkCmdBuffer                                 cmdBuffer,
+    uint32_t                                    cmdBuffersCount,
+    const VkCmdBuffer*                          pCmdBuffers);
 #endif
 
 #ifdef __cplusplus
