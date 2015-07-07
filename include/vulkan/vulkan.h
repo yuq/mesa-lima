@@ -1452,7 +1452,6 @@ typedef struct {
     VkPrimitiveTopology                         topology;
     bool32_t                                    disableVertexReuse;
     bool32_t                                    primitiveRestartEnable;
-    uint32_t                                    primitiveRestartIndex;
 } VkPipelineIaStateCreateInfo;
 
 typedef struct {

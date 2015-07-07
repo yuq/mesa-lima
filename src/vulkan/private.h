@@ -642,6 +642,7 @@ struct anv_buffer {
 #define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
 #define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
 #define ANV_CMD_BUFFER_VP_DIRTY                 (1 << 5)
+#define ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY       (1 << 6)
 
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
@@ -687,6 +688,7 @@ struct anv_cmd_buffer {
    struct anv_dynamic_ds_state *                ds_state;
    struct anv_dynamic_vp_state *                vp_state;
    struct anv_dynamic_cb_state *                cb_state;
+   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
 };
@@ -746,6 +748,7 @@ struct anv_pipeline {
    uint32_t                                     binding_stride[MAX_VBS];
 
    uint32_t                                     state_sf[GEN8_3DSTATE_SF_length];
+   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    uint32_t                                     state_raster[GEN8_3DSTATE_RASTER_length];
    uint32_t                                     state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
 

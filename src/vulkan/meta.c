@@ -38,7 +38,6 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
       .disableVertexReuse = false,
       .primitiveRestartEnable = false,
-      .primitiveRestartIndex = 0
    };
 
    /* We don't use a vertex shader for clearing, but instead build and pass
@@ -314,7 +313,6 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
       .disableVertexReuse = false,
       .primitiveRestartEnable = false,
-      .primitiveRestartIndex = 0
    };
 
    /* We don't use a vertex shader for clearing, but instead build and pass

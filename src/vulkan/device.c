@@ -2227,6 +2227,7 @@ VkResult anv_CreateCommandBuffer(
    cmd_buffer->vp_state = NULL;
    cmd_buffer->cb_state = NULL;
    cmd_buffer->ds_state = NULL;
+   memset(&cmd_buffer->state_vf, 0, sizeof(cmd_buffer->state_vf));
    memset(&cmd_buffer->descriptors, 0, sizeof(cmd_buffer->descriptors));
 
    result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
@@ -2716,6 +2717,14 @@ void anv_CmdBindIndexBuffer(
       [VK_INDEX_TYPE_UINT32]                    = INDEX_DWORD,
    };
 
+   struct GEN8_3DSTATE_VF vf = {
+      GEN8_3DSTATE_VF_header,
+      .CutIndex = (indexType == VK_INDEX_TYPE_UINT16) ? UINT16_MAX : UINT32_MAX,
+   };
+   GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state_vf, &vf);
+
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
+
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
                   .MemoryObjectControlState = GEN8_MOCS,
@@ -3179,6 +3188,11 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                      GEN8_3DSTATE_CC_STATE_POINTERS,
                      .ColorCalcStatePointer = state.offset,
                      .ColorCalcStatePointerValid = true);
+   }
+
+   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
+      anv_batch_emit_merge(&cmd_buffer->batch,
+                           cmd_buffer->state_vf, pipeline->state_vf);
    }
 
    cmd_buffer->vb_dirty &= ~vb_emit;

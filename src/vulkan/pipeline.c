@@ -146,9 +146,12 @@ emit_ia_state(struct anv_pipeline *pipeline,
    if (extra && extra->use_rectlist)
       topology = _3DPRIM_RECTLIST;
 
-   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF,
-                  .IndexedDrawCutIndexEnable = info->primitiveRestartEnable,
-                  .CutIndex = info->primitiveRestartIndex);
+   struct GEN8_3DSTATE_VF vf = {
+      GEN8_3DSTATE_VF_header,
+      .IndexedDrawCutIndexEnable = info->primitiveRestartEnable,
+   };
+   GEN8_3DSTATE_VF_pack(NULL, pipeline->state_vf, &vf);
+
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_TOPOLOGY,
                   .PrimitiveTopologyType = topology);
 }
