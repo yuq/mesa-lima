@@ -57,7 +57,7 @@ VkResult anv_CreateShader(
 // Pipeline functions
 
 static void
-emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputCreateInfo *info)
+emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputStateCreateInfo *info)
 {
    const uint32_t num_dwords = 1 + info->attributeCount * 2;
    uint32_t *p;
@@ -403,7 +403,7 @@ anv_pipeline_create(
    VkPipelineRsStateCreateInfo *rs_info = NULL;
    VkPipelineDsStateCreateInfo *ds_info = NULL;
    VkPipelineCbStateCreateInfo *cb_info = NULL;
-   VkPipelineVertexInputCreateInfo *vi_info = NULL;
+   VkPipelineVertexInputStateCreateInfo *vi_info = NULL;
    VkResult result;
    uint32_t offset, length;
 
@@ -432,8 +432,8 @@ anv_pipeline_create(
 
    for (common = pCreateInfo->pNext; common; common = common->pNext) {
       switch (common->sType) {
-      case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO:
-         vi_info = (VkPipelineVertexInputCreateInfo *) common;
+      case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO:
+         vi_info = (VkPipelineVertexInputStateCreateInfo *) common;
          break;
       case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
          ia_info = (VkPipelineIaStateCreateInfo *) common;

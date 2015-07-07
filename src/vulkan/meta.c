@@ -69,8 +69,8 @@ anv_device_init_meta_clear_state(struct anv_device *device)
     * per-instance data, which consists of the VUE header (which selects the
     * layer) and the color (Vulkan supports per-RT clear colors).
     */
-   VkPipelineVertexInputCreateInfo vi_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO,
+   VkPipelineVertexInputStateCreateInfo vi_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
       .pNext = &fs_create_info,
       .bindingCount = 2,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
@@ -363,8 +363,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    };
 
-   VkPipelineVertexInputCreateInfo vi_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO,
+   VkPipelineVertexInputStateCreateInfo vi_create_info = {
+      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
       .pNext = &fs_create_info,
       .bindingCount = 2,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {

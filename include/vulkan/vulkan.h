@@ -194,7 +194,7 @@ typedef enum {
     VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO = 23,
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 24,
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_CREATE_INFO = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 26,
     VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO = 27,
     VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO = 28,
     VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO = 29,
@@ -1443,7 +1443,7 @@ typedef struct {
     const VkVertexInputBindingDescription*      pVertexBindingDescriptions;
     uint32_t                                    attributeCount;
     const VkVertexInputAttributeDescription*    pVertexAttributeDescriptions;
-} VkPipelineVertexInputCreateInfo;
+} VkPipelineVertexInputStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
