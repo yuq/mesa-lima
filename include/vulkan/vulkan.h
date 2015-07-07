@@ -911,7 +911,6 @@ typedef enum {
     VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT = 0x00000004,
     VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT = 0x00000008,
     VK_MEMORY_PROPERTY_PREFER_HOST_LOCAL = 0x00000010,
-    VK_MEMORY_PROPERTY_SHAREABLE_BIT = 0x00000011,
 } VkMemoryPropertyFlagBits;
 typedef VkFlags VkMemoryPropertyFlags;
 
@@ -926,10 +925,6 @@ typedef enum {
     VK_FENCE_CREATE_SIGNALED_BIT = 0x00000001,
 } VkFenceCreateFlagBits;
 typedef VkFlags VkFenceCreateFlags;
-
-typedef enum {
-    VK_SEMAPHORE_CREATE_SHAREABLE_BIT = 0x00000001,
-} VkSemaphoreCreateFlagBits;
 typedef VkFlags VkSemaphoreCreateFlags;
 typedef VkFlags VkEventCreateFlags;
 
@@ -973,8 +968,7 @@ typedef enum {
 typedef VkFlags VkBufferUsageFlags;
 
 typedef enum {
-    VK_BUFFER_CREATE_SHAREABLE_BIT = 0x00000001,
-    VK_BUFFER_CREATE_SPARSE_BIT = 0x00000002,
+    VK_BUFFER_CREATE_SPARSE_BIT = 0x00000001,
 } VkBufferCreateFlagBits;
 typedef VkFlags VkBufferCreateFlags;
 
@@ -993,10 +987,9 @@ typedef VkFlags VkImageUsageFlags;
 typedef enum {
     VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000001,
     VK_IMAGE_CREATE_CLONEABLE_BIT = 0x00000002,
-    VK_IMAGE_CREATE_SHAREABLE_BIT = 0x00000004,
-    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000008,
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
+    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000004,
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000008,
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000010,
 } VkImageCreateFlagBits;
 typedef VkFlags VkImageCreateFlags;
 
