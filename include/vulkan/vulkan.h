@@ -1732,6 +1732,8 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkCmdBufferOptimizeFlags                    flags;
+    VkRenderPass                                renderPass;
+    VkFramebuffer                               framebuffer;
 } VkCmdBufferBeginInfo;
 
 typedef struct {
@@ -1841,12 +1843,6 @@ typedef struct {
     VkMemoryInputFlags                          inputMask;
 } VkMemoryBarrier;
 
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-
-    VkRenderPassBegin                           renderPassContinue;
-} VkCmdBufferGraphicsBeginInfo;
 
 typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
