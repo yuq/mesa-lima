@@ -1890,6 +1890,7 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -1925,7 +1926,6 @@ typedef VkResult (VKAPI *PFN_vkSetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkResetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkCreateQueryPool)(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool);
 typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags);
-typedef VkResult (VKAPI *PFN_vkGetFormatInfo)(VkDevice device, VkFormat format, VkFormatInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
@@ -2013,6 +2013,11 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
     VkPhysicalDeviceInfoType                    infoType,
     size_t*                                     pDataSize,
     void*                                       pData);
+
+VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkFormatProperties*                         pFormatInfo);
 
 PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
@@ -2196,13 +2201,6 @@ VkResult VKAPI vkGetQueryPoolResults(
     size_t*                                     pDataSize,
     void*                                       pData,
     VkQueryResultFlags                          flags);
-
-VkResult VKAPI vkGetFormatInfo(
-    VkDevice                                    device,
-    VkFormat                                    format,
-    VkFormatInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
 
 VkResult VKAPI vkCreateBuffer(
     VkDevice                                    device,
