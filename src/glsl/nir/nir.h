@@ -1659,9 +1659,9 @@ bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
 void nir_convert_to_ssa_impl(nir_function_impl *impl);
 void nir_convert_to_ssa(nir_shader *shader);
 
-/* If convert_everything is true, convert all values (even those not involved
- * in a phi node) to registers. If false, only convert SSA values involved in
- * phi nodes to registers.
+/* If phi_webs_only is true, only convert SSA values involved in phi nodes to
+ * registers.  If false, convert all values (even those not involved in a phi
+ * node) to registers.
  */
 void nir_convert_from_ssa(nir_shader *shader, bool phi_webs_only);
 
