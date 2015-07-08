@@ -350,6 +350,7 @@ AddrChipFamily CIAddrLib::HwlConvertChipFamily(
             m_settings.isVolcanicIslands = 1;
             m_settings.isIceland         = ASICREV_IS_ICELAND_M(uChipRevision);
             m_settings.isTonga           = ASICREV_IS_TONGA_P(uChipRevision);
+            m_settings.isFiji            = ASICREV_IS_FIJI_P(uChipRevision);
             break;
         case FAMILY_CZ:
             m_settings.isCarrizo         = 1;
@@ -409,6 +410,10 @@ BOOL_32 CIAddrLib::HwlInitGlobalParams(
     else if (m_settings.isIceland)
     {
         m_pipes = 2;
+    }
+    else if (m_settings.isFiji)
+    {
+        m_pipes = 16;
     }
 
     if (valid)

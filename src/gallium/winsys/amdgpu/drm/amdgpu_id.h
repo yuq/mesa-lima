@@ -136,6 +136,8 @@ enum {
 	VI_TONGA_P_A0     = 20,
 	VI_TONGA_P_A1     = 21,
 
+	VI_FIJI_P_A0      = 60,
+
 	VI_UNKNOWN        = 0xFF
 };
 
@@ -143,7 +145,9 @@ enum {
 #define ASICREV_IS_ICELAND_M(eChipRev)	\
 	(eChipRev < VI_TONGA_P_A0)
 #define ASICREV_IS_TONGA_P(eChipRev)	\
-	(eChipRev >= VI_TONGA_P_A0)
+	((eChipRev >= VI_TONGA_P_A0) && (eChipRev < VI_FIJI_P_A0))
+#define ASICREV_IS_FIJI_P(eChipRev)	\
+	(eChipRev >= VI_FIJI_P_A0)
 
 /* CZ specific rev IDs */
 enum {
