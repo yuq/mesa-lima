@@ -870,7 +870,9 @@ struct intel_batchbuffer {
    /** Last BO submitted to the hardware.  Used for glFinish(). */
    drm_intel_bo *last_bo;
 
+#ifdef DEBUG
    uint16_t emit, total;
+#endif
    uint16_t used, reserved_space;
    uint32_t *map;
    uint32_t *cpu_map;

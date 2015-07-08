@@ -138,8 +138,8 @@ intel_batchbuffer_begin(struct brw_context *brw, int n, enum brw_gpu_ring ring)
 {
    intel_batchbuffer_require_space(brw, n * 4, ring);
 
-   brw->batch.emit = brw->batch.used;
 #ifdef DEBUG
+   brw->batch.emit = brw->batch.used;
    brw->batch.total = n;
 #endif
 }
