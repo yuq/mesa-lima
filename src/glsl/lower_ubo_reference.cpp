@@ -150,7 +150,8 @@ public:
                                 int *matrix_columns);
    ir_expression *ubo_load(const struct glsl_type *type,
 			   ir_rvalue *offset);
-
+   ir_call *ssbo_load(const struct glsl_type *type,
+                      ir_rvalue *offset);
 
    void check_for_ssbo_store(ir_assignment *ir);
    void write_to_memory(ir_dereference *deref,
@@ -170,6 +171,7 @@ public:
    struct gl_uniform_buffer_variable *ubo_var;
    ir_rvalue *uniform_block;
    bool progress;
+   bool is_shader_storage;
 };
 
 /**
@@ -265,6 +267,8 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
          } else {
             this->uniform_block = index;
          }
+
+         this->is_shader_storage = shader->UniformBlocks[i].IsShaderStorage;
 
          struct gl_uniform_block *block = &shader->UniformBlocks[i];
 
@@ -415,7 +419,7 @@ lower_ubo_reference_visitor::handle_rvalue(ir_rvalue **rvalue)
    if (!var || !var->is_in_buffer_block())
       return;
 
-   mem_ctx = ralloc_parent(*rvalue);
+   mem_ctx = ralloc_parent(shader->ir);
 
    ir_rvalue *offset = NULL;
    unsigned const_offset;
@@ -510,6 +514,42 @@ lower_ubo_reference_visitor::ssbo_store(ir_rvalue *deref,
    call_params.push_tail(deref->clone(mem_ctx, NULL));
    call_params.push_tail(new(mem_ctx) ir_constant(write_mask));
    return new(mem_ctx) ir_call(sig, NULL, &call_params);
+}
+
+ir_call *
+lower_ubo_reference_visitor::ssbo_load(const struct glsl_type *type,
+                                       ir_rvalue *offset)
+{
+   exec_list sig_params;
+
+   ir_variable *block_ref = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "block_ref" , ir_var_function_in);
+   sig_params.push_tail(block_ref);
+
+   ir_variable *offset_ref = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "offset_ref" , ir_var_function_in);
+   sig_params.push_tail(offset_ref);
+
+   ir_function_signature *sig =
+      new(mem_ctx) ir_function_signature(type, shader_storage_buffer_object);
+   assert(sig);
+   sig->replace_parameters(&sig_params);
+   sig->is_intrinsic = true;
+
+   ir_function *f = new(mem_ctx) ir_function("__intrinsic_load_ssbo");
+   f->add_signature(sig);
+
+   ir_variable *result = new(mem_ctx)
+      ir_variable(type, "ssbo_load_result", ir_var_temporary);
+   base_ir->insert_before(result);
+   ir_dereference_variable *deref_result = new(mem_ctx)
+      ir_dereference_variable(result);
+
+   exec_list call_params;
+   call_params.push_tail(this->uniform_block->clone(mem_ctx, NULL));
+   call_params.push_tail(offset->clone(mem_ctx, NULL));
+
+   return new(mem_ctx) ir_call(sig, deref_result, &call_params);
 }
 
 static inline int
@@ -610,9 +650,17 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
          add(base_offset, new(mem_ctx) ir_constant(deref_offset));
       if (is_write)
          base_ir->insert_after(ssbo_store(deref, offset, write_mask));
-      else
-         base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                       ubo_load(deref->type, offset)));
+      else {
+         if (!this->is_shader_storage) {
+             base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
+                                           ubo_load(deref->type, offset)));
+         } else {
+            ir_call *load_ssbo = ssbo_load(deref->type, offset);
+            base_ir->insert_before(load_ssbo);
+            ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
+            base_ir->insert_before(assign(deref->clone(mem_ctx, NULL), value));
+         }
+      }
    } else {
       unsigned N = deref->type->is_double() ? 8 : 4;
 
@@ -640,9 +688,18 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
          if (is_write) {
             base_ir->insert_after(ssbo_store(swizzle(deref, i, 1), chan_offset, 1));
          } else {
-            base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
-                                          ubo_load(deref_type, chan_offset),
-                                          (1U << i)));
+            if (!this->is_shader_storage) {
+               base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
+                                             ubo_load(deref_type, chan_offset),
+                                             (1U << i)));
+            } else {
+               ir_call *load_ssbo = ssbo_load(deref_type, chan_offset);
+               base_ir->insert_before(load_ssbo);
+               ir_rvalue *value = load_ssbo->return_deref->as_rvalue()->clone(mem_ctx, NULL);
+               base_ir->insert_before(assign(deref->clone(mem_ctx, NULL),
+                                             value,
+                                             (1U << i)));
+            }
          }
       }
    }
