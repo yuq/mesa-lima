@@ -1147,11 +1147,9 @@ VkResult anv_BindObjectMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_QueueBindObjectMemoryRange(
+VkResult anv_QueueBindSparseBufferMemory(
     VkQueue                                     queue,
-    VkObjectType                                objType,
-    VkObject                                    object,
-    uint32_t                                    allocationIdx,
+    VkBuffer                                    buffer,
     VkDeviceSize                                rangeOffset,
     VkDeviceSize                                rangeSize,
     VkDeviceMemory                              mem,
@@ -1160,10 +1158,9 @@ VkResult anv_QueueBindObjectMemoryRange(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_QueueBindImageMemoryRange(
+VkResult anv_QueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    uint32_t                                    allocationIdx,
     const VkImageMemoryBindInfo*                pBindInfo,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset)
