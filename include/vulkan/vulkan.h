@@ -1157,6 +1157,11 @@ typedef struct {
 } VkInstanceCreateInfo;
 
 typedef struct {
+    VkFormatFeatureFlags                        linearTilingFeatures;
+    VkFormatFeatureFlags                        optimalTilingFeatures;
+} VkFormatProperties;
+
+typedef struct {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
@@ -1814,11 +1819,6 @@ typedef struct {
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
 } VkMemoryBarrier;
-
-typedef struct {
-    VkFormatFeatureFlags                        linearTilingFeatures;
-    VkFormatFeatureFlags                        optimalTilingFeatures;
-} VkFormatProperties;
 
 typedef struct {
     VkStructureType                             sType;
