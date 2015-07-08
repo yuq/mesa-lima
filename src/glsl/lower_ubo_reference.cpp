@@ -180,6 +180,10 @@ public:
    unsigned calculate_unsized_array_stride(ir_dereference *deref,
                                            unsigned packing);
 
+   ir_call *lower_ssbo_atomic_intrinsic(ir_call *ir);
+   ir_call *check_for_ssbo_atomic_intrinsic(ir_call *ir);
+   ir_visitor_status visit_enter(ir_call *ir);
+
    void *mem_ctx;
    struct gl_shader *shader;
    struct gl_uniform_buffer_variable *ubo_var;
@@ -242,7 +246,12 @@ interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
 
          break;
       }
+      case ir_type_swizzle: {
+         ir_swizzle *s = (ir_swizzle *) d;
 
+         d = s->val->as_dereference();
+         break;
+      }
       default:
          assert(!"Should not get here.");
          break;
@@ -424,6 +433,16 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
 
          *const_offset += intra_struct_offset;
          deref = deref_record->record->as_dereference();
+         break;
+      }
+
+      case ir_type_swizzle: {
+         ir_swizzle *deref_swizzle = (ir_swizzle *) deref;
+
+         assert(deref_swizzle->mask.num_components == 1);
+
+         *const_offset += deref_swizzle->mask.x * sizeof(int);
+         deref = deref_swizzle->val->as_dereference();
          break;
       }
 
@@ -1013,6 +1032,146 @@ lower_ubo_reference_visitor::visit_enter(ir_assignment *ir)
    check_for_ssbo_store(ir);
    return rvalue_visit(ir);
 }
+
+/* Lowers the intrinsic call to a new internal intrinsic that swaps the
+ * access to the buffer variable in the first parameter by an offset
+ * and block index. This involves creating the new internal intrinsic
+ * (i.e. the new function signature).
+ */
+ir_call *
+lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
+{
+   /* SSBO atomics usually have 2 parameters, the buffer variable and an
+    * integer argument. The exception is CompSwap, that has an additional
+    * integer parameter.
+    */
+   int param_count = ir->actual_parameters.length();
+   assert(param_count == 2 || param_count == 3);
+
+   /* First argument must be a scalar integer buffer variable */
+   exec_node *param = ir->actual_parameters.get_head();
+   ir_instruction *inst = (ir_instruction *) param;
+   assert(inst->ir_type == ir_type_dereference_variable ||
+          inst->ir_type == ir_type_dereference_array ||
+          inst->ir_type == ir_type_dereference_record ||
+          inst->ir_type == ir_type_swizzle);
+
+   ir_rvalue *deref = (ir_rvalue *) inst;
+   assert(deref->type->is_scalar() && deref->type->is_integer());
+
+   ir_variable *var = deref->variable_referenced();
+   assert(var);
+
+   /* Compute the offset to the start if the dereference and the
+    * block index
+    */
+   mem_ctx = ralloc_parent(shader->ir);
+
+   ir_rvalue *offset = NULL;
+   unsigned const_offset;
+   bool row_major;
+   int matrix_columns;
+   unsigned packing = var->get_interface_type()->interface_packing;
+
+   setup_for_load_or_store(var, deref,
+                           &offset, &const_offset,
+                           &row_major, &matrix_columns,
+                           packing);
+   assert(offset);
+   assert(!row_major);
+   assert(matrix_columns == 1);
+
+   ir_rvalue *deref_offset =
+      add(offset, new(mem_ctx) ir_constant(const_offset));
+   ir_rvalue *block_index = this->uniform_block->clone(mem_ctx, NULL);
+
+   /* Create the new internal function signature that will take a block
+    * index and offset instead of a buffer variable
+    */
+   exec_list sig_params;
+   ir_variable *sig_param = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "block_ref" , ir_var_function_in);
+   sig_params.push_tail(sig_param);
+
+   sig_param = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "offset" , ir_var_function_in);
+   sig_params.push_tail(sig_param);
+
+   const glsl_type *type = deref->type->base_type == GLSL_TYPE_INT ?
+      glsl_type::int_type : glsl_type::uint_type;
+   param = param->get_next();
+   sig_param = new(mem_ctx)
+         ir_variable(type, "data1", ir_var_function_in);
+   sig_params.push_tail(sig_param);
+
+   if (param_count == 3) {
+      param = param->get_next();
+      sig_param = new(mem_ctx)
+            ir_variable(type, "data2", ir_var_function_in);
+      sig_params.push_tail(sig_param);
+   }
+
+   ir_function_signature *sig =
+      new(mem_ctx) ir_function_signature(deref->type,
+                                         shader_storage_buffer_object);
+   assert(sig);
+   sig->replace_parameters(&sig_params);
+   sig->is_intrinsic = true;
+
+   char func_name[64];
+   sprintf(func_name, "%s_internal", ir->callee_name());
+   ir_function *f = new(mem_ctx) ir_function(func_name);
+   f->add_signature(sig);
+
+   /* Now, create the call to the internal intrinsic */
+   exec_list call_params;
+   call_params.push_tail(block_index);
+   call_params.push_tail(deref_offset);
+   param = ir->actual_parameters.get_head()->get_next();
+   ir_rvalue *param_as_rvalue = ((ir_instruction *) param)->as_rvalue();
+   call_params.push_tail(param_as_rvalue->clone(mem_ctx, NULL));
+   if (param_count == 3) {
+      param = param->get_next();
+      param_as_rvalue = ((ir_instruction *) param)->as_rvalue();
+      call_params.push_tail(param_as_rvalue->clone(mem_ctx, NULL));
+   }
+   ir_dereference_variable *return_deref =
+      ir->return_deref->clone(mem_ctx, NULL);
+   return new(mem_ctx) ir_call(sig, return_deref, &call_params);
+}
+
+ir_call *
+lower_ubo_reference_visitor::check_for_ssbo_atomic_intrinsic(ir_call *ir)
+{
+   const char *callee = ir->callee_name();
+   if (!strcmp("__intrinsic_ssbo_atomic_add", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_min", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_max", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_and", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_or", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_xor", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_ssbo_atomic_comp_swap", callee)) {
+      return lower_ssbo_atomic_intrinsic(ir);
+   }
+
+   return ir;
+}
+
+
+ir_visitor_status
+lower_ubo_reference_visitor::visit_enter(ir_call *ir)
+{
+   ir_call *new_ir = check_for_ssbo_atomic_intrinsic(ir);
+   if (new_ir != ir) {
+      progress = true;
+      base_ir->replace_with(new_ir);
+      return visit_continue_with_parent;
+   }
+
+   return rvalue_visit(ir);
+}
+
 
 } /* unnamed namespace */
 
