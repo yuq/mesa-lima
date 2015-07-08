@@ -361,8 +361,14 @@ struct pipe_context {
                         const void *clear_value,
                         int clear_value_size);
 
-   /** Flush draw commands
+   /**
+    * Flush draw commands
     *
+    * NOTE: use screen->fence_reference() (or equivalent) to transfer
+    * new fence ref to **fence, to ensure that previous fence is unref'd
+    *
+    * \param fence  if not NULL, an old fence to unref and transfer a
+    *    new fence reference to
     * \param flags  bitfield of enum pipe_flush_flags values.
     */
    void (*flush)(struct pipe_context *pipe,
