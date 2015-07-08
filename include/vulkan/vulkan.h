@@ -938,7 +938,6 @@ typedef VkFlags VkMemoryPropertyFlags;
 
 typedef enum {
     VK_DEVICE_CREATE_VALIDATION_BIT = 0x00000001,
-    VK_DEVICE_CREATE_MULTI_DEVICE_IQ_MATCH_BIT = 0x00000002,
 } VkDeviceCreateFlagBits;
 typedef VkFlags VkDeviceCreateFlags;
 typedef VkFlags VkMemoryMapFlags;
