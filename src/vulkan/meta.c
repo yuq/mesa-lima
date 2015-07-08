@@ -578,22 +578,24 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_AllocDescriptorSets((VkDevice) device, 0 /* pool */,
                            VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
                            1, &device->meta_state.blit.ds_layout, &set, &count);
-   anv_UpdateDescriptors((VkDevice) device, set, 1,
-      (const void * []) {
-         &(VkUpdateImages) {
-            .sType = VK_STRUCTURE_TYPE_UPDATE_IMAGES,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .binding = 0,
+   anv_UpdateDescriptorSets((VkDevice) device,
+      1, /* writeCount */
+      (VkWriteDescriptorSet[]) {
+         {
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .destSet = set,
+            .destBinding = 0,
+            .destArrayElement = 0,
             .count = 1,
-            .pImageViews = (VkImageViewAttachInfo[]) {
+            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            .pDescriptors = (VkDescriptorInfo[]) {
                {
-                  .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO,
-                  .view = (VkImageView) src,
-                  .layout = VK_IMAGE_LAYOUT_GENERAL,
-               }
+                  .imageView = (VkImageView) src,
+                  .imageLayout = VK_IMAGE_LAYOUT_GENERAL
+               },
             }
          }
-      });
+      }, 0, NULL);
 
    struct anv_framebuffer *fb;
    anv_CreateFramebuffer((VkDevice) device,

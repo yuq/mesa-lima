@@ -1756,74 +1756,68 @@ VkResult anv_AllocDescriptorSets(
    return VK_SUCCESS;
 }
 
-void anv_UpdateDescriptors(
-    VkDevice                                    _device,
-    VkDescriptorSet                             descriptorSet,
-    uint32_t                                    updateCount,
-    const void**                                ppUpdateArray)
+VkResult anv_UpdateDescriptorSets(
+    VkDevice                                    device,
+    uint32_t                                    writeCount,
+    const VkWriteDescriptorSet*                 pDescriptorWrites,
+    uint32_t                                    copyCount,
+    const VkCopyDescriptorSet*                  pDescriptorCopies)
 {
-   struct anv_descriptor_set *set = (struct anv_descriptor_set *) descriptorSet;
-   VkUpdateSamplers *update_samplers;
-   VkUpdateSamplerTextures *update_sampler_textures;
-   VkUpdateImages *update_images;
-   VkUpdateBuffers *update_buffers;
-   VkUpdateAsCopy *update_as_copy;
+   for (uint32_t i = 0; i < writeCount; i++) {
+      const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
+      ANV_FROM_HANDLE(anv_descriptor_set, set, write->destSet);
 
-   for (uint32_t i = 0; i < updateCount; i++) {
-      const struct anv_common *common = ppUpdateArray[i];
+      switch (write->descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+         for (uint32_t j = 0; j < write->count; j++) {
+            set->descriptors[write->destBinding + j].sampler =
+               (struct anv_sampler *) write->pDescriptors[j].sampler;
+         }
 
-      switch (common->sType) {
-      case VK_STRUCTURE_TYPE_UPDATE_SAMPLERS:
-         update_samplers = (VkUpdateSamplers *) common;
+         if (write->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
+            break;
 
-         for (uint32_t j = 0; j < update_samplers->count; j++) {
-            set->descriptors[update_samplers->binding + j].sampler =
-               (struct anv_sampler *) update_samplers->pSamplers[j];
+         /* fallthrough */
+
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+         for (uint32_t j = 0; j < write->count; j++) {
+            set->descriptors[write->destBinding + j].view =
+               (struct anv_surface_view *) write->pDescriptors[j].imageView;
          }
          break;
 
-      case VK_STRUCTURE_TYPE_UPDATE_SAMPLER_TEXTURES:
-         /* FIXME: Shouldn't this be *_UPDATE_SAMPLER_IMAGES? */
-         update_sampler_textures = (VkUpdateSamplerTextures *) common;
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+         anv_finishme("texel buffers not implemented");
+         break;
 
-         for (uint32_t j = 0; j < update_sampler_textures->count; j++) {
-            set->descriptors[update_sampler_textures->binding + j].view =
-               (struct anv_surface_view *)
-               update_sampler_textures->pSamplerImageViews[j].pImageView->view;
-            set->descriptors[update_sampler_textures->binding + j].sampler =
-               (struct anv_sampler *)
-               update_sampler_textures->pSamplerImageViews[j].sampler;
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         for (uint32_t j = 0; j < write->count; j++) {
+            set->descriptors[write->destBinding + j].view =
+               (struct anv_surface_view *) write->pDescriptors[j].bufferView;
          }
-         break;
-
-      case VK_STRUCTURE_TYPE_UPDATE_IMAGES:
-         update_images = (VkUpdateImages *) common;
-
-         for (uint32_t j = 0; j < update_images->count; j++) {
-            set->descriptors[update_images->binding + j].view =
-               (struct anv_surface_view *) update_images->pImageViews[j].view;
-         }
-         break;
-
-      case VK_STRUCTURE_TYPE_UPDATE_BUFFERS:
-         update_buffers = (VkUpdateBuffers *) common;
-
-         for (uint32_t j = 0; j < update_buffers->count; j++) {
-            set->descriptors[update_buffers->binding + j].view =
-               (struct anv_surface_view *) update_buffers->pBufferViews[j].view;
-         }
-         /* FIXME: descriptor arrays? */
-         break;
-
-      case VK_STRUCTURE_TYPE_UPDATE_AS_COPY:
-         update_as_copy = (VkUpdateAsCopy *) common;
-         (void) update_as_copy;
-         break;
 
       default:
          break;
       }
    }
+
+   for (uint32_t i = 0; i < copyCount; i++) {
+      const VkCopyDescriptorSet *copy = &pDescriptorCopies[i];
+      ANV_FROM_HANDLE(anv_descriptor_set, src, copy->destSet);
+      ANV_FROM_HANDLE(anv_descriptor_set, dest, copy->destSet);
+      for (uint32_t j = 0; j < copy->count; j++) {
+         dest->descriptors[copy->destBinding + j] =
+            src->descriptors[copy->srcBinding + j];
+      }
+   }
+
+   return VK_SUCCESS;
 }
 
 // State object functions
