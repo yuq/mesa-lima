@@ -819,6 +819,15 @@ typedef enum {
 } VkAttachmentStoreOp;
 
 typedef enum {
+    VK_CMD_BUFFER_LEVEL_PRIMARY = 0,
+    VK_CMD_BUFFER_LEVEL_SECONDARY = 1,
+    VK_CMD_BUFFER_LEVEL_BEGIN_RANGE = VK_CMD_BUFFER_LEVEL_PRIMARY,
+    VK_CMD_BUFFER_LEVEL_END_RANGE = VK_CMD_BUFFER_LEVEL_SECONDARY,
+    VK_CMD_BUFFER_LEVEL_NUM = (VK_CMD_BUFFER_LEVEL_SECONDARY - VK_CMD_BUFFER_LEVEL_PRIMARY + 1),
+    VK_CMD_BUFFER_LEVEL_MAX_ENUM = 0x7FFFFFFF
+} VkCmdBufferLevel;
+
+typedef enum {
     VK_PIPELINE_BIND_POINT_COMPUTE = 0,
     VK_PIPELINE_BIND_POINT_GRAPHICS = 1,
     VK_PIPELINE_BIND_POINT_BEGIN_RANGE = VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -1029,6 +1038,7 @@ typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT = 0x00000002,
     VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
     VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
+    VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
 } VkCmdBufferOptimizeFlagBits;
 typedef VkFlags VkCmdBufferOptimizeFlags;
 
@@ -1680,6 +1690,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    queueNodeIndex;
+    VkCmdBufferLevel                            level;
     VkCmdBufferCreateFlags                      flags;
 } VkCmdBufferCreateInfo;
 

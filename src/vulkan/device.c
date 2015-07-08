@@ -2155,6 +2155,8 @@ VkResult anv_CreateCommandBuffer(
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
+   assert(pCreateInfo->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+
    cmd_buffer = anv_device_alloc(device, sizeof(*cmd_buffer), 8,
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer == NULL)
