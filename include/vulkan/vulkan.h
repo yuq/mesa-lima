@@ -1088,14 +1088,6 @@ typedef enum {
     VK_ENUM_RANGE(PHYSICAL_DEVICE_INFO_TYPE, PROPERTIES, MEMORY_PROPERTIES)
 } VkPhysicalDeviceInfoType;
 
-typedef enum {
-    // Info type for vkGetFormatInfo()
-    VK_FORMAT_INFO_TYPE_PROPERTIES                          = 0x00000000,
-
-    VK_ENUM_RANGE(FORMAT_INFO_TYPE, PROPERTIES, PROPERTIES)
-} VkFormatInfoType;
-
-
 // Physical device compatibility flags
 typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
 typedef enum {
