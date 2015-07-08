@@ -746,7 +746,6 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
             .baseArraySlice = 0,
             .arraySize = 1
          },
-         .minLod = 0
       },
       cmd_buffer);
 
@@ -887,7 +886,6 @@ void anv_CmdCopyImage(
                .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
                .arraySize = 1
             },
-            .minLod = 0
          },
          cmd_buffer);
 
@@ -956,7 +954,6 @@ void anv_CmdBlitImage(
                .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
                .arraySize = 1
             },
-            .minLod = 0
          },
          cmd_buffer);
 
@@ -1051,7 +1048,6 @@ void anv_CmdCopyBufferToImage(
                .baseArraySlice = 0,
                .arraySize = 1
             },
-            .minLod = 0
          },
          cmd_buffer);
 
@@ -1123,7 +1119,6 @@ void anv_CmdCopyImageToBuffer(
                .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
                .arraySize = 1
             },
-            .minLod = 0
          },
          cmd_buffer);
 

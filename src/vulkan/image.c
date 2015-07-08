@@ -402,7 +402,13 @@ anv_image_view_init(struct anv_surface_view *view,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
       .MemoryObjectControlState = GEN8_MOCS,
-      .BaseMipLevel = (float) pCreateInfo->minLod,
+
+      /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
+       * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
+       * both Base Mip Level fields nonzero".
+       */
+      .BaseMipLevel = 0.0,
+
       .SurfaceQPitch = surface->qpitch >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
@@ -493,8 +499,6 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(subresource->baseMipLevel + subresource->mipLevels <= image->levels);
    assert(subresource->baseArraySlice < image->array_size);
    assert(subresource->baseArraySlice + subresource->arraySize <= image->array_size);
-   assert(pCreateInfo->minLod >= 0);
-   assert(pCreateInfo->minLod < image->levels);
    assert(pView);
 
    if (view_info->is_cube) {
@@ -605,7 +609,13 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
       .SamplerL2BypassModeDisable = true,
       .RenderCacheReadWriteMode = WriteOnlyCache,
       .MemoryObjectControlState = GEN8_MOCS,
+
+      /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
+       * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
+       * both Base Mip Level fields nonzero".
+       */
       .BaseMipLevel = 0.0,
+
       .SurfaceQPitch = surface->qpitch >> 2,
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,

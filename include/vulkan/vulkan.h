@@ -1348,7 +1348,6 @@ typedef struct {
     VkFormat                                    format;
     VkChannelMapping                            channels;
     VkImageSubresourceRange                     subresourceRange;
-    float                                       minLod;
 } VkImageViewCreateInfo;
 
 typedef struct {
