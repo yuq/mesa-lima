@@ -643,7 +643,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                                  VK_STATE_BIND_POINT_VIEWPORT, fb->vp_state);
 
    anv_CmdBindDescriptorSets((VkCmdBuffer) cmd_buffer,
-                             VK_PIPELINE_BIND_POINT_GRAPHICS, 0, 1,
+                             VK_PIPELINE_BIND_POINT_GRAPHICS,
+                             device->meta_state.blit.pipeline_layout, 0, 1,
                              &set, 0, NULL);
 
    anv_CmdDraw((VkCmdBuffer) cmd_buffer, 0, 3, 0, 1);
