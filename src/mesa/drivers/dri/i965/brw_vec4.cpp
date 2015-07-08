@@ -1760,7 +1760,7 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
     * that we have reladdr computations available for CSE, since we'll
     * often do repeated subexpressions for those.
     */
-   if (shader) {
+   if (shader || use_vec4_nir) {
       move_grf_array_access_to_scratch();
       move_uniform_array_access_to_pull_constants();
    } else {
