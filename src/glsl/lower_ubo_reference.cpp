@@ -166,6 +166,18 @@ public:
                     bool row_major, int matrix_columns,
                     unsigned write_mask);
 
+   ir_visitor_status visit_enter(class ir_expression *);
+   ir_expression *calculate_ssbo_unsized_array_length(ir_expression *expr);
+   void check_ssbo_unsized_array_length_expression(class ir_expression *);
+   void check_ssbo_unsized_array_length_assignment(ir_assignment *ir);
+
+   ir_expression *process_ssbo_unsized_array_length(ir_rvalue **,
+                                                    ir_dereference *,
+                                                    ir_variable *);
+   ir_expression *emit_ssbo_get_buffer_size();
+
+   unsigned calculate_unsized_array_stride(ir_dereference *deref);
+
    void *mem_ctx;
    struct gl_shader *shader;
    struct gl_uniform_buffer_variable *ubo_var;
@@ -738,6 +750,175 @@ lower_ubo_reference_visitor::write_to_memory(ir_dereference *deref,
                row_major, matrix_columns, write_mask);
 }
 
+ir_visitor_status
+lower_ubo_reference_visitor::visit_enter(ir_expression *ir)
+{
+   check_ssbo_unsized_array_length_expression(ir);
+   return rvalue_visit(ir);
+}
+
+ir_expression *
+lower_ubo_reference_visitor::calculate_ssbo_unsized_array_length(ir_expression *expr)
+{
+   if (expr->operation !=
+       ir_expression_operation(ir_unop_ssbo_unsized_array_length))
+      return NULL;
+
+   ir_rvalue *rvalue = expr->operands[0]->as_rvalue();
+   if (!rvalue ||
+       !rvalue->type->is_array() || !rvalue->type->is_unsized_array())
+      return NULL;
+
+   ir_dereference *deref = expr->operands[0]->as_dereference();
+   if (!deref)
+      return NULL;
+
+   ir_variable *var = expr->operands[0]->variable_referenced();
+   if (!var || !var->is_in_shader_storage_block())
+      return NULL;
+   return process_ssbo_unsized_array_length(&rvalue, deref, var);
+}
+
+void
+lower_ubo_reference_visitor::check_ssbo_unsized_array_length_expression(ir_expression *ir)
+{
+   if (ir->operation ==
+       ir_expression_operation(ir_unop_ssbo_unsized_array_length)) {
+         /* Don't replace this unop if it is found alone. It is going to be
+          * removed by the optimization passes or replaced if it is part of
+          * an ir_assignment or another ir_expression.
+          */
+         return;
+   }
+
+   for (unsigned i = 0; i < ir->get_num_operands(); i++) {
+      if (ir->operands[i]->ir_type != ir_type_expression)
+         continue;
+      ir_expression *expr = (ir_expression *) ir->operands[i];
+      ir_expression *temp = calculate_ssbo_unsized_array_length(expr);
+      if (!temp)
+         continue;
+
+      delete expr;
+      ir->operands[i] = temp;
+   }
+}
+
+void
+lower_ubo_reference_visitor::check_ssbo_unsized_array_length_assignment(ir_assignment *ir)
+{
+   if (!ir->rhs || ir->rhs->ir_type != ir_type_expression)
+      return;
+
+   ir_expression *expr = (ir_expression *) ir->rhs;
+   ir_expression *temp = calculate_ssbo_unsized_array_length(expr);
+   if (!temp)
+      return;
+
+   delete expr;
+   ir->rhs = temp;
+   return;
+}
+
+ir_expression *
+lower_ubo_reference_visitor::emit_ssbo_get_buffer_size()
+{
+   ir_rvalue *block_ref = this->uniform_block->clone(mem_ctx, NULL);
+   return new(mem_ctx) ir_expression(ir_unop_get_buffer_size,
+                                     glsl_type::int_type,
+                                     block_ref);
+}
+
+unsigned
+lower_ubo_reference_visitor::calculate_unsized_array_stride(ir_dereference *deref)
+{
+   unsigned array_stride = 0;
+
+   switch (deref->ir_type) {
+   case ir_type_dereference_variable:
+   {
+      ir_dereference_variable *deref_var = (ir_dereference_variable *)deref;
+      const struct glsl_type *unsized_array_type = NULL;
+      /* An unsized array can be sized by other lowering passes, so pick
+       * the first field of the array which has the data type of the unsized
+       * array.
+       */
+      unsized_array_type = deref_var->var->type->fields.array;
+
+      /* Whether or not the field is row-major (because it might be a
+       * bvec2 or something) does not affect the array itself. We need
+       * to know whether an array element in its entirety is row-major.
+       */
+      const bool array_row_major =
+         is_dereferenced_thing_row_major(deref_var);
+
+      array_stride = unsized_array_type->std140_size(array_row_major);
+      array_stride = glsl_align(array_stride, 16);
+      break;
+   }
+   case ir_type_dereference_record:
+   {
+      ir_dereference_record *deref_record = (ir_dereference_record *) deref;
+      const struct glsl_type *deref_record_type =
+         deref_record->record->as_dereference()->type;
+      unsigned record_length = deref_record_type->length;
+      /* Unsized array is always the last element of the interface */
+      const struct glsl_type *unsized_array_type =
+         deref_record_type->fields.structure[record_length - 1].type->fields.array;
+
+      const bool array_row_major =
+         is_dereferenced_thing_row_major(deref_record);
+      array_stride = unsized_array_type->std140_size(array_row_major);
+      array_stride = glsl_align(array_stride, 16);
+      break;
+   }
+   default:
+      unreachable("Unsupported dereference type");
+   }
+   return array_stride;
+}
+
+ir_expression *
+lower_ubo_reference_visitor::process_ssbo_unsized_array_length(ir_rvalue **rvalue,
+                                                               ir_dereference *deref,
+                                                               ir_variable *var)
+{
+   mem_ctx = ralloc_parent(*rvalue);
+
+   ir_rvalue *base_offset = NULL;
+   unsigned const_offset;
+   bool row_major;
+   int matrix_columns;
+   int unsized_array_stride = calculate_unsized_array_stride(deref);
+
+   /* Compute the offset to the start if the dereference as well as other
+    * information we need to calculate the length.
+    */
+   setup_for_load_or_store(var, deref,
+                           &base_offset, &const_offset,
+                           &row_major, &matrix_columns);
+   /* array.length() =
+    *  max((buffer_object_size - offset_of_array) / stride_of_array, 0)
+    */
+   ir_expression *buffer_size = emit_ssbo_get_buffer_size();
+
+   ir_expression *offset_of_array = new(mem_ctx)
+      ir_expression(ir_binop_add, base_offset,
+                    new(mem_ctx) ir_constant(const_offset));
+   ir_expression *offset_of_array_int = new(mem_ctx)
+      ir_expression(ir_unop_u2i, offset_of_array);
+
+   ir_expression *sub = new(mem_ctx)
+      ir_expression(ir_binop_sub, buffer_size, offset_of_array_int);
+   ir_expression *div =  new(mem_ctx)
+      ir_expression(ir_binop_div, sub,
+                    new(mem_ctx) ir_constant(unsized_array_stride));
+   ir_expression *max = new(mem_ctx)
+      ir_expression(ir_binop_max, div, new(mem_ctx) ir_constant(0));
+
+   return max;
+}
+
 void
 lower_ubo_reference_visitor::check_for_ssbo_store(ir_assignment *ir)
 {
@@ -777,6 +958,7 @@ lower_ubo_reference_visitor::check_for_ssbo_store(ir_assignment *ir)
 ir_visitor_status
 lower_ubo_reference_visitor::visit_enter(ir_assignment *ir)
 {
+   check_ssbo_unsized_array_length_assignment(ir);
    check_for_ssbo_store(ir);
    return rvalue_visit(ir);
 }
