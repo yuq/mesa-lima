@@ -2160,7 +2160,7 @@ VkResult VKAPI vkWaitForFences(
     uint32_t                                    fenceCount,
     const VkFence*                              pFences,
     bool32_t                                    waitAll,
-    uint64_t                                    timeout); // timeout in nanoseconds
+    uint64_t                                    timeout);
 
 VkResult VKAPI vkCreateSemaphore(
     VkDevice                                    device,
