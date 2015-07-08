@@ -472,64 +472,50 @@ VkResult anv_DestroyDevice(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetGlobalExtensionInfo(
-    VkExtensionInfoType                         infoType,
-    uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-   static const VkExtensionProperties extensions[] = {
-      {
-         .extName = "VK_WSI_LunarG",
-         .version = 3
-      }
-   };
-   uint32_t count = ARRAY_SIZE(extensions);
-
-   switch (infoType) {
-   case VK_EXTENSION_INFO_TYPE_COUNT:
-      memcpy(pData, &count, sizeof(count));
-      *pDataSize = sizeof(count);
-      return VK_SUCCESS;
-
-   case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-      if (extensionIndex >= count)
-         return vk_error(VK_ERROR_INVALID_EXTENSION);
-
-      memcpy(pData, &extensions[extensionIndex], sizeof(extensions[0]));
-      *pDataSize = sizeof(extensions[0]);
-      return VK_SUCCESS;
-
-   default:
-      return VK_UNSUPPORTED;
+static const VkExtensionProperties global_extensions[] = {
+   {
+      .extName = "VK_WSI_LunarG",
+      .version = 3
    }
+};
+
+VkResult anv_GetGlobalExtensionCount(
+    uint32_t*                                   pCount)
+{
+   *pCount = ARRAY_SIZE(global_extensions);
+
+   return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceExtensionInfo(
-    VkPhysicalDevice                            physicalDevice,
-    VkExtensionInfoType                         infoType,
+
+VkResult anv_GetGlobalExtensionProperties(
     uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+    VkExtensionProperties*                      pProperties)
 {
-   uint32_t *count;
+   assert(extensionIndex < ARRAY_SIZE(global_extensions));
 
-   switch (infoType) {
-   case VK_EXTENSION_INFO_TYPE_COUNT:
-      *pDataSize = 4;
-      if (pData == NULL)
-         return VK_SUCCESS;
+   *pProperties = global_extensions[extensionIndex];
 
-      count = pData;
-      *count = 0;
-      return VK_SUCCESS;
-      
-   case VK_EXTENSION_INFO_TYPE_PROPERTIES:
-      return vk_error(VK_ERROR_INVALID_EXTENSION);
-      
-   default:
-      return VK_UNSUPPORTED;
-   }
+   return VK_SUCCESS;
+}
+
+VkResult anv_GetPhysicalDeviceExtensionCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount)
+{
+   /* None supported at this time */
+   *pCount = 0;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_GetPhysicalDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    extensionIndex,
+    VkExtensionProperties*                      pProperties)
+{
+   /* None supported at this time */
+   return vk_error(VK_ERROR_INVALID_EXTENSION);
 }
 
 VkResult anv_EnumerateLayers(

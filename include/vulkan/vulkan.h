@@ -1089,14 +1089,6 @@ typedef enum {
 } VkPhysicalDeviceInfoType;
 
 typedef enum {
-    // Info type for vkGetGlobalExtensionInfo() and vkGetPhysicalDeviceExtensionInfo()
-    VK_EXTENSION_INFO_TYPE_COUNT                            = 0x00000000,
-    VK_EXTENSION_INFO_TYPE_PROPERTIES                       = 0x00000001,
-
-    VK_ENUM_RANGE(EXTENSION_INFO_TYPE, COUNT, PROPERTIES)
-} VkExtensionInfoType;
-
-typedef enum {
     // Info type for vkGetFormatInfo()
     VK_FORMAT_INFO_TYPE_PROPERTIES                          = 0x00000000,
 
@@ -1895,8 +1887,10 @@ typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instanc
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
-typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionInfo)(VkPhysicalDevice physicalDevice, VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionCount)(uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(uint32_t extensionIndex, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, uint32_t extensionIndex, VkExtensionProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
@@ -2035,18 +2029,21 @@ VkResult VKAPI vkCreateDevice(
 VkResult VKAPI vkDestroyDevice(
     VkDevice                                    device);
 
-VkResult VKAPI vkGetGlobalExtensionInfo(
-    VkExtensionInfoType                         infoType,
-    uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+VkResult VKAPI vkGetGlobalExtensionCount(
+    uint32_t*                                   pCount);
 
-VkResult VKAPI vkGetPhysicalDeviceExtensionInfo(
-    VkPhysicalDevice                            physicalDevice,
-    VkExtensionInfoType                         infoType,
+VkResult VKAPI vkGetGlobalExtensionProperties(
     uint32_t                                    extensionIndex,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+    VkExtensionProperties*                      pProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount);
+
+VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    extensionIndex,
+    VkExtensionProperties*                      pProperties);
 
 VkResult VKAPI vkEnumerateLayers(
     VkPhysicalDevice                            physicalDevice,
