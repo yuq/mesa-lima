@@ -67,6 +67,8 @@ i = 0
 for line in fileinput.input():
     m  = p.match(line)
     if (m):
+        if m.group(2) == 'VoidFunction':
+            continue
         fullname = "vk" + m.group(2)
         h = hash(fullname)
         entrypoints.append((m.group(1), m.group(2), m.group(3), i, h))

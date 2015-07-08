@@ -1194,6 +1194,7 @@ typedef struct {
     bool32_t                                    supportsPinning;
 } VkPhysicalDeviceMemoryProperties;
 
+typedef void (VKAPI *PFN_vkVoidFunction)(void);
 typedef struct {
     uint32_t                                    queueNodeIndex;
     uint32_t                                    queueCount;
@@ -1898,7 +1899,8 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
-typedef void *   (VKAPI *PFN_vkGetProcAddr)(VkPhysicalDevice physicalDevice, const char * pName);
+typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
+typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
 typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionInfo)(VkExtensionInfoType infoType, uint32_t extensionIndex, size_t* pDataSize, void* pData);
@@ -2021,8 +2023,12 @@ VkResult VKAPI vkGetPhysicalDeviceInfo(
     size_t*                                     pDataSize,
     void*                                       pData);
 
-void * VKAPI vkGetProcAddr(
-    VkPhysicalDevice                            physicalDevice,
+PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName);
+
+PFN_vkVoidFunction VKAPI vkGetDeviceProcAddr(
+    VkDevice                                    device,
     const char*                                 pName);
 
 VkResult VKAPI vkCreateDevice(

@@ -274,8 +274,15 @@ VkResult anv_GetPhysicalDeviceInfo(
 
 }
 
-void * vkGetProcAddr(
-    VkPhysicalDevice                            physicalDevice,
+PFN_vkVoidFunction anv_GetInstanceProcAddr(
+    VkInstance                                  instance,
+    const char*                                 pName)
+{
+   return anv_lookup_entrypoint(pName);
+}
+
+PFN_vkVoidFunction anv_GetDeviceProcAddr(
+    VkDevice                                    device,
     const char*                                 pName)
 {
    return anv_lookup_entrypoint(pName);
