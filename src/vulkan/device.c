@@ -338,30 +338,19 @@ anv_queue_finish(struct anv_queue *queue)
 static void
 anv_device_init_border_colors(struct anv_device *device)
 {
-   float float_border_colors[][4] = {
-      [VK_BORDER_COLOR_OPAQUE_WHITE]            = { 1.0, 1.0, 1.0, 1.0 },
-      [VK_BORDER_COLOR_TRANSPARENT_BLACK]       = { 0.0, 0.0, 0.0, 0.0 },
-      [VK_BORDER_COLOR_OPAQUE_BLACK]            = { 0.0, 0.0, 0.0, 1.0 }
+   static const VkClearColorValue border_colors[] = {
+      [VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK] =  { .f32 = { 0.0, 0.0, 0.0, 0.0 } },
+      [VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK] =       { .f32 = { 0.0, 0.0, 0.0, 1.0 } },
+      [VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE] =       { .f32 = { 1.0, 1.0, 1.0, 1.0 } },
+      [VK_BORDER_COLOR_INT_TRANSPARENT_BLACK] =    { .u32 = { 0, 0, 0, 0 } },
+      [VK_BORDER_COLOR_INT_OPAQUE_BLACK] =         { .u32 = { 0, 0, 0, 1 } },
+      [VK_BORDER_COLOR_INT_OPAQUE_WHITE] =         { .u32 = { 1, 1, 1, 1 } },
    };
 
-   uint32_t uint32_border_colors[][4] = {
-      [VK_BORDER_COLOR_OPAQUE_WHITE]            = { 1, 1, 1, 1 },
-      [VK_BORDER_COLOR_TRANSPARENT_BLACK]       = { 0, 0, 0, 0 },
-      [VK_BORDER_COLOR_OPAQUE_BLACK]            = { 0, 0, 0, 1 }
-   };
-
-   device->float_border_colors =
+   device->border_colors =
       anv_state_pool_alloc(&device->dynamic_state_pool,
-                           sizeof(float_border_colors), 32);
-   memcpy(device->float_border_colors.map,
-          float_border_colors, sizeof(float_border_colors));
-
-   device->uint32_border_colors =
-      anv_state_pool_alloc(&device->dynamic_state_pool,
-                           sizeof(uint32_border_colors), 32);
-   memcpy(device->uint32_border_colors.map,
-          uint32_border_colors, sizeof(uint32_border_colors));
-
+                           sizeof(border_colors), 32);
+   memcpy(device->border_colors.map, border_colors, sizeof(border_colors));
 }
 
 static const uint32_t BATCH_SIZE = 8192;
@@ -451,10 +440,7 @@ VkResult anv_DestroyDevice(
    /* We only need to free these to prevent valgrind errors.  The backing
     * BO will go away in a couple of lines so we don't actually leak.
     */
-   anv_state_pool_free(&device->dynamic_state_pool,
-                       device->float_border_colors);
-   anv_state_pool_free(&device->dynamic_state_pool,
-                       device->uint32_border_colors);
+   anv_state_pool_free(&device->dynamic_state_pool, device->border_colors);
 #endif
 
    anv_bo_pool_finish(&device->batch_bo_pool);
@@ -1537,7 +1523,7 @@ VkResult anv_CreateSampler(
       .CubeSurfaceControlMode = 0,
 
       .IndirectStatePointer =
-         device->float_border_colors.offset +
+         device->border_colors.offset +
          pCreateInfo->borderColor * sizeof(float) * 4,
 
       .LODClampMagnificationMode = MIPNONE,
