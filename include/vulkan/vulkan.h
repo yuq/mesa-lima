@@ -1237,6 +1237,14 @@ typedef struct {
 } VkMemoryAllocInfo;
 
 typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkDeviceMemory                              mem;
+    VkDeviceSize                                offset;
+    VkDeviceSize                                size;
+} VkMappedMemoryRange;
+
+typedef struct {
     VkDeviceSize                                size;
     VkDeviceSize                                alignment;
     VkDeviceSize                                granularity;
@@ -1919,8 +1927,8 @@ typedef VkResult (VKAPI *PFN_vkAllocMemory)(VkDevice device, const VkMemoryAlloc
 typedef VkResult (VKAPI *PFN_vkFreeMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData);
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
-typedef VkResult (VKAPI *PFN_vkFlushMappedMemory)(VkDevice device, VkDeviceMemory mem, VkDeviceSize offset, VkDeviceSize size);
-typedef VkResult (VKAPI *PFN_vkPinSystemMemory)(VkDevice device, const void* pSysMem, size_t memSize, VkDeviceMemory* pMem);
+typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
+typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetObjectInfo)(VkDevice device, VkObjectType objType, VkObject object, VkObjectInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceMemory mem, VkDeviceSize offset);
@@ -2099,17 +2107,15 @@ VkResult VKAPI vkUnmapMemory(
     VkDevice                                    device,
     VkDeviceMemory                              mem);
 
-VkResult VKAPI vkFlushMappedMemory(
+VkResult VKAPI vkFlushMappedMemoryRanges(
     VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                offset,
-    VkDeviceSize                                size);
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges);
 
-VkResult VKAPI vkPinSystemMemory(
+VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                    device,
-    const void*                                 pSysMem,
-    size_t                                      memSize,
-    VkDeviceMemory*                             pMem);
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges);
 
 VkResult VKAPI vkDestroyObject(
     VkDevice                                    device,

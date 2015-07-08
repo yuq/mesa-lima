@@ -990,24 +990,22 @@ VkResult anv_UnmapMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_FlushMappedMemory(
+VkResult anv_FlushMappedMemoryRanges(
     VkDevice                                    device,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                offset,
-    VkDeviceSize                                size)
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges)
 {
    /* clflush here for !llc platforms */
 
    return VK_SUCCESS;
 }
 
-VkResult anv_PinSystemMemory(
+VkResult anv_InvalidateMappedMemoryRanges(
     VkDevice                                    device,
-    const void*                                 pSysMem,
-    size_t                                      memSize,
-    VkDeviceMemory*                             pMem)
+    uint32_t                                    memRangeCount,
+    const VkMappedMemoryRange*                  pMemRanges)
 {
-   return VK_SUCCESS;
+   return anv_FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
 VkResult anv_DestroyObject(
