@@ -940,6 +940,9 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 void *
 anv_lookup_entrypoint(const char *name);
 
+#define ANV_FROM_HANDLE(__anv_type, __name, __handle) \
+   struct __anv_type *__name = (struct __anv_type *) __handle
+
 #ifdef __cplusplus
 }
 #endif

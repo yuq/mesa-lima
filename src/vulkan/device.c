@@ -1260,15 +1260,15 @@ VkResult anv_WaitForFences(
     bool32_t                                    waitAll,
     uint64_t                                    timeout)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_fence **fences = (struct anv_fence **) pFences;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    int64_t t = timeout;
    int ret;
 
    /* FIXME: handle !waitAll */
 
    for (uint32_t i = 0; i < fenceCount; i++) {
-      ret = anv_gem_wait(device, fences[i]->bo.gem_handle, &t);
+      ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
+      ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
       if (ret == -1 && errno == ETIME)
          return VK_TIMEOUT;
       else if (ret == -1)
@@ -1340,7 +1340,7 @@ VkResult anv_CreateBuffer(
     const VkBufferCreateInfo*                   pCreateInfo,
     VkBuffer*                                   pBuffer)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_buffer *buffer;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
@@ -1418,8 +1418,8 @@ VkResult anv_CreateBufferView(
     const VkBufferViewCreateInfo*               pCreateInfo,
     VkBufferView*                               pView)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_buffer *buffer = (struct anv_buffer *) pCreateInfo->buffer;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
    struct anv_surface_view *view;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
@@ -1453,7 +1453,7 @@ VkResult anv_CreateSampler(
     const VkSamplerCreateInfo*                  pCreateInfo,
     VkSampler*                                  pSampler)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_sampler *sampler;
    uint32_t mag_filter, min_filter, max_anisotropy;
 
@@ -1555,7 +1555,7 @@ VkResult anv_CreateDescriptorSetLayout(
     const VkDescriptorSetLayoutCreateInfo*      pCreateInfo,
     VkDescriptorSetLayout*                      pSetLayout)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_descriptor_set_layout *set_layout;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
@@ -1729,13 +1729,12 @@ VkResult anv_AllocDescriptorSets(
     VkDescriptorSet*                            pDescriptorSets,
     uint32_t*                                   pCount)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   const struct anv_descriptor_set_layout *layout;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_descriptor_set *set;
    size_t size;
 
    for (uint32_t i = 0; i < count; i++) {
-      layout = (struct anv_descriptor_set_layout *) pSetLayouts[i];
+      ANV_FROM_HANDLE(anv_descriptor_set_layout, layout, pSetLayouts[i]);
       size = sizeof(*set) + layout->count * sizeof(set->descriptors[0]);
       set = anv_device_alloc(device, size, 8,
                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
