@@ -689,7 +689,6 @@ anv_CreateDepthStencilView(VkDevice _device,
    anv_assert(pCreateInfo->mipLevel == 0);
    anv_assert(pCreateInfo->baseArraySlice == 0);
    anv_assert(pCreateInfo->arraySize == 1);
-   anv_assert(pCreateInfo->msaaResolveImage == 0);
 
    view->bo = image->bo;
 

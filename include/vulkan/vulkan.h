@@ -1382,8 +1382,6 @@ typedef struct {
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                     msaaResolveImage;
-    VkImageSubresourceRange                     msaaResolveSubResource;
     VkDepthStencilViewCreateFlags               flags;
 } VkDepthStencilViewCreateInfo;
 
