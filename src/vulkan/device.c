@@ -1076,85 +1076,39 @@ VkResult anv_DestroyObject(
    }
 }
 
-static void
-fill_memory_requirements(
+VkResult anv_GetObjectMemoryRequirements(
+    VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
-    VkMemoryRequirements *                      memory_requirements)
+    VkMemoryRequirements*                       pMemoryRequirements)
 {
-   struct anv_buffer *buffer;
-   struct anv_image *image;
-
-   memory_requirements->memPropsAllowed =
+   pMemoryRequirements->memPropsAllowed =
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
       /* VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT | */
       /* VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT | */
       VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT;
 
-   memory_requirements->memPropsRequired = 0;
+   pMemoryRequirements->memPropsRequired = 0;
 
    switch (objType) {
-   case VK_OBJECT_TYPE_BUFFER:
-      buffer = (struct anv_buffer *) object;
-      memory_requirements->size = buffer->size;
-      memory_requirements->alignment = 16;
-      break;
-   case VK_OBJECT_TYPE_IMAGE:
-      image = (struct anv_image *) object;
-      memory_requirements->size = image->size;
-      memory_requirements->alignment = image->alignment;
-      break;
-   default:
-      memory_requirements->size = 0;
+   case VK_OBJECT_TYPE_BUFFER: {
+      struct anv_buffer *buffer = (struct anv_buffer *) object;
+      pMemoryRequirements->size = buffer->size;
+      pMemoryRequirements->alignment = 16;
       break;
    }
-}
-
-static uint32_t
-get_allocation_count(VkObjectType objType)
-{
-   switch (objType) {
-   case VK_OBJECT_TYPE_BUFFER:
-   case VK_OBJECT_TYPE_IMAGE:
-      return 1;
-   default:
-      return 0;
+   case VK_OBJECT_TYPE_IMAGE: {
+      struct anv_image *image = (struct anv_image *) object;
+      pMemoryRequirements->size = image->size;
+      pMemoryRequirements->alignment = image->alignment;
+      break;
    }
-}
-
-VkResult anv_GetObjectInfo(
-    VkDevice                                    _device,
-    VkObjectType                                objType,
-    VkObject                                    object,
-    VkObjectInfoType                            infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData)
-{
-   VkMemoryRequirements memory_requirements;
-   uint32_t *count;
-
-   switch (infoType) {
-   case VK_OBJECT_INFO_TYPE_MEMORY_REQUIREMENTS:
-      *pDataSize = sizeof(memory_requirements);
-      if (pData == NULL)
-         return VK_SUCCESS;
-
-      fill_memory_requirements(objType, object, pData);
-      return VK_SUCCESS;
-
-   case VK_OBJECT_INFO_TYPE_MEMORY_ALLOCATION_COUNT:
-      *pDataSize = sizeof(count);
-      if (pData == NULL)
-         return VK_SUCCESS;
-
-      count = pData;
-      *count = get_allocation_count(objType);
-      return VK_SUCCESS;
-
    default:
-      return vk_error(VK_UNSUPPORTED);
+      pMemoryRequirements->size = 0;
+      break;
    }
 
+   return VK_SUCCESS;
 }
 
 VkResult anv_QueueBindObjectMemory(
