@@ -1295,7 +1295,7 @@ VkResult anv_CreateFence(
 VkResult anv_ResetFences(
     VkDevice                                    _device,
     uint32_t                                    fenceCount,
-    VkFence*                                    pFences)
+    const VkFence*                              pFences)
 {
    struct anv_fence **fences = (struct anv_fence **) pFences;
 

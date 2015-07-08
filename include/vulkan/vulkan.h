@@ -1927,7 +1927,7 @@ typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemory)(VkQueue queue, VkObjectTyp
 typedef VkResult (VKAPI *PFN_vkQueueBindObjectMemoryRange)(VkQueue queue, VkObjectType objType, VkObject object, uint32_t allocationIdx, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkQueueBindImageMemoryRange)(VkQueue queue, VkImage image, uint32_t allocationIdx, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
-typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, VkFence* pFences);
+typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, bool32_t waitAll, uint64_t timeout);
 typedef VkResult (VKAPI *PFN_vkCreateSemaphore)(VkDevice device, const VkSemaphoreCreateInfo* pCreateInfo, VkSemaphore* pSemaphore);
@@ -2158,7 +2158,7 @@ VkResult VKAPI vkCreateFence(
 VkResult VKAPI vkResetFences(
     VkDevice                                    device,
     uint32_t                                    fenceCount,
-    VkFence*                                    pFences);
+    const VkFence*                              pFences);
 
 VkResult VKAPI vkGetFenceStatus(
     VkDevice                                    device,
