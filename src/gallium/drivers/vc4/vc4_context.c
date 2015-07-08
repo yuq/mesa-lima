@@ -103,8 +103,10 @@ vc4_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
         vc4_flush(pctx);
 
         if (fence) {
+                struct pipe_screen *screen = pctx->screen;
                 struct vc4_fence *f = vc4_fence_create(vc4->screen,
                                                        vc4->last_emit_seqno);
+                screen->fence_reference(screen, fence, NULL);
                 *fence = (struct pipe_fence_handle *)f;
         }
 }
