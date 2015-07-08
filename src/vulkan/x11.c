@@ -147,10 +147,10 @@ VkResult anv_CreateSwapChainWSI(
                       },
                       (VkDeviceMemory *) &memory);
 
-      anv_QueueBindObjectMemory(VK_NULL_HANDLE,
-                                VK_OBJECT_TYPE_IMAGE,
-                                (VkImage) image, 0,
-                                (VkDeviceMemory) memory, 0);
+      anv_BindObjectMemory(VK_NULL_HANDLE,
+                           VK_OBJECT_TYPE_IMAGE,
+                           (VkImage) image,
+                           (VkDeviceMemory) memory, 0);
 
       ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
                                surface->stride, I915_TILING_X);

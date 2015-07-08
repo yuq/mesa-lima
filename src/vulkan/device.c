@@ -1118,11 +1118,10 @@ VkResult anv_GetObjectMemoryRequirements(
    return VK_SUCCESS;
 }
 
-VkResult anv_QueueBindObjectMemory(
-    VkQueue                                     queue,
+VkResult anv_BindObjectMemory(
+    VkDevice                                    device,
     VkObjectType                                objType,
     VkObject                                    object,
-    uint32_t                                    allocationIdx,
     VkDeviceMemory                              _mem,
     VkDeviceSize                                memOffset)
 {
@@ -1144,7 +1143,7 @@ VkResult anv_QueueBindObjectMemory(
    default:
       break;
    }
-   
+
    return VK_SUCCESS;
 }
 
