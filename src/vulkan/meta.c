@@ -995,6 +995,11 @@ void anv_CmdCopyBufferToImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      if (pRegions[r].bufferRowLength != 0)
+         anv_finishme("bufferRowLength not supported in CopyBufferToImage");
+      if (pRegions[r].bufferImageHeight != 0)
+         anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
+
       struct anv_image *src_image;
       anv_CreateImage(vk_device,
          &(VkImageCreateInfo) {
@@ -1087,6 +1092,11 @@ void anv_CmdCopyImageToBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      if (pRegions[r].bufferRowLength != 0)
+         anv_finishme("bufferRowLength not supported in CopyBufferToImage");
+      if (pRegions[r].bufferImageHeight != 0)
+         anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
+
       struct anv_surface_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {

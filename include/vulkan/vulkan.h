@@ -1741,6 +1741,8 @@ typedef struct {
 
 typedef struct {
     VkDeviceSize                                bufferOffset;
+    uint32_t                                    bufferRowLength;
+    uint32_t                                    bufferImageHeight;
     VkImageSubresource                          imageSubresource;
     VkOffset3D                                  imageOffset;
     VkExtent3D                                  imageExtent;
