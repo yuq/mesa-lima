@@ -2591,7 +2591,7 @@ Array Declaration
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Declarations can optional have an ArrayID attribute which can be referred by
-indirect addressing operands. An ArrayID of zero is reserved and treaded as
+indirect addressing operands. An ArrayID of zero is reserved and treated as
 if no ArrayID is specified.
 
 If an indirect addressing operand refers to a specific declaration by using
