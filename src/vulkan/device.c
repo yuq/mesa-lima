@@ -3641,6 +3641,16 @@ VkResult anv_CreateRenderPass(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetRenderAreaGranularity(
+    VkDevice                                    device,
+    VkRenderPass                                renderPass,
+    VkExtent2D*                                 pGranularity)
+{
+   *pGranularity = (VkExtent2D) { 1, 1 };
+
+   return VK_SUCCESS;
+}
+
 static void
 anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_render_pass *pass)
