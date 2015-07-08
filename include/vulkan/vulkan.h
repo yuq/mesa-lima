@@ -891,6 +891,16 @@ typedef enum {
 } VkTimestampType;
 
 typedef enum {
+    VK_RENDER_PASS_CONTENTS_INLINE = 0,
+    VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS = 1,
+    VK_RENDER_PASS_CONTENTS_BEGIN_RANGE = VK_RENDER_PASS_CONTENTS_INLINE,
+    VK_RENDER_PASS_CONTENTS_END_RANGE = VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS,
+    VK_RENDER_PASS_CONTENTS_NUM = (VK_RENDER_PASS_CONTENTS_SECONDARY_CMD_BUFFERS - VK_RENDER_PASS_CONTENTS_INLINE + 1),
+    VK_RENDER_PASS_CONTENTS_MAX_ENUM = 0x7FFFFFFF
+} VkRenderPassContents;
+
+
+typedef enum {
     VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT = 0x00000001,
     VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT = 0x00000002,
     VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT = 0x00000004,
@@ -1746,6 +1756,7 @@ typedef struct {
 typedef struct {
     VkRenderPass                                renderPass;
     VkFramebuffer                               framebuffer;
+    VkRenderPassContents                        contents;
 } VkRenderPassBegin;
 
 typedef struct {

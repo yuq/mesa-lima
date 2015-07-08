@@ -3655,6 +3655,8 @@ void anv_CmdBeginRenderPass(
    struct anv_framebuffer *framebuffer =
       (struct anv_framebuffer *) pRenderPassBegin->framebuffer;
 
+   assert(pRenderPassBegin->contents == VK_RENDER_PASS_CONTENTS_INLINE);
+
    cmd_buffer->framebuffer = framebuffer;
 
    cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
