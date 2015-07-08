@@ -920,12 +920,16 @@ void anv_CmdBlitImage(
     VkImage                                     destImage,
     VkImageLayout                               destImageLayout,
     uint32_t                                    regionCount,
-    const VkImageBlit*                          pRegions)
+    const VkImageBlit*                          pRegions,
+    VkTexFilter                                 filter)
+
 {
    struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
    struct anv_image *src_image = (struct anv_image *)srcImage;
    struct anv_image *dest_image = (struct anv_image *)destImage;
    struct anv_saved_state saved_state;
+
+   anv_finishme("respect VkTexFilter");
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
