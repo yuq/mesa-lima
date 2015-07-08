@@ -171,8 +171,6 @@ typedef enum {
     VK_STRUCTURE_TYPE_APPLICATION_INFO = 0,
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 1,
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO = 2,
-    VK_STRUCTURE_TYPE_MEMORY_OPEN_INFO = 3,
-    VK_STRUCTURE_TYPE_PEER_MEMORY_OPEN_INFO = 4,
     VK_STRUCTURE_TYPE_BUFFER_VIEW_ATTACH_INFO = 5,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_ATTACH_INFO = 6,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO = 7,
@@ -190,7 +188,6 @@ typedef enum {
     VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 19,
     VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 20,
     VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 21,
-    VK_STRUCTURE_TYPE_SEMAPHORE_OPEN_INFO = 22,
     VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO = 23,
     VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 24,
     VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 25,
@@ -1810,12 +1807,6 @@ typedef struct {
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
 } VkMemoryBarrier;
-
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkDeviceMemory                              originalMem;
-} VkPeerMemoryOpenInfo;
 
 typedef struct {
     VkFormatFeatureFlags                        linearTilingFeatures;
