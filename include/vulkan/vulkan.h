@@ -1106,13 +1106,6 @@ typedef enum {
     VK_ENUM_RANGE(FORMAT_INFO_TYPE, PROPERTIES, PROPERTIES)
 } VkFormatInfoType;
 
-typedef enum {
-    // Info type for vkGetImageSubresourceInfo()
-    VK_SUBRESOURCE_INFO_TYPE_LAYOUT                         = 0x00000000,
-
-    VK_ENUM_RANGE(SUBRESOURCE_INFO_TYPE, LAYOUT, LAYOUT)
-} VkSubresourceInfoType;
-
 
 // Physical device compatibility flags
 typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
@@ -1943,7 +1936,7 @@ typedef VkResult (VKAPI *PFN_vkGetFormatInfo)(VkDevice device, VkFormat format, 
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
-typedef VkResult (VKAPI *PFN_vkGetImageSubresourceInfo)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceInfoType infoType, size_t* pDataSize, void* pData);
+typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
@@ -2233,13 +2226,11 @@ VkResult VKAPI vkCreateImage(
     const VkImageCreateInfo*                    pCreateInfo,
     VkImage*                                    pImage);
 
-VkResult VKAPI vkGetImageSubresourceInfo(
+VkResult VKAPI vkGetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
     const VkImageSubresource*                   pSubresource,
-    VkSubresourceInfoType                       infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
+    VkSubresourceLayout*                        pLayout);
 
 VkResult VKAPI vkCreateImageView(
     VkDevice                                    device,

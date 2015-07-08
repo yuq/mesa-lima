@@ -306,13 +306,11 @@ anv_CreateImage(VkDevice device,
       pImage);
 }
 
-VkResult
-anv_GetImageSubresourceInfo(VkDevice device,
-                            VkImage image,
-                            const VkImageSubresource *pSubresource,
-                            VkSubresourceInfoType infoType,
-                            size_t *pDataSize,
-                            void *pData)
+VkResult anv_GetImageSubresourceLayout(
+    VkDevice                                    device,
+    VkImage                                     image,
+    const VkImageSubresource*                   pSubresource,
+    VkSubresourceLayout*                        pLayout)
 {
    stub_return(VK_UNSUPPORTED);
 }
