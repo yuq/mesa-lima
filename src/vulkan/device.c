@@ -47,7 +47,7 @@ fill_physical_device(struct anv_physical_device *device,
 {
    int fd;
    
-   fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+   fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
       return vk_error(VK_ERROR_UNAVAILABLE);
 
@@ -377,7 +377,7 @@ VkResult anv_CreateDevice(
    parse_debug_flags(device);
 
    device->instance = physicalDevice->instance;
-   device->fd = open("/dev/dri/renderD128", O_RDWR | O_CLOEXEC);
+   device->fd = open(physicalDevice->path, O_RDWR | O_CLOEXEC);
    if (device->fd == -1)
       goto fail_device;
       
