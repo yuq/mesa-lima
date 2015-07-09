@@ -614,7 +614,6 @@ struct r200_context {
    struct r200_swtcl_info swtcl;
 
    GLboolean using_hyperz;
-   GLboolean texmicrotile;
 
   struct ati_fragment_shader *afs_loaded;
 };

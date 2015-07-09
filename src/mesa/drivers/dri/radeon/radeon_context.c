@@ -199,9 +199,6 @@ r100CreateContext( gl_api api,
 	 rmesa->using_hyperz = GL_TRUE;
    }
 
-   if ( sPriv->drm_version.minor >= 15 )
-      rmesa->texmicrotile = GL_TRUE;
-
    /* Init default driver functions then plug in our Radeon-specific functions
     * (the texture functions are especially important)
     */
