@@ -942,7 +942,7 @@ anv_compile_shader_glsl(struct anv_compiler *compiler,
    shader = brw_new_shader(&brw->ctx, name, stage_info[stage].token);
    fail_if(shader == NULL, "failed to create %s shader\n", stage_info[stage].name);
 
-   shader->Source = strdup(src_as_glsl(pipeline->shaders[stage]->data));
+   shader->Source = strdup(src_as_glsl(pipeline->shaders[stage]->module->data));
    _mesa_glsl_compile_shader(&brw->ctx, shader, false, false);
    fail_on_compile_error(shader->CompileStatus, shader->InfoLog);
 
@@ -968,13 +968,13 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    mesa_shader->Type = stage_info[stage].token;
    mesa_shader->Stage = stage_info[stage].stage;
 
-   assert(shader->size % 4 == 0);
+   assert(shader->module->size % 4 == 0);
 
    struct gl_shader_compiler_options *glsl_options =
       &compiler->screen->compiler->glsl_compiler_options[stage_info[stage].stage];
 
    mesa_shader->Program->nir =
-      spirv_to_nir((uint32_t *)shader->data, shader->size / 4,
+      spirv_to_nir((uint32_t *)shader->module->data, shader->module->size / 4,
                    glsl_options->NirOptions);
    nir_validate_shader(mesa_shader->Program->nir);
 
@@ -1041,14 +1041,14 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
          continue;
 
       /* You need at least this much for "void main() { }" anyway */
-      assert(pipeline->shaders[i]->size >= 12);
+      assert(pipeline->shaders[i]->module->size >= 12);
 
-      if (src_as_glsl(pipeline->shaders[i]->data)) {
+      if (src_as_glsl(pipeline->shaders[i]->module->data)) {
          all_spirv = false;
          break;
       }
 
-      assert(pipeline->shaders[i]->size % 4 == 0);
+      assert(pipeline->shaders[i]->module->size % 4 == 0);
    }
 
    if (all_spirv) {

@@ -33,16 +33,10 @@
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
-   VkPipelineIaStateCreateInfo ia_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
-      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-      .primitiveRestartEnable = false,
-   };
-
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.
     */
-   VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
+   VkShader fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
       out vec4 f_color;
       flat in vec4 v_color;
       void main()
@@ -51,17 +45,13 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       }
    );
 
-   VkPipelineShaderStageCreateInfo fs_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .pNext = &ia_create_info,
-      .shader = {
-         .stage = VK_SHADER_STAGE_FRAGMENT,
-         .shader = fs,
-         .linkConstBufferCount = 0,
-         .pLinkConstBufferInfo = NULL,
-         .pSpecializationInfo = NULL
-      }
-   };
+   VkShader fs;
+   anv_CreateShader((VkDevice) device,
+      &(VkShaderCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+         .module = fsm,
+         .pName = "main",
+      }, &fs);
 
    /* We use instanced rendering to clear multiple render targets. We have two
     * vertex buffers: the first vertex buffer holds per-vertex data and
@@ -71,7 +61,6 @@ anv_device_init_meta_clear_state(struct anv_device *device)
     */
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .pNext = &fs_create_info,
       .bindingCount = 2,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
@@ -111,32 +100,39 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       }
    };
 
-   VkPipelineRsStateCreateInfo rs_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
-      .pNext = &vi_create_info,
-      .depthClipEnable = true,
-      .rasterizerDiscardEnable = false,
-      .fillMode = VK_FILL_MODE_SOLID,
-      .cullMode = VK_CULL_MODE_NONE,
-      .frontFace = VK_FRONT_FACE_CCW
-   };
-
-   VkPipelineCbStateCreateInfo cb_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
-      .pNext = &rs_create_info,
-      .attachmentCount = 1,
-      .pAttachments = (VkPipelineCbAttachmentState []) {
-         { .channelWriteMask = VK_CHANNEL_A_BIT |
-              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
-      }
-   };
-
    anv_pipeline_create((VkDevice) device,
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .pNext = &cb_create_info,
+         .stageCount = 1,
+         .pStages = &(VkPipelineShaderStageCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+            .stage = VK_SHADER_STAGE_FRAGMENT,
+            .shader = fs,
+            .pSpecializationInfo = NULL,
+         },
+         .pVertexInputState = &vi_create_info,
+         .pIaState = &(VkPipelineIaStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+            .primitiveRestartEnable = false,
+         },
+         .pRsState = &(VkPipelineRsStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+            .depthClipEnable = true,
+            .rasterizerDiscardEnable = false,
+            .fillMode = VK_FILL_MODE_SOLID,
+            .cullMode = VK_CULL_MODE_NONE,
+            .frontFace = VK_FRONT_FACE_CCW
+         },
+         .pCbState = &(VkPipelineCbStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+            .attachmentCount = 1,
+            .pAttachments = (VkPipelineCbAttachmentState []) {
+               { .channelWriteMask = VK_CHANNEL_A_BIT |
+                    VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+            }
+         },
          .flags = 0,
-         .layout = 0
       },
       &(struct anv_pipeline_create_info) {
          .use_repclear = true,
@@ -302,18 +298,12 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 static void
 anv_device_init_meta_blit_state(struct anv_device *device)
 {
-   VkPipelineIaStateCreateInfo ia_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
-      .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-      .primitiveRestartEnable = false,
-   };
-
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.  However, we do need
     * to provide GLSL source for the vertex shader so that the compiler
     * does not dead-code our inputs.
     */
-   VkShader vs = GLSL_VK_SHADER(device, VERTEX,
+   VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
       in vec2 a_pos;
       in vec2 a_tex_coord;
       out vec4 v_tex_coord;
@@ -324,7 +314,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    );
 
-   VkShader fs = GLSL_VK_SHADER(device, FRAGMENT,
+   VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
       out vec4 f_color;
       in vec4 v_tex_coord;
       layout(set = 0, binding = 0) uniform sampler2D u_tex;
@@ -334,33 +324,24 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    );
 
-   VkPipelineShaderStageCreateInfo vs_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .pNext = &ia_create_info,
-      .shader = {
-         .stage = VK_SHADER_STAGE_VERTEX,
-         .shader = vs,
-         .linkConstBufferCount = 0,
-         .pLinkConstBufferInfo = NULL,
-         .pSpecializationInfo = NULL
-      }
-   };
+   VkShader vs;
+   anv_CreateShader((VkDevice) device,
+      &(VkShaderCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+         .module = vsm,
+         .pName = "main",
+      }, &vs);
 
-   VkPipelineShaderStageCreateInfo fs_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-      .pNext = &vs_create_info,
-      .shader = {
-         .stage = VK_SHADER_STAGE_FRAGMENT,
-         .shader = fs,
-         .linkConstBufferCount = 0,
-         .pLinkConstBufferInfo = NULL,
-         .pSpecializationInfo = NULL
-      }
-   };
+   VkShader fs;
+   anv_CreateShader((VkDevice) device,
+      &(VkShaderCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+         .module = fsm,
+         .pName = "main",
+      }, &fs);
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .pNext = &fs_create_info,
       .bindingCount = 2,
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
@@ -423,42 +404,56 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       &device->meta_state.blit.pipeline_layout);
 
-   VkPipelineRsStateCreateInfo rs_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
-      .pNext = &vi_create_info,
-      .depthClipEnable = true,
-      .rasterizerDiscardEnable = false,
-      .fillMode = VK_FILL_MODE_SOLID,
-      .cullMode = VK_CULL_MODE_NONE,
-      .frontFace = VK_FRONT_FACE_CCW
-   };
-
-   VkPipelineCbStateCreateInfo cb_create_info = {
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
-      .pNext = &rs_create_info,
-      .attachmentCount = 1,
-      .pAttachments = (VkPipelineCbAttachmentState []) {
-         { .channelWriteMask = VK_CHANNEL_A_BIT |
-              VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
-      }
-   };
-
-   VkGraphicsPipelineCreateInfo pipeline_info = {
-      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-      .pNext = &cb_create_info,
-      .flags = 0,
-      .layout = device->meta_state.blit.pipeline_layout,
-   };
-
-   anv_pipeline_create((VkDevice) device, &pipeline_info,
-                       &(struct anv_pipeline_create_info) {
-                          .use_repclear = false,
-                          .disable_viewport = true,
-                          .disable_scissor = true,
-                          .disable_vs = true,
-                          .use_rectlist = true
-                       },
-                       &device->meta_state.blit.pipeline);
+   anv_pipeline_create((VkDevice) device,
+      &(VkGraphicsPipelineCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+         .stageCount = 2,
+         .pStages = (VkPipelineShaderStageCreateInfo[]) {
+            {
+               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .stage = VK_SHADER_STAGE_VERTEX,
+               .shader = vs,
+               .pSpecializationInfo = NULL
+            }, {
+               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .stage = VK_SHADER_STAGE_FRAGMENT,
+               .shader = fs,
+               .pSpecializationInfo = NULL
+            },
+         },
+         .pVertexInputState = &vi_create_info,
+         .pIaState = &(VkPipelineIaStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+            .primitiveRestartEnable = false,
+         },
+         .pRsState = &(VkPipelineRsStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+            .depthClipEnable = true,
+            .rasterizerDiscardEnable = false,
+            .fillMode = VK_FILL_MODE_SOLID,
+            .cullMode = VK_CULL_MODE_NONE,
+            .frontFace = VK_FRONT_FACE_CCW
+         },
+         .pCbState = &(VkPipelineCbStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+            .attachmentCount = 1,
+            .pAttachments = (VkPipelineCbAttachmentState []) {
+               { .channelWriteMask = VK_CHANNEL_A_BIT |
+                    VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+            }
+         },
+         .flags = 0,
+         .layout = device->meta_state.blit.pipeline_layout,
+      },
+      &(struct anv_pipeline_create_info) {
+         .use_repclear = false,
+         .disable_viewport = true,
+         .disable_scissor = true,
+         .disable_vs = true,
+         .use_rectlist = true
+      },
+      &device->meta_state.blit.pipeline);
 
    anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, vs);
    anv_DestroyObject((VkDevice) device, VK_OBJECT_TYPE_SHADER, fs);

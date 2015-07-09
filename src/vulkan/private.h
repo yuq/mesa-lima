@@ -714,9 +714,14 @@ struct anv_fence {
    bool ready;
 };
 
+struct anv_shader_module {
+   uint32_t                                     size;
+   char                                         data[0];
+};
+
 struct anv_shader {
-   uint32_t size;
-   char data[0];
+   struct anv_shader_module *                   module;
+   char                                         entrypoint[0];
 };
 
 struct anv_pipeline {

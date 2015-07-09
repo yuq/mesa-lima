@@ -101,7 +101,7 @@ class Shader:
          line_start += 6
       f.write('\n};\n')
 
-token_exp = re.compile(r'(GLSL_VK_SHADER|\(|\)|,)')
+token_exp = re.compile(r'(GLSL_VK_SHADER_MODULE|\(|\)|,)')
 
 class Parser:
    def __init__(self, f):
@@ -172,7 +172,7 @@ class Parser:
 
    def run(self):
       for t in self.token_iter:
-         if t == 'GLSL_VK_SHADER':
+         if t == 'GLSL_VK_SHADER_MODULE':
             self.handle_macro()
 
 def open_file(name, mode):
@@ -188,9 +188,10 @@ def open_file(name, mode):
 
 def parse_args():
    description = dedent("""\
-      This program scrapes a C file for any instance of the GLSL_VK_SHADER
-      macro, grabs the GLSL source code, compiles it to SPIR-V.  The resulting
-      SPIR-V code is written to another C file as an array of 32-bit words.
+      This program scrapes a C file for any instance of the
+      GLSL_VK_SHADER_MODULE macro, grabs the GLSL source code, compiles it
+      to SPIR-V.  The resulting SPIR-V code is written to another C file as
+      an array of 32-bit words.
 
       If '-' is passed as the input file or output file, stdin or stdout will be
       used instead of a file on disc.""")
@@ -256,15 +257,16 @@ with open_file(outfname, 'w') as outfile:
       #define _ANV_GLSL_SRC_VAR2(_line) _glsl_helpers_shader ## _line ## _glsl_src
       #define _ANV_GLSL_SRC_VAR(_line) _ANV_GLSL_SRC_VAR2(_line)
 
-      #define GLSL_VK_SHADER(device, stage, ...) ({                           \\
-         VkShader __shader;                                                   \\
-         VkShaderCreateInfo __shader_create_info = {                          \\
-            .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,                    \\
+      #define GLSL_VK_SHADER_MODULE(device, stage, ...) ({                    \\
+         VkShaderModule __module;                                             \\
+         VkShaderModuleCreateInfo __shader_create_info = {                    \\
+            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,             \\
             .codeSize = sizeof(_ANV_GLSL_SRC_VAR(__LINE__)),                  \\
             .pCode = _ANV_GLSL_SRC_VAR(__LINE__),                             \\
          };                                                                   \\
-         vkCreateShader((VkDevice) device, &__shader_create_info, &__shader); \\
-         __shader;                                                            \\
+         vkCreateShaderModule((VkDevice) device,                              \\
+                              &__shader_create_info, &__module);              \\
+         __module;                                                            \\
       })
       """))
 

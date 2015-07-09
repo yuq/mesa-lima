@@ -215,6 +215,8 @@ typedef enum {
     VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 52,
     VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
+    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 
     VK_ENUM_RANGE(STRUCTURE_TYPE, APPLICATION_INFO, PIPELINE_LAYOUT_CREATE_INFO)
 } VkStructureType;
@@ -437,7 +439,7 @@ typedef enum {
     VK_OBJECT_TYPE_IMAGE_VIEW = 9,
     VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW = 10,
     VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW = 11,
-
+    VK_OBJECT_TYPE_SHADER_MODULE = 12,
     VK_OBJECT_TYPE_SHADER = 13,
     VK_OBJECT_TYPE_PIPELINE = 14,
     VK_OBJECT_TYPE_PIPELINE_LAYOUT = 15,
@@ -455,9 +457,10 @@ typedef enum {
     VK_OBJECT_TYPE_QUERY_POOL = 27,
     VK_OBJECT_TYPE_FRAMEBUFFER = 28,
     VK_OBJECT_TYPE_RENDER_PASS = 29,
+    VK_OBJECT_TYPE_PIPELINE_CACHE = 30,
     VK_OBJECT_TYPE_BEGIN_RANGE = VK_OBJECT_TYPE_INSTANCE,
-    VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_RENDER_PASS,
-    VK_NUM_OBJECT_TYPE = (VK_OBJECT_TYPE_END_RANGE - VK_OBJECT_TYPE_BEGIN_RANGE + 1),
+    VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_PIPELINE_CACHE,
+    VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_PIPELINE_CACHE - VK_OBJECT_TYPE_INSTANCE + 1),
     VK_OBJECT_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkObjectType;
 
@@ -1006,6 +1009,7 @@ typedef enum {
     VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
 } VkDepthStencilViewCreateFlagBits;
 typedef VkFlags VkDepthStencilViewCreateFlags;
+typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
 typedef enum {
@@ -1019,6 +1023,7 @@ typedef VkFlags VkChannelFlags;
 typedef enum {
     VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT = 0x00000001,
     VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT = 0x00000002,
+    VK_PIPELINE_CREATE_DERIVATIVE_BIT = 0x00000004,
 } VkPipelineCreateFlagBits;
 typedef VkFlags VkPipelineCreateFlags;
 
@@ -1377,19 +1382,29 @@ typedef struct {
     const void*                                 pNext;
     size_t                                      codeSize;
     const void*                                 pCode;
+    VkShaderModuleCreateFlags                   flags;
+} VkShaderModuleCreateInfo;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkShaderModule                              module;
+    const char*                                 pName;
     VkShaderCreateFlags                         flags;
 } VkShaderCreateInfo;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    size_t                                      initialSize;
+    const void*                                 initialData;
+    size_t                                      maxSize;
+} VkPipelineCacheCreateInfo;
 
 typedef struct {
     uint32_t                                    constantId;
     uint32_t                                    offset;
 } VkSpecializationMapEntry;
-
-typedef struct {
-    uint32_t                                    bufferId;
-    size_t                                      bufferSize;
-    const void*                                 pBufferData;
-} VkLinkConstBuffer;
 
 typedef struct {
     uint32_t                                    mapEntryCount;
@@ -1398,17 +1413,11 @@ typedef struct {
 } VkSpecializationInfo;
 
 typedef struct {
-    VkShaderStage                               stage;
-    VkShader                                    shader;
-    uint32_t                                    linkConstBufferCount;
-    const VkLinkConstBuffer*                    pLinkConstBufferInfo;
-    const VkSpecializationInfo*                 pSpecializationInfo;
-} VkPipelineShader;
-
-typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineShader                            shader;
+    VkShaderStage                               stage;
+    VkShader                                    shader;
+    const VkSpecializationInfo*                 pSpecializationInfo;
 } VkPipelineShaderStageCreateInfo;
 
 typedef struct {
@@ -1517,23 +1526,45 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    uint32_t                                    stageCount;
+    const VkPipelineShaderStageCreateInfo*      pStages;
+    const VkPipelineVertexInputStateCreateInfo* pVertexInputState;
+    const VkPipelineIaStateCreateInfo*          pIaState;
+    const VkPipelineTessStateCreateInfo*        pTessState;
+    const VkPipelineVpStateCreateInfo*          pVpState;
+    const VkPipelineRsStateCreateInfo*          pRsState;
+    const VkPipelineMsStateCreateInfo*          pMsState;
+    const VkPipelineDsStateCreateInfo*          pDsState;
+    const VkPipelineCbStateCreateInfo*          pCbState;
     VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
+    VkPipeline                                  basePipelineHandle;
+    int32_t                                     basePipelineIndex;
 } VkGraphicsPipelineCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineShader                            cs;
+    VkPipelineShaderStageCreateInfo             cs;
     VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
+    VkPipeline                                  basePipelineHandle;
+    int32_t                                     basePipelineIndex;
 } VkComputePipelineCreateInfo;
+
+typedef struct {
+    VkShaderStageFlags                          stageFlags;
+    uint32_t                                    start;
+    uint32_t                                    length;
+} VkPushConstantRange;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    descriptorSetCount;
     const VkDescriptorSetLayout*                pSetLayouts;
+    uint32_t                                    pushConstantRangeCount;
+    const VkPushConstantRange*                  pPushConstantRanges;
 } VkPipelineLayoutCreateInfo;
 
 typedef struct {
@@ -1892,13 +1923,14 @@ typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkIma
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
 typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
+typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
-typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipeline)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelineDerivative)(VkDevice device, const VkGraphicsPipelineCreateInfo* pCreateInfo, VkPipeline basePipeline, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkCreateComputePipeline)(VkDevice device, const VkComputePipelineCreateInfo* pCreateInfo, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkStorePipeline)(VkDevice device, VkPipeline pipeline, size_t* pDataSize, void* pData);
-typedef VkResult (VKAPI *PFN_vkLoadPipeline)(VkDevice device, size_t dataSize, const void* pData, VkPipeline* pPipeline);
-typedef VkResult (VKAPI *PFN_vkLoadPipelineDerivative)(VkDevice device, size_t dataSize, const void* pData, VkPipeline basePipeline, VkPipeline* pPipeline);
+typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache);
+typedef size_t (VKAPI *PFN_vkGetPipelineCacheSize)(VkDevice device, VkPipelineCache pipelineCache);
+typedef VkResult (VKAPI *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, void* pData);
+typedef VkResult (VKAPI *PFN_vkMergePipelineCaches)(VkDevice device, VkPipelineCache destCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches);
+typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkGraphicsPipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines);
+typedef VkResult (VKAPI *PFN_vkCreateComputePipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineLayout)(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout);
 typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
@@ -2200,45 +2232,49 @@ VkResult VKAPI vkCreateDepthStencilView(
     const VkDepthStencilViewCreateInfo*         pCreateInfo,
     VkDepthStencilView*                         pView);
 
+VkResult VKAPI vkCreateShaderModule(
+    VkDevice                                    device,
+    const VkShaderModuleCreateInfo*             pCreateInfo,
+    VkShaderModule*                             pShaderModule);
+
 VkResult VKAPI vkCreateShader(
     VkDevice                                    device,
     const VkShaderCreateInfo*                   pCreateInfo,
     VkShader*                                   pShader);
 
-VkResult VKAPI vkCreateGraphicsPipeline(
+VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline*                                 pPipeline);
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache);
 
-VkResult VKAPI vkCreateGraphicsPipelineDerivative(
+size_t VKAPI vkGetPipelineCacheSize(
     VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             pipelineCache);
 
-VkResult VKAPI vkCreateComputePipeline(
+VkResult VKAPI vkGetPipelineCacheData(
     VkDevice                                    device,
-    const VkComputePipelineCreateInfo*          pCreateInfo,
-    VkPipeline*                                 pPipeline);
-
-VkResult VKAPI vkStorePipeline(
-    VkDevice                                    device,
-    VkPipeline                                  pipeline,
-    size_t*                                     pDataSize,
+    VkPipelineCache                             pipelineCache,
     void*                                       pData);
 
-VkResult VKAPI vkLoadPipeline(
+VkResult VKAPI vkMergePipelineCaches(
     VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches);
 
-VkResult VKAPI vkLoadPipelineDerivative(
+VkResult VKAPI vkCreateGraphicsPipelines(
     VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline);
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkGraphicsPipelineCreateInfo*         pCreateInfos,
+    VkPipeline*                                 pPipelines);
+
+VkResult VKAPI vkCreateComputePipelines(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkComputePipelineCreateInfo*          pCreateInfos,
+    VkPipeline*                                 pPipelines);
 
 VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,

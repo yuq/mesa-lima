@@ -1015,6 +1015,7 @@ VkResult anv_DestroyObject(
       return anv_FreeMemory(_device, (VkDeviceMemory) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
+   case VK_OBJECT_TYPE_PIPELINE_CACHE:
       /* These are just dummys anyway, so we don't need to destroy them */
       return VK_SUCCESS;
 
@@ -1022,6 +1023,7 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_IMAGE:
    case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
    case VK_OBJECT_TYPE_SHADER:
+   case VK_OBJECT_TYPE_SHADER_MODULE:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
    case VK_OBJECT_TYPE_SAMPLER:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
@@ -2877,7 +2879,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
    uint32_t s, dirty = cmd_buffer->descriptors_dirty &
                        cmd_buffer->pipeline->active_stages;
 
-   VkResult result;
+   VkResult result = VK_SUCCESS;
    for_each_bit(s, dirty) {
       result = flush_descriptor_set(cmd_buffer, s);
       if (result != VK_SUCCESS)

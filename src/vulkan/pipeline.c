@@ -31,33 +31,100 @@
 
 // Shader functions
 
+VkResult anv_CreateShaderModule(
+    VkDevice                                    _device,
+    const VkShaderModuleCreateInfo*             pCreateInfo,
+    VkShader*                                   pShaderModule)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_shader_module *module;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
+   assert(pCreateInfo->flags == 0);
+
+   module = anv_device_alloc(device, sizeof(*module) + pCreateInfo->codeSize, 8,
+                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (module == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   module->size = pCreateInfo->codeSize;
+   memcpy(module->data, pCreateInfo->pCode, module->size);
+
+   *pShaderModule = (VkShaderModule) module;
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_CreateShader(
     VkDevice                                    _device,
     const VkShaderCreateInfo*                   pCreateInfo,
     VkShader*                                   pShader)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_shader_module, module, pCreateInfo->module);
    struct anv_shader *shader;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
+   assert(pCreateInfo->flags == 0);
 
-   shader = anv_device_alloc(device, sizeof(*shader) + pCreateInfo->codeSize, 8,
-                               VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   size_t name_len = strlen(pCreateInfo->pName);
+
+   if (strcmp(pCreateInfo->pName, "main") != 0) {
+      anv_finishme("Multiple shaders per module not really supported");
+   }
+
+   shader = anv_device_alloc(device, sizeof(*shader) + name_len + 1, 8,
+                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (shader == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   shader->size = pCreateInfo->codeSize;
-   memcpy(shader->data, pCreateInfo->pCode, shader->size);
+   shader->module = module;
+   memcpy(shader->entrypoint, pCreateInfo->pName, name_len + 1);
 
    *pShader = (VkShader) shader;
 
    return VK_SUCCESS;
 }
 
+VkResult anv_CreatePipelineCache(
+    VkDevice                                    device,
+    const VkPipelineCacheCreateInfo*            pCreateInfo,
+    VkPipelineCache*                            pPipelineCache)
+{
+   *pPipelineCache = 1;
+
+   stub_return(VK_SUCCESS);
+}
+
+size_t anv_GetPipelineCacheSize(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache)
+{
+   stub_return(0);
+}
+
+VkResult anv_GetPipelineCacheData(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache,
+    void*                                       pData)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
+VkResult anv_MergePipelineCaches(
+    VkDevice                                    device,
+    VkPipelineCache                             destCache,
+    uint32_t                                    srcCacheCount,
+    const VkPipelineCache*                      pSrcCaches)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
 // Pipeline functions
 
 static void
-emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputStateCreateInfo *info)
+emit_vertex_input(struct anv_pipeline *pipeline,
+                  const VkPipelineVertexInputStateCreateInfo *info)
 {
    const uint32_t num_dwords = 1 + info->attributeCount * 2;
    uint32_t *p;
@@ -125,7 +192,7 @@ emit_vertex_input(struct anv_pipeline *pipeline, VkPipelineVertexInputStateCreat
 
 static void
 emit_ia_state(struct anv_pipeline *pipeline,
-              VkPipelineIaStateCreateInfo *info,
+              const VkPipelineIaStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_primitive_type[] = {
@@ -157,7 +224,8 @@ emit_ia_state(struct anv_pipeline *pipeline,
 }
 
 static void
-emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
+emit_rs_state(struct anv_pipeline *pipeline,
+              const VkPipelineRsStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_cullmode[] = {
@@ -214,7 +282,8 @@ emit_rs_state(struct anv_pipeline *pipeline, VkPipelineRsStateCreateInfo *info,
 }
 
 static void
-emit_cb_state(struct anv_pipeline *pipeline, VkPipelineCbStateCreateInfo *info)
+emit_cb_state(struct anv_pipeline *pipeline,
+              const VkPipelineCbStateCreateInfo *info)
 {
    struct anv_device *device = pipeline->device;
 
@@ -331,7 +400,8 @@ static const uint32_t vk_to_gen_stencil_op[] = {
 };
 
 static void
-emit_ds_state(struct anv_pipeline *pipeline, VkPipelineDsStateCreateInfo *info)
+emit_ds_state(struct anv_pipeline *pipeline,
+              const VkPipelineDsStateCreateInfo *info)
 {
    if (info == NULL) {
       /* We're going to OR this together with the dynamic state.  We need
@@ -364,14 +434,6 @@ emit_ds_state(struct anv_pipeline *pipeline, VkPipelineDsStateCreateInfo *info)
    GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, pipeline->state_wm_depth_stencil, &wm_depth_stencil);
 }
 
-VkResult anv_CreateGraphicsPipeline(
-    VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline*                                 pPipeline)
-{
-   return anv_pipeline_create(device, pCreateInfo, NULL, pPipeline);
-}
-
 static void
 anv_pipeline_destroy(struct anv_device *device,
                      struct anv_object *object,
@@ -397,13 +459,6 @@ anv_pipeline_create(
 {
    struct anv_device *device = (struct anv_device *) _device;
    struct anv_pipeline *pipeline;
-   const struct anv_common *common;
-   VkPipelineShaderStageCreateInfo *shader_create_info;
-   VkPipelineIaStateCreateInfo *ia_info = NULL;
-   VkPipelineRsStateCreateInfo *rs_info = NULL;
-   VkPipelineDsStateCreateInfo *ds_info = NULL;
-   VkPipelineCbStateCreateInfo *cb_info = NULL;
-   VkPipelineVertexInputStateCreateInfo *vi_info = NULL;
    VkResult result;
    uint32_t offset, length;
 
@@ -430,41 +485,17 @@ anv_pipeline_create(
    anv_state_stream_init(&pipeline->program_stream,
                          &device->instruction_block_pool);
 
-   for (common = pCreateInfo->pNext; common; common = common->pNext) {
-      switch (common->sType) {
-      case VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO:
-         vi_info = (VkPipelineVertexInputStateCreateInfo *) common;
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO:
-         ia_info = (VkPipelineIaStateCreateInfo *) common;
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO:
-         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO");
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO:
-         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO");
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO:
-         rs_info = (VkPipelineRsStateCreateInfo *) common;
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO:
-         anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO");
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO:
-         cb_info = (VkPipelineCbStateCreateInfo *) common;
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO:
-         ds_info = (VkPipelineDsStateCreateInfo *) common;
-         break;
-      case VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO:
-         shader_create_info = (VkPipelineShaderStageCreateInfo *) common;
-         pipeline->shaders[shader_create_info->shader.stage] =
-            (struct anv_shader *) shader_create_info->shader.shader;
-         break;
-      default:
-         break;
-      }
+   for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+      pipeline->shaders[pCreateInfo->pStages[i].stage] =
+         (struct anv_shader *) pCreateInfo->pStages[i].shader;
    }
+
+   if (pCreateInfo->pTessState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO");
+   if (pCreateInfo->pVpState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO");
+   if (pCreateInfo->pMsState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO");
 
    pipeline->use_repclear = extra && extra->use_repclear;
 
@@ -474,17 +505,19 @@ anv_pipeline_create(
     * hard code this to num_attributes - 2. This is because the attributes
     * include VUE header and position, which aren't counted as varying
     * inputs. */
-   if (pipeline->vs_simd8 == NO_KERNEL)
-      pipeline->wm_prog_data.num_varying_inputs = vi_info->attributeCount - 2;
+   if (pipeline->vs_simd8 == NO_KERNEL) {
+      pipeline->wm_prog_data.num_varying_inputs =
+         pCreateInfo->pVertexInputState->attributeCount - 2;
+   }
 
-   assert(vi_info);
-   emit_vertex_input(pipeline, vi_info);
-   assert(ia_info);
-   emit_ia_state(pipeline, ia_info, extra);
-   assert(rs_info);
-   emit_rs_state(pipeline, rs_info, extra);
-   emit_ds_state(pipeline, ds_info);
-   emit_cb_state(pipeline, cb_info);
+   assert(pCreateInfo->pVertexInputState);
+   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
+   assert(pCreateInfo->pIaState);
+   emit_ia_state(pipeline, pCreateInfo->pIaState, extra);
+   assert(pCreateInfo->pRsState);
+   emit_rs_state(pipeline, pCreateInfo->pRsState, extra);
+   emit_ds_state(pipeline, pCreateInfo->pDsState);
+   emit_cb_state(pipeline, pCreateInfo->pCbState);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_STATISTICS,
                    .StatisticsEnable = true);
@@ -611,7 +644,7 @@ anv_pipeline_create(
                       * vertex data to read from this field. We use attribute
                       * count - 1, as we don't count the VUE header here. */
                      .VertexURBEntryOutputLength =
-                        DIV_ROUND_UP(vi_info->attributeCount - 1, 2));
+                        DIV_ROUND_UP(pCreateInfo->pVertexInputState->attributeCount - 1, 2));
    else
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
                      .KernelStartPointer = pipeline->vs_simd8,
@@ -703,16 +736,34 @@ anv_pipeline_create(
    return VK_SUCCESS;
 }
 
-VkResult anv_CreateGraphicsPipelineDerivative(
-    VkDevice                                    device,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline)
+VkResult anv_CreateGraphicsPipelines(
+    VkDevice                                    _device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkGraphicsPipelineCreateInfo*         pCreateInfos,
+    VkPipeline*                                 pPipelines)
 {
-   stub_return(VK_UNSUPPORTED);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   VkResult result = VK_SUCCESS;
+
+   unsigned i = 0;
+   for (; i < count; i++) {
+      result = anv_pipeline_create(_device, &pCreateInfos[i],
+                                   NULL, &pPipelines[i]);
+      if (result != VK_SUCCESS) {
+         for (unsigned j = 0; j < i; j++) {
+            anv_pipeline_destroy(device, (struct anv_object *)pPipelines[j],
+                                 VK_OBJECT_TYPE_PIPELINE);
+         }
+
+         return result;
+      }
+   }
+
+   return VK_SUCCESS;
 }
 
-VkResult anv_CreateComputePipeline(
+static VkResult anv_compute_pipeline_create(
     VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)
@@ -784,32 +835,31 @@ VkResult anv_CreateComputePipeline(
    return VK_SUCCESS;
 }
 
-VkResult anv_StorePipeline(
-    VkDevice                                    device,
-    VkPipeline                                  pipeline,
-    size_t*                                     pDataSize,
-    void*                                       pData)
+VkResult anv_CreateComputePipelines(
+    VkDevice                                    _device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkComputePipelineCreateInfo*          pCreateInfos,
+    VkPipeline*                                 pPipelines)
 {
-   stub_return(VK_UNSUPPORTED);
-}
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   VkResult result = VK_SUCCESS;
 
-VkResult anv_LoadPipeline(
-    VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline*                                 pPipeline)
-{
-   stub_return(VK_UNSUPPORTED);
-}
+   unsigned i = 0;
+   for (; i < count; i++) {
+      result = anv_compute_pipeline_create(_device, &pCreateInfos[i],
+                                           &pPipelines[i]);
+      if (result != VK_SUCCESS) {
+         for (unsigned j = 0; j < i; j++) {
+            anv_pipeline_destroy(device, (struct anv_object *)pPipelines[j],
+                                 VK_OBJECT_TYPE_PIPELINE);
+         }
 
-VkResult anv_LoadPipelineDerivative(
-    VkDevice                                    device,
-    size_t                                      dataSize,
-    const void*                                 pData,
-    VkPipeline                                  basePipeline,
-    VkPipeline*                                 pPipeline)
-{
-   stub_return(VK_UNSUPPORTED);
+         return result;
+      }
+   }
+
+   return VK_SUCCESS;
 }
 
 // Pipeline layout functions
