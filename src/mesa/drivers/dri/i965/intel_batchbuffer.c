@@ -48,6 +48,7 @@ intel_batchbuffer_init(struct brw_context *brw)
    if (!brw->has_llc) {
       brw->batch.cpu_map = malloc(BATCH_SZ);
       brw->batch.map = brw->batch.cpu_map;
+      brw->batch.map_next = brw->batch.cpu_map;
    }
 }
 
@@ -68,10 +69,10 @@ intel_batchbuffer_reset(struct brw_context *brw)
       drm_intel_bo_map(brw->batch.bo, true);
       brw->batch.map = brw->batch.bo->virtual;
    }
+   brw->batch.map_next = brw->batch.map;
 
    brw->batch.reserved_space = BATCH_RESERVED;
    brw->batch.state_batch_offset = brw->batch.bo->size;
-   brw->batch.used = 0;
    brw->batch.needs_sol_reset = false;
 
    /* We don't know what ring the new batch will be sent to until we see the
@@ -83,7 +84,7 @@ intel_batchbuffer_reset(struct brw_context *brw)
 void
 intel_batchbuffer_save_state(struct brw_context *brw)
 {
-   brw->batch.saved.used = brw->batch.used;
+   brw->batch.saved.map_next = brw->batch.map_next;
    brw->batch.saved.reloc_count =
       drm_intel_gem_bo_get_reloc_count(brw->batch.bo);
 }
@@ -93,7 +94,7 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
 {
    drm_intel_gem_bo_clear_relocs(brw->batch.bo, brw->batch.saved.reloc_count);
 
-   brw->batch.used = brw->batch.saved.used;
+   brw->batch.map_next = brw->batch.saved.map_next;
    if (USED_BATCH(brw->batch) == 0)
       brw->batch.ring = UNKNOWN_RING;
 }
@@ -395,13 +396,13 @@ _intel_batchbuffer_flush(struct brw_context *brw,
  */
 uint32_t
 intel_batchbuffer_reloc(struct brw_context *brw,
-                        drm_intel_bo *buffer,
+                        drm_intel_bo *buffer, uint32_t offset,
                         uint32_t read_domains, uint32_t write_domain,
                         uint32_t delta)
 {
    int ret;
 
-   ret = drm_intel_bo_emit_reloc(brw->batch.bo, 4*brw->batch.used,
+   ret = drm_intel_bo_emit_reloc(brw->batch.bo, offset,
 				 buffer, delta,
 				 read_domains, write_domain);
    assert(ret == 0);
@@ -416,11 +417,11 @@ intel_batchbuffer_reloc(struct brw_context *brw,
 
 uint64_t
 intel_batchbuffer_reloc64(struct brw_context *brw,
-                          drm_intel_bo *buffer,
+                          drm_intel_bo *buffer, uint32_t offset,
                           uint32_t read_domains, uint32_t write_domain,
                           uint32_t delta)
 {
-   int ret = drm_intel_bo_emit_reloc(brw->batch.bo, 4*brw->batch.used,
+   int ret = drm_intel_bo_emit_reloc(brw->batch.bo, offset,
                                      buffer, delta,
                                      read_domains, write_domain);
    assert(ret == 0);
@@ -440,8 +441,8 @@ intel_batchbuffer_data(struct brw_context *brw,
 {
    assert((bytes & 3) == 0);
    intel_batchbuffer_require_space(brw, bytes, ring);
-   memcpy(brw->batch.map + brw->batch.used, data, bytes);
-   brw->batch.used += bytes >> 2;
+   memcpy(brw->batch.map_next, data, bytes);
+   brw->batch.map_next += bytes >> 2;
 }
 
 static void

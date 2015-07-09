@@ -873,7 +873,8 @@ struct intel_batchbuffer {
 #ifdef DEBUG
    uint16_t emit, total;
 #endif
-   uint16_t used, reserved_space;
+   uint16_t reserved_space;
+   uint32_t *map_next;
    uint32_t *map;
    uint32_t *cpu_map;
 #define BATCH_SZ (8192*sizeof(uint32_t))
@@ -883,7 +884,7 @@ struct intel_batchbuffer {
    bool needs_sol_reset;
 
    struct {
-      uint16_t used;
+      uint32_t *map_next;
       int reloc_count;
    } saved;
 };

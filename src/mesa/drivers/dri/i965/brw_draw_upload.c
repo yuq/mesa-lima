@@ -604,14 +604,15 @@ brw_prepare_shader_draw_parameters(struct brw_context *brw)
 /**
  * Emit a VERTEX_BUFFER_STATE entry (part of 3DSTATE_VERTEX_BUFFERS).
  */
-static void
+static uint32_t *
 emit_vertex_buffer_state(struct brw_context *brw,
                          unsigned buffer_nr,
                          drm_intel_bo *bo,
                          unsigned bo_ending_address,
                          unsigned bo_offset,
                          unsigned stride,
-                         unsigned step_rate)
+                         unsigned step_rate,
+                         uint32_t *__map)
 {
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw0;
@@ -643,7 +644,10 @@ emit_vertex_buffer_state(struct brw_context *brw,
       OUT_BATCH(0);
    }
    OUT_BATCH(step_rate);
+
+   return __map;
 }
+#define EMIT_VERTEX_BUFFER_STATE(...) __map = emit_vertex_buffer_state(__VA_ARGS__, __map)
 
 static void brw_emit_vertices(struct brw_context *brw)
 {
@@ -704,14 +708,14 @@ static void brw_emit_vertices(struct brw_context *brw)
       OUT_BATCH((_3DSTATE_VERTEX_BUFFERS << 16) | (4 * nr_buffers - 1));
       for (i = 0; i < brw->vb.nr_buffers; i++) {
 	 struct brw_vertex_buffer *buffer = &brw->vb.buffers[i];
-         emit_vertex_buffer_state(brw, i, buffer->bo, buffer->bo->size - 1,
+         EMIT_VERTEX_BUFFER_STATE(brw, i, buffer->bo, buffer->bo->size - 1,
                                   buffer->offset, buffer->stride,
                                   buffer->step_rate);
 
       }
 
       if (brw->vs.prog_data->uses_vertexid) {
-         emit_vertex_buffer_state(brw, brw->vb.nr_buffers,
+         EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers,
                                   brw->draw.draw_params_bo,
                                   brw->draw.draw_params_bo->size - 1,
                                   brw->draw.draw_params_offset,
