@@ -1763,9 +1763,6 @@ for plat in $egl_platforms; do
 			AC_MSG_ERROR([EGL platform surfaceless requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
-	android|gdi|null)
-		;;
-
 	*)
 		AC_MSG_ERROR([EGL platform '$plat' does not exist])
 		;;
