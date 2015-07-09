@@ -1553,8 +1553,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    samples;
-    bool32_t                                    multisampleEnable;
+    uint32_t                                    rasterSamples;
     bool32_t                                    sampleShadingEnable;
     float                                       minSampleShading;
     VkSampleMask                                sampleMask;
