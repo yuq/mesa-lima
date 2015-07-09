@@ -82,8 +82,8 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			info->restart_index : 0xffffffff);
 
 	if (ctx->rasterizer && ctx->rasterizer->point_size_per_vertex &&
-		info->mode == PIPE_PRIM_POINTS)
-		primtype = DI_PT_POINTLIST_A2XX;
+			(info->mode == PIPE_PRIM_POINTS))
+		primtype = DI_PT_POINTLIST_PSIZE;
 
 	fd_draw_emit(ctx, ring,
 			primtype,
