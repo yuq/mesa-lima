@@ -1931,15 +1931,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.file_offset[TGSI_FILE_IMMEDIATE] = V_SQ_ALU_SRC_LITERAL;
 	ctx.bc->ar_reg = ctx.file_offset[TGSI_FILE_TEMPORARY] +
 			ctx.info.file_max[TGSI_FILE_TEMPORARY] + 1;
+	ctx.bc->index_reg[0] = ctx.bc->ar_reg + 1;
+	ctx.bc->index_reg[1] = ctx.bc->ar_reg + 2;
+
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
-		ctx.gs_export_gpr_treg = ctx.bc->ar_reg + 1;
-		ctx.temp_reg = ctx.bc->ar_reg + 2;
-		ctx.bc->index_reg[0] = ctx.bc->ar_reg + 3;
-		ctx.bc->index_reg[1] = ctx.bc->ar_reg + 4;
+		ctx.gs_export_gpr_treg = ctx.bc->ar_reg + 3;
+		ctx.temp_reg = ctx.bc->ar_reg + 4;
 	} else {
-		ctx.temp_reg = ctx.bc->ar_reg + 1;
-		ctx.bc->index_reg[0] = ctx.bc->ar_reg + 2;
-		ctx.bc->index_reg[1] = ctx.bc->ar_reg + 3;
+		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
 
 	shader->max_arrays = 0;
