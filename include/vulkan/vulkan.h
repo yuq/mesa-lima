@@ -1153,6 +1153,50 @@ typedef struct {
 } VkInstanceCreateInfo;
 
 typedef struct {
+    bool32_t                                    robustBufferAccess;
+    bool32_t                                    fullDrawIndexUint32;
+    bool32_t                                    imageCubeArray;
+    bool32_t                                    independentBlend;
+    bool32_t                                    geometryShader;
+    bool32_t                                    tessellationShader;
+    bool32_t                                    sampleRateShading;
+    bool32_t                                    dualSourceBlend;
+    bool32_t                                    logicOp;
+    bool32_t                                    instancedDrawIndirect;
+    bool32_t                                    depthClip;
+    bool32_t                                    depthBiasClamp;
+    bool32_t                                    fillModeNonSolid;
+    bool32_t                                    depthBounds;
+    bool32_t                                    wideLines;
+    bool32_t                                    largePoints;
+    bool32_t                                    textureCompressionETC2;
+    bool32_t                                    textureCompressionASTC_LDR;
+    bool32_t                                    textureCompressionBC;
+    bool32_t                                    pipelineStatisticsQuery;
+    bool32_t                                    vertexSideEffects;
+    bool32_t                                    tessellationSideEffects;
+    bool32_t                                    geometrySideEffects;
+    bool32_t                                    fragmentSideEffects;
+    bool32_t                                    shaderTessellationPointSize;
+    bool32_t                                    shaderGeometryPointSize;
+    bool32_t                                    shaderTextureGatherExtended;
+    bool32_t                                    shaderStorageImageExtendedFormats;
+    bool32_t                                    shaderStorageImageMultisample;
+    bool32_t                                    shaderStorageBufferArrayConstantIndexing;
+    bool32_t                                    shaderStorageImageArrayConstantIndexing;
+    bool32_t                                    shaderUniformBufferArrayDynamicIndexing;
+    bool32_t                                    shaderSampledImageArrayDynamicIndexing;
+    bool32_t                                    shaderStorageBufferArrayDynamicIndexing;
+    bool32_t                                    shaderStorageImageArrayDynamicIndexing;
+    bool32_t                                    shaderClipDistance;
+    bool32_t                                    shaderCullDistance;
+    bool32_t                                    shaderFloat64;
+    bool32_t                                    shaderInt64;
+    bool32_t                                    shaderFloat16;
+    bool32_t                                    shaderInt16;
+} VkPhysicalDeviceFeatures;
+
+typedef struct {
     VkFormatFeatureFlags                        linearTilingFeatures;
     VkFormatFeatureFlags                        optimalTilingFeatures;
 } VkFormatProperties;
@@ -1877,6 +1921,7 @@ typedef struct {
 typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCreateInfo, VkInstance* pInstance);
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
@@ -1998,6 +2043,10 @@ VkResult VKAPI vkEnumeratePhysicalDevices(
     VkInstance                                  instance,
     uint32_t*                                   pPhysicalDeviceCount,
     VkPhysicalDevice*                           pPhysicalDevices);
+
+VkResult VKAPI vkGetPhysicalDeviceFeatures(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceFeatures*                   pFeatures);
 
 VkResult VKAPI vkGetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,

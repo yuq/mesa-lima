@@ -200,6 +200,59 @@ VkResult anv_EnumeratePhysicalDevices(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetPhysicalDeviceFeatures(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceFeatures*                   pFeatures)
+{
+   anv_finishme("Get correct values for PhysicalDeviceFeatures");
+
+   *pFeatures = (VkPhysicalDeviceFeatures) {
+      .robustBufferAccess                       = false,
+      .fullDrawIndexUint32                      = false,
+      .imageCubeArray                           = false,
+      .independentBlend                         = false,
+      .geometryShader                           = true,
+      .tessellationShader                       = false,
+      .sampleRateShading                        = false,
+      .dualSourceBlend                          = true,
+      .logicOp                                  = true,
+      .instancedDrawIndirect                    = true,
+      .depthClip                                = false,
+      .depthBiasClamp                           = false,
+      .fillModeNonSolid                         = true,
+      .depthBounds                              = false,
+      .wideLines                                = true,
+      .largePoints                              = true,
+      .textureCompressionETC2                   = true,
+      .textureCompressionASTC_LDR               = true,
+      .textureCompressionBC                     = true,
+      .pipelineStatisticsQuery                  = true,
+      .vertexSideEffects                        = false,
+      .tessellationSideEffects                  = false,
+      .geometrySideEffects                      = false,
+      .fragmentSideEffects                      = false,
+      .shaderTessellationPointSize              = false,
+      .shaderGeometryPointSize                  = true,
+      .shaderTextureGatherExtended              = true,
+      .shaderStorageImageExtendedFormats        = false,
+      .shaderStorageImageMultisample            = false,
+      .shaderStorageBufferArrayConstantIndexing = false,
+      .shaderStorageImageArrayConstantIndexing  = false,
+      .shaderUniformBufferArrayDynamicIndexing  = true,
+      .shaderSampledImageArrayDynamicIndexing   = false,
+      .shaderStorageBufferArrayDynamicIndexing  = false,
+      .shaderStorageImageArrayDynamicIndexing   = false,
+      .shaderClipDistance                       = false,
+      .shaderCullDistance                       = false,
+      .shaderFloat64                            = false,
+      .shaderInt64                              = false,
+      .shaderFloat16                            = false,
+      .shaderInt16                              = false,
+   };
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceInfoType                    infoType,
