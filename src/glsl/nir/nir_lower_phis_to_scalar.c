@@ -94,6 +94,8 @@ is_phi_src_scalarizable(nir_phi_src *src,
       case nir_intrinsic_load_uniform_indirect:
       case nir_intrinsic_load_ubo:
       case nir_intrinsic_load_ubo_indirect:
+      case nir_intrinsic_load_ssbo:
+      case nir_intrinsic_load_ssbo_indirect:
       case nir_intrinsic_load_input:
       case nir_intrinsic_load_input_indirect:
          return true;
