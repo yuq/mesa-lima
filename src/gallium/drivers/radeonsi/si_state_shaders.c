@@ -1245,6 +1245,18 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 	si_pm4_bind_state(sctx, vgt_shader_config, *pm4);
 }
 
+static void si_update_so(struct si_context *sctx, struct si_shader_selector *shader)
+{
+	struct pipe_stream_output_info *so = &shader->so;
+	uint32_t enabled_stream_buffers_mask = 0;
+	int i;
+
+	for (i = 0; i < so->num_outputs; i++)
+		enabled_stream_buffers_mask |= (1 << so->output[i].output_buffer);
+	sctx->b.streamout.enabled_stream_buffers_mask = enabled_stream_buffers_mask;
+	sctx->b.streamout.stride_in_dw = shader->so.stride;
+}
+
 void si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
@@ -1277,7 +1289,7 @@ void si_update_shaders(struct si_context *sctx)
 		} else {
 			/* TES as VS */
 			si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
-			sctx->b.streamout.stride_in_dw = sctx->tes_shader->so.stride;
+			si_update_so(sctx, sctx->tes_shader);
 		}
 	} else if (sctx->gs_shader) {
 		/* VS as ES */
@@ -1287,7 +1299,7 @@ void si_update_shaders(struct si_context *sctx)
 		/* VS as VS */
 		si_shader_select(ctx, sctx->vs_shader);
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
-		sctx->b.streamout.stride_in_dw = sctx->vs_shader->so.stride;
+		si_update_so(sctx, sctx->vs_shader);
 	}
 
 	/* Update GS. */
@@ -1295,7 +1307,7 @@ void si_update_shaders(struct si_context *sctx)
 		si_shader_select(ctx, sctx->gs_shader);
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
-		sctx->b.streamout.stride_in_dw = sctx->gs_shader->so.stride;
+		si_update_so(sctx, sctx->gs_shader);
 
 		if (!sctx->gs_rings)
 			si_init_gs_rings(sctx);

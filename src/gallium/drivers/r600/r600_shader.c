@@ -310,6 +310,7 @@ struct r600_shader_ctx {
 	int					gs_next_vertex;
 	struct r600_shader	*gs_for_vs;
 	int					gs_export_gpr_treg;
+	unsigned				enabled_stream_buffers_mask;
 };
 
 struct r600_shader_tgsi_instruction {
@@ -1402,6 +1403,9 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 		 * with MEM_STREAM instructions */
 		output.array_size = 0xFFF;
 		output.comp_mask = ((1 << so->output[i].num_components) - 1) << so->output[i].start_component;
+
+		ctx->enabled_stream_buffers_mask |= (1 << so->output[i].output_buffer);
+
 		if (ctx->bc->chip_class >= EVERGREEN) {
 			switch (so->output[i].output_buffer) {
 			case 0:
@@ -1718,6 +1722,8 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	gs->gs_copy_shader = cshader;
 
 	ctx.bc->nstack = 1;
+
+	cshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	cshader->shader.ring_item_size = ocnt * 16;
 
 	return r600_bytecode_build(ctx.bc);
@@ -2261,6 +2267,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	    so.num_outputs && !use_llvm)
 		emit_streamout(&ctx, &so);
 
+	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
 	if (ring_outputs) {

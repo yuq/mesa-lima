@@ -320,17 +320,24 @@ static bool r600_get_strmout_en(struct r600_common_context *rctx)
 static void r600_emit_streamout_enable(struct r600_common_context *rctx,
 				       struct r600_atom *atom)
 {
-	r600_write_context_reg(rctx->rings.gfx.cs,
-			       rctx->chip_class >= EVERGREEN ?
-				       R_028B98_VGT_STRMOUT_BUFFER_CONFIG :
-				       R_028B20_VGT_STRMOUT_BUFFER_EN,
-			       rctx->streamout.hw_enabled_mask);
+	unsigned strmout_config_reg = R_028AB0_VGT_STRMOUT_EN;
+	unsigned strmout_config_val = S_028B94_STREAMOUT_0_EN(r600_get_strmout_en(rctx));
+	unsigned strmout_buffer_reg = R_028B20_VGT_STRMOUT_BUFFER_EN;
+	unsigned strmout_buffer_val = rctx->streamout.hw_enabled_mask &
+				      rctx->streamout.enabled_stream_buffers_mask;
 
-	r600_write_context_reg(rctx->rings.gfx.cs,
-			       rctx->chip_class >= EVERGREEN ?
-				       R_028B94_VGT_STRMOUT_CONFIG :
-				       R_028AB0_VGT_STRMOUT_EN,
-			       S_028B94_STREAMOUT_0_EN(r600_get_strmout_en(rctx)));
+	if (rctx->chip_class >= EVERGREEN) {
+		strmout_buffer_reg = R_028B98_VGT_STRMOUT_BUFFER_CONFIG;
+
+		strmout_config_reg = R_028B94_VGT_STRMOUT_CONFIG;
+		strmout_config_val |=
+			S_028B94_RAST_STREAM(0) |
+			S_028B94_STREAMOUT_1_EN(r600_get_strmout_en(rctx)) |
+			S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
+			S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx));
+	}
+	r600_write_context_reg(rctx->rings.gfx.cs, strmout_buffer_reg, strmout_buffer_val);
+	r600_write_context_reg(rctx->rings.gfx.cs, strmout_config_reg, strmout_config_val);
 }
 
 static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable)
@@ -339,7 +346,12 @@ static void r600_set_streamout_enable(struct r600_common_context *rctx, bool ena
 	unsigned old_hw_enabled_mask = rctx->streamout.hw_enabled_mask;
 
 	rctx->streamout.streamout_enabled = enable;
-	rctx->streamout.hw_enabled_mask = rctx->streamout.enabled_mask;
+
+	rctx->streamout.hw_enabled_mask = rctx->streamout.enabled_mask |
+					  (rctx->streamout.enabled_mask << 4) |
+					  (rctx->streamout.enabled_mask << 8) |
+					  (rctx->streamout.enabled_mask << 12);
+
 	if ((old_strmout_en != r600_get_strmout_en(rctx)) ||
             (old_hw_enabled_mask != rctx->streamout.hw_enabled_mask))
 		rctx->streamout.enable_atom.dirty = true;
