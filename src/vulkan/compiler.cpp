@@ -981,7 +981,21 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    fail_if(mesa_shader == NULL,
            "failed to create %s shader\n", stage_info[stage].name);
 
-   mesa_shader->Program = rzalloc(mesa_shader, struct gl_program);
+   switch (stage) {
+   case VK_SHADER_STAGE_VERTEX:
+      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_vertex_program)->program.Base;
+      break;
+   case VK_SHADER_STAGE_GEOMETRY:
+      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_geometry_program)->program.Base;
+      break;
+   case VK_SHADER_STAGE_FRAGMENT:
+      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_fragment_program)->program.Base;
+      break;
+   case VK_SHADER_STAGE_COMPUTE:
+      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_compute_program)->program.Base;
+      break;
+   }
+
    mesa_shader->Type = stage_info[stage].token;
    mesa_shader->Stage = stage_info[stage].stage;
 
