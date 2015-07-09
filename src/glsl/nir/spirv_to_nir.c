@@ -1840,6 +1840,7 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
                      glsl_get_vector_elements(type), val->name);
+   instr->dest.write_mask = (1 << glsl_get_vector_elements(type)) - 1;
    val->ssa->def = &instr->dest.dest.ssa;
 
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
