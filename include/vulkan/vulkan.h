@@ -1202,6 +1202,100 @@ typedef struct {
 } VkFormatProperties;
 
 typedef struct {
+    uint32_t                                    maxImageDimension1D;
+    uint32_t                                    maxImageDimension2D;
+    uint32_t                                    maxImageDimension3D;
+    uint32_t                                    maxImageDimensionCube;
+    uint32_t                                    maxImageArrayLayers;
+    uint32_t                                    maxTexelBufferSize;
+    uint32_t                                    maxUniformBufferSize;
+    uint32_t                                    maxStorageBufferSize;
+    uint32_t                                    maxPushConstantsSize;
+    uint32_t                                    maxMemoryAllocationCount;
+    uint32_t                                    maxBoundDescriptorSets;
+    uint32_t                                    maxDescriptorSets;
+    uint32_t                                    maxPerStageDescriptorSamplers;
+    uint32_t                                    maxPerStageDescriptorUniformBuffers;
+    uint32_t                                    maxPerStageDescriptorStorageBuffers;
+    uint32_t                                    maxPerStageDescriptorSampledImages;
+    uint32_t                                    maxPerStageDescriptorStorageImages;
+    uint32_t                                    maxDescriptorSetSamplers;
+    uint32_t                                    maxDescriptorSetUniformBuffers;
+    uint32_t                                    maxDescriptorSetStorageBuffers;
+    uint32_t                                    maxDescriptorSetSampledImages;
+    uint32_t                                    maxDescriptorSetStorageImages;
+    uint32_t                                    maxVertexInputAttributes;
+    uint32_t                                    maxVertexInputAttributeOffset;
+    uint32_t                                    maxVertexInputBindingStride;
+    uint32_t                                    maxVertexOutputComponents;
+    uint32_t                                    maxTessGenLevel;
+    uint32_t                                    maxTessPatchSize;
+    uint32_t                                    maxTessControlPerVertexInputComponents;
+    uint32_t                                    maxTessControlPerVertexOutputComponents;
+    uint32_t                                    maxTessControlPerPatchOutputComponents;
+    uint32_t                                    maxTessControlTotalOutputComponents;
+    uint32_t                                    maxTessEvaluationInputComponents;
+    uint32_t                                    maxTessEvaluationOutputComponents;
+    uint32_t                                    maxGeometryShaderInvocations;
+    uint32_t                                    maxGeometryInputComponents;
+    uint32_t                                    maxGeometryOutputComponents;
+    uint32_t                                    maxGeometryOutputVertices;
+    uint32_t                                    maxGeometryTotalOutputComponents;
+    uint32_t                                    maxFragmentInputComponents;
+    uint32_t                                    maxFragmentOutputBuffers;
+    uint32_t                                    maxFragmentDualSourceBuffers;
+    uint32_t                                    maxFragmentCombinedOutputResources;
+    uint32_t                                    maxComputeSharedMemorySize;
+    uint32_t                                    maxComputeWorkGroupCount[3];
+    uint32_t                                    maxComputeWorkGroupInvocations;
+    uint32_t                                    maxComputeWorkGroupSize[3];
+    uint32_t                                    subPixelPrecisionBits;
+    uint32_t                                    subTexelPrecisionBits;
+    uint32_t                                    mipmapPrecisionBits;
+    uint32_t                                    maxDrawIndexedIndexValue;
+    uint32_t                                    maxDrawIndirectInstanceCount;
+    bool32_t                                    primitiveRestartForPatches;
+    float                                       maxSamplerLodBias;
+    uint32_t                                    maxSamplerAnisotropy;
+    uint32_t                                    maxViewports;
+    uint32_t                                    maxDynamicViewportStates;
+    uint32_t                                    maxViewportDimensions[2];
+    float                                       viewportBoundsRange[2];
+    uint32_t                                    viewportSubPixelBits;
+    uint32_t                                    minMemoryMapAlignment;
+    uint32_t                                    minTexelBufferOffsetAlignment;
+    uint32_t                                    minUniformBufferOffsetAlignment;
+    uint32_t                                    minStorageBufferOffsetAlignment;
+    uint32_t                                    minTexelOffset;
+    uint32_t                                    maxTexelOffset;
+    uint32_t                                    minTexelGatherOffset;
+    uint32_t                                    maxTexelGatherOffset;
+    float                                       minInterpolationOffset;
+    float                                       maxInterpolationOffset;
+    uint32_t                                    subPixelInterpolationOffsetBits;
+    uint32_t                                    maxFramebufferWidth;
+    uint32_t                                    maxFramebufferHeight;
+    uint32_t                                    maxFramebufferLayers;
+    uint32_t                                    maxFramebufferColorSamples;
+    uint32_t                                    maxFramebufferDepthSamples;
+    uint32_t                                    maxFramebufferStencilSamples;
+    uint32_t                                    maxColorAttachments;
+    uint32_t                                    maxSampledImageColorSamples;
+    uint32_t                                    maxSampledImageDepthSamples;
+    uint32_t                                    maxSampledImageIntegerSamples;
+    uint32_t                                    maxStorageImageSamples;
+    uint32_t                                    maxSampleMaskWords;
+    uint64_t                                    timestampFrequency;
+    uint32_t                                    maxClipDistances;
+    uint32_t                                    maxCullDistances;
+    uint32_t                                    maxCombinedClipAndCullDistances;
+    float                                       pointSizeRange[2];
+    float                                       lineWidthRange[2];
+    float                                       pointSizeGranularity;
+    float                                       lineWidthGranularity;
+} VkPhysicalDeviceLimits;
+
+typedef struct {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
@@ -1924,6 +2018,7 @@ typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, ui
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2058,6 +2153,10 @@ VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
     VkFormatProperties*                         pFormatInfo);
+
+VkResult VKAPI vkGetPhysicalDeviceLimits(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceLimits*                     pLimits);
 
 PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,

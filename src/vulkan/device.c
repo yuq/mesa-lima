@@ -253,6 +253,120 @@ VkResult anv_GetPhysicalDeviceFeatures(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetPhysicalDeviceLimits(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceLimits*                     pLimits)
+{
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   const struct brw_device_info *devinfo = physical_device->info;
+
+   anv_finishme("Get correct values for PhysicalDeviceLimits");
+
+   *pLimits = (VkPhysicalDeviceLimits) {
+      .maxImageDimension1D                      = (1 << 14),
+      .maxImageDimension2D                      = (1 << 14),
+      .maxImageDimension3D                      = (1 << 10),
+      .maxImageDimensionCube                    = (1 << 14),
+      .maxImageArrayLayers                      = (1 << 10),
+      .maxTexelBufferSize                       = (1 << 14),
+      .maxUniformBufferSize                     = UINT32_MAX,
+      .maxStorageBufferSize                     = UINT32_MAX,
+      .maxPushConstantsSize                     = 128,
+      .maxMemoryAllocationCount                 = UINT32_MAX,
+      .maxBoundDescriptorSets                   = MAX_SETS,
+      .maxDescriptorSets                        = UINT32_MAX,
+      .maxPerStageDescriptorSamplers            = 64,
+      .maxPerStageDescriptorUniformBuffers      = 64,
+      .maxPerStageDescriptorStorageBuffers      = 64,
+      .maxPerStageDescriptorSampledImages       = 64,
+      .maxPerStageDescriptorStorageImages       = 64,
+      .maxDescriptorSetSamplers                 = 256,
+      .maxDescriptorSetUniformBuffers           = 256,
+      .maxDescriptorSetStorageBuffers           = 256,
+      .maxDescriptorSetSampledImages            = 256,
+      .maxDescriptorSetStorageImages            = 256,
+      .maxVertexInputAttributes                 = 32,
+      .maxVertexInputAttributeOffset            = 256,
+      .maxVertexInputBindingStride              = 256,
+      .maxVertexOutputComponents                = 32,
+      .maxTessGenLevel                          = 0,
+      .maxTessPatchSize                         = 0,
+      .maxTessControlPerVertexInputComponents   = 0,
+      .maxTessControlPerVertexOutputComponents  = 0,
+      .maxTessControlPerPatchOutputComponents   = 0,
+      .maxTessControlTotalOutputComponents      = 0,
+      .maxTessEvaluationInputComponents         = 0,
+      .maxTessEvaluationOutputComponents        = 0,
+      .maxGeometryShaderInvocations             = 6,
+      .maxGeometryInputComponents               = 16,
+      .maxGeometryOutputComponents              = 16,
+      .maxGeometryOutputVertices                = 16,
+      .maxGeometryTotalOutputComponents         = 16,
+      .maxFragmentInputComponents               = 16,
+      .maxFragmentOutputBuffers                 = 8,
+      .maxFragmentDualSourceBuffers             = 2,
+      .maxFragmentCombinedOutputResources       = 8,
+      .maxComputeSharedMemorySize               = 1024,
+      .maxComputeWorkGroupCount = {
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+      },
+      .maxComputeWorkGroupInvocations           = 16 * devinfo->max_cs_threads,
+      .maxComputeWorkGroupSize = {
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+      },
+      .subPixelPrecisionBits                    = 4 /* FIXME */,
+      .subTexelPrecisionBits                    = 4 /* FIXME */,
+      .mipmapPrecisionBits                      = 4 /* FIXME */,
+      .maxDrawIndexedIndexValue                 = UINT32_MAX,
+      .maxDrawIndirectInstanceCount             = UINT32_MAX,
+      .primitiveRestartForPatches               = UINT32_MAX,
+      .maxSamplerLodBias                        = 16,
+      .maxSamplerAnisotropy                     = 16,
+      .maxViewports                             = 32,
+      .maxDynamicViewportStates                 = UINT32_MAX,
+      .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
+      .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
+      .viewportSubPixelBits                     = 13, /* We take a float? */
+      .minMemoryMapAlignment                    = 64, /* A cache line */
+      .minTexelBufferOffsetAlignment            = 1,
+      .minUniformBufferOffsetAlignment          = 1,
+      .minStorageBufferOffsetAlignment          = 1,
+      .minTexelOffset                           = 0, /* FIXME */
+      .maxTexelOffset                           = 0, /* FIXME */
+      .minTexelGatherOffset                     = 0, /* FIXME */
+      .maxTexelGatherOffset                     = 0, /* FIXME */
+      .minInterpolationOffset                   = 0, /* FIXME */
+      .maxInterpolationOffset                   = 0, /* FIXME */
+      .subPixelInterpolationOffsetBits          = 0, /* FIXME */
+      .maxFramebufferWidth                      = (1 << 14),
+      .maxFramebufferHeight                     = (1 << 14),
+      .maxFramebufferLayers                     = (1 << 10),
+      .maxFramebufferColorSamples               = 8,
+      .maxFramebufferDepthSamples               = 8,
+      .maxFramebufferStencilSamples             = 8,
+      .maxColorAttachments                      = MAX_RTS,
+      .maxSampledImageColorSamples              = 8,
+      .maxSampledImageDepthSamples              = 8,
+      .maxSampledImageIntegerSamples            = 1,
+      .maxStorageImageSamples                   = 1,
+      .maxSampleMaskWords                       = 1,
+      .timestampFrequency                       = 0 /* FIXME */,
+      .maxClipDistances                         = 0 /* FIXME */,
+      .maxCullDistances                         = 0 /* FIXME */,
+      .maxCombinedClipAndCullDistances          = 0 /* FIXME */,
+      .pointSizeRange                           = { 0.125, 255.875 },
+      .lineWidthRange                           = { 0.0, 7.9921875 },
+      .pointSizeGranularity                     = (1.0 / 8.0),
+      .lineWidthGranularity                     = (1.0 / 128.0),
+   };
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceInfoType                    infoType,
