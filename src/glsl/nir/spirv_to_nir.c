@@ -2788,7 +2788,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);
    b->shader = shader;
    b->value_id_bound = value_id_bound;
-   b->values = ralloc_array(b, struct vtn_value, value_id_bound);
+   b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
    exec_list_make_empty(&b->functions);
 
    /* Handle all the preamble instructions */
