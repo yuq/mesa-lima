@@ -1289,6 +1289,7 @@ typedef struct {
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
+    const VkPhysicalDeviceFeatures*             pEnabledFeatures;
     VkDeviceCreateFlags                         flags;
 } VkDeviceCreateInfo;
 
