@@ -28,6 +28,7 @@
 #include <fcntl.h>
 
 #include "private.h"
+#include "mesa/main/git_sha1.h"
 
 static int
 anv_env_get_int(const char *name)
@@ -326,7 +327,7 @@ VkResult anv_GetPhysicalDeviceLimits(
       .primitiveRestartForPatches               = UINT32_MAX,
       .maxSamplerLodBias                        = 16,
       .maxSamplerAnisotropy                     = 16,
-      .maxViewports                             = 32,
+      .maxViewports                             = 16,
       .maxDynamicViewportStates                 = UINT32_MAX,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
       .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
@@ -354,7 +355,7 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxSampledImageIntegerSamples            = 1,
       .maxStorageImageSamples                   = 1,
       .maxSampleMaskWords                       = 1,
-      .timestampFrequency                       = 0 /* FIXME */,
+      .timestampFrequency                       = 1000 * 1000 * 1000 / 80,
       .maxClipDistances                         = 0 /* FIXME */,
       .maxCullDistances                         = 0 /* FIXME */,
       .maxCombinedClipAndCullDistances          = 0 /* FIXME */,
@@ -367,44 +368,39 @@ VkResult anv_GetPhysicalDeviceLimits(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetPhysicalDeviceProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceProperties*                 pProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+
+   *pProperties = (VkPhysicalDeviceProperties) {
+      .apiVersion = 1,
+      .driverVersion = 1,
+      .vendorId = 0x8086,
+      .deviceId = pdevice->chipset_id,
+      .deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+   };
+
+   strcpy(pProperties->deviceName, pdevice->name);
+   snprintf((char *)pProperties->pipelineCacheUUID, VK_UUID_LENGTH,
+            "anv-%s", MESA_GIT_SHA1 + 4);
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceInfoType                    infoType,
     size_t*                                     pDataSize,
     void*                                       pData)
 {
-   struct anv_physical_device *device = (struct anv_physical_device *) physicalDevice;
-   VkPhysicalDeviceProperties *properties;
    VkPhysicalDevicePerformance *performance;
    VkPhysicalDeviceQueueProperties *queue_properties;
    VkPhysicalDeviceMemoryProperties *memory_properties;
    VkDisplayPropertiesWSI *display_properties;
-   uint64_t ns_per_tick = 80;
    
    switch ((uint32_t) infoType) {
-   case VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES:
-      properties = pData;
-
-      *pDataSize = sizeof(*properties);
-      if (pData == NULL)
-         return VK_SUCCESS;
-
-      properties->apiVersion = 1;
-      properties->driverVersion = 1;
-      properties->vendorId = 0x8086;
-      properties->deviceId = device->chipset_id;
-      properties->deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU;
-      strcpy(properties->deviceName, device->name);
-      properties->maxInlineMemoryUpdateSize = 0;
-      properties->maxBoundDescriptorSets = MAX_SETS;
-      properties->maxThreadGroupSize = 512;
-      properties->timestampFrequency = 1000 * 1000 * 1000 / ns_per_tick;
-      properties->multiColorAttachmentClears = true;
-      properties->maxDescriptorSets = 8;
-      properties->maxViewports = 16;
-      properties->maxColorAttachments = 8;
-      return VK_SUCCESS;
-
    case VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE:
       performance = pData;
 

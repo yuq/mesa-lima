@@ -1302,14 +1302,7 @@ typedef struct {
     uint32_t                                    deviceId;
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
-    VkDeviceSize                                maxInlineMemoryUpdateSize;
-    uint32_t                                    maxBoundDescriptorSets;
-    uint32_t                                    maxThreadGroupSize;
-    uint64_t                                    timestampFrequency;
-    bool32_t                                    multiColorAttachmentClears;
-    uint32_t                                    maxDescriptorSets;
-    uint32_t                                    maxViewports;
-    uint32_t                                    maxColorAttachments;
+    uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
 } VkPhysicalDeviceProperties;
 
 typedef struct {
@@ -2019,6 +2012,7 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physi
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2157,6 +2151,10 @@ VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
 VkResult VKAPI vkGetPhysicalDeviceLimits(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceLimits*                     pLimits);
+
+VkResult VKAPI vkGetPhysicalDeviceProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceProperties*                 pProperties);
 
 PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
