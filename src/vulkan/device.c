@@ -121,7 +121,6 @@ VkResult anv_CreateInstance(
    struct anv_instance *instance;
    const VkAllocCallbacks *alloc_callbacks = &default_alloc_callbacks;
    void *user_data = NULL;
-   VkResult result;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
@@ -138,15 +137,8 @@ VkResult anv_CreateInstance(
    instance->pfnAlloc = alloc_callbacks->pfnAlloc;
    instance->pfnFree = alloc_callbacks->pfnFree;
    instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
-
    instance->physicalDeviceCount = 0;
-   result = fill_physical_device(&instance->physicalDevice,
-                                 instance, "/dev/dri/renderD128");
 
-   if (result != VK_SUCCESS)
-      return result;
-
-   instance->physicalDeviceCount++;
    *pInstance = (VkInstance) instance;
 
    return VK_SUCCESS;
@@ -168,6 +160,16 @@ VkResult anv_EnumeratePhysicalDevices(
     VkPhysicalDevice*                           pPhysicalDevices)
 {
    struct anv_instance *instance = (struct anv_instance *) _instance;
+   VkResult result;
+
+   if (instance->physicalDeviceCount == 0) {
+      result = fill_physical_device(&instance->physicalDevice,
+                                    instance, "/dev/dri/renderD128");
+      if (result != VK_SUCCESS)
+         return result;
+
+      instance->physicalDeviceCount++;
+   }
 
    if (*pPhysicalDeviceCount >= 1)
       pPhysicalDevices[0] = (VkPhysicalDevice) &instance->physicalDevice;
