@@ -261,17 +261,17 @@ static void brw_emit_prim(struct brw_context *brw,
       indirect_flag = 0;
    }
 
+   BEGIN_BATCH(brw->gen >= 7 ? 7 : 6);
+
    if (brw->gen >= 7) {
       if (brw->predicate.state == BRW_PREDICATE_STATE_USE_BIT)
          predicate_enable = GEN7_3DPRIM_PREDICATE_ENABLE;
       else
          predicate_enable = 0;
 
-      BEGIN_BATCH(7);
       OUT_BATCH(CMD_3D_PRIM << 16 | (7 - 2) | indirect_flag | predicate_enable);
       OUT_BATCH(hw_prim | vertex_access_type);
    } else {
-      BEGIN_BATCH(6);
       OUT_BATCH(CMD_3D_PRIM << 16 | (6 - 2) |
                 hw_prim << GEN4_3DPRIM_TOPOLOGY_TYPE_SHIFT |
                 vertex_access_type);
