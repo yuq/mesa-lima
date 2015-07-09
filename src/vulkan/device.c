@@ -389,6 +389,33 @@ VkResult anv_GetPhysicalDeviceProperties(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetPhysicalDeviceQueueCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount)
+{
+   *pCount = 1;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_GetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    count,
+    VkPhysicalDeviceQueueProperties*            pQueueProperties)
+{
+   assert(count == 1);
+
+   *pQueueProperties = (VkPhysicalDeviceQueueProperties) {
+      .queueFlags = VK_QUEUE_GRAPHICS_BIT |
+                    VK_QUEUE_COMPUTE_BIT |
+                    VK_QUEUE_DMA_BIT,
+      .queueCount = 1,
+      .supportsTimestamps = true,
+   };
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetPhysicalDeviceInfo(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceInfoType                    infoType,

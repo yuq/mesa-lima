@@ -2013,6 +2013,8 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalD
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueProperties)(VkPhysicalDevice physicalDevice, uint32_t count, VkPhysicalDeviceQueueProperties* pQueueProperties);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2155,6 +2157,15 @@ VkResult VKAPI vkGetPhysicalDeviceLimits(
 VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceQueueCount(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount);
+
+VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    count,
+    VkPhysicalDeviceQueueProperties*            pQueueProperties);
 
 PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,
