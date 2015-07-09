@@ -149,6 +149,7 @@ struct r600_bytecode_cf {
 	unsigned			id;
 	unsigned			cond;
 	unsigned			pop_count;
+	unsigned			count;
 	unsigned			cf_addr; /* control flow addr */
 	struct r600_bytecode_kcache		kcache[4];
 	unsigned			r6xx_uses_waterfall;

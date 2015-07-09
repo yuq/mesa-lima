@@ -182,6 +182,9 @@ void bc_dump::dump(cf_node& n) {
 
 		if (n.bc.pop_count)
 			s << " POP:" << n.bc.pop_count;
+
+		if (n.bc.count && (n.bc.op_ptr->flags & CF_EMIT))
+			s << " STREAM" << n.bc.count;
 	}
 
 	if (!n.bc.barrier)

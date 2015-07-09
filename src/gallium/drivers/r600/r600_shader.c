@@ -93,8 +93,10 @@ static void r600_dump_streamout(struct pipe_stream_output_info *so)
 	for (i = 0; i < so->num_outputs; i++) {
 		unsigned mask = ((1 << so->output[i].num_components) - 1) <<
 				so->output[i].start_component;
-		fprintf(stderr, "  %i: MEM_STREAM0_BUF%i[%i..%i] <- OUT[%i].%s%s%s%s%s\n",
-			i, so->output[i].output_buffer,
+		fprintf(stderr, "  %i: MEM_STREAM%d_BUF%i[%i..%i] <- OUT[%i].%s%s%s%s%s\n",
+			i,
+			so->output[i].stream,
+			so->output[i].output_buffer,
 			so->output[i].dst_offset, so->output[i].dst_offset + so->output[i].num_components - 1,
 			so->output[i].register_index,
 			mask & 1 ? "x" : "",
