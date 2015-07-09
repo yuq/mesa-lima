@@ -168,12 +168,34 @@ VkResult anv_EnumeratePhysicalDevices(
       if (result != VK_SUCCESS)
          return result;
 
-      instance->physicalDeviceCount++;
+      instance->physicalDeviceCount = 1;
    }
 
-   if (*pPhysicalDeviceCount >= 1)
+   /* pPhysicalDeviceCount is an out parameter if pPhysicalDevices is NULL;
+    * otherwise it's an inout parameter.
+    *
+    * The Vulkan spec (git aaed022) says:
+    *
+    *    pPhysicalDeviceCount is a pointer to an unsigned integer variable
+    *    that is initialized with the number of devices the application is
+    *    prepared to receive handles to. pname:pPhysicalDevices is pointer to
+    *    an array of at least this many VkPhysicalDevice handles [...].
+    *
+    *    Upon success, if pPhysicalDevices is NULL, vkEnumeratePhysicalDevices
+    *    overwrites the contents of the variable pointed to by
+    *    pPhysicalDeviceCount with the number of physical devices in in the
+    *    instance; otherwise, vkEnumeratePhysicalDevices overwrites
+    *    pPhysicalDeviceCount with the number of physical handles written to
+    *    pPhysicalDevices.
+    */
+   if (!pPhysicalDevices) {
+      *pPhysicalDeviceCount = instance->physicalDeviceCount;
+   } else if (*pPhysicalDeviceCount >= 1) {
       pPhysicalDevices[0] = (VkPhysicalDevice) &instance->physicalDevice;
-   *pPhysicalDeviceCount = instance->physicalDeviceCount;
+      *pPhysicalDeviceCount = 1;
+   } else {
+      *pPhysicalDeviceCount = 0;
+   }
 
    return VK_SUCCESS;
 }
