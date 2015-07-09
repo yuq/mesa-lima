@@ -951,6 +951,23 @@ anv_compile_shader_glsl(struct anv_compiler *compiler,
 }
 
 static void
+setup_nir_io(struct gl_program *prog,
+             nir_shader *shader)
+{
+   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+      prog->InputsRead |= BITFIELD64_BIT(var->data.location);
+   }
+
+   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+      /* XXX glslang gives us this but we never use it */
+      if (!strcmp(var->name, "gl_PerVertex"))
+         continue;
+
+      prog->OutputsWritten |= BITFIELD64_BIT(var->data.location);
+   }
+}
+
+static void
 anv_compile_shader_spirv(struct anv_compiler *compiler,
                          struct gl_shader_program *program,
                          struct anv_pipeline *pipeline, uint32_t stage)
@@ -981,6 +998,8 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    brw_process_nir(mesa_shader->Program->nir,
                    compiler->screen->devinfo,
                    NULL, mesa_shader->Stage);
+
+   setup_nir_io(mesa_shader->Program, mesa_shader->Program->nir);
 
    fail_if(mesa_shader->Program->nir == NULL,
            "failed to translate SPIR-V to NIR\n");
