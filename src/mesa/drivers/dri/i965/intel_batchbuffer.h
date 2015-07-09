@@ -57,16 +57,16 @@ void intel_batchbuffer_data(struct brw_context *brw,
                             const void *data, GLuint bytes,
                             enum brw_gpu_ring ring);
 
-bool intel_batchbuffer_emit_reloc(struct brw_context *brw,
-                                       drm_intel_bo *buffer,
-				       uint32_t read_domains,
-				       uint32_t write_domain,
-				       uint32_t offset);
-bool intel_batchbuffer_emit_reloc64(struct brw_context *brw,
-                                    drm_intel_bo *buffer,
-                                    uint32_t read_domains,
-                                    uint32_t write_domain,
-                                    uint32_t offset);
+uint32_t intel_batchbuffer_reloc(struct brw_context *brw,
+                                 drm_intel_bo *buffer,
+                                 uint32_t read_domains,
+                                 uint32_t write_domain,
+                                 uint32_t offset);
+uint64_t intel_batchbuffer_reloc64(struct brw_context *brw,
+                                   drm_intel_bo *buffer,
+                                   uint32_t read_domains,
+                                   uint32_t write_domain,
+                                   uint32_t offset);
 static inline uint32_t float_as_int(float f)
 {
    union {
@@ -164,14 +164,16 @@ intel_batchbuffer_advance(struct brw_context *brw)
 #define BEGIN_BATCH_BLT(n) intel_batchbuffer_begin(brw, n, BLT_RING)
 #define OUT_BATCH(d) intel_batchbuffer_emit_dword(brw, d)
 #define OUT_BATCH_F(f) intel_batchbuffer_emit_float(brw, f)
-#define OUT_RELOC(buf, read_domains, write_domain, delta) do {		\
-   intel_batchbuffer_emit_reloc(brw, buf,			\
-				read_domains, write_domain, delta);	\
-} while (0)
+#define OUT_RELOC(buf, read_domains, write_domain, delta)                  \
+   OUT_BATCH(intel_batchbuffer_reloc(brw, buf, read_domains, write_domain, \
+                                     delta))
 
 /* Handle 48-bit address relocations for Gen8+ */
-#define OUT_RELOC64(buf, read_domains, write_domain, delta) do { \
-   intel_batchbuffer_emit_reloc64(brw, buf, read_domains, write_domain, delta);	\
+#define OUT_RELOC64(buf, read_domains, write_domain, delta) do {        \
+   uint64_t reloc64 = intel_batchbuffer_reloc64(brw, buf, read_domains, \
+                                                write_domain, delta);   \
+   OUT_BATCH(reloc64);                                                  \
+   OUT_BATCH(reloc64 >> 32);                                            \
 } while (0)
 
 #define ADVANCE_BATCH() intel_batchbuffer_advance(brw);

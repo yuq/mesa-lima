@@ -393,11 +393,11 @@ _intel_batchbuffer_flush(struct brw_context *brw,
 
 /*  This is the only way buffers get added to the validate list.
  */
-bool
-intel_batchbuffer_emit_reloc(struct brw_context *brw,
-                             drm_intel_bo *buffer,
-                             uint32_t read_domains, uint32_t write_domain,
-			     uint32_t delta)
+uint32_t
+intel_batchbuffer_reloc(struct brw_context *brw,
+                        drm_intel_bo *buffer,
+                        uint32_t read_domains, uint32_t write_domain,
+                        uint32_t delta)
 {
    int ret;
 
@@ -411,16 +411,14 @@ intel_batchbuffer_emit_reloc(struct brw_context *brw,
     * case the buffer doesn't move and we can short-circuit the relocation
     * processing in the kernel
     */
-   intel_batchbuffer_emit_dword(brw, buffer->offset64 + delta);
-
-   return true;
+   return buffer->offset64 + delta;
 }
 
-bool
-intel_batchbuffer_emit_reloc64(struct brw_context *brw,
-                               drm_intel_bo *buffer,
-                               uint32_t read_domains, uint32_t write_domain,
-			       uint32_t delta)
+uint64_t
+intel_batchbuffer_reloc64(struct brw_context *brw,
+                          drm_intel_bo *buffer,
+                          uint32_t read_domains, uint32_t write_domain,
+                          uint32_t delta)
 {
    int ret = drm_intel_bo_emit_reloc(brw->batch.bo, 4*brw->batch.used,
                                      buffer, delta,
@@ -432,11 +430,7 @@ intel_batchbuffer_emit_reloc64(struct brw_context *brw,
     * case the buffer doesn't move and we can short-circuit the relocation
     * processing in the kernel
     */
-   uint64_t offset = buffer->offset64 + delta;
-   intel_batchbuffer_emit_dword(brw, offset);
-   intel_batchbuffer_emit_dword(brw, offset >> 32);
-
-   return true;
+   return buffer->offset64 + delta;
 }
 
 
