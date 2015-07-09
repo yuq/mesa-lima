@@ -205,15 +205,19 @@ LOAD(input, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /*
  * Stores work the same way as loads, except now the first register input is
  * the value or array to store and the optional second input is the indirect
- * offset.
+ * offset. SSBO stores are similar, but they accept an extra source for the
+ * block index and an extra index with the writemask to use.
  */
 
-#define STORE(name, num_indices, flags) \
-   INTRINSIC(store_##name, 1, ARR(0), false, 0, 0, num_indices, flags) \
-   INTRINSIC(store_##name##_indirect, 2, ARR(0, 1), false, 0, 0, \
-             num_indices, flags) \
+#define STORE(name, extra_srcs, extra_srcs_size, extra_indices, flags) \
+   INTRINSIC(store_##name, 1 + extra_srcs, \
+             ARR(0, extra_srcs_size, extra_srcs_size, extra_srcs_size), \
+             false, 0, 0, 1 + extra_indices, flags) \
+   INTRINSIC(store_##name##_indirect, 2 + extra_srcs, \
+             ARR(0, 1, extra_srcs_size, extra_srcs_size), \
+             false, 0, 0, 1 + extra_indices, flags)
 
-STORE(output, 1, 0)
-/* STORE(ssbo, 2, 0) */
+STORE(output, 0, 0, 0, 0)
+STORE(ssbo, 1, 1, 1, 0)
 
-LAST_INTRINSIC(store_output_indirect)
+LAST_INTRINSIC(store_ssbo_indirect)

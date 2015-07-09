@@ -649,6 +649,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_image_size;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_samples") == 0) {
          op = nir_intrinsic_image_samples;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_store_ssbo") == 0) {
+         op = nir_intrinsic_store_ssbo;
       } else {
          unreachable("not reached");
       }
@@ -747,6 +749,40 @@ nir_visitor::visit(ir_call *ir)
       }
       case nir_intrinsic_memory_barrier:
          break;
+      case nir_intrinsic_store_ssbo: {
+         exec_node *param = ir->actual_parameters.get_head();
+         ir_rvalue *block = ((ir_instruction *)param)->as_rvalue();
+
+         param = param->get_next();
+         ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
+
+         param = param->get_next();
+         ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
+
+         param = param->get_next();
+         ir_constant *write_mask = ((ir_instruction *)param)->as_constant();
+         assert(write_mask);
+
+         /* Check if we need the indirect version */
+         ir_constant *const_offset = offset->as_constant();
+         if (!const_offset) {
+            op = nir_intrinsic_store_ssbo_indirect;
+            ralloc_free(instr);
+            instr = nir_intrinsic_instr_create(shader, op);
+            instr->src[2] = evaluate_rvalue(offset);
+            instr->const_index[0] = 0;
+         } else {
+            instr->const_index[0] = const_offset->value.u[0];
+         }
+
+         instr->const_index[1] = write_mask->value.u[0];
+
+         instr->src[0] = evaluate_rvalue(val);
+         instr->num_components = val->type->vector_elements;
+
+         instr->src[1] = evaluate_rvalue(block);
+         break;
+      }
       default:
          unreachable("not reached");
       }
