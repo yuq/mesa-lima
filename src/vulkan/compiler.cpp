@@ -996,6 +996,9 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
       break;
    }
 
+   mesa_shader->Program->Parameters =
+      rzalloc(mesa_shader, struct gl_program_parameter_list);
+
    mesa_shader->Type = stage_info[stage].token;
    mesa_shader->Stage = stage_info[stage].stage;
 
