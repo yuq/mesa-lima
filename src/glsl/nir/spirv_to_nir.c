@@ -801,7 +801,7 @@ get_builtin_variable(struct vtn_builder *b,
       nir_variable_mode mode;
       vtn_get_builtin_location(builtin, &var->data.location, &mode);
       var->data.mode = mode;
-      var->name = ralloc_strdup(b->shader, "builtin");
+      var->name = ralloc_strdup(var, "builtin");
 
       switch (mode) {
       case nir_var_shader_in:
