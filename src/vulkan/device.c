@@ -41,10 +41,16 @@ anv_env_get_int(const char *name)
    return strtol(val, NULL, 0);
 }
 
+static void
+anv_physical_device_finish(struct anv_physical_device *device)
+{
+   /* Nothing to do */
+}
+
 static VkResult
-fill_physical_device(struct anv_physical_device *device,
-                     struct anv_instance *instance,
-                     const char *path)
+anv_physical_device_init(struct anv_physical_device *device,
+                         struct anv_instance *instance,
+                         const char *path)
 {
    int fd;
    
@@ -150,6 +156,10 @@ VkResult anv_DestroyInstance(
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
+   if (instance->physicalDeviceCount > 0) {
+      anv_physical_device_finish(&instance->physicalDevice);
+   }
+
    instance->pfnFree(instance->pAllocUserData, instance);
 
    return VK_SUCCESS;
@@ -164,8 +174,8 @@ VkResult anv_EnumeratePhysicalDevices(
    VkResult result;
 
    if (instance->physicalDeviceCount == 0) {
-      result = fill_physical_device(&instance->physicalDevice,
-                                    instance, "/dev/dri/renderD128");
+      result = anv_physical_device_init(&instance->physicalDevice,
+                                        instance, "/dev/dri/renderD128");
       if (result != VK_SUCCESS)
          return result;
 
