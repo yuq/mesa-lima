@@ -26,6 +26,10 @@ extern "C" {
  *     - 3 DWords for MI_REPORT_PERF_COUNT itself on Gen6+.  ==> 12 bytes.
  *       On Ironlake, it's 6 DWords, but we have some slack due to the lack of
  *       Sandybridge PIPE_CONTROL madness.
+ *   - CC_STATE workaround on HSW (12 * 4 = 48 bytes)
+ *     - 5 dwords for initial mi_flush
+ *     - 2 dwords for CC state setup
+ *     - 5 dwords for the required pipe control at the end
  */
 #define BATCH_RESERVED 152
 

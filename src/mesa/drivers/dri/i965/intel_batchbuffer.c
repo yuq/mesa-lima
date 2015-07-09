@@ -32,6 +32,7 @@
 #include "intel_buffers.h"
 #include "intel_fbo.h"
 #include "brw_context.h"
+#include "brw_defines.h"
 
 #include <xf86drm.h>
 #include <i915_drm.h>
@@ -206,9 +207,31 @@ brw_finish_batch(struct brw_context *brw)
     */
    brw_emit_query_end(brw);
 
-   /* We may also need to snapshot and disable OA counters. */
-   if (brw->batch.ring == RENDER_RING)
+   if (brw->batch.ring == RENDER_RING) {
+      /* We may also need to snapshot and disable OA counters. */
       brw_perf_monitor_finish_batch(brw);
+
+      if (brw->is_haswell) {
+         /* From the Haswell PRM, Volume 2b, Command Reference: Instructions,
+          * 3DSTATE_CC_STATE_POINTERS > "Note":
+          *
+          * "SW must program 3DSTATE_CC_STATE_POINTERS command at the end of every
+          *  3D batch buffer followed by a PIPE_CONTROL with RC flush and CS stall."
+          *
+          * From the example in the docs, it seems to expect a regular pipe control
+          * flush here as well. We may have done it already, but meh.
+          *
+          * See also WaAvoidRCZCounterRollover.
+          */
+         brw_emit_mi_flush(brw);
+         BEGIN_BATCH(2);
+         OUT_BATCH(_3DSTATE_CC_STATE_POINTERS << 16 | (2 - 2));
+         OUT_BATCH(brw->cc.state_offset | 1);
+         ADVANCE_BATCH();
+         brw_emit_pipe_control_flush(brw, PIPE_CONTROL_RENDER_TARGET_FLUSH |
+                                          PIPE_CONTROL_CS_STALL);
+      }
+   }
 
    /* Mark that the current program cache BO has been used by the GPU.
     * It will be reallocated if we need to put new programs in for the
