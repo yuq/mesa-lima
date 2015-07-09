@@ -103,24 +103,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDsState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
-// This macro defines INT_MAX in enumerations to force compilers to use 32 bits
-// to represent them. This may or may not be necessary on some compilers. The
-// option to compile it out may allow compilers that warn about missing enumerants
-// in switch statements to be silenced.
-// Using this macro is not needed for flag bit enums because those aren't used
-// as storage type anywhere.
-#define VK_MAX_ENUM(Prefix) VK_##Prefix##_MAX_ENUM = 0x7FFFFFFF
-
-// This macro defines the BEGIN_RANGE, END_RANGE, NUM, and MAX_ENUM constants for
-// the enumerations.
-#define VK_ENUM_RANGE(Prefix, First, Last) \
-    VK_##Prefix##_BEGIN_RANGE                               = VK_##Prefix##_##First, \
-    VK_##Prefix##_END_RANGE                                 = VK_##Prefix##_##Last, \
-    VK_NUM_##Prefix                                         = (VK_##Prefix##_END_RANGE - VK_##Prefix##_BEGIN_RANGE + 1), \
-    VK_MAX_ENUM(Prefix)
-
-// This is a helper macro to define the value of flag bit enum values.
-#define VK_BIT(bit)     (1 << (bit))
 
 typedef enum {
     VK_SUCCESS = 0,
@@ -1095,28 +1077,6 @@ typedef enum {
 } VkMemoryInputFlagBits;
 typedef VkFlags VkMemoryInputFlags;
 
-typedef enum {
-    // Info type for vkGetPhysicalDeviceInfo()
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PROPERTIES                 = 0x00000000,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_PERFORMANCE                = 0x00000001,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_QUEUE_PROPERTIES           = 0x00000002,
-    VK_PHYSICAL_DEVICE_INFO_TYPE_MEMORY_PROPERTIES          = 0x00000003,
-
-    VK_ENUM_RANGE(PHYSICAL_DEVICE_INFO_TYPE, PROPERTIES, MEMORY_PROPERTIES)
-} VkPhysicalDeviceInfoType;
-
-// Physical device compatibility flags
-typedef VkFlags VkPhysicalDeviceCompatibilityFlags;
-typedef enum {
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_FEATURES_BIT           = VK_BIT(0),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_IQ_MATCH_BIT           = VK_BIT(1),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_PEER_TRANSFER_BIT      = VK_BIT(2),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_MEMORY_BIT      = VK_BIT(3),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_SYNC_BIT        = VK_BIT(4),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE0_DISPLAY_BIT = VK_BIT(5),
-    VK_PHYSICAL_DEVICE_COMPATIBILITY_SHARED_DEVICE1_DISPLAY_BIT = VK_BIT(6),
-} VkPhysicalDeviceCompatibilityFlagBits;
-
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
@@ -1304,18 +1264,6 @@ typedef struct {
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
     uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
 } VkPhysicalDeviceProperties;
-
-typedef struct {
-    float                                       maxDeviceClock;
-    float                                       aluPerClock;
-    float                                       texPerClock;
-    float                                       primsPerClock;
-    float                                       pixelsPerClock;
-} VkPhysicalDevicePerformance;
-
-typedef struct {
-    VkPhysicalDeviceCompatibilityFlags          compatibilityFlags;
-} VkPhysicalDeviceCompatibilityInfo;
 
 typedef struct {
     VkQueueFlags                                queueFlags;
@@ -2009,7 +1957,6 @@ typedef VkResult (VKAPI *PFN_vkCreateInstance)(const VkInstanceCreateInfo* pCrea
 typedef VkResult (VKAPI *PFN_vkDestroyInstance)(VkInstance instance);
 typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, uint32_t* pPhysicalDeviceCount, VkPhysicalDevice* pPhysicalDevices);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceInfo)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceInfoType infoType, size_t* pDataSize, void* pData);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatInfo)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatInfo);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
@@ -2138,12 +2085,6 @@ VkResult VKAPI vkEnumeratePhysicalDevices(
 VkResult VKAPI vkGetPhysicalDeviceFeatures(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceFeatures*                   pFeatures);
-
-VkResult VKAPI vkGetPhysicalDeviceInfo(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceInfoType                    infoType,
-    size_t*                                     pDataSize,
-    void*                                       pData);
 
 VkResult VKAPI vkGetPhysicalDeviceFormatInfo(
     VkPhysicalDevice                            physicalDevice,

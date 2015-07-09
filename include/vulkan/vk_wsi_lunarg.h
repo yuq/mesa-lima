@@ -37,6 +37,25 @@ extern "C"
 {
 #endif // __cplusplus
 
+// This macro defines INT_MAX in enumerations to force compilers to use 32 bits
+// to represent them. This may or may not be necessary on some compilers. The
+// option to compile it out may allow compilers that warn about missing enumerants
+// in switch statements to be silenced.
+// Using this macro is not needed for flag bit enums because those aren't used
+// as storage type anywhere.
+#define VK_MAX_ENUM(Prefix) VK_##Prefix##_MAX_ENUM = 0x7FFFFFFF
+
+// This macro defines the BEGIN_RANGE, END_RANGE, NUM, and MAX_ENUM constants for
+// the enumerations.
+#define VK_ENUM_RANGE(Prefix, First, Last) \
+    VK_##Prefix##_BEGIN_RANGE                               = VK_##Prefix##_##First, \
+    VK_##Prefix##_END_RANGE                                 = VK_##Prefix##_##Last, \
+    VK_NUM_##Prefix                                         = (VK_##Prefix##_END_RANGE - VK_##Prefix##_BEGIN_RANGE + 1), \
+    VK_MAX_ENUM(Prefix)
+
+// This is a helper macro to define the value of flag bit enum values.
+#define VK_BIT(bit)     (1 << (bit))
+
 // ------------------------------------------------------------------------------------------------
 // Objects
 
