@@ -44,7 +44,8 @@ anv_env_get_int(const char *name)
 static void
 anv_physical_device_finish(struct anv_physical_device *device)
 {
-   /* Nothing to do */
+   if (device->fd >= 0)
+      close(device->fd);
 }
 
 static VkResult
@@ -52,10 +53,8 @@ anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
                          const char *path)
 {
-   int fd;
-   
-   fd = open(path, O_RDWR | O_CLOEXEC);
-   if (fd < 0)
+   device->fd = open(path, O_RDWR | O_CLOEXEC);
+   if (device->fd < 0)
       return vk_error(VK_ERROR_UNAVAILABLE);
 
    device->instance = instance;
@@ -67,7 +66,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       /* INTEL_DEVID_OVERRIDE implies INTEL_NO_HW. */
       device->no_hw = true;
    } else {
-      device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
+      device->chipset_id = anv_gem_get_param(device->fd, I915_PARAM_CHIPSET_ID);
    }
    if (!device->chipset_id)
       goto fail;
@@ -77,25 +76,22 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (!device->info)
       goto fail;
    
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT))
+   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_WAIT_TIMEOUT))
       goto fail;
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2))
+   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_EXECBUF2))
       goto fail;
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC))
+   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_LLC))
       goto fail;
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CONSTANTS))
+   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_EXEC_CONSTANTS))
       goto fail;
-
-   close(fd);
    
    return VK_SUCCESS;
    
- fail:
-   close(fd);
-
+fail:
+   anv_physical_device_finish(device);
    return vk_error(VK_ERROR_UNAVAILABLE);
 }
 
@@ -528,6 +524,8 @@ VkResult anv_CreateDevice(
    parse_debug_flags(device);
 
    device->instance = physical_device->instance;
+
+   /* XXX(chadv): Can we dup() physicalDevice->fd here? */
    device->fd = open(physical_device->path, O_RDWR | O_CLOEXEC);
    if (device->fd == -1)
       goto fail_device;

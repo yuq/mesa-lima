@@ -343,6 +343,7 @@ struct anv_physical_device {
     const char *                                path;
     const char *                                name;
     const struct brw_device_info *              info;
+    int                                         fd;
 };
 
 struct anv_instance {
