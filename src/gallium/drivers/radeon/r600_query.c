@@ -54,6 +54,8 @@ struct r600_query {
 	uint64_t end_result;
 	/* Fence for GPU_FINISHED. */
 	struct pipe_fence_handle *fence;
+	/* For transform feedback: which stream the query is for */
+	unsigned stream;
 };
 
 
@@ -155,6 +157,17 @@ static void r600_update_occlusion_query_state(struct r600_common_context *rctx,
 	}
 }
 
+static unsigned event_type_for_stream(struct r600_query *query)
+{
+	switch (query->stream) {
+	default:
+	case 0: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS;
+	case 1: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS1;
+	case 2: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS2;
+	case 3: return EVENT_TYPE_SAMPLE_STREAMOUTSTATS3;
+	}
+}
+
 static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_query *query)
 {
 	struct radeon_winsys_cs *cs = ctx->rings.gfx.cs;
@@ -189,7 +202,7 @@ static void r600_emit_query_begin(struct r600_common_context *ctx, struct r600_q
 	case PIPE_QUERY_SO_STATISTICS:
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_STREAMOUTSTATS) | EVENT_INDEX(3));
+		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32UL) & 0xFF);
 		break;
@@ -246,7 +259,7 @@ static void r600_emit_query_end(struct r600_common_context *ctx, struct r600_que
 	case PIPE_QUERY_SO_OVERFLOW_PREDICATE:
 		va += query->buffer.results_end + query->result_size/2;
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_STREAMOUTSTATS) | EVENT_INDEX(3));
+		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32UL) & 0xFF);
 		break;
@@ -371,6 +384,7 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 		/* NumPrimitivesWritten, PrimitiveStorageNeeded. */
 		query->result_size = 32;
 		query->num_cs_dw = 6;
+		query->stream = index;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */

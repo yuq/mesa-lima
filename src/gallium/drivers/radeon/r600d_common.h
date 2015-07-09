@@ -66,6 +66,9 @@
 #define PKT3_SET_SH_REG                        0x76 /* SI and later */
 #define PKT3_SET_UCONFIG_REG                   0x79 /* CIK and later */
 
+#define EVENT_TYPE_SAMPLE_STREAMOUTSTATS1      0x1 /* EG and later */
+#define EVENT_TYPE_SAMPLE_STREAMOUTSTATS2      0x2 /* EG and later */
+#define EVENT_TYPE_SAMPLE_STREAMOUTSTATS3      0x3 /* EG and later */
 #define EVENT_TYPE_PS_PARTIAL_FLUSH            0x10
 #define EVENT_TYPE_CACHE_FLUSH_AND_INV_TS_EVENT 0x14
 #define EVENT_TYPE_ZPASS_DONE                  0x15
