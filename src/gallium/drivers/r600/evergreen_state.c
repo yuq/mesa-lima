@@ -3012,8 +3012,12 @@ void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader
 	struct r600_command_buffer *cb = &shader->command_buffer;
 	struct r600_shader *rshader = &shader->shader;
 	struct r600_shader *cp_shader = &shader->gs_copy_shader->shader;
-	unsigned gsvs_itemsize =
-			(cp_shader->ring_item_size * shader->selector->gs_max_out_vertices) >> 2;
+	unsigned gsvs_itemsizes[4] = {
+			(cp_shader->ring_item_sizes[0] * shader->selector->gs_max_out_vertices) >> 2,
+			(cp_shader->ring_item_sizes[1] * shader->selector->gs_max_out_vertices) >> 2,
+			(cp_shader->ring_item_sizes[2] * shader->selector->gs_max_out_vertices) >> 2,
+			(cp_shader->ring_item_sizes[3] * shader->selector->gs_max_out_vertices) >> 2
+	};
 
 	r600_init_command_buffer(cb, 64);
 
@@ -3032,21 +3036,24 @@ void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader
 				S_028B90_ENABLE(shader->selector->gs_num_invocations > 0));
 	}
 	r600_store_context_reg_seq(cb, R_02891C_SQ_GS_VERT_ITEMSIZE, 4);
-	r600_store_value(cb, cp_shader->ring_item_size >> 2);
-	r600_store_value(cb, 0);
-	r600_store_value(cb, 0);
-	r600_store_value(cb, 0);
+	r600_store_value(cb, cp_shader->ring_item_sizes[0] >> 2);
+	r600_store_value(cb, cp_shader->ring_item_sizes[1] >> 2);
+	r600_store_value(cb, cp_shader->ring_item_sizes[2] >> 2);
+	r600_store_value(cb, cp_shader->ring_item_sizes[3] >> 2);
 
 	r600_store_context_reg(cb, R_028900_SQ_ESGS_RING_ITEMSIZE,
-			       (rshader->ring_item_size) >> 2);
+			       (rshader->ring_item_sizes[0]) >> 2);
 
 	r600_store_context_reg(cb, R_028904_SQ_GSVS_RING_ITEMSIZE,
-			       gsvs_itemsize);
+			       gsvs_itemsizes[0] +
+			       gsvs_itemsizes[1] +
+			       gsvs_itemsizes[2] +
+			       gsvs_itemsizes[3]);
 
 	r600_store_context_reg_seq(cb, R_02892C_SQ_GSVS_RING_OFFSET_1, 3);
-	r600_store_value(cb, gsvs_itemsize);
-	r600_store_value(cb, gsvs_itemsize);
-	r600_store_value(cb, gsvs_itemsize);
+	r600_store_value(cb, gsvs_itemsizes[0]);
+	r600_store_value(cb, gsvs_itemsizes[0] + gsvs_itemsizes[1]);
+	r600_store_value(cb, gsvs_itemsizes[0] + gsvs_itemsizes[1] + gsvs_itemsizes[2]);
 
 	/* FIXME calculate these values somehow ??? */
 	r600_store_context_reg_seq(cb, R_028A54_GS_PER_ES, 3);

@@ -78,8 +78,9 @@ struct r600_shader {
 	/* Temporarily workaround SB not handling CF_INDEX_[01] index registers */
 	boolean			uses_index_registers;
 
-	/* size in bytes of a data item in the ring (single vertex data) */
-	unsigned		ring_item_size;
+	/* Size in bytes of a data item in the ring(s) (single vertex data).
+	   Stages with only one ring items 123 will be set to 0. */
+	unsigned		ring_item_sizes[4];
 
 	unsigned		indirect_files;
 	unsigned		max_arrays;

@@ -2650,7 +2650,7 @@ void r600_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 	struct r600_shader *rshader = &shader->shader;
 	struct r600_shader *cp_shader = &shader->gs_copy_shader->shader;
 	unsigned gsvs_itemsize =
-			(cp_shader->ring_item_size * shader->selector->gs_max_out_vertices) >> 2;
+			(cp_shader->ring_item_sizes[0] * shader->selector->gs_max_out_vertices) >> 2;
 
 	r600_init_command_buffer(cb, 64);
 
@@ -2665,10 +2665,10 @@ void r600_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 			       r600_conv_prim_to_gs_out(shader->selector->gs_output_prim));
 
 	r600_store_context_reg(cb, R_0288C8_SQ_GS_VERT_ITEMSIZE,
-	                       cp_shader->ring_item_size >> 2);
+	                       cp_shader->ring_item_sizes[0] >> 2);
 
 	r600_store_context_reg(cb, R_0288A8_SQ_ESGS_RING_ITEMSIZE,
-			       (rshader->ring_item_size) >> 2);
+			       (rshader->ring_item_sizes[0]) >> 2);
 
 	r600_store_context_reg(cb, R_0288AC_SQ_GSVS_RING_ITEMSIZE,
 			       gsvs_itemsize);

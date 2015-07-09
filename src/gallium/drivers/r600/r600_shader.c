@@ -311,7 +311,8 @@ struct r600_shader_ctx {
 	int					gs_out_ring_offset;
 	int					gs_next_vertex;
 	struct r600_shader	*gs_for_vs;
-	int					gs_export_gpr_treg;
+	int					gs_export_gpr_tregs[4];
+	const struct pipe_stream_output_info	*gs_stream_output_info;
 	unsigned				enabled_stream_buffers_mask;
 };
 
@@ -320,7 +321,7 @@ struct r600_shader_tgsi_instruction {
 	int (*process)(struct r600_shader_ctx *ctx);
 };
 
-static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, bool ind);
+static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_stream_output_info *so, int stream, bool ind);
 static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[], eg_shader_tgsi_instruction[], cm_shader_tgsi_instruction[];
 static int tgsi_helper_tempx_replicate(struct r600_shader_ctx *ctx);
 static inline void callstack_push(struct r600_shader_ctx *ctx, unsigned reason);
@@ -1337,9 +1338,11 @@ static int process_twoside_color_inputs(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
-static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output_info *so)
+static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output_info *so,
+						  int stream, unsigned *stream_item_size)
 {
 	unsigned so_gpr[PIPE_MAX_SHADER_OUTPUTS];
+	unsigned start_comp[PIPE_MAX_SHADER_OUTPUTS];
 	int i, j, r;
 
 	/* Sanity checking. */
@@ -1359,8 +1362,9 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 
 	/* Initialize locations where the outputs are stored. */
 	for (i = 0; i < so->num_outputs; i++) {
-		so_gpr[i] = ctx->shader->output[so->output[i].register_index].gpr;
 
+		so_gpr[i] = ctx->shader->output[so->output[i].register_index].gpr;
+		start_comp[i] = so->output[i].start_component;
 		/* Lower outputs with dst_offset < start_component.
 		 *
 		 * We can only output 4D vectors with a write mask, e.g. we can
@@ -1386,7 +1390,7 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 				if (r)
 					return r;
 			}
-			so->output[i].start_component = 0;
+			start_comp[i] = 0;
 			so_gpr[i] = tmp;
 		}
 	}
@@ -1395,18 +1399,21 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 	for (i = 0; i < so->num_outputs; i++) {
 		struct r600_bytecode_output output;
 
+		if (stream != -1 && stream != so->output[i].output_buffer)
+			continue;
+
 		memset(&output, 0, sizeof(struct r600_bytecode_output));
 		output.gpr = so_gpr[i];
-		output.elem_size = so->output[i].num_components;
-		output.array_base = so->output[i].dst_offset - so->output[i].start_component;
+		output.elem_size = so->output[i].num_components - 1;
+		if (output.elem_size == 2)
+			output.elem_size = 3; // 3 not supported, write 4 with junk at end
+		output.array_base = so->output[i].dst_offset - start_comp[i];
 		output.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE;
 		output.burst_count = 1;
 		/* array_size is an upper limit for the burst_count
 		 * with MEM_STREAM instructions */
 		output.array_size = 0xFFF;
-		output.comp_mask = ((1 << so->output[i].num_components) - 1) << so->output[i].start_component;
-
-		ctx->enabled_stream_buffers_mask |= (1 << so->output[i].output_buffer);
+		output.comp_mask = ((1 << so->output[i].num_components) - 1) << start_comp[i];
 
 		if (ctx->bc->chip_class >= EVERGREEN) {
 			switch (so->output[i].output_buffer) {
@@ -1423,6 +1430,9 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 				output.op = CF_OP_MEM_STREAM0_BUF3;
 				break;
 			}
+			output.op += so->output[i].stream * 4;
+			assert(output.op >= CF_OP_MEM_STREAM0_BUF0 && output.op <= CF_OP_MEM_STREAM3_BUF3);
+			ctx->enabled_stream_buffers_mask |= (1 << so->output[i].output_buffer) << so->output[i].stream * 4;
 		} else {
 			switch (so->output[i].output_buffer) {
 			case 0:
@@ -1438,6 +1448,7 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 				output.op = CF_OP_MEM_STREAM3;
 					break;
 			}
+			ctx->enabled_stream_buffers_mask |= 1 << so->output[i].output_buffer;
 		}
 		r = r600_bytecode_add_output(ctx->bc, &output);
 		if (r)
@@ -1490,7 +1501,8 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	struct r600_bytecode_output output;
 	struct r600_bytecode_cf *cf_jump, *cf_pop,
 		*last_exp_pos = NULL, *last_exp_param = NULL;
-	int i, next_clip_pos = 61, next_param = 0;
+	int i, j, next_clip_pos = 61, next_param = 0;
+	int ring;
 
 	cshader = calloc(1, sizeof(struct r600_pipe_shader));
 	if (!cshader)
@@ -1510,6 +1522,9 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 
 	ctx.bc->isa = rctx->isa;
 
+	cf_jump = NULL;
+	memset(cshader->shader.ring_item_sizes, 0, sizeof(cshader->shader.ring_item_sizes));
+
 	/* R0.x = R0.x & 0x3fffffff */
 	memset(&alu, 0, sizeof(alu));
 	alu.op = ALU_OP2_AND_INT;
@@ -1528,22 +1543,10 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	alu.last = 1;
 	r600_bytecode_add_alu(ctx.bc, &alu);
 
-	/* PRED_SETE_INT __, R0.y, 0 */
-	memset(&alu, 0, sizeof(alu));
-	alu.op = ALU_OP2_PRED_SETE_INT;
-	alu.src[0].chan = 1;
-	alu.src[1].sel = V_SQ_ALU_SRC_0;
-	alu.execute_mask = 1;
-	alu.update_pred = 1;
-	alu.last = 1;
-	r600_bytecode_add_alu_type(ctx.bc, &alu, CF_OP_ALU_PUSH_BEFORE);
-
-	r600_bytecode_add_cfinst(ctx.bc, CF_OP_JUMP);
-	cf_jump = ctx.bc->cf_last;
-
 	/* fetch vertex data from GSVS ring */
 	for (i = 0; i < ocnt; ++i) {
 		struct r600_shader_io *out = &ctx.shader->output[i];
+
 		out->gpr = i + 1;
 		out->ring_offset = i * 16;
 
@@ -1553,6 +1556,7 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 		vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 		vtx.offset = out->ring_offset;
 		vtx.dst_gpr = out->gpr;
+		vtx.src_gpr = 0;
 		vtx.dst_sel_x = 0;
 		vtx.dst_sel_y = 1;
 		vtx.dst_sel_z = 2;
@@ -1565,18 +1569,68 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 
 		r600_bytecode_add_vtx(ctx.bc, &vtx);
 	}
+	ctx.temp_reg = i + 1;
+	for (ring = 3; ring >= 0; --ring) {
+		bool enabled = false;
+		for (i = 0; i < so->num_outputs; i++) {
+			if (so->output[i].stream == ring) {
+				enabled = true;
+				break;
+			}
+		}
+		if (ring != 0 && !enabled) {
+			cshader->shader.ring_item_sizes[ring] = 0;
+			continue;
+		}
 
-	/* XXX handle clipvertex, streamout? */
-	emit_streamout(&ctx, so);
+		if (cf_jump) {
+			// Patch up jump label
+			r600_bytecode_add_cfinst(ctx.bc, CF_OP_POP);
+			cf_pop = ctx.bc->cf_last;
+
+			cf_jump->cf_addr = cf_pop->id + 2;
+			cf_jump->pop_count = 1;
+			cf_pop->cf_addr = cf_pop->id + 2;
+			cf_pop->pop_count = 1;
+		}
+
+		/* PRED_SETE_INT __, R0.y, ring */
+		memset(&alu, 0, sizeof(alu));
+		alu.op = ALU_OP2_PRED_SETE_INT;
+		alu.src[0].chan = 1;
+		alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
+		alu.src[1].value = ring;
+		alu.execute_mask = 1;
+		alu.update_pred = 1;
+		alu.last = 1;
+		r600_bytecode_add_alu_type(ctx.bc, &alu, CF_OP_ALU_PUSH_BEFORE);
+
+		r600_bytecode_add_cfinst(ctx.bc, CF_OP_JUMP);
+		cf_jump = ctx.bc->cf_last;
+
+		if (enabled)
+			emit_streamout(&ctx, so, ring, &cshader->shader.ring_item_sizes[ring]);
+		cshader->shader.ring_item_sizes[ring] = ocnt * 16;
+	}
 
 	/* export vertex data */
 	/* XXX factor out common code with r600_shader_from_tgsi ? */
 	for (i = 0; i < ocnt; ++i) {
 		struct r600_shader_io *out = &ctx.shader->output[i];
-
+		bool instream0 = true;
 		if (out->name == TGSI_SEMANTIC_CLIPVERTEX)
 			continue;
 
+		for (j = 0; j < so->num_outputs; j++) {
+			if (so->output[j].register_index == i) {
+				if (so->output[j].stream == 0)
+					break;
+				if (so->output[j].stream > 0)
+					instream0 = false;
+			}
+		}
+		if (!instream0)
+			continue;
 		memset(&output, 0, sizeof(output));
 		output.gpr = out->gpr;
 		output.elem_size = 3;
@@ -1722,19 +1776,19 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	}
 
 	gs->gs_copy_shader = cshader;
+	cshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 
 	ctx.bc->nstack = 1;
-
-	cshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
-	cshader->shader.ring_item_size = ocnt * 16;
 
 	return r600_bytecode_build(ctx.bc);
 }
 
-static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, bool ind)
+static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, const struct pipe_stream_output_info *so, int stream, bool ind)
 {
 	struct r600_bytecode_output output;
 	int i, k, ring_offset;
+	int effective_stream = stream == -1 ? 0 : stream;
+	int idx = 0;
 
 	for (i = 0; i < ctx->shader->noutput; i++) {
 		if (ctx->gs_for_vs) {
@@ -1751,15 +1805,18 @@ static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, bool ind)
 
 			if (ring_offset == -1)
 				continue;
-		} else
-			ring_offset = i * 16;
+		} else {
+			ring_offset = idx * 16;
+			idx++;
+		}
 
+		if (stream > 0 && ctx->shader->output[i].name == TGSI_SEMANTIC_POSITION)
+			continue;
 		/* next_ring_offset after parsing input decls contains total size of
 		 * single vertex data, gs_next_vertex - current vertex index */
 		if (!ind)
 			ring_offset += ctx->gs_out_ring_offset * ctx->gs_next_vertex;
 
-		/* get a temp and add the ring offset to the next vertex base in the shader */
 		memset(&output, 0, sizeof(struct r600_bytecode_output));
 		output.gpr = ctx->shader->output[i].gpr;
 		output.elem_size = 3;
@@ -1770,28 +1827,39 @@ static int emit_gs_ring_writes(struct r600_shader_ctx *ctx, bool ind)
 			output.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE_IND;
 		else
 			output.type = V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_WRITE;
-		output.op = CF_OP_MEM_RING;
 
+		switch (stream) {
+		default:
+		case 0:
+			output.op = CF_OP_MEM_RING; break;
+		case 1:
+			output.op = CF_OP_MEM_RING1; break;
+		case 2:
+			output.op = CF_OP_MEM_RING2; break;
+		case 3:
+			output.op = CF_OP_MEM_RING3; break;
+		}
 
 		if (ind) {
 			output.array_base = ring_offset >> 2; /* in dwords */
 			output.array_size = 0xfff;
-			output.index_gpr = ctx->gs_export_gpr_treg;
+			output.index_gpr = ctx->gs_export_gpr_tregs[effective_stream];
 		} else
 			output.array_base = ring_offset >> 2; /* in dwords */
 		r600_bytecode_add_output(ctx->bc, &output);
 	}
 
 	if (ind) {
+		/* get a temp and add the ring offset to the next vertex base in the shader */
 		struct r600_bytecode_alu alu;
 		int r;
 
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP2_ADD_INT;
-		alu.src[0].sel = ctx->gs_export_gpr_treg;
+		alu.src[0].sel = ctx->gs_export_gpr_tregs[effective_stream];
 		alu.src[1].sel = V_SQ_ALU_SRC_LITERAL;
 		alu.src[1].value = ctx->gs_out_ring_offset >> 4;
-		alu.dst.sel = ctx->gs_export_gpr_treg;
+		alu.dst.sel = ctx->gs_export_gpr_tregs[effective_stream];
 		alu.dst.write = 1;
 		alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
@@ -1856,6 +1924,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.next_ring_offset = 0;
 	ctx.gs_out_ring_offset = 0;
 	ctx.gs_next_vertex = 0;
+	ctx.gs_stream_output_info = &so;
 
 	shader->uses_index_registers = false;
 	ctx.face_gpr = -1;
@@ -1942,8 +2011,11 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.bc->index_reg[1] = ctx.bc->ar_reg + 2;
 
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
-		ctx.gs_export_gpr_treg = ctx.bc->ar_reg + 3;
-		ctx.temp_reg = ctx.bc->ar_reg + 4;
+		ctx.gs_export_gpr_tregs[0] = ctx.bc->ar_reg + 3;
+		ctx.gs_export_gpr_tregs[1] = ctx.bc->ar_reg + 4;
+		ctx.gs_export_gpr_tregs[2] = ctx.bc->ar_reg + 5;
+		ctx.gs_export_gpr_tregs[3] = ctx.bc->ar_reg + 6;
+		ctx.temp_reg = ctx.bc->ar_reg + 7;
 	} else {
 		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
@@ -2006,7 +2078,10 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		}
 	}
 	
-	shader->ring_item_size = ctx.next_ring_offset;
+	shader->ring_item_sizes[0] = ctx.next_ring_offset;
+	shader->ring_item_sizes[1] = 0;
+	shader->ring_item_sizes[2] = 0;
+	shader->ring_item_sizes[3] = 0;
 
 	/* Process two side if needed */
 	if (shader->two_side && ctx.colors_used) {
@@ -2129,17 +2204,18 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
 			struct r600_bytecode_alu alu;
 			int r;
-
-			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-			alu.op = ALU_OP1_MOV;
-			alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
-			alu.src[0].value = 0;
-			alu.dst.sel = ctx.gs_export_gpr_treg;
-			alu.dst.write = 1;
-			alu.last = 1;
-			r = r600_bytecode_add_alu(ctx.bc, &alu);
-			if (r)
-				return r;
+			for (j = 0; j < 4; j++) {
+				memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+				alu.op = ALU_OP1_MOV;
+				alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+				alu.src[0].value = 0;
+				alu.dst.sel = ctx.gs_export_gpr_tregs[j];
+				alu.dst.write = 1;
+				alu.last = 1;
+				r = r600_bytecode_add_alu(ctx.bc, &alu);
+				if (r)
+					return r;
+			}
 		}
 		if (shader->two_side && ctx.colors_used) {
 			if ((r = process_twoside_color_inputs(&ctx)))
@@ -2240,14 +2316,20 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	/* Add stream outputs. */
 	if (!ring_outputs && ctx.type == TGSI_PROCESSOR_VERTEX &&
 	    so.num_outputs && !use_llvm)
-		emit_streamout(&ctx, &so);
+		emit_streamout(&ctx, &so, -1, NULL);
 
 	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
 	if (ring_outputs) {
-		if (key.vs.as_es)
-			emit_gs_ring_writes(&ctx, FALSE);
+		if (key.vs.as_es) {
+			ctx.gs_export_gpr_tregs[0] = r600_get_temp(&ctx);
+			ctx.gs_export_gpr_tregs[1] = -1;
+			ctx.gs_export_gpr_tregs[2] = -1;
+			ctx.gs_export_gpr_tregs[3] = -1;
+
+			emit_gs_ring_writes(&ctx, &so, -1, FALSE);
+		}
 	} else {
 		/* Export output */
 		next_clip_base = shader->vs_out_misc_write ? 62 : 61;
@@ -7198,10 +7280,17 @@ static int tgsi_loop_brk_cont(struct r600_shader_ctx *ctx)
 
 static int tgsi_gs_emit(struct r600_shader_ctx *ctx)
 {
-	if (ctx->inst_info->op == CF_OP_EMIT_VERTEX)
-		emit_gs_ring_writes(ctx, TRUE);
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	int stream = ctx->literals[inst->Src[0].Register.Index * 4 + inst->Src[0].Register.SwizzleX];
+	int r;
 
-	return r600_bytecode_add_cfinst(ctx->bc, ctx->inst_info->op);
+	if (ctx->inst_info->op == CF_OP_EMIT_VERTEX)
+		emit_gs_ring_writes(ctx, ctx->gs_stream_output_info, stream, TRUE);
+
+	r = r600_bytecode_add_cfinst(ctx->bc, ctx->inst_info->op);
+	if (!r)
+		ctx->bc->cf_last->count = stream; // Count field for CUT/EMIT_VERTEX indicates which stream
+	return r;
 }
 
 static int tgsi_umad(struct r600_shader_ctx *ctx)

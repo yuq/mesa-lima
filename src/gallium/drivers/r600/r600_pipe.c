@@ -358,7 +358,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_GEOMETRY_TOTAL_OUTPUT_COMPONENTS:
 		return 16384;
 	case PIPE_CAP_MAX_VERTEX_STREAMS:
-		return 1;
+		return family >= CHIP_CEDAR ? 4 : 1;
 
 	case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
 		return 2047;
