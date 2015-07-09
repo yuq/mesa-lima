@@ -1601,20 +1601,13 @@ vec4_visitor::visit(ir_expression *ir)
       assert(ir->type->is_integer());
       emit_math(SHADER_OPCODE_INT_QUOTIENT, result_dst, op[0], op[1]);
       break;
-   case ir_binop_carry: {
-      struct brw_reg acc = retype(brw_acc_reg(8), BRW_REGISTER_TYPE_UD);
 
-      emit(ADDC(dst_null_ud(), op[0], op[1]));
-      emit(MOV(result_dst, src_reg(acc)));
-      break;
-   }
-   case ir_binop_borrow: {
-      struct brw_reg acc = retype(brw_acc_reg(8), BRW_REGISTER_TYPE_UD);
+   case ir_binop_carry:
+      unreachable("Should have been lowered by carry_to_arith().");
 
-      emit(SUBB(dst_null_ud(), op[0], op[1]));
-      emit(MOV(result_dst, src_reg(acc)));
-      break;
-   }
+   case ir_binop_borrow:
+      unreachable("Should have been lowered by borrow_to_arith().");
+
    case ir_binop_mod:
       /* Floating point should be lowered by MOD_TO_FLOOR in the compiler. */
       assert(ir->type->is_integer());

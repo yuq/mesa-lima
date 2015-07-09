@@ -259,7 +259,9 @@ process_glsl_ir(struct brw_context *brw,
                       EXP_TO_EXP2 |
                       LOG_TO_LOG2 |
                       bitfield_insert |
-                      LDEXP_TO_ARITH);
+                      LDEXP_TO_ARITH |
+                      CARRY_TO_ARITH |
+                      BORROW_TO_ARITH);
 
    /* Pre-gen6 HW can only nest if-statements 16 deep.  Beyond this,
     * if-statements need to be flattened.
