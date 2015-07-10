@@ -949,6 +949,7 @@ VkResult anv_DestroyBufferView(VkDevice device, VkBufferView bufferView);
 VkResult anv_DestroyColorAttachmentView(VkDevice device,
                                         VkColorAttachmentView view);
 VkResult anv_DestroyDepthStencilView(VkDevice device, VkDepthStencilView view);
+VkResult anv_DestroyRenderPass(VkDevice device, VkRenderPass renderPass);
 
 #define ANV_DEFINE_CASTS(__anv_type, __VkType)     \
 static inline struct __anv_type *                  \

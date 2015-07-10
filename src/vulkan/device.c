@@ -3723,6 +3723,17 @@ VkResult anv_CreateRenderPass(
    return VK_SUCCESS;
 }
 
+VkResult anv_DestroyRenderPass(
+    VkDevice                                    _device,
+    VkRenderPass                                renderPass)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   anv_device_free(device, anv_render_pass_from_handle(renderPass));
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetRenderAreaGranularity(
     VkDevice                                    device,
     VkRenderPass                                renderPass,
