@@ -66,8 +66,15 @@ vc4_gem_hindex(struct vc4_context *vc4, struct vc4_bo *bo)
                         return hindex;
         }
 
-        cl_u32(&vc4->bo_handles, bo->handle);
-        cl_ptr(&vc4->bo_pointers, vc4_bo_reference(bo));
+        struct vc4_cl_out *out;
+
+        out = cl_start(&vc4->bo_handles);
+        cl_u32(&out, bo->handle);
+        cl_end(&vc4->bo_handles, out);
+
+        out = cl_start(&vc4->bo_pointers);
+        cl_ptr(&out, vc4_bo_reference(bo));
+        cl_end(&vc4->bo_pointers, out);
 
         return hindex;
 }

@@ -2530,13 +2530,14 @@ static uint32_t translate_wrap(uint32_t p_wrap, bool using_nearest)
 
 static void
 write_texture_p0(struct vc4_context *vc4,
+                 struct vc4_cl_out **uniforms,
                  struct vc4_texture_stateobj *texstate,
                  uint32_t unit)
 {
         struct pipe_sampler_view *texture = texstate->textures[unit];
         struct vc4_resource *rsc = vc4_resource(texture->texture);
 
-        cl_reloc(vc4, &vc4->uniforms, rsc->bo,
+        cl_reloc(vc4, &vc4->uniforms, uniforms, rsc->bo,
                  VC4_SET_FIELD(rsc->slices[0].offset >> 12, VC4_TEX_P0_OFFSET) |
                  VC4_SET_FIELD(texture->u.tex.last_level -
                                texture->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
@@ -2547,6 +2548,7 @@ write_texture_p0(struct vc4_context *vc4,
 
 static void
 write_texture_p1(struct vc4_context *vc4,
+                 struct vc4_cl_out **uniforms,
                  struct vc4_texture_stateobj *texstate,
                  uint32_t unit)
 {
@@ -2570,7 +2572,7 @@ write_texture_p1(struct vc4_context *vc4,
                 (sampler->mag_img_filter == PIPE_TEX_MIPFILTER_NEAREST ||
                  sampler->min_img_filter == PIPE_TEX_MIPFILTER_NEAREST);
 
-        cl_aligned_u32(&vc4->uniforms,
+        cl_aligned_u32(uniforms,
                VC4_SET_FIELD(rsc->vc4_format >> 4, VC4_TEX_P1_TYPE4) |
                VC4_SET_FIELD(texture->texture->height0 & 2047,
                              VC4_TEX_P1_HEIGHT) |
@@ -2589,6 +2591,7 @@ write_texture_p1(struct vc4_context *vc4,
 
 static void
 write_texture_p2(struct vc4_context *vc4,
+                 struct vc4_cl_out **uniforms,
                  struct vc4_texture_stateobj *texstate,
                  uint32_t data)
 {
@@ -2596,7 +2599,7 @@ write_texture_p2(struct vc4_context *vc4,
         struct pipe_sampler_view *texture = texstate->textures[unit];
         struct vc4_resource *rsc = vc4_resource(texture->texture);
 
-        cl_aligned_u32(&vc4->uniforms,
+        cl_aligned_u32(uniforms,
                VC4_SET_FIELD(VC4_TEX_P2_PTYPE_CUBE_MAP_STRIDE,
                              VC4_TEX_P2_PTYPE) |
                VC4_SET_FIELD(rsc->cube_map_stride >> 12, VC4_TEX_P2_CMST) |
@@ -2613,6 +2616,7 @@ write_texture_p2(struct vc4_context *vc4,
 
 static void
 write_texture_border_color(struct vc4_context *vc4,
+                           struct vc4_cl_out **uniforms,
                            struct vc4_texture_stateobj *texstate,
                            uint32_t unit)
 {
@@ -2673,7 +2677,7 @@ write_texture_border_color(struct vc4_context *vc4,
                 }
         }
 
-        cl_aligned_u32(&vc4->uniforms, uc.ui[0]);
+        cl_aligned_u32(uniforms, uc.ui[0]);
 }
 
 static uint32_t
@@ -2693,7 +2697,8 @@ get_texrect_scale(struct vc4_texture_stateobj *texstate,
 }
 
 static struct vc4_bo *
-vc4_upload_ubo(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
+vc4_upload_ubo(struct vc4_context *vc4,
+               struct vc4_compiled_shader *shader,
                const uint32_t *gallium_uniforms)
 {
         if (!shader->ubo_size)
@@ -2722,72 +2727,78 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
         cl_ensure_space(&vc4->uniforms, (uinfo->count +
                                          uinfo->num_texture_samples) * 4);
 
-        cl_start_shader_reloc(&vc4->uniforms, uinfo->num_texture_samples);
+        struct vc4_cl_out *uniforms =
+                cl_start_shader_reloc(&vc4->uniforms,
+                                      uinfo->num_texture_samples);
 
         for (int i = 0; i < uinfo->count; i++) {
 
                 switch (uinfo->contents[i]) {
                 case QUNIFORM_CONSTANT:
-                        cl_aligned_u32(&vc4->uniforms, uinfo->data[i]);
+                        cl_aligned_u32(&uniforms, uinfo->data[i]);
                         break;
                 case QUNIFORM_UNIFORM:
-                        cl_aligned_u32(&vc4->uniforms,
+                        cl_aligned_u32(&uniforms,
                                        gallium_uniforms[uinfo->data[i]]);
                         break;
                 case QUNIFORM_VIEWPORT_X_SCALE:
-                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[0] * 16.0f);
+                        cl_aligned_f(&uniforms, vc4->viewport.scale[0] * 16.0f);
                         break;
                 case QUNIFORM_VIEWPORT_Y_SCALE:
-                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[1] * 16.0f);
+                        cl_aligned_f(&uniforms, vc4->viewport.scale[1] * 16.0f);
                         break;
 
                 case QUNIFORM_VIEWPORT_Z_OFFSET:
-                        cl_aligned_f(&vc4->uniforms, vc4->viewport.translate[2]);
+                        cl_aligned_f(&uniforms, vc4->viewport.translate[2]);
                         break;
                 case QUNIFORM_VIEWPORT_Z_SCALE:
-                        cl_aligned_f(&vc4->uniforms, vc4->viewport.scale[2]);
+                        cl_aligned_f(&uniforms, vc4->viewport.scale[2]);
                         break;
 
                 case QUNIFORM_USER_CLIP_PLANE:
-                        cl_aligned_f(&vc4->uniforms,
+                        cl_aligned_f(&uniforms,
                                      vc4->clip.ucp[uinfo->data[i] / 4][uinfo->data[i] % 4]);
                         break;
 
                 case QUNIFORM_TEXTURE_CONFIG_P0:
-                        write_texture_p0(vc4, texstate, uinfo->data[i]);
+                        write_texture_p0(vc4, &uniforms, texstate,
+                                         uinfo->data[i]);
                         break;
 
                 case QUNIFORM_TEXTURE_CONFIG_P1:
-                        write_texture_p1(vc4, texstate, uinfo->data[i]);
+                        write_texture_p1(vc4, &uniforms, texstate,
+                                         uinfo->data[i]);
                         break;
 
                 case QUNIFORM_TEXTURE_CONFIG_P2:
-                        write_texture_p2(vc4, texstate, uinfo->data[i]);
+                        write_texture_p2(vc4, &uniforms, texstate,
+                                         uinfo->data[i]);
                         break;
 
                 case QUNIFORM_UBO_ADDR:
-                        cl_aligned_reloc(vc4, &vc4->uniforms, ubo, 0);
+                        cl_aligned_reloc(vc4, &vc4->uniforms, &uniforms, ubo, 0);
                         break;
 
                 case QUNIFORM_TEXTURE_BORDER_COLOR:
-                        write_texture_border_color(vc4, texstate, uinfo->data[i]);
+                        write_texture_border_color(vc4, &uniforms,
+                                                   texstate, uinfo->data[i]);
                         break;
 
                 case QUNIFORM_TEXRECT_SCALE_X:
                 case QUNIFORM_TEXRECT_SCALE_Y:
-                        cl_aligned_u32(&vc4->uniforms,
+                        cl_aligned_u32(&uniforms,
                                        get_texrect_scale(texstate,
                                                          uinfo->contents[i],
                                                          uinfo->data[i]));
                         break;
 
                 case QUNIFORM_BLEND_CONST_COLOR:
-                        cl_aligned_f(&vc4->uniforms,
+                        cl_aligned_f(&uniforms,
                                      CLAMP(vc4->blend_color.color[uinfo->data[i]], 0, 1));
                         break;
 
                 case QUNIFORM_STENCIL:
-                        cl_aligned_u32(&vc4->uniforms,
+                        cl_aligned_u32(&uniforms,
                                        vc4->zsa->stencil_uniforms[uinfo->data[i]] |
                                        (uinfo->data[i] <= 1 ?
                                         (vc4->stencil_ref.ref_value[uinfo->data[i]] << 8) :
@@ -2795,16 +2806,18 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
                         break;
 
                 case QUNIFORM_ALPHA_REF:
-                        cl_aligned_f(&vc4->uniforms,
+                        cl_aligned_f(&uniforms,
                                      vc4->zsa->base.alpha.ref_value);
                         break;
                 }
 #if 0
-                uint32_t written_val = *(uint32_t *)(vc4->uniforms.next - 4);
+                uint32_t written_val = *((uint32_t *)uniforms - 1);
                 fprintf(stderr, "%p: %d / 0x%08x (%f)\n",
                         shader, i, written_val, uif(written_val));
 #endif
         }
+
+        cl_end(&vc4->uniforms, uniforms);
 }
 
 static void

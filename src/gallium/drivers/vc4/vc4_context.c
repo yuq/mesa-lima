@@ -61,9 +61,11 @@ vc4_flush(struct pipe_context *pctx)
          * FLUSH completes.
          */
         cl_ensure_space(&vc4->bcl, 8);
-        cl_u8(&vc4->bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
+        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+        cl_u8(&bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
         /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
-        cl_u8(&vc4->bcl, VC4_PACKET_FLUSH);
+        cl_u8(&bcl, VC4_PACKET_FLUSH);
+        cl_end(&vc4->bcl, bcl);
 
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
                 pipe_surface_reference(&vc4->color_write, cbuf);
