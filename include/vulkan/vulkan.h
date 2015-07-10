@@ -97,6 +97,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineCache, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineLayout, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipeline, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorSetLayout, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSampler, VkNonDispatchable)
@@ -108,7 +109,6 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicRasterState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicColorBlendState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDepthStencilState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
 
 typedef enum {
