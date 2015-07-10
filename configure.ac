@@ -205,10 +205,12 @@ AX_GCC_BUILTIN([__builtin_popcount])
 AX_GCC_BUILTIN([__builtin_popcountll])
 AX_GCC_BUILTIN([__builtin_unreachable])
 
+AX_GCC_FUNC_ATTRIBUTE([const])
 AX_GCC_FUNC_ATTRIBUTE([flatten])
 AX_GCC_FUNC_ATTRIBUTE([format])
 AX_GCC_FUNC_ATTRIBUTE([malloc])
 AX_GCC_FUNC_ATTRIBUTE([packed])
+AX_GCC_FUNC_ATTRIBUTE([pure])
 AX_GCC_FUNC_ATTRIBUTE([unused])
 AX_GCC_FUNC_ATTRIBUTE([warn_unused_result])
 
