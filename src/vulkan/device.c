@@ -1219,7 +1219,7 @@ VkResult anv_GetObjectMemoryRequirements(
       break;
    }
    case VK_OBJECT_TYPE_IMAGE: {
-      struct anv_image *image = anv_buffer_from_handle(object);
+      struct anv_image *image = anv_image_from_handle(object);
       pMemoryRequirements->size = image->size;
       pMemoryRequirements->alignment = image->alignment;
       break;
@@ -1926,7 +1926,7 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
          for (uint32_t j = 0; j < write->count; j++) {
             set->descriptors[write->destBinding + j].view =
-               anv_surface_view_from_handle(write->pDescriptors[j].imageView);
+               (struct anv_surface_view *)write->pDescriptors[j].imageView;
          }
          break;
 
@@ -1941,7 +1941,7 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for (uint32_t j = 0; j < write->count; j++) {
             set->descriptors[write->destBinding + j].view =
-               anv_surface_view_from_handle(write->pDescriptors[j].bufferView);
+               (struct anv_surface_view *)write->pDescriptors[j].bufferView;
          }
 
       default:
@@ -2073,7 +2073,7 @@ VkResult anv_CreateDynamicViewportState(
       }
    }
 
-   *pState = anv_descriptor_set_to_handle(state);
+   *pState = anv_dynamic_vp_state_to_handle(state);
 
    return VK_SUCCESS;
 }
@@ -2337,7 +2337,7 @@ VkResult anv_CreateCommandBuffer(
    cmd_buffer->rs_state = NULL;
    cmd_buffer->ds_state = NULL;
 
-   *pState = anv_cmd_buffer_to_handle(cmd_buffer);
+   *pCmdBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
 
    return VK_SUCCESS;
 
