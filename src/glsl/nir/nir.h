@@ -511,7 +511,11 @@ typedef struct nir_src {
    bool is_ssa;
 } nir_src;
 
-#define NIR_SRC_INIT (nir_src) { { NULL } }
+#ifdef __cplusplus
+#  define NIR_SRC_INIT nir_src()
+#else
+#  define NIR_SRC_INIT (nir_src) { { NULL } }
+#endif
 
 #define nir_foreach_use(reg_or_ssa_def, src) \
    list_for_each_entry(nir_src, src, &(reg_or_ssa_def)->uses, use_link)
@@ -534,7 +538,11 @@ typedef struct {
    bool is_ssa;
 } nir_dest;
 
-#define NIR_DEST_INIT (nir_dest) { { { NULL } } }
+#ifdef __cplusplus
+#  define NIR_DEST_INIT nir_dest()
+#else
+#  define NIR_DEST_INIT (nir_dest) { { { NULL } } }
+#endif
 
 #define nir_foreach_def(reg, dest) \
    list_for_each_entry(nir_dest, dest, &(reg)->defs, reg.def_link)
