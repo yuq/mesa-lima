@@ -44,7 +44,9 @@ struct vc4_cl {
         struct vc4_cl_out *next;
         struct vc4_cl_out *reloc_next;
         uint32_t size;
+#ifdef DEBUG
         uint32_t reloc_count;
+#endif
 };
 
 void vc4_init_cl(struct vc4_context *vc4, struct vc4_cl *cl);
@@ -145,8 +147,10 @@ static inline void
 cl_start_reloc(struct vc4_cl *cl, struct vc4_cl_out **out, uint32_t n)
 {
         assert(n == 1 || n == 2);
+#ifdef DEBUG
         assert(cl->reloc_count == 0);
         cl->reloc_count = n;
+#endif
 
         cl_u8(out, VC4_PACKET_GEM_HANDLES);
         cl->reloc_next = *out;
@@ -157,8 +161,10 @@ cl_start_reloc(struct vc4_cl *cl, struct vc4_cl_out **out, uint32_t n)
 static inline struct vc4_cl_out *
 cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
 {
+#ifdef DEBUG
         assert(cl->reloc_count == 0);
         cl->reloc_count = n;
+#endif
         cl->reloc_next = cl->next;
 
         /* Reserve the space where hindex will be written. */
@@ -174,7 +180,9 @@ cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl, struct vc4_cl_out **cl_out,
         *(uint32_t *)cl->reloc_next = vc4_gem_hindex(vc4, bo);
         cl_advance(&cl->reloc_next, 4);
 
+#ifdef DEBUG
         cl->reloc_count--;
+#endif
 
         cl_u32(cl_out, offset);
 }
@@ -187,7 +195,9 @@ cl_aligned_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
         *(uint32_t *)cl->reloc_next = vc4_gem_hindex(vc4, bo);
         cl_advance(&cl->reloc_next, 4);
 
+#ifdef DEBUG
         cl->reloc_count--;
+#endif
 
         cl_aligned_u32(cl_out, offset);
 }
