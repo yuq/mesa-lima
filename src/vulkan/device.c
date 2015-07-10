@@ -3598,7 +3598,7 @@ anv_framebuffer_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_FRAMEBUFFER);
 
-   anv_DestroyObject((VkDevice) device,
+   anv_DestroyObject(anv_device_to_handle(device),
                      VK_OBJECT_TYPE_DYNAMIC_VP_STATE,
                      fb->vp_state);
 
