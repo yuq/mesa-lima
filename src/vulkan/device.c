@@ -140,7 +140,7 @@ VkResult anv_CreateInstance(
    instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
    instance->physicalDeviceCount = 0;
 
-   *pInstance = (VkInstance) instance;
+   *pInstance = anv_instance_to_handle(instance);
 
    return VK_SUCCESS;
 }
@@ -192,7 +192,7 @@ VkResult anv_EnumeratePhysicalDevices(
    if (!pPhysicalDevices) {
       *pPhysicalDeviceCount = instance->physicalDeviceCount;
    } else if (*pPhysicalDeviceCount >= 1) {
-      pPhysicalDevices[0] = (VkPhysicalDevice) &instance->physicalDevice;
+      pPhysicalDevices[0] = anv_physical_device_to_handle(&instance->physicalDevice);
       *pPhysicalDeviceCount = 1;
    } else {
       *pPhysicalDeviceCount = 0;
@@ -554,7 +554,7 @@ VkResult anv_CreateDevice(
 
    anv_device_init_border_colors(device);
 
-   *pDevice = (VkDevice) device;
+   *pDevice = anv_device_to_handle(device);
 
    return VK_SUCCESS;
 
@@ -667,7 +667,7 @@ VkResult anv_GetDeviceQueue(
 
    assert(queueIndex == 0);
 
-   *pQueue = (VkQueue) &device->queue;
+   *pQueue = anv_queue_to_handle(&device->queue);
 
    return VK_SUCCESS;
 }
@@ -919,7 +919,7 @@ VkResult anv_QueueWaitIdle(
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
 
-   return vkDeviceWaitIdle((VkDevice) queue->device);
+   return vkDeviceWaitIdle(anv_device_to_handle(queue->device));
 }
 
 VkResult anv_DeviceWaitIdle(
@@ -1045,7 +1045,7 @@ VkResult anv_AllocMemory(
    if (result != VK_SUCCESS)
       goto fail;
 
-   *pMem = (VkDeviceMemory) mem;
+   *pMem = anv_device_memory_to_handle(mem);
 
    return VK_SUCCESS;
 
@@ -1351,7 +1351,7 @@ VkResult anv_CreateFence(
    fence->execbuf.rsvd1 = device->context_id;
    fence->execbuf.rsvd2 = 0;
 
-   *pFence = (VkFence) fence;
+   *pFence = anv_fence_to_handle(fence);
 
    return VK_SUCCESS;
 
@@ -1496,7 +1496,7 @@ VkResult anv_CreateBuffer(
    buffer->bo = NULL;
    buffer->offset = 0;
 
-   *pBuffer = (VkBuffer) buffer;
+   *pBuffer = anv_buffer_to_handle(buffer);
 
    return VK_SUCCESS;
 }
@@ -1685,7 +1685,7 @@ VkResult anv_CreateSampler(
 
    GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
 
-   *pSampler = (VkSampler) sampler;
+   *pSampler = anv_sampler_to_handle(sampler);
 
    return VK_SUCCESS;
 }
@@ -1838,7 +1838,7 @@ VkResult anv_CreateDescriptorSetLayout(
       descriptor += pCreateInfo->pBinding[i].arraySize;
    }
 
-   *pSetLayout = (VkDescriptorSetLayout) set_layout;
+   *pSetLayout = anv_descriptor_set_layout_to_handle(set_layout);
 
    return VK_SUCCESS;
 }
@@ -1890,7 +1890,7 @@ VkResult anv_AllocDescriptorSets(
        */
       memset(set, 0, size);
 
-      pDescriptorSets[i] = (VkDescriptorSet) set;
+      pDescriptorSets[i] = anv_descriptor_set_to_handle(set);
    }
 
    *pCount = count;
@@ -2073,7 +2073,7 @@ VkResult anv_CreateDynamicViewportState(
       }
    }
 
-   *pState = (VkDynamicVpState) state;
+   *pState = anv_descriptor_set_to_handle(state);
 
    return VK_SUCCESS;
 }
@@ -2113,7 +2113,7 @@ VkResult anv_CreateDynamicRasterState(
 
    GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
 
-   *pState = (VkDynamicRsState) state;
+   *pState = anv_dynamic_rs_state_to_handle(state);
 
    return VK_SUCCESS;
 }
@@ -2142,7 +2142,7 @@ VkResult anv_CreateDynamicColorBlendState(
 
    GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
-   *pState = (VkDynamicCbState) state;
+   *pState = anv_dynamic_cb_state_to_handle(state);
 
    return VK_SUCCESS;
 }
@@ -2185,7 +2185,7 @@ VkResult anv_CreateDynamicDepthStencilState(
 
    GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
-   *pState = (VkDynamicDsState) state;
+   *pState = anv_dynamic_ds_state_to_handle(state);
 
    return VK_SUCCESS;
 }
@@ -2337,7 +2337,7 @@ VkResult anv_CreateCommandBuffer(
    cmd_buffer->rs_state = NULL;
    cmd_buffer->ds_state = NULL;
 
-   *pCmdBuffer = (VkCmdBuffer) cmd_buffer;
+   *pState = anv_cmd_buffer_to_handle(cmd_buffer);
 
    return VK_SUCCESS;
 
@@ -3643,7 +3643,7 @@ VkResult anv_CreateFramebuffer(
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
 
-   anv_CreateDynamicViewportState((VkDevice) device,
+   anv_CreateDynamicViewportState(anv_device_to_handle(device),
       &(VkDynamicVpStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
          .viewportAndScissorCount = 1,
@@ -3664,7 +3664,7 @@ VkResult anv_CreateFramebuffer(
       },
       &framebuffer->vp_state);
 
-   *pFramebuffer = (VkFramebuffer) framebuffer;
+   *pFramebuffer = anv_framebuffer_to_handle(framebuffer);
 
    return VK_SUCCESS;
 }
@@ -3699,7 +3699,7 @@ VkResult anv_CreateRenderPass(
          pass->num_clear_layers++;
    }
 
-   *pRenderPass = (VkRenderPass) pass;
+   *pRenderPass = anv_render_pass_to_handle(pass);
 
    return VK_SUCCESS;
 }
