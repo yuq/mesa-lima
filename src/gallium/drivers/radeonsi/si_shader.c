@@ -2686,16 +2686,41 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	}
 }
 
+int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
+{
+	const struct radeon_shader_binary *binary = &shader->binary;
+	unsigned code_size = binary->code_size + binary->rodata_size;
+	unsigned char *ptr;
+
+	r600_resource_reference(&shader->bo, NULL);
+	shader->bo = si_resource_create_custom(&sscreen->b.b,
+					       PIPE_USAGE_IMMUTABLE,
+					       code_size);
+	if (!shader->bo)
+		return -ENOMEM;
+
+	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL,
+					PIPE_TRANSFER_READ_WRITE);
+	util_memcpy_cpu_to_le32(ptr, binary->code, binary->code_size);
+	if (binary->rodata_size > 0) {
+		ptr += binary->code_size;
+		util_memcpy_cpu_to_le32(ptr, binary->rodata,
+					binary->rodata_size);
+	}
+
+	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
+	return 0;
+}
+
 int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 	unsigned i;
-	unsigned code_size;
-	unsigned char *ptr;
 	bool dump  = r600_can_dump_shader(&sscreen->b,
 		shader->selector ? shader->selector->tokens : NULL);
 
 	si_shader_binary_read_config(sscreen, shader, 0);
+	si_shader_binary_upload(sscreen, shader);
 
 	if (dump) {
 		if (!binary->disassembled) {
@@ -2713,26 +2738,6 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 			shader->num_sgprs, shader->num_vgprs, binary->code_size,
 			shader->lds_size, shader->scratch_bytes_per_wave);
 	}
-
-	/* copy new shader */
-	code_size = binary->code_size + binary->rodata_size;
-	r600_resource_reference(&shader->bo, NULL);
-	shader->bo = si_resource_create_custom(&sscreen->b.b, PIPE_USAGE_IMMUTABLE,
-					       code_size);
-	if (shader->bo == NULL) {
-		return -ENOMEM;
-	}
-
-
-	ptr = sscreen->b.ws->buffer_map(shader->bo->cs_buf, NULL, PIPE_TRANSFER_READ_WRITE);
-	util_memcpy_cpu_to_le32(ptr, binary->code, binary->code_size);
-	if (binary->rodata_size > 0) {
-		ptr += binary->code_size;
-		util_memcpy_cpu_to_le32(ptr, binary->rodata, binary->rodata_size);
-	}
-
-	sscreen->b.ws->buffer_unmap(shader->bo->cs_buf);
-
 	return 0;
 }
 

@@ -749,7 +749,6 @@ static unsigned si_update_scratch_buffer(struct si_context *sctx,
 {
 	struct si_shader *shader;
 	uint64_t scratch_va = sctx->scratch_buffer->gpu_address;
-	unsigned char *ptr;
 
 	if (!sel)
 		return 0;
@@ -770,12 +769,7 @@ static unsigned si_update_scratch_buffer(struct si_context *sctx,
 	si_shader_apply_scratch_relocs(sctx, shader, scratch_va);
 
 	/* Replace the shader bo with a new bo that has the relocs applied. */
-	r600_resource_reference(&shader->bo, NULL);
-	shader->bo = si_resource_create_custom(&sctx->screen->b.b, PIPE_USAGE_IMMUTABLE,
-					       shader->binary.code_size);
-	ptr = sctx->screen->b.ws->buffer_map(shader->bo->cs_buf, NULL, PIPE_TRANSFER_WRITE);
-	util_memcpy_cpu_to_le32(ptr, shader->binary.code, shader->binary.code_size);
-	sctx->screen->b.ws->buffer_unmap(shader->bo->cs_buf);
+	si_shader_binary_upload(sctx->screen, shader);
 
 	/* Update the shader state to use the new shader bo. */
 	si_shader_init_pm4_state(shader);
