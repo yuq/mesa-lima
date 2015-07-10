@@ -145,9 +145,10 @@ cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
 }
 
 static inline void
-cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
+cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
+         struct vc4_bo *bo, uint32_t offset)
 {
-        *(uint32_t *)cl->reloc_next = hindex;
+        *(uint32_t *)cl->reloc_next = vc4_gem_hindex(vc4, bo);
         cl->reloc_next += 4;
 
         cl->reloc_count--;
@@ -156,28 +157,15 @@ cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 }
 
 static inline void
-cl_aligned_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
+cl_aligned_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
+         struct vc4_bo *bo, uint32_t offset)
 {
-        *(uint32_t *)cl->reloc_next = hindex;
+        *(uint32_t *)cl->reloc_next = vc4_gem_hindex(vc4, bo);
         cl->reloc_next += 4;
 
         cl->reloc_count--;
 
         cl_aligned_u32(cl, offset);
-}
-
-static inline void
-cl_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
-         struct vc4_bo *bo, uint32_t offset)
-{
-        cl_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
-}
-
-static inline void
-cl_aligned_reloc(struct vc4_context *vc4, struct vc4_cl *cl,
-         struct vc4_bo *bo, uint32_t offset)
-{
-        cl_aligned_reloc_hindex(cl, vc4_gem_hindex(vc4, bo), offset);
 }
 
 void cl_ensure_space(struct vc4_cl *cl, uint32_t size);
