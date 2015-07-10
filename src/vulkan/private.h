@@ -945,8 +945,44 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 void *
 anv_lookup_entrypoint(const char *name);
 
+#define ANV_DEFINE_CASTS(__anv_type, __VkType)     \
+static inline struct __anv_type *                  \
+__anv_type ## _from_handle(__VkType _handle)       \
+{                                                  \
+   return (struct __anv_type *) _handle;           \
+}                                                  \
+                                                   \
+static inline __VkType                             \
+__anv_type ## _to_handle(struct __anv_type *_obj)  \
+{                                                  \
+   return (__VkType) _obj;                         \
+}
+
+ANV_DEFINE_CASTS(anv_physical_device, VkPhysicalDevice)
+ANV_DEFINE_CASTS(anv_instance, VkInstance)
+ANV_DEFINE_CASTS(anv_queue, VkQueue)
+ANV_DEFINE_CASTS(anv_device, VkDevice)
+ANV_DEFINE_CASTS(anv_device_memory, VkDeviceMemory)
+ANV_DEFINE_CASTS(anv_dynamic_vp_state, VkDynamicVpState)
+ANV_DEFINE_CASTS(anv_dynamic_rs_state, VkDynamicRsState)
+ANV_DEFINE_CASTS(anv_dynamic_ds_state, VkDynamicDsState)
+ANV_DEFINE_CASTS(anv_dynamic_cb_state, VkDynamicCbState)
+ANV_DEFINE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
+ANV_DEFINE_CASTS(anv_descriptor_set, VkDescriptorSet)
+ANV_DEFINE_CASTS(anv_pipeline_layout, VkPipelineLayout)
+ANV_DEFINE_CASTS(anv_buffer, VkBuffer)
+ANV_DEFINE_CASTS(anv_cmd_buffer, VkCmdBuffer)
+ANV_DEFINE_CASTS(anv_fence, VkFence)
+ANV_DEFINE_CASTS(anv_shader_module, VkShaderModule)
+ANV_DEFINE_CASTS(anv_shader, VkShader)
+ANV_DEFINE_CASTS(anv_pipeline, VkPipeline)
+ANV_DEFINE_CASTS(anv_image, VkImage)
+ANV_DEFINE_CASTS(anv_depth_stencil_view, VkDepthStencilView)
+ANV_DEFINE_CASTS(anv_framebuffer, VkFramebuffer)
+ANV_DEFINE_CASTS(anv_render_pass, VkRenderPass)
+
 #define ANV_FROM_HANDLE(__anv_type, __name, __handle) \
-   struct __anv_type *__name = (struct __anv_type *) __handle
+   struct __anv_type *__name = __anv_type ## _from_handle(__handle)
 
 #ifdef __cplusplus
 }
