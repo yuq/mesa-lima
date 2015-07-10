@@ -845,22 +845,6 @@ bad_format:
    return NULL;
 }
 
-static char
-is_fd_render_node(int fd)
-{
-   struct stat render;
-
-   if (fstat(fd, &render))
-      return 0;
-
-   if (!S_ISCHR(render.st_mode))
-      return 0;
-
-   if (render.st_rdev & 0x80)
-      return 1;
-   return 0;
-}
-
 static int
 dri2_wl_authenticate(_EGLDisplay *disp, uint32_t id)
 {
@@ -904,7 +888,7 @@ drm_handle_device(void *data, struct wl_drm *drm, const char *device)
       return;
    }
 
-   if (is_fd_render_node(dri2_dpy->fd)) {
+   if (drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER) {
       dri2_dpy->authenticated = 1;
    } else {
       drmGetMagic(dri2_dpy->fd, &magic);
@@ -1114,7 +1098,7 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
     * will return a render-node when the requested gpu is different
     * to the server, but also if the client asks for the same gpu than
     * the server by requesting its pci-id */
-   dri2_dpy->is_render_node = is_fd_render_node(dri2_dpy->fd);
+   dri2_dpy->is_render_node = drmGetNodeTypeFromFd(dri2_dpy->fd) == DRM_NODE_RENDER;
 
    dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
    if (dri2_dpy->driver_name == NULL) {
