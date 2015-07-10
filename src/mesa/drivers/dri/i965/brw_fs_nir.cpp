@@ -968,10 +968,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_b2i:
-      bld.AND(result, op[0], fs_reg(1));
-      break;
    case nir_op_b2f:
-      bld.AND(retype(result, BRW_REGISTER_TYPE_UD), op[0], fs_reg(0x3f800000u));
+      bld.MOV(result, negate(op[0]));
       break;
 
    case nir_op_f2b:
