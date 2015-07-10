@@ -148,7 +148,7 @@ VkResult anv_CreateInstance(
 VkResult anv_DestroyInstance(
     VkInstance                                  _instance)
 {
-   struct anv_instance *instance = (struct anv_instance *) _instance;
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
    instance->pfnFree(instance->pAllocUserData, instance);
 
@@ -160,7 +160,7 @@ VkResult anv_EnumeratePhysicalDevices(
     uint32_t*                                   pPhysicalDeviceCount,
     VkPhysicalDevice*                           pPhysicalDevices)
 {
-   struct anv_instance *instance = (struct anv_instance *) _instance;
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
    VkResult result;
 
    if (instance->physicalDeviceCount == 0) {
@@ -1213,13 +1213,13 @@ VkResult anv_GetObjectMemoryRequirements(
 
    switch (objType) {
    case VK_OBJECT_TYPE_BUFFER: {
-      struct anv_buffer *buffer = (struct anv_buffer *) object;
+      struct anv_buffer *buffer = anv_buffer_from_handle(object);
       pMemoryRequirements->size = buffer->size;
       pMemoryRequirements->alignment = 16;
       break;
    }
    case VK_OBJECT_TYPE_IMAGE: {
-      struct anv_image *image = (struct anv_image *) object;
+      struct anv_image *image = anv_buffer_from_handle(object);
       pMemoryRequirements->size = image->size;
       pMemoryRequirements->alignment = image->alignment;
       break;
@@ -1245,12 +1245,12 @@ VkResult anv_BindObjectMemory(
 
    switch (objType) {
    case VK_OBJECT_TYPE_BUFFER:
-      buffer = (struct anv_buffer *) object;
+      buffer = anv_buffer_from_handle(object);
       buffer->bo = &mem->bo;
       buffer->offset = memOffset;
       break;
    case VK_OBJECT_TYPE_IMAGE:
-      image = (struct anv_image *) object;
+      image = anv_image_from_handle(object);
       image->bo = &mem->bo;
       image->offset = memOffset;
       break;
@@ -1914,7 +1914,7 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for (uint32_t j = 0; j < write->count; j++) {
             set->descriptors[write->destBinding + j].sampler =
-               (struct anv_sampler *) write->pDescriptors[j].sampler;
+               anv_sampler_from_handle(write->pDescriptors[j].sampler);
          }
 
          if (write->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
@@ -1926,7 +1926,7 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
          for (uint32_t j = 0; j < write->count; j++) {
             set->descriptors[write->destBinding + j].view =
-               (struct anv_surface_view *) write->pDescriptors[j].imageView;
+               anv_surface_view_from_handle(write->pDescriptors[j].imageView);
          }
          break;
 
@@ -1941,7 +1941,7 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for (uint32_t j = 0; j < write->count; j++) {
             set->descriptors[write->destBinding + j].view =
-               (struct anv_surface_view *) write->pDescriptors[j].bufferView;
+               anv_surface_view_from_handle(write->pDescriptors[j].bufferView);
          }
 
       default:
@@ -2652,19 +2652,19 @@ void anv_CmdBindDynamicStateObject(
 
    switch (stateBindPoint) {
    case VK_STATE_BIND_POINT_VIEWPORT:
-      cmd_buffer->vp_state = (struct anv_dynamic_vp_state *) dynamicState;
+      cmd_buffer->vp_state = anv_dynamic_vp_state_from_handle(dynamicState);
       cmd_buffer->dirty |= ANV_CMD_BUFFER_VP_DIRTY;
       break;
    case VK_STATE_BIND_POINT_RASTER:
-      cmd_buffer->rs_state = (struct anv_dynamic_rs_state *) dynamicState;
+      cmd_buffer->rs_state = anv_dynamic_rs_state_from_handle(dynamicState);
       cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
       break;
    case VK_STATE_BIND_POINT_COLOR_BLEND:
-      cmd_buffer->cb_state = (struct anv_dynamic_cb_state *) dynamicState;
+      cmd_buffer->cb_state = anv_dynamic_cb_state_from_handle(dynamicState);
       cmd_buffer->dirty |= ANV_CMD_BUFFER_CB_DIRTY;
       break;
    case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-      cmd_buffer->ds_state = (struct anv_dynamic_ds_state *) dynamicState;
+      cmd_buffer->ds_state = anv_dynamic_ds_state_from_handle(dynamicState);
       cmd_buffer->dirty |= ANV_CMD_BUFFER_DS_DIRTY;
       break;
    default:
@@ -2805,7 +2805,7 @@ void anv_CmdBindVertexBuffers(
 
    assert(startBinding + bindingCount < MAX_VBS);
    for (uint32_t i = 0; i < bindingCount; i++) {
-      vb[startBinding + i].buffer = (struct anv_buffer *) pBuffers[i];
+      vb[startBinding + i].buffer = anv_buffer_from_handle(pBuffers[i]);
       vb[startBinding + i].offset = pOffsets[i];
       cmd_buffer->vb_dirty |= 1 << (startBinding + i);
    }
@@ -3633,7 +3633,7 @@ VkResult anv_CreateFramebuffer(
 
    if (pCreateInfo->pDepthStencilAttachment) {
       framebuffer->depth_stencil =
-         (struct anv_depth_stencil_view *) pCreateInfo->pDepthStencilAttachment->view;
+         anv_depth_stencil_view_from_handle(pCreateInfo->pDepthStencilAttachment->view);
    } else {
       framebuffer->depth_stencil = &null_view;
    }
