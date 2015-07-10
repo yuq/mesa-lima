@@ -911,6 +911,11 @@ typedef enum {
 typedef VkFlags VkMemoryPropertyFlags;
 
 typedef enum {
+    VK_MEMORY_HEAP_HOST_LOCAL = 0x00000001,
+} VkMemoryHeapFlagBits;
+typedef VkFlags VkMemoryHeapFlags;
+
+typedef enum {
     VK_DEVICE_CREATE_VALIDATION_BIT = 0x00000001,
 } VkDeviceCreateFlagBits;
 typedef VkFlags VkDeviceCreateFlags;
@@ -1272,8 +1277,20 @@ typedef struct {
 } VkPhysicalDeviceQueueProperties;
 
 typedef struct {
-    bool32_t                                    supportsMigration;
-    bool32_t                                    supportsPinning;
+    VkMemoryPropertyFlags                       propertyFlags;
+    uint32_t                                    heapIndex;
+} VkMemoryType;
+
+typedef struct {
+    VkDeviceSize                                size;
+    VkMemoryHeapFlags                           flags;
+} VkMemoryHeap;
+
+typedef struct {
+    uint32_t                                    memoryTypeCount;
+    VkMemoryType                                memoryTypes[VK_MAX_MEMORY_TYPES];
+    uint32_t                                    memoryHeapCount;
+    VkMemoryHeap                                memoryHeaps[VK_MAX_MEMORY_HEAPS];
 } VkPhysicalDeviceMemoryProperties;
 
 typedef void (VKAPI *PFN_vkVoidFunction)(void);
@@ -1962,6 +1979,7 @@ typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physica
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueProperties)(VkPhysicalDevice physicalDevice, uint32_t count, VkPhysicalDeviceQueueProperties* pQueueProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperies);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instance, const char* pName);
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
@@ -2107,6 +2125,10 @@ VkResult VKAPI vkGetPhysicalDeviceQueueProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    count,
     VkPhysicalDeviceQueueProperties*            pQueueProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceMemoryProperties*           pMemoryProperies);
 
 PFN_vkVoidFunction VKAPI vkGetInstanceProcAddr(
     VkInstance                                  instance,

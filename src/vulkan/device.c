@@ -422,6 +422,39 @@ VkResult anv_GetPhysicalDeviceQueueProperties(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetPhysicalDeviceMemoryProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceMemoryProperties*           pMemoryProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+
+   size_t aperture_size;
+   size_t heap_size;
+
+   if (anv_gem_get_aperture(physical_device, &aperture_size) == -1)
+      return vk_error(VK_ERROR_UNAVAILABLE);
+
+   /* Reserve some wiggle room for the driver by exposing only 75% of the
+    * aperture to the heap.
+    */
+   heap_size = 3 * aperture_size / 4;
+
+   /* The property flags below are valid only for llc platforms. */
+   pMemoryProperties->memoryTypeCount = 1;
+   pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
+      .propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+      .heapIndex = 1,
+   };
+
+   pMemoryProperties->memoryHeapCount = 1;
+   pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
+      .size = heap_size,
+      .flags = VK_MEMORY_HEAP_HOST_LOCAL,
+   };
+
+   return VK_SUCCESS;
+}
+
 PFN_vkVoidFunction anv_GetInstanceProcAddr(
     VkInstance                                  instance,
     const char*                                 pName)
