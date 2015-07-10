@@ -1171,8 +1171,10 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
       return anv_DestroyDepthStencilView(_device, _object);
 
-   case VK_OBJECT_TYPE_BUFFER:
    case VK_OBJECT_TYPE_IMAGE:
+      return anv_DestroyImage(_device, _object);
+
+   case VK_OBJECT_TYPE_BUFFER:
    case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_SHADER_MODULE:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:

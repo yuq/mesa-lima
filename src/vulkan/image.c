@@ -306,6 +306,16 @@ anv_CreateImage(VkDevice device,
       pImage);
 }
 
+VkResult
+anv_DestroyImage(VkDevice _device, VkImage _image)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   anv_device_free(device, anv_image_from_handle(_image));
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_GetImageSubresourceLayout(
     VkDevice                                    device,
     VkImage                                     image,
