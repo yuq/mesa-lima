@@ -50,7 +50,7 @@ VkResult anv_CreateShaderModule(
    module->size = pCreateInfo->codeSize;
    memcpy(module->data, pCreateInfo->pCode, module->size);
 
-   *pShaderModule = (VkShaderModule) module;
+   *pShaderModule = anv_shader_module_to_handle(module);
 
    return VK_SUCCESS;
 }
@@ -81,7 +81,7 @@ VkResult anv_CreateShader(
    shader->module = module;
    memcpy(shader->entrypoint, pCreateInfo->pName, name_len + 1);
 
-   *pShader = (VkShader) shader;
+   *pShader = anv_shader_to_handle(shader);
 
    return VK_SUCCESS;
 }
@@ -457,7 +457,7 @@ anv_pipeline_create(
     const struct anv_pipeline_create_info *     extra,
     VkPipeline*                                 pPipeline)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_pipeline *pipeline;
    VkResult result;
    uint32_t offset, length;
@@ -471,7 +471,7 @@ anv_pipeline_create(
 
    pipeline->base.destructor = anv_pipeline_destroy;
    pipeline->device = device;
-   pipeline->layout = (struct anv_pipeline_layout *) pCreateInfo->layout;
+   pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
 
    result = anv_reloc_list_init(&pipeline->batch.relocs, device);
@@ -487,7 +487,7 @@ anv_pipeline_create(
 
    for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
       pipeline->shaders[pCreateInfo->pStages[i].stage] =
-         (struct anv_shader *) pCreateInfo->pStages[i].shader;
+         anv_shader_from_handle(pCreateInfo->pStages[i].shader);
    }
 
    if (pCreateInfo->pTessState)
@@ -731,7 +731,7 @@ anv_pipeline_create(
                   .oMaskPresenttoRenderTarget = wm_prog_data->uses_omask,
                   .PixelShaderIsPerSample = per_sample_ps);
 
-   *pPipeline = (VkPipeline) pipeline;
+   *pPipeline = anv_pipeline_to_handle(pipeline);
 
    return VK_SUCCESS;
 }
@@ -768,7 +768,7 @@ static VkResult anv_compute_pipeline_create(
     const VkComputePipelineCreateInfo*          pCreateInfo,
     VkPipeline*                                 pPipeline)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_pipeline *pipeline;
    VkResult result;
 
@@ -781,7 +781,7 @@ static VkResult anv_compute_pipeline_create(
 
    pipeline->base.destructor = anv_pipeline_destroy;
    pipeline->device = device;
-   pipeline->layout = (struct anv_pipeline_layout *) pCreateInfo->layout;
+   pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
    result = anv_reloc_list_init(&pipeline->batch.relocs, device);
    if (result != VK_SUCCESS) {
@@ -797,7 +797,7 @@ static VkResult anv_compute_pipeline_create(
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
 
    pipeline->shaders[VK_SHADER_STAGE_COMPUTE] =
-      (struct anv_shader *) pCreateInfo->cs.shader;
+      anv_shader_from_handle(pCreateInfo->cs.shader);
 
    pipeline->use_repclear = false;
 
@@ -830,7 +830,7 @@ static VkResult anv_compute_pipeline_create(
       pipeline->cs_right_mask = ~0u >> (32 - prog_data->simd_size);
 
 
-   *pPipeline = (VkPipeline) pipeline;
+   *pPipeline = anv_pipeline_to_handle(pipeline);
 
    return VK_SUCCESS;
 }
@@ -869,7 +869,7 @@ VkResult anv_CreatePipelineLayout(
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
     VkPipelineLayout*                           pPipelineLayout)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_pipeline_layout *layout;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
@@ -890,8 +890,8 @@ VkResult anv_CreatePipelineLayout(
    }
 
    for (uint32_t i = 0; i < pCreateInfo->descriptorSetCount; i++) {
-      struct anv_descriptor_set_layout *set_layout =
-         (struct anv_descriptor_set_layout *) pCreateInfo->pSetLayouts[i];
+      ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
+                      pCreateInfo->pSetLayouts[i]);
 
       layout->set[i].layout = set_layout;
       for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
@@ -905,7 +905,7 @@ VkResult anv_CreatePipelineLayout(
       }
    }
 
-   *pPipelineLayout = (VkPipelineLayout) layout;
+   *pPipelineLayout = anv_pipeline_layout_to_handle(layout);
 
    return VK_SUCCESS;
 }
