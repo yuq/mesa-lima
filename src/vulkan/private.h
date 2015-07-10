@@ -857,8 +857,6 @@ struct anv_image {
 };
 
 struct anv_surface_view {
-   struct anv_object                            base;
-
    struct anv_state                             surface_state;
    struct anv_bo *                              bo;
    uint32_t                                     offset;
@@ -888,7 +886,7 @@ void anv_color_attachment_view_init(struct anv_surface_view *view,
                                     struct anv_cmd_buffer *cmd_buffer);
 
 void anv_surface_view_destroy(struct anv_device *device,
-                              struct anv_object *obj, VkObjectType obj_type);
+                              struct anv_surface_view *view);
 
 struct anv_sampler {
    uint32_t state[4];
@@ -944,6 +942,12 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 
 void *
 anv_lookup_entrypoint(const char *name);
+
+VkResult anv_DestroyImageView(VkDevice device, VkImageView imageView);
+VkResult anv_DestroyBufferView(VkDevice device, VkBufferView bufferView);
+VkResult anv_DestroyColorAttachmentView(VkDevice device,
+                                        VkColorAttachmentView view);
+VkResult anv_DestroyDepthStencilView(VkDevice device, VkDepthStencilView view);
 
 #define ANV_DEFINE_CASTS(__anv_type, __VkType)     \
 static inline struct __anv_type *                  \

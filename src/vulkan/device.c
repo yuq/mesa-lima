@@ -1159,9 +1159,20 @@ VkResult anv_DestroyObject(
       /* These are just dummys anyway, so we don't need to destroy them */
       return VK_SUCCESS;
 
+   case VK_OBJECT_TYPE_BUFFER_VIEW:
+      return anv_DestroyBufferView(_device, _object);
+
+   case VK_OBJECT_TYPE_IMAGE_VIEW:
+      return anv_DestroyImageView(_device, _object);
+
+   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
+      return anv_DestroyColorAttachmentView(_device, _object);
+
+   case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
+      return anv_DestroyDepthStencilView(_device, _object);
+
    case VK_OBJECT_TYPE_BUFFER:
    case VK_OBJECT_TYPE_IMAGE:
-   case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
    case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_SHADER_MODULE:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
@@ -1182,9 +1193,6 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_FENCE:
    case VK_OBJECT_TYPE_QUERY_POOL:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
-   case VK_OBJECT_TYPE_BUFFER_VIEW:
-   case VK_OBJECT_TYPE_IMAGE_VIEW:
-   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
 
@@ -1571,8 +1579,6 @@ VkResult anv_CreateBufferView(
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->base.destructor = anv_surface_view_destroy;
-
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->surface_state =
@@ -1584,6 +1590,17 @@ VkResult anv_CreateBufferView(
                              pCreateInfo->format, view->offset, pCreateInfo->range);
 
    *pView = (VkBufferView) view;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyBufferView(
+    VkDevice                                    _device,
+    VkBufferView                                _view)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
 
    return VK_SUCCESS;
 }

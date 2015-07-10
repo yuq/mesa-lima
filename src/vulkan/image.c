@@ -317,14 +317,8 @@ VkResult anv_GetImageSubresourceLayout(
 
 void
 anv_surface_view_destroy(struct anv_device *device,
-                         struct anv_object *obj, VkObjectType obj_type)
+                         struct anv_surface_view *view)
 {
-   struct anv_surface_view *view = (struct anv_surface_view *)obj;
-
-   assert(obj_type == VK_OBJECT_TYPE_BUFFER_VIEW ||
-          obj_type == VK_OBJECT_TYPE_IMAGE_VIEW ||
-          obj_type == VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW);
-
    anv_state_pool_free(&device->surface_state_pool, view->surface_state);
 
    anv_device_free(device, view);
@@ -544,9 +538,17 @@ anv_CreateImageView(VkDevice _device,
 
    anv_image_view_init(view, device, pCreateInfo, NULL);
 
-   view->base.destructor = anv_surface_view_destroy;
-
    *pView = (VkImageView) view;
+
+   return VK_SUCCESS;
+}
+
+VkResult
+anv_DestroyImageView(VkDevice _device, VkImageView _view)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
 
    return VK_SUCCESS;
 }
@@ -664,9 +666,17 @@ anv_CreateColorAttachmentView(VkDevice _device,
 
    anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
 
-   view->base.destructor = anv_surface_view_destroy;
-
    *pView = (VkColorAttachmentView) view;
+
+   return VK_SUCCESS;
+}
+
+VkResult
+anv_DestroyColorAttachmentView(VkDevice _device, VkColorAttachmentView _view)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
 
    return VK_SUCCESS;
 }
@@ -708,6 +718,17 @@ anv_CreateDepthStencilView(VkDevice _device,
    view->stencil_qpitch = 0; /* FINISHME: QPitch */
 
    *pView = anv_depth_stencil_view_to_handle(view);
+
+   return VK_SUCCESS;
+}
+
+VkResult
+anv_DestroyDepthStencilView(VkDevice _device, VkDepthStencilView _view)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_depth_stencil_view, view, _view);
+
+   anv_device_free(device, view);
 
    return VK_SUCCESS;
 }
