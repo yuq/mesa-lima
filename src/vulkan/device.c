@@ -1391,7 +1391,7 @@ VkResult anv_GetFenceStatus(
       fence->ready = true;
       return VK_SUCCESS;
    }
-   
+
    return VK_NOT_READY;
 }
 
@@ -1415,7 +1415,7 @@ VkResult anv_WaitForFences(
          return VK_TIMEOUT;
       else if (ret == -1)
          return vk_error(VK_ERROR_UNKNOWN);
-   }      
+   }
 
    return VK_SUCCESS;
 }
@@ -1645,7 +1645,7 @@ VkResult anv_CreateSampler(
       min_filter = vk_to_gen_tex_filter[pCreateInfo->minFilter];
       max_anisotropy = RATIO21;
    }
-   
+
    struct GEN8_SAMPLER_STATE sampler_state = {
       .SamplerDisable = false,
       .TextureBorderColorMode = DX10OGL,
