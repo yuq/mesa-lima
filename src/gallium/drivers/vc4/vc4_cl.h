@@ -36,8 +36,8 @@ struct vc4_bo;
 struct vc4_cl {
         void *base;
         void *next;
+        void *reloc_next;
         uint32_t size;
-        uint32_t reloc_next;
         uint32_t reloc_count;
 };
 
@@ -128,7 +128,7 @@ cl_start_reloc(struct vc4_cl *cl, uint32_t n)
         cl->reloc_count = n;
 
         cl_u8(cl, VC4_PACKET_GEM_HANDLES);
-        cl->reloc_next = cl->next - cl->base;
+        cl->reloc_next = cl->next;
         cl_u32(cl, 0); /* Space where hindex will be written. */
         cl_u32(cl, 0); /* Space where hindex will be written. */
 }
@@ -138,7 +138,7 @@ cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
 {
         assert(cl->reloc_count == 0);
         cl->reloc_count = n;
-        cl->reloc_next = cl->next - cl->base;
+        cl->reloc_next = cl->next;
 
         /* Space where hindex will be written. */
         cl->next += n * 4;
@@ -147,7 +147,7 @@ cl_start_shader_reloc(struct vc4_cl *cl, uint32_t n)
 static inline void
 cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 {
-        *(uint32_t *)(cl->base + cl->reloc_next) = hindex;
+        *(uint32_t *)cl->reloc_next = hindex;
         cl->reloc_next += 4;
 
         cl->reloc_count--;
@@ -158,7 +158,7 @@ cl_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 static inline void
 cl_aligned_reloc_hindex(struct vc4_cl *cl, uint32_t hindex, uint32_t offset)
 {
-        *(uint32_t *)(cl->base + cl->reloc_next) = hindex;
+        *(uint32_t *)cl->reloc_next = hindex;
         cl->reloc_next += 4;
 
         cl->reloc_count--;
