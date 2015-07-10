@@ -1319,7 +1319,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkDeviceSize                                allocationSize;
-    VkMemoryPropertyFlags                       memProps;
+    uint32_t                                    memoryTypeIndex;
 } VkMemoryAllocInfo;
 
 typedef struct {
@@ -1334,8 +1334,7 @@ typedef struct {
     VkDeviceSize                                size;
     VkDeviceSize                                alignment;
     VkDeviceSize                                granularity;
-    VkMemoryPropertyFlags                       memPropsAllowed;
-    VkMemoryPropertyFlags                       memPropsRequired;
+    uint32_t                                    memoryTypeBits;
 } VkMemoryRequirements;
 
 typedef struct {

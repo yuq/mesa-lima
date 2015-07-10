@@ -144,6 +144,7 @@ VkResult anv_CreateSwapChainWSI(
                       &(VkMemoryAllocInfo) {
                          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
                          .allocationSize = image->size,
+                         .memoryTypeIndex = 0,
                       },
                       (VkDeviceMemory *) &memory);
 

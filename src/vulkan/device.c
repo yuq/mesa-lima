@@ -1077,6 +1077,13 @@ VkResult anv_AllocMemory(
 
    assert(pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
 
+   if (pAllocInfo->memoryTypeIndex != 0) {
+      /* We support exactly one memory heap. */
+      return vk_error(VK_ERROR_INVALID_VALUE);
+   }
+
+   /* FINISHME: Fail if allocation request exceeds heap size. */
+
    mem = anv_device_alloc(device, sizeof(*mem), 8,
                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (mem == NULL)
@@ -1254,13 +1261,17 @@ VkResult anv_GetObjectMemoryRequirements(
     VkObject                                    object,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
-   pMemoryRequirements->memPropsAllowed =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-      /* VK_MEMORY_PROPERTY_HOST_NON_COHERENT_BIT | */
-      /* VK_MEMORY_PROPERTY_HOST_UNCACHED_BIT | */
-      VK_MEMORY_PROPERTY_HOST_WRITE_COMBINED_BIT;
 
-   pMemoryRequirements->memPropsRequired = 0;
+   /* The Vulkan spec (git aaed022) says:
+    *
+    *    memoryTypeBits is a bitfield and contains one bit set for every
+    *    supported memory type for the resource. The bit `1<<i` is set if and
+    *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
+    *    structure for the physical device is supported.
+    *
+    * We support exactly one memory type.
+    */
+   pMemoryRequirements->memoryTypeBits = 1;
 
    switch (objType) {
    case VK_OBJECT_TYPE_BUFFER: {
