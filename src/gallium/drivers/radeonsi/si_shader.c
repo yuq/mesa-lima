@@ -2686,11 +2686,9 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 	}
 }
 
-int si_shader_binary_read(struct si_screen *sscreen,
-			struct si_shader *shader,
-			const struct radeon_shader_binary *binary)
+int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 {
-
+	const struct radeon_shader_binary *binary = &shader->binary;
 	unsigned i;
 	unsigned code_size;
 	unsigned char *ptr;
@@ -2750,7 +2748,7 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 	if (r) {
 		return r;
 	}
-	r = si_shader_binary_read(sscreen, shader, &shader->binary);
+	r = si_shader_binary_read(sscreen, shader);
 
 	FREE(shader->binary.config);
 	FREE(shader->binary.rodata);
