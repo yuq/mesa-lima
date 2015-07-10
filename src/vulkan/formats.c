@@ -247,8 +247,7 @@ VkResult anv_GetPhysicalDeviceFormatInfo(
     VkFormat                                    _format,
     VkFormatProperties*                         pFormatInfo)
 {
-   struct anv_physical_device *physical_device =
-      (struct anv_physical_device *) physicalDevice;
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    const struct surface_format_info *info;
    int gen;
 
