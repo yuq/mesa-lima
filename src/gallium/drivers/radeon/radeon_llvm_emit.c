@@ -210,7 +210,7 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 	buffer_size = LLVMGetBufferSize(out_buffer);
 	buffer_data = LLVMGetBufferStart(out_buffer);
 
-	radeon_elf_read(buffer_data, buffer_size, binary, dump);
+	radeon_elf_read(buffer_data, buffer_size, binary);
 
 	/* Clean up */
 	LLVMDisposeMemoryBuffer(out_buffer);

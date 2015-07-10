@@ -226,7 +226,7 @@ void *evergreen_create_compute_state(
 	}
 #else
 	memset(&shader->binary, 0, sizeof(shader->binary));
-	radeon_elf_read(code, header->num_bytes, &shader->binary, true);
+	radeon_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
 
 	shader->code_bo = r600_compute_buffer_alloc_vram(ctx->screen,

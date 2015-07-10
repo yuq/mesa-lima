@@ -129,9 +129,8 @@ struct radeon_shader_binary {
 	struct radeon_shader_reloc *relocs;
 	unsigned reloc_count;
 
-	/** Set to 1 if the disassembly for this binary has been dumped to
-	 *  stderr. */
-	int disassembled;
+	/** Disassembled shader in a string. */
+	char *disasm_string;
 };
 
 struct r600_resource {

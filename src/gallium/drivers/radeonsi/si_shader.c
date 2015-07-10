@@ -3811,7 +3811,10 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 	si_shader_binary_upload(sscreen, shader);
 
 	if (dump) {
-		if (!binary->disassembled) {
+		if (binary->disasm_string) {
+			fprintf(stderr, "\nShader Disassembly:\n\n");
+			fprintf(stderr, "%s\n", binary->disasm_string);
+		} else {
 			fprintf(stderr, "SI CODE:\n");
 			for (i = 0; i < binary->code_size; i+=4 ) {
 				fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
@@ -3849,7 +3852,8 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 	if (shader->scratch_bytes_per_wave == 0) {
 		FREE(shader->binary.code);
 		FREE(shader->binary.relocs);
-		memset(&shader->binary, 0, sizeof(shader->binary));
+		memset(&shader->binary, 0,
+		       offsetof(struct radeon_shader_binary, disasm_string));
 	}
 	return r;
 }
@@ -4176,4 +4180,5 @@ void si_shader_destroy(struct pipe_context *ctx, struct si_shader *shader)
 
 	FREE(shader->binary.code);
 	FREE(shader->binary.relocs);
+	FREE(shader->binary.disasm_string);
 }

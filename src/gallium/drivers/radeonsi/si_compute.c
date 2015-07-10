@@ -137,7 +137,7 @@ static void *si_create_compute_state(
 	}
 #else
 
-	radeon_elf_read(code, header->num_bytes, &program->shader.binary, true);
+	radeon_elf_read(code, header->num_bytes, &program->shader.binary);
 
 	/* init_scratch_buffer patches the shader code with the scratch address,
 	 * so we need to call it before si_shader_binary_read() which uploads
