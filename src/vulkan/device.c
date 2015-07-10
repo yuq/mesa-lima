@@ -498,13 +498,12 @@ anv_device_init_border_colors(struct anv_device *device)
 static const uint32_t BATCH_SIZE = 8192;
 
 VkResult anv_CreateDevice(
-    VkPhysicalDevice                            _physicalDevice,
+    VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
     VkDevice*                                   pDevice)
 {
-   struct anv_physical_device *physicalDevice =
-      (struct anv_physical_device *) _physicalDevice;
-   struct anv_instance *instance = physicalDevice->instance;
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   struct anv_instance *instance = physical_device->instance;
    struct anv_device *device;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
@@ -515,11 +514,11 @@ VkResult anv_CreateDevice(
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   device->no_hw = physicalDevice->no_hw;
+   device->no_hw = physical_device->no_hw;
    parse_debug_flags(device);
 
-   device->instance = physicalDevice->instance;
-   device->fd = open(physicalDevice->path, O_RDWR | O_CLOEXEC);
+   device->instance = physical_device->instance;
+   device->fd = open(physical_device->path, O_RDWR | O_CLOEXEC);
    if (device->fd == -1)
       goto fail_device;
       
@@ -542,7 +541,7 @@ VkResult anv_CreateDevice(
 
    anv_block_pool_init(&device->scratch_block_pool, device, 0x10000);
 
-   device->info = *physicalDevice->info;
+   device->info = *physical_device->info;
 
    device->compiler = anv_compiler_create(device);
    device->aub_writer = NULL;
@@ -570,7 +569,7 @@ VkResult anv_CreateDevice(
 VkResult anv_DestroyDevice(
     VkDevice                                    _device)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
 
    anv_compiler_destroy(device->compiler);
 
@@ -664,7 +663,7 @@ VkResult anv_GetDeviceQueue(
     uint32_t                                    queueIndex,
     VkQueue*                                    pQueue)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
 
    assert(queueIndex == 0);
 
@@ -883,14 +882,13 @@ VkResult anv_QueueSubmit(
     const VkCmdBuffer*                          pCmdBuffers,
     VkFence                                     _fence)
 {
-   struct anv_queue *queue = (struct anv_queue *) _queue;
+   ANV_FROM_HANDLE(anv_queue, queue, _queue);
+   ANV_FROM_HANDLE(anv_fence, fence, _fence);
    struct anv_device *device = queue->device;
-   struct anv_fence *fence = (struct anv_fence *) _fence;
    int ret;
 
    for (uint32_t i = 0; i < cmdBufferCount; i++) {
-      struct anv_cmd_buffer *cmd_buffer =
-         (struct anv_cmd_buffer *) pCmdBuffers[i];
+      ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, pCmdBuffers[i]);
 
       if (device->dump_aub)
          anv_cmd_buffer_dump(cmd_buffer);
@@ -919,7 +917,7 @@ VkResult anv_QueueSubmit(
 VkResult anv_QueueWaitIdle(
     VkQueue                                     _queue)
 {
-   struct anv_queue *queue = (struct anv_queue *) _queue;
+   ANV_FROM_HANDLE(anv_queue, queue, _queue);
 
    return vkDeviceWaitIdle((VkDevice) queue->device);
 }
@@ -927,7 +925,7 @@ VkResult anv_QueueWaitIdle(
 VkResult anv_DeviceWaitIdle(
     VkDevice                                    _device)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_state state;
    struct anv_batch batch;
    struct drm_i915_gem_execbuffer2 execbuf;
@@ -1032,7 +1030,7 @@ VkResult anv_AllocMemory(
     const VkMemoryAllocInfo*                    pAllocInfo,
     VkDeviceMemory*                             pMem)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_device_memory *mem;
    VkResult result;
 
@@ -1049,7 +1047,7 @@ VkResult anv_AllocMemory(
 
    *pMem = (VkDeviceMemory) mem;
 
-   return VK_SUCCESS;   
+   return VK_SUCCESS;
 
  fail:
    anv_device_free(device, mem);
@@ -1061,8 +1059,8 @@ VkResult anv_FreeMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_device_memory *mem = (struct anv_device_memory *) _mem;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
    if (mem->bo.map)
       anv_gem_munmap(mem->bo.map, mem->bo.size);
@@ -1083,8 +1081,8 @@ VkResult anv_MapMemory(
     VkMemoryMapFlags                            flags,
     void**                                      ppData)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_device_memory *mem = (struct anv_device_memory *) _mem;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
    /* FIXME: Is this supposed to be thread safe? Since vkUnmapMemory() only
     * takes a VkDeviceMemory pointer, it seems like only one map of the memory
@@ -1104,7 +1102,7 @@ VkResult anv_UnmapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
-   struct anv_device_memory *mem = (struct anv_device_memory *) _mem;
+   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
    anv_gem_munmap(mem->map, mem->map_size);
 
@@ -1134,7 +1132,7 @@ VkResult anv_DestroyObject(
     VkObjectType                                objType,
     VkObject                                    _object)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_object *object = (struct anv_object *) _object;
 
    switch (objType) {
@@ -1241,9 +1239,9 @@ VkResult anv_BindObjectMemory(
     VkDeviceMemory                              _mem,
     VkDeviceSize                                memOffset)
 {
+   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
    struct anv_buffer *buffer;
    struct anv_image *image;
-   struct anv_device_memory *mem = (struct anv_device_memory *) _mem;
 
    switch (objType) {
    case VK_OBJECT_TYPE_BUFFER:
@@ -1303,7 +1301,7 @@ VkResult anv_CreateFence(
     const VkFenceCreateInfo*                    pCreateInfo,
     VkFence*                                    pFence)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_fence *fence;
    struct anv_batch batch;
    VkResult result;
@@ -1380,8 +1378,8 @@ VkResult anv_GetFenceStatus(
     VkDevice                                    _device,
     VkFence                                     _fence)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_fence *fence = (struct anv_fence *) _fence;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_fence, fence, _fence);
    int64_t t = 0;
    int ret;
 
@@ -1998,7 +1996,7 @@ VkResult anv_CreateDynamicViewportState(
     const VkDynamicVpStateCreateInfo*           pCreateInfo,
     VkDynamicVpState*                           pState)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_vp_state *state;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
@@ -2085,7 +2083,7 @@ VkResult anv_CreateDynamicRasterState(
     const VkDynamicRsStateCreateInfo*           pCreateInfo,
     VkDynamicRsState*                           pState)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_rs_state *state;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
@@ -2125,7 +2123,7 @@ VkResult anv_CreateDynamicColorBlendState(
     const VkDynamicCbStateCreateInfo*           pCreateInfo,
     VkDynamicCbState*                           pState)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_cb_state *state;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
@@ -2154,7 +2152,7 @@ VkResult anv_CreateDynamicDepthStencilState(
     const VkDynamicDsStateCreateInfo*           pCreateInfo,
     VkDynamicDsState*                           pState)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_ds_state *state;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
@@ -2274,7 +2272,7 @@ VkResult anv_CreateCommandBuffer(
     const VkCmdBufferCreateInfo*                pCreateInfo,
     VkCmdBuffer*                                pCmdBuffer)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
@@ -2399,7 +2397,7 @@ VkResult anv_BeginCommandBuffer(
     VkCmdBuffer                                 cmdBuffer,
     const VkCmdBufferBeginInfo*                 pBeginInfo)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
    cmd_buffer->current_pipeline = UINT32_MAX;
@@ -2506,7 +2504,7 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
 VkResult anv_EndCommandBuffer(
     VkCmdBuffer                                 cmdBuffer)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_device *device = cmd_buffer->device;
    struct anv_batch *batch = &cmd_buffer->batch;
 
@@ -2584,7 +2582,7 @@ VkResult anv_EndCommandBuffer(
 VkResult anv_ResetCommandBuffer(
     VkCmdBuffer                                 cmdBuffer)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    /* Delete all but the first batch bo */
    while (cmd_buffer->last_batch_bo->prev_batch_bo) {
@@ -2624,8 +2622,8 @@ void anv_CmdBindPipeline(
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipeline                                  _pipeline)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_pipeline *pipeline = (struct anv_pipeline *) _pipeline;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
    switch (pipelineBindPoint) {
    case VK_PIPELINE_BIND_POINT_COMPUTE:
@@ -2650,7 +2648,7 @@ void anv_CmdBindDynamicStateObject(
     VkStateBindPoint                            stateBindPoint,
     VkDynamicStateObject                        dynamicState)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    switch (stateBindPoint) {
    case VK_STATE_BIND_POINT_VIEWPORT:
@@ -2738,16 +2736,15 @@ void anv_CmdBindDescriptorSets(
     uint32_t                                    dynamicOffsetCount,
     const uint32_t*                             pDynamicOffsets)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_pipeline_layout *layout = (struct anv_pipeline_layout *) _layout;
-   struct anv_descriptor_set *set;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
    struct anv_descriptor_set_layout *set_layout;
 
    assert(firstSet + setCount < MAX_SETS);
 
    uint32_t dynamic_slot = 0;
    for (uint32_t i = 0; i < setCount; i++) {
-      set = (struct anv_descriptor_set *) pDescriptorSets[i];
+      ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
       cmd_buffer->descriptors[firstSet + i].set = set;
@@ -2770,8 +2767,8 @@ void anv_CmdBindIndexBuffer(
     VkDeviceSize                                offset,
     VkIndexType                                 indexType)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    static const uint32_t vk_to_gen_index_type[] = {
       [VK_INDEX_TYPE_UINT16]                    = INDEX_WORD,
@@ -2800,7 +2797,7 @@ void anv_CmdBindVertexBuffers(
     const VkBuffer*                             pBuffers,
     const VkDeviceSize*                         pOffsets)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_vertex_binding *vb = cmd_buffer->vertex_bindings;
 
    /* We have to defer setting up vertex buffer since we need the buffer
@@ -3267,7 +3264,7 @@ void anv_CmdDraw(
     uint32_t                                    firstInstance,
     uint32_t                                    instanceCount)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    anv_cmd_buffer_flush_state(cmd_buffer);
 
@@ -3288,7 +3285,7 @@ void anv_CmdDrawIndexed(
     uint32_t                                    firstInstance,
     uint32_t                                    instanceCount)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    anv_cmd_buffer_flush_state(cmd_buffer);
 
@@ -3333,8 +3330,8 @@ void anv_CmdDrawIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
@@ -3358,8 +3355,8 @@ void anv_CmdDrawIndexedIndirect(
     uint32_t                                    count,
     uint32_t                                    stride)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
@@ -3382,7 +3379,7 @@ void anv_CmdDispatch(
     uint32_t                                    y,
     uint32_t                                    z)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
@@ -3411,10 +3408,10 @@ void anv_CmdDispatchIndirect(
     VkBuffer                                    _buffer,
     VkDeviceSize                                offset)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
    struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
-   struct anv_buffer *buffer = (struct anv_buffer *) _buffer;
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
 
@@ -3471,7 +3468,7 @@ void anv_CmdPipelineBarrier(
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    uint32_t b, *dw;
 
    struct GEN8_PIPE_CONTROL cmd = {
@@ -3613,7 +3610,7 @@ VkResult anv_CreateFramebuffer(
     const VkFramebufferCreateInfo*              pCreateInfo,
     VkFramebuffer*                              pFramebuffer)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_framebuffer *framebuffer;
 
    static const struct anv_depth_stencil_view null_view =
@@ -3677,7 +3674,7 @@ VkResult anv_CreateRenderPass(
     const VkRenderPassCreateInfo*               pCreateInfo,
     VkRenderPass*                               pRenderPass)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_render_pass *pass;
    size_t size;
 
@@ -3773,10 +3770,9 @@ void anv_CmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
     const VkRenderPassBegin*                    pRenderPassBegin)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_render_pass *pass = (struct anv_render_pass *) pRenderPassBegin->renderPass;
-   struct anv_framebuffer *framebuffer =
-      (struct anv_framebuffer *) pRenderPassBegin->framebuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
+   ANV_FROM_HANDLE(anv_framebuffer, framebuffer, pRenderPassBegin->framebuffer);
 
    assert(pRenderPassBegin->contents == VK_RENDER_PASS_CONTENTS_INLINE);
 
@@ -3802,12 +3798,13 @@ void anv_CmdBeginRenderPass(
 void anv_CmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer)
 {
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
    /* Emit a flushing pipe control at the end of a pass.  This is kind of a
     * hack but it ensures that render targets always actually get written.
     * Eventually, we should do flushing based on image format transitions
     * or something of that nature.
     */
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
    anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
                   .PostSyncOperation = NoWrite,
                   .RenderTargetCacheFlushEnable = true,
