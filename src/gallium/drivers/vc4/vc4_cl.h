@@ -49,6 +49,11 @@ uint32_t vc4_gem_hindex(struct vc4_context *vc4, struct vc4_bo *bo);
 struct PACKED unaligned_16 { uint16_t x; };
 struct PACKED unaligned_32 { uint32_t x; };
 
+static inline uint32_t cl_offset(struct vc4_cl *cl)
+{
+        return (char *)cl->next - (char *)cl->base;
+}
+
 static inline void
 put_unaligned_32(void *ptr, uint32_t val)
 {
@@ -66,7 +71,7 @@ put_unaligned_16(void *ptr, uint16_t val)
 static inline void
 cl_u8(struct vc4_cl *cl, uint8_t n)
 {
-        assert((cl->next - cl->base) + 1 <= cl->size);
+        assert(cl_offset(cl) + 1 <= cl->size);
 
         *(uint8_t *)cl->next = n;
         cl->next++;
@@ -75,7 +80,7 @@ cl_u8(struct vc4_cl *cl, uint8_t n)
 static inline void
 cl_u16(struct vc4_cl *cl, uint16_t n)
 {
-        assert((cl->next - cl->base) + 2 <= cl->size);
+        assert(cl_offset(cl) + 2 <= cl->size);
 
         put_unaligned_16(cl->next, n);
         cl->next += 2;
@@ -84,7 +89,7 @@ cl_u16(struct vc4_cl *cl, uint16_t n)
 static inline void
 cl_u32(struct vc4_cl *cl, uint32_t n)
 {
-        assert((cl->next - cl->base) + 4 <= cl->size);
+        assert(cl_offset(cl) + 4 <= cl->size);
 
         put_unaligned_32(cl->next, n);
         cl->next += 4;
@@ -93,7 +98,7 @@ cl_u32(struct vc4_cl *cl, uint32_t n)
 static inline void
 cl_aligned_u32(struct vc4_cl *cl, uint32_t n)
 {
-        assert((cl->next - cl->base) + 4 <= cl->size);
+        assert(cl_offset(cl) + 4 <= cl->size);
 
         *(uint32_t *)cl->next = n;
         cl->next += 4;
@@ -102,7 +107,7 @@ cl_aligned_u32(struct vc4_cl *cl, uint32_t n)
 static inline void
 cl_ptr(struct vc4_cl *cl, void *ptr)
 {
-        assert((cl->next - cl->base) + sizeof(void *) <= cl->size);
+        assert(cl_offset(cl) + sizeof(void *) <= cl->size);
 
         *(void **)cl->next = ptr;
         cl->next += sizeof(void *);

@@ -128,8 +128,7 @@ vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo)
          * they match.
          */
         struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
-        for (int i = 0; i < (vc4->bo_handles.next -
-                             vc4->bo_handles.base) / 4; i++) {
+        for (int i = 0; i < cl_offset(&vc4->bo_handles) / 4; i++) {
                 if (referenced_bos[i] == bo) {
                         return true;
                 }

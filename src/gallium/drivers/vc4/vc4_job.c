@@ -44,8 +44,7 @@ void
 vc4_job_reset(struct vc4_context *vc4)
 {
         struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
-        for (int i = 0; i < (vc4->bo_handles.next -
-                             vc4->bo_handles.base) / 4; i++) {
+        for (int i = 0; i < cl_offset(&vc4->bo_handles) / 4; i++) {
                 vc4_bo_unreference(&referenced_bos[i]);
         }
         vc4_reset_cl(&vc4->bcl);
@@ -145,7 +144,7 @@ vc4_job_submit(struct vc4_context *vc4)
 {
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "BCL:\n");
-                vc4_dump_cl(vc4->bcl.base, vc4->bcl.next - vc4->bcl.base, false);
+                vc4_dump_cl(vc4->bcl.base, cl_offset(&vc4->bcl), false);
         }
 
         struct drm_vc4_submit_cl submit;
@@ -164,15 +163,14 @@ vc4_job_submit(struct vc4_context *vc4)
                                      vc4->zs_write, true, true);
 
         submit.bo_handles = (uintptr_t)vc4->bo_handles.base;
-        submit.bo_handle_count = (vc4->bo_handles.next -
-                                  vc4->bo_handles.base) / 4;
+        submit.bo_handle_count = cl_offset(&vc4->bo_handles) / 4;
         submit.bin_cl = (uintptr_t)vc4->bcl.base;
-        submit.bin_cl_size = vc4->bcl.next - vc4->bcl.base;
+        submit.bin_cl_size = cl_offset(&vc4->bcl);
         submit.shader_rec = (uintptr_t)vc4->shader_rec.base;
-        submit.shader_rec_size = vc4->shader_rec.next - vc4->shader_rec.base;
+        submit.shader_rec_size = cl_offset(&vc4->shader_rec);
         submit.shader_rec_count = vc4->shader_rec_count;
         submit.uniforms = (uintptr_t)vc4->uniforms.base;
-        submit.uniforms_size = vc4->uniforms.next - vc4->uniforms.base;
+        submit.uniforms_size = cl_offset(&vc4->uniforms);
 
         assert(vc4->draw_min_x != ~0 && vc4->draw_min_y != ~0);
         submit.min_x_tile = vc4->draw_min_x / 64;
