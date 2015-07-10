@@ -208,7 +208,7 @@ anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
                  VkImage *pImage)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
    const VkExtent3D *restrict extent = &pCreateInfo->extent;
    struct anv_image *image = NULL;
@@ -283,7 +283,7 @@ anv_image_create(VkDevice _device,
          goto fail;
    }
 
-   *pImage = (VkImage) image;
+   *pImage = anv_image_to_handle(image);
 
    return VK_SUCCESS;
 
@@ -336,8 +336,8 @@ anv_image_view_init(struct anv_surface_view *view,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer)
 {
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
    struct anv_surface *surface;
 
    const struct anv_format *format_info =
@@ -454,7 +454,7 @@ anv_validate_CreateImageView(VkDevice _device,
                              const VkImageViewCreateInfo *pCreateInfo,
                              VkImageView *pView)
 {
-   const struct anv_image *image;
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *subresource;
    const struct anv_image_view_info *view_info;
    const struct anv_format *view_format_info;
@@ -464,10 +464,6 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(pCreateInfo);
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
    subresource = &pCreateInfo->subresourceRange;
-
-   /* Validate image pointer before dereferencing it. */
-   assert(pCreateInfo->image != 0);
-   image = (struct anv_image *) pCreateInfo->image;
 
    /* Validate viewType is in range before using it. */
    assert(pCreateInfo->viewType >= VK_IMAGE_VIEW_TYPE_BEGIN_RANGE);
@@ -538,7 +534,7 @@ anv_CreateImageView(VkDevice _device,
                     const VkImageViewCreateInfo *pCreateInfo,
                     VkImageView *pView)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_surface_view *view;
 
    view = anv_device_alloc(device, sizeof(*view), 8,
@@ -561,7 +557,7 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
                                const VkColorAttachmentViewCreateInfo* pCreateInfo,
                                struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_surface *surface = &image->primary_surface;
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
@@ -656,7 +652,7 @@ anv_CreateColorAttachmentView(VkDevice _device,
                               const VkColorAttachmentViewCreateInfo *pCreateInfo,
                               VkColorAttachmentView *pView)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_surface_view *view;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
@@ -680,9 +676,9 @@ anv_CreateDepthStencilView(VkDevice _device,
                            const VkDepthStencilViewCreateInfo *pCreateInfo,
                            VkDepthStencilView *pView)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_depth_stencil_view *view;
-   struct anv_image *image = (struct anv_image *) pCreateInfo->image;
    struct anv_surface *depth_surface = &image->primary_surface;
    struct anv_surface *stencil_surface = &image->stencil_surface;
    const struct anv_format *format =
@@ -711,7 +707,7 @@ anv_CreateDepthStencilView(VkDevice _device,
    view->stencil_offset = image->offset + stencil_surface->offset;
    view->stencil_qpitch = 0; /* FINISHME: QPitch */
 
-   *pView = (VkDepthStencilView) view;
+   *pView = anv_depth_stencil_view_to_handle(view);
 
    return VK_SUCCESS;
 }
