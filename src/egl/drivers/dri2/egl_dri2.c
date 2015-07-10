@@ -1448,53 +1448,6 @@ dri2_create_image_khr_renderbuffer(_EGLDisplay *disp, _EGLContext *ctx,
    return dri2_create_image_from_dri(disp, dri_image);
 }
 
-#ifdef HAVE_LIBDRM
-static _EGLImage *
-dri2_create_image_mesa_drm_buffer(_EGLDisplay *disp, _EGLContext *ctx,
-				  EGLClientBuffer buffer, const EGLint *attr_list)
-{
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   EGLint format, name, pitch, err;
-   _EGLImageAttribs attrs;
-   __DRIimage *dri_image;
-
-   name = (EGLint) (uintptr_t) buffer;
-
-   err = _eglParseImageAttribList(&attrs, disp, attr_list);
-   if (err != EGL_SUCCESS)
-      return NULL;
-
-   if (attrs.Width <= 0 || attrs.Height <= 0 ||
-       attrs.DRMBufferStrideMESA <= 0) {
-      _eglError(EGL_BAD_PARAMETER,
-		"bad width, height or stride");
-      return NULL;
-   }
-
-   switch (attrs.DRMBufferFormatMESA) {
-   case EGL_DRM_BUFFER_FORMAT_ARGB32_MESA:
-      format = __DRI_IMAGE_FORMAT_ARGB8888;
-      pitch = attrs.DRMBufferStrideMESA;
-      break;
-   default:
-      _eglError(EGL_BAD_PARAMETER,
-		"dri2_create_image_khr: unsupported pixmap depth");
-      return NULL;
-   }
-
-   dri_image =
-      dri2_dpy->image->createImageFromName(dri2_dpy->dri_screen,
-					   attrs.Width,
-					   attrs.Height,
-					   format,
-					   name,
-					   pitch,
-					   NULL);
-
-   return dri2_create_image_from_dri(disp, dri_image);
-}
-#endif
-
 #ifdef HAVE_WAYLAND_PLATFORM
 
 /* This structure describes how a wl_buffer maps to one or more
@@ -1691,6 +1644,51 @@ dri2_create_wayland_buffer_from_image(_EGLDriver *drv, _EGLDisplay *dpy,
 }
 
 #ifdef HAVE_LIBDRM
+static _EGLImage *
+dri2_create_image_mesa_drm_buffer(_EGLDisplay *disp, _EGLContext *ctx,
+				  EGLClientBuffer buffer, const EGLint *attr_list)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   EGLint format, name, pitch, err;
+   _EGLImageAttribs attrs;
+   __DRIimage *dri_image;
+
+   name = (EGLint) (uintptr_t) buffer;
+
+   err = _eglParseImageAttribList(&attrs, disp, attr_list);
+   if (err != EGL_SUCCESS)
+      return NULL;
+
+   if (attrs.Width <= 0 || attrs.Height <= 0 ||
+       attrs.DRMBufferStrideMESA <= 0) {
+      _eglError(EGL_BAD_PARAMETER,
+		"bad width, height or stride");
+      return NULL;
+   }
+
+   switch (attrs.DRMBufferFormatMESA) {
+   case EGL_DRM_BUFFER_FORMAT_ARGB32_MESA:
+      format = __DRI_IMAGE_FORMAT_ARGB8888;
+      pitch = attrs.DRMBufferStrideMESA;
+      break;
+   default:
+      _eglError(EGL_BAD_PARAMETER,
+		"dri2_create_image_khr: unsupported pixmap depth");
+      return NULL;
+   }
+
+   dri_image =
+      dri2_dpy->image->createImageFromName(dri2_dpy->dri_screen,
+					   attrs.Width,
+					   attrs.Height,
+					   format,
+					   name,
+					   pitch,
+					   NULL);
+
+   return dri2_create_image_from_dri(disp, dri_image);
+}
+
 static EGLBoolean
 dri2_check_dma_buf_attribs(const _EGLImageAttribs *attrs)
 {
@@ -1923,67 +1921,6 @@ dri2_create_image_dma_buf(_EGLDisplay *disp, _EGLContext *ctx,
 
    return res;
 }
-#endif
-
-_EGLImage *
-dri2_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
-		      _EGLContext *ctx, EGLenum target,
-		      EGLClientBuffer buffer, const EGLint *attr_list)
-{
-   (void) drv;
-
-   switch (target) {
-   case EGL_GL_TEXTURE_2D_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_X_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_X_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Y_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Z_KHR:
-   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_KHR:
-      return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
-   case EGL_GL_TEXTURE_3D_KHR:
-      if (disp->Extensions.KHR_gl_texture_3D_image) {
-         return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
-      }
-      else {
-         _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
-         return EGL_NO_IMAGE_KHR;
-      }
-   case EGL_GL_RENDERBUFFER_KHR:
-      return dri2_create_image_khr_renderbuffer(disp, ctx, buffer, attr_list);
-#ifdef HAVE_LIBDRM
-   case EGL_DRM_BUFFER_MESA:
-      return dri2_create_image_mesa_drm_buffer(disp, ctx, buffer, attr_list);
-#endif
-#ifdef HAVE_WAYLAND_PLATFORM
-   case EGL_WAYLAND_BUFFER_WL:
-      return dri2_create_image_wayland_wl_buffer(disp, ctx, buffer, attr_list);
-#endif
-#ifdef HAVE_LIBDRM
-   case EGL_LINUX_DMA_BUF_EXT:
-      return dri2_create_image_dma_buf(disp, ctx, buffer, attr_list);
-#endif
-   default:
-      _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
-      return EGL_NO_IMAGE_KHR;
-   }
-}
-
-static EGLBoolean
-dri2_destroy_image_khr(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *image)
-{
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_image *dri2_img = dri2_egl_image(image);
-
-   (void) drv;
-
-   dri2_dpy->image->destroyImage(dri2_img->dri_image);
-   free(dri2_img);
-
-   return EGL_TRUE;
-}
-
-#ifdef HAVE_LIBDRM
 static _EGLImage *
 dri2_create_drm_image_mesa(_EGLDriver *drv, _EGLDisplay *disp,
 			   const EGLint *attr_list)
@@ -2143,7 +2080,64 @@ dri2_export_dma_buf_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *im
 
    return EGL_TRUE;
 }
+
 #endif
+
+_EGLImage *
+dri2_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
+		      _EGLContext *ctx, EGLenum target,
+		      EGLClientBuffer buffer, const EGLint *attr_list)
+{
+   (void) drv;
+
+   switch (target) {
+   case EGL_GL_TEXTURE_2D_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_X_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_X_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Y_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Y_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_POSITIVE_Z_KHR:
+   case EGL_GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_KHR:
+      return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
+   case EGL_GL_TEXTURE_3D_KHR:
+      if (disp->Extensions.KHR_gl_texture_3D_image) {
+         return dri2_create_image_khr_texture(disp, ctx, target, buffer, attr_list);
+      }
+      else {
+         _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
+         return EGL_NO_IMAGE_KHR;
+      }
+   case EGL_GL_RENDERBUFFER_KHR:
+      return dri2_create_image_khr_renderbuffer(disp, ctx, buffer, attr_list);
+#ifdef HAVE_LIBDRM
+   case EGL_DRM_BUFFER_MESA:
+      return dri2_create_image_mesa_drm_buffer(disp, ctx, buffer, attr_list);
+   case EGL_LINUX_DMA_BUF_EXT:
+      return dri2_create_image_dma_buf(disp, ctx, buffer, attr_list);
+#endif
+#ifdef HAVE_WAYLAND_PLATFORM
+   case EGL_WAYLAND_BUFFER_WL:
+      return dri2_create_image_wayland_wl_buffer(disp, ctx, buffer, attr_list);
+#endif
+   default:
+      _eglError(EGL_BAD_PARAMETER, "dri2_create_image_khr");
+      return EGL_NO_IMAGE_KHR;
+   }
+}
+
+static EGLBoolean
+dri2_destroy_image_khr(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *image)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_image *dri2_img = dri2_egl_image(image);
+
+   (void) drv;
+
+   dri2_dpy->image->destroyImage(dri2_img->dri_image);
+   free(dri2_img);
+
+   return EGL_TRUE;
+}
 
 #ifdef HAVE_WAYLAND_PLATFORM
 
