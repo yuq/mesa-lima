@@ -981,6 +981,7 @@ ANV_DEFINE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_CASTS(anv_depth_stencil_view, VkDepthStencilView)
 ANV_DEFINE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_CASTS(anv_render_pass, VkRenderPass)
+ANV_DEFINE_CASTS(anv_query_pool, VkQueryPool)
 
 #define ANV_FROM_HANDLE(__anv_type, __name, __handle) \
    struct __anv_type *__name = __anv_type ## _from_handle(__handle)

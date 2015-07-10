@@ -61,13 +61,13 @@ VkResult anv_CreateQueryPool(
     const VkQueryPoolCreateInfo*                pCreateInfo,
     VkQueryPool*                                pQueryPool)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_query_pool *pool;
    VkResult result;
    size_t size;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
-   
+
    switch (pCreateInfo->queryType) {
    case VK_QUERY_TYPE_OCCLUSION:
       break;
@@ -92,7 +92,7 @@ VkResult anv_CreateQueryPool(
 
    pool->bo.map = anv_gem_mmap(device, pool->bo.gem_handle, 0, size);
 
-   *pQueryPool = (VkQueryPool) pool;
+   *pQueryPool = anv_query_pool_to_handle(pool);
 
    return VK_SUCCESS;
 
@@ -111,8 +111,8 @@ VkResult anv_GetQueryPoolResults(
     void*                                       pData,
     VkQueryResultFlags                          flags)
 {
-   struct anv_device *device = (struct anv_device *) _device;
-   struct anv_query_pool *pool = (struct anv_query_pool *) queryPool;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
    struct anv_query_pool_slot *slot = pool->bo.map;
    int64_t timeout = INT64_MAX;
    uint32_t *dst32 = pData;
@@ -172,8 +172,8 @@ void anv_CmdBeginQuery(
     uint32_t                                    slot,
     VkQueryControlFlags                         flags)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_query_pool *pool = (struct anv_query_pool *) queryPool;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
 
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
@@ -192,8 +192,8 @@ void anv_CmdEndQuery(
     VkQueryPool                                 queryPool,
     uint32_t                                    slot)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_query_pool *pool = (struct anv_query_pool *) queryPool;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
 
    switch (pool->type) {
    case VK_QUERY_TYPE_OCCLUSION:
@@ -224,8 +224,8 @@ void anv_CmdWriteTimestamp(
     VkBuffer                                    destBuffer,
     VkDeviceSize                                destOffset)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_buffer *buffer = (struct anv_buffer *) destBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, buffer, destBuffer);
    struct anv_bo *bo = buffer->bo;
 
    switch (timestampType) {
@@ -305,9 +305,9 @@ void anv_CmdCopyQueryPoolResults(
     VkDeviceSize                                destStride,
     VkQueryResultFlags                          flags)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) cmdBuffer;
-   struct anv_query_pool *pool = (struct anv_query_pool *) queryPool;
-   struct anv_buffer *buffer = (struct anv_buffer *) destBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
+   ANV_FROM_HANDLE(anv_buffer, buffer, destBuffer);
    uint32_t slot_offset, dst_offset;
 
    if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
