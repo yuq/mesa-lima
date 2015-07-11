@@ -28,14 +28,21 @@ extern "C" {
 ** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 */
 
+/*
+** This header is generated from the Khronos Vulkan XML API Registry.
+**
+** Generated on date 20150620 
+*/
 
+
+#define VK_VERSION_1_0 1
 #include "vk_platform.h"
 
 #define VK_MAKE_VERSION(major, minor, patch) \
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 90, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 130, 0)
 
 #if defined (__cplusplus) && (VK_UINTPTRLEAST64_MAX == UINTPTR_MAX)
     #define VK_TYPE_SAFE_COMPATIBLE_HANDLES 1
