@@ -339,7 +339,7 @@ nvc0_check_program_ucps(struct nvc0_context *nvc0,
       nvc0_vertprog_validate(nvc0);
    else
    if (likely(vp == nvc0->gmtyprog))
-      nvc0_vertprog_validate(nvc0);
+      nvc0_gmtyprog_validate(nvc0);
    else
       nvc0_tevlprog_validate(nvc0);
 }
