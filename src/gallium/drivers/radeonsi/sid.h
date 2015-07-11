@@ -207,6 +207,324 @@
  */
 
 
+#define R_000E4C_SRBM_STATUS2                                           0x000E4C
+#define   S_000E4C_SDMA_RQ_PENDING(x)                                 (((x) & 0x1) << 0)
+#define   G_000E4C_SDMA_RQ_PENDING(x)                                 (((x) >> 0) & 0x1)
+#define   C_000E4C_SDMA_RQ_PENDING                                    0xFFFFFFFE
+#define   S_000E4C_TST_RQ_PENDING(x)                                  (((x) & 0x1) << 1)
+#define   G_000E4C_TST_RQ_PENDING(x)                                  (((x) >> 1) & 0x1)
+#define   C_000E4C_TST_RQ_PENDING                                     0xFFFFFFFD
+#define   S_000E4C_SDMA1_RQ_PENDING(x)                                (((x) & 0x1) << 2)
+#define   G_000E4C_SDMA1_RQ_PENDING(x)                                (((x) >> 2) & 0x1)
+#define   C_000E4C_SDMA1_RQ_PENDING                                   0xFFFFFFFB
+#define   S_000E4C_VCE0_RQ_PENDING(x)                                 (((x) & 0x1) << 3)
+#define   G_000E4C_VCE0_RQ_PENDING(x)                                 (((x) >> 3) & 0x1)
+#define   C_000E4C_VCE0_RQ_PENDING                                    0xFFFFFFF7
+#define   S_000E4C_VP8_BUSY(x)                                        (((x) & 0x1) << 4)
+#define   G_000E4C_VP8_BUSY(x)                                        (((x) >> 4) & 0x1)
+#define   C_000E4C_VP8_BUSY                                           0xFFFFFFEF
+#define   S_000E4C_SDMA_BUSY(x)                                       (((x) & 0x1) << 5)
+#define   G_000E4C_SDMA_BUSY(x)                                       (((x) >> 5) & 0x1)
+#define   C_000E4C_SDMA_BUSY                                          0xFFFFFFDF
+#define   S_000E4C_SDMA1_BUSY(x)                                      (((x) & 0x1) << 6)
+#define   G_000E4C_SDMA1_BUSY(x)                                      (((x) >> 6) & 0x1)
+#define   C_000E4C_SDMA1_BUSY                                         0xFFFFFFBF
+#define   S_000E4C_VCE0_BUSY(x)                                       (((x) & 0x1) << 7)
+#define   G_000E4C_VCE0_BUSY(x)                                       (((x) >> 7) & 0x1)
+#define   C_000E4C_VCE0_BUSY                                          0xFFFFFF7F
+#define   S_000E4C_XDMA_BUSY(x)                                       (((x) & 0x1) << 8)
+#define   G_000E4C_XDMA_BUSY(x)                                       (((x) >> 8) & 0x1)
+#define   C_000E4C_XDMA_BUSY                                          0xFFFFFEFF
+#define   S_000E4C_CHUB_BUSY(x)                                       (((x) & 0x1) << 9)
+#define   G_000E4C_CHUB_BUSY(x)                                       (((x) >> 9) & 0x1)
+#define   C_000E4C_CHUB_BUSY                                          0xFFFFFDFF
+#define   S_000E4C_SDMA2_BUSY(x)                                      (((x) & 0x1) << 10)
+#define   G_000E4C_SDMA2_BUSY(x)                                      (((x) >> 10) & 0x1)
+#define   C_000E4C_SDMA2_BUSY                                         0xFFFFFBFF
+#define   S_000E4C_SDMA3_BUSY(x)                                      (((x) & 0x1) << 11)
+#define   G_000E4C_SDMA3_BUSY(x)                                      (((x) >> 11) & 0x1)
+#define   C_000E4C_SDMA3_BUSY                                         0xFFFFF7FF
+#define   S_000E4C_SAMSCP_BUSY(x)                                     (((x) & 0x1) << 12)
+#define   G_000E4C_SAMSCP_BUSY(x)                                     (((x) >> 12) & 0x1)
+#define   C_000E4C_SAMSCP_BUSY                                        0xFFFFEFFF
+#define   S_000E4C_ISP_BUSY(x)                                        (((x) & 0x1) << 13)
+#define   G_000E4C_ISP_BUSY(x)                                        (((x) >> 13) & 0x1)
+#define   C_000E4C_ISP_BUSY                                           0xFFFFDFFF
+#define   S_000E4C_VCE1_BUSY(x)                                       (((x) & 0x1) << 14)
+#define   G_000E4C_VCE1_BUSY(x)                                       (((x) >> 14) & 0x1)
+#define   C_000E4C_VCE1_BUSY                                          0xFFFFBFFF
+#define   S_000E4C_ODE_BUSY(x)                                        (((x) & 0x1) << 15)
+#define   G_000E4C_ODE_BUSY(x)                                        (((x) >> 15) & 0x1)
+#define   C_000E4C_ODE_BUSY                                           0xFFFF7FFF
+#define   S_000E4C_SDMA2_RQ_PENDING(x)                                (((x) & 0x1) << 16)
+#define   G_000E4C_SDMA2_RQ_PENDING(x)                                (((x) >> 16) & 0x1)
+#define   C_000E4C_SDMA2_RQ_PENDING                                   0xFFFEFFFF
+#define   S_000E4C_SDMA3_RQ_PENDING(x)                                (((x) & 0x1) << 17)
+#define   G_000E4C_SDMA3_RQ_PENDING(x)                                (((x) >> 17) & 0x1)
+#define   C_000E4C_SDMA3_RQ_PENDING                                   0xFFFDFFFF
+#define   S_000E4C_SAMSCP_RQ_PENDING(x)                               (((x) & 0x1) << 18)
+#define   G_000E4C_SAMSCP_RQ_PENDING(x)                               (((x) >> 18) & 0x1)
+#define   C_000E4C_SAMSCP_RQ_PENDING                                  0xFFFBFFFF
+#define   S_000E4C_ISP_RQ_PENDING(x)                                  (((x) & 0x1) << 19)
+#define   G_000E4C_ISP_RQ_PENDING(x)                                  (((x) >> 19) & 0x1)
+#define   C_000E4C_ISP_RQ_PENDING                                     0xFFF7FFFF
+#define   S_000E4C_VCE1_RQ_PENDING(x)                                 (((x) & 0x1) << 20)
+#define   G_000E4C_VCE1_RQ_PENDING(x)                                 (((x) >> 20) & 0x1)
+#define   C_000E4C_VCE1_RQ_PENDING                                    0xFFEFFFFF
+#define R_000E50_SRBM_STATUS                                            0x000E50
+#define   S_000E50_UVD_RQ_PENDING(x)                                  (((x) & 0x1) << 1)
+#define   G_000E50_UVD_RQ_PENDING(x)                                  (((x) >> 1) & 0x1)
+#define   C_000E50_UVD_RQ_PENDING                                     0xFFFFFFFD
+#define   S_000E50_SAMMSP_RQ_PENDING(x)                               (((x) & 0x1) << 2)
+#define   G_000E50_SAMMSP_RQ_PENDING(x)                               (((x) >> 2) & 0x1)
+#define   C_000E50_SAMMSP_RQ_PENDING                                  0xFFFFFFFB
+#define   S_000E50_ACP_RQ_PENDING(x)                                  (((x) & 0x1) << 3)
+#define   G_000E50_ACP_RQ_PENDING(x)                                  (((x) >> 3) & 0x1)
+#define   C_000E50_ACP_RQ_PENDING                                     0xFFFFFFF7
+#define   S_000E50_SMU_RQ_PENDING(x)                                  (((x) & 0x1) << 4)
+#define   G_000E50_SMU_RQ_PENDING(x)                                  (((x) >> 4) & 0x1)
+#define   C_000E50_SMU_RQ_PENDING                                     0xFFFFFFEF
+#define   S_000E50_GRBM_RQ_PENDING(x)                                 (((x) & 0x1) << 5)
+#define   G_000E50_GRBM_RQ_PENDING(x)                                 (((x) >> 5) & 0x1)
+#define   C_000E50_GRBM_RQ_PENDING                                    0xFFFFFFDF
+#define   S_000E50_HI_RQ_PENDING(x)                                   (((x) & 0x1) << 6)
+#define   G_000E50_HI_RQ_PENDING(x)                                   (((x) >> 6) & 0x1)
+#define   C_000E50_HI_RQ_PENDING                                      0xFFFFFFBF
+#define   S_000E50_VMC_BUSY(x)                                        (((x) & 0x1) << 8)
+#define   G_000E50_VMC_BUSY(x)                                        (((x) >> 8) & 0x1)
+#define   C_000E50_VMC_BUSY                                           0xFFFFFEFF
+#define   S_000E50_MCB_BUSY(x)                                        (((x) & 0x1) << 9)
+#define   G_000E50_MCB_BUSY(x)                                        (((x) >> 9) & 0x1)
+#define   C_000E50_MCB_BUSY                                           0xFFFFFDFF
+#define   S_000E50_MCB_NON_DISPLAY_BUSY(x)                            (((x) & 0x1) << 10)
+#define   G_000E50_MCB_NON_DISPLAY_BUSY(x)                            (((x) >> 10) & 0x1)
+#define   C_000E50_MCB_NON_DISPLAY_BUSY                               0xFFFFFBFF
+#define   S_000E50_MCC_BUSY(x)                                        (((x) & 0x1) << 11)
+#define   G_000E50_MCC_BUSY(x)                                        (((x) >> 11) & 0x1)
+#define   C_000E50_MCC_BUSY                                           0xFFFFF7FF
+#define   S_000E50_MCD_BUSY(x)                                        (((x) & 0x1) << 12)
+#define   G_000E50_MCD_BUSY(x)                                        (((x) >> 12) & 0x1)
+#define   C_000E50_MCD_BUSY                                           0xFFFFEFFF
+#define   S_000E50_VMC1_BUSY(x)                                       (((x) & 0x1) << 13)
+#define   G_000E50_VMC1_BUSY(x)                                       (((x) >> 13) & 0x1)
+#define   C_000E50_VMC1_BUSY                                          0xFFFFDFFF
+#define   S_000E50_SEM_BUSY(x)                                        (((x) & 0x1) << 14)
+#define   G_000E50_SEM_BUSY(x)                                        (((x) >> 14) & 0x1)
+#define   C_000E50_SEM_BUSY                                           0xFFFFBFFF
+#define   S_000E50_ACP_BUSY(x)                                        (((x) & 0x1) << 16)
+#define   G_000E50_ACP_BUSY(x)                                        (((x) >> 16) & 0x1)
+#define   C_000E50_ACP_BUSY                                           0xFFFEFFFF
+#define   S_000E50_IH_BUSY(x)                                         (((x) & 0x1) << 17)
+#define   G_000E50_IH_BUSY(x)                                         (((x) >> 17) & 0x1)
+#define   C_000E50_IH_BUSY                                            0xFFFDFFFF
+#define   S_000E50_UVD_BUSY(x)                                        (((x) & 0x1) << 19)
+#define   G_000E50_UVD_BUSY(x)                                        (((x) >> 19) & 0x1)
+#define   C_000E50_UVD_BUSY                                           0xFFF7FFFF
+#define   S_000E50_SAMMSP_BUSY(x)                                     (((x) & 0x1) << 20)
+#define   G_000E50_SAMMSP_BUSY(x)                                     (((x) >> 20) & 0x1)
+#define   C_000E50_SAMMSP_BUSY                                        0xFFEFFFFF
+#define   S_000E50_GCATCL2_BUSY(x)                                    (((x) & 0x1) << 21)
+#define   G_000E50_GCATCL2_BUSY(x)                                    (((x) >> 21) & 0x1)
+#define   C_000E50_GCATCL2_BUSY                                       0xFFDFFFFF
+#define   S_000E50_OSATCL2_BUSY(x)                                    (((x) & 0x1) << 22)
+#define   G_000E50_OSATCL2_BUSY(x)                                    (((x) >> 22) & 0x1)
+#define   C_000E50_OSATCL2_BUSY                                       0xFFBFFFFF
+#define   S_000E50_BIF_BUSY(x)                                        (((x) & 0x1) << 29)
+#define   G_000E50_BIF_BUSY(x)                                        (((x) >> 29) & 0x1)
+#define   C_000E50_BIF_BUSY                                           0xDFFFFFFF
+#define R_000E54_SRBM_STATUS3                                           0x000E54
+#define   S_000E54_MCC0_BUSY(x)                                       (((x) & 0x1) << 0)
+#define   G_000E54_MCC0_BUSY(x)                                       (((x) >> 0) & 0x1)
+#define   C_000E54_MCC0_BUSY                                          0xFFFFFFFE
+#define   S_000E54_MCC1_BUSY(x)                                       (((x) & 0x1) << 1)
+#define   G_000E54_MCC1_BUSY(x)                                       (((x) >> 1) & 0x1)
+#define   C_000E54_MCC1_BUSY                                          0xFFFFFFFD
+#define   S_000E54_MCC2_BUSY(x)                                       (((x) & 0x1) << 2)
+#define   G_000E54_MCC2_BUSY(x)                                       (((x) >> 2) & 0x1)
+#define   C_000E54_MCC2_BUSY                                          0xFFFFFFFB
+#define   S_000E54_MCC3_BUSY(x)                                       (((x) & 0x1) << 3)
+#define   G_000E54_MCC3_BUSY(x)                                       (((x) >> 3) & 0x1)
+#define   C_000E54_MCC3_BUSY                                          0xFFFFFFF7
+#define   S_000E54_MCC4_BUSY(x)                                       (((x) & 0x1) << 4)
+#define   G_000E54_MCC4_BUSY(x)                                       (((x) >> 4) & 0x1)
+#define   C_000E54_MCC4_BUSY                                          0xFFFFFFEF
+#define   S_000E54_MCC5_BUSY(x)                                       (((x) & 0x1) << 5)
+#define   G_000E54_MCC5_BUSY(x)                                       (((x) >> 5) & 0x1)
+#define   C_000E54_MCC5_BUSY                                          0xFFFFFFDF
+#define   S_000E54_MCC6_BUSY(x)                                       (((x) & 0x1) << 6)
+#define   G_000E54_MCC6_BUSY(x)                                       (((x) >> 6) & 0x1)
+#define   C_000E54_MCC6_BUSY                                          0xFFFFFFBF
+#define   S_000E54_MCC7_BUSY(x)                                       (((x) & 0x1) << 7)
+#define   G_000E54_MCC7_BUSY(x)                                       (((x) >> 7) & 0x1)
+#define   C_000E54_MCC7_BUSY                                          0xFFFFFF7F
+#define   S_000E54_MCD0_BUSY(x)                                       (((x) & 0x1) << 8)
+#define   G_000E54_MCD0_BUSY(x)                                       (((x) >> 8) & 0x1)
+#define   C_000E54_MCD0_BUSY                                          0xFFFFFEFF
+#define   S_000E54_MCD1_BUSY(x)                                       (((x) & 0x1) << 9)
+#define   G_000E54_MCD1_BUSY(x)                                       (((x) >> 9) & 0x1)
+#define   C_000E54_MCD1_BUSY                                          0xFFFFFDFF
+#define   S_000E54_MCD2_BUSY(x)                                       (((x) & 0x1) << 10)
+#define   G_000E54_MCD2_BUSY(x)                                       (((x) >> 10) & 0x1)
+#define   C_000E54_MCD2_BUSY                                          0xFFFFFBFF
+#define   S_000E54_MCD3_BUSY(x)                                       (((x) & 0x1) << 11)
+#define   G_000E54_MCD3_BUSY(x)                                       (((x) >> 11) & 0x1)
+#define   C_000E54_MCD3_BUSY                                          0xFFFFF7FF
+#define   S_000E54_MCD4_BUSY(x)                                       (((x) & 0x1) << 12)
+#define   G_000E54_MCD4_BUSY(x)                                       (((x) >> 12) & 0x1)
+#define   C_000E54_MCD4_BUSY                                          0xFFFFEFFF
+#define   S_000E54_MCD5_BUSY(x)                                       (((x) & 0x1) << 13)
+#define   G_000E54_MCD5_BUSY(x)                                       (((x) >> 13) & 0x1)
+#define   C_000E54_MCD5_BUSY                                          0xFFFFDFFF
+#define   S_000E54_MCD6_BUSY(x)                                       (((x) & 0x1) << 14)
+#define   G_000E54_MCD6_BUSY(x)                                       (((x) >> 14) & 0x1)
+#define   C_000E54_MCD6_BUSY                                          0xFFFFBFFF
+#define   S_000E54_MCD7_BUSY(x)                                       (((x) & 0x1) << 15)
+#define   G_000E54_MCD7_BUSY(x)                                       (((x) >> 15) & 0x1)
+#define   C_000E54_MCD7_BUSY                                          0xFFFF7FFF
+#define R_00D034_SDMA0_STATUS_REG                                       0x00D034
+#define   S_00D034_IDLE(x)                                            (((x) & 0x1) << 0)
+#define   G_00D034_IDLE(x)                                            (((x) >> 0) & 0x1)
+#define   C_00D034_IDLE                                               0xFFFFFFFE
+#define   S_00D034_REG_IDLE(x)                                        (((x) & 0x1) << 1)
+#define   G_00D034_REG_IDLE(x)                                        (((x) >> 1) & 0x1)
+#define   C_00D034_REG_IDLE                                           0xFFFFFFFD
+#define   S_00D034_RB_EMPTY(x)                                        (((x) & 0x1) << 2)
+#define   G_00D034_RB_EMPTY(x)                                        (((x) >> 2) & 0x1)
+#define   C_00D034_RB_EMPTY                                           0xFFFFFFFB
+#define   S_00D034_RB_FULL(x)                                         (((x) & 0x1) << 3)
+#define   G_00D034_RB_FULL(x)                                         (((x) >> 3) & 0x1)
+#define   C_00D034_RB_FULL                                            0xFFFFFFF7
+#define   S_00D034_RB_CMD_IDLE(x)                                     (((x) & 0x1) << 4)
+#define   G_00D034_RB_CMD_IDLE(x)                                     (((x) >> 4) & 0x1)
+#define   C_00D034_RB_CMD_IDLE                                        0xFFFFFFEF
+#define   S_00D034_RB_CMD_FULL(x)                                     (((x) & 0x1) << 5)
+#define   G_00D034_RB_CMD_FULL(x)                                     (((x) >> 5) & 0x1)
+#define   C_00D034_RB_CMD_FULL                                        0xFFFFFFDF
+#define   S_00D034_IB_CMD_IDLE(x)                                     (((x) & 0x1) << 6)
+#define   G_00D034_IB_CMD_IDLE(x)                                     (((x) >> 6) & 0x1)
+#define   C_00D034_IB_CMD_IDLE                                        0xFFFFFFBF
+#define   S_00D034_IB_CMD_FULL(x)                                     (((x) & 0x1) << 7)
+#define   G_00D034_IB_CMD_FULL(x)                                     (((x) >> 7) & 0x1)
+#define   C_00D034_IB_CMD_FULL                                        0xFFFFFF7F
+#define   S_00D034_BLOCK_IDLE(x)                                      (((x) & 0x1) << 8)
+#define   G_00D034_BLOCK_IDLE(x)                                      (((x) >> 8) & 0x1)
+#define   C_00D034_BLOCK_IDLE                                         0xFFFFFEFF
+#define   S_00D034_INSIDE_IB(x)                                       (((x) & 0x1) << 9)
+#define   G_00D034_INSIDE_IB(x)                                       (((x) >> 9) & 0x1)
+#define   C_00D034_INSIDE_IB                                          0xFFFFFDFF
+#define   S_00D034_EX_IDLE(x)                                         (((x) & 0x1) << 10)
+#define   G_00D034_EX_IDLE(x)                                         (((x) >> 10) & 0x1)
+#define   C_00D034_EX_IDLE                                            0xFFFFFBFF
+#define   S_00D034_EX_IDLE_POLL_TIMER_EXPIRE(x)                       (((x) & 0x1) << 11)
+#define   G_00D034_EX_IDLE_POLL_TIMER_EXPIRE(x)                       (((x) >> 11) & 0x1)
+#define   C_00D034_EX_IDLE_POLL_TIMER_EXPIRE                          0xFFFFF7FF
+#define   S_00D034_PACKET_READY(x)                                    (((x) & 0x1) << 12)
+#define   G_00D034_PACKET_READY(x)                                    (((x) >> 12) & 0x1)
+#define   C_00D034_PACKET_READY                                       0xFFFFEFFF
+#define   S_00D034_MC_WR_IDLE(x)                                      (((x) & 0x1) << 13)
+#define   G_00D034_MC_WR_IDLE(x)                                      (((x) >> 13) & 0x1)
+#define   C_00D034_MC_WR_IDLE                                         0xFFFFDFFF
+#define   S_00D034_SRBM_IDLE(x)                                       (((x) & 0x1) << 14)
+#define   G_00D034_SRBM_IDLE(x)                                       (((x) >> 14) & 0x1)
+#define   C_00D034_SRBM_IDLE                                          0xFFFFBFFF
+#define   S_00D034_CONTEXT_EMPTY(x)                                   (((x) & 0x1) << 15)
+#define   G_00D034_CONTEXT_EMPTY(x)                                   (((x) >> 15) & 0x1)
+#define   C_00D034_CONTEXT_EMPTY                                      0xFFFF7FFF
+#define   S_00D034_DELTA_RPTR_FULL(x)                                 (((x) & 0x1) << 16)
+#define   G_00D034_DELTA_RPTR_FULL(x)                                 (((x) >> 16) & 0x1)
+#define   C_00D034_DELTA_RPTR_FULL                                    0xFFFEFFFF
+#define   S_00D034_RB_MC_RREQ_IDLE(x)                                 (((x) & 0x1) << 17)
+#define   G_00D034_RB_MC_RREQ_IDLE(x)                                 (((x) >> 17) & 0x1)
+#define   C_00D034_RB_MC_RREQ_IDLE                                    0xFFFDFFFF
+#define   S_00D034_IB_MC_RREQ_IDLE(x)                                 (((x) & 0x1) << 18)
+#define   G_00D034_IB_MC_RREQ_IDLE(x)                                 (((x) >> 18) & 0x1)
+#define   C_00D034_IB_MC_RREQ_IDLE                                    0xFFFBFFFF
+#define   S_00D034_MC_RD_IDLE(x)                                      (((x) & 0x1) << 19)
+#define   G_00D034_MC_RD_IDLE(x)                                      (((x) >> 19) & 0x1)
+#define   C_00D034_MC_RD_IDLE                                         0xFFF7FFFF
+#define   S_00D034_DELTA_RPTR_EMPTY(x)                                (((x) & 0x1) << 20)
+#define   G_00D034_DELTA_RPTR_EMPTY(x)                                (((x) >> 20) & 0x1)
+#define   C_00D034_DELTA_RPTR_EMPTY                                   0xFFEFFFFF
+#define   S_00D034_MC_RD_RET_STALL(x)                                 (((x) & 0x1) << 21)
+#define   G_00D034_MC_RD_RET_STALL(x)                                 (((x) >> 21) & 0x1)
+#define   C_00D034_MC_RD_RET_STALL                                    0xFFDFFFFF
+#define   S_00D034_MC_RD_NO_POLL_IDLE(x)                              (((x) & 0x1) << 22)
+#define   G_00D034_MC_RD_NO_POLL_IDLE(x)                              (((x) >> 22) & 0x1)
+#define   C_00D034_MC_RD_NO_POLL_IDLE                                 0xFFBFFFFF
+#define   S_00D034_PREV_CMD_IDLE(x)                                   (((x) & 0x1) << 25)
+#define   G_00D034_PREV_CMD_IDLE(x)                                   (((x) >> 25) & 0x1)
+#define   C_00D034_PREV_CMD_IDLE                                      0xFDFFFFFF
+#define   S_00D034_SEM_IDLE(x)                                        (((x) & 0x1) << 26)
+#define   G_00D034_SEM_IDLE(x)                                        (((x) >> 26) & 0x1)
+#define   C_00D034_SEM_IDLE                                           0xFBFFFFFF
+#define   S_00D034_SEM_REQ_STALL(x)                                   (((x) & 0x1) << 27)
+#define   G_00D034_SEM_REQ_STALL(x)                                   (((x) >> 27) & 0x1)
+#define   C_00D034_SEM_REQ_STALL                                      0xF7FFFFFF
+#define   S_00D034_SEM_RESP_STATE(x)                                  (((x) & 0x03) << 28)
+#define   G_00D034_SEM_RESP_STATE(x)                                  (((x) >> 28) & 0x03)
+#define   C_00D034_SEM_RESP_STATE                                     0xCFFFFFFF
+#define   S_00D034_INT_IDLE(x)                                        (((x) & 0x1) << 30)
+#define   G_00D034_INT_IDLE(x)                                        (((x) >> 30) & 0x1)
+#define   C_00D034_INT_IDLE                                           0xBFFFFFFF
+#define   S_00D034_INT_REQ_STALL(x)                                   (((x) & 0x1) << 31)
+#define   G_00D034_INT_REQ_STALL(x)                                   (((x) >> 31) & 0x1)
+#define   C_00D034_INT_REQ_STALL                                      0x7FFFFFFF
+#define R_00D834_SDMA1_STATUS_REG                                       0x00D834
+#define R_008008_GRBM_STATUS2                                           0x008008
+#define   S_008008_ME0PIPE1_CMDFIFO_AVAIL(x)                          (((x) & 0x0F) << 0)
+#define   G_008008_ME0PIPE1_CMDFIFO_AVAIL(x)                          (((x) >> 0) & 0x0F)
+#define   C_008008_ME0PIPE1_CMDFIFO_AVAIL                             0xFFFFFFF0
+#define   S_008008_ME0PIPE1_CF_RQ_PENDING(x)                          (((x) & 0x1) << 4)
+#define   G_008008_ME0PIPE1_CF_RQ_PENDING(x)                          (((x) >> 4) & 0x1)
+#define   C_008008_ME0PIPE1_CF_RQ_PENDING                             0xFFFFFFEF
+#define   S_008008_ME0PIPE1_PF_RQ_PENDING(x)                          (((x) & 0x1) << 5)
+#define   G_008008_ME0PIPE1_PF_RQ_PENDING(x)                          (((x) >> 5) & 0x1)
+#define   C_008008_ME0PIPE1_PF_RQ_PENDING                             0xFFFFFFDF
+#define   S_008008_ME1PIPE0_RQ_PENDING(x)                             (((x) & 0x1) << 6)
+#define   G_008008_ME1PIPE0_RQ_PENDING(x)                             (((x) >> 6) & 0x1)
+#define   C_008008_ME1PIPE0_RQ_PENDING                                0xFFFFFFBF
+#define   S_008008_ME1PIPE1_RQ_PENDING(x)                             (((x) & 0x1) << 7)
+#define   G_008008_ME1PIPE1_RQ_PENDING(x)                             (((x) >> 7) & 0x1)
+#define   C_008008_ME1PIPE1_RQ_PENDING                                0xFFFFFF7F
+#define   S_008008_ME1PIPE2_RQ_PENDING(x)                             (((x) & 0x1) << 8)
+#define   G_008008_ME1PIPE2_RQ_PENDING(x)                             (((x) >> 8) & 0x1)
+#define   C_008008_ME1PIPE2_RQ_PENDING                                0xFFFFFEFF
+#define   S_008008_ME1PIPE3_RQ_PENDING(x)                             (((x) & 0x1) << 9)
+#define   G_008008_ME1PIPE3_RQ_PENDING(x)                             (((x) >> 9) & 0x1)
+#define   C_008008_ME1PIPE3_RQ_PENDING                                0xFFFFFDFF
+#define   S_008008_ME2PIPE0_RQ_PENDING(x)                             (((x) & 0x1) << 10)
+#define   G_008008_ME2PIPE0_RQ_PENDING(x)                             (((x) >> 10) & 0x1)
+#define   C_008008_ME2PIPE0_RQ_PENDING                                0xFFFFFBFF
+#define   S_008008_ME2PIPE1_RQ_PENDING(x)                             (((x) & 0x1) << 11)
+#define   G_008008_ME2PIPE1_RQ_PENDING(x)                             (((x) >> 11) & 0x1)
+#define   C_008008_ME2PIPE1_RQ_PENDING                                0xFFFFF7FF
+#define   S_008008_ME2PIPE2_RQ_PENDING(x)                             (((x) & 0x1) << 12)
+#define   G_008008_ME2PIPE2_RQ_PENDING(x)                             (((x) >> 12) & 0x1)
+#define   C_008008_ME2PIPE2_RQ_PENDING                                0xFFFFEFFF
+#define   S_008008_ME2PIPE3_RQ_PENDING(x)                             (((x) & 0x1) << 13)
+#define   G_008008_ME2PIPE3_RQ_PENDING(x)                             (((x) >> 13) & 0x1)
+#define   C_008008_ME2PIPE3_RQ_PENDING                                0xFFFFDFFF
+#define   S_008008_RLC_RQ_PENDING(x)                                  (((x) & 0x1) << 14)
+#define   G_008008_RLC_RQ_PENDING(x)                                  (((x) >> 14) & 0x1)
+#define   C_008008_RLC_RQ_PENDING                                     0xFFFFBFFF
+#define   S_008008_RLC_BUSY(x)                                        (((x) & 0x1) << 24)
+#define   G_008008_RLC_BUSY(x)                                        (((x) >> 24) & 0x1)
+#define   C_008008_RLC_BUSY                                           0xFEFFFFFF
+#define   S_008008_TC_BUSY(x)                                         (((x) & 0x1) << 25)
+#define   G_008008_TC_BUSY(x)                                         (((x) >> 25) & 0x1)
+#define   C_008008_TC_BUSY                                            0xFDFFFFFF
+#define   S_008008_TCC_CC_RESIDENT(x)                                 (((x) & 0x1) << 26)
+#define   G_008008_TCC_CC_RESIDENT(x)                                 (((x) >> 26) & 0x1)
+#define   C_008008_TCC_CC_RESIDENT                                    0xFBFFFFFF
+#define   S_008008_CPF_BUSY(x)                                        (((x) & 0x1) << 28)
+#define   G_008008_CPF_BUSY(x)                                        (((x) >> 28) & 0x1)
+#define   C_008008_CPF_BUSY                                           0xEFFFFFFF
+#define   S_008008_CPC_BUSY(x)                                        (((x) & 0x1) << 29)
+#define   G_008008_CPC_BUSY(x)                                        (((x) >> 29) & 0x1)
+#define   C_008008_CPC_BUSY                                           0xDFFFFFFF
+#define   S_008008_CPG_BUSY(x)                                        (((x) & 0x1) << 30)
+#define   G_008008_CPG_BUSY(x)                                        (((x) >> 30) & 0x1)
+#define   C_008008_CPG_BUSY                                           0xBFFFFFFF
 #define R_008010_GRBM_STATUS                                            0x008010
 #define   S_008010_ME0PIPE0_CMDFIFO_AVAIL(x)                          (((x) & 0x0F) << 0)
 #define   G_008010_ME0PIPE0_CMDFIFO_AVAIL(x)                          (((x) >> 0) & 0x0F)
@@ -350,7 +668,142 @@
 #define   C_0085F0_SH_ICACHE_ACTION_ENA                               0xDFFFFFFF
 #define R_0085F4_CP_COHER_SIZE                                          0x0085F4
 #define R_0085F8_CP_COHER_BASE                                          0x0085F8
-
+#define R_008014_GRBM_STATUS_SE0                                        0x008014
+#define   S_008014_DB_CLEAN(x)                                        (((x) & 0x1) << 1)
+#define   G_008014_DB_CLEAN(x)                                        (((x) >> 1) & 0x1)
+#define   C_008014_DB_CLEAN                                           0xFFFFFFFD
+#define   S_008014_CB_CLEAN(x)                                        (((x) & 0x1) << 2)
+#define   G_008014_CB_CLEAN(x)                                        (((x) >> 2) & 0x1)
+#define   C_008014_CB_CLEAN                                           0xFFFFFFFB
+#define   S_008014_BCI_BUSY(x)                                        (((x) & 0x1) << 22)
+#define   G_008014_BCI_BUSY(x)                                        (((x) >> 22) & 0x1)
+#define   C_008014_BCI_BUSY                                           0xFFBFFFFF
+#define   S_008014_VGT_BUSY(x)                                        (((x) & 0x1) << 23)
+#define   G_008014_VGT_BUSY(x)                                        (((x) >> 23) & 0x1)
+#define   C_008014_VGT_BUSY                                           0xFF7FFFFF
+#define   S_008014_PA_BUSY(x)                                         (((x) & 0x1) << 24)
+#define   G_008014_PA_BUSY(x)                                         (((x) >> 24) & 0x1)
+#define   C_008014_PA_BUSY                                            0xFEFFFFFF
+#define   S_008014_TA_BUSY(x)                                         (((x) & 0x1) << 25)
+#define   G_008014_TA_BUSY(x)                                         (((x) >> 25) & 0x1)
+#define   C_008014_TA_BUSY                                            0xFDFFFFFF
+#define   S_008014_SX_BUSY(x)                                         (((x) & 0x1) << 26)
+#define   G_008014_SX_BUSY(x)                                         (((x) >> 26) & 0x1)
+#define   C_008014_SX_BUSY                                            0xFBFFFFFF
+#define   S_008014_SPI_BUSY(x)                                        (((x) & 0x1) << 27)
+#define   G_008014_SPI_BUSY(x)                                        (((x) >> 27) & 0x1)
+#define   C_008014_SPI_BUSY                                           0xF7FFFFFF
+#define   S_008014_SC_BUSY(x)                                         (((x) & 0x1) << 29)
+#define   G_008014_SC_BUSY(x)                                         (((x) >> 29) & 0x1)
+#define   C_008014_SC_BUSY                                            0xDFFFFFFF
+#define   S_008014_DB_BUSY(x)                                         (((x) & 0x1) << 30)
+#define   G_008014_DB_BUSY(x)                                         (((x) >> 30) & 0x1)
+#define   C_008014_DB_BUSY                                            0xBFFFFFFF
+#define   S_008014_CB_BUSY(x)                                         (((x) & 0x1) << 31)
+#define   G_008014_CB_BUSY(x)                                         (((x) >> 31) & 0x1)
+#define   C_008014_CB_BUSY                                            0x7FFFFFFF
+#define R_008018_GRBM_STATUS_SE1                                        0x008018
+#define   S_008018_DB_CLEAN(x)                                        (((x) & 0x1) << 1)
+#define   G_008018_DB_CLEAN(x)                                        (((x) >> 1) & 0x1)
+#define   C_008018_DB_CLEAN                                           0xFFFFFFFD
+#define   S_008018_CB_CLEAN(x)                                        (((x) & 0x1) << 2)
+#define   G_008018_CB_CLEAN(x)                                        (((x) >> 2) & 0x1)
+#define   C_008018_CB_CLEAN                                           0xFFFFFFFB
+#define   S_008018_BCI_BUSY(x)                                        (((x) & 0x1) << 22)
+#define   G_008018_BCI_BUSY(x)                                        (((x) >> 22) & 0x1)
+#define   C_008018_BCI_BUSY                                           0xFFBFFFFF
+#define   S_008018_VGT_BUSY(x)                                        (((x) & 0x1) << 23)
+#define   G_008018_VGT_BUSY(x)                                        (((x) >> 23) & 0x1)
+#define   C_008018_VGT_BUSY                                           0xFF7FFFFF
+#define   S_008018_PA_BUSY(x)                                         (((x) & 0x1) << 24)
+#define   G_008018_PA_BUSY(x)                                         (((x) >> 24) & 0x1)
+#define   C_008018_PA_BUSY                                            0xFEFFFFFF
+#define   S_008018_TA_BUSY(x)                                         (((x) & 0x1) << 25)
+#define   G_008018_TA_BUSY(x)                                         (((x) >> 25) & 0x1)
+#define   C_008018_TA_BUSY                                            0xFDFFFFFF
+#define   S_008018_SX_BUSY(x)                                         (((x) & 0x1) << 26)
+#define   G_008018_SX_BUSY(x)                                         (((x) >> 26) & 0x1)
+#define   C_008018_SX_BUSY                                            0xFBFFFFFF
+#define   S_008018_SPI_BUSY(x)                                        (((x) & 0x1) << 27)
+#define   G_008018_SPI_BUSY(x)                                        (((x) >> 27) & 0x1)
+#define   C_008018_SPI_BUSY                                           0xF7FFFFFF
+#define   S_008018_SC_BUSY(x)                                         (((x) & 0x1) << 29)
+#define   G_008018_SC_BUSY(x)                                         (((x) >> 29) & 0x1)
+#define   C_008018_SC_BUSY                                            0xDFFFFFFF
+#define   S_008018_DB_BUSY(x)                                         (((x) & 0x1) << 30)
+#define   G_008018_DB_BUSY(x)                                         (((x) >> 30) & 0x1)
+#define   C_008018_DB_BUSY                                            0xBFFFFFFF
+#define   S_008018_CB_BUSY(x)                                         (((x) & 0x1) << 31)
+#define   G_008018_CB_BUSY(x)                                         (((x) >> 31) & 0x1)
+#define   C_008018_CB_BUSY                                            0x7FFFFFFF
+#define R_008038_GRBM_STATUS_SE2                                        0x008038
+#define   S_008038_DB_CLEAN(x)                                        (((x) & 0x1) << 1)
+#define   G_008038_DB_CLEAN(x)                                        (((x) >> 1) & 0x1)
+#define   C_008038_DB_CLEAN                                           0xFFFFFFFD
+#define   S_008038_CB_CLEAN(x)                                        (((x) & 0x1) << 2)
+#define   G_008038_CB_CLEAN(x)                                        (((x) >> 2) & 0x1)
+#define   C_008038_CB_CLEAN                                           0xFFFFFFFB
+#define   S_008038_BCI_BUSY(x)                                        (((x) & 0x1) << 22)
+#define   G_008038_BCI_BUSY(x)                                        (((x) >> 22) & 0x1)
+#define   C_008038_BCI_BUSY                                           0xFFBFFFFF
+#define   S_008038_VGT_BUSY(x)                                        (((x) & 0x1) << 23)
+#define   G_008038_VGT_BUSY(x)                                        (((x) >> 23) & 0x1)
+#define   C_008038_VGT_BUSY                                           0xFF7FFFFF
+#define   S_008038_PA_BUSY(x)                                         (((x) & 0x1) << 24)
+#define   G_008038_PA_BUSY(x)                                         (((x) >> 24) & 0x1)
+#define   C_008038_PA_BUSY                                            0xFEFFFFFF
+#define   S_008038_TA_BUSY(x)                                         (((x) & 0x1) << 25)
+#define   G_008038_TA_BUSY(x)                                         (((x) >> 25) & 0x1)
+#define   C_008038_TA_BUSY                                            0xFDFFFFFF
+#define   S_008038_SX_BUSY(x)                                         (((x) & 0x1) << 26)
+#define   G_008038_SX_BUSY(x)                                         (((x) >> 26) & 0x1)
+#define   C_008038_SX_BUSY                                            0xFBFFFFFF
+#define   S_008038_SPI_BUSY(x)                                        (((x) & 0x1) << 27)
+#define   G_008038_SPI_BUSY(x)                                        (((x) >> 27) & 0x1)
+#define   C_008038_SPI_BUSY                                           0xF7FFFFFF
+#define   S_008038_SC_BUSY(x)                                         (((x) & 0x1) << 29)
+#define   G_008038_SC_BUSY(x)                                         (((x) >> 29) & 0x1)
+#define   C_008038_SC_BUSY                                            0xDFFFFFFF
+#define   S_008038_DB_BUSY(x)                                         (((x) & 0x1) << 30)
+#define   G_008038_DB_BUSY(x)                                         (((x) >> 30) & 0x1)
+#define   C_008038_DB_BUSY                                            0xBFFFFFFF
+#define   S_008038_CB_BUSY(x)                                         (((x) & 0x1) << 31)
+#define   G_008038_CB_BUSY(x)                                         (((x) >> 31) & 0x1)
+#define   C_008038_CB_BUSY                                            0x7FFFFFFF
+#define R_00803C_GRBM_STATUS_SE3                                        0x00803C
+#define   S_00803C_DB_CLEAN(x)                                        (((x) & 0x1) << 1)
+#define   G_00803C_DB_CLEAN(x)                                        (((x) >> 1) & 0x1)
+#define   C_00803C_DB_CLEAN                                           0xFFFFFFFD
+#define   S_00803C_CB_CLEAN(x)                                        (((x) & 0x1) << 2)
+#define   G_00803C_CB_CLEAN(x)                                        (((x) >> 2) & 0x1)
+#define   C_00803C_CB_CLEAN                                           0xFFFFFFFB
+#define   S_00803C_BCI_BUSY(x)                                        (((x) & 0x1) << 22)
+#define   G_00803C_BCI_BUSY(x)                                        (((x) >> 22) & 0x1)
+#define   C_00803C_BCI_BUSY                                           0xFFBFFFFF
+#define   S_00803C_VGT_BUSY(x)                                        (((x) & 0x1) << 23)
+#define   G_00803C_VGT_BUSY(x)                                        (((x) >> 23) & 0x1)
+#define   C_00803C_VGT_BUSY                                           0xFF7FFFFF
+#define   S_00803C_PA_BUSY(x)                                         (((x) & 0x1) << 24)
+#define   G_00803C_PA_BUSY(x)                                         (((x) >> 24) & 0x1)
+#define   C_00803C_PA_BUSY                                            0xFEFFFFFF
+#define   S_00803C_TA_BUSY(x)                                         (((x) & 0x1) << 25)
+#define   G_00803C_TA_BUSY(x)                                         (((x) >> 25) & 0x1)
+#define   C_00803C_TA_BUSY                                            0xFDFFFFFF
+#define   S_00803C_SX_BUSY(x)                                         (((x) & 0x1) << 26)
+#define   G_00803C_SX_BUSY(x)                                         (((x) >> 26) & 0x1)
+#define   C_00803C_SX_BUSY                                            0xFBFFFFFF
+#define   S_00803C_SPI_BUSY(x)                                        (((x) & 0x1) << 27)
+#define   G_00803C_SPI_BUSY(x)                                        (((x) >> 27) & 0x1)
+#define   C_00803C_SPI_BUSY                                           0xF7FFFFFF
+#define   S_00803C_SC_BUSY(x)                                         (((x) & 0x1) << 29)
+#define   G_00803C_SC_BUSY(x)                                         (((x) >> 29) & 0x1)
+#define   C_00803C_SC_BUSY                                            0xDFFFFFFF
+#define   S_00803C_DB_BUSY(x)                                         (((x) & 0x1) << 30)
+#define   G_00803C_DB_BUSY(x)                                         (((x) >> 30) & 0x1)
+#define   C_00803C_DB_BUSY                                            0xBFFFFFFF
+#define   S_00803C_CB_BUSY(x)                                         (((x) & 0x1) << 31)
+#define   G_00803C_CB_BUSY(x)                                         (((x) >> 31) & 0x1)
+#define   C_00803C_CB_BUSY                                            0x7FFFFFFF
 /* CIK */
 #define R_0300FC_CP_STRMOUT_CNTL                                        0x0300FC
 #define   S_0300FC_OFFSET_UPDATE_DONE(x)                              (((x) & 0x1) << 0)
@@ -465,6 +918,366 @@
 #define   S_0301FC_STATUS(x)                                          (((x) & 0x1) << 31)
 #define   G_0301FC_STATUS(x)                                          (((x) >> 31) & 0x1)
 #define   C_0301FC_STATUS                                             0x7FFFFFFF
+#define R_008210_CP_CPC_STATUS                                          0x008210
+#define   S_008210_MEC1_BUSY(x)                                       (((x) & 0x1) << 0)
+#define   G_008210_MEC1_BUSY(x)                                       (((x) >> 0) & 0x1)
+#define   C_008210_MEC1_BUSY                                          0xFFFFFFFE
+#define   S_008210_MEC2_BUSY(x)                                       (((x) & 0x1) << 1)
+#define   G_008210_MEC2_BUSY(x)                                       (((x) >> 1) & 0x1)
+#define   C_008210_MEC2_BUSY                                          0xFFFFFFFD
+#define   S_008210_DC0_BUSY(x)                                        (((x) & 0x1) << 2)
+#define   G_008210_DC0_BUSY(x)                                        (((x) >> 2) & 0x1)
+#define   C_008210_DC0_BUSY                                           0xFFFFFFFB
+#define   S_008210_DC1_BUSY(x)                                        (((x) & 0x1) << 3)
+#define   G_008210_DC1_BUSY(x)                                        (((x) >> 3) & 0x1)
+#define   C_008210_DC1_BUSY                                           0xFFFFFFF7
+#define   S_008210_RCIU1_BUSY(x)                                      (((x) & 0x1) << 4)
+#define   G_008210_RCIU1_BUSY(x)                                      (((x) >> 4) & 0x1)
+#define   C_008210_RCIU1_BUSY                                         0xFFFFFFEF
+#define   S_008210_RCIU2_BUSY(x)                                      (((x) & 0x1) << 5)
+#define   G_008210_RCIU2_BUSY(x)                                      (((x) >> 5) & 0x1)
+#define   C_008210_RCIU2_BUSY                                         0xFFFFFFDF
+#define   S_008210_ROQ1_BUSY(x)                                       (((x) & 0x1) << 6)
+#define   G_008210_ROQ1_BUSY(x)                                       (((x) >> 6) & 0x1)
+#define   C_008210_ROQ1_BUSY                                          0xFFFFFFBF
+#define   S_008210_ROQ2_BUSY(x)                                       (((x) & 0x1) << 7)
+#define   G_008210_ROQ2_BUSY(x)                                       (((x) >> 7) & 0x1)
+#define   C_008210_ROQ2_BUSY                                          0xFFFFFF7F
+#define   S_008210_TCIU_BUSY(x)                                       (((x) & 0x1) << 10)
+#define   G_008210_TCIU_BUSY(x)                                       (((x) >> 10) & 0x1)
+#define   C_008210_TCIU_BUSY                                          0xFFFFFBFF
+#define   S_008210_SCRATCH_RAM_BUSY(x)                                (((x) & 0x1) << 11)
+#define   G_008210_SCRATCH_RAM_BUSY(x)                                (((x) >> 11) & 0x1)
+#define   C_008210_SCRATCH_RAM_BUSY                                   0xFFFFF7FF
+#define   S_008210_QU_BUSY(x)                                         (((x) & 0x1) << 12)
+#define   G_008210_QU_BUSY(x)                                         (((x) >> 12) & 0x1)
+#define   C_008210_QU_BUSY                                            0xFFFFEFFF
+#define   S_008210_ATCL2IU_BUSY(x)                                    (((x) & 0x1) << 13)
+#define   G_008210_ATCL2IU_BUSY(x)                                    (((x) >> 13) & 0x1)
+#define   C_008210_ATCL2IU_BUSY                                       0xFFFFDFFF
+#define   S_008210_CPG_CPC_BUSY(x)                                    (((x) & 0x1) << 29)
+#define   G_008210_CPG_CPC_BUSY(x)                                    (((x) >> 29) & 0x1)
+#define   C_008210_CPG_CPC_BUSY                                       0xDFFFFFFF
+#define   S_008210_CPF_CPC_BUSY(x)                                    (((x) & 0x1) << 30)
+#define   G_008210_CPF_CPC_BUSY(x)                                    (((x) >> 30) & 0x1)
+#define   C_008210_CPF_CPC_BUSY                                       0xBFFFFFFF
+#define   S_008210_CPC_BUSY(x)                                        (((x) & 0x1) << 31)
+#define   G_008210_CPC_BUSY(x)                                        (((x) >> 31) & 0x1)
+#define   C_008210_CPC_BUSY                                           0x7FFFFFFF
+#define R_008214_CP_CPC_BUSY_STAT                                       0x008214
+#define   S_008214_MEC1_LOAD_BUSY(x)                                  (((x) & 0x1) << 0)
+#define   G_008214_MEC1_LOAD_BUSY(x)                                  (((x) >> 0) & 0x1)
+#define   C_008214_MEC1_LOAD_BUSY                                     0xFFFFFFFE
+#define   S_008214_MEC1_SEMAPOHRE_BUSY(x)                             (((x) & 0x1) << 1)
+#define   G_008214_MEC1_SEMAPOHRE_BUSY(x)                             (((x) >> 1) & 0x1)
+#define   C_008214_MEC1_SEMAPOHRE_BUSY                                0xFFFFFFFD
+#define   S_008214_MEC1_MUTEX_BUSY(x)                                 (((x) & 0x1) << 2)
+#define   G_008214_MEC1_MUTEX_BUSY(x)                                 (((x) >> 2) & 0x1)
+#define   C_008214_MEC1_MUTEX_BUSY                                    0xFFFFFFFB
+#define   S_008214_MEC1_MESSAGE_BUSY(x)                               (((x) & 0x1) << 3)
+#define   G_008214_MEC1_MESSAGE_BUSY(x)                               (((x) >> 3) & 0x1)
+#define   C_008214_MEC1_MESSAGE_BUSY                                  0xFFFFFFF7
+#define   S_008214_MEC1_EOP_QUEUE_BUSY(x)                             (((x) & 0x1) << 4)
+#define   G_008214_MEC1_EOP_QUEUE_BUSY(x)                             (((x) >> 4) & 0x1)
+#define   C_008214_MEC1_EOP_QUEUE_BUSY                                0xFFFFFFEF
+#define   S_008214_MEC1_IQ_QUEUE_BUSY(x)                              (((x) & 0x1) << 5)
+#define   G_008214_MEC1_IQ_QUEUE_BUSY(x)                              (((x) >> 5) & 0x1)
+#define   C_008214_MEC1_IQ_QUEUE_BUSY                                 0xFFFFFFDF
+#define   S_008214_MEC1_IB_QUEUE_BUSY(x)                              (((x) & 0x1) << 6)
+#define   G_008214_MEC1_IB_QUEUE_BUSY(x)                              (((x) >> 6) & 0x1)
+#define   C_008214_MEC1_IB_QUEUE_BUSY                                 0xFFFFFFBF
+#define   S_008214_MEC1_TC_BUSY(x)                                    (((x) & 0x1) << 7)
+#define   G_008214_MEC1_TC_BUSY(x)                                    (((x) >> 7) & 0x1)
+#define   C_008214_MEC1_TC_BUSY                                       0xFFFFFF7F
+#define   S_008214_MEC1_DMA_BUSY(x)                                   (((x) & 0x1) << 8)
+#define   G_008214_MEC1_DMA_BUSY(x)                                   (((x) >> 8) & 0x1)
+#define   C_008214_MEC1_DMA_BUSY                                      0xFFFFFEFF
+#define   S_008214_MEC1_PARTIAL_FLUSH_BUSY(x)                         (((x) & 0x1) << 9)
+#define   G_008214_MEC1_PARTIAL_FLUSH_BUSY(x)                         (((x) >> 9) & 0x1)
+#define   C_008214_MEC1_PARTIAL_FLUSH_BUSY                            0xFFFFFDFF
+#define   S_008214_MEC1_PIPE0_BUSY(x)                                 (((x) & 0x1) << 10)
+#define   G_008214_MEC1_PIPE0_BUSY(x)                                 (((x) >> 10) & 0x1)
+#define   C_008214_MEC1_PIPE0_BUSY                                    0xFFFFFBFF
+#define   S_008214_MEC1_PIPE1_BUSY(x)                                 (((x) & 0x1) << 11)
+#define   G_008214_MEC1_PIPE1_BUSY(x)                                 (((x) >> 11) & 0x1)
+#define   C_008214_MEC1_PIPE1_BUSY                                    0xFFFFF7FF
+#define   S_008214_MEC1_PIPE2_BUSY(x)                                 (((x) & 0x1) << 12)
+#define   G_008214_MEC1_PIPE2_BUSY(x)                                 (((x) >> 12) & 0x1)
+#define   C_008214_MEC1_PIPE2_BUSY                                    0xFFFFEFFF
+#define   S_008214_MEC1_PIPE3_BUSY(x)                                 (((x) & 0x1) << 13)
+#define   G_008214_MEC1_PIPE3_BUSY(x)                                 (((x) >> 13) & 0x1)
+#define   C_008214_MEC1_PIPE3_BUSY                                    0xFFFFDFFF
+#define   S_008214_MEC2_LOAD_BUSY(x)                                  (((x) & 0x1) << 16)
+#define   G_008214_MEC2_LOAD_BUSY(x)                                  (((x) >> 16) & 0x1)
+#define   C_008214_MEC2_LOAD_BUSY                                     0xFFFEFFFF
+#define   S_008214_MEC2_SEMAPOHRE_BUSY(x)                             (((x) & 0x1) << 17)
+#define   G_008214_MEC2_SEMAPOHRE_BUSY(x)                             (((x) >> 17) & 0x1)
+#define   C_008214_MEC2_SEMAPOHRE_BUSY                                0xFFFDFFFF
+#define   S_008214_MEC2_MUTEX_BUSY(x)                                 (((x) & 0x1) << 18)
+#define   G_008214_MEC2_MUTEX_BUSY(x)                                 (((x) >> 18) & 0x1)
+#define   C_008214_MEC2_MUTEX_BUSY                                    0xFFFBFFFF
+#define   S_008214_MEC2_MESSAGE_BUSY(x)                               (((x) & 0x1) << 19)
+#define   G_008214_MEC2_MESSAGE_BUSY(x)                               (((x) >> 19) & 0x1)
+#define   C_008214_MEC2_MESSAGE_BUSY                                  0xFFF7FFFF
+#define   S_008214_MEC2_EOP_QUEUE_BUSY(x)                             (((x) & 0x1) << 20)
+#define   G_008214_MEC2_EOP_QUEUE_BUSY(x)                             (((x) >> 20) & 0x1)
+#define   C_008214_MEC2_EOP_QUEUE_BUSY                                0xFFEFFFFF
+#define   S_008214_MEC2_IQ_QUEUE_BUSY(x)                              (((x) & 0x1) << 21)
+#define   G_008214_MEC2_IQ_QUEUE_BUSY(x)                              (((x) >> 21) & 0x1)
+#define   C_008214_MEC2_IQ_QUEUE_BUSY                                 0xFFDFFFFF
+#define   S_008214_MEC2_IB_QUEUE_BUSY(x)                              (((x) & 0x1) << 22)
+#define   G_008214_MEC2_IB_QUEUE_BUSY(x)                              (((x) >> 22) & 0x1)
+#define   C_008214_MEC2_IB_QUEUE_BUSY                                 0xFFBFFFFF
+#define   S_008214_MEC2_TC_BUSY(x)                                    (((x) & 0x1) << 23)
+#define   G_008214_MEC2_TC_BUSY(x)                                    (((x) >> 23) & 0x1)
+#define   C_008214_MEC2_TC_BUSY                                       0xFF7FFFFF
+#define   S_008214_MEC2_DMA_BUSY(x)                                   (((x) & 0x1) << 24)
+#define   G_008214_MEC2_DMA_BUSY(x)                                   (((x) >> 24) & 0x1)
+#define   C_008214_MEC2_DMA_BUSY                                      0xFEFFFFFF
+#define   S_008214_MEC2_PARTIAL_FLUSH_BUSY(x)                         (((x) & 0x1) << 25)
+#define   G_008214_MEC2_PARTIAL_FLUSH_BUSY(x)                         (((x) >> 25) & 0x1)
+#define   C_008214_MEC2_PARTIAL_FLUSH_BUSY                            0xFDFFFFFF
+#define   S_008214_MEC2_PIPE0_BUSY(x)                                 (((x) & 0x1) << 26)
+#define   G_008214_MEC2_PIPE0_BUSY(x)                                 (((x) >> 26) & 0x1)
+#define   C_008214_MEC2_PIPE0_BUSY                                    0xFBFFFFFF
+#define   S_008214_MEC2_PIPE1_BUSY(x)                                 (((x) & 0x1) << 27)
+#define   G_008214_MEC2_PIPE1_BUSY(x)                                 (((x) >> 27) & 0x1)
+#define   C_008214_MEC2_PIPE1_BUSY                                    0xF7FFFFFF
+#define   S_008214_MEC2_PIPE2_BUSY(x)                                 (((x) & 0x1) << 28)
+#define   G_008214_MEC2_PIPE2_BUSY(x)                                 (((x) >> 28) & 0x1)
+#define   C_008214_MEC2_PIPE2_BUSY                                    0xEFFFFFFF
+#define   S_008214_MEC2_PIPE3_BUSY(x)                                 (((x) & 0x1) << 29)
+#define   G_008214_MEC2_PIPE3_BUSY(x)                                 (((x) >> 29) & 0x1)
+#define   C_008214_MEC2_PIPE3_BUSY                                    0xDFFFFFFF
+#define R_008218_CP_CPC_STALLED_STAT1                                   0x008218
+#define   S_008218_RCIU_TX_FREE_STALL(x)                              (((x) & 0x1) << 3)
+#define   G_008218_RCIU_TX_FREE_STALL(x)                              (((x) >> 3) & 0x1)
+#define   C_008218_RCIU_TX_FREE_STALL                                 0xFFFFFFF7
+#define   S_008218_RCIU_PRIV_VIOLATION(x)                             (((x) & 0x1) << 4)
+#define   G_008218_RCIU_PRIV_VIOLATION(x)                             (((x) >> 4) & 0x1)
+#define   C_008218_RCIU_PRIV_VIOLATION                                0xFFFFFFEF
+#define   S_008218_TCIU_TX_FREE_STALL(x)                              (((x) & 0x1) << 6)
+#define   G_008218_TCIU_TX_FREE_STALL(x)                              (((x) >> 6) & 0x1)
+#define   C_008218_TCIU_TX_FREE_STALL                                 0xFFFFFFBF
+#define   S_008218_MEC1_DECODING_PACKET(x)                            (((x) & 0x1) << 8)
+#define   G_008218_MEC1_DECODING_PACKET(x)                            (((x) >> 8) & 0x1)
+#define   C_008218_MEC1_DECODING_PACKET                               0xFFFFFEFF
+#define   S_008218_MEC1_WAIT_ON_RCIU(x)                               (((x) & 0x1) << 9)
+#define   G_008218_MEC1_WAIT_ON_RCIU(x)                               (((x) >> 9) & 0x1)
+#define   C_008218_MEC1_WAIT_ON_RCIU                                  0xFFFFFDFF
+#define   S_008218_MEC1_WAIT_ON_RCIU_READ(x)                          (((x) & 0x1) << 10)
+#define   G_008218_MEC1_WAIT_ON_RCIU_READ(x)                          (((x) >> 10) & 0x1)
+#define   C_008218_MEC1_WAIT_ON_RCIU_READ                             0xFFFFFBFF
+#define   S_008218_MEC1_WAIT_ON_ROQ_DATA(x)                           (((x) & 0x1) << 13)
+#define   G_008218_MEC1_WAIT_ON_ROQ_DATA(x)                           (((x) >> 13) & 0x1)
+#define   C_008218_MEC1_WAIT_ON_ROQ_DATA                              0xFFFFDFFF
+#define   S_008218_MEC2_DECODING_PACKET(x)                            (((x) & 0x1) << 16)
+#define   G_008218_MEC2_DECODING_PACKET(x)                            (((x) >> 16) & 0x1)
+#define   C_008218_MEC2_DECODING_PACKET                               0xFFFEFFFF
+#define   S_008218_MEC2_WAIT_ON_RCIU(x)                               (((x) & 0x1) << 17)
+#define   G_008218_MEC2_WAIT_ON_RCIU(x)                               (((x) >> 17) & 0x1)
+#define   C_008218_MEC2_WAIT_ON_RCIU                                  0xFFFDFFFF
+#define   S_008218_MEC2_WAIT_ON_RCIU_READ(x)                          (((x) & 0x1) << 18)
+#define   G_008218_MEC2_WAIT_ON_RCIU_READ(x)                          (((x) >> 18) & 0x1)
+#define   C_008218_MEC2_WAIT_ON_RCIU_READ                             0xFFFBFFFF
+#define   S_008218_MEC2_WAIT_ON_ROQ_DATA(x)                           (((x) & 0x1) << 21)
+#define   G_008218_MEC2_WAIT_ON_ROQ_DATA(x)                           (((x) >> 21) & 0x1)
+#define   C_008218_MEC2_WAIT_ON_ROQ_DATA                              0xFFDFFFFF
+#define   S_008218_ATCL2IU_WAITING_ON_FREE(x)                         (((x) & 0x1) << 22)
+#define   G_008218_ATCL2IU_WAITING_ON_FREE(x)                         (((x) >> 22) & 0x1)
+#define   C_008218_ATCL2IU_WAITING_ON_FREE                            0xFFBFFFFF
+#define   S_008218_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) & 0x1) << 23)
+#define   G_008218_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) >> 23) & 0x1)
+#define   C_008218_ATCL2IU_WAITING_ON_TAGS                            0xFF7FFFFF
+#define   S_008218_ATCL1_WAITING_ON_TRANS(x)                          (((x) & 0x1) << 24)
+#define   G_008218_ATCL1_WAITING_ON_TRANS(x)                          (((x) >> 24) & 0x1)
+#define   C_008218_ATCL1_WAITING_ON_TRANS                             0xFEFFFFFF
+#define R_00821C_CP_CPF_STATUS                                          0x00821C
+#define   S_00821C_POST_WPTR_GFX_BUSY(x)                              (((x) & 0x1) << 0)
+#define   G_00821C_POST_WPTR_GFX_BUSY(x)                              (((x) >> 0) & 0x1)
+#define   C_00821C_POST_WPTR_GFX_BUSY                                 0xFFFFFFFE
+#define   S_00821C_CSF_BUSY(x)                                        (((x) & 0x1) << 1)
+#define   G_00821C_CSF_BUSY(x)                                        (((x) >> 1) & 0x1)
+#define   C_00821C_CSF_BUSY                                           0xFFFFFFFD
+#define   S_00821C_ROQ_ALIGN_BUSY(x)                                  (((x) & 0x1) << 4)
+#define   G_00821C_ROQ_ALIGN_BUSY(x)                                  (((x) >> 4) & 0x1)
+#define   C_00821C_ROQ_ALIGN_BUSY                                     0xFFFFFFEF
+#define   S_00821C_ROQ_RING_BUSY(x)                                   (((x) & 0x1) << 5)
+#define   G_00821C_ROQ_RING_BUSY(x)                                   (((x) >> 5) & 0x1)
+#define   C_00821C_ROQ_RING_BUSY                                      0xFFFFFFDF
+#define   S_00821C_ROQ_INDIRECT1_BUSY(x)                              (((x) & 0x1) << 6)
+#define   G_00821C_ROQ_INDIRECT1_BUSY(x)                              (((x) >> 6) & 0x1)
+#define   C_00821C_ROQ_INDIRECT1_BUSY                                 0xFFFFFFBF
+#define   S_00821C_ROQ_INDIRECT2_BUSY(x)                              (((x) & 0x1) << 7)
+#define   G_00821C_ROQ_INDIRECT2_BUSY(x)                              (((x) >> 7) & 0x1)
+#define   C_00821C_ROQ_INDIRECT2_BUSY                                 0xFFFFFF7F
+#define   S_00821C_ROQ_STATE_BUSY(x)                                  (((x) & 0x1) << 8)
+#define   G_00821C_ROQ_STATE_BUSY(x)                                  (((x) >> 8) & 0x1)
+#define   C_00821C_ROQ_STATE_BUSY                                     0xFFFFFEFF
+#define   S_00821C_ROQ_CE_RING_BUSY(x)                                (((x) & 0x1) << 9)
+#define   G_00821C_ROQ_CE_RING_BUSY(x)                                (((x) >> 9) & 0x1)
+#define   C_00821C_ROQ_CE_RING_BUSY                                   0xFFFFFDFF
+#define   S_00821C_ROQ_CE_INDIRECT1_BUSY(x)                           (((x) & 0x1) << 10)
+#define   G_00821C_ROQ_CE_INDIRECT1_BUSY(x)                           (((x) >> 10) & 0x1)
+#define   C_00821C_ROQ_CE_INDIRECT1_BUSY                              0xFFFFFBFF
+#define   S_00821C_ROQ_CE_INDIRECT2_BUSY(x)                           (((x) & 0x1) << 11)
+#define   G_00821C_ROQ_CE_INDIRECT2_BUSY(x)                           (((x) >> 11) & 0x1)
+#define   C_00821C_ROQ_CE_INDIRECT2_BUSY                              0xFFFFF7FF
+#define   S_00821C_SEMAPHORE_BUSY(x)                                  (((x) & 0x1) << 12)
+#define   G_00821C_SEMAPHORE_BUSY(x)                                  (((x) >> 12) & 0x1)
+#define   C_00821C_SEMAPHORE_BUSY                                     0xFFFFEFFF
+#define   S_00821C_INTERRUPT_BUSY(x)                                  (((x) & 0x1) << 13)
+#define   G_00821C_INTERRUPT_BUSY(x)                                  (((x) >> 13) & 0x1)
+#define   C_00821C_INTERRUPT_BUSY                                     0xFFFFDFFF
+#define   S_00821C_TCIU_BUSY(x)                                       (((x) & 0x1) << 14)
+#define   G_00821C_TCIU_BUSY(x)                                       (((x) >> 14) & 0x1)
+#define   C_00821C_TCIU_BUSY                                          0xFFFFBFFF
+#define   S_00821C_HQD_BUSY(x)                                        (((x) & 0x1) << 15)
+#define   G_00821C_HQD_BUSY(x)                                        (((x) >> 15) & 0x1)
+#define   C_00821C_HQD_BUSY                                           0xFFFF7FFF
+#define   S_00821C_PRT_BUSY(x)                                        (((x) & 0x1) << 16)
+#define   G_00821C_PRT_BUSY(x)                                        (((x) >> 16) & 0x1)
+#define   C_00821C_PRT_BUSY                                           0xFFFEFFFF
+#define   S_00821C_ATCL2IU_BUSY(x)                                    (((x) & 0x1) << 17)
+#define   G_00821C_ATCL2IU_BUSY(x)                                    (((x) >> 17) & 0x1)
+#define   C_00821C_ATCL2IU_BUSY                                       0xFFFDFFFF
+#define   S_00821C_CPF_GFX_BUSY(x)                                    (((x) & 0x1) << 26)
+#define   G_00821C_CPF_GFX_BUSY(x)                                    (((x) >> 26) & 0x1)
+#define   C_00821C_CPF_GFX_BUSY                                       0xFBFFFFFF
+#define   S_00821C_CPF_CMP_BUSY(x)                                    (((x) & 0x1) << 27)
+#define   G_00821C_CPF_CMP_BUSY(x)                                    (((x) >> 27) & 0x1)
+#define   C_00821C_CPF_CMP_BUSY                                       0xF7FFFFFF
+#define   S_00821C_GRBM_CPF_STAT_BUSY(x)                              (((x) & 0x03) << 28)
+#define   G_00821C_GRBM_CPF_STAT_BUSY(x)                              (((x) >> 28) & 0x03)
+#define   C_00821C_GRBM_CPF_STAT_BUSY                                 0xCFFFFFFF
+#define   S_00821C_CPC_CPF_BUSY(x)                                    (((x) & 0x1) << 30)
+#define   G_00821C_CPC_CPF_BUSY(x)                                    (((x) >> 30) & 0x1)
+#define   C_00821C_CPC_CPF_BUSY                                       0xBFFFFFFF
+#define   S_00821C_CPF_BUSY(x)                                        (((x) & 0x1) << 31)
+#define   G_00821C_CPF_BUSY(x)                                        (((x) >> 31) & 0x1)
+#define   C_00821C_CPF_BUSY                                           0x7FFFFFFF
+#define R_008220_CP_CPF_BUSY_STAT                                       0x008220
+#define   S_008220_REG_BUS_FIFO_BUSY(x)                               (((x) & 0x1) << 0)
+#define   G_008220_REG_BUS_FIFO_BUSY(x)                               (((x) >> 0) & 0x1)
+#define   C_008220_REG_BUS_FIFO_BUSY                                  0xFFFFFFFE
+#define   S_008220_CSF_RING_BUSY(x)                                   (((x) & 0x1) << 1)
+#define   G_008220_CSF_RING_BUSY(x)                                   (((x) >> 1) & 0x1)
+#define   C_008220_CSF_RING_BUSY                                      0xFFFFFFFD
+#define   S_008220_CSF_INDIRECT1_BUSY(x)                              (((x) & 0x1) << 2)
+#define   G_008220_CSF_INDIRECT1_BUSY(x)                              (((x) >> 2) & 0x1)
+#define   C_008220_CSF_INDIRECT1_BUSY                                 0xFFFFFFFB
+#define   S_008220_CSF_INDIRECT2_BUSY(x)                              (((x) & 0x1) << 3)
+#define   G_008220_CSF_INDIRECT2_BUSY(x)                              (((x) >> 3) & 0x1)
+#define   C_008220_CSF_INDIRECT2_BUSY                                 0xFFFFFFF7
+#define   S_008220_CSF_STATE_BUSY(x)                                  (((x) & 0x1) << 4)
+#define   G_008220_CSF_STATE_BUSY(x)                                  (((x) >> 4) & 0x1)
+#define   C_008220_CSF_STATE_BUSY                                     0xFFFFFFEF
+#define   S_008220_CSF_CE_INDR1_BUSY(x)                               (((x) & 0x1) << 5)
+#define   G_008220_CSF_CE_INDR1_BUSY(x)                               (((x) >> 5) & 0x1)
+#define   C_008220_CSF_CE_INDR1_BUSY                                  0xFFFFFFDF
+#define   S_008220_CSF_CE_INDR2_BUSY(x)                               (((x) & 0x1) << 6)
+#define   G_008220_CSF_CE_INDR2_BUSY(x)                               (((x) >> 6) & 0x1)
+#define   C_008220_CSF_CE_INDR2_BUSY                                  0xFFFFFFBF
+#define   S_008220_CSF_ARBITER_BUSY(x)                                (((x) & 0x1) << 7)
+#define   G_008220_CSF_ARBITER_BUSY(x)                                (((x) >> 7) & 0x1)
+#define   C_008220_CSF_ARBITER_BUSY                                   0xFFFFFF7F
+#define   S_008220_CSF_INPUT_BUSY(x)                                  (((x) & 0x1) << 8)
+#define   G_008220_CSF_INPUT_BUSY(x)                                  (((x) >> 8) & 0x1)
+#define   C_008220_CSF_INPUT_BUSY                                     0xFFFFFEFF
+#define   S_008220_OUTSTANDING_READ_TAGS(x)                           (((x) & 0x1) << 9)
+#define   G_008220_OUTSTANDING_READ_TAGS(x)                           (((x) >> 9) & 0x1)
+#define   C_008220_OUTSTANDING_READ_TAGS                              0xFFFFFDFF
+#define   S_008220_HPD_PROCESSING_EOP_BUSY(x)                         (((x) & 0x1) << 11)
+#define   G_008220_HPD_PROCESSING_EOP_BUSY(x)                         (((x) >> 11) & 0x1)
+#define   C_008220_HPD_PROCESSING_EOP_BUSY                            0xFFFFF7FF
+#define   S_008220_HQD_DISPATCH_BUSY(x)                               (((x) & 0x1) << 12)
+#define   G_008220_HQD_DISPATCH_BUSY(x)                               (((x) >> 12) & 0x1)
+#define   C_008220_HQD_DISPATCH_BUSY                                  0xFFFFEFFF
+#define   S_008220_HQD_IQ_TIMER_BUSY(x)                               (((x) & 0x1) << 13)
+#define   G_008220_HQD_IQ_TIMER_BUSY(x)                               (((x) >> 13) & 0x1)
+#define   C_008220_HQD_IQ_TIMER_BUSY                                  0xFFFFDFFF
+#define   S_008220_HQD_DMA_OFFLOAD_BUSY(x)                            (((x) & 0x1) << 14)
+#define   G_008220_HQD_DMA_OFFLOAD_BUSY(x)                            (((x) >> 14) & 0x1)
+#define   C_008220_HQD_DMA_OFFLOAD_BUSY                               0xFFFFBFFF
+#define   S_008220_HQD_WAIT_SEMAPHORE_BUSY(x)                         (((x) & 0x1) << 15)
+#define   G_008220_HQD_WAIT_SEMAPHORE_BUSY(x)                         (((x) >> 15) & 0x1)
+#define   C_008220_HQD_WAIT_SEMAPHORE_BUSY                            0xFFFF7FFF
+#define   S_008220_HQD_SIGNAL_SEMAPHORE_BUSY(x)                       (((x) & 0x1) << 16)
+#define   G_008220_HQD_SIGNAL_SEMAPHORE_BUSY(x)                       (((x) >> 16) & 0x1)
+#define   C_008220_HQD_SIGNAL_SEMAPHORE_BUSY                          0xFFFEFFFF
+#define   S_008220_HQD_MESSAGE_BUSY(x)                                (((x) & 0x1) << 17)
+#define   G_008220_HQD_MESSAGE_BUSY(x)                                (((x) >> 17) & 0x1)
+#define   C_008220_HQD_MESSAGE_BUSY                                   0xFFFDFFFF
+#define   S_008220_HQD_PQ_FETCHER_BUSY(x)                             (((x) & 0x1) << 18)
+#define   G_008220_HQD_PQ_FETCHER_BUSY(x)                             (((x) >> 18) & 0x1)
+#define   C_008220_HQD_PQ_FETCHER_BUSY                                0xFFFBFFFF
+#define   S_008220_HQD_IB_FETCHER_BUSY(x)                             (((x) & 0x1) << 19)
+#define   G_008220_HQD_IB_FETCHER_BUSY(x)                             (((x) >> 19) & 0x1)
+#define   C_008220_HQD_IB_FETCHER_BUSY                                0xFFF7FFFF
+#define   S_008220_HQD_IQ_FETCHER_BUSY(x)                             (((x) & 0x1) << 20)
+#define   G_008220_HQD_IQ_FETCHER_BUSY(x)                             (((x) >> 20) & 0x1)
+#define   C_008220_HQD_IQ_FETCHER_BUSY                                0xFFEFFFFF
+#define   S_008220_HQD_EOP_FETCHER_BUSY(x)                            (((x) & 0x1) << 21)
+#define   G_008220_HQD_EOP_FETCHER_BUSY(x)                            (((x) >> 21) & 0x1)
+#define   C_008220_HQD_EOP_FETCHER_BUSY                               0xFFDFFFFF
+#define   S_008220_HQD_CONSUMED_RPTR_BUSY(x)                          (((x) & 0x1) << 22)
+#define   G_008220_HQD_CONSUMED_RPTR_BUSY(x)                          (((x) >> 22) & 0x1)
+#define   C_008220_HQD_CONSUMED_RPTR_BUSY                             0xFFBFFFFF
+#define   S_008220_HQD_FETCHER_ARB_BUSY(x)                            (((x) & 0x1) << 23)
+#define   G_008220_HQD_FETCHER_ARB_BUSY(x)                            (((x) >> 23) & 0x1)
+#define   C_008220_HQD_FETCHER_ARB_BUSY                               0xFF7FFFFF
+#define   S_008220_HQD_ROQ_ALIGN_BUSY(x)                              (((x) & 0x1) << 24)
+#define   G_008220_HQD_ROQ_ALIGN_BUSY(x)                              (((x) >> 24) & 0x1)
+#define   C_008220_HQD_ROQ_ALIGN_BUSY                                 0xFEFFFFFF
+#define   S_008220_HQD_ROQ_EOP_BUSY(x)                                (((x) & 0x1) << 25)
+#define   G_008220_HQD_ROQ_EOP_BUSY(x)                                (((x) >> 25) & 0x1)
+#define   C_008220_HQD_ROQ_EOP_BUSY                                   0xFDFFFFFF
+#define   S_008220_HQD_ROQ_IQ_BUSY(x)                                 (((x) & 0x1) << 26)
+#define   G_008220_HQD_ROQ_IQ_BUSY(x)                                 (((x) >> 26) & 0x1)
+#define   C_008220_HQD_ROQ_IQ_BUSY                                    0xFBFFFFFF
+#define   S_008220_HQD_ROQ_PQ_BUSY(x)                                 (((x) & 0x1) << 27)
+#define   G_008220_HQD_ROQ_PQ_BUSY(x)                                 (((x) >> 27) & 0x1)
+#define   C_008220_HQD_ROQ_PQ_BUSY                                    0xF7FFFFFF
+#define   S_008220_HQD_ROQ_IB_BUSY(x)                                 (((x) & 0x1) << 28)
+#define   G_008220_HQD_ROQ_IB_BUSY(x)                                 (((x) >> 28) & 0x1)
+#define   C_008220_HQD_ROQ_IB_BUSY                                    0xEFFFFFFF
+#define   S_008220_HQD_WPTR_POLL_BUSY(x)                              (((x) & 0x1) << 29)
+#define   G_008220_HQD_WPTR_POLL_BUSY(x)                              (((x) >> 29) & 0x1)
+#define   C_008220_HQD_WPTR_POLL_BUSY                                 0xDFFFFFFF
+#define   S_008220_HQD_PQ_BUSY(x)                                     (((x) & 0x1) << 30)
+#define   G_008220_HQD_PQ_BUSY(x)                                     (((x) >> 30) & 0x1)
+#define   C_008220_HQD_PQ_BUSY                                        0xBFFFFFFF
+#define   S_008220_HQD_IB_BUSY(x)                                     (((x) & 0x1) << 31)
+#define   G_008220_HQD_IB_BUSY(x)                                     (((x) >> 31) & 0x1)
+#define   C_008220_HQD_IB_BUSY                                        0x7FFFFFFF
+#define R_008224_CP_CPF_STALLED_STAT1                                   0x008224
+#define   S_008224_RING_FETCHING_DATA(x)                              (((x) & 0x1) << 0)
+#define   G_008224_RING_FETCHING_DATA(x)                              (((x) >> 0) & 0x1)
+#define   C_008224_RING_FETCHING_DATA                                 0xFFFFFFFE
+#define   S_008224_INDR1_FETCHING_DATA(x)                             (((x) & 0x1) << 1)
+#define   G_008224_INDR1_FETCHING_DATA(x)                             (((x) >> 1) & 0x1)
+#define   C_008224_INDR1_FETCHING_DATA                                0xFFFFFFFD
+#define   S_008224_INDR2_FETCHING_DATA(x)                             (((x) & 0x1) << 2)
+#define   G_008224_INDR2_FETCHING_DATA(x)                             (((x) >> 2) & 0x1)
+#define   C_008224_INDR2_FETCHING_DATA                                0xFFFFFFFB
+#define   S_008224_STATE_FETCHING_DATA(x)                             (((x) & 0x1) << 3)
+#define   G_008224_STATE_FETCHING_DATA(x)                             (((x) >> 3) & 0x1)
+#define   C_008224_STATE_FETCHING_DATA                                0xFFFFFFF7
+#define   S_008224_TCIU_WAITING_ON_FREE(x)                            (((x) & 0x1) << 5)
+#define   G_008224_TCIU_WAITING_ON_FREE(x)                            (((x) >> 5) & 0x1)
+#define   C_008224_TCIU_WAITING_ON_FREE                               0xFFFFFFDF
+#define   S_008224_TCIU_WAITING_ON_TAGS(x)                            (((x) & 0x1) << 6)
+#define   G_008224_TCIU_WAITING_ON_TAGS(x)                            (((x) >> 6) & 0x1)
+#define   C_008224_TCIU_WAITING_ON_TAGS                               0xFFFFFFBF
+#define   S_008224_ATCL2IU_WAITING_ON_FREE(x)                         (((x) & 0x1) << 7)
+#define   G_008224_ATCL2IU_WAITING_ON_FREE(x)                         (((x) >> 7) & 0x1)
+#define   C_008224_ATCL2IU_WAITING_ON_FREE                            0xFFFFFF7F
+#define   S_008224_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) & 0x1) << 8)
+#define   G_008224_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) >> 8) & 0x1)
+#define   C_008224_ATCL2IU_WAITING_ON_TAGS                            0xFFFFFEFF
+#define   S_008224_ATCL1_WAITING_ON_TRANS(x)                          (((x) & 0x1) << 9)
+#define   G_008224_ATCL1_WAITING_ON_TRANS(x)                          (((x) >> 9) & 0x1)
+#define   C_008224_ATCL1_WAITING_ON_TRANS                             0xFFFFFDFF
 #define R_030230_CP_COHER_SIZE_HI                                       0x030230
 #define   S_030230_COHER_SIZE_HI_256B(x)                              (((x) & 0xFF) << 0)
 #define   G_030230_COHER_SIZE_HI_256B(x)                              (((x) >> 0) & 0xFF)
@@ -568,6 +1381,271 @@
 #define   S_008B10_CURRENT_COUNT(x)                                   (((x) & 0xFF) << 8)
 #define   G_008B10_CURRENT_COUNT(x)                                   (((x) >> 8) & 0xFF)
 #define   C_008B10_CURRENT_COUNT                                      0xFFFF00FF
+#define R_008670_CP_STALLED_STAT3                                       0x008670
+#define   S_008670_CE_TO_CSF_NOT_RDY_TO_RCV(x)                        (((x) & 0x1) << 0)
+#define   G_008670_CE_TO_CSF_NOT_RDY_TO_RCV(x)                        (((x) >> 0) & 0x1)
+#define   C_008670_CE_TO_CSF_NOT_RDY_TO_RCV                           0xFFFFFFFE
+#define   S_008670_CE_TO_RAM_INIT_FETCHER_NOT_RDY_TO_RCV(x)           (((x) & 0x1) << 1)
+#define   G_008670_CE_TO_RAM_INIT_FETCHER_NOT_RDY_TO_RCV(x)           (((x) >> 1) & 0x1)
+#define   C_008670_CE_TO_RAM_INIT_FETCHER_NOT_RDY_TO_RCV              0xFFFFFFFD
+#define   S_008670_CE_WAITING_ON_DATA_FROM_RAM_INIT_FETCHER(x)        (((x) & 0x1) << 2)
+#define   G_008670_CE_WAITING_ON_DATA_FROM_RAM_INIT_FETCHER(x)        (((x) >> 2) & 0x1)
+#define   C_008670_CE_WAITING_ON_DATA_FROM_RAM_INIT_FETCHER           0xFFFFFFFB
+#define   S_008670_CE_TO_RAM_INIT_NOT_RDY(x)                          (((x) & 0x1) << 3)
+#define   G_008670_CE_TO_RAM_INIT_NOT_RDY(x)                          (((x) >> 3) & 0x1)
+#define   C_008670_CE_TO_RAM_INIT_NOT_RDY                             0xFFFFFFF7
+#define   S_008670_CE_TO_RAM_DUMP_NOT_RDY(x)                          (((x) & 0x1) << 4)
+#define   G_008670_CE_TO_RAM_DUMP_NOT_RDY(x)                          (((x) >> 4) & 0x1)
+#define   C_008670_CE_TO_RAM_DUMP_NOT_RDY                             0xFFFFFFEF
+#define   S_008670_CE_TO_RAM_WRITE_NOT_RDY(x)                         (((x) & 0x1) << 5)
+#define   G_008670_CE_TO_RAM_WRITE_NOT_RDY(x)                         (((x) >> 5) & 0x1)
+#define   C_008670_CE_TO_RAM_WRITE_NOT_RDY                            0xFFFFFFDF
+#define   S_008670_CE_TO_INC_FIFO_NOT_RDY_TO_RCV(x)                   (((x) & 0x1) << 6)
+#define   G_008670_CE_TO_INC_FIFO_NOT_RDY_TO_RCV(x)                   (((x) >> 6) & 0x1)
+#define   C_008670_CE_TO_INC_FIFO_NOT_RDY_TO_RCV                      0xFFFFFFBF
+#define   S_008670_CE_TO_WR_FIFO_NOT_RDY_TO_RCV(x)                    (((x) & 0x1) << 7)
+#define   G_008670_CE_TO_WR_FIFO_NOT_RDY_TO_RCV(x)                    (((x) >> 7) & 0x1)
+#define   C_008670_CE_TO_WR_FIFO_NOT_RDY_TO_RCV                       0xFFFFFF7F
+#define   S_008670_CE_WAITING_ON_BUFFER_DATA(x)                       (((x) & 0x1) << 10)
+#define   G_008670_CE_WAITING_ON_BUFFER_DATA(x)                       (((x) >> 10) & 0x1)
+#define   C_008670_CE_WAITING_ON_BUFFER_DATA                          0xFFFFFBFF
+#define   S_008670_CE_WAITING_ON_CE_BUFFER_FLAG(x)                    (((x) & 0x1) << 11)
+#define   G_008670_CE_WAITING_ON_CE_BUFFER_FLAG(x)                    (((x) >> 11) & 0x1)
+#define   C_008670_CE_WAITING_ON_CE_BUFFER_FLAG                       0xFFFFF7FF
+#define   S_008670_CE_WAITING_ON_DE_COUNTER(x)                        (((x) & 0x1) << 12)
+#define   G_008670_CE_WAITING_ON_DE_COUNTER(x)                        (((x) >> 12) & 0x1)
+#define   C_008670_CE_WAITING_ON_DE_COUNTER                           0xFFFFEFFF
+#define   S_008670_CE_WAITING_ON_DE_COUNTER_UNDERFLOW(x)              (((x) & 0x1) << 13)
+#define   G_008670_CE_WAITING_ON_DE_COUNTER_UNDERFLOW(x)              (((x) >> 13) & 0x1)
+#define   C_008670_CE_WAITING_ON_DE_COUNTER_UNDERFLOW                 0xFFFFDFFF
+#define   S_008670_TCIU_WAITING_ON_FREE(x)                            (((x) & 0x1) << 14)
+#define   G_008670_TCIU_WAITING_ON_FREE(x)                            (((x) >> 14) & 0x1)
+#define   C_008670_TCIU_WAITING_ON_FREE                               0xFFFFBFFF
+#define   S_008670_TCIU_WAITING_ON_TAGS(x)                            (((x) & 0x1) << 15)
+#define   G_008670_TCIU_WAITING_ON_TAGS(x)                            (((x) >> 15) & 0x1)
+#define   C_008670_TCIU_WAITING_ON_TAGS                               0xFFFF7FFF
+#define   S_008670_CE_STALLED_ON_TC_WR_CONFIRM(x)                     (((x) & 0x1) << 16)
+#define   G_008670_CE_STALLED_ON_TC_WR_CONFIRM(x)                     (((x) >> 16) & 0x1)
+#define   C_008670_CE_STALLED_ON_TC_WR_CONFIRM                        0xFFFEFFFF
+#define   S_008670_CE_STALLED_ON_ATOMIC_RTN_DATA(x)                   (((x) & 0x1) << 17)
+#define   G_008670_CE_STALLED_ON_ATOMIC_RTN_DATA(x)                   (((x) >> 17) & 0x1)
+#define   C_008670_CE_STALLED_ON_ATOMIC_RTN_DATA                      0xFFFDFFFF
+#define   S_008670_ATCL2IU_WAITING_ON_FREE(x)                         (((x) & 0x1) << 18)
+#define   G_008670_ATCL2IU_WAITING_ON_FREE(x)                         (((x) >> 18) & 0x1)
+#define   C_008670_ATCL2IU_WAITING_ON_FREE                            0xFFFBFFFF
+#define   S_008670_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) & 0x1) << 19)
+#define   G_008670_ATCL2IU_WAITING_ON_TAGS(x)                         (((x) >> 19) & 0x1)
+#define   C_008670_ATCL2IU_WAITING_ON_TAGS                            0xFFF7FFFF
+#define   S_008670_ATCL1_WAITING_ON_TRANS(x)                          (((x) & 0x1) << 20)
+#define   G_008670_ATCL1_WAITING_ON_TRANS(x)                          (((x) >> 20) & 0x1)
+#define   C_008670_ATCL1_WAITING_ON_TRANS                             0xFFEFFFFF
+#define R_008674_CP_STALLED_STAT1                                       0x008674
+#define   S_008674_RBIU_TO_DMA_NOT_RDY_TO_RCV(x)                      (((x) & 0x1) << 0)
+#define   G_008674_RBIU_TO_DMA_NOT_RDY_TO_RCV(x)                      (((x) >> 0) & 0x1)
+#define   C_008674_RBIU_TO_DMA_NOT_RDY_TO_RCV                         0xFFFFFFFE
+#define   S_008674_RBIU_TO_SEM_NOT_RDY_TO_RCV(x)                      (((x) & 0x1) << 2)
+#define   G_008674_RBIU_TO_SEM_NOT_RDY_TO_RCV(x)                      (((x) >> 2) & 0x1)
+#define   C_008674_RBIU_TO_SEM_NOT_RDY_TO_RCV                         0xFFFFFFFB
+#define   S_008674_RBIU_TO_MEMWR_NOT_RDY_TO_RCV(x)                    (((x) & 0x1) << 4)
+#define   G_008674_RBIU_TO_MEMWR_NOT_RDY_TO_RCV(x)                    (((x) >> 4) & 0x1)
+#define   C_008674_RBIU_TO_MEMWR_NOT_RDY_TO_RCV                       0xFFFFFFEF
+#define   S_008674_ME_HAS_ACTIVE_CE_BUFFER_FLAG(x)                    (((x) & 0x1) << 10)
+#define   G_008674_ME_HAS_ACTIVE_CE_BUFFER_FLAG(x)                    (((x) >> 10) & 0x1)
+#define   C_008674_ME_HAS_ACTIVE_CE_BUFFER_FLAG                       0xFFFFFBFF
+#define   S_008674_ME_HAS_ACTIVE_DE_BUFFER_FLAG(x)                    (((x) & 0x1) << 11)
+#define   G_008674_ME_HAS_ACTIVE_DE_BUFFER_FLAG(x)                    (((x) >> 11) & 0x1)
+#define   C_008674_ME_HAS_ACTIVE_DE_BUFFER_FLAG                       0xFFFFF7FF
+#define   S_008674_ME_STALLED_ON_TC_WR_CONFIRM(x)                     (((x) & 0x1) << 12)
+#define   G_008674_ME_STALLED_ON_TC_WR_CONFIRM(x)                     (((x) >> 12) & 0x1)
+#define   C_008674_ME_STALLED_ON_TC_WR_CONFIRM                        0xFFFFEFFF
+#define   S_008674_ME_STALLED_ON_ATOMIC_RTN_DATA(x)                   (((x) & 0x1) << 13)
+#define   G_008674_ME_STALLED_ON_ATOMIC_RTN_DATA(x)                   (((x) >> 13) & 0x1)
+#define   C_008674_ME_STALLED_ON_ATOMIC_RTN_DATA                      0xFFFFDFFF
+#define   S_008674_ME_WAITING_ON_TC_READ_DATA(x)                      (((x) & 0x1) << 14)
+#define   G_008674_ME_WAITING_ON_TC_READ_DATA(x)                      (((x) >> 14) & 0x1)
+#define   C_008674_ME_WAITING_ON_TC_READ_DATA                         0xFFFFBFFF
+#define   S_008674_ME_WAITING_ON_REG_READ_DATA(x)                     (((x) & 0x1) << 15)
+#define   G_008674_ME_WAITING_ON_REG_READ_DATA(x)                     (((x) >> 15) & 0x1)
+#define   C_008674_ME_WAITING_ON_REG_READ_DATA                        0xFFFF7FFF
+#define   S_008674_RCIU_WAITING_ON_GDS_FREE(x)                        (((x) & 0x1) << 23)
+#define   G_008674_RCIU_WAITING_ON_GDS_FREE(x)                        (((x) >> 23) & 0x1)
+#define   C_008674_RCIU_WAITING_ON_GDS_FREE                           0xFF7FFFFF
+#define   S_008674_RCIU_WAITING_ON_GRBM_FREE(x)                       (((x) & 0x1) << 24)
+#define   G_008674_RCIU_WAITING_ON_GRBM_FREE(x)                       (((x) >> 24) & 0x1)
+#define   C_008674_RCIU_WAITING_ON_GRBM_FREE                          0xFEFFFFFF
+#define   S_008674_RCIU_WAITING_ON_VGT_FREE(x)                        (((x) & 0x1) << 25)
+#define   G_008674_RCIU_WAITING_ON_VGT_FREE(x)                        (((x) >> 25) & 0x1)
+#define   C_008674_RCIU_WAITING_ON_VGT_FREE                           0xFDFFFFFF
+#define   S_008674_RCIU_STALLED_ON_ME_READ(x)                         (((x) & 0x1) << 26)
+#define   G_008674_RCIU_STALLED_ON_ME_READ(x)                         (((x) >> 26) & 0x1)
+#define   C_008674_RCIU_STALLED_ON_ME_READ                            0xFBFFFFFF
+#define   S_008674_RCIU_STALLED_ON_DMA_READ(x)                        (((x) & 0x1) << 27)
+#define   G_008674_RCIU_STALLED_ON_DMA_READ(x)                        (((x) >> 27) & 0x1)
+#define   C_008674_RCIU_STALLED_ON_DMA_READ                           0xF7FFFFFF
+#define   S_008674_RCIU_STALLED_ON_APPEND_READ(x)                     (((x) & 0x1) << 28)
+#define   G_008674_RCIU_STALLED_ON_APPEND_READ(x)                     (((x) >> 28) & 0x1)
+#define   C_008674_RCIU_STALLED_ON_APPEND_READ                        0xEFFFFFFF
+#define   S_008674_RCIU_HALTED_BY_REG_VIOLATION(x)                    (((x) & 0x1) << 29)
+#define   G_008674_RCIU_HALTED_BY_REG_VIOLATION(x)                    (((x) >> 29) & 0x1)
+#define   C_008674_RCIU_HALTED_BY_REG_VIOLATION                       0xDFFFFFFF
+#define R_008678_CP_STALLED_STAT2                                       0x008678
+#define   S_008678_PFP_TO_CSF_NOT_RDY_TO_RCV(x)                       (((x) & 0x1) << 0)
+#define   G_008678_PFP_TO_CSF_NOT_RDY_TO_RCV(x)                       (((x) >> 0) & 0x1)
+#define   C_008678_PFP_TO_CSF_NOT_RDY_TO_RCV                          0xFFFFFFFE
+#define   S_008678_PFP_TO_MEQ_NOT_RDY_TO_RCV(x)                       (((x) & 0x1) << 1)
+#define   G_008678_PFP_TO_MEQ_NOT_RDY_TO_RCV(x)                       (((x) >> 1) & 0x1)
+#define   C_008678_PFP_TO_MEQ_NOT_RDY_TO_RCV                          0xFFFFFFFD
+#define   S_008678_PFP_TO_RCIU_NOT_RDY_TO_RCV(x)                      (((x) & 0x1) << 2)
+#define   G_008678_PFP_TO_RCIU_NOT_RDY_TO_RCV(x)                      (((x) >> 2) & 0x1)
+#define   C_008678_PFP_TO_RCIU_NOT_RDY_TO_RCV                         0xFFFFFFFB
+#define   S_008678_PFP_TO_VGT_WRITES_PENDING(x)                       (((x) & 0x1) << 4)
+#define   G_008678_PFP_TO_VGT_WRITES_PENDING(x)                       (((x) >> 4) & 0x1)
+#define   C_008678_PFP_TO_VGT_WRITES_PENDING                          0xFFFFFFEF
+#define   S_008678_PFP_RCIU_READ_PENDING(x)                           (((x) & 0x1) << 5)
+#define   G_008678_PFP_RCIU_READ_PENDING(x)                           (((x) >> 5) & 0x1)
+#define   C_008678_PFP_RCIU_READ_PENDING                              0xFFFFFFDF
+#define   S_008678_PFP_WAITING_ON_BUFFER_DATA(x)                      (((x) & 0x1) << 8)
+#define   G_008678_PFP_WAITING_ON_BUFFER_DATA(x)                      (((x) >> 8) & 0x1)
+#define   C_008678_PFP_WAITING_ON_BUFFER_DATA                         0xFFFFFEFF
+#define   S_008678_ME_WAIT_ON_CE_COUNTER(x)                           (((x) & 0x1) << 9)
+#define   G_008678_ME_WAIT_ON_CE_COUNTER(x)                           (((x) >> 9) & 0x1)
+#define   C_008678_ME_WAIT_ON_CE_COUNTER                              0xFFFFFDFF
+#define   S_008678_ME_WAIT_ON_AVAIL_BUFFER(x)                         (((x) & 0x1) << 10)
+#define   G_008678_ME_WAIT_ON_AVAIL_BUFFER(x)                         (((x) >> 10) & 0x1)
+#define   C_008678_ME_WAIT_ON_AVAIL_BUFFER                            0xFFFFFBFF
+#define   S_008678_GFX_CNTX_NOT_AVAIL_TO_ME(x)                        (((x) & 0x1) << 11)
+#define   G_008678_GFX_CNTX_NOT_AVAIL_TO_ME(x)                        (((x) >> 11) & 0x1)
+#define   C_008678_GFX_CNTX_NOT_AVAIL_TO_ME                           0xFFFFF7FF
+#define   S_008678_ME_RCIU_NOT_RDY_TO_RCV(x)                          (((x) & 0x1) << 12)
+#define   G_008678_ME_RCIU_NOT_RDY_TO_RCV(x)                          (((x) >> 12) & 0x1)
+#define   C_008678_ME_RCIU_NOT_RDY_TO_RCV                             0xFFFFEFFF
+#define   S_008678_ME_TO_CONST_NOT_RDY_TO_RCV(x)                      (((x) & 0x1) << 13)
+#define   G_008678_ME_TO_CONST_NOT_RDY_TO_RCV(x)                      (((x) >> 13) & 0x1)
+#define   C_008678_ME_TO_CONST_NOT_RDY_TO_RCV                         0xFFFFDFFF
+#define   S_008678_ME_WAITING_DATA_FROM_PFP(x)                        (((x) & 0x1) << 14)
+#define   G_008678_ME_WAITING_DATA_FROM_PFP(x)                        (((x) >> 14) & 0x1)
+#define   C_008678_ME_WAITING_DATA_FROM_PFP                           0xFFFFBFFF
+#define   S_008678_ME_WAITING_ON_PARTIAL_FLUSH(x)                     (((x) & 0x1) << 15)
+#define   G_008678_ME_WAITING_ON_PARTIAL_FLUSH(x)                     (((x) >> 15) & 0x1)
+#define   C_008678_ME_WAITING_ON_PARTIAL_FLUSH                        0xFFFF7FFF
+#define   S_008678_MEQ_TO_ME_NOT_RDY_TO_RCV(x)                        (((x) & 0x1) << 16)
+#define   G_008678_MEQ_TO_ME_NOT_RDY_TO_RCV(x)                        (((x) >> 16) & 0x1)
+#define   C_008678_MEQ_TO_ME_NOT_RDY_TO_RCV                           0xFFFEFFFF
+#define   S_008678_STQ_TO_ME_NOT_RDY_TO_RCV(x)                        (((x) & 0x1) << 17)
+#define   G_008678_STQ_TO_ME_NOT_RDY_TO_RCV(x)                        (((x) >> 17) & 0x1)
+#define   C_008678_STQ_TO_ME_NOT_RDY_TO_RCV                           0xFFFDFFFF
+#define   S_008678_ME_WAITING_DATA_FROM_STQ(x)                        (((x) & 0x1) << 18)
+#define   G_008678_ME_WAITING_DATA_FROM_STQ(x)                        (((x) >> 18) & 0x1)
+#define   C_008678_ME_WAITING_DATA_FROM_STQ                           0xFFFBFFFF
+#define   S_008678_PFP_STALLED_ON_TC_WR_CONFIRM(x)                    (((x) & 0x1) << 19)
+#define   G_008678_PFP_STALLED_ON_TC_WR_CONFIRM(x)                    (((x) >> 19) & 0x1)
+#define   C_008678_PFP_STALLED_ON_TC_WR_CONFIRM                       0xFFF7FFFF
+#define   S_008678_PFP_STALLED_ON_ATOMIC_RTN_DATA(x)                  (((x) & 0x1) << 20)
+#define   G_008678_PFP_STALLED_ON_ATOMIC_RTN_DATA(x)                  (((x) >> 20) & 0x1)
+#define   C_008678_PFP_STALLED_ON_ATOMIC_RTN_DATA                     0xFFEFFFFF
+#define   S_008678_EOPD_FIFO_NEEDS_SC_EOP_DONE(x)                     (((x) & 0x1) << 21)
+#define   G_008678_EOPD_FIFO_NEEDS_SC_EOP_DONE(x)                     (((x) >> 21) & 0x1)
+#define   C_008678_EOPD_FIFO_NEEDS_SC_EOP_DONE                        0xFFDFFFFF
+#define   S_008678_EOPD_FIFO_NEEDS_WR_CONFIRM(x)                      (((x) & 0x1) << 22)
+#define   G_008678_EOPD_FIFO_NEEDS_WR_CONFIRM(x)                      (((x) >> 22) & 0x1)
+#define   C_008678_EOPD_FIFO_NEEDS_WR_CONFIRM                         0xFFBFFFFF
+#define   S_008678_STRMO_WR_OF_PRIM_DATA_PENDING(x)                   (((x) & 0x1) << 23)
+#define   G_008678_STRMO_WR_OF_PRIM_DATA_PENDING(x)                   (((x) >> 23) & 0x1)
+#define   C_008678_STRMO_WR_OF_PRIM_DATA_PENDING                      0xFF7FFFFF
+#define   S_008678_PIPE_STATS_WR_DATA_PENDING(x)                      (((x) & 0x1) << 24)
+#define   G_008678_PIPE_STATS_WR_DATA_PENDING(x)                      (((x) >> 24) & 0x1)
+#define   C_008678_PIPE_STATS_WR_DATA_PENDING                         0xFEFFFFFF
+#define   S_008678_APPEND_RDY_WAIT_ON_CS_DONE(x)                      (((x) & 0x1) << 25)
+#define   G_008678_APPEND_RDY_WAIT_ON_CS_DONE(x)                      (((x) >> 25) & 0x1)
+#define   C_008678_APPEND_RDY_WAIT_ON_CS_DONE                         0xFDFFFFFF
+#define   S_008678_APPEND_RDY_WAIT_ON_PS_DONE(x)                      (((x) & 0x1) << 26)
+#define   G_008678_APPEND_RDY_WAIT_ON_PS_DONE(x)                      (((x) >> 26) & 0x1)
+#define   C_008678_APPEND_RDY_WAIT_ON_PS_DONE                         0xFBFFFFFF
+#define   S_008678_APPEND_WAIT_ON_WR_CONFIRM(x)                       (((x) & 0x1) << 27)
+#define   G_008678_APPEND_WAIT_ON_WR_CONFIRM(x)                       (((x) >> 27) & 0x1)
+#define   C_008678_APPEND_WAIT_ON_WR_CONFIRM                          0xF7FFFFFF
+#define   S_008678_APPEND_ACTIVE_PARTITION(x)                         (((x) & 0x1) << 28)
+#define   G_008678_APPEND_ACTIVE_PARTITION(x)                         (((x) >> 28) & 0x1)
+#define   C_008678_APPEND_ACTIVE_PARTITION                            0xEFFFFFFF
+#define   S_008678_APPEND_WAITING_TO_SEND_MEMWRITE(x)                 (((x) & 0x1) << 29)
+#define   G_008678_APPEND_WAITING_TO_SEND_MEMWRITE(x)                 (((x) >> 29) & 0x1)
+#define   C_008678_APPEND_WAITING_TO_SEND_MEMWRITE                    0xDFFFFFFF
+#define   S_008678_SURF_SYNC_NEEDS_IDLE_CNTXS(x)                      (((x) & 0x1) << 30)
+#define   G_008678_SURF_SYNC_NEEDS_IDLE_CNTXS(x)                      (((x) >> 30) & 0x1)
+#define   C_008678_SURF_SYNC_NEEDS_IDLE_CNTXS                         0xBFFFFFFF
+#define   S_008678_SURF_SYNC_NEEDS_ALL_CLEAN(x)                       (((x) & 0x1) << 31)
+#define   G_008678_SURF_SYNC_NEEDS_ALL_CLEAN(x)                       (((x) >> 31) & 0x1)
+#define   C_008678_SURF_SYNC_NEEDS_ALL_CLEAN                          0x7FFFFFFF
+#define R_008680_CP_STAT                                                0x008680
+#define   S_008680_ROQ_RING_BUSY(x)                                   (((x) & 0x1) << 9)
+#define   G_008680_ROQ_RING_BUSY(x)                                   (((x) >> 9) & 0x1)
+#define   C_008680_ROQ_RING_BUSY                                      0xFFFFFDFF
+#define   S_008680_ROQ_INDIRECT1_BUSY(x)                              (((x) & 0x1) << 10)
+#define   G_008680_ROQ_INDIRECT1_BUSY(x)                              (((x) >> 10) & 0x1)
+#define   C_008680_ROQ_INDIRECT1_BUSY                                 0xFFFFFBFF
+#define   S_008680_ROQ_INDIRECT2_BUSY(x)                              (((x) & 0x1) << 11)
+#define   G_008680_ROQ_INDIRECT2_BUSY(x)                              (((x) >> 11) & 0x1)
+#define   C_008680_ROQ_INDIRECT2_BUSY                                 0xFFFFF7FF
+#define   S_008680_ROQ_STATE_BUSY(x)                                  (((x) & 0x1) << 12)
+#define   G_008680_ROQ_STATE_BUSY(x)                                  (((x) >> 12) & 0x1)
+#define   C_008680_ROQ_STATE_BUSY                                     0xFFFFEFFF
+#define   S_008680_DC_BUSY(x)                                         (((x) & 0x1) << 13)
+#define   G_008680_DC_BUSY(x)                                         (((x) >> 13) & 0x1)
+#define   C_008680_DC_BUSY                                            0xFFFFDFFF
+#define   S_008680_ATCL2IU_BUSY(x)                                    (((x) & 0x1) << 14)
+#define   G_008680_ATCL2IU_BUSY(x)                                    (((x) >> 14) & 0x1)
+#define   C_008680_ATCL2IU_BUSY                                       0xFFFFBFFF
+#define   S_008680_PFP_BUSY(x)                                        (((x) & 0x1) << 15)
+#define   G_008680_PFP_BUSY(x)                                        (((x) >> 15) & 0x1)
+#define   C_008680_PFP_BUSY                                           0xFFFF7FFF
+#define   S_008680_MEQ_BUSY(x)                                        (((x) & 0x1) << 16)
+#define   G_008680_MEQ_BUSY(x)                                        (((x) >> 16) & 0x1)
+#define   C_008680_MEQ_BUSY                                           0xFFFEFFFF
+#define   S_008680_ME_BUSY(x)                                         (((x) & 0x1) << 17)
+#define   G_008680_ME_BUSY(x)                                         (((x) >> 17) & 0x1)
+#define   C_008680_ME_BUSY                                            0xFFFDFFFF
+#define   S_008680_QUERY_BUSY(x)                                      (((x) & 0x1) << 18)
+#define   G_008680_QUERY_BUSY(x)                                      (((x) >> 18) & 0x1)
+#define   C_008680_QUERY_BUSY                                         0xFFFBFFFF
+#define   S_008680_SEMAPHORE_BUSY(x)                                  (((x) & 0x1) << 19)
+#define   G_008680_SEMAPHORE_BUSY(x)                                  (((x) >> 19) & 0x1)
+#define   C_008680_SEMAPHORE_BUSY                                     0xFFF7FFFF
+#define   S_008680_INTERRUPT_BUSY(x)                                  (((x) & 0x1) << 20)
+#define   G_008680_INTERRUPT_BUSY(x)                                  (((x) >> 20) & 0x1)
+#define   C_008680_INTERRUPT_BUSY                                     0xFFEFFFFF
+#define   S_008680_SURFACE_SYNC_BUSY(x)                               (((x) & 0x1) << 21)
+#define   G_008680_SURFACE_SYNC_BUSY(x)                               (((x) >> 21) & 0x1)
+#define   C_008680_SURFACE_SYNC_BUSY                                  0xFFDFFFFF
+#define   S_008680_DMA_BUSY(x)                                        (((x) & 0x1) << 22)
+#define   G_008680_DMA_BUSY(x)                                        (((x) >> 22) & 0x1)
+#define   C_008680_DMA_BUSY                                           0xFFBFFFFF
+#define   S_008680_RCIU_BUSY(x)                                       (((x) & 0x1) << 23)
+#define   G_008680_RCIU_BUSY(x)                                       (((x) >> 23) & 0x1)
+#define   C_008680_RCIU_BUSY                                          0xFF7FFFFF
+#define   S_008680_SCRATCH_RAM_BUSY(x)                                (((x) & 0x1) << 24)
+#define   G_008680_SCRATCH_RAM_BUSY(x)                                (((x) >> 24) & 0x1)
+#define   C_008680_SCRATCH_RAM_BUSY                                   0xFEFFFFFF
+#define   S_008680_CPC_CPG_BUSY(x)                                    (((x) & 0x1) << 25)
+#define   G_008680_CPC_CPG_BUSY(x)                                    (((x) >> 25) & 0x1)
+#define   C_008680_CPC_CPG_BUSY                                       0xFDFFFFFF
+#define   S_008680_CE_BUSY(x)                                         (((x) & 0x1) << 26)
+#define   G_008680_CE_BUSY(x)                                         (((x) >> 26) & 0x1)
+#define   C_008680_CE_BUSY                                            0xFBFFFFFF
+#define   S_008680_TCIU_BUSY(x)                                       (((x) & 0x1) << 27)
+#define   G_008680_TCIU_BUSY(x)                                       (((x) >> 27) & 0x1)
+#define   C_008680_TCIU_BUSY                                          0xF7FFFFFF
+#define   S_008680_ROQ_CE_RING_BUSY(x)                                (((x) & 0x1) << 28)
+#define   G_008680_ROQ_CE_RING_BUSY(x)                                (((x) >> 28) & 0x1)
+#define   C_008680_ROQ_CE_RING_BUSY                                   0xEFFFFFFF
+#define   S_008680_ROQ_CE_INDIRECT1_BUSY(x)                           (((x) & 0x1) << 29)
+#define   G_008680_ROQ_CE_INDIRECT1_BUSY(x)                           (((x) >> 29) & 0x1)
+#define   C_008680_ROQ_CE_INDIRECT1_BUSY                              0xDFFFFFFF
+#define   S_008680_ROQ_CE_INDIRECT2_BUSY(x)                           (((x) & 0x1) << 30)
+#define   G_008680_ROQ_CE_INDIRECT2_BUSY(x)                           (((x) >> 30) & 0x1)
+#define   C_008680_ROQ_CE_INDIRECT2_BUSY                              0xBFFFFFFF
+#define   S_008680_CP_BUSY(x)                                         (((x) & 0x1) << 31)
+#define   G_008680_CP_BUSY(x)                                         (((x) >> 31) & 0x1)
+#define   C_008680_CP_BUSY                                            0x7FFFFFFF
 /* CIK */
 #define R_030800_GRBM_GFX_INDEX                                         0x030800
 #define   S_030800_INSTANCE_INDEX(x)                                  (((x) & 0xFF) << 0)
