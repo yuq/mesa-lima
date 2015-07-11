@@ -304,6 +304,7 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 /* radeonsi_shader.c */
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader);
+void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f);
 int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    LLVMTargetMachineRef tm, LLVMModuleRef mod);
 void si_shader_destroy(struct pipe_context *ctx, struct si_shader *shader);

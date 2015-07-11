@@ -3964,48 +3964,48 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	return r;
 }
 
-static void si_dump_key(unsigned shader, union si_shader_key *key)
+void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 {
 	int i;
 
-	fprintf(stderr, "SHADER KEY\n");
+	fprintf(f, "SHADER KEY\n");
 
 	switch (shader) {
 	case PIPE_SHADER_VERTEX:
-		fprintf(stderr, "  instance_divisors = {");
+		fprintf(f, "  instance_divisors = {");
 		for (i = 0; i < Elements(key->vs.instance_divisors); i++)
-			fprintf(stderr, !i ? "%u" : ", %u",
+			fprintf(f, !i ? "%u" : ", %u",
 				key->vs.instance_divisors[i]);
-		fprintf(stderr, "}\n");
+		fprintf(f, "}\n");
 
 		if (key->vs.as_es)
-			fprintf(stderr, "  es_enabled_outputs = 0x%"PRIx64"\n",
+			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
 				key->vs.es_enabled_outputs);
-		fprintf(stderr, "  as_es = %u\n", key->vs.as_es);
-		fprintf(stderr, "  as_ls = %u\n", key->vs.as_ls);
+		fprintf(f, "  as_es = %u\n", key->vs.as_es);
+		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
-		fprintf(stderr, "  prim_mode = %u\n", key->tcs.prim_mode);
+		fprintf(f, "  prim_mode = %u\n", key->tcs.prim_mode);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
 		if (key->tes.as_es)
-			fprintf(stderr, "  es_enabled_outputs = 0x%"PRIx64"\n",
+			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
 				key->tes.es_enabled_outputs);
-		fprintf(stderr, "  as_es = %u\n", key->tes.as_es);
+		fprintf(f, "  as_es = %u\n", key->tes.as_es);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
-		fprintf(stderr, "  export_16bpc = 0x%X\n", key->ps.export_16bpc);
-		fprintf(stderr, "  last_cbuf = %u\n", key->ps.last_cbuf);
-		fprintf(stderr, "  color_two_side = %u\n", key->ps.color_two_side);
-		fprintf(stderr, "  alpha_func = %u\n", key->ps.alpha_func);
-		fprintf(stderr, "  alpha_to_one = %u\n", key->ps.alpha_to_one);
-		fprintf(stderr, "  poly_stipple = %u\n", key->ps.poly_stipple);
+		fprintf(f, "  export_16bpc = 0x%X\n", key->ps.export_16bpc);
+		fprintf(f, "  last_cbuf = %u\n", key->ps.last_cbuf);
+		fprintf(f, "  color_two_side = %u\n", key->ps.color_two_side);
+		fprintf(f, "  alpha_func = %u\n", key->ps.alpha_func);
+		fprintf(f, "  alpha_to_one = %u\n", key->ps.alpha_to_one);
+		fprintf(f, "  poly_stipple = %u\n", key->ps.poly_stipple);
 		break;
 
 	default:
@@ -4036,7 +4036,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
 	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		si_dump_key(sel->type, &shader->key);
+		si_dump_shader_key(sel->type, &shader->key, stderr);
 		tgsi_dump(tokens, 0);
 		si_dump_streamout(&sel->so);
 	}
