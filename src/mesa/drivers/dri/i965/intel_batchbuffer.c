@@ -94,7 +94,7 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
    drm_intel_gem_bo_clear_relocs(brw->batch.bo, brw->batch.saved.reloc_count);
 
    brw->batch.used = brw->batch.saved.used;
-   if (brw->batch.used == 0)
+   if (USED_BATCH(brw->batch) == 0)
       brw->batch.ring = UNKNOWN_RING;
 }
 
@@ -122,7 +122,7 @@ do_batch_dump(struct brw_context *brw)
       drm_intel_decode_set_batch_pointer(decode,
 					 batch->bo->virtual,
 					 batch->bo->offset64,
-					 batch->used);
+                                         USED_BATCH(*batch));
    } else {
       fprintf(stderr,
 	      "WARNING: failed to map batchbuffer (%s), "
@@ -131,7 +131,7 @@ do_batch_dump(struct brw_context *brw)
       drm_intel_decode_set_batch_pointer(decode,
 					 batch->map,
 					 batch->bo->offset64,
-					 batch->used);
+                                         USED_BATCH(*batch));
    }
 
    drm_intel_decode_set_output_file(decode, stderr);
@@ -289,7 +289,7 @@ do_flush_locked(struct brw_context *brw)
    if (brw->has_llc) {
       drm_intel_bo_unmap(batch->bo);
    } else {
-      ret = drm_intel_bo_subdata(batch->bo, 0, 4*batch->used, batch->map);
+      ret = drm_intel_bo_subdata(batch->bo, 0, 4 * USED_BATCH(*batch), batch->map);
       if (ret == 0 && batch->state_batch_offset != batch->bo->size) {
 	 ret = drm_intel_bo_subdata(batch->bo,
 				    batch->state_batch_offset,
@@ -314,11 +314,11 @@ do_flush_locked(struct brw_context *brw)
             brw_annotate_aub(brw);
 
 	 if (brw->hw_ctx == NULL || batch->ring != RENDER_RING) {
-	    ret = drm_intel_bo_mrb_exec(batch->bo, 4 * batch->used, NULL, 0, 0,
-					flags);
+            ret = drm_intel_bo_mrb_exec(batch->bo, 4 * USED_BATCH(*batch),
+                                        NULL, 0, 0, flags);
 	 } else {
 	    ret = drm_intel_gem_bo_context_exec(batch->bo, brw->hw_ctx,
-						4 * batch->used, flags);
+                                                4 * USED_BATCH(*batch), flags);
 	 }
       }
 
@@ -342,7 +342,7 @@ _intel_batchbuffer_flush(struct brw_context *brw,
 {
    int ret;
 
-   if (brw->batch.used == 0)
+   if (USED_BATCH(brw->batch) == 0)
       return 0;
 
    if (brw->throttle_batch[0] == NULL) {
@@ -351,7 +351,7 @@ _intel_batchbuffer_flush(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_BATCH)) {
-      int bytes_for_commands = 4 * brw->batch.used;
+      int bytes_for_commands = 4 * USED_BATCH(brw->batch);
       int bytes_for_state = brw->batch.bo->size - brw->batch.state_batch_offset;
       int total_bytes = bytes_for_commands + bytes_for_state;
       fprintf(stderr, "%s:%d: Batchbuffer flush with %4db (pkt) + "
@@ -367,7 +367,7 @@ _intel_batchbuffer_flush(struct brw_context *brw,
 
    /* Mark the end of the buffer. */
    intel_batchbuffer_emit_dword(brw, MI_BATCH_BUFFER_END);
-   if (brw->batch.used & 1) {
+   if (USED_BATCH(brw->batch) & 1) {
       /* Round batchbuffer usage to 2 DWORDs. */
       intel_batchbuffer_emit_dword(brw, MI_NOOP);
    }

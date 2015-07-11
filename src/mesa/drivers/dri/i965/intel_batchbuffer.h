@@ -67,6 +67,9 @@ uint64_t intel_batchbuffer_reloc64(struct brw_context *brw,
                                    uint32_t read_domains,
                                    uint32_t write_domain,
                                    uint32_t offset);
+
+#define USED_BATCH(batch) ((batch).used)
+
 static inline uint32_t float_as_int(float f)
 {
    union {
@@ -87,7 +90,7 @@ static inline unsigned
 intel_batchbuffer_space(struct brw_context *brw)
 {
    return (brw->batch.state_batch_offset - brw->batch.reserved_space)
-      - brw->batch.used*4;
+      - USED_BATCH(brw->batch) * 4;
 }
 
 
@@ -139,7 +142,7 @@ intel_batchbuffer_begin(struct brw_context *brw, int n, enum brw_gpu_ring ring)
    intel_batchbuffer_require_space(brw, n * 4, ring);
 
 #ifdef DEBUG
-   brw->batch.emit = brw->batch.used;
+   brw->batch.emit = USED_BATCH(brw->batch);
    brw->batch.total = n;
 #endif
 }
@@ -149,7 +152,7 @@ intel_batchbuffer_advance(struct brw_context *brw)
 {
 #ifdef DEBUG
    struct intel_batchbuffer *batch = &brw->batch;
-   unsigned int _n = batch->used - batch->emit;
+   unsigned int _n = USED_BATCH(*batch) - batch->emit;
    assert(batch->total != 0);
    if (_n != batch->total) {
       fprintf(stderr, "ADVANCE_BATCH: %d of %d dwords emitted\n",

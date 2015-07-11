@@ -710,7 +710,7 @@ emit_mi_report_perf_count(struct brw_context *brw,
    /* Make sure the commands to take a snapshot fits in a single batch. */
    intel_batchbuffer_require_space(brw, MI_REPORT_PERF_COUNT_BATCH_DWORDS * 4,
                                    RENDER_RING);
-   int batch_used = brw->batch.used;
+   int batch_used = USED_BATCH(brw->batch);
 
    /* Reports apparently don't always get written unless we flush first. */
    brw_emit_mi_flush(brw);
@@ -754,7 +754,7 @@ emit_mi_report_perf_count(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    (void) batch_used;
-   assert(brw->batch.used - batch_used <= MI_REPORT_PERF_COUNT_BATCH_DWORDS * 4);
+   assert(USED_BATCH(brw->batch) - batch_used <= MI_REPORT_PERF_COUNT_BATCH_DWORDS * 4);
 }
 
 /**
@@ -1386,7 +1386,7 @@ void
 brw_perf_monitor_new_batch(struct brw_context *brw)
 {
    assert(brw->batch.ring == RENDER_RING);
-   assert(brw->gen < 6 || brw->batch.used == 0);
+   assert(brw->gen < 6 || USED_BATCH(brw->batch) == 0);
 
    if (brw->perfmon.oa_users == 0)
       return;
