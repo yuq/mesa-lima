@@ -695,6 +695,8 @@ struct anv_cmd_buffer {
    struct anv_pipeline *                        pipeline;
    struct anv_pipeline *                        compute_pipeline;
    struct anv_framebuffer *                     framebuffer;
+   struct anv_render_pass *                     pass;
+   struct anv_subpass *                         subpass;
    struct anv_dynamic_rs_state *                rs_state;
    struct anv_dynamic_ds_state *                ds_state;
    struct anv_dynamic_vp_state *                vp_state;
@@ -797,12 +799,13 @@ struct anv_format {
    uint16_t surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    uint8_t cpp; /**< Bytes-per-pixel of anv_format::surface_format. */
    uint8_t num_channels;
-   uint8_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
+   uint16_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
    bool has_stencil;
 };
 
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
+bool anv_is_vk_format_depth_or_stencil(VkFormat format);
 
 /**
  * A proxy for the color surfaces, depth surfaces, and stencil surfaces.
@@ -866,6 +869,36 @@ struct anv_surface_view {
    VkFormat                                     format;
 };
 
+enum anv_attachment_view_type {
+   ANV_ATTACHMENT_VIEW_TYPE_COLOR,
+   ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL,
+};
+
+struct anv_attachment_view {
+   enum anv_attachment_view_type attachment_type;
+};
+
+struct anv_color_attachment_view {
+   struct anv_attachment_view base;
+
+   struct anv_surface_view view;
+};
+
+struct anv_depth_stencil_view {
+   struct anv_attachment_view base;
+
+   struct anv_bo *bo;
+
+   uint32_t depth_offset; /**< Offset into bo. */
+   uint32_t depth_stride; /**< 3DSTATE_DEPTH_BUFFER.SurfacePitch */
+   uint32_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
+   uint16_t depth_qpitch; /**< 3DSTATE_DEPTH_BUFFER.SurfaceQPitch */
+
+   uint32_t stencil_offset; /**< Offset into bo. */
+   uint32_t stencil_stride; /**< 3DSTATE_STENCIL_BUFFER.SurfacePitch */
+   uint16_t stencil_qpitch; /**< 3DSTATE_STENCIL_BUFFER.SurfaceQPitch */
+};
+
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
    bool force_tile_mode;
@@ -881,65 +914,66 @@ void anv_image_view_init(struct anv_surface_view *view,
                          const VkImageViewCreateInfo* pCreateInfo,
                          struct anv_cmd_buffer *cmd_buffer);
 
-void anv_color_attachment_view_init(struct anv_surface_view *view,
+void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
                                     struct anv_device *device,
-                                    const VkColorAttachmentViewCreateInfo* pCreateInfo,
+                                    const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
 
-void anv_surface_view_destroy(struct anv_device *device,
-                              struct anv_surface_view *view);
+void anv_surface_view_fini(struct anv_device *device,
+                           struct anv_surface_view *view);
 
 struct anv_sampler {
    uint32_t state[4];
 };
 
-struct anv_depth_stencil_view {
-   struct anv_bo *bo;
-
-   uint32_t depth_offset; /**< Offset into bo. */
-   uint32_t depth_stride; /**< 3DSTATE_DEPTH_BUFFER.SurfacePitch */
-   uint32_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
-   uint16_t depth_qpitch; /**< 3DSTATE_DEPTH_BUFFER.SurfaceQPitch */
-
-   uint32_t stencil_offset; /**< Offset into bo. */
-   uint32_t stencil_stride; /**< 3DSTATE_STENCIL_BUFFER.SurfacePitch */
-   uint16_t stencil_qpitch; /**< 3DSTATE_STENCIL_BUFFER.SurfaceQPitch */
-};
-
 struct anv_framebuffer {
    struct anv_object                            base;
-   uint32_t                                     color_attachment_count;
-   const struct anv_surface_view *              color_attachments[MAX_RTS];
-   const struct anv_depth_stencil_view *        depth_stencil;
 
-   uint32_t                                     sample_count;
    uint32_t                                     width;
    uint32_t                                     height;
    uint32_t                                     layers;
 
    /* Viewport for clears */
    VkDynamicViewportState                       vp_state;
+
+   uint32_t                                     attachment_count;
+   const struct anv_attachment_view *           attachments[0];
 };
 
-struct anv_render_pass_layer {
-   VkAttachmentLoadOp                           color_load_op;
-   VkClearColorValue                            clear_color;
+struct anv_subpass {
+   uint32_t                                     input_count;
+   uint32_t *                                   input_attachments;
+   uint32_t                                     color_count;
+   uint32_t *                                   color_attachments;
+   uint32_t *                                   resolve_attachments;
+   uint32_t                                     depth_stencil_attachment;
+};
+
+struct anv_render_pass_attachment {
+   VkFormat                                     format;
+   uint32_t                                     samples;
+   VkAttachmentLoadOp                           load_op;
+   VkAttachmentLoadOp                           stencil_load_op;
 };
 
 struct anv_render_pass {
-   VkRect2D                                     render_area;
+   uint32_t                                     attachment_count;
+   struct anv_render_pass_attachment *          attachments;
 
-   uint32_t                                     num_clear_layers;
-   uint32_t                                     num_layers;
-   struct anv_render_pass_layer                 layers[0];
+   struct anv_subpass                           subpasses[0];
 };
 
 void anv_device_init_meta(struct anv_device *device);
 void anv_device_finish_meta(struct anv_device *device);
 
 void
-anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
-                     struct anv_render_pass *pass);
+anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_subpass *subpass);
+
+void
+anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                 struct anv_render_pass *pass,
+                                 const VkClearValue *clear_values);
 
 void *
 anv_lookup_entrypoint(const char *name);
@@ -977,7 +1011,7 @@ ANV_DEFINE_CASTS(anv_shader, VkShader)
 ANV_DEFINE_CASTS(anv_pipeline, VkPipeline)
 ANV_DEFINE_CASTS(anv_image, VkImage)
 ANV_DEFINE_CASTS(anv_sampler, VkSampler)
-ANV_DEFINE_CASTS(anv_depth_stencil_view, VkDepthStencilView)
+ANV_DEFINE_CASTS(anv_attachment_view, VkAttachmentView)
 ANV_DEFINE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_CASTS(anv_query_pool, VkQueryPool)

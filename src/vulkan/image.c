@@ -326,12 +326,10 @@ VkResult anv_GetImageSubresourceLayout(
 }
 
 void
-anv_surface_view_destroy(struct anv_device *device,
-                         struct anv_surface_view *view)
+anv_surface_view_fini(struct anv_device *device,
+                      struct anv_surface_view *view)
 {
    anv_state_pool_free(&device->surface_state_pool, view->surface_state);
-
-   anv_device_free(device, view);
 }
 
 void
@@ -557,29 +555,31 @@ VkResult
 anv_DestroyImageView(VkDevice _device, VkImageView _view)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_surface_view *view = (struct anv_surface_view *)_view;
 
-   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
+   anv_surface_view_fini(device, view);
+   anv_device_free(device, view);
 
    return VK_SUCCESS;
 }
 
 void
-anv_color_attachment_view_init(struct anv_surface_view *view,
+anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
                                struct anv_device *device,
-                               const VkColorAttachmentViewCreateInfo* pCreateInfo,
+                               const VkAttachmentViewCreateInfo* pCreateInfo,
                                struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+   struct anv_surface_view *view = &aview->view;
    struct anv_surface *surface = &image->primary_surface;
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
+   aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
+
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
-
-   if (pCreateInfo->msaaResolveImage)
-      anv_finishme("msaaResolveImage");
 
    view->bo = image->bo;
    view->offset = image->offset + surface->offset;
@@ -659,57 +659,17 @@ anv_color_attachment_view_init(struct anv_surface_view *view,
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
-VkResult
-anv_CreateColorAttachmentView(VkDevice _device,
-                              const VkColorAttachmentViewCreateInfo *pCreateInfo,
-                              VkColorAttachmentView *pView)
+static void
+anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
+                            const VkAttachmentViewCreateInfo *pCreateInfo)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_surface_view *view;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO);
-
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
-
-   *pView = (VkColorAttachmentView) view;
-
-   return VK_SUCCESS;
-}
-
-VkResult
-anv_DestroyColorAttachmentView(VkDevice _device, VkColorAttachmentView _view)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-
-   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
-
-   return VK_SUCCESS;
-}
-
-VkResult
-anv_CreateDepthStencilView(VkDevice _device,
-                           const VkDepthStencilViewCreateInfo *pCreateInfo,
-                           VkDepthStencilView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_depth_stencil_view *view;
    struct anv_surface *depth_surface = &image->primary_surface;
    struct anv_surface *stencil_surface = &image->stencil_surface;
    const struct anv_format *format =
       anv_format_for_vk_format(image->format);
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO);
-
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   view->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
 
    /* XXX: We don't handle any of these */
    anv_assert(pCreateInfo->mipLevel == 0);
@@ -726,17 +686,54 @@ anv_CreateDepthStencilView(VkDevice _device,
    view->stencil_stride = stencil_surface->stride;
    view->stencil_offset = image->offset + stencil_surface->offset;
    view->stencil_qpitch = 0; /* FINISHME: QPitch */
+}
 
-   *pView = anv_depth_stencil_view_to_handle(view);
+VkResult
+anv_CreateAttachmentView(VkDevice _device,
+                         const VkAttachmentViewCreateInfo *pCreateInfo,
+                         VkAttachmentView *pView)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
+
+   if (anv_is_vk_format_depth_or_stencil(pCreateInfo->format)) {
+      struct anv_depth_stencil_view *view =
+         anv_device_alloc(device, sizeof(*view), 8,
+                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+      if (view == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      anv_depth_stencil_view_init(view, pCreateInfo);
+
+      *pView = anv_attachment_view_to_handle(&view->base);
+   } else {
+      struct anv_color_attachment_view *view =
+         anv_device_alloc(device, sizeof(*view), 8,
+                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+      if (view == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
+
+      *pView = anv_attachment_view_to_handle(&view->base);
+   }
 
    return VK_SUCCESS;
 }
 
 VkResult
-anv_DestroyDepthStencilView(VkDevice _device, VkDepthStencilView _view)
+anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _view)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_depth_stencil_view, view, _view);
+   ANV_FROM_HANDLE(anv_attachment_view, view, _view);
+
+   if (view->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR) {
+      struct anv_color_attachment_view *aview =
+         (struct anv_color_attachment_view *)view;
+
+      anv_surface_view_fini(device, &aview->view);
+   }
 
    anv_device_free(device, view);
 

@@ -263,31 +263,56 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
 }
 
 void
-anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
-                     struct anv_render_pass *pass)
+anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                 struct anv_render_pass *pass,
+                                 const VkClearValue *clear_values)
 {
    struct anv_saved_state saved_state;
 
    int num_clear_layers = 0;
-   struct clear_instance_data instance_data[MAX_RTS];
-
-   for (uint32_t i = 0; i < pass->num_layers; i++) {
-      if (pass->layers[i].color_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         instance_data[num_clear_layers++] = (struct clear_instance_data) {
-            .vue_header = {
-               .RTAIndex = i,
-               .ViewportIndex = 0,
-               .PointWidth = 0.0
-            },
-            .color = pass->layers[i].clear_color,
-         };
+   for (uint32_t i = 0; i < pass->attachment_count; i++) {
+      if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+         if (anv_is_vk_format_depth_or_stencil(pass->attachments[i].format)) {
+            anv_finishme("Can't clear depth-stencil yet");
+            continue;
+         }
+         num_clear_layers++;
       }
    }
 
    if (num_clear_layers == 0)
       return;
 
+   struct clear_instance_data instance_data[num_clear_layers];
+   uint32_t color_attachments[num_clear_layers];
+
+   int layer = 0;
+   for (uint32_t i = 0; i < pass->attachment_count; i++) {
+      if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR &&
+          !anv_is_vk_format_depth_or_stencil(pass->attachments[i].format)) {
+         instance_data[layer] = (struct clear_instance_data) {
+            .vue_header = {
+               .RTAIndex = i,
+               .ViewportIndex = 0,
+               .PointWidth = 0.0
+            },
+            .color = clear_values[i].color,
+         };
+         color_attachments[layer] = i;
+         layer++;
+      }
+   }
+
    anv_cmd_buffer_save(cmd_buffer, &saved_state);
+
+   struct anv_subpass subpass = {
+      .input_count = 0,
+      .color_count = num_clear_layers,
+      .color_attachments = color_attachments,
+      .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
+   };
+
+   anv_cmd_buffer_begin_subpass(cmd_buffer, &subpass);
 
    meta_emit_clear(cmd_buffer, num_clear_layers, instance_data);
 
@@ -500,7 +525,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_surface_view *src,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
-               struct anv_surface_view *dest,
+               struct anv_color_attachment_view *dest,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
 {
@@ -596,45 +621,67 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    anv_CreateFramebuffer(anv_device_to_handle(device),
       &(VkFramebufferCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-         .colorAttachmentCount = 1,
-         .pColorAttachments = (VkColorAttachmentBindInfo[]) {
+         .attachmentCount = 1,
+         .pAttachments = (VkAttachmentBindInfo[]) {
             {
-               .view = (VkColorAttachmentView) dest,
+               .view = anv_attachment_view_to_handle(&dest->base),
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
-         .pDepthStencilAttachment = NULL,
-         .sampleCount = 1,
-         .width = dest->extent.width,
-         .height = dest->extent.height,
+         .width = dest->view.extent.width,
+         .height = dest->view.extent.height,
          .layers = 1
       }, &fb);
-
 
    VkRenderPass pass;
    anv_CreateRenderPass(anv_device_to_handle(device),
       &(VkRenderPassCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-         .renderArea = { { 0, 0 }, { dest->extent.width, dest->extent.height } },
-         .colorAttachmentCount = 1,
-         .extent = { 0, },
-         .sampleCount = 1,
-         .layers = 1,
-         .pColorFormats = (VkFormat[]) { dest->format },
-         .pColorLayouts = (VkImageLayout[]) { VK_IMAGE_LAYOUT_GENERAL },
-         .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_LOAD },
-         .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
-         .pColorLoadClearValues = (VkClearColorValue[]) {
-            { .f32 = { 1.0, 0.0, 0.0, 1.0 } }
+         .attachmentCount = 1,
+         .pAttachments = &(VkAttachmentDescription) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
+            .format = dest->view.format,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
          },
-         .depthStencilFormat = VK_FORMAT_UNDEFINED,
+         .subpassCount = 1,
+         .pSubpasses = &(VkSubpassDescription) {
+            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .inputCount = 0,
+            .colorCount = 1,
+            .colorAttachments = &(VkAttachmentReference) {
+               .attachment = 0,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            .resolveAttachments = NULL,
+            .depthStencilAttachment = (VkAttachmentReference) {
+               .attachment = VK_ATTACHMENT_UNUSED,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            .preserveCount = 1,
+            .preserveAttachments = &(VkAttachmentReference) {
+               .attachment = 0,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+         },
+         .dependencyCount = 0,
       }, &pass);
 
    anv_CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
-      &(VkRenderPassBegin) {
+      &(VkRenderPassBeginInfo) {
+         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
          .renderPass = pass,
          .framebuffer = fb,
-      });
+         .renderArea = {
+            .offset = { dest_offset.x, dest_offset.y },
+            .extent = { dest_extent.width, dest_extent.height },
+         },
+         .attachmentCount = 1,
+         .pAttachmentClearValues = NULL,
+      }, VK_RENDER_PASS_CONTENTS_INLINE);
 
    anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
                                  VK_STATE_BIND_POINT_VIEWPORT,
@@ -747,10 +794,10 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       },
       cmd_buffer);
 
-   struct anv_surface_view dest_view;
+   struct anv_color_attachment_view dest_view;
    anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-      &(VkColorAttachmentViewCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+      &(VkAttachmentViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
          .image = dest_image,
          .format = copy_format,
          .mipLevel = 0,
@@ -887,10 +934,10 @@ void anv_CmdCopyImage(
          },
          cmd_buffer);
 
-      struct anv_surface_view dest_view;
+      struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-         &(VkColorAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         &(VkAttachmentViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
             .format = src_image->format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
@@ -955,10 +1002,10 @@ void anv_CmdBlitImage(
          },
          cmd_buffer);
 
-      struct anv_surface_view dest_view;
+      struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-         &(VkColorAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         &(VkAttachmentViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
             .format = dest_image->format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
@@ -1051,10 +1098,10 @@ void anv_CmdCopyBufferToImage(
          },
          cmd_buffer);
 
-      struct anv_surface_view dest_view;
+      struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-         &(VkColorAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         &(VkAttachmentViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
             .format = dest_image->format,
             .mipLevel = pRegions[r].imageSubresource.mipLevel,
@@ -1149,10 +1196,10 @@ void anv_CmdCopyImageToBuffer(
       dest_image->bo = dest_buffer->bo;
       dest_image->offset = dest_buffer->offset + pRegions[r].bufferOffset;
 
-      struct anv_surface_view dest_view;
+      struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
-         &(VkColorAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+         &(VkAttachmentViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
             .format = src_image->format,
             .mipLevel = 0,
@@ -1212,10 +1259,10 @@ void anv_CmdClearColorImage(
    for (uint32_t r = 0; r < rangeCount; r++) {
       for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
          for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
-            struct anv_surface_view view;
+            struct anv_color_attachment_view view;
             anv_color_attachment_view_init(&view, cmd_buffer->device,
-               &(VkColorAttachmentViewCreateInfo) {
-                  .sType = VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO,
+               &(VkAttachmentViewCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                   .image = _image,
                   .format = image->format,
                   .mipLevel = pRanges[r].baseMipLevel + l,
@@ -1228,17 +1275,15 @@ void anv_CmdClearColorImage(
             anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
                &(VkFramebufferCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                  .colorAttachmentCount = 1,
-                  .pColorAttachments = (VkColorAttachmentBindInfo[]) {
+                  .attachmentCount = 1,
+                  .pAttachments = (VkAttachmentBindInfo[]) {
                      {
-                        .view = (VkColorAttachmentView) &view,
+                        .view = anv_attachment_view_to_handle(&view.base),
                         .layout = VK_IMAGE_LAYOUT_GENERAL
                      }
                   },
-                  .pDepthStencilAttachment = NULL,
-                  .sampleCount = 1,
-                  .width = view.extent.width,
-                  .height = view.extent.height,
+                  .width = view.view.extent.width,
+                  .height = view.view.extent.height,
                   .layers = 1
                }, &fb);
 
@@ -1246,24 +1291,54 @@ void anv_CmdClearColorImage(
             anv_CreateRenderPass(anv_device_to_handle(cmd_buffer->device),
                &(VkRenderPassCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-                  .renderArea = { { 0, 0 }, { view.extent.width, view.extent.height } },
-                  .colorAttachmentCount = 1,
-                  .extent = { 0, },
-                  .sampleCount = 1,
-                  .layers = 1,
-                  .pColorFormats = (VkFormat[]) { image->format },
-                  .pColorLayouts = (VkImageLayout[]) { imageLayout },
-                  .pColorLoadOps = (VkAttachmentLoadOp[]) { VK_ATTACHMENT_LOAD_OP_DONT_CARE },
-                  .pColorStoreOps = (VkAttachmentStoreOp[]) { VK_ATTACHMENT_STORE_OP_STORE },
-                  .pColorLoadClearValues = pColor,
-                  .depthStencilFormat = VK_FORMAT_UNDEFINED,
+                  .attachmentCount = 1,
+                  .pAttachments = &(VkAttachmentDescription) {
+                     .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
+                     .format = view.view.format,
+                     .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+                     .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+                     .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
+                     .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
+                  },
+                  .subpassCount = 1,
+                  .pSubpasses = &(VkSubpassDescription) {
+                     .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
+                     .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+                     .inputCount = 0,
+                     .colorCount = 1,
+                     .colorAttachments = &(VkAttachmentReference) {
+                        .attachment = 0,
+                        .layout = VK_IMAGE_LAYOUT_GENERAL,
+                     },
+                     .resolveAttachments = NULL,
+                     .depthStencilAttachment = (VkAttachmentReference) {
+                        .attachment = VK_ATTACHMENT_UNUSED,
+                        .layout = VK_IMAGE_LAYOUT_GENERAL,
+                     },
+                     .preserveCount = 1,
+                     .preserveAttachments = &(VkAttachmentReference) {
+                        .attachment = 0,
+                        .layout = VK_IMAGE_LAYOUT_GENERAL,
+                     },
+                  },
+                  .dependencyCount = 0,
                }, &pass);
 
             anv_CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
-               &(VkRenderPassBegin) {
+               &(VkRenderPassBeginInfo) {
+                  .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                  .renderArea = {
+                     .offset = { 0, 0, },
+                     .extent = {
+                        .width = view.view.extent.width,
+                        .height = view.view.extent.height,
+                     },
+                  },
                   .renderPass = pass,
                   .framebuffer = fb,
-               });
+                  .attachmentCount = 1,
+                  .pAttachmentClearValues = NULL,
+               }, VK_RENDER_PASS_CONTENTS_INLINE);
 
             struct clear_instance_data instance_data = {
                .vue_header = {

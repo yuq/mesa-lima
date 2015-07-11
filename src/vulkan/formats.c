@@ -215,6 +215,19 @@ anv_format_for_vk_format(VkFormat format)
    return &anv_formats[format];
 }
 
+bool
+anv_is_vk_format_depth_or_stencil(VkFormat format)
+{
+   const struct anv_format *format_info =
+      anv_format_for_vk_format(format);
+
+   if (format_info->depth_format != UNSUPPORTED &&
+       format_info->depth_format != 0)
+      return true;
+
+   return format_info->has_stencil;
+}
+
 // Format capabilities
 
 struct surface_format_info {

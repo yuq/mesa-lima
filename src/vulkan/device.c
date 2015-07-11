@@ -1216,11 +1216,8 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_IMAGE_VIEW:
       return anv_DestroyImageView(_device, _object);
 
-   case VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW:
-      return anv_DestroyColorAttachmentView(_device, _object);
-
-   case VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW:
-      return anv_DestroyDepthStencilView(_device, _object);
+   case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
+      return anv_DestroyAttachmentView(_device, _object);
 
    case VK_OBJECT_TYPE_IMAGE:
       return anv_DestroyImage(_device, _object);
@@ -1722,8 +1719,10 @@ VkResult anv_DestroyBufferView(
     VkBufferView                                _view)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_surface_view *view = (struct anv_surface_view *)_view;
 
-   anv_surface_view_destroy(device, (struct anv_surface_view *)_view);
+   anv_surface_view_fini(device, view);
+   anv_device_free(device, view);
 
    return VK_SUCCESS;
 }
@@ -1882,6 +1881,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
             surface_count[s] += pCreateInfo->pBinding[i].arraySize;
          break;
@@ -1970,6 +1970,7 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
             for (uint32_t j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
                surface[s]->index = descriptor + j;
@@ -2105,6 +2106,10 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
          anv_finishme("texel buffers not implemented");
+         break;
+
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+         anv_finishme("input attachments not implemented");
          break;
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
@@ -3049,8 +3054,10 @@ static VkResult
 cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                               unsigned stage, struct anv_state *bt_state)
 {
+   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
+   struct anv_subpass *subpass = cmd_buffer->subpass;
    struct anv_pipeline_layout *layout;
-   uint32_t color_attachments, bias, size;
+   uint32_t attachments, bias, size;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
       layout = cmd_buffer->compute_pipeline->layout;
@@ -3059,10 +3066,10 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
    if (stage == VK_SHADER_STAGE_FRAGMENT) {
       bias = MAX_RTS;
-      color_attachments = cmd_buffer->framebuffer->color_attachment_count;
+      attachments = subpass->color_count;
    } else {
       bias = 0;
-      color_attachments = 0;
+      attachments = 0;
    }
 
    /* This is a little awkward: layout can be NULL but we still have to
@@ -3070,7 +3077,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
     * targets. */
    uint32_t surface_count = layout ? layout->stage[stage].surface_count : 0;
 
-   if (color_attachments + surface_count == 0)
+   if (attachments + surface_count == 0)
       return VK_SUCCESS;
 
    size = (bias + surface_count) * sizeof(uint32_t);
@@ -3080,9 +3087,19 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (bt_state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-   for (uint32_t ca = 0; ca < color_attachments; ca++) {
-      const struct anv_surface_view *view =
-         cmd_buffer->framebuffer->color_attachments[ca];
+   /* This is highly annoying.  The Vulkan spec puts the depth-stencil
+    * attachments in with the color attachments.  Unfortunately, thanks to
+    * other aspects of the API, we cana't really saparate them before this
+    * point.  Therefore, we have to walk all of the attachments but only
+    * put the color attachments into the binding table.
+    */
+   for (uint32_t a = 0; a < attachments; a++) {
+      const struct anv_attachment_view *attachment =
+         fb->attachments[subpass->color_attachments[a]];
+
+      assert(attachment->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR);
+      const struct anv_color_attachment_view *view =
+         (const struct anv_color_attachment_view *)attachment;
 
       struct anv_state state =
          anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
@@ -3090,16 +3107,16 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       if (state.map == NULL)
          return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-      memcpy(state.map, view->surface_state.map, 64);
+      memcpy(state.map, view->view.surface_state.map, 64);
 
       /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
       *(uint64_t *)(state.map + 8 * 4) =
          anv_reloc_list_add(&cmd_buffer->surface_relocs,
                             cmd_buffer->device,
                             state.offset + 8 * 4,
-                            view->bo, view->offset);
+                            view->view.bo, view->view.offset);
 
-      bt_map[ca] = state.offset;
+      bt_map[a] = state.offset;
    }
 
    if (layout == NULL)
@@ -3844,32 +3861,25 @@ VkResult anv_CreateFramebuffer(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_framebuffer *framebuffer;
 
-   static const struct anv_depth_stencil_view null_view =
-      { .depth_format = D16_UNORM, .depth_stride = 0, .stencil_stride = 0 };
-
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
 
-   framebuffer = anv_device_alloc(device, sizeof(*framebuffer), 8,
+   size_t size = sizeof(*framebuffer) +
+                 sizeof(struct anv_attachment_view *) * pCreateInfo->attachmentCount;
+   framebuffer = anv_device_alloc(device, size, 8,
                                   VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (framebuffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    framebuffer->base.destructor = anv_framebuffer_destroy;
 
-   framebuffer->color_attachment_count = pCreateInfo->colorAttachmentCount;
-   for (uint32_t i = 0; i < pCreateInfo->colorAttachmentCount; i++) {
-      framebuffer->color_attachments[i] =
-         (struct anv_surface_view *) pCreateInfo->pColorAttachments[i].view;
+   framebuffer->attachment_count = pCreateInfo->attachmentCount;
+   for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
+      ANV_FROM_HANDLE(anv_attachment_view, view,
+                      pCreateInfo->pAttachments[i].view);
+
+      framebuffer->attachments[i] = view;
    }
 
-   if (pCreateInfo->pDepthStencilAttachment) {
-      framebuffer->depth_stencil =
-         anv_depth_stencil_view_from_handle(pCreateInfo->pDepthStencilAttachment->view);
-   } else {
-      framebuffer->depth_stencil = &null_view;
-   }
-
-   framebuffer->sample_count = pCreateInfo->sampleCount;
    framebuffer->width = pCreateInfo->width;
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
@@ -3926,22 +3936,52 @@ VkResult anv_CreateRenderPass(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
 
    size = sizeof(*pass) +
-      pCreateInfo->layers * sizeof(struct anv_render_pass_layer);
+      pCreateInfo->subpassCount * sizeof(struct anv_subpass);
    pass = anv_device_alloc(device, size, 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (pass == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   pass->render_area = pCreateInfo->renderArea;
+   pass->attachment_count = pCreateInfo->attachmentCount;
+   size = pCreateInfo->attachmentCount * sizeof(*pass->attachments);
+   pass->attachments = anv_device_alloc(device, size, 8,
+                                        VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
+      pass->attachments[i].format = pCreateInfo->pAttachments[i].format;
+      pass->attachments[i].samples = pCreateInfo->pAttachments[i].samples;
+      pass->attachments[i].load_op = pCreateInfo->pAttachments[i].loadOp;
+      pass->attachments[i].stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
+      // pass->attachments[i].store_op = pCreateInfo->pAttachments[i].storeOp;
+      // pass->attachments[i].stencil_store_op = pCreateInfo->pAttachments[i].stencilStoreOp;
+   }
 
-   pass->num_layers = pCreateInfo->layers;
+   for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
+      const VkSubpassDescription *desc = &pCreateInfo->pSubpasses[i];
+      struct anv_subpass *subpass = &pass->subpasses[i];
 
-   pass->num_clear_layers = 0;
-   for (uint32_t i = 0; i < pCreateInfo->layers; i++) {
-      pass->layers[i].color_load_op = pCreateInfo->pColorLoadOps[i];
-      pass->layers[i].clear_color = pCreateInfo->pColorLoadClearValues[i];
-      if (pass->layers[i].color_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR)
-         pass->num_clear_layers++;
+      subpass->input_count = desc->inputCount;
+      subpass->input_attachments =
+         anv_device_alloc(device, desc->inputCount * sizeof(uint32_t),
+                          8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+      for (uint32_t j = 0; j < desc->inputCount; j++)
+         subpass->input_attachments[j] = desc->inputAttachments[j].attachment;
+
+      subpass->color_count = desc->colorCount;
+      subpass->color_attachments =
+         anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
+                          8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+      for (uint32_t j = 0; j < desc->colorCount; j++)
+         subpass->color_attachments[j] = desc->colorAttachments[j].attachment;
+
+      if (desc->resolveAttachments) {
+         subpass->resolve_attachments =
+            anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
+                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+         for (uint32_t j = 0; j < desc->colorCount; j++)
+            subpass->resolve_attachments[j] = desc->resolveAttachments[j].attachment;
+      }
+
+      subpass->depth_stencil_attachment = desc->depthStencilAttachment.attachment;
    }
 
    *pRenderPass = anv_render_pass_to_handle(pass);
@@ -3955,6 +3995,14 @@ VkResult anv_DestroyRenderPass(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, _pass);
+
+   anv_device_free(device, pass->attachments);
+
+   for (uint32_t i = 0; i < pass->attachment_count; i++) {
+      anv_device_free(device, pass->subpasses[i].input_attachments);
+      anv_device_free(device, pass->subpasses[i].color_attachments);
+      anv_device_free(device, pass->subpasses[i].resolve_attachments);
+   }
 
    anv_device_free(device, pass);
 
@@ -3972,11 +4020,23 @@ VkResult anv_GetRenderAreaGranularity(
 }
 
 static void
-anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
-                                  struct anv_render_pass *pass)
+anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
-   const struct anv_depth_stencil_view *view =
-      cmd_buffer->framebuffer->depth_stencil;
+   struct anv_subpass *subpass = cmd_buffer->subpass;
+   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
+   const struct anv_depth_stencil_view *view;
+
+   static const struct anv_depth_stencil_view null_view =
+      { .depth_format = D16_UNORM, .depth_stride = 0, .stencil_stride = 0 };
+
+   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+      const struct anv_attachment_view *aview =
+         fb->attachments[subpass->depth_stencil_attachment];
+      assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL);
+      view = (const struct anv_depth_stencil_view *)aview;
+   } else {
+      view = &null_view;
+   }
 
    /* FIXME: Implement the PMA stall W/A */
    /* FIXME: Width and Height are wrong */
@@ -3989,8 +4049,8 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer,
                   .SurfaceFormat = view->depth_format,
                   .SurfacePitch = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
                   .SurfaceBaseAddress = { view->bo,  view->depth_offset },
-                  .Height = pass->render_area.extent.height - 1,
-                  .Width = pass->render_area.extent.width - 1,
+                  .Height = cmd_buffer->framebuffer->height - 1,
+                  .Width = cmd_buffer->framebuffer->width - 1,
                   .LOD = 0,
                   .Depth = 1 - 1,
                   .MinimumArrayElement = 0,
@@ -4023,33 +4083,59 @@ void anv_CmdPushConstants(
    stub();
 }
 
+void
+anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_subpass *subpass)
+{
+   cmd_buffer->subpass = subpass;
+
+   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+   anv_cmd_buffer_emit_depth_stencil(cmd_buffer);
+}
+
 void anv_CmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
-    const VkRenderPassBegin*                    pRenderPassBegin)
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkRenderPassContents                        contents)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
    ANV_FROM_HANDLE(anv_framebuffer, framebuffer, pRenderPassBegin->framebuffer);
 
-   assert(pRenderPassBegin->contents == VK_RENDER_PASS_CONTENTS_INLINE);
+   assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
 
    cmd_buffer->framebuffer = framebuffer;
+   cmd_buffer->pass = pass;
 
-   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+   const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DRAWING_RECTANGLE,
-                  .ClippedDrawingRectangleYMin = pass->render_area.offset.y,
-                  .ClippedDrawingRectangleXMin = pass->render_area.offset.x,
+                  .ClippedDrawingRectangleYMin = render_area->offset.y,
+                  .ClippedDrawingRectangleXMin = render_area->offset.x,
                   .ClippedDrawingRectangleYMax =
-                     pass->render_area.offset.y + pass->render_area.extent.height - 1,
+                     render_area->offset.y + render_area->extent.height - 1,
                   .ClippedDrawingRectangleXMax =
-                     pass->render_area.offset.x + pass->render_area.extent.width - 1,
+                     render_area->offset.x + render_area->extent.width - 1,
                   .DrawingRectangleOriginY = 0,
                   .DrawingRectangleOriginX = 0);
 
-   anv_cmd_buffer_emit_depth_stencil(cmd_buffer, pass);
+   anv_cmd_buffer_clear_attachments(cmd_buffer, pass,
+                                    pRenderPassBegin->pAttachmentClearValues);
 
-   anv_cmd_buffer_clear(cmd_buffer, pass);
+   anv_cmd_buffer_begin_subpass(cmd_buffer, pass->subpasses);
+}
+
+void anv_CmdNextSubpass(
+    VkCmdBuffer                                 cmdBuffer,
+    VkRenderPassContents                        contents)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
+
+   cmd_buffer->subpass++;
+   anv_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->subpass + 1);
 }
 
 void anv_CmdEndRenderPass(

@@ -31,7 +31,7 @@ extern "C" {
 /*
 ** This header is generated from the Khronos Vulkan XML API Registry.
 **
-** Generated on date 20150620 
+** Generated on date 20150624
 */
 
 
@@ -42,7 +42,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 130, 0)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 131, 0)
 
 #if defined (__cplusplus) && (VK_UINTPTRLEAST64_MAX == UINTPTR_MAX)
     #define VK_TYPE_SAFE_COMPATIBLE_HANDLES 1
@@ -71,6 +71,7 @@ extern "C" {
 #define VK_LAST_MIP_LEVEL                 UINT32_MAX
 #define VK_LAST_ARRAY_SLICE               UINT32_MAX
 #define VK_WHOLE_SIZE                     UINT64_MAX
+#define VK_ATTACHMENT_UNUSED              UINT32_MAX
 #define VK_TRUE                           1
 #define VK_FALSE                          0
 #define VK_NULL_HANDLE                    0
@@ -91,8 +92,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkEvent, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkQueryPool, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkBufferView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImageView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkColorAttachmentView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDepthStencilView, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkAttachmentView, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineCache, VkNonDispatchable)
@@ -161,52 +161,55 @@ typedef enum {
     VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO = 1,
     VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO = 2,
     VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO = 3,
-    VK_STRUCTURE_TYPE_COLOR_ATTACHMENT_VIEW_CREATE_INFO = 4,
-    VK_STRUCTURE_TYPE_DEPTH_STENCIL_VIEW_CREATE_INFO = 5,
-    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 6,
-    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO = 7,
-    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 8,
-    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 9,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 10,
-    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO = 11,
-    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO = 12,
-    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO = 13,
-    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO = 14,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO = 15,
-    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 16,
-    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 17,
-    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 18,
-    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO = 19,
-    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 20,
-    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 21,
-    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 22,
-    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO = 23,
-    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO = 24,
-    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO = 25,
-    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO = 26,
-    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO = 27,
-    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO = 28,
-    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO = 29,
-    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO = 30,
-    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 31,
-    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO = 32,
-    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO = 33,
-    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO = 34,
-    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 35,
-    VK_STRUCTURE_TYPE_LAYER_CREATE_INFO = 36,
-    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 37,
-    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 38,
-    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 39,
-    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO = 40,
-    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 41,
-    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET = 42,
-    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO = 43,
-    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 44,
-    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE = 45,
-    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO = 46,
+    VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO = 4,
+    VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO = 5,
+    VK_STRUCTURE_TYPE_SHADER_CREATE_INFO = 6,
+    VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO = 7,
+    VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO = 8,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO = 9,
+    VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO = 10,
+    VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO = 11,
+    VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO = 12,
+    VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO = 13,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_CREATE_INFO = 14,
+    VK_STRUCTURE_TYPE_EVENT_CREATE_INFO = 15,
+    VK_STRUCTURE_TYPE_FENCE_CREATE_INFO = 16,
+    VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO = 17,
+    VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO = 18,
+    VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO = 19,
+    VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO = 20,
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO = 21,
+    VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO = 22,
+    VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO = 23,
+    VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO = 24,
+    VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO = 25,
+    VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO = 26,
+    VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO = 27,
+    VK_STRUCTURE_TYPE_PIPELINE_DS_STATE_CREATE_INFO = 28,
+    VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO = 29,
+    VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO = 30,
+    VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO = 31,
+    VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO = 32,
+    VK_STRUCTURE_TYPE_CMD_BUFFER_BEGIN_INFO = 33,
+    VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO = 34,
+    VK_STRUCTURE_TYPE_LAYER_CREATE_INFO = 35,
+    VK_STRUCTURE_TYPE_MEMORY_BARRIER = 36,
+    VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER = 37,
+    VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER = 38,
+    VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO = 39,
+    VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET = 40,
+    VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET = 41,
+    VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO = 42,
+    VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO = 43,
+    VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE = 44,
+    VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO = 45,
+    VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION = 46,
+    VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION = 47,
+    VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY = 48,
+    VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 49,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -445,27 +448,26 @@ typedef enum {
     VK_OBJECT_TYPE_BUFFER_VIEW = 7,
     VK_OBJECT_TYPE_IMAGE = 8,
     VK_OBJECT_TYPE_IMAGE_VIEW = 9,
-    VK_OBJECT_TYPE_COLOR_ATTACHMENT_VIEW = 10,
-    VK_OBJECT_TYPE_DEPTH_STENCIL_VIEW = 11,
-    VK_OBJECT_TYPE_SHADER_MODULE = 12,
-    VK_OBJECT_TYPE_SHADER = 13,
-    VK_OBJECT_TYPE_PIPELINE = 14,
-    VK_OBJECT_TYPE_PIPELINE_LAYOUT = 15,
-    VK_OBJECT_TYPE_SAMPLER = 16,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET = 17,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT = 18,
-    VK_OBJECT_TYPE_DESCRIPTOR_POOL = 19,
-    VK_OBJECT_TYPE_DYNAMIC_VP_STATE = 20,
-    VK_OBJECT_TYPE_DYNAMIC_RS_STATE = 21,
-    VK_OBJECT_TYPE_DYNAMIC_CB_STATE = 22,
-    VK_OBJECT_TYPE_DYNAMIC_DS_STATE = 23,
-    VK_OBJECT_TYPE_FENCE = 24,
-    VK_OBJECT_TYPE_SEMAPHORE = 25,
-    VK_OBJECT_TYPE_EVENT = 26,
-    VK_OBJECT_TYPE_QUERY_POOL = 27,
-    VK_OBJECT_TYPE_FRAMEBUFFER = 28,
-    VK_OBJECT_TYPE_RENDER_PASS = 29,
-    VK_OBJECT_TYPE_PIPELINE_CACHE = 30,
+    VK_OBJECT_TYPE_ATTACHMENT_VIEW = 10,
+    VK_OBJECT_TYPE_SHADER_MODULE = 11,
+    VK_OBJECT_TYPE_SHADER = 12,
+    VK_OBJECT_TYPE_PIPELINE = 13,
+    VK_OBJECT_TYPE_PIPELINE_LAYOUT = 14,
+    VK_OBJECT_TYPE_SAMPLER = 15,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET = 16,
+    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT = 17,
+    VK_OBJECT_TYPE_DESCRIPTOR_POOL = 18,
+    VK_OBJECT_TYPE_DYNAMIC_VP_STATE = 19,
+    VK_OBJECT_TYPE_DYNAMIC_RS_STATE = 20,
+    VK_OBJECT_TYPE_DYNAMIC_CB_STATE = 21,
+    VK_OBJECT_TYPE_DYNAMIC_DS_STATE = 22,
+    VK_OBJECT_TYPE_FENCE = 23,
+    VK_OBJECT_TYPE_SEMAPHORE = 24,
+    VK_OBJECT_TYPE_EVENT = 25,
+    VK_OBJECT_TYPE_QUERY_POOL = 26,
+    VK_OBJECT_TYPE_FRAMEBUFFER = 27,
+    VK_OBJECT_TYPE_RENDER_PASS = 28,
+    VK_OBJECT_TYPE_PIPELINE_CACHE = 29,
     VK_OBJECT_TYPE_BEGIN_RANGE = VK_OBJECT_TYPE_INSTANCE,
     VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_PIPELINE_CACHE,
     VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_PIPELINE_CACHE - VK_OBJECT_TYPE_INSTANCE + 1),
@@ -743,9 +745,10 @@ typedef enum {
     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER = 7,
     VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC = 8,
     VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC = 9,
+    VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT = 10,
     VK_DESCRIPTOR_TYPE_BEGIN_RANGE = VK_DESCRIPTOR_TYPE_SAMPLER,
-    VK_DESCRIPTOR_TYPE_END_RANGE = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-    VK_DESCRIPTOR_TYPE_NUM = (VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC - VK_DESCRIPTOR_TYPE_SAMPLER + 1),
+    VK_DESCRIPTOR_TYPE_END_RANGE = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+    VK_DESCRIPTOR_TYPE_NUM = (VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT - VK_DESCRIPTOR_TYPE_SAMPLER + 1),
     VK_DESCRIPTOR_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkDescriptorType;
 
@@ -998,10 +1001,10 @@ typedef enum {
 typedef VkFlags VkImageCreateFlags;
 
 typedef enum {
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
-    VK_DEPTH_STENCIL_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
-} VkDepthStencilViewCreateFlagBits;
-typedef VkFlags VkDepthStencilViewCreateFlags;
+    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
+    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
+} VkAttachmentViewCreateFlagBits;
+typedef VkFlags VkAttachmentViewCreateFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
@@ -1030,6 +1033,11 @@ typedef enum {
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
 typedef VkFlags VkShaderStageFlags;
+
+typedef enum {
+    VK_SUBPASS_DESCRIPTION_NO_OVERDRAW_BIT = 0x00000001,
+} VkSubpassDescriptionFlagBits;
+typedef VkFlags VkSubpassDescriptionFlags;
 
 typedef enum {
     VK_PIPE_EVENT_TOP_OF_PIPE_BIT = 0x00000001,
@@ -1062,7 +1070,8 @@ typedef enum {
     VK_MEMORY_INPUT_SHADER_READ_BIT = 0x00000020,
     VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT = 0x00000040,
     VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000080,
-    VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000100,
+    VK_MEMORY_INPUT_INPUT_ATTACHMENT_BIT = 0x00000100,
+    VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000200,
 } VkMemoryInputFlagBits;
 typedef VkFlags VkMemoryInputFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
@@ -1465,19 +1474,8 @@ typedef struct {
     uint32_t                                    mipLevel;
     uint32_t                                    baseArraySlice;
     uint32_t                                    arraySize;
-    VkImage                                     msaaResolveImage;
-    VkImageSubresourceRange                     msaaResolveSubResource;
-} VkColorAttachmentViewCreateInfo;
-
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    VkImage                                     image;
-    uint32_t                                    mipLevel;
-    uint32_t                                    baseArraySlice;
-    uint32_t                                    arraySize;
-    VkDepthStencilViewCreateFlags               flags;
-} VkDepthStencilViewCreateInfo;
+    VkAttachmentViewCreateFlags                 flags;
+} VkAttachmentViewCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1592,7 +1590,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkFormat                                    format;
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
@@ -1604,7 +1601,6 @@ typedef struct {
 
 typedef struct {
     VkBool32                                    blendEnable;
-    VkFormat                                    format;
     VkBlend                                     srcBlendColor;
     VkBlend                                     destBlendColor;
     VkBlendOp                                   blendOpColor;
@@ -1639,6 +1635,8 @@ typedef struct {
     const VkPipelineCbStateCreateInfo*          pCbState;
     VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
+    VkRenderPass                                renderPass;
+    uint32_t                                    subpass;
     VkPipeline                                  basePipelineHandle;
     int32_t                                     basePipelineIndex;
 } VkGraphicsPipelineCreateInfo;
@@ -1716,6 +1714,7 @@ typedef struct {
     VkBufferView                                bufferView;
     VkSampler                                   sampler;
     VkImageView                                 imageView;
+    VkAttachmentView                            attachmentView;
     VkImageLayout                               imageLayout;
 } VkDescriptorInfo;
 
@@ -1801,54 +1800,74 @@ typedef struct {
 } VkDynamicDepthStencilStateCreateInfo;
 
 typedef struct {
-    VkColorAttachmentView                       view;
+    VkAttachmentView                            view;
     VkImageLayout                               layout;
-} VkColorAttachmentBindInfo;
-
-typedef struct {
-    VkDepthStencilView                          view;
-    VkImageLayout                               layout;
-} VkDepthStencilBindInfo;
+} VkAttachmentBindInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    colorAttachmentCount;
-    const VkColorAttachmentBindInfo*            pColorAttachments;
-    const VkDepthStencilBindInfo*               pDepthStencilAttachment;
-    uint32_t                                    sampleCount;
+    VkRenderPass                                renderPass;
+    uint32_t                                    attachmentCount;
+    const VkAttachmentBindInfo*                 pAttachments;
     uint32_t                                    width;
     uint32_t                                    height;
     uint32_t                                    layers;
 } VkFramebufferCreateInfo;
 
-typedef union {
-    float                                       f32[4];
-    int32_t                                     s32[4];
-    uint32_t                                    u32[4];
-} VkClearColorValue;
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkFormat                                    format;
+    uint32_t                                    samples;
+    VkAttachmentLoadOp                          loadOp;
+    VkAttachmentStoreOp                         storeOp;
+    VkAttachmentLoadOp                          stencilLoadOp;
+    VkAttachmentStoreOp                         stencilStoreOp;
+    VkImageLayout                               initialLayout;
+    VkImageLayout                               finalLayout;
+} VkAttachmentDescription;
+
+typedef struct {
+    uint32_t                                    attachment;
+    VkImageLayout                               layout;
+} VkAttachmentReference;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkRect2D                                    renderArea;
-    uint32_t                                    colorAttachmentCount;
-    VkExtent2D                                  extent;
-    uint32_t                                    sampleCount;
-    uint32_t                                    layers;
-    const VkFormat*                             pColorFormats;
-    const VkImageLayout*                        pColorLayouts;
-    const VkAttachmentLoadOp*                   pColorLoadOps;
-    const VkAttachmentStoreOp*                  pColorStoreOps;
-    const VkClearColorValue*                    pColorLoadClearValues;
-    VkFormat                                    depthStencilFormat;
-    VkImageLayout                               depthStencilLayout;
-    VkAttachmentLoadOp                          depthLoadOp;
-    float                                       depthLoadClearValue;
-    VkAttachmentStoreOp                         depthStoreOp;
-    VkAttachmentLoadOp                          stencilLoadOp;
-    uint32_t                                    stencilLoadClearValue;
-    VkAttachmentStoreOp                         stencilStoreOp;
+    VkPipelineBindPoint                         pipelineBindPoint;
+    VkSubpassDescriptionFlags                   flags;
+    uint32_t                                    inputCount;
+    const VkAttachmentReference*                inputAttachments;
+    uint32_t                                    colorCount;
+    const VkAttachmentReference*                colorAttachments;
+    const VkAttachmentReference*                resolveAttachments;
+    VkAttachmentReference                       depthStencilAttachment;
+    uint32_t                                    preserveCount;
+    const VkAttachmentReference*                preserveAttachments;
+} VkSubpassDescription;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    srcSubpass;
+    uint32_t                                    dstSubpass;
+    VkWaitEvent                                 waitEvent;
+    VkPipeEventFlags                            pipeEventMask;
+    VkMemoryOutputFlags                         outputMask;
+    VkMemoryInputFlags                          inputMask;
+} VkSubpassDependency;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    uint32_t                                    attachmentCount;
+    const VkAttachmentDescription*              pAttachments;
+    uint32_t                                    subpassCount;
+    const VkSubpassDescription*                 pSubpasses;
+    uint32_t                                    dependencyCount;
+    const VkSubpassDependency*                  pDependencies;
 } VkRenderPassCreateInfo;
 
 typedef struct {
@@ -1899,6 +1918,12 @@ typedef struct {
     VkExtent3D                                  imageExtent;
 } VkBufferImageCopy;
 
+typedef union {
+    float                                       f32[4];
+    int32_t                                     s32[4];
+    uint32_t                                    u32[4];
+} VkClearColorValue;
+
 typedef struct {
     VkOffset3D                                  offset;
     VkExtent3D                                  extent;
@@ -1913,10 +1938,24 @@ typedef struct {
 } VkImageResolve;
 
 typedef struct {
+    float                                       depth;
+    uint32_t                                    stencil;
+} VkClearDepthStencilValue;
+
+typedef union {
+    VkClearColorValue                           color;
+    VkClearDepthStencilValue                    ds;
+} VkClearValue;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
     VkRenderPass                                renderPass;
     VkFramebuffer                               framebuffer;
-    VkRenderPassContents                        contents;
-} VkRenderPassBegin;
+    VkRect2D                                    renderArea;
+    uint32_t                                    attachmentCount;
+    const VkClearValue*                         pAttachmentClearValues;
+} VkRenderPassBeginInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -2034,11 +2073,9 @@ typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreate
 typedef VkResult (VKAPI *PFN_vkDestroyImage)(VkDevice device, VkImage image);
 typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
-typedef VkResult (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView imageView);
-typedef VkResult (VKAPI *PFN_vkCreateColorAttachmentView)(VkDevice device, const VkColorAttachmentViewCreateInfo* pCreateInfo, VkColorAttachmentView* pView);
-typedef VkResult (VKAPI *PFN_vkDestroyColorAttachmentView)(VkDevice device, VkColorAttachmentView view);
-typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const VkDepthStencilViewCreateInfo* pCreateInfo, VkDepthStencilView* pView);
-typedef VkResult (VKAPI *PFN_vkDestroyDepthStencilView)(VkDevice device, VkDepthStencilView view);
+typedef VkResult (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView view);
+typedef VkResult (VKAPI *PFN_vkCreateAttachmentView)(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView);
+typedef VkResult (VKAPI *PFN_vkDestroyAttachmentView)(VkDevice device, VkAttachmentView view);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
@@ -2113,7 +2150,8 @@ typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool
 typedef void (VKAPI *PFN_vkCmdWriteTimestamp)(VkCmdBuffer cmdBuffer, VkTimestampType timestampType, VkBuffer destBuffer, VkDeviceSize destOffset);
 typedef void (VKAPI *PFN_vkCmdCopyQueryPoolResults)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, VkBuffer destBuffer, VkDeviceSize destOffset, VkDeviceSize destStride, VkQueryResultFlags flags);
 typedef void (VKAPI *PFN_vkCmdPushConstants)(VkCmdBuffer cmdBuffer, VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t start, uint32_t length, const void* values);
-typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBegin* pRenderPassBegin);
+typedef void (VKAPI *PFN_vkCmdBeginRenderPass)(VkCmdBuffer cmdBuffer, const VkRenderPassBeginInfo* pRenderPassBegin, VkRenderPassContents contents);
+typedef void (VKAPI *PFN_vkCmdNextSubpass)(VkCmdBuffer cmdBuffer, VkRenderPassContents contents);
 typedef void (VKAPI *PFN_vkCmdEndRenderPass)(VkCmdBuffer cmdBuffer);
 typedef void (VKAPI *PFN_vkCmdExecuteCommands)(VkCmdBuffer cmdBuffer, uint32_t cmdBuffersCount, const VkCmdBuffer* pCmdBuffers);
 
@@ -2404,23 +2442,14 @@ VkResult VKAPI vkDestroyImageView(
     VkDevice                                    device,
     VkImageView                                 imageView);
 
-VkResult VKAPI vkCreateColorAttachmentView(
+VkResult VKAPI vkCreateAttachmentView(
     VkDevice                                    device,
-    const VkColorAttachmentViewCreateInfo*      pCreateInfo,
-    VkColorAttachmentView*                      pView);
+    const VkAttachmentViewCreateInfo*           pCreateInfo,
+    VkAttachmentView*                           pView);
 
-VkResult VKAPI vkDestroyColorAttachmentView(
+VkResult VKAPI vkDestroyAttachmentView(
     VkDevice                                    device,
-    VkColorAttachmentView                       view);
-
-VkResult VKAPI vkCreateDepthStencilView(
-    VkDevice                                    device,
-    const VkDepthStencilViewCreateInfo*         pCreateInfo,
-    VkDepthStencilView*                         pView);
-
-VkResult VKAPI vkDestroyDepthStencilView(
-    VkDevice                                    device,
-    VkDepthStencilView                          view);
+    VkAttachmentView                       view);
 
 VkResult VKAPI vkCreateShaderModule(
     VkDevice                                    device,
@@ -2859,7 +2888,12 @@ void VKAPI vkCmdPushConstants(
 
 void VKAPI vkCmdBeginRenderPass(
     VkCmdBuffer                                 cmdBuffer,
-    const VkRenderPassBegin*                    pRenderPassBegin);
+    const VkRenderPassBeginInfo*                pRenderPassBegin,
+    VkRenderPassContents                        contents);
+
+void VKAPI vkCmdNextSubpass(
+    VkCmdBuffer                                 cmdBuffer,
+    VkRenderPassContents                        contents);
 
 void VKAPI vkCmdEndRenderPass(
     VkCmdBuffer                                 cmdBuffer);
