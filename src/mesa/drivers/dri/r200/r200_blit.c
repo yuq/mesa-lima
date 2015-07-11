@@ -547,5 +547,21 @@ unsigned r200_blit(struct gl_context *ctx,
 
     radeonFlush(ctx);
 
+    /* We submitted those packets outside our state atom mechanism. Thus
+     * make sure the atoms are resubmitted the next time. */
+    r200->hw.cst.dirty = GL_TRUE;
+    r200->hw.ctx.dirty = GL_TRUE;
+    r200->hw.vap.dirty = GL_TRUE;
+    r200->hw.msk.dirty = GL_TRUE;
+    r200->hw.pix[0].dirty = GL_TRUE;
+    r200->hw.pix[1].dirty = GL_TRUE;
+    r200->hw.pix[2].dirty = GL_TRUE;
+    r200->hw.pix[3].dirty = GL_TRUE;
+    r200->hw.sci.dirty = GL_TRUE;
+    r200->hw.set.dirty = GL_TRUE;
+    r200->hw.tex[0].dirty = GL_TRUE;
+    r200->hw.vte.dirty = GL_TRUE;
+    r200->hw.vtx.dirty = GL_TRUE;
+
     return GL_TRUE;
 }

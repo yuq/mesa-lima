@@ -425,5 +425,13 @@ unsigned r100_blit(struct gl_context *ctx,
 
     radeonFlush(ctx);
 
+    /* We submitted those packets outside our state atom mechanism. Thus
+     * make sure they are all resubmitted the next time. */
+    r100->hw.ctx.dirty = GL_TRUE;
+    r100->hw.msk.dirty = GL_TRUE;
+    r100->hw.set.dirty = GL_TRUE;
+    r100->hw.tex[0].dirty = GL_TRUE;
+    r100->hw.txr[0].dirty = GL_TRUE;
+
     return GL_TRUE;
 }
