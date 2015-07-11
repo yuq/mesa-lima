@@ -1785,7 +1785,14 @@ ast_function_expression::hir(exec_list *instructions,
 	 /* an error has already been emitted */
 	 value = ir_rvalue::error_value(ctx);
       } else {
-	 value = generate_call(instructions, sig, &actual_parameters, state);
+         value = generate_call(instructions, sig, &actual_parameters, state);
+         if (!value) {
+            ir_variable *const tmp = new(ctx) ir_variable(glsl_type::void_type,
+                                                          "void_var",
+                                                          ir_var_temporary);
+            instructions->push_tail(tmp);
+            value = new(ctx) ir_dereference_variable(tmp);
+         }
       }
 
       return value;

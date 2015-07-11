@@ -1270,7 +1270,14 @@ ast_expression::do_hir(exec_list *instructions,
        *    applied to one operand that can make them match, in which
        *    case this conversion is done."
        */
-      if ((!apply_implicit_conversion(op[0]->type, op[1], state)
+
+      if (op[0]->type == glsl_type::void_type || op[1]->type == glsl_type::void_type) {
+         _mesa_glsl_error(& loc, state, "`%s':  wrong operand types: "
+                         "no operation `%1$s' exists that takes a left-hand "
+                         "operand of type 'void' or a right operand of type "
+                         "'void'", (this->oper == ast_equal) ? "==" : "!=");
+         error_emitted = true;
+      } else if ((!apply_implicit_conversion(op[0]->type, op[1], state)
            && !apply_implicit_conversion(op[1]->type, op[0], state))
           || (op[0]->type != op[1]->type)) {
          _mesa_glsl_error(& loc, state, "operands of `%s' must have the same "
