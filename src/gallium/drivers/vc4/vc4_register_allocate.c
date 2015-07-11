@@ -270,7 +270,11 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         }
 
         bool ok = ra_allocate(g);
-        assert(ok);
+        if (!ok) {
+                fprintf(stderr, "Failed to register allocate:\n");
+                qir_dump(c);
+                abort();
+        }
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
                 temp_registers[i] = vc4_regs[ra_get_node_reg(g, temp_to_node[i])];
