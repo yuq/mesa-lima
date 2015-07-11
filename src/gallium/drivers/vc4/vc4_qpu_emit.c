@@ -234,6 +234,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         case QFILE_VPM:
                                 assert((int)qinst->src[i].index >=
                                        last_vpm_read_index);
+                                (void)last_vpm_read_index;
                                 last_vpm_read_index = qinst->src[i].index;
                                 src[i] = qpu_ra(QPU_R_VPM);
                                 break;

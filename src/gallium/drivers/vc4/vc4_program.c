@@ -1748,6 +1748,7 @@ ntq_setup_inputs(struct vc4_compile *c)
                 unsigned loc = var->data.driver_location;
 
                 assert(array_len == 1);
+                (void)array_len;
                 resize_qreg_array(c, &c->inputs, &c->inputs_array_size,
                                   (loc + 1) * 4);
 
@@ -1782,6 +1783,7 @@ ntq_setup_outputs(struct vc4_compile *c)
                 unsigned loc = var->data.driver_location * 4;
 
                 assert(array_len == 1);
+                (void)array_len;
 
                 /* NIR hack to pass through
                  * TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS */
