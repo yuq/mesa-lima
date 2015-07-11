@@ -32,6 +32,7 @@
 #include "p_format.h"
 #include "p_video_enums.h"
 #include "p_defines.h"
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -617,6 +618,17 @@ struct pipe_context {
     * Return information about unexpected device resets.
     */
    enum pipe_reset_status (*get_device_reset_status)(struct pipe_context *ctx);
+
+   /**
+    * Dump driver-specific debug information into a stream. This is
+    * used by debugging tools.
+    *
+    * \param ctx        pipe context
+    * \param stream     where the output should be written to
+    * \param flags      a mask of PIPE_DEBUG_* flags
+    */
+   void (*dump_debug_state)(struct pipe_context *ctx, FILE *stream,
+                            unsigned flags);
 };
 
 
