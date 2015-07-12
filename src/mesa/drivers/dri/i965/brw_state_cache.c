@@ -323,7 +323,7 @@ brw_upload_cache(struct brw_cache *cache,
 
    item->key = tmp;
 
-   if (cache->n_items > cache->size * 1.5)
+   if (cache->n_items > cache->size * 1.5f)
       rehash(cache);
 
    hash %= cache->size;

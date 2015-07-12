@@ -834,13 +834,13 @@ static void upload_line_stipple(struct brw_context *brw)
 
    if (brw->gen >= 7) {
       /* in U1.16 */
-      tmp = 1.0 / (GLfloat) ctx->Line.StippleFactor;
+      tmp = 1.0f / ctx->Line.StippleFactor;
       tmpi = tmp * (1<<16);
       OUT_BATCH(tmpi << 15 | ctx->Line.StippleFactor);
    }
    else {
       /* in U1.13 */
-      tmp = 1.0 / (GLfloat) ctx->Line.StippleFactor;
+      tmp = 1.0f / ctx->Line.StippleFactor;
       tmpi = tmp * (1<<13);
       OUT_BATCH(tmpi << 16 | ctx->Line.StippleFactor);
    }

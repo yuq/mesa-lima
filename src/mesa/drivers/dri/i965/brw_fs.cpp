@@ -975,11 +975,11 @@ fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
       bld.MOV(wpos, this->pixel_y);
    } else {
       fs_reg pixel_y = this->pixel_y;
-      float offset = (pixel_center_integer ? 0.0 : 0.5);
+      float offset = (pixel_center_integer ? 0.0f : 0.5f);
 
       if (flip) {
 	 pixel_y.negate = true;
-	 offset += key->drawable_height - 1.0;
+	 offset += key->drawable_height - 1.0f;
       }
 
       bld.ADD(wpos, pixel_y, fs_reg(offset));

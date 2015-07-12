@@ -348,7 +348,7 @@ is_color_fast_clear_compatible(struct brw_context *brw,
    }
 
    for (int i = 0; i < 4; i++) {
-      if (color->f[i] != 0.0 && color->f[i] != 1.0 &&
+      if (color->f[i] != 0.0f && color->f[i] != 1.0f &&
           _mesa_format_has_color_component(format, i)) {
          return false;
       }
@@ -366,7 +366,7 @@ compute_fast_clear_color_bits(const union gl_color_union *color)
    uint32_t bits = 0;
    for (int i = 0; i < 4; i++) {
       /* Testing for non-0 works for integer and float colors */
-      if (color->f[i] != 0.0)
+      if (color->f[i] != 0.0f)
          bits |= 1 << (GEN7_SURFACE_CLEAR_COLOR_SHIFT + (3 - i));
    }
    return bits;

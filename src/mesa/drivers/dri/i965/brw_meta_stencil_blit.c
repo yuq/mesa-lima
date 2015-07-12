@@ -239,10 +239,10 @@ setup_coord_coeff(GLuint prog, GLuint multiplier, GLuint offset,
 
    if (mirror) {
       _mesa_Uniform1f(multiplier, -scale);
-      _mesa_Uniform1f(offset, src_0 + (dst_1 - 0.5) * scale);
+      _mesa_Uniform1f(offset, src_0 + (dst_1 - 0.5f) * scale);
    } else {
       _mesa_Uniform1f(multiplier, scale);
-      _mesa_Uniform1f(offset, src_0 + (-dst_0 + 0.5) * scale);
+      _mesa_Uniform1f(offset, src_0 + (-dst_0 + 0.5f) * scale);
    }
 }
 

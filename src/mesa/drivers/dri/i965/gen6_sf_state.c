@@ -383,7 +383,7 @@ upload_sf_state(struct brw_context *brw)
    point_size = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
 
    /* Clamp to the hardware limits and convert to fixed point */
-   dw4 |= U_FIXED(CLAMP(point_size, 0.125, 255.875), 3);
+   dw4 |= U_FIXED(CLAMP(point_size, 0.125f, 255.875f), 3);
 
    /*
     * Window coordinates in an FBO are inverted, which means point

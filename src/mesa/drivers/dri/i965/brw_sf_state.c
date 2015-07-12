@@ -220,7 +220,7 @@ static void upload_sf_unit( struct brw_context *brw )
 
    /* _NEW_LINE */
    sf->sf6.line_width =
-      CLAMP(ctx->Line.Width, 1.0, ctx->Const.MaxLineWidth) * (1<<1);
+      CLAMP(ctx->Line.Width, 1.0f, ctx->Const.MaxLineWidth) * (1<<1);
 
    sf->sf6.line_endcap_aa_region_width = 1;
    if (ctx->Line.SmoothFlag)
@@ -259,9 +259,10 @@ static void upload_sf_unit( struct brw_context *brw )
 
    /* _NEW_POINT */
    sf->sf7.sprite_point = ctx->Point.PointSprite;
-   sf->sf7.point_size = CLAMP(rint(CLAMP(ctx->Point.Size,
-					 ctx->Point.MinSize,
-					 ctx->Point.MaxSize)), 1, 255) * (1<<3);
+   sf->sf7.point_size = CLAMP(rintf(CLAMP(ctx->Point.Size,
+                                          ctx->Point.MinSize,
+                                          ctx->Point.MaxSize)), 1.0f, 255.0f) *
+                        (1<<3);
    /* _NEW_PROGRAM | _NEW_POINT */
    sf->sf7.use_point_size_state = !(ctx->VertexProgram.PointSizeEnabled ||
 				    ctx->Point._Attenuated);

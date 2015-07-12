@@ -148,7 +148,7 @@ unsigned
 gen6_determine_sample_mask(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   float coverage = 1.0;
+   float coverage = 1.0f;
    float coverage_invert = false;
    unsigned sample_mask = ~0u;
 
@@ -166,7 +166,7 @@ gen6_determine_sample_mask(struct brw_context *brw)
    }
 
    if (num_samples > 1) {
-      int coverage_int = (int) (num_samples * coverage + 0.5);
+      int coverage_int = (int) (num_samples * coverage + 0.5f);
       uint32_t coverage_bits = (1 << coverage_int) - 1;
       if (coverage_invert)
          coverage_bits ^= (1 << num_samples) - 1;

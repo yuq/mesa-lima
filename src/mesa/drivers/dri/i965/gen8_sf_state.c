@@ -169,7 +169,7 @@ upload_sf(struct brw_context *brw)
    point_size = CLAMP(ctx->Point.Size, ctx->Point.MinSize, ctx->Point.MaxSize);
 
    /* Clamp to the hardware limits and convert to fixed point */
-   dw3 |= U_FIXED(CLAMP(point_size, 0.125, 255.875), 3);
+   dw3 |= U_FIXED(CLAMP(point_size, 0.125f, 255.875f), 3);
 
    /* _NEW_PROGRAM | _NEW_POINT */
    if (!(ctx->VertexProgram.PointSizeEnabled || ctx->Point._Attenuated))
