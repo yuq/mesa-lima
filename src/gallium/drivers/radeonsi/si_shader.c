@@ -2252,9 +2252,29 @@ static void tex_fetch_args(
 	unsigned num_coords = tgsi_util_get_texture_coord_dim(target, &ref_pos);
 	unsigned count = 0;
 	unsigned chan;
-	unsigned sampler_src = emit_data->inst->Instruction.NumSrcRegs - 1;
-	unsigned sampler_index = emit_data->inst->Src[sampler_src].Register.Index;
+	unsigned sampler_src;
+	unsigned sampler_index;
 	bool has_offset = HAVE_LLVM >= 0x0305 ? inst->Texture.NumOffsets > 0 : false;
+	LLVMValueRef res_ptr, samp_ptr;
+
+	sampler_src = emit_data->inst->Instruction.NumSrcRegs - 1;
+	sampler_index = emit_data->inst->Src[sampler_src].Register.Index;
+
+	if (emit_data->inst->Src[sampler_src].Register.Indirect) {
+		const struct tgsi_full_src_register *reg = &emit_data->inst->Src[sampler_src];
+		LLVMValueRef ind_index;
+
+		ind_index = get_indirect_index(si_shader_ctx, &reg->Indirect, reg->Register.Index);
+
+		res_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_RESOURCE);
+		res_ptr = build_indexed_load_const(si_shader_ctx, res_ptr, ind_index);
+
+		samp_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_SAMPLER);
+		samp_ptr = build_indexed_load_const(si_shader_ctx, samp_ptr, ind_index);
+	} else {
+		res_ptr = si_shader_ctx->resources[sampler_index];
+		samp_ptr = si_shader_ctx->samplers[sampler_index];
+	}
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		LLVMTypeRef i128 = LLVMIntTypeInContext(gallivm->context, 128);
@@ -2263,7 +2283,7 @@ static void tex_fetch_args(
 		LLVMTypeRef v16i8 = LLVMVectorType(i8, 16);
 
 		/* Bitcast and truncate v8i32 to v16i8. */
-		LLVMValueRef res = si_shader_ctx->resources[sampler_index];
+		LLVMValueRef res = res_ptr;
 		res = LLVMBuildBitCast(gallivm->builder, res, v2i128, "");
 		res = LLVMBuildExtractElement(gallivm->builder, res, bld_base->uint_bld.one, "");
 		res = LLVMBuildBitCast(gallivm->builder, res, v16i8, "");
@@ -2489,7 +2509,7 @@ static void tex_fetch_args(
 	}
 
 	/* Resource */
-	emit_data->args[1] = si_shader_ctx->resources[sampler_index];
+	emit_data->args[1] = res_ptr;
 
 	if (opcode == TGSI_OPCODE_TXF) {
 		/* add tex offsets */
@@ -2572,7 +2592,7 @@ static void tex_fetch_args(
 			dmask = 1 << gather_comp;
 		}
 
-		emit_data->args[2] = si_shader_ctx->samplers[sampler_index];
+		emit_data->args[2] = samp_ptr;
 		emit_data->args[3] = lp_build_const_int32(gallivm, dmask);
 		emit_data->args[4] = lp_build_const_int32(gallivm, is_rect); /* unorm */
 		emit_data->args[5] = lp_build_const_int32(gallivm, 0); /* r128 */
@@ -2588,7 +2608,7 @@ static void tex_fetch_args(
 			LLVMFloatTypeInContext(gallivm->context),
 			4);
 	} else {
-		emit_data->args[2] = si_shader_ctx->samplers[sampler_index];
+		emit_data->args[2] = samp_ptr;
 		emit_data->args[3] = lp_build_const_int32(gallivm, target);
 		emit_data->arg_count = 4;
 
@@ -2734,13 +2754,26 @@ static void txq_fetch_args(
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	unsigned target = inst->Texture.Texture;
+	LLVMValueRef res_ptr;
+
+	if (inst->Src[1].Register.Indirect) {
+		const struct tgsi_full_src_register *reg = &inst->Src[1];
+		LLVMValueRef ind_index;
+
+		ind_index = get_indirect_index(si_shader_ctx, &reg->Indirect, reg->Register.Index);
+
+		res_ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_RESOURCE);
+		res_ptr = build_indexed_load_const(si_shader_ctx, res_ptr,
+						   ind_index);
+	} else
+		res_ptr = si_shader_ctx->resources[inst->Src[1].Register.Index];
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 		LLVMTypeRef v8i32 = LLVMVectorType(i32, 8);
 
 		/* Read the size from the buffer descriptor directly. */
-		LLVMValueRef size = si_shader_ctx->resources[inst->Src[1].Register.Index];
+		LLVMValueRef size = res_ptr;
 		size = LLVMBuildBitCast(gallivm->builder, size, v8i32, "");
 		size = LLVMBuildExtractElement(gallivm->builder, size,
 					      lp_build_const_int32(gallivm, 6), "");
@@ -2752,7 +2785,7 @@ static void txq_fetch_args(
 	emit_data->args[0] = lp_build_emit_fetch(bld_base, inst, 0, TGSI_CHAN_X);
 
 	/* Resource */
-	emit_data->args[1] = si_shader_ctx->resources[inst->Src[1].Register.Index];
+	emit_data->args[1] = res_ptr;
 
 	/* Texture target */
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
