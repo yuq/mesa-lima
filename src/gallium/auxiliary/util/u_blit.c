@@ -572,8 +572,10 @@ util_blit_pixels_tex(struct blit_state *ctx,
    ctx->sampler.normalized_coords = normalized;
    ctx->sampler.min_img_filter = filter;
    ctx->sampler.mag_img_filter = filter;
-   cso_single_sampler(ctx->cso, PIPE_SHADER_FRAGMENT, 0, &ctx->sampler);
-   cso_single_sampler_done(ctx->cso, PIPE_SHADER_FRAGMENT);
+   {
+      const struct pipe_sampler_state *samplers[] = {&ctx->sampler};
+      cso_set_samplers(ctx->cso, PIPE_SHADER_FRAGMENT, 1, samplers);
+   }
 
    /* viewport */
    ctx->viewport.scale[0] = 0.5f * dst->width;
