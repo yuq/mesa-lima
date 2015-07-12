@@ -378,7 +378,7 @@ _tnl_RasterPos(struct gl_context *ctx, const GLfloat vObj[4])
       GLfloat eye[4], clip[4], ndc[3], d;
       GLfloat *norm, eyenorm[3];
       GLfloat *objnorm = ctx->Current.Attrib[VERT_ATTRIB_NORMAL];
-      double scale[3], translate[3];
+      float scale[3], translate[3];
 
       /* apply modelview matrix:  eye = MV * obj */
       TRANSFORM_POINT( eye, ctx->ModelviewMatrixStack.Top->m, vObj );

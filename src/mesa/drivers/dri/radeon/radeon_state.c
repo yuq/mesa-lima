@@ -1354,7 +1354,7 @@ void radeonUpdateWindow( struct gl_context *ctx )
    GLfloat xoffset = 0.0;
    GLfloat yoffset = dPriv ? (GLfloat) dPriv->h : 0;
    const GLboolean render_to_fbo = (ctx->DrawBuffer ? _mesa_is_user_fbo(ctx->DrawBuffer) : 0);
-   double scale[3], translate[3];
+   float scale[3], translate[3];
    GLfloat y_scale, y_bias;
 
    if (render_to_fbo) {
