@@ -408,7 +408,9 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 	if (rscreen->info.family >= CHIP_TONGA)
 		enc->dual_pipe = true;
 	/* TODO enable B frame with dual instance */
-	if ((rscreen->info.family >= CHIP_TONGA) && (templ->max_references == 1))
+	if ((rscreen->info.family >= CHIP_TONGA) &&
+		(templ->max_references == 1) &&
+		(rscreen->info.vce_harvest_config == 0))
 		enc->dual_inst = true;
 
 	enc->base = *templ;

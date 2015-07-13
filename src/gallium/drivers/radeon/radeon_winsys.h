@@ -244,6 +244,7 @@ struct radeon_info {
 
     boolean                     cik_macrotile_mode_array_valid;
     uint32_t                    cik_macrotile_mode_array[16];
+    uint32_t                    vce_harvest_config;
 };
 
 enum radeon_feature_id {

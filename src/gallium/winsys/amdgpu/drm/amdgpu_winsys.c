@@ -164,6 +164,7 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
 
    /* Set chip identification. */
    ws->info.pci_id = ws->amdinfo.asic_id; /* TODO: is this correct? */
+   ws->info.vce_harvest_config = ws->amdinfo.vce_harvest_config;
 
    switch (ws->info.pci_id) {
 #define CHIPSET(pci_id, name, cfamily) case pci_id: ws->info.family = CHIP_##cfamily; break;
