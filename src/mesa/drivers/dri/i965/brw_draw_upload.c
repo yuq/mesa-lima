@@ -40,7 +40,7 @@
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 
-static GLuint double_types[5] = {
+static const GLuint double_types[5] = {
    0,
    BRW_SURFACEFORMAT_R64_FLOAT,
    BRW_SURFACEFORMAT_R64G64_FLOAT,
@@ -48,7 +48,7 @@ static GLuint double_types[5] = {
    BRW_SURFACEFORMAT_R64G64B64A64_FLOAT
 };
 
-static GLuint float_types[5] = {
+static const GLuint float_types[5] = {
    0,
    BRW_SURFACEFORMAT_R32_FLOAT,
    BRW_SURFACEFORMAT_R32G32_FLOAT,
@@ -56,7 +56,7 @@ static GLuint float_types[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_FLOAT
 };
 
-static GLuint half_float_types[5] = {
+static const GLuint half_float_types[5] = {
    0,
    BRW_SURFACEFORMAT_R16_FLOAT,
    BRW_SURFACEFORMAT_R16G16_FLOAT,
@@ -64,7 +64,7 @@ static GLuint half_float_types[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_FLOAT
 };
 
-static GLuint fixed_point_types[5] = {
+static const GLuint fixed_point_types[5] = {
    0,
    BRW_SURFACEFORMAT_R32_SFIXED,
    BRW_SURFACEFORMAT_R32G32_SFIXED,
@@ -72,7 +72,7 @@ static GLuint fixed_point_types[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_SFIXED,
 };
 
-static GLuint uint_types_direct[5] = {
+static const GLuint uint_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R32_UINT,
    BRW_SURFACEFORMAT_R32G32_UINT,
@@ -80,7 +80,7 @@ static GLuint uint_types_direct[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_UINT
 };
 
-static GLuint uint_types_norm[5] = {
+static const GLuint uint_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R32_UNORM,
    BRW_SURFACEFORMAT_R32G32_UNORM,
@@ -88,7 +88,7 @@ static GLuint uint_types_norm[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_UNORM
 };
 
-static GLuint uint_types_scale[5] = {
+static const GLuint uint_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R32_USCALED,
    BRW_SURFACEFORMAT_R32G32_USCALED,
@@ -96,7 +96,7 @@ static GLuint uint_types_scale[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_USCALED
 };
 
-static GLuint int_types_direct[5] = {
+static const GLuint int_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R32_SINT,
    BRW_SURFACEFORMAT_R32G32_SINT,
@@ -104,7 +104,7 @@ static GLuint int_types_direct[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_SINT
 };
 
-static GLuint int_types_norm[5] = {
+static const GLuint int_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R32_SNORM,
    BRW_SURFACEFORMAT_R32G32_SNORM,
@@ -112,7 +112,7 @@ static GLuint int_types_norm[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_SNORM
 };
 
-static GLuint int_types_scale[5] = {
+static const GLuint int_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R32_SSCALED,
    BRW_SURFACEFORMAT_R32G32_SSCALED,
@@ -120,7 +120,7 @@ static GLuint int_types_scale[5] = {
    BRW_SURFACEFORMAT_R32G32B32A32_SSCALED
 };
 
-static GLuint ushort_types_direct[5] = {
+static const GLuint ushort_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R16_UINT,
    BRW_SURFACEFORMAT_R16G16_UINT,
@@ -128,7 +128,7 @@ static GLuint ushort_types_direct[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_UINT
 };
 
-static GLuint ushort_types_norm[5] = {
+static const GLuint ushort_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R16_UNORM,
    BRW_SURFACEFORMAT_R16G16_UNORM,
@@ -136,7 +136,7 @@ static GLuint ushort_types_norm[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_UNORM
 };
 
-static GLuint ushort_types_scale[5] = {
+static const GLuint ushort_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R16_USCALED,
    BRW_SURFACEFORMAT_R16G16_USCALED,
@@ -144,7 +144,7 @@ static GLuint ushort_types_scale[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_USCALED
 };
 
-static GLuint short_types_direct[5] = {
+static const GLuint short_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R16_SINT,
    BRW_SURFACEFORMAT_R16G16_SINT,
@@ -152,7 +152,7 @@ static GLuint short_types_direct[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_SINT
 };
 
-static GLuint short_types_norm[5] = {
+static const GLuint short_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R16_SNORM,
    BRW_SURFACEFORMAT_R16G16_SNORM,
@@ -160,7 +160,7 @@ static GLuint short_types_norm[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_SNORM
 };
 
-static GLuint short_types_scale[5] = {
+static const GLuint short_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R16_SSCALED,
    BRW_SURFACEFORMAT_R16G16_SSCALED,
@@ -168,7 +168,7 @@ static GLuint short_types_scale[5] = {
    BRW_SURFACEFORMAT_R16G16B16A16_SSCALED
 };
 
-static GLuint ubyte_types_direct[5] = {
+static const GLuint ubyte_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R8_UINT,
    BRW_SURFACEFORMAT_R8G8_UINT,
@@ -176,7 +176,7 @@ static GLuint ubyte_types_direct[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_UINT
 };
 
-static GLuint ubyte_types_norm[5] = {
+static const GLuint ubyte_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R8_UNORM,
    BRW_SURFACEFORMAT_R8G8_UNORM,
@@ -184,7 +184,7 @@ static GLuint ubyte_types_norm[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_UNORM
 };
 
-static GLuint ubyte_types_scale[5] = {
+static const GLuint ubyte_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R8_USCALED,
    BRW_SURFACEFORMAT_R8G8_USCALED,
@@ -192,7 +192,7 @@ static GLuint ubyte_types_scale[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_USCALED
 };
 
-static GLuint byte_types_direct[5] = {
+static const GLuint byte_types_direct[5] = {
    0,
    BRW_SURFACEFORMAT_R8_SINT,
    BRW_SURFACEFORMAT_R8G8_SINT,
@@ -200,7 +200,7 @@ static GLuint byte_types_direct[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_SINT
 };
 
-static GLuint byte_types_norm[5] = {
+static const GLuint byte_types_norm[5] = {
    0,
    BRW_SURFACEFORMAT_R8_SNORM,
    BRW_SURFACEFORMAT_R8G8_SNORM,
@@ -208,7 +208,7 @@ static GLuint byte_types_norm[5] = {
    BRW_SURFACEFORMAT_R8G8B8A8_SNORM
 };
 
-static GLuint byte_types_scale[5] = {
+static const GLuint byte_types_scale[5] = {
    0,
    BRW_SURFACEFORMAT_R8_SSCALED,
    BRW_SURFACEFORMAT_R8G8_SSCALED,
