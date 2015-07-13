@@ -149,7 +149,7 @@ struct anv_saved_state {
    struct anv_vertex_binding old_vertex_bindings[NUM_VB_USED];
    struct anv_descriptor_set *old_descriptor_set0;
    struct anv_pipeline *old_pipeline;
-   VkDynamicCbState cb_state;
+   VkDynamicColorBlendState cb_state;
 };
 
 static void
@@ -1339,19 +1339,19 @@ anv_device_init_meta(struct anv_device *device)
    anv_device_init_meta_blit_state(device);
 
    anv_CreateDynamicRasterState(anv_device_to_handle(device),
-      &(VkDynamicRsStateCreateInfo) {
+      &(VkDynamicRasterStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
       },
       &device->meta_state.shared.rs_state);
 
    anv_CreateDynamicColorBlendState(anv_device_to_handle(device),
-      &(VkDynamicCbStateCreateInfo) {
+      &(VkDynamicColorBlendStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
       },
       &device->meta_state.shared.cb_state);
 
    anv_CreateDynamicDepthStencilState(anv_device_to_handle(device),
-      &(VkDynamicDsStateCreateInfo) {
+      &(VkDynamicDepthStencilStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
       },
       &device->meta_state.shared.ds_state);

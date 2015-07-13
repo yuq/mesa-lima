@@ -103,10 +103,10 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSampler, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorPool, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorSet, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicStateObject, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicVpState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicRsState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicCbState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDsState, VkDynamicStateObject)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicViewportState, VkDynamicStateObject)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicRasterState, VkDynamicStateObject)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicColorBlendState, VkDynamicStateObject)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDepthStencilState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
 
@@ -1772,7 +1772,7 @@ typedef struct {
     uint32_t                                    viewportAndScissorCount;
     const VkViewport*                           pViewports;
     const VkRect2D*                             pScissors;
-} VkDynamicVpStateCreateInfo;
+} VkDynamicViewportStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1781,13 +1781,13 @@ typedef struct {
     float                                       depthBiasClamp;
     float                                       slopeScaledDepthBias;
     float                                       lineWidth;
-} VkDynamicRsStateCreateInfo;
+} VkDynamicRasterStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     float                                       blendConst[4];
-} VkDynamicCbStateCreateInfo;
+} VkDynamicColorBlendStateCreateInfo;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1798,7 +1798,7 @@ typedef struct {
     uint32_t                                    stencilWriteMask;
     uint32_t                                    stencilFrontRef;
     uint32_t                                    stencilBackRef;
-} VkDynamicDsStateCreateInfo;
+} VkDynamicDepthStencilStateCreateInfo;
 
 typedef struct {
     VkColorAttachmentView                       view;
@@ -2044,10 +2044,10 @@ typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescript
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
 typedef VkResult (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicVpStateCreateInfo* pCreateInfo, VkDynamicVpState* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRsStateCreateInfo* pCreateInfo, VkDynamicRsState* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicCbStateCreateInfo* pCreateInfo, VkDynamicCbState* pState);
-typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDsStateCreateInfo* pCreateInfo, VkDynamicDsState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicViewportState)(VkDevice device, const VkDynamicViewportStateCreateInfo* pCreateInfo, VkDynamicViewportState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState);
+typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef VkResult (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
@@ -2445,23 +2445,23 @@ VkResult VKAPI vkUpdateDescriptorSets(
 
 VkResult VKAPI vkCreateDynamicViewportState(
     VkDevice                                    device,
-    const VkDynamicVpStateCreateInfo*           pCreateInfo,
-    VkDynamicVpState*                           pState);
+    const VkDynamicViewportStateCreateInfo*     pCreateInfo,
+    VkDynamicViewportState*                     pState);
 
 VkResult VKAPI vkCreateDynamicRasterState(
     VkDevice                                    device,
-    const VkDynamicRsStateCreateInfo*           pCreateInfo,
-    VkDynamicRsState*                           pState);
+    const VkDynamicRasterStateCreateInfo*       pCreateInfo,
+    VkDynamicRasterState*                       pState);
 
 VkResult VKAPI vkCreateDynamicColorBlendState(
     VkDevice                                    device,
-    const VkDynamicCbStateCreateInfo*           pCreateInfo,
-    VkDynamicCbState*                           pState);
+    const VkDynamicColorBlendStateCreateInfo*   pCreateInfo,
+    VkDynamicColorBlendState*                   pState);
 
 VkResult VKAPI vkCreateDynamicDepthStencilState(
     VkDevice                                    device,
-    const VkDynamicDsStateCreateInfo*           pCreateInfo,
-    VkDynamicDsState*                           pState);
+    const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
+    VkDynamicDepthStencilState*                 pState);
 
 VkResult VKAPI vkCreateFramebuffer(
     VkDevice                                    device,

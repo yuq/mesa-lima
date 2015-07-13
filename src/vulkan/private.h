@@ -367,9 +367,9 @@ struct anv_meta_state {
    } blit;
 
    struct {
-      VkDynamicRsState                          rs_state;
-      VkDynamicCbState                          cb_state;
-      VkDynamicDsState                          ds_state;
+      VkDynamicRasterState                      rs_state;
+      VkDynamicColorBlendState                  cb_state;
+      VkDynamicDepthStencilState                ds_state;
    } shared;
 };
 
@@ -918,7 +918,7 @@ struct anv_framebuffer {
    uint32_t                                     layers;
 
    /* Viewport for clears */
-   VkDynamicVpState                             vp_state;
+   VkDynamicViewportState                       vp_state;
 };
 
 struct anv_render_pass_layer {
@@ -970,10 +970,10 @@ ANV_DEFINE_CASTS(anv_instance, VkInstance)
 ANV_DEFINE_CASTS(anv_queue, VkQueue)
 ANV_DEFINE_CASTS(anv_device, VkDevice)
 ANV_DEFINE_CASTS(anv_device_memory, VkDeviceMemory)
-ANV_DEFINE_CASTS(anv_dynamic_vp_state, VkDynamicVpState)
-ANV_DEFINE_CASTS(anv_dynamic_rs_state, VkDynamicRsState)
-ANV_DEFINE_CASTS(anv_dynamic_ds_state, VkDynamicDsState)
-ANV_DEFINE_CASTS(anv_dynamic_cb_state, VkDynamicCbState)
+ANV_DEFINE_CASTS(anv_dynamic_vp_state, VkDynamicViewportState)
+ANV_DEFINE_CASTS(anv_dynamic_rs_state, VkDynamicRasterState)
+ANV_DEFINE_CASTS(anv_dynamic_ds_state, VkDynamicDepthStencilState)
+ANV_DEFINE_CASTS(anv_dynamic_cb_state, VkDynamicColorBlendState)
 ANV_DEFINE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_CASTS(anv_pipeline_layout, VkPipelineLayout)

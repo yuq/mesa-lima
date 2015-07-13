@@ -2064,8 +2064,8 @@ anv_dynamic_vp_state_destroy(struct anv_device *device,
 
 VkResult anv_CreateDynamicViewportState(
     VkDevice                                    _device,
-    const VkDynamicVpStateCreateInfo*           pCreateInfo,
-    VkDynamicVpState*                           pState)
+    const VkDynamicViewportStateCreateInfo*     pCreateInfo,
+    VkDynamicViewportState*                     pState)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_vp_state *state;
@@ -2151,8 +2151,8 @@ VkResult anv_CreateDynamicViewportState(
 
 VkResult anv_CreateDynamicRasterState(
     VkDevice                                    _device,
-    const VkDynamicRsStateCreateInfo*           pCreateInfo,
-    VkDynamicRsState*                           pState)
+    const VkDynamicRasterStateCreateInfo*       pCreateInfo,
+    VkDynamicRasterState*                       pState)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_rs_state *state;
@@ -2191,8 +2191,8 @@ VkResult anv_CreateDynamicRasterState(
 
 VkResult anv_CreateDynamicColorBlendState(
     VkDevice                                    _device,
-    const VkDynamicCbStateCreateInfo*           pCreateInfo,
-    VkDynamicCbState*                           pState)
+    const VkDynamicColorBlendStateCreateInfo*   pCreateInfo,
+    VkDynamicColorBlendState*                   pState)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_cb_state *state;
@@ -2220,8 +2220,8 @@ VkResult anv_CreateDynamicColorBlendState(
 
 VkResult anv_CreateDynamicDepthStencilState(
     VkDevice                                    _device,
-    const VkDynamicDsStateCreateInfo*           pCreateInfo,
-    VkDynamicDsState*                           pState)
+    const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
+    VkDynamicDepthStencilState*                 pState)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_ds_state *state;
@@ -3715,7 +3715,7 @@ VkResult anv_CreateFramebuffer(
    framebuffer->layers = pCreateInfo->layers;
 
    anv_CreateDynamicViewportState(anv_device_to_handle(device),
-      &(VkDynamicVpStateCreateInfo) {
+      &(VkDynamicViewportStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
          .viewportAndScissorCount = 1,
          .pViewports = (VkViewport[]) {
