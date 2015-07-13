@@ -1374,15 +1374,19 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
       emit(pull);
 }
 
-void
-vec4_visitor::emit_uniformize(const dst_reg &dst, const src_reg &src)
+src_reg
+vec4_visitor::emit_uniformize(const src_reg &src)
 {
    const src_reg chan_index(this, glsl_type::uint_type);
+   const dst_reg dst = retype(dst_reg(this, glsl_type::uint_type),
+                              src.type);
 
    emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, dst_reg(chan_index))
       ->force_writemask_all = true;
    emit(SHADER_OPCODE_BROADCAST, dst, src, chan_index)
       ->force_writemask_all = true;
+
+   return src_reg(dst);
 }
 
 void
@@ -1826,7 +1830,7 @@ vec4_visitor::visit(ir_expression *ir)
          surf_index = src_reg(this, glsl_type::uint_type);
          emit(ADD(dst_reg(surf_index), op[0],
                   src_reg(prog_data->base.binding_table.ubo_start)));
-         emit_uniformize(dst_reg(surf_index), surf_index);
+         surf_index = emit_uniformize(surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
@@ -2522,11 +2526,9 @@ vec4_visitor::visit(ir_texture *ir)
 
       /* Emit code to evaluate the actual indexing expression */
       nonconst_sampler_index->accept(this);
-      dst_reg temp(this, glsl_type::uint_type);
-      emit(ADD(temp, this->result, src_reg(sampler)));
-      emit_uniformize(temp, src_reg(temp));
-
-      sampler_reg = src_reg(temp);
+      src_reg temp(this, glsl_type::uint_type);
+      emit(ADD(dst_reg(temp), this->result, src_reg(sampler)));
+      sampler_reg = emit_uniformize(temp);
    } else {
       /* Single sampler, or constant array index; the indexing expression
        * is just an immediate.

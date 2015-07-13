@@ -350,17 +350,19 @@ namespace brw {
       }
 
       /**
-       * Copy any live channel from \p src to the first channel of \p dst.
+       * Copy any live channel from \p src to the first channel of the result.
        */
-      void
-      emit_uniformize(const dst_reg &dst, const src_reg &src) const
+      src_reg
+      emit_uniformize(const src_reg &src) const
       {
          const fs_builder ubld = exec_all();
-         const dst_reg chan_index = vgrf(BRW_REGISTER_TYPE_UD);
+         const dst_reg chan_index = component(vgrf(BRW_REGISTER_TYPE_UD), 0);
+         const dst_reg dst = component(vgrf(src.type), 0);
 
-         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, component(chan_index, 0));
-         ubld.emit(SHADER_OPCODE_BROADCAST, component(dst, 0),
-                   src, component(chan_index, 0));
+         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, chan_index);
+         ubld.emit(SHADER_OPCODE_BROADCAST, dst, src, chan_index);
+
+         return src_reg(dst);
       }
 
       /**

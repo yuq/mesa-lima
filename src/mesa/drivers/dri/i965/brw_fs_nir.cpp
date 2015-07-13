@@ -1378,7 +1378,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          surf_index = vgrf(glsl_type::uint_type);
          bld.ADD(surf_index, get_nir_src(instr->src[0]),
                  fs_reg(stage_prog_data->binding_table.ubo_start));
-         bld.emit_uniformize(surf_index, surf_index);
+         surf_index = bld.emit_uniformize(surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
@@ -1673,7 +1673,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          /* Emit code to evaluate the actual indexing expression */
          sampler_reg = vgrf(glsl_type::uint_type);
          bld.ADD(sampler_reg, src, fs_reg(sampler));
-         bld.emit_uniformize(sampler_reg, sampler_reg);
+         sampler_reg = bld.emit_uniformize(sampler_reg);
          break;
       }
 
