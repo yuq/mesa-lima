@@ -1461,7 +1461,7 @@ VkResult anv_WaitForFences(
     VkDevice                                    _device,
     uint32_t                                    fenceCount,
     const VkFence*                              pFences,
-    bool32_t                                    waitAll,
+    VkBool32                                    waitAll,
     uint64_t                                    timeout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
