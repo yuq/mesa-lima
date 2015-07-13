@@ -44,7 +44,6 @@ extern "C" {
 #endif
 
 enum _egl_platform_type {
-   _EGL_PLATFORM_WINDOWS,
    _EGL_PLATFORM_X11,
    _EGL_PLATFORM_WAYLAND,
    _EGL_PLATFORM_DRM,
