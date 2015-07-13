@@ -1582,6 +1582,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_DABS].intr_name = "fabs";
 	bld_base->op_actions[TGSI_OPCODE_DFMA].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DFMA].intr_name = "llvm.fma.f64";
+	bld_base->op_actions[TGSI_OPCODE_DFRAC].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DFRAC].intr_name = "llvm.AMDIL.fraction.";
 	bld_base->op_actions[TGSI_OPCODE_DNEG].emit = emit_dneg;
 	bld_base->op_actions[TGSI_OPCODE_DSEQ].emit = emit_dcmp;
