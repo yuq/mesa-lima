@@ -334,10 +334,8 @@ struct_member_decoration_cb(struct vtn_builder *b,
       return;
 
    switch (dec->decoration) {
-   case SpvDecorationPrecisionLow:
-   case SpvDecorationPrecisionMedium:
-   case SpvDecorationPrecisionHigh:
-      break; /* FIXME: Do nothing with these for now. */
+   case SpvDecorationRelaxedPrecision:
+      break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationSmooth:
       ctx->fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
       break;
@@ -362,8 +360,29 @@ struct_member_decoration_cb(struct vtn_builder *b,
       ctx->type->members[member]->is_builtin = true;
       ctx->type->members[member]->builtin = dec->literals[0];
       break;
+   case SpvDecorationOffset:
+      ctx->type->offsets[member] = dec->literals[0];
+      break;
    default:
       unreachable("Unhandled member decoration");
+   }
+}
+
+static void
+array_decoration_cb(struct vtn_builder *b,
+                    struct vtn_value *val, int member,
+                    const struct vtn_decoration *dec, void *ctx)
+{
+   struct vtn_type *type = val->type;
+
+   assert(member == -1);
+   switch (dec->decoration) {
+   case SpvDecorationArrayStride:
+      type->stride = dec->literals[0];
+      break;
+
+   default:
+      unreachable("Unhandled array type decoration");
    }
 }
 
@@ -421,12 +440,14 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->type = glsl_array_type(array_element->type, w[3]);
       val->type->array_element = array_element;
       val->type->stride = 0;
+      vtn_foreach_decoration(b, val, array_decoration_cb, NULL);
       return;
    }
 
    case SpvOpTypeStruct: {
       unsigned num_fields = count - 2;
       val->type->members = ralloc_array(b, struct vtn_type *, num_fields);
+      val->type->offsets = ralloc_array(b, unsigned, num_fields);
 
       NIR_VLA(struct glsl_struct_field, fields, count);
       for (unsigned i = 0; i < num_fields; i++) {
@@ -479,7 +500,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type = vtn_value(b, w[3], vtn_value_type_type)->type;
       return;
 
-   case SpvOpTypeSampler: {
+   case SpvOpTypeImage: {
       const struct glsl_type *sampled_type =
          vtn_value(b, w[2], vtn_value_type_type)->type->type;
 
@@ -497,18 +518,20 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          unreachable("Invalid SPIR-V Sampler dimension");
       }
 
-      /* TODO: Handle the various texture image/filter options */
-      (void)w[4];
-
+      bool is_shadow = w[4];
       bool is_array = w[5];
-      bool is_shadow = w[6];
 
-      assert(w[7] == 0 && "FIXME: Handl multi-sampled textures");
+      assert(w[6] == 0 && "FIXME: Handl multi-sampled textures");
+      assert(w[7] == 1 && "FIXME: Add support for non-sampled images");
 
       val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
                                           glsl_get_base_type(sampled_type));
       return;
    }
+
+   case SpvOpTypeSampledImage:
+      val->type = vtn_value(b, w[2], vtn_value_type_type)->type;
+      break;
 
    case SpvOpTypeRuntimeArray:
    case SpvOpTypeOpaque:
@@ -693,10 +716,8 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
    nir_variable *var = void_var;
    switch (dec->decoration) {
-   case SpvDecorationPrecisionLow:
-   case SpvDecorationPrecisionMedium:
-   case SpvDecorationPrecisionHigh:
-      break; /* FIXME: Do nothing with these for now. */
+   case SpvDecorationRelaxedPrecision:
+      break; /* FIXME: Do nothing with this for now. */
    case SpvDecorationSmooth:
       var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
       break;
@@ -758,9 +779,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationRowMajor:
    case SpvDecorationColMajor:
    case SpvDecorationGLSLShared:
-   case SpvDecorationGLSLStd140:
-   case SpvDecorationGLSLStd430:
-   case SpvDecorationGLSLPacked:
    case SpvDecorationPatch:
    case SpvDecorationRestrict:
    case SpvDecorationAliased:
@@ -773,9 +791,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationSaturatedConversion:
    case SpvDecorationStream:
    case SpvDecorationOffset:
-   case SpvDecorationAlignment:
    case SpvDecorationXfbBuffer:
-   case SpvDecorationStride:
    case SpvDecorationFuncParamAttr:
    case SpvDecorationFPRoundingMode:
    case SpvDecorationFPFastMathMode:
@@ -1118,7 +1134,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       case SpvStorageClassWorkgroupLocal:
       case SpvStorageClassWorkgroupGlobal:
       case SpvStorageClassGeneric:
-      case SpvStorageClassPrivate:
       case SpvStorageClassAtomicCounter:
       default:
          unreachable("Unhandled variable storage class");
@@ -1270,10 +1285,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
-   case SpvOpVariableArray:
    case SpvOpCopyMemorySized:
    case SpvOpArrayLength:
-   case SpvOpImagePointer:
+   case SpvOpImageTexelPointer:
    default:
       unreachable("Unhandled opcode");
    }
@@ -1342,31 +1356,24 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    nir_tex_src srcs[8]; /* 8 should be enough */
    nir_tex_src *p = srcs;
 
+   unsigned idx = 4;
+
    unsigned coord_components = 0;
    switch (opcode) {
-   case SpvOpTextureSample:
-   case SpvOpTextureSampleDref:
-   case SpvOpTextureSampleLod:
-   case SpvOpTextureSampleProj:
-   case SpvOpTextureSampleGrad:
-   case SpvOpTextureSampleOffset:
-   case SpvOpTextureSampleProjLod:
-   case SpvOpTextureSampleProjGrad:
-   case SpvOpTextureSampleLodOffset:
-   case SpvOpTextureSampleProjOffset:
-   case SpvOpTextureSampleGradOffset:
-   case SpvOpTextureSampleProjLodOffset:
-   case SpvOpTextureSampleProjGradOffset:
-   case SpvOpTextureFetchTexelLod:
-   case SpvOpTextureFetchTexelOffset:
-   case SpvOpTextureFetchSample:
-   case SpvOpTextureFetchTexel:
-   case SpvOpTextureGather:
-   case SpvOpTextureGatherOffset:
-   case SpvOpTextureGatherOffsets:
-   case SpvOpTextureQueryLod: {
+   case SpvOpImageSampleImplicitLod:
+   case SpvOpImageSampleExplicitLod: 
+   case SpvOpImageSampleDrefImplicitLod: 
+   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleProjImplicitLod:
+   case SpvOpImageSampleProjExplicitLod: 
+   case SpvOpImageSampleProjDrefImplicitLod: 
+   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageFetch:
+   case SpvOpImageGather:
+   case SpvOpImageDrefGather: 
+   case SpvOpImageQueryLod: {
       /* All these types have the coordinate as their first real argument */
-      struct vtn_ssa_value *coord = vtn_ssa_value(b, w[4]);
+      struct vtn_ssa_value *coord = vtn_ssa_value(b, w[idx++]);
       coord_components = glsl_get_vector_elements(coord->type);
       p->src = nir_src_for_ssa(coord->def);
       p->src_type = nir_tex_src_coord;
@@ -1380,42 +1387,35 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
 
    nir_texop texop;
    switch (opcode) {
-   case SpvOpTextureSample:
+   case SpvOpImageSampleImplicitLod:
       texop = nir_texop_tex;
-
-      if (count == 6) {
-         texop = nir_texop_txb;
-         *p++ = vtn_tex_src(b, w[5], nir_tex_src_bias);
-      }
       break;
 
-   case SpvOpTextureSampleDref:
-   case SpvOpTextureSampleLod:
-   case SpvOpTextureSampleProj:
-   case SpvOpTextureSampleGrad:
-   case SpvOpTextureSampleOffset:
-   case SpvOpTextureSampleProjLod:
-   case SpvOpTextureSampleProjGrad:
-   case SpvOpTextureSampleLodOffset:
-   case SpvOpTextureSampleProjOffset:
-   case SpvOpTextureSampleGradOffset:
-   case SpvOpTextureSampleProjLodOffset:
-   case SpvOpTextureSampleProjGradOffset:
-   case SpvOpTextureFetchTexelLod:
-   case SpvOpTextureFetchTexelOffset:
-   case SpvOpTextureFetchSample:
-   case SpvOpTextureFetchTexel:
-   case SpvOpTextureGather:
-   case SpvOpTextureGatherOffset:
-   case SpvOpTextureGatherOffsets:
-   case SpvOpTextureQuerySizeLod:
-   case SpvOpTextureQuerySize:
-   case SpvOpTextureQueryLod:
-   case SpvOpTextureQueryLevels:
-   case SpvOpTextureQuerySamples:
+   case SpvOpImageSampleExplicitLod: 
+   case SpvOpImageSampleDrefImplicitLod: 
+   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleProjImplicitLod:
+   case SpvOpImageSampleProjExplicitLod: 
+   case SpvOpImageSampleProjDrefImplicitLod: 
+   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageFetch:
+   case SpvOpImageGather:
+   case SpvOpImageDrefGather: 
+   case SpvOpImageQuerySizeLod:
+   case SpvOpImageQuerySize:
+   case SpvOpImageQueryLod:
+   case SpvOpImageQueryLevels:
+   case SpvOpImageQuerySamples:
    default:
       unreachable("Unhandled opcode");
    }
+
+   /* From now on, the remaining sources are "Optional Image Operands." */
+   if (idx < count) {
+      /* XXX handle these (bias, lod, etc.) */
+      assert(0);
+   }
+
 
    nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
 
@@ -1742,7 +1742,8 @@ vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
    case SpvOpShiftRightArithmetic:  op = nir_op_ishr;    break;
    case SpvOpShiftLeftLogical:      op = nir_op_ishl;    break;
    case SpvOpLogicalOr:             op = nir_op_ior;     break;
-   case SpvOpLogicalXor:            op = nir_op_ixor;    break;
+   case SpvOpLogicalEqual:          op = nir_op_ieq;     break;
+   case SpvOpLogicalNotEqual:       op = nir_op_ine;     break;
    case SpvOpLogicalAnd:            op = nir_op_iand;    break;
    case SpvOpBitwiseOr:             op = nir_op_ior;     break;
    case SpvOpBitwiseXor:            op = nir_op_ixor;    break;
@@ -2200,9 +2201,17 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    switch (opcode) {
    case SpvOpSource:
    case SpvOpSourceExtension:
-   case SpvOpCompileFlag:
    case SpvOpExtension:
       /* Unhandled, but these are for debug so that's ok. */
+      break;
+
+   case SpvOpCapability:
+      /*
+       * TODO properly handle these and give a real error if asking for too
+       * much.
+       */
+      assert(w[1] == SpvCapabilityMatrix ||
+             w[1] == SpvCapabilityShader);
       break;
 
    case SpvOpExtInstImport:
@@ -2221,7 +2230,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpExecutionMode:
-      unreachable("Execution modes not yet implemented");
+      /*
+       * TODO handle these - for Vulkan OriginUpperLeft is always set for
+       * fragment shaders, so we can ignore this for now
+       */
       break;
 
    case SpvOpString:
@@ -2254,7 +2266,9 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpTypeFloat:
    case SpvOpTypeVector:
    case SpvOpTypeMatrix:
+   case SpvOpTypeImage:
    case SpvOpTypeSampler:
+   case SpvOpTypeSampledImage:
    case SpvOpTypeArray:
    case SpvOpTypeRuntimeArray:
    case SpvOpTypeStruct:
@@ -2274,8 +2288,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpConstant:
    case SpvOpConstantComposite:
    case SpvOpConstantSampler:
-   case SpvOpConstantNullPointer:
-   case SpvOpConstantNullObject:
    case SpvOpSpecConstantTrue:
    case SpvOpSpecConstantFalse:
    case SpvOpSpecConstant:
@@ -2422,7 +2434,6 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpVariable:
-   case SpvOpVariableArray:
    case SpvOpLoad:
    case SpvOpStore:
    case SpvOpCopyMemory:
@@ -2430,7 +2441,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpAccessChain:
    case SpvOpInBoundsAccessChain:
    case SpvOpArrayLength:
-   case SpvOpImagePointer:
+   case SpvOpImageTexelPointer:
       vtn_handle_variables(b, opcode, w, count);
       break;
 
@@ -2438,31 +2449,22 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       vtn_handle_function_call(b, opcode, w, count);
       break;
 
-   case SpvOpTextureSample:
-   case SpvOpTextureSampleDref:
-   case SpvOpTextureSampleLod:
-   case SpvOpTextureSampleProj:
-   case SpvOpTextureSampleGrad:
-   case SpvOpTextureSampleOffset:
-   case SpvOpTextureSampleProjLod:
-   case SpvOpTextureSampleProjGrad:
-   case SpvOpTextureSampleLodOffset:
-   case SpvOpTextureSampleProjOffset:
-   case SpvOpTextureSampleGradOffset:
-   case SpvOpTextureSampleProjLodOffset:
-   case SpvOpTextureSampleProjGradOffset:
-   case SpvOpTextureFetchTexelLod:
-   case SpvOpTextureFetchTexelOffset:
-   case SpvOpTextureFetchSample:
-   case SpvOpTextureFetchTexel:
-   case SpvOpTextureGather:
-   case SpvOpTextureGatherOffset:
-   case SpvOpTextureGatherOffsets:
-   case SpvOpTextureQuerySizeLod:
-   case SpvOpTextureQuerySize:
-   case SpvOpTextureQueryLod:
-   case SpvOpTextureQueryLevels:
-   case SpvOpTextureQuerySamples:
+   case SpvOpImageSampleImplicitLod:
+   case SpvOpImageSampleExplicitLod: 
+   case SpvOpImageSampleDrefImplicitLod: 
+   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleProjImplicitLod:
+   case SpvOpImageSampleProjExplicitLod: 
+   case SpvOpImageSampleProjDrefImplicitLod: 
+   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageFetch:
+   case SpvOpImageGather:
+   case SpvOpImageDrefGather: 
+   case SpvOpImageQuerySizeLod:
+   case SpvOpImageQuerySize:
+   case SpvOpImageQueryLod:
+   case SpvOpImageQueryLevels:
+   case SpvOpImageQuerySamples:
       vtn_handle_texture(b, opcode, w, count);
       break;
 
@@ -2511,7 +2513,8 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpShiftRightArithmetic:
    case SpvOpShiftLeftLogical:
    case SpvOpLogicalOr:
-   case SpvOpLogicalXor:
+   case SpvOpLogicalEqual:
+   case SpvOpLogicalNotEqual:
    case SpvOpLogicalAnd:
    case SpvOpBitwiseOr:
    case SpvOpBitwiseXor:
