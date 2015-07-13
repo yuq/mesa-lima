@@ -1031,7 +1031,6 @@ typedef enum {
     VK_SHADER_STAGE_ALL = 0x7FFFFFFF,
 } VkShaderStageFlagBits;
 typedef VkFlags VkShaderStageFlags;
-typedef VkFlags VkCmdBufferCreateFlags;
 
 typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
@@ -1088,6 +1087,7 @@ typedef enum {
     VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000100,
 } VkMemoryInputFlagBits;
 typedef VkFlags VkMemoryInputFlags;
+typedef VkFlags VkCmdBufferCreateFlags;
 
 typedef struct {
     VkStructureType                             sType;
