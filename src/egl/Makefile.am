@@ -115,5 +115,4 @@ EXTRA_DIST = \
 	drivers/haiku \
 	docs \
 	main/egl.def \
-	main/README.txt \
-	main/Makefile.sources
+	main/README.txt
