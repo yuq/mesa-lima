@@ -3198,6 +3198,30 @@ fs_visitor::lower_integer_multiplication()
    return progress;
 }
 
+bool
+fs_visitor::lower_logical_sends()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
+      const fs_builder ibld = bld.exec_all(inst->force_writemask_all)
+                                 .group(inst->exec_size, inst->force_sechalf)
+                                 .at(block, inst);
+
+      switch (inst->opcode) {
+      default:
+         continue;
+      }
+
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 void
 fs_visitor::dump_instructions()
 {
@@ -3645,9 +3669,12 @@ fs_visitor::optimize()
       backend_shader::dump_instructions(filename);
    }
 
-   bool progress;
+   bool progress = false;
    int iteration = 0;
    int pass_num = 0;
+
+   OPT(lower_logical_sends);
+
    do {
       progress = false;
       pass_num = 0;
