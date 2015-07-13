@@ -69,7 +69,6 @@ static const struct {
    { _EGL_PLATFORM_X11, "x11" },
    { _EGL_PLATFORM_WAYLAND, "wayland" },
    { _EGL_PLATFORM_DRM, "drm" },
-   { _EGL_PLATFORM_NULL, "null" },
    { _EGL_PLATFORM_ANDROID, "android" },
    { _EGL_PLATFORM_HAIKU, "haiku" },
    { _EGL_PLATFORM_SURFACELESS, "surfaceless" },
