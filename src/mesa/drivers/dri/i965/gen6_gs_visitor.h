@@ -51,6 +51,8 @@ protected:
    virtual void emit_thread_end();
    virtual void visit(ir_emit_vertex *);
    virtual void visit(ir_end_primitive *);
+   virtual void gs_emit_vertex(int stream_id);
+   virtual void gs_end_primitive();
    virtual void emit_urb_write_header(int mrf);
    virtual void emit_urb_write_opcode(bool complete,
                                       int base_mrf,
