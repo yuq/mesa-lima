@@ -39,7 +39,6 @@
 #include <stdlib.h>
 #include "c11/threads.h"
 
-#include "eglstring.h"
 #include "egldefines.h"
 #include "egldisplay.h"
 #include "egldriver.h"
@@ -135,7 +134,7 @@ _eglAddModule(const char *name)
    /* allocate a new one */
    mod = calloc(1, sizeof(*mod));
    if (mod) {
-      mod->Name = _eglstrdup(name);
+      mod->Name = strdup(name);
       if (!mod->Name) {
          free(mod);
          mod = NULL;

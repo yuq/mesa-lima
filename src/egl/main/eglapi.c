@@ -100,7 +100,6 @@
 #include "eglconfig.h"
 #include "eglimage.h"
 #include "eglsync.h"
-#include "eglstring.h"
 
 
 /**
@@ -506,7 +505,7 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       _eglComputeVersion(disp);
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
-      _eglsnprintf(disp->VersionString, sizeof(disp->VersionString),
+      snprintf(disp->VersionString, sizeof(disp->VersionString),
               "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
               disp->Driver->Name);
    }
