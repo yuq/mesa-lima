@@ -257,7 +257,7 @@ static GLboolean *_tnl_import_edgeflag( struct gl_context *ctx,
    GLuint i;
 
    for (i = 0; i < count; i++) {
-      *bptr++ = ((GLfloat *)ptr)[0] == 1.0;
+      *bptr++ = ((GLfloat *)ptr)[0] == 1.0F;
       ptr += stride;
    }
 
