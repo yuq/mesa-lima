@@ -861,6 +861,14 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       }
    }
 
+   if (op == ir_query_levels) {
+      /* textureQueryLevels() is implemented in terms of TXS so we need to
+       * pass a valid LOD argument.
+       */
+      assert(lod.file == BAD_FILE);
+      lod = fs_reg(0u);
+   }
+
    if (coordinate.file != BAD_FILE) {
       /* FINISHME: Texture coordinate rescaling doesn't work with non-constant
        * samplers.  This should only be a problem with GL_CLAMP on Gen7.
@@ -873,25 +881,49 @@ fs_visitor::emit_texture(ir_texture_opcode op,
     * samples, so don't worry about them.
     */
    fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 4, 1));
+   const fs_reg srcs[] = {
+      coordinate, shadow_c, lod, lod2,
+      sample_index, mcs, sampler_reg, offset_value,
+      fs_reg(coord_components), fs_reg(grad_components)
+   };
+   enum opcode opcode;
 
-   if (devinfo->gen >= 7) {
-      inst = emit_texture_gen7(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sample_index, mcs, sampler_reg,
-                               offset_value);
-   } else if (devinfo->gen >= 5) {
-      inst = emit_texture_gen5(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sample_index, sampler,
-                               offset_value.file != BAD_FILE);
-   } else if (dispatch_width == 16) {
-      inst = emit_texture_gen4_simd16(op, dst, coordinate, coord_components,
-                                      shadow_c, lod, sampler);
-   } else {
-      inst = emit_texture_gen4(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sampler);
+   switch (op) {
+   case ir_tex:
+      opcode = SHADER_OPCODE_TEX_LOGICAL;
+      break;
+   case ir_txb:
+      opcode = FS_OPCODE_TXB_LOGICAL;
+      break;
+   case ir_txl:
+      opcode = SHADER_OPCODE_TXL_LOGICAL;
+      break;
+   case ir_txd:
+      opcode = SHADER_OPCODE_TXD_LOGICAL;
+      break;
+   case ir_txf:
+      opcode = SHADER_OPCODE_TXF_LOGICAL;
+      break;
+   case ir_txf_ms:
+      opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      break;
+   case ir_txs:
+   case ir_query_levels:
+      opcode = SHADER_OPCODE_TXS_LOGICAL;
+      break;
+   case ir_lod:
+      opcode = SHADER_OPCODE_LOD_LOGICAL;
+      break;
+   case ir_tg4:
+      opcode = (offset_value.file != BAD_FILE && offset_value.file != IMM ?
+                SHADER_OPCODE_TG4_OFFSET_LOGICAL : SHADER_OPCODE_TG4_LOGICAL);
+      break;
+   default:
+      unreachable("Invalid texture opcode.");
    }
+
+   inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
+   inst->regs_written = 4 * dispatch_width / 8;
 
    if (shadow_c.file != BAD_FILE)
       inst->shadow_compare = true;
