@@ -25,7 +25,7 @@
 #include "main/core.h" /* for Elements, MAX2 */
 #include "glsl_parser_extras.h"
 #include "glsl_types.h"
-#include "program/hash_table.h"
+#include "util/hash_table.h"
 
 
 mtx_t glsl_type::mutex = _MTX_INITIALIZER_NP;
@@ -329,12 +329,12 @@ _mesa_glsl_release_types(void)
     * necessary.
     */
    if (glsl_type::array_types != NULL) {
-      hash_table_dtor(glsl_type::array_types);
+      _mesa_hash_table_destroy(glsl_type::array_types, NULL);
       glsl_type::array_types = NULL;
    }
 
    if (glsl_type::record_types != NULL) {
-      hash_table_dtor(glsl_type::record_types);
+      _mesa_hash_table_destroy(glsl_type::record_types, NULL);
       glsl_type::record_types = NULL;
    }
 }
@@ -648,27 +648,28 @@ glsl_type::get_array_instance(const glsl_type *base, unsigned array_size)
    mtx_lock(&glsl_type::mutex);
 
    if (array_types == NULL) {
-      array_types = hash_table_ctor(64, hash_table_string_hash,
-				    hash_table_string_compare);
+      array_types = _mesa_hash_table_create(NULL, _mesa_key_hash_string,
+                                            _mesa_key_string_equal);
    }
 
-   const glsl_type *t = (glsl_type *) hash_table_find(array_types, key);
-
-   if (t == NULL) {
+   const struct hash_entry *entry = _mesa_hash_table_search(array_types, key);
+   if (entry == NULL) {
       mtx_unlock(&glsl_type::mutex);
-      t = new glsl_type(base, array_size);
+      const glsl_type *t = new glsl_type(base, array_size);
       mtx_lock(&glsl_type::mutex);
 
-      hash_table_insert(array_types, (void *) t, ralloc_strdup(mem_ctx, key));
+      entry = _mesa_hash_table_insert(array_types,
+                                      ralloc_strdup(mem_ctx, key),
+                                      (void *) t);
    }
 
-   assert(t->base_type == GLSL_TYPE_ARRAY);
-   assert(t->length == array_size);
-   assert(t->fields.array == base);
+   assert(((glsl_type *) entry->data)->base_type == GLSL_TYPE_ARRAY);
+   assert(((glsl_type *) entry->data)->length == array_size);
+   assert(((glsl_type *) entry->data)->fields.array == base);
 
    mtx_unlock(&glsl_type::mutex);
 
-   return t;
+   return (glsl_type *) entry->data;
 }
 
 
@@ -722,19 +723,13 @@ glsl_type::record_compare(const glsl_type *b) const
 }
 
 
-int
+bool
 glsl_type::record_key_compare(const void *a, const void *b)
 {
    const glsl_type *const key1 = (glsl_type *) a;
    const glsl_type *const key2 = (glsl_type *) b;
 
-   /* Return zero is the types match (there is zero difference) or non-zero
-    * otherwise.
-    */
-   if (strcmp(key1->name, key2->name) != 0)
-      return 1;
-
-   return !key1->record_compare(key2);
+   return strcmp(key1->name, key2->name) == 0 && key1->record_compare(key2);
 }
 
 
@@ -772,25 +767,27 @@ glsl_type::get_record_instance(const glsl_struct_field *fields,
    mtx_lock(&glsl_type::mutex);
 
    if (record_types == NULL) {
-      record_types = hash_table_ctor(64, record_key_hash, record_key_compare);
+      record_types = _mesa_hash_table_create(NULL, record_key_hash,
+                                             record_key_compare);
    }
 
-   const glsl_type *t = (glsl_type *) hash_table_find(record_types, & key);
-   if (t == NULL) {
+   const struct hash_entry *entry = _mesa_hash_table_search(record_types,
+                                                            &key);
+   if (entry == NULL) {
       mtx_unlock(&glsl_type::mutex);
-      t = new glsl_type(fields, num_fields, name);
+      const glsl_type *t = new glsl_type(fields, num_fields, name);
       mtx_lock(&glsl_type::mutex);
 
-      hash_table_insert(record_types, (void *) t, t);
+      entry = _mesa_hash_table_insert(record_types, t, (void *) t);
    }
 
-   assert(t->base_type == GLSL_TYPE_STRUCT);
-   assert(t->length == num_fields);
-   assert(strcmp(t->name, name) == 0);
+   assert(((glsl_type *) entry->data)->base_type == GLSL_TYPE_STRUCT);
+   assert(((glsl_type *) entry->data)->length == num_fields);
+   assert(strcmp(((glsl_type *) entry->data)->name, name) == 0);
 
    mtx_unlock(&glsl_type::mutex);
 
-   return t;
+   return (glsl_type *) entry->data;
 }
 
 
@@ -805,25 +802,28 @@ glsl_type::get_interface_instance(const glsl_struct_field *fields,
    mtx_lock(&glsl_type::mutex);
 
    if (interface_types == NULL) {
-      interface_types = hash_table_ctor(64, record_key_hash, record_key_compare);
+      interface_types = _mesa_hash_table_create(NULL, record_key_hash,
+                                                record_key_compare);
    }
 
-   const glsl_type *t = (glsl_type *) hash_table_find(interface_types, & key);
-   if (t == NULL) {
+   const struct hash_entry *entry = _mesa_hash_table_search(interface_types,
+                                                            &key);
+   if (entry == NULL) {
       mtx_unlock(&glsl_type::mutex);
-      t = new glsl_type(fields, num_fields, packing, block_name);
+      const glsl_type *t = new glsl_type(fields, num_fields,
+                                         packing, block_name);
       mtx_lock(&glsl_type::mutex);
 
-      hash_table_insert(interface_types, (void *) t, t);
+      entry = _mesa_hash_table_insert(interface_types, t, (void *) t);
    }
 
-   assert(t->base_type == GLSL_TYPE_INTERFACE);
-   assert(t->length == num_fields);
-   assert(strcmp(t->name, block_name) == 0);
+   assert(((glsl_type *) entry->data)->base_type == GLSL_TYPE_INTERFACE);
+   assert(((glsl_type *) entry->data)->length == num_fields);
+   assert(strcmp(((glsl_type *) entry->data)->name, block_name) == 0);
 
    mtx_unlock(&glsl_type::mutex);
 
-   return t;
+   return (glsl_type *) entry->data;
 }
 
 

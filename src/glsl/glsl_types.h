@@ -688,7 +688,7 @@ private:
    /** Hash table containing the known interface types. */
    static struct hash_table *interface_types;
 
-   static int record_key_compare(const void *a, const void *b);
+   static bool record_key_compare(const void *a, const void *b);
    static unsigned record_key_hash(const void *key);
 
    /**
