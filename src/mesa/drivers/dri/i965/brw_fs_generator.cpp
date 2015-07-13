@@ -221,11 +221,11 @@ fs_generator::fire_fb_write(fs_inst *inst,
    if (inst->opcode == FS_OPCODE_REP_FB_WRITE)
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE_REPLICATED;
    else if (prog_data->dual_src_blend) {
-      if (dispatch_width == 8 || !inst->eot)
+      if (!inst->force_sechalf)
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN01;
       else
          msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_DUAL_SOURCE_SUBSPAN23;
-   } else if (dispatch_width == 16)
+   } else if (inst->exec_size == 16)
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE;
    else
       msg_control = BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD8_SINGLE_SOURCE_SUBSPAN01;
