@@ -2,10 +2,6 @@ Import('*')
 
 env = env.Clone()
 
-env.Append(CPPDEFINES = [
-	'DEFAULT_DRIVER_DIR=\\"\\"',
-])
-
 env.Append(CPPPATH = [
 	'#/include',
 	'#/src/egl/main',
