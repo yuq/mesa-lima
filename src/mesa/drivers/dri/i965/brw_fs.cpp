@@ -3269,6 +3269,15 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
                        const fs_inst *inst)
 {
    switch (inst->opcode) {
+   case FS_OPCODE_FB_WRITE_LOGICAL:
+      /* Gen6 doesn't support SIMD16 depth writes but we cannot handle them
+       * here.
+       */
+      assert(devinfo->gen != 6 || inst->src[3].file == BAD_FILE ||
+             inst->exec_size == 8);
+      /* Dual-source FB writes are unsupported in SIMD16 mode. */
+      return (inst->src[1].file != BAD_FILE ? 8 : inst->exec_size);
+
    default:
       return inst->exec_size;
    }
