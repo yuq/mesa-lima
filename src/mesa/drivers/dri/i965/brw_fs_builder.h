@@ -160,10 +160,13 @@ namespace brw {
       dst_reg
       vgrf(enum brw_reg_type type, unsigned n = 1) const
       {
-         return dst_reg(GRF, shader->alloc.allocate(
-                           DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
-                                        REG_SIZE)),
-                        type);
+         if (n > 0)
+            return dst_reg(GRF, shader->alloc.allocate(
+                              DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
+                                           REG_SIZE)),
+                           type);
+         else
+            return retype(null_reg_ud(), type);
       }
 
       /**
