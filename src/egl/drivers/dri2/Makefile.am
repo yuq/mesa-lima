@@ -44,10 +44,6 @@ libegl_dri2_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la \
 	$(EGL_LIB_DEPS)
 
-if HAVE_SHARED_GLAPI
-AM_CFLAGS += -DHAVE_SHARED_GLAPI
-endif
-
 if HAVE_EGL_PLATFORM_X11
 libegl_dri2_la_SOURCES += platform_x11.c
 AM_CFLAGS += -DHAVE_X11_PLATFORM

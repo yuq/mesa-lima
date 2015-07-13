@@ -32,7 +32,6 @@ LOCAL_SRC_FILES := \
 	platform_android.c
 
 LOCAL_CFLAGS := \
-	-DHAVE_SHARED_GLAPI \
 	-DHAVE_ANDROID_PLATFORM
 
 ifeq ($(MESA_LOLLIPOP_BUILD),true)

@@ -2365,20 +2365,12 @@ static EGLBoolean
 dri2_load(_EGLDriver *drv)
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
-#ifdef HAVE_SHARED_GLAPI
 #ifdef HAVE_ANDROID_PLATFORM
    const char *libname = "libglapi.so";
 #elif defined(__APPLE__)
    const char *libname = "libglapi.0.dylib";
 #else
    const char *libname = "libglapi.so.0";
-#endif
-#else
-   /*
-    * Both libGL.so and libglapi.so are glapi providers.  There is no way to
-    * tell which one to load.
-    */
-   const char *libname = NULL;
 #endif
    void *handle;
 
