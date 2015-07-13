@@ -79,6 +79,10 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg)
       brw_reg = byte_offset(brw_reg, reg->subreg_offset);
       break;
    case IMM:
+      assert(reg->stride == ((reg->type == BRW_REGISTER_TYPE_V ||
+                              reg->type == BRW_REGISTER_TYPE_UV ||
+                              reg->type == BRW_REGISTER_TYPE_VF) ? 1 : 0));
+
       switch (reg->type) {
       case BRW_REGISTER_TYPE_F:
 	 brw_reg = brw_imm_f(reg->fixed_hw_reg.dw1.f);

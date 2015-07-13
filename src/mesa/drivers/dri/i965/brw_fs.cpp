@@ -362,6 +362,7 @@ fs_reg::fs_reg(float f)
    init();
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_F;
+   this->stride = 0;
    this->fixed_hw_reg.dw1.f = f;
 }
 
@@ -371,6 +372,7 @@ fs_reg::fs_reg(int32_t i)
    init();
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_D;
+   this->stride = 0;
    this->fixed_hw_reg.dw1.d = i;
 }
 
@@ -380,6 +382,7 @@ fs_reg::fs_reg(uint32_t u)
    init();
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_UD;
+   this->stride = 0;
    this->fixed_hw_reg.dw1.ud = u;
 }
 
