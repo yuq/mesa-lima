@@ -182,7 +182,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = cs->num_uniform_components;
+   int param_count = cs->num_uniform_components +
+                     cs->NumImages * BRW_IMAGE_PARAM_SIZE;
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;

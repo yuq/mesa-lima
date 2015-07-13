@@ -189,7 +189,8 @@ brw_codegen_wm_prog(struct brw_context *brw,
     */
    int param_count;
    if (fs) {
-      param_count = fs->num_uniform_components;
+      param_count = fs->num_uniform_components +
+                    fs->NumImages * BRW_IMAGE_PARAM_SIZE;
       prog_data.base.nr_image_params = fs->NumImages;
    } else {
       param_count = fp->program.Base.Parameters->NumParameters * 4;
