@@ -240,7 +240,7 @@ util_iround(float f)
 static inline boolean
 util_is_approx(float a, float b, float tol)
 {
-   return fabs(b - a) <= tol;
+   return fabsf(b - a) <= tol;
 }
 
 

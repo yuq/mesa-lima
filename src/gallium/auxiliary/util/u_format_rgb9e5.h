@@ -75,7 +75,7 @@ typedef union {
 
 static inline float rgb9e5_ClampRange(float x)
 {
-   if (x > 0.0) {
+   if (x > 0.0f) {
       if (x >= MAX_RGB9E5) {
          return MAX_RGB9E5;
       } else {
