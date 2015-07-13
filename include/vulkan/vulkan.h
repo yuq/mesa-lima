@@ -1045,11 +1045,6 @@ typedef enum {
 typedef VkFlags VkPipeEventFlags;
 
 typedef enum {
-    VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
-} VkQueryControlFlagBits;
-typedef VkFlags VkQueryControlFlags;
-
-typedef enum {
     VK_MEMORY_OUTPUT_HOST_WRITE_BIT = 0x00000001,
     VK_MEMORY_OUTPUT_SHADER_WRITE_BIT = 0x00000002,
     VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT = 0x00000004,
@@ -1087,6 +1082,11 @@ typedef enum {
     VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
 } VkImageAspectFlagBits;
 typedef VkFlags VkImageAspectFlags;
+
+typedef enum {
+    VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
+} VkQueryControlFlagBits;
+typedef VkFlags VkQueryControlFlags;
 
 typedef struct {
     VkStructureType                             sType;
