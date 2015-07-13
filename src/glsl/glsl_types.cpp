@@ -337,6 +337,11 @@ _mesa_glsl_release_types(void)
       _mesa_hash_table_destroy(glsl_type::record_types, NULL);
       glsl_type::record_types = NULL;
    }
+
+   if (glsl_type::interface_types != NULL) {
+      _mesa_hash_table_destroy(glsl_type::interface_types, NULL);
+      glsl_type::interface_types = NULL;
+   }
 }
 
 
