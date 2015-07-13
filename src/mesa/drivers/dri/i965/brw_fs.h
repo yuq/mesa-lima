@@ -495,10 +495,6 @@ private:
                                           struct brw_reg msg_data,
                                           unsigned msg_type);
 
-   void generate_set_omask(fs_inst *inst,
-                           struct brw_reg dst,
-                           struct brw_reg sample_mask);
-
    void generate_set_sample_id(fs_inst *inst,
                                struct brw_reg dst,
                                struct brw_reg src0,

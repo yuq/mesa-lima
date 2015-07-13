@@ -1364,37 +1364,6 @@ fs_generator::generate_set_simd4x2_offset(fs_inst *inst,
    brw_pop_insn_state(p);
 }
 
-/* Sets vstride=16, width=8, hstride=2 or vstride=0, width=1, hstride=0
- * (when mask is passed as a uniform) of register mask before moving it
- * to register dst.
- */
-void
-fs_generator::generate_set_omask(fs_inst *inst,
-                                 struct brw_reg dst,
-                                 struct brw_reg mask)
-{
-   bool stride_8_8_1 =
-    (mask.vstride == BRW_VERTICAL_STRIDE_8 &&
-     mask.width == BRW_WIDTH_8 &&
-     mask.hstride == BRW_HORIZONTAL_STRIDE_1);
-
-   bool stride_0_1_0 = has_scalar_region(mask);
-
-   assert(stride_8_8_1 || stride_0_1_0);
-   assert(dst.type == BRW_REGISTER_TYPE_UW);
-
-   brw_push_insn_state(p);
-   brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
-   brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-
-   if (stride_8_8_1) {
-      brw_MOV(p, dst, retype(stride(mask, 16, 8, 2), dst.type));
-   } else if (stride_0_1_0) {
-      brw_MOV(p, dst, retype(mask, dst.type));
-   }
-   brw_pop_insn_state(p);
-}
-
 /* Sets vstride=1, width=4, hstride=0 of register src1 during
  * the ADD instruction.
  */
@@ -2072,10 +2041,6 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 
       case SHADER_OPCODE_BROADCAST:
          brw_broadcast(p, dst, src[0], src[1]);
-         break;
-
-      case FS_OPCODE_SET_OMASK:
-         generate_set_omask(inst, dst, src[0]);
          break;
 
       case FS_OPCODE_SET_SAMPLE_ID:
