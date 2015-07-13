@@ -1191,7 +1191,7 @@ static LLVMValueRef fetch_constant(
 	const struct tgsi_ind_register *ireg = &reg->Indirect;
 	unsigned buf, idx;
 
-	LLVMValueRef addr;
+	LLVMValueRef addr, bufp;
 	LLVMValueRef result;
 
 	if (swizzle == LP_CHAN_ALL) {
@@ -1206,7 +1206,7 @@ static LLVMValueRef fetch_constant(
 	buf = reg->Register.Dimension ? reg->Dimension.Index : 0;
 	idx = reg->Register.Index * 4 + swizzle;
 
-	if (!reg->Register.Indirect) {
+	if (!reg->Register.Indirect && !reg->Dimension.Indirect) {
 		if (type != TGSI_TYPE_DOUBLE)
 			return bitcast(bld_base, type, si_shader_ctx->constants[buf][idx]);
 		else {
@@ -1216,13 +1216,22 @@ static LLVMValueRef fetch_constant(
 		}
 	}
 
+	if (reg->Register.Dimension && reg->Dimension.Indirect) {
+		LLVMValueRef ptr = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_CONST);
+		LLVMValueRef index;
+		index = get_indirect_index(si_shader_ctx, &reg->DimIndirect,
+						   reg->Dimension.Index);
+		bufp = build_indexed_load_const(si_shader_ctx, ptr, index);
+	} else
+		bufp = si_shader_ctx->const_resource[buf];
+
 	addr = si_shader_ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
 	addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
 	addr = lp_build_mul_imm(&bld_base->uint_bld, addr, 16);
 	addr = lp_build_add(&bld_base->uint_bld, addr,
 			    lp_build_const_int32(base->gallivm, idx * 4));
 
-	result = buffer_load_const(base->gallivm->builder, si_shader_ctx->const_resource[buf],
+	result = buffer_load_const(base->gallivm->builder, bufp,
 				   addr, bld_base->base.elem_type);
 
 	if (type != TGSI_TYPE_DOUBLE)
