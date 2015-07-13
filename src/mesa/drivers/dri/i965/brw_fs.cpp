@@ -3223,6 +3223,148 @@ fs_visitor::lower_logical_sends()
    return progress;
 }
 
+/**
+ * Get the closest native SIMD width supported by the hardware for instruction
+ * \p inst.  The instruction will be left untouched by
+ * fs_visitor::lower_simd_width() if the returned value is equal to the
+ * original execution size.
+ */
+static unsigned
+get_lowered_simd_width(const struct brw_device_info *devinfo,
+                       const fs_inst *inst)
+{
+   switch (inst->opcode) {
+   default:
+      return inst->exec_size;
+   }
+}
+
+/**
+ * The \p rows array of registers represents a \p num_rows by \p num_columns
+ * matrix in row-major order, write it in column-major order into the register
+ * passed as destination.  \p stride gives the separation between matrix
+ * elements in the input in fs_builder::dispatch_width() units.
+ */
+static void
+emit_transpose(const fs_builder &bld,
+               const fs_reg &dst, const fs_reg *rows,
+               unsigned num_rows, unsigned num_columns, unsigned stride)
+{
+   fs_reg *const components = new fs_reg[num_rows * num_columns];
+
+   for (unsigned i = 0; i < num_columns; ++i) {
+      for (unsigned j = 0; j < num_rows; ++j)
+         components[num_rows * i + j] = offset(rows[j], bld, stride * i);
+   }
+
+   bld.LOAD_PAYLOAD(dst, components, num_rows * num_columns, 0);
+
+   delete[] components;
+}
+
+bool
+fs_visitor::lower_simd_width()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
+      const unsigned lower_width = get_lowered_simd_width(devinfo, inst);
+
+      if (lower_width != inst->exec_size) {
+         /* Builder matching the original instruction. */
+         const fs_builder ibld = bld.at(block, inst)
+                                    .exec_all(inst->force_writemask_all)
+                                    .group(inst->exec_size, inst->force_sechalf);
+
+         /* Split the copies in chunks of the execution width of either the
+          * original or the lowered instruction, whichever is lower.
+          */
+         const unsigned copy_width = MIN2(lower_width, inst->exec_size);
+         const unsigned n = inst->exec_size / copy_width;
+         const unsigned dst_size = inst->regs_written * REG_SIZE /
+            inst->dst.component_size(inst->exec_size);
+         fs_reg dsts[4];
+
+         assert(n > 0 && n <= ARRAY_SIZE(dsts) &&
+                !inst->writes_accumulator && !inst->mlen);
+
+         for (unsigned i = 0; i < n; i++) {
+            /* Emit a copy of the original instruction with the lowered width.
+             * If the EOT flag was set throw it away except for the last
+             * instruction to avoid killing the thread prematurely.
+             */
+            fs_inst split_inst = *inst;
+            split_inst.exec_size = lower_width;
+            split_inst.eot = inst->eot && i == n - 1;
+
+            /* Set exec_all if the lowered width is higher than the original
+             * to avoid breaking the compiler invariant that no control
+             * flow-masked instruction is wider than the shader's
+             * dispatch_width.  Then transform the sources and destination and
+             * emit the lowered instruction.
+             */
+            const fs_builder lbld = ibld.exec_all(lower_width > inst->exec_size)
+                                        .group(lower_width, i);
+
+            for (unsigned j = 0; j < inst->sources; j++) {
+               if (inst->src[j].file != BAD_FILE &&
+                   !is_uniform(inst->src[j])) {
+                  /* Get the i-th copy_width-wide chunk of the source. */
+                  const fs_reg src = horiz_offset(inst->src[j], copy_width * i);
+                  const unsigned src_size = inst->components_read(j);
+
+                  /* Use a trivial transposition to copy one every n
+                   * copy_width-wide components of the register into a
+                   * temporary passed as source to the lowered instruction.
+                   */
+                  split_inst.src[j] = lbld.vgrf(inst->src[j].type, src_size);
+                  emit_transpose(lbld.group(copy_width, 0),
+                                 split_inst.src[j], &src, 1, src_size, n);
+               }
+            }
+
+            if (inst->regs_written) {
+               /* Allocate enough space to hold the result of the lowered
+                * instruction and fix up the number of registers written.
+                */
+               split_inst.dst = dsts[i] =
+                  lbld.vgrf(inst->dst.type, dst_size);
+               split_inst.regs_written =
+                  DIV_ROUND_UP(inst->regs_written * lower_width,
+                               inst->exec_size);
+            }
+
+            lbld.emit(split_inst);
+         }
+
+         if (inst->regs_written) {
+            /* Distance between useful channels in the temporaries, skipping
+             * garbage if the lowered instruction is wider than the original.
+             */
+            const unsigned m = lower_width / copy_width;
+
+            /* Interleave the components of the result from the lowered
+             * instructions.  We need to set exec_all() when copying more than
+             * one half per component, because LOAD_PAYLOAD (in terms of which
+             * emit_transpose is implemented) can only use the same channel
+             * enable signals for all of its non-header sources.
+             */
+            emit_transpose(ibld.exec_all(inst->exec_size > copy_width)
+                               .group(copy_width, 0),
+                           inst->dst, dsts, n, dst_size, m);
+         }
+
+         inst->remove(block);
+         progress = true;
+      }
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 void
 fs_visitor::dump_instructions()
 {
@@ -3674,6 +3816,7 @@ fs_visitor::optimize()
    int iteration = 0;
    int pass_num = 0;
 
+   OPT(lower_simd_width);
    OPT(lower_logical_sends);
 
    do {

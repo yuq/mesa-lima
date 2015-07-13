@@ -184,6 +184,7 @@ public:
    bool lower_load_payload();
    bool lower_logical_sends();
    bool lower_integer_multiplication();
+   bool lower_simd_width();
    bool opt_combine_constants();
 
    void emit_dummy_fs();
