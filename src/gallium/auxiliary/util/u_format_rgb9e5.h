@@ -115,8 +115,8 @@ static inline unsigned float3_to_rgb9e5(const float rgb[3])
    exp_shared = MAX2(-RGB9E5_EXP_BIAS-1, rgb9e5_FloorLog2(maxrgb)) + 1 + RGB9E5_EXP_BIAS;
    assert(exp_shared <= RGB9E5_MAX_VALID_BIASED_EXP);
    assert(exp_shared >= 0);
-   /* This pow function could be replaced by a table. */
-   denom = pow(2, exp_shared - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS);
+   /* This exp2 function could be replaced by a table. */
+   denom = exp2(exp_shared - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS);
 
    maxm = (int) floor(maxrgb / denom + 0.5);
    if (maxm == MAX_RGB9E5_MANTISSA+1) {
@@ -154,7 +154,7 @@ static inline void rgb9e5_to_float3(unsigned rgb, float retval[3])
 
    v.raw = rgb;
    exponent = v.field.biasedexponent - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS;
-   scale = (float) pow(2, exponent);
+   scale = exp2f(exponent);
 
    retval[0] = v.field.r * scale;
    retval[1] = v.field.g * scale;
