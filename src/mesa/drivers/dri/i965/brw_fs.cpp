@@ -3208,6 +3208,25 @@ fs_visitor::lower_integer_multiplication()
 }
 
 static void
+setup_color_payload(const fs_builder &bld, const brw_wm_prog_key *key,
+                    fs_reg *dst, fs_reg color, unsigned components)
+{
+   if (key->clamp_fragment_color) {
+      fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
+      assert(color.type == BRW_REGISTER_TYPE_F);
+
+      for (unsigned i = 0; i < components; i++)
+         set_saturate(true,
+                      bld.MOV(offset(tmp, bld, i), offset(color, bld, i)));
+
+      color = tmp;
+   }
+
+   for (unsigned i = 0; i < components; i++)
+      dst[i] = offset(color, bld, i);
+}
+
+static void
 lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
                             const brw_wm_prog_data *prog_data,
                             const brw_wm_prog_key *key,
@@ -3223,7 +3242,123 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    fs_reg sample_mask = inst->src[5];
    const unsigned components = inst->src[6].fixed_hw_reg.dw1.ud;
 
-   assert(!"Not implemented");
+   /* We can potentially have a message length of up to 15, so we have to set
+    * base_mrf to either 0 or 1 in order to fit in m0..m15.
+    */
+   fs_reg sources[15];
+   int header_size = 2, payload_header_size;
+   unsigned length = 0;
+
+   /* From the Sandy Bridge PRM, volume 4, page 198:
+    *
+    *     "Dispatched Pixel Enables. One bit per pixel indicating
+    *      which pixels were originally enabled when the thread was
+    *      dispatched. This field is only required for the end-of-
+    *      thread message and on all dual-source messages."
+    */
+   if (devinfo->gen >= 6 &&
+       (devinfo->is_haswell || devinfo->gen >= 8 || !prog_data->uses_kill) &&
+       color1.file == BAD_FILE &&
+       key->nr_color_regions == 1) {
+      header_size = 0;
+   }
+
+   if (header_size != 0) {
+      assert(header_size == 2);
+      /* Allocate 2 registers for a header */
+      length += 2;
+   }
+
+   if (payload.aa_dest_stencil_reg) {
+      sources[length] = fs_reg(GRF, bld.shader->alloc.allocate(1));
+      bld.group(8, 0).exec_all().annotate("FB write stencil/AA alpha")
+         .MOV(sources[length],
+              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
+      length++;
+   }
+
+   if (prog_data->uses_omask) {
+      sources[length] = fs_reg(GRF, bld.shader->alloc.allocate(1),
+                               BRW_REGISTER_TYPE_UD);
+
+      /* Hand over gl_SampleMask.  Only the lower 16 bits of each channel are
+       * relevant.  Since it's unsigned single words one vgrf is always
+       * 16-wide, but only the lower or higher 8 channels will be used by the
+       * hardware when doing a SIMD8 write depending on whether we have
+       * selected the subspans for the first or second half respectively.
+       */
+      assert(sample_mask.file != BAD_FILE && type_sz(sample_mask.type) == 4);
+      sample_mask.type = BRW_REGISTER_TYPE_UW;
+      sample_mask.stride *= 2;
+
+      bld.exec_all().annotate("FB write oMask")
+         .MOV(half(retype(sources[length], BRW_REGISTER_TYPE_UW),
+                   inst->force_sechalf),
+              sample_mask);
+      length++;
+   }
+
+   payload_header_size = length;
+
+   if (src0_alpha.file != BAD_FILE) {
+      /* FIXME: This is being passed at the wrong location in the payload and
+       * doesn't work when gl_SampleMask and MRTs are used simultaneously.
+       * It's supposed to be immediately before oMask but there seems to be no
+       * reasonable way to pass them in the correct order because LOAD_PAYLOAD
+       * requires header sources to form a contiguous segment at the beginning
+       * of the message and src0_alpha has per-channel semantics.
+       */
+      setup_color_payload(bld, key, &sources[length], src0_alpha, 1);
+      length++;
+   }
+
+   setup_color_payload(bld, key, &sources[length], color0, components);
+   length += 4;
+
+   if (color1.file != BAD_FILE) {
+      setup_color_payload(bld, key, &sources[length], color1, components);
+      length += 4;
+   }
+
+   if (src_depth.file != BAD_FILE) {
+      sources[length] = src_depth;
+      length++;
+   }
+
+   if (dst_depth.file != BAD_FILE) {
+      sources[length] = dst_depth;
+      length++;
+   }
+
+   fs_inst *load;
+   if (devinfo->gen >= 7) {
+      /* Send from the GRF */
+      fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
+      load = bld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
+      payload.reg = bld.shader->alloc.allocate(load->regs_written);
+      load->dst = payload;
+
+      inst->src[0] = payload;
+      inst->resize_sources(1);
+      inst->base_mrf = -1;
+   } else {
+      /* Send from the MRF */
+      load = bld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
+                              sources, length, payload_header_size);
+
+      /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
+       * will do this for us if we just give it a COMPR4 destination.
+       */
+      if (devinfo->gen < 6 && bld.dispatch_width() == 16)
+         load->dst.reg |= BRW_MRF_COMPR4;
+
+      inst->resize_sources(0);
+      inst->base_mrf = 1;
+   }
+
+   inst->opcode = FS_OPCODE_FB_WRITE;
+   inst->mlen = load->regs_written;
+   inst->header_size = header_size;
 }
 
 bool
