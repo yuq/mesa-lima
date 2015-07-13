@@ -268,7 +268,7 @@ read_uint_depth_pixels( struct gl_context *ctx,
    GLubyte *map, *dst;
    int stride, dstStride, j;
 
-   if (ctx->Pixel.DepthScale != 1.0 || ctx->Pixel.DepthBias != 0.0)
+   if (ctx->Pixel.DepthScale != 1.0F || ctx->Pixel.DepthBias != 0.0F)
       return GL_FALSE;
 
    if (packing->SwapBytes)
@@ -821,7 +821,7 @@ read_depth_stencil_pixels(struct gl_context *ctx,
                           const struct gl_pixelstore_attrib *packing )
 {
    const GLboolean scaleOrBias
-      = ctx->Pixel.DepthScale != 1.0 || ctx->Pixel.DepthBias != 0.0;
+      = ctx->Pixel.DepthScale != 1.0F || ctx->Pixel.DepthBias != 0.0F;
    const GLboolean stencilTransfer = ctx->Pixel.IndexShift
       || ctx->Pixel.IndexOffset || ctx->Pixel.MapStencilFlag;
    GLubyte *dst;

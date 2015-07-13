@@ -689,7 +689,7 @@ set_sampler_max_anisotropy(struct gl_context *ctx,
    if (samp->MaxAnisotropy == param)
       return GL_FALSE;
 
-   if (param < 1.0)
+   if (param < 1.0F)
       return INVALID_VALUE;
 
    flush(ctx);

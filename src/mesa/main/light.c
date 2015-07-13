@@ -143,7 +143,7 @@ _mesa_light(struct gl_context *ctx, GLuint lnum, GLenum pname, const GLfloat *pa
       COPY_3V(light->SpotDirection, params);
       break;
    case GL_SPOT_EXPONENT:
-      assert(params[0] >= 0.0);
+      assert(params[0] >= 0.0F);
       assert(params[0] <= ctx->Const.MaxSpotExponent);
       if (light->SpotExponent == params[0])
 	 return;
@@ -151,12 +151,12 @@ _mesa_light(struct gl_context *ctx, GLuint lnum, GLenum pname, const GLfloat *pa
       light->SpotExponent = params[0];
       break;
    case GL_SPOT_CUTOFF:
-      assert(params[0] == 180.0 || (params[0] >= 0.0 && params[0] <= 90.0));
+      assert(params[0] == 180.0F || (params[0] >= 0.0F && params[0] <= 90.0F));
       if (light->SpotCutoff == params[0])
          return;
       FLUSH_VERTICES(ctx, _NEW_LIGHT);
       light->SpotCutoff = params[0];
-      light->_CosCutoff = (GLfloat) (cos(light->SpotCutoff * M_PI / 180.0));
+      light->_CosCutoff = (cosf(light->SpotCutoff * M_PI / 180.0));
       if (light->_CosCutoff < 0)
          light->_CosCutoff = 0;
       if (light->SpotCutoff != 180.0F)
@@ -165,21 +165,21 @@ _mesa_light(struct gl_context *ctx, GLuint lnum, GLenum pname, const GLfloat *pa
          light->_Flags &= ~LIGHT_SPOT;
       break;
    case GL_CONSTANT_ATTENUATION:
-      assert(params[0] >= 0.0);
+      assert(params[0] >= 0.0F);
       if (light->ConstantAttenuation == params[0])
 	 return;
       FLUSH_VERTICES(ctx, _NEW_LIGHT);
       light->ConstantAttenuation = params[0];
       break;
    case GL_LINEAR_ATTENUATION:
-      assert(params[0] >= 0.0);
+      assert(params[0] >= 0.0F);
       if (light->LinearAttenuation == params[0])
 	 return;
       FLUSH_VERTICES(ctx, _NEW_LIGHT);
       light->LinearAttenuation = params[0];
       break;
    case GL_QUADRATIC_ATTENUATION:
-      assert(params[0] >= 0.0);
+      assert(params[0] >= 0.0F);
       if (light->QuadraticAttenuation == params[0])
 	 return;
       FLUSH_VERTICES(ctx, _NEW_LIGHT);
@@ -238,31 +238,31 @@ _mesa_Lightfv( GLenum light, GLenum pname, const GLfloat *params )
       params = temp;
       break;
    case GL_SPOT_EXPONENT:
-      if (params[0] < 0.0 || params[0] > ctx->Const.MaxSpotExponent) {
+      if (params[0] < 0.0F || params[0] > ctx->Const.MaxSpotExponent) {
 	 _mesa_error(ctx, GL_INVALID_VALUE, "glLight");
 	 return;
       }
       break;
    case GL_SPOT_CUTOFF:
-      if ((params[0] < 0.0 || params[0] > 90.0) && params[0] != 180.0) {
+      if ((params[0] < 0.0F || params[0] > 90.0F) && params[0] != 180.0F) {
 	 _mesa_error(ctx, GL_INVALID_VALUE, "glLight");
 	 return;
       }
       break;
    case GL_CONSTANT_ATTENUATION:
-      if (params[0] < 0.0) {
+      if (params[0] < 0.0F) {
 	 _mesa_error(ctx, GL_INVALID_VALUE, "glLight");
 	 return;
       }
       break;
    case GL_LINEAR_ATTENUATION:
-      if (params[0] < 0.0) {
+      if (params[0] < 0.0F) {
 	 _mesa_error(ctx, GL_INVALID_VALUE, "glLight");
 	 return;
       }
       break;
    case GL_QUADRATIC_ATTENUATION:
-      if (params[0] < 0.0) {
+      if (params[0] < 0.0F) {
 	 _mesa_error(ctx, GL_INVALID_VALUE, "glLight");
 	 return;
       }
@@ -463,14 +463,14 @@ _mesa_LightModelfv( GLenum pname, const GLfloat *params )
       case GL_LIGHT_MODEL_LOCAL_VIEWER:
          if (ctx->API != API_OPENGL_COMPAT)
             goto invalid_pname;
-         newbool = (params[0]!=0.0);
+         newbool = (params[0] != 0.0F);
 	 if (ctx->Light.Model.LocalViewer == newbool)
 	    return;
 	 FLUSH_VERTICES(ctx, _NEW_LIGHT);
 	 ctx->Light.Model.LocalViewer = newbool;
          break;
       case GL_LIGHT_MODEL_TWO_SIDE:
-         newbool = (params[0]!=0.0);
+         newbool = (params[0] != 0.0F);
 	 if (ctx->Light.Model.TwoSide == newbool)
 	    return;
 	 FLUSH_VERTICES(ctx, _NEW_LIGHT);
@@ -975,7 +975,7 @@ compute_light_positions( struct gl_context *ctx )
       }
       else {
          /* positional light w/ homogeneous coordinate, divide by W */
-         GLfloat wInv = (GLfloat)1.0 / light->_Position[3];
+         GLfloat wInv = 1.0F / light->_Position[3];
          light->_Position[0] *= wInv;
          light->_Position[1] *= wInv;
          light->_Position[2] *= wInv;
@@ -1024,7 +1024,7 @@ update_modelview_scale( struct gl_context *ctx )
    if (!_math_matrix_is_length_preserving(ctx->ModelviewMatrixStack.Top)) {
       const GLfloat *m = ctx->ModelviewMatrixStack.Top->inv;
       GLfloat f = m[2] * m[2] + m[6] * m[6] + m[10] * m[10];
-      if (f < 1e-12) f = 1.0;
+      if (f < 1e-12f) f = 1.0f;
       if (ctx->_NeedEyeCoords)
 	 ctx->_ModelViewInvScale = 1.0f / sqrtf(f);
       else

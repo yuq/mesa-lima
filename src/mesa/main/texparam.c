@@ -683,7 +683,7 @@ set_tex_parameterf(struct gl_context *ctx,
 
          if (texObj->Sampler.MaxAnisotropy == params[0])
             return GL_FALSE;
-         if (params[0] < 1.0) {
+         if (params[0] < 1.0F) {
             _mesa_error(ctx, GL_INVALID_VALUE, "glTex%sParameter(param)",
                         suffix);
             return GL_FALSE;
