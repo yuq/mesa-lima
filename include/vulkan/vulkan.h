@@ -1032,13 +1032,6 @@ typedef enum {
 typedef VkFlags VkShaderStageFlags;
 
 typedef enum {
-    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
-    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
-    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
-} VkImageAspectFlagBits;
-typedef VkFlags VkImageAspectFlags;
-
-typedef enum {
     VK_PIPE_EVENT_TOP_OF_PIPE_BIT = 0x00000001,
     VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE_BIT = 0x00000002,
     VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE_BIT = 0x00000004,
@@ -1087,6 +1080,14 @@ typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
 } VkCmdBufferOptimizeFlagBits;
 typedef VkFlags VkCmdBufferOptimizeFlags;
+
+typedef enum {
+    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+} VkImageAspectFlagBits;
+typedef VkFlags VkImageAspectFlags;
+
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
