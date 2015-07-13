@@ -723,7 +723,7 @@ _mesa_execute_program(struct gl_context * ctx,
                 * result.z = result.x * APPX(result.y)
                 * We do what the ARB extension says.
                 */
-               q[2] = (GLfloat) pow(2.0, t[0]);
+               q[2] = exp2f(t[0]);
             }
             q[1] = t[0] - floor_t0;
             q[3] = 1.0F;
@@ -734,7 +734,7 @@ _mesa_execute_program(struct gl_context * ctx,
          {
             GLfloat a[4], result[4], val;
             fetch_vector1(&inst->SrcReg[0], machine, a);
-            val = (GLfloat) pow(2.0, a[0]);
+            val = exp2f(a[0]);
             /*
             if (IS_INF_OR_NAN(val))
                val = 1.0e10;
