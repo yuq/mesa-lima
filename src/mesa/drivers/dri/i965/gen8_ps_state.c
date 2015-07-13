@@ -61,7 +61,8 @@ gen8_upload_ps_extra(struct brw_context *brw,
    if (brw->gen >= 9 && prog_data->pulls_bary)
       dw1 |= GEN9_PSX_SHADER_PULLS_BARY;
 
-   if (_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx))
+   if (_mesa_active_fragment_shader_has_atomic_ops(&brw->ctx) ||
+       prog_data->base.nr_image_params)
       dw1 |= GEN8_PSX_SHADER_HAS_UAV;
 
    BEGIN_BATCH(2);

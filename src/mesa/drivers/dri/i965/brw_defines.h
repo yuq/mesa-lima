@@ -1855,6 +1855,7 @@ enum brw_message_target {
 # define GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT	18
 # define GEN6_VS_FLOATING_POINT_MODE_IEEE_754		(0 << 16)
 # define GEN6_VS_FLOATING_POINT_MODE_ALT		(1 << 16)
+# define HSW_VS_UAV_ACCESS_ENABLE                       (1 << 12)
 /* DW4 */
 # define GEN6_VS_DISPATCH_START_GRF_SHIFT		20
 # define GEN6_VS_URB_READ_LENGTH_SHIFT			11
@@ -1880,6 +1881,7 @@ enum brw_message_target {
 # define GEN6_GS_BINDING_TABLE_ENTRY_COUNT_SHIFT	18
 # define GEN6_GS_FLOATING_POINT_MODE_IEEE_754		(0 << 16)
 # define GEN6_GS_FLOATING_POINT_MODE_ALT		(1 << 16)
+# define HSW_GS_UAV_ACCESS_ENABLE       		(1 << 12)
 /* DW4 */
 # define GEN7_GS_OUTPUT_VERTEX_SIZE_SHIFT		23
 # define GEN7_GS_OUTPUT_TOPOLOGY_SHIFT			17
@@ -2406,6 +2408,7 @@ enum brw_wm_barycentric_interp_mode {
 /* DW2 */
 # define GEN7_WM_MSDISPMODE_PERSAMPLE			(0 << 31)
 # define GEN7_WM_MSDISPMODE_PERPIXEL			(1 << 31)
+# define HSW_WM_UAV_ONLY                                (1 << 30)
 
 #define _3DSTATE_PS				0x7820 /* GEN7+ */
 /* DW1: kernel pointer */
@@ -2429,6 +2432,7 @@ enum brw_wm_barycentric_interp_mode {
 # define GEN7_PS_RENDER_TARGET_FAST_CLEAR_ENABLE	(1 << 8)
 # define GEN7_PS_DUAL_SOURCE_BLEND_ENABLE		(1 << 7)
 # define GEN7_PS_RENDER_TARGET_RESOLVE_ENABLE		(1 << 6)
+# define HSW_PS_UAV_ACCESS_ENABLE			(1 << 5)
 # define GEN7_PS_POSOFFSET_NONE				(0 << 3)
 # define GEN7_PS_POSOFFSET_CENTROID			(2 << 3)
 # define GEN7_PS_POSOFFSET_SAMPLE			(3 << 3)

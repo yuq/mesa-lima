@@ -53,7 +53,9 @@ upload_vs_state(struct brw_context *brw)
              ((ALIGN(stage_state->sampler_count, 4) / 4) <<
                GEN6_VS_SAMPLER_COUNT_SHIFT) |
              ((prog_data->base.binding_table.size_bytes / 4) <<
-               GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
+               GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT) |
+             (prog_data->base.nr_image_params ?
+              HSW_VS_UAV_ACCESS_ENABLE : 0));
 
    if (prog_data->base.total_scratch) {
       OUT_RELOC64(stage_state->scratch_bo,

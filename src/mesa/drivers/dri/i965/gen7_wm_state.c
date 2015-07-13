@@ -107,6 +107,12 @@ upload_wm_state(struct brw_context *brw)
       dw1 |= GEN7_WM_USES_INPUT_COVERAGE_MASK;
    }
 
+   /* _NEW_BUFFERS | _NEW_COLOR */
+   if (brw->is_haswell &&
+       !(brw_color_buffer_write_enabled(brw) || writes_depth) &&
+       prog_data->base.nr_image_params)
+      dw2 |= HSW_WM_UAV_ONLY;
+
    BEGIN_BATCH(3);
    OUT_BATCH(_3DSTATE_WM << 16 | (3 - 2));
    OUT_BATCH(dw1);
@@ -208,6 +214,9 @@ gen7_upload_ps_state(struct brw_context *brw,
    int min_inv_per_frag =
       _mesa_get_min_invocations_per_fragment(ctx, fp, false);
    assert(min_inv_per_frag >= 1);
+
+   if (brw->is_haswell && prog_data->base.nr_image_params)
+      dw4 |= HSW_PS_UAV_ACCESS_ENABLE;
 
    if (prog_data->prog_offset_16 || prog_data->no_8) {
       dw4 |= GEN7_PS_16_DISPATCH_ENABLE;

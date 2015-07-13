@@ -111,6 +111,7 @@ upload_vs_state(struct brw_context *brw)
    uint32_t floating_point_mode = 0;
    const int max_threads_shift = brw->is_haswell ?
       HSW_VS_MAX_THREADS_SHIFT : GEN6_VS_MAX_THREADS_SHIFT;
+   const struct brw_vue_prog_data *prog_data = &brw->vs.prog_data->base;
 
    if (!brw->is_haswell && !brw->is_baytrail)
       gen7_emit_vs_workaround_flush(brw);
@@ -125,19 +126,21 @@ upload_vs_state(struct brw_context *brw)
 	     ((ALIGN(stage_state->sampler_count, 4)/4) <<
               GEN6_VS_SAMPLER_COUNT_SHIFT) |
              ((brw->vs.prog_data->base.base.binding_table.size_bytes / 4) <<
-              GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
+              GEN6_VS_BINDING_TABLE_ENTRY_COUNT_SHIFT) |
+             (brw->is_haswell && prog_data->base.nr_image_params ?
+              HSW_VS_UAV_ACCESS_ENABLE : 0));
 
-   if (brw->vs.prog_data->base.base.total_scratch) {
+   if (prog_data->base.total_scratch) {
       OUT_RELOC(stage_state->scratch_bo,
 		I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-		ffs(brw->vs.prog_data->base.base.total_scratch) - 11);
+		ffs(prog_data->base.total_scratch) - 11);
    } else {
       OUT_BATCH(0);
    }
 
-   OUT_BATCH((brw->vs.prog_data->base.base.dispatch_grf_start_reg <<
+   OUT_BATCH((prog_data->base.dispatch_grf_start_reg <<
               GEN6_VS_DISPATCH_START_GRF_SHIFT) |
-	     (brw->vs.prog_data->base.urb_read_length << GEN6_VS_URB_READ_LENGTH_SHIFT) |
+	     (prog_data->urb_read_length << GEN6_VS_URB_READ_LENGTH_SHIFT) |
 	     (0 << GEN6_VS_URB_ENTRY_READ_OFFSET_SHIFT));
 
    OUT_BATCH(((brw->max_vs_threads - 1) << max_threads_shift) |
