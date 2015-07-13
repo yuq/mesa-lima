@@ -1032,15 +1032,6 @@ typedef enum {
 typedef VkFlags VkShaderStageFlags;
 
 typedef enum {
-    VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
-    VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT = 0x00000002,
-    VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
-    VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
-    VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
-} VkCmdBufferOptimizeFlagBits;
-typedef VkFlags VkCmdBufferOptimizeFlags;
-
-typedef enum {
     VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
     VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
     VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
@@ -1088,6 +1079,14 @@ typedef enum {
 typedef VkFlags VkMemoryInputFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
 
+typedef enum {
+    VK_CMD_BUFFER_OPTIMIZE_SMALL_BATCH_BIT = 0x00000001,
+    VK_CMD_BUFFER_OPTIMIZE_PIPELINE_SWITCH_BIT = 0x00000002,
+    VK_CMD_BUFFER_OPTIMIZE_ONE_TIME_SUBMIT_BIT = 0x00000004,
+    VK_CMD_BUFFER_OPTIMIZE_DESCRIPTOR_SET_SWITCH_BIT = 0x00000008,
+    VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
+} VkCmdBufferOptimizeFlagBits;
+typedef VkFlags VkCmdBufferOptimizeFlags;
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
