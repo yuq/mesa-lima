@@ -1432,6 +1432,7 @@ static void
 nv50_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
 {
    struct nv50_context *nv50 = nv50_context(pipe);
+   struct nouveau_pushbuf *push = nv50->base.pushbuf;
    boolean eng3d = FALSE;
 
    if (util_format_is_depth_or_stencil(info->dst.resource->format)) {
@@ -1493,10 +1494,20 @@ nv50_blit(struct pipe_context *pipe, const struct pipe_blit_info *info)
         info->src.box.height != -info->dst.box.height))
       eng3d = TRUE;
 
+   if (nv50->screen->num_occlusion_queries_active) {
+      BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
+      PUSH_DATA (push, 0);
+   }
+
    if (!eng3d)
       nv50_blit_eng2d(nv50, info);
    else
       nv50_blit_3d(nv50, info);
+
+   if (nv50->screen->num_occlusion_queries_active) {
+      BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
+      PUSH_DATA (push, 1);
+   }
 }
 
 static void
