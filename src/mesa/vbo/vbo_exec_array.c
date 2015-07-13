@@ -255,7 +255,7 @@ check_array_data(struct gl_context *ctx, struct gl_client_array *array,
             GLint k;
             for (k = 0; k < array->Size; k++) {
                if (IS_INF_OR_NAN(f[k]) ||
-                   f[k] >= 1.0e20 || f[k] <= -1.0e10) {
+                   f[k] >= 1.0e20F || f[k] <= -1.0e10F) {
                   printf("Bad array data:\n");
                   printf("  Element[%u].%u = %f\n", j, k, f[k]);
                   printf("  Array %u at %p\n", attrib, (void* ) array);
@@ -263,7 +263,7 @@ check_array_data(struct gl_context *ctx, struct gl_client_array *array,
 			 array->Type, array->Size, array->Stride);
                   printf("  Address/offset %p in Buffer Object %u\n",
 			 array->Ptr, array->BufferObj->Name);
-                  f[k] = 1.0; /* XXX replace the bad value! */
+                  f[k] = 1.0F; /* XXX replace the bad value! */
                }
                /*assert(!IS_INF_OR_NAN(f[k]));*/
             }
