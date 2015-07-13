@@ -2162,11 +2162,11 @@ fs_visitor::opt_zero_samples()
        *     "Parameter 0 is required except for the sampleinfo message, which
        *      has no parameter 0"
        */
-      while (inst->mlen > inst->header_size + dispatch_width / 8 &&
+      while (inst->mlen > inst->header_size + inst->exec_size / 8 &&
              load_payload->src[(inst->mlen - inst->header_size) /
-                               (dispatch_width / 8) +
+                               (inst->exec_size / 8) +
                                inst->header_size - 1].is_zero()) {
-         inst->mlen -= dispatch_width / 8;
+         inst->mlen -= inst->exec_size / 8;
          progress = true;
       }
    }
