@@ -43,11 +43,6 @@ LOCAL_EXPORT_C_INCLUDE_DIRS := \
     $(LOCAL_PATH) \
     $(intermediates)
 
-ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS := -DHAVE_LIBDRM
-LOCAL_SHARED_LIBRARIES := libdrm
-endif
-
 LOCAL_SRC_FILES := \
 	$(DRI_COMMON_FILES) \
 	$(XMLCONFIG_FILES)

@@ -32,8 +32,6 @@ drienv.AppendUnique(LIBS = [
     'expat',
 ])
 
-drienv.PkgUseModules('DRM')
-
 sources = drienv.ParseSourceList('Makefile.sources', ['DRI_COMMON_FILES', 'XMLCONFIG_FILES' ])
 
 dri_common = drienv.ConvenienceLibrary(

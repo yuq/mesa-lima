@@ -40,9 +40,6 @@
 
 
 #include <stdbool.h>
-#ifdef HAVE_LIBDRM
-#include <xf86drm.h>
-#endif
 #include "dri_util.h"
 #include "utils.h"
 #include "xmlpool.h"
@@ -136,18 +133,6 @@ driCreateNewScreen2(int scrn, int fd,
     }
 
     setupLoaderExtensions(psp, extensions);
-
-#ifdef HAVE_LIBDRM
-    if (fd != -1) {
-       drmVersionPtr version = drmGetVersion(fd);
-       if (version) {
-          psp->drm_version.major = version->version_major;
-          psp->drm_version.minor = version->version_minor;
-          psp->drm_version.patch = version->version_patchlevel;
-          drmFreeVersion(version);
-       }
-    }
-#endif
 
     psp->loaderPrivate = data;
 

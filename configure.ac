@@ -1375,26 +1375,6 @@ if test "x$enable_dri" = xyes; then
                      [AC_MSG_ERROR([Expat library required for DRI not found])])
          EXPAT_LIBS="-lexpat"])
 
-    DRICOMMON_NEED_LIBDRM=no
-    # If we are building any DRI driver other than swrast.
-    if test -n "$with_dri_drivers"; then
-        if test "x$with_dri_drivers" != xswrast; then
-            # ... libdrm is required
-            if test "x$have_libdrm" != xyes; then
-                AC_MSG_ERROR([DRI drivers requires libdrm >= $LIBDRM_REQUIRED])
-            fi
-            DRICOMMON_NEED_LIBDRM=yes
-        fi
-    fi
-
-    # If we're building any gallium DRI driver other than swrast
-    if test -n "$with_gallium_drivers" -a "x$DRICOMMON_NEED_LIBDRM" = xno; then
-        if test "x$with_gallium_drivers" != xswrast; then
-            # ... build a libdrm aware dricommon
-            DRICOMMON_NEED_LIBDRM=yes
-        fi
-    fi
-
     # put all the necessary libs together
     DRI_LIB_DEPS="$DRI_LIB_DEPS $SELINUX_LIBS $LIBDRM_LIBS $EXPAT_LIBS -lm $PTHREAD_LIBS $DLOPEN_LIBS"
 fi
@@ -2264,7 +2244,6 @@ fi
 
 AC_SUBST([ELF_LIB])
 
-AM_CONDITIONAL(DRICOMMON_NEED_LIBDRM, test "x$DRICOMMON_NEED_LIBDRM" = xyes)
 AM_CONDITIONAL(HAVE_LIBDRM, test "x$have_libdrm" = xyes)
 AM_CONDITIONAL(HAVE_X11_DRIVER, test "x$enable_xlib_glx" = xyes)
 AM_CONDITIONAL(HAVE_OSMESA, test "x$enable_osmesa" = xyes)
