@@ -27,19 +27,37 @@ LOCAL_PATH := $(call my-dir)
 
 include $(LOCAL_PATH)/Makefile.sources
 
-SOURCES := \
-	${LIBEGL_C_FILES}
-
 # ---------------------------------------
 # Build libGLES_mesa
 # ---------------------------------------
 
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := $(SOURCES)
+LOCAL_SRC_FILES := \
+	$(LIBEGL_C_FILES) \
+	$(dri2_backend_core_FILES) \
+	drivers/dri2/platform_android.c
 
 LOCAL_CFLAGS := \
-	-D_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_ANDROID
+	-D_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_ANDROID \
+	-D_EGL_BUILT_IN_DRIVER_DRI2 \
+	-DHAVE_ANDROID_PLATFORM
+
+ifeq ($(MESA_LOLLIPOP_BUILD),true)
+LOCAL_CFLAGS_arm := -DDEFAULT_DRIVER_DIR=\"/system/lib/dri\"
+LOCAL_CFLAGS_x86 := -DDEFAULT_DRIVER_DIR=\"/system/lib/dri\"
+LOCAL_CFLAGS_x86_64 := -DDEFAULT_DRIVER_DIR=\"/system/lib64/dri\"
+else
+LOCAL_CFLAGS += -DDEFAULT_DRIVER_DIR=\"/system/lib/dri\"
+endif
+
+LOCAL_C_INCLUDES := \
+	$(DRM_GRALLOC_TOP) \
+	$(MESA_TOP)/src/egl/main \
+	$(MESA_TOP)/src/egl/drivers/dri2 \
+
+LOCAL_STATIC_LIBRARIES := \
+	libmesa_loader
 
 LOCAL_SHARED_LIBRARIES := \
 	libdl \
@@ -53,11 +71,10 @@ LOCAL_SHARED_LIBRARIES += libsync
 endif
 
 # add libdrm if there are hardware drivers
-ifneq ($(MESA_GPU_DRIVERS),swrast)
+ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
+LOCAL_CFLAGS += -DHAVE_LIBDRM
 LOCAL_SHARED_LIBRARIES += libdrm
 endif
-
-LOCAL_CFLAGS += -D_EGL_BUILT_IN_DRIVER_DRI2
 
 ifeq ($(strip $(MESA_BUILD_CLASSIC)),true)
 # require i915_dri and/or i965_dri
@@ -69,9 +86,6 @@ ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
 LOCAL_REQUIRED_MODULES += gallium_dri
 endif # MESA_BUILD_GALLIUM
 
-LOCAL_STATIC_LIBRARIES := \
-	libmesa_egl_dri2 \
-	libmesa_loader
 
 LOCAL_MODULE := libGLES_mesa
 ifeq ($(MESA_LOLLIPOP_BUILD),true)

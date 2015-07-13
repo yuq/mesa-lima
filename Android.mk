@@ -91,8 +91,7 @@ SUBDIRS := \
 	src/glsl \
 	src/mesa \
 	src/util \
-	src/egl/main \
-	src/egl/drivers/dri2 \
+	src/egl \
 	src/mesa/drivers/dri
 
 ifeq ($(strip $(MESA_BUILD_GALLIUM)),true)
