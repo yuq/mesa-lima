@@ -1902,7 +1902,7 @@ sample_lambda_2d_aniso(struct gl_context *ctx,
    const struct gl_texture_unit *texUnit = &ctx->Texture.Unit[u];
    const GLboolean adjustLOD =
       (texUnit->LodBias + samp->LodBias != 0.0F)
-      || (samp->MinLod != -1000.0 || samp->MaxLod != 1000.0);
+      || (samp->MinLod != -1000.0F || samp->MaxLod != 1000.0F);
 
    GLuint i;
    
@@ -1973,8 +1973,8 @@ sample_lambda_2d_aniso(struct gl_context *ctx,
                      ctx->Const.MaxTextureLodBias);
             lod += bias;
 
-            if (samp->MinLod != -1000.0 ||
-                samp->MaxLod != 1000.0) {
+            if (samp->MinLod != -1000.0F ||
+                samp->MaxLod != 1000.0F) {
                /* apply LOD clamping to lambda */
                lod = CLAMP(lod, samp->MinLod, samp->MaxLod);
             }
@@ -3740,7 +3740,7 @@ _swrast_choose_texture_sample_func( struct gl_context *ctx,
          }
          else if (needLambda) {
             /* Anisotropic filtering extension. Activated only if mipmaps are used */
-            if (sampler->MaxAnisotropy > 1.0 &&
+            if (sampler->MaxAnisotropy > 1.0F &&
                 sampler->MinFilter == GL_LINEAR_MIPMAP_LINEAR) {
                return sample_lambda_2d_aniso;
             }
