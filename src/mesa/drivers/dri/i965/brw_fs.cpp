@@ -3386,6 +3386,214 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    inst->header_size = header_size;
 }
 
+static bool
+is_high_sampler(const struct brw_device_info *devinfo, const fs_reg &sampler)
+{
+   if (devinfo->gen < 8 && !devinfo->is_haswell)
+      return false;
+
+   return sampler.file != IMM || sampler.fixed_hw_reg.dw1.ud >= 16;
+}
+
+static void
+lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
+                                fs_reg coordinate,
+                                const fs_reg &shadow_c,
+                                fs_reg lod, fs_reg lod2,
+                                const fs_reg &sample_index,
+                                const fs_reg &mcs, const fs_reg &sampler,
+                                fs_reg offset_value,
+                                unsigned coord_components,
+                                unsigned grad_components)
+{
+   const brw_device_info *devinfo = bld.shader->devinfo;
+   int reg_width = bld.dispatch_width() / 8;
+   unsigned header_size = 0, length = 0;
+   fs_reg sources[MAX_SAMPLER_MESSAGE_SIZE];
+   for (unsigned i = 0; i < ARRAY_SIZE(sources); i++)
+      sources[i] = bld.vgrf(BRW_REGISTER_TYPE_F);
+
+   if (op == SHADER_OPCODE_TG4 || op == SHADER_OPCODE_TG4_OFFSET ||
+       offset_value.file != BAD_FILE ||
+       is_high_sampler(devinfo, sampler)) {
+      /* For general texture offsets (no txf workaround), we need a header to
+       * put them in.  Note that we're only reserving space for it in the
+       * message payload as it will be initialized implicitly by the
+       * generator.
+       *
+       * TG4 needs to place its channel select in the header, for interaction
+       * with ARB_texture_swizzle.  The sampler index is only 4-bits, so for
+       * larger sampler numbers we need to offset the Sampler State Pointer in
+       * the header.
+       */
+      header_size = 1;
+      sources[0] = fs_reg();
+      length++;
+   }
+
+   if (shadow_c.file != BAD_FILE) {
+      bld.MOV(sources[length], shadow_c);
+      length++;
+   }
+
+   bool coordinate_done = false;
+
+   /* The sampler can only meaningfully compute LOD for fragment shader
+    * messages. For all other stages, we change the opcode to TXL and
+    * hardcode the LOD to 0.
+    */
+   if (bld.shader->stage != MESA_SHADER_FRAGMENT &&
+       op == SHADER_OPCODE_TEX) {
+      op = SHADER_OPCODE_TXL;
+      lod = fs_reg(0.0f);
+   }
+
+   /* Set up the LOD info */
+   switch (op) {
+   case FS_OPCODE_TXB:
+   case SHADER_OPCODE_TXL:
+      bld.MOV(sources[length], lod);
+      length++;
+      break;
+   case SHADER_OPCODE_TXD:
+      /* TXD should have been lowered in SIMD16 mode. */
+      assert(bld.dispatch_width() == 8);
+
+      /* Load dPdx and the coordinate together:
+       * [hdr], [ref], x, dPdx.x, dPdy.x, y, dPdx.y, dPdy.y, z, dPdx.z, dPdy.z
+       */
+      for (unsigned i = 0; i < coord_components; i++) {
+         bld.MOV(sources[length], coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+
+         /* For cube map array, the coordinate is (u,v,r,ai) but there are
+          * only derivatives for (u, v, r).
+          */
+         if (i < grad_components) {
+            bld.MOV(sources[length], lod);
+            lod = offset(lod, bld, 1);
+            length++;
+
+            bld.MOV(sources[length], lod2);
+            lod2 = offset(lod2, bld, 1);
+            length++;
+         }
+      }
+
+      coordinate_done = true;
+      break;
+   case SHADER_OPCODE_TXS:
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), lod);
+      length++;
+      break;
+   case SHADER_OPCODE_TXF:
+      /* Unfortunately, the parameters for LD are intermixed: u, lod, v, r.
+       * On Gen9 they are u, v, lod, r
+       */
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
+      coordinate = offset(coordinate, bld, 1);
+      length++;
+
+      if (devinfo->gen >= 9) {
+         if (coord_components >= 2) {
+            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
+            coordinate = offset(coordinate, bld, 1);
+         }
+         length++;
+      }
+
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod);
+      length++;
+
+      for (unsigned i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++) {
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+      }
+
+      coordinate_done = true;
+      break;
+   case SHADER_OPCODE_TXF_CMS:
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
+      length++;
+
+      /* Data from the multisample control surface. */
+      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
+      length++;
+
+      /* There is no offsetting for this message; just copy in the integer
+       * texture coordinates.
+       */
+      for (unsigned i = 0; i < coord_components; i++) {
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+      }
+
+      coordinate_done = true;
+      break;
+   case SHADER_OPCODE_TG4_OFFSET:
+      /* gather4_po_c should have been lowered in SIMD16 mode. */
+      assert(bld.dispatch_width() == 8 || shadow_c.file == BAD_FILE);
+
+      /* More crazy intermixing */
+      for (unsigned i = 0; i < 2; i++) { /* u, v */
+         bld.MOV(sources[length], coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+      }
+
+      for (unsigned i = 0; i < 2; i++) { /* offu, offv */
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), offset_value);
+         offset_value = offset(offset_value, bld, 1);
+         length++;
+      }
+
+      if (coord_components == 3) { /* r if present */
+         bld.MOV(sources[length], coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+      }
+
+      coordinate_done = true;
+      break;
+   default:
+      break;
+   }
+
+   /* Set up the coordinate (except for cases where it was done above) */
+   if (!coordinate_done) {
+      for (unsigned i = 0; i < coord_components; i++) {
+         bld.MOV(sources[length], coordinate);
+         coordinate = offset(coordinate, bld, 1);
+         length++;
+      }
+   }
+
+   int mlen;
+   if (reg_width == 2)
+      mlen = length * reg_width - header_size;
+   else
+      mlen = length * reg_width;
+
+   const fs_reg src_payload = fs_reg(GRF, bld.shader->alloc.allocate(mlen),
+                                     BRW_REGISTER_TYPE_F);
+   bld.LOAD_PAYLOAD(src_payload, sources, length, header_size);
+
+   /* Generate the SEND. */
+   inst->opcode = op;
+   inst->src[0] = src_payload;
+   inst->src[1] = sampler;
+   inst->resize_sources(2);
+   inst->base_mrf = -1;
+   inst->mlen = mlen;
+   inst->header_size = header_size;
+
+   /* Message length > MAX_SAMPLER_MESSAGE_SIZE disallowed by hardware. */
+   assert(inst->mlen <= MAX_SAMPLER_MESSAGE_SIZE);
+}
+
 static void
 lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
 {
@@ -3402,7 +3610,14 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    const unsigned coord_components = inst->src[8].fixed_hw_reg.dw1.ud;
    const unsigned grad_components = inst->src[9].fixed_hw_reg.dw1.ud;
 
-   assert(!"Not implemented");
+   if (devinfo->gen >= 7) {
+      lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
+                                      shadow_c, lod, lod2, sample_index,
+                                      mcs, sampler, offset_value,
+                                      coord_components, grad_components);
+   } else {
+      assert(!"Not implemented");
+   }
 }
 
 bool
