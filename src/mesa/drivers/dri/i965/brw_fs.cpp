@@ -823,6 +823,7 @@ fs_reg::fs_reg(enum register_file file, int reg)
    this->file = file;
    this->reg = reg;
    this->type = BRW_REGISTER_TYPE_F;
+   this->stride = (file == UNIFORM ? 0 : 1);
 }
 
 /** Fixed HW reg constructor. */
@@ -832,6 +833,7 @@ fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type)
    this->file = file;
    this->reg = reg;
    this->type = type;
+   this->stride = (file == UNIFORM ? 0 : 1);
 }
 
 /* For SIMD16, we need to follow from the uniform setup of SIMD8 dispatch.
@@ -1272,6 +1274,7 @@ fs_visitor::assign_curb_setup()
 						  constant_nr / 8,
 						  constant_nr % 8);
 
+            assert(inst->src[i].stride == 0);
 	    inst->src[i].file = HW_REG;
 	    inst->src[i].fixed_hw_reg = byte_offset(
                retype(brw_reg, inst->src[i].type),
@@ -1822,6 +1825,8 @@ fs_visitor::demote_pull_constants()
          fs_reg surf_index(stage_prog_data->binding_table.pull_constants_start);
          fs_reg dst = vgrf(glsl_type::float_type);
 
+         assert(inst->src[i].stride == 0);
+
          /* Generate a pull load into dst. */
          if (inst->src[i].reladdr) {
             VARYING_PULL_CONSTANT_LOAD(ibld, dst,
@@ -1829,6 +1834,7 @@ fs_visitor::demote_pull_constants()
                                        *inst->src[i].reladdr,
                                        pull_index);
             inst->src[i].reladdr = NULL;
+            inst->src[i].stride = 1;
          } else {
             fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
             ibld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
