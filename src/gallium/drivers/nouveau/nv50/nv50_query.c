@@ -49,6 +49,7 @@ struct nv50_query {
    uint32_t offset; /* base + i * 32 */
    uint8_t state;
    boolean is64bit;
+   int nesting; /* only used for occlusion queries */
    struct nouveau_mm_allocation *mm;
    struct nouveau_fence *fence;
 };
@@ -175,11 +176,16 @@ nv50_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
 
    switch (q->type) {
    case PIPE_QUERY_OCCLUSION_COUNTER:
-      PUSH_SPACE(push, 4);
-      BEGIN_NV04(push, NV50_3D(COUNTER_RESET), 1);
-      PUSH_DATA (push, NV50_3D_COUNTER_RESET_SAMPLECNT);
-      BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
-      PUSH_DATA (push, 1);
+      q->nesting = nv50->screen->num_occlusion_queries_active++;
+      if (q->nesting) {
+         nv50_query_get(push, q, 0x10, 0x0100f002);
+      } else {
+         PUSH_SPACE(push, 4);
+         BEGIN_NV04(push, NV50_3D(COUNTER_RESET), 1);
+         PUSH_DATA (push, NV50_3D_COUNTER_RESET_SAMPLECNT);
+         BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
+         PUSH_DATA (push, 1);
+      }
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
       nv50_query_get(push, q, 0x10, 0x06805002);
@@ -223,9 +229,11 @@ nv50_query_end(struct pipe_context *pipe, struct pipe_query *pq)
    switch (q->type) {
    case PIPE_QUERY_OCCLUSION_COUNTER:
       nv50_query_get(push, q, 0, 0x0100f002);
-      PUSH_SPACE(push, 2);
-      BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
-      PUSH_DATA (push, 0);
+      if (--nv50->screen->num_occlusion_queries_active == 0) {
+         PUSH_SPACE(push, 2);
+         BEGIN_NV04(push, NV50_3D(SAMPLECNT_ENABLE), 1);
+         PUSH_DATA (push, 0);
+      }
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
       nv50_query_get(push, q, 0, 0x06805002);
@@ -319,7 +327,7 @@ nv50_query_result(struct pipe_context *pipe, struct pipe_query *pq,
       res8[0] = TRUE;
       break;
    case PIPE_QUERY_OCCLUSION_COUNTER: /* u32 sequence, u32 count, u64 time */
-      res64[0] = q->data[1];
+      res64[0] = q->data[1] - q->data[5];
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED: /* u64 count, u64 time */
    case PIPE_QUERY_PRIMITIVES_EMITTED: /* u64 count, u64 time */
@@ -396,8 +404,7 @@ nv50_render_condition(struct pipe_context *pipe,
       case PIPE_QUERY_OCCLUSION_COUNTER:
       case PIPE_QUERY_OCCLUSION_PREDICATE:
          if (likely(!condition)) {
-            /* XXX: Placeholder, handle nesting here if available */
-            if (unlikely(false))
+            if (unlikely(q->nesting))
                cond = wait ? NV50_3D_COND_MODE_NOT_EQUAL :
                              NV50_3D_COND_MODE_ALWAYS;
             else

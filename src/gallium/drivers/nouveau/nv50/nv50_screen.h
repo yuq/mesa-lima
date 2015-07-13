@@ -54,6 +54,8 @@ struct nv50_screen {
    struct nv50_context *cur_ctx;
    struct nv50_graph_state save_state;
 
+   int num_occlusion_queries_active;
+
    struct nouveau_bo *code;
    struct nouveau_bo *uniforms;
    struct nouveau_bo *txc; /* TIC (offset 0) and TSC (65536) */
