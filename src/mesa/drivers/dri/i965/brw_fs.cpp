@@ -3935,6 +3935,39 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
       return (inst->src[1].file != BAD_FILE ? 8 : inst->exec_size);
 
+   case SHADER_OPCODE_TXD_LOGICAL:
+      /* TXD is unsupported in SIMD16 mode. */
+      return 8;
+
+   case SHADER_OPCODE_TG4_OFFSET_LOGICAL: {
+      /* gather4_po_c is unsupported in SIMD16 mode. */
+      const fs_reg &shadow_c = inst->src[1];
+      return (shadow_c.file != BAD_FILE ? 8 : inst->exec_size);
+   }
+   case SHADER_OPCODE_TXL_LOGICAL:
+   case FS_OPCODE_TXB_LOGICAL: {
+      /* Gen4 doesn't have SIMD8 non-shadow-compare bias/LOD instructions, and
+       * Gen4-6 can't support TXL and TXB with shadow comparison in SIMD16
+       * mode because the message exceeds the maximum length of 11.
+       */
+      const fs_reg &shadow_c = inst->src[1];
+      if (devinfo->gen == 4 && shadow_c.file == BAD_FILE)
+         return 16;
+      else if (devinfo->gen < 7 && shadow_c.file != BAD_FILE)
+         return 8;
+      else
+         return inst->exec_size;
+   }
+   case SHADER_OPCODE_TXF_LOGICAL:
+   case SHADER_OPCODE_TXS_LOGICAL:
+      /* Gen4 doesn't have SIMD8 variants for the RESINFO and LD-with-LOD
+       * messages.  Use SIMD16 instead.
+       */
+      if (devinfo->gen == 4)
+         return 16;
+      else
+         return inst->exec_size;
+
    default:
       return inst->exec_size;
    }
