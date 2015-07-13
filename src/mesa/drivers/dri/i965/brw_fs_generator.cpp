@@ -655,7 +655,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 /* Note that G45 and older determines shadow compare and dispatch width
 	  * from message length for most messages.
 	  */
-         if (dispatch_width == 8) {
+         if (inst->exec_size == 8) {
             msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE;
             if (inst->shadow_compare) {
                assert(inst->mlen == 6);
@@ -674,7 +674,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case FS_OPCODE_TXB:
 	 if (inst->shadow_compare) {
-            assert(dispatch_width == 8);
+            assert(inst->exec_size == 8);
 	    assert(inst->mlen == 6);
 	    msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_BIAS_COMPARE;
 	 } else {
@@ -685,7 +685,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case SHADER_OPCODE_TXL:
 	 if (inst->shadow_compare) {
-            assert(dispatch_width == 8);
+            assert(inst->exec_size == 8);
 	    assert(inst->mlen == 6);
 	    msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_LOD_COMPARE;
 	 } else {
@@ -696,7 +696,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case SHADER_OPCODE_TXD:
 	 /* There is no sample_d_c message; comparisons are done manually */
-         assert(dispatch_width == 8);
+         assert(inst->exec_size == 8);
 	 assert(inst->mlen == 7 || inst->mlen == 10);
 	 msg_type = BRW_SAMPLER_MESSAGE_SIMD8_SAMPLE_GRADIENTS;
 	 break;
