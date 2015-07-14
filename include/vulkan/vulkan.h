@@ -2449,7 +2449,7 @@ VkResult VKAPI vkCreateAttachmentView(
 
 VkResult VKAPI vkDestroyAttachmentView(
     VkDevice                                    device,
-    VkAttachmentView                       view);
+    VkAttachmentView                            attachmentView);
 
 VkResult VKAPI vkCreateShaderModule(
     VkDevice                                    device,
