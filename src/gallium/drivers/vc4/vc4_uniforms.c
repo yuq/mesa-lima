@@ -53,16 +53,11 @@ write_texture_p0(struct vc4_context *vc4,
                  struct vc4_texture_stateobj *texstate,
                  uint32_t unit)
 {
-        struct pipe_sampler_view *texture = texstate->textures[unit];
-        struct vc4_resource *rsc = vc4_resource(texture->texture);
+        struct vc4_sampler_view *sview =
+                vc4_sampler_view(texstate->textures[unit]);
+        struct vc4_resource *rsc = vc4_resource(sview->base.texture);
 
-        cl_reloc(vc4, &vc4->uniforms, uniforms, rsc->bo,
-                 VC4_SET_FIELD(rsc->slices[0].offset >> 12, VC4_TEX_P0_OFFSET) |
-                 VC4_SET_FIELD(texture->u.tex.last_level -
-                               texture->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
-                 VC4_SET_FIELD(texture->target == PIPE_TEXTURE_CUBE,
-                               VC4_TEX_P0_CMMODE) |
-                 VC4_SET_FIELD(rsc->vc4_format & 15, VC4_TEX_P0_TYPE));
+        cl_reloc(vc4, &vc4->uniforms, uniforms, rsc->bo, sview->texture_p0);
 }
 
 static void
@@ -71,8 +66,8 @@ write_texture_p1(struct vc4_context *vc4,
                  struct vc4_texture_stateobj *texstate,
                  uint32_t unit)
 {
-        struct pipe_sampler_view *texture = texstate->textures[unit];
-        struct vc4_resource *rsc = vc4_resource(texture->texture);
+        struct vc4_sampler_view *sview =
+                vc4_sampler_view(texstate->textures[unit]);
         struct pipe_sampler_state *sampler = texstate->samplers[unit];
         static const uint8_t minfilter_map[6] = {
                 VC4_TEX_P1_MINFILT_NEAR_MIP_NEAR,
@@ -91,12 +86,7 @@ write_texture_p1(struct vc4_context *vc4,
                 (sampler->mag_img_filter == PIPE_TEX_MIPFILTER_NEAREST ||
                  sampler->min_img_filter == PIPE_TEX_MIPFILTER_NEAREST);
 
-        cl_aligned_u32(uniforms,
-               VC4_SET_FIELD(rsc->vc4_format >> 4, VC4_TEX_P1_TYPE4) |
-               VC4_SET_FIELD(texture->texture->height0 & 2047,
-                             VC4_TEX_P1_HEIGHT) |
-               VC4_SET_FIELD(texture->texture->width0 & 2047,
-                             VC4_TEX_P1_WIDTH) |
+        cl_aligned_u32(uniforms, sview->texture_p1 |
                VC4_SET_FIELD(magfilter_map[sampler->mag_img_filter],
                              VC4_TEX_P1_MAGFILT) |
                VC4_SET_FIELD(minfilter_map[sampler->min_mip_filter * 2 +

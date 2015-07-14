@@ -499,13 +499,13 @@ static struct pipe_sampler_view *
 vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
                         const struct pipe_sampler_view *cso)
 {
-        struct pipe_sampler_view *so = malloc(sizeof(*so));
+        struct vc4_sampler_view *so = malloc(sizeof(*so));
         struct vc4_resource *rsc = vc4_resource(prsc);
 
         if (!so)
                 return NULL;
 
-        *so = *cso;
+        so->base = *cso;
 
         pipe_reference(NULL, &prsc->reference);
 
@@ -516,18 +516,19 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
          * Also, Raspberry Pi doesn't support sampling from raster textures,
          * so we also have to copy to a temporary then.
          */
-        if (so->u.tex.first_level ||
+        if (cso->u.tex.first_level ||
             rsc->vc4_format == VC4_TEXTURE_TYPE_RGBA32R) {
                 struct vc4_resource *shadow_parent = vc4_resource(prsc);
                 struct pipe_resource tmpl = shadow_parent->base.b;
                 struct vc4_resource *clone;
 
                 tmpl.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
-                tmpl.width0 = u_minify(tmpl.width0, so->u.tex.first_level);
-                tmpl.height0 = u_minify(tmpl.height0, so->u.tex.first_level);
-                tmpl.last_level = so->u.tex.last_level - so->u.tex.first_level;
+                tmpl.width0 = u_minify(tmpl.width0, cso->u.tex.first_level);
+                tmpl.height0 = u_minify(tmpl.height0, cso->u.tex.first_level);
+                tmpl.last_level = cso->u.tex.last_level - cso->u.tex.first_level;
 
                 prsc = vc4_resource_create(pctx->screen, &tmpl);
+                rsc = vc4_resource(prsc);
                 clone = vc4_resource(prsc);
                 clone->shadow_parent = &shadow_parent->base.b;
                 /* Flag it as needing update of the contents from the parent. */
@@ -535,11 +536,23 @@ vc4_create_sampler_view(struct pipe_context *pctx, struct pipe_resource *prsc,
 
                 assert(clone->vc4_format != VC4_TEXTURE_TYPE_RGBA32R);
         }
-        so->texture = prsc;
-        so->reference.count = 1;
-        so->context = pctx;
+        so->base.texture = prsc;
+        so->base.reference.count = 1;
+        so->base.context = pctx;
 
-        return so;
+        so->texture_p0 =
+                (VC4_SET_FIELD(rsc->slices[0].offset >> 12, VC4_TEX_P0_OFFSET) |
+                 VC4_SET_FIELD(rsc->vc4_format & 15, VC4_TEX_P0_TYPE) |
+                 VC4_SET_FIELD(cso->u.tex.last_level -
+                               cso->u.tex.first_level, VC4_TEX_P0_MIPLVLS) |
+                 VC4_SET_FIELD(cso->target == PIPE_TEXTURE_CUBE,
+                               VC4_TEX_P0_CMMODE));
+        so->texture_p1 =
+                (VC4_SET_FIELD(rsc->vc4_format >> 4, VC4_TEX_P1_TYPE4) |
+                 VC4_SET_FIELD(prsc->height0 & 2047, VC4_TEX_P1_HEIGHT) |
+                 VC4_SET_FIELD(prsc->width0 & 2047, VC4_TEX_P1_WIDTH));
+
+        return &so->base;
 }
 
 static void

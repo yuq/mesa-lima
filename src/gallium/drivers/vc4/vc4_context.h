@@ -69,6 +69,12 @@
 #define VC4_DIRTY_UNCOMPILED_FS (1 << 22)
 #define VC4_DIRTY_COMPILED_FS   (1 << 24)
 
+struct vc4_sampler_view {
+        struct pipe_sampler_view base;
+        uint32_t texture_p0;
+        uint32_t texture_p1;
+};
+
 struct vc4_texture_stateobj {
         struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
         unsigned num_textures;
@@ -324,6 +330,12 @@ static inline struct vc4_context *
 vc4_context(struct pipe_context *pcontext)
 {
         return (struct vc4_context *)pcontext;
+}
+
+static inline struct vc4_sampler_view *
+vc4_sampler_view(struct pipe_sampler_view *psview)
+{
+        return (struct vc4_sampler_view *)psview;
 }
 
 struct pipe_context *vc4_context_create(struct pipe_screen *pscreen,
