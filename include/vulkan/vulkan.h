@@ -1209,7 +1209,7 @@ typedef struct {
     uint32_t                                    maxDrawIndirectInstanceCount;
     VkBool32                                    primitiveRestartForPatches;
     float                                       maxSamplerLodBias;
-    uint32_t                                    maxSamplerAnisotropy;
+    float                                       maxSamplerAnisotropy;
     uint32_t                                    maxViewports;
     uint32_t                                    maxDynamicViewportStates;
     uint32_t                                    maxViewportDimensions[2];
@@ -1649,7 +1649,7 @@ typedef struct {
     VkTexAddress                                addressV;
     VkTexAddress                                addressW;
     float                                       mipLodBias;
-    uint32_t                                    maxAnisotropy;
+    float                                       maxAnisotropy;
     VkBool32                                    compareEnable;
     VkCompareOp                                 compareOp;
     float                                       minLod;
