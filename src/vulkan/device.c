@@ -1536,6 +1536,13 @@ VkResult anv_CreateEvent(
    stub_return(VK_UNSUPPORTED);
 }
 
+VkResult anv_DestroyEvent(
+    VkDevice                                    device,
+    VkEvent                                     event)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
 VkResult anv_GetEventStatus(
     VkDevice                                    device,
     VkEvent                                     event)

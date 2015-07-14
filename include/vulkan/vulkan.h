@@ -2019,6 +2019,7 @@ typedef VkResult (VKAPI *PFN_vkDestroySemaphore)(VkDevice device, VkSemaphore se
 typedef VkResult (VKAPI *PFN_vkQueueSignalSemaphore)(VkQueue queue, VkSemaphore semaphore);
 typedef VkResult (VKAPI *PFN_vkQueueWaitSemaphore)(VkQueue queue, VkSemaphore semaphore);
 typedef VkResult (VKAPI *PFN_vkCreateEvent)(VkDevice device, const VkEventCreateInfo* pCreateInfo, VkEvent* pEvent);
+typedef VkResult (VKAPI *PFN_vkDestroyEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkGetEventStatus)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkSetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkResetEvent)(VkDevice device, VkEvent event);
@@ -2304,6 +2305,10 @@ VkResult VKAPI vkCreateEvent(
     VkDevice                                    device,
     const VkEventCreateInfo*                    pCreateInfo,
     VkEvent*                                    pEvent);
+
+VkResult VKAPI vkDestroyEvent(
+    VkDevice                                    device,
+    VkEvent                                     event);
 
 VkResult VKAPI vkGetEventStatus(
     VkDevice                                    device,
