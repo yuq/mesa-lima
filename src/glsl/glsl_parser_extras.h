@@ -217,7 +217,7 @@ struct _mesa_glsl_parse_state {
 
    bool has_shader_storage_buffer_objects() const
    {
-      return ARB_shader_storage_buffer_object_enable || is_version(430, 0);
+      return ARB_shader_storage_buffer_object_enable || is_version(430, 310);
    }
 
    bool has_separate_shader_objects() const
