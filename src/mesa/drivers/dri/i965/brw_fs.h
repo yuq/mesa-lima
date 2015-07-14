@@ -70,14 +70,14 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
       break;
    case GRF:
    case MRF:
+   case HW_REG:
    case ATTR:
       return byte_offset(reg,
-                         delta * MAX2(bld.dispatch_width() * reg.stride, 1) *
-                         type_sz(reg.type));
+                         delta * reg.component_size(bld.dispatch_width()));
    case UNIFORM:
       reg.reg_offset += delta;
       break;
-   default:
+   case IMM:
       assert(delta == 0);
    }
    return reg;

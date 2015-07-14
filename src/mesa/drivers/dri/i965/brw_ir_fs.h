@@ -48,6 +48,12 @@ public:
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;
 
+   /**
+    * Return the size in bytes of a single logical component of the
+    * register assuming the given execution width.
+    */
+   unsigned component_size(unsigned width) const;
+
    /** Smear a channel of the reg to all channels. */
    fs_reg &set_smear(unsigned subreg);
 

@@ -1601,7 +1601,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          /* If the instruction writes to more than one register, it needs to
           * be a "compressed" instruction on Gen <= 5.
           */
-         if (inst->exec_size * inst->dst.stride * type_sz(inst->dst.type) > 32)
+         if (inst->dst.component_size(inst->exec_size) > REG_SIZE)
             brw_set_default_compression_control(p, BRW_COMPRESSION_COMPRESSED);
          else
             brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
