@@ -1839,7 +1839,7 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    srcSubpass;
-    uint32_t                                    dstSubpass;
+    uint32_t                                    destSubpass;
     VkPipelineStageFlags                        srcStageMask;
     VkPipelineStageFlags                        destStageMask;
     VkMemoryOutputFlags                         outputMask;
