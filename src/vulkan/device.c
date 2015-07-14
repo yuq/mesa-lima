@@ -1228,8 +1228,10 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_BUFFER:
       return anv_DestroyBuffer(_device, (VkBuffer) _object);
 
-   case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_SHADER_MODULE:
+      return anv_DestroyShaderModule(_device, (VkShaderModule) _object);
+
+   case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
    case VK_OBJECT_TYPE_SAMPLER:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:

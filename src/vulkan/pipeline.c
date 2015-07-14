@@ -55,6 +55,18 @@ VkResult anv_CreateShaderModule(
    return VK_SUCCESS;
 }
 
+VkResult anv_DestroyShaderModule(
+    VkDevice                                    _device,
+    VkShaderModule                              _module)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_shader_module, module, _module);
+
+   anv_device_free(device, module);
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_CreateShader(
     VkDevice                                    _device,
     const VkShaderCreateInfo*                   pCreateInfo,
