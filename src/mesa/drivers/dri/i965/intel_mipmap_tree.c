@@ -272,7 +272,6 @@ intel_miptree_create_layout(struct brw_context *brw,
                             GLuint height0,
                             GLuint depth0,
                             GLuint num_samples,
-                            enum intel_miptree_tiling_mode requested,
                             uint32_t layout_flags)
 {
    struct intel_mipmap_tree *mt = calloc(sizeof(*mt), 1);
@@ -454,8 +453,10 @@ intel_miptree_create_layout(struct brw_context *brw,
 	(brw->has_separate_stencil &&
          intel_miptree_wants_hiz_buffer(brw, mt)))) {
       uint32_t stencil_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
-      if (brw->gen == 6)
-         stencil_flags |= MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD;
+      if (brw->gen == 6) {
+         stencil_flags |= MIPTREE_LAYOUT_FORCE_ALL_SLICE_AT_LOD |
+                          MIPTREE_LAYOUT_ALLOC_ANY_TILED;
+      }
 
       mt->stencil_mt = intel_miptree_create(brw,
                                             mt->target,
@@ -466,7 +467,6 @@ intel_miptree_create_layout(struct brw_context *brw,
                                             mt->logical_height0,
                                             mt->logical_depth0,
                                             num_samples,
-                                            INTEL_MIPTREE_TILING_ANY,
                                             stencil_flags);
 
       if (!mt->stencil_mt) {
@@ -510,7 +510,7 @@ intel_miptree_create_layout(struct brw_context *brw,
       assert((layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16) == 0);
    }
 
-   brw_miptree_layout(brw, mt, requested, layout_flags);
+   brw_miptree_layout(brw, mt, layout_flags);
 
    if (mt->disable_aux_buffers)
       assert(mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS);
@@ -616,7 +616,6 @@ intel_miptree_create(struct brw_context *brw,
                      GLuint height0,
                      GLuint depth0,
                      GLuint num_samples,
-                     enum intel_miptree_tiling_mode requested_tiling,
                      uint32_t layout_flags)
 {
    struct intel_mipmap_tree *mt;
@@ -634,7 +633,7 @@ intel_miptree_create(struct brw_context *brw,
    mt = intel_miptree_create_layout(brw, target, format,
                                     first_level, last_level, width0,
                                     height0, depth0, num_samples,
-                                    requested_tiling, layout_flags);
+                                    layout_flags);
    /*
     * pitch == 0 || height == 0  indicates the null texture
     */
@@ -757,17 +756,16 @@ intel_miptree_create_for_bo(struct brw_context *brw,
 
    target = depth > 1 ? GL_TEXTURE_2D_ARRAY : GL_TEXTURE_2D;
 
-   /* 'requested' parameter of intel_miptree_create_layout() is relevant
-    * only for non bo miptree. Tiling for bo is already computed above.
-    * So, the tiling requested (INTEL_MIPTREE_TILING_ANY) below is
-    * just a place holder and will not make any change to the miptree
-    * tiling format.
+   /* The BO already has a tiling format and we shouldn't confuse the lower
+    * layers by making it try to find a tiling format again.
     */
+   assert((layout_flags & MIPTREE_LAYOUT_ALLOC_ANY_TILED) == 0);
+   assert((layout_flags & MIPTREE_LAYOUT_ALLOC_LINEAR) == 0);
+
    layout_flags |= MIPTREE_LAYOUT_FOR_BO;
    mt = intel_miptree_create_layout(brw, target, format,
                                     0, 0,
                                     width, height, depth, 0,
-                                    INTEL_MIPTREE_TILING_ANY,
                                     layout_flags);
    if (!mt)
       return NULL;
@@ -875,11 +873,13 @@ intel_miptree_create_for_renderbuffer(struct brw_context *brw,
    uint32_t depth = 1;
    bool ok;
    GLenum target = num_samples > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
+   const uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
+                                 MIPTREE_LAYOUT_ALLOC_ANY_TILED;
+
 
    mt = intel_miptree_create(brw, target, format, 0, 0,
                              width, height, depth, num_samples,
-                             INTEL_MIPTREE_TILING_ANY,
-                             MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
+                             layout_flags);
    if (!mt)
       goto fail;
 
@@ -1384,6 +1384,8 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
     *
     *     "The MCS surface must be stored as Tile Y."
     */
+   const uint32_t mcs_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
+                              MIPTREE_LAYOUT_ALLOC_YTILED;
    mt->mcs_mt = intel_miptree_create(brw,
                                      mt->target,
                                      format,
@@ -1393,8 +1395,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                                      mt->logical_height0,
                                      mt->logical_depth0,
                                      0 /* num_samples */,
-                                     INTEL_MIPTREE_TILING_Y,
-                                     MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
+                                     mcs_flags);
 
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *
@@ -1442,9 +1443,11 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    unsigned mcs_height =
       ALIGN(mt->logical_height0, height_divisor) / height_divisor;
    assert(mt->logical_depth0 == 1);
-   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
-   if (brw->gen >= 8)
+   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
+                           MIPTREE_LAYOUT_ALLOC_YTILED;
+   if (brw->gen >= 8) {
       layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
+   }
    mt->mcs_mt = intel_miptree_create(brw,
                                      mt->target,
                                      format,
@@ -1454,7 +1457,6 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                      mcs_height,
                                      mt->logical_depth0,
                                      0 /* num_samples */,
-                                     INTEL_MIPTREE_TILING_Y,
                                      layout_flags);
 
    return mt->mcs_mt;
@@ -1707,6 +1709,7 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
    if (!buf)
       return NULL;
 
+   layout_flags |= MIPTREE_LAYOUT_ALLOC_ANY_TILED;
    buf->mt = intel_miptree_create(brw,
                                   mt->target,
                                   mt->format,
@@ -1716,7 +1719,6 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
                                   mt->logical_height0,
                                   mt->logical_depth0,
                                   mt->num_samples,
-                                  INTEL_MIPTREE_TILING_ANY,
                                   layout_flags);
    if (!buf->mt) {
       free(buf);
@@ -2147,7 +2149,7 @@ intel_miptree_map_blit(struct brw_context *brw,
    map->mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
                                   0, 0,
                                   map->w, map->h, 1,
-                                  0, INTEL_MIPTREE_TILING_NONE, 0);
+                                  0, 0);
 
    if (!map->mt) {
       fprintf(stderr, "Failed to allocate blit temporary\n");
