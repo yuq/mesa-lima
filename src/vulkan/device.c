@@ -1184,6 +1184,9 @@ VkResult anv_DestroyObject(
    struct anv_object *object = (struct anv_object *) _object;
 
    switch (objType) {
+   case VK_OBJECT_TYPE_FENCE:
+      return anv_DestroyFence(_device, (VkFence) _object);
+
    case VK_OBJECT_TYPE_INSTANCE:
       return anv_DestroyInstance((VkInstance) _object);
 
@@ -1223,6 +1226,8 @@ VkResult anv_DestroyObject(
       return anv_DestroyImage(_device, _object);
 
    case VK_OBJECT_TYPE_BUFFER:
+      return anv_DestroyBuffer(_device, (VkBuffer) _object);
+
    case VK_OBJECT_TYPE_SHADER:
    case VK_OBJECT_TYPE_SHADER_MODULE:
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
@@ -1240,15 +1245,18 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_PIPELINE:
    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
-   case VK_OBJECT_TYPE_FENCE:
-   case VK_OBJECT_TYPE_QUERY_POOL:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
 
+   case VK_OBJECT_TYPE_QUERY_POOL:
+      return anv_DestroyQueryPool(_device, (VkQueryPool) _object);
+
    case VK_OBJECT_TYPE_SEMAPHORE:
+      return anv_DestroySemaphore(_device, (VkSemaphore) _object);
+
    case VK_OBJECT_TYPE_EVENT:
-      stub_return(VK_UNSUPPORTED);
+      return anv_DestroyEvent(_device, (VkEvent) _object);
 
    default:
       unreachable("Invalid object type");
