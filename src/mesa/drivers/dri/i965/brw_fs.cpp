@@ -3890,6 +3890,20 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    }
 }
 
+/**
+ * Initialize the header present in some typed and untyped surface
+ * messages.
+ */
+static fs_reg
+emit_surface_header(const fs_builder &bld, const fs_reg &sample_mask)
+{
+   fs_builder ubld = bld.exec_all().group(8, 0);
+   const fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+   ubld.MOV(dst, fs_reg(0));
+   ubld.MOV(component(dst, 7), sample_mask);
+   return dst;
+}
+
 static void
 lower_surface_logical_send(const fs_builder &bld, fs_inst *inst, opcode op,
                            const fs_reg &sample_mask)
@@ -3898,10 +3912,43 @@ lower_surface_logical_send(const fs_builder &bld, fs_inst *inst, opcode op,
    const fs_reg &addr = inst->src[0];
    const fs_reg &src = inst->src[1];
    const fs_reg &surface = inst->src[2];
-   const fs_reg &dims = inst->src[3];
+   const UNUSED fs_reg &dims = inst->src[3];
    const fs_reg &arg = inst->src[4];
 
-   assert(!"Not implemented");
+   /* Calculate the total number of components of the payload. */
+   const unsigned addr_sz = inst->components_read(0);
+   const unsigned src_sz = inst->components_read(1);
+   const unsigned header_sz = (sample_mask.file == BAD_FILE ? 0 : 1);
+   const unsigned sz = header_sz + addr_sz + src_sz;
+
+   /* Allocate space for the payload. */
+   fs_reg *const components = new fs_reg[sz];
+   const fs_reg payload = bld.vgrf(BRW_REGISTER_TYPE_UD, sz);
+   unsigned n = 0;
+
+   /* Construct the payload. */
+   if (header_sz)
+      components[n++] = emit_surface_header(bld, sample_mask);
+
+   for (unsigned i = 0; i < addr_sz; i++)
+      components[n++] = offset(addr, bld, i);
+
+   for (unsigned i = 0; i < src_sz; i++)
+      components[n++] = offset(src, bld, i);
+
+   bld.LOAD_PAYLOAD(payload, components, sz, header_sz);
+
+   /* Update the original instruction. */
+   inst->opcode = op;
+   inst->mlen = header_sz + (addr_sz + src_sz) * inst->exec_size / 8;
+   inst->header_size = header_sz;
+
+   inst->src[0] = payload;
+   inst->src[1] = surface;
+   inst->src[2] = arg;
+   inst->resize_sources(3);
+
+   delete[] components;
 }
 
 bool
@@ -3974,37 +4021,37 @@ fs_visitor::lower_logical_sends()
       case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_SURFACE_READ,
-                                    fs_reg());
+                                    fs_reg(0xffff));
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_SURFACE_WRITE,
-                                    fs_reg());
+                                    ibld.sample_mask_reg());
          break;
 
       case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_ATOMIC,
-                                    fs_reg());
+                                    ibld.sample_mask_reg());
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_TYPED_SURFACE_READ,
-                                    fs_reg());
+                                    fs_reg(0xffff));
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_TYPED_SURFACE_WRITE,
-                                    fs_reg());
+                                    ibld.sample_mask_reg());
          break;
 
       case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_TYPED_ATOMIC,
-                                    fs_reg());
+                                    ibld.sample_mask_reg());
          break;
 
       default:
