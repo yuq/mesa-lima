@@ -1262,8 +1262,10 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
       return anv_DestroyDynamicDepthStencilState(_device, (VkDynamicDepthStencilState) _object);
 
-   case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
+      return anv_DestroyFramebuffer(_device, (VkFramebuffer) _object);
+
+   case VK_OBJECT_TYPE_COMMAND_BUFFER:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
 
@@ -3818,11 +3820,8 @@ anv_framebuffer_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_FRAMEBUFFER);
 
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DYNAMIC_VP_STATE,
-                     fb->vp_state);
-
-   anv_device_free(device, fb);
+   anv_DestroyFramebuffer(anv_device_to_handle(device),
+                          anv_framebuffer_to_handle(fb));
 }
 
 VkResult anv_CreateFramebuffer(
@@ -3885,6 +3884,20 @@ VkResult anv_CreateFramebuffer(
       &framebuffer->vp_state);
 
    *pFramebuffer = anv_framebuffer_to_handle(framebuffer);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyFramebuffer(
+    VkDevice                                    _device,
+    VkFramebuffer                               _fb)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_framebuffer, fb, _fb);
+
+   anv_DestroyDynamicViewportState(anv_device_to_handle(device),
+                                   fb->vp_state);
+   anv_device_free(device, fb);
 
    return VK_SUCCESS;
 }

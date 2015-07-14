@@ -2067,6 +2067,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyDynamicColorBlendState)(VkDevice device, V
 typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState);
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicDepthStencilState)(VkDevice device, VkDynamicDepthStencilState dynamicDepthStencilState);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
+typedef VkResult (VKAPI *PFN_vkDestroyFramebuffer)(VkDevice device, VkFramebuffer framebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef VkResult (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
 typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
@@ -2557,6 +2558,10 @@ VkResult VKAPI vkCreateFramebuffer(
     VkDevice                                    device,
     const VkFramebufferCreateInfo*              pCreateInfo,
     VkFramebuffer*                              pFramebuffer);
+
+VkResult VKAPI vkDestroyFramebuffer(
+    VkDevice                                    device,
+    VkFramebuffer                               framebuffer);
 
 VkResult VKAPI vkCreateRenderPass(
     VkDevice                                    device,
