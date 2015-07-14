@@ -75,6 +75,11 @@ struct vc4_sampler_view {
         uint32_t texture_p1;
 };
 
+struct vc4_sampler_state {
+        struct pipe_sampler_state base;
+        uint32_t texture_p1;
+};
+
 struct vc4_texture_stateobj {
         struct pipe_sampler_view *textures[PIPE_MAX_SAMPLERS];
         unsigned num_textures;
@@ -336,6 +341,12 @@ static inline struct vc4_sampler_view *
 vc4_sampler_view(struct pipe_sampler_view *psview)
 {
         return (struct vc4_sampler_view *)psview;
+}
+
+static inline struct vc4_sampler_state *
+vc4_sampler_state(struct pipe_sampler_state *psampler)
+{
+        return (struct vc4_sampler_state *)psampler;
 }
 
 struct pipe_context *vc4_context_create(struct pipe_screen *pscreen,

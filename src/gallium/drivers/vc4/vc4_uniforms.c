@@ -27,26 +27,6 @@
 #include "vc4_context.h"
 #include "vc4_qir.h"
 
-static uint32_t translate_wrap(uint32_t p_wrap, bool using_nearest)
-{
-        switch (p_wrap) {
-        case PIPE_TEX_WRAP_REPEAT:
-                return 0;
-        case PIPE_TEX_WRAP_CLAMP_TO_EDGE:
-                return 1;
-        case PIPE_TEX_WRAP_MIRROR_REPEAT:
-                return 2;
-        case PIPE_TEX_WRAP_CLAMP_TO_BORDER:
-                return 3;
-        case PIPE_TEX_WRAP_CLAMP:
-                return (using_nearest ? 1 : 3);
-        default:
-                fprintf(stderr, "Unknown wrap mode %d\n", p_wrap);
-                assert(!"not reached");
-                return 0;
-        }
-}
-
 static void
 write_texture_p0(struct vc4_context *vc4,
                  struct vc4_cl_out **uniforms,
@@ -68,34 +48,10 @@ write_texture_p1(struct vc4_context *vc4,
 {
         struct vc4_sampler_view *sview =
                 vc4_sampler_view(texstate->textures[unit]);
-        struct pipe_sampler_state *sampler = texstate->samplers[unit];
-        static const uint8_t minfilter_map[6] = {
-                VC4_TEX_P1_MINFILT_NEAR_MIP_NEAR,
-                VC4_TEX_P1_MINFILT_LIN_MIP_NEAR,
-                VC4_TEX_P1_MINFILT_NEAR_MIP_LIN,
-                VC4_TEX_P1_MINFILT_LIN_MIP_LIN,
-                VC4_TEX_P1_MINFILT_NEAREST,
-                VC4_TEX_P1_MINFILT_LINEAR,
-        };
-        static const uint32_t magfilter_map[] = {
-                [PIPE_TEX_FILTER_NEAREST] = VC4_TEX_P1_MAGFILT_NEAREST,
-                [PIPE_TEX_FILTER_LINEAR] = VC4_TEX_P1_MAGFILT_LINEAR,
-        };
+        struct vc4_sampler_state *sampler =
+                vc4_sampler_state(texstate->samplers[unit]);
 
-        bool either_nearest =
-                (sampler->mag_img_filter == PIPE_TEX_MIPFILTER_NEAREST ||
-                 sampler->min_img_filter == PIPE_TEX_MIPFILTER_NEAREST);
-
-        cl_aligned_u32(uniforms, sview->texture_p1 |
-               VC4_SET_FIELD(magfilter_map[sampler->mag_img_filter],
-                             VC4_TEX_P1_MAGFILT) |
-               VC4_SET_FIELD(minfilter_map[sampler->min_mip_filter * 2 +
-                                           sampler->min_img_filter],
-                             VC4_TEX_P1_MINFILT) |
-               VC4_SET_FIELD(translate_wrap(sampler->wrap_s, either_nearest),
-                             VC4_TEX_P1_WRAP_S) |
-               VC4_SET_FIELD(translate_wrap(sampler->wrap_t, either_nearest),
-                             VC4_TEX_P1_WRAP_T));
+        cl_aligned_u32(uniforms, sview->texture_p1 | sampler->texture_p1);
 }
 
 static void
