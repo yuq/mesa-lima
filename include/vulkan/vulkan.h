@@ -62,12 +62,6 @@ extern "C" {
 #endif
 
 
-#define VK_MAX_PHYSICAL_DEVICE_NAME       256
-#define VK_UUID_LENGTH                    16
-#define VK_MAX_EXTENSION_NAME             256
-#define VK_MAX_DESCRIPTION                256
-#define VK_MAX_MEMORY_TYPES               32
-#define VK_MAX_MEMORY_HEAPS               16
 #define VK_LOD_CLAMP_NONE                 MAX_FLOAT
 #define VK_LAST_MIP_LEVEL                 UINT32_MAX
 #define VK_LAST_ARRAY_SLICE               UINT32_MAX
@@ -76,6 +70,12 @@ extern "C" {
 #define VK_TRUE                           1
 #define VK_FALSE                          0
 #define VK_NULL_HANDLE                    0
+#define VK_MAX_PHYSICAL_DEVICE_NAME       256
+#define VK_UUID_LENGTH                    16
+#define VK_MAX_MEMORY_TYPES               32
+#define VK_MAX_MEMORY_HEAPS               16
+#define VK_MAX_EXTENSION_NAME             256
+#define VK_MAX_DESCRIPTION                256
 
 VK_DEFINE_BASE_HANDLE(VkObject)
 VK_DEFINE_DISP_SUBCLASS_HANDLE(VkInstance, VkObject)
