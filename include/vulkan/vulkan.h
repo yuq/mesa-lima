@@ -2048,9 +2048,9 @@ typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreate
 typedef VkResult (VKAPI *PFN_vkDestroyImage)(VkDevice device, VkImage image);
 typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
-typedef VkResult (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView view);
+typedef VkResult (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView imageView);
 typedef VkResult (VKAPI *PFN_vkCreateAttachmentView)(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView);
-typedef VkResult (VKAPI *PFN_vkDestroyAttachmentView)(VkDevice device, VkAttachmentView view);
+typedef VkResult (VKAPI *PFN_vkDestroyAttachmentView)(VkDevice device, VkAttachmentView attachmentView);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
