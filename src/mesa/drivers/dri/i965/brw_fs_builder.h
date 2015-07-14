@@ -307,6 +307,17 @@ namespace brw {
       }
 
       /**
+       * Create and insert an instruction with a variable number of sources
+       * into the program.
+       */
+      instruction *
+      emit(enum opcode opcode, const dst_reg &dst, const src_reg srcs[],
+           unsigned n) const
+      {
+         return emit(instruction(opcode, dispatch_width(), dst, srcs, n));
+      }
+
+      /**
        * Insert a preallocated instruction into the program.
        */
       instruction *
@@ -518,9 +529,7 @@ namespace brw {
       LOAD_PAYLOAD(const dst_reg &dst, const src_reg *src,
                    unsigned sources, unsigned header_size) const
       {
-         instruction *inst = emit(instruction(SHADER_OPCODE_LOAD_PAYLOAD,
-                                              dispatch_width(), dst,
-                                              src, sources));
+         instruction *inst = emit(SHADER_OPCODE_LOAD_PAYLOAD, dst, src, sources);
          inst->header_size = header_size;
          inst->regs_written = header_size +
                               (sources - header_size) * (dispatch_width() / 8);
