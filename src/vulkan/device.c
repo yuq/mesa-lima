@@ -643,59 +643,68 @@ VkResult anv_DestroyDevice(
 static const VkExtensionProperties global_extensions[] = {
    {
       .extName = "VK_WSI_LunarG",
-      .version = 3
+      .specVersion = 3
    }
 };
 
-VkResult anv_GetGlobalExtensionCount(
-    uint32_t*                                   pCount)
-{
-   *pCount = ARRAY_SIZE(global_extensions);
-
-   return VK_SUCCESS;
-}
-
-
 VkResult anv_GetGlobalExtensionProperties(
-    uint32_t                                    extensionIndex,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
 {
-   assert(extensionIndex < ARRAY_SIZE(global_extensions));
+   if (pProperties == NULL) {
+      *pCount = ARRAY_SIZE(global_extensions);
+      return VK_SUCCESS;
+   }
 
-   *pProperties = global_extensions[extensionIndex];
+   assert(*pCount < ARRAY_SIZE(global_extensions));
 
-   return VK_SUCCESS;
-}
-
-VkResult anv_GetPhysicalDeviceExtensionCount(
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount)
-{
-   /* None supported at this time */
-   *pCount = 0;
+   *pCount = ARRAY_SIZE(global_extensions);
+   memcpy(pProperties, global_extensions, sizeof(global_extensions));
 
    return VK_SUCCESS;
 }
 
 VkResult anv_GetPhysicalDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    extensionIndex,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
 {
+   if (pProperties == NULL) {
+      *pCount = 0;
+      return VK_SUCCESS;
+   }
+
    /* None supported at this time */
    return vk_error(VK_ERROR_INVALID_EXTENSION);
 }
 
-VkResult anv_EnumerateLayers(
-    VkPhysicalDevice                            physicalDevice,
-    size_t                                      maxStringSize,
-    size_t*                                     pLayerCount,
-    char* const*                                pOutLayers,
-    void*                                       pReserved)
+VkResult anv_GetGlobalLayerProperties(
+    uint32_t*                                   pCount,
+    VkLayerProperties*                          pProperties)
 {
-   *pLayerCount = 0;
+   if (pProperties == NULL) {
+      *pCount = 0;
+      return VK_SUCCESS;
+   }
 
-   return VK_SUCCESS;
+   /* None supported at this time */
+   return vk_error(VK_ERROR_INVALID_LAYER);
+}
+
+VkResult anv_GetPhysicalDeviceLayerProperties(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pCount,
+    VkLayerProperties*                          pProperties)
+{
+   if (pProperties == NULL) {
+      *pCount = 0;
+      return VK_SUCCESS;
+   }
+
+   /* None supported at this time */
+   return vk_error(VK_ERROR_INVALID_LAYER);
 }
 
 VkResult anv_GetDeviceQueue(

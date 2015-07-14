@@ -65,6 +65,7 @@ extern "C" {
 #define VK_MAX_PHYSICAL_DEVICE_NAME       256
 #define VK_UUID_LENGTH                    16
 #define VK_MAX_EXTENSION_NAME             256
+#define VK_MAX_DESCRIPTION                256
 #define VK_MAX_MEMORY_TYPES               32
 #define VK_MAX_MEMORY_HEAPS               16
 #define VK_LOD_CLAMP_NONE                 MAX_FLOAT
@@ -118,6 +119,7 @@ typedef enum {
     VK_TIMEOUT = 3,
     VK_EVENT_SET = 4,
     VK_EVENT_RESET = 5,
+    VK_INCOMPLETE = 6,
     VK_ERROR_UNKNOWN = -1,
     VK_ERROR_UNAVAILABLE = -2,
     VK_ERROR_INITIALIZATION_FAILED = -3,
@@ -150,9 +152,10 @@ typedef enum {
     VK_ERROR_BUILDING_COMMAND_BUFFER = -30,
     VK_ERROR_MEMORY_NOT_BOUND = -31,
     VK_ERROR_INCOMPATIBLE_QUEUE = -32,
-    VK_RESULT_BEGIN_RANGE = VK_ERROR_INCOMPATIBLE_QUEUE,
-    VK_RESULT_END_RANGE = VK_EVENT_RESET,
-    VK_RESULT_NUM = (VK_EVENT_RESET - VK_ERROR_INCOMPATIBLE_QUEUE + 1),
+    VK_ERROR_INVALID_LAYER = -33,
+    VK_RESULT_BEGIN_RANGE = VK_ERROR_INVALID_LAYER,
+    VK_RESULT_END_RANGE = VK_INCOMPLETE,
+    VK_RESULT_NUM = (VK_INCOMPLETE - VK_ERROR_INVALID_LAYER + 1),
     VK_RESULT_MAX_ENUM = 0x7FFFFFFF
 } VkResult;
 
@@ -1101,6 +1104,8 @@ typedef struct {
     const void*                                 pNext;
     const VkApplicationInfo*                    pAppInfo;
     const VkAllocCallbacks*                     pAllocCb;
+    uint32_t                                    layerCount;
+    const char*const*                           ppEnabledLayerNames;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
 } VkInstanceCreateInfo;
@@ -1292,6 +1297,8 @@ typedef struct {
     const void*                                 pNext;
     uint32_t                                    queueRecordCount;
     const VkDeviceQueueCreateInfo*              pRequestedQueues;
+    uint32_t                                    layerCount;
+    const char*const*                           ppEnabledLayerNames;
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
@@ -1300,8 +1307,15 @@ typedef struct {
 
 typedef struct {
     char                                        extName[VK_MAX_EXTENSION_NAME];
-    uint32_t                                    version;
+    uint32_t                                    specVersion;
 } VkExtensionProperties;
+
+typedef struct {
+    char                                        layerName[VK_MAX_EXTENSION_NAME];
+    uint32_t                                    specVersion;
+    uint32_t                                    implVersion;
+    const char*                                 description[VK_MAX_DESCRIPTION];
+} VkLayerProperties;
 
 typedef struct {
     VkStructureType                             sType;
@@ -1976,13 +1990,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    layerCount;
-    const char *const*                          ppActiveLayerNames;
-} VkLayerCreateInfo;
-
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
 } VkMemoryBarrier;
@@ -2002,11 +2009,10 @@ typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetInstanceProcAddr)(VkInstance instanc
 typedef PFN_vkVoidFunction (VKAPI *PFN_vkGetDeviceProcAddr)(VkDevice device, const char* pName);
 typedef VkResult (VKAPI *PFN_vkCreateDevice)(VkPhysicalDevice physicalDevice, const VkDeviceCreateInfo* pCreateInfo, VkDevice* pDevice);
 typedef VkResult (VKAPI *PFN_vkDestroyDevice)(VkDevice device);
-typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionCount)(uint32_t* pCount);
-typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(uint32_t extensionIndex, VkExtensionProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionCount)(VkPhysicalDevice physicalDevice, uint32_t* pCount);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, uint32_t extensionIndex, VkExtensionProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkEnumerateLayers)(VkPhysicalDevice physicalDevice, size_t maxStringSize, size_t* pLayerCount, char* const* pOutLayers, void* pReserved);
+typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetGlobalLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
+typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
@@ -2193,28 +2199,25 @@ VkResult VKAPI vkCreateDevice(
 VkResult VKAPI vkDestroyDevice(
     VkDevice                                    device);
 
-VkResult VKAPI vkGetGlobalExtensionCount(
-    uint32_t*                                   pCount);
-
 VkResult VKAPI vkGetGlobalExtensionProperties(
-    uint32_t                                    extensionIndex,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties);
-
-VkResult VKAPI vkGetPhysicalDeviceExtensionCount(
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount);
 
 VkResult VKAPI vkGetPhysicalDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    extensionIndex,
+    const char*                                 pLayerName,
+    uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties);
 
-VkResult VKAPI vkEnumerateLayers(
+VkResult VKAPI vkGetGlobalLayerProperties(
+    uint32_t*                                   pCount,
+    VkLayerProperties*                          pProperties);
+
+VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
-    size_t                                      maxStringSize,
-    size_t*                                     pLayerCount,
-    char* const*                                pOutLayers,
-    void*                                       pReserved);
+    uint32_t*                                   pCount,
+    VkLayerProperties*                          pProperties);
 
 VkResult VKAPI vkGetDeviceQueue(
     VkDevice                                    device,
