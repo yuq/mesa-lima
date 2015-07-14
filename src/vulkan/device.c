@@ -3951,11 +3951,12 @@ VkResult anv_CreateRenderPass(
 
 VkResult anv_DestroyRenderPass(
     VkDevice                                    _device,
-    VkRenderPass                                renderPass)
+    VkRenderPass                                _pass)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_render_pass, pass, _pass);
 
-   anv_device_free(device, anv_render_pass_from_handle(renderPass));
+   anv_device_free(device, pass);
 
    return VK_SUCCESS;
 }

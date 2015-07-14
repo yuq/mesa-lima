@@ -944,8 +944,6 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 void *
 anv_lookup_entrypoint(const char *name);
 
-VkResult anv_DestroyRenderPass(VkDevice device, VkRenderPass renderPass);
-
 #define ANV_DEFINE_CASTS(__anv_type, __VkType)     \
 static inline struct __anv_type *                  \
 __anv_type ## _from_handle(__VkType _handle)       \
