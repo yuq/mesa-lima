@@ -955,3 +955,15 @@ VkResult anv_CreatePipelineLayout(
 
    return VK_SUCCESS;
 }
+
+VkResult anv_DestroyPipelineLayout(
+    VkDevice                                    _device,
+    VkPipelineLayout                            _pipelineLayout)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_pipeline_layout, pipeline_layout, _pipelineLayout);
+
+   anv_device_free(device, pipeline_layout);
+
+   return VK_SUCCESS;
+}

@@ -1237,6 +1237,8 @@ VkResult anv_DestroyObject(
       return anv_DestroyShader(_device, (VkShader) _object);
 
    case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
+      return anv_DestroyPipelineLayout(_device, (VkPipelineLayout) _object);
+
    case VK_OBJECT_TYPE_SAMPLER:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:

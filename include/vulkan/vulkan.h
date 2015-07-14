@@ -2048,6 +2048,7 @@ typedef VkResult (VKAPI *PFN_vkCreateGraphicsPipelines)(VkDevice device, VkPipel
 typedef VkResult (VKAPI *PFN_vkCreateComputePipelines)(VkDevice device, VkPipelineCache pipelineCache, uint32_t count, const VkComputePipelineCreateInfo* pCreateInfos, VkPipeline* pPipelines);
 typedef VkResult (VKAPI *PFN_vkDestroyPipeline)(VkDevice device, VkPipeline pipeline);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineLayout)(VkDevice device, const VkPipelineLayoutCreateInfo* pCreateInfo, VkPipelineLayout* pPipelineLayout);
+typedef VkResult (VKAPI *PFN_vkDestroyPipelineLayout)(VkDevice device, VkPipelineLayout pipelineLayout);
 typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCreateInfo* pCreateInfo, VkSampler* pSampler);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
@@ -2455,6 +2456,10 @@ VkResult VKAPI vkCreatePipelineLayout(
     VkDevice                                    device,
     const VkPipelineLayoutCreateInfo*           pCreateInfo,
     VkPipelineLayout*                           pPipelineLayout);
+
+VkResult VKAPI vkDestroyPipelineLayout(
+    VkDevice                                    device,
+    VkPipelineLayout                            pipelineLayout);
 
 VkResult VKAPI vkCreateSampler(
     VkDevice                                    device,
