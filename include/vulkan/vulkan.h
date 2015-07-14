@@ -2024,6 +2024,7 @@ typedef VkResult (VKAPI *PFN_vkGetEventStatus)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkSetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkResetEvent)(VkDevice device, VkEvent event);
 typedef VkResult (VKAPI *PFN_vkCreateQueryPool)(VkDevice device, const VkQueryPoolCreateInfo* pCreateInfo, VkQueryPool* pQueryPool);
+typedef VkResult (VKAPI *PFN_vkDestroyQueryPool)(VkDevice device, VkQueryPool queryPool);
 typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount, size_t* pDataSize, void* pData, VkQueryResultFlags flags);
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
@@ -2326,6 +2327,10 @@ VkResult VKAPI vkCreateQueryPool(
     VkDevice                                    device,
     const VkQueryPoolCreateInfo*                pCreateInfo,
     VkQueryPool*                                pQueryPool);
+
+VkResult VKAPI vkDestroyQueryPool(
+    VkDevice                                    device,
+    VkQueryPool                                 queryPool);
 
 VkResult VKAPI vkGetQueryPoolResults(
     VkDevice                                    device,
