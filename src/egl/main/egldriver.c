@@ -96,14 +96,9 @@ _eglLoadModule(_EGLModule *mod)
 static void
 _eglUnloadModule(_EGLModule *mod)
 {
-#if defined(_EGL_OS_UNIX)
    /* destroy the driver */
    if (mod->Driver && mod->Driver->Unload)
       mod->Driver->Unload(mod->Driver);
-
-#elif defined(_EGL_OS_WINDOWS)
-   /* XXX Windows unloads DLLs before atexit */
-#endif
 
    mod->Driver = NULL;
 }

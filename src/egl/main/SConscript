@@ -12,7 +12,6 @@ env.Append(CPPDEFINES = [
 
 env.Append(CPPDEFINES = [
     '_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_HAIKU',
-    '_EGL_OS_UNIX',
     '_EGL_BUILT_IN_DRIVER_HAIKU',
 ])
 env.Prepend(LIBS = [
