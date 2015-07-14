@@ -476,11 +476,8 @@ anv_pipeline_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_PIPELINE);
 
-   anv_compiler_free(pipeline);
-   anv_reloc_list_finish(&pipeline->batch.relocs, pipeline->device);
-   anv_state_stream_finish(&pipeline->program_stream);
-   anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
-   anv_device_free(pipeline->device, pipeline);
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       anv_pipeline_to_handle(pipeline));
 }
 
 VkResult
@@ -765,6 +762,22 @@ anv_pipeline_create(
                   .PixelShaderIsPerSample = per_sample_ps);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyPipeline(
+    VkDevice                                    _device,
+    VkPipeline                                  _pipeline)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
+
+   anv_compiler_free(pipeline);
+   anv_reloc_list_finish(&pipeline->batch.relocs, pipeline->device);
+   anv_state_stream_finish(&pipeline->program_stream);
+   anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
+   anv_device_free(pipeline->device, pipeline);
 
    return VK_SUCCESS;
 }

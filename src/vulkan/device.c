@@ -1249,11 +1249,13 @@ VkResult anv_DestroyObject(
       return VK_SUCCESS;
 
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
-   case VK_OBJECT_TYPE_PIPELINE:
    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_PIPELINE:
+      return anv_DestroyPipeline(_device, (VkPipeline) _object);
 
    case VK_OBJECT_TYPE_QUERY_POOL:
       return anv_DestroyQueryPool(_device, (VkQueryPool) _object);
