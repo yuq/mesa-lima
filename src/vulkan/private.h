@@ -944,7 +944,6 @@ anv_cmd_buffer_clear(struct anv_cmd_buffer *cmd_buffer,
 void *
 anv_lookup_entrypoint(const char *name);
 
-VkResult anv_DestroyImageView(VkDevice device, VkImageView imageView);
 VkResult anv_DestroyColorAttachmentView(VkDevice device,
                                         VkColorAttachmentView view);
 VkResult anv_DestroyDepthStencilView(VkDevice device, VkDepthStencilView view);
