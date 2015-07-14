@@ -1242,8 +1242,10 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_SAMPLER:
       return anv_DestroySampler(_device, (VkSampler) _object);
 
-   case VK_OBJECT_TYPE_DESCRIPTOR_SET:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
+      return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
+
+   case VK_OBJECT_TYPE_DESCRIPTOR_SET:
    case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
    case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
@@ -1981,6 +1983,18 @@ VkResult anv_CreateDescriptorSetLayout(
    }
 
    *pSetLayout = anv_descriptor_set_layout_to_handle(set_layout);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDescriptorSetLayout(
+    VkDevice                                    _device,
+    VkDescriptorSetLayout                       _set_layout)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout, _set_layout);
+
+   anv_device_free(device, set_layout);
 
    return VK_SUCCESS;
 }
