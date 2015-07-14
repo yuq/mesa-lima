@@ -1245,7 +1245,6 @@ VkResult anv_DestroyObject(
       return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-   case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
    case VK_OBJECT_TYPE_RENDER_PASS:
       /* These are trivially destroyable */
       anv_device_free(device, (void *) _object);
@@ -1259,6 +1258,9 @@ VkResult anv_DestroyObject(
 
    case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
       return anv_DestroyDynamicColorBlendState(_device, (VkDynamicColorBlendState) _object);
+
+   case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
+      return anv_DestroyDynamicDepthStencilState(_device, (VkDynamicDepthStencilState) _object);
 
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
@@ -2392,6 +2394,18 @@ VkResult anv_CreateDynamicDepthStencilState(
    GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
    *pState = anv_dynamic_ds_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDynamicDepthStencilState(
+    VkDevice                                    _device,
+    VkDynamicDepthStencilState                  _ds_state)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, _ds_state);
+
+   anv_device_free(device, ds_state);
 
    return VK_SUCCESS;
 }
