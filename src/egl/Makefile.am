@@ -111,10 +111,9 @@ egl_HEADERS = \
 	$(top_srcdir)/include/EGL/eglplatform.h
 
 EXTRA_DIST = \
+	SConscript \
 	drivers/haiku \
 	docs \
 	main/egl.def \
 	main/README.txt \
-	main/SConscript \
-	main/Makefile.sources \
-	drivers/dri2/SConscript
+	main/Makefile.sources

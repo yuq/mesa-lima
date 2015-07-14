@@ -6,21 +6,22 @@ Import('*')
 
 env = env.Clone()
 
-env.Append(CPPDEFINES = [
-    '_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_HAIKU',
-    '_EGL_BUILT_IN_DRIVER_HAIKU',
-])
-env.Prepend(LIBS = [
-    egl_haiku,
-])
-
 env.Append(CPPPATH = [
     '#/include',
+    '#/src/egl/main',
 ])
 
 
 # parse Makefile.sources
 egl_sources = env.ParseSourceList('Makefile.sources', 'LIBEGL_C_FILES')
+egl_sources.append(env.ParseSourceList('Makefile.sources', 'dri2_backend_core_FILES'))
+
+env.Append(CPPDEFINES = [
+    '_EGL_NATIVE_PLATFORM=_EGL_PLATFORM_HAIKU',
+    '_EGL_BUILT_IN_DRIVER_HAIKU',
+    'HAVE_HAIKU_PLATFORM',
+])
+egl_sources.append('drivers/haiku/egl_haiku.cpp')
 
 egl = env.SharedLibrary(
     target = 'EGL',
