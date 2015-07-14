@@ -1206,8 +1206,7 @@ VkResult anv_DestroyObject(
       return anv_FreeMemory(_device, (VkDeviceMemory) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-      /* These are just dummys anyway, so we don't need to destroy them */
-      return VK_SUCCESS;
+      return anv_DestroyDescriptorPool(_device, (VkDescriptorPool) _object);
 
    case VK_OBJECT_TYPE_PIPELINE_CACHE:
       return anv_DestroyPipelineCache(_device, (VkPipelineCache) _object);
@@ -2008,6 +2007,14 @@ VkResult anv_CreateDescriptorPool(
 {
    *pDescriptorPool = 1;
 
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDescriptorPool(
+    VkDevice                                    _device,
+    VkDescriptorPool                            _pool)
+{
+   /* VkDescriptorPool is a dummy object. */
    return VK_SUCCESS;
 }
 

@@ -2054,6 +2054,7 @@ typedef VkResult (VKAPI *PFN_vkDestroySampler)(VkDevice device, VkSampler sample
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
 typedef VkResult (VKAPI *PFN_vkDestroyDescriptorSetLayout)(VkDevice device, VkDescriptorSetLayout descriptorSetLayout);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
+typedef VkResult (VKAPI *PFN_vkDestroyDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets, uint32_t* pCount);
 typedef VkResult (VKAPI *PFN_vkUpdateDescriptorSets)(VkDevice device, uint32_t writeCount, const VkWriteDescriptorSet* pDescriptorWrites, uint32_t copyCount, const VkCopyDescriptorSet* pDescriptorCopies);
@@ -2487,6 +2488,10 @@ VkResult VKAPI vkCreateDescriptorPool(
     uint32_t                                    maxSets,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool);
+
+VkResult VKAPI vkDestroyDescriptorPool(
+    VkDevice                                    device,
+    VkDescriptorPool                            descriptorPool);
 
 VkResult VKAPI vkResetDescriptorPool(
     VkDevice                                    device,
