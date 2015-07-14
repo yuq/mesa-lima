@@ -1253,8 +1253,10 @@ VkResult anv_DestroyObject(
       anv_device_free(device, (void *) _object);
       return VK_SUCCESS;
 
-   case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
+      return anv_DestroyDynamicViewportState(_device, (VkDynamicViewportState) _object);
+
+   case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
       (object->destructor)(device, object, objType);
       return VK_SUCCESS;
@@ -2143,15 +2145,12 @@ anv_dynamic_vp_state_destroy(struct anv_device *device,
                              struct anv_object *object,
                              VkObjectType obj_type)
 {
-   struct anv_dynamic_vp_state *state = (void *)object;
+   struct anv_dynamic_vp_state *vp_state = (void *) object;
 
    assert(obj_type == VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
 
-   anv_state_pool_free(&device->dynamic_state_pool, state->sf_clip_vp);
-   anv_state_pool_free(&device->dynamic_state_pool, state->cc_vp);
-   anv_state_pool_free(&device->dynamic_state_pool, state->scissor);
-
-   anv_device_free(device, state);
+   anv_DestroyDynamicViewportState(anv_device_to_handle(device),
+                                   anv_dynamic_vp_state_to_handle(vp_state));
 }
 
 VkResult anv_CreateDynamicViewportState(
@@ -2237,6 +2236,22 @@ VkResult anv_CreateDynamicViewportState(
    }
 
    *pState = anv_dynamic_vp_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDynamicViewportState(
+    VkDevice                                    _device,
+    VkDynamicViewportState                      _vp_state)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_dynamic_vp_state, vp_state, _vp_state);
+
+   anv_state_pool_free(&device->dynamic_state_pool, vp_state->sf_clip_vp);
+   anv_state_pool_free(&device->dynamic_state_pool, vp_state->cc_vp);
+   anv_state_pool_free(&device->dynamic_state_pool, vp_state->scissor);
+
+   anv_device_free(device, vp_state);
 
    return VK_SUCCESS;
 }
