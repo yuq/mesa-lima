@@ -1282,12 +1282,12 @@ VkResult anv_DestroyObject(
    }
 }
 
-VkResult anv_GetObjectMemoryRequirements(
+VkResult anv_GetBufferMemoryRequirements(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    _buffer,
     VkMemoryRequirements*                       pMemoryRequirements)
 {
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    /* The Vulkan spec (git aaed022) says:
     *
@@ -1300,52 +1300,62 @@ VkResult anv_GetObjectMemoryRequirements(
     */
    pMemoryRequirements->memoryTypeBits = 1;
 
-   switch (objType) {
-   case VK_OBJECT_TYPE_BUFFER: {
-      struct anv_buffer *buffer = anv_buffer_from_handle(object);
-      pMemoryRequirements->size = buffer->size;
-      pMemoryRequirements->alignment = 16;
-      break;
-   }
-   case VK_OBJECT_TYPE_IMAGE: {
-      struct anv_image *image = anv_image_from_handle(object);
-      pMemoryRequirements->size = image->size;
-      pMemoryRequirements->alignment = image->alignment;
-      break;
-   }
-   default:
-      pMemoryRequirements->size = 0;
-      break;
-   }
+   pMemoryRequirements->size = buffer->size;
+   pMemoryRequirements->alignment = 16;
 
    return VK_SUCCESS;
 }
 
-VkResult anv_BindObjectMemory(
+VkResult anv_GetImageMemoryRequirements(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkImage                                     _image,
+    VkMemoryRequirements*                       pMemoryRequirements)
+{
+   ANV_FROM_HANDLE(anv_image, image, _image);
+
+   /* The Vulkan spec (git aaed022) says:
+    *
+    *    memoryTypeBits is a bitfield and contains one bit set for every
+    *    supported memory type for the resource. The bit `1<<i` is set if and
+    *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
+    *    structure for the physical device is supported.
+    *
+    * We support exactly one memory type.
+    */
+   pMemoryRequirements->memoryTypeBits = 1;
+
+   pMemoryRequirements->size = image->size;
+   pMemoryRequirements->alignment = image->alignment;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_BindBufferMemory(
+    VkDevice                                    device,
+    VkBuffer                                    _buffer,
     VkDeviceMemory                              _mem,
     VkDeviceSize                                memOffset)
 {
    ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
-   struct anv_buffer *buffer;
-   struct anv_image *image;
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   switch (objType) {
-   case VK_OBJECT_TYPE_BUFFER:
-      buffer = anv_buffer_from_handle(object);
-      buffer->bo = &mem->bo;
-      buffer->offset = memOffset;
-      break;
-   case VK_OBJECT_TYPE_IMAGE:
-      image = anv_image_from_handle(object);
-      image->bo = &mem->bo;
-      image->offset = memOffset;
-      break;
-   default:
-      break;
-   }
+   buffer->bo = &mem->bo;
+   buffer->offset = memOffset;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_BindImageMemory(
+    VkDevice                                    device,
+    VkImage                                     _image,
+    VkDeviceMemory                              _mem,
+    VkDeviceSize                                memOffset)
+{
+   ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
+   ANV_FROM_HANDLE(anv_image, image, _image);
+
+   image->bo = &mem->bo;
+   image->offset = memOffset;
 
    return VK_SUCCESS;
 }

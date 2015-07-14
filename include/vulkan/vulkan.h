@@ -2017,8 +2017,10 @@ typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem)
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
-typedef VkResult (VKAPI *PFN_vkBindObjectMemory)(VkDevice device, VkObjectType objType, VkObject object, VkDeviceMemory mem, VkDeviceSize memOffset);
-typedef VkResult (VKAPI *PFN_vkGetObjectMemoryRequirements)(VkDevice device, VkObjectType objType, VkObject object, VkMemoryRequirements* pMemoryRequirements);
+typedef VkResult (VKAPI *PFN_vkBindBufferMemory)(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkBindImageMemory)(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memOffset);
+typedef VkResult (VKAPI *PFN_vkGetBufferMemoryRequirements)(VkDevice device, VkBuffer buffer, VkMemoryRequirements* pMemoryRequirements);
+typedef VkResult (VKAPI *PFN_vkGetImageMemoryRequirements)(VkDevice device, VkImage image, VkMemoryRequirements* pMemoryRequirements);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
@@ -2267,17 +2269,26 @@ VkResult VKAPI vkDestroyObject(
     VkObjectType                                objType,
     VkObject                                    object);
 
-VkResult VKAPI vkBindObjectMemory(
+VkResult VKAPI vkBindBufferMemory(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkBuffer                                    buffer,
     VkDeviceMemory                              mem,
     VkDeviceSize                                memOffset);
 
-VkResult VKAPI vkGetObjectMemoryRequirements(
+VkResult VKAPI vkBindImageMemory(
     VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object,
+    VkImage                                     image,
+    VkDeviceMemory                              mem,
+    VkDeviceSize                                memOffset);
+
+VkResult VKAPI vkGetBufferMemoryRequirements(
+    VkDevice                                    device,
+    VkBuffer                                    buffer,
+    VkMemoryRequirements*                       pMemoryRequirements);
+
+VkResult VKAPI vkGetImageMemoryRequirements(
+    VkDevice                                    device,
+    VkImage                                     image,
     VkMemoryRequirements*                       pMemoryRequirements);
 
 VkResult VKAPI vkQueueBindSparseBufferMemory(
