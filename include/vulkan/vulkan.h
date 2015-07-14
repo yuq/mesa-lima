@@ -2029,6 +2029,7 @@ typedef VkResult (VKAPI *PFN_vkGetQueryPoolResults)(VkDevice device, VkQueryPool
 typedef VkResult (VKAPI *PFN_vkCreateBuffer)(VkDevice device, const VkBufferCreateInfo* pCreateInfo, VkBuffer* pBuffer);
 typedef VkResult (VKAPI *PFN_vkDestroyBuffer)(VkDevice device, VkBuffer buffer);
 typedef VkResult (VKAPI *PFN_vkCreateBufferView)(VkDevice device, const VkBufferViewCreateInfo* pCreateInfo, VkBufferView* pView);
+typedef VkResult (VKAPI *PFN_vkDestroyBufferView)(VkDevice device, VkBufferView bufferView);
 typedef VkResult (VKAPI *PFN_vkCreateImage)(VkDevice device, const VkImageCreateInfo* pCreateInfo, VkImage* pImage);
 typedef VkResult (VKAPI *PFN_vkDestroyImage)(VkDevice device, VkImage image);
 typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
@@ -2369,6 +2370,10 @@ VkResult VKAPI vkCreateBufferView(
     VkDevice                                    device,
     const VkBufferViewCreateInfo*               pCreateInfo,
     VkBufferView*                               pView);
+
+VkResult VKAPI vkDestroyBufferView(
+    VkDevice                                    device,
+    VkBufferView                                bufferView);
 
 VkResult VKAPI vkCreateImage(
     VkDevice                                    device,

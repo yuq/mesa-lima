@@ -945,7 +945,6 @@ void *
 anv_lookup_entrypoint(const char *name);
 
 VkResult anv_DestroyImageView(VkDevice device, VkImageView imageView);
-VkResult anv_DestroyBufferView(VkDevice device, VkBufferView bufferView);
 VkResult anv_DestroyColorAttachmentView(VkDevice device,
                                         VkColorAttachmentView view);
 VkResult anv_DestroyDepthStencilView(VkDevice device, VkDepthStencilView view);
