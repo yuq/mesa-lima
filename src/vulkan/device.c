@@ -2062,8 +2062,8 @@ VkResult anv_CreateDescriptorPool(
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool)
 {
+   anv_finishme("VkDescriptorPool is a stub");
    *pDescriptorPool = 1;
-
    return VK_SUCCESS;
 }
 
@@ -2071,7 +2071,7 @@ VkResult anv_DestroyDescriptorPool(
     VkDevice                                    _device,
     VkDescriptorPool                            _pool)
 {
-   /* VkDescriptorPool is a dummy object. */
+   anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
    return VK_SUCCESS;
 }
 
@@ -2079,6 +2079,7 @@ VkResult anv_ResetDescriptorPool(
     VkDevice                                    device,
     VkDescriptorPool                            descriptorPool)
 {
+   anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
    return VK_SUCCESS;
 }
 
