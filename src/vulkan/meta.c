@@ -240,24 +240,20 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_RASTER,
+      anv_CmdBindDynamicRasterState(anv_cmd_buffer_to_handle(cmd_buffer),
                                     device->meta_state.shared.rs_state);
 
    if (cmd_buffer->vp_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_VIEWPORT,
-                                    cmd_buffer->framebuffer->vp_state);
+      anv_CmdBindDynamicViewportState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                      cmd_buffer->framebuffer->vp_state);
 
    if (cmd_buffer->ds_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_DEPTH_STENCIL,
-                                    device->meta_state.shared.ds_state);
+      anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                          device->meta_state.shared.ds_state);
 
    if (cmd_buffer->cb_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_COLOR_BLEND,
-                                    device->meta_state.shared.cb_state);
+      anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                        device->meta_state.shared.cb_state);
 
    anv_CmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, num_instances);
 }
@@ -499,18 +495,15 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->rs_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_RASTER,
+      anv_CmdBindDynamicRasterState(anv_cmd_buffer_to_handle(cmd_buffer),
                                     device->meta_state.shared.rs_state);
    if (cmd_buffer->ds_state == NULL)
-      anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                    VK_STATE_BIND_POINT_DEPTH_STENCIL,
-                                    device->meta_state.shared.ds_state);
+      anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                          device->meta_state.shared.ds_state);
 
    saved_state->cb_state = anv_dynamic_cb_state_to_handle(cmd_buffer->cb_state);
-   anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                 VK_STATE_BIND_POINT_COLOR_BLEND,
-                                 device->meta_state.shared.cb_state);
+   anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                     device->meta_state.shared.cb_state);
 }
 
 struct blit_region {
@@ -683,9 +676,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .pAttachmentClearValues = NULL,
       }, VK_RENDER_PASS_CONTENTS_INLINE);
 
-   anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                 VK_STATE_BIND_POINT_VIEWPORT,
-                                 anv_framebuffer_from_handle(fb)->vp_state);
+   anv_CmdBindDynamicViewportState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                   anv_framebuffer_from_handle(fb)->vp_state);
 
    anv_CmdBindDescriptorSets(anv_cmd_buffer_to_handle(cmd_buffer),
                              VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -712,9 +704,8 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_saved_state *saved_state)
 {
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
-   anv_CmdBindDynamicStateObject(anv_cmd_buffer_to_handle(cmd_buffer),
-                                 VK_STATE_BIND_POINT_COLOR_BLEND,
-                                 saved_state->cb_state);
+   anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
+                                     saved_state->cb_state);
 }
 
 static VkFormat

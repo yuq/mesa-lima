@@ -832,17 +832,6 @@ typedef enum {
 } VkCmdBufferLevel;
 
 typedef enum {
-    VK_STATE_BIND_POINT_VIEWPORT = 0,
-    VK_STATE_BIND_POINT_RASTER = 1,
-    VK_STATE_BIND_POINT_COLOR_BLEND = 2,
-    VK_STATE_BIND_POINT_DEPTH_STENCIL = 3,
-    VK_STATE_BIND_POINT_BEGIN_RANGE = VK_STATE_BIND_POINT_VIEWPORT,
-    VK_STATE_BIND_POINT_END_RANGE = VK_STATE_BIND_POINT_DEPTH_STENCIL,
-    VK_STATE_BIND_POINT_NUM = (VK_STATE_BIND_POINT_DEPTH_STENCIL - VK_STATE_BIND_POINT_VIEWPORT + 1),
-    VK_STATE_BIND_POINT_MAX_ENUM = 0x7FFFFFFF
-} VkStateBindPoint;
-
-typedef enum {
     VK_INDEX_TYPE_UINT16 = 0,
     VK_INDEX_TYPE_UINT32 = 1,
     VK_INDEX_TYPE_BEGIN_RANGE = VK_INDEX_TYPE_UINT16,
@@ -2118,7 +2107,10 @@ typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const 
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
 typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer);
 typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
-typedef void (VKAPI *PFN_vkCmdBindDynamicStateObject)(VkCmdBuffer cmdBuffer, VkStateBindPoint stateBindPoint, VkDynamicStateObject dynamicState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicViewportState)(VkCmdBuffer cmdBuffer, VkDynamicViewportState dynamicViewportState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicRasterState)(VkCmdBuffer cmdBuffer, VkDynamicRasterState dynamicRasterState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicColorBlendState)(VkCmdBuffer cmdBuffer, VkDynamicColorBlendState dynamicColorBlendState);
+typedef void (VKAPI *PFN_vkCmdBindDynamicDepthStencilState)(VkCmdBuffer cmdBuffer, VkDynamicDepthStencilState dynamicDepthStencilState);
 typedef void (VKAPI *PFN_vkCmdBindDescriptorSets)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipelineLayout layout, uint32_t firstSet, uint32_t setCount, const VkDescriptorSet* pDescriptorSets, uint32_t dynamicOffsetCount, const uint32_t* pDynamicOffsets);
 typedef void (VKAPI *PFN_vkCmdBindIndexBuffer)(VkCmdBuffer cmdBuffer, VkBuffer buffer, VkDeviceSize offset, VkIndexType indexType);
 typedef void (VKAPI *PFN_vkCmdBindVertexBuffers)(VkCmdBuffer cmdBuffer, uint32_t startBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets);
@@ -2652,10 +2644,21 @@ void VKAPI vkCmdBindPipeline(
     VkPipelineBindPoint                         pipelineBindPoint,
     VkPipeline                                  pipeline);
 
-void VKAPI vkCmdBindDynamicStateObject(
+void VKAPI vkCmdBindDynamicViewportState(
     VkCmdBuffer                                 cmdBuffer,
-    VkStateBindPoint                            stateBindPoint,
-    VkDynamicStateObject                        dynamicState);
+    VkDynamicViewportState                      dynamicViewportState);
+
+void VKAPI vkCmdBindDynamicRasterState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicRasterState                        dynamicRasterState);
+
+void VKAPI vkCmdBindDynamicColorBlendState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicColorBlendState                    dynamicColorBlendState);
+
+void VKAPI vkCmdBindDynamicDepthStencilState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicDepthStencilState                  dynamicDepthStencilState);
 
 void VKAPI vkCmdBindDescriptorSets(
     VkCmdBuffer                                 cmdBuffer,

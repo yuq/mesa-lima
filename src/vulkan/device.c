@@ -2882,33 +2882,48 @@ void anv_CmdBindPipeline(
    }
 }
 
-void anv_CmdBindDynamicStateObject(
+void anv_CmdBindDynamicViewportState(
     VkCmdBuffer                                 cmdBuffer,
-    VkStateBindPoint                            stateBindPoint,
-    VkDynamicStateObject                        dynamicState)
+    VkDynamicViewportState                      dynamicViewportState)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_dynamic_vp_state, vp_state, dynamicViewportState);
 
-   switch (stateBindPoint) {
-   case VK_STATE_BIND_POINT_VIEWPORT:
-      cmd_buffer->vp_state = anv_dynamic_vp_state_from_handle(dynamicState);
-      cmd_buffer->dirty |= ANV_CMD_BUFFER_VP_DIRTY;
-      break;
-   case VK_STATE_BIND_POINT_RASTER:
-      cmd_buffer->rs_state = anv_dynamic_rs_state_from_handle(dynamicState);
-      cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
-      break;
-   case VK_STATE_BIND_POINT_COLOR_BLEND:
-      cmd_buffer->cb_state = anv_dynamic_cb_state_from_handle(dynamicState);
-      cmd_buffer->dirty |= ANV_CMD_BUFFER_CB_DIRTY;
-      break;
-   case VK_STATE_BIND_POINT_DEPTH_STENCIL:
-      cmd_buffer->ds_state = anv_dynamic_ds_state_from_handle(dynamicState);
-      cmd_buffer->dirty |= ANV_CMD_BUFFER_DS_DIRTY;
-      break;
-   default:
-      break;
-   };
+   cmd_buffer->vp_state = vp_state;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_VP_DIRTY;
+}
+
+void anv_CmdBindDynamicRasterState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicRasterState                        dynamicRasterState)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, dynamicRasterState);
+
+   cmd_buffer->rs_state = rs_state;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
+}
+
+void anv_CmdBindDynamicColorBlendState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicColorBlendState                    dynamicColorBlendState)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, dynamicColorBlendState);
+
+   cmd_buffer->cb_state = cb_state;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_CB_DIRTY;
+}
+
+void anv_CmdBindDynamicDepthStencilState(
+    VkCmdBuffer                                 cmdBuffer,
+    VkDynamicDepthStencilState                  dynamicDepthStencilState)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, dynamicDepthStencilState);
+
+   cmd_buffer->ds_state = ds_state;
+   cmd_buffer->dirty |= ANV_CMD_BUFFER_DS_DIRTY;
 }
 
 static struct anv_state
