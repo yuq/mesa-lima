@@ -3702,7 +3702,7 @@ void anv_CmdDispatchIndirect(
 void anv_CmdSetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent)
+    VkPipelineStageFlags                        stageMask)
 {
    stub();
 }
@@ -3710,17 +3710,17 @@ void anv_CmdSetEvent(
 void anv_CmdResetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent)
+    VkPipelineStageFlags                        stageMask)
 {
    stub();
 }
 
 void anv_CmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
-    VkPipeEventFlags                            pipeEventMask,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
@@ -3729,8 +3729,9 @@ void anv_CmdWaitEvents(
 
 void anv_CmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
-    VkPipeEventFlags                            pipeEventMask,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers)
 {
@@ -3744,32 +3745,41 @@ void anv_CmdPipelineBarrier(
 
    /* XXX: I think waitEvent is a no-op on our HW.  We should verify that. */
 
-   if (anv_clear_mask(&pipeEventMask, VK_PIPE_EVENT_TOP_OF_PIPE_BIT)) {
+   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)) {
       /* This is just what PIPE_CONTROL does */
    }
 
-   if (anv_clear_mask(&pipeEventMask,
-                      VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE_BIT |
-                      VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE_BIT |
-                      VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE_BIT)) {
+   if (anv_clear_mask(&srcStageMask,
+                      VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+                      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+                      VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT |
+                      VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)) {
       cmd.StallAtPixelScoreboard = true;
    }
 
 
-   if (anv_clear_mask(&pipeEventMask,
-                      VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE_BIT |
-                      VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE_BIT |
-                      VK_PIPE_EVENT_TRANSFER_COMPLETE_BIT |
-                      VK_PIPE_EVENT_COMMANDS_COMPLETE_BIT)) {
+   if (anv_clear_mask(&srcStageMask,
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TRANSFER_BIT |
+                      VK_PIPELINE_STAGE_TRANSITION_BIT)) {
       cmd.CommandStreamerStallEnable = true;
    }
 
-   if (anv_clear_mask(&pipeEventMask, VK_PIPE_EVENT_CPU_SIGNAL_BIT)) {
+   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_HOST_BIT)) {
       anv_finishme("VK_PIPE_EVENT_CPU_SIGNAL_BIT");
    }
 
+   /* On our hardware, all stages will wait for execution as needed. */
+   (void)destStageMask;
+
    /* We checked all known VkPipeEventFlags. */
-   anv_assert(pipeEventMask == 0);
+   anv_assert(srcStageMask == 0);
 
    /* XXX: Right now, we're really dumb and just flush whatever categories
     * the app asks for.  One of these days we may make this a bit better

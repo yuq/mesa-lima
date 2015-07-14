@@ -814,15 +814,6 @@ typedef enum {
 } VkPipelineBindPoint;
 
 typedef enum {
-    VK_WAIT_EVENT_TOP_OF_PIPE = 1,
-    VK_WAIT_EVENT_BEFORE_RASTERIZATION = 2,
-    VK_WAIT_EVENT_BEGIN_RANGE = VK_WAIT_EVENT_TOP_OF_PIPE,
-    VK_WAIT_EVENT_END_RANGE = VK_WAIT_EVENT_BEFORE_RASTERIZATION,
-    VK_WAIT_EVENT_NUM = (VK_WAIT_EVENT_BEFORE_RASTERIZATION - VK_WAIT_EVENT_TOP_OF_PIPE + 1),
-    VK_WAIT_EVENT_MAX_ENUM = 0x7FFFFFFF
-} VkWaitEvent;
-
-typedef enum {
     VK_CMD_BUFFER_LEVEL_PRIMARY = 0,
     VK_CMD_BUFFER_LEVEL_SECONDARY = 1,
     VK_CMD_BUFFER_LEVEL_BEGIN_RANGE = VK_CMD_BUFFER_LEVEL_PRIMARY,
@@ -839,22 +830,6 @@ typedef enum {
     VK_INDEX_TYPE_NUM = (VK_INDEX_TYPE_UINT32 - VK_INDEX_TYPE_UINT16 + 1),
     VK_INDEX_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkIndexType;
-
-typedef enum {
-    VK_PIPE_EVENT_TOP_OF_PIPE = 0,
-    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE = 1,
-    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE = 2,
-    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE = 3,
-    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE = 4,
-    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE = 5,
-    VK_PIPE_EVENT_TRANSFER_COMPLETE = 6,
-    VK_PIPE_EVENT_COMMANDS_COMPLETE = 7,
-    VK_PIPE_EVENT_CPU_SIGNAL = 8,
-    VK_PIPE_EVENT_BEGIN_RANGE = VK_PIPE_EVENT_TOP_OF_PIPE,
-    VK_PIPE_EVENT_END_RANGE = VK_PIPE_EVENT_CPU_SIGNAL,
-    VK_PIPE_EVENT_NUM = (VK_PIPE_EVENT_CPU_SIGNAL - VK_PIPE_EVENT_TOP_OF_PIPE + 1),
-    VK_PIPE_EVENT_MAX_ENUM = 0x7FFFFFFF
-} VkPipeEvent;
 
 typedef enum {
     VK_TIMESTAMP_TYPE_TOP = 0,
@@ -1029,17 +1004,25 @@ typedef enum {
 typedef VkFlags VkSubpassDescriptionFlags;
 
 typedef enum {
-    VK_PIPE_EVENT_TOP_OF_PIPE_BIT = 0x00000001,
-    VK_PIPE_EVENT_VERTEX_PROCESSING_COMPLETE_BIT = 0x00000002,
-    VK_PIPE_EVENT_LOCAL_FRAGMENT_PROCESSING_COMPLETE_BIT = 0x00000004,
-    VK_PIPE_EVENT_FRAGMENT_PROCESSING_COMPLETE_BIT = 0x00000008,
-    VK_PIPE_EVENT_GRAPHICS_PIPELINE_COMPLETE_BIT = 0x00000010,
-    VK_PIPE_EVENT_COMPUTE_PIPELINE_COMPLETE_BIT = 0x00000020,
-    VK_PIPE_EVENT_TRANSFER_COMPLETE_BIT = 0x00000040,
-    VK_PIPE_EVENT_COMMANDS_COMPLETE_BIT = 0x00000080,
-    VK_PIPE_EVENT_CPU_SIGNAL_BIT = 0x00000100,
-} VkPipeEventFlagBits;
-typedef VkFlags VkPipeEventFlags;
+    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT = 0x00000001,
+    VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT = 0x00000002,
+    VK_PIPELINE_STAGE_VERTEX_INPUT_BIT = 0x00000004,
+    VK_PIPELINE_STAGE_VERTEX_SHADER_BIT = 0x00000008,
+    VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT = 0x00000010,
+    VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT = 0x00000020,
+    VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT = 0x00000040,
+    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT = 0x00000080,
+    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT = 0x00000100,
+    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT = 0x00000200,
+    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT = 0x00000400,
+    VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT = 0x00000800,
+    VK_PIPELINE_STAGE_TRANSFER_BIT = 0x00001000,
+    VK_PIPELINE_STAGE_TRANSITION_BIT = 0x00002000,
+    VK_PIPELINE_STAGE_HOST_BIT = 0x00004000,
+    VK_PIPELINE_STAGE_ALL_GRAPHICS = 0x000007FF,
+    VK_PIPELINE_STAGE_ALL_GPU_COMMANDS = 0x00003FFF,
+} VkPipelineStageFlagBits;
+typedef VkFlags VkPipelineStageFlags;
 
 typedef enum {
     VK_MEMORY_OUTPUT_HOST_WRITE_BIT = 0x00000001,
@@ -1842,10 +1825,11 @@ typedef struct {
     const void*                                 pNext;
     uint32_t                                    srcSubpass;
     uint32_t                                    dstSubpass;
-    VkWaitEvent                                 waitEvent;
-    VkPipeEventFlags                            pipeEventMask;
+    VkPipelineStageFlags                        srcStageMask;
+    VkPipelineStageFlags                        destStageMask;
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
+    VkBool32                                    byRegion;
 } VkSubpassDependency;
 
 typedef struct {
@@ -2132,10 +2116,10 @@ typedef void (VKAPI *PFN_vkCmdClearDepthStencilImage)(VkCmdBuffer cmdBuffer, VkI
 typedef void (VKAPI *PFN_vkCmdClearColorAttachment)(VkCmdBuffer cmdBuffer, uint32_t colorAttachment, VkImageLayout imageLayout, const VkClearColorValue* pColor, uint32_t rectCount, const VkRect3D* pRects);
 typedef void (VKAPI *PFN_vkCmdClearDepthStencilAttachment)(VkCmdBuffer cmdBuffer, VkImageAspectFlags imageAspectMask, VkImageLayout imageLayout, float depth, uint32_t stencil, uint32_t rectCount, const VkRect3D* pRects);
 typedef void (VKAPI *PFN_vkCmdResolveImage)(VkCmdBuffer cmdBuffer, VkImage srcImage, VkImageLayout srcImageLayout, VkImage destImage, VkImageLayout destImageLayout, uint32_t regionCount, const VkImageResolve* pRegions);
-typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
-typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipeEvent pipeEvent);
-typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, uint32_t eventCount, const VkEvent* pEvents, VkPipeEventFlags pipeEventMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
-typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkWaitEvent waitEvent, VkPipeEventFlags pipeEventMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdSetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void (VKAPI *PFN_vkCmdResetEvent)(VkCmdBuffer cmdBuffer, VkEvent event, VkPipelineStageFlags stageMask);
+typedef void (VKAPI *PFN_vkCmdWaitEvents)(VkCmdBuffer cmdBuffer, uint32_t eventCount, const VkEvent* pEvents, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, uint32_t memBarrierCount, const void* const* ppMemBarriers);
+typedef void (VKAPI *PFN_vkCmdPipelineBarrier)(VkCmdBuffer cmdBuffer, VkPipelineStageFlags srcStageMask, VkPipelineStageFlags destStageMask, VkBool32 byRegion, uint32_t memBarrierCount, const void* const* ppMemBarriers);
 typedef void (VKAPI *PFN_vkCmdBeginQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot, VkQueryControlFlags flags);
 typedef void (VKAPI *PFN_vkCmdEndQuery)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t slot);
 typedef void (VKAPI *PFN_vkCmdResetQueryPool)(VkCmdBuffer cmdBuffer, VkQueryPool queryPool, uint32_t startQuery, uint32_t queryCount);
@@ -2825,26 +2809,27 @@ void VKAPI vkCmdResolveImage(
 void VKAPI vkCmdSetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent);
+    VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdResetEvent(
     VkCmdBuffer                                 cmdBuffer,
     VkEvent                                     event,
-    VkPipeEvent                                 pipeEvent);
+    VkPipelineStageFlags                        stageMask);
 
 void VKAPI vkCmdWaitEvents(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
     uint32_t                                    eventCount,
     const VkEvent*                              pEvents,
-    VkPipeEventFlags                            pipeEventMask,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers);
 
 void VKAPI vkCmdPipelineBarrier(
     VkCmdBuffer                                 cmdBuffer,
-    VkWaitEvent                                 waitEvent,
-    VkPipeEventFlags                            pipeEventMask,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    VkBool32                                    byRegion,
     uint32_t                                    memBarrierCount,
     const void* const*                          ppMemBarriers);
 
