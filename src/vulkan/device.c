@@ -1505,6 +1505,13 @@ VkResult anv_CreateSemaphore(
    stub_return(VK_UNSUPPORTED);
 }
 
+VkResult anv_DestroySemaphore(
+    VkDevice                                    device,
+    VkSemaphore                                 semaphore)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
 VkResult anv_QueueSignalSemaphore(
     VkQueue                                     queue,
     VkSemaphore                                 semaphore)
