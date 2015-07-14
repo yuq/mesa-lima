@@ -1245,7 +1245,6 @@ VkResult anv_DestroyObject(
       return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-   case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
    case VK_OBJECT_TYPE_RENDER_PASS:
       /* These are trivially destroyable */
@@ -1257,6 +1256,9 @@ VkResult anv_DestroyObject(
 
    case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
       return anv_DestroyDynamicRasterState(_device, (VkDynamicRasterState) _object);
+
+   case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
+      return anv_DestroyDynamicColorBlendState(_device, (VkDynamicColorBlendState) _object);
 
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
@@ -2335,6 +2337,18 @@ VkResult anv_CreateDynamicColorBlendState(
    GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
    *pState = anv_dynamic_cb_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDynamicColorBlendState(
+    VkDevice                                    _device,
+    VkDynamicColorBlendState                    _cb_state)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, _cb_state);
+
+   anv_device_free(device, cb_state);
 
    return VK_SUCCESS;
 }

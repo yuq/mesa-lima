@@ -2063,6 +2063,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyDynamicViewportState)(VkDevice device, VkD
 typedef VkResult (VKAPI *PFN_vkCreateDynamicRasterState)(VkDevice device, const VkDynamicRasterStateCreateInfo* pCreateInfo, VkDynamicRasterState* pState);
 typedef VkResult (VKAPI *PFN_vkDestroyDynamicRasterState)(VkDevice device, VkDynamicRasterState dynamicRasterState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicColorBlendState)(VkDevice device, const VkDynamicColorBlendStateCreateInfo* pCreateInfo, VkDynamicColorBlendState* pState);
+typedef VkResult (VKAPI *PFN_vkDestroyDynamicColorBlendState)(VkDevice device, VkDynamicColorBlendState dynamicColorBlendState);
 typedef VkResult (VKAPI *PFN_vkCreateDynamicDepthStencilState)(VkDevice device, const VkDynamicDepthStencilStateCreateInfo* pCreateInfo, VkDynamicDepthStencilState* pState);
 typedef VkResult (VKAPI *PFN_vkCreateFramebuffer)(VkDevice device, const VkFramebufferCreateInfo* pCreateInfo, VkFramebuffer* pFramebuffer);
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
@@ -2537,6 +2538,10 @@ VkResult VKAPI vkCreateDynamicColorBlendState(
     VkDevice                                    device,
     const VkDynamicColorBlendStateCreateInfo*   pCreateInfo,
     VkDynamicColorBlendState*                   pState);
+
+VkResult VKAPI vkDestroyDynamicColorBlendState(
+    VkDevice                                    device,
+    VkDynamicColorBlendState                    dynamicColorBlendState);
 
 VkResult VKAPI vkCreateDynamicDepthStencilState(
     VkDevice                                    device,
