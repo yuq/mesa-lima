@@ -588,7 +588,7 @@ struct anv_dynamic_ds_state {
 };
 
 struct anv_dynamic_cb_state {
-   uint32_t                                     state_color_calc[GEN8_COLOR_CALC_STATE_length];
+   uint32_t state_color_calc[GEN8_COLOR_CALC_STATE_length];
 
 };
 
