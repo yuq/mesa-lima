@@ -32,10 +32,10 @@ vc4_emit_state(struct pipe_context *pctx)
         if (vc4->dirty & (VC4_DIRTY_SCISSOR | VC4_DIRTY_VIEWPORT)) {
                 float *vpscale = vc4->viewport.scale;
                 float *vptranslate = vc4->viewport.translate;
-                float vp_minx = -fabs(vpscale[0]) + vptranslate[0];
-                float vp_maxx = fabs(vpscale[0]) + vptranslate[0];
-                float vp_miny = -fabs(vpscale[1]) + vptranslate[1];
-                float vp_maxy = fabs(vpscale[1]) + vptranslate[1];
+                float vp_minx = -fabsf(vpscale[0]) + vptranslate[0];
+                float vp_maxx = fabsf(vpscale[0]) + vptranslate[0];
+                float vp_miny = -fabsf(vpscale[1]) + vptranslate[1];
+                float vp_maxy = fabsf(vpscale[1]) + vptranslate[1];
                 uint32_t minx = MAX2(vc4->scissor.minx, vp_minx);
                 uint32_t miny = MAX2(vc4->scissor.miny, vp_miny);
                 uint32_t maxx = MIN2(vc4->scissor.maxx, vp_maxx);

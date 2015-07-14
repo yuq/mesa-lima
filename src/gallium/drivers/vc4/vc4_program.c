@@ -558,7 +558,7 @@ ntq_fsin(struct vc4_compile *c, struct qreg src)
         struct qreg scaled_x =
                 qir_FMUL(c,
                          src,
-                         qir_uniform_f(c, 1.0f / (M_PI * 2.0f)));
+                         qir_uniform_f(c, 1.0 / (M_PI * 2.0)));
 
         struct qreg x = qir_FADD(c,
                                  ntq_ffract(c, scaled_x),
