@@ -23,16 +23,18 @@ include Makefile.sources
 
 AM_CFLAGS = \
 	-I$(top_srcdir)/include \
+	-I$(top_srcdir)/src/egl/main \
 	-I$(top_srcdir)/src/gbm/main \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
+	$(LIBDRM_CFLAGS) \
 	$(EGL_CFLAGS) \
 	-D_EGL_NATIVE_PLATFORM=$(EGL_NATIVE_PLATFORM)
 
 lib_LTLIBRARIES = libEGL.la
 
 libEGL_la_SOURCES = \
-	${LIBEGL_C_FILES}
+	$(LIBEGL_C_FILES)
 
 libEGL_la_LIBADD = \
 	$(EGL_LIB_DEPS)
@@ -43,10 +45,13 @@ libEGL_la_LDFLAGS = \
 	$(GC_SECTIONS) \
 	$(LD_NO_UNDEFINED)
 
+dri2_backend_FILES =
+
 if HAVE_EGL_PLATFORM_X11
 AM_CFLAGS += -DHAVE_X11_PLATFORM
 AM_CFLAGS += $(XCB_DRI2_CFLAGS)
 libEGL_la_LIBADD += $(XCB_DRI2_LIBS)
+dri2_backend_FILES += drivers/dri2/platform_x11.c
 endif
 
 if HAVE_EGL_PLATFORM_WAYLAND
@@ -54,21 +59,37 @@ AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_la_LIBADD += $(WAYLAND_LIBS)
 libEGL_la_LIBADD += $(LIBDRM_LIBS)
-libEGL_la_LIBADD += ../wayland/wayland-drm/libwayland-drm.la
+libEGL_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la
+dri2_backend_FILES += drivers/dri2/platform_wayland.c
 endif
 
 if HAVE_EGL_PLATFORM_DRM
 AM_CFLAGS += -DHAVE_DRM_PLATFORM
-libEGL_la_LIBADD += ../../gbm/libgbm.la
+libEGL_la_LIBADD += $(top_builddir)/src/gbm/libgbm.la
+dri2_backend_FILES += drivers/dri2/platform_drm.c
 endif
 
 if HAVE_EGL_PLATFORM_SURFACELESS
 AM_CFLAGS += -DHAVE_SURFACELESS_PLATFORM
+dri2_backend_FILES += drivers/dri2/platform_surfaceless.c
 endif
 
 if HAVE_EGL_DRIVER_DRI2
-AM_CFLAGS += -D_EGL_BUILT_IN_DRIVER_DRI2
-libEGL_la_LIBADD += ../drivers/dri2/libegl_dri2.la
+AM_CFLAGS += \
+	-I$(top_srcdir)/src/loader \
+	-I$(top_srcdir)/src/egl/drivers/dri2 \
+	-I$(top_srcdir)/src/gbm/backends/dri \
+	-I$(top_srcdir)/src/egl/wayland/wayland-egl \
+	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
+	-I$(top_builddir)/src/egl/wayland/wayland-drm \
+	-DDEFAULT_DRIVER_DIR=\"$(DRI_DRIVER_SEARCH_DIR)\" \
+	-D_EGL_BUILT_IN_DRIVER_DRI2
+
+libEGL_la_SOURCES += \
+	$(dri2_backend_core_FILES) \
+	$(dri2_backend_FILES)
+
+libEGL_la_LIBADD += $(top_builddir)/src/loader/libloader.la
 libEGL_la_LIBADD += $(DLOPEN_LIBS) $(LIBDRM_LIBS)
 endif
 
@@ -76,7 +97,7 @@ include $(top_srcdir)/install-lib-links.mk
 
 pkgconfigdir = $(libdir)/pkgconfig
 
-pkgconfig_DATA = egl.pc
+pkgconfig_DATA = main/egl.pc
 
 khrdir = $(includedir)/KHR
 khr_HEADERS = $(top_srcdir)/include/KHR/khrplatform.h
@@ -90,6 +111,10 @@ egl_HEADERS = \
 	$(top_srcdir)/include/EGL/eglplatform.h
 
 EXTRA_DIST = \
-	egl.def \
-	README.txt \
-	SConscript
+	drivers/haiku \
+	docs \
+	main/egl.def \
+	main/README.txt \
+	main/SConscript \
+	main/Makefile.sources \
+	drivers/dri2/SConscript
