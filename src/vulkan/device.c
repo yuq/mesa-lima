@@ -1590,6 +1590,18 @@ VkResult anv_CreateBuffer(
    return VK_SUCCESS;
 }
 
+VkResult anv_DestroyBuffer(
+    VkDevice                                    _device,
+    VkBuffer                                    _buffer)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
+
+   anv_device_free(device, buffer);
+
+   return VK_SUCCESS;
+}
+
 // Buffer view functions
 
 static void
