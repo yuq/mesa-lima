@@ -2040,6 +2040,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderMod
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
 typedef VkResult (VKAPI *PFN_vkDestroyShader)(VkDevice device, VkShader shader);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache);
+typedef VkResult (VKAPI *PFN_vkDestroyPipelineCache)(VkDevice device, VkPipelineCache pipelineCache);
 typedef size_t (VKAPI *PFN_vkGetPipelineCacheSize)(VkDevice device, VkPipelineCache pipelineCache);
 typedef VkResult (VKAPI *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, void* pData);
 typedef VkResult (VKAPI *PFN_vkMergePipelineCaches)(VkDevice device, VkPipelineCache destCache, uint32_t srcCacheCount, const VkPipelineCache* pSrcCaches);
@@ -2411,6 +2412,10 @@ VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
     VkPipelineCache*                            pPipelineCache);
+
+VkResult VKAPI vkDestroyPipelineCache(
+    VkDevice                                    device,
+    VkPipelineCache                             pipelineCache);
 
 size_t VKAPI vkGetPipelineCacheSize(
     VkDevice                                    device,

@@ -121,6 +121,14 @@ VkResult anv_CreatePipelineCache(
    stub_return(VK_SUCCESS);
 }
 
+VkResult anv_DestroyPipelineCache(
+    VkDevice                                    _device,
+    VkPipelineCache                             _cache)
+{
+   /* VkPipelineCache is a dummy object. */
+   return VK_SUCCESS;
+}
+
 size_t anv_GetPipelineCacheSize(
     VkDevice                                    device,
     VkPipelineCache                             pipelineCache)

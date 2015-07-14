@@ -1206,9 +1206,11 @@ VkResult anv_DestroyObject(
       return anv_FreeMemory(_device, (VkDeviceMemory) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-   case VK_OBJECT_TYPE_PIPELINE_CACHE:
       /* These are just dummys anyway, so we don't need to destroy them */
       return VK_SUCCESS;
+
+   case VK_OBJECT_TYPE_PIPELINE_CACHE:
+      return anv_DestroyPipelineCache(_device, (VkPipelineCache) _object);
 
    case VK_OBJECT_TYPE_BUFFER_VIEW:
       return anv_DestroyBufferView(_device, _object);
