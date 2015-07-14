@@ -1353,9 +1353,8 @@ anv_fence_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_FENCE);
 
-   anv_gem_munmap(fence->bo.map, fence->bo.size);
-   anv_gem_close(device, fence->bo.gem_handle);
-   anv_device_free(device, fence);
+   anv_DestroyFence(anv_device_to_handle(device),
+                    anv_fence_to_handle(fence));
 }
 
 VkResult anv_CreateFence(
@@ -1421,6 +1420,20 @@ VkResult anv_CreateFence(
    anv_device_free(device, fence);
 
    return result;
+}
+
+VkResult anv_DestroyFence(
+    VkDevice                                    _device,
+    VkFence                                     _fence)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_fence, fence, _fence);
+
+   anv_gem_munmap(fence->bo.map, fence->bo.size);
+   anv_gem_close(device, fence->bo.gem_handle);
+   anv_device_free(device, fence);
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_ResetFences(

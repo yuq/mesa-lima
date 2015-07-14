@@ -2010,6 +2010,7 @@ typedef VkResult (VKAPI *PFN_vkGetObjectMemoryRequirements)(VkDevice device, VkO
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseBufferMemory)(VkQueue queue, VkBuffer buffer, VkDeviceSize rangeOffset, VkDeviceSize rangeSize, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkQueueBindSparseImageMemory)(VkQueue queue, VkImage image, const VkImageMemoryBindInfo* pBindInfo, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkCreateFence)(VkDevice device, const VkFenceCreateInfo* pCreateInfo, VkFence* pFence);
+typedef VkResult (VKAPI *PFN_vkDestroyFence)(VkDevice device, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkResetFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences);
 typedef VkResult (VKAPI *PFN_vkGetFenceStatus)(VkDevice device, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkWaitForFences)(VkDevice device, uint32_t fenceCount, const VkFence* pFences, VkBool32 waitAll, uint64_t timeout);
@@ -2260,6 +2261,10 @@ VkResult VKAPI vkCreateFence(
     VkDevice                                    device,
     const VkFenceCreateInfo*                    pCreateInfo,
     VkFence*                                    pFence);
+
+VkResult VKAPI vkDestroyFence(
+    VkDevice                                    device,
+    VkFence                                     fence);
 
 VkResult VKAPI vkResetFences(
     VkDevice                                    device,
