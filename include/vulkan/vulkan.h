@@ -2038,6 +2038,7 @@ typedef VkResult (VKAPI *PFN_vkCreateDepthStencilView)(VkDevice device, const Vk
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef VkResult (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
+typedef VkResult (VKAPI *PFN_vkDestroyShader)(VkDevice device, VkShader shader);
 typedef VkResult (VKAPI *PFN_vkCreatePipelineCache)(VkDevice device, const VkPipelineCacheCreateInfo* pCreateInfo, VkPipelineCache* pPipelineCache);
 typedef size_t (VKAPI *PFN_vkGetPipelineCacheSize)(VkDevice device, VkPipelineCache pipelineCache);
 typedef VkResult (VKAPI *PFN_vkGetPipelineCacheData)(VkDevice device, VkPipelineCache pipelineCache, void* pData);
@@ -2401,6 +2402,10 @@ VkResult VKAPI vkCreateShader(
     VkDevice                                    device,
     const VkShaderCreateInfo*                   pCreateInfo,
     VkShader*                                   pShader);
+
+VkResult VKAPI vkDestroyShader(
+    VkDevice                                    device,
+    VkShader                                    shader);
 
 VkResult VKAPI vkCreatePipelineCache(
     VkDevice                                    device,

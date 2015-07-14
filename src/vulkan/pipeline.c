@@ -98,6 +98,19 @@ VkResult anv_CreateShader(
    return VK_SUCCESS;
 }
 
+VkResult anv_DestroyShader(
+    VkDevice                                    _device,
+    VkShader                                    _shader)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_shader, shader, _shader);
+
+   anv_device_free(device, shader);
+
+   return VK_SUCCESS;
+}
+
+
 VkResult anv_CreatePipelineCache(
     VkDevice                                    device,
     const VkPipelineCacheCreateInfo*            pCreateInfo,
