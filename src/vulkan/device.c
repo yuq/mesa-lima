@@ -1181,7 +1181,6 @@ VkResult anv_DestroyObject(
     VkObject                                    _object)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_object *object = (struct anv_object *) _object;
 
    switch (objType) {
    case VK_OBJECT_TYPE_FENCE:
@@ -1266,7 +1265,7 @@ VkResult anv_DestroyObject(
       return anv_DestroyFramebuffer(_device, (VkFramebuffer) _object);
 
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
-      (object->destructor)(device, object, objType);
+      return anv_DestroyCommandBuffer(_device, (VkCmdBuffer) _object);
       return VK_SUCCESS;
 
    case VK_OBJECT_TYPE_PIPELINE:
@@ -2423,29 +2422,8 @@ anv_cmd_buffer_destroy(struct anv_device *device,
 
    assert(obj_type == VK_OBJECT_TYPE_COMMAND_BUFFER);
 
-   /* Destroy all of the batch buffers */
-   struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
-   while (bbo) {
-      struct anv_batch_bo *prev = bbo->prev_batch_bo;
-      anv_batch_bo_destroy(bbo, device);
-      bbo = prev;
-   }
-   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
-
-   /* Destroy all of the surface state buffers */
-   bbo = cmd_buffer->surface_batch_bo;
-   while (bbo) {
-      struct anv_batch_bo *prev = bbo->prev_batch_bo;
-      anv_batch_bo_destroy(bbo, device);
-      bbo = prev;
-   }
-   anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
-
-   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
-   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
-   anv_device_free(device, cmd_buffer->exec2_objects);
-   anv_device_free(device, cmd_buffer->exec2_bos);
-   anv_device_free(device, cmd_buffer);
+   anv_DestroyCommandBuffer(anv_device_to_handle(device),
+                            anv_cmd_buffer_to_handle(cmd_buffer));
 }
 
 static VkResult
@@ -2573,6 +2551,40 @@ VkResult anv_CreateCommandBuffer(
    anv_device_free(device, cmd_buffer);
 
    return result;
+}
+
+VkResult anv_DestroyCommandBuffer(
+    VkDevice                                    _device,
+    VkCmdBuffer                                 _cmd_buffer)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
+
+   /* Destroy all of the batch buffers */
+   struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
+   while (bbo) {
+      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+      anv_batch_bo_destroy(bbo, device);
+      bbo = prev;
+   }
+   anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
+
+   /* Destroy all of the surface state buffers */
+   bbo = cmd_buffer->surface_batch_bo;
+   while (bbo) {
+      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+      anv_batch_bo_destroy(bbo, device);
+      bbo = prev;
+   }
+   anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
+
+   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
+   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
+   anv_device_free(device, cmd_buffer->exec2_objects);
+   anv_device_free(device, cmd_buffer->exec2_bos);
+   anv_device_free(device, cmd_buffer);
+
+   return VK_SUCCESS;
 }
 
 static void

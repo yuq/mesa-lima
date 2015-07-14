@@ -2073,6 +2073,7 @@ typedef VkResult (VKAPI *PFN_vkDestroyFramebuffer)(VkDevice device, VkFramebuffe
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef VkResult (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
 typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
+typedef VkResult (VKAPI *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCmdBuffer commandBuffer);
 typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
 typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer);
@@ -2587,6 +2588,10 @@ VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                    device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
     VkCmdBuffer*                                pCmdBuffer);
+
+VkResult VKAPI vkDestroyCommandBuffer(
+    VkDevice                                    device,
+    VkCmdBuffer                                 commandBuffer);
 
 VkResult VKAPI vkBeginCommandBuffer(
     VkCmdBuffer                                 cmdBuffer,
