@@ -1240,6 +1240,8 @@ VkResult anv_DestroyObject(
       return anv_DestroyPipelineLayout(_device, (VkPipelineLayout) _object);
 
    case VK_OBJECT_TYPE_SAMPLER:
+      return anv_DestroySampler(_device, (VkSampler) _object);
+
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
    case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
    case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
@@ -1814,6 +1816,18 @@ VkResult anv_CreateSampler(
    GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
 
    *pSampler = anv_sampler_to_handle(sampler);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroySampler(
+    VkDevice                                    _device,
+    VkSampler                                   _sampler)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_sampler, sampler, _sampler);
+
+   anv_device_free(device, sampler);
 
    return VK_SUCCESS;
 }
