@@ -111,23 +111,23 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             .pSpecializationInfo = NULL,
          },
          .pVertexInputState = &vi_create_info,
-         .pIaState = &(VkPipelineIaStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+         .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
             .primitiveRestartEnable = false,
          },
-         .pRsState = &(VkPipelineRsStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+         .pRasterState = &(VkPipelineRasterStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
             .depthClipEnable = true,
             .rasterizerDiscardEnable = false,
             .fillMode = VK_FILL_MODE_SOLID,
             .cullMode = VK_CULL_MODE_NONE,
             .frontFace = VK_FRONT_FACE_CCW
          },
-         .pCbState = &(VkPipelineCbStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+         .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .attachmentCount = 1,
-            .pAttachments = (VkPipelineCbAttachmentState []) {
+            .pAttachments = (VkPipelineColorBlendAttachmentState []) {
                { .channelWriteMask = VK_CHANNEL_A_BIT |
                     VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
             }
@@ -443,23 +443,23 @@ anv_device_init_meta_blit_state(struct anv_device *device)
             },
          },
          .pVertexInputState = &vi_create_info,
-         .pIaState = &(VkPipelineIaStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_IA_STATE_CREATE_INFO,
+         .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
             .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
             .primitiveRestartEnable = false,
          },
-         .pRsState = &(VkPipelineRsStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RS_STATE_CREATE_INFO,
+         .pRasterState = &(VkPipelineRasterStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
             .depthClipEnable = true,
             .rasterizerDiscardEnable = false,
             .fillMode = VK_FILL_MODE_SOLID,
             .cullMode = VK_CULL_MODE_NONE,
             .frontFace = VK_FRONT_FACE_CCW
          },
-         .pCbState = &(VkPipelineCbStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_CB_STATE_CREATE_INFO,
+         .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .attachmentCount = 1,
-            .pAttachments = (VkPipelineCbAttachmentState []) {
+            .pAttachments = (VkPipelineColorBlendAttachmentState []) {
                { .channelWriteMask = VK_CHANNEL_A_BIT |
                     VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
             }
@@ -1406,19 +1406,19 @@ anv_device_init_meta(struct anv_device *device)
 
    anv_CreateDynamicRasterState(anv_device_to_handle(device),
       &(VkDynamicRasterStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO,
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO,
       },
       &device->meta_state.shared.rs_state);
 
    anv_CreateDynamicColorBlendState(anv_device_to_handle(device),
       &(VkDynamicColorBlendStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO
       },
       &device->meta_state.shared.cb_state);
 
    anv_CreateDynamicDepthStencilState(anv_device_to_handle(device),
       &(VkDynamicDepthStencilStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO
       },
       &device->meta_state.shared.ds_state);
 }

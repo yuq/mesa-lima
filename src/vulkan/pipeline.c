@@ -225,7 +225,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
 static void
 emit_ia_state(struct anv_pipeline *pipeline,
-              const VkPipelineIaStateCreateInfo *info,
+              const VkPipelineInputAssemblyStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_primitive_type[] = {
@@ -258,7 +258,7 @@ emit_ia_state(struct anv_pipeline *pipeline,
 
 static void
 emit_rs_state(struct anv_pipeline *pipeline,
-              const VkPipelineRsStateCreateInfo *info,
+              const VkPipelineRasterStateCreateInfo *info,
               const struct anv_pipeline_create_info *extra)
 {
    static const uint32_t vk_to_gen_cullmode[] = {
@@ -316,7 +316,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
 static void
 emit_cb_state(struct anv_pipeline *pipeline,
-              const VkPipelineCbStateCreateInfo *info)
+              const VkPipelineColorBlendStateCreateInfo *info)
 {
    struct anv_device *device = pipeline->device;
 
@@ -381,7 +381,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
    GEN8_BLEND_STATE_pack(NULL, state, &blend_state);
 
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
-      const VkPipelineCbAttachmentState *a = &info->pAttachments[i];
+      const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
 
       struct GEN8_BLEND_STATE_ENTRY entry = {
          .LogicOpEnable = info->logicOpEnable,
@@ -434,7 +434,7 @@ static const uint32_t vk_to_gen_stencil_op[] = {
 
 static void
 emit_ds_state(struct anv_pipeline *pipeline,
-              const VkPipelineDsStateCreateInfo *info)
+              const VkPipelineDepthStencilStateCreateInfo *info)
 {
    if (info == NULL) {
       /* We're going to OR this together with the dynamic state.  We need
@@ -520,12 +520,12 @@ anv_pipeline_create(
          anv_shader_from_handle(pCreateInfo->pStages[i].shader);
    }
 
-   if (pCreateInfo->pTessState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESS_STATE_CREATE_INFO");
-   if (pCreateInfo->pVpState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VP_STATE_CREATE_INFO");
-   if (pCreateInfo->pMsState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MS_STATE_CREATE_INFO");
+   if (pCreateInfo->pTessellationState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
+   if (pCreateInfo->pViewportState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO");
+   if (pCreateInfo->pMultisampleState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
 
    pipeline->use_repclear = extra && extra->use_repclear;
 
@@ -542,12 +542,12 @@ anv_pipeline_create(
 
    assert(pCreateInfo->pVertexInputState);
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
-   assert(pCreateInfo->pIaState);
-   emit_ia_state(pipeline, pCreateInfo->pIaState, extra);
-   assert(pCreateInfo->pRsState);
-   emit_rs_state(pipeline, pCreateInfo->pRsState, extra);
-   emit_ds_state(pipeline, pCreateInfo->pDsState);
-   emit_cb_state(pipeline, pCreateInfo->pCbState);
+   assert(pCreateInfo->pInputAssemblyState);
+   emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
+   assert(pCreateInfo->pRasterState);
+   emit_rs_state(pipeline, pCreateInfo->pRasterState, extra);
+   emit_ds_state(pipeline, pCreateInfo->pDepthStencilState);
+   emit_cb_state(pipeline, pCreateInfo->pColorBlendState);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_STATISTICS,
                    .StatisticsEnable = true);

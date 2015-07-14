@@ -2192,7 +2192,7 @@ VkResult anv_CreateDynamicViewportState(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_vp_state *state;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
 
    state = anv_device_alloc(device, sizeof(*state), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -2295,7 +2295,7 @@ VkResult anv_CreateDynamicRasterState(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_rs_state *state;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RS_STATE_CREATE_INFO);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
 
    state = anv_device_alloc(device, sizeof(*state), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -2347,7 +2347,7 @@ VkResult anv_CreateDynamicColorBlendState(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_cb_state *state;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_CB_STATE_CREATE_INFO);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO);
 
    state = anv_device_alloc(device, sizeof(*state), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -2388,7 +2388,7 @@ VkResult anv_CreateDynamicDepthStencilState(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_dynamic_ds_state *state;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DS_STATE_CREATE_INFO);
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
 
    state = anv_device_alloc(device, sizeof(*state), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -3930,7 +3930,7 @@ VkResult anv_CreateFramebuffer(
 
    anv_CreateDynamicViewportState(anv_device_to_handle(device),
       &(VkDynamicViewportStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_VP_STATE_CREATE_INFO,
+         .sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO,
          .viewportAndScissorCount = 1,
          .pViewports = (VkViewport[]) {
             {
