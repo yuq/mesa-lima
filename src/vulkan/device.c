@@ -1245,7 +1245,6 @@ VkResult anv_DestroyObject(
       return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-   case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
    case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
    case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
    case VK_OBJECT_TYPE_RENDER_PASS:
@@ -1255,6 +1254,9 @@ VkResult anv_DestroyObject(
 
    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
       return anv_DestroyDynamicViewportState(_device, (VkDynamicViewportState) _object);
+
+   case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
+      return anv_DestroyDynamicRasterState(_device, (VkDynamicRasterState) _object);
 
    case VK_OBJECT_TYPE_COMMAND_BUFFER:
    case VK_OBJECT_TYPE_FRAMEBUFFER:
@@ -2292,6 +2294,18 @@ VkResult anv_CreateDynamicRasterState(
    GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
 
    *pState = anv_dynamic_rs_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyDynamicRasterState(
+    VkDevice                                    _device,
+    VkDynamicRasterState                        _rs_state)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, _rs_state);
+
+   anv_device_free(device, rs_state);
 
    return VK_SUCCESS;
 }
