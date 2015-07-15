@@ -443,6 +443,18 @@ nir_instr_prev(nir_instr *instr)
       return exec_node_data(nir_instr, prev, node);
 }
 
+static inline bool
+nir_instr_is_first(nir_instr *instr)
+{
+   return exec_node_is_head_sentinel(exec_node_get_prev(&instr->node));
+}
+
+static inline bool
+nir_instr_is_last(nir_instr *instr)
+{
+   return exec_node_is_tail_sentinel(exec_node_get_next(&instr->node));
+}
+
 typedef struct {
    /** for debugging only, can be NULL */
    const char* name;
