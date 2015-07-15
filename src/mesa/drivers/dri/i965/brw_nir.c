@@ -42,8 +42,12 @@ nir_optimize(nir_shader *nir, bool is_scalar)
 
       progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);
-      nir_lower_phis_to_scalar(nir);
-      nir_validate_shader(nir);
+
+      if (is_scalar) {
+         nir_lower_phis_to_scalar(nir);
+         nir_validate_shader(nir);
+      }
+
       progress |= nir_copy_prop(nir);
       nir_validate_shader(nir);
       progress |= nir_opt_dce(nir);
