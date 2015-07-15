@@ -1551,19 +1551,23 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
 
    payload_header_size = length;
 
-   if (color1.file == BAD_FILE) {
-      if (src0_alpha.file != BAD_FILE) {
-         setup_color_payload(&sources[length], src0_alpha, 1, exec_size, false);
-         length++;
-      }
+   if (src0_alpha.file != BAD_FILE) {
+      /* FIXME: This is being passed at the wrong location in the payload and
+       * doesn't work when gl_SampleMask and MRTs are used simultaneously.
+       * It's supposed to be immediately before oMask but there seems to be no
+       * reasonable way to pass them in the correct order because LOAD_PAYLOAD
+       * requires header sources to form a contiguous segment at the beginning
+       * of the message and src0_alpha has per-channel semantics.
+       */
+      setup_color_payload(&sources[length], src0_alpha, 1, exec_size, false);
+      length++;
+   }
 
-      setup_color_payload(&sources[length], color0, components,
-                          exec_size, use_2nd_half);
-      length += 4;
-   } else {
-      setup_color_payload(&sources[length], color0, components,
-                          exec_size, use_2nd_half);
-      length += 4;
+   setup_color_payload(&sources[length], color0, components,
+                       exec_size, use_2nd_half);
+   length += 4;
+
+   if (color1.file != BAD_FILE) {
       setup_color_payload(&sources[length], color1, components,
                           exec_size, use_2nd_half);
       length += 4;
