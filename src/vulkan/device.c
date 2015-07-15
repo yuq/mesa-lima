@@ -1287,6 +1287,9 @@ VkResult anv_DestroyObject(
    case VK_OBJECT_TYPE_EVENT:
       return anv_DestroyEvent(_device, (VkEvent) _object);
 
+   case VK_OBJECT_TYPE_CMD_POOL:
+      return anv_DestroyCommandPool(_device, (VkCmdPool) _object);
+
    default:
       unreachable("Invalid object type");
    }
@@ -2516,6 +2519,31 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    return VK_SUCCESS;
 }
 
+VkResult anv_CreateCommandPool(
+    VkDevice                                    device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool)
+{
+   *pCmdPool = 7;
+
+   stub_return(VK_SUCCESS);
+}
+
+VkResult anv_DestroyCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool)
+{
+   stub_return(VK_SUCCESS);
+}
+
+VkResult anv_ResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
 VkResult anv_CreateCommandBuffer(
     VkDevice                                    _device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -2863,7 +2891,8 @@ VkResult anv_EndCommandBuffer(
 }
 
 VkResult anv_ResetCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer)
+    VkCmdBuffer                                 cmdBuffer,
+    VkCmdBufferResetFlags                       flags)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 

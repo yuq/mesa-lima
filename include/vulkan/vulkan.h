@@ -109,6 +109,7 @@ VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicRasterState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicColorBlendState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDepthStencilState, VkDynamicStateObject)
 VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
+VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkCmdPool, VkNonDispatchable)
 
 
 typedef enum {
@@ -209,9 +210,10 @@ typedef enum {
     VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION = 47,
     VK_STRUCTURE_TYPE_SUBPASS_DEPENDENCY = 48,
     VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO = 49,
+    VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO = 50,
     VK_STRUCTURE_TYPE_BEGIN_RANGE = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
+    VK_STRUCTURE_TYPE_END_RANGE = VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO,
+    VK_STRUCTURE_TYPE_NUM = (VK_STRUCTURE_TYPE_CMD_POOL_CREATE_INFO - VK_STRUCTURE_TYPE_APPLICATION_INFO + 1),
     VK_STRUCTURE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkStructureType;
 
@@ -470,6 +472,7 @@ typedef enum {
     VK_OBJECT_TYPE_FRAMEBUFFER = 27,
     VK_OBJECT_TYPE_RENDER_PASS = 28,
     VK_OBJECT_TYPE_PIPELINE_CACHE = 29,
+    VK_OBJECT_TYPE_CMD_POOL = 30,
     VK_OBJECT_TYPE_BEGIN_RANGE = VK_OBJECT_TYPE_INSTANCE,
     VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_PIPELINE_CACHE,
     VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_PIPELINE_CACHE - VK_OBJECT_TYPE_INSTANCE + 1),
@@ -1076,6 +1079,17 @@ typedef enum {
     VK_MEMORY_INPUT_TRANSFER_BIT = 0x00000200,
 } VkMemoryInputFlagBits;
 typedef VkFlags VkMemoryInputFlags;
+
+typedef enum {
+    VK_CMD_POOL_CREATE_TRANSIENT_BIT = 0x00000001,
+    VK_CMD_POOL_CREATE_RESET_COMMAND_BUFFER_BIT = 0x00000002,
+} VkCmdPoolCreateFlagBits;
+typedef VkFlags VkCmdPoolCreateFlags;
+
+typedef enum {
+    VK_CMD_POOL_RESET_RELEASE_RESOURCES = 0x00000001,
+} VkCmdPoolResetFlagBits;
+typedef VkFlags VkCmdPoolResetFlags;
 typedef VkFlags VkCmdBufferCreateFlags;
 
 typedef enum {
@@ -1086,6 +1100,11 @@ typedef enum {
     VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT = 0x00000010,
 } VkCmdBufferOptimizeFlagBits;
 typedef VkFlags VkCmdBufferOptimizeFlags;
+
+typedef enum {
+    VK_CMD_BUFFER_RESET_RELEASE_RESOURCES = 0x00000001,
+} VkCmdBufferResetFlagBits;
+typedef VkFlags VkCmdBufferResetFlags;
 
 typedef enum {
     VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
@@ -1943,6 +1962,13 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    queueFamilyIndex;
+    VkCmdPoolCreateFlags                        flags;
+} VkCmdPoolCreateInfo;
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    VkCmdPool                                   cmdPool;
     VkCmdBufferLevel                            level;
     VkCmdBufferCreateFlags                      flags;
 } VkCmdBufferCreateInfo;
@@ -2184,11 +2210,14 @@ typedef VkResult (VKAPI *PFN_vkDestroyFramebuffer)(VkDevice device, VkFramebuffe
 typedef VkResult (VKAPI *PFN_vkCreateRenderPass)(VkDevice device, const VkRenderPassCreateInfo* pCreateInfo, VkRenderPass* pRenderPass);
 typedef VkResult (VKAPI *PFN_vkDestroyRenderPass)(VkDevice device, VkRenderPass renderPass);
 typedef VkResult (VKAPI *PFN_vkGetRenderAreaGranularity)(VkDevice device, VkRenderPass renderPass, VkExtent2D* pGranularity);
+typedef VkResult (VKAPI *PFN_vkCreateCommandPool)(VkDevice device, const VkCmdPoolCreateInfo* pCreateInfo, VkCmdPool* pCmdPool);
+typedef VkResult (VKAPI *PFN_vkDestroyCommandPool)(VkDevice device, VkCmdPool cmdPool);
+typedef VkResult (VKAPI *PFN_vkResetCommandPool)(VkDevice device, VkCmdPool cmdPool, VkCmdPoolResetFlags flags);
 typedef VkResult (VKAPI *PFN_vkCreateCommandBuffer)(VkDevice device, const VkCmdBufferCreateInfo* pCreateInfo, VkCmdBuffer* pCmdBuffer);
 typedef VkResult (VKAPI *PFN_vkDestroyCommandBuffer)(VkDevice device, VkCmdBuffer commandBuffer);
 typedef VkResult (VKAPI *PFN_vkBeginCommandBuffer)(VkCmdBuffer cmdBuffer, const VkCmdBufferBeginInfo* pBeginInfo);
 typedef VkResult (VKAPI *PFN_vkEndCommandBuffer)(VkCmdBuffer cmdBuffer);
-typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer);
+typedef VkResult (VKAPI *PFN_vkResetCommandBuffer)(VkCmdBuffer cmdBuffer, VkCmdBufferResetFlags flags);
 typedef void (VKAPI *PFN_vkCmdBindPipeline)(VkCmdBuffer cmdBuffer, VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline);
 typedef void (VKAPI *PFN_vkCmdBindDynamicViewportState)(VkCmdBuffer cmdBuffer, VkDynamicViewportState dynamicViewportState);
 typedef void (VKAPI *PFN_vkCmdBindDynamicRasterState)(VkCmdBuffer cmdBuffer, VkDynamicRasterState dynamicRasterState);
@@ -2741,6 +2770,20 @@ VkResult VKAPI vkGetRenderAreaGranularity(
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity);
 
+VkResult VKAPI vkCreateCommandPool(
+    VkDevice                                    device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool);
+
+VkResult VKAPI vkDestroyCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool);
+
+VkResult VKAPI vkResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags);
+
 VkResult VKAPI vkCreateCommandBuffer(
     VkDevice                                    device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -2758,7 +2801,8 @@ VkResult VKAPI vkEndCommandBuffer(
     VkCmdBuffer                                 cmdBuffer);
 
 VkResult VKAPI vkResetCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer);
+    VkCmdBuffer                                 cmdBuffer,
+    VkCmdBufferResetFlags                       flags);
 
 void VKAPI vkCmdBindPipeline(
     VkCmdBuffer                                 cmdBuffer,
