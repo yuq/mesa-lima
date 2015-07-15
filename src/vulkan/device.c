@@ -4129,12 +4129,9 @@ VkResult anv_DestroyRenderPass(
        */
       struct anv_subpass *subpass = &pass->subpasses[i];
 
-      if (subpass->input_attachments)
-         anv_device_free(device, subpass->input_attachments);
-      if (subpass->color_attachments)
-         anv_device_free(device, subpass->color_attachments);
-      if (subpass->resolve_attachments)
-         anv_device_free(device, subpass->resolve_attachments);
+      anv_device_free(device, subpass->input_attachments);
+      anv_device_free(device, subpass->color_attachments);
+      anv_device_free(device, subpass->resolve_attachments);
    }
 
    anv_device_free(device, pass);
