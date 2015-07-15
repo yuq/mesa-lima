@@ -37,6 +37,7 @@
 
 
 #include <stdio.h>
+#include <stdarg.h>
 #include "compiler.h"
 #include "glheader.h"
 #include "mtypes.h"
