@@ -1255,9 +1255,7 @@ VkResult anv_DestroyObject(
       return VK_SUCCESS;
 
    case VK_OBJECT_TYPE_RENDER_PASS:
-      /* These are trivially destroyable */
-      anv_device_free(device, (void *) _object);
-      return VK_SUCCESS;
+      return anv_DestroyRenderPass(_device, (VkRenderPass) _object);
 
    case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
       return anv_DestroyDynamicViewportState(_device, (VkDynamicViewportState) _object);
