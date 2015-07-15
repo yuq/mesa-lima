@@ -714,6 +714,21 @@ struct anv_cmd_buffer {
    struct anv_cmd_state                         state;
 };
 
+struct anv_state
+anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
+                                   uint32_t size, uint32_t alignment);
+
+VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
+
+void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
+void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                  struct anv_subpass *subpass);
+
+void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                      struct anv_render_pass *pass,
+                                      const VkClearValue *clear_values);
+
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 void anv_aub_writer_destroy(struct anv_aub_writer *writer);
 
@@ -981,21 +996,6 @@ struct anv_render_pass {
 
 void anv_device_init_meta(struct anv_device *device);
 void anv_device_finish_meta(struct anv_device *device);
-
-struct anv_state
-anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                   uint32_t size, uint32_t alignment);
-
-VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
-
-void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-
-void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                                  struct anv_subpass *subpass);
-
-void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
-                                      struct anv_render_pass *pass,
-                                      const VkClearValue *clear_values);
 
 void *anv_lookup_entrypoint(const char *name);
 
