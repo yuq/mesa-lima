@@ -406,10 +406,14 @@ static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, ui
 void radeon_drm_cs_emit_ioctl_oneshot(struct radeon_drm_cs *cs, struct radeon_cs_context *csc)
 {
     unsigned i;
+    int r;
 
-    if (drmCommandWriteRead(csc->fd, DRM_RADEON_CS,
-                            &csc->cs, sizeof(struct drm_radeon_cs))) {
-        if (debug_get_bool_option("RADEON_DUMP_CS", FALSE)) {
+    r = drmCommandWriteRead(csc->fd, DRM_RADEON_CS,
+                            &csc->cs, sizeof(struct drm_radeon_cs));
+    if (r) {
+	if (r == -ENOMEM)
+	    fprintf(stderr, "radeon: Not enough memory for command submission.\n");
+	else if (debug_get_bool_option("RADEON_DUMP_CS", FALSE)) {
             unsigned i;
 
             fprintf(stderr, "radeon: The kernel rejected CS, dumping...\n");
