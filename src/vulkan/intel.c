@@ -83,8 +83,8 @@ VkResult anv_CreateDmaBufImageINTEL(
    assert(image->extent.height > 0);
    assert(image->extent.depth == 1);
 
-   *pMem = (VkDeviceMemory) mem;
-   *pImage = (VkImage) image;
+   *pMem = anv_device_memory_to_handle(mem);
+   *pImage = anv_image_to_handle(image);
 
    return VK_SUCCESS;
 
