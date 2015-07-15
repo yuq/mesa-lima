@@ -4305,14 +4305,6 @@ void vkCmdDbgMarkerEnd(
    VkCmdBuffer                              cmdBuffer)
    __attribute__ ((visibility ("default")));
 
-VkResult vkDbgSetObjectTag(
-    VkDevice                                   device,
-    VkObject                                   object,
-    size_t                                     tagSize,
-    const void*                                pTag)
-   __attribute__ ((visibility ("default")));
-
-
 void vkCmdDbgMarkerBegin(
     VkCmdBuffer                              cmdBuffer,
     const char*                                 pMarker)
@@ -4322,13 +4314,4 @@ void vkCmdDbgMarkerBegin(
 void vkCmdDbgMarkerEnd(
     VkCmdBuffer                              cmdBuffer)
 {
-}
-
-VkResult vkDbgSetObjectTag(
-    VkDevice                                   device,
-    VkObject                                   object,
-    size_t                                     tagSize,
-    const void*                                pTag)
-{
-    return VK_SUCCESS;
 }
