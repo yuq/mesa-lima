@@ -36,24 +36,10 @@ struct anv_query_pool_slot {
 };
 
 struct anv_query_pool {
-   struct anv_object                            base;
    VkQueryType                                  type;
    uint32_t                                     slots;
    struct anv_bo                                bo;
 };
-
-static void
-anv_query_pool_destroy(struct anv_device *device,
-                       struct anv_object *object,
-                       VkObjectType obj_type)
-{
-   struct anv_query_pool *pool = (struct anv_query_pool *) object;
-
-   assert(obj_type == VK_OBJECT_TYPE_QUERY_POOL);
-
-   anv_DestroyQueryPool(anv_device_to_handle(device),
-                        anv_query_pool_to_handle(pool));
-}
 
 VkResult anv_CreateQueryPool(
     VkDevice                                    _device,
@@ -81,9 +67,6 @@ VkResult anv_CreateQueryPool(
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   pool->base.destructor = anv_query_pool_destroy;
-
-   pool->type = pCreateInfo->queryType;
    size = pCreateInfo->slots * sizeof(struct anv_query_pool_slot);
    result = anv_bo_init_new(&pool->bo, device, size);
    if (result != VK_SUCCESS)

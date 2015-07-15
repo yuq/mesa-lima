@@ -325,17 +325,6 @@ void anv_bo_pool_finish(struct anv_bo_pool *pool);
 VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo);
 void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 
-struct anv_object;
-struct anv_device;
-
-typedef void (*anv_object_destructor_cb)(struct anv_device *,
-                                         struct anv_object *,
-                                         VkObjectType);
-
-struct anv_object {
-   anv_object_destructor_cb                     destructor;
-};
-
 struct anv_physical_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
@@ -571,7 +560,6 @@ struct anv_device_memory {
 };
 
 struct anv_dynamic_vp_state {
-   struct anv_object base;
    struct anv_state sf_clip_vp;
    struct anv_state cc_vp;
    struct anv_state scissor;
@@ -666,7 +654,6 @@ struct anv_descriptor_set_binding {
 };
 
 struct anv_cmd_buffer {
-   struct anv_object                            base;
    struct anv_device *                          device;
 
    struct drm_i915_gem_execbuffer2              execbuf;
@@ -710,7 +697,6 @@ void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 void anv_aub_writer_destroy(struct anv_aub_writer *writer);
 
 struct anv_fence {
-   struct anv_object base;
    struct anv_bo bo;
    struct drm_i915_gem_execbuffer2 execbuf;
    struct drm_i915_gem_exec_object2 exec2_objects[1];
@@ -728,7 +714,6 @@ struct anv_shader {
 };
 
 struct anv_pipeline {
-   struct anv_object                            base;
    struct anv_device *                          device;
    struct anv_batch                             batch;
    uint32_t                                     batch_data[256];
@@ -927,8 +912,6 @@ struct anv_sampler {
 };
 
 struct anv_framebuffer {
-   struct anv_object                            base;
-
    uint32_t                                     width;
    uint32_t                                     height;
    uint32_t                                     layers;

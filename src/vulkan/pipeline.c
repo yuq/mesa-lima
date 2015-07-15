@@ -467,19 +467,6 @@ emit_ds_state(struct anv_pipeline *pipeline,
    GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, pipeline->state_wm_depth_stencil, &wm_depth_stencil);
 }
 
-static void
-anv_pipeline_destroy(struct anv_device *device,
-                     struct anv_object *object,
-                     VkObjectType obj_type)
-{
-   struct anv_pipeline *pipeline = (struct anv_pipeline*) object;
-
-   assert(obj_type == VK_OBJECT_TYPE_PIPELINE);
-
-   anv_DestroyPipeline(anv_device_to_handle(device),
-                       anv_pipeline_to_handle(pipeline));
-}
-
 VkResult
 anv_pipeline_create(
     VkDevice                                    _device,
@@ -499,7 +486,6 @@ anv_pipeline_create(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   pipeline->base.destructor = anv_pipeline_destroy;
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
@@ -789,7 +775,6 @@ VkResult anv_CreateGraphicsPipelines(
     const VkGraphicsPipelineCreateInfo*         pCreateInfos,
     VkPipeline*                                 pPipelines)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
    VkResult result = VK_SUCCESS;
 
    unsigned i = 0;
@@ -798,8 +783,7 @@ VkResult anv_CreateGraphicsPipelines(
                                    NULL, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
-            anv_pipeline_destroy(device, (struct anv_object *)pPipelines[j],
-                                 VK_OBJECT_TYPE_PIPELINE);
+            anv_DestroyPipeline(_device, pPipelines[j]);
          }
 
          return result;
@@ -825,7 +809,6 @@ static VkResult anv_compute_pipeline_create(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   pipeline->base.destructor = anv_pipeline_destroy;
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
@@ -888,7 +871,6 @@ VkResult anv_CreateComputePipelines(
     const VkComputePipelineCreateInfo*          pCreateInfos,
     VkPipeline*                                 pPipelines)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
    VkResult result = VK_SUCCESS;
 
    unsigned i = 0;
@@ -897,8 +879,7 @@ VkResult anv_CreateComputePipelines(
                                            &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
-            anv_pipeline_destroy(device, (struct anv_object *)pPipelines[j],
-                                 VK_OBJECT_TYPE_PIPELINE);
+            anv_DestroyPipeline(_device, pPipelines[j]);
          }
 
          return result;

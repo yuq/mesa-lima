@@ -1418,19 +1418,6 @@ VkResult anv_QueueBindSparseImageMemory(
    stub_return(VK_UNSUPPORTED);
 }
 
-static void
-anv_fence_destroy(struct anv_device *device,
-                  struct anv_object *object,
-                  VkObjectType obj_type)
-{
-   struct anv_fence *fence = (struct anv_fence *) object;
-
-   assert(obj_type == VK_OBJECT_TYPE_FENCE);
-
-   anv_DestroyFence(anv_device_to_handle(device),
-                    anv_fence_to_handle(fence));
-}
-
 VkResult anv_CreateFence(
     VkDevice                                    _device,
     const VkFenceCreateInfo*                    pCreateInfo,
@@ -1453,8 +1440,6 @@ VkResult anv_CreateFence(
    result = anv_bo_init_new(&fence->bo, device, fence_size);
    if (result != VK_SUCCESS)
       goto fail;
-
-   fence->base.destructor = anv_fence_destroy;
 
    fence->bo.map =
       anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
@@ -2200,19 +2185,6 @@ clamp_int64(int64_t x, int64_t min, int64_t max)
       return max;
 }
 
-static void
-anv_dynamic_vp_state_destroy(struct anv_device *device,
-                             struct anv_object *object,
-                             VkObjectType obj_type)
-{
-   struct anv_dynamic_vp_state *vp_state = (void *) object;
-
-   assert(obj_type == VK_OBJECT_TYPE_DYNAMIC_VP_STATE);
-
-   anv_DestroyDynamicViewportState(anv_device_to_handle(device),
-                                   anv_dynamic_vp_state_to_handle(vp_state));
-}
-
 VkResult anv_CreateDynamicViewportState(
     VkDevice                                    _device,
     const VkDynamicViewportStateCreateInfo*     pCreateInfo,
@@ -2227,8 +2199,6 @@ VkResult anv_CreateDynamicViewportState(
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (state == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   state->base.destructor = anv_dynamic_vp_state_destroy;
 
    unsigned count = pCreateInfo->viewportAndScissorCount;
    state->sf_clip_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
@@ -2466,19 +2436,6 @@ VkResult anv_DestroyDynamicDepthStencilState(
 
 // Command buffer functions
 
-static void
-anv_cmd_buffer_destroy(struct anv_device *device,
-                       struct anv_object *object,
-                       VkObjectType obj_type)
-{
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *) object;
-
-   assert(obj_type == VK_OBJECT_TYPE_COMMAND_BUFFER);
-
-   anv_DestroyCommandBuffer(anv_device_to_handle(device),
-                            anv_cmd_buffer_to_handle(cmd_buffer));
-}
-
 static VkResult
 anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
 {
@@ -2560,8 +2517,6 @@ VkResult anv_CreateCommandBuffer(
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   cmd_buffer->base.destructor = anv_cmd_buffer_destroy;
 
    cmd_buffer->device = device;
    cmd_buffer->rs_state = NULL;
@@ -3972,19 +3927,6 @@ void anv_CmdPipelineBarrier(
    GEN8_PIPE_CONTROL_pack(&cmd_buffer->batch, dw, &cmd);
 }
 
-static void
-anv_framebuffer_destroy(struct anv_device *device,
-                        struct anv_object *object,
-                        VkObjectType obj_type)
-{
-   struct anv_framebuffer *fb = (struct anv_framebuffer *)object;
-
-   assert(obj_type == VK_OBJECT_TYPE_FRAMEBUFFER);
-
-   anv_DestroyFramebuffer(anv_device_to_handle(device),
-                          anv_framebuffer_to_handle(fb));
-}
-
 VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
@@ -4001,8 +3943,6 @@ VkResult anv_CreateFramebuffer(
                                   VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (framebuffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   framebuffer->base.destructor = anv_framebuffer_destroy;
 
    framebuffer->attachment_count = pCreateInfo->attachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
