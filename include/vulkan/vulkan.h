@@ -1554,12 +1554,14 @@ typedef struct {
 
 typedef struct {
     uint32_t                                    constantId;
+    size_t                                      size;
     uint32_t                                    offset;
 } VkSpecializationMapEntry;
 
 typedef struct {
     uint32_t                                    mapEntryCount;
     const VkSpecializationMapEntry*             pMap;
+    const size_t                                dataSize;
     const void*                                 pData;
 } VkSpecializationInfo;
 
