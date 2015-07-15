@@ -667,6 +667,31 @@ struct anv_descriptor_set_binding {
    uint32_t                                     dynamic_offsets[128];
 };
 
+/** State required while building cmd buffer */
+struct anv_cmd_state {
+   uint32_t                                     current_pipeline;
+   uint32_t                                     vb_dirty;
+   uint32_t                                     dirty;
+   uint32_t                                     compute_dirty;
+   uint32_t                                     descriptors_dirty;
+   uint32_t                                     scratch_size;
+   struct anv_pipeline *                        pipeline;
+   struct anv_pipeline *                        compute_pipeline;
+   struct anv_framebuffer *                     framebuffer;
+   struct anv_render_pass *                     pass;
+   struct anv_subpass *                         subpass;
+   struct anv_dynamic_rs_state *                rs_state;
+   struct anv_dynamic_ds_state *                ds_state;
+   struct anv_dynamic_vp_state *                vp_state;
+   struct anv_dynamic_cb_state *                cb_state;
+   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
+   struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
+   struct anv_descriptor_set_binding            descriptors[MAX_SETS];
+};
+
+VkResult anv_cmd_state_init(struct anv_cmd_state *state);
+void anv_cmd_state_fini(struct anv_cmd_state *state);
+
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
@@ -686,25 +711,7 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
-   /* State required while building cmd buffer */
-   uint32_t                                     current_pipeline;
-   uint32_t                                     vb_dirty;
-   uint32_t                                     dirty;
-   uint32_t                                     compute_dirty;
-   uint32_t                                     descriptors_dirty;
-   uint32_t                                     scratch_size;
-   struct anv_pipeline *                        pipeline;
-   struct anv_pipeline *                        compute_pipeline;
-   struct anv_framebuffer *                     framebuffer;
-   struct anv_render_pass *                     pass;
-   struct anv_subpass *                         subpass;
-   struct anv_dynamic_rs_state *                rs_state;
-   struct anv_dynamic_ds_state *                ds_state;
-   struct anv_dynamic_vp_state *                vp_state;
-   struct anv_dynamic_cb_state *                cb_state;
-   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
-   struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
-   struct anv_descriptor_set_binding            descriptors[MAX_SETS];
+   struct anv_cmd_state                         state;
 };
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);

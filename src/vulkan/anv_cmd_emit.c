@@ -38,14 +38,41 @@
  * is concerned, most of anv_cmd_buffer is magic.
  */
 
+VkResult
+anv_cmd_state_init(struct anv_cmd_state *state)
+{
+   state->rs_state = NULL;
+   state->vp_state = NULL;
+   state->cb_state = NULL;
+   state->ds_state = NULL;
+   memset(&state->state_vf, 0, sizeof(state->state_vf));
+   memset(&state->descriptors, 0, sizeof(state->descriptors));
+
+   state->dirty = 0;
+   state->vb_dirty = 0;
+   state->descriptors_dirty = 0;
+   state->pipeline = NULL;
+   state->vp_state = NULL;
+   state->rs_state = NULL;
+   state->ds_state = NULL;
+
+   return VK_SUCCESS;
+}
+
+void
+anv_cmd_state_fini(struct anv_cmd_state *state)
+{
+   /* Nothing we need to finish right now */
+}
+
 void
 anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_bo *scratch_bo = NULL;
 
-   cmd_buffer->scratch_size = device->scratch_block_pool.size;
-   if (cmd_buffer->scratch_size > 0)
+   cmd_buffer->state.scratch_size = device->scratch_block_pool.size;
+   if (cmd_buffer->state.scratch_size > 0)
       scratch_bo = &device->scratch_block_pool.bo;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_BASE_ADDRESS,
@@ -85,7 +112,7 @@ VkResult anv_BeginCommandBuffer(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
-   cmd_buffer->current_pipeline = UINT32_MAX;
+   cmd_buffer->state.current_pipeline = UINT32_MAX;
 
    return VK_SUCCESS;
 }
@@ -100,14 +127,14 @@ void anv_CmdBindPipeline(
 
    switch (pipelineBindPoint) {
    case VK_PIPELINE_BIND_POINT_COMPUTE:
-      cmd_buffer->compute_pipeline = pipeline;
-      cmd_buffer->compute_dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      cmd_buffer->state.compute_pipeline = pipeline;
+      cmd_buffer->state.compute_dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
       break;
 
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
-      cmd_buffer->pipeline = pipeline;
-      cmd_buffer->vb_dirty |= pipeline->vb_used;
-      cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      cmd_buffer->state.pipeline = pipeline;
+      cmd_buffer->state.vb_dirty |= pipeline->vb_used;
+      cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
       break;
 
    default:
@@ -123,8 +150,8 @@ void anv_CmdBindDynamicViewportState(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_dynamic_vp_state, vp_state, dynamicViewportState);
 
-   cmd_buffer->vp_state = vp_state;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_VP_DIRTY;
+   cmd_buffer->state.vp_state = vp_state;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_VP_DIRTY;
 }
 
 void anv_CmdBindDynamicRasterState(
@@ -134,8 +161,8 @@ void anv_CmdBindDynamicRasterState(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, dynamicRasterState);
 
-   cmd_buffer->rs_state = rs_state;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_RS_DIRTY;
+   cmd_buffer->state.rs_state = rs_state;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_RS_DIRTY;
 }
 
 void anv_CmdBindDynamicColorBlendState(
@@ -145,8 +172,8 @@ void anv_CmdBindDynamicColorBlendState(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, dynamicColorBlendState);
 
-   cmd_buffer->cb_state = cb_state;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_CB_DIRTY;
+   cmd_buffer->state.cb_state = cb_state;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_CB_DIRTY;
 }
 
 void anv_CmdBindDynamicDepthStencilState(
@@ -156,8 +183,8 @@ void anv_CmdBindDynamicDepthStencilState(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, dynamicDepthStencilState);
 
-   cmd_buffer->ds_state = ds_state;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_DS_DIRTY;
+   cmd_buffer->state.ds_state = ds_state;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_DS_DIRTY;
 }
 
 void anv_CmdBindDescriptorSets(
@@ -181,15 +208,15 @@ void anv_CmdBindDescriptorSets(
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
-      cmd_buffer->descriptors[firstSet + i].set = set;
+      cmd_buffer->state.descriptors[firstSet + i].set = set;
 
       assert(set_layout->num_dynamic_buffers <
-             ARRAY_SIZE(cmd_buffer->descriptors[0].dynamic_offsets));
-      memcpy(cmd_buffer->descriptors[firstSet + i].dynamic_offsets,
+             ARRAY_SIZE(cmd_buffer->state.descriptors[0].dynamic_offsets));
+      memcpy(cmd_buffer->state.descriptors[firstSet + i].dynamic_offsets,
              pDynamicOffsets + dynamic_slot,
              set_layout->num_dynamic_buffers * sizeof(*pDynamicOffsets));
 
-      cmd_buffer->descriptors_dirty |= set_layout->shader_stages;
+      cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
 
       dynamic_slot += set_layout->num_dynamic_buffers;
    }
@@ -213,9 +240,9 @@ void anv_CmdBindIndexBuffer(
       GEN8_3DSTATE_VF_header,
       .CutIndex = (indexType == VK_INDEX_TYPE_UINT16) ? UINT16_MAX : UINT32_MAX,
    };
-   GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state_vf, &vf);
+   GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state.state_vf, &vf);
 
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
@@ -232,7 +259,7 @@ void anv_CmdBindVertexBuffers(
     const VkDeviceSize*                         pOffsets)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   struct anv_vertex_binding *vb = cmd_buffer->vertex_bindings;
+   struct anv_vertex_binding *vb = cmd_buffer->state.vertex_bindings;
 
    /* We have to defer setting up vertex buffer since we need the buffer
     * stride from the pipeline. */
@@ -241,7 +268,7 @@ void anv_CmdBindVertexBuffers(
    for (uint32_t i = 0; i < bindingCount; i++) {
       vb[startBinding + i].buffer = anv_buffer_from_handle(pBuffers[i]);
       vb[startBinding + i].offset = pOffsets[i];
-      cmd_buffer->vb_dirty |= 1 << (startBinding + i);
+      cmd_buffer->state.vb_dirty |= 1 << (startBinding + i);
    }
 }
 
@@ -249,15 +276,15 @@ static VkResult
 cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                               unsigned stage, struct anv_state *bt_state)
 {
-   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
-   struct anv_subpass *subpass = cmd_buffer->subpass;
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_layout *layout;
    uint32_t attachments, bias, size;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
-      layout = cmd_buffer->compute_pipeline->layout;
+      layout = cmd_buffer->state.compute_pipeline->layout;
    else
-      layout = cmd_buffer->pipeline->layout;
+      layout = cmd_buffer->state.pipeline->layout;
 
    if (stage == VK_SHADER_STAGE_FRAGMENT) {
       bias = MAX_RTS;
@@ -318,7 +345,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
-      struct anv_descriptor_set_binding *d = &cmd_buffer->descriptors[set];
+      struct anv_descriptor_set_binding *d = &cmd_buffer->state.descriptors[set];
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
       struct anv_descriptor_slot *surface_slots =
          set_layout->stage[stage].surface_start;
@@ -373,9 +400,9 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
    uint32_t sampler_count;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
-      layout = cmd_buffer->compute_pipeline->layout;
+      layout = cmd_buffer->state.compute_pipeline->layout;
    else
-      layout = cmd_buffer->pipeline->layout;
+      layout = cmd_buffer->state.pipeline->layout;
 
    sampler_count = layout ? layout->stage[stage].sampler_count : 0;
    if (sampler_count == 0)
@@ -388,7 +415,7 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
    for (uint32_t set = 0; set < layout->num_sets; set++) {
-      struct anv_descriptor_set_binding *d = &cmd_buffer->descriptors[set];
+      struct anv_descriptor_set_binding *d = &cmd_buffer->state.descriptors[set];
       struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
       struct anv_descriptor_slot *sampler_slots =
          set_layout->stage[stage].sampler_start;
@@ -461,8 +488,8 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, uint32_t stage)
 static void
 flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
-   uint32_t s, dirty = cmd_buffer->descriptors_dirty &
-                       cmd_buffer->pipeline->active_stages;
+   uint32_t s, dirty = cmd_buffer->state.descriptors_dirty &
+                       cmd_buffer->state.pipeline->active_stages;
 
    VkResult result = VK_SUCCESS;
    for_each_bit(s, dirty) {
@@ -478,7 +505,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       assert(result == VK_SUCCESS);
 
       /* Re-emit all active binding tables */
-      for_each_bit(s, cmd_buffer->pipeline->active_stages) {
+      for_each_bit(s, cmd_buffer->state.pipeline->active_stages) {
          result = flush_descriptor_set(cmd_buffer, s);
 
          /* It had better succeed this time */
@@ -486,7 +513,7 @@ flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   cmd_buffer->descriptors_dirty &= ~cmd_buffer->pipeline->active_stages;
+   cmd_buffer->state.descriptors_dirty &= ~cmd_buffer->state.pipeline->active_stages;
 }
 
 static struct anv_state
@@ -527,7 +554,7 @@ static VkResult
 flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
-   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct anv_state surfaces = { 0, }, samplers = { 0, };
    VkResult result;
 
@@ -566,44 +593,44 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 static void
 anv_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    VkResult result;
 
    assert(pipeline->active_stages == VK_SHADER_STAGE_COMPUTE_BIT);
 
-   if (cmd_buffer->current_pipeline != GPGPU) {
+   if (cmd_buffer->state.current_pipeline != GPGPU) {
       anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
                      .PipelineSelection = GPGPU);
-      cmd_buffer->current_pipeline = GPGPU;
+      cmd_buffer->state.current_pipeline = GPGPU;
    }
 
-   if (cmd_buffer->compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
+   if (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
-   if ((cmd_buffer->descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
-       (cmd_buffer->compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)) {
+   if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
+       (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)) {
       result = flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
-      cmd_buffer->descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
+      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;
    }
 
-   cmd_buffer->compute_dirty = 0;
+   cmd_buffer->state.compute_dirty = 0;
 }
 
 static void
 anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_pipeline *pipeline = cmd_buffer->pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
    uint32_t *p;
 
-   uint32_t vb_emit = cmd_buffer->vb_dirty & pipeline->vb_used;
+   uint32_t vb_emit = cmd_buffer->state.vb_dirty & pipeline->vb_used;
 
    assert((pipeline->active_stages & VK_SHADER_STAGE_COMPUTE_BIT) == 0);
 
-   if (cmd_buffer->current_pipeline != _3D) {
+   if (cmd_buffer->state.current_pipeline != _3D) {
       anv_batch_emit(&cmd_buffer->batch, GEN8_PIPELINE_SELECT,
                      .PipelineSelection = _3D);
-      cmd_buffer->current_pipeline = _3D;
+      cmd_buffer->state.current_pipeline = _3D;
    }
 
    if (vb_emit) {
@@ -614,8 +641,8 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                           GEN8_3DSTATE_VERTEX_BUFFERS);
       uint32_t vb, i = 0;
       for_each_bit(vb, vb_emit) {
-         struct anv_buffer *buffer = cmd_buffer->vertex_bindings[vb].buffer;
-         uint32_t offset = cmd_buffer->vertex_bindings[vb].offset;
+         struct anv_buffer *buffer = cmd_buffer->state.vertex_bindings[vb].buffer;
+         uint32_t offset = cmd_buffer->state.vertex_bindings[vb].offset;
 
          struct GEN8_VERTEX_BUFFER_STATE state = {
             .VertexBufferIndex = vb,
@@ -631,56 +658,63 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY) {
+   if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY) {
       /* If somebody compiled a pipeline after starting a command buffer the
        * scratch bo may have grown since we started this cmd buffer (and
        * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
        * reemit STATE_BASE_ADDRESS so that we use the bigger scratch bo. */
-      if (cmd_buffer->scratch_size < pipeline->total_scratch)
+      if (cmd_buffer->state.scratch_size < pipeline->total_scratch)
          anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
    }
 
-   if (cmd_buffer->descriptors_dirty)
+   if (cmd_buffer->state.descriptors_dirty)
       flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->dirty & ANV_CMD_BUFFER_VP_DIRTY) {
+   if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_VP_DIRTY) {
+      struct anv_dynamic_vp_state *vp_state = cmd_buffer->state.vp_state;
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
-                     .ScissorRectPointer = cmd_buffer->vp_state->scissor.offset);
+                     .ScissorRectPointer = vp_state->scissor.offset);
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
-                     .CCViewportPointer = cmd_buffer->vp_state->cc_vp.offset);
+                     .CCViewportPointer = vp_state->cc_vp.offset);
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
-                     .SFClipViewportPointer = cmd_buffer->vp_state->sf_clip_vp.offset);
+                     .SFClipViewportPointer = vp_state->sf_clip_vp.offset);
    }
 
-   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                                  ANV_CMD_BUFFER_RS_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->rs_state->state_sf, pipeline->state_sf);
+                           cmd_buffer->state.rs_state->state_sf,
+                           pipeline->state_sf);
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->rs_state->state_raster, pipeline->state_raster);
+                           cmd_buffer->state.rs_state->state_raster,
+                           pipeline->state_raster);
    }
 
-   if (cmd_buffer->ds_state &&
-       (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)))
+   if (cmd_buffer->state.ds_state &&
+       (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                                   ANV_CMD_BUFFER_DS_DIRTY))) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->ds_state->state_wm_depth_stencil,
+                           cmd_buffer->state.ds_state->state_wm_depth_stencil,
                            pipeline->state_wm_depth_stencil);
+   }
 
-   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_CB_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_CB_DIRTY |
+                                  ANV_CMD_BUFFER_DS_DIRTY)) {
       struct anv_state state;
-      if (cmd_buffer->ds_state == NULL)
+      if (cmd_buffer->state.ds_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->cb_state->state_color_calc,
+                                             cmd_buffer->state.cb_state->state_color_calc,
                                              GEN8_COLOR_CALC_STATE_length, 64);
-      else if (cmd_buffer->cb_state == NULL)
+      else if (cmd_buffer->state.cb_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->ds_state->state_color_calc,
+                                             cmd_buffer->state.ds_state->state_color_calc,
                                              GEN8_COLOR_CALC_STATE_length, 64);
       else
          state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
-                                              cmd_buffer->ds_state->state_color_calc,
-                                              cmd_buffer->cb_state->state_color_calc,
+                                              cmd_buffer->state.ds_state->state_color_calc,
+                                              cmd_buffer->state.cb_state->state_color_calc,
                                               GEN8_COLOR_CALC_STATE_length, 64);
 
       anv_batch_emit(&cmd_buffer->batch,
@@ -689,13 +723,14 @@ anv_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                      .ColorCalcStatePointerValid = true);
    }
 
-   if (cmd_buffer->dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                                  ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state_vf, pipeline->state_vf);
+                           cmd_buffer->state.state_vf, pipeline->state_vf);
    }
 
-   cmd_buffer->vb_dirty &= ~vb_emit;
-   cmd_buffer->dirty = 0;
+   cmd_buffer->state.vb_dirty &= ~vb_emit;
+   cmd_buffer->state.dirty = 0;
 }
 
 void anv_CmdDraw(
@@ -821,7 +856,7 @@ void anv_CmdDispatch(
     uint32_t                                    z)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
 
    anv_cmd_buffer_flush_compute_state(cmd_buffer);
@@ -851,7 +886,7 @@ void anv_CmdDispatchIndirect(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
-   struct anv_pipeline *pipeline = cmd_buffer->compute_pipeline;
+   struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct brw_cs_prog_data *prog_data = &pipeline->cs_prog_data;
    struct anv_bo *bo = buffer->bo;
    uint32_t bo_offset = buffer->offset + offset;
@@ -1054,8 +1089,8 @@ void anv_CmdPushConstants(
 static void
 anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_subpass *subpass = cmd_buffer->subpass;
-   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_depth_stencil_view *view;
 
    static const struct anv_depth_stencil_view null_view =
@@ -1081,8 +1116,8 @@ anv_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
                   .SurfaceFormat = view->depth_format,
                   .SurfacePitch = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
                   .SurfaceBaseAddress = { view->bo,  view->depth_offset },
-                  .Height = cmd_buffer->framebuffer->height - 1,
-                  .Width = cmd_buffer->framebuffer->width - 1,
+                  .Height = cmd_buffer->state.framebuffer->height - 1,
+                  .Width = cmd_buffer->state.framebuffer->width - 1,
                   .LOD = 0,
                   .Depth = 1 - 1,
                   .MinimumArrayElement = 0,
@@ -1108,9 +1143,9 @@ void
 anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
 {
-   cmd_buffer->subpass = subpass;
+   cmd_buffer->state.subpass = subpass;
 
-   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
    anv_cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
@@ -1126,8 +1161,8 @@ void anv_CmdBeginRenderPass(
 
    assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
 
-   cmd_buffer->framebuffer = framebuffer;
-   cmd_buffer->pass = pass;
+   cmd_buffer->state.framebuffer = framebuffer;
+   cmd_buffer->state.pass = pass;
 
    const VkRect2D *render_area = &pRenderPassBegin->renderArea;
 
@@ -1155,8 +1190,7 @@ void anv_CmdNextSubpass(
 
    assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
 
-   cmd_buffer->subpass++;
-   anv_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->subpass + 1);
+   anv_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
 void anv_CmdEndRenderPass(

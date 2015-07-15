@@ -403,12 +403,6 @@ VkResult anv_CreateCommandBuffer(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    cmd_buffer->device = device;
-   cmd_buffer->rs_state = NULL;
-   cmd_buffer->vp_state = NULL;
-   cmd_buffer->cb_state = NULL;
-   cmd_buffer->ds_state = NULL;
-   memset(&cmd_buffer->state_vf, 0, sizeof(cmd_buffer->state_vf));
-   memset(&cmd_buffer->descriptors, 0, sizeof(cmd_buffer->descriptors));
 
    result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
    if (result != VK_SUCCESS)
@@ -446,13 +440,7 @@ VkResult anv_CreateCommandBuffer(
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &device->dynamic_state_block_pool);
 
-   cmd_buffer->dirty = 0;
-   cmd_buffer->vb_dirty = 0;
-   cmd_buffer->descriptors_dirty = 0;
-   cmd_buffer->pipeline = NULL;
-   cmd_buffer->vp_state = NULL;
-   cmd_buffer->rs_state = NULL;
-   cmd_buffer->ds_state = NULL;
+   anv_cmd_state_init(&cmd_buffer->state);
 
    *pCmdBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
 
@@ -476,6 +464,8 @@ VkResult anv_DestroyCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
+
+   anv_cmd_state_fini(&cmd_buffer->state);
 
    /* Destroy all of the batch buffers */
    struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
@@ -707,10 +697,8 @@ VkResult anv_ResetCommandBuffer(
    cmd_buffer->surface_next = 1;
    cmd_buffer->surface_relocs.num_relocs = 0;
 
-   cmd_buffer->rs_state = NULL;
-   cmd_buffer->vp_state = NULL;
-   cmd_buffer->cb_state = NULL;
-   cmd_buffer->ds_state = NULL;
+   anv_cmd_state_fini(&cmd_buffer->state);
+   anv_cmd_state_init(&cmd_buffer->state);
 
    return VK_SUCCESS;
 }

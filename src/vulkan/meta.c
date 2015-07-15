@@ -156,9 +156,9 @@ static void
 anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
                     struct anv_saved_state *state)
 {
-   state->old_pipeline = cmd_buffer->pipeline;
-   state->old_descriptor_set0 = cmd_buffer->descriptors[0].set;
-   memcpy(state->old_vertex_bindings, cmd_buffer->vertex_bindings,
+   state->old_pipeline = cmd_buffer->state.pipeline;
+   state->old_descriptor_set0 = cmd_buffer->state.descriptors[0].set;
+   memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
           sizeof(state->old_vertex_bindings));
 }
 
@@ -166,14 +166,14 @@ static void
 anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                        const struct anv_saved_state *state)
 {
-   cmd_buffer->pipeline = state->old_pipeline;
-   cmd_buffer->descriptors[0].set = state->old_descriptor_set0;
-   memcpy(cmd_buffer->vertex_bindings, state->old_vertex_bindings,
+   cmd_buffer->state.pipeline = state->old_pipeline;
+   cmd_buffer->state.descriptors[0].set = state->old_descriptor_set0;
+   memcpy(cmd_buffer->state.vertex_bindings, state->old_vertex_bindings,
           sizeof(state->old_vertex_bindings));
 
-   cmd_buffer->vb_dirty |= (1 << NUM_VB_USED) - 1;
-   cmd_buffer->dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
-   cmd_buffer->descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
+   cmd_buffer->state.vb_dirty |= (1 << NUM_VB_USED) - 1;
+   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
 }
 
 struct vue_header {
@@ -194,7 +194,7 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
                 struct clear_instance_data *instance_data)
 {
    struct anv_device *device = cmd_buffer->device;
-   struct anv_framebuffer *fb = cmd_buffer->framebuffer;
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_state state;
    uint32_t size;
 
@@ -233,25 +233,25 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
          sizeof(vertex_data)
       });
 
-   if (cmd_buffer->pipeline != anv_pipeline_from_handle(device->meta_state.clear.pipeline))
+   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(device->meta_state.clear.pipeline))
       anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           device->meta_state.clear.pipeline);
 
    /* We don't need anything here, only set if not already set. */
-   if (cmd_buffer->rs_state == NULL)
+   if (cmd_buffer->state.rs_state == NULL)
       anv_CmdBindDynamicRasterState(anv_cmd_buffer_to_handle(cmd_buffer),
                                     device->meta_state.shared.rs_state);
 
-   if (cmd_buffer->vp_state == NULL)
+   if (cmd_buffer->state.vp_state == NULL)
       anv_CmdBindDynamicViewportState(anv_cmd_buffer_to_handle(cmd_buffer),
-                                      cmd_buffer->framebuffer->vp_state);
+                                      cmd_buffer->state.framebuffer->vp_state);
 
-   if (cmd_buffer->ds_state == NULL)
+   if (cmd_buffer->state.ds_state == NULL)
       anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
                                           device->meta_state.shared.ds_state);
 
-   if (cmd_buffer->cb_state == NULL)
+   if (cmd_buffer->state.cb_state == NULL)
       anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                         device->meta_state.shared.cb_state);
 
@@ -488,20 +488,20 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
 
    anv_cmd_buffer_save(cmd_buffer, saved_state);
 
-   if (cmd_buffer->pipeline != anv_pipeline_from_handle(device->meta_state.blit.pipeline))
+   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(device->meta_state.blit.pipeline))
       anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
                           VK_PIPELINE_BIND_POINT_GRAPHICS,
                           device->meta_state.blit.pipeline);
 
    /* We don't need anything here, only set if not already set. */
-   if (cmd_buffer->rs_state == NULL)
+   if (cmd_buffer->state.rs_state == NULL)
       anv_CmdBindDynamicRasterState(anv_cmd_buffer_to_handle(cmd_buffer),
                                     device->meta_state.shared.rs_state);
-   if (cmd_buffer->ds_state == NULL)
+   if (cmd_buffer->state.ds_state == NULL)
       anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
                                           device->meta_state.shared.ds_state);
 
-   saved_state->cb_state = anv_dynamic_cb_state_to_handle(cmd_buffer->cb_state);
+   saved_state->cb_state = anv_dynamic_cb_state_to_handle(cmd_buffer->state.cb_state);
    anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                      device->meta_state.shared.cb_state);
 }
