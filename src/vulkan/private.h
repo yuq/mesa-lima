@@ -608,6 +608,15 @@ struct anv_descriptor_set {
    struct anv_descriptor descriptors[0];
 };
 
+VkResult
+anv_descriptor_set_create(struct anv_device *device,
+                          const struct anv_descriptor_set_layout *layout,
+                          struct anv_descriptor_set **out_set);
+
+void
+anv_descriptor_set_destroy(struct anv_device *device,
+                           struct anv_descriptor_set *set);
+
 #define MAX_VBS   32
 #define MAX_SETS   8
 #define MAX_RTS    8

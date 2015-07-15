@@ -1251,6 +1251,9 @@ VkResult anv_DestroyObject(
       return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
 
    case VK_OBJECT_TYPE_DESCRIPTOR_SET:
+      anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(_object));
+      return VK_SUCCESS;
+
    case VK_OBJECT_TYPE_RENDER_PASS:
       /* These are trivially destroyable */
       anv_device_free(device, (void *) _object);
@@ -2070,6 +2073,35 @@ VkResult anv_ResetDescriptorPool(
    return VK_SUCCESS;
 }
 
+VkResult
+anv_descriptor_set_create(struct anv_device *device,
+                          const struct anv_descriptor_set_layout *layout,
+                          struct anv_descriptor_set **out_set)
+{
+   struct anv_descriptor_set *set;
+   size_t size = sizeof(*set) + layout->count * sizeof(set->descriptors[0]);
+
+   set = anv_device_alloc(device, size, 8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (!set)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   /* A descriptor set may not be 100% filled. Clear the set so we can can
+    * later detect holes in it.
+    */
+   memset(set, 0, size);
+
+   *out_set = set;
+
+   return VK_SUCCESS;
+}
+
+void
+anv_descriptor_set_destroy(struct anv_device *device,
+                           struct anv_descriptor_set *set)
+{
+   anv_device_free(device, set);
+}
+
 VkResult anv_AllocDescriptorSets(
     VkDevice                                    _device,
     VkDescriptorPool                            descriptorPool,
@@ -2080,23 +2112,18 @@ VkResult anv_AllocDescriptorSets(
     uint32_t*                                   pCount)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+
+   VkResult result;
    struct anv_descriptor_set *set;
-   size_t size;
 
    for (uint32_t i = 0; i < count; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, layout, pSetLayouts[i]);
-      size = sizeof(*set) + layout->count * sizeof(set->descriptors[0]);
-      set = anv_device_alloc(device, size, 8,
-                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-      if (!set) {
-         *pCount = i;
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-      }
 
-      /* Descriptor sets may not be 100% filled out so we need to memset to
-       * ensure that we can properly detect and handle holes.
-       */
-      memset(set, 0, size);
+      result = anv_descriptor_set_create(device, layout, &set);
+      if (result != VK_SUCCESS) {
+         *pCount = i;
+         return result;
+      }
 
       pDescriptorSets[i] = anv_descriptor_set_to_handle(set);
    }
