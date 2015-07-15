@@ -1535,8 +1535,6 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
       length++;
    }
 
-   prog_data->uses_omask =
-      prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    if (prog_data->uses_omask) {
       assert(this->sample_mask.file != BAD_FILE);
       /* Hand over gl_SampleMask. Only lower 16 bits are relevant.  Since

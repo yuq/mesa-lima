@@ -181,7 +181,8 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * so the shader definitely kills pixels.
     */
    prog_data.uses_kill = fp->program.UsesKill || key->alpha_test_func;
-
+   prog_data.uses_omask =
+      fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    prog_data.computed_depth_mode = computed_depth_mode(&fp->program);
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
