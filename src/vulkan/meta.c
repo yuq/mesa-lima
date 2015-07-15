@@ -523,6 +523,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                VkExtent3D dest_extent)
 {
    struct anv_device *device = cmd_buffer->device;
+   VkDescriptorPool dummy_desc_pool = { .handle = 1 };
 
    struct blit_vb_data {
       float pos[2];
@@ -588,7 +589,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
 
    uint32_t count;
    VkDescriptorSet set;
-   anv_AllocDescriptorSets(anv_device_to_handle(device), 0 /* pool */,
+   anv_AllocDescriptorSets(anv_device_to_handle(device), dummy_desc_pool,
                            VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
                            1, &device->meta_state.blit.ds_layout, &set, &count);
    anv_UpdateDescriptorSets(anv_device_to_handle(device),

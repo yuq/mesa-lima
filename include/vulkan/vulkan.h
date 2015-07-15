@@ -43,22 +43,37 @@ extern "C" {
 // Vulkan API version supported by this file
 #define VK_API_VERSION VK_MAKE_VERSION(0, 131, 0)
 
-#if defined (__cplusplus) && (VK_UINTPTRLEAST64_MAX == UINTPTR_MAX)
-    #define VK_TYPE_SAFE_COMPATIBLE_HANDLES 1
-#endif
 
-#if defined(VK_TYPE_SAFE_COMPATIBLE_HANDLES) && !defined(VK_DISABLE_TYPE_SAFE_HANDLES)
-    #define VK_DEFINE_PTR_HANDLE(_obj) struct _obj##_T { char _dummy; }; typedef _obj##_T* _obj;
-    #define VK_DEFINE_PTR_SUBCLASS_HANDLE(_obj, _base) struct _obj##_T : public _base##_T {}; typedef _obj##_T* _obj;
+#define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
 
-    #define VK_DEFINE_BASE_HANDLE(_obj) VK_DEFINE_PTR_HANDLE(_obj)
-    #define VK_DEFINE_DISP_SUBCLASS_HANDLE(_obj, _base) VK_DEFINE_PTR_SUBCLASS_HANDLE(_obj, _base)
-    #define VK_DEFINE_NONDISP_SUBCLASS_HANDLE(_obj, _base) VK_DEFINE_PTR_SUBCLASS_HANDLE(_obj, _base)
+
+#if defined(__cplusplus)
+    #if (_MSC_VER >= 1800 || __cplusplus >= 201103L)
+        // The bool operator only works if there are no implicit conversions from an obj to
+        // a bool-compatible type, which can then be used to unintentionally violate type safety.
+        // C++11 and above supports the "explicit" keyword on conversion operators to stop this
+        // from happening. Otherwise users of C++ below C++11 won't get direct access to evaluating
+        // the object handle as a bool in expressions like:
+        //     if (obj) vkDestroy(obj);
+        #define VK_NONDISP_HANDLE_OPERATOR_BOOL() explicit operator bool() const { return handle != 0; }
+    #else
+        #define VK_NONDISP_HANDLE_OPERATOR_BOOL()
+    #endif
+    #define VK_DEFINE_NONDISP_HANDLE(obj) \
+        struct obj { \
+            obj() { } \
+            obj(uint64_t x) { handle = x; } \
+            obj& operator =(uint64_t x) { handle = x; return *this; } \
+            bool operator==(const obj& other) const { return handle == other.handle; } \
+            bool operator!=(const obj& other) const { return handle != other.handle; } \
+            bool operator!() const { return !handle; } \
+            VK_NONDISP_HANDLE_OPERATOR_BOOL() \
+            uint64_t handle; \
+        };
 #else
-    #define VK_DEFINE_BASE_HANDLE(_obj) typedef VkUintPtrLeast64 _obj;
-    #define VK_DEFINE_DISP_SUBCLASS_HANDLE(_obj, _base) typedef uintptr_t _obj;
-    #define VK_DEFINE_NONDISP_SUBCLASS_HANDLE(_obj, _base) typedef VkUintPtrLeast64 _obj;
+    #define VK_DEFINE_NONDISP_HANDLE(obj) typedef struct obj##_T { uint64_t handle; } obj;
 #endif
+        
 
 
 #define VK_LOD_CLAMP_NONE                 MAX_FLOAT
@@ -76,40 +91,37 @@ extern "C" {
 #define VK_MAX_EXTENSION_NAME             256
 #define VK_MAX_DESCRIPTION                256
 
-VK_DEFINE_BASE_HANDLE(VkObject)
-VK_DEFINE_DISP_SUBCLASS_HANDLE(VkInstance, VkObject)
-VK_DEFINE_DISP_SUBCLASS_HANDLE(VkPhysicalDevice, VkObject)
-VK_DEFINE_DISP_SUBCLASS_HANDLE(VkDevice, VkObject)
-VK_DEFINE_DISP_SUBCLASS_HANDLE(VkQueue, VkObject)
-VK_DEFINE_DISP_SUBCLASS_HANDLE(VkCmdBuffer, VkObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkNonDispatchable, VkObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFence, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDeviceMemory, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkBuffer, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImage, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSemaphore, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkEvent, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkQueryPool, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkBufferView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkImageView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkAttachmentView, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShaderModule, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkShader, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineCache, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipelineLayout, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkRenderPass, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkPipeline, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorSetLayout, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkSampler, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorPool, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDescriptorSet, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicStateObject, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicViewportState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicRasterState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicColorBlendState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkDynamicDepthStencilState, VkDynamicStateObject)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkFramebuffer, VkNonDispatchable)
-VK_DEFINE_NONDISP_SUBCLASS_HANDLE(VkCmdPool, VkNonDispatchable)
+VK_DEFINE_HANDLE(VkInstance)
+VK_DEFINE_HANDLE(VkPhysicalDevice)
+VK_DEFINE_HANDLE(VkDevice)
+VK_DEFINE_HANDLE(VkQueue)
+VK_DEFINE_HANDLE(VkCmdBuffer)
+VK_DEFINE_NONDISP_HANDLE(VkFence)
+VK_DEFINE_NONDISP_HANDLE(VkDeviceMemory)
+VK_DEFINE_NONDISP_HANDLE(VkBuffer)
+VK_DEFINE_NONDISP_HANDLE(VkImage)
+VK_DEFINE_NONDISP_HANDLE(VkSemaphore)
+VK_DEFINE_NONDISP_HANDLE(VkEvent)
+VK_DEFINE_NONDISP_HANDLE(VkQueryPool)
+VK_DEFINE_NONDISP_HANDLE(VkBufferView)
+VK_DEFINE_NONDISP_HANDLE(VkImageView)
+VK_DEFINE_NONDISP_HANDLE(VkAttachmentView)
+VK_DEFINE_NONDISP_HANDLE(VkShaderModule)
+VK_DEFINE_NONDISP_HANDLE(VkShader)
+VK_DEFINE_NONDISP_HANDLE(VkPipelineCache)
+VK_DEFINE_NONDISP_HANDLE(VkPipelineLayout)
+VK_DEFINE_NONDISP_HANDLE(VkRenderPass)
+VK_DEFINE_NONDISP_HANDLE(VkPipeline)
+VK_DEFINE_NONDISP_HANDLE(VkDescriptorSetLayout)
+VK_DEFINE_NONDISP_HANDLE(VkSampler)
+VK_DEFINE_NONDISP_HANDLE(VkDescriptorPool)
+VK_DEFINE_NONDISP_HANDLE(VkDescriptorSet)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicViewportState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicRasterState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicColorBlendState)
+VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthStencilState)
+VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
+VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
 
 
 typedef enum {
@@ -139,7 +151,7 @@ typedef enum {
     VK_ERROR_INVALID_IMAGE = -17,
     VK_ERROR_INVALID_DESCRIPTOR_SET_DATA = -18,
     VK_ERROR_INVALID_QUEUE_TYPE = -19,
-    VK_ERROR_INVALID_OBJECT_TYPE = -20,
+
     VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION = -21,
     VK_ERROR_BAD_SHADER_CODE = -22,
     VK_ERROR_BAD_PIPELINE_DATA = -23,
@@ -440,44 +452,6 @@ typedef enum {
     VK_PHYSICAL_DEVICE_TYPE_NUM = (VK_PHYSICAL_DEVICE_TYPE_CPU - VK_PHYSICAL_DEVICE_TYPE_OTHER + 1),
     VK_PHYSICAL_DEVICE_TYPE_MAX_ENUM = 0x7FFFFFFF
 } VkPhysicalDeviceType;
-
-typedef enum {
-    VK_OBJECT_TYPE_INSTANCE = 0,
-    VK_OBJECT_TYPE_PHYSICAL_DEVICE = 1,
-    VK_OBJECT_TYPE_DEVICE = 2,
-    VK_OBJECT_TYPE_QUEUE = 3,
-    VK_OBJECT_TYPE_COMMAND_BUFFER = 4,
-    VK_OBJECT_TYPE_DEVICE_MEMORY = 5,
-    VK_OBJECT_TYPE_BUFFER = 6,
-    VK_OBJECT_TYPE_BUFFER_VIEW = 7,
-    VK_OBJECT_TYPE_IMAGE = 8,
-    VK_OBJECT_TYPE_IMAGE_VIEW = 9,
-    VK_OBJECT_TYPE_ATTACHMENT_VIEW = 10,
-    VK_OBJECT_TYPE_SHADER_MODULE = 11,
-    VK_OBJECT_TYPE_SHADER = 12,
-    VK_OBJECT_TYPE_PIPELINE = 13,
-    VK_OBJECT_TYPE_PIPELINE_LAYOUT = 14,
-    VK_OBJECT_TYPE_SAMPLER = 15,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET = 16,
-    VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT = 17,
-    VK_OBJECT_TYPE_DESCRIPTOR_POOL = 18,
-    VK_OBJECT_TYPE_DYNAMIC_VP_STATE = 19,
-    VK_OBJECT_TYPE_DYNAMIC_RS_STATE = 20,
-    VK_OBJECT_TYPE_DYNAMIC_CB_STATE = 21,
-    VK_OBJECT_TYPE_DYNAMIC_DS_STATE = 22,
-    VK_OBJECT_TYPE_FENCE = 23,
-    VK_OBJECT_TYPE_SEMAPHORE = 24,
-    VK_OBJECT_TYPE_EVENT = 25,
-    VK_OBJECT_TYPE_QUERY_POOL = 26,
-    VK_OBJECT_TYPE_FRAMEBUFFER = 27,
-    VK_OBJECT_TYPE_RENDER_PASS = 28,
-    VK_OBJECT_TYPE_PIPELINE_CACHE = 29,
-    VK_OBJECT_TYPE_CMD_POOL = 30,
-    VK_OBJECT_TYPE_BEGIN_RANGE = VK_OBJECT_TYPE_INSTANCE,
-    VK_OBJECT_TYPE_END_RANGE = VK_OBJECT_TYPE_PIPELINE_CACHE,
-    VK_OBJECT_TYPE_NUM = (VK_OBJECT_TYPE_PIPELINE_CACHE - VK_OBJECT_TYPE_INSTANCE + 1),
-    VK_OBJECT_TYPE_MAX_ENUM = 0x7FFFFFFF
-} VkObjectType;
 
 typedef enum {
     VK_IMAGE_ASPECT_COLOR = 0,
@@ -2135,7 +2109,6 @@ typedef VkResult (VKAPI *PFN_vkMapMemory)(VkDevice device, VkDeviceMemory mem, V
 typedef VkResult (VKAPI *PFN_vkUnmapMemory)(VkDevice device, VkDeviceMemory mem);
 typedef VkResult (VKAPI *PFN_vkFlushMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
 typedef VkResult (VKAPI *PFN_vkInvalidateMappedMemoryRanges)(VkDevice device, uint32_t memRangeCount, const VkMappedMemoryRange* pMemRanges);
-typedef VkResult (VKAPI *PFN_vkDestroyObject)(VkDevice device, VkObjectType objType, VkObject object);
 typedef VkResult (VKAPI *PFN_vkGetDeviceMemoryCommitment)(VkDevice device, VkDeviceMemory memory, VkDeviceSize* pCommittedMemoryInBytes);
 typedef VkResult (VKAPI *PFN_vkBindBufferMemory)(VkDevice device, VkBuffer buffer, VkDeviceMemory mem, VkDeviceSize memOffset);
 typedef VkResult (VKAPI *PFN_vkBindImageMemory)(VkDevice device, VkImage image, VkDeviceMemory mem, VkDeviceSize memOffset);
@@ -2394,11 +2367,6 @@ VkResult VKAPI vkInvalidateMappedMemoryRanges(
     VkDevice                                    device,
     uint32_t                                    memRangeCount,
     const VkMappedMemoryRange*                  pMemRanges);
-
-VkResult VKAPI vkDestroyObject(
-    VkDevice                                    device,
-    VkObjectType                                objType,
-    VkObject                                    object);
 
 VkResult VKAPI vkGetDeviceMemoryCommitment(
     VkDevice                                    device,

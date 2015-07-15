@@ -984,117 +984,6 @@ VkResult anv_InvalidateMappedMemoryRanges(
    return anv_FlushMappedMemoryRanges(device, memRangeCount, pMemRanges);
 }
 
-VkResult anv_DestroyObject(
-    VkDevice                                    _device,
-    VkObjectType                                objType,
-    VkObject                                    _object)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-
-   switch (objType) {
-   case VK_OBJECT_TYPE_FENCE:
-      return anv_DestroyFence(_device, (VkFence) _object);
-
-   case VK_OBJECT_TYPE_INSTANCE:
-      return anv_DestroyInstance((VkInstance) _object);
-
-   case VK_OBJECT_TYPE_PHYSICAL_DEVICE:
-      /* We don't want to actually destroy physical devices */
-      return VK_SUCCESS;
-
-   case VK_OBJECT_TYPE_DEVICE:
-      assert(_device == (VkDevice) _object);
-      return anv_DestroyDevice((VkDevice) _object);
-
-   case VK_OBJECT_TYPE_QUEUE:
-      /* TODO */
-      return VK_SUCCESS;
-
-   case VK_OBJECT_TYPE_DEVICE_MEMORY:
-      return anv_FreeMemory(_device, (VkDeviceMemory) _object);
-
-   case VK_OBJECT_TYPE_DESCRIPTOR_POOL:
-      return anv_DestroyDescriptorPool(_device, (VkDescriptorPool) _object);
-
-   case VK_OBJECT_TYPE_PIPELINE_CACHE:
-      return anv_DestroyPipelineCache(_device, (VkPipelineCache) _object);
-
-   case VK_OBJECT_TYPE_BUFFER_VIEW:
-      return anv_DestroyBufferView(_device, _object);
-
-   case VK_OBJECT_TYPE_IMAGE_VIEW:
-      return anv_DestroyImageView(_device, _object);
-
-   case VK_OBJECT_TYPE_ATTACHMENT_VIEW:
-      return anv_DestroyAttachmentView(_device, _object);
-
-   case VK_OBJECT_TYPE_IMAGE:
-      return anv_DestroyImage(_device, _object);
-
-   case VK_OBJECT_TYPE_BUFFER:
-      return anv_DestroyBuffer(_device, (VkBuffer) _object);
-
-   case VK_OBJECT_TYPE_SHADER_MODULE:
-      return anv_DestroyShaderModule(_device, (VkShaderModule) _object);
-
-   case VK_OBJECT_TYPE_SHADER:
-      return anv_DestroyShader(_device, (VkShader) _object);
-
-   case VK_OBJECT_TYPE_PIPELINE_LAYOUT:
-      return anv_DestroyPipelineLayout(_device, (VkPipelineLayout) _object);
-
-   case VK_OBJECT_TYPE_SAMPLER:
-      return anv_DestroySampler(_device, (VkSampler) _object);
-
-   case VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT:
-      return anv_DestroyDescriptorSetLayout(_device, (VkDescriptorSetLayout) _object);
-
-   case VK_OBJECT_TYPE_DESCRIPTOR_SET:
-      anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(_object));
-      return VK_SUCCESS;
-
-   case VK_OBJECT_TYPE_RENDER_PASS:
-      return anv_DestroyRenderPass(_device, (VkRenderPass) _object);
-
-   case VK_OBJECT_TYPE_DYNAMIC_VP_STATE:
-      return anv_DestroyDynamicViewportState(_device, (VkDynamicViewportState) _object);
-
-   case VK_OBJECT_TYPE_DYNAMIC_RS_STATE:
-      return anv_DestroyDynamicRasterState(_device, (VkDynamicRasterState) _object);
-
-   case VK_OBJECT_TYPE_DYNAMIC_CB_STATE:
-      return anv_DestroyDynamicColorBlendState(_device, (VkDynamicColorBlendState) _object);
-
-   case VK_OBJECT_TYPE_DYNAMIC_DS_STATE:
-      return anv_DestroyDynamicDepthStencilState(_device, (VkDynamicDepthStencilState) _object);
-
-   case VK_OBJECT_TYPE_FRAMEBUFFER:
-      return anv_DestroyFramebuffer(_device, (VkFramebuffer) _object);
-
-   case VK_OBJECT_TYPE_COMMAND_BUFFER:
-      return anv_DestroyCommandBuffer(_device, (VkCmdBuffer) _object);
-      return VK_SUCCESS;
-
-   case VK_OBJECT_TYPE_PIPELINE:
-      return anv_DestroyPipeline(_device, (VkPipeline) _object);
-
-   case VK_OBJECT_TYPE_QUERY_POOL:
-      return anv_DestroyQueryPool(_device, (VkQueryPool) _object);
-
-   case VK_OBJECT_TYPE_SEMAPHORE:
-      return anv_DestroySemaphore(_device, (VkSemaphore) _object);
-
-   case VK_OBJECT_TYPE_EVENT:
-      return anv_DestroyEvent(_device, (VkEvent) _object);
-
-   case VK_OBJECT_TYPE_CMD_POOL:
-      return anv_DestroyCommandPool(_device, (VkCmdPool) _object);
-
-   default:
-      unreachable("Invalid object type");
-   }
-}
-
 VkResult anv_GetBufferMemoryRequirements(
     VkDevice                                    device,
     VkBuffer                                    _buffer,
@@ -1851,7 +1740,7 @@ VkResult anv_CreateDescriptorPool(
     VkDescriptorPool*                           pDescriptorPool)
 {
    anv_finishme("VkDescriptorPool is a stub");
-   *pDescriptorPool = 1;
+   pDescriptorPool->handle = 1;
    return VK_SUCCESS;
 }
 
@@ -2270,7 +2159,7 @@ VkResult anv_CreateCommandPool(
     const VkCmdPoolCreateInfo*                  pCreateInfo,
     VkCmdPool*                                  pCmdPool)
 {
-   *pCmdPool = 7;
+   pCmdPool->handle = 7;
 
    stub_return(VK_SUCCESS);
 }
