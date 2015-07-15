@@ -1364,13 +1364,12 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_ubo: {
+      uint32_t set = instr->const_index[0];
       nir_const_value *const_index = nir_src_as_const_value(instr->src[0]);
       fs_reg surf_index;
 
       if (const_index) {
-         uint32_t index = const_index->u[0];
-         uint32_t set = shader->base.UniformBlocks[index].Set;
-         uint32_t binding = shader->base.UniformBlocks[index].Binding;
+         uint32_t binding = const_index->u[0];
 
          /* FIXME: We should probably assert here, but dota2 seems to hit
           * it and we'd like to keep going.
@@ -1405,7 +1404,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                      BRW_REGISTER_TYPE_D),
                  fs_reg(2));
 
-         unsigned vec4_offset = instr->const_index[0] / 4;
+         unsigned vec4_offset = instr->const_index[1] / 4;
          for (int i = 0; i < instr->num_components; i++)
             VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, i), surf_index,
                                        base_offset, vec4_offset + i);
@@ -1413,7 +1412,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;
 
-         fs_reg const_offset_reg((unsigned) instr->const_index[0] & ~15);
+         fs_reg const_offset_reg((unsigned) instr->const_index[1] & ~15);
          bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
                   surf_index, const_offset_reg);
 

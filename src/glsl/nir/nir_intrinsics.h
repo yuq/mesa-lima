@@ -139,11 +139,12 @@ SYSTEM_VALUE(sample_mask_in, 1)
 SYSTEM_VALUE(invocation_id, 1)
 
 /*
- * The first and only index is the base address to load from.  Indirect
- * loads have an additional register input, which is added to the constant
- * address to compute the final address to load from.  For UBO's (and
- * SSBO's), the first source is the (possibly constant) UBO buffer index
- * and the indirect (if it exists) is the second source.
+ * The last index is the base address to load from.  Indirect loads have an
+ * additional register input, which is added to the constant address to
+ * compute the final address to load from.  For UBO's (and SSBO's), the first
+ * source is the (possibly constant) UBO buffer index and the indirect (if it
+ * exists) is the second source, and the first index is the descriptor set
+ * index.
  *
  * For vector backends, the address is in terms of one vec4, and so each array
  * element is +4 scalar components from the previous array element. For scalar
@@ -151,14 +152,14 @@ SYSTEM_VALUE(invocation_id, 1)
  * elements begin immediately after the previous array element.
  */
 
-#define LOAD(name, extra_srcs, flags) \
-   INTRINSIC(load_##name, extra_srcs, ARR(1), true, 0, 0, 1, flags) \
+#define LOAD(name, extra_srcs, extra_indices, flags) \
+   INTRINSIC(load_##name, extra_srcs, ARR(1), true, 0, 0, 1 + extra_indices, flags) \
    INTRINSIC(load_##name##_indirect, extra_srcs + 1, ARR(1, 1), \
-             true, 0, 0, 1, flags)
+             true, 0, 0, 1 + extra_indices, flags)
 
-LOAD(uniform, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-LOAD(ubo, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-LOAD(input, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(uniform, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(ubo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(input, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* LOAD(ssbo, 1, 0) */
 
 /*
