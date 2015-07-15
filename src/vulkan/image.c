@@ -333,13 +333,15 @@ anv_surface_view_fini(struct anv_device *device,
 }
 
 void
-anv_image_view_init(struct anv_surface_view *view,
+anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+   struct anv_surface_view *view = &iview->view;
    struct anv_surface *surface;
 
    const struct anv_format *format_info =
@@ -537,7 +539,7 @@ anv_CreateImageView(VkDevice _device,
                     VkImageView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_surface_view *view;
+   struct anv_image_view *view;
 
    view = anv_device_alloc(device, sizeof(*view), 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -546,19 +548,19 @@ anv_CreateImageView(VkDevice _device,
 
    anv_image_view_init(view, device, pCreateInfo, NULL);
 
-   *pView = (VkImageView) view;
+   *pView = anv_image_view_to_handle(view);
 
    return VK_SUCCESS;
 }
 
 VkResult
-anv_DestroyImageView(VkDevice _device, VkImageView _view)
+anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_surface_view *view = (struct anv_surface_view *)_view;
+   ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   anv_surface_view_fini(device, view);
-   anv_device_free(device, view);
+   anv_surface_view_fini(device, &iview->view);
+   anv_device_free(device, iview);
 
    return VK_SUCCESS;
 }

@@ -854,6 +854,15 @@ struct anv_surface_view {
    VkFormat                                     format;
 };
 
+struct anv_buffer_view {
+   /* FINISHME: Trim unneeded data from this struct. */
+   struct anv_surface_view view;
+};
+
+struct anv_image_view {
+   struct anv_surface_view view;
+};
+
 enum anv_attachment_view_type {
    ANV_ATTACHMENT_VIEW_TYPE_COLOR,
    ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL,
@@ -894,7 +903,7 @@ VkResult anv_image_create(VkDevice _device,
                           const struct anv_image_create_info *info,
                           VkImage *pImage);
 
-void anv_image_view_init(struct anv_surface_view *view,
+void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,
                          const VkImageViewCreateInfo* pCreateInfo,
                          struct anv_cmd_buffer *cmd_buffer);
@@ -995,6 +1004,8 @@ ANV_DEFINE_CASTS(anv_pipeline, VkPipeline)
 ANV_DEFINE_CASTS(anv_image, VkImage)
 ANV_DEFINE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_CASTS(anv_attachment_view, VkAttachmentView)
+ANV_DEFINE_CASTS(anv_buffer_view, VkBufferView);
+ANV_DEFINE_CASTS(anv_image_view, VkImageView);
 ANV_DEFINE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_CASTS(anv_query_pool, VkQueryPool)

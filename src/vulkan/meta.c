@@ -762,7 +762,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
    anv_image_from_handle(dest_image)->bo = dest;
    anv_image_from_handle(dest_image)->offset = dest_offset;
 
-   struct anv_surface_view src_view;
+   struct anv_image_view src_view;
    anv_image_view_init(&src_view, cmd_buffer->device,
       &(VkImageViewCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -798,7 +798,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer);
 
    meta_emit_blit(cmd_buffer,
-                  &src_view,
+                  &src_view.view,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
                   &dest_view,
@@ -902,7 +902,7 @@ void anv_CmdCopyImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      struct anv_surface_view src_view;
+      struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -938,7 +938,7 @@ void anv_CmdCopyImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     &src_view.view,
                      pRegions[r].srcOffset,
                      pRegions[r].extent,
                      &dest_view,
@@ -970,7 +970,7 @@ void anv_CmdBlitImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      struct anv_surface_view src_view;
+      struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1006,7 +1006,7 @@ void anv_CmdBlitImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     &src_view.view,
                      pRegions[r].srcOffset,
                      pRegions[r].srcExtent,
                      &dest_view,
@@ -1066,7 +1066,7 @@ void anv_CmdCopyBufferToImage(
       src_image->bo = src_buffer->bo;
       src_image->offset = src_buffer->offset + pRegions[r].bufferOffset;
 
-      struct anv_surface_view src_view;
+      struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1102,7 +1102,7 @@ void anv_CmdCopyBufferToImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     &src_view.view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent,
                      &dest_view,
@@ -1137,7 +1137,7 @@ void anv_CmdCopyImageToBuffer(
       if (pRegions[r].bufferImageHeight != 0)
          anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
 
-      struct anv_surface_view src_view;
+      struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1200,7 +1200,7 @@ void anv_CmdCopyImageToBuffer(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     &src_view.view,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
                      &dest_view,

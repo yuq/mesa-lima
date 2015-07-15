@@ -1722,15 +1722,17 @@ VkResult anv_CreateBufferView(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
+   struct anv_buffer_view *bview;
    struct anv_surface_view *view;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
 
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
+   bview = anv_device_alloc(device, sizeof(*view), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (bview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   view = &bview->view;
    view->bo = buffer->bo;
    view->offset = buffer->offset + pCreateInfo->offset;
    view->surface_state =
@@ -1741,20 +1743,20 @@ VkResult anv_CreateBufferView(
    fill_buffer_surface_state(view->surface_state.map,
                              pCreateInfo->format, view->offset, pCreateInfo->range);
 
-   *pView = (VkBufferView) view;
+   *pView = anv_buffer_view_to_handle(bview);
 
    return VK_SUCCESS;
 }
 
 VkResult anv_DestroyBufferView(
     VkDevice                                    _device,
-    VkBufferView                                _view)
+    VkBufferView                                _bview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_surface_view *view = (struct anv_surface_view *)_view;
+   ANV_FROM_HANDLE(anv_buffer_view, bview, _bview);
 
-   anv_surface_view_fini(device, view);
-   anv_device_free(device, view);
+   anv_surface_view_fini(device, &bview->view);
+   anv_device_free(device, bview);
 
    return VK_SUCCESS;
 }
@@ -2131,8 +2133,9 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
          for (uint32_t j = 0; j < write->count; j++) {
-            set->descriptors[write->destBinding + j].view =
-               (struct anv_surface_view *)write->pDescriptors[j].imageView;
+            ANV_FROM_HANDLE(anv_image_view, iview,
+                            write->pDescriptors[j].imageView);
+            set->descriptors[write->destBinding + j].view = &iview->view;
          }
          break;
 
@@ -2150,8 +2153,9 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
          for (uint32_t j = 0; j < write->count; j++) {
-            set->descriptors[write->destBinding + j].view =
-               (struct anv_surface_view *)write->pDescriptors[j].bufferView;
+            ANV_FROM_HANDLE(anv_buffer_view, bview,
+                            write->pDescriptors[j].bufferView);
+            set->descriptors[write->destBinding + j].view = &bview->view;
          }
 
       default:
