@@ -4045,7 +4045,14 @@ VkResult anv_CreateRenderPass(
    if (pass == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   /* Clear the subpasses along with the parent pass. This required because
+    * each array member of anv_subpass must be a valid pointer if not NULL.
+    */
+   memset(pass, 0, size);
+
    pass->attachment_count = pCreateInfo->attachmentCount;
+   pass->subpass_count = pCreateInfo->subpassCount;
+
    size = pCreateInfo->attachmentCount * sizeof(*pass->attachments);
    pass->attachments = anv_device_alloc(device, size, 8,
                                         VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -4063,25 +4070,39 @@ VkResult anv_CreateRenderPass(
       struct anv_subpass *subpass = &pass->subpasses[i];
 
       subpass->input_count = desc->inputCount;
-      subpass->input_attachments =
-         anv_device_alloc(device, desc->inputCount * sizeof(uint32_t),
-                          8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-      for (uint32_t j = 0; j < desc->inputCount; j++)
-         subpass->input_attachments[j] = desc->inputAttachments[j].attachment;
-
       subpass->color_count = desc->colorCount;
-      subpass->color_attachments =
-         anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
-                          8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-      for (uint32_t j = 0; j < desc->colorCount; j++)
-         subpass->color_attachments[j] = desc->colorAttachments[j].attachment;
+
+      if (desc->inputCount > 0) {
+         subpass->input_attachments =
+            anv_device_alloc(device, desc->inputCount * sizeof(uint32_t),
+                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+
+         for (uint32_t j = 0; j < desc->inputCount; j++) {
+            subpass->input_attachments[j]
+               = desc->inputAttachments[j].attachment;
+         }
+      }
+
+      if (desc->colorCount > 0) {
+         subpass->color_attachments =
+            anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
+                             8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+
+         for (uint32_t j = 0; j < desc->colorCount; j++) {
+            subpass->color_attachments[j]
+               = desc->colorAttachments[j].attachment;
+         }
+      }
 
       if (desc->resolveAttachments) {
          subpass->resolve_attachments =
             anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-         for (uint32_t j = 0; j < desc->colorCount; j++)
-            subpass->resolve_attachments[j] = desc->resolveAttachments[j].attachment;
+
+         for (uint32_t j = 0; j < desc->colorCount; j++) {
+            subpass->resolve_attachments[j]
+               = desc->resolveAttachments[j].attachment;
+         }
       }
 
       subpass->depth_stencil_attachment = desc->depthStencilAttachment.attachment;
@@ -4101,10 +4122,18 @@ VkResult anv_DestroyRenderPass(
 
    anv_device_free(device, pass->attachments);
 
-   for (uint32_t i = 0; i < pass->attachment_count; i++) {
-      anv_device_free(device, pass->subpasses[i].input_attachments);
-      anv_device_free(device, pass->subpasses[i].color_attachments);
-      anv_device_free(device, pass->subpasses[i].resolve_attachments);
+   for (uint32_t i = 0; i < pass->subpass_count; i++) {
+      /* In VkSubpassCreateInfo, each of the attachment arrays may be null.
+       * Don't free the null arrays.
+       */
+      struct anv_subpass *subpass = &pass->subpasses[i];
+
+      if (subpass->input_attachments)
+         anv_device_free(device, subpass->input_attachments);
+      if (subpass->color_attachments)
+         anv_device_free(device, subpass->color_attachments);
+      if (subpass->resolve_attachments)
+         anv_device_free(device, subpass->resolve_attachments);
    }
 
    anv_device_free(device, pass);

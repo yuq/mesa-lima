@@ -959,8 +959,9 @@ struct anv_render_pass_attachment {
 
 struct anv_render_pass {
    uint32_t                                     attachment_count;
-   struct anv_render_pass_attachment *          attachments;
+   uint32_t                                     subpass_count;
 
+   struct anv_render_pass_attachment *          attachments;
    struct anv_subpass                           subpasses[0];
 };
 
