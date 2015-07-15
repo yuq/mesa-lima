@@ -3044,9 +3044,16 @@ anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
     */
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
 
-   /* It seems like just changing the state base addresses isn't enough.
-    * Invalidating the cache seems to be enough to cause things to
-    * propagate.  However, I'm not 100% sure what we're supposed to do.
+   /* The sampler unit caches SURFACE_STATE and RENDER_SURFACE_STATE entries,
+    * and the data port uses the same cache. When changing the Surface State
+    * Base Address, we need to flush the texture cache so that it can pick up
+    * on the new SURFACE_STATE's. From the Broadwell PRM,
+    * Shared Function > 3D Sampler > State > State Caching (page 96):
+    *
+    *     Whenever the value of the Dynamic_State_Base_Addr,
+    *     Surface_State_Base_Addr are altered, the L1 state cache
+    *     must be invalidated to ensure the new surface or sampler state is
+    *     fetched from system memory.
     */
    anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
                   .TextureCacheInvalidationEnable = true);
