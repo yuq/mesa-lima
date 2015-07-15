@@ -264,7 +264,7 @@ with open_file(outfname, 'w') as outfile:
             .codeSize = sizeof(_ANV_GLSL_SRC_VAR(__LINE__)),                  \\
             .pCode = _ANV_GLSL_SRC_VAR(__LINE__),                             \\
          };                                                                   \\
-         vkCreateShaderModule((VkDevice) device,                              \\
+         vkCreateShaderModule(anv_device_to_handle(device),                   \\
                               &__shader_create_info, &__module);              \\
          __module;                                                            \\
       })
