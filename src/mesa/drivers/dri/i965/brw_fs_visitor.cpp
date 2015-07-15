@@ -1572,15 +1572,6 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    }
 
    if (source_depth_to_render_target) {
-      if (devinfo->gen == 6) {
-	 /* For outputting oDepth on gen6, SIMD8 writes have to be
-	  * used.  This would require SIMD8 moves of each half to
-	  * message regs, kind of like pre-gen5 SIMD16 FB writes.
-	  * Just bail on doing so for now.
-	  */
-	 no16("Missing support for simd16 depth writes on gen6\n");
-      }
-
       if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
 	 /* Hand over gl_FragDepth. */
 	 assert(this->frag_depth.file != BAD_FILE);
@@ -1643,6 +1634,17 @@ fs_visitor::emit_fb_writes()
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    fs_inst *inst = NULL;
+
+   if (source_depth_to_render_target && devinfo->gen == 6) {
+      /* For outputting oDepth on gen6, SIMD8 writes have to be used.  This
+       * would require SIMD8 moves of each half to message regs, e.g. by using
+       * the SIMD lowering pass.  Unfortunately this is more difficult than it
+       * sounds because the SIMD8 single-source message lacks channel selects
+       * for the second and third subspans.
+       */
+      no16("Missing support for simd16 depth writes on gen6\n");
+   }
+
    if (do_dual_src) {
       const fs_builder abld = bld.annotate("FB dual-source write");
 
