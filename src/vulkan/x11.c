@@ -88,7 +88,8 @@ VkResult anv_CreateSwapChainWSI(
     const VkSwapChainCreateInfoWSI*         pCreateInfo,
     VkSwapChainWSI*                         pSwapChain)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
    struct anv_swap_chain *chain;
    xcb_void_cookie_t cookie;
    VkResult result;
@@ -110,11 +111,13 @@ VkResult anv_CreateSwapChainWSI(
    chain->extent = pCreateInfo->imageExtent;
 
    for (uint32_t i = 0; i < chain->count; i++) {
+      VkDeviceMemory memory_h;
+      VkImage image_h;
       struct anv_image *image;
       struct anv_surface *surface;
       struct anv_device_memory *memory;
 
-      anv_image_create((VkDevice) device,
+      anv_image_create(_device,
          &(struct anv_image_create_info) {
             .force_tile_mode = true,
             .tile_mode = XMAJOR,
@@ -136,21 +139,23 @@ VkResult anv_CreateSwapChainWSI(
             .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
             .flags = 0,
          }},
-         (VkImage *) &image);
+         &image_h);
 
+      image = anv_image_from_handle(image_h);
       surface = &image->primary_surface;
 
-      anv_AllocMemory((VkDevice) device,
+      anv_AllocMemory(_device,
                       &(VkMemoryAllocInfo) {
                          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
                          .allocationSize = image->size,
                          .memoryTypeIndex = 0,
                       },
-                      (VkDeviceMemory *) &memory);
+                      &memory_h);
 
-      anv_BindImageMemory(VK_NULL_HANDLE,
-                          anv_image_to_handle(image),
-                          anv_device_memory_to_handle(memory), 0);
+      memory = anv_device_memory_from_handle(memory_h);
+
+      anv_BindImageMemory(VK_NULL_HANDLE, anv_image_to_handle(image),
+                          memory_h, 0);
 
       ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
                                surface->stride, I915_TILING_X);
@@ -241,8 +246,8 @@ VkResult anv_GetSwapChainInfoWSI(
 
       images = pData;
       for (uint32_t i = 0; i < chain->count; i++) {
-         images[i].image = (VkImage) chain->images[i].image;
-         images[i].memory = (VkDeviceMemory) chain->images[i].memory;
+         images[i].image = anv_image_to_handle(chain->images[i].image);
+         images[i].memory = anv_device_memory_to_handle(chain->images[i].memory);
       }
 
       return VK_SUCCESS;
@@ -256,7 +261,8 @@ VkResult anv_QueuePresentWSI(
     VkQueue                                 queue_,
     const VkPresentInfoWSI*                 pPresentInfo)
 {
-   struct anv_image *image = (struct anv_image *) pPresentInfo->image;
+   ANV_FROM_HANDLE(anv_image, image, pPresentInfo->image);
+
    struct anv_swap_chain *chain = image->swap_chain;
    xcb_void_cookie_t cookie;
    xcb_pixmap_t pixmap;
@@ -268,7 +274,7 @@ VkResult anv_QueuePresentWSI(
 
    pixmap = XCB_NONE;
    for (uint32_t i = 0; i < chain->count; i++) {
-      if ((VkImage) chain->images[i].image == pPresentInfo->image) {
+      if (image == chain->images[i].image) {
          pixmap = chain->images[i].pixmap;
          break;
       }
