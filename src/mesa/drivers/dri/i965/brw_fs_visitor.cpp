@@ -1499,6 +1499,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
+   const fs_builder ubld = bld.group(exec_size, use_2nd_half);
    int header_size = 2, payload_header_size;
 
    /* We can potentially have a message length of up to 15, so we have to set
@@ -1536,14 +1537,24 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    }
 
    if (prog_data->uses_omask) {
-      assert(this->sample_mask.file != BAD_FILE);
-      /* Hand over gl_SampleMask. Only lower 16 bits are relevant.  Since
-       * it's unsinged single words, one vgrf is always 16-wide.
-       */
       sources[length] = fs_reg(GRF, alloc.allocate(1),
-                               BRW_REGISTER_TYPE_UW);
-      bld.exec_all().annotate("FB write oMask")
-         .emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
+                               BRW_REGISTER_TYPE_UD);
+
+      /* Hand over gl_SampleMask.  Only the lower 16 bits of each channel are
+       * relevant.  Since it's unsigned single words one vgrf is always
+       * 16-wide, but only the lower or higher 8 channels will be used by the
+       * hardware when doing a SIMD8 write depending on whether we have
+       * selected the subspans for the first or second half respectively.
+       */
+      fs_reg sample_mask = this->sample_mask;
+      assert(sample_mask.file != BAD_FILE && type_sz(sample_mask.type) == 4);
+      sample_mask.type = BRW_REGISTER_TYPE_UW;
+      sample_mask.stride *= 2;
+
+      ubld.annotate("FB write oMask")
+          .MOV(half(retype(sources[length], BRW_REGISTER_TYPE_UW),
+                    use_2nd_half),
+               half(sample_mask, use_2nd_half));
       length++;
    }
 
@@ -1590,7 +1601,6 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    if (payload.dest_depth_reg)
       sources[length++] = fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0));
 
-   const fs_builder ubld = bld.group(exec_size, use_2nd_half);
    fs_inst *load;
    fs_inst *write;
    if (devinfo->gen >= 7) {
