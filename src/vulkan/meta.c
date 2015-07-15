@@ -515,7 +515,7 @@ struct blit_region {
 
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_surface_view *src,
+               struct anv_image_view *src,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
                struct anv_color_attachment_view *dest,
@@ -542,8 +542,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)(src_offset.x + src_extent.width) / (float)src->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+         (float)(src_offset.x + src_extent.width) / (float)src->view.extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->view.extent.height,
       },
    };
 
@@ -553,8 +553,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+         (float)src_offset.x / (float)src->view.extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->view.extent.height,
       },
    };
 
@@ -564,8 +564,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->extent.width,
-         (float)src_offset.y / (float)src->extent.height,
+         (float)src_offset.x / (float)src->view.extent.width,
+         (float)src_offset.y / (float)src->view.extent.height,
       },
    };
 
@@ -603,7 +603,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .pDescriptors = (VkDescriptorInfo[]) {
                {
-                  .imageView = (VkImageView) src,
+                  .imageView = anv_image_view_to_handle(src),
                   .imageLayout = VK_IMAGE_LAYOUT_GENERAL
                },
             }
@@ -795,7 +795,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer);
 
    meta_emit_blit(cmd_buffer,
-                  &src_view.view,
+                  &src_view,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
                   &dest_view,
@@ -813,9 +813,10 @@ void anv_CmdCopyBuffer(
     uint32_t                                    regionCount,
     const VkBufferCopy*                         pRegions)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
-   struct anv_buffer *src_buffer = (struct anv_buffer *)srcBuffer;
-   struct anv_buffer *dest_buffer = (struct anv_buffer *)destBuffer;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_buffer, src_buffer, srcBuffer);
+   ANV_FROM_HANDLE(anv_buffer, dest_buffer, destBuffer);
+
    struct anv_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -892,8 +893,9 @@ void anv_CmdCopyImage(
     uint32_t                                    regionCount,
     const VkImageCopy*                          pRegions)
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
-   struct anv_image *src_image = (struct anv_image *)srcImage;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+
    struct anv_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -935,7 +937,7 @@ void anv_CmdCopyImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view.view,
+                     &src_view,
                      pRegions[r].srcOffset,
                      pRegions[r].extent,
                      &dest_view,
@@ -957,9 +959,10 @@ void anv_CmdBlitImage(
     VkTexFilter                                 filter)
 
 {
-   struct anv_cmd_buffer *cmd_buffer = (struct anv_cmd_buffer *)cmdBuffer;
-   struct anv_image *src_image = (struct anv_image *)srcImage;
-   struct anv_image *dest_image = (struct anv_image *)destImage;
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+   ANV_FROM_HANDLE(anv_image, dest_image, destImage);
+
    struct anv_saved_state saved_state;
 
    anv_finishme("respect VkTexFilter");
@@ -1003,7 +1006,7 @@ void anv_CmdBlitImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view.view,
+                     &src_view,
                      pRegions[r].srcOffset,
                      pRegions[r].srcExtent,
                      &dest_view,
@@ -1099,7 +1102,7 @@ void anv_CmdCopyBufferToImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view.view,
+                     &src_view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent,
                      &dest_view,
@@ -1197,7 +1200,7 @@ void anv_CmdCopyImageToBuffer(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view.view,
+                     &src_view,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
                      &dest_view,
