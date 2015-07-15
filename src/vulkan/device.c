@@ -1057,6 +1057,9 @@ void
 anv_device_free(struct anv_device *             device,
                 void *                          mem)
 {
+   if (mem == NULL)
+      return;
+
    return device->instance->pfnFree(device->instance->pAllocUserData,
                                     mem);
 }
