@@ -141,7 +141,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       },
       &device->meta_state.clear.pipeline);
 
-   anv_DestroyObject(anv_device_to_handle(device), VK_OBJECT_TYPE_SHADER, fs);
+   anv_DestroyShader(anv_device_to_handle(device), fs);
 }
 
 #define NUM_VB_USED 2
@@ -476,8 +476,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       &device->meta_state.blit.pipeline);
 
-   anv_DestroyObject(anv_device_to_handle(device), VK_OBJECT_TYPE_SHADER, vs);
-   anv_DestroyObject(anv_device_to_handle(device), VK_OBJECT_TYPE_SHADER, fs);
+   anv_DestroyShader(anv_device_to_handle(device), vs);
+   anv_DestroyShader(anv_device_to_handle(device), fs);
 }
 
 static void
@@ -691,12 +691,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    /* At the point where we emit the draw call, all data from the
     * descriptor sets, etc. has been used.  We are free to delete it.
     */
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DESCRIPTOR_SET, set);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_FRAMEBUFFER, fb);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_RENDER_PASS, pass);
+   anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(set));
+   anv_DestroyFramebuffer(anv_device_to_handle(device), fb);
+   anv_DestroyRenderPass(anv_device_to_handle(device), pass);
 }
 
 static void
@@ -805,8 +802,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 });
 
-   anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, src_image);
-   anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, dest_image);
+   anv_DestroyImage(vk_device, src_image);
+   anv_DestroyImage(vk_device, dest_image);
 }
 
 void anv_CmdCopyBuffer(
@@ -1109,7 +1106,7 @@ void anv_CmdCopyBufferToImage(
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent);
 
-      anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, srcImage);
+      anv_DestroyImage(vk_device, srcImage);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1207,7 +1204,7 @@ void anv_CmdCopyImageToBuffer(
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
 
-      anv_DestroyObject(vk_device, VK_OBJECT_TYPE_IMAGE, destImage);
+      anv_DestroyImage(vk_device, destImage);
    }
 
    meta_finish_blit(cmd_buffer, &saved_state);
@@ -1427,27 +1424,22 @@ void
 anv_device_finish_meta(struct anv_device *device)
 {
    /* Clear */
-   anv_DestroyObject(anv_device_to_handle(device), VK_OBJECT_TYPE_PIPELINE,
-                     device->meta_state.clear.pipeline);
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.clear.pipeline);
 
    /* Blit */
-   anv_DestroyObject(anv_device_to_handle(device), VK_OBJECT_TYPE_PIPELINE,
-                     device->meta_state.blit.pipeline);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_PIPELINE_LAYOUT,
-                     device->meta_state.blit.pipeline_layout);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-                     device->meta_state.blit.ds_layout);
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.blit.pipeline);
+   anv_DestroyPipelineLayout(anv_device_to_handle(device),
+                             device->meta_state.blit.pipeline_layout);
+   anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
+                                  device->meta_state.blit.ds_layout);
 
    /* Shared */
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DYNAMIC_RS_STATE,
-                     device->meta_state.shared.rs_state);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DYNAMIC_CB_STATE,
-                     device->meta_state.shared.cb_state);
-   anv_DestroyObject(anv_device_to_handle(device),
-                     VK_OBJECT_TYPE_DYNAMIC_DS_STATE,
-                     device->meta_state.shared.ds_state);
+   anv_DestroyDynamicRasterState(anv_device_to_handle(device),
+                                 device->meta_state.shared.rs_state);
+   anv_DestroyDynamicColorBlendState(anv_device_to_handle(device),
+                                     device->meta_state.shared.cb_state);
+   anv_DestroyDynamicDepthStencilState(anv_device_to_handle(device),
+                                       device->meta_state.shared.ds_state);
 }
