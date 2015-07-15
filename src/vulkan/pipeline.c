@@ -34,7 +34,7 @@
 VkResult anv_CreateShaderModule(
     VkDevice                                    _device,
     const VkShaderModuleCreateInfo*             pCreateInfo,
-    VkShader*                                   pShaderModule)
+    VkShaderModule*                             pShaderModule)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_shader_module *module;
