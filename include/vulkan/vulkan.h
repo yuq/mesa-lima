@@ -497,6 +497,15 @@ typedef enum {
 } VkQueryType;
 
 typedef enum {
+    VK_SHARING_MODE_EXCLUSIVE = 0,
+    VK_SHARING_MODE_CONCURRENT = 1,
+    VK_SHARING_MODE_BEGIN_RANGE = VK_SHARING_MODE_EXCLUSIVE,
+    VK_SHARING_MODE_END_RANGE = VK_SHARING_MODE_CONCURRENT,
+    VK_SHARING_MODE_NUM = (VK_SHARING_MODE_CONCURRENT - VK_SHARING_MODE_EXCLUSIVE + 1),
+    VK_SHARING_MODE_MAX_ENUM = 0x7FFFFFFF
+} VkSharingMode;
+
+typedef enum {
     VK_BUFFER_VIEW_TYPE_RAW = 0,
     VK_BUFFER_VIEW_TYPE_FORMATTED = 1,
     VK_BUFFER_VIEW_TYPE_BEGIN_RANGE = VK_BUFFER_VIEW_TYPE_RAW,
@@ -1329,7 +1338,7 @@ typedef struct {
 
 typedef void (VKAPI *PFN_vkVoidFunction)(void);
 typedef struct {
-    uint32_t                                    queueNodeIndex;
+    uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
 } VkDeviceQueueCreateInfo;
 
@@ -1459,6 +1468,9 @@ typedef struct {
     VkDeviceSize                                size;
     VkBufferUsageFlags                          usage;
     VkBufferCreateFlags                         flags;
+    VkSharingMode                               sharingMode;
+    uint32_t                                    queueFamilyCount;
+    const uint32_t*                             pQueueFamilyIndices;
 } VkBufferCreateInfo;
 
 typedef struct {
@@ -1483,6 +1495,9 @@ typedef struct {
     VkImageTiling                               tiling;
     VkImageUsageFlags                           usage;
     VkImageCreateFlags                          flags;
+    VkSharingMode                               sharingMode;
+    uint32_t                                    queueFamilyCount;
+    const uint32_t*                             pQueueFamilyIndices;
 } VkImageCreateInfo;
 
 typedef struct {
@@ -1927,7 +1942,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    uint32_t                                    queueNodeIndex;
+    uint32_t                                    queueFamilyIndex;
     VkCmdBufferLevel                            level;
     VkCmdBufferCreateFlags                      flags;
 } VkCmdBufferCreateInfo;
@@ -2016,6 +2031,8 @@ typedef struct {
     const void*                                 pNext;
     VkMemoryOutputFlags                         outputMask;
     VkMemoryInputFlags                          inputMask;
+    uint32_t                                    srcQueueFamilyIndex;
+    uint32_t                                    destQueueFamilyIndex;
     VkBuffer                                    buffer;
     VkDeviceSize                                offset;
     VkDeviceSize                                size;
@@ -2049,6 +2066,8 @@ typedef struct {
     VkMemoryInputFlags                          inputMask;
     VkImageLayout                               oldLayout;
     VkImageLayout                               newLayout;
+    uint32_t                                    srcQueueFamilyIndex;
+    uint32_t                                    destQueueFamilyIndex;
     VkImage                                     image;
     VkImageSubresourceRange                     subresourceRange;
 } VkImageMemoryBarrier;
@@ -2080,7 +2099,7 @@ typedef VkResult (VKAPI *PFN_vkGetGlobalExtensionProperties)(const char* pLayerN
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceExtensionProperties)(VkPhysicalDevice physicalDevice, const char* pLayerName, uint32_t* pCount, VkExtensionProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetGlobalLayerProperties)(uint32_t* pCount, VkLayerProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLayerProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkLayerProperties* pProperties);
-typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueNodeIndex, uint32_t queueIndex, VkQueue* pQueue);
+typedef VkResult (VKAPI *PFN_vkGetDeviceQueue)(VkDevice device, uint32_t queueFamilyIndex, uint32_t queueIndex, VkQueue* pQueue);
 typedef VkResult (VKAPI *PFN_vkQueueSubmit)(VkQueue queue, uint32_t cmdBufferCount, const VkCmdBuffer* pCmdBuffers, VkFence fence);
 typedef VkResult (VKAPI *PFN_vkQueueWaitIdle)(VkQueue queue);
 typedef VkResult (VKAPI *PFN_vkDeviceWaitIdle)(VkDevice device);
@@ -2300,7 +2319,7 @@ VkResult VKAPI vkGetPhysicalDeviceLayerProperties(
 
 VkResult VKAPI vkGetDeviceQueue(
     VkDevice                                    device,
-    uint32_t                                    queueNodeIndex,
+    uint32_t                                    queueFamilyIndex,
     uint32_t                                    queueIndex,
     VkQueue*                                    pQueue);
 
