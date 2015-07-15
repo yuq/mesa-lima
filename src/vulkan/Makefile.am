@@ -58,6 +58,7 @@ libvulkan_la_SOURCES =				\
 	gem.c					\
 	device.c				\
         anv_cmd_buffer.c                        \
+	anv_cmd_emit.c                          \
 	aub.c					\
 	allocator.c				\
 	util.c					\

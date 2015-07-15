@@ -926,6 +926,8 @@ void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
                                     struct anv_device *device,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
+void anv_fill_buffer_surface_state(void *state, VkFormat format,
+                                   uint32_t offset, uint32_t range);
 
 void anv_surface_view_fini(struct anv_device *device,
                            struct anv_surface_view *view);
