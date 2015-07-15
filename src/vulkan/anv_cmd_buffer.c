@@ -318,6 +318,14 @@ anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
    return state;
 }
 
+struct anv_state
+anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
+                                   uint32_t size, uint32_t alignment)
+{
+   return anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
+                                 size, alignment);
+}
+
 VkResult
 anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
 {

@@ -409,7 +409,7 @@ cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
 
    uint32_t size = sampler_count * 16;
-   *state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream, size, 32);
+   *state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, size, 32);
 
    if (state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
@@ -522,8 +522,8 @@ anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_state state;
 
-   state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
-                                  dwords * 4, alignment);
+   state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                              dwords * 4, alignment);
    memcpy(state.map, a, dwords * 4);
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(state.map, dwords * 4));
@@ -539,8 +539,8 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
    struct anv_state state;
    uint32_t *p;
 
-   state = anv_state_stream_alloc(&cmd_buffer->dynamic_state_stream,
-                                  dwords * 4, alignment);
+   state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                              dwords * 4, alignment);
    p = state.map;
    for (uint32_t i = 0; i < dwords; i++)
       p[i] = a[i] | b[i];
