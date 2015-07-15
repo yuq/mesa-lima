@@ -1339,6 +1339,24 @@ VkResult anv_GetImageMemoryRequirements(
    return VK_SUCCESS;
 }
 
+VkResult anv_GetImageSparseMemoryRequirements(
+    VkDevice                                    device,
+    VkImage                                     image,
+    uint32_t*                                   pNumRequirements,
+    VkSparseImageMemoryRequirements*            pSparseMemoryRequirements)
+{
+   return vk_error(VK_UNSUPPORTED);
+}
+
+VkResult anv_GetDeviceMemoryCommitment(
+    VkDevice                                    device,
+    VkDeviceMemory                              memory,
+    VkDeviceSize*                               pCommittedMemoryInBytes)
+{
+   *pCommittedMemoryInBytes = 0;
+   stub_return(VK_SUCCESS);
+}
+
 VkResult anv_BindBufferMemory(
     VkDevice                                    device,
     VkBuffer                                    _buffer,
@@ -1372,10 +1390,17 @@ VkResult anv_BindImageMemory(
 VkResult anv_QueueBindSparseBufferMemory(
     VkQueue                                     queue,
     VkBuffer                                    buffer,
-    VkDeviceSize                                rangeOffset,
-    VkDeviceSize                                rangeSize,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset)
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
+{
+   stub_return(VK_UNSUPPORTED);
+}
+
+VkResult anv_QueueBindSparseImageOpaqueMemory(
+    VkQueue                                     queue,
+    VkImage                                     image,
+    uint32_t                                    numBindings,
+    const VkSparseMemoryBindInfo*               pBindInfo)
 {
    stub_return(VK_UNSUPPORTED);
 }
@@ -1383,9 +1408,8 @@ VkResult anv_QueueBindSparseBufferMemory(
 VkResult anv_QueueBindSparseImageMemory(
     VkQueue                                     queue,
     VkImage                                     image,
-    const VkImageMemoryBindInfo*                pBindInfo,
-    VkDeviceMemory                              mem,
-    VkDeviceSize                                memOffset)
+    uint32_t                                    numBindings,
+    const VkSparseImageMemoryBindInfo*          pBindInfo)
 {
    stub_return(VK_UNSUPPORTED);
 }

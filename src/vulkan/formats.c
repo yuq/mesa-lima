@@ -307,3 +307,28 @@ VkResult anv_GetPhysicalDeviceFormatProperties(
 
    return VK_SUCCESS;
 }
+
+VkResult anv_GetPhysicalDeviceImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    VkImageTiling                               tiling,
+    VkImageUsageFlags                           usage,
+    VkImageFormatProperties*                    pImageFormatProperties)
+{
+   /* TODO: We should do something here. Chad? */
+   stub_return(VK_UNSUPPORTED);
+}
+
+VkResult anv_GetPhysicalDeviceSparseImageFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkImageType                                 type,
+    uint32_t                                    samples,
+    VkImageUsageFlags                           usage,
+    VkImageTiling                               tiling,
+    uint32_t*                                   pNumProperties,
+    VkSparseImageFormatProperties*              pProperties)
+{
+   stub_return(VK_UNSUPPORTED);
+}
