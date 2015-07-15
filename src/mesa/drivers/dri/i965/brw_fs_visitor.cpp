@@ -1551,17 +1551,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
 
    payload_header_size = length;
 
-   if (color0.file == BAD_FILE) {
-      /* Even if there's no color buffers enabled, we still need to send
-       * alpha out the pipeline to our null renderbuffer to support
-       * alpha-testing, alpha-to-coverage, and so on.
-       */
-      if (this->outputs[0].file != BAD_FILE)
-         setup_color_payload(&sources[length + 3],
-                             offset(this->outputs[0], bld, 3),
-                             1, exec_size, false);
-      length += 4;
-   } else if (color1.file == BAD_FILE) {
+   if (color1.file == BAD_FILE) {
       if (src0_alpha.file != BAD_FILE) {
          setup_color_payload(&sources[length], src0_alpha, 1, exec_size, false);
          length++;
@@ -1709,7 +1699,15 @@ fs_visitor::emit_fb_writes()
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
        */
-      inst = emit_single_fb_write(bld, reg_undef, reg_undef, reg_undef, 0,
+      /* FINISHME: Factor out this frequently recurring pattern into a
+       * helper function.
+       */
+      const fs_reg srcs[] = { reg_undef, reg_undef,
+                              reg_undef, offset(this->outputs[0], bld, 3) };
+      const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+      bld.LOAD_PAYLOAD(tmp, srcs, 4, 0);
+
+      inst = emit_single_fb_write(bld, tmp, reg_undef, reg_undef, 4,
                                   dispatch_width);
       inst->target = 0;
    }
