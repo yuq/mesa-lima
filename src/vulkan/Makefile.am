@@ -57,6 +57,7 @@ libvulkan_la_SOURCES =				\
 	private.h				\
 	gem.c					\
 	device.c				\
+        anv_cmd_buffer.c                        \
 	aub.c					\
 	allocator.c				\
 	util.c					\

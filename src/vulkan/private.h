@@ -456,6 +456,11 @@ VkResult anv_reloc_list_init(struct anv_reloc_list *list,
 void anv_reloc_list_finish(struct anv_reloc_list *list,
                            struct anv_device *device);
 
+uint64_t anv_reloc_list_add(struct anv_reloc_list *list,
+                            struct anv_device *device,
+                            uint32_t offset, struct anv_bo *target_bo,
+                            uint32_t delta);
+
 struct anv_batch_bo {
    struct anv_bo                                bo;
 
@@ -968,17 +973,22 @@ struct anv_render_pass {
 void anv_device_init_meta(struct anv_device *device);
 void anv_device_finish_meta(struct anv_device *device);
 
-void
-anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass);
+struct anv_state
+anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
+                                   uint32_t size, uint32_t alignment);
 
-void
-anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
-                                 struct anv_render_pass *pass,
-                                 const VkClearValue *clear_values);
+VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
 
-void *
-anv_lookup_entrypoint(const char *name);
+void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
+void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                  struct anv_subpass *subpass);
+
+void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                      struct anv_render_pass *pass,
+                                      const VkClearValue *clear_values);
+
+void *anv_lookup_entrypoint(const char *name);
 
 #define ANV_DEFINE_CASTS(__anv_type, __VkType)     \
 static inline struct __anv_type *                  \
