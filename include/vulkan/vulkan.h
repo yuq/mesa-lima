@@ -1210,6 +1210,7 @@ typedef struct {
     uint32_t                                    maxStorageBufferSize;
     uint32_t                                    maxPushConstantsSize;
     uint32_t                                    maxMemoryAllocationCount;
+    VkDeviceSize                                bufferImageGranularity;
     uint32_t                                    maxBoundDescriptorSets;
     uint32_t                                    maxDescriptorSets;
     uint32_t                                    maxPerStageDescriptorSamplers;
@@ -1375,7 +1376,6 @@ typedef struct {
 typedef struct {
     VkDeviceSize                                size;
     VkDeviceSize                                alignment;
-    VkDeviceSize                                granularity;
     uint32_t                                    memoryTypeBits;
 } VkMemoryRequirements;
 
