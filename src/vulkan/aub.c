@@ -248,9 +248,9 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    if (writer == NULL)
       return;
 
-   aub_bos = malloc(cmd_buffer->bo_count * sizeof(aub_bos[0]));
+   aub_bos = malloc(cmd_buffer->exec2_bo_count * sizeof(aub_bos[0]));
    offset = writer->offset;
-   for (uint32_t i = 0; i < cmd_buffer->bo_count; i++) {
+   for (uint32_t i = 0; i < cmd_buffer->exec2_bo_count; i++) {
       bo = cmd_buffer->exec2_bos[i];
       if (bo->map)
          aub_bos[i].map = bo->map;
@@ -282,9 +282,9 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
                   bbo->num_relocs, aub_bos);
    }
 
-   for (uint32_t i = 0; i < cmd_buffer->bo_count; i++) {
+   for (uint32_t i = 0; i < cmd_buffer->exec2_bo_count; i++) {
       bo = cmd_buffer->exec2_bos[i];
-      if (i == cmd_buffer->bo_count - 1) {
+      if (i == cmd_buffer->exec2_bo_count - 1) {
          assert(bo == &first_bbo->bo);
          aub_write_trace_block(writer, AUB_TRACE_TYPE_BATCH,
                                aub_bos[i].relocated,

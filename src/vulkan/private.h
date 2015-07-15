@@ -697,12 +697,12 @@ struct anv_cmd_buffer {
 
    struct drm_i915_gem_execbuffer2              execbuf;
    struct drm_i915_gem_exec_object2 *           exec2_objects;
+   uint32_t                                     exec2_bo_count;
    struct anv_bo **                             exec2_bos;
    uint32_t                                     exec2_array_length;
    bool                                         need_reloc;
    uint32_t                                     serial;
 
-   uint32_t                                     bo_count;
    struct anv_batch                             batch;
    struct anv_batch_bo *                        last_batch_bo;
    struct anv_batch_bo *                        surface_batch_bo;

@@ -751,7 +751,7 @@ VkResult anv_QueueSubmit(
                return vk_error(VK_ERROR_UNKNOWN);
          }
 
-         for (uint32_t i = 0; i < cmd_buffer->bo_count; i++)
+         for (uint32_t i = 0; i < cmd_buffer->exec2_bo_count; i++)
             cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
       } else {
          *(uint32_t *)queue->completed_serial.map = cmd_buffer->serial;
