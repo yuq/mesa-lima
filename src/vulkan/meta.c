@@ -36,7 +36,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.
     */
-   VkShader fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
+   VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
       out vec4 f_color;
       flat in vec4 v_color;
       void main()
