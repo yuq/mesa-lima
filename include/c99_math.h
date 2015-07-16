@@ -140,6 +140,12 @@ llrintf(float f)
    return rounded;
 }
 
+static inline float
+exp2f(float f)
+{
+   return powf(2.0f, f);
+}
+
 #endif /* C99 */
 
 
