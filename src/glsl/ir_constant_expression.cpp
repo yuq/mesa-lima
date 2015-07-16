@@ -1662,10 +1662,10 @@ ir_expression::constant_expression_value(struct hash_table *variable_context)
             if (!isnormal(data.d[c]))
                data.d[c] = copysign(0.0, op[0]->value.d[c]);
          } else {
-            data.f[c] = ldexp(op[0]->value.f[c], op[1]->value.i[c]);
+            data.f[c] = ldexpf(op[0]->value.f[c], op[1]->value.i[c]);
             /* Flush subnormal values to zero. */
             if (!isnormal(data.f[c]))
-               data.f[c] = copysign(0.0f, op[0]->value.f[c]);
+               data.f[c] = copysignf(0.0f, op[0]->value.f[c]);
          }
       }
       break;
