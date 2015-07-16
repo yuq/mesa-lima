@@ -359,6 +359,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
                                                  ctx->type->members[member]);
       ctx->type->members[member]->is_builtin = true;
       ctx->type->members[member]->builtin = dec->literals[0];
+      ctx->type->builtin_block = true;
       break;
    case SpvDecorationOffset:
       ctx->type->offsets[member] = dec->literals[0];
@@ -404,7 +405,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 {
    struct vtn_value *val = vtn_push_value(b, w[1], vtn_value_type_type);
 
-   val->type = ralloc(b, struct vtn_type);
+   val->type = rzalloc(b, struct vtn_type);
    val->type->is_builtin = false;
 
    switch (opcode) {
@@ -1230,13 +1231,18 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       var->type = type->type;
       var->name = ralloc_strdup(var, val->name);
 
-      if (type->block)
+      bool builtin_block = false;
+      if (type->block) {
          var->interface_type = type->type;
-      else if (glsl_type_is_array(type->type) &&
-               (type->array_element->block || type->array_element->buffer_block))
+         builtin_block = type->builtin_block;
+      } else if (glsl_type_is_array(type->type) &&
+                 (type->array_element->block ||
+                  type->array_element->buffer_block)) {
          var->interface_type = type->array_element->type;
-      else
+         builtin_block = type->array_element->builtin_block;
+      } else {
          var->interface_type = NULL;
+      }
 
       switch ((SpvStorageClass)w[3]) {
       case SpvStorageClassUniform:
@@ -1292,6 +1298,12 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
        * declare it in the shader.
        */
       if (var->data.mode == nir_var_uniform && var->interface_type)
+         break;
+
+      /* Builtin blocks are lowered to individual variables during SPIR-V ->
+       * NIR, so don't declare them either.
+       */
+      if (builtin_block)
          break;
 
       switch (var->data.mode) {

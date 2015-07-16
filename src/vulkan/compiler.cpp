@@ -959,10 +959,6 @@ setup_nir_io(struct gl_program *prog,
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->outputs) {
-      /* XXX glslang gives us this but we never use it */
-      if (!strcmp(var->name, "gl_PerVertex"))
-         continue;
-
       prog->OutputsWritten |= BITFIELD64_BIT(var->data.location);
    }
 }

@@ -96,6 +96,11 @@ struct vtn_type {
    /* for structs, whether it was decorated as an "SSBO-like" block */
    bool buffer_block;
 
+   /* for structs with block == true, whether this is a builtin block (i.e. a
+    * block that contains only builtins).
+    */
+   bool builtin_block;
+
    /* for arrays and matrices, the array stride */
    unsigned stride;
 
