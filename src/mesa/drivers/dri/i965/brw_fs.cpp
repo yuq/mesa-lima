@@ -698,6 +698,9 @@ fs_inst::regs_read(int arg) const
          return 1;
       break;
 
+   case CS_OPCODE_CS_TERMINATE:
+      return 1;
+
    default:
       if (is_tex() && arg == 0 && src[0].file == GRF)
          return mlen;
