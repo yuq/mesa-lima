@@ -614,8 +614,8 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
  */
 static uint32_t
 brw_miptree_choose_tiling(struct brw_context *brw,
-                          const struct intel_mipmap_tree *mt,
-                          uint32_t layout_flags)
+                          enum intel_miptree_tiling_mode requested,
+                          const struct intel_mipmap_tree *mt)
 {
    if (mt->format == MESA_FORMAT_S_UINT8) {
       /* The stencil buffer is W tiled. However, we request from the kernel a
@@ -624,18 +624,15 @@ brw_miptree_choose_tiling(struct brw_context *brw,
       return I915_TILING_NONE;
    }
 
-   /* Do not support changing the tiling for miptrees with pre-allocated BOs. */
-   assert((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0);
-
    /* Some usages may want only one type of tiling, like depth miptrees (Y
     * tiled), or temporary BOs for uploading data once (linear).
     */
-   switch (layout_flags & MIPTREE_LAYOUT_ALLOC_ANY_TILED) {
-   case MIPTREE_LAYOUT_ALLOC_ANY_TILED:
+   switch (requested) {
+   case INTEL_MIPTREE_TILING_ANY:
       break;
-   case MIPTREE_LAYOUT_ALLOC_YTILED:
+   case INTEL_MIPTREE_TILING_Y:
       return I915_TILING_Y;
-   case MIPTREE_LAYOUT_ALLOC_LINEAR:
+   case INTEL_MIPTREE_TILING_NONE:
       return I915_TILING_NONE;
    }
 
@@ -838,6 +835,7 @@ intel_miptree_can_use_tr_mode(const struct intel_mipmap_tree *mt)
 void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
+                   enum intel_miptree_tiling_mode requested,
                    uint32_t layout_flags)
 {
    const unsigned bpp = mt->cpp * 8;
@@ -854,7 +852,8 @@ brw_miptree_layout(struct brw_context *brw,
       !(layout_flags & MIPTREE_LAYOUT_FOR_BO) &&
       !mt->compressed &&
       _mesa_is_format_color_format(mt->format) &&
-      (layout_flags & MIPTREE_LAYOUT_ALLOC_YTILED) &&
+      (requested == INTEL_MIPTREE_TILING_Y ||
+       requested == INTEL_MIPTREE_TILING_ANY) &&
       (bpp && is_power_of_two(bpp)) &&
       /* FIXME: To avoid piglit regressions keep the Yf/Ys tiling
        * disabled at the moment.
@@ -898,7 +897,7 @@ brw_miptree_layout(struct brw_context *brw,
       if (layout_flags & MIPTREE_LAYOUT_FOR_BO)
          break;
 
-      mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
+      mt->tiling = brw_miptree_choose_tiling(brw, requested, mt);
       if (is_tr_mode_yf_ys_allowed) {
          if (intel_miptree_can_use_tr_mode(mt))
             break;

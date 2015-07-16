@@ -80,7 +80,8 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
 			       height,
 			       depth,
                                intelImage->base.Base.NumSamples,
-                               layout_flags | MIPTREE_LAYOUT_ALLOC_ANY_TILED);
+                               INTEL_MIPTREE_TILING_ANY,
+                               layout_flags);
 }
 
 static void

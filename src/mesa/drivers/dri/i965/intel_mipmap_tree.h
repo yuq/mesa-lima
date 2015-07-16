@@ -516,6 +516,12 @@ struct intel_mipmap_tree
    GLuint refcount;
 };
 
+enum intel_miptree_tiling_mode {
+   INTEL_MIPTREE_TILING_ANY,
+   INTEL_MIPTREE_TILING_Y,
+   INTEL_MIPTREE_TILING_NONE,
+};
+
 void
 intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
@@ -535,14 +541,7 @@ enum {
    MIPTREE_LAYOUT_FOR_BO                   = 1 << 2,
    MIPTREE_LAYOUT_DISABLE_AUX              = 1 << 3,
    MIPTREE_LAYOUT_FORCE_HALIGN16           = 1 << 4,
-
-   MIPTREE_LAYOUT_ALLOC_YTILED             = 1 << 5,
-   MIPTREE_LAYOUT_ALLOC_XTILED             = 1 << 6,
-   MIPTREE_LAYOUT_ALLOC_LINEAR             = 1 << 7,
 };
-
-#define MIPTREE_LAYOUT_ALLOC_ANY_TILED (MIPTREE_LAYOUT_ALLOC_YTILED | \
-                                        MIPTREE_LAYOUT_ALLOC_XTILED)
 
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                GLenum target,
@@ -553,6 +552,7 @@ struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                GLuint height0,
                                                GLuint depth0,
                                                GLuint num_samples,
+                                               enum intel_miptree_tiling_mode,
                                                uint32_t flags);
 
 struct intel_mipmap_tree *
@@ -771,6 +771,7 @@ brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
 void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
+                   enum intel_miptree_tiling_mode requested,
                    uint32_t layout_flags);
 
 void *intel_miptree_map_raw(struct brw_context *brw,

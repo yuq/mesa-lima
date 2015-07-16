@@ -1022,9 +1022,6 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
    struct intel_mipmap_tree *new_mt;
    int width, height, depth;
 
-   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                           MIPTREE_LAYOUT_ALLOC_ANY_TILED;
-
    intel_miptree_get_dimensions_for_image(rb->TexImage, &width, &height, &depth);
 
    new_mt = intel_miptree_create(brw, rb->TexImage->TexObject->Target,
@@ -1033,7 +1030,8 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
                                  intel_image->base.Base.Level,
                                  width, height, depth,
                                  irb->mt->num_samples,
-                                 layout_flags);
+                                 INTEL_MIPTREE_TILING_ANY,
+                                 MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
 
    if (intel_miptree_wants_hiz_buffer(brw, new_mt)) {
       intel_miptree_alloc_hiz(brw, new_mt);
