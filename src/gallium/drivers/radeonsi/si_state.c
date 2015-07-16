@@ -2059,6 +2059,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (rtex->fmask.size && rtex->cmask.size) {
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
+		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
 	/* Set the 16BPC export for possible dual-src blending. */
 	if (i == 1 && surf && surf->export_16bpc) {
@@ -2073,6 +2074,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (!surf->depth_initialized) {
 			si_init_depth_surface(sctx, surf);
 		}
+		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
 
 	si_update_fb_rs_state(sctx);
@@ -2815,6 +2817,7 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 			pipe_resource_reference(&dsti->buffer, src->buffer);
 			dsti->buffer_offset = src->buffer_offset;
 			dsti->stride = src->stride;
+			r600_context_add_resource_size(ctx, src->buffer);
 		}
 	} else {
 		for (i = 0; i < count; i++) {
@@ -2832,6 +2835,7 @@ static void si_set_index_buffer(struct pipe_context *ctx,
 	if (ib) {
 		pipe_resource_reference(&sctx->index_buffer.buffer, ib->buffer);
 	        memcpy(&sctx->index_buffer, ib, sizeof(*ib));
+		r600_context_add_resource_size(ctx, ib->buffer);
 	} else {
 		pipe_resource_reference(&sctx->index_buffer.buffer, NULL);
 	}

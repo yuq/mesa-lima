@@ -32,6 +32,19 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 {
 	int i;
 
+	/* There are two memory usage counters in the winsys for all buffers
+	 * that have been added (cs_add_reloc) and two counters in the pipe
+	 * driver for those that haven't been added yet.
+	 * */
+	if (!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs, ctx->b.vram, ctx->b.gtt)) {
+		ctx->b.gtt = 0;
+		ctx->b.vram = 0;
+		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+		return;
+	}
+	ctx->b.gtt = 0;
+	ctx->b.vram = 0;
+
 	/* The number of dwords we already used in the CS so far. */
 	num_dw += ctx->b.rings.gfx.cs->cdw;
 
