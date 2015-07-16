@@ -1030,6 +1030,31 @@ static LLVMValueRef buffer_load_const(LLVMBuilderRef builder, LLVMValueRef resou
 			       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 }
 
+static LLVMValueRef load_sample_position(struct radeon_llvm_context *radeon_bld, LLVMValueRef sample_id)
+{
+	struct si_shader_context *si_shader_ctx =
+		si_shader_context(&radeon_bld->soa.bld_base);
+	struct lp_build_context *uint_bld = &radeon_bld->soa.bld_base.uint_bld;
+	struct gallivm_state *gallivm = &radeon_bld->gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef desc = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_CONST);
+	LLVMValueRef buf_index = lp_build_const_int32(gallivm, SI_DRIVER_STATE_CONST_BUF);
+	LLVMValueRef resource = build_indexed_load_const(si_shader_ctx, desc, buf_index);
+
+	/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
+	LLVMValueRef offset0 = lp_build_mul_imm(uint_bld, sample_id, 8);
+	LLVMValueRef offset1 = LLVMBuildAdd(builder, offset0, lp_build_const_int32(gallivm, 4), "");
+
+	LLVMValueRef pos[4] = {
+		buffer_load_const(builder, resource, offset0, radeon_bld->soa.bld_base.base.elem_type),
+		buffer_load_const(builder, resource, offset1, radeon_bld->soa.bld_base.base.elem_type),
+		lp_build_const_float(gallivm, 0),
+		lp_build_const_float(gallivm, 0)
+	};
+
+	return lp_build_gather_values(gallivm, pos, 4);
+}
+
 static void declare_system_value(
 	struct radeon_llvm_context * radeon_bld,
 	unsigned index,
@@ -1081,25 +1106,8 @@ static void declare_system_value(
 		break;
 
 	case TGSI_SEMANTIC_SAMPLEPOS:
-	{
-		LLVMBuilderRef builder = gallivm->builder;
-		LLVMValueRef desc = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_CONST);
-		LLVMValueRef buf_index = lp_build_const_int32(gallivm, SI_DRIVER_STATE_CONST_BUF);
-		LLVMValueRef resource = build_indexed_load_const(si_shader_ctx, desc, buf_index);
-
-		/* offset = sample_id * 8  (8 = 2 floats containing samplepos.xy) */
-		LLVMValueRef offset0 = lp_build_mul_imm(uint_bld, get_sample_id(radeon_bld), 8);
-		LLVMValueRef offset1 = LLVMBuildAdd(builder, offset0, lp_build_const_int32(gallivm, 4), "");
-
-		LLVMValueRef pos[4] = {
-			buffer_load_const(builder, resource, offset0, radeon_bld->soa.bld_base.base.elem_type),
-			buffer_load_const(builder, resource, offset1, radeon_bld->soa.bld_base.base.elem_type),
-			lp_build_const_float(gallivm, 0),
-			lp_build_const_float(gallivm, 0)
-		};
-		value = lp_build_gather_values(gallivm, pos, 4);
+		value = load_sample_position(radeon_bld, get_sample_id(radeon_bld));
 		break;
-	}
 
 	case TGSI_SEMANTIC_SAMPLEMASK:
 		/* Smoothing isn't MSAA in GL, but it's MSAA in hardware.
