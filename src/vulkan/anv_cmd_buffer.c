@@ -241,6 +241,10 @@ anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
 static void
 anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 {
+   /* Round batch up to an even number of dwords. */
+   if ((batch->next - batch->start) & 4)
+      anv_batch_emit(batch, GEN8_MI_NOOP);
+
    assert(batch->start == bbo->bo.map);
    bbo->length = batch->next - batch->start;
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(batch->start, bbo->length));
@@ -282,12 +286,6 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
       .AddressSpaceIndicator = ASI_PPGTT,
       .BatchBufferStartAddress = { &new_bbo->bo, 0 },
    );
-
-   /* Pad out to a 2-dword aligned boundary with zeros */
-   if ((uintptr_t)batch->next % 8 != 0) {
-      *(uint32_t *)batch->next = 0;
-      batch->next += 4;
-   }
 
    anv_batch_bo_finish(cmd_buffer->last_batch_bo, batch);
 
@@ -606,10 +604,6 @@ VkResult anv_EndCommandBuffer(
    struct anv_batch *batch = &cmd_buffer->batch;
 
    anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_END);
-
-   /* Round batch up to an even number of dwords. */
-   if ((batch->next - batch->start) & 4)
-      anv_batch_emit(batch, GEN8_MI_NOOP);
 
    anv_batch_bo_finish(cmd_buffer->last_batch_bo, &cmd_buffer->batch);
    cmd_buffer->surface_batch_bo->num_relocs =
