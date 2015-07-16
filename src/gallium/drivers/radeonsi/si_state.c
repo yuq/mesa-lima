@@ -2272,15 +2272,28 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
  * Samplers
  */
 
-static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx,
-							struct pipe_resource *texture,
-							const struct pipe_sampler_view *state)
+/**
+ * Create a sampler view.
+ *
+ * @param ctx		context
+ * @param texture	texture
+ * @param state		sampler view template
+ * @param width0	width0 override (for compressed textures as int)
+ * @param height0	height0 override (for compressed textures as int)
+ * @param force_level   set the base address to the level (for compressed textures)
+ */
+struct pipe_sampler_view *
+si_create_sampler_view_custom(struct pipe_context *ctx,
+			      struct pipe_resource *texture,
+			      const struct pipe_sampler_view *state,
+			      unsigned width0, unsigned height0,
+			      unsigned force_level)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_sampler_view *view = CALLOC_STRUCT(si_sampler_view);
 	struct r600_texture *tmp = (struct r600_texture*)texture;
 	const struct util_format_description *desc;
-	unsigned format, num_format;
+	unsigned format, num_format, base_level, first_level, last_level;
 	uint32_t pitch = 0;
 	unsigned char state_swizzle[4], swizzle[4];
 	unsigned height, depth, width;
@@ -2453,13 +2466,25 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 		format = 0;
 	}
 
-	/* not supported any more */
-	//endian = si_colorformat_endian_swap(format);
+	base_level = 0;
+	first_level = state->u.tex.first_level;
+	last_level = state->u.tex.last_level;
+	width = width0;
+	height = height0;
+	depth = texture->depth0;
 
-	width = surflevel[0].npix_x;
-	height = surflevel[0].npix_y;
-	depth = surflevel[0].npix_z;
-	pitch = surflevel[0].nblk_x * util_format_get_blockwidth(pipe_format);
+	if (force_level) {
+		assert(force_level == first_level &&
+		       force_level == last_level);
+		base_level = force_level;
+		first_level = 0;
+		last_level = 0;
+		width = u_minify(width, force_level);
+		height = u_minify(height, force_level);
+		depth = u_minify(depth, force_level);
+	}
+
+	pitch = surflevel[base_level].nblk_x * util_format_get_blockwidth(pipe_format);
 
 	if (texture->target == PIPE_TEXTURE_1D_ARRAY) {
 	        height = 1;
@@ -2469,8 +2494,7 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 	} else if (texture->target == PIPE_TEXTURE_CUBE_ARRAY)
 		depth = texture->array_size / 6;
 
-	va = tmp->resource.gpu_address + surflevel[0].offset;
-	va += tmp->mipmap_shift * surflevel[texture->last_level].slice_size * tmp->surface.array_size;
+	va = tmp->resource.gpu_address + surflevel[base_level].offset;
 
 	view->state[0] = va >> 8;
 	view->state[1] = (S_008F14_BASE_ADDRESS_HI(va >> 40) |
@@ -2483,10 +2507,10 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 			  S_008F1C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
 			  S_008F1C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
 			  S_008F1C_BASE_LEVEL(texture->nr_samples > 1 ?
-						      0 : state->u.tex.first_level - tmp->mipmap_shift) |
+						      0 : first_level) |
 			  S_008F1C_LAST_LEVEL(texture->nr_samples > 1 ?
 						      util_logbase2(texture->nr_samples) :
-						      state->u.tex.last_level - tmp->mipmap_shift) |
+						      last_level) |
 			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, 0, false)) |
 			  S_008F1C_POW2_PAD(texture->last_level > 0) |
 			  S_008F1C_TYPE(si_tex_dim(texture->target, texture->nr_samples)));
@@ -2537,6 +2561,16 @@ static struct pipe_sampler_view *si_create_sampler_view(struct pipe_context *ctx
 	}
 
 	return &view->base;
+}
+
+static struct pipe_sampler_view *
+si_create_sampler_view(struct pipe_context *ctx,
+		       struct pipe_resource *texture,
+		       const struct pipe_sampler_view *state)
+{
+	return si_create_sampler_view_custom(ctx, texture, state,
+					     texture ? texture->width0 : 0,
+					     texture ? texture->height0 : 0, 0);
 }
 
 static void si_sampler_view_destroy(struct pipe_context *ctx,

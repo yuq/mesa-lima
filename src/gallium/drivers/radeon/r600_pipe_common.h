@@ -214,7 +214,6 @@ struct r600_texture {
 	float				depth_clear_value;
 
 	bool				non_disp_tiling; /* R600-Cayman only */
-	unsigned			mipmap_shift;
 };
 
 struct r600_surface {

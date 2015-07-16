@@ -264,6 +264,12 @@ unsigned cik_tile_split(unsigned tile_split);
 unsigned si_array_mode(unsigned mode);
 uint32_t si_num_banks(struct si_screen *sscreen, struct r600_texture *tex);
 unsigned si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil);
+struct pipe_sampler_view *
+si_create_sampler_view_custom(struct pipe_context *ctx,
+			      struct pipe_resource *texture,
+			      const struct pipe_sampler_view *state,
+			      unsigned width0, unsigned height0,
+			      unsigned force_level);
 
 /* si_state_shader.c */
 void si_update_shaders(struct si_context *sctx);
