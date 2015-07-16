@@ -1125,9 +1125,9 @@ nvc0_set_compute_resources(struct pipe_context *pipe,
 }
 
 static void
-nvc0_set_shader_images(struct pipe_context *pipe,
-                          unsigned start, unsigned nr,
-                          struct pipe_image_view **views)
+nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
+                       unsigned start_slot, unsigned count,
+                       struct pipe_image_view **views)
 {
 #if 0
    nvc0_bind_surfaces_range(nvc0_context(pipe), 0, start, nr, views);
