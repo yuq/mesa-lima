@@ -727,6 +727,7 @@ fs_inst::regs_read(int arg) const
 
    switch (src[arg].file) {
    case BAD_FILE:
+      return 0;
    case UNIFORM:
    case IMM:
       return 1;
