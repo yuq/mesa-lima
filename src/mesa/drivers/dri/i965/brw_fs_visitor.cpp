@@ -1409,33 +1409,6 @@ fs_visitor::emit_interpolation_setup_gen6()
    }
 }
 
-void
-fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
-                                unsigned exec_size, bool use_2nd_half)
-{
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_inst *inst;
-
-   if (key->clamp_fragment_color) {
-      fs_reg tmp = vgrf(glsl_type::vec4_type);
-      assert(color.type == BRW_REGISTER_TYPE_F);
-      for (unsigned i = 0; i < components; i++) {
-         inst = bld.MOV(offset(tmp, bld, i), offset(color, bld, i));
-         inst->saturate = true;
-      }
-      color = tmp;
-   }
-
-   if (exec_size < dispatch_width) {
-      unsigned half_idx = use_2nd_half ? 1 : 0;
-      for (unsigned i = 0; i < components; i++)
-         dst[i] = half(offset(color, bld, i), half_idx);
-   } else {
-      for (unsigned i = 0; i < components; i++)
-         dst[i] = offset(color, bld, i);
-   }
-}
-
 static enum brw_conditional_mod
 cond_for_alpha_func(GLenum func)
 {
@@ -1493,146 +1466,36 @@ fs_visitor::emit_alpha_test()
 fs_inst *
 fs_visitor::emit_single_fb_write(const fs_builder &bld,
                                  fs_reg color0, fs_reg color1,
-                                 fs_reg src0_alpha, unsigned components,
-                                 unsigned exec_size, bool use_2nd_half)
+                                 fs_reg src0_alpha, unsigned components)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   const fs_builder ubld = bld.group(exec_size, use_2nd_half);
-   int header_size = 2, payload_header_size;
 
-   /* We can potentially have a message length of up to 15, so we have to set
-    * base_mrf to either 0 or 1 in order to fit in m0..m15.
-    */
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 15);
-   int length = 0;
-
-   /* From the Sandy Bridge PRM, volume 4, page 198:
-    *
-    *     "Dispatched Pixel Enables. One bit per pixel indicating
-    *      which pixels were originally enabled when the thread was
-    *      dispatched. This field is only required for the end-of-
-    *      thread message and on all dual-source messages."
-    */
-   if (devinfo->gen >= 6 &&
-       (devinfo->is_haswell || devinfo->gen >= 8 || !prog_data->uses_kill) &&
-       color1.file == BAD_FILE &&
-       key->nr_color_regions == 1) {
-      header_size = 0;
-   }
-
-   if (header_size != 0) {
-      assert(header_size == 2);
-      /* Allocate 2 registers for a header */
-      length += 2;
-   }
-
-   if (payload.aa_dest_stencil_reg) {
-      sources[length] = fs_reg(GRF, alloc.allocate(1));
-      bld.group(8, 0).exec_all().annotate("FB write stencil/AA alpha")
-         .MOV(sources[length],
-              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
-      length++;
-   }
-
-   if (prog_data->uses_omask) {
-      sources[length] = fs_reg(GRF, alloc.allocate(1),
-                               BRW_REGISTER_TYPE_UD);
-
-      /* Hand over gl_SampleMask.  Only the lower 16 bits of each channel are
-       * relevant.  Since it's unsigned single words one vgrf is always
-       * 16-wide, but only the lower or higher 8 channels will be used by the
-       * hardware when doing a SIMD8 write depending on whether we have
-       * selected the subspans for the first or second half respectively.
-       */
-      fs_reg sample_mask = this->sample_mask;
-      assert(sample_mask.file != BAD_FILE && type_sz(sample_mask.type) == 4);
-      sample_mask.type = BRW_REGISTER_TYPE_UW;
-      sample_mask.stride *= 2;
-
-      ubld.annotate("FB write oMask")
-          .MOV(half(retype(sources[length], BRW_REGISTER_TYPE_UW),
-                    use_2nd_half),
-               half(sample_mask, use_2nd_half));
-      length++;
-   }
-
-   payload_header_size = length;
-
-   if (src0_alpha.file != BAD_FILE) {
-      /* FIXME: This is being passed at the wrong location in the payload and
-       * doesn't work when gl_SampleMask and MRTs are used simultaneously.
-       * It's supposed to be immediately before oMask but there seems to be no
-       * reasonable way to pass them in the correct order because LOAD_PAYLOAD
-       * requires header sources to form a contiguous segment at the beginning
-       * of the message and src0_alpha has per-channel semantics.
-       */
-      setup_color_payload(&sources[length], src0_alpha, 1, exec_size, false);
-      length++;
-   }
-
-   setup_color_payload(&sources[length], color0, components,
-                       exec_size, use_2nd_half);
-   length += 4;
-
-   if (color1.file != BAD_FILE) {
-      setup_color_payload(&sources[length], color1, components,
-                          exec_size, use_2nd_half);
-      length += 4;
-   }
+   /* Hand over gl_FragDepth or the payload depth. */
+   const fs_reg dst_depth = (payload.dest_depth_reg ?
+                             fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0)) :
+                             fs_reg());
+   fs_reg src_depth;
 
    if (source_depth_to_render_target) {
-      if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-	 /* Hand over gl_FragDepth. */
-	 assert(this->frag_depth.file != BAD_FILE);
-         if (exec_size < dispatch_width) {
-            sources[length] = half(this->frag_depth, use_2nd_half);
-         } else {
-            sources[length] = this->frag_depth;
-         }
-      } else {
-	 /* Pass through the payload depth. */
-         sources[length] = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
-      }
-      length++;
+      if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+         src_depth = frag_depth;
+      else
+         src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
    }
 
-   if (payload.dest_depth_reg)
-      sources[length++] = fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0));
+   const fs_reg sources[] = {
+      color0, color1, src0_alpha, src_depth, dst_depth, sample_mask,
+      fs_reg(components)
+   };
+   fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
+                             sources, ARRAY_SIZE(sources));
 
-   fs_inst *load;
-   fs_inst *write;
-   if (devinfo->gen >= 7) {
-      /* Send from the GRF */
-      fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
-      load = ubld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
-      payload.reg = alloc.allocate(load->regs_written);
-      load->dst = payload;
-      write = ubld.emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
-      write->base_mrf = -1;
-   } else {
-      /* Send from the MRF */
-      load = ubld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F),
-                               sources, length, payload_header_size);
-
-      /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
-       * will do this for us if we just give it a COMPR4 destination.
-       */
-      if (devinfo->gen < 6 && exec_size == 16)
-         load->dst.reg |= BRW_MRF_COMPR4;
-
-      write = ubld.emit(FS_OPCODE_FB_WRITE);
-      write->exec_size = exec_size;
-      write->base_mrf = 1;
-   }
-
-   write->mlen = load->regs_written;
-   write->header_size = header_size;
    if (prog_data->uses_kill) {
       write->predicate = BRW_PREDICATE_NORMAL;
       write->flag_subreg = 1;
    }
+
    return write;
 }
 
@@ -1659,32 +1522,8 @@ fs_visitor::emit_fb_writes()
       const fs_builder abld = bld.annotate("FB dual-source write");
 
       inst = emit_single_fb_write(abld, this->outputs[0],
-                                  this->dual_src_output, reg_undef, 4, 8);
+                                  this->dual_src_output, reg_undef, 4);
       inst->target = 0;
-
-      /* SIMD16 dual source blending requires to send two SIMD8 dual source
-       * messages, where each message contains color data for 8 pixels. Color
-       * data for the first group of pixels is stored in the "lower" half of
-       * the color registers, so in SIMD16, the previous message did:
-       * m + 0: r0
-       * m + 1: g0
-       * m + 2: b0
-       * m + 3: a0
-       *
-       * Here goes the second message, which packs color data for the
-       * remaining 8 pixels. Color data for these pixels is stored in the
-       * "upper" half of the color registers, so we need to do:
-       * m + 0: r1
-       * m + 1: g1
-       * m + 2: b1
-       * m + 3: a1
-       */
-      if (dispatch_width == 16) {
-         inst = emit_single_fb_write(abld, this->outputs[0],
-                                     this->dual_src_output, reg_undef, 4, 8,
-                                     true);
-         inst->target = 0;
-      }
 
       prog_data->dual_src_blend = true;
    } else {
@@ -1702,8 +1541,7 @@ fs_visitor::emit_fb_writes()
 
          inst = emit_single_fb_write(abld, this->outputs[target], reg_undef,
                                      src0_alpha,
-                                     this->output_components[target],
-                                     dispatch_width);
+                                     this->output_components[target]);
          inst->target = target;
       }
    }
@@ -1721,8 +1559,7 @@ fs_visitor::emit_fb_writes()
       const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
       bld.LOAD_PAYLOAD(tmp, srcs, 4, 0);
 
-      inst = emit_single_fb_write(bld, tmp, reg_undef, reg_undef, 4,
-                                  dispatch_width);
+      inst = emit_single_fb_write(bld, tmp, reg_undef, reg_undef, 4);
       inst->target = 0;
    }
 

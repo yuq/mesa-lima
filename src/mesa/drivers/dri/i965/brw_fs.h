@@ -290,13 +290,10 @@ public:
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
 
-   void setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
-                            unsigned exec_size, bool use_2nd_half);
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(const brw::fs_builder &bld,
                                  fs_reg color1, fs_reg color2,
-                                 fs_reg src0_alpha, unsigned components,
-                                 unsigned exec_size, bool use_2nd_half = false);
+                                 fs_reg src0_alpha, unsigned components);
    void emit_fb_writes();
    void emit_urb_writes();
    void emit_cs_terminate();
