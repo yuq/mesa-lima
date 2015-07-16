@@ -118,7 +118,6 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 			}
 			results += 4 * ctx->max_db;
 		}
-		ctx->ws->buffer_unmap(buf->cs_buf);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 	case PIPE_QUERY_TIMESTAMP:
@@ -130,7 +129,6 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		results = r600_buffer_map_sync_with_rings(ctx, buf, PIPE_TRANSFER_WRITE);
 		memset(results, 0, buf_size);
-		ctx->ws->buffer_unmap(buf->cs_buf);
 		break;
 	default:
 		assert(0);
@@ -751,7 +749,6 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 		assert(0);
 	}
 
-	ctx->ws->buffer_unmap(qbuf->buf->cs_buf);
 	return TRUE;
 }
 
@@ -919,7 +916,6 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 	results = r600_buffer_map_sync_with_rings(ctx, buffer, PIPE_TRANSFER_WRITE);
 	if (results) {
 		memset(results, 0, ctx->max_db * 4 * 4);
-		ctx->ws->buffer_unmap(buffer->cs_buf);
 
 		/* emit EVENT_WRITE for ZPASS_DONE */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
@@ -937,7 +933,6 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 				if (results[i*4 + 1])
 					mask |= (1<<i);
 			}
-			ctx->ws->buffer_unmap(buffer->cs_buf);
 		}
 	}
 

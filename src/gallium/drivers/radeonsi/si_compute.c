@@ -309,8 +309,6 @@ static void si_launch_grid(
 			kernel_args[i]);
 	}
 
-	sctx->b.ws->buffer_unmap(input_buffer->cs_buf);
-
 	kernel_args_va = input_buffer->gpu_address;
 	kernel_args_va += kernel_args_offset;
 

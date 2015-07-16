@@ -939,10 +939,8 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 	pipe_mutex_destroy(rscreen->aux_context_lock);
 	rscreen->aux_context->destroy(rscreen->aux_context);
 
-	if (rscreen->trace_bo) {
-		rscreen->ws->buffer_unmap(rscreen->trace_bo->cs_buf);
+	if (rscreen->trace_bo)
 		pipe_resource_reference((struct pipe_resource**)&rscreen->trace_bo, NULL);
-	}
 
 	rscreen->ws->destroy(rscreen->ws);
 	FREE(rscreen);

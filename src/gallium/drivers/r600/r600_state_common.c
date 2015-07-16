@@ -1409,7 +1409,6 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 					data += info.indirect_offset / sizeof(unsigned);
 					start = data[2] * ib.index_size;
 					count = data[0];
-					rctx->b.ws->buffer_unmap(indirect_resource->cs_buf);
 				}
 				else {
 					start = 0;

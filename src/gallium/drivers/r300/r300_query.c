@@ -168,8 +168,6 @@ static boolean r300_get_query_result(struct pipe_context* pipe,
         map++;
     }
 
-    r300->rws->buffer_unmap(q->cs_buf);
-
     if (q->type == PIPE_QUERY_OCCLUSION_PREDICATE) {
         vresult->b = temp != 0;
     } else {

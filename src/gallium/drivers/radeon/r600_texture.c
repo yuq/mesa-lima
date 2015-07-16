@@ -1059,17 +1059,8 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 					struct pipe_transfer* transfer)
 {
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
-	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
-	struct radeon_winsys_cs_handle *buf;
 	struct pipe_resource *texture = transfer->resource;
 	struct r600_texture *rtex = (struct r600_texture*)texture;
-
-	if (rtransfer->staging) {
-		buf = rtransfer->staging->cs_buf;
-	} else {
-		buf = r600_resource(transfer->resource)->cs_buf;
-	}
-	rctx->ws->buffer_unmap(buf);
 
 	if ((transfer->usage & PIPE_TRANSFER_WRITE) && rtransfer->staging) {
 		if (rtex->is_depth && rtex->resource.b.b.nr_samples <= 1) {

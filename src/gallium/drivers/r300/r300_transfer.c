@@ -251,16 +251,12 @@ void r300_texture_transfer_unmap(struct pipe_context *ctx,
     struct r300_resource *tex = r300_resource(transfer->resource);
 
     if (trans->linear_texture) {
-        rws->buffer_unmap(trans->linear_texture->cs_buf);
-
         if (transfer->usage & PIPE_TRANSFER_WRITE) {
             r300_copy_into_tiled_texture(ctx, trans);
         }
 
         pipe_resource_reference(
             (struct pipe_resource**)&trans->linear_texture, NULL);
-    } else {
-        rws->buffer_unmap(tex->cs_buf);
     }
     FREE(transfer);
 }
