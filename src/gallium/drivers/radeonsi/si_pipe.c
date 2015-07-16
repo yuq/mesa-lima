@@ -128,17 +128,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	sctx->atoms.s.streamout_begin = &sctx->b.streamout.begin_atom;
 	sctx->atoms.s.streamout_enable = &sctx->b.streamout.enable_atom;
 
-	switch (sctx->b.chip_class) {
-	case SI:
-	case CIK:
-		si_init_state_functions(sctx);
-		si_init_shader_functions(sctx);
-		si_init_config(sctx);
-		break;
-	default:
-		R600_ERR("Unsupported chip class %d.\n", sctx->b.chip_class);
-		goto fail;
-	}
+	si_init_state_functions(sctx);
+	si_init_shader_functions(sctx);
 
 	if (sscreen->b.debug_flags & DBG_FORCE_DMA)
 		sctx->b.b.resource_copy_region = sctx->b.dma_copy;

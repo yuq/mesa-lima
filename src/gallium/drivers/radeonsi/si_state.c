@@ -2920,6 +2920,8 @@ static void si_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
 	si_need_cs_space((struct si_context*)ctx, num_dw, include_draw_vbo);
 }
 
+static void si_init_config(struct si_context *sctx);
+
 void si_init_state_functions(struct si_context *sctx)
 {
 	si_init_atom(&sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
@@ -2981,6 +2983,8 @@ void si_init_state_functions(struct si_context *sctx)
 	} else {
 		sctx->b.dma_copy = si_dma_copy;
 	}
+
+	si_init_config(sctx);
 }
 
 static void
@@ -3087,7 +3091,7 @@ si_write_harvested_raster_configs(struct si_context *sctx,
 		       INSTANCE_BROADCAST_WRITES);
 }
 
-void si_init_config(struct si_context *sctx)
+static void si_init_config(struct si_context *sctx)
 {
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 

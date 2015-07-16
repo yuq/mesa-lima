@@ -256,7 +256,6 @@ boolean si_is_format_supported(struct pipe_screen *screen,
                                unsigned sample_count,
                                unsigned usage);
 void si_init_state_functions(struct si_context *sctx);
-void si_init_config(struct si_context *sctx);
 unsigned cik_bank_wh(unsigned bankwh);
 unsigned cik_db_pipe_config(struct si_screen *sscreen, unsigned tile_mode);
 unsigned cik_macro_tile_aspect(unsigned macro_tile_aspect);
