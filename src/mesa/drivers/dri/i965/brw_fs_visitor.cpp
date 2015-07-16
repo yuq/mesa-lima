@@ -1960,7 +1960,7 @@ fs_visitor::emit_cs_terminate()
     */
    struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD);
    fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-   bld.exec_all().MOV(payload, g0);
+   bld.group(8, 0).exec_all().MOV(payload, g0);
 
    /* Send a message to the thread spawner to terminate the thread. */
    fs_inst *inst = bld.exec_all()
