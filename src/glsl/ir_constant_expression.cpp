@@ -40,23 +40,11 @@
 #include "glsl_types.h"
 #include "program/hash_table.h"
 
-#if defined(_MSC_VER) && (_MSC_VER < 1800)
-static int isnormal(double x)
-{
-   return _fpclass(x) == _FPCLASS_NN || _fpclass(x) == _FPCLASS_PN;
-}
-#elif defined(__SUNPRO_CC) && !defined(isnormal)
+#if defined(__SUNPRO_CC) && !defined(isnormal)
 #include <ieeefp.h>
 static int isnormal(double x)
 {
    return fpclass(x) == FP_NORMAL;
-}
-#endif
-
-#if defined(_MSC_VER)
-static double copysign(double x, double y)
-{
-   return _copysign(x, y);
 }
 #endif
 
