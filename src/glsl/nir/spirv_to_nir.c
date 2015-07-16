@@ -369,20 +369,32 @@ struct_member_decoration_cb(struct vtn_builder *b,
 }
 
 static void
-array_decoration_cb(struct vtn_builder *b,
-                    struct vtn_value *val, int member,
+type_decoration_cb(struct vtn_builder *b,
+                   struct vtn_value *val, int member,
                     const struct vtn_decoration *dec, void *ctx)
 {
    struct vtn_type *type = val->type;
 
-   assert(member == -1);
+   if (member != -1)
+      return;
+
    switch (dec->decoration) {
    case SpvDecorationArrayStride:
       type->stride = dec->literals[0];
       break;
+   case SpvDecorationBlock:
+      type->block = true;
+      break;
+   case SpvDecorationBufferBlock:
+      type->buffer_block = true;
+      break;
+   case SpvDecorationGLSLShared:
+   case SpvDecorationGLSLPacked:
+      /* Ignore these, since we get explicit offsets anyways */
+      break;
 
    default:
-      unreachable("Unhandled array type decoration");
+      unreachable("Unhandled type decoration");
    }
 }
 
@@ -398,16 +410,16 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    switch (opcode) {
    case SpvOpTypeVoid:
       val->type->type = glsl_void_type();
-      return;
+      break;
    case SpvOpTypeBool:
       val->type->type = glsl_bool_type();
-      return;
+      break;
    case SpvOpTypeInt:
       val->type->type = glsl_int_type();
-      return;
+      break;
    case SpvOpTypeFloat:
       val->type->type = glsl_float_type();
-      return;
+      break;
 
    case SpvOpTypeVector: {
       const struct glsl_type *base =
@@ -416,7 +428,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       assert(glsl_type_is_scalar(base));
       val->type->type = glsl_vector_type(glsl_get_base_type(base), elems);
-      return;
+      break;
    }
 
    case SpvOpTypeMatrix: {
@@ -431,7 +443,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->array_element = base;
       val->type->row_major = false;
       val->type->stride = 0;
-      return;
+      break;
    }
 
    case SpvOpTypeArray: {
@@ -440,8 +452,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->type = glsl_array_type(array_element->type, w[3]);
       val->type->array_element = array_element;
       val->type->stride = 0;
-      vtn_foreach_decoration(b, val, array_decoration_cb, NULL);
-      return;
+      break;
    }
 
    case SpvOpTypeStruct: {
@@ -474,7 +485,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       const char *name = val->name ? val->name : "struct";
 
       val->type->type = glsl_struct_type(fields, num_fields, name);
-      return;
+      break;
    }
 
    case SpvOpTypeFunction: {
@@ -489,7 +500,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          params[i].out = true;
       }
       val->type->type = glsl_function_type(return_type, params, count - 3);
-      return;
+      break;
    }
 
    case SpvOpTypePointer:
@@ -498,7 +509,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
        * of dereferences happen
        */
       val->type = vtn_value(b, w[3], vtn_value_type_type)->type;
-      return;
+      break;
 
    case SpvOpTypeImage: {
       const struct glsl_type *sampled_type =
@@ -526,7 +537,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
 
       val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
                                           glsl_get_base_type(sampled_type));
-      return;
+      break;
    }
 
    case SpvOpTypeSampledImage:
@@ -543,6 +554,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Unhandled opcode");
    }
+   
+   vtn_foreach_decoration(b, val, type_decoration_cb, NULL);
 }
 
 static void
@@ -774,8 +787,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationNoStaticUse:
       /* This can safely be ignored */
       break;
-   case SpvDecorationBlock:
-   case SpvDecorationBufferBlock:
    case SpvDecorationRowMajor:
    case SpvDecorationColMajor:
    case SpvDecorationGLSLShared:
@@ -1002,6 +1013,109 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
    dest_deref_tail->child = old_child;
 }
 
+static struct vtn_ssa_value *
+_vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
+                unsigned set, nir_ssa_def *binding,
+                unsigned offset, nir_ssa_def *indirect,
+                struct vtn_type *type)
+{
+   struct vtn_ssa_value *val = ralloc(b, struct vtn_ssa_value);
+   val->type = type->type;
+   val->transposed = NULL;
+   if (glsl_type_is_vector_or_scalar(type->type)) {
+      nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, op);
+      load->num_components = glsl_get_vector_elements(type->type);
+      load->const_index[0] = set;
+      load->src[0] = nir_src_for_ssa(binding);
+      load->const_index[1] = offset;
+      if (indirect)
+         load->src[1] = nir_src_for_ssa(indirect);
+      nir_ssa_dest_init(&load->instr, &load->dest, load->num_components, NULL);
+      nir_builder_instr_insert(&b->nb, &load->instr);
+      val->def = &load->dest.ssa;
+   } else {
+      unsigned elems = glsl_get_length(type->type);
+      val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
+      if (glsl_type_is_struct(type->type)) {
+         for (unsigned i = 0; i < elems; i++) {
+            val->elems[i] = _vtn_block_load(b, op, set, binding,
+                                            offset + type->offsets[i],
+                                            indirect, type->members[i]);
+         }
+      } else {
+         for (unsigned i = 0; i < elems; i++) {
+            val->elems[i] = _vtn_block_load(b, op, set, binding,
+                                            offset + i * type->stride,
+                                            indirect, type->array_element);
+         }
+      }
+   }
+
+   return val;
+}
+
+static struct vtn_ssa_value *
+vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
+               struct vtn_type *type, nir_deref *src_tail)
+{
+   unsigned set = src->var->data.descriptor_set;
+   
+   nir_ssa_def *binding = nir_imm_int(&b->nb, src->var->data.binding);
+   nir_deref *deref = &src->deref;
+   
+   /* The block variable may be an array, in which case the array index adds
+    * an offset to the binding. Figure out that index now.
+    */
+
+   if (deref->child->deref_type == nir_deref_type_array) {
+      deref = deref->child;
+      type = type->array_element;
+      nir_deref_array *deref_array = nir_deref_as_array(deref);
+      if (deref_array->deref_array_type == nir_deref_array_type_direct) {
+         binding = nir_imm_int(&b->nb, src->var->data.binding +
+                                       deref_array->base_offset);
+      } else {
+         binding = nir_iadd(&b->nb, binding, deref_array->indirect.ssa);
+      }
+   }
+
+   unsigned offset = 0;
+   nir_ssa_def *indirect = NULL;
+   while (deref != src_tail) {
+      deref = deref->child;
+      switch (deref->deref_type) {
+      case nir_deref_type_array: {
+         nir_deref_array *deref_array = nir_deref_as_array(deref);
+         if (deref_array->deref_array_type == nir_deref_array_type_direct) {
+            offset += type->stride * deref_array->base_offset;
+         } else {
+            nir_ssa_def *offset = nir_imul(&b->nb, deref_array->indirect.ssa,
+                                           nir_imm_int(&b->nb, type->stride));
+            indirect = indirect ? nir_iadd(&b->nb, indirect, offset) : offset;
+         }
+         type = type->array_element;
+         break;
+      }
+      
+      case nir_deref_type_struct: {
+         nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
+         offset += type->offsets[deref_struct->index];
+         type = type->members[deref_struct->index];
+         break;
+      }
+
+      default:
+         unreachable("unknown deref type");
+      }
+   }
+
+   /* TODO SSBO's */
+   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_indirect
+                                  : nir_intrinsic_load_ubo;
+
+   return _vtn_block_load(b, op, set, binding, offset, indirect, type);
+}
+
 /*
  * Gets the NIR-level deref tail, which may have as a child an array deref
  * selecting which component due to OpAccessChain supporting per-component
@@ -1030,7 +1144,12 @@ vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
                   struct vtn_type *src_type)
 {
    nir_deref *src_tail = get_deref_tail(src);
-   struct vtn_ssa_value *val = _vtn_variable_load(b, src, src_type, src_tail);
+
+   struct vtn_ssa_value *val;
+   if (src->var->interface_type)
+      val = vtn_block_load(b, src, src_type, src_tail);
+   else
+      val = _vtn_variable_load(b, src, src_type, src_tail);
 
    if (src_tail->child) {
       nir_deref_array *vec_deref = nir_deref_as_array(src_tail->child);
@@ -1082,7 +1201,7 @@ vtn_variable_copy(struct vtn_builder *b, nir_deref_var *src,
 {
    nir_deref *src_tail = get_deref_tail(src);
 
-   if (src_tail->child) {
+   if (src_tail->child || src->var->interface_type) {
       assert(get_deref_tail(dest)->child);
       struct vtn_ssa_value *val = vtn_variable_load(b, src, type);
       vtn_variable_store(b, val, dest, type);
@@ -1111,12 +1230,19 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       var->type = type->type;
       var->name = ralloc_strdup(var, val->name);
 
+      if (type->block)
+         var->interface_type = type->type;
+      else if (glsl_type_is_array(type->type) &&
+               (type->array_element->block || type->array_element->buffer_block))
+         var->interface_type = type->array_element->type;
+      else
+         var->interface_type = NULL;
+
       switch ((SpvStorageClass)w[3]) {
       case SpvStorageClassUniform:
       case SpvStorageClassUniformConstant:
          var->data.mode = nir_var_uniform;
          var->data.read_only = true;
-         var->interface_type = type->type;
          break;
       case SpvStorageClassInput:
          var->data.mode = nir_var_shader_in;
@@ -1161,6 +1287,13 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          var->data.location += VARYING_SLOT_VAR0;
       }
 
+      /* If this was a uniform block, then we're not going to actually use the
+       * variable (we're only going to use it to compute offsets), so don't
+       * declare it in the shader.
+       */
+      if (var->data.mode == nir_var_uniform && var->interface_type)
+         break;
+
       switch (var->data.mode) {
       case nir_var_shader_in:
          exec_list_push_tail(&b->shader->inputs, &var->node);
@@ -1189,7 +1322,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_deref);
       nir_deref_var *base = vtn_value(b, w[3], vtn_value_type_deref)->deref;
       val->deref = nir_deref_as_var(nir_copy_deref(b, &base->deref));
-      val->deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
+      struct vtn_type *deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
 
       nir_deref *tail = &val->deref->deref;
       while (tail->child)
@@ -1210,14 +1343,14 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             nir_deref_array *deref_arr = nir_deref_array_create(b);
             if (base_type == GLSL_TYPE_ARRAY ||
                 glsl_type_is_matrix(tail->type)) {
-               val->deref_type = val->deref_type->array_element;
+               deref_type = deref_type->array_element;
             } else {
                assert(glsl_type_is_vector(tail->type));
-               val->deref_type = ralloc(b, struct vtn_type);
-               val->deref_type->type = glsl_scalar_type(base_type);
+               deref_type = ralloc(b, struct vtn_type);
+               deref_type->type = glsl_scalar_type(base_type);
             }
 
-            deref_arr->deref.type = val->deref_type->type;
+            deref_arr->deref.type = deref_type->type;
 
             if (idx_val->value_type == vtn_value_type_constant) {
                unsigned idx = idx_val->constant->value.u[0];
@@ -1237,9 +1370,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          case GLSL_TYPE_STRUCT: {
             assert(idx_val->value_type == vtn_value_type_constant);
             unsigned idx = idx_val->constant->value.u[0];
-            val->deref_type = val->deref_type->members[idx];
+            deref_type = deref_type->members[idx];
             nir_deref_struct *deref_struct = nir_deref_struct_create(b, idx);
-            deref_struct->deref.type = val->deref_type->type;
+            deref_struct->deref.type = deref_type->type;
             tail->child = &deref_struct->deref;
             break;
          }
@@ -1248,6 +1381,17 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          }
          tail = tail->child;
       }
+
+      /* For uniform blocks, we don't resolve the access chain until we
+       * actually access the variable, so we need to keep around the original
+       * type of the variable.
+       */
+      if (base->var->interface_type && base->var->data.mode == nir_var_uniform)
+         val->deref_type = vtn_value(b, w[3], vtn_value_type_deref)->deref_type;
+      else
+         val->deref_type = deref_type;
+
+
       break;
    }
 

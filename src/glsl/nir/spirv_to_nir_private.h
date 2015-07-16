@@ -90,6 +90,12 @@ struct vtn_type {
    /* for structs, the offset of each member */
    unsigned *offsets;
 
+   /* for structs, whether it was decorated as a "non-SSBO-like" block */
+   bool block;
+
+   /* for structs, whether it was decorated as an "SSBO-like" block */
+   bool buffer_block;
+
    /* for arrays and matrices, the array stride */
    unsigned stride;
 
