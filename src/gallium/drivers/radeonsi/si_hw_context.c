@@ -164,7 +164,8 @@ void si_context_gfx_flush(void *context, unsigned flags,
 void si_begin_new_cs(struct si_context *ctx)
 {
 	/* Flush read caches at the beginning of CS. */
-	ctx->b.flags |= SI_CONTEXT_INV_TC_L1 |
+	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
+			SI_CONTEXT_INV_TC_L1 |
 			SI_CONTEXT_INV_TC_L2 |
 			SI_CONTEXT_INV_KCACHE |
 			SI_CONTEXT_INV_ICACHE;
