@@ -169,6 +169,18 @@ glsl_type_is_matrix(const struct glsl_type *type)
 }
 
 bool
+glsl_type_is_array(const struct glsl_type *type)
+{
+   return type->is_array();
+}
+
+bool
+glsl_type_is_struct(const struct glsl_type *type)
+{
+   return type->is_record() || type->is_interface();
+}
+
+bool
 glsl_type_is_sampler(const struct glsl_type *type)
 {
    return type->is_sampler();
