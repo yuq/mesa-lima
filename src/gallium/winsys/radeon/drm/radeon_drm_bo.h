@@ -54,6 +54,7 @@ struct radeon_bo {
 
     void *ptr;
     pipe_mutex map_mutex;
+    unsigned map_count;
 
     uint32_t handle;
     uint32_t flink_name;

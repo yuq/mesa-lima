@@ -351,14 +351,11 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
     if (bo->user_ptr)
         return bo->user_ptr;
 
-    /* Return the pointer if it's already mapped. */
-    if (bo->ptr)
-        return bo->ptr;
-
     /* Map the buffer. */
     pipe_mutex_lock(bo->map_mutex);
-    /* Return the pointer if it's already mapped (in case of a race). */
+    /* Return the pointer if it's already mapped. */
     if (bo->ptr) {
+        bo->map_count++;
         pipe_mutex_unlock(bo->map_mutex);
         return bo->ptr;
     }
@@ -383,6 +380,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
         return NULL;
     }
     bo->ptr = ptr;
+    bo->map_count = 1;
     pipe_mutex_unlock(bo->map_mutex);
 
     return bo->ptr;
@@ -467,7 +465,26 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
 
 static void radeon_bo_unmap(struct radeon_winsys_cs_handle *_buf)
 {
-    /* NOP */
+    struct radeon_bo *bo = (struct radeon_bo*)_buf;
+
+    if (bo->user_ptr)
+        return;
+
+    pipe_mutex_lock(bo->map_mutex);
+    if (!bo->ptr) {
+        pipe_mutex_unlock(bo->map_mutex);
+        return; /* it's not been mapped */
+    }
+
+    assert(bo->map_count);
+    if (--bo->map_count) {
+        pipe_mutex_unlock(bo->map_mutex);
+        return; /* it's been mapped multiple times */
+    }
+
+    os_munmap(bo->ptr, bo->base.size);
+    bo->ptr = NULL;
+    pipe_mutex_unlock(bo->map_mutex);
 }
 
 static void radeon_bo_get_base_buffer(struct pb_buffer *buf,
