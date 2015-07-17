@@ -31,7 +31,6 @@ AM_CFLAGS = \
 	$(LIBDRM_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(SIM_CFLAGS) \
-	-I$(top_srcdir)/src/mesa/ \
 	$()
 
 noinst_LTLIBRARIES = libvc4.la
