@@ -483,7 +483,7 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
        * need to offset the Sampler State Pointer in the header.
        */
       header_size = 1;
-      sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+      sources[0] = fs_reg();
       length++;
    }
 
