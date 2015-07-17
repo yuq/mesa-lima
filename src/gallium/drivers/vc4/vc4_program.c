@@ -2277,9 +2277,8 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         }
 
         copy_uniform_state_to_shader(shader, c);
-        shader->bo = vc4_bo_alloc_mem(vc4->screen, c->qpu_insts,
-                                      c->qpu_inst_count * sizeof(uint64_t),
-                                      "code");
+        shader->bo = vc4_bo_alloc_shader(vc4->screen, c->qpu_insts,
+                                         c->qpu_inst_count * sizeof(uint64_t));
 
         /* Copy the compiler UBO range state to the compiled shader, dropping
          * out arrays that were never referenced by an indirect load.

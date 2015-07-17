@@ -58,8 +58,8 @@ struct vc4_bo {
 
 struct vc4_bo *vc4_bo_alloc(struct vc4_screen *screen, uint32_t size,
                             const char *name);
-struct vc4_bo *vc4_bo_alloc_mem(struct vc4_screen *screen, const void *data,
-                                uint32_t size, const char *name);
+struct vc4_bo *vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data,
+                                   uint32_t size);
 void vc4_bo_last_unreference(struct vc4_bo *bo);
 void vc4_bo_last_unreference_locked_timed(struct vc4_bo *bo, time_t time);
 struct vc4_bo *vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,

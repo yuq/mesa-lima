@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Broadcom
+ * Copyright © 2014-2015 Broadcom
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -381,15 +381,57 @@ vc4_bo_get_dmabuf(struct vc4_bo *bo)
 }
 
 struct vc4_bo *
-vc4_bo_alloc_mem(struct vc4_screen *screen, const void *data, uint32_t size,
-                 const char *name)
+vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data, uint32_t size)
 {
-        void *map;
         struct vc4_bo *bo;
+        int ret;
 
-        bo = vc4_bo_alloc(screen, size, name);
-        map = vc4_bo_map(bo);
-        memcpy(map, data, size);
+        bo = CALLOC_STRUCT(vc4_bo);
+        if (!bo)
+                return NULL;
+
+        pipe_reference_init(&bo->reference, 1);
+        bo->screen = screen;
+        bo->size = align(size, 4096);
+        bo->name = "code";
+        bo->private = false; /* Make sure it doesn't go back to the cache. */
+
+        if (!using_vc4_simulator) {
+                struct drm_vc4_create_shader_bo create = {
+                        .size = size,
+                        .data = (uintptr_t)data,
+                };
+
+                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_CREATE_SHADER_BO,
+                               &create);
+                bo->handle = create.handle;
+        } else {
+                struct drm_mode_create_dumb create;
+                memset(&create, 0, sizeof(create));
+
+                create.width = 128;
+                create.bpp = 8;
+                create.height = (size + 127) / 128;
+
+                ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+                bo->handle = create.handle;
+                assert(create.size >= size);
+
+                vc4_bo_map(bo);
+                memcpy(bo->map, data, size);
+        }
+        if (ret != 0) {
+                fprintf(stderr, "create shader ioctl failure\n");
+                abort();
+        }
+
+        screen->bo_count++;
+        screen->bo_size += bo->size;
+        if (dump_stats) {
+                fprintf(stderr, "Allocated shader %dkb:\n", size / 1024);
+                vc4_bo_dump_stats(screen);
+        }
+
         return bo;
 }
 
