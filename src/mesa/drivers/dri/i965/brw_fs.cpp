@@ -3515,12 +3515,18 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       coordinate_done = true;
       break;
    case SHADER_OPCODE_TXF_CMS:
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
-      length++;
+   case SHADER_OPCODE_TXF_UMS:
+   case SHADER_OPCODE_TXF_MCS:
+      if (op == SHADER_OPCODE_TXF_UMS || op == SHADER_OPCODE_TXF_CMS) {
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
+         length++;
+      }
 
-      /* Data from the multisample control surface. */
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
-      length++;
+      if (op == SHADER_OPCODE_TXF_CMS) {
+         /* Data from the multisample control surface. */
+         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
+         length++;
+      }
 
       /* There is no offsetting for this message; just copy in the integer
        * texture coordinates.
