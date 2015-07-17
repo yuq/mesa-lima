@@ -1180,6 +1180,36 @@ get_image_atomic_op(nir_intrinsic_op op, const glsl_type *type)
    }
 }
 
+static fs_inst *
+emit_pixel_interpolater_send(const fs_builder &bld,
+                             enum opcode opcode,
+                             const fs_reg &dst,
+                             const fs_reg &src,
+                             const fs_reg &desc,
+                             glsl_interp_qualifier interpolation)
+{
+   fs_inst *inst;
+   fs_reg payload;
+   int mlen;
+
+   if (src.file == BAD_FILE) {
+      /* Dummy payload */
+      payload = bld.vgrf(BRW_REGISTER_TYPE_F, 1);
+      mlen = 1;
+   } else {
+      payload = src;
+      mlen = 2 * bld.dispatch_width() / 8;
+   }
+
+   inst = bld.emit(opcode, dst, payload, desc);
+   inst->mlen = mlen;
+   /* 2 floats per slot returned */
+   inst->regs_written = 2 * bld.dispatch_width() / 8;
+   inst->pi_noperspective = interpolation == INTERP_QUALIFIER_NOPERSPECTIVE;
+
+   return inst;
+}
+
 void
 fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr)
 {
@@ -1583,28 +1613,81 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       ((struct brw_wm_prog_data *) prog_data)->pulls_bary = true;
 
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
-
-      /* For most messages, we need one reg of ignored data; the hardware
-       * requires mlen==1 even when there is no payload. in the per-slot
-       * offset case, we'll replace this with the proper source data.
-       */
-      fs_reg src = vgrf(glsl_type::float_type);
-      int mlen = 1;     /* one reg unless overriden */
-      fs_inst *inst;
+      const glsl_interp_qualifier interpolation =
+         (glsl_interp_qualifier) instr->variables[0]->var->data.interpolation;
 
       switch (instr->intrinsic) {
       case nir_intrinsic_interp_var_at_centroid:
-         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_CENTROID,
-                         dst_xy, src, fs_reg(0u));
+         emit_pixel_interpolater_send(bld,
+                                      FS_OPCODE_INTERPOLATE_AT_CENTROID,
+                                      dst_xy,
+                                      fs_reg(), /* src */
+                                      fs_reg(0u),
+                                      interpolation);
          break;
 
       case nir_intrinsic_interp_var_at_sample: {
-         /* XXX: We should probably handle non-constant sample id's */
          nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
-         assert(const_sample);
-         unsigned msg_data = const_sample ? const_sample->i[0] << 4 : 0;
-         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src,
-                         fs_reg(msg_data));
+
+         if (const_sample) {
+            unsigned msg_data = const_sample->i[0] << 4;
+
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                         dst_xy,
+                                         fs_reg(), /* src */
+                                         fs_reg(msg_data),
+                                         interpolation);
+         } else {
+            const fs_reg sample_src = retype(get_nir_src(instr->src[0]),
+                                             BRW_REGISTER_TYPE_UD);
+
+            if (nir_src_is_dynamically_uniform(instr->src[0])) {
+               const fs_reg sample_id = bld.emit_uniformize(sample_src);
+               const fs_reg msg_data = vgrf(glsl_type::uint_type);
+               bld.exec_all().group(1, 0).SHL(msg_data, sample_id, fs_reg(4u));
+               emit_pixel_interpolater_send(bld,
+                                            FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                            dst_xy,
+                                            fs_reg(), /* src */
+                                            msg_data,
+                                            interpolation);
+            } else {
+               /* Make a loop that sends a message to the pixel interpolater
+                * for the sample number in each live channel. If there are
+                * multiple channels with the same sample number then these
+                * will be handled simultaneously with a single interation of
+                * the loop.
+                */
+               bld.emit(BRW_OPCODE_DO);
+
+               /* Get the next live sample number into sample_id_reg */
+               const fs_reg sample_id = bld.emit_uniformize(sample_src);
+
+               /* Set the flag register so that we can perform the send
+                * message on all channels that have the same sample number
+                */
+               bld.CMP(bld.null_reg_ud(),
+                       sample_src, sample_id,
+                       BRW_CONDITIONAL_EQ);
+               const fs_reg msg_data = vgrf(glsl_type::uint_type);
+               bld.exec_all().group(1, 0).SHL(msg_data, sample_id, fs_reg(4u));
+               fs_inst *inst =
+                  emit_pixel_interpolater_send(bld,
+                                               FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                               dst_xy,
+                                               fs_reg(), /* src */
+                                               msg_data,
+                                               interpolation);
+               set_predicate(BRW_PREDICATE_NORMAL, inst);
+
+               /* Continue the loop if there are any live channels left */
+               set_predicate_inv(BRW_PREDICATE_NORMAL,
+                                 true, /* inverse */
+                                 bld.emit(BRW_OPCODE_WHILE));
+            }
+         }
+
          break;
       }
 
@@ -1615,10 +1698,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             unsigned off_x = MIN2((int)(const_offset->f[0] * 16), 7) & 0xf;
             unsigned off_y = MIN2((int)(const_offset->f[1] * 16), 7) & 0xf;
 
-            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
-                            fs_reg(off_x | (off_y << 4)));
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
+                                         dst_xy,
+                                         fs_reg(), /* src */
+                                         fs_reg(off_x | (off_y << 4)),
+                                         interpolation);
          } else {
-            src = vgrf(glsl_type::ivec2_type);
+            fs_reg src = vgrf(glsl_type::ivec2_type);
             fs_reg offset_src = retype(get_nir_src(instr->src[0]),
                                        BRW_REGISTER_TYPE_F);
             for (int i = 0; i < 2; i++) {
@@ -1646,9 +1733,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                            bld.SEL(offset(src, bld, i), itemp, fs_reg(7)));
             }
 
-            mlen = 2 * dispatch_width / 8;
-            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
-                            fs_reg(0u));
+            const enum opcode opcode = FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET;
+            emit_pixel_interpolater_send(bld,
+                                         opcode,
+                                         dst_xy,
+                                         src,
+                                         fs_reg(0u),
+                                         interpolation);
          }
          break;
       }
@@ -1656,12 +1747,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       default:
          unreachable("Invalid intrinsic");
       }
-
-      inst->mlen = mlen;
-      /* 2 floats per slot returned */
-      inst->regs_written = 2 * dispatch_width / 8;
-      inst->pi_noperspective = instr->variables[0]->var->data.interpolation ==
-                               INTERP_QUALIFIER_NOPERSPECTIVE;
 
       for (unsigned j = 0; j < instr->num_components; j++) {
          fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);

@@ -1377,15 +1377,14 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
                                                 struct brw_reg msg_data,
                                                 unsigned msg_type)
 {
-   assert(msg_data.file == BRW_IMMEDIATE_VALUE &&
-          msg_data.type == BRW_REGISTER_TYPE_UD);
+   assert(msg_data.type == BRW_REGISTER_TYPE_UD);
 
    brw_pixel_interpolator_query(p,
          retype(dst, BRW_REGISTER_TYPE_UW),
          src,
          inst->pi_noperspective,
          msg_type,
-         msg_data.dw1.ud,
+         msg_data,
          inst->mlen,
          inst->regs_written);
 }
