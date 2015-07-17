@@ -372,7 +372,7 @@ anv_image_view_init(struct anv_image_view *iview,
    view->offset = image->offset + surface->offset;
    view->format = pCreateInfo->format;
 
-   view->extent = (VkExtent3D) {
+   iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
       .height = anv_minify(image->extent.height, range->baseMipLevel),
       .depth = anv_minify(image->extent.depth, range->baseMipLevel),
@@ -588,7 +588,7 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
    view->offset = image->offset + surface->offset;
    view->format = pCreateInfo->format;
 
-   view->extent = (VkExtent3D) {
+   aview->base.extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
       .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),

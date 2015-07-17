@@ -889,17 +889,16 @@ struct anv_surface_view {
    struct anv_bo *bo;
    uint32_t offset; /**< VkBufferCreateInfo::offset */
    uint32_t range; /**< VkBufferCreateInfo::range */
-   VkExtent3D extent;
    VkFormat format; /**< VkBufferCreateInfo::format */
 };
 
 struct anv_buffer_view {
-   /* FINISHME: Trim unneeded data from this struct. */
    struct anv_surface_view view;
 };
 
 struct anv_image_view {
    struct anv_surface_view view;
+   VkExtent3D extent;
 };
 
 enum anv_attachment_view_type {
@@ -909,11 +908,11 @@ enum anv_attachment_view_type {
 
 struct anv_attachment_view {
    enum anv_attachment_view_type attachment_type;
+   VkExtent3D extent;
 };
 
 struct anv_color_attachment_view {
    struct anv_attachment_view base;
-
    struct anv_surface_view view;
 };
 

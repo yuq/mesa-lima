@@ -543,8 +543,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)(src_offset.x + src_extent.width) / (float)src->view.extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->view.extent.height,
+         (float)(src_offset.x + src_extent.width) / (float)src->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
       },
    };
 
@@ -554,8 +554,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->view.extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->view.extent.height,
+         (float)src_offset.x / (float)src->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
       },
    };
 
@@ -565,8 +565,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->view.extent.width,
-         (float)src_offset.y / (float)src->view.extent.height,
+         (float)src_offset.x / (float)src->extent.width,
+         (float)src_offset.y / (float)src->extent.height,
       },
    };
 
@@ -622,8 +622,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
-         .width = dest->view.extent.width,
-         .height = dest->view.extent.height,
+         .width = dest->base.extent.width,
+         .height = dest->base.extent.height,
          .layers = 1
       }, &fb);
 
@@ -1274,8 +1274,8 @@ void anv_CmdClearColorImage(
                         .layout = VK_IMAGE_LAYOUT_GENERAL
                      }
                   },
-                  .width = view.view.extent.width,
-                  .height = view.view.extent.height,
+                  .width = view.base.extent.width,
+                  .height = view.base.extent.height,
                   .layers = 1
                }, &fb);
 
@@ -1322,8 +1322,8 @@ void anv_CmdClearColorImage(
                   .renderArea = {
                      .offset = { 0, 0, },
                      .extent = {
-                        .width = view.view.extent.width,
-                        .height = view.view.extent.height,
+                        .width = view.base.extent.width,
+                        .height = view.base.extent.height,
                      },
                   },
                   .renderPass = pass,
