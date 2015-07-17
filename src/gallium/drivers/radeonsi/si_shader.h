@@ -258,7 +258,7 @@ struct si_shader {
 	unsigned		nparam;
 	unsigned		vs_output_param_offset[PIPE_MAX_SHADER_OUTPUTS];
 	unsigned		ps_input_param_offset[PIPE_MAX_SHADER_INPUTS];
-
+	unsigned		ps_input_interpolate[PIPE_MAX_SHADER_INPUTS];
 	bool			uses_instanceid;
 	unsigned		nr_pos_exports;
 	unsigned		nr_param_exports;

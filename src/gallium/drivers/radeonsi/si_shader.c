@@ -836,6 +836,35 @@ static LLVMValueRef fetch_input_gs(
 				tgsi2llvmtype(bld_base, type), "");
 }
 
+static int lookup_interp_param_index(unsigned interpolate, unsigned location)
+{
+	switch (interpolate) {
+	case TGSI_INTERPOLATE_CONSTANT:
+		return 0;
+
+	case TGSI_INTERPOLATE_LINEAR:
+		if (location == TGSI_INTERPOLATE_LOC_SAMPLE)
+			return SI_PARAM_LINEAR_SAMPLE;
+		else if (location == TGSI_INTERPOLATE_LOC_CENTROID)
+			return SI_PARAM_LINEAR_CENTROID;
+		else
+			return SI_PARAM_LINEAR_CENTER;
+		break;
+	case TGSI_INTERPOLATE_COLOR:
+	case TGSI_INTERPOLATE_PERSPECTIVE:
+		if (location == TGSI_INTERPOLATE_LOC_SAMPLE)
+			return SI_PARAM_PERSP_SAMPLE;
+		else if (location == TGSI_INTERPOLATE_LOC_CENTROID)
+			return SI_PARAM_PERSP_CENTROID;
+		else
+			return SI_PARAM_PERSP_CENTER;
+		break;
+	default:
+		fprintf(stderr, "Warning: Unhandled interpolation mode.\n");
+		return -1;
+	}
+}
+
 static void declare_input_fs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
@@ -850,7 +879,8 @@ static void declare_input_fs(
 	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
 	LLVMValueRef main_fn = radeon_bld->main_fn;
 
-	LLVMValueRef interp_param;
+	LLVMValueRef interp_param = NULL;
+	int interp_param_idx;
 	const char * intr_name;
 
 	/* This value is:
@@ -899,31 +929,13 @@ static void declare_input_fs(
 	attr_number = lp_build_const_int32(gallivm,
 					   shader->ps_input_param_offset[input_index]);
 
-	switch (decl->Interp.Interpolate) {
-	case TGSI_INTERPOLATE_CONSTANT:
-		interp_param = 0;
-		break;
-	case TGSI_INTERPOLATE_LINEAR:
-		if (decl->Interp.Location == TGSI_INTERPOLATE_LOC_SAMPLE)
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_LINEAR_SAMPLE);
-		else if (decl->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID)
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_LINEAR_CENTROID);
-		else
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_LINEAR_CENTER);
-		break;
-	case TGSI_INTERPOLATE_COLOR:
-	case TGSI_INTERPOLATE_PERSPECTIVE:
-		if (decl->Interp.Location == TGSI_INTERPOLATE_LOC_SAMPLE)
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_PERSP_SAMPLE);
-		else if (decl->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID)
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_PERSP_CENTROID);
-		else
-			interp_param = LLVMGetParam(main_fn, SI_PARAM_PERSP_CENTER);
-		break;
-	default:
-		fprintf(stderr, "Warning: Unhandled interpolation mode.\n");
+	shader->ps_input_interpolate[input_index] = decl->Interp.Interpolate;
+	interp_param_idx = lookup_interp_param_index(decl->Interp.Interpolate,
+						     decl->Interp.Location);
+	if (interp_param_idx == -1)
 		return;
-	}
+	else if (interp_param_idx)
+		interp_param = LLVMGetParam(main_fn, interp_param_idx);
 
 	/* fs.constant returns the param from the middle vertex, so it's not
 	 * really useful for flat shading. It's meant to be used for custom
