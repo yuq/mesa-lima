@@ -797,31 +797,21 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
-fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
+fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
+                           const fs_reg &sampler)
 {
-   int reg_width = dispatch_width / 8;
-   fs_reg payload = fs_reg(GRF, alloc.allocate(components * reg_width),
-                           BRW_REGISTER_TYPE_F);
-   fs_reg dest = vgrf(glsl_type::uvec4_type);
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
+   const fs_reg dest = vgrf(glsl_type::uvec4_type);
+   const fs_reg srcs[] = {
+      coordinate, fs_reg(), fs_reg(), fs_reg(), fs_reg(), fs_reg(),
+      sampler, fs_reg(), fs_reg(components), fs_reg(0)
+   };
+   fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
+                            ARRAY_SIZE(srcs));
 
-   /* parameters are: u, v, r; missing parameters are treated as zero */
-   for (int i = 0; i < components; i++) {
-      sources[i] = vgrf(glsl_type::float_type);
-      bld.MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate);
-      coordinate = offset(coordinate, bld, 1);
-   }
-
-   bld.LOAD_PAYLOAD(payload, sources, components, 0);
-
-   fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
-   inst->base_mrf = -1;
-   inst->mlen = components * reg_width;
-   inst->header_size = 0;
-   inst->regs_written = 4 * reg_width; /* we only care about one reg of
-                                        * response, but the sampler always
-                                        * writes 4/8
-                                        */
+   /* We only care about one reg of response, but the sampler always writes
+    * 4/8.
+    */
+   inst->regs_written = 4 * dispatch_width / 8;
 
    return dest;
 }

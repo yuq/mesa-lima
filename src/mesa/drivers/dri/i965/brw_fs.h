@@ -243,7 +243,8 @@ public:
                      uint32_t sampler,
                      fs_reg sampler_reg,
                      int texunit);
-   fs_reg emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler);
+   fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
+                         const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
    void resolve_source_modifiers(fs_reg *src);
    void emit_discard_jump();
