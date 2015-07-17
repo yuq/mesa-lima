@@ -885,12 +885,12 @@ struct anv_image {
 };
 
 struct anv_surface_view {
-   struct anv_state                             surface_state;
-   struct anv_bo *                              bo;
-   uint32_t                                     offset;
-   uint32_t                                     range;
-   VkExtent3D                                   extent;
-   VkFormat                                     format;
+   struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
+   struct anv_bo *bo;
+   uint32_t offset; /**< VkBufferCreateInfo::offset */
+   uint32_t range; /**< VkBufferCreateInfo::range */
+   VkExtent3D extent;
+   VkFormat format; /**< VkBufferCreateInfo::format */
 };
 
 struct anv_buffer_view {
