@@ -1793,8 +1793,6 @@ GLboolean
 _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
                                GLenum intFormat)
 {
-   (void) intFormat;  /* not used yet */
-
    switch (target) {
    case GL_TEXTURE_2D:
    case GL_PROXY_TEXTURE_2D:
@@ -1814,6 +1812,16 @@ _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
    case GL_PROXY_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_CUBE_MAP_ARRAY:
       return ctx->Extensions.ARB_texture_cube_map_array;
+   case GL_TEXTURE_3D:
+      switch (intFormat) {
+      case GL_COMPRESSED_RGBA_BPTC_UNORM:
+      case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
+      case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
+      case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+         return ctx->Extensions.ARB_texture_compression_bptc;
+      default:
+         return GL_FALSE;
+      }
    default:
       return GL_FALSE;
    }
@@ -4575,32 +4583,23 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
        *    one of the EAC, ETC2, or RGTC formats and either border is
        *    non-zero, or the effective target for the texture is not
        *    TEXTURE_2D_ARRAY."
+       * Instead of listing all these, just list those which are allowed,
+       * which is (at this time) only bptc. Otherwise we'd say s3tc (and more)
+       * are valid here, which they are not, but of course not mentioned by
+       * core spec.
        */
       if (target != GL_TEXTURE_2D_ARRAY) {
          bool invalidformat;
          switch (format) {
             /* These came from _mesa_is_compressed_format in glformats.c. */
-            /* EAC formats */
-            case GL_COMPRESSED_RGBA8_ETC2_EAC:
-            case GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC:
-            case GL_COMPRESSED_R11_EAC:
-            case GL_COMPRESSED_RG11_EAC:
-            case GL_COMPRESSED_SIGNED_R11_EAC:
-            case GL_COMPRESSED_SIGNED_RG11_EAC:
-            /* ETC2 formats */
-            case GL_COMPRESSED_RGB8_ETC2:
-            case GL_COMPRESSED_SRGB8_ETC2:
-            case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-            case GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-            /* RGTC formats */
-            case GL_COMPRESSED_RED_RGTC1:
-            case GL_COMPRESSED_SIGNED_RED_RGTC1:
-            case GL_COMPRESSED_RG_RGTC2:
-            case GL_COMPRESSED_SIGNED_RG_RGTC2:
-               invalidformat = true;
+            case GL_COMPRESSED_RGBA_BPTC_UNORM:
+            case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
+            case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
+            case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+               invalidformat = false;
                break;
             default:
-               invalidformat = false;
+               invalidformat = true;
          }
          if (invalidformat) {
             _mesa_error(ctx, GL_INVALID_OPERATION,

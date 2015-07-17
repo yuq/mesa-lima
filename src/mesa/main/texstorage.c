@@ -309,6 +309,7 @@ tex_storage_error_check(struct gl_context *ctx,
                   GL_INVALID_ENUM : GL_INVALID_OPERATION,
                   "glTex%sStorage%dD(internalformat = %s)", suffix, dims,
                   _mesa_lookup_enum_by_nr(internalformat));
+      return GL_TRUE;
    }
 
    /* levels check */
