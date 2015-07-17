@@ -226,11 +226,7 @@ BUILT_SOURCES =						\
 	glsl_lexer.cpp					\
 	glcpp/glcpp-parse.c				\
 	glcpp/glcpp-lex.c				\
-	nir/nir_builder_opcodes.h				\
-	nir/nir_constant_expressions.c			\
-	nir/nir_opcodes.c				\
-	nir/nir_opcodes.h				\
-	nir/nir_opt_algebraic.c
+	$(NIR_GENERATED_FILES)
 CLEANFILES =						\
 	glcpp/glcpp-parse.h				\
 	glsl_parser.h					\
