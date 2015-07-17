@@ -2960,6 +2960,234 @@ static void si_llvm_emit_ddxy(
 	emit_data->output[0] = lp_build_gather_values(gallivm, result, 4);
 }
 
+/*
+ * this takes an I,J coordinate pair,
+ * and works out the X and Y derivatives.
+ * it returns DDX(I), DDX(J), DDY(I), DDY(J).
+ */
+static LLVMValueRef si_llvm_emit_ddxy_interp(
+	struct lp_build_tgsi_context *bld_base,
+	LLVMValueRef interp_ij)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	struct lp_build_context *base = &bld_base->base;
+	LLVMValueRef indices[2];
+	LLVMValueRef store_ptr, load_ptr_x, load_ptr_y, load_ptr_ddx, load_ptr_ddy, temp, temp2;
+	LLVMValueRef tl, tr, bl, result[4];
+	LLVMTypeRef i32;
+	unsigned c;
+
+	i32 = LLVMInt32TypeInContext(gallivm->context);
+
+	indices[0] = bld_base->uint_bld.zero;
+	indices[1] = build_intrinsic(gallivm->builder, "llvm.SI.tid", i32,
+				     NULL, 0, LLVMReadNoneAttribute);
+	store_ptr = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
+				 indices, 2, "");
+
+	temp = LLVMBuildAnd(gallivm->builder, indices[1],
+			    lp_build_const_int32(gallivm, TID_MASK_LEFT), "");
+
+	temp2 = LLVMBuildAnd(gallivm->builder, indices[1],
+			     lp_build_const_int32(gallivm, TID_MASK_TOP), "");
+
+	indices[1] = temp;
+	load_ptr_x = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
+				  indices, 2, "");
+
+	indices[1] = temp2;
+	load_ptr_y = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
+				  indices, 2, "");
+
+	indices[1] = LLVMBuildAdd(gallivm->builder, temp,
+				  lp_build_const_int32(gallivm, 1), "");
+	load_ptr_ddx = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
+				   indices, 2, "");
+
+	indices[1] = LLVMBuildAdd(gallivm->builder, temp2,
+				  lp_build_const_int32(gallivm, 2), "");
+	load_ptr_ddy = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
+				   indices, 2, "");
+
+	for (c = 0; c < 2; ++c) {
+		LLVMValueRef store_val;
+		LLVMValueRef c_ll = lp_build_const_int32(gallivm, c);
+
+		store_val = LLVMBuildExtractElement(gallivm->builder,
+						    interp_ij, c_ll, "");
+		LLVMBuildStore(gallivm->builder,
+			       store_val,
+			       store_ptr);
+
+		tl = LLVMBuildLoad(gallivm->builder, load_ptr_x, "");
+		tl = LLVMBuildBitCast(gallivm->builder, tl, base->elem_type, "");
+
+		tr = LLVMBuildLoad(gallivm->builder, load_ptr_ddx, "");
+		tr = LLVMBuildBitCast(gallivm->builder, tr, base->elem_type, "");
+
+		result[c] = LLVMBuildFSub(gallivm->builder, tr, tl, "");
+
+		tl = LLVMBuildLoad(gallivm->builder, load_ptr_y, "");
+		tl = LLVMBuildBitCast(gallivm->builder, tl, base->elem_type, "");
+
+		bl = LLVMBuildLoad(gallivm->builder, load_ptr_ddy, "");
+		bl = LLVMBuildBitCast(gallivm->builder, bl, base->elem_type, "");
+
+		result[c + 2] = LLVMBuildFSub(gallivm->builder, bl, tl, "");
+	}
+
+	return lp_build_gather_values(gallivm, result, 4);
+}
+
+static void interp_fetch_args(
+	struct lp_build_tgsi_context *bld_base,
+	struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET) {
+		/* offset is in second src, first two channels */
+		emit_data->args[0] = lp_build_emit_fetch(bld_base,
+							 emit_data->inst, 1,
+							 0);
+		emit_data->args[1] = lp_build_emit_fetch(bld_base,
+							 emit_data->inst, 1,
+							 1);
+		emit_data->arg_count = 2;
+	} else if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
+		LLVMValueRef sample_position;
+		LLVMValueRef sample_id;
+		LLVMValueRef halfval = lp_build_const_float(gallivm, 0.5f);
+
+		/* fetch sample ID, then fetch its sample position,
+		 * and place into first two channels.
+		 */
+		sample_id = lp_build_emit_fetch(bld_base,
+						emit_data->inst, 1, 0);
+		sample_id = LLVMBuildBitCast(gallivm->builder, sample_id,
+					     LLVMInt32TypeInContext(gallivm->context),
+					     "");
+		sample_position = load_sample_position(&si_shader_ctx->radeon_bld, sample_id);
+
+		emit_data->args[0] = LLVMBuildExtractElement(gallivm->builder,
+							     sample_position,
+							     lp_build_const_int32(gallivm, 0), "");
+
+		emit_data->args[0] = LLVMBuildFSub(gallivm->builder, emit_data->args[0], halfval, "");
+		emit_data->args[1] = LLVMBuildExtractElement(gallivm->builder,
+							     sample_position,
+							     lp_build_const_int32(gallivm, 1), "");
+		emit_data->args[1] = LLVMBuildFSub(gallivm->builder, emit_data->args[1], halfval, "");
+		emit_data->arg_count = 2;
+	}
+}
+
+static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
+				struct lp_build_tgsi_context *bld_base,
+				struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
+	struct si_shader *shader = si_shader_ctx->shader;
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef interp_param;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	const char *intr_name;
+	int input_index;
+	int chan;
+	int i;
+	LLVMValueRef attr_number;
+	LLVMTypeRef input_type = LLVMFloatTypeInContext(gallivm->context);
+	LLVMValueRef params = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_PRIM_MASK);
+	int interp_param_idx;
+	unsigned location;
+
+	assert(inst->Src[0].Register.File == TGSI_FILE_INPUT);
+	input_index = inst->Src[0].Register.Index;
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
+	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE)
+		location = TGSI_INTERPOLATE_LOC_CENTER;
+	else
+		location = TGSI_INTERPOLATE_LOC_CENTROID;
+
+	interp_param_idx = lookup_interp_param_index(shader->ps_input_interpolate[input_index],
+						     location);
+	if (interp_param_idx == -1)
+		return;
+	else if (interp_param_idx)
+		interp_param = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, interp_param_idx);
+	else
+		interp_param = NULL;
+
+	attr_number = lp_build_const_int32(gallivm,
+					   shader->ps_input_param_offset[input_index]);
+
+	if (inst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
+	    inst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
+		LLVMValueRef ij_out[2];
+		LLVMValueRef ddxy_out = si_llvm_emit_ddxy_interp(bld_base, interp_param);
+
+		/*
+		 * take the I then J parameters, and the DDX/Y for it, and
+		 * calculate the IJ inputs for the interpolator.
+		 * temp1 = ddx * offset/sample.x + I;
+		 * interp_param.I = ddy * offset/sample.y + temp1;
+		 * temp1 = ddx * offset/sample.x + J;
+		 * interp_param.J = ddy * offset/sample.y + temp1;
+		 */
+		for (i = 0; i < 2; i++) {
+			LLVMValueRef ix_ll = lp_build_const_int32(gallivm, i);
+			LLVMValueRef iy_ll = lp_build_const_int32(gallivm, i + 2);
+			LLVMValueRef ddx_el = LLVMBuildExtractElement(gallivm->builder,
+								      ddxy_out, ix_ll, "");
+			LLVMValueRef ddy_el = LLVMBuildExtractElement(gallivm->builder,
+								      ddxy_out, iy_ll, "");
+			LLVMValueRef interp_el = LLVMBuildExtractElement(gallivm->builder,
+									 interp_param, ix_ll, "");
+			LLVMValueRef temp1, temp2;
+
+			interp_el = LLVMBuildBitCast(gallivm->builder, interp_el,
+						     LLVMFloatTypeInContext(gallivm->context), "");
+
+			temp1 = LLVMBuildFMul(gallivm->builder, ddx_el, emit_data->args[0], "");
+
+			temp1 = LLVMBuildFAdd(gallivm->builder, temp1, interp_el, "");
+
+			temp2 = LLVMBuildFMul(gallivm->builder, ddy_el, emit_data->args[1], "");
+
+			temp2 = LLVMBuildFAdd(gallivm->builder, temp2, temp1, "");
+
+			ij_out[i] = LLVMBuildBitCast(gallivm->builder,
+						     temp2,
+						     LLVMIntTypeInContext(gallivm->context, 32), "");
+		}
+		interp_param = lp_build_gather_values(bld_base->base.gallivm, ij_out, 2);
+	}
+
+	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
+	for (chan = 0; chan < 2; chan++) {
+		LLVMValueRef args[4];
+		LLVMValueRef llvm_chan;
+		unsigned schan;
+
+		schan = tgsi_util_get_full_src_register_swizzle(&inst->Src[0], chan);
+		llvm_chan = lp_build_const_int32(gallivm, schan);
+
+		args[0] = llvm_chan;
+		args[1] = attr_number;
+		args[2] = params;
+		args[3] = interp_param;
+
+		emit_data->output[chan] =
+			build_intrinsic(gallivm->builder, intr_name,
+					input_type, args, args[3] ? 4 : 3,
+					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+	}
+}
+
 /* Emit one vertex from the geometry shader */
 static void si_llvm_emit_vertex(
 	const struct lp_build_tgsi_action *action,
@@ -3071,6 +3299,11 @@ static const struct lp_build_tgsi_action txq_action = {
 	.fetch_args = txq_fetch_args,
 	.emit = build_txq_intrinsic,
 	.intr_name = "llvm.SI.resinfo"
+};
+
+static const struct lp_build_tgsi_action interp_action = {
+	.fetch_args = interp_fetch_args,
+	.emit = build_interp_intrinsic,
 };
 
 static void create_meta_data(struct si_shader_context *si_shader_ctx)
@@ -3269,7 +3502,9 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 	    (bld_base->info->opcode_count[TGSI_OPCODE_DDX] > 0 ||
 	     bld_base->info->opcode_count[TGSI_OPCODE_DDY] > 0 ||
 	     bld_base->info->opcode_count[TGSI_OPCODE_DDX_FINE] > 0 ||
-	     bld_base->info->opcode_count[TGSI_OPCODE_DDY_FINE] > 0))
+	     bld_base->info->opcode_count[TGSI_OPCODE_DDY_FINE] > 0 ||
+	     bld_base->info->opcode_count[TGSI_OPCODE_INTERP_OFFSET] > 0 ||
+	     bld_base->info->opcode_count[TGSI_OPCODE_INTERP_SAMPLE] > 0))
 		si_shader_ctx->lds =
 			LLVMAddGlobalInAddressSpace(gallivm->module,
 						    LLVMArrayType(i32, 64),
@@ -3746,6 +3981,10 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	shader->uses_instanceid = sel->info.uses_instanceid;
 	bld_base->info = poly_stipple ? &stipple_shader_info : &sel->info;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;
+
+	bld_base->op_actions[TGSI_OPCODE_INTERP_CENTROID] = interp_action;
+	bld_base->op_actions[TGSI_OPCODE_INTERP_SAMPLE] = interp_action;
+	bld_base->op_actions[TGSI_OPCODE_INTERP_OFFSET] = interp_action;
 
 	bld_base->op_actions[TGSI_OPCODE_TEX] = tex_action;
 	bld_base->op_actions[TGSI_OPCODE_TEX2] = tex_action;
