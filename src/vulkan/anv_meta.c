@@ -27,8 +27,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
-#include "meta-spirv.h"
+#include "anv_private.h"
+#include "anv_meta_spirv.h"
 
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)

@@ -25,7 +25,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 #include <brw_context.h>
 #include <brw_wm.h> /* brw_new_shader_program is here */

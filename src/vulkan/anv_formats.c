@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "private.h"
+#include "anv_private.h"
 
 #define UNSUPPORTED 0xffff
 

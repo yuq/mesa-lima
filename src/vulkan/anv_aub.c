@@ -33,8 +33,8 @@
 #include <drm.h>
 #include <i915_drm.h>
 
-#include "private.h"
-#include "aub.h"
+#include "anv_private.h"
+#include "anv_aub.h"
 
 struct anv_aub_writer {
    FILE *file;

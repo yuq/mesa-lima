@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 VkResult anv_CreateDmaBufImageINTEL(
     VkDevice                                    _device,

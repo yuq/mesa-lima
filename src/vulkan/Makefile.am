@@ -53,38 +53,38 @@ libvulkan_la_CFLAGS =							\
 libvulkan_la_CXXFLAGS =							\
 	-Wall -Wextra -Wno-unused-parameter -fvisibility=hidden -O0 -g
 
-libvulkan_la_SOURCES =				\
-	private.h				\
-	gem.c					\
-	device.c				\
-        anv_cmd_buffer.c                        \
-	anv_cmd_emit.c                          \
-	aub.c					\
-	allocator.c				\
-	util.c					\
-	pipeline.c				\
-	image.c					\
-	meta.c					\
-	intel.c					\
-	entrypoints.c				\
-	entrypoints.h				\
-	x11.c					\
-	formats.c				\
-	compiler.cpp				\
-	query.c
+libvulkan_la_SOURCES =                                  \
+	anv_allocator.c                                 \
+	anv_aub.c                                       \
+	anv_cmd_buffer.c                                \
+	anv_cmd_emit.c                                  \
+	anv_compiler.cpp                                \
+	anv_device.c                                    \
+	anv_entrypoints.c                               \
+	anv_entrypoints.h                               \
+	anv_formats.c                                   \
+	anv_gem.c                                       \
+	anv_image.c                                     \
+	anv_intel.c                                     \
+	anv_meta.c                                      \
+	anv_pipeline.c                                  \
+	anv_private.h                                   \
+	anv_query.c                                     \
+	anv_util.c                                      \
+	anv_x11.c
 
-BUILT_SOURCES =					\
-	entrypoints.h				\
-	entrypoints.c				\
-	meta-spirv.h
+BUILT_SOURCES =                                         \
+	anv_entrypoints.h                               \
+	anv_entrypoints.c                               \
+	anv_meta_spirv.h
 
-entrypoints.h : vk_gen.py $(vulkan_include_HEADERS)
+anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@
 
-entrypoints.c : vk_gen.py $(vulkan_include_HEADERS)
+anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
 
-%-spirv.h: %.c glsl_scraper.py
+%_spirv.h: %.c glsl_scraper.py
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/glsl_scraper.py --glsl-only -o $@ $<
 
 CLEANFILES = $(BUILT_SOURCES)

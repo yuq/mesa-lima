@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 #include "mesa/main/git_sha1.h"
 
 static int

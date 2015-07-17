@@ -108,9 +108,9 @@ print """/*
  * IN THE SOFTWARE.
  */
 
-/* This file generated from vk_gen.py, don't edit directly. */
+/* DO NOT EDIT! This is a generated file. */
 
-#include "private.h"
+#include "anv_private.h"
 
 struct anv_entrypoint {
    uint32_t name;

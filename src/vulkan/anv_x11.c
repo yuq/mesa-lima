@@ -21,7 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "private.h"
+#include "anv_private.h"
 
 #include <xcb/xcb.h>
 #include <xcb/dri3.h>

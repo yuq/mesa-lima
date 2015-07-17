@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 struct anv_query_pool_slot {
    uint64_t begin;

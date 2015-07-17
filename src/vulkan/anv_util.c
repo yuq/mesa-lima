@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 /** Log an error message.  */
 void anv_printflike(1, 2)

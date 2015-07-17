@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 struct anv_image_view_info {
    uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */

@@ -34,7 +34,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 #ifdef HAVE_VALGRIND
 #define VG_NOACCESS_READ(__ptr) ({                       \

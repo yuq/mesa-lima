@@ -1,4 +1,4 @@
 # Generated source files
-/*-spirv.h
-/entrypoints.c
-/entrypoints.h
+/*_spirv.h
+/anv_entrypoints.c
+/anv_entrypoints.h

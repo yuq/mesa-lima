@@ -30,7 +30,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "private.h"
+#include "anv_private.h"
 
 #define VG_CLEAR(s) VG(memset(&s, 0, sizeof(s)))
 
