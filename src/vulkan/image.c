@@ -443,12 +443,13 @@ anv_image_view_init(struct anv_image_view *iview,
       .SurfaceBaseAddress = { NULL, view->offset },
    };
 
-   if (cmd_buffer)
+   if (cmd_buffer) {
       view->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   else
+   } else {
       view->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   }
 
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
@@ -600,12 +601,13 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
       depth = image->extent.depth;
    }
 
-   if (cmd_buffer)
+   if (cmd_buffer) {
       view->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   else
+   } else {
       view->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   }
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
