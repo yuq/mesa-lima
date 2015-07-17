@@ -1002,19 +1002,19 @@ void anv_CmdPipelineBarrier(
       const struct anv_common *common = ppMemBarriers[i];
       switch (common->sType) {
       case VK_STRUCTURE_TYPE_MEMORY_BARRIER: {
-         const VkMemoryBarrier *barrier = (VkMemoryBarrier *)common;
+         ANV_COMMON_TO_STRUCT(VkMemoryBarrier, barrier, common);
          out_flags |= barrier->outputMask;
          in_flags |= barrier->inputMask;
          break;
       }
       case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER: {
-         const VkBufferMemoryBarrier *barrier = (VkBufferMemoryBarrier *)common;
+         ANV_COMMON_TO_STRUCT(VkBufferMemoryBarrier, barrier, common);
          out_flags |= barrier->outputMask;
          in_flags |= barrier->inputMask;
          break;
       }
       case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER: {
-         const VkImageMemoryBarrier *barrier = (VkImageMemoryBarrier *)common;
+         ANV_COMMON_TO_STRUCT(VkImageMemoryBarrier, barrier, common);
          out_flags |= barrier->outputMask;
          in_flags |= barrier->inputMask;
          break;

@@ -205,7 +205,7 @@ VkResult anv_CreateSwapChainWSI(
                           (uint32_t []) { 0 });
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   *pSwapChain = (VkSwapChainWSI) chain;
+   *pSwapChain = anv_swap_chain_to_handle(chain);
 
    return VK_SUCCESS;
 
@@ -214,23 +214,23 @@ VkResult anv_CreateSwapChainWSI(
 }
 
 VkResult anv_DestroySwapChainWSI(
-    VkSwapChainWSI                          swapChain)
+    VkSwapChainWSI                          _chain)
 {
-   struct anv_swap_chain *chain = (struct anv_swap_chain *) swapChain;
-   struct anv_device *device = chain->device;
+   ANV_FROM_HANDLE(anv_swap_chain, chain, _chain);
 
-   anv_device_free(device, chain);
+   anv_device_free(chain->device, chain);
 
    return VK_SUCCESS;
 }
 
 VkResult anv_GetSwapChainInfoWSI(
-    VkSwapChainWSI                          swapChain,
+    VkSwapChainWSI                          _chain,
     VkSwapChainInfoTypeWSI                  infoType,
     size_t*                                 pDataSize,
     void*                                   pData)
 {
-   struct anv_swap_chain *chain = (struct anv_swap_chain *) swapChain;
+   ANV_FROM_HANDLE(anv_swap_chain, chain, _chain);
+
    VkSwapChainImageInfoWSI *images;
    size_t size;
 

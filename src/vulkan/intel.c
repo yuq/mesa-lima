@@ -35,7 +35,7 @@ VkResult anv_CreateDmaBufImageINTEL(
     VkDeviceMemory*                             pMem,
     VkImage*                                    pImage)
 {
-   struct anv_device *device = (struct anv_device *) _device;
+   ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_device_memory *mem;
    struct anv_image *image;
    VkResult result;

@@ -1038,6 +1038,7 @@ ANV_DEFINE_HANDLE_CASTS(anv_device, VkDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_instance, VkInstance)
 ANV_DEFINE_HANDLE_CASTS(anv_physical_device, VkPhysicalDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
+ANV_DEFINE_HANDLE_CASTS(anv_swap_chain, VkSwapChainWSI);
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_attachment_view, VkAttachmentView)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
@@ -1060,6 +1061,21 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader, VkShader)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
+
+#define ANV_DEFINE_STRUCT_CASTS(__anv_type, __VkType) \
+   \
+   static inline const __VkType * \
+   __anv_type ## _to_ ## __VkType(const struct __anv_type *__anv_obj) \
+   { \
+      return (const __VkType *) __anv_obj; \
+   }
+
+#define ANV_COMMON_TO_STRUCT(__VkType, __vk_name, __common_name) \
+   const __VkType *__vk_name = anv_common_to_ ## __VkType(__common_name)
+
+ANV_DEFINE_STRUCT_CASTS(anv_common, VkMemoryBarrier)
+ANV_DEFINE_STRUCT_CASTS(anv_common, VkBufferMemoryBarrier)
+ANV_DEFINE_STRUCT_CASTS(anv_common, VkImageMemoryBarrier)
 
 #ifdef __cplusplus
 }
