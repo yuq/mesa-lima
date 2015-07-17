@@ -55,14 +55,6 @@ fs_visitor::emit_nir_code()
 
    nir_emit_system_values(nir);
 
-   nir_globals = ralloc_array(mem_ctx, fs_reg, nir->reg_alloc);
-   foreach_list_typed(nir_register, reg, node, &nir->registers) {
-      unsigned array_elems =
-         reg->num_array_elems == 0 ? 1 : reg->num_array_elems;
-      unsigned size = array_elems * reg->num_components;
-      nir_globals[reg->index] = bld.vgrf(BRW_REGISTER_TYPE_F, size);
-   }
-
    /* get the main function and emit it */
    nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
@@ -1159,10 +1151,10 @@ fs_reg_for_nir_reg(fs_visitor *v, nir_register *nir_reg,
                    unsigned base_offset, nir_src *indirect)
 {
    fs_reg reg;
-   if (nir_reg->is_global)
-      reg = v->nir_globals[nir_reg->index];
-   else
-      reg = v->nir_locals[nir_reg->index];
+
+   assert(!nir_reg->is_global);
+
+   reg = v->nir_locals[nir_reg->index];
 
    reg = offset(reg, v->bld, base_offset * nir_reg->num_components);
    if (indirect) {
