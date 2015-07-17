@@ -807,107 +807,32 @@ intel_miptree_set_alignment(struct brw_context *brw,
    }
 }
 
-static void
-intel_miptree_release_levels(struct intel_mipmap_tree *mt)
-{
-   unsigned int level = 0;
-
-   for (level = mt->first_level; level <= mt->last_level; level++) {
-      free(mt->level[level].slice);
-      mt->level[level].slice = NULL;
-   }
-}
-
-static bool
-intel_miptree_can_use_tr_mode(const struct intel_mipmap_tree *mt)
-{
-   if (mt->tiling == I915_TILING_Y ||
-       mt->tiling == (I915_TILING_Y | I915_TILING_X) ||
-       mt->tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
-      /* FIXME: Don't allow YS tiling at the moment. Using 64KB tiling
-       * for small textures might result in to memory wastage. Revisit
-       * this condition when we have more information about the specific
-       * cases where using YS over YF will be useful.
-       */
-      if (mt->tr_mode != INTEL_MIPTREE_TRMODE_YS)
-         return true;
-   }
-   return false;
-}
-
 void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
                    uint32_t layout_flags)
 {
-   const unsigned bpp = mt->cpp * 8;
-   /* Enable YF/YS tiling only for color surfaces because depth and
-    * stencil surfaces are not supported in blitter using fast copy
-    * blit and meta PBO upload, download paths. No other paths
-    * currently support Yf/Ys tiled surfaces.
-    * FINISHME:  Remove this restriction once we have a tiled_memcpy()
-    * path to do depth/stencil data upload/download to Yf/Ys tiled
-    * surfaces.
-    */
-   const bool is_tr_mode_yf_ys_allowed =
-      brw->gen >= 9 &&
-      !(layout_flags & MIPTREE_LAYOUT_FOR_BO) &&
-      !mt->compressed &&
-      _mesa_is_format_color_format(mt->format) &&
-      (layout_flags & MIPTREE_LAYOUT_ALLOC_YTILED) &&
-      (bpp && is_power_of_two(bpp)) &&
-      /* FIXME: To avoid piglit regressions keep the Yf/Ys tiling
-       * disabled at the moment.
-       */
-      false;
+   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
 
-   /* Lower index (Yf) is the higher priority mode */
-   const uint32_t tr_mode[3] = {INTEL_MIPTREE_TRMODE_YF,
-                                INTEL_MIPTREE_TRMODE_YS,
-                                INTEL_MIPTREE_TRMODE_NONE};
-   int i = is_tr_mode_yf_ys_allowed ? 0 : ARRAY_SIZE(tr_mode) - 1;
+   intel_miptree_set_alignment(brw, mt, layout_flags);
+   intel_miptree_set_total_width_height(brw, mt);
 
-   while (i < ARRAY_SIZE(tr_mode)) {
-      if (brw->gen < 9)
-         assert(tr_mode[i] == INTEL_MIPTREE_TRMODE_NONE);
-      else
-         assert(tr_mode[i] == INTEL_MIPTREE_TRMODE_YF ||
-                tr_mode[i] == INTEL_MIPTREE_TRMODE_YS ||
-                tr_mode[i] == INTEL_MIPTREE_TRMODE_NONE);
-
-      mt->tr_mode = tr_mode[i];
-      intel_miptree_set_alignment(brw, mt, layout_flags);
-      intel_miptree_set_total_width_height(brw, mt);
-
-      if (!mt->total_width || !mt->total_height) {
-         intel_miptree_release(&mt);
-         break;
-      }
-
-      /* On Gen9+ the alignment values are expressed in multiples of the
-       * block size.
-       */
-      if (brw->gen >= 9) {
-         unsigned int i, j;
-         _mesa_get_format_block_size(mt->format, &i, &j);
-         mt->align_w /= i;
-         mt->align_h /= j;
-      }
-
-      /* If there is already a BO, we cannot effect tiling modes */
-      if (layout_flags & MIPTREE_LAYOUT_FOR_BO)
-         break;
-
-      mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
-      if (is_tr_mode_yf_ys_allowed) {
-         if (intel_miptree_can_use_tr_mode(mt))
-            break;
-         /* Failed to use selected tr_mode. Free up the memory allocated
-          * for miptree levels in intel_miptree_total_width_height().
-          */
-         intel_miptree_release_levels(mt);
-      }
-      i++;
+   if (!mt->total_width || !mt->total_height) {
+      intel_miptree_release(&mt);
+      return;
    }
+
+   /* On Gen9+ the alignment values are expressed in multiples of the block
+    * size
+    */
+   if (brw->gen >= 9) {
+      unsigned int i, j;
+      _mesa_get_format_block_size(mt->format, &i, &j);
+      mt->align_w /= i;
+      mt->align_h /= j;
+   }
+
+   if ((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0)
+      mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
 }
 
