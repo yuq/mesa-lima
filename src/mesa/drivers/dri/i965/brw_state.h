@@ -374,6 +374,15 @@ gen7_upload_constant_state(struct brw_context *brw,
                            bool active, unsigned opcode);
 
 void gen7_rs_control(struct brw_context *brw, int enable);
+
+void gen7_edit_hw_binding_table_entry(struct brw_context *brw,
+                                      gl_shader_stage stage,
+                                      uint32_t index,
+                                      uint32_t surf_offset);
+void gen7_update_binding_table_from_array(struct brw_context *brw,
+                                          gl_shader_stage stage,
+                                          const uint32_t* binding_table,
+                                          int num_surfaces);
 void gen7_enable_hw_binding_tables(struct brw_context *brw);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);

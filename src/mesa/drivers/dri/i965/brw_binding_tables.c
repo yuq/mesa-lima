@@ -44,6 +44,12 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 
+static const GLuint stage_to_bt_edit[MESA_SHADER_FRAGMENT + 1] = {
+   _3DSTATE_BINDING_TABLE_EDIT_VS,
+   _3DSTATE_BINDING_TABLE_EDIT_GS,
+   _3DSTATE_BINDING_TABLE_EDIT_PS,
+};
+
 /**
  * Upload a shader stage's binding table as indirect state.
  *
@@ -169,6 +175,55 @@ const struct brw_tracked_state brw_gs_binding_table = {
    },
    .emit = brw_gs_upload_binding_table,
 };
+
+/**
+ * Edit a single entry in a hardware-generated binding table
+ */
+void
+gen7_edit_hw_binding_table_entry(struct brw_context *brw,
+                                 gl_shader_stage stage,
+                                 uint32_t index,
+                                 uint32_t surf_offset)
+{
+   assert(stage <= MESA_SHADER_FRAGMENT);
+
+   uint32_t dw2 = SET_FIELD(index, BRW_BINDING_TABLE_INDEX) |
+      (brw->gen >= 8 ? GEN8_SURFACE_STATE_EDIT(surf_offset) :
+       HSW_SURFACE_STATE_EDIT(surf_offset));
+
+   BEGIN_BATCH(3);
+   OUT_BATCH(stage_to_bt_edit[stage] << 16 | (3 - 2));
+   OUT_BATCH(BRW_BINDING_TABLE_EDIT_TARGET_ALL);
+   OUT_BATCH(dw2);
+   ADVANCE_BATCH();
+}
+
+/**
+ * Upload a whole hardware binding table for the given stage.
+ *
+ * Takes an array of surface offsets and the number of binding table
+ * entries.
+ */
+void
+gen7_update_binding_table_from_array(struct brw_context *brw,
+                                     gl_shader_stage stage,
+                                     const uint32_t* binding_table,
+                                     int num_surfaces)
+{
+   uint32_t dw2 = 0;
+   assert(stage <= MESA_SHADER_FRAGMENT);
+
+   BEGIN_BATCH(num_surfaces + 2);
+   OUT_BATCH(stage_to_bt_edit[stage] << 16 | num_surfaces);
+   OUT_BATCH(BRW_BINDING_TABLE_EDIT_TARGET_ALL);
+   for (int i = 0; i < num_surfaces; i++) {
+      dw2 = SET_FIELD(i, BRW_BINDING_TABLE_INDEX) |
+         (brw->gen >= 8 ? GEN8_SURFACE_STATE_EDIT(binding_table[i]) :
+          HSW_SURFACE_STATE_EDIT(binding_table[i]));
+      OUT_BATCH(dw2);
+   }
+   ADVANCE_BATCH();
+}
 
 /**
  * Disable hardware binding table support, falling back to the
