@@ -29,18 +29,7 @@ endif
 
 intermediates := $(call local-generated-sources-dir)
 
-sources := \
-	glsl_lexer.cpp \
-	glsl_parser.cpp \
-	glcpp/glcpp-lex.c \
-	glcpp/glcpp-parse.c \
-	nir/nir_builder_opcodes.h \
-	nir/nir_constant_expressions.c \
-	nir/nir_opcodes.c \
-	nir/nir_opcodes.h \
-	nir/nir_opt_algebraic.c
-
-LOCAL_SRC_FILES := $(filter-out $(sources), $(LOCAL_SRC_FILES))
+LOCAL_SRC_FILES := $(LOCAL_SRC_FILES)
 
 LOCAL_C_INCLUDES += \
 	$(intermediates)/glcpp \
@@ -51,8 +40,10 @@ LOCAL_C_INCLUDES += \
 LOCAL_EXPORT_C_INCLUDE_DIRS += \
 	$(intermediates)/nir
 
-sources := $(addprefix $(intermediates)/, $(sources))
-LOCAL_GENERATED_SOURCES += $(sources)
+LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
+	$(LIBGLCPP_GENERATED_FILES) \
+	$(NIR_GENERATED_FILES) \
+	$(LIBGLSL_GENERATED_CXX_FILES))
 
 define local-l-or-ll-to-c-or-cpp
 	@mkdir -p $(dir $@)

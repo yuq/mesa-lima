@@ -140,13 +140,16 @@ libglsl_la_SOURCES =					\
 	glsl_parser.cpp					\
 	glsl_parser.h					\
 	$(LIBGLSL_FILES)				\
-	$(NIR_FILES)
+	$(NIR_FILES)					\
+	$(NIR_GENERATED_FILES)
+
 
 libnir_la_SOURCES =					\
 	glsl_types.cpp					\
 	builtin_types.cpp				\
 	glsl_symbol_table.cpp				\
-	$(NIR_FILES)
+	$(NIR_FILES)					\
+	$(NIR_GENERATED_FILES)
 
 glsl_compiler_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
