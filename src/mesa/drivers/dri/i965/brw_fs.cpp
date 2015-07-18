@@ -1048,11 +1048,11 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
    unsigned int array_elements;
 
    if (type->is_array()) {
-      array_elements = type->length;
+      array_elements = type->arrays_of_arrays_size();
       if (array_elements == 0) {
          fail("dereferenced array '%s' has length 0\n", name);
       }
-      type = type->fields.array;
+      type = type->without_array();
    } else {
       array_elements = 1;
    }

@@ -89,9 +89,7 @@ fs_visitor::nir_setup_outputs()
    nir_foreach_variable(var, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
-      int vector_elements =
-         var->type->is_array() ? var->type->fields.array->vector_elements
-                               : var->type->vector_elements;
+      int vector_elements = var->type->without_array()->vector_elements;
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
