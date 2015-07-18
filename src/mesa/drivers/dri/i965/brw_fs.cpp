@@ -3386,6 +3386,104 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    inst->header_size = header_size;
 }
 
+static void
+lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
+                                fs_reg coordinate,
+                                const fs_reg &shadow_c,
+                                fs_reg lod, fs_reg lod2,
+                                const fs_reg &sample_index,
+                                const fs_reg &sampler,
+                                const fs_reg &offset_value,
+                                unsigned coord_components,
+                                unsigned grad_components)
+{
+   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F);
+   fs_reg msg_coords = message;
+   unsigned header_size = 0;
+
+   if (offset_value.file != BAD_FILE) {
+      /* The offsets set up by the visitor are in the m1 header, so we can't
+       * go headerless.
+       */
+      header_size = 1;
+      message.reg--;
+   }
+
+   for (unsigned i = 0; i < coord_components; i++) {
+      bld.MOV(retype(offset(msg_coords, bld, i), coordinate.type), coordinate);
+      coordinate = offset(coordinate, bld, 1);
+   }
+   fs_reg msg_end = offset(msg_coords, bld, coord_components);
+   fs_reg msg_lod = offset(msg_coords, bld, 4);
+
+   if (shadow_c.file != BAD_FILE) {
+      fs_reg msg_shadow = msg_lod;
+      bld.MOV(msg_shadow, shadow_c);
+      msg_lod = offset(msg_shadow, bld, 1);
+      msg_end = msg_lod;
+   }
+
+   switch (op) {
+   case SHADER_OPCODE_TXL:
+   case FS_OPCODE_TXB:
+      bld.MOV(msg_lod, lod);
+      msg_end = offset(msg_lod, bld, 1);
+      break;
+   case SHADER_OPCODE_TXD:
+      /**
+       *  P   =  u,    v,    r
+       * dPdx = dudx, dvdx, drdx
+       * dPdy = dudy, dvdy, drdy
+       *
+       * Load up these values:
+       * - dudx   dudy   dvdx   dvdy   drdx   drdy
+       * - dPdx.x dPdy.x dPdx.y dPdy.y dPdx.z dPdy.z
+       */
+      msg_end = msg_lod;
+      for (unsigned i = 0; i < grad_components; i++) {
+         bld.MOV(msg_end, lod);
+         lod = offset(lod, bld, 1);
+         msg_end = offset(msg_end, bld, 1);
+
+         bld.MOV(msg_end, lod2);
+         lod2 = offset(lod2, bld, 1);
+         msg_end = offset(msg_end, bld, 1);
+      }
+      break;
+   case SHADER_OPCODE_TXS:
+      msg_lod = retype(msg_end, BRW_REGISTER_TYPE_UD);
+      bld.MOV(msg_lod, lod);
+      msg_end = offset(msg_lod, bld, 1);
+      break;
+   case SHADER_OPCODE_TXF:
+      msg_lod = offset(msg_coords, bld, 3);
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), lod);
+      msg_end = offset(msg_lod, bld, 1);
+      break;
+   case SHADER_OPCODE_TXF_CMS:
+      msg_lod = offset(msg_coords, bld, 3);
+      /* lod */
+      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
+      /* sample index */
+      bld.MOV(retype(offset(msg_lod, bld, 1), BRW_REGISTER_TYPE_UD), sample_index);
+      msg_end = offset(msg_lod, bld, 2);
+      break;
+   default:
+      break;
+   }
+
+   inst->opcode = op;
+   inst->src[0] = reg_undef;
+   inst->src[1] = sampler;
+   inst->resize_sources(2);
+   inst->base_mrf = message.reg;
+   inst->mlen = msg_end.reg - message.reg;
+   inst->header_size = header_size;
+
+   /* Message length > MAX_SAMPLER_MESSAGE_SIZE disallowed by hardware. */
+   assert(inst->mlen <= MAX_SAMPLER_MESSAGE_SIZE);
+}
+
 static bool
 is_high_sampler(const struct brw_device_info *devinfo, const fs_reg &sampler)
 {
@@ -3620,6 +3718,11 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
       lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
                                       shadow_c, lod, lod2, sample_index,
                                       mcs, sampler, offset_value,
+                                      coord_components, grad_components);
+   } else if (devinfo->gen >= 5) {
+      lower_sampler_logical_send_gen5(bld, inst, op, coordinate,
+                                      shadow_c, lod, lod2, sample_index,
+                                      sampler, offset_value,
                                       coord_components, grad_components);
    } else {
       assert(!"Not implemented");
