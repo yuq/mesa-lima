@@ -3387,6 +3387,110 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 }
 
 static void
+lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
+                                const fs_reg &coordinate,
+                                const fs_reg &shadow_c,
+                                const fs_reg &lod, const fs_reg &lod2,
+                                const fs_reg &sampler,
+                                unsigned coord_components,
+                                unsigned grad_components)
+{
+   const bool has_lod = (op == SHADER_OPCODE_TXL || op == FS_OPCODE_TXB ||
+                         op == SHADER_OPCODE_TXF || op == SHADER_OPCODE_TXS);
+   fs_reg msg_begin(MRF, 1, BRW_REGISTER_TYPE_F);
+   fs_reg msg_end = msg_begin;
+
+   /* g0 header. */
+   msg_end = offset(msg_end, bld.group(8, 0), 1);
+
+   for (unsigned i = 0; i < coord_components; i++)
+      bld.MOV(retype(offset(msg_end, bld, i), coordinate.type),
+              offset(coordinate, bld, i));
+
+   msg_end = offset(msg_end, bld, coord_components);
+
+   /* Messages other than SAMPLE and RESINFO in SIMD16 and TXD in SIMD8
+    * require all three components to be present and zero if they are unused.
+    */
+   if (coord_components > 0 &&
+       (has_lod || shadow_c.file != BAD_FILE ||
+        (op == SHADER_OPCODE_TEX && bld.dispatch_width() == 8))) {
+      for (unsigned i = coord_components; i < 3; i++)
+         bld.MOV(offset(msg_end, bld, i), fs_reg(0.0f));
+
+      msg_end = offset(msg_end, bld, 3 - coord_components);
+   }
+
+   if (op == SHADER_OPCODE_TXD) {
+      /* TXD unsupported in SIMD16 mode. */
+      assert(bld.dispatch_width() == 8);
+
+      /* the slots for u and v are always present, but r is optional */
+      if (coord_components < 2)
+         msg_end = offset(msg_end, bld, 2 - coord_components);
+
+      /*  P   = u, v, r
+       * dPdx = dudx, dvdx, drdx
+       * dPdy = dudy, dvdy, drdy
+       *
+       * 1-arg: Does not exist.
+       *
+       * 2-arg: dudx   dvdx   dudy   dvdy
+       *        dPdx.x dPdx.y dPdy.x dPdy.y
+       *        m4     m5     m6     m7
+       *
+       * 3-arg: dudx   dvdx   drdx   dudy   dvdy   drdy
+       *        dPdx.x dPdx.y dPdx.z dPdy.x dPdy.y dPdy.z
+       *        m5     m6     m7     m8     m9     m10
+       */
+      for (unsigned i = 0; i < grad_components; i++)
+         bld.MOV(offset(msg_end, bld, i), offset(lod, bld, i));
+
+      msg_end = offset(msg_end, bld, MAX2(grad_components, 2));
+
+      for (unsigned i = 0; i < grad_components; i++)
+         bld.MOV(offset(msg_end, bld, i), offset(lod2, bld, i));
+
+      msg_end = offset(msg_end, bld, MAX2(grad_components, 2));
+   }
+
+   if (has_lod) {
+      /* Bias/LOD with shadow comparitor is unsupported in SIMD16 -- *Without*
+       * shadow comparitor (including RESINFO) it's unsupported in SIMD8 mode.
+       */
+      assert(shadow_c.file != BAD_FILE ? bld.dispatch_width() == 8 :
+             bld.dispatch_width() == 16);
+
+      const brw_reg_type type =
+         (op == SHADER_OPCODE_TXF || op == SHADER_OPCODE_TXS ?
+          BRW_REGISTER_TYPE_UD : BRW_REGISTER_TYPE_F);
+      bld.MOV(retype(msg_end, type), lod);
+      msg_end = offset(msg_end, bld, 1);
+   }
+
+   if (shadow_c.file != BAD_FILE) {
+      if (op == SHADER_OPCODE_TEX && bld.dispatch_width() == 8) {
+         /* There's no plain shadow compare message, so we use shadow
+          * compare with a bias of 0.0.
+          */
+         bld.MOV(msg_end, fs_reg(0.0f));
+         msg_end = offset(msg_end, bld, 1);
+      }
+
+      bld.MOV(msg_end, shadow_c);
+      msg_end = offset(msg_end, bld, 1);
+   }
+
+   inst->opcode = op;
+   inst->src[0] = reg_undef;
+   inst->src[1] = sampler;
+   inst->resize_sources(2);
+   inst->base_mrf = msg_begin.reg;
+   inst->mlen = msg_end.reg - msg_begin.reg;
+   inst->header_size = 1;
+}
+
+static void
 lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
                                 fs_reg coordinate,
                                 const fs_reg &shadow_c,
@@ -3725,7 +3829,9 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
                                       sampler, offset_value,
                                       coord_components, grad_components);
    } else {
-      assert(!"Not implemented");
+      lower_sampler_logical_send_gen4(bld, inst, op, coordinate,
+                                      shadow_c, lod, lod2, sampler,
+                                      coord_components, grad_components);
    }
 }
 
