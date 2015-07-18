@@ -77,6 +77,7 @@ program_resource_visitor::process(ir_variable *var)
 {
    unsigned record_array_count = 1;
    const glsl_type *t = var->type;
+   const glsl_type *t_without_array = var->type->without_array();
    const bool row_major =
       var->data.matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
 
@@ -153,13 +154,8 @@ program_resource_visitor::process(ir_variable *var)
       recursion(var->type, &name, strlen(name), row_major, NULL, packing,
                 false, record_array_count);
       ralloc_free(name);
-   } else if (t->is_interface()) {
-      char *name = ralloc_strdup(NULL, var->type->name);
-      recursion(var->type, &name, strlen(name), row_major, NULL, packing,
-                false, record_array_count);
-      ralloc_free(name);
-   } else if (t->is_array() && t->fields.array->is_interface()) {
-      char *name = ralloc_strdup(NULL, var->type->fields.array->name);
+   } else if (t_without_array->is_interface()) {
+      char *name = ralloc_strdup(NULL, t_without_array->name);
       recursion(var->type, &name, strlen(name), row_major, NULL, packing,
                 false, record_array_count);
       ralloc_free(name);
@@ -234,8 +230,8 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          (*name)[name_length] = '\0';
          this->leave_record(t, *name, row_major, packing);
       }
-   } else if (t->is_array() && (t->fields.array->is_record()
-                                || t->fields.array->is_interface())) {
+   } else if (t->without_array()->is_record() ||
+              t->without_array()->is_interface()) {
       if (record_type == NULL && t->fields.array->is_record())
          record_type = t->fields.array;
 
@@ -974,8 +970,7 @@ link_update_uniform_buffer_variables(struct gl_shader *shader)
 
       if (var->type->is_record()) {
          sentinel = '.';
-      } else if (var->type->is_array()
-                 && var->type->fields.array->is_record()) {
+      } else if (var->type->without_array()->is_record()) {
          sentinel = '[';
       }
 
