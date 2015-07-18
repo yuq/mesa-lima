@@ -956,44 +956,30 @@ NVC0LoweringPass::handleTXD(TexInstruction *txd)
 bool
 NVC0LoweringPass::handleTXQ(TexInstruction *txq)
 {
-   if (txq->tex.rIndirectSrc < 0 && txq->tex.sIndirectSrc < 0)
+   if (txq->tex.rIndirectSrc < 0)
       return true;
 
    Value *ticRel = txq->getIndirectR();
-   Value *tscRel = txq->getIndirectS();
    const int chipset = prog->getTarget()->getChipset();
 
    txq->setIndirectS(NULL);
    txq->tex.sIndirectSrc = -1;
 
+   assert(ticRel);
+
    if (chipset < NVISA_GK104_CHIPSET) {
       LValue *src = new_LValue(func, FILE_GPR); // 0xttxsaaaa
 
-      if (ticRel) {
-         txq->setSrc(txq->tex.rIndirectSrc, NULL);
-         if (txq->tex.r)
-            ticRel = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getScratch(),
-                                ticRel, bld.mkImm(txq->tex.r));
-      }
-      if (tscRel) {
-         txq->setSrc(txq->tex.sIndirectSrc, NULL);
-         if (txq->tex.s)
-            tscRel = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getScratch(),
-                                tscRel, bld.mkImm(txq->tex.s));
-      }
+      txq->setSrc(txq->tex.rIndirectSrc, NULL);
+      if (txq->tex.r)
+         ticRel = bld.mkOp2v(OP_ADD, TYPE_U32, bld.getScratch(),
+                             ticRel, bld.mkImm(txq->tex.r));
 
-      bld.loadImm(src, 0);
-
-      if (ticRel)
-         bld.mkOp3(OP_INSBF, TYPE_U32, src, ticRel, bld.mkImm(0x0917), src);
-      if (tscRel)
-         bld.mkOp3(OP_INSBF, TYPE_U32, src, tscRel, bld.mkImm(0x0710), src);
+      bld.mkOp2(OP_SHL, TYPE_U32, src, ticRel, bld.mkImm(0x17));
 
       txq->moveSources(0, 1);
       txq->setSrc(0, src);
    } else {
-      // XXX this ignores tsc, and assumes a 1:1 mapping
-      assert(txq->tex.rIndirectSrc >= 0);
       Value *hnd = loadTexHandle(
             bld.mkOp2v(OP_SHL, TYPE_U32, bld.getSSA(),
                        txq->getIndirectR(), bld.mkImm(2)),
