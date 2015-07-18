@@ -716,7 +716,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    }
 
    _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramiv(pname=%s)",
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
 }
 
 
@@ -1172,7 +1172,7 @@ _mesa_CreateShader(GLenum type)
 {
    GET_CURRENT_CONTEXT(ctx);
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glCreateShader %s\n", _mesa_lookup_enum_by_nr(type));
+      _mesa_debug(ctx, "glCreateShader %s\n", _mesa_enum_to_string(type));
    return create_shader(ctx, type);
 }
 
@@ -1857,7 +1857,7 @@ _mesa_ProgramParameteri(GLuint program, GLenum pname, GLint value)
 
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glProgramParameteri(pname=%s)",
-                  _mesa_lookup_enum_by_nr(pname));
+                  _mesa_enum_to_string(pname));
       return;
    }
 
@@ -1865,7 +1865,7 @@ invalid_value:
    _mesa_error(ctx, GL_INVALID_VALUE,
                "glProgramParameteri(pname=%s, value=%d): "
                "value must be 0 or 1.",
-               _mesa_lookup_enum_by_nr(pname),
+               _mesa_enum_to_string(pname),
                value);
 }
 

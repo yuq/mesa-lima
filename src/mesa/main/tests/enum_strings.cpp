@@ -39,13 +39,13 @@ TEST(EnumStrings, LookUpByNumber)
 {
    for (unsigned i = 0; everything[i].name != NULL; i++) {
       EXPECT_STREQ(everything[i].name,
-		   _mesa_lookup_enum_by_nr(everything[i].value));
+		   _mesa_enum_to_string(everything[i].value));
    }
 }
 
 TEST(EnumStrings, LookUpUnknownNumber)
 {
-   EXPECT_STRCASEEQ("0xEEEE", _mesa_lookup_enum_by_nr(0xEEEE));
+   EXPECT_STRCASEEQ("0xEEEE", _mesa_enum_to_string(0xEEEE));
 }
 
 /* Please type the name and the value.  This makes it easier to detect

@@ -391,8 +391,8 @@ _mesa_ClipControl(GLenum origin, GLenum depth)
 
    if (MESA_VERBOSE&VERBOSE_API)
       _mesa_debug(ctx, "glClipControl(%s, %s)\n",
-	          _mesa_lookup_enum_by_nr(origin),
-                  _mesa_lookup_enum_by_nr(depth));
+	          _mesa_enum_to_string(origin),
+                  _mesa_enum_to_string(depth));
 
    ASSERT_OUTSIDE_BEGIN_END(ctx);
 

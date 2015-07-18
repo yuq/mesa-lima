@@ -1452,7 +1452,7 @@ static void radeonEnable( struct gl_context *ctx, GLenum cap, GLboolean state )
 
    if ( RADEON_DEBUG & RADEON_STATE )
       fprintf( stderr, "%s( %s = %s )\n", __func__,
-	       _mesa_lookup_enum_by_nr( cap ),
+	       _mesa_enum_to_string( cap ),
 	       state ? "GL_TRUE" : "GL_FALSE" );
 
    switch ( cap ) {

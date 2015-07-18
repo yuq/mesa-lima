@@ -950,8 +950,8 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glReadPixels(%d, %d, %s, %s, %p)\n",
                   width, height,
-                  _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type),
+                  _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type),
                   pixels);
 
    if (width < 0 || height < 0) {
@@ -1008,8 +1008,8 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
 
       if (err != GL_NO_ERROR) {
          _mesa_error(ctx, err, "glReadPixels(invalid format %s and/or type %s)",
-                     _mesa_lookup_enum_by_nr(format),
-                     _mesa_lookup_enum_by_nr(type));
+                     _mesa_enum_to_string(format),
+                     _mesa_enum_to_string(type));
          return;
       }
    }
@@ -1017,8 +1017,8 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
    err = _mesa_error_check_format_and_type(ctx, format, type);
    if (err != GL_NO_ERROR) {
       _mesa_error(ctx, err, "glReadPixels(invalid format %s and/or type %s)",
-                  _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type));
+                  _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type));
       return;
    }
 

@@ -186,7 +186,7 @@ get_map_idx(GLenum value)
       return IDX_RG;
    default:
       _mesa_problem(NULL, "Unexpected inFormat %s",
-                    _mesa_lookup_enum_by_nr(value));
+                    _mesa_enum_to_string(value));
       return 0;
    }
 }
@@ -216,8 +216,8 @@ _mesa_compute_component_mapping(GLenum inFormat, GLenum outFormat, GLubyte *map)
 
 #if 0
    printf("from %x/%s to %x/%s map %d %d %d %d %d %d\n",
-	  inFormat, _mesa_lookup_enum_by_nr(inFormat),
-	  outFormat, _mesa_lookup_enum_by_nr(outFormat),
+	  inFormat, _mesa_enum_to_string(inFormat),
+	  outFormat, _mesa_enum_to_string(outFormat),
 	  map[0],
 	  map[1],
 	  map[2],

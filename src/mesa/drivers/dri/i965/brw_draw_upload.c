@@ -230,7 +230,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_VERTS))
       fprintf(stderr, "type %s size %d normalized %d\n",
-              _mesa_lookup_enum_by_nr(glarray->Type),
+              _mesa_enum_to_string(glarray->Type),
               glarray->Size, glarray->Normalized);
 
    if (glarray->Integer) {

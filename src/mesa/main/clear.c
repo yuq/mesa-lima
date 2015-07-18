@@ -395,7 +395,7 @@ _mesa_ClearBufferiv(GLenum buffer, GLint drawbuffer, const GLint *value)
       return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferiv(buffer=%s)",
-                  _mesa_lookup_enum_by_nr(buffer));
+                  _mesa_enum_to_string(buffer));
       return;
    }
 }
@@ -485,7 +485,7 @@ _mesa_ClearBufferuiv(GLenum buffer, GLint drawbuffer, const GLuint *value)
       return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferuiv(buffer=%s)",
-                  _mesa_lookup_enum_by_nr(buffer));
+                  _mesa_enum_to_string(buffer));
       return;
    }
 }
@@ -596,7 +596,7 @@ _mesa_ClearBufferfv(GLenum buffer, GLint drawbuffer, const GLfloat *value)
       return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferfv(buffer=%s)",
-                  _mesa_lookup_enum_by_nr(buffer));
+                  _mesa_enum_to_string(buffer));
       return;
    }
 }
@@ -636,7 +636,7 @@ _mesa_ClearBufferfi(GLenum buffer, GLint drawbuffer,
 
    if (buffer != GL_DEPTH_STENCIL) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glClearBufferfi(buffer=%s)",
-                  _mesa_lookup_enum_by_nr(buffer));
+                  _mesa_enum_to_string(buffer));
       return;
    }
 

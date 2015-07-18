@@ -451,7 +451,7 @@ void _tnl_draw_prims(struct gl_context *ctx,
       printf("%s %d..%d\n", __func__, min_index, max_index);
       for (i = 0; i < nr_prims; i++)
 	 printf("prim %d: %s start %d count %d\n", i, 
-		_mesa_lookup_enum_by_nr(prim[i].mode),
+		_mesa_enum_to_string(prim[i].mode),
 		prim[i].start,
 		prim[i].count);
    }

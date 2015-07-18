@@ -66,7 +66,7 @@ fallback_required(struct gl_context *ctx, GLenum target,
    if (target == GL_TEXTURE_3D) {
       _mesa_perf_debug(ctx, MESA_DEBUG_SEVERITY_HIGH,
                        "glGenerateMipmap() to %s target\n",
-                       _mesa_lookup_enum_by_nr(target));
+                       _mesa_enum_to_string(target));
       return true;
    }
 

@@ -1113,7 +1113,7 @@ mesa_bufferiv(struct gl_shader_program *shProg, GLenum type,
    default:
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(pname 0x%x (%s))", caller, pname,
-                  _mesa_lookup_enum_by_nr(pname));
+                  _mesa_enum_to_string(pname));
       return;
    }
 }

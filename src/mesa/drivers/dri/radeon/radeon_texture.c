@@ -279,8 +279,8 @@ mesa_format radeonChooseTextureFormat(struct gl_context * ctx,
 	radeon_print(RADEON_TEXTURE, RADEON_TRACE,
 		"%s InternalFormat=%s(%d) type=%s format=%s\n",
 		__func__,
-		_mesa_lookup_enum_by_nr(internalFormat), internalFormat,
-		_mesa_lookup_enum_by_nr(type), _mesa_lookup_enum_by_nr(format));
+		_mesa_enum_to_string(internalFormat), internalFormat,
+		_mesa_enum_to_string(type), _mesa_enum_to_string(format));
 	radeon_print(RADEON_TEXTURE, RADEON_TRACE,
 			"%s do32bpt=%d force16bpt=%d\n",
 			__func__, do32bpt, force16bpt);

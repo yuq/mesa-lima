@@ -212,7 +212,7 @@ _mesa_blit_framebuffer(struct gl_context *ctx,
 
    if (!is_valid_blit_filter(ctx, filter)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid filter %s)", func,
-                  _mesa_lookup_enum_by_nr(filter));
+                  _mesa_enum_to_string(filter));
       return;
    }
 
@@ -220,7 +220,7 @@ _mesa_blit_framebuffer(struct gl_context *ctx,
         filter == GL_SCALED_RESOLVE_NICEST_EXT) &&
         (readFb->Visual.samples == 0 || drawFb->Visual.samples > 0)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s: invalid samples)", func,
-                  _mesa_lookup_enum_by_nr(filter));
+                  _mesa_enum_to_string(filter));
       return;
    }
 
@@ -548,7 +548,7 @@ _mesa_BlitFramebuffer(GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1,
                   " %d, %d, %d, %d, 0x%x, %s)\n",
                   srcX0, srcY0, srcX1, srcY1,
                   dstX0, dstY0, dstX1, dstY1,
-                  mask, _mesa_lookup_enum_by_nr(filter));
+                  mask, _mesa_enum_to_string(filter));
 
    _mesa_blit_framebuffer(ctx, ctx->ReadBuffer, ctx->DrawBuffer,
                           srcX0, srcY0, srcX1, srcY1,
@@ -573,7 +573,7 @@ _mesa_BlitNamedFramebuffer(GLuint readFramebuffer, GLuint drawFramebuffer,
                   readFramebuffer, drawFramebuffer,
                   srcX0, srcY0, srcX1, srcY1,
                   dstX0, dstY0, dstX1, dstY1,
-                  mask, _mesa_lookup_enum_by_nr(filter));
+                  mask, _mesa_enum_to_string(filter));
 
    /*
     * According to PDF page 533 of the OpenGL 4.5 core spec (30.10.2014,

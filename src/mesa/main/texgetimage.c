@@ -1129,7 +1129,7 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
     */
    if (!legal_getteximage_target(ctx, texObj->Target, true)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glGetTextureImage(target=%s)",
-                  _mesa_lookup_enum_by_nr(texObj->Target));
+                  _mesa_enum_to_string(texObj->Target));
       return;
    }
 
@@ -1191,7 +1191,7 @@ getcompressedteximage_error_check(struct gl_context *ctx,
    if (!legal_getteximage_target(ctx, target, dsa)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetCompressedTex%sImage(target=%s)", suffix,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return GL_TRUE;
    }
 

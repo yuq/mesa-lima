@@ -42,7 +42,7 @@ _mesa_ShadeModel( GLenum mode )
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glShadeModel %s\n", _mesa_lookup_enum_by_nr(mode));
+      _mesa_debug(ctx, "glShadeModel %s\n", _mesa_enum_to_string(mode));
 
    if (mode != GL_FLAT && mode != GL_SMOOTH) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glShadeModel");
@@ -723,8 +723,8 @@ _mesa_ColorMaterial( GLenum face, GLenum mode )
 
    if (MESA_VERBOSE&VERBOSE_API)
       _mesa_debug(ctx, "glColorMaterial %s %s\n",
-                  _mesa_lookup_enum_by_nr(face),
-                  _mesa_lookup_enum_by_nr(mode));
+                  _mesa_enum_to_string(face),
+                  _mesa_enum_to_string(mode));
 
    bitmask = _mesa_material_bitmask(ctx, face, mode, legal, "glColorMaterial");
    if (bitmask == 0)

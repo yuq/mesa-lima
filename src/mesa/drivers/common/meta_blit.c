@@ -312,7 +312,7 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
       break;
    default:
       _mesa_problem(ctx, "Unkown texture target %s\n",
-                    _mesa_lookup_enum_by_nr(target));
+                    _mesa_enum_to_string(target));
       shader_index = BLIT_2X_MSAA_SHADER_2D_MULTISAMPLE_RESOLVE;
    }
 

@@ -2169,8 +2169,8 @@ texture_error_check( struct gl_context *ctx,
             _mesa_error(ctx, GL_INVALID_OPERATION,
                         "glTexImage%dD(format = %s, internalFormat = %s)",
                         dimensions,
-                        _mesa_lookup_enum_by_nr(format),
-                        _mesa_lookup_enum_by_nr(internalFormat));
+                        _mesa_enum_to_string(format),
+                        _mesa_enum_to_string(internalFormat));
             return GL_TRUE;
          }
 
@@ -2180,9 +2180,9 @@ texture_error_check( struct gl_context *ctx,
          _mesa_error(ctx, err,
                      "glTexImage%dD(format = %s, type = %s, internalFormat = %s)",
                      dimensions,
-                     _mesa_lookup_enum_by_nr(format),
-                     _mesa_lookup_enum_by_nr(type),
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(format),
+                     _mesa_enum_to_string(type),
+                     _mesa_enum_to_string(internalFormat));
          return GL_TRUE;
       }
    }
@@ -2191,7 +2191,7 @@ texture_error_check( struct gl_context *ctx,
    if (_mesa_base_tex_format(ctx, internalFormat) < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glTexImage%dD(internalFormat=%s)",
-                  dimensions, _mesa_lookup_enum_by_nr(internalFormat));
+                  dimensions, _mesa_enum_to_string(internalFormat));
       return GL_TRUE;
    }
 
@@ -2200,8 +2200,8 @@ texture_error_check( struct gl_context *ctx,
    if (err != GL_NO_ERROR) {
       _mesa_error(ctx, err,
                   "glTexImage%dD(incompatible format = %s, type = %s)",
-                  dimensions, _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type));
+                  dimensions, _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type));
       return GL_TRUE;
    }
 
@@ -2216,8 +2216,8 @@ texture_error_check( struct gl_context *ctx,
    if (!texture_formats_agree(internalFormat, format)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glTexImage%dD(incompatible internalFormat = %s, format = %s)",
-                  dimensions, _mesa_lookup_enum_by_nr(internalFormat),
-                  _mesa_lookup_enum_by_nr(format));
+                  dimensions, _mesa_enum_to_string(internalFormat),
+                  _mesa_enum_to_string(format));
       return GL_TRUE;
    }
 
@@ -2332,7 +2332,7 @@ compressed_texture_error_check(struct gl_context *ctx, GLint dimensions,
    if (!_mesa_is_compressed_format(ctx, internalFormat)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glCompressedTexImage%dD(internalFormat=%s)",
-                  dimensions, _mesa_lookup_enum_by_nr(internalFormat));
+                  dimensions, _mesa_enum_to_string(internalFormat));
       return GL_TRUE;
    }
 
@@ -2490,7 +2490,7 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    /* check target (proxies not allowed) */
    if (!legal_texsubimage_target(ctx, dimensions, target, dsa)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(target=%s)",
-                  callerName, _mesa_lookup_enum_by_nr(target));
+                  callerName, _mesa_enum_to_string(target));
       return GL_TRUE;
    }
 
@@ -2509,8 +2509,8 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       err = _mesa_es_error_check_format_and_type(format, type, dimensions);
       if (err != GL_NO_ERROR) {
          _mesa_error(ctx, err, "%s(format = %s, type = %s)",
-                     callerName, _mesa_lookup_enum_by_nr(format),
-                     _mesa_lookup_enum_by_nr(type));
+                     callerName, _mesa_enum_to_string(format),
+                     _mesa_enum_to_string(type));
          return GL_TRUE;
       }
    }
@@ -2519,8 +2519,8 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
    if (err != GL_NO_ERROR) {
       _mesa_error(ctx, err,
                   "%s(incompatible format = %s, type = %s)",
-                  callerName, _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type));
+                  callerName, _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type));
       return GL_TRUE;
    }
 
@@ -2598,7 +2598,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
    /* check target */
    if (!legal_texsubimage_target(ctx, dimensions, target, false)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glCopyTexImage%uD(target=%s)",
-                  dimensions, _mesa_lookup_enum_by_nr(target));
+                  dimensions, _mesa_enum_to_string(target));
       return GL_TRUE;
    }
 
@@ -2658,7 +2658,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
       default:
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "glCopyTexImage%dD(internalFormat=%s)", dimensions,
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(internalFormat));
          return GL_TRUE;
       }
    }
@@ -2667,7 +2667,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
    if (baseFormat < 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glCopyTexImage%dD(internalFormat=%s)", dimensions,
-                  _mesa_lookup_enum_by_nr(internalFormat));
+                  _mesa_enum_to_string(internalFormat));
       return GL_TRUE;
    }
 
@@ -2677,7 +2677,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
       if (rb_base_format < 0) {
          _mesa_error(ctx, GL_INVALID_VALUE,
                      "glCopyTexImage%dD(internalFormat=%s)", dimensions,
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(internalFormat));
          return GL_TRUE;
       }
    }
@@ -2704,7 +2704,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
       if (!valid) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glCopyTexImage%dD(internalFormat=%s)", dimensions,
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(internalFormat));
          return GL_TRUE;
       }
    }
@@ -2746,7 +2746,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
       if(_mesa_is_enum_format_snorm(internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glCopyTexImage%dD(internalFormat=%s)", dimensions,
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(internalFormat));
          return GL_TRUE;
       }
    }
@@ -3111,8 +3111,8 @@ _mesa_choose_texture_format(struct gl_context *ctx,
                        "DXT compression requested (%s), "
                        "but libtxc_dxtn library not installed.  Using %s "
                        "instead.",
-                       _mesa_lookup_enum_by_nr(before),
-                       _mesa_lookup_enum_by_nr(internalFormat));
+                       _mesa_enum_to_string(before),
+                       _mesa_enum_to_string(internalFormat));
       }
    }
 
@@ -3199,18 +3199,18 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
          _mesa_debug(ctx,
                      "glCompressedTexImage%uD %s %d %s %d %d %d %d %p\n",
                      dims,
-                     _mesa_lookup_enum_by_nr(target), level,
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(target), level,
+                     _mesa_enum_to_string(internalFormat),
                      width, height, depth, border, pixels);
       else
          _mesa_debug(ctx,
                      "glTexImage%uD %s %d %s %d %d %d %d %s %s %p\n",
                      dims,
-                     _mesa_lookup_enum_by_nr(target), level,
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(target), level,
+                     _mesa_enum_to_string(internalFormat),
                      width, height, depth, border,
-                     _mesa_lookup_enum_by_nr(format),
-                     _mesa_lookup_enum_by_nr(type), pixels);
+                     _mesa_enum_to_string(format),
+                     _mesa_enum_to_string(type), pixels);
    }
 
    internalFormat = override_internal_format(internalFormat, width, height);
@@ -3218,7 +3218,7 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
    /* target error checking */
    if (!legal_teximage_target(ctx, dims, target)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s%uD(target=%s)",
-                  func, dims, _mesa_lookup_enum_by_nr(target));
+                  func, dims, _mesa_enum_to_string(target));
       return;
    }
 
@@ -3330,7 +3330,7 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
          _mesa_error(ctx, GL_OUT_OF_MEMORY,
                      "glTexImage%uD(image too large: %d x %d x %d, %s format)",
                      dims, width, height, depth,
-                     _mesa_lookup_enum_by_nr(internalFormat));
+                     _mesa_enum_to_string(internalFormat));
          return;
       }
 
@@ -3527,7 +3527,7 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
    if (!legal_texsubimage_target(ctx, dims, target, dsa)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glTex%sSubImage%uD(target=%s)",
                   dsa ? "ture" : "",
-                  dims, _mesa_lookup_enum_by_nr(target));
+                  dims, _mesa_enum_to_string(target));
       return;
    }
 
@@ -3597,10 +3597,10 @@ texsubimage(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "glTexSubImage%uD %s %d %d %d %d %d %d %d %s %s %p\n",
                   dims,
-                  _mesa_lookup_enum_by_nr(target), level,
+                  _mesa_enum_to_string(target), level,
                   xoffset, yoffset, zoffset, width, height, depth,
-                  _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type), pixels);
+                  _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type), pixels);
 
    _mesa_texture_sub_image(ctx, dims, texObj, texImage, target, level,
                            xoffset, yoffset, zoffset, width, height, depth,
@@ -3629,8 +3629,8 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
                   "glTextureSubImage%uD %d %d %d %d %d %d %d %d %s %s %p\n",
                   dims, texture, level,
                   xoffset, yoffset, zoffset, width, height, depth,
-                  _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type), pixels);
+                  _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type), pixels);
 
    /* Get the texture object by Name. */
    texObj = _mesa_lookup_texture(ctx, texture);
@@ -3891,8 +3891,8 @@ copyteximage(struct gl_context *ctx, GLuint dims,
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "glCopyTexImage%uD %s %d %s %d %d %d %d %d\n",
                   dims,
-                  _mesa_lookup_enum_by_nr(target), level,
-                  _mesa_lookup_enum_by_nr(internalFormat),
+                  _mesa_enum_to_string(target), level,
+                  _mesa_enum_to_string(internalFormat),
                   x, y, width, height, border);
 
    if (ctx->NewState & NEW_COPY_TEX_STATE)
@@ -4051,7 +4051,7 @@ _mesa_copy_texture_sub_image(struct gl_context *ctx, GLuint dims,
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "%s %s %d %d %d %d %d %d %d %d\n", caller,
-                  _mesa_lookup_enum_by_nr(target),
+                  _mesa_enum_to_string(target),
                   level, xoffset, yoffset, zoffset, x, y, width, height);
 
    if (ctx->NewState & NEW_COPY_TEX_STATE)
@@ -4113,7 +4113,7 @@ _mesa_CopyTexSubImage1D( GLenum target, GLint level,
     */
    if (!legal_texsubimage_target(ctx, 1, target, false)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4141,7 +4141,7 @@ _mesa_CopyTexSubImage2D( GLenum target, GLint level,
     */
    if (!legal_texsubimage_target(ctx, 2, target, false)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4170,7 +4170,7 @@ _mesa_CopyTexSubImage3D( GLenum target, GLint level,
     */
    if (!legal_texsubimage_target(ctx, 3, target, false)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4198,7 +4198,7 @@ _mesa_CopyTextureSubImage1D(GLuint texture, GLint level,
    /* Check target (proxies not allowed). */
    if (!legal_texsubimage_target(ctx, 1, texObj->Target, true)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(texObj->Target));
+                  _mesa_enum_to_string(texObj->Target));
       return;
    }
 
@@ -4222,7 +4222,7 @@ _mesa_CopyTextureSubImage2D(GLuint texture, GLint level,
    /* Check target (proxies not allowed). */
    if (!legal_texsubimage_target(ctx, 2, texObj->Target, true)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(texObj->Target));
+                  _mesa_enum_to_string(texObj->Target));
       return;
    }
 
@@ -4249,7 +4249,7 @@ _mesa_CopyTextureSubImage3D(GLuint texture, GLint level,
    /* Check target (proxies not allowed). */
    if (!legal_texsubimage_target(ctx, 3, texObj->Target, true)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", self,
-                  _mesa_lookup_enum_by_nr(texObj->Target));
+                  _mesa_enum_to_string(texObj->Target));
       return;
    }
 
@@ -4296,8 +4296,8 @@ check_clear_tex_image(struct gl_context *ctx,
       _mesa_error(ctx, err,
                   "%s(incompatible format = %s, type = %s)",
                   function,
-                  _mesa_lookup_enum_by_nr(format),
-                  _mesa_lookup_enum_by_nr(type));
+                  _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type));
       return false;
    }
 
@@ -4306,8 +4306,8 @@ check_clear_tex_image(struct gl_context *ctx,
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(incompatible internalFormat = %s, format = %s)",
                   function,
-                  _mesa_lookup_enum_by_nr(internalFormat),
-                  _mesa_lookup_enum_by_nr(format));
+                  _mesa_enum_to_string(internalFormat),
+                  _mesa_enum_to_string(format));
       return false;
    }
 
@@ -4549,7 +4549,7 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
 
    if (dsa && target == GL_TEXTURE_RECTANGLE) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid target %s)", caller,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return GL_TRUE;
    }
 
@@ -4604,8 +4604,8 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
          if (invalidformat) {
             _mesa_error(ctx, GL_INVALID_OPERATION,
                         "%s(invalid target %s for format %s)", caller,
-                        _mesa_lookup_enum_by_nr(target),
-                        _mesa_lookup_enum_by_nr(format));
+                        _mesa_enum_to_string(target),
+                        _mesa_enum_to_string(format));
             return GL_TRUE;
          }
       }
@@ -4620,7 +4620,7 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
 
    if (!targetOK) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", caller,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return GL_TRUE;
    }
 
@@ -5604,14 +5604,14 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
    if (immutable && !_mesa_is_legal_tex_storage_format(ctx, internalformat)) {
       _mesa_error(ctx, GL_INVALID_ENUM,
             "%s(internalformat=%s not legal for immutable-format)",
-            func, _mesa_lookup_enum_by_nr(internalformat));
+            func, _mesa_enum_to_string(internalformat));
       return;
    }
 
    if (!is_renderable_texture_format(ctx, internalformat)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
             "%s(internalformat=%s)",
-            func, _mesa_lookup_enum_by_nr(internalformat));
+            func, _mesa_enum_to_string(internalformat));
       return;
    }
 

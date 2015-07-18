@@ -110,7 +110,7 @@ static void brw_set_prim(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    uint32_t hw_prim = get_hw_prim_for_gl_prim(prim->mode);
 
-   DBG("PRIM: %s\n", _mesa_lookup_enum_by_nr(prim->mode));
+   DBG("PRIM: %s\n", _mesa_enum_to_string(prim->mode));
 
    /* Slight optimization to avoid the GS program when not needed:
     */
@@ -143,7 +143,7 @@ static void gen6_set_prim(struct brw_context *brw,
 {
    uint32_t hw_prim;
 
-   DBG("PRIM: %s\n", _mesa_lookup_enum_by_nr(prim->mode));
+   DBG("PRIM: %s\n", _mesa_enum_to_string(prim->mode));
 
    hw_prim = get_hw_prim_for_gl_prim(prim->mode);
 
@@ -182,7 +182,7 @@ static void brw_emit_prim(struct brw_context *brw,
    int indirect_flag;
    int predicate_enable;
 
-   DBG("PRIM: %s %d %d\n", _mesa_lookup_enum_by_nr(prim->mode),
+   DBG("PRIM: %s %d %d\n", _mesa_enum_to_string(prim->mode),
        prim->start, prim->count);
 
    int start_vertex_location = prim->start;
@@ -582,7 +582,7 @@ void brw_draw_prims( struct gl_context *ctx,
     */
    if (ctx->RenderMode != GL_RENDER) {
       perf_debug("%s render mode not supported in hardware\n",
-                 _mesa_lookup_enum_by_nr(ctx->RenderMode));
+                 _mesa_enum_to_string(ctx->RenderMode));
       _swsetup_Wakeup(ctx);
       _tnl_wakeup(ctx);
       _tnl_draw_prims(ctx, prims, nr_prims, ib,

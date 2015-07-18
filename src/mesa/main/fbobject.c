@@ -2007,7 +2007,7 @@ renderbuffer_storage(struct gl_context *ctx, struct gl_renderbuffer *rb,
    baseFormat = _mesa_base_fbo_format(ctx, internalFormat);
    if (baseFormat == 0) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(internalFormat=%s)",
-                  func, _mesa_lookup_enum_by_nr(internalFormat));
+                  func, _mesa_enum_to_string(internalFormat));
       return;
    }
 
@@ -2095,12 +2095,12 @@ renderbuffer_storage_named(GLuint renderbuffer, GLenum internalFormat,
       if (samples == NO_SAMPLES)
          _mesa_debug(ctx, "%s(%u, %s, %d, %d)\n",
                      func, renderbuffer,
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(internalFormat),
                      width, height);
       else
          _mesa_debug(ctx, "%s(%u, %s, %d, %d, %d)\n",
                      func, renderbuffer,
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(internalFormat),
                      width, height, samples);
    }
 
@@ -2131,14 +2131,14 @@ renderbuffer_storage_target(GLenum target, GLenum internalFormat,
       if (samples == NO_SAMPLES)
          _mesa_debug(ctx, "%s(%s, %s, %d, %d)\n",
                      func,
-                     _mesa_lookup_enum_by_nr(target),
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(target),
+                     _mesa_enum_to_string(internalFormat),
                      width, height);
       else
          _mesa_debug(ctx, "%s(%s, %s, %d, %d, %d)\n",
                      func,
-                     _mesa_lookup_enum_by_nr(target),
-                     _mesa_lookup_enum_by_nr(internalFormat),
+                     _mesa_enum_to_string(target),
+                     _mesa_enum_to_string(internalFormat),
                      width, height, samples);
    }
 
@@ -2311,7 +2311,7 @@ get_render_buffer_parameteriv(struct gl_context *ctx,
       /* fallthrough */
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname=%s)", func,
-                  _mesa_lookup_enum_by_nr(pname));
+                  _mesa_enum_to_string(pname));
       return;
    }
 }
@@ -2694,13 +2694,13 @@ _mesa_CheckFramebufferStatus(GLenum target)
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glCheckFramebufferStatus(%s)\n",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
 
    fb = get_framebuffer_target(ctx, target);
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glCheckFramebufferStatus(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return 0;
    }
 
@@ -2732,7 +2732,7 @@ _mesa_CheckNamedFramebufferStatus(GLuint framebuffer, GLenum target)
       default:
          _mesa_error(ctx, GL_INVALID_ENUM,
                      "glCheckNamedFramebufferStatus(invalid target %s)",
-                     _mesa_lookup_enum_by_nr(target));
+                     _mesa_enum_to_string(target));
          return 0;
    }
 
@@ -2851,7 +2851,7 @@ check_layered_texture_target(struct gl_context *ctx, GLenum target,
 
    _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(invalid texture target %s)", caller,
-               _mesa_lookup_enum_by_nr(target));
+               _mesa_enum_to_string(target));
    return false;
 }
 
@@ -2893,7 +2893,7 @@ check_texture_target(struct gl_context *ctx, GLenum target,
 
    _mesa_error(ctx, GL_INVALID_OPERATION,
                "%s(invalid texture target %s)", caller,
-               _mesa_lookup_enum_by_nr(target));
+               _mesa_enum_to_string(target));
    return false;
 }
 
@@ -2962,7 +2962,7 @@ check_textarget(struct gl_context *ctx, int dims, GLenum target,
    if (err) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(invalid textarget %s)",
-                  caller, _mesa_lookup_enum_by_nr(textarget));
+                  caller, _mesa_enum_to_string(textarget));
       return false;
    }
 
@@ -3074,7 +3074,7 @@ _mesa_framebuffer_texture(struct gl_context *ctx, struct gl_framebuffer *fb,
    att = get_attachment(ctx, fb, attachment);
    if (att == NULL) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", caller,
-                  _mesa_lookup_enum_by_nr(attachment));
+                  _mesa_enum_to_string(attachment));
       return;
    }
 
@@ -3157,7 +3157,7 @@ framebuffer_texture_with_dims(int dims, GLenum target,
    fb = get_framebuffer_target(ctx, target);
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid target %s)", caller,
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -3225,7 +3225,7 @@ _mesa_FramebufferTextureLayer(GLenum target, GLenum attachment,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glFramebufferTextureLayer(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -3319,7 +3319,7 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glFramebufferTexture(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -3400,7 +3400,7 @@ _mesa_framebuffer_renderbuffer(struct gl_context *ctx,
    if (att == NULL) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(invalid attachment %s)", func,
-                  _mesa_lookup_enum_by_nr(attachment));
+                  _mesa_enum_to_string(attachment));
       return;
    }
 
@@ -3440,7 +3440,7 @@ _mesa_FramebufferRenderbuffer(GLenum target, GLenum attachment,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glFramebufferRenderbuffer(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -3539,7 +3539,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
           attachment != GL_DEPTH && attachment != GL_STENCIL) {
          _mesa_error(ctx, GL_INVALID_ENUM,
                      "%s(invalid attachment %s)", caller,
-                     _mesa_lookup_enum_by_nr(attachment));
+                     _mesa_enum_to_string(attachment));
          return;
       }
       /* the default / window-system FBO */
@@ -3552,7 +3552,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
 
    if (att == NULL) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", caller,
-                  _mesa_lookup_enum_by_nr(attachment));
+                  _mesa_enum_to_string(attachment));
       return;
    }
 
@@ -3609,7 +3609,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
       else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       }
       else {
          goto invalid_pname_enum;
@@ -3626,7 +3626,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
       else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       }
       else {
          goto invalid_pname_enum;
@@ -3637,7 +3637,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
          goto invalid_pname_enum;
       } else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       } else if (att->Type == GL_TEXTURE) {
          if (att->Texture && (att->Texture->Target == GL_TEXTURE_3D ||
              att->Texture->Target == GL_TEXTURE_2D_ARRAY)) {
@@ -3659,7 +3659,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
       else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       }
       else {
          if (ctx->Extensions.EXT_framebuffer_sRGB) {
@@ -3682,7 +3682,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
       else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       }
       else {
          mesa_format format = att->Renderbuffer->Format;
@@ -3734,7 +3734,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
       }
       else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       }
       else if (att->Texture) {
          const struct gl_texture_image *texImage =
@@ -3763,7 +3763,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
          *params = att->Layered;
       } else if (att->Type == GL_NONE) {
          _mesa_error(ctx, err, "%s(invalid pname %s)", caller,
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(pname));
       } else {
          goto invalid_pname_enum;
       }
@@ -3776,7 +3776,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
 
 invalid_pname_enum:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname %s)", caller,
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
    return;
 }
 
@@ -3792,7 +3792,7 @@ _mesa_GetFramebufferAttachmentParameteriv(GLenum target, GLenum attachment,
    if (!buffer) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetFramebufferAttachmentParameteriv(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4009,7 +4009,7 @@ invalidate_framebuffer_storage(struct gl_context *ctx,
 
 invalid_enum:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", name,
-               _mesa_lookup_enum_by_nr(attachments[i]));
+               _mesa_enum_to_string(attachments[i]));
    return;
 }
 
@@ -4026,7 +4026,7 @@ _mesa_InvalidateSubFramebuffer(GLenum target, GLsizei numAttachments,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glInvalidateSubFramebuffer(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4076,7 +4076,7 @@ _mesa_InvalidateFramebuffer(GLenum target, GLsizei numAttachments,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glInvalidateFramebuffer(invalid target %s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       return;
    }
 
@@ -4152,7 +4152,7 @@ _mesa_DiscardFramebufferEXT(GLenum target, GLsizei numAttachments,
    if (!fb) {
       _mesa_error(ctx, GL_INVALID_ENUM,
          "glDiscardFramebufferEXT(target %s)",
-         _mesa_lookup_enum_by_nr(target));
+         _mesa_enum_to_string(target));
       return;
    }
 
@@ -4189,5 +4189,5 @@ _mesa_DiscardFramebufferEXT(GLenum target, GLsizei numAttachments,
 invalid_enum:
    _mesa_error(ctx, GL_INVALID_ENUM,
                "glDiscardFramebufferEXT(attachment %s)",
-              _mesa_lookup_enum_by_nr(attachments[i]));
+              _mesa_enum_to_string(attachments[i]));
 }

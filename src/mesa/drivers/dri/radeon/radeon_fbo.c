@@ -700,7 +700,7 @@ radeon_bind_framebuffer(struct gl_context * ctx, GLenum target,
   radeon_print(RADEON_TEXTURE, RADEON_TRACE,
 		"%s(%p, fb %p, target %s) \n",
 		__func__, ctx, fb,
-		_mesa_lookup_enum_by_nr(target));
+		_mesa_enum_to_string(target));
 
    if (target == GL_FRAMEBUFFER_EXT || target == GL_DRAW_FRAMEBUFFER_EXT) {
       radeon_draw_buffer(ctx, fb);

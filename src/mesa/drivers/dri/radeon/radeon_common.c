@@ -343,7 +343,7 @@ void radeonDrawBuffer( struct gl_context *ctx, GLenum mode )
 {
 	if (RADEON_DEBUG & RADEON_DRI)
 		fprintf(stderr, "%s %s\n", __func__,
-			_mesa_lookup_enum_by_nr( mode ));
+			_mesa_enum_to_string( mode ));
 
 	if (_mesa_is_winsys_fbo(ctx->DrawBuffer)) {
 		radeonContextPtr radeon = RADEON_CONTEXT(ctx);

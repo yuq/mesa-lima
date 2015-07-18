@@ -1669,7 +1669,7 @@ static void r200Enable( struct gl_context *ctx, GLenum cap, GLboolean state )
 
    if ( R200_DEBUG & RADEON_STATE )
       fprintf( stderr, "%s( %s = %s )\n", __func__,
-	       _mesa_lookup_enum_by_nr( cap ),
+	       _mesa_enum_to_string( cap ),
 	       state ? "GL_TRUE" : "GL_FALSE" );
 
    switch ( cap ) {

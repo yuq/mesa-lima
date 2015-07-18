@@ -1161,7 +1161,7 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
 
    if (api_check && !api_found) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=%s)", func,
-                  _mesa_lookup_enum_by_nr(d->pname));
+                  _mesa_enum_to_string(d->pname));
       return GL_FALSE;
    }
 
@@ -1222,7 +1222,7 @@ find_value(const char *func, GLenum pname, void **p, union value *v)
        * any valid enum. */
       if (unlikely(idx == 0)) {
          _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=%s)", func,
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
          return &error_value;
       }
 
@@ -2004,11 +2004,11 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
 
  invalid_enum:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=%s)", func,
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
    return TYPE_INVALID;
  invalid_value:
    _mesa_error(ctx, GL_INVALID_VALUE, "%s(pname=%s)", func,
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
    return TYPE_INVALID;
 }
 

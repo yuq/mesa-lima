@@ -411,7 +411,7 @@ dump_renderbuffer(const struct gl_renderbuffer *rb, GLboolean writeImage)
 {
    printf("Renderbuffer %u: %u x %u  IntFormat = %s\n",
 	  rb->Name, rb->Width, rb->Height,
-	  _mesa_lookup_enum_by_nr(rb->InternalFormat));
+	  _mesa_enum_to_string(rb->InternalFormat));
    if (writeImage) {
       _mesa_write_renderbuffer_image(rb);
    }

@@ -925,8 +925,8 @@ get_buffer_property(struct gl_shader_program *shProg,
 
 invalid_operation:
    _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s prop %s)", caller,
-               _mesa_lookup_enum_by_nr(res->Type),
-               _mesa_lookup_enum_by_nr(prop));
+               _mesa_enum_to_string(res->Type),
+               _mesa_enum_to_string(prop));
 
    return 0;
 }
@@ -1057,14 +1057,14 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
 
 invalid_enum:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(%s prop %s)", caller,
-               _mesa_lookup_enum_by_nr(res->Type),
-               _mesa_lookup_enum_by_nr(prop));
+               _mesa_enum_to_string(res->Type),
+               _mesa_enum_to_string(prop));
    return 0;
 
 invalid_operation:
    _mesa_error(ctx, GL_INVALID_OPERATION, "%s(%s prop %s)", caller,
-               _mesa_lookup_enum_by_nr(res->Type),
-               _mesa_lookup_enum_by_nr(prop));
+               _mesa_enum_to_string(res->Type),
+               _mesa_enum_to_string(prop));
    return 0;
 }
 
@@ -1086,7 +1086,7 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
    if (!res || bufSize < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glGetProgramResourceiv(%s index %d bufSize %d)",
-                  _mesa_lookup_enum_by_nr(programInterface), index, bufSize);
+                  _mesa_enum_to_string(programInterface), index, bufSize);
       return;
    }
 

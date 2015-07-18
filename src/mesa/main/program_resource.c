@@ -81,7 +81,7 @@ _mesa_GetProgramInterfaceiv(GLuint program, GLenum programInterface,
    /* Validate interface. */
    if (!supported_interface_enum(programInterface)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glGetProgramInterfaceiv(%s)",
-                  _mesa_lookup_enum_by_nr(programInterface));
+                  _mesa_enum_to_string(programInterface));
       return;
    }
 
@@ -96,8 +96,8 @@ _mesa_GetProgramInterfaceiv(GLuint program, GLenum programInterface,
       if (programInterface == GL_ATOMIC_COUNTER_BUFFER) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glGetProgramInterfaceiv(%s pname %s)",
-                     _mesa_lookup_enum_by_nr(programInterface),
-                     _mesa_lookup_enum_by_nr(pname));
+                     _mesa_enum_to_string(programInterface),
+                     _mesa_enum_to_string(pname));
          return;
       }
       /* Name length consists of base name, 3 additional chars '[0]' if
@@ -138,15 +138,15 @@ _mesa_GetProgramInterfaceiv(GLuint program, GLenum programInterface,
       default:
         _mesa_error(ctx, GL_INVALID_OPERATION,
                     "glGetProgramInterfaceiv(%s pname %s)",
-                    _mesa_lookup_enum_by_nr(programInterface),
-                    _mesa_lookup_enum_by_nr(pname));
+                    _mesa_enum_to_string(programInterface),
+                    _mesa_enum_to_string(pname));
       };
       break;
    case GL_MAX_NUM_COMPATIBLE_SUBROUTINES:
    default:
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetProgramInterfaceiv(pname %s)",
-                  _mesa_lookup_enum_by_nr(pname));
+                  _mesa_enum_to_string(pname));
    }
 }
 
@@ -234,7 +234,7 @@ _mesa_GetProgramResourceIndex(GLuint program, GLenum programInterface,
    case GL_ATOMIC_COUNTER_BUFFER:
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceIndex(%s)",
-                  _mesa_lookup_enum_by_nr(programInterface));
+                  _mesa_enum_to_string(programInterface));
    }
 
    return GL_INVALID_INDEX;
@@ -262,7 +262,7 @@ _mesa_GetProgramResourceName(GLuint program, GLenum programInterface,
    if (programInterface == GL_ATOMIC_COUNTER_BUFFER ||
        !supported_interface_enum(programInterface)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceName(%s)",
-                  _mesa_lookup_enum_by_nr(programInterface));
+                  _mesa_enum_to_string(programInterface));
       return;
    }
 
@@ -380,7 +380,7 @@ _mesa_GetProgramResourceLocation(GLuint program, GLenum programInterface,
 
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glGetProgramResourceLocation(%s %s)",
-                  _mesa_lookup_enum_by_nr(programInterface), name);
+                  _mesa_enum_to_string(programInterface), name);
    }
 
    return _mesa_program_resource_location(shProg, programInterface, name);
@@ -408,7 +408,7 @@ _mesa_GetProgramResourceLocationIndex(GLuint program, GLenum programInterface,
    if (programInterface != GL_PROGRAM_OUTPUT) {
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "glGetProgramResourceLocationIndex(%s)",
-                  _mesa_lookup_enum_by_nr(programInterface));
+                  _mesa_enum_to_string(programInterface));
       return -1;
    }
 

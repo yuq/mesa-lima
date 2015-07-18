@@ -1182,7 +1182,7 @@ _mesa_BindBuffer(GLenum target, GLuint buffer)
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glBindBuffer(%s, %u)\n",
-                  _mesa_lookup_enum_by_nr(target), buffer);
+                  _mesa_enum_to_string(target), buffer);
 
    bind_buffer_object(ctx, target, buffer);
 }
@@ -1535,9 +1535,9 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "%s(%s, %ld, %p, %s)\n",
                   func,
-                  _mesa_lookup_enum_by_nr(target),
+                  _mesa_enum_to_string(target),
                   (long int) size, data,
-                  _mesa_lookup_enum_by_nr(usage));
+                  _mesa_enum_to_string(usage));
 
    if (size < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(size < 0)", func);
@@ -1570,7 +1570,7 @@ _mesa_buffer_data(struct gl_context *ctx, struct gl_buffer_object *bufObj,
 
    if (!valid_usage) {
       _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid usage: %s)", func,
-                  _mesa_lookup_enum_by_nr(usage));
+                  _mesa_enum_to_string(usage));
       return;
    }
 
@@ -2025,7 +2025,7 @@ get_buffer_parameter(struct gl_context *ctx,
 
 invalid_pname:
    _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid pname: %s)", func,
-               _mesa_lookup_enum_by_nr(pname));
+               _mesa_enum_to_string(pname));
    return false;
 }
 
@@ -4367,7 +4367,7 @@ _mesa_BindBuffersRange(GLenum target, GLuint first, GLsizei count,
       return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glBindBuffersRange(target=%s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       break;
    }
 }
@@ -4393,7 +4393,7 @@ _mesa_BindBuffersBase(GLenum target, GLuint first, GLsizei count,
       return;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM, "glBindBuffersBase(target=%s)",
-                  _mesa_lookup_enum_by_nr(target));
+                  _mesa_enum_to_string(target));
       break;
    }
 }
