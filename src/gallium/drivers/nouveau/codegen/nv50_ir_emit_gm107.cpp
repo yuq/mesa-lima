@@ -2441,8 +2441,14 @@ CodeEmitterGM107::emitTXQ()
       break;
    }
 
-   emitInsn (0xdf4a0000);
-   emitField(0x24, 13, insn->tex.r);
+   if (insn->tex.rIndirectSrc >= 0) {
+      emitInsn (0xdf500000);
+   } else {
+      emitInsn (0xdf480000);
+      emitField(0x24, 13, insn->tex.r);
+   }
+
+   emitField(0x31, 1, insn->tex.liveOnly);
    emitField(0x1f, 4, insn->tex.mask);
    emitField(0x16, 6, type);
    emitGPR  (0x08, insn->src(0));
