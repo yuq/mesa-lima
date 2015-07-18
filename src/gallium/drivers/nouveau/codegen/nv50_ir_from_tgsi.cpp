@@ -1728,7 +1728,7 @@ Converter::handleTXQ(Value *dst0[4], enum TexQuery query)
    }
    tex->setSrc((c = 0), fetchSrc(0, 0)); // mip level
 
-   setTexRS(tex, c, 1, -1);
+   setTexRS(tex, ++c, 1, -1);
 
    bb->insertTail(tex);
 }
