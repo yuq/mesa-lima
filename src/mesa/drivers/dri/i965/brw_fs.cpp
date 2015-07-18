@@ -4073,6 +4073,11 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       else
          return inst->exec_size;
 
+   case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+      return 8;
+
    default:
       return inst->exec_size;
    }
