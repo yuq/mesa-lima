@@ -305,6 +305,8 @@ struct r600_common_screen {
 	unsigned			gpu_load_counter_busy;
 	unsigned			gpu_load_counter_idle;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
+
+	char				renderer_string[64];
 };
 
 /* This encapsulates a state or an operation which can emitted into the GPU

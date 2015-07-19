@@ -365,11 +365,9 @@ static const char* r600_get_device_vendor(struct pipe_screen* pscreen)
 	return "AMD";
 }
 
-static const char* r600_get_name(struct pipe_screen* pscreen)
+static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 {
-	struct r600_common_screen *rscreen = (struct r600_common_screen*)pscreen;
-
-	switch (rscreen->family) {
+	switch (rscreen->info.family) {
 	case CHIP_R600: return "AMD R600";
 	case CHIP_RV610: return "AMD RV610";
 	case CHIP_RV630: return "AMD RV630";
@@ -407,6 +405,13 @@ static const char* r600_get_name(struct pipe_screen* pscreen)
 	case CHIP_MULLINS: return "AMD MULLINS";
 	default: return "AMD unknown";
 	}
+}
+
+static const char* r600_get_name(struct pipe_screen* pscreen)
+{
+	struct r600_common_screen *rscreen = (struct r600_common_screen*)pscreen;
+
+	return rscreen->renderer_string;
 }
 
 static float r600_get_paramf(struct pipe_screen* pscreen,
@@ -868,7 +873,20 @@ struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 bool r600_common_screen_init(struct r600_common_screen *rscreen,
 			     struct radeon_winsys *ws)
 {
+	char llvm_string[32] = {};
+
 	ws->query_info(ws, &rscreen->info);
+
+	if (HAVE_LLVM)
+		snprintf(llvm_string, sizeof(llvm_string),
+			 ", LLVM %i.%i.%i", (HAVE_LLVM >> 8) & 0xff,
+			 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
+
+	snprintf(rscreen->renderer_string, sizeof(rscreen->renderer_string),
+		 "%s (DRM %i.%i.%i%s)",
+		 r600_get_chip_name(rscreen), rscreen->info.drm_major,
+		 rscreen->info.drm_minor, rscreen->info.drm_patchlevel,
+		 llvm_string);
 
 	rscreen->b.get_name = r600_get_name;
 	rscreen->b.get_vendor = r600_get_vendor;
