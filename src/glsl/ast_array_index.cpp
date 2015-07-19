@@ -61,21 +61,29 @@ update_max_array_access(ir_rvalue *ir, int idx, YYLTYPE *loc,
       }
    } else if (ir_dereference_record *deref_record =
               ir->as_dereference_record()) {
-      /* There are two possibilities we need to consider:
+      /* There are three possibilities we need to consider:
        *
        * - Accessing an element of an array that is a member of a named
        *   interface block (e.g. ifc.foo[i])
        *
        * - Accessing an element of an array that is a member of a named
        *   interface block array (e.g. ifc[j].foo[i]).
+       *
+       * - Accessing an element of an array that is a member of a named
+       *   interface block array of arrays (e.g. ifc[j][k].foo[i]).
        */
       ir_dereference_variable *deref_var =
          deref_record->record->as_dereference_variable();
       if (deref_var == NULL) {
-         if (ir_dereference_array *deref_array =
-             deref_record->record->as_dereference_array()) {
-            deref_var = deref_array->array->as_dereference_variable();
+         ir_dereference_array *deref_array =
+            deref_record->record->as_dereference_array();
+         ir_dereference_array *deref_array_prev = NULL;
+         while (deref_array != NULL) {
+            deref_array_prev = deref_array;
+            deref_array = deref_array->array->as_dereference_array();
          }
+         if (deref_array_prev != NULL)
+            deref_var = deref_array_prev->array->as_dereference_variable();
       }
 
       if (deref_var != NULL) {
