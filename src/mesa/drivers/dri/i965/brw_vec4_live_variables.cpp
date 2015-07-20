@@ -96,7 +96,8 @@ vec4_live_variables::setup_def_use()
 	  * are the things that screen off preceding definitions of a
 	  * variable, and thus qualify for being in def[].
 	  */
-	 if (inst->dst.file == GRF && !inst->predicate) {
+	 if (inst->dst.file == GRF &&
+	     (!inst->predicate || inst->opcode == BRW_OPCODE_SEL)) {
             for (unsigned i = 0; i < inst->regs_written; i++) {
                for (int c = 0; c < 4; c++) {
                   if (inst->dst.writemask & (1 << c)) {
