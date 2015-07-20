@@ -61,6 +61,7 @@ lp_check_alignment(const void *ptr, unsigned alignment)
    return ((uintptr_t)ptr & (alignment - 1)) == 0;
 }
 
+#if (defined(PIPE_OS_WINDOWS) && !defined(PIPE_CC_MSVC)) || defined(PIPE_OS_EMBEDDED)
 
 class raw_debug_ostream :
    public llvm::raw_ostream
@@ -91,6 +92,7 @@ raw_debug_ostream::write_impl(const char *Ptr, size_t Size)
    }
 }
 
+#endif
 
 extern "C" const char *
 lp_get_module_id(LLVMModuleRef module)
