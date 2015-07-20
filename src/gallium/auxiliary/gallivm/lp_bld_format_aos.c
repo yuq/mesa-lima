@@ -95,7 +95,7 @@ lp_build_format_swizzle_aos(const struct util_format_description *desc,
 /**
  * Whether the format matches the vector type, apart of swizzles.
  */
-static INLINE boolean
+static inline boolean
 format_matches_type(const struct util_format_description *desc,
                     struct lp_type type)
 {
@@ -146,7 +146,7 @@ format_matches_type(const struct util_format_description *desc,
  *
  * @return XYZW in a float[4] or ubyte[4] or ushort[4] vector.
  */
-static INLINE LLVMValueRef
+static inline LLVMValueRef
 lp_build_unpack_arith_rgba_aos(struct gallivm_state *gallivm,
                                const struct util_format_description *desc,
                                LLVMValueRef packed)

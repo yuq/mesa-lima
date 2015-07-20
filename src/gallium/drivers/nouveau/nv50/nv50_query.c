@@ -56,7 +56,7 @@ struct nv50_query {
 
 #define NV50_QUERY_ALLOC_SPACE 256
 
-static INLINE struct nv50_query *
+static inline struct nv50_query *
 nv50_query(struct pipe_query *pipe)
 {
    return (struct nv50_query *)pipe;
@@ -281,7 +281,7 @@ nv50_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       nouveau_fence_ref(nv50->screen->base.fence.current, &q->fence);
 }
 
-static INLINE void
+static inline void
 nv50_query_update(struct nv50_query *q)
 {
    if (q->is64bit) {

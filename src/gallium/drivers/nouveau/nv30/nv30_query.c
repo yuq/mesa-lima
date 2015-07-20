@@ -98,7 +98,7 @@ struct nv30_query {
    uint64_t result;
 };
 
-static INLINE struct nv30_query *
+static inline struct nv30_query *
 nv30_query(struct pipe_query *pipe)
 {
    return (struct nv30_query *)pipe;

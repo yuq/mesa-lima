@@ -55,7 +55,7 @@ nvc0_push_context_init(struct nvc0_context *nvc0, struct push_context *ctx)
    ctx->edgeflag.stride = 0;
 }
 
-static INLINE void
+static inline void
 nvc0_vertex_configure_translate(struct nvc0_context *nvc0, int32_t index_bias)
 {
    struct translate *translate = nvc0->vertex->translate;
@@ -78,7 +78,7 @@ nvc0_vertex_configure_translate(struct nvc0_context *nvc0, int32_t index_bias)
    }
 }
 
-static INLINE void
+static inline void
 nvc0_push_map_idxbuf(struct push_context *ctx, struct nvc0_context *nvc0)
 {
    if (nvc0->idxbuf.buffer) {
@@ -90,7 +90,7 @@ nvc0_push_map_idxbuf(struct push_context *ctx, struct nvc0_context *nvc0)
    }
 }
 
-static INLINE void
+static inline void
 nvc0_push_map_edgeflag(struct push_context *ctx, struct nvc0_context *nvc0,
                        int32_t index_bias)
 {
@@ -112,7 +112,7 @@ nvc0_push_map_edgeflag(struct push_context *ctx, struct nvc0_context *nvc0,
       ctx->edgeflag.data += (intptr_t)index_bias * vb->stride;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i08(const uint8_t *elts, unsigned push, uint8_t index)
 {
    unsigned i;
@@ -120,7 +120,7 @@ prim_restart_search_i08(const uint8_t *elts, unsigned push, uint8_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i16(const uint16_t *elts, unsigned push, uint16_t index)
 {
    unsigned i;
@@ -128,7 +128,7 @@ prim_restart_search_i16(const uint16_t *elts, unsigned push, uint16_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i32(const uint32_t *elts, unsigned push, uint32_t index)
 {
    unsigned i;
@@ -136,21 +136,21 @@ prim_restart_search_i32(const uint32_t *elts, unsigned push, uint32_t index)
    return i;
 }
 
-static INLINE bool
+static inline bool
 ef_value(const struct push_context *ctx, uint32_t index)
 {
    float *pf = (float *)&ctx->edgeflag.data[index * ctx->edgeflag.stride];
    return *pf ? true : false;
 }
 
-static INLINE bool
+static inline bool
 ef_toggle(struct push_context *ctx)
 {
    ctx->edgeflag.value = !ctx->edgeflag.value;
    return ctx->edgeflag.value;
 }
 
-static INLINE unsigned
+static inline unsigned
 ef_toggle_search_i08(struct push_context *ctx, const uint8_t *elts, unsigned n)
 {
    unsigned i;
@@ -158,7 +158,7 @@ ef_toggle_search_i08(struct push_context *ctx, const uint8_t *elts, unsigned n)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 ef_toggle_search_i16(struct push_context *ctx, const uint16_t *elts, unsigned n)
 {
    unsigned i;
@@ -166,7 +166,7 @@ ef_toggle_search_i16(struct push_context *ctx, const uint16_t *elts, unsigned n)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 ef_toggle_search_i32(struct push_context *ctx, const uint32_t *elts, unsigned n)
 {
    unsigned i;
@@ -174,7 +174,7 @@ ef_toggle_search_i32(struct push_context *ctx, const uint32_t *elts, unsigned n)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 ef_toggle_search_seq(struct push_context *ctx, unsigned start, unsigned n)
 {
    unsigned i;
@@ -182,7 +182,7 @@ ef_toggle_search_seq(struct push_context *ctx, unsigned start, unsigned n)
    return i;
 }
 
-static INLINE void *
+static inline void *
 nvc0_push_setup_vertex_array(struct nvc0_context *nvc0, const unsigned count)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -409,7 +409,7 @@ disp_vertices_seq(struct push_context *ctx, unsigned start, unsigned count)
 #define NVC0_PRIM_GL_CASE(n) \
    case PIPE_PRIM_##n: return NVC0_3D_VERTEX_BEGIN_GL_PRIMITIVE_##n
 
-static INLINE unsigned
+static inline unsigned
 nvc0_prim_gl(unsigned prim)
 {
    switch (prim) {
@@ -560,7 +560,7 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
    NOUVEAU_DRV_STAT(&nvc0->screen->base, draw_calls_fallback_count, 1);
 }
 
-static INLINE void
+static inline void
 copy_indices_u8(uint32_t *dst, const uint8_t *elts, uint32_t bias, unsigned n)
 {
    unsigned i;
@@ -568,7 +568,7 @@ copy_indices_u8(uint32_t *dst, const uint8_t *elts, uint32_t bias, unsigned n)
       dst[i] = elts[i] + bias;
 }
 
-static INLINE void
+static inline void
 copy_indices_u16(uint32_t *dst, const uint16_t *elts, uint32_t bias, unsigned n)
 {
    unsigned i;
@@ -576,7 +576,7 @@ copy_indices_u16(uint32_t *dst, const uint16_t *elts, uint32_t bias, unsigned n)
       dst[i] = elts[i] + bias;
 }
 
-static INLINE void
+static inline void
 copy_indices_u32(uint32_t *dst, const uint32_t *elts, uint32_t bias, unsigned n)
 {
    unsigned i;

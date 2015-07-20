@@ -105,7 +105,7 @@ struct nvc0_screen {
    struct nouveau_object *nvsw;
 };
 
-static INLINE struct nvc0_screen *
+static inline struct nvc0_screen *
 nvc0_screen(struct pipe_screen *screen)
 {
    return (struct nvc0_screen *)screen;
@@ -290,7 +290,7 @@ int nvc0_screen_compute_setup(struct nvc0_screen *, struct nouveau_pushbuf *);
 bool nvc0_screen_resize_tls_area(struct nvc0_screen *, uint32_t lpos,
                                  uint32_t lneg, uint32_t cstack);
 
-static INLINE void
+static inline void
 nvc0_resource_fence(struct nv04_resource *res, uint32_t flags)
 {
    struct nvc0_screen *screen = nvc0_screen(res->base.screen);
@@ -302,7 +302,7 @@ nvc0_resource_fence(struct nv04_resource *res, uint32_t flags)
    }
 }
 
-static INLINE void
+static inline void
 nvc0_resource_validate(struct nv04_resource *res, uint32_t flags)
 {
    if (likely(res->bo)) {
@@ -325,21 +325,21 @@ struct nvc0_format {
 
 extern const struct nvc0_format nvc0_format_table[];
 
-static INLINE void
+static inline void
 nvc0_screen_tic_unlock(struct nvc0_screen *screen, struct nv50_tic_entry *tic)
 {
    if (tic->id >= 0)
       screen->tic.lock[tic->id / 32] &= ~(1 << (tic->id % 32));
 }
 
-static INLINE void
+static inline void
 nvc0_screen_tsc_unlock(struct nvc0_screen *screen, struct nv50_tsc_entry *tsc)
 {
    if (tsc->id >= 0)
       screen->tsc.lock[tsc->id / 32] &= ~(1 << (tsc->id % 32));
 }
 
-static INLINE void
+static inline void
 nvc0_screen_tic_free(struct nvc0_screen *screen, struct nv50_tic_entry *tic)
 {
    if (tic->id >= 0) {
@@ -348,7 +348,7 @@ nvc0_screen_tic_free(struct nvc0_screen *screen, struct nv50_tic_entry *tic)
    }
 }
 
-static INLINE void
+static inline void
 nvc0_screen_tsc_free(struct nvc0_screen *screen, struct nv50_tsc_entry *tsc)
 {
    if (tsc->id >= 0) {

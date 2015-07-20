@@ -79,7 +79,7 @@ nv30_emit_vtxattr(struct nv30_context *nv30, struct pipe_vertex_buffer *vb,
    }
 }
 
-static INLINE void
+static inline void
 nv30_vbuf_range(struct nv30_context *nv30, int vbi,
                 uint32_t *base, uint32_t *size)
 {
@@ -163,7 +163,7 @@ nv30_update_user_vbufs(struct nv30_context *nv30)
    nv30->base.vbo_dirty = true;
 }
 
-static INLINE void
+static inline void
 nv30_release_user_vbufs(struct nv30_context *nv30)
 {
    uint32_t vbo_user = nv30->vbo_user;

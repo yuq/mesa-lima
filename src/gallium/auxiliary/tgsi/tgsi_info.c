@@ -316,7 +316,7 @@ tgsi_get_processor_name( uint processor )
  *
  * MOV and UCMP is special so return VOID
  */
-static INLINE enum tgsi_opcode_type
+static inline enum tgsi_opcode_type
 tgsi_opcode_infer_type( uint opcode )
 {
    switch (opcode) {

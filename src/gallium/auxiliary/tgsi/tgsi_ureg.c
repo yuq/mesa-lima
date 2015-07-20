@@ -1830,7 +1830,7 @@ void ureg_free_tokens( const struct tgsi_token *tokens )
 }
 
 
-static INLINE unsigned
+static inline unsigned
 pipe_shader_from_tgsi_processor(unsigned processor)
 {
    switch (processor) {

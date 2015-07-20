@@ -840,7 +840,7 @@ store_unswizzled_block(struct gallivm_state *gallivm,
  *
  * A format which has irregular channel sizes such as R3_G3_B2 or R5_G6_B5.
  */
-static INLINE boolean
+static inline boolean
 is_arithmetic_format(const struct util_format_description *format_desc)
 {
    boolean arith = false;
@@ -860,7 +860,7 @@ is_arithmetic_format(const struct util_format_description *format_desc)
  * to floats for blending, and furthermore has "natural" packed AoS -> unpacked
  * SoA conversion.
  */
-static INLINE boolean
+static inline boolean
 format_expands_to_float_soa(const struct util_format_description *format_desc)
 {
    if (format_desc->format == PIPE_FORMAT_R11G11B10_FLOAT ||
@@ -876,7 +876,7 @@ format_expands_to_float_soa(const struct util_format_description *format_desc)
  *
  * e.g. RGBA16F = 4x half-float and R3G3B2 = 1x byte
  */
-static INLINE void
+static inline void
 lp_mem_type_from_format_desc(const struct util_format_description *format_desc,
                              struct lp_type* type)
 {
@@ -924,7 +924,7 @@ lp_mem_type_from_format_desc(const struct util_format_description *format_desc,
  *
  * e.g. RGBA16F = 4x float, R3G3B2 = 3x byte
  */
-static INLINE void
+static inline void
 lp_blend_type_from_format_desc(const struct util_format_description *format_desc,
                                struct lp_type* type)
 {
@@ -996,7 +996,7 @@ lp_blend_type_from_format_desc(const struct util_format_description *format_desc
  *
  * but we try to avoid division and multiplication through shifts.
  */
-static INLINE LLVMValueRef
+static inline LLVMValueRef
 scale_bits(struct gallivm_state *gallivm,
            int src_bits,
            int dst_bits,
@@ -1108,7 +1108,7 @@ scale_bits(struct gallivm_state *gallivm,
 /**
  * If RT is a smallfloat (needing denorms) format
  */
-static INLINE int
+static inline int
 have_smallfloat_format(struct lp_type dst_type,
                        enum pipe_format format)
 {
@@ -2880,7 +2880,7 @@ llvmpipe_set_constant_buffer(struct pipe_context *pipe,
 /**
  * Return the blend factor equivalent to a destination alpha of one.
  */
-static INLINE unsigned
+static inline unsigned
 force_dst_alpha_one(unsigned factor, boolean clamped_zero)
 {
    switch(factor) {

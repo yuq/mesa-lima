@@ -112,7 +112,7 @@ struct nouveau_screen {
 # define NOUVEAU_DRV_STAT_IFD(x)
 #endif
 
-static INLINE struct nouveau_screen *
+static inline struct nouveau_screen *
 nouveau_screen(struct pipe_screen *pscreen)
 {
 	return (struct nouveau_screen *)pscreen;

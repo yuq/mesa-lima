@@ -111,7 +111,7 @@ static const float cos_constants[4] = { 1.0,
 /**
  * component-wise negation of ureg
  */
-static INLINE int
+static inline int
 negate(int reg, int x, int y, int z, int w)
 {
    /* Another neat thing about the UREG representation */

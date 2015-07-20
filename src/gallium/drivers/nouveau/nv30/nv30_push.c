@@ -52,7 +52,7 @@ struct push_context {
    uint32_t restart_index;
 };
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i08(uint8_t *elts, unsigned push, uint8_t index)
 {
    unsigned i;
@@ -62,7 +62,7 @@ prim_restart_search_i08(uint8_t *elts, unsigned push, uint8_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i16(uint16_t *elts, unsigned push, uint16_t index)
 {
    unsigned i;
@@ -72,7 +72,7 @@ prim_restart_search_i16(uint16_t *elts, unsigned push, uint16_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i32(uint32_t *elts, unsigned push, uint32_t index)
 {
    unsigned i;

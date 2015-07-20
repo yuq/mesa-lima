@@ -60,7 +60,7 @@ os_time_get_nano(void);
 /*
  * Get the current time in microseconds from an unknown base.
  */
-static INLINE int64_t
+static inline int64_t
 os_time_get(void)
 {
    return os_time_get_nano() / 1000;
@@ -83,7 +83,7 @@ os_time_sleep(int64_t usecs);
  *
  * Returns true if the current time has elapsed beyond the specified interval.
  */
-static INLINE boolean
+static inline boolean
 os_time_timeout(int64_t start,
                 int64_t end,
                 int64_t curr)

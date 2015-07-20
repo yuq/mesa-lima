@@ -133,7 +133,7 @@ nvc0_mt_choose_storage_type(struct nv50_miptree *mt, bool compressed)
    return tile_flags;
 }
 
-static INLINE bool
+static inline bool
 nvc0_miptree_init_ms_mode(struct nv50_miptree *mt)
 {
    switch (mt->base.base.nr_samples) {
@@ -325,7 +325,7 @@ nvc0_miptree_create(struct pipe_screen *pscreen,
 }
 
 /* Offset of zslice @z from start of level @l. */
-INLINE unsigned
+inline unsigned
 nvc0_mt_zslice_offset(const struct nv50_miptree *mt, unsigned l, unsigned z)
 {
    const struct pipe_resource *pt = &mt->base.base;

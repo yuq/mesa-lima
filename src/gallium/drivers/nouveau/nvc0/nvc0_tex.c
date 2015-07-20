@@ -34,7 +34,7 @@
    (NV50_TIC_0_MAPA__MASK | NV50_TIC_0_MAPB__MASK |   \
     NV50_TIC_0_MAPG__MASK | NV50_TIC_0_MAPR__MASK)
 
-static INLINE uint32_t
+static inline uint32_t
 nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
 {
    switch (swz) {
@@ -645,13 +645,13 @@ nve4_set_surface_info(struct nouveau_pushbuf *push,
    }
 }
 
-static INLINE void
+static inline void
 nvc0_update_surface_bindings(struct nvc0_context *nvc0)
 {
    /* TODO */
 }
 
-static INLINE void
+static inline void
 nve4_update_surface_bindings(struct nvc0_context *nvc0)
 {
    /* TODO */

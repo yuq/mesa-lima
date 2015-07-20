@@ -364,7 +364,7 @@ nve4_compute_upload_input(struct nvc0_context *nvc0, const void *input,
    PUSH_DATA (push, NVE4_COMPUTE_FLUSH_CB);
 }
 
-static INLINE uint8_t
+static inline uint8_t
 nve4_compute_derive_cache_split(struct nvc0_context *nvc0, uint32_t shared_size)
 {
    if (shared_size > (32 << 10))
@@ -413,7 +413,7 @@ nve4_compute_setup_launch_desc(struct nvc0_context *nvc0,
    nve4_cp_launch_desc_set_cb(desc, 0, screen->parm, 0, NVE4_CP_INPUT_SIZE);
 }
 
-static INLINE struct nve4_cp_launch_desc *
+static inline struct nve4_cp_launch_desc *
 nve4_compute_alloc_launch_desc(struct nouveau_context *nv,
                                struct nouveau_bo **pbo, uint64_t *pgpuaddr)
 {

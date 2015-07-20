@@ -735,7 +735,7 @@ static const union tgsi_exec_channel M128Vec = {
  * not lead to crashes, etc.  But when debugging, it's helpful to catch
  * them.
  */
-static INLINE void
+static inline void
 check_inf_or_nan(const union tgsi_exec_channel *chan)
 {
    assert(!util_is_inf_or_nan((chan)->f[0]));

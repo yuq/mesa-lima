@@ -669,12 +669,12 @@ struct radeon_winsys {
 };
 
 
-static INLINE void radeon_emit(struct radeon_winsys_cs *cs, uint32_t value)
+static inline void radeon_emit(struct radeon_winsys_cs *cs, uint32_t value)
 {
     cs->buf[cs->cdw++] = value;
 }
 
-static INLINE void radeon_emit_array(struct radeon_winsys_cs *cs,
+static inline void radeon_emit_array(struct radeon_winsys_cs *cs,
 				     const uint32_t *values, unsigned count)
 {
     memcpy(cs->buf+cs->cdw, values, count * 4);

@@ -66,20 +66,20 @@ void *
 nouveau_resource_map_offset(struct nouveau_context *, struct nv04_resource *,
                             uint32_t offset, uint32_t flags);
 
-static INLINE void
+static inline void
 nouveau_resource_unmap(struct nv04_resource *res)
 {
    /* no-op */
 }
 
-static INLINE struct nv04_resource *
+static inline struct nv04_resource *
 nv04_resource(struct pipe_resource *resource)
 {
    return (struct nv04_resource *)resource;
 }
 
 /* is resource mapped into the GPU's address space (i.e. VRAM or GART) ? */
-static INLINE bool
+static inline bool
 nouveau_resource_mapped_by_gpu(struct pipe_resource *resource)
 {
    return nv04_resource(resource)->domain != 0;

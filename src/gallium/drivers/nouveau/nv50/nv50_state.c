@@ -62,7 +62,7 @@
  *     in advance to maintain elegant separate shader objects.)
  */
 
-static INLINE uint32_t
+static inline uint32_t
 nv50_colormask(unsigned mask)
 {
    uint32_t ret = 0;
@@ -82,7 +82,7 @@ nv50_colormask(unsigned mask)
 #define NV50_BLEND_FACTOR_CASE(a, b) \
    case PIPE_BLENDFACTOR_##a: return NV50_BLEND_FACTOR_##b
 
-static INLINE uint32_t
+static inline uint32_t
 nv50_blend_fac(unsigned factor)
 {
    switch (factor) {
@@ -439,7 +439,7 @@ nv50_zsa_state_delete(struct pipe_context *pipe, void *hwcso)
 #define NV50_TSC_WRAP_CASE(n) \
     case PIPE_TEX_WRAP_##n: return NV50_TSC_WRAP_##n
 
-static INLINE unsigned
+static inline unsigned
 nv50_tsc_wrap_mode(unsigned wrap)
 {
    switch (wrap) {
@@ -572,7 +572,7 @@ nv50_sampler_state_delete(struct pipe_context *pipe, void *hwcso)
    FREE(hwcso);
 }
 
-static INLINE void
+static inline void
 nv50_stage_sampler_states_bind(struct nv50_context *nv50, int s,
                                unsigned nr, void **hwcso)
 {
@@ -650,7 +650,7 @@ nv50_sampler_view_destroy(struct pipe_context *pipe,
    FREE(nv50_tic_entry(view));
 }
 
-static INLINE void
+static inline void
 nv50_stage_set_sampler_views(struct nv50_context *nv50, int s,
                              unsigned nr,
                              struct pipe_sampler_view **views)

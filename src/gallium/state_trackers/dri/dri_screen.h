@@ -97,7 +97,7 @@ struct dri_screen
 };
 
 /** cast wrapper */
-static INLINE struct dri_screen *
+static inline struct dri_screen *
 dri_screen(__DRIscreen * sPriv)
 {
    return (struct dri_screen *)sPriv->driverPrivate;
@@ -124,7 +124,7 @@ struct __DRIimageRec {
 
 #ifndef __NOT_HAVE_DRM_H
 
-static INLINE boolean
+static inline boolean
 dri_with_format(__DRIscreen * sPriv)
 {
    const __DRIdri2LoaderExtension *loader = sPriv->dri2.loader;
@@ -136,7 +136,7 @@ dri_with_format(__DRIscreen * sPriv)
 
 #else
 
-static INLINE boolean
+static inline boolean
 dri_with_format(__DRIscreen * sPriv)
 {
    return TRUE;

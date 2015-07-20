@@ -106,7 +106,7 @@ emit_dump_reg(struct gallivm_state *gallivm,
  * Return the context for the current function.
  * (always 'main', if shader doesn't do any function calls)
  */
-static INLINE struct function_ctx *
+static inline struct function_ctx *
 func_ctx(struct lp_exec_mask *mask)
 {
    assert(mask->function_stack_size > 0);
@@ -120,7 +120,7 @@ func_ctx(struct lp_exec_mask *mask)
  * no loop inside the current function, but we were inside
  * a loop inside another function, from which this one was called.
  */
-static INLINE boolean
+static inline boolean
 mask_has_loop(struct lp_exec_mask *mask)
 {
    int i;
@@ -138,7 +138,7 @@ mask_has_loop(struct lp_exec_mask *mask)
  * no switch in the current function, but we were inside
  * a switch inside another function, from which this one was called.
  */
-static INLINE boolean
+static inline boolean
 mask_has_switch(struct lp_exec_mask *mask)
 {
    int i;
@@ -156,7 +156,7 @@ mask_has_switch(struct lp_exec_mask *mask)
  * no conditional in the current function, but we were inside
  * a conditional inside another function, from which this one was called.
  */
-static INLINE boolean
+static inline boolean
 mask_has_cond(struct lp_exec_mask *mask)
 {
    int i;

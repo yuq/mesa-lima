@@ -52,7 +52,7 @@ struct nv30_render {
    uint32_t prim;
 };
 
-static INLINE struct nv30_render *
+static inline struct nv30_render *
 nv30_render(struct vbuf_render *render)
 {
    return (struct nv30_render *)render;

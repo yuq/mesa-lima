@@ -63,7 +63,7 @@ struct sanity_check_ctx
    boolean print;
 };
 
-static INLINE unsigned
+static inline unsigned
 scan_register_key(const scan_register *reg)
 {
    unsigned key = reg->file;

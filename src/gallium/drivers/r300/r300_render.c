@@ -871,7 +871,7 @@ struct r300_render {
     uint8_t *vbo_ptr;
 };
 
-static INLINE struct r300_render*
+static inline struct r300_render*
 r300_render(struct vbuf_render* render)
 {
     return (struct r300_render*)render;

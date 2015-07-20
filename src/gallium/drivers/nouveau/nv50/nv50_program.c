@@ -25,7 +25,7 @@
 
 #include "codegen/nv50_ir_driver.h"
 
-static INLINE unsigned
+static inline unsigned
 bitcount4(const uint32_t val)
 {
    static const uint8_t cnt[16]

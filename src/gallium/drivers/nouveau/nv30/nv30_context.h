@@ -125,7 +125,7 @@ struct nv30_context {
    bool render_cond_cond;
 };
 
-static INLINE struct nv30_context *
+static inline struct nv30_context *
 nv30_context(struct pipe_context *pipe)
 {
    return (struct nv30_context *)pipe;
@@ -214,7 +214,7 @@ nv30_state_release(struct nv30_context *nv30);
 #define NV30_PRIM_GL_CASE(n) \
    case PIPE_PRIM_##n: return NV30_3D_VERTEX_BEGIN_END_##n
 
-static INLINE unsigned
+static inline unsigned
 nv30_prim_gl(unsigned prim)
 {
    switch (prim) {

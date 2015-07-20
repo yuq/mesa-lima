@@ -41,7 +41,7 @@ struct r300_transfer {
 };
 
 /* Convenience cast wrapper. */
-static INLINE struct r300_transfer*
+static inline struct r300_transfer*
 r300_transfer(struct pipe_transfer* transfer)
 {
     return (struct r300_transfer*)transfer;

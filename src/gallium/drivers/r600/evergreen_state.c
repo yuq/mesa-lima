@@ -32,7 +32,7 @@
 #include "evergreen_compute.h"
 #include "util/u_math.h"
 
-static INLINE unsigned evergreen_array_mode(unsigned mode)
+static inline unsigned evergreen_array_mode(unsigned mode)
 {
 	switch (mode) {
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:	return V_028C70_ARRAY_LINEAR_ALIGNED;

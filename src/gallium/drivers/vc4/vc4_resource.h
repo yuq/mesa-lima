@@ -82,19 +82,19 @@ struct vc4_resource {
         struct pipe_resource *shadow_parent;
 };
 
-static INLINE struct vc4_resource *
+static inline struct vc4_resource *
 vc4_resource(struct pipe_resource *prsc)
 {
         return (struct vc4_resource *)prsc;
 }
 
-static INLINE struct vc4_surface *
+static inline struct vc4_surface *
 vc4_surface(struct pipe_surface *psurf)
 {
         return (struct vc4_surface *)psurf;
 }
 
-static INLINE struct vc4_transfer *
+static inline struct vc4_transfer *
 vc4_transfer(struct pipe_transfer *ptrans)
 {
         return (struct vc4_transfer *)ptrans;

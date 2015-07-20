@@ -938,7 +938,7 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
    }
 }
 
-static INLINE
+static inline
 void *blitter_get_fs_texfetch_depth(struct blitter_context_priv *ctx,
                                     enum pipe_texture_target target,
                                     unsigned nr_samples)
@@ -976,7 +976,7 @@ void *blitter_get_fs_texfetch_depth(struct blitter_context_priv *ctx,
    }
 }
 
-static INLINE
+static inline
 void *blitter_get_fs_texfetch_depthstencil(struct blitter_context_priv *ctx,
                                            enum pipe_texture_target target,
                                            unsigned nr_samples)
@@ -1014,7 +1014,7 @@ void *blitter_get_fs_texfetch_depthstencil(struct blitter_context_priv *ctx,
    }
 }
 
-static INLINE
+static inline
 void *blitter_get_fs_texfetch_stencil(struct blitter_context_priv *ctx,
                                       enum pipe_texture_target target,
                                       unsigned nr_samples)

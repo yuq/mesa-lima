@@ -2800,7 +2800,7 @@ void r600_update_db_shader_control(struct r600_context * rctx)
 	}
 }
 
-static INLINE unsigned r600_array_mode(unsigned mode)
+static inline unsigned r600_array_mode(unsigned mode)
 {
 	switch (mode) {
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:	return V_0280A0_ARRAY_LINEAR_ALIGNED;

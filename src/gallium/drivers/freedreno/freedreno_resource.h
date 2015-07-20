@@ -78,7 +78,7 @@ struct fd_resource {
 	struct list_head list;
 };
 
-static INLINE struct fd_resource *
+static inline struct fd_resource *
 fd_resource(struct pipe_resource *ptex)
 {
 	return (struct fd_resource *)ptex;
@@ -89,13 +89,13 @@ struct fd_transfer {
 	void *staging;
 };
 
-static INLINE struct fd_transfer *
+static inline struct fd_transfer *
 fd_transfer(struct pipe_transfer *ptrans)
 {
 	return (struct fd_transfer *)ptrans;
 }
 
-static INLINE struct fd_resource_slice *
+static inline struct fd_resource_slice *
 fd_resource_slice(struct fd_resource *rsc, unsigned level)
 {
 	assert(level <= rsc->base.b.last_level);
@@ -103,7 +103,7 @@ fd_resource_slice(struct fd_resource *rsc, unsigned level)
 }
 
 /* get offset for specified mipmap level and texture/array layer */
-static INLINE uint32_t
+static inline uint32_t
 fd_resource_offset(struct fd_resource *rsc, unsigned level, unsigned layer)
 {
 	struct fd_resource_slice *slice = fd_resource_slice(rsc, level);

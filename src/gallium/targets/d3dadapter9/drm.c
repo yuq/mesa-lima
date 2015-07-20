@@ -101,7 +101,7 @@ drm_destroy( struct d3dadapter9_context *ctx )
 
 /* read a DWORD in the form 0xnnnnnnnn, which is how sysfs pci id stuff is
  * formatted. */
-static INLINE DWORD
+static inline DWORD
 read_file_dword( const char *name )
 {
     char buf[32];
@@ -123,7 +123,7 @@ read_file_dword( const char *name )
  * dword at an offset in the raw PCI header. The reason this isn't used for all
  * data is that the kernel will make corrections but not expose them in the raw
  * header bytes. */
-static INLINE DWORD
+static inline DWORD
 read_config_dword( int fd,
                    unsigned offset )
 {
@@ -135,7 +135,7 @@ read_config_dword( int fd,
     return r;
 }
 
-static INLINE void
+static inline void
 get_bus_info( int fd,
               DWORD *vendorid,
               DWORD *deviceid,
@@ -160,7 +160,7 @@ get_bus_info( int fd,
     }
 }
 
-static INLINE void
+static inline void
 read_descriptor( struct d3dadapter9_context *ctx,
                  int fd )
 {

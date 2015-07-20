@@ -100,7 +100,7 @@ nouveau_vpe_fini(struct nouveau_decoder *dec) {
    dec->current = dec->future = dec->past = 8;
 }
 
-static INLINE void
+static inline void
 nouveau_vpe_mb_dct_blocks(struct nouveau_decoder *dec, const struct pipe_mpeg12_macroblock *mb)
 {
    int cbb;
@@ -125,7 +125,7 @@ nouveau_vpe_mb_dct_blocks(struct nouveau_decoder *dec, const struct pipe_mpeg12_
    }
 }
 
-static INLINE void
+static inline void
 nouveau_vpe_mb_data_blocks(struct nouveau_decoder *dec, const struct pipe_mpeg12_macroblock *mb)
 {
    int cbb;
@@ -143,7 +143,7 @@ nouveau_vpe_mb_data_blocks(struct nouveau_decoder *dec, const struct pipe_mpeg12
    }
 }
 
-static INLINE void
+static inline void
 nouveau_vpe_mb_dct_header(struct nouveau_decoder *dec,
                           const struct pipe_mpeg12_macroblock *mb,
                           bool luma)
@@ -187,7 +187,7 @@ nouveau_vpe_mb_dct_header(struct nouveau_decoder *dec,
                      x | (y << NV17_MPEG_CMD_MB_COORDS_Y__SHIFT));
 }
 
-static INLINE unsigned int
+static inline unsigned int
 nouveau_vpe_mb_mv_flags(bool luma, int mv_h, int mv_v, bool forward, bool first, bool vert)
 {
    unsigned mc_header = 0;
@@ -228,7 +228,7 @@ static int div_up(int val, int mult) {
    return val / mult;
 }
 
-static INLINE void
+static inline void
 nouveau_vpe_mb_mv(struct nouveau_decoder *dec, unsigned mc_header,
                    bool luma, bool frame, bool forward, bool vert,
                    int x, int y, const short motions[2],

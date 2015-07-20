@@ -56,7 +56,7 @@ struct fd_screen {
 	int64_t cpu_gpu_time_delta;
 };
 
-static INLINE struct fd_screen *
+static inline struct fd_screen *
 fd_screen(struct pipe_screen *pscreen)
 {
 	return (struct fd_screen *)pscreen;

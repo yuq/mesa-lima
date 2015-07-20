@@ -55,7 +55,7 @@ nvc0_validate_zcull(struct nvc0_context *nvc0)
 }
 #endif
 
-static INLINE void
+static inline void
 nvc0_fb_set_null_rt(struct nouveau_pushbuf *push, unsigned i)
 {
    BEGIN_NVC0(push, NVC0_3D(RT_ADDRESS_HIGH(i)), 6);
@@ -309,7 +309,7 @@ nvc0_validate_viewport(struct nvc0_context *nvc0)
    nvc0->viewports_dirty = 0;
 }
 
-static INLINE void
+static inline void
 nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -324,7 +324,7 @@ nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
    PUSH_DATAp(push, &nvc0->clip.ucp[0][0], PIPE_MAX_CLIP_PLANES * 4);
 }
 
-static INLINE void
+static inline void
 nvc0_check_program_ucps(struct nvc0_context *nvc0,
                         struct nvc0_program *vp, uint8_t mask)
 {

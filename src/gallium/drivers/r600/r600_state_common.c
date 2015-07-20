@@ -694,7 +694,7 @@ void r600_emit_viewport_state(struct r600_context *rctx, struct r600_atom *atom)
 }
 
 /* Compute the key for the hw shader variant */
-static INLINE struct r600_shader_key r600_shader_selector_key(struct pipe_context * ctx,
+static inline struct r600_shader_key r600_shader_selector_key(struct pipe_context * ctx,
 		struct r600_pipe_shader_selector * sel)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;

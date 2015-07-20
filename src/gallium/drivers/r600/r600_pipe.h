@@ -490,7 +490,7 @@ struct r600_context {
 	struct r600_isa		*isa;
 };
 
-static INLINE void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
+static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
 					    struct r600_command_buffer *cb)
 {
 	assert(cs->cdw + cb->num_dw <= RADEON_MAX_CMDBUF_DWORDS);
@@ -500,7 +500,7 @@ static INLINE void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
 
 void r600_trace_emit(struct r600_context *rctx);
 
-static INLINE void r600_emit_atom(struct r600_context *rctx, struct r600_atom *atom)
+static inline void r600_emit_atom(struct r600_context *rctx, struct r600_atom *atom)
 {
 	atom->emit(&rctx->b, atom);
 	atom->dirty = false;
@@ -509,13 +509,13 @@ static INLINE void r600_emit_atom(struct r600_context *rctx, struct r600_atom *a
 	}
 }
 
-static INLINE void r600_set_cso_state(struct r600_cso_state *state, void *cso)
+static inline void r600_set_cso_state(struct r600_cso_state *state, void *cso)
 {
 	state->cso = cso;
 	state->atom.dirty = cso != NULL;
 }
 
-static INLINE void r600_set_cso_state_with_cb(struct r600_cso_state *state, void *cso,
+static inline void r600_set_cso_state_with_cb(struct r600_cso_state *state, void *cso,
 					      struct r600_command_buffer *cb)
 {
 	state->cb = cb;
@@ -719,19 +719,19 @@ struct pipe_video_buffer *r600_video_buffer_create(struct pipe_context *pipe,
 /*Evergreen Compute packet3*/
 #define PKT3C(op, count, predicate) (PKT_TYPE_S(3) | PKT3_IT_OPCODE_S(op) | PKT_COUNT_S(count) | PKT3_PREDICATE(predicate) | RADEON_CP_PACKET3_COMPUTE_MODE)
 
-static INLINE void r600_store_value(struct r600_command_buffer *cb, unsigned value)
+static inline void r600_store_value(struct r600_command_buffer *cb, unsigned value)
 {
 	cb->buf[cb->num_dw++] = value;
 }
 
-static INLINE void r600_store_array(struct r600_command_buffer *cb, unsigned num, unsigned *ptr)
+static inline void r600_store_array(struct r600_command_buffer *cb, unsigned num, unsigned *ptr)
 {
 	assert(cb->num_dw+num <= cb->max_num_dw);
 	memcpy(&cb->buf[cb->num_dw], ptr, num * sizeof(ptr[0]));
 	cb->num_dw += num;
 }
 
-static INLINE void r600_store_config_reg_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
+static inline void r600_store_config_reg_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
 {
 	assert(reg < R600_CONTEXT_REG_OFFSET);
 	assert(cb->num_dw+2+num <= cb->max_num_dw);
@@ -743,7 +743,7 @@ static INLINE void r600_store_config_reg_seq(struct r600_command_buffer *cb, uns
  * Needs cb->pkt_flags set to  RADEON_CP_PACKET3_COMPUTE_MODE for compute
  * shaders.
  */
-static INLINE void r600_store_context_reg_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
+static inline void r600_store_context_reg_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CONTEXT_REG_OFFSET && reg < R600_CTL_CONST_OFFSET);
 	assert(cb->num_dw+2+num <= cb->max_num_dw);
@@ -755,7 +755,7 @@ static INLINE void r600_store_context_reg_seq(struct r600_command_buffer *cb, un
  * Needs cb->pkt_flags set to  RADEON_CP_PACKET3_COMPUTE_MODE for compute
  * shaders.
  */
-static INLINE void r600_store_ctl_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
+static inline void r600_store_ctl_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
 	assert(cb->num_dw+2+num <= cb->max_num_dw);
@@ -763,7 +763,7 @@ static INLINE void r600_store_ctl_const_seq(struct r600_command_buffer *cb, unsi
 	cb->buf[cb->num_dw++] = (reg - R600_CTL_CONST_OFFSET) >> 2;
 }
 
-static INLINE void r600_store_loop_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
+static inline void r600_store_loop_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_LOOP_CONST_OFFSET);
 	assert(cb->num_dw+2+num <= cb->max_num_dw);
@@ -775,7 +775,7 @@ static INLINE void r600_store_loop_const_seq(struct r600_command_buffer *cb, uns
  * Needs cb->pkt_flags set to  RADEON_CP_PACKET3_COMPUTE_MODE for compute
  * shaders.
  */
-static INLINE void eg_store_loop_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
+static inline void eg_store_loop_const_seq(struct r600_command_buffer *cb, unsigned reg, unsigned num)
 {
 	assert(reg >= EG_LOOP_CONST_OFFSET);
 	assert(cb->num_dw+2+num <= cb->max_num_dw);
@@ -783,31 +783,31 @@ static INLINE void eg_store_loop_const_seq(struct r600_command_buffer *cb, unsig
 	cb->buf[cb->num_dw++] = (reg - EG_LOOP_CONST_OFFSET) >> 2;
 }
 
-static INLINE void r600_store_config_reg(struct r600_command_buffer *cb, unsigned reg, unsigned value)
+static inline void r600_store_config_reg(struct r600_command_buffer *cb, unsigned reg, unsigned value)
 {
 	r600_store_config_reg_seq(cb, reg, 1);
 	r600_store_value(cb, value);
 }
 
-static INLINE void r600_store_context_reg(struct r600_command_buffer *cb, unsigned reg, unsigned value)
+static inline void r600_store_context_reg(struct r600_command_buffer *cb, unsigned reg, unsigned value)
 {
 	r600_store_context_reg_seq(cb, reg, 1);
 	r600_store_value(cb, value);
 }
 
-static INLINE void r600_store_ctl_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
+static inline void r600_store_ctl_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
 {
 	r600_store_ctl_const_seq(cb, reg, 1);
 	r600_store_value(cb, value);
 }
 
-static INLINE void r600_store_loop_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
+static inline void r600_store_loop_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
 {
 	r600_store_loop_const_seq(cb, reg, 1);
 	r600_store_value(cb, value);
 }
 
-static INLINE void eg_store_loop_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
+static inline void eg_store_loop_const(struct r600_command_buffer *cb, unsigned reg, unsigned value)
 {
 	eg_store_loop_const_seq(cb, reg, 1);
 	r600_store_value(cb, value);
@@ -816,14 +816,14 @@ static INLINE void eg_store_loop_const(struct r600_command_buffer *cb, unsigned 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw);
 void r600_release_command_buffer(struct r600_command_buffer *cb);
 
-static INLINE void r600_write_compute_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void r600_write_compute_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	r600_write_context_reg_seq(cs, reg, num);
 	/* Set the compute bit on the packet header */
 	cs->buf[cs->cdw - 2] |= RADEON_CP_PACKET3_COMPUTE_MODE;
 }
 
-static INLINE void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
 	assert(cs->cdw+2+num <= RADEON_MAX_CMDBUF_DWORDS);
@@ -831,13 +831,13 @@ static INLINE void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigne
 	cs->buf[cs->cdw++] = (reg - R600_CTL_CONST_OFFSET) >> 2;
 }
 
-static INLINE void r600_write_compute_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void r600_write_compute_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
 	r600_write_compute_context_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static INLINE void r600_write_context_reg_flag(struct radeon_winsys_cs *cs, unsigned reg, unsigned value, unsigned flag)
+static inline void r600_write_context_reg_flag(struct radeon_winsys_cs *cs, unsigned reg, unsigned value, unsigned flag)
 {
 	if (flag & RADEON_CP_PACKET3_COMPUTE_MODE) {
 		r600_write_compute_context_reg(cs, reg, value);
@@ -846,7 +846,7 @@ static INLINE void r600_write_context_reg_flag(struct radeon_winsys_cs *cs, unsi
 	}
 }
 
-static INLINE void r600_write_ctl_const(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void r600_write_ctl_const(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
 	r600_write_ctl_const_seq(cs, reg, 1);
 	radeon_emit(cs, value);
@@ -855,21 +855,21 @@ static INLINE void r600_write_ctl_const(struct radeon_winsys_cs *cs, unsigned re
 /*
  * common helpers
  */
-static INLINE uint32_t S_FIXED(float value, uint32_t frac_bits)
+static inline uint32_t S_FIXED(float value, uint32_t frac_bits)
 {
 	return value * (1 << frac_bits);
 }
 #define ALIGN_DIVUP(x, y) (((x) + (y) - 1) / (y))
 
 /* 12.4 fixed-point */
-static INLINE unsigned r600_pack_float_12p4(float x)
+static inline unsigned r600_pack_float_12p4(float x)
 {
 	return x <= 0    ? 0 :
 	       x >= 4096 ? 0xffff : x * 16;
 }
 
 /* Return if the depth format can be read without the DB->CB copy on r6xx-r7xx. */
-static INLINE bool r600_can_read_depth(struct r600_texture *rtex)
+static inline bool r600_can_read_depth(struct r600_texture *rtex)
 {
 	return rtex->resource.b.b.nr_samples <= 1 &&
 	       (rtex->resource.b.b.format == PIPE_FORMAT_Z16_UNORM ||
@@ -880,7 +880,7 @@ static INLINE bool r600_can_read_depth(struct r600_texture *rtex)
 #define     V_028A6C_OUTPRIM_TYPE_LINESTRIP            1
 #define     V_028A6C_OUTPRIM_TYPE_TRISTRIP             2
 
-static INLINE unsigned r600_conv_prim_to_gs_out(unsigned mode)
+static inline unsigned r600_conv_prim_to_gs_out(unsigned mode)
 {
 	static const int prim_conv[] = {
 		V_028A6C_OUTPRIM_TYPE_POINTLIST,

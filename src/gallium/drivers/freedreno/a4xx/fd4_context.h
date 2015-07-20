@@ -90,7 +90,7 @@ struct fd4_context {
 	struct ir3_shader_key last_key;
 };
 
-static INLINE struct fd4_context *
+static inline struct fd4_context *
 fd4_context(struct fd_context *ctx)
 {
 	return (struct fd4_context *)ctx;

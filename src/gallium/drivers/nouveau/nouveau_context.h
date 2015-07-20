@@ -53,7 +53,7 @@ struct nouveau_context {
    } stats;
 };
 
-static INLINE struct nouveau_context *
+static inline struct nouveau_context *
 nouveau_context(struct pipe_context *pipe)
 {
    return (struct nouveau_context *)pipe;
@@ -69,7 +69,7 @@ nouveau_scratch_runout_release(struct nouveau_context *);
  * because we don't want to un-bo_ref each allocation every time. This is less
  * work, and we need the wrap index anyway for extreme situations.
  */
-static INLINE void
+static inline void
 nouveau_scratch_done(struct nouveau_context *nv)
 {
    nv->scratch.wrap = nv->scratch.id;
@@ -84,7 +84,7 @@ void *
 nouveau_scratch_get(struct nouveau_context *, unsigned size, uint64_t *gpu_addr,
                     struct nouveau_bo **);
 
-static INLINE void
+static inline void
 nouveau_context_destroy(struct nouveau_context *ctx)
 {
    int i;
@@ -96,7 +96,7 @@ nouveau_context_destroy(struct nouveau_context *ctx)
    FREE(ctx);
 }
 
-static INLINE  void
+static inline  void
 nouveau_context_update_frame_stats(struct nouveau_context *nv)
 {
    nv->stats.buf_cache_frame <<= 1;

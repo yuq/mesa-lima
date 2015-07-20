@@ -416,7 +416,7 @@ tgsi_src(struct nvfx_vpc *vpc, const struct tgsi_full_src_register *fsrc) {
    return src;
 }
 
-static INLINE struct nvfx_reg
+static inline struct nvfx_reg
 tgsi_dst(struct nvfx_vpc *vpc, const struct tgsi_full_dst_register *fdst) {
    struct nvfx_reg dst;
 

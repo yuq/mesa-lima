@@ -45,7 +45,7 @@ struct fd3_blend_stateobj {
 	} rb_mrt[4];
 };
 
-static INLINE struct fd3_blend_stateobj *
+static inline struct fd3_blend_stateobj *
 fd3_blend_stateobj(struct pipe_blend_state *blend)
 {
 	return (struct fd3_blend_stateobj *)blend;

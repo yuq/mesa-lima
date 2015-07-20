@@ -193,7 +193,7 @@ nvc0_program_assign_varying_slots(struct nv50_ir_prog_info *info)
    return ret;
 }
 
-static INLINE void
+static inline void
 nvc0_vtgp_hdr_update_oread(struct nvc0_program *vp, uint8_t slot)
 {
    uint8_t min = (vp->hdr[4] >> 12) & 0xff;

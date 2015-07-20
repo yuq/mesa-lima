@@ -428,7 +428,7 @@ static int r300_get_video_param(struct pipe_screen *screen,
  * Whether the format matches:
  *   PIPE_FORMAT_?10?10?10?2_UNORM
  */
-static INLINE boolean
+static inline boolean
 util_format_is_rgba1010102_variant(const struct util_format_description *desc)
 {
    static const unsigned size[4] = {10, 10, 10, 2};

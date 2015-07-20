@@ -68,7 +68,7 @@ struct nvc0_so_target {
    bool clean;
 };
 
-static INLINE struct nvc0_so_target *
+static inline struct nvc0_so_target *
 nvc0_so_target(struct pipe_stream_output_target *ptarg)
 {
    return (struct nvc0_so_target *)ptarg;

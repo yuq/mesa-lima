@@ -62,7 +62,7 @@ static void nvc0_mp_pm_query_end(struct nvc0_context *, struct nvc0_query *);
 static boolean nvc0_mp_pm_query_result(struct nvc0_context *,
                                        struct nvc0_query *, void *, boolean);
 
-static INLINE struct nvc0_query *
+static inline struct nvc0_query *
 nvc0_query(struct pipe_query *pipe)
 {
    return (struct nvc0_query *)pipe;
@@ -422,7 +422,7 @@ nvc0_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       nouveau_fence_ref(nvc0->screen->base.fence.current, &q->fence);
 }
 
-static INLINE void
+static inline void
 nvc0_query_update(struct nouveau_client *cli, struct nvc0_query *q)
 {
    if (q->is64bit) {
@@ -1249,7 +1249,7 @@ nvc0_mp_pm_query_end(struct nvc0_context *nvc0, struct nvc0_query *q)
    }
 }
 
-static INLINE bool
+static inline bool
 nvc0_mp_pm_query_read_data(uint32_t count[32][4],
                            struct nvc0_context *nvc0, bool wait,
                            struct nvc0_query *q,
@@ -1274,7 +1274,7 @@ nvc0_mp_pm_query_read_data(uint32_t count[32][4],
    return true;
 }
 
-static INLINE bool
+static inline bool
 nve4_mp_pm_query_read_data(uint32_t count[32][4],
                            struct nvc0_context *nvc0, bool wait,
                            struct nvc0_query *q,

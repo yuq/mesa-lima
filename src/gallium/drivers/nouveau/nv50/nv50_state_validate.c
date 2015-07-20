@@ -2,7 +2,7 @@
 #include "nv50/nv50_context.h"
 #include "nv50/nv50_defs.xml.h"
 
-static INLINE void
+static inline void
 nv50_fb_set_null_rt(struct nouveau_pushbuf *push, unsigned i)
 {
    BEGIN_NV04(push, NV50_3D(RT_ADDRESS_HIGH(i)), 4);
@@ -275,7 +275,7 @@ nv50_validate_viewport(struct nv50_context *nv50)
    nv50->viewports_dirty = 0;
 }
 
-static INLINE void
+static inline void
 nv50_check_program_ucps(struct nv50_context *nv50,
                         struct nv50_program *vp, uint8_t mask)
 {

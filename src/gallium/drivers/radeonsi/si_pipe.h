@@ -294,7 +294,7 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
  * common helpers
  */
 
-static INLINE struct r600_resource *
+static inline struct r600_resource *
 si_resource_create_custom(struct pipe_screen *screen,
 			  unsigned usage, unsigned size)
 {
@@ -303,7 +303,7 @@ si_resource_create_custom(struct pipe_screen *screen,
 		PIPE_BIND_CUSTOM, usage, size));
 }
 
-static INLINE void
+static inline void
 si_invalidate_draw_sh_constants(struct si_context *sctx)
 {
 	sctx->last_base_vertex = SI_BASE_VERTEX_UNKNOWN;

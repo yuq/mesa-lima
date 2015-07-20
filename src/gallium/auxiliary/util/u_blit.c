@@ -158,7 +158,7 @@ util_destroy_blit(struct blit_state *ctx)
 /**
  * Helper function to set the fragment shaders.
  */
-static INLINE void
+static inline void
 set_fragment_shader(struct blit_state *ctx, uint writemask,
                     enum pipe_format format,
                     enum pipe_texture_target pipe_tex)
@@ -194,7 +194,7 @@ set_fragment_shader(struct blit_state *ctx, uint writemask,
 /**
  * Helper function to set the vertex shader.
  */
-static INLINE void
+static inline void
 set_vertex_shader(struct blit_state *ctx)
 {
    /* vertex shader - still required to provide the linkage between

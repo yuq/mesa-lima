@@ -112,7 +112,7 @@ struct fd3_context {
 	struct ir3_shader_key last_key;
 };
 
-static INLINE struct fd3_context *
+static inline struct fd3_context *
 fd3_context(struct fd_context *ctx)
 {
 	return (struct fd3_context *)ctx;

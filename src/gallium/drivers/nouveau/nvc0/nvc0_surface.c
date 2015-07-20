@@ -47,7 +47,7 @@
 #define NOUVEAU_DRIVER 0xc0
 #include "nv50/nv50_blit.h"
 
-static INLINE uint8_t
+static inline uint8_t
 nvc0_2d_format(enum pipe_format format, bool dst, bool dst_src_equal)
 {
    uint8_t id = nvc0_format_table[format].rt;

@@ -31,7 +31,7 @@
    (NV50_TIC_0_MAPA__MASK | NV50_TIC_0_MAPB__MASK |   \
     NV50_TIC_0_MAPG__MASK | NV50_TIC_0_MAPR__MASK)
 
-static INLINE uint32_t
+static inline uint32_t
 nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
 {
    switch (swz) {

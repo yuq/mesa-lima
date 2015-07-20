@@ -15,7 +15,7 @@ struct nv30_surface {
    uint16_t depth;
 };
 
-static INLINE struct nv30_surface *
+static inline struct nv30_surface *
 nv30_surface(struct pipe_surface *ps)
 {
    return (struct nv30_surface *)ps;
@@ -38,7 +38,7 @@ struct nv30_miptree {
    unsigned ms_y:1;
 };
 
-static INLINE struct nv30_miptree *
+static inline struct nv30_miptree *
 nv30_miptree(struct pipe_resource *pt)
 {
    return (struct nv30_miptree *)pt;

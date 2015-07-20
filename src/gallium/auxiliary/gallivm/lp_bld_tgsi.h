@@ -562,13 +562,13 @@ struct lp_build_tgsi_aos_context
 
 };
 
-static INLINE struct lp_build_tgsi_soa_context *
+static inline struct lp_build_tgsi_soa_context *
 lp_soa_context(struct lp_build_tgsi_context *bld_base)
 {
    return (struct lp_build_tgsi_soa_context *)bld_base;
 }
 
-static INLINE struct lp_build_tgsi_aos_context *
+static inline struct lp_build_tgsi_aos_context *
 lp_aos_context(struct lp_build_tgsi_context *bld_base)
 {
    return (struct lp_build_tgsi_aos_context *)bld_base;

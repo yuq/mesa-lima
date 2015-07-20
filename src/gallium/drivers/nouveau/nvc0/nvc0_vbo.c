@@ -196,7 +196,7 @@ nvc0_set_constant_vertex_attrib(struct nvc0_context *nvc0, const unsigned a)
    push->cur += 5;
 }
 
-static INLINE void
+static inline void
 nvc0_user_vbuf_range(struct nvc0_context *nvc0, int vbi,
                      uint32_t *base, uint32_t *size)
 {
@@ -214,7 +214,7 @@ nvc0_user_vbuf_range(struct nvc0_context *nvc0, int vbi,
    }
 }
 
-static INLINE void
+static inline void
 nvc0_release_user_vbufs(struct nvc0_context *nvc0)
 {
    if (nvc0->vbo_user) {
@@ -529,7 +529,7 @@ nvc0_idxbuf_validate(struct nvc0_context *nvc0)
 #define NVC0_PRIM_GL_CASE(n) \
    case PIPE_PRIM_##n: return NVC0_3D_VERTEX_BEGIN_GL_PRIMITIVE_##n
 
-static INLINE unsigned
+static inline unsigned
 nvc0_prim_gl(unsigned prim)
 {
    switch (prim) {
@@ -835,7 +835,7 @@ nvc0_draw_indirect(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
                         buf->bo, offset, NVC0_IB_ENTRY_1_NO_PREFETCH | size);
 }
 
-static INLINE void
+static inline void
 nvc0_update_prim_restart(struct nvc0_context *nvc0, bool en, uint32_t index)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;

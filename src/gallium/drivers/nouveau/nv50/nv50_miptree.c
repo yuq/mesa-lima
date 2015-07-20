@@ -204,7 +204,7 @@ const struct u_resource_vtbl nv50_miptree_vtbl =
    u_default_transfer_inline_write  /* transfer_inline_write */
 };
 
-static INLINE bool
+static inline bool
 nv50_miptree_init_ms_mode(struct nv50_miptree *mt)
 {
    switch (mt->base.base.nr_samples) {
@@ -438,7 +438,7 @@ nv50_miptree_from_handle(struct pipe_screen *pscreen,
 
 
 /* Offset of zslice @z from start of level @l. */
-INLINE unsigned
+inline unsigned
 nv50_mt_zslice_offset(const struct nv50_miptree *mt, unsigned l, unsigned z)
 {
    const struct pipe_resource *pt = &mt->base.base;

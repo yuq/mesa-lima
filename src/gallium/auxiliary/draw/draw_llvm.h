@@ -350,7 +350,7 @@ struct draw_gs_llvm_variant_key
     PIPE_MAX_SHADER_SAMPLER_VIEWS * sizeof(struct draw_sampler_static_state))
 
 
-static INLINE size_t
+static inline size_t
 draw_llvm_variant_key_size(unsigned nr_vertex_elements,
                            unsigned nr_samplers)
 {
@@ -360,7 +360,7 @@ draw_llvm_variant_key_size(unsigned nr_vertex_elements,
 }
 
 
-static INLINE size_t
+static inline size_t
 draw_gs_llvm_variant_key_size(unsigned nr_samplers)
 {
    return (sizeof(struct draw_gs_llvm_variant_key) +
@@ -368,7 +368,7 @@ draw_gs_llvm_variant_key_size(unsigned nr_samplers)
 }
 
 
-static INLINE struct draw_sampler_static_state *
+static inline struct draw_sampler_static_state *
 draw_llvm_variant_key_samplers(struct draw_llvm_variant_key *key)
 {
    return (struct draw_sampler_static_state *)
@@ -476,13 +476,13 @@ struct draw_llvm {
 };
 
 
-static INLINE struct llvm_vertex_shader *
+static inline struct llvm_vertex_shader *
 llvm_vertex_shader(struct draw_vertex_shader *vs)
 {
    return (struct llvm_vertex_shader *)vs;
 }
 
-static INLINE struct llvm_geometry_shader *
+static inline struct llvm_geometry_shader *
 llvm_geometry_shader(struct draw_geometry_shader *gs)
 {
    return (struct llvm_geometry_shader *)gs;

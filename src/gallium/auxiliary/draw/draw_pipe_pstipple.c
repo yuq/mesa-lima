@@ -462,7 +462,7 @@ bind_pstip_fragment_shader(struct pstip_stage *pstip)
 }
 
 
-static INLINE struct pstip_stage *
+static inline struct pstip_stage *
 pstip_stage( struct draw_stage *stage )
 {
    return (struct pstip_stage *) stage;

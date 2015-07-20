@@ -184,13 +184,13 @@ struct nvc0_context {
    struct util_dynarray global_residents;
 };
 
-static INLINE struct nvc0_context *
+static inline struct nvc0_context *
 nvc0_context(struct pipe_context *pipe)
 {
    return (struct nvc0_context *)pipe;
 }
 
-static INLINE unsigned
+static inline unsigned
 nvc0_shader_stage(unsigned pipe)
 {
    switch (pipe) {

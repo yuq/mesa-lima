@@ -192,7 +192,7 @@ static boolean delete_vertex_elements(struct cso_context *ctx,
 }
 
 
-static INLINE boolean delete_cso(struct cso_context *ctx,
+static inline boolean delete_cso(struct cso_context *ctx,
                                  void *state, enum cso_cache_type type)
 {
    switch (type) {
@@ -213,7 +213,7 @@ static INLINE boolean delete_cso(struct cso_context *ctx,
    return FALSE;
 }
 
-static INLINE void
+static inline void
 sanitize_hash(struct cso_hash *hash, enum cso_cache_type type,
               int max_size, void *user_data)
 {
@@ -921,14 +921,14 @@ void cso_restore_tesseval_shader(struct cso_context *ctx)
 
 /* clip state */
 
-static INLINE void
+static inline void
 clip_state_cpy(struct pipe_clip_state *dst,
                const struct pipe_clip_state *src)
 {
    memcpy(dst->ucp, src->ucp, sizeof(dst->ucp));
 }
 
-static INLINE int
+static inline int
 clip_state_cmp(const struct pipe_clip_state *a,
                const struct pipe_clip_state *b)
 {

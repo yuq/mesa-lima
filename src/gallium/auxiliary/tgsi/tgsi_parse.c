@@ -69,7 +69,7 @@ tgsi_parse_end_of_tokens(
  * warnings.  The warnings seem harmless on x86 but on PPC they cause
  * real failures.
  */
-static INLINE void
+static inline void
 copy_token(void *dst, const void *src)
 {
    memcpy(dst, src, 4);

@@ -164,14 +164,14 @@ struct nv50_context {
    struct nv50_blitctx *blit;
 };
 
-static INLINE struct nv50_context *
+static inline struct nv50_context *
 nv50_context(struct pipe_context *pipe)
 {
    return (struct nv50_context *)pipe;
 }
 
 /* return index used in nv50_context arrays for a specific shader type */
-static INLINE unsigned
+static inline unsigned
 nv50_context_shader_stage(unsigned pipe)
 {
    switch (pipe) {

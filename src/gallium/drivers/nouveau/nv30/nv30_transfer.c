@@ -41,7 +41,7 @@
  * of different ways.
  */
 
-static INLINE bool
+static inline bool
 nv30_transfer_scaled(struct nv30_rect *src, struct nv30_rect *dst)
 {
    if (src->x1 - src->x0 != dst->x1 - dst->x0)
@@ -51,7 +51,7 @@ nv30_transfer_scaled(struct nv30_rect *src, struct nv30_rect *dst)
    return false;
 }
 
-static INLINE bool
+static inline bool
 nv30_transfer_blit(XFER_ARGS)
 {
    if (nv30->screen->eng3d->oclass < NV40_3D_CLASS)
@@ -67,7 +67,7 @@ nv30_transfer_blit(XFER_ARGS)
    return true;
 }
 
-static INLINE struct nouveau_heap *
+static inline struct nouveau_heap *
 nv30_transfer_rect_vertprog(struct nv30_context *nv30)
 {
    struct nouveau_heap *heap = nv30->screen->vp_exec_heap;
@@ -108,7 +108,7 @@ nv30_transfer_rect_vertprog(struct nv30_context *nv30)
 }
 
 
-static INLINE struct nv04_resource *
+static inline struct nv04_resource *
 nv30_transfer_rect_fragprog(struct nv30_context *nv30)
 {
    struct nv04_resource *fp = nv04_resource(nv30->blit_fp);
@@ -554,7 +554,7 @@ linear_ptr(struct nv30_rect *rect, char *base, int x, int y, int z)
    return base + (y * rect->pitch) + (x * rect->cpp);
 }
 
-static INLINE unsigned
+static inline unsigned
 swizzle2d(unsigned v, unsigned s)
 {
    v = (v | (v << 8)) & 0x00ff00ff;
@@ -614,7 +614,7 @@ swizzle3d_ptr(struct nv30_rect *rect, char *base, int x, int y, int z)
 
 typedef char *(*get_ptr_t)(struct nv30_rect *, char *, int, int, int);
 
-static INLINE get_ptr_t
+static inline get_ptr_t
 get_ptr(struct nv30_rect *rect)
 {
    if (rect->pitch)

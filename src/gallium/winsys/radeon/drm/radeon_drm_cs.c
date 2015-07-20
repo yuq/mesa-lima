@@ -195,7 +195,7 @@ radeon_drm_cs_create(struct radeon_winsys *rws,
 
 #define OUT_CS(cs, value) (cs)->buf[(cs)->cdw++] = (value)
 
-static INLINE void update_reloc(struct drm_radeon_cs_reloc *reloc,
+static inline void update_reloc(struct drm_radeon_cs_reloc *reloc,
                                 enum radeon_bo_domain rd,
                                 enum radeon_bo_domain wd,
                                 unsigned priority,

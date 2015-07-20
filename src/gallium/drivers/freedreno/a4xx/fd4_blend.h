@@ -42,7 +42,7 @@ struct fd4_blend_stateobj {
 	uint32_t rb_fs_output;
 };
 
-static INLINE struct fd4_blend_stateobj *
+static inline struct fd4_blend_stateobj *
 fd4_blend_stateobj(struct pipe_blend_state *blend)
 {
 	return (struct fd4_blend_stateobj *)blend;

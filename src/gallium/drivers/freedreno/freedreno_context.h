@@ -356,13 +356,13 @@ struct fd_context {
 			const union pipe_color_union *color, double depth, unsigned stencil);
 };
 
-static INLINE struct fd_context *
+static inline struct fd_context *
 fd_context(struct pipe_context *pctx)
 {
 	return (struct fd_context *)pctx;
 }
 
-static INLINE struct pipe_scissor_state *
+static inline struct pipe_scissor_state *
 fd_context_get_scissor(struct fd_context *ctx)
 {
 	if (ctx->rasterizer && ctx->rasterizer->scissor)
@@ -370,13 +370,13 @@ fd_context_get_scissor(struct fd_context *ctx)
 	return &ctx->disabled_scissor;
 }
 
-static INLINE bool
+static inline bool
 fd_supported_prim(struct fd_context *ctx, unsigned prim)
 {
 	return (1 << prim) & ctx->primtype_mask;
 }
 
-static INLINE void
+static inline void
 fd_reset_wfi(struct fd_context *ctx)
 {
 	ctx->needs_wfi = true;

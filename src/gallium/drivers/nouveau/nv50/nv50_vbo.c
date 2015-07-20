@@ -188,7 +188,7 @@ nv50_emit_vtxattr(struct nv50_context *nv50, struct pipe_vertex_buffer *vb,
    }
 }
 
-static INLINE void
+static inline void
 nv50_user_vbuf_range(struct nv50_context *nv50, unsigned vbi,
                      uint32_t *base, uint32_t *size)
 {
@@ -278,7 +278,7 @@ nv50_update_user_vbufs(struct nv50_context *nv50)
    nv50->base.vbo_dirty = true;
 }
 
-static INLINE void
+static inline void
 nv50_release_user_vbufs(struct nv50_context *nv50)
 {
    if (nv50->vbo_user) {
@@ -423,7 +423,7 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
 #define NV50_PRIM_GL_CASE(n) \
    case PIPE_PRIM_##n: return NV50_3D_VERTEX_BEGIN_GL_PRIMITIVE_##n
 
-static INLINE unsigned
+static inline unsigned
 nv50_prim_gl(unsigned prim)
 {
    switch (prim) {

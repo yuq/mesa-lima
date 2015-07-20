@@ -27,7 +27,7 @@
 
 #include "nvc0/nvc0_context.h"
 
-static INLINE void
+static inline void
 nvc0_program_update_context_state(struct nvc0_context *nvc0,
                                   struct nvc0_program *prog, int stage)
 {
@@ -63,7 +63,7 @@ nvc0_program_update_context_state(struct nvc0_context *nvc0,
    }
 }
 
-static INLINE bool
+static inline bool
 nvc0_program_validate(struct nvc0_context *nvc0, struct nvc0_program *prog)
 {
    if (prog->mem)

@@ -33,7 +33,7 @@
 #include "nv30/nv30_resource.h"
 #include "nv30/nv30_transfer.h"
 
-static INLINE unsigned
+static inline unsigned
 layer_offset(struct pipe_resource *pt, unsigned level, unsigned layer)
 {
    struct nv30_miptree *mt = nv30_miptree(pt);
@@ -78,13 +78,13 @@ struct nv30_transfer {
    unsigned nblocksy;
 };
 
-static INLINE struct nv30_transfer *
+static inline struct nv30_transfer *
 nv30_transfer(struct pipe_transfer *ptx)
 {
    return (struct nv30_transfer *)ptx;
 }
 
-static INLINE void
+static inline void
 define_rect(struct pipe_resource *pt, unsigned level, unsigned z,
             unsigned x, unsigned y, unsigned w, unsigned h,
             struct nv30_rect *rect)

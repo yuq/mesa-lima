@@ -29,7 +29,7 @@ struct push_context {
    uint32_t instance_id;
 };
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i08(uint8_t *elts, unsigned push, uint8_t index)
 {
    unsigned i;
@@ -39,7 +39,7 @@ prim_restart_search_i08(uint8_t *elts, unsigned push, uint8_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i16(uint16_t *elts, unsigned push, uint16_t index)
 {
    unsigned i;
@@ -49,7 +49,7 @@ prim_restart_search_i16(uint16_t *elts, unsigned push, uint16_t index)
    return i;
 }
 
-static INLINE unsigned
+static inline unsigned
 prim_restart_search_i32(uint32_t *elts, unsigned push, uint32_t index)
 {
    unsigned i;
@@ -179,7 +179,7 @@ emit_vertices_seq(struct push_context *ctx, unsigned start, unsigned count)
 #define NV50_PRIM_GL_CASE(n) \
    case PIPE_PRIM_##n: return NV50_3D_VERTEX_BEGIN_GL_PRIMITIVE_##n
 
-static INLINE unsigned
+static inline unsigned
 nv50_prim_gl(unsigned prim)
 {
    switch (prim) {

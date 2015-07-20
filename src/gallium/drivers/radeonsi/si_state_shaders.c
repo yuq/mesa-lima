@@ -335,7 +335,7 @@ static void si_shader_init_pm4_state(struct si_shader *shader)
 }
 
 /* Compute the key for the hw shader variant */
-static INLINE void si_shader_selector_key(struct pipe_context *ctx,
+static inline void si_shader_selector_key(struct pipe_context *ctx,
 					  struct si_shader_selector *sel,
 					  union si_shader_key *key)
 {

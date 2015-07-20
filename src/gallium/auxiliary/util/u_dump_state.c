@@ -39,7 +39,7 @@
  * Dump primitives
  */
 
-static INLINE void
+static inline void
 util_stream_writef(FILE *stream, const char *format, ...)
 {
    static char buf[1024];

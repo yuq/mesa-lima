@@ -44,7 +44,7 @@ struct nvfx_fpc {
    struct util_dynarray label_relocs;
 };
 
-static INLINE struct nvfx_reg
+static inline struct nvfx_reg
 temp(struct nvfx_fpc *fpc)
 {
    int idx = __builtin_ctzll(~fpc->r_temps);
@@ -60,7 +60,7 @@ temp(struct nvfx_fpc *fpc)
    return nvfx_reg(NVFXSR_TEMP, idx);
 }
 
-static INLINE void
+static inline void
 release_temps(struct nvfx_fpc *fpc)
 {
    fpc->r_temps &= ~fpc->r_temps_discard;
@@ -373,7 +373,7 @@ nv40_fp_brk(struct nvfx_fpc *fpc)
    hw[3] = 0;
 }
 
-static INLINE struct nvfx_src
+static inline struct nvfx_src
 tgsi_src(struct nvfx_fpc *fpc, const struct tgsi_full_src_register *fsrc)
 {
    struct nvfx_src src;
@@ -415,7 +415,7 @@ tgsi_src(struct nvfx_fpc *fpc, const struct tgsi_full_src_register *fsrc)
    return src;
 }
 
-static INLINE struct nvfx_reg
+static inline struct nvfx_reg
 tgsi_dst(struct nvfx_fpc *fpc, const struct tgsi_full_dst_register *fdst) {
    switch (fdst->Register.File) {
    case TGSI_FILE_OUTPUT:
@@ -430,7 +430,7 @@ tgsi_dst(struct nvfx_fpc *fpc, const struct tgsi_full_dst_register *fdst) {
    }
 }
 
-static INLINE int
+static inline int
 tgsi_mask(uint tgsi)
 {
    int mask = 0;

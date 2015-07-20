@@ -22,13 +22,13 @@ struct nouveau_transfer {
    uint32_t offset;
 };
 
-static INLINE struct nouveau_transfer *
+static inline struct nouveau_transfer *
 nouveau_transfer(struct pipe_transfer *transfer)
 {
    return (struct nouveau_transfer *)transfer;
 }
 
-static INLINE bool
+static inline bool
 nouveau_buffer_malloc(struct nv04_resource *buf)
 {
    if (!buf->data)
@@ -36,7 +36,7 @@ nouveau_buffer_malloc(struct nv04_resource *buf)
    return !!buf->data;
 }
 
-static INLINE bool
+static inline bool
 nouveau_buffer_allocate(struct nouveau_screen *screen,
                         struct nv04_resource *buf, unsigned domain)
 {
@@ -69,7 +69,7 @@ nouveau_buffer_allocate(struct nouveau_screen *screen,
    return true;
 }
 
-static INLINE void
+static inline void
 release_allocation(struct nouveau_mm_allocation **mm,
                    struct nouveau_fence *fence)
 {
@@ -77,7 +77,7 @@ release_allocation(struct nouveau_mm_allocation **mm,
    (*mm) = NULL;
 }
 
-INLINE void
+inline void
 nouveau_buffer_release_gpu_storage(struct nv04_resource *buf)
 {
    nouveau_bo_ref(NULL, &buf->bo);
@@ -93,7 +93,7 @@ nouveau_buffer_release_gpu_storage(struct nv04_resource *buf)
    buf->domain = 0;
 }
 
-static INLINE bool
+static inline bool
 nouveau_buffer_reallocate(struct nouveau_screen *screen,
                           struct nv04_resource *buf, unsigned domain)
 {
@@ -219,7 +219,7 @@ nouveau_transfer_write(struct nouveau_context *nv, struct nouveau_transfer *tx,
 /* Does a CPU wait for the buffer's backing data to become reliably accessible
  * for write/read by waiting on the buffer's relevant fences.
  */
-static INLINE bool
+static inline bool
 nouveau_buffer_sync(struct nv04_resource *buf, unsigned rw)
 {
    if (rw == PIPE_TRANSFER_READ) {
@@ -244,7 +244,7 @@ nouveau_buffer_sync(struct nv04_resource *buf, unsigned rw)
    return true;
 }
 
-static INLINE bool
+static inline bool
 nouveau_buffer_busy(struct nv04_resource *buf, unsigned rw)
 {
    if (rw == PIPE_TRANSFER_READ)
@@ -253,7 +253,7 @@ nouveau_buffer_busy(struct nv04_resource *buf, unsigned rw)
       return (buf->fence && !nouveau_fence_signalled(buf->fence));
 }
 
-static INLINE void
+static inline void
 nouveau_buffer_transfer_init(struct nouveau_transfer *tx,
                              struct pipe_resource *resource,
                              const struct pipe_box *box,
@@ -275,7 +275,7 @@ nouveau_buffer_transfer_init(struct nouveau_transfer *tx,
    tx->map = NULL;
 }
 
-static INLINE void
+static inline void
 nouveau_buffer_transfer_del(struct nouveau_context *nv,
                             struct nouveau_transfer *tx)
 {
@@ -330,7 +330,7 @@ nouveau_buffer_cache(struct nouveau_context *nv, struct nv04_resource *buf)
  * resource. This can be useful if we would otherwise have to wait for a read
  * operation to complete on this data.
  */
-static INLINE bool
+static inline bool
 nouveau_buffer_should_discard(struct nv04_resource *buf, unsigned usage)
 {
    if (!(usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE))
@@ -725,7 +725,7 @@ nouveau_user_buffer_create(struct pipe_screen *pscreen, void *ptr,
    return &buffer->base;
 }
 
-static INLINE bool
+static inline bool
 nouveau_buffer_data_fetch(struct nouveau_context *nv, struct nv04_resource *buf,
                           struct nouveau_bo *bo, unsigned offset, unsigned size)
 {
@@ -833,7 +833,7 @@ nouveau_user_buffer_upload(struct nouveau_context *nv,
 
 /* Scratch data allocation. */
 
-static INLINE int
+static inline int
 nouveau_scratch_bo_alloc(struct nouveau_context *nv, struct nouveau_bo **pbo,
                          unsigned size)
 {
@@ -870,7 +870,7 @@ nouveau_scratch_runout_release(struct nouveau_context *nv)
 /* Allocate an extra bo if we can't fit everything we need simultaneously.
  * (Could happen for very large user arrays.)
  */
-static INLINE bool
+static inline bool
 nouveau_scratch_runout(struct nouveau_context *nv, unsigned size)
 {
    int ret;
@@ -904,7 +904,7 @@ nouveau_scratch_runout(struct nouveau_context *nv, unsigned size)
 /* Continue to next scratch buffer, if available (no wrapping, large enough).
  * Allocate it if it has not yet been created.
  */
-static INLINE bool
+static inline bool
 nouveau_scratch_next(struct nouveau_context *nv, unsigned size)
 {
    struct nouveau_bo *bo;

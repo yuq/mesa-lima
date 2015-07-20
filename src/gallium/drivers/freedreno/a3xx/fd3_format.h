@@ -41,7 +41,7 @@ enum a3xx_color_swap fd3_pipe2swap(enum pipe_format format);
 uint32_t fd3_tex_swiz(enum pipe_format format, unsigned swizzle_r,
 		unsigned swizzle_g, unsigned swizzle_b, unsigned swizzle_a);
 
-static INLINE bool
+static inline bool
 fd3_half_precision(const struct pipe_surface *surface)
 {
 	enum pipe_format format;

@@ -35,7 +35,7 @@
 
 #include "nouveau_gldefs.h"
 
-static INLINE uint32_t
+static inline uint32_t
 nvc0_colormask(unsigned mask)
 {
     uint32_t ret = 0;
@@ -55,7 +55,7 @@ nvc0_colormask(unsigned mask)
 #define NVC0_BLEND_FACTOR_CASE(a, b) \
    case PIPE_BLENDFACTOR_##a: return NV50_BLEND_FACTOR_##b
 
-static INLINE uint32_t
+static inline uint32_t
 nvc0_blend_fac(unsigned factor)
 {
    switch (factor) {
@@ -428,7 +428,7 @@ nvc0_sampler_state_delete(struct pipe_context *pipe, void *hwcso)
    FREE(hwcso);
 }
 
-static INLINE void
+static inline void
 nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0, int s,
                                unsigned nr, void **hwcso)
 {
@@ -537,7 +537,7 @@ nvc0_sampler_view_destroy(struct pipe_context *pipe,
    FREE(nv50_tic_entry(view));
 }
 
-static INLINE void
+static inline void
 nvc0_stage_set_sampler_views(struct nvc0_context *nvc0, int s,
                              unsigned nr,
                              struct pipe_sampler_view **views)
@@ -1136,7 +1136,7 @@ nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
 #endif
 }
 
-static INLINE void
+static inline void
 nvc0_set_global_handle(uint32_t *phandle, struct pipe_resource *res)
 {
    struct nv04_resource *buf = nv04_resource(res);

@@ -97,7 +97,7 @@ struct radeon_drm_winsys {
     struct radeon_drm_cs *cs_stack[RING_LAST];
 };
 
-static INLINE struct radeon_drm_winsys *
+static inline struct radeon_drm_winsys *
 radeon_drm_winsys(struct radeon_winsys *base)
 {
     return (struct radeon_drm_winsys*)base;

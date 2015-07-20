@@ -56,7 +56,7 @@ struct nv50_miptree {
    uint8_t ms_mode;
 };
 
-static INLINE struct nv50_miptree *
+static inline struct nv50_miptree *
 nv50_miptree(struct pipe_resource *pt)
 {
    return (struct nv50_miptree *)pt;
@@ -98,13 +98,13 @@ struct nv50_surface {
    uint16_t depth;
 };
 
-static INLINE struct nv50_surface *
+static inline struct nv50_surface *
 nv50_surface(struct pipe_surface *ps)
 {
    return (struct nv50_surface *)ps;
 }
 
-static INLINE enum pipe_format
+static inline enum pipe_format
 nv50_zs_to_s_format(enum pipe_format format)
 {
    switch (format) {

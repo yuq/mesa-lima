@@ -631,7 +631,7 @@ static void pend_present(struct NineSwapChain9 *This,
     return;
 }
 
-static INLINE HRESULT
+static inline HRESULT
 present( struct NineSwapChain9 *This,
          const RECT *pSourceRect,
          const RECT *pDestRect,

@@ -550,12 +550,12 @@ void cayman_emit_msaa_config(struct radeon_winsys_cs *cs, int nr_samples,
 
 /* Inline helpers. */
 
-static INLINE struct r600_resource *r600_resource(struct pipe_resource *r)
+static inline struct r600_resource *r600_resource(struct pipe_resource *r)
 {
 	return (struct r600_resource*)r;
 }
 
-static INLINE void
+static inline void
 r600_resource_reference(struct r600_resource **ptr, struct r600_resource *res)
 {
 	pipe_resource_reference((struct pipe_resource **)ptr,

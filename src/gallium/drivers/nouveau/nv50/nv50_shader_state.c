@@ -127,7 +127,7 @@ nv50_program_validate(struct nv50_context *nv50, struct nv50_program *prog)
    return nv50_program_upload_code(nv50, prog);
 }
 
-static INLINE void
+static inline void
 nv50_program_update_context_state(struct nv50_context *nv50,
                                   struct nv50_program *prog, int stage)
 {

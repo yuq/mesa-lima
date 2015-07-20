@@ -88,7 +88,7 @@
  * actually try to allocate the maximum and run out of memory and crash.  So
  * stick with something reasonable here.
  */
-static INLINE int
+static inline int
 gallivm_get_shader_param(enum pipe_shader_cap param)
 {
    switch(param) {

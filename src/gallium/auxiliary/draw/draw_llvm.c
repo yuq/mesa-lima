@@ -72,7 +72,7 @@ struct draw_gs_llvm_iface {
    LLVMValueRef input;
 };
 
-static INLINE const struct draw_gs_llvm_iface *
+static inline const struct draw_gs_llvm_iface *
 draw_gs_llvm_iface(const struct lp_build_tgsi_gs_iface *iface)
 {
    return (const struct draw_gs_llvm_iface *)iface;

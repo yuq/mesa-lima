@@ -44,7 +44,7 @@
 
 static const struct pb_vtbl radeon_bo_vtbl;
 
-static INLINE struct radeon_bo *radeon_bo(struct pb_buffer *bo)
+static inline struct radeon_bo *radeon_bo(struct pb_buffer *bo)
 {
     assert(bo->vtbl == &radeon_bo_vtbl);
     return (struct radeon_bo *)bo;
@@ -78,7 +78,7 @@ struct radeon_bomgr {
     struct list_head va_holes;
 };
 
-static INLINE struct radeon_bomgr *radeon_bomgr(struct pb_manager *mgr)
+static inline struct radeon_bomgr *radeon_bomgr(struct pb_manager *mgr)
 {
     return (struct radeon_bomgr *)mgr;
 }
