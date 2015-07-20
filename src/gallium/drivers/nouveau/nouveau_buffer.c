@@ -40,13 +40,7 @@ static INLINE boolean
 nouveau_buffer_allocate(struct nouveau_screen *screen,
                         struct nv04_resource *buf, unsigned domain)
 {
-   uint32_t size = buf->base.width0;
-
-   if (buf->base.bind & (PIPE_BIND_CONSTANT_BUFFER |
-                         PIPE_BIND_COMPUTE_RESOURCE |
-                         PIPE_BIND_SHADER_BUFFER |
-                         PIPE_BIND_SHADER_IMAGE))
-      size = align(size, 0x100);
+   uint32_t size = align(buf->base.width0, 0x100);
 
    if (domain == NOUVEAU_BO_VRAM) {
       buf->mm = nouveau_mm_allocate(screen->mm_VRAM, size,
