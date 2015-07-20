@@ -82,7 +82,7 @@ nv50_validate_fb(struct nv50_context *nv50)
       ms_mode = mt->ms_mode;
 
       if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-         nv50->state.rt_serialize = TRUE;
+         nv50->state.rt_serialize = true;
       mt->base.status |= NOUVEAU_BUFFER_STATUS_GPU_WRITING;
       mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -111,7 +111,7 @@ nv50_validate_fb(struct nv50_context *nv50)
       ms_mode = mt->ms_mode;
 
       if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-         nv50->state.rt_serialize = TRUE;
+         nv50->state.rt_serialize = true;
       mt->base.status |= NOUVEAU_BUFFER_STATUS_GPU_WRITING;
       mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -486,7 +486,7 @@ static struct state_validate {
 };
 #define validate_list_len (sizeof(validate_list) / sizeof(validate_list[0]))
 
-boolean
+bool
 nv50_state_validate(struct nv50_context *nv50, uint32_t mask, unsigned words)
 {
    uint32_t state_mask;
@@ -508,19 +508,19 @@ nv50_state_validate(struct nv50_context *nv50, uint32_t mask, unsigned words)
       nv50->dirty &= ~state_mask;
 
       if (nv50->state.rt_serialize) {
-         nv50->state.rt_serialize = FALSE;
+         nv50->state.rt_serialize = false;
          BEGIN_NV04(nv50->base.pushbuf, SUBC_3D(NV50_GRAPH_SERIALIZE), 1);
          PUSH_DATA (nv50->base.pushbuf, 0);
       }
 
-      nv50_bufctx_fence(nv50->bufctx_3d, FALSE);
+      nv50_bufctx_fence(nv50->bufctx_3d, false);
    }
    nouveau_pushbuf_bufctx(nv50->base.pushbuf, nv50->bufctx_3d);
    ret = nouveau_pushbuf_validate(nv50->base.pushbuf);
 
    if (unlikely(nv50->state.flushed)) {
-      nv50->state.flushed = FALSE;
-      nv50_bufctx_fence(nv50->bufctx_3d, TRUE);
+      nv50->state.flushed = false;
+      nv50_bufctx_fence(nv50->bufctx_3d, true);
    }
    return !ret;
 }

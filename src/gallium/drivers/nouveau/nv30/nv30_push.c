@@ -47,7 +47,7 @@ struct push_context {
 
    struct translate *translate;
 
-   boolean primitive_restart;
+   bool primitive_restart;
    uint32_t prim;
    uint32_t restart_index;
 };
@@ -199,7 +199,7 @@ nv30_push_vbo(struct nv30_context *nv30, const struct pipe_draw_info *info)
 {
    struct push_context ctx;
    unsigned i, index_size;
-   boolean apply_bias = info->indexed && info->index_bias;
+   bool apply_bias = info->indexed && info->index_bias;
 
    ctx.push = nv30->base.pushbuf;
    ctx.translate = nv30->vertex->translate;
@@ -241,7 +241,7 @@ nv30_push_vbo(struct nv30_context *nv30, const struct pipe_draw_info *info)
    } else {
       ctx.idxbuf = NULL;
       index_size = 0;
-      ctx.primitive_restart = FALSE;
+      ctx.primitive_restart = false;
       ctx.restart_index = 0;
    }
 

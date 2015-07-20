@@ -13,7 +13,7 @@ struct nouveau_context {
    struct nouveau_client *client;
    struct nouveau_pushbuf *pushbuf;
 
-   boolean vbo_dirty;
+   bool vbo_dirty;
 
    void (*copy_data)(struct nouveau_context *,
                      struct nouveau_bo *dst, unsigned, unsigned,
@@ -104,7 +104,7 @@ nouveau_context_update_frame_stats(struct nouveau_context *nv)
       nv->stats.buf_cache_count = 0;
       nv->stats.buf_cache_frame |= 1;
       if ((nv->stats.buf_cache_frame & 0xf) == 0xf)
-         nv->screen->hint_buf_keep_sysmem_copy = TRUE;
+         nv->screen->hint_buf_keep_sysmem_copy = true;
    }
 }
 

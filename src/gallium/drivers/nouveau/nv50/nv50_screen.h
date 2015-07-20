@@ -32,14 +32,14 @@ struct nv50_graph_state {
    uint32_t semantic_color;
    uint32_t semantic_psize;
    int32_t index_bias;
-   boolean uniform_buffer_bound[3];
-   boolean prim_restart;
-   boolean point_sprite;
-   boolean rt_serialize;
-   boolean flushed;
-   boolean rasterizer_discard;
+   bool uniform_buffer_bound[3];
+   bool prim_restart;
+   bool point_sprite;
+   bool rt_serialize;
+   bool flushed;
+   bool rasterizer_discard;
    uint8_t tls_required;
-   boolean new_tls_space;
+   bool new_tls_space;
    uint8_t num_vtxbufs;
    uint8_t num_vtxelts;
    uint8_t num_textures[3];
@@ -103,7 +103,7 @@ nv50_screen(struct pipe_screen *screen)
    return (struct nv50_screen *)screen;
 }
 
-boolean nv50_blitter_create(struct nv50_screen *);
+bool nv50_blitter_create(struct nv50_screen *);
 void nv50_blitter_destroy(struct nv50_screen *);
 
 int nv50_screen_tic_alloc(struct nv50_screen *, void *);

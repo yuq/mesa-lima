@@ -32,7 +32,7 @@ struct nv30_miptree {
    struct nv30_miptree_level level[13];
    uint32_t uniform_pitch;
    uint32_t layer_size;
-   boolean swizzled;
+   bool swizzled;
    unsigned ms_mode;
    unsigned ms_x:1;
    unsigned ms_y:1;

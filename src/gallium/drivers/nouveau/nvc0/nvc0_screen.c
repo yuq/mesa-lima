@@ -44,16 +44,16 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
                                 unsigned bindings)
 {
    if (sample_count > 8)
-      return FALSE;
+      return false;
    if (!(0x117 & (1 << sample_count))) /* 0, 1, 2, 4 or 8 */
-      return FALSE;
+      return false;
 
    if (!util_format_is_supported(format, bindings))
-      return FALSE;
+      return false;
 
    if ((bindings & PIPE_BIND_SAMPLER_VIEW) && (target != PIPE_BUFFER))
       if (util_format_get_blocksizebits(format) == 3 * 32)
-         return FALSE;
+         return false;
 
    /* transfers & shared are always supported */
    bindings &= ~(PIPE_BIND_TRANSFER_READ |
@@ -556,7 +556,7 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
       /* Using COMPUTE has weird effects on 3D state, we need to
        * investigate this further before enabling it by default.
        */
-      if (debug_get_bool_option("NVC0_COMPUTE", FALSE))
+      if (debug_get_bool_option("NVC0_COMPUTE", false))
          return nvc0_screen_compute_setup(screen, screen->base.pushbuf);
       return 0;
    case 0xe0:
@@ -570,7 +570,7 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    }
 }
 
-boolean
+bool
 nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
                             uint32_t lpos, uint32_t lneg, uint32_t cstack)
 {
@@ -580,7 +580,7 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 
    if (size >= (1 << 20)) {
       NOUVEAU_ERR("requested TLS size too large: 0x%"PRIx64"\n", size);
-      return FALSE;
+      return false;
    }
 
    size *= (screen->base.device->chipset >= 0xe0) ? 64 : 48; /* max warps */
@@ -593,11 +593,11 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
                         NULL, &bo);
    if (ret) {
       NOUVEAU_ERR("failed to allocate TLS area, size: 0x%"PRIx64"\n", size);
-      return FALSE;
+      return false;
    }
    nouveau_bo_ref(NULL, &screen->tls);
    screen->tls = bo;
-   return TRUE;
+   return true;
 }
 
 #define FAIL_SCREEN_INIT(str, err)                    \
@@ -791,7 +791,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    BEGIN_NVC0(push, NVC0_3D(COND_MODE), 1);
    PUSH_DATA (push, NVC0_3D_COND_MODE_ALWAYS);
 
-   if (debug_get_bool_option("NOUVEAU_SHADER_WATCHDOG", TRUE)) {
+   if (debug_get_bool_option("NOUVEAU_SHADER_WATCHDOG", true)) {
       /* kill shaders after about 1 second (at 100 MHz) */
       BEGIN_NVC0(push, NVC0_3D(WATCHDOG_TIMER), 1);
       PUSH_DATA (push, 0x17);
@@ -1041,7 +1041,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    if (!nvc0_blitter_create(screen))
       goto fail;
 
-   nouveau_fence_new(&screen->base, &screen->base.fence.current, FALSE);
+   nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
 
    return pscreen;
 

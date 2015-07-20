@@ -51,19 +51,19 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
                                 unsigned bindings)
 {
    if (sample_count > 8)
-      return FALSE;
+      return false;
    if (!(0x117 & (1 << sample_count))) /* 0, 1, 2, 4 or 8 */
-      return FALSE;
+      return false;
    if (sample_count == 8 && util_format_get_blocksizebits(format) >= 128)
-      return FALSE;
+      return false;
 
    if (!util_format_is_supported(format, bindings))
-      return FALSE;
+      return false;
 
    switch (format) {
    case PIPE_FORMAT_Z16_UNORM:
       if (nv50_screen(pscreen)->tesla->oclass < NVA0_3D_CLASS)
-         return FALSE;
+         return false;
       break;
    default:
       break;
@@ -455,7 +455,7 @@ nv50_screen_init_hwctx(struct nv50_screen *screen)
    BEGIN_NV04(push, NV50_3D(UNK1400_LANES), 1);
    PUSH_DATA (push, 0xf);
 
-   if (debug_get_bool_option("NOUVEAU_SHADER_WATCHDOG", TRUE)) {
+   if (debug_get_bool_option("NOUVEAU_SHADER_WATCHDOG", true)) {
       BEGIN_NV04(push, NV50_3D(WATCHDOG_TIMER), 1);
       PUSH_DATA (push, 0x18);
    }
@@ -735,7 +735,7 @@ nv50_screen_create(struct nouveau_device *dev)
    nv50_screen_init_resource_functions(pscreen);
 
    if (screen->base.device->chipset < 0x84 ||
-       debug_get_bool_option("NOUVEAU_PMPEG", FALSE)) {
+       debug_get_bool_option("NOUVEAU_PMPEG", false)) {
       /* PMPEG */
       nouveau_screen_init_vdec(&screen->base);
    } else if (screen->base.device->chipset < 0x98 ||
@@ -891,7 +891,7 @@ nv50_screen_create(struct nouveau_device *dev)
 
    nv50_screen_init_hwctx(screen);
 
-   nouveau_fence_new(&screen->base, &screen->base.fence.current, FALSE);
+   nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
 
    return pscreen;
 

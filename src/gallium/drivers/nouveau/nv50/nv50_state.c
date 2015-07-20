@@ -116,7 +116,7 @@ nv50_blend_state_create(struct pipe_context *pipe,
 {
    struct nv50_blend_stateobj *so = CALLOC_STRUCT(nv50_blend_stateobj);
    int i;
-   boolean emit_common_func = cso->rt[0].blend_enable;
+   bool emit_common_func = cso->rt[0].blend_enable;
    uint32_t ms;
 
    if (nv50_context(pipe)->screen->tesla->oclass >= NVA3_3D_CLASS) {
@@ -137,11 +137,11 @@ nv50_blend_state_create(struct pipe_context *pipe,
       for (i = 0; i < 8; ++i) {
          SB_DATA(so, cso->rt[i].blend_enable);
          if (cso->rt[i].blend_enable)
-            emit_common_func = TRUE;
+            emit_common_func = true;
       }
 
       if (nv50_context(pipe)->screen->tesla->oclass >= NVA3_3D_CLASS) {
-         emit_common_func = FALSE;
+         emit_common_func = false;
 
          for (i = 0; i < 8; ++i) {
             if (!cso->rt[i].blend_enable)
@@ -808,7 +808,7 @@ nv50_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
 
    pipe_resource_reference(&nv50->constbuf[s][i].u.buf, res);
 
-   nv50->constbuf[s][i].user = (cb && cb->user_buffer) ? TRUE : FALSE;
+   nv50->constbuf[s][i].user = (cb && cb->user_buffer) ? true : false;
    if (nv50->constbuf[s][i].user) {
       nv50->constbuf[s][i].u.data = cb->user_buffer;
       nv50->constbuf[s][i].size = MIN2(cb->buffer_size, 0x10000);
@@ -1041,7 +1041,7 @@ nv50_so_target_create(struct pipe_context *pipe,
    } else {
       targ->pq = NULL;
    }
-   targ->clean = TRUE;
+   targ->clean = true;
 
    targ->pipe.buffer_size = size;
    targ->pipe.buffer_offset = offset;
@@ -1075,32 +1075,32 @@ nv50_set_stream_output_targets(struct pipe_context *pipe,
 {
    struct nv50_context *nv50 = nv50_context(pipe);
    unsigned i;
-   boolean serialize = TRUE;
-   const boolean can_resume = nv50->screen->base.class_3d >= NVA0_3D_CLASS;
+   bool serialize = true;
+   const bool can_resume = nv50->screen->base.class_3d >= NVA0_3D_CLASS;
 
    assert(num_targets <= 4);
 
    for (i = 0; i < num_targets; ++i) {
-      const boolean changed = nv50->so_target[i] != targets[i];
-      const boolean append = (offsets[i] == (unsigned)-1);
+      const bool changed = nv50->so_target[i] != targets[i];
+      const bool append = (offsets[i] == (unsigned)-1);
       if (!changed && append)
          continue;
       nv50->so_targets_dirty |= 1 << i;
 
       if (can_resume && changed && nv50->so_target[i]) {
          nva0_so_target_save_offset(pipe, nv50->so_target[i], i, serialize);
-         serialize = FALSE;
+         serialize = false;
       }
 
       if (targets[i] && !append)
-         nv50_so_target(targets[i])->clean = TRUE;
+         nv50_so_target(targets[i])->clean = true;
 
       pipe_so_target_reference(&nv50->so_target[i], targets[i]);
    }
    for (; i < nv50->num_so_targets; ++i) {
       if (can_resume && nv50->so_target[i]) {
          nva0_so_target_save_offset(pipe, nv50->so_target[i], i, serialize);
-         serialize = FALSE;
+         serialize = false;
       }
       pipe_so_target_reference(&nv50->so_target[i], NULL);
       nv50->so_targets_dirty |= 1 << i;

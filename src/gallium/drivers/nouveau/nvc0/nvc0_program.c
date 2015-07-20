@@ -523,7 +523,7 @@ nvc0_program_dump(struct nvc0_program *prog)
 }
 #endif
 
-boolean
+bool
 nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
 {
    struct nv50_ir_prog_info *info;
@@ -531,7 +531,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
 
    info = CALLOC_STRUCT(nv50_ir_prog_info);
    if (!info)
-      return FALSE;
+      return false;
 
    info->type = prog->type;
    info->target = chipset;
@@ -630,7 +630,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
       assert(info->bin.tlsSpace < (1 << 24));
       prog->hdr[0] |= 1 << 26;
       prog->hdr[1] |= align(info->bin.tlsSpace, 0x10); /* l[] size */
-      prog->need_tls = TRUE;
+      prog->need_tls = true;
    }
    /* TODO: factor 2 only needed where joinat/precont is used,
     *       and we only have to count non-uniform branches
@@ -638,7 +638,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
    /*
    if ((info->maxCFDepth * 2) > 16) {
       prog->hdr[2] |= (((info->maxCFDepth * 2) + 47) / 48) * 0x200;
-      prog->need_tls = TRUE;
+      prog->need_tls = true;
    }
    */
    if (info->io.globalAccess)
@@ -655,11 +655,11 @@ out:
    return !ret;
 }
 
-boolean
+bool
 nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 {
    struct nvc0_screen *screen = nvc0->screen;
-   const boolean is_cp = prog->type == PIPE_SHADER_COMPUTE;
+   const bool is_cp = prog->type == PIPE_SHADER_COMPUTE;
    int ret;
    uint32_t size = prog->code_size + (is_cp ? 0 : NVC0_SHADER_HEADER_SIZE);
    uint32_t lib_pos = screen->lib_code->start;
@@ -694,7 +694,7 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
       ret = nouveau_heap_alloc(heap, size, prog, &prog->mem);
       if (ret) {
          NOUVEAU_ERR("shader too large (0x%x) to fit in code space ?\n", size);
-         return FALSE;
+         return false;
       }
       IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
    }
@@ -729,7 +729,7 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
       nv50_ir_relocate_code(prog->relocs, prog->code, code_pos, lib_pos, 0);
 
 #ifdef DEBUG
-   if (debug_get_bool_option("NV50_PROG_DEBUG", FALSE))
+   if (debug_get_bool_option("NV50_PROG_DEBUG", false))
       nvc0_program_dump(prog);
 #endif
 
@@ -746,7 +746,7 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
    BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(MEM_BARRIER), 1);
    PUSH_DATA (nvc0->base.pushbuf, 0x1011);
 
-   return TRUE;
+   return true;
 }
 
 /* Upload code for builtin functions like integer division emulation. */

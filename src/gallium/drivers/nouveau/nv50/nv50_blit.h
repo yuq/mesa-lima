@@ -191,8 +191,8 @@ nv50_blit_eng2d_get_mask(const struct pipe_blit_info *info)
 # define nv50_format_table nvc0_format_table
 #endif
 
-/* return TRUE for formats that can be converted among each other by NVC0_2D */
-static INLINE boolean
+/* return true for formats that can be converted among each other by NVC0_2D */
+static INLINE bool
 nv50_2d_dst_format_faithful(enum pipe_format format)
 {
    const uint64_t mask =
@@ -201,7 +201,7 @@ nv50_2d_dst_format_faithful(enum pipe_format format)
    uint8_t id = nv50_format_table[format].rt;
    return (id >= 0xc0) && (mask & (1ULL << (id - 0xc0)));
 }
-static INLINE boolean
+static INLINE bool
 nv50_2d_src_format_faithful(enum pipe_format format)
 {
    const uint64_t mask =
@@ -211,7 +211,7 @@ nv50_2d_src_format_faithful(enum pipe_format format)
    return (id >= 0xc0) && (mask & (1ULL << (id - 0xc0)));
 }
 
-static INLINE boolean
+static INLINE bool
 nv50_2d_format_supported(enum pipe_format format)
 {
    uint8_t id = nv50_format_table[format].rt;
@@ -219,7 +219,7 @@ nv50_2d_format_supported(enum pipe_format format)
       (NV50_ENG2D_SUPPORTED_FORMATS & (1ULL << (id - 0xc0)));
 }
 
-static INLINE boolean
+static INLINE bool
 nv50_2d_dst_format_ops_supported(enum pipe_format format)
 {
    uint8_t id = nv50_format_table[format].rt;

@@ -80,7 +80,7 @@ struct nv30_vertprog {
    struct tgsi_shader_info info;
 
    struct draw_vertex_shader *draw;
-   boolean translated;
+   bool translated;
    unsigned enabled_ucps;
    uint16_t texcoord[10];
 
@@ -109,7 +109,7 @@ struct nv30_fragprog {
    struct tgsi_shader_info info;
 
    struct draw_fragment_shader *draw;
-   boolean translated;
+   bool translated;
 
    uint32_t *insn;
    unsigned insn_len;

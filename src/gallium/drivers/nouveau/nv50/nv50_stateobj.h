@@ -41,7 +41,7 @@ struct nv50_constbuf {
    } u;
    uint32_t size; /* max 65536 */
    uint32_t offset;
-   boolean user; /* should only be TRUE if u.data is valid and non-NULL */
+   bool user; /* should only be true if u.data is valid and non-NULL */
 };
 
 struct nv50_vertex_element {
@@ -56,7 +56,7 @@ struct nv50_vertex_stateobj {
    unsigned num_elements;
    uint32_t instance_elts;
    uint32_t instance_bufs;
-   boolean need_conversion;
+   bool need_conversion;
    unsigned vertex_size;
    unsigned packet_vertex_limit;
    struct nv50_vertex_element element[0];
@@ -66,7 +66,7 @@ struct nv50_so_target {
    struct pipe_stream_output_target pipe;
    struct pipe_query *pq;
    unsigned stride;
-   boolean clean;
+   bool clean;
 };
 
 static INLINE struct nv50_so_target *

@@ -35,7 +35,7 @@ nv50_screen_init_resource_functions(struct pipe_screen *pscreen);
 
 uint32_t
 nv50_tex_choose_tile_dims_helper(unsigned nx, unsigned ny, unsigned nz,
-                                 boolean is_3d);
+                                 bool is_3d);
 
 struct nv50_miptree_level {
    uint32_t offset;
@@ -50,7 +50,7 @@ struct nv50_miptree {
    struct nv50_miptree_level level[NV50_MAX_TEXTURE_LEVELS];
    uint32_t total_size;
    uint32_t layer_stride;
-   boolean layout_3d; /* TRUE if layer count varies with mip level */
+   bool layout_3d; /* true if layer count varies with mip level */
    uint8_t ms_x;      /* log2 of number of samples in x/y dimension */
    uint8_t ms_y;
    uint8_t ms_mode;
@@ -70,7 +70,7 @@ nv50_miptree(struct pipe_resource *pt)
 
 /* Internal functions:
  */
-boolean
+bool
 nv50_miptree_init_layout_linear(struct nv50_miptree *mt, unsigned pitch_align);
 
 struct pipe_resource *

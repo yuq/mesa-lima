@@ -74,7 +74,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
     struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
     unsigned i, ms;
     unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
-    boolean serialize = FALSE;
+    bool serialize = false;
 
     nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
 
@@ -136,7 +136,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         }
 
         if (res->status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = TRUE;
+           serialize = true;
         res->status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -168,7 +168,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         ms_mode = mt->ms_mode;
 
         if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = TRUE;
+           serialize = true;
         mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -518,12 +518,12 @@ static void
 nvc0_validate_derived_1(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   boolean rasterizer_discard;
+   bool rasterizer_discard;
 
    if (nvc0->rast && nvc0->rast->pipe.rasterizer_discard) {
-      rasterizer_discard = TRUE;
+      rasterizer_discard = true;
    } else {
-      boolean zs = nvc0->zsa &&
+      bool zs = nvc0->zsa &&
          (nvc0->zsa->pipe.depth.enabled || nvc0->zsa->pipe.stencil[0].enabled);
       rasterizer_discard = !zs &&
          (!nvc0->fragprog || !nvc0->fragprog->hdr[18]);
@@ -631,7 +631,7 @@ static struct state_validate {
 };
 #define validate_list_len (sizeof(validate_list) / sizeof(validate_list[0]))
 
-boolean
+bool
 nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
 {
    uint32_t state_mask;
@@ -652,15 +652,15 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
       }
       nvc0->dirty &= ~state_mask;
 
-      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, FALSE);
+      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, false);
    }
 
    nouveau_pushbuf_bufctx(nvc0->base.pushbuf, nvc0->bufctx_3d);
    ret = nouveau_pushbuf_validate(nvc0->base.pushbuf);
 
    if (unlikely(nvc0->state.flushed)) {
-      nvc0->state.flushed = FALSE;
-      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, TRUE);
+      nvc0->state.flushed = false;
+      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, true);
    }
    return !ret;
 }

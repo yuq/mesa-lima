@@ -111,7 +111,7 @@ nouveau_screen_bo_from_handle(struct pipe_screen *pscreen,
 }
 
 
-boolean
+bool
 nouveau_screen_bo_get_handle(struct pipe_screen *pscreen,
 			     struct nouveau_bo *bo,
 			     unsigned stride,
@@ -123,11 +123,11 @@ nouveau_screen_bo_get_handle(struct pipe_screen *pscreen,
 		return nouveau_bo_name_get(bo, &whandle->handle) == 0;
 	} else if (whandle->type == DRM_API_HANDLE_TYPE_KMS) {
 		whandle->handle = bo->handle;
-		return TRUE;
+		return true;
 	} else if (whandle->type == DRM_API_HANDLE_TYPE_FD) {
 		return nouveau_bo_set_prime(bo, (int *)&whandle->handle) == 0;
 	} else {
-		return FALSE;
+		return false;
 	}
 }
 

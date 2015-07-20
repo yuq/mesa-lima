@@ -449,7 +449,7 @@ struct nvfx_insn
 };
 
 static INLINE struct nvfx_insn
-nvfx_insn(boolean sat, unsigned op, int unit, struct nvfx_reg dst, unsigned mask, struct nvfx_src s0, struct nvfx_src s1, struct nvfx_src s2)
+nvfx_insn(bool sat, unsigned op, int unit, struct nvfx_reg dst, unsigned mask, struct nvfx_src s0, struct nvfx_src s1, struct nvfx_src s2)
 {
 	struct nvfx_insn insn = {
 		.op = op,
@@ -529,7 +529,7 @@ struct nv30_vertprog;
 void
 _nvfx_fragprog_translate(uint16_t oclass, struct nv30_fragprog *fp);
 
-boolean
+bool
 _nvfx_vertprog_translate(uint16_t oclass, struct nv30_vertprog *vp);
 
 #endif

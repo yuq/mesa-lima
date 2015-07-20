@@ -21,12 +21,12 @@ PUSH_AVAIL(struct nouveau_pushbuf *push)
    return push->end - push->cur;
 }
 
-static INLINE boolean
+static INLINE bool
 PUSH_SPACE(struct nouveau_pushbuf *push, uint32_t size)
 {
    if (PUSH_AVAIL(push) < size)
       return nouveau_pushbuf_space(push, size, 0, 0) == 0;
-   return TRUE;
+   return true;
 }
 
 static INLINE void

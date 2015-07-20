@@ -21,12 +21,12 @@ struct push_context {
    uint32_t restart_index;
    uint32_t instance_id;
 
-   boolean prim_restart;
-   boolean need_vertex_id;
+   bool prim_restart;
+   bool need_vertex_id;
 
    struct {
-      boolean enabled;
-      boolean value;
+      bool enabled;
+      bool value;
       unsigned stride;
       const uint8_t *data;
    } edgeflag;
@@ -47,7 +47,7 @@ nvc0_push_context_init(struct nvc0_context *nvc0, struct push_context *ctx)
    ctx->need_vertex_id =
       nvc0->vertprog->vp.need_vertex_id && (nvc0->vertex->num_elements < 32);
 
-   ctx->edgeflag.value = TRUE;
+   ctx->edgeflag.value = true;
    ctx->edgeflag.enabled = nvc0->vertprog->vp.edgeflag < PIPE_MAX_ATTRIBS;
 
    /* silence warnings */
@@ -136,14 +136,14 @@ prim_restart_search_i32(const uint32_t *elts, unsigned push, uint32_t index)
    return i;
 }
 
-static INLINE boolean
+static INLINE bool
 ef_value(const struct push_context *ctx, uint32_t index)
 {
    float *pf = (float *)&ctx->edgeflag.data[index * ctx->edgeflag.stride];
-   return *pf ? TRUE : FALSE;
+   return *pf ? true : false;
 }
 
-static INLINE boolean
+static INLINE bool
 ef_toggle(struct push_context *ctx)
 {
    ctx->edgeflag.value = !ctx->edgeflag.value;
@@ -483,7 +483,7 @@ nvc0_push_vbo(struct nvc0_context *nvc0, const struct pipe_draw_info *info)
          struct pipe_context *pipe = &nvc0->base.pipe;
          struct nvc0_so_target *targ;
          targ = nvc0_so_target(info->count_from_stream_output);
-         pipe->get_query_result(pipe, targ->pq, TRUE, (void *)&vert_count);
+         pipe->get_query_result(pipe, targ->pq, true, (void *)&vert_count);
          vert_count /= targ->stride;
       }
       ctx.idxbuf = NULL; /* shut up warnings */

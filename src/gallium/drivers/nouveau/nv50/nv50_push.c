@@ -23,7 +23,7 @@ struct push_context {
 
    struct translate *translate;
 
-   boolean primitive_restart;
+   bool primitive_restart;
    uint32_t prim;
    uint32_t restart_index;
    uint32_t instance_id;
@@ -212,7 +212,7 @@ nv50_push_vbo(struct nv50_context *nv50, const struct pipe_draw_info *info)
    unsigned i, index_size;
    unsigned inst_count = info->instance_count;
    unsigned vert_count = info->count;
-   boolean apply_bias = info->indexed && info->index_bias;
+   bool apply_bias = info->indexed && info->index_bias;
 
    ctx.push = nv50->base.pushbuf;
    ctx.translate = nv50->vertex->translate;
@@ -258,12 +258,12 @@ nv50_push_vbo(struct nv50_context *nv50, const struct pipe_draw_info *info)
             NOUVEAU_ERR("draw_stream_output not supported on pre-NVA0 cards\n");
             return;
          }
-         pipe->get_query_result(pipe, targ->pq, TRUE, (void *)&vert_count);
+         pipe->get_query_result(pipe, targ->pq, true, (void *)&vert_count);
          vert_count /= targ->stride;
       }
       ctx.idxbuf = NULL;
       index_size = 0;
-      ctx.primitive_restart = FALSE;
+      ctx.primitive_restart = false;
       ctx.restart_index = 0;
    }
 

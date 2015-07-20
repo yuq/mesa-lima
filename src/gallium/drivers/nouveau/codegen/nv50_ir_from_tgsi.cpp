@@ -826,7 +826,7 @@ Source::Source(struct nv50_ir_prog_info *prog) : info(prog)
    if (prog->dbgFlags & NV50_IR_DEBUG_BASIC)
       tgsi_dump(tokens, 0);
 
-   mainTempsInLMem = FALSE;
+   mainTempsInLMem = false;
 }
 
 Source::~Source()
@@ -937,7 +937,7 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
       info->prop.gp.instanceCount = prop->u[0].Data;
       break;
    case TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS:
-      info->prop.fp.separateFragData = TRUE;
+      info->prop.fp.separateFragData = true;
       break;
    case TGSI_PROPERTY_FS_COORD_ORIGIN:
    case TGSI_PROPERTY_FS_COORD_PIXEL_CENTER:
@@ -1155,7 +1155,7 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
       } else
       if (insn.getDst(0).getFile() == TGSI_FILE_TEMPORARY) {
          if (insn.getDst(0).isIndirect(0))
-            mainTempsInLMem = TRUE;
+            mainTempsInLMem = true;
       }
    }
 
@@ -1163,7 +1163,7 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
       Instruction::SrcRegister src = insn.getSrc(s);
       if (src.getFile() == TGSI_FILE_TEMPORARY) {
          if (src.isIndirect(0))
-            mainTempsInLMem = TRUE;
+            mainTempsInLMem = true;
       } else
       if (src.getFile() == TGSI_FILE_RESOURCE) {
          if (src.getIndex(0) == TGSI_RESOURCE_GLOBAL)

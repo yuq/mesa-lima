@@ -54,7 +54,7 @@ nv30_miptree_get_handle(struct pipe_screen *pscreen,
    unsigned stride;
 
    if (!mt || !mt->base.bo)
-      return FALSE;
+      return false;
 
    stride = mt->level[0].pitch;
 
@@ -372,7 +372,7 @@ nv30_miptree_create(struct pipe_screen *pscreen,
    }
 
    if (!mt->uniform_pitch)
-      mt->swizzled = TRUE;
+      mt->swizzled = true;
 
    size = 0;
    for (l = 0; l <= pt->last_level; l++) {

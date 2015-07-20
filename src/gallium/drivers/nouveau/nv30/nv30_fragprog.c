@@ -68,7 +68,7 @@ nv30_fragprog_validate(struct nv30_context *nv30)
    struct nouveau_pushbuf *push = nv30->base.pushbuf;
    struct nouveau_object *eng3d = nv30->screen->eng3d;
    struct nv30_fragprog *fp = nv30->fragprog.program;
-   boolean upload = FALSE;
+   bool upload = false;
    int i;
 
    if (!fp->translated) {
@@ -76,7 +76,7 @@ nv30_fragprog_validate(struct nv30_context *nv30)
       if (!fp->translated)
          return;
 
-      upload = TRUE;
+      upload = true;
    }
 
    /* update constants, also needs to be done on every fp switch as we
@@ -93,7 +93,7 @@ nv30_fragprog_validate(struct nv30_context *nv30)
          if (!memcmp(&fp->insn[off], &cbuf[idx], 4 * 4))
             continue;
          memcpy(&fp->insn[off], &cbuf[idx], 4 * 4);
-         upload = TRUE;
+         upload = true;
       }
    }
 

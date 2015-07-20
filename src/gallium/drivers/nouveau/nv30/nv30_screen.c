@@ -315,12 +315,12 @@ nv30_screen_is_format_supported(struct pipe_screen *pscreen,
                                 unsigned bindings)
 {
    if (sample_count > 4)
-      return FALSE;
+      return false;
    if (!(0x00000017 & (1 << sample_count)))
-      return FALSE;
+      return false;
 
    if (!util_format_is_supported(format, bindings)) {
-      return FALSE;
+      return false;
    }
 
    /* transfers & shared are always supported */
@@ -658,6 +658,6 @@ nv30_screen_create(struct nouveau_device *dev)
 
    nouveau_pushbuf_kick(push, push->channel);
 
-   nouveau_fence_new(&screen->base, &screen->base.fence.current, FALSE);
+   nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
    return pscreen;
 }

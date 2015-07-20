@@ -92,8 +92,8 @@ nvc0_blend_state_create(struct pipe_context *pipe,
    int r; /* reference */
    uint32_t ms;
    uint8_t blend_en = 0;
-   boolean indep_masks = FALSE;
-   boolean indep_funcs = FALSE;
+   bool indep_masks = false;
+   bool indep_funcs = false;
 
    so->pipe = *cso;
 
@@ -111,7 +111,7 @@ nvc0_blend_state_create(struct pipe_context *pipe,
              cso->rt[i].alpha_func != cso->rt[r].alpha_func ||
              cso->rt[i].alpha_src_factor != cso->rt[r].alpha_src_factor ||
              cso->rt[i].alpha_dst_factor != cso->rt[r].alpha_dst_factor) {
-            indep_funcs = TRUE;
+            indep_funcs = true;
             break;
          }
       }
@@ -120,7 +120,7 @@ nvc0_blend_state_create(struct pipe_context *pipe,
 
       for (i = 1; i < 8; ++i) {
          if (cso->rt[i].colormask != cso->rt[0].colormask) {
-            indep_masks = TRUE;
+            indep_masks = true;
             break;
          }
       }
@@ -790,7 +790,7 @@ nvc0_set_constant_buffer(struct pipe_context *pipe, uint shader, uint index,
 
    pipe_resource_reference(&nvc0->constbuf[s][i].u.buf, res);
 
-   nvc0->constbuf[s][i].user = (cb && cb->user_buffer) ? TRUE : FALSE;
+   nvc0->constbuf[s][i].user = (cb && cb->user_buffer) ? true : false;
    if (nvc0->constbuf[s][i].user) {
       nvc0->constbuf[s][i].u.data = cb->user_buffer;
       nvc0->constbuf[s][i].size = MIN2(cb->buffer_size, 0x10000);
@@ -1018,7 +1018,7 @@ nvc0_so_target_create(struct pipe_context *pipe,
       FREE(targ);
       return NULL;
    }
-   targ->clean = TRUE;
+   targ->clean = true;
 
    targ->pipe.buffer_size = size;
    targ->pipe.buffer_offset = offset;
@@ -1051,13 +1051,13 @@ nvc0_set_transform_feedback_targets(struct pipe_context *pipe,
 {
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    unsigned i;
-   boolean serialize = TRUE;
+   bool serialize = true;
 
    assert(num_targets <= 4);
 
    for (i = 0; i < num_targets; ++i) {
-      const boolean changed = nvc0->tfbbuf[i] != targets[i];
-      const boolean append = (offsets[i] == ((unsigned)-1));
+      const bool changed = nvc0->tfbbuf[i] != targets[i];
+      const bool append = (offsets[i] == ((unsigned)-1));
       if (!changed && append)
          continue;
       nvc0->tfbbuf_dirty |= 1 << i;
@@ -1066,7 +1066,7 @@ nvc0_set_transform_feedback_targets(struct pipe_context *pipe,
          nvc0_so_target_save_offset(pipe, nvc0->tfbbuf[i], i, &serialize);
 
       if (targets[i] && !append)
-         nvc0_so_target(targets[i])->clean = TRUE;
+         nvc0_so_target(targets[i])->clean = true;
 
       pipe_so_target_reference(&nvc0->tfbbuf[i], targets[i]);
    }

@@ -49,7 +49,7 @@ struct nouveau_screen {
 
 	int64_t cpu_gpu_time_delta;
 
-	boolean hint_buf_keep_sysmem_copy;
+	bool hint_buf_keep_sysmem_copy;
 
 	unsigned vram_domain;
 
@@ -118,9 +118,9 @@ nouveau_screen(struct pipe_screen *pscreen)
 	return (struct nouveau_screen *)pscreen;
 }
 
-boolean nouveau_drm_screen_unref(struct nouveau_screen *screen);
+bool nouveau_drm_screen_unref(struct nouveau_screen *screen);
 
-boolean
+bool
 nouveau_screen_bo_get_handle(struct pipe_screen *pscreen,
 			     struct nouveau_bo *bo,
 			     unsigned stride,

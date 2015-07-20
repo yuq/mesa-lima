@@ -151,10 +151,10 @@ struct nv50_ir_prog_info
       } gp;
       struct {
          unsigned numColourResults;
-         boolean writesDepth;
-         boolean earlyFragTests;
-         boolean separateFragData;
-         boolean usesDiscard;
+         bool writesDepth;
+         bool earlyFragTests;
+         bool separateFragData;
+         bool usesDiscard;
       } fp;
       struct {
          uint32_t inputOffset; /* base address for user args */
@@ -180,11 +180,11 @@ struct nv50_ir_prog_info
       int8_t viewportId;         /* output index of ViewportIndex */
       uint8_t fragDepth;         /* output index of FragDepth */
       uint8_t sampleMask;        /* output index of SampleMask */
-      boolean sampleInterp;      /* perform sample interp on all fp inputs */
+      bool sampleInterp;         /* perform sample interp on all fp inputs */
       uint8_t backFaceColor[2];  /* input/output indices of back face colour */
       uint8_t globalAccess;      /* 1 for read, 2 for wr, 3 for rw */
-      boolean fp64;              /* program uses fp64 math */
-      boolean nv50styleSurfaces; /* generate gX[] access for raw buffers */
+      bool fp64;                 /* program uses fp64 math */
+      bool nv50styleSurfaces;    /* generate gX[] access for raw buffers */
       uint8_t resInfoCBSlot;     /* cX[] used for tex handles, surface info */
       uint16_t texBindBase;      /* base address for tex handles (nve4) */
       uint16_t suInfoBase;       /* base address for surface info (nve4) */
