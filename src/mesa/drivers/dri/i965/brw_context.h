@@ -201,6 +201,7 @@ enum brw_state_id {
    BRW_STATE_STATS_WM,
    BRW_STATE_UNIFORM_BUFFER,
    BRW_STATE_ATOMIC_BUFFER,
+   BRW_STATE_IMAGE_UNITS,
    BRW_STATE_META_IN_PROGRESS,
    BRW_STATE_INTERPOLATION_MAP,
    BRW_STATE_PUSH_CONSTANT_ALLOCATION,
@@ -282,6 +283,7 @@ enum brw_state_id {
 #define BRW_NEW_STATS_WM                (1ull << BRW_STATE_STATS_WM)
 #define BRW_NEW_UNIFORM_BUFFER          (1ull << BRW_STATE_UNIFORM_BUFFER)
 #define BRW_NEW_ATOMIC_BUFFER           (1ull << BRW_STATE_ATOMIC_BUFFER)
+#define BRW_NEW_IMAGE_UNITS             (1ull << BRW_STATE_IMAGE_UNITS)
 #define BRW_NEW_META_IN_PROGRESS        (1ull << BRW_STATE_META_IN_PROGRESS)
 #define BRW_NEW_INTERPOLATION_MAP       (1ull << BRW_STATE_INTERPOLATION_MAP)
 #define BRW_NEW_PUSH_CONSTANT_ALLOCATION (1ull << BRW_STATE_PUSH_CONSTANT_ALLOCATION)
@@ -1513,8 +1515,8 @@ struct brw_context
    } perfmon;
 
    int num_atoms[BRW_NUM_PIPELINES];
-   const struct brw_tracked_state render_atoms[57];
-   const struct brw_tracked_state compute_atoms[3];
+   const struct brw_tracked_state render_atoms[60];
+   const struct brw_tracked_state compute_atoms[4];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
@@ -1792,6 +1794,10 @@ void brw_upload_abo_surfaces(struct brw_context *brw,
                              struct gl_shader_program *prog,
                              struct brw_stage_state *stage_state,
                              struct brw_stage_prog_data *prog_data);
+void brw_upload_image_surfaces(struct brw_context *brw,
+                               struct gl_shader *shader,
+                               struct brw_stage_state *stage_state,
+                               struct brw_stage_prog_data *prog_data);
 
 /* brw_surface_formats.c */
 bool brw_render_target_supported(struct brw_context *brw,

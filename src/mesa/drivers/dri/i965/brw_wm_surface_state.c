@@ -1024,6 +1024,31 @@ const struct brw_tracked_state brw_cs_abo_surfaces = {
    .emit = brw_upload_cs_abo_surfaces,
 };
 
+static void
+brw_upload_cs_image_surfaces(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* _NEW_PROGRAM */
+   struct gl_shader_program *prog =
+      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (prog) {
+      /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS */
+      brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+                                &brw->cs.base, &brw->cs.prog_data->base);
+   }
+}
+
+const struct brw_tracked_state brw_cs_image_surfaces = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_IMAGE_UNITS
+   },
+   .emit = brw_upload_cs_image_surfaces,
+};
+
 static uint32_t
 get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
@@ -1202,6 +1227,53 @@ update_image_surface(struct brw_context *brw,
       update_default_image_param(brw, u, surface_idx, param);
    }
 }
+
+void
+brw_upload_image_surfaces(struct brw_context *brw,
+                          struct gl_shader *shader,
+                          struct brw_stage_state *stage_state,
+                          struct brw_stage_prog_data *prog_data)
+{
+   struct gl_context *ctx = &brw->ctx;
+
+   if (shader && shader->NumImages) {
+      for (unsigned i = 0; i < shader->NumImages; i++) {
+         struct gl_image_unit *u = &ctx->ImageUnits[shader->ImageUnits[i]];
+         const unsigned surf_idx = prog_data->binding_table.image_start + i;
+
+         update_image_surface(brw, u, shader->ImageAccess[i],
+                              surf_idx,
+                              &stage_state->surf_offset[surf_idx],
+                              &prog_data->image_param[i]);
+      }
+
+      brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+   }
+}
+
+static void
+brw_upload_wm_image_surfaces(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FRAGMENT_PROGRAM */
+   struct gl_shader_program *prog = ctx->Shader._CurrentFragmentProgram;
+
+   if (prog) {
+      /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS */
+      brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
+                                &brw->wm.base, &brw->wm.prog_data->base);
+   }
+}
+
+const struct brw_tracked_state brw_wm_image_surfaces = {
+   .dirty = {
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA |
+             BRW_NEW_IMAGE_UNITS
+   },
+   .emit = brw_upload_wm_image_surfaces,
+};
 
 void
 gen4_init_vtable_surface_functions(struct brw_context *brw)
