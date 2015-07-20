@@ -123,7 +123,7 @@ lp_debug_dump_value(LLVMValueRef value)
  * - http://blog.llvm.org/2010/04/intro-to-llvm-mc-project.html
  */
 static size_t
-disassemble(const void* func, llvm::raw_ostream & Out)
+disassemble(const void* func)
 {
    const uint8_t *bytes = (const uint8_t *)func;
 
@@ -141,7 +141,8 @@ disassemble(const void* func, llvm::raw_ostream & Out)
    char outline[1024];
 
    if (!D) {
-      Out << "error: couldn't create disassembler for triple " << Triple << "\n";
+      _debug_printf("error: couldn't create disassembler for triple %s\n",
+                    Triple.c_str());
       return 0;
    }
 
@@ -155,13 +156,13 @@ disassemble(const void* func, llvm::raw_ostream & Out)
        * so that between runs.
        */
 
-      Out << llvm::format("%6lu:\t", (unsigned long)pc);
+      _debug_printf("%6lu:\t", (unsigned long)pc);
 
       Size = LLVMDisasmInstruction(D, (uint8_t *)bytes + pc, extent - pc, 0, outline,
                                    sizeof outline);
 
       if (!Size) {
-         Out << "invalid\n";
+         _debug_printf("invalid\n");
          pc += 1;
          break;
       }
@@ -173,10 +174,10 @@ disassemble(const void* func, llvm::raw_ostream & Out)
       if (0) {
          unsigned i;
          for (i = 0; i < Size; ++i) {
-            Out << llvm::format("%02x ", bytes[pc + i]);
+            _debug_printf("%02x ", bytes[pc + i]);
          }
          for (; i < 16; ++i) {
-            Out << "   ";
+            _debug_printf("   ");
          }
       }
 
@@ -184,9 +185,9 @@ disassemble(const void* func, llvm::raw_ostream & Out)
        * Print the instruction.
        */
 
-      Out << outline;
+      _debug_printf("%*s", Size, outline);
 
-      Out << "\n";
+      _debug_printf("\n");
 
       /*
        * Stop disassembling on return statements, if there is no record of a
@@ -206,13 +207,12 @@ disassemble(const void* func, llvm::raw_ostream & Out)
       pc += Size;
 
       if (pc >= extent) {
-         Out << "disassembly larger than " << extent << "bytes, aborting\n";
+         _debug_printf("disassembly larger than %ull bytes, aborting\n", extent);
          break;
       }
    }
 
-   Out << "\n";
-   Out.flush();
+   _debug_printf("\n");
 
    LLVMDisasmDispose(D);
 
@@ -229,9 +229,8 @@ disassemble(const void* func, llvm::raw_ostream & Out)
 
 extern "C" void
 lp_disassemble(LLVMValueRef func, const void *code) {
-   raw_debug_ostream Out;
-   Out << LLVMGetValueName(func) << ":\n";
-   disassemble(code, Out);
+   _debug_printf("%s:\n", LLVMGetValueName(func));
+   disassemble(code);
 }
 
 
