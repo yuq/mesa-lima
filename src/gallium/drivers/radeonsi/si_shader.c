@@ -31,6 +31,7 @@
 #include "gallivm/lp_bld_intr.h"
 #include "gallivm/lp_bld_logic.h"
 #include "gallivm/lp_bld_arit.h"
+#include "gallivm/lp_bld_bitarit.h"
 #include "gallivm/lp_bld_flow.h"
 #include "radeon/r600_cs.h"
 #include "radeon/radeon_llvm.h"
@@ -87,8 +88,8 @@ struct si_shader_context
 	LLVMValueRef samplers[SI_NUM_SAMPLER_STATES];
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef esgs_ring;
-	LLVMValueRef gsvs_ring;
-	LLVMValueRef gs_next_vertex;
+	LLVMValueRef gsvs_ring[4];
+	LLVMValueRef gs_next_vertex[4];
 };
 
 static struct si_shader_context * si_shader_context(
@@ -1576,6 +1577,9 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 	LLVMValueRef can_emit =
 		LLVMBuildICmp(builder, LLVMIntULT, tid, so_vtx_count, "");
 
+	LLVMValueRef stream_id =
+		unpack_param(shader, shader->param_streamout_config, 24, 2);
+
 	/* Emit the streamout code conditionally. This actually avoids
 	 * out-of-bounds buffer access. The hw tells us via the SGPR
 	 * (so_vtx_count) which threads are allowed to emit streamout data. */
@@ -1615,7 +1619,9 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 			unsigned reg = so->output[i].register_index;
 			unsigned start = so->output[i].start_component;
 			unsigned num_comps = so->output[i].num_components;
+			unsigned stream = so->output[i].stream;
 			LLVMValueRef out[4];
+			struct lp_build_if_state if_ctx_stream;
 
 			assert(num_comps && num_comps <= 4);
 			if (!num_comps || num_comps > 4)
@@ -1649,11 +1655,18 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 				break;
 			}
 
+			LLVMValueRef can_emit_stream =
+				LLVMBuildICmp(builder, LLVMIntEQ,
+					      stream_id,
+					      lp_build_const_int32(gallivm, stream), "");
+
+			lp_build_if(&if_ctx_stream, gallivm, can_emit_stream);
 			build_tbuffer_store_dwords(shader, shader->so_buffers[buf_idx],
 						   vdata, num_comps,
 						   so_write_offset[buf_idx],
 						   LLVMConstInt(i32, 0, 0),
 						   so->output[i].dst_offset*4);
+			lp_build_endif(&if_ctx_stream);
 		}
 	}
 	lp_build_endif(&if_ctx);
@@ -3188,6 +3201,19 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 }
 
+static unsigned si_llvm_get_stream(struct lp_build_tgsi_context *bld_base,
+				       struct lp_build_emit_data *emit_data)
+{
+	LLVMValueRef (*imms)[4] = lp_soa_context(bld_base)->immediates;
+	struct tgsi_src_register src0 = emit_data->inst->Src[0].Register;
+	unsigned stream;
+
+	assert(src0.File == TGSI_FILE_IMMEDIATE);
+
+	stream = LLVMConstIntGetZExtValue(imms[src0.Index][src0.SwizzleX]) & 0x3;
+	return stream;
+}
+
 /* Emit one vertex from the geometry shader */
 static void si_llvm_emit_vertex(
 	const struct lp_build_tgsi_action *action,
@@ -3207,9 +3233,14 @@ static void si_llvm_emit_vertex(
 	LLVMValueRef args[2];
 	unsigned chan;
 	int i;
+	unsigned stream;
+
+	stream = si_llvm_get_stream(bld_base, emit_data);
 
 	/* Write vertex attribute values to GSVS ring */
-	gs_next_vertex = LLVMBuildLoad(gallivm->builder, si_shader_ctx->gs_next_vertex, "");
+	gs_next_vertex = LLVMBuildLoad(gallivm->builder,
+				       si_shader_ctx->gs_next_vertex[stream],
+				       "");
 
 	/* If this thread has already emitted the declared maximum number of
 	 * vertices, kill it: excessive vertex emissions are not supposed to
@@ -3222,6 +3253,7 @@ static void si_llvm_emit_vertex(
 	kill = lp_build_select(&bld_base->base, can_emit,
 			       lp_build_const_float(gallivm, 1.0f),
 			       lp_build_const_float(gallivm, -1.0f));
+
 	build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
 			LLVMVoidTypeInContext(gallivm->context), &kill, 1, 0);
 
@@ -3241,7 +3273,7 @@ static void si_llvm_emit_vertex(
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, i32, "");
 
 			build_tbuffer_store(si_shader_ctx,
-					    si_shader_ctx->gsvs_ring,
+					    si_shader_ctx->gsvs_ring[stream],
 					    out_val, 1,
 					    voffset, soffset, 0,
 					    V_008F0C_BUF_DATA_FORMAT_32,
@@ -3251,10 +3283,11 @@ static void si_llvm_emit_vertex(
 	}
 	gs_next_vertex = lp_build_add(uint, gs_next_vertex,
 				      lp_build_const_int32(gallivm, 1));
-	LLVMBuildStore(gallivm->builder, gs_next_vertex, si_shader_ctx->gs_next_vertex);
+
+	LLVMBuildStore(gallivm->builder, gs_next_vertex, si_shader_ctx->gs_next_vertex[stream]);
 
 	/* Signal vertex emission */
-	args[0] = lp_build_const_int32(gallivm, SENDMSG_GS_OP_EMIT | SENDMSG_GS);
+	args[0] = lp_build_const_int32(gallivm, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
 	build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			LLVMVoidTypeInContext(gallivm->context), args, 2,
@@ -3270,9 +3303,11 @@ static void si_llvm_emit_primitive(
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMValueRef args[2];
+	unsigned stream;
 
 	/* Signal primitive cut */
-	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_CUT | SENDMSG_GS);
+	stream = si_llvm_get_stream(bld_base, emit_data);
+	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_CUT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
 	build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			LLVMVoidTypeInContext(gallivm->context), args, 2,
@@ -3651,12 +3686,20 @@ static void preload_ring_buffers(struct si_shader_context *si_shader_ctx)
 			build_indexed_load_const(si_shader_ctx, buf_ptr, offset);
 	}
 
-	if (si_shader_ctx->type == TGSI_PROCESSOR_GEOMETRY ||
-	    si_shader_ctx->shader->is_gs_copy_shader) {
+	if (si_shader_ctx->shader->is_gs_copy_shader) {
 		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
 
-		si_shader_ctx->gsvs_ring =
+		si_shader_ctx->gsvs_ring[0] =
 			build_indexed_load_const(si_shader_ctx, buf_ptr, offset);
+	}
+	if (si_shader_ctx->type == TGSI_PROCESSOR_GEOMETRY) {
+		int i;
+		for (i = 0; i < 4; i++) {
+			LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS + i);
+
+			si_shader_ctx->gsvs_ring[i] =
+				build_indexed_load_const(si_shader_ctx, buf_ptr, offset);
+		}
 	}
 }
 
@@ -3838,7 +3881,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	preload_streamout_buffers(si_shader_ctx);
 	preload_ring_buffers(si_shader_ctx);
 
-	args[0] = si_shader_ctx->gsvs_ring;
+	args[0] = si_shader_ctx->gsvs_ring[0];
 	args[1] = lp_build_mul_imm(uint,
 				   LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 						si_shader_ctx->param_vertex_id),
@@ -4076,9 +4119,12 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	preload_ring_buffers(&si_shader_ctx);
 
 	if (si_shader_ctx.type == TGSI_PROCESSOR_GEOMETRY) {
-		si_shader_ctx.gs_next_vertex =
-			lp_build_alloca(bld_base->base.gallivm,
-					bld_base->uint_bld.elem_type, "");
+		int i;
+		for (i = 0; i < 4; i++) {
+			si_shader_ctx.gs_next_vertex[i] =
+				lp_build_alloca(bld_base->base.gallivm,
+						bld_base->uint_bld.elem_type, "");
+		}
 	}
 
 	if (!lp_build_tgsi_llvm(bld_base, tokens)) {

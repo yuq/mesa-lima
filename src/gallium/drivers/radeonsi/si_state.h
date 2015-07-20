@@ -148,7 +148,10 @@ struct si_shader_data {
 #define SI_RING_TESS_FACTOR	0 /* for HS (TCS)  */
 #define SI_RING_ESGS		0 /* for ES, GS */
 #define SI_RING_GSVS		1 /* for GS, VS */
-#define SI_NUM_RING_BUFFERS	2
+#define SI_RING_GSVS_1		2 /* 1, 2, 3 for GS */
+#define SI_RING_GSVS_2		3
+#define SI_RING_GSVS_3		4
+#define SI_NUM_RING_BUFFERS	5
 #define SI_SO_BUF_OFFSET	SI_NUM_RING_BUFFERS
 #define SI_NUM_RW_BUFFERS	(SI_SO_BUF_OFFSET + 4)
 
@@ -249,7 +252,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
 			bool add_tid, bool swizzle,
-			unsigned element_size, unsigned index_stride);
+			unsigned element_size, unsigned index_stride, uint64_t offset);
 void si_init_all_descriptors(struct si_context *sctx);
 void si_release_all_descriptors(struct si_context *sctx);
 void si_all_descriptors_begin_new_cs(struct si_context *sctx);

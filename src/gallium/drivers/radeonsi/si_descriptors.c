@@ -724,7 +724,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,
 			bool add_tid, bool swizzle,
-			unsigned element_size, unsigned index_stride)
+			unsigned element_size, unsigned index_stride, uint64_t offset)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_buffer_resources *buffers = &sctx->rw_buffers[shader];
@@ -741,7 +741,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 	if (buffer) {
 		uint64_t va;
 
-		va = r600_resource(buffer)->gpu_address;
+		va = r600_resource(buffer)->gpu_address + offset;
 
 		switch (element_size) {
 		default:
