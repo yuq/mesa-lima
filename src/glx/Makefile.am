@@ -134,7 +134,7 @@ libglx_la_SOURCES += \
 	dri3_glx.c \
 	dri3_priv.h
 
-libglx_la_LIBADD += $(XCB_DRI3_LIBS)
+libglx_la_LIBADD += $(top_builddir)/src/loader/libloader_dri3_helper.la
 endif
 
 if HAVE_APPLEDRI
