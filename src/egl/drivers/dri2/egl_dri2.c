@@ -27,6 +27,7 @@
 
 #define WL_HIDE_DEPRECATED
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -902,6 +903,55 @@ dri2_create_context_attribs_error(int dri_error)
    _eglError(egl_error, "dri2_create_context");
 }
 
+static bool
+dri2_fill_context_attribs(struct dri2_egl_context *dri2_ctx,
+                          struct dri2_egl_display *dri2_dpy,
+                          uint32_t *ctx_attribs,
+                          unsigned *num_attribs)
+{
+   int pos = 0;
+
+   assert(*num_attribs >= 8);
+
+   ctx_attribs[pos++] = __DRI_CTX_ATTRIB_MAJOR_VERSION;
+   ctx_attribs[pos++] = dri2_ctx->base.ClientMajorVersion;
+   ctx_attribs[pos++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
+   ctx_attribs[pos++] = dri2_ctx->base.ClientMinorVersion;
+
+   if (dri2_ctx->base.Flags != 0) {
+      /* If the implementation doesn't support the __DRI2_ROBUSTNESS
+       * extension, don't even try to send it the robust-access flag.
+       * It may explode.  Instead, generate the required EGL error here.
+       */
+      if ((dri2_ctx->base.Flags & EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR) != 0
+            && !dri2_dpy->robustness) {
+         _eglError(EGL_BAD_MATCH, "eglCreateContext");
+         return false;
+      }
+
+      ctx_attribs[pos++] = __DRI_CTX_ATTRIB_FLAGS;
+      ctx_attribs[pos++] = dri2_ctx->base.Flags;
+   }
+
+   if (dri2_ctx->base.ResetNotificationStrategy != EGL_NO_RESET_NOTIFICATION_KHR) {
+      /* If the implementation doesn't support the __DRI2_ROBUSTNESS
+       * extension, don't even try to send it a reset strategy.  It may
+       * explode.  Instead, generate the required EGL error here.
+       */
+      if (!dri2_dpy->robustness) {
+         _eglError(EGL_BAD_CONFIG, "eglCreateContext");
+         return false;
+      }
+
+      ctx_attribs[pos++] = __DRI_CTX_ATTRIB_RESET_STRATEGY;
+      ctx_attribs[pos++] = __DRI_CTX_RESET_LOSE_CONTEXT;
+   }
+
+   *num_attribs = pos;
+
+   return true;
+}
+
 /**
  * Called via eglCreateContext(), drv->API.CreateContext().
  */
@@ -987,44 +1037,12 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
    if (dri2_dpy->dri2) {
       if (dri2_dpy->dri2->base.version >= 3) {
          unsigned error;
-         unsigned num_attribs = 0;
+         unsigned num_attribs = 8;
          uint32_t ctx_attribs[8];
 
-         ctx_attribs[num_attribs++] = __DRI_CTX_ATTRIB_MAJOR_VERSION;
-         ctx_attribs[num_attribs++] = dri2_ctx->base.ClientMajorVersion;
-         ctx_attribs[num_attribs++] = __DRI_CTX_ATTRIB_MINOR_VERSION;
-         ctx_attribs[num_attribs++] = dri2_ctx->base.ClientMinorVersion;
-
-         if (dri2_ctx->base.Flags != 0) {
-            /* If the implementation doesn't support the __DRI2_ROBUSTNESS
-             * extension, don't even try to send it the robust-access flag.
-             * It may explode.  Instead, generate the required EGL error here.
-             */
-            if ((dri2_ctx->base.Flags & EGL_CONTEXT_OPENGL_ROBUST_ACCESS_BIT_KHR) != 0
-                && !dri2_dpy->robustness) {
-               _eglError(EGL_BAD_MATCH, "eglCreateContext");
-               goto cleanup;
-            }
-
-            ctx_attribs[num_attribs++] = __DRI_CTX_ATTRIB_FLAGS;
-            ctx_attribs[num_attribs++] = dri2_ctx->base.Flags;
-         }
-
-         if (dri2_ctx->base.ResetNotificationStrategy != EGL_NO_RESET_NOTIFICATION_KHR) {
-            /* If the implementation doesn't support the __DRI2_ROBUSTNESS
-             * extension, don't even try to send it a reset strategy.  It may
-             * explode.  Instead, generate the required EGL error here.
-             */
-            if (!dri2_dpy->robustness) {
-               _eglError(EGL_BAD_CONFIG, "eglCreateContext");
-               goto cleanup;
-            }
-
-            ctx_attribs[num_attribs++] = __DRI_CTX_ATTRIB_RESET_STRATEGY;
-            ctx_attribs[num_attribs++] = __DRI_CTX_RESET_LOSE_CONTEXT;
-         }
-
-         assert(num_attribs <= ARRAY_SIZE(ctx_attribs));
+         if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
+                                        &num_attribs))
+            goto cleanup;
 
 	 dri2_ctx->dri_context =
 	    dri2_dpy->dri2->createContextAttribs(dri2_dpy->dri_screen,
