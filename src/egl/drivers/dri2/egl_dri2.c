@@ -1064,12 +1064,33 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
       }
    } else {
       assert(dri2_dpy->swrast);
-      dri2_ctx->dri_context =
-         dri2_dpy->swrast->createNewContextForAPI(dri2_dpy->dri_screen,
-                                                  api,
-                                                  dri_config,
-                                                  shared,
-                                                  dri2_ctx);
+      if (dri2_dpy->swrast->base.version >= 3) {
+         unsigned error;
+         unsigned num_attribs = 8;
+         uint32_t ctx_attribs[8];
+
+         if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
+                                        &num_attribs))
+            goto cleanup;
+
+         dri2_ctx->dri_context =
+            dri2_dpy->swrast->createContextAttribs(dri2_dpy->dri_screen,
+                                                   api,
+                                                   dri_config,
+                                                   shared,
+                                                   num_attribs / 2,
+                                                   ctx_attribs,
+                                                   & error,
+                                                   dri2_ctx);
+         dri2_create_context_attribs_error(error);
+      } else {
+         dri2_ctx->dri_context =
+            dri2_dpy->swrast->createNewContextForAPI(dri2_dpy->dri_screen,
+                                                     api,
+                                                     dri_config,
+                                                     shared,
+                                                     dri2_ctx);
+      }
    }
 
    if (!dri2_ctx->dri_context)
