@@ -126,6 +126,9 @@ do_dead_code(exec_list *instructions, bool uniform_locations_assigned)
                if (block_type->interface_packing != GLSL_INTERFACE_PACKING_PACKED)
                   continue;
             }
+
+            if (entry->var->type->is_subroutine())
+               continue;
          }
 
 	 entry->var->remove();
