@@ -1054,6 +1054,47 @@ image_format_to_fourcc(int format)
    return 0;
 }
 
+__DRIimage *
+loader_dri3_create_image(xcb_connection_t *c,
+                         xcb_dri3_buffer_from_pixmap_reply_t *bp_reply,
+                         unsigned int format,
+                         __DRIscreen *dri_screen,
+                         const __DRIimageExtension *image,
+                         void *loaderPrivate)
+{
+   int                                  *fds;
+   __DRIimage                           *image_planar, *ret;
+   int                                  stride, offset;
+
+   /* Get an FD for the pixmap object
+    */
+   fds = xcb_dri3_buffer_from_pixmap_reply_fds(c, bp_reply);
+
+   stride = bp_reply->stride;
+   offset = 0;
+
+   /* createImageFromFds creates a wrapper __DRIimage structure which
+    * can deal with multiple planes for things like Yuv images. So, once
+    * we've gotten the planar wrapper, pull the single plane out of it and
+    * discard the wrapper.
+    */
+   image_planar = (image->createImageFromFds)(dri_screen,
+                                              bp_reply->width,
+                                              bp_reply->height,
+                                              image_format_to_fourcc(format),
+                                              fds, 1,
+                                              &stride, &offset, loaderPrivate);
+   close(fds[0]);
+   if (!image_planar)
+      return NULL;
+
+   ret = (image->fromPlanar)(image_planar, 0, loaderPrivate);
+
+   (image->destroyImage)(image_planar);
+
+   return ret;
+}
+
 /** dri3_get_pixmap_buffer
  *
  * Get the DRM object for a pixmap from the X server and
@@ -1069,12 +1110,9 @@ dri3_get_pixmap_buffer(__DRIdrawable *driDrawable, unsigned int format,
    xcb_drawable_t                       pixmap;
    xcb_dri3_buffer_from_pixmap_cookie_t bp_cookie;
    xcb_dri3_buffer_from_pixmap_reply_t  *bp_reply;
-   int                                  *fds;
    xcb_sync_fence_t                     sync_fence;
    struct xshmfence                     *shm_fence;
    int                                  fence_fd;
-   __DRIimage                           *image_planar;
-   int                                  stride, offset;
 
    if (buffer)
       return buffer;
@@ -1100,36 +1138,14 @@ dri3_get_pixmap_buffer(__DRIdrawable *driDrawable, unsigned int format,
                           false,
                           fence_fd);
 
-   /* Get an FD for the pixmap object
-    */
    bp_cookie = xcb_dri3_buffer_from_pixmap(draw->conn, pixmap);
-   bp_reply = xcb_dri3_buffer_from_pixmap_reply(draw->conn,
-                                                bp_cookie, NULL);
+   bp_reply = xcb_dri3_buffer_from_pixmap_reply(draw->conn, bp_cookie, NULL);
    if (!bp_reply)
       goto no_image;
-   fds = xcb_dri3_buffer_from_pixmap_reply_fds(draw->conn, bp_reply);
 
-   stride = bp_reply->stride;
-   offset = 0;
-
-   /* createImageFromFds creates a wrapper __DRIimage structure which
-    * can deal with multiple planes for things like Yuv images. So, once
-    * we've gotten the planar wrapper, pull the single plane out of it and
-    * discard the wrapper.
-    */
-   image_planar =
-      (draw->ext->image->createImageFromFds)(draw->dri_screen, bp_reply->width,
-                                             bp_reply->height,
-                                             image_format_to_fourcc(format),
-                                             fds, 1, &stride, &offset, buffer);
-   close(fds[0]);
-   if (!image_planar)
-      goto no_image;
-
-   buffer->image = (draw->ext->image->fromPlanar)(image_planar, 0, buffer);
-
-   (draw->ext->image->destroyImage)(image_planar);
-
+   buffer->image = loader_dri3_create_image(draw->conn, bp_reply, format,
+                                            draw->dri_screen, draw->ext->image,
+                                            buffer);
    if (!buffer->image)
       goto no_image;
 
@@ -1142,9 +1158,13 @@ dri3_get_pixmap_buffer(__DRIdrawable *driDrawable, unsigned int format,
    buffer->sync_fence = sync_fence;
 
    draw->buffers[buf_id] = buffer;
+
+   free(bp_reply);
+
    return buffer;
 
 no_image:
+   free(bp_reply);
    xcb_sync_destroy_fence(draw->conn, sync_fence);
    xshmfence_unmap_shm(shm_fence);
 no_fence:

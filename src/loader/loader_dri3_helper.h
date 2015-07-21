@@ -28,6 +28,7 @@
 #include <stdint.h>
 
 #include <xcb/xcb.h>
+#include <xcb/dri3.h>
 #include <xcb/present.h>
 
 #include <GL/gl.h>
@@ -220,6 +221,14 @@ loader_dri3_wait_gl(struct loader_dri3_drawable *draw);
 int loader_dri3_open(xcb_connection_t *conn,
                      xcb_window_t root,
                      uint32_t provider);
+
+__DRIimage *
+loader_dri3_create_image(xcb_connection_t *c,
+                         xcb_dri3_buffer_from_pixmap_reply_t *bp_reply,
+                         unsigned int format,
+                         __DRIscreen *dri_screen,
+                         const __DRIimageExtension *image,
+                         void *loaderPrivate);
 
 int
 loader_dri3_get_buffers(__DRIdrawable *driDrawable,
