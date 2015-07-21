@@ -145,6 +145,8 @@ struct dri2_egl_display_vtbl {
    EGLBoolean (*get_sync_values)(_EGLDisplay *display, _EGLSurface *surface,
                                  EGLuint64KHR *ust, EGLuint64KHR *msc,
                                  EGLuint64KHR *sbc);
+
+   __DRIdrawable *(*get_dri_drawable)(_EGLSurface *surf);
 };
 
 struct dri2_egl_display
@@ -326,6 +328,9 @@ dri2_load_driver_swrast(_EGLDisplay *disp);
 
 EGLBoolean
 dri2_create_screen(_EGLDisplay *disp);
+
+__DRIdrawable *
+dri2_surface_get_dri_drawable(_EGLSurface *surf);
 
 __DRIimage *
 dri2_lookup_egl_image(__DRIscreen *screen, void *image, void *data);

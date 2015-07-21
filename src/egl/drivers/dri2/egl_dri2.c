@@ -1119,11 +1119,10 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
 {
    struct dri2_egl_driver *dri2_drv = dri2_egl_driver(drv);
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_surface *dri2_dsurf = dri2_egl_surface(dsurf);
-   struct dri2_egl_surface *dri2_rsurf = dri2_egl_surface(rsurf);
    struct dri2_egl_context *dri2_ctx = dri2_egl_context(ctx);
    _EGLContext *old_ctx;
    _EGLSurface *old_dsurf, *old_rsurf;
+   _EGLSurface *tmp_dsurf, *tmp_rsurf;
    __DRIdrawable *ddraw, *rdraw;
    __DRIcontext *cctx;
 
@@ -1135,8 +1134,8 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
    if (old_ctx && dri2_drv->glFlush)
       dri2_drv->glFlush();
 
-   ddraw = (dri2_dsurf) ? dri2_dsurf->dri_drawable : NULL;
-   rdraw = (dri2_rsurf) ? dri2_rsurf->dri_drawable : NULL;
+   ddraw = (dsurf) ? dri2_dpy->vtbl->get_dri_drawable(dsurf) : NULL;
+   rdraw = (rsurf) ? dri2_dpy->vtbl->get_dri_drawable(rsurf) : NULL;
    cctx = (dri2_ctx) ? dri2_ctx->dri_context : NULL;
 
    if (old_ctx) {
@@ -1156,10 +1155,10 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
       return EGL_TRUE;
    } else {
       /* undo the previous _eglBindContext */
-      _eglBindContext(old_ctx, old_dsurf, old_rsurf, &ctx, &dsurf, &rsurf);
+      _eglBindContext(old_ctx, old_dsurf, old_rsurf, &ctx, &tmp_dsurf, &tmp_rsurf);
       assert(&dri2_ctx->base == ctx &&
-             &dri2_dsurf->base == dsurf &&
-             &dri2_rsurf->base == rsurf);
+             tmp_dsurf == dsurf &&
+             tmp_rsurf == rsurf);
 
       _eglPutSurface(dsurf);
       _eglPutSurface(rsurf);
@@ -1171,6 +1170,14 @@ dri2_make_current(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *dsurf,
 
       return EGL_FALSE;
    }
+}
+
+__DRIdrawable *
+dri2_surface_get_dri_drawable(_EGLSurface *surf)
+{
+   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
+
+   return dri2_surf->dri_drawable;
 }
 
 /*
@@ -1235,7 +1242,7 @@ void
 dri2_flush_drawable_for_swapbuffers(_EGLDisplay *disp, _EGLSurface *draw)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(draw);
+   __DRIdrawable *dri_drawable = dri2_dpy->vtbl->get_dri_drawable(draw);
 
    if (dri2_dpy->flush) {
       if (dri2_dpy->flush->base.version >= 4) {
@@ -1253,12 +1260,12 @@ dri2_flush_drawable_for_swapbuffers(_EGLDisplay *disp, _EGLSurface *draw)
           *      after calling eglSwapBuffers."
           */
          dri2_dpy->flush->flush_with_flags(dri2_ctx->dri_context,
-                                           dri2_surf->dri_drawable,
+                                           dri_drawable,
                                            __DRI2_FLUSH_DRAWABLE |
                                            __DRI2_FLUSH_INVALIDATE_ANCILLARY,
                                            __DRI2_THROTTLE_SWAPBUFFER);
       } else {
-         dri2_dpy->flush->flush(dri2_surf->dri_drawable);
+         dri2_dpy->flush->flush(dri_drawable);
       }
    }
 }
@@ -1315,7 +1322,8 @@ static EGLBoolean
 dri2_wait_client(_EGLDriver *drv, _EGLDisplay *disp, _EGLContext *ctx)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(ctx->DrawSurface);
+   _EGLSurface *surf = ctx->DrawSurface;
+   __DRIdrawable *dri_drawable = dri2_dpy->vtbl->get_dri_drawable(surf);
 
    (void) drv;
 
@@ -1323,7 +1331,7 @@ dri2_wait_client(_EGLDriver *drv, _EGLDisplay *disp, _EGLContext *ctx)
     * we need to copy fake to real here.*/
 
    if (dri2_dpy->flush != NULL)
-      dri2_dpy->flush->flush(dri2_surf->dri_drawable);
+      dri2_dpy->flush->flush(dri_drawable);
 
    return EGL_TRUE;
 }
@@ -1346,10 +1354,10 @@ dri2_bind_tex_image(_EGLDriver *drv,
 		    _EGLDisplay *disp, _EGLSurface *surf, EGLint buffer)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
    struct dri2_egl_context *dri2_ctx;
    _EGLContext *ctx;
    GLint format, target;
+   __DRIdrawable *dri_drawable = dri2_dpy->vtbl->get_dri_drawable(surf);
 
    ctx = _eglGetCurrentContext();
    dri2_ctx = dri2_egl_context(ctx);
@@ -1357,7 +1365,7 @@ dri2_bind_tex_image(_EGLDriver *drv,
    if (!_eglBindTexImage(drv, disp, surf, buffer))
       return EGL_FALSE;
 
-   switch (dri2_surf->base.TextureFormat) {
+   switch (surf->TextureFormat) {
    case EGL_TEXTURE_RGB:
       format = __DRI_TEXTURE_FORMAT_RGB;
       break;
@@ -1369,7 +1377,7 @@ dri2_bind_tex_image(_EGLDriver *drv,
       format = __DRI_TEXTURE_FORMAT_RGBA;
    }
 
-   switch (dri2_surf->base.TextureTarget) {
+   switch (surf->TextureTarget) {
    case EGL_TEXTURE_2D:
       target = GL_TEXTURE_2D;
       break;
@@ -1380,7 +1388,7 @@ dri2_bind_tex_image(_EGLDriver *drv,
 
    (*dri2_dpy->tex_buffer->setTexBuffer2)(dri2_ctx->dri_context,
 					  target, format,
-					  dri2_surf->dri_drawable);
+					  dri_drawable);
 
    return EGL_TRUE;
 }
@@ -1390,10 +1398,10 @@ dri2_release_tex_image(_EGLDriver *drv,
 		       _EGLDisplay *disp, _EGLSurface *surf, EGLint buffer)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
    struct dri2_egl_context *dri2_ctx;
    _EGLContext *ctx;
    GLint  target;
+   __DRIdrawable *dri_drawable = dri2_dpy->vtbl->get_dri_drawable(surf);
 
    ctx = _eglGetCurrentContext();
    dri2_ctx = dri2_egl_context(ctx);
@@ -1401,7 +1409,7 @@ dri2_release_tex_image(_EGLDriver *drv,
    if (!_eglReleaseTexImage(drv, disp, surf, buffer))
       return EGL_FALSE;
 
-   switch (dri2_surf->base.TextureTarget) {
+   switch (surf->TextureTarget) {
    case EGL_TEXTURE_2D:
       target = GL_TEXTURE_2D;
       break;
@@ -1413,7 +1421,7 @@ dri2_release_tex_image(_EGLDriver *drv,
        dri2_dpy->tex_buffer->releaseTexBuffer != NULL) {
       (*dri2_dpy->tex_buffer->releaseTexBuffer)(dri2_ctx->dri_context,
                                                 target,
-                                                dri2_surf->dri_drawable);
+                                                dri_drawable);
    }
 
    return EGL_TRUE;

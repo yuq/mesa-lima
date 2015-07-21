@@ -1112,6 +1112,7 @@ static struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .query_buffer_age = dri2_fallback_query_buffer_age,
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri2_fallback_get_sync_values,
+   .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
 static struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
@@ -1130,6 +1131,7 @@ static struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
    .query_buffer_age = dri2_fallback_query_buffer_age,
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri2_x11_get_sync_values,
+   .get_dri_drawable = dri2_surface_get_dri_drawable,
 };
 
 static EGLBoolean
