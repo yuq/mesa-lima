@@ -99,6 +99,8 @@ nv50_constbufs_validate(struct nv50_context *nv50)
                PUSH_DATA (push, (b << 12) | (i << 8) | p | 1);
 
                BCTX_REFN(nv50->bufctx_3d, CB(s, i), res, RD);
+
+               nv50->cb_dirty = 1; /* Force cache flush for UBO. */
             } else {
                BEGIN_NV04(push, NV50_3D(SET_PROGRAM_CB), 1);
                PUSH_DATA (push, (i << 8) | p | 0);
