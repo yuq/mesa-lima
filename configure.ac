@@ -1568,6 +1568,12 @@ if test "x$enable_egl" = xyes; then
             if test "x$enable_shared_glapi" = xno; then
                 AC_MSG_ERROR([egl_dri2 requires --enable-shared-glapi])
             fi
+            if test "x$enable_dri3" = xyes; then
+                HAVE_EGL_DRIVER_DRI3=1
+                if test "x$enable_shared_glapi" = xno; then
+                    AC_MSG_ERROR([egl_dri3 requires --enable-shared-glapi])
+                fi
+            fi
         else
             # Avoid building an "empty" libEGL. Drop/update this
             # when other backends (haiku?) come along.
@@ -2519,6 +2525,9 @@ if test "$enable_egl" = yes; then
     egl_drivers=""
     if test "x$HAVE_EGL_DRIVER_DRI2" != "x"; then
         egl_drivers="$egl_drivers builtin:egl_dri2"
+    fi
+    if test "x$HAVE_EGL_DRIVER_DRI3" != "x"; then
+        egl_drivers="$egl_drivers builtin:egl_dri3"
     fi
 
     echo "        EGL drivers:    $egl_drivers"

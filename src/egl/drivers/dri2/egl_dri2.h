@@ -35,6 +35,10 @@
 #include <xcb/dri2.h>
 #include <xcb/xfixes.h>
 #include <X11/Xlib-xcb.h>
+
+#ifdef HAVE_DRI3
+#include "loader_dri3_helper.h"
+#endif
 #endif
 
 #ifdef HAVE_WAYLAND_PLATFORM
@@ -160,6 +164,7 @@ struct dri2_egl_display
    const __DRIconfig       **driver_configs;
    void                     *driver;
    const __DRIcoreExtension       *core;
+   const __DRIimageDriverExtension *image_driver;
    const __DRIdri2Extension       *dri2;
    const __DRIswrastExtension     *swrast;
    const __DRI2flushExtension     *flush;
@@ -192,6 +197,9 @@ struct dri2_egl_display
 #ifdef HAVE_X11_PLATFORM
    xcb_connection_t         *conn;
    int                      screen;
+#ifdef HAVE_DRI3
+   struct loader_dri3_extensions loader_dri3_ext;
+#endif
 #endif
 
 #ifdef HAVE_WAYLAND_PLATFORM
@@ -205,8 +213,9 @@ struct dri2_egl_display
    int			     formats;
    uint32_t                  capabilities;
    int			     is_render_node;
-   int			     is_different_gpu;
 #endif
+
+   int			     is_different_gpu;
 };
 
 struct dri2_egl_context
@@ -325,6 +334,9 @@ dri2_setup_screen(_EGLDisplay *disp);
 
 EGLBoolean
 dri2_load_driver_swrast(_EGLDisplay *disp);
+
+EGLBoolean
+dri2_load_driver_dri3(_EGLDisplay *disp);
 
 EGLBoolean
 dri2_create_screen(_EGLDisplay *disp);

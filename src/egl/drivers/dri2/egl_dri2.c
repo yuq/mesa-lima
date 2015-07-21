@@ -352,6 +352,12 @@ struct dri2_extension_match {
    int offset;
 };
 
+static struct dri2_extension_match dri3_driver_extensions[] = {
+   { __DRI_CORE, 1, offsetof(struct dri2_egl_display, core) },
+   { __DRI_IMAGE_DRIVER, 1, offsetof(struct dri2_egl_display, image_driver) },
+   { NULL, 0, 0 }
+};
+
 static struct dri2_extension_match dri2_driver_extensions[] = {
    { __DRI_CORE, 1, offsetof(struct dri2_egl_display, core) },
    { __DRI_DRI2, 2, offsetof(struct dri2_egl_display, dri2) },
@@ -494,6 +500,25 @@ dri2_open_driver(_EGLDisplay *disp)
 }
 
 EGLBoolean
+dri2_load_driver_dri3(_EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = disp->DriverData;
+   const __DRIextension **extensions;
+
+   extensions = dri2_open_driver(disp);
+   if (!extensions)
+      return EGL_FALSE;
+
+   if (!dri2_bind_extensions(dri2_dpy, dri3_driver_extensions, extensions)) {
+      dlclose(dri2_dpy->driver);
+      return EGL_FALSE;
+   }
+   dri2_dpy->driver_extensions = extensions;
+
+   return EGL_TRUE;
+}
+
+EGLBoolean
 dri2_load_driver(_EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy = disp->DriverData;
@@ -550,7 +575,9 @@ dri2_setup_screen(_EGLDisplay *disp)
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    unsigned int api_mask;
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->image_driver) {
+      api_mask = dri2_dpy->image_driver->getAPIMask(dri2_dpy->dri_screen);
+   } else if (dri2_dpy->dri2) {
       api_mask = dri2_dpy->dri2->getAPIMask(dri2_dpy->dri_screen);
    } else {
       assert(dri2_dpy->swrast);
@@ -570,7 +597,7 @@ dri2_setup_screen(_EGLDisplay *disp)
    if (api_mask & (1 << __DRI_API_GLES3))
       disp->ClientAPIs |= EGL_OPENGL_ES3_BIT_KHR;
 
-   assert(dri2_dpy->dri2 || dri2_dpy->swrast);
+   assert(dri2_dpy->image_driver || dri2_dpy->dri2 || dri2_dpy->swrast);
    disp->Extensions.KHR_surfaceless_context = EGL_TRUE;
    disp->Extensions.MESA_configless_context = EGL_TRUE;
 
@@ -578,7 +605,8 @@ dri2_setup_screen(_EGLDisplay *disp)
                                    __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))
       disp->Extensions.KHR_gl_colorspace = EGL_TRUE;
 
-   if ((dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) ||
+   if (dri2_dpy->image_driver ||
+       (dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) ||
        (dri2_dpy->swrast && dri2_dpy->swrast->base.version >= 3)) {
       disp->Extensions.KHR_create_context = EGL_TRUE;
 
@@ -641,7 +669,14 @@ dri2_create_screen(_EGLDisplay *disp)
 
    dri2_dpy = disp->DriverData;
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->image_driver) {
+      dri2_dpy->dri_screen =
+         dri2_dpy->image_driver->createNewScreen2(0, dri2_dpy->fd,
+                                                  dri2_dpy->extensions,
+                                                  dri2_dpy->driver_extensions,
+                                                  &dri2_dpy->driver_configs,
+                                                  disp);
+   } else if (dri2_dpy->dri2) {
       if (dri2_dpy->dri2->base.version >= 4) {
          dri2_dpy->dri_screen =
             dri2_dpy->dri2->createNewScreen2(0, dri2_dpy->fd,
@@ -677,7 +712,7 @@ dri2_create_screen(_EGLDisplay *disp)
 
    extensions = dri2_dpy->core->getExtensions(dri2_dpy->dri_screen);
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->image_driver || dri2_dpy->dri2) {
       if (!dri2_bind_extensions(dri2_dpy, dri2_core_extensions, extensions))
          goto cleanup_dri_screen;
    } else {
@@ -1024,7 +1059,26 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
    else
       dri_config = NULL;
 
-   if (dri2_dpy->dri2) {
+   if (dri2_dpy->image_driver) {
+      unsigned error;
+      unsigned num_attribs = 8;
+      uint32_t ctx_attribs[8];
+
+      if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
+                                        &num_attribs))
+         goto cleanup;
+
+      dri2_ctx->dri_context =
+         dri2_dpy->image_driver->createContextAttribs(dri2_dpy->dri_screen,
+                                                      api,
+                                                      dri_config,
+                                                      shared,
+                                                      num_attribs / 2,
+                                                      ctx_attribs,
+                                                      & error,
+                                                      dri2_ctx);
+      dri2_create_context_attribs_error(error);
+   } else if (dri2_dpy->dri2) {
       if (dri2_dpy->dri2->base.version >= 3) {
          unsigned error;
          unsigned num_attribs = 8;
