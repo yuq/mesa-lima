@@ -272,6 +272,81 @@ dri3_get_sync_values(_EGLDisplay *display, _EGLSurface *surface,
                                    (int64_t *) sbc) ? EGL_TRUE : EGL_FALSE;
 }
 
+static _EGLImage *
+dri3_create_image_khr_pixmap(_EGLDisplay *disp, _EGLContext *ctx,
+                             EGLClientBuffer buffer, const EGLint *attr_list)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   struct dri2_egl_image *dri2_img;
+   xcb_drawable_t drawable;
+   xcb_dri3_buffer_from_pixmap_cookie_t bp_cookie;
+   xcb_dri3_buffer_from_pixmap_reply_t  *bp_reply;
+   unsigned int format;
+
+   drawable = (xcb_drawable_t) (uintptr_t) buffer;
+   bp_cookie = xcb_dri3_buffer_from_pixmap(dri2_dpy->conn, drawable);
+   bp_reply = xcb_dri3_buffer_from_pixmap_reply(dri2_dpy->conn,
+                                                bp_cookie, NULL);
+   if (!bp_reply) {
+      _eglError(EGL_BAD_ALLOC, "xcb_dri3_buffer_from_pixmap");
+      return NULL;
+   }
+
+   switch (bp_reply->depth) {
+   case 16:
+      format = __DRI_IMAGE_FORMAT_RGB565;
+      break;
+   case 24:
+      format = __DRI_IMAGE_FORMAT_XRGB8888;
+      break;
+   case 32:
+      format = __DRI_IMAGE_FORMAT_ARGB8888;
+      break;
+   default:
+      _eglError(EGL_BAD_PARAMETER,
+                "dri3_create_image_khr: unsupported pixmap depth");
+      free(bp_reply);
+      return EGL_NO_IMAGE_KHR;
+   }
+
+   dri2_img = malloc(sizeof *dri2_img);
+   if (!dri2_img) {
+      _eglError(EGL_BAD_ALLOC, "dri3_create_image_khr");
+      return EGL_NO_IMAGE_KHR;
+   }
+
+   if (!_eglInitImage(&dri2_img->base, disp)) {
+      free(dri2_img);
+      return EGL_NO_IMAGE_KHR;
+   }
+
+   dri2_img->dri_image = loader_dri3_create_image(dri2_dpy->conn,
+                                                  bp_reply,
+                                                  format,
+                                                  dri2_dpy->dri_screen,
+                                                  dri2_dpy->image,
+                                                  dri2_img);
+
+   free(bp_reply);
+
+   return &dri2_img->base;
+}
+
+static _EGLImage *
+dri3_create_image_khr(_EGLDriver *drv, _EGLDisplay *disp,
+                      _EGLContext *ctx, EGLenum target,
+                      EGLClientBuffer buffer, const EGLint *attr_list)
+{
+   (void) drv;
+
+   switch (target) {
+   case EGL_NATIVE_PIXMAP_KHR:
+      return dri3_create_image_khr_pixmap(disp, ctx, buffer, attr_list);
+   default:
+      return dri2_create_image_khr(drv, disp, ctx, target, buffer, attr_list);
+   }
+}
+
 /**
  * Called by the driver when it needs to update the real front buffer with the
  * contents of its fake front buffer.
@@ -347,7 +422,7 @@ struct dri2_egl_display_vtbl dri3_x11_display_vtbl = {
    .create_pixmap_surface = dri3_create_pixmap_surface,
    .create_pbuffer_surface = dri3_create_pbuffer_surface,
    .destroy_surface = dri3_destroy_surface,
-   .create_image = dri2_create_image_khr,
+   .create_image = dri3_create_image_khr,
    .swap_interval = dri3_set_swap_interval,
    .swap_buffers = dri3_swap_buffers,
    .swap_buffers_with_damage = dri2_fallback_swap_buffers_with_damage,

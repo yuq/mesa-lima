@@ -1305,6 +1305,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 
+   if (!dri2_dpy->is_different_gpu)
+      disp->Extensions.KHR_image_pixmap = EGL_TRUE;
    disp->Extensions.NOK_texture_from_pixmap = EGL_TRUE;
    disp->Extensions.CHROMIUM_sync_control = EGL_TRUE;
    disp->Extensions.EXT_buffer_age = EGL_TRUE;
