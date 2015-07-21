@@ -1056,8 +1056,6 @@ vec4_visitor::visit(ir_variable *ir)
       for (int i = 0; i < type_size(ir->type); i++) {
 	 output_reg[ir->data.location + i] = *reg;
 	 output_reg[ir->data.location + i].reg_offset = i;
-	 output_reg[ir->data.location + i].type =
-            brw_type_for_base_type(ir->type->get_scalar_type());
 	 output_reg_annotation[ir->data.location + i] = ir->name;
       }
       break;
@@ -3103,6 +3101,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
          vec4_instruction *inst;
          inst = emit(OR(header1_w, src_reg(header1_w), src_reg(1u << 6)));
          inst->predicate = BRW_PREDICATE_NORMAL;
+         output_reg[BRW_VARYING_SLOT_NDC].type = BRW_REGISTER_TYPE_F;
          inst = emit(MOV(output_reg[BRW_VARYING_SLOT_NDC], src_reg(0.0f)));
          inst->predicate = BRW_PREDICATE_NORMAL;
       }
@@ -3115,18 +3114,23 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
       if (prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) {
          dst_reg reg_w = reg;
          reg_w.writemask = WRITEMASK_W;
-         emit(MOV(reg_w, src_reg(output_reg[VARYING_SLOT_PSIZ])));
+         src_reg reg_as_src = src_reg(output_reg[VARYING_SLOT_PSIZ]);
+         reg_as_src.type = reg_w.type;
+         reg_as_src.swizzle = brw_swizzle_for_size(1);
+         emit(MOV(reg_w, reg_as_src));
       }
       if (prog_data->vue_map.slots_valid & VARYING_BIT_LAYER) {
          dst_reg reg_y = reg;
          reg_y.writemask = WRITEMASK_Y;
          reg_y.type = BRW_REGISTER_TYPE_D;
+         output_reg[VARYING_SLOT_LAYER].type = reg_y.type;
          emit(MOV(reg_y, src_reg(output_reg[VARYING_SLOT_LAYER])));
       }
       if (prog_data->vue_map.slots_valid & VARYING_BIT_VIEWPORT) {
          dst_reg reg_z = reg;
          reg_z.writemask = WRITEMASK_Z;
          reg_z.type = BRW_REGISTER_TYPE_D;
+         output_reg[VARYING_SLOT_VIEWPORT].type = reg_z.type;
          emit(MOV(reg_z, src_reg(output_reg[VARYING_SLOT_VIEWPORT])));
       }
    }
@@ -3164,8 +3168,8 @@ vec4_visitor::emit_clip_distances(dst_reg reg, int offset)
 vec4_instruction *
 vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
 {
-   assert (varying < VARYING_SLOT_MAX);
-   reg.type = output_reg[varying].type;
+   assert(varying < VARYING_SLOT_MAX);
+   assert(output_reg[varying].type == reg.type);
    current_annotation = output_reg_annotation[varying];
    /* Copy the register, saturating if necessary */
    return emit(MOV(reg, src_reg(output_reg[varying])));
@@ -3175,6 +3179,7 @@ void
 vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
 {
    reg.type = BRW_REGISTER_TYPE_F;
+   output_reg[varying].type = reg.type;
 
    switch (varying) {
    case VARYING_SLOT_PSIZ:
