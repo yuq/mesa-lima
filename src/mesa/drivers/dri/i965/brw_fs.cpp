@@ -663,10 +663,29 @@ fs_inst::is_partial_write() const
            !this->dst.is_contiguous());
 }
 
+unsigned
+fs_inst::components_read(unsigned i) const
+{
+   switch (opcode) {
+   case FS_OPCODE_LINTERP:
+      if (i == 0)
+         return 2;
+      else
+         return 1;
+
+   case FS_OPCODE_PIXEL_X:
+   case FS_OPCODE_PIXEL_Y:
+      assert(i == 0);
+      return 2;
+
+   default:
+      return 1;
+   }
+}
+
 int
 fs_inst::regs_read(int arg) const
 {
-   unsigned components = 1;
    switch (opcode) {
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
@@ -688,15 +707,8 @@ fs_inst::regs_read(int arg) const
       break;
 
    case FS_OPCODE_LINTERP:
-      if (arg == 0)
-         return exec_size / 4;
-      else
+      if (arg == 1)
          return 1;
-
-   case FS_OPCODE_PIXEL_X:
-   case FS_OPCODE_PIXEL_Y:
-      if (arg == 0)
-         components = 2;
       break;
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
@@ -720,7 +732,8 @@ fs_inst::regs_read(int arg) const
       return 1;
    case GRF:
    case HW_REG:
-      return DIV_ROUND_UP(components * src[arg].component_size(exec_size),
+      return DIV_ROUND_UP(components_read(arg) *
+                          src[arg].component_size(exec_size),
                           REG_SIZE);
    case MRF:
       unreachable("MRF registers are not allowed as sources");
