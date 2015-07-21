@@ -686,6 +686,31 @@ fs_inst::components_read(unsigned i) const
       else
          return 1;
 
+   case SHADER_OPCODE_TEX_LOGICAL:
+   case SHADER_OPCODE_TXD_LOGICAL:
+   case SHADER_OPCODE_TXF_LOGICAL:
+   case SHADER_OPCODE_TXL_LOGICAL:
+   case SHADER_OPCODE_TXS_LOGICAL:
+   case FS_OPCODE_TXB_LOGICAL:
+   case SHADER_OPCODE_TXF_CMS_LOGICAL:
+   case SHADER_OPCODE_TXF_UMS_LOGICAL:
+   case SHADER_OPCODE_TXF_MCS_LOGICAL:
+   case SHADER_OPCODE_LOD_LOGICAL:
+   case SHADER_OPCODE_TG4_LOGICAL:
+   case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+      assert(src[8].file == IMM && src[9].file == IMM);
+      /* Texture coordinates. */
+      if (i == 0)
+         return src[8].fixed_hw_reg.dw1.ud;
+      /* Texture derivatives. */
+      else if ((i == 2 || i == 3) && opcode == SHADER_OPCODE_TXD_LOGICAL)
+         return src[9].fixed_hw_reg.dw1.ud;
+      /* Texture offset. */
+      else if (i == 7)
+         return 2;
+      else
+         return 1;
+
    default:
       return 1;
    }
@@ -3361,6 +3386,25 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    inst->header_size = header_size;
 }
 
+static void
+lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
+{
+   const brw_device_info *devinfo = bld.shader->devinfo;
+   const fs_reg &coordinate = inst->src[0];
+   const fs_reg &shadow_c = inst->src[1];
+   const fs_reg &lod = inst->src[2];
+   const fs_reg &lod2 = inst->src[3];
+   const fs_reg &sample_index = inst->src[4];
+   const fs_reg &mcs = inst->src[5];
+   const fs_reg &sampler = inst->src[6];
+   const fs_reg &offset_value = inst->src[7];
+   assert(inst->src[8].file == IMM && inst->src[9].file == IMM);
+   const unsigned coord_components = inst->src[8].fixed_hw_reg.dw1.ud;
+   const unsigned grad_components = inst->src[9].fixed_hw_reg.dw1.ud;
+
+   assert(!"Not implemented");
+}
+
 bool
 fs_visitor::lower_logical_sends()
 {
@@ -3378,6 +3422,54 @@ fs_visitor::lower_logical_sends()
                                      (const brw_wm_prog_data *)prog_data,
                                      (const brw_wm_prog_key *)key,
                                      payload);
+         break;
+
+      case SHADER_OPCODE_TEX_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TEX);
+         break;
+
+      case SHADER_OPCODE_TXD_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXD);
+         break;
+
+      case SHADER_OPCODE_TXF_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF);
+         break;
+
+      case SHADER_OPCODE_TXL_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXL);
+         break;
+
+      case SHADER_OPCODE_TXS_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXS);
+         break;
+
+      case FS_OPCODE_TXB_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, FS_OPCODE_TXB);
+         break;
+
+      case SHADER_OPCODE_TXF_CMS_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_CMS);
+         break;
+
+      case SHADER_OPCODE_TXF_UMS_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_UMS);
+         break;
+
+      case SHADER_OPCODE_TXF_MCS_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_MCS);
+         break;
+
+      case SHADER_OPCODE_LOD_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_LOD);
+         break;
+
+      case SHADER_OPCODE_TG4_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TG4);
+         break;
+
+      case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TG4_OFFSET);
          break;
 
       default:

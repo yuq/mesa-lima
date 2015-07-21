@@ -567,28 +567,53 @@ brw_instruction_name(enum opcode op)
 
    case SHADER_OPCODE_TEX:
       return "tex";
+   case SHADER_OPCODE_TEX_LOGICAL:
+      return "tex_logical";
    case SHADER_OPCODE_TXD:
       return "txd";
+   case SHADER_OPCODE_TXD_LOGICAL:
+      return "txd_logical";
    case SHADER_OPCODE_TXF:
       return "txf";
+   case SHADER_OPCODE_TXF_LOGICAL:
+      return "txf_logical";
    case SHADER_OPCODE_TXL:
       return "txl";
+   case SHADER_OPCODE_TXL_LOGICAL:
+      return "txl_logical";
    case SHADER_OPCODE_TXS:
       return "txs";
+   case SHADER_OPCODE_TXS_LOGICAL:
+      return "txs_logical";
    case FS_OPCODE_TXB:
       return "txb";
+   case FS_OPCODE_TXB_LOGICAL:
+      return "txb_logical";
    case SHADER_OPCODE_TXF_CMS:
       return "txf_cms";
+   case SHADER_OPCODE_TXF_CMS_LOGICAL:
+      return "txf_cms_logical";
    case SHADER_OPCODE_TXF_UMS:
       return "txf_ums";
+   case SHADER_OPCODE_TXF_UMS_LOGICAL:
+      return "txf_ums_logical";
    case SHADER_OPCODE_TXF_MCS:
       return "txf_mcs";
+   case SHADER_OPCODE_TXF_MCS_LOGICAL:
+      return "txf_mcs_logical";
    case SHADER_OPCODE_LOD:
       return "lod";
+   case SHADER_OPCODE_LOD_LOGICAL:
+      return "lod_logical";
    case SHADER_OPCODE_TG4:
       return "tg4";
+   case SHADER_OPCODE_TG4_LOGICAL:
+      return "tg4_logical";
    case SHADER_OPCODE_TG4_OFFSET:
       return "tg4_offset";
+   case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
+      return "tg4_offset_logical";
+
    case SHADER_OPCODE_SHADER_TIME_ADD:
       return "shader_time_add";
 

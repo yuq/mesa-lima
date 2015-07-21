@@ -903,18 +903,49 @@ enum opcode {
    SHADER_OPCODE_SIN,
    SHADER_OPCODE_COS,
 
+   /**
+    * Texture sampling opcodes.
+    *
+    * LOGICAL opcodes are eventually translated to the matching non-LOGICAL
+    * opcode but instead of taking a single payload blob they expect their
+    * arguments separately as individual sources:
+    *
+    * Source 0: [optional] Texture coordinates.
+    * Source 1: [optional] Shadow comparitor.
+    * Source 2: [optional] dPdx if the operation takes explicit derivatives,
+    *                      otherwise LOD value.
+    * Source 3: [optional] dPdy if the operation takes explicit derivatives.
+    * Source 4: [optional] Sample index.
+    * Source 5: [optional] MCS data.
+    * Source 6: [required] Texture sampler.
+    * Source 7: [optional] Texel offset.
+    * Source 8: [required] Number of coordinate components (as UD immediate).
+    * Source 9: [required] Number derivative components (as UD immediate).
+    */
    SHADER_OPCODE_TEX,
+   SHADER_OPCODE_TEX_LOGICAL,
    SHADER_OPCODE_TXD,
+   SHADER_OPCODE_TXD_LOGICAL,
    SHADER_OPCODE_TXF,
+   SHADER_OPCODE_TXF_LOGICAL,
    SHADER_OPCODE_TXL,
+   SHADER_OPCODE_TXL_LOGICAL,
    SHADER_OPCODE_TXS,
+   SHADER_OPCODE_TXS_LOGICAL,
    FS_OPCODE_TXB,
+   FS_OPCODE_TXB_LOGICAL,
    SHADER_OPCODE_TXF_CMS,
+   SHADER_OPCODE_TXF_CMS_LOGICAL,
    SHADER_OPCODE_TXF_UMS,
+   SHADER_OPCODE_TXF_UMS_LOGICAL,
    SHADER_OPCODE_TXF_MCS,
+   SHADER_OPCODE_TXF_MCS_LOGICAL,
    SHADER_OPCODE_LOD,
+   SHADER_OPCODE_LOD_LOGICAL,
    SHADER_OPCODE_TG4,
+   SHADER_OPCODE_TG4_LOGICAL,
    SHADER_OPCODE_TG4_OFFSET,
+   SHADER_OPCODE_TG4_OFFSET_LOGICAL,
 
    /**
     * Combines multiple sources of size 1 into a larger virtual GRF.
