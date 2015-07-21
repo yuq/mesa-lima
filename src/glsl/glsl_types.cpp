@@ -1027,11 +1027,11 @@ glsl_type::component_slots() const
 
    case GLSL_TYPE_IMAGE:
       return 1;
-
+   case GLSL_TYPE_SUBROUTINE:
+     return 1;
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_ATOMIC_UINT:
    case GLSL_TYPE_VOID:
-   case GLSL_TYPE_SUBROUTINE:
    case GLSL_TYPE_ERROR:
       break;
    }

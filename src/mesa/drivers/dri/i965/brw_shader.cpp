@@ -430,6 +430,7 @@ brw_type_for_base_type(const struct glsl_type *type)
       return BRW_REGISTER_TYPE_F;
    case GLSL_TYPE_INT:
    case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_SUBROUTINE:
       return BRW_REGISTER_TYPE_D;
    case GLSL_TYPE_UINT:
       return BRW_REGISTER_TYPE_UD;

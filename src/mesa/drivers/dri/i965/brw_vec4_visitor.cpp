@@ -603,6 +603,9 @@ type_size(const struct glsl_type *type)
 	 size += type_size(type->fields.structure[i].type);
       }
       return size;
+   case GLSL_TYPE_SUBROUTINE:
+      return 1;
+
    case GLSL_TYPE_SAMPLER:
       /* Samplers take up no register space, since they're baked in at
        * link time.
@@ -1557,6 +1560,10 @@ vec4_visitor::visit(ir_expression *ir)
 
    case ir_unop_noise:
       unreachable("not reached: should be handled by lower_noise");
+
+   case ir_unop_subroutine_to_int:
+      emit(MOV(result_dst, op[0]));
+      break;
 
    case ir_binop_add:
       emit(ADD(result_dst, op[0], op[1]));

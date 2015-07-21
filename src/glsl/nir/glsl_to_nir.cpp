@@ -1171,6 +1171,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_bitcast_f2i:
    case ir_unop_bitcast_u2f:
    case ir_unop_bitcast_f2u:
+   case ir_unop_subroutine_to_int:
       /* no-op */
       emit(nir_op_imov, dest_size, srcs);
       break;

@@ -311,6 +311,7 @@ intelInitExtensions(struct gl_context *ctx)
        * slightly differently when the extension is enabled.
        */
       if (ctx->API == API_OPENGL_CORE) {
+         ctx->Extensions.ARB_shader_subroutine = true;
          ctx->Extensions.ARB_viewport_array = true;
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
       }
@@ -343,6 +344,7 @@ intelInitExtensions(struct gl_context *ctx)
       if (ctx->API == API_OPENGL_CORE) {
          ctx->Extensions.ARB_viewport_array = true;
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
+         ctx->Extensions.ARB_shader_subroutine = true;
       }
    }
 
