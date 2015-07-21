@@ -963,13 +963,33 @@ enum opcode {
 
    SHADER_OPCODE_SHADER_TIME_ADD,
 
+   /**
+    * Typed and untyped surface access opcodes.
+    *
+    * LOGICAL opcodes are eventually translated to the matching non-LOGICAL
+    * opcode but instead of taking a single payload blob they expect their
+    * arguments separately as individual sources:
+    *
+    * Source 0: [required] Surface coordinates.
+    * Source 1: [optional] Operation source.
+    * Source 2: [required] Surface index.
+    * Source 3: [required] Number of coordinate components (as UD immediate).
+    * Source 4: [required] Opcode-specific control immediate, same as source 2
+    *                      of the matching non-LOGICAL opcode.
+    */
    SHADER_OPCODE_UNTYPED_ATOMIC,
+   SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL,
    SHADER_OPCODE_UNTYPED_SURFACE_READ,
+   SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL,
    SHADER_OPCODE_UNTYPED_SURFACE_WRITE,
+   SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL,
 
    SHADER_OPCODE_TYPED_ATOMIC,
+   SHADER_OPCODE_TYPED_ATOMIC_LOGICAL,
    SHADER_OPCODE_TYPED_SURFACE_READ,
+   SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL,
    SHADER_OPCODE_TYPED_SURFACE_WRITE,
+   SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL,
 
    SHADER_OPCODE_MEMORY_FENCE,
 

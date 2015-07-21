@@ -711,6 +711,49 @@ fs_inst::components_read(unsigned i) const
       else
          return 1;
 
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+      assert(src[3].file == IMM);
+      /* Surface coordinates. */
+      if (i == 0)
+         return src[3].fixed_hw_reg.dw1.ud;
+      /* Surface operation source (ignored for reads). */
+      else if (i == 1)
+         return 0;
+      else
+         return 1;
+
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+      assert(src[3].file == IMM &&
+             src[4].file == IMM);
+      /* Surface coordinates. */
+      if (i == 0)
+         return src[3].fixed_hw_reg.dw1.ud;
+      /* Surface operation source. */
+      else if (i == 1)
+         return src[4].fixed_hw_reg.dw1.ud;
+      else
+         return 1;
+
+   case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+   case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL: {
+      assert(src[3].file == IMM &&
+             src[4].file == IMM);
+      const unsigned op = src[4].fixed_hw_reg.dw1.ud;
+      /* Surface coordinates. */
+      if (i == 0)
+         return src[3].fixed_hw_reg.dw1.ud;
+      /* Surface operation source. */
+      else if (i == 1 && op == BRW_AOP_CMPWR)
+         return 2;
+      else if (i == 1 && (op == BRW_AOP_INC || op == BRW_AOP_DEC ||
+                          op == BRW_AOP_PREDEC))
+         return 0;
+      else
+         return 1;
+   }
+
    default:
       return 1;
    }
@@ -3847,6 +3890,20 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    }
 }
 
+static void
+lower_surface_logical_send(const fs_builder &bld, fs_inst *inst, opcode op,
+                           const fs_reg &sample_mask)
+{
+   /* Get the logical send arguments. */
+   const fs_reg &addr = inst->src[0];
+   const fs_reg &src = inst->src[1];
+   const fs_reg &surface = inst->src[2];
+   const fs_reg &dims = inst->src[3];
+   const fs_reg &arg = inst->src[4];
+
+   assert(!"Not implemented");
+}
+
 bool
 fs_visitor::lower_logical_sends()
 {
@@ -3912,6 +3969,42 @@ fs_visitor::lower_logical_sends()
 
       case SHADER_OPCODE_TG4_OFFSET_LOGICAL:
          lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TG4_OFFSET);
+         break;
+
+      case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_UNTYPED_SURFACE_READ,
+                                    fs_reg());
+         break;
+
+      case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_UNTYPED_SURFACE_WRITE,
+                                    fs_reg());
+         break;
+
+      case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_UNTYPED_ATOMIC,
+                                    fs_reg());
+         break;
+
+      case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_TYPED_SURFACE_READ,
+                                    fs_reg());
+         break;
+
+      case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_TYPED_SURFACE_WRITE,
+                                    fs_reg());
+         break;
+
+      case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
+         lower_surface_logical_send(ibld, inst,
+                                    SHADER_OPCODE_TYPED_ATOMIC,
+                                    fs_reg());
          break;
 
       default:

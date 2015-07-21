@@ -619,16 +619,28 @@ brw_instruction_name(enum opcode op)
 
    case SHADER_OPCODE_UNTYPED_ATOMIC:
       return "untyped_atomic";
+   case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+      return "untyped_atomic_logical";
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
       return "untyped_surface_read";
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+      return "untyped_surface_read_logical";
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
       return "untyped_surface_write";
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
+      return "untyped_surface_write_logical";
    case SHADER_OPCODE_TYPED_ATOMIC:
       return "typed_atomic";
+   case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
+      return "typed_atomic_logical";
    case SHADER_OPCODE_TYPED_SURFACE_READ:
       return "typed_surface_read";
+   case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+      return "typed_surface_read_logical";
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
       return "typed_surface_write";
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
+      return "typed_surface_write_logical";
    case SHADER_OPCODE_MEMORY_FENCE:
       return "memory_fence";
 
@@ -1181,10 +1193,14 @@ backend_instruction::has_side_effects() const
 {
    switch (opcode) {
    case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+   case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_TYPED_ATOMIC:
+   case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+   case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_MEMORY_FENCE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
    case FS_OPCODE_FB_WRITE:
