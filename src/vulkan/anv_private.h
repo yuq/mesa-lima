@@ -339,7 +339,7 @@ struct anv_physical_device {
     const char *                                path;
     const char *                                name;
     const struct brw_device_info *              info;
-    int                                         fd;
+    uint64_t                                    aperture_size;
 };
 
 struct anv_instance {
@@ -444,7 +444,7 @@ int anv_gem_set_tiling(struct anv_device *device, int gem_handle,
 int anv_gem_create_context(struct anv_device *device);
 int anv_gem_destroy_context(struct anv_device *device, int context);
 int anv_gem_get_param(int fd, uint32_t param);
-int anv_gem_get_aperture(struct anv_physical_device *physical_dev, uint64_t *size);
+int anv_gem_get_aperture(int fd, uint64_t *size);
 int anv_gem_handle_to_fd(struct anv_device *device, int gem_handle);
 int anv_gem_fd_to_handle(struct anv_device *device, int fd);
 int anv_gem_userptr(struct anv_device *device, void *mem, size_t size);

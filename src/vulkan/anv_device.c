@@ -41,20 +41,15 @@ anv_env_get_int(const char *name)
    return strtol(val, NULL, 0);
 }
 
-static void
-anv_physical_device_finish(struct anv_physical_device *device)
-{
-   if (device->fd >= 0)
-      close(device->fd);
-}
-
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
                          const char *path)
 {
-   device->fd = open(path, O_RDWR | O_CLOEXEC);
-   if (device->fd < 0)
+   int fd;
+
+   fd = open(path, O_RDWR | O_CLOEXEC);
+   if (fd < 0)
       return vk_error(VK_ERROR_UNAVAILABLE);
 
    device->instance = instance;
@@ -66,7 +61,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       /* INTEL_DEVID_OVERRIDE implies INTEL_NO_HW. */
       device->no_hw = true;
    } else {
-      device->chipset_id = anv_gem_get_param(device->fd, I915_PARAM_CHIPSET_ID);
+      device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    }
    if (!device->chipset_id)
       goto fail;
@@ -76,22 +71,27 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (!device->info)
       goto fail;
    
-   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_WAIT_TIMEOUT))
+   if (anv_gem_get_aperture(fd, &device->aperture_size) == -1)
       goto fail;
 
-   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_EXECBUF2))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT))
       goto fail;
 
-   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_LLC))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2))
       goto fail;
 
-   if (!anv_gem_get_param(device->fd, I915_PARAM_HAS_EXEC_CONSTANTS))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC))
+      goto fail;
+
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CONSTANTS))
       goto fail;
    
+   close(fd);
+
    return VK_SUCCESS;
    
 fail:
-   anv_physical_device_finish(device);
+   close(fd);
    return vk_error(VK_ERROR_UNAVAILABLE);
 }
 
@@ -153,10 +153,6 @@ VkResult anv_DestroyInstance(
     VkInstance                                  _instance)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
-
-   if (instance->physicalDeviceCount > 0) {
-      anv_physical_device_finish(&instance->physicalDevice);
-   }
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
 
@@ -456,17 +452,12 @@ VkResult anv_GetPhysicalDeviceMemoryProperties(
     VkPhysicalDeviceMemoryProperties*           pMemoryProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-
-   size_t aperture_size;
-   size_t heap_size;
-
-   if (anv_gem_get_aperture(physical_device, &aperture_size) == -1)
-      return vk_error(VK_ERROR_UNAVAILABLE);
+   VkDeviceSize heap_size;
 
    /* Reserve some wiggle room for the driver by exposing only 75% of the
     * aperture to the heap.
     */
-   heap_size = 3 * aperture_size / 4;
+   heap_size = 3 * physical_device->aperture_size / 4;
 
    /* The property flags below are valid only for llc platforms. */
    pMemoryProperties->memoryTypeCount = 1;

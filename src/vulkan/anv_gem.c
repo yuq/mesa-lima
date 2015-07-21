@@ -230,13 +230,13 @@ anv_gem_destroy_context(struct anv_device *device, int context)
 }
 
 int
-anv_gem_get_aperture(struct anv_physical_device *physical_dev, uint64_t *size)
+anv_gem_get_aperture(int fd, uint64_t *size)
 {
    struct drm_i915_gem_get_aperture aperture;
    int ret;
 
    VG_CLEAR(aperture);
-   ret = anv_ioctl(physical_dev->fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
+   ret = anv_ioctl(fd, DRM_IOCTL_I915_GEM_GET_APERTURE, &aperture);
    if (ret == -1)
       return -1;
 
