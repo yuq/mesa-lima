@@ -455,6 +455,8 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
                PUSH_DATA (push, (i << 4) | 1);
 
                BCTX_REFN(nvc0->bufctx_3d, CB(s, i), res, RD);
+
+               nvc0->cb_dirty = 1; /* Force cache flush for UBO. */
             } else {
                BEGIN_NVC0(push, NVC0_3D(CB_BIND(s)), 1);
                PUSH_DATA (push, (i << 4) | 0);
