@@ -589,7 +589,8 @@ dri2_setup_screen(_EGLDisplay *disp)
                                    __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))
       disp->Extensions.KHR_gl_colorspace = EGL_TRUE;
 
-   if (dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) {
+   if ((dri2_dpy->dri2 && dri2_dpy->dri2->base.version >= 3) ||
+       (dri2_dpy->swrast && dri2_dpy->swrast->base.version >= 3)) {
       disp->Extensions.KHR_create_context = EGL_TRUE;
 
       if (dri2_dpy->robustness)
