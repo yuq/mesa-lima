@@ -52,7 +52,7 @@ struct intel_screen
 
    bool hw_has_swizzling;
 
-   bool hw_has_timestamp;
+   int hw_has_timestamp;
 
    /**
     * Does the kernel support resource streamer?

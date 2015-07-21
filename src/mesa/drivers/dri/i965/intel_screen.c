@@ -1123,25 +1123,48 @@ intel_detect_swizzling(struct intel_screen *screen)
       return true;
 }
 
-static bool
+static int
 intel_detect_timestamp(struct intel_screen *screen)
 {
-   uint64_t dummy = 0;
-   int loop = 10;
+   uint64_t dummy = 0, last = 0;
+   int upper, lower, loops;
 
-   /*
-    * On 32bit systems, some old kernels trigger a hw bug resulting in the
-    * TIMESTAMP register being shifted and the low 32bits always zero. Detect
-    * this by repeating the read a few times and check the register is
-    * incrementing every 80ns as expected and not stuck on zero (as would be
-    * the case with the buggy kernel/hw.).
+   /* On 64bit systems, some old kernels trigger a hw bug resulting in the
+    * TIMESTAMP register being shifted and the low 32bits always zero.
+    *
+    * More recent kernels offer an interface to read the full 36bits
+    * everywhere.
     */
-   do {
-      if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
-	 return false;
-   } while ((dummy & 0xffffffff) == 0 && --loop);
+   if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP | 1, &dummy) == 0)
+      return 3;
 
-   return loop > 0;
+   /* Determine if we have a 32bit or 64bit kernel by inspecting the
+    * upper 32bits for a rapidly changing timestamp.
+    */
+   if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &last))
+      return 0;
+
+   upper = lower = 0;
+   for (loops = 0; loops < 10; loops++) {
+      /* The TIMESTAMP should change every 80ns, so several round trips
+       * through the kernel should be enough to advance it.
+       */
+      if (drm_intel_reg_read(screen->bufmgr, TIMESTAMP, &dummy))
+         return 0;
+
+      upper += (dummy >> 32) != (last >> 32);
+      if (upper > 1) /* beware 32bit counter overflow */
+         return 2; /* upper dword holds the low 32bits of the timestamp */
+
+      lower += (dummy & 0xffffffff) != (last & 0xffffffff);
+      if (lower > 1)
+         return 1; /* timestamp is unshifted */
+
+      last = dummy;
+   }
+
+   /* No advancement? No timestamp! */
+   return 0;
 }
 
 /**
