@@ -1226,7 +1226,8 @@ xyesno)
 
             if test x"$enable_dri3" = xyes; then
                PKG_CHECK_EXISTS([xcb >= $XCB_REQUIRED], [], AC_MSG_ERROR([DRI3 requires xcb >= $XCB_REQUIRED]))
-               dri_modules="$dri_modules xcb-dri3 xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
+               dri3_modules="xcb-dri3 xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
+               PKG_CHECK_MODULES([XCB_DRI3], [$dri3_modules])
             fi
         fi
         if test x"$dri_platform" = xapple ; then

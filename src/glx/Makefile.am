@@ -133,6 +133,8 @@ if HAVE_DRI3
 libglx_la_SOURCES += \
 	dri3_glx.c \
 	dri3_priv.h
+
+libglx_la_LIBADD += $(XCB_DRI3_LIBS)
 endif
 
 if HAVE_APPLEDRI
