@@ -44,13 +44,13 @@ _mesa_ShadeModel( GLenum mode )
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glShadeModel %s\n", _mesa_enum_to_string(mode));
 
+   if (ctx->Light.ShadeModel == mode)
+      return;
+
    if (mode != GL_FLAT && mode != GL_SMOOTH) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glShadeModel");
       return;
    }
-
-   if (ctx->Light.ShadeModel == mode)
-      return;
 
    FLUSH_VERTICES(ctx, _NEW_LIGHT);
    ctx->Light.ShadeModel = mode;
