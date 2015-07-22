@@ -293,6 +293,14 @@ move_successors(nir_block *source, nir_block *dest)
    link_blocks(dest, succ1, succ2);
 }
 
+static bool
+block_ends_in_jump(nir_block *block)
+{
+   return !exec_list_is_empty(&block->instr_list) &&
+          nir_block_last_instr(block)->type == nir_instr_type_jump;
+}
+
+
 /* Given a basic block with no successors that has been inserted into the
  * control flow tree, gives it the successors it would normally have assuming
  * it doesn't end in a jump instruction. Also inserts phi sources with undefs
