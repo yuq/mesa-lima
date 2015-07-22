@@ -1013,8 +1013,7 @@ dimensions_error_check(struct gl_context *ctx,
    texImage = select_tex_image(texObj, target, level, zoffset);
    if (!texImage) {
       /* missing texture image */
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(zoffset = %d)", caller, zoffset);
+      _mesa_error(ctx, GL_INVALID_OPERATION, "%s(missing image)", caller);
       return true;
    }
 
