@@ -35,13 +35,14 @@
 #ifndef U_STRING_H_
 #define U_STRING_H_
 
-#if !defined(_MSC_VER) && !defined(XF86_LIBC_H)
+#if !defined(XF86_LIBC_H)
 #include <stdio.h>
 #endif
 #include <stddef.h>
 #include <stdarg.h>
 
 #include "pipe/p_compiler.h"
+#include "util/macros.h" // PRINTFLIKE
 
 
 #ifdef __cplusplus
@@ -64,10 +65,35 @@ util_strchrnul(const char *s, char c)
 
 #endif
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 
-int util_vsnprintf(char *, size_t, const char *, va_list);
-int util_snprintf(char *str, size_t size, const char *format, ...);
+static inline int
+util_vsnprintf(char *str, size_t size, const char *format, va_list ap)
+{
+   /* We need to use _vscprintf to calculate the length as vsnprintf returns -1
+    * if the number of characters to write is greater than count.
+    */
+   va_list ap_copy;
+   int ret;
+   va_copy(ap_copy, ap);
+   ret = _vsnprintf(str, size, format, ap);
+   if (ret < 0) {
+      ret = _vscprintf(format, ap_copy);
+   }
+   return ret;
+}
+
+static inline int
+   PRINTFLIKE(3, 4)
+util_snprintf(char *str, size_t size, const char *format, ...)
+{
+   va_list ap;
+   int ret;
+   va_start(ap, format);
+   ret = util_vsnprintf(str, size, format, ap);
+   va_end(ap);
+   return ret;
+}
 
 static inline void
 util_vsprintf(char *str, const char *format, va_list ap)
@@ -76,6 +102,7 @@ util_vsprintf(char *str, const char *format, va_list ap)
 }
 
 static inline void
+   PRINTFLIKE(2, 3)
 util_sprintf(char *str, const char *format, ...)
 {
    va_list ap;
