@@ -1212,8 +1212,10 @@ cleanup_cf_node(nir_cf_node *node)
    case nir_cf_node_block: {
       nir_block *block = nir_cf_node_as_block(node);
       /* We need to walk the instructions and clean up defs/uses */
-      nir_foreach_instr(block, instr)
-         remove_defs_uses(instr);
+      nir_foreach_instr(block, instr) {
+         if (instr->type != nir_instr_type_jump)
+            nir_instr_remove(instr);
+      }
       break;
    }
 
