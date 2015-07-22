@@ -122,8 +122,6 @@ struct __DRIimageRec {
 
 };
 
-#ifndef __NOT_HAVE_DRM_H
-
 static inline boolean
 dri_with_format(__DRIscreen * sPriv)
 {
@@ -133,16 +131,6 @@ dri_with_format(__DRIscreen * sPriv)
        && (loader->base.version >= 3)
        && (loader->getBuffersWithFormat != NULL);
 }
-
-#else
-
-static inline boolean
-dri_with_format(__DRIscreen * sPriv)
-{
-   return TRUE;
-}
-
-#endif
 
 void
 dri_fill_st_visual(struct st_visual *stvis, struct dri_screen *screen,
