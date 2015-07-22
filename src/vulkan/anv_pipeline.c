@@ -79,9 +79,10 @@ VkResult anv_CreateShader(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_CREATE_INFO);
    assert(pCreateInfo->flags == 0);
 
-   size_t name_len = strlen(pCreateInfo->pName);
+   const char *name = pCreateInfo->pName ? pCreateInfo->pName : "main";
+   size_t name_len = strlen(name);
 
-   if (strcmp(pCreateInfo->pName, "main") != 0) {
+   if (strcmp(name, "main") != 0) {
       anv_finishme("Multiple shaders per module not really supported");
    }
 
@@ -91,7 +92,7 @@ VkResult anv_CreateShader(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    shader->module = module;
-   memcpy(shader->entrypoint, pCreateInfo->pName, name_len + 1);
+   memcpy(shader->entrypoint, name, name_len + 1);
 
    *pShader = anv_shader_to_handle(shader);
 
