@@ -1382,7 +1382,7 @@ _mesa_GetTexImage(GLenum target, GLint level, GLenum format, GLenum type,
                   GLvoid *pixels )
 {
    GET_CURRENT_CONTEXT(ctx);
-   static const char *caller = "glGetTextImage";
+   static const char *caller = "glGetTexImage";
    GLsizei width, height, depth;
    struct gl_texture_object *texObj;
 
