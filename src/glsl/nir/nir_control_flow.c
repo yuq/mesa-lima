@@ -230,6 +230,31 @@ rewrite_phi_preds(nir_block *block, nir_block *old_pred, nir_block *new_pred)
    }
 }
 
+static void
+insert_phi_undef(nir_block *block, nir_block *pred)
+{
+   nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         break;
+
+      nir_phi_instr *phi = nir_instr_as_phi(instr);
+      nir_ssa_undef_instr *undef =
+         nir_ssa_undef_instr_create(ralloc_parent(phi),
+                                    phi->dest.ssa.num_components);
+      nir_instr_insert_before_cf_list(&impl->body, &undef->instr);
+      nir_phi_src *src = ralloc(phi, nir_phi_src);
+      src->pred = pred;
+      src->src.parent_instr = &phi->instr;
+      src->src.is_ssa = true;
+      src->src.ssa = &undef->def;
+
+      list_addtail(&src->src.use_link, &undef->def.uses);
+
+      exec_list_push_tail(&phi->srcs, &src->node);
+   }
+}
+
 /**
  * Moves the successors of source to the successors of dest, leaving both
  * successors of source NULL.
