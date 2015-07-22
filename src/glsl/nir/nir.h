@@ -1101,6 +1101,8 @@ typedef struct {
 
 #define nir_foreach_phi_src(phi, entry) \
    foreach_list_typed(nir_phi_src, entry, node, &(phi)->srcs)
+#define nir_foreach_phi_src_safe(phi, entry) \
+   foreach_list_typed_safe(nir_phi_src, entry, node, &(phi)->srcs)
 
 typedef struct {
    nir_instr instr;
