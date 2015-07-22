@@ -739,3 +739,65 @@ nir_cf_node_remove(nir_cf_node *node)
    cleanup_cf_node(node, impl);
 }
 
+void
+nir_cf_extract(nir_cf_list *extracted, nir_cursor begin, nir_cursor end)
+{
+   nir_block *block_begin, *block_end, *block_before, *block_after;
+
+   /* In the case where begin points to an instruction in some basic block and
+    * end points to the end of the same basic block, we rely on the fact that
+    * splitting on an instruction moves earlier instructions into a new basic
+    * block. If the later instructions were moved instead, then the end cursor
+    * would be pointing to the same place that begin used to point to, which
+    * is obviously not what we want.
+    */
+   split_block_cursor(begin, &block_before, &block_begin);
+   split_block_cursor(end, &block_end, &block_after);
+
+   extracted->impl = nir_cf_node_get_function(&block_begin->cf_node);
+   exec_list_make_empty(&extracted->list);
+
+   nir_cf_node *cf_node = &block_begin->cf_node;
+   nir_cf_node *cf_node_end = &block_end->cf_node;
+   while (true) {
+      nir_cf_node *next = nir_cf_node_next(cf_node);
+
+      exec_node_remove(&cf_node->node);
+      cf_node->parent = NULL;
+      exec_list_push_tail(&extracted->list, &cf_node->node);
+
+      if (cf_node == cf_node_end)
+         break;
+
+      cf_node = next;
+   }
+
+   stitch_blocks(block_before, block_after);
+}
+
+void
+nir_cf_reinsert(nir_cf_list *cf_list, nir_cursor cursor)
+{
+   nir_block *before, *after;
+
+   split_block_cursor(cursor, &before, &after);
+
+   foreach_list_typed_safe(nir_cf_node, node, node, &cf_list->list) {
+      exec_node_remove(&node->node);
+      node->parent = before->cf_node.parent;
+      exec_node_insert_node_before(&after->cf_node.node, &node->node);
+   }
+
+   stitch_blocks(before,
+                 nir_cf_node_as_block(nir_cf_node_next(&before->cf_node)));
+   stitch_blocks(nir_cf_node_as_block(nir_cf_node_prev(&after->cf_node)),
+                 after);
+}
+
+void
+nir_cf_delete(nir_cf_list *cf_list)
+{
+   foreach_list_typed(nir_cf_node, node, node, &cf_list->list) {
+      cleanup_cf_node(node, cf_list->impl);
+   }
+}
