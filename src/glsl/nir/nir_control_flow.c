@@ -747,7 +747,10 @@ cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
       nir_block *block = nir_cf_node_as_block(node);
       /* We need to walk the instructions and clean up defs/uses */
       nir_foreach_instr_safe(block, instr) {
-         if (instr->type != nir_instr_type_jump) {
+         if (instr->type == nir_instr_type_jump) {
+            nir_jump_type jump_type = nir_instr_as_jump(instr)->type;
+            unlink_jump(block, jump_type);
+         } else {
             nir_foreach_ssa_def(instr, replace_ssa_def_uses, impl);
             nir_instr_remove(instr);
          }
