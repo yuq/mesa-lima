@@ -928,6 +928,13 @@ dimensions_error_check(struct gl_context *ctx,
    const struct gl_texture_image *texImage;
    int i;
 
+   if (width == 0 || height == 0 || depth == 0) {
+      /* Not an error, but nothing to do.  Return 'true' so that the
+       * caller simply returns.
+       */
+      return true;
+   }
+
    if (xoffset < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(xoffset = %d)", caller, xoffset);
       return true;
@@ -1079,13 +1086,6 @@ dimensions_error_check(struct gl_context *ctx,
       }
    }
 
-   if (width == 0 || height == 0 || depth == 0) {
-      /* Not an error, but nothing to do.  Return 'true' so that the
-       * caller simply returns.
-       */
-      return true;
-   }
-
    return false;
 }
 
@@ -1164,15 +1164,15 @@ getteximage_error_check(struct gl_context *ctx,
       return true;
    }
 
-   if (dimensions_error_check(ctx, texObj, target, level,
-                              xoffset, yoffset, zoffset,
-                              width, height, depth, caller)) {
-      return true;
-   }
-
    err = _mesa_error_check_format_and_type(ctx, format, type);
    if (err != GL_NO_ERROR) {
       _mesa_error(ctx, err, "%s(format/type)", caller);
+      return true;
+   }
+
+   if (dimensions_error_check(ctx, texObj, target, level,
+                              xoffset, yoffset, zoffset,
+                              width, height, depth, caller)) {
       return true;
    }
 
