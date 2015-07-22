@@ -267,8 +267,7 @@ nir_function_impl_create(nir_function_overload *overload)
    exec_list_push_tail(&impl->body, &start_block->cf_node.node);
 
    start_block->successors[0] = end_block;
-   block_add_pred(end_block, start_block);
-
+   _mesa_set_add(end_block->predecessors, start_block);
    return impl;
 }
 
@@ -334,7 +333,7 @@ nir_loop_create(void *mem_ctx)
    body->cf_node.parent = &loop->cf_node;
 
    body->successors[0] = body;
-   block_add_pred(body, body);
+   _mesa_set_add(body->predecessors, body);
 
    return loop;
 }
