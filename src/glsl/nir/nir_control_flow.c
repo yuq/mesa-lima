@@ -363,7 +363,14 @@ split_block_end(nir_block *block)
    new_block->cf_node.parent = block->cf_node.parent;
    exec_node_insert_after(&block->cf_node.node, &new_block->cf_node.node);
 
-   move_successors(block, new_block);
+   if (block_ends_in_jump(block)) {
+      /* Figure out what successor block would've had if it didn't have a jump
+       * instruction, and make new_block have that successor.
+       */
+      block_add_normal_succs(new_block);
+   } else {
+      move_successors(block, new_block);
+   }
 
    return new_block;
 }
