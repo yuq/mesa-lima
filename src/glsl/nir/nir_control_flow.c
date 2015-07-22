@@ -726,26 +726,41 @@ stitch_blocks(nir_block *before, nir_block *after)
    }
 }
 
+static bool
+replace_ssa_def_uses(nir_ssa_def *def, void *void_impl)
+{
+   nir_function_impl *impl = void_impl;
+   void *mem_ctx = ralloc_parent(impl);
+
+   nir_ssa_undef_instr *undef =
+      nir_ssa_undef_instr_create(mem_ctx, def->num_components);
+   nir_instr_insert_before_cf_list(&impl->body, &undef->instr);
+   nir_ssa_def_rewrite_uses(def, nir_src_for_ssa(&undef->def), mem_ctx);
+   return true;
+}
 
 static void
-cleanup_cf_node(nir_cf_node *node)
+cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
 {
    switch (node->type) {
    case nir_cf_node_block: {
       nir_block *block = nir_cf_node_as_block(node);
       /* We need to walk the instructions and clean up defs/uses */
-      nir_foreach_instr_safe(block, instr)
-         if (instr->type != nir_instr_type_jump)
+      nir_foreach_instr_safe(block, instr) {
+         if (instr->type != nir_instr_type_jump) {
+            nir_foreach_ssa_def(instr, replace_ssa_def_uses, impl);
             nir_instr_remove(instr);
+         }
+      }
       break;
    }
 
    case nir_cf_node_if: {
       nir_if *if_stmt = nir_cf_node_as_if(node);
       foreach_list_typed(nir_cf_node, child, node, &if_stmt->then_list)
-         cleanup_cf_node(child);
+         cleanup_cf_node(child, impl);
       foreach_list_typed(nir_cf_node, child, node, &if_stmt->else_list)
-         cleanup_cf_node(child);
+         cleanup_cf_node(child, impl);
 
       list_del(&if_stmt->condition.use_link);
       break;
@@ -754,13 +769,13 @@ cleanup_cf_node(nir_cf_node *node)
    case nir_cf_node_loop: {
       nir_loop *loop = nir_cf_node_as_loop(node);
       foreach_list_typed(nir_cf_node, child, node, &loop->body)
-         cleanup_cf_node(child);
+         cleanup_cf_node(child, impl);
       break;
    }
    case nir_cf_node_function: {
       nir_function_impl *impl = nir_cf_node_as_function(node);
       foreach_list_typed(nir_cf_node, child, node, &impl->body)
-         cleanup_cf_node(child);
+         cleanup_cf_node(child, impl);
       break;
    }
    default:
@@ -796,5 +811,6 @@ nir_cf_node_remove(nir_cf_node *node)
       stitch_blocks(before_block, after_block);
    }
 
-   cleanup_cf_node(node);
+   cleanup_cf_node(node, impl);
 }
+
