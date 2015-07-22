@@ -706,14 +706,24 @@ stitch_blocks(nir_block *before, nir_block *after)
     * TODO: special case when before is empty and after isn't?
     */
 
-   move_successors(after, before);
+   if (block_ends_in_jump(before)) {
+      assert(exec_list_is_empty(&after->instr_list));
+      if (after->successors[0])
+         remove_phi_src(after->successors[0], after);
+      if (after->successors[1])
+         remove_phi_src(after->successors[1], after);
+      unlink_block_successors(after);
+      exec_node_remove(&after->cf_node.node);
+   } else {
+      move_successors(after, before);
 
-   foreach_list_typed(nir_instr, instr, node, &after->instr_list) {
-      instr->block = before;
+      foreach_list_typed(nir_instr, instr, node, &after->instr_list) {
+         instr->block = before;
+      }
+
+      exec_list_append(&before->instr_list, &after->instr_list);
+      exec_node_remove(&after->cf_node.node);
    }
-
-   exec_list_append(&before->instr_list, &after->instr_list);
-   exec_node_remove(&after->cf_node.node);
 }
 
 
