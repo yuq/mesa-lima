@@ -2966,15 +2966,14 @@ static bool
 decompress_texture_image(struct gl_context *ctx,
                          struct gl_texture_image *texImage,
                          GLuint slice,
+                         GLint xoffset, GLint yoffset,
+                         GLsizei width, GLsizei height,
                          GLenum destFormat, GLenum destType,
                          GLvoid *dest)
 {
    struct decompress_state *decompress = &ctx->Meta->Decompress;
    struct decompress_fbo_state *decompress_fbo;
    struct gl_texture_object *texObj = texImage->TexObject;
-   const GLint width = texImage->Width;
-   const GLint height = texImage->Height;
-   const GLint depth = texImage->Height;
    const GLenum target = texObj->Target;
    GLenum rbFormat;
    GLenum faceTarget;
@@ -3093,7 +3092,7 @@ decompress_texture_image(struct gl_context *ctx,
    memset(verts, 0, sizeof(verts));
 
    _mesa_meta_setup_texture_coords(faceTarget, slice,
-                                   0, 0, width, height,
+                                   xoffset, yoffset, width, height,
                                    texImage->Width, texImage->Height,
                                    texImage->Depth,
                                    verts[0].tex,
@@ -3224,7 +3223,8 @@ _mesa_meta_GetTexImage(struct gl_context *ctx,
          else {
             dst = pixels;
          }
-         result = decompress_texture_image(ctx, texImage, slice,
+         result = decompress_texture_image(ctx, texImage, slice, 0, 0,
+                                           texImage->Width, texImage->Height,
                                            format, type, dst);
          if (!result)
             break;
