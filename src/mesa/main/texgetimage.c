@@ -893,7 +893,8 @@ legal_getteximage_target(struct gl_context *ctx, GLenum target, bool dsa)
 /**
  * Wrapper for _mesa_select_tex_image() which can handle target being
  * GL_TEXTURE_CUBE_MAP_ARB in which case we use zoffset to select a cube face.
- * This can happen for glGetTextureImage (DSA function).
+ * This can happen for glGetTextureImage and glGetTextureSubImage (DSA
+ * functions).
  */
 static struct gl_texture_image *
 select_tex_image(const struct gl_texture_object *texObj, GLenum target,
@@ -1436,6 +1437,35 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format, GLenum type,
 }
 
 
+void GLAPIENTRY
+_mesa_GetTextureSubImage(GLuint texture, GLint level,
+                         GLint xoffset, GLint yoffset, GLint zoffset,
+                         GLsizei width, GLsizei height, GLsizei depth,
+                         GLenum format, GLenum type, GLsizei bufSize,
+                         void *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   static const char *caller = "glGetTextureSubImage";
+   struct gl_texture_object *texObj =
+      _mesa_lookup_texture_err(ctx, texture, caller);
+
+   if (!texObj) {
+      return;
+   }
+
+   if (getteximage_error_check(ctx, texObj, texObj->Target, level,
+                               xoffset, yoffset, zoffset, width, height, depth,
+                               format, type, bufSize, pixels, caller)) {
+      return;
+   }
+
+   get_texture_image(ctx, texObj, texObj->Target, level,
+                     xoffset, yoffset, zoffset, width, height, depth,
+                     format, type, pixels, caller);
+}
+
+
+
 /**
  * Compute the number of bytes which will be written when retrieving
  * a sub-region of a compressed texture.
@@ -1712,5 +1742,35 @@ _mesa_GetCompressedTextureImage(GLuint texture, GLint level,
 
    get_compressed_texture_image(ctx, texObj, texObj->Target, level,
                                 0, 0, 0, width, height, depth,
+                                pixels, caller);
+}
+
+
+void APIENTRY
+_mesa_GetCompressedTextureSubImage(GLuint texture, GLint level,
+                                   GLint xoffset, GLint yoffset,
+                                   GLint zoffset, GLsizei width,
+                                   GLsizei height, GLsizei depth,
+                                   GLsizei bufSize, void *pixels)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   static const char *caller = "glGetCompressedTextureImage";
+   struct gl_texture_object *texObj;
+
+   texObj = _mesa_lookup_texture_err(ctx, texture, caller);
+   if (!texObj) {
+      return;
+   }
+
+   if (getcompressedteximage_error_check(ctx, texObj, texObj->Target, level,
+                                         xoffset, yoffset, zoffset,
+                                         width, height, depth,
+                                         bufSize, pixels, caller)) {
+      return;
+   }
+
+   get_compressed_texture_image(ctx, texObj, texObj->Target, level,
+                                xoffset, yoffset, zoffset,
+                                width, height, depth,
                                 pixels, caller);
 }
