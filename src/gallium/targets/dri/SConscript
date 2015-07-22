@@ -25,6 +25,8 @@ if env['llvm']:
     env.Append(CPPDEFINES = 'GALLIUM_LLVMPIPE')
     env.Prepend(LIBS = [llvmpipe])
 
+env.PkgUseModules('DRM')
+
 env.Append(CPPDEFINES = [
     'GALLIUM_VMWGFX',
     'GALLIUM_SOFTPIPE',
