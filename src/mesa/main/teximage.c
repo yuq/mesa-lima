@@ -4581,12 +4581,19 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
        *    one of the EAC, ETC2, or RGTC formats and either border is
        *    non-zero, or the effective target for the texture is not
        *    TEXTURE_2D_ARRAY."
+       *
+       * NOTE: that's probably a spec error.  It should probably say
+       *    "... or the effective target for the texture is not
+       *    TEXTURE_2D_ARRAY, TEXTURE_CUBE_MAP, nor GL_TEXTURE_CUBE_MAP_ARRAY."
+       * since those targets are 2D images and they support all compression
+       * formats.
+       *
        * Instead of listing all these, just list those which are allowed,
        * which is (at this time) only bptc. Otherwise we'd say s3tc (and more)
        * are valid here, which they are not, but of course not mentioned by
        * core spec.
        */
-      if (target != GL_TEXTURE_2D_ARRAY && target != GL_TEXTURE_CUBE_MAP_ARRAY) {
+      if (target == GL_TEXTURE_3D) {
          switch (format) {
          /* These are the only 3D compression formats supported at this time */
          case GL_COMPRESSED_RGBA_BPTC_UNORM:
