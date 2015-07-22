@@ -4586,21 +4586,17 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
        * are valid here, which they are not, but of course not mentioned by
        * core spec.
        */
-      if (targetOK && target != GL_TEXTURE_2D_ARRAY &&
-          target != GL_TEXTURE_CUBE_MAP_ARRAY) {
-         bool invalidformat;
+      if (target != GL_TEXTURE_2D_ARRAY && target != GL_TEXTURE_CUBE_MAP_ARRAY) {
          switch (format) {
-            /* These came from _mesa_is_compressed_format in glformats.c. */
-            case GL_COMPRESSED_RGBA_BPTC_UNORM:
-            case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
-            case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
-            case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
-               invalidformat = false;
-               break;
-            default:
-               invalidformat = true;
-         }
-         if (invalidformat) {
+         /* These are the only 3D compression formats supported at this time */
+         case GL_COMPRESSED_RGBA_BPTC_UNORM:
+         case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
+         case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
+         case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
+            /* valid format */
+            break;
+         default:
+            /* invalid format */
             _mesa_error(ctx, GL_INVALID_OPERATION,
                         "%s(invalid target %s for format %s)", caller,
                         _mesa_enum_to_string(target),
