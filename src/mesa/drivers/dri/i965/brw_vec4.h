@@ -414,6 +414,7 @@ public:
    virtual dst_reg *make_reg_for_system_value(int location,
                                               const glsl_type *type) = 0;
 
+   dst_reg *nir_locals;
    src_reg *nir_inputs;
    unsigned *nir_uniform_driver_location;
    dst_reg *nir_system_values;
