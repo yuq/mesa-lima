@@ -59,6 +59,8 @@ unsigned glsl_get_matrix_columns(const struct glsl_type *type);
 
 unsigned glsl_get_length(const struct glsl_type *type);
 
+unsigned glsl_get_aoa_size(const struct glsl_type *type);
+
 const char *glsl_get_struct_elem_name(const struct glsl_type *type,
                                       unsigned index);
 
