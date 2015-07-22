@@ -449,7 +449,8 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
       rebaseSwizzle[1] = MESA_FORMAT_SWIZZLE_ZERO;
       rebaseSwizzle[2] = MESA_FORMAT_SWIZZLE_ZERO;
       rebaseSwizzle[3] = MESA_FORMAT_SWIZZLE_W;
-    } else if (texImage->_BaseFormat != _mesa_get_format_base_format(texFormat)) {
+    } else if (texImage->_BaseFormat !=
+               _mesa_get_format_base_format(texFormat)) {
       needsRebase =
          _mesa_compute_rgba2base2rgba_component_mapping(texImage->_BaseFormat,
                                                         rebaseSwizzle);
@@ -531,8 +532,8 @@ get_tex_rgba_uncompressed(struct gl_context *ctx, GLuint dimensions,
          /* If we had to rebase, we have already handled that */
          needsRebase = false;
 
-         /* If we were lucky and our RGBA conversion matches the dst format, then
-          * we are done.
+         /* If we were lucky and our RGBA conversion matches the dst format,
+          * then we are done.
           */
          if (!need_convert)
             goto do_swap;
@@ -832,7 +833,8 @@ _mesa_GetCompressedTexSubImage_sw(struct gl_context *ctx,
          ctx->Driver.UnmapTextureImage(ctx, texImage, zoffset + slice);
 
          /* Advance to next slice */
-         dest += store.TotalBytesPerRow * (store.TotalRowsPerSlice - store.CopyRowsPerSlice);
+         dest += store.TotalBytesPerRow * (store.TotalRowsPerSlice -
+                                           store.CopyRowsPerSlice);
 
       } else {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "glGetCompresssedTexImage");
@@ -953,7 +955,8 @@ getteximage_error_check(struct gl_context *ctx,
                   "glGetTex%sImage(format mismatch)", suffix);
       return GL_TRUE;
    }
-   else if (!_mesa_is_stencil_format(format) && _mesa_is_enum_format_integer(format) !=
+   else if (!_mesa_is_stencil_format(format) &&
+            _mesa_is_enum_format_integer(format) !=
             _mesa_is_format_integer(texImage->TexFormat)) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetTex%sImage(format mismatch)", suffix);
