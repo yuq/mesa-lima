@@ -373,6 +373,23 @@ nir_handle_add_jump(nir_block *block)
    }
 }
 
+static void
+remove_phi_src(nir_block *block, nir_block *pred)
+{
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_phi)
+         break;
+
+      nir_phi_instr *phi = nir_instr_as_phi(instr);
+      nir_foreach_phi_src_safe(phi, src) {
+         if (src->pred == pred) {
+            list_del(&src->src.use_link);
+            exec_node_remove(&src->node);
+         }
+      }
+   }
+}
+
 void
 nir_handle_remove_jump(nir_block *block, nir_jump_type type)
 {
