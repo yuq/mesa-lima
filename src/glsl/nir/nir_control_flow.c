@@ -394,6 +394,54 @@ split_block_before_instr(nir_instr *instr)
    return new_block;
 }
 
+/* Splits a basic block at the point specified by the cursor. The "before" and
+ * "after" arguments are filled out with the blocks resulting from the split
+ * if non-NULL. Note that the "beginning" of the block is actually interpreted
+ * as before the first non-phi instruction, and it's illegal to split a block
+ * before a phi instruction.
+ */
+
+static void
+split_block_cursor(nir_cursor cursor,
+                   nir_block **_before, nir_block **_after)
+{
+   nir_block *before, *after;
+   switch (cursor.option) {
+   case nir_cursor_before_block:
+      after = cursor.block;
+      before = split_block_beginning(cursor.block);
+      break;
+
+   case nir_cursor_after_block:
+      before = cursor.block;
+      after = split_block_end(cursor.block);
+      break;
+
+   case nir_cursor_before_instr:
+      after = cursor.instr->block;
+      before = split_block_before_instr(cursor.instr);
+      break;
+
+   case nir_cursor_after_instr:
+      /* We lower this to split_block_before_instr() so that we can keep the
+       * after-a-jump-instr case contained to split_block_end().
+       */
+      if (nir_instr_is_last(cursor.instr)) {
+         before = cursor.instr->block;
+         after = split_block_end(cursor.instr->block);
+      } else {
+         after = cursor.instr->block;
+         before = split_block_before_instr(nir_instr_next(cursor.instr));
+      }
+      break;
+   }
+
+   if (_before)
+      *_before = before;
+   if (_after)
+      *_after = after;
+}
+
 /**
  * Inserts a non-basic block between two basic blocks and links them together.
  */
