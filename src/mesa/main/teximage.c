@@ -4588,7 +4588,7 @@ compressed_subtexture_target_check(struct gl_context *ctx, GLenum target,
        * are valid here, which they are not, but of course not mentioned by
        * core spec.
        */
-      if (target != GL_TEXTURE_2D_ARRAY) {
+      if (target != GL_TEXTURE_2D_ARRAY && target != GL_TEXTURE_CUBE_MAP_ARRAY) {
          bool invalidformat;
          switch (format) {
             /* These came from _mesa_is_compressed_format in glformats.c. */
