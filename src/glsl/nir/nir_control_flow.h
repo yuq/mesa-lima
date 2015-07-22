@@ -167,8 +167,6 @@ nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node)
    nir_cf_node_insert(nir_after_cf_list(list), node);
 }
 
-/** removes a control flow node, doing any cleanup necessary */
-void nir_cf_node_remove(nir_cf_node *node);
 
 /** Control flow motion.
  *
@@ -237,6 +235,15 @@ nir_cf_list_extract(nir_cf_list *extracted, struct exec_list *cf_list)
 {
    nir_cf_extract(extracted, nir_before_cf_list(cf_list),
                   nir_after_cf_list(cf_list));
+}
+
+/** removes a control flow node, doing any cleanup necessary */
+static inline void
+nir_cf_node_remove(nir_cf_node *node)
+{
+   nir_cf_list list;
+   nir_cf_extract(&list, nir_before_cf_node(node), nir_after_cf_node(node));
+   nir_cf_delete(&list);
 }
 
 #ifdef __cplusplus

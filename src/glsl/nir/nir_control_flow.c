@@ -709,37 +709,6 @@ cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
 }
 
 void
-nir_cf_node_remove(nir_cf_node *node)
-{
-   nir_function_impl *impl = nir_cf_node_get_function(node);
-   nir_metadata_preserve(impl, nir_metadata_none);
-
-   if (node->type == nir_cf_node_block) {
-      /*
-       * Basic blocks can't really be removed by themselves, since they act as
-       * padding between the non-basic blocks. So all we do here is empty the
-       * block of instructions.
-       *
-       * TODO: could we assert here?
-       */
-      exec_list_make_empty(&nir_cf_node_as_block(node)->instr_list);
-   } else {
-      nir_cf_node *before = nir_cf_node_prev(node);
-      assert(before->type == nir_cf_node_block);
-      nir_block *before_block = nir_cf_node_as_block(before);
-
-      nir_cf_node *after = nir_cf_node_next(node);
-      assert(after->type == nir_cf_node_block);
-      nir_block *after_block = nir_cf_node_as_block(after);
-
-      exec_node_remove(&node->node);
-      stitch_blocks(before_block, after_block);
-   }
-
-   cleanup_cf_node(node, impl);
-}
-
-void
 nir_cf_extract(nir_cf_list *extracted, nir_cursor begin, nir_cursor end)
 {
    nir_block *block_begin, *block_end, *block_before, *block_after;
