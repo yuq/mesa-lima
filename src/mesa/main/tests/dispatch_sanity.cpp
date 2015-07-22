@@ -930,6 +930,11 @@ const struct function common_desktop_functions_possible[] = {
 
    /* GL_EXT_polygon_offset_clamp */
    { "glPolygonOffsetClampEXT", 11, -1 },
+
+   /* GL_ARB_get_texture_sub_image */
+   { "glGetTextureSubImage", 20, -1 },
+   { "glGetCompressedTextureSubImage", 20, -1 },
+
    { NULL, 0, -1 }
 };
 
