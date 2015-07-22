@@ -201,7 +201,9 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 struct pipe_vertex_buffer *vb =
                         &vertexbuf->vb[elem->vertex_buffer_index];
                 struct vc4_resource *rsc = vc4_resource(vb->buffer);
-                uint32_t offset = vb->buffer_offset + elem->src_offset;
+                uint32_t offset = (vb->buffer_offset +
+                                   elem->src_offset +
+                                   vb->stride * info->index_bias);
                 uint32_t vb_size = rsc->bo->size - offset;
                 uint32_t elem_size =
                         util_format_get_blocksize(elem->src_format);
