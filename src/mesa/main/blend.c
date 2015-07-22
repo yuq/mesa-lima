@@ -569,6 +569,9 @@ _mesa_AlphaFunc( GLenum func, GLclampf ref )
       _mesa_debug(ctx, "glAlphaFunc(%s, %f)\n",
                   _mesa_enum_to_string(func), ref);
 
+   if (ctx->Color.AlphaFunc == func && ctx->Color.AlphaRefUnclamped == ref)
+      return; /* no change */
+
    switch (func) {
    case GL_NEVER:
    case GL_LESS:
@@ -578,9 +581,6 @@ _mesa_AlphaFunc( GLenum func, GLclampf ref )
    case GL_NOTEQUAL:
    case GL_GEQUAL:
    case GL_ALWAYS:
-      if (ctx->Color.AlphaFunc == func && ctx->Color.AlphaRefUnclamped == ref)
-         return; /* no change */
-
       FLUSH_VERTICES(ctx, _NEW_COLOR);
       ctx->Color.AlphaFunc = func;
       ctx->Color.AlphaRefUnclamped = ref;
