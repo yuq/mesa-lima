@@ -560,9 +560,11 @@ _mesa_meta_ClearTexSubImage(struct gl_context *ctx,
                             const GLvoid *clearValue);
 
 extern void
-_mesa_meta_GetTexImage(struct gl_context *ctx,
-                       GLenum format, GLenum type, GLvoid *pixels,
-                       struct gl_texture_image *texImage);
+_mesa_meta_GetTexSubImage(struct gl_context *ctx,
+                          GLint xoffset, GLint yoffset, GLint zoffset,
+                          GLsizei width, GLsizei height, GLsizei depth,
+                          GLenum format, GLenum type, GLvoid *pixels,
+                          struct gl_texture_image *texImage);
 
 extern void
 _mesa_meta_DrawTex(struct gl_context *ctx, GLfloat x, GLfloat y, GLfloat z,

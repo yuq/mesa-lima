@@ -37,10 +37,11 @@ extern GLenum
 _mesa_base_pack_format(GLenum format);
 
 extern void
-_mesa_GetTexImage_sw(struct gl_context *ctx,
-                     GLenum format, GLenum type, GLvoid *pixels,
-                     struct gl_texture_image *texImage);
-
+_mesa_GetTexSubImage_sw(struct gl_context *ctx,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLint depth,
+                        GLenum format, GLenum type, GLvoid *pixels,
+                        struct gl_texture_image *texImage);
 
 extern void
 _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,

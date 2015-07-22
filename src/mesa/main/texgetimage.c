@@ -684,15 +684,17 @@ get_tex_memcpy(struct gl_context *ctx, GLenum format, GLenum type,
 
 
 /**
- * This is the software fallback for Driver.GetTexImage().
+ * This is the software fallback for Driver.GetTexSubImage().
  * All error checking will have been done before this routine is called.
  * We'll call ctx->Driver.MapTextureImage() to access the data, then
  * unmap with ctx->Driver.UnmapTextureImage().
  */
 void
-_mesa_GetTexImage_sw(struct gl_context *ctx,
-                     GLenum format, GLenum type, GLvoid *pixels,
-                     struct gl_texture_image *texImage)
+_mesa_GetTexSubImage_sw(struct gl_context *ctx,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLint depth,
+                        GLenum format, GLenum type, GLvoid *pixels,
+                        struct gl_texture_image *texImage)
 {
    const GLuint dimensions =
       _mesa_get_texture_dimensions(texImage->TexObject->Target);
@@ -1022,7 +1024,10 @@ _mesa_get_texture_image(struct gl_context *ctx,
 
    _mesa_lock_texture(ctx, texObj);
    {
-      ctx->Driver.GetTexImage(ctx, format, type, pixels, texImage);
+      ctx->Driver.GetTexSubImage(ctx, 0, 0, 0,
+                                 texImage->Width, texImage->Height,
+                                 texImage->Depth,
+                                 format, type, pixels, texImage);
    }
    _mesa_unlock_texture(ctx, texObj);
 }

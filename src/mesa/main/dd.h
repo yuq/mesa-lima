@@ -232,11 +232,13 @@ struct dd_function_table {
 
 
    /**
-    * Called by glGetTexImage().
+    * Called by glGetTexImage(), glGetTextureSubImage().
     */
-   void (*GetTexImage)( struct gl_context *ctx,
-                        GLenum format, GLenum type, GLvoid *pixels,
-                        struct gl_texture_image *texImage );
+   void (*GetTexSubImage)(struct gl_context *ctx,
+                          GLint xoffset, GLint yoffset, GLint zoffset,
+                          GLsizei width, GLsizei height, GLsizei depth,
+                          GLenum format, GLenum type, GLvoid *pixels,
+                          struct gl_texture_image *texImage);
 
    /**
     * Called by glClearTex[Sub]Image

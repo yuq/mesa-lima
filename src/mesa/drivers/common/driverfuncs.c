@@ -94,7 +94,7 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->QuerySamplesForFormat = _mesa_query_samples_for_format;
    driver->TexImage = _mesa_store_teximage;
    driver->TexSubImage = _mesa_store_texsubimage;
-   driver->GetTexImage = _mesa_meta_GetTexImage;
+   driver->GetTexSubImage = _mesa_meta_GetTexSubImage;
    driver->ClearTexSubImage = _mesa_meta_ClearTexSubImage;
    driver->CopyTexSubImage = _mesa_meta_CopyTexSubImage;
    driver->GenerateMipmap = _mesa_meta_GenerateMipmap;

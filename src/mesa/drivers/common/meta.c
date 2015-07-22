@@ -3196,15 +3196,17 @@ decompress_texture_image(struct gl_context *ctx,
  * from core Mesa.
  */
 void
-_mesa_meta_GetTexImage(struct gl_context *ctx,
-                       GLenum format, GLenum type, GLvoid *pixels,
-                       struct gl_texture_image *texImage)
+_mesa_meta_GetTexSubImage(struct gl_context *ctx,
+                          GLint xoffset, GLint yoffset, GLint zoffset,
+                          GLsizei width, GLsizei height, GLsizei depth,
+                          GLenum format, GLenum type, GLvoid *pixels,
+                          struct gl_texture_image *texImage)
 {
    if (_mesa_is_format_compressed(texImage->TexFormat)) {
       GLuint slice;
       bool result = true;
 
-      for (slice = 0; slice < texImage->Depth; slice++) {
+      for (slice = 0; slice < depth; slice++) {
          void *dst;
          if (texImage->TexObject->Target == GL_TEXTURE_2D_ARRAY
              || texImage->TexObject->Target == GL_TEXTURE_CUBE_MAP_ARRAY) {
@@ -3216,15 +3218,14 @@ _mesa_meta_GetTexImage(struct gl_context *ctx,
             struct gl_pixelstore_attrib packing = ctx->Pack;
             packing.SkipPixels = 0;
             packing.SkipRows = 0;
-            dst = _mesa_image_address3d(&packing, pixels, texImage->Width,
-                                        texImage->Height, format, type,
-                                        slice, 0, 0);
+            dst = _mesa_image_address3d(&packing, pixels, width, height,
+                                        format, type, slice, 0, 0);
          }
          else {
             dst = pixels;
          }
-         result = decompress_texture_image(ctx, texImage, slice, 0, 0,
-                                           texImage->Width, texImage->Height,
+         result = decompress_texture_image(ctx, texImage, slice,
+                                           xoffset, yoffset, width, height,
                                            format, type, dst);
          if (!result)
             break;
@@ -3234,7 +3235,8 @@ _mesa_meta_GetTexImage(struct gl_context *ctx,
          return;
    }
 
-   _mesa_GetTexImage_sw(ctx, format, type, pixels, texImage);
+   _mesa_GetTexSubImage_sw(ctx, xoffset, yoffset, zoffset,
+                           width, height, depth, format, type, pixels, texImage);
 }
 
 
