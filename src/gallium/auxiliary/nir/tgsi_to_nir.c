@@ -24,6 +24,7 @@
 
 #include "util/ralloc.h"
 #include "glsl/nir/nir.h"
+#include "glsl/nir/nir_control_flow.h"
 #include "glsl/nir/nir_builder.h"
 #include "glsl/list.h"
 #include "glsl/shader_enums.h"

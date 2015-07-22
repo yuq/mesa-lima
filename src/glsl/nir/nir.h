@@ -1506,21 +1506,6 @@ nir_loop *nir_loop_create(void *mem_ctx);
 
 nir_function_impl *nir_cf_node_get_function(nir_cf_node *node);
 
-/** puts a control flow node immediately after another control flow node */
-void nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after);
-
-/** puts a control flow node immediately before another control flow node */
-void nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before);
-
-/** puts a control flow node at the beginning of a list from an if, loop, or function */
-void nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node);
-
-/** puts a control flow node at the end of a list from an if, loop, or function */
-void nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node);
-
-/** removes a control flow node, doing any cleanup necessary */
-void nir_cf_node_remove(nir_cf_node *node);
-
 /** requests that the given pieces of metadata be generated */
 void nir_metadata_require(nir_function_impl *impl, nir_metadata required);
 /** dirties all but the preserved metadata */
