@@ -335,9 +335,12 @@ struct dd_function_table {
    /**
     * Called by glGetCompressedTexImage.
     */
-   void (*GetCompressedTexImage)(struct gl_context *ctx,
-                                 struct gl_texture_image *texImage,
-                                 GLvoid *data);
+   void (*GetCompressedTexSubImage)(struct gl_context *ctx,
+                                    struct gl_texture_image *texImage,
+                                    GLint xoffset, GLint yoffset,
+                                    GLint zoffset, GLsizei width,
+                                    GLsizei height, GLsizei depth,
+                                    GLvoid *data);
    /*@}*/
 
    /**

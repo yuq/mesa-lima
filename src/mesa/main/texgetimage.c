@@ -772,13 +772,16 @@ _mesa_GetTexSubImage_sw(struct gl_context *ctx,
 
 
 /**
- * This is the software fallback for Driver.GetCompressedTexImage().
+ * This is the software fallback for Driver.GetCompressedTexSubImage().
  * All error checking will have been done before this routine is called.
  */
 void
-_mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
-                               struct gl_texture_image *texImage,
-                               GLvoid *img)
+_mesa_GetCompressedTexSubImage_sw(struct gl_context *ctx,
+                                  struct gl_texture_image *texImage,
+                                  GLint xoffset, GLint yoffset,
+                                  GLint zoffset, GLsizei width,
+                                  GLint height, GLint depth,
+                                  GLvoid *img)
 {
    const GLuint dimensions =
       _mesa_get_texture_dimensions(texImage->TexObject->Target);
@@ -787,10 +790,8 @@ _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
    GLubyte *dest;
 
    _mesa_compute_compressed_pixelstore(dimensions, texImage->TexFormat,
-                                       texImage->Width, texImage->Height,
-                                       texImage->Depth,
-                                       &ctx->Pack,
-                                       &store);
+                                       width, height, depth,
+                                       &ctx->Pack, &store);
 
    if (_mesa_is_bufferobj(ctx->Pack.BufferObj)) {
       /* pack texture image into a PBO */
@@ -816,8 +817,8 @@ _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
       GLubyte *src;
 
       /* map src texture buffer */
-      ctx->Driver.MapTextureImage(ctx, texImage, slice,
-                                  0, 0, texImage->Width, texImage->Height,
+      ctx->Driver.MapTextureImage(ctx, texImage, zoffset + slice,
+                                  xoffset, yoffset, width, height,
                                   GL_MAP_READ_BIT, &src, &srcRowStride);
 
       if (src) {
@@ -828,7 +829,7 @@ _mesa_GetCompressedTexImage_sw(struct gl_context *ctx,
             src += srcRowStride;
          }
 
-         ctx->Driver.UnmapTextureImage(ctx, texImage, slice);
+         ctx->Driver.UnmapTextureImage(ctx, texImage, zoffset + slice);
 
          /* Advance to next slice */
          dest += store.TotalBytesPerRow * (store.TotalRowsPerSlice - store.CopyRowsPerSlice);
@@ -1323,7 +1324,10 @@ _mesa_get_compressed_texture_image(struct gl_context *ctx,
 
    _mesa_lock_texture(ctx, texObj);
    {
-      ctx->Driver.GetCompressedTexImage(ctx, texImage, pixels);
+      ctx->Driver.GetCompressedTexSubImage(ctx, texImage,
+                                           0, 0, 0,
+                                           texImage->Width, texImage->Height,
+                                           texImage->Depth, pixels);
    }
    _mesa_unlock_texture(ctx, texObj);
 }
