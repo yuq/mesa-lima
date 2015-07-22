@@ -280,6 +280,61 @@ move_successors(nir_block *source, nir_block *dest)
    link_blocks(dest, succ1, succ2);
 }
 
+/* Given a basic block with no successors that has been inserted into the
+ * control flow tree, gives it the successors it would normally have assuming
+ * it doesn't end in a jump instruction. Also inserts phi sources with undefs
+ * if necessary.
+ */
+static void
+block_add_normal_succs(nir_block *block)
+{
+   if (exec_node_is_tail_sentinel(block->cf_node.node.next)) {
+      nir_cf_node *parent = block->cf_node.parent;
+      if (parent->type == nir_cf_node_if) {
+         nir_cf_node *next = nir_cf_node_next(parent);
+         assert(next->type == nir_cf_node_block);
+         nir_block *next_block = nir_cf_node_as_block(next);
+
+         link_blocks(block, next_block, NULL);
+      } else {
+         assert(parent->type == nir_cf_node_loop);
+         nir_loop *loop = nir_cf_node_as_loop(parent);
+
+         nir_cf_node *head = nir_loop_first_cf_node(loop);
+         assert(head->type == nir_cf_node_block);
+         nir_block *head_block = nir_cf_node_as_block(head);
+
+         link_blocks(block, head_block, NULL);
+         insert_phi_undef(head_block, block);
+      }
+   } else {
+      nir_cf_node *next = nir_cf_node_next(&block->cf_node);
+      if (next->type == nir_cf_node_if) {
+         nir_if *next_if = nir_cf_node_as_if(next);
+
+         nir_cf_node *first_then = nir_if_first_then_node(next_if);
+         assert(first_then->type == nir_cf_node_block);
+         nir_block *first_then_block = nir_cf_node_as_block(first_then);
+
+         nir_cf_node *first_else = nir_if_first_else_node(next_if);
+         assert(first_else->type == nir_cf_node_block);
+         nir_block *first_else_block = nir_cf_node_as_block(first_else);
+
+         link_blocks(block, first_then_block, first_else_block);
+      } else {
+         assert(next->type == nir_cf_node_loop);
+         nir_loop *next_loop = nir_cf_node_as_loop(next);
+
+         nir_cf_node *first = nir_loop_first_cf_node(next_loop);
+         assert(first->type == nir_cf_node_block);
+         nir_block *first_block = nir_cf_node_as_block(first);
+
+         link_blocks(block, first_block, NULL);
+         insert_phi_undef(first_block, block);
+      }
+   }
+}
+
 static nir_block *
 split_block_end(nir_block *block)
 {
@@ -390,72 +445,44 @@ remove_phi_src(nir_block *block, nir_block *pred)
    }
 }
 
-void
-nir_handle_remove_jump(nir_block *block, nir_jump_type type)
+/* Removes the successor of a block with a jump, and inserts a fake edge for
+ * infinite loops. Note that the jump to be eliminated may be free-floating.
+ */
+
+static
+void unlink_jump(nir_block *block, nir_jump_type type)
 {
-   unlink_block_successors(block);
-
-   if (exec_node_is_tail_sentinel(block->cf_node.node.next)) {
-      nir_cf_node *parent = block->cf_node.parent;
-      if (parent->type == nir_cf_node_if) {
-         nir_cf_node *next = nir_cf_node_next(parent);
-         assert(next->type == nir_cf_node_block);
-         nir_block *next_block = nir_cf_node_as_block(next);
-
-         link_blocks(block, next_block, NULL);
-      } else {
-         assert(parent->type == nir_cf_node_loop);
-         nir_loop *loop = nir_cf_node_as_loop(parent);
-
-         nir_cf_node *head = nir_loop_first_cf_node(loop);
-         assert(head->type == nir_cf_node_block);
-         nir_block *head_block = nir_cf_node_as_block(head);
-
-         link_blocks(block, head_block, NULL);
-      }
-   } else {
-      nir_cf_node *next = nir_cf_node_next(&block->cf_node);
-      if (next->type == nir_cf_node_if) {
-         nir_if *next_if = nir_cf_node_as_if(next);
-
-         nir_cf_node *first_then = nir_if_first_then_node(next_if);
-         assert(first_then->type == nir_cf_node_block);
-         nir_block *first_then_block = nir_cf_node_as_block(first_then);
-
-         nir_cf_node *first_else = nir_if_first_else_node(next_if);
-         assert(first_else->type == nir_cf_node_block);
-         nir_block *first_else_block = nir_cf_node_as_block(first_else);
-
-         link_blocks(block, first_then_block, first_else_block);
-      } else {
-         assert(next->type == nir_cf_node_loop);
-         nir_loop *next_loop = nir_cf_node_as_loop(next);
-
-         nir_cf_node *first = nir_loop_first_cf_node(next_loop);
-         assert(first->type == nir_cf_node_block);
-         nir_block *first_block = nir_cf_node_as_block(first);
-
-         link_blocks(block, first_block, NULL);
-      }
-   }
+   if (block->successors[0])
+      remove_phi_src(block->successors[0], block);
+   if (block->successors[1])
+      remove_phi_src(block->successors[1], block);
 
    if (type == nir_jump_break) {
-      nir_loop *loop = nearest_loop(&block->cf_node);
+      nir_block *next = block->successors[0];
 
-      nir_cf_node *next = nir_cf_node_next(&loop->cf_node);
-      assert(next->type == nir_cf_node_block);
-      nir_block *next_block = nir_cf_node_as_block(next);
+      if (next->predecessors->entries == 1) {
+         nir_loop *loop =
+            nir_cf_node_as_loop(nir_cf_node_prev(&next->cf_node));
 
-      if (next_block->predecessors->entries == 0) {
          /* insert fake link */
          nir_cf_node *last = nir_loop_last_cf_node(loop);
          assert(last->type == nir_cf_node_block);
          nir_block *last_block = nir_cf_node_as_block(last);
 
-         last_block->successors[1] = next_block;
-         block_add_pred(next_block, last_block);
+         last_block->successors[1] = next;
+         block_add_pred(next, last_block);
       }
    }
+
+   unlink_block_successors(block);
+}
+
+void
+nir_handle_remove_jump(nir_block *block, nir_jump_type type)
+{
+   unlink_jump(block, type);
+
+   block_add_normal_succs(block);
 
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
    nir_metadata_preserve(impl, nir_metadata_none);
