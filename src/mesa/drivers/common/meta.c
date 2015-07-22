@@ -2449,29 +2449,52 @@ _mesa_meta_Bitmap(struct gl_context *ctx,
 
 /**
  * Compute the texture coordinates for the four vertices of a quad for
- * drawing a 2D texture image or slice of a cube/3D texture.
+ * drawing a 2D texture image or slice of a cube/3D texture.  The offset
+ * and width, height specify a sub-region of the 2D image.
+ *
  * \param faceTarget  GL_TEXTURE_1D/2D/3D or cube face name
  * \param slice  slice of a 1D/2D array texture or 3D texture
- * \param width  width of the texture image
- * \param height  height of the texture image
+ * \param xoffset  X position of sub texture
+ * \param yoffset  Y position of sub texture
+ * \param width  width of the sub texture image
+ * \param height  height of the sub texture image
+ * \param total_width  total width of the texture image
+ * \param total_height  total height of the texture image
+ * \param total_depth  total depth of the texture image
  * \param coords0/1/2/3  returns the computed texcoords
  */
 void
 _mesa_meta_setup_texture_coords(GLenum faceTarget,
                                 GLint slice,
+                                GLint xoffset,
+                                GLint yoffset,
                                 GLint width,
                                 GLint height,
-                                GLint depth,
+                                GLint total_width,
+                                GLint total_height,
+                                GLint total_depth,
                                 GLfloat coords0[4],
                                 GLfloat coords1[4],
                                 GLfloat coords2[4],
                                 GLfloat coords3[4])
 {
-   static const GLfloat st[4][2] = {
-      {0.0f, 0.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}, {0.0f, 1.0f}
-   };
+   float st[4][2];
    GLuint i;
+   const float s0 = (float) xoffset / (float) total_width;
+   const float s1 = (float) (xoffset + width) / (float) total_width;
+   const float t0 = (float) yoffset / (float) total_height;
+   const float t1 = (float) (yoffset + height) / (float) total_height;
    GLfloat r;
+
+   /* setup the reference texcoords */
+   st[0][0] = s0;
+   st[0][1] = t0;
+   st[1][0] = s1;
+   st[1][1] = t0;
+   st[2][0] = s1;
+   st[2][1] = t1;
+   st[3][0] = s0;
+   st[3][1] = t1;
 
    if (faceTarget == GL_TEXTURE_CUBE_MAP_ARRAY)
       faceTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + slice % 6;
@@ -2489,52 +2512,52 @@ _mesa_meta_setup_texture_coords(GLenum faceTarget,
    case GL_TEXTURE_3D:
    case GL_TEXTURE_2D_ARRAY:
       if (faceTarget == GL_TEXTURE_3D) {
-         assert(slice < depth);
-         assert(depth >= 1);
-         r = (slice + 0.5f) / depth;
+         assert(slice < total_depth);
+         assert(total_depth >= 1);
+         r = (slice + 0.5f) / total_depth;
       }
       else if (faceTarget == GL_TEXTURE_2D_ARRAY)
          r = (float) slice;
       else
          r = 0.0F;
-      coords0[0] = 0.0F; /* s */
-      coords0[1] = 0.0F; /* t */
+      coords0[0] = st[0][0]; /* s */
+      coords0[1] = st[0][1]; /* t */
       coords0[2] = r; /* r */
-      coords1[0] = 1.0F;
-      coords1[1] = 0.0F;
+      coords1[0] = st[1][0];
+      coords1[1] = st[1][1];
       coords1[2] = r;
-      coords2[0] = 1.0F;
-      coords2[1] = 1.0F;
+      coords2[0] = st[2][0];
+      coords2[1] = st[2][1];
       coords2[2] = r;
-      coords3[0] = 0.0F;
-      coords3[1] = 1.0F;
+      coords3[0] = st[3][0];
+      coords3[1] = st[3][1];
       coords3[2] = r;
       break;
    case GL_TEXTURE_RECTANGLE_ARB:
-      coords0[0] = 0.0F; /* s */
-      coords0[1] = 0.0F; /* t */
+      coords0[0] = (float) xoffset; /* s */
+      coords0[1] = (float) yoffset; /* t */
       coords0[2] = 0.0F; /* r */
-      coords1[0] = (float) width;
-      coords1[1] = 0.0F;
+      coords1[0] = (float) (xoffset + width);
+      coords1[1] = (float) yoffset;
       coords1[2] = 0.0F;
-      coords2[0] = (float) width;
-      coords2[1] = (float) height;
+      coords2[0] = (float) (xoffset + width);
+      coords2[1] = (float) (yoffset + height);
       coords2[2] = 0.0F;
-      coords3[0] = 0.0F;
-      coords3[1] = (float) height;
+      coords3[0] = (float) xoffset;
+      coords3[1] = (float) (yoffset + height);
       coords3[2] = 0.0F;
       break;
    case GL_TEXTURE_1D_ARRAY:
-      coords0[0] = 0.0F; /* s */
+      coords0[0] = st[0][0]; /* s */
       coords0[1] = (float) slice; /* t */
       coords0[2] = 0.0F; /* r */
-      coords1[0] = 1.0f;
+      coords1[0] = st[1][0];
       coords1[1] = (float) slice;
       coords1[2] = 0.0F;
-      coords2[0] = 1.0F;
+      coords2[0] = st[2][0];
       coords2[1] = (float) slice;
       coords2[2] = 0.0F;
-      coords3[0] = 0.0F;
+      coords3[0] = st[3][0];
       coords3[1] = (float) slice;
       coords3[2] = 0.0F;
       break;
@@ -3069,7 +3092,10 @@ decompress_texture_image(struct gl_context *ctx,
    /* Silence valgrind warnings about reading uninitialized stack. */
    memset(verts, 0, sizeof(verts));
 
-   _mesa_meta_setup_texture_coords(faceTarget, slice, width, height, depth,
+   _mesa_meta_setup_texture_coords(faceTarget, slice,
+                                   0, 0, width, height,
+                                   texImage->Width, texImage->Height,
+                                   texImage->Depth,
                                    verts[0].tex,
                                    verts[1].tex,
                                    verts[2].tex,
