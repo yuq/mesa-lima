@@ -2743,7 +2743,7 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
        * types for SNORM formats. Also, conversion to SNORM formats is not
        * allowed by Table 3.2 on Page 110.
        */
-      if(_mesa_is_enum_format_snorm(internalFormat)) {
+      if (_mesa_is_enum_format_snorm(internalFormat)) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glCopyTexImage%dD(internalFormat=%s)", dimensions,
                      _mesa_enum_to_string(internalFormat));
@@ -3503,7 +3503,6 @@ _mesa_EGLImageTargetTexture2DOES (GLenum target, GLeglImageOES image)
       _mesa_dirty_texobj(ctx, texObj);
    }
    _mesa_unlock_texture(ctx, texObj);
-
 }
 
 
@@ -3850,8 +3849,7 @@ copytexsubimage_by_slice(struct gl_context *ctx,
 }
 
 static GLboolean
-formats_differ_in_component_sizes (mesa_format f1,
-                                   mesa_format f2)
+formats_differ_in_component_sizes(mesa_format f1, mesa_format f2)
 {
    GLint f1_r_bits = _mesa_get_format_bits(f1, GL_RED_BITS);
    GLint f1_g_bits = _mesa_get_format_bits(f1, GL_GREEN_BITS);
@@ -3924,8 +3922,8 @@ copyteximage(struct gl_context *ctx, GLuint dims,
        */
          if (rb->InternalFormat == GL_RGB10_A2) {
                _mesa_error(ctx, GL_INVALID_OPERATION,
-                           "glCopyTexImage%uD(Reading from GL_RGB10_A2 buffer and"
-                           " writing to unsized internal format)", dims);
+                           "glCopyTexImage%uD(Reading from GL_RGB10_A2 buffer"
+                           " and writing to unsized internal format)", dims);
                return;
          }
       }
@@ -4833,8 +4831,7 @@ _mesa_CompressedTextureSubImage1D(GLuint texture, GLint level, GLint xoffset,
    if (!texObj)
       return;
 
-   if (compressed_subtexture_target_check(ctx, texObj->Target, 1, format,
-                                          true,
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 1, format, true,
                                           "glCompressedTextureSubImage1D")) {
       return;
    }
@@ -4911,8 +4908,7 @@ _mesa_CompressedTextureSubImage2D(GLuint texture, GLint level, GLint xoffset,
    if (!texObj)
       return;
 
-   if (compressed_subtexture_target_check(ctx, texObj->Target, 2, format,
-                                          true,
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 2, format, true,
                                           "glCompressedTextureSubImage2D")) {
       return;
    }
@@ -4989,8 +4985,7 @@ _mesa_CompressedTextureSubImage3D(GLuint texture, GLint level, GLint xoffset,
    if (!texObj)
       return;
 
-   if (compressed_subtexture_target_check(ctx, texObj->Target, 3, format,
-                                          true,
+   if (compressed_subtexture_target_check(ctx, texObj->Target, 3, format, true,
                                           "glCompressedTextureSubImage3D")) {
       return;
    }
@@ -5439,7 +5434,6 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
          return;
 
    } else {
-
       /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
        * Textures (PDF page 254):
        *    "If buffer is zero, then any buffer object attached to the buffer
@@ -5507,7 +5501,6 @@ _mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
          return;
 
    } else {
-
       /* OpenGL 4.5 core spec (02.02.2015) says in Section 8.9 Buffer
        * Textures (PDF page 254):
        *    "If buffer is zero, then any buffer object attached to the buffer
@@ -5553,12 +5546,10 @@ check_multisample_target(GLuint dims, GLenum target, bool dsa)
       return dims == 2;
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE:
       return dims == 2 && !dsa;
-
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return dims == 3;
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return dims == 3 && !dsa;
-
    default:
       return GL_FALSE;
    }
@@ -5670,13 +5661,12 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
    else {
       if (!dimensionsOK) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-               "%s(invalid width or height)", func);
+                     "%s(invalid width or height)", func);
          return;
       }
 
       if (!sizeOK) {
-         _mesa_error(ctx, GL_OUT_OF_MEMORY,
-               "%s(texture too large)", func);
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s(texture too large)", func);
          return;
       }
 
@@ -5694,7 +5684,7 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
 
       if (width > 0 && height > 0 && depth > 0) {
          if (!ctx->Driver.AllocTextureStorage(ctx, texObj, 1,
-                  width, height, depth)) {
+                                              width, height, depth)) {
             /* tidy up the texture image state. strictly speaking,
              * we're allowed to just leave this in whatever state we
              * like, but being tidy is good.
