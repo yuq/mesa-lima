@@ -130,17 +130,36 @@ nir_after_cf_list(struct exec_list *cf_list)
 
 /** Control flow insertion. */
 
+/** puts a control flow node where the cursor is */
+void nir_cf_node_insert(nir_cursor cursor, nir_cf_node *node);
+
 /** puts a control flow node immediately after another control flow node */
-void nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after);
+static inline void
+nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after)
+{
+   nir_cf_node_insert(nir_after_cf_node(node), after);
+}
 
 /** puts a control flow node immediately before another control flow node */
-void nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before);
+static inline void
+nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before)
+{
+   nir_cf_node_insert(nir_before_cf_node(node), before);
+}
 
 /** puts a control flow node at the beginning of a list from an if, loop, or function */
-void nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node);
+static inline void
+nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node)
+{
+   nir_cf_node_insert(nir_before_cf_list(list), node);
+}
 
 /** puts a control flow node at the end of a list from an if, loop, or function */
-void nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node);
+static inline void
+nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node)
+{
+   nir_cf_node_insert(nir_after_cf_list(list), node);
+}
 
 /** removes a control flow node, doing any cleanup necessary */
 void nir_cf_node_remove(nir_cf_node *node);

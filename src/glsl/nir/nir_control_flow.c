@@ -455,20 +455,6 @@ insert_non_block(nir_block *before, nir_cf_node *node, nir_block *after)
    link_non_block_to_block(node, after);
 }
 
-/**
- * Inserts a non-basic block before a basic block.
- */
-
-static void
-insert_non_block_before_block(nir_cf_node *node, nir_block *block)
-{
-   /* split off the beginning of block into new_block */
-   nir_block *new_block = split_block_beginning(block);
-
-   /* insert our node in between new_block and block */
-   insert_non_block(new_block, node, block);
-}
-
 /* walk up the control flow tree to find the innermost enclosed loop */
 static nir_loop *
 nearest_loop(nir_cf_node *node)
@@ -584,60 +570,6 @@ nir_handle_remove_jump(nir_block *block, nir_jump_type type)
 }
 
 static void
-insert_non_block_after_block(nir_block *block, nir_cf_node *node)
-{
-   /* split off the end of block into new_block */
-   nir_block *new_block = split_block_end(block);
-
-   /* insert our node in between block and new_block */
-   insert_non_block(block, node, new_block);
-}
-
-/**
- * Inserts a basic block before another by merging the instructions.
- *
- * @param block the target of the insertion
- * @param before the block to be inserted - must not have been inserted before
- * @param has_jump whether \before has a jump instruction at the end
- */
-
-static void
-insert_block_before_block(nir_block *block, nir_block *before, bool has_jump)
-{
-   assert(!has_jump || exec_list_is_empty(&block->instr_list));
-
-   foreach_list_typed(nir_instr, instr, node, &before->instr_list) {
-      instr->block = block;
-   }
-
-   exec_list_prepend(&block->instr_list, &before->instr_list);
-
-   if (has_jump)
-      nir_handle_add_jump(block);
-}
-
-/**
- * Inserts a basic block after another by merging the instructions.
- *
- * @param block the target of the insertion
- * @param after the block to be inserted - must not have been inserted before
- * @param has_jump whether \after has a jump instruction at the end
- */
-
-static void
-insert_block_after_block(nir_block *block, nir_block *after, bool has_jump)
-{
-   foreach_list_typed(nir_instr, instr, node, &after->instr_list) {
-      instr->block = block;
-   }
-
-   exec_list_append(&block->instr_list, &after->instr_list);
-
-   if (has_jump)
-      nir_handle_add_jump(block);
-}
-
-static void
 update_if_uses(nir_cf_node *node)
 {
    if (node->type != nir_cf_node_if)
@@ -653,109 +585,6 @@ update_if_uses(nir_cf_node *node)
       list_addtail(&if_stmt->condition.use_link,
                    &if_stmt->condition.reg.reg->if_uses);
    }
-}
-
-void
-nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after)
-{
-   update_if_uses(after);
-
-   if (after->type == nir_cf_node_block) {
-      /*
-       * either node or the one after it must be a basic block, by invariant #2;
-       * in either case, just merge the blocks together.
-       */
-      nir_block *after_block = nir_cf_node_as_block(after);
-
-      bool has_jump = !exec_list_is_empty(&after_block->instr_list) &&
-         nir_block_last_instr(after_block)->type == nir_instr_type_jump;
-
-      if (node->type == nir_cf_node_block) {
-         insert_block_after_block(nir_cf_node_as_block(node), after_block,
-                                  has_jump);
-      } else {
-         nir_cf_node *next = nir_cf_node_next(node);
-         assert(next->type == nir_cf_node_block);
-         nir_block *next_block = nir_cf_node_as_block(next);
-
-         insert_block_before_block(next_block, after_block, has_jump);
-      }
-   } else {
-      if (node->type == nir_cf_node_block) {
-         insert_non_block_after_block(nir_cf_node_as_block(node), after);
-      } else {
-         /*
-          * We have to insert a non-basic block after a non-basic block. Since
-          * every non-basic block has a basic block after it, this is equivalent
-          * to inserting a non-basic block before a basic block.
-          */
-
-         nir_cf_node *next = nir_cf_node_next(node);
-         assert(next->type == nir_cf_node_block);
-         nir_block *next_block = nir_cf_node_as_block(next);
-
-         insert_non_block_before_block(after, next_block);
-      }
-   }
-
-   nir_function_impl *impl = nir_cf_node_get_function(node);
-   nir_metadata_preserve(impl, nir_metadata_none);
-}
-
-void
-nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before)
-{
-   update_if_uses(before);
-
-   if (before->type == nir_cf_node_block) {
-      nir_block *before_block = nir_cf_node_as_block(before);
-
-      bool has_jump = !exec_list_is_empty(&before_block->instr_list) &&
-         nir_block_last_instr(before_block)->type == nir_instr_type_jump;
-
-      if (node->type == nir_cf_node_block) {
-         insert_block_before_block(nir_cf_node_as_block(node), before_block,
-                                   has_jump);
-      } else {
-         nir_cf_node *prev = nir_cf_node_prev(node);
-         assert(prev->type == nir_cf_node_block);
-         nir_block *prev_block = nir_cf_node_as_block(prev);
-
-         insert_block_after_block(prev_block, before_block, has_jump);
-      }
-   } else {
-      if (node->type == nir_cf_node_block) {
-         insert_non_block_before_block(before, nir_cf_node_as_block(node));
-      } else {
-         /*
-          * We have to insert a non-basic block before a non-basic block. This
-          * is equivalent to inserting a non-basic block after a basic block.
-          */
-
-         nir_cf_node *prev_node = nir_cf_node_prev(node);
-         assert(prev_node->type == nir_cf_node_block);
-         nir_block *prev_block = nir_cf_node_as_block(prev_node);
-
-         insert_non_block_after_block(prev_block, before);
-      }
-   }
-
-   nir_function_impl *impl = nir_cf_node_get_function(node);
-   nir_metadata_preserve(impl, nir_metadata_none);
-}
-
-void
-nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node)
-{
-   nir_cf_node *begin = exec_node_data(nir_cf_node, list->head, node);
-   nir_cf_node_insert_before(begin, node);
-}
-
-void
-nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node)
-{
-   nir_cf_node *end = exec_node_data(nir_cf_node, list->tail_pred, node);
-   nir_cf_node_insert_after(end, node);
 }
 
 /**
@@ -790,6 +619,32 @@ stitch_blocks(nir_block *before, nir_block *after)
 
       exec_list_append(&before->instr_list, &after->instr_list);
       exec_node_remove(&after->cf_node.node);
+   }
+}
+
+void
+nir_cf_node_insert(nir_cursor cursor, nir_cf_node *node)
+{
+   nir_block *before, *after;
+
+   split_block_cursor(cursor, &before, &after);
+
+   if (node->type == nir_cf_node_block) {
+      nir_block *block = nir_cf_node_as_block(node);
+      exec_node_insert_after(&before->cf_node.node, &block->cf_node.node);
+      block->cf_node.parent = before->cf_node.parent;
+      /* stitch_blocks() assumes that any block that ends with a jump has
+       * already been setup with the correct successors, so we need to set
+       * up jumps here as the block is being inserted.
+       */
+      if (block_ends_in_jump(block))
+         nir_handle_add_jump(block);
+
+      stitch_blocks(block, after);
+      stitch_blocks(before, block);
+   } else {
+      update_if_uses(node);
+      insert_non_block(before, node, after);
    }
 }
 
