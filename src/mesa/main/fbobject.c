@@ -3304,7 +3304,7 @@ _mesa_FramebufferTexture(GLenum target, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered;
+   GLboolean layered = GL_FALSE;
 
    const char *func = "FramebufferTexture";
 
@@ -3347,7 +3347,7 @@ _mesa_NamedFramebufferTexture(GLuint framebuffer, GLenum attachment,
    GET_CURRENT_CONTEXT(ctx);
    struct gl_framebuffer *fb;
    struct gl_texture_object *texObj;
-   GLboolean layered;
+   GLboolean layered = GL_FALSE;
 
    const char *func = "glNamedFramebufferTexture";
 
