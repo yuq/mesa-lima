@@ -93,13 +93,13 @@ _mesa_FrontFace( GLenum mode )
    if (MESA_VERBOSE&VERBOSE_API)
       _mesa_debug(ctx, "glFrontFace %s\n", _mesa_enum_to_string(mode));
 
+   if (ctx->Polygon.FrontFace == mode)
+      return;
+
    if (mode!=GL_CW && mode!=GL_CCW) {
       _mesa_error( ctx, GL_INVALID_ENUM, "glFrontFace" );
       return;
    }
-
-   if (ctx->Polygon.FrontFace == mode)
-      return;
 
    FLUSH_VERTICES(ctx, _NEW_POLYGON);
    ctx->Polygon.FrontFace = mode;
