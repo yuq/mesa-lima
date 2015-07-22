@@ -376,6 +376,24 @@ split_block_end(nir_block *block)
    return new_block;
 }
 
+static nir_block *
+split_block_before_instr(nir_instr *instr)
+{
+   assert(instr->type != nir_instr_type_phi);
+   nir_block *new_block = split_block_beginning(instr->block);
+
+   nir_foreach_instr_safe(instr->block, cur_instr) {
+      if (cur_instr == instr)
+         break;
+
+      exec_node_remove(&cur_instr->node);
+      cur_instr->block = new_block;
+      exec_list_push_tail(&new_block->instr_list, &cur_instr->node);
+   }
+
+   return new_block;
+}
+
 /**
  * Inserts a non-basic block between two basic blocks and links them together.
  */
