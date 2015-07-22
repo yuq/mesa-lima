@@ -398,8 +398,10 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       brw_add_texrect_params(prog);
 
-      if (options->NirOptions)
-         prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage);
+      if (options->NirOptions) {
+         prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
+                                    is_scalar_shader_stage(brw, stage));
+      }
 
       _mesa_reference_program(ctx, &prog, NULL);
    }

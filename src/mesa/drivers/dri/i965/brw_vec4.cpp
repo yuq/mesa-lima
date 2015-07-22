@@ -1919,7 +1919,7 @@ brw_vs_emit(struct brw_context *brw,
           */
          assert(vp->Base.Id == 0 && prog == NULL);
          vp->Base.nir =
-            brw_create_nir(brw, NULL, &vp->Base, MESA_SHADER_VERTEX);
+            brw_create_nir(brw, NULL, &vp->Base, MESA_SHADER_VERTEX, true);
       }
 
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;

@@ -61,7 +61,8 @@ nir_shader *
 brw_create_nir(struct brw_context *brw,
                const struct gl_shader_program *shader_prog,
                const struct gl_program *prog,
-               gl_shader_stage stage)
+               gl_shader_stage stage,
+               bool is_scalar)
 {
    struct gl_context *ctx = &brw->ctx;
    const nir_shader_compiler_options *options =
