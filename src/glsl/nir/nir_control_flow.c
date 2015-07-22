@@ -57,7 +57,8 @@ static void
 link_blocks(nir_block *pred, nir_block *succ1, nir_block *succ2)
 {
    pred->successors[0] = succ1;
-   block_add_pred(succ1, pred);
+   if (succ1 != NULL)
+      block_add_pred(succ1, pred);
 
    pred->successors[1] = succ2;
    if (succ2 != NULL)
