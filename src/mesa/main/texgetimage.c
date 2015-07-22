@@ -1004,12 +1004,12 @@ getteximage_error_check(struct gl_context *ctx,
  * \param dsa True when the caller is an ARB_direct_state_access function,
  *            false otherwise
  */
-void
-_mesa_get_texture_image(struct gl_context *ctx,
-                        struct gl_texture_object *texObj,
-                        struct gl_texture_image *texImage, GLenum target,
-                        GLint level, GLenum format, GLenum type,
-                        GLsizei bufSize, GLvoid *pixels, bool dsa)
+static void
+get_texture_image(struct gl_context *ctx,
+                  struct gl_texture_object *texObj,
+                  struct gl_texture_image *texImage, GLenum target,
+                  GLint level, GLenum format, GLenum type,
+                  GLsizei bufSize, GLvoid *pixels, bool dsa)
 {
    assert(texObj);
    assert(texImage);
@@ -1103,8 +1103,8 @@ _mesa_GetnTexImageARB(GLenum target, GLint level, GLenum format,
    if (!texImage)
       return;
 
-   _mesa_get_texture_image(ctx, texObj, texImage, target, level, format, type,
-                           bufSize, pixels, false);
+   get_texture_image(ctx, texObj, texImage, target, level, format, type,
+                     bufSize, pixels, false);
 }
 
 
@@ -1179,8 +1179,8 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
          texImage = texObj->Image[i][level];
          assert(texImage);
 
-         _mesa_get_texture_image(ctx, texObj, texImage, texObj->Target, level,
-                                 format, type, bufSize, pixels, true);
+         get_texture_image(ctx, texObj, texImage, texObj->Target, level,
+                           format, type, bufSize, pixels, true);
 
          image_stride = _mesa_image_image_stride(&ctx->Pack, texImage->Width,
                                                  texImage->Height, format,
@@ -1194,8 +1194,8 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format,
       if (!texImage)
          return;
 
-      _mesa_get_texture_image(ctx, texObj, texImage, texObj->Target, level,
-                              format, type, bufSize, pixels, true);
+      get_texture_image(ctx, texObj, texImage, texObj->Target, level,
+                        format, type, bufSize, pixels, true);
    }
 }
 
