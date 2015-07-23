@@ -1820,6 +1820,23 @@ VkResult anv_AllocDescriptorSets(
    return VK_SUCCESS;
 }
 
+VkResult anv_FreeDescriptorSets(
+    VkDevice                                    _device,
+    VkDescriptorPool                            descriptorPool,
+    uint32_t                                    count,
+    const VkDescriptorSet*                      pDescriptorSets)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   for (uint32_t i = 0; i < count; i++) {
+      ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
+
+      anv_descriptor_set_destroy(device, set);
+   }
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_UpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,
