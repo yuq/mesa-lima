@@ -279,6 +279,29 @@ st_fb_orientation(const struct gl_framebuffer *fb)
 }
 
 
+static inline unsigned
+st_shader_stage_to_ptarget(gl_shader_stage stage)
+{
+   switch (stage) {
+   case MESA_SHADER_VERTEX:
+      return PIPE_SHADER_VERTEX;
+   case MESA_SHADER_FRAGMENT:
+      return PIPE_SHADER_FRAGMENT;
+   case MESA_SHADER_GEOMETRY:
+      return PIPE_SHADER_GEOMETRY;
+   case MESA_SHADER_TESS_CTRL:
+      return PIPE_SHADER_TESS_CTRL;
+   case MESA_SHADER_TESS_EVAL:
+      return PIPE_SHADER_TESS_EVAL;
+   case MESA_SHADER_COMPUTE:
+      return PIPE_SHADER_COMPUTE;
+   }
+
+   assert(!"should not be reached");
+   return PIPE_SHADER_VERTEX;
+}
+
+
 /** clear-alloc a struct-sized object, with casting */
 #define ST_CALLOC_STRUCT(T)   (struct T *) calloc(1, sizeof(struct T))
 

@@ -103,7 +103,8 @@ swizzle_swizzle(unsigned swizzle1, unsigned swizzle2)
  */
 static unsigned
 compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
-                               enum pipe_format actualFormat)
+                               enum pipe_format actualFormat,
+                               unsigned glsl_version)
 {
    switch (baseFormat) {
    case GL_RGBA:
@@ -157,8 +158,26 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
       case GL_INTENSITY:
          return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_X);
       case GL_ALPHA:
-         return MAKE_SWIZZLE4(SWIZZLE_ZERO, SWIZZLE_ZERO,
-                              SWIZZLE_ZERO, SWIZZLE_X);
+         /* The texture(sampler*Shadow) functions from GLSL 1.30 ignore
+          * the depth mode and return float, while older shadow* functions
+          * and ARB_fp instructions return vec4 according to the depth mode.
+          *
+          * The problem with the GLSL 1.30 functions is that GL_ALPHA forces
+          * them to return 0, breaking them completely.
+          *
+          * A proper fix would increase code complexity and that's not worth
+          * it for a rarely used feature such as the GL_ALPHA depth mode
+          * in GL3. Therefore, change GL_ALPHA to GL_INTENSITY for all
+          * shaders that use GLSL 1.30 or later.
+          *
+          * BTW, it's required that sampler views are updated when
+          * shaders change (check_sampler_swizzle takes care of that).
+          */
+         if (glsl_version && glsl_version >= 130)
+            return SWIZZLE_XXXX;
+         else
+            return MAKE_SWIZZLE4(SWIZZLE_ZERO, SWIZZLE_ZERO,
+                                 SWIZZLE_ZERO, SWIZZLE_X);
       case GL_RED:
          return MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_ZERO,
                               SWIZZLE_ZERO, SWIZZLE_ONE);
@@ -174,7 +193,8 @@ compute_texture_format_swizzle(GLenum baseFormat, GLenum depthMode,
 
 
 static unsigned
-get_texture_format_swizzle(const struct st_texture_object *stObj)
+get_texture_format_swizzle(const struct st_texture_object *stObj,
+                           unsigned glsl_version)
 {
    GLenum baseFormat = _mesa_texture_base_format(&stObj->base);
    unsigned tex_swizzle;
@@ -182,7 +202,8 @@ get_texture_format_swizzle(const struct st_texture_object *stObj)
    if (baseFormat != GL_NONE) {
       tex_swizzle = compute_texture_format_swizzle(baseFormat,
                                                    stObj->base.DepthMode,
-                                                   stObj->pt->format);
+                                                   stObj->pt->format,
+                                                   glsl_version);
    }
    else {
       tex_swizzle = SWIZZLE_XYZW;
@@ -201,9 +222,9 @@ get_texture_format_swizzle(const struct st_texture_object *stObj)
  */
 static boolean
 check_sampler_swizzle(const struct st_texture_object *stObj,
-		      struct pipe_sampler_view *sv)
+		      struct pipe_sampler_view *sv, unsigned glsl_version)
 {
-   unsigned swizzle = get_texture_format_swizzle(stObj);
+   unsigned swizzle = get_texture_format_swizzle(stObj, glsl_version);
 
    return ((sv->swizzle_r != GET_SWZ(swizzle, 0)) ||
            (sv->swizzle_g != GET_SWZ(swizzle, 1)) ||
@@ -232,10 +253,11 @@ static unsigned last_layer(struct st_texture_object *stObj)
 static struct pipe_sampler_view *
 st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
 					  struct st_texture_object *stObj,
-					  enum pipe_format format)
+					  enum pipe_format format,
+                                          unsigned glsl_version)
 {
    struct pipe_sampler_view templ;
-   unsigned swizzle = get_texture_format_swizzle(stObj);
+   unsigned swizzle = get_texture_format_swizzle(stObj, glsl_version);
 
    u_sampler_view_default_template(&templ,
                                    stObj->pt,
@@ -282,7 +304,8 @@ st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
 static struct pipe_sampler_view *
 st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        struct st_texture_object *stObj,
-				       enum pipe_format format)
+				       enum pipe_format format,
+                                       unsigned glsl_version)
 {
    struct pipe_sampler_view **sv;
    const struct st_texture_image *firstImage;
@@ -304,7 +327,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
 
    /* if sampler view has changed dereference it */
    if (*sv) {
-      if (check_sampler_swizzle(stObj, *sv) ||
+      if (check_sampler_swizzle(stObj, *sv, glsl_version) ||
 	  (format != (*sv)->format) ||
           gl_target_to_pipe(stObj->base.Target) != (*sv)->target ||
           stObj->base.MinLevel + stObj->base.BaseLevel != (*sv)->u.tex.first_level ||
@@ -316,7 +339,8 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
    }
 
    if (!*sv) {
-      *sv = st_create_texture_sampler_view_from_stobj(st->pipe, stObj, format);
+      *sv = st_create_texture_sampler_view_from_stobj(st->pipe, stObj,
+                                                      format, glsl_version);
 
    } else if ((*sv)->context != st->pipe) {
       /* Recreate view in correct context, use existing view as template */
@@ -332,7 +356,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
 static GLboolean
 update_single_texture(struct st_context *st,
                       struct pipe_sampler_view **sampler_view,
-		      GLuint texUnit)
+		      GLuint texUnit, unsigned glsl_version)
 {
    struct gl_context *ctx = st->ctx;
    const struct gl_sampler_object *samp;
@@ -372,8 +396,9 @@ update_single_texture(struct st_context *st,
       }
    }
 
-   *sampler_view = st_get_texture_sampler_view_from_stobj(st, stObj,
-                                                          view_format);
+   *sampler_view =
+      st_get_texture_sampler_view_from_stobj(st, stObj, view_format,
+                                             glsl_version);
    return GL_TRUE;
 }
 
@@ -381,7 +406,7 @@ update_single_texture(struct st_context *st,
 
 static void
 update_textures(struct st_context *st,
-                unsigned shader_stage,
+                gl_shader_stage mesa_shader,
                 const struct gl_program *prog,
                 unsigned max_units,
                 struct pipe_sampler_view **sampler_views,
@@ -390,6 +415,10 @@ update_textures(struct st_context *st,
    const GLuint old_max = *num_textures;
    GLbitfield samplers_used = prog->SamplersUsed;
    GLuint unit;
+   struct gl_shader_program *shader =
+      st->ctx->_Shader->CurrentProgram[mesa_shader];
+   unsigned glsl_version = shader ? shader->Version : 0;
+   unsigned shader_stage = st_shader_stage_to_ptarget(mesa_shader);
 
    if (samplers_used == 0x0 && old_max == 0)
       return;
@@ -404,7 +433,8 @@ update_textures(struct st_context *st,
          const GLuint texUnit = prog->SamplerUnits[unit];
          GLboolean retval;
 
-         retval = update_single_texture(st, &sampler_view, texUnit);
+         retval = update_single_texture(st, &sampler_view, texUnit,
+                                        glsl_version);
          if (retval == GL_FALSE)
             continue;
 
@@ -433,7 +463,7 @@ update_vertex_textures(struct st_context *st)
 
    if (ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits > 0) {
       update_textures(st,
-                      PIPE_SHADER_VERTEX,
+                      MESA_SHADER_VERTEX,
                       &ctx->VertexProgram._Current->Base,
                       ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_VERTEX],
@@ -448,7 +478,7 @@ update_fragment_textures(struct st_context *st)
    const struct gl_context *ctx = st->ctx;
 
    update_textures(st,
-                   PIPE_SHADER_FRAGMENT,
+                   MESA_SHADER_FRAGMENT,
                    &ctx->FragmentProgram._Current->Base,
                    ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
                    st->state.sampler_views[PIPE_SHADER_FRAGMENT],
@@ -463,7 +493,7 @@ update_geometry_textures(struct st_context *st)
 
    if (ctx->GeometryProgram._Current) {
       update_textures(st,
-                      PIPE_SHADER_GEOMETRY,
+                      MESA_SHADER_GEOMETRY,
                       &ctx->GeometryProgram._Current->Base,
                       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_GEOMETRY],
@@ -479,7 +509,7 @@ update_tessctrl_textures(struct st_context *st)
 
    if (ctx->TessCtrlProgram._Current) {
       update_textures(st,
-                      PIPE_SHADER_TESS_CTRL,
+                      MESA_SHADER_TESS_CTRL,
                       &ctx->TessCtrlProgram._Current->Base,
                       ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_TESS_CTRL],
@@ -495,7 +525,7 @@ update_tesseval_textures(struct st_context *st)
 
    if (ctx->TessEvalProgram._Current) {
       update_textures(st,
-                      PIPE_SHADER_TESS_EVAL,
+                      MESA_SHADER_TESS_EVAL,
                       &ctx->TessEvalProgram._Current->Base,
                       ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_TESS_EVAL],
