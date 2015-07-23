@@ -70,7 +70,7 @@ public:
    hash_table *consumer_interface_inputs;
 
    const glsl_type *simple_interface;
-   ir_variable *junk[VARYING_SLOT_MAX];
+   ir_variable *junk[VARYING_SLOT_TESS_MAX];
 };
 
 link_varyings::link_varyings()
