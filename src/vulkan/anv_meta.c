@@ -141,6 +141,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       },
       &device->meta_state.clear.pipeline);
 
+   anv_DestroyShaderModule(anv_device_to_handle(device), fsm);
    anv_DestroyShader(anv_device_to_handle(device), fs);
 }
 
@@ -476,7 +477,9 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       &device->meta_state.blit.pipeline);
 
+   anv_DestroyShaderModule(anv_device_to_handle(device), vsm);
    anv_DestroyShader(anv_device_to_handle(device), vs);
+   anv_DestroyShaderModule(anv_device_to_handle(device), fsm);
    anv_DestroyShader(anv_device_to_handle(device), fs);
 }
 
