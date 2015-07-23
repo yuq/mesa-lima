@@ -528,6 +528,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       };                                                                \
       void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       cmd ## _pack(batch, __dst, &__template);                          \
+      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, cmd ## _length * 4));     \
    } while (0)
 
 #define anv_batch_emitn(batch, n, cmd, ...) ({          \

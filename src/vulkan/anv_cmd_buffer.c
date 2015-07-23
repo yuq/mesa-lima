@@ -192,6 +192,7 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
 
    assert(batch->next + size <= batch->end);
 
+   VG(VALGRIND_CHECK_MEM_IS_DEFINED(other->start, size));
    memcpy(batch->next, other->start, size);
 
    offset = batch->next - batch->start;
