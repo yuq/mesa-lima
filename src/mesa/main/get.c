@@ -1232,9 +1232,12 @@ find_value(const char *func, GLenum pname, void **p, union value *v)
     * value since it's compatible with GLES2 its entry in table_set[] is at the
     * end.
     */
-   STATIC_ASSERT(ARRAY_SIZE(table_set) == API_OPENGL_LAST + 2);
+   STATIC_ASSERT(ARRAY_SIZE(table_set) == API_OPENGL_LAST + 3);
    if (_mesa_is_gles3(ctx)) {
       api = API_OPENGL_LAST + 1;
+   }
+   if (_mesa_is_gles31(ctx)) {
+      api = API_OPENGL_LAST + 2;
    }
    mask = ARRAY_SIZE(table(api)) - 1;
    hash = (pname * prime_factor);
