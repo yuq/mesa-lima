@@ -51,7 +51,7 @@
 
 /**
  * Wrap all the information about vectors up in a struct.  Has
- * additional fields compared to the other vectors to help us track of
+ * additional fields compared to the other vectors to help us track
  * different vertex sizes, and whether we need to clean columns out
  * because they contain non-(0,0,0,1) values.
  *
