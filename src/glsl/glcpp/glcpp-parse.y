@@ -1074,9 +1074,9 @@ _token_list_equal_ignoring_space (token_list_t *a, token_list_t *b)
 		 */
 		if (node_a->token->type == SPACE
 		    && node_b->token->type == SPACE) {
-			while (node_a->token->type == SPACE)
+			while (node_a && node_a->token->type == SPACE)
 				node_a = node_a->next;
-			while (node_b->token->type == SPACE)
+			while (node_b && node_b->token->type == SPACE)
 				node_b = node_b->next;
 			continue;
 		}
