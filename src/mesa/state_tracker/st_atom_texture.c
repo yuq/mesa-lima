@@ -232,7 +232,6 @@ static unsigned last_layer(struct st_texture_object *stObj)
 static struct pipe_sampler_view *
 st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
 					  struct st_texture_object *stObj,
-                                          const struct gl_sampler_object *samp,
 					  enum pipe_format format)
 {
    struct pipe_sampler_view templ;
@@ -283,7 +282,6 @@ st_create_texture_sampler_view_from_stobj(struct pipe_context *pipe,
 static struct pipe_sampler_view *
 st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        struct st_texture_object *stObj,
-                                       const struct gl_sampler_object *samp,
 				       enum pipe_format format)
 {
    struct pipe_sampler_view **sv;
@@ -318,7 +316,7 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
    }
 
    if (!*sv) {
-      *sv = st_create_texture_sampler_view_from_stobj(st->pipe, stObj, samp, format);
+      *sv = st_create_texture_sampler_view_from_stobj(st->pipe, stObj, format);
 
    } else if ((*sv)->context != st->pipe) {
       /* Recreate view in correct context, use existing view as template */
@@ -374,8 +372,8 @@ update_single_texture(struct st_context *st,
       }
    }
 
-   *sampler_view = st_get_texture_sampler_view_from_stobj(st, stObj, samp,
-							  view_format);
+   *sampler_view = st_get_texture_sampler_view_from_stobj(st, stObj,
+                                                          view_format);
    return GL_TRUE;
 }
 
