@@ -266,36 +266,6 @@ scalarEqual(struct glx_config *mode, unsigned int attrib, unsigned int value)
 }
 
 static int
-scalarGreaterEqual(struct glx_config *mode, unsigned int attrib, unsigned int value)
-{
-   unsigned int glxValue;
-   int i;
-
-   for (i = 0; i < ARRAY_SIZE(attribMap); i++)
-      if (attribMap[i].attrib == attrib) {
-         glxValue = *(unsigned int *) ((char *) mode + attribMap[i].offset);
-         return glxValue == GLX_DONT_CARE || glxValue >= value;
-      }
-
-   return GL_TRUE;              /* Is a non-existing attribute greater than or equal to value? */
-}
-
-static int
-booleanSupported(struct glx_config *mode, unsigned int attrib, unsigned int value)
-{
-   unsigned int glxValue;
-   int i;
-
-   for (i = 0; i < ARRAY_SIZE(attribMap); i++)
-      if (attribMap[i].attrib == attrib) {
-         glxValue = *(unsigned int *) ((char *) mode + attribMap[i].offset);
-         return glxValue == GLX_DONT_CARE || glxValue;
-      }
-
-   return GL_TRUE;              /* Is a non-existing attribute supported? */
-}
-
-static int
 driConfigEqual(const __DRIcoreExtension *core,
                struct glx_config *config, const __DRIconfig *driConfig)
 {
@@ -343,36 +313,9 @@ driConfigEqual(const __DRIcoreExtension *core,
          if (value & __DRI_ATTRIB_TEXTURE_RECTANGLE_BIT)
             glxValue |= GLX_TEXTURE_RECTANGLE_BIT_EXT;
          if (config->bindToTextureTargets != GLX_DONT_CARE &&
-             glxValue != (config->bindToTextureTargets & glxValue))
+             glxValue != config->bindToTextureTargets)
             return GL_FALSE;
          break;
-
-      case __DRI_ATTRIB_STENCIL_SIZE:
-      case __DRI_ATTRIB_ACCUM_RED_SIZE:
-      case __DRI_ATTRIB_ACCUM_GREEN_SIZE:
-      case __DRI_ATTRIB_ACCUM_BLUE_SIZE:
-      case __DRI_ATTRIB_ACCUM_ALPHA_SIZE:
-         if (value != 0 && !scalarEqual(config, attrib, value))
-            return GL_FALSE;
-         break;
-
-      case __DRI_ATTRIB_DOUBLE_BUFFER:
-      case __DRI_ATTRIB_BIND_TO_TEXTURE_RGB:
-      case __DRI_ATTRIB_BIND_TO_TEXTURE_RGBA:
-      case __DRI_ATTRIB_BIND_TO_MIPMAP_TEXTURE:
-      case __DRI_ATTRIB_FRAMEBUFFER_SRGB_CAPABLE:
-          if (value && !booleanSupported(config, attrib, value))
-            return GL_FALSE;
-          break;
-
-      case __DRI_ATTRIB_SAMPLE_BUFFERS:
-      case __DRI_ATTRIB_SAMPLES:
-      case __DRI_ATTRIB_AUX_BUFFERS:
-      case __DRI_ATTRIB_MAX_PBUFFER_WIDTH:
-      case __DRI_ATTRIB_MAX_PBUFFER_HEIGHT:
-      case __DRI_ATTRIB_MAX_PBUFFER_PIXELS:
-         if (!scalarGreaterEqual(config, attrib, value))
-            return GL_FALSE;
 
       default:
          if (!scalarEqual(config, attrib, value))
