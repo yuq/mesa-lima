@@ -218,6 +218,58 @@ namespace {
 
    namespace image_coordinates {
       /**
+       * Return the total number of coordinates needed to address a texel of
+       * the surface, which may be more than the sum of \p surf_dims and \p
+       * arr_dims if padding is required.
+       */
+      unsigned
+      num_image_coordinates(const fs_builder &bld,
+                            unsigned surf_dims, unsigned arr_dims,
+                            mesa_format format)
+      {
+         /* HSW in vec4 mode and our software coordinate handling for untyped
+          * reads want the array index to be at the Z component.
+          */
+         const bool array_index_at_z =
+            !image_format_info::has_matching_typed_format(
+               bld.shader->devinfo, format);
+         const unsigned zero_dims =
+            ((surf_dims == 1 && arr_dims == 1 && array_index_at_z) ? 1 : 0);
+
+         return surf_dims + zero_dims + arr_dims;
+      }
+
+      /**
+       * Transform image coordinates into the form expected by the
+       * implementation.
+       */
+      fs_reg
+      emit_image_coordinates(const fs_builder &bld, const fs_reg &addr,
+                             unsigned surf_dims, unsigned arr_dims,
+                             mesa_format format)
+      {
+         const unsigned dims =
+            num_image_coordinates(bld, surf_dims, arr_dims, format);
+
+         if (dims > surf_dims + arr_dims) {
+            assert(surf_dims == 1 && arr_dims == 1 && dims == 3);
+            /* The array index is required to be passed in as the Z component,
+             * insert a zero at the Y component to shift it to the right
+             * position.
+             *
+             * FINISHME: Factor out this frequently recurring pattern into a
+             * helper function.
+             */
+            const fs_reg srcs[] = { addr, fs_reg(0), offset(addr, bld, 1) };
+            const fs_reg dst = bld.vgrf(addr.type, dims);
+            bld.LOAD_PAYLOAD(dst, srcs, dims, 0);
+            return dst;
+         } else {
+            return addr;
+         }
+      }
+
+      /**
        * Calculate the offset in memory of the texel given by \p coord.
        *
        * This is meant to be used with untyped surface messages to access a
