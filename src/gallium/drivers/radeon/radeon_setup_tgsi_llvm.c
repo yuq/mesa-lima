@@ -748,32 +748,24 @@ static void kil_emit(
 	}
 }
 
-void radeon_llvm_emit_prepare_cube_coords(
-		struct lp_build_tgsi_context * bld_base,
-		struct lp_build_emit_data * emit_data,
-		LLVMValueRef *coords_arg)
+static void radeon_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base,
+					  LLVMValueRef *in, LLVMValueRef *out)
 {
-
-	unsigned target = emit_data->inst->Texture.Texture;
-	unsigned opcode = emit_data->inst->Instruction.Opcode;
 	struct gallivm_state * gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMTypeRef type = bld_base->base.elem_type;
 	LLVMValueRef coords[4];
 	LLVMValueRef mad_args[3];
-	LLVMValueRef idx;
-	struct LLVMOpaqueValue *cube_vec;
-	LLVMValueRef v;
+	LLVMValueRef v, cube_vec;
 	unsigned i;
 
-	cube_vec = lp_build_gather_values(bld_base->base.gallivm, coords_arg, 4);
+	cube_vec = lp_build_gather_values(bld_base->base.gallivm, in, 4);
 	v = build_intrinsic(builder, "llvm.AMDGPU.cube", LLVMVectorType(type, 4),
                             &cube_vec, 1, LLVMReadNoneAttribute);
 
-	for (i = 0; i < 4; ++i) {
-		idx = lp_build_const_int32(gallivm, i);
-		coords[i] = LLVMBuildExtractElement(builder, v, idx, "");
-	}
+	for (i = 0; i < 4; ++i)
+		coords[i] = LLVMBuildExtractElement(builder, v,
+						    lp_build_const_int32(gallivm, i), "");
 
 	coords[2] = build_intrinsic(builder, "fabs",
 			type, &coords[2], 1, LLVMReadNoneAttribute);
@@ -791,10 +783,60 @@ void radeon_llvm_emit_prepare_cube_coords(
 			mad_args[0], mad_args[1], mad_args[2]);
 
 	/* apply xyz = yxw swizzle to cooords */
-	coords[2] = coords[3];
-	coords[3] = coords[1];
-	coords[1] = coords[0];
-	coords[0] = coords[3];
+	out[0] = coords[1];
+	out[1] = coords[0];
+	out[2] = coords[3];
+}
+
+void radeon_llvm_emit_prepare_cube_coords(
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data,
+		LLVMValueRef *coords_arg,
+		LLVMValueRef *derivs_arg)
+{
+
+	unsigned target = emit_data->inst->Texture.Texture;
+	unsigned opcode = emit_data->inst->Instruction.Opcode;
+	struct gallivm_state * gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMValueRef coords[4];
+	unsigned i;
+
+	radeon_llvm_cube_to_2d_coords(bld_base, coords_arg, coords);
+
+	if (opcode == TGSI_OPCODE_TXD && derivs_arg) {
+		LLVMValueRef derivs[4];
+		int axis;
+
+		/* Convert cube derivatives to 2D derivatives. */
+		for (axis = 0; axis < 2; axis++) {
+			LLVMValueRef shifted_cube_coords[4], shifted_coords[4];
+
+			/* Shift the cube coordinates by the derivatives to get
+			 * the cube coordinates of the "neighboring pixel".
+			 */
+			for (i = 0; i < 3; i++)
+				shifted_cube_coords[i] =
+					LLVMBuildFAdd(builder, coords_arg[i],
+						      derivs_arg[axis*3+i], "");
+			shifted_cube_coords[3] = LLVMGetUndef(bld_base->base.elem_type);
+
+			/* Project the shifted cube coordinates onto the face. */
+			radeon_llvm_cube_to_2d_coords(bld_base, shifted_cube_coords,
+						      shifted_coords);
+
+			/* Subtract both sets of 2D coordinates to get 2D derivatives.
+			 * This won't work if the shifted coordinates ended up
+			 * in a different face.
+			 */
+			for (i = 0; i < 2; i++)
+				derivs[axis * 2 + i] =
+					LLVMBuildFSub(builder, shifted_coords[i],
+						      coords[i], "");
+		}
+
+		memcpy(derivs_arg, derivs, sizeof(derivs));
+	}
 
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
 	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
@@ -864,7 +906,7 @@ static void txp_fetch_args(
 	     inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) &&
 	    inst->Instruction.Opcode != TGSI_OPCODE_TXQ &&
 	    inst->Instruction.Opcode != TGSI_OPCODE_TXQ_LZ) {
-		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords);
+		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords, NULL);
 	}
 
 	emit_data->args[0] = lp_build_gather_values(bld_base->base.gallivm,
@@ -909,7 +951,7 @@ static void tex_fetch_args(
 	     inst->Texture.Texture == TGSI_TEXTURE_SHADOWCUBE_ARRAY) &&
 	    inst->Instruction.Opcode != TGSI_OPCODE_TXQ &&
 	    inst->Instruction.Opcode != TGSI_OPCODE_TXQ_LZ) {
-		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords);
+		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords, NULL);
 	}
 
 	emit_data->arg_count = 1;

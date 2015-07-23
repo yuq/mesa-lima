@@ -2255,7 +2255,7 @@ static void tex_fetch_args(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned opcode = inst->Instruction.Opcode;
 	unsigned target = inst->Texture.Texture;
-	LLVMValueRef coords[5];
+	LLVMValueRef coords[5], derivs[6];
 	LLVMValueRef address[16];
 	int ref_pos;
 	unsigned num_coords = tgsi_util_get_texture_coord_dim(target, &ref_pos);
@@ -2263,6 +2263,7 @@ static void tex_fetch_args(
 	unsigned chan;
 	unsigned sampler_src;
 	unsigned sampler_index;
+	unsigned num_deriv_channels = 0;
 	bool has_offset = HAVE_LLVM >= 0x0305 ? inst->Texture.NumOffsets > 0 : false;
 	LLVMValueRef res_ptr, samp_ptr;
 
@@ -2361,18 +2362,13 @@ static void tex_fetch_args(
 		}
 	}
 
-	if (target == TGSI_TEXTURE_CUBE ||
-	    target == TGSI_TEXTURE_CUBE_ARRAY ||
-	    target == TGSI_TEXTURE_SHADOWCUBE ||
-	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY)
-		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords);
-
 	/* Pack user derivatives */
 	if (opcode == TGSI_OPCODE_TXD) {
-		int num_deriv_channels, param;
+		int param, num_src_deriv_channels;
 
 		switch (target) {
 		case TGSI_TEXTURE_3D:
+			num_src_deriv_channels = 3;
 			num_deriv_channels = 3;
 			break;
 		case TGSI_TEXTURE_2D:
@@ -2381,26 +2377,43 @@ static void tex_fetch_args(
 		case TGSI_TEXTURE_SHADOWRECT:
 		case TGSI_TEXTURE_2D_ARRAY:
 		case TGSI_TEXTURE_SHADOW2D_ARRAY:
+			num_src_deriv_channels = 2;
+			num_deriv_channels = 2;
+			break;
 		case TGSI_TEXTURE_CUBE:
 		case TGSI_TEXTURE_SHADOWCUBE:
 		case TGSI_TEXTURE_CUBE_ARRAY:
 		case TGSI_TEXTURE_SHADOWCUBE_ARRAY:
+			/* Cube derivatives will be converted to 2D. */
+			num_src_deriv_channels = 3;
 			num_deriv_channels = 2;
 			break;
 		case TGSI_TEXTURE_1D:
 		case TGSI_TEXTURE_SHADOW1D:
 		case TGSI_TEXTURE_1D_ARRAY:
 		case TGSI_TEXTURE_SHADOW1D_ARRAY:
+			num_src_deriv_channels = 1;
 			num_deriv_channels = 1;
 			break;
 		default:
 			assert(0); /* no other targets are valid here */
 		}
 
-		for (param = 1; param <= 2; param++)
-			for (chan = 0; chan < num_deriv_channels; chan++)
-				address[count++] = lp_build_emit_fetch(bld_base, inst, param, chan);
+		for (param = 0; param < 2; param++)
+			for (chan = 0; chan < num_src_deriv_channels; chan++)
+				derivs[param * num_src_deriv_channels + chan] =
+					lp_build_emit_fetch(bld_base, inst, param+1, chan);
 	}
+
+	if (target == TGSI_TEXTURE_CUBE ||
+	    target == TGSI_TEXTURE_CUBE_ARRAY ||
+	    target == TGSI_TEXTURE_SHADOWCUBE ||
+	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY)
+		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords, derivs);
+
+	if (opcode == TGSI_OPCODE_TXD)
+		for (int i = 0; i < num_deriv_channels * 2; i++)
+			address[count++] = derivs[i];
 
 	/* Pack texture coordinates */
 	address[count++] = coords[0];
