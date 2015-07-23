@@ -630,6 +630,7 @@ VkResult anv_DestroyDevice(
    anv_block_pool_finish(&device->dynamic_state_block_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);
+   anv_block_pool_finish(&device->scratch_block_pool);
 
    close(device->fd);
 
