@@ -61,7 +61,7 @@
  */
 typedef struct {
    GLfloat (*data)[4];	/**< may be malloc'd or point to client data */
-   GLfloat *start;	/**< points somewhere inside of <data> */
+   GLfloat *start;	/**< points somewhere inside of GLvector4f::data */
    GLuint count;	/**< size of the vector (in elements) */
    GLuint stride;	/**< stride from one element to the next (in bytes) */
    GLuint size;		/**< 2-4 for vertices and 1-4 for texcoords */
