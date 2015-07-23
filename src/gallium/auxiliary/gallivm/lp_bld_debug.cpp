@@ -274,7 +274,7 @@ lp_profile(LLVMValueRef func, const void *code)
       unsigned long addr = (uintptr_t)code;
       llvm::raw_fd_ostream Out(perf_asm_fd, false);
       Out << symbol << ":\n";
-      unsigned long size = disassemble(code, Out);
+      unsigned long size = disassemble(code);
       fprintf(perf_map_file, "%lx %lx %s\n", addr, size, symbol);
       fflush(perf_map_file);
    }
