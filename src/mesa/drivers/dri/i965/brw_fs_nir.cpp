@@ -102,6 +102,8 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
       }
       case MESA_SHADER_GEOMETRY:
       case MESA_SHADER_COMPUTE:
+      case MESA_SHADER_TESS_CTRL:
+      case MESA_SHADER_TESS_EVAL:
          unreachable("fs_visitor not used for these stages yet.");
          break;
       case MESA_SHADER_FRAGMENT:
