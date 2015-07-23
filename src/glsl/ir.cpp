@@ -63,8 +63,6 @@ update_rhs_swizzle(ir_swizzle_mask &m, unsigned from, unsigned to)
    case 3: m.w = from; break;
    default: assert(!"Should not get here.");
    }
-
-   m.num_components = MAX2(m.num_components, (to + 1));
 }
 
 void
@@ -95,6 +93,7 @@ ir_assignment::set_lhs(ir_rvalue *lhs)
 
 	 write_mask |= (((this->write_mask >> i) & 1) << c);
 	 update_rhs_swizzle(rhs_swiz, i, c);
+         rhs_swiz.num_components = swiz->val->type->vector_elements;
       }
 
       this->write_mask = write_mask;
@@ -114,6 +113,7 @@ ir_assignment::set_lhs(ir_rvalue *lhs)
 	 if (write_mask & (1 << i))
 	    update_rhs_swizzle(rhs_swiz, i, rhs_chan++);
       }
+      rhs_swiz.num_components = rhs_chan;
       this->rhs = new(mem_ctx) ir_swizzle(this->rhs, rhs_swiz);
    }
 
