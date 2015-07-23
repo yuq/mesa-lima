@@ -1215,7 +1215,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction *load =
 				ir3_LDG(b, addr, 0, create_immed(b, 1), 0);
 		load->cat6.type = TYPE_U32;
-		load->cat6.offset = off + i * 4;    /* byte offset */
+		load->cat6.src_offset = off + i * 4;     /* byte offset */
 		dst[i] = load;
 	}
 }
