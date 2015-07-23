@@ -1431,6 +1431,16 @@ const struct function gl_core_functions_possible[] = {
    /* GL 3.2 */
    { "glFramebufferTexture", 32, -1 },
 
+   /* GL 4.0 */
+   { "glGetSubroutineUniformLocation", 40, -1 },
+   { "glGetSubroutineIndex", 40, -1 },
+   { "glGetActiveSubroutineUniformiv", 40, -1 },
+   { "glGetActiveSubroutineUniformName", 40, -1 },
+   { "glGetActiveSubroutineName", 40, -1 },
+   { "glUniformSubroutinesuiv", 40, -1 },
+   { "glGetUniformSubroutineuiv", 40, -1 },
+   { "glGetProgramStageiv", 40, -1 },
+
    /* GL 4.3 */
    { "glIsRenderbuffer", 43, -1 },
    { "glBindRenderbuffer", 43, -1 },
@@ -1569,14 +1579,6 @@ const struct function gl_core_functions_possible[] = {
    { "glUniformMatrix4x2dv", 40, -1 },
    { "glUniformMatrix4x3dv", 40, -1 },
    { "glGetUniformdv", 43, -1 },
-// { "glGetSubroutineUniformLocation", 43, -1 },        // XXX: Add to xml
-// { "glGetSubroutineIndex", 43, -1 },                  // XXX: Add to xml
-// { "glGetActiveSubroutineUniformiv", 43, -1 },        // XXX: Add to xml
-// { "glGetActiveSubroutineUniformName", 43, -1 },      // XXX: Add to xml
-// { "glGetActiveSubroutineName", 43, -1 },             // XXX: Add to xml
-// { "glUniformSubroutinesuiv", 43, -1 },               // XXX: Add to xml
-// { "glGetUniformSubroutineuiv", 43, -1 },             // XXX: Add to xml
-// { "glGetProgramStageiv", 43, -1 },                   // XXX: Add to xml
 
    { "glBindTransformFeedback", 43, -1 },
    { "glDeleteTransformFeedbacks", 43, -1 },
