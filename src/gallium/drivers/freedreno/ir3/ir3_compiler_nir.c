@@ -2283,9 +2283,7 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 
 int
 ir3_compile_shader_nir(struct ir3_compiler *compiler,
-		struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens,
-		struct ir3_shader_key key)
+		struct ir3_shader_variant *so)
 {
 	struct ir3_compile *ctx;
 	struct ir3 *ir;
@@ -2295,7 +2293,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 	assert(!so->ir);
 
-	ctx = compile_init(compiler, so, tokens);
+	ctx = compile_init(compiler, so, so->shader->tokens);
 	if (!ctx) {
 		DBG("INIT failed!");
 		ret = -1;
@@ -2320,7 +2318,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		fixup_frag_inputs(ctx);
 
 	/* at this point, for binning pass, throw away unneeded outputs: */
-	if (key.binning_pass) {
+	if (so->key.binning_pass) {
 		for (i = 0, j = 0; i < so->outputs_count; i++) {
 			unsigned name = sem2name(so->outputs[i].semantic);
 			unsigned idx = sem2idx(so->outputs[i].semantic);
@@ -2345,7 +2343,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	/* if we want half-precision outputs, mark the output registers
 	 * as half:
 	 */
-	if (key.half_precision) {
+	if (so->key.half_precision) {
 		for (i = 0; i < ir->noutputs; i++) {
 			struct ir3_instruction *out = ir->outputs[i];
 			if (!out)

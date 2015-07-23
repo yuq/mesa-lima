@@ -29,6 +29,8 @@
 #ifndef IR3_SHADER_H_
 #define IR3_SHADER_H_
 
+#include "pipe/p_state.h"
+
 #include "ir3.h"
 #include "disasm.h"
 
@@ -203,6 +205,7 @@ struct ir3_shader {
 
 	struct pipe_context *pctx;
 	const struct tgsi_token *tokens;
+	struct pipe_stream_output_info stream_output;
 
 	struct ir3_shader_variant *variants;
 
@@ -215,7 +218,7 @@ struct ir3_shader {
 void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
 
 struct ir3_shader * ir3_shader_create(struct pipe_context *pctx,
-		const struct tgsi_token *tokens, enum shader_t type);
+		const struct pipe_shader_state *cso, enum shader_t type);
 void ir3_shader_destroy(struct ir3_shader *shader);
 struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);

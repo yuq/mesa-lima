@@ -181,10 +181,6 @@ int main(int argc, char **argv)
 
 	filename = argv[n];
 
-	memset(&v, 0, sizeof(v));
-	v.key = key;
-	v.shader = &s;
-
 	ret = read_file(filename, &ptr, &size);
 	if (ret) {
 		print_usage();
@@ -196,6 +192,13 @@ int main(int argc, char **argv)
 
 	if (!tgsi_text_translate(ptr, toks, Elements(toks)))
 		errx(1, "could not parse `%s'", filename);
+
+	memset(&s, 0, sizeof(s));
+	s.tokens = toks;
+
+	memset(&v, 0, sizeof(v));
+	v.key = key;
+	v.shader = &s;
 
 	tgsi_parse_init(&parse, toks);
 	switch (parse.FullHeader.Processor.Processor) {
@@ -214,7 +217,7 @@ int main(int argc, char **argv)
 	compiler = ir3_compiler_create(320);
 
 	info = "NIR compiler";
-	ret = ir3_compile_shader_nir(compiler, &v, toks, key);
+	ret = ir3_compile_shader_nir(compiler, &v);
 	if (ret) {
 		fprintf(stderr, "compiler failed!\n");
 		return ret;

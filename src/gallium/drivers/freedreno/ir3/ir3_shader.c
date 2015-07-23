@@ -177,7 +177,6 @@ static struct ir3_shader_variant *
 create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 {
 	struct ir3_shader_variant *v = CALLOC_STRUCT(ir3_shader_variant);
-	const struct tgsi_token *tokens = shader->tokens;
 	int ret;
 
 	if (!v)
@@ -191,10 +190,10 @@ create_variant(struct ir3_shader *shader, struct ir3_shader_key key)
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		DBG("dump tgsi: type=%d, k={bp=%u,cts=%u,hp=%u}", shader->type,
 			key.binning_pass, key.color_two_side, key.half_precision);
-		tgsi_dump(tokens, 0);
+		tgsi_dump(shader->tokens, 0);
 	}
 
-	ret = ir3_compile_shader_nir(shader->compiler, v, tokens, key);
+	ret = ir3_compile_shader_nir(shader->compiler, v);
 	if (ret) {
 		debug_error("compile failed!");
 		goto fail;
@@ -273,7 +272,8 @@ ir3_shader_destroy(struct ir3_shader *shader)
 }
 
 struct ir3_shader *
-ir3_shader_create(struct pipe_context *pctx, const struct tgsi_token *tokens,
+ir3_shader_create(struct pipe_context *pctx,
+		const struct pipe_shader_state *cso,
 		enum shader_t type)
 {
 	struct ir3_shader *shader = CALLOC_STRUCT(ir3_shader);
@@ -281,7 +281,8 @@ ir3_shader_create(struct pipe_context *pctx, const struct tgsi_token *tokens,
 	shader->id = ++shader->compiler->shader_count;
 	shader->pctx = pctx;
 	shader->type = type;
-	shader->tokens = tgsi_dup_tokens(tokens);
+	shader->tokens = tgsi_dup_tokens(cso->tokens);
+	shader->stream_output = cso->stream_output;
 	if (fd_mesa_debug & FD_DBG_SHADERDB) {
 		/* if shader-db run, create a standard variant immediately
 		 * (as otherwise nothing will trigger the shader to be

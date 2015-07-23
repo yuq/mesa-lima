@@ -53,7 +53,7 @@ create_shader_stateobj(struct pipe_context *pctx, const struct pipe_shader_state
 		enum shader_t type)
 {
 	struct fd4_shader_stateobj *so = CALLOC_STRUCT(fd4_shader_stateobj);
-	so->shader = ir3_shader_create(pctx, cso->tokens, type);
+	so->shader = ir3_shader_create(pctx, cso, type);
 	return so;
 }
 

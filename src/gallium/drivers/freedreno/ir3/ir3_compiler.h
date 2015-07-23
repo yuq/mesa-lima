@@ -43,8 +43,6 @@ struct ir3_compiler * ir3_compiler_create(uint32_t gpu_id);
 void ir3_compiler_destroy(struct ir3_compiler *compiler);
 
 int ir3_compile_shader_nir(struct ir3_compiler *compiler,
-		struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens,
-		struct ir3_shader_key key);
+		struct ir3_shader_variant *so);
 
 #endif /* IR3_COMPILER_H_ */
