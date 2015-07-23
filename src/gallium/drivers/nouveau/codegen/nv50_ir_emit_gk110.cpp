@@ -120,6 +120,8 @@ private:
 
    void emitPIXLD(const Instruction *);
 
+   void emitBAR(const Instruction *);
+
    void emitFlow(const Instruction *);
 
    inline void defId(const ValueDef&, const int pos);
@@ -1250,6 +1252,13 @@ CodeEmitterGK110::emitPIXLD(const Instruction *i)
 }
 
 void
+CodeEmitterGK110::emitBAR(const Instruction *i)
+{
+   /* TODO */
+   emitNOP(i);
+}
+
+void
 CodeEmitterGK110::emitFlow(const Instruction *i)
 {
    const FlowInstruction *f = i->asFlow();
@@ -1855,6 +1864,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
    case OP_JOIN:
       emitNOP(insn);
       insn->join = 1;
+      break;
+   case OP_BAR:
+      emitBAR(insn);
       break;
    case OP_PHI:
    case OP_UNION:
