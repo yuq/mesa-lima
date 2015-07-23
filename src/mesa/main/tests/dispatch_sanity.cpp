@@ -1577,8 +1577,6 @@ const struct function gl_core_functions_possible[] = {
 // { "glUniformSubroutinesuiv", 43, -1 },               // XXX: Add to xml
 // { "glGetUniformSubroutineuiv", 43, -1 },             // XXX: Add to xml
 // { "glGetProgramStageiv", 43, -1 },                   // XXX: Add to xml
-// { "glPatchParameteri", 43, -1 },                     // XXX: Add to xml
-// { "glPatchParameterfv", 43, -1 },                    // XXX: Add to xml
 
    { "glBindTransformFeedback", 43, -1 },
    { "glDeleteTransformFeedbacks", 43, -1 },
