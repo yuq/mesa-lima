@@ -1561,7 +1561,7 @@ read_shader(const char *fname)
  */
 void GLAPIENTRY
 _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
-                      const GLcharARB * const * string, const GLint * length)
+                   const GLcharARB * const * string, const GLint * length)
 {
    GET_CURRENT_CONTEXT(ctx);
    GLint *offsets;
@@ -1986,7 +1986,8 @@ _mesa_use_shader_program(struct gl_context *ctx, GLenum type,
 
 static GLuint
 _mesa_create_shader_program(struct gl_context* ctx, GLboolean separate,
-                            GLenum type, GLsizei count, const GLchar* const *strings)
+                            GLenum type, GLsizei count,
+                            const GLchar* const *strings)
 {
    const GLuint shader = create_shader(ctx, type);
    GLuint program = 0;
@@ -2071,20 +2072,20 @@ _mesa_copy_linked_program_data(gl_shader_stage type,
       dst->UsesClipDistanceOut = src->Geom.UsesClipDistance;
       dst_gp->UsesEndPrimitive = src->Geom.UsesEndPrimitive;
       dst_gp->UsesStreams = src->Geom.UsesStreams;
-   }
       break;
+   }
    case MESA_SHADER_FRAGMENT: {
       struct gl_fragment_program *dst_fp = (struct gl_fragment_program *) dst;
       dst_fp->FragDepthLayout = src->FragDepthLayout;
-   }
       break;
+   }
    case MESA_SHADER_COMPUTE: {
       struct gl_compute_program *dst_cp = (struct gl_compute_program *) dst;
       int i;
       for (i = 0; i < 3; i++)
          dst_cp->LocalSize[i] = src->Comp.LocalSize[i];
-   }
       break;
+   }
    default:
       break;
    }
@@ -2311,7 +2312,8 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
    case GL_UNIFORM_NAME_LENGTH:
       res = _mesa_program_resource_find_index(shProg, resource_type, index);
       if (res) {
-         values[0] = strlen(_mesa_program_resource_name(res)) + 1 + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);;
+         values[0] = strlen(_mesa_program_resource_name(res)) + 1
+            + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);;
       }
       break;
    default:
@@ -2596,7 +2598,8 @@ _mesa_GetProgramStageiv(GLuint program, GLenum shadertype,
       for (i = 0; i < sh->NumSubroutineUniformRemapTable; i++) {
          res = _mesa_program_resource_find_index(shProg, resource_type, i);
          if (res) {
-            const GLint len = strlen(_mesa_program_resource_name(res)) + 1+  ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);
+            const GLint len = strlen(_mesa_program_resource_name(res)) + 1
+               + ((_mesa_program_resource_array_size(res) != 0) ? 3 : 0);
 
             if (len > max_len)
                max_len = len;
