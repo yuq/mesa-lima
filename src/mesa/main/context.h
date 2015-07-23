@@ -343,6 +343,15 @@ _mesa_has_compute_shaders(const struct gl_context *ctx)
       (ctx->API == API_OPENGLES2 && ctx->Version >= 31);
 }
 
+/**
+ * Checks if the context supports shader subroutines.
+ */
+static inline bool
+_mesa_has_shader_subroutine(const struct gl_context *ctx)
+{
+   return ctx->API == API_OPENGL_CORE &&
+      (ctx->Version >= 40 || ctx->Extensions.ARB_shader_subroutine);
+}
 
 /**
  * Checks if the context supports tessellation.
