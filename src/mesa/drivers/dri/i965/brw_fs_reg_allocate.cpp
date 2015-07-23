@@ -649,7 +649,7 @@ fs_visitor::assign_regs(bool allow_spilling)
    }
 
    /* Debug of register spilling: Go spill everything. */
-   if (unlikely(INTEL_DEBUG & DEBUG_SPILL)) {
+   if (unlikely(INTEL_DEBUG & DEBUG_SPILL_FS)) {
       int reg = choose_spill_reg(g);
 
       if (reg != -1) {

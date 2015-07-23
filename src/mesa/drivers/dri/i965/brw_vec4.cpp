@@ -1833,7 +1833,7 @@ vec4_visitor::run()
 
    setup_payload();
 
-   if (false) {
+   if (unlikely(INTEL_DEBUG & DEBUG_SPILL_VEC4)) {
       /* Debug of register spilling: Go spill everything. */
       const int grf_count = alloc.count;
       float spill_costs[alloc.count];
