@@ -76,14 +76,14 @@ functions = {
 
     # OpenGL 4.0 / GL_ARB_shader_subroutines. Mesa only exposes this
     # extension with core profile.
-    "glGetSubroutineUniformLocation": exec_info(core=31),
-    "glGetSubroutineIndex": exec_info(core=31),
-    "glGetActiveSubroutineUniformiv": exec_info(core=31),
-    "glGetActiveSubroutineUniformName": exec_info(core=31),
-    "glGetActiveSubroutineName": exec_info(core=31),
-    "glUniformSubroutinesuiv": exec_info(core=31),
-    "glGetUniformSubroutineuiv": exec_info(core=31),
-    "glGetProgramStageiv": exec_info(core=31),
+    "GetSubroutineUniformLocation": exec_info(core=31),
+    "GetSubroutineIndex": exec_info(core=31),
+    "GetActiveSubroutineUniformiv": exec_info(core=31),
+    "GetActiveSubroutineUniformName": exec_info(core=31),
+    "GetActiveSubroutineName": exec_info(core=31),
+    "UniformSubroutinesuiv": exec_info(core=31),
+    "GetUniformSubroutineuiv": exec_info(core=31),
+    "GetProgramStageiv": exec_info(core=31),
 
     # OpenGL 4.0 / GL_ARB_gpu_shader_fp64.  The extension spec says:
     #
