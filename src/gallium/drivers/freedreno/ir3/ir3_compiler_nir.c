@@ -706,16 +706,13 @@ create_indirect_store(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 }
 
 static struct ir3_instruction *
-create_input(struct ir3_block *block, struct ir3_instruction *instr,
-		unsigned n)
+create_input(struct ir3_block *block, unsigned n)
 {
 	struct ir3_instruction *in;
 
 	in = ir3_instr_create(block, -1, OPC_META_INPUT);
 	in->inout.block = block;
 	ir3_reg_create(in, n, 0);
-	if (instr)
-		ir3_reg_create(in, 0, IR3_REG_SSA)->instr = instr;
 
 	return in;
 }
@@ -747,7 +744,7 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 
 	compile_assert(ctx, !ctx->frag_coord[comp]);
 
-	ctx->frag_coord[comp] = create_input(ctx->block, NULL, 0);
+	ctx->frag_coord[comp] = create_input(ctx->block, 0);
 
 	switch (comp) {
 	case 0: /* .x */
@@ -786,7 +783,7 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 	case 0: /* .x */
 		compile_assert(ctx, !ctx->frag_face);
 
-		ctx->frag_face = create_input(block, NULL, 0);
+		ctx->frag_face = create_input(block, 0);
 		ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
 
 		/* for faceness, we always get -1 or 0 (int).. but TGSI expects
@@ -1428,7 +1425,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
-			ctx->vertex_id = create_input(ctx->block, NULL, 0);
+			ctx->vertex_id = create_input(ctx->block, 0);
 			add_sysval_input(ctx, TGSI_SEMANTIC_VERTEXID_NOBASE,
 					ctx->vertex_id);
 		}
@@ -1436,7 +1433,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(ctx->block, NULL, 0);
+			ctx->instance_id = create_input(ctx->block, 0);
 			add_sysval_input(ctx, TGSI_SEMANTIC_INSTANCEID,
 					ctx->instance_id);
 		}
@@ -2054,7 +2051,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 						so->inputs[n].inloc + i - 8, use_ldlv);
 			}
 		} else {
-			instr = create_input(ctx->block, NULL, idx);
+			instr = create_input(ctx->block, idx);
 		}
 
 		ctx->ir->inputs[idx] = instr;
@@ -2267,13 +2264,13 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 	so->pos_regid = regid;
 
 	/* r0.x */
-	instr = create_input(ctx->in_block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[1]->instr = instr;
 
 	/* r0.y */
-	instr = create_input(ctx->in_block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[2]->instr = instr;
