@@ -743,11 +743,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		sctx->current_rast_prim = info->mode;
 
 	si_update_shaders(sctx);
-
-	if (sctx->vertex_buffers_dirty) {
-		si_update_vertex_buffers(sctx);
-		sctx->vertex_buffers_dirty = false;
-	}
+	if (!si_upload_shader_descriptors(sctx))
+		return;
 
 	if (info->indexed) {
 		/* Initialize the index buffer struct. */

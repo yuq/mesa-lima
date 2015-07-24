@@ -142,12 +142,6 @@ struct si_context {
 	union {
 		struct {
 			/* The order matters. */
-			struct r600_atom *const_buffers[SI_NUM_SHADERS];
-			struct r600_atom *rw_buffers[SI_NUM_SHADERS];
-			struct r600_atom *sampler_views[SI_NUM_SHADERS];
-			struct r600_atom *sampler_states[SI_NUM_SHADERS];
-			/* Caches must be flushed after resource descriptors are
-			 * updated in memory. */
 			struct r600_atom *cache_flush;
 			struct r600_atom *streamout_begin;
 			struct r600_atom *streamout_enable; /* must be after streamout_begin */
