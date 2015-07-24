@@ -85,6 +85,7 @@ private:
    void emitCCTL(const Instruction *);
 
    void emitINTERP(const Instruction *);
+   void emitAFETCH(const Instruction *);
    void emitPFETCH(const Instruction *);
    void emitVFETCH(const Instruction *);
    void emitEXPORT(const Instruction *);
@@ -1491,6 +1492,21 @@ CodeEmitterNVC0::emitBAR(const Instruction *i)
       code[1] &= ~(7 << 21);
       defId(pDef, 32 + 21);
    }
+}
+
+void
+CodeEmitterNVC0::emitAFETCH(const Instruction *i)
+{
+   code[0] = 0x00000006;
+   code[1] = 0x0c000000 | (i->src(0).get()->reg.data.offset & 0x7ff);
+
+   if (i->getSrc(0)->reg.file == FILE_SHADER_OUTPUT)
+      code[0] |= 0x200;
+
+   emitPredicate(i);
+
+   defId(i->def(0), 14);
+   srcId(i->src(0).getIndirect(0), 20);
 }
 
 void

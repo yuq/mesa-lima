@@ -106,6 +106,7 @@ enum operation
    OP_MEMBAR, // memory barrier (mfence, lfence, sfence)
    OP_VFETCH, // indirection 0 in attribute space, indirection 1 is vertex base
    OP_PFETCH, // fetch base address of vertex src0 (immediate) [+ src1]
+   OP_AFETCH, // fetch base address of shader input (a[%r1+0x10])
    OP_EXPORT,
    OP_LINTERP,
    OP_PINTERP,

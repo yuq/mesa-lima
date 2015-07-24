@@ -1749,6 +1749,7 @@ NVC0LoweringPass::checkPredicate(Instruction *insn)
 bool
 NVC0LoweringPass::visit(Instruction *i)
 {
+   bool ret = true;
    bld.setPosition(i, false);
 
    if (i->cc != CC_ALWAYS)
@@ -1780,7 +1781,8 @@ NVC0LoweringPass::visit(Instruction *i)
    case OP_SQRT:
       return handleSQRT(i);
    case OP_EXPORT:
-      return handleEXPORT(i);
+      ret = handleEXPORT(i);
+      break;
    case OP_EMIT:
    case OP_RESTART:
       return handleOUT(i);
@@ -1843,7 +1845,20 @@ NVC0LoweringPass::visit(Instruction *i)
    default:
       break;
    }
-   return true;
+
+   /* Kepler+ has a special opcode to compute a new base address to be used
+    * for indirect loads.
+    */
+   if (targ->getChipset() >= NVISA_GK104_CHIPSET && !i->perPatch &&
+       (i->op == OP_VFETCH || i->op == OP_EXPORT) && i->src(0).isIndirect(0)) {
+      Instruction *afetch = bld.mkOp1(OP_AFETCH, TYPE_U32, bld.getSSA(),
+                                      cloneShallow(func, i->getSrc(0)));
+      afetch->setIndirect(0, 0, i->getIndirect(0, 0));
+      i->src(0).get()->reg.data.offset = 0;
+      i->setIndirect(0, 0, afetch->getDef(0));
+   }
+
+   return ret;
 }
 
 bool

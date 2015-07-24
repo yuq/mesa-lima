@@ -135,6 +135,7 @@ const char *operationStr[OP_LAST + 1] =
    "membar",
    "vfetch",
    "pfetch",
+   "afetch",
    "export",
    "linterp",
    "pinterp",

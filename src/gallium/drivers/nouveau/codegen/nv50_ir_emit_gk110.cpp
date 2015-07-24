@@ -77,6 +77,7 @@ private:
    void emitMOV(const Instruction *);
 
    void emitINTERP(const Instruction *);
+   void emitAFETCH(const Instruction *);
    void emitPFETCH(const Instruction *);
    void emitVFETCH(const Instruction *);
    void emitEXPORT(const Instruction *);
@@ -1339,6 +1340,23 @@ CodeEmitterGK110::emitFlow(const Instruction *i)
 }
 
 void
+CodeEmitterGK110::emitAFETCH(const Instruction *i)
+{
+   uint32_t offset = i->src(0).get()->reg.data.offset & 0x7ff;
+
+   code[0] = 0x00000002 | (offset << 23);
+   code[1] = 0x7d000000 | (offset >> 9);
+
+   if (i->getSrc(0)->reg.file == FILE_SHADER_OUTPUT)
+      code[1] |= 0x8;
+
+   emitPredicate(i);
+
+   defId(i->def(0), 2);
+   srcId(i->src(0).getIndirect(0), 10);
+}
+
+void
 CodeEmitterGK110::emitPFETCH(const Instruction *i)
 {
    uint32_t prim = i->src(0).get()->reg.data.u32;
@@ -1706,6 +1724,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_EXPORT:
       emitEXPORT(insn);
+      break;
+   case OP_AFETCH:
+      emitAFETCH(insn);
       break;
    case OP_PFETCH:
       emitPFETCH(insn);

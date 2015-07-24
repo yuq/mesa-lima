@@ -174,6 +174,7 @@ private:
    void emitALD();
    void emitAST();
    void emitISBERD();
+   void emitAL2P();
    void emitIPA();
 
    void emitPIXLD();
@@ -2204,6 +2205,17 @@ CodeEmitterGM107::emitISBERD()
 }
 
 void
+CodeEmitterGM107::emitAL2P()
+{
+   emitInsn (0xefa00000);
+   emitField(0x2f, 2, (insn->getDef(0)->reg.size / 4) - 1);
+   emitO    (0x20);
+   emitField(0x14, 11, insn->src(0).get()->reg.data.offset);
+   emitGPR  (0x08, insn->src(0).getIndirect(0));
+   emitGPR  (0x00, insn->def(0));
+}
+
+void
 CodeEmitterGM107::emitIPA()
 {
    int ipam = 0, ipas = 0;
@@ -2758,6 +2770,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       break;
    case OP_PFETCH:
       emitISBERD();
+      break;
+   case OP_AFETCH:
+      emitAL2P();
       break;
    case OP_LINTERP:
    case OP_PINTERP:
