@@ -3,6 +3,7 @@ C_SOURCES := \
 	si_blit.c \
 	si_commands.c \
 	si_compute.c \
+	si_cp_dma.c \
 	si_descriptors.c \
 	sid.h \
 	si_dma.c \
