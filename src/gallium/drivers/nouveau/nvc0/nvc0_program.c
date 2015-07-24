@@ -31,7 +31,7 @@
  * 124 scalar varying values.
  */
 static uint32_t
-nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
+nvc0_shader_input_address(unsigned sn, unsigned si)
 {
    switch (sn) {
    case TGSI_SEMANTIC_TESSOUTER:    return 0x000 + si * 0x4;
@@ -42,7 +42,7 @@ nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
    case TGSI_SEMANTIC_PSIZE:        return 0x06c;
    case TGSI_SEMANTIC_POSITION:     return 0x070;
-   case TGSI_SEMANTIC_GENERIC:      return ubase + si * 0x10;
+   case TGSI_SEMANTIC_GENERIC:      return 0x080 + si * 0x10;
    case TGSI_SEMANTIC_FOG:          return 0x2e8;
    case TGSI_SEMANTIC_COLOR:        return 0x280 + si * 0x10;
    case TGSI_SEMANTIC_BCOLOR:       return 0x2a0 + si * 0x10;
@@ -61,7 +61,7 @@ nvc0_shader_input_address(unsigned sn, unsigned si, unsigned ubase)
 }
 
 static uint32_t
-nvc0_shader_output_address(unsigned sn, unsigned si, unsigned ubase)
+nvc0_shader_output_address(unsigned sn, unsigned si)
 {
    switch (sn) {
    case TGSI_SEMANTIC_TESSOUTER:     return 0x000 + si * 0x4;
@@ -72,7 +72,7 @@ nvc0_shader_output_address(unsigned sn, unsigned si, unsigned ubase)
    case TGSI_SEMANTIC_VIEWPORT_INDEX:return 0x068;
    case TGSI_SEMANTIC_PSIZE:         return 0x06c;
    case TGSI_SEMANTIC_POSITION:      return 0x070;
-   case TGSI_SEMANTIC_GENERIC:       return ubase + si * 0x10;
+   case TGSI_SEMANTIC_GENERIC:       return 0x080 + si * 0x10;
    case TGSI_SEMANTIC_FOG:           return 0x2e8;
    case TGSI_SEMANTIC_COLOR:         return 0x280 + si * 0x10;
    case TGSI_SEMANTIC_BCOLOR:        return 0x2a0 + si * 0x10;
@@ -97,7 +97,7 @@ nvc0_vp_assign_input_slots(struct nv50_ir_prog_info *info)
       case TGSI_SEMANTIC_VERTEXID:
          info->in[i].mask = 0x1;
          info->in[i].slot[0] =
-            nvc0_shader_input_address(info->in[i].sn, 0, 0) / 4;
+            nvc0_shader_input_address(info->in[i].sn, 0) / 4;
          continue;
       default:
          break;
@@ -113,13 +113,11 @@ nvc0_vp_assign_input_slots(struct nv50_ir_prog_info *info)
 static int
 nvc0_sp_assign_input_slots(struct nv50_ir_prog_info *info)
 {
-   unsigned ubase = MAX2(0x80, 0x20 + info->numPatchConstants * 0x10);
    unsigned offset;
    unsigned i, c;
 
    for (i = 0; i < info->numInputs; ++i) {
-      offset = nvc0_shader_input_address(info->in[i].sn,
-                                         info->in[i].si, ubase);
+      offset = nvc0_shader_input_address(info->in[i].sn, info->in[i].si);
 
       for (c = 0; c < 4; ++c)
          info->in[i].slot[c] = (offset + c * 0x4) / 4;
@@ -154,13 +152,11 @@ nvc0_fp_assign_output_slots(struct nv50_ir_prog_info *info)
 static int
 nvc0_sp_assign_output_slots(struct nv50_ir_prog_info *info)
 {
-   unsigned ubase = MAX2(0x80, 0x20 + info->numPatchConstants * 0x10);
    unsigned offset;
    unsigned i, c;
 
    for (i = 0; i < info->numOutputs; ++i) {
-      offset = nvc0_shader_output_address(info->out[i].sn,
-                                          info->out[i].si, ubase);
+      offset = nvc0_shader_output_address(info->out[i].sn, info->out[i].si);
 
       for (c = 0; c < 4; ++c)
          info->out[i].slot[c] = (offset + c * 0x4) / 4;

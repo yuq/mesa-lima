@@ -2085,6 +2085,8 @@ MemoryOpt::runOpt(BasicBlock *bb)
       }
       if (ldst->getPredicate()) // TODO: handle predicated ld/st
          continue;
+      if (ldst->perPatch) // TODO: create separate per-patch lists
+         continue;
 
       if (isLoad) {
          DataFile file = ldst->src(0).getFile();
