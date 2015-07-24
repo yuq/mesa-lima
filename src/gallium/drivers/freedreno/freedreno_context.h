@@ -351,9 +351,16 @@ struct fd_context {
 	void (*emit_sysmem_prep)(struct fd_context *ctx);
 
 	/* draw: */
-	void (*draw_vbo)(struct fd_context *pctx, const struct pipe_draw_info *info);
+	void (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info);
 	void (*clear)(struct fd_context *ctx, unsigned buffers,
 			const union pipe_color_union *color, double depth, unsigned stencil);
+
+	/* constant emit:  (note currently not used/needed for a2xx) */
+	void (*emit_const)(struct fd_ringbuffer *ring, enum shader_t type,
+			uint32_t regid, uint32_t offset, uint32_t sizedwords,
+			const uint32_t *dwords, struct pipe_resource *prsc);
+	void (*emit_const_bo)(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
+			uint32_t regid, uint32_t num, struct fd_bo **bos, uint32_t *offsets);
 };
 
 static inline struct fd_context *

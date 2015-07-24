@@ -37,10 +37,8 @@
 #include "ir3_shader.h"
 
 struct fd_ringbuffer;
-enum adreno_state_block;
 
-void fd4_emit_constant(struct fd_ringbuffer *ring,
-		enum adreno_state_block sb,
+void fd4_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 		uint32_t regid, uint32_t offset, uint32_t sizedwords,
 		const uint32_t *dwords, struct pipe_resource *prsc);
 
@@ -95,5 +93,7 @@ void fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd4_emit *emit);
 
 void fd4_emit_restore(struct fd_context *ctx);
+
+void fd4_emit_init(struct pipe_context *pctx);
 
 #endif /* FD4_EMIT_H */

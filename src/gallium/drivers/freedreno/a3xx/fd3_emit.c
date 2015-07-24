@@ -43,18 +43,25 @@
 #include "fd3_format.h"
 #include "fd3_zsa.h"
 
+static const enum adreno_state_block sb[] = {
+	[SHADER_VERTEX]   = SB_VERT_SHADER,
+	[SHADER_FRAGMENT] = SB_FRAG_SHADER,
+};
+
 /* regid:          base const register
  * prsc or dwords: buffer containing constant values
  * sizedwords:     size of const value buffer
  */
 void
-fd3_emit_constant(struct fd_ringbuffer *ring,
-		enum adreno_state_block sb,
+fd3_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 		uint32_t regid, uint32_t offset, uint32_t sizedwords,
 		const uint32_t *dwords, struct pipe_resource *prsc)
 {
 	uint32_t i, sz;
 	enum adreno_state_src src;
+
+	debug_assert((regid % 4) == 0);
+	debug_assert((sizedwords % 4) == 0);
 
 	if (prsc) {
 		sz = 0;
@@ -67,7 +74,7 @@ fd3_emit_constant(struct fd_ringbuffer *ring,
 	OUT_PKT3(ring, CP_LOAD_STATE, 2 + sz);
 	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(regid/2) |
 			CP_LOAD_STATE_0_STATE_SRC(src) |
-			CP_LOAD_STATE_0_STATE_BLOCK(sb) |
+			CP_LOAD_STATE_0_STATE_BLOCK(sb[type]) |
 			CP_LOAD_STATE_0_NUM_UNIT(sizedwords/2));
 	if (prsc) {
 		struct fd_bo *bo = fd_resource(prsc)->bo;
@@ -84,89 +91,31 @@ fd3_emit_constant(struct fd_ringbuffer *ring,
 }
 
 static void
-emit_constants(struct fd_ringbuffer *ring,
-		enum adreno_state_block sb,
-		struct fd_constbuf_stateobj *constbuf,
-		struct ir3_shader_variant *shader,
-		bool emit_immediates)
+fd3_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
+		uint32_t regid, uint32_t num, struct fd_bo **bos, uint32_t *offsets)
 {
-	uint32_t enabled_mask = constbuf->enabled_mask;
-	uint32_t max_const;
-	int i;
+	uint32_t i;
 
-	// XXX TODO only emit dirty consts.. but we need to keep track if
-	// they are clobbered by a clear, gmem2mem, or mem2gmem..
-	constbuf->dirty_mask = enabled_mask;
+	debug_assert((regid % 4) == 0);
+	debug_assert((num % 4) == 0);
 
-	/* in particular, with binning shader we may end up with unused
-	 * consts, ie. we could end up w/ constlen that is smaller
-	 * than first_immediate.  In that case truncate the user consts
-	 * early to avoid HLSQ lockup caused by writing too many consts
-	 */
-	max_const = MIN2(shader->first_driver_param, shader->constlen);
+	OUT_PKT3(ring, CP_LOAD_STATE, 2 + num);
+	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(regid/2) |
+			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
+			CP_LOAD_STATE_0_STATE_BLOCK(sb[type]) |
+			CP_LOAD_STATE_0_NUM_UNIT(num/2));
+	OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
+			CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
 
-	/* emit user constants: */
-	if (enabled_mask & 1) {
-		const unsigned index = 0;
-		struct pipe_constant_buffer *cb = &constbuf->cb[index];
-		unsigned size = align(cb->buffer_size, 4) / 4; /* size in dwords */
-
-		// I expect that size should be a multiple of vec4's:
-		assert(size == align(size, 4));
-
-		/* and even if the start of the const buffer is before
-		 * first_immediate, the end may not be:
-		 */
-		size = MIN2(size, 4 * max_const);
-
-		if (size && constbuf->dirty_mask & (1 << index)) {
-			fd3_emit_constant(ring, sb, 0,
-							  cb->buffer_offset, size,
-							  cb->user_buffer, cb->buffer);
-			constbuf->dirty_mask &= ~(1 << index);
-		}
-
-		enabled_mask &= ~(1 << index);
-	}
-
-	if (shader->constlen > shader->first_driver_param) {
-		uint32_t params = MIN2(4, shader->constlen - shader->first_driver_param);
-		/* emit ubos: */
-		OUT_PKT3(ring, CP_LOAD_STATE, 2 + params * 4);
-		OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(shader->first_driver_param * 2) |
-				 CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
-				 CP_LOAD_STATE_0_STATE_BLOCK(sb) |
-				 CP_LOAD_STATE_0_NUM_UNIT(params * 2));
-		OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
-				 CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
-
-		for (i = 1; i <= params * 4; i++) {
-			struct pipe_constant_buffer *cb = &constbuf->cb[i];
-			assert(!cb->user_buffer);
-			if ((enabled_mask & (1 << i)) && cb->buffer)
-				OUT_RELOC(ring, fd_resource(cb->buffer)->bo, cb->buffer_offset, 0, 0);
-			else
-				OUT_RING(ring, 0xbad00000 | ((i - 1) << 16));
-		}
-	}
-
-	/* emit shader immediates: */
-	if (shader && emit_immediates) {
-		int size = shader->immediates_count;
-		uint32_t base = shader->first_immediate;
-
-		/* truncate size to avoid writing constants that shader
-		 * does not use:
-		 */
-		size = MIN2(size + base, shader->constlen) - base;
-
-		/* convert out of vec4: */
-		base *= 4;
-		size *= 4;
-
-		if (size > 0) {
-			fd3_emit_constant(ring, sb, base,
-				0, size, shader->immediates[0].val, NULL);
+	for (i = 0; i < num; i++) {
+		if (bos[i]) {
+			if (write) {
+				OUT_RELOCW(ring, bos[i], offsets[i], 0, 0);
+			} else {
+				OUT_RELOC(ring, bos[i], offsets[i], 0, 0);
+			}
+		} else {
+			OUT_RING(ring, 0xbad00000 | (i << 16));
 		}
 	}
 }
@@ -669,33 +618,12 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	OUT_PKT3(ring, CP_EVENT_WRITE, 1);
 	OUT_RING(ring, HLSQ_FLUSH);
 
-	if ((dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) &&
-			/* evil hack to deal sanely with clear path: */
-			(emit->prog == &ctx->prog)) {
-		fd_wfi(ctx, ring);
-		emit_constants(ring,  SB_VERT_SHADER,
-				&ctx->constbuf[PIPE_SHADER_VERTEX],
-				vp, emit->prog->dirty & FD_SHADER_DIRTY_VP);
-		if (!emit->key.binning_pass) {
-			emit_constants(ring, SB_FRAG_SHADER,
-					&ctx->constbuf[PIPE_SHADER_FRAGMENT],
-					fp, emit->prog->dirty & FD_SHADER_DIRTY_FP);
-		}
-	}
-
-	/* emit driver params every time */
-	if (emit->info && emit->prog == &ctx->prog) {
-		uint32_t vertex_params[4] = {
-			emit->info->indexed ? emit->info->index_bias : emit->info->start,
-			0,
-			0,
-			0
-		};
-		if (vp->constlen >= vp->first_driver_param + 4) {
-			fd3_emit_constant(ring, SB_VERT_SHADER,
-							  (vp->first_driver_param + 4) * 4,
-							  0, 4, vertex_params, NULL);
-		}
+	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */
+		ir3_emit_consts(vp, ring, emit->info, dirty);
+		if (!emit->key.binning_pass)
+			ir3_emit_consts(fp, ring, emit->info, dirty);
+		/* mark clean after emitting consts: */
+		ctx->prog.dirty = 0;
 	}
 
 	if ((dirty & (FD_DIRTY_BLEND | FD_DIRTY_FRAMEBUFFER)) && ctx->blend) {
@@ -929,4 +857,12 @@ fd3_emit_restore(struct fd_context *ctx)
 	fd_wfi(ctx, ring);
 
 	ctx->needs_rb_fbd = true;
+}
+
+void
+fd3_emit_init(struct pipe_context *pctx)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	ctx->emit_const = fd3_emit_const;
+	ctx->emit_const_bo = fd3_emit_const_bo;
 }

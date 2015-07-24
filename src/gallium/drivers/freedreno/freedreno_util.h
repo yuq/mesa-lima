@@ -40,6 +40,7 @@
 #include "util/u_dynarray.h"
 #include "util/u_pack_color.h"
 
+#include "disasm.h"
 #include "adreno_common.xml.h"
 #include "adreno_pm4.xml.h"
 

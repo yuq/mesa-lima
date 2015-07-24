@@ -224,6 +224,10 @@ struct ir3_shader_variant * ir3_shader_variant(struct ir3_shader *shader,
 		struct ir3_shader_key key);
 void ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin);
 
+struct fd_ringbuffer;
+void ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		const struct pipe_draw_info *info, uint32_t dirty);
+
 static inline const char *
 ir3_shader_stage(struct ir3_shader *shader)
 {

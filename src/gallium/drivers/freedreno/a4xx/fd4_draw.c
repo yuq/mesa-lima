@@ -295,7 +295,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	OUT_RING(ring, colr);         /* RB_CLEAR_COLOR_DW3 */
 
 	/* until fastclear works: */
-	fd4_emit_constant(ring, SB_FRAG_SHADER, 0, 0, 4, color->ui, NULL);
+	fd4_emit_const(ring, SHADER_FRAGMENT, 0, 0, 4, color->ui, NULL);
 
 	OUT_PKT0(ring, REG_A4XX_VFD_INDEX_OFFSET, 2);
 	OUT_RING(ring, 0);            /* VFD_INDEX_OFFSET */

@@ -119,6 +119,7 @@ fd4_context_create(struct pipe_screen *pscreen, void *priv)
 	fd4_gmem_init(pctx);
 	fd4_texture_init(pctx);
 	fd4_prog_init(pctx);
+	fd4_emit_init(pctx);
 
 	pctx = fd_context_init(&fd4_ctx->base, pscreen, primtypes, priv);
 	if (!pctx)

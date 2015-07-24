@@ -412,3 +412,151 @@ ir3_shader_disasm(struct ir3_shader_variant *so, uint32_t *bin)
 
 	debug_printf("\n");
 }
+
+/* This has to reach into the fd_context a bit more than the rest of
+ * ir3, but it needs to be aligned with the compiler, so both agree
+ * on which const regs hold what.  And the logic is identical between
+ * a3xx/a4xx, the only difference is small details in the actual
+ * CP_LOAD_STATE packets (which is handled inside the generation
+ * specific ctx->emit_const(_bo)() fxns)
+ */
+
+#include "freedreno_resource.h"
+
+static void
+emit_user_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_constbuf_stateobj *constbuf)
+{
+	struct fd_context *ctx = fd_context(v->shader->pctx);
+	const unsigned index = 0;     /* user consts are index 0 */
+	/* TODO save/restore dirty_mask for binning pass instead: */
+	uint32_t dirty_mask = constbuf->enabled_mask;
+
+	if (dirty_mask & (1 << index)) {
+		struct pipe_constant_buffer *cb = &constbuf->cb[index];
+		unsigned size = align(cb->buffer_size, 4) / 4; /* size in dwords */
+
+		/* in particular, with binning shader we may end up with
+		 * unused consts, ie. we could end up w/ constlen that is
+		 * smaller than first_driver_param.  In that case truncate
+		 * the user consts early to avoid HLSQ lockup caused by
+		 * writing too many consts
+		 */
+		uint32_t max_const = MIN2(v->first_driver_param, v->constlen);
+
+		// I expect that size should be a multiple of vec4's:
+		assert(size == align(size, 4));
+
+		/* and even if the start of the const buffer is before
+		 * first_immediate, the end may not be:
+		 */
+		size = MIN2(size, 4 * max_const);
+
+		if (size > 0) {
+			fd_wfi(ctx, ring);
+			ctx->emit_const(ring, v->type, 0,
+					cb->buffer_offset, size,
+					cb->user_buffer, cb->buffer);
+			constbuf->dirty_mask &= ~(1 << index);
+		}
+	}
+}
+
+static void
+emit_ubos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		struct fd_constbuf_stateobj *constbuf)
+{
+	if (v->constlen > v->first_driver_param) {
+		struct fd_context *ctx = fd_context(v->shader->pctx);
+		uint32_t offset = v->first_driver_param;  /* UBOs after user consts */
+		uint32_t params = MIN2(4, v->constlen - v->first_driver_param) * 4;
+		uint32_t offsets[params];
+		struct fd_bo *bos[params];
+
+		for (uint32_t i = 0; i < params; i++) {
+			const uint32_t index = i + 1;   /* UBOs start at index 1 */
+			struct pipe_constant_buffer *cb = &constbuf->cb[index];
+			assert(!cb->user_buffer);
+
+			if ((constbuf->enabled_mask & (1 << index)) && cb->buffer) {
+				offsets[i] = cb->buffer_offset;
+				bos[i] = fd_resource(cb->buffer)->bo;
+			} else {
+				offsets[i] = 0;
+				bos[i] = NULL;
+			}
+		}
+
+		fd_wfi(ctx, ring);
+		ctx->emit_const_bo(ring, v->type, false, offset * 4, params, bos, offsets);
+	}
+}
+
+static void
+emit_immediates(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
+{
+	struct fd_context *ctx = fd_context(v->shader->pctx);
+	int size = v->immediates_count;
+	uint32_t base = v->first_immediate;
+
+	/* truncate size to avoid writing constants that shader
+	 * does not use:
+	 */
+	size = MIN2(size + base, v->constlen) - base;
+
+	/* convert out of vec4: */
+	base *= 4;
+	size *= 4;
+
+	if (size > 0) {
+		fd_wfi(ctx, ring);
+		ctx->emit_const(ring, v->type, base,
+			0, size, v->immediates[0].val, NULL);
+	}
+}
+
+void
+ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
+		const struct pipe_draw_info *info, uint32_t dirty)
+{
+	struct fd_context *ctx = fd_context(v->shader->pctx);
+
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_CONSTBUF)) {
+		struct fd_constbuf_stateobj *constbuf;
+		bool shader_dirty;
+
+		if (v->type == SHADER_VERTEX) {
+			constbuf = &ctx->constbuf[PIPE_SHADER_VERTEX];
+			shader_dirty = !!(ctx->prog.dirty & FD_SHADER_DIRTY_VP);
+		} else if (v->type == SHADER_FRAGMENT) {
+			constbuf = &ctx->constbuf[PIPE_SHADER_FRAGMENT];
+			shader_dirty = !!(ctx->prog.dirty & FD_SHADER_DIRTY_FP);
+		} else {
+			unreachable("bad shader type");
+			return;
+		}
+
+		emit_user_consts(v, ring, constbuf);
+		emit_ubos(v, ring, constbuf);
+		if (shader_dirty)
+			emit_immediates(v, ring);
+	}
+
+	/* emit driver params every time: */
+	/* TODO skip emit if shader doesn't use driver params to avoid WFI.. */
+	if (info && (v->type == SHADER_VERTEX)) {
+		uint32_t offset = v->first_driver_param + 4;  /* driver params after UBOs */
+		if (v->constlen >= offset) {
+			uint32_t vertex_params[4] = {
+				info->indexed ? info->index_bias : info->start,
+				0,
+				0,
+				0
+			};
+
+			fd_wfi(ctx, ring);
+			ctx->emit_const(ring, SHADER_VERTEX, offset * 4, 0,
+					ARRAY_SIZE(vertex_params), vertex_params, NULL);
+		}
+	}
+}
