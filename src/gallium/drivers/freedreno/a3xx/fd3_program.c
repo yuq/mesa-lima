@@ -449,10 +449,6 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 		OUT_RING(ring, flatshade[1]);        /* SP_FS_FLAT_SHAD_MODE_REG_1 */
 	}
 
-	OUT_PKT0(ring, REG_A3XX_VFD_VS_THREADING_THRESHOLD, 1);
-	OUT_RING(ring, A3XX_VFD_VS_THREADING_THRESHOLD_REGID_THRESHOLD(15) |
-			A3XX_VFD_VS_THREADING_THRESHOLD_REGID_VTXCNT(252));
-
 	if (vpbuffer == BUFFER)
 		emit_shader(ring, vp);
 

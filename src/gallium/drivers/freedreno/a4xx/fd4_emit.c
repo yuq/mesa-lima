@@ -251,7 +251,9 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	uint32_t total_in = 0;
 	const struct fd_vertex_state *vtx = emit->vtx;
 	struct ir3_shader_variant *vp = fd4_emit_get_vp(emit);
-	unsigned vertex_regid = regid(63, 0), instance_regid = regid(63, 0);
+	unsigned vertex_regid = regid(63, 0);
+	unsigned instance_regid = regid(63, 0);
+	unsigned vtxcnt_regid = regid(63, 0);
 
 	for (i = 0; i < vp->inputs_count; i++) {
 		uint8_t semantic = sem2name(vp->inputs[i].semantic);
@@ -259,6 +261,8 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			vertex_regid = vp->inputs[i].regid;
 		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
 			instance_regid = vp->inputs[i].regid;
+		else if (semantic == IR3_SEMANTIC_VTXCNT)
+			vtxcnt_regid = vp->inputs[i].regid;
 		else if ((i < vtx->vtx->num_elements) && vp->inputs[i].compmask)
 			last = i;
 	}
@@ -266,7 +270,8 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
 	if ((vtx->vtx->num_elements == 0) &&
 			(vertex_regid == regid(63, 0)) &&
-			(instance_regid == regid(63, 0)))
+			(instance_regid == regid(63, 0)) &&
+			(vtxcnt_regid == regid(63, 0)))
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
@@ -280,7 +285,8 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			enum a4xx_vtx_fmt fmt = fd4_pipe2vtx(pfmt);
 			bool switchnext = (i != last) ||
 					(vertex_regid != regid(63, 0)) ||
-					(instance_regid != regid(63, 0));
+					(instance_regid != regid(63, 0)) ||
+					(vtxcnt_regid != regid(63, 0));
 			bool isint = util_format_is_pure_integer(pfmt);
 			uint32_t fs = util_format_get_blocksize(pfmt);
 			uint32_t off = vb->buffer_offset + elem->src_offset;
@@ -321,7 +327,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 			A4XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |
 			A4XX_VFD_CONTROL_1_REGID4INST(instance_regid));
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_2 */
-	OUT_RING(ring, A4XX_VFD_CONTROL_3_REGID_VTXCNT(regid(63, 0)));
+	OUT_RING(ring, A4XX_VFD_CONTROL_3_REGID_VTXCNT(vtxcnt_regid));
 	OUT_RING(ring, 0x00000000);   /* XXX VFD_CONTROL_4 */
 
 	/* cache invalidate, otherwise vertex fetch could see

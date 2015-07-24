@@ -393,7 +393,9 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	uint32_t total_in = 0;
 	const struct fd_vertex_state *vtx = emit->vtx;
 	struct ir3_shader_variant *vp = fd3_emit_get_vp(emit);
-	unsigned vertex_regid = regid(63, 0), instance_regid = regid(63, 0);
+	unsigned vertex_regid = regid(63, 0);
+	unsigned instance_regid = regid(63, 0);
+	unsigned vtxcnt_regid = regid(63, 0);
 
 	for (i = 0; i < vp->inputs_count; i++) {
 		uint8_t semantic = sem2name(vp->inputs[i].semantic);
@@ -401,14 +403,17 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			vertex_regid = vp->inputs[i].regid;
 		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
 			instance_regid = vp->inputs[i].regid;
+		else if (semantic == IR3_SEMANTIC_VTXCNT)
+			vtxcnt_regid = vp->inputs[i].regid;
 		else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask)
 			last = i;
 	}
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
-	if (vtx->vtx->num_elements == 0 &&
-		vertex_regid == regid(63, 0) &&
-		instance_regid == regid(63, 0))
+	if ((vtx->vtx->num_elements == 0) &&
+			(vertex_regid == regid(63, 0)) &&
+			(instance_regid == regid(63, 0)) &&
+			(vtxcnt_regid == regid(63, 0)))
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
@@ -421,8 +426,9 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 			enum pipe_format pfmt = elem->src_format;
 			enum a3xx_vtx_fmt fmt = fd3_pipe2vtx(pfmt);
 			bool switchnext = (i != last) ||
-				vertex_regid != regid(63, 0) ||
-				instance_regid != regid(63, 0);
+					(vertex_regid != regid(63, 0)) ||
+					(instance_regid != regid(63, 0)) ||
+					(vtxcnt_regid != regid(63, 0));
 			bool isint = util_format_is_pure_integer(pfmt);
 			uint32_t fs = util_format_get_blocksize(pfmt);
 
@@ -461,6 +467,10 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	OUT_RING(ring, A3XX_VFD_CONTROL_1_MAXSTORAGE(1) | // XXX
 			A3XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |
 			A3XX_VFD_CONTROL_1_REGID4INST(instance_regid));
+
+	OUT_PKT0(ring, REG_A3XX_VFD_VS_THREADING_THRESHOLD, 1);
+	OUT_RING(ring, A3XX_VFD_VS_THREADING_THRESHOLD_REGID_THRESHOLD(15) |
+			A3XX_VFD_VS_THREADING_THRESHOLD_REGID_VTXCNT(vtxcnt_regid));
 }
 
 void

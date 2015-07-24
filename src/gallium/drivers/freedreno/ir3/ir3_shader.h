@@ -34,6 +34,11 @@
 #include "ir3.h"
 #include "disasm.h"
 
+/* internal semantic used for passing vtxcnt to vertex shader to
+ * implement transform feedback:
+ */
+#define IR3_SEMANTIC_VTXCNT (TGSI_SEMANTIC_COUNT + 0)
+
 typedef uint16_t ir3_semantic;  /* semantic name + index */
 static inline ir3_semantic
 ir3_semantic_name(uint8_t name, uint16_t index)
