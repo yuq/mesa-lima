@@ -1598,7 +1598,7 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
       ld->subOp = NV50_IR_SUBOP_PIXLD_COVMASK;
       break;
    default:
-      if (prog->getType() == Program::TYPE_TESSELLATION_EVAL)
+      if (prog->getType() == Program::TYPE_TESSELLATION_EVAL && !i->perPatch)
          vtx = bld.mkOp1v(OP_PFETCH, TYPE_U32, bld.getSSA(), bld.mkImm(0));
       ld = bld.mkFetch(i->getDef(0), i->dType,
                        FILE_SHADER_INPUT, addr, i->getIndirect(0, 0), vtx);

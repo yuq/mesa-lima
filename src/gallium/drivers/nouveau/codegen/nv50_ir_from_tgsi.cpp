@@ -373,6 +373,8 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_SAMPLEMASK: return nv50_ir::SV_SAMPLE_MASK;
    case TGSI_SEMANTIC_INVOCATIONID: return nv50_ir::SV_INVOCATION_ID;
    case TGSI_SEMANTIC_TESSCOORD:  return nv50_ir::SV_TESS_COORD;
+   case TGSI_SEMANTIC_TESSOUTER:  return nv50_ir::SV_TESS_OUTER;
+   case TGSI_SEMANTIC_TESSINNER:  return nv50_ir::SV_TESS_INNER;
    case TGSI_SEMANTIC_VERTICESIN: return nv50_ir::SV_VERTEX_COUNT;
    default:
       assert(0);
@@ -1055,9 +1057,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
                   info->in[i].centroid = 1;
             }
 
-            if (sn == TGSI_SEMANTIC_PATCH ||
-                sn == TGSI_SEMANTIC_TESSOUTER ||
-                sn == TGSI_SEMANTIC_TESSINNER)
+            if (sn == TGSI_SEMANTIC_PATCH)
                info->in[i].patch = 1;
             if (sn == TGSI_SEMANTIC_PATCH)
                info->numPatchConstants = MAX2(info->numPatchConstants, si + 1);
@@ -1125,6 +1125,13 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          info->sv[i].sn = sn;
          info->sv[i].si = si;
          info->sv[i].input = inferSysValDirection(sn);
+
+         switch (sn) {
+         case TGSI_SEMANTIC_TESSOUTER:
+         case TGSI_SEMANTIC_TESSINNER:
+            info->sv[i].patch = 1;
+            break;
+         }
       }
       break;
    case TGSI_FILE_RESOURCE:
@@ -1624,7 +1631,9 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       return ld->getDef(0);
    case TGSI_FILE_SYSTEM_VALUE:
       assert(!ptr);
-      return mkOp1v(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
+      ld = mkOp1(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
+      ld->perPatch = info->sv[idx].patch;
+      return ld->getDef(0);
    default:
       return getArrayForFile(src.getFile(), idx2d)->load(
          sub.cur->values, idx, swz, shiftAddress(ptr));
