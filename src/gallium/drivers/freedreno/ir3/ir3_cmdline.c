@@ -93,8 +93,7 @@ static void print_usage(void)
 	printf("    --saturate-s MASK - bitmask of samplers to saturate S coord\n");
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
-	printf("    --nocp            - disable copy propagation\n");
-	printf("    --nir             - use NIR compiler\n");
+	printf("    --stream-out      - enable stream-out (aka transform feedback)\n");
 	printf("    --help            - show this message\n");
 }
 
@@ -113,6 +112,9 @@ int main(int argc, char **argv)
 	size_t size;
 
 	fd_mesa_debug |= FD_DBG_DISASM;
+
+	memset(&s, 0, sizeof(s));
+	memset(&v, 0, sizeof(v));
 
 	/* cmdline args which impact shader variant get spit out in a
 	 * comment on the first line..  a quick/dirty way to preserve
@@ -170,6 +172,24 @@ int main(int argc, char **argv)
 			continue;
 		}
 
+		if (!strcmp(argv[n], "--stream-out")) {
+			struct pipe_stream_output_info *so = &s.stream_output;
+			debug_printf(" %s", argv[n]);
+			/* TODO more dynamic config based on number of outputs, etc
+			 * rather than just hard-code for first output:
+			 */
+			so->num_outputs = 1;
+			so->stride[0] = 4;
+			so->output[0].register_index = 0;
+			so->output[0].start_component = 0;
+			so->output[0].num_components = 4;
+			so->output[0].output_buffer = 0;
+			so->output[0].dst_offset = 2;
+			so->output[0].stream = 0;
+			n++;
+			continue;
+		}
+
 		if (!strcmp(argv[n], "--help")) {
 			print_usage();
 			return 0;
@@ -193,10 +213,8 @@ int main(int argc, char **argv)
 	if (!tgsi_text_translate(ptr, toks, Elements(toks)))
 		errx(1, "could not parse `%s'", filename);
 
-	memset(&s, 0, sizeof(s));
 	s.tokens = toks;
 
-	memset(&v, 0, sizeof(v));
 	v.key = key;
 	v.shader = &s;
 
