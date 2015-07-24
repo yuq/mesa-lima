@@ -934,7 +934,7 @@ parameter_qualifier:
       if (($1.flags.q.in || $1.flags.q.out) && ($2.flags.q.in || $2.flags.q.out))
          _mesa_glsl_error(&@1, state, "duplicate in/out/inout qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable && $2.flags.q.constant)
+      if (!state->has_420pack() && $2.flags.q.constant)
          _mesa_glsl_error(&@1, state, "in/out/inout must come after const "
                                       "or precise");
 
@@ -946,7 +946,7 @@ parameter_qualifier:
       if ($2.precision != ast_precision_none)
          _mesa_glsl_error(&@1, state, "duplicate precision qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable && $2.flags.i != 0)
+      if (!state->has_420pack() && $2.flags.i != 0)
          _mesa_glsl_error(&@1, state, "precision qualifiers must come last");
 
       $$ = $2;
@@ -1458,7 +1458,7 @@ layout_qualifier_id:
          }
       }
 
-      if ((state->ARB_shading_language_420pack_enable ||
+      if ((state->has_420pack() ||
            state->has_atomic_counters() ||
            state->ARB_shader_storage_buffer_object_enable) &&
           match_layout_qualifier("binding", $1, state) == 0) {
@@ -1729,7 +1729,7 @@ type_qualifier:
       if ($2.flags.q.invariant)
          _mesa_glsl_error(&@1, state, "duplicate \"invariant\" qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable && $2.flags.q.precise)
+      if (!state->has_420pack() && $2.flags.q.precise)
          _mesa_glsl_error(&@1, state,
                           "\"invariant\" must come after \"precise\"");
 
@@ -1762,7 +1762,7 @@ type_qualifier:
       if ($2.has_interpolation())
          _mesa_glsl_error(&@1, state, "duplicate interpolation qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable &&
+      if (!state->has_420pack() &&
           ($2.flags.q.precise || $2.flags.q.invariant)) {
          _mesa_glsl_error(&@1, state, "interpolation qualifiers must come "
                           "after \"precise\" or \"invariant\"");
@@ -1782,7 +1782,7 @@ type_qualifier:
        * precise qualifiers since these are useful in ARB_separate_shader_objects.
        * There is no clear spec guidance on this either.
        */
-      if (!state->ARB_shading_language_420pack_enable && $2.has_layout())
+      if (!state->has_420pack() && $2.has_layout())
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
 
       $$ = $1;
@@ -1800,7 +1800,7 @@ type_qualifier:
                           "duplicate auxiliary storage qualifier (centroid or sample)");
       }
 
-      if (!state->ARB_shading_language_420pack_enable &&
+      if (!state->has_420pack() &&
           ($2.flags.q.precise || $2.flags.q.invariant ||
            $2.has_interpolation() || $2.has_layout())) {
          _mesa_glsl_error(&@1, state, "auxiliary storage qualifiers must come "
@@ -1818,7 +1818,7 @@ type_qualifier:
       if ($2.has_storage())
          _mesa_glsl_error(&@1, state, "duplicate storage qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable &&
+      if (!state->has_420pack() &&
           ($2.flags.q.precise || $2.flags.q.invariant || $2.has_interpolation() ||
            $2.has_layout() || $2.has_auxiliary_storage())) {
          _mesa_glsl_error(&@1, state, "storage qualifiers must come after "
@@ -1834,7 +1834,7 @@ type_qualifier:
       if ($2.precision != ast_precision_none)
          _mesa_glsl_error(&@1, state, "duplicate precision qualifier");
 
-      if (!state->ARB_shading_language_420pack_enable && $2.flags.i != 0)
+      if (!state->has_420pack() && $2.flags.i != 0)
          _mesa_glsl_error(&@1, state, "precision qualifiers must come last");
 
       $$ = $2;

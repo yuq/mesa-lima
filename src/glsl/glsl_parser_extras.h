@@ -231,6 +231,11 @@ struct _mesa_glsl_parse_state {
       return ARB_gpu_shader_fp64_enable || is_version(400, 0);
    }
 
+   bool has_420pack() const
+   {
+      return ARB_shading_language_420pack_enable || is_version(420, 0);
+   }
+
    void process_version_directive(YYLTYPE *locp, int version,
                                   const char *ident);
 
