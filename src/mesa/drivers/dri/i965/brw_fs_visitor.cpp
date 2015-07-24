@@ -473,8 +473,9 @@ fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
    if (op == ir_tg4 || offset_value.file != BAD_FILE ||
        is_high_sampler(devinfo, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
-       * put them in.  Note that for SIMD16 we're making space for two actual
-       * hardware registers here, so the emit will have to fix up for this.
+       * put them in.  Note that we're only reserving space for it in the
+       * message payload as it will be initialized implicitly by the
+       * generator.
        *
        * * ir4_tg4 needs to place its channel select in the header,
        * for interaction with ARB_texture_swizzle
