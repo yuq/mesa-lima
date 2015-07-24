@@ -420,6 +420,10 @@ can_fast_copy_blit(struct brw_context *brw,
        dst_tr_mode == INTEL_MIPTREE_TRMODE_NONE)
       return false;
 
+   /* The start pixel for Fast Copy blit should be on an OWord boundary. */
+   if ((dst_x * cpp | src_x * cpp) & 15)
+      return false;
+
    /* For all surface types buffers must be cacheline-aligned. */
    if ((dst_offset | src_offset) & 63)
       return false;
