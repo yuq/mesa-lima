@@ -104,7 +104,7 @@ lp_build_tgsi_intrinsic(
    struct lp_build_context * base = &bld_base->base;
    emit_data->output[emit_data->chan] = lp_build_intrinsic(
                base->gallivm->builder, action->intr_name,
-               emit_data->dst_type, emit_data->args, emit_data->arg_count);
+               emit_data->dst_type, emit_data->args, emit_data->arg_count, 0);
 }
 
 LLVMValueRef

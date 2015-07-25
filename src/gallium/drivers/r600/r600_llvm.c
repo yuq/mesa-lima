@@ -332,7 +332,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 			args[2] = lp_build_const_int32(base->gallivm, so->output[i].output_buffer);
 			args[3] = lp_build_const_int32(base->gallivm, ((1 << num_components) - 1) << start_component);
 			lp_build_intrinsic(base->gallivm->builder, "llvm.R600.store.stream.output",
-				LLVMVoidTypeInContext(base->gallivm->context), args, 4);
+				LLVMVoidTypeInContext(base->gallivm->context), args, 4, 0);
 		}
 	}
 

@@ -1528,7 +1528,7 @@ static void build_tbuffer_store(struct si_shader_context *shader,
 
 	lp_build_intrinsic(gallivm->builder, name,
 			   LLVMVoidTypeInContext(gallivm->context),
-			   args, Elements(args));
+			   args, Elements(args), 0);
 }
 
 static void build_tbuffer_store_dwords(struct si_shader_context *shader,
@@ -1757,7 +1757,7 @@ handle_semantic:
 			lp_build_intrinsic(base->gallivm->builder,
 					   "llvm.SI.export",
 					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9);
+					   args, 9, 0);
 		}
 
 		if (semantic_name == TGSI_SEMANTIC_CLIPDIST) {
@@ -1845,7 +1845,7 @@ handle_semantic:
 		lp_build_intrinsic(base->gallivm->builder,
 				   "llvm.SI.export",
 				   LLVMVoidTypeInContext(base->gallivm->context),
-				   pos_args[i], 9);
+				   pos_args[i], 9, 0);
 	}
 }
 
@@ -2122,7 +2122,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 				lp_build_intrinsic(base->gallivm->builder,
 						   "llvm.SI.export",
 						   LLVMVoidTypeInContext(base->gallivm->context),
-						   last_args, 9);
+						   last_args, 9, 0);
 			}
 
 			/* This instruction will be emitted at the end of the shader. */
@@ -2139,14 +2139,14 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 					lp_build_intrinsic(base->gallivm->builder,
 							   "llvm.SI.export",
 							   LLVMVoidTypeInContext(base->gallivm->context),
-							   args, 9);
+							   args, 9, 0);
 				}
 			}
 		} else {
 			lp_build_intrinsic(base->gallivm->builder,
 					   "llvm.SI.export",
 					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9);
+					   args, 9, 0);
 		}
 	}
 
@@ -2208,7 +2208,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			lp_build_intrinsic(base->gallivm->builder,
 					   "llvm.SI.export",
 					   LLVMVoidTypeInContext(base->gallivm->context),
-					   args, 9);
+					   args, 9, 0);
 		else
 			memcpy(last_args, args, sizeof(args));
 	}
@@ -2239,7 +2239,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	lp_build_intrinsic(base->gallivm->builder,
 			   "llvm.SI.export",
 			   LLVMVoidTypeInContext(base->gallivm->context),
-			   last_args, 9);
+			   last_args, 9, 0);
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,

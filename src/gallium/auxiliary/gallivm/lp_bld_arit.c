@@ -1717,7 +1717,7 @@ lp_build_round_sse41(struct lp_build_context *bld,
       args[2] = LLVMConstInt(i32t, mode, 0);
 
       res = lp_build_intrinsic(builder, intrinsic,
-                               vec_type, args, Elements(args));
+                               vec_type, args, Elements(args), 0);
 
       res = LLVMBuildExtractElement(builder, res, index0, "");
    }
@@ -3547,7 +3547,7 @@ lp_build_fpstate_get(struct gallivm_state *gallivm)
       lp_build_intrinsic(builder,
                          "llvm.x86.sse.stmxcsr",
                          LLVMVoidTypeInContext(gallivm->context),
-                         &mxcsr_ptr8, 1);
+                         &mxcsr_ptr8, 1, 0);
       return mxcsr_ptr;
    }
    return 0;
@@ -3594,6 +3594,6 @@ lp_build_fpstate_set(struct gallivm_state *gallivm,
       lp_build_intrinsic(builder,
                          "llvm.x86.sse.ldmxcsr",
                          LLVMVoidTypeInContext(gallivm->context),
-                         &mxcsr_ptr, 1);
+                         &mxcsr_ptr, 1, 0);
    }
 }
