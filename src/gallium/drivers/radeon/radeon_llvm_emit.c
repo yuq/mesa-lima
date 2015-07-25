@@ -82,6 +82,10 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 	sprintf(Str, "%1d", llvm_type);
 
 	LLVMAddTargetDependentFunctionAttr(F, "ShaderType", Str);
+
+	if (type != TGSI_PROCESSOR_COMPUTE) {
+		LLVMAddTargetDependentFunctionAttr(F, "unsafe-fp-math", "true");
+	}
 }
 
 static void init_r600_target()
