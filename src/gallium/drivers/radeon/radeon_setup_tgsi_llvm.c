@@ -760,14 +760,14 @@ static void radeon_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base
 	unsigned i;
 
 	cube_vec = lp_build_gather_values(bld_base->base.gallivm, in, 4);
-	v = build_intrinsic(builder, "llvm.AMDGPU.cube", LLVMVectorType(type, 4),
+	v = lp_build_intrinsic(builder, "llvm.AMDGPU.cube", LLVMVectorType(type, 4),
                             &cube_vec, 1, LLVMReadNoneAttribute);
 
 	for (i = 0; i < 4; ++i)
 		coords[i] = LLVMBuildExtractElement(builder, v,
 						    lp_build_const_int32(gallivm, i), "");
 
-	coords[2] = build_intrinsic(builder, "fabs",
+	coords[2] = lp_build_intrinsic(builder, "fabs",
 			type, &coords[2], 1, LLVMReadNoneAttribute);
 	coords[2] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_RCP, coords[2]);
 
@@ -1358,58 +1358,16 @@ static void emit_immediate(struct lp_build_tgsi_context * bld_base,
 	ctx->soa.num_immediates++;
 }
 
-LLVMValueRef
-build_intrinsic(LLVMBuilderRef builder,
-                   const char *name,
-                   LLVMTypeRef ret_type,
-                   LLVMValueRef *args,
-                   unsigned num_args,
-                   LLVMAttribute attr)
-{
-   LLVMModuleRef module = LLVMGetGlobalParent(LLVMGetBasicBlockParent(LLVMGetInsertBlock(builder)));
-   LLVMValueRef function;
-
-   function = LLVMGetNamedFunction(module, name);
-   if(!function) {
-      LLVMTypeRef arg_types[LP_MAX_FUNC_ARGS];
-      unsigned i;
-
-      assert(num_args <= LP_MAX_FUNC_ARGS);
-
-      for(i = 0; i < num_args; ++i) {
-         assert(args[i]);
-         arg_types[i] = LLVMTypeOf(args[i]);
-      }
-
-      function = lp_declare_intrinsic(module, name, ret_type, arg_types, num_args);
-
-      if (attr)
-          LLVMAddFunctionAttr(function, attr);
-   }
-
-   return LLVMBuildCall(builder, function, args, num_args, "");
-}
-
-static void build_tgsi_intrinsic(
- const struct lp_build_tgsi_action * action,
- struct lp_build_tgsi_context * bld_base,
- struct lp_build_emit_data * emit_data,
- LLVMAttribute attr)
-{
-   struct lp_build_context * base = &bld_base->base;
-   emit_data->output[emit_data->chan] = build_intrinsic(
-               base->gallivm->builder, action->intr_name,
-               emit_data->dst_type, emit_data->args,
-               emit_data->arg_count, attr);
-}
-
 void
-build_tgsi_intrinsic_nomem(
- const struct lp_build_tgsi_action * action,
- struct lp_build_tgsi_context * bld_base,
- struct lp_build_emit_data * emit_data)
+build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
+			   struct lp_build_tgsi_context *bld_base,
+			   struct lp_build_emit_data *emit_data)
 {
-	build_tgsi_intrinsic(action, bld_base, emit_data, LLVMReadNoneAttribute);
+	struct lp_build_context * base = &bld_base->base;
+	emit_data->output[emit_data->chan] =
+		lp_build_intrinsic(base->gallivm->builder, action->intr_name,
+				   emit_data->dst_type, emit_data->args,
+				   emit_data->arg_count, LLVMReadNoneAttribute);
 }
 
 static void emit_bfi(const struct lp_build_tgsi_action * action,
@@ -1465,7 +1423,7 @@ static void emit_lsb(const struct lp_build_tgsi_action * action,
 	};
 
 	emit_data->output[emit_data->chan] =
-		build_intrinsic(gallivm->builder, "llvm.cttz.i32",
+		lp_build_intrinsic(gallivm->builder, "llvm.cttz.i32",
 				emit_data->dst_type, args, Elements(args),
 				LLVMReadNoneAttribute);
 }
@@ -1484,7 +1442,7 @@ static void emit_umsb(const struct lp_build_tgsi_action * action,
 	};
 
 	LLVMValueRef msb =
-		build_intrinsic(builder, "llvm.ctlz.i32",
+		lp_build_intrinsic(builder, "llvm.ctlz.i32",
 				emit_data->dst_type, args, Elements(args),
 				LLVMReadNoneAttribute);
 
@@ -1511,7 +1469,7 @@ static void emit_imsb(const struct lp_build_tgsi_action * action,
 	LLVMValueRef arg = emit_data->args[0];
 
 	LLVMValueRef msb =
-		build_intrinsic(builder, "llvm.AMDGPU.flbit.i32",
+		lp_build_intrinsic(builder, "llvm.AMDGPU.flbit.i32",
 				emit_data->dst_type, &arg, 1,
 				LLVMReadNoneAttribute);
 

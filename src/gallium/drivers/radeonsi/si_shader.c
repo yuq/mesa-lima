@@ -457,7 +457,7 @@ static void declare_input_vs(
 	args[0] = t_list;
 	args[1] = attribute_offset;
 	args[2] = buffer_index;
-	input = build_intrinsic(gallivm->builder,
+	input = lp_build_intrinsic(gallivm->builder,
 		"llvm.SI.vs.load.input", vec4_type, args, 3,
 		LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
@@ -830,7 +830,7 @@ static LLVMValueRef fetch_input_gs(
 	args[8] = uint->zero; /* TFE */
 
 	return LLVMBuildBitCast(gallivm->builder,
-				build_intrinsic(gallivm->builder,
+				lp_build_intrinsic(gallivm->builder,
 						"llvm.SI.buffer.load.dword.i32.i32",
 						i32, args, 9,
 						LLVMReadOnlyAttribute | LLVMNoUnwindAttribute),
@@ -974,12 +974,12 @@ static void declare_input_fs(
 
 			args[0] = llvm_chan;
 			args[1] = attr_number;
-			front = build_intrinsic(gallivm->builder, intr_name,
+			front = lp_build_intrinsic(gallivm->builder, intr_name,
 						input_type, args, args[3] ? 4 : 3,
 						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
 			args[1] = back_attr_number;
-			back = build_intrinsic(gallivm->builder, intr_name,
+			back = lp_build_intrinsic(gallivm->builder, intr_name,
 					       input_type, args, args[3] ? 4 : 3,
 					       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 
@@ -1000,7 +1000,7 @@ static void declare_input_fs(
 		args[2] = params;
 		args[3] = interp_param;
 		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			build_intrinsic(gallivm->builder, intr_name,
+			lp_build_intrinsic(gallivm->builder, intr_name,
 					input_type, args, args[3] ? 4 : 3,
 					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
@@ -1018,7 +1018,7 @@ static void declare_input_fs(
 			args[2] = params;
 			args[3] = interp_param;
 			radeon_bld->inputs[soa_index] =
-				build_intrinsic(gallivm->builder, intr_name,
+				lp_build_intrinsic(gallivm->builder, intr_name,
 						input_type, args, args[3] ? 4 : 3,
 						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 		}
@@ -1039,7 +1039,7 @@ static LLVMValueRef buffer_load_const(LLVMBuilderRef builder, LLVMValueRef resou
 {
 	LLVMValueRef args[2] = {resource, offset};
 
-	return build_intrinsic(builder, "llvm.SI.load.const", return_type, args, 2,
+	return lp_build_intrinsic(builder, "llvm.SI.load.const", return_type, args, 2,
 			       LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 }
 
@@ -1290,7 +1290,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			args[0] = values[2 * chan];
 			args[1] = values[2 * chan + 1];
 			args[chan + 5] =
-				build_intrinsic(base->gallivm->builder,
+				lp_build_intrinsic(base->gallivm->builder,
 						"llvm.SI.packf16",
 						LLVMInt32TypeInContext(base->gallivm->context),
 						args, 2,
@@ -1372,12 +1372,12 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 					lp_build_const_float(gallivm, 1.0f),
 					lp_build_const_float(gallivm, -1.0f));
 
-		build_intrinsic(gallivm->builder,
+		lp_build_intrinsic(gallivm->builder,
 				"llvm.AMDGPU.kill",
 				LLVMVoidTypeInContext(gallivm->context),
 				&arg, 1, 0);
 	} else {
-		build_intrinsic(gallivm->builder,
+		lp_build_intrinsic(gallivm->builder,
 				"llvm.AMDGPU.kilp",
 				LLVMVoidTypeInContext(gallivm->context),
 				NULL, 0, 0);
@@ -1398,7 +1398,7 @@ static void si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *bld_base
 				SI_PARAM_SAMPLE_COVERAGE);
 	coverage = bitcast(bld_base, TGSI_TYPE_SIGNED, coverage);
 
-	coverage = build_intrinsic(gallivm->builder, "llvm.ctpop.i32",
+	coverage = lp_build_intrinsic(gallivm->builder, "llvm.ctpop.i32",
 				   bld_base->int_bld.elem_type,
 				   &coverage, 1, LLVMReadNoneAttribute);
 
@@ -1570,7 +1570,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *shader,
 	LLVMValueRef so_vtx_count =
 		unpack_param(shader, shader->param_streamout_config, 16, 7);
 
-	LLVMValueRef tid = build_intrinsic(builder, "llvm.SI.tid", i32,
+	LLVMValueRef tid = lp_build_intrinsic(builder, "llvm.SI.tid", i32,
 					   NULL, 0, LLVMReadNoneAttribute);
 
 	/* can_emit = tid < so_vtx_count; */
@@ -2031,7 +2031,7 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 
 	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_NOP | SENDMSG_GS_DONE);
 	args[1] = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
-	build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
+	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			LLVMVoidTypeInContext(gallivm->context), args, 2,
 			LLVMNoUnwindAttribute);
 }
@@ -2678,7 +2678,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 				emit_data->inst->Texture.NumOffsets > 0 : false;
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		emit_data->output[emit_data->chan] = build_intrinsic(
+		emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			base->gallivm->builder,
 			"llvm.SI.vs.load.input", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
@@ -2727,7 +2727,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 			is_shadow ? ".c" : "", infix, has_offset ? ".o" : "",
 			LLVMGetVectorSize(LLVMTypeOf(emit_data->args[0])));
 
-		emit_data->output[emit_data->chan] = build_intrinsic(
+		emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			base->gallivm->builder, intr_name, emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
 			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
@@ -2774,7 +2774,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 		sprintf(intr_name, "%s.v%ui32", name,
 			LLVMGetVectorSize(LLVMTypeOf(emit_data->args[0])));
 
-		emit_data->output[emit_data->chan] = build_intrinsic(
+		emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			base->gallivm->builder, intr_name, emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
 			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
@@ -2918,7 +2918,7 @@ static void si_llvm_emit_ddxy(
 	i32 = LLVMInt32TypeInContext(gallivm->context);
 
 	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = build_intrinsic(gallivm->builder, "llvm.SI.tid", i32,
+	indices[1] = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", i32,
 				     NULL, 0, LLVMReadNoneAttribute);
 	store_ptr = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
 				 indices, 2, "");
@@ -2994,8 +2994,8 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 	i32 = LLVMInt32TypeInContext(gallivm->context);
 
 	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = build_intrinsic(gallivm->builder, "llvm.SI.tid", i32,
-				     NULL, 0, LLVMReadNoneAttribute);
+	indices[1] = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid", i32,
+					NULL, 0, LLVMReadNoneAttribute);
 	store_ptr = LLVMBuildGEP(gallivm->builder, si_shader_ctx->lds,
 				 indices, 2, "");
 
@@ -3195,9 +3195,9 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 		args[3] = interp_param;
 
 		emit_data->output[chan] =
-			build_intrinsic(gallivm->builder, intr_name,
-					input_type, args, args[3] ? 4 : 3,
-					LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+			lp_build_intrinsic(gallivm->builder, intr_name,
+					   input_type, args, args[3] ? 4 : 3,
+					   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 	}
 }
 
@@ -3254,8 +3254,8 @@ static void si_llvm_emit_vertex(
 			       lp_build_const_float(gallivm, 1.0f),
 			       lp_build_const_float(gallivm, -1.0f));
 
-	build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-			LLVMVoidTypeInContext(gallivm->context), &kill, 1, 0);
+	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
+			   LLVMVoidTypeInContext(gallivm->context), &kill, 1, 0);
 
 	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
@@ -3289,7 +3289,7 @@ static void si_llvm_emit_vertex(
 	/* Signal vertex emission */
 	args[0] = lp_build_const_int32(gallivm, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
-	build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
+	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			LLVMVoidTypeInContext(gallivm->context), args, 2,
 			LLVMNoUnwindAttribute);
 }
@@ -3309,7 +3309,7 @@ static void si_llvm_emit_primitive(
 	stream = si_llvm_get_stream(bld_base, emit_data);
 	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_CUT | SENDMSG_GS | (stream << 8));
 	args[1] = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, SI_PARAM_GS_WAVE_ID);
-	build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
+	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			LLVMVoidTypeInContext(gallivm->context), args, 2,
 			LLVMNoUnwindAttribute);
 }
@@ -3320,7 +3320,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 {
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
-	build_intrinsic(gallivm->builder, "llvm.AMDGPU.barrier.local",
+	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.barrier.local",
 			LLVMVoidTypeInContext(gallivm->context), NULL, 0,
 			LLVMNoUnwindAttribute);
 }
@@ -3907,7 +3907,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 			outputs[i].values[chan] =
 				LLVMBuildBitCast(gallivm->builder,
-						 build_intrinsic(gallivm->builder,
+						 lp_build_intrinsic(gallivm->builder,
 								 "llvm.SI.buffer.load.dword.i32.i32",
 								 LLVMInt32TypeInContext(gallivm->context),
 								 args, 9,

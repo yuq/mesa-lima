@@ -194,14 +194,6 @@ unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan);
 
 void radeon_llvm_finalize_module(struct radeon_llvm_context * ctx);
 
-LLVMValueRef
-build_intrinsic(LLVMBuilderRef builder,
-		const char *name,
-		LLVMTypeRef ret_type,
-		LLVMValueRef *args,
-		unsigned num_args,
-		LLVMAttribute attr);
-
 void
 build_tgsi_intrinsic_nomem(
 		const struct lp_build_tgsi_action * action,

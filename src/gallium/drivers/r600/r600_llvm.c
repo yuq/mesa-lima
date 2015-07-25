@@ -84,7 +84,7 @@ static void llvm_load_system_value(
 #else
 	LLVMValueRef reg = lp_build_const_int32(
 			ctx->soa.bld_base.base.gallivm, chan);
-	ctx->system_values[index] = build_intrinsic(
+	ctx->system_values[index] = lp_build_intrinsic(
 			ctx->soa.bld_base.base.gallivm->builder,
 			"llvm.R600.load.input",
 			ctx->soa.bld_base.base.elem_type, &reg, 1,
@@ -111,9 +111,9 @@ llvm_load_input_vector(
 			Args[ArgCount++] = LLVMBuildExtractElement(ctx->gallivm.builder, IJIndex,
 				lp_build_const_int32(&(ctx->gallivm), 2 * (ijregs % 2) + 1), "");
 			LLVMValueRef HalfVec[2] = {
-				build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.xy",
+				lp_build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.xy",
 					VecType, Args, ArgCount, LLVMReadNoneAttribute),
-				build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.zw",
+				lp_build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.zw",
 					VecType, Args, ArgCount, LLVMReadNoneAttribute)
 			};
 			LLVMValueRef MaskInputs[4] = {
@@ -127,7 +127,7 @@ llvm_load_input_vector(
 				Mask, "");
 		} else {
 			VecType = LLVMVectorType(ctx->soa.bld_base.base.elem_type, 4);
-			return build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.const",
+			return lp_build_intrinsic(ctx->gallivm.builder, "llvm.R600.interp.const",
 				VecType, Args, ArgCount, LLVMReadNoneAttribute);
 		}
 }
@@ -153,7 +153,7 @@ llvm_load_input_helper(
 		arg_count = 1;
 	}
 
-	return build_intrinsic(bb->gallivm->builder, intrinsic,
+	return lp_build_intrinsic(bb->gallivm->builder, intrinsic,
 		bb->elem_type, &arg[0], arg_count, LLVMReadNoneAttribute);
 }
 #endif
@@ -356,7 +356,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 				args[0] = output;
 				args[1] = lp_build_const_int32(base->gallivm, next_pos++);
 				args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_POS);
-				build_intrinsic(
+				lp_build_intrinsic(
 					base->gallivm->builder,
 					"llvm.R600.store.swizzle",
 					LLVMVoidTypeInContext(base->gallivm->context),
@@ -373,7 +373,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 						LLVMValueRef base_vector = llvm_load_const_buffer(bld_base, offset, CONSTANT_BUFFER_1_ADDR_SPACE);
 						args[0] = output;
 						args[1] = base_vector;
-						adjusted_elements[chan] = build_intrinsic(base->gallivm->builder,
+						adjusted_elements[chan] = lp_build_intrinsic(base->gallivm->builder,
 							"llvm.AMDGPU.dp4", bld_base->base.elem_type,
 							args, 2, LLVMReadNoneAttribute);
 					}
@@ -381,7 +381,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 						adjusted_elements, 4);
 					args[1] = lp_build_const_int32(base->gallivm, next_pos++);
 					args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_POS);
-					build_intrinsic(
+					lp_build_intrinsic(
 						base->gallivm->builder,
 						"llvm.R600.store.swizzle",
 						LLVMVoidTypeInContext(base->gallivm->context),
@@ -394,14 +394,14 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 				args[0] = output;
 				args[1] = lp_build_const_int32(base->gallivm, next_pos++);
 				args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_POS);
-				build_intrinsic(
+				lp_build_intrinsic(
 					base->gallivm->builder,
 					"llvm.R600.store.swizzle",
 					LLVMVoidTypeInContext(base->gallivm->context),
 					args, 3, 0);
 				args[1] = lp_build_const_int32(base->gallivm, next_param++);
 				args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PARAM);
-				build_intrinsic(
+				lp_build_intrinsic(
 					base->gallivm->builder,
 					"llvm.R600.store.swizzle",
 					LLVMVoidTypeInContext(base->gallivm->context),
@@ -418,7 +418,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 				args[0] = lp_build_gather_values(base->gallivm, elements, 4);
 				args[1] = lp_build_const_int32(base->gallivm, next_param++);
 				args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PARAM);
-				build_intrinsic(
+				lp_build_intrinsic(
 					base->gallivm->builder,
 					"llvm.R600.store.swizzle",
 					LLVMVoidTypeInContext(base->gallivm->context),
@@ -430,7 +430,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 				args[0] = output;
 				args[1] = lp_build_const_int32(base->gallivm, next_param++);
 				args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PARAM);
-				build_intrinsic(
+				lp_build_intrinsic(
 					base->gallivm->builder,
 					"llvm.R600.store.swizzle",
 					LLVMVoidTypeInContext(base->gallivm->context),
@@ -449,7 +449,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 						for (unsigned j = 0; j < ctx->color_buffer_count; j++) {
 							args[1] = lp_build_const_int32(base->gallivm, j);
 							args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL);
-							build_intrinsic(
+							lp_build_intrinsic(
 								base->gallivm->builder,
 								"llvm.R600.store.swizzle",
 								LLVMVoidTypeInContext(base->gallivm->context),
@@ -458,7 +458,7 @@ static void llvm_emit_epilogue(struct lp_build_tgsi_context * bld_base)
 					} else {
 						args[1] = lp_build_const_int32(base->gallivm, color_count++);
 						args[2] = lp_build_const_int32(base->gallivm, V_SQ_CF_ALLOC_EXPORT_WORD0_SQ_EXPORT_PIXEL);
-						build_intrinsic(
+						lp_build_intrinsic(
 							base->gallivm->builder,
 							"llvm.R600.store.swizzle",
 							LLVMVoidTypeInContext(base->gallivm->context),
@@ -543,7 +543,7 @@ static void llvm_emit_tex(
 		case TGSI_OPCODE_TXF: {
 			args[0] = LLVMBuildExtractElement(gallivm->builder, emit_data->args[0], lp_build_const_int32(gallivm, 0), "");
 			args[1] = lp_build_const_int32(gallivm, R600_MAX_CONST_BUFFERS);
-			emit_data->output[0] = build_intrinsic(gallivm->builder,
+			emit_data->output[0] = lp_build_intrinsic(gallivm->builder,
 							"llvm.R600.load.texbuf",
 							emit_data->dst_type, args, 2, LLVMReadNoneAttribute);
 			if (ctx->chip_class >= EVERGREEN)
@@ -658,7 +658,7 @@ static void llvm_emit_tex(
 				lp_build_const_int32(gallivm, 1),
 				lp_build_const_int32(gallivm, 1)
 			};
-			LLVMValueRef ptr = build_intrinsic(gallivm->builder,
+			LLVMValueRef ptr = lp_build_intrinsic(gallivm->builder,
 				"llvm.R600.ldptr",
 				emit_data->dst_type, ldptr_args, 10, LLVMReadNoneAttribute);
 			LLVMValueRef Tmp = LLVMBuildExtractElement(gallivm->builder, args[0],
@@ -679,7 +679,7 @@ static void llvm_emit_tex(
 		}
 	}
 
-	emit_data->output[0] = build_intrinsic(gallivm->builder,
+	emit_data->output[0] = lp_build_intrinsic(gallivm->builder,
 					action->intr_name,
 					emit_data->dst_type, args, c, LLVMReadNoneAttribute);
 
