@@ -102,6 +102,8 @@
      NINE_MAX_CONST_I * 4 * sizeof(int))
 
 
+#define NINE_MAX_TEXTURE_STAGES 8
+
 #define NINE_MAX_LIGHTS        65536
 #define NINE_MAX_LIGHTS_ACTIVE 8
 
@@ -156,7 +158,7 @@ struct nine_state
     int    ps_const_i[NINE_MAX_CONST_I][4];
     BOOL   ps_const_b[NINE_MAX_CONST_B];
     float *ps_lconstf_temp;
-    uint32_t bumpmap_vars[48];
+    uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
 
     struct {
         void *vs;
@@ -191,7 +193,7 @@ struct nine_state
     struct {
         struct {
             uint32_t group;
-            uint32_t tex_stage[NINE_MAX_SAMPLERS][(NINED3DTSS_COUNT + 31) / 32];
+            uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32];
             uint32_t transform[(NINED3DTS_COUNT + 31) / 32];
         } changed;
 
@@ -208,7 +210,7 @@ struct nine_state
 
         D3DMATERIAL9 material;
 
-        DWORD tex_stage[NINE_MAX_SAMPLERS][NINED3DTSS_COUNT];
+        DWORD tex_stage[NINE_MAX_TEXTURE_STAGES][NINED3DTSS_COUNT];
     } ff;
 
     uint32_t commit;
