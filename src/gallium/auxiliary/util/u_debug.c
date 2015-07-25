@@ -256,12 +256,12 @@ static boolean str_has_option(const char *str, const char *name)
    return FALSE;
 }
 
-unsigned long
+uint64_t
 debug_get_flags_option(const char *name, 
                        const struct debug_named_value *flags,
-                       unsigned long dfault)
+                       uint64_t dfault)
 {
-   unsigned long result;
+   uint64_t result;
    const char *str;
    const struct debug_named_value *orig = flags;
    unsigned namealign = 0;
@@ -276,7 +276,7 @@ debug_get_flags_option(const char *name,
          namealign = MAX2(namealign, strlen(flags->name));
       for (flags = orig; flags->name; ++flags)
          _debug_printf("| %*s [0x%0*lx]%s%s\n", namealign, flags->name,
-                      (int)sizeof(unsigned long)*CHAR_BIT/4, flags->value,
+                      (int)sizeof(uint64_t)*CHAR_BIT/4, flags->value,
                       flags->desc ? " " : "", flags->desc ? flags->desc : "");
    }
    else {
