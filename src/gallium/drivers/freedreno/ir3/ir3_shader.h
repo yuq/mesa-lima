@@ -34,6 +34,11 @@
 #include "ir3.h"
 #include "disasm.h"
 
+/* driver param indices: */
+enum ir3_driver_param {
+	IR3_DP_VTXID_BASE = 0,
+};
+
 /* internal semantic used for passing vtxcnt to vertex shader to
  * implement transform feedback:
  */

@@ -548,10 +548,7 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		uint32_t offset = v->first_driver_param + 4;  /* driver params after UBOs */
 		if (v->constlen >= offset) {
 			uint32_t vertex_params[4] = {
-				info->indexed ? info->index_bias : info->start,
-				0,
-				0,
-				0
+				[IR3_DP_VTXID_BASE] = info->indexed ? info->index_bias : info->start,
 			};
 
 			fd_wfi(ctx, ring);

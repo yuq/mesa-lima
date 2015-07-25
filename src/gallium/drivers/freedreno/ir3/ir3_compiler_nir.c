@@ -261,12 +261,25 @@ compile_init(struct ir3_compiler *compiler,
 
 	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
 
-	/* one (vec4) slot for vertex id base: */
-	if (so->type == SHADER_VERTEX)
-		so->first_immediate++;
+	/* Layout of constant registers:
+	 *
+	 *    num_uniform * vec4  -  user consts
+	 *    4 * vec4            -  UBO addresses
+	 *    if (vertex shader) {
+	 *        1 * vec4        -  driver params (IR3_DP_*)
+	 *    }
+	 *
+	 * TODO this could be made more dynamic, to at least skip sections
+	 * that we don't need..
+	 */
 
 	/* reserve 4 (vec4) slots for ubo base addresses: */
 	so->first_immediate += 4;
+
+	if (so->type == SHADER_VERTEX) {
+		/* one (vec4) slot for driver params (see ir3_driver_param): */
+		so->first_immediate++;
+	}
 
 	return ctx;
 }
@@ -809,6 +822,14 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 	case 3: /* .w */
 		return create_immed(block, fui(1.0));
 	}
+}
+
+static struct ir3_instruction *
+create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
+{
+	/* first four vec4 sysval's reserved for UBOs: */
+	unsigned r = regid(ctx->so->first_driver_param + 4, dp);
+	return create_uniform(ctx, r);
 }
 
 /* helper for instructions that produce multiple consecutive scalar
@@ -1415,9 +1436,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_base_vertex:
 		if (!ctx->basevertex) {
-			/* first four vec4 sysval's reserved for UBOs: */
-			unsigned r = regid(ctx->so->first_driver_param + 4, 0);
-			ctx->basevertex = create_uniform(ctx, r);
+			ctx->basevertex = create_driver_param(ctx, IR3_DP_VTXID_BASE);
 			add_sysval_input(ctx, TGSI_SEMANTIC_BASEVERTEX,
 					ctx->basevertex);
 		}
