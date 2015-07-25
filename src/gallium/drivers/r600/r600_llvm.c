@@ -783,7 +783,6 @@ LLVMModuleRef r600_tgsi_llvm(
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = llvm_fetch_const;
 	bld_base->emit_prologue = llvm_emit_prologue;
 	bld_base->emit_epilogue = llvm_emit_epilogue;
-	ctx->userdata = ctx;
 	ctx->load_input = llvm_load_input;
 	ctx->load_system_value = llvm_load_system_value;
 

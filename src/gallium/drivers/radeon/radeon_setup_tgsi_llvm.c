@@ -918,14 +918,6 @@ static void tex_fetch_args(
 	struct lp_build_tgsi_context * bld_base,
 	struct lp_build_emit_data * emit_data)
 {
-	/* XXX: lp_build_swizzle_aos() was failing with wrong arg types,
-	 * when we used CHAN_ALL.  We should be able to get this to work,
-	 * but for now we will swizzle it ourselves
-	emit_data->args[0] = lp_build_emit_fetch(bld_base, emit_data->inst,
-						 0, CHAN_ALL);
-
-	*/
-
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 
 	LLVMValueRef coords[5];
@@ -1508,12 +1500,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 						ctx->gallivm.context);
 	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
 
-	ctx->store_output_intr = "llvm.AMDGPU.store.output.";
-	ctx->swizzle_intr = "llvm.AMDGPU.swizzle";
 	struct lp_build_tgsi_context * bld_base = &ctx->soa.bld_base;
 
-	/* XXX: We need to revisit this.I think the correct way to do this is
-	 * to use length = 4 here and use the elem_bld for everything. */
 	type.floating = TRUE;
 	type.fixed = FALSE;
 	type.sign = TRUE;
@@ -1545,8 +1533,6 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 
 	/* Allocate outputs */
 	ctx->soa.outputs = ctx->outputs;
-
-	/* XXX: Is there a better way to initialize all this ? */
 
 	lp_set_default_actions(bld_base);
 

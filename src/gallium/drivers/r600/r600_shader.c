@@ -2091,7 +2091,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		radeon_llvm_ctx.chip_class = ctx.bc->chip_class;
 		radeon_llvm_ctx.fs_color_all = shader->fs_write_all && (rscreen->b.chip_class >= EVERGREEN);
 		radeon_llvm_ctx.stream_outputs = &so;
-		radeon_llvm_ctx.clip_vertex = ctx.cv_output;
 		radeon_llvm_ctx.alpha_to_one = key.alpha_to_one;
 		radeon_llvm_ctx.has_compressed_msaa_texturing =
 			ctx.bc->has_compressed_msaa_texturing;

@@ -58,7 +58,6 @@ struct radeon_llvm_context {
 	unsigned type;
 	unsigned face_gpr;
 	unsigned two_side;
-	unsigned clip_vertex;
 	unsigned inputs_count;
 	struct r600_shader_io * r600_inputs;
 	struct r600_shader_io * r600_outputs;
@@ -72,21 +71,6 @@ struct radeon_llvm_context {
 
 	/*=== Front end configuration ===*/
 
-	/* Special Intrinsics */
-
-	/** Write to an output register: float store_output(float, i32) */
-	const char * store_output_intr;
-
-	/** Swizzle a vector value: <4 x float> swizzle(<4 x float>, i32)
-	 * The swizzle is an unsigned integer that encodes a TGSI_SWIZZLE_* value
-	 * in 2-bits.
-	 * Swizzle{0-1} = X Channel
-	 * Swizzle{2-3} = Y Channel
-	 * Swizzle{4-5} = Z Channel
-	 * Swizzle{6-7} = W Channel
-	 */
-	const char * swizzle_intr;
-
 	/* Instructions that are not described by any of the TGSI opcodes. */
 
 	/** This function is responsible for initilizing the inputs array and will be
@@ -99,9 +83,6 @@ struct radeon_llvm_context {
 	void (*load_system_value)(struct radeon_llvm_context *,
 			unsigned index,
 			const struct tgsi_full_declaration *decl);
-
-	/** User data to use with the callbacks */
-	void * userdata;
 
 	/** This array contains the input values for the shader.  Typically these
 	  * values will be in the form of a target intrinsic that will inform the
