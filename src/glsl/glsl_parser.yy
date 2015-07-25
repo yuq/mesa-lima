@@ -1166,7 +1166,8 @@ layout_qualifier_id:
       /* Layout qualifiers for AMD/ARB_conservative_depth. */
       if (!$$.flags.i &&
           (state->AMD_conservative_depth_enable ||
-           state->ARB_conservative_depth_enable)) {
+           state->ARB_conservative_depth_enable ||
+           state->is_version(420, 0))) {
          if (match_layout_qualifier($1, "depth_any", state) == 0) {
             $$.flags.q.depth_any = 1;
          } else if (match_layout_qualifier($1, "depth_greater", state) == 0) {
@@ -1460,7 +1461,7 @@ layout_qualifier_id:
 
       if ((state->has_420pack() ||
            state->has_atomic_counters() ||
-           state->ARB_shader_storage_buffer_object_enable) &&
+           state->has_shader_storage_buffer_objects()) &&
           match_layout_qualifier("binding", $1, state) == 0) {
          $$.flags.q.explicit_binding = 1;
          $$.binding = $3;
