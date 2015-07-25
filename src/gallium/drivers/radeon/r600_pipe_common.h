@@ -82,6 +82,7 @@
 #define DBG_TCS			(1 << 10)
 #define DBG_TES			(1 << 11)
 #define DBG_NO_IR		(1 << 12)
+#define DBG_NO_TGSI		(1 << 13)
 /* Bits 21-31 are reserved for the r600g driver. */
 /* features */
 #define DBG_NO_ASYNC_DMA	(1llu << 32)

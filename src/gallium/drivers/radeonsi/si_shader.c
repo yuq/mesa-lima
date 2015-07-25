@@ -4008,7 +4008,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
 	 * conversion fails. */
-	if (dump) {
+	if (dump && !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
 		si_dump_key(sel->type, &shader->key);
 		tgsi_dump(tokens, 0);
 		si_dump_streamout(&sel->so);
