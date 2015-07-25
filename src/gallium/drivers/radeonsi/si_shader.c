@@ -3836,14 +3836,15 @@ int si_compile_llvm(struct si_screen *sscreen, struct si_shader *shader,
 		    LLVMTargetMachineRef tm, LLVMModuleRef mod)
 {
 	int r = 0;
-	bool dump = r600_can_dump_shader(&sscreen->b,
-			shader->selector ? shader->selector->tokens : NULL);
-	r = radeon_llvm_compile(mod, &shader->binary,
-		r600_get_llvm_processor_name(sscreen->b.family), dump, tm);
+	bool dump_asm = r600_can_dump_shader(&sscreen->b,
+				shader->selector ? shader->selector->tokens : NULL);
+	bool dump_ir = dump_asm && !(sscreen->b.debug_flags & DBG_NO_IR);
 
-	if (r) {
+	r = radeon_llvm_compile(mod, &shader->binary,
+		r600_get_llvm_processor_name(sscreen->b.family), dump_ir, dump_asm, tm);
+	if (r)
 		return r;
-	}
+
 	r = si_shader_binary_read(sscreen, shader);
 
 	FREE(shader->binary.config);

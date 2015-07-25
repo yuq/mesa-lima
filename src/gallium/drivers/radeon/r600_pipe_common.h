@@ -81,17 +81,18 @@
 #define DBG_CS			(1 << 9)
 #define DBG_TCS			(1 << 10)
 #define DBG_TES			(1 << 11)
+#define DBG_NO_IR		(1 << 12)
+/* Bits 21-31 are reserved for the r600g driver. */
 /* features */
-#define DBG_NO_ASYNC_DMA	(1 << 12)
-#define DBG_NO_HYPERZ		(1 << 13)
-#define DBG_NO_DISCARD_RANGE	(1 << 14)
-#define DBG_NO_2D_TILING	(1 << 15)
-#define DBG_NO_TILING		(1 << 16)
-#define DBG_SWITCH_ON_EOP	(1 << 17)
-#define DBG_FORCE_DMA		(1 << 18)
-#define DBG_PRECOMPILE		(1 << 19)
-#define DBG_INFO		(1 << 20)
-/* The maximum allowed bit is 20. */
+#define DBG_NO_ASYNC_DMA	(1llu << 32)
+#define DBG_NO_HYPERZ		(1llu << 33)
+#define DBG_NO_DISCARD_RANGE	(1llu << 34)
+#define DBG_NO_2D_TILING	(1llu << 35)
+#define DBG_NO_TILING		(1llu << 36)
+#define DBG_SWITCH_ON_EOP	(1llu << 37)
+#define DBG_FORCE_DMA		(1llu << 38)
+#define DBG_PRECOMPILE		(1llu << 39)
+#define DBG_INFO		(1llu << 40)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -272,7 +273,7 @@ struct r600_common_screen {
 	enum chip_class			chip_class;
 	struct radeon_info		info;
 	struct r600_tiling_info		tiling_info;
-	unsigned			debug_flags;
+	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
 

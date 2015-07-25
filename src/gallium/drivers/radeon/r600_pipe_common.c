@@ -335,6 +335,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "cs", DBG_CS, "Print compute shaders" },
 	{ "tcs", DBG_TCS, "Print tessellation control shaders" },
 	{ "tes", DBG_TES, "Print tessellation evaluation shaders" },
+	{ "noir", DBG_NO_IR, "Don't print the LLVM IR"},
 
 	/* features */
 	{ "nodma", DBG_NO_ASYNC_DMA, "Disable asynchronous DMA" },

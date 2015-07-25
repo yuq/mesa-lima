@@ -148,7 +148,8 @@ static void radeonDiagnosticHandler(LLVMDiagnosticInfoRef di, void *context)
  * @returns 0 for success, 1 for failure
  */
 unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
-			  const char *gpu_family, unsigned dump, LLVMTargetMachineRef tm)
+			     const char *gpu_family, bool dump_ir, bool dump_asm,
+			     LLVMTargetMachineRef tm)
 {
 
 	char cpu[CPU_STRING_LEN];
@@ -171,17 +172,15 @@ unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binar
 		}
 		strncpy(cpu, gpu_family, CPU_STRING_LEN);
 		memset(fs, 0, sizeof(fs));
-		if (dump) {
+		if (dump_asm)
 			strncpy(fs, "+DumpCode", FS_STRING_LEN);
-		}
 		tm = LLVMCreateTargetMachine(target, triple, cpu, fs,
 				  LLVMCodeGenLevelDefault, LLVMRelocDefault,
 						  LLVMCodeModelDefault);
 		dispose_tm = true;
 	}
-	if (dump) {
+	if (dump_ir)
 		LLVMDumpModule(M);
-	}
 	/* Setup Diagnostic Handler*/
 	llvm_ctx = LLVMGetModuleContext(M);
 
