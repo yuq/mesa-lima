@@ -2229,7 +2229,7 @@ _mesa_GetSubroutineIndex(GLuint program, GLenum shadertype,
    }
 
    resource_type = _mesa_shader_stage_to_subroutine(stage);
-   res = _mesa_program_resource_find_name(shProg, resource_type, name);
+   res = _mesa_program_resource_find_name(shProg, resource_type, name, NULL);
    if (!res) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s", api_name);
      return -1;

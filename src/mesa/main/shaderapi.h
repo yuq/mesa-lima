@@ -232,7 +232,8 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
 
 extern struct gl_program_resource *
 _mesa_program_resource_find_name(struct gl_shader_program *shProg,
-                                 GLenum programInterface, const char *name);
+                                 GLenum programInterface, const char *name,
+                                 unsigned *array_index);
 
 extern struct gl_program_resource *
 _mesa_program_resource_find_index(struct gl_shader_program *shProg,

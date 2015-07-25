@@ -229,6 +229,7 @@ _mesa_GetProgramResourceIndex(GLuint program, GLenum programInterface,
                               const GLchar *name)
 {
    GET_CURRENT_CONTEXT(ctx);
+   unsigned array_index = 0;
    struct gl_program_resource *res;
    struct gl_shader_program *shProg =
       _mesa_lookup_shader_program_err(ctx, program,
@@ -268,13 +269,10 @@ _mesa_GetProgramResourceIndex(GLuint program, GLenum programInterface,
    case GL_PROGRAM_OUTPUT:
    case GL_UNIFORM:
    case GL_TRANSFORM_FEEDBACK_VARYING:
-      /* Validate name syntax for array variables */
-      if (!valid_program_resource_index_name(name))
-         return GL_INVALID_INDEX;
-      /* fall-through */
    case GL_UNIFORM_BLOCK:
-      res = _mesa_program_resource_find_name(shProg, programInterface, name);
-      if (!res)
+      res = _mesa_program_resource_find_name(shProg, programInterface, name,
+                                             &array_index);
+      if (!res || array_index > 0)
          return GL_INVALID_INDEX;
 
       return _mesa_program_resource_index(shProg, res);
@@ -403,7 +401,7 @@ _mesa_GetProgramResourceLocation(GLuint program, GLenum programInterface,
    struct gl_shader_program *shProg =
       lookup_linked_program(program, "glGetProgramResourceLocation");
 
-   if (!shProg || !name || invalid_array_element_syntax(name))
+   if (!shProg || !name)
       return -1;
 
    /* Validate programInterface. */
@@ -453,7 +451,7 @@ _mesa_GetProgramResourceLocationIndex(GLuint program, GLenum programInterface,
    struct gl_shader_program *shProg =
       lookup_linked_program(program, "glGetProgramResourceLocationIndex");
 
-   if (!shProg || !name || invalid_array_element_syntax(name))
+   if (!shProg || !name)
       return -1;
 
    /* From the GL_ARB_program_interface_query spec:

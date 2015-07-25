@@ -952,7 +952,7 @@ _mesa_GetUniformBlockIndex(GLuint program,
 
    struct gl_program_resource *res =
       _mesa_program_resource_find_name(shProg, GL_UNIFORM_BLOCK,
-                                       uniformBlockName);
+                                       uniformBlockName, NULL);
    if (!res)
       return GL_INVALID_INDEX;
 
@@ -987,7 +987,8 @@ _mesa_GetUniformIndices(GLuint program,
 
    for (i = 0; i < uniformCount; i++) {
       struct gl_program_resource *res =
-         _mesa_program_resource_find_name(shProg, GL_UNIFORM, uniformNames[i]);
+         _mesa_program_resource_find_name(shProg, GL_UNIFORM, uniformNames[i],
+                                          NULL);
       uniformIndices[i] = _mesa_program_resource_index(shProg, res);
    }
 }
