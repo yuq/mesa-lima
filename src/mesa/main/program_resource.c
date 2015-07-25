@@ -203,27 +203,6 @@ is_xfb_marker(const char *str)
    return false;
 }
 
-/**
- * Checks if given name index is legal for GetProgramResourceIndex,
- * check is written to be compatible with GL_ARB_array_of_arrays.
- */
-static bool
-valid_program_resource_index_name(const GLchar *name)
-{
-   const char *array = strstr(name, "[");
-   const char *close = strrchr(name, ']');
-
-   /* Not array, no need for the check. */
-   if (!array)
-      return true;
-
-   /* Last array index has to be zero. */
-   if (!close || *--close != '0')
-      return false;
-
-   return true;
-}
-
 GLuint GLAPIENTRY
 _mesa_GetProgramResourceIndex(GLuint program, GLenum programInterface,
                               const GLchar *name)
@@ -343,36 +322,6 @@ _mesa_GetProgramResourceiv(GLuint program, GLenum programInterface,
 
    _mesa_get_program_resourceiv(shProg, programInterface, index,
                                 propCount, props, bufSize, length, params);
-}
-
-/**
- * Function verifies syntax of given name for GetProgramResourceLocation
- * and GetProgramResourceLocationIndex for the following cases:
- *
- * "array element portion of a string passed to GetProgramResourceLocation
- * or GetProgramResourceLocationIndex must not have, a "+" sign, extra
- * leading zeroes, or whitespace".
- *
- * Check is written to be compatible with GL_ARB_array_of_arrays.
- */
-static bool
-invalid_array_element_syntax(const GLchar *name)
-{
-   char *first = strchr(name, '[');
-   char *last = strrchr(name, '[');
-
-   if (!first)
-      return false;
-
-   /* No '+' or ' ' allowed anywhere. */
-   if (strchr(first, '+') || strchr(first, ' '))
-      return true;
-
-   /* Check that last array index is 0. */
-   if (last[1] == '0' && last[2] != ']')
-      return true;
-
-   return false;
 }
 
 static struct gl_shader_program *
