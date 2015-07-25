@@ -227,9 +227,20 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
 	/* Stream output. */
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
+		if (is_a3xx(screen) || is_a4xx(screen))
+			return PIPE_MAX_SO_BUFFERS;
+		return 0;
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+		if (is_a3xx(screen) || is_a4xx(screen))
+			return 1;
+		return 0;
 	case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:
+		if (is_a3xx(screen) || is_a4xx(screen))
+			return 16;    /* should only be shader out limit? */
+		return 0;
 	case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
+		if (is_a3xx(screen) || is_a4xx(screen))
+			return 16;    /* should only be shader out limit? */
 		return 0;
 
 	/* Geometry shader output, unsupported. */

@@ -466,10 +466,10 @@ static void
 emit_ubos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_constbuf_stateobj *constbuf)
 {
-	if (v->constlen > v->first_driver_param) {
+	uint32_t offset = v->first_driver_param;  /* UBOs after user consts */
+	if (v->constlen > offset) {
 		struct fd_context *ctx = fd_context(v->shader->pctx);
-		uint32_t offset = v->first_driver_param;  /* UBOs after user consts */
-		uint32_t params = MIN2(4, v->constlen - v->first_driver_param) * 4;
+		uint32_t params = MIN2(4, v->constlen - offset) * 4;
 		uint32_t offsets[params];
 		struct fd_bo *bos[params];
 
@@ -515,6 +515,83 @@ emit_immediates(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
 	}
 }
 
+/* emit stream-out buffers: */
+static void
+emit_tfbos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
+{
+	uint32_t offset = v->first_driver_param + 5;  /* streamout addresses after driver-params*/
+	if (v->constlen > offset) {
+		struct fd_context *ctx = fd_context(v->shader->pctx);
+		struct fd_streamout_stateobj *so = &ctx->streamout;
+		struct pipe_stream_output_info *info = &v->shader->stream_output;
+		uint32_t params = 4;
+		uint32_t offsets[params];
+		struct fd_bo *bos[params];
+
+		for (uint32_t i = 0; i < params; i++) {
+			struct pipe_stream_output_target *target = so->targets[i];
+
+			if (target) {
+				offsets[i] = (so->offsets[i] * info->stride[i] * 4) +
+						target->buffer_offset;
+				bos[i] = fd_resource(target->buffer)->bo;
+			} else {
+				offsets[i] = 0;
+				bos[i] = NULL;
+			}
+		}
+
+		fd_wfi(ctx, ring);
+		ctx->emit_const_bo(ring, v->type, true, offset * 4, params, bos, offsets);
+	}
+}
+
+static uint32_t
+max_tf_vtx(struct ir3_shader_variant *v)
+{
+	struct fd_context *ctx = fd_context(v->shader->pctx);
+	struct fd_streamout_stateobj *so = &ctx->streamout;
+	struct pipe_stream_output_info *info = &v->shader->stream_output;
+	uint32_t maxvtxcnt = 0x7fffffff;
+
+	if (v->key.binning_pass)
+		return 0;
+	if (v->shader->stream_output.num_outputs == 0)
+		return 0;
+	if (so->num_targets == 0)
+		return 0;
+
+	/* offset to write to is:
+	 *
+	 *   total_vtxcnt = vtxcnt + offsets[i]
+	 *   offset = total_vtxcnt * stride[i]
+	 *
+	 *   offset =   vtxcnt * stride[i]       ; calculated in shader
+	 *            + offsets[i] * stride[i]   ; calculated at emit_tfbos()
+	 *
+	 * assuming for each vtx, each target buffer will have data written
+	 * up to 'offset + stride[i]', that leaves maxvtxcnt as:
+	 *
+	 *   buffer_size = (maxvtxcnt * stride[i]) + stride[i]
+	 *   maxvtxcnt   = (buffer_size - stride[i]) / stride[i]
+	 *
+	 * but shader is actually doing a less-than (rather than less-than-
+	 * equal) check, so we can drop the -stride[i].
+	 *
+	 * TODO is assumption about `offset + stride[i]` legit?
+	 */
+	for (unsigned i = 0; i < so->num_targets; i++) {
+		struct pipe_stream_output_target *target = so->targets[i];
+		unsigned stride = info->stride[i] * 4;   /* convert dwords->bytes */
+		if (target) {
+			uint32_t max = target->buffer_size / stride;
+			maxvtxcnt = MIN2(maxvtxcnt, max);
+		}
+	}
+
+	return maxvtxcnt;
+}
+
 void
 ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		const struct pipe_draw_info *info, uint32_t dirty)
@@ -548,12 +625,19 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		uint32_t offset = v->first_driver_param + 4;  /* driver params after UBOs */
 		if (v->constlen >= offset) {
 			uint32_t vertex_params[4] = {
-				[IR3_DP_VTXID_BASE] = info->indexed ? info->index_bias : info->start,
+				[IR3_DP_VTXID_BASE] = info->indexed ?
+						info->index_bias : info->start,
+				[IR3_DP_VTXCNT_MAX] = max_tf_vtx(v),
 			};
 
 			fd_wfi(ctx, ring);
 			ctx->emit_const(ring, SHADER_VERTEX, offset * 4, 0,
 					ARRAY_SIZE(vertex_params), vertex_params, NULL);
+
+			/* if needed, emit stream-out buffer addresses: */
+			if (vertex_params[IR3_DP_VTXCNT_MAX] > 0) {
+				emit_tfbos(v, ring);
+			}
 		}
 	}
 }

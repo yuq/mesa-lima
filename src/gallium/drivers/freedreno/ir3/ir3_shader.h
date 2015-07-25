@@ -37,6 +37,7 @@
 /* driver param indices: */
 enum ir3_driver_param {
 	IR3_DP_VTXID_BASE = 0,
+	IR3_DP_VTXCNT_MAX = 1,
 };
 
 /* internal semantic used for passing vtxcnt to vertex shader to

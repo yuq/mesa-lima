@@ -263,6 +263,7 @@ compile_init(struct ir3_compiler *compiler,
 	 *    4 * vec4            -  UBO addresses
 	 *    if (vertex shader) {
 	 *        1 * vec4        -  driver params (IR3_DP_*)
+	 *        1 * vec4        -  stream-out addresses
 	 *    }
 	 *
 	 * TODO this could be made more dynamic, to at least skip sections
@@ -274,6 +275,8 @@ compile_init(struct ir3_compiler *compiler,
 
 	if (so->type == SHADER_VERTEX) {
 		/* one (vec4) slot for driver params (see ir3_driver_param): */
+		so->first_immediate++;
+		/* one (vec4) slot for stream-output base addresses: */
 		so->first_immediate++;
 	}
 
@@ -1971,6 +1974,115 @@ emit_cf_list(struct ir3_compile *ctx, struct exec_list *list)
 	}
 }
 
+/* emit stream-out code.  At this point, the current block is the original
+ * (nir) end block, and nir ensures that all flow control paths terminate
+ * into the end block.  We re-purpose the original end block to generate
+ * the 'if (vtxcnt < maxvtxcnt)' condition, then append the conditional
+ * block holding stream-out write instructions, followed by the new end
+ * block:
+ *
+ *   blockOrigEnd {
+ *      p0.x = (vtxcnt < maxvtxcnt)
+ *      // succs: blockStreamOut, blockNewEnd
+ *   }
+ *   blockStreamOut {
+ *      ... stream-out instructions ...
+ *      // succs: blockNewEnd
+ *   }
+ *   blockNewEnd {
+ *   }
+ */
+static void
+emit_stream_out(struct ir3_compile *ctx)
+{
+	struct ir3_shader_variant *v = ctx->so;
+	struct ir3 *ir = ctx->ir;
+	struct pipe_stream_output_info *strmout =
+			&ctx->so->shader->stream_output;
+	struct ir3_block *orig_end_block, *stream_out_block, *new_end_block;
+	struct ir3_instruction *vtxcnt, *maxvtxcnt, *cond;
+	struct ir3_instruction *bases[PIPE_MAX_SO_BUFFERS];
+
+	/* create vtxcnt input in input block at top of shader,
+	 * so that it is seen as live over the entire duration
+	 * of the shader:
+	 */
+	vtxcnt = create_input(ctx->in_block, 0);
+	add_sysval_input(ctx, IR3_SEMANTIC_VTXCNT, vtxcnt);
+
+	maxvtxcnt = create_driver_param(ctx, IR3_DP_VTXCNT_MAX);
+
+	/* at this point, we are at the original 'end' block,
+	 * re-purpose this block to stream-out condition, then
+	 * append stream-out block and new-end block
+	 */
+	orig_end_block = ctx->block;
+
+	stream_out_block = ir3_block_create(ir);
+	list_addtail(&stream_out_block->node, &ir->block_list);
+
+	new_end_block = ir3_block_create(ir);
+	list_addtail(&new_end_block->node, &ir->block_list);
+
+	orig_end_block->successors[0] = stream_out_block;
+	orig_end_block->successors[1] = new_end_block;
+	stream_out_block->successors[0] = new_end_block;
+
+	/* setup 'if (vtxcnt < maxvtxcnt)' condition: */
+	cond = ir3_CMPS_S(ctx->block, vtxcnt, 0, maxvtxcnt, 0);
+	cond->regs[0]->num = regid(REG_P0, 0);
+	cond->cat2.condition = IR3_COND_LT;
+
+	/* condition goes on previous block to the conditional,
+	 * since it is used to pick which of the two successor
+	 * paths to take:
+	 */
+	orig_end_block->condition = cond;
+
+	/* switch to stream_out_block to generate the stream-out
+	 * instructions:
+	 */
+	ctx->block = stream_out_block;
+
+	/* Calculate base addresses based on vtxcnt.  Instructions
+	 * generated for bases not used in following loop will be
+	 * stripped out in the backend.
+	 */
+	for (unsigned i = 0; i < PIPE_MAX_SO_BUFFERS; i++) {
+		unsigned stride = strmout->stride[i];
+		struct ir3_instruction *base, *off;
+
+		base = create_uniform(ctx, regid(v->first_driver_param + 5, i));
+
+		/* 24-bit should be enough: */
+		off = ir3_MUL_U(ctx->block, vtxcnt, 0,
+				create_immed(ctx->block, stride * 4), 0);
+
+		bases[i] = ir3_ADD_S(ctx->block, off, 0, base, 0);
+	}
+
+	/* Generate the per-output store instructions: */
+	for (unsigned i = 0; i < strmout->num_outputs; i++) {
+		for (unsigned j = 0; j < strmout->output[i].num_components; j++) {
+			unsigned c = j + strmout->output[i].start_component;
+			struct ir3_instruction *base, *out, *stg;
+
+			base = bases[strmout->output[i].output_buffer];
+			out = ctx->ir->outputs[regid(strmout->output[i].register_index, c)];
+
+			stg = ir3_STG(ctx->block, base, 0, out, 0,
+					create_immed(ctx->block, 1), 0);
+			stg->cat6.type = TYPE_U32;
+			stg->cat6.dst_offset = (strmout->output[i].dst_offset + j) * 4;
+
+			array_insert(ctx->ir->keeps, stg);
+		}
+	}
+
+	/* and finally switch to the new_end_block: */
+	ctx->block = new_end_block;
+}
+
 static void
 emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 {
@@ -1981,6 +2093,24 @@ emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 	 * into which we emit the 'end' instruction.
 	 */
 	compile_assert(ctx, list_empty(&ctx->block->instr_list));
+
+	/* If stream-out (aka transform-feedback) enabled, emit the
+	 * stream-out instructions, followed by a new empty block (into
+	 * which the 'end' instruction lands).
+	 *
+	 * NOTE: it is done in this order, rather than inserting before
+	 * we emit end_block, because NIR guarantees that all blocks
+	 * flow into end_block, and that end_block has no successors.
+	 * So by re-purposing end_block as the first block of stream-
+	 * out, we guarantee that all exit paths flow into the stream-
+	 * out instructions.
+	 */
+	if ((ctx->so->shader->stream_output.num_outputs > 0) &&
+			!ctx->so->key.binning_pass) {
+		debug_assert(ctx->so->type == SHADER_VERTEX);
+		emit_stream_out(ctx);
+	}
+
 	ir3_END(ctx->block);
 }
 
