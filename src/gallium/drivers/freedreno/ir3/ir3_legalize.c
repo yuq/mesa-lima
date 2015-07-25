@@ -182,14 +182,14 @@ legalize_block(struct ir3_legalize_ctx *ctx, struct ir3_block *block)
 			 */
 			ctx->has_samp = true;
 			regmask_set(&needs_sy, n->regs[0]);
-		} else if (is_mem(n)) {
+		} else if (is_load(n)) {
 			regmask_set(&needs_sy, n->regs[0]);
 		}
 
 		/* both tex/sfu appear to not always immediately consume
 		 * their src register(s):
 		 */
-		if (is_tex(n) || is_sfu(n) || is_mem(n)) {
+		if (is_tex(n) || is_sfu(n) || is_load(n)) {
 			foreach_src(reg, n) {
 				if (reg_gpr(reg))
 					regmask_set(&needs_ss_war, reg);

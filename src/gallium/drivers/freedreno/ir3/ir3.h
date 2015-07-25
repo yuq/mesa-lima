@@ -554,6 +554,26 @@ is_store(struct ir3_instruction *instr)
 	return false;
 }
 
+static inline bool is_load(struct ir3_instruction *instr)
+{
+	if (is_mem(instr)) {
+		switch (instr->opc) {
+		case OPC_LDG:
+		case OPC_LDL:
+		case OPC_LDP:
+		case OPC_L2G:
+		case OPC_LDLW:
+		case OPC_LDC_4:
+		case OPC_LDLV:
+		/* probably some others too.. */
+			return true;
+		default:
+			break;
+		}
+	}
+	return false;
+}
+
 static inline bool is_input(struct ir3_instruction *instr)
 {
 	/* in some cases, ldlv is used to fetch varying without
@@ -1043,6 +1063,7 @@ ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
 /* cat6 instructions: */
 INSTR2(6, LDLV)
 INSTR2(6, LDG)
+INSTR3(6, STG)
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */

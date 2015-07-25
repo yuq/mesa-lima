@@ -499,12 +499,28 @@ static int emit_cat5(struct ir3_instruction *instr, void *ptr,
 static int emit_cat6(struct ir3_instruction *instr, void *ptr,
 		struct ir3_info *info)
 {
-	struct ir3_register *dst  = instr->regs[0];
-	struct ir3_register *src1 = instr->regs[1];
-	struct ir3_register *src2 = (instr->regs_count >= 3) ? instr->regs[2] : NULL;
+	struct ir3_register *dst, *src1, *src2;
 	instr_cat6_t *cat6 = ptr;
 
-	iassert(instr->regs_count >= 2);
+	/* the "dst" for a store instruction is (from the perspective
+	 * of data flow in the shader, ie. register use/def, etc) in
+	 * fact a register that is read by the instruction, rather
+	 * than written:
+	 */
+	if (is_store(instr)) {
+		iassert(instr->regs_count >= 3);
+
+		dst  = instr->regs[1];
+		src1 = instr->regs[2];
+		src2 = (instr->regs_count >= 4) ? instr->regs[3] : NULL;
+	} else {
+		iassert(instr->regs_count >= 2);
+
+		dst  = instr->regs[0];
+		src1 = instr->regs[1];
+		src2 = (instr->regs_count >= 3) ? instr->regs[2] : NULL;
+	}
+
 
 	/* TODO we need a more comprehensive list about which instructions
 	 * can be encoded which way.  Or possibly use IR3_INSTR_0 flag to
