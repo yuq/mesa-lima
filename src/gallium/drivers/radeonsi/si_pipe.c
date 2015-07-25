@@ -92,7 +92,8 @@ si_amdgpu_get_reset_status(struct pipe_context *ctx)
 	return sctx->b.ws->ctx_query_reset_status(sctx->b.ctx);
 }
 
-static struct pipe_context *si_create_context(struct pipe_screen *screen, void *priv)
+static struct pipe_context *si_create_context(struct pipe_screen *screen,
+                                              void *priv, unsigned flags)
 {
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
 	struct si_screen* sscreen = (struct si_screen *)screen;
@@ -586,7 +587,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
 
 	/* Create the auxiliary context. This must be done last. */
-	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL);
+	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL, 0);
 
 	return &sscreen->b.b;
 }

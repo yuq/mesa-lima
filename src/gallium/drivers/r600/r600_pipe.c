@@ -108,7 +108,8 @@ static void r600_destroy_context(struct pipe_context *context)
 	FREE(rctx);
 }
 
-static struct pipe_context *r600_create_context(struct pipe_screen *screen, void *priv)
+static struct pipe_context *r600_create_context(struct pipe_screen *screen,
+                                                void *priv, unsigned flags)
 {
 	struct r600_context *rctx = CALLOC_STRUCT(r600_context);
 	struct r600_screen* rscreen = (struct r600_screen *)screen;
@@ -624,7 +625,7 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	rscreen->global_pool = compute_memory_pool_new(rscreen);
 
 	/* Create the auxiliary context. This must be done last. */
-	rscreen->b.aux_context = rscreen->b.b.context_create(&rscreen->b.b, NULL);
+	rscreen->b.aux_context = rscreen->b.b.context_create(&rscreen->b.b, NULL, 0);
 
 #if 0 /* This is for testing whether aux_context and buffer clearing work correctly. */
 	struct pipe_resource templ = {};

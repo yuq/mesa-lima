@@ -125,8 +125,15 @@ struct pipe_screen {
     */
    uint64_t (*get_timestamp)(struct pipe_screen *);
 
-   struct pipe_context * (*context_create)( struct pipe_screen *,
-					    void *priv );
+   /**
+    * Create a context.
+    *
+    * \param screen      pipe screen
+    * \param priv        a pointer to set in pipe_context::priv
+    * \param flags       a mask of PIPE_CONTEXT_* flags
+    */
+   struct pipe_context * (*context_create)(struct pipe_screen *screen,
+					   void *priv, unsigned flags);
 
    /**
     * Check if the given pipe_format is supported as a texture or
