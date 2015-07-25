@@ -369,6 +369,12 @@ struct ir3 {
 	unsigned predicates_count, predicates_sz;
 	struct ir3_instruction **predicates;
 
+	/* Track instructions which do not write a register but other-
+	 * wise must not be discarded (such as kill, stg, etc)
+	 */
+	unsigned keeps_count, keeps_sz;
+	struct ir3_instruction **keeps;
+
 	/* List of blocks: */
 	struct list_head block_list;
 

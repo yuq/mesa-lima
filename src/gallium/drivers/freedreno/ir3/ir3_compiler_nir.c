@@ -117,10 +117,6 @@ struct ir3_compile {
 	/* for looking up which system value is which */
 	unsigned sysval_semantics[8];
 
-	/* list of kill instructions: */
-	struct ir3_instruction *kill[16];
-	unsigned int kill_count;
-
 	/* set if we encounter something we can't handle yet, so we
 	 * can bail cleanly and fallback to TGSI compiler f/e
 	 */
@@ -1481,7 +1477,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		kill = ir3_KILL(b, cond, 0);
 		array_insert(ctx->ir->predicates, kill);
 
-		ctx->kill[ctx->kill_count++] = kill;
+		array_insert(ctx->ir->keeps, kill);
 		ctx->so->has_kill = true;
 
 		break;
@@ -2165,13 +2161,9 @@ emit_instructions(struct ir3_compile *ctx)
 	ninputs  = exec_list_length(&ctx->s->inputs) * 4;
 	noutputs = exec_list_length(&ctx->s->outputs) * 4;
 
-	/* we need to allocate big enough outputs array so that
-	 * we can stuff the kill's at the end.  Likewise for vtx
-	 * shaders, we need to leave room for sysvals:
+	/* or vtx shaders, we need to leave room for sysvals:
 	 */
-	if (ctx->so->type == SHADER_FRAGMENT) {
-		noutputs += ARRAY_SIZE(ctx->kill);
-	} else if (ctx->so->type == SHADER_VERTEX) {
+	if (ctx->so->type == SHADER_VERTEX) {
 		ninputs += 8;
 	}
 
@@ -2182,9 +2174,7 @@ emit_instructions(struct ir3_compile *ctx)
 	ctx->in_block = ctx->block;
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
-	if (ctx->so->type == SHADER_FRAGMENT) {
-		ctx->ir->noutputs -= ARRAY_SIZE(ctx->kill);
-	} else if (ctx->so->type == SHADER_VERTEX) {
+	if (ctx->so->type == SHADER_VERTEX) {
 		ctx->ir->ninputs -= 8;
 	}
 
@@ -2378,15 +2368,6 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 				out->cat1.dst_type = half_type(out->cat1.dst_type);
 			}
 		}
-	}
-
-	/* at this point, we want the kill's in the outputs array too,
-	 * so that they get scheduled (since they have no dst).. we've
-	 * already ensured that the array is big enough in push_block():
-	 */
-	if (so->type == SHADER_FRAGMENT) {
-		for (i = 0; i < ctx->kill_count; i++)
-			ir->outputs[ir->noutputs++] = ctx->kill[i];
 	}
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {

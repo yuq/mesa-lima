@@ -156,6 +156,9 @@ ir3_depth(struct ir3 *ir)
 		if (ir->outputs[i])
 			ir3_instr_depth(ir->outputs[i]);
 
+	for (i = 0; i < ir->keeps_count; i++)
+		ir3_instr_depth(ir->keeps[i]);
+
 	/* We also need to account for if-condition: */
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		if (block->condition)

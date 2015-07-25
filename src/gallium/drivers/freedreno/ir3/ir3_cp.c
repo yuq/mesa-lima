@@ -408,6 +408,10 @@ ir3_cp(struct ir3 *ir)
 		}
 	}
 
+	for (unsigned i = 0; i < ir->keeps_count; i++) {
+		ir->keeps[i] = instr_cp(ir->keeps[i], NULL);
+	}
+
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		if (block->condition)
 			block->condition = instr_cp(block->condition, NULL);
