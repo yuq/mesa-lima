@@ -65,10 +65,10 @@
 #define _3DPRIM_TRIFAN            0x06
 #define _3DPRIM_QUADLIST          0x07
 #define _3DPRIM_QUADSTRIP         0x08
-#define _3DPRIM_LINELIST_ADJ      0x09
-#define _3DPRIM_LINESTRIP_ADJ     0x0A
-#define _3DPRIM_TRILIST_ADJ       0x0B
-#define _3DPRIM_TRISTRIP_ADJ      0x0C
+#define _3DPRIM_LINELIST_ADJ      0x09 /* G45+ */
+#define _3DPRIM_LINESTRIP_ADJ     0x0A /* G45+ */
+#define _3DPRIM_TRILIST_ADJ       0x0B /* G45+ */
+#define _3DPRIM_TRISTRIP_ADJ      0x0C /* G45+ */
 #define _3DPRIM_TRISTRIP_REVERSE  0x0D
 #define _3DPRIM_POLYGON           0x0E
 #define _3DPRIM_RECTLIST          0x0F
