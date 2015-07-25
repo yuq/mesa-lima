@@ -1170,6 +1170,20 @@ static void emit_dneg(
 			emit_data->args[0], "");
 }
 
+static void emit_frac(
+		const struct lp_build_tgsi_action * action,
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+
+	LLVMValueRef floor = lp_build_intrinsic(builder, "floor", emit_data->dst_type,
+						&emit_data->args[0], 1,
+						LLVMReadNoneAttribute);
+	emit_data->output[emit_data->chan] = LLVMBuildFSub(builder,
+			emit_data->args[0], floor, "");
+}
+
 static void emit_f2i(
 		const struct lp_build_tgsi_action * action,
 		struct lp_build_tgsi_context * bld_base,
@@ -1432,8 +1446,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_DABS].intr_name = "fabs";
 	bld_base->op_actions[TGSI_OPCODE_DFMA].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_DFMA].intr_name = "llvm.fma.f64";
-	bld_base->op_actions[TGSI_OPCODE_DFRAC].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_DFRAC].intr_name = "llvm.AMDIL.fraction.";
+	bld_base->op_actions[TGSI_OPCODE_DFRAC].emit = emit_frac;
 	bld_base->op_actions[TGSI_OPCODE_DNEG].emit = emit_dneg;
 	bld_base->op_actions[TGSI_OPCODE_DSEQ].emit = emit_dcmp;
 	bld_base->op_actions[TGSI_OPCODE_DSGE].emit = emit_dcmp;
@@ -1452,8 +1465,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_FLR].intr_name = "floor";
 	bld_base->op_actions[TGSI_OPCODE_FMA].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_FMA].intr_name = "llvm.fma.f32";
-	bld_base->op_actions[TGSI_OPCODE_FRC].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_FRC].intr_name = "llvm.AMDIL.fraction.";
+	bld_base->op_actions[TGSI_OPCODE_FRC].emit = emit_frac;
 	bld_base->op_actions[TGSI_OPCODE_F2I].emit = emit_f2i;
 	bld_base->op_actions[TGSI_OPCODE_F2U].emit = emit_f2u;
 	bld_base->op_actions[TGSI_OPCODE_FSEQ].emit = emit_fcmp;
