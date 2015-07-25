@@ -3811,15 +3811,17 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 	si_shader_binary_upload(sscreen, shader);
 
 	if (dump) {
-		if (binary->disasm_string) {
-			fprintf(stderr, "\nShader Disassembly:\n\n");
-			fprintf(stderr, "%s\n", binary->disasm_string);
-		} else {
-			fprintf(stderr, "SI CODE:\n");
-			for (i = 0; i < binary->code_size; i+=4 ) {
-				fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
-				binary->code[i + 2], binary->code[i + 1],
-				binary->code[i]);
+		if (!(sscreen->b.debug_flags & DBG_NO_ASM)) {
+			if (binary->disasm_string) {
+				fprintf(stderr, "\nShader Disassembly:\n\n");
+				fprintf(stderr, "%s\n", binary->disasm_string);
+			} else {
+				fprintf(stderr, "SI CODE:\n");
+				for (i = 0; i < binary->code_size; i+=4 ) {
+					fprintf(stderr, "@0x%x: %02x%02x%02x%02x\n", i, binary->code[i + 3],
+					binary->code[i + 2], binary->code[i + 1],
+					binary->code[i]);
+				}
 			}
 		}
 
