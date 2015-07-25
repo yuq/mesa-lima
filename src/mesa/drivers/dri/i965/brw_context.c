@@ -484,6 +484,8 @@ brw_initialize_context_constants(struct brw_context *brw)
    if (brw->gen >= 5 || brw->is_g4x)
       ctx->Const.MaxClipPlanes = 8;
 
+   ctx->Const.LowerTessLevel = true;
+
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxNativeInstructions = 16 * 1024;
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxAluInstructions = 0;
    ctx->Const.Program[MESA_SHADER_VERTEX].MaxTexInstructions = 0;
