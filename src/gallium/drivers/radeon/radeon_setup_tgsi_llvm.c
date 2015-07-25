@@ -1498,6 +1498,9 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_POW].intr_name = "llvm.pow.f32";
 	bld_base->op_actions[TGSI_OPCODE_ROUND].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_ROUND].intr_name = "llvm.AMDIL.round.nearest.";
+	bld_base->op_actions[TGSI_OPCODE_RSQ].intr_name =
+		HAVE_LLVM >= 0x0305 ? "llvm.AMDGPU.rsq.clamped.f32" : "llvm.AMDGPU.rsq";
+	bld_base->op_actions[TGSI_OPCODE_RSQ].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_SGE].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_SEQ].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_SHL].emit = emit_shl;
@@ -1529,13 +1532,6 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_U2F].emit = emit_u2f;
 	bld_base->op_actions[TGSI_OPCODE_XOR].emit = emit_xor;
 	bld_base->op_actions[TGSI_OPCODE_UCMP].emit = emit_ucmp;
-
-	bld_base->rsq_action.emit = build_tgsi_intrinsic_nomem;
-#if HAVE_LLVM >= 0x0305
-	bld_base->rsq_action.intr_name = "llvm.AMDGPU.rsq.clamped.f32";
-#else
-	bld_base->rsq_action.intr_name = "llvm.AMDGPU.rsq";
-#endif
 }
 
 void radeon_llvm_create_func(struct radeon_llvm_context * ctx,
