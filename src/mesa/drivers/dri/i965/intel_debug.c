@@ -75,6 +75,10 @@ static const struct debug_control debug_control[] = {
    { "cs",          DEBUG_CS },
    { "hex",         DEBUG_HEX },
    { "nocompact",   DEBUG_NO_COMPACTION },
+   { "hs",          DEBUG_TCS },
+   { "tcs",         DEBUG_TCS },
+   { "ds",          DEBUG_TES },
+   { "tes",         DEBUG_TES },
    { NULL,    0 }
 };
 
@@ -83,8 +87,8 @@ intel_debug_flag_for_shader_stage(gl_shader_stage stage)
 {
    uint64_t flags[] = {
       [MESA_SHADER_VERTEX] = DEBUG_VS,
-      [MESA_SHADER_TESS_CTRL] = 0,
-      [MESA_SHADER_TESS_EVAL] = 0,
+      [MESA_SHADER_TESS_CTRL] = DEBUG_TCS,
+      [MESA_SHADER_TESS_EVAL] = DEBUG_TES,
       [MESA_SHADER_GEOMETRY] = DEBUG_GS,
       [MESA_SHADER_FRAGMENT] = DEBUG_WM,
       [MESA_SHADER_COMPUTE] = DEBUG_CS,
