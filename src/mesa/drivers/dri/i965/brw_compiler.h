@@ -465,8 +465,8 @@ static inline GLuint brw_vue_slot_to_offset(GLuint slot)
  * Convert a vertex output (brw_varying_slot) into a byte offset within the
  * VUE.
  */
-static inline GLuint brw_varying_to_offset(struct brw_vue_map *vue_map,
-                                           GLuint varying)
+static inline
+GLuint brw_varying_to_offset(const struct brw_vue_map *vue_map, GLuint varying)
 {
    return brw_vue_slot_to_offset(vue_map->varying_to_slot[varying]);
 }
