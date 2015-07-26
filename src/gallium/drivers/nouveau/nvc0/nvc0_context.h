@@ -128,6 +128,8 @@ struct nvc0_context {
    struct nvc0_program *fragprog;
    struct nvc0_program *compprog;
 
+   struct nvc0_program *tcp_empty;
+
    struct nvc0_constbuf constbuf[6][NVC0_MAX_PIPE_CONSTBUFS];
    uint16_t constbuf_dirty[6];
    uint16_t constbuf_valid[6];
@@ -227,6 +229,7 @@ void nvc0_program_destroy(struct nvc0_context *, struct nvc0_program *);
 void nvc0_program_library_upload(struct nvc0_context *);
 uint32_t nvc0_program_symbol_offset(const struct nvc0_program *,
                                     uint32_t label);
+void nvc0_program_init_tcp_empty(struct nvc0_context *);
 
 /* nvc0_query.c */
 void nvc0_init_query_functions(struct nvc0_context *);
