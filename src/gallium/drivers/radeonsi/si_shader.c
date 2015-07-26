@@ -136,8 +136,13 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		assert(index <= 1);
 		return 2 + index;
 	case TGSI_SEMANTIC_GENERIC:
-		assert(index <= 63-4);
-		return 4 + index;
+		if (index <= 63-4)
+			return 4 + index;
+		else
+			/* same explanation as in the default statement,
+			 * the only user hitting this is st/nine.
+			 */
+			return 0;
 
 	/* patch indices are completely separate and thus start from 0 */
 	case TGSI_SEMANTIC_TESSOUTER:
