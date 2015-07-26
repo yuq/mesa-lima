@@ -329,6 +329,9 @@ struct r600_streamout {
 	 * it must be set explicitly when binding a shader. */
 	unsigned			*stride_in_dw;
 
+	/* The state of VGT_STRMOUT_BUFFER_(CONFIG|EN). */
+	unsigned			hw_enabled_mask;
+
 	/* The state of VGT_STRMOUT_(CONFIG|EN). */
 	struct r600_atom		enable_atom;
 	bool				streamout_enabled;
