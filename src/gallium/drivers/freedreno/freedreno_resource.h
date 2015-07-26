@@ -68,7 +68,7 @@ struct fd_resource {
 	uint32_t layer_size;
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
 	uint32_t timestamp;
-	bool dirty, reading;
+	bool dirty, reading, writing;
 	/* buffer range that has been initialized */
 	struct util_range valid_buffer_range;
 

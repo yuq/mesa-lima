@@ -130,8 +130,9 @@ fd_context_render(struct pipe_context *pctx)
 
 	/* go through all the used resources and clear their reading flag */
 	LIST_FOR_EACH_ENTRY_SAFE(rsc, rsc_tmp, &ctx->used_resources, list) {
-		assert(rsc->reading);
+		assert(rsc->reading || rsc->writing);
 		rsc->reading = false;
+		rsc->writing = false;
 		list_delinit(&rsc->list);
 	}
 

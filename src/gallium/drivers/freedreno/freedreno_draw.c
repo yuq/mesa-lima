@@ -40,7 +40,7 @@
 #include "freedreno_util.h"
 
 static void
-resource_reading(struct fd_context *ctx, struct pipe_resource *prsc)
+resource_used(struct fd_context *ctx, struct pipe_resource *prsc, boolean reading)
 {
 	struct fd_resource *rsc;
 
@@ -48,7 +48,10 @@ resource_reading(struct fd_context *ctx, struct pipe_resource *prsc)
 		return;
 
 	rsc = fd_resource(prsc);
-	rsc->reading = true;
+	if (reading)
+		rsc->reading = true;
+	else
+		rsc->writing = true;
 	list_delinit(&rsc->list);
 	list_addtail(&rsc->list, &ctx->used_resources);
 }
@@ -120,26 +123,26 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	/* Skip over buffer 0, that is sent along with the command stream */
 	for (i = 1; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-		resource_reading(ctx, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
-		resource_reading(ctx, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer);
+		resource_used(ctx, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer, true);
+		resource_used(ctx, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer, true);
 	}
 
 	/* Mark VBOs as being read */
 	for (i = 0; i < ctx->vtx.vertexbuf.count; i++) {
 		assert(!ctx->vtx.vertexbuf.vb[i].user_buffer);
-		resource_reading(ctx, ctx->vtx.vertexbuf.vb[i].buffer);
+		resource_used(ctx, ctx->vtx.vertexbuf.vb[i].buffer, true);
 	}
 
 	/* Mark index buffer as being read */
-	resource_reading(ctx, ctx->indexbuf.buffer);
+	resource_used(ctx, ctx->indexbuf.buffer, true);
 
 	/* Mark textures as being read */
 	for (i = 0; i < ctx->verttex.num_textures; i++)
 		if (ctx->verttex.textures[i])
-			resource_reading(ctx, ctx->verttex.textures[i]->texture);
+			resource_used(ctx, ctx->verttex.textures[i]->texture, true);
 	for (i = 0; i < ctx->fragtex.num_textures; i++)
 		if (ctx->fragtex.textures[i])
-			resource_reading(ctx, ctx->fragtex.textures[i]->texture);
+			resource_used(ctx, ctx->fragtex.textures[i]->texture, true);
 
 	ctx->num_draws++;
 

@@ -97,7 +97,7 @@ realloc_bo(struct fd_resource *rsc, uint32_t size)
 
 	rsc->bo = fd_bo_new(screen->dev, size, flags);
 	rsc->timestamp = 0;
-	rsc->dirty = rsc->reading = false;
+	rsc->dirty = rsc->reading = rsc->writing = false;
 	list_delinit(&rsc->list);
 	util_range_set_empty(&rsc->valid_buffer_range);
 }
@@ -239,7 +239,8 @@ fd_resource_transfer_map(struct pipe_context *pctx,
 		 * resource and we're trying to write to it, flush the renders.
 		 */
 		if (rsc->dirty || (rsc->stencil && rsc->stencil->dirty) ||
-			((ptrans->usage & PIPE_TRANSFER_WRITE) && rsc->reading))
+			((ptrans->usage & PIPE_TRANSFER_WRITE) && rsc->reading) ||
+			((ptrans->usage & PIPE_TRANSFER_READ) && rsc->writing))
 			fd_context_render(pctx);
 
 		/* The GPU keeps track of how the various bo's are being used, and
