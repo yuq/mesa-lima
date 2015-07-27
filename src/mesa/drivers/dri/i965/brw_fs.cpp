@@ -2258,7 +2258,8 @@ fs_visitor::opt_sampler_eot()
       return false;
 
    /* Look for a texturing instruction immediately before the final FB_WRITE. */
-   fs_inst *fb_write = (fs_inst *) cfg->blocks[cfg->num_blocks - 1]->end();
+   bblock_t *block = cfg->blocks[cfg->num_blocks - 1];
+   fs_inst *fb_write = (fs_inst *)block->end();
    assert(fb_write->eot);
    assert(fb_write->opcode == FS_OPCODE_FB_WRITE);
 
@@ -2289,9 +2290,11 @@ fs_visitor::opt_sampler_eot()
    assert(!tex_inst->eot); /* We can't get here twice */
    assert((tex_inst->offset & (0xff << 24)) == 0);
 
+   const fs_builder ibld(this, block, tex_inst);
+
    tex_inst->offset |= fb_write->target << 24;
    tex_inst->eot = true;
-   tex_inst->dst = bld.null_reg_ud();
+   tex_inst->dst = ibld.null_reg_ud();
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
    /* If a header is present, marking the eot is sufficient. Otherwise, we need
@@ -2303,8 +2306,8 @@ fs_visitor::opt_sampler_eot()
    if (tex_inst->header_size != 0)
       return true;
 
-   fs_reg send_header = bld.vgrf(BRW_REGISTER_TYPE_F,
-                                 load_payload->sources + 1);
+   fs_reg send_header = ibld.vgrf(BRW_REGISTER_TYPE_F,
+                                  load_payload->sources + 1);
    fs_reg *new_sources =
       ralloc_array(mem_ctx, fs_reg, load_payload->sources + 1);
 
