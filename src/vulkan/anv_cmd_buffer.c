@@ -345,51 +345,6 @@ anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
    new_bbo->prev_batch_bo = old_bbo;
    cmd_buffer->surface_batch_bo = new_bbo;
 
-   /* Re-emit state base addresses so we get the new surface state base
-    * address before we start emitting binding tables etc.
-    */
-   anv_cmd_buffer_emit_state_base_address(cmd_buffer);
-
-   /* After re-setting the surface state base address, we have to do some
-    * cache flusing so that the sampler engine will pick up the new
-    * SURFACE_STATE objects and binding tables. From the Broadwell PRM,
-    * Shared Function > 3D Sampler > State > State Caching (page 96):
-    *
-    *    Coherency with system memory in the state cache, like the texture
-    *    cache is handled partially by software. It is expected that the
-    *    command stream or shader will issue Cache Flush operation or
-    *    Cache_Flush sampler message to ensure that the L1 cache remains
-    *    coherent with system memory.
-    *
-    *    [...]
-    *
-    *    Whenever the value of the Dynamic_State_Base_Addr,
-    *    Surface_State_Base_Addr are altered, the L1 state cache must be
-    *    invalidated to ensure the new surface or sampler state is fetched
-    *    from system memory.
-    *
-    * The PIPE_CONTROL command has a "State Cache Invalidation Enable" bit
-    * which, according the PIPE_CONTROL instruction documentation in the
-    * Broadwell PRM:
-    *
-    *    Setting this bit is independent of any other bit in this packet.
-    *    This bit controls the invalidation of the L1 and L2 state caches
-    *    at the top of the pipe i.e. at the parsing time.
-    *
-    * Unfortunately, experimentation seems to indicate that state cache
-    * invalidation through a PIPE_CONTROL does nothing whatsoever in
-    * regards to surface state and binding tables.  In stead, it seems that
-    * invalidating the texture cache is what is actually needed.
-    *
-    * XXX:  As far as we have been able to determine through
-    * experimentation, shows that flush the texture cache appears to be
-    * sufficient.  The theory here is that all of the sampling/rendering
-    * units cache the binding table in the texture cache.  However, we have
-    * yet to be able to actually confirm this.
-    */
-   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
-                  .TextureCacheInvalidationEnable = true);
-
    return VK_SUCCESS;
 }
 
