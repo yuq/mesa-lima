@@ -407,6 +407,15 @@ descriptor=[
   [ "TEXTURE_EXTERNAL_OES", "LOC_CUSTOM, TYPE_BOOLEAN, 0, extra_OES_EGL_image_external" ],
 ]},
 
+# Enums in OpenGL and ES 3.1
+{ "apis": ["GL", "GL_CORE", "GLES31"], "params": [
+# GL_ARB_shader_image_load_store / GLES 3.1
+  [ "MAX_IMAGE_UNITS", "CONTEXT_INT(Const.MaxImageUnits), extra_ARB_shader_image_load_store_es31" ],
+  [ "MAX_VERTEX_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms), extra_ARB_shader_image_load_store_es31" ],
+  [ "MAX_FRAGMENT_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms), extra_ARB_shader_image_load_store_es31" ],
+  [ "MAX_COMBINED_IMAGE_UNIFORMS", "CONTEXT_INT(Const.MaxCombinedImageUniforms), extra_ARB_shader_image_load_store_es31" ],
+]},
+
 # Enums in OpenGL Core profile and ES 3.1
 { "apis": ["GL_CORE", "GLES3"], "params": [
 # GL_ARB_draw_indirect / GLES 3.1
@@ -779,13 +788,9 @@ descriptor=[
   [ "MAX_VERTEX_ATTRIB_BINDINGS", "CONTEXT_ENUM(Const.MaxVertexAttribBindings), NO_EXTRA" ],
 
 # GL_ARB_shader_image_load_store
-  [ "MAX_IMAGE_UNITS", "CONTEXT_INT(Const.MaxImageUnits), extra_ARB_shader_image_load_store"],
-  [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedImageUnitsAndFragmentOutputs), extra_ARB_shader_image_load_store"],
-  [ "MAX_IMAGE_SAMPLES", "CONTEXT_INT(Const.MaxImageSamples), extra_ARB_shader_image_load_store"],
-  [ "MAX_VERTEX_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms), extra_ARB_shader_image_load_store"],
+  [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedImageUnitsAndFragmentOutputs), extra_ARB_shader_image_load_store" ],
+  [ "MAX_IMAGE_SAMPLES", "CONTEXT_INT(Const.MaxImageSamples), extra_ARB_shader_image_load_store" ],
   [ "MAX_GEOMETRY_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms), extra_ARB_shader_image_load_store_and_geometry_shader"],
-  [ "MAX_FRAGMENT_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_FRAGMENT].MaxImageUniforms), extra_ARB_shader_image_load_store"],
-  [ "MAX_COMBINED_IMAGE_UNIFORMS", "CONTEXT_INT(Const.MaxCombinedImageUniforms), extra_ARB_shader_image_load_store"],
 
 # GL_ARB_compute_shader
   [ "MAX_COMPUTE_WORK_GROUP_INVOCATIONS", "CONTEXT_INT(Const.MaxComputeWorkGroupInvocations), extra_ARB_compute_shader" ],

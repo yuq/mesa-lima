@@ -367,6 +367,12 @@ static const int extra_ARB_draw_indirect_es31[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_shader_image_load_store_es31[] = {
+   EXT(ARB_shader_image_load_store),
+   EXTRA_API_ES31,
+   EXTRA_END
+};
+
 EXTRA_EXT(ARB_texture_cube_map);
 EXTRA_EXT(EXT_texture_array);
 EXTRA_EXT(NV_fog_distance);
