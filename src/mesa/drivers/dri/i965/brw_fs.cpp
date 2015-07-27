@@ -2827,7 +2827,8 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
       if (block->start() == scan_inst) {
          for (int i = 0; i < write_len; i++) {
             if (needs_dep[i])
-               DEP_RESOLVE_MOV(bld.at(block, inst), first_write_grf + i);
+               DEP_RESOLVE_MOV(fs_builder(this, block, inst),
+                               first_write_grf + i);
          }
          return;
       }
@@ -2843,7 +2844,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
             if (reg >= first_write_grf &&
                 reg < first_write_grf + write_len &&
                 needs_dep[reg - first_write_grf]) {
-               DEP_RESOLVE_MOV(bld.at(block, inst), reg);
+               DEP_RESOLVE_MOV(fs_builder(this, block, inst), reg);
                needs_dep[reg - first_write_grf] = false;
                if (scan_inst->exec_size == 16)
                   needs_dep[reg - first_write_grf + 1] = false;
@@ -2890,7 +2891,8 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
       if (block->end() == scan_inst) {
          for (int i = 0; i < write_len; i++) {
             if (needs_dep[i])
-               DEP_RESOLVE_MOV(bld.at(block, scan_inst), first_write_grf + i);
+               DEP_RESOLVE_MOV(fs_builder(this, block, scan_inst),
+                               first_write_grf + i);
          }
          return;
       }
@@ -2905,7 +2907,8 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
           scan_inst->dst.reg >= first_write_grf &&
           scan_inst->dst.reg < first_write_grf + write_len &&
           needs_dep[scan_inst->dst.reg - first_write_grf]) {
-         DEP_RESOLVE_MOV(bld.at(block, scan_inst), scan_inst->dst.reg);
+         DEP_RESOLVE_MOV(fs_builder(this, block, scan_inst),
+                         scan_inst->dst.reg);
          needs_dep[scan_inst->dst.reg - first_write_grf] = false;
       }
 
