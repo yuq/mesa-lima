@@ -1924,8 +1924,7 @@ fs_visitor::demote_pull_constants()
 	    continue;
 
          /* Set up the annotation tracking for new generated instructions. */
-         const fs_builder ibld = bld.annotate(inst->annotation, inst->ir)
-                                    .at(block, inst);
+         const fs_builder ibld(this, block, inst);
          fs_reg surf_index(stage_prog_data->binding_table.pull_constants_start);
          fs_reg dst = vgrf(glsl_type::float_type);
 
@@ -1940,8 +1939,9 @@ fs_visitor::demote_pull_constants()
             inst->src[i].reladdr = NULL;
             inst->src[i].stride = 1;
          } else {
+            const fs_builder ubld = ibld.exec_all().group(8, 0);
             fs_reg offset = fs_reg((unsigned)(pull_index * 4) & ~15);
-            ibld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+            ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
                       dst, surf_index, offset);
             inst->src[i].set_smear(pull_index & 3);
          }
