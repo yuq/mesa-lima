@@ -650,25 +650,24 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-VkResult anv_EndCommandBuffer(
-    VkCmdBuffer                                 cmdBuffer)
+void
+anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
 {
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   struct anv_device *device = cmd_buffer->device;
-   struct anv_batch *batch = &cmd_buffer->batch;
-
-   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_END);
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
 
    anv_batch_bo_finish(cmd_buffer->last_batch_bo, &cmd_buffer->batch);
    cmd_buffer->surface_batch_bo->num_relocs =
       cmd_buffer->surface_relocs.num_relocs - cmd_buffer->surface_batch_bo->first_reloc;
    cmd_buffer->surface_batch_bo->length = cmd_buffer->surface_next;
+}
+
+void
+anv_cmd_buffer_compute_validate_list(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_batch *batch = &cmd_buffer->batch;
 
    cmd_buffer->exec2_bo_count = 0;
    cmd_buffer->need_reloc = false;
-
-   /* Lock for access to bo->index. */
-   pthread_mutex_lock(&device->mutex);
 
    /* Add surface state bos first so we can add them with their relocs. */
    for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
@@ -716,9 +715,24 @@ VkResult anv_EndCommandBuffer(
    if (!cmd_buffer->need_reloc)
       cmd_buffer->execbuf.flags |= I915_EXEC_NO_RELOC;
    cmd_buffer->execbuf.flags |= I915_EXEC_RENDER;
-   cmd_buffer->execbuf.rsvd1 = device->context_id;
+   cmd_buffer->execbuf.rsvd1 = cmd_buffer->device->context_id;
    cmd_buffer->execbuf.rsvd2 = 0;
+}
 
+VkResult anv_EndCommandBuffer(
+    VkCmdBuffer                                 cmdBuffer)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   struct anv_device *device = cmd_buffer->device;
+
+   anv_cmd_buffer_emit_batch_buffer_end(cmd_buffer);
+
+   /* The algorithm used to compute the validate list is not threadsafe as
+    * it uses the bo->index field.  We have to lock the device around it.
+    * Fortunately, the chances for contention here are probably very low.
+    */
+   pthread_mutex_lock(&device->mutex);
+   anv_cmd_buffer_compute_validate_list(cmd_buffer);
    pthread_mutex_unlock(&device->mutex);
 
    return VK_SUCCESS;
