@@ -3957,9 +3957,7 @@ fs_visitor::lower_logical_sends()
    bool progress = false;
 
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
-      const fs_builder ibld = bld.exec_all(inst->force_writemask_all)
-                                 .group(inst->exec_size, inst->force_sechalf)
-                                 .at(block, inst);
+      const fs_builder ibld(this, block, inst);
 
       switch (inst->opcode) {
       case FS_OPCODE_FB_WRITE_LOGICAL:
