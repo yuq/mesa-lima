@@ -269,17 +269,19 @@ namespace {
 #endif
    }
 
-   void
-   find_kernels(llvm::Module *mod, std::vector<llvm::Function *> &kernels) {
+   std::vector<llvm::Function *>
+   find_kernels(const llvm::Module *mod) {
       const llvm::NamedMDNode *kernel_node =
                                  mod->getNamedMetadata("opencl.kernels");
       // This means there are no kernels in the program.  The spec does not
       // require that we return an error here, but there will be an error if
       // the user tries to pass this program to a clCreateKernel() call.
       if (!kernel_node) {
-         return;
+         return std::vector<llvm::Function *>();
       }
 
+      std::vector<llvm::Function *> kernels;
+      kernels.reserve(kernel_node->getNumOperands());
       for (unsigned i = 0; i < kernel_node->getNumOperands(); ++i) {
 #if HAVE_LLVM >= 0x0306
          kernels.push_back(llvm::mdconst::dyn_extract<llvm::Function>(
@@ -288,17 +290,19 @@ namespace {
 #endif
                                     kernel_node->getOperand(i)->getOperand(0)));
       }
+      return kernels;
    }
 
    void
-   optimize(llvm::Module *mod, unsigned optimization_level,
-            const std::vector<llvm::Function *> &kernels) {
+   optimize(llvm::Module *mod, unsigned optimization_level) {
 
 #if HAVE_LLVM >= 0x0307
       llvm::legacy::PassManager PM;
 #else
       llvm::PassManager PM;
 #endif
+
+      const std::vector<llvm::Function *> kernels = find_kernels(mod);
 
       // Add a function internalizer pass.
       //
@@ -435,7 +439,6 @@ namespace {
 
    module
    build_module_llvm(llvm::Module *mod,
-                     const std::vector<llvm::Function *> &kernels,
                      clang::LangAS::Map& address_spaces) {
 
       module m;
@@ -447,6 +450,7 @@ namespace {
       llvm::WriteBitcodeToFile(mod, bitcode_ostream);
       bitcode_ostream.flush();
 
+      const std::vector<llvm::Function *> kernels = find_kernels(mod);
       for (unsigned i = 0; i < kernels.size(); ++i) {
          std::string kernel_name = kernels[i]->getName();
          std::vector<module::argument> args =
@@ -610,9 +614,10 @@ namespace {
    module
    build_module_native(std::vector<char> &code,
                        const llvm::Module *mod,
-                       const std::vector<llvm::Function *> &kernels,
                        const clang::LangAS::Map &address_spaces,
                        std::string &r_log) {
+
+      const std::vector<llvm::Function *> kernels = find_kernels(mod);
 
       std::map<std::string, unsigned> kernel_offsets =
             get_kernel_offsets(code, kernels, r_log);
@@ -697,7 +702,6 @@ clover::compile_program_llvm(const std::string &source,
 
    init_targets();
 
-   std::vector<llvm::Function *> kernels;
    size_t processor_str_len = std::string(target).find_first_of("-");
    std::string processor(target, 0, processor_str_len);
    std::string triple(target, processor_str_len + 1,
@@ -717,9 +721,7 @@ clover::compile_program_llvm(const std::string &source,
                                     triple, processor, opts, address_spaces,
                                     optimization_level, r_log);
 
-   find_kernels(mod, kernels);
-
-   optimize(mod, optimization_level, kernels);
+   optimize(mod, optimization_level);
 
    if (get_debug_flags() & DBG_LLVM) {
       std::string log;
@@ -738,13 +740,13 @@ clover::compile_program_llvm(const std::string &source,
          m = module();
          break;
       case PIPE_SHADER_IR_LLVM:
-         m = build_module_llvm(mod, kernels, address_spaces);
+         m = build_module_llvm(mod, address_spaces);
          break;
       case PIPE_SHADER_IR_NATIVE: {
          std::vector<char> code = compile_native(mod, triple, processor,
                                                  get_debug_flags() & DBG_ASM,
                                                  r_log);
-         m = build_module_native(code, mod, kernels, address_spaces, r_log);
+         m = build_module_native(code, mod, address_spaces, r_log);
          break;
       }
    }
