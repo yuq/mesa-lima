@@ -696,6 +696,16 @@ void anv_cmd_state_fini(struct anv_cmd_state *state);
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
+   /* Fields required for the actual chain of anv_batch_bo's */
+   struct anv_batch                             batch;
+   struct anv_batch_bo *                        last_batch_bo;
+   struct anv_batch_bo *                        surface_batch_bo;
+   uint32_t                                     surface_next;
+   struct anv_reloc_list                        surface_relocs;
+
+   /* Information needed for execbuf that's generated when the command
+    * buffer is ended.
+    */
    struct drm_i915_gem_execbuffer2              execbuf;
    struct drm_i915_gem_exec_object2 *           exec2_objects;
    uint32_t                                     exec2_bo_count;
@@ -704,11 +714,7 @@ struct anv_cmd_buffer {
    bool                                         need_reloc;
    uint32_t                                     serial;
 
-   struct anv_batch                             batch;
-   struct anv_batch_bo *                        last_batch_bo;
-   struct anv_batch_bo *                        surface_batch_bo;
-   uint32_t                                     surface_next;
-   struct anv_reloc_list                        surface_relocs;
+   /* Stream objects for storing temporary data */
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
