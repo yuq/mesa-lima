@@ -2313,12 +2313,10 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
  * Assign locations for either VS inputs or FS outputs
  *
  * \param prog          Shader program whose variables need locations assigned
+ * \param constants     Driver specific constant values for the program.
  * \param target_index  Selector for the program target to receive location
  *                      assignmnets.  Must be either \c MESA_SHADER_VERTEX or
  *                      \c MESA_SHADER_FRAGMENT.
- * \param max_index     Maximum number of generic locations.  This corresponds
- *                      to either the maximum number of draw buffers or the
- *                      maximum number of generic attributes.
  *
  * \return
  * If locations are successfully assigned, true is returned.  Otherwise an
@@ -2326,9 +2324,17 @@ find_available_slots(unsigned used_mask, unsigned needed_count)
  */
 bool
 assign_attribute_or_color_locations(gl_shader_program *prog,
-				    unsigned target_index,
-				    unsigned max_index)
+                                    struct gl_constants *constants,
+                                    unsigned target_index)
 {
+   /* Maximum number of generic locations.  This corresponds to either the
+    * maximum number of draw buffers or the maximum number of generic
+    * attributes.
+    */
+   unsigned max_index = (target_index == MESA_SHADER_VERTEX) ?
+      constants->Program[target_index].MaxAttribs :
+      MAX2(constants->MaxDrawBuffers, constants->MaxDualSourceDrawBuffers);
+
    /* Mark invalid locations as being used.
     */
    unsigned used_locations = (max_index >= 32)
@@ -3648,12 +3654,13 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
-   if (!assign_attribute_or_color_locations(prog, MESA_SHADER_VERTEX,
-                                            ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)) {
+   if (!assign_attribute_or_color_locations(prog, &ctx->Const,
+                                            MESA_SHADER_VERTEX)) {
       goto done;
    }
 
-   if (!assign_attribute_or_color_locations(prog, MESA_SHADER_FRAGMENT, MAX2(ctx->Const.MaxDrawBuffers, ctx->Const.MaxDualSourceDrawBuffers))) {
+   if (!assign_attribute_or_color_locations(prog, &ctx->Const,
+                                            MESA_SHADER_FRAGMENT)) {
       goto done;
    }
 
