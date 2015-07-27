@@ -174,6 +174,9 @@ fs_visitor::opt_peephole_sel()
 
          /* Check that the MOVs are the right form. */
          if (!then_mov[i]->dst.equals(else_mov[i]->dst) ||
+             then_mov[i]->exec_size != else_mov[i]->exec_size ||
+             then_mov[i]->force_sechalf != else_mov[i]->force_sechalf ||
+             then_mov[i]->force_writemask_all != else_mov[i]->force_writemask_all ||
              then_mov[i]->is_partial_write() ||
              else_mov[i]->is_partial_write() ||
              then_mov[i]->conditional_mod != BRW_CONDITIONAL_NONE ||
@@ -192,14 +195,17 @@ fs_visitor::opt_peephole_sel()
       if (movs == 0)
          continue;
 
-      const fs_builder ibld = bld.at(block, if_inst);
-
       /* Emit a CMP if our IF used the embedded comparison */
-      if (devinfo->gen == 6 && if_inst->conditional_mod)
+      if (devinfo->gen == 6 && if_inst->conditional_mod) {
+         const fs_builder ibld(this, block, if_inst);
          ibld.CMP(ibld.null_reg_d(), if_inst->src[0], if_inst->src[1],
                   if_inst->conditional_mod);
+      }
 
       for (int i = 0; i < movs; i++) {
+         const fs_builder ibld = fs_builder(this, then_block, then_mov[i])
+                                 .at(block, if_inst);
+
          if (then_mov[i]->src[0].equals(else_mov[i]->src[0])) {
             ibld.MOV(then_mov[i]->dst, then_mov[i]->src[0]);
          } else {
