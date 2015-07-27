@@ -189,7 +189,7 @@ image2d::image2d(clover::context &ctx, cl_mem_flags flags,
                  const cl_image_format *format, size_t width,
                  size_t height, size_t row_pitch,
                  void *host_ptr) :
-   image(ctx, flags, format, width, height, 0,
+   image(ctx, flags, format, width, height, 1,
          row_pitch, 0, height * row_pitch, host_ptr) {
 }
 
