@@ -706,12 +706,20 @@ struct anv_cmd_buffer {
    /* Information needed for execbuf that's generated when the command
     * buffer is ended.
     */
-   struct drm_i915_gem_execbuffer2              execbuf;
-   struct drm_i915_gem_exec_object2 *           exec2_objects;
-   uint32_t                                     exec2_bo_count;
-   struct anv_bo **                             exec2_bos;
-   uint32_t                                     exec2_array_length;
-   bool                                         need_reloc;
+   struct {
+      struct drm_i915_gem_execbuffer2           execbuf;
+
+      struct drm_i915_gem_exec_object2 *        objects;
+      uint32_t                                  bo_count;
+      struct anv_bo **                          bos;
+
+      /* Allocated length of the 'objects' and 'bos' arrays */
+      uint32_t                                  array_length;
+
+      bool                                      need_reloc;
+   } execbuf2;
+
+   /* Serial for tracking buffer completion */
    uint32_t                                     serial;
 
    /* Stream objects for storing temporary data */
@@ -725,7 +733,7 @@ VkResult anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer);
-void anv_cmd_buffer_compute_validate_list(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,

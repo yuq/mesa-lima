@@ -742,7 +742,7 @@ VkResult anv_QueueSubmit(
          anv_cmd_buffer_dump(cmd_buffer);
 
       if (!device->no_hw) {
-         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf);
+         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
          if (ret != 0)
             return vk_error(VK_ERROR_UNKNOWN);
 
@@ -752,8 +752,8 @@ VkResult anv_QueueSubmit(
                return vk_error(VK_ERROR_UNKNOWN);
          }
 
-         for (uint32_t i = 0; i < cmd_buffer->exec2_bo_count; i++)
-            cmd_buffer->exec2_bos[i]->offset = cmd_buffer->exec2_objects[i].offset;
+         for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
+            cmd_buffer->execbuf2.bos[i]->offset = cmd_buffer->execbuf2.objects[i].offset;
       } else {
          *(uint32_t *)queue->completed_serial.map = cmd_buffer->serial;
       }

@@ -381,9 +381,9 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    /* Start surface_next at 1 so surface offset 0 is invalid. */
    cmd_buffer->surface_next = 1;
 
-   cmd_buffer->exec2_objects = NULL;
-   cmd_buffer->exec2_bos = NULL;
-   cmd_buffer->exec2_array_length = 0;
+   cmd_buffer->execbuf2.objects = NULL;
+   cmd_buffer->execbuf2.bos = NULL;
+   cmd_buffer->execbuf2.array_length = 0;
 
    return VK_SUCCESS;
 
@@ -420,8 +420,8 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    }
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
 
-   anv_device_free(device, cmd_buffer->exec2_objects);
-   anv_device_free(device, cmd_buffer->exec2_bos);
+   anv_device_free(device, cmd_buffer->execbuf2.objects);
+   anv_device_free(device, cmd_buffer->execbuf2.bos);
 }
 
 void
@@ -461,13 +461,13 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
 {
    struct drm_i915_gem_exec_object2 *obj;
 
-   if (bo->index < cmd_buffer->exec2_bo_count &&
-       cmd_buffer->exec2_bos[bo->index] == bo)
+   if (bo->index < cmd_buffer->execbuf2.bo_count &&
+       cmd_buffer->execbuf2.bos[bo->index] == bo)
       return VK_SUCCESS;
 
-   if (cmd_buffer->exec2_bo_count >= cmd_buffer->exec2_array_length) {
-      uint32_t new_len = cmd_buffer->exec2_objects ?
-                         cmd_buffer->exec2_array_length * 2 : 64;
+   if (cmd_buffer->execbuf2.bo_count >= cmd_buffer->execbuf2.array_length) {
+      uint32_t new_len = cmd_buffer->execbuf2.objects ?
+                         cmd_buffer->execbuf2.array_length * 2 : 64;
 
       struct drm_i915_gem_exec_object2 *new_objects =
          anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_objects),
@@ -483,23 +483,23 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       }
 
-      if (cmd_buffer->exec2_objects) {
-         memcpy(new_objects, cmd_buffer->exec2_objects,
-                cmd_buffer->exec2_bo_count * sizeof(*new_objects));
-         memcpy(new_bos, cmd_buffer->exec2_bos,
-                cmd_buffer->exec2_bo_count * sizeof(*new_bos));
+      if (cmd_buffer->execbuf2.objects) {
+         memcpy(new_objects, cmd_buffer->execbuf2.objects,
+                cmd_buffer->execbuf2.bo_count * sizeof(*new_objects));
+         memcpy(new_bos, cmd_buffer->execbuf2.bos,
+                cmd_buffer->execbuf2.bo_count * sizeof(*new_bos));
       }
 
-      cmd_buffer->exec2_objects = new_objects;
-      cmd_buffer->exec2_bos = new_bos;
-      cmd_buffer->exec2_array_length = new_len;
+      cmd_buffer->execbuf2.objects = new_objects;
+      cmd_buffer->execbuf2.bos = new_bos;
+      cmd_buffer->execbuf2.array_length = new_len;
    }
 
-   assert(cmd_buffer->exec2_bo_count < cmd_buffer->exec2_array_length);
+   assert(cmd_buffer->execbuf2.bo_count < cmd_buffer->execbuf2.array_length);
 
-   bo->index = cmd_buffer->exec2_bo_count++;
-   obj = &cmd_buffer->exec2_objects[bo->index];
-   cmd_buffer->exec2_bos[bo->index] = bo;
+   bo->index = cmd_buffer->execbuf2.bo_count++;
+   obj = &cmd_buffer->execbuf2.objects[bo->index];
+   cmd_buffer->execbuf2.bos[bo->index] = bo;
 
    obj->handle = bo->gem_handle;
    obj->relocation_count = 0;
@@ -543,7 +543,7 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
    for (size_t i = 0; i < list->num_relocs; i++) {
       bo = list->reloc_bos[i];
       if (bo->offset != list->relocs[i].presumed_offset)
-         cmd_buffer->need_reloc = true;
+         cmd_buffer->execbuf2.need_reloc = true;
 
       list->relocs[i].target_handle = bo->index;
    }
@@ -561,12 +561,12 @@ anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void
-anv_cmd_buffer_compute_validate_list(struct anv_cmd_buffer *cmd_buffer)
+anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch *batch = &cmd_buffer->batch;
 
-   cmd_buffer->exec2_bo_count = 0;
-   cmd_buffer->need_reloc = false;
+   cmd_buffer->execbuf2.bo_count = 0;
+   cmd_buffer->execbuf2.need_reloc = false;
 
    /* Add surface state bos first so we can add them with their relocs. */
    for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
@@ -596,24 +596,25 @@ anv_cmd_buffer_compute_validate_list(struct anv_cmd_buffer *cmd_buffer)
    anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo,
                          &batch->relocs.relocs[batch_bo->first_reloc],
                          batch_bo->num_relocs);
-   assert(batch_bo->bo.index == cmd_buffer->exec2_bo_count - 1);
+   assert(batch_bo->bo.index == cmd_buffer->execbuf2.bo_count - 1);
 
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_process_relocs(cmd_buffer, &batch->relocs);
 
-   cmd_buffer->execbuf.buffers_ptr = (uintptr_t) cmd_buffer->exec2_objects;
-   cmd_buffer->execbuf.buffer_count = cmd_buffer->exec2_bo_count;
-   cmd_buffer->execbuf.batch_start_offset = 0;
-   cmd_buffer->execbuf.batch_len = batch->next - batch->start;
-   cmd_buffer->execbuf.cliprects_ptr = 0;
-   cmd_buffer->execbuf.num_cliprects = 0;
-   cmd_buffer->execbuf.DR1 = 0;
-   cmd_buffer->execbuf.DR4 = 0;
+   cmd_buffer->execbuf2.execbuf = (struct drm_i915_gem_execbuffer2) {
+      .buffers_ptr = (uintptr_t) cmd_buffer->execbuf2.objects,
+      .buffer_count = cmd_buffer->execbuf2.bo_count,
+      .batch_start_offset = 0,
+      .batch_len = batch->next - batch->start,
+      .cliprects_ptr = 0,
+      .num_cliprects = 0,
+      .DR1 = 0,
+      .DR4 = 0,
+      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER,
+      .rsvd1 = cmd_buffer->device->context_id,
+      .rsvd2 = 0,
+   };
 
-   cmd_buffer->execbuf.flags = I915_EXEC_HANDLE_LUT;
-   if (!cmd_buffer->need_reloc)
-      cmd_buffer->execbuf.flags |= I915_EXEC_NO_RELOC;
-   cmd_buffer->execbuf.flags |= I915_EXEC_RENDER;
-   cmd_buffer->execbuf.rsvd1 = cmd_buffer->device->context_id;
-   cmd_buffer->execbuf.rsvd2 = 0;
+   if (!cmd_buffer->execbuf2.need_reloc)
+      cmd_buffer->execbuf2.execbuf.flags |= I915_EXEC_NO_RELOC;
 }

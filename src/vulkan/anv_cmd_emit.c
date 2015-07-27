@@ -189,7 +189,7 @@ VkResult anv_EndCommandBuffer(
     * Fortunately, the chances for contention here are probably very low.
     */
    pthread_mutex_lock(&device->mutex);
-   anv_cmd_buffer_compute_validate_list(cmd_buffer);
+   anv_cmd_buffer_prepare_execbuf(cmd_buffer);
    pthread_mutex_unlock(&device->mutex);
 
    return VK_SUCCESS;
