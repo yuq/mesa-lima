@@ -38,7 +38,7 @@
  * is concerned, most of anv_cmd_buffer is magic.
  */
 
-VkResult
+static void
 anv_cmd_state_init(struct anv_cmd_state *state)
 {
    state->rs_state = NULL;
@@ -55,14 +55,73 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->vp_state = NULL;
    state->rs_state = NULL;
    state->ds_state = NULL;
+}
+
+VkResult anv_CreateCommandBuffer(
+    VkDevice                                    _device,
+    const VkCmdBufferCreateInfo*                pCreateInfo,
+    VkCmdBuffer*                                pCmdBuffer)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_cmd_buffer *cmd_buffer;
+   VkResult result;
+
+   assert(pCreateInfo->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+
+   cmd_buffer = anv_device_alloc(device, sizeof(*cmd_buffer), 8,
+                                 VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (cmd_buffer == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   cmd_buffer->device = device;
+
+   result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);
+   if (result != VK_SUCCESS)
+      goto fail;
+
+   anv_state_stream_init(&cmd_buffer->surface_state_stream,
+                         &device->surface_state_block_pool);
+   anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
+                         &device->dynamic_state_block_pool);
+
+   anv_cmd_state_init(&cmd_buffer->state);
+
+   *pCmdBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
+
+   return VK_SUCCESS;
+
+ fail: anv_device_free(device, cmd_buffer);
+
+   return result;
+}
+
+VkResult anv_DestroyCommandBuffer(
+    VkDevice                                    _device,
+    VkCmdBuffer                                 _cmd_buffer)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
+
+   anv_cmd_buffer_fini_batch_bo_chain(cmd_buffer);
+
+   anv_state_stream_finish(&cmd_buffer->surface_state_stream);
+   anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
+   anv_device_free(device, cmd_buffer);
 
    return VK_SUCCESS;
 }
 
-void
-anv_cmd_state_fini(struct anv_cmd_state *state)
+VkResult anv_ResetCommandBuffer(
+    VkCmdBuffer                                 cmdBuffer,
+    VkCmdBufferResetFlags                       flags)
 {
-   /* Nothing we need to finish right now */
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
+
+   anv_cmd_state_init(&cmd_buffer->state);
+
+   return VK_SUCCESS;
 }
 
 void
@@ -113,6 +172,25 @@ VkResult anv_BeginCommandBuffer(
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
    cmd_buffer->state.current_pipeline = UINT32_MAX;
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_EndCommandBuffer(
+    VkCmdBuffer                                 cmdBuffer)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   struct anv_device *device = cmd_buffer->device;
+
+   anv_cmd_buffer_emit_batch_buffer_end(cmd_buffer);
+
+   /* The algorithm used to compute the validate list is not threadsafe as
+    * it uses the bo->index field.  We have to lock the device around it.
+    * Fortunately, the chances for contention here are probably very low.
+    */
+   pthread_mutex_lock(&device->mutex);
+   anv_cmd_buffer_compute_validate_list(cmd_buffer);
+   pthread_mutex_unlock(&device->mutex);
 
    return VK_SUCCESS;
 }

@@ -690,9 +690,6 @@ struct anv_cmd_state {
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
 };
 
-VkResult anv_cmd_state_init(struct anv_cmd_state *state);
-void anv_cmd_state_fini(struct anv_cmd_state *state);
-
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
