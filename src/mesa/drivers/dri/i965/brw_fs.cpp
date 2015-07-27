@@ -3139,7 +3139,7 @@ fs_visitor::lower_integer_multiplication()
            inst->dst.type != BRW_REGISTER_TYPE_UD))
          continue;
 
-      const fs_builder ibld = bld.at(block, inst);
+      const fs_builder ibld(this, block, inst);
 
       /* The MUL instruction isn't commutative. On Gen <= 6, only the low
        * 16-bits of src0 are read, and on Gen >= 7 only the low 16-bits of
