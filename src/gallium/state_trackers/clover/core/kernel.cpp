@@ -182,6 +182,34 @@ kernel::exec_context::bind(intrusive_ptr<command_queue> _q,
          }
          break;
       }
+      case module::argument::image_size: {
+         auto img = dynamic_cast<image_argument &>(**(explicit_arg - 1)).get();
+         std::vector<cl_uint> image_size{
+               static_cast<cl_uint>(img->width()),
+               static_cast<cl_uint>(img->height()),
+               static_cast<cl_uint>(img->depth())};
+         for (auto x : image_size) {
+            auto arg = argument::create(marg);
+
+            arg->set(sizeof(x), &x);
+            arg->bind(*this, marg);
+         }
+         break;
+      }
+      case module::argument::image_format: {
+         auto img = dynamic_cast<image_argument &>(**(explicit_arg - 1)).get();
+         cl_image_format fmt = img->format();
+         std::vector<cl_uint> image_format{
+               static_cast<cl_uint>(fmt.image_channel_data_type),
+               static_cast<cl_uint>(fmt.image_channel_order)};
+         for (auto x : image_format) {
+            auto arg = argument::create(marg);
+
+            arg->set(sizeof(x), &x);
+            arg->bind(*this, marg);
+         }
+         break;
+      }
       }
    }
 

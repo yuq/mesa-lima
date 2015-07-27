@@ -344,18 +344,91 @@ namespace {
       PM.run(*mod);
    }
 
+   // Kernel metadata
+
+   const llvm::MDNode *
+   get_kernel_metadata(const llvm::Function *kernel_func) {
+      auto mod = kernel_func->getParent();
+      auto kernels_node = mod->getNamedMetadata("opencl.kernels");
+      if (!kernels_node) {
+         return nullptr;
+      }
+
+      const llvm::MDNode *kernel_node = nullptr;
+      for (unsigned i = 0; i < kernels_node->getNumOperands(); ++i) {
+#if HAVE_LLVM >= 0x0306
+         auto func = llvm::mdconst::dyn_extract<llvm::Function>(
+#else
+         auto func = llvm::dyn_cast<llvm::Function>(
+#endif
+                                    kernels_node->getOperand(i)->getOperand(0));
+         if (func == kernel_func) {
+            kernel_node = kernels_node->getOperand(i);
+            break;
+         }
+      }
+
+      return kernel_node;
+   }
+
+   llvm::MDNode*
+   node_from_op_checked(const llvm::MDOperand &md_operand,
+                        llvm::StringRef expect_name,
+                        unsigned expect_num_args)
+   {
+      auto node = llvm::cast<llvm::MDNode>(md_operand);
+      assert(node->getNumOperands() == expect_num_args &&
+             "Wrong number of operands.");
+
+      auto str_node = llvm::cast<llvm::MDString>(node->getOperand(0));
+      assert(str_node->getString() == expect_name &&
+             "Wrong metadata node name.");
+
+      return node;
+   }
+
+   struct kernel_arg_md {
+      llvm::StringRef type_name;
+      llvm::StringRef access_qual;
+      kernel_arg_md(llvm::StringRef type_name_, llvm::StringRef access_qual_):
+         type_name(type_name_), access_qual(access_qual_) {}
+   };
+
+   std::vector<kernel_arg_md>
+   get_kernel_arg_md(const llvm::Function *kernel_func) {
+      auto num_args = kernel_func->getArgumentList().size();
+
+      auto kernel_node = get_kernel_metadata(kernel_func);
+      auto aq = node_from_op_checked(kernel_node->getOperand(2),
+                                     "kernel_arg_access_qual", num_args + 1);
+      auto ty = node_from_op_checked(kernel_node->getOperand(3),
+                                     "kernel_arg_type", num_args + 1);
+
+      std::vector<kernel_arg_md> res;
+      res.reserve(num_args);
+      for (unsigned i = 0; i < num_args; ++i) {
+         res.push_back(kernel_arg_md(
+            llvm::cast<llvm::MDString>(ty->getOperand(i+1))->getString(),
+            llvm::cast<llvm::MDString>(aq->getOperand(i+1))->getString()));
+      }
+
+      return res;
+   }
+
    std::vector<module::argument>
    get_kernel_args(const llvm::Module *mod, const std::string &kernel_name,
                    const clang::LangAS::Map &address_spaces) {
 
       std::vector<module::argument> args;
       llvm::Function *kernel_func = mod->getFunction(kernel_name);
+      assert(kernel_func && "Kernel name not found in module.");
+      auto arg_md = get_kernel_arg_md(kernel_func);
 
       llvm::DataLayout TD(mod);
+      llvm::Type *size_type =
+         TD.getSmallestLegalIntType(mod->getContext(), sizeof(cl_uint) * 8);
 
-      for (llvm::Function::const_arg_iterator I = kernel_func->arg_begin(),
-                                      E = kernel_func->arg_end(); I != E; ++I) {
-         const llvm::Argument &arg = *I;
+      for (const auto &arg: kernel_func->args()) {
 
          llvm::Type *arg_type = arg.getType();
          const unsigned arg_store_size = TD.getTypeStoreSize(arg_type);
@@ -373,6 +446,59 @@ namespace {
          unsigned target_size = TD.getTypeStoreSize(target_type);
          unsigned target_align = TD.getABITypeAlignment(target_type);
 
+         llvm::StringRef type_name = arg_md[arg.getArgNo()].type_name;
+         llvm::StringRef access_qual = arg_md[arg.getArgNo()].access_qual;
+
+         // Image
+         const bool is_image2d = type_name == "image2d_t";
+         const bool is_image3d = type_name == "image3d_t";
+         if (is_image2d || is_image3d) {
+            const bool is_write_only = access_qual == "write_only";
+            const bool is_read_only = access_qual == "read_only";
+
+            typename module::argument::type marg_type;
+            if (is_image2d && is_read_only) {
+               marg_type = module::argument::image2d_rd;
+            } else if (is_image2d && is_write_only) {
+               marg_type = module::argument::image2d_wr;
+            } else if (is_image3d && is_read_only) {
+               marg_type = module::argument::image3d_rd;
+            } else if (is_image3d && is_write_only) {
+               marg_type = module::argument::image3d_wr;
+            } else {
+               assert(0 && "Wrong image access qualifier");
+            }
+
+            args.push_back(module::argument(marg_type,
+                                            arg_store_size, target_size,
+                                            target_align,
+                                            module::argument::zero_ext));
+            continue;
+         }
+
+         // Image size implicit argument
+         if (type_name == "__llvm_image_size") {
+            args.push_back(module::argument(module::argument::scalar,
+                                            sizeof(cl_uint),
+                                            TD.getTypeStoreSize(size_type),
+                                            TD.getABITypeAlignment(size_type),
+                                            module::argument::zero_ext,
+                                            module::argument::image_size));
+            continue;
+         }
+
+         // Image format implicit argument
+         if (type_name == "__llvm_image_format") {
+            args.push_back(module::argument(module::argument::scalar,
+                                            sizeof(cl_uint),
+                                            TD.getTypeStoreSize(size_type),
+                                            TD.getABITypeAlignment(size_type),
+                                            module::argument::zero_ext,
+                                            module::argument::image_format));
+            continue;
+         }
+
+         // Other types
          if (llvm::isa<llvm::PointerType>(arg_type) && arg.hasByValAttr()) {
             arg_type =
                   llvm::dyn_cast<llvm::PointerType>(arg_type)->getElementType();
@@ -417,9 +543,6 @@ namespace {
       // Append implicit arguments.  XXX - The types, ordering and
       // vector size of the implicit arguments should depend on the
       // target according to the selected calling convention.
-      llvm::Type *size_type =
-         TD.getSmallestLegalIntType(mod->getContext(), sizeof(cl_uint) * 8);
-
       args.push_back(
          module::argument(module::argument::scalar, sizeof(cl_uint),
                           TD.getTypeStoreSize(size_type),
