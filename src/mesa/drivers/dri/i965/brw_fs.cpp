@@ -4671,9 +4671,11 @@ fs_visitor::optimize()
     * Ideally optimization passes wouldn't be part of the visitor so they
     * wouldn't have access to bld at all, but they do, so just in case some
     * pass forgets to ask for a location explicitly set it to NULL here to
-    * make it trip.
+    * make it trip.  The dispatch width is initialized to a bogus value to
+    * make sure that optimizations set the execution controls explicitly to
+    * match the code they are manipulating instead of relying on the defaults.
     */
-   bld = bld.at(NULL, NULL);
+   bld = fs_builder(this, 64);
 
    split_virtual_grfs();
 

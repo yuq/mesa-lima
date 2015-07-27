@@ -176,6 +176,8 @@ namespace brw {
       dst_reg
       vgrf(enum brw_reg_type type, unsigned n = 1) const
       {
+         assert(dispatch_width() <= 32);
+
          if (n > 0)
             return dst_reg(GRF, shader->alloc.allocate(
                               DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
@@ -342,6 +344,7 @@ namespace brw {
       instruction *
       emit(instruction *inst) const
       {
+         assert(inst->exec_size <= 32);
          assert(inst->exec_size == dispatch_width() ||
                 force_writemask_all);
          assert(_group == 0 || _group == 8);
