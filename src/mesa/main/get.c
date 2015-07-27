@@ -379,6 +379,12 @@ static const int extra_ARB_shader_atomic_counters_es31[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_texture_multisample_es31[] = {
+   EXT(ARB_texture_multisample),
+   EXTRA_API_ES31,
+   EXTRA_END
+};
+
 EXTRA_EXT(ARB_texture_cube_map);
 EXTRA_EXT(EXT_texture_array);
 EXTRA_EXT(NV_fog_distance);
