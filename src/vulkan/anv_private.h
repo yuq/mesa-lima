@@ -696,7 +696,10 @@ void anv_cmd_state_fini(struct anv_cmd_state *state);
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
-   /* Fields required for the actual chain of anv_batch_bo's */
+   /* Fields required for the actual chain of anv_batch_bo's.
+    *
+    * These fields are initialized by anv_cmd_buffer_init_batch_bo_chain().
+    */
    struct anv_batch                             batch;
    struct anv_batch_bo *                        last_batch_bo;
    struct anv_batch_bo *                        surface_batch_bo;
@@ -720,6 +723,10 @@ struct anv_cmd_buffer {
 
    struct anv_cmd_state                         state;
 };
+
+VkResult anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
