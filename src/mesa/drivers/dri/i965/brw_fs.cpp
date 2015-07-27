@@ -4163,10 +4163,15 @@ fs_visitor::lower_simd_width()
       const unsigned lower_width = get_lowered_simd_width(devinfo, inst);
 
       if (lower_width != inst->exec_size) {
-         /* Builder matching the original instruction. */
+         /* Builder matching the original instruction.  We may also need to
+          * emit an instruction of width larger than the original, set the
+          * execution size of the builder to the highest of both for now so
+          * we're sure that both cases can be handled.
+          */
          const fs_builder ibld = bld.at(block, inst)
                                     .exec_all(inst->force_writemask_all)
-                                    .group(inst->exec_size, inst->force_sechalf);
+                                    .group(MAX2(inst->exec_size, lower_width),
+                                           inst->force_sechalf);
 
          /* Split the copies in chunks of the execution width of either the
           * original or the lowered instruction, whichever is lower.
@@ -4189,14 +4194,11 @@ fs_visitor::lower_simd_width()
             split_inst.exec_size = lower_width;
             split_inst.eot = inst->eot && i == n - 1;
 
-            /* Set exec_all if the lowered width is higher than the original
-             * to avoid breaking the compiler invariant that no control
-             * flow-masked instruction is wider than the shader's
-             * dispatch_width.  Then transform the sources and destination and
-             * emit the lowered instruction.
+            /* Select the correct channel enables for the i-th group, then
+             * transform the sources and destination and emit the lowered
+             * instruction.
              */
-            const fs_builder lbld = ibld.exec_all(lower_width > inst->exec_size)
-                                        .group(lower_width, i);
+            const fs_builder lbld = ibld.group(lower_width, i);
 
             for (unsigned j = 0; j < inst->sources; j++) {
                if (inst->src[j].file != BAD_FILE &&
