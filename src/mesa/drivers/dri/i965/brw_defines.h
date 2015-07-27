@@ -875,6 +875,21 @@ enum opcode {
     * instructions.
     */
    FS_OPCODE_FB_WRITE = 128,
+
+   /**
+    * Same as FS_OPCODE_FB_WRITE but expects its arguments separately as
+    * individual sources instead of as a single payload blob:
+    *
+    * Source 0: [required] Color 0.
+    * Source 1: [optional] Color 1 (for dual source blend messages).
+    * Source 2: [optional] Src0 Alpha.
+    * Source 3: [optional] Source Depth (passthrough from the thread payload).
+    * Source 4: [optional] Destination Depth (gl_FragDepth).
+    * Source 5: [optional] Sample Mask (gl_SampleMask).
+    * Source 6: [required] Number of color components (as a UD immediate).
+    */
+   FS_OPCODE_FB_WRITE_LOGICAL,
+
    FS_OPCODE_BLORP_FB_WRITE,
    FS_OPCODE_REP_FB_WRITE,
    SHADER_OPCODE_RCP,

@@ -537,6 +537,8 @@ brw_instruction_name(enum opcode op)
       return opcode_descs[op].name;
    case FS_OPCODE_FB_WRITE:
       return "fb_write";
+   case FS_OPCODE_FB_WRITE_LOGICAL:
+      return "fb_write_logical";
    case FS_OPCODE_BLORP_FB_WRITE:
       return "blorp_fb_write";
    case FS_OPCODE_REP_FB_WRITE:

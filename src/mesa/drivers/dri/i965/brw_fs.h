@@ -386,7 +386,7 @@ public:
    fs_reg result;
 
    /** Register numbers for thread payload fields. */
-   struct {
+   struct thread_payload {
       uint8_t source_depth_reg;
       uint8_t source_w_reg;
       uint8_t aa_dest_stencil_reg;

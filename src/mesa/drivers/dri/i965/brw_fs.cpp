@@ -678,6 +678,14 @@ fs_inst::components_read(unsigned i) const
       assert(i == 0);
       return 2;
 
+   case FS_OPCODE_FB_WRITE_LOGICAL:
+      assert(src[6].file == IMM);
+      /* First/second FB write color. */
+      if (i < 2)
+         return src[6].fixed_hw_reg.dw1.ud;
+      else
+         return 1;
+
    default:
       return 1;
    }
@@ -3199,6 +3207,25 @@ fs_visitor::lower_integer_multiplication()
    return progress;
 }
 
+static void
+lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
+                            const brw_wm_prog_data *prog_data,
+                            const brw_wm_prog_key *key,
+                            const fs_visitor::thread_payload &payload)
+{
+   assert(inst->src[6].file == IMM);
+   const brw_device_info *devinfo = bld.shader->devinfo;
+   const fs_reg &color0 = inst->src[0];
+   const fs_reg &color1 = inst->src[1];
+   const fs_reg &src0_alpha = inst->src[2];
+   const fs_reg &src_depth = inst->src[3];
+   const fs_reg &dst_depth = inst->src[4];
+   fs_reg sample_mask = inst->src[5];
+   const unsigned components = inst->src[6].fixed_hw_reg.dw1.ud;
+
+   assert(!"Not implemented");
+}
+
 bool
 fs_visitor::lower_logical_sends()
 {
@@ -3210,6 +3237,14 @@ fs_visitor::lower_logical_sends()
                                  .at(block, inst);
 
       switch (inst->opcode) {
+      case FS_OPCODE_FB_WRITE_LOGICAL:
+         assert(stage == MESA_SHADER_FRAGMENT);
+         lower_fb_write_logical_send(ibld, inst,
+                                     (const brw_wm_prog_data *)prog_data,
+                                     (const brw_wm_prog_key *)key,
+                                     payload);
+         break;
+
       default:
          continue;
       }
