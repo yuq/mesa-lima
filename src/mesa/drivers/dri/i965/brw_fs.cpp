@@ -3040,7 +3040,8 @@ fs_visitor::lower_load_payload()
       if (dst.file == MRF)
          dst.reg = dst.reg & ~BRW_MRF_COMPR4;
 
-      const fs_builder hbld = bld.exec_all().group(8, 0).at(block, inst);
+      const fs_builder ibld(this, block, inst);
+      const fs_builder hbld = ibld.exec_all().group(8, 0);
 
       for (uint8_t i = 0; i < inst->header_size; i++) {
          if (inst->src[i].file != BAD_FILE) {
@@ -3050,10 +3051,6 @@ fs_visitor::lower_load_payload()
          }
          dst = offset(dst, hbld, 1);
       }
-
-      const fs_builder ibld = bld.exec_all(inst->force_writemask_all)
-                                 .group(inst->exec_size, inst->force_sechalf)
-                                 .at(block, inst);
 
       if (inst->dst.file == MRF && (inst->dst.reg & BRW_MRF_COMPR4) &&
           inst->exec_size > 8) {
