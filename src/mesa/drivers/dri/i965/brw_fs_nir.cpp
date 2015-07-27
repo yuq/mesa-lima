@@ -1170,14 +1170,31 @@ fs_visitor::get_nir_image_deref(const nir_deref_var *deref)
          nir_deref_as_array(deref->deref.child);
       assert(deref->deref.child->deref_type == nir_deref_type_array &&
              deref_array->deref.child == NULL);
+      const unsigned size = glsl_get_length(deref->var->type);
+      const unsigned base = MIN2(deref_array->base_offset, size - 1);
 
-      image = offset(image, bld,
-                     deref_array->base_offset * BRW_IMAGE_PARAM_SIZE);
+      image = offset(image, bld, base * BRW_IMAGE_PARAM_SIZE);
 
       if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
          fs_reg *tmp = new(mem_ctx) fs_reg(vgrf(glsl_type::int_type));
-         bld.MUL(*tmp, get_nir_src(deref_array->indirect),
-                 fs_reg(BRW_IMAGE_PARAM_SIZE));
+
+         if (devinfo->gen == 7 && !devinfo->is_haswell) {
+            /* IVB hangs when trying to access an invalid surface index with
+             * the dataport.  According to the spec "if the index used to
+             * select an individual element is negative or greater than or
+             * equal to the size of the array, the results of the operation
+             * are undefined but may not lead to termination" -- which is one
+             * of the possible outcomes of the hang.  Clamp the index to
+             * prevent access outside of the array bounds.
+             */
+            bld.emit_minmax(*tmp, retype(get_nir_src(deref_array->indirect),
+                                         BRW_REGISTER_TYPE_UD),
+                            fs_reg(size - base - 1), BRW_CONDITIONAL_L);
+         } else {
+            bld.MOV(*tmp, get_nir_src(deref_array->indirect));
+         }
+
+         bld.MUL(*tmp, *tmp, fs_reg(BRW_IMAGE_PARAM_SIZE));
          image.reladdr = tmp;
       }
    }
