@@ -2511,7 +2511,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 			  S_008F1C_LAST_LEVEL(texture->nr_samples > 1 ?
 						      util_logbase2(texture->nr_samples) :
 						      last_level) |
-			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, 0, false)) |
+			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, base_level, false)) |
 			  S_008F1C_POW2_PAD(texture->last_level > 0) |
 			  S_008F1C_TYPE(si_tex_dim(texture->target, texture->nr_samples)));
 	view->state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
