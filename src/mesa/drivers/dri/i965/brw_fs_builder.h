@@ -64,6 +64,22 @@ namespace brw {
       }
 
       /**
+       * Construct an fs_builder that inserts instructions into \p shader
+       * before instruction \p inst in basic block \p block.  The default
+       * execution controls and debug annotation are initialized from the
+       * instruction passed as argument.
+       */
+      fs_builder(backend_shader *shader, bblock_t *block, fs_inst *inst) :
+         shader(shader), block(block), cursor(inst),
+         _dispatch_width(inst->exec_size),
+         _group(inst->force_sechalf ? 8 : 0),
+         force_writemask_all(inst->force_writemask_all)
+      {
+         annotation.str = inst->annotation;
+         annotation.ir = inst->ir;
+      }
+
+      /**
        * Construct an fs_builder that inserts instructions before \p cursor in
        * basic block \p block, inheriting other code generation parameters
        * from this.
