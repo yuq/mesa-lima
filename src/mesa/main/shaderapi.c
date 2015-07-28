@@ -2369,6 +2369,11 @@ _mesa_GetActiveSubroutineUniformiv(GLuint program, GLenum shadertype,
       return;
    }
 
+   if (index >= sh->NumSubroutineUniformTypes) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s: invalid index greater than GL_ACTIVE_SUBROUTINE_UNIFORMS", api_name);
+      return;
+   }
+
    switch (pname) {
    case GL_NUM_COMPATIBLE_SUBROUTINES: {
       res = _mesa_program_resource_find_index(shProg, resource_type, index);
