@@ -427,8 +427,10 @@ can_fast_copy_blit(struct brw_context *brw,
    if ((dst_offset | src_offset) & 63)
       return false;
 
-   /* Color depth greater than 128 bits not supported. */
-   if (cpp > 16)
+   /* Color depths which are not power of 2 or greater than 128 bits are
+    * not supported.
+    */
+   if (!_mesa_is_pow_two(cpp) || cpp > 16)
       return false;
 
    /* For Fast Copy Blits the pitch cannot be a negative number. So, bit 15
