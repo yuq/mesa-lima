@@ -72,7 +72,6 @@ struct vc4_exec_info {
 	 * command lists.
 	 */
 	struct vc4_shader_state {
-		uint8_t packet;
 		uint32_t addr;
 		/* Maximum vertex index referenced by any primitive using this
 		 * shader state.
