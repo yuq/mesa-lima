@@ -278,5 +278,6 @@ LOAD(shared, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 STORE(output, 0, 0, 0, 0)
 STORE(per_vertex_output, 1, 1, 0, 0)
 STORE(ssbo, 1, 1, 1, 0)
+STORE(shared, 0, 0, 1, 0)
 
-LAST_INTRINSIC(store_ssbo_indirect)
+LAST_INTRINSIC(store_shared_indirect)
