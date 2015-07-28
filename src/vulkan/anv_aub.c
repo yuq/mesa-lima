@@ -210,26 +210,27 @@ aub_build_dump_ringbuffer(struct anv_aub_writer *writer,
 }
 
 struct aub_bo {
+   uint32_t size;
    uint32_t offset;
    void *map;
    void *relocated;
 };
 
 static void
-relocate_bo(struct anv_bo *bo, struct drm_i915_gem_relocation_entry *relocs,
-            size_t num_relocs, struct aub_bo *bos)
+relocate_bo(struct aub_bo *aub_bo,
+            const struct drm_i915_gem_exec_object2 *gem_obj,
+            struct aub_bo *aub_bos)
 {
-   struct aub_bo *aub_bo = &bos[bo->index];
-   struct drm_i915_gem_relocation_entry *reloc;
+   const struct drm_i915_gem_relocation_entry *relocs =
+      (const struct drm_i915_gem_relocation_entry *) gem_obj->relocs_ptr;
    uint32_t *dw;
 
-   aub_bo->relocated = malloc(bo->size);
-   memcpy(aub_bo->relocated, aub_bo->map, bo->size);
-   for (size_t i = 0; i < num_relocs; i++) {
-      reloc = &relocs[i];
-      assert(reloc->offset < bo->size);
-      dw = aub_bo->relocated + reloc->offset;
-      *dw = bos[reloc->target_handle].offset + reloc->delta;
+   aub_bo->relocated = malloc(aub_bo->size);
+   memcpy(aub_bo->relocated, aub_bo->map, aub_bo->size);
+   for (size_t i = 0; i < gem_obj->relocation_count; i++) {
+      assert(relocs[i].offset < aub_bo->size);
+      dw = aub_bo->relocated + relocs[i].offset;
+      *dw = aub_bos[relocs[i].target_handle].offset + relocs[i].delta;
    }
 }
 
@@ -237,7 +238,6 @@ void
 anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_device *device = cmd_buffer->device;
-   struct anv_batch *batch = &cmd_buffer->batch;
    struct anv_aub_writer *writer;
    struct anv_bo *bo;
    uint32_t ring_flag = 0;
@@ -256,39 +256,23 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
          aub_bos[i].map = bo->map;
       else
          aub_bos[i].map = anv_gem_mmap(device, bo->gem_handle, 0, bo->size);
+      aub_bos[i].size = bo->size;
       aub_bos[i].relocated = aub_bos[i].map;
       aub_bos[i].offset = offset;
       offset = align_u32(offset + bo->size + 4095, 4096);
    }
 
-   struct anv_batch_bo *first_bbo;
-   for (struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
-        bbo != NULL; bbo = bbo->prev_batch_bo) {
-      /* Keep stashing the current BO until we get to the beginning */
-      first_bbo = bbo;
+   for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
+      relocate_bo(&aub_bos[i], &cmd_buffer->execbuf2.objects[i], aub_bos);
 
-      /* Handle relocations for this batch BO */
-      relocate_bo(&bbo->bo, &batch->relocs.relocs[bbo->first_reloc],
-                  bbo->num_relocs, aub_bos);
-   }
-   assert(first_bbo->prev_batch_bo == NULL);
-
-   for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
-        bbo != NULL; bbo = bbo->prev_batch_bo) {
-
-      /* Handle relocations for this surface state BO */
-      relocate_bo(&bbo->bo,
-                  &cmd_buffer->surface_relocs.relocs[bbo->first_reloc],
-                  bbo->num_relocs, aub_bos);
-   }
+   struct aub_bo *batch_bo = &aub_bos[cmd_buffer->execbuf2.bo_count - 1];
 
    for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++) {
       bo = cmd_buffer->execbuf2.bos[i];
-      if (i == cmd_buffer->execbuf2.bo_count - 1) {
-         assert(bo == &first_bbo->bo);
+      if (&aub_bos[i] == batch_bo) {
          aub_write_trace_block(writer, AUB_TRACE_TYPE_BATCH,
                                aub_bos[i].relocated,
-                               first_bbo->length, aub_bos[i].offset);
+                               bo->size, aub_bos[i].offset);
       } else {
          aub_write_trace_block(writer, AUB_TRACE_TYPE_NOTYPE,
                                aub_bos[i].relocated,
@@ -301,8 +285,7 @@ anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer)
    }
 
    /* Dump ring buffer */
-   aub_build_dump_ringbuffer(writer, aub_bos[first_bbo->bo.index].offset,
-                             offset, ring_flag);
+   aub_build_dump_ringbuffer(writer, batch_bo->offset, offset, ring_flag);
 
    free(aub_bos);
 
