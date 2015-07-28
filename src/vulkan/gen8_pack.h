@@ -267,7 +267,7 @@ struct GEN8_GPGPU_CSR_BASE_ADDRESS {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   __gen_address_type                           GPGPUCSRBaseAddressHigh;
+   __gen_address_type                           GPGPUCSRBaseAddress;
 };
 
 static inline void
@@ -288,7 +288,7 @@ GEN8_GPGPU_CSR_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    uint64_t qw1 =
-      __gen_combine_address(data, &dw[1], values->GPGPUCSRBaseAddressHigh, dw1);
+      __gen_combine_address(data, &dw[1], values->GPGPUCSRBaseAddress, dw1);
 
    dw[1] = qw1;
    dw[2] = qw1 >> 32;
@@ -319,7 +319,6 @@ struct GEN8_MI_ATOMIC {
    uint32_t                                     ATOMICOPCODE;
    uint32_t                                     DwordLength;
    __gen_address_type                           MemoryAddress;
-   uint32_t                                     MemoryAddressHigh;
    uint32_t                                     Operand1DataDword0;
    uint32_t                                     Operand2DataDword0;
    uint32_t                                     Operand1DataDword1;
@@ -352,12 +351,11 @@ GEN8_MI_ATOMIC_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw1 =
       0;
 
-   dw[1] =
+   uint64_t qw1 =
       __gen_combine_address(data, &dw[1], values->MemoryAddress, dw1);
 
-   dw[2] =
-      __gen_field(values->MemoryAddressHigh, 0, 15) |
-      0;
+   dw[1] = qw1;
+   dw[2] = qw1 >> 32;
 
    dw[3] =
       __gen_field(values->Operand1DataDword0, 0, 31) |
@@ -886,7 +884,6 @@ struct GEN8_SWTESS_BASE_ADDRESS {
    uint32_t                                     DwordLength;
    __gen_address_type                           SWTessellationBaseAddress;
    struct GEN8_MEMORY_OBJECT_CONTROL_STATE      SWTessellationMemoryObjectControlState;
-   __gen_address_type                           SWTessellationBaseAddressHigh;
 };
 
 static inline void
@@ -909,14 +906,11 @@ GEN8_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(dw_SWTessellationMemoryObjectControlState, 8, 11) |
       0;
 
-   dw[1] =
+   uint64_t qw1 =
       __gen_combine_address(data, &dw[1], values->SWTessellationBaseAddress, dw1);
 
-   uint32_t dw2 =
-      0;
-
-   dw[2] =
-      __gen_combine_address(data, &dw[2], values->SWTessellationBaseAddressHigh, dw2);
+   dw[1] = qw1;
+   dw[2] = qw1 >> 32;
 
 }
 
@@ -3217,7 +3211,7 @@ struct GEN8_3DSTATE_POLY_STIPPLE_PATTERN {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     PatternRow;
+   uint32_t                                     PatternRow[32];
 };
 
 static inline void
@@ -3234,9 +3228,11 @@ GEN8_3DSTATE_POLY_STIPPLE_PATTERN_pack(__gen_user_data *data, void * restrict ds
       __gen_field(values->DwordLength, 0, 7) |
       0;
 
-   dw[1] =
-      __gen_field(values->PatternRow, 0, 31) |
-      0;
+   for (uint32_t i = 0, j = 1; i < 32; i += 1, j++) {
+      dw[j] =
+         __gen_field(values->PatternRow[i + 0], 0, 31) |
+         0;
+   }
 
 }
 
@@ -4191,9 +4187,6 @@ GEN8_3DSTATE_SAMPLE_PATTERN_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->DwordLength, 0, 7) |
       0;
 
-   dw[1] =
-      0;
-
    dw[5] =
       __gen_field(values->_8xSample7XOffset * (1 << 4), 28, 31) |
       __gen_field(values->_8xSample7YOffset * (1 << 4), 24, 27) |
@@ -4363,23 +4356,8 @@ struct GEN8_3DSTATE_SBE_SWIZ {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   struct GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL       Attribute;
-   uint32_t                                     Attribute15WrapShortestEnables;
-   uint32_t                                     Attribute14WrapShortestEnables;
-   uint32_t                                     Attribute13WrapShortestEnables;
-   uint32_t                                     Attribute12WrapShortestEnables;
-   uint32_t                                     Attribute11WrapShortestEnables;
-   uint32_t                                     Attribute10WrapShortestEnables;
-   uint32_t                                     Attribute09WrapShortestEnables;
-   uint32_t                                     Attribute08WrapShortestEnables;
-   uint32_t                                     Attribute07WrapShortestEnables;
-   uint32_t                                     Attribute06WrapShortestEnables;
-   uint32_t                                     Attribute05WrapShortestEnables;
-   uint32_t                                     Attribute04WrapShortestEnables;
-   uint32_t                                     Attribute03WrapShortestEnables;
-   uint32_t                                     Attribute02WrapShortestEnables;
-   uint32_t                                     Attribute01WrapShortestEnables;
-   uint32_t                                     Attribute00WrapShortestEnables;
+   struct GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL       Attribute[16];
+   uint32_t                                     AttributeWrapShortestEnables[16];
 };
 
 static inline void
@@ -4396,33 +4374,29 @@ GEN8_3DSTATE_SBE_SWIZ_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->DwordLength, 0, 7) |
       0;
 
-   uint32_t dw_Attribute;
-   GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL_pack(data, &dw_Attribute, &values->Attribute);
-   dw[1] =
-      __gen_field(dw_Attribute, 0, 15) |
-      0;
+   for (uint32_t i = 0, j = 1; i < 16; i += 2, j++) {
+      uint32_t dw_Attribute0;
+      GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL_pack(data, &dw_Attribute0, &values->Attribute[i + 0]);
+      uint32_t dw_Attribute1;
+      GEN8_SF_OUTPUT_ATTRIBUTE_DETAIL_pack(data, &dw_Attribute1, &values->Attribute[i + 1]);
+      dw[j] =
+         __gen_field(dw_Attribute0, 0, 15) |
+         __gen_field(dw_Attribute1, 16, 31) |
+         0;
+   }
 
-   uint64_t qw9 =
-      __gen_field(values->Attribute15WrapShortestEnables, 60, 63) |
-      __gen_field(values->Attribute14WrapShortestEnables, 56, 59) |
-      __gen_field(values->Attribute13WrapShortestEnables, 52, 55) |
-      __gen_field(values->Attribute12WrapShortestEnables, 48, 51) |
-      __gen_field(values->Attribute11WrapShortestEnables, 44, 47) |
-      __gen_field(values->Attribute10WrapShortestEnables, 40, 43) |
-      __gen_field(values->Attribute09WrapShortestEnables, 36, 39) |
-      __gen_field(values->Attribute08WrapShortestEnables, 32, 35) |
-      __gen_field(values->Attribute07WrapShortestEnables, 28, 31) |
-      __gen_field(values->Attribute06WrapShortestEnables, 24, 27) |
-      __gen_field(values->Attribute05WrapShortestEnables, 20, 23) |
-      __gen_field(values->Attribute04WrapShortestEnables, 16, 19) |
-      __gen_field(values->Attribute03WrapShortestEnables, 12, 15) |
-      __gen_field(values->Attribute02WrapShortestEnables, 8, 11) |
-      __gen_field(values->Attribute01WrapShortestEnables, 4, 7) |
-      __gen_field(values->Attribute00WrapShortestEnables, 0, 3) |
-      0;
-
-   dw[9] = qw9;
-   dw[10] = qw9 >> 32;
+   for (uint32_t i = 0, j = 9; i < 16; i += 8, j++) {
+      dw[j] =
+         __gen_field(values->AttributeWrapShortestEnables[i + 0], 0, 3) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 1], 4, 7) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 2], 8, 11) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 3], 12, 15) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 4], 16, 19) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 5], 20, 23) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 6], 24, 27) |
+         __gen_field(values->AttributeWrapShortestEnables[i + 7], 28, 31) |
+         0;
+   }
 
 }
 
@@ -6091,7 +6065,7 @@ struct GEN8_MEDIA_OBJECT_GRPID {
    uint32_t                                     SubSliceDestinationSelect;
    uint32_t                                     IndirectDataLength;
    __gen_address_type                           IndirectDataStartAddress;
-   uint32_t                                     ScoredboardY;
+   uint32_t                                     ScoreboardY;
    uint32_t                                     ScoreboardX;
    uint32_t                                     ScoreboardColor;
    bool                                         ScoreboardMask;
@@ -6133,7 +6107,7 @@ GEN8_MEDIA_OBJECT_GRPID_pack(__gen_user_data *data, void * restrict dst,
       __gen_combine_address(data, &dw[3], values->IndirectDataStartAddress, dw3);
 
    dw[4] =
-      __gen_field(values->ScoredboardY, 16, 24) |
+      __gen_field(values->ScoreboardY, 16, 24) |
       __gen_field(values->ScoreboardX, 0, 8) |
       0;
 
@@ -6170,7 +6144,7 @@ struct GEN8_MEDIA_OBJECT_PRT {
 #define     Rootthreadqueue                                    0
 #define     VFEstateflush                                      1
    uint32_t                                     PRT_FenceType;
-   uint32_t                                     InlineData;
+   uint32_t                                     InlineData[12];
 };
 
 static inline void
@@ -6200,9 +6174,11 @@ GEN8_MEDIA_OBJECT_PRT_pack(__gen_user_data *data, void * restrict dst,
    dw[3] =
       0;
 
-   dw[4] =
-      __gen_field(values->InlineData, 0, 31) |
-      0;
+   for (uint32_t i = 0, j = 4; i < 12; i += 1, j++) {
+      dw[j] =
+         __gen_field(values->InlineData[i + 0], 0, 31) |
+         0;
+   }
 
 }
 
@@ -6587,7 +6563,6 @@ struct GEN8_MI_BATCH_BUFFER_START {
    uint32_t                                     AddressSpaceIndicator;
    uint32_t                                     DwordLength;
    __gen_address_type                           BatchBufferStartAddress;
-   __gen_address_type                           BatchBufferStartAddressHigh;
 };
 
 static inline void
@@ -6610,14 +6585,11 @@ GEN8_MI_BATCH_BUFFER_START_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw1 =
       0;
 
-   dw[1] =
+   uint64_t qw1 =
       __gen_combine_address(data, &dw[1], values->BatchBufferStartAddress, dw1);
 
-   uint32_t dw2 =
-      0;
-
-   dw[2] =
-      __gen_combine_address(data, &dw[2], values->BatchBufferStartAddressHigh, dw2);
+   dw[1] = qw1;
+   dw[2] = qw1 >> 32;
 
 }
 
@@ -6635,7 +6607,6 @@ struct GEN8_MI_CLFLUSH {
    uint32_t                                     DwordLength;
    __gen_address_type                           PageBaseAddress;
    uint32_t                                     StartingCachelineOffset;
-   __gen_address_type                           PageBaseAddressHigh;
    /* variable length fields follow */
 };
 
@@ -6656,14 +6627,11 @@ GEN8_MI_CLFLUSH_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->StartingCachelineOffset, 6, 11) |
       0;
 
-   dw[1] =
+   uint64_t qw1 =
       __gen_combine_address(data, &dw[1], values->PageBaseAddress, dw1);
 
-   uint32_t dw2 =
-      0;
-
-   dw[2] =
-      __gen_combine_address(data, &dw[2], values->PageBaseAddressHigh, dw2);
+   dw[1] = qw1;
+   dw[2] = qw1 >> 32;
 
    /* variable length fields follow */
 }
@@ -6685,7 +6653,6 @@ struct GEN8_MI_CONDITIONAL_BATCH_BUFFER_END {
    uint32_t                                     DwordLength;
    uint32_t                                     CompareDataDword;
    __gen_address_type                           CompareAddress;
-   __gen_address_type                           CompareAddressHigh;
 };
 
 static inline void
@@ -6709,14 +6676,11 @@ GEN8_MI_CONDITIONAL_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restrict
    uint32_t dw2 =
       0;
 
-   dw[2] =
+   uint64_t qw2 =
       __gen_combine_address(data, &dw[2], values->CompareAddress, dw2);
 
-   uint32_t dw3 =
-      0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->CompareAddressHigh, dw3);
+   dw[2] = qw2;
+   dw[3] = qw2 >> 32;
 
 }
 
@@ -7704,7 +7668,6 @@ struct GEN8_PIPE_CONTROL {
 #define     FlushEnabled                                       1
    bool                                         DepthCacheFlushEnable;
    __gen_address_type                           Address;
-   __gen_address_type                           AddressHigh;
    uint64_t                                     ImmediateData;
 };
 
@@ -7749,14 +7712,11 @@ GEN8_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
    uint32_t dw2 =
       0;
 
-   dw[2] =
+   uint64_t qw2 =
       __gen_combine_address(data, &dw[2], values->Address, dw2);
 
-   uint32_t dw3 =
-      0;
-
-   dw[3] =
-      __gen_combine_address(data, &dw[3], values->AddressHigh, dw3);
+   dw[2] = qw2;
+   dw[3] = qw2 >> 32;
 
    uint64_t qw4 =
       __gen_field(values->ImmediateData, 0, 63) |
@@ -7930,7 +7890,7 @@ GEN8_BLEND_STATE_ENTRY_pack(__gen_user_data *data, void * restrict dst,
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
-   dw[0] =
+   uint64_t qw0 =
       __gen_field(values->LogicOpEnable, 63, 63) |
       __gen_field(values->LogicOpFunction, 59, 62) |
       __gen_field(values->PreBlendSourceOnlyClampEnable, 36, 36) |
@@ -7950,6 +7910,9 @@ GEN8_BLEND_STATE_ENTRY_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->WriteDisableBlue, 0, 0) |
       0;
 
+   dw[0] = qw0;
+   dw[1] = qw0 >> 32;
+
 }
 
 struct GEN8_BLEND_STATE {
@@ -7962,7 +7925,7 @@ struct GEN8_BLEND_STATE {
    bool                                         ColorDitherEnable;
    uint32_t                                     XDitherOffset;
    uint32_t                                     YDitherOffset;
-   struct GEN8_BLEND_STATE_ENTRY                Entry;
+   struct GEN8_BLEND_STATE_ENTRY                Entry[8];
 };
 
 static inline void
@@ -7983,10 +7946,11 @@ GEN8_BLEND_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->YDitherOffset, 19, 20) |
       0;
 
-   GEN8_BLEND_STATE_ENTRY_pack(data, &dw[1], &values->Entry);
+   for (uint32_t i = 0, j = 1; i < 8; i++, j += 2)
+      GEN8_BLEND_STATE_ENTRY_pack(data, &dw[j], &values->Entry[i]);
 }
 
-#define GEN8_BLEND_STATE_ENTRY_length 0x00000001
+#define GEN8_BLEND_STATE_ENTRY_length 0x00000002
 
 #define GEN8_CC_VIEWPORT_length 0x00000002
 

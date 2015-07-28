@@ -370,7 +370,7 @@ emit_cb_state(struct anv_pipeline *pipeline,
       [VK_BLEND_OP_MAX]                         = BLENDFUNCTION_MAX,
    };
 
-   uint32_t num_dwords = 1 + info->attachmentCount * 2;
+   uint32_t num_dwords = GEN8_BLEND_STATE_length;
    pipeline->blend_state =
       anv_state_pool_alloc(&device->dynamic_state_pool, num_dwords * 4, 64);
 
@@ -378,13 +378,10 @@ emit_cb_state(struct anv_pipeline *pipeline,
       .AlphaToCoverageEnable = info->alphaToCoverageEnable,
    };
 
-   uint32_t *state = pipeline->blend_state.map;
-   GEN8_BLEND_STATE_pack(NULL, state, &blend_state);
-
    for (uint32_t i = 0; i < info->attachmentCount; i++) {
       const VkPipelineColorBlendAttachmentState *a = &info->pAttachments[i];
 
-      struct GEN8_BLEND_STATE_ENTRY entry = {
+      blend_state.Entry[i] = (struct GEN8_BLEND_STATE_ENTRY) {
          .LogicOpEnable = info->logicOpEnable,
          .LogicOpFunction = vk_to_gen_logic_op[info->logicOp],
          .ColorBufferBlendEnable = a->blendEnable,
@@ -402,9 +399,9 @@ emit_cb_state(struct anv_pipeline *pipeline,
          .WriteDisableGreen = !(a->channelWriteMask & VK_CHANNEL_G_BIT),
          .WriteDisableBlue = !(a->channelWriteMask & VK_CHANNEL_B_BIT),
       };
-
-      GEN8_BLEND_STATE_ENTRY_pack(NULL, state + i * 2 + 1, &entry);
    }
+
+   GEN8_BLEND_STATE_pack(NULL, pipeline->blend_state.map, &blend_state);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_BLEND_STATE_POINTERS,
                   .BlendStatePointer = pipeline->blend_state.offset,

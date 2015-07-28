@@ -2156,7 +2156,7 @@ struct GEN7_3DSTATE_POLY_STIPPLE_PATTERN {
    uint32_t                                     _3DCommandOpcode;
    uint32_t                                     _3DCommandSubOpcode;
    uint32_t                                     DwordLength;
-   uint32_t                                     PatternRow;
+   uint32_t                                     PatternRow[32];
 };
 
 static inline void
@@ -2173,9 +2173,11 @@ GEN7_3DSTATE_POLY_STIPPLE_PATTERN_pack(__gen_user_data *data, void * restrict ds
       __gen_field(values->DwordLength, 0, 7) |
       0;
 
-   dw[1] =
-      __gen_field(values->PatternRow, 0, 31) |
-      0;
+   for (uint32_t i = 0, j = 1; i < 32; i += 1, j++) {
+      dw[j] =
+         __gen_field(values->PatternRow[i + 0], 0, 31) |
+         0;
+   }
 
 }
 
@@ -4451,7 +4453,7 @@ struct GEN7_MEDIA_OBJECT_PRT {
 #define     Rootthreadqueue                                    0
 #define     VFEstateflush                                      1
    uint32_t                                     PRT_FenceType;
-   uint32_t                                     InlineData;
+   uint32_t                                     InlineData[12];
 };
 
 static inline void
@@ -4481,9 +4483,11 @@ GEN7_MEDIA_OBJECT_PRT_pack(__gen_user_data *data, void * restrict dst,
    dw[3] =
       0;
 
-   dw[4] =
-      __gen_field(values->InlineData, 0, 31) |
-      0;
+   for (uint32_t i = 0, j = 4; i < 12; i += 1, j++) {
+      dw[j] =
+         __gen_field(values->InlineData[i + 0], 0, 31) |
+         0;
+   }
 
 }
 
@@ -5812,9 +5816,6 @@ GEN7_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       __gen_float(values->YMaxClipGuardband) |
       0;
 
-   dw[12] =
-      0;
-
 }
 
 #define GEN7_BLEND_STATE_length 0x00000002
@@ -6288,7 +6289,6 @@ struct GEN7_RENDER_SURFACE_STATE {
    uint32_t                                     AppendCounterAddress;
    uint32_t                                     AppendCounterEnable;
    uint32_t                                     MCSEnable;
-   uint32_t                                     ReservedMBZ;
    uint32_t                                     XOffsetforUVPlane;
    uint32_t                                     YOffsetforUVPlane;
 #define     CC_ZERO                                            0
@@ -6366,7 +6366,6 @@ GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->AppendCounterAddress, 6, 31) |
       __gen_field(values->AppendCounterEnable, 1, 1) |
       __gen_field(values->MCSEnable, 0, 0) |
-      __gen_field(values->ReservedMBZ, 30, 31) |
       __gen_field(values->XOffsetforUVPlane, 16, 29) |
       __gen_field(values->YOffsetforUVPlane, 0, 13) |
       0;
