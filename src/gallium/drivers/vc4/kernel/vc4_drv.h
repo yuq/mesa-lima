@@ -171,10 +171,9 @@ vc4_validate_shader_recs(struct drm_device *dev, struct vc4_exec_info *exec);
 struct vc4_validated_shader_info *
 vc4_validate_shader(struct drm_gem_cma_object *shader_obj);
 
-bool vc4_use_bo(struct vc4_exec_info *exec,
-		uint32_t hindex,
-		enum vc4_bo_mode mode,
-		struct drm_gem_cma_object **obj);
+struct drm_gem_cma_object *vc4_use_bo(struct vc4_exec_info *exec,
+				      uint32_t hindex,
+				      enum vc4_bo_mode mode);
 
 int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec);
 
