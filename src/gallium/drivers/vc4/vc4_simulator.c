@@ -79,6 +79,7 @@ vc4_simulator_pin_bos(struct drm_device *dev, struct vc4_exec_info *exec)
                 struct vc4_bo *bo = bos[i];
                 struct drm_gem_cma_object *obj = vc4_wrap_bo_with_cma(dev, bo);
 
+                struct drm_vc4_bo *drm_bo = to_vc4_bo(&obj->base);
 #if 0
                 fprintf(stderr, "bo hindex %d: %s\n", i, bo->name);
 #endif
@@ -87,6 +88,15 @@ vc4_simulator_pin_bos(struct drm_device *dev, struct vc4_exec_info *exec)
                 memcpy(obj->vaddr, bo->map, bo->size);
 
                 exec->bo[i].bo = obj;
+
+                /* The kernel does this validation at shader create ioctl
+                 * time.
+                 */
+                if (strcmp(bo->name, "code") == 0) {
+                        drm_bo->validated_shader = vc4_validate_shader(obj);
+                        if (!drm_bo->validated_shader)
+                                abort();
+                }
         }
         return 0;
 }

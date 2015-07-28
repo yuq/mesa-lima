@@ -750,7 +750,6 @@ validate_gl_shader_rec(struct drm_device *dev,
 	struct drm_gem_cma_object *bo[shader_reloc_count + 8];
 	uint32_t nr_attributes, nr_relocs, packet_size;
 	int i;
-	struct vc4_validated_shader_info *validated_shader = NULL;
 
 	nr_attributes = state->addr & 0x7;
 	if (nr_attributes == 0)
@@ -799,6 +798,7 @@ validate_gl_shader_rec(struct drm_device *dev,
 	}
 
 	for (i = 0; i < shader_reloc_count; i++) {
+		struct vc4_validated_shader_info *validated_shader;
 		uint32_t o = shader_reloc_offsets[i];
 		uint32_t src_offset = *(uint32_t *)(pkt_u + o);
 		uint32_t *texture_handles_u;
@@ -810,18 +810,17 @@ validate_gl_shader_rec(struct drm_device *dev,
 		if (src_offset != 0) {
 			DRM_ERROR("Shaders must be at offset 0 of "
 				  "the BO.\n");
-			goto fail;
+			return -EINVAL;
 		}
 
-		kfree(validated_shader);
-		validated_shader = vc4_validate_shader(bo[i]);
+		validated_shader = to_vc4_bo(&bo[i]->base)->validated_shader;
 		if (!validated_shader)
-			goto fail;
+			return -EINVAL;
 
 		if (validated_shader->uniforms_src_size >
 		    exec->uniforms_size) {
 			DRM_ERROR("Uniforms src buffer overflow\n");
-			goto fail;
+			return -EINVAL;
 		}
 
 		texture_handles_u = exec->uniforms_u;
@@ -838,7 +837,7 @@ validate_gl_shader_rec(struct drm_device *dev,
 				       uniform_data_u,
 				       &validated_shader->texture_samples[tex],
 				       texture_handles_u[tex])) {
-				goto fail;
+				return -EINVAL;
 			}
 		}
 
@@ -881,13 +880,7 @@ validate_gl_shader_rec(struct drm_device *dev,
 		*(uint32_t *)(pkt_v + o) = vbo->paddr + offset;
 	}
 
-	kfree(validated_shader);
-
 	return 0;
-
-fail:
-	kfree(validated_shader);
-	return -EINVAL;
 }
 
 int

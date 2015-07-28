@@ -78,6 +78,7 @@ struct drm_gem_cma_object {
 struct drm_vc4_bo {
         struct drm_gem_cma_object base;
         struct vc4_bo *bo;
+        struct vc4_validated_shader_info *validated_shader;
         struct list_head unref_head;
 };
 
