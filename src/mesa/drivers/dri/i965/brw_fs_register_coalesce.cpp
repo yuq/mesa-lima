@@ -241,20 +241,19 @@ fs_visitor::register_coalesce()
       }
 
       foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
-         for (int i = 0; i < src_size; i++) {
-            if (scan_inst->dst.file == GRF &&
-                scan_inst->dst.reg == reg_from &&
-                scan_inst->dst.reg_offset == i) {
-               scan_inst->dst.reg = reg_to;
-               scan_inst->dst.reg_offset = reg_to_offset[i];
-            }
-            for (int j = 0; j < scan_inst->sources; j++) {
-               if (scan_inst->src[j].file == GRF &&
-                   scan_inst->src[j].reg == reg_from &&
-                   scan_inst->src[j].reg_offset == i) {
-                  scan_inst->src[j].reg = reg_to;
-                  scan_inst->src[j].reg_offset = reg_to_offset[i];
-               }
+         if (scan_inst->dst.file == GRF &&
+             scan_inst->dst.reg == reg_from) {
+            scan_inst->dst.reg = reg_to;
+            scan_inst->dst.reg_offset =
+               reg_to_offset[scan_inst->dst.reg_offset];
+         }
+
+         for (int j = 0; j < scan_inst->sources; j++) {
+            if (scan_inst->src[j].file == GRF &&
+                scan_inst->src[j].reg == reg_from) {
+               scan_inst->src[j].reg = reg_to;
+               scan_inst->src[j].reg_offset =
+                  reg_to_offset[scan_inst->src[j].reg_offset];
             }
          }
       }
