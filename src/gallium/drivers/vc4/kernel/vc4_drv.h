@@ -87,6 +87,7 @@ struct vc4_exec_info {
 	bool found_tile_binning_mode_config_packet;
 	bool found_start_tile_binning_packet;
 	bool found_increment_semaphore_packet;
+	bool found_flush;
 	uint8_t bin_tiles_x, bin_tiles_y;
 	struct drm_gem_cma_object *tile_bo;
 	uint32_t tile_alloc_offset;
@@ -97,6 +98,9 @@ struct vc4_exec_info {
 	 */
 	uint32_t ct0ca, ct0ea;
 	uint32_t ct1ca, ct1ea;
+
+	/* Pointer to the unvalidated bin CL (if present). */
+	void *bin_u;
 
 	/* Pointers to the shader recs.  These paddr gets incremented as CL
 	 * packets are relocated in validate_gl_shader_state, and the vaddrs

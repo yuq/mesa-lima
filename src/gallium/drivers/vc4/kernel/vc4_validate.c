@@ -132,6 +132,15 @@ vc4_use_handle(struct vc4_exec_info *exec,
 			  mode, obj);
 }
 
+static bool
+validate_bin_pos(struct vc4_exec_info *exec, void *untrusted, uint32_t pos)
+{
+	/* Note that the untrusted pointer passed to these functions is
+	 * incremented past the packet byte.
+	 */
+	return (untrusted - 1 == exec->bin_u + pos);
+}
+
 static uint32_t
 gl_shader_rec_size(uint32_t pointer_bits)
 {
@@ -201,14 +210,15 @@ vc4_check_tex_size(struct vc4_exec_info *exec, struct drm_gem_cma_object *fbo,
 	return true;
 }
 
+
 static int
-validate_flush_all(VALIDATE_ARGS)
+validate_flush(VALIDATE_ARGS)
 {
-	if (exec->found_increment_semaphore_packet) {
-		DRM_ERROR("VC4_PACKET_FLUSH_ALL after "
-			  "VC4_PACKET_INCREMENT_SEMAPHORE\n");
-		return -EINVAL;
+	if (!validate_bin_pos(exec, untrusted, exec->args->bin_cl_size - 1)) {
+		DRM_ERROR("Bin CL must end with VC4_PACKET_FLUSH\n");
+		return false;
 	}
+	exec->found_flush = true;
 
 	return 0;
 }
@@ -233,16 +243,12 @@ validate_start_tile_binning(VALIDATE_ARGS)
 static int
 validate_increment_semaphore(VALIDATE_ARGS)
 {
-	if (exec->found_increment_semaphore_packet) {
-		DRM_ERROR("Duplicate VC4_PACKET_INCREMENT_SEMAPHORE\n");
+	if (!validate_bin_pos(exec, untrusted, exec->args->bin_cl_size - 2)) {
+		DRM_ERROR("Bin CL must end with "
+			  "VC4_PACKET_INCREMENT_SEMAPHORE\n");
 		return -EINVAL;
 	}
 	exec->found_increment_semaphore_packet = true;
-
-	/* Once we've found the semaphore increment, there should be one FLUSH
-	 * then the end of the command list.  The FLUSH actually triggers the
-	 * increment, so we only need to make sure there
-	 */
 
 	return 0;
 }
@@ -256,11 +262,6 @@ validate_indexed_prim_list(VALIDATE_ARGS)
 	uint32_t max_index = *(uint32_t *)(untrusted + 9);
 	uint32_t index_size = (*(uint8_t *)(untrusted + 0) >> 4) ? 2 : 1;
 	struct vc4_shader_state *shader_state;
-
-	if (exec->found_increment_semaphore_packet) {
-		DRM_ERROR("Drawing after VC4_PACKET_INCREMENT_SEMAPHORE\n");
-		return -EINVAL;
-	}
 
 	/* Check overflow condition */
 	if (exec->shader_state_count == 0) {
@@ -294,11 +295,6 @@ validate_gl_array_primitive(VALIDATE_ARGS)
 	uint32_t base_index = *(uint32_t *)(untrusted + 5);
 	uint32_t max_index;
 	struct vc4_shader_state *shader_state;
-
-	if (exec->found_increment_semaphore_packet) {
-		DRM_ERROR("Drawing after VC4_PACKET_INCREMENT_SEMAPHORE\n");
-		return -EINVAL;
-	}
 
 	/* Check overflow condition */
 	if (exec->shader_state_count == 0) {
@@ -447,8 +443,8 @@ static const struct cmd_info {
 } cmd_info[] = {
 	VC4_DEFINE_PACKET(VC4_PACKET_HALT, "halt", NULL),
 	VC4_DEFINE_PACKET(VC4_PACKET_NOP, "nop", NULL),
-	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH, "flush", NULL),
-	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH_ALL, "flush all state", validate_flush_all),
+	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH, "flush", validate_flush),
+	VC4_DEFINE_PACKET(VC4_PACKET_FLUSH_ALL, "flush all state", NULL),
 	VC4_DEFINE_PACKET(VC4_PACKET_START_TILE_BINNING, "start tile binning", validate_start_tile_binning),
 	VC4_DEFINE_PACKET(VC4_PACKET_INCREMENT_SEMAPHORE, "increment semaphore", validate_increment_semaphore),
 
@@ -554,8 +550,16 @@ vc4_validate_bin_cl(struct drm_device *dev,
 		return -EINVAL;
 	}
 
-	if (!exec->found_increment_semaphore_packet) {
-		DRM_ERROR("Bin CL missing VC4_PACKET_INCREMENT_SEMAPHORE\n");
+	/* The bin CL must be ended with INCREMENT_SEMAPHORE and FLUSH.  The
+	 * semaphore is used to trigger the render CL to start up, and the
+	 * FLUSH is what caps the bin lists with
+	 * VC4_PACKET_RETURN_FROM_SUB_LIST (so they jump back to the main
+	 * render CL when they get called to) and actually triggers the queued
+	 * semaphore increment.
+	 */
+	if (!exec->found_increment_semaphore_packet || !exec->found_flush) {
+		DRM_ERROR("Bin CL missing VC4_PACKET_INCREMENT_SEMAPHORE + "
+			  "VC4_PACKET_FLUSH\n");
 		return -EINVAL;
 	}
 
