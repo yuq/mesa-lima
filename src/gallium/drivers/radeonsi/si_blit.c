@@ -342,6 +342,8 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 	if (buffers & PIPE_CLEAR_COLOR) {
 		evergreen_do_fast_color_clear(&sctx->b, fb, &sctx->framebuffer.atom,
 					      &buffers, color);
+		if (!buffers)
+			return; /* all buffers have been fast cleared */
 	}
 
 	if (buffers & PIPE_CLEAR_COLOR) {
