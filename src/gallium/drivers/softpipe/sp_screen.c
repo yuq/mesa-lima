@@ -396,6 +396,24 @@ softpipe_is_format_supported( struct pipe_screen *screen,
       return FALSE;
    }
 
+   if ((bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW)) &&
+       ((bind & PIPE_BIND_DISPLAY_TARGET) == 0) &&
+       target != PIPE_BUFFER) {
+      const struct util_format_description *desc =
+         util_format_description(format);
+      if (desc->nr_channels == 3 && desc->is_array) {
+         /* Don't support any 3-component formats for rendering/texturing
+          * since we don't support the corresponding 8-bit 3 channel UNORM
+          * formats.  This allows us to support GL_ARB_copy_image between
+          * GL_RGB8 and GL_RGB8UI, for example.  Otherwise, we may be asked to
+          * do a resource copy between PIPE_FORMAT_R8G8B8_UINT and
+          * PIPE_FORMAT_R8G8B8X8_UNORM, for example, which will not work
+          * (different bpp).
+          */
+         return FALSE;
+      }
+   }
+
    if (format_desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
        format != PIPE_FORMAT_ETC1_RGB8)
       return FALSE;
