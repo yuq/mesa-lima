@@ -140,7 +140,6 @@ struct st_context
 
    struct st_state_flags dirty;
 
-   GLboolean missing_textures;
    GLboolean vertdata_edgeflags;
    GLboolean edgeflag_culls_prims;
 

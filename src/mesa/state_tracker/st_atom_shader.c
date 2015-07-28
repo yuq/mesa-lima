@@ -50,24 +50,6 @@
 
 
 /**
- * Return pointer to a pass-through fragment shader.
- * This shader is used when a texture is missing/incomplete.
- */
-static void *
-get_passthrough_fs(struct st_context *st)
-{
-   if (!st->passthrough_fs) {
-      st->passthrough_fs =
-         util_make_fragment_passthrough_shader(st->pipe, TGSI_SEMANTIC_COLOR,
-                                               TGSI_INTERPOLATE_PERSPECTIVE,
-                                               TRUE);
-   }
-
-   return st->passthrough_fs;
-}
-
-
-/**
  * Update fragment program state/atom.  This involves translating the
  * Mesa fragment program into a gallium fragment program and binding it.
  */
@@ -96,15 +78,8 @@ update_fp( struct st_context *st )
 
    st_reference_fragprog(st, &st->fp, stfp);
 
-   if (st->missing_textures) {
-      /* use a pass-through frag shader that uses no textures */
-      void *fs = get_passthrough_fs(st);
-      cso_set_fragment_shader_handle(st->cso_context, fs);
-   }
-   else {
-      cso_set_fragment_shader_handle(st->cso_context,
-                                     st->fp_variant->driver_shader);
-   }
+   cso_set_fragment_shader_handle(st->cso_context,
+                                  st->fp_variant->driver_shader);
 }
 
 
