@@ -559,6 +559,12 @@ NVC0LegalizePostRA::visit(BasicBlock *bb)
       } else
       if (i->isNop()) {
          bb->remove(i);
+      } else
+      if (i->op == OP_BAR && i->subOp == NV50_IR_SUBOP_BAR_SYNC &&
+          prog->getType() != Program::TYPE_COMPUTE) {
+         // It seems like barriers are never required for tessellation since
+         // the warp size is 32, and there are always at most 32 tcs threads.
+         bb->remove(i);
       } else {
          // TODO: Move this to before register allocation for operations that
          // need the $c register !
