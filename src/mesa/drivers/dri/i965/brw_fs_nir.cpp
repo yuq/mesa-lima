@@ -2427,6 +2427,34 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_shared_indirect:
+      has_indirect = true;
+      /* fallthrough */
+   case nir_intrinsic_load_shared: {
+      assert(devinfo->gen >= 7);
+
+      fs_reg surf_index = brw_imm_ud(GEN7_BTI_SLM);
+
+      /* Get the offset to read from */
+      fs_reg offset_reg;
+      if (has_indirect) {
+         offset_reg = get_nir_src(instr->src[0]);
+      } else {
+         offset_reg = brw_imm_ud(instr->const_index[0]);
+      }
+
+      /* Read the vector */
+      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                             1 /* dims */,
+                                             instr->num_components,
+                                             BRW_PREDICATE_NONE);
+      read_result.type = dest.type;
+      for (int i = 0; i < instr->num_components; i++)
+         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
+
+      break;
+   }
+
    case nir_intrinsic_load_input_indirect:
       unreachable("Not allowed");
       /* fallthrough */
