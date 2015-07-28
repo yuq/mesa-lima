@@ -727,6 +727,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_memory_barrier_image;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_shared") == 0) {
          op = nir_intrinsic_memory_barrier_shared;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_load_shared") == 0) {
+         op = nir_intrinsic_load_shared;
       } else {
          unreachable("not reached");
       }
@@ -971,6 +973,33 @@ nir_visitor::visit(ir_call *ir)
          assert(ir->return_deref);
          nir_ssa_dest_init(&instr->instr, &instr->dest,
                            ir->return_deref->type->vector_elements, NULL);
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+      case nir_intrinsic_load_shared: {
+         exec_node *param = ir->actual_parameters.get_head();
+         ir_rvalue *offset = ((ir_instruction *)param)->as_rvalue();
+
+         /* Check if we need the indirect version */
+         ir_constant *const_offset = offset->as_constant();
+         if (!const_offset) {
+            op = nir_intrinsic_load_shared_indirect;
+            ralloc_free(instr);
+            instr = nir_intrinsic_instr_create(shader, op);
+            instr->src[0] = nir_src_for_ssa(evaluate_rvalue(offset));
+            instr->const_index[0] = 0;
+            dest = &instr->dest;
+         } else {
+            instr->const_index[0] = const_offset->value.u[0];
+         }
+
+         const glsl_type *type = ir->return_deref->var->type;
+         instr->num_components = type->vector_elements;
+
+         /* Setup destination register */
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           type->vector_elements, NULL);
+
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }

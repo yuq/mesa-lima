@@ -258,6 +258,7 @@ LOAD(per_vertex_input, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REO
 LOAD(ssbo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 LOAD(output, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 LOAD(per_vertex_output, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
+LOAD(shared, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Stores work the same way as loads, except now the first register input is
