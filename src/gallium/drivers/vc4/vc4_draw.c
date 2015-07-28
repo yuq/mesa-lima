@@ -25,6 +25,7 @@
 #include "util/u_prim.h"
 #include "util/u_format.h"
 #include "util/u_pack_color.h"
+#include "util/u_upload_mgr.h"
 #include "indices/u_primconvert.h"
 
 #include "vc4_context.h"
@@ -319,7 +320,15 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                                            info->count, &offset);
                         index_size = 2;
                 } else {
-                        prsc = vc4->indexbuf.buffer;
+                        if (vc4->indexbuf.user_buffer) {
+                                prsc = NULL;
+                                u_upload_data(vc4->uploader, 0,
+                                              info->count * index_size,
+                                              vc4->indexbuf.user_buffer,
+                                              &offset, &prsc);
+                        } else {
+                                prsc = vc4->indexbuf.buffer;
+                        }
                 }
                 struct vc4_resource *rsc = vc4_resource(prsc);
 
@@ -334,7 +343,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_reloc(vc4, &vc4->bcl, &bcl, rsc->bo, offset);
                 cl_u32(&bcl, vc4->max_index);
 
-                if (vc4->indexbuf.index_size == 4)
+                if (vc4->indexbuf.index_size == 4 || vc4->indexbuf.user_buffer)
                         pipe_resource_reference(&prsc, NULL);
         } else {
                 cl_u8(&bcl, VC4_PACKET_GL_ARRAY_PRIMITIVE);
