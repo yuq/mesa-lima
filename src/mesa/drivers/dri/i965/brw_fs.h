@@ -54,11 +54,9 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
    case MRF:
    case VGRF:
    case ATTR:
+   case UNIFORM:
       return byte_offset(reg,
                          delta * reg.component_size(bld.dispatch_width()));
-   case UNIFORM:
-      reg.reg_offset += delta;
-      break;
    case IMM:
       assert(delta == 0);
    }
