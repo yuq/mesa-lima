@@ -490,6 +490,12 @@ vc4_screen_bo_get_handle(struct pipe_screen *pscreen,
 {
         whandle->stride = stride;
 
+        /* If we're passing some reference to our BO out to some other part of
+         * the system, then we can't do any optimizations about only us being
+         * the ones seeing it (like BO caching or shadow update avoidance).
+         */
+        bo->private = false;
+
         switch (whandle->type) {
         case DRM_API_HANDLE_TYPE_SHARED:
                 return vc4_bo_flink(bo, &whandle->handle);
