@@ -95,38 +95,32 @@ size_is_lt(uint32_t width, uint32_t height, int cpp)
 }
 
 struct drm_gem_cma_object *
-vc4_use_bo(struct vc4_exec_info *exec,
-	   uint32_t hindex,
-	   enum vc4_bo_mode mode)
+vc4_use_bo(struct vc4_exec_info *exec, uint32_t hindex)
 {
 	struct drm_gem_cma_object *obj;
+	struct drm_vc4_bo *bo;
 
 	if (hindex >= exec->bo_count) {
 		DRM_ERROR("BO index %d greater than BO count %d\n",
 			  hindex, exec->bo_count);
 		return NULL;
 	}
-	obj = exec->bo[hindex].bo;
+	obj = exec->bo[hindex];
+	bo = to_vc4_bo(&obj->base);
 
-	if (exec->bo[hindex].mode != mode) {
-		if (exec->bo[hindex].mode == VC4_MODE_UNDECIDED) {
-			exec->bo[hindex].mode = mode;
-		} else {
-			DRM_ERROR("BO index %d reused with mode %d vs %d\n",
-				  hindex, exec->bo[hindex].mode, mode);
-			return NULL;
-		}
+	if (bo->validated_shader) {
+		DRM_ERROR("Trying to use shader BO as something other than "
+			  "a shader\n");
+		return NULL;
 	}
 
 	return obj;
 }
 
 static struct drm_gem_cma_object *
-vc4_use_handle(struct vc4_exec_info *exec,
-	       uint32_t gem_handles_packet_index,
-	       enum vc4_bo_mode mode)
+vc4_use_handle(struct vc4_exec_info *exec, uint32_t gem_handles_packet_index)
 {
-	return vc4_use_bo(exec, exec->bo_index[gem_handles_packet_index], mode);
+	return vc4_use_bo(exec, exec->bo_index[gem_handles_packet_index]);
 }
 
 static bool
@@ -270,7 +264,7 @@ validate_indexed_prim_list(VALIDATE_ARGS)
 	if (max_index > shader_state->max_index)
 		shader_state->max_index = max_index;
 
-	ib = vc4_use_handle(exec, 0, VC4_MODE_RENDER);
+	ib = vc4_use_handle(exec, 0);
 	if (!ib)
 		return -EINVAL;
 
@@ -588,7 +582,7 @@ reloc_tex(struct vc4_exec_info *exec,
 	uint32_t cube_map_stride = 0;
 	enum vc4_texture_data_type type;
 
-	tex = vc4_use_bo(exec, texture_handle_index, VC4_MODE_RENDER);
+	tex = vc4_use_bo(exec, texture_handle_index);
 	if (!tex)
 		return false;
 
@@ -787,12 +781,17 @@ validate_gl_shader_rec(struct drm_device *dev,
 	exec->shader_rec_size -= packet_size;
 
 	for (i = 0; i < shader_reloc_count; i++) {
-		bo[i] = vc4_use_bo(exec, src_handles[i], VC4_MODE_SHADER);
+		if (src_handles[i] > exec->bo_count) {
+			DRM_ERROR("Shader handle %d too big\n", src_handles[i]);
+			return false;
+		}
+
+		bo[i] = exec->bo[src_handles[i]];
 		if (!bo[i])
 			return false;
 	}
 	for (i = shader_reloc_count; i < nr_relocs; i++) {
-		bo[i] = vc4_use_bo(exec, src_handles[i], VC4_MODE_RENDER);
+		bo[i] = vc4_use_bo(exec, src_handles[i]);
 		if (!bo[i])
 			return false;
 	}

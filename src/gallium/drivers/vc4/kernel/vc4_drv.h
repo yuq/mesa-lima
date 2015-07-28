@@ -26,17 +26,6 @@
 
 #include "vc4_simulator_validate.h"
 
-enum vc4_bo_mode {
-	VC4_MODE_UNDECIDED,
-	VC4_MODE_RENDER,
-	VC4_MODE_SHADER,
-};
-
-struct vc4_bo_exec_state {
-	struct drm_gem_cma_object *bo;
-	enum vc4_bo_mode mode;
-};
-
 struct vc4_exec_info {
 	/* Sequence number for this bin/render job. */
 	uint64_t seqno;
@@ -47,7 +36,7 @@ struct vc4_exec_info {
 	/* This is the array of BOs that were looked up at the start of exec.
 	 * Command validation will use indices into this array.
 	 */
-	struct vc4_bo_exec_state *bo;
+	struct drm_gem_cma_object **bo;
 	uint32_t bo_count;
 
 	/* List of other BOs used in the job that need to be released
@@ -172,8 +161,7 @@ struct vc4_validated_shader_info *
 vc4_validate_shader(struct drm_gem_cma_object *shader_obj);
 
 struct drm_gem_cma_object *vc4_use_bo(struct vc4_exec_info *exec,
-				      uint32_t hindex,
-				      enum vc4_bo_mode mode);
+				      uint32_t hindex);
 
 int vc4_get_rcl(struct drm_device *dev, struct vc4_exec_info *exec);
 

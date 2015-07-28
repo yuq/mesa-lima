@@ -286,7 +286,7 @@ static int vc4_rcl_surface_setup(struct vc4_exec_info *exec,
 	if (surf->hindex == ~0)
 		return 0;
 
-	*obj = vc4_use_bo(exec, surf->hindex, VC4_MODE_RENDER);
+	*obj = vc4_use_bo(exec, surf->hindex);
 	if (!*obj)
 		return -EINVAL;
 
@@ -366,7 +366,7 @@ vc4_rcl_ms_surface_setup(struct vc4_exec_info *exec,
 	if (surf->hindex == ~0)
 		return 0;
 
-	*obj = vc4_use_bo(exec, surf->hindex, VC4_MODE_RENDER);
+	*obj = vc4_use_bo(exec, surf->hindex);
 	if (!*obj)
 		return -EINVAL;
 
