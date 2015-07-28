@@ -485,6 +485,8 @@ type_size_scalar(const struct glsl_type *type)
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
       return type->components();
+   case GLSL_TYPE_DOUBLE:
+      return type->components() * 2;
    case GLSL_TYPE_ARRAY:
       return type_size_scalar(type->fields.array) * type->length;
    case GLSL_TYPE_STRUCT:
@@ -507,7 +509,6 @@ type_size_scalar(const struct glsl_type *type)
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_INTERFACE:
-   case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_FUNCTION:
       unreachable("not reached");
    }
