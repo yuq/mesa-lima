@@ -67,7 +67,9 @@
 #define VC4_DIRTY_CLIP          (1 << 20)
 #define VC4_DIRTY_UNCOMPILED_VS (1 << 21)
 #define VC4_DIRTY_UNCOMPILED_FS (1 << 22)
-#define VC4_DIRTY_COMPILED_FS   (1 << 24)
+#define VC4_DIRTY_COMPILED_CS   (1 << 23)
+#define VC4_DIRTY_COMPILED_VS   (1 << 24)
+#define VC4_DIRTY_COMPILED_FS   (1 << 25)
 
 struct vc4_sampler_view {
         struct pipe_sampler_view base;
@@ -132,6 +134,12 @@ struct vc4_compiled_shader {
         struct vc4_ubo_range *ubo_ranges;
         uint32_t num_ubo_ranges;
         uint32_t ubo_size;
+        /**
+         * VC4_DIRTY_* flags that, when set in vc4->dirty, mean that the
+         * uniforms have to be rewritten (and therefore the shader state
+         * reemitted).
+         */
+        uint32_t uniform_dirty_bits;
 
         /** bitmask of which inputs are color inputs, for flat shade handling. */
         uint32_t color_inputs;
@@ -249,6 +257,11 @@ struct vc4_context {
          */
         bool draw_call_queued;
 
+        /** Maximum index buffer valid for the current shader_rec. */
+        uint32_t max_index;
+        /** Last index bias baked into the current shader_rec. */
+        uint32_t last_index_bias;
+
         struct primconvert_context *primconvert;
 
         struct hash_table *fs_cache, *vs_cache;
@@ -360,6 +373,7 @@ void vc4_simulator_init(struct vc4_screen *screen);
 int vc4_simulator_flush(struct vc4_context *vc4,
                         struct drm_vc4_submit_cl *args);
 
+void vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader);
 void vc4_write_uniforms(struct vc4_context *vc4,
                         struct vc4_compiled_shader *shader,
                         struct vc4_constbuf_stateobj *cb,

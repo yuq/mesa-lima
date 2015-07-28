@@ -102,6 +102,12 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
 
         if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
                 vc4_resource_bo_alloc(rsc);
+
+                /* If it might be bound as one of our vertex buffers, make
+                 * sure we re-emit vertex buffer state.
+                 */
+                if (prsc->bind & PIPE_BIND_VERTEX_BUFFER)
+                        vc4->dirty |= VC4_DIRTY_VTXBUF;
         } else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
                 if (vc4_cl_references_bo(pctx, rsc->bo)) {
                         if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
@@ -110,6 +116,8 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                             prsc->height0 == box->height &&
                             prsc->depth0 == box->depth) {
                                 vc4_resource_bo_alloc(rsc);
+                                if (prsc->bind & PIPE_BIND_VERTEX_BUFFER)
+                                        vc4->dirty |= VC4_DIRTY_VTXBUF;
                         } else {
                                 vc4_flush(pctx);
                         }

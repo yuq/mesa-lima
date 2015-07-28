@@ -122,48 +122,12 @@ vc4_update_shadow_textures(struct pipe_context *pctx,
 }
 
 static void
-vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
+vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *info)
 {
-        struct vc4_context *vc4 = vc4_context(pctx);
-
-        if (info->mode >= PIPE_PRIM_QUADS) {
-                util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
-                util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);
-                util_primconvert_draw_vbo(vc4->primconvert, info);
-                perf_debug("Fallback conversion for %d %s vertices\n",
-                           info->count, u_prim_name(info->mode));
-                return;
-        }
-
-        /* Before setting up the draw, do any fixup blits necessary. */
-        vc4_update_shadow_textures(pctx, &vc4->verttex);
-        vc4_update_shadow_textures(pctx, &vc4->fragtex);
-
-        vc4_get_draw_cl_space(vc4);
-
+        /* VC4_DIRTY_VTXSTATE */
         struct vc4_vertex_stateobj *vtx = vc4->vtx;
+        /* VC4_DIRTY_VTXBUF */
         struct vc4_vertexbuf_stateobj *vertexbuf = &vc4->vertexbuf;
-
-        if (vc4->prim_mode != info->mode) {
-                vc4->prim_mode = info->mode;
-                vc4->dirty |= VC4_DIRTY_PRIM_MODE;
-        }
-
-        vc4_start_draw(vc4);
-        vc4_update_compiled_shaders(vc4, info->mode);
-
-        vc4_emit_state(pctx);
-        vc4->dirty = 0;
-
-        vc4_write_uniforms(vc4, vc4->prog.fs,
-                           &vc4->constbuf[PIPE_SHADER_FRAGMENT],
-                           &vc4->fragtex);
-        vc4_write_uniforms(vc4, vc4->prog.vs,
-                           &vc4->constbuf[PIPE_SHADER_VERTEX],
-                           &vc4->verttex);
-        vc4_write_uniforms(vc4, vc4->prog.cs,
-                           &vc4->constbuf[PIPE_SHADER_VERTEX],
-                           &vc4->verttex);
 
         /* The simulator throws a fit if VS or CS don't read an attribute, so
          * we emit a dummy read.
@@ -172,22 +136,27 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         /* Emit the shader record. */
         struct vc4_cl_out *shader_rec =
                 cl_start_shader_reloc(&vc4->shader_rec, 3 + num_elements_emit);
+        /* VC4_DIRTY_PRIM_MODE | VC4_DIRTY_RASTERIZER */
         cl_u16(&shader_rec,
                VC4_SHADER_FLAG_ENABLE_CLIPPING |
                ((info->mode == PIPE_PRIM_POINTS &&
                  vc4->rasterizer->base.point_size_per_vertex) ?
                 VC4_SHADER_FLAG_VS_POINT_SIZE : 0));
+
+        /* VC4_DIRTY_COMPILED_FS */
         cl_u8(&shader_rec, 0); /* fs num uniforms (unused) */
         cl_u8(&shader_rec, vc4->prog.fs->num_inputs);
         cl_reloc(vc4, &vc4->shader_rec, &shader_rec, vc4->prog.fs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
+        /* VC4_DIRTY_COMPILED_VS */
         cl_u16(&shader_rec, 0); /* vs num uniforms */
         cl_u8(&shader_rec, vc4->prog.vs->vattrs_live);
         cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[8]);
         cl_reloc(vc4, &vc4->shader_rec, &shader_rec, vc4->prog.vs->bo, 0);
         cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
 
+        /* VC4_DIRTY_COMPILED_CS */
         cl_u16(&shader_rec, 0); /* cs num uniforms */
         cl_u8(&shader_rec, vc4->prog.cs->vattrs_live);
         cl_u8(&shader_rec, vc4->prog.cs->vattr_offsets[8]);
@@ -200,6 +169,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 struct pipe_vertex_buffer *vb =
                         &vertexbuf->vb[elem->vertex_buffer_index];
                 struct vc4_resource *rsc = vc4_resource(vb->buffer);
+                /* not vc4->dirty tracked: vc4->last_index_bias */
                 uint32_t offset = (vb->buffer_offset +
                                    elem->src_offset +
                                    vb->stride * info->index_bias);
@@ -239,10 +209,72 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          * attributes.  This field also contains the offset into shader_rec.
          */
         cl_u32(&bcl, num_elements_emit & 0x7);
+        cl_end(&vc4->bcl, bcl);
+
+        vc4_write_uniforms(vc4, vc4->prog.fs,
+                           &vc4->constbuf[PIPE_SHADER_FRAGMENT],
+                           &vc4->fragtex);
+        vc4_write_uniforms(vc4, vc4->prog.vs,
+                           &vc4->constbuf[PIPE_SHADER_VERTEX],
+                           &vc4->verttex);
+        vc4_write_uniforms(vc4, vc4->prog.cs,
+                           &vc4->constbuf[PIPE_SHADER_VERTEX],
+                           &vc4->verttex);
+
+        vc4->last_index_bias = info->index_bias;
+        vc4->max_index = max_index;
+}
+
+static void
+vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
+{
+        struct vc4_context *vc4 = vc4_context(pctx);
+
+        if (info->mode >= PIPE_PRIM_QUADS) {
+                util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
+                util_primconvert_save_rasterizer_state(vc4->primconvert, &vc4->rasterizer->base);
+                util_primconvert_draw_vbo(vc4->primconvert, info);
+                perf_debug("Fallback conversion for %d %s vertices\n",
+                           info->count, u_prim_name(info->mode));
+                return;
+        }
+
+        /* Before setting up the draw, do any fixup blits necessary. */
+        vc4_update_shadow_textures(pctx, &vc4->verttex);
+        vc4_update_shadow_textures(pctx, &vc4->fragtex);
+
+        vc4_get_draw_cl_space(vc4);
+
+        if (vc4->prim_mode != info->mode) {
+                vc4->prim_mode = info->mode;
+                vc4->dirty |= VC4_DIRTY_PRIM_MODE;
+        }
+
+        vc4_start_draw(vc4);
+        vc4_update_compiled_shaders(vc4, info->mode);
+
+        vc4_emit_state(pctx);
+
+        if ((vc4->dirty & (VC4_DIRTY_VTXBUF |
+                           VC4_DIRTY_VTXSTATE |
+                           VC4_DIRTY_PRIM_MODE |
+                           VC4_DIRTY_RASTERIZER |
+                           VC4_DIRTY_COMPILED_CS |
+                           VC4_DIRTY_COMPILED_VS |
+                           VC4_DIRTY_COMPILED_FS |
+                           vc4->prog.cs->uniform_dirty_bits |
+                           vc4->prog.vs->uniform_dirty_bits |
+                           vc4->prog.fs->uniform_dirty_bits)) ||
+            vc4->last_index_bias != info->index_bias) {
+                vc4_emit_gl_shader_state(vc4, info);
+        }
+
+        vc4->dirty = 0;
 
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
          */
+        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
         if (info->indexed) {
                 uint32_t offset = vc4->indexbuf.offset;
                 uint32_t index_size = vc4->indexbuf.index_size;
@@ -265,7 +297,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                        VC4_INDEX_BUFFER_U8));
                 cl_u32(&bcl, info->count);
                 cl_reloc(vc4, &vc4->bcl, &bcl, rsc->bo, offset);
-                cl_u32(&bcl, max_index);
+                cl_u32(&bcl, vc4->max_index);
 
                 if (vc4->indexbuf.index_size == 4)
                         pipe_resource_reference(&prsc, NULL);

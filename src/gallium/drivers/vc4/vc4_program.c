@@ -2205,6 +2205,8 @@ copy_uniform_state_to_shader(struct vc4_compiled_shader *shader,
         memcpy(uinfo->contents, c->uniform_contents,
                count * sizeof(*uinfo->contents));
         uinfo->num_texture_samples = c->num_texture_samples;
+
+        vc4_set_shader_uniform_dirty_flags(shader);
 }
 
 static struct vc4_compiled_shader *
@@ -2440,9 +2442,20 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
                 (prim_mode == PIPE_PRIM_POINTS &&
                  vc4->rasterizer->base.point_size_per_vertex);
 
-        vc4->prog.vs = vc4_get_compiled_shader(vc4, QSTAGE_VERT, &key->base);
+        struct vc4_compiled_shader *vs =
+                vc4_get_compiled_shader(vc4, QSTAGE_VERT, &key->base);
+        if (vs != vc4->prog.vs) {
+                vc4->prog.vs = vs;
+                vc4->dirty |= VC4_DIRTY_COMPILED_VS;
+        }
+
         key->is_coord = true;
-        vc4->prog.cs = vc4_get_compiled_shader(vc4, QSTAGE_COORD, &key->base);
+        struct vc4_compiled_shader *cs =
+                vc4_get_compiled_shader(vc4, QSTAGE_COORD, &key->base);
+        if (cs != vc4->prog.cs) {
+                vc4->prog.cs = cs;
+                vc4->dirty |= VC4_DIRTY_COMPILED_CS;
+        }
 }
 
 void
