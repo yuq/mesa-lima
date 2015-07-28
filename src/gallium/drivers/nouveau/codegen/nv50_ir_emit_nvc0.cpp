@@ -1451,6 +1451,7 @@ CodeEmitterNVC0::emitBAR(const Instruction *i)
       ImmediateValue *imm = i->getSrc(0)->asImm();
       assert(imm);
       code[0] |= imm->reg.data.u32 << 20;
+      code[1] |= 0x8000;
    }
 
    // thread count
@@ -1461,6 +1462,7 @@ CodeEmitterNVC0::emitBAR(const Instruction *i)
       assert(imm);
       code[0] |= imm->reg.data.u32 << 26;
       code[1] |= imm->reg.data.u32 >> 6;
+      code[1] |= 0x4000;
    }
 
    if (i->srcExists(2) && (i->predSrc != 2)) {
