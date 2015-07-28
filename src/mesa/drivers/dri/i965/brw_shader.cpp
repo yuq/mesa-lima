@@ -138,6 +138,9 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
    if (compiler->scalar_stage[MESA_SHADER_GEOMETRY])
       compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].EmitNoIndirectInput = false;
 
+   compiler->glsl_compiler_options[MESA_SHADER_COMPUTE]
+      .LowerShaderSharedVariables = true;
+
    return compiler;
 }
 
