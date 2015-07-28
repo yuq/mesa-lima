@@ -2674,6 +2674,10 @@ struct gl_shader_program
        * local_size_{x,y,z}.  Otherwise undefined.
        */
       unsigned LocalSize[3];
+      /**
+       * Size of shared variables accessed by the compute shader.
+       */
+      unsigned SharedSize;
    } Comp;
 
    /* post-link info: */
@@ -2884,6 +2888,9 @@ struct gl_shader_compiler_options
    GLboolean OptimizeForAOS;
 
    GLboolean LowerBufferInterfaceBlocks; /**< Lower UBO and SSBO access to intrinsics. */
+
+   GLboolean LowerShaderSharedVariables; /**< Lower compute shader shared
+                                          *   variable access to intrinsics. */
 
    const struct nir_shader_compiler_options *NirOptions;
 };
