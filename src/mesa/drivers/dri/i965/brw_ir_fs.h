@@ -90,10 +90,14 @@ byte_offset(fs_reg reg, unsigned delta)
    case MRF:
       reg.nr += delta / 32;
       break;
+   case UNIFORM:
+      reg.reg_offset += delta / 4;
+      reg.subreg_offset += delta % 4;
+      return reg;
    case ARF:
    case FIXED_GRF:
    case IMM:
-   case UNIFORM:
+   default:
       assert(delta == 0);
    }
    reg.subreg_offset += delta % 32;
