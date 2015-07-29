@@ -519,7 +519,7 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
    xcb_generic_error_t *error;
    xcb_screen_iterator_t s;
    xcb_screen_t *screen;
-   char *driver_name, *device_name;
+   char *driver_name, *loader_driver_name, *device_name;
    const xcb_query_extension_reply_t *extension;
 
    xcb_prefetch_extension_data (dri2_dpy->conn, &xcb_xfixes_id);
@@ -596,6 +596,16 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
    }
 
    driver_name = xcb_dri2_connect_driver_name (connect);
+
+   /* If Mesa knows about the appropriate driver for this fd, then trust it.
+    * Otherwise, default to the server's value.
+    */
+   loader_driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
+   if (loader_driver_name) {
+      free(driver_name);
+      driver_name = loader_driver_name;
+   }
+
    dri2_dpy->driver_name =
       strndup(driver_name,
               xcb_dri2_connect_driver_name_length(connect));
