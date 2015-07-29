@@ -397,7 +397,7 @@ vc4_dump_cl(void *cl, uint32_t size, bool is_render)
         while (offset < size) {
                 uint8_t header = cmds[offset];
 
-                if (header > ARRAY_SIZE(packet_info) ||
+                if (header >= ARRAY_SIZE(packet_info) ||
                     !packet_info[header].name) {
                         fprintf(stderr, "0x%08x 0x%08x: Unknown packet 0x%02x (%d)!\n",
                                 offset, hw_offset, header, header);

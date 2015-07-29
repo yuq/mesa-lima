@@ -487,7 +487,7 @@ vc4_validate_bin_cl(struct drm_device *dev,
 		u8 cmd = *(uint8_t *)src_pkt;
 		const struct cmd_info *info;
 
-		if (cmd > ARRAY_SIZE(cmd_info)) {
+		if (cmd >= ARRAY_SIZE(cmd_info)) {
 			DRM_ERROR("0x%08x: packet %d out of bounds\n",
 				  src_offset, cmd);
 			return -EINVAL;
