@@ -493,7 +493,7 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
         radeon_surface_manager_free(ws->surf_man);
     }
 
-    if (ws->fd)
+    if (ws->fd >= 0)
         close(ws->fd);
 
     FREE(rws);
@@ -786,7 +786,7 @@ fail:
         ws->kman->destroy(ws->kman);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
-    if (ws->fd)
+    if (ws->fd >= 0)
         close(ws->fd);
 
     FREE(ws);
