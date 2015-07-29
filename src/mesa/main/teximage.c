@@ -5569,10 +5569,13 @@ static GLboolean
 is_renderable_texture_format(struct gl_context *ctx, GLenum internalformat)
 {
    /* Everything that is allowed for renderbuffers,
-    * except for a base format of GL_STENCIL_INDEX.
+    * except for a base format of GL_STENCIL_INDEX, unless supported.
     */
    GLenum baseFormat = _mesa_base_fbo_format(ctx, internalformat);
-   return baseFormat != 0 && baseFormat != GL_STENCIL_INDEX;
+   if (ctx->Extensions.ARB_texture_stencil8)
+      return baseFormat != 0;
+   else
+      return baseFormat != 0 && baseFormat != GL_STENCIL_INDEX;
 }
 
 
