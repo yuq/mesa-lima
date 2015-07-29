@@ -853,7 +853,7 @@ static inline struct brw_reg
 spread(struct brw_reg reg, unsigned s)
 {
    if (s) {
-      assert(is_power_of_two(s));
+      assert(_mesa_is_pow_two(s));
 
       if (reg.hstride)
          reg.hstride += cvt(s) - 1;

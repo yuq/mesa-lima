@@ -121,14 +121,14 @@ get_tr_horizontal_align(uint32_t tr_mode, uint32_t cpp, bool is_src) {
       return 0;
 
    /* Compute array index. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp));
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
    i = ffs(bpp / 8) - 1;
 
    align = tr_mode == INTEL_MIPTREE_TRMODE_YF ?
            align_2d_yf[i] :
            4 * align_2d_yf[i];
 
-   assert(is_power_of_two(align));
+   assert(_mesa_is_pow_two(align));
 
    /* XY_FAST_COPY_BLT doesn't support horizontal alignment of 16. */
    if (align == 16)
@@ -150,14 +150,14 @@ get_tr_vertical_align(uint32_t tr_mode, uint32_t cpp, bool is_src) {
       return 0;
 
    /* Compute array index. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp));
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
    i = ffs(bpp / 8) - 1;
 
    align = tr_mode == INTEL_MIPTREE_TRMODE_YF ?
            align_2d_yf[i] :
            4 * align_2d_yf[i];
 
-   assert(is_power_of_two(align));
+   assert(_mesa_is_pow_two(align));
 
    /* XY_FAST_COPY_BLT doesn't support vertical alignments of 16 and 32. */
    if (align == 16 || align == 32)

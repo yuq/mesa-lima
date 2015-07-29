@@ -63,7 +63,7 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    int i = 0;
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp));
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
 
    switch(mt->target) {
    case GL_TEXTURE_1D:
@@ -95,7 +95,7 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
                align_yf[i] : align_ys[i];
 
-   assert(is_power_of_two(mt->num_samples));
+   assert(_mesa_is_pow_two(mt->num_samples));
 
    switch (mt->num_samples) {
    case 2:
@@ -199,7 +199,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
           mt->target != GL_TEXTURE_1D_ARRAY);
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp)) ;
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
 
    switch(mt->target) {
    case GL_TEXTURE_2D:
@@ -226,7 +226,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
                align_yf[i] : align_ys[i];
 
-   assert(is_power_of_two(mt->num_samples));
+   assert(_mesa_is_pow_two(mt->num_samples));
 
    switch (mt->num_samples) {
    case 4:

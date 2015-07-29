@@ -1545,7 +1545,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
           *
           * where they pack the four bytes from the low and high four DW.
           */
-         assert(is_power_of_two(dst.dw1.bits.writemask) &&
+         assert(_mesa_is_pow_two(dst.dw1.bits.writemask) &&
                 dst.dw1.bits.writemask != 0);
          unsigned offset = __builtin_ctz(dst.dw1.bits.writemask);
 
