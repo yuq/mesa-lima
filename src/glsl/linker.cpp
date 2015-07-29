@@ -2282,6 +2282,22 @@ resize_tes_inputs(struct gl_context *ctx,
    foreach_in_list(ir_instruction, ir, tes->ir) {
       ir->accept(&input_resize_visitor);
    }
+
+   if (tcs) {
+      /* Convert the gl_PatchVerticesIn system value into a constant, since
+       * the value is known at this point.
+       */
+      foreach_in_list(ir_instruction, ir, tes->ir) {
+         ir_variable *var = ir->as_variable();
+         if (var && var->data.mode == ir_var_system_value &&
+             var->data.location == SYSTEM_VALUE_VERTICES_IN) {
+            void *mem_ctx = ralloc_parent(var);
+            var->data.mode = ir_var_auto;
+            var->data.location = 0;
+            var->constant_value = new(mem_ctx) ir_constant(num_vertices);
+         }
+      }
+   }
 }
 
 /**
