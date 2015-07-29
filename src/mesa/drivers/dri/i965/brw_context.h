@@ -1241,12 +1241,12 @@ struct brw_context
     * Platform specific constants containing the maximum number of threads
     * for each pipeline stage.
     */
-   int max_vs_threads;
-   int max_hs_threads;
-   int max_ds_threads;
-   int max_gs_threads;
-   int max_wm_threads;
-   int max_cs_threads;
+   unsigned max_vs_threads;
+   unsigned max_hs_threads;
+   unsigned max_ds_threads;
+   unsigned max_gs_threads;
+   unsigned max_wm_threads;
+   unsigned max_cs_threads;
 
    /* BRW_NEW_URB_ALLOCATIONS:
     */

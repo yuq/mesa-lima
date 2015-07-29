@@ -82,7 +82,7 @@ brw_cs_emit(struct brw_context *brw,
    prog_data->local_size[0] = cp->LocalSize[0];
    prog_data->local_size[1] = cp->LocalSize[1];
    prog_data->local_size[2] = cp->LocalSize[2];
-   int local_workgroup_size =
+   unsigned local_workgroup_size =
       cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
 
    cfg_t *cfg = NULL;
