@@ -42,11 +42,19 @@
  * Functions related to anv_reloc_list
  *-----------------------------------------------------------------------*/
 
-VkResult
-anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
+static VkResult
+anv_reloc_list_init_clone(struct anv_reloc_list *list,
+                          struct anv_device *device,
+                          const struct anv_reloc_list *other_list)
 {
-   list->num_relocs = 0;
-   list->array_length = 256;
+   if (other_list) {
+      list->num_relocs = other_list->num_relocs;
+      list->array_length = other_list->array_length;
+   } else {
+      list->num_relocs = 0;
+      list->array_length = 256;
+   }
+
    list->relocs =
       anv_device_alloc(device, list->array_length * sizeof(*list->relocs), 8,
                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
@@ -58,12 +66,25 @@ anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
       anv_device_alloc(device, list->array_length * sizeof(*list->reloc_bos), 8,
                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
 
-   if (list->relocs == NULL) {
+   if (list->reloc_bos == NULL) {
       anv_device_free(device, list->relocs);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    }
 
+   if (other_list) {
+      memcpy(list->relocs, other_list->relocs,
+             list->array_length * sizeof(*list->relocs));
+      memcpy(list->reloc_bos, other_list->reloc_bos,
+             list->array_length * sizeof(*list->reloc_bos));
+   }
+
    return VK_SUCCESS;
+}
+
+VkResult
+anv_reloc_list_init(struct anv_reloc_list *list, struct anv_device *device)
+{
+   return anv_reloc_list_init_clone(list, device, NULL);
 }
 
 void
@@ -223,6 +244,41 @@ anv_batch_bo_create(struct anv_device *device, struct anv_batch_bo **bbo_out)
    result = anv_reloc_list_init(&bbo->relocs, device);
    if (result != VK_SUCCESS)
       goto fail_bo_alloc;
+
+   *bbo_out = bbo;
+
+   return VK_SUCCESS;
+
+ fail_bo_alloc:
+   anv_bo_pool_free(&device->batch_bo_pool, &bbo->bo);
+ fail_alloc:
+   anv_device_free(device, bbo);
+
+   return result;
+}
+
+static VkResult
+anv_batch_bo_clone(struct anv_device *device,
+                   const struct anv_batch_bo *other_bbo,
+                   struct anv_batch_bo **bbo_out)
+{
+   VkResult result;
+
+   struct anv_batch_bo *bbo =
+      anv_device_alloc(device, sizeof(*bbo), 8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   if (bbo == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   result = anv_bo_pool_alloc(&device->batch_bo_pool, &bbo->bo);
+   if (result != VK_SUCCESS)
+      goto fail_alloc;
+
+   result = anv_reloc_list_init_clone(&bbo->relocs, device, &other_bbo->relocs);
+   if (result != VK_SUCCESS)
+      goto fail_bo_alloc;
+
+   bbo->length = other_bbo->length;
+   memcpy(bbo->bo.map, other_bbo->bo.map, other_bbo->length);
 
    *bbo_out = bbo;
 
