@@ -283,6 +283,8 @@ vc4_write_uniforms(struct vc4_context *vc4, struct vc4_compiled_shader *shader,
         }
 
         cl_end(&vc4->uniforms, uniforms);
+
+        vc4_bo_unreference(&ubo);
 }
 
 void
