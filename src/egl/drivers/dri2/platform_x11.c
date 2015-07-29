@@ -1227,10 +1227,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_dpy;
    }
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_connect(dri2_dpy))
-	 goto cleanup_conn;
-   }
+   if (!dri2_x11_connect(dri2_dpy))
+      goto cleanup_conn;
 
    if (!dri2_load_driver(disp))
       goto cleanup_conn;
@@ -1243,10 +1241,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_driver;
    }
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_local_authenticate(disp))
-	 goto cleanup_fd;
-   }
+   if (!dri2_x11_local_authenticate(disp))
+      goto cleanup_fd;
 
    if (dri2_dpy->dri2_minor >= 1) {
       dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
@@ -1285,10 +1281,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    disp->Extensions.WL_bind_wayland_display = EGL_TRUE;
 #endif
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
-	 goto cleanup_configs;
-   }
+   if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
+      goto cleanup_configs;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
