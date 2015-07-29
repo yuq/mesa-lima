@@ -104,6 +104,22 @@ link_uniform_block_active_visitor::visit(ir_variable *var)
    assert(b->num_array_elements == 0);
    assert(b->array_elements == NULL);
    assert(b->type != NULL);
+   assert(!b->type->is_array() || b->has_instance_name);
+
+   /* For uniform block arrays declared with a shared or std140 layout
+    * qualifier, mark all its instances as used.
+    */
+   if (b->type->is_array() && b->type->length > 0) {
+      b->num_array_elements = b->type->length;
+      b->array_elements = reralloc(this->mem_ctx,
+                                   b->array_elements,
+                                   unsigned,
+                                   b->num_array_elements);
+
+      for (unsigned i = 0; i < b->num_array_elements; i++) {
+         b->array_elements[i] = i;
+      }
+   }
 
    return visit_continue;
 }
@@ -144,6 +160,14 @@ link_uniform_block_active_visitor::visit_enter(ir_dereference_array *ir)
    assert(b->has_instance_name);
    assert((b->num_array_elements == 0) == (b->array_elements == NULL));
    assert(b->type != NULL);
+
+   /* If the block array was declared with a shared or
+    * std140 layout qualifier, all its instances have been already marked
+    * as used in link_uniform_block_active_visitor::visit(ir_variable *).
+    */
+   if (var->get_interface_type()->interface_packing !=
+       GLSL_INTERFACE_PACKING_PACKED)
+      return visit_continue_with_parent;
 
    ir_constant *c = ir->array_index->as_constant();
 
