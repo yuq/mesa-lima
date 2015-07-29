@@ -1895,13 +1895,10 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_store_output:
-                for (int i = 0; i < instr->num_components; i++) {
-                        c->outputs[instr->const_index[0] * 4 + i] =
-                                qir_MOV(c, ntq_get_src(c, instr->src[0], i));
-                }
-                c->num_outputs = MAX2(c->num_outputs,
-                                      instr->const_index[0] * 4 +
-                                      instr->num_components + 1);
+                assert(instr->num_components == 1);
+                c->outputs[instr->const_index[0]] =
+                        qir_MOV(c, ntq_get_src(c, instr->src[0], 0));
+                c->num_outputs = MAX2(c->num_outputs, instr->const_index[0] + 1);
                 break;
 
         case nir_intrinsic_discard:
@@ -2102,6 +2099,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         c->s = tgsi_to_nir(tokens, &nir_options);
         nir_opt_global_to_local(c->s);
         nir_convert_to_ssa(c->s);
+        vc4_nir_lower_io(c);
         nir_lower_idiv(c->s);
 
         vc4_optimize_nir(c->s);
