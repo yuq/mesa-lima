@@ -585,12 +585,23 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
       strndup(device_name,
               xcb_dri2_connect_device_name_length(connect));
 
+   dri2_dpy->fd = loader_open_device(dri2_dpy->device_name);
+   if (dri2_dpy->fd == -1) {
+      _eglLog(_EGL_WARNING,
+              "DRI2: could not open %s (%s)", dri2_dpy->device_name,
+              strerror(errno));
+      free(dri2_dpy->device_name);
+      free(connect);
+      return EGL_FALSE;
+   }
+
    driver_name = xcb_dri2_connect_driver_name (connect);
    dri2_dpy->driver_name =
       strndup(driver_name,
               xcb_dri2_connect_driver_name_length(connect));
 
    if (dri2_dpy->device_name == NULL || dri2_dpy->driver_name == NULL) {
+      close(dri2_dpy->fd);
       free(dri2_dpy->device_name);
       free(dri2_dpy->driver_name);
       free(connect);
@@ -1231,18 +1242,10 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_conn;
 
    if (!dri2_load_driver(disp))
-      goto cleanup_conn;
-
-   dri2_dpy->fd = loader_open_device(dri2_dpy->device_name);
-   if (dri2_dpy->fd == -1) {
-      _eglLog(_EGL_WARNING,
-	      "DRI2: could not open %s (%s)", dri2_dpy->device_name,
-              strerror(errno));
-      goto cleanup_driver;
-   }
+      goto cleanup_fd;
 
    if (!dri2_x11_local_authenticate(disp))
-      goto cleanup_fd;
+      goto cleanup_driver;
 
    if (dri2_dpy->dri2_minor >= 1) {
       dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
@@ -1267,7 +1270,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->invalidate_available = (dri2_dpy->dri2_minor >= 3);
 
    if (!dri2_create_screen(disp))
-      goto cleanup_fd;
+      goto cleanup_driver;
 
    dri2_x11_setup_swap_interval(dri2_dpy);
 
@@ -1294,10 +1297,10 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
  cleanup_configs:
    _eglCleanupDisplay(disp);
    dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
- cleanup_fd:
-   close(dri2_dpy->fd);
  cleanup_driver:
    dlclose(dri2_dpy->driver);
+ cleanup_fd:
+   close(dri2_dpy->fd);
  cleanup_conn:
    if (disp->PlatformDisplay == NULL)
       xcb_disconnect(dri2_dpy->conn);
