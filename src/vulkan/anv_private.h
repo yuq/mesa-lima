@@ -483,7 +483,7 @@ struct anv_batch {
    void *                                       end;
    void *                                       next;
 
-   struct anv_reloc_list                        relocs;
+   struct anv_reloc_list *                      relocs;
 
    /* This callback is called (with the associated user data) in the event
     * that the batch runs out of space.
@@ -702,6 +702,7 @@ struct anv_cmd_buffer {
     * These fields are initialized by anv_cmd_buffer_init_batch_bo_chain().
     */
    struct list_head                             batch_bos;
+   struct anv_reloc_list                        batch_relocs;
    struct list_head                             surface_bos;
    uint32_t                                     surface_next;
    struct anv_reloc_list                        surface_relocs;
@@ -783,6 +784,7 @@ struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
    uint32_t                                     batch_data[256];
+   struct anv_reloc_list                        batch_relocs;
    struct anv_shader *                          shaders[VK_SHADER_STAGE_NUM];
    struct anv_pipeline_layout *                 layout;
    bool                                         use_repclear;

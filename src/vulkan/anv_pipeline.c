@@ -488,13 +488,14 @@ anv_pipeline_create(
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
 
-   result = anv_reloc_list_init(&pipeline->batch.relocs, device);
+   result = anv_reloc_list_init(&pipeline->batch_relocs, device);
    if (result != VK_SUCCESS) {
       anv_device_free(device, pipeline);
       return result;
    }
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
+   pipeline->batch.relocs = &pipeline->batch_relocs;
 
    anv_state_stream_init(&pipeline->program_stream,
                          &device->instruction_block_pool);
@@ -758,7 +759,7 @@ VkResult anv_DestroyPipeline(
    ANV_FROM_HANDLE(anv_pipeline, pipeline, _pipeline);
 
    anv_compiler_free(pipeline);
-   anv_reloc_list_finish(&pipeline->batch.relocs, pipeline->device);
+   anv_reloc_list_finish(&pipeline->batch_relocs, pipeline->device);
    anv_state_stream_finish(&pipeline->program_stream);
    anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_device_free(pipeline->device, pipeline);
@@ -810,13 +811,14 @@ static VkResult anv_compute_pipeline_create(
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
 
-   result = anv_reloc_list_init(&pipeline->batch.relocs, device);
+   result = anv_reloc_list_init(&pipeline->batch_relocs, device);
    if (result != VK_SUCCESS) {
       anv_device_free(device, pipeline);
       return result;
    }
    pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
    pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
+   pipeline->batch.relocs = &pipeline->batch_relocs;
 
    anv_state_stream_init(&pipeline->program_stream,
                          &device->instruction_block_pool);
