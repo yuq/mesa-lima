@@ -1793,12 +1793,23 @@ _mesa_ShaderBinary(GLint n, const GLuint* shaders, GLenum binaryformat,
                    const void* binary, GLint length)
 {
    GET_CURRENT_CONTEXT(ctx);
-   (void) n;
    (void) shaders;
    (void) binaryformat;
    (void) binary;
-   (void) length;
-   _mesa_error(ctx, GL_INVALID_OPERATION, "glShaderBinary");
+
+   /* Page 68, section 7.2 'Shader Binaries" of the of the OpenGL ES 3.1, and
+    * page 88 of the OpenGL 4.5 specs state:
+    *
+    *     "An INVALID_VALUE error is generated if count or length is negative.
+    *      An INVALID_ENUM error is generated if binaryformat is not a supported
+    *      format returned in SHADER_BINARY_FORMATS."
+    */
+   if (n < 0 || length < 0) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glShaderBinary(count or length < 0)");
+      return;
+   }
+
+   _mesa_error(ctx, GL_INVALID_ENUM, "glShaderBinary(format)");
 }
 
 
