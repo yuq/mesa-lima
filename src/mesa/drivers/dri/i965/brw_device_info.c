@@ -365,7 +365,9 @@ brw_get_device_info(int devid, int revision)
       return NULL;
    }
 
-   if (devinfo->gen == 9 && (revision == 2 || revision == 3 || revision == -1))
+   if (devinfo->gen == 9 &&
+       !devinfo->is_broxton &&
+       (revision == 2 || revision == 3 || revision == -1))
       return &brw_device_info_skl_early;
 
    return devinfo;
