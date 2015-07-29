@@ -101,13 +101,12 @@ open_drm_render_node_minor(int minor)
 int
 pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev)
 {
-   struct pipe_loader_device *dev;
    int i, j, fd;
 
    for (i = DRM_RENDER_NODE_MIN_MINOR, j = 0;
-        i <= DRM_RENDER_NODE_MAX_MINOR && j < ndev; i++) {
-
+        i <= DRM_RENDER_NODE_MAX_MINOR; i++) {
       fd = open_drm_render_node_minor(i);
+      struct pipe_loader_device *dev;
       if (fd < 0)
          continue;
 
@@ -116,7 +115,13 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev)
          continue;
       }
 
-      devs[j++] = dev;
+      if (j < ndev) {
+         devs[j] = dev;
+      } else {
+         close(fd);
+         dev->ops->release(&dev);
+      }
+      j++;
    }
 
    return j;
