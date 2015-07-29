@@ -780,6 +780,11 @@ validate_gl_shader_rec(struct drm_device *dev,
 	exec->shader_rec_v += roundup(packet_size, 16);
 	exec->shader_rec_size -= packet_size;
 
+	if (!(*(uint16_t *)pkt_u & VC4_SHADER_FLAG_FS_SINGLE_THREAD)) {
+		DRM_ERROR("Multi-threaded fragment shaders not supported.\n");
+		return -EINVAL;
+	}
+
 	for (i = 0; i < shader_reloc_count; i++) {
 		if (src_handles[i] > exec->bo_count) {
 			DRM_ERROR("Shader handle %d too big\n", src_handles[i]);

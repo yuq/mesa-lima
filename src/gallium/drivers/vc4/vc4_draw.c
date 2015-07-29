@@ -139,6 +139,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
         /* VC4_DIRTY_PRIM_MODE | VC4_DIRTY_RASTERIZER */
         cl_u16(&shader_rec,
                VC4_SHADER_FLAG_ENABLE_CLIPPING |
+               VC4_SHADER_FLAG_FS_SINGLE_THREAD |
                ((info->mode == PIPE_PRIM_POINTS &&
                  vc4->rasterizer->base.point_size_per_vertex) ?
                 VC4_SHADER_FLAG_VS_POINT_SIZE : 0));
