@@ -411,7 +411,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
       *(uint64_t *)(state.map + 8 * 4) =
-         anv_reloc_list_add(&cmd_buffer->surface_relocs,
+         anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
                             cmd_buffer->device,
                             state.offset + 8 * 4,
                             view->view.bo, view->view.offset);
@@ -458,7 +458,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
          /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
          *(uint64_t *)(state.map + 8 * 4) =
-            anv_reloc_list_add(&cmd_buffer->surface_relocs,
+            anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
                                cmd_buffer->device,
                                state.offset + 8 * 4,
                                view->bo, offset);

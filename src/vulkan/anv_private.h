@@ -471,9 +471,7 @@ struct anv_batch_bo {
    /* Bytes actually consumed in this batch BO */
    size_t                                       length;
 
-   /* These offsets reference the per-batch reloc list */
-   size_t                                       first_reloc;
-   size_t                                       num_relocs;
+   struct anv_reloc_list                        relocs;
 };
 
 struct anv_batch {
@@ -702,10 +700,8 @@ struct anv_cmd_buffer {
     * These fields are initialized by anv_cmd_buffer_init_batch_bo_chain().
     */
    struct list_head                             batch_bos;
-   struct anv_reloc_list                        batch_relocs;
    struct list_head                             surface_bos;
    uint32_t                                     surface_next;
-   struct anv_reloc_list                        surface_relocs;
 
    /* Information needed for execbuf
     *
@@ -742,6 +738,8 @@ void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_bo *
 anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer);
+struct anv_reloc_list *
+anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer);
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);
