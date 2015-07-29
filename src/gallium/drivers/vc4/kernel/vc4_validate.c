@@ -207,7 +207,7 @@ validate_flush(VALIDATE_ARGS)
 {
 	if (!validate_bin_pos(exec, untrusted, exec->args->bin_cl_size - 1)) {
 		DRM_ERROR("Bin CL must end with VC4_PACKET_FLUSH\n");
-		return false;
+		return -EINVAL;
 	}
 	exec->found_flush = true;
 
@@ -783,17 +783,17 @@ validate_gl_shader_rec(struct drm_device *dev,
 	for (i = 0; i < shader_reloc_count; i++) {
 		if (src_handles[i] > exec->bo_count) {
 			DRM_ERROR("Shader handle %d too big\n", src_handles[i]);
-			return false;
+			return -EINVAL;
 		}
 
 		bo[i] = exec->bo[src_handles[i]];
 		if (!bo[i])
-			return false;
+			return -EINVAL;
 	}
 	for (i = shader_reloc_count; i < nr_relocs; i++) {
 		bo[i] = vc4_use_bo(exec, src_handles[i]);
 		if (!bo[i])
-			return false;
+			return -EINVAL;
 	}
 
 	for (i = 0; i < shader_reloc_count; i++) {
