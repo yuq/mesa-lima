@@ -3226,6 +3226,11 @@ static void si_init_config(struct si_context *sctx)
 		raster_config = 0x3a00161a;
 		raster_config_1 = 0x0000002e;
 		break;
+	case CHIP_FIJI:
+		/* Fiji should be same as Hawaii, but that causes corruption in some cases */
+		raster_config = 0x16000012; /* 0x3a00161a */
+		raster_config_1 = 0x0000002a; /* 0x0000002e */
+		break;
 	case CHIP_TONGA:
 		raster_config = 0x16000012;
 		raster_config_1 = 0x0000002a;

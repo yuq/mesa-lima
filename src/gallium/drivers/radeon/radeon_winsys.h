@@ -136,6 +136,7 @@ enum radeon_family {
     CHIP_TONGA,
     CHIP_ICELAND,
     CHIP_CARRIZO,
+    CHIP_FIJI,
     CHIP_LAST,
 };
 

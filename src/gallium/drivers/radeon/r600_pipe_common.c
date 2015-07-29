@@ -411,6 +411,7 @@ static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 	case CHIP_TONGA: return "AMD TONGA";
 	case CHIP_ICELAND: return "AMD ICELAND";
 	case CHIP_CARRIZO: return "AMD CARRIZO";
+	case CHIP_FIJI: return "AMD FIJI";
 	default: return "AMD unknown";
 	}
 }
@@ -538,6 +539,7 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_TONGA: return "tonga";
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";
+	case CHIP_FIJI: return "fiji";
 	default: return "";
 	}
 }

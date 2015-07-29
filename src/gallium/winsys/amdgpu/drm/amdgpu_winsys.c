@@ -227,6 +227,10 @@ static boolean do_winsys_init(struct amdgpu_winsys *ws)
       ws->family = FAMILY_CZ;
       ws->rev_id = CZ_CARRIZO_A0;
       break;
+   case CHIP_FIJI:
+      ws->family = FAMILY_VI;
+      ws->rev_id = VI_FIJI_P_A0;
+      break;
    default:
       fprintf(stderr, "amdgpu: Unknown family.\n");
       goto fail;
