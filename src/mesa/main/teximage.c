@@ -2487,13 +2487,6 @@ texsubimage_error_check(struct gl_context *ctx, GLuint dimensions,
       return GL_TRUE;
    }
 
-   /* check target (proxies not allowed) */
-   if (!legal_texsubimage_target(ctx, dimensions, target, dsa)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target=%s)",
-                  callerName, _mesa_enum_to_string(target));
-      return GL_TRUE;
-   }
-
    /* level check */
    if (level < 0 || level >= _mesa_max_texture_levels(ctx, target)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(level=%d)", callerName, level);
@@ -3522,14 +3515,6 @@ _mesa_texture_sub_image(struct gl_context *ctx, GLuint dims,
 {
    FLUSH_VERTICES(ctx, 0);
 
-   /* check target (proxies not allowed) */
-   if (!legal_texsubimage_target(ctx, dims, target, dsa)) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glTex%sSubImage%uD(target=%s)",
-                  dsa ? "ture" : "",
-                  dims, _mesa_enum_to_string(target));
-      return;
-   }
-
    if (ctx->NewState & _NEW_PIXEL)
       _mesa_update_state(ctx);
 
@@ -3578,6 +3563,13 @@ texsubimage(struct gl_context *ctx, GLuint dims, GLenum target, GLint level,
 {
    struct gl_texture_object *texObj;
    struct gl_texture_image *texImage;
+
+   /* check target (proxies not allowed) */
+   if (!legal_texsubimage_target(ctx, dims, target, false)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "glTexSubImage%uD(target=%s)",
+                  dims, _mesa_enum_to_string(target));
+      return;
+   }
 
    texObj = _mesa_get_current_tex_object(ctx, target);
    if (!texObj)
@@ -3636,6 +3628,13 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
    if (!texObj) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glTextureSubImage%uD(texture)",
                   dims);
+      return;
+   }
+
+   /* check target (proxies not allowed) */
+   if (!legal_texsubimage_target(ctx, dims, texObj->Target, true)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(target=%s)",
+                  callerName, _mesa_enum_to_string(texObj->Target));
       return;
    }
 
