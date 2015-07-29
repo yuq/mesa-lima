@@ -1222,7 +1222,7 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->screen = DefaultScreen(dpy);
    }
 
-   if (xcb_connection_has_error(dri2_dpy->conn)) {
+   if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
       _eglLog(_EGL_WARNING, "DRI2: xcb_connect failed");
       goto cleanup_dpy;
    }
