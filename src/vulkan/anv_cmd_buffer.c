@@ -474,6 +474,20 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->surface_next = 1;
 }
 
+void
+anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
+   struct anv_batch_bo *surface_bbo =
+      anv_cmd_buffer_current_surface_bbo(cmd_buffer);
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
+
+   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
+
+   surface_bbo->length = cmd_buffer->surface_next;
+}
+
 static VkResult
 anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
                       struct anv_bo *bo,
@@ -567,20 +581,6 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
 
       list->relocs[i].target_handle = bo->index;
    }
-}
-
-void
-anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
-{
-   struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
-   struct anv_batch_bo *surface_bbo =
-      anv_cmd_buffer_current_surface_bbo(cmd_buffer);
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
-
-   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
-
-   surface_bbo->length = cmd_buffer->surface_next;
 }
 
 void
