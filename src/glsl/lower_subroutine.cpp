@@ -37,7 +37,8 @@ namespace {
 
 class lower_subroutine_visitor : public ir_hierarchical_visitor {
 public:
-   lower_subroutine_visitor()
+   lower_subroutine_visitor(struct _mesa_glsl_parse_state *state)
+      : state(state)
    {
       this->progress = false;
    }
@@ -52,8 +53,7 @@ public:
 bool
 lower_subroutine(exec_list *instructions, struct _mesa_glsl_parse_state *state)
 {
-   lower_subroutine_visitor v;
-   v.state = state;
+   lower_subroutine_visitor v(state);
    visit_list_elements(&v, instructions);
    return v.progress;
 }
