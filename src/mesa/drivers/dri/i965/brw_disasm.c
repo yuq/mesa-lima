@@ -254,6 +254,7 @@ static const char *const three_source_reg_encoding[] = {
    [BRW_3SRC_TYPE_F]  = "F",
    [BRW_3SRC_TYPE_D]  = "D",
    [BRW_3SRC_TYPE_UD] = "UD",
+   [BRW_3SRC_TYPE_DF] = "DF",
 };
 
 const int reg_type_size[] = {
