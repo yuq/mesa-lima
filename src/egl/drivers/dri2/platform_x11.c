@@ -1251,11 +1251,11 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_x11_connect(dri2_dpy))
       goto cleanup_conn;
 
-   if (!dri2_load_driver(disp))
+   if (!dri2_x11_local_authenticate(disp))
       goto cleanup_fd;
 
-   if (!dri2_x11_local_authenticate(disp))
-      goto cleanup_driver;
+   if (!dri2_load_driver(disp))
+      goto cleanup_fd;
 
    if (dri2_dpy->dri2_minor >= 1) {
       dri2_dpy->dri2_loader_extension.base.name = __DRI_DRI2_LOADER;
