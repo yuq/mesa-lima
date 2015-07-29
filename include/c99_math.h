@@ -146,6 +146,12 @@ exp2f(float f)
    return powf(2.0f, f);
 }
 
+static inline double
+exp2(double d)
+{
+   return pow(2.0, d);
+}
+
 #endif /* C99 */
 
 
