@@ -307,6 +307,7 @@ static const struct brw_device_info brw_device_info_chv = {
    .must_use_separate_stencil = true,               \
    .has_llc = true,                                 \
    .has_pln = true,                                 \
+   .supports_simd16_3src = true,                    \
    .max_vs_threads = 280,                           \
    .max_gs_threads = 256,                           \
    .max_wm_threads = 408,                           \
@@ -324,17 +325,14 @@ static const struct brw_device_info brw_device_info_skl_early = {
 
 static const struct brw_device_info brw_device_info_skl_gt1 = {
    GEN9_FEATURES, .gt = 1,
-   .supports_simd16_3src = true,
 };
 
 static const struct brw_device_info brw_device_info_skl_gt2 = {
    GEN9_FEATURES, .gt = 2,
-   .supports_simd16_3src = true,
 };
 
 static const struct brw_device_info brw_device_info_skl_gt3 = {
    GEN9_FEATURES, .gt = 3,
-   .supports_simd16_3src = true,
 };
 
 static const struct brw_device_info brw_device_info_bxt = {
