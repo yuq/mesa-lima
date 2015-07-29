@@ -2373,7 +2373,7 @@ _mesa_map_buffer_range(struct gl_context *ctx,
 
    if (offset + length > bufObj->Size) {
       _mesa_error(ctx, GL_INVALID_VALUE,
-                  "%s(offset %ld + length %ld > buffer_size %ld)", func,
+                  "%s(offset %td + length %td > buffer_size %td)", func,
                   offset, length, bufObj->Size);
       return NULL;
    }
