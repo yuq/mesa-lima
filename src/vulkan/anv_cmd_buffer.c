@@ -493,71 +493,75 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
                       struct anv_bo *bo,
                       struct anv_reloc_list *relocs)
 {
-   struct drm_i915_gem_exec_object2 *obj;
+   struct drm_i915_gem_exec_object2 *obj = NULL;
 
    if (bo->index < cmd_buffer->execbuf2.bo_count &&
        cmd_buffer->execbuf2.bos[bo->index] == bo)
-      return VK_SUCCESS;
+      obj = &cmd_buffer->execbuf2.objects[bo->index];
 
-   if (cmd_buffer->execbuf2.bo_count >= cmd_buffer->execbuf2.array_length) {
-      uint32_t new_len = cmd_buffer->execbuf2.objects ?
-                         cmd_buffer->execbuf2.array_length * 2 : 64;
+   if (obj == NULL) {
+      /* We've never seen this one before.  Add it to the list and assign
+       * an id that we can use later.
+       */
+      if (cmd_buffer->execbuf2.bo_count >= cmd_buffer->execbuf2.array_length) {
+         uint32_t new_len = cmd_buffer->execbuf2.objects ?
+                            cmd_buffer->execbuf2.array_length * 2 : 64;
 
-      struct drm_i915_gem_exec_object2 *new_objects =
-         anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_objects),
-                          8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-      if (new_objects == NULL)
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+         struct drm_i915_gem_exec_object2 *new_objects =
+            anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_objects),
+                             8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+         if (new_objects == NULL)
+            return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-      struct anv_bo **new_bos =
-         anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_bos),
-                          8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-      if (new_objects == NULL) {
-         anv_device_free(cmd_buffer->device, new_objects);
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+         struct anv_bo **new_bos =
+            anv_device_alloc(cmd_buffer->device, new_len * sizeof(*new_bos),
+                             8, VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+         if (new_objects == NULL) {
+            anv_device_free(cmd_buffer->device, new_objects);
+            return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+         }
+
+         if (cmd_buffer->execbuf2.objects) {
+            memcpy(new_objects, cmd_buffer->execbuf2.objects,
+                   cmd_buffer->execbuf2.bo_count * sizeof(*new_objects));
+            memcpy(new_bos, cmd_buffer->execbuf2.bos,
+                   cmd_buffer->execbuf2.bo_count * sizeof(*new_bos));
+         }
+
+         cmd_buffer->execbuf2.objects = new_objects;
+         cmd_buffer->execbuf2.bos = new_bos;
+         cmd_buffer->execbuf2.array_length = new_len;
       }
 
-      if (cmd_buffer->execbuf2.objects) {
-         memcpy(new_objects, cmd_buffer->execbuf2.objects,
-                cmd_buffer->execbuf2.bo_count * sizeof(*new_objects));
-         memcpy(new_bos, cmd_buffer->execbuf2.bos,
-                cmd_buffer->execbuf2.bo_count * sizeof(*new_bos));
-      }
+      assert(cmd_buffer->execbuf2.bo_count < cmd_buffer->execbuf2.array_length);
 
-      cmd_buffer->execbuf2.objects = new_objects;
-      cmd_buffer->execbuf2.bos = new_bos;
-      cmd_buffer->execbuf2.array_length = new_len;
+      bo->index = cmd_buffer->execbuf2.bo_count++;
+      obj = &cmd_buffer->execbuf2.objects[bo->index];
+      cmd_buffer->execbuf2.bos[bo->index] = bo;
+
+      obj->handle = bo->gem_handle;
+      obj->relocation_count = 0;
+      obj->relocs_ptr = 0;
+      obj->alignment = 0;
+      obj->offset = bo->offset;
+      obj->flags = 0;
+      obj->rsvd1 = 0;
+      obj->rsvd2 = 0;
    }
 
-   assert(cmd_buffer->execbuf2.bo_count < cmd_buffer->execbuf2.array_length);
-
-   bo->index = cmd_buffer->execbuf2.bo_count++;
-   obj = &cmd_buffer->execbuf2.objects[bo->index];
-   cmd_buffer->execbuf2.bos[bo->index] = bo;
-
-   obj->handle = bo->gem_handle;
-   obj->relocation_count = 0;
-   obj->relocs_ptr = 0;
-   obj->alignment = 0;
-   obj->offset = bo->offset;
-   obj->flags = 0;
-   obj->rsvd1 = 0;
-   obj->rsvd2 = 0;
-
-   if (relocs) {
+   if (relocs != NULL && obj->relocation_count == 0) {
+      /* This is the first time we've ever seen a list of relocations for
+       * this BO.  Go ahead and set the relocations and then walk the list
+       * of relocations and add them all.
+       */
       obj->relocation_count = relocs->num_relocs;
       obj->relocs_ptr = (uintptr_t) relocs->relocs;
+
+      for (size_t i = 0; i < relocs->num_relocs; i++)
+         anv_cmd_buffer_add_bo(cmd_buffer, relocs->reloc_bos[i], NULL);
    }
 
    return VK_SUCCESS;
-}
-
-static void
-anv_cmd_buffer_add_validate_bos(struct anv_cmd_buffer *cmd_buffer,
-                                struct anv_reloc_list *list)
-{
-   for (size_t i = 0; i < list->num_relocs; i++)
-      anv_cmd_buffer_add_bo(cmd_buffer, list->reloc_bos[i], NULL);
 }
 
 static void
@@ -591,25 +595,53 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->execbuf2.bo_count = 0;
    cmd_buffer->execbuf2.need_reloc = false;
 
-   /* Add surface state bos first so we can add them with their relocs. */
+   list_for_each_entry(struct anv_batch_bo, bbo,
+                       &cmd_buffer->batch_bos, link) {
+      anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo, &bbo->relocs);
+   }
+
    list_for_each_entry(struct anv_batch_bo, bbo,
                        &cmd_buffer->surface_bos, link) {
       anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo, &bbo->relocs);
-      anv_cmd_buffer_add_validate_bos(cmd_buffer, &bbo->relocs);
-      anv_cmd_buffer_process_relocs(cmd_buffer, &bbo->relocs);
    }
 
-   /* Walk the list of batch buffers backwards and add each one.  There are
-    * two reasons for walking backwards.  First, it guarantees that we add
-    * a given batch bo before we process the relocation pointing to it from
-    * the MI_BATCH_BUFFER_START command.  Second, thed kernel requires that
-    * the last bo on the list is the batch buffer to execute and walking
-    * backwards gives us this for free.
+   struct anv_batch_bo *first_batch_bo =
+      list_first_entry(&cmd_buffer->batch_bos, struct anv_batch_bo, link);
+
+   /* The kernel requires that the last entry in the validation list be the
+    * batch buffer to execute.  We can simply swap the element
+    * corresponding to the first batch_bo in the chain with the last
+    * element in the list.
     */
+   if (first_batch_bo->bo.index != cmd_buffer->execbuf2.bo_count - 1) {
+      uint32_t idx = first_batch_bo->bo.index;
+
+      struct drm_i915_gem_exec_object2 tmp_obj =
+         cmd_buffer->execbuf2.objects[idx];
+      assert(cmd_buffer->execbuf2.bos[idx] == &first_batch_bo->bo);
+
+      cmd_buffer->execbuf2.objects[idx] =
+         cmd_buffer->execbuf2.objects[cmd_buffer->execbuf2.bo_count - 1];
+      cmd_buffer->execbuf2.bos[idx] =
+         cmd_buffer->execbuf2.bos[cmd_buffer->execbuf2.bo_count - 1];
+      cmd_buffer->execbuf2.bos[idx]->index = idx;
+
+      cmd_buffer->execbuf2.objects[cmd_buffer->execbuf2.bo_count - 1] = tmp_obj;
+      cmd_buffer->execbuf2.bos[cmd_buffer->execbuf2.bo_count - 1] =
+         &first_batch_bo->bo;
+      first_batch_bo->bo.index = cmd_buffer->execbuf2.bo_count - 1;
+   }
+
+   /* Now we go through and fixup all of the relocation lists to point to
+    * the correct indices in the object array.  We have to do this after we
+    * reorder the list above as some of the indices may have changed.
+    */
+   list_for_each_entry(struct anv_batch_bo, bbo,
+                       &cmd_buffer->surface_bos, link) {
+      anv_cmd_buffer_process_relocs(cmd_buffer, &bbo->relocs);
+   }
    list_for_each_entry_rev(struct anv_batch_bo, bbo,
                            &cmd_buffer->batch_bos, link) {
-      anv_cmd_buffer_add_validate_bos(cmd_buffer, &bbo->relocs);
-      anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo, &bbo->relocs);
       anv_cmd_buffer_process_relocs(cmd_buffer, &bbo->relocs);
    }
 
