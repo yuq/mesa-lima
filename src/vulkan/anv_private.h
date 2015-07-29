@@ -41,6 +41,7 @@
 
 #include "brw_device_info.h"
 #include "util/macros.h"
+#include "util/list.h"
 
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
@@ -462,6 +463,9 @@ uint64_t anv_reloc_list_add(struct anv_reloc_list *list,
                             uint32_t delta);
 
 struct anv_batch_bo {
+   /* Link in the anv_cmd_buffer.owned_batch_bos list */
+   struct list_head                             link;
+
    struct anv_bo                                bo;
 
    /* Bytes actually consumed in this batch BO */
@@ -470,8 +474,6 @@ struct anv_batch_bo {
    /* These offsets reference the per-batch reloc list */
    size_t                                       first_reloc;
    size_t                                       num_relocs;
-
-   struct anv_batch_bo *                        prev_batch_bo;
 };
 
 struct anv_batch {
@@ -693,13 +695,14 @@ struct anv_cmd_state {
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
+   struct anv_batch                             batch;
+
    /* Fields required for the actual chain of anv_batch_bo's.
     *
     * These fields are initialized by anv_cmd_buffer_init_batch_bo_chain().
     */
-   struct anv_batch                             batch;
-   struct anv_batch_bo *                        last_batch_bo;
-   struct anv_batch_bo *                        surface_batch_bo;
+   struct list_head                             batch_bos;
+   struct list_head                             surface_bos;
    uint32_t                                     surface_next;
    struct anv_reloc_list                        surface_relocs;
 
@@ -735,6 +738,8 @@ void anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
+struct anv_bo *
+anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer);
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);

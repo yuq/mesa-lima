@@ -141,7 +141,7 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
                   .GeneralStateBufferSize = 0xfffff,
                   .GeneralStateBufferSizeModifyEnable = true,
 
-                  .SurfaceStateBaseAddress = { &cmd_buffer->surface_batch_bo->bo, 0 },
+                  .SurfaceStateBaseAddress = { anv_cmd_buffer_current_surface_bo(cmd_buffer), 0 },
                   .SurfaceStateMemoryObjectControlState = GEN8_MOCS,
                   .SurfaceStateBaseAddressModifyEnable = true,
 

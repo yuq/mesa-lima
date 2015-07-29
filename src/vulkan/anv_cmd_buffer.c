@@ -217,7 +217,6 @@ anv_batch_bo_create(struct anv_device *device, struct anv_batch_bo **bbo_out)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    bbo->num_relocs = 0;
-   bbo->prev_batch_bo = NULL;
 
    result = anv_bo_pool_alloc(&device->batch_bo_pool, &bbo->bo);
    if (result != VK_SUCCESS) {
@@ -263,12 +262,30 @@ anv_batch_bo_destroy(struct anv_batch_bo *bbo, struct anv_device *device)
  * Functions related to anv_batch_bo
  *-----------------------------------------------------------------------*/
 
+static inline struct anv_batch_bo *
+anv_cmd_buffer_current_batch_bo(struct anv_cmd_buffer *cmd_buffer)
+{
+   return LIST_ENTRY(struct anv_batch_bo, cmd_buffer->batch_bos.prev, link);
+}
+
+static inline struct anv_batch_bo *
+anv_cmd_buffer_current_surface_bbo(struct anv_cmd_buffer *cmd_buffer)
+{
+   return LIST_ENTRY(struct anv_batch_bo, cmd_buffer->surface_bos.prev, link);
+}
+
+struct anv_bo *
+anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer)
+{
+   return &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->bo;
+}
+
 static VkResult
 anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
 {
    struct anv_cmd_buffer *cmd_buffer = _data;
-
-   struct anv_batch_bo *new_bbo, *old_bbo = cmd_buffer->last_batch_bo;
+   struct anv_batch_bo *new_bbo, *old_bbo =
+      anv_cmd_buffer_current_batch_bo(cmd_buffer);
 
    VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
    if (result != VK_SUCCESS)
@@ -288,10 +305,9 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
       .BatchBufferStartAddress = { &new_bbo->bo, 0 },
    );
 
-   anv_batch_bo_finish(cmd_buffer->last_batch_bo, batch);
+   anv_batch_bo_finish(old_bbo, batch);
 
-   new_bbo->prev_batch_bo = old_bbo;
-   cmd_buffer->last_batch_bo = new_bbo;
+   list_addtail(&new_bbo->link, &cmd_buffer->batch_bos);
 
    anv_batch_bo_start(new_bbo, batch, GEN8_MI_BATCH_BUFFER_START_length * 4);
 
@@ -302,17 +318,19 @@ struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment)
 {
+   struct anv_bo *surface_bo =
+      anv_cmd_buffer_current_surface_bo(cmd_buffer);
    struct anv_state state;
 
    state.offset = align_u32(cmd_buffer->surface_next, alignment);
-   if (state.offset + size > cmd_buffer->surface_batch_bo->bo.size)
+   if (state.offset + size > surface_bo->size)
       return (struct anv_state) { 0 };
 
-   state.map = cmd_buffer->surface_batch_bo->bo.map + state.offset;
+   state.map = surface_bo->map + state.offset;
    state.alloc_size = size;
    cmd_buffer->surface_next = state.offset + size;
 
-   assert(state.offset + size <= cmd_buffer->surface_batch_bo->bo.size);
+   assert(state.offset + size <= surface_bo->size);
 
    return state;
 }
@@ -328,7 +346,8 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 VkResult
 anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_batch_bo *new_bbo, *old_bbo = cmd_buffer->surface_batch_bo;
+   struct anv_batch_bo *new_bbo, *old_bbo =
+      anv_cmd_buffer_current_surface_bbo(cmd_buffer);
 
    /* Finish off the old buffer */
    old_bbo->num_relocs =
@@ -342,8 +361,7 @@ anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
    new_bbo->first_reloc = cmd_buffer->surface_relocs.num_relocs;
    cmd_buffer->surface_next = 1;
 
-   new_bbo->prev_batch_bo = old_bbo;
-   cmd_buffer->surface_batch_bo = new_bbo;
+   list_addtail(&new_bbo->link, &cmd_buffer->surface_bos);
 
    return VK_SUCCESS;
 }
@@ -351,12 +369,18 @@ anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer)
 VkResult
 anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_batch_bo *batch_bo, *surface_bbo;
    struct anv_device *device = cmd_buffer->device;
    VkResult result;
 
-   result = anv_batch_bo_create(device, &cmd_buffer->last_batch_bo);
+   list_inithead(&cmd_buffer->batch_bos);
+   list_inithead(&cmd_buffer->surface_bos);
+
+   result = anv_batch_bo_create(device, &batch_bo);
    if (result != VK_SUCCESS)
       return result;
+
+   list_addtail(&batch_bo->link, &cmd_buffer->batch_bos);
 
    result = anv_reloc_list_init(&cmd_buffer->batch.relocs, device);
    if (result != VK_SUCCESS)
@@ -366,13 +390,15 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->batch.extend_cb = anv_cmd_buffer_chain_batch;
    cmd_buffer->batch.user_data = cmd_buffer;
 
-   anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
+   anv_batch_bo_start(batch_bo, &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   result = anv_batch_bo_create(device, &cmd_buffer->surface_batch_bo);
+   result = anv_batch_bo_create(device, &surface_bbo);
    if (result != VK_SUCCESS)
       goto fail_batch_relocs;
-   cmd_buffer->surface_batch_bo->first_reloc = 0;
+
+   surface_bbo->first_reloc = 0;
+   list_addtail(&surface_bbo->link, &cmd_buffer->surface_bos);
 
    result = anv_reloc_list_init(&cmd_buffer->surface_relocs, device);
    if (result != VK_SUCCESS)
@@ -388,11 +414,11 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 
  fail_ss_batch_bo:
-   anv_batch_bo_destroy(cmd_buffer->surface_batch_bo, device);
+   anv_batch_bo_destroy(surface_bbo, device);
  fail_batch_relocs:
    anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
  fail_batch_bo:
-   anv_batch_bo_destroy(cmd_buffer->last_batch_bo, device);
+   anv_batch_bo_destroy(batch_bo, device);
 
    return result;
 }
@@ -403,20 +429,16 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    struct anv_device *device = cmd_buffer->device;
 
    /* Destroy all of the batch buffers */
-   struct anv_batch_bo *bbo = cmd_buffer->last_batch_bo;
-   while (bbo) {
-      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+   list_for_each_entry_safe(struct anv_batch_bo, bbo,
+                            &cmd_buffer->batch_bos, link) {
       anv_batch_bo_destroy(bbo, device);
-      bbo = prev;
    }
    anv_reloc_list_finish(&cmd_buffer->batch.relocs, device);
 
    /* Destroy all of the surface state buffers */
-   bbo = cmd_buffer->surface_batch_bo;
-   while (bbo) {
-      struct anv_batch_bo *prev = bbo->prev_batch_bo;
+   list_for_each_entry_safe(struct anv_batch_bo, bbo,
+                            &cmd_buffer->surface_bos, link) {
       anv_batch_bo_destroy(bbo, device);
-      bbo = prev;
    }
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, device);
 
@@ -430,24 +452,27 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    struct anv_device *device = cmd_buffer->device;
 
    /* Delete all but the first batch bo */
-   while (cmd_buffer->last_batch_bo->prev_batch_bo) {
-      struct anv_batch_bo *prev = cmd_buffer->last_batch_bo->prev_batch_bo;
-      anv_batch_bo_destroy(cmd_buffer->last_batch_bo, device);
-      cmd_buffer->last_batch_bo = prev;
+   assert(!list_empty(&cmd_buffer->batch_bos));
+   while (cmd_buffer->batch_bos.next != cmd_buffer->batch_bos.prev) {
+      struct anv_batch_bo *bbo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
+      list_del(&bbo->link);
+      anv_batch_bo_destroy(bbo, device);
    }
-   assert(cmd_buffer->last_batch_bo->prev_batch_bo == NULL);
+   assert(!list_empty(&cmd_buffer->batch_bos));
 
    cmd_buffer->batch.relocs.num_relocs = 0;
-   anv_batch_bo_start(cmd_buffer->last_batch_bo, &cmd_buffer->batch,
+   anv_batch_bo_start(anv_cmd_buffer_current_batch_bo(cmd_buffer),
+                      &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
    /* Delete all but the first batch bo */
-   while (cmd_buffer->surface_batch_bo->prev_batch_bo) {
-      struct anv_batch_bo *prev = cmd_buffer->surface_batch_bo->prev_batch_bo;
-      anv_batch_bo_destroy(cmd_buffer->surface_batch_bo, device);
-      cmd_buffer->surface_batch_bo = prev;
+   assert(!list_empty(&cmd_buffer->batch_bos));
+   while (cmd_buffer->surface_bos.next != cmd_buffer->surface_bos.prev) {
+      struct anv_batch_bo *bbo = anv_cmd_buffer_current_surface_bbo(cmd_buffer);
+      list_del(&bbo->link);
+      anv_batch_bo_destroy(bbo, device);
    }
-   assert(cmd_buffer->surface_batch_bo->prev_batch_bo == NULL);
+   assert(!list_empty(&cmd_buffer->batch_bos));
 
    cmd_buffer->surface_next = 1;
    cmd_buffer->surface_relocs.num_relocs = 0;
@@ -552,12 +577,17 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
 void
 anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
+   struct anv_batch_bo *surface_bbo =
+      anv_cmd_buffer_current_surface_bbo(cmd_buffer);
+
    anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
 
-   anv_batch_bo_finish(cmd_buffer->last_batch_bo, &cmd_buffer->batch);
-   cmd_buffer->surface_batch_bo->num_relocs =
-      cmd_buffer->surface_relocs.num_relocs - cmd_buffer->surface_batch_bo->first_reloc;
-   cmd_buffer->surface_batch_bo->length = cmd_buffer->surface_next;
+   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
+
+   surface_bbo->num_relocs =
+      cmd_buffer->surface_relocs.num_relocs - surface_bbo->first_reloc;
+   surface_bbo->length = cmd_buffer->surface_next;
 }
 
 void
@@ -569,8 +599,8 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->execbuf2.need_reloc = false;
 
    /* Add surface state bos first so we can add them with their relocs. */
-   for (struct anv_batch_bo *bbo = cmd_buffer->surface_batch_bo;
-        bbo != NULL; bbo = bbo->prev_batch_bo) {
+   list_for_each_entry(struct anv_batch_bo, bbo,
+                       &cmd_buffer->surface_bos, link) {
       anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo,
                             &cmd_buffer->surface_relocs.relocs[bbo->first_reloc],
                             bbo->num_relocs);
@@ -579,24 +609,27 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    /* Add all of the BOs referenced by surface state */
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &cmd_buffer->surface_relocs);
 
+   struct anv_batch_bo *first_batch_bo =
+      LIST_ENTRY(struct anv_batch_bo, cmd_buffer->batch_bos.next, link);
+
    /* Add all but the first batch BO */
-   struct anv_batch_bo *batch_bo = cmd_buffer->last_batch_bo;
-   while (batch_bo->prev_batch_bo) {
-      anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo,
-                            &batch->relocs.relocs[batch_bo->first_reloc],
-                            batch_bo->num_relocs);
-      batch_bo = batch_bo->prev_batch_bo;
+   list_for_each_entry(struct anv_batch_bo, bbo, &cmd_buffer->batch_bos, link) {
+      if (bbo == first_batch_bo)
+         continue;
+
+      anv_cmd_buffer_add_bo(cmd_buffer, &bbo->bo,
+                            &batch->relocs.relocs[bbo->first_reloc],
+                            bbo->num_relocs);
    }
 
    /* Add everything referenced by the batches */
    anv_cmd_buffer_add_validate_bos(cmd_buffer, &batch->relocs);
 
    /* Add the first batch bo last */
-   assert(batch_bo->prev_batch_bo == NULL && batch_bo->first_reloc == 0);
-   anv_cmd_buffer_add_bo(cmd_buffer, &batch_bo->bo,
-                         &batch->relocs.relocs[batch_bo->first_reloc],
-                         batch_bo->num_relocs);
-   assert(batch_bo->bo.index == cmd_buffer->execbuf2.bo_count - 1);
+   anv_cmd_buffer_add_bo(cmd_buffer, &first_batch_bo->bo,
+                         &batch->relocs.relocs[first_batch_bo->first_reloc],
+                         first_batch_bo->num_relocs);
+   assert(first_batch_bo->bo.index == cmd_buffer->execbuf2.bo_count - 1);
 
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_process_relocs(cmd_buffer, &batch->relocs);
