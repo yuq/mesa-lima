@@ -437,6 +437,16 @@ descriptor=[
 # GL_ARB_texture_gather / GLES 3.1
   [ "MIN_PROGRAM_TEXTURE_GATHER_OFFSET", "CONTEXT_INT(Const.MinProgramTextureGatherOffset), extra_ARB_texture_gather_es31"],
   [ "MAX_PROGRAM_TEXTURE_GATHER_OFFSET", "CONTEXT_INT(Const.MaxProgramTextureGatherOffset), extra_ARB_texture_gather_es31"],
+
+# GL_ARB_compute_shader / GLES 3.1
+  [ "MAX_COMPUTE_WORK_GROUP_INVOCATIONS", "CONTEXT_INT(Const.MaxComputeWorkGroupInvocations), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_UNIFORM_BLOCKS", "CONST(MAX_COMPUTE_UNIFORM_BLOCKS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_TEXTURE_IMAGE_UNITS", "CONST(MAX_COMPUTE_TEXTURE_IMAGE_UNITS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_ATOMIC_COUNTERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTERS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_SHARED_MEMORY_SIZE", "CONST(MAX_COMPUTE_SHARED_MEMORY_SIZE), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_UNIFORM_COMPONENTS", "CONST(MAX_COMPUTE_UNIFORM_COMPONENTS), extra_ARB_compute_shader_es31" ],
+  [ "MAX_COMPUTE_IMAGE_UNIFORMS", "CONST(MAX_COMPUTE_IMAGE_UNIFORMS), extra_ARB_compute_shader_es31" ],
 ]},
 
 # Enums in OpenGL Core profile and ES 3.1
@@ -797,16 +807,6 @@ descriptor=[
   [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedImageUnitsAndFragmentOutputs), extra_ARB_shader_image_load_store" ],
   [ "MAX_IMAGE_SAMPLES", "CONTEXT_INT(Const.MaxImageSamples), extra_ARB_shader_image_load_store" ],
   [ "MAX_GEOMETRY_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms), extra_ARB_shader_image_load_store_and_geometry_shader"],
-
-# GL_ARB_compute_shader
-  [ "MAX_COMPUTE_WORK_GROUP_INVOCATIONS", "CONTEXT_INT(Const.MaxComputeWorkGroupInvocations), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_UNIFORM_BLOCKS", "CONST(MAX_COMPUTE_UNIFORM_BLOCKS), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_TEXTURE_IMAGE_UNITS", "CONST(MAX_COMPUTE_TEXTURE_IMAGE_UNITS), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_ATOMIC_COUNTERS", "CONST(MAX_COMPUTE_ATOMIC_COUNTERS), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_SHARED_MEMORY_SIZE", "CONST(MAX_COMPUTE_SHARED_MEMORY_SIZE), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_UNIFORM_COMPONENTS", "CONST(MAX_COMPUTE_UNIFORM_COMPONENTS), extra_ARB_compute_shader" ],
-  [ "MAX_COMPUTE_IMAGE_UNIFORMS", "CONST(MAX_COMPUTE_IMAGE_UNIFORMS), extra_ARB_compute_shader" ],
 
 # GL_ARB_framebuffer_no_attachments
   ["MAX_FRAMEBUFFER_WIDTH", "CONTEXT_INT(Const.MaxFramebufferWidth), extra_ARB_framebuffer_no_attachments"],
