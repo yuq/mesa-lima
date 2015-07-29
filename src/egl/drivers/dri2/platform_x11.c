@@ -579,16 +579,16 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
       return EGL_FALSE;
    }
 
-   driver_name = xcb_dri2_connect_driver_name (connect);
-   dri2_dpy->driver_name =
-      strndup(driver_name,
-              xcb_dri2_connect_driver_name_length(connect));
-
    device_name = xcb_dri2_connect_device_name (connect);
 
    dri2_dpy->device_name =
       strndup(device_name,
               xcb_dri2_connect_device_name_length(connect));
+
+   driver_name = xcb_dri2_connect_driver_name (connect);
+   dri2_dpy->driver_name =
+      strndup(driver_name,
+              xcb_dri2_connect_driver_name_length(connect));
 
    if (dri2_dpy->device_name == NULL || dri2_dpy->driver_name == NULL) {
       free(dri2_dpy->device_name);
