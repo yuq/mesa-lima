@@ -1394,6 +1394,8 @@ private:
    Value *vtxBase[5]; // base address of vertex in primitive (for TP/GP)
    uint8_t vtxBaseValid;
 
+   Value *outBase; // base address of vertex out patch (for TCP)
+
    Stack condBBs;  // fork BB, then else clause BB
    Stack joinBBs;  // fork BB, for inserting join ops on ENDIF
    Stack loopBBs;  // loop headers
@@ -1537,13 +1539,7 @@ Converter::getOutputBase(int s)
                          fetchSrc(tgsi.getSrc(s).getIndirect(1), 0, NULL),
                          offset);
       vtxBaseValid |= 1 << s;
-      vtxBase[s] = mkOp2v(
-         OP_ADD, TYPE_U32, getSSA(),
-         mkOp2v(
-            OP_SUB, TYPE_U32, getSSA(),
-            mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_LANEID, 0)),
-            mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_INVOCATION_ID, 0))),
-         offset);
+      vtxBase[s] = mkOp2v(OP_ADD, TYPE_U32, getSSA(), outBase, offset);
    }
    return vtxBase[s];
 }
@@ -3369,10 +3365,21 @@ Converter::run()
          clipVtx[c] = getScratch();
    }
 
-   if (prog->getType() == Program::TYPE_FRAGMENT) {
+   switch (prog->getType()) {
+   case Program::TYPE_TESSELLATION_CONTROL:
+      outBase = mkOp2v(
+         OP_SUB, TYPE_U32, getSSA(),
+         mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_LANEID, 0)),
+         mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_INVOCATION_ID, 0)));
+      break;
+   case Program::TYPE_FRAGMENT: {
       Symbol *sv = mkSysVal(SV_POSITION, 3);
       fragCoord[3] = mkOp1v(OP_RDSV, TYPE_F32, getSSA(), sv);
       mkOp1(OP_RCP, TYPE_F32, fragCoord[3], fragCoord[3]);
+      break;
+   }
+   default:
+      break;
    }
 
    if (info->io.viewportId >= 0)
