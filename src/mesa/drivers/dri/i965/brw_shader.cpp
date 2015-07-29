@@ -290,8 +290,9 @@ process_glsl_ir(gl_shader_stage stage,
                                           options->EmitNoIndirectUniform);
 
    if (unlikely(brw->perf_debug && lowered_variable_indexing)) {
-      perf_debug("Unsupported form of variable indexing in FS; falling "
-                 "back to very inefficient code generation\n");
+      perf_debug("Unsupported form of variable indexing in %s; falling "
+                 "back to very inefficient code generation\n",
+                 _mesa_shader_stage_to_abbrev(shader->Stage));
    }
 
    lower_ubo_reference(shader, shader->ir);
