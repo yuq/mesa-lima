@@ -1296,6 +1296,7 @@ private:
 
    Value *shiftAddress(Value *);
    Value *getVertexBase(int s);
+   Value *getOutputBase(int s);
    DataArray *getArrayForFile(unsigned file, int idx);
    Value *fetchSrc(int s, int c);
    Value *acquireDst(int d, int c);
@@ -1526,6 +1527,28 @@ Converter::getVertexBase(int s)
 }
 
 Value *
+Converter::getOutputBase(int s)
+{
+   assert(s < 5);
+   if (!(vtxBaseValid & (1 << s))) {
+      Value *offset = loadImm(NULL, tgsi.getSrc(s).getIndex(1));
+      if (tgsi.getSrc(s).isIndirect(1))
+         offset = mkOp2v(OP_ADD, TYPE_U32, getSSA(),
+                         fetchSrc(tgsi.getSrc(s).getIndirect(1), 0, NULL),
+                         offset);
+      vtxBaseValid |= 1 << s;
+      vtxBase[s] = mkOp2v(
+         OP_ADD, TYPE_U32, getSSA(),
+         mkOp2v(
+            OP_SUB, TYPE_U32, getSSA(),
+            mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_LANEID, 0)),
+            mkOp1v(OP_RDSV, TYPE_U32, getSSA(), mkSysVal(SV_INVOCATION_ID, 0))),
+         offset);
+   }
+   return vtxBase[s];
+}
+
+Value *
 Converter::fetchSrc(int s, int c)
 {
    Value *res;
@@ -1539,6 +1562,8 @@ Converter::fetchSrc(int s, int c)
    if (src.is2D()) {
       switch (src.getFile()) {
       case TGSI_FILE_OUTPUT:
+         dimRel = getOutputBase(s);
+         break;
       case TGSI_FILE_INPUT:
          dimRel = getVertexBase(s);
          break;
