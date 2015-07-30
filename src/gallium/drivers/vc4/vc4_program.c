@@ -42,6 +42,9 @@
 #include "simpenrose/simpenrose.h"
 #endif
 
+static struct qreg
+ntq_get_src(struct vc4_compile *c, nir_src src, int i);
+
 static void
 resize_qreg_array(struct vc4_compile *c,
                   struct qreg **regs,
@@ -64,10 +67,10 @@ resize_qreg_array(struct vc4_compile *c,
 }
 
 static struct qreg
-indirect_uniform_load(struct vc4_compile *c,
-                      struct qreg indirect_offset,
-                      unsigned offset)
+indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
 {
+        struct qreg indirect_offset = ntq_get_src(c, intr->src[0], 0);
+        uint32_t offset = intr->const_index[0];
         struct vc4_compiler_ubo_range *range = NULL;
         unsigned i;
         for (i = 0; i < c->num_uniform_ranges; i++) {
@@ -89,10 +92,6 @@ indirect_uniform_load(struct vc4_compile *c,
         };
 
         offset -= range->src_offset;
-        /* Translate the user's TGSI register index from the TGSI register
-         * base to a byte offset.
-         */
-        indirect_offset = qir_SHL(c, indirect_offset, qir_uniform_ui(c, 4));
 
         /* Adjust for where we stored the TGSI register base. */
         indirect_offset = qir_ADD(c, indirect_offset,
@@ -1793,19 +1792,12 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 
         switch (instr->intrinsic) {
         case nir_intrinsic_load_uniform:
-                for (int i = 0; i < instr->num_components; i++) {
-                        dest[i] = qir_uniform(c, QUNIFORM_UNIFORM,
-                                              instr->const_index[0] * 4 + i);
-                }
+                assert(instr->num_components == 1);
+                *dest = qir_uniform(c, QUNIFORM_UNIFORM, instr->const_index[0]);
                 break;
 
         case nir_intrinsic_load_uniform_indirect:
-                for (int i = 0; i < instr->num_components; i++) {
-                        dest[i] = indirect_uniform_load(c,
-                                                        ntq_get_src(c, instr->src[0], 0),
-                                                        (instr->const_index[0] *
-                                                         4 + i) * sizeof(float));
-                }
+                *dest = indirect_uniform_load(c, instr);
 
                 break;
 
