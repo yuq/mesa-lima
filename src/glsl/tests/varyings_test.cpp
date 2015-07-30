@@ -76,15 +76,7 @@ public:
 link_varyings::link_varyings()
 {
    static const glsl_struct_field f[] = {
-      {
-         glsl_type::vec(4),
-         "v",
-         false,
-         0,
-         0,
-         0,
-         0
-      }
+      glsl_struct_field(glsl_type::vec(4), "v")
    };
 
    this->simple_interface =

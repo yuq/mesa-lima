@@ -781,6 +781,19 @@ struct glsl_struct_field {
     * streams (as in ir_variable::stream). -1 otherwise.
     */
    int stream;
+
+   glsl_struct_field(const struct glsl_type *_type, const char *_name)
+      : type(_type), name(_name), location(-1), interpolation(0), centroid(0),
+        sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
+        stream(-1)
+   {
+      /* empty */
+   }
+
+   glsl_struct_field()
+   {
+      /* empty */
+   }
 };
 
 static inline unsigned int
