@@ -78,8 +78,27 @@ for line in fileinput.input():
 # per entry point.
 
 if opt_header:
+    print "/* This file generated from vk_gen.py, don't edit directly. */\n"
+
+    print "struct anv_layer {"
+    print "   union {"
+    print "      void *entrypoints[%d];" % len(entrypoints)
+    print "      struct {"
+
+    for type, name, args, num, h in entrypoints:
+        print "         %s (*%s)%s;" % (type, name, args)
+    print "      };\n"
+    print "   };\n"
+    print "};\n"
+
+    print "extern const struct anv_layer gen7_layer;\n"
+    print "extern const struct anv_layer gen8_layer;\n"
+    print "extern const struct anv_layer *driver_layer;\n"
+
     for type, name, args, num, h in entrypoints:
         print "%s anv_%s%s;" % (type, name, args)
+        print "%s gen7_%s%s;" % (type, name, args)
+        print "%s gen8_%s%s;" % (type, name, args)
         print "%s anv_validate_%s%s;" % (type, name, args)
     exit()
 
@@ -115,8 +134,6 @@ print """/*
 struct anv_entrypoint {
    uint32_t name;
    uint32_t hash;
-   void *function;
-   void *validate;
 };
 
 /* We use a big string constant to avoid lots of reloctions from the entry
@@ -141,15 +158,20 @@ print """   ;
  */
 """
 
-for type, name, args, num, h in entrypoints:
-    print "%s anv_validate_%s%s __attribute__ ((weak));" % (type, name, args)
-
 # Now generate the table of all entry points and their validation functions
 
 print "\nstatic const struct anv_entrypoint entrypoints[] = {"
 for type, name, args, num, h in entrypoints:
-    print "   { %5d, 0x%08x, anv_%s, anv_validate_%s }," % (offsets[num], h, name, name)
+    print "   { %5d, 0x%08x }," % (offsets[num], h)
 print "};\n"
+
+for layer in [ "anv", "validate", "gen7", "gen8" ]:
+    for type, name, args, num, h in entrypoints:
+        print "%s %s_%s%s __attribute__ ((weak));" % (type, layer, name, args)
+    print "\nconst struct anv_layer %s_layer = {" % layer
+    for type, name, args, num, h in entrypoints:
+        print "   .%s = %s_%s," % (name, layer, name)
+    print "};\n"
 
 print """
 #ifdef DEBUG
@@ -173,13 +195,18 @@ determine_validate(void)
       enable_validate = atoi(s);
 }
 
+const struct anv_layer *driver_layer = &anv_layer;
+
 static void * __attribute__ ((noinline))
 resolve_entrypoint(uint32_t index)
 {
-   if (enable_validate && entrypoints[index].validate)
-      return entrypoints[index].validate;
+   if (enable_validate && validate_layer.entrypoints[index])
+      return validate_layer.entrypoints[index];
 
-   return entrypoints[index].function;
+   if (driver_layer && driver_layer->entrypoints[index])
+      return driver_layer->entrypoints[index];
+
+   return anv_layer.entrypoints[index];
 }
 """
 
