@@ -736,6 +736,9 @@ struct anv_cmd_buffer {
    struct anv_state_stream                      surface_state_stream;
    struct anv_state_stream                      dynamic_state_stream;
 
+   VkCmdBufferOptimizeFlags                     opt_flags;
+   VkCmdBufferLevel                             level;
+
    struct anv_cmd_state                         state;
 };
 
@@ -743,6 +746,8 @@ VkResult anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
+                                  struct anv_cmd_buffer *secondary);
 void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_bo *

@@ -736,6 +736,8 @@ VkResult anv_QueueSubmit(
    for (uint32_t i = 0; i < cmdBufferCount; i++) {
       ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, pCmdBuffers[i]);
 
+      assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+
       if (device->dump_aub)
          anv_cmd_buffer_dump(cmd_buffer);
 

@@ -304,6 +304,16 @@ anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
 }
 
 static void
+anv_batch_bo_continue(struct anv_batch_bo *bbo, struct anv_batch *batch,
+                      size_t batch_padding)
+{
+   batch->start = bbo->bo.map;
+   batch->next = bbo->bo.map + bbo->length;
+   batch->end = bbo->bo.map + bbo->bo.size - batch_padding;
+   batch->relocs = &bbo->relocs;
+}
+
+static void
 anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 {
    assert(batch->start == bbo->bo.map);
@@ -618,15 +628,72 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
    struct anv_batch_bo *surface_bbo =
       anv_cmd_buffer_current_surface_bbo(cmd_buffer);
 
-   anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
+   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
+      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
 
-   /* Round batch up to an even number of dwords. */
-   if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
-      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
+      /* Round batch up to an even number of dwords. */
+      if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
+         anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
+   }
 
    anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
 
    surface_bbo->length = cmd_buffer->surface_next;
+}
+
+static inline VkResult
+anv_cmd_buffer_add_seen_bbos(struct anv_cmd_buffer *cmd_buffer,
+                             struct list_head *list)
+{
+   list_for_each_entry(struct anv_batch_bo, bbo, list, link) {
+      struct anv_batch_bo **bbo_ptr = anv_vector_add(&cmd_buffer->seen_bbos);
+      if (bbo_ptr == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      *bbo_ptr = bbo;
+   }
+
+   return VK_SUCCESS;
+}
+
+void
+anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
+                             struct anv_cmd_buffer *secondary)
+{
+   if ((secondary->batch_bos.next == secondary->batch_bos.prev) &&
+       anv_cmd_buffer_current_batch_bo(secondary)->length < ANV_CMD_BUFFER_BATCH_SIZE / 2) {
+      /* If the secondary has exactly one batch buffer in its list *and*
+       * that batch buffer is less than half of the maximum size, we're
+       * probably better of simply copying it into our batch.
+       */
+      anv_batch_emit_batch(&primary->batch, &secondary->batch);
+   } else {
+      struct list_head copy_list;
+      VkResult result = anv_batch_bo_list_clone(&secondary->batch_bos,
+                                                secondary->device,
+                                                &copy_list);
+      if (result != VK_SUCCESS)
+         return; /* FIXME */
+
+      anv_cmd_buffer_add_seen_bbos(primary, &copy_list);
+
+      struct anv_batch_bo *first_bbo =
+         list_first_entry(&copy_list, struct anv_batch_bo, link);
+      struct anv_batch_bo *last_bbo =
+         list_last_entry(&copy_list, struct anv_batch_bo, link);
+
+      cmd_buffer_chain_to_batch_bo(primary, first_bbo);
+
+      list_splicetail(&copy_list, &primary->batch_bos);
+
+      anv_batch_bo_continue(last_bbo, &primary->batch,
+                            GEN8_MI_BATCH_BUFFER_START_length * 4);
+
+      anv_cmd_buffer_emit_state_base_address(primary);
+   }
+
+   /* Mark the surface buffer from the secondary as seen */
+   anv_cmd_buffer_add_seen_bbos(primary, &secondary->surface_bos);
 }
 
 static VkResult

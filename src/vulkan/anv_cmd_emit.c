@@ -66,8 +66,6 @@ VkResult anv_CreateCommandBuffer(
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
-   assert(pCreateInfo->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
-
    cmd_buffer = anv_device_alloc(device, sizeof(*cmd_buffer), 8,
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (cmd_buffer == NULL)
@@ -83,6 +81,9 @@ VkResult anv_CreateCommandBuffer(
                          &device->surface_state_block_pool);
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &device->dynamic_state_block_pool);
+
+   cmd_buffer->level = pCreateInfo->level;
+   cmd_buffer->opt_flags = 0;
 
    anv_cmd_state_init(&cmd_buffer->state);
 
@@ -210,6 +211,19 @@ VkResult anv_BeginCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
+   cmd_buffer->opt_flags = pBeginInfo->flags;
+
+   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_SECONDARY) {
+      cmd_buffer->state.framebuffer =
+         anv_framebuffer_from_handle(pBeginInfo->framebuffer);
+      cmd_buffer->state.pass =
+         anv_render_pass_from_handle(pBeginInfo->renderPass);
+
+      /* FIXME: We shouldn't be starting on the first subpass */
+      anv_cmd_buffer_begin_subpass(cmd_buffer,
+                                   &cmd_buffer->state.pass->subpasses[0]);
+   }
+
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);
    cmd_buffer->state.current_pipeline = UINT32_MAX;
 
@@ -224,13 +238,15 @@ VkResult anv_EndCommandBuffer(
 
    anv_cmd_buffer_end_batch_buffer(cmd_buffer);
 
-   /* The algorithm used to compute the validate list is not threadsafe as
-    * it uses the bo->index field.  We have to lock the device around it.
-    * Fortunately, the chances for contention here are probably very low.
-    */
-   pthread_mutex_lock(&device->mutex);
-   anv_cmd_buffer_prepare_execbuf(cmd_buffer);
-   pthread_mutex_unlock(&device->mutex);
+   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
+      /* The algorithm used to compute the validate list is not threadsafe as
+       * it uses the bo->index field.  We have to lock the device around it.
+       * Fortunately, the chances for contention here are probably very low.
+       */
+      pthread_mutex_lock(&device->mutex);
+      anv_cmd_buffer_prepare_execbuf(cmd_buffer);
+      pthread_mutex_unlock(&device->mutex);
+   }
 
    return VK_SUCCESS;
 }
@@ -1282,8 +1298,6 @@ void anv_CmdBeginRenderPass(
    ANV_FROM_HANDLE(anv_render_pass, pass, pRenderPassBegin->renderPass);
    ANV_FROM_HANDLE(anv_framebuffer, framebuffer, pRenderPassBegin->framebuffer);
 
-   assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
-
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
 
@@ -1311,7 +1325,7 @@ void anv_CmdNextSubpass(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
-   assert(contents == VK_RENDER_PASS_CONTENTS_INLINE);
+   assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
 
    anv_cmd_buffer_begin_subpass(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
@@ -1341,5 +1355,17 @@ void anv_CmdExecuteCommands(
     uint32_t                                    cmdBuffersCount,
     const VkCmdBuffer*                          pCmdBuffers)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_cmd_buffer, primary, cmdBuffer);
+
+   assert(primary->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
+
+   anv_assert(primary->state.subpass == &primary->state.pass->subpasses[0]);
+
+   for (uint32_t i = 0; i < cmdBuffersCount; i++) {
+      ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
+
+      assert(secondary->level == VK_CMD_BUFFER_LEVEL_SECONDARY);
+
+      anv_cmd_buffer_add_secondary(primary, secondary);
+   }
 }
