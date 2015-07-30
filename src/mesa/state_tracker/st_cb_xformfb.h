@@ -40,7 +40,7 @@ st_init_xformfb_functions(struct dd_function_table *functions);
 
 extern bool
 st_transform_feedback_draw_init(struct gl_transform_feedback_object *obj,
-                                struct pipe_draw_info *out);
+                                unsigned stream, struct pipe_draw_info *out);
 
 
 #endif /* ST_CB_XFORMFB_H */
