@@ -707,26 +707,6 @@ emit_fragcoord_input(struct vc4_compile *c, int attr)
         c->inputs[attr * 4 + 3] = qir_RCP(c, qir_FRAG_W(c));
 }
 
-static void
-emit_point_coord_input(struct vc4_compile *c, int attr)
-{
-        if (c->point_x.file == QFILE_NULL) {
-                c->point_x = qir_uniform_f(c, 0.0);
-                c->point_y = qir_uniform_f(c, 0.0);
-        }
-
-        c->inputs[attr * 4 + 0] = c->point_x;
-        if (c->fs_key->point_coord_upper_left) {
-                c->inputs[attr * 4 + 1] = qir_FSUB(c,
-                                                   qir_uniform_f(c, 1.0),
-                                                   c->point_y);
-        } else {
-                c->inputs[attr * 4 + 1] = c->point_y;
-        }
-        c->inputs[attr * 4 + 2] = qir_uniform_f(c, 0.0);
-        c->inputs[attr * 4 + 3] = qir_uniform_f(c, 1.0);
-}
-
 static struct qreg
 emit_fragment_varying(struct vc4_compile *c, uint8_t semantic,
                       uint8_t index, uint8_t swizzle)
@@ -765,19 +745,6 @@ emit_fragment_input(struct vc4_compile *c, int attr,
                                               i);
                 c->num_inputs++;
         }
-}
-
-static void
-emit_face_input(struct vc4_compile *c, int attr)
-{
-        c->inputs[attr * 4 + 0] = qir_FSUB(c,
-                                           qir_uniform_f(c, 1.0),
-                                           qir_FMUL(c,
-                                                    qir_ITOF(c, qir_FRAG_REV_FLAG(c)),
-                                                    qir_uniform_f(c, 2.0)));
-        c->inputs[attr * 4 + 1] = qir_uniform_f(c, 0.0);
-        c->inputs[attr * 4 + 2] = qir_uniform_f(c, 0.0);
-        c->inputs[attr * 4 + 3] = qir_uniform_f(c, 1.0);
 }
 
 static void
@@ -1707,11 +1674,12 @@ ntq_setup_inputs(struct vc4_compile *c)
                         if (semantic_name == TGSI_SEMANTIC_POSITION) {
                                 emit_fragcoord_input(c, loc);
                         } else if (semantic_name == TGSI_SEMANTIC_FACE) {
-                                emit_face_input(c, loc);
+                                c->inputs[loc * 4 + 0] = qir_FRAG_REV_FLAG(c);
                         } else if (semantic_name == TGSI_SEMANTIC_GENERIC &&
                                    (c->fs_key->point_sprite_mask &
                                     (1 << semantic_index))) {
-                                emit_point_coord_input(c, loc);
+                                c->inputs[loc * 4 + 0] = c->point_x;
+                                c->inputs[loc * 4 + 1] = c->point_y;
                         } else {
                                 emit_fragment_input(c, loc,
                                                     semantic_name,

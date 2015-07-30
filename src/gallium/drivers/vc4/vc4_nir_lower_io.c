@@ -42,6 +42,17 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
 
         nir_builder_insert_before_instr(b, &intr->instr);
 
+        nir_variable *input_var = NULL;
+        foreach_list_typed(nir_variable, var, node, &c->s->inputs) {
+                if (var->data.driver_location == intr->const_index[0]) {
+                        input_var = var;
+                        break;
+                }
+        }
+        assert(input_var);
+        int semantic_name = input_var->data.location;
+        int semantic_index = input_var->data.index;
+
         /* Generate scalar loads equivalent to the original VEC4. */
         nir_ssa_def *dests[4];
         for (unsigned i = 0; i < intr->num_components; i++) {
@@ -53,6 +64,42 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                 nir_builder_instr_insert(b, &intr_comp->instr);
 
                 dests[i] = &intr_comp->dest.ssa;
+        }
+
+        switch (c->stage) {
+        case QSTAGE_FRAG:
+                switch (semantic_name) {
+                case TGSI_SEMANTIC_FACE:
+                        dests[0] = nir_fsub(b,
+                                            nir_imm_float(b, 1.0),
+                                            nir_fmul(b,
+                                                     nir_i2f(b, dests[0]),
+                                                     nir_imm_float(b, 2.0)));
+                        dests[1] = nir_imm_float(b, 0.0);
+                        dests[2] = nir_imm_float(b, 0.0);
+                        dests[3] = nir_imm_float(b, 1.0);
+                        break;
+                case TGSI_SEMANTIC_GENERIC:
+                        if (c->fs_key->point_sprite_mask &
+                            (1 << semantic_index)) {
+                                if (!c->fs_key->is_points) {
+                                        dests[0] = nir_imm_float(b, 0.0);
+                                        dests[1] = nir_imm_float(b, 0.0);
+                                }
+                                if (c->fs_key->point_coord_upper_left) {
+                                        dests[1] = nir_fsub(b,
+                                                            nir_imm_float(b, 1.0),
+                                                            dests[1]);
+                                }
+                                dests[2] = nir_imm_float(b, 0.0);
+                                dests[3] = nir_imm_float(b, 1.0);
+                        }
+                        break;
+                }
+                break;
+        case QSTAGE_COORD:
+        case QSTAGE_VERT:
+                break;
         }
 
         /* Batch things back together into a vec4.  This will get split by the
