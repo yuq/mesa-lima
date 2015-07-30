@@ -191,7 +191,6 @@ st_transform_feedback_get_draw_target(struct gl_transform_feedback_object *obj)
       }
    }
 
-   assert(0);
    return NULL;
 }
 
@@ -211,14 +210,17 @@ st_end_transform_feedback(struct gl_context *ctx,
 }
 
 
-void
+bool
 st_transform_feedback_draw_init(struct gl_transform_feedback_object *obj,
                                 struct pipe_draw_info *out)
 {
    struct st_transform_feedback_object *sobj =
          st_transform_feedback_object(obj);
 
+   if (sobj->draw_count == NULL)
+      return false;
    out->count_from_stream_output = sobj->draw_count;
+   return true;
 }
 
 

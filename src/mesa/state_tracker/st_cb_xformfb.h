@@ -38,7 +38,7 @@ struct pipe_draw_info;
 extern void
 st_init_xformfb_functions(struct dd_function_table *functions);
 
-extern void
+extern bool
 st_transform_feedback_draw_init(struct gl_transform_feedback_object *obj,
                                 struct pipe_draw_info *out);
 
