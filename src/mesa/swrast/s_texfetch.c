@@ -290,6 +290,10 @@ texfetch_funcs[] =
    },
 
    /* Packed signed/unsigned non-normalized integer formats */
+   FETCH_NULL(A8B8G8R8_UINT),
+   FETCH_NULL(A8R8G8B8_UINT),
+   FETCH_NULL(R8G8B8A8_UINT),
+   FETCH_NULL(B8G8R8A8_UINT),
    FETCH_NULL(B10G10R10A2_UINT),
    FETCH_NULL(R10G10B10A2_UINT),
    FETCH_NULL(A2B10G10R10_UINT),

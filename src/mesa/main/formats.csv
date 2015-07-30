@@ -186,6 +186,10 @@ MESA_FORMAT_RGBX_FLOAT32                  , array , 1, 1, f32 , f32 , f32 , x32 
 MESA_FORMAT_Z_FLOAT32                     , array , 1, 1, f32 ,     ,     ,     , x___, zs
 
 # Packed signed/unsigned non-normalized integer formats
+MESA_FORMAT_A8B8G8R8_UINT                 , packed, 1, 1, u8  , u8  , u8  , u8  , wzyx, rgb
+MESA_FORMAT_A8R8G8B8_UINT                 , packed, 1, 1, u8  , u8  , u8  , u8  , yzwx, rgb
+MESA_FORMAT_R8G8B8A8_UINT                 , packed, 1, 1, u8  , u8  , u8  , u8  , xyzw, rgb
+MESA_FORMAT_B8G8R8A8_UINT                 , packed, 1, 1, u8  , u8  , u8  , u8  , zyxw, rgb
 MESA_FORMAT_B10G10R10A2_UINT              , packed, 1, 1, u10 , u10 , u10 , u2  , zyxw, rgb
 MESA_FORMAT_R10G10B10A2_UINT              , packed, 1, 1, u10 , u10 , u10 , u2  , xyzw, rgb
 MESA_FORMAT_A2B10G10R10_UINT              , packed, 1, 1, u2  , u10 , u10 , u10 , wzyx, rgb

@@ -926,6 +926,10 @@ _mesa_uncompressed_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_R8G8B8X8_UNORM:
    case MESA_FORMAT_B8G8R8X8_UNORM:
    case MESA_FORMAT_X8R8G8B8_UNORM:
+   case MESA_FORMAT_A8B8G8R8_UINT:
+   case MESA_FORMAT_R8G8B8A8_UINT:
+   case MESA_FORMAT_B8G8R8A8_UINT:
+   case MESA_FORMAT_A8R8G8B8_UINT:
       *datatype = GL_UNSIGNED_BYTE;
       *comps = 4;
       return;
@@ -2034,6 +2038,45 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
 
    case MESA_FORMAT_R5G5B5A1_UINT:
       return format == GL_RGBA_INTEGER && type == GL_UNSIGNED_SHORT_1_5_5_5_REV;
+
+   case MESA_FORMAT_A8B8G8R8_UINT:
+      if (format == GL_RGBA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8 && !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_RGBA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8_REV && swapBytes)
+         return GL_TRUE;
+      return GL_FALSE;
+
+   case MESA_FORMAT_A8R8G8B8_UINT:
+      if (format == GL_BGRA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8 &&
+          !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_BGRA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8_REV &&
+          swapBytes)
+         return GL_TRUE;
+
+      return GL_FALSE;
+
+   case MESA_FORMAT_R8G8B8A8_UINT:
+      if (format == GL_RGBA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8_REV &&
+          !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_RGBA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8 && swapBytes)
+         return GL_TRUE;
+
+      return GL_FALSE;
+
+   case MESA_FORMAT_B8G8R8A8_UINT:
+      if (format == GL_BGRA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8_REV &&
+          !swapBytes)
+         return GL_TRUE;
+
+      if (format == GL_BGRA_INTEGER && type == GL_UNSIGNED_INT_8_8_8_8 && swapBytes)
+         return GL_TRUE;
+
+      return GL_FALSE;
 
    case MESA_FORMAT_R9G9B9E5_FLOAT:
       return format == GL_RGB && type == GL_UNSIGNED_INT_5_9_9_9_REV &&
