@@ -3062,8 +3062,7 @@ void lp_emit_immediate_soa(
    } else {
       /* simply copy the immediate values into the next immediates[] slot */
       unsigned i;
-      const uint size = imm->Immediate.NrTokens - 1;
-      assert(size <= 4);
+      assert(imm->Immediate.NrTokens - 1 <= 4);
       assert(bld->num_immediates < LP_MAX_INLINED_IMMEDIATES);
 
       for(i = 0; i < 4; ++i )
