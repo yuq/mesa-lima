@@ -1868,6 +1868,11 @@ struct gl_transform_feedback_info
     * multiple transform feedback outputs in the same buffer.
     */
    unsigned BufferStride[MAX_FEEDBACK_BUFFERS];
+
+   /**
+    * Which transform feedback stream this buffer binding is associated with.
+    */
+   unsigned BufferStream[MAX_FEEDBACK_BUFFERS];
 };
 
 

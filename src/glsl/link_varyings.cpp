@@ -572,6 +572,7 @@ tfeedback_decl::store(struct gl_context *ctx, struct gl_shader_program *prog,
       info->Outputs[info->NumOutputs].DstOffset = info->BufferStride[buffer];
       ++info->NumOutputs;
       info->BufferStride[buffer] += output_size;
+      info->BufferStream[buffer] = this->stream_id;
       num_components -= output_size;
       location++;
       location_frac = 0;
