@@ -319,6 +319,44 @@ anv_batch_bo_destroy(struct anv_batch_bo *bbo, struct anv_device *device)
    anv_device_free(device, bbo);
 }
 
+static VkResult
+anv_batch_bo_list_clone(const struct list_head *list, struct anv_device *device,
+                        struct list_head *new_list)
+{
+   VkResult result = VK_SUCCESS;
+
+   list_inithead(new_list);
+
+   struct anv_batch_bo *prev_bbo = NULL;
+   list_for_each_entry(struct anv_batch_bo, bbo, list, link) {
+      struct anv_batch_bo *new_bbo;
+      result = anv_batch_bo_clone(device, bbo, &new_bbo);
+      if (result != VK_SUCCESS)
+         break;
+      list_addtail(&new_bbo->link, new_list);
+
+      if (prev_bbo) {
+         /* As we clone this list of batch_bo's, they chain one to the
+          * other using MI_BATCH_BUFFER_START commands.  We need to fix up
+          * those relocations as we go.  Fortunately, this is pretty easy
+          * as it will always be the last relocation in the list.
+          */
+         uint32_t last_idx = prev_bbo->relocs.num_relocs - 1;
+         assert(prev_bbo->relocs.reloc_bos[last_idx] == &bbo->bo);
+         prev_bbo->relocs.reloc_bos[last_idx] = &new_bbo->bo;
+      }
+
+      prev_bbo = new_bbo;
+   }
+
+   if (result != VK_SUCCESS) {
+      list_for_each_entry_safe(struct anv_batch_bo, bbo, new_list, link)
+         anv_batch_bo_destroy(bbo, device);
+   }
+
+   return result;
+}
+
 /*-----------------------------------------------------------------------*
  * Functions related to anv_batch_bo
  *-----------------------------------------------------------------------*/
