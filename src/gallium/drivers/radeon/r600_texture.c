@@ -706,6 +706,7 @@ static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
 				   const struct pipe_resource *templ)
 {
 	const struct util_format_description *desc = util_format_description(templ->format);
+	bool force_tiling = templ->flags & R600_RESOURCE_FLAG_FORCE_TILING;
 
 	/* MSAA resources must be 2D tiled. */
 	if (templ->nr_samples > 1)
@@ -715,10 +716,16 @@ static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
 	if (templ->flags & R600_RESOURCE_FLAG_TRANSFER)
 		return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
+	/* r600g: force tiling on TEXTURE_2D and TEXTURE_3D compute resources. */
+	if (rscreen->chip_class >= R600 && rscreen->chip_class <= CAYMAN &&
+	    (templ->bind & PIPE_BIND_COMPUTE_RESOURCE) &&
+	    (templ->target == PIPE_TEXTURE_2D ||
+	     templ->target == PIPE_TEXTURE_3D))
+		force_tiling = true;
+
 	/* Handle common candidates for the linear mode.
 	 * Compressed textures must always be tiled. */
-	if (!(templ->flags & R600_RESOURCE_FLAG_FORCE_TILING) &&
-	    !util_format_is_compressed(templ->format)) {
+	if (!force_tiling && !util_format_is_compressed(templ->format)) {
 		/* Not everything can be linear, so we cannot enforce it
 		 * for all textures. */
 		if ((rscreen->debug_flags & DBG_NO_TILING) &&
