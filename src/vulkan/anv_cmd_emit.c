@@ -182,7 +182,7 @@ VkResult anv_EndCommandBuffer(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_device *device = cmd_buffer->device;
 
-   anv_cmd_buffer_emit_batch_buffer_end(cmd_buffer);
+   anv_cmd_buffer_end_batch_buffer(cmd_buffer);
 
    /* The algorithm used to compute the validate list is not threadsafe as
     * it uses the bo->index field.  We have to lock the device around it.

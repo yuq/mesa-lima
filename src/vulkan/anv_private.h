@@ -740,7 +740,7 @@ struct anv_cmd_buffer {
 VkResult anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer);
-void anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer);
 void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_bo *

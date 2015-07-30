@@ -249,10 +249,6 @@ anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
 static void
 anv_batch_bo_finish(struct anv_batch_bo *bbo, struct anv_batch *batch)
 {
-   /* Round batch up to an even number of dwords. */
-   if ((batch->next - batch->start) & 4)
-      anv_batch_emit(batch, GEN8_MI_NOOP);
-
    assert(batch->start == bbo->bo.map);
    bbo->length = batch->next - batch->start;
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(batch->start, bbo->length));
@@ -511,13 +507,17 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 }
 
 void
-anv_cmd_buffer_emit_batch_buffer_end(struct anv_cmd_buffer *cmd_buffer)
+anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch_bo *batch_bo = anv_cmd_buffer_current_batch_bo(cmd_buffer);
    struct anv_batch_bo *surface_bbo =
       anv_cmd_buffer_current_surface_bbo(cmd_buffer);
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
+
+   /* Round batch up to an even number of dwords. */
+   if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
+      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
 
    anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
 
