@@ -634,6 +634,37 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
       /* Round batch up to an even number of dwords. */
       if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
          anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
+
+      cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
+   } else {
+      /* If this is a secondary command buffer, we need to determine the
+       * mode in which it will be executed with vkExecuteCommands.  We
+       * determine this statically here so that this stays in sync with the
+       * actual ExecuteCommands implementation.
+       */
+      if ((cmd_buffer->batch_bos.next == cmd_buffer->batch_bos.prev) &&
+          (anv_cmd_buffer_current_batch_bo(cmd_buffer)->length <
+           ANV_CMD_BUFFER_BATCH_SIZE / 2)) {
+         /* If the secondary has exactly one batch buffer in its list *and*
+          * that batch buffer is less than half of the maximum size, we're
+          * probably better of simply copying it into our batch.
+          */
+         cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_EMIT;
+      } else if (cmd_buffer->opt_flags &
+                 VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT) {
+         cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_CHAIN;
+
+         /* For chaining mode, we need to increment the number of
+          * relocations.  This is because, when we chain, we need to add
+          * an MI_BATCH_BUFFER_START command.  Adding this command will
+          * also add a relocation.  In order to handle theis we'll
+          * increment it here and decrement it right before adding the
+          * MI_BATCH_BUFFER_START command.
+          */
+         anv_cmd_buffer_current_batch_bo(cmd_buffer)->relocs.num_relocs++;
+      } else {
+         cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
+      }
    }
 
    anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
@@ -660,14 +691,42 @@ void
 anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
                              struct anv_cmd_buffer *secondary)
 {
-   if ((secondary->batch_bos.next == secondary->batch_bos.prev) &&
-       anv_cmd_buffer_current_batch_bo(secondary)->length < ANV_CMD_BUFFER_BATCH_SIZE / 2) {
-      /* If the secondary has exactly one batch buffer in its list *and*
-       * that batch buffer is less than half of the maximum size, we're
-       * probably better of simply copying it into our batch.
-       */
+   switch (secondary->exec_mode) {
+   case ANV_CMD_BUFFER_EXEC_MODE_EMIT:
       anv_batch_emit_batch(&primary->batch, &secondary->batch);
-   } else {
+      break;
+   case ANV_CMD_BUFFER_EXEC_MODE_CHAIN: {
+      struct anv_batch_bo *first_bbo =
+         list_first_entry(&secondary->batch_bos, struct anv_batch_bo, link);
+      struct anv_batch_bo *last_bbo =
+         list_last_entry(&secondary->batch_bos, struct anv_batch_bo, link);
+
+      anv_batch_emit(&primary->batch, GEN8_MI_BATCH_BUFFER_START,
+         GEN8_MI_BATCH_BUFFER_START_header,
+         ._2ndLevelBatchBuffer = _1stlevelbatch,
+         .AddressSpaceIndicator = ASI_PPGTT,
+         .BatchBufferStartAddress = { &first_bbo->bo, 0 },
+      );
+
+      struct anv_batch_bo *this_bbo = anv_cmd_buffer_current_batch_bo(primary);
+      assert(primary->batch.start == this_bbo->bo.map);
+      uint32_t offset = primary->batch.next - primary->batch.start;
+
+      struct GEN8_MI_BATCH_BUFFER_START ret = {
+         GEN8_MI_BATCH_BUFFER_START_header,
+         ._2ndLevelBatchBuffer = _1stlevelbatch,
+         .AddressSpaceIndicator = ASI_PPGTT,
+         .BatchBufferStartAddress = { &this_bbo->bo, offset },
+      };
+      last_bbo->relocs.num_relocs++;
+      GEN8_MI_BATCH_BUFFER_START_pack(&secondary->batch,
+                                      last_bbo->bo.map + last_bbo->length,
+                                      &ret);
+
+      anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
+      break;
+   }
+   case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
       struct list_head copy_list;
       VkResult result = anv_batch_bo_list_clone(&secondary->batch_bos,
                                                 secondary->device,
@@ -690,6 +749,10 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
                             GEN8_MI_BATCH_BUFFER_START_length * 4);
 
       anv_cmd_buffer_emit_state_base_address(primary);
+      break;
+   }
+   default:
+      assert(!"Invalid execution mode");
    }
 
    /* Mark the surface buffer from the secondary as seen */

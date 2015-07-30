@@ -692,6 +692,13 @@ struct anv_cmd_state {
 
 #define ANV_CMD_BUFFER_BATCH_SIZE 8192
 
+enum anv_cmd_buffer_exec_mode {
+   ANV_CMD_BUFFER_EXEC_MODE_PRIMARY,
+   ANV_CMD_BUFFER_EXEC_MODE_EMIT,
+   ANV_CMD_BUFFER_EXEC_MODE_CHAIN,
+   ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN,
+};
+
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 
@@ -704,6 +711,7 @@ struct anv_cmd_buffer {
    struct list_head                             batch_bos;
    struct list_head                             surface_bos;
    uint32_t                                     surface_next;
+   enum anv_cmd_buffer_exec_mode                exec_mode;
 
    /* A vector of anv_batch_bo pointers for every batch or surface buffer
     * referenced by this command buffer
