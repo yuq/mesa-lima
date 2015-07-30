@@ -385,12 +385,36 @@ anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer)
    return &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->relocs;
 }
 
+static void
+cmd_buffer_chain_to_batch_bo(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_batch_bo *bbo)
+{
+   struct anv_batch *batch = &cmd_buffer->batch;
+   struct anv_batch_bo *current_bbo =
+      anv_cmd_buffer_current_batch_bo(cmd_buffer);
+
+   /* We set the end of the batch a little short so we would be sure we
+    * have room for the chaining command.  Since we're about to emit the
+    * chaining command, let's set it back where it should go.
+    */
+   batch->end += GEN8_MI_BATCH_BUFFER_START_length * 4;
+   assert(batch->end == current_bbo->bo.map + current_bbo->bo.size);
+
+   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
+      GEN8_MI_BATCH_BUFFER_START_header,
+      ._2ndLevelBatchBuffer = _1stlevelbatch,
+      .AddressSpaceIndicator = ASI_PPGTT,
+      .BatchBufferStartAddress = { &bbo->bo, 0 },
+   );
+
+   anv_batch_bo_finish(current_bbo, batch);
+}
+
 static VkResult
 anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
 {
    struct anv_cmd_buffer *cmd_buffer = _data;
-   struct anv_batch_bo *new_bbo, *old_bbo =
-      anv_cmd_buffer_current_batch_bo(cmd_buffer);
+   struct anv_batch_bo *new_bbo;
 
    VkResult result = anv_batch_bo_create(cmd_buffer->device, &new_bbo);
    if (result != VK_SUCCESS)
@@ -403,21 +427,7 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    }
    *seen_bbo = new_bbo;
 
-   /* We set the end of the batch a little short so we would be sure we
-    * have room for the chaining command.  Since we're about to emit the
-    * chaining command, let's set it back where it should go.
-    */
-   batch->end += GEN8_MI_BATCH_BUFFER_START_length * 4;
-   assert(batch->end == old_bbo->bo.map + old_bbo->bo.size);
-
-   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
-      GEN8_MI_BATCH_BUFFER_START_header,
-      ._2ndLevelBatchBuffer = _1stlevelbatch,
-      .AddressSpaceIndicator = ASI_PPGTT,
-      .BatchBufferStartAddress = { &new_bbo->bo, 0 },
-   );
-
-   anv_batch_bo_finish(old_bbo, batch);
+   cmd_buffer_chain_to_batch_bo(cmd_buffer, new_bbo);
 
    list_addtail(&new_bbo->link, &cmd_buffer->batch_bos);
 
