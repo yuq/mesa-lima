@@ -929,6 +929,7 @@ decode_slice(struct vl_mpg12_bs *bs, struct pipe_video_buffer *target)
          mb.PMV[1][0][0] = mb.PMV[0][0][0];
          mb.PMV[1][0][1] = mb.PMV[0][0][1];
          assert(extra);
+         (void) extra;
       } else if (mb.macroblock_type & PIPE_MPEG12_MB_TYPE_INTRA ||
                 !(mb.macroblock_type & (PIPE_MPEG12_MB_TYPE_MOTION_FORWARD |
                                         PIPE_MPEG12_MB_TYPE_MOTION_BACKWARD))) {
