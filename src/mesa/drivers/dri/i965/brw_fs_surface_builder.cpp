@@ -584,4 +584,269 @@ namespace {
          return dst;
       }
    }
+
+   namespace image_format_conversion {
+      using image_format_info::color_u;
+
+      namespace {
+         /**
+          * Maximum representable value in an unsigned integer with the given
+          * number of bits.
+          */
+         inline unsigned
+         scale(unsigned n)
+         {
+            return (1 << n) - 1;
+         }
+      }
+
+      /**
+       * Pack the vector \p src in a bitfield given the per-component bit
+       * shifts and widths.  Note that bitfield components are not allowed to
+       * cross 32-bit boundaries.
+       */
+      fs_reg
+      emit_pack(const fs_builder &bld, const fs_reg &src,
+                const color_u &shifts, const color_u &widths)
+      {
+         const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+         bool seen[4] = {};
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD);
+
+               /* Shift each component left to the correct bitfield position. */
+               bld.SHL(tmp, offset(src, bld, c), fs_reg(shifts[c] % 32));
+
+               /* Add everything up. */
+               if (seen[shifts[c] / 32]) {
+                  bld.OR(offset(dst, bld, shifts[c] / 32),
+                         offset(dst, bld, shifts[c] / 32), tmp);
+               } else {
+                  bld.MOV(offset(dst, bld, shifts[c] / 32), tmp);
+                  seen[shifts[c] / 32] = true;
+               }
+            }
+         }
+
+         return dst;
+      }
+
+      /**
+       * Unpack a vector from the bitfield \p src given the per-component bit
+       * shifts and widths.  Note that bitfield components are not allowed to
+       * cross 32-bit boundaries.
+       */
+      fs_reg
+      emit_unpack(const fs_builder &bld, const fs_reg &src,
+                  const color_u &shifts, const color_u &widths)
+      {
+         const fs_reg dst = bld.vgrf(src.type, 4);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               /* Shift left to discard the most significant bits. */
+               bld.SHL(offset(dst, bld, c),
+                       offset(src, bld, shifts[c] / 32),
+                       fs_reg(32 - shifts[c] % 32 - widths[c]));
+
+               /* Shift back to the least significant bits using an arithmetic
+                * shift to get sign extension on signed types.
+                */
+               bld.ASR(offset(dst, bld, c),
+                       offset(dst, bld, c), fs_reg(32 - widths[c]));
+            }
+         }
+
+         return dst;
+      }
+
+      /**
+       * Convert an integer vector into another integer vector of the
+       * specified bit widths, properly handling overflow.
+       */
+      fs_reg
+      emit_convert_to_integer(const fs_builder &bld, const fs_reg &src,
+                              const color_u &widths, bool is_signed)
+      {
+         const unsigned s = (is_signed ? 1 : 0);
+         const fs_reg dst = bld.vgrf(
+            is_signed ? BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_UD, 4);
+         assert(src.type == dst.type);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               /* Clamp to the maximum value. */
+               bld.emit_minmax(offset(dst, bld, c), offset(src, bld, c),
+                               fs_reg((int)scale(widths[c] - s)),
+                               BRW_CONDITIONAL_L);
+
+               /* Clamp to the minimum value. */
+               if (is_signed)
+                  bld.emit_minmax(offset(dst, bld, c), offset(dst, bld, c),
+                                  fs_reg(-(int)scale(widths[c] - s) - 1),
+                                  BRW_CONDITIONAL_G);
+            }
+         }
+
+         return dst;
+      }
+
+      /**
+       * Convert a normalized fixed-point vector of the specified signedness
+       * and bit widths into a floating point vector.
+       */
+      fs_reg
+      emit_convert_from_scaled(const fs_builder &bld, const fs_reg &src,
+                               const color_u &widths, bool is_signed)
+      {
+         const unsigned s = (is_signed ? 1 : 0);
+         const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               /* Convert to float. */
+               bld.MOV(offset(dst, bld, c), offset(src, bld, c));
+
+               /* Divide by the normalization constants. */
+               bld.MUL(offset(dst, bld, c), offset(dst, bld, c),
+                       fs_reg(1.0f / scale(widths[c] - s)));
+
+               /* Clamp to the minimum value. */
+               if (is_signed)
+                  bld.emit_minmax(offset(dst, bld, c),
+                                  offset(dst, bld, c), fs_reg(-1.0f),
+                                  BRW_CONDITIONAL_G);
+            }
+         }
+         return dst;
+      }
+
+      /**
+       * Convert a floating-point vector into a normalized fixed-point vector
+       * of the specified signedness and bit widths.
+       */
+      fs_reg
+      emit_convert_to_scaled(const fs_builder &bld, const fs_reg &src,
+                             const color_u &widths, bool is_signed)
+      {
+         const unsigned s = (is_signed ? 1 : 0);
+         const fs_reg dst = bld.vgrf(
+            is_signed ? BRW_REGISTER_TYPE_D : BRW_REGISTER_TYPE_UD, 4);
+         const fs_reg fdst = retype(dst, BRW_REGISTER_TYPE_F);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               /* Clamp the normalized floating-point argument. */
+               if (is_signed) {
+                  bld.emit_minmax(offset(fdst, bld, c), offset(src, bld, c),
+                                  fs_reg(-1.0f), BRW_CONDITIONAL_G);
+
+                  bld.emit_minmax(offset(fdst, bld, c), offset(fdst, bld, c),
+                                  fs_reg(1.0f), BRW_CONDITIONAL_L);
+               } else {
+                  set_saturate(true, bld.MOV(offset(fdst, bld, c),
+                                             offset(src, bld, c)));
+               }
+
+               /* Multiply by the normalization constants. */
+               bld.MUL(offset(fdst, bld, c), offset(fdst, bld, c),
+                       fs_reg((float)scale(widths[c] - s)));
+
+               /* Convert to integer. */
+               bld.RNDE(offset(fdst, bld, c), offset(fdst, bld, c));
+               bld.MOV(offset(dst, bld, c), offset(fdst, bld, c));
+            }
+         }
+
+         return dst;
+      }
+
+      /**
+       * Convert a floating point vector of the specified bit widths into a
+       * 32-bit floating point vector.
+       */
+      fs_reg
+      emit_convert_from_float(const fs_builder &bld, const fs_reg &src,
+                              const color_u &widths)
+      {
+         const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+         const fs_reg fdst = retype(dst, BRW_REGISTER_TYPE_F);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               bld.MOV(offset(dst, bld, c), offset(src, bld, c));
+
+               /* Extend 10-bit and 11-bit floating point numbers to 15 bits.
+                * This works because they have a 5-bit exponent just like the
+                * 16-bit floating point format, and they have no sign bit.
+                */
+               if (widths[c] < 16)
+                  bld.SHL(offset(dst, bld, c),
+                          offset(dst, bld, c), fs_reg(15 - widths[c]));
+
+               /* Convert to 32-bit floating point. */
+               bld.F16TO32(offset(fdst, bld, c), offset(dst, bld, c));
+            }
+         }
+
+         return fdst;
+      }
+
+      /**
+       * Convert a vector into a floating point vector of the specified bit
+       * widths.
+       */
+      fs_reg
+      emit_convert_to_float(const fs_builder &bld, const fs_reg &src,
+                            const color_u &widths)
+      {
+         const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+         const fs_reg fdst = retype(dst, BRW_REGISTER_TYPE_F);
+
+         for (unsigned c = 0; c < 4; ++c) {
+            if (widths[c]) {
+               bld.MOV(offset(fdst, bld, c), offset(src, bld, c));
+
+               /* Clamp to the minimum value. */
+               if (widths[c] < 16)
+                  bld.emit_minmax(offset(fdst, bld, c), offset(fdst, bld, c),
+                                  fs_reg(0.0f), BRW_CONDITIONAL_G);
+
+               /* Convert to 16-bit floating-point. */
+               bld.F32TO16(offset(dst, bld, c), offset(fdst, bld, c));
+
+               /* Discard the least significant bits to get floating point
+                * numbers of the requested width.  This works because the
+                * 10-bit and 11-bit floating point formats have a 5-bit
+                * exponent just like the 16-bit format, and they have no sign
+                * bit.
+                */
+               if (widths[c] < 16)
+                  bld.SHR(offset(dst, bld, c), offset(dst, bld, c),
+                          fs_reg(15 - widths[c]));
+            }
+         }
+
+         return dst;
+      }
+
+      /**
+       * Fill missing components of a vector with 0, 0, 0, 1.
+       */
+      fs_reg
+      emit_pad(const fs_builder &bld, const fs_reg &src,
+               const color_u &widths)
+      {
+         const fs_reg dst = bld.vgrf(src.type, 4);
+         const unsigned pad[] = { 0, 0, 0, 1 };
+
+         for (unsigned c = 0; c < 4; ++c)
+            bld.MOV(offset(dst, bld, c),
+                    widths[c] ? offset(src, bld, c) : fs_reg(pad[c]));
+
+         return dst;
+      }
+   }
 }
