@@ -57,7 +57,7 @@ libvulkan_la_SOURCES =                                  \
 	anv_allocator.c                                 \
 	anv_aub.c                                       \
 	anv_cmd_buffer.c                                \
-	anv_cmd_emit.c                                  \
+	anv_batch_chain.c                               \
 	anv_compiler.cpp                                \
 	anv_device.c                                    \
 	anv_entrypoints.c                               \
