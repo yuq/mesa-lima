@@ -475,6 +475,18 @@ typedef enum
    MESA_FORMAT_R10G10B10A2_UINT, /* AABB BBBB BBBB GGGG GGGG GGRR RRRR RRRR */
    MESA_FORMAT_A2B10G10R10_UINT, /* RRRR RRRR RRGG GGGG GGGG BBBB BBBB BBAA */
    MESA_FORMAT_A2R10G10B10_UINT, /* BBBB BBBB BBGG GGGG GGGG RRRR RRRR RRAA */
+   MESA_FORMAT_B5G6R5_UINT,                          /* RRRR RGGG GGGB BBBB */
+   MESA_FORMAT_R5G6B5_UINT,                          /* BBBB BGGG GGGR RRRR */
+   MESA_FORMAT_B2G3R3_UINT,                                    /* RRRG GGBB */
+   MESA_FORMAT_R3G3B2_UINT,                                    /* BBGG GRRR */
+   MESA_FORMAT_A4B4G4R4_UINT,                        /* RRRR GGGG BBBB AAAA */
+   MESA_FORMAT_R4G4B4A4_UINT,                        /* AAAA BBBB GGGG RRRR */
+   MESA_FORMAT_B4G4R4A4_UINT,                        /* AAAA RRRR GGGG BBBB */
+   MESA_FORMAT_A4R4G4B4_UINT,                        /* BBBB GGGG RRRR AAAA */
+   MESA_FORMAT_A1B5G5R5_UINT,                        /* RRRR RGGG GGBB BBBA */
+   MESA_FORMAT_B5G5R5A1_UINT,                        /* ARRR RRGG GGGB BBBB */
+   MESA_FORMAT_A1R5G5B5_UINT,                        /* BBBB BGGG GGRR RRRA */
+   MESA_FORMAT_R5G5B5A1_UINT,                        /* ABBB BBGG GGGR RRRR */
 
    /* Array signed/unsigned non-normalized integer formats */
    MESA_FORMAT_A_UINT8,
