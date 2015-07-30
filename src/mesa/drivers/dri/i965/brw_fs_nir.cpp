@@ -182,7 +182,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    /* We split the uniform register file in half.  The first half is
     * entirely direct uniforms.  The second half is indirect.
     */
-   param_size[0] = num_direct_uniforms;
+   if (num_direct_uniforms > 0)
+      param_size[0] = num_direct_uniforms;
    if (shader->num_uniforms > num_direct_uniforms)
       param_size[num_direct_uniforms] = shader->num_uniforms - num_direct_uniforms;
 
