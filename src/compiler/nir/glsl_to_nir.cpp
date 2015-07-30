@@ -1356,6 +1356,8 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_f2b:  result = nir_f2b(&b, srcs[0]);   break;
    case ir_unop_i2b:  result = nir_i2b(&b, srcs[0]);   break;
    case ir_unop_b2i:  result = nir_b2i(&b, srcs[0]);   break;
+   case ir_unop_d2f:  result = nir_d2f(&b, srcs[0]);   break;
+   case ir_unop_f2d:  result = nir_f2d(&b, srcs[0]);   break;
    case ir_unop_i2u:
    case ir_unop_u2i:
    case ir_unop_bitcast_i2f:

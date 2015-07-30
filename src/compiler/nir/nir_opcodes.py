@@ -170,6 +170,9 @@ unop_convert("b2f", tfloat32, tbool, "src0 ? 1.0f : 0.0f")
 unop_convert("i2b", tbool, tint32, "src0 != 0")
 unop_convert("b2i", tint32, tbool, "src0 ? 1 : 0") # Boolean-to-int conversion
 unop_convert("u2f", tfloat32, tuint32, "src0") # Unsigned-to-float conversion.
+# double-to-float conversion
+unop_convert("d2f", tfloat32, tfloat64, "src0") # Single to double precision
+unop_convert("f2d", tfloat64, tfloat32, "src0") # Double to single precision
 
 # Unary floating-point rounding operations.
 
