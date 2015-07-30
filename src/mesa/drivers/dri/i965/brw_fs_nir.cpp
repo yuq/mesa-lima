@@ -723,6 +723,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       if (optimize_extract_to_float(instr, result))
          return;
 
+   case nir_op_f2d:
+   case nir_op_d2f:
       inst = bld.MOV(result, op[0]);
       inst->saturate = instr->dest.saturate;
       break;
