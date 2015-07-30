@@ -1080,6 +1080,35 @@ nir_src_as_const_value(nir_src src)
    return &load->value;
 }
 
+/**
+ * Returns true if the source is known to be dynamically uniform. Otherwise it
+ * returns false which means it may or may not be dynamically uniform but it
+ * can't be determined.
+ */
+bool
+nir_src_is_dynamically_uniform(nir_src src)
+{
+   if (!src.is_ssa)
+      return false;
+
+   /* Constants are trivially dynamically uniform */
+   if (src.ssa->parent_instr->type == nir_instr_type_load_const)
+      return true;
+
+   /* As are uniform variables */
+   if (src.ssa->parent_instr->type == nir_instr_type_intrinsic) {
+      nir_intrinsic_instr *intr = nir_instr_as_intrinsic(src.ssa->parent_instr);
+
+      if (intr->intrinsic == nir_intrinsic_load_uniform)
+         return true;
+   }
+
+   /* XXX: this could have many more tests, such as when a sampler function is
+    * called with dynamically uniform arguments.
+    */
+   return false;
+}
+
 bool
 nir_srcs_equal(nir_src src1, nir_src src2)
 {
