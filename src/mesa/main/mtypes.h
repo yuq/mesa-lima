@@ -1888,6 +1888,7 @@ enum gl_frag_depth_layout
  */
 struct gl_program
 {
+   mtx_t Mutex;
    GLuint Id;
    GLint RefCount;
    GLubyte *String;  /**< Null-terminated program text */
