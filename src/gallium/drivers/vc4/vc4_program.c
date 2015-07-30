@@ -1889,8 +1889,8 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_input:
-                for (int i = 0; i < instr->num_components; i++)
-                        dest[i] = c->inputs[instr->const_index[0] * 4 + i];
+                assert(instr->num_components == 1);
+                *dest = c->inputs[instr->const_index[0]];
 
                 break;
 
