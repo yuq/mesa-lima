@@ -23,7 +23,6 @@
  */
 
 #include <inttypes.h>
-#include "pipe/p_state.h"
 #include "util/u_format.h"
 #include "util/u_hash.h"
 #include "util/u_math.h"
@@ -42,52 +41,6 @@
 #ifdef USE_VC4_SIMULATOR
 #include "simpenrose/simpenrose.h"
 #endif
-
-struct vc4_key {
-        struct vc4_uncompiled_shader *shader_state;
-        struct {
-                enum pipe_format format;
-                unsigned compare_mode:1;
-                unsigned compare_func:3;
-                unsigned wrap_s:3;
-                unsigned wrap_t:3;
-                uint8_t swizzle[4];
-        } tex[VC4_MAX_TEXTURE_SAMPLERS];
-        uint8_t ucp_enables;
-};
-
-struct vc4_fs_key {
-        struct vc4_key base;
-        enum pipe_format color_format;
-        bool depth_enabled;
-        bool stencil_enabled;
-        bool stencil_twoside;
-        bool stencil_full_writemasks;
-        bool is_points;
-        bool is_lines;
-        bool alpha_test;
-        bool point_coord_upper_left;
-        bool light_twoside;
-        uint8_t alpha_test_func;
-        uint8_t logicop_func;
-        uint32_t point_sprite_mask;
-
-        struct pipe_rt_blend_state blend;
-};
-
-struct vc4_vs_key {
-        struct vc4_key base;
-
-        /**
-         * This is a proxy for the array of FS input semantics, which is
-         * larger than we would want to put in the key.
-         */
-        uint64_t compiled_fs_id;
-
-        enum pipe_format attr_formats[8];
-        bool is_coord;
-        bool per_vertex_point_size;
-};
 
 static void
 resize_qreg_array(struct vc4_compile *c,
