@@ -50,6 +50,15 @@ _mesa_lookup_samplerobj(struct gl_context *ctx, GLuint name)
          _mesa_HashLookup(ctx->Shared->SamplerObjects, name);
 }
 
+static struct gl_sampler_object *
+_mesa_lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
+{
+   if (name == 0)
+      return NULL;
+   else
+      return (struct gl_sampler_object *)
+         _mesa_HashLookupLocked(ctx->Shared->SamplerObjects, name);
+}
 
 static inline void
 begin_samplerobj_lookups(struct gl_context *ctx)
@@ -186,15 +195,19 @@ create_samplers(struct gl_context *ctx, GLsizei count, GLuint *samplers,
    if (!samplers)
       return;
 
+   _mesa_HashLockMutex(ctx->Shared->SamplerObjects);
+
    first = _mesa_HashFindFreeKeyBlock(ctx->Shared->SamplerObjects, count);
 
    /* Insert the ID and pointer to new sampler object into hash table */
    for (i = 0; i < count; i++) {
       struct gl_sampler_object *sampObj =
          ctx->Driver.NewSamplerObject(ctx, first + i);
-      _mesa_HashInsert(ctx->Shared->SamplerObjects, first + i, sampObj);
+      _mesa_HashInsertLocked(ctx->Shared->SamplerObjects, first + i, sampObj);
       samplers[i] = first + i;
    }
+
+   _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
 }
 
 void GLAPIENTRY
@@ -225,13 +238,13 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
       return;
    }
 
-   mtx_lock(&ctx->Shared->Mutex);
+   _mesa_HashLockMutex(ctx->Shared->SamplerObjects);
 
    for (i = 0; i < count; i++) {
       if (samplers[i]) {
          GLuint j;
          struct gl_sampler_object *sampObj =
-            _mesa_lookup_samplerobj(ctx, samplers[i]);
+            _mesa_lookup_samplerobj_locked(ctx, samplers[i]);
    
          if (sampObj) {
             /* If the sampler is currently bound, unbind it. */
@@ -243,14 +256,14 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
             }
 
             /* The ID is immediately freed for re-use */
-            _mesa_HashRemove(ctx->Shared->SamplerObjects, samplers[i]);
+            _mesa_HashRemoveLocked(ctx->Shared->SamplerObjects, samplers[i]);
             /* But the object exists until its reference count goes to zero */
             _mesa_reference_sampler_object(ctx, &sampObj, NULL);
          }
       }
    }
 
-   mtx_unlock(&ctx->Shared->Mutex);
+   _mesa_HashUnlockMutex(ctx->Shared->SamplerObjects);
 }
 
 

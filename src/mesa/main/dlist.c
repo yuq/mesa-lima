@@ -9228,15 +9228,15 @@ _mesa_GenLists(GLsizei range)
    /*
     * Make this an atomic operation
     */
-   mtx_lock(&ctx->Shared->Mutex);
+   _mesa_HashLockMutex(ctx->Shared->DisplayList);
 
    base = _mesa_HashFindFreeKeyBlock(ctx->Shared->DisplayList, range);
    if (base) {
       /* reserve the list IDs by with empty/dummy lists */
       GLint i;
       for (i = 0; i < range; i++) {
-         _mesa_HashInsert(ctx->Shared->DisplayList, base + i,
-                          make_list(base + i, 1));
+         _mesa_HashInsertLocked(ctx->Shared->DisplayList, base + i,
+                                make_list(base + i, 1));
       }
    }
 
@@ -9258,7 +9258,7 @@ _mesa_GenLists(GLsizei range)
       }
    }
 
-   mtx_unlock(&ctx->Shared->Mutex);
+   _mesa_HashUnlockMutex(ctx->Shared->DisplayList);
 
    return base;
 }

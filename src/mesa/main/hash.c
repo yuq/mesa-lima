@@ -468,10 +468,8 @@ GLuint
 _mesa_HashFindFreeKeyBlock(struct _mesa_HashTable *table, GLuint numKeys)
 {
    const GLuint maxKey = ~((GLuint) 0) - 1;
-   mtx_lock(&table->Mutex);
    if (maxKey - numKeys > table->MaxKey) {
       /* the quick solution */
-      mtx_unlock(&table->Mutex);
       return table->MaxKey + 1;
    }
    else {
@@ -489,13 +487,11 @@ _mesa_HashFindFreeKeyBlock(struct _mesa_HashTable *table, GLuint numKeys)
 	    /* this key not in use, check if we've found enough */
 	    freeCount++;
 	    if (freeCount == numKeys) {
-               mtx_unlock(&table->Mutex);
 	       return freeStart;
 	    }
 	 }
       }
       /* cannot allocate a block of numKeys consecutive keys */
-      mtx_unlock(&table->Mutex);
       return 0;
    }
 }

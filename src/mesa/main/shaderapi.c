@@ -305,9 +305,11 @@ create_shader(struct gl_context *ctx, GLenum type)
       return 0;
    }
 
+   _mesa_HashLockMutex(ctx->Shared->ShaderObjects);
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
    sh = ctx->Driver.NewShader(ctx, name, type);
-   _mesa_HashInsert(ctx->Shared->ShaderObjects, name, sh);
+   _mesa_HashInsertLocked(ctx->Shared->ShaderObjects, name, sh);
+   _mesa_HashUnlockMutex(ctx->Shared->ShaderObjects);
 
    return name;
 }
@@ -319,13 +321,17 @@ create_shader_program(struct gl_context *ctx)
    GLuint name;
    struct gl_shader_program *shProg;
 
+   _mesa_HashLockMutex(ctx->Shared->ShaderObjects);
+
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
 
    shProg = _mesa_new_shader_program(name);
 
-   _mesa_HashInsert(ctx->Shared->ShaderObjects, name, shProg);
+   _mesa_HashInsertLocked(ctx->Shared->ShaderObjects, name, shProg);
 
    assert(shProg->RefCount == 1);
+
+   _mesa_HashUnlockMutex(ctx->Shared->ShaderObjects);
 
    return name;
 }

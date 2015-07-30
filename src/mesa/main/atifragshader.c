@@ -201,10 +201,14 @@ _mesa_GenFragmentShadersATI(GLuint range)
       return 0;
    }
 
+   _mesa_HashLockMutex(ctx->Shared->ATIShaders);
+
    first = _mesa_HashFindFreeKeyBlock(ctx->Shared->ATIShaders, range);
    for (i = 0; i < range; i++) {
-      _mesa_HashInsert(ctx->Shared->ATIShaders, first + i, &DummyShader);
+      _mesa_HashInsertLocked(ctx->Shared->ATIShaders, first + i, &DummyShader);
    }
+
+   _mesa_HashUnlockMutex(ctx->Shared->ATIShaders);
 
    return first;
 }
