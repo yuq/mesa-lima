@@ -200,7 +200,7 @@ brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
 
    brw_draw_prims(ctx, &prim, 1, NULL,
                   GL_TRUE, start, start + count - 1,
-                  NULL, NULL);
+                  NULL, 0, NULL);
 }
 
 static void
