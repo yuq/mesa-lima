@@ -126,6 +126,7 @@ anv_reloc_list_grow(struct anv_reloc_list *list, struct anv_device *device,
    anv_device_free(device, list->relocs);
    anv_device_free(device, list->reloc_bos);
 
+   list->array_length = new_length;
    list->relocs = new_relocs;
    list->reloc_bos = new_reloc_bos;
 
