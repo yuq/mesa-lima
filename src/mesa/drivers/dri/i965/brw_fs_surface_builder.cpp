@@ -850,3 +850,247 @@ namespace {
       }
    }
 }
+
+namespace brw {
+   namespace image_access {
+      /**
+       * Load a vector from a surface of the given format and dimensionality
+       * at the given coordinates.  \p surf_dims and \p arr_dims give the
+       * number of non-array and array coordinates of the image respectively.
+       */
+      fs_reg
+      emit_image_load(const fs_builder &bld,
+                      const fs_reg &image, const fs_reg &addr,
+                      unsigned surf_dims, unsigned arr_dims,
+                      mesa_format format)
+      {
+         using namespace image_format_info;
+         using namespace image_format_conversion;
+         using namespace image_validity;
+         using namespace image_coordinates;
+         using namespace surface_access;
+         const brw_device_info *devinfo = bld.shader->devinfo;
+         const mesa_format lower_format =
+            brw_lower_mesa_image_format(devinfo, format);
+         fs_reg tmp;
+
+         /* Transform the image coordinates into actual surface coordinates. */
+         const fs_reg saddr =
+            emit_image_coordinates(bld, addr, surf_dims, arr_dims, format);
+         const unsigned dims =
+            num_image_coordinates(bld, surf_dims, arr_dims, format);
+
+         if (has_matching_typed_format(devinfo, format)) {
+            /* Hopefully we get here most of the time... */
+            tmp = emit_typed_read(bld, image, saddr, dims,
+                                  _mesa_format_num_components(lower_format));
+         } else {
+            /* Untyped surface reads return 32 bits of the surface per
+             * component, without any sort of unpacking or type conversion,
+             */
+            const unsigned size = _mesa_get_format_bytes(format) / 4;
+
+            /* they don't properly handle out of bounds access, so we have to
+             * check manually if the coordinates are valid and predicate the
+             * surface read on the result,
+             */
+            const brw_predicate pred =
+               emit_bounds_check(bld, image, saddr, dims);
+
+            /* and they don't know about surface coordinates, we need to
+             * convert them to a raw memory offset.
+             */
+            const fs_reg laddr = emit_address_calculation(bld, image, saddr, dims);
+
+            tmp = emit_untyped_read(bld, image, laddr, 1, size, pred);
+
+            /* An out of bounds surface access should give zero as result. */
+            for (unsigned c = 0; c < 4; ++c)
+               set_predicate(pred, bld.SEL(offset(tmp, bld, c),
+                                           offset(tmp, bld, c), fs_reg(0)));
+         }
+
+         /* Set the register type to D instead of UD if the data type is
+          * represented as a signed integer in memory so that sign extension
+          * is handled correctly by unpack.
+          */
+         if (needs_sign_extension(format))
+            tmp = retype(tmp, BRW_REGISTER_TYPE_D);
+
+         if (!has_supported_bit_layout(devinfo, format)) {
+            /* Unpack individual vector components from the bitfield if the
+             * hardware is unable to do it for us.
+             */
+            if (has_split_bit_layout(devinfo, format))
+               tmp = emit_pack(bld, tmp, get_bit_shifts(lower_format),
+                               get_bit_widths(lower_format));
+            else
+               tmp = emit_unpack(bld, tmp, get_bit_shifts(format),
+                                 get_bit_widths(format));
+
+         } else if ((needs_sign_extension(format) &&
+                     !is_conversion_trivial(devinfo, format)) ||
+                    has_undefined_high_bits(devinfo, format)) {
+            /* Perform a trivial unpack even though the bit layout matches in
+             * order to get the most significant bits of each component
+             * initialized properly.
+             */
+            tmp = emit_unpack(bld, tmp, color_u(0, 32, 64, 96),
+                              get_bit_widths(format));
+         }
+
+         if (!_mesa_is_format_integer(format)) {
+            if (is_conversion_trivial(devinfo, format)) {
+               /* Just need to cast the vector to the target type. */
+               tmp = retype(tmp, BRW_REGISTER_TYPE_F);
+            } else {
+               /* Do the right sort of type conversion to float. */
+               if (_mesa_get_format_datatype(format) == GL_FLOAT)
+                  tmp = emit_convert_from_float(
+                     bld, tmp, get_bit_widths(format));
+               else
+                  tmp = emit_convert_from_scaled(
+                     bld, tmp, get_bit_widths(format),
+                     _mesa_is_format_signed(format));
+            }
+         }
+
+         /* Initialize missing components of the result. */
+         return emit_pad(bld, tmp, get_bit_widths(format));
+      }
+
+      /**
+       * Store a vector in a surface of the given format and dimensionality at
+       * the given coordinates.  \p surf_dims and \p arr_dims give the number
+       * of non-array and array coordinates of the image respectively.
+       */
+      void
+      emit_image_store(const fs_builder &bld, const fs_reg &image,
+                       const fs_reg &addr, const fs_reg &src,
+                       unsigned surf_dims, unsigned arr_dims,
+                       mesa_format format)
+      {
+         using namespace image_format_info;
+         using namespace image_format_conversion;
+         using namespace image_validity;
+         using namespace image_coordinates;
+         using namespace surface_access;
+         const brw_device_info *devinfo = bld.shader->devinfo;
+
+         /* Transform the image coordinates into actual surface coordinates. */
+         const fs_reg saddr =
+            emit_image_coordinates(bld, addr, surf_dims, arr_dims, format);
+         const unsigned dims =
+            num_image_coordinates(bld, surf_dims, arr_dims, format);
+
+         if (format == MESA_FORMAT_NONE) {
+            /* We don't know what the format is, but that's fine because it
+             * implies write-only access, and typed surface writes are always
+             * able to take care of type conversion and packing for us.
+             */
+            emit_typed_write(bld, image, saddr, src, dims, 4);
+
+         } else {
+            const mesa_format lower_format =
+               brw_lower_mesa_image_format(devinfo, format);
+            fs_reg tmp = src;
+
+            if (!is_conversion_trivial(devinfo, format)) {
+               /* Do the right sort of type conversion. */
+               if (_mesa_get_format_datatype(format) == GL_FLOAT)
+                  tmp = emit_convert_to_float(bld, tmp, get_bit_widths(format));
+
+               else if (_mesa_is_format_integer(format))
+                  tmp = emit_convert_to_integer(bld, tmp, get_bit_widths(format),
+                                                _mesa_is_format_signed(format));
+
+               else
+                  tmp = emit_convert_to_scaled(bld, tmp, get_bit_widths(format),
+                                               _mesa_is_format_signed(format));
+            }
+
+            /* We're down to bit manipulation at this point. */
+            tmp = retype(tmp, BRW_REGISTER_TYPE_UD);
+
+            if (!has_supported_bit_layout(devinfo, format)) {
+               /* Pack the vector components into a bitfield if the hardware
+                * is unable to do it for us.
+                */
+               if (has_split_bit_layout(devinfo, format))
+                  tmp = emit_unpack(bld, tmp, get_bit_shifts(lower_format),
+                                    get_bit_widths(lower_format));
+
+               else
+                  tmp = emit_pack(bld, tmp, get_bit_shifts(format),
+                                  get_bit_widths(format));
+            }
+
+            if (has_matching_typed_format(devinfo, format)) {
+               /* Hopefully we get here most of the time... */
+               emit_typed_write(bld, image, saddr, tmp, dims,
+                                _mesa_format_num_components(lower_format));
+
+            } else {
+               /* Untyped surface writes store 32 bits of the surface per
+                * component, without any sort of packing or type conversion,
+                */
+               const unsigned size = _mesa_get_format_bytes(format) / 4;
+
+               /* they don't properly handle out of bounds access, so we have
+                * to check manually if the coordinates are valid and predicate
+                * the surface write on the result,
+                */
+               const brw_predicate pred =
+                  emit_bounds_check(bld, image, saddr, dims);
+
+               /* and, phew, they don't know about surface coordinates, we
+                * need to convert them to a raw memory offset.
+                */
+               const fs_reg laddr = emit_address_calculation(
+                  bld, image, saddr, dims);
+
+               emit_untyped_write(bld, image, laddr, tmp, 1, size, pred);
+            }
+         }
+      }
+
+      /**
+       * Perform an atomic read-modify-write operation in a surface of the
+       * given dimensionality at the given coordinates.  \p surf_dims and \p
+       * arr_dims give the number of non-array and array coordinates of the
+       * image respectively.  Main building block of the imageAtomic GLSL
+       * built-ins.
+       */
+      fs_reg
+      emit_image_atomic(const fs_builder &bld,
+                        const fs_reg &image, const fs_reg &addr,
+                        const fs_reg &src0, const fs_reg &src1,
+                        unsigned surf_dims, unsigned arr_dims,
+                        unsigned rsize, unsigned op)
+      {
+         using namespace image_validity;
+         using namespace image_coordinates;
+         using namespace surface_access;
+         /* Avoid performing an atomic operation on an unbound surface. */
+         const brw_predicate pred = emit_surface_check(bld, image);
+
+         /* Transform the image coordinates into actual surface coordinates. */
+         const fs_reg saddr =
+            emit_image_coordinates(bld, addr, surf_dims, arr_dims,
+                                  MESA_FORMAT_R_UINT32);
+         const unsigned dims =
+            num_image_coordinates(bld, surf_dims, arr_dims,
+                                  MESA_FORMAT_R_UINT32);
+
+         /* Thankfully we can do without untyped atomics here. */
+         const fs_reg tmp = emit_typed_atomic(bld, image, saddr, src0, src1,
+                                              dims, rsize, op, pred);
+
+         /* An unbound surface access should give zero as result. */
+         if (rsize)
+            set_predicate(pred, bld.SEL(tmp, tmp, fs_reg(0)));
+
+         return tmp;
+      }
+   }
+}

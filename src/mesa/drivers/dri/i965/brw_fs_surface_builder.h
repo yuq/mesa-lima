@@ -65,5 +65,25 @@ namespace brw {
                         unsigned dims, unsigned rsize, unsigned op,
                         brw_predicate pred = BRW_PREDICATE_NONE);
    }
+
+   namespace image_access {
+      fs_reg
+      emit_image_load(const fs_builder &bld,
+                      const fs_reg &image, const fs_reg &addr,
+                      unsigned surf_dims, unsigned arr_dims,
+                      mesa_format format);
+
+      void
+      emit_image_store(const fs_builder &bld, const fs_reg &image,
+                       const fs_reg &addr, const fs_reg &src,
+                       unsigned surf_dims, unsigned arr_dims,
+                       mesa_format format);
+      fs_reg
+      emit_image_atomic(const fs_builder &bld,
+                        const fs_reg &image, const fs_reg &addr,
+                        const fs_reg &src0, const fs_reg &src1,
+                        unsigned surf_dims, unsigned arr_dims,
+                        unsigned rsize, unsigned op);
+   }
 }
 #endif
