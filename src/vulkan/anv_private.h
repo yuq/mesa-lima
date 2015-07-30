@@ -690,6 +690,8 @@ struct anv_cmd_state {
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
 };
 
+#define ANV_CMD_BUFFER_BATCH_SIZE 8192
+
 struct anv_cmd_buffer {
    struct anv_device *                          device;
 

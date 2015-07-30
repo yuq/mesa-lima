@@ -535,8 +535,6 @@ anv_device_init_border_colors(struct anv_device *device)
    memcpy(device->border_colors.map, border_colors, sizeof(border_colors));
 }
 
-static const uint32_t BATCH_SIZE = 8192;
-
 VkResult anv_CreateDevice(
     VkPhysicalDevice                            physicalDevice,
     const VkDeviceCreateInfo*                   pCreateInfo,
@@ -568,7 +566,7 @@ VkResult anv_CreateDevice(
    if (device->context_id == -1)
       goto fail_fd;
 
-   anv_bo_pool_init(&device->batch_bo_pool, device, BATCH_SIZE);
+   anv_bo_pool_init(&device->batch_bo_pool, device, ANV_CMD_BUFFER_BATCH_SIZE);
 
    anv_block_pool_init(&device->dynamic_state_block_pool, device, 2048);
 
