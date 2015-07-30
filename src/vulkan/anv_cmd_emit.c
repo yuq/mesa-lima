@@ -63,6 +63,7 @@ VkResult anv_CreateCommandBuffer(
     VkCmdBuffer*                                pCmdBuffer)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, pCreateInfo->cmdPool);
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
@@ -87,6 +88,8 @@ VkResult anv_CreateCommandBuffer(
 
    anv_cmd_state_init(&cmd_buffer->state);
 
+   list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
+
    *pCmdBuffer = anv_cmd_buffer_to_handle(cmd_buffer);
 
    return VK_SUCCESS;
@@ -102,6 +105,8 @@ VkResult anv_DestroyCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, _cmd_buffer);
+
+   list_del(&cmd_buffer->pool_link);
 
    anv_cmd_buffer_fini_batch_bo_chain(cmd_buffer);
 
@@ -1368,4 +1373,53 @@ void anv_CmdExecuteCommands(
 
       anv_cmd_buffer_add_secondary(primary, secondary);
    }
+}
+
+VkResult anv_CreateCommandPool(
+    VkDevice                                    _device,
+    const VkCmdPoolCreateInfo*                  pCreateInfo,
+    VkCmdPool*                                  pCmdPool)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_cmd_pool *pool;
+
+   pool = anv_device_alloc(device, sizeof(*pool), 8,
+                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (pool == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   list_inithead(&pool->cmd_buffers);
+
+   *pCmdPool = anv_cmd_pool_to_handle(pool);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_DestroyCommandPool(
+    VkDevice                                    _device,
+    VkCmdPool                                   cmdPool)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, cmdPool);
+
+   anv_ResetCommandPool(_device, cmdPool, 0);
+
+   anv_device_free(device, pool);
+
+   return VK_SUCCESS;
+}
+
+VkResult anv_ResetCommandPool(
+    VkDevice                                    device,
+    VkCmdPool                                   cmdPool,
+    VkCmdPoolResetFlags                         flags)
+{
+   ANV_FROM_HANDLE(anv_cmd_pool, pool, cmdPool);
+
+   list_for_each_entry_safe(struct anv_cmd_buffer, cmd_buffer,
+                            &pool->cmd_buffers, pool_link) {
+      anv_DestroyCommandBuffer(device, anv_cmd_buffer_to_handle(cmd_buffer));
+   }
+
+   return VK_SUCCESS;
 }

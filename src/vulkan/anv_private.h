@@ -690,6 +690,10 @@ struct anv_cmd_state {
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
 };
 
+struct anv_cmd_pool {
+   struct list_head                             cmd_buffers;
+};
+
 #define ANV_CMD_BUFFER_BATCH_SIZE 8192
 
 enum anv_cmd_buffer_exec_mode {
@@ -701,6 +705,8 @@ enum anv_cmd_buffer_exec_mode {
 
 struct anv_cmd_buffer {
    struct anv_device *                          device;
+
+   struct list_head                             pool_link;
 
    struct anv_batch                             batch;
 
@@ -1088,6 +1094,7 @@ ANV_DEFINE_HANDLE_CASTS(anv_physical_device, VkPhysicalDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 ANV_DEFINE_HANDLE_CASTS(anv_swap_chain, VkSwapChainWSI);
 
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCmdPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_attachment_view, VkAttachmentView)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView);

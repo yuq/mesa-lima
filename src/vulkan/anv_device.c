@@ -2170,33 +2170,6 @@ VkResult anv_DestroyDynamicDepthStencilState(
    return VK_SUCCESS;
 }
 
-// Command buffer functions
-
-VkResult anv_CreateCommandPool(
-    VkDevice                                    device,
-    const VkCmdPoolCreateInfo*                  pCreateInfo,
-    VkCmdPool*                                  pCmdPool)
-{
-   pCmdPool->handle = 7;
-
-   stub_return(VK_SUCCESS);
-}
-
-VkResult anv_DestroyCommandPool(
-    VkDevice                                    device,
-    VkCmdPool                                   cmdPool)
-{
-   stub_return(VK_SUCCESS);
-}
-
-VkResult anv_ResetCommandPool(
-    VkDevice                                    device,
-    VkCmdPool                                   cmdPool,
-    VkCmdPoolResetFlags                         flags)
-{
-   stub_return(VK_UNSUPPORTED);
-}
-
 VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
