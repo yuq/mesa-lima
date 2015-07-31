@@ -136,6 +136,8 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 	int constmode;
 	int i, j, k;
 
+	debug_assert(nr <= ARRAY_SIZE(color_regid));
+
 	vp = fd3_emit_get_vp(emit);
 
 	if (emit->key.binning_pass) {
@@ -207,7 +209,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 			unsigned idx = sem2idx(sem);
 			if (sem2name(sem) != TGSI_SEMANTIC_COLOR)
 				continue;
-			assert(idx < 4);
+			debug_assert(idx < ARRAY_SIZE(color_regid));
 			color_regid[idx] = fp->outputs[i].regid;
 		}
 	}

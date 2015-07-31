@@ -265,7 +265,7 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 		ce = 0x0;
 	}
 
-	for (i = 0; i < 8; i++) {
+	for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
 		OUT_RING(ring, A4XX_RB_MRT_CONTROL_FASTCLEAR |
 				A4XX_RB_MRT_CONTROL_B11 |

@@ -487,7 +487,7 @@ fd4_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		struct fd4_blend_stateobj *blend = fd4_blend_stateobj(ctx->blend);
 		uint32_t i;
 
-		for (i = 0; i < 8; i++) {
+		for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 			OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
 			OUT_RING(ring, blend->rb_mrt[i].control);
 

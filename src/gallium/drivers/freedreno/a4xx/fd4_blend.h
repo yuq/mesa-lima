@@ -32,13 +32,15 @@
 #include "pipe/p_state.h"
 #include "pipe/p_context.h"
 
+#include "freedreno_util.h"
+
 struct fd4_blend_stateobj {
 	struct pipe_blend_state base;
 	struct {
 		uint32_t control;
 		uint32_t buf_info;
 		uint32_t blend_control;
-	} rb_mrt[8];
+	} rb_mrt[A4XX_MAX_RENDER_TARGETS];
 	uint32_t rb_fs_output;
 };
 

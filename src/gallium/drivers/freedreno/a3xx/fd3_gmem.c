@@ -57,7 +57,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		tile_mode = LINEAR;
 	}
 
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < A3XX_MAX_RENDER_TARGETS; i++) {
 		enum pipe_format pformat = 0;
 		enum a3xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
