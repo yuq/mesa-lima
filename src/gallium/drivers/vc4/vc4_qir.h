@@ -587,14 +587,6 @@ qir_R4_UNPACK(struct vc4_compile *c, struct qreg r4, int i)
 }
 
 static inline struct qreg
-qir_SEL_X_0_COND(struct vc4_compile *c, int i)
-{
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_R4_UNPACK_A + i, t, c->undef, c->undef));
-        return t;
-}
-
-static inline struct qreg
 qir_UNPACK_8_F(struct vc4_compile *c, struct qreg src, int i)
 {
         struct qreg t = qir_get_temp(c);
