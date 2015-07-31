@@ -105,9 +105,8 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
                                                      range->size - 4)));
 
         qir_TEX_DIRECT(c, indirect_offset, qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
-        struct qreg r4 = qir_TEX_RESULT(c);
         c->num_texture_samples++;
-        return qir_MOV(c, r4);
+        return qir_TEX_RESULT(c);
 }
 
 static struct qreg *
@@ -360,13 +359,13 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
         qir_TEX_S(c, s, texture_u[next_texture_u++]);
 
         c->num_texture_samples++;
-        struct qreg r4 = qir_TEX_RESULT(c);
+        struct qreg tex = qir_TEX_RESULT(c);
 
         enum pipe_format format = c->key->tex[unit].format;
 
         struct qreg unpacked[4];
         if (util_format_is_depth_or_stencil(format)) {
-                struct qreg depthf = qir_ITOF(c, qir_SHR(c, r4,
+                struct qreg depthf = qir_ITOF(c, qir_SHR(c, tex,
                                                          qir_uniform_ui(c, 8)));
                 struct qreg normalized = qir_FMUL(c, depthf,
                                                   qir_uniform_f(c, 1.0f/0xffffff));
@@ -418,7 +417,7 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                         unpacked[i] = depth_output;
         } else {
                 for (int i = 0; i < 4; i++)
-                        unpacked[i] = qir_R4_UNPACK(c, r4, i);
+                        unpacked[i] = qir_UNPACK_8_F(c, tex, i);
         }
 
         const uint8_t *format_swiz = vc4_get_format_swizzle(format);
@@ -1305,9 +1304,10 @@ blend_pipeline(struct vc4_compile *c)
         if (c->fs_key->blend.blend_enable ||
             c->fs_key->blend.colormask != 0xf ||
             c->fs_key->logicop_func != PIPE_LOGICOP_COPY) {
-                struct qreg r4 = qir_TLB_COLOR_READ(c);
+                packed_dst_color = qir_TLB_COLOR_READ(c);
                 for (int i = 0; i < 4; i++)
-                        tlb_read_color[i] = qir_R4_UNPACK(c, r4, i);
+                        tlb_read_color[i] = qir_UNPACK_8_F(c,
+                                                           packed_dst_color, i);
                 for (int i = 0; i < 4; i++) {
                         dst_color[i] = get_swizzled_channel(c,
                                                             tlb_read_color,
@@ -1319,11 +1319,6 @@ blend_pipeline(struct vc4_compile *c)
                                 linear_dst_color[i] = dst_color[i];
                         }
                 }
-
-                /* Save the packed value for logic ops.  Can't reuse r4
-                 * because other things might smash it (like sRGB)
-                 */
-                packed_dst_color = qir_MOV(c, r4);
         }
 
         struct qreg undef_array[4] = { c->undef, c->undef, c->undef, c->undef };

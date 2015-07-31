@@ -270,6 +270,7 @@ struct vc4_context {
 
         struct ra_regs *regs;
         unsigned int reg_class_any;
+        unsigned int reg_class_r4_or_a;
         unsigned int reg_class_a;
 
         uint8_t prim_mode;

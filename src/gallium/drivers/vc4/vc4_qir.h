@@ -158,10 +158,6 @@ enum qop {
          * the destination
          */
         QOP_TEX_RESULT,
-        QOP_R4_UNPACK_A,
-        QOP_R4_UNPACK_B,
-        QOP_R4_UNPACK_C,
-        QOP_R4_UNPACK_D
 };
 
 struct queued_qpu_inst {
@@ -442,7 +438,6 @@ bool qir_is_multi_instruction(struct qinst *inst);
 bool qir_is_tex(struct qinst *inst);
 bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
-bool qir_reads_r4(struct qinst *inst);
 bool qir_src_needs_a_file(struct qinst *inst);
 struct qreg qir_follow_movs(struct vc4_compile *c, struct qreg reg);
 
@@ -577,14 +572,6 @@ QIR_NODST_1(TLB_COLOR_WRITE)
 QIR_NODST_1(TLB_Z_WRITE)
 QIR_NODST_1(TLB_DISCARD_SETUP)
 QIR_NODST_1(TLB_STENCIL_SETUP)
-
-static inline struct qreg
-qir_R4_UNPACK(struct vc4_compile *c, struct qreg r4, int i)
-{
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_R4_UNPACK_A + i, t, r4, c->undef));
-        return t;
-}
 
 static inline struct qreg
 qir_UNPACK_8_F(struct vc4_compile *c, struct qreg src, int i)
