@@ -844,10 +844,10 @@ anv_device_alloc(struct anv_device *            device,
                  size_t                         alignment,
                  VkSystemAllocType              allocType)
 {
-   return device->instance->pfnAlloc(device->instance->pAllocUserData,
-                                     size,
-                                     alignment,
-                                     allocType);
+   void *mem = device->instance->pfnAlloc(device->instance->pAllocUserData,
+                                          size, alignment, allocType);
+   VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
+   return mem;
 }
 
 void
