@@ -33,8 +33,9 @@
 #include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_lowering.h"
 #include "tgsi/tgsi_parse.h"
+#include "glsl/nir/nir.h"
+#include "glsl/nir/nir_builder.h"
 #include "nir/tgsi_to_nir.h"
-
 #include "vc4_context.h"
 #include "vc4_qpu.h"
 #include "vc4_qir.h"
@@ -107,6 +108,19 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
         qir_TEX_DIRECT(c, indirect_offset, qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
         c->num_texture_samples++;
         return qir_TEX_RESULT(c);
+}
+
+nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
+                                       enum quniform_contents contents)
+{
+        nir_intrinsic_instr *intr =
+                nir_intrinsic_instr_create(b->shader,
+                                           nir_intrinsic_load_uniform);
+        intr->const_index[0] = VC4_NIR_STATE_UNIFORM_OFFSET + contents;
+        intr->num_components = 1;
+        nir_ssa_dest_init(&intr->instr, &intr->dest, 1, NULL);
+        nir_builder_instr_insert(b, &intr->instr);
+        return &intr->dest.ssa;
 }
 
 static struct qreg *
@@ -1808,7 +1822,14 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
         switch (instr->intrinsic) {
         case nir_intrinsic_load_uniform:
                 assert(instr->num_components == 1);
-                *dest = qir_uniform(c, QUNIFORM_UNIFORM, instr->const_index[0]);
+                if (instr->const_index[0] < VC4_NIR_STATE_UNIFORM_OFFSET) {
+                        *dest = qir_uniform(c, QUNIFORM_UNIFORM,
+                                            instr->const_index[0]);
+                } else {
+                        *dest = qir_uniform(c, instr->const_index[0] -
+                                            VC4_NIR_STATE_UNIFORM_OFFSET,
+                                            0);
+                }
                 break;
 
         case nir_intrinsic_load_uniform_indirect:

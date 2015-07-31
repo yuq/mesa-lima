@@ -414,6 +414,11 @@ struct vc4_compile {
         uint32_t variant_id;
 };
 
+/* Special offset for nir_load_uniform values to get a QUNIFORM_*
+ * state-dependent value.
+ */
+#define VC4_NIR_STATE_UNIFORM_OFFSET		2000000000
+
 struct vc4_compile *qir_compile_init(void);
 void qir_compile_destroy(struct vc4_compile *c);
 struct qinst *qir_inst(enum qop op, struct qreg dst,
@@ -454,6 +459,8 @@ bool qir_opt_dead_code(struct vc4_compile *c);
 bool qir_opt_small_immediates(struct vc4_compile *c);
 bool qir_opt_vpm_writes(struct vc4_compile *c);
 void vc4_nir_lower_io(struct vc4_compile *c);
+nir_ssa_def *vc4_nir_get_state_uniform(struct nir_builder *b,
+                                       enum quniform_contents contents);
 void qir_lower_uniforms(struct vc4_compile *c);
 
 void qpu_schedule_instructions(struct vc4_compile *c);
