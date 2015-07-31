@@ -142,6 +142,8 @@ VkResult anv_CreateInstance(
    instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
    instance->physicalDeviceCount = 0;
 
+   VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
+
    *pInstance = anv_instance_to_handle(instance);
 
    return VK_SUCCESS;
@@ -156,6 +158,8 @@ VkResult anv_DestroyInstance(
       anv_physical_device_finish(&instance->physicalDevice);
    }
 
+   VG(VALGRIND_DESTROY_MEMPOOL(instance));
+
    instance->pfnFree(instance->pAllocUserData, instance);
 
    return VK_SUCCESS;
@@ -167,7 +171,10 @@ anv_instance_alloc(struct anv_instance *instance, size_t size,
 {
    void *mem = instance->pfnAlloc(instance->pAllocUserData,
                                   size, alignment, allocType);
-   VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
+   if (mem) {
+      VALGRIND_MEMPOOL_ALLOC(instance, mem, size);
+      VALGRIND_MAKE_MEM_UNDEFINED(mem, size);
+   }
    return mem;
 }
 
@@ -176,6 +183,8 @@ anv_instance_free(struct anv_instance *instance, void *mem)
 {
    if (mem == NULL)
       return;
+
+   VALGRIND_MEMPOOL_FREE(instance, mem);
 
    instance->pfnFree(instance->pAllocUserData, mem);
 }
