@@ -161,6 +161,25 @@ VkResult anv_DestroyInstance(
    return VK_SUCCESS;
 }
 
+static void *
+anv_instance_alloc(struct anv_instance *instance, size_t size,
+                   size_t alignment, VkSystemAllocType allocType)
+{
+   void *mem = instance->pfnAlloc(instance->pAllocUserData,
+                                  size, alignment, allocType);
+   VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
+   return mem;
+}
+
+static void
+anv_instance_free(struct anv_instance *instance, void *mem)
+{
+   if (mem == NULL)
+      return;
+
+   instance->pfnFree(instance->pAllocUserData, mem);
+}
+
 VkResult anv_EnumeratePhysicalDevices(
     VkInstance                                  _instance,
     uint32_t*                                   pPhysicalDeviceCount,
@@ -546,8 +565,7 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
-   device = instance->pfnAlloc(instance->pAllocUserData,
-                               sizeof(*device), 8,
+   device = anv_instance_alloc(instance, sizeof(*device), 8,
                                VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -635,7 +653,7 @@ VkResult anv_DestroyDevice(
    if (device->aub_writer)
       anv_aub_writer_destroy(device->aub_writer);
 
-   anv_device_free(device, device);
+   anv_instance_free(device->instance, device);
 
    return VK_SUCCESS;
 }
@@ -844,21 +862,14 @@ anv_device_alloc(struct anv_device *            device,
                  size_t                         alignment,
                  VkSystemAllocType              allocType)
 {
-   void *mem = device->instance->pfnAlloc(device->instance->pAllocUserData,
-                                          size, alignment, allocType);
-   VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
-   return mem;
+   return anv_instance_alloc(device->instance, size, alignment, allocType);
 }
 
 void
 anv_device_free(struct anv_device *             device,
                 void *                          mem)
 {
-   if (mem == NULL)
-      return;
-
-   return device->instance->pfnFree(device->instance->pAllocUserData,
-                                    mem);
+   anv_instance_free(device->instance, mem);
 }
 
 VkResult
