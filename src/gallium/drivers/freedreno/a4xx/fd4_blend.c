@@ -61,7 +61,7 @@ fd4_blend_state_create(struct pipe_context *pctx,
 	struct fd4_blend_stateobj *so;
 //	enum a3xx_rop_code rop = ROP_COPY;
 	bool reads_dest = false;
-	int i;
+	unsigned i, mrt_blend = 0;
 
 	if (cso->logicop_enable) {
 //		rop = cso->logicop_func;  /* maps 1:1 */
@@ -115,7 +115,7 @@ fd4_blend_state_create(struct pipe_context *pctx,
 					A4XX_RB_MRT_CONTROL_READ_DEST_ENABLE |
 					A4XX_RB_MRT_CONTROL_BLEND |
 					A4XX_RB_MRT_CONTROL_BLEND2;
-			so->rb_fs_output |= A4XX_RB_FS_OUTPUT_ENABLE_BLEND(1);
+			mrt_blend |= (1 << i);
 		}
 
 		if (reads_dest)
@@ -124,6 +124,8 @@ fd4_blend_state_create(struct pipe_context *pctx,
 		if (cso->dither)
 			so->rb_mrt[i].buf_info |= A4XX_RB_MRT_BUF_INFO_DITHER_MODE(DITHER_ALWAYS);
 	}
+
+	so->rb_fs_output = A4XX_RB_FS_OUTPUT_ENABLE_BLEND(mrt_blend);
 
 	return so;
 }

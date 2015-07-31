@@ -204,7 +204,7 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 		color_regid[0] = color_regid[1] = color_regid[2] = color_regid[3] =
 			ir3_find_output_regid(fp, ir3_semantic_name(TGSI_SEMANTIC_COLOR, 0));
 	} else {
-		for (int i = 0; i < fp->outputs_count; i++) {
+		for (i = 0; i < fp->outputs_count; i++) {
 			ir3_semantic sem = fp->outputs[i].semantic;
 			unsigned idx = sem2idx(sem);
 			if (sem2name(sem) != TGSI_SEMANTIC_COLOR)

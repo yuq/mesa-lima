@@ -265,7 +265,8 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 			FD_DIRTY_SAMPLE_MASK |
 			FD_DIRTY_PROG |
 			FD_DIRTY_CONSTBUF |
-			FD_DIRTY_BLEND;
+			FD_DIRTY_BLEND |
+			FD_DIRTY_FRAMEBUFFER;
 
 	if (fd_mesa_debug & FD_DBG_DCLEAR)
 		ctx->dirty = 0xffffffff;

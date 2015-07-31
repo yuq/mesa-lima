@@ -58,7 +58,7 @@ enum adreno_stencil_op fd_stencil_op(unsigned op);
 #define A3XX_MAX_RENDER_TARGETS 4
 #define A4XX_MAX_RENDER_TARGETS 8
 /* for now until a4xx MRT support: */
-#define MAX_RENDER_TARGETS A3XX_MAX_RENDER_TARGETS
+#define MAX_RENDER_TARGETS A4XX_MAX_RENDER_TARGETS
 
 #define FD_DBG_MSGS     0x0001
 #define FD_DBG_DISASM   0x0002

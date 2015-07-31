@@ -111,7 +111,6 @@ static void
 fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 {
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
-	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd4_emit emit = {
 		.vtx  = &ctx->vtx,
 		.prog = &ctx->prog,
@@ -132,8 +131,6 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_t = fd4_ctx->fsaturate_t,
 			.fsaturate_r = fd4_ctx->fsaturate_r,
 		},
-		.format = fd4_emit_format(pfb->cbufs[0]),
-		.pformat = pipe_surface_format(pfb->cbufs[0]),
 	};
 	unsigned dirty;
 
@@ -173,20 +170,16 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	struct fd4_context *fd4_ctx = fd4_context(ctx);
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
+	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
 	unsigned dirty = ctx->dirty;
-	unsigned ce, i;
+	unsigned i;
 	struct fd4_emit emit = {
 		.vtx  = &fd4_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
-			.half_precision = true,
+			.half_precision = fd_half_precision(pfb),
 		},
-		.format = fd4_emit_format(pfb->cbufs[0]),
 	};
-	uint32_t colr = 0;
-
-	if ((buffers & PIPE_CLEAR_COLOR) && pfb->nr_cbufs)
-		colr  = pack_rgba(pfb->cbufs[0]->format, color->f);
 
 	dirty &= FD_DIRTY_FRAMEBUFFER | FD_DIRTY_SCISSOR;
 	dirty |= FD_DIRTY_PROG;
@@ -260,16 +253,15 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 	if (buffers & PIPE_CLEAR_COLOR) {
 		OUT_PKT0(ring, REG_A4XX_RB_ALPHA_CONTROL, 1);
 		OUT_RING(ring, A4XX_RB_ALPHA_CONTROL_ALPHA_TEST_FUNC(FUNC_NEVER));
-		ce = 0xf;
-	} else {
-		ce = 0x0;
 	}
 
 	for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
+		mrt_comp[i] = (buffers & (PIPE_CLEAR_COLOR0 << i)) ? 0xf : 0x0;
+
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_CONTROL(i), 1);
 		OUT_RING(ring, A4XX_RB_MRT_CONTROL_FASTCLEAR |
 				A4XX_RB_MRT_CONTROL_B11 |
-				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(ce));
+				A4XX_RB_MRT_CONTROL_COMPONENT_ENABLE(0xf));
 
 		OUT_PKT0(ring, REG_A4XX_RB_MRT_BLEND_CONTROL(i), 1);
 		OUT_RING(ring, A4XX_RB_MRT_BLEND_CONTROL_RGB_SRC_FACTOR(FACTOR_ONE) |
@@ -280,6 +272,16 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 				A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR(FACTOR_ZERO));
 	}
 
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_COMPONENTS, 1);
+	OUT_RING(ring, A4XX_RB_RENDER_COMPONENTS_RT0(mrt_comp[0]) |
+			A4XX_RB_RENDER_COMPONENTS_RT1(mrt_comp[1]) |
+			A4XX_RB_RENDER_COMPONENTS_RT2(mrt_comp[2]) |
+			A4XX_RB_RENDER_COMPONENTS_RT3(mrt_comp[3]) |
+			A4XX_RB_RENDER_COMPONENTS_RT4(mrt_comp[4]) |
+			A4XX_RB_RENDER_COMPONENTS_RT5(mrt_comp[5]) |
+			A4XX_RB_RENDER_COMPONENTS_RT6(mrt_comp[6]) |
+			A4XX_RB_RENDER_COMPONENTS_RT7(mrt_comp[7]));
+
 	fd4_emit_vertex_bufs(ring, &emit);
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
@@ -287,12 +289,6 @@ fd4_clear(struct fd_context *ctx, unsigned buffers,
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_CLEAR_CNTL, 1);
 	OUT_RING(ring, 0x00000000);
-
-	OUT_PKT0(ring, REG_A4XX_RB_CLEAR_COLOR_DW0, 4);
-	OUT_RING(ring, colr);         /* RB_CLEAR_COLOR_DW0 */
-	OUT_RING(ring, colr);         /* RB_CLEAR_COLOR_DW1 */
-	OUT_RING(ring, colr);         /* RB_CLEAR_COLOR_DW2 */
-	OUT_RING(ring, colr);         /* RB_CLEAR_COLOR_DW3 */
 
 	/* until fastclear works: */
 	fd4_emit_const(ring, SHADER_FRAGMENT, 0, 0, 4, color->ui, NULL);

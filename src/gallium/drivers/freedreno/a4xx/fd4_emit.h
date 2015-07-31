@@ -43,7 +43,7 @@ void fd4_emit_const(struct fd_ringbuffer *ring, enum shader_t type,
 		const uint32_t *dwords, struct pipe_resource *prsc);
 
 void fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
-		struct pipe_surface *psurf);
+		unsigned nr_bufs, struct pipe_surface **bufs);
 
 /* grouped together emit-state for prog/vertex/state emit: */
 struct fd4_emit {
@@ -51,8 +51,6 @@ struct fd4_emit {
 	const struct fd_program_stateobj *prog;
 	const struct pipe_draw_info *info;
 	struct ir3_shader_key key;
-	enum a4xx_color_fmt format;
-	enum pipe_format pformat;
 	uint32_t dirty;
 
 	/* cached to avoid repeated lookups of same variants: */
