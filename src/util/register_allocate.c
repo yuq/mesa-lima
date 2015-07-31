@@ -348,6 +348,11 @@ ra_set_finalize(struct ra_regs *regs, unsigned int **q_values)
          }
       }
    }
+
+   for (b = 0; b < regs->count; b++) {
+      ralloc_free(regs->regs[b].conflict_list);
+      regs->regs[b].conflict_list = NULL;
+   }
 }
 
 static void
