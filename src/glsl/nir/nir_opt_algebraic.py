@@ -132,6 +132,7 @@ optimizations = [
    # Logical and bit operations
    (('fand', a, 0.0), 0.0),
    (('iand', a, a), a),
+   (('iand', a, ~0), a),
    (('iand', a, 0), 0),
    (('ior', a, a), a),
    (('ior', a, 0), a),
