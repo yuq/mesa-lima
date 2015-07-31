@@ -132,10 +132,11 @@ void r600_preflush_suspend_features(struct r600_common_context *ctx)
 	}
 
 	/* suspend queries */
-	ctx->nontimer_queries_suspended = false;
+	ctx->queries_suspended_for_flush = false;
 	if (ctx->num_cs_dw_nontimer_queries_suspend) {
 		r600_suspend_nontimer_queries(ctx);
-		ctx->nontimer_queries_suspended = true;
+		r600_suspend_timer_queries(ctx);
+		ctx->queries_suspended_for_flush = true;
 	}
 
 	ctx->streamout.suspended = false;
@@ -153,8 +154,9 @@ void r600_postflush_resume_features(struct r600_common_context *ctx)
 	}
 
 	/* resume queries */
-	if (ctx->nontimer_queries_suspended) {
+	if (ctx->queries_suspended_for_flush) {
 		r600_resume_nontimer_queries(ctx);
+		r600_resume_timer_queries(ctx);
 	}
 
 	/* Re-enable render condition. */

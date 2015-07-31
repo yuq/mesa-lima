@@ -68,7 +68,8 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 	}
 
 	/* Count in queries_suspend. */
-	num_dw += ctx->b.num_cs_dw_nontimer_queries_suspend;
+	num_dw += ctx->b.num_cs_dw_nontimer_queries_suspend +
+		  ctx->b.num_cs_dw_timer_queries_suspend;
 
 	/* Count in streamout_end at the end of CS. */
 	if (ctx->b.streamout.begin_emitted) {

@@ -384,11 +384,14 @@ struct r600_common_context {
 	int				num_occlusion_queries;
 	/* Keep track of non-timer queries, because they should be suspended
 	 * during context flushing.
-	 * The timer queries (TIME_ELAPSED) shouldn't be suspended. */
+	 * The timer queries (TIME_ELAPSED) shouldn't be suspended for blits,
+	 * but they should be suspended between IBs. */
 	struct list_head		active_nontimer_queries;
+	struct list_head		active_timer_queries;
 	unsigned			num_cs_dw_nontimer_queries_suspend;
+	unsigned			num_cs_dw_timer_queries_suspend;
 	/* If queries have been suspended. */
-	bool				nontimer_queries_suspended;
+	bool				queries_suspended_for_flush;
 	/* Additional hardware info. */
 	unsigned			backend_mask;
 	unsigned			max_db; /* for OQ */
@@ -503,6 +506,8 @@ unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
 void r600_query_init(struct r600_common_context *rctx);
 void r600_suspend_nontimer_queries(struct r600_common_context *ctx);
 void r600_resume_nontimer_queries(struct r600_common_context *ctx);
+void r600_suspend_timer_queries(struct r600_common_context *ctx);
+void r600_resume_timer_queries(struct r600_common_context *ctx);
 void r600_query_init_backend_mask(struct r600_common_context *ctx);
 
 /* r600_streamout.c */
