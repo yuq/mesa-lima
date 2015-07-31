@@ -286,6 +286,9 @@ if test "x$GCC" = xyes; then
     # Work around aliasing bugs - developers should comment this out
     CFLAGS="$CFLAGS -fno-strict-aliasing"
 
+    # We don't want floating-point math functions to set errno
+    CFLAGS="$CFLAGS -fno-math-errno"
+
     # gcc's builtin memcmp is slower than glibc's
     # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
     CFLAGS="$CFLAGS -fno-builtin-memcmp"
