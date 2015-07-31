@@ -60,6 +60,15 @@ struct fd_resource_slice {
 	uint32_t size0;          /* size of first layer in slice */
 };
 
+/* status of queued up but not flushed reads and write operations.
+ * In _transfer_map() we need to know if queued up rendering needs
+ * to be flushed to preserve the order of cpu and gpu access.
+ */
+enum fd_resource_status {
+	FD_PENDING_WRITE = 0x01,
+	FD_PENDING_READ  = 0x02,
+};
+
 struct fd_resource {
 	struct u_resource base;
 	struct fd_bo *bo;
@@ -68,14 +77,20 @@ struct fd_resource {
 	uint32_t layer_size;
 	struct fd_resource_slice slices[MAX_MIP_LEVELS];
 	uint32_t timestamp;
-	bool dirty, reading, writing;
 	/* buffer range that has been initialized */
 	struct util_range valid_buffer_range;
 
 	/* reference to the resource holding stencil data for a z32_s8 texture */
+	/* TODO rename to secondary or auxiliary? */
 	struct fd_resource *stencil;
 
+	/* pending read/write state: */
+	enum fd_resource_status status;
+	/* resources accessed by queued but not flushed draws are tracked
+	 * in the used_resources list.
+	 */
 	struct list_head list;
+	struct fd_context *pending_ctx;
 };
 
 static inline struct fd_resource *

@@ -40,7 +40,8 @@
 #include "freedreno_util.h"
 
 static void
-resource_used(struct fd_context *ctx, struct pipe_resource *prsc, boolean reading)
+resource_used(struct fd_context *ctx, struct pipe_resource *prsc,
+		enum fd_resource_status status)
 {
 	struct fd_resource *rsc;
 
@@ -48,12 +49,29 @@ resource_used(struct fd_context *ctx, struct pipe_resource *prsc, boolean readin
 		return;
 
 	rsc = fd_resource(prsc);
-	if (reading)
-		rsc->reading = true;
-	else
-		rsc->writing = true;
+	rsc->status |= status;
+	if (rsc->stencil)
+		rsc->stencil->status |= status;
+
+	/* TODO resources can actually be shared across contexts,
+	 * so I'm not sure a single list-head will do the trick?
+	 */
+	debug_assert((rsc->pending_ctx == ctx) || !rsc->pending_ctx);
 	list_delinit(&rsc->list);
 	list_addtail(&rsc->list, &ctx->used_resources);
+	rsc->pending_ctx = ctx;
+}
+
+static void
+resource_read(struct fd_context *ctx, struct pipe_resource *prsc)
+{
+	resource_used(ctx, prsc, FD_PENDING_READ);
+}
+
+static void
+resource_written(struct fd_context *ctx, struct pipe_resource *prsc)
+{
+	resource_used(ctx, prsc, FD_PENDING_WRITE);
 }
 
 static void
@@ -72,6 +90,8 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	/* emulate unsupported primitives: */
 	if (!fd_supported_prim(ctx, info->mode)) {
+		if (ctx->streamout.num_targets > 0)
+			debug_error("stream-out with emulated prims");
 		util_primconvert_save_index_buffer(ctx->primconvert, &ctx->indexbuf);
 		util_primconvert_save_rasterizer_state(ctx->primconvert, ctx->rasterizer);
 		util_primconvert_draw_vbo(ctx->primconvert, info);
@@ -86,17 +106,13 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	if (fd_depth_enabled(ctx)) {
 		buffers |= FD_BUFFER_DEPTH;
-		fd_resource(pfb->zsbuf->texture)->dirty = true;
+		resource_written(ctx, pfb->zsbuf->texture);
 		ctx->gmem_reason |= FD_GMEM_DEPTH_ENABLED;
 	}
 
 	if (fd_stencil_enabled(ctx)) {
-		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
 		buffers |= FD_BUFFER_STENCIL;
-		if (rsc->stencil)
-			rsc->stencil->dirty = true;
-		else
-			rsc->dirty = true;
+		resource_written(ctx, pfb->zsbuf->texture);
 		ctx->gmem_reason |= FD_GMEM_STENCIL_ENABLED;
 	}
 
@@ -111,7 +127,7 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 		surf = pfb->cbufs[i]->texture;
 
-		fd_resource(surf)->dirty = true;
+		resource_written(ctx, surf);
 		buffers |= PIPE_CLEAR_COLOR0 << i;
 
 		if (surf->nr_samples > 1)
@@ -123,31 +139,31 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
 	/* Skip over buffer 0, that is sent along with the command stream */
 	for (i = 1; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
-		resource_used(ctx, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer, true);
-		resource_used(ctx, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer, true);
+		resource_read(ctx, ctx->constbuf[PIPE_SHADER_VERTEX].cb[i].buffer);
+		resource_read(ctx, ctx->constbuf[PIPE_SHADER_FRAGMENT].cb[i].buffer);
 	}
 
 	/* Mark VBOs as being read */
 	for (i = 0; i < ctx->vtx.vertexbuf.count; i++) {
 		assert(!ctx->vtx.vertexbuf.vb[i].user_buffer);
-		resource_used(ctx, ctx->vtx.vertexbuf.vb[i].buffer, true);
+		resource_read(ctx, ctx->vtx.vertexbuf.vb[i].buffer);
 	}
 
 	/* Mark index buffer as being read */
-	resource_used(ctx, ctx->indexbuf.buffer, true);
+	resource_read(ctx, ctx->indexbuf.buffer);
 
 	/* Mark textures as being read */
 	for (i = 0; i < ctx->verttex.num_textures; i++)
 		if (ctx->verttex.textures[i])
-			resource_used(ctx, ctx->verttex.textures[i]->texture, true);
+			resource_read(ctx, ctx->verttex.textures[i]->texture);
 	for (i = 0; i < ctx->fragtex.num_textures; i++)
 		if (ctx->fragtex.textures[i])
-			resource_used(ctx, ctx->fragtex.textures[i]->texture, true);
+			resource_read(ctx, ctx->fragtex.textures[i]->texture);
 
-	/* Mark streamout buffers as being read.. actually they are written.. */
+	/* Mark streamout buffers as being written.. */
 	for (i = 0; i < ctx->streamout.num_targets; i++)
 		if (ctx->streamout.targets[i])
-			resource_used(ctx, ctx->streamout.targets[i]->buffer, false);
+			resource_written(ctx, ctx->streamout.targets[i]->buffer);
 
 	ctx->num_draws++;
 
@@ -228,15 +244,10 @@ fd_clear(struct pipe_context *pctx, unsigned buffers,
 	if (buffers & PIPE_CLEAR_COLOR)
 		for (i = 0; i < pfb->nr_cbufs; i++)
 			if (buffers & (PIPE_CLEAR_COLOR0 << i))
-				fd_resource(pfb->cbufs[i]->texture)->dirty = true;
+				resource_written(ctx, pfb->cbufs[i]->texture);
 
 	if (buffers & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
-		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
-		if (rsc->stencil && buffers & PIPE_CLEAR_STENCIL)
-			rsc->stencil->dirty = true;
-		if (!rsc->stencil || buffers & PIPE_CLEAR_DEPTH)
-			rsc->dirty = true;
-
+		resource_written(ctx, pfb->zsbuf->texture);
 		ctx->gmem_reason |= FD_GMEM_CLEARS_DEPTH_STENCIL;
 	}
 
