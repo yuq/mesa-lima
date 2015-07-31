@@ -528,22 +528,22 @@ __gen_combine_address(struct anv_batch *batch, void *location,
 #include "gen8_pack.h"
 
 #define anv_batch_emit(batch, cmd, ...) do {                            \
+      void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       struct cmd __template = {                                         \
          cmd ## _header,                                                \
          __VA_ARGS__                                                    \
       };                                                                \
-      void *__dst = anv_batch_emit_dwords(batch, cmd ## _length);       \
       cmd ## _pack(batch, __dst, &__template);                          \
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(__dst, cmd ## _length * 4));     \
    } while (0)
 
 #define anv_batch_emitn(batch, n, cmd, ...) ({          \
+      void *__dst = anv_batch_emit_dwords(batch, n);    \
       struct cmd __template = {                         \
          cmd ## _header,                                \
         .DwordLength = n - cmd ## _length_bias,         \
          __VA_ARGS__                                    \
       };                                                \
-      void *__dst = anv_batch_emit_dwords(batch, n);    \
       cmd ## _pack(batch, __dst, &__template);          \
       __dst;                                            \
    })
