@@ -3482,7 +3482,8 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
    dst_reg dst = dst_reg(brw_writemask(brw_vec8_grf(0, 0),
 				       inst->dst.writemask));
    vec4_instruction *write = SCRATCH_WRITE(dst, temp, index);
-   write->predicate = inst->predicate;
+   if (inst->opcode != BRW_OPCODE_SEL)
+      write->predicate = inst->predicate;
    write->ir = inst->ir;
    write->annotation = inst->annotation;
    inst->insert_after(block, write);
