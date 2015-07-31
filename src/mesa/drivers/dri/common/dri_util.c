@@ -163,7 +163,9 @@ driCreateNewScreen2(int scrn, int fd,
        }
     }
 
-    psp->api_mask = (1 << __DRI_API_OPENGL);
+    psp->api_mask = 0;
+    if (psp->max_gl_compat_version > 0)
+       psp->api_mask |= (1 << __DRI_API_OPENGL);
     if (psp->max_gl_core_version > 0)
        psp->api_mask |= (1 << __DRI_API_OPENGL_CORE);
     if (psp->max_gl_es1_version > 0)
