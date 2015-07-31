@@ -116,6 +116,42 @@ pipe_surface_format(struct pipe_surface *psurf)
 	return psurf->format;
 }
 
+static inline bool
+fd_surface_half_precision(const struct pipe_surface *psurf)
+{
+	enum pipe_format format;
+
+	if (!psurf)
+		return true;
+
+	format = psurf->format;
+
+	/* colors are provided in consts, which go through cov.f32f16, which will
+	 * break these values
+	 */
+	if (util_format_is_pure_integer(format))
+		return false;
+
+	/* avoid losing precision on 32-bit float formats */
+	if (util_format_is_float(format) &&
+		util_format_get_component_bits(format, UTIL_FORMAT_COLORSPACE_RGB, 0) == 32)
+		return false;
+
+	return true;
+}
+
+static inline bool
+fd_half_precision(struct pipe_framebuffer_state *pfb)
+{
+	unsigned i;
+
+	for (i = 0; i < pfb->nr_cbufs; i++)
+		if (!fd_surface_half_precision(pfb->cbufs[i]))
+			return false;
+
+	return true;
+}
+
 #define LOG_DWORDS 0
 
 static inline void emit_marker(struct fd_ringbuffer *ring, int scratch_idx);

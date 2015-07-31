@@ -243,10 +243,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		.vtx  = &fd3_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
-			.half_precision = (fd3_half_precision(pfb->cbufs[0]) &&
-							   fd3_half_precision(pfb->cbufs[1]) &&
-							   fd3_half_precision(pfb->cbufs[2]) &&
-							   fd3_half_precision(pfb->cbufs[3])),
+			.half_precision = fd_half_precision(pfb),
 		},
 	};
 

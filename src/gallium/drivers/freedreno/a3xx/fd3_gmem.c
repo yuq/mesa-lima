@@ -537,10 +537,7 @@ fd3_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 			/* NOTE: They all use the same VP, this is for vtx bufs. */
 			.prog = &ctx->blit_prog[0],
 			.key = {
-				.half_precision = (fd3_half_precision(pfb->cbufs[0]) &&
-								   fd3_half_precision(pfb->cbufs[1]) &&
-								   fd3_half_precision(pfb->cbufs[2]) &&
-								   fd3_half_precision(pfb->cbufs[3]))
+				.half_precision = fd_half_precision(pfb),
 			},
 	};
 	float x0, y0, x1, y1;
