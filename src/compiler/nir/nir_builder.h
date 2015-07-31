@@ -115,6 +115,14 @@ nir_imm_float(nir_builder *build, float x)
 }
 
 static inline nir_ssa_def *
+nir_imm_double(nir_builder *build, double x)
+{
+   nir_const_value v = { { .f64 = {x, 0, 0, 0} } };
+   nir_ssa_def *def = nir_build_imm(build, 1, 64, v);
+   return def;
+}
+
+static inline nir_ssa_def *
 nir_imm_vec4(nir_builder *build, float x, float y, float z, float w)
 {
    nir_const_value v;
