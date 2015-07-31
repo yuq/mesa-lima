@@ -321,32 +321,31 @@ ra_set_finalize(struct ra_regs *regs, unsigned int **q_values)
             regs->classes[b]->q[c] = q_values[b][c];
 	 }
       }
-      return;
-   }
+   } else {
+      /* Compute, for each class B and C, how many regs of B an
+       * allocation to C could conflict with.
+       */
+      for (b = 0; b < regs->class_count; b++) {
+         for (c = 0; c < regs->class_count; c++) {
+            unsigned int rc;
+            int max_conflicts = 0;
 
-   /* Compute, for each class B and C, how many regs of B an
-    * allocation to C could conflict with.
-    */
-   for (b = 0; b < regs->class_count; b++) {
-      for (c = 0; c < regs->class_count; c++) {
-	 unsigned int rc;
-	 int max_conflicts = 0;
+            for (rc = 0; rc < regs->count; rc++) {
+               int conflicts = 0;
+               unsigned int i;
 
-	 for (rc = 0; rc < regs->count; rc++) {
-	    int conflicts = 0;
-	    unsigned int i;
+               if (!reg_belongs_to_class(rc, regs->classes[c]))
+                  continue;
 
-            if (!reg_belongs_to_class(rc, regs->classes[c]))
-	       continue;
-
-	    for (i = 0; i < regs->regs[rc].num_conflicts; i++) {
-	       unsigned int rb = regs->regs[rc].conflict_list[i];
-	       if (reg_belongs_to_class(rb, regs->classes[b]))
-		  conflicts++;
-	    }
-	    max_conflicts = MAX2(max_conflicts, conflicts);
-	 }
-	 regs->classes[b]->q[c] = max_conflicts;
+               for (i = 0; i < regs->regs[rc].num_conflicts; i++) {
+                  unsigned int rb = regs->regs[rc].conflict_list[i];
+                  if (reg_belongs_to_class(rb, regs->classes[b]))
+                     conflicts++;
+               }
+               max_conflicts = MAX2(max_conflicts, conflicts);
+            }
+            regs->classes[b]->q[c] = max_conflicts;
+         }
       }
    }
 }
