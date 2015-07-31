@@ -50,11 +50,18 @@ TEST(MesaFormatsTest, FormatTypeAndComps)
        */
       if (!_mesa_is_format_compressed(f)) {
          GLenum datatype = 0;
+         GLenum error = 0;
          GLuint comps = 0;
-         _mesa_uncompressed_format_to_type_and_comps(f, &datatype, &comps);
 
          /* If the datatype is zero, the format was not handled */
+         _mesa_uncompressed_format_to_type_and_comps(f, &datatype, &comps);
          EXPECT_NE(datatype, (GLenum)0);
+
+         /* If the error isn't NO_ERROR, the format was not handled.
+          * Use an arbitrary GLenum format. */
+         _mesa_format_matches_format_and_type(f, GL_RG, datatype,
+                                              GL_FALSE, &error);
+         EXPECT_EQ((GLenum)GL_NO_ERROR, error);
       }
 
    }

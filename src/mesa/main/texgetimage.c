@@ -651,7 +651,7 @@ get_tex_memcpy(struct gl_context *ctx,
        texBaseFormat == texImage->_BaseFormat) {
       memCopy = _mesa_format_matches_format_and_type(texImage->TexFormat,
                                                      format, type,
-                                                     ctx->Pack.SwapBytes);
+                                                     ctx->Pack.SwapBytes, NULL);
    }
 
    if (depth > 1) {

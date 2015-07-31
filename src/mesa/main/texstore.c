@@ -863,7 +863,7 @@ _mesa_texstore_can_use_memcpy(struct gl_context *ctx,
 
    /* The Mesa format must match the input format and type. */
    if (!_mesa_format_matches_format_and_type(dstFormat, srcFormat, srcType,
-                                             srcPacking->SwapBytes)) {
+                                             srcPacking->SwapBytes, NULL)) {
       return GL_FALSE;
    }
 

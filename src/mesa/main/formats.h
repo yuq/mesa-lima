@@ -686,7 +686,7 @@ _mesa_format_has_color_component(mesa_format format, int component);
 GLboolean
 _mesa_format_matches_format_and_type(mesa_format mesa_format,
 				     GLenum format, GLenum type,
-                                     GLboolean swapBytes);
+				     GLboolean swapBytes, GLenum *error);
 
 #ifdef __cplusplus
 }

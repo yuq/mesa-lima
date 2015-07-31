@@ -695,7 +695,7 @@ st_TexSubImage(struct gl_context *ctx, GLuint dims,
     * in which case the memcpy-based fast path will likely be used and
     * we don't have to blit. */
    if (_mesa_format_matches_format_and_type(texImage->TexFormat, format,
-                                            type, unpack->SwapBytes)) {
+                                            type, unpack->SwapBytes, NULL)) {
       goto fallback;
    }
 
@@ -963,7 +963,7 @@ st_GetTexSubImage(struct gl_context * ctx,
    /* See if the texture format already matches the format and type,
     * in which case the memcpy-based fast path will be used. */
    if (_mesa_format_matches_format_and_type(texImage->TexFormat, format,
-                                            type, ctx->Pack.SwapBytes)) {
+                                            type, ctx->Pack.SwapBytes, NULL)) {
       goto fallback;
    }
 
@@ -1116,7 +1116,7 @@ st_GetTexSubImage(struct gl_context * ctx,
 
    /* copy/pack data into user buffer */
    if (_mesa_format_matches_format_and_type(mesa_format, format, type,
-                                            ctx->Pack.SwapBytes)) {
+                                            ctx->Pack.SwapBytes, NULL)) {
       /* memcpy */
       const uint bytesPerRow = width * util_format_get_blocksize(dst_format);
       GLuint row, slice;

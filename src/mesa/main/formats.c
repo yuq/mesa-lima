@@ -1420,19 +1420,25 @@ _mesa_uncompressed_format_to_type_and_comps(mesa_format format,
  * \param format  the user-specified image format
  * \param type  the user-specified image datatype
  * \param swapBytes  typically the current pixel pack/unpack byteswap state
+ * \param[out] error GL_NO_ERROR if format is an expected input.
+ *                   GL_INVALID_ENUM if format is an unexpected input.
  * \return GL_TRUE if the formats match, GL_FALSE otherwise.
  */
 GLboolean
 _mesa_format_matches_format_and_type(mesa_format mesa_format,
 				     GLenum format, GLenum type,
-                                     GLboolean swapBytes)
+				     GLboolean swapBytes, GLenum *error)
 {
    const GLboolean littleEndian = _mesa_little_endian();
+   if (error)
+      *error = GL_NO_ERROR;
 
    /* Note: When reading a GL format/type combination, the format lists channel
     * assignments from most significant channel in the type to least
     * significant.  A type with _REV indicates that the assignments are
     * swapped, so they are listed from least significant to most significant.
+    *
+    * Compressed formats will fall through and return GL_FALSE.
     *
     * For sanity, please keep this switch statement ordered the same as the
     * enums in formats.h.
@@ -1694,26 +1700,6 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
    case MESA_FORMAT_S_UINT8:
       return format == GL_STENCIL_INDEX && type == GL_UNSIGNED_BYTE;
 
-   case MESA_FORMAT_SRGB_DXT1:
-   case MESA_FORMAT_SRGBA_DXT1:
-   case MESA_FORMAT_SRGBA_DXT3:
-   case MESA_FORMAT_SRGBA_DXT5:
-      return GL_FALSE;
-
-   case MESA_FORMAT_RGB_FXT1:
-   case MESA_FORMAT_RGBA_FXT1:
-   case MESA_FORMAT_RGB_DXT1:
-   case MESA_FORMAT_RGBA_DXT1:
-   case MESA_FORMAT_RGBA_DXT3:
-   case MESA_FORMAT_RGBA_DXT5:
-      return GL_FALSE;
-
-   case MESA_FORMAT_BPTC_RGBA_UNORM:
-   case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
-   case MESA_FORMAT_BPTC_RGB_SIGNED_FLOAT:
-   case MESA_FORMAT_BPTC_RGB_UNSIGNED_FLOAT:
-      return GL_FALSE;
-
    case MESA_FORMAT_RGBA_FLOAT32:
       return format == GL_RGBA && type == GL_FLOAT && !swapBytes;
    case MESA_FORMAT_RGBA_FLOAT16:
@@ -1910,31 +1896,6 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
       return format == GL_RGBA && type == GL_UNSIGNED_SHORT &&
              !swapBytes;
 
-   case MESA_FORMAT_R_RGTC1_UNORM:
-   case MESA_FORMAT_R_RGTC1_SNORM:
-   case MESA_FORMAT_RG_RGTC2_UNORM:
-   case MESA_FORMAT_RG_RGTC2_SNORM:
-      return GL_FALSE;
-
-   case MESA_FORMAT_L_LATC1_UNORM:
-   case MESA_FORMAT_L_LATC1_SNORM:
-   case MESA_FORMAT_LA_LATC2_UNORM:
-   case MESA_FORMAT_LA_LATC2_SNORM:
-      return GL_FALSE;
-
-   case MESA_FORMAT_ETC1_RGB8:
-   case MESA_FORMAT_ETC2_RGB8:
-   case MESA_FORMAT_ETC2_SRGB8:
-   case MESA_FORMAT_ETC2_RGBA8_EAC:
-   case MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC:
-   case MESA_FORMAT_ETC2_R11_EAC:
-   case MESA_FORMAT_ETC2_RG11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_R11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_RG11_EAC:
-   case MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1:
-      return GL_FALSE;
-
    case MESA_FORMAT_A_SNORM8:
       return format == GL_ALPHA && type == GL_BYTE;
    case MESA_FORMAT_L_SNORM8:
@@ -2017,8 +1978,11 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
    case MESA_FORMAT_B8G8R8X8_SRGB:
    case MESA_FORMAT_X8R8G8B8_SRGB:
       return GL_FALSE;
+   default:
+      assert(_mesa_is_format_compressed(format));
+      if (error)
+         *error = GL_INVALID_ENUM;
    }
-
    return GL_FALSE;
 }
 

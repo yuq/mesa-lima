@@ -134,7 +134,7 @@ try_pbo_upload(struct gl_context *ctx,
    }
 
    if (!_mesa_format_matches_format_and_type(intelImage->mt->format,
-                                             format, type, false)) {
+                                             format, type, false, NULL)) {
       DBG("%s: format mismatch (upload to %s with format 0x%x, type 0x%x)\n",
 	  __func__, _mesa_get_format_name(intelImage->mt->format),
 	  format, type);
