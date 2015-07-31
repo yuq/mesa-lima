@@ -73,11 +73,11 @@ fs_visitor::assign_regs_trivial()
 }
 
 static void
-brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
+brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
 {
    const struct brw_device_info *devinfo = compiler->devinfo;
    int base_reg_count = BRW_MAX_GRF;
-   int index = reg_width - 1;
+   int index = (dispatch_width / 8) - 1;
 
    /* The registers used to make up almost all values handled in the compiler
     * are a scalar value occupying a single register (or 2 registers in the
@@ -121,7 +121,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
    /* Compute the total number of registers across all classes. */
    int ra_reg_count = 0;
    for (int i = 0; i < class_count; i++) {
-      if (devinfo->gen <= 5 && reg_width == 2) {
+      if (devinfo->gen <= 5 && dispatch_width == 16) {
          /* From the G45 PRM:
           *
           * In order to reduce the hardware complexity, the following
@@ -168,7 +168,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
    int pairs_reg_count = 0;
    for (int i = 0; i < class_count; i++) {
       int class_reg_count;
-      if (devinfo->gen <= 5 && reg_width == 2) {
+      if (devinfo->gen <= 5 && dispatch_width == 16) {
          class_reg_count = (base_reg_count - (class_sizes[i] - 1)) / 2;
 
          /* See comment below.  The only difference here is that we are
@@ -214,7 +214,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
          pairs_reg_count = class_reg_count;
       }
 
-      if (devinfo->gen <= 5 && reg_width == 2) {
+      if (devinfo->gen <= 5 && dispatch_width == 16) {
          for (int j = 0; j < class_reg_count; j++) {
             ra_class_add_reg(regs, classes[i], reg);
 
@@ -249,7 +249,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
    /* Add a special class for aligned pairs, which we'll put delta_xy
     * in on Gen <= 6 so that we can do PLN.
     */
-   if (devinfo->has_pln && reg_width == 1 && devinfo->gen <= 6) {
+   if (devinfo->has_pln && dispatch_width == 8 && devinfo->gen <= 6) {
       aligned_pairs_class = ra_alloc_reg_class(regs);
 
       for (int i = 0; i < pairs_reg_count; i++) {
@@ -287,8 +287,8 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int reg_width)
 void
 brw_fs_alloc_reg_sets(struct brw_compiler *compiler)
 {
-   brw_alloc_reg_set(compiler, 1);
-   brw_alloc_reg_set(compiler, 2);
+   brw_alloc_reg_set(compiler, 8);
+   brw_alloc_reg_set(compiler, 16);
 }
 
 static int
