@@ -652,8 +652,10 @@ VkResult anv_DestroyDevice(
 #endif
 
    anv_bo_pool_finish(&device->batch_bo_pool);
+   anv_state_pool_finish(&device->dynamic_state_pool);
    anv_block_pool_finish(&device->dynamic_state_block_pool);
    anv_block_pool_finish(&device->instruction_block_pool);
+   anv_state_pool_finish(&device->surface_state_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);
    anv_block_pool_finish(&device->scratch_block_pool);
 

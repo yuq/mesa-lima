@@ -456,6 +456,11 @@ anv_state_pool_init(struct anv_state_pool *pool,
    }
 }
 
+void
+anv_state_pool_finish(struct anv_state_pool *pool)
+{
+}
+
 struct anv_state
 anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
 {
