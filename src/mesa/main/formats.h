@@ -665,7 +665,7 @@ extern GLint
 _mesa_format_row_stride(mesa_format format, GLsizei width);
 
 extern void
-_mesa_format_to_type_and_comps(mesa_format format,
+_mesa_uncompressed_format_to_type_and_comps(mesa_format format,
                                GLenum *datatype, GLuint *comps);
 
 extern void

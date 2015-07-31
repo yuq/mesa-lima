@@ -885,9 +885,9 @@ _mesa_format_row_stride(mesa_format format, GLsizei width)
 
 
 /**
- * Debug/test: check that all formats are handled in the
- * _mesa_format_to_type_and_comps() function.  When new pixel formats
- * are added to Mesa, that function needs to be updated.
+ * Debug/test: check that all uncompressed formats are handled in the
+ * _mesa_uncompressed_format_to_type_and_comps() function. When new pixel
+ * formats are added to Mesa, that function needs to be updated.
  * This is a no-op after the first call.
  */
 static void
@@ -901,7 +901,8 @@ check_format_to_type_and_comps(void)
       /* This function will emit a problem/warning if the format is
        * not handled.
        */
-      _mesa_format_to_type_and_comps(f, &datatype, &comps);
+      if (!_mesa_is_format_compressed(f))
+         _mesa_uncompressed_format_to_type_and_comps(f, &datatype, &comps);
    }
 }
 
@@ -997,11 +998,11 @@ _mesa_test_formats(void)
 
 
 /**
- * Return datatype and number of components per texel for the given mesa_format.
- * Only used for mipmap generation code.
+ * Return datatype and number of components per texel for the given
+ * uncompressed mesa_format. Only used for mipmap generation code.
  */
 void
-_mesa_format_to_type_and_comps(mesa_format format,
+_mesa_uncompressed_format_to_type_and_comps(mesa_format format,
                                GLenum *datatype, GLuint *comps)
 {
    switch (format) {
@@ -1233,44 +1234,6 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_A8L8_SRGB:
       *datatype = GL_UNSIGNED_BYTE;
       *comps = 2;
-      return;
-
-   case MESA_FORMAT_RGB_FXT1:
-   case MESA_FORMAT_RGBA_FXT1:
-   case MESA_FORMAT_RGB_DXT1:
-   case MESA_FORMAT_RGBA_DXT1:
-   case MESA_FORMAT_RGBA_DXT3:
-   case MESA_FORMAT_RGBA_DXT5:
-   case MESA_FORMAT_SRGB_DXT1:
-   case MESA_FORMAT_SRGBA_DXT1:
-   case MESA_FORMAT_SRGBA_DXT3:
-   case MESA_FORMAT_SRGBA_DXT5:
-   case MESA_FORMAT_R_RGTC1_UNORM:
-   case MESA_FORMAT_R_RGTC1_SNORM:
-   case MESA_FORMAT_RG_RGTC2_UNORM:
-   case MESA_FORMAT_RG_RGTC2_SNORM:
-   case MESA_FORMAT_L_LATC1_UNORM:
-   case MESA_FORMAT_L_LATC1_SNORM:
-   case MESA_FORMAT_LA_LATC2_UNORM:
-   case MESA_FORMAT_LA_LATC2_SNORM:
-   case MESA_FORMAT_ETC1_RGB8:
-   case MESA_FORMAT_ETC2_RGB8:
-   case MESA_FORMAT_ETC2_SRGB8:
-   case MESA_FORMAT_ETC2_RGBA8_EAC:
-   case MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC:
-   case MESA_FORMAT_ETC2_R11_EAC:
-   case MESA_FORMAT_ETC2_RG11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_R11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_RG11_EAC:
-   case MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_BPTC_RGBA_UNORM:
-   case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
-   case MESA_FORMAT_BPTC_RGB_SIGNED_FLOAT:
-   case MESA_FORMAT_BPTC_RGB_UNSIGNED_FLOAT:
-      /* XXX generate error instead? */
-      *datatype = GL_UNSIGNED_BYTE;
-      *comps = 0;
       return;
 
    case MESA_FORMAT_RGBA_FLOAT32:
@@ -1571,12 +1534,46 @@ _mesa_format_to_type_and_comps(mesa_format format,
       assert(0);
       return;
 
+   case MESA_FORMAT_RGB_FXT1:
+   case MESA_FORMAT_RGBA_FXT1:
+   case MESA_FORMAT_RGB_DXT1:
+   case MESA_FORMAT_RGBA_DXT1:
+   case MESA_FORMAT_RGBA_DXT3:
+   case MESA_FORMAT_RGBA_DXT5:
+   case MESA_FORMAT_SRGB_DXT1:
+   case MESA_FORMAT_SRGBA_DXT1:
+   case MESA_FORMAT_SRGBA_DXT3:
+   case MESA_FORMAT_SRGBA_DXT5:
+   case MESA_FORMAT_R_RGTC1_UNORM:
+   case MESA_FORMAT_R_RGTC1_SNORM:
+   case MESA_FORMAT_RG_RGTC2_UNORM:
+   case MESA_FORMAT_RG_RGTC2_SNORM:
+   case MESA_FORMAT_L_LATC1_UNORM:
+   case MESA_FORMAT_L_LATC1_SNORM:
+   case MESA_FORMAT_LA_LATC2_UNORM:
+   case MESA_FORMAT_LA_LATC2_SNORM:
+   case MESA_FORMAT_ETC1_RGB8:
+   case MESA_FORMAT_ETC2_RGB8:
+   case MESA_FORMAT_ETC2_SRGB8:
+   case MESA_FORMAT_ETC2_RGBA8_EAC:
+   case MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC:
+   case MESA_FORMAT_ETC2_R11_EAC:
+   case MESA_FORMAT_ETC2_RG11_EAC:
+   case MESA_FORMAT_ETC2_SIGNED_R11_EAC:
+   case MESA_FORMAT_ETC2_SIGNED_RG11_EAC:
+   case MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1:
+   case MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1:
+   case MESA_FORMAT_BPTC_RGBA_UNORM:
+   case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
+   case MESA_FORMAT_BPTC_RGB_SIGNED_FLOAT:
+   case MESA_FORMAT_BPTC_RGB_UNSIGNED_FLOAT:
+      assert(_mesa_is_format_compressed(format));
    case MESA_FORMAT_NONE:
    /* For debug builds, warn if any formats are not handled */
 #ifdef DEBUG
    default:
 #endif
-      _mesa_problem(NULL, "bad format %s in _mesa_format_to_type_and_comps",
+      _mesa_problem(NULL, "bad format %s in _mesa_uncompressed_format_to_type_and_comps",
                     _mesa_get_format_name(format));
       *datatype = 0;
       *comps = 1;
