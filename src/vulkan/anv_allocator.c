@@ -454,11 +454,13 @@ anv_state_pool_init(struct anv_state_pool *pool,
       size_t size = 1 << (ANV_MIN_STATE_SIZE_LOG2 + i);
       anv_fixed_size_state_pool_init(&pool->buckets[i], size);
    }
+   VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
 }
 
 void
 anv_state_pool_finish(struct anv_state_pool *pool)
 {
+   VG(VALGRIND_DESTROY_MEMPOOL(pool));
 }
 
 struct anv_state
@@ -475,7 +477,7 @@ anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
    state.offset = anv_fixed_size_state_pool_alloc(&pool->buckets[bucket],
                                                   pool->block_pool);
    state.map = pool->block_pool->map + state.offset;
-   VG(VALGRIND_MALLOCLIKE_BLOCK(state.map, size, 0, false));
+   VG(VALGRIND_MEMPOOL_ALLOC(pool, state.map, size));
    return state;
 }
 
@@ -488,7 +490,7 @@ anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
           size_log2 <= ANV_MAX_STATE_SIZE_LOG2);
    unsigned bucket = size_log2 - ANV_MIN_STATE_SIZE_LOG2;
 
-   VG(VALGRIND_FREELIKE_BLOCK(state.map, 0));
+   VG(VALGRIND_MEMPOOL_FREE(pool, state.map));
    anv_fixed_size_state_pool_free(&pool->buckets[bucket],
                                   pool->block_pool, state.offset);
 }
@@ -516,6 +518,8 @@ anv_state_stream_init(struct anv_state_stream *stream,
    stream->next = 0;
    stream->end = 0;
    stream->current_block = NULL_BLOCK;
+
+   VG(VALGRIND_CREATE_MEMPOOL(stream, 0, false));
 }
 
 void
@@ -528,10 +532,12 @@ anv_state_stream_finish(struct anv_state_stream *stream)
    while (block != NULL_BLOCK) {
       sb = stream->block_pool->map + block;
       next_block = VG_NOACCESS_READ(&sb->next);
-      VG(VALGRIND_FREELIKE_BLOCK(VG_NOACCESS_READ(&sb->_vg_ptr), 0));
+      VG(VALGRIND_MEMPOOL_FREE(stream, VG_NOACCESS_READ(&sb->_vg_ptr)));
       anv_block_pool_free(stream->block_pool, block);
       block = next_block;
    }
+
+   VG(VALGRIND_DESTROY_MEMPOOL(stream));
 }
 
 struct anv_state
@@ -568,15 +574,13 @@ anv_state_stream_alloc(struct anv_state_stream *stream,
    if (vg_ptr == NULL) {
       vg_ptr = state.map;
       VG_NOACCESS_WRITE(&sb->_vg_ptr, vg_ptr);
-      VALGRIND_MALLOCLIKE_BLOCK(vg_ptr, size, 0, false);
+      VALGRIND_MEMPOOL_ALLOC(stream, vg_ptr, size);
    } else {
       ptrdiff_t vg_offset = vg_ptr - current_map;
       assert(vg_offset >= stream->current_block &&
              vg_offset < stream->end);
-      VALGRIND_RESIZEINPLACE_BLOCK(vg_ptr,
-                                   stream->next - vg_offset,
-                                   (state.offset + size) - vg_offset,
-                                   0);
+      VALGRIND_MEMPOOL_CHANGE(stream, vg_ptr, vg_ptr,
+                              (state.offset + size) - vg_offset);
    }
 #endif
 
@@ -597,6 +601,8 @@ anv_bo_pool_init(struct anv_bo_pool *pool,
    pool->device = device;
    pool->bo_size = bo_size;
    pool->free_list = NULL;
+
+   VG(VALGRIND_CREATE_MEMPOOL(pool, 0, false));
 }
 
 void
@@ -606,16 +612,12 @@ anv_bo_pool_finish(struct anv_bo_pool *pool)
    while (link != NULL) {
       struct bo_pool_bo_link link_copy = VG_NOACCESS_READ(link);
 
-      /* The anv_gem_m[un]map() functions are also valgrind-safe so they
-       * act as an alloc/free.  In order to avoid a double-free warning, we
-       * need to mark thiss as malloc'd before we unmap it.
-       */
-      VG(VALGRIND_MALLOCLIKE_BLOCK(link_copy.bo.map, pool->bo_size, 0, false));
-
       anv_gem_munmap(link_copy.bo.map, pool->bo_size);
       anv_gem_close(pool->device, link_copy.bo.gem_handle);
       link = link_copy.next;
    }
+
+   VG(VALGRIND_DESTROY_MEMPOOL(pool));
 }
 
 VkResult
@@ -630,7 +632,7 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
       assert(bo->map == next_free);
       assert(bo->size == pool->bo_size);
 
-      VG(VALGRIND_MALLOCLIKE_BLOCK(bo->map, pool->bo_size, 0, false));
+      VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, pool->bo_size));
 
       return VK_SUCCESS;
    }
@@ -649,13 +651,10 @@ anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo)
       return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
    }
 
-   /* We don't need to call VALGRIND_MALLOCLIKE_BLOCK here because gem_mmap
-    * calls it for us.  If we really want to be pedantic we could do a
-    * VALGRIND_FREELIKE_BLOCK right after the mmap, but there's no good
-    * reason.
-    */
-
    *bo = new_bo;
+
+   VG(VALGRIND_MEMPOOL_ALLOC(pool, bo->map, pool->bo_size));
+
    return VK_SUCCESS;
 }
 
@@ -665,6 +664,6 @@ anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo)
    struct bo_pool_bo_link *link = bo->map;
    link->bo = *bo;
 
-   VG(VALGRIND_FREELIKE_BLOCK(bo->map, 0));
+   VG(VALGRIND_MEMPOOL_FREE(pool, bo->map));
    anv_ptr_free_list_push(&pool->free_list, link);
 }
