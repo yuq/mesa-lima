@@ -720,7 +720,15 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
          .AddressSpaceIndicator = ASI_PPGTT,
          .BatchBufferStartAddress = { &this_bbo->bo, offset },
       };
-      last_bbo->relocs.num_relocs++;
+      /* The pack function below is going to insert a relocation.  In order
+       * to allow us to splice this secondary into a primary multiple
+       * times, we can't have relocations from previous splices in this
+       * splice.  In order to deal with this, we simply decrement the
+       * relocation count prior to inserting the next one.  In order to
+       * handle the base case, num_relocs was artificially incremented in
+       * end_batch_buffer().
+       */
+      last_bbo->relocs.num_relocs--;
       GEN8_MI_BATCH_BUFFER_START_pack(&secondary->batch,
                                       last_bbo->bo.map + last_bbo->length,
                                       &ret);
