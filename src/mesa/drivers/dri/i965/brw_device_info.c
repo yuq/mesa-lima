@@ -340,8 +340,10 @@ static const struct brw_device_info brw_device_info_bxt = {
    .is_broxton = 1,
    .gt = 1,
    .has_llc = false,
-   .max_vs_threads = 112,
-   .max_gs_threads = 112,
+
+   /* XXX: These are preliminary thread counts and URB sizes. */
+   .max_vs_threads = 56,
+   .max_gs_threads = 56,
    .max_wm_threads = 32,
    .urb = {
       .size = 64,
