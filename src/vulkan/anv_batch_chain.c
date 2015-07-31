@@ -636,7 +636,13 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
          anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
 
       cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
-   } else {
+   }
+
+   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
+
+   surface_bbo->length = cmd_buffer->surface_next;
+
+   if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_SECONDARY) {
       /* If this is a secondary command buffer, we need to determine the
        * mode in which it will be executed with vkExecuteCommands.  We
        * determine this statically here so that this stays in sync with the
@@ -666,10 +672,6 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
       }
    }
-
-   anv_batch_bo_finish(batch_bo, &cmd_buffer->batch);
-
-   surface_bbo->length = cmd_buffer->surface_next;
 }
 
 static inline VkResult
