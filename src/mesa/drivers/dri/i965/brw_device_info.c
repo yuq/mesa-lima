@@ -310,11 +310,16 @@ static const struct brw_device_info brw_device_info_chv = {
    .supports_simd16_3src = true,                    \
    .max_vs_threads = 336,                           \
    .max_gs_threads = 336,                           \
+   .max_hs_threads = 336,                           \
+   .max_ds_threads = 336,                           \
    .max_wm_threads = 64 * 6,                        \
+   .max_cs_threads = 56,                            \
    .urb = {                                         \
       .size = 192,                                  \
       .min_vs_entries = 64,                         \
       .max_vs_entries = 1856,                       \
+      .max_hs_entries = 672,                        \
+      .max_ds_entries = 1120,                       \
       .max_gs_entries = 640,                        \
    }
 
@@ -343,12 +348,17 @@ static const struct brw_device_info brw_device_info_bxt = {
 
    /* XXX: These are preliminary thread counts and URB sizes. */
    .max_vs_threads = 56,
+   .max_hs_threads = 56,
+   .max_ds_threads = 56,
    .max_gs_threads = 56,
    .max_wm_threads = 32,
+   .max_cs_threads = 28,
    .urb = {
       .size = 64,
       .min_vs_entries = 34,
       .max_vs_entries = 640,
+      .max_hs_entries = 80,
+      .max_ds_entries = 80,
       .max_gs_entries = 256,
    }
 };
