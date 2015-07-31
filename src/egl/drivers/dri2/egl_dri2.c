@@ -1545,6 +1545,10 @@ dri2_create_image_khr_texture_error(int dri_error)
       egl_error = EGL_BAD_PARAMETER;
       break;
 
+   case __DRI_IMAGE_ERROR_BAD_ACCESS:
+      egl_error = EGL_BAD_ACCESS;
+      break;
+
    default:
       assert(0);
       egl_error = EGL_BAD_MATCH;
