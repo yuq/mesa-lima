@@ -79,6 +79,15 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
    int base_reg_count = BRW_MAX_GRF;
    int index = (dispatch_width / 8) - 1;
 
+   if (dispatch_width > 8 && devinfo->gen >= 7) {
+      /* For IVB+, we don't need the PLN hacks or the even-reg alignment in
+       * SIMD16.  Therefore, we can use the exact same register sets for
+       * SIMD16 as we do for SIMD8 and we don't need to recalculate them.
+       */
+      compiler->fs_reg_sets[index] = compiler->fs_reg_sets[0];
+      return;
+   }
+
    /* The registers used to make up almost all values handled in the compiler
     * are a scalar value occupying a single register (or 2 registers in the
     * case of SIMD16, which is handled by dividing base_reg_count by 2 and
