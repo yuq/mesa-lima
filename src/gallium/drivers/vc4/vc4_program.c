@@ -602,125 +602,17 @@ ntq_fsign(struct vc4_compile *c, struct qreg src)
                               qir_uniform_f(c, -1.0));
 }
 
-static struct qreg
-get_channel_from_vpm(struct vc4_compile *c,
-                     struct qreg *vpm_reads,
-                     uint8_t swiz,
-                     const struct util_format_description *desc)
-{
-        const struct util_format_channel_description *chan =
-                &desc->channel[swiz];
-        struct qreg temp;
-
-        if (swiz > UTIL_FORMAT_SWIZZLE_W)
-                return get_swizzled_channel(c, vpm_reads, swiz);
-        else if (chan->size == 32 &&
-                 chan->type == UTIL_FORMAT_TYPE_FLOAT) {
-                return get_swizzled_channel(c, vpm_reads, swiz);
-        } else if (chan->size == 32 &&
-                   chan->type == UTIL_FORMAT_TYPE_SIGNED) {
-                if (chan->normalized) {
-                        return qir_FMUL(c,
-                                        qir_ITOF(c, vpm_reads[swiz]),
-                                        qir_uniform_f(c,
-                                                      1.0 / 0x7fffffff));
-                } else {
-                        return qir_ITOF(c, vpm_reads[swiz]);
-                }
-        } else if (chan->size == 8 &&
-                   (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
-                    chan->type == UTIL_FORMAT_TYPE_SIGNED)) {
-                struct qreg vpm = vpm_reads[0];
-                if (chan->type == UTIL_FORMAT_TYPE_SIGNED) {
-                        temp = qir_XOR(c, vpm, qir_uniform_ui(c, 0x80808080));
-                        if (chan->normalized) {
-                                return qir_FSUB(c, qir_FMUL(c,
-                                                            qir_UNPACK_8_F(c, temp, swiz),
-                                                            qir_uniform_f(c, 2.0)),
-                                                qir_uniform_f(c, 1.0));
-                        } else {
-                                return qir_FADD(c,
-                                                qir_ITOF(c,
-                                                         qir_UNPACK_8_I(c, temp,
-                                                                        swiz)),
-                                                qir_uniform_f(c, -128.0));
-                        }
-                } else {
-                        if (chan->normalized) {
-                                return qir_UNPACK_8_F(c, vpm, swiz);
-                        } else {
-                                return qir_ITOF(c, qir_UNPACK_8_I(c, vpm, swiz));
-                        }
-                }
-        } else if (chan->size == 16 &&
-                   (chan->type == UTIL_FORMAT_TYPE_UNSIGNED ||
-                    chan->type == UTIL_FORMAT_TYPE_SIGNED)) {
-                struct qreg vpm = vpm_reads[swiz / 2];
-
-                /* Note that UNPACK_16F eats a half float, not ints, so we use
-                 * UNPACK_16_I for all of these.
-                 */
-                if (chan->type == UTIL_FORMAT_TYPE_SIGNED) {
-                        temp = qir_ITOF(c, qir_UNPACK_16_I(c, vpm, swiz % 2));
-                        if (chan->normalized) {
-                                return qir_FMUL(c, temp,
-                                                qir_uniform_f(c, 1/32768.0f));
-                        } else {
-                                return temp;
-                        }
-                } else {
-                        /* UNPACK_16I sign-extends, so we have to emit ANDs. */
-                        temp = vpm;
-                        if (swiz == 1 || swiz == 3)
-                                temp = qir_UNPACK_16_I(c, temp, 1);
-                        temp = qir_AND(c, temp, qir_uniform_ui(c, 0xffff));
-                        temp = qir_ITOF(c, temp);
-
-                        if (chan->normalized) {
-                                return qir_FMUL(c, temp,
-                                                qir_uniform_f(c, 1 / 65535.0));
-                        } else {
-                                return temp;
-                        }
-                }
-        } else {
-                return c->undef;
-        }
-}
-
 static void
 emit_vertex_input(struct vc4_compile *c, int attr)
 {
         enum pipe_format format = c->vs_key->attr_formats[attr];
         uint32_t attr_size = util_format_get_blocksize(format);
-        struct qreg vpm_reads[4];
 
         c->vattr_sizes[attr] = align(attr_size, 4);
         for (int i = 0; i < align(attr_size, 4) / 4; i++) {
                 struct qreg vpm = { QFILE_VPM, attr * 4 + i };
-                vpm_reads[i] = qir_MOV(c, vpm);
+                c->inputs[attr * 4 + i] = qir_MOV(c, vpm);
                 c->num_inputs++;
-        }
-
-        bool format_warned = false;
-        const struct util_format_description *desc =
-                util_format_description(format);
-
-        for (int i = 0; i < 4; i++) {
-                uint8_t swiz = desc->swizzle[i];
-                struct qreg result = get_channel_from_vpm(c, vpm_reads,
-                                                          swiz, desc);
-
-                if (result.file == QFILE_NULL) {
-                        if (!format_warned) {
-                                fprintf(stderr,
-                                        "vtx element %d unsupported type: %s\n",
-                                        attr, util_format_name(format));
-                                format_warned = true;
-                        }
-                        result = qir_uniform_f(c, 0.0);
-                }
-                c->inputs[attr * 4 + i] = result;
         }
 }
 
