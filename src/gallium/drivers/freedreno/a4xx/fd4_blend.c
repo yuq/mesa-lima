@@ -84,11 +84,6 @@ fd4_blend_state_create(struct pipe_context *pctx,
 		}
 	}
 
-	if (cso->independent_blend_enable) {
-		DBG("Unsupported! independent blend state");
-		return NULL;
-	}
-
 	so = CALLOC_STRUCT(fd4_blend_stateobj);
 	if (!so)
 		return NULL;
@@ -96,7 +91,12 @@ fd4_blend_state_create(struct pipe_context *pctx,
 	so->base = *cso;
 
 	for (i = 0; i < ARRAY_SIZE(so->rb_mrt); i++) {
-		const struct pipe_rt_blend_state *rt = &cso->rt[i];
+		const struct pipe_rt_blend_state *rt;
+
+		if (cso->independent_blend_enable)
+			rt = &cso->rt[i];
+		else
+			rt = &cso->rt[0];
 
 		so->rb_mrt[i].blend_control =
 				A4XX_RB_MRT_BLEND_CONTROL_RGB_SRC_FACTOR(fd_blend_factor(rt->rgb_src_factor)) |

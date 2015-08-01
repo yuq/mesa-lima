@@ -178,10 +178,12 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
 		return is_a3xx(screen) || is_a4xx(screen);
 
-	case PIPE_CAP_INDEP_BLEND_ENABLE:
-	case PIPE_CAP_INDEP_BLEND_FUNC:
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen);
+
+	case PIPE_CAP_INDEP_BLEND_ENABLE:
+	case PIPE_CAP_INDEP_BLEND_FUNC:
+		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
 		return 256;
