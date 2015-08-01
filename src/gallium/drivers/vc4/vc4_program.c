@@ -1130,14 +1130,8 @@ vc4_blend(struct vc4_compile *c, struct qreg *result,
                 return;
         }
 
-        struct qreg clamped_src[4];
-        struct qreg clamped_dst[4];
-        for (int i = 0; i < 4; i++) {
-                clamped_src[i] = qir_SAT(c, src_color[i]);
-                clamped_dst[i] = qir_SAT(c, dst_color[i]);
-        }
-        src_color = clamped_src;
-        dst_color = clamped_dst;
+        for (int i = 0; i < 4; i++)
+                src_color[i] = qir_SAT(c, src_color[i]);
 
         struct qreg src_blend[4], dst_blend[4];
         for (int i = 0; i < 3; i++) {
