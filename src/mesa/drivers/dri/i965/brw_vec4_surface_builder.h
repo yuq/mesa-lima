@@ -27,4 +27,43 @@
 
 #include "brw_vec4_builder.h"
 
+namespace brw {
+   namespace surface_access {
+      src_reg
+      emit_untyped_read(const vec4_builder &bld,
+                        const src_reg &surface, const src_reg &addr,
+                        unsigned dims, unsigned size,
+                        brw_predicate pred = BRW_PREDICATE_NONE);
+
+      void
+      emit_untyped_write(const vec4_builder &bld, const src_reg &surface,
+                         const src_reg &addr, const src_reg &src,
+                         unsigned dims, unsigned size,
+                         brw_predicate pred = BRW_PREDICATE_NONE);
+
+      src_reg
+      emit_untyped_atomic(const vec4_builder &bld,
+                          const src_reg &surface, const src_reg &addr,
+                          const src_reg &src0, const src_reg &src1,
+                          unsigned dims, unsigned rsize, unsigned op,
+                          brw_predicate pred = BRW_PREDICATE_NONE);
+
+      src_reg
+      emit_typed_read(const vec4_builder &bld, const src_reg &surface,
+                      const src_reg &addr, unsigned dims, unsigned size);
+
+      void
+      emit_typed_write(const vec4_builder &bld, const src_reg &surface,
+                       const src_reg &addr, const src_reg &src,
+                       unsigned dims, unsigned size);
+
+      src_reg
+      emit_typed_atomic(const vec4_builder &bld, const src_reg &surface,
+                        const src_reg &addr,
+                        const src_reg &src0, const src_reg &src1,
+                        unsigned dims, unsigned rsize, unsigned op,
+                        brw_predicate pred = BRW_PREDICATE_NONE);
+   }
+}
+
 #endif
