@@ -242,43 +242,47 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       {" us", " ms", " s"};  /* based on microseconds */
    static const char *hz_units[] =
       {" Hz", " KHz", " MHz", " GHz"};
-   const char *suffix;
+   static const char *percent_units[] = {"%"};
+
+   const char **units;
+   unsigned max_unit;
    double divisor = (type == PIPE_DRIVER_QUERY_TYPE_BYTES) ? 1024 : 1000;
-   int unit = 0;
+   unsigned unit = 0;
    double d = num;
 
-   while (d > divisor) {
+   switch (type) {
+   case PIPE_DRIVER_QUERY_TYPE_MICROSECONDS:
+      max_unit = ARRAY_SIZE(time_units)-1;
+      units = time_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_PERCENTAGE:
+      max_unit = ARRAY_SIZE(percent_units)-1;
+      units = percent_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_BYTES:
+      max_unit = ARRAY_SIZE(byte_units)-1;
+      units = byte_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_HZ:
+      max_unit = ARRAY_SIZE(hz_units)-1;
+      units = hz_units;
+      break;
+   default:
+      max_unit = ARRAY_SIZE(metric_units)-1;
+      units = metric_units;
+   }
+
+   while (d > divisor && unit < max_unit) {
       d /= divisor;
       unit++;
    }
 
-   switch (type) {
-   case PIPE_DRIVER_QUERY_TYPE_MICROSECONDS:
-      assert(unit < ARRAY_SIZE(time_units));
-      suffix = time_units[unit];
-      break;
-   case PIPE_DRIVER_QUERY_TYPE_PERCENTAGE:
-      suffix = "%";
-      break;
-   case PIPE_DRIVER_QUERY_TYPE_BYTES:
-      assert(unit < ARRAY_SIZE(byte_units));
-      suffix = byte_units[unit];
-      break;
-   case PIPE_DRIVER_QUERY_TYPE_HZ:
-      assert(unit < ARRAY_SIZE(hz_units));
-      suffix = hz_units[unit];
-      break;
-   default:
-      assert(unit < ARRAY_SIZE(metric_units));
-      suffix = metric_units[unit];
-   }
-
    if (d >= 100 || d == (int)d)
-      sprintf(out, "%.0f%s", d, suffix);
+      sprintf(out, "%.0f%s", d, units[unit]);
    else if (d >= 10 || d*10 == (int)(d*10))
-      sprintf(out, "%.1f%s", d, suffix);
+      sprintf(out, "%.1f%s", d, units[unit]);
    else
-      sprintf(out, "%.2f%s", d, suffix);
+      sprintf(out, "%.2f%s", d, units[unit]);
 }
 
 static void
