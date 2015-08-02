@@ -92,6 +92,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_GPU_LOAD:
+	case R600_QUERY_NUM_COMPILATIONS:
 		return NULL;
 	}
 
@@ -408,6 +409,7 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_GPU_LOAD:
+	case R600_QUERY_NUM_COMPILATIONS:
 		skip_allocation = true;
 		break;
 	default:
@@ -482,6 +484,9 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 		return true;
 	case R600_QUERY_GPU_LOAD:
 		rquery->begin_result = r600_gpu_load_begin(rctx->screen);
+		return true;
+	case R600_QUERY_NUM_COMPILATIONS:
+		rquery->begin_result = p_atomic_read(&rctx->screen->num_compilations);
 		return true;
 	}
 
@@ -560,6 +565,9 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	case R600_QUERY_GPU_LOAD:
 		rquery->end_result = r600_gpu_load_end(rctx->screen, rquery->begin_result);
 		return;
+	case R600_QUERY_NUM_COMPILATIONS:
+		rquery->end_result = p_atomic_read(&rctx->screen->num_compilations);
+		return;
 	}
 
 	r600_emit_query_end(rctx, rquery);
@@ -619,6 +627,7 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 	case R600_QUERY_GPU_TEMPERATURE:
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
+	case R600_QUERY_NUM_COMPILATIONS:
 		result->u64 = query->end_result - query->begin_result;
 		return TRUE;
 	case R600_QUERY_GPU_LOAD:

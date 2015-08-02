@@ -59,6 +59,7 @@
 #define R600_QUERY_CURRENT_GPU_SCLK	(PIPE_QUERY_DRIVER_SPECIFIC + 9)
 #define R600_QUERY_CURRENT_GPU_MCLK	(PIPE_QUERY_DRIVER_SPECIFIC + 10)
 #define R600_QUERY_GPU_LOAD		(PIPE_QUERY_DRIVER_SPECIFIC + 11)
+#define R600_QUERY_NUM_COMPILATIONS	(PIPE_QUERY_DRIVER_SPECIFIC + 12)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
 #define R600_CONTEXT_PRIVATE_FLAG		(1u << 1)
@@ -287,6 +288,11 @@ struct r600_common_screen {
 	struct r600_resource		*trace_bo;
 	uint32_t			*trace_ptr;
 	unsigned			cs_count;
+
+	/* This must be in the screen, because UE4 uses one context for
+	 * compilation and another one for rendering.
+	 */
+	unsigned			num_compilations;
 
 	/* GPU load thread. */
 	pipe_mutex			gpu_load_mutex;

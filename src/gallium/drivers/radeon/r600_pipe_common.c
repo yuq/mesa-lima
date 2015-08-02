@@ -689,6 +689,8 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct pipe_driver_query_info list[] = {
+		{"num-compilations", R600_QUERY_NUM_COMPILATIONS, {0}, PIPE_DRIVER_QUERY_TYPE_UINT64,
+		 PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE},
 		{"draw-calls", R600_QUERY_DRAW_CALLS, {0}},
 		{"requested-VRAM", R600_QUERY_REQUESTED_VRAM, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
 		{"requested-GTT", R600_QUERY_REQUESTED_GTT, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
@@ -709,7 +711,7 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
 		num_queries = Elements(list);
 	else
-		num_queries = 8;
+		num_queries = 9;
 
 	if (!info)
 		return num_queries;
