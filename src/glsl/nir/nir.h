@@ -292,9 +292,13 @@ typedef struct {
       unsigned int driver_location;
 
       /**
-       * output index for dual source blending.
+       * Output index for dual source blending.
+       *
+       * \note
+       * The GLSL spec only allows the values 0 or 1 for the index in \b dual
+       * source blending.
        */
-      int index;
+      unsigned index:1;
 
       /**
        * Initial binding point for a sampler or UBO.
