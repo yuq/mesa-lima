@@ -762,6 +762,7 @@ union pipe_query_result
    /* PIPE_QUERY_PRIMITIVES_GENERATED */
    /* PIPE_QUERY_PRIMITIVES_EMITTED */
    /* PIPE_DRIVER_QUERY_TYPE_UINT64 */
+   /* PIPE_DRIVER_QUERY_TYPE_HZ */
    uint64_t u64;
 
    /* PIPE_DRIVER_QUERY_TYPE_UINT */
@@ -796,6 +797,7 @@ enum pipe_driver_query_type
    PIPE_DRIVER_QUERY_TYPE_PERCENTAGE   = 3,
    PIPE_DRIVER_QUERY_TYPE_BYTES        = 4,
    PIPE_DRIVER_QUERY_TYPE_MICROSECONDS = 5,
+   PIPE_DRIVER_QUERY_TYPE_HZ           = 6,
 };
 
 enum pipe_driver_query_group_type

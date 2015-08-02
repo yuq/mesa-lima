@@ -240,6 +240,8 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       {"", " k", " M", " G", " T", " P", " E"};
    static const char *time_units[] =
       {" us", " ms", " s"};  /* based on microseconds */
+   static const char *hz_units[] =
+      {" Hz", " KHz", " MHz", " GHz"};
    const char *suffix;
    double divisor = (type == PIPE_DRIVER_QUERY_TYPE_BYTES) ? 1024 : 1000;
    int unit = 0;
@@ -261,6 +263,10 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
    case PIPE_DRIVER_QUERY_TYPE_BYTES:
       assert(unit < ARRAY_SIZE(byte_units));
       suffix = byte_units[unit];
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_HZ:
+      assert(unit < ARRAY_SIZE(hz_units));
+      suffix = hz_units[unit];
       break;
    default:
       assert(unit < ARRAY_SIZE(metric_units));
