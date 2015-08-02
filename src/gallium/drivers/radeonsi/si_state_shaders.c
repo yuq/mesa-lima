@@ -653,6 +653,7 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	sel->so = state->stream_output;
 	tgsi_scan_shader(state->tokens, &sel->info);
+	p_atomic_inc(&sscreen->b.num_shaders_created);
 
 	switch (pipe_shader_type) {
 	case PIPE_SHADER_GEOMETRY:

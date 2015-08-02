@@ -60,6 +60,7 @@
 #define R600_QUERY_CURRENT_GPU_MCLK	(PIPE_QUERY_DRIVER_SPECIFIC + 10)
 #define R600_QUERY_GPU_LOAD		(PIPE_QUERY_DRIVER_SPECIFIC + 11)
 #define R600_QUERY_NUM_COMPILATIONS	(PIPE_QUERY_DRIVER_SPECIFIC + 12)
+#define R600_QUERY_NUM_SHADERS_CREATED	(PIPE_QUERY_DRIVER_SPECIFIC + 13)
 
 #define R600_CONTEXT_STREAMOUT_FLUSH		(1u << 0)
 #define R600_CONTEXT_PRIVATE_FLAG		(1u << 1)
@@ -293,6 +294,10 @@ struct r600_common_screen {
 	 * compilation and another one for rendering.
 	 */
 	unsigned			num_compilations;
+	/* Along with ST_DEBUG=precompile, this should show if applications
+	 * are loading shaders on demand. This is a monotonic counter.
+	 */
+	unsigned			num_shaders_created;
 
 	/* GPU load thread. */
 	pipe_mutex			gpu_load_mutex;

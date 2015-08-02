@@ -93,6 +93,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_NUM_COMPILATIONS:
+	case R600_QUERY_NUM_SHADERS_CREATED:
 		return NULL;
 	}
 
@@ -410,6 +411,7 @@ static struct pipe_query *r600_create_query(struct pipe_context *ctx, unsigned q
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_NUM_COMPILATIONS:
+	case R600_QUERY_NUM_SHADERS_CREATED:
 		skip_allocation = true;
 		break;
 	default:
@@ -487,6 +489,9 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 		return true;
 	case R600_QUERY_NUM_COMPILATIONS:
 		rquery->begin_result = p_atomic_read(&rctx->screen->num_compilations);
+		return true;
+	case R600_QUERY_NUM_SHADERS_CREATED:
+		rquery->begin_result = p_atomic_read(&rctx->screen->num_shaders_created);
 		return true;
 	}
 
@@ -568,6 +573,9 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 	case R600_QUERY_NUM_COMPILATIONS:
 		rquery->end_result = p_atomic_read(&rctx->screen->num_compilations);
 		return;
+	case R600_QUERY_NUM_SHADERS_CREATED:
+		rquery->end_result = p_atomic_read(&rctx->screen->num_shaders_created);
+		return;
 	}
 
 	r600_emit_query_end(rctx, rquery);
@@ -628,6 +636,7 @@ static boolean r600_get_query_buffer_result(struct r600_common_context *ctx,
 	case R600_QUERY_CURRENT_GPU_SCLK:
 	case R600_QUERY_CURRENT_GPU_MCLK:
 	case R600_QUERY_NUM_COMPILATIONS:
+	case R600_QUERY_NUM_SHADERS_CREATED:
 		result->u64 = query->end_result - query->begin_result;
 		return TRUE;
 	case R600_QUERY_GPU_LOAD:
