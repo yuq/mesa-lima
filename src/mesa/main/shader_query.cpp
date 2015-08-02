@@ -506,7 +506,7 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
 static bool
 valid_array_index(const GLchar *name, unsigned *array_index)
 {
-   unsigned idx = 0;
+   long idx = 0;
    const GLchar *out_base_name_end;
 
    idx = parse_program_resource_name(name, &out_base_name_end);
