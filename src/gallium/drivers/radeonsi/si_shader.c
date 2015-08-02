@@ -681,17 +681,7 @@ static LLVMValueRef fetch_output_tcs(
 		enum tgsi_opcode_type type, unsigned swizzle)
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct tgsi_shader_info *info = &shader->selector->info;
-	unsigned name = info->output_semantic_name[reg->Register.Index];
 	LLVMValueRef dw_addr, stride;
-
-	/* Just read the local temp "output" register to get TESSOUTER/INNER. */
-	if (!reg->Register.Indirect &&
-	    (name == TGSI_SEMANTIC_TESSOUTER ||
-	     name == TGSI_SEMANTIC_TESSINNER)) {
-		return radeon_llvm_emit_fetch(bld_base, reg, type, swizzle);
-	}
 
 	if (reg->Register.Dimension) {
 		stride = unpack_param(si_shader_ctx, SI_PARAM_TCS_OUT_LAYOUT, 13, 8);
@@ -731,8 +721,6 @@ static void store_output_tcs(struct lp_build_tgsi_context * bld_base,
 			     LLVMValueRef dst[4])
 {
 	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct tgsi_shader_info *sinfo = &shader->selector->info;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
 	unsigned chan_index;
 	LLVMValueRef dw_addr, stride;
@@ -745,14 +733,6 @@ static void store_output_tcs(struct lp_build_tgsi_context * bld_base,
 		radeon_llvm_emit_store(bld_base, inst, info, dst);
 		return;
 	}
-
-	/* Write tessellation levels to "output" temp registers.
-	 * Also write them to LDS as per-patch outputs (below).
-	 */
-	if (!reg->Register.Indirect &&
-	    (sinfo->output_semantic_name[reg->Register.Index] == TGSI_SEMANTIC_TESSINNER ||
-             sinfo->output_semantic_name[reg->Register.Index] == TGSI_SEMANTIC_TESSOUTER))
-		radeon_llvm_emit_store(bld_base, inst, info, dst);
 
 	if (reg->Register.Dimension) {
 		stride = unpack_param(si_shader_ctx, SI_PARAM_TCS_OUT_LAYOUT, 13, 8);
@@ -1854,58 +1834,78 @@ handle_semantic:
 	}
 }
 
-static void si_write_tess_factors(struct si_shader_context *si_shader_ctx,
-				  unsigned name, LLVMValueRef *out_ptr)
+/* This only writes the tessellation factor levels. */
+static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct lp_build_tgsi_context *bld_base = &si_shader_ctx->radeon_bld.soa.bld_base;
+	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	struct si_shader *shader = si_shader_ctx->shader;
+	unsigned tess_inner_index, tess_outer_index;
+	LLVMValueRef lds_base, lds_inner, lds_outer;
 	LLVMValueRef tf_base, rel_patch_id, byteoffset, buffer, rw_buffers;
-	LLVMValueRef output, out[4];
+	LLVMValueRef out[6], vec0, vec1, invocation_id;
 	unsigned stride, outer_comps, inner_comps, i;
+	struct lp_build_if_state if_ctx;
 
-	if (name != TGSI_SEMANTIC_TESSOUTER &&
-	    name != TGSI_SEMANTIC_TESSINNER) {
-		assert(0);
-		return;
-	}
+	invocation_id = unpack_param(si_shader_ctx, SI_PARAM_REL_IDS, 8, 5);
 
+	/* Do this only for invocation 0, because the tess levels are per-patch,
+	 * not per-vertex.
+	 *
+	 * This can't jump, because invocation 0 executes this. It should
+	 * at least mask out the loads and stores for other invocations.
+	 */
+	lp_build_if(&if_ctx, gallivm,
+		    LLVMBuildICmp(gallivm->builder, LLVMIntEQ,
+				  invocation_id, bld_base->uint_bld.zero, ""));
+
+	/* Determine the layout of one tess factor element in the buffer. */
 	switch (shader->key.tcs.prim_mode) {
 	case PIPE_PRIM_LINES:
-		stride = 2;
+		stride = 2; /* 2 dwords, 1 vec2 store */
 		outer_comps = 2;
 		inner_comps = 0;
 		break;
 	case PIPE_PRIM_TRIANGLES:
-		stride = 4;
+		stride = 4; /* 4 dwords, 1 vec4 store */
 		outer_comps = 3;
 		inner_comps = 1;
 		break;
 	case PIPE_PRIM_QUADS:
-		stride = 6;
+		stride = 6; /* 6 dwords, 2 stores (vec4 + vec2) */
 		outer_comps = 4;
 		inner_comps = 2;
 		break;
 	default:
 		assert(0);
+		return;
 	}
 
-	/* Load the outputs as i32. */
-	for (i = 0; i < 4; i++)
-		out[i] = LLVMBuildBitCast(gallivm->builder,
-				LLVMBuildLoad(gallivm->builder, out_ptr[i], ""),
-				bld_base->uint_bld.elem_type, "");
+	/* Load tess_inner and tess_outer from LDS.
+	 * Any invocation can write them, so we can't get them from a temporary.
+	 */
+	tess_inner_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSINNER, 0);
+	tess_outer_index = si_shader_io_get_unique_index(TGSI_SEMANTIC_TESSOUTER, 0);
 
-	/* Convert the outputs to vectors. */
-	if (name == TGSI_SEMANTIC_TESSOUTER)
-		output = lp_build_gather_values(gallivm, out,
-						util_next_power_of_two(outer_comps));
-	else if (inner_comps > 1)
-		output = lp_build_gather_values(gallivm, out, inner_comps);
-	else if (inner_comps == 1)
-		output = out[0];
-	else
-		return;
+	lds_base = get_tcs_out_current_patch_data_offset(si_shader_ctx);
+	lds_inner = LLVMBuildAdd(gallivm->builder, lds_base,
+				 lp_build_const_int32(gallivm,
+						      tess_inner_index * 4), "");
+	lds_outer = LLVMBuildAdd(gallivm->builder, lds_base,
+				 lp_build_const_int32(gallivm,
+						      tess_outer_index * 4), "");
+
+	for (i = 0; i < outer_comps; i++)
+		out[i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_outer);
+	for (i = 0; i < inner_comps; i++)
+		out[outer_comps+i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_inner);
+
+	/* Convert the outputs to vectors for stores. */
+	vec0 = lp_build_gather_values(gallivm, out, MIN2(stride, 4));
+	vec1 = NULL;
+
+	if (stride > 4)
+		vec1 = lp_build_gather_values(gallivm, out+4, stride - 4);
 
 	/* Get the buffer. */
 	rw_buffers = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
@@ -1913,22 +1913,20 @@ static void si_write_tess_factors(struct si_shader_context *si_shader_ctx,
 	buffer = build_indexed_load_const(si_shader_ctx, rw_buffers,
 			lp_build_const_int32(gallivm, SI_RING_TESS_FACTOR));
 
-	/* Get offsets. */
+	/* Get the offset. */
 	tf_base = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 			       SI_PARAM_TESS_FACTOR_OFFSET);
 	rel_patch_id = get_rel_patch_id(si_shader_ctx);
 	byteoffset = LLVMBuildMul(gallivm->builder, rel_patch_id,
 				  lp_build_const_int32(gallivm, 4 * stride), "");
 
-	/* Store the output. */
-	if (name == TGSI_SEMANTIC_TESSOUTER) {
-		build_tbuffer_store_dwords(si_shader_ctx, buffer, output,
-					   outer_comps, byteoffset, tf_base, 0);
-	} else if (inner_comps) {
-		build_tbuffer_store_dwords(si_shader_ctx, buffer, output,
-					   inner_comps, byteoffset, tf_base,
-					   outer_comps * 4);
-	}
+	/* Store the outputs. */
+	build_tbuffer_store_dwords(si_shader_ctx, buffer, vec0,
+				   MIN2(stride, 4), byteoffset, tf_base, 0);
+	if (vec1)
+		build_tbuffer_store_dwords(si_shader_ctx, buffer, vec1,
+					   stride - 4, byteoffset, tf_base, 16);
+	lp_build_endif(&if_ctx);
 }
 
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context * bld_base)
@@ -1958,26 +1956,6 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context * bld_base)
 		for (chan = 0; chan < 4; chan++) {
 			lds_store(bld_base, chan, dw_addr,
 				  LLVMBuildLoad(gallivm->builder, out_ptr[chan], ""));
-		}
-	}
-}
-
-static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context * bld_base)
-{
-	struct si_shader_context *si_shader_ctx = si_shader_context(bld_base);
-	struct si_shader *shader = si_shader_ctx->shader;
-	struct tgsi_shader_info *info = &shader->selector->info;
-	unsigned i;
-
-	/* Only write tessellation factors. Other outputs have already been
-	 * written to LDS by instructions. */
-	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr = si_shader_ctx->radeon_bld.soa.outputs[i];
-		unsigned name = info->output_semantic_name[i];
-
-		if (name == TGSI_SEMANTIC_TESSINNER ||
-		    name == TGSI_SEMANTIC_TESSOUTER) {
-			si_write_tess_factors(si_shader_ctx, name, out_ptr);
 		}
 	}
 }
