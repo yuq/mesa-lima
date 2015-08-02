@@ -472,7 +472,7 @@ static boolean r600_begin_query(struct pipe_context *ctx,
 		rquery->begin_result = 0;
 		return true;
 	case R600_QUERY_BUFFER_WAIT_TIME:
-		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_BUFFER_WAIT_TIME_NS);
+		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_BUFFER_WAIT_TIME_NS) / 1000;
 		return true;
 	case R600_QUERY_NUM_CS_FLUSHES:
 		rquery->begin_result = rctx->ws->query_value(rctx->ws, RADEON_NUM_CS_FLUSHES);
@@ -534,7 +534,7 @@ static void r600_end_query(struct pipe_context *ctx, struct pipe_query *query)
 		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_REQUESTED_GTT_MEMORY);
 		return;
 	case R600_QUERY_BUFFER_WAIT_TIME:
-		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_BUFFER_WAIT_TIME_NS);
+		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_BUFFER_WAIT_TIME_NS) / 1000;
 		return;
 	case R600_QUERY_NUM_CS_FLUSHES:
 		rquery->end_result = rctx->ws->query_value(rctx->ws, RADEON_NUM_CS_FLUSHES);
