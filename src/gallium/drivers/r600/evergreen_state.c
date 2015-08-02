@@ -1028,7 +1028,10 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 	macro_aspect = rtex->surface.mtilea;
 	bankw = rtex->surface.bankw;
 	bankh = rtex->surface.bankh;
-	fmask_bankh = rtex->fmask.bank_height;
+	if (rtex->fmask.size)
+		fmask_bankh = rtex->fmask.bank_height;
+	else
+		fmask_bankh = rtex->surface.bankh;
 	tile_split = eg_tile_split(tile_split);
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
@@ -1149,10 +1152,11 @@ void evergreen_init_color_surface(struct r600_context *rctx,
 	surf->cb_color_attrib = color_attrib;
 	if (rtex->fmask.size) {
 		surf->cb_color_fmask = (base_offset + rtex->fmask.offset) >> 8;
+		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
 	} else {
 		surf->cb_color_fmask = surf->cb_color_base;
+		surf->cb_color_fmask_slice = S_028C88_TILE_MAX(slice);
 	}
-	surf->cb_color_fmask_slice = S_028C88_TILE_MAX(rtex->fmask.slice_tile_max);
 
 	surf->color_initialized = true;
 }
