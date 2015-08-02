@@ -2490,6 +2490,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			output[j].array_base = 0;
 			output[j].op = CF_OP_EXPORT;
 			j++;
+			shader->nr_ps_color_exports++;
 		}
 
 		noutput = j;
