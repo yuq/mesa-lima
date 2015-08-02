@@ -896,13 +896,15 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
                has_occlusion_query(hud->pipe->screen)) {
          hud_pipe_query_install(pane, hud->pipe, "samples-passed",
                                 PIPE_QUERY_OCCLUSION_COUNTER, 0, 0,
-                                PIPE_DRIVER_QUERY_TYPE_UINT64);
+                                PIPE_DRIVER_QUERY_TYPE_UINT64,
+                                PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE);
       }
       else if (strcmp(name, "primitives-generated") == 0 &&
                has_streamout(hud->pipe->screen)) {
          hud_pipe_query_install(pane, hud->pipe, "primitives-generated",
                                 PIPE_QUERY_PRIMITIVES_GENERATED, 0, 0,
-                                PIPE_DRIVER_QUERY_TYPE_UINT64);
+                                PIPE_DRIVER_QUERY_TYPE_UINT64,
+                                PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE);
       }
       else {
          boolean processed = FALSE;
@@ -929,7 +931,8 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
             if (i < Elements(pipeline_statistics_names)) {
                hud_pipe_query_install(pane, hud->pipe, name,
                                       PIPE_QUERY_PIPELINE_STATISTICS, i,
-                                      0, PIPE_DRIVER_QUERY_TYPE_UINT64);
+                                      0, PIPE_DRIVER_QUERY_TYPE_UINT64,
+                                      PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE);
                processed = TRUE;
             }
          }
