@@ -235,7 +235,7 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
                          char *out)
 {
    static const char *byte_units[] =
-      {"", " KB", " MB", " GB", " TB", " PB", " EB"};
+      {" B", " KB", " MB", " GB", " TB", " PB", " EB"};
    static const char *metric_units[] =
       {"", " k", " M", " G", " T", " P", " E"};
    static const char *time_units[] =
