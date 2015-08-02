@@ -231,8 +231,8 @@ hud_draw_string(struct hud_context *hud, unsigned x, unsigned y,
 }
 
 static void
-number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
-                         char *out)
+number_to_human_readable(uint64_t num, uint64_t max_value,
+                         enum pipe_driver_query_type type, char *out)
 {
    static const char *byte_units[] =
       {" B", " KB", " MB", " GB", " TB", " PB", " EB"};
@@ -268,8 +268,13 @@ number_to_human_readable(uint64_t num, enum pipe_driver_query_type type,
       units = hz_units;
       break;
    default:
-      max_unit = ARRAY_SIZE(metric_units)-1;
-      units = metric_units;
+      if (max_value == 100) {
+         max_unit = ARRAY_SIZE(percent_units)-1;
+         units = percent_units;
+      } else {
+         max_unit = ARRAY_SIZE(metric_units)-1;
+         units = metric_units;
+      }
    }
 
    while (d > divisor && unit < max_unit) {
@@ -330,7 +335,7 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
       unsigned y = pane->inner_y1 + pane->inner_height * (5 - i) / 5 -
                    hud->font.glyph_height / 2;
 
-      number_to_human_readable(pane->max_value * i / 5,
+      number_to_human_readable(pane->max_value * i / 5, pane->max_value,
                                pane->type, str);
       hud_draw_string(hud, x, y, "%s", str);
    }
@@ -341,7 +346,7 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
       unsigned x = pane->x1 + 2;
       unsigned y = pane->y2 + 2 + i*hud->font.glyph_height;
 
-      number_to_human_readable(gr->current_value,
+      number_to_human_readable(gr->current_value, pane->max_value,
                                pane->type, str);
       hud_draw_string(hud, x, y, "  %s: %s", gr->name, str);
       i++;
