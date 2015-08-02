@@ -698,8 +698,8 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 		{"VRAM-usage", R600_QUERY_VRAM_USAGE, {rscreen->info.vram_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
 		{"GTT-usage", R600_QUERY_GTT_USAGE, {rscreen->info.gart_size}, PIPE_DRIVER_QUERY_TYPE_BYTES},
 		{"temperature", R600_QUERY_GPU_TEMPERATURE, {100}},
-		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}},
-		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}},
+		{"shader-clock", R600_QUERY_CURRENT_GPU_SCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
+		{"memory-clock", R600_QUERY_CURRENT_GPU_MCLK, {0}, PIPE_DRIVER_QUERY_TYPE_HZ},
 		{"GPU-load", R600_QUERY_GPU_LOAD, {100}}
 	};
 	unsigned num_queries;
