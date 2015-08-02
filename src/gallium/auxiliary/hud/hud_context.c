@@ -332,7 +332,7 @@ hud_pane_accumulate_vertices(struct hud_context *hud,
 
       number_to_human_readable(pane->max_value * i / 5,
                                pane->type, str);
-      hud_draw_string(hud, x, y, str);
+      hud_draw_string(hud, x, y, "%s", str);
    }
 
    /* draw info below the pane */
