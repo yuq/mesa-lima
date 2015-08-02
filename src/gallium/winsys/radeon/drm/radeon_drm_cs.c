@@ -379,11 +379,16 @@ static boolean radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
 static boolean radeon_drm_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64_t vram, uint64_t gtt)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
-    boolean status =
-        (cs->csc->used_gart + gtt) < cs->ws->info.gart_size * 0.7 &&
-        (cs->csc->used_vram + vram) < cs->ws->info.vram_size * 0.7;
 
-    return status;
+    vram += cs->csc->used_vram;
+    gtt += cs->csc->used_gart;
+
+    /* Anything that goes above the VRAM size should go to GTT. */
+    if (vram > cs->ws->info.vram_size)
+        gtt += vram - cs->ws->info.vram_size;
+
+    /* Now we just need to check if we have enough GTT. */
+    return gtt < cs->ws->info.gart_size * 0.7;
 }
 
 void radeon_drm_cs_emit_ioctl_oneshot(struct radeon_drm_cs *cs, struct radeon_cs_context *csc)
