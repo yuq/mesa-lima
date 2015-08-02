@@ -161,6 +161,9 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 		flags |= RADEON_FLAG_NO_CPU_ACCESS;
 	}
 
+	if (rscreen->debug_flags & DBG_NO_WC)
+		flags &= ~RADEON_FLAG_GTT_WC;
+
 	/* Allocate a new resource. */
 	new_buf = rscreen->ws->buffer_create(rscreen->ws, size, alignment,
 					     use_reusable_pool,

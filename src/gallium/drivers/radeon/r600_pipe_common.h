@@ -97,6 +97,7 @@
 #define DBG_FORCE_DMA		(1llu << 38)
 #define DBG_PRECOMPILE		(1llu << 39)
 #define DBG_INFO		(1llu << 40)
+#define DBG_NO_WC		(1llu << 41)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
