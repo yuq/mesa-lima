@@ -393,12 +393,7 @@ static void r600_clear(struct pipe_context *ctx, unsigned buffers,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct pipe_framebuffer_state *fb = &rctx->framebuffer.state;
 
-	/* Single-sample fast color clear is broken on r600g:
-	 *   https://bugs.freedesktop.org/show_bug.cgi?id=73528
-	 *   https://bugs.freedesktop.org/show_bug.cgi?id=82186
-	 */
-	if (buffers & PIPE_CLEAR_COLOR && rctx->b.chip_class >= EVERGREEN &&
-	    rctx->framebuffer.nr_samples > 1) {
+	if (buffers & PIPE_CLEAR_COLOR && rctx->b.chip_class >= EVERGREEN) {
 		evergreen_do_fast_color_clear(&rctx->b, fb, &rctx->framebuffer.atom,
 					      &buffers, color);
 		if (!buffers)
