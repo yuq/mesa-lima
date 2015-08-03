@@ -2062,12 +2062,12 @@
 #define     V_008F14_IMG_DATA_FORMAT_8_24                           0x14
 #define     V_008F14_IMG_DATA_FORMAT_24_8                           0x15
 #define     V_008F14_IMG_DATA_FORMAT_X24_8_32                       0x16
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_23                    0x17
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_24                    0x18
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_25                    0x19
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_26                    0x1A
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_27                    0x1B
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_28                    0x1C
+#define     V_008F14_IMG_DATA_FORMAT_8_AS_8_8_8_8                   0x17 /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGB                       0x18 /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGBA                      0x19 /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_R                         0x1A /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RG                        0x1B /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGBA1                     0x1C /* stoney+ */
 #define     V_008F14_IMG_DATA_FORMAT_RESERVED_29                    0x1D
 #define     V_008F14_IMG_DATA_FORMAT_RESERVED_30                    0x1E
 #define     V_008F14_IMG_DATA_FORMAT_RESERVED_31                    0x1F
@@ -2081,8 +2081,8 @@
 #define     V_008F14_IMG_DATA_FORMAT_BC5                            0x27
 #define     V_008F14_IMG_DATA_FORMAT_BC6                            0x28
 #define     V_008F14_IMG_DATA_FORMAT_BC7                            0x29
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_42                    0x2A
-#define     V_008F14_IMG_DATA_FORMAT_RESERVED_43                    0x2B
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_16_16_16_16              0x2A /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_32_32_32_32              0x2B /* stoney+ */
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F1                   0x2C
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F1                   0x2D
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S8_F1                   0x2E
@@ -2100,8 +2100,8 @@
 #define     V_008F14_IMG_DATA_FORMAT_6_5_5                          0x3A
 #define     V_008F14_IMG_DATA_FORMAT_1                              0x3B
 #define     V_008F14_IMG_DATA_FORMAT_1_REVERSED                     0x3C
-#define     V_008F14_IMG_DATA_FORMAT_32_AS_8                        0x3D
-#define     V_008F14_IMG_DATA_FORMAT_32_AS_8_8                      0x3E
+#define     V_008F14_IMG_DATA_FORMAT_32_AS_8                        0x3D /* not on stoney */
+#define     V_008F14_IMG_DATA_FORMAT_32_AS_8_8                      0x3E /* not on stoney */
 #define     V_008F14_IMG_DATA_FORMAT_32_AS_32_32_32_32              0x3F
 #define   S_008F14_NUM_FORMAT(x)                                      (((x) & 0x0F) << 26)
 #define   G_008F14_NUM_FORMAT(x)                                      (((x) >> 26) & 0x0F)

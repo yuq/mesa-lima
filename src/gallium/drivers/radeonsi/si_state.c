@@ -1376,6 +1376,29 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 		}
 	}
 
+	if (desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
+	    sscreen->b.family >= CHIP_STONEY) {
+		switch (format) {
+		case PIPE_FORMAT_ETC2_RGB8:
+		case PIPE_FORMAT_ETC2_SRGB8:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGB;
+		case PIPE_FORMAT_ETC2_RGB8A1:
+		case PIPE_FORMAT_ETC2_SRGB8A1:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGBA1;
+		case PIPE_FORMAT_ETC2_RGBA8:
+		case PIPE_FORMAT_ETC2_SRGBA8:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RGBA;
+		case PIPE_FORMAT_ETC2_R11_UNORM:
+		case PIPE_FORMAT_ETC2_R11_SNORM:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_R;
+		case PIPE_FORMAT_ETC2_RG11_UNORM:
+		case PIPE_FORMAT_ETC2_RG11_SNORM:
+			return V_008F14_IMG_DATA_FORMAT_ETC2_RG;
+		default:
+			goto out_unknown;
+		}
+	}
+
 	if (desc->layout == UTIL_FORMAT_LAYOUT_BPTC) {
 		if (!enable_compressed_formats)
 			goto out_unknown;
@@ -2808,12 +2831,17 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				case PIPE_FORMAT_DXT3_SRGBA:
 				case PIPE_FORMAT_DXT5_SRGBA:
 				case PIPE_FORMAT_BPTC_SRGBA:
+				case PIPE_FORMAT_ETC2_SRGB8:
+				case PIPE_FORMAT_ETC2_SRGB8A1:
+				case PIPE_FORMAT_ETC2_SRGBA8:
 					num_format = V_008F14_IMG_NUM_FORMAT_SRGB;
 					break;
 				case PIPE_FORMAT_RGTC1_SNORM:
 				case PIPE_FORMAT_LATC1_SNORM:
 				case PIPE_FORMAT_RGTC2_SNORM:
 				case PIPE_FORMAT_LATC2_SNORM:
+				case PIPE_FORMAT_ETC2_R11_SNORM:
+				case PIPE_FORMAT_ETC2_RG11_SNORM:
 				/* implies float, so use SNORM/UNORM to determine
 				   whether data is signed or not */
 				case PIPE_FORMAT_BPTC_RGB_FLOAT:
