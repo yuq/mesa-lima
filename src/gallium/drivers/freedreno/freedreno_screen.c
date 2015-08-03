@@ -163,7 +163,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
-	case PIPE_CAP_CUBE_MAP_ARRAY:
 	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
 	case PIPE_CAP_START_INSTANCE:
 	case PIPE_CAP_COMPUTE:
@@ -195,6 +194,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_a3xx(screen);
 
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
+	case PIPE_CAP_CUBE_MAP_ARRAY:
 		return is_a4xx(screen);
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:

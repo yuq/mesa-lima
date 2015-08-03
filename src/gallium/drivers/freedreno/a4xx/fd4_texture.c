@@ -187,9 +187,9 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A4XX_TEX_CONST_3_LAYERSZ(rsc->layer_size);
 		break;
 	case PIPE_TEXTURE_CUBE:
-	case PIPE_TEXTURE_CUBE_ARRAY:  /* ?? not sure about _CUBE_ARRAY */
+	case PIPE_TEXTURE_CUBE_ARRAY:
 		so->texconst3 =
-			A4XX_TEX_CONST_3_DEPTH(1) |
+			A4XX_TEX_CONST_3_DEPTH(prsc->array_size / 6) |
 			A4XX_TEX_CONST_3_LAYERSZ(rsc->layer_size);
 		break;
 	case PIPE_TEXTURE_3D:

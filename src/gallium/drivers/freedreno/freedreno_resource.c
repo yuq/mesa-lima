@@ -459,7 +459,6 @@ fd_resource_create(struct pipe_screen *pscreen,
 	if (is_a4xx(fd_screen(pscreen))) {
 		switch (tmpl->target) {
 		case PIPE_TEXTURE_3D:
-			/* TODO 3D_ARRAY? */
 			rsc->layer_first = false;
 			break;
 		default:
