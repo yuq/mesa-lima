@@ -109,6 +109,29 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          uint8_t resolve_status;
          nir_alu_instr *alu = nir_instr_as_alu(instr);
          switch (alu->op) {
+         case nir_op_bany2:
+         case nir_op_bany3:
+         case nir_op_bany4:
+         case nir_op_ball_fequal2:
+         case nir_op_ball_iequal2:
+         case nir_op_ball_fequal3:
+         case nir_op_ball_iequal3:
+         case nir_op_ball_fequal4:
+         case nir_op_ball_iequal4:
+         case nir_op_bany_fnequal2:
+         case nir_op_bany_inequal2:
+         case nir_op_bany_fnequal3:
+         case nir_op_bany_inequal3:
+         case nir_op_bany_fnequal4:
+         case nir_op_bany_inequal4:
+            /* These are only implemented by the vec4 backend and its
+             * implementation emits resolved booleans.  At some point in the
+             * future, this may change and we'll have to remove some of the
+             * above cases.
+             */
+            resolve_status = BRW_NIR_BOOLEAN_NO_RESOLVE;
+            break;
+
          case nir_op_imov:
          case nir_op_inot:
             /* This is a single-source instruction.  Just copy the resolve
