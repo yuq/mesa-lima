@@ -109,30 +109,6 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          uint8_t resolve_status;
          nir_alu_instr *alu = nir_instr_as_alu(instr);
          switch (alu->op) {
-         case nir_op_flt:
-         case nir_op_ilt:
-         case nir_op_ult:
-         case nir_op_fge:
-         case nir_op_ige:
-         case nir_op_uge:
-         case nir_op_feq:
-         case nir_op_ieq:
-         case nir_op_fne:
-         case nir_op_ine:
-         case nir_op_f2b:
-         case nir_op_i2b:
-            /* This instruction will turn into a CMP when we actually emit
-             * so the result will have to be resolved before it can be used.
-             */
-            resolve_status = BRW_NIR_BOOLEAN_UNRESOLVED;
-
-            /* Even though the destination is allowed to be left unresolved,
-             * the sources are treated as regular integers or floats so
-             * they need to be resolved.
-             */
-            nir_foreach_src(instr, src_mark_needs_resolve, NULL);
-            break;
-
          case nir_op_imov:
          case nir_op_inot:
             /* This is a single-source instruction.  Just copy the resolve
@@ -169,7 +145,21 @@ analyze_boolean_resolves_block(nir_block *block, void *void_state)
          }
 
          default:
-            resolve_status = BRW_NIR_NON_BOOLEAN;
+            if (nir_op_infos[alu->op].output_type == nir_type_bool) {
+               /* This instructions will turn into a CMP when we actually emit
+                * them so the result will have to be resolved before it can be
+                * used.
+                */
+               resolve_status = BRW_NIR_BOOLEAN_UNRESOLVED;
+
+               /* Even though the destination is allowed to be left
+                * unresolved, the sources are treated as regular integers or
+                * floats so they need to be resolved.
+                */
+               nir_foreach_src(instr, src_mark_needs_resolve, NULL);
+            } else {
+               resolve_status = BRW_NIR_NON_BOOLEAN;
+            }
          }
 
          /* If the destination is SSA, go ahead allow unresolved booleans.
