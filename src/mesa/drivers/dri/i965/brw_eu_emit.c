@@ -350,7 +350,10 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    brw_inst_set_src0_address_mode(devinfo, inst, reg.address_mode);
 
    if (reg.file == BRW_IMMEDIATE_VALUE) {
-      brw_inst_set_imm_ud(devinfo, inst, reg.ud);
+      if (reg.type == BRW_REGISTER_TYPE_DF)
+         brw_inst_set_imm_df(devinfo, inst, reg.df);
+      else
+         brw_inst_set_imm_ud(devinfo, inst, reg.ud);
 
       /* The Bspec's section titled "Non-present Operands" claims that if src0
        * is an immediate that src1's type must be the same as that of src0.
@@ -373,13 +376,20 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
        * The GM45 instruction compaction tables do not contain mapped meanings
        * so it's not clear whether it has the restriction. We'll assume it was
        * lifted on SNB. (FINISHME: decode the GM45 tables and check.)
+       *
+       * Don't do any of this for 64-bit immediates, since the src1 fields
+       * overlap with the immediate and setting them would overwrite the
+       * immediate we set.
        */
-      brw_inst_set_src1_reg_file(devinfo, inst, BRW_ARCHITECTURE_REGISTER_FILE);
-      if (devinfo->gen < 6) {
-         brw_inst_set_src1_reg_type(devinfo, inst,
-                                    brw_inst_src0_reg_type(devinfo, inst));
-      } else {
-         brw_inst_set_src1_reg_type(devinfo, inst, BRW_HW_REG_TYPE_UD);
+      if (type_sz(reg.type) < 8) {
+         brw_inst_set_src1_reg_file(devinfo, inst,
+                                    BRW_ARCHITECTURE_REGISTER_FILE);
+         if (devinfo->gen < 6) {
+            brw_inst_set_src1_reg_type(devinfo, inst,
+                                       brw_inst_src0_reg_type(devinfo, inst));
+         } else {
+            brw_inst_set_src1_reg_type(devinfo, inst, BRW_HW_REG_TYPE_UD);
+         }
       }
 
       /* Compacted instructions only have 12-bits (plus 1 for the other 20)
@@ -849,6 +859,10 @@ static brw_inst *
 brw_alu2(struct brw_codegen *p, unsigned opcode,
          struct brw_reg dest, struct brw_reg src0, struct brw_reg src1)
 {
+   /* 64-bit immediates are only supported on 1-src instructions */
+   assert(src0.file != BRW_IMMEDIATE_VALUE || type_sz(src0.type) <= 4);
+   assert(src1.file != BRW_IMMEDIATE_VALUE || type_sz(src1.type) <= 4);
+
    brw_inst *insn = next_insn(p, opcode);
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);
