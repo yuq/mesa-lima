@@ -240,8 +240,8 @@ anv_ptr_free_list_push(void **list, void *elem)
    } while (old != current);
 }
 
-static int
-anv_block_pool_grow(struct anv_block_pool *pool);
+static uint32_t
+anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size);
 
 void
 anv_block_pool_init(struct anv_block_pool *pool,
@@ -260,7 +260,7 @@ anv_block_pool_init(struct anv_block_pool *pool,
                    round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
 
    /* Immediately grow the pool so we'll have a backing bo. */
-   anv_block_pool_grow(pool);
+   anv_block_pool_grow(pool, 0);
 }
 
 void
@@ -280,38 +280,38 @@ anv_block_pool_finish(struct anv_block_pool *pool)
    close(pool->fd);
 }
 
-static int
-anv_block_pool_grow(struct anv_block_pool *pool)
+static uint32_t
+anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
 {
    size_t size;
    void *map;
    int gem_handle;
    struct anv_mmap_cleanup *cleanup;
 
-   if (pool->size == 0) {
+   if (old_size == 0) {
       size = 32 * pool->block_size;
    } else {
-      size = pool->size * 2;
+      size = old_size * 2;
    }
 
    cleanup = anv_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
-      return -1;
+      return 0;
    *cleanup = ANV_MMAP_CLEANUP_INIT;
 
-   if (pool->size == 0)
+   if (old_size == 0)
       pool->fd = memfd_create("block pool", MFD_CLOEXEC);
 
    if (pool->fd == -1)
-      return -1;
+      return 0;
 
    if (ftruncate(pool->fd, size) == -1)
-      return -1;
+      return 0;
 
    /* First try to see if mremap can grow the map in place. */
    map = MAP_FAILED;
-   if (pool->size > 0)
-      map = mremap(pool->map, pool->size, size, 0);
+   if (old_size > 0)
+      map = mremap(pool->map, old_size, size, 0);
    if (map == MAP_FAILED) {
       /* Just leak the old map until we destroy the pool.  We can't munmap it
        * without races or imposing locking on the block allocate fast path. On
@@ -325,11 +325,11 @@ anv_block_pool_grow(struct anv_block_pool *pool)
       cleanup->size = size;
    }
    if (map == MAP_FAILED)
-      return -1;
+      return 0;
 
    gem_handle = anv_gem_userptr(pool->device, map, size);
    if (gem_handle == 0)
-      return -1;
+      return 0;
    cleanup->gem_handle = gem_handle;
 
    /* Now that we successfull allocated everything, we can write the new
@@ -348,7 +348,7 @@ anv_block_pool_grow(struct anv_block_pool *pool)
    __sync_synchronize();
    pool->size = size;
 
-   return 0;
+   return size;
 }
 
 uint32_t
@@ -373,9 +373,9 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
        * pool->next_block acts a mutex: threads who try to allocate now will
        * get block indexes above the current limit and hit futex_wait
        * below. */
-      int err = anv_block_pool_grow(pool);
-      assert(err == 0);
-      (void) err;
+      uint32_t new_size = anv_block_pool_grow(pool, size);
+      assert(new_size > 0);
+      (void) new_size;
       futex_wake(&pool->size, INT_MAX);
    } else {
       futex_wait(&pool->size, size);
