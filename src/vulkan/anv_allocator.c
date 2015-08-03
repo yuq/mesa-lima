@@ -153,9 +153,9 @@ round_to_power_of_two(uint32_t value)
 static bool
 anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
 {
-   union anv_free_list current, next, old;
+   union anv_free_list current, new, old;
 
-   current = *list;
+   current.u64 = list->u64;
    while (current.offset != EMPTY) {
       /* We have to add a memory barrier here so that the list head (and
        * offset) gets read before we read the map pointer.  This way we
@@ -165,9 +165,9 @@ anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
       __sync_synchronize();
 
       uint32_t *next_ptr = *map + current.offset;
-      next.offset = VG_NOACCESS_READ(next_ptr);
-      next.count = current.count + 1;
-      old.u64 = __sync_val_compare_and_swap(&list->u64, current.u64, next.u64);
+      new.offset = VG_NOACCESS_READ(next_ptr);
+      new.count = current.count + 1;
+      old.u64 = __sync_val_compare_and_swap(&list->u64, current.u64, new.u64);
       if (old.u64 == current.u64) {
          *offset = current.offset;
          return true;
