@@ -1036,7 +1036,7 @@ imm(FILE *file, const struct brw_device_info *devinfo, unsigned type, brw_inst *
       format(file, "%-gF", brw_inst_imm_f(devinfo, inst));
       break;
    case GEN8_HW_REG_IMM_TYPE_DF:
-      string(file, "Double IMM");
+      format(file, "%-gDF", brw_inst_imm_df(devinfo, inst));
       break;
    case GEN8_HW_REG_IMM_TYPE_HF:
       string(file, "Half Float IMM");
