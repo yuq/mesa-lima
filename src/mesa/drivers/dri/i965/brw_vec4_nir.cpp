@@ -1292,6 +1292,20 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    default:
       unreachable("Unimplemented ALU operation");
    }
+
+   /* If we need to do a boolean resolve, replace the result with -(x & 1)
+    * to sign extend the low bit to 0/~0
+    */
+   if (devinfo->gen <= 5 &&
+       (instr->instr.pass_flags & BRW_NIR_BOOLEAN_MASK) ==
+       BRW_NIR_BOOLEAN_NEEDS_RESOLVE) {
+      dst_reg masked = dst_reg(this, glsl_type::int_type);
+      masked.writemask = dst.writemask;
+      emit(AND(masked, src_reg(dst), src_reg(1)));
+      src_reg masked_neg = src_reg(masked);
+      masked_neg.negate = true;
+      emit(MOV(retype(dst, BRW_REGISTER_TYPE_D), masked_neg));
+   }
 }
 
 void
