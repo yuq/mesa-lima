@@ -1020,18 +1020,33 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    }
 
    case nir_op_inot:
+      if (devinfo->gen >= 8) {
+         op[0] = resolve_source_modifiers(op[0]);
+      }
       emit(NOT(dst, op[0]));
       break;
 
    case nir_op_ixor:
+      if (devinfo->gen >= 8) {
+         op[0] = resolve_source_modifiers(op[0]);
+         op[1] = resolve_source_modifiers(op[1]);
+      }
       emit(XOR(dst, op[0], op[1]));
       break;
 
    case nir_op_ior:
+      if (devinfo->gen >= 8) {
+         op[0] = resolve_source_modifiers(op[0]);
+         op[1] = resolve_source_modifiers(op[1]);
+      }
       emit(OR(dst, op[0], op[1]));
       break;
 
    case nir_op_iand:
+      if (devinfo->gen >= 8) {
+         op[0] = resolve_source_modifiers(op[0]);
+         op[1] = resolve_source_modifiers(op[1]);
+      }
       emit(AND(dst, op[0], op[1]));
       break;
 

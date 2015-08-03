@@ -313,6 +313,19 @@ vec4_visitor::fix_3src_operand(src_reg src)
 }
 
 src_reg
+vec4_visitor::resolve_source_modifiers(const src_reg& src)
+{
+   if (!src.abs && !src.negate)
+      return src;
+
+   dst_reg resolved = dst_reg(this, glsl_type::ivec4_type);
+   resolved.type = src.type;
+   emit(MOV(resolved, src));
+
+   return src_reg(resolved);
+}
+
+src_reg
 vec4_visitor::fix_math_operand(src_reg src)
 {
    if (devinfo->gen < 6 || devinfo->gen >= 8 || src.file == BAD_FILE)
