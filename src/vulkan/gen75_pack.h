@@ -7060,6 +7060,11 @@ GEN75_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       __gen_float(values->YMaxClipGuardband) |
       0;
 
+   for (uint32_t i = 0, j = 12; i < 4; i += 1, j++) {
+      dw[j] =
+         0;
+   }
+
 }
 
 #define GEN75_BLEND_STATE_length 0x00000002
@@ -7364,36 +7369,6 @@ GEN75_DEPTH_STENCIL_STATE_pack(__gen_user_data *data, void * restrict dst,
 }
 
 #define GEN75_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
-
-#define GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_length 0x00000001
-
-struct GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS {
-#define     Highestpriority                                    0
-#define     Secondhighestpriority                              1
-#define     Thirdhighestpriority                               2
-#define     Lowestpriority                                     3
-   uint32_t                                     ArbitrationPriorityControl;
-#define     PTE                                                0
-#define     UC                                                 1
-#define     LLCeLLCWBcacheable                                 2
-#define     eLLCWBcacheable                                    3
-   uint32_t                                     LLCeLLCCacheabilityControlLLCCC;
-   uint32_t                                     L3CacheabilityControlL3CC;
-};
-
-static inline void
-GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_pack(__gen_user_data *data, void * restrict dst,
-                                                  const struct GEN75_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS * restrict values)
-{
-   uint32_t *dw = (uint32_t * restrict) dst;
-
-   dw[0] =
-      __gen_field(values->ArbitrationPriorityControl, 4, 5) |
-      __gen_field(values->LLCeLLCCacheabilityControlLLCCC, 1, 2) |
-      __gen_field(values->L3CacheabilityControlL3CC, 0, 0) |
-      0;
-
-}
 
 #define GEN75_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
 
@@ -7700,6 +7675,11 @@ GEN75_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst
    dw[3] =
       __gen_field(values->BorderColorAlpha, 0, 31) |
       0;
+
+   for (uint32_t i = 0, j = 4; i < 12; i += 1, j++) {
+      dw[j] =
+         0;
+   }
 
    dw[16] =
       __gen_field(values->BorderColor, 0, 127) |

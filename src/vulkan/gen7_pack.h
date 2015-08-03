@@ -5816,6 +5816,11 @@ GEN7_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
       __gen_float(values->YMaxClipGuardband) |
       0;
 
+   for (uint32_t i = 0, j = 12; i < 4; i += 1, j++) {
+      dw[j] =
+         0;
+   }
+
 }
 
 #define GEN7_BLEND_STATE_length 0x00000002

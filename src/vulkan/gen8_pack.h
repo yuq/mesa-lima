@@ -4187,6 +4187,11 @@ GEN8_3DSTATE_SAMPLE_PATTERN_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->DwordLength, 0, 7) |
       0;
 
+   for (uint32_t i = 0, j = 1; i < 4; i += 1, j++) {
+      dw[j] =
+         0;
+   }
+
    dw[5] =
       __gen_field(values->_8xSample7XOffset * (1 << 4), 28, 31) |
       __gen_field(values->_8xSample7YOffset * (1 << 4), 24, 27) |
@@ -8031,42 +8036,6 @@ GEN8_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
 }
 
 #define GEN8_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
-
-#define GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_length 0x00000001
-
-struct GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS {
-#define     UseCacheabilityControlsfrompagetableUCwithFenceifcoherentcycle       0
-#define     UncacheableUCnoncacheable                          1
-#define     WritethroughWT                                     2
-#define     WritebackWB                                        3
-   uint32_t                                     MemoryTypeLLCeLLCCacheabilityControlLeLLCCC;
-#define     eLLCOnly                                           0
-#define     LLCOnly                                            1
-#define     LLCeLLCAllowed                                     2
-#define     L3LLCeLLCAllowed                                   3
-   uint32_t                                     TargetCacheTC;
-   bool                                         EncryptedData;
-#define     PoorChance                                         3
-#define     NormalChance                                       2
-#define     BetterChance                                       1
-#define     BestChance                                         0
-   bool                                         AgeforQUADLRUAGE;
-};
-
-static inline void
-GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS_pack(__gen_user_data *data, void * restrict dst,
-                                                  const struct GEN8_VEB_DI_IECP_COMMAND_SURFACE_CONTROL_BITS * restrict values)
-{
-   uint32_t *dw = (uint32_t * restrict) dst;
-
-   dw[0] =
-      __gen_field(values->MemoryTypeLLCeLLCCacheabilityControlLeLLCCC, 5, 6) |
-      __gen_field(values->TargetCacheTC, 3, 4) |
-      __gen_field(values->EncryptedData, 2, 2) |
-      __gen_field(values->AgeforQUADLRUAGE, 0, 1) |
-      0;
-
-}
 
 #define GEN8_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
 
