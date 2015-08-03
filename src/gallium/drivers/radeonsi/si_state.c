@@ -1173,7 +1173,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 				       int first_non_void)
 {
 	struct si_screen *sscreen = (struct si_screen*)screen;
-	bool enable_s3tc = sscreen->b.info.drm_minor >= 31;
+	bool enable_compressed_formats = sscreen->b.info.drm_minor >= 31;
 	boolean uniform = TRUE;
 	int i;
 
@@ -1216,7 +1216,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_RGTC) {
-		if (!enable_s3tc)
+		if (!enable_compressed_formats)
 			goto out_unknown;
 
 		switch (format) {
@@ -1236,7 +1236,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_BPTC) {
-		if (!enable_s3tc)
+		if (!enable_compressed_formats)
 			goto out_unknown;
 
 		switch (format) {
@@ -1265,8 +1265,7 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_S3TC) {
-
-		if (!enable_s3tc)
+		if (!enable_compressed_formats)
 			goto out_unknown;
 
 		if (!util_format_s3tc_enabled) {
