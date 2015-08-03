@@ -1404,3 +1404,37 @@ nir_index_ssa_defs(nir_function_impl *impl)
    nir_foreach_block(impl, index_ssa_block, &index);
    impl->ssa_alloc = index;
 }
+
+gl_system_value
+nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
+{
+   switch (intrin) {
+   case nir_intrinsic_load_vertex_id:
+      return SYSTEM_VALUE_VERTEX_ID;
+   case nir_intrinsic_load_instance_id:
+      return SYSTEM_VALUE_INSTANCE_ID;
+   case nir_intrinsic_load_vertex_id_zero_base:
+      return SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
+   case nir_intrinsic_load_base_vertex:
+      return SYSTEM_VALUE_BASE_VERTEX;
+   case nir_intrinsic_load_invocation_id:
+      return SYSTEM_VALUE_INVOCATION_ID;
+   case nir_intrinsic_load_front_face:
+      return SYSTEM_VALUE_FRONT_FACE;
+   case nir_intrinsic_load_sample_id:
+      return SYSTEM_VALUE_SAMPLE_ID;
+   case nir_intrinsic_load_sample_pos:
+      return SYSTEM_VALUE_SAMPLE_POS;
+   case nir_intrinsic_load_sample_mask_in:
+      return SYSTEM_VALUE_SAMPLE_MASK_IN;
+   /* FINISHME: Add tessellation intrinsics.
+      return SYSTEM_VALUE_TESS_COORD;
+      return SYSTEM_VALUE_VERTICES_IN;
+      return SYSTEM_VALUE_PRIMITIVE_ID;
+      return SYSTEM_VALUE_TESS_LEVEL_OUTER;
+      return SYSTEM_VALUE_TESS_LEVEL_INNER;
+    */
+   default:
+      unreachable("intrinsic doesn't produce a system value");
+   }
+}
