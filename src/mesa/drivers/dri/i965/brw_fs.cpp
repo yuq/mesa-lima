@@ -4913,6 +4913,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          case BRW_REGISTER_TYPE_F:
             fprintf(file, "%-gf", inst->src[i].f);
             break;
+         case BRW_REGISTER_TYPE_DF:
+            fprintf(file, "%fdf", inst->src[i].df);
+            break;
          case BRW_REGISTER_TYPE_W:
          case BRW_REGISTER_TYPE_D:
             fprintf(file, "%dd", inst->src[i].d);
