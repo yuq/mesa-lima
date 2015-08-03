@@ -3110,7 +3110,8 @@ add_program_resource(struct gl_shader_program *prog, GLenum type,
  * Function builds a stage reference bitmask from variable name.
  */
 static uint8_t
-build_stageref(struct gl_shader_program *shProg, const char *name)
+build_stageref(struct gl_shader_program *shProg, const char *name,
+               unsigned mode)
 {
    uint8_t stages = 0;
 
@@ -3131,6 +3132,13 @@ build_stageref(struct gl_shader_program *shProg, const char *name)
          ir_variable *var = node->as_variable();
          if (var) {
             unsigned baselen = strlen(var->name);
+
+            /* Type needs to match if specified, otherwise we might
+             * pick a variable with same name but different interface.
+             */
+            if (mode != 0 && var->data.mode != mode)
+               continue;
+
             if (strncmp(var->name, name, baselen) == 0) {
                /* Check for exact name matches but also check for arrays and
                 * structs.
@@ -3188,7 +3196,8 @@ add_interface_variables(struct gl_shader_program *shProg,
       };
 
       if (!add_program_resource(shProg, programInterface, var,
-                                build_stageref(shProg, var->name) | mask))
+                                build_stageref(shProg, var->name,
+                                               var->data.mode) | mask))
          return false;
    }
    return true;
@@ -3241,7 +3250,7 @@ build_program_resource_list(struct gl_context *ctx,
       for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
          uint8_t stageref =
             build_stageref(shProg,
-                           shProg->LinkedTransformFeedback.Varyings[i].Name);
+                           shProg->LinkedTransformFeedback.Varyings[i].Name, 0);
          if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_VARYING,
                                    &shProg->LinkedTransformFeedback.Varyings[i],
                                    stageref))
@@ -3256,7 +3265,7 @@ build_program_resource_list(struct gl_context *ctx,
          continue;
 
       uint8_t stageref =
-         build_stageref(shProg, shProg->UniformStorage[i].name);
+         build_stageref(shProg, shProg->UniformStorage[i].name, 0);
 
       /* Add stagereferences for uniforms in a uniform block. */
       int block_index = shProg->UniformStorage[i].block_index;
