@@ -1444,35 +1444,16 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
 
-   case nir_intrinsic_load_vertex_id_zero_base: {
-      fs_reg vertex_id = nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
-      assert(vertex_id.file != BAD_FILE);
-      dest.type = vertex_id.type;
-      bld.MOV(dest, vertex_id);
-      break;
-   }
-
-   case nir_intrinsic_load_base_vertex: {
-      fs_reg base_vertex = nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
-      assert(base_vertex.file != BAD_FILE);
-      dest.type = base_vertex.type;
-      bld.MOV(dest, base_vertex);
-      break;
-   }
-
-   case nir_intrinsic_load_instance_id: {
-      fs_reg instance_id = nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
-      assert(instance_id.file != BAD_FILE);
-      dest.type = instance_id.type;
-      bld.MOV(dest, instance_id);
-      break;
-   }
-
-   case nir_intrinsic_load_sample_mask_in: {
-      fs_reg sample_mask_in = nir_system_values[SYSTEM_VALUE_SAMPLE_MASK_IN];
-      assert(sample_mask_in.file != BAD_FILE);
-      dest.type = sample_mask_in.type;
-      bld.MOV(dest, sample_mask_in);
+   case nir_intrinsic_load_vertex_id_zero_base:
+   case nir_intrinsic_load_base_vertex:
+   case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_sample_mask_in:
+   case nir_intrinsic_load_sample_id: {
+      gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);
+      fs_reg val = nir_system_values[sv];
+      assert(val.file != BAD_FILE);
+      dest.type = val.type;
+      bld.MOV(dest, val);
       break;
    }
 
@@ -1482,14 +1463,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       dest.type = sample_pos.type;
       bld.MOV(dest, sample_pos);
       bld.MOV(offset(dest, bld, 1), offset(sample_pos, bld, 1));
-      break;
-   }
-
-   case nir_intrinsic_load_sample_id: {
-      fs_reg sample_id = nir_system_values[SYSTEM_VALUE_SAMPLE_ID];
-      assert(sample_id.file != BAD_FILE);
-      dest.type = sample_id.type;
-      bld.MOV(dest, sample_id);
       break;
    }
 
