@@ -508,6 +508,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
    if (entry->src.file != IMM)
       return false;
+   if (type_sz(entry->src.type) > 4)
+      return false;
    if (entry->saturate)
       return false;
 
