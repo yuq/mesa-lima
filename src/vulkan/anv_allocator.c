@@ -424,15 +424,15 @@ anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
    if (block.next < block.end) {
       return block.next;
    } else if (block.next == block.end) {
-      new.next = anv_block_pool_alloc(block_pool);
-      new.end = new.next + block_pool->block_size;
-      old.u64 = __sync_fetch_and_add(&pool->block.u64, new.u64 - block.u64);
+      offset = anv_block_pool_alloc(block_pool);
+      new.next = offset + pool->state_size;
+      new.end = offset + block_pool->block_size;
+      old.u64 = __sync_lock_test_and_set(&pool->block.u64, new.u64);
       if (old.next != block.next)
          futex_wake(&pool->block.end, INT_MAX);
-      return new.next;
+      return offset;
    } else {
       futex_wait(&pool->block.end, block.end);
-      __sync_fetch_and_add(&pool->block.u64, -pool->state_size);
       goto restart;
    }
 }
