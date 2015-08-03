@@ -253,6 +253,12 @@ struct anv_block_pool {
    union anv_free_list free_list;
 };
 
+static inline uint32_t
+anv_block_pool_size(struct anv_block_pool *pool)
+{
+   return pool->size;
+}
+
 struct anv_block_state {
    union {
       struct {

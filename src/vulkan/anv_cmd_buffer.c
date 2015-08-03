@@ -136,7 +136,8 @@ anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
    struct anv_device *device = cmd_buffer->device;
    struct anv_bo *scratch_bo = NULL;
 
-   cmd_buffer->state.scratch_size = device->scratch_block_pool.size;
+   cmd_buffer->state.scratch_size =
+      anv_block_pool_size(&device->scratch_block_pool);
    if (cmd_buffer->state.scratch_size > 0)
       scratch_bo = &device->scratch_block_pool.bo;
 
