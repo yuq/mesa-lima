@@ -775,31 +775,35 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_imul: {
-      nir_const_value *value0 = nir_src_as_const_value(instr->src[0].src);
-      nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
+      if (devinfo->gen < 8) {
+         nir_const_value *value0 = nir_src_as_const_value(instr->src[0].src);
+         nir_const_value *value1 = nir_src_as_const_value(instr->src[1].src);
 
-      /* For integer multiplication, the MUL uses the low 16 bits of one of
-       * the operands (src0 through SNB, src1 on IVB and later). The MACH
-       * accumulates in the contribution of the upper 16 bits of that
-       * operand. If we can determine that one of the args is in the low
-       * 16 bits, though, we can just emit a single MUL.
-       */
-      if (value0 && value0->u[0] < (1 << 16)) {
-         if (devinfo->gen < 7)
-            emit(MUL(dst, op[0], op[1]));
-         else
-            emit(MUL(dst, op[1], op[0]));
-      } else if (value1 && value1->u[0] < (1 << 16)) {
-         if (devinfo->gen < 7)
-            emit(MUL(dst, op[1], op[0]));
-         else
-            emit(MUL(dst, op[0], op[1]));
+         /* For integer multiplication, the MUL uses the low 16 bits of one of
+          * the operands (src0 through SNB, src1 on IVB and later). The MACH
+          * accumulates in the contribution of the upper 16 bits of that
+          * operand. If we can determine that one of the args is in the low
+          * 16 bits, though, we can just emit a single MUL.
+          */
+         if (value0 && value0->u[0] < (1 << 16)) {
+            if (devinfo->gen < 7)
+               emit(MUL(dst, op[0], op[1]));
+            else
+               emit(MUL(dst, op[1], op[0]));
+         } else if (value1 && value1->u[0] < (1 << 16)) {
+            if (devinfo->gen < 7)
+               emit(MUL(dst, op[1], op[0]));
+            else
+               emit(MUL(dst, op[0], op[1]));
+         } else {
+            struct brw_reg acc = retype(brw_acc_reg(8), dst.type);
+
+            emit(MUL(acc, op[0], op[1]));
+            emit(MACH(dst_null_d(), op[0], op[1]));
+            emit(MOV(dst, src_reg(acc)));
+         }
       } else {
-         struct brw_reg acc = retype(brw_acc_reg(8), dst.type);
-
-         emit(MUL(acc, op[0], op[1]));
-         emit(MACH(dst_null_d(), op[0], op[1]));
-         emit(MOV(dst, src_reg(acc)));
+	 emit(MUL(dst, op[0], op[1]));
       }
       break;
    }
