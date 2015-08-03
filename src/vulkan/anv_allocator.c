@@ -252,15 +252,14 @@ anv_block_pool_init(struct anv_block_pool *pool,
    pool->device = device;
    pool->bo.gem_handle = 0;
    pool->bo.offset = 0;
-   pool->size = 0;
    pool->block_size = block_size;
-   pool->next_block = 0;
    pool->free_list = ANV_FREE_LIST_EMPTY;
    anv_vector_init(&pool->mmap_cleanups,
                    round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
 
    /* Immediately grow the pool so we'll have a backing bo. */
-   anv_block_pool_grow(pool, 0);
+   pool->state.next = 0;
+   pool->state.end = anv_block_pool_grow(pool, 0);
 }
 
 void
@@ -340,21 +339,14 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
    pool->bo.map = map;
    pool->bo.index = 0;
 
-   /* Write size last and after the memory barrier here. We need the memory
-    * barrier to make sure map and gem_handle are written before other threads
-    * see the new size.  A thread could allocate a block and then go try using
-    * the old pool->map and access out of bounds. */
-
-   __sync_synchronize();
-   pool->size = size;
-
    return size;
 }
 
 uint32_t
 anv_block_pool_alloc(struct anv_block_pool *pool)
 {
-   uint32_t offset, block, size;
+   uint32_t offset;
+   struct anv_block_state state, old, new;
 
    /* Try free list first. */
    if (anv_free_list_pop(&pool->free_list, &pool->map, &offset)) {
@@ -363,27 +355,26 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
    }
 
  restart:
-   size = pool->size;
-   block = __sync_fetch_and_add(&pool->next_block, pool->block_size);
-   if (block < size) {
+   state.u64 = __sync_fetch_and_add(&pool->state.u64, pool->block_size);
+   if (state.next < state.end) {
       assert(pool->map);
-      return block;
-   } else if (block == size) {
+      return state.next;
+   } else if (state.next == state.end) {
       /* We allocated the first block outside the pool, we have to grow it.
        * pool->next_block acts a mutex: threads who try to allocate now will
        * get block indexes above the current limit and hit futex_wait
        * below. */
-      uint32_t new_size = anv_block_pool_grow(pool, size);
-      assert(new_size > 0);
-      (void) new_size;
-      futex_wake(&pool->size, INT_MAX);
+      new.next = state.next + pool->block_size;
+      new.end = anv_block_pool_grow(pool, state.end);
+      assert(new.end > 0);
+      old.u64 = __sync_lock_test_and_set(&pool->state.u64, new.u64);
+      if (old.next != state.next)
+         futex_wake(&pool->state.end, INT_MAX);
+      return state.next;
    } else {
-      futex_wait(&pool->size, size);
-      __sync_fetch_and_add(&pool->next_block, -pool->block_size);
+      futex_wait(&pool->state.end, state.end);
       goto restart;
    }
-
-   return block;
 }
 
 void

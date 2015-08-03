@@ -233,32 +233,6 @@ union anv_free_list {
 
 #define ANV_FREE_LIST_EMPTY ((union anv_free_list) { { 1, 0 } })
 
-struct anv_block_pool {
-   struct anv_device *device;
-
-   struct anv_bo bo;
-   void *map;
-   int fd;
-   uint32_t size;
-
-   /**
-    * Array of mmaps and gem handles owned by the block pool, reclaimed when
-    * the block pool is destroyed.
-    */
-   struct anv_vector mmap_cleanups;
-
-   uint32_t block_size;
-
-   uint32_t next_block;
-   union anv_free_list free_list;
-};
-
-static inline uint32_t
-anv_block_pool_size(struct anv_block_pool *pool)
-{
-   return pool->size;
-}
-
 struct anv_block_state {
    union {
       struct {
@@ -268,6 +242,31 @@ struct anv_block_state {
       uint64_t u64;
    };
 };
+
+struct anv_block_pool {
+   struct anv_device *device;
+
+   struct anv_bo bo;
+   void *map;
+   int fd;
+
+   /**
+    * Array of mmaps and gem handles owned by the block pool, reclaimed when
+    * the block pool is destroyed.
+    */
+   struct anv_vector mmap_cleanups;
+
+   uint32_t block_size;
+
+   union anv_free_list free_list;
+   struct anv_block_state state;
+};
+
+static inline uint32_t
+anv_block_pool_size(struct anv_block_pool *pool)
+{
+   return pool->state.end;
+}
 
 struct anv_state {
    uint32_t offset;
