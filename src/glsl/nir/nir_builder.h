@@ -242,7 +242,7 @@ nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
 {
    nir_alu_src alu_src = { NIR_SRC_INIT };
    alu_src.src = nir_src_for_ssa(src);
-   for (int i = 0; i < 4; i++)
+   for (unsigned i = 0; i < num_components; i++)
       alu_src.swizzle[i] = swiz[i];
 
    return use_fmov ? nir_fmov_alu(build, alu_src, num_components) :
