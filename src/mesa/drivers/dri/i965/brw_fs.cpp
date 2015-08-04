@@ -4133,6 +4133,68 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
                        const fs_inst *inst)
 {
    switch (inst->opcode) {
+   case BRW_OPCODE_MOV:
+   case BRW_OPCODE_SEL:
+   case BRW_OPCODE_NOT:
+   case BRW_OPCODE_AND:
+   case BRW_OPCODE_OR:
+   case BRW_OPCODE_XOR:
+   case BRW_OPCODE_SHR:
+   case BRW_OPCODE_SHL:
+   case BRW_OPCODE_ASR:
+   case BRW_OPCODE_CMP:
+   case BRW_OPCODE_CMPN:
+   case BRW_OPCODE_CSEL:
+   case BRW_OPCODE_F32TO16:
+   case BRW_OPCODE_F16TO32:
+   case BRW_OPCODE_BFREV:
+   case BRW_OPCODE_BFE:
+   case BRW_OPCODE_BFI1:
+   case BRW_OPCODE_BFI2:
+   case BRW_OPCODE_ADD:
+   case BRW_OPCODE_MUL:
+   case BRW_OPCODE_AVG:
+   case BRW_OPCODE_FRC:
+   case BRW_OPCODE_RNDU:
+   case BRW_OPCODE_RNDD:
+   case BRW_OPCODE_RNDE:
+   case BRW_OPCODE_RNDZ:
+   case BRW_OPCODE_LZD:
+   case BRW_OPCODE_FBH:
+   case BRW_OPCODE_FBL:
+   case BRW_OPCODE_CBIT:
+   case BRW_OPCODE_SAD2:
+   case BRW_OPCODE_MAD:
+   case BRW_OPCODE_LRP:
+   case SHADER_OPCODE_RCP:
+   case SHADER_OPCODE_RSQ:
+   case SHADER_OPCODE_SQRT:
+   case SHADER_OPCODE_EXP2:
+   case SHADER_OPCODE_LOG2:
+   case SHADER_OPCODE_POW:
+   case SHADER_OPCODE_INT_QUOTIENT:
+   case SHADER_OPCODE_INT_REMAINDER:
+   case SHADER_OPCODE_SIN:
+   case SHADER_OPCODE_COS: {
+      /* According to the PRMs:
+       *  "A. In Direct Addressing mode, a source cannot span more than 2
+       *      adjacent GRF registers.
+       *   B. A destination cannot span more than 2 adjacent GRF registers."
+       *
+       * Look for the source or destination with the largest register region
+       * which is the one that is going to limit the overal execution size of
+       * the instruction due to this rule.
+       */
+      unsigned reg_count = inst->regs_written;
+
+      for (unsigned i = 0; i < inst->sources; i++)
+         reg_count = MAX2(reg_count, (unsigned)inst->regs_read(i));
+
+      /* Calculate the maximum execution size of the instruction based on the
+       * factor by which it goes over the hardware limit of 2 GRFs.
+       */
+      return inst->exec_size / DIV_ROUND_UP(reg_count, 2);
+   }
    case SHADER_OPCODE_MULH:
       /* MULH is lowered to the MUL/MACH sequence using the accumulator, which
        * is 8-wide on Gen7+.
