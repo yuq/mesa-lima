@@ -65,8 +65,9 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case VGRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
-      } else if (inst->exec_size < 8) {
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->nr, 0);
+      } else if (inst->exec_size * reg->stride * type_sz(reg->type) <= 32) {
+         brw_reg = brw_vecn_reg(inst->exec_size, brw_file_from_reg(reg),
+                                reg->nr, 0);
          brw_reg = stride(brw_reg, inst->exec_size * reg->stride,
                           inst->exec_size, reg->stride);
       } else {
@@ -76,11 +77,14 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
           * rule implies that elements within a 'Width' cannot cross GRF
           * boundaries.
           *
-          * So, for registers with width > 8, we have to use a width of 8
-          * and trust the compression state to sort out the exec size.
+          * So, for registers that are large enough, we have to split the exec
+          * size in two and trust the compression state to sort it out.
           */
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->nr, 0);
-         brw_reg = stride(brw_reg, 8 * reg->stride, 8, reg->stride);
+         assert(inst->exec_size / 2 * reg->stride * type_sz(reg->type) <= 32);
+         brw_reg = brw_vecn_reg(inst->exec_size / 2, brw_file_from_reg(reg),
+                                reg->nr, 0);
+         brw_reg = stride(brw_reg, inst->exec_size / 2 * reg->stride,
+                          inst->exec_size / 2, reg->stride);
       }
 
       brw_reg = retype(brw_reg, reg->type);
