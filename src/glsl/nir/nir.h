@@ -1704,6 +1704,8 @@ bool nir_opt_peephole_ffma(nir_shader *shader);
 
 bool nir_opt_remove_phis(nir_shader *shader);
 
+bool nir_opt_undef(nir_shader *shader);
+
 void nir_sweep(nir_shader *shader);
 
 #ifdef __cplusplus

@@ -1627,6 +1627,7 @@ vc4_optimize_nir(struct nir_shader *s)
                 progress = nir_opt_peephole_select(s) || progress;
                 progress = nir_opt_algebraic(s) || progress;
                 progress = nir_opt_constant_folding(s) || progress;
+                progress = nir_opt_undef(s) || progress;
         } while (progress);
 }
 
