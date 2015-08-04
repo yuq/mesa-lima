@@ -268,10 +268,18 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    if (type != EGL_PBUFFER_BIT) {
       cookie = xcb_get_geometry (dri2_dpy->conn, dri2_surf->drawable);
       reply = xcb_get_geometry_reply (dri2_dpy->conn, cookie, &error);
-      if (reply == NULL || error != NULL) {
-	 _eglError(EGL_BAD_ALLOC, "xcb_get_geometry");
-	 free(error);
-	 goto cleanup_dri_drawable;
+      if (error != NULL) {
+         if (error->error_code == BadAlloc)
+            _eglError(EGL_BAD_ALLOC, "xcb_get_geometry");
+         else if (type == EGL_WINDOW_BIT)
+            _eglError(EGL_BAD_NATIVE_WINDOW, "xcb_get_geometry");
+         else
+            _eglError(EGL_BAD_NATIVE_PIXMAP, "xcb_get_geometry");
+         free(error);
+         goto cleanup_dri_drawable;
+      } else if (reply == NULL) {
+         _eglError(EGL_BAD_ALLOC, "xcb_get_geometry");
+         goto cleanup_dri_drawable;
       }
 
       dri2_surf->base.Width = reply->width;
