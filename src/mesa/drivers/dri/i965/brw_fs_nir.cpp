@@ -768,38 +768,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_imul_high:
-   case nir_op_umul_high: {
-      if (devinfo->gen >= 7)
-         no16("SIMD16 explicit accumulator operands unsupported\n");
-
-      struct brw_reg acc = retype(brw_acc_reg(dispatch_width), result.type);
-
-      fs_inst *mul = bld.MUL(acc, op[0], op[1]);
-      bld.MACH(result, op[0], op[1]);
-
-      /* Until Gen8, integer multiplies read 32-bits from one source, and
-       * 16-bits from the other, and relying on the MACH instruction to
-       * generate the high bits of the result.
-       *
-       * On Gen8, the multiply instruction does a full 32x32-bit multiply,
-       * but in order to do a 64x64-bit multiply we have to simulate the
-       * previous behavior and then use a MACH instruction.
-       *
-       * FINISHME: Don't use source modifiers on src1.
-       */
-      if (devinfo->gen >= 8) {
-         assert(mul->src[1].type == BRW_REGISTER_TYPE_D ||
-                mul->src[1].type == BRW_REGISTER_TYPE_UD);
-         if (mul->src[1].type == BRW_REGISTER_TYPE_D) {
-            mul->src[1].type = BRW_REGISTER_TYPE_W;
-            mul->src[1].stride = 2;
-         } else {
-            mul->src[1].type = BRW_REGISTER_TYPE_UW;
-            mul->src[1].stride = 2;
-         }
-      }
+   case nir_op_umul_high:
+      bld.emit(SHADER_OPCODE_MULH, result, op[0], op[1]);
       break;
-   }
 
    case nir_op_idiv:
    case nir_op_udiv:
