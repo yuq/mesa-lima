@@ -2032,6 +2032,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         nir_convert_to_ssa(c->s);
         vc4_nir_lower_io(c);
         nir_lower_idiv(c->s);
+        nir_lower_load_const_to_scalar(c->s);
 
         vc4_optimize_nir(c->s);
 
