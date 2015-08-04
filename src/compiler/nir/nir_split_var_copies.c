@@ -149,6 +149,7 @@ split_var_copy_instr(nir_intrinsic_instr *old_copy,
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
       if (glsl_type_is_matrix(src_tail->type)) {
          nir_deref_array *deref = nir_deref_array_create(state->dead_ctx);
@@ -231,6 +232,7 @@ split_var_copies_block(nir_block *block, void *void_state)
          ralloc_steal(state->dead_ctx, instr);
          break;
       case GLSL_TYPE_FLOAT:
+      case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_BOOL:
