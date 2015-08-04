@@ -226,7 +226,7 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       s = xcb_setup_roots_iterator(xcb_get_setup(dri2_dpy->conn));
       screen = get_xcb_screen(s, dri2_dpy->screen);
       if (!screen) {
-         _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
+         _eglError(EGL_BAD_ALLOC, "failed to get xcb screen");
          goto cleanup_surf;
       }
 
@@ -236,7 +236,10 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
 			dri2_surf->base.Width, dri2_surf->base.Height);
    } else {
       if (!drawable) {
-         _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
+         if (type == EGL_WINDOW_BIT)
+            _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_create_surface");
+         else
+            _eglError(EGL_BAD_NATIVE_PIXMAP, "dri2_create_surface");
          goto cleanup_surf;
       }
       dri2_surf->drawable = drawable;
@@ -544,7 +547,7 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
    s = xcb_setup_roots_iterator(xcb_get_setup(dri2_dpy->conn));
    screen = get_xcb_screen(s, dri2_dpy->screen);
    if (!screen) {
-      _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_x11_connect");
+      _eglLog(_EGL_WARNING, "DRI2: failed to get xcb screen");
       return EGL_FALSE;
    }
    connect_cookie = xcb_dri2_connect_unchecked(dri2_dpy->conn, screen->root,
@@ -635,7 +638,7 @@ dri2_x11_authenticate(_EGLDisplay *disp, uint32_t id)
 
    screen = get_xcb_screen(s, dri2_dpy->screen);
    if (!screen) {
-      _eglError(EGL_BAD_NATIVE_WINDOW, "dri2_x11_authenticate");
+      _eglLog(_EGL_WARNING, "DRI2: failed to get xcb screen");
       return -1;
    }
 
