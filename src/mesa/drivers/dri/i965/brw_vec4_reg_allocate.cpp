@@ -280,15 +280,15 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
-	 if (inst->src[i].file == GRF) {
-	    spill_costs[inst->src[i].reg] += loop_scale;
+         if (inst->src[i].file == GRF) {
+            spill_costs[inst->src[i].reg] += loop_scale;
             if (inst->src[i].reladdr)
                no_spill[inst->src[i].reg] = true;
-	 }
+         }
       }
 
       if (inst->dst.file == GRF) {
-	 spill_costs[inst->dst.reg] += loop_scale;
+         spill_costs[inst->dst.reg] += loop_scale;
          if (inst->dst.reladdr)
             no_spill[inst->dst.reg] = true;
       }
@@ -296,12 +296,12 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
       switch (inst->opcode) {
 
       case BRW_OPCODE_DO:
-	 loop_scale *= 10;
-	 break;
+         loop_scale *= 10;
+         break;
 
       case BRW_OPCODE_WHILE:
-	 loop_scale /= 10;
-	 break;
+         loop_scale /= 10;
+         break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
@@ -309,12 +309,12 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
             if (inst->src[i].file == GRF)
                no_spill[inst->src[i].reg] = true;
          }
-	 if (inst->dst.file == GRF)
-	    no_spill[inst->dst.reg] = true;
-	 break;
+         if (inst->dst.file == GRF)
+            no_spill[inst->dst.reg] = true;
+         break;
 
       default:
-	 break;
+         break;
       }
    }
 }
