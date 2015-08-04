@@ -1412,10 +1412,11 @@ ntq_setup_inputs(struct vc4_compile *c)
         for (unsigned i = 0; i < num_entries; i++) {
                 nir_variable *var = vars[i];
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
-                /* XXX: map loc slots to semantics */
-                unsigned semantic_name = var->data.location;
-                unsigned semantic_index = var->data.index;
+                unsigned semantic_name, semantic_index;
                 unsigned loc = var->data.driver_location;
+
+                varying_slot_to_tgsi_semantic(var->data.location,
+                                              &semantic_name, &semantic_index);
 
                 assert(array_len == 1);
                 (void)array_len;
@@ -1448,10 +1449,16 @@ ntq_setup_outputs(struct vc4_compile *c)
 {
         foreach_list_typed(nir_variable, var, node, &c->s->outputs) {
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
-                /* XXX: map loc slots to semantics */
-                unsigned semantic_name = var->data.location;
-                unsigned semantic_index = var->data.index;
+                unsigned semantic_name, semantic_index;
                 unsigned loc = var->data.driver_location * 4;
+
+                if (c->stage == QSTAGE_FRAG) {
+                        frag_result_to_tgsi_semantic(var->data.location,
+                                                     &semantic_name, &semantic_index);
+                } else {
+                        varying_slot_to_tgsi_semantic(var->data.location,
+                                                      &semantic_name, &semantic_index);
+                }
 
                 assert(array_len == 1);
                 (void)array_len;

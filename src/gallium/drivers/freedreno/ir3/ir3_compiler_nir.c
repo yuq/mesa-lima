@@ -2133,17 +2133,12 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	struct ir3_shader_variant *so = ctx->so;
 	unsigned array_len = MAX2(glsl_get_length(in->type), 1);
 	unsigned ncomp = glsl_get_components(in->type);
-	/* XXX: map loc slots to semantics */
-	unsigned semantic_name = in->data.location;
-	unsigned semantic_index = in->data.index;
 	unsigned n = in->data.driver_location;
+	unsigned slot = in->data.location;
 
-	DBG("; in: %u:%u, len=%ux%u, loc=%u",
-			semantic_name, semantic_index, array_len,
-			ncomp, n);
+	DBG("; in: slot=%u, len=%ux%u, drvloc=%u",
+			slot, array_len, ncomp, n);
 
-	so->inputs[n].semantic =
-			ir3_semantic_name(semantic_name, semantic_index);
 	so->inputs[n].compmask = (1 << ncomp) - 1;
 	so->inputs[n].inloc = ctx->next_inloc;
 	so->inputs[n].interpolate = 0;
@@ -2164,11 +2159,19 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 		break;
 	}
 
-	for (int i = 0; i < ncomp; i++) {
-		struct ir3_instruction *instr = NULL;
-		unsigned idx = (n * 4) + i;
+	if (ctx->so->type == SHADER_FRAGMENT) {
+		unsigned semantic_name, semantic_index;
 
-		if (ctx->so->type == SHADER_FRAGMENT) {
+		varying_slot_to_tgsi_semantic(slot,
+				&semantic_name, &semantic_index);
+
+		so->inputs[n].semantic =
+				ir3_semantic_name(semantic_name, semantic_index);
+
+		for (int i = 0; i < ncomp; i++) {
+			struct ir3_instruction *instr = NULL;
+			unsigned idx = (n * 4) + i;
+
 			if (semantic_name == TGSI_SEMANTIC_POSITION) {
 				so->inputs[n].bary = false;
 				so->frag_coord = true;
@@ -2208,11 +2211,17 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				instr = create_frag_input(ctx,
 						so->inputs[n].inloc + i - 8, use_ldlv);
 			}
-		} else {
-			instr = create_input(ctx->block, idx);
-		}
 
-		ctx->ir->inputs[idx] = instr;
+			ctx->ir->inputs[idx] = instr;
+		}
+	} else if (ctx->so->type == SHADER_VERTEX) {
+		so->inputs[n].semantic = 0;
+		for (int i = 0; i < ncomp; i++) {
+			unsigned idx = (n * 4) + i;
+			ctx->ir->inputs[idx] = create_input(ctx->block, idx);
+		}
+	} else {
+		compile_error(ctx, "unknown shader type: %d\n", ctx->so->type);
 	}
 
 	if (so->inputs[n].bary || (ctx->so->type == SHADER_VERTEX)) {
@@ -2227,17 +2236,18 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 	struct ir3_shader_variant *so = ctx->so;
 	unsigned array_len = MAX2(glsl_get_length(out->type), 1);
 	unsigned ncomp = glsl_get_components(out->type);
-	/* XXX: map loc slots to semantics */
-	unsigned semantic_name = out->data.location;
-	unsigned semantic_index = out->data.index;
+	unsigned semantic_name, semantic_index;
 	unsigned n = out->data.driver_location;
+	unsigned slot = out->data.location;
 	unsigned comp = 0;
 
-	DBG("; out: %u:%u, len=%ux%u, loc=%u",
-			semantic_name, semantic_index, array_len,
-			ncomp, n);
+	DBG("; out: slot=%u, len=%ux%u, drvloc=%u",
+			slot, array_len, ncomp, n);
 
 	if (ctx->so->type == SHADER_VERTEX) {
+		varying_slot_to_tgsi_semantic(slot,
+				&semantic_name, &semantic_index);
+
 		switch (semantic_name) {
 		case TGSI_SEMANTIC_POSITION:
 			so->writes_pos = true;
@@ -2255,7 +2265,10 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 			compile_error(ctx, "unknown VS semantic name: %s\n",
 					tgsi_semantic_names[semantic_name]);
 		}
-	} else {
+	} else if (ctx->so->type == SHADER_FRAGMENT) {
+		frag_result_to_tgsi_semantic(slot,
+				&semantic_name, &semantic_index);
+
 		switch (semantic_name) {
 		case TGSI_SEMANTIC_POSITION:
 			comp = 2;  /* tgsi will write to .z component */
@@ -2271,6 +2284,8 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 			compile_error(ctx, "unknown FS semantic name: %s\n",
 					tgsi_semantic_names[semantic_name]);
 		}
+	} else {
+		compile_error(ctx, "unknown shader type: %d\n", ctx->so->type);
 	}
 
 	compile_assert(ctx, n < ARRAY_SIZE(so->outputs));

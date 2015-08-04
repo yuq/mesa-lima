@@ -22,6 +22,7 @@
  */
 
 #include "vc4_qir.h"
+#include "nir/tgsi_to_nir.h"
 #include "tgsi/tgsi_info.h"
 #include "glsl/nir/nir_builder.h"
 
@@ -71,8 +72,11 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                 }
         }
         assert(input_var);
-        int semantic_name = input_var->data.location;
-        int semantic_index = input_var->data.index;
+        unsigned semantic_name, semantic_index;
+
+        varying_slot_to_tgsi_semantic(input_var->data.location,
+                                      &semantic_name, &semantic_index);
+
 
         /* All TGSI-to-NIR inputs are vec4. */
         assert(intr->num_components == 4);
@@ -141,7 +145,10 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
                 }
         }
         assert(output_var);
-        unsigned semantic_name = output_var->data.location;
+        unsigned semantic_name, semantic_index;
+
+        varying_slot_to_tgsi_semantic(output_var->data.location,
+                                      &semantic_name, &semantic_index);
 
         if (c->stage == QSTAGE_COORD &&
             (semantic_name != TGSI_SEMANTIC_POSITION &&
