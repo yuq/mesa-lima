@@ -274,12 +274,6 @@ _mesa_GetProgramResourceName(GLuint program, GLenum programInterface,
       _mesa_lookup_shader_program_err(ctx, program,
                                       "glGetProgramResourceName");
 
-   /* Set user friendly return values in case of errors. */
-   if (name)
-      *name = '\0';
-   if (length)
-      *length = 0;
-
    if (!shProg || !name)
       return;
 
