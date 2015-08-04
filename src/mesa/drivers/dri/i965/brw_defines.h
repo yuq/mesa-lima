@@ -1214,6 +1214,11 @@ enum opcode {
     * GLSL barrier()
     */
    SHADER_OPCODE_BARRIER,
+
+   /**
+    * Calculate the high 32-bits of a 32x32 multiply.
+    */
+   SHADER_OPCODE_MULH,
 };
 
 enum brw_urb_write_flags {

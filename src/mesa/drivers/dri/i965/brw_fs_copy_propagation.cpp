@@ -534,6 +534,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
       case BRW_OPCODE_MACH:
       case BRW_OPCODE_MUL:
+      case SHADER_OPCODE_MULH:
       case BRW_OPCODE_ADD:
       case BRW_OPCODE_OR:
       case BRW_OPCODE_AND:

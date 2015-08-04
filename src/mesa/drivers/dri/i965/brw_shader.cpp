@@ -778,6 +778,8 @@ brw_instruction_name(enum opcode op)
       return "cs_terminate";
    case SHADER_OPCODE_BARRIER:
       return "barrier";
+   case SHADER_OPCODE_MULH:
+      return "mulh";
    }
 
    unreachable("not reached");
@@ -996,6 +998,7 @@ backend_instruction::is_commutative() const
    case BRW_OPCODE_XOR:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
+   case SHADER_OPCODE_MULH:
       return true;
    case BRW_OPCODE_SEL:
       /* MIN and MAX are commutative. */
@@ -1103,6 +1106,7 @@ backend_instruction::can_do_saturate() const
    case BRW_OPCODE_MATH:
    case BRW_OPCODE_MOV:
    case BRW_OPCODE_MUL:
+   case SHADER_OPCODE_MULH:
    case BRW_OPCODE_PLN:
    case BRW_OPCODE_RNDD:
    case BRW_OPCODE_RNDE:

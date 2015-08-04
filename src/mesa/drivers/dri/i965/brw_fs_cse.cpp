@@ -61,6 +61,7 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case BRW_OPCODE_CMPN:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
+   case SHADER_OPCODE_MULH:
    case BRW_OPCODE_FRC:
    case BRW_OPCODE_RNDU:
    case BRW_OPCODE_RNDD:
