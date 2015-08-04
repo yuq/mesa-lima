@@ -177,7 +177,8 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         uint8_t class_bits[c->num_temps];
         struct qpu_reg *temp_registers = calloc(c->num_temps,
                                                 sizeof(*temp_registers));
-        memset(def, 0, sizeof(def));
+        for (int i = 0; i < ARRAY_SIZE(def); i++)
+                def[i] = ~0;
         memset(use, 0, sizeof(use));
 
         /* If things aren't ever written (undefined values), just read from
@@ -196,7 +197,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         uint32_t ip = 0;
         list_for_each_entry(struct qinst, inst, &c->instructions, link) {
                 if (inst->dst.file == QFILE_TEMP) {
-                        def[inst->dst.index] = ip;
+                        def[inst->dst.index] = MIN2(ip, def[inst->dst.index]);
                         use[inst->dst.index] = ip;
                 }
 

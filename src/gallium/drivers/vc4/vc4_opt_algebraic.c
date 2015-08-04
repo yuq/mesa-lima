@@ -207,6 +207,7 @@ qir_opt_algebraic(struct vc4_compile *c)
 
                         /* FADD(a, FSUB(0, b)) -> FSUB(a, b) */
                         if (inst->src[1].file == QFILE_TEMP &&
+                            c->defs[inst->src[1].index] &&
                             c->defs[inst->src[1].index]->op == QOP_FSUB) {
                                 struct qinst *fsub = c->defs[inst->src[1].index];
                                 if (is_zero(c, fsub->src[0])) {
@@ -221,6 +222,7 @@ qir_opt_algebraic(struct vc4_compile *c)
 
                         /* FADD(FSUB(0, b), a) -> FSUB(a, b) */
                         if (inst->src[0].file == QFILE_TEMP &&
+                            c->defs[inst->src[0].index] &&
                             c->defs[inst->src[0].index]->op == QOP_FSUB) {
                                 struct qinst *fsub = c->defs[inst->src[0].index];
                                 if (is_zero(c, fsub->src[0])) {

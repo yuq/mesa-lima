@@ -68,7 +68,7 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                         continue;
 
                 struct qinst *inst = c->defs[temp];
-                if (qir_is_multi_instruction(inst))
+                if (!inst || qir_is_multi_instruction(inst))
                         continue;
 
                 if (qir_depends_on_flags(inst) || inst->sf)
