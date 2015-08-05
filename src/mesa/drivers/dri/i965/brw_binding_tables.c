@@ -44,10 +44,10 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 
-static const GLuint stage_to_bt_edit[MESA_SHADER_FRAGMENT + 1] = {
-   _3DSTATE_BINDING_TABLE_EDIT_VS,
-   _3DSTATE_BINDING_TABLE_EDIT_GS,
-   _3DSTATE_BINDING_TABLE_EDIT_PS,
+static const GLuint stage_to_bt_edit[] = {
+   [MESA_SHADER_VERTEX] = _3DSTATE_BINDING_TABLE_EDIT_VS,
+   [MESA_SHADER_GEOMETRY] = _3DSTATE_BINDING_TABLE_EDIT_GS,
+   [MESA_SHADER_FRAGMENT] = _3DSTATE_BINDING_TABLE_EDIT_PS,
 };
 
 static uint32_t
@@ -233,7 +233,8 @@ gen7_edit_hw_binding_table_entry(struct brw_context *brw,
                                  uint32_t index,
                                  uint32_t surf_offset)
 {
-   assert(stage <= MESA_SHADER_FRAGMENT);
+   assert(stage < ARRAY_SIZE(stage_to_bt_edit));
+   assert(stage_to_bt_edit[stage]);
 
    uint32_t dw2 = SET_FIELD(index, BRW_BINDING_TABLE_INDEX) |
       (brw->gen >= 8 ? GEN8_SURFACE_STATE_EDIT(surf_offset) :
@@ -259,7 +260,9 @@ gen7_update_binding_table_from_array(struct brw_context *brw,
                                      int num_surfaces)
 {
    uint32_t dw2 = 0;
-   assert(stage <= MESA_SHADER_FRAGMENT);
+
+   assert(stage < ARRAY_SIZE(stage_to_bt_edit));
+   assert(stage_to_bt_edit[stage]);
 
    BEGIN_BATCH(num_surfaces + 2);
    OUT_BATCH(stage_to_bt_edit[stage] << 16 | num_surfaces);
