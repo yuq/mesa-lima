@@ -484,14 +484,6 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
    if (stream_id > 0 && shader_prog->TransformFeedback.NumVarying == 0)
       return;
 
-   /* To ensure that we don't output more vertices than the shader specified
-    * using max_vertices, do the logic inside a conditional of the form "if
-    * (vertex_count < MAX)"
-    */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
-   emit(CMP(dst_null_d(), this->vertex_count,
-            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
-   emit(IF(BRW_PREDICATE_NORMAL));
    {
       /* If we're outputting 32 control data bits or less, then we can wait
        * until the shader is over to output them all.  Otherwise we need to
@@ -562,12 +554,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
           this->current_annotation = "emit vertex: Stream control data bits";
           set_stream_control_data_bits(stream_id);
       }
-
-      this->current_annotation = "emit vertex: increment vertex count";
-      emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
-               src_reg(1u)));
    }
-   emit(BRW_OPCODE_ENDIF);
 
    this->current_annotation = NULL;
 }
@@ -575,7 +562,22 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
 void
 vec4_gs_visitor::visit(ir_emit_vertex *ir)
 {
+   /* To ensure that we don't output more vertices than the shader specified
+    * using max_vertices, do the logic inside a conditional of the form "if
+    * (vertex_count < MAX)"
+    */
+   unsigned num_output_vertices = c->gp->program.VerticesOut;
+   emit(CMP(dst_null_d(), this->vertex_count,
+            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
+   emit(IF(BRW_PREDICATE_NORMAL));
+
    gs_emit_vertex(ir->stream_id());
+
+   this->current_annotation = "emit vertex: increment vertex count";
+   emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
+            src_reg(1u)));
+
+   emit(BRW_OPCODE_ENDIF);
 }
 
 void

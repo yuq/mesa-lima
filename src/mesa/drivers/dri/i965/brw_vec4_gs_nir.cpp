@@ -92,14 +92,23 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    src_reg src;
 
    switch (instr->intrinsic) {
-   case nir_intrinsic_emit_vertex: {
+   case nir_intrinsic_emit_vertex_with_counter: {
+      this->vertex_count =
+         retype(get_nir_src(instr->src[0], 1), BRW_REGISTER_TYPE_UD);
       int stream_id = instr->const_index[0];
       gs_emit_vertex(stream_id);
       break;
    }
 
-   case nir_intrinsic_end_primitive:
+   case nir_intrinsic_end_primitive_with_counter:
+      this->vertex_count =
+         retype(get_nir_src(instr->src[0], 1), BRW_REGISTER_TYPE_UD);
       gs_end_primitive();
+      break;
+
+   case nir_intrinsic_set_vertex_count:
+      this->vertex_count =
+         retype(get_nir_src(instr->src[0], 1), BRW_REGISTER_TYPE_UD);
       break;
 
    case nir_intrinsic_load_invocation_id: {

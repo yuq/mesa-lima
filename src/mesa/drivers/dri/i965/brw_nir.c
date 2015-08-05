@@ -96,6 +96,11 @@ brw_create_nir(struct brw_context *brw,
    }
    nir_validate_shader(nir);
 
+   if (stage == MESA_SHADER_GEOMETRY) {
+      nir_lower_gs_intrinsics(nir);
+      nir_validate_shader(nir);
+   }
+
    nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
 

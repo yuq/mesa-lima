@@ -149,19 +149,29 @@ gen6_gs_visitor::emit_prolog()
 void
 gen6_gs_visitor::visit(ir_emit_vertex *ir)
 {
+   /* To ensure that we don't output more vertices than the shader specified
+    * using max_vertices, do the logic inside a conditional of the form "if
+    * (vertex_count < MAX)"
+    */
+   unsigned num_output_vertices = c->gp->program.VerticesOut;
+   emit(CMP(dst_null_d(), this->vertex_count,
+            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
+   emit(IF(BRW_PREDICATE_NORMAL));
+
    gs_emit_vertex(ir->stream_id());
+
+   this->current_annotation = "emit vertex: increment vertex count";
+   emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
+            src_reg(1u)));
+
+   emit(BRW_OPCODE_ENDIF);
 }
+
 void
 gen6_gs_visitor::gs_emit_vertex(int stream_id)
 {
    this->current_annotation = "gen6 emit vertex";
-   /* Honor max_vertex layout indication in geometry shader by ignoring any
-    * vertices coming after c->gp->program.VerticesOut.
-    */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
-   emit(CMP(dst_null_d(), this->vertex_count, src_reg(num_output_vertices),
-            BRW_CONDITIONAL_L));
-   emit(IF(BRW_PREDICATE_NORMAL));
+
    {
       /* Buffer all output slots for this vertex in vertex_output */
       for (int slot = 0; slot < prog_data->vue_map.num_slots; ++slot) {
@@ -219,11 +229,7 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
       }
       emit(ADD(dst_reg(this->vertex_output_offset),
                this->vertex_output_offset, 1u));
-
-      /* Update vertex count */
-      emit(ADD(dst_reg(this->vertex_count), this->vertex_count, 1u));
    }
-   emit(BRW_OPCODE_ENDIF);
 }
 
 void
