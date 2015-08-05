@@ -14,7 +14,7 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  66709 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  60800 bytes, from 2015-07-10 14:00:13)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63728 bytes, from 2015-08-05 18:07:28)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -227,6 +227,7 @@ enum a4xx_depth_format {
 	DEPTH4_NONE = 0,
 	DEPTH4_16 = 1,
 	DEPTH4_24_8 = 2,
+	DEPTH4_32 = 3,
 };
 
 enum a4xx_tess_spacing {
@@ -819,6 +820,23 @@ static inline uint32_t A4XX_RB_STENCIL_CONTROL_ZFAIL_BF(enum adreno_stencil_op v
 
 #define REG_A4XX_RB_STENCIL_CONTROL2				0x00002107
 #define A4XX_RB_STENCIL_CONTROL2_STENCIL_BUFFER			0x00000001
+
+#define REG_A4XX_RB_STENCIL_INFO				0x00002108
+#define A4XX_RB_STENCIL_INFO_SEPARATE_STENCIL			0x00000001
+#define A4XX_RB_STENCIL_INFO_STENCIL_BASE__MASK			0xfffff000
+#define A4XX_RB_STENCIL_INFO_STENCIL_BASE__SHIFT		12
+static inline uint32_t A4XX_RB_STENCIL_INFO_STENCIL_BASE(uint32_t val)
+{
+	return ((val >> 12) << A4XX_RB_STENCIL_INFO_STENCIL_BASE__SHIFT) & A4XX_RB_STENCIL_INFO_STENCIL_BASE__MASK;
+}
+
+#define REG_A4XX_RB_STENCIL_PITCH				0x00002109
+#define A4XX_RB_STENCIL_PITCH__MASK				0xffffffff
+#define A4XX_RB_STENCIL_PITCH__SHIFT				0
+static inline uint32_t A4XX_RB_STENCIL_PITCH(uint32_t val)
+{
+	return ((val >> 5) << A4XX_RB_STENCIL_PITCH__SHIFT) & A4XX_RB_STENCIL_PITCH__MASK;
+}
 
 #define REG_A4XX_RB_STENCILREFMASK				0x0000210b
 #define A4XX_RB_STENCILREFMASK_STENCILREF__MASK			0x000000ff
@@ -1479,6 +1497,76 @@ static inline uint32_t A4XX_SP_HS_OBJ_OFFSET_REG_SHADEROBJOFFSET(uint32_t val)
 
 #define REG_A4XX_SP_HS_LENGTH_REG				0x00002312
 
+#define REG_A4XX_SP_DS_PARAM_REG				0x0000231a
+#define A4XX_SP_DS_PARAM_REG_POSREGID__MASK			0x000000ff
+#define A4XX_SP_DS_PARAM_REG_POSREGID__SHIFT			0
+static inline uint32_t A4XX_SP_DS_PARAM_REG_POSREGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_PARAM_REG_POSREGID__SHIFT) & A4XX_SP_DS_PARAM_REG_POSREGID__MASK;
+}
+#define A4XX_SP_DS_PARAM_REG_TOTALGSOUTVAR__MASK		0xfff00000
+#define A4XX_SP_DS_PARAM_REG_TOTALGSOUTVAR__SHIFT		20
+static inline uint32_t A4XX_SP_DS_PARAM_REG_TOTALGSOUTVAR(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_PARAM_REG_TOTALGSOUTVAR__SHIFT) & A4XX_SP_DS_PARAM_REG_TOTALGSOUTVAR__MASK;
+}
+
+static inline uint32_t REG_A4XX_SP_DS_OUT(uint32_t i0) { return 0x0000231b + 0x1*i0; }
+
+static inline uint32_t REG_A4XX_SP_DS_OUT_REG(uint32_t i0) { return 0x0000231b + 0x1*i0; }
+#define A4XX_SP_DS_OUT_REG_A_REGID__MASK			0x000001ff
+#define A4XX_SP_DS_OUT_REG_A_REGID__SHIFT			0
+static inline uint32_t A4XX_SP_DS_OUT_REG_A_REGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_OUT_REG_A_REGID__SHIFT) & A4XX_SP_DS_OUT_REG_A_REGID__MASK;
+}
+#define A4XX_SP_DS_OUT_REG_A_COMPMASK__MASK			0x00001e00
+#define A4XX_SP_DS_OUT_REG_A_COMPMASK__SHIFT			9
+static inline uint32_t A4XX_SP_DS_OUT_REG_A_COMPMASK(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_OUT_REG_A_COMPMASK__SHIFT) & A4XX_SP_DS_OUT_REG_A_COMPMASK__MASK;
+}
+#define A4XX_SP_DS_OUT_REG_B_REGID__MASK			0x01ff0000
+#define A4XX_SP_DS_OUT_REG_B_REGID__SHIFT			16
+static inline uint32_t A4XX_SP_DS_OUT_REG_B_REGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_OUT_REG_B_REGID__SHIFT) & A4XX_SP_DS_OUT_REG_B_REGID__MASK;
+}
+#define A4XX_SP_DS_OUT_REG_B_COMPMASK__MASK			0x1e000000
+#define A4XX_SP_DS_OUT_REG_B_COMPMASK__SHIFT			25
+static inline uint32_t A4XX_SP_DS_OUT_REG_B_COMPMASK(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_OUT_REG_B_COMPMASK__SHIFT) & A4XX_SP_DS_OUT_REG_B_COMPMASK__MASK;
+}
+
+static inline uint32_t REG_A4XX_SP_DS_VPC_DST(uint32_t i0) { return 0x0000232c + 0x1*i0; }
+
+static inline uint32_t REG_A4XX_SP_DS_VPC_DST_REG(uint32_t i0) { return 0x0000232c + 0x1*i0; }
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC0__MASK			0x000000ff
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC0__SHIFT			0
+static inline uint32_t A4XX_SP_DS_VPC_DST_REG_OUTLOC0(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_VPC_DST_REG_OUTLOC0__SHIFT) & A4XX_SP_DS_VPC_DST_REG_OUTLOC0__MASK;
+}
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC1__MASK			0x0000ff00
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC1__SHIFT			8
+static inline uint32_t A4XX_SP_DS_VPC_DST_REG_OUTLOC1(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_VPC_DST_REG_OUTLOC1__SHIFT) & A4XX_SP_DS_VPC_DST_REG_OUTLOC1__MASK;
+}
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC2__MASK			0x00ff0000
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC2__SHIFT			16
+static inline uint32_t A4XX_SP_DS_VPC_DST_REG_OUTLOC2(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_VPC_DST_REG_OUTLOC2__SHIFT) & A4XX_SP_DS_VPC_DST_REG_OUTLOC2__MASK;
+}
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC3__MASK			0xff000000
+#define A4XX_SP_DS_VPC_DST_REG_OUTLOC3__SHIFT			24
+static inline uint32_t A4XX_SP_DS_VPC_DST_REG_OUTLOC3(uint32_t val)
+{
+	return ((val) << A4XX_SP_DS_VPC_DST_REG_OUTLOC3__SHIFT) & A4XX_SP_DS_VPC_DST_REG_OUTLOC3__MASK;
+}
+
 #define REG_A4XX_SP_DS_OBJ_OFFSET_REG				0x00002334
 #define A4XX_SP_DS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET__MASK	0x01ff0000
 #define A4XX_SP_DS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET__SHIFT	16
@@ -1500,6 +1588,82 @@ static inline uint32_t A4XX_SP_DS_OBJ_OFFSET_REG_SHADEROBJOFFSET(uint32_t val)
 #define REG_A4XX_SP_DS_PVT_MEM_ADDR				0x00002337
 
 #define REG_A4XX_SP_DS_LENGTH_REG				0x00002339
+
+#define REG_A4XX_SP_GS_PARAM_REG				0x00002341
+#define A4XX_SP_GS_PARAM_REG_POSREGID__MASK			0x000000ff
+#define A4XX_SP_GS_PARAM_REG_POSREGID__SHIFT			0
+static inline uint32_t A4XX_SP_GS_PARAM_REG_POSREGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_PARAM_REG_POSREGID__SHIFT) & A4XX_SP_GS_PARAM_REG_POSREGID__MASK;
+}
+#define A4XX_SP_GS_PARAM_REG_PRIMREGID__MASK			0x0000ff00
+#define A4XX_SP_GS_PARAM_REG_PRIMREGID__SHIFT			8
+static inline uint32_t A4XX_SP_GS_PARAM_REG_PRIMREGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_PARAM_REG_PRIMREGID__SHIFT) & A4XX_SP_GS_PARAM_REG_PRIMREGID__MASK;
+}
+#define A4XX_SP_GS_PARAM_REG_TOTALGSOUTVAR__MASK		0xfff00000
+#define A4XX_SP_GS_PARAM_REG_TOTALGSOUTVAR__SHIFT		20
+static inline uint32_t A4XX_SP_GS_PARAM_REG_TOTALGSOUTVAR(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_PARAM_REG_TOTALGSOUTVAR__SHIFT) & A4XX_SP_GS_PARAM_REG_TOTALGSOUTVAR__MASK;
+}
+
+static inline uint32_t REG_A4XX_SP_GS_OUT(uint32_t i0) { return 0x00002342 + 0x1*i0; }
+
+static inline uint32_t REG_A4XX_SP_GS_OUT_REG(uint32_t i0) { return 0x00002342 + 0x1*i0; }
+#define A4XX_SP_GS_OUT_REG_A_REGID__MASK			0x000001ff
+#define A4XX_SP_GS_OUT_REG_A_REGID__SHIFT			0
+static inline uint32_t A4XX_SP_GS_OUT_REG_A_REGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_OUT_REG_A_REGID__SHIFT) & A4XX_SP_GS_OUT_REG_A_REGID__MASK;
+}
+#define A4XX_SP_GS_OUT_REG_A_COMPMASK__MASK			0x00001e00
+#define A4XX_SP_GS_OUT_REG_A_COMPMASK__SHIFT			9
+static inline uint32_t A4XX_SP_GS_OUT_REG_A_COMPMASK(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_OUT_REG_A_COMPMASK__SHIFT) & A4XX_SP_GS_OUT_REG_A_COMPMASK__MASK;
+}
+#define A4XX_SP_GS_OUT_REG_B_REGID__MASK			0x01ff0000
+#define A4XX_SP_GS_OUT_REG_B_REGID__SHIFT			16
+static inline uint32_t A4XX_SP_GS_OUT_REG_B_REGID(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_OUT_REG_B_REGID__SHIFT) & A4XX_SP_GS_OUT_REG_B_REGID__MASK;
+}
+#define A4XX_SP_GS_OUT_REG_B_COMPMASK__MASK			0x1e000000
+#define A4XX_SP_GS_OUT_REG_B_COMPMASK__SHIFT			25
+static inline uint32_t A4XX_SP_GS_OUT_REG_B_COMPMASK(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_OUT_REG_B_COMPMASK__SHIFT) & A4XX_SP_GS_OUT_REG_B_COMPMASK__MASK;
+}
+
+static inline uint32_t REG_A4XX_SP_GS_VPC_DST(uint32_t i0) { return 0x00002353 + 0x1*i0; }
+
+static inline uint32_t REG_A4XX_SP_GS_VPC_DST_REG(uint32_t i0) { return 0x00002353 + 0x1*i0; }
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC0__MASK			0x000000ff
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC0__SHIFT			0
+static inline uint32_t A4XX_SP_GS_VPC_DST_REG_OUTLOC0(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_VPC_DST_REG_OUTLOC0__SHIFT) & A4XX_SP_GS_VPC_DST_REG_OUTLOC0__MASK;
+}
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC1__MASK			0x0000ff00
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC1__SHIFT			8
+static inline uint32_t A4XX_SP_GS_VPC_DST_REG_OUTLOC1(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_VPC_DST_REG_OUTLOC1__SHIFT) & A4XX_SP_GS_VPC_DST_REG_OUTLOC1__MASK;
+}
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC2__MASK			0x00ff0000
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC2__SHIFT			16
+static inline uint32_t A4XX_SP_GS_VPC_DST_REG_OUTLOC2(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_VPC_DST_REG_OUTLOC2__SHIFT) & A4XX_SP_GS_VPC_DST_REG_OUTLOC2__MASK;
+}
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC3__MASK			0xff000000
+#define A4XX_SP_GS_VPC_DST_REG_OUTLOC3__SHIFT			24
+static inline uint32_t A4XX_SP_GS_VPC_DST_REG_OUTLOC3(uint32_t val)
+{
+	return ((val) << A4XX_SP_GS_VPC_DST_REG_OUTLOC3__SHIFT) & A4XX_SP_GS_VPC_DST_REG_OUTLOC3__MASK;
+}
 
 #define REG_A4XX_SP_GS_OBJ_OFFSET_REG				0x0000235b
 #define A4XX_SP_GS_OBJ_OFFSET_REG_CONSTOBJECTOFFSET__MASK	0x01ff0000
@@ -1701,6 +1865,18 @@ static inline uint32_t A4XX_VFD_CONTROL_1_REGID4INST(uint32_t val)
 static inline uint32_t A4XX_VFD_CONTROL_3_REGID_VTXCNT(uint32_t val)
 {
 	return ((val) << A4XX_VFD_CONTROL_3_REGID_VTXCNT__SHIFT) & A4XX_VFD_CONTROL_3_REGID_VTXCNT__MASK;
+}
+#define A4XX_VFD_CONTROL_3_REGID_TESSX__MASK			0x00ff0000
+#define A4XX_VFD_CONTROL_3_REGID_TESSX__SHIFT			16
+static inline uint32_t A4XX_VFD_CONTROL_3_REGID_TESSX(uint32_t val)
+{
+	return ((val) << A4XX_VFD_CONTROL_3_REGID_TESSX__SHIFT) & A4XX_VFD_CONTROL_3_REGID_TESSX__MASK;
+}
+#define A4XX_VFD_CONTROL_3_REGID_TESSY__MASK			0xff000000
+#define A4XX_VFD_CONTROL_3_REGID_TESSY__SHIFT			24
+static inline uint32_t A4XX_VFD_CONTROL_3_REGID_TESSY(uint32_t val)
+{
+	return ((val) << A4XX_VFD_CONTROL_3_REGID_TESSY__SHIFT) & A4XX_VFD_CONTROL_3_REGID_TESSY__MASK;
 }
 
 #define REG_A4XX_VFD_CONTROL_4					0x00002204
@@ -2497,6 +2673,8 @@ static inline uint32_t A4XX_UNKNOWN_20F7(float val)
 #define REG_A4XX_UNKNOWN_2209					0x00002209
 
 #define REG_A4XX_UNKNOWN_22D7					0x000022d7
+
+#define REG_A4XX_UNKNOWN_2352					0x00002352
 
 #define REG_A4XX_TEX_SAMP_0					0x00000000
 #define A4XX_TEX_SAMP_0_MIPFILTER_LINEAR_NEAR			0x00000001
