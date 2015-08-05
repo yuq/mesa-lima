@@ -68,11 +68,23 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 
 		if ((i < nr_bufs) && bufs[i]) {
 			struct pipe_surface *psurf = bufs[i];
+			enum pipe_format pformat = 0;
 
 			rsc = fd_resource(psurf->texture);
+			pformat = psurf->format;
+
+			/* In case we're drawing to Z32F_S8, the "color" actually goes to
+			 * the stencil
+			 */
+			if (rsc->stencil) {
+				rsc = rsc->stencil;
+				pformat = rsc->base.b.format;
+				bases++;
+			}
+
 			slice = fd_resource_slice(rsc, psurf->u.tex.level);
-			format = fd4_pipe2color(psurf->format);
-			swap = fd4_pipe2swap(psurf->format);
+			format = fd4_pipe2color(pformat);
+			swap = fd4_pipe2swap(pformat);
 
 			debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
@@ -114,13 +126,23 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 /* transfer from gmem to system memory (ie. normal RAM) */
 
 static void
-emit_gmem2mem_surf(struct fd_context *ctx,
+emit_gmem2mem_surf(struct fd_context *ctx, bool stencil,
 		uint32_t base, struct pipe_surface *psurf)
 {
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct fd_resource *rsc = fd_resource(psurf->texture);
-	struct fd_resource_slice *slice = &rsc->slices[psurf->u.tex.level];
-	uint32_t offset = fd_resource_offset(rsc, psurf->u.tex.level,
+	enum pipe_format pformat = psurf->format;
+	struct fd_resource_slice *slice;
+	uint32_t offset;
+
+	if (stencil) {
+		debug_assert(rsc->stencil);
+		rsc = rsc->stencil;
+		pformat = rsc->base.b.format;
+	}
+
+	slice = &rsc->slices[psurf->u.tex.level];
+	offset = fd_resource_offset(rsc, psurf->u.tex.level,
 			psurf->u.tex.first_layer);
 
 	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
@@ -132,10 +154,10 @@ emit_gmem2mem_surf(struct fd_context *ctx,
 	OUT_RELOCW(ring, rsc->bo, offset, 0, 0);   /* RB_COPY_DEST_BASE */
 	OUT_RING(ring, A4XX_RB_COPY_DEST_PITCH_PITCH(slice->pitch * rsc->cpp));
 	OUT_RING(ring, A4XX_RB_COPY_DEST_INFO_TILE(TILE4_LINEAR) |
-			A4XX_RB_COPY_DEST_INFO_FORMAT(fd4_pipe2color(psurf->format)) |
+			A4XX_RB_COPY_DEST_INFO_FORMAT(fd4_pipe2color(pformat)) |
 			A4XX_RB_COPY_DEST_INFO_COMPONENT_ENABLE(0xf) |
 			A4XX_RB_COPY_DEST_INFO_ENDIAN(ENDIAN_NONE) |
-			A4XX_RB_COPY_DEST_INFO_SWAP(fd4_pipe2swap(psurf->format)));
+			A4XX_RB_COPY_DEST_INFO_SWAP(fd4_pipe2swap(pformat)));
 
 	fd4_draw(ctx, ring, DI_PT_RECTLIST, IGNORE_VISIBILITY,
 			DI_SRC_SEL_AUTO_INDEX, 2, 1, INDEX_SIZE_IGN, 0, 0, NULL);
@@ -226,7 +248,11 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 	fd4_emit_vertex_bufs(ring, &emit);
 
 	if (ctx->resolve & (FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
-		emit_gmem2mem_surf(ctx, gmem->zsbuf_base[0], pfb->zsbuf);
+		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
+		if (!rsc->stencil || (ctx->resolve & FD_BUFFER_DEPTH))
+			emit_gmem2mem_surf(ctx, false, ctx->gmem.zsbuf_base[0], pfb->zsbuf);
+		if (rsc->stencil && (ctx->resolve & FD_BUFFER_STENCIL))
+			emit_gmem2mem_surf(ctx, true, ctx->gmem.zsbuf_base[1], pfb->zsbuf);
 	}
 
 	if (ctx->resolve & FD_BUFFER_COLOR) {
@@ -236,7 +262,7 @@ fd4_emit_tile_gmem2mem(struct fd_context *ctx, struct fd_tile *tile)
 				continue;
 			if (!(ctx->resolve & (PIPE_CLEAR_COLOR0 << i)))
 				continue;
-			emit_gmem2mem_surf(ctx, gmem->cbuf_base[i], pfb->cbufs[i]);
+			emit_gmem2mem_surf(ctx, false, gmem->cbuf_base[i], pfb->cbufs[i]);
 		}
 	}
 
@@ -254,8 +280,19 @@ emit_mem2gmem_surf(struct fd_context *ctx, uint32_t *bases,
 		struct pipe_surface **bufs, uint32_t nr_bufs, uint32_t bin_w)
 {
 	struct fd_ringbuffer *ring = ctx->ring;
+	struct pipe_surface *zsbufs[2];
 
 	emit_mrt(ring, nr_bufs, bufs, bases, bin_w);
+
+	if (bufs[0] && (bufs[0]->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)) {
+		/* The gmem_restore_tex logic will put the first buffer's stencil
+		 * as color. Supply it with the proper information to make that
+		 * happen.
+		 */
+		zsbufs[0] = zsbufs[1] = bufs[0];
+		bufs = zsbufs;
+		nr_bufs = 2;
+	}
 
 	fd4_emit_gmem_restore_tex(ring, nr_bufs, bufs);
 
@@ -394,18 +431,45 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 	bin_w = gmem->bin_w;
 	bin_h = gmem->bin_h;
 
-	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
-		emit.prog = &ctx->blit_prog[0];
-		emit.fp = NULL;      /* frag shader changed so clear cache */
-		fd4_program_emit(ring, &emit, 1, &pfb->zsbuf);
-		emit_mem2gmem_surf(ctx, gmem->zsbuf_base, &pfb->zsbuf, 1, bin_w);
-	}
-
 	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_COLOR)) {
 		emit.prog = &ctx->blit_prog[pfb->nr_cbufs - 1];
 		emit.fp = NULL;      /* frag shader changed so clear cache */
 		fd4_program_emit(ring, &emit, pfb->nr_cbufs, pfb->cbufs);
 		emit_mem2gmem_surf(ctx, gmem->cbuf_base, pfb->cbufs, pfb->nr_cbufs, bin_w);
+	}
+
+	if (fd_gmem_needs_restore(ctx, tile, FD_BUFFER_DEPTH | FD_BUFFER_STENCIL)) {
+		switch (pfb->zsbuf->format) {
+		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
+		case PIPE_FORMAT_Z32_FLOAT:
+			emit.prog = (pfb->zsbuf->format == PIPE_FORMAT_Z32_FLOAT) ?
+					&ctx->blit_z : &ctx->blit_zs;
+			emit.key.half_precision = false;
+
+			OUT_PKT0(ring, REG_A4XX_RB_DEPTH_CONTROL, 1);
+			OUT_RING(ring, A4XX_RB_DEPTH_CONTROL_Z_ENABLE |
+					A4XX_RB_DEPTH_CONTROL_Z_WRITE_ENABLE |
+					A4XX_RB_DEPTH_CONTROL_ZFUNC(FUNC_ALWAYS) |
+					A4XX_RB_DEPTH_CONTROL_EARLY_Z_DISABLE);
+
+			OUT_PKT0(ring, REG_A4XX_GRAS_ALPHA_CONTROL, 1);
+			OUT_RING(ring, A4XX_GRAS_ALPHA_CONTROL_ALPHA_TEST_ENABLE);
+
+			OUT_PKT0(ring, REG_A4XX_GRAS_CL_CLIP_CNTL, 1);
+			OUT_RING(ring, 0x80000);   /* GRAS_CL_CLIP_CNTL */
+
+			break;
+		default:
+			/* Non-float can use a regular color write. It's split over 8-bit
+			 * components, so half precision is always sufficient.
+			 */
+			emit.prog = &ctx->blit_prog[0];
+			emit.key.half_precision = true;
+			break;
+		}
+		emit.fp = NULL;      /* frag shader changed so clear cache */
+		fd4_program_emit(ring, &emit, 1, &pfb->zsbuf);
+		emit_mem2gmem_surf(ctx, gmem->zsbuf_base, &pfb->zsbuf, 1, bin_w);
 	}
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_SC_CONTROL, 1);
@@ -546,21 +610,35 @@ fd4_emit_tile_prep(struct fd_context *ctx, struct fd_tile *tile)
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
 	struct fd_gmem_stateobj *gmem = &ctx->gmem;
-	uint32_t reg;
 
-	OUT_PKT0(ring, REG_A4XX_RB_DEPTH_INFO, 3);
-	reg = A4XX_RB_DEPTH_INFO_DEPTH_BASE(gmem->zsbuf_base[0]);
 	if (pfb->zsbuf) {
-		reg |= A4XX_RB_DEPTH_INFO_DEPTH_FORMAT(fd4_pipe2depth(pfb->zsbuf->format));
-	}
-	OUT_RING(ring, reg);
-	if (pfb->zsbuf) {
-		uint32_t cpp = util_format_get_blocksize(pfb->zsbuf->format);
+		struct fd_resource *rsc = fd_resource(pfb->zsbuf->texture);
+		uint32_t cpp = rsc->cpp;
+
+		OUT_PKT0(ring, REG_A4XX_RB_DEPTH_INFO, 3);
+		OUT_RING(ring, A4XX_RB_DEPTH_INFO_DEPTH_BASE(gmem->zsbuf_base[0]) |
+				A4XX_RB_DEPTH_INFO_DEPTH_FORMAT(fd4_pipe2depth(pfb->zsbuf->format)));
 		OUT_RING(ring, A4XX_RB_DEPTH_PITCH(cpp * gmem->bin_w));
 		OUT_RING(ring, A4XX_RB_DEPTH_PITCH2(cpp * gmem->bin_w));
+
+		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_INFO, 2);
+		if (rsc->stencil) {
+			OUT_RING(ring, A4XX_RB_STENCIL_INFO_SEPARATE_STENCIL |
+					A4XX_RB_STENCIL_INFO_STENCIL_BASE(gmem->zsbuf_base[1]));
+			OUT_RING(ring, A4XX_RB_STENCIL_PITCH(rsc->stencil->cpp * gmem->bin_w));
+		} else {
+			OUT_RING(ring, 0x00000000);
+			OUT_RING(ring, 0x00000000);
+		}
 	} else {
+		OUT_PKT0(ring, REG_A4XX_RB_DEPTH_INFO, 3);
 		OUT_RING(ring, 0x00000000);
 		OUT_RING(ring, 0x00000000);
+		OUT_RING(ring, 0x00000000);
+
+		OUT_PKT0(ring, REG_A4XX_RB_STENCIL_INFO, 2);
+		OUT_RING(ring, 0);            /* RB_STENCIL_INFO */
+		OUT_RING(ring, 0);            /* RB_STENCIL_PITCH */
 	}
 
 	OUT_PKT0(ring, REG_A4XX_GRAS_DEPTH_CONTROL, 1);

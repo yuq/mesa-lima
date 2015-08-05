@@ -200,22 +200,12 @@ void
 fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		struct pipe_surface **bufs)
 {
-	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
+	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS];
 	int i;
 
 	for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 		mrt_comp[i] = (i < nr_bufs) ? 0xf : 0;
 	}
-
-	OUT_PKT0(ring, REG_A4XX_RB_RENDER_COMPONENTS, 1);
-	OUT_RING(ring, A4XX_RB_RENDER_COMPONENTS_RT0(mrt_comp[0]) |
-			A4XX_RB_RENDER_COMPONENTS_RT1(mrt_comp[1]) |
-			A4XX_RB_RENDER_COMPONENTS_RT2(mrt_comp[2]) |
-			A4XX_RB_RENDER_COMPONENTS_RT3(mrt_comp[3]) |
-			A4XX_RB_RENDER_COMPONENTS_RT4(mrt_comp[4]) |
-			A4XX_RB_RENDER_COMPONENTS_RT5(mrt_comp[5]) |
-			A4XX_RB_RENDER_COMPONENTS_RT6(mrt_comp[6]) |
-			A4XX_RB_RENDER_COMPONENTS_RT7(mrt_comp[7]));
 
 	/* output sampler state: */
 	OUT_PKT3(ring, CP_LOAD_STATE, 2 + (2 * nr_bufs));
@@ -250,6 +240,25 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			uint32_t offset = fd_resource_offset(rsc, lvl, bufs[i]->u.tex.first_layer);
 			enum pipe_format format = fd4_gmem_restore_format(bufs[i]->format);
 
+			/* The restore blit_zs shader expects stencil in sampler 0,
+			 * and depth in sampler 1
+			 */
+			if (rsc->stencil && (i == 0)) {
+				rsc = rsc->stencil;
+				format = fd4_gmem_restore_format(rsc->base.b.format);
+			}
+
+			/* z32 restore is accomplished using depth write.  If there is
+			 * no stencil component (ie. PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
+			 * then no render target:
+			 *
+			 * (The same applies for z32_s8x24, since for stencil sampler
+			 * state the above 'if' will replace 'format' with s8)
+			 */
+			if ((format == PIPE_FORMAT_Z32_FLOAT) ||
+					(format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT))
+				mrt_comp[i] = 0;
+
 			debug_assert(bufs[i]->u.tex.first_layer == bufs[i]->u.tex.last_layer);
 
 			OUT_RING(ring, A4XX_TEX_CONST_0_FMT(fd4_pipe2tex(format)) |
@@ -281,6 +290,16 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			OUT_RING(ring, 0x00000000);
 		}
 	}
+
+	OUT_PKT0(ring, REG_A4XX_RB_RENDER_COMPONENTS, 1);
+	OUT_RING(ring, A4XX_RB_RENDER_COMPONENTS_RT0(mrt_comp[0]) |
+			A4XX_RB_RENDER_COMPONENTS_RT1(mrt_comp[1]) |
+			A4XX_RB_RENDER_COMPONENTS_RT2(mrt_comp[2]) |
+			A4XX_RB_RENDER_COMPONENTS_RT3(mrt_comp[3]) |
+			A4XX_RB_RENDER_COMPONENTS_RT4(mrt_comp[4]) |
+			A4XX_RB_RENDER_COMPONENTS_RT5(mrt_comp[5]) |
+			A4XX_RB_RENDER_COMPONENTS_RT6(mrt_comp[6]) |
+			A4XX_RB_RENDER_COMPONENTS_RT7(mrt_comp[7]));
 }
 
 void
