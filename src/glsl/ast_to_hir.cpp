@@ -820,7 +820,16 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
                           "assignment to %s",
                           non_lvalue_description);
          error_emitted = true;
-      } else if (lhs_var != NULL && lhs_var->data.read_only) {
+      } else if (lhs_var != NULL && (lhs_var->data.read_only ||
+                 (lhs_var->data.mode == ir_var_shader_storage &&
+                  lhs_var->data.image_read_only))) {
+         /* We can have image_read_only set on both images and buffer variables,
+          * but in the former there is a distinction between assignments to
+          * the variable itself (read_only) and to the memory they point to
+          * (image_read_only), while in the case of buffer variables there is
+          * no such distinction, that is why this check here is limited to
+          * buffer variables alone.
+          */
          _mesa_glsl_error(&lhs_loc, state,
                           "assignment to read-only variable '%s'",
                           lhs_var->name);
