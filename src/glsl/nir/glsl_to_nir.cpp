@@ -129,9 +129,13 @@ private:
 }; /* end of anonymous namespace */
 
 nir_shader *
-glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
+glsl_to_nir(const struct gl_shader_program *shader_prog,
+            gl_shader_stage stage,
+            const nir_shader_compiler_options *options)
 {
-   nir_shader *shader = nir_shader_create(NULL, sh->Stage, options);
+   struct gl_shader *sh = shader_prog->_LinkedShaders[stage];
+
+   nir_shader *shader = nir_shader_create(NULL, stage, options);
 
    nir_visitor v1(shader);
    nir_function_visitor v2(&v1);
