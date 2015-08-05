@@ -3130,9 +3130,9 @@ fs_visitor::lower_integer_multiplication()
    bool progress = false;
 
    /* Gen8's MUL instruction can do a 32-bit x 32-bit -> 32-bit operation
-    * directly, but Cherryview cannot.
+    * directly, but CHV/BXT cannot.
     */
-   if (devinfo->gen >= 8 && !devinfo->is_cherryview)
+   if (devinfo->gen >= 8 && !devinfo->is_cherryview && !devinfo->is_broxton)
       return false;
 
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
