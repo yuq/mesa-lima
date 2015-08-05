@@ -140,8 +140,8 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 QPU_UNPACK_8B,
                 QPU_UNPACK_8C,
                 QPU_UNPACK_8D,
-                QPU_UNPACK_16A_TO_F32,
-                QPU_UNPACK_16B_TO_F32,
+                QPU_UNPACK_16A,
+                QPU_UNPACK_16B,
         };
 
         list_inithead(&c->qpu_inst_list);
