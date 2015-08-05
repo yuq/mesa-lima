@@ -808,6 +808,7 @@ fs_inst::regs_read(int arg) const
    case IMM:
       return 1;
    case GRF:
+   case ATTR:
    case HW_REG:
       return DIV_ROUND_UP(components_read(arg) *
                           src[arg].component_size(exec_size),
