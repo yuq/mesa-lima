@@ -3136,7 +3136,7 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
             /* Type needs to match if specified, otherwise we might
              * pick a variable with same name but different interface.
              */
-            if (mode != 0 && var->data.mode != mode)
+            if (var->data.mode != mode)
                continue;
 
             if (strncmp(var->name, name, baselen) == 0) {
@@ -3248,12 +3248,9 @@ build_program_resource_list(struct gl_context *ctx,
    /* Add transform feedback varyings. */
    if (shProg->LinkedTransformFeedback.NumVarying > 0) {
       for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
-         uint8_t stageref =
-            build_stageref(shProg,
-                           shProg->LinkedTransformFeedback.Varyings[i].Name, 0);
          if (!add_program_resource(shProg, GL_TRANSFORM_FEEDBACK_VARYING,
                                    &shProg->LinkedTransformFeedback.Varyings[i],
-                                   stageref))
+                                   0))
          return;
       }
    }
@@ -3265,7 +3262,8 @@ build_program_resource_list(struct gl_context *ctx,
          continue;
 
       uint8_t stageref =
-         build_stageref(shProg, shProg->UniformStorage[i].name, 0);
+         build_stageref(shProg, shProg->UniformStorage[i].name,
+                        ir_var_uniform);
 
       /* Add stagereferences for uniforms in a uniform block. */
       int block_index = shProg->UniformStorage[i].block_index;
