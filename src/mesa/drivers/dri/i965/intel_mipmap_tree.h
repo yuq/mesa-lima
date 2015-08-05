@@ -537,12 +537,10 @@ enum {
    MIPTREE_LAYOUT_FORCE_HALIGN16           = 1 << 4,
 
    MIPTREE_LAYOUT_ALLOC_YTILED             = 1 << 5,
-   MIPTREE_LAYOUT_ALLOC_XTILED             = 1 << 6,
-   MIPTREE_LAYOUT_ALLOC_LINEAR             = 1 << 7,
+   MIPTREE_LAYOUT_ALLOC_LINEAR             = 1 << 6,
+   MIPTREE_LAYOUT_ALLOC_ANY_TILED          = MIPTREE_LAYOUT_ALLOC_YTILED |
+                                             MIPTREE_LAYOUT_ALLOC_LINEAR,
 };
-
-#define MIPTREE_LAYOUT_ALLOC_ANY_TILED (MIPTREE_LAYOUT_ALLOC_YTILED | \
-                                        MIPTREE_LAYOUT_ALLOC_XTILED)
 
 struct intel_mipmap_tree *intel_miptree_create(struct brw_context *brw,
                                                GLenum target,
