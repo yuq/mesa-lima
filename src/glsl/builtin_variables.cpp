@@ -322,6 +322,7 @@ per_vertex_accumulator::add_field(int slot, const glsl_type *type,
    this->fields[this->num_fields].interpolation = INTERP_QUALIFIER_NONE;
    this->fields[this->num_fields].centroid = 0;
    this->fields[this->num_fields].sample = 0;
+   this->fields[this->num_fields].patch = 0;
    this->num_fields++;
 }
 
@@ -1159,6 +1160,7 @@ builtin_variable_generator::generate_varyings()
          var->data.interpolation = fields[i].interpolation;
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
+         var->data.patch = fields[i].patch;
          var->init_interface_type(per_vertex_out_type);
       }
    }
