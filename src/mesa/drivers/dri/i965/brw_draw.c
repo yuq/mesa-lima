@@ -626,7 +626,7 @@ brw_draw_init(struct brw_context *brw)
 void
 brw_draw_destroy(struct brw_context *brw)
 {
-   int i;
+   unsigned i;
 
    for (i = 0; i < brw->vb.nr_buffers; i++) {
       drm_intel_bo_unreference(brw->vb.buffers[i].bo);
