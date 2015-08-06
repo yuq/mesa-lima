@@ -398,24 +398,15 @@ struct radeon_winsys {
     void (*buffer_unmap)(struct radeon_winsys_cs_handle *buf);
 
     /**
-     * Return TRUE if a buffer object is being used by the GPU.
+     * Wait for the buffer and return true if the buffer is not used
+     * by the device.
      *
-     * \param buf       A winsys buffer object.
-     * \param usage     Only check whether the buffer is busy for the given usage.
+     * The timeout of 0 will only return the status.
+     * The timeout of PIPE_TIMEOUT_INFINITE will always wait until the buffer
+     * is idle.
      */
-    boolean (*buffer_is_busy)(struct pb_buffer *buf,
-                              enum radeon_bo_usage usage);
-
-    /**
-     * Wait for a buffer object until it is not used by a GPU. This is
-     * equivalent to a fence placed after the last command using the buffer,
-     * and synchronizing to the fence.
-     *
-     * \param buf       A winsys buffer object to wait for.
-     * \param usage     Only wait until the buffer is idle for the given usage,
-     *                  but may still be busy for some other usage.
-     */
-    void (*buffer_wait)(struct pb_buffer *buf, enum radeon_bo_usage usage);
+    bool (*buffer_wait)(struct pb_buffer *buf, uint64_t timeout,
+                        enum radeon_bo_usage usage);
 
     /**
      * Return tiling flags describing a memory layout of a buffer object.

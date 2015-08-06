@@ -101,33 +101,30 @@ static struct radeon_bo *get_radeon_bo(struct pb_buffer *_buf)
     return bo;
 }
 
-static void radeon_bo_wait(struct pb_buffer *_buf, enum radeon_bo_usage usage)
+static bool radeon_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
+                           enum radeon_bo_usage usage)
 {
-    struct radeon_bo *bo = get_radeon_bo(_buf);
-    struct drm_radeon_gem_wait_idle args = {0};
+   struct radeon_bo *bo = get_radeon_bo(_buf);
 
-    while (p_atomic_read(&bo->num_active_ioctls)) {
-        sched_yield();
+   /* Wait if any ioctl is being submitted with this buffer. */
+   if (!os_wait_until_zero(&bo->num_active_ioctls, timeout))
+      return false;
+
+   /* TODO: handle arbitrary timeout */
+    if (!timeout) {
+        struct drm_radeon_gem_busy args = {0};
+
+        args.handle = bo->handle;
+        return drmCommandWriteRead(bo->rws->fd, DRM_RADEON_GEM_BUSY,
+                                   &args, sizeof(args)) == 0;
+    } else {
+        struct drm_radeon_gem_wait_idle args = {0};
+
+        args.handle = bo->handle;
+        while (drmCommandWrite(bo->rws->fd, DRM_RADEON_GEM_WAIT_IDLE,
+                               &args, sizeof(args)) == -EBUSY);
+        return true;
     }
-
-    args.handle = bo->handle;
-    while (drmCommandWrite(bo->rws->fd, DRM_RADEON_GEM_WAIT_IDLE,
-                           &args, sizeof(args)) == -EBUSY);
-}
-
-static boolean radeon_bo_is_busy(struct pb_buffer *_buf,
-                                 enum radeon_bo_usage usage)
-{
-    struct radeon_bo *bo = get_radeon_bo(_buf);
-    struct drm_radeon_gem_busy args = {0};
-
-    if (p_atomic_read(&bo->num_active_ioctls)) {
-        return TRUE;
-    }
-
-    args.handle = bo->handle;
-    return drmCommandWriteRead(bo->rws->fd, DRM_RADEON_GEM_BUSY,
-                               &args, sizeof(args)) != 0;
 }
 
 static enum radeon_bo_domain get_valid_domain(enum radeon_bo_domain domain)
@@ -410,8 +407,8 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
                     return NULL;
                 }
 
-                if (radeon_bo_is_busy((struct pb_buffer*)bo,
-                                      RADEON_USAGE_WRITE)) {
+                if (!radeon_bo_wait((struct pb_buffer*)bo, 0,
+                                    RADEON_USAGE_WRITE)) {
                     return NULL;
                 }
             } else {
@@ -420,8 +417,8 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
                     return NULL;
                 }
 
-                if (radeon_bo_is_busy((struct pb_buffer*)bo,
-                                      RADEON_USAGE_READWRITE)) {
+                if (!radeon_bo_wait((struct pb_buffer*)bo, 0,
+                                    RADEON_USAGE_READWRITE)) {
                     return NULL;
                 }
             }
@@ -439,7 +436,7 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
                 if (cs && radeon_bo_is_referenced_by_cs_for_write(cs, bo)) {
                     cs->flush_cs(cs->flush_data, 0, NULL);
                 }
-                radeon_bo_wait((struct pb_buffer*)bo,
+                radeon_bo_wait((struct pb_buffer*)bo, PIPE_TIMEOUT_INFINITE,
                                RADEON_USAGE_WRITE);
             } else {
                 /* Mapping for write. */
@@ -453,7 +450,8 @@ static void *radeon_bo_map(struct radeon_winsys_cs_handle *buf,
                     }
                 }
 
-                radeon_bo_wait((struct pb_buffer*)bo, RADEON_USAGE_READWRITE);
+                radeon_bo_wait((struct pb_buffer*)bo, PIPE_TIMEOUT_INFINITE,
+                               RADEON_USAGE_READWRITE);
             }
 
             bo->mgr->rws->buffer_wait_time += os_time_get_nano() - time;
@@ -644,7 +642,7 @@ static boolean radeon_bomgr_is_buffer_busy(struct pb_manager *_mgr,
        return TRUE;
    }
 
-   if (radeon_bo_is_busy((struct pb_buffer*)bo, RADEON_USAGE_READWRITE)) {
+   if (!radeon_bo_wait((struct pb_buffer*)bo, 0, RADEON_USAGE_READWRITE)) {
        return TRUE;
    }
 
@@ -1166,7 +1164,6 @@ void radeon_bomgr_init_functions(struct radeon_drm_winsys *ws)
     ws->base.buffer_map = radeon_bo_map;
     ws->base.buffer_unmap = radeon_bo_unmap;
     ws->base.buffer_wait = radeon_bo_wait;
-    ws->base.buffer_is_busy = radeon_bo_is_busy;
     ws->base.buffer_create = radeon_winsys_bo_create;
     ws->base.buffer_from_handle = radeon_winsys_bo_from_handle;
     ws->base.buffer_from_ptr = radeon_winsys_bo_from_ptr;
