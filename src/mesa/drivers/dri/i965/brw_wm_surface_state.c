@@ -898,7 +898,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    uint32_t *surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
-   for (int i = 0; i < shader->NumUniformBlocks; i++) {
+   for (unsigned i = 0; i < shader->NumUniformBlocks; i++) {
       struct gl_uniform_buffer_binding *binding;
       struct intel_buffer_object *intel_bo;
 
