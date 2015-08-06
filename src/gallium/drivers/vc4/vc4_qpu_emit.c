@@ -336,28 +336,12 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_PACK_8B_F:
                 case QOP_PACK_8C_F:
                 case QOP_PACK_8D_F:
-                        /* If dst doesn't happen to already contain src[0],
-                         * then we have to move it in.
-                         */
-                        if (qinst->src[0].file != QFILE_NULL &&
-                            (src[0].mux != dst.mux || src[0].addr != dst.addr)) {
-                                /* Don't overwrite src1 while setting up
-                                 * the dst!
-                                 */
-                                if (dst.mux == src[1].mux &&
-                                    dst.addr == src[1].addr) {
-                                        queue(c, qpu_m_MOV(qpu_rb(31), src[1]));
-                                        src[1] = qpu_rb(31);
-                                }
-
-                                queue(c, qpu_m_MOV(dst, src[0]));
-                        }
-
-                        queue(c, qpu_m_MOV(dst, src[1]));
-                        *last_inst(c) |= QPU_PM;
-                        *last_inst(c) |= QPU_SET_FIELD(QPU_PACK_MUL_8A +
-                                                       qinst->op - QOP_PACK_8A_F,
-                                                       QPU_PACK);
+                        queue(c,
+                              qpu_m_MOV(dst, src[0]) |
+                              QPU_PM |
+                              QPU_SET_FIELD(QPU_PACK_MUL_8A +
+                                            qinst->op - QOP_PACK_8A_F,
+                                            QPU_PACK));
                         break;
 
                 case QOP_FRAG_X:

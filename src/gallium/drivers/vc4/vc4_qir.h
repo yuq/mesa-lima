@@ -534,6 +534,16 @@ qir_##name(struct vc4_compile *c, struct qreg a, struct qreg b)         \
         qir_emit(c, qir_inst(QOP_##name, c->undef, a, b));       \
 }
 
+#define QIR_PACK(name)                                                   \
+static inline struct qreg                                                \
+qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
+{                                                                        \
+        qir_emit(c, qir_inst(QOP_##name, dest, a, c->undef));            \
+        if (dest.file == QFILE_TEMP)                                     \
+                c->defs[dest.index] = NULL;                              \
+        return dest;                                                     \
+}
+
 QIR_ALU1(MOV)
 QIR_ALU2(FADD)
 QIR_ALU2(FSUB)
@@ -572,10 +582,10 @@ QIR_ALU1(EXP2)
 QIR_ALU1(LOG2)
 QIR_ALU2(PACK_SCALED)
 QIR_ALU1(PACK_8888_F)
-QIR_ALU2(PACK_8A_F)
-QIR_ALU2(PACK_8B_F)
-QIR_ALU2(PACK_8C_F)
-QIR_ALU2(PACK_8D_F)
+QIR_PACK(PACK_8A_F)
+QIR_PACK(PACK_8B_F)
+QIR_PACK(PACK_8C_F)
+QIR_PACK(PACK_8D_F)
 QIR_ALU1(VARY_ADD_C)
 QIR_NODST_2(TEX_S)
 QIR_NODST_2(TEX_T)
@@ -627,11 +637,12 @@ qir_UNPACK_16_I(struct vc4_compile *c, struct qreg src, int i)
 }
 
 static inline struct qreg
-qir_PACK_8_F(struct vc4_compile *c, struct qreg rest, struct qreg val, int chan)
+qir_PACK_8_F(struct vc4_compile *c, struct qreg dest, struct qreg val, int chan)
 {
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_PACK_8A_F + chan, t, rest, val));
-        return t;
+        qir_emit(c, qir_inst(QOP_PACK_8A_F + chan, dest, val, c->undef));
+        if (dest.file == QFILE_TEMP)
+                c->defs[dest.index] = NULL;
+        return dest;
 }
 
 static inline struct qreg

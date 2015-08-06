@@ -839,14 +839,13 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         }
 
         if (instr->op == nir_op_pack_unorm_4x8) {
-                struct qreg result;
+                struct qreg result = qir_get_temp(c);
+
                 for (int i = 0; i < 4; i++) {
-                        struct qreg src = ntq_get_src(c, instr->src[0].src,
-                                                      instr->src[0].swizzle[i]);
-                        if (i == 0)
-                                result = qir_PACK_8888_F(c, src);
-                        else
-                                result = qir_PACK_8_F(c, result, src, i);
+                        qir_PACK_8_F(c, result,
+                                     ntq_get_src(c, instr->src[0].src,
+                                                 instr->src[0].swizzle[i]),
+                                     i);
                 }
                 struct qreg *dest = ntq_get_dest(c, &instr->dest.dest);
                 *dest = result;
