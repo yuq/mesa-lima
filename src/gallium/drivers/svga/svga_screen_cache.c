@@ -453,7 +453,8 @@ svga_screen_surface_create(struct svga_screen *svgascreen,
                                    0 : SVGA_SURFACE_USAGE_SHARED,
                                    key->size,
                                    key->numFaces,
-                                   key->numMipLevels);
+                                   key->numMipLevels,
+                                   0);
       if (handle)
          SVGA_DBG(DEBUG_CACHE|DEBUG_DMA,
                   "  CREATE sid %p sz %dx%dx%d\n",

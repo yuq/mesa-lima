@@ -1634,7 +1634,7 @@ SVGA3D_DefineGBShader(struct svga_winsys_context *swc,
    if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
-   swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader);
+   swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader, 0);
    cmd->type = type;
    cmd->sizeInBytes = sizeInBytes;
 
@@ -1658,7 +1658,7 @@ SVGA3D_BindGBShader(struct svga_winsys_context *swc,
       return PIPE_ERROR_OUT_OF_MEMORY;
 
    swc->shader_relocation(swc, &cmd->shid, &cmd->mobid,
-			  &cmd->offsetInBytes, gbshader);
+			  &cmd->offsetInBytes, gbshader, 0);
 
    swc->commit(swc);
 
@@ -1683,7 +1683,7 @@ SVGA3D_SetGBShader(struct svga_winsys_context *swc,
    swc->context_relocation(swc, &cmd->cid);
    cmd->type = type;
    if (gbshader)
-      swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader);
+      swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader, 0);
    else
       cmd->shid = SVGA_ID_INVALID;
    swc->commit(swc);
@@ -1705,7 +1705,7 @@ SVGA3D_DestroyGBShader(struct svga_winsys_context *swc,
    if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
-   swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader);
+   swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader, 0);
 
    swc->commit(swc);
 
