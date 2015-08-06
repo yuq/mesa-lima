@@ -797,7 +797,7 @@ intel_blit_framebuffer_with_blitter(struct gl_context *ctx,
    intel_prepare_render(brw);
 
    if (mask & GL_COLOR_BUFFER_BIT) {
-      GLint i;
+      unsigned i;
       struct gl_renderbuffer *src_rb = readFb->_ColorReadBuffer;
       struct intel_renderbuffer *src_irb = intel_renderbuffer(src_rb);
 
