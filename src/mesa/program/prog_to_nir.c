@@ -143,7 +143,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
       load->variables[0] = nir_deref_var_create(load, c->input_vars[prog_src->Index]);
 
       nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
-      nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+      nir_builder_instr_insert(b, &load->instr);
 
       src.src = nir_src_for_ssa(&load->dest.ssa);
       break;
@@ -203,7 +203,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
             deref_arr->base_offset = prog_src->Index;
          }
 
-         nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+         nir_builder_instr_insert(b, &load->instr);
 
          src.src = nir_src_for_ssa(&load->dest.ssa);
          break;
@@ -253,7 +253,7 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
             mov->dest.write_mask = 0x1;
             mov->src[0] = src;
             mov->src[0].swizzle[0] = swizzle;
-            nir_instr_insert_after_cf_list(b->cf_node_list, &mov->instr);
+            nir_builder_instr_insert(b, &mov->instr);
 
             chans[i] = &mov->dest.dest.ssa;
          }
@@ -281,7 +281,7 @@ ptn_alu(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
       instr->src[i].src = nir_src_for_ssa(src[i]);
 
    instr->dest = dest;
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 }
 
 static void
@@ -300,7 +300,7 @@ ptn_move_dest_masked(nir_builder *b, nir_alu_dest dest,
    mov->src[0].src = nir_src_for_ssa(def);
    for (unsigned i = def->num_components; i < 4; i++)
       mov->src[0].swizzle[i] = def->num_components - 1;
-   nir_instr_insert_after_cf_list(b->cf_node_list, &mov->instr);
+   nir_builder_instr_insert(b, &mov->instr);
 }
 
 static void
@@ -561,7 +561,7 @@ ptn_kil(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
    nir_intrinsic_instr *discard =
       nir_intrinsic_instr_create(b->shader, nir_intrinsic_discard_if);
    discard->src[0] = nir_src_for_ssa(cmp);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &discard->instr);
+   nir_builder_instr_insert(b, &discard->instr);
 }
 
 static void
@@ -688,7 +688,7 @@ ptn_tex(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src,
    assert(src_number == num_srcs);
 
    nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 
    /* Resolve the writemask on the texture op. */
    ptn_move_dest(b, dest, &instr->dest.ssa);
@@ -944,7 +944,7 @@ ptn_add_output_stores(struct ptn_compile *c)
       } else {
          store->src[0].reg.reg = c->output_regs[var->data.location];
       }
-      nir_instr_insert_after_cf_list(c->build.cf_node_list, &store->instr);
+      nir_builder_instr_insert(b, &store->instr);
    }
 }
 
@@ -988,7 +988,7 @@ setup_registers_and_variables(struct ptn_compile *c)
             load_x->num_components = 1;
             load_x->variables[0] = nir_deref_var_create(load_x, var);
             nir_ssa_dest_init(&load_x->instr, &load_x->dest, 1, NULL);
-            nir_instr_insert_after_cf_list(b->cf_node_list, &load_x->instr);
+            nir_builder_instr_insert(b, &load_x->instr);
 
             nir_ssa_def *f001 = nir_vec4(b, &load_x->dest.ssa, nir_imm_float(b, 0.0),
                                          nir_imm_float(b, 0.0), nir_imm_float(b, 1.0));
@@ -1004,7 +1004,7 @@ setup_registers_and_variables(struct ptn_compile *c)
             store->num_components = 4;
             store->variables[0] = nir_deref_var_create(store, fullvar);
             store->src[0] = nir_src_for_ssa(f001);
-            nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
+            nir_builder_instr_insert(b, &store->instr);
 
             /* Insert the real input into the list so the driver has real
              * inputs, but set c->input_vars[i] to the temporary so we use
@@ -1108,7 +1108,7 @@ prog_to_nir(const struct gl_program *prog,
 
    c->build.shader = s;
    c->build.impl = impl;
-   c->build.cf_node_list = &impl->body;
+   nir_builder_insert_after_cf_list(&c->build, &impl->body);
 
    setup_registers_and_variables(c);
    if (unlikely(c->error))
