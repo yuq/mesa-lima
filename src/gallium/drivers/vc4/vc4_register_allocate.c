@@ -268,7 +268,8 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                                         AB_INDEX + QPU_R_FRAG_PAYLOAD_ZW * 2);
                         break;
 
-                case QOP_PACK_SCALED:
+                case QOP_PACK_16A_I:
+                case QOP_PACK_16B_I:
                         /* The pack flags require an A-file dst register. */
                         class_bits[inst->dst.index] &= CLASS_BIT_A;
                         break;

@@ -1142,7 +1142,10 @@ emit_scaled_viewport_write(struct vc4_compile *c, struct qreg rcp_w)
                                               rcp_w));
         }
 
-        qir_VPM_WRITE(c, qir_PACK_SCALED(c, xyi[0], xyi[1]));
+        struct qreg packed = qir_get_temp(c);
+        qir_PACK_16A_I(c, packed, xyi[0]);
+        qir_PACK_16B_I(c, packed, xyi[1]);
+        qir_VPM_WRITE(c, packed);
 }
 
 static void

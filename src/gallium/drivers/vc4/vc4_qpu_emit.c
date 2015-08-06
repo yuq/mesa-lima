@@ -403,23 +403,14 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_a_FADD(dst, src[0], qpu_r5()));
                         break;
 
-                case QOP_PACK_SCALED: {
-                        uint64_t a = (qpu_a_MOV(dst, src[0]) |
-                                      QPU_SET_FIELD(QPU_PACK_A_16A,
-                                                    QPU_PACK));
-                        uint64_t b = (qpu_a_MOV(dst, src[1]) |
-                                      QPU_SET_FIELD(QPU_PACK_A_16B,
-                                                    QPU_PACK));
-
-                        if (dst.mux == src[1].mux && dst.addr == src[1].addr) {
-                                queue(c, b);
-                                queue(c, a);
-                        } else {
-                                queue(c, a);
-                                queue(c, b);
-                        }
+                case QOP_PACK_16A_I:
+                case QOP_PACK_16B_I:
+                        queue(c,
+                              qpu_a_MOV(dst, src[0]) |
+                              QPU_SET_FIELD(qinst->op == QOP_PACK_16A_I ?
+                                            QPU_PACK_A_16A : QPU_PACK_A_16B,
+                                            QPU_PACK));
                         break;
-                }
 
                 case QOP_TEX_S:
                 case QOP_TEX_T:
