@@ -2149,7 +2149,7 @@ intel_miptree_map_blit(struct brw_context *brw,
    map->mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
                                   0, 0,
                                   map->w, map->h, 1,
-                                  0, 0);
+                                  0, MIPTREE_LAYOUT_ALLOC_LINEAR);
 
    if (!map->mt) {
       fprintf(stderr, "Failed to allocate blit temporary\n");
