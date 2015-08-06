@@ -383,7 +383,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       brw_render_cache_set_add_bo(brw, stencil_irb->mt->bo);
    }
 
-   for (int i = 0; i < fb->_NumColorDrawBuffers; i++) {
+   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
       struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
