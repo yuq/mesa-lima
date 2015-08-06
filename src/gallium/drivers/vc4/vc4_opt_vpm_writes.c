@@ -79,22 +79,6 @@ qir_opt_vpm_writes(struct vc4_compile *c)
                         continue;
                 }
 
-                /* A QOP_TEX_RESULT destination is r4, so we can't move
-                 * accesses to it past another QOP_TEX_RESULT which would
-                 * update it.
-                 */
-                int src;
-                for (src = 0; src < qir_get_op_nsrc(inst->op); src++) {
-                        if (inst->src[src].file == QFILE_TEMP) {
-                                if (c->defs[inst->src[src].index]->op ==
-                                    QOP_TEX_RESULT) {
-                                        break;
-                                }
-                        }
-                }
-                if (src != qir_get_op_nsrc(inst->op))
-                        continue;
-
                 /* Move the generating instruction to the end of the program
                  * to maintain the order of the VPM writes.
                  */
