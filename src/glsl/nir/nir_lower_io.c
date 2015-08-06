@@ -84,7 +84,7 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
    unsigned base_offset = 0;
 
    nir_builder *b = &state->builder;
-   nir_builder_insert_before_instr(b, instr);
+   b->cursor = nir_before_instr(instr);
 
    nir_deref *tail = &deref->deref;
    while (tail->child != NULL) {

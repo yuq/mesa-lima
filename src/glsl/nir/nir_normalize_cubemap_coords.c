@@ -52,7 +52,7 @@ normalize_cubemap_coords_block(nir_block *block, void *void_state)
       if (tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE)
          continue;
 
-      nir_builder_insert_before_instr(b, &tex->instr);
+      b->cursor = nir_before_instr(&tex->instr);
 
       for (unsigned i = 0; i < tex->num_srcs; i++) {
          if (tex->src[i].src_type != nir_tex_src_coord)

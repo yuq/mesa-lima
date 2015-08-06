@@ -1108,7 +1108,7 @@ prog_to_nir(const struct gl_program *prog,
 
    c->build.shader = s;
    c->build.impl = impl;
-   nir_builder_insert_after_cf_list(&c->build, &impl->body);
+   c->build.cursor = nir_after_cf_list(&impl->body);
 
    setup_registers_and_variables(c);
    if (unlikely(c->error))

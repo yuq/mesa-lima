@@ -65,24 +65,24 @@ struct ttn_compile {
    nir_register *addr_reg;
 
    /**
-    * Stack of cf_node_lists where instructions should be pushed as we pop
+    * Stack of nir_cursors where instructions should be pushed as we pop
     * back out of the control flow stack.
     *
     * For each IF/ELSE/ENDIF block, if_stack[if_stack_pos] has where the else
     * instructions should be placed, and if_stack[if_stack_pos - 1] has where
     * the next instructions outside of the if/then/else block go.
     */
-   struct exec_list **if_stack;
+   nir_cursor *if_stack;
    unsigned if_stack_pos;
 
    /**
-    * Stack of cf_node_lists where instructions should be pushed as we pop
+    * Stack of nir_cursors where instructions should be pushed as we pop
     * back out of the control flow stack.
     *
     * loop_stack[loop_stack_pos - 1] contains the cf_node_list for the outside
     * of the loop.
     */
-   struct exec_list **loop_stack;
+   nir_cursor *loop_stack;
    unsigned loop_stack_pos;
 
    /* How many TGSI_FILE_IMMEDIATE vec4s have been parsed so far. */
@@ -922,7 +922,7 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
    nir_builder *b = &c->build;
 
    /* Save the outside-of-the-if-statement node list. */
-   c->if_stack[c->if_stack_pos] = b->cf_node_list;
+   c->if_stack[c->if_stack_pos] = b->cursor;
    c->if_stack_pos++;
 
    src = ttn_channel(b, src, X);
@@ -933,11 +933,11 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
    } else {
       if_stmt->condition = nir_src_for_ssa(nir_fne(b, src, nir_imm_int(b, 0)));
    }
-   nir_cf_node_insert_end(b->cf_node_list, &if_stmt->cf_node);
+   nir_builder_cf_insert(b, &if_stmt->cf_node);
 
-   nir_builder_insert_after_cf_list(b, &if_stmt->then_list);
+   b->cursor = nir_after_cf_list(&if_stmt->then_list);
 
-   c->if_stack[c->if_stack_pos] = &if_stmt->else_list;
+   c->if_stack[c->if_stack_pos] = nir_after_cf_list(&if_stmt->else_list);
    c->if_stack_pos++;
 }
 
@@ -946,7 +946,7 @@ ttn_else(struct ttn_compile *c)
 {
    nir_builder *b = &c->build;
 
-   nir_builder_insert_after_cf_list(b, c->if_stack[c->if_stack_pos - 1]);
+   b->cursor = c->if_stack[c->if_stack_pos - 1];
 }
 
 static void
@@ -955,7 +955,7 @@ ttn_endif(struct ttn_compile *c)
    nir_builder *b = &c->build;
 
    c->if_stack_pos -= 2;
-   nir_builder_insert_after_cf_list(b, c->if_stack[c->if_stack_pos]);
+   b->cursor = c->if_stack[c->if_stack_pos];
 }
 
 static void
@@ -964,13 +964,13 @@ ttn_bgnloop(struct ttn_compile *c)
    nir_builder *b = &c->build;
 
    /* Save the outside-of-the-loop node list. */
-   c->loop_stack[c->loop_stack_pos] = b->cf_node_list;
+   c->loop_stack[c->loop_stack_pos] = b->cursor;
    c->loop_stack_pos++;
 
    nir_loop *loop = nir_loop_create(b->shader);
-   nir_cf_node_insert_end(b->cf_node_list, &loop->cf_node);
+   nir_builder_cf_insert(b, &loop->cf_node);
 
-   nir_builder_insert_after_cf_list(b, &loop->body);
+   b->cursor = nir_after_cf_list(&loop->body);
 }
 
 static void
@@ -993,7 +993,7 @@ ttn_endloop(struct ttn_compile *c)
    nir_builder *b = &c->build;
 
    c->loop_stack_pos--;
-   nir_builder_insert_after_cf_list(b, c->loop_stack[c->loop_stack_pos]);
+   b->cursor = c->loop_stack[c->loop_stack_pos];
 }
 
 static void
@@ -1803,7 +1803,7 @@ tgsi_to_nir(const void *tgsi_tokens,
    nir_function_impl *impl = nir_function_impl_create(overload);
 
    nir_builder_init(&c->build, impl);
-   nir_builder_insert_after_cf_list(&c->build, &impl->body);
+   c->build.cursor = nir_after_cf_list(&impl->body);
 
    s->num_inputs = scan.file_max[TGSI_FILE_INPUT] + 1;
    s->num_uniforms = scan.const_file_max[0] + 1;
@@ -1819,10 +1819,10 @@ tgsi_to_nir(const void *tgsi_tokens,
    c->num_samp_types = scan.file_max[TGSI_FILE_SAMPLER_VIEW] + 1;
    c->samp_types = rzalloc_array(c, nir_alu_type, c->num_samp_types);
 
-   c->if_stack = rzalloc_array(c, struct exec_list *,
+   c->if_stack = rzalloc_array(c, nir_cursor,
                                (scan.opcode_count[TGSI_OPCODE_IF] +
                                 scan.opcode_count[TGSI_OPCODE_UIF]) * 2);
-   c->loop_stack = rzalloc_array(c, struct exec_list *,
+   c->loop_stack = rzalloc_array(c, nir_cursor,
                                  scan.opcode_count[TGSI_OPCODE_BGNLOOP]);
 
    ret = tgsi_parse_init(&parser, tgsi_tokens);
