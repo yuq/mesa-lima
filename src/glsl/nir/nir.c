@@ -41,6 +41,7 @@ nir_shader_create(void *mem_ctx,
    exec_list_make_empty(&shader->outputs);
 
    shader->options = options;
+   memset(&shader->info, 0, sizeof(shader->info));
 
    exec_list_make_empty(&shader->functions);
    exec_list_make_empty(&shader->registers);

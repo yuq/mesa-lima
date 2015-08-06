@@ -144,8 +144,26 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    nir_lower_outputs_to_temporaries(shader);
 
+   /* TODO: Use _mesa_fls instead */
+   unsigned num_textures = 0;
+   for (unsigned i = 0; i < 8 * sizeof(sh->Program->SamplersUsed); i++)
+      if (sh->Program->SamplersUsed & (1 << i))
+         num_textures = i;
+
    shader->gs.vertices_out = sh->Geom.VerticesOut;
    shader->gs.invocations = sh->Geom.Invocations;
+   shader->info.name = ralloc_asprintf(shader, "GLSL%d", sh->Name);
+   shader->info.num_textures = num_textures;
+   shader->info.num_ubos = sh->NumUniformBlocks;
+   shader->info.num_abos = shader_prog->NumAtomicBuffers;
+   shader->info.num_ssbos = shader_prog->NumBufferInterfaceBlocks;
+   shader->info.num_images = sh->NumImages;
+   shader->info.inputs_read = sh->Program->InputsRead;
+   shader->info.outputs_written = sh->Program->OutputsWritten;
+   shader->info.system_values_read = sh->Program->SystemValuesRead;
+   shader->info.uses_texture_gather = sh->Program->UsesGather;
+   shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
+   shader->info.separate_shader = shader_prog->SeparateShader;
 
    return shader;
 }
