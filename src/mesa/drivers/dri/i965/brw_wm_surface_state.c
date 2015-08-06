@@ -958,7 +958,7 @@ brw_upload_abo_surfaces(struct brw_context *brw,
    uint32_t *surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.abo_start];
 
-   for (int i = 0; i < prog->NumAtomicBuffers; i++) {
+   for (unsigned i = 0; i < prog->NumAtomicBuffers; i++) {
       struct gl_atomic_buffer_binding *binding =
          &ctx->AtomicBufferBindings[prog->AtomicBuffers[i].Binding];
       struct intel_buffer_object *intel_bo =
