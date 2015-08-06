@@ -122,7 +122,7 @@ aub_dump_bmp(struct gl_context *ctx)
 {
    struct gl_framebuffer *fb = ctx->DrawBuffer;
 
-   for (int i = 0; i < fb->_NumColorDrawBuffers; i++) {
+   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
       struct intel_renderbuffer *irb =
 	 intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
