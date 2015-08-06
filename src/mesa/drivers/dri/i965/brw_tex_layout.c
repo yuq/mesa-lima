@@ -630,12 +630,12 @@ brw_miptree_choose_tiling(struct brw_context *brw,
    /* Some usages may want only one type of tiling, like depth miptrees (Y
     * tiled), or temporary BOs for uploading data once (linear).
     */
-   switch (layout_flags & MIPTREE_LAYOUT_ALLOC_ANY_TILED) {
-   case MIPTREE_LAYOUT_ALLOC_ANY_TILED:
+   switch (layout_flags & MIPTREE_LAYOUT_TILING_ANY) {
+   case MIPTREE_LAYOUT_TILING_ANY:
       break;
-   case MIPTREE_LAYOUT_ALLOC_YTILED:
+   case MIPTREE_LAYOUT_TILING_Y:
       return I915_TILING_Y;
-   case MIPTREE_LAYOUT_ALLOC_LINEAR:
+   case MIPTREE_LAYOUT_TILING_NONE:
       return I915_TILING_NONE;
    }
 

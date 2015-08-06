@@ -145,7 +145,7 @@ intel_alloc_texture_storage(struct gl_context *ctx,
                                               0, levels - 1,
                                               width, height, depth,
                                               num_samples,
-                                              MIPTREE_LAYOUT_ALLOC_ANY_TILED);
+                                              MIPTREE_LAYOUT_TILING_ANY);
 
       if (intel_texobj->mt == NULL) {
          return false;

@@ -1023,7 +1023,7 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
    int width, height, depth;
 
    uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                           MIPTREE_LAYOUT_ALLOC_ANY_TILED;
+                           MIPTREE_LAYOUT_TILING_ANY;
 
    intel_miptree_get_dimensions_for_image(rb->TexImage, &width, &height, &depth);
 
