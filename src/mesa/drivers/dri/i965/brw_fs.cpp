@@ -3280,6 +3280,55 @@ fs_visitor::lower_integer_multiplication()
                            ibld.MOV(null, inst->dst));
             }
          }
+
+      } else if (inst->opcode == SHADER_OPCODE_MULH) {
+         /* Should have been lowered to 8-wide. */
+         assert(inst->exec_size <= 8);
+         const fs_reg acc = retype(brw_acc_reg(inst->exec_size),
+                                   inst->dst.type);
+         fs_inst *mul = ibld.MUL(acc, inst->src[0], inst->src[1]);
+         fs_inst *mach = ibld.MACH(inst->dst, inst->src[0], inst->src[1]);
+
+         if (devinfo->gen >= 8) {
+            /* Until Gen8, integer multiplies read 32-bits from one source,
+             * and 16-bits from the other, and relying on the MACH instruction
+             * to generate the high bits of the result.
+             *
+             * On Gen8, the multiply instruction does a full 32x32-bit
+             * multiply, but in order to do a 64-bit multiply we can simulate
+             * the previous behavior and then use a MACH instruction.
+             *
+             * FINISHME: Don't use source modifiers on src1.
+             */
+            assert(mul->src[1].type == BRW_REGISTER_TYPE_D ||
+                   mul->src[1].type == BRW_REGISTER_TYPE_UD);
+            mul->src[1].type = (type_is_signed(mul->src[1].type) ?
+                                BRW_REGISTER_TYPE_W : BRW_REGISTER_TYPE_UW);
+            mul->src[1].stride *= 2;
+
+         } else if (devinfo->gen == 7 && !devinfo->is_haswell &&
+                    inst->force_sechalf) {
+            /* Among other things the quarter control bits influence which
+             * accumulator register is used by the hardware for instructions
+             * that access the accumulator implicitly (e.g. MACH).  A
+             * second-half instruction would normally map to acc1, which
+             * doesn't exist on Gen7 and up (the hardware does emulate it for
+             * floating-point instructions *only* by taking advantage of the
+             * extra precision of acc0 not normally used for floating point
+             * arithmetic).
+             *
+             * HSW and up are careful enough not to try to access an
+             * accumulator register that doesn't exist, but on earlier Gen7
+             * hardware we need to make sure that the quarter control bits are
+             * zero to avoid non-deterministic behaviour and emit an extra MOV
+             * to get the result masked correctly according to the current
+             * channel enables.
+             */
+            mach->force_sechalf = false;
+            mach->force_writemask_all = true;
+            mach->dst = ibld.vgrf(inst->dst.type);
+            ibld.MOV(inst->dst, mach->dst);
+         }
       } else {
          continue;
       }
@@ -4083,6 +4132,12 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
                        const fs_inst *inst)
 {
    switch (inst->opcode) {
+   case SHADER_OPCODE_MULH:
+      /* MULH is lowered to the MUL/MACH sequence using the accumulator, which
+       * is 8-wide on Gen7+.
+       */
+      return (devinfo->gen >= 7 ? 8 : inst->exec_size);
+
    case FS_OPCODE_FB_WRITE_LOGICAL:
       /* Gen6 doesn't support SIMD16 depth writes but we cannot handle them
        * here.
