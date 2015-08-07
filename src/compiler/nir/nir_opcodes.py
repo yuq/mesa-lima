@@ -298,6 +298,29 @@ unop_horiz("unpack_half_2x16_split_x", 1, tfloat32, 1, tuint32,
 unop_horiz("unpack_half_2x16_split_y", 1, tfloat32, 1, tuint32,
            "unpack_half_1x16((uint16_t)(src0.x >> 16))")
 
+unop_convert("unpack_double_2x32_split_x", tuint32, tuint64, """
+union {
+    uint64_t u64;
+    struct {
+        uint32_t x;
+        uint32_t y;
+    };
+} di;
+di.u64 = src0;
+dst = di.x;
+""")
+
+unop_convert("unpack_double_2x32_split_y", tuint32, tuint64, """
+union {
+    uint64_t u64;
+    struct {
+        uint32_t x;
+        uint32_t y;
+    };
+} di;
+di.u64 = src0;
+dst = di.y;
+""")
 
 # Bit operations, part of ARB_gpu_shader5.
 
@@ -562,6 +585,19 @@ binop("fpow", tfloat, "", "bit_size == 64 ? powf(src0, src1) : pow(src0, src1)")
 
 binop_horiz("pack_half_2x16_split", 1, tuint32, 1, tfloat32, 1, tfloat32,
             "pack_half_1x16(src0.x) | (pack_half_1x16(src1.x) << 16)")
+
+binop_convert("pack_double_2x32_split", tuint64, tuint32, "", """
+union {
+    uint64_t u64;
+    struct {
+        uint32_t x;
+        uint32_t y;
+    };
+} di;
+di.x = src0;
+di.y = src1;
+dst = di.u64;
+""")
 
 # bfm implements the behavior of the first operation of the SM5 "bfi" assembly
 # and that of the "bfi1" i965 instruction. That is, it has undefined behavior
