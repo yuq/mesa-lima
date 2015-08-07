@@ -9,6 +9,7 @@ env = env.Clone()
 env.Append(CPPPATH = [
     '#/include',
     '#/src/egl/main',
+    '#/src',
 ])
 
 

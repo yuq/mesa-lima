@@ -52,7 +52,7 @@
 #endif
 
 #include "egl_dri2.h"
-#include "../util/u_atomic.h"
+#include "util/u_atomic.h"
 
 /* The kernel header drm_fourcc.h defines the DRM formats below.  We duplicate
  * some of the definitions here so that building Mesa won't bleeding-edge

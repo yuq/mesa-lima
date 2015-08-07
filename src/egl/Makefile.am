@@ -25,6 +25,7 @@ AM_CFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/egl/main \
 	-I$(top_srcdir)/src/gbm/main \
+	-I$(top_srcdir)/src \
 	$(DEFINES) \
 	$(VISIBILITY_CFLAGS) \
 	$(LIBDRM_CFLAGS) \
