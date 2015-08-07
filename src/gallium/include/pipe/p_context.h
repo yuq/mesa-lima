@@ -592,6 +592,13 @@ struct pipe_context {
                                float *out_value);
 
    /**
+    * Query a timestamp in nanoseconds.  This is completely equivalent to
+    * pipe_screen::get_timestamp() but takes a context handle for drivers
+    * that require a context.
+    */
+   uint64_t (*get_timestamp)(struct pipe_context *);
+
+   /**
     * Flush the resource cache, so that the resource can be used
     * by an external client. Possible usage:
     * - flushing a resource before presenting it on the screen
