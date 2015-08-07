@@ -1124,7 +1124,7 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->screen = DefaultScreen(dpy);
    }
 
-   if (xcb_connection_has_error(dri2_dpy->conn)) {
+   if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
       _eglLog(_EGL_WARNING, "DRI2: xcb_connect failed");
       goto cleanup_dpy;
    }
@@ -1150,10 +1150,8 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_create_screen(disp))
       goto cleanup_driver;
 
-   if (dri2_dpy->conn) {
-      if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
-         goto cleanup_configs;
-   }
+   if (!dri2_x11_add_configs_for_visuals(dri2_dpy, disp))
+      goto cleanup_configs;
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
