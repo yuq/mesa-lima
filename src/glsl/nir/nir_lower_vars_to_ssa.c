@@ -935,7 +935,7 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    nir_foreach_block(impl, register_variable_uses_block, &state);
 
    insert_phi_nodes(&state);
-   rename_variables_block(impl->start_block, &state);
+   rename_variables_block(nir_start_block(impl), &state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);

@@ -1309,7 +1309,7 @@ typedef struct {
 
    struct exec_list body; /** < list of nir_cf_node */
 
-   nir_block *start_block, *end_block;
+   nir_block *end_block;
 
    /** list for all local variables in the function */
    struct exec_list locals;
@@ -1335,6 +1335,12 @@ typedef struct {
 
    nir_metadata valid_metadata;
 } nir_function_impl;
+
+static inline nir_block *
+nir_start_block(nir_function_impl *impl)
+{
+   return (nir_block *) exec_list_get_head(&impl->body);
+}
 
 static inline nir_cf_node *
 nir_cf_node_next(nir_cf_node *node)

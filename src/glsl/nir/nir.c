@@ -262,7 +262,6 @@ nir_function_impl_create(nir_function_overload *overload)
    nir_block *end_block = nir_block_create(mem_ctx);
    start_block->cf_node.parent = &impl->cf_node;
    end_block->cf_node.parent = &impl->cf_node;
-   impl->start_block = start_block;
    impl->end_block = end_block;
 
    exec_list_push_tail(&impl->body, &start_block->cf_node.node);
