@@ -3336,15 +3336,15 @@ teximage(struct gl_context *ctx, GLboolean compressed, GLuint dims,
 
       if (!dimensionsOK) {
          _mesa_error(ctx, GL_INVALID_VALUE,
-                     "glTexImage%uD(invalid width or height or depth)",
-                     dims);
+                     "%s%uD(invalid width or height or depth)",
+                     func, dims);
          return;
       }
 
       if (!sizeOK) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY,
-                     "glTexImage%uD(image too large: %d x %d x %d, %s format)",
-                     dims, width, height, depth,
+                     "%s%uD(image too large: %d x %d x %d, %s format)",
+                     func, dims, width, height, depth,
                      _mesa_enum_to_string(internalFormat));
          return;
       }
