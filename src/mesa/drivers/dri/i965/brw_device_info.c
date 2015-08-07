@@ -299,7 +299,6 @@ static const struct brw_device_info brw_device_info_chv = {
    }
 };
 
-/* Thread counts and URB limits are placeholders, and may not be accurate. */
 #define GEN9_FEATURES                               \
    .gen = 9,                                        \
    .has_hiz_and_separate_stencil = true,            \
