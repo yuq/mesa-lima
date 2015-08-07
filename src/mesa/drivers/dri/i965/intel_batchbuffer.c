@@ -343,9 +343,6 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 	 flags |= I915_EXEC_GEN7_SOL_RESET;
 
       if (ret == 0) {
-         if (unlikely(INTEL_DEBUG & DEBUG_AUB))
-            brw_annotate_aub(brw);
-
 	 if (brw->hw_ctx == NULL || batch->ring != RENDER_RING) {
             assert(in_fence_fd == -1);
             assert(out_fence_fd == NULL);

@@ -1154,12 +1154,6 @@ intelDestroyContext(__DRIcontext * driContextPriv)
       (struct brw_context *) driContextPriv->driverPrivate;
    struct gl_context *ctx = &brw->ctx;
 
-   /* Dump a final BMP in case the application doesn't call SwapBuffers */
-   if (INTEL_DEBUG & DEBUG_AUB) {
-      intel_batchbuffer_flush(brw);
-      aub_dump_bmp(&brw->ctx);
-   }
-
    _mesa_meta_free(&brw->ctx);
 
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {

@@ -123,39 +123,6 @@ get_time(void)
    return tp.tv_sec + tp.tv_nsec / 1000000000.0;
 }
 
-void
-aub_dump_bmp(struct gl_context *ctx)
-{
-   struct gl_framebuffer *fb = ctx->DrawBuffer;
-
-   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
-      struct intel_renderbuffer *irb =
-	 intel_renderbuffer(fb->_ColorDrawBuffers[i]);
-
-      if (irb && irb->mt) {
-	 enum aub_dump_bmp_format format;
-
-	 switch (irb->Base.Base.Format) {
-	 case MESA_FORMAT_B8G8R8A8_UNORM:
-	 case MESA_FORMAT_B8G8R8X8_UNORM:
-	    format = AUB_DUMP_BMP_FORMAT_ARGB_8888;
-	    break;
-	 default:
-	    continue;
-	 }
-
-         drm_intel_gem_bo_aub_dump_bmp(irb->mt->bo,
-				       irb->draw_x,
-				       irb->draw_y,
-				       irb->Base.Base.Width,
-				       irb->Base.Base.Height,
-				       format,
-				       irb->mt->pitch,
-				       0);
-      }
-   }
-}
-
 static const __DRItexBufferExtension intelTexBufferExtension = {
    .base = { __DRI_TEX_BUFFER, 3 },
 
@@ -188,10 +155,6 @@ intel_dri2_flush_with_flags(__DRIcontext *cPriv,
       brw->need_flush_throttle = true;
 
    intel_batchbuffer_flush(brw);
-
-   if (INTEL_DEBUG & DEBUG_AUB) {
-      aub_dump_bmp(ctx);
-   }
 }
 
 /**
@@ -1688,9 +1651,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
               "shader_time debugging requires gen7 (Ivybridge) or better.\n");
       INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
    }
-
-   if (INTEL_DEBUG & DEBUG_AUB)
-      drm_intel_bufmgr_gem_set_aub_dump(screen->bufmgr, true);
 
    if (intel_get_integer(screen, I915_PARAM_MMAP_GTT_VERSION) >= 1) {
       /* Theorectically unlimited! At least for individual objects...

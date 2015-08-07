@@ -1261,7 +1261,6 @@ void brw_store_data_imm64(struct brw_context *brw, drm_intel_bo *bo,
  * brw_state_dump.c
  */
 void brw_debug_batch(struct brw_context *brw);
-void brw_annotate_aub(struct brw_context *brw);
 
 /*======================================================================
  * intel_tex_validate.c
