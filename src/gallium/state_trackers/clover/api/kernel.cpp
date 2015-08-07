@@ -189,6 +189,14 @@ clGetKernelWorkGroupInfo(cl_kernel d_kern, cl_device_id d_dev,
    return CL_INVALID_DEVICE;
 }
 
+CLOVER_API cl_int
+clGetKernelArgInfo(cl_kernel d_kern,
+                   cl_uint idx, cl_kernel_arg_info param,
+                   size_t size, void *r_buf, size_t *r_size) {
+   CLOVER_NOT_SUPPORTED_UNTIL("1.2");
+   return CL_KERNEL_ARG_INFO_NOT_AVAILABLE;
+}
+
 namespace {
    ///
    /// Common argument checking shared by kernel invocation commands.
