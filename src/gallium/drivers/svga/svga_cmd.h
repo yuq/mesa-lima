@@ -229,12 +229,6 @@ SVGA3D_SetShader(struct svga_winsys_context *swc,
  */
 
 enum pipe_error
-SVGA3D_DefineGBShader(struct svga_winsys_context *swc,
-                      struct svga_winsys_gb_shader *gbshader,
-                      SVGA3dShaderType type,
-                      uint32 sizeInBytes);
-
-enum pipe_error
 SVGA3D_BindGBShader(struct svga_winsys_context *swc,
                     struct svga_winsys_gb_shader *gbshader);
 
@@ -244,24 +238,8 @@ SVGA3D_SetGBShader(struct svga_winsys_context *swc,
                    struct svga_winsys_gb_shader *gbshader);
 
 enum pipe_error
-SVGA3D_DestroyGBShader(struct svga_winsys_context *swc,
-                       struct svga_winsys_gb_shader *gbshader);
-
-enum pipe_error
 SVGA3D_BindGBSurface(struct svga_winsys_context *swc,
                      struct svga_winsys_surface *surface);
-
-enum pipe_error
-SVGA3D_DefineGBContext(struct svga_winsys_context *swc);
-
-enum pipe_error
-SVGA3D_DestroyGBContext(struct svga_winsys_context *swc);
-
-enum pipe_error
-SVGA3D_BindGBContext(struct svga_winsys_context *swc);
-
-enum pipe_error
-SVGA3D_InvalidateGBContext(struct svga_winsys_context *swc);
 
 enum pipe_error
 SVGA3D_UpdateGBImage(struct svga_winsys_context *swc,
