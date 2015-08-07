@@ -766,6 +766,37 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_ssbo_atomic_add:
+      nir_emit_ssbo_atomic(BRW_AOP_ADD, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_min:
+      if (dest.type == BRW_REGISTER_TYPE_D)
+         nir_emit_ssbo_atomic(BRW_AOP_IMIN, instr);
+      else
+         nir_emit_ssbo_atomic(BRW_AOP_UMIN, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_max:
+      if (dest.type == BRW_REGISTER_TYPE_D)
+         nir_emit_ssbo_atomic(BRW_AOP_IMAX, instr);
+      else
+         nir_emit_ssbo_atomic(BRW_AOP_UMAX, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_and:
+      nir_emit_ssbo_atomic(BRW_AOP_AND, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_or:
+      nir_emit_ssbo_atomic(BRW_AOP_OR, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_xor:
+      nir_emit_ssbo_atomic(BRW_AOP_XOR, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_exchange:
+      nir_emit_ssbo_atomic(BRW_AOP_MOV, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_comp_swap:
+      nir_emit_ssbo_atomic(BRW_AOP_CMPWR, instr);
+      break;
+
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
 
@@ -893,6 +924,53 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    default:
       unreachable("Unknown intrinsic");
    }
+}
+
+void
+vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
+{
+   dst_reg dest;
+   if (nir_intrinsic_infos[instr->intrinsic].has_dest)
+      dest = get_nir_dest(instr->dest);
+
+   src_reg surface;
+   nir_const_value *const_surface = nir_src_as_const_value(instr->src[0]);
+   if (const_surface) {
+      unsigned surf_index = prog_data->base.binding_table.ubo_start +
+                            const_surface->u[0];
+      surface = src_reg(surf_index);
+      brw_mark_surface_used(&prog_data->base, surf_index);
+   } else {
+      surface = src_reg(this, glsl_type::uint_type);
+      emit(ADD(dst_reg(surface), get_nir_src(instr->src[0]),
+               src_reg(prog_data->base.binding_table.ubo_start)));
+
+      /* Assume this may touch any UBO. This is the same we do for other
+       * UBO/SSBO accesses with non-constant surface.
+       */
+      brw_mark_surface_used(&prog_data->base,
+                            prog_data->base.binding_table.ubo_start +
+                            shader_prog->NumUniformBlocks - 1);
+   }
+
+   src_reg offset = get_nir_src(instr->src[1], 1);
+   src_reg data1 = get_nir_src(instr->src[2], 1);
+   src_reg data2;
+   if (op == BRW_AOP_CMPWR)
+      data2 = get_nir_src(instr->src[3], 1);
+
+   /* Emit the actual atomic operation operation */
+   const vec4_builder bld =
+      vec4_builder(this).at_end().annotate(current_annotation, base_ir);
+
+   src_reg atomic_result =
+      surface_access::emit_untyped_atomic(bld, surface, offset,
+                                          data1, data2,
+                                          1 /* dims */, 1 /* rsize */,
+                                          op,
+                                          BRW_PREDICATE_NONE);
+   dest.type = atomic_result.type;
+   bld.MOV(dest, atomic_result);
 }
 
 static unsigned
