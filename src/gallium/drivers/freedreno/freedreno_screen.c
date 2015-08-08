@@ -191,6 +191,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 16383;
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
+	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 		return is_a3xx(screen);
 
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
@@ -206,7 +207,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return is_ir3(screen) ? 130 : 120;
 
 	/* Unsupported features. */
-	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
 	case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
 	case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
