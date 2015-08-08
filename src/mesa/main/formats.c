@@ -372,10 +372,10 @@ uint32_t
 _mesa_format_to_array_format(mesa_format format)
 {
    const struct gl_format_info *info = _mesa_get_format_info(format);
-   if (_mesa_little_endian())
-      return info->ArrayFormat;
-   else
+   if (!_mesa_little_endian() && info->Layout == MESA_FORMAT_LAYOUT_PACKED)
       return _mesa_array_format_flip_channels(info->ArrayFormat);
+   else
+      return info->ArrayFormat;
 }
 
 static struct hash_table *format_array_format_table;
