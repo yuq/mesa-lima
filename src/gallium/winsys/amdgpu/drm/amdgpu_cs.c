@@ -348,7 +348,7 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
    cs->ctx = ctx;
    cs->flush_cs = flush;
    cs->flush_data = flush_ctx;
-   cs->base.ring_type = ring_type;
+   cs->ring_type = ring_type;
 
    if (!amdgpu_init_cs_context(cs, ring_type)) {
       FREE(cs);
@@ -570,7 +570,7 @@ static void amdgpu_cs_do_submission(struct amdgpu_cs *cs,
    cs->request.fence_info.handle = NULL;
    if (cs->request.ip_type != AMDGPU_HW_IP_UVD && cs->request.ip_type != AMDGPU_HW_IP_VCE) {
 	cs->request.fence_info.handle = cs->ctx->user_fence_bo;
-	cs->request.fence_info.offset = cs->base.ring_type;
+	cs->request.fence_info.offset = cs->ring_type;
    }
 
    r = amdgpu_cs_submit(cs->ctx->ctx, 0, &cs->request, 1);
@@ -591,7 +591,7 @@ static void amdgpu_cs_do_submission(struct amdgpu_cs *cs,
       amdgpu_fence_submitted(fence, &cs->request, user_fence);
 
       for (i = 0; i < cs->num_buffers; i++)
-         amdgpu_fence_reference(&cs->buffers[i].bo->fence[cs->base.ring_type],
+         amdgpu_fence_reference(&cs->buffers[i].bo->fence[cs->ring_type],
                                 fence);
    }
    pipe_mutex_unlock(ws->bo_fence_lock);
@@ -613,7 +613,7 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys *ws = cs->ctx->ws;
 
-   switch (cs->base.ring_type) {
+   switch (cs->ring_type) {
    case RING_DMA:
       /* pad DMA ring to 8 DWs */
       while (rcs->cdw & 7)

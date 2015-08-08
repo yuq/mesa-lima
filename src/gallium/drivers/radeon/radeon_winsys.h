@@ -229,7 +229,6 @@ struct radeon_winsys_cs {
     unsigned                    cdw;  /* Number of used dwords. */
     unsigned                    max_dw; /* Maximum number of dwords. */
     uint32_t                    *buf; /* The command buffer. */
-    enum ring_type              ring_type;
 };
 
 struct radeon_info {

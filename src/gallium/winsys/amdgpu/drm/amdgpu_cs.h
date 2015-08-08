@@ -66,6 +66,7 @@ struct amdgpu_cs {
    unsigned used_ib_space;
 
    /* amdgpu_cs_submit parameters */
+   enum ring_type              ring_type;
    struct amdgpu_cs_request    request;
    struct amdgpu_cs_ib_info    ib;
 
