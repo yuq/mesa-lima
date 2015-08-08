@@ -38,11 +38,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static inline struct amdgpu_winsys_bo *amdgpu_winsys_bo(struct pb_buffer *bo)
-{
-   return (struct amdgpu_winsys_bo *)bo;
-}
-
 static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
                            enum radeon_bo_usage usage)
 {

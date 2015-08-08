@@ -69,6 +69,12 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf);
 void amdgpu_bo_init_functions(struct amdgpu_winsys *ws);
 
 static inline
+struct amdgpu_winsys_bo *amdgpu_winsys_bo(struct pb_buffer *bo)
+{
+   return (struct amdgpu_winsys_bo *)bo;
+}
+
+static inline
 void amdgpu_winsys_bo_reference(struct amdgpu_winsys_bo **dst,
                                 struct amdgpu_winsys_bo *src)
 {

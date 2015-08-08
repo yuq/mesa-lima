@@ -50,20 +50,22 @@ struct amdgpu_cs_buffer {
    enum radeon_bo_domain domains;
 };
 
+struct amdgpu_ib {
+   struct radeon_winsys_cs base;
+
+   /* A buffer out of which new IBs are allocated. */
+   struct pb_buffer        *big_ib_buffer;
+   uint8_t                 *ib_mapped;
+   unsigned                used_ib_space;
+};
 
 struct amdgpu_cs {
-   struct radeon_winsys_cs base;
+   struct amdgpu_ib main; /* must be first because this is inherited */
    struct amdgpu_ctx *ctx;
 
    /* Flush CS. */
    void (*flush_cs)(void *ctx, unsigned flags, struct pipe_fence_handle **fence);
    void *flush_data;
-
-   /* A buffer out of which new IBs are allocated. */
-   struct pb_buffer *big_ib_buffer; /* for holding the reference */
-   struct amdgpu_winsys_bo *big_ib_winsys_buffer;
-   uint8_t *ib_mapped;
-   unsigned used_ib_space;
 
    /* amdgpu_cs_submit parameters */
    enum ring_type              ring_type;
