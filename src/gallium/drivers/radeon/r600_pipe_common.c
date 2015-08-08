@@ -882,10 +882,11 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 
 	ws->query_info(ws, &rscreen->info);
 
-	if (HAVE_LLVM)
-		snprintf(llvm_string, sizeof(llvm_string),
-			 ", LLVM %i.%i.%i", (HAVE_LLVM >> 8) & 0xff,
-			 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
+#if HAVE_LLVM
+	snprintf(llvm_string, sizeof(llvm_string),
+		 ", LLVM %i.%i.%i", (HAVE_LLVM >> 8) & 0xff,
+		 HAVE_LLVM & 0xff, MESA_LLVM_VERSION_PATCH);
+#endif
 
 	snprintf(rscreen->renderer_string, sizeof(rscreen->renderer_string),
 		 "%s (DRM %i.%i.%i%s)",
