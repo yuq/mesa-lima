@@ -602,13 +602,12 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
     */
    loader_driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
    if (loader_driver_name) {
-      free(driver_name);
-      driver_name = loader_driver_name;
+      dri2_dpy->driver_name = loader_driver_name;
+   } else {
+      dri2_dpy->driver_name =
+         strndup(driver_name,
+                 xcb_dri2_connect_driver_name_length(connect));
    }
-
-   dri2_dpy->driver_name =
-      strndup(driver_name,
-              xcb_dri2_connect_driver_name_length(connect));
 
    if (dri2_dpy->device_name == NULL || dri2_dpy->driver_name == NULL) {
       close(dri2_dpy->fd);
