@@ -5631,10 +5631,10 @@ ast_process_structure_or_interface_block(exec_list *instructions,
          }
 
          if (field_type->contains_atomic()) {
-            /* FINISHME: Add a spec quotation here once updated spec
-             * FINISHME: language is available.  See Khronos bug #10903
-             * FINISHME: on whether atomic counters are allowed in
-             * FINISHME: structures.
+            /* From section 4.1.7.3 of the GLSL 4.40 spec:
+             *
+             *    "Members of structures cannot be declared as atomic counter
+             *     types."
              */
             YYLTYPE loc = decl_list->get_location();
             _mesa_glsl_error(&loc, state, "atomic counter in structure, "
