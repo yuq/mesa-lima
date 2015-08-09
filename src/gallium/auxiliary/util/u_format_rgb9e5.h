@@ -21,7 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/* Copied from EXT_texture_shared_exponent and edited. */
+/* Copied from EXT_texture_shared_exponent and edited, getting rid of
+ * expensive float math bits too. */
 
 #ifndef RGB9E5_H
 #define RGB9E5_H
@@ -39,7 +40,6 @@
 #define RGB9E5_MANTISSA_VALUES       (1<<RGB9E5_MANTISSA_BITS)
 #define MAX_RGB9E5_MANTISSA          (RGB9E5_MANTISSA_VALUES-1)
 #define MAX_RGB9E5                   (((float)MAX_RGB9E5_MANTISSA)/RGB9E5_MANTISSA_VALUES * (1<<MAX_RGB9E5_EXP))
-#define EPSILON_RGB9E5               ((1.0/RGB9E5_MANTISSA_VALUES) / (1<<RGB9E5_EXP_BIAS))
 
 typedef union {
    unsigned int raw;
@@ -84,7 +84,7 @@ static inline float rgb9e5_ClampRange(float x)
       }
    } else {
       /* NaN gets here too since comparisons with NaN always fail! */
-      return 0.0;
+      return 0.0f;
    }
 }
 
@@ -106,31 +106,30 @@ static inline unsigned float3_to_rgb9e5(const float rgb[3])
    int rm, gm, bm;
    float rc, gc, bc;
    int exp_shared, maxm;
-   double denom;
+   float754 revdenom = {0};
 
    rc = rgb9e5_ClampRange(rgb[0]);
    gc = rgb9e5_ClampRange(rgb[1]);
    bc = rgb9e5_ClampRange(rgb[2]);
 
    maxrgb = MAX3(rc, gc, bc);
-   exp_shared = MAX2(-RGB9E5_EXP_BIAS-1, rgb9e5_FloorLog2(maxrgb)) + 1 + RGB9E5_EXP_BIAS;
+   exp_shared = MAX2(-RGB9E5_EXP_BIAS - 1, rgb9e5_FloorLog2(maxrgb)) + 1 + RGB9E5_EXP_BIAS;
    assert(exp_shared <= RGB9E5_MAX_VALID_BIASED_EXP);
    assert(exp_shared >= 0);
-   /* This exp2 function could be replaced by a table. */
-   denom = exp2(exp_shared - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS);
+   revdenom.field.biasedexponent = 127 - (exp_shared - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS);
 
-   maxm = (int) floor(maxrgb / denom + 0.5);
-   if (maxm == MAX_RGB9E5_MANTISSA+1) {
-      denom *= 2;
+   maxm = (int) (maxrgb * revdenom.value + 0.5);
+   if (maxm == MAX_RGB9E5_MANTISSA + 1) {
+      revdenom.value *= 0.5f;
       exp_shared += 1;
       assert(exp_shared <= RGB9E5_MAX_VALID_BIASED_EXP);
    } else {
       assert(maxm <= MAX_RGB9E5_MANTISSA);
    }
 
-   rm = (int) floor(rc / denom + 0.5);
-   gm = (int) floor(gc / denom + 0.5);
-   bm = (int) floor(bc / denom + 0.5);
+   rm = (int) (rc * revdenom.value + 0.5);
+   gm = (int) (gc * revdenom.value + 0.5);
+   bm = (int) (bc * revdenom.value + 0.5);
 
    assert(rm <= MAX_RGB9E5_MANTISSA);
    assert(gm <= MAX_RGB9E5_MANTISSA);
@@ -151,15 +150,15 @@ static inline void rgb9e5_to_float3(unsigned rgb, float retval[3])
 {
    rgb9e5 v;
    int exponent;
-   float scale;
+   float754 scale = {0};
 
    v.raw = rgb;
    exponent = v.field.biasedexponent - RGB9E5_EXP_BIAS - RGB9E5_MANTISSA_BITS;
-   scale = exp2f(exponent);
+   scale.field.biasedexponent = exponent + 127;
 
-   retval[0] = v.field.r * scale;
-   retval[1] = v.field.g * scale;
-   retval[2] = v.field.b * scale;
+   retval[0] = v.field.r * scale.value;
+   retval[1] = v.field.g * scale.value;
+   retval[2] = v.field.b * scale.value;
 }
 
 #endif
