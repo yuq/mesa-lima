@@ -537,15 +537,24 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 
 /* hack.. until we figure out how to deal w/ vpsrepl properly.. */
 static void
-fix_blit_fp(struct pipe_context *pctx)
+fix_blit_fp(struct fd4_shader_stateobj *so)
 {
-	struct fd_context *ctx = fd_context(pctx);
-	struct fd4_shader_stateobj *so = ctx->blit_prog[0].fp;
-
 	so->shader->vpsrepl[0] = 0x99999999;
 	so->shader->vpsrepl[1] = 0x99999999;
 	so->shader->vpsrepl[2] = 0x99999999;
 	so->shader->vpsrepl[3] = 0x99999999;
+}
+static void
+fix_blit_fps(struct pipe_context *pctx)
+{
+	struct fd_context *ctx = fd_context(pctx);
+	int i;
+
+	for (i = 0; i < ctx->screen->max_rts; i++)
+		fix_blit_fp(ctx->blit_prog[i].fp);
+
+	fix_blit_fp(ctx->blit_z.fp);
+	fix_blit_fp(ctx->blit_zs.fp);
 }
 
 void
@@ -559,5 +568,5 @@ fd4_prog_init(struct pipe_context *pctx)
 
 	fd_prog_init(pctx);
 
-	fix_blit_fp(pctx);
+	fix_blit_fps(pctx);
 }
