@@ -47,10 +47,9 @@
 static unsigned
 values_for_type(const glsl_type *type)
 {
-   if (type->is_sampler() || type->is_subroutine()) {
+   if (type->is_sampler()) {
       return 1;
-   } else if (type->is_array() && (type->fields.array->is_sampler() ||
-                                   type->fields.array->is_subroutine())) {
+   } else if (type->is_array() && type->fields.array->is_sampler()) {
       return type->array_size();
    } else {
       return type->component_slots();
