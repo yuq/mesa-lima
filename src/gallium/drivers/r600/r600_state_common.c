@@ -47,18 +47,25 @@ void r600_release_command_buffer(struct r600_command_buffer *cb)
 	FREE(cb->buf);
 }
 
+void r600_add_atom(struct r600_context *rctx,
+		   struct r600_atom *atom,
+		   unsigned id)
+{
+	assert(id < R600_NUM_ATOMS);
+	assert(rctx->atoms[id] == NULL);
+	rctx->atoms[id] = atom;
+	atom->dirty = false;
+}
+
 void r600_init_atom(struct r600_context *rctx,
 		    struct r600_atom *atom,
 		    unsigned id,
 		    void (*emit)(struct r600_context *ctx, struct r600_atom *state),
 		    unsigned num_dw)
 {
-	assert(id < R600_NUM_ATOMS);
-	assert(rctx->atoms[id] == NULL);
-	rctx->atoms[id] = atom;
 	atom->emit = (void*)emit;
 	atom->num_dw = num_dw;
-	atom->dirty = false;
+	r600_add_atom(rctx, atom, id);
 }
 
 void r600_emit_cso_state(struct r600_context *rctx, struct r600_atom *atom)

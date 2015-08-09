@@ -671,6 +671,7 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 void r600_emit_stencil_ref(struct r600_context *rctx, struct r600_atom *atom);
 void r600_emit_viewport_state(struct r600_context *rctx, struct r600_atom *atom);
 void r600_emit_shader(struct r600_context *rctx, struct r600_atom *a);
+void r600_add_atom(struct r600_context *rctx, struct r600_atom *atom, unsigned id);
 void r600_init_atom(struct r600_context *rctx, struct r600_atom *atom, unsigned id,
 		    void (*emit)(struct r600_context *ctx, struct r600_atom *state),
 		    unsigned num_dw);
