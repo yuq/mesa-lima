@@ -312,7 +312,9 @@ void r600_begin_new_cs(struct r600_context *ctx)
 		r600_mark_atom_dirty(ctx, &ctx->scissor[i].atom);
 		r600_mark_atom_dirty(ctx, &ctx->viewport[i].atom);
 	}
-	r600_mark_atom_dirty(ctx, &ctx->config_state.atom);
+	if (ctx->b.chip_class < EVERGREEN) {
+		r600_mark_atom_dirty(ctx, &ctx->config_state.atom);
+	}
 	r600_mark_atom_dirty(ctx, &ctx->stencil_ref.atom);
 	r600_mark_atom_dirty(ctx, &ctx->vertex_fetch_shader.atom);
 	r600_mark_atom_dirty(ctx, &ctx->export_shader.atom);
