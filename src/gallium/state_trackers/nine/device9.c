@@ -3297,6 +3297,12 @@ NineDevice9_SetVertexShaderConstantF( struct NineDevice9 *This,
        return D3D_OK;
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
+    if (!This->is_recording) {
+        if (!memcmp(&state->vs_const_f[StartRegister * 4], pConstantData,
+                    Vector4fCount * 4 * sizeof(state->vs_const_f[0])))
+            return D3D_OK;
+    }
+
     memcpy(&state->vs_const_f[StartRegister * 4],
            pConstantData,
            Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
@@ -3346,6 +3352,11 @@ NineDevice9_SetVertexShaderConstantI( struct NineDevice9 *This,
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (This->driver_caps.vs_integer) {
+        if (!This->is_recording) {
+            if (!memcmp(&state->vs_const_i[StartRegister][0], pConstantData,
+                        Vector4iCount * sizeof(state->vs_const_i[0])))
+                return D3D_OK;
+        }
         memcpy(&state->vs_const_i[StartRegister][0],
                pConstantData,
                Vector4iCount * sizeof(state->vs_const_i[0]));
@@ -3409,6 +3420,16 @@ NineDevice9_SetVertexShaderConstantB( struct NineDevice9 *This,
     user_assert(StartRegister              < NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
     user_assert(StartRegister + BoolCount <= NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
+
+    if (!This->is_recording) {
+        bool noChange = true;
+        for (i = 0; i < BoolCount; i++) {
+            if (!!state->vs_const_b[StartRegister + i] != !!pConstantData[i])
+              noChange = false;
+        }
+        if (noChange)
+            return D3D_OK;
+    }
 
     for (i = 0; i < BoolCount; i++)
         state->vs_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
@@ -3635,6 +3656,12 @@ NineDevice9_SetPixelShaderConstantF( struct NineDevice9 *This,
        return D3D_OK;
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
+    if (!This->is_recording) {
+        if (!memcmp(&state->ps_const_f[StartRegister * 4], pConstantData,
+                    Vector4fCount * 4 * sizeof(state->ps_const_f[0])))
+            return D3D_OK;
+    }
+
     memcpy(&state->ps_const_f[StartRegister * 4],
            pConstantData,
            Vector4fCount * 4 * sizeof(state->ps_const_f[0]));
@@ -3684,6 +3711,11 @@ NineDevice9_SetPixelShaderConstantI( struct NineDevice9 *This,
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (This->driver_caps.ps_integer) {
+        if (!This->is_recording) {
+            if (!memcmp(&state->ps_const_i[StartRegister][0], pConstantData,
+                        Vector4iCount * sizeof(state->ps_const_i[0])))
+                return D3D_OK;
+        }
         memcpy(&state->ps_const_i[StartRegister][0],
                pConstantData,
                Vector4iCount * sizeof(state->ps_const_i[0]));
@@ -3746,6 +3778,16 @@ NineDevice9_SetPixelShaderConstantB( struct NineDevice9 *This,
     user_assert(StartRegister              < NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
     user_assert(StartRegister + BoolCount <= NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
+
+    if (!This->is_recording) {
+        bool noChange = true;
+        for (i = 0; i < BoolCount; i++) {
+            if (!!state->ps_const_b[StartRegister + i] != !!pConstantData[i])
+              noChange = false;
+        }
+        if (noChange)
+            return D3D_OK;
+    }
 
     for (i = 0; i < BoolCount; i++)
         state->ps_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
