@@ -54,6 +54,7 @@ void r600_add_atom(struct r600_context *rctx,
 	assert(id < R600_NUM_ATOMS);
 	assert(rctx->atoms[id] == NULL);
 	rctx->atoms[id] = atom;
+	atom->id = id;
 	atom->dirty = false;
 }
 
@@ -1476,11 +1477,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	r600_need_cs_space(rctx, ib.user_buffer ? 5 : 0, TRUE);
 	r600_flush_emit(rctx);
 
-	for (i = 0; i < R600_NUM_ATOMS; i++) {
-		if (rctx->atoms[i] == NULL || !rctx->atoms[i]->dirty) {
-			continue;
-		}
+	i = r600_next_dirty_atom(rctx, 0);
+	while (i < R600_NUM_ATOMS) {
 		r600_emit_atom(rctx, rctx->atoms[i]);
+		i = r600_next_dirty_atom(rctx, i + 1);
 	}
 
 	if (rctx->b.chip_class == CAYMAN) {

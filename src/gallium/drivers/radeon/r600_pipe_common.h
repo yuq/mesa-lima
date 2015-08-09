@@ -315,6 +315,7 @@ struct r600_common_screen {
 struct r600_atom {
 	void (*emit)(struct r600_common_context *ctx, struct r600_atom *state);
 	unsigned		num_dw;
+	unsigned short		id;	/* used by r600 only */
 	bool			dirty;
 };
 

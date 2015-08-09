@@ -51,13 +51,13 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 		unsigned i;
 
 		/* The number of dwords all the dirty states would take. */
-		for (i = 0; i < R600_NUM_ATOMS; i++) {
-			if (ctx->atoms[i] && ctx->atoms[i]->dirty) {
-				num_dw += ctx->atoms[i]->num_dw;
-				if (ctx->screen->b.trace_bo) {
-					num_dw += R600_TRACE_CS_DWORDS;
-				}
+		i = r600_next_dirty_atom(ctx, 0);
+		while (i < R600_NUM_ATOMS) {
+			num_dw += ctx->atoms[i]->num_dw;
+			if (ctx->screen->b.trace_bo) {
+				num_dw += R600_TRACE_CS_DWORDS;
 			}
+			i = r600_next_dirty_atom(ctx, i + 1);
 		}
 
 		/* The upper-bound of how much space a draw command would take. */
