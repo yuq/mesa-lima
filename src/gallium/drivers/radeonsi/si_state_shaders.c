@@ -314,6 +314,12 @@ static void si_shader_vs(struct si_shader *shader)
 	if (pm4 == NULL)
 		return;
 
+	/* If this is the GS copy shader, the GS state writes this register.
+	 * Otherwise, the VS state writes it.
+	 */
+	if (!shader->is_gs_copy_shader)
+		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, 0);
+
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
 
@@ -1287,8 +1293,6 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 		}
 
 		si_pm4_set_reg(*pm4, R_028B54_VGT_SHADER_STAGES_EN, stages);
-		if (!sctx->gs_shader)
-			si_pm4_set_reg(*pm4, R_028A40_VGT_GS_MODE, 0);
 	}
 	si_pm4_bind_state(sctx, vgt_shader_config, *pm4);
 }
