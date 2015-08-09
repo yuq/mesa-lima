@@ -73,6 +73,7 @@ struct si_shader_context
 	int param_streamout_offset[4];
 	int param_vertex_id;
 	int param_rel_auto_id;
+	int param_vs_prim_id;
 	int param_instance_id;
 	int param_tes_u;
 	int param_tes_v;
@@ -486,6 +487,9 @@ static LLVMValueRef get_primitive_id(struct lp_build_tgsi_context *bld_base,
 		return bld_base->uint_bld.zero;
 
 	switch (si_shader_ctx->type) {
+	case TGSI_PROCESSOR_VERTEX:
+		return LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+				    si_shader_ctx->param_vs_prim_id);
 	case TGSI_PROCESSOR_TESS_CTRL:
 		return LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 				    SI_PARAM_PATCH_ID);
@@ -2027,7 +2031,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct si_shader_output_values *outputs = NULL;
 	int i,j;
 
-	outputs = MALLOC(info->num_outputs * sizeof(outputs[0]));
+	outputs = MALLOC((info->num_outputs + 1) * sizeof(outputs[0]));
 
 	for (i = 0; i < info->num_outputs; i++) {
 		outputs[i].name = info->output_semantic_name[i];
@@ -2040,7 +2044,19 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 					      "");
 	}
 
-	si_llvm_export_vs(bld_base, outputs, info->num_outputs);
+	/* Export PrimitiveID when PS needs it. */
+	if (si_vs_exports_prim_id(si_shader_ctx->shader)) {
+		outputs[i].name = TGSI_SEMANTIC_PRIMID;
+		outputs[i].sid = 0;
+		outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+					       get_primitive_id(bld_base, 0));
+		outputs[i].values[1] = bld_base->base.undef;
+		outputs[i].values[2] = bld_base->base.undef;
+		outputs[i].values[3] = bld_base->base.undef;
+		i++;
+	}
+
+	si_llvm_export_vs(bld_base, outputs, i);
 	FREE(outputs);
 }
 
@@ -3415,7 +3431,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 		/* VGPRs */
 		params[si_shader_ctx->param_vertex_id = num_params++] = i32;
 		params[si_shader_ctx->param_rel_auto_id = num_params++] = i32;
-		params[num_params++] = i32; /* unused */
+		params[si_shader_ctx->param_vs_prim_id = num_params++] = i32;
 		params[si_shader_ctx->param_instance_id = num_params++] = i32;
 		break;
 

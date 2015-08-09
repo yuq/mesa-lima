@@ -3136,7 +3136,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
 	si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
 
-	si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0x0);
 	si_pm4_set_reg(pm4, R_028A8C_VGT_PRIMITIVEID_RESET, 0x0);
 	si_pm4_set_reg(pm4, R_028AB8_VGT_VTX_CNT_EN, 0);
 	si_pm4_set_reg(pm4, R_028B28_VGT_STRMOUT_DRAW_OPAQUE_OFFSET, 0);

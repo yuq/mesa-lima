@@ -308,6 +308,7 @@ static void si_shader_vs(struct si_shader *shader)
 	uint64_t va;
 	unsigned window_space =
 	   shader->selector->info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
+	bool enable_prim_id = si_vs_exports_prim_id(shader);
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -317,8 +318,12 @@ static void si_shader_vs(struct si_shader *shader)
 	/* If this is the GS copy shader, the GS state writes this register.
 	 * Otherwise, the VS state writes it.
 	 */
-	if (!shader->is_gs_copy_shader)
-		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, 0);
+	if (!shader->is_gs_copy_shader) {
+		si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE,
+			       S_028A40_MODE(enable_prim_id ? V_028A40_GS_SCENARIO_A : 0));
+		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, enable_prim_id);
+	} else
+		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0);
 
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
@@ -327,7 +332,7 @@ static void si_shader_vs(struct si_shader *shader)
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
 		num_user_sgprs = SI_GSCOPY_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_VERTEX) {
-		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
+		vgpr_comp_cnt = shader->uses_instanceid ? 3 : (enable_prim_id ? 2 : 0);
 		num_user_sgprs = SI_VS_NUM_USER_SGPR;
 	} else if (shader->selector->type == PIPE_SHADER_TESS_EVAL) {
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
@@ -534,6 +539,10 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->vs.as_es = 1;
 			key->vs.es_enabled_outputs = sctx->gs_shader->inputs_read;
 		}
+
+		if (!sctx->gs_shader && sctx->ps_shader &&
+		    sctx->ps_shader->info.uses_primid)
+			key->vs.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		key->tcs.prim_mode =
@@ -543,7 +552,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		if (sctx->gs_shader) {
 			key->tes.as_es = 1;
 			key->tes.es_enabled_outputs = sctx->gs_shader->inputs_read;
-		}
+		} else if (sctx->ps_shader && sctx->ps_shader->info.uses_primid)
+			key->tes.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		break;
@@ -977,7 +987,10 @@ bcolor:
 			}
 		}
 
-		if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(tmp)) {
+		if (name == TGSI_SEMANTIC_PRIMID)
+			/* PrimID is written after the last output. */
+			tmp |= S_028644_OFFSET(vs->vs_output_param_offset[vsinfo->num_outputs]);
+		else if (j == vsinfo->num_outputs && !G_028644_PT_SPRITE_TEX(tmp)) {
 			/* No corresponding output found, load defaults into input.
 			 * Don't set any other bits.
 			 * (FLAT_SHADE=1 completely changes behavior) */
