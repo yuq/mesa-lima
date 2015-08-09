@@ -3259,6 +3259,9 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
 
     DBG("This=%p pShader=%p\n", This, pShader);
 
+    if (!This->is_recording && state->vs == (struct NineVertexShader9*)pShader)
+      return D3D_OK;
+
     /* ff -> non-ff: commit back non-ff constants */
     if (!state->vs && pShader)
         state->commit |= NINE_STATE_COMMIT_CONST_VS;
@@ -3611,6 +3614,9 @@ NineDevice9_SetPixelShader( struct NineDevice9 *This,
     unsigned mask;
 
     DBG("This=%p pShader=%p\n", This, pShader);
+
+    if (!This->is_recording && state->ps == (struct NinePixelShader9*)pShader)
+      return D3D_OK;
 
     /* ff -> non-ff: commit back non-ff constants */
     if (!state->ps && pShader)
