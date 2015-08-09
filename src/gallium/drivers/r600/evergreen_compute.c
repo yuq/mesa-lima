@@ -163,7 +163,7 @@ static void evergreen_cs_set_vertex_buffer(
 	rctx->b.flags |= R600_CONTEXT_INV_VERTEX_CACHE;
 	state->enabled_mask |= 1 << vb_index;
 	state->dirty_mask |= 1 << vb_index;
-	state->atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &state->atom);
 }
 
 static void evergreen_cs_set_constant_buffer(

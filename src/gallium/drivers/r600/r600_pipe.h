@@ -498,29 +498,44 @@ static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
 	cs->cdw += cb->num_dw;
 }
 
+static inline void r600_set_atom_dirty(struct r600_context *rctx,
+				       struct r600_atom *atom,
+				       bool dirty)
+{
+	atom->dirty = dirty;
+}
+
+static inline void r600_mark_atom_dirty(struct r600_context *rctx,
+					struct r600_atom *atom)
+{
+	r600_set_atom_dirty(rctx, atom, true);
+}
+
 void r600_trace_emit(struct r600_context *rctx);
 
 static inline void r600_emit_atom(struct r600_context *rctx, struct r600_atom *atom)
 {
 	atom->emit(&rctx->b, atom);
-	atom->dirty = false;
+	r600_set_atom_dirty(rctx, atom, false);
 	if (rctx->screen->b.trace_bo) {
 		r600_trace_emit(rctx);
 	}
 }
 
-static inline void r600_set_cso_state(struct r600_cso_state *state, void *cso)
+static inline void r600_set_cso_state(struct r600_context *rctx,
+				      struct r600_cso_state *state, void *cso)
 {
 	state->cso = cso;
-	state->atom.dirty = cso != NULL;
+	r600_set_atom_dirty(rctx, &state->atom, cso != NULL);
 }
 
-static inline void r600_set_cso_state_with_cb(struct r600_cso_state *state, void *cso,
+static inline void r600_set_cso_state_with_cb(struct r600_context *rctx,
+					      struct r600_cso_state *state, void *cso,
 					      struct r600_command_buffer *cb)
 {
 	state->cb = cb;
 	state->atom.num_dw = cb ? cb->num_dw : 0;
-	r600_set_cso_state(state, cso);
+	r600_set_cso_state(rctx, state, cso);
 }
 
 /* compute_memory_pool.c */

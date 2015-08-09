@@ -744,7 +744,7 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 		return;
 
 	sctx->vs_shader = sel;
-	sctx->clip_regs.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 }
 
 static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
@@ -757,7 +757,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 		return;
 
 	sctx->gs_shader = sel;
-	sctx->clip_regs.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
 	if (enable_changed)
@@ -789,7 +789,7 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 		return;
 
 	sctx->tes_shader = sel;
-	sctx->clip_regs.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
 	if (enable_changed) {
@@ -1402,15 +1402,15 @@ void si_update_shaders(struct si_context *sctx)
 
 	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {
 		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;
-		sctx->db_render_state.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
 
 	if (sctx->smoothing_enabled != sctx->ps_shader->current->key.ps.poly_line_smoothing) {
 		sctx->smoothing_enabled = sctx->ps_shader->current->key.ps.poly_line_smoothing;
-		sctx->msaa_config.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 		if (sctx->b.chip_class == SI)
-			sctx->db_render_state.dirty = true;
+			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
 }
 

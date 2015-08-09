@@ -127,11 +127,11 @@ static void r600_bind_blend_state_internal(struct r600_context *rctx,
 	rctx->dual_src_blend = blend->dual_src_blend;
 
 	if (!blend_disable) {
-		r600_set_cso_state_with_cb(&rctx->blend_state, blend, &blend->buffer);
+		r600_set_cso_state_with_cb(rctx, &rctx->blend_state, blend, &blend->buffer);
 		color_control = blend->cb_color_control;
 	} else {
 		/* Blending is disabled. */
-		r600_set_cso_state_with_cb(&rctx->blend_state, blend, &blend->buffer_no_blend);
+		r600_set_cso_state_with_cb(rctx, &rctx->blend_state, blend, &blend->buffer_no_blend);
 		color_control = blend->cb_color_control_no_blend;
 	}
 
@@ -150,7 +150,7 @@ static void r600_bind_blend_state_internal(struct r600_context *rctx,
 		update_cb = true;
 	}
 	if (update_cb) {
-		rctx->cb_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 }
 
@@ -160,7 +160,7 @@ static void r600_bind_blend_state(struct pipe_context *ctx, void *state)
 	struct r600_blend_state *blend = (struct r600_blend_state *)state;
 
 	if (blend == NULL) {
-		r600_set_cso_state_with_cb(&rctx->blend_state, NULL, NULL);
+		r600_set_cso_state_with_cb(rctx, &rctx->blend_state, NULL, NULL);
 		return;
 	}
 
@@ -173,7 +173,7 @@ static void r600_set_blend_color(struct pipe_context *ctx,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
 	rctx->blend_color.state = *state;
-	rctx->blend_color.atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &rctx->blend_color.atom);
 }
 
 void r600_emit_blend_color(struct r600_context *rctx, struct r600_atom *atom)
@@ -210,7 +210,7 @@ static void r600_set_clip_state(struct pipe_context *ctx,
 	struct pipe_constant_buffer cb;
 
 	rctx->clip_state.state = *state;
-	rctx->clip_state.atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &rctx->clip_state.atom);
 
 	cb.buffer = NULL;
 	cb.user_buffer = state->ucp;
@@ -226,7 +226,7 @@ static void r600_set_stencil_ref(struct pipe_context *ctx,
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
 	rctx->stencil_ref.state = *state;
-	rctx->stencil_ref.atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &rctx->stencil_ref.atom);
 }
 
 void r600_emit_stencil_ref(struct r600_context *rctx, struct r600_atom *atom)
@@ -274,11 +274,11 @@ static void r600_bind_dsa_state(struct pipe_context *ctx, void *state)
 	struct r600_stencil_ref ref;
 
 	if (state == NULL) {
-		r600_set_cso_state_with_cb(&rctx->dsa_state, NULL, NULL);
+		r600_set_cso_state_with_cb(rctx, &rctx->dsa_state, NULL, NULL);
 		return;
 	}
 
-	r600_set_cso_state_with_cb(&rctx->dsa_state, dsa, &dsa->buffer);
+	r600_set_cso_state_with_cb(rctx, &rctx->dsa_state, dsa, &dsa->buffer);
 
 	ref.ref_value[0] = rctx->stencil_ref.pipe_state.ref_value[0];
 	ref.ref_value[1] = rctx->stencil_ref.pipe_state.ref_value[1];
@@ -293,7 +293,7 @@ static void r600_bind_dsa_state(struct pipe_context *ctx, void *state)
 			 * we are having lockup on evergreen so do not enable
 			 * hyperz when not writing zbuffer
 			 */
-			rctx->db_misc_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 		}
 	}
 
@@ -304,7 +304,7 @@ static void r600_bind_dsa_state(struct pipe_context *ctx, void *state)
 	    rctx->alphatest_state.sx_alpha_ref != dsa->alpha_ref) {
 		rctx->alphatest_state.sx_alpha_test_control = dsa->sx_alpha_test_control;
 		rctx->alphatest_state.sx_alpha_ref = dsa->alpha_ref;
-		rctx->alphatest_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->alphatest_state.atom);
 	}
 }
 
@@ -318,14 +318,14 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	rctx->rasterizer = rs;
 
-	r600_set_cso_state_with_cb(&rctx->rasterizer_state, rs, &rs->buffer);
+	r600_set_cso_state_with_cb(rctx, &rctx->rasterizer_state, rs, &rs->buffer);
 
 	if (rs->offset_enable &&
 	    (rs->offset_units != rctx->poly_offset_state.offset_units ||
 	     rs->offset_scale != rctx->poly_offset_state.offset_scale)) {
 		rctx->poly_offset_state.offset_units = rs->offset_units;
 		rctx->poly_offset_state.offset_scale = rs->offset_scale;
-		rctx->poly_offset_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->poly_offset_state.atom);
 	}
 
 	/* Update clip_misc_state. */
@@ -333,14 +333,14 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 	    rctx->clip_misc_state.clip_plane_enable != rs->clip_plane_enable) {
 		rctx->clip_misc_state.pa_cl_clip_cntl = rs->pa_cl_clip_cntl;
 		rctx->clip_misc_state.clip_plane_enable = rs->clip_plane_enable;
-		rctx->clip_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 	}
 
 	/* Workaround for a missing scissor enable on r600. */
 	if (rctx->b.chip_class == R600 &&
 	    rs->scissor_enable != rctx->scissor[0].enable) {
 		rctx->scissor[0].enable = rs->scissor_enable;
-		rctx->scissor[0].atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->scissor[0].atom);
 	}
 
 	/* Re-emit PA_SC_LINE_STIPPLE. */
@@ -378,7 +378,7 @@ void r600_sampler_states_dirty(struct r600_context *rctx,
 		state->atom.num_dw =
 			util_bitcount(state->dirty_mask & state->has_bordercolor_mask) * 11 +
 			util_bitcount(state->dirty_mask & ~state->has_bordercolor_mask) * 5;
-		state->atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &state->atom);
 	}
 }
 
@@ -443,7 +443,7 @@ static void r600_bind_sampler_states(struct pipe_context *pipe,
 		/* change in TA_CNTL_AUX need a pipeline flush */
 		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
 		rctx->seamless_cube_map.enabled = seamless_cube_map;
-		rctx->seamless_cube_map.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->seamless_cube_map.atom);
 	}
 }
 
@@ -483,7 +483,7 @@ static void r600_bind_vertex_elements(struct pipe_context *ctx, void *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
 
-	r600_set_cso_state(&rctx->vertex_fetch_shader, state);
+	r600_set_cso_state(rctx, &rctx->vertex_fetch_shader, state);
 }
 
 static void r600_delete_vertex_elements(struct pipe_context *ctx, void *state)
@@ -513,7 +513,7 @@ void r600_vertex_buffers_dirty(struct r600_context *rctx)
 		rctx->b.flags |= R600_CONTEXT_INV_VERTEX_CACHE;
 		rctx->vertex_buffer_state.atom.num_dw = (rctx->b.chip_class >= EVERGREEN ? 12 : 11) *
 					       util_bitcount(rctx->vertex_buffer_state.dirty_mask);
-		rctx->vertex_buffer_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->vertex_buffer_state.atom);
 	}
 }
 
@@ -570,7 +570,7 @@ void r600_sampler_views_dirty(struct r600_context *rctx,
 		rctx->b.flags |= R600_CONTEXT_INV_TEX_CACHE;
 		state->atom.num_dw = (rctx->b.chip_class >= EVERGREEN ? 14 : 13) *
 				     util_bitcount(state->dirty_mask);
-		state->atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &state->atom);
 	}
 }
 
@@ -673,7 +673,7 @@ static void r600_set_viewport_states(struct pipe_context *ctx,
 
 	for (i = start_slot; i < start_slot + num_viewports; i++) {
 		rctx->viewport[i].state = state[i - start_slot];
-		rctx->viewport[i].atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->viewport[i].atom);
 	}
 }
 
@@ -913,7 +913,7 @@ void r600_constant_buffers_dirty(struct r600_context *rctx, struct r600_constbuf
 		rctx->b.flags |= R600_CONTEXT_INV_CONST_CACHE;
 		state->atom.num_dw = rctx->b.chip_class >= EVERGREEN ? util_bitcount(state->dirty_mask)*20
 								   : util_bitcount(state->dirty_mask)*19;
-		state->atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &state->atom);
 	}
 }
 
@@ -982,7 +982,7 @@ static void r600_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask
 		return;
 
 	rctx->sample_mask.sample_mask = sample_mask;
-	rctx->sample_mask.atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &rctx->sample_mask.atom);
 }
 
 /*
@@ -1107,27 +1107,28 @@ static void update_shader_atom(struct pipe_context *ctx,
 			       struct r600_shader_state *state,
 			       struct r600_pipe_shader *shader)
 {
+	struct r600_context *rctx = (struct r600_context *)ctx;
+
 	state->shader = shader;
 	if (shader) {
 		state->atom.num_dw = shader->command_buffer.num_dw;
-		state->atom.dirty = true;
 		r600_context_add_resource_size(ctx, (struct pipe_resource *)shader->bo);
 	} else {
 		state->atom.num_dw = 0;
-		state->atom.dirty = false;
 	}
+	r600_mark_atom_dirty(rctx, &state->atom);
 }
 
 static void update_gs_block_state(struct r600_context *rctx, unsigned enable)
 {
 	if (rctx->shader_stages.geom_enable != enable) {
 		rctx->shader_stages.geom_enable = enable;
-		rctx->shader_stages.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 	}
 
 	if (rctx->gs_rings.enable != enable) {
 		rctx->gs_rings.enable = enable;
-		rctx->gs_rings.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->gs_rings.atom);
 
 		if (enable && !rctx->gs_rings.esgs_ring.buffer) {
 			unsigned size = 0x1C000;
@@ -1192,7 +1193,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 		if (!rctx->shader_stages.geom_enable) {
 			rctx->shader_stages.geom_enable = true;
-			rctx->shader_stages.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
 
 		/* gs_shader provides GS and VS (copy shader) */
@@ -1206,7 +1207,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				rctx->clip_misc_state.pa_cl_vs_out_cntl = rctx->gs_shader->current->gs_copy_shader->pa_cl_vs_out_cntl;
 				rctx->clip_misc_state.clip_dist_write = rctx->gs_shader->current->gs_copy_shader->shader.clip_dist_write;
 				rctx->clip_misc_state.clip_disable = rctx->gs_shader->current->shader.vs_position_window_space;
-				rctx->clip_misc_state.atom.dirty = true;
+				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 			}
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->gs_shader->current->gs_copy_shader->enabled_stream_buffers_mask;
 		}
@@ -1224,7 +1225,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 			update_shader_atom(ctx, &rctx->geometry_shader, NULL);
 			update_shader_atom(ctx, &rctx->export_shader, NULL);
 			rctx->shader_stages.geom_enable = false;
-			rctx->shader_stages.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		}
 
 		r600_shader_select(ctx, rctx->vs_shader, &vs_dirty);
@@ -1241,7 +1242,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				rctx->clip_misc_state.pa_cl_vs_out_cntl = rctx->vs_shader->current->pa_cl_vs_out_cntl;
 				rctx->clip_misc_state.clip_dist_write = rctx->vs_shader->current->shader.clip_dist_write;
 				rctx->clip_misc_state.clip_disable = rctx->vs_shader->current->shader.vs_position_window_space;
-				rctx->clip_misc_state.atom.dirty = true;
+				r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 			}
 			rctx->b.streamout.enabled_stream_buffers_mask = rctx->vs_shader->current->enabled_stream_buffers_mask;
 		}
@@ -1254,7 +1255,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 		if (rctx->cb_misc_state.nr_ps_color_outputs != rctx->ps_shader->current->nr_ps_color_outputs) {
 			rctx->cb_misc_state.nr_ps_color_outputs = rctx->ps_shader->current->nr_ps_color_outputs;
-			rctx->cb_misc_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 		}
 
 		if (rctx->b.chip_class <= R700) {
@@ -1262,7 +1263,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 
 			if (rctx->cb_misc_state.multiwrite != multiwrite) {
 				rctx->cb_misc_state.multiwrite = multiwrite;
-				rctx->cb_misc_state.atom.dirty = true;
+				r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 			}
 		}
 
@@ -1276,7 +1277,7 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				r600_update_ps_state(ctx, rctx->ps_shader->current);
 		}
 
-		rctx->shader_stages.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->shader_stages.atom);
 		update_shader_atom(ctx, &rctx->pixel_shader, rctx->ps_shader->current);
 	}
 
@@ -1455,13 +1456,13 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		rctx->vgt_state.vgt_multi_prim_ib_reset_en = info.primitive_restart;
 		rctx->vgt_state.vgt_multi_prim_ib_reset_indx = info.restart_index;
 		rctx->vgt_state.vgt_indx_offset = info.index_bias;
-		rctx->vgt_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->vgt_state.atom);
 	}
 
 	/* Workaround for hardware deadlock on certain R600 ASICs: write into a CB register. */
 	if (rctx->b.chip_class == R600) {
 		rctx->b.flags |= R600_CONTEXT_PS_PARTIAL_FLUSH;
-		rctx->cb_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 
 	/* Emit states. */
@@ -2491,7 +2492,7 @@ static void r600_set_occlusion_query_state(struct pipe_context *ctx, bool enable
 
 	if (rctx->db_misc_state.occlusion_query_enabled != enable) {
 		rctx->db_misc_state.occlusion_query_enabled = enable;
-		rctx->db_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 }
 

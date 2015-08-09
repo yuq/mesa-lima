@@ -325,4 +325,18 @@ si_invalidate_draw_sh_constants(struct si_context *sctx)
 	sctx->last_sh_base_reg = -1; /* reset to an unknown value */
 }
 
+static inline void
+si_set_atom_dirty(struct si_context *sctx,
+		  struct r600_atom *atom, bool dirty)
+{
+	atom->dirty = dirty;
+}
+
+static inline void
+si_mark_atom_dirty(struct si_context *sctx,
+		   struct r600_atom *atom)
+{
+	si_set_atom_dirty(sctx, atom, true);
+}
+
 #endif

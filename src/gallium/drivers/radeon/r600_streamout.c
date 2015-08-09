@@ -104,7 +104,7 @@ void r600_streamout_buffers_dirty(struct r600_common_context *rctx)
 		(num_bufs - num_bufs_appended) * 6 + /* STRMOUT_BUFFER_UPDATE */
 		(rctx->family > CHIP_R600 && rctx->family < CHIP_RS780 ? 2 : 0); /* SURFACE_BASE_UPDATE */
 
-	begin->dirty = true;
+	rctx->set_atom_dirty(rctx, begin, true);
 
 	r600_set_streamout_enable(rctx, true);
 }
@@ -145,7 +145,7 @@ void r600_set_streamout_targets(struct pipe_context *ctx,
 	if (num_targets) {
 		r600_streamout_buffers_dirty(rctx);
 	} else {
-		rctx->streamout.begin_atom.dirty = false;
+		rctx->set_atom_dirty(rctx, &rctx->streamout.begin_atom, false);
 		r600_set_streamout_enable(rctx, false);
 	}
 }
@@ -353,8 +353,9 @@ static void r600_set_streamout_enable(struct r600_common_context *rctx, bool ena
 					  (rctx->streamout.enabled_mask << 12);
 
 	if ((old_strmout_en != r600_get_strmout_en(rctx)) ||
-            (old_hw_enabled_mask != rctx->streamout.hw_enabled_mask))
-		rctx->streamout.enable_atom.dirty = true;
+            (old_hw_enabled_mask != rctx->streamout.hw_enabled_mask)) {
+		rctx->set_atom_dirty(rctx, &rctx->streamout.enable_atom, true);
+	}
 }
 
 void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
@@ -369,8 +370,9 @@ void r600_update_prims_generated_query_state(struct r600_common_context *rctx,
 		rctx->streamout.prims_gen_query_enabled =
 			rctx->streamout.num_prims_gen_queries != 0;
 
-		if (old_strmout_en != r600_get_strmout_en(rctx))
-			rctx->streamout.enable_atom.dirty = true;
+		if (old_strmout_en != r600_get_strmout_en(rctx)) {
+			rctx->set_atom_dirty(rctx, &rctx->streamout.enable_atom, true);
+		}
 	}
 }
 

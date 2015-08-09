@@ -802,7 +802,7 @@ static void r600_set_scissor_states(struct pipe_context *ctx,
 		return;
 
 	for (i = start_slot ; i < start_slot + num_scissors; i++) {
-		rctx->scissor[i].atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->scissor[i].atom);
 	}
 }
 
@@ -1193,7 +1193,7 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 
 		if (rctx->alphatest_state.bypass != alphatest_bypass) {
 			rctx->alphatest_state.bypass = alphatest_bypass;
-			rctx->alphatest_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->alphatest_state.atom);
 		}
 	}
 
@@ -1209,28 +1209,28 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 
 		if (state->zsbuf->format != rctx->poly_offset_state.zs_format) {
 			rctx->poly_offset_state.zs_format = state->zsbuf->format;
-			rctx->poly_offset_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->poly_offset_state.atom);
 		}
 
 		if (rctx->db_state.rsurf != surf) {
 			rctx->db_state.rsurf = surf;
-			rctx->db_state.atom.dirty = true;
-			rctx->db_misc_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->db_state.atom);
+			r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 		}
 	} else if (rctx->db_state.rsurf) {
 		rctx->db_state.rsurf = NULL;
-		rctx->db_state.atom.dirty = true;
-		rctx->db_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->db_state.atom);
+		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 
 	if (rctx->cb_misc_state.nr_cbufs != state->nr_cbufs) {
 		rctx->cb_misc_state.nr_cbufs = state->nr_cbufs;
-		rctx->cb_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->cb_misc_state.atom);
 	}
 
 	if (state->nr_cbufs == 0 && rctx->alphatest_state.bypass) {
 		rctx->alphatest_state.bypass = false;
-		rctx->alphatest_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->alphatest_state.atom);
 	}
 
 	/* Calculate the CS size. */
@@ -1250,7 +1250,7 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 		rctx->framebuffer.atom.num_dw += 2;
 	}
 
-	rctx->framebuffer.atom.dirty = true;
+	r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 
 	r600_set_sample_locations_constant_buffer(rctx);
 }
@@ -1541,9 +1541,9 @@ static void r600_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 
 	rctx->ps_iter_samples = min_samples;
 	if (rctx->framebuffer.nr_samples > 1) {
-		rctx->rasterizer_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->rasterizer_state.atom);
 		if (rctx->b.chip_class == R600)
-			rctx->db_misc_state.atom.dirty = true;
+			r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 }
 
@@ -2089,7 +2089,7 @@ bool r600_adjust_gprs(struct r600_context *rctx)
 	if (rctx->config_state.sq_gpr_resource_mgmt_1 != tmp || rctx->config_state.sq_gpr_resource_mgmt_2 != tmp2) {
 		rctx->config_state.sq_gpr_resource_mgmt_1 = tmp;
 		rctx->config_state.sq_gpr_resource_mgmt_2 = tmp2;
-		rctx->config_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->config_state.atom);
 		rctx->b.flags |= R600_CONTEXT_WAIT_3D_IDLE;
 	}
 	return true;
@@ -2796,7 +2796,7 @@ void r600_update_db_shader_control(struct r600_context * rctx)
 
 	if (db_shader_control != rctx->db_misc_state.db_shader_control) {
 		rctx->db_misc_state.db_shader_control = db_shader_control;
-		rctx->db_misc_state.atom.dirty = true;
+		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 }
 

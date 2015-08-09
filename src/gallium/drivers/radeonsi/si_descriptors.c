@@ -122,7 +122,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 
 	desc->list_dirty = false;
 	desc->pointer_dirty = true;
-	sctx->shader_userdata.atom.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	return true;
 }
 
@@ -452,7 +452,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
 	desc->pointer_dirty = true;
-	sctx->shader_userdata.atom.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	sctx->vertex_buffers_dirty = false;
 	return true;
 }
@@ -869,7 +869,7 @@ static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 	if (shader == PIPE_SHADER_VERTEX)
 		sctx->vertex_buffers.pointer_dirty = true;
 
-	sctx->shader_userdata.atom.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 }
 
 static void si_shader_userdata_begin_new_cs(struct si_context *sctx)

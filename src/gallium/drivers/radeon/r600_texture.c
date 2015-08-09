@@ -1276,7 +1276,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   tex->cmask.offset, tex->cmask.size, 0, true);
 
 		tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
-		fb_state->dirty = true;
+		rctx->set_atom_dirty(rctx, fb_state, true);
 		*buffers &= ~clear_bit;
 	}
 }

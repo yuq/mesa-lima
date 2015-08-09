@@ -734,12 +734,12 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	if (sctx->framebuffer.nr_samples > 1 &&
 	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable))
-		sctx->db_render_state.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_fb_rs_state(sctx);
 
-	sctx->clip_regs.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 }
 
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
@@ -904,7 +904,7 @@ static void si_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 
-	sctx->db_render_state.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
 static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *state)
@@ -2038,7 +2038,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 				  util_format_is_pure_integer(state->cbufs[0]->format);
 
 	if (sctx->framebuffer.cb0_is_integer != old_cb0_is_integer)
-		sctx->db_render_state.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	for (i = 0; i < state->nr_cbufs; i++) {
 		if (!state->cbufs[i])
@@ -2083,11 +2083,11 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.atom.num_dw += state->zsbuf ? 26 : 4;
 	sctx->framebuffer.atom.num_dw += 3; /* WINDOW_SCISSOR_BR */
 	sctx->framebuffer.atom.num_dw += 18; /* MSAA sample locations */
-	sctx->framebuffer.atom.dirty = true;
+	si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 
 	if (sctx->framebuffer.nr_samples != old_nr_samples) {
-		sctx->msaa_config.dirty = true;
-		sctx->db_render_state.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
+		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 		/* Set sample locations as fragment shader constants. */
 		switch (sctx->framebuffer.nr_samples) {
@@ -2124,7 +2124,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		     old_nr_samples != SI_NUM_SMOOTH_AA_SAMPLES) &&
 		    (sctx->framebuffer.nr_samples != SI_NUM_SMOOTH_AA_SAMPLES ||
 		     old_nr_samples != 1))
-			sctx->msaa_sample_locs.dirty = true;
+			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs);
 	}
 }
 
@@ -2266,7 +2266,7 @@ static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 	sctx->ps_iter_samples = min_samples;
 
 	if (sctx->framebuffer.nr_samples > 1)
-		sctx->msaa_config.dirty = true;
+		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 }
 
 /*
