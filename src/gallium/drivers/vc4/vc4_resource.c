@@ -507,13 +507,9 @@ vc4_surface_destroy(struct pipe_context *pctx, struct pipe_surface *psurf)
         FREE(psurf);
 }
 
-/** Debug routine to dump the contents of an 8888 surface to the console */
-void
-vc4_dump_surface(struct pipe_surface *psurf)
+static void
+vc4_dump_surface_non_msaa(struct pipe_surface *psurf)
 {
-        if (!psurf)
-                return;
-
         struct pipe_resource *prsc = psurf->texture;
         struct vc4_resource *rsc = vc4_resource(prsc);
         uint32_t *map = vc4_bo_map(rsc->bo);
@@ -605,6 +601,147 @@ vc4_dump_surface(struct pipe_surface *psurf)
         for (int i = 0; i < num_found_colors; i++) {
                 fprintf(stderr, "color %d: 0x%08x\n", i, found_colors[i]);
         }
+}
+
+static uint32_t
+vc4_surface_msaa_get_sample(struct pipe_surface *psurf,
+                            uint32_t x, uint32_t y, uint32_t sample)
+{
+        struct pipe_resource *prsc = psurf->texture;
+        struct vc4_resource *rsc = vc4_resource(prsc);
+        uint32_t tile_w = 32, tile_h = 32;
+        uint32_t tiles_w = DIV_ROUND_UP(psurf->width, 32);
+
+        uint32_t tile_x = x / tile_w;
+        uint32_t tile_y = y / tile_h;
+        uint32_t *tile = (vc4_bo_map(rsc->bo) +
+                          VC4_TILE_BUFFER_SIZE * (tile_y * tiles_w + tile_x));
+        uint32_t subtile_x = x % tile_w;
+        uint32_t subtile_y = y % tile_h;
+
+        uint32_t quad_samples = VC4_MAX_SAMPLES * 4;
+        uint32_t tile_stride = quad_samples * tile_w / 2;
+
+        return *((uint32_t *)tile +
+                 (subtile_y >> 1) * tile_stride +
+                 (subtile_x >> 1) * quad_samples +
+                 ((subtile_y & 1) << 1) +
+                 (subtile_x & 1) +
+                 sample);
+}
+
+static void
+vc4_dump_surface_msaa_char(struct pipe_surface *psurf,
+                           uint32_t start_x, uint32_t start_y,
+                           uint32_t w, uint32_t h)
+{
+        bool all_same_color = true;
+        uint32_t all_pix = 0;
+
+        for (int y = start_y; y < start_y + h; y++) {
+                for (int x = start_x; x < start_x + w; x++) {
+                        for (int s = 0; s < VC4_MAX_SAMPLES; s++) {
+                                uint32_t pix = vc4_surface_msaa_get_sample(psurf,
+                                                                           x, y,
+                                                                           s);
+                                if (x == start_x && y == start_y)
+                                        all_pix = pix;
+                                else if (all_pix != pix)
+                                        all_same_color = false;
+                        }
+                }
+        }
+        if (all_same_color) {
+                static const struct {
+                        uint32_t val;
+                        const char *c;
+                } named_colors[] = {
+                        { 0xff000000, "█" },
+                        { 0x00000000, "█" },
+                        { 0xffff0000, "r" },
+                        { 0xff00ff00, "g" },
+                        { 0xff0000ff, "b" },
+                        { 0xffffffff, "w" },
+                };
+                int i;
+                for (i = 0; i < ARRAY_SIZE(named_colors); i++) {
+                        if (named_colors[i].val == all_pix) {
+                                fprintf(stderr, "%s",
+                                        named_colors[i].c);
+                                return;
+                        }
+                }
+                fprintf(stderr, "x");
+        } else {
+                fprintf(stderr, ".");
+        }
+}
+
+static void
+vc4_dump_surface_msaa(struct pipe_surface *psurf)
+{
+        uint32_t tile_w = 32, tile_h = 32;
+        uint32_t tiles_w = DIV_ROUND_UP(psurf->width, tile_w);
+        uint32_t tiles_h = DIV_ROUND_UP(psurf->height, tile_h);
+        uint32_t char_w = 140, char_h = 60;
+        uint32_t char_w_per_tile = char_w / tiles_w - 1;
+        uint32_t char_h_per_tile = char_h / tiles_h - 1;
+        uint32_t found_colors[10];
+        uint32_t num_found_colors = 0;
+
+        fprintf(stderr, "Surface: %dx%d (%dx MSAA)\n",
+                psurf->width, psurf->height, psurf->texture->nr_samples);
+
+        for (int x = 0; x < (char_w_per_tile + 1) * tiles_w; x++)
+                fprintf(stderr, "-");
+        fprintf(stderr, "\n");
+
+        for (int ty = 0; ty < psurf->height; ty += tile_h) {
+                for (int y = 0; y < char_h_per_tile; y++) {
+
+                        for (int tx = 0; tx < psurf->width; tx += tile_w) {
+                                for (int x = 0; x < char_w_per_tile; x++) {
+                                        uint32_t bx1 = (x * tile_w /
+                                                        char_w_per_tile);
+                                        uint32_t bx2 = ((x + 1) * tile_w /
+                                                        char_w_per_tile);
+                                        uint32_t by1 = (y * tile_h /
+                                                        char_h_per_tile);
+                                        uint32_t by2 = ((y + 1) * tile_h /
+                                                        char_h_per_tile);
+
+                                        vc4_dump_surface_msaa_char(psurf,
+                                                                   tx + bx1,
+                                                                   ty + by1,
+                                                                   bx2 - bx1,
+                                                                   by2 - by1);
+                                }
+                                fprintf(stderr, "|");
+                        }
+                        fprintf(stderr, "\n");
+                }
+
+                for (int x = 0; x < (char_w_per_tile + 1) * tiles_w; x++)
+                        fprintf(stderr, "-");
+                fprintf(stderr, "\n");
+        }
+
+        for (int i = 0; i < num_found_colors; i++) {
+                fprintf(stderr, "color %d: 0x%08x\n", i, found_colors[i]);
+        }
+}
+
+/** Debug routine to dump the contents of an 8888 surface to the console */
+void
+vc4_dump_surface(struct pipe_surface *psurf)
+{
+        if (!psurf)
+                return;
+
+        if (psurf->texture->nr_samples)
+                vc4_dump_surface_msaa(psurf);
+        else
+                vc4_dump_surface_non_msaa(psurf);
 }
 
 static void
