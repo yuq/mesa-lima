@@ -28,6 +28,7 @@
 
 #include <math.h>
 #include <limits.h>
+#include <stdint.h>
 
 #ifdef __x86_64__
 #include <xmmintrin.h>
@@ -96,12 +97,12 @@ static inline long
 _mesa_lroundevenf(float x)
 {
 #ifdef __x86_64__
-#if LONG_BIT == 64
+#if LONG_MAX == INT64_MAX
    return _mm_cvtss_si64(_mm_load_ss(&x));
-#elif LONG_BIT == 32 || defined(_WIN32)
+#elif LONG_MAX == INT32_MAX
    return _mm_cvtss_si32(_mm_load_ss(&x));
 #else
-#error "Unsupported or undefined LONG_BIT"
+#error "Unsupported long size"
 #endif
 #else
    return lrintf(x);
@@ -116,12 +117,12 @@ static inline long
 _mesa_lroundeven(double x)
 {
 #ifdef __x86_64__
-#if LONG_BIT == 64
+#if LONG_MAX == INT64_MAX
    return _mm_cvtsd_si64(_mm_load_sd(&x));
-#elif LONG_BIT == 32 || defined(_WIN32)
+#elif LONG_MAX == INT32_MAX
    return _mm_cvtsd_si32(_mm_load_sd(&x));
 #else
-#error "Unsupported or undefined LONG_BIT"
+#error "Unsupported long size"
 #endif
 #else
    return lrint(x);
