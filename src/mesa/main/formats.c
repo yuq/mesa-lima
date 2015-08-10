@@ -354,14 +354,22 @@ _mesa_array_format_flip_channels(mesa_array_format format)
       return format;
 
    if (num_channels == 2) {
-      _mesa_array_format_set_swizzle(&format, swizzle[1], swizzle[0],
-                                     swizzle[2], swizzle[3]);
+      /* Assert that the swizzle makes sense for 2 channels */
+      for (unsigned i = 0; i < 4; i++)
+         assert(swizzle[i] != 2 && swizzle[i] != 3);
+
+      static const uint8_t flip_xy[6] = { 1, 0, 2, 3, 4, 5 };
+      _mesa_array_format_set_swizzle(&format,
+                                     flip_xy[swizzle[0]], flip_xy[swizzle[1]],
+                                     flip_xy[swizzle[2]], flip_xy[swizzle[3]]);
       return format;
    }
 
    if (num_channels == 4) {
-      _mesa_array_format_set_swizzle(&format, swizzle[3], swizzle[2],
-                                     swizzle[1], swizzle[0]);
+      static const uint8_t flip[6] = { 3, 2, 1, 0, 4, 5 };
+      _mesa_array_format_set_swizzle(&format,
+                                     flip[swizzle[0]], flip[swizzle[1]],
+                                     flip[swizzle[2]], flip[swizzle[3]]);
       return format;
    }
 
