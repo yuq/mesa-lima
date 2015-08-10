@@ -209,6 +209,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
         case PIPE_CAP_INVALIDATE_BUFFER:
         case PIPE_CAP_GENERATE_MIPMAP:
+        case PIPE_CAP_STRING_MARKER:
             return 0;
 
         /* SWTCL-only features. */

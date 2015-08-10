@@ -679,6 +679,13 @@ struct pipe_context {
                             unsigned flags);
 
    /**
+    * Emit string marker in cmdstream
+    */
+   void (*emit_string_marker)(struct pipe_context *ctx,
+                              const char *string,
+                              int len);
+
+   /**
     * Generate mipmap.
     * \return TRUE if mipmap generation succeeds, FALSE otherwise
     */

@@ -349,6 +349,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MULTI_DRAW_INDIRECT_PARAMS:
 	case PIPE_CAP_SHADER_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_GENERATE_MIPMAP:
+	case PIPE_CAP_STRING_MARKER:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

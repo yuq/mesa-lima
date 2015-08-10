@@ -37,6 +37,7 @@
 #include "util/u_math.h"
 
 #include "st_context.h"
+#include "st_debug.h"
 #include "st_extensions.h"
 #include "st_format.h"
 
@@ -973,4 +974,8 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_gpu_shader_fp64 = GL_TRUE;
       extensions->ARB_vertex_attrib_64bit = GL_TRUE;
    }
+
+   if ((ST_DEBUG & DEBUG_GREMEDY) &&
+       screen->get_param(screen, PIPE_CAP_STRING_MARKER))
+      extensions->GREMEDY_string_marker = GL_TRUE;
 }
