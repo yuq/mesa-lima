@@ -225,7 +225,7 @@ public:
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                          const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
-   void resolve_source_modifiers(fs_reg *src);
+   fs_reg resolve_source_modifiers(const fs_reg &src);
    void emit_discard_jump();
    bool try_replace_with_sel();
    bool opt_peephole_sel();

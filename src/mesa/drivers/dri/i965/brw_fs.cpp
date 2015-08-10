@@ -1311,15 +1311,16 @@ fs_visitor::emit_sampleid_setup()
    return reg;
 }
 
-void
-fs_visitor::resolve_source_modifiers(fs_reg *src)
+fs_reg
+fs_visitor::resolve_source_modifiers(const fs_reg &src)
 {
-   if (!src->abs && !src->negate)
-      return;
+   if (!src.abs && !src.negate)
+      return src;
 
-   fs_reg temp = bld.vgrf(src->type);
-   bld.MOV(temp, *src);
-   *src = temp;
+   fs_reg temp = bld.vgrf(src.type);
+   bld.MOV(temp, src);
+
+   return temp;
 }
 
 void
