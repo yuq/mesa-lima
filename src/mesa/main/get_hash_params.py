@@ -458,6 +458,13 @@ descriptor=[
 
 # GL_ARB_explicit_uniform_location / GLES 3.1
   [ "MAX_UNIFORM_LOCATIONS", "CONTEXT_INT(Const.MaxUserAssignableUniformLocations), extra_ARB_explicit_uniform_location" ],
+
+# GL_ARB_vertex_attrib_binding / GLES 3.1
+  [ "MAX_VERTEX_ATTRIB_RELATIVE_OFFSET", "CONTEXT_ENUM(Const.MaxVertexAttribRelativeOffset), NO_EXTRA" ],
+  [ "MAX_VERTEX_ATTRIB_BINDINGS", "CONTEXT_ENUM(Const.MaxVertexAttribBindings), NO_EXTRA" ],
+
+# GL 4.4 / GLES 3.1
+  [ "MAX_VERTEX_ATTRIB_STRIDE", "CONTEXT_ENUM(Const.MaxVertexAttribStride), NO_EXTRA" ],
 ]},
 
 # Enums in OpenGL Core profile and ES 3.1
@@ -766,9 +773,6 @@ descriptor=[
   [ "MAX_GEOMETRY_INPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxInputComponents), extra_version_32" ],
   [ "MAX_GEOMETRY_OUTPUT_COMPONENTS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxOutputComponents), extra_version_32" ],
 
-# GL 4.4
-  [ "MAX_VERTEX_ATTRIB_STRIDE", "CONTEXT_ENUM(Const.MaxVertexAttribStride), NO_EXTRA" ],
-
 # GL_ARB_robustness
   [ "RESET_NOTIFICATION_STRATEGY_ARB", "CONTEXT_ENUM(Const.ResetStrategy), NO_EXTRA" ],
 
@@ -805,10 +809,6 @@ descriptor=[
 # GL_ARB_shader_atomic_counters
   [ "MAX_GEOMETRY_ATOMIC_COUNTER_BUFFERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicBuffers), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
   [ "MAX_GEOMETRY_ATOMIC_COUNTERS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxAtomicCounters), extra_ARB_shader_atomic_counters_and_geometry_shader" ],
-
-# GL_ARB_vertex_attrib_binding
-  [ "MAX_VERTEX_ATTRIB_RELATIVE_OFFSET", "CONTEXT_ENUM(Const.MaxVertexAttribRelativeOffset), NO_EXTRA" ],
-  [ "MAX_VERTEX_ATTRIB_BINDINGS", "CONTEXT_ENUM(Const.MaxVertexAttribBindings), NO_EXTRA" ],
 
 # GL_ARB_shader_image_load_store
   [ "MAX_COMBINED_IMAGE_UNITS_AND_FRAGMENT_OUTPUTS", "CONTEXT_INT(Const.MaxCombinedShaderOutputResources), extra_ARB_shader_image_load_store" ],
