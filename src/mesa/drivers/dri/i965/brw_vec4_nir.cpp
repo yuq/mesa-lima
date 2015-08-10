@@ -1779,20 +1779,8 @@ const glsl_type *
 glsl_type_for_nir_alu_type(nir_alu_type alu_type,
                            unsigned components)
 {
-   switch (alu_type) {
-   case nir_type_float:
-      return glsl_type::vec(components);
-   case nir_type_int:
-      return glsl_type::ivec(components);
-   case nir_type_uint:
-      return glsl_type::uvec(components);
-   case nir_type_bool:
-      return glsl_type::bvec(components);
-   default:
-      return glsl_type::error_type;
-   }
-
-   return glsl_type::error_type;
+   return glsl_type::get_instance(brw_glsl_base_type_for_nir_type(alu_type),
+                                  components, 1);
 }
 
 void
