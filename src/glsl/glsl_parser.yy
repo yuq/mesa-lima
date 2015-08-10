@@ -1519,11 +1519,10 @@ layout_qualifier_id:
                                 "invalid %s of %d specified",
                                 local_size_qualifiers[i], $3);
                YYERROR;
-            } else if (!state->is_version(430, 0) &&
-                       !state->ARB_compute_shader_enable) {
+            } else if (!state->has_compute_shader()) {
                _mesa_glsl_error(& @3, state,
                                 "%s qualifier requires GLSL 4.30 or "
-                                "ARB_compute_shader",
+                                "GLSL ES 3.10 or ARB_compute_shader",
                                 local_size_qualifiers[i]);
                YYERROR;
             } else {
