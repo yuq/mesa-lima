@@ -289,11 +289,13 @@ dump_VC4_PACKET_TILE_RENDERING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t h
                 break;
         }
 
-        fprintf(stderr, "0x%08x 0x%08x: 0x%02x %s %s %s\n",
+        fprintf(stderr, "0x%08x 0x%08x: 0x%02x %s %s %s %s\n",
                 offset + 8, hw_offset + 8,
                 bytes[0],
                 format, tiling,
-                (bytes[0] & VC4_RENDER_CONFIG_MS_MODE_4X) ? "ms" : "ss");
+                (shorts[2] & VC4_RENDER_CONFIG_MS_MODE_4X) ? "ms" : "ss",
+                (shorts[2] & VC4_RENDER_CONFIG_DECIMATE_MODE_4X) ?
+                "ms_decimate" : "ss_decimate");
 
         const char *earlyz = "";
         if (shorts[2] & VC4_RENDER_CONFIG_EARLY_Z_COVERAGE_DISABLE) {
