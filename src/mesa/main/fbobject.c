@@ -2944,8 +2944,9 @@ check_textarget(struct gl_context *ctx, int dims, GLenum target,
          break;
       case GL_TEXTURE_2D_MULTISAMPLE:
       case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-         err = _mesa_is_gles(ctx)
-               || !ctx->Extensions.ARB_texture_multisample;
+         err = (_mesa_is_gles(ctx) ||
+                !ctx->Extensions.ARB_texture_multisample) &&
+               !_mesa_is_gles31(ctx);
          break;
       default:
          err = true;
