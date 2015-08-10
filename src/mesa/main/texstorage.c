@@ -287,7 +287,7 @@ tex_storage_error_check(struct gl_context *ctx,
     * order to allow meta functions to use legacy formats. */
 
    /* size check */
-   if (width < 1 || height < 1 || depth < 1) {
+   if (!_mesa_valid_tex_storage_dim(width, height, depth)) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glTex%sStorage%uD(width, height or depth < 1)",
                   suffix, dims);
