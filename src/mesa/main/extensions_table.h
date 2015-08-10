@@ -251,6 +251,8 @@ EXT(EXT_unpack_subimage                     , dummy_true                        
 EXT(EXT_vertex_array                        , dummy_true                             , GLL,  x ,  x ,  x , 1995)
 EXT(EXT_vertex_array_bgra                   , EXT_vertex_array_bgra                  , GLL, GLC,  x ,  x , 2008)
 
+EXT(GREMEDY_string_marker                   , GREMEDY_string_marker                  , GLL, GLC,  x ,  x , 2007)
+
 EXT(IBM_multimode_draw_arrays               , dummy_true                             , GLL, GLC,  x ,  x , 1998)
 EXT(IBM_rasterpos_clip                      , dummy_true                             , GLL,  x ,  x ,  x , 1996)
 EXT(IBM_texture_mirrored_repeat             , dummy_true                             , GLL,  x ,  x ,  x , 1998)

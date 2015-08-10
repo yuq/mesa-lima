@@ -762,6 +762,12 @@ struct dd_function_table {
    void (*UseProgram)(struct gl_context *ctx, struct gl_shader_program *shProg);
    /*@}*/
 
+   /**
+    * \name GREMEDY debug/marker functions
+    */
+   /*@{*/
+   void (*EmitStringMarker)(struct gl_context *ctx, const GLchar *string, GLsizei len);
+   /*@}*/
 
    /**
     * \name Support for multiple T&L engines

@@ -1276,6 +1276,19 @@ _mesa_free_errors_data(struct gl_context *ctx)
    mtx_destroy(&ctx->DebugMutex);
 }
 
+void GLAPIENTRY
+_mesa_StringMarkerGREMEDY(GLsizei len, const GLvoid *string)
+{
+   GET_CURRENT_CONTEXT(ctx);
+   if (ctx->Extensions.GREMEDY_string_marker) {
+      /* if length not specified, string will be null terminated: */
+      if (len <= 0)
+         len = strlen(string);
+      ctx->Driver.EmitStringMarker(ctx, string, len);
+   } else {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "StringMarkerGREMEDY");
+   }
+}
 
 /**********************************************************************/
 /** \name Diagnostics */

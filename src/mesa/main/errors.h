@@ -138,6 +138,9 @@ _mesa_PushDebugGroup(GLenum source, GLuint id, GLsizei length,
 void GLAPIENTRY
 _mesa_PopDebugGroup(void);
 
+void GLAPIENTRY
+_mesa_StringMarkerGREMEDY(GLsizei len, const GLvoid *string);
+
 #ifdef __cplusplus
 }
 #endif
