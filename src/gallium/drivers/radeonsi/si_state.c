@@ -1994,10 +1994,6 @@ static void si_init_depth_surface(struct si_context *sctx,
 		db_htile_surface = 0;
 	}
 
-	/* Bug workaround. */
-	if (sctx->b.chip_class >= VI)
-		s_info |= S_028044_TILE_STENCIL_DISABLE(1);
-
 	assert(levelinfo->nblk_x % 8 == 0 && levelinfo->nblk_y % 8 == 0);
 
 	surf->db_depth_view = S_028008_SLICE_START(surf->base.u.tex.first_layer) |
