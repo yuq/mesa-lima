@@ -474,6 +474,8 @@ void st_init_extensions(struct pipe_screen *screen,
        * support the GL_POINT_SPRITE_R_MODE_NV option. */
 
       { o(OES_standard_derivatives),         PIPE_CAP_SM3                              },
+      { o(OES_texture_float_linear),         PIPE_CAP_TEXTURE_FLOAT_LINEAR             },
+      { o(OES_texture_half_float_linear),    PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR        },
       { o(ARB_texture_cube_map_array),       PIPE_CAP_CUBE_MAP_ARRAY                   },
       { o(ARB_texture_multisample),          PIPE_CAP_TEXTURE_MULTISAMPLE              },
       { o(ARB_texture_query_lod),            PIPE_CAP_TEXTURE_QUERY_LOD                },
@@ -491,6 +493,12 @@ void st_init_extensions(struct pipe_screen *screen,
       { { o(ARB_texture_float) },
         { PIPE_FORMAT_R32G32B32A32_FLOAT,
           PIPE_FORMAT_R16G16B16A16_FLOAT } },
+
+      { { o(OES_texture_float) },
+        { PIPE_FORMAT_R32G32B32A32_FLOAT } },
+
+      { { o(OES_texture_half_float) },
+        { PIPE_FORMAT_R16G16B16A16_FLOAT } },
 
       { { o(ARB_texture_rgb10_a2ui) },
         { PIPE_FORMAT_R10G10B10A2_UINT,

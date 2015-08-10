@@ -177,6 +177,8 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
         case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
+	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
                 return 0;
 
                 /* Stream output. */

@@ -258,6 +258,12 @@ The integer capabilities:
   How many per-patch outputs and inputs are supported between tessellation
   control and tessellation evaluation shaders, not counting in TESSINNER and
   TESSOUTER. The minimum allowed value for OpenGL is 30.
+* ``PIPE_CAP_TEXTURE_FLOAT_LINEAR``: Whether the linear minification and
+  magnification filters are supported with single-precision floating-point
+  textures.
+* ``PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR``: Whether the linear minification and
+  magnification filters are supported with half-precision floating-point
+  textures.
 
 
 .. _pipe_capf:
