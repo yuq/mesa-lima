@@ -434,12 +434,14 @@ void st_init_extensions(struct pipe_screen *screen,
 
    static const struct st_extension_cap_mapping cap_mapping[] = {
       { o(ARB_base_instance),                PIPE_CAP_START_INSTANCE                   },
-      { o(ARB_buffer_storage),               PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT },
+      { o(ARB_buffer_storage),               PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT   },
+      { o(ARB_color_buffer_float),           PIPE_CAP_VERTEX_COLOR_UNCLAMPED           },
       { o(ARB_depth_clamp),                  PIPE_CAP_DEPTH_CLIP_DISABLE               },
       { o(ARB_depth_texture),                PIPE_CAP_TEXTURE_SHADOW_MAP               },
       { o(ARB_draw_buffers_blend),           PIPE_CAP_INDEP_BLEND_FUNC                 },
       { o(ARB_draw_instanced),               PIPE_CAP_TGSI_INSTANCEID                  },
       { o(ARB_fragment_program_shadow),      PIPE_CAP_TEXTURE_SHADOW_MAP               },
+      { o(ARB_framebuffer_object),           PIPE_CAP_MIXED_FRAMEBUFFER_SIZES          },
       { o(ARB_instanced_arrays),             PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR  },
       { o(ARB_occlusion_query),              PIPE_CAP_OCCLUSION_QUERY                  },
       { o(ARB_occlusion_query2),             PIPE_CAP_OCCLUSION_QUERY                  },
@@ -449,6 +451,8 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_shader_stencil_export),        PIPE_CAP_SHADER_STENCIL_EXPORT            },
       { o(ARB_shader_texture_lod),           PIPE_CAP_SM3                              },
       { o(ARB_shadow),                       PIPE_CAP_TEXTURE_SHADOW_MAP               },
+      { o(ARB_texture_buffer_object),        PIPE_CAP_TEXTURE_BUFFER_OBJECTS           },
+      { o(ARB_texture_gather),               PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS    },
       { o(ARB_texture_mirror_clamp_to_edge), PIPE_CAP_TEXTURE_MIRROR_CLAMP             },
       { o(ARB_texture_non_power_of_two),     PIPE_CAP_NPOT_TEXTURES                    },
       { o(ARB_timer_query),                  PIPE_CAP_QUERY_TIMESTAMP                  },
@@ -469,6 +473,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ATI_separate_stencil),             PIPE_CAP_TWO_SIDED_STENCIL                },
       { o(ATI_texture_mirror_once),          PIPE_CAP_TEXTURE_MIRROR_CLAMP             },
       { o(NV_conditional_render),            PIPE_CAP_CONDITIONAL_RENDER               },
+      { o(NV_primitive_restart),             PIPE_CAP_PRIMITIVE_RESTART                },
       { o(NV_texture_barrier),               PIPE_CAP_TEXTURE_BARRIER                  },
       /* GL_NV_point_sprite is not supported by gallium because we don't
        * support the GL_POINT_SPRITE_R_MODE_NV option. */
@@ -581,7 +586,8 @@ void st_init_extensions(struct pipe_screen *screen,
           PIPE_FORMAT_R8G8B8A8_UNORM },
         GL_TRUE }, /* at least one format must be supported */
 
-      { { o(ARB_stencil_texturing) },
+      { { o(ARB_stencil_texturing),
+          o(ARB_texture_stencil8) },
         { PIPE_FORMAT_X24S8_UINT,
           PIPE_FORMAT_S8X24_UINT },
         GL_TRUE }, /* at least one format must be supported */
@@ -675,9 +681,6 @@ void st_init_extensions(struct pipe_screen *screen,
                           ARRAY_SIZE(vertex_mapping), PIPE_BUFFER,
                           PIPE_BIND_VERTEX_BUFFER);
 
-   if (extensions->ARB_stencil_texturing)
-      extensions->ARB_texture_stencil8 = GL_TRUE;
-
    /* Figure out GLSL support. */
    glsl_feature_level = screen->get_param(screen, PIPE_CAP_GLSL_FEATURE_LEVEL);
 
@@ -749,25 +752,9 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ANGLE_texture_compression_dxt = GL_FALSE;
    }
 
-   if (screen->get_shader_param(screen, PIPE_SHADER_GEOMETRY,
-                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
-#if 0 /* XXX re-enable when GLSL compiler again supports geometry shaders */
-      extensions->ARB_geometry_shader4 = GL_TRUE;
-#endif
-   }
-
    if (screen->get_shader_param(screen, PIPE_SHADER_TESS_CTRL,
                                 PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
       extensions->ARB_tessellation_shader = GL_TRUE;
-   }
-
-   if (screen->get_param(screen, PIPE_CAP_PRIMITIVE_RESTART)) {
-      extensions->NV_primitive_restart = GL_TRUE;
-   }
-
-   /* ARB_color_buffer_float. */
-   if (screen->get_param(screen, PIPE_CAP_VERTEX_COLOR_UNCLAMPED)) {
-      extensions->ARB_color_buffer_float = GL_TRUE;
    }
 
    if (screen->fence_finish) {
@@ -854,9 +841,7 @@ void st_init_extensions(struct pipe_screen *screen,
    consts->MinMapBufferAlignment =
       screen->get_param(screen, PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT);
 
-   if (screen->get_param(screen, PIPE_CAP_TEXTURE_BUFFER_OBJECTS)) {
-      extensions->ARB_texture_buffer_object = GL_TRUE;
-
+   if (extensions->ARB_texture_buffer_object) {
       consts->MaxTextureBufferSize =
          _min(screen->get_param(screen, PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE),
               (1u << 31) - 1);
@@ -869,10 +854,6 @@ void st_init_extensions(struct pipe_screen *screen,
       init_format_extensions(screen, extensions, tbo_rgb32,
                              ARRAY_SIZE(tbo_rgb32), PIPE_BUFFER,
                              PIPE_BIND_SAMPLER_VIEW);
-   }
-
-   if (screen->get_param(screen, PIPE_CAP_MIXED_FRAMEBUFFER_SIZES)) {
-      extensions->ARB_framebuffer_object = GL_TRUE;
    }
 
    /* Unpacking a varying in the fragment shader costs 1 texture indirection.
@@ -898,9 +879,6 @@ void st_init_extensions(struct pipe_screen *screen,
       if (extensions->AMD_vertex_shader_layer)
          extensions->AMD_vertex_shader_viewport_index = GL_TRUE;
    }
-
-   if (consts->MaxProgramTextureGatherComponents > 0)
-      extensions->ARB_texture_gather = GL_TRUE;
 
    /* GL_ARB_ES3_compatibility.
     *
