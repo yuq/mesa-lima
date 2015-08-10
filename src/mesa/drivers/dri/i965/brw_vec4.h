@@ -319,13 +319,13 @@ public:
    void emit_scalar(ir_instruction *ir, enum prog_opcode op,
 		    dst_reg dst, src_reg src0, src_reg src1);
 
-   src_reg fix_3src_operand(src_reg src);
-   src_reg resolve_source_modifiers(const src_reg& src);
+   src_reg fix_3src_operand(const src_reg &src);
+   src_reg resolve_source_modifiers(const src_reg &src);
 
    vec4_instruction *emit_math(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
                                const src_reg &src1 = src_reg());
 
-   src_reg fix_math_operand(src_reg src);
+   src_reg fix_math_operand(const src_reg &src);
 
    void emit_pack_half_2x16(dst_reg dst, src_reg src0);
    void emit_unpack_half_2x16(dst_reg dst, src_reg src0);

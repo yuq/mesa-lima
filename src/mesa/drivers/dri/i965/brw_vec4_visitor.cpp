@@ -287,7 +287,7 @@ vec4_visitor::emit_dp(dst_reg dst, src_reg src0, src_reg src1, unsigned elements
 }
 
 src_reg
-vec4_visitor::fix_3src_operand(src_reg src)
+vec4_visitor::fix_3src_operand(const src_reg &src)
 {
    /* Using vec4 uniforms in SIMD4x2 programs is difficult. You'd like to be
     * able to use vertical stride of zero to replicate the vec4 uniform, like
@@ -313,7 +313,7 @@ vec4_visitor::fix_3src_operand(src_reg src)
 }
 
 src_reg
-vec4_visitor::resolve_source_modifiers(const src_reg& src)
+vec4_visitor::resolve_source_modifiers(const src_reg &src)
 {
    if (!src.abs && !src.negate)
       return src;
@@ -326,7 +326,7 @@ vec4_visitor::resolve_source_modifiers(const src_reg& src)
 }
 
 src_reg
-vec4_visitor::fix_math_operand(src_reg src)
+vec4_visitor::fix_math_operand(const src_reg &src)
 {
    if (devinfo->gen < 6 || devinfo->gen >= 8 || src.file == BAD_FILE)
       return src;
