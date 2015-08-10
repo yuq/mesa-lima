@@ -194,6 +194,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
         case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
         case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
+        case PIPE_CAP_DEPTH_BOUNDS_TEST:
             return 0;
 
         /* SWTCL-only features. */

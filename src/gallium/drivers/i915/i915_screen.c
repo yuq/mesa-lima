@@ -246,6 +246,7 @@ i915_get_param(struct pipe_screen *screen, enum pipe_cap cap)
    case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
    case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
    case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
+   case PIPE_CAP_DEPTH_BOUNDS_TEST:
       return 0;
 
    case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:

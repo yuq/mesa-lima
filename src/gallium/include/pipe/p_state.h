@@ -223,6 +223,9 @@ struct pipe_depth_state
    unsigned enabled:1;         /**< depth test enabled? */
    unsigned writemask:1;       /**< allow depth buffer writes? */
    unsigned func:3;            /**< depth test func (PIPE_FUNC_x) */
+   unsigned bounds_test:1;     /**< depth bounds test enabled? */
+   float bounds_min;           /**< minimum depth bound */
+   float bounds_max;           /**< maximum depth bound */
 };
 
 
