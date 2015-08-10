@@ -683,9 +683,9 @@ brw_inst_bits(const brw_inst *inst, unsigned high, unsigned low)
    high %= 64;
    low %= 64;
 
-   const uint64_t mask = (((1ull << (high - low + 1)) - 1) << low);
+   const uint64_t mask = (1ull << (high - low + 1)) - 1;
 
-   return (inst->data[word] & mask) >> low;
+   return (inst->data[word] >> low) & mask;
 }
 
 /**
@@ -731,9 +731,9 @@ typedef struct {
 static inline unsigned
 brw_compact_inst_bits(brw_compact_inst *inst, unsigned high, unsigned low)
 {
-   const uint64_t mask = (((1ull << (high - low + 1)) - 1) << low);
+   const uint64_t mask = (1ull << (high - low + 1)) - 1;
 
-   return (inst->data & mask) >> low;
+   return (inst->data >> low) & mask;
 }
 
 /**
