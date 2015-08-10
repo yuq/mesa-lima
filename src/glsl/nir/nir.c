@@ -664,102 +664,51 @@ add_defs_uses(nir_instr *instr)
 }
 
 void
-nir_instr_insert_before(nir_instr *instr, nir_instr *before)
+nir_instr_insert(nir_cursor cursor, nir_instr *instr)
 {
-   assert(before->type != nir_instr_type_jump);
-   before->block = instr->block;
-   add_defs_uses(before);
-   exec_node_insert_node_before(&instr->node, &before->node);
-}
+   switch (cursor.option) {
+   case nir_cursor_before_block:
+      /* Only allow inserting jumps into empty blocks. */
+      if (instr->type == nir_instr_type_jump)
+         assert(exec_list_is_empty(&cursor.block->instr_list));
 
-void
-nir_instr_insert_after(nir_instr *instr, nir_instr *after)
-{
-   assert(instr->type != nir_instr_type_jump);
+      instr->block = cursor.block;
+      add_defs_uses(instr);
+      exec_list_push_head(&cursor.block->instr_list, &instr->node);
+      break;
+   case nir_cursor_after_block: {
+      /* Inserting instructions after a jump is illegal. */
+      nir_instr *last = nir_block_last_instr(cursor.block);
+      assert(last == NULL || last->type != nir_instr_type_jump);
+      (void) last;
 
-   if (after->type == nir_instr_type_jump) {
-      assert(instr == nir_block_last_instr(instr->block));
+      instr->block = cursor.block;
+      add_defs_uses(instr);
+      exec_list_push_tail(&cursor.block->instr_list, &instr->node);
+      break;
+   }
+   case nir_cursor_before_instr:
+      assert(instr->type != nir_instr_type_jump);
+      instr->block = cursor.instr->block;
+      add_defs_uses(instr);
+      exec_node_insert_node_before(&cursor.instr->node, &instr->node);
+      break;
+   case nir_cursor_after_instr:
+      /* Inserting instructions after a jump is illegal. */
+      assert(cursor.instr->type != nir_instr_type_jump);
+
+      /* Only allow inserting jumps at the end of the block. */
+      if (instr->type == nir_instr_type_jump)
+         assert(cursor.instr == nir_block_last_instr(cursor.instr->block));
+
+      instr->block = cursor.instr->block;
+      add_defs_uses(instr);
+      exec_node_insert_after(&cursor.instr->node, &instr->node);
+      break;
    }
 
-   after->block = instr->block;
-   add_defs_uses(after);
-   exec_node_insert_after(&instr->node, &after->node);
-
-   if (after->type == nir_instr_type_jump)
-      nir_handle_add_jump(after->block);
-}
-
-void
-nir_instr_insert_before_block(nir_block *block, nir_instr *before)
-{
-   if (before->type == nir_instr_type_jump)
-      assert(exec_list_is_empty(&block->instr_list));
-
-   before->block = block;
-   add_defs_uses(before);
-   exec_list_push_head(&block->instr_list, &before->node);
-
-   if (before->type == nir_instr_type_jump)
-      nir_handle_add_jump(block);
-}
-
-void
-nir_instr_insert_after_block(nir_block *block, nir_instr *after)
-{
-   nir_instr *last = nir_block_last_instr(block);
-   assert(last == NULL || last->type != nir_instr_type_jump);
-   (void) last;
-
-   after->block = block;
-   add_defs_uses(after);
-   exec_list_push_tail(&block->instr_list, &after->node);
-
-   if (after->type == nir_instr_type_jump)
-      nir_handle_add_jump(block);
-}
-
-void
-nir_instr_insert_before_cf(nir_cf_node *node, nir_instr *before)
-{
-   if (node->type == nir_cf_node_block) {
-      nir_instr_insert_before_block(nir_cf_node_as_block(node), before);
-   } else {
-      nir_cf_node *prev = nir_cf_node_prev(node);
-      assert(prev->type == nir_cf_node_block);
-      nir_block *prev_block = nir_cf_node_as_block(prev);
-
-      nir_instr_insert_before_block(prev_block, before);
-   }
-}
-
-void
-nir_instr_insert_after_cf(nir_cf_node *node, nir_instr *after)
-{
-   if (node->type == nir_cf_node_block) {
-      nir_instr_insert_after_block(nir_cf_node_as_block(node), after);
-   } else {
-      nir_cf_node *next = nir_cf_node_next(node);
-      assert(next->type == nir_cf_node_block);
-      nir_block *next_block = nir_cf_node_as_block(next);
-
-      nir_instr_insert_before_block(next_block, after);
-   }
-}
-
-void
-nir_instr_insert_before_cf_list(struct exec_list *list, nir_instr *before)
-{
-   nir_cf_node *first_node = exec_node_data(nir_cf_node,
-                                            exec_list_get_head(list), node);
-   nir_instr_insert_before_cf(first_node, before);
-}
-
-void
-nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after)
-{
-   nir_cf_node *last_node = exec_node_data(nir_cf_node,
-                                           exec_list_get_tail(list), node);
-   nir_instr_insert_after_cf(last_node, after);
+   if (instr->type == nir_instr_type_jump)
+      nir_handle_add_jump(instr->block);
 }
 
 static bool

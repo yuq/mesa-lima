@@ -1641,17 +1641,60 @@ nir_after_cf_list(struct exec_list *cf_list)
    return nir_after_cf_node(last_node);
 }
 
-void nir_instr_insert_before(nir_instr *instr, nir_instr *before);
-void nir_instr_insert_after(nir_instr *instr, nir_instr *after);
+/**
+ * Insert a NIR instruction at the given cursor.
+ *
+ * Note: This does not update the cursor.
+ */
+void nir_instr_insert(nir_cursor cursor, nir_instr *instr);
 
-void nir_instr_insert_before_block(nir_block *block, nir_instr *before);
-void nir_instr_insert_after_block(nir_block *block, nir_instr *after);
+static inline void
+nir_instr_insert_before(nir_instr *instr, nir_instr *before)
+{
+   nir_instr_insert(nir_before_instr(instr), before);
+}
 
-void nir_instr_insert_before_cf(nir_cf_node *node, nir_instr *before);
-void nir_instr_insert_after_cf(nir_cf_node *node, nir_instr *after);
+static inline void
+nir_instr_insert_after(nir_instr *instr, nir_instr *after)
+{
+   nir_instr_insert(nir_after_instr(instr), after);
+}
 
-void nir_instr_insert_before_cf_list(struct exec_list *list, nir_instr *before);
-void nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after);
+static inline void
+nir_instr_insert_before_block(nir_block *block, nir_instr *before)
+{
+   nir_instr_insert(nir_before_block(block), before);
+}
+
+static inline void
+nir_instr_insert_after_block(nir_block *block, nir_instr *after)
+{
+   nir_instr_insert(nir_after_block(block), after);
+}
+
+static inline void
+nir_instr_insert_before_cf(nir_cf_node *node, nir_instr *before)
+{
+   nir_instr_insert(nir_before_cf_node(node), before);
+}
+
+static inline void
+nir_instr_insert_after_cf(nir_cf_node *node, nir_instr *after)
+{
+   nir_instr_insert(nir_after_cf_node(node), after);
+}
+
+static inline void
+nir_instr_insert_before_cf_list(struct exec_list *list, nir_instr *before)
+{
+   nir_instr_insert(nir_before_cf_list(list), before);
+}
+
+static inline void
+nir_instr_insert_after_cf_list(struct exec_list *list, nir_instr *after)
+{
+   nir_instr_insert(nir_after_cf_list(list), after);
+}
 
 void nir_instr_remove(nir_instr *instr);
 
