@@ -262,14 +262,14 @@ dump_VC4_PACKET_TILE_RENDERING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t h
                 shorts[1]);
 
         const char *format = "???";
-        switch ((bytes[0] >> 2) & 3) {
-        case 0:
+        switch (VC4_GET_FIELD(shorts[2], VC4_RENDER_CONFIG_FORMAT)) {
+        case VC4_RENDER_CONFIG_FORMAT_BGR565_DITHERED:
                 format = "BGR565_DITHERED";
                 break;
-        case 1:
+        case VC4_RENDER_CONFIG_FORMAT_RGBA8888:
                 format = "RGBA8888";
                 break;
-        case 2:
+        case VC4_RENDER_CONFIG_FORMAT_BGR565:
                 format = "BGR565";
                 break;
         }
@@ -277,14 +277,14 @@ dump_VC4_PACKET_TILE_RENDERING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t h
                 format = "64bit";
 
         const char *tiling = "???";
-        switch ((bytes[0] >> 6) & 3) {
-        case 0:
+        switch (VC4_GET_FIELD(shorts[2], VC4_RENDER_CONFIG_MEMORY_FORMAT)) {
+        case VC4_TILING_FORMAT_LINEAR:
                 tiling = "linear";
                 break;
-        case 1:
+        case VC4_TILING_FORMAT_T:
                 tiling = "T";
                 break;
-        case 2:
+        case VC4_TILING_FORMAT_LT:
                 tiling = "LT";
                 break;
         }
@@ -296,10 +296,10 @@ dump_VC4_PACKET_TILE_RENDERING_MODE_CONFIG(void *cl, uint32_t offset, uint32_t h
                 (bytes[0] & VC4_RENDER_CONFIG_MS_MODE_4X) ? "ms" : "ss");
 
         const char *earlyz = "";
-        if (bytes[1] & (1 << 3)) {
+        if (shorts[2] & VC4_RENDER_CONFIG_EARLY_Z_COVERAGE_DISABLE) {
                 earlyz = "early_z disabled";
         } else {
-                if (bytes[1] & (1 << 2))
+                if (shorts[2] & VC4_RENDER_CONFIG_EARLY_Z_DIRECTION_G)
                         earlyz = "early_z >";
                 else
                         earlyz = "early_z <";
