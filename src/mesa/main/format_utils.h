@@ -99,7 +99,7 @@ _mesa_unorm_to_unorm(unsigned x, unsigned src_bits, unsigned dst_bits)
 {
    if (src_bits < dst_bits) {
       return EXTEND_NORMALIZED_INT(x, src_bits, dst_bits);
-   } else {
+   } else if (src_bits > dst_bits) {
       unsigned src_half = (1 << (src_bits - 1)) - 1;
 
       if (src_bits + dst_bits > sizeof(x) * 8) {
@@ -109,6 +109,8 @@ _mesa_unorm_to_unorm(unsigned x, unsigned src_bits, unsigned dst_bits)
       } else {
          return (x * MAX_UINT(dst_bits) + src_half) / MAX_UINT(src_bits);
       }
+   } else {
+      return x;
    }
 }
 
