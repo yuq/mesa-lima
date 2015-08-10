@@ -496,6 +496,7 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 					    info->writes_edgeflag ||
 					    info->writes_layer ||
 					     info->writes_viewport_index) |
+		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(1) |
 		(sctx->queued.named.rasterizer->clip_plane_enable &
 		 clipdist_mask));
 	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
