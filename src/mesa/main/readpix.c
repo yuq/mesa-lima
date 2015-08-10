@@ -916,10 +916,8 @@ read_pixels_es3_error_check(GLenum format, GLenum type,
    const GLenum data_type = _mesa_get_format_datatype(rb->Format);
    GLboolean is_unsigned_int = GL_FALSE;
    GLboolean is_signed_int = GL_FALSE;
-
-   if (!_mesa_is_color_format(internalFormat)) {
-      return GL_INVALID_OPERATION;
-   }
+   GLboolean is_float_depth = (internalFormat == GL_DEPTH_COMPONENT32F) ||
+         (internalFormat == GL_DEPTH32F_STENCIL8);
 
    is_unsigned_int = _mesa_is_enum_format_unsigned_int(internalFormat);
    if (!is_unsigned_int) {
@@ -949,6 +947,43 @@ read_pixels_es3_error_check(GLenum format, GLenum type,
       if ((is_signed_int && type == GL_INT) ||
           (is_unsigned_int && type == GL_UNSIGNED_INT))
          return GL_NO_ERROR;
+      break;
+   case GL_DEPTH_STENCIL:
+      switch (type) {
+      case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+         if (is_float_depth)
+            return GL_NO_ERROR;
+         break;
+      case GL_UNSIGNED_INT_24_8:
+         if (!is_float_depth)
+            return GL_NO_ERROR;
+         break;
+      default:
+         return GL_INVALID_ENUM;
+      }
+      break;
+   case GL_DEPTH_COMPONENT:
+      switch (type) {
+      case GL_FLOAT:
+         if (is_float_depth)
+            return GL_NO_ERROR;
+         break;
+      case GL_UNSIGNED_SHORT:
+      case GL_UNSIGNED_INT_24_8:
+         if (!is_float_depth)
+            return GL_NO_ERROR;
+         break;
+      default:
+         return GL_INVALID_ENUM;
+      }
+      break;
+   case GL_STENCIL_INDEX:
+      switch (type) {
+      case GL_UNSIGNED_BYTE:
+         return GL_NO_ERROR;
+      default:
+         return GL_INVALID_ENUM;
+      }
       break;
    }
 
@@ -1021,11 +1056,6 @@ _mesa_ReadnPixelsARB( GLint x, GLint y, GLsizei width, GLsizei height,
          }
       } else {
          err = read_pixels_es3_error_check(format, type, rb);
-      }
-
-      if (err == GL_NO_ERROR && (format == GL_DEPTH_COMPONENT
-          || format == GL_DEPTH_STENCIL)) {
-         err = GL_INVALID_ENUM;
       }
 
       if (err != GL_NO_ERROR) {
