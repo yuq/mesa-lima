@@ -13,6 +13,8 @@
 #define SB_DATA(so, u)        (so)->data[(so)->size++] = (u)
 #define SB_MTHD30(so, mthd, size)                                          \
    SB_DATA((so), ((size) << 18) | (7 << 13) | NV30_3D_##mthd)
+#define SB_MTHD35(so, mthd, size)                                          \
+   SB_DATA((so), ((size) << 18) | (7 << 13) | NV35_3D_##mthd)
 #define SB_MTHD40(so, mthd, size)                                          \
    SB_DATA((so), ((size) << 18) | (7 << 13) | NV40_3D_##mthd)
 
@@ -30,7 +32,7 @@ struct nv30_rasterizer_stateobj {
 
 struct nv30_zsa_stateobj {
    struct pipe_depth_stencil_alpha_state pipe;
-   unsigned data[32];
+   unsigned data[36];
    unsigned size;
 };
 
