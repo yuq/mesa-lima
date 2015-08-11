@@ -373,6 +373,16 @@ nv50_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, 0);
    }
 
+   SB_BEGIN_3D(so, DEPTH_BOUNDS_EN, 1);
+   if (cso->depth.bounds_test) {
+      SB_DATA    (so, 1);
+      SB_BEGIN_3D(so, DEPTH_BOUNDS(0), 2);
+      SB_DATA    (so, fui(cso->depth.bounds_min));
+      SB_DATA    (so, fui(cso->depth.bounds_max));
+   } else {
+      SB_DATA    (so, 0);
+   }
+
    if (cso->stencil[0].enabled) {
       SB_BEGIN_3D(so, STENCIL_ENABLE, 5);
       SB_DATA    (so, 1);

@@ -31,7 +31,7 @@ struct nv50_rasterizer_stateobj {
 struct nv50_zsa_stateobj {
    struct pipe_depth_stencil_alpha_state pipe;
    int size;
-   uint32_t state[29];
+   uint32_t state[34];
 };
 
 struct nv50_constbuf {
