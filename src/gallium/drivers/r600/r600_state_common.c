@@ -407,11 +407,6 @@ static void r600_bind_sampler_states(struct pipe_context *pipe,
 
 	assert(start == 0); /* XXX fix below */
 
-	if (shader != PIPE_SHADER_VERTEX &&
-	    shader != PIPE_SHADER_FRAGMENT) {
-		return;
-	}
-
 	for (i = 0; i < count; i++) {
 		struct r600_pipe_sampler_state *rstate = rstates[i];
 
