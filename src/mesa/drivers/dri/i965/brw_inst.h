@@ -702,12 +702,12 @@ brw_inst_set_bits(brw_inst *inst, unsigned high, unsigned low, uint64_t value)
    high %= 64;
    low %= 64;
 
-   const uint64_t mask = (((1ull << (high - low + 1)) - 1) << low);
+   const uint64_t mask = ((1ull << (high - low + 1)) - 1) << low;
 
    /* Make sure the supplied value actually fits in the given bitfield. */
    assert((value & (mask >> low)) == value);
 
-   inst->data[word] = (inst->data[word] & ~mask) | ((value << low) & mask);
+   inst->data[word] = (inst->data[word] & ~mask) | (value << low);
 }
 
 #undef BRW_IA16_ADDR_IMM
@@ -745,12 +745,12 @@ static inline void
 brw_compact_inst_set_bits(brw_compact_inst *inst, unsigned high, unsigned low,
                           uint64_t value)
 {
-   const uint64_t mask = (((1ull << (high - low + 1)) - 1) << low);
+   const uint64_t mask = ((1ull << (high - low + 1)) - 1) << low;
 
    /* Make sure the supplied value actually fits in the given bitfield. */
    assert((value & (mask >> low)) == value);
 
-   inst->data = (inst->data & ~mask) | ((value << low) & mask);
+   inst->data = (inst->data & ~mask) | (value << low);
 }
 
 #define F(name, high, low)                                      \
