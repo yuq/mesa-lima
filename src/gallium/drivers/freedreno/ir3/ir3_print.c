@@ -175,6 +175,20 @@ print_instr(struct ir3_instruction *instr, int lvl)
 		printf("]");
 	}
 
+	if (instr->cp.left) {
+		printf(", left=_");
+		printf("[");
+		print_instr_name(instr->cp.left);
+		printf("]");
+	}
+
+	if (instr->cp.right) {
+		printf(", right=_");
+		printf("[");
+		print_instr_name(instr->cp.right);
+		printf("]");
+	}
+
 	if (is_meta(instr)) {
 		if (instr->opc == OPC_META_FO) {
 			printf(", off=%d", instr->fo.off);
