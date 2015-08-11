@@ -374,7 +374,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
       if (i < this->header_size) {
          reg.reg_offset += 1;
       } else {
-         reg.reg_offset += this->exec_size / 8;
+         reg = horiz_offset(reg, this->exec_size);
       }
    }
 
