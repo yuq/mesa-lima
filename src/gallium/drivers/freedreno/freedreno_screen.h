@@ -73,6 +73,7 @@ struct fd_bo * fd_screen_bo_from_handle(struct pipe_screen *pscreen,
 struct pipe_screen * fd_screen_create(struct fd_device *dev);
 
 /* is a3xx patch revision 0? */
+/* TODO a306.0 probably doesn't need this.. be more clever?? */
 static inline boolean
 is_a3xx_p0(struct fd_screen *screen)
 {
@@ -89,6 +90,13 @@ static inline boolean
 is_a4xx(struct fd_screen *screen)
 {
 	return (screen->gpu_id >= 400) && (screen->gpu_id < 500);
+}
+
+/* is it using the ir3 compiler (shader isa introduced with a3xx)? */
+static inline boolean
+is_ir3(struct fd_screen *screen)
+{
+	return is_a3xx(screen) || is_a4xx(screen);
 }
 
 #endif /* FREEDRENO_SCREEN_H_ */

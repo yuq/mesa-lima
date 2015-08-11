@@ -176,14 +176,12 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_PRIMITIVE_RESTART:
 	case PIPE_CAP_TGSI_INSTANCEID:
 	case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
+	case PIPE_CAP_INDEP_BLEND_ENABLE:
+	case PIPE_CAP_INDEP_BLEND_FUNC:
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen);
-
-	case PIPE_CAP_INDEP_BLEND_ENABLE:
-	case PIPE_CAP_INDEP_BLEND_FUNC:
-		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
 		return 256;
@@ -191,7 +189,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		if (glsl120)
 			return 120;
-		return (is_a3xx(screen) || is_a4xx(screen)) ? 130 : 120;
+		return is_ir3(screen) ? 130 : 120;
 
 	/* Unsupported features. */
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
@@ -229,19 +227,16 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
 	/* Stream output. */
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
-		if (is_a3xx(screen) || is_a4xx(screen))
+		if (is_ir3(screen))
 			return PIPE_MAX_SO_BUFFERS;
 		return 0;
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
-		if (is_a3xx(screen) || is_a4xx(screen))
+		if (is_ir3(screen))
 			return 1;
 		return 0;
 	case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:
-		if (is_a3xx(screen) || is_a4xx(screen))
-			return 16 * 4;   /* should only be shader out limit? */
-		return 0;
 	case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
-		if (is_a3xx(screen) || is_a4xx(screen))
+		if (is_ir3(screen))
 			return 16 * 4;   /* should only be shader out limit? */
 		return 0;
 
@@ -273,9 +268,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_QUERY_TIMESTAMP:
 		return 0;
 	case PIPE_CAP_OCCLUSION_QUERY:
-		/* TODO still missing on a4xx, but we lie to get gl2..
-		 * it's not a feature, it's a bug!
-		 */
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
@@ -372,7 +364,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		 */
 		return ((is_a3xx(screen) || is_a4xx(screen)) ? 4096 : 64) * sizeof(float[4]);
 	case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
-		return (is_a3xx(screen) || is_a4xx(screen)) ? 16 : 1;
+		return is_ir3(screen) ? 16 : 1;
 	case PIPE_SHADER_CAP_MAX_PREDS:
 		return 0; /* nothing uses this */
 	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
@@ -394,7 +386,7 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 	case PIPE_SHADER_CAP_INTEGERS:
 		if (glsl120)
 			return 0;
-		return (is_a3xx(screen) || is_a4xx(screen)) ? 1 : 0;
+		return is_ir3(screen) ? 1 : 0;
 	case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return 16;
