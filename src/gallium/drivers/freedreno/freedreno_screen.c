@@ -164,9 +164,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
 	case PIPE_CAP_CUBE_MAP_ARRAY:
-	case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
-	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
-	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
 	case PIPE_CAP_START_INSTANCE:
 	case PIPE_CAP_COMPUTE:
@@ -178,7 +175,20 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
 	case PIPE_CAP_INDEP_BLEND_ENABLE:
 	case PIPE_CAP_INDEP_BLEND_FUNC:
+	case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
 		return is_a3xx(screen) || is_a4xx(screen);
+
+	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
+		/* ignoring first/last_element.. but I guess that should be
+		 * easy to add..
+		 */
+		return 0;
+	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
+		/* I think 32k on a4xx.. and we could possibly emulate more
+		 * by pretending 2d/rect textures and splitting high bits
+		 * of index into 2nd dimension..
+		 */
+		return 16383;
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen);

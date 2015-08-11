@@ -251,14 +251,15 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				CP_LOAD_STATE_1_EXT_SRC_ADDR(0));
 		for (i = 0; i < tex->num_textures; i++) {
 			static const struct fd3_pipe_sampler_view dummy_view = {
+					.base.target = PIPE_TEXTURE_1D, /* anything !PIPE_BUFFER */
 					.base.u.tex.first_level = 1,
 			};
 			const struct fd3_pipe_sampler_view *view = tex->textures[i] ?
 					fd3_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
 			struct fd_resource *rsc = fd_resource(view->base.texture);
-			unsigned start = view->base.u.tex.first_level;
-			unsigned end   = view->base.u.tex.last_level;
+			unsigned start = fd_sampler_first_level(&view->base);
+			unsigned end   = fd_sampler_last_level(&view->base);;
 
 			for (j = 0; j < (end - start + 1); j++) {
 				struct fd_resource_slice *slice =
@@ -341,6 +342,7 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 			format = fd3_gmem_restore_format(rsc->base.b.format);
 		}
 
+		/* note: PIPE_BUFFER disallowed for surfaces */
 		unsigned lvl = psurf[i]->u.tex.level;
 		struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
 

@@ -172,7 +172,7 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd4_pipe_sampler_view *view = tex->textures[i] ?
 					fd4_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
-			unsigned start = view->base.u.tex.first_level;
+			unsigned start = fd_sampler_first_level(&view->base);
 
 			OUT_RING(ring, view->texconst0);
 			OUT_RING(ring, view->texconst1);
@@ -235,6 +235,7 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < nr_bufs; i++) {
 		if (bufs[i]) {
 			struct fd_resource *rsc = fd_resource(bufs[i]->texture);
+			/* note: PIPE_BUFFER disallowed for surfaces */
 			unsigned lvl = bufs[i]->u.tex.level;
 			struct fd_resource_slice *slice = fd_resource_slice(rsc, lvl);
 			uint32_t offset = fd_resource_offset(rsc, lvl, bufs[i]->u.tex.first_layer);

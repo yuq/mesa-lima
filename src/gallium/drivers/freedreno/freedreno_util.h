@@ -140,6 +140,22 @@ fd_surface_half_precision(const struct pipe_surface *psurf)
 	return true;
 }
 
+static inline unsigned
+fd_sampler_first_level(const struct pipe_sampler_view *view)
+{
+	if (view->target == PIPE_BUFFER)
+		return 0;
+	return view->u.tex.first_level;
+}
+
+static inline unsigned
+fd_sampler_last_level(const struct pipe_sampler_view *view)
+{
+	if (view->target == PIPE_BUFFER)
+		return 0;
+	return view->u.tex.last_level;
+}
+
 static inline bool
 fd_half_precision(struct pipe_framebuffer_state *pfb)
 {
