@@ -236,6 +236,11 @@ find_neighbors(struct ir3 *ir)
 			instr_find_neighbors(instr);
 		}
 	}
+
+	for (i = 0; i < ir->keeps_count; i++) {
+		struct ir3_instruction *instr = ir->keeps[i];
+		instr_find_neighbors(instr);
+	}
 }
 
 void
