@@ -465,10 +465,10 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 				COND(s[VS].v->writes_psize, A4XX_VPC_ATTR_PSIZE));
 		OUT_RING(ring, 0x00000000);
 	} else {
-		uint32_t vinterp[8], flatshade[2];
+		uint32_t vinterp[8], vpsrepl[8];
 
 		memset(vinterp, 0, sizeof(vinterp));
-		memset(flatshade, 0, sizeof(flatshade));
+		memset(vpsrepl, 0, sizeof(vpsrepl));
 
 		/* looks like we need to do int varyings in the frag
 		 * shader on a4xx (no flatshad reg?  or a420.0 bug?):
@@ -485,29 +485,40 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 		 * something like the code below instead of workaround
 		 * in the shader:
 		 */
-#if 0
-		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
+		/* figure out VARYING_INTERP / VARYING_PS_REPL register values: */
 		for (j = -1; (j = ir3_next_varying(s[FS].v, j)) < (int)s[FS].v->inputs_count; ) {
 			uint32_t interp = s[FS].v->inputs[j].interpolate;
+
+			/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
+			 * instead.. rather than -8 everywhere else..
+			 */
+			uint32_t inloc = s[FS].v->inputs[j].inloc - 8;
+
+			/* currently assuming varyings aligned to 4 (not
+			 * packed):
+			 */
+			debug_assert((inloc % 4) == 0);
+
 			if ((interp == TGSI_INTERPOLATE_CONSTANT) ||
 					((interp == TGSI_INTERPOLATE_COLOR) && emit->rasterflat)) {
-				/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
-				 * instead.. rather than -8 everywhere else..
-				 */
-				uint32_t loc = s[FS].v->inputs[j].inloc - 8;
-
-				/* currently assuming varyings aligned to 4 (not
-				 * packed):
-				 */
-				debug_assert((loc % 4) == 0);
+				uint32_t loc = inloc;
 
 				for (i = 0; i < 4; i++, loc++) {
 					vinterp[loc / 16] |= 1 << ((loc % 16) * 2);
-					flatshade[loc / 32] |= 1 << (loc % 32);
+					//flatshade[loc / 32] |= 1 << (loc % 32);
 				}
 			}
+
+			/* Replace the .xy coordinates with S/T from the point sprite. Set
+			 * interpolation bits for .zw such that they become .01
+			 */
+			if (emit->sprite_coord_enable & (1 << sem2idx(s[FS].v->inputs[j].semantic))) {
+				vpsrepl[inloc / 16] |= (emit->sprite_coord_mode ? 0x0d : 0x09)
+					<< ((inloc % 16) * 2);
+				vinterp[(inloc + 2) / 16] |= 2 << (((inloc + 2) % 16) * 2);
+				vinterp[(inloc + 3) / 16] |= 3 << (((inloc + 3) % 16) * 2);
+			}
 		}
-#endif
 
 		OUT_PKT0(ring, REG_A4XX_VPC_ATTR, 2);
 		OUT_RING(ring, A4XX_VPC_ATTR_TOTALATTR(s[FS].v->total_in) |
@@ -524,7 +535,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 
 		OUT_PKT0(ring, REG_A4XX_VPC_VARYING_PS_REPL_MODE(0), 8);
 		for (i = 0; i < 8; i++)
-			OUT_RING(ring, s[FS].v->shader->vpsrepl[i]);   /* VPC_VARYING_PS_REPL[i] */
+			OUT_RING(ring, vpsrepl[i]);   /* VPC_VARYING_PS_REPL[i] */
 	}
 
 	if (s[VS].instrlen)
@@ -533,28 +544,6 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	if (!emit->key.binning_pass)
 		if (s[FS].instrlen)
 			emit_shader(ring, s[FS].v);
-}
-
-/* hack.. until we figure out how to deal w/ vpsrepl properly.. */
-static void
-fix_blit_fp(struct fd4_shader_stateobj *so)
-{
-	so->shader->vpsrepl[0] = 0x99999999;
-	so->shader->vpsrepl[1] = 0x99999999;
-	so->shader->vpsrepl[2] = 0x99999999;
-	so->shader->vpsrepl[3] = 0x99999999;
-}
-static void
-fix_blit_fps(struct pipe_context *pctx)
-{
-	struct fd_context *ctx = fd_context(pctx);
-	int i;
-
-	for (i = 0; i < ctx->screen->max_rts; i++)
-		fix_blit_fp(ctx->blit_prog[i].fp);
-
-	fix_blit_fp(ctx->blit_z.fp);
-	fix_blit_fp(ctx->blit_zs.fp);
 }
 
 void
@@ -567,6 +556,4 @@ fd4_prog_init(struct pipe_context *pctx)
 	pctx->delete_vs_state = fd4_vp_state_delete;
 
 	fd_prog_init(pctx);
-
-	fix_blit_fps(pctx);
 }

@@ -53,6 +53,10 @@ struct fd4_emit {
 	struct ir3_shader_key key;
 	uint32_t dirty;
 
+	uint32_t sprite_coord_enable;  /* bitmask */
+	bool sprite_coord_mode;
+	bool rasterflat;
+
 	/* cached to avoid repeated lookups of same variants: */
 	struct ir3_shader_variant *vp, *fp;
 	/* TODO: other shader stages.. */

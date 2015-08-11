@@ -131,6 +131,9 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_t = fd4_ctx->fsaturate_t,
 			.fsaturate_r = fd4_ctx->fsaturate_r,
 		},
+		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
+		.sprite_coord_enable = ctx->rasterizer ? ctx->rasterizer->sprite_coord_enable : false,
+		.sprite_coord_mode = ctx->rasterizer ? ctx->rasterizer->sprite_coord_mode : false,
 	};
 	unsigned dirty;
 

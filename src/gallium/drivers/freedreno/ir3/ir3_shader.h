@@ -219,11 +219,6 @@ struct ir3_shader {
 	struct pipe_stream_output_info stream_output;
 
 	struct ir3_shader_variant *variants;
-
-	/* so far, only used for blit_prog shader.. values for
-	 * VPC_VARYING_PS_REPL[i].MODE
-	 */
-	uint32_t vpsrepl[8];
 };
 
 void * ir3_shader_assemble(struct ir3_shader_variant *v, uint32_t gpu_id);
