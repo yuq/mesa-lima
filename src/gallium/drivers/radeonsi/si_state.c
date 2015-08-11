@@ -666,7 +666,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 
 	/* offset */
 	rs->offset_units = state->offset_units;
-	rs->offset_scale = state->offset_scale * 12.0f;
+	rs->offset_scale = state->offset_scale * 16.0f;
 
 	si_pm4_set_reg(pm4, R_0286D4_SPI_INTERP_CONTROL_0,
 		S_0286D4_FLAT_SHADE_ENA(1) |
