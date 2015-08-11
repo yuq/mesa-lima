@@ -351,6 +351,13 @@ nvc0_zsa_state_create(struct pipe_context *pipe,
       SB_DATA    (so, nvgl_comparison_op(cso->depth.func));
    }
 
+   SB_IMMED_3D(so, DEPTH_BOUNDS_EN, cso->depth.bounds_test);
+   if (cso->depth.bounds_test) {
+      SB_BEGIN_3D(so, DEPTH_BOUNDS(0), 2);
+      SB_DATA    (so, fui(cso->depth.bounds_min));
+      SB_DATA    (so, fui(cso->depth.bounds_max));
+   }
+
    if (cso->stencil[0].enabled) {
       SB_BEGIN_3D(so, STENCIL_ENABLE, 5);
       SB_DATA    (so, 1);

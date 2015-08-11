@@ -29,7 +29,7 @@ struct nvc0_rasterizer_stateobj {
 struct nvc0_zsa_stateobj {
    struct pipe_depth_stencil_alpha_state pipe;
    int size;
-   uint32_t state[26];
+   uint32_t state[30];
 };
 
 struct nvc0_constbuf {
