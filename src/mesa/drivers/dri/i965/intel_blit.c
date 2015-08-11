@@ -327,10 +327,6 @@ intel_miptree_blit(struct brw_context *brw,
    if (dst_flip)
       dst_y = minify(dst_mt->physical_height0, dst_level - dst_mt->first_level) - dst_y - height;
 
-   int src_pitch = src_mt->pitch;
-   if (src_flip != dst_flip)
-      src_pitch = -src_pitch;
-
    uint32_t src_image_x, src_image_y, dst_image_x, dst_image_y;
    intel_miptree_get_image_offset(src_mt, src_level, src_slice,
                                   &src_image_x, &src_image_y);
@@ -353,7 +349,7 @@ intel_miptree_blit(struct brw_context *brw,
 
    if (!intelEmitCopyBlit(brw,
                           src_mt->cpp,
-                          src_pitch,
+                          src_flip == dst_flip ? src_mt->pitch : -src_mt->pitch,
                           src_mt->bo, src_mt->offset,
                           src_mt->tiling,
                           src_mt->tr_mode,
