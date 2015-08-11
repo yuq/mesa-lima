@@ -210,6 +210,8 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       copy = bld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
       copy = bld.MOV(inst->dst, src);
+      copy->force_sechalf = inst->force_sechalf;
+      copy->force_writemask_all = inst->force_writemask_all;
       copy->src[0].negate = negate;
    }
    assert(copy->regs_written == written);
