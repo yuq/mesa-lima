@@ -102,6 +102,19 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
    return VK_SUCCESS;
 }
 
+static uint32_t
+upload_kernel(struct anv_pipeline *pipeline, const void *data, size_t size)
+{
+   struct anv_state state =
+      anv_state_stream_alloc(&pipeline->program_stream, size, 64);
+
+   assert(size < pipeline->program_stream.block_pool->block_size);
+
+   memcpy(state.map, data, size);
+
+   return state.offset;
+}
+
 static void
 brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vertex_program *vp,
@@ -249,11 +262,7 @@ really_do_vs_prog(struct brw_context *brw,
       return false;
    }
 
-   struct anv_state vs_state = anv_state_stream_alloc(&pipeline->program_stream,
-                                                      program_size, 64);
-   memcpy(vs_state.map, program, program_size);
-
-   pipeline->vs_simd8 = vs_state.offset;
+   pipeline->vs_simd8 = upload_kernel(pipeline, program, program_size);
 
    ralloc_free(mem_ctx);
 
@@ -520,17 +529,15 @@ really_do_wm_prog(struct brw_context *brw,
       return false;
    }
 
-   struct anv_state ps_state = anv_state_stream_alloc(&pipeline->program_stream,
-                                                      program_size, 64);
-   memcpy(ps_state.map, program, program_size);
+   uint32_t offset = upload_kernel(pipeline, program, program_size);
 
    if (prog_data->no_8)
       pipeline->ps_simd8 = NO_KERNEL;
    else
-      pipeline->ps_simd8 = ps_state.offset;
+      pipeline->ps_simd8 = offset;
 
    if (prog_data->no_8 || prog_data->prog_offset_16) {
-      pipeline->ps_simd16 = ps_state.offset + prog_data->prog_offset_16;
+      pipeline->ps_simd16 = offset + prog_data->prog_offset_16;
    } else {
       pipeline->ps_simd16 = NO_KERNEL;
    }
@@ -581,11 +588,7 @@ really_do_gs_prog(struct brw_context *brw,
 
    brw_compile_gs_prog(brw, prog, gp, key, &output);
 
-   struct anv_state gs_state = anv_state_stream_alloc(&pipeline->program_stream,
-                                                      output.program_size, 64);
-   memcpy(gs_state.map, output.program, output.program_size);
-
-   pipeline->gs_vec4 = gs_state.offset;
+   pipeline->gs_vec4 = upload_kernel(pipeline, output.program, output.program_size);
    pipeline->gs_vertex_count = gp->program.VerticesIn;
 
    ralloc_free(output.mem_ctx);
@@ -636,11 +639,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_CS))
       fprintf(stderr, "\n");
 
-   struct anv_state cs_state = anv_state_stream_alloc(&pipeline->program_stream,
-                                                      program_size, 64);
-   memcpy(cs_state.map, program, program_size);
-
-   pipeline->cs_simd = cs_state.offset;
+   pipeline->cs_simd = upload_kernel(pipeline, program, program_size);
 
    ralloc_free(mem_ctx);
 
