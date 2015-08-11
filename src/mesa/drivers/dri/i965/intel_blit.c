@@ -522,6 +522,8 @@ intelEmitCopyBlit(struct brw_context *brw,
    bool dst_y_tiled = dst_tiling == I915_TILING_Y;
    bool src_y_tiled = src_tiling == I915_TILING_Y;
    bool use_fast_copy_blit = false;
+   uint32_t src_tile_w, src_tile_h;
+   uint32_t dst_tile_w, dst_tile_h;
 
    if ((dst_y_tiled || src_y_tiled) && brw->gen < 6)
       return false;
@@ -549,6 +551,9 @@ intelEmitCopyBlit(struct brw_context *brw,
        __func__,
        src_buffer, src_pitch, src_offset, src_x, src_y,
        dst_buffer, dst_pitch, dst_offset, dst_x, dst_y, w, h);
+
+   intel_get_tile_dims(src_tiling, src_tr_mode, cpp, &src_tile_w, &src_tile_h);
+   intel_get_tile_dims(dst_tiling, dst_tr_mode, cpp, &dst_tile_w, &dst_tile_h);
 
    use_fast_copy_blit = can_fast_copy_blit(brw,
                                            src_buffer,
@@ -588,8 +593,8 @@ intelEmitCopyBlit(struct brw_context *brw,
                         cpp, use_fast_copy_blit);
 
    } else {
-      assert(!dst_y_tiled || (dst_pitch % 128) == 0);
-      assert(!src_y_tiled || (src_pitch % 128) == 0);
+      assert(src_tiling == I915_TILING_NONE || (src_pitch % src_tile_w) == 0);
+      assert(dst_tiling == I915_TILING_NONE || (dst_pitch % dst_tile_w) == 0);
 
       /* For big formats (such as floating point), do the copy using 16 or
        * 32bpp and multiply the coordinates.
