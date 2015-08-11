@@ -149,6 +149,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 	nir_opt_global_to_local(s);
 	nir_convert_to_ssa(s);
 	nir_lower_idiv(s);
+	nir_lower_load_const_to_scalar(s);
 
 	do {
 		progress = false;
