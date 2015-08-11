@@ -439,14 +439,6 @@ can_fast_copy_blit(struct brw_context *brw,
        (dst_tiling_none && dst_pitch % 16 != 0))
       return false;
 
-   /* For Tiled surfaces, the pitch has to be a multiple of the Tile width
-    * (X direction width of the Tile). This means the pitch value will
-    * always be Cache Line aligned (64byte multiple).
-    */
-   if ((!dst_tiling_none && dst_pitch % 64 != 0) ||
-       (!src_tiling_none && src_pitch % 64 != 0))
-      return false;
-
    return true;
 }
 
@@ -555,6 +547,13 @@ intelEmitCopyBlit(struct brw_context *brw,
    intel_get_tile_dims(src_tiling, src_tr_mode, cpp, &src_tile_w, &src_tile_h);
    intel_get_tile_dims(dst_tiling, dst_tr_mode, cpp, &dst_tile_w, &dst_tile_h);
 
+   /* For Tiled surfaces, the pitch has to be a multiple of the Tile width
+    * (X direction width of the Tile). This is ensured while allocating the
+    * buffer object.
+    */
+   assert(src_tiling == I915_TILING_NONE || (src_pitch % src_tile_w) == 0);
+   assert(dst_tiling == I915_TILING_NONE || (dst_pitch % dst_tile_w) == 0);
+
    use_fast_copy_blit = can_fast_copy_blit(brw,
                                            src_buffer,
                                            src_x, src_y,
@@ -593,9 +592,6 @@ intelEmitCopyBlit(struct brw_context *brw,
                         cpp, use_fast_copy_blit);
 
    } else {
-      assert(src_tiling == I915_TILING_NONE || (src_pitch % src_tile_w) == 0);
-      assert(dst_tiling == I915_TILING_NONE || (dst_pitch % dst_tile_w) == 0);
-
       /* For big formats (such as floating point), do the copy using 16 or
        * 32bpp and multiply the coordinates.
        */
