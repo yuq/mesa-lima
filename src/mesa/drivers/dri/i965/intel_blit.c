@@ -587,15 +587,6 @@ intelEmitCopyBlit(struct brw_context *brw,
                         dst_tiling, dst_tr_mode,
                         cpp, use_fast_copy_blit);
 
-      /* For tiled source and destination, pitch value should be specified
-       * as a number of Dwords.
-       */
-      if (dst_tiling != I915_TILING_NONE)
-         dst_pitch /= 4;
-
-      if (src_tiling != I915_TILING_NONE)
-         src_pitch /= 4;
-
    } else {
       assert(!dst_y_tiled || (dst_pitch % 128) == 0);
       assert(!src_y_tiled || (src_pitch % 128) == 0);
@@ -636,17 +627,19 @@ intelEmitCopyBlit(struct brw_context *brw,
       CMD = xy_blit_cmd(src_tiling, src_tr_mode,
                         dst_tiling, dst_tr_mode,
                         cpp, use_fast_copy_blit);
-
-      if (dst_tiling != I915_TILING_NONE)
-         dst_pitch /= 4;
-
-      if (src_tiling != I915_TILING_NONE)
-         src_pitch /= 4;
    }
 
-   if (dst_y2 <= dst_y || dst_x2 <= dst_x) {
+   /* For tiled source and destination, pitch value should be specified
+    * as a number of Dwords.
+    */
+   if (dst_tiling != I915_TILING_NONE)
+      dst_pitch /= 4;
+
+   if (src_tiling != I915_TILING_NONE)
+      src_pitch /= 4;
+
+   if (dst_y2 <= dst_y || dst_x2 <= dst_x)
       return true;
-   }
 
    assert(dst_x < dst_x2);
    assert(dst_y < dst_y2);
