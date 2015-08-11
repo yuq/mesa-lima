@@ -999,6 +999,9 @@ static void
 setup_texture_info(nir_tex_instr *instr, unsigned texture)
 {
    switch (texture) {
+   case TGSI_TEXTURE_BUFFER:
+      instr->sampler_dim = GLSL_SAMPLER_DIM_BUF;
+      break;
    case TGSI_TEXTURE_1D:
       instr->sampler_dim = GLSL_SAMPLER_DIM_1D;
       break;
