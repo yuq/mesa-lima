@@ -235,7 +235,7 @@ _SAVE_LDFLAGS="$LDFLAGS"
 _SAVE_CPPFLAGS="$CPPFLAGS"
 
 dnl Compiler macros
-DEFINES=""
+DEFINES="-D__STDC_LIMIT_MACROS"
 AC_SUBST([DEFINES])
 case "$host_os" in
 linux*|*-gnu*|gnu*)
