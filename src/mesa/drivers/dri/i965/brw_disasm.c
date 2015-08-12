@@ -617,6 +617,7 @@ static const char *const gen5_sampler_msg_type[] = {
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4]      = "gather4",
    [GEN5_SAMPLER_MESSAGE_LOD]                 = "lod",
    [GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO]      = "resinfo",
+   [GEN6_SAMPLER_MESSAGE_SAMPLE_SAMPLEINFO]   = "sampleinfo",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_C]    = "gather4_c",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO]   = "gather4_po",
    [GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO_C] = "gather4_po_c",

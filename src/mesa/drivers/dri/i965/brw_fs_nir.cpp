@@ -1842,6 +1842,16 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    case nir_texop_txf_ms: op = ir_txf_ms; break;
    case nir_texop_txl: op = ir_txl; break;
    case nir_texop_txs: op = ir_txs; break;
+   case nir_texop_texture_samples: {
+      fs_reg dst = retype(get_nir_dest(instr->dest), BRW_REGISTER_TYPE_D);
+      fs_inst *inst = bld.emit(SHADER_OPCODE_SAMPLEINFO, dst,
+                               bld.vgrf(BRW_REGISTER_TYPE_D, 1),
+                               sampler_reg);
+      inst->mlen = 1;
+      inst->header_size = 1;
+      inst->base_mrf = -1;
+      return;
+   }
    default:
       unreachable("unknown texture opcode");
    }

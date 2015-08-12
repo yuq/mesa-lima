@@ -877,6 +877,7 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    case SHADER_OPCODE_TXL:
    case SHADER_OPCODE_TXS:
    case SHADER_OPCODE_LOD:
+   case SHADER_OPCODE_SAMPLEINFO:
       return 1;
    case FS_OPCODE_FB_WRITE:
       return 2;

@@ -2550,6 +2550,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    case ir_tg4: opcode = offset_value.file != BAD_FILE
                          ? SHADER_OPCODE_TG4_OFFSET : SHADER_OPCODE_TG4; break;
    case ir_query_levels: opcode = SHADER_OPCODE_TXS; break;
+   case ir_texture_samples: opcode = SHADER_OPCODE_SAMPLEINFO; break;
    case ir_txb:
       unreachable("TXB is not valid for vertex shaders.");
    case ir_lod:
@@ -2569,13 +2570,15 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
     * - Texel offsets
     * - Gather channel selection
     * - Sampler indices too large to fit in a 4-bit value.
+    * - Sampleinfo message - takes no parameters, but mlen = 0 is illegal
     */
    inst->header_size =
       (devinfo->gen < 5 || devinfo->gen >= 9 ||
        inst->offset != 0 || op == ir_tg4 ||
+       op == ir_texture_samples ||
        is_high_sampler(sampler_reg)) ? 1 : 0;
    inst->base_mrf = 2;
-   inst->mlen = inst->header_size + 1; /* always at least one */
+   inst->mlen = inst->header_size;
    inst->dst.writemask = WRITEMASK_XYZW;
    inst->shadow_compare = shadow_comparitor.file != BAD_FILE;
 
@@ -2587,6 +2590,9 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    if (op == ir_txs || op == ir_query_levels) {
       int writemask = devinfo->gen == 4 ? WRITEMASK_W : WRITEMASK_X;
       emit(MOV(dst_reg(MRF, param_base, lod.type, writemask), lod));
+      inst->mlen++;
+   } else if (op == ir_texture_samples) {
+      inst->dst.writemask = WRITEMASK_X;
    } else {
       /* Load the coordinate */
       /* FINISHME: gl_clamp_mask and saturate */
@@ -2595,6 +2601,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 
       emit(MOV(dst_reg(MRF, param_base, coordinate.type, coord_mask),
                coordinate));
+      inst->mlen++;
 
       if (zero_mask != 0) {
          emit(MOV(dst_reg(MRF, param_base, coordinate.type, zero_mask),
@@ -2817,6 +2824,7 @@ vec4_visitor::visit(ir_texture *ir)
    case ir_txb:
    case ir_lod:
    case ir_tg4:
+   case ir_texture_samples:
       break;
    }
 

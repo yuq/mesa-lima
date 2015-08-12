@@ -1337,6 +1337,7 @@ ir_texture_opcode_for_nir_texop(nir_texop texop)
    switch (texop) {
    case nir_texop_lod: op = ir_lod; break;
    case nir_texop_query_levels: op = ir_query_levels; break;
+   case nir_texop_texture_samples: op = ir_texture_samples; break;
    case nir_texop_tex: op = ir_tex; break;
    case nir_texop_tg4: op = ir_tg4; break;
    case nir_texop_txb: op = ir_txb; break;

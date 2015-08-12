@@ -286,6 +286,9 @@ vec4_generator::generate_tex(vec4_instruction *inst,
             msg_type = GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO;
          }
          break;
+      case SHADER_OPCODE_SAMPLEINFO:
+         msg_type = GEN6_SAMPLER_MESSAGE_SAMPLE_SAMPLEINFO;
+         break;
       default:
 	 unreachable("should not get here: invalid vec4 texture opcode");
       }
@@ -1374,6 +1377,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       case SHADER_OPCODE_TXS:
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
+      case SHADER_OPCODE_SAMPLEINFO:
          generate_tex(inst, dst, src[0], src[1]);
          break;
 

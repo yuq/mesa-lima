@@ -646,6 +646,9 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
             msg_type = GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO;
          }
          break;
+      case SHADER_OPCODE_SAMPLEINFO:
+         msg_type = GEN6_SAMPLER_MESSAGE_SAMPLE_SAMPLEINFO;
+         break;
       default:
 	 unreachable("not reached");
       }
@@ -1920,6 +1923,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_LOD:
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
+      case SHADER_OPCODE_SAMPLEINFO:
 	 generate_tex(inst, dst, src[0], src[1]);
 	 break;
       case FS_OPCODE_DDX_COARSE:
