@@ -450,7 +450,7 @@ nir_call_instr_create(nir_shader *shader, nir_function_overload *callee)
 nir_tex_instr *
 nir_tex_instr_create(nir_shader *shader, unsigned num_srcs)
 {
-   nir_tex_instr *instr = ralloc(shader, nir_tex_instr);
+   nir_tex_instr *instr = rzalloc(shader, nir_tex_instr);
    instr_init(&instr->instr, nir_instr_type_tex);
 
    dest_init(&instr->dest);
