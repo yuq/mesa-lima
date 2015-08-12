@@ -2880,8 +2880,9 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
       if (sh) {
          if (sh->NumImages > ctx->Const.Program[i].MaxImageUniforms)
-            linker_error(prog, "Too many %s shader image uniforms\n",
-                         _mesa_shader_stage_to_string(i));
+            linker_error(prog, "Too many %s shader image uniforms (%u > %u)\n",
+                         _mesa_shader_stage_to_string(i), sh->NumImages,
+                         ctx->Const.Program[i].MaxImageUniforms);
 
          total_image_units += sh->NumImages;
 
