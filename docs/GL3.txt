@@ -228,5 +228,29 @@ GLES3.1, GLSL ES 3.1
       glGetTexLevelParameter[fi]v - needs updates to restrict to GLES enums
       glGetBooleani_v - needs updates to restrict to GLES enums
 
+GLES3.2, GLSL ES 3.2
+  GL_EXT_color_buffer_float                            DONE (all drivers)
+  GL_KHR_blend_equation_advanced                       not started
+  GL_KHR_debug                                         DONE (all drivers)
+  GL_KHR_robustness                                    90% done (the ARB variant)
+  GL_KHR_texture_compression_astc_hdr                  DONE (i965/gen9+)
+  GL_OES_copy_image                                    not started (based on GL_ARB_copy_image, which is done for some drivers)
+  GL_OES_draw_buffers_indexed                          not started
+  GL_OES_draw_elements_base_vertex                     not started (based on GL_ARB_draw_elements_base_verte, which is done for all drivers)
+  GL_OES_geometry_shader                               not started (based on GL_ARB_geometry_shader4, which is done for all drivers)
+  GL_OES_gpu_shader5                                   not started (based on parts of GL_ARB_gpu_shader5, which is done for some drivers)
+  GL_OES_primitive_bounding box                        not started
+  GL_OES_sample_shading                                not started (based on parts of GL_ARB_sample_shading, which is done for some drivers)
+  GL_OES_sample_variables                              not started (based on parts of GL_ARB_sample_shading, which is done for some drivers)
+  GL_OES_shader_image_atomic                           not started (based on parts of GL_ARB_shader_image_load_store, which is done for some drivers)
+  GL_OES_shader_io_blocks                              not started (based on parts of GLSL 1.50, which is done)
+  GL_OES_shader_multisample_interpolation              not started (based on parts of GL_ARB_gpu_shader5, which is done)
+  GL_OES_tessellation_shader                           not started (based on GL_ARB_tessellation_shader, which is done for some drivers)
+  GL_OES_texture_border_clamp                          not started (based on GL_ARB_texture_border_clamp, which is done)
+  GL_OES_texture_buffer                                not started (based on GL_ARB_texture_buffer_object, GL_ARB_texture_buffer_range, and GL_ARB_texture_buffer_object_rgb32 that are all done)
+  GL_OES_texture_cube_map_array                        not started (based on GL_ARB_texture_cube_map_array, which is done for all drivers)
+  GL_OES_texture_stencil8                              not started (based on GL_ARB_texture_stencil8, which is done for some drivers)
+  GL_OES_texture_storage_multisample_2d_array          in progress (Tapani Pälli)
+
 More info about these features and the work involved can be found at
 http://dri.freedesktop.org/wiki/MissingFunctionality
