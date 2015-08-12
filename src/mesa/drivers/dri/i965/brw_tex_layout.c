@@ -162,9 +162,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    const unsigned align_3d_ys[] = {32, 32, 32, 16, 16};
    int i = 0;
 
-   assert(brw->gen >= 9 &&
-          mt->target != GL_TEXTURE_1D &&
-          mt->target != GL_TEXTURE_1D_ARRAY);
+   assert(brw->gen >= 9);
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
    assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
@@ -184,8 +182,10 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
       align_yf = align_3d_yf;
       align_ys = align_3d_ys;
       break;
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
    default:
-      unreachable("not reached");
+      unreachable("Unexpected miptree target");
    }
 
    /* Compute array index. */
