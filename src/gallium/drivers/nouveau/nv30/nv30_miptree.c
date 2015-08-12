@@ -28,6 +28,7 @@
 #include "util/u_surface.h"
 
 #include "nv_m2mf.xml.h"
+#include "nv_object.xml.h"
 #include "nv30/nv30_screen.h"
 #include "nv30/nv30_context.h"
 #include "nv30/nv30_resource.h"
@@ -362,6 +363,7 @@ nv30_miptree_create(struct pipe_screen *pscreen,
    blocksz = util_format_get_blocksize(pt->format);
 
    if ((pt->target == PIPE_TEXTURE_RECT) ||
+       (pt->bind & PIPE_BIND_SCANOUT) ||
        !util_is_power_of_two(pt->width0) ||
        !util_is_power_of_two(pt->height0) ||
        !util_is_power_of_two(pt->depth0) ||
@@ -369,6 +371,14 @@ nv30_miptree_create(struct pipe_screen *pscreen,
        util_format_is_float(pt->format) || mt->ms_mode) {
       mt->uniform_pitch = util_format_get_nblocksx(pt->format, w) * blocksz;
       mt->uniform_pitch = align(mt->uniform_pitch, 64);
+      if (pt->bind & PIPE_BIND_SCANOUT) {
+         struct nv30_screen *screen = nv30_screen(pscreen);
+         int pitch_align = MAX2(
+               screen->eng3d->oclass >= NV40_3D_CLASS ? 1024 : 256,
+               /* round_down_pow2(mt->uniform_pitch / 4) */
+               1 << (util_last_bit(mt->uniform_pitch / 4) - 1));
+         mt->uniform_pitch = align(mt->uniform_pitch, pitch_align);
+      }
    }
 
    if (!mt->uniform_pitch)
