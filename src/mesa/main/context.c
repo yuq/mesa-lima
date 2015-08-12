@@ -604,7 +604,7 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    /** GL_ARB_shader_storage_buffer_object */
    consts->MaxCombinedShaderStorageBlocks = 8;
    consts->MaxShaderStorageBufferBindings = 8;
-   consts->MaxShaderStorageBlockSize = 16 * 1024 * 1024;
+   consts->MaxShaderStorageBlockSize = 128 * 1024 * 1024; /* 2^27 */
    consts->ShaderStorageBufferOffsetAlignment = 256;
 
    /* GL_ARB_explicit_uniform_location, GL_MAX_UNIFORM_LOCATIONS */
