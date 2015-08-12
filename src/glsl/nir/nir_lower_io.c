@@ -299,6 +299,25 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
    return base_offset;
 }
 
+static nir_intrinsic_op
+load_op(nir_variable_mode mode, bool has_indirect)
+{
+   nir_intrinsic_op op;
+   switch (mode) {
+   case nir_var_shader_in:
+      op = has_indirect ? nir_intrinsic_load_input_indirect :
+                          nir_intrinsic_load_input;
+      break;
+   case nir_var_uniform:
+      op = has_indirect ? nir_intrinsic_load_uniform_indirect :
+                          nir_intrinsic_load_uniform;
+      break;
+   default:
+      unreachable("Unknown variable mode");
+   }
+   return op;
+}
+
 static bool
 nir_lower_io_block(nir_block *block, void *void_state)
 {
@@ -318,23 +337,9 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
          bool has_indirect = deref_has_indirect(intrin->variables[0]);
 
-         /* Figure out the opcode */
-         nir_intrinsic_op load_op;
-         switch (mode) {
-         case nir_var_shader_in:
-            load_op = has_indirect ? nir_intrinsic_load_input_indirect :
-                                     nir_intrinsic_load_input;
-            break;
-         case nir_var_uniform:
-            load_op = has_indirect ? nir_intrinsic_load_uniform_indirect :
-                                     nir_intrinsic_load_uniform;
-            break;
-         default:
-            unreachable("Unknown variable mode");
-         }
-
-         nir_intrinsic_instr *load = nir_intrinsic_instr_create(state->mem_ctx,
-                                                                load_op);
+         nir_intrinsic_instr *load =
+            nir_intrinsic_instr_create(state->mem_ctx,
+                                       load_op(mode, has_indirect));
          load->num_components = intrin->num_components;
 
          nir_src indirect;
