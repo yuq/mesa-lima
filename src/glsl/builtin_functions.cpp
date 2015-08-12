@@ -666,10 +666,7 @@ private:
    B1(any);
    B1(all);
    B1(not);
-   B2(textureSize);
-   ir_function_signature *_textureSize(builtin_available_predicate avail,
-                                       const glsl_type *return_type,
-                                       const glsl_type *sampler_type);
+   BA2(textureSize);
 
 /** Flags to _texture() */
 #define TEX_PROJECT 1
