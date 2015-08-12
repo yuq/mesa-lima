@@ -2649,8 +2649,6 @@ get_swizzle_from_gl_format(GLenum format, uint8_t *swizzle)
 uint32_t
 _mesa_format_from_format_and_type(GLenum format, GLenum type)
 {
-   mesa_array_format array_format;
-
    bool is_array_format = true;
    uint8_t swizzle[4];
    bool normalized = false, is_float = false, is_signed = false;
@@ -2706,15 +2704,9 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
       normalized = !_mesa_is_enum_format_integer(format);
       num_channels = _mesa_components_in_format(format);
 
-      array_format =
-         MESA_ARRAY_FORMAT(type_size, is_signed, is_float,
-                           normalized, num_channels,
-                           swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
-
-      if (!_mesa_little_endian())
-         array_format = _mesa_array_format_flip_channels(array_format);
-
-      return array_format;
+      return MESA_ARRAY_FORMAT(type_size, is_signed, is_float,
+                               normalized, num_channels,
+                               swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
    }
 
    /* Otherwise this is not an array format, so return the mesa_format
