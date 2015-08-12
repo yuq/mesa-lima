@@ -42,7 +42,6 @@
 static unsigned int
 tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
    unsigned ret_align, divisor, multiplier_ys;
 
@@ -61,11 +60,13 @@ tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
    assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
+   /* Compute array index. */
+   i = ffs(bpp/8) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
-      align_yf = align_1d_yf;
+      ret_align = align_1d_yf[i];
       multiplier_ys = 16;
       break;
    case GL_TEXTURE_2D:
@@ -75,21 +76,16 @@ tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
    case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-      align_yf = align_2d_yf;
+      ret_align = align_2d_yf[i];
       multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
-      align_yf = align_3d_yf;
+      ret_align = align_3d_yf[i];
       multiplier_ys = 4;
       break;
    default:
       unreachable("not reached");
    }
-
-   /* Compute array index. */
-   i = ffs(bpp/8) - 1;
-
-   ret_align = align_yf[i];
 
    if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
       ret_align *= multiplier_ys;
@@ -149,7 +145,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 static unsigned int
 tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
    unsigned ret_align, divisor, multiplier_ys;
 
@@ -162,6 +157,8 @@ tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
    assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
+   /* Compute array index. */
+   i = ffs(bpp / 8) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_2D:
@@ -171,11 +168,11 @@ tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
    case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-      align_yf = align_2d_yf;
+      ret_align = align_2d_yf[i];
       multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
-      align_yf = align_3d_yf;
+      ret_align = align_3d_yf[i];
       multiplier_ys = 2;
       break;
    case GL_TEXTURE_1D:
@@ -183,11 +180,6 @@ tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
    default:
       unreachable("Unexpected miptree target");
    }
-
-   /* Compute array index. */
-   i = ffs(bpp / 8) - 1;
-
-   ret_align = align_yf[i];
 
    if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
       ret_align *= multiplier_ys;
