@@ -1822,6 +1822,7 @@ void nir_assign_var_locations(struct exec_list *var_list,
                               int (*type_size)(const struct glsl_type *));
 
 void nir_lower_io(nir_shader *shader,
+                  nir_variable_mode mode,
                   int (*type_size)(const struct glsl_type *));
 void nir_lower_vars_to_ssa(nir_shader *shader);
 

@@ -38,6 +38,7 @@ struct lower_io_state {
    nir_builder builder;
    void *mem_ctx;
    int (*type_size)(const struct glsl_type *type);
+   nir_variable_mode mode;
 };
 
 void
@@ -154,9 +155,17 @@ nir_lower_io_block(nir_block *block, void *void_state)
 
       nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
 
+      if (intrin->intrinsic != nir_intrinsic_load_var &&
+          intrin->intrinsic != nir_intrinsic_store_var)
+         continue;
+
+      nir_variable_mode mode = intrin->variables[0]->var->data.mode;
+
+      if (state->mode != -1 && state->mode != mode)
+         continue;
+
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var: {
-         nir_variable_mode mode = intrin->variables[0]->var->data.mode;
          if (mode != nir_var_shader_in && mode != nir_var_uniform)
             continue;
 
@@ -239,12 +248,15 @@ nir_lower_io_block(nir_block *block, void *void_state)
 }
 
 static void
-nir_lower_io_impl(nir_function_impl *impl, int(*type_size)(const struct glsl_type *))
+nir_lower_io_impl(nir_function_impl *impl,
+                  nir_variable_mode mode,
+                  int (*type_size)(const struct glsl_type *))
 {
    struct lower_io_state state;
 
    nir_builder_init(&state.builder, impl);
    state.mem_ctx = ralloc_parent(impl);
+   state.mode = mode;
    state.type_size = type_size;
 
    nir_foreach_block(impl, nir_lower_io_block, &state);
@@ -254,10 +266,11 @@ nir_lower_io_impl(nir_function_impl *impl, int(*type_size)(const struct glsl_typ
 }
 
 void
-nir_lower_io(nir_shader *shader, int(*type_size)(const struct glsl_type *))
+nir_lower_io(nir_shader *shader, nir_variable_mode mode,
+             int (*type_size)(const struct glsl_type *))
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_io_impl(overload->impl, type_size);
+         nir_lower_io_impl(overload->impl, mode, type_size);
    }
 }
