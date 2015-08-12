@@ -2793,7 +2793,7 @@ static int tgsi_op2_64(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	unsigned write_mask = inst->Dst[0].Register.WriteMask;
-	/* confirm writemaskiing */
+	/* confirm writemasking */
 	if ((write_mask & 0x3) != 0x3 &&
 	    (write_mask & 0xc) != 0xc) {
 		fprintf(stderr, "illegal writemask for 64-bit: 0x%x\n", write_mask);
@@ -3082,7 +3082,7 @@ static int cayman_emit_double_instr(struct r600_shader_ctx *ctx)
 		alu.dst.chan = i;
 		alu.dst.write = (i == 0 || i == 1);
 
-		if (i == last_slot - 1)
+		if (ctx->bc->chip_class != CAYMAN || i == last_slot - 1)
 			alu.last = 1;
 		r = r600_bytecode_add_alu(ctx->bc, &alu);
 		if (r)
@@ -8127,6 +8127,29 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_INTERP_CENTROID]	= { ALU_OP0_NOP, tgsi_interp_egcm},
 	[TGSI_OPCODE_INTERP_SAMPLE]	= { ALU_OP0_NOP, tgsi_interp_egcm},
 	[TGSI_OPCODE_INTERP_OFFSET]	= { ALU_OP0_NOP, tgsi_interp_egcm},
+	[TGSI_OPCODE_F2D]	= { ALU_OP1_FLT32_TO_FLT64, tgsi_op2_64},
+	[TGSI_OPCODE_D2F]	= { ALU_OP1_FLT64_TO_FLT32, tgsi_op2_64_single_dest},
+	[TGSI_OPCODE_DABS]	= { ALU_OP1_MOV, tgsi_op2_64},
+	[TGSI_OPCODE_DNEG]	= { ALU_OP2_ADD_64, tgsi_dneg},
+	[TGSI_OPCODE_DADD]	= { ALU_OP2_ADD_64, tgsi_op2_64},
+	[TGSI_OPCODE_DMUL]	= { ALU_OP2_MUL_64, cayman_mul_double_instr},
+	[TGSI_OPCODE_DMAX]	= { ALU_OP2_MAX_64, tgsi_op2_64},
+	[TGSI_OPCODE_DMIN]	= { ALU_OP2_MIN_64, tgsi_op2_64},
+	[TGSI_OPCODE_DSLT]	= { ALU_OP2_SETGT_64, tgsi_op2_64_single_dest_s},
+	[TGSI_OPCODE_DSGE]	= { ALU_OP2_SETGE_64, tgsi_op2_64_single_dest},
+	[TGSI_OPCODE_DSEQ]	= { ALU_OP2_SETE_64, tgsi_op2_64_single_dest},
+	[TGSI_OPCODE_DSNE]	= { ALU_OP2_SETNE_64, tgsi_op2_64_single_dest},
+	[TGSI_OPCODE_DRCP]	= { ALU_OP2_RECIP_64, cayman_emit_double_instr},
+	[TGSI_OPCODE_DSQRT]	= { ALU_OP2_SQRT_64, cayman_emit_double_instr},
+	[TGSI_OPCODE_DMAD]	= { ALU_OP3_FMA_64, tgsi_op3_64},
+	[TGSI_OPCODE_DFRAC]	= { ALU_OP1_FRACT_64, tgsi_op2_64},
+	[TGSI_OPCODE_DLDEXP]	= { ALU_OP2_LDEXP_64, tgsi_op2_64},
+	[TGSI_OPCODE_DFRACEXP]	= { ALU_OP1_FREXP_64, tgsi_dfracexp},
+	[TGSI_OPCODE_D2I]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_I2D]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_D2U]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_U2D]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_DRSQ]	= { ALU_OP2_RECIPSQRT_64, cayman_emit_double_instr},
 	[TGSI_OPCODE_LAST]	= { ALU_OP0_NOP, tgsi_unsupported},
 };
 
