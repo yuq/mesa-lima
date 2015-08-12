@@ -37,99 +37,12 @@
 struct lower_io_state {
    nir_builder builder;
    void *mem_ctx;
-   bool is_scalar;
+   int (*type_size)(const struct glsl_type *type);
 };
 
-static int
-type_size_vec4(const struct glsl_type *type)
-{
-   unsigned int i;
-   int size;
-
-   switch (glsl_get_base_type(type)) {
-   case GLSL_TYPE_UINT:
-   case GLSL_TYPE_INT:
-   case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_BOOL:
-      if (glsl_type_is_matrix(type)) {
-         return glsl_get_matrix_columns(type);
-      } else {
-         return 1;
-      }
-   case GLSL_TYPE_ARRAY:
-      return type_size_vec4(glsl_get_array_element(type)) * glsl_get_length(type);
-   case GLSL_TYPE_STRUCT:
-      size = 0;
-      for (i = 0; i <  glsl_get_length(type); i++) {
-         size += type_size_vec4(glsl_get_struct_field(type, i));
-      }
-      return size;
-   case GLSL_TYPE_SUBROUTINE:
-      return 1;
-   case GLSL_TYPE_SAMPLER:
-      return 0;
-   case GLSL_TYPE_ATOMIC_UINT:
-      return 0;
-   case GLSL_TYPE_IMAGE:
-   case GLSL_TYPE_VOID:
-   case GLSL_TYPE_DOUBLE:
-   case GLSL_TYPE_ERROR:
-   case GLSL_TYPE_INTERFACE:
-      unreachable("not reached");
-   }
-
-   return 0;
-}
-
-static unsigned
-type_size_scalar(const struct glsl_type *type)
-{
-   unsigned int size, i;
-
-   switch (glsl_get_base_type(type)) {
-   case GLSL_TYPE_UINT:
-   case GLSL_TYPE_INT:
-   case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_BOOL:
-      return glsl_get_components(type);
-   case GLSL_TYPE_ARRAY:
-      return type_size_scalar(glsl_get_array_element(type)) * glsl_get_length(type);
-   case GLSL_TYPE_STRUCT:
-      size = 0;
-      for (i = 0; i < glsl_get_length(type); i++) {
-         size += type_size_scalar(glsl_get_struct_field(type, i));
-      }
-      return size;
-   case GLSL_TYPE_SUBROUTINE:
-      return 1;
-   case GLSL_TYPE_SAMPLER:
-      return 0;
-   case GLSL_TYPE_ATOMIC_UINT:
-      return 0;
-   case GLSL_TYPE_INTERFACE:
-      return 0;
-   case GLSL_TYPE_IMAGE:
-      return 0;
-   case GLSL_TYPE_VOID:
-   case GLSL_TYPE_ERROR:
-   case GLSL_TYPE_DOUBLE:
-      unreachable("not reached");
-   }
-
-   return 0;
-}
-
-static unsigned
-type_size(const struct glsl_type *type, bool is_scalar)
-{
-   if (is_scalar)
-      return type_size_scalar(type);
-   else
-      return type_size_vec4(type);
-}
-
 void
-nir_assign_var_locations(struct exec_list *var_list, unsigned *size, bool is_scalar)
+nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
+                         int (*type_size)(const struct glsl_type *))
 {
    unsigned location = 0;
 
@@ -143,7 +56,7 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size, bool is_sca
          continue;
 
       var->data.driver_location = location;
-      location += type_size(var->type, is_scalar);
+      location += type_size(var->type);
    }
 
    *size = location;
@@ -193,7 +106,7 @@ nir_assign_var_locations_direct_first(nir_shader *shader,
                                       struct exec_list *var_list,
                                       unsigned *direct_size,
                                       unsigned *size,
-                                      bool is_scalar)
+                                      int (*type_size)(const struct glsl_type *))
 {
    struct set *indirect_set = _mesa_set_create(NULL, _mesa_hash_pointer,
                                                _mesa_key_pointer_equal);
@@ -215,7 +128,7 @@ nir_assign_var_locations_direct_first(nir_shader *shader,
          continue;
 
       var->data.driver_location = location;
-      location += type_size(var->type, is_scalar);
+      location += type_size(var->type);
    }
 
    *direct_size = location;
@@ -229,7 +142,7 @@ nir_assign_var_locations_direct_first(nir_shader *shader,
          continue;
 
       var->data.driver_location = location;
-      location += type_size(var->type, is_scalar);
+      location += type_size(var->type);
    }
 
    *size = location;
@@ -254,7 +167,7 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
 
       if (tail->deref_type == nir_deref_type_array) {
          nir_deref_array *deref_array = nir_deref_as_array(tail);
-         unsigned size = type_size(tail->type, state->is_scalar);
+         unsigned size = state->type_size(tail->type);
 
          base_offset += size * deref_array->base_offset;
 
@@ -275,9 +188,10 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
       } else if (tail->deref_type == nir_deref_type_struct) {
          nir_deref_struct *deref_struct = nir_deref_as_struct(tail);
 
-         for (unsigned i = 0; i < deref_struct->index; i++)
-            base_offset += type_size(glsl_get_struct_field(parent_type, i),
-                                     state->is_scalar);
+         for (unsigned i = 0; i < deref_struct->index; i++) {
+            base_offset +=
+               state->type_size(glsl_get_struct_field(parent_type, i));
+         }
       }
    }
 
@@ -395,13 +309,13 @@ nir_lower_io_block(nir_block *block, void *void_state)
 }
 
 static void
-nir_lower_io_impl(nir_function_impl *impl, bool is_scalar)
+nir_lower_io_impl(nir_function_impl *impl, int(*type_size)(const struct glsl_type *))
 {
    struct lower_io_state state;
 
    nir_builder_init(&state.builder, impl);
    state.mem_ctx = ralloc_parent(impl);
-   state.is_scalar = is_scalar;
+   state.type_size = type_size;
 
    nir_foreach_block(impl, nir_lower_io_block, &state);
 
@@ -410,10 +324,10 @@ nir_lower_io_impl(nir_function_impl *impl, bool is_scalar)
 }
 
 void
-nir_lower_io(nir_shader *shader, bool is_scalar)
+nir_lower_io(nir_shader *shader, int(*type_size)(const struct glsl_type *))
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_io_impl(overload->impl, is_scalar);
+         nir_lower_io_impl(overload->impl, type_size);
    }
 }

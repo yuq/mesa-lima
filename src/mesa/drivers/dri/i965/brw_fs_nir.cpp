@@ -239,18 +239,7 @@ fs_visitor::nir_setup_uniform(nir_variable *var)
       }
 
       if (storage->type->is_image()) {
-         /* Images don't get a valid location assigned by nir_lower_io()
-          * because their size is driver-specific, so we need to allocate
-          * space for them here at the end of the parameter array.
-          */
-         var->data.driver_location = uniforms;
-         unsigned size =
-            BRW_IMAGE_PARAM_SIZE * MAX2(storage->array_elements, 1);
-
-         setup_image_uniform_values(uniforms, storage);
-
-         param_size[uniforms] = size;
-         uniforms += size;
+         setup_image_uniform_values(index, storage);
       } else {
          unsigned slots = storage->type->component_slots();
          if (storage->array_elements)
