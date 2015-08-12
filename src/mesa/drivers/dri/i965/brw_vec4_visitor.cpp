@@ -597,8 +597,8 @@ vec4_visitor::visit_instructions(const exec_list *list)
  * This method is useful to calculate how much register space is needed to
  * store a particular type.
  */
-int
-vec4_visitor::type_size(const struct glsl_type *type)
+extern "C" int
+type_size_vec4(const struct glsl_type *type)
 {
    unsigned int i;
    int size;
@@ -620,11 +620,11 @@ vec4_visitor::type_size(const struct glsl_type *type)
       }
    case GLSL_TYPE_ARRAY:
       assert(type->length > 0);
-      return type_size(type->fields.array) * type->length;
+      return type_size_vec4(type->fields.array) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-	 size += type_size(type->fields.structure[i].type);
+	 size += type_size_vec4(type->fields.structure[i].type);
       }
       return size;
    case GLSL_TYPE_SUBROUTINE:
@@ -654,7 +654,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(v->type_size(type));
+   this->reg = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
@@ -672,7 +672,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(v->type_size(type) * size);
+   this->reg = v->alloc.allocate(type_size_vec4(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
 
@@ -684,7 +684,7 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(v->type_size(type));
+   this->reg = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->writemask = WRITEMASK_XYZW;
@@ -1075,7 +1075,7 @@ vec4_visitor::visit(ir_variable *ir)
       assert(ir->data.location != -1);
       reg = new(mem_ctx) dst_reg(this, ir->type);
 
-      for (int i = 0; i < type_size(ir->type); i++) {
+      for (int i = 0; i < type_size_vec4(ir->type); i++) {
 	 output_reg[ir->data.location + i] = *reg;
 	 output_reg[ir->data.location + i].reg_offset = i;
 	 output_reg_annotation[ir->data.location + i] = ir->name;
@@ -1097,14 +1097,14 @@ vec4_visitor::visit(ir_variable *ir)
        * Some uniforms, such as samplers and atomic counters, have no actual
        * storage, so we should ignore them.
        */
-      if (ir->is_in_buffer_block() || type_size(ir->type) == 0)
+      if (ir->is_in_buffer_block() || type_size_vec4(ir->type) == 0)
          return;
 
       /* Track how big the whole uniform variable is, in case we need to put a
        * copy of its data into pull constants for array access.
        */
       assert(this->uniforms < uniform_array_size);
-      this->uniform_size[this->uniforms] = type_size(ir->type);
+      this->uniform_size[this->uniforms] = type_size_vec4(ir->type);
 
       if (!strncmp(ir->name, "gl_", 3)) {
 	 setup_builtin_uniform_values(ir);
@@ -2057,7 +2057,7 @@ vec4_visitor::compute_array_stride(ir_dereference_array *ir)
    /* Under normal circumstances array elements are stored consecutively, so
     * the stride is equal to the size of the array element.
     */
-   return type_size(ir->type);
+   return type_size_vec4(ir->type);
 }
 
 
@@ -2126,7 +2126,7 @@ vec4_visitor::visit(ir_dereference_record *ir)
    for (i = 0; i < struct_type->length; i++) {
       if (strcmp(struct_type->fields.structure[i].name, ir->field) == 0)
 	 break;
-      offset += type_size(struct_type->fields.structure[i].type);
+      offset += type_size_vec4(struct_type->fields.structure[i].type);
    }
 
    /* If the type is smaller than a vec4, replicate the last channel out. */
@@ -2335,7 +2335,7 @@ vec4_visitor::visit(ir_assignment *ir)
       emit_bool_to_cond_code(ir->condition, &predicate);
    }
 
-   for (i = 0; i < type_size(ir->lhs->type); i++) {
+   for (i = 0; i < type_size_vec4(ir->lhs->type); i++) {
       vec4_instruction *inst = emit(MOV(dst, src));
       inst->predicate = predicate;
 

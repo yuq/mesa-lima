@@ -309,6 +309,9 @@ bool brw_cs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);
 
+int type_size_scalar(const struct glsl_type *type);
+int type_size_vec4(const struct glsl_type *type);
+
 #ifdef __cplusplus
 }
 #endif

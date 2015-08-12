@@ -44,7 +44,7 @@ vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
           */
          assert(var->type->length > 0);
          int length = var->type->length;
-         int size = type_size(var->type) / length;
+         int size = type_size_vec4(var->type) / length;
          for (int i = 0; i < length; i++) {
             int location = var->data.location + i * BRW_VARYING_SLOT_COUNT;
             for (int j = 0; j < size; j++) {
@@ -55,7 +55,7 @@ vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
             }
          }
       } else {
-         int size = type_size(var->type);
+         int size = type_size_vec4(var->type);
          for (int i = 0; i < size; i++) {
             src_reg src = src_reg(ATTR, var->data.location + i, var->type);
             src = retype(src, brw_type_for_base_type(var->type));

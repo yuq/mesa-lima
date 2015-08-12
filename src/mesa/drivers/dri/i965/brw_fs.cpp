@@ -455,8 +455,8 @@ fs_reg::component_size(unsigned width) const
    return MAX2(width * stride, 1) * type_sz(type);
 }
 
-int
-fs_visitor::type_size(const struct glsl_type *type)
+extern "C" int
+type_size_scalar(const struct glsl_type *type)
 {
    unsigned int size, i;
 
@@ -467,11 +467,11 @@ fs_visitor::type_size(const struct glsl_type *type)
    case GLSL_TYPE_BOOL:
       return type->components();
    case GLSL_TYPE_ARRAY:
-      return type_size(type->fields.array) * type->length;
+      return type_size_scalar(type->fields.array) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-	 size += type_size(type->fields.structure[i].type);
+	 size += type_size_scalar(type->fields.structure[i].type);
       }
       return size;
    case GLSL_TYPE_SAMPLER:
@@ -906,7 +906,7 @@ fs_reg
 fs_visitor::vgrf(const glsl_type *const type)
 {
    int reg_width = dispatch_width / 8;
-   return fs_reg(GRF, alloc.allocate(type_size(type) * reg_width),
+   return fs_reg(GRF, alloc.allocate(type_size_scalar(type) * reg_width),
                  brw_type_for_base_type(type));
 }
 

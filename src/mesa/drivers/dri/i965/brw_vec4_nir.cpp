@@ -119,7 +119,7 @@ vec4_visitor::nir_setup_inputs(nir_shader *shader)
 
    foreach_list_typed(nir_variable, var, node, &shader->inputs) {
       int offset = var->data.driver_location;
-      unsigned size = type_size(var->type);
+      unsigned size = type_size_vec4(var->type);
       for (unsigned i = 0; i < size; i++) {
          src_reg src = src_reg(ATTR, var->data.location + i, var->type);
          nir_inputs[offset + i] = src;
@@ -140,12 +140,12 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
          /* UBO's, atomics and samplers don't take up space in the
             uniform file */
          if (var->interface_type != NULL || var->type->contains_atomic() ||
-             type_size(var->type) == 0) {
+             type_size_vec4(var->type) == 0) {
             continue;
          }
 
          assert(uniforms < uniform_array_size);
-         this->uniform_size[uniforms] = type_size(var->type);
+         this->uniform_size[uniforms] = type_size_vec4(var->type);
 
          if (strncmp(var->name, "gl_", 3) == 0)
             nir_setup_builtin_uniform(var);
@@ -161,7 +161,7 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
              strcmp(var->name, "parameters") == 0);
 
       assert(uniforms < uniform_array_size);
-      this->uniform_size[uniforms] = type_size(var->type);
+      this->uniform_size[uniforms] = type_size_vec4(var->type);
 
       struct gl_program_parameter_list *plist = prog->Parameters;
       for (unsigned p = 0; p < plist->NumParameters; p++) {

@@ -112,7 +112,6 @@ public:
    void swizzle_result(ir_texture_opcode op, int dest_components,
                        fs_reg orig_val, uint32_t sampler);
 
-   int type_size(const struct glsl_type *type);
    fs_inst *get_instruction_generating_reg(fs_inst *start,
 					   fs_inst *end,
 					   const fs_reg &reg);
