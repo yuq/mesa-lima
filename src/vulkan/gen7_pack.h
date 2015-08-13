@@ -92,7 +92,6 @@ __gen_float(float v)
 
 #endif
 
-#define GEN7_3DSTATE_URB_VS_length 0x00000002
 #define GEN7_3DSTATE_URB_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_URB_VS_header              \
    .CommandType          =  3,                  \
@@ -100,6 +99,8 @@ __gen_float(float v)
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 48,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_URB_VS_length 0x00000002
 
 struct GEN7_3DSTATE_URB_VS {
    uint32_t                                     CommandType;
@@ -114,7 +115,7 @@ struct GEN7_3DSTATE_URB_VS {
 
 static inline void
 GEN7_3DSTATE_URB_VS_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_3DSTATE_URB_VS * restrict values)
+                         const struct GEN7_3DSTATE_URB_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -134,12 +135,13 @@ GEN7_3DSTATE_URB_VS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_STORE_REGISTER_MEM_length 0x00000003
 #define GEN7_MI_STORE_REGISTER_MEM_length_bias 0x00000002
 #define GEN7_MI_STORE_REGISTER_MEM_header       \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 36,                  \
    .DwordLength          =  1
+
+#define GEN7_MI_STORE_REGISTER_MEM_length 0x00000003
 
 struct GEN7_MI_STORE_REGISTER_MEM {
    uint32_t                                     CommandType;
@@ -152,7 +154,7 @@ struct GEN7_MI_STORE_REGISTER_MEM {
 
 static inline void
 GEN7_MI_STORE_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
-                               const struct GEN7_MI_STORE_REGISTER_MEM * restrict values)
+                                const struct GEN7_MI_STORE_REGISTER_MEM * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -175,13 +177,14 @@ GEN7_MI_STORE_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_PIPELINE_SELECT_length 0x00000001
 #define GEN7_PIPELINE_SELECT_length_bias 0x00000001
 #define GEN7_PIPELINE_SELECT_header             \
    .CommandType          =  3,                  \
    .CommandSubType       =  1,                  \
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  4
+
+#define GEN7_PIPELINE_SELECT_length 0x00000001
 
 struct GEN7_PIPELINE_SELECT {
    uint32_t                                     CommandType;
@@ -196,7 +199,7 @@ struct GEN7_PIPELINE_SELECT {
 
 static inline void
 GEN7_PIPELINE_SELECT_pack(__gen_user_data *data, void * restrict dst,
-                         const struct GEN7_PIPELINE_SELECT * restrict values)
+                          const struct GEN7_PIPELINE_SELECT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -210,7 +213,6 @@ GEN7_PIPELINE_SELECT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_STATE_BASE_ADDRESS_length 0x0000000a
 #define GEN7_STATE_BASE_ADDRESS_length_bias 0x00000002
 #define GEN7_STATE_BASE_ADDRESS_header          \
    .CommandType          =  3,                  \
@@ -218,6 +220,10 @@ GEN7_PIPELINE_SELECT_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  1,                  \
    .DwordLength          =  8
+
+#define GEN7_STATE_BASE_ADDRESS_length 0x0000000a
+
+#define GEN7_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
 
 struct GEN7_MEMORY_OBJECT_CONTROL_STATE {
    uint32_t                                     GraphicsDataTypeGFDT;
@@ -227,7 +233,7 @@ struct GEN7_MEMORY_OBJECT_CONTROL_STATE {
 
 static inline void
 GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(__gen_user_data *data, void * restrict dst,
-                                     const struct GEN7_MEMORY_OBJECT_CONTROL_STATE * restrict values)
+                                      const struct GEN7_MEMORY_OBJECT_CONTROL_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -274,7 +280,7 @@ struct GEN7_STATE_BASE_ADDRESS {
 
 static inline void
 GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
-                            const struct GEN7_STATE_BASE_ADDRESS * restrict values)
+                             const struct GEN7_STATE_BASE_ADDRESS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -370,7 +376,6 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_STATE_PREFETCH_length 0x00000002
 #define GEN7_STATE_PREFETCH_length_bias 0x00000002
 #define GEN7_STATE_PREFETCH_header              \
    .CommandType          =  3,                  \
@@ -378,6 +383,8 @@ GEN7_STATE_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  3,                  \
    .DwordLength          =  0
+
+#define GEN7_STATE_PREFETCH_length 0x00000002
 
 struct GEN7_STATE_PREFETCH {
    uint32_t                                     CommandType;
@@ -391,7 +398,7 @@ struct GEN7_STATE_PREFETCH {
 
 static inline void
 GEN7_STATE_PREFETCH_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_STATE_PREFETCH * restrict values)
+                         const struct GEN7_STATE_PREFETCH * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -412,7 +419,6 @@ GEN7_STATE_PREFETCH_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_STATE_SIP_length 0x00000002
 #define GEN7_STATE_SIP_length_bias 0x00000002
 #define GEN7_STATE_SIP_header                   \
    .CommandType          =  3,                  \
@@ -420,6 +426,8 @@ GEN7_STATE_PREFETCH_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  2,                  \
    .DwordLength          =  0
+
+#define GEN7_STATE_SIP_length 0x00000002
 
 struct GEN7_STATE_SIP {
    uint32_t                                     CommandType;
@@ -432,7 +440,7 @@ struct GEN7_STATE_SIP {
 
 static inline void
 GEN7_STATE_SIP_pack(__gen_user_data *data, void * restrict dst,
-                   const struct GEN7_STATE_SIP * restrict values)
+                    const struct GEN7_STATE_SIP * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -450,7 +458,6 @@ GEN7_STATE_SIP_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_SWTESS_BASE_ADDRESS_length 0x00000002
 #define GEN7_SWTESS_BASE_ADDRESS_length_bias 0x00000002
 #define GEN7_SWTESS_BASE_ADDRESS_header         \
    .CommandType          =  3,                  \
@@ -458,6 +465,8 @@ GEN7_STATE_SIP_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  3,                  \
    .DwordLength          =  0
+
+#define GEN7_SWTESS_BASE_ADDRESS_length 0x00000002
 
 struct GEN7_SWTESS_BASE_ADDRESS {
    uint32_t                                     CommandType;
@@ -471,7 +480,7 @@ struct GEN7_SWTESS_BASE_ADDRESS {
 
 static inline void
 GEN7_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_SWTESS_BASE_ADDRESS * restrict values)
+                              const struct GEN7_SWTESS_BASE_ADDRESS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -494,7 +503,6 @@ GEN7_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DPRIMITIVE_length 0x00000007
 #define GEN7_3DPRIMITIVE_length_bias 0x00000002
 #define GEN7_3DPRIMITIVE_header                 \
    .CommandType          =  3,                  \
@@ -502,6 +510,8 @@ GEN7_SWTESS_BASE_ADDRESS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  3,                  \
    ._3DCommandSubOpcode  =  0,                  \
    .DwordLength          =  5
+
+#define GEN7_3DPRIMITIVE_length 0x00000007
 
 struct GEN7_3DPRIMITIVE {
    uint32_t                                     CommandType;
@@ -525,7 +535,7 @@ struct GEN7_3DPRIMITIVE {
 
 static inline void
 GEN7_3DPRIMITIVE_pack(__gen_user_data *data, void * restrict dst,
-                     const struct GEN7_3DPRIMITIVE * restrict values)
+                      const struct GEN7_3DPRIMITIVE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -567,7 +577,6 @@ GEN7_3DPRIMITIVE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_AA_LINE_PARAMETERS_length 0x00000003
 #define GEN7_3DSTATE_AA_LINE_PARAMETERS_length_bias 0x00000002
 #define GEN7_3DSTATE_AA_LINE_PARAMETERS_header  \
    .CommandType          =  3,                  \
@@ -575,6 +584,8 @@ GEN7_3DPRIMITIVE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 10,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_AA_LINE_PARAMETERS_length 0x00000003
 
 struct GEN7_3DSTATE_AA_LINE_PARAMETERS {
    uint32_t                                     CommandType;
@@ -590,7 +601,7 @@ struct GEN7_3DSTATE_AA_LINE_PARAMETERS {
 
 static inline void
 GEN7_3DSTATE_AA_LINE_PARAMETERS_pack(__gen_user_data *data, void * restrict dst,
-                                    const struct GEN7_3DSTATE_AA_LINE_PARAMETERS * restrict values)
+                                     const struct GEN7_3DSTATE_AA_LINE_PARAMETERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -614,7 +625,6 @@ GEN7_3DSTATE_AA_LINE_PARAMETERS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_length 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_header\
    .CommandType          =  3,                  \
@@ -622,6 +632,8 @@ GEN7_3DSTATE_AA_LINE_PARAMETERS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 40,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_length 0x00000002
 
 struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS {
    uint32_t                                     CommandType;
@@ -634,7 +646,7 @@ struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS {
 
 static inline void
 GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS * restrict values)
+                                            const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -652,7 +664,6 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_length 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_header\
    .CommandType          =  3,                  \
@@ -660,6 +671,8 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_DS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 41,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_length 0x00000002
 
 struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS {
    uint32_t                                     CommandType;
@@ -672,7 +685,7 @@ struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS {
 
 static inline void
 GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS * restrict values)
+                                            const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -690,7 +703,6 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_length 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_header\
    .CommandType          =  3,                  \
@@ -698,6 +710,8 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_GS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 39,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_length 0x00000002
 
 struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS {
    uint32_t                                     CommandType;
@@ -710,7 +724,7 @@ struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS {
 
 static inline void
 GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS * restrict values)
+                                            const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -728,7 +742,6 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_length 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_length_bias 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_header\
    .CommandType          =  3,                  \
@@ -736,6 +749,8 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_HS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 42,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_length 0x00000002
 
 struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS {
    uint32_t                                     CommandType;
@@ -748,7 +763,7 @@ struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS {
 
 static inline void
 GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS * restrict values)
+                                            const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -766,7 +781,6 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_length 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_header\
    .CommandType          =  3,                  \
@@ -774,6 +788,8 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_PS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 38,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_length 0x00000002
 
 struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS {
    uint32_t                                     CommandType;
@@ -786,7 +802,7 @@ struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS {
 
 static inline void
 GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS * restrict values)
+                                            const struct GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -804,7 +820,6 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_BLEND_STATE_POINTERS_length 0x00000002
 #define GEN7_3DSTATE_BLEND_STATE_POINTERS_length_bias 0x00000002
 #define GEN7_3DSTATE_BLEND_STATE_POINTERS_header\
    .CommandType          =  3,                  \
@@ -812,6 +827,8 @@ GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 36,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_BLEND_STATE_POINTERS_length 0x00000002
 
 struct GEN7_3DSTATE_BLEND_STATE_POINTERS {
    uint32_t                                     CommandType;
@@ -824,7 +841,7 @@ struct GEN7_3DSTATE_BLEND_STATE_POINTERS {
 
 static inline void
 GEN7_3DSTATE_BLEND_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
-                                      const struct GEN7_3DSTATE_BLEND_STATE_POINTERS * restrict values)
+                                       const struct GEN7_3DSTATE_BLEND_STATE_POINTERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -843,7 +860,6 @@ GEN7_3DSTATE_BLEND_STATE_POINTERS_pack(__gen_user_data *data, void * restrict ds
 
 }
 
-#define GEN7_3DSTATE_CC_STATE_POINTERS_length 0x00000002
 #define GEN7_3DSTATE_CC_STATE_POINTERS_length_bias 0x00000002
 #define GEN7_3DSTATE_CC_STATE_POINTERS_header   \
    .CommandType          =  3,                  \
@@ -851,6 +867,8 @@ GEN7_3DSTATE_BLEND_STATE_POINTERS_pack(__gen_user_data *data, void * restrict ds
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 14,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_CC_STATE_POINTERS_length 0x00000002
 
 struct GEN7_3DSTATE_CC_STATE_POINTERS {
    uint32_t                                     CommandType;
@@ -863,7 +881,7 @@ struct GEN7_3DSTATE_CC_STATE_POINTERS {
 
 static inline void
 GEN7_3DSTATE_CC_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
-                                   const struct GEN7_3DSTATE_CC_STATE_POINTERS * restrict values)
+                                    const struct GEN7_3DSTATE_CC_STATE_POINTERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -882,7 +900,6 @@ GEN7_3DSTATE_CC_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_CHROMA_KEY_length 0x00000004
 #define GEN7_3DSTATE_CHROMA_KEY_length_bias 0x00000002
 #define GEN7_3DSTATE_CHROMA_KEY_header          \
    .CommandType          =  3,                  \
@@ -890,6 +907,8 @@ GEN7_3DSTATE_CC_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  4,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_CHROMA_KEY_length 0x00000004
 
 struct GEN7_3DSTATE_CHROMA_KEY {
    uint32_t                                     CommandType;
@@ -904,7 +923,7 @@ struct GEN7_3DSTATE_CHROMA_KEY {
 
 static inline void
 GEN7_3DSTATE_CHROMA_KEY_pack(__gen_user_data *data, void * restrict dst,
-                            const struct GEN7_3DSTATE_CHROMA_KEY * restrict values)
+                             const struct GEN7_3DSTATE_CHROMA_KEY * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -930,7 +949,6 @@ GEN7_3DSTATE_CHROMA_KEY_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_CLEAR_PARAMS_length 0x00000003
 #define GEN7_3DSTATE_CLEAR_PARAMS_length_bias 0x00000002
 #define GEN7_3DSTATE_CLEAR_PARAMS_header        \
    .CommandType          =  3,                  \
@@ -938,6 +956,8 @@ GEN7_3DSTATE_CHROMA_KEY_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  4,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_CLEAR_PARAMS_length 0x00000003
 
 struct GEN7_3DSTATE_CLEAR_PARAMS {
    uint32_t                                     CommandType;
@@ -951,7 +971,7 @@ struct GEN7_3DSTATE_CLEAR_PARAMS {
 
 static inline void
 GEN7_3DSTATE_CLEAR_PARAMS_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_3DSTATE_CLEAR_PARAMS * restrict values)
+                               const struct GEN7_3DSTATE_CLEAR_PARAMS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -973,7 +993,6 @@ GEN7_3DSTATE_CLEAR_PARAMS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_CLIP_length 0x00000004
 #define GEN7_3DSTATE_CLIP_length_bias 0x00000002
 #define GEN7_3DSTATE_CLIP_header                \
    .CommandType          =  3,                  \
@@ -981,6 +1000,8 @@ GEN7_3DSTATE_CLEAR_PARAMS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 18,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_CLIP_length 0x00000004
 
 struct GEN7_3DSTATE_CLIP {
    uint32_t                                     CommandType;
@@ -1030,7 +1051,7 @@ struct GEN7_3DSTATE_CLIP {
 
 static inline void
 GEN7_3DSTATE_CLIP_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_3DSTATE_CLIP * restrict values)
+                       const struct GEN7_3DSTATE_CLIP * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1075,7 +1096,6 @@ GEN7_3DSTATE_CLIP_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_CONSTANT_DS_length 0x00000007
 #define GEN7_3DSTATE_CONSTANT_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_CONSTANT_DS_header         \
    .CommandType          =  3,                  \
@@ -1083,6 +1103,10 @@ GEN7_3DSTATE_CLIP_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 26,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_CONSTANT_DS_length 0x00000007
+
+#define GEN7_3DSTATE_CONSTANT_BODY_length 0x00000006
 
 struct GEN7_3DSTATE_CONSTANT_BODY {
    uint32_t                                     ConstantBuffer1ReadLength;
@@ -1098,7 +1122,7 @@ struct GEN7_3DSTATE_CONSTANT_BODY {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_BODY_pack(__gen_user_data *data, void * restrict dst,
-                               const struct GEN7_3DSTATE_CONSTANT_BODY * restrict values)
+                                const struct GEN7_3DSTATE_CONSTANT_BODY * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1152,7 +1176,7 @@ struct GEN7_3DSTATE_CONSTANT_DS {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_DS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_CONSTANT_DS * restrict values)
+                              const struct GEN7_3DSTATE_CONSTANT_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1167,7 +1191,6 @@ GEN7_3DSTATE_CONSTANT_DS_pack(__gen_user_data *data, void * restrict dst,
    GEN7_3DSTATE_CONSTANT_BODY_pack(data, &dw[1], &values->ConstantBody);
 }
 
-#define GEN7_3DSTATE_CONSTANT_GS_length 0x00000007
 #define GEN7_3DSTATE_CONSTANT_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_CONSTANT_GS_header         \
    .CommandType          =  3,                  \
@@ -1175,6 +1198,8 @@ GEN7_3DSTATE_CONSTANT_DS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 22,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_CONSTANT_GS_length 0x00000007
 
 struct GEN7_3DSTATE_CONSTANT_GS {
    uint32_t                                     CommandType;
@@ -1187,7 +1212,7 @@ struct GEN7_3DSTATE_CONSTANT_GS {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_GS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_CONSTANT_GS * restrict values)
+                              const struct GEN7_3DSTATE_CONSTANT_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1202,7 +1227,6 @@ GEN7_3DSTATE_CONSTANT_GS_pack(__gen_user_data *data, void * restrict dst,
    GEN7_3DSTATE_CONSTANT_BODY_pack(data, &dw[1], &values->ConstantBody);
 }
 
-#define GEN7_3DSTATE_CONSTANT_HS_length 0x00000007
 #define GEN7_3DSTATE_CONSTANT_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_CONSTANT_HS_header         \
    .CommandType          =  3,                  \
@@ -1210,6 +1234,8 @@ GEN7_3DSTATE_CONSTANT_GS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 25,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_CONSTANT_HS_length 0x00000007
 
 struct GEN7_3DSTATE_CONSTANT_HS {
    uint32_t                                     CommandType;
@@ -1222,7 +1248,7 @@ struct GEN7_3DSTATE_CONSTANT_HS {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_HS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_CONSTANT_HS * restrict values)
+                              const struct GEN7_3DSTATE_CONSTANT_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1237,7 +1263,6 @@ GEN7_3DSTATE_CONSTANT_HS_pack(__gen_user_data *data, void * restrict dst,
    GEN7_3DSTATE_CONSTANT_BODY_pack(data, &dw[1], &values->ConstantBody);
 }
 
-#define GEN7_3DSTATE_CONSTANT_PS_length 0x00000007
 #define GEN7_3DSTATE_CONSTANT_PS_length_bias 0x00000002
 #define GEN7_3DSTATE_CONSTANT_PS_header         \
    .CommandType          =  3,                  \
@@ -1245,6 +1270,8 @@ GEN7_3DSTATE_CONSTANT_HS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 23,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_CONSTANT_PS_length 0x00000007
 
 struct GEN7_3DSTATE_CONSTANT_PS {
    uint32_t                                     CommandType;
@@ -1257,7 +1284,7 @@ struct GEN7_3DSTATE_CONSTANT_PS {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_PS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_CONSTANT_PS * restrict values)
+                              const struct GEN7_3DSTATE_CONSTANT_PS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1272,7 +1299,6 @@ GEN7_3DSTATE_CONSTANT_PS_pack(__gen_user_data *data, void * restrict dst,
    GEN7_3DSTATE_CONSTANT_BODY_pack(data, &dw[1], &values->ConstantBody);
 }
 
-#define GEN7_3DSTATE_CONSTANT_VS_length 0x00000007
 #define GEN7_3DSTATE_CONSTANT_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_CONSTANT_VS_header         \
    .CommandType          =  3,                  \
@@ -1280,6 +1306,8 @@ GEN7_3DSTATE_CONSTANT_PS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 21,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_CONSTANT_VS_length 0x00000007
 
 struct GEN7_3DSTATE_CONSTANT_VS {
    uint32_t                                     CommandType;
@@ -1292,7 +1320,7 @@ struct GEN7_3DSTATE_CONSTANT_VS {
 
 static inline void
 GEN7_3DSTATE_CONSTANT_VS_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_CONSTANT_VS * restrict values)
+                              const struct GEN7_3DSTATE_CONSTANT_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1307,7 +1335,6 @@ GEN7_3DSTATE_CONSTANT_VS_pack(__gen_user_data *data, void * restrict dst,
    GEN7_3DSTATE_CONSTANT_BODY_pack(data, &dw[1], &values->ConstantBody);
 }
 
-#define GEN7_3DSTATE_DEPTH_BUFFER_length 0x00000007
 #define GEN7_3DSTATE_DEPTH_BUFFER_length_bias 0x00000002
 #define GEN7_3DSTATE_DEPTH_BUFFER_header        \
    .CommandType          =  3,                  \
@@ -1315,6 +1342,8 @@ GEN7_3DSTATE_CONSTANT_VS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  5,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_DEPTH_BUFFER_length 0x00000007
 
 struct GEN7_3DSTATE_DEPTH_BUFFER {
    uint32_t                                     CommandType;
@@ -1351,7 +1380,7 @@ struct GEN7_3DSTATE_DEPTH_BUFFER {
 
 static inline void
 GEN7_3DSTATE_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_3DSTATE_DEPTH_BUFFER * restrict values)
+                               const struct GEN7_3DSTATE_DEPTH_BUFFER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1403,7 +1432,6 @@ GEN7_3DSTATE_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_length 0x00000002
 #define GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_length_bias 0x00000002
 #define GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_header\
    .CommandType          =  3,                  \
@@ -1411,6 +1439,8 @@ GEN7_3DSTATE_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 37,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_length 0x00000002
 
 struct GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS {
    uint32_t                                     CommandType;
@@ -1423,7 +1453,7 @@ struct GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS {
 
 static inline void
 GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
-                                              const struct GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS * restrict values)
+                                               const struct GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1442,7 +1472,6 @@ GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_pack(__gen_user_data *data, void * res
 
 }
 
-#define GEN7_3DSTATE_DRAWING_RECTANGLE_length 0x00000004
 #define GEN7_3DSTATE_DRAWING_RECTANGLE_length_bias 0x00000002
 #define GEN7_3DSTATE_DRAWING_RECTANGLE_header   \
    .CommandType          =  3,                  \
@@ -1450,6 +1479,8 @@ GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS_pack(__gen_user_data *data, void * res
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  0,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_DRAWING_RECTANGLE_length 0x00000004
 
 struct GEN7_3DSTATE_DRAWING_RECTANGLE {
    uint32_t                                     CommandType;
@@ -1467,7 +1498,7 @@ struct GEN7_3DSTATE_DRAWING_RECTANGLE {
 
 static inline void
 GEN7_3DSTATE_DRAWING_RECTANGLE_pack(__gen_user_data *data, void * restrict dst,
-                                   const struct GEN7_3DSTATE_DRAWING_RECTANGLE * restrict values)
+                                    const struct GEN7_3DSTATE_DRAWING_RECTANGLE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1496,7 +1527,6 @@ GEN7_3DSTATE_DRAWING_RECTANGLE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_DS_length 0x00000006
 #define GEN7_3DSTATE_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_DS_header                  \
    .CommandType          =  3,                  \
@@ -1504,6 +1534,8 @@ GEN7_3DSTATE_DRAWING_RECTANGLE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 29,                  \
    .DwordLength          =  4
+
+#define GEN7_3DSTATE_DS_length 0x00000006
 
 struct GEN7_3DSTATE_DS {
    uint32_t                                     CommandType;
@@ -1544,7 +1576,7 @@ struct GEN7_3DSTATE_DS {
 
 static inline void
 GEN7_3DSTATE_DS_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_DS * restrict values)
+                     const struct GEN7_3DSTATE_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1591,7 +1623,6 @@ GEN7_3DSTATE_DS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_GS_length 0x00000007
 #define GEN7_3DSTATE_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_GS_header                  \
    .CommandType          =  3,                  \
@@ -1599,6 +1630,8 @@ GEN7_3DSTATE_DS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 17,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_GS_length 0x00000007
 
 struct GEN7_3DSTATE_GS {
    uint32_t                                     CommandType;
@@ -1658,7 +1691,7 @@ struct GEN7_3DSTATE_GS {
 
 static inline void
 GEN7_3DSTATE_GS_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_GS * restrict values)
+                     const struct GEN7_3DSTATE_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1722,7 +1755,6 @@ GEN7_3DSTATE_GS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_HIER_DEPTH_BUFFER_length 0x00000003
 #define GEN7_3DSTATE_HIER_DEPTH_BUFFER_length_bias 0x00000002
 #define GEN7_3DSTATE_HIER_DEPTH_BUFFER_header   \
    .CommandType          =  3,                  \
@@ -1730,6 +1762,8 @@ GEN7_3DSTATE_GS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  7,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_HIER_DEPTH_BUFFER_length 0x00000003
 
 struct GEN7_3DSTATE_HIER_DEPTH_BUFFER {
    uint32_t                                     CommandType;
@@ -1744,7 +1778,7 @@ struct GEN7_3DSTATE_HIER_DEPTH_BUFFER {
 
 static inline void
 GEN7_3DSTATE_HIER_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
-                                   const struct GEN7_3DSTATE_HIER_DEPTH_BUFFER * restrict values)
+                                    const struct GEN7_3DSTATE_HIER_DEPTH_BUFFER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1771,7 +1805,6 @@ GEN7_3DSTATE_HIER_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_HS_length 0x00000007
 #define GEN7_3DSTATE_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_HS_header                  \
    .CommandType          =  3,                  \
@@ -1779,6 +1812,8 @@ GEN7_3DSTATE_HIER_DEPTH_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 27,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_HS_length 0x00000007
 
 struct GEN7_3DSTATE_HS {
    uint32_t                                     CommandType;
@@ -1818,7 +1853,7 @@ struct GEN7_3DSTATE_HS {
 
 static inline void
 GEN7_3DSTATE_HS_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_HS * restrict values)
+                     const struct GEN7_3DSTATE_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1869,7 +1904,6 @@ GEN7_3DSTATE_HS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_INDEX_BUFFER_length 0x00000003
 #define GEN7_3DSTATE_INDEX_BUFFER_length_bias 0x00000002
 #define GEN7_3DSTATE_INDEX_BUFFER_header        \
    .CommandType          =  3,                  \
@@ -1877,6 +1911,8 @@ GEN7_3DSTATE_HS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 10,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_INDEX_BUFFER_length 0x00000003
 
 struct GEN7_3DSTATE_INDEX_BUFFER {
    uint32_t                                     CommandType;
@@ -1896,7 +1932,7 @@ struct GEN7_3DSTATE_INDEX_BUFFER {
 
 static inline void
 GEN7_3DSTATE_INDEX_BUFFER_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_3DSTATE_INDEX_BUFFER * restrict values)
+                               const struct GEN7_3DSTATE_INDEX_BUFFER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1927,7 +1963,6 @@ GEN7_3DSTATE_INDEX_BUFFER_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_LINE_STIPPLE_length 0x00000003
 #define GEN7_3DSTATE_LINE_STIPPLE_length_bias 0x00000002
 #define GEN7_3DSTATE_LINE_STIPPLE_header        \
    .CommandType          =  3,                  \
@@ -1935,6 +1970,8 @@ GEN7_3DSTATE_INDEX_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  8,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_LINE_STIPPLE_length 0x00000003
 
 struct GEN7_3DSTATE_LINE_STIPPLE {
    uint32_t                                     CommandType;
@@ -1952,7 +1989,7 @@ struct GEN7_3DSTATE_LINE_STIPPLE {
 
 static inline void
 GEN7_3DSTATE_LINE_STIPPLE_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_3DSTATE_LINE_STIPPLE * restrict values)
+                               const struct GEN7_3DSTATE_LINE_STIPPLE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -1978,7 +2015,6 @@ GEN7_3DSTATE_LINE_STIPPLE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_MONOFILTER_SIZE_length 0x00000002
 #define GEN7_3DSTATE_MONOFILTER_SIZE_length_bias 0x00000002
 #define GEN7_3DSTATE_MONOFILTER_SIZE_header     \
    .CommandType          =  3,                  \
@@ -1986,6 +2022,8 @@ GEN7_3DSTATE_LINE_STIPPLE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 17,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_MONOFILTER_SIZE_length 0x00000002
 
 struct GEN7_3DSTATE_MONOFILTER_SIZE {
    uint32_t                                     CommandType;
@@ -1999,7 +2037,7 @@ struct GEN7_3DSTATE_MONOFILTER_SIZE {
 
 static inline void
 GEN7_3DSTATE_MONOFILTER_SIZE_pack(__gen_user_data *data, void * restrict dst,
-                                 const struct GEN7_3DSTATE_MONOFILTER_SIZE * restrict values)
+                                  const struct GEN7_3DSTATE_MONOFILTER_SIZE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2018,7 +2056,6 @@ GEN7_3DSTATE_MONOFILTER_SIZE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_MULTISAMPLE_length 0x00000004
 #define GEN7_3DSTATE_MULTISAMPLE_length_bias 0x00000002
 #define GEN7_3DSTATE_MULTISAMPLE_header         \
    .CommandType          =  3,                  \
@@ -2026,6 +2063,8 @@ GEN7_3DSTATE_MONOFILTER_SIZE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 13,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_MULTISAMPLE_length 0x00000004
 
 struct GEN7_3DSTATE_MULTISAMPLE {
    uint32_t                                     CommandType;
@@ -2060,7 +2099,7 @@ struct GEN7_3DSTATE_MULTISAMPLE {
 
 static inline void
 GEN7_3DSTATE_MULTISAMPLE_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_MULTISAMPLE * restrict values)
+                              const struct GEN7_3DSTATE_MULTISAMPLE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2101,7 +2140,6 @@ GEN7_3DSTATE_MULTISAMPLE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_POLY_STIPPLE_OFFSET_length 0x00000002
 #define GEN7_3DSTATE_POLY_STIPPLE_OFFSET_length_bias 0x00000002
 #define GEN7_3DSTATE_POLY_STIPPLE_OFFSET_header \
    .CommandType          =  3,                  \
@@ -2109,6 +2147,8 @@ GEN7_3DSTATE_MULTISAMPLE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  6,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_POLY_STIPPLE_OFFSET_length 0x00000002
 
 struct GEN7_3DSTATE_POLY_STIPPLE_OFFSET {
    uint32_t                                     CommandType;
@@ -2122,7 +2162,7 @@ struct GEN7_3DSTATE_POLY_STIPPLE_OFFSET {
 
 static inline void
 GEN7_3DSTATE_POLY_STIPPLE_OFFSET_pack(__gen_user_data *data, void * restrict dst,
-                                     const struct GEN7_3DSTATE_POLY_STIPPLE_OFFSET * restrict values)
+                                      const struct GEN7_3DSTATE_POLY_STIPPLE_OFFSET * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2141,7 +2181,6 @@ GEN7_3DSTATE_POLY_STIPPLE_OFFSET_pack(__gen_user_data *data, void * restrict dst
 
 }
 
-#define GEN7_3DSTATE_POLY_STIPPLE_PATTERN_length 0x00000021
 #define GEN7_3DSTATE_POLY_STIPPLE_PATTERN_length_bias 0x00000002
 #define GEN7_3DSTATE_POLY_STIPPLE_PATTERN_header\
    .CommandType          =  3,                  \
@@ -2149,6 +2188,8 @@ GEN7_3DSTATE_POLY_STIPPLE_OFFSET_pack(__gen_user_data *data, void * restrict dst
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  7,                  \
    .DwordLength          = 31
+
+#define GEN7_3DSTATE_POLY_STIPPLE_PATTERN_length 0x00000021
 
 struct GEN7_3DSTATE_POLY_STIPPLE_PATTERN {
    uint32_t                                     CommandType;
@@ -2161,7 +2202,7 @@ struct GEN7_3DSTATE_POLY_STIPPLE_PATTERN {
 
 static inline void
 GEN7_3DSTATE_POLY_STIPPLE_PATTERN_pack(__gen_user_data *data, void * restrict dst,
-                                      const struct GEN7_3DSTATE_POLY_STIPPLE_PATTERN * restrict values)
+                                       const struct GEN7_3DSTATE_POLY_STIPPLE_PATTERN * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2181,7 +2222,6 @@ GEN7_3DSTATE_POLY_STIPPLE_PATTERN_pack(__gen_user_data *data, void * restrict ds
 
 }
 
-#define GEN7_3DSTATE_PS_length 0x00000008
 #define GEN7_3DSTATE_PS_length_bias 0x00000002
 #define GEN7_3DSTATE_PS_header                  \
    .CommandType          =  3,                  \
@@ -2189,6 +2229,8 @@ GEN7_3DSTATE_POLY_STIPPLE_PATTERN_pack(__gen_user_data *data, void * restrict ds
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 32,                  \
    .DwordLength          =  6
+
+#define GEN7_3DSTATE_PS_length 0x00000008
 
 struct GEN7_3DSTATE_PS {
    uint32_t                                     CommandType;
@@ -2244,7 +2286,7 @@ struct GEN7_3DSTATE_PS {
 
 static inline void
 GEN7_3DSTATE_PS_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_PS * restrict values)
+                     const struct GEN7_3DSTATE_PS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2308,7 +2350,6 @@ GEN7_3DSTATE_PS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_length 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_header\
    .CommandType          =  3,                  \
@@ -2316,6 +2357,8 @@ GEN7_3DSTATE_PS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 20,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_length 0x00000002
 
 struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS {
    uint32_t                                     CommandType;
@@ -2331,7 +2374,7 @@ struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS {
 
 static inline void
 GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS * restrict values)
+                                         const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2350,7 +2393,6 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_pack(__gen_user_data *data, void * restrict 
 
 }
 
-#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_length 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_header\
    .CommandType          =  3,                  \
@@ -2358,6 +2400,8 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_DS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 21,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_length 0x00000002
 
 struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS {
    uint32_t                                     CommandType;
@@ -2373,7 +2417,7 @@ struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS {
 
 static inline void
 GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS * restrict values)
+                                         const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2392,7 +2436,6 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_pack(__gen_user_data *data, void * restrict 
 
 }
 
-#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_length 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_header\
    .CommandType          =  3,                  \
@@ -2400,6 +2443,8 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_GS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 19,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_length 0x00000002
 
 struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS {
    uint32_t                                     CommandType;
@@ -2415,7 +2460,7 @@ struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS {
 
 static inline void
 GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS * restrict values)
+                                         const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2434,7 +2479,6 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_pack(__gen_user_data *data, void * restrict 
 
 }
 
-#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_length 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_length_bias 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_header\
    .CommandType          =  3,                  \
@@ -2442,6 +2486,8 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_HS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 22,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_length 0x00000002
 
 struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS {
    uint32_t                                     CommandType;
@@ -2457,7 +2503,7 @@ struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS {
 
 static inline void
 GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS * restrict values)
+                                         const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2476,7 +2522,6 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_pack(__gen_user_data *data, void * restrict 
 
 }
 
-#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_length 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_header\
    .CommandType          =  3,                  \
@@ -2484,6 +2529,8 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_PS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 18,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_length 0x00000002
 
 struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS {
    uint32_t                                     CommandType;
@@ -2499,7 +2546,7 @@ struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS {
 
 static inline void
 GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS * restrict values)
+                                         const struct GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2525,6 +2572,10 @@ GEN7_3DSTATE_PUSH_CONSTANT_ALLOC_VS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  =  2
 
+#define GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0_length 0x00000000
+
+#define GEN7_PALETTE_ENTRY_length 0x00000001
+
 struct GEN7_PALETTE_ENTRY {
    uint32_t                                     Alpha;
    uint32_t                                     Red;
@@ -2534,7 +2585,7 @@ struct GEN7_PALETTE_ENTRY {
 
 static inline void
 GEN7_PALETTE_ENTRY_pack(__gen_user_data *data, void * restrict dst,
-                       const struct GEN7_PALETTE_ENTRY * restrict values)
+                        const struct GEN7_PALETTE_ENTRY * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2558,7 +2609,7 @@ struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0 {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0_pack(__gen_user_data *data, void * restrict dst,
-                                       const struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0 * restrict values)
+                                        const struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0 * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2580,6 +2631,8 @@ GEN7_3DSTATE_SAMPLER_PALETTE_LOAD0_pack(__gen_user_data *data, void * restrict d
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 12
 
+#define GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1_length 0x00000000
+
 struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1 {
    uint32_t                                     CommandType;
    uint32_t                                     CommandSubType;
@@ -2591,7 +2644,7 @@ struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1 {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1_pack(__gen_user_data *data, void * restrict dst,
-                                       const struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1 * restrict values)
+                                        const struct GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1 * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2606,7 +2659,6 @@ GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1_pack(__gen_user_data *data, void * restrict d
    /* variable length fields follow */
 }
 
-#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_length 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_header\
    .CommandType          =  3,                  \
@@ -2614,6 +2666,8 @@ GEN7_3DSTATE_SAMPLER_PALETTE_LOAD1_pack(__gen_user_data *data, void * restrict d
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 45,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS {
    uint32_t                                     CommandType;
@@ -2626,7 +2680,7 @@ struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS * restrict values)
+                                            const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2644,7 +2698,6 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_length 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_header\
    .CommandType          =  3,                  \
@@ -2652,6 +2705,8 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_DS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 46,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS {
    uint32_t                                     CommandType;
@@ -2664,7 +2719,7 @@ struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS * restrict values)
+                                            const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2682,7 +2737,6 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_length 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_header\
    .CommandType          =  3,                  \
@@ -2690,6 +2744,8 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_GS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 44,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS {
    uint32_t                                     CommandType;
@@ -2702,7 +2758,7 @@ struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS * restrict values)
+                                            const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2720,7 +2776,6 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_length 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_header\
    .CommandType          =  3,                  \
@@ -2728,6 +2783,8 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_HS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 47,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS {
    uint32_t                                     CommandType;
@@ -2740,7 +2797,7 @@ struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS * restrict values)
+                                            const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2758,7 +2815,6 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_length 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_header\
    .CommandType          =  3,                  \
@@ -2766,6 +2822,8 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_PS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 43,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS {
    uint32_t                                     CommandType;
@@ -2778,7 +2836,7 @@ struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS {
 
 static inline void
 GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_pack(__gen_user_data *data, void * restrict dst,
-                                           const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS * restrict values)
+                                            const struct GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2796,7 +2854,6 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_pack(__gen_user_data *data, void * restri
 
 }
 
-#define GEN7_3DSTATE_SAMPLE_MASK_length 0x00000002
 #define GEN7_3DSTATE_SAMPLE_MASK_length_bias 0x00000002
 #define GEN7_3DSTATE_SAMPLE_MASK_header         \
    .CommandType          =  3,                  \
@@ -2804,6 +2861,8 @@ GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS_pack(__gen_user_data *data, void * restri
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 24,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SAMPLE_MASK_length 0x00000002
 
 struct GEN7_3DSTATE_SAMPLE_MASK {
    uint32_t                                     CommandType;
@@ -2816,7 +2875,7 @@ struct GEN7_3DSTATE_SAMPLE_MASK {
 
 static inline void
 GEN7_3DSTATE_SAMPLE_MASK_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_3DSTATE_SAMPLE_MASK * restrict values)
+                              const struct GEN7_3DSTATE_SAMPLE_MASK * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2834,7 +2893,6 @@ GEN7_3DSTATE_SAMPLE_MASK_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_SBE_length 0x0000000e
 #define GEN7_3DSTATE_SBE_length_bias 0x00000002
 #define GEN7_3DSTATE_SBE_header                 \
    .CommandType          =  3,                  \
@@ -2842,6 +2900,8 @@ GEN7_3DSTATE_SAMPLE_MASK_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 31,                  \
    .DwordLength          = 12
+
+#define GEN7_3DSTATE_SBE_length 0x0000000e
 
 struct GEN7_3DSTATE_SBE {
    uint32_t                                     CommandType;
@@ -2911,7 +2971,7 @@ struct GEN7_3DSTATE_SBE {
 
 static inline void
 GEN7_3DSTATE_SBE_pack(__gen_user_data *data, void * restrict dst,
-                     const struct GEN7_3DSTATE_SBE * restrict values)
+                      const struct GEN7_3DSTATE_SBE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -2981,7 +3041,6 @@ GEN7_3DSTATE_SBE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_SCISSOR_STATE_POINTERS_length 0x00000002
 #define GEN7_3DSTATE_SCISSOR_STATE_POINTERS_length_bias 0x00000002
 #define GEN7_3DSTATE_SCISSOR_STATE_POINTERS_header\
    .CommandType          =  3,                  \
@@ -2989,6 +3048,8 @@ GEN7_3DSTATE_SBE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 15,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_SCISSOR_STATE_POINTERS_length 0x00000002
 
 struct GEN7_3DSTATE_SCISSOR_STATE_POINTERS {
    uint32_t                                     CommandType;
@@ -3001,7 +3062,7 @@ struct GEN7_3DSTATE_SCISSOR_STATE_POINTERS {
 
 static inline void
 GEN7_3DSTATE_SCISSOR_STATE_POINTERS_pack(__gen_user_data *data, void * restrict dst,
-                                        const struct GEN7_3DSTATE_SCISSOR_STATE_POINTERS * restrict values)
+                                         const struct GEN7_3DSTATE_SCISSOR_STATE_POINTERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3019,7 +3080,6 @@ GEN7_3DSTATE_SCISSOR_STATE_POINTERS_pack(__gen_user_data *data, void * restrict 
 
 }
 
-#define GEN7_3DSTATE_SF_length 0x00000007
 #define GEN7_3DSTATE_SF_length_bias 0x00000002
 #define GEN7_3DSTATE_SF_header                  \
    .CommandType          =  3,                  \
@@ -3027,6 +3087,8 @@ GEN7_3DSTATE_SCISSOR_STATE_POINTERS_pack(__gen_user_data *data, void * restrict 
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 19,                  \
    .DwordLength          =  5
+
+#define GEN7_3DSTATE_SF_length 0x00000007
 
 struct GEN7_3DSTATE_SF {
    uint32_t                                     CommandType;
@@ -3080,14 +3142,14 @@ struct GEN7_3DSTATE_SF {
    uint32_t                                     VertexSubPixelPrecisionSelect;
    uint32_t                                     UsePointWidthState;
    float                                        PointWidth;
-   uint32_t                                     GlobalDepthOffsetConstant;
-   uint32_t                                     GlobalDepthOffsetScale;
-   uint32_t                                     GlobalDepthOffsetClamp;
+   float                                        GlobalDepthOffsetConstant;
+   float                                        GlobalDepthOffsetScale;
+   float                                        GlobalDepthOffsetClamp;
 };
 
 static inline void
 GEN7_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_SF * restrict values)
+                     const struct GEN7_3DSTATE_SF * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3133,20 +3195,19 @@ GEN7_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[4] =
-      __gen_field(values->GlobalDepthOffsetConstant, 0, 31) |
+      __gen_float(values->GlobalDepthOffsetConstant) |
       0;
 
    dw[5] =
-      __gen_field(values->GlobalDepthOffsetScale, 0, 31) |
+      __gen_float(values->GlobalDepthOffsetScale) |
       0;
 
    dw[6] =
-      __gen_field(values->GlobalDepthOffsetClamp, 0, 31) |
+      __gen_float(values->GlobalDepthOffsetClamp) |
       0;
 
 }
 
-#define GEN7_3DSTATE_SO_BUFFER_length 0x00000004
 #define GEN7_3DSTATE_SO_BUFFER_length_bias 0x00000002
 #define GEN7_3DSTATE_SO_BUFFER_header           \
    .CommandType          =  3,                  \
@@ -3154,6 +3215,8 @@ GEN7_3DSTATE_SF_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 24,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_SO_BUFFER_length 0x00000004
 
 struct GEN7_3DSTATE_SO_BUFFER {
    uint32_t                                     CommandType;
@@ -3170,7 +3233,7 @@ struct GEN7_3DSTATE_SO_BUFFER {
 
 static inline void
 GEN7_3DSTATE_SO_BUFFER_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_3DSTATE_SO_BUFFER * restrict values)
+                            const struct GEN7_3DSTATE_SO_BUFFER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3211,6 +3274,12 @@ GEN7_3DSTATE_SO_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  1,                  \
    ._3DCommandSubOpcode  = 23
 
+#define GEN7_3DSTATE_SO_DECL_LIST_length 0x00000000
+
+#define GEN7_SO_DECL_ENTRY_length 0x00000002
+
+#define GEN7_SO_DECL_length 0x00000001
+
 struct GEN7_SO_DECL {
    uint32_t                                     OutputBufferSlot;
    uint32_t                                     HoleFlag;
@@ -3220,7 +3289,7 @@ struct GEN7_SO_DECL {
 
 static inline void
 GEN7_SO_DECL_pack(__gen_user_data *data, void * restrict dst,
-                 const struct GEN7_SO_DECL * restrict values)
+                  const struct GEN7_SO_DECL * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3242,7 +3311,7 @@ struct GEN7_SO_DECL_ENTRY {
 
 static inline void
 GEN7_SO_DECL_ENTRY_pack(__gen_user_data *data, void * restrict dst,
-                       const struct GEN7_SO_DECL_ENTRY * restrict values)
+                        const struct GEN7_SO_DECL_ENTRY * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3285,7 +3354,7 @@ struct GEN7_3DSTATE_SO_DECL_LIST {
 
 static inline void
 GEN7_3DSTATE_SO_DECL_LIST_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_3DSTATE_SO_DECL_LIST * restrict values)
+                               const struct GEN7_3DSTATE_SO_DECL_LIST * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3314,7 +3383,6 @@ GEN7_3DSTATE_SO_DECL_LIST_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_3DSTATE_STENCIL_BUFFER_length 0x00000003
 #define GEN7_3DSTATE_STENCIL_BUFFER_length_bias 0x00000002
 #define GEN7_3DSTATE_STENCIL_BUFFER_header      \
    .CommandType          =  3,                  \
@@ -3322,6 +3390,8 @@ GEN7_3DSTATE_SO_DECL_LIST_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  6,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_STENCIL_BUFFER_length 0x00000003
 
 struct GEN7_3DSTATE_STENCIL_BUFFER {
    uint32_t                                     CommandType;
@@ -3336,7 +3406,7 @@ struct GEN7_3DSTATE_STENCIL_BUFFER {
 
 static inline void
 GEN7_3DSTATE_STENCIL_BUFFER_pack(__gen_user_data *data, void * restrict dst,
-                                const struct GEN7_3DSTATE_STENCIL_BUFFER * restrict values)
+                                 const struct GEN7_3DSTATE_STENCIL_BUFFER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3363,7 +3433,6 @@ GEN7_3DSTATE_STENCIL_BUFFER_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_STREAMOUT_length 0x00000003
 #define GEN7_3DSTATE_STREAMOUT_length_bias 0x00000002
 #define GEN7_3DSTATE_STREAMOUT_header           \
    .CommandType          =  3,                  \
@@ -3371,6 +3440,8 @@ GEN7_3DSTATE_STENCIL_BUFFER_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 30,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_STREAMOUT_length 0x00000003
 
 struct GEN7_3DSTATE_STREAMOUT {
    uint32_t                                     CommandType;
@@ -3401,7 +3472,7 @@ struct GEN7_3DSTATE_STREAMOUT {
 
 static inline void
 GEN7_3DSTATE_STREAMOUT_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_3DSTATE_STREAMOUT * restrict values)
+                            const struct GEN7_3DSTATE_STREAMOUT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3438,7 +3509,6 @@ GEN7_3DSTATE_STREAMOUT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_TE_length 0x00000004
 #define GEN7_3DSTATE_TE_length_bias 0x00000002
 #define GEN7_3DSTATE_TE_header                  \
    .CommandType          =  3,                  \
@@ -3446,6 +3516,8 @@ GEN7_3DSTATE_STREAMOUT_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 28,                  \
    .DwordLength          =  2
+
+#define GEN7_3DSTATE_TE_length 0x00000004
 
 struct GEN7_3DSTATE_TE {
    uint32_t                                     CommandType;
@@ -3476,7 +3548,7 @@ struct GEN7_3DSTATE_TE {
 
 static inline void
 GEN7_3DSTATE_TE_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_TE * restrict values)
+                     const struct GEN7_3DSTATE_TE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3506,7 +3578,6 @@ GEN7_3DSTATE_TE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_URB_DS_length 0x00000002
 #define GEN7_3DSTATE_URB_DS_length_bias 0x00000002
 #define GEN7_3DSTATE_URB_DS_header              \
    .CommandType          =  3,                  \
@@ -3514,6 +3585,8 @@ GEN7_3DSTATE_TE_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 50,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_URB_DS_length 0x00000002
 
 struct GEN7_3DSTATE_URB_DS {
    uint32_t                                     CommandType;
@@ -3528,7 +3601,7 @@ struct GEN7_3DSTATE_URB_DS {
 
 static inline void
 GEN7_3DSTATE_URB_DS_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_3DSTATE_URB_DS * restrict values)
+                         const struct GEN7_3DSTATE_URB_DS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3548,7 +3621,6 @@ GEN7_3DSTATE_URB_DS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_URB_GS_length 0x00000002
 #define GEN7_3DSTATE_URB_GS_length_bias 0x00000002
 #define GEN7_3DSTATE_URB_GS_header              \
    .CommandType          =  3,                  \
@@ -3556,6 +3628,8 @@ GEN7_3DSTATE_URB_DS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 51,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_URB_GS_length 0x00000002
 
 struct GEN7_3DSTATE_URB_GS {
    uint32_t                                     CommandType;
@@ -3570,7 +3644,7 @@ struct GEN7_3DSTATE_URB_GS {
 
 static inline void
 GEN7_3DSTATE_URB_GS_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_3DSTATE_URB_GS * restrict values)
+                         const struct GEN7_3DSTATE_URB_GS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3590,7 +3664,6 @@ GEN7_3DSTATE_URB_GS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_URB_HS_length 0x00000002
 #define GEN7_3DSTATE_URB_HS_length_bias 0x00000002
 #define GEN7_3DSTATE_URB_HS_header              \
    .CommandType          =  3,                  \
@@ -3598,6 +3671,8 @@ GEN7_3DSTATE_URB_GS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 49,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_URB_HS_length 0x00000002
 
 struct GEN7_3DSTATE_URB_HS {
    uint32_t                                     CommandType;
@@ -3612,7 +3687,7 @@ struct GEN7_3DSTATE_URB_HS {
 
 static inline void
 GEN7_3DSTATE_URB_HS_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_3DSTATE_URB_HS * restrict values)
+                         const struct GEN7_3DSTATE_URB_HS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3639,6 +3714,10 @@ GEN7_3DSTATE_URB_HS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  8
 
+#define GEN7_3DSTATE_VERTEX_BUFFERS_length 0x00000000
+
+#define GEN7_VERTEX_BUFFER_STATE_length 0x00000004
+
 struct GEN7_VERTEX_BUFFER_STATE {
    uint32_t                                     VertexBufferIndex;
 #define     VERTEXDATA                                         0
@@ -3656,7 +3735,7 @@ struct GEN7_VERTEX_BUFFER_STATE {
 
 static inline void
 GEN7_VERTEX_BUFFER_STATE_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_VERTEX_BUFFER_STATE * restrict values)
+                              const struct GEN7_VERTEX_BUFFER_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3701,7 +3780,7 @@ struct GEN7_3DSTATE_VERTEX_BUFFERS {
 
 static inline void
 GEN7_3DSTATE_VERTEX_BUFFERS_pack(__gen_user_data *data, void * restrict dst,
-                                const struct GEN7_3DSTATE_VERTEX_BUFFERS * restrict values)
+                                 const struct GEN7_3DSTATE_VERTEX_BUFFERS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3723,6 +3802,10 @@ GEN7_3DSTATE_VERTEX_BUFFERS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  =  9
 
+#define GEN7_3DSTATE_VERTEX_ELEMENTS_length 0x00000000
+
+#define GEN7_VERTEX_ELEMENT_STATE_length 0x00000002
+
 struct GEN7_VERTEX_ELEMENT_STATE {
    uint32_t                                     VertexBufferIndex;
    bool                                         Valid;
@@ -3737,7 +3820,7 @@ struct GEN7_VERTEX_ELEMENT_STATE {
 
 static inline void
 GEN7_VERTEX_ELEMENT_STATE_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_VERTEX_ELEMENT_STATE * restrict values)
+                               const struct GEN7_VERTEX_ELEMENT_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3769,7 +3852,7 @@ struct GEN7_3DSTATE_VERTEX_ELEMENTS {
 
 static inline void
 GEN7_3DSTATE_VERTEX_ELEMENTS_pack(__gen_user_data *data, void * restrict dst,
-                                 const struct GEN7_3DSTATE_VERTEX_ELEMENTS * restrict values)
+                                  const struct GEN7_3DSTATE_VERTEX_ELEMENTS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3784,13 +3867,14 @@ GEN7_3DSTATE_VERTEX_ELEMENTS_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_3DSTATE_VF_STATISTICS_length 0x00000001
 #define GEN7_3DSTATE_VF_STATISTICS_length_bias 0x00000001
 #define GEN7_3DSTATE_VF_STATISTICS_header       \
    .CommandType          =  3,                  \
    .CommandSubType       =  1,                  \
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 11
+
+#define GEN7_3DSTATE_VF_STATISTICS_length 0x00000001
 
 struct GEN7_3DSTATE_VF_STATISTICS {
    uint32_t                                     CommandType;
@@ -3802,7 +3886,7 @@ struct GEN7_3DSTATE_VF_STATISTICS {
 
 static inline void
 GEN7_3DSTATE_VF_STATISTICS_pack(__gen_user_data *data, void * restrict dst,
-                               const struct GEN7_3DSTATE_VF_STATISTICS * restrict values)
+                                const struct GEN7_3DSTATE_VF_STATISTICS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3816,7 +3900,6 @@ GEN7_3DSTATE_VF_STATISTICS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_length 0x00000002
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_length_bias 0x00000002
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_header\
    .CommandType          =  3,                  \
@@ -3824,6 +3907,8 @@ GEN7_3DSTATE_VF_STATISTICS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 35,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_length 0x00000002
 
 struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC {
    uint32_t                                     CommandType;
@@ -3836,7 +3921,7 @@ struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC {
 
 static inline void
 GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_pack(__gen_user_data *data, void * restrict dst,
-                                            const struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC * restrict values)
+                                             const struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3854,7 +3939,6 @@ GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_pack(__gen_user_data *data, void * restr
 
 }
 
-#define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_length 0x00000002
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_length_bias 0x00000002
 #define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_header\
    .CommandType          =  3,                  \
@@ -3862,6 +3946,8 @@ GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC_pack(__gen_user_data *data, void * restr
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 33,                  \
    .DwordLength          =  0
+
+#define GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_length 0x00000002
 
 struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP {
    uint32_t                                     CommandType;
@@ -3874,7 +3960,7 @@ struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP {
 
 static inline void
 GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_pack(__gen_user_data *data, void * restrict dst,
-                                                 const struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP * restrict values)
+                                                  const struct GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3892,7 +3978,6 @@ GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_pack(__gen_user_data *data, void * 
 
 }
 
-#define GEN7_3DSTATE_VS_length 0x00000006
 #define GEN7_3DSTATE_VS_length_bias 0x00000002
 #define GEN7_3DSTATE_VS_header                  \
    .CommandType          =  3,                  \
@@ -3900,6 +3985,8 @@ GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP_pack(__gen_user_data *data, void * 
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 16,                  \
    .DwordLength          =  4
+
+#define GEN7_3DSTATE_VS_length 0x00000006
 
 struct GEN7_3DSTATE_VS {
    uint32_t                                     CommandType;
@@ -3939,7 +4026,7 @@ struct GEN7_3DSTATE_VS {
 
 static inline void
 GEN7_3DSTATE_VS_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_VS * restrict values)
+                     const struct GEN7_3DSTATE_VS * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -3985,7 +4072,6 @@ GEN7_3DSTATE_VS_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_WM_length 0x00000003
 #define GEN7_3DSTATE_WM_length_bias 0x00000002
 #define GEN7_3DSTATE_WM_header                  \
    .CommandType          =  3,                  \
@@ -3993,6 +4079,8 @@ GEN7_3DSTATE_VS_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  0,                  \
    ._3DCommandSubOpcode  = 20,                  \
    .DwordLength          =  1
+
+#define GEN7_3DSTATE_WM_length 0x00000003
 
 struct GEN7_3DSTATE_WM {
    uint32_t                                     CommandType;
@@ -4043,7 +4131,7 @@ struct GEN7_3DSTATE_WM {
 
 static inline void
 GEN7_3DSTATE_WM_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_3DSTATE_WM * restrict values)
+                     const struct GEN7_3DSTATE_WM * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4084,7 +4172,6 @@ GEN7_3DSTATE_WM_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_GPGPU_OBJECT_length 0x00000008
 #define GEN7_GPGPU_OBJECT_length_bias 0x00000002
 #define GEN7_GPGPU_OBJECT_header                \
    .CommandType          =  3,                  \
@@ -4092,6 +4179,8 @@ GEN7_3DSTATE_WM_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  1,                  \
    .SubOpcode            =  4,                  \
    .DwordLength          =  6
+
+#define GEN7_GPGPU_OBJECT_length 0x00000008
 
 struct GEN7_GPGPU_OBJECT {
    uint32_t                                     CommandType;
@@ -4118,7 +4207,7 @@ struct GEN7_GPGPU_OBJECT {
 
 static inline void
 GEN7_GPGPU_OBJECT_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_GPGPU_OBJECT * restrict values)
+                       const struct GEN7_GPGPU_OBJECT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4165,7 +4254,6 @@ GEN7_GPGPU_OBJECT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_GPGPU_WALKER_length 0x0000000b
 #define GEN7_GPGPU_WALKER_length_bias 0x00000002
 #define GEN7_GPGPU_WALKER_header                \
    .CommandType          =  3,                  \
@@ -4173,6 +4261,8 @@ GEN7_GPGPU_OBJECT_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  1,                  \
    .SubOpcodeA           =  5,                  \
    .DwordLength          =  9
+
+#define GEN7_GPGPU_WALKER_length 0x0000000b
 
 struct GEN7_GPGPU_WALKER {
    uint32_t                                     CommandType;
@@ -4202,7 +4292,7 @@ struct GEN7_GPGPU_WALKER {
 
 static inline void
 GEN7_GPGPU_WALKER_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_GPGPU_WALKER * restrict values)
+                       const struct GEN7_GPGPU_WALKER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4261,7 +4351,6 @@ GEN7_GPGPU_WALKER_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MEDIA_CURBE_LOAD_length 0x00000004
 #define GEN7_MEDIA_CURBE_LOAD_length_bias 0x00000002
 #define GEN7_MEDIA_CURBE_LOAD_header            \
    .CommandType          =  3,                  \
@@ -4269,6 +4358,8 @@ GEN7_GPGPU_WALKER_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  0,                  \
    .SubOpcode            =  1,                  \
    .DwordLength          =  2
+
+#define GEN7_MEDIA_CURBE_LOAD_length 0x00000004
 
 struct GEN7_MEDIA_CURBE_LOAD {
    uint32_t                                     CommandType;
@@ -4282,7 +4373,7 @@ struct GEN7_MEDIA_CURBE_LOAD {
 
 static inline void
 GEN7_MEDIA_CURBE_LOAD_pack(__gen_user_data *data, void * restrict dst,
-                          const struct GEN7_MEDIA_CURBE_LOAD * restrict values)
+                           const struct GEN7_MEDIA_CURBE_LOAD * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4307,7 +4398,6 @@ GEN7_MEDIA_CURBE_LOAD_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_length 0x00000004
 #define GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_length_bias 0x00000002
 #define GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_header\
    .CommandType          =  3,                  \
@@ -4315,6 +4405,8 @@ GEN7_MEDIA_CURBE_LOAD_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  0,                  \
    .SubOpcode            =  2,                  \
    .DwordLength          =  2
+
+#define GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_length 0x00000004
 
 struct GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD {
    uint32_t                                     CommandType;
@@ -4328,7 +4420,7 @@ struct GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD {
 
 static inline void
 GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_pack(__gen_user_data *data, void * restrict dst,
-                                         const struct GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD * restrict values)
+                                          const struct GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4360,6 +4452,8 @@ GEN7_MEDIA_INTERFACE_DESCRIPTOR_LOAD_pack(__gen_user_data *data, void * restrict
    .MediaCommandOpcode   =  1,                  \
    .MediaCommandSubOpcode =  0
 
+#define GEN7_MEDIA_OBJECT_length 0x00000000
+
 struct GEN7_MEDIA_OBJECT {
    uint32_t                                     CommandType;
    uint32_t                                     MediaCommandPipeline;
@@ -4389,7 +4483,7 @@ struct GEN7_MEDIA_OBJECT {
 
 static inline void
 GEN7_MEDIA_OBJECT_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_MEDIA_OBJECT * restrict values)
+                       const struct GEN7_MEDIA_OBJECT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4432,7 +4526,6 @@ GEN7_MEDIA_OBJECT_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_MEDIA_OBJECT_PRT_length 0x00000010
 #define GEN7_MEDIA_OBJECT_PRT_length_bias 0x00000002
 #define GEN7_MEDIA_OBJECT_PRT_header            \
    .CommandType          =  3,                  \
@@ -4440,6 +4533,8 @@ GEN7_MEDIA_OBJECT_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  1,                  \
    .SubOpcode            =  2,                  \
    .DwordLength          = 14
+
+#define GEN7_MEDIA_OBJECT_PRT_length 0x00000010
 
 struct GEN7_MEDIA_OBJECT_PRT {
    uint32_t                                     CommandType;
@@ -4458,7 +4553,7 @@ struct GEN7_MEDIA_OBJECT_PRT {
 
 static inline void
 GEN7_MEDIA_OBJECT_PRT_pack(__gen_user_data *data, void * restrict dst,
-                          const struct GEN7_MEDIA_OBJECT_PRT * restrict values)
+                           const struct GEN7_MEDIA_OBJECT_PRT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4497,6 +4592,8 @@ GEN7_MEDIA_OBJECT_PRT_pack(__gen_user_data *data, void * restrict dst,
    .Pipeline             =  2,                  \
    .MediaCommandOpcode   =  1,                  \
    .SubOpcode            =  3
+
+#define GEN7_MEDIA_OBJECT_WALKER_length 0x00000000
 
 struct GEN7_MEDIA_OBJECT_WALKER {
    uint32_t                                     CommandType;
@@ -4546,7 +4643,7 @@ struct GEN7_MEDIA_OBJECT_WALKER {
 
 static inline void
 GEN7_MEDIA_OBJECT_WALKER_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_MEDIA_OBJECT_WALKER * restrict values)
+                              const struct GEN7_MEDIA_OBJECT_WALKER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4642,7 +4739,6 @@ GEN7_MEDIA_OBJECT_WALKER_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_MEDIA_STATE_FLUSH_length 0x00000002
 #define GEN7_MEDIA_STATE_FLUSH_length_bias 0x00000002
 #define GEN7_MEDIA_STATE_FLUSH_header           \
    .CommandType          =  3,                  \
@@ -4650,6 +4746,8 @@ GEN7_MEDIA_OBJECT_WALKER_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  0,                  \
    .SubOpcode            =  4,                  \
    .DwordLength          =  0
+
+#define GEN7_MEDIA_STATE_FLUSH_length 0x00000002
 
 struct GEN7_MEDIA_STATE_FLUSH {
    uint32_t                                     CommandType;
@@ -4663,7 +4761,7 @@ struct GEN7_MEDIA_STATE_FLUSH {
 
 static inline void
 GEN7_MEDIA_STATE_FLUSH_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_MEDIA_STATE_FLUSH * restrict values)
+                            const struct GEN7_MEDIA_STATE_FLUSH * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4682,7 +4780,6 @@ GEN7_MEDIA_STATE_FLUSH_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MEDIA_VFE_STATE_length 0x00000008
 #define GEN7_MEDIA_VFE_STATE_length_bias 0x00000002
 #define GEN7_MEDIA_VFE_STATE_header             \
    .CommandType          =  3,                  \
@@ -4690,6 +4787,8 @@ GEN7_MEDIA_STATE_FLUSH_pack(__gen_user_data *data, void * restrict dst,
    .MediaCommandOpcode   =  0,                  \
    .SubOpcode            =  0,                  \
    .DwordLength          =  6
+
+#define GEN7_MEDIA_VFE_STATE_length 0x00000008
 
 struct GEN7_MEDIA_VFE_STATE {
    uint32_t                                     CommandType;
@@ -4740,7 +4839,7 @@ struct GEN7_MEDIA_VFE_STATE {
 
 static inline void
 GEN7_MEDIA_VFE_STATE_pack(__gen_user_data *data, void * restrict dst,
-                         const struct GEN7_MEDIA_VFE_STATE * restrict values)
+                          const struct GEN7_MEDIA_VFE_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4804,11 +4903,12 @@ GEN7_MEDIA_VFE_STATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_ARB_CHECK_length 0x00000001
 #define GEN7_MI_ARB_CHECK_length_bias 0x00000001
 #define GEN7_MI_ARB_CHECK_header                \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  5
+
+#define GEN7_MI_ARB_CHECK_length 0x00000001
 
 struct GEN7_MI_ARB_CHECK {
    uint32_t                                     CommandType;
@@ -4817,7 +4917,7 @@ struct GEN7_MI_ARB_CHECK {
 
 static inline void
 GEN7_MI_ARB_CHECK_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_MI_ARB_CHECK * restrict values)
+                       const struct GEN7_MI_ARB_CHECK * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4828,11 +4928,12 @@ GEN7_MI_ARB_CHECK_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_ARB_ON_OFF_length 0x00000001
 #define GEN7_MI_ARB_ON_OFF_length_bias 0x00000001
 #define GEN7_MI_ARB_ON_OFF_header               \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  8
+
+#define GEN7_MI_ARB_ON_OFF_length 0x00000001
 
 struct GEN7_MI_ARB_ON_OFF {
    uint32_t                                     CommandType;
@@ -4842,7 +4943,7 @@ struct GEN7_MI_ARB_ON_OFF {
 
 static inline void
 GEN7_MI_ARB_ON_OFF_pack(__gen_user_data *data, void * restrict dst,
-                       const struct GEN7_MI_ARB_ON_OFF * restrict values)
+                        const struct GEN7_MI_ARB_ON_OFF * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4854,11 +4955,12 @@ GEN7_MI_ARB_ON_OFF_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_BATCH_BUFFER_END_length 0x00000001
 #define GEN7_MI_BATCH_BUFFER_END_length_bias 0x00000001
 #define GEN7_MI_BATCH_BUFFER_END_header         \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 10
+
+#define GEN7_MI_BATCH_BUFFER_END_length 0x00000001
 
 struct GEN7_MI_BATCH_BUFFER_END {
    uint32_t                                     CommandType;
@@ -4867,7 +4969,7 @@ struct GEN7_MI_BATCH_BUFFER_END {
 
 static inline void
 GEN7_MI_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_MI_BATCH_BUFFER_END * restrict values)
+                              const struct GEN7_MI_BATCH_BUFFER_END * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4878,12 +4980,13 @@ GEN7_MI_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_BATCH_BUFFER_START_length 0x00000002
 #define GEN7_MI_BATCH_BUFFER_START_length_bias 0x00000002
 #define GEN7_MI_BATCH_BUFFER_START_header       \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 49,                  \
    .DwordLength          =  0
+
+#define GEN7_MI_BATCH_BUFFER_START_length 0x00000002
 
 struct GEN7_MI_BATCH_BUFFER_START {
    uint32_t                                     CommandType;
@@ -4898,7 +5001,7 @@ struct GEN7_MI_BATCH_BUFFER_START {
 
 static inline void
 GEN7_MI_BATCH_BUFFER_START_pack(__gen_user_data *data, void * restrict dst,
-                               const struct GEN7_MI_BATCH_BUFFER_START * restrict values)
+                                const struct GEN7_MI_BATCH_BUFFER_START * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4923,6 +5026,8 @@ GEN7_MI_BATCH_BUFFER_START_pack(__gen_user_data *data, void * restrict dst,
    .CommandType          =  0,                  \
    .MICommandOpcode      = 39
 
+#define GEN7_MI_CLFLUSH_length 0x00000000
+
 struct GEN7_MI_CLFLUSH {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
@@ -4938,7 +5043,7 @@ struct GEN7_MI_CLFLUSH {
 
 static inline void
 GEN7_MI_CLFLUSH_pack(__gen_user_data *data, void * restrict dst,
-                    const struct GEN7_MI_CLFLUSH * restrict values)
+                     const struct GEN7_MI_CLFLUSH * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -4965,7 +5070,6 @@ GEN7_MI_CLFLUSH_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_length 0x00000002
 #define GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_length_bias 0x00000002
 #define GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_header\
    .CommandType          =  0,                  \
@@ -4973,6 +5077,8 @@ GEN7_MI_CLFLUSH_pack(__gen_user_data *data, void * restrict dst,
    .UseGlobalGTT         =  0,                  \
    .CompareSemaphore     =  0,                  \
    .DwordLength          =  0
+
+#define GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_length 0x00000002
 
 struct GEN7_MI_CONDITIONAL_BATCH_BUFFER_END {
    uint32_t                                     CommandType;
@@ -4986,7 +5092,7 @@ struct GEN7_MI_CONDITIONAL_BATCH_BUFFER_END {
 
 static inline void
 GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restrict dst,
-                                         const struct GEN7_MI_CONDITIONAL_BATCH_BUFFER_END * restrict values)
+                                          const struct GEN7_MI_CONDITIONAL_BATCH_BUFFER_END * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5010,11 +5116,12 @@ GEN7_MI_CONDITIONAL_BATCH_BUFFER_END_pack(__gen_user_data *data, void * restrict
 
 }
 
-#define GEN7_MI_FLUSH_length 0x00000001
 #define GEN7_MI_FLUSH_length_bias 0x00000001
 #define GEN7_MI_FLUSH_header                    \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  4
+
+#define GEN7_MI_FLUSH_length 0x00000001
 
 struct GEN7_MI_FLUSH {
    uint32_t                                     CommandType;
@@ -5034,7 +5141,7 @@ struct GEN7_MI_FLUSH {
 
 static inline void
 GEN7_MI_FLUSH_pack(__gen_user_data *data, void * restrict dst,
-                  const struct GEN7_MI_FLUSH * restrict values)
+                   const struct GEN7_MI_FLUSH * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5050,12 +5157,13 @@ GEN7_MI_FLUSH_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_LOAD_REGISTER_IMM_length 0x00000003
 #define GEN7_MI_LOAD_REGISTER_IMM_length_bias 0x00000002
 #define GEN7_MI_LOAD_REGISTER_IMM_header        \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 34,                  \
    .DwordLength          =  1
+
+#define GEN7_MI_LOAD_REGISTER_IMM_length 0x00000003
 
 struct GEN7_MI_LOAD_REGISTER_IMM {
    uint32_t                                     CommandType;
@@ -5068,7 +5176,7 @@ struct GEN7_MI_LOAD_REGISTER_IMM {
 
 static inline void
 GEN7_MI_LOAD_REGISTER_IMM_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_MI_LOAD_REGISTER_IMM * restrict values)
+                               const struct GEN7_MI_LOAD_REGISTER_IMM * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5089,12 +5197,13 @@ GEN7_MI_LOAD_REGISTER_IMM_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_LOAD_REGISTER_MEM_length 0x00000003
 #define GEN7_MI_LOAD_REGISTER_MEM_length_bias 0x00000002
 #define GEN7_MI_LOAD_REGISTER_MEM_header        \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 41,                  \
    .DwordLength          =  1
+
+#define GEN7_MI_LOAD_REGISTER_MEM_length 0x00000003
 
 struct GEN7_MI_LOAD_REGISTER_MEM {
    uint32_t                                     CommandType;
@@ -5108,7 +5217,7 @@ struct GEN7_MI_LOAD_REGISTER_MEM {
 
 static inline void
 GEN7_MI_LOAD_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_MI_LOAD_REGISTER_MEM * restrict values)
+                               const struct GEN7_MI_LOAD_REGISTER_MEM * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5132,11 +5241,12 @@ GEN7_MI_LOAD_REGISTER_MEM_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_NOOP_length 0x00000001
 #define GEN7_MI_NOOP_length_bias 0x00000001
 #define GEN7_MI_NOOP_header                     \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  0
+
+#define GEN7_MI_NOOP_length 0x00000001
 
 struct GEN7_MI_NOOP {
    uint32_t                                     CommandType;
@@ -5147,7 +5257,7 @@ struct GEN7_MI_NOOP {
 
 static inline void
 GEN7_MI_NOOP_pack(__gen_user_data *data, void * restrict dst,
-                 const struct GEN7_MI_NOOP * restrict values)
+                  const struct GEN7_MI_NOOP * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5160,11 +5270,12 @@ GEN7_MI_NOOP_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_PREDICATE_length 0x00000001
 #define GEN7_MI_PREDICATE_length_bias 0x00000001
 #define GEN7_MI_PREDICATE_header                \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 12
+
+#define GEN7_MI_PREDICATE_length 0x00000001
 
 struct GEN7_MI_PREDICATE {
    uint32_t                                     CommandType;
@@ -5185,7 +5296,7 @@ struct GEN7_MI_PREDICATE {
 
 static inline void
 GEN7_MI_PREDICATE_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_MI_PREDICATE * restrict values)
+                       const struct GEN7_MI_PREDICATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5199,11 +5310,12 @@ GEN7_MI_PREDICATE_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_REPORT_HEAD_length 0x00000001
 #define GEN7_MI_REPORT_HEAD_length_bias 0x00000001
 #define GEN7_MI_REPORT_HEAD_header              \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  7
+
+#define GEN7_MI_REPORT_HEAD_length 0x00000001
 
 struct GEN7_MI_REPORT_HEAD {
    uint32_t                                     CommandType;
@@ -5212,7 +5324,7 @@ struct GEN7_MI_REPORT_HEAD {
 
 static inline void
 GEN7_MI_REPORT_HEAD_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_MI_REPORT_HEAD * restrict values)
+                         const struct GEN7_MI_REPORT_HEAD * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5223,12 +5335,13 @@ GEN7_MI_REPORT_HEAD_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_SEMAPHORE_MBOX_length 0x00000003
 #define GEN7_MI_SEMAPHORE_MBOX_length_bias 0x00000002
 #define GEN7_MI_SEMAPHORE_MBOX_header           \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 22,                  \
    .DwordLength          =  1
+
+#define GEN7_MI_SEMAPHORE_MBOX_length 0x00000003
 
 struct GEN7_MI_SEMAPHORE_MBOX {
    uint32_t                                     CommandType;
@@ -5243,7 +5356,7 @@ struct GEN7_MI_SEMAPHORE_MBOX {
 
 static inline void
 GEN7_MI_SEMAPHORE_MBOX_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_MI_SEMAPHORE_MBOX * restrict values)
+                            const struct GEN7_MI_SEMAPHORE_MBOX * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5263,12 +5376,13 @@ GEN7_MI_SEMAPHORE_MBOX_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_SET_CONTEXT_length 0x00000002
 #define GEN7_MI_SET_CONTEXT_length_bias 0x00000002
 #define GEN7_MI_SET_CONTEXT_header              \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 24,                  \
    .DwordLength          =  0
+
+#define GEN7_MI_SET_CONTEXT_length 0x00000002
 
 struct GEN7_MI_SET_CONTEXT {
    uint32_t                                     CommandType;
@@ -5284,7 +5398,7 @@ struct GEN7_MI_SET_CONTEXT {
 
 static inline void
 GEN7_MI_SET_CONTEXT_pack(__gen_user_data *data, void * restrict dst,
-                        const struct GEN7_MI_SET_CONTEXT * restrict values)
+                         const struct GEN7_MI_SET_CONTEXT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5307,12 +5421,13 @@ GEN7_MI_SET_CONTEXT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_STORE_DATA_IMM_length 0x00000004
 #define GEN7_MI_STORE_DATA_IMM_length_bias 0x00000002
 #define GEN7_MI_STORE_DATA_IMM_header           \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 32,                  \
    .DwordLength          =  2
+
+#define GEN7_MI_STORE_DATA_IMM_length 0x00000004
 
 struct GEN7_MI_STORE_DATA_IMM {
    uint32_t                                     CommandType;
@@ -5327,7 +5442,7 @@ struct GEN7_MI_STORE_DATA_IMM {
 
 static inline void
 GEN7_MI_STORE_DATA_IMM_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_MI_STORE_DATA_IMM * restrict values)
+                            const struct GEN7_MI_STORE_DATA_IMM * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5356,12 +5471,13 @@ GEN7_MI_STORE_DATA_IMM_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_STORE_DATA_INDEX_length 0x00000003
 #define GEN7_MI_STORE_DATA_INDEX_length_bias 0x00000002
 #define GEN7_MI_STORE_DATA_INDEX_header         \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 33,                  \
    .DwordLength          =  1
+
+#define GEN7_MI_STORE_DATA_INDEX_length 0x00000003
 
 struct GEN7_MI_STORE_DATA_INDEX {
    uint32_t                                     CommandType;
@@ -5374,7 +5490,7 @@ struct GEN7_MI_STORE_DATA_INDEX {
 
 static inline void
 GEN7_MI_STORE_DATA_INDEX_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_MI_STORE_DATA_INDEX * restrict values)
+                              const struct GEN7_MI_STORE_DATA_INDEX * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5398,11 +5514,12 @@ GEN7_MI_STORE_DATA_INDEX_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_SUSPEND_FLUSH_length 0x00000001
 #define GEN7_MI_SUSPEND_FLUSH_length_bias 0x00000001
 #define GEN7_MI_SUSPEND_FLUSH_header            \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 11
+
+#define GEN7_MI_SUSPEND_FLUSH_length 0x00000001
 
 struct GEN7_MI_SUSPEND_FLUSH {
    uint32_t                                     CommandType;
@@ -5412,7 +5529,7 @@ struct GEN7_MI_SUSPEND_FLUSH {
 
 static inline void
 GEN7_MI_SUSPEND_FLUSH_pack(__gen_user_data *data, void * restrict dst,
-                          const struct GEN7_MI_SUSPEND_FLUSH * restrict values)
+                           const struct GEN7_MI_SUSPEND_FLUSH * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5424,11 +5541,12 @@ GEN7_MI_SUSPEND_FLUSH_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_TOPOLOGY_FILTER_length 0x00000001
 #define GEN7_MI_TOPOLOGY_FILTER_length_bias 0x00000001
 #define GEN7_MI_TOPOLOGY_FILTER_header          \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 13
+
+#define GEN7_MI_TOPOLOGY_FILTER_length 0x00000001
 
 struct GEN7_MI_TOPOLOGY_FILTER {
    uint32_t                                     CommandType;
@@ -5438,7 +5556,7 @@ struct GEN7_MI_TOPOLOGY_FILTER {
 
 static inline void
 GEN7_MI_TOPOLOGY_FILTER_pack(__gen_user_data *data, void * restrict dst,
-                            const struct GEN7_MI_TOPOLOGY_FILTER * restrict values)
+                             const struct GEN7_MI_TOPOLOGY_FILTER * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5455,6 +5573,8 @@ GEN7_MI_TOPOLOGY_FILTER_pack(__gen_user_data *data, void * restrict dst,
    .CommandType          =  0,                  \
    .MICommandOpcode      = 35
 
+#define GEN7_MI_UPDATE_GTT_length 0x00000000
+
 struct GEN7_MI_UPDATE_GTT {
    uint32_t                                     CommandType;
    uint32_t                                     MICommandOpcode;
@@ -5468,7 +5588,7 @@ struct GEN7_MI_UPDATE_GTT {
 
 static inline void
 GEN7_MI_UPDATE_GTT_pack(__gen_user_data *data, void * restrict dst,
-                       const struct GEN7_MI_UPDATE_GTT * restrict values)
+                        const struct GEN7_MI_UPDATE_GTT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5488,12 +5608,13 @@ GEN7_MI_UPDATE_GTT_pack(__gen_user_data *data, void * restrict dst,
    /* variable length fields follow */
 }
 
-#define GEN7_MI_URB_CLEAR_length 0x00000002
 #define GEN7_MI_URB_CLEAR_length_bias 0x00000002
 #define GEN7_MI_URB_CLEAR_header                \
    .CommandType          =  0,                  \
    .MICommandOpcode      = 25,                  \
    .DwordLength          =  0
+
+#define GEN7_MI_URB_CLEAR_length 0x00000002
 
 struct GEN7_MI_URB_CLEAR {
    uint32_t                                     CommandType;
@@ -5505,7 +5626,7 @@ struct GEN7_MI_URB_CLEAR {
 
 static inline void
 GEN7_MI_URB_CLEAR_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_MI_URB_CLEAR * restrict values)
+                       const struct GEN7_MI_URB_CLEAR * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5522,11 +5643,12 @@ GEN7_MI_URB_CLEAR_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_USER_INTERRUPT_length 0x00000001
 #define GEN7_MI_USER_INTERRUPT_length_bias 0x00000001
 #define GEN7_MI_USER_INTERRUPT_header           \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  2
+
+#define GEN7_MI_USER_INTERRUPT_length 0x00000001
 
 struct GEN7_MI_USER_INTERRUPT {
    uint32_t                                     CommandType;
@@ -5535,7 +5657,7 @@ struct GEN7_MI_USER_INTERRUPT {
 
 static inline void
 GEN7_MI_USER_INTERRUPT_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_MI_USER_INTERRUPT * restrict values)
+                            const struct GEN7_MI_USER_INTERRUPT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5546,11 +5668,12 @@ GEN7_MI_USER_INTERRUPT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_MI_WAIT_FOR_EVENT_length 0x00000001
 #define GEN7_MI_WAIT_FOR_EVENT_length_bias 0x00000001
 #define GEN7_MI_WAIT_FOR_EVENT_header           \
    .CommandType          =  0,                  \
    .MICommandOpcode      =  3
+
+#define GEN7_MI_WAIT_FOR_EVENT_length 0x00000001
 
 struct GEN7_MI_WAIT_FOR_EVENT {
    uint32_t                                     CommandType;
@@ -5576,7 +5699,7 @@ struct GEN7_MI_WAIT_FOR_EVENT {
 
 static inline void
 GEN7_MI_WAIT_FOR_EVENT_pack(__gen_user_data *data, void * restrict dst,
-                           const struct GEN7_MI_WAIT_FOR_EVENT * restrict values)
+                            const struct GEN7_MI_WAIT_FOR_EVENT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5603,7 +5726,6 @@ GEN7_MI_WAIT_FOR_EVENT_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_PIPE_CONTROL_length 0x00000005
 #define GEN7_PIPE_CONTROL_length_bias 0x00000002
 #define GEN7_PIPE_CONTROL_header                \
    .CommandType          =  3,                  \
@@ -5611,6 +5733,8 @@ GEN7_MI_WAIT_FOR_EVENT_pack(__gen_user_data *data, void * restrict dst,
    ._3DCommandOpcode     =  2,                  \
    ._3DCommandSubOpcode  =  0,                  \
    .DwordLength          =  3
+
+#define GEN7_PIPE_CONTROL_length 0x00000005
 
 struct GEN7_PIPE_CONTROL {
    uint32_t                                     CommandType;
@@ -5660,7 +5784,7 @@ struct GEN7_PIPE_CONTROL {
 
 static inline void
 GEN7_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_PIPE_CONTROL * restrict values)
+                       const struct GEN7_PIPE_CONTROL * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5712,16 +5836,6 @@ GEN7_PIPE_CONTROL_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_3DSTATE_CONSTANT_BODY_length 0x00000006
-
-#define GEN7_VERTEX_BUFFER_STATE_length 0x00000004
-
-#define GEN7_VERTEX_ELEMENT_STATE_length 0x00000002
-
-#define GEN7_SO_DECL_ENTRY_length 0x00000002
-
-#define GEN7_SO_DECL_length 0x00000001
-
 #define GEN7_SCISSOR_RECT_length 0x00000002
 
 struct GEN7_SCISSOR_RECT {
@@ -5733,7 +5847,7 @@ struct GEN7_SCISSOR_RECT {
 
 static inline void
 GEN7_SCISSOR_RECT_pack(__gen_user_data *data, void * restrict dst,
-                      const struct GEN7_SCISSOR_RECT * restrict values)
+                       const struct GEN7_SCISSOR_RECT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5766,7 +5880,7 @@ struct GEN7_SF_CLIP_VIEWPORT {
 
 static inline void
 GEN7_SF_CLIP_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
-                          const struct GEN7_SF_CLIP_VIEWPORT * restrict values)
+                           const struct GEN7_SF_CLIP_VIEWPORT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5911,7 +6025,7 @@ struct GEN7_BLEND_STATE {
 
 static inline void
 GEN7_BLEND_STATE_pack(__gen_user_data *data, void * restrict dst,
-                     const struct GEN7_BLEND_STATE * restrict values)
+                      const struct GEN7_BLEND_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5957,7 +6071,7 @@ struct GEN7_CC_VIEWPORT {
 
 static inline void
 GEN7_CC_VIEWPORT_pack(__gen_user_data *data, void * restrict dst,
-                     const struct GEN7_CC_VIEWPORT * restrict values)
+                      const struct GEN7_CC_VIEWPORT * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -5992,7 +6106,7 @@ struct GEN7_COLOR_CALC_STATE {
 
 static inline void
 GEN7_COLOR_CALC_STATE_pack(__gen_user_data *data, void * restrict dst,
-                          const struct GEN7_COLOR_CALC_STATE * restrict values)
+                           const struct GEN7_COLOR_CALC_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -6091,7 +6205,7 @@ struct GEN7_DEPTH_STENCIL_STATE {
 
 static inline void
 GEN7_DEPTH_STENCIL_STATE_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_DEPTH_STENCIL_STATE * restrict values)
+                              const struct GEN7_DEPTH_STENCIL_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -6123,8 +6237,6 @@ GEN7_DEPTH_STENCIL_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
 }
-
-#define GEN7_MEMORY_OBJECT_CONTROL_STATE_length 0x00000001
 
 #define GEN7_INTERFACE_DESCRIPTOR_DATA_length 0x00000008
 
@@ -6165,7 +6277,7 @@ struct GEN7_INTERFACE_DESCRIPTOR_DATA {
 
 static inline void
 GEN7_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
-                                   const struct GEN7_INTERFACE_DESCRIPTOR_DATA * restrict values)
+                                    const struct GEN7_INTERFACE_DESCRIPTOR_DATA * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -6212,8 +6324,6 @@ GEN7_INTERFACE_DESCRIPTOR_DATA_pack(__gen_user_data *data, void * restrict dst,
 
 }
 
-#define GEN7_PALETTE_ENTRY_length 0x00000001
-
 #define GEN7_BINDING_TABLE_STATE_length 0x00000001
 
 struct GEN7_BINDING_TABLE_STATE {
@@ -6222,7 +6332,7 @@ struct GEN7_BINDING_TABLE_STATE {
 
 static inline void
 GEN7_BINDING_TABLE_STATE_pack(__gen_user_data *data, void * restrict dst,
-                             const struct GEN7_BINDING_TABLE_STATE * restrict values)
+                              const struct GEN7_BINDING_TABLE_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -6243,7 +6353,7 @@ struct GEN7_RENDER_SURFACE_STATE {
 #define     SURFTYPE_STRBUF                                    5
 #define     SURFTYPE_NULL                                      7
    uint32_t                                     SurfaceType;
-   uint32_t                                     SurfaceArray;
+   bool                                         SurfaceArray;
    uint32_t                                     SurfaceFormat;
    uint32_t                                     SurfaceVerticalAlignment;
 #define     HALIGN_4                                           0
@@ -6264,7 +6374,7 @@ struct GEN7_RENDER_SURFACE_STATE {
 #define     INTERLACED_FRAME                                   3
    uint32_t                                     MediaBoundaryPixelMode;
    uint32_t                                     CubeFaceEnables;
-   uint32_t                                     SurfaceBaseAddress;
+   __gen_address_type                           SurfaceBaseAddress;
    uint32_t                                     Height;
    uint32_t                                     Width;
    uint32_t                                     Depth;
@@ -6286,14 +6396,14 @@ struct GEN7_RENDER_SURFACE_STATE {
    uint32_t                                     MinimumArrayElement0;
    uint32_t                                     XOffset;
    uint32_t                                     YOffset;
-   uint32_t                                     SurfaceObjectControlState;
+   struct GEN7_MEMORY_OBJECT_CONTROL_STATE      SurfaceObjectControlState;
    uint32_t                                     SurfaceMinLOD;
    uint32_t                                     MIPCountLOD;
-   uint32_t                                     MCSBaseAddress;
+   __gen_address_type                           MCSBaseAddress;
    uint32_t                                     MCSSurfacePitch;
-   uint32_t                                     AppendCounterAddress;
-   uint32_t                                     AppendCounterEnable;
-   uint32_t                                     MCSEnable;
+   __gen_address_type                           AppendCounterAddress;
+   bool                                         AppendCounterEnable;
+   bool                                         MCSEnable;
    uint32_t                                     XOffsetforUVPlane;
    uint32_t                                     YOffsetforUVPlane;
 #define     CC_ZERO                                            0
@@ -6308,12 +6418,12 @@ struct GEN7_RENDER_SURFACE_STATE {
 #define     CC_ZERO                                            0
 #define     CC_ONE                                             1
    uint32_t                                     AlphaClearColor;
-   uint32_t                                     ResourceMinLOD;
+   float                                        ResourceMinLOD;
 };
 
 static inline void
 GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
-                              const struct GEN7_RENDER_SURFACE_STATE * restrict values)
+                               const struct GEN7_RENDER_SURFACE_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
@@ -6333,9 +6443,11 @@ GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->CubeFaceEnables, 0, 5) |
       0;
 
-   dw[1] =
-      __gen_field(values->SurfaceBaseAddress, 0, 31) |
+   uint32_t dw1 =
       0;
+
+   dw[1] =
+      __gen_combine_address(data, &dw[1], values->SurfaceBaseAddress, dw1);
 
    dw[2] =
       __gen_field(values->Height, 16, 29) |
@@ -6357,30 +6469,33 @@ GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
       __gen_field(values->MinimumArrayElement, 0, 26) |
       0;
 
+   uint32_t dw_SurfaceObjectControlState;
+   GEN7_MEMORY_OBJECT_CONTROL_STATE_pack(data, &dw_SurfaceObjectControlState, &values->SurfaceObjectControlState);
    dw[5] =
-      __gen_field(values->XOffset, 25, 31) |
-      __gen_field(values->YOffset, 20, 23) |
-      __gen_field(values->SurfaceObjectControlState, 16, 19) |
+      __gen_offset(values->XOffset, 25, 31) |
+      __gen_offset(values->YOffset, 20, 23) |
+      __gen_field(dw_SurfaceObjectControlState, 16, 19) |
       __gen_field(values->SurfaceMinLOD, 4, 7) |
       __gen_field(values->MIPCountLOD, 0, 3) |
       0;
 
-   dw[6] =
-      __gen_field(values->MCSBaseAddress, 12, 31) |
+   uint32_t dw6 =
       __gen_field(values->MCSSurfacePitch, 3, 11) |
-      __gen_field(values->AppendCounterAddress, 6, 31) |
       __gen_field(values->AppendCounterEnable, 1, 1) |
       __gen_field(values->MCSEnable, 0, 0) |
       __gen_field(values->XOffsetforUVPlane, 16, 29) |
       __gen_field(values->YOffsetforUVPlane, 0, 13) |
       0;
 
+   dw[6] =
+      __gen_combine_address(data, &dw[6], values->AppendCounterAddress, dw6);
+
    dw[7] =
       __gen_field(values->RedClearColor, 31, 31) |
       __gen_field(values->GreenClearColor, 30, 30) |
       __gen_field(values->BlueClearColor, 29, 29) |
       __gen_field(values->AlphaClearColor, 28, 28) |
-      __gen_field(values->ResourceMinLOD, 0, 11) |
+      __gen_field(values->ResourceMinLOD * (1 << 8), 0, 11) |
       0;
 
 }
@@ -6388,24 +6503,24 @@ GEN7_RENDER_SURFACE_STATE_pack(__gen_user_data *data, void * restrict dst,
 #define GEN7_SAMPLER_BORDER_COLOR_STATE_length 0x00000004
 
 struct GEN7_SAMPLER_BORDER_COLOR_STATE {
-   uint32_t                                     BorderColorRedDX100GL;
+   float                                        BorderColorRedDX100GL;
    uint32_t                                     BorderColorAlpha;
    uint32_t                                     BorderColorBlue;
    uint32_t                                     BorderColorGreen;
    uint32_t                                     BorderColorRedDX9;
-   uint32_t                                     BorderColorGreen0;
-   uint32_t                                     BorderColorBlue0;
-   uint32_t                                     BorderColorAlpha0;
+   float                                        BorderColorGreen0;
+   float                                        BorderColorBlue0;
+   float                                        BorderColorAlpha0;
 };
 
 static inline void
 GEN7_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst,
-                                    const struct GEN7_SAMPLER_BORDER_COLOR_STATE * restrict values)
+                                     const struct GEN7_SAMPLER_BORDER_COLOR_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
    dw[0] =
-      __gen_field(values->BorderColorRedDX100GL, 0, 31) |
+      __gen_float(values->BorderColorRedDX100GL) |
       __gen_field(values->BorderColorAlpha, 24, 31) |
       __gen_field(values->BorderColorBlue, 16, 23) |
       __gen_field(values->BorderColorGreen, 8, 15) |
@@ -6413,15 +6528,15 @@ GEN7_SAMPLER_BORDER_COLOR_STATE_pack(__gen_user_data *data, void * restrict dst,
       0;
 
    dw[1] =
-      __gen_field(values->BorderColorGreen, 0, 31) |
+      __gen_float(values->BorderColorGreen) |
       0;
 
    dw[2] =
-      __gen_field(values->BorderColorBlue, 0, 31) |
+      __gen_float(values->BorderColorBlue) |
       0;
 
    dw[3] =
-      __gen_field(values->BorderColorAlpha, 0, 31) |
+      __gen_float(values->BorderColorAlpha) |
       0;
 
 }
@@ -6501,7 +6616,7 @@ struct GEN7_SAMPLER_STATE {
 
 static inline void
 GEN7_SAMPLER_STATE_pack(__gen_user_data *data, void * restrict dst,
-                       const struct GEN7_SAMPLER_STATE * restrict values)
+                        const struct GEN7_SAMPLER_STATE * restrict values)
 {
    uint32_t *dw = (uint32_t * restrict) dst;
 
