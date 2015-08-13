@@ -100,6 +100,6 @@ svga_sampler_view_reference(struct svga_sampler_view **ptr, struct svga_sampler_
 
 boolean
 svga_check_sampler_view_resource_collision(struct svga_context *svga,
-                                           struct svga_winsys_surface *res);
-
+                                           struct svga_winsys_surface *res,
+                                           unsigned shader);
 #endif

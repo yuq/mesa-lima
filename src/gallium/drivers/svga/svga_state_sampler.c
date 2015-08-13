@@ -63,23 +63,22 @@ svga_resource_handle(struct pipe_resource *res)
  */
 boolean
 svga_check_sampler_view_resource_collision(struct svga_context *svga,
-                                           struct svga_winsys_surface *res)
+                                           struct svga_winsys_surface *res,
+                                           unsigned shader)
 {
    struct pipe_screen *screen = svga->pipe.screen;
-   unsigned shader, i;
+   unsigned i;
 
    if (svga_screen(screen)->debug.no_surface_view) {
       return FALSE;
    }
 
-   for (shader = PIPE_SHADER_VERTEX; shader <= PIPE_SHADER_GEOMETRY; shader++) {
-      for (i = 0; i < svga->curr.num_sampler_views[shader]; i++) {
-         struct svga_pipe_sampler_view *sv =
-            svga_pipe_sampler_view(svga->curr.sampler_views[shader][i]);
+   for (i = 0; i < svga->curr.num_sampler_views[shader]; i++) {
+      struct svga_pipe_sampler_view *sv =
+         svga_pipe_sampler_view(svga->curr.sampler_views[shader][i]);
 
-         if (sv && res == svga_resource_handle(sv->base.texture)) {
-            return TRUE;
-         }
+      if (sv && res == svga_resource_handle(sv->base.texture)) {
+         return TRUE;
       }
    }
 
