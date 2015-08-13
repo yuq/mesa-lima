@@ -1106,6 +1106,30 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst = emit(MOV(dst, op[0]));
       break;
 
+   case nir_op_d2f: {
+      dst_reg temp = dst_reg(this, glsl_type::dvec4_type);
+      emit(MOV(temp, op[0]));
+
+      dst_reg temp2 = dst_reg(this, glsl_type::dvec4_type);
+      temp2 = retype(temp2, BRW_REGISTER_TYPE_F);
+      emit(VEC4_OPCODE_DOUBLE_TO_FLOAT, temp2, src_reg(temp))
+         ->size_written = 2 * REG_SIZE;
+
+      vec4_instruction *inst = emit(MOV(dst, src_reg(temp2)));
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
+   case nir_op_f2d: {
+      dst_reg tmp_dst = dst_reg(src_reg(this, glsl_type::dvec4_type));
+      src_reg tmp_src = src_reg(this, glsl_type::vec4_type);
+      emit(MOV(dst_reg(tmp_src), retype(op[0], BRW_REGISTER_TYPE_F)));
+      emit(VEC4_OPCODE_FLOAT_TO_DOUBLE, tmp_dst, tmp_src);
+      vec4_instruction *inst = emit(MOV(dst, src_reg(tmp_dst)));
+      inst->saturate = instr->dest.saturate;
+      break;
+   }
+
    case nir_op_fadd:
       /* fall through */
    case nir_op_iadd:
