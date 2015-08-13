@@ -5595,7 +5595,7 @@ check_multisample_target(GLuint dims, GLenum target, bool dsa)
 }
 
 
-void
+static void
 _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
                                 struct gl_texture_object *texObj,
                                 GLenum target, GLsizei samples,
