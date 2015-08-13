@@ -5639,9 +5639,16 @@ _mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
    }
 
    if (!is_renderable_texture_format(ctx, internalformat)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-            "%s(internalformat=%s)",
-            func, _mesa_enum_to_string(internalformat));
+      /* Page 172 of OpenGL ES 3.1 spec says:
+       *   "An INVALID_ENUM error is generated if sizedinternalformat is not
+       *   color-renderable, depth-renderable, or stencil-renderable (as
+       *   defined in section 9.4).
+       *
+       *  (Same error is also defined for desktop OpenGL for multisample
+       *  teximage/texstorage functions.)
+       */
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s(internalformat=%s)", func,
+                  _mesa_enum_to_string(internalformat));
       return;
    }
 
