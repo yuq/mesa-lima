@@ -42,7 +42,6 @@
 static unsigned int
 tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
    unsigned ret_align, divisor, multiplier_ys;
 
    /* Values in below tables specifiy the horizontal alignment requirement
@@ -54,14 +53,13 @@ tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
    const unsigned align_1d_yf[] = {4096, 2048, 1024, 512, 256};
    const unsigned align_2d_yf[] = {64, 64, 32, 32, 16};
    const unsigned align_3d_yf[] = {16, 8, 8, 8, 4};
-   int i = 0;
 
    assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
-   /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
+   /* Alignment computations below assume a power of 2 cpp. */
+   assert (mt->cpp >= 1 && mt->cpp <= 16 && _mesa_is_pow_two(mt->cpp));
    /* Compute array index. */
-   i = ffs(bpp/8) - 1;
+   const int i = ffs(mt->cpp) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_1D:
@@ -145,20 +143,18 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 static unsigned int
 tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
    unsigned ret_align, divisor, multiplier_ys;
 
    /* Vertical alignment tables for TRMODE_YF */
    const unsigned align_2d_yf[] = {64, 32, 32, 16, 16};
    const unsigned align_3d_yf[] = {16, 16, 16, 8, 8};
-   int i = 0;
 
    assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
-   /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
+   /* Alignment computations below assume a power of 2 cpp. */
+   assert (mt->cpp >= 1 && mt->cpp <= 16 && _mesa_is_pow_two(mt->cpp)) ;
    /* Compute array index. */
-   i = ffs(bpp / 8) - 1;
+   const int i = ffs(mt->cpp) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_2D:
