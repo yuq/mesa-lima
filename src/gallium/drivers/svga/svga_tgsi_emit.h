@@ -28,6 +28,7 @@
 
 #include "tgsi/tgsi_scan.h"
 #include "svga_hw_reg.h"
+#include "svga_shader.h"
 #include "svga_tgsi.h"
 #include "svga3d_shaderdefs.h"
 
@@ -130,6 +131,8 @@ struct svga_shader_emitter
    struct svga_arl_consts arl_consts[12];
    int num_arl_consts;
    int current_arl;
+
+   unsigned pstipple_sampler_unit;
 };
 
 

@@ -84,7 +84,7 @@ svga_delete_gs_state(struct pipe_context *pipe, void *shader)
 {
    struct svga_context *svga = svga_context(pipe);
    struct svga_geometry_shader *gs = (struct svga_geometry_shader *)shader;
-   struct svga_geometry_shader *next_gs;  
+   struct svga_geometry_shader *next_gs;
    struct svga_shader_variant *variant, *tmp;
    enum pipe_error ret;
 
@@ -96,9 +96,9 @@ svga_delete_gs_state(struct pipe_context *pipe, void *shader)
 
    /* Free the list of geometry shaders */
    while (gs) {
-      next_gs = (struct svga_geometry_shader *)gs->base.next;  
+      next_gs = (struct svga_geometry_shader *)gs->base.next;
 
-      if (gs->base.stream_output != NULL) 
+      if (gs->base.stream_output != NULL)
          svga_delete_stream_output(svga, gs->base.stream_output);
 
       draw_delete_geometry_shader(svga->swtnl.draw, gs->draw_shader);

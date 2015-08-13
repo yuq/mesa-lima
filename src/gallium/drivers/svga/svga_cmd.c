@@ -66,7 +66,7 @@ surface_to_surfaceid(struct svga_winsys_context *swc, // IN
    if (surface) {
       struct svga_surface *s = svga_surface(surface);
       swc->surface_relocation(swc, &id->sid, NULL, s->handle, flags);
-      id->face = s->real_face; /* faces have the same order */
+      id->face = s->real_layer; /* faces have the same order */
       id->mipmap = s->real_level;
    }
    else {
@@ -460,7 +460,7 @@ SVGA3D_SurfaceDMA(struct svga_winsys_context *swc,
 
    swc->surface_relocation(swc, &cmd->host.sid, NULL,
                            texture->handle, surface_flags);
-   cmd->host.face = st->face; /* PIPE_TEX_FACE_* and SVGA3D_CUBEFACE_* match */
+   cmd->host.face = st->slice; /* PIPE_TEX_FACE_* and SVGA3D_CUBEFACE_* match */
    cmd->host.mipmap = st->base.level;
 
    cmd->transfer = transfer;
@@ -841,6 +841,8 @@ SVGA3D_SetShader(struct svga_winsys_context *swc,
                  uint32 shid)            // IN
 {
    SVGA3dCmdSetShader *cmd;
+
+   assert(type == SVGA3D_SHADERTYPE_VS || type == SVGA3D_SHADERTYPE_PS);
 
    cmd = SVGA3D_FIFOReserve(swc,
                             SVGA_3D_CMD_SET_SHADER, sizeof *cmd,
@@ -1385,7 +1387,7 @@ SVGA3D_BeginGBQuery(struct svga_winsys_context *swc,
    if(!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
-   swc->context_relocation(swc, &cmd->cid);
+   cmd->cid = swc->cid;
    cmd->type = type;
 
    swc->commit(swc);
@@ -1465,7 +1467,7 @@ SVGA3D_EndGBQuery(struct svga_winsys_context *swc,
    if(!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
-   swc->context_relocation(swc, &cmd->cid);
+   cmd->cid = swc->cid;
    cmd->type = type;
 
    swc->mob_relocation(swc, &cmd->mobid, &cmd->offset, buffer,
@@ -1552,7 +1554,7 @@ SVGA3D_WaitForGBQuery(struct svga_winsys_context *swc,
    if(!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
 
-   swc->context_relocation(swc, &cmd->cid);
+   cmd->cid = swc->cid;
    cmd->type = type;
 
    swc->mob_relocation(swc, &cmd->mobid, &cmd->offset, buffer,
@@ -1642,6 +1644,8 @@ SVGA3D_SetGBShader(struct svga_winsys_context *swc,
                    struct svga_winsys_gb_shader *gbshader)
 {
    SVGA3dCmdSetShader *cmd;
+
+   assert(type == SVGA3D_SHADERTYPE_VS || type == SVGA3D_SHADERTYPE_PS);
    
    cmd = SVGA3D_FIFOReserve(swc,
                             SVGA_3D_CMD_SET_SHADER,
@@ -1650,7 +1654,7 @@ SVGA3D_SetGBShader(struct svga_winsys_context *swc,
    if (!cmd)
       return PIPE_ERROR_OUT_OF_MEMORY;
    
-   swc->context_relocation(swc, &cmd->cid);
+   cmd->cid = swc->cid;
    cmd->type = type;
    if (gbshader)
       swc->shader_relocation(swc, &cmd->shid, NULL, NULL, gbshader, 0);

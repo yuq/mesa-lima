@@ -45,7 +45,7 @@
 
 
 /** Get resource handle for a texture or buffer */
-static INLINE struct svga_winsys_surface *
+static inline struct svga_winsys_surface *
 svga_resource_handle(struct pipe_resource *res)
 {
    if (res->target == PIPE_BUFFER) {
@@ -111,7 +111,7 @@ svga_validate_pipe_sampler_view(struct svga_context *svga,
 
       if (texture->target == PIPE_BUFFER) {
          viewDesc.buffer.firstElement = sv->base.u.buf.first_element;
-         viewDesc.buffer.numElements = (sv->base.u.buf.last_element - 
+         viewDesc.buffer.numElements = (sv->base.u.buf.last_element -
                                         sv->base.u.buf.first_element + 1);
       }
       else {
@@ -122,13 +122,13 @@ svga_validate_pipe_sampler_view(struct svga_context *svga,
       }
 
       /* arraySize in viewDesc specifies the number of array slices in a
-       * texture array. For 3D texture, last_layer in 
+       * texture array. For 3D texture, last_layer in
        * pipe_sampler_view specifies the last slice of the texture
        * which is different from the last slice in a texture array,
        * hence we need to set arraySize to 1 explicitly.
        */
-      viewDesc.tex.arraySize = 
-         (texture->target == PIPE_TEXTURE_3D || 
+      viewDesc.tex.arraySize =
+         (texture->target == PIPE_TEXTURE_3D ||
           texture->target == PIPE_BUFFER) ? 1 :
             (sv->base.u.tex.last_layer - sv->base.u.tex.first_layer + 1);
 

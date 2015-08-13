@@ -1,4 +1,4 @@
-/**********************************************************
+ /**********************************************************
  * Copyright 2008-2009 VMware, Inc.  All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person
@@ -48,10 +48,13 @@ struct svga_screen
    SVGA3dHardwareVersion hw_version;
 
    /** Device caps */
+   boolean haveProvokingVertex;
    boolean haveLineStipple, haveLineSmooth;
    float maxLineWidth, maxLineWidthAA;
    float maxPointSize;
    unsigned max_color_buffers;
+   unsigned max_const_buffers;
+   unsigned ms_samples;
 
    struct {
       boolean force_level_surface_view;
@@ -69,6 +72,7 @@ struct svga_screen
    /* which formats to translate depth formats into */
    struct {
      enum SVGA3dSurfaceFormat z16;
+
      /* note gallium order */
      enum SVGA3dSurfaceFormat x8z24;
      enum SVGA3dSurfaceFormat s8z24;

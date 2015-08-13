@@ -281,7 +281,7 @@ free_emitter(struct svga_shader_emitter_v10 *emit)
    FREE(emit);
 }
 
-static INLINE boolean
+static inline boolean
 reserve(struct svga_shader_emitter_v10 *emit,
         unsigned nr_dwords)
 {
@@ -1459,7 +1459,7 @@ absolute_src(const struct tgsi_full_src_register *reg)
 
 
 /** Return the named swizzle term from the src register */
-static INLINE unsigned
+static inline unsigned
 get_swizzle(const struct tgsi_full_src_register *reg, unsigned term)
 {
    switch (term) {

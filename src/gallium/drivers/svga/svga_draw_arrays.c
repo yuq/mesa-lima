@@ -49,8 +49,8 @@ generate_indices(struct svga_hwtnl *hwtnl,
    struct pipe_resource *dst = NULL;
    void *dst_map = NULL;
 
-   dst = pipe_buffer_create(pipe->screen,
-                            PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_DEFAULT, size);
+   dst = pipe_buffer_create(pipe->screen, PIPE_BIND_INDEX_BUFFER,
+                            PIPE_USAGE_IMMUTABLE, size);
    if (dst == NULL)
       goto fail;
 
@@ -168,7 +168,8 @@ retrieve_or_generate_indices(struct svga_hwtnl *hwtnl,
 
 static enum pipe_error
 simple_draw_arrays(struct svga_hwtnl *hwtnl,
-                   unsigned prim, unsigned start, unsigned count)
+                   unsigned prim, unsigned start, unsigned count,
+                   unsigned start_instance, unsigned instance_count)
 {
    SVGA3dPrimitiveRange range;
    unsigned hw_prim;
@@ -191,13 +192,16 @@ simple_draw_arrays(struct svga_hwtnl *hwtnl,
     * looking at those numbers knows to adjust them by
     * range.indexBias.
     */
-   return svga_hwtnl_prim(hwtnl, &range, 0, count - 1, NULL);
+   return svga_hwtnl_prim(hwtnl, &range, count,
+                          0, count - 1, NULL,
+                          start_instance, instance_count);
 }
 
 
 enum pipe_error
 svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
-                       unsigned prim, unsigned start, unsigned count)
+                       unsigned prim, unsigned start, unsigned count,
+                       unsigned start_instance, unsigned instance_count)
 {
    unsigned gen_prim, gen_size, gen_nr, gen_type;
    u_generate_func gen_func;
@@ -228,7 +232,8 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
    }
 
    if (gen_type == U_GENERATE_LINEAR) {
-      return simple_draw_arrays(hwtnl, gen_prim, start, count);
+      return simple_draw_arrays(hwtnl, gen_prim, start, count,
+                                start_instance, instance_count);
    }
    else {
       struct pipe_resource *gen_buf = NULL;
@@ -250,8 +255,9 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
                                                   start,
                                                   0,
                                                   count - 1,
-                                                  gen_prim, 0, gen_nr);
-
+                                                  gen_prim, 0, gen_nr,
+                                                  start_instance,
+                                                  instance_count);
       if (ret != PIPE_OK)
          goto done;
 

@@ -67,7 +67,7 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
    assert(pt);
    assert(min_lod <= max_lod);
    assert(max_lod <= pt->last_level);
-
+   assert(!svga_have_vgpu10(svga));
 
    /* Is a view needed */
    {
@@ -143,10 +143,12 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
             pt->last_level);
 
    sv->age = tex->age;
-   sv->handle = svga_texture_view_surface(svga, tex, flags, format,
+   sv->handle = svga_texture_view_surface(svga, tex,
+                                          PIPE_BIND_SAMPLER_VIEW,
+                                          flags, format,
                                           min_lod,
                                           max_lod - min_lod + 1,
-                                          -1, -1,
+                                          -1, 1, -1,
                                           &sv->key);
 
    if (!sv->handle) {
@@ -177,6 +179,7 @@ svga_validate_sampler_view(struct svga_context *svga, struct svga_sampler_view *
    unsigned k;
 
    assert(svga);
+   assert(!svga_have_vgpu10(svga));
 
    if (v->handle == tex->handle)
       return;

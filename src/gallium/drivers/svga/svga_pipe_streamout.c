@@ -38,7 +38,7 @@ struct svga_stream_output_target {
 };
 
 /** cast wrapper */
-static INLINE struct svga_stream_output_target *
+static inline struct svga_stream_output_target *
 svga_stream_output_target(struct pipe_stream_output_target *s)
 {
    return (struct svga_stream_output_target *)s;

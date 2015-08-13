@@ -65,6 +65,9 @@ struct svga_buffer
 {
    struct u_resource b;
 
+   /** This is a superset of b.b.bind */
+   unsigned bind_flags;
+
    /**
     * Regular (non DMA'able) memory.
     * 
@@ -187,6 +190,8 @@ struct svga_buffer
    struct list_head head;
 
    unsigned size;  /**< Approximate size in bytes */
+
+   boolean dirty;  /**< Need to do a readback before mapping? */
 };
 
 
