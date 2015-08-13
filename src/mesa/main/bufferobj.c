@@ -866,8 +866,8 @@ _mesa_init_buffer_objects( struct gl_context *ctx )
       _mesa_reference_buffer_object(ctx,
 				    &ctx->AtomicBufferBindings[i].BufferObject,
 				    ctx->Shared->NullBufferObj);
-      ctx->AtomicBufferBindings[i].Offset = -1;
-      ctx->AtomicBufferBindings[i].Size = -1;
+      ctx->AtomicBufferBindings[i].Offset = 0;
+      ctx->AtomicBufferBindings[i].Size = 0;
    }
 }
 
