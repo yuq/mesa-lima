@@ -450,10 +450,15 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 	OUT_PKT0(ring, REG_A4XX_SP_FS_MRT_REG(0), 8);
 	for (i = 0; i < 8; i++) {
 		enum a4xx_color_fmt format = 0;
-		if (i < nr)
+		bool srgb = false;
+		if (i < nr) {
 			format = fd4_emit_format(bufs[i]);
+			if (bufs[i] && !emit->no_decode_srgb)
+				srgb = util_format_is_srgb(bufs[i]->format);
+		}
 		OUT_RING(ring, A4XX_SP_FS_MRT_REG_REGID(color_regid[i]) |
 				A4XX_SP_FS_MRT_REG_MRTFORMAT(format) |
+				COND(srgb, A4XX_SP_FS_MRT_REG_COLOR_SRGB) |
 				COND(emit->key.half_precision,
 					A4XX_SP_FS_MRT_REG_HALF_PRECISION));
 	}

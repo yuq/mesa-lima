@@ -46,7 +46,8 @@
 
 static void
 emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
-		struct pipe_surface **bufs, uint32_t *bases, uint32_t bin_w)
+		struct pipe_surface **bufs, uint32_t *bases,
+		uint32_t bin_w, bool decode_srgb)
 {
 	enum a4xx_tile_mode tile_mode;
 	unsigned i;
@@ -60,6 +61,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < A4XX_MAX_RENDER_TARGETS; i++) {
 		enum a4xx_color_fmt format = 0;
 		enum a3xx_color_swap swap = WZYX;
+		bool srgb = false;
 		struct fd_resource *rsc = NULL;
 		struct fd_resource_slice *slice = NULL;
 		uint32_t stride = 0;
@@ -68,10 +70,9 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 
 		if ((i < nr_bufs) && bufs[i]) {
 			struct pipe_surface *psurf = bufs[i];
-			enum pipe_format pformat = 0;
+			enum pipe_format pformat = psurf->format;
 
 			rsc = fd_resource(psurf->texture);
-			pformat = psurf->format;
 
 			/* In case we're drawing to Z32F_S8, the "color" actually goes to
 			 * the stencil
@@ -85,6 +86,11 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			slice = fd_resource_slice(rsc, psurf->u.tex.level);
 			format = fd4_pipe2color(pformat);
 			swap = fd4_pipe2swap(pformat);
+
+			if (decode_srgb)
+				srgb = util_format_is_srgb(pformat);
+			else
+				pformat = util_format_linear(pformat);
 
 			debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
 
@@ -108,7 +114,8 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_RING(ring, A4XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
 				A4XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(tile_mode) |
 				A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(stride) |
-				A4XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap));
+				A4XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap) |
+				COND(srgb, A4XX_RB_MRT_BUF_INFO_COLOR_SRGB));
 		if (bin_w || (i >= nr_bufs) || !bufs[i]) {
 			OUT_RING(ring, base);
 			OUT_RING(ring, A4XX_RB_MRT_CONTROL3_STRIDE(stride));
@@ -282,7 +289,7 @@ emit_mem2gmem_surf(struct fd_context *ctx, uint32_t *bases,
 	struct fd_ringbuffer *ring = ctx->ring;
 	struct pipe_surface *zsbufs[2];
 
-	emit_mrt(ring, nr_bufs, bufs, bases, bin_w);
+	emit_mrt(ring, nr_bufs, bufs, bases, bin_w, false);
 
 	if (bufs[0] && (bufs[0]->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)) {
 		/* The gmem_restore_tex logic will put the first buffer's stencil
@@ -315,6 +322,7 @@ fd4_emit_tile_mem2gmem(struct fd_context *ctx, struct fd_tile *tile)
 			.key = {
 				.half_precision = fd_half_precision(pfb),
 			},
+			.no_decode_srgb = true,
 	};
 	unsigned char mrt_comp[A4XX_MAX_RENDER_TARGETS] = {0};
 	float x0, y0, x1, y1;
@@ -520,7 +528,7 @@ fd4_emit_sysmem_prep(struct fd_context *ctx)
 	OUT_RING(ring, A4XX_RB_FRAME_BUFFER_DIMENSION_WIDTH(pfb->width) |
 			A4XX_RB_FRAME_BUFFER_DIMENSION_HEIGHT(pfb->height));
 
-	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, NULL, 0);
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, NULL, 0, true);
 
 	/* setup scissor/offset for current tile: */
 	OUT_PKT0(ring, REG_A4XX_RB_BIN_OFFSET, 1);
@@ -677,7 +685,7 @@ fd4_emit_tile_renderprep(struct fd_context *ctx, struct fd_tile *tile)
 	OUT_RING(ring, CP_SET_BIN_1_X1(x1) | CP_SET_BIN_1_Y1(y1));
 	OUT_RING(ring, CP_SET_BIN_2_X2(x2) | CP_SET_BIN_2_Y2(y2));
 
-	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, gmem->cbuf_base, gmem->bin_w);
+	emit_mrt(ring, pfb->nr_cbufs, pfb->cbufs, gmem->cbuf_base, gmem->bin_w, true);
 
 	/* setup scissor/offset for current tile: */
 	OUT_PKT0(ring, REG_A4XX_RB_BIN_OFFSET, 1);
