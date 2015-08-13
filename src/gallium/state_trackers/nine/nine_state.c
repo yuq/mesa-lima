@@ -496,26 +496,6 @@ update_framebuffer(struct NineDevice9 *device)
 
     pipe->set_framebuffer_state(pipe, fb); /* XXX: cso ? */
 
-    if (fb->zsbuf) {
-        DWORD scale;
-        switch (fb->zsbuf->format) {
-        case PIPE_FORMAT_Z32_FLOAT:
-        case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-            scale = fui(1.0f);
-            break;
-        case PIPE_FORMAT_Z16_UNORM:
-            scale = fui((float)(1 << 16));
-            break;
-        default:
-            scale = fui((float)(1 << 24));
-            break;
-        }
-        if (state->rs[NINED3DRS_ZBIASSCALE] != scale) {
-            state->rs[NINED3DRS_ZBIASSCALE] = scale;
-            state->changed.group |= NINE_STATE_RASTERIZER;
-        }
-    }
-
     return state->changed.group;
 }
 

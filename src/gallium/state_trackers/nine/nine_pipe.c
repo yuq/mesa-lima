@@ -117,7 +117,17 @@ nine_convert_rasterizer_state(struct pipe_rasterizer_state *rast_state, const DW
                 asfloat(rs[D3DRS_POINTSIZE_MIN]),
                 asfloat(rs[D3DRS_POINTSIZE_MAX]));
     }
-    rast.offset_units = asfloat(rs[D3DRS_DEPTHBIAS]) * asfloat(rs[NINED3DRS_ZBIASSCALE]);
+    /* offset_units has the ogl/d3d11 meaning.
+     * d3d9: offset = scale * dz + bias
+     * ogl/d3d11: offset = scale * dz + r * bias
+     * with r implementation dependant and is supposed to be
+     * the smallest value the depth buffer format can hold.
+     * In practice on current and past hw it seems to be 2^-23
+     * for all formats except float formats where it varies depending
+     * on the content.
+     * For now use 1 << 23, but in the future perhaps add a way in gallium
+     * to get r for the format or get the gallium behaviour */
+    rast.offset_units = asfloat(rs[D3DRS_DEPTHBIAS]) * (float)(1 << 23);
     rast.offset_scale = asfloat(rs[D3DRS_SLOPESCALEDEPTHBIAS]);
  /* rast.offset_clamp = 0.0f; */
 
