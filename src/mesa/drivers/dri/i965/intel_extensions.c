@@ -248,6 +248,7 @@ intelInitExtensions(struct gl_context *ctx)
    ctx->Extensions.MESA_pack_invert = true;
    ctx->Extensions.NV_conditional_render = true;
    ctx->Extensions.NV_primitive_restart = true;
+   ctx->Extensions.NV_texture_barrier = true;
    ctx->Extensions.NV_texture_env_combine4 = true;
    ctx->Extensions.NV_texture_rectangle = true;
    ctx->Extensions.TDFX_texture_compression_FXT1 = true;
