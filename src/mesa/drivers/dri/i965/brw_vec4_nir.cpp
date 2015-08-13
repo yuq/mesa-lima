@@ -352,8 +352,15 @@ vec4_visitor::get_indirect_offset(nir_intrinsic_instr *instr)
 void
 vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
 {
-   dst_reg reg = dst_reg(VGRF, alloc.allocate(1));
-   reg.type =  BRW_REGISTER_TYPE_D;
+   dst_reg reg;
+
+   if (instr->def.bit_size == 64) {
+      reg = dst_reg(VGRF, alloc.allocate(2));
+      reg.type = BRW_REGISTER_TYPE_DF;
+   } else {
+      reg = dst_reg(VGRF, alloc.allocate(1));
+      reg.type = BRW_REGISTER_TYPE_D;
+   }
 
    unsigned remaining = brw_writemask_for_size(instr->def.num_components);
 
@@ -368,13 +375,20 @@ vec4_visitor::nir_emit_load_const(nir_load_const_instr *instr)
          continue;
 
       for (unsigned j = i; j < instr->def.num_components; j++) {
-         if (instr->value.u32[i] == instr->value.u32[j]) {
+         if ((instr->def.bit_size == 32 &&
+              instr->value.u32[i] == instr->value.u32[j]) ||
+             (instr->def.bit_size == 64 &&
+              instr->value.f64[i] == instr->value.f64[j])) {
             writemask |= 1 << j;
          }
       }
 
       reg.writemask = writemask;
-      emit(MOV(reg, brw_imm_d(instr->value.i32[i])));
+      if (instr->def.bit_size == 64) {
+         emit(MOV(reg, brw_imm_df(instr->value.f64[i])));
+      } else {
+         emit(MOV(reg, brw_imm_d(instr->value.i32[i])));
+      }
 
       remaining &= ~writemask;
    }
