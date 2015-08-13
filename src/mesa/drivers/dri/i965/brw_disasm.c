@@ -412,6 +412,22 @@ static const char *const gen7_gateway_subfuncid[8] = {
    [BRW_MESSAGE_GATEWAY_SFID_MMIO_READ_WRITE] = "mmio read/write",
 };
 
+static const char *const gen4_dp_read_port_msg_type[4] = {
+   [0b00] = "OWord Block Read",
+   [0b01] = "OWord Dual Block Read",
+   [0b10] = "Media Block Read",
+   [0b11] = "DWord Scattered Read",
+};
+
+static const char *const g45_dp_read_port_msg_type[8] = {
+   [0b000] = "OWord Block Read",
+   [0b010] = "OWord Dual Block Read",
+   [0b100] = "Media Block Read",
+   [0b110] = "DWord Scattered Read",
+   [0b001] = "Render Target UNORM Read",
+   [0b011] = "AVC Loop Filter Read",
+};
+
 static const char *const dp_write_port_msg_type[8] = {
    [0b000] = "OWord block write",
    [0b001] = "OWord dual block write",
@@ -1444,10 +1460,17 @@ brw_disassemble_inst(FILE *file, const struct brw_device_info *devinfo,
                       brw_inst_dp_msg_type(devinfo, inst),
                       devinfo->gen >= 7 ? 0 : brw_inst_dp_write_commit(devinfo, inst));
             } else {
-               format(file, " (%ld, %ld, %ld)",
-                      brw_inst_binding_table_index(devinfo, inst),
-                      brw_inst_dp_read_msg_control(devinfo, inst),
-                      brw_inst_dp_read_msg_type(devinfo, inst));
+               bool is_965 = devinfo->gen == 4 && !devinfo->is_g4x;
+               err |= control(file, "DP read message type",
+                              is_965 ? gen4_dp_read_port_msg_type :
+                                       g45_dp_read_port_msg_type,
+                              brw_inst_dp_read_msg_type(devinfo, inst),
+                              &space);
+
+               format(file, " MsgCtrl = 0x%lx",
+                      brw_inst_dp_read_msg_control(devinfo, inst));
+
+               format(file, " Surface = %ld", brw_inst_binding_table_index(devinfo, inst));
             }
             break;
 
