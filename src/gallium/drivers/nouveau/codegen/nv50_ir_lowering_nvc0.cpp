@@ -993,14 +993,10 @@ NVC0LoweringPass::handleTXQ(TexInstruction *txq)
       txq->tex.r = 0xff;
       txq->tex.s = 0x1f;
 
-      if (chipset < NVISA_GM107_CHIPSET) {
-         txq->setIndirectR(NULL);
-         txq->moveSources(0, 1);
-         txq->setSrc(0, hnd);
-         txq->tex.rIndirectSrc = 0;
-      } else {
-         txq->setIndirectR(hnd);
-      }
+      txq->setIndirectR(NULL);
+      txq->moveSources(0, 1);
+      txq->setSrc(0, hnd);
+      txq->tex.rIndirectSrc = 0;
    }
 
    return true;
