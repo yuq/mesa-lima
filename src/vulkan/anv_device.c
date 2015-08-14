@@ -31,17 +31,6 @@
 #include "mesa/main/git_sha1.h"
 #include "util/strtod.h"
 
-static int
-anv_env_get_int(const char *name)
-{
-   const char *val = getenv(name);
-
-   if (!val)
-      return 0;
-
-   return strtol(val, NULL, 0);
-}
-
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
@@ -56,14 +45,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->instance = instance;
    device->path = path;
    
-   device->chipset_id = anv_env_get_int("INTEL_DEVID_OVERRIDE");
-   device->no_hw = false;
-   if (device->chipset_id) {
-      /* INTEL_DEVID_OVERRIDE implies INTEL_NO_HW. */
-      device->no_hw = true;
-   } else {
-      device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
-   }
+   device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id)
       goto fail;
 
@@ -494,26 +476,6 @@ PFN_vkVoidFunction anv_GetDeviceProcAddr(
    return anv_lookup_entrypoint(pName);
 }
 
-static void
-parse_debug_flags(struct anv_device *device)
-{
-   const char *debug, *p, *end;
-
-   debug = getenv("INTEL_DEBUG");
-   device->dump_aub = false;
-   if (debug) {
-      for (p = debug; *p; p = end + 1) {
-         end = strchrnul(p, ',');
-         if (end - p == 3 && memcmp(p, "aub", 3) == 0)
-            device->dump_aub = true;
-         if (end - p == 5 && memcmp(p, "no_hw", 5) == 0)
-            device->no_hw = true;
-         if (*end == '\0')
-            break;
-      }
-   }
-}
-
 static VkResult
 anv_queue_init(struct anv_device *device, struct anv_queue *queue)
 {
@@ -575,9 +537,6 @@ VkResult anv_CreateDevice(
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   device->no_hw = physical_device->no_hw;
-   parse_debug_flags(device);
-
    device->instance = physical_device->instance;
 
    /* XXX(chadv): Can we dup() physicalDevice->fd here? */
@@ -607,7 +566,6 @@ VkResult anv_CreateDevice(
    device->info = *physical_device->info;
 
    device->compiler = anv_compiler_create(device);
-   device->aub_writer = NULL;
 
    pthread_mutex_init(&device->mutex, NULL);
 
@@ -656,9 +614,6 @@ VkResult anv_DestroyDevice(
    anv_block_pool_finish(&device->scratch_block_pool);
 
    close(device->fd);
-
-   if (device->aub_writer)
-      anv_aub_writer_destroy(device->aub_writer);
 
    anv_instance_free(device->instance, device);
 
@@ -763,25 +718,18 @@ VkResult anv_QueueSubmit(
 
       assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
 
-      if (device->dump_aub)
-         anv_cmd_buffer_dump(cmd_buffer);
+      ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
+      if (ret != 0)
+         return vk_error(VK_ERROR_UNKNOWN);
 
-      if (!device->no_hw) {
-         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
+      if (fence) {
+         ret = anv_gem_execbuffer(device, &fence->execbuf);
          if (ret != 0)
             return vk_error(VK_ERROR_UNKNOWN);
-
-         if (fence) {
-            ret = anv_gem_execbuffer(device, &fence->execbuf);
-            if (ret != 0)
-               return vk_error(VK_ERROR_UNKNOWN);
-         }
-
-         for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
-            cmd_buffer->execbuf2.bos[i]->offset = cmd_buffer->execbuf2.objects[i].offset;
-      } else {
-         *(uint32_t *)queue->completed_serial.map = cmd_buffer->serial;
       }
+
+      for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
+         cmd_buffer->execbuf2.bos[i]->offset = cmd_buffer->execbuf2.objects[i].offset;
    }
 
    return VK_SUCCESS;
@@ -838,19 +786,17 @@ VkResult anv_DeviceWaitIdle(
    execbuf.rsvd1 = device->context_id;
    execbuf.rsvd2 = 0;
 
-   if (!device->no_hw) {
-      ret = anv_gem_execbuffer(device, &execbuf);
-      if (ret != 0) {
-         result = vk_error(VK_ERROR_UNKNOWN);
-         goto fail;
-      }
+   ret = anv_gem_execbuffer(device, &execbuf);
+   if (ret != 0) {
+      result = vk_error(VK_ERROR_UNKNOWN);
+      goto fail;
+   }
 
-      timeout = INT64_MAX;
-      ret = anv_gem_wait(device, bo->gem_handle, &timeout);
-      if (ret != 0) {
-         result = vk_error(VK_ERROR_UNKNOWN);
-         goto fail;
-      }
+   timeout = INT64_MAX;
+   ret = anv_gem_wait(device, bo->gem_handle, &timeout);
+   if (ret != 0) {
+      result = vk_error(VK_ERROR_UNKNOWN);
+      goto fail;
    }
 
    anv_state_pool_free(&device->dynamic_state_pool, state);

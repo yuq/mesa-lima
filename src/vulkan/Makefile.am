@@ -58,7 +58,6 @@ libvulkan_la_CXXFLAGS =							\
 
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
-	anv_aub.c                                       \
 	anv_cmd_buffer.c                                \
 	anv_batch_chain.c                               \
 	anv_compiler.cpp                                \

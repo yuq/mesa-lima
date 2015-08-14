@@ -209,11 +209,6 @@ struct anv_bo {
    uint32_t index;
    uint64_t offset;
    uint64_t size;
-
-   /* This field is here for the benefit of the aub dumper.  It can (and for
-    * userptr bos it must) be set to the cpu map of the buffer.  Destroying
-    * the bo won't clean up the mmap, it's still the responsibility of the bo
-    * user to do that. */
    void *map;
 };
 
@@ -335,7 +330,6 @@ void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 struct anv_physical_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
-    bool                                        no_hw;
     const char *                                path;
     const char *                                name;
     const struct brw_device_info *              info;
@@ -395,8 +389,6 @@ struct anv_device {
     struct brw_device_info                      info;
     int                                         context_id;
     int                                         fd;
-    bool                                        no_hw;
-    bool                                        dump_aub;
 
     struct anv_bo_pool                          batch_bo_pool;
 
@@ -416,7 +408,6 @@ struct anv_device {
     struct anv_block_pool                       scratch_block_pool;
 
     struct anv_compiler *                       compiler;
-    struct anv_aub_writer *                     aub_writer;
     pthread_mutex_t                             mutex;
 };
 
@@ -793,7 +784,6 @@ void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       const VkClearValue *clear_values);
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
-void anv_aub_writer_destroy(struct anv_aub_writer *writer);
 
 struct anv_fence {
    struct anv_bo bo;
