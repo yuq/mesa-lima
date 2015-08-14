@@ -1508,9 +1508,11 @@ void
 fs_visitor::assign_vs_urb_setup()
 {
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
-   int grf, slot, channel, attr;
 
    assert(stage == MESA_SHADER_VERTEX);
+   int count = _mesa_bitcount_64(vs_prog_data->inputs_read);
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid)
+      count++;
 
    /* Each attribute is 4 regs. */
    this->first_non_payload_grf += 4 * vs_prog_data->nr_attributes;
@@ -1521,25 +1523,10 @@ fs_visitor::assign_vs_urb_setup()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == ATTR) {
-
-            if (inst->src[i].reg == VERT_ATTRIB_MAX) {
-               slot = vs_prog_data->nr_attributes - 1;
-            } else {
-               /* Attributes come in in a contiguous block, ordered by their
-                * gl_vert_attrib value.  That means we can compute the slot
-                * number for an attribute by masking out the enabled
-                * attributes before it and counting the bits.
-                */
-               attr = inst->src[i].reg + inst->src[i].reg_offset / 4;
-               slot = _mesa_bitcount_64(vs_prog_data->inputs_read &
-                                        BITFIELD64_MASK(attr));
-            }
-
-            channel = inst->src[i].reg_offset & 3;
-
-            grf = payload.num_regs +
-               prog_data->curb_read_length +
-               slot * 4 + channel;
+            int grf = payload.num_regs +
+                      prog_data->curb_read_length +
+                      inst->src[i].reg +
+                      inst->src[i].reg_offset;
 
             inst->src[i].file = HW_REG;
             inst->src[i].fixed_hw_reg =

@@ -53,7 +53,8 @@ fs_reg *
 fs_visitor::emit_vs_system_value(int location)
 {
    fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, VERT_ATTRIB_MAX, BRW_REGISTER_TYPE_D);
+      fs_reg(ATTR, 4 * _mesa_bitcount_64(nir->info.inputs_read),
+             BRW_REGISTER_TYPE_D);
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
 
    switch (location) {

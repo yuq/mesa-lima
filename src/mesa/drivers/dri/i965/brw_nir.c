@@ -27,6 +27,34 @@
 #include "glsl/nir/glsl_to_nir.h"
 #include "program/prog_to_nir.h"
 
+static bool
+remap_vs_attrs(nir_block *block, void *closure)
+{
+   GLbitfield64 inputs_read = *((GLbitfield64 *) closure);
+
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
+         continue;
+
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+
+      /* We set EmitNoIndirect for VS inputs, so there are no indirects. */
+      assert(intrin->intrinsic != nir_intrinsic_load_input_indirect);
+
+      if (intrin->intrinsic == nir_intrinsic_load_input) {
+         /* Attributes come in a contiguous block, ordered by their
+          * gl_vert_attrib value.  That means we can compute the slot
+          * number for an attribute by masking out the enabled attributes
+          * before it and counting the bits.
+          */
+         int attr = intrin->const_index[0];
+         int slot = _mesa_bitcount_64(inputs_read & BITFIELD64_MASK(attr));
+         intrin->const_index[0] = 4 * slot;
+      }
+   }
+   return true;
+}
+
 static void
 brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
 {
@@ -49,6 +77,18 @@ brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
        * type_size_vec4 here.
        */
       nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+
+      /* Finally, translate VERT_ATTRIB_* values into the actual registers.
+       *
+       * Note that we can use nir->info.inputs_read instead of key->inputs_read
+       * since the two are identical aside from Gen4-5 edge flag differences.
+       */
+      GLbitfield64 inputs_read = nir->info.inputs_read;
+      nir_foreach_overload(nir, overload) {
+         if (overload->impl) {
+            nir_foreach_block(overload->impl, remap_vs_attrs, &inputs_read);
+         }
+      }
       break;
    case MESA_SHADER_GEOMETRY:
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
