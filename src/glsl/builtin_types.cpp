@@ -182,7 +182,7 @@ const static struct builtin_type_versions {
    T(samplerCubeArray,                400, 999)
    T(sampler2DRect,                   140, 999)
    T(samplerBuffer,                   140, 999)
-   T(sampler2DMS,                     150, 999)
+   T(sampler2DMS,                     150, 310)
    T(sampler2DMSArray,                150, 999)
 
    T(isampler1D,                      130, 999)
@@ -194,7 +194,7 @@ const static struct builtin_type_versions {
    T(isamplerCubeArray,               400, 999)
    T(isampler2DRect,                  140, 999)
    T(isamplerBuffer,                  140, 999)
-   T(isampler2DMS,                    150, 999)
+   T(isampler2DMS,                    150, 310)
    T(isampler2DMSArray,               150, 999)
 
    T(usampler1D,                      130, 999)
@@ -206,7 +206,7 @@ const static struct builtin_type_versions {
    T(usamplerCubeArray,               400, 999)
    T(usampler2DRect,                  140, 999)
    T(usamplerBuffer,                  140, 999)
-   T(usampler2DMS,                    150, 999)
+   T(usampler2DMS,                    150, 310)
    T(usampler2DMSArray,               150, 999)
 
    T(sampler1DShadow,                 110, 999)
