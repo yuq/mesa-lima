@@ -101,6 +101,7 @@ union nir_constant_data {
    int i[16];
    float f[16];
    bool b[16];
+   double d[16];
 };
 
 typedef struct nir_constant {
@@ -1209,8 +1210,11 @@ nir_tex_instr_src_index(nir_tex_instr *instr, nir_tex_src_type type)
 typedef struct {
    union {
       float f[4];
+      double d[4];
       int32_t i[4];
       uint32_t u[4];
+      int64_t l[4];
+      uint64_t ul[4];
    };
 } nir_const_value;
 
