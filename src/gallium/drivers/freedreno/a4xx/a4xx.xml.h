@@ -13,8 +13,8 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  66709 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63728 bytes, from 2015-08-05 18:07:28)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67120 bytes, from 2015-08-14 23:22:03)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63785 bytes, from 2015-08-14 18:27:06)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -430,7 +430,7 @@ static inline uint32_t A4XX_RB_MRT_BUF_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 	return ((val) << A4XX_RB_MRT_BUF_INFO_COLOR_SWAP__SHIFT) & A4XX_RB_MRT_BUF_INFO_COLOR_SWAP__MASK;
 }
 #define A4XX_RB_MRT_BUF_INFO_COLOR_SRGB				0x00002000
-#define A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__MASK		0x007fc000
+#define A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__MASK		0xffffc000
 #define A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__SHIFT		14
 static inline uint32_t A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(uint32_t val)
 {
@@ -440,7 +440,7 @@ static inline uint32_t A4XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(uint32_t val)
 static inline uint32_t REG_A4XX_RB_MRT_BASE(uint32_t i0) { return 0x000020a6 + 0x5*i0; }
 
 static inline uint32_t REG_A4XX_RB_MRT_CONTROL3(uint32_t i0) { return 0x000020a7 + 0x5*i0; }
-#define A4XX_RB_MRT_CONTROL3_STRIDE__MASK			0x0001fff8
+#define A4XX_RB_MRT_CONTROL3_STRIDE__MASK			0x03fffff8
 #define A4XX_RB_MRT_CONTROL3_STRIDE__SHIFT			3
 static inline uint32_t A4XX_RB_MRT_CONTROL3_STRIDE(uint32_t val)
 {
@@ -1460,6 +1460,7 @@ static inline uint32_t A4XX_SP_FS_MRT_REG_MRTFORMAT(enum a4xx_color_fmt val)
 {
 	return ((val) << A4XX_SP_FS_MRT_REG_MRTFORMAT__SHIFT) & A4XX_SP_FS_MRT_REG_MRTFORMAT__MASK;
 }
+#define A4XX_SP_FS_MRT_REG_COLOR_SRGB				0x00040000
 
 #define REG_A4XX_SP_CS_CTRL_REG0				0x00002300
 
