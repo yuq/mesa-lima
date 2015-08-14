@@ -142,3 +142,102 @@ VkResult gen8_CreateBufferView(
    return VK_SUCCESS;
 }
 
+VkResult gen8_CreateSampler(
+    VkDevice                                    _device,
+    const VkSamplerCreateInfo*                  pCreateInfo,
+    VkSampler*                                  pSampler)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_sampler *sampler;
+   uint32_t mag_filter, min_filter, max_anisotropy;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
+
+   sampler = anv_device_alloc(device, sizeof(*sampler), 8,
+                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (!sampler)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   static const uint32_t vk_to_gen_tex_filter[] = {
+      [VK_TEX_FILTER_NEAREST]                   = MAPFILTER_NEAREST,
+      [VK_TEX_FILTER_LINEAR]                    = MAPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_mipmap_mode[] = {
+      [VK_TEX_MIPMAP_MODE_BASE]                 = MIPFILTER_NONE,
+      [VK_TEX_MIPMAP_MODE_NEAREST]              = MIPFILTER_NEAREST,
+      [VK_TEX_MIPMAP_MODE_LINEAR]               = MIPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_tex_address[] = {
+      [VK_TEX_ADDRESS_WRAP]                     = TCM_WRAP,
+      [VK_TEX_ADDRESS_MIRROR]                   = TCM_MIRROR,
+      [VK_TEX_ADDRESS_CLAMP]                    = TCM_CLAMP,
+      [VK_TEX_ADDRESS_MIRROR_ONCE]              = TCM_MIRROR_ONCE,
+      [VK_TEX_ADDRESS_CLAMP_BORDER]             = TCM_CLAMP_BORDER,
+   };
+
+   static const uint32_t vk_to_gen_compare_op[] = {
+      [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
+      [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
+      [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
+      [VK_COMPARE_OP_LESS_EQUAL]                = PREFILTEROPLEQUAL,
+      [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
+      [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
+      [VK_COMPARE_OP_GREATER_EQUAL]             = PREFILTEROPGEQUAL,
+      [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
+   };
+
+   if (pCreateInfo->maxAnisotropy > 1) {
+      mag_filter = MAPFILTER_ANISOTROPIC;
+      min_filter = MAPFILTER_ANISOTROPIC;
+      max_anisotropy = (pCreateInfo->maxAnisotropy - 2) / 2;
+   } else {
+      mag_filter = vk_to_gen_tex_filter[pCreateInfo->magFilter];
+      min_filter = vk_to_gen_tex_filter[pCreateInfo->minFilter];
+      max_anisotropy = RATIO21;
+   }
+
+   struct GEN8_SAMPLER_STATE sampler_state = {
+      .SamplerDisable = false,
+      .TextureBorderColorMode = DX10OGL,
+      .LODPreClampMode = 0,
+      .BaseMipLevel = 0.0,
+      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
+      .MagModeFilter = mag_filter,
+      .MinModeFilter = min_filter,
+      .TextureLODBias = pCreateInfo->mipLodBias * 256,
+      .AnisotropicAlgorithm = EWAApproximation,
+      .MinLOD = pCreateInfo->minLod,
+      .MaxLOD = pCreateInfo->maxLod,
+      .ChromaKeyEnable = 0,
+      .ChromaKeyIndex = 0,
+      .ChromaKeyMode = 0,
+      .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
+      .CubeSurfaceControlMode = 0,
+
+      .IndirectStatePointer =
+         device->border_colors.offset +
+         pCreateInfo->borderColor * sizeof(float) * 4,
+
+      .LODClampMagnificationMode = MIPNONE,
+      .MaximumAnisotropy = max_anisotropy,
+      .RAddressMinFilterRoundingEnable = 0,
+      .RAddressMagFilterRoundingEnable = 0,
+      .VAddressMinFilterRoundingEnable = 0,
+      .VAddressMagFilterRoundingEnable = 0,
+      .UAddressMinFilterRoundingEnable = 0,
+      .UAddressMagFilterRoundingEnable = 0,
+      .TrilinearFilterQuality = 0,
+      .NonnormalizedCoordinateEnable = 0,
+      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressU],
+      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressV],
+      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressW],
+   };
+
+   GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
+
+   *pSampler = anv_sampler_to_handle(sampler);
+
+   return VK_SUCCESS;
+}
