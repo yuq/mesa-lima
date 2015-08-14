@@ -67,6 +67,7 @@ const AddrTileModeFlags AddrLib1::ModeFlags[ADDR_TM_COUNT] =
     {4, 0, 0, 1, 0, 1, 1, 0}, // ADDR_TM_PRT_TILED_THICK
     {4, 0, 0, 1, 0, 1, 0, 0}, // ADDR_TM_PRT_2D_TILED_THICK
     {4, 0, 0, 1, 1, 1, 0, 0}, // ADDR_TM_PRT_3D_TILED_THICK
+    {0, 0, 0, 0, 0, 0, 0, 0}, // ADDR_TM_UNKNOWN
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -179,8 +180,13 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
         returnCode = ADDR_INVALIDPARAMS;
     }
 
+    if ((pIn->tileMode == ADDR_TM_UNKNOWN) && (pIn->mipLevel > 0))
+    {
+        returnCode = ADDR_INVALIDPARAMS;
+    }
+
     // Thick modes don't support multisample
-    if (Thickness(pIn->tileMode) > 1 && pIn->numSamples > 1)
+    if ((Thickness(pIn->tileMode) > 1) && (pIn->numSamples > 1))
     {
         returnCode = ADDR_INVALIDPARAMS;
     }
@@ -202,7 +208,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
             localIn.pTileInfo  = &tileInfoNull;
         }
 
-        localIn.numSamples = pIn->numSamples == 0 ? 1 : pIn->numSamples;
+        localIn.numSamples = (pIn->numSamples == 0) ? 1 : pIn->numSamples;
 
         // Do mipmap check first
         // If format is BCn, pre-pad dimension to power-of-two according to HWL
@@ -324,15 +330,23 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
 
         if (returnCode == ADDR_OK)
         {
-            // HWL layer may override tile mode if necessary
-            HwlOverrideTileMode(&localIn);
-
-            AddrTileMode tileMode = localIn.tileMode;
-
-            // Optimize tile mode if possible
-            if (OptimizeTileMode(&localIn, &tileMode))
+            if (localIn.tileMode == ADDR_TM_UNKNOWN)
             {
-                localIn.tileMode = tileMode;
+                // HWL layer may override tile mode if necessary
+                HwlSelectTileMode(&localIn);
+            }
+            else
+            {
+                // HWL layer may override tile mode if necessary
+                HwlOverrideTileMode(&localIn);
+
+                AddrTileMode tileMode = localIn.tileMode;
+
+                // Optimize tile mode if possible
+                if (OptimizeTileMode(&localIn, &tileMode))
+                {
+                    localIn.tileMode = tileMode;
+                }
             }
         }
 

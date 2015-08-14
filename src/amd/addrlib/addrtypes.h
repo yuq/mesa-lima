@@ -195,7 +195,8 @@ typedef enum _AddrTileMode
     ADDR_TM_PRT_TILED_THICK     = 22,   ///< No bank/pipe rotation or hashing beyond macrotile size
     ADDR_TM_PRT_2D_TILED_THICK  = 23,   ///< Same as 2D_TILED_THICK, PRT only
     ADDR_TM_PRT_3D_TILED_THICK  = 24,   ///< Same as 3D_TILED_THICK, PRT only
-    ADDR_TM_COUNT               = 25,   ///< Must be the value of the last tile mode
+    ADDR_TM_UNKNOWN             = 25,   ///< Unkown tile mode, should be decided by address lib
+    ADDR_TM_COUNT               = 26,   ///< Must be the value of the last tile mode
 } AddrTileMode;
 
 /**

@@ -3199,6 +3199,82 @@ void SiAddrLib::HwlOverrideTileMode(
 
 /**
 ***************************************************************************************************
+*   SiAddrLib::HwlSelectTileMode
+*
+*   @brief
+*       Select tile modes.
+*
+*   @return
+*       N/A
+*
+***************************************************************************************************
+*/
+VOID SiAddrLib::HwlSelectTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
+    ) const
+{
+    AddrTileMode tileMode;
+    AddrTileType tileType;
+
+    if (pInOut->flags.volume)
+    {
+        if (pInOut->numSlices >= 8)
+        {
+            tileMode = ADDR_TM_2D_TILED_XTHICK;
+        }
+        else if (pInOut->numSlices >= 4)
+        {
+            tileMode = ADDR_TM_2D_TILED_THICK;
+        }
+        else
+        {
+            tileMode = ADDR_TM_2D_TILED_THIN1;
+        }
+        tileType = ADDR_NON_DISPLAYABLE;
+    }
+    else
+    {
+        tileMode = ADDR_TM_2D_TILED_THIN1;
+
+        if (pInOut->flags.depth || pInOut->flags.stencil)
+        {
+            tileType = ADDR_DEPTH_SAMPLE_ORDER;
+        }
+        else if ((pInOut->bpp <= 32) ||
+                 (pInOut->flags.display == TRUE) ||
+                 (pInOut->flags.overlay == TRUE))
+        {
+            tileType = ADDR_DISPLAYABLE;
+        }
+        else
+        {
+            tileType = ADDR_NON_DISPLAYABLE;
+        }
+    }
+
+    if (pInOut->flags.prt)
+    {
+        tileMode = ADDR_TM_2D_TILED_THIN1;
+        tileType = (tileType == ADDR_DISPLAYABLE) ? ADDR_NON_DISPLAYABLE : tileType;
+    }
+
+    pInOut->tileMode = tileMode;
+    pInOut->tileType = tileType;
+
+    // Optimize tile mode if possible
+    pInOut->flags.opt4Space = TRUE;
+
+    // Optimize tile mode if possible
+    if (OptimizeTileMode(pInOut, &tileMode))
+    {
+        pInOut->tileMode = tileMode;
+    }
+
+    HwlOverrideTileMode(pInOut);
+}
+
+/**
+***************************************************************************************************
 *   SiAddrLib::HwlGetMaxAlignments
 *
 *   @brief

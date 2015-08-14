@@ -183,6 +183,8 @@ protected:
 
     virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
 
+    virtual VOID HwlSelectTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
+
     virtual BOOL_32 HwlSanityCheckMacroTiled(
         ADDR_TILEINFO* pTileInfo) const
     {

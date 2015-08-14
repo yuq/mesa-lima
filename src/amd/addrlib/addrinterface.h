@@ -514,7 +514,8 @@ typedef union _ADDR_SURFACE_FLAGS
                                           ///  mode to PRT_* tile mode to disable slice rotation,
                                           ///  which is needed by swizzle pattern equation.
         UINT_32 skipIndicesOutput    : 1; ///< Skipping indices in output.
-        UINT_32 reserved             : 7; ///< Reserved bits
+        UINT_32 rotateDisplay        : 1; ///< Rotate micro tile type
+        UINT_32 reserved             : 6; ///< Reserved bits
     };
 
     UINT_32 value;

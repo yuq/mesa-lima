@@ -351,6 +351,11 @@ protected:
         // not supported in hwl layer
     }
 
+    virtual VOID HwlSelectTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const
+    {
+        // not supported in hwl layer
+    }
+
     AddrTileMode DegradeLargeThickTile(AddrTileMode tileMode, UINT_32 bpp) const;
 
     VOID PadDimensions(
@@ -485,6 +490,9 @@ protected:
     virtual UINT_32 HwlComputeQbStereoRightSwizzle(
         ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const = 0;
 
+    BOOL_32 OptimizeTileMode(
+        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, AddrTileMode* pTileMode) const;
+
 private:
     // Disallow the copy constructor
     AddrLib1(const AddrLib1& a);
@@ -507,9 +515,6 @@ private:
 
     UINT_32 ComputeXmaskCoordYFromPipe(
         UINT_32 pipe, UINT_32 x) const;
-
-    BOOL_32 OptimizeTileMode(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, AddrTileMode* pTileMode) const;
 };
 
 #endif

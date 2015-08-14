@@ -143,6 +143,8 @@ protected:
 
     virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
 
+    virtual VOID HwlSelectTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
+
     virtual ADDR_E_RETURNCODE HwlComputeDccInfo(
         const ADDR_COMPUTE_DCCINFO_INPUT* pIn,
         ADDR_COMPUTE_DCCINFO_OUTPUT* pOut) const;

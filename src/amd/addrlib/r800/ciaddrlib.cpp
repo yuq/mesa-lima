@@ -1024,6 +1024,102 @@ VOID CiAddrLib::HwlOverrideTileMode(
 
 /**
 ***************************************************************************************************
+*   CiAddrLib::HwlSelectTileMode
+*
+*   @brief
+*       Select tile modes.
+*
+*   @return
+*       N/A
+*
+***************************************************************************************************
+*/
+VOID CiAddrLib::HwlSelectTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
+    ) const
+{
+    AddrTileMode tileMode;
+    AddrTileType tileType;
+
+    if (pInOut->flags.rotateDisplay)
+    {
+        tileMode = ADDR_TM_2D_TILED_THIN1;
+        tileType = ADDR_ROTATED;
+    }
+    else if (pInOut->flags.volume)
+    {
+        BOOL_32 bThin = (m_settings.isBonaire == TRUE) ||
+                        ((m_allowNonDispThickModes == TRUE) && (pInOut->flags.color == TRUE));
+
+        if (pInOut->numSlices >= 8)
+        {
+            tileMode = ADDR_TM_2D_TILED_XTHICK;
+            tileType = (bThin == TRUE) ? ADDR_NON_DISPLAYABLE : ADDR_THICK;
+        }
+        else if (pInOut->numSlices >= 4)
+        {
+            tileMode = ADDR_TM_2D_TILED_THICK;
+            tileType = (bThin == TRUE) ? ADDR_NON_DISPLAYABLE : ADDR_THICK;
+        }
+        else
+        {
+            tileMode = ADDR_TM_2D_TILED_THIN1;
+            tileType = ADDR_NON_DISPLAYABLE;
+        }
+    }
+    else
+    {
+        tileMode = ADDR_TM_2D_TILED_THIN1;
+
+        if (pInOut->flags.depth || pInOut->flags.stencil)
+        {
+            tileType = ADDR_DEPTH_SAMPLE_ORDER;
+        }
+        else if ((pInOut->bpp <= 32) ||
+                 (pInOut->flags.display == TRUE) ||
+                 (pInOut->flags.overlay == TRUE))
+        {
+            tileType = ADDR_DISPLAYABLE;
+        }
+        else
+        {
+            tileType = ADDR_NON_DISPLAYABLE;
+        }
+    }
+
+    if (pInOut->flags.prt)
+    {
+        if (Thickness(tileMode) > 1)
+        {
+            tileMode = ADDR_TM_PRT_TILED_THICK;
+            tileType = (m_settings.isBonaire == TRUE) ? ADDR_NON_DISPLAYABLE : ADDR_THICK;
+        }
+        else
+        {
+            tileMode = ADDR_TM_PRT_TILED_THIN1;
+        }
+    }
+
+    pInOut->tileMode = tileMode;
+    pInOut->tileType = tileType;
+
+    if ((pInOut->flags.dccCompatible == FALSE) &&
+        (pInOut->flags.tcCompatible == FALSE))
+    {
+        pInOut->flags.opt4Space = TRUE;
+
+        // Optimize tile mode if possible
+        if (OptimizeTileMode(pInOut, &tileMode))
+        {
+            pInOut->tileMode = tileMode;
+        }
+    }
+
+    HwlOverrideTileMode(pInOut);
+}
+
+/**
+***************************************************************************************************
 *   CiAddrLib::HwlSetupTileInfo
 *
 *   @brief
