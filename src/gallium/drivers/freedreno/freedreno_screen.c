@@ -176,6 +176,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_INDEP_BLEND_ENABLE:
 	case PIPE_CAP_INDEP_BLEND_FUNC:
 	case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
+	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
@@ -192,6 +193,9 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
 		return is_a3xx(screen);
+
+	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
+		return is_a4xx(screen);
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
 		return 256;
@@ -230,8 +234,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
-	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
-	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 		return 0;
 
