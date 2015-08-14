@@ -769,8 +769,8 @@ VkResult anv_DeviceWaitIdle(
    bo = &device->dynamic_state_pool.block_pool->bo;
    batch.start = batch.next = state.map;
    batch.end = state.map + 32;
-   anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
-   anv_batch_emit(&batch, GEN8_MI_NOOP);
+   anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
+   anv_batch_emit(&batch, GEN7_MI_NOOP);
 
    exec2_objects[0].handle = bo->gem_handle;
    exec2_objects[0].relocation_count = 0;
@@ -1996,39 +1996,7 @@ VkResult anv_CreateDynamicRasterState(
     const VkDynamicRasterStateCreateInfo*       pCreateInfo,
     VkDynamicRasterState*                       pState)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_rs_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   struct GEN8_3DSTATE_SF sf = {
-      GEN8_3DSTATE_SF_header,
-      .LineWidth = pCreateInfo->lineWidth,
-   };
-
-   GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
-
-   bool enable_bias = pCreateInfo->depthBias != 0.0f ||
-      pCreateInfo->slopeScaledDepthBias != 0.0f;
-   struct GEN8_3DSTATE_RASTER raster = {
-      .GlobalDepthOffsetEnableSolid = enable_bias,
-      .GlobalDepthOffsetEnableWireframe = enable_bias,
-      .GlobalDepthOffsetEnablePoint = enable_bias,
-      .GlobalDepthOffsetConstant = pCreateInfo->depthBias,
-      .GlobalDepthOffsetScale = pCreateInfo->slopeScaledDepthBias,
-      .GlobalDepthOffsetClamp = pCreateInfo->depthBiasClamp
-   };
-
-   GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
-
-   *pState = anv_dynamic_rs_state_to_handle(state);
-
-   return VK_SUCCESS;
+   return driver_layer->CreateDynamicRasterState(_device, pCreateInfo, pState);
 }
 
 VkResult anv_DestroyDynamicRasterState(

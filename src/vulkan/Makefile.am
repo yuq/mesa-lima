@@ -72,7 +72,8 @@ VULKAN_SOURCES =                                        \
 	anv_private.h                                   \
 	anv_query.c                                     \
 	anv_util.c                                      \
-	anv_x11.c
+	anv_x11.c					\
+	anv_gen8.c
 
 libvulkan_la_SOURCES =                                  \
 	$(VULKAN_SOURCES)                               \
