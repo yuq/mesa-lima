@@ -95,6 +95,7 @@ tuint = "uint"
 tfloat32 = "float32"
 tint32 = "int32"
 tuint32 = "uint32"
+tuint64 = "uint64"
 tfloat64 = "float64"
 
 commutative = "commutative "
@@ -259,6 +260,34 @@ dst.x = (src0.x <<  0) |
         (src0.y <<  8) |
         (src0.z << 16) |
         (src0.w << 24);
+""")
+
+unop_horiz("pack_double_2x32", 1, tuint64, 2, tuint32, """
+union {
+    uint64_t u64;
+    struct {
+        uint32_t i1;
+        uint32_t i2;
+    };
+} di;
+
+di.i1 = src0.x;
+di.i2 = src0.y;
+dst.x = di.u64;
+""")
+
+unop_horiz("unpack_double_2x32", 2, tuint32, 1, tuint64, """
+union {
+    uint64_t u64;
+    struct {
+        uint32_t i1;
+        uint32_t i2;
+    };
+} di;
+
+di.u64 = src0.x;
+dst.x = di.i1;
+dst.y = di.i2;
 """)
 
 # Lowered floating point unpacking operations.
