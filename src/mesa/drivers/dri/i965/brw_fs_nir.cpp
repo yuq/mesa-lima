@@ -56,61 +56,25 @@ fs_visitor::emit_nir_code()
 void
 fs_visitor::nir_setup_inputs()
 {
+   if (stage != MESA_SHADER_FRAGMENT)
+      return;
+
    nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
 
    nir_foreach_variable(var, &nir->inputs) {
-      enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
 
       fs_reg reg;
-      switch (stage) {
-      case MESA_SHADER_VERTEX: {
-         /* Our ATTR file is indexed by VERT_ATTRIB_*, which is the value
-          * stored in nir_variable::location.
-          *
-          * However, NIR's load_input intrinsics use a different index - an
-          * offset into a single contiguous array containing all inputs.
-          * This index corresponds to the nir_variable::driver_location field.
-          *
-          * So, we need to copy from fs_reg(ATTR, var->location) to
-          * offset(nir_inputs, var->data.driver_location).
-          */
-         const glsl_type *const t = var->type->without_array();
-         const unsigned components = t->components();
-         const unsigned cols = t->matrix_columns;
-         const unsigned elts = t->vector_elements;
-         unsigned array_length = var->type->is_array() ? var->type->length : 1;
-         for (unsigned i = 0; i < array_length; i++) {
-            for (unsigned j = 0; j < cols; j++) {
-               for (unsigned k = 0; k < elts; k++) {
-                  bld.MOV(offset(retype(input, type), bld,
-                                 components * i + elts * j + k),
-                          offset(fs_reg(ATTR, var->data.location + i, type),
-                                 bld, 4 * j + k));
-               }
-            }
-         }
-         break;
-      }
-      case MESA_SHADER_GEOMETRY:
-      case MESA_SHADER_COMPUTE:
-      case MESA_SHADER_TESS_CTRL:
-      case MESA_SHADER_TESS_EVAL:
-         unreachable("fs_visitor not used for these stages yet.");
-         break;
-      case MESA_SHADER_FRAGMENT:
-         if (var->data.location == VARYING_SLOT_POS) {
-            reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
-                                                var->data.origin_upper_left);
-            emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
-                                      input, reg), 0xF);
-         } else {
-            emit_general_interpolation(input, var->name, var->type,
-                                       (glsl_interp_qualifier) var->data.interpolation,
-                                       var->data.location, var->data.centroid,
-                                       var->data.sample);
-         }
-         break;
+      if (var->data.location == VARYING_SLOT_POS) {
+         reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
+                                             var->data.origin_upper_left);
+         emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
+                                   input, reg), 0xF);
+      } else {
+         emit_general_interpolation(input, var->name, var->type,
+                                    (glsl_interp_qualifier) var->data.interpolation,
+                                    var->data.location, var->data.centroid,
+                                    var->data.sample);
       }
    }
 }
@@ -1575,8 +1539,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_load_input: {
       unsigned index = 0;
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = offset(retype(nir_inputs, dest.type), bld,
-                             instr->const_index[0] + index);
+         fs_reg src;
+         if (stage == MESA_SHADER_VERTEX) {
+            src = offset(fs_reg(ATTR, instr->const_index[0], dest.type), bld, index);
+         } else {
+            src = offset(retype(nir_inputs, dest.type), bld,
+                         instr->const_index[0] + index);
+         }
          if (has_indirect)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
          index++;

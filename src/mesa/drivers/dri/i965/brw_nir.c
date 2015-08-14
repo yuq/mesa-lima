@@ -31,15 +31,36 @@ static void
 brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
 {
    switch (nir->stage) {
+   case MESA_SHADER_VERTEX:
+      /* For now, leave the vec4 backend doing the old method. */
+      if (!is_scalar) {
+         nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
+                                  type_size_vec4);
+         break;
+      }
+
+      /* Start with the location of the variable's base. */
+      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+         var->data.driver_location = var->data.location;
+      }
+
+      /* Now use nir_lower_io to walk dereference chains.  Attribute arrays
+       * are loaded as one vec4 per element (or matrix column), so we use
+       * type_size_vec4 here.
+       */
+      nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+      break;
    case MESA_SHADER_GEOMETRY:
       foreach_list_typed(nir_variable, var, node, &nir->inputs) {
          var->data.driver_location = var->data.location;
       }
       break;
-   default:
+   case MESA_SHADER_FRAGMENT:
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
                                is_scalar ? type_size_scalar : type_size_vec4);
       break;
+   default:
+      unreachable("unsupported shader stage");
    }
 }
 
