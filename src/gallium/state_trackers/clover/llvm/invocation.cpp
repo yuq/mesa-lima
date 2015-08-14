@@ -571,7 +571,9 @@ namespace {
       llvm::raw_svector_ostream bitcode_ostream(llvm_bitcode);
       llvm::BitstreamWriter writer(llvm_bitcode);
       llvm::WriteBitcodeToFile(mod, bitcode_ostream);
+#if HAVE_LLVM < 0x0308
       bitcode_ostream.flush();
+#endif
 
       const std::vector<llvm::Function *> kernels = find_kernels(mod);
       for (unsigned i = 0; i < kernels.size(); ++i) {
