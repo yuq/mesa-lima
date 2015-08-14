@@ -776,6 +776,8 @@ VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
+void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
 void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
