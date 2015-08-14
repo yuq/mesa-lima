@@ -100,7 +100,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       }
    };
 
-   anv_pipeline_create(anv_device_to_handle(device),
+   anv_graphics_pipeline_create(anv_device_to_handle(device),
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .stageCount = 1,
@@ -150,7 +150,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
          },
          .flags = 0,
       },
-      &(struct anv_pipeline_create_info) {
+      &(struct anv_graphics_pipeline_create_info) {
          .use_repclear = true,
          .disable_viewport = true,
          .use_rectlist = true
@@ -454,7 +454,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       &device->meta_state.blit.pipeline_layout);
 
-   anv_pipeline_create(anv_device_to_handle(device),
+   anv_graphics_pipeline_create(anv_device_to_handle(device),
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
          .stageCount = 2,
@@ -496,7 +496,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .flags = 0,
          .layout = device->meta_state.blit.pipeline_layout,
       },
-      &(struct anv_pipeline_create_info) {
+      &(struct anv_graphics_pipeline_create_info) {
          .use_repclear = false,
          .disable_viewport = true,
          .disable_scissor = true,

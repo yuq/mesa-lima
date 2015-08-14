@@ -850,7 +850,7 @@ struct anv_pipeline {
    uint32_t                                     cs_right_mask;
 };
 
-struct anv_pipeline_create_info {
+struct anv_graphics_pipeline_create_info {
    bool                                         use_repclear;
    bool                                         disable_viewport;
    bool                                         disable_scissor;
@@ -859,10 +859,20 @@ struct anv_pipeline_create_info {
 };
 
 VkResult
-anv_pipeline_create(VkDevice device,
-                    const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                    const struct anv_pipeline_create_info *extra,
-                    VkPipeline *pPipeline);
+anv_graphics_pipeline_create(VkDevice device,
+                             const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                             const struct anv_graphics_pipeline_create_info *extra,
+                             VkPipeline *pPipeline);
+
+VkResult
+gen8_graphics_pipeline_create(VkDevice _device,
+                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                              const struct anv_graphics_pipeline_create_info *extra,
+                              VkPipeline *pPipeline);
+VkResult
+gen8_compute_pipeline_create(VkDevice _device,
+                             const VkComputePipelineCreateInfo *pCreateInfo,
+                             VkPipeline *pPipeline);
 
 struct anv_compiler *anv_compiler_create(struct anv_device *device);
 void anv_compiler_destroy(struct anv_compiler *compiler);
