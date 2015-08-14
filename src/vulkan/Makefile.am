@@ -30,6 +30,8 @@ vulkan_include_HEADERS =				\
 
 lib_LTLIBRARIES = libvulkan.la
 
+check_LTLIBRARIES = libvulkan-test.la
+
 # The gallium includes are for the util/u_math.h include from main/macros.h
 
 AM_CPPFLAGS = \
@@ -53,7 +55,7 @@ libvulkan_la_CFLAGS =							\
 libvulkan_la_CXXFLAGS =							\
 	-Wall -Wextra -Wno-unused-parameter -fvisibility=hidden -O0 -g
 
-libvulkan_la_SOURCES =                                  \
+VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
 	anv_aub.c                                       \
 	anv_cmd_buffer.c                                \
@@ -63,7 +65,6 @@ libvulkan_la_SOURCES =                                  \
 	anv_entrypoints.c                               \
 	anv_entrypoints.h                               \
 	anv_formats.c                                   \
-	anv_gem.c                                       \
 	anv_image.c                                     \
 	anv_intel.c                                     \
 	anv_meta.c                                      \
@@ -72,6 +73,10 @@ libvulkan_la_SOURCES =                                  \
 	anv_query.c                                     \
 	anv_util.c                                      \
 	anv_x11.c
+
+libvulkan_la_SOURCES =                                  \
+	$(VULKAN_SOURCES)                               \
+	anv_gem.c
 
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
@@ -91,5 +96,15 @@ CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_la_LIBADD = -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
+
+# Libvulkan with dummy gem. Used for unit tests.
+
+libvulkan_test_la_SOURCES =                             \
+	$(VULKAN_SOURCES)                               \
+	anv_gem_stubs.c
+
+libvulkan_test_la_CFLAGS = $(libvulkan_la_CFLAGS)
+libvulkan_test_la_CXXFLAGS = $(libvulkan_la_CXXFLAGS)
+libvulkan_test_la_LIBADD = $(libvulkan_la_LIBADD)
 
 include $(top_srcdir)/install-lib-links.mk
