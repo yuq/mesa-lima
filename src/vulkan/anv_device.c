@@ -1917,42 +1917,7 @@ VkResult anv_CreateDynamicDepthStencilState(
     const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
     VkDynamicDepthStencilState*                 pState)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_ds_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
-      GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
-
-      /* Is this what we need to do? */
-      .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
-
-      .StencilTestMask = pCreateInfo->stencilReadMask & 0xff,
-      .StencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
-
-      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask & 0xff,
-      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
-   };
-
-   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
-                                      &wm_depth_stencil);
-
-   struct GEN8_COLOR_CALC_STATE color_calc_state = {
-      .StencilReferenceValue = pCreateInfo->stencilFrontRef,
-      .BackFaceStencilReferenceValue = pCreateInfo->stencilBackRef
-   };
-
-   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
-
-   *pState = anv_dynamic_ds_state_to_handle(state);
-
-   return VK_SUCCESS;
+   return driver_layer->CreateDynamicDepthStencilState(_device, pCreateInfo, pState);
 }
 
 VkResult anv_DestroyDynamicDepthStencilState(
