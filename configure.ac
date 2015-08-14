@@ -2439,6 +2439,7 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/drivers/x11/Makefile
 		src/mesa/main/tests/Makefile
 		src/vulkan/Makefile
+		src/vulkan/tests/Makefile
 		src/util/Makefile
 		src/util/tests/hash_table/Makefile])
 
