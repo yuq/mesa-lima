@@ -77,6 +77,27 @@ enum glsl_base_type glsl_get_sampler_result_type(const struct glsl_type *type);
 unsigned glsl_get_record_location_offset(const struct glsl_type *type,
                                          unsigned length);
 
+static inline unsigned
+glsl_get_bit_size(enum glsl_base_type type)
+{
+   switch (type) {
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_FLOAT: /* TODO handle mediump */
+   case GLSL_TYPE_SUBROUTINE:
+      return 32;
+
+   case GLSL_TYPE_DOUBLE:
+      return 64;
+
+   default:
+      unreachable("unknown base type");
+   }
+
+   return 0;
+}
+
 bool glsl_type_is_void(const struct glsl_type *type);
 bool glsl_type_is_error(const struct glsl_type *type);
 bool glsl_type_is_vector(const struct glsl_type *type);
