@@ -1086,6 +1086,18 @@ struct anv_render_pass {
    struct anv_subpass                           subpasses[0];
 };
 
+struct anv_query_pool_slot {
+   uint64_t begin;
+   uint64_t end;
+   uint64_t available;
+};
+
+struct anv_query_pool {
+   VkQueryType                                  type;
+   uint32_t                                     slots;
+   struct anv_bo                                bo;
+};
+
 void anv_device_init_meta(struct anv_device *device);
 void anv_device_finish_meta(struct anv_device *device);
 
