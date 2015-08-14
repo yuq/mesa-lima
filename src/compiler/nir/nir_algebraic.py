@@ -63,11 +63,11 @@ class Value(object):
 static const ${val.c_type} ${val.name} = {
    { ${val.type_enum} },
 % if isinstance(val, Constant):
-   { ${hex(val)} /* ${val.value} */ },
+   ${val.type()}, { ${hex(val)} /* ${val.value} */ },
 % elif isinstance(val, Variable):
    ${val.index}, /* ${val.var_name} */
    ${'true' if val.is_constant else 'false'},
-   nir_type_${ val.required_type or 'invalid' },
+   ${val.type() or 'nir_type_invalid' },
 % elif isinstance(val, Expression):
    nir_op_${val.opcode},
    { ${', '.join(src.c_ptr for src in val.sources)} },
@@ -107,9 +107,17 @@ class Constant(Value):
       if isinstance(self.value, (int, long)):
          return hex(self.value)
       elif isinstance(self.value, float):
-         return hex(struct.unpack('I', struct.pack('f', self.value))[0])
+         return hex(struct.unpack('Q', struct.pack('d', self.value))[0])
       else:
          assert False
+
+   def type(self):
+      if isinstance(self.value, (bool)):
+         return "nir_type_bool32"
+      elif isinstance(self.value, (int, long)):
+         return "nir_type_int"
+      elif isinstance(self.value, float):
+         return "nir_type_float"
 
 _var_name_re = re.compile(r"(?P<const>#)?(?P<name>\w+)(?:@(?P<type>\w+))?")
 
@@ -128,6 +136,14 @@ class Variable(Value):
          assert self.required_type in ('float', 'bool', 'int', 'unsigned')
 
       self.index = varset[self.var_name]
+
+   def type(self):
+      if self.required_type == 'bool':
+         return "nir_type_bool32"
+      elif self.required_type in ('int', 'unsigned'):
+         return "nir_type_int"
+      elif self.required_type == 'float':
+         return "nir_type_float"
 
 class Expression(Value):
    def __init__(self, expr, name_base, varset):

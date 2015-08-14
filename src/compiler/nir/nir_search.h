@@ -71,10 +71,12 @@ typedef struct {
 typedef struct {
    nir_search_value value;
 
+   nir_alu_type type;
+
    union {
-      uint32_t u;
-      int32_t i;
-      float f;
+      uint64_t u;
+      int64_t i;
+      double d;
    } data;
 } nir_search_constant;
 
