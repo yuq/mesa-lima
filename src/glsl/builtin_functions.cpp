@@ -3573,7 +3573,16 @@ builtin_builder::_isinf(builtin_available_predicate avail, const glsl_type *type
 
    ir_constant_data infinities;
    for (int i = 0; i < type->vector_elements; i++) {
-      infinities.f[i] = INFINITY;
+      switch (type->base_type) {
+      case GLSL_TYPE_FLOAT:
+         infinities.f[i] = INFINITY;
+         break;
+      case GLSL_TYPE_DOUBLE:
+         infinities.d[i] = INFINITY;
+         break;
+      default:
+         unreachable("unknown type");
+      }
    }
 
    body.emit(ret(equal(abs(x), imm(type, infinities))));
