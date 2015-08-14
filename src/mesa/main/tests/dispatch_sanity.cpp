@@ -851,6 +851,9 @@ const struct function common_desktop_functions_possible[] = {
 // { "glTextureStorage2DMultisampleEXT", 43, -1 },      // XXX: Add to xml
 // { "glTextureStorage3DMultisampleEXT", 43, -1 },      // XXX: Add to xml
 
+/* GL 4.5 */
+   { "glMemoryBarrierByRegion", 45, -1 },
+
    /* GL_ARB_internalformat_query */
    { "glGetInternalformativ", 30, -1 },
 
@@ -1739,6 +1742,9 @@ const struct function gl_core_functions_possible[] = {
 // { "glTextureStorage2DMultisampleEXT", 43, -1 },      // XXX: Add to xml
 // { "glTextureStorage3DMultisampleEXT", 43, -1 },      // XXX: Add to xml
 
+/* GL 4.5 */
+   { "glMemoryBarrierByRegion", 45, -1 },
+
    /* GL_ARB_direct_state_access */
    { "glCreateTransformFeedbacks", 45, -1 },
    { "glTransformFeedbackBufferBase", 45, -1 },
@@ -2461,8 +2467,7 @@ const struct function gles31_functions_possible[] = {
    { "glGetBooleani_v", 31, -1 },
    { "glMemoryBarrier", 31, -1 },
 
-   // FINISHME: This function has not been implemented yet.
-   // { "glMemoryBarrierByRegion", 31, -1 },
+   { "glMemoryBarrierByRegion", 31, -1 },
 
    { "glTexStorage2DMultisample", 31, -1 },
    { "glGetMultisamplefv", 31, -1 },
