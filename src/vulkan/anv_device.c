@@ -1324,88 +1324,42 @@ VkResult anv_DestroyBuffer(
    return VK_SUCCESS;
 }
 
-// Buffer view functions
-
-void
-anv_fill_buffer_surface_state(void *state, const struct anv_format *format,
-                              uint32_t offset, uint32_t range)
+VkResult
+anv_buffer_view_create(
+   struct anv_device *                          device,
+   const VkBufferViewCreateInfo*                pCreateInfo,
+   struct anv_buffer_view **                    view_out)
 {
-   /* This assumes RGBA float format. */
-   uint32_t stride = 4;
-   uint32_t num_elements = range / stride;
+   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
+   struct anv_buffer_view *view;
 
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = SURFTYPE_BUFFER,
-      .SurfaceArray = false,
-      .SurfaceFormat = format->surface_format,
-      .SurfaceVerticalAlignment = VALIGN4,
-      .SurfaceHorizontalAlignment = HALIGN4,
-      .TileMode = LINEAR,
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
-      .SamplerL2BypassModeDisable = true,
-      .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
-      .BaseMipLevel = 0.0,
-      .SurfaceQPitch = 0,
-      .Height = (num_elements >> 7) & 0x3fff,
-      .Width = num_elements & 0x7f,
-      .Depth = (num_elements >> 21) & 0x3f,
-      .SurfacePitch = stride - 1,
-      .MinimumArrayElement = 0,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
-      .XOffset = 0,
-      .YOffset = 0,
-      .SurfaceMinLOD = 0,
-      .MIPCountLOD = 0,
-      .AuxiliarySurfaceMode = AUX_NONE,
-      .RedClearColor = 0,
-      .GreenClearColor = 0,
-      .BlueClearColor = 0,
-      .AlphaClearColor = 0,
-      .ShaderChannelSelectRed = SCS_RED,
-      .ShaderChannelSelectGreen = SCS_GREEN,
-      .ShaderChannelSelectBlue = SCS_BLUE,
-      .ShaderChannelSelectAlpha = SCS_ALPHA,
-      .ResourceMinLOD = 0.0,
-      /* FIXME: We assume that the image must be bound at this time. */
-      .SurfaceBaseAddress = { NULL, offset },
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
+
+   view = anv_device_alloc(device, sizeof(*view), 8,
+                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (view == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   view->view = (struct anv_surface_view) {
+      .bo = buffer->bo,
+      .offset = buffer->offset + pCreateInfo->offset,
+      .surface_state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64),
+      .format = anv_format_for_vk_format(pCreateInfo->format),
+      .range = pCreateInfo->range,
    };
 
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
+   *view_out = view;
+
+   return VK_SUCCESS;
 }
+
 
 VkResult anv_CreateBufferView(
     VkDevice                                    _device,
     const VkBufferViewCreateInfo*               pCreateInfo,
     VkBufferView*                               pView)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
-   struct anv_buffer_view *bview;
-   struct anv_surface_view *view;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
-
-   bview = anv_device_alloc(device, sizeof(*view), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (bview == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   view = &bview->view;
-   view->bo = buffer->bo;
-   view->offset = buffer->offset + pCreateInfo->offset;
-   view->surface_state =
-      anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
-   view->range = pCreateInfo->range;
-
-   anv_fill_buffer_surface_state(view->surface_state.map, view->format,
-                                 view->offset, pCreateInfo->range);
-
-   *pView = anv_buffer_view_to_handle(bview);
-
-   return VK_SUCCESS;
+   return driver_layer->CreateBufferView(_device, pCreateInfo, pView);
 }
 
 VkResult anv_DestroyBufferView(

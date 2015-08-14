@@ -68,3 +68,77 @@ VkResult gen8_CreateDynamicRasterState(
 
    return VK_SUCCESS;
 }
+
+void
+gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
+                               uint32_t offset, uint32_t range)
+{
+   /* This assumes RGBA float format. */
+   uint32_t stride = 4;
+   uint32_t num_elements = range / stride;
+
+   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+      .SurfaceType = SURFTYPE_BUFFER,
+      .SurfaceArray = false,
+      .SurfaceFormat = format->surface_format,
+      .SurfaceVerticalAlignment = VALIGN4,
+      .SurfaceHorizontalAlignment = HALIGN4,
+      .TileMode = LINEAR,
+      .VerticalLineStride = 0,
+      .VerticalLineStrideOffset = 0,
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+      .MemoryObjectControlState = GEN8_MOCS,
+      .BaseMipLevel = 0.0,
+      .SurfaceQPitch = 0,
+      .Height = (num_elements >> 7) & 0x3fff,
+      .Width = num_elements & 0x7f,
+      .Depth = (num_elements >> 21) & 0x3f,
+      .SurfacePitch = stride - 1,
+      .MinimumArrayElement = 0,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .XOffset = 0,
+      .YOffset = 0,
+      .SurfaceMinLOD = 0,
+      .MIPCountLOD = 0,
+      .AuxiliarySurfaceMode = AUX_NONE,
+      .RedClearColor = 0,
+      .GreenClearColor = 0,
+      .BlueClearColor = 0,
+      .AlphaClearColor = 0,
+      .ShaderChannelSelectRed = SCS_RED,
+      .ShaderChannelSelectGreen = SCS_GREEN,
+      .ShaderChannelSelectBlue = SCS_BLUE,
+      .ShaderChannelSelectAlpha = SCS_ALPHA,
+      .ResourceMinLOD = 0.0,
+      /* FIXME: We assume that the image must be bound at this time. */
+      .SurfaceBaseAddress = { NULL, offset },
+   };
+
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
+}
+
+VkResult gen8_CreateBufferView(
+    VkDevice                                    _device,
+    const VkBufferViewCreateInfo*               pCreateInfo,
+    VkBufferView*                               pView)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_buffer_view *view;
+   VkResult result;
+
+   result = anv_buffer_view_create(device, pCreateInfo, &view);
+   if (result != VK_SUCCESS)
+      return result;
+
+   const struct anv_format *format = 
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   gen8_fill_buffer_surface_state(view->view.surface_state.map, format,
+                                  view->view.offset, pCreateInfo->range);
+
+   *pView = anv_buffer_view_to_handle(view);
+
+   return VK_SUCCESS;
+}
+
