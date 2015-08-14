@@ -996,6 +996,7 @@ struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
    bool force_tile_mode;
    uint8_t tile_mode;
+   uint32_t stride;
 };
 
 VkResult anv_image_create(VkDevice _device,

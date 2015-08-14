@@ -121,6 +121,7 @@ VkResult anv_CreateSwapChainWSI(
          &(struct anv_image_create_info) {
             .force_tile_mode = true,
             .tile_mode = XMAJOR,
+            .stride = 0,
             .vk_info =
          &(VkImageCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,

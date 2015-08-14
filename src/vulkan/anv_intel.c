@@ -39,6 +39,7 @@ VkResult anv_CreateDmaBufImageINTEL(
    struct anv_device_memory *mem;
    struct anv_image *image;
    VkResult result;
+   VkImage image_h;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DMA_BUF_IMAGE_CREATE_INFO_INTEL);
 
@@ -65,19 +66,30 @@ VkResult anv_CreateDmaBufImageINTEL(
       goto fail_mem;
    }
 
-   *image = (struct anv_image) {
-      .bo = &mem->bo,
-      .offset = 0,
-      .type = VK_IMAGE_TYPE_2D,
-      .extent = pCreateInfo->extent,
-      .size = mem->bo.size,
-
-      .primary_surface = {
-         .offset = 0,
-         .stride = pCreateInfo->strideInBytes,
+   anv_image_create(_device,
+      &(struct anv_image_create_info) {
+         .force_tile_mode = true,
          .tile_mode = XMAJOR,
-      },
-   };
+         .stride = pCreateInfo->strideInBytes,
+         .vk_info =
+      &(VkImageCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = pCreateInfo->format,
+         .extent = pCreateInfo->extent,
+         .mipLevels = 1,
+         .arraySize = 1,
+         .samples = 1,
+         /* FIXME: Need a way to use X tiling to allow scanout */
+         .tiling = VK_IMAGE_TILING_OPTIMAL,
+         .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+         .flags = 0,
+      }},
+      &image_h);
+
+   image = anv_image_from_handle(image_h);
+   image->bo = &mem->bo;
+   image->offset = 0;
 
    assert(image->extent.width > 0);
    assert(image->extent.height > 0);
