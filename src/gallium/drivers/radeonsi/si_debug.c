@@ -278,10 +278,62 @@ static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw)
 	}
 }
 
+static void si_dump_mmapped_reg(struct si_context *sctx, FILE *f,
+				unsigned offset)
+{
+	struct radeon_winsys *ws = sctx->b.ws;
+	uint32_t value;
+
+	ws->read_registers(ws, offset, 1, &value);
+	si_dump_reg(f, offset, value, ~0);
+}
+
+static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
+{
+	if (sctx->screen->b.info.drm_major == 2 &&
+	    sctx->screen->b.info.drm_minor < 42)
+		return; /* no radeon support */
+
+	fprintf(f, "Memory-mapped registers:\n");
+	si_dump_mmapped_reg(sctx, f, R_008010_GRBM_STATUS);
+
+	/* No other registers can be read on DRM < 3.1.0. */
+	if (sctx->screen->b.info.drm_major < 3 ||
+	    sctx->screen->b.info.drm_minor < 1) {
+		fprintf(f, "\n");
+		return;
+	}
+
+	si_dump_mmapped_reg(sctx, f, R_008008_GRBM_STATUS2);
+	si_dump_mmapped_reg(sctx, f, R_008014_GRBM_STATUS_SE0);
+	si_dump_mmapped_reg(sctx, f, R_008018_GRBM_STATUS_SE1);
+	si_dump_mmapped_reg(sctx, f, R_008038_GRBM_STATUS_SE2);
+	si_dump_mmapped_reg(sctx, f, R_00803C_GRBM_STATUS_SE3);
+	si_dump_mmapped_reg(sctx, f, R_00D034_SDMA0_STATUS_REG);
+	si_dump_mmapped_reg(sctx, f, R_00D834_SDMA1_STATUS_REG);
+	si_dump_mmapped_reg(sctx, f, R_000E50_SRBM_STATUS);
+	si_dump_mmapped_reg(sctx, f, R_000E4C_SRBM_STATUS2);
+	si_dump_mmapped_reg(sctx, f, R_000E54_SRBM_STATUS3);
+	si_dump_mmapped_reg(sctx, f, R_008680_CP_STAT);
+	si_dump_mmapped_reg(sctx, f, R_008674_CP_STALLED_STAT1);
+	si_dump_mmapped_reg(sctx, f, R_008678_CP_STALLED_STAT2);
+	si_dump_mmapped_reg(sctx, f, R_008670_CP_STALLED_STAT3);
+	si_dump_mmapped_reg(sctx, f, R_008210_CP_CPC_STATUS);
+	si_dump_mmapped_reg(sctx, f, R_008214_CP_CPC_BUSY_STAT);
+	si_dump_mmapped_reg(sctx, f, R_008218_CP_CPC_STALLED_STAT1);
+	si_dump_mmapped_reg(sctx, f, R_00821C_CP_CPF_STATUS);
+	si_dump_mmapped_reg(sctx, f, R_008220_CP_CPF_BUSY_STAT);
+	si_dump_mmapped_reg(sctx, f, R_008224_CP_CPF_STALLED_STAT1);
+	fprintf(f, "\n");
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
+
+	if (flags & PIPE_DEBUG_DEVICE_IS_HUNG)
+		si_dump_debug_registers(sctx, f);
 
 	si_dump_shader(sctx->vs_shader, "Vertex", f);
 	si_dump_shader(sctx->tcs_shader, "Tessellation control", f);
