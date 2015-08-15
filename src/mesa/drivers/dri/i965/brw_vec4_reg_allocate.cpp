@@ -140,7 +140,7 @@ brw_vec4_alloc_reg_set(struct brw_compiler *compiler)
 	 for (int base_reg = j;
 	      base_reg < j + class_sizes[i];
 	      base_reg++) {
-	    ra_add_transitive_reg_conflict(compiler->vec4_reg_set.regs, base_reg, reg);
+	    ra_add_reg_conflict(compiler->vec4_reg_set.regs, base_reg, reg);
 	 }
 
 	 reg++;
@@ -157,6 +157,9 @@ brw_vec4_alloc_reg_set(struct brw_compiler *compiler)
       }
    }
    assert(reg == ra_reg_count);
+
+   for (int reg = 0; reg < base_reg_count; reg++)
+      ra_make_reg_conflicts_transitive(compiler->vec4_reg_set.regs, reg);
 
    ra_set_finalize(compiler->vec4_reg_set.regs, q_values);
 
