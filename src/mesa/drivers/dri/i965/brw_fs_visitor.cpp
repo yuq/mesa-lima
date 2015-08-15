@@ -77,612 +77,6 @@ fs_visitor::emit_vs_system_value(int location)
    return reg;
 }
 
-fs_inst *
-fs_visitor::emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int coord_components,
-                              fs_reg shadow_c,
-                              fs_reg lod, fs_reg dPdy, int grad_components,
-                              uint32_t sampler)
-{
-   int mlen;
-   int base_mrf = 1;
-   bool simd16 = false;
-   fs_reg orig_dst;
-
-   /* g0 header. */
-   mlen = 1;
-
-   if (shadow_c.file != BAD_FILE) {
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
-	 coordinate = offset(coordinate, 1);
-      }
-
-      /* gen4's SIMD8 sampler always has the slots for u,v,r present.
-       * the unused slots must be zeroed.
-       */
-      for (int i = coord_components; i < 3; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f));
-      }
-      mlen += 3;
-
-      if (op == ir_tex) {
-	 /* There's no plain shadow compare message, so we use shadow
-	  * compare with a bias of 0.0.
-	  */
-         bld.MOV(fs_reg(MRF, base_mrf + mlen), fs_reg(0.0f));
-	 mlen++;
-      } else if (op == ir_txb || op == ir_txl) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen), lod);
-	 mlen++;
-      } else {
-         unreachable("Should not get here.");
-      }
-
-      bld.MOV(fs_reg(MRF, base_mrf + mlen), shadow_c);
-      mlen++;
-   } else if (op == ir_tex) {
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
-	 coordinate = offset(coordinate, 1);
-      }
-      /* zero the others. */
-      for (int i = coord_components; i<3; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), fs_reg(0.0f));
-      }
-      /* gen4's SIMD8 sampler always has the slots for u,v,r present. */
-      mlen += 3;
-   } else if (op == ir_txd) {
-      fs_reg &dPdx = lod;
-
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i), coordinate);
-	 coordinate = offset(coordinate, 1);
-      }
-      /* the slots for u and v are always present, but r is optional */
-      mlen += MAX2(coord_components, 2);
-
-      /*  P   = u, v, r
-       * dPdx = dudx, dvdx, drdx
-       * dPdy = dudy, dvdy, drdy
-       *
-       * 1-arg: Does not exist.
-       *
-       * 2-arg: dudx   dvdx   dudy   dvdy
-       *        dPdx.x dPdx.y dPdy.x dPdy.y
-       *        m4     m5     m6     m7
-       *
-       * 3-arg: dudx   dvdx   drdx   dudy   dvdy   drdy
-       *        dPdx.x dPdx.y dPdx.z dPdy.x dPdy.y dPdy.z
-       *        m5     m6     m7     m8     m9     m10
-       */
-      for (int i = 0; i < grad_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen), dPdx);
-	 dPdx = offset(dPdx, 1);
-      }
-      mlen += MAX2(grad_components, 2);
-
-      for (int i = 0; i < grad_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen), dPdy);
-	 dPdy = offset(dPdy, 1);
-      }
-      mlen += MAX2(grad_components, 2);
-   } else if (op == ir_txs) {
-      /* There's no SIMD8 resinfo message on Gen4.  Use SIMD16 instead. */
-      simd16 = true;
-      bld.MOV(fs_reg(MRF, base_mrf + mlen, BRW_REGISTER_TYPE_UD), lod);
-      mlen += 2;
-   } else {
-      /* Oh joy.  gen4 doesn't have SIMD8 non-shadow-compare bias/lod
-       * instructions.  We'll need to do SIMD16 here.
-       */
-      simd16 = true;
-      assert(op == ir_txb || op == ir_txl || op == ir_txf);
-
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i * 2, coordinate.type),
-                 coordinate);
-	 coordinate = offset(coordinate, 1);
-      }
-
-      /* Initialize the rest of u/v/r with 0.0.  Empirically, this seems to
-       * be necessary for TXF (ld), but seems wise to do for all messages.
-       */
-      for (int i = coord_components; i < 3; i++) {
-         bld.MOV(fs_reg(MRF, base_mrf + mlen + i * 2), fs_reg(0.0f));
-      }
-
-      /* lod/bias appears after u/v/r. */
-      mlen += 6;
-
-      bld.MOV(fs_reg(MRF, base_mrf + mlen, lod.type), lod);
-      mlen++;
-
-      /* The unused upper half. */
-      mlen++;
-   }
-
-   if (simd16) {
-      /* Now, since we're doing simd16, the return is 2 interleaved
-       * vec4s where the odd-indexed ones are junk. We'll need to move
-       * this weirdness around to the expected layout.
-       */
-      orig_dst = dst;
-      dst = fs_reg(GRF, alloc.allocate(8), orig_dst.type);
-   }
-
-   enum opcode opcode;
-   switch (op) {
-   case ir_tex: opcode = SHADER_OPCODE_TEX; break;
-   case ir_txb: opcode = FS_OPCODE_TXB; break;
-   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
-   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
-   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
-   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
-   default:
-      unreachable("not reached");
-   }
-
-   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
-   inst->base_mrf = base_mrf;
-   inst->mlen = mlen;
-   inst->header_size = 1;
-   inst->regs_written = simd16 ? 8 : 4;
-
-   if (simd16) {
-      for (int i = 0; i < 4; i++) {
-         bld.MOV(orig_dst, dst);
-	 orig_dst = offset(orig_dst, 1);
-	 dst = offset(dst, 2);
-      }
-   }
-
-   return inst;
-}
-
-fs_inst *
-fs_visitor::emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
-                                     fs_reg coordinate, int vector_elements,
-                                     fs_reg shadow_c, fs_reg lod,
-                                     uint32_t sampler)
-{
-   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
-   bool has_lod = op == ir_txl || op == ir_txb || op == ir_txf;
-
-   if (has_lod && shadow_c.file != BAD_FILE)
-      no16("TXB and TXL with shadow comparison unsupported in SIMD16.");
-
-   if (op == ir_txd)
-      no16("textureGrad unsupported in SIMD16.");
-
-   /* Copy the coordinates. */
-   for (int i = 0; i < vector_elements; i++) {
-      bld.MOV(retype(offset(message, i), coordinate.type), coordinate);
-      coordinate = offset(coordinate, 1);
-   }
-
-   fs_reg msg_end = offset(message, vector_elements);
-
-   /* Messages other than sample and ld require all three components */
-   if (has_lod || shadow_c.file != BAD_FILE) {
-      for (int i = vector_elements; i < 3; i++) {
-         bld.MOV(offset(message, i), fs_reg(0.0f));
-      }
-   }
-
-   if (has_lod) {
-      fs_reg msg_lod = retype(offset(message, 3), op == ir_txf ?
-                              BRW_REGISTER_TYPE_UD : BRW_REGISTER_TYPE_F);
-      bld.MOV(msg_lod, lod);
-      msg_end = offset(msg_lod, 1);
-   }
-
-   if (shadow_c.file != BAD_FILE) {
-      fs_reg msg_ref = offset(message, 3 + has_lod);
-      bld.MOV(msg_ref, shadow_c);
-      msg_end = offset(msg_ref, 1);
-   }
-
-   enum opcode opcode;
-   switch (op) {
-   case ir_tex: opcode = SHADER_OPCODE_TEX; break;
-   case ir_txb: opcode = FS_OPCODE_TXB;     break;
-   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
-   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
-   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
-   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
-   default: unreachable("not reached");
-   }
-
-   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
-   inst->base_mrf = message.reg - 1;
-   inst->mlen = msg_end.reg - inst->base_mrf;
-   inst->header_size = 1;
-   inst->regs_written = 8;
-
-   return inst;
-}
-
-/* gen5's sampler has slots for u, v, r, array index, then optional
- * parameters like shadow comparitor or LOD bias.  If optional
- * parameters aren't present, those base slots are optional and don't
- * need to be included in the message.
- *
- * We don't fill in the unnecessary slots regardless, which may look
- * surprising in the disassembly.
- */
-fs_inst *
-fs_visitor::emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int vector_elements,
-                              fs_reg shadow_c,
-                              fs_reg lod, fs_reg lod2, int grad_components,
-                              fs_reg sample_index, uint32_t sampler,
-                              bool has_offset)
-{
-   int reg_width = dispatch_width / 8;
-   unsigned header_size = 0;
-
-   fs_reg message(MRF, 2, BRW_REGISTER_TYPE_F, dispatch_width);
-   fs_reg msg_coords = message;
-
-   if (has_offset) {
-      /* The offsets set up by the ir_texture visitor are in the
-       * m1 header, so we can't go headerless.
-       */
-      header_size = 1;
-      message.reg--;
-   }
-
-   for (int i = 0; i < vector_elements; i++) {
-      bld.MOV(retype(offset(msg_coords, i), coordinate.type), coordinate);
-      coordinate = offset(coordinate, 1);
-   }
-   fs_reg msg_end = offset(msg_coords, vector_elements);
-   fs_reg msg_lod = offset(msg_coords, 4);
-
-   if (shadow_c.file != BAD_FILE) {
-      fs_reg msg_shadow = msg_lod;
-      bld.MOV(msg_shadow, shadow_c);
-      msg_lod = offset(msg_shadow, 1);
-      msg_end = msg_lod;
-   }
-
-   enum opcode opcode;
-   switch (op) {
-   case ir_tex:
-      opcode = SHADER_OPCODE_TEX;
-      break;
-   case ir_txb:
-      bld.MOV(msg_lod, lod);
-      msg_end = offset(msg_lod, 1);
-
-      opcode = FS_OPCODE_TXB;
-      break;
-   case ir_txl:
-      bld.MOV(msg_lod, lod);
-      msg_end = offset(msg_lod, 1);
-
-      opcode = SHADER_OPCODE_TXL;
-      break;
-   case ir_txd: {
-      /**
-       *  P   =  u,    v,    r
-       * dPdx = dudx, dvdx, drdx
-       * dPdy = dudy, dvdy, drdy
-       *
-       * Load up these values:
-       * - dudx   dudy   dvdx   dvdy   drdx   drdy
-       * - dPdx.x dPdy.x dPdx.y dPdy.y dPdx.z dPdy.z
-       */
-      msg_end = msg_lod;
-      for (int i = 0; i < grad_components; i++) {
-         bld.MOV(msg_end, lod);
-         lod = offset(lod, 1);
-         msg_end = offset(msg_end, 1);
-
-         bld.MOV(msg_end, lod2);
-         lod2 = offset(lod2, 1);
-         msg_end = offset(msg_end, 1);
-      }
-
-      opcode = SHADER_OPCODE_TXD;
-      break;
-   }
-   case ir_txs:
-      msg_lod = retype(msg_end, BRW_REGISTER_TYPE_UD);
-      bld.MOV(msg_lod, lod);
-      msg_end = offset(msg_lod, 1);
-
-      opcode = SHADER_OPCODE_TXS;
-      break;
-   case ir_query_levels:
-      msg_lod = msg_end;
-      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
-      msg_end = offset(msg_lod, 1);
-
-      opcode = SHADER_OPCODE_TXS;
-      break;
-   case ir_txf:
-      msg_lod = offset(msg_coords, 3);
-      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), lod);
-      msg_end = offset(msg_lod, 1);
-
-      opcode = SHADER_OPCODE_TXF;
-      break;
-   case ir_txf_ms:
-      msg_lod = offset(msg_coords, 3);
-      /* lod */
-      bld.MOV(retype(msg_lod, BRW_REGISTER_TYPE_UD), fs_reg(0u));
-      /* sample index */
-      bld.MOV(retype(offset(msg_lod, 1), BRW_REGISTER_TYPE_UD), sample_index);
-      msg_end = offset(msg_lod, 2);
-
-      opcode = SHADER_OPCODE_TXF_CMS;
-      break;
-   case ir_lod:
-      opcode = SHADER_OPCODE_LOD;
-      break;
-   case ir_tg4:
-      opcode = SHADER_OPCODE_TG4;
-      break;
-   default:
-      unreachable("not reached");
-   }
-
-   fs_inst *inst = bld.emit(opcode, dst, reg_undef, fs_reg(sampler));
-   inst->base_mrf = message.reg;
-   inst->mlen = msg_end.reg - message.reg;
-   inst->header_size = header_size;
-   inst->regs_written = 4 * reg_width;
-
-   if (inst->mlen > MAX_SAMPLER_MESSAGE_SIZE) {
-      fail("Message length >" STRINGIFY(MAX_SAMPLER_MESSAGE_SIZE)
-           " disallowed by hardware\n");
-   }
-
-   return inst;
-}
-
-static bool
-is_high_sampler(const struct brw_device_info *devinfo, fs_reg sampler)
-{
-   if (devinfo->gen < 8 && !devinfo->is_haswell)
-      return false;
-
-   return sampler.file != IMM || sampler.fixed_hw_reg.dw1.ud >= 16;
-}
-
-fs_inst *
-fs_visitor::emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int coord_components,
-                              fs_reg shadow_c,
-                              fs_reg lod, fs_reg lod2, int grad_components,
-                              fs_reg sample_index, fs_reg mcs, fs_reg sampler,
-                              fs_reg offset_value)
-{
-   int reg_width = dispatch_width / 8;
-   unsigned header_size = 0;
-
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, MAX_SAMPLER_MESSAGE_SIZE);
-   for (int i = 0; i < MAX_SAMPLER_MESSAGE_SIZE; i++) {
-      sources[i] = vgrf(glsl_type::float_type);
-   }
-   int length = 0;
-
-   if (op == ir_tg4 || offset_value.file != BAD_FILE ||
-       is_high_sampler(devinfo, sampler)) {
-      /* For general texture offsets (no txf workaround), we need a header to
-       * put them in.  Note that for SIMD16 we're making space for two actual
-       * hardware registers here, so the emit will have to fix up for this.
-       *
-       * * ir4_tg4 needs to place its channel select in the header,
-       * for interaction with ARB_texture_swizzle
-       *
-       * The sampler index is only 4-bits, so for larger sampler numbers we
-       * need to offset the Sampler State Pointer in the header.
-       */
-      header_size = 1;
-      sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-      length++;
-   }
-
-   if (shadow_c.file != BAD_FILE) {
-      bld.MOV(sources[length], shadow_c);
-      length++;
-   }
-
-   bool has_nonconstant_offset =
-      offset_value.file != BAD_FILE && offset_value.file != IMM;
-   bool coordinate_done = false;
-
-   /* The sampler can only meaningfully compute LOD for fragment shader
-    * messages. For all other stages, we change the opcode to ir_txl and
-    * hardcode the LOD to 0.
-    */
-   if (stage != MESA_SHADER_FRAGMENT && op == ir_tex) {
-      op = ir_txl;
-      lod = fs_reg(0.0f);
-   }
-
-   /* Set up the LOD info */
-   switch (op) {
-   case ir_tex:
-   case ir_lod:
-      break;
-   case ir_txb:
-      bld.MOV(sources[length], lod);
-      length++;
-      break;
-   case ir_txl:
-      bld.MOV(sources[length], lod);
-      length++;
-      break;
-   case ir_txd: {
-      no16("Gen7 does not support sample_d/sample_d_c in SIMD16 mode.");
-
-      /* Load dPdx and the coordinate together:
-       * [hdr], [ref], x, dPdx.x, dPdy.x, y, dPdx.y, dPdy.y, z, dPdx.z, dPdy.z
-       */
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(sources[length], coordinate);
-	 coordinate = offset(coordinate, 1);
-	 length++;
-
-         /* For cube map array, the coordinate is (u,v,r,ai) but there are
-          * only derivatives for (u, v, r).
-          */
-         if (i < grad_components) {
-            bld.MOV(sources[length], lod);
-            lod = offset(lod, 1);
-            length++;
-
-            bld.MOV(sources[length], lod2);
-            lod2 = offset(lod2, 1);
-            length++;
-         }
-      }
-
-      coordinate_done = true;
-      break;
-   }
-   case ir_txs:
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), lod);
-      length++;
-      break;
-   case ir_query_levels:
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), fs_reg(0u));
-      length++;
-      break;
-   case ir_txf:
-      /* Unfortunately, the parameters for LD are intermixed: u, lod, v, r.
-       * On Gen9 they are u, v, lod, r
-       */
-
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-      coordinate = offset(coordinate, 1);
-      length++;
-
-      if (devinfo->gen >= 9) {
-         if (coord_components >= 2) {
-            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-            coordinate = offset(coordinate, 1);
-         }
-         length++;
-      }
-
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), lod);
-      length++;
-
-      for (int i = devinfo->gen >= 9 ? 2 : 1; i < coord_components; i++) {
-         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-	 coordinate = offset(coordinate, 1);
-	 length++;
-      }
-
-      coordinate_done = true;
-      break;
-   case ir_txf_ms:
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
-      length++;
-
-      /* data from the multisample control surface */
-      bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
-      length++;
-
-      /* there is no offsetting for this message; just copy in the integer
-       * texture coordinates
-       */
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), coordinate);
-         coordinate = offset(coordinate, 1);
-         length++;
-      }
-
-      coordinate_done = true;
-      break;
-   case ir_tg4:
-      if (has_nonconstant_offset) {
-         if (shadow_c.file != BAD_FILE)
-            no16("Gen7 does not support gather4_po_c in SIMD16 mode.");
-
-         /* More crazy intermixing */
-         for (int i = 0; i < 2; i++) { /* u, v */
-            bld.MOV(sources[length], coordinate);
-            coordinate = offset(coordinate, 1);
-            length++;
-         }
-
-         for (int i = 0; i < 2; i++) { /* offu, offv */
-            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_D), offset_value);
-            offset_value = offset(offset_value, 1);
-            length++;
-         }
-
-         if (coord_components == 3) { /* r if present */
-            bld.MOV(sources[length], coordinate);
-            coordinate = offset(coordinate, 1);
-            length++;
-         }
-
-         coordinate_done = true;
-      }
-      break;
-   }
-
-   /* Set up the coordinate (except for cases where it was done above) */
-   if (!coordinate_done) {
-      for (int i = 0; i < coord_components; i++) {
-         bld.MOV(sources[length], coordinate);
-         coordinate = offset(coordinate, 1);
-         length++;
-      }
-   }
-
-   int mlen;
-   if (reg_width == 2)
-      mlen = length * reg_width - header_size;
-   else
-      mlen = length * reg_width;
-
-   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_F, dispatch_width);
-   bld.LOAD_PAYLOAD(src_payload, sources, length, header_size);
-
-   /* Generate the SEND */
-   enum opcode opcode;
-   switch (op) {
-   case ir_tex: opcode = SHADER_OPCODE_TEX; break;
-   case ir_txb: opcode = FS_OPCODE_TXB; break;
-   case ir_txl: opcode = SHADER_OPCODE_TXL; break;
-   case ir_txd: opcode = SHADER_OPCODE_TXD; break;
-   case ir_txf: opcode = SHADER_OPCODE_TXF; break;
-   case ir_txf_ms: opcode = SHADER_OPCODE_TXF_CMS; break;
-   case ir_txs: opcode = SHADER_OPCODE_TXS; break;
-   case ir_query_levels: opcode = SHADER_OPCODE_TXS; break;
-   case ir_lod: opcode = SHADER_OPCODE_LOD; break;
-   case ir_tg4:
-      if (has_nonconstant_offset)
-         opcode = SHADER_OPCODE_TG4_OFFSET;
-      else
-         opcode = SHADER_OPCODE_TG4;
-      break;
-   default:
-      unreachable("not reached");
-   }
-   fs_inst *inst = bld.emit(opcode, dst, src_payload, sampler);
-   inst->base_mrf = -1;
-   inst->mlen = mlen;
-   inst->header_size = header_size;
-   inst->regs_written = 4 * reg_width;
-
-   if (inst->mlen > MAX_SAMPLER_MESSAGE_SIZE) {
-      fail("Message length >" STRINGIFY(MAX_SAMPLER_MESSAGE_SIZE)
-           " disallowed by hardware\n");
-   }
-
-   return inst;
-}
-
 fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
                              bool is_rect, uint32_t sampler, int texunit)
@@ -746,8 +140,8 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
       coordinate = dst;
 
       bld.MUL(dst, src, scale_x);
-      dst = offset(dst, 1);
-      src = offset(src, 1);
+      dst = offset(dst, bld, 1);
+      src = offset(src, bld, 1);
       bld.MUL(dst, src, scale_y);
    } else if (is_rect) {
       /* On gen6+, the sampler handles the rectangle coordinates
@@ -760,7 +154,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
       for (int i = 0; i < 2; i++) {
 	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
-	    chan = offset(chan, i);
+	    chan = offset(chan, bld, i);
 
             set_condmod(BRW_CONDITIONAL_GE,
                         bld.emit(BRW_OPCODE_SEL, chan, chan, fs_reg(0.0f)));
@@ -785,7 +179,7 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
       for (int i = 0; i < MIN2(coord_components, 3); i++) {
 	 if (key_tex->gl_clamp_mask[i] & (1 << sampler)) {
 	    fs_reg chan = coordinate;
-	    chan = offset(chan, i);
+	    chan = offset(chan, bld, i);
             set_saturate(true, bld.MOV(chan, chan));
 	 }
       }
@@ -795,31 +189,21 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
 
 /* Sample from the MCS surface attached to this multisample texture. */
 fs_reg
-fs_visitor::emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler)
+fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
+                           const fs_reg &sampler)
 {
-   int reg_width = dispatch_width / 8;
-   fs_reg payload = fs_reg(GRF, alloc.allocate(components * reg_width),
-                           BRW_REGISTER_TYPE_F, dispatch_width);
-   fs_reg dest = vgrf(glsl_type::uvec4_type);
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, components);
+   const fs_reg dest = vgrf(glsl_type::uvec4_type);
+   const fs_reg srcs[] = {
+      coordinate, fs_reg(), fs_reg(), fs_reg(), fs_reg(), fs_reg(),
+      sampler, fs_reg(), fs_reg(components), fs_reg(0)
+   };
+   fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
+                            ARRAY_SIZE(srcs));
 
-   /* parameters are: u, v, r; missing parameters are treated as zero */
-   for (int i = 0; i < components; i++) {
-      sources[i] = vgrf(glsl_type::float_type);
-      bld.MOV(retype(sources[i], BRW_REGISTER_TYPE_D), coordinate);
-      coordinate = offset(coordinate, 1);
-   }
-
-   bld.LOAD_PAYLOAD(payload, sources, components, 0);
-
-   fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS, dest, payload, sampler);
-   inst->base_mrf = -1;
-   inst->mlen = components * reg_width;
-   inst->header_size = 0;
-   inst->regs_written = 4 * reg_width; /* we only care about one reg of
-                                        * response, but the sampler always
-                                        * writes 4/8
-                                        */
+   /* We only care about one reg of response, but the sampler always writes
+    * 4/8.
+    */
+   inst->regs_written = 4 * dispatch_width / 8;
 
    return dest;
 }
@@ -853,10 +237,18 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 
          for (int i=0; i<4; i++) {
             bld.MOV(res, fs_reg(swiz == SWIZZLE_ZERO ? 0.0f : 1.0f));
-            res = offset(res, 1);
+            res = offset(res, bld, 1);
          }
          return;
       }
+   }
+
+   if (op == ir_query_levels) {
+      /* textureQueryLevels() is implemented in terms of TXS so we need to
+       * pass a valid LOD argument.
+       */
+      assert(lod.file == BAD_FILE);
+      lod = fs_reg(0u);
    }
 
    if (coordinate.file != BAD_FILE) {
@@ -871,25 +263,49 @@ fs_visitor::emit_texture(ir_texture_opcode op,
     * samples, so don't worry about them.
     */
    fs_reg dst = vgrf(glsl_type::get_instance(dest_type->base_type, 4, 1));
+   const fs_reg srcs[] = {
+      coordinate, shadow_c, lod, lod2,
+      sample_index, mcs, sampler_reg, offset_value,
+      fs_reg(coord_components), fs_reg(grad_components)
+   };
+   enum opcode opcode;
 
-   if (devinfo->gen >= 7) {
-      inst = emit_texture_gen7(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sample_index, mcs, sampler_reg,
-                               offset_value);
-   } else if (devinfo->gen >= 5) {
-      inst = emit_texture_gen5(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sample_index, sampler,
-                               offset_value.file != BAD_FILE);
-   } else if (dispatch_width == 16) {
-      inst = emit_texture_gen4_simd16(op, dst, coordinate, coord_components,
-                                      shadow_c, lod, sampler);
-   } else {
-      inst = emit_texture_gen4(op, dst, coordinate, coord_components,
-                               shadow_c, lod, lod2, grad_components,
-                               sampler);
+   switch (op) {
+   case ir_tex:
+      opcode = SHADER_OPCODE_TEX_LOGICAL;
+      break;
+   case ir_txb:
+      opcode = FS_OPCODE_TXB_LOGICAL;
+      break;
+   case ir_txl:
+      opcode = SHADER_OPCODE_TXL_LOGICAL;
+      break;
+   case ir_txd:
+      opcode = SHADER_OPCODE_TXD_LOGICAL;
+      break;
+   case ir_txf:
+      opcode = SHADER_OPCODE_TXF_LOGICAL;
+      break;
+   case ir_txf_ms:
+      opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      break;
+   case ir_txs:
+   case ir_query_levels:
+      opcode = SHADER_OPCODE_TXS_LOGICAL;
+      break;
+   case ir_lod:
+      opcode = SHADER_OPCODE_LOD_LOGICAL;
+      break;
+   case ir_tg4:
+      opcode = (offset_value.file != BAD_FILE && offset_value.file != IMM ?
+                SHADER_OPCODE_TG4_OFFSET_LOGICAL : SHADER_OPCODE_TG4_LOGICAL);
+      break;
+   default:
+      unreachable("Invalid texture opcode.");
    }
+
+   inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
+   inst->regs_written = 4 * dispatch_width / 8;
 
    if (shadow_c.file != BAD_FILE)
       inst->shadow_compare = true;
@@ -907,17 +323,17 @@ fs_visitor::emit_texture(ir_texture_opcode op,
 
    /* fixup #layers for cube map arrays */
    if (op == ir_txs && is_cube_array) {
-      fs_reg depth = offset(dst, 2);
+      fs_reg depth = offset(dst, bld, 2);
       fs_reg fixed_depth = vgrf(glsl_type::int_type);
       bld.emit(SHADER_OPCODE_INT_QUOTIENT, fixed_depth, depth, fs_reg(6));
 
       fs_reg *fixed_payload = ralloc_array(mem_ctx, fs_reg, inst->regs_written);
-      int components = inst->regs_written / (dst.width / 8);
+      int components = inst->regs_written / (inst->exec_size / 8);
       for (int i = 0; i < components; i++) {
          if (i == 2) {
             fixed_payload[i] = fixed_depth;
          } else {
-            fixed_payload[i] = offset(dst, i);
+            fixed_payload[i] = offset(dst, bld, i);
          }
       }
       bld.LOAD_PAYLOAD(dst, fixed_payload, components, 0);
@@ -952,7 +368,7 @@ fs_visitor::emit_gen6_gather_wa(uint8_t wa, fs_reg dst)
          bld.ASR(dst, dst, fs_reg(32 - width));
       }
 
-      dst = offset(dst, 1);
+      dst = offset(dst, bld, 1);
    }
 }
 
@@ -989,7 +405,7 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
 {
    if (op == ir_query_levels) {
       /* # levels is in .w */
-      this->result = offset(orig_val, 3);
+      this->result = offset(orig_val, bld, 3);
       return;
    }
 
@@ -1010,15 +426,15 @@ fs_visitor::swizzle_result(ir_texture_opcode op, int dest_components,
       for (int i = 0; i < 4; i++) {
 	 int swiz = GET_SWZ(key_tex->swizzles[sampler], i);
 	 fs_reg l = swizzled_result;
-	 l = offset(l, i);
+	 l = offset(l, bld, i);
 
 	 if (swiz == SWIZZLE_ZERO) {
             bld.MOV(l, fs_reg(0.0f));
 	 } else if (swiz == SWIZZLE_ONE) {
             bld.MOV(l, fs_reg(1.0f));
 	 } else {
-            bld.MOV(l, offset(orig_val,
-                              GET_SWZ(key_tex->swizzles[sampler], i)));
+            bld.MOV(l, offset(orig_val, bld,
+                                  GET_SWZ(key_tex->swizzles[sampler], i)));
 	 }
       }
       this->result = swizzled_result;
@@ -1114,118 +530,6 @@ fs_visitor::try_replace_with_sel()
    return false;
 }
 
-void
-fs_visitor::emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                                fs_reg dst, fs_reg offset, fs_reg src0,
-                                fs_reg src1)
-{
-   int reg_width = dispatch_width / 8;
-   int length = 0;
-
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 4);
-
-   sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-   /* Initialize the sample mask in the message header. */
-   bld.exec_all().MOV(sources[0], fs_reg(0u));
-
-   if (stage == MESA_SHADER_FRAGMENT) {
-      if (((brw_wm_prog_data*)this->prog_data)->uses_kill) {
-         bld.exec_all()
-            .MOV(component(sources[0], 7), brw_flag_reg(0, 1));
-      } else {
-         bld.exec_all()
-            .MOV(component(sources[0], 7),
-                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
-      }
-   } else {
-      /* The execution mask is part of the side-band information sent together with
-       * the message payload to the data port. It's implicitly ANDed with the sample
-       * mask sent in the header to compute the actual set of channels that execute
-       * the atomic operation.
-       */
-      assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
-      bld.exec_all()
-         .MOV(component(sources[0], 7), fs_reg(0xffffu));
-   }
-   length++;
-
-   /* Set the atomic operation offset. */
-   sources[1] = vgrf(glsl_type::uint_type);
-   bld.MOV(sources[1], offset);
-   length++;
-
-   /* Set the atomic operation arguments. */
-   if (src0.file != BAD_FILE) {
-      sources[length] = vgrf(glsl_type::uint_type);
-      bld.MOV(sources[length], src0);
-      length++;
-   }
-
-   if (src1.file != BAD_FILE) {
-      sources[length] = vgrf(glsl_type::uint_type);
-      bld.MOV(sources[length], src1);
-      length++;
-   }
-
-   int mlen = 1 + (length - 1) * reg_width;
-   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_UD, dispatch_width);
-   bld.LOAD_PAYLOAD(src_payload, sources, length, 1);
-
-   /* Emit the instruction. */
-   fs_inst *inst = bld.emit(SHADER_OPCODE_UNTYPED_ATOMIC, dst, src_payload,
-                            fs_reg(surf_index), fs_reg(atomic_op));
-   inst->mlen = mlen;
-}
-
-void
-fs_visitor::emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
-                                      fs_reg offset)
-{
-   int reg_width = dispatch_width / 8;
-
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 2);
-
-   sources[0] = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-   /* Initialize the sample mask in the message header. */
-   bld.exec_all()
-      .MOV(sources[0], fs_reg(0u));
-
-   if (stage == MESA_SHADER_FRAGMENT) {
-      if (((brw_wm_prog_data*)this->prog_data)->uses_kill) {
-         bld.exec_all()
-            .MOV(component(sources[0], 7), brw_flag_reg(0, 1));
-      } else {
-         bld.exec_all()
-            .MOV(component(sources[0], 7),
-                 retype(brw_vec1_grf(1, 7), BRW_REGISTER_TYPE_UD));
-      }
-   } else {
-      /* The execution mask is part of the side-band information sent together with
-       * the message payload to the data port. It's implicitly ANDed with the sample
-       * mask sent in the header to compute the actual set of channels that execute
-       * the atomic operation.
-       */
-      assert(stage == MESA_SHADER_VERTEX || stage == MESA_SHADER_COMPUTE);
-      bld.exec_all()
-         .MOV(component(sources[0], 7), fs_reg(0xffffu));
-   }
-
-   /* Set the surface read offset. */
-   sources[1] = vgrf(glsl_type::uint_type);
-   bld.MOV(sources[1], offset);
-
-   int mlen = 1 + reg_width;
-   fs_reg src_payload = fs_reg(GRF, alloc.allocate(mlen),
-                               BRW_REGISTER_TYPE_UD, dispatch_width);
-   fs_inst *inst = bld.LOAD_PAYLOAD(src_payload, sources, 2, 1);
-
-   /* Emit the instruction. */
-   inst = bld.emit(SHADER_OPCODE_UNTYPED_SURFACE_READ, dst, src_payload,
-                   fs_reg(surf_index), fs_reg(1));
-   inst->mlen = mlen;
-}
-
 /** Emits a dummy fragment shader consisting of magenta for bringup purposes. */
 void
 fs_visitor::emit_dummy_fs()
@@ -1235,8 +539,8 @@ fs_visitor::emit_dummy_fs()
    /* Everyone's favorite color. */
    const float color[4] = { 1.0, 0.0, 1.0, 0.0 };
    for (int i = 0; i < 4; i++) {
-      bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F,
-                     dispatch_width), fs_reg(color[i]));
+      bld.MOV(fs_reg(MRF, 2 + i * reg_width, BRW_REGISTER_TYPE_F),
+              fs_reg(color[i]));
    }
 
    fs_inst *write;
@@ -1315,14 +619,14 @@ fs_visitor::emit_interpolation_setup_gen4()
 
    if (devinfo->has_pln && dispatch_width == 16) {
       for (unsigned i = 0; i < 2; i++) {
-         abld.half(i).ADD(half(offset(delta_xy, i), 0),
+         abld.half(i).ADD(half(offset(delta_xy, abld, i), 0),
                           half(this->pixel_x, i), xstart);
-         abld.half(i).ADD(half(offset(delta_xy, i), 1),
+         abld.half(i).ADD(half(offset(delta_xy, abld, i), 1),
                           half(this->pixel_y, i), ystart);
       }
    } else {
-      abld.ADD(offset(delta_xy, 0), this->pixel_x, xstart);
-      abld.ADD(offset(delta_xy, 1), this->pixel_y, ystart);
+      abld.ADD(offset(delta_xy, abld, 0), this->pixel_x, xstart);
+      abld.ADD(offset(delta_xy, abld, 1), this->pixel_y, ystart);
    }
 
    abld = bld.annotate("compute pos.w and 1/pos.w");
@@ -1356,9 +660,10 @@ fs_visitor::emit_interpolation_setup_gen6()
        * compute our pixel centers.
        */
       fs_reg int_pixel_xy(GRF, alloc.allocate(dispatch_width / 8),
-                          BRW_REGISTER_TYPE_UW, dispatch_width * 2);
-      abld.exec_all()
-          .ADD(int_pixel_xy,
+                          BRW_REGISTER_TYPE_UW);
+
+      const fs_builder dbld = abld.exec_all().group(dispatch_width * 2, 0);
+      dbld.ADD(int_pixel_xy,
                fs_reg(stride(suboffset(g1_uw, 4), 1, 4, 0)),
                fs_reg(brw_imm_v(0x11001010)));
 
@@ -1407,33 +712,6 @@ fs_visitor::emit_interpolation_setup_gen6()
    }
 }
 
-void
-fs_visitor::setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
-                                unsigned exec_size, bool use_2nd_half)
-{
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   fs_inst *inst;
-
-   if (key->clamp_fragment_color) {
-      fs_reg tmp = vgrf(glsl_type::vec4_type);
-      assert(color.type == BRW_REGISTER_TYPE_F);
-      for (unsigned i = 0; i < components; i++) {
-         inst = bld.MOV(offset(tmp, i), offset(color, i));
-         inst->saturate = true;
-      }
-      color = tmp;
-   }
-
-   if (exec_size < dispatch_width) {
-      unsigned half_idx = use_2nd_half ? 1 : 0;
-      for (unsigned i = 0; i < components; i++)
-         dst[i] = half(offset(color, i), half_idx);
-   } else {
-      for (unsigned i = 0; i < components; i++)
-         dst[i] = offset(color, i);
-   }
-}
-
 static enum brw_conditional_mod
 cond_for_alpha_func(GLenum func)
 {
@@ -1478,7 +756,7 @@ fs_visitor::emit_alpha_test()
                      BRW_CONDITIONAL_NEQ);
    } else {
       /* RT0 alpha */
-      fs_reg color = offset(outputs[0], 3);
+      fs_reg color = offset(outputs[0], bld, 3);
 
       /* f0.1 &= func(color, ref) */
       cmp = abld.CMP(bld.null_reg_f(), color, fs_reg(key->alpha_test_ref),
@@ -1491,152 +769,36 @@ fs_visitor::emit_alpha_test()
 fs_inst *
 fs_visitor::emit_single_fb_write(const fs_builder &bld,
                                  fs_reg color0, fs_reg color1,
-                                 fs_reg src0_alpha, unsigned components,
-                                 unsigned exec_size, bool use_2nd_half)
+                                 fs_reg src0_alpha, unsigned components)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   int header_size = 2, payload_header_size;
 
-   /* We can potentially have a message length of up to 15, so we have to set
-    * base_mrf to either 0 or 1 in order to fit in m0..m15.
-    */
-   fs_reg *sources = ralloc_array(mem_ctx, fs_reg, 15);
-   int length = 0;
-
-   /* From the Sandy Bridge PRM, volume 4, page 198:
-    *
-    *     "Dispatched Pixel Enables. One bit per pixel indicating
-    *      which pixels were originally enabled when the thread was
-    *      dispatched. This field is only required for the end-of-
-    *      thread message and on all dual-source messages."
-    */
-   if (devinfo->gen >= 6 &&
-       (devinfo->is_haswell || devinfo->gen >= 8 || !prog_data->uses_kill) &&
-       color1.file == BAD_FILE &&
-       key->nr_color_regions == 1) {
-      header_size = 0;
-   }
-
-   if (header_size != 0) {
-      assert(header_size == 2);
-      /* Allocate 2 registers for a header */
-      length += 2;
-   }
-
-   if (payload.aa_dest_stencil_reg) {
-      sources[length] = fs_reg(GRF, alloc.allocate(1));
-      bld.exec_all().annotate("FB write stencil/AA alpha")
-         .MOV(sources[length],
-              fs_reg(brw_vec8_grf(payload.aa_dest_stencil_reg, 0)));
-      length++;
-   }
-
-   prog_data->uses_omask =
-      prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
-   if (prog_data->uses_omask) {
-      assert(this->sample_mask.file != BAD_FILE);
-      /* Hand over gl_SampleMask. Only lower 16 bits are relevant.  Since
-       * it's unsinged single words, one vgrf is always 16-wide.
-       */
-      sources[length] = fs_reg(GRF, alloc.allocate(1),
-                               BRW_REGISTER_TYPE_UW, 16);
-      bld.exec_all().annotate("FB write oMask")
-         .emit(FS_OPCODE_SET_OMASK, sources[length], this->sample_mask);
-      length++;
-   }
-
-   payload_header_size = length;
-
-   if (color0.file == BAD_FILE) {
-      /* Even if there's no color buffers enabled, we still need to send
-       * alpha out the pipeline to our null renderbuffer to support
-       * alpha-testing, alpha-to-coverage, and so on.
-       */
-      if (this->outputs[0].file != BAD_FILE)
-         setup_color_payload(&sources[length + 3], offset(this->outputs[0], 3),
-                             1, exec_size, false);
-      length += 4;
-   } else if (color1.file == BAD_FILE) {
-      if (src0_alpha.file != BAD_FILE) {
-         setup_color_payload(&sources[length], src0_alpha, 1, exec_size, false);
-         length++;
-      }
-
-      setup_color_payload(&sources[length], color0, components,
-                          exec_size, use_2nd_half);
-      length += 4;
-   } else {
-      setup_color_payload(&sources[length], color0, components,
-                          exec_size, use_2nd_half);
-      length += 4;
-      setup_color_payload(&sources[length], color1, components,
-                          exec_size, use_2nd_half);
-      length += 4;
-   }
+   /* Hand over gl_FragDepth or the payload depth. */
+   const fs_reg dst_depth = (payload.dest_depth_reg ?
+                             fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0)) :
+                             fs_reg());
+   fs_reg src_depth;
 
    if (source_depth_to_render_target) {
-      if (devinfo->gen == 6) {
-	 /* For outputting oDepth on gen6, SIMD8 writes have to be
-	  * used.  This would require SIMD8 moves of each half to
-	  * message regs, kind of like pre-gen5 SIMD16 FB writes.
-	  * Just bail on doing so for now.
-	  */
-	 no16("Missing support for simd16 depth writes on gen6\n");
-      }
-
-      if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-	 /* Hand over gl_FragDepth. */
-	 assert(this->frag_depth.file != BAD_FILE);
-         if (exec_size < dispatch_width) {
-            sources[length] = half(this->frag_depth, use_2nd_half);
-         } else {
-            sources[length] = this->frag_depth;
-         }
-      } else {
-	 /* Pass through the payload depth. */
-         sources[length] = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
-      }
-      length++;
+      if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+         src_depth = frag_depth;
+      else
+         src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
    }
 
-   if (payload.dest_depth_reg)
-      sources[length++] = fs_reg(brw_vec8_grf(payload.dest_depth_reg, 0));
+   const fs_reg sources[] = {
+      color0, color1, src0_alpha, src_depth, dst_depth, sample_mask,
+      fs_reg(components)
+   };
+   fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
+                             sources, ARRAY_SIZE(sources));
 
-   const fs_builder ubld = bld.group(exec_size, use_2nd_half);
-   fs_inst *load;
-   fs_inst *write;
-   if (devinfo->gen >= 7) {
-      /* Send from the GRF */
-      fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F, exec_size);
-      load = ubld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
-      payload.reg = alloc.allocate(load->regs_written);
-      load->dst = payload;
-      write = ubld.emit(FS_OPCODE_FB_WRITE, reg_undef, payload);
-      write->base_mrf = -1;
-   } else {
-      /* Send from the MRF */
-      load = ubld.LOAD_PAYLOAD(fs_reg(MRF, 1, BRW_REGISTER_TYPE_F, exec_size),
-                               sources, length, payload_header_size);
-
-      /* On pre-SNB, we have to interlace the color values.  LOAD_PAYLOAD
-       * will do this for us if we just give it a COMPR4 destination.
-       */
-      if (devinfo->gen < 6 && exec_size == 16)
-         load->dst.reg |= BRW_MRF_COMPR4;
-
-      write = ubld.emit(FS_OPCODE_FB_WRITE);
-      write->exec_size = exec_size;
-      write->base_mrf = 1;
-   }
-
-   write->mlen = load->regs_written;
-   write->header_size = header_size;
    if (prog_data->uses_kill) {
       write->predicate = BRW_PREDICATE_NORMAL;
       write->flag_subreg = 1;
    }
+
    return write;
 }
 
@@ -1648,36 +810,23 @@ fs_visitor::emit_fb_writes()
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    fs_inst *inst = NULL;
+
+   if (source_depth_to_render_target && devinfo->gen == 6) {
+      /* For outputting oDepth on gen6, SIMD8 writes have to be used.  This
+       * would require SIMD8 moves of each half to message regs, e.g. by using
+       * the SIMD lowering pass.  Unfortunately this is more difficult than it
+       * sounds because the SIMD8 single-source message lacks channel selects
+       * for the second and third subspans.
+       */
+      no16("Missing support for simd16 depth writes on gen6\n");
+   }
+
    if (do_dual_src) {
       const fs_builder abld = bld.annotate("FB dual-source write");
 
       inst = emit_single_fb_write(abld, this->outputs[0],
-                                  this->dual_src_output, reg_undef, 4, 8);
+                                  this->dual_src_output, reg_undef, 4);
       inst->target = 0;
-
-      /* SIMD16 dual source blending requires to send two SIMD8 dual source
-       * messages, where each message contains color data for 8 pixels. Color
-       * data for the first group of pixels is stored in the "lower" half of
-       * the color registers, so in SIMD16, the previous message did:
-       * m + 0: r0
-       * m + 1: g0
-       * m + 2: b0
-       * m + 3: a0
-       *
-       * Here goes the second message, which packs color data for the
-       * remaining 8 pixels. Color data for these pixels is stored in the
-       * "upper" half of the color registers, so we need to do:
-       * m + 0: r1
-       * m + 1: g1
-       * m + 2: b1
-       * m + 3: a1
-       */
-      if (dispatch_width == 16) {
-         inst = emit_single_fb_write(abld, this->outputs[0],
-                                     this->dual_src_output, reg_undef, 4, 8,
-                                     true);
-         inst->target = 0;
-      }
 
       prog_data->dual_src_blend = true;
    } else {
@@ -1691,12 +840,11 @@ fs_visitor::emit_fb_writes()
 
          fs_reg src0_alpha;
          if (devinfo->gen >= 6 && key->replicate_alpha && target != 0)
-            src0_alpha = offset(outputs[0], 3);
+            src0_alpha = offset(outputs[0], bld, 3);
 
          inst = emit_single_fb_write(abld, this->outputs[target], reg_undef,
                                      src0_alpha,
-                                     this->output_components[target],
-                                     dispatch_width);
+                                     this->output_components[target]);
          inst->target = target;
       }
    }
@@ -1706,8 +854,15 @@ fs_visitor::emit_fb_writes()
        * alpha out the pipeline to our null renderbuffer to support
        * alpha-testing, alpha-to-coverage, and so on.
        */
-      inst = emit_single_fb_write(bld, reg_undef, reg_undef, reg_undef, 0,
-                                  dispatch_width);
+      /* FINISHME: Factor out this frequently recurring pattern into a
+       * helper function.
+       */
+      const fs_reg srcs[] = { reg_undef, reg_undef,
+                              reg_undef, offset(this->outputs[0], bld, 3) };
+      const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, 4);
+      bld.LOAD_PAYLOAD(tmp, srcs, 4, 0);
+
+      inst = emit_single_fb_write(bld, tmp, reg_undef, reg_undef, 4);
       inst->target = 0;
    }
 
@@ -1730,12 +885,22 @@ fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
    }
 }
 
+/**
+ * Lower legacy fixed-function and gl_ClipVertex clipping to clip distances.
+ *
+ * This does nothing if the shader uses gl_ClipDistance or user clipping is
+ * disabled altogether.
+ */
 void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
    struct brw_vue_prog_data *vue_prog_data =
       (struct brw_vue_prog_data *) prog_data;
    const struct brw_vue_prog_key *key =
       (const struct brw_vue_prog_key *) this->key;
+
+   /* Bail unless some sort of legacy clipping is enabled */
+   if (!key->userclip_active || prog->UsesClipDistanceOut)
+      return;
 
    /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
     *
@@ -1774,13 +939,13 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
       abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {
          u.reg = userplane[i].reg + j;
-         abld.MAD(output, output, offset(outputs[clip_vertex], j), u);
+         abld.MAD(output, output, offset(outputs[clip_vertex], bld, j), u);
       }
    }
 }
 
 void
-fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
+fs_visitor::emit_urb_writes()
 {
    int slot, urb_offset, length;
    struct brw_vs_prog_data *vs_prog_data =
@@ -1793,21 +958,24 @@ fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
    bool flush;
    fs_reg sources[8];
 
-   /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->base.userclip_active && !prog->UsesClipDistanceOut)
-      compute_clip_distance(clip_planes);
-
    /* If we don't have any valid slots to write, just do a minimal urb write
-    * send to terminate the shader. */
+    * send to terminate the shader.  This includes 1 slot of undefined data,
+    * because it's invalid to write 0 data:
+    *
+    * From the Broadwell PRM, Volume 7: 3D Media GPGPU, Shared Functions -
+    * Unified Return Buffer (URB) > URB_SIMD8_Write and URB_SIMD8_Read >
+    * Write Data Payload:
+    *
+    *    "The write data payload can be between 1 and 8 message phases long."
+    */
    if (vue_map->slots_valid == 0) {
-
-      fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+      fs_reg payload = fs_reg(GRF, alloc.allocate(2), BRW_REGISTER_TYPE_UD);
       bld.exec_all().MOV(payload, fs_reg(retype(brw_vec8_grf(1, 0),
                                                 BRW_REGISTER_TYPE_UD)));
 
       fs_inst *inst = bld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
       inst->eot = true;
-      inst->mlen = 1;
+      inst->mlen = 2;
       inst->offset = 1;
       return;
    }
@@ -1888,13 +1056,13 @@ fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
              */
             for (int i = 0; i < 4; i++) {
                reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
-               src = offset(this->outputs[varying], i);
+               src = offset(this->outputs[varying], bld, i);
                set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
             }
          } else {
             for (int i = 0; i < 4; i++)
-               sources[length++] = offset(this->outputs[varying], i);
+               sources[length++] = offset(this->outputs[varying], bld, i);
          }
          break;
       }
@@ -1911,7 +1079,7 @@ fs_visitor::emit_urb_writes(gl_clip_plane *clip_planes)
       if (flush) {
          fs_reg *payload_sources = ralloc_array(mem_ctx, fs_reg, length + 1);
          fs_reg payload = fs_reg(GRF, alloc.allocate(length + 1),
-                                 BRW_REGISTER_TYPE_F, dispatch_width);
+                                 BRW_REGISTER_TYPE_F);
          payload_sources[0] =
             fs_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
 
@@ -1944,7 +1112,7 @@ fs_visitor::emit_cs_terminate()
     */
    struct brw_reg g0 = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD);
    fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-   bld.exec_all().MOV(payload, g0);
+   bld.group(8, 0).exec_all().MOV(payload, g0);
 
    /* Send a message to the thread spawner to terminate the thread. */
    fs_inst *inst = bld.exec_all()
@@ -2012,7 +1180,7 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    this->no16_msg = NULL;
 
    this->nir_locals = NULL;
-   this->nir_globals = NULL;
+   this->nir_ssa_values = NULL;
 
    memset(&this->payload, 0, sizeof(this->payload));
    memset(this->outputs, 0, sizeof(this->outputs));

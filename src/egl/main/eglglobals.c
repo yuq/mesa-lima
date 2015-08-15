@@ -53,10 +53,10 @@ struct _egl_global _eglGlobal =
    /* ClientExtensionsString */
    "EGL_EXT_client_extensions"
    " EGL_EXT_platform_base"
-   " EGL_EXT_platform_x11"
    " EGL_EXT_platform_wayland"
-   " EGL_MESA_platform_gbm"
+   " EGL_EXT_platform_x11"
    " EGL_KHR_client_get_all_proc_addresses"
+   " EGL_MESA_platform_gbm"
 };
 
 

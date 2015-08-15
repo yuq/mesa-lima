@@ -51,7 +51,7 @@ gen6_upload_blend_state(struct brw_context *brw)
     * with render target 0, which will reference BLEND_STATE[0] for
     * alpha test enable.
     */
-   if (nr_draw_buffers == 0 && ctx->Color.AlphaEnabled)
+   if (nr_draw_buffers == 0)
       nr_draw_buffers = 1;
 
    size = sizeof(*blend) * nr_draw_buffers;
@@ -97,8 +97,8 @@ gen6_upload_blend_state(struct brw_context *brw)
                    rb_type != GL_UNSIGNED_NORMALIZED &&
                    rb_type != GL_FLOAT, "Ignoring %s logic op on %s "
                    "renderbuffer\n",
-                   _mesa_lookup_enum_by_nr(ctx->Color.LogicOp),
-                   _mesa_lookup_enum_by_nr(rb_type));
+                   _mesa_enum_to_string(ctx->Color.LogicOp),
+                   _mesa_enum_to_string(rb_type));
 	 if (rb_type == GL_UNSIGNED_NORMALIZED) {
 	    blend[b].blend1.logic_op_enable = 1;
 	    blend[b].blend1.logic_op_func =

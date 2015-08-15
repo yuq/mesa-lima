@@ -150,8 +150,8 @@ fd4_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 {
 	struct fd4_pipe_sampler_view *so = CALLOC_STRUCT(fd4_pipe_sampler_view);
 	struct fd_resource *rsc = fd_resource(prsc);
-	unsigned lvl = cso->u.tex.first_level;
-	unsigned miplevels = cso->u.tex.last_level - lvl;
+	unsigned lvl = fd_sampler_first_level(cso);
+	unsigned miplevels = fd_sampler_last_level(cso) - lvl;
 
 	if (!so)
 		return NULL;

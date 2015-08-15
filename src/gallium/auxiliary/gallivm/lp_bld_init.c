@@ -106,7 +106,6 @@ enum LLVM_CodeGenOpt_Level {
 static boolean
 create_pass_manager(struct gallivm_state *gallivm)
 {
-   char *td_str;
    assert(!gallivm->passmgr);
    assert(gallivm->target);
 
@@ -122,10 +121,29 @@ create_pass_manager(struct gallivm_state *gallivm)
    // Old versions of LLVM get the DataLayout from the pass manager.
    LLVMAddTargetData(gallivm->target, gallivm->passmgr);
 
-   // New ones from the Module.
-   td_str = LLVMCopyStringRepOfTargetData(gallivm->target);
-   LLVMSetDataLayout(gallivm->module, td_str);
-   free(td_str);
+   /* Setting the module's DataLayout to an empty string will cause the
+    * ExecutionEngine to copy to the DataLayout string from its target
+    * machine to the module.  As of LLVM 3.8 the module and the execution
+    * engine are required to have the same DataLayout.
+    *
+    * TODO: This is just a temporary work-around.  The correct solution is
+    * for gallivm_init_state() to create a TargetMachine and pull the
+    * DataLayout from there.  Currently, the TargetMachine used by llvmpipe
+    * is being implicitly created by the EngineBuilder in
+    * lp_build_create_jit_compiler_for_module()
+    */
+
+#if HAVE_LLVM < 0x0308
+   {
+      char *td_str;
+      // New ones from the Module.
+      td_str = LLVMCopyStringRepOfTargetData(gallivm->target);
+      LLVMSetDataLayout(gallivm->module, td_str);
+      free(td_str);
+   }
+#else
+   LLVMSetDataLayout(gallivm->module, "");
+#endif
 
    if ((gallivm_debug & GALLIVM_DEBUG_NO_OPT) == 0) {
       /* These are the passes currently listed in llvm-c/Transforms/Scalar.h,

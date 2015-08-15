@@ -379,13 +379,12 @@ finalize_cbuf_state(struct ilo_context *ilo,
       u_upload_data(ilo->uploader, 0, cbuf->cso[i].info.size,
             cbuf->cso[i].user_buffer, &offset, &cbuf->cso[i].resource);
 
-      cbuf->cso[i].info.buf = ilo_buffer(cbuf->cso[i].resource);
+      cbuf->cso[i].info.vma = ilo_resource_get_vma(cbuf->cso[i].resource);
       cbuf->cso[i].info.offset = offset;
 
       memset(&cbuf->cso[i].surface, 0, sizeof(cbuf->cso[i].surface));
       ilo_state_surface_init_for_buffer(&cbuf->cso[i].surface,
             ilo->dev, &cbuf->cso[i].info);
-      cbuf->cso[i].surface.bo = cbuf->cso[i].info.buf->bo;
 
       ilo->state_vector.dirty |= ILO_DIRTY_CBUF;
    }
@@ -466,11 +465,9 @@ finalize_index_buffer(struct ilo_context *ilo)
 
    memset(&info, 0, sizeof(info));
    if (vec->ib.hw_resource) {
-      info.buf = ilo_buffer(vec->ib.hw_resource);
-      info.size = info.buf->bo_size;
+      info.vma = ilo_resource_get_vma(vec->ib.hw_resource);
+      info.size = info.vma->vm_size;
       info.format = ilo_translate_index_size(vec->ib.hw_index_size);
-
-      vec->ib.ib.bo = info.buf->bo;
    }
 
    ilo_state_index_buffer_set_info(&vec->ib.ib, dev, &info);
@@ -532,13 +529,11 @@ finalize_vertex_buffers(struct ilo_context *ilo)
       const struct pipe_vertex_buffer *cso = &vec->vb.states[pipe_idx];
 
       if (cso->buffer) {
-         info.buf = ilo_buffer(cso->buffer);
+         info.vma = ilo_resource_get_vma(cso->buffer);
          info.offset = cso->buffer_offset;
-         info.size = info.buf->bo_size;
+         info.size = info.vma->vm_size - cso->buffer_offset;
 
          info.stride = cso->stride;
-
-         vec->vb.vb[i].bo = info.buf->bo;
       } else {
          memset(&info, 0, sizeof(info));
       }
@@ -1566,24 +1561,23 @@ ilo_set_constant_buffer(struct pipe_context *pipe,
          cso->info.size = buf[i].buffer_size;
 
          if (buf[i].buffer) {
-            cso->info.buf = ilo_buffer(buf[i].buffer);
+            cso->info.vma = ilo_resource_get_vma(buf[i].buffer);
             cso->info.offset = buf[i].buffer_offset;
 
             memset(&cso->surface, 0, sizeof(cso->surface));
             ilo_state_surface_init_for_buffer(&cso->surface, dev, &cso->info);
-            cso->surface.bo = cso->info.buf->bo;
 
             cso->user_buffer = NULL;
 
             cbuf->enabled_mask |= 1 << (index + i);
          } else if (buf[i].user_buffer) {
-            cso->info.buf = NULL;
+            cso->info.vma = NULL;
             /* buffer_offset does not apply for user buffer */
             cso->user_buffer = buf[i].user_buffer;
 
             cbuf->enabled_mask |= 1 << (index + i);
          } else {
-            cso->info.buf = NULL;
+            cso->info.vma = NULL;
             cso->info.size = 0;
             cso->user_buffer = NULL;
 
@@ -1596,7 +1590,7 @@ ilo_set_constant_buffer(struct pipe_context *pipe,
 
          pipe_resource_reference(&cso->resource, NULL);
 
-         cso->info.buf = NULL;
+         cso->info.vma = NULL;
          cso->info.size = 0;
          cso->user_buffer = NULL;
 
@@ -1705,10 +1699,11 @@ ilo_set_framebuffer_state(struct pipe_context *pipe,
    if (state->zsbuf) {
       const struct ilo_surface_cso *cso =
          (const struct ilo_surface_cso *) state->zsbuf;
+      const struct ilo_texture *tex = ilo_texture(cso->base.texture);
 
-      fb->has_hiz = cso->u.zs.hiz_bo;
+      fb->has_hiz = cso->u.zs.hiz_vma;
       fb->depth_offset_format =
-         ilo_state_zs_get_depth_format(&cso->u.zs, dev);
+         ilo_format_translate_depth(dev, tex->image_format);
    } else {
       fb->has_hiz = false;
       fb->depth_offset_format = GEN6_ZFORMAT_D32_FLOAT;
@@ -1854,10 +1849,11 @@ ilo_set_sampler_views(struct pipe_context *pipe, unsigned shader,
 }
 
 static void
-ilo_set_shader_resources(struct pipe_context *pipe,
-                         unsigned start, unsigned count,
-                         struct pipe_surface **surfaces)
+ilo_set_shader_images(struct pipe_context *pipe, unsigned shader,
+                      unsigned start, unsigned count,
+                      struct pipe_image_view **views)
 {
+#if 0
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;
    struct ilo_resource_state *dst = &vec->resource;
    unsigned i;
@@ -1886,6 +1882,7 @@ ilo_set_shader_resources(struct pipe_context *pipe,
    }
 
    vec->dirty |= ILO_DIRTY_RESOURCE;
+#endif
 }
 
 static void
@@ -1945,12 +1942,11 @@ ilo_create_stream_output_target(struct pipe_context *pipe,
    target->base.buffer_size = buffer_size;
 
    memset(&info, 0, sizeof(info));
-   info.buf = ilo_buffer(res);
+   info.vma = ilo_resource_get_vma(res);
    info.offset = buffer_offset;
    info.size = buffer_size;
 
    ilo_state_sol_buffer_init(&target->sb, dev, &info);
-   target->sb.bo = info.buf->bo;
 
    return &target->base;
 }
@@ -2018,18 +2014,17 @@ ilo_create_sampler_view(struct pipe_context *pipe,
       struct ilo_state_surface_buffer_info info;
 
       memset(&info, 0, sizeof(info));
-      info.buf = ilo_buffer(res);
+      info.vma = ilo_resource_get_vma(res);
+      info.offset = templ->u.buf.first_element * info.struct_size;
+      info.size = (templ->u.buf.last_element -
+            templ->u.buf.first_element + 1) * info.struct_size;
       info.access = ILO_STATE_SURFACE_ACCESS_SAMPLER;
       info.format = ilo_format_translate_color(dev, templ->format);
       info.format_size = util_format_get_blocksize(templ->format);
       info.struct_size = info.format_size;
       info.readonly = true;
-      info.offset = templ->u.buf.first_element * info.struct_size;
-      info.size = (templ->u.buf.last_element -
-            templ->u.buf.first_element + 1) * info.struct_size;
 
       ilo_state_surface_init_for_buffer(&view->surface, dev, &info);
-      view->surface.bo = info.buf->bo;
    } else {
       struct ilo_texture *tex = ilo_texture(res);
       struct ilo_state_surface_image_info info;
@@ -2042,23 +2037,8 @@ ilo_create_sampler_view(struct pipe_context *pipe,
       }
 
       memset(&info, 0, sizeof(info));
+
       info.img = &tex->image;
-
-      info.access = ILO_STATE_SURFACE_ACCESS_SAMPLER;
-
-      if (templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
-          tex->image.separate_stencil) {
-         info.format = ilo_format_translate_texture(dev,
-               PIPE_FORMAT_Z32_FLOAT);
-      } else {
-         info.format = ilo_format_translate_texture(dev, templ->format);
-      }
-
-      info.is_cube_map = (tex->image.target == PIPE_TEXTURE_CUBE ||
-                          tex->image.target == PIPE_TEXTURE_CUBE_ARRAY);
-      info.is_array = util_resource_is_array_texture(&tex->base);
-      info.readonly = true;
-
       info.level_base = templ->u.tex.first_level;
       info.level_count = templ->u.tex.last_level -
          templ->u.tex.first_level + 1;
@@ -2066,8 +2046,22 @@ ilo_create_sampler_view(struct pipe_context *pipe,
       info.slice_count = templ->u.tex.last_layer -
          templ->u.tex.first_layer + 1;
 
+      info.vma = &tex->vma;
+      info.access = ILO_STATE_SURFACE_ACCESS_SAMPLER;
+      info.type = tex->image.type;
+
+      if (templ->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT &&
+          tex->separate_s8) {
+         info.format = ilo_format_translate_texture(dev,
+               PIPE_FORMAT_Z32_FLOAT);
+      } else {
+         info.format = ilo_format_translate_texture(dev, templ->format);
+      }
+
+      info.is_array = util_resource_is_array_texture(&tex->base);
+      info.readonly = true;
+
       ilo_state_surface_init_for_image(&view->surface, dev, &info);
-      view->surface.bo = info.img->bo;
    }
 
    return &view->base;
@@ -2111,18 +2105,27 @@ ilo_create_surface(struct pipe_context *pipe,
       assert(tex->base.target != PIPE_BUFFER);
 
       memset(&info, 0, sizeof(info));
+
       info.img = &tex->image;
-      info.access = ILO_STATE_SURFACE_ACCESS_DP_RENDER;
-      info.format = ilo_format_translate_render(dev, templ->format);
-      info.is_array = util_resource_is_array_texture(&tex->base);
       info.level_base = templ->u.tex.level;
       info.level_count = 1;
       info.slice_base = templ->u.tex.first_layer;
       info.slice_count = templ->u.tex.last_layer -
          templ->u.tex.first_layer + 1;
 
+      info.vma = &tex->vma;
+      if (ilo_image_can_enable_aux(&tex->image, templ->u.tex.level))
+         info.aux_vma = &tex->aux_vma;
+
+      info.access = ILO_STATE_SURFACE_ACCESS_DP_RENDER;
+
+      info.type = (tex->image.type == GEN6_SURFTYPE_CUBE) ?
+         GEN6_SURFTYPE_2D : tex->image.type;
+
+      info.format = ilo_format_translate_render(dev, templ->format);
+      info.is_array = util_resource_is_array_texture(&tex->base);
+
       ilo_state_surface_init_for_image(&surf->u.rt, dev, &info);
-      surf->u.rt.bo = info.img->bo;
    } else {
       struct ilo_state_zs_info info;
 
@@ -2131,13 +2134,19 @@ ilo_create_surface(struct pipe_context *pipe,
       memset(&info, 0, sizeof(info));
 
       if (templ->format == PIPE_FORMAT_S8_UINT) {
+         info.s_vma = &tex->vma;
          info.s_img = &tex->image;
       } else {
+         info.z_vma = &tex->vma;
          info.z_img = &tex->image;
-         info.s_img = (tex->separate_s8) ? &tex->separate_s8->image : NULL;
 
-         info.hiz_enable =
-            ilo_image_can_enable_aux(&tex->image, templ->u.tex.level);
+         if (tex->separate_s8) {
+            info.s_vma = &tex->separate_s8->vma;
+            info.s_img = &tex->separate_s8->image;
+         }
+
+         if (ilo_image_can_enable_aux(&tex->image, templ->u.tex.level))
+            info.hiz_vma = &tex->aux_vma;
       }
 
       info.level = templ->u.tex.level;
@@ -2145,16 +2154,15 @@ ilo_create_surface(struct pipe_context *pipe,
       info.slice_count = templ->u.tex.last_layer -
          templ->u.tex.first_layer + 1;
 
+      info.type = (tex->image.type == GEN6_SURFTYPE_CUBE) ?
+         GEN6_SURFTYPE_2D : tex->image.type;
+
+      info.format = ilo_format_translate_depth(dev, tex->image_format);
+      if (ilo_dev_gen(dev) == ILO_GEN(6) && !info.hiz_vma &&
+          tex->image_format == PIPE_FORMAT_Z24X8_UNORM)
+         info.format = GEN6_ZFORMAT_D24_UNORM_S8_UINT;
+
       ilo_state_zs_init(&surf->u.zs, dev, &info);
-
-      if (info.z_img) {
-         surf->u.zs.depth_bo = info.z_img->bo;
-         if (info.hiz_enable)
-            surf->u.zs.hiz_bo = info.z_img->aux.bo;
-      }
-
-      if (info.s_img)
-         surf->u.zs.stencil_bo = info.s_img->bo;
    }
 
    return &surf->base;
@@ -2339,7 +2347,7 @@ ilo_init_state_functions(struct ilo_context *ilo)
    ilo->base.set_scissor_states = ilo_set_scissor_states;
    ilo->base.set_viewport_states = ilo_set_viewport_states;
    ilo->base.set_sampler_views = ilo_set_sampler_views;
-   ilo->base.set_shader_resources = ilo_set_shader_resources;
+   ilo->base.set_shader_images = ilo_set_shader_images;
    ilo->base.set_vertex_buffers = ilo_set_vertex_buffers;
    ilo->base.set_index_buffer = ilo_set_index_buffer;
 
@@ -2451,7 +2459,6 @@ void
 ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
                                   struct pipe_resource *res)
 {
-   struct intel_bo *bo = ilo_resource_get_bo(res);
    uint32_t states = 0;
    unsigned sh, i;
 
@@ -2482,10 +2489,6 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
 
       for (i = 0; i < vec->so.count; i++) {
          if (vec->so.states[i]->buffer == res) {
-            struct ilo_stream_output_target *target =
-               (struct ilo_stream_output_target *) vec->so.states[i];
-
-            target->sb.bo = ilo_buffer(res)->bo;
             states |= ILO_DIRTY_SO;
             break;
          }
@@ -2503,7 +2506,6 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
                [PIPE_SHADER_GEOMETRY]  = ILO_DIRTY_VIEW_GS,
                [PIPE_SHADER_COMPUTE]   = ILO_DIRTY_VIEW_CS,
             };
-            cso->surface.bo = bo;
 
             states |= view_dirty_bits[sh];
             break;
@@ -2515,7 +2517,6 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
             struct ilo_cbuf_cso *cbuf = &vec->cbuf[sh].cso[i];
 
             if (cbuf->resource == res) {
-               cbuf->surface.bo = bo;
                states |= ILO_DIRTY_CBUF;
                break;
             }
@@ -2528,7 +2529,6 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
          (struct ilo_surface_cso *) vec->resource.states[i];
 
       if (cso->base.texture == res) {
-         cso->u.rt.bo = bo;
          states |= ILO_DIRTY_RESOURCE;
          break;
       }
@@ -2540,27 +2540,19 @@ ilo_state_vector_resource_renamed(struct ilo_state_vector *vec,
          struct ilo_surface_cso *cso =
             (struct ilo_surface_cso *) vec->fb.state.cbufs[i];
          if (cso && cso->base.texture == res) {
-            cso->u.rt.bo = bo;
             states |= ILO_DIRTY_FB;
             break;
          }
       }
 
-      if (vec->fb.state.zsbuf && vec->fb.state.zsbuf->texture == res) {
-         struct ilo_surface_cso *cso =
-            (struct ilo_surface_cso *) vec->fb.state.zsbuf;
-
-         cso->u.zs.depth_bo = bo;
-
+      if (vec->fb.state.zsbuf && vec->fb.state.zsbuf->texture == res)
          states |= ILO_DIRTY_FB;
-      }
    }
 
    for (i = 0; i < vec->cs_resource.count; i++) {
       struct ilo_surface_cso *cso =
          (struct ilo_surface_cso *) vec->cs_resource.states[i];
       if (cso->base.texture == res) {
-         cso->u.rt.bo = bo;
          states |= ILO_DIRTY_CS_RESOURCE;
          break;
       }

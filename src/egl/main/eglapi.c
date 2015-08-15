@@ -100,7 +100,6 @@
 #include "eglconfig.h"
 #include "eglimage.h"
 #include "eglsync.h"
-#include "eglstring.h"
 
 
 /**
@@ -381,48 +380,47 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
 
    char *exts = dpy->ExtensionsString;
 
-   _EGL_CHECK_EXTENSION(MESA_drm_display);
-   _EGL_CHECK_EXTENSION(MESA_drm_image);
-   _EGL_CHECK_EXTENSION(MESA_configless_context);
-
-   _EGL_CHECK_EXTENSION(WL_bind_wayland_display);
-   _EGL_CHECK_EXTENSION(WL_create_wayland_buffer_from_image);
-
-   _EGL_CHECK_EXTENSION(KHR_image_base);
-   _EGL_CHECK_EXTENSION(KHR_image_pixmap);
-   if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
-      _eglAppendExtension(&exts, "EGL_KHR_image");
-
-   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
-   _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_2D_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
-   _EGL_CHECK_EXTENSION(KHR_gl_renderbuffer_image);
-
-   _EGL_CHECK_EXTENSION(KHR_reusable_sync);
-   _EGL_CHECK_EXTENSION(KHR_fence_sync);
-   _EGL_CHECK_EXTENSION(KHR_wait_sync);
-   _EGL_CHECK_EXTENSION(KHR_cl_event2);
-
-   _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
-   _EGL_CHECK_EXTENSION(KHR_create_context);
-
-   _EGL_CHECK_EXTENSION(NOK_swap_region);
-   _EGL_CHECK_EXTENSION(NOK_texture_from_pixmap);
-
+   /* Please keep these sorted alphabetically. */
    _EGL_CHECK_EXTENSION(ANDROID_image_native_buffer);
 
    _EGL_CHECK_EXTENSION(CHROMIUM_sync_control);
 
-   _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
    _EGL_CHECK_EXTENSION(EXT_buffer_age);
-   _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
+   _EGL_CHECK_EXTENSION(EXT_create_context_robustness);
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import);
+   _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
+
+   _EGL_CHECK_EXTENSION(KHR_cl_event2);
+   _EGL_CHECK_EXTENSION(KHR_create_context);
+   _EGL_CHECK_EXTENSION(KHR_fence_sync);
+   _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
+   _EGL_CHECK_EXTENSION(KHR_gl_colorspace);
+   _EGL_CHECK_EXTENSION(KHR_gl_renderbuffer_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_2D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_3D_image);
+   _EGL_CHECK_EXTENSION(KHR_gl_texture_cubemap_image);
+   if (dpy->Extensions.KHR_image_base && dpy->Extensions.KHR_image_pixmap)
+      _eglAppendExtension(&exts, "EGL_KHR_image");
+   _EGL_CHECK_EXTENSION(KHR_image_base);
+   _EGL_CHECK_EXTENSION(KHR_image_pixmap);
+   _EGL_CHECK_EXTENSION(KHR_reusable_sync);
+   _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
+   _EGL_CHECK_EXTENSION(KHR_vg_parent_image);
+   _EGL_CHECK_EXTENSION(KHR_wait_sync);
+
+   _EGL_CHECK_EXTENSION(MESA_configless_context);
+   _EGL_CHECK_EXTENSION(MESA_drm_display);
+   _EGL_CHECK_EXTENSION(MESA_drm_image);
+   _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
+
+   _EGL_CHECK_EXTENSION(NOK_swap_region);
+   _EGL_CHECK_EXTENSION(NOK_texture_from_pixmap);
 
    _EGL_CHECK_EXTENSION(NV_post_sub_buffer);
 
-   _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
+   _EGL_CHECK_EXTENSION(WL_bind_wayland_display);
+   _EGL_CHECK_EXTENSION(WL_create_wayland_buffer_from_image);
+
 #undef _EGL_CHECK_EXTENSION
 }
 
@@ -507,7 +505,7 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
       _eglComputeVersion(disp);
       _eglCreateExtensionsString(disp);
       _eglCreateAPIsString(disp);
-      _eglsnprintf(disp->VersionString, sizeof(disp->VersionString),
+      snprintf(disp->VersionString, sizeof(disp->VersionString),
               "%d.%d (%s)", disp->Version / 10, disp->Version % 10,
               disp->Driver->Name);
    }
@@ -1015,8 +1013,6 @@ eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 }
 
 
-#ifdef EGL_EXT_swap_buffers_with_damage
-
 static EGLBoolean EGLAPIENTRY
 eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
                             EGLint *rects, EGLint n_rects)
@@ -1041,8 +1037,6 @@ eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
 
    RETURN_EGL_EVAL(disp, ret);
 }
-
-#endif /* EGL_EXT_swap_buffers_with_damage */
 
 EGLBoolean EGLAPIENTRY
 eglCopyBuffers(EGLDisplay dpy, EGLSurface surface, EGLNativePixmapType target)
@@ -1204,16 +1198,12 @@ eglGetError(void)
 }
 
 
-#ifdef EGL_MESA_drm_display
-
 static EGLDisplay EGLAPIENTRY
 eglGetDRMDisplayMESA(int fd)
 {
    _EGLDisplay *dpy = _eglFindDisplay(_EGL_PLATFORM_DRM, (void *) (intptr_t) fd);
    return _eglGetDisplayHandle(dpy);
 }
-
-#endif /* EGL_MESA_drm_display */
 
 /**
  ** EGL 1.2
@@ -1580,8 +1570,6 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *valu
 }
 
 
-#ifdef EGL_NOK_swap_region
-
 static EGLBoolean EGLAPIENTRY
 eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
 			EGLint numRects, const EGLint *rects)
@@ -1607,10 +1595,6 @@ eglSwapBuffersRegionNOK(EGLDisplay dpy, EGLSurface surface,
    RETURN_EGL_EVAL(disp, ret);
 }
 
-#endif /* EGL_NOK_swap_region */
-
-
-#ifdef EGL_MESA_drm_image
 
 static EGLImage EGLAPIENTRY
 eglCreateDRMImageMESA(EGLDisplay dpy, const EGLint *attr_list)
@@ -1650,9 +1634,7 @@ eglExportDRMImageMESA(EGLDisplay dpy, EGLImage image,
    RETURN_EGL_EVAL(disp, ret);
 }
 
-#endif
 
-#ifdef EGL_WL_bind_wayland_display
 struct wl_display;
 
 static EGLBoolean EGLAPIENTRY
@@ -1709,9 +1691,8 @@ eglQueryWaylandBufferWL(EGLDisplay dpy, struct wl_resource *buffer,
 
    RETURN_EGL_EVAL(disp, ret);
 }
-#endif
 
-#ifdef EGL_WL_create_wayland_buffer_from_image
+
 static struct wl_buffer * EGLAPIENTRY
 eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImage image)
 {
@@ -1732,7 +1713,6 @@ eglCreateWaylandBufferFromImageWL(EGLDisplay dpy, EGLImage image)
 
    RETURN_EGL_EVAL(disp, ret);
 }
-#endif
 
 static EGLBoolean EGLAPIENTRY
 eglPostSubBufferNV(EGLDisplay dpy, EGLSurface surface,
@@ -1775,7 +1755,6 @@ eglGetSyncValuesCHROMIUM(EGLDisplay display, EGLSurface surface,
    RETURN_EGL_EVAL(disp, ret);
 }
 
-#ifdef EGL_MESA_image_dma_buf_export
 static EGLBoolean EGLAPIENTRY
 eglExportDMABUFImageQueryMESA(EGLDisplay dpy, EGLImage image,
                               EGLint *fourcc, EGLint *nplanes,
@@ -1817,7 +1796,6 @@ eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImage image,
 
    RETURN_EGL_EVAL(disp, ret);
 }
-#endif
 
 __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char *procname)
@@ -1874,9 +1852,7 @@ eglGetProcAddress(const char *procname)
       { "eglGetPlatformDisplay", (_EGLProc) eglGetPlatformDisplay },
       { "eglCreatePlatformWindowSurface", (_EGLProc) eglCreatePlatformWindowSurface },
       { "eglCreatePlatformPixmapSurface", (_EGLProc) eglCreatePlatformPixmapSurface },
-#ifdef EGL_MESA_drm_display
       { "eglGetDRMDisplayMESA", (_EGLProc) eglGetDRMDisplayMESA },
-#endif
       { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
       { "eglDestroyImageKHR", (_EGLProc) eglDestroyImage },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
@@ -1886,33 +1862,21 @@ eglGetProcAddress(const char *procname)
       { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
       { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
       { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
-#ifdef EGL_NOK_swap_region
       { "eglSwapBuffersRegionNOK", (_EGLProc) eglSwapBuffersRegionNOK },
-#endif
-#ifdef EGL_MESA_drm_image
       { "eglCreateDRMImageMESA", (_EGLProc) eglCreateDRMImageMESA },
       { "eglExportDRMImageMESA", (_EGLProc) eglExportDRMImageMESA },
-#endif
-#ifdef EGL_WL_bind_wayland_display
       { "eglBindWaylandDisplayWL", (_EGLProc) eglBindWaylandDisplayWL },
       { "eglUnbindWaylandDisplayWL", (_EGLProc) eglUnbindWaylandDisplayWL },
       { "eglQueryWaylandBufferWL", (_EGLProc) eglQueryWaylandBufferWL },
-#endif
-#ifdef EGL_WL_create_wayland_buffer_from_image
       { "eglCreateWaylandBufferFromImageWL", (_EGLProc) eglCreateWaylandBufferFromImageWL },
-#endif
       { "eglPostSubBufferNV", (_EGLProc) eglPostSubBufferNV },
-#ifdef EGL_EXT_swap_buffers_with_damage
       { "eglSwapBuffersWithDamageEXT", (_EGLProc) eglSwapBuffersWithDamageEXT },
-#endif
       { "eglGetPlatformDisplayEXT", (_EGLProc) eglGetPlatformDisplayEXT },
       { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
       { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
       { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
-#ifdef EGL_MESA_image_dma_buf_export
       { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
       { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
-#endif
       { NULL, NULL }
    };
    EGLint i;

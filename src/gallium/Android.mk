@@ -34,7 +34,7 @@ SUBDIRS := auxiliary
 
 # swrast
 ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
-SUBDIRS += winsys/sw/dri winsys/sw/kms-dri drivers/softpipe
+SUBDIRS += winsys/sw/dri drivers/softpipe
 endif
 
 # freedreno
@@ -72,6 +72,7 @@ SUBDIRS += drivers/r600
 endif
 ifneq ($(filter radeonsi, $(MESA_GPU_DRIVERS)),)
 SUBDIRS += drivers/radeonsi
+SUBDIRS += winsys/amdgpu/drm
 endif
 endif
 endif

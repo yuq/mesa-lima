@@ -166,7 +166,6 @@ really_do_vs_prog(struct brw_context *brw,
 {
    GLuint program_size;
    const GLuint *program;
-   struct brw_vs_compile c;
    struct brw_vs_prog_data *prog_data = &pipeline->vs_prog_data;
    struct brw_stage_prog_data *stage_prog_data = &prog_data->base.base;
    void *mem_ctx;
@@ -175,13 +174,9 @@ really_do_vs_prog(struct brw_context *brw,
    if (prog)
       vs = prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
-   memset(&c, 0, sizeof(c));
-   memcpy(&c.key, key, sizeof(*key));
    memset(prog_data, 0, sizeof(*prog_data));
 
    mem_ctx = ralloc_context(NULL);
-
-   c.vp = vp;
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
@@ -201,7 +196,7 @@ really_do_vs_prog(struct brw_context *brw,
    /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
     * planes as uniforms.
     */
-   param_count += c.key.base.nr_userclip_plane_consts * 4;
+   param_count += key->base.nr_userclip_plane_consts * 4;
 
    /* Setting nr_params here NOT to the size of the param and pull_param
     * arrays, but to the number of uniform components vec4_visitor
@@ -215,7 +210,7 @@ really_do_vs_prog(struct brw_context *brw,
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
 
-   if (c.key.copy_edgeflag) {
+   if (key->copy_edgeflag) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
       prog_data->inputs_read |= VERT_BIT_EDGEFLAG;
    }
@@ -228,7 +223,7 @@ really_do_vs_prog(struct brw_context *brw,
        * coords, which would be a pain to handle.
        */
       for (int i = 0; i < 8; i++) {
-         if (c.key.point_coord_replace & (1 << i))
+         if (key->point_coord_replace & (1 << i))
             outputs_written |= BITFIELD64_BIT(VARYING_SLOT_TEX0 + i);
       }
 
@@ -243,7 +238,7 @@ really_do_vs_prog(struct brw_context *brw,
     * distance varying slots whenever clipping is enabled, even if the vertex
     * shader doesn't write to gl_ClipDistance.
     */
-   if (c.key.base.userclip_active) {
+   if (key->base.userclip_active) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
    }
@@ -256,7 +251,8 @@ really_do_vs_prog(struct brw_context *brw,
 
    /* Emit GEN4 code.
     */
-   program = brw_vs_emit(brw, prog, &c, prog_data, mem_ctx, &program_size);
+   program = brw_vs_emit(brw, mem_ctx, key, prog_data, &vp->program,
+                         prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
@@ -1009,7 +1005,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
 
    brw_process_nir(mesa_shader->Program->nir,
                    compiler->screen->devinfo,
-                   NULL, mesa_shader->Stage);
+                   NULL, mesa_shader->Stage, false);
 
    setup_nir_io(mesa_shader->Program, mesa_shader->Program->nir);
 

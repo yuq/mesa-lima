@@ -80,8 +80,7 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
 			       height,
 			       depth,
                                intelImage->base.Base.NumSamples,
-                               INTEL_MIPTREE_TILING_ANY,
-                               layout_flags);
+                               layout_flags | MIPTREE_LAYOUT_TILING_ANY);
 }
 
 static void
@@ -98,8 +97,8 @@ intelTexImage(struct gl_context * ctx,
 
    DBG("%s mesa_format %s target %s format %s type %s level %d %dx%dx%d\n",
        __func__, _mesa_get_format_name(texImage->TexFormat),
-       _mesa_lookup_enum_by_nr(texImage->TexObject->Target),
-       _mesa_lookup_enum_by_nr(format), _mesa_lookup_enum_by_nr(type),
+       _mesa_enum_to_string(texImage->TexObject->Target),
+       _mesa_enum_to_string(format), _mesa_enum_to_string(type),
        texImage->Level, texImage->Width, texImage->Height, texImage->Depth);
 
    /* Allocate storage for texture data. */
@@ -472,39 +471,44 @@ intel_gettexsubimage_tiled_memcpy(struct gl_context *ctx,
 }
 
 static void
-intel_get_tex_image(struct gl_context *ctx,
-                    GLenum format, GLenum type, GLvoid *pixels,
-                    struct gl_texture_image *texImage) {
+intel_get_tex_sub_image(struct gl_context *ctx,
+                        GLint xoffset, GLint yoffset, GLint zoffset,
+                        GLsizei width, GLsizei height, GLint depth,
+                        GLenum format, GLenum type, GLvoid *pixels,
+                        struct gl_texture_image *texImage)
+{
    struct brw_context *brw = brw_context(ctx);
    bool ok;
 
    DBG("%s\n", __func__);
 
    if (_mesa_is_bufferobj(ctx->Pack.BufferObj)) {
-      if (_mesa_meta_pbo_GetTexSubImage(ctx, 3, texImage, 0, 0, 0,
-                                        texImage->Width, texImage->Height,
-                                        texImage->Depth, format, type,
+      if (_mesa_meta_pbo_GetTexSubImage(ctx, 3, texImage,
+                                        xoffset, yoffset, zoffset,
+                                        width, height, depth, format, type,
                                         pixels, &ctx->Pack)) {
          /* Flush to guarantee coherency between the render cache and other
           * caches the PBO could potentially be bound to after this point.
           * See the related comment in intelReadPixels() for a more detailed
           * explanation.
           */
-         intel_batchbuffer_emit_mi_flush(brw);
+         brw_emit_mi_flush(brw);
          return;
       }
 
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __func__);
    }
 
-   ok = intel_gettexsubimage_tiled_memcpy(ctx, texImage, 0, 0,
-                                          texImage->Width, texImage->Height,
+   ok = intel_gettexsubimage_tiled_memcpy(ctx, texImage, xoffset, yoffset,
+                                          width, height,
                                           format, type, pixels, &ctx->Pack);
 
    if(ok)
       return;
 
-   _mesa_meta_GetTexImage(ctx, format, type, pixels, texImage);
+   _mesa_meta_GetTexSubImage(ctx, xoffset, yoffset, zoffset,
+                             width, height, depth,
+                             format, type, pixels, texImage);
 
    DBG("%s - DONE\n", __func__);
 }
@@ -515,5 +519,5 @@ intelInitTextureImageFuncs(struct dd_function_table *functions)
    functions->TexImage = intelTexImage;
    functions->EGLImageTargetTexture2D = intel_image_target_texture_2d;
    functions->BindRenderbufferTexImage = intel_bind_renderbuffer_tex_image;
-   functions->GetTexImage = intel_get_tex_image;
+   functions->GetTexSubImage = intel_get_tex_sub_image;
 }

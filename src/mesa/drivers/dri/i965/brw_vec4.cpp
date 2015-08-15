@@ -171,6 +171,17 @@ dst_reg::dst_reg(register_file file, int reg, const glsl_type *type,
    this->writemask = writemask;
 }
 
+dst_reg::dst_reg(register_file file, int reg, brw_reg_type type,
+                 unsigned writemask)
+{
+   init();
+
+   this->file = file;
+   this->reg = reg;
+   this->type = type;
+   this->writemask = writemask;
+}
+
 dst_reg::dst_reg(struct brw_reg reg)
 {
    init();
@@ -1709,6 +1720,9 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 bool
 vec4_visitor::run(gl_clip_plane *clip_planes)
 {
+   bool use_vec4_nir =
+      compiler->glsl_compiler_options[stage].NirOptions != NULL;
+
    sanity_param_count = prog->Parameters->NumParameters;
 
    if (shader_time_index >= 0)
@@ -1718,10 +1732,15 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
 
    emit_prolog();
 
-   /* Generate VS IR for main().  (the visitor only descends into
-    * functions called "main").
-    */
-   if (shader) {
+   if (use_vec4_nir) {
+      assert(prog->nir != NULL);
+      emit_nir_code();
+      if (failed)
+         return false;
+   } else if (shader) {
+      /* Generate VS IR for main().  (the visitor only descends into
+       * functions called "main").
+       */
       visit_instructions(shader->base.ir);
    } else {
       emit_program_code();
@@ -1741,7 +1760,7 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
     * that we have reladdr computations available for CSE, since we'll
     * often do repeated subexpressions for those.
     */
-   if (shader) {
+   if (shader || use_vec4_nir) {
       move_grf_array_access_to_scratch();
       move_uniform_array_access_to_pull_constants();
    } else {
@@ -1827,14 +1846,29 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
       }
    }
 
-   while (!reg_allocate()) {
-      if (failed)
-         return false;
+   bool allocated_without_spills = reg_allocate();
+
+   if (!allocated_without_spills) {
+      compiler->shader_perf_log(log_data,
+                                "%s shader triggered register spilling.  "
+                                "Try reducing the number of live vec4 values "
+                                "to improve performance.\n",
+                                stage_name);
+
+      while (!reg_allocate()) {
+         if (failed)
+            return false;
+      }
    }
 
    opt_schedule_instructions();
 
    opt_set_dependency_control();
+
+   if (last_scratch > 0) {
+      prog_data->base.total_scratch =
+         brw_get_scratch_size(last_scratch * REG_SIZE);
+   }
 
    /* If any state parameters were appended, then ParameterValues could have
     * been realloced, in which case the driver uniform storage set up by
@@ -1857,10 +1891,11 @@ extern "C" {
  */
 const unsigned *
 brw_vs_emit(struct brw_context *brw,
-            struct gl_shader_program *prog,
-            struct brw_vs_compile *c,
-            struct brw_vs_prog_data *prog_data,
             void *mem_ctx,
+            const struct brw_vs_prog_key *key,
+            struct brw_vs_prog_data *prog_data,
+            struct gl_vertex_program *vp,
+            struct gl_shader_program *prog,
             unsigned *final_assembly_size)
 {
    bool start_busy = false;
@@ -1879,29 +1914,31 @@ brw_vs_emit(struct brw_context *brw,
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &c->vp->program.Base,
-                                           ST_VS);
+      st_index = brw_get_shader_time_index(brw, prog, &vp->Base, ST_VS);
 
    if (unlikely(INTEL_DEBUG & DEBUG_VS) && shader->base.ir)
-      brw_dump_ir("vertex", prog, &shader->base, &c->vp->program.Base);
+      brw_dump_ir("vertex", prog, &shader->base, &vp->Base);
+
+   if (!vp->Base.nir &&
+       (brw->intelScreen->compiler->scalar_vs ||
+        brw->intelScreen->compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions != NULL)) {
+      /* Normally we generate NIR in LinkShader() or
+       * ProgramStringNotify(), but Mesa's fixed-function vertex program
+       * handling doesn't notify the driver at all.  Just do it here, at
+       * the last minute, even though it's lame.
+       */
+      assert(vp->Base.Id == 0 && prog == NULL);
+      vp->Base.nir =
+         brw_create_nir(brw, NULL, &vp->Base, MESA_SHADER_VERTEX,
+                        brw->intelScreen->compiler->scalar_vs);
+   }
 
    if (brw->intelScreen->compiler->scalar_vs) {
-      if (!c->vp->program.Base.nir) {
-         /* Normally we generate NIR in LinkShader() or
-          * ProgramStringNotify(), but Mesa's fixed-function vertex program
-          * handling doesn't notify the driver at all.  Just do it here, at
-          * the last minute, even though it's lame.
-          */
-         assert(c->vp->program.Base.Id == 0 && prog == NULL);
-         c->vp->program.Base.nir =
-            brw_create_nir(brw, NULL, &c->vp->program.Base, MESA_SHADER_VERTEX);
-      }
-
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
       fs_visitor v(brw->intelScreen->compiler, brw,
-                   mem_ctx, MESA_SHADER_VERTEX, &c->key,
-                   &prog_data->base.base, prog, &c->vp->program.Base,
+                   mem_ctx, MESA_SHADER_VERTEX, key,
+                   &prog_data->base.base, prog, &vp->Base,
                    8, st_index);
       if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
@@ -1916,8 +1953,8 @@ brw_vs_emit(struct brw_context *brw,
       }
 
       fs_generator g(brw->intelScreen->compiler, brw,
-                     mem_ctx, (void *) &c->key, &prog_data->base.base,
-                     &c->vp->program.Base, v.promoted_constants,
+                     mem_ctx, (void *) key, &prog_data->base.base,
+                     &vp->Base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
          char *name;
@@ -1927,21 +1964,19 @@ brw_vs_emit(struct brw_context *brw,
                                    prog->Name);
          } else {
             name = ralloc_asprintf(mem_ctx, "vertex program %d",
-                                   c->vp->program.Base.Id);
+                                   vp->Base.Id);
          }
          g.enable_debug(name);
       }
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
-
-      c->base.last_scratch = v.last_scratch;
    }
 
    if (!assembly) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-      vec4_vs_visitor v(brw->intelScreen->compiler,
-                        c, prog_data, prog, mem_ctx, st_index,
+      vec4_vs_visitor v(brw->intelScreen->compiler, brw, key, prog_data,
+                        vp, prog, mem_ctx, st_index,
                         !_mesa_is_gles3(&brw->ctx));
       if (!v.run(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
@@ -1956,14 +1991,14 @@ brw_vs_emit(struct brw_context *brw,
       }
 
       vec4_generator g(brw->intelScreen->compiler, brw,
-                       prog, &c->vp->program.Base, &prog_data->base,
+                       prog, &vp->Base, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
       assembly = g.generate_assembly(v.cfg, final_assembly_size);
    }
 
    if (unlikely(brw->perf_debug) && shader) {
       if (shader->compiled_once) {
-         brw_vs_debug_recompile(brw, prog, &c->key);
+         brw_vs_debug_recompile(brw, prog, key);
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("VS compile took %.03f ms and stalled the GPU\n",

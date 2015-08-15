@@ -172,6 +172,7 @@ struct ir3_instruction {
 		IR3_INSTR_P     = 0x080,
 		IR3_INSTR_S     = 0x100,
 		IR3_INSTR_S2EN  = 0x200,
+		IR3_INSTR_G     = 0x400,
 		/* meta-flags, for intermediate stages of IR, ie.
 		 * before register assignment is done:
 		 */
@@ -209,7 +210,8 @@ struct ir3_instruction {
 		} cat5;
 		struct {
 			type_t type;
-			int offset;
+			int src_offset;
+			int dst_offset;
 			int iim_val;
 		} cat6;
 		/* for meta-instructions, just used to hold extra data
@@ -285,6 +287,8 @@ struct ir3_instruction {
 
 	/* an instruction can reference at most one address register amongst
 	 * it's src/dst registers.  Beyond that, you need to insert mov's.
+	 *
+	 * NOTE: do not write this directly, use ir3_instr_set_address()
 	 */
 	struct ir3_instruction *address;
 
@@ -365,6 +369,12 @@ struct ir3 {
 	unsigned predicates_count, predicates_sz;
 	struct ir3_instruction **predicates;
 
+	/* Track instructions which do not write a register but other-
+	 * wise must not be discarded (such as kill, stg, etc)
+	 */
+	unsigned keeps_count, keeps_sz;
+	struct ir3_instruction **keeps;
+
 	/* List of blocks: */
 	struct list_head block_list;
 
@@ -420,6 +430,9 @@ const char *ir3_instr_name(struct ir3_instruction *instr);
 struct ir3_register * ir3_reg_create(struct ir3_instruction *instr,
 		int num, int flags);
 
+void ir3_instr_set_address(struct ir3_instruction *instr,
+		struct ir3_instruction *addr);
+
 static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 {
 	if (instr->flags & IR3_INSTR_MARK)
@@ -431,7 +444,7 @@ static inline bool ir3_instr_check_mark(struct ir3_instruction *instr)
 void ir3_block_clear_mark(struct ir3_block *block);
 void ir3_clear_mark(struct ir3 *shader);
 
-void ir3_count_instructions(struct ir3 *ir);
+unsigned ir3_count_instructions(struct ir3 *ir);
 
 static inline int ir3_instr_regno(struct ir3_instruction *instr,
 		struct ir3_register *reg)
@@ -539,6 +552,26 @@ is_store(struct ir3_instruction *instr)
 		case OPC_STLW:
 		case OPC_L2G:
 		case OPC_G2L:
+			return true;
+		default:
+			break;
+		}
+	}
+	return false;
+}
+
+static inline bool is_load(struct ir3_instruction *instr)
+{
+	if (is_mem(instr)) {
+		switch (instr->opc) {
+		case OPC_LDG:
+		case OPC_LDL:
+		case OPC_LDP:
+		case OPC_L2G:
+		case OPC_LDLW:
+		case OPC_LDC_4:
+		case OPC_LDLV:
+		/* probably some others too.. */
 			return true;
 		default:
 			break;
@@ -1036,6 +1069,7 @@ ir3_SAM(struct ir3_block *block, opc_t opc, type_t type,
 /* cat6 instructions: */
 INSTR2(6, LDLV)
 INSTR2(6, LDG)
+INSTR3(6, STG)
 
 /* ************************************************************************* */
 /* split this out or find some helper to use.. like main/bitset.h.. */

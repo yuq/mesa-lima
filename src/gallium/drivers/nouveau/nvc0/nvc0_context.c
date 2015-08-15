@@ -63,12 +63,12 @@ nvc0_memory_barrier(struct pipe_context *pipe, unsigned flags)
          if (!nvc0->vtxbuf[i].buffer)
             continue;
          if (nvc0->vtxbuf[i].buffer->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
-            nvc0->base.vbo_dirty = TRUE;
+            nvc0->base.vbo_dirty = true;
       }
 
       if (nvc0->idxbuf.buffer &&
           nvc0->idxbuf.buffer->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
-         nvc0->base.vbo_dirty = TRUE;
+         nvc0->base.vbo_dirty = true;
 
       for (s = 0; s < 5 && !nvc0->cb_dirty; ++s) {
          uint32_t valid = nvc0->constbuf_valid[s];
@@ -86,7 +86,7 @@ nvc0_memory_barrier(struct pipe_context *pipe, unsigned flags)
                continue;
 
             if (res->flags & PIPE_RESOURCE_FLAG_MAP_PERSISTENT)
-               nvc0->cb_dirty = TRUE;
+               nvc0->cb_dirty = true;
          }
       }
    }
@@ -164,9 +164,9 @@ nvc0_default_kick_notify(struct nouveau_pushbuf *push)
 
    if (screen) {
       nouveau_fence_next(&screen->base);
-      nouveau_fence_update(&screen->base, TRUE);
+      nouveau_fence_update(&screen->base, true);
       if (screen->cur_ctx)
-         screen->cur_ctx->state.flushed = TRUE;
+         screen->cur_ctx->state.flushed = true;
       NOUVEAU_DRV_STAT(&screen->base, pushbuf_count, 1);
    }
 }
@@ -378,7 +378,7 @@ out_err:
 
 void
 nvc0_bufctx_fence(struct nvc0_context *nvc0, struct nouveau_bufctx *bufctx,
-                  boolean on_flush)
+                  bool on_flush)
 {
    struct nouveau_list *list = on_flush ? &bufctx->current : &bufctx->pending;
    struct nouveau_list *it;

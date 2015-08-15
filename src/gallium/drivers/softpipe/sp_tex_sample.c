@@ -58,7 +58,7 @@
  * of improperly weighted linear-filtered textures.
  * The tests/texwrap.c demo is a good test.
  */
-static INLINE float
+static inline float
 frac(float f)
 {
    return f - floorf(f);
@@ -69,7 +69,7 @@ frac(float f)
 /**
  * Linear interpolation macro
  */
-static INLINE float
+static inline float
 lerp(float a, float v0, float v1)
 {
    return v0 + a * (v1 - v0);
@@ -84,7 +84,7 @@ lerp(float a, float v0, float v1)
  * optimization!  If we find that's not true on some systems, convert
  * to a macro.
  */
-static INLINE float
+static inline float
 lerp_2d(float a, float b,
         float v00, float v10, float v01, float v11)
 {
@@ -97,7 +97,7 @@ lerp_2d(float a, float b,
 /**
  * As above, but 3D interpolation of 8 values.
  */
-static INLINE float
+static inline float
 lerp_3d(float a, float b, float c,
         float v000, float v100, float v010, float v110,
         float v001, float v101, float v011, float v111)
@@ -115,7 +115,7 @@ lerp_3d(float a, float b, float c,
  * value.  To avoid that problem we add a large multiple of the size
  * (rather than using a conditional).
  */
-static INLINE int
+static inline int
 repeat(int coord, unsigned size)
 {
    return (coord + size * 1024) % size;
@@ -486,7 +486,7 @@ wrap_linear_unorm_clamp_to_edge(float s, unsigned size, int offset,
 /**
  * Do coordinate to array index conversion.  For array textures.
  */
-static INLINE int
+static inline int
 coord_to_layer(float coord, unsigned first_layer, unsigned last_layer)
 {
    int c = util_ifloor(coord + 0.5F);
@@ -587,7 +587,7 @@ compute_lambda_vert(const struct sp_sampler_view *sview,
 
 
 
-static INLINE const float *
+static inline const float *
 get_texel_2d_no_border(const struct sp_sampler_view *sp_sview,
                        union tex_tile_address addr, int x, int y)
 {
@@ -603,7 +603,7 @@ get_texel_2d_no_border(const struct sp_sampler_view *sp_sview,
 }
 
 
-static INLINE const float *
+static inline const float *
 get_texel_2d(const struct sp_sampler_view *sp_sview,
              const struct sp_sampler *sp_samp,
              union tex_tile_address addr, int x, int y)
@@ -695,7 +695,7 @@ static const unsigned face_array[PIPE_TEX_FACE_MAX][4] = {
      PIPE_TEX_FACE_POS_Y, PIPE_TEX_FACE_NEG_Y }
 };
 
-static INLINE unsigned
+static inline unsigned
 get_next_face(unsigned face, int idx)
 {
    return face_array[face][idx];
@@ -705,7 +705,7 @@ get_next_face(unsigned face, int idx)
  * return a new xcoord based on old face, old coords, cube size
  * and fall_off_index (0 for x-, 1 for x+, 2 for y-, 3 for y+)
  */
-static INLINE int
+static inline int
 get_next_xcoord(unsigned face, unsigned fall_off_index, int max, int xc, int yc)
 {
    if ((face == 0 && fall_off_index != 1) ||
@@ -743,7 +743,7 @@ get_next_xcoord(unsigned face, unsigned fall_off_index, int max, int xc, int yc)
  * return a new ycoord based on old face, old coords, cube size
  * and fall_off_index (0 for x-, 1 for x+, 2 for y-, 3 for y+)
  */
-static INLINE int
+static inline int
 get_next_ycoord(unsigned face, unsigned fall_off_index, int max, int xc, int yc)
 {
    if ((fall_off_index <= 1) && (face <= 1 || face >= 4)) {
@@ -771,7 +771,7 @@ get_next_ycoord(unsigned face, unsigned fall_off_index, int max, int xc, int yc)
 
 /* Gather a quad of adjacent texels within a tile:
  */
-static INLINE void
+static inline void
 get_texel_quad_2d_no_border_single_tile(const struct sp_sampler_view *sp_sview,
                                         union tex_tile_address addr,
                                         unsigned x, unsigned y,
@@ -795,7 +795,7 @@ get_texel_quad_2d_no_border_single_tile(const struct sp_sampler_view *sp_sview,
 
 /* Gather a quad of potentially non-adjacent texels:
  */
-static INLINE void
+static inline void
 get_texel_quad_2d_no_border(const struct sp_sampler_view *sp_sview,
                             union tex_tile_address addr,
                             int x0, int y0,
@@ -810,7 +810,7 @@ get_texel_quad_2d_no_border(const struct sp_sampler_view *sp_sview,
 
 /* Can involve a lot of unnecessary checks for border color:
  */
-static INLINE void
+static inline void
 get_texel_quad_2d(const struct sp_sampler_view *sp_sview,
                   const struct sp_sampler *sp_samp,
                   union tex_tile_address addr,
@@ -828,7 +828,7 @@ get_texel_quad_2d(const struct sp_sampler_view *sp_sview,
 
 /* 3d variants:
  */
-static INLINE const float *
+static inline const float *
 get_texel_3d_no_border(const struct sp_sampler_view *sp_sview,
                        union tex_tile_address addr, int x, int y, int z)
 {
@@ -846,7 +846,7 @@ get_texel_3d_no_border(const struct sp_sampler_view *sp_sview,
 }
 
 
-static INLINE const float *
+static inline const float *
 get_texel_3d(const struct sp_sampler_view *sp_sview,
              const struct sp_sampler *sp_samp,
              union tex_tile_address addr, int x, int y, int z)
@@ -866,7 +866,7 @@ get_texel_3d(const struct sp_sampler_view *sp_sview,
 
 
 /* Get texel pointer for 1D array texture */
-static INLINE const float *
+static inline const float *
 get_texel_1d_array(const struct sp_sampler_view *sp_sview,
                    const struct sp_sampler *sp_samp,
                    union tex_tile_address addr, int x, int y)
@@ -884,7 +884,7 @@ get_texel_1d_array(const struct sp_sampler_view *sp_sview,
 
 
 /* Get texel pointer for 2D array texture */
-static INLINE const float *
+static inline const float *
 get_texel_2d_array(const struct sp_sampler_view *sp_sview,
                    const struct sp_sampler *sp_samp,
                    union tex_tile_address addr, int x, int y, int layer)
@@ -905,7 +905,7 @@ get_texel_2d_array(const struct sp_sampler_view *sp_sview,
 }
 
 
-static INLINE const float *
+static inline const float *
 get_texel_cube_seamless(const struct sp_sampler_view *sp_sview,
                         union tex_tile_address addr, int x, int y,
                         float *corner, int layer, unsigned face)
@@ -960,7 +960,7 @@ get_texel_cube_seamless(const struct sp_sampler_view *sp_sview,
 
 
 /* Get texel pointer for cube array texture */
-static INLINE const float *
+static inline const float *
 get_texel_cube_array(const struct sp_sampler_view *sp_sview,
                      const struct sp_sampler *sp_samp,
                      union tex_tile_address addr, int x, int y, int layer)
@@ -986,7 +986,7 @@ get_texel_cube_array(const struct sp_sampler_view *sp_sview,
  * If level = 2, then we'll return 64 (the width at level=2).
  * Return 1 if level > base_pot.
  */
-static INLINE unsigned
+static inline unsigned
 pot_level_size(unsigned base_pot, unsigned level)
 {
    return (base_pot >= level) ? (1 << (base_pot - level)) : 1;
@@ -1016,7 +1016,7 @@ print_sample_4(const char *function, float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZ
 
 /* Some image-filter fastpaths:
  */
-static INLINE void
+static inline void
 img_filter_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
                                 struct sp_sampler *sp_samp,
                                 const struct img_filter_args *args,
@@ -1070,7 +1070,7 @@ img_filter_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
 }
 
 
-static INLINE void
+static inline void
 img_filter_2d_nearest_repeat_POT(struct sp_sampler_view *sp_sview,
                                  struct sp_sampler *sp_samp,
                                  const struct img_filter_args *args,
@@ -1104,7 +1104,7 @@ img_filter_2d_nearest_repeat_POT(struct sp_sampler_view *sp_sview,
 }
 
 
-static INLINE void
+static inline void
 img_filter_2d_nearest_clamp_POT(struct sp_sampler_view *sp_sview,
                                 struct sp_sampler *sp_samp,
                                 const struct img_filter_args *args,
@@ -1819,7 +1819,7 @@ img_filter_3d_linear(struct sp_sampler_view *sp_sview,
  * \param lod_in per-fragment lod_bias or explicit_lod.
  * \param lod returns the per-fragment lod.
  */
-static INLINE void
+static inline void
 compute_lod(const struct pipe_sampler_state *sampler,
             enum tgsi_sampler_control control,
             const float biased_lambda,
@@ -1859,7 +1859,7 @@ compute_lod(const struct pipe_sampler_state *sampler,
  * \param lod_in per-fragment lod_bias or explicit_lod.
  * \param lod results per-fragment lod.
  */
-static INLINE void
+static inline void
 compute_lambda_lod(struct sp_sampler_view *sp_sview,
                    struct sp_sampler *sp_samp,
                    const float s[TGSI_QUAD_SIZE],
@@ -1906,7 +1906,7 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
    }
 }
 
-static INLINE unsigned
+static inline unsigned
 get_gather_component(const float lod_in[TGSI_QUAD_SIZE])
 {
    /* gather component is stored in lod_in slot as unsigned */
@@ -2789,7 +2789,7 @@ get_linear_wrap(unsigned mode)
 /**
  * Is swizzling needed for the given state key?
  */
-static INLINE bool
+static inline bool
 any_swizzle(const struct pipe_sampler_view *view)
 {
    return (view->swizzle_r != PIPE_SWIZZLE_RED ||

@@ -44,7 +44,7 @@ AC_INIT([Mesa], [MESA_VERSION],
 AC_CONFIG_AUX_DIR([bin])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CANONICAL_SYSTEM
-AM_INIT_AUTOMAKE([foreign tar-ustar dist-xz])
+AM_INIT_AUTOMAKE([foreign tar-ustar dist-xz subdir-objects])
 
 dnl We only support native Windows builds (MinGW/MSVC) through SCons.
 case "$host_os" in
@@ -64,13 +64,16 @@ m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 dnl Set internal versions
 OSMESA_VERSION=8
 AC_SUBST([OSMESA_VERSION])
+OPENCL_VERSION=1
+AC_SUBST([OPENCL_VERSION])
 
 dnl Versions for external dependencies
-LIBDRM_REQUIRED=2.4.38
+LIBDRM_REQUIRED=2.4.60
 LIBDRM_RADEON_REQUIRED=2.4.56
-LIBDRM_INTEL_REQUIRED=2.4.60
+LIBDRM_AMDGPU_REQUIRED=2.4.63
+LIBDRM_INTEL_REQUIRED=2.4.61
 LIBDRM_NVVIEUX_REQUIRED=2.4.33
-LIBDRM_NOUVEAU_REQUIRED="2.4.33 libdrm >= 2.4.41"
+LIBDRM_NOUVEAU_REQUIRED=2.4.62
 LIBDRM_FREEDRENO_REQUIRED=2.4.57
 DRI2PROTO_REQUIRED=2.6
 DRI3PROTO_REQUIRED=1.0
@@ -79,7 +82,7 @@ LIBUDEV_REQUIRED=151
 GLPROTO_REQUIRED=1.4.14
 LIBOMXIL_BELLAGIO_REQUIRED=0.0
 LIBVA_REQUIRED=0.35.0
-VDPAU_REQUIRED=0.4.1
+VDPAU_REQUIRED=1.1
 WAYLAND_REQUIRED=1.2.0
 XCB_REQUIRED=1.9.3
 XCBDRI2_REQUIRED=1.8
@@ -205,11 +208,14 @@ AX_GCC_BUILTIN([__builtin_popcount])
 AX_GCC_BUILTIN([__builtin_popcountll])
 AX_GCC_BUILTIN([__builtin_unreachable])
 
+AX_GCC_FUNC_ATTRIBUTE([const])
 AX_GCC_FUNC_ATTRIBUTE([flatten])
 AX_GCC_FUNC_ATTRIBUTE([format])
 AX_GCC_FUNC_ATTRIBUTE([malloc])
 AX_GCC_FUNC_ATTRIBUTE([packed])
+AX_GCC_FUNC_ATTRIBUTE([pure])
 AX_GCC_FUNC_ATTRIBUTE([unused])
+AX_GCC_FUNC_ATTRIBUTE([warn_unused_result])
 
 AM_CONDITIONAL([GEN_ASM_OFFSETS], test "x$GEN_ASM_OFFSETS" = xyes)
 
@@ -230,7 +236,7 @@ _SAVE_LDFLAGS="$LDFLAGS"
 _SAVE_CPPFLAGS="$CPPFLAGS"
 
 dnl Compiler macros
-DEFINES=""
+DEFINES="-D__STDC_LIMIT_MACROS"
 AC_SUBST([DEFINES])
 case "$host_os" in
 linux*|*-gnu*|gnu*)
@@ -280,6 +286,9 @@ if test "x$GCC" = xyes; then
 
     # Work around aliasing bugs - developers should comment this out
     CFLAGS="$CFLAGS -fno-strict-aliasing"
+
+    # We don't want floating-point math functions to set errno or trap
+    CFLAGS="$CFLAGS -fno-math-errno -fno-trapping-math"
 
     # gcc's builtin memcmp is slower than glibc's
     # http://gcc.gnu.org/bugzilla/show_bug.cgi?id=43052
@@ -651,6 +660,7 @@ fi
 AC_CHECK_HEADER([xlocale.h], [DEFINES="$DEFINES -DHAVE_XLOCALE_H"])
 AC_CHECK_HEADER([sys/sysctl.h], [DEFINES="$DEFINES -DHAVE_SYS_SYSCTL_H"])
 AC_CHECK_FUNC([strtof], [DEFINES="$DEFINES -DHAVE_STRTOF"])
+AC_CHECK_FUNC([mkostemp], [DEFINES="$DEFINES -DHAVE_MKOSTEMP"])
 
 dnl Check to see if dlopen is in default libraries (like Solaris, which
 dnl has it in libc), or if libdl is needed to get it.
@@ -910,6 +920,13 @@ fi
 AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xyes -a \
                                   "x$enable_dri" = xyes)
 
+# Check for libdrm
+PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
+                  [have_libdrm=yes], [have_libdrm=no])
+if test "x$have_libdrm" = xyes; then
+	DEFINES="$DEFINES -DHAVE_LIBDRM"
+fi
+
 # Select which platform-dependent DRI code gets built
 case "$host_os" in
 darwin*)
@@ -922,8 +939,8 @@ esac
 
 AM_CONDITIONAL(HAVE_DRICOMMON, test "x$enable_dri" = xyes )
 AM_CONDITIONAL(HAVE_DRISW, test "x$enable_dri" = xyes )
-AM_CONDITIONAL(HAVE_DRI2, test "x$enable_dri" = xyes -a "x$dri_platform" = xdrm )
-AM_CONDITIONAL(HAVE_DRI3, test "x$enable_dri3" = xyes -a "x$dri_platform" = xdrm )
+AM_CONDITIONAL(HAVE_DRI2, test "x$enable_dri" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
+AM_CONDITIONAL(HAVE_DRI3, test "x$enable_dri3" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
 AM_CONDITIONAL(HAVE_APPLEDRI, test "x$enable_dri" = xyes -a "x$dri_platform" = xapple )
 
 AC_ARG_ENABLE([shared-glapi],
@@ -952,11 +969,9 @@ dnl
 dnl Driver specific build directories
 dnl
 
-case "x$enable_glx$enable_xlib_glx" in
-xyesyes)
+if test -n "$with_gallium_drivers" -a "x$enable_glx$enable_xlib_glx" = xyesyes; then
     NEED_WINSYS_XLIB="yes"
-    ;;
-esac
+fi
 
 if test "x$enable_dri" = xyes; then
     enable_gallium_loader="$enable_shared_pipe_drivers"
@@ -1110,13 +1125,6 @@ if test "x$with_sha1" = "x"; then
     fi
 fi
 AM_CONDITIONAL([ENABLE_SHADER_CACHE], [test x$enable_shader_cache = xyes])
-
-# Check for libdrm
-PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
-                  [have_libdrm=yes], [have_libdrm=no])
-if test "x$have_libdrm" = xyes; then
-	DEFINES="$DEFINES -DHAVE_LIBDRM"
-fi
 
 case "$host_os" in
 linux*)
@@ -1357,7 +1365,7 @@ if test "x$enable_dri" = xyes; then
         fi
         ;;
     darwin*)
-        DEFINES="$DEFINES -DGLX_ALIAS_UNSUPPORTED"
+        DEFINES="$DEFINES -DGLX_ALIAS_UNSUPPORTED -DBUILDING_MESA"
         if test "x$with_dri_drivers" = "xyes"; then
             with_dri_drivers="swrast"
         fi
@@ -1377,26 +1385,6 @@ if test "x$enable_dri" = xyes; then
          AC_CHECK_LIB([expat],[XML_ParserCreate],[],
                      [AC_MSG_ERROR([Expat library required for DRI not found])])
          EXPAT_LIBS="-lexpat"])
-
-    DRICOMMON_NEED_LIBDRM=no
-    # If we are building any DRI driver other than swrast.
-    if test -n "$with_dri_drivers"; then
-        if test "x$with_dri_drivers" != xswrast; then
-            # ... libdrm is required
-            if test "x$have_libdrm" != xyes; then
-                AC_MSG_ERROR([DRI drivers requires libdrm >= $LIBDRM_REQUIRED])
-            fi
-            DRICOMMON_NEED_LIBDRM=yes
-        fi
-    fi
-
-    # If we're building any gallium DRI driver other than swrast
-    if test -n "$with_gallium_drivers" -a "x$DRICOMMON_NEED_LIBDRM" = xno; then
-        if test "x$with_gallium_drivers" != xswrast; then
-            # ... build a libdrm aware dricommon
-            DRICOMMON_NEED_LIBDRM=yes
-        fi
-    fi
 
     # put all the necessary libs together
     DRI_LIB_DEPS="$DRI_LIB_DEPS $SELINUX_LIBS $LIBDRM_LIBS $EXPAT_LIBS -lm $PTHREAD_LIBS $DLOPEN_LIBS"
@@ -1425,7 +1413,7 @@ if test -n "$with_dri_drivers"; then
             ;;
         xnouveau)
             HAVE_NOUVEAU_DRI=yes;
-            PKG_CHECK_MODULES([NOUVEAU], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
+            PKG_CHECK_MODULES([NVVIEUX], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
             ;;
         xradeon)
             HAVE_RADEON_DRI=yes;
@@ -1765,6 +1753,9 @@ egl_platforms=`IFS=', '; echo $with_egl_platforms`
 for plat in $egl_platforms; do
 	case "$plat" in
 	wayland)
+		test "x$have_libdrm" != xyes &&
+			AC_MSG_ERROR([EGL platform wayland requires libdrm >= $LIBDRM_REQUIRED])
+
 		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
 		if test "x$WAYLAND_SCANNER" = x; then
@@ -1788,9 +1779,6 @@ for plat in $egl_platforms; do
 			AC_MSG_ERROR([EGL platform surfaceless requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
-	android|gdi|null)
-		;;
-
 	*)
 		AC_MSG_ERROR([EGL platform '$plat' does not exist])
 		;;
@@ -1811,9 +1799,6 @@ else
     EGL_NATIVE_PLATFORM="_EGL_INVALID_PLATFORM"
 fi
 
-if echo "$egl_platforms" | grep -q 'x11'; then
-    NEED_WINSYS_XLIB=yes
-fi
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
@@ -2127,6 +2112,7 @@ if test -n "$with_gallium_drivers"; then
         xradeonsi)
             HAVE_GALLIUM_RADEONSI=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             gallium_require_drm "radeonsi"
             gallium_require_drm_loader
             radeon_llvm_check "radeonsi"
@@ -2237,31 +2223,15 @@ AM_CONDITIONAL(HAVE_GALLIUM_STATIC_TARGETS, test "x$enable_shared_pipe_drivers" 
 #       use by XA tracker in particular, but could be used in any case
 #       where communication with xserver is not desired).
 if test "x$enable_gallium_loader" = xyes; then
-    if test "x$NEED_WINSYS_XLIB" = xyes; then
-        GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_XLIB"
-    fi
-
     if test "x$enable_dri" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRI"
     fi
 
     if test "x$enable_gallium_drm_loader" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRM"
-        PKG_CHECK_MODULES([GALLIUM_PIPE_LOADER_XCB], [xcb xcb-dri2],
-                          pipe_loader_have_xcb=yes, pipe_loader_have_xcb=no)
-        if test "x$pipe_loader_have_xcb" = xyes; then
-            GALLIUM_PIPE_LOADER_CLIENT_DEFINES="$GALLIUM_PIPE_LOADER_CLIENT_DEFINES -DHAVE_PIPE_LOADER_XCB"
-            GALLIUM_PIPE_LOADER_CLIENT_LIBS="$GALLIUM_PIPE_LOADER_CLIENT_LIBS $GALLIUM_PIPE_LOADER_XCB_LIBS $LIBDRM_LIBS"
-        fi
     fi
 
-    GALLIUM_PIPE_LOADER_CLIENT_DEFINES="$GALLIUM_PIPE_LOADER_CLIENT_DEFINES $GALLIUM_PIPE_LOADER_DEFINES"
-    GALLIUM_PIPE_LOADER_CLIENT_LIBS="$GALLIUM_PIPE_LOADER_CLIENT_LIBS $GALLIUM_PIPE_LOADER_LIBS"
-
     AC_SUBST([GALLIUM_PIPE_LOADER_DEFINES])
-    AC_SUBST([GALLIUM_PIPE_LOADER_LIBS])
-    AC_SUBST([GALLIUM_PIPE_LOADER_CLIENT_DEFINES])
-    AC_SUBST([GALLIUM_PIPE_LOADER_CLIENT_LIBS])
 fi
 
 AM_CONDITIONAL(HAVE_I915_DRI, test x$HAVE_I915_DRI = xyes)
@@ -2288,7 +2258,6 @@ fi
 
 AC_SUBST([ELF_LIB])
 
-AM_CONDITIONAL(DRICOMMON_NEED_LIBDRM, test "x$DRICOMMON_NEED_LIBDRM" = xyes)
 AM_CONDITIONAL(HAVE_LIBDRM, test "x$have_libdrm" = xyes)
 AM_CONDITIONAL(HAVE_X11_DRIVER, test "x$enable_xlib_glx" = xyes)
 AM_CONDITIONAL(HAVE_OSMESA, test "x$enable_osmesa" = xyes)
@@ -2348,8 +2317,7 @@ CXXFLAGS="$CXXFLAGS $USER_CXXFLAGS"
 dnl Substitute the config
 AC_CONFIG_FILES([Makefile
 		src/Makefile
-		src/egl/drivers/dri2/Makefile
-		src/egl/main/Makefile
+		src/egl/Makefile
 		src/egl/main/egl.pc
 		src/egl/wayland/wayland-drm/Makefile
 		src/egl/wayland/wayland-egl/Makefile
@@ -2388,6 +2356,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/targets/libgl-xlib/Makefile
 		src/gallium/targets/omx/Makefile
 		src/gallium/targets/opencl/Makefile
+		src/gallium/targets/opencl/mesa.icd
 		src/gallium/targets/osmesa/Makefile
 		src/gallium/targets/osmesa/osmesa.pc
 		src/gallium/targets/pipe-loader/Makefile
@@ -2403,6 +2372,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/winsys/intel/drm/Makefile
 		src/gallium/winsys/nouveau/drm/Makefile
 		src/gallium/winsys/radeon/drm/Makefile
+		src/gallium/winsys/amdgpu/drm/Makefile
 		src/gallium/winsys/svga/drm/Makefile
 		src/gallium/winsys/sw/dri/Makefile
 		src/gallium/winsys/sw/kms-dri/Makefile

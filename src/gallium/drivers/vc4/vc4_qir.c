@@ -96,10 +96,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_B] = { "tex_b", 0, 2 },
         [QOP_TEX_DIRECT] = { "tex_direct", 0, 2 },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
-        [QOP_R4_UNPACK_A] = { "r4_unpack_a", 1, 1 },
-        [QOP_R4_UNPACK_B] = { "r4_unpack_b", 1, 1 },
-        [QOP_R4_UNPACK_C] = { "r4_unpack_c", 1, 1 },
-        [QOP_R4_UNPACK_D] = { "r4_unpack_d", 1, 1 },
         [QOP_UNPACK_8A_F] = { "unpack_8a_f", 1, 1 },
         [QOP_UNPACK_8B_F] = { "unpack_8b_f", 1, 1 },
         [QOP_UNPACK_8C_F] = { "unpack_8c_f", 1, 1 },
@@ -228,20 +224,6 @@ qir_writes_r4(struct qinst *inst)
         case QOP_RSQ:
         case QOP_EXP2:
         case QOP_LOG2:
-                return true;
-        default:
-                return false;
-        }
-}
-
-bool
-qir_reads_r4(struct qinst *inst)
-{
-        switch (inst->op) {
-        case QOP_R4_UNPACK_A:
-        case QOP_R4_UNPACK_B:
-        case QOP_R4_UNPACK_C:
-        case QOP_R4_UNPACK_D:
                 return true;
         default:
                 return false;

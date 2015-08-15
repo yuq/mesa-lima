@@ -938,7 +938,7 @@ _mesa_print_framebuffer(const struct gl_framebuffer *fb)
 
    fprintf(stderr, "Mesa Framebuffer %u at %p\n", fb->Name, (void *) fb);
    fprintf(stderr, "  Size: %u x %u  Status: %s\n", fb->Width, fb->Height,
-           _mesa_lookup_enum_by_nr(fb->_Status));
+           _mesa_enum_to_string(fb->_Status));
    fprintf(stderr, "  Attachments:\n");
 
    for (i = 0; i < BUFFER_COUNT; i++) {

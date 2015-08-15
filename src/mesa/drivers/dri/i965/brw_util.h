@@ -53,14 +53,14 @@ brw_get_line_width(struct brw_context *brw)
    float line_width =
       CLAMP(!brw->ctx.Multisample._Enabled && !brw->ctx.Line.SmoothFlag
             ? roundf(brw->ctx.Line.Width) : brw->ctx.Line.Width,
-            0.0, brw->ctx.Const.MaxLineWidth);
+            0.0f, brw->ctx.Const.MaxLineWidth);
    uint32_t line_width_u3_7 = U_FIXED(line_width, 7);
 
    /* Line width of 0 is not allowed when MSAA enabled */
    if (brw->ctx.Multisample._Enabled) {
       if (line_width_u3_7 == 0)
          line_width_u3_7 = 1;
-   } else if (brw->ctx.Line.SmoothFlag && line_width < 1.5) {
+   } else if (brw->ctx.Line.SmoothFlag && line_width < 1.5f) {
       /* For 1 pixel line thickness or less, the general
        * anti-aliasing algorithm gives up, and a garbage line is
        * generated.  Setting a Line Width of 0.0 specifies the

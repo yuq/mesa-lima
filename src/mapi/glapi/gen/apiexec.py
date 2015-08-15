@@ -74,6 +74,17 @@ functions = {
     # GL_ARB_geometry_shader4, so OpenGL 3.2 is required.
     "FramebufferTexture": exec_info(core=32),
 
+    # OpenGL 4.0 / GL_ARB_shader_subroutines. Mesa only exposes this
+    # extension with core profile.
+    "GetSubroutineUniformLocation": exec_info(core=31),
+    "GetSubroutineIndex": exec_info(core=31),
+    "GetActiveSubroutineUniformiv": exec_info(core=31),
+    "GetActiveSubroutineUniformName": exec_info(core=31),
+    "GetActiveSubroutineName": exec_info(core=31),
+    "UniformSubroutinesuiv": exec_info(core=31),
+    "GetUniformSubroutineuiv": exec_info(core=31),
+    "GetProgramStageiv": exec_info(core=31),
+
     # OpenGL 4.0 / GL_ARB_gpu_shader_fp64.  The extension spec says:
     #
     #     "OpenGL 3.2 and GLSL 1.50 are required."

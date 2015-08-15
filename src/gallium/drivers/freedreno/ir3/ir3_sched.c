@@ -80,12 +80,12 @@ schedule(struct ir3_sched_ctx *ctx, struct ir3_instruction *instr)
 	list_delinit(&instr->node);
 
 	if (writes_addr(instr)) {
-		assert(ctx->addr == NULL);
+		debug_assert(ctx->addr == NULL);
 		ctx->addr = instr;
 	}
 
 	if (writes_pred(instr)) {
-		assert(ctx->pred == NULL);
+		debug_assert(ctx->pred == NULL);
 		ctx->pred = instr;
 	}
 
@@ -180,13 +180,13 @@ check_conflict(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 	 * free:
 	 */
 	if (writes_addr(instr) && ctx->addr) {
-		assert(ctx->addr != instr);
+		debug_assert(ctx->addr != instr);
 		notes->addr_conflict = true;
 		return true;
 	}
 
 	if (writes_pred(instr) && ctx->pred) {
-		assert(ctx->pred != instr);
+		debug_assert(ctx->pred != instr);
 		notes->pred_conflict = true;
 		return true;
 	}
@@ -261,6 +261,20 @@ instr_eligibility(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 	return 0;
 }
 
+/* could an instruction be scheduled if specified ssa src was scheduled? */
+static bool
+could_sched(struct ir3_instruction *instr, struct ir3_instruction *src)
+{
+	struct ir3_instruction *other_src;
+	foreach_ssa_src(other_src, instr) {
+		/* if dependency not scheduled, we aren't ready yet: */
+		if ((src != other_src) && !is_scheduled(other_src)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /* move eligible instructions to the priority list: */
 static unsigned
 add_eligible_instrs(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
@@ -272,6 +286,31 @@ add_eligible_instrs(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
 		int e = instr_eligibility(ctx, notes, instr);
 		if (e < 0)
 			continue;
+
+		/* For instructions that write address register we need to
+		 * make sure there is at least one instruction that uses the
+		 * addr value which is otherwise ready.
+		 *
+		 * TODO if any instructions use pred register and have other
+		 * src args, we would need to do the same for writes_pred()..
+		 */
+		if (unlikely(writes_addr(instr))) {
+			struct ir3 *ir = instr->block->shader;
+			bool ready = false;
+			for (unsigned i = 0; (i < ir->indirects_count) && !ready; i++) {
+				struct ir3_instruction *indirect = ir->indirects[i];
+				if (!indirect)
+					continue;
+				if (indirect->address != instr)
+					continue;
+				ready = could_sched(indirect, instr);
+			}
+
+			/* nothing could be scheduled, so keep looking: */
+			if (!ready)
+				continue;
+		}
+
 		min_delay = MIN2(min_delay, e);
 		if (e == 0) {
 			/* remove from unscheduled list and into priority queue: */
@@ -287,20 +326,25 @@ add_eligible_instrs(struct ir3_sched_ctx *ctx, struct ir3_sched_notes *notes,
  * instructions which depend on the current address register
  * to a clone of the instruction which wrote the address reg.
  */
-static void
+static struct ir3_instruction *
 split_addr(struct ir3_sched_ctx *ctx)
 {
-	struct ir3 *ir = ctx->addr->block->shader;
+	struct ir3 *ir;
 	struct ir3_instruction *new_addr = NULL;
 	unsigned i;
 
 	debug_assert(ctx->addr);
 
+	ir = ctx->addr->block->shader;
+
 	for (i = 0; i < ir->indirects_count; i++) {
 		struct ir3_instruction *indirect = ir->indirects[i];
 
+		if (!indirect)
+			continue;
+
 		/* skip instructions already scheduled: */
-		if (indirect->flags & IR3_INSTR_MARK)
+		if (is_scheduled(indirect))
 			continue;
 
 		/* remap remaining instructions using current addr
@@ -312,32 +356,36 @@ split_addr(struct ir3_sched_ctx *ctx)
 				/* original addr is scheduled, but new one isn't: */
 				new_addr->flags &= ~IR3_INSTR_MARK;
 			}
-			indirect->address = new_addr;
+			ir3_instr_set_address(indirect, new_addr);
 		}
 	}
 
 	/* all remaining indirects remapped to new addr: */
 	ctx->addr = NULL;
+
+	return new_addr;
 }
 
 /* "spill" the predicate register by remapping any unscheduled
  * instructions which depend on the current predicate register
  * to a clone of the instruction which wrote the address reg.
  */
-static void
+static struct ir3_instruction *
 split_pred(struct ir3_sched_ctx *ctx)
 {
-	struct ir3 *ir = ctx->pred->block->shader;
+	struct ir3 *ir;
 	struct ir3_instruction *new_pred = NULL;
 	unsigned i;
 
 	debug_assert(ctx->pred);
 
+	ir = ctx->pred->block->shader;
+
 	for (i = 0; i < ir->predicates_count; i++) {
 		struct ir3_instruction *predicated = ir->predicates[i];
 
 		/* skip instructions already scheduled: */
-		if (predicated->flags & IR3_INSTR_MARK)
+		if (is_scheduled(predicated))
 			continue;
 
 		/* remap remaining instructions using current pred
@@ -358,6 +406,8 @@ split_pred(struct ir3_sched_ctx *ctx)
 
 	/* all remaining predicated remapped to new pred: */
 	ctx->pred = NULL;
+
+	return new_pred;
 }
 
 static void
@@ -407,20 +457,32 @@ sched_block(struct ir3_sched_ctx *ctx, struct ir3_block *block)
 
 			schedule(ctx, instr);
 		} else if (delay == ~0) {
+			struct ir3_instruction *new_instr = NULL;
+
 			/* nothing available to schedule.. if we are blocked on
 			 * address/predicate register conflict, then break the
 			 * deadlock by cloning the instruction that wrote that
 			 * reg:
 			 */
 			if (notes.addr_conflict) {
-				split_addr(ctx);
+				new_instr = split_addr(ctx);
 			} else if (notes.pred_conflict) {
-				split_pred(ctx);
+				new_instr = split_pred(ctx);
 			} else {
 				debug_assert(0);
 				ctx->error = true;
 				return;
 			}
+
+			if (new_instr) {
+				list_del(&new_instr->node);
+				list_addtail(&new_instr->node, &unscheduled_list);
+				/* the original instr that wrote addr/pred may have
+				 * originated from a different block:
+				 */
+				new_instr->block = block;
+			}
+
 		} else {
 			/* and if we run out of instructions that can be scheduled,
 			 * then it is time for nop's:

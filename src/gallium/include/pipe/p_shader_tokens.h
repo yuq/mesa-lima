@@ -685,7 +685,7 @@ struct tgsi_src_register
  *
  * File, Index and Swizzle are handled the same as in tgsi_src_register.
  *
- * If ArrayID is zero the whole register file might be is indirectly addressed,
+ * If ArrayID is zero the whole register file might be indirectly addressed,
  * if not only the Declaration with this ArrayID is accessed by this operand.
  *
  */

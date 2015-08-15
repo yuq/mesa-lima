@@ -511,7 +511,7 @@ bind_aaline_fragment_shader(struct aaline_stage *aaline)
 
 
 
-static INLINE struct aaline_stage *
+static inline struct aaline_stage *
 aaline_stage( struct draw_stage *stage )
 {
    return (struct aaline_stage *) stage;

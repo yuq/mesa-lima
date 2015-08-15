@@ -310,6 +310,7 @@ struct r600_shader_ctx {
 	int					gs_next_vertex;
 	struct r600_shader	*gs_for_vs;
 	int					gs_export_gpr_treg;
+	unsigned				enabled_stream_buffers_mask;
 };
 
 struct r600_shader_tgsi_instruction {
@@ -1402,6 +1403,9 @@ static int emit_streamout(struct r600_shader_ctx *ctx, struct pipe_stream_output
 		 * with MEM_STREAM instructions */
 		output.array_size = 0xFFF;
 		output.comp_mask = ((1 << so->output[i].num_components) - 1) << so->output[i].start_component;
+
+		ctx->enabled_stream_buffers_mask |= (1 << so->output[i].output_buffer);
+
 		if (ctx->bc->chip_class >= EVERGREEN) {
 			switch (so->output[i].output_buffer) {
 			case 0:
@@ -1718,6 +1722,8 @@ static int generate_gs_copy_shader(struct r600_context *rctx,
 	gs->gs_copy_shader = cshader;
 
 	ctx.bc->nstack = 1;
+
+	cshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	cshader->shader.ring_item_size = ocnt * 16;
 
 	return r600_bytecode_build(ctx.bc);
@@ -1931,15 +1937,14 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.file_offset[TGSI_FILE_IMMEDIATE] = V_SQ_ALU_SRC_LITERAL;
 	ctx.bc->ar_reg = ctx.file_offset[TGSI_FILE_TEMPORARY] +
 			ctx.info.file_max[TGSI_FILE_TEMPORARY] + 1;
+	ctx.bc->index_reg[0] = ctx.bc->ar_reg + 1;
+	ctx.bc->index_reg[1] = ctx.bc->ar_reg + 2;
+
 	if (ctx.type == TGSI_PROCESSOR_GEOMETRY) {
-		ctx.gs_export_gpr_treg = ctx.bc->ar_reg + 1;
-		ctx.temp_reg = ctx.bc->ar_reg + 2;
-		ctx.bc->index_reg[0] = ctx.bc->ar_reg + 3;
-		ctx.bc->index_reg[1] = ctx.bc->ar_reg + 4;
+		ctx.gs_export_gpr_treg = ctx.bc->ar_reg + 3;
+		ctx.temp_reg = ctx.bc->ar_reg + 4;
 	} else {
-		ctx.temp_reg = ctx.bc->ar_reg + 1;
-		ctx.bc->index_reg[0] = ctx.bc->ar_reg + 2;
-		ctx.bc->index_reg[1] = ctx.bc->ar_reg + 3;
+		ctx.temp_reg = ctx.bc->ar_reg + 3;
 	}
 
 	shader->max_arrays = 0;
@@ -2086,7 +2091,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 		radeon_llvm_ctx.chip_class = ctx.bc->chip_class;
 		radeon_llvm_ctx.fs_color_all = shader->fs_write_all && (rscreen->b.chip_class >= EVERGREEN);
 		radeon_llvm_ctx.stream_outputs = &so;
-		radeon_llvm_ctx.clip_vertex = ctx.cv_output;
 		radeon_llvm_ctx.alpha_to_one = key.alpha_to_one;
 		radeon_llvm_ctx.has_compressed_msaa_texturing =
 			ctx.bc->has_compressed_msaa_texturing;
@@ -2262,6 +2266,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	    so.num_outputs && !use_llvm)
 		emit_streamout(&ctx, &so);
 
+	pipeshader->enabled_stream_buffers_mask = ctx.enabled_stream_buffers_mask;
 	convert_edgeflag_to_int(&ctx);
 
 	if (ring_outputs) {
@@ -2485,6 +2490,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			output[j].array_base = 0;
 			output[j].op = CF_OP_EXPORT;
 			j++;
+			shader->nr_ps_color_exports++;
 		}
 
 		noutput = j;

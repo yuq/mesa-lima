@@ -143,7 +143,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       brw_add_texrect_params(prog);
 
       if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions) {
-         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT);
+         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
       }
 
       brw_fs_precompile(ctx, NULL, prog);
@@ -169,7 +169,8 @@ brwProgramStringNotify(struct gl_context *ctx,
       brw_add_texrect_params(prog);
 
       if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions) {
-         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX);
+         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
+                                    brw->intelScreen->compiler->scalar_vs);
       }
 
       brw_vs_precompile(ctx, NULL, prog);
@@ -196,7 +197,7 @@ brw_memory_barrier(struct gl_context *ctx, GLbitfield barriers)
    unsigned bits = (PIPE_CONTROL_DATA_CACHE_INVALIDATE |
                     PIPE_CONTROL_NO_WRITE |
                     PIPE_CONTROL_CS_STALL);
-   assert(brw->gen >= 7 && brw->gen <= 8);
+   assert(brw->gen >= 7 && brw->gen <= 9);
 
    if (barriers & (GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
                    GL_ELEMENT_ARRAY_BARRIER_BIT |
@@ -574,10 +575,13 @@ brw_dump_ir(const char *stage, struct gl_shader_program *shader_prog,
             struct gl_shader *shader, struct gl_program *prog)
 {
    if (shader_prog) {
-      fprintf(stderr,
-              "GLSL IR for native %s shader %d:\n", stage, shader_prog->Name);
-      _mesa_print_ir(stderr, shader->ir, NULL);
-      fprintf(stderr, "\n\n");
+      if (shader->ir) {
+         fprintf(stderr,
+                 "GLSL IR for native %s shader %d:\n",
+                 stage, shader_prog->Name);
+         _mesa_print_ir(stderr, shader->ir, NULL);
+         fprintf(stderr, "\n\n");
+      }
    } else {
       fprintf(stderr, "ARB_%s_program %d ir for native %s shader\n",
               stage, prog->Id, stage);

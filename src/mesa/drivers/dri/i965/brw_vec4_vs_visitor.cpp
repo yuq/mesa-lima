@@ -36,7 +36,7 @@ vec4_vs_visitor::emit_prolog()
 
    for (int i = 0; i < VERT_ATTRIB_MAX; i++) {
       if (vs_prog_data->inputs_read & BITFIELD64_BIT(i)) {
-         uint8_t wa_flags = vs_compile->key.gl_attrib_wa_flags[i];
+         uint8_t wa_flags = key->gl_attrib_wa_flags[i];
          dst_reg reg(ATTR, i);
          dst_reg reg_d = reg;
          reg_d.type = BRW_REGISTER_TYPE_D;
@@ -143,7 +143,8 @@ vec4_vs_visitor::emit_prolog()
 
 
 dst_reg *
-vec4_vs_visitor::make_reg_for_system_value(ir_variable *ir)
+vec4_vs_visitor::make_reg_for_system_value(int location,
+                                           const glsl_type *type)
 {
    /* VertexID is stored by the VF as the last vertex element, but
     * we don't represent it with a flag in inputs_read, so we call
@@ -151,7 +152,7 @@ vec4_vs_visitor::make_reg_for_system_value(ir_variable *ir)
     */
    dst_reg *reg = new(mem_ctx) dst_reg(ATTR, VERT_ATTRIB_MAX);
 
-   switch (ir->data.location) {
+   switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
       reg->writemask = WRITEMASK_X;
       vs_prog_data->uses_vertexid = true;
@@ -212,19 +213,22 @@ vec4_vs_visitor::emit_thread_end()
 
 
 vec4_vs_visitor::vec4_vs_visitor(const struct brw_compiler *compiler,
-                                 struct brw_vs_compile *vs_compile,
+                                 void *log_data,
+                                 const struct brw_vs_prog_key *key,
                                  struct brw_vs_prog_data *vs_prog_data,
+                                 struct gl_vertex_program *vp,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
                                  int shader_time_index,
                                  bool use_legacy_snorm_formula)
-   : vec4_visitor(compiler, &vs_compile->base, &vs_compile->vp->program.Base,
-                  &vs_compile->key.base, &vs_prog_data->base, prog,
+   : vec4_visitor(compiler, log_data,
+                  &vp->Base, &key->base, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
                   mem_ctx, false /* no_spills */,
                   shader_time_index),
-     vs_compile(vs_compile),
+     key(key),
      vs_prog_data(vs_prog_data),
+     vp(vp),
      use_legacy_snorm_formula(use_legacy_snorm_formula)
 {
 }

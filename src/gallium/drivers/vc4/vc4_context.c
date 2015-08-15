@@ -61,9 +61,11 @@ vc4_flush(struct pipe_context *pctx)
          * FLUSH completes.
          */
         cl_ensure_space(&vc4->bcl, 8);
-        cl_u8(&vc4->bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
+        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
+        cl_u8(&bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
         /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
-        cl_u8(&vc4->bcl, VC4_PACKET_FLUSH);
+        cl_u8(&bcl, VC4_PACKET_FLUSH);
+        cl_end(&vc4->bcl, bcl);
 
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
                 pipe_surface_reference(&vc4->color_write, cbuf);
@@ -103,8 +105,10 @@ vc4_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
         vc4_flush(pctx);
 
         if (fence) {
+                struct pipe_screen *screen = pctx->screen;
                 struct vc4_fence *f = vc4_fence_create(vc4->screen,
                                                        vc4->last_emit_seqno);
+                screen->fence_reference(screen, fence, NULL);
                 *fence = (struct pipe_fence_handle *)f;
         }
 }
@@ -126,8 +130,7 @@ vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo)
          * they match.
          */
         struct vc4_bo **referenced_bos = vc4->bo_pointers.base;
-        for (int i = 0; i < (vc4->bo_handles.next -
-                             vc4->bo_handles.base) / 4; i++) {
+        for (int i = 0; i < cl_offset(&vc4->bo_handles) / 4; i++) {
                 if (referenced_bos[i] == bo) {
                         return true;
                 }

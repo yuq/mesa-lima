@@ -44,14 +44,10 @@ LOCAL_STATIC_LIBRARIES := \
 	libmesa_dri_common \
 
 ifneq ($(filter swrast,$(MESA_GPU_DRIVERS)),)
-LOCAL_CFLAGS += -DGALLIUM_SOFTPIPE
 LOCAL_SRC_FILES += $(drisw_SOURCES)
 endif
 
-# swrast only?
-ifeq ($(MESA_GPU_DRIVERS),swrast)
-LOCAL_CFLAGS += -D__NOT_HAVE_DRM_H
-else
+ifneq ($(filter-out swrast,$(MESA_GPU_DRIVERS)),)
 LOCAL_SRC_FILES += $(dri2_SOURCES)
 LOCAL_SHARED_LIBRARIES := libdrm
 endif

@@ -60,6 +60,9 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	const struct pipe_draw_info *info = emit->info;
 	enum pc_di_primtype primtype = ctx->primtypes[info->mode];
 
+	if (!(fd3_emit_get_vp(emit) && fd3_emit_get_fp(emit)))
+		return;
+
 	fd3_emit_state(ctx, ring, emit);
 
 	if (emit->dirty & (FD_DIRTY_VTXBUF | FD_DIRTY_VTXSTATE))
@@ -79,8 +82,8 @@ draw_impl(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			info->restart_index : 0xffffffff);
 
 	if (ctx->rasterizer && ctx->rasterizer->point_size_per_vertex &&
-		info->mode == PIPE_PRIM_POINTS)
-		primtype = DI_PT_POINTLIST_A2XX;
+			(info->mode == PIPE_PRIM_POINTS))
+		primtype = DI_PT_POINTLIST_PSIZE;
 
 	fd_draw_emit(ctx, ring,
 			primtype,
@@ -240,10 +243,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 		.vtx  = &fd3_ctx->solid_vbuf_state,
 		.prog = &ctx->solid_prog,
 		.key = {
-			.half_precision = (fd3_half_precision(pfb->cbufs[0]) &&
-							   fd3_half_precision(pfb->cbufs[1]) &&
-							   fd3_half_precision(pfb->cbufs[2]) &&
-							   fd3_half_precision(pfb->cbufs[3])),
+			.half_precision = fd_half_precision(pfb),
 		},
 	};
 
@@ -321,7 +321,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 				A3XX_RB_STENCIL_CONTROL_ZFAIL_BF(STENCIL_KEEP));
 	}
 
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < A3XX_MAX_RENDER_TARGETS; i++) {
 		OUT_PKT0(ring, REG_A3XX_RB_MRT_CONTROL(i), 1);
 		OUT_RING(ring, A3XX_RB_MRT_CONTROL_ROP_CODE(ROP_COPY) |
 				A3XX_RB_MRT_CONTROL_DITHER_MODE(DITHER_ALWAYS) |
@@ -342,7 +342,7 @@ fd3_clear(struct fd_context *ctx, unsigned buffers,
 
 	fd3_emit_vertex_bufs(ring, &emit);
 
-	fd3_emit_constant(ring, SB_FRAG_SHADER, 0, 0, 4, color->ui, NULL);
+	fd3_emit_const(ring, SHADER_FRAGMENT, 0, 0, 4, color->ui, NULL);
 
 	OUT_PKT0(ring, REG_A3XX_PC_PRIM_VTX_CNTL, 1);
 	OUT_RING(ring, A3XX_PC_PRIM_VTX_CNTL_STRIDE_IN_VPC(0) |

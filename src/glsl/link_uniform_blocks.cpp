@@ -295,6 +295,7 @@ link_uniform_blocks(void *mem_ctx,
 
             blocks[i].Set = b->set;
             blocks[i].Binding = b->binding;
+            blocks[i].IsShaderStorage = b->is_shader_storage;
 
             i++;
          }
@@ -316,6 +317,7 @@ link_uniform_blocks(void *mem_ctx,
 
          blocks[i].Set = b->set;
          blocks[i].Binding = b->binding;
+         blocks[i].IsShaderStorage = b->is_shader_storage;
 
          i++;
       }

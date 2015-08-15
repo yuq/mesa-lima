@@ -247,7 +247,7 @@ void
 anv_block_pool_init(struct anv_block_pool *pool,
                     struct anv_device *device, uint32_t block_size)
 {
-   assert(is_power_of_two(block_size));
+   assert(util_is_power_of_two(block_size));
 
    pool->device = device;
    pool->bo.gem_handle = 0;
@@ -388,7 +388,7 @@ anv_fixed_size_state_pool_init(struct anv_fixed_size_state_pool *pool,
                                size_t state_size)
 {
    /* At least a cache line and must divide the block size. */
-   assert(state_size >= 64 && is_power_of_two(state_size));
+   assert(state_size >= 64 && util_is_power_of_two(state_size));
 
    pool->state_size = state_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
@@ -475,7 +475,7 @@ anv_state_pool_alloc(struct anv_state_pool *pool, size_t size, size_t align)
 void
 anv_state_pool_free(struct anv_state_pool *pool, struct anv_state state)
 {
-   assert(is_power_of_two(state.alloc_size));
+   assert(util_is_power_of_two(state.alloc_size));
    unsigned size_log2 = ilog2_round_up(state.alloc_size);
    assert(size_log2 >= ANV_MIN_STATE_SIZE_LOG2 &&
           size_log2 <= ANV_MAX_STATE_SIZE_LOG2);

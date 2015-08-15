@@ -101,7 +101,7 @@ gen6_upload_sf_vp(struct brw_context *brw)
    }
 
    for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {
-      double scale[3], translate[3];
+      float scale[3], translate[3];
 
       /* _NEW_VIEWPORT */
       _mesa_get_viewport_xform(ctx, i, scale, translate);

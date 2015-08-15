@@ -55,7 +55,7 @@ nvc0_validate_zcull(struct nvc0_context *nvc0)
 }
 #endif
 
-static INLINE void
+static inline void
 nvc0_fb_set_null_rt(struct nouveau_pushbuf *push, unsigned i)
 {
    BEGIN_NVC0(push, NVC0_3D(RT_ADDRESS_HIGH(i)), 6);
@@ -74,7 +74,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
     struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
     unsigned i, ms;
     unsigned ms_mode = NVC0_3D_MULTISAMPLE_MODE_MS1;
-    boolean serialize = FALSE;
+    bool serialize = false;
 
     nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_FB);
 
@@ -136,7 +136,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         }
 
         if (res->status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = TRUE;
+           serialize = true;
         res->status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         res->status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -168,7 +168,7 @@ nvc0_validate_fb(struct nvc0_context *nvc0)
         ms_mode = mt->ms_mode;
 
         if (mt->base.status & NOUVEAU_BUFFER_STATUS_GPU_READING)
-           serialize = TRUE;
+           serialize = true;
         mt->base.status |=  NOUVEAU_BUFFER_STATUS_GPU_WRITING;
         mt->base.status &= ~NOUVEAU_BUFFER_STATUS_GPU_READING;
 
@@ -309,7 +309,7 @@ nvc0_validate_viewport(struct nvc0_context *nvc0)
    nvc0->viewports_dirty = 0;
 }
 
-static INLINE void
+static inline void
 nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -324,7 +324,7 @@ nvc0_upload_uclip_planes(struct nvc0_context *nvc0, unsigned s)
    PUSH_DATAp(push, &nvc0->clip.ucp[0][0], PIPE_MAX_CLIP_PLANES * 4);
 }
 
-static INLINE void
+static inline void
 nvc0_check_program_ucps(struct nvc0_context *nvc0,
                         struct nvc0_program *vp, uint8_t mask)
 {
@@ -339,7 +339,7 @@ nvc0_check_program_ucps(struct nvc0_context *nvc0,
       nvc0_vertprog_validate(nvc0);
    else
    if (likely(vp == nvc0->gmtyprog))
-      nvc0_vertprog_validate(nvc0);
+      nvc0_gmtyprog_validate(nvc0);
    else
       nvc0_tevlprog_validate(nvc0);
 }
@@ -455,6 +455,8 @@ nvc0_constbufs_validate(struct nvc0_context *nvc0)
                PUSH_DATA (push, (i << 4) | 1);
 
                BCTX_REFN(nvc0->bufctx_3d, CB(s, i), res, RD);
+
+               nvc0->cb_dirty = 1; /* Force cache flush for UBO. */
             } else {
                BEGIN_NVC0(push, NVC0_3D(CB_BIND(s)), 1);
                PUSH_DATA (push, (i << 4) | 0);
@@ -518,12 +520,12 @@ static void
 nvc0_validate_derived_1(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   boolean rasterizer_discard;
+   bool rasterizer_discard;
 
    if (nvc0->rast && nvc0->rast->pipe.rasterizer_discard) {
-      rasterizer_discard = TRUE;
+      rasterizer_discard = true;
    } else {
-      boolean zs = nvc0->zsa &&
+      bool zs = nvc0->zsa &&
          (nvc0->zsa->pipe.depth.enabled || nvc0->zsa->pipe.stencil[0].enabled);
       rasterizer_discard = !zs &&
          (!nvc0->fragprog || !nvc0->fragprog->hdr[18]);
@@ -533,6 +535,33 @@ nvc0_validate_derived_1(struct nvc0_context *nvc0)
       nvc0->state.rasterizer_discard = rasterizer_discard;
       IMMED_NVC0(push, NVC0_3D(RASTERIZE_ENABLE), !rasterizer_discard);
    }
+}
+
+/* alpha test is disabled if there are no color RTs, so make sure we have at
+ * least one if alpha test is enabled. Note that this must run after
+ * nvc0_validate_fb, otherwise that will override the RT count setting.
+ */
+static void
+nvc0_validate_derived_2(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+
+   if (nvc0->zsa && nvc0->zsa->pipe.alpha.enabled &&
+       nvc0->framebuffer.nr_cbufs == 0) {
+      nvc0_fb_set_null_rt(push, 0);
+      BEGIN_NVC0(push, NVC0_3D(RT_CONTROL), 1);
+      PUSH_DATA (push, (076543210 << 4) | 1);
+   }
+}
+
+static void
+nvc0_validate_tess_state(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+
+   BEGIN_NVC0(push, NVC0_3D(TESS_LEVEL_OUTER(0)), 6);
+   PUSH_DATAp(push, nvc0->default_tess_outer, 4);
+   PUSH_DATAp(push, nvc0->default_tess_inner, 2);
 }
 
 static void
@@ -593,10 +622,12 @@ static struct state_validate {
     { nvc0_vertprog_validate,      NVC0_NEW_VERTPROG },
     { nvc0_tctlprog_validate,      NVC0_NEW_TCTLPROG },
     { nvc0_tevlprog_validate,      NVC0_NEW_TEVLPROG },
+    { nvc0_validate_tess_state,    NVC0_NEW_TESSFACTOR },
     { nvc0_gmtyprog_validate,      NVC0_NEW_GMTYPROG },
     { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG },
     { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
                                    NVC0_NEW_RASTERIZER },
+    { nvc0_validate_derived_2,     NVC0_NEW_ZSA | NVC0_NEW_FRAMEBUFFER },
     { nvc0_validate_clip,          NVC0_NEW_CLIP | NVC0_NEW_RASTERIZER |
                                    NVC0_NEW_VERTPROG |
                                    NVC0_NEW_TEVLPROG |
@@ -613,7 +644,7 @@ static struct state_validate {
 };
 #define validate_list_len (sizeof(validate_list) / sizeof(validate_list[0]))
 
-boolean
+bool
 nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
 {
    uint32_t state_mask;
@@ -634,15 +665,15 @@ nvc0_state_validate(struct nvc0_context *nvc0, uint32_t mask, unsigned words)
       }
       nvc0->dirty &= ~state_mask;
 
-      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, FALSE);
+      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, false);
    }
 
    nouveau_pushbuf_bufctx(nvc0->base.pushbuf, nvc0->bufctx_3d);
    ret = nouveau_pushbuf_validate(nvc0->base.pushbuf);
 
    if (unlikely(nvc0->state.flushed)) {
-      nvc0->state.flushed = FALSE;
-      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, TRUE);
+      nvc0->state.flushed = false;
+      nvc0_bufctx_fence(nvc0, nvc0->bufctx_3d, true);
    }
    return !ret;
 }

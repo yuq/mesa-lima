@@ -45,7 +45,7 @@
 /* fixme: move it from here */
 #define MAX_PRIMITIVES 64
 
-static INLINE int
+static inline int
 draw_gs_get_input_index(int semantic, int index,
                         const struct tgsi_shader_info *input_info)
 {
@@ -66,7 +66,7 @@ draw_gs_get_input_index(int semantic, int index,
  * the number of elements in the SOA vector. This ensures that the
  * throughput is optimized for the given vector instruction set.
  */
-static INLINE boolean
+static inline boolean
 draw_gs_should_flush(struct draw_geometry_shader *shader)
 {
    return (shader->fetched_prim_count == shader->vector_length);

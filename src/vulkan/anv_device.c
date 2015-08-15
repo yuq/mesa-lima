@@ -29,6 +29,7 @@
 
 #include "anv_private.h"
 #include "mesa/main/git_sha1.h"
+#include "util/strtod.h"
 
 static int
 anv_env_get_int(const char *name)
@@ -142,6 +143,8 @@ VkResult anv_CreateInstance(
    instance->apiVersion = pCreateInfo->pAppInfo->apiVersion;
    instance->physicalDeviceCount = 0;
 
+   _mesa_locale_init();
+
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
 
    *pInstance = anv_instance_to_handle(instance);
@@ -155,6 +158,8 @@ VkResult anv_DestroyInstance(
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
+
+   _mesa_locale_fini();
 
    instance->pfnFree(instance->pAllocUserData, instance);
 

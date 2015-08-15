@@ -184,7 +184,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
     *      must be issued before the rectangle primitive used for the depth
     *      buffer clear operation.
     */
-   intel_batchbuffer_emit_mi_flush(brw);
+   brw_emit_mi_flush(brw);
 
    if (fb->MaxNumLayers > 0) {
       for (unsigned layer = 0; layer < depth_irb->layer_count; layer++) {
@@ -204,7 +204,7 @@ brw_fast_clear_depth(struct gl_context *ctx)
        *      by a PIPE_CONTROL command with DEPTH_STALL bit set and Then
        *      followed by Depth FLUSH'
       */
-      intel_batchbuffer_emit_mi_flush(brw);
+      brw_emit_mi_flush(brw);
    }
 
    /* Now, the HiZ buffer contains data that needs to be resolved to the depth

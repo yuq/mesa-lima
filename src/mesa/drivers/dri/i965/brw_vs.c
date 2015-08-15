@@ -94,7 +94,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
 {
    GLuint program_size;
    const GLuint *program;
-   struct brw_vs_compile c;
    struct brw_vs_prog_data prog_data;
    struct brw_stage_prog_data *stage_prog_data = &prog_data.base.base;
    void *mem_ctx;
@@ -104,8 +103,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    if (prog)
       vs = prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
-   memset(&c, 0, sizeof(c));
-   memcpy(&c.key, key, sizeof(*key));
    memset(&prog_data, 0, sizeof(prog_data));
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
@@ -113,8 +110,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
       stage_prog_data->use_alt_mode = true;
 
    mem_ctx = ralloc_context(NULL);
-
-   c.vp = vp;
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
@@ -126,26 +121,30 @@ brw_codegen_vs_prog(struct brw_context *brw,
        * case being a float value that gets blown up to a vec4, so be
        * conservative here.
        */
-      param_count = vs->num_uniform_components * 4;
-
+      param_count = vs->num_uniform_components * 4 +
+                    vs->NumImages * BRW_IMAGE_PARAM_SIZE;
+      stage_prog_data->nr_image_params = vs->NumImages;
    } else {
       param_count = vp->program.Base.Parameters->NumParameters * 4;
    }
    /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
     * planes as uniforms.
     */
-   param_count += c.key.base.nr_userclip_plane_consts * 4;
+   param_count += key->base.nr_userclip_plane_consts * 4;
 
    stage_prog_data->param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    stage_prog_data->pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
+   stage_prog_data->image_param =
+      rzalloc_array(NULL, struct brw_image_param,
+                    stage_prog_data->nr_image_params);
    stage_prog_data->nr_params = param_count;
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data.inputs_read = vp->program.Base.InputsRead;
 
-   if (c.key.copy_edgeflag) {
+   if (key->copy_edgeflag) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
       prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
    }
@@ -158,7 +157,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
        * coords, which would be a pain to handle.
        */
       for (i = 0; i < 8; i++) {
-         if (c.key.point_coord_replace & (1 << i))
+         if (key->point_coord_replace & (1 << i))
             outputs_written |= BITFIELD64_BIT(VARYING_SLOT_TEX0 + i);
       }
 
@@ -173,7 +172,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
     * distance varying slots whenever clipping is enabled, even if the vertex
     * shader doesn't write to gl_ClipDistance.
     */
-   if (c.key.base.userclip_active) {
+   if (key->base.userclip_active) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
    }
@@ -182,34 +181,28 @@ brw_codegen_vs_prog(struct brw_context *brw,
                        &prog_data.base.vue_map, outputs_written);
 
    if (0) {
-      _mesa_fprint_program_opt(stderr, &c.vp->program.Base, PROG_PRINT_DEBUG,
+      _mesa_fprint_program_opt(stderr, &vp->program.Base, PROG_PRINT_DEBUG,
 			       true);
    }
 
    /* Emit GEN4 code.
     */
-   program = brw_vs_emit(brw, prog, &c, &prog_data, mem_ctx, &program_size);
+   program = brw_vs_emit(brw, mem_ctx, key, &prog_data,
+                         &vp->program, prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
    }
 
    /* Scratch space is used for register spilling */
-   if (c.base.last_scratch) {
-      perf_debug("Vertex shader triggered register spilling.  "
-                 "Try reducing the number of live vec4 values to "
-                 "improve performance.\n");
-
-      prog_data.base.base.total_scratch
-         = brw_get_scratch_size(c.base.last_scratch*REG_SIZE);
-
+   if (prog_data.base.base.total_scratch) {
       brw_get_scratch_bo(brw, &brw->vs.base.scratch_bo,
 			 prog_data.base.base.total_scratch *
                          brw->max_vs_threads);
    }
 
    brw_upload_cache(&brw->cache, BRW_CACHE_VS_PROG,
-		    &c.key, sizeof(c.key),
+		    key, sizeof(struct brw_vs_prog_key),
 		    program, program_size,
 		    &prog_data, sizeof(prog_data),
 		    &brw->vs.base.prog_offset, &brw->vs.prog_data);

@@ -100,7 +100,8 @@ static void emit_tile(struct vc4_exec_info *exec,
 		      struct vc4_rcl_setup *setup,
 		      uint8_t x, uint8_t y, bool first, bool last)
 {
-	bool has_bin = exec->args->bin_cl_size != 0;
+	struct drm_vc4_submit_cl *args = exec->args;
+	bool has_bin = args->bin_cl_size != 0;
 
 	/* Note that the load doesn't actually occur until the
 	 * tile coords packet is processed, and only one load
@@ -108,10 +109,9 @@ static void emit_tile(struct vc4_exec_info *exec,
 	 */
 	if (setup->color_read) {
 		rcl_u8(setup, VC4_PACKET_LOAD_TILE_BUFFER_GENERAL);
-		rcl_u16(setup, exec->args->color_read.bits);
+		rcl_u16(setup, args->color_read.bits);
 		rcl_u32(setup,
-			setup->color_read->paddr +
-			exec->args->color_read.offset);
+			setup->color_read->paddr + args->color_read.offset);
 	}
 
 	if (setup->zs_read) {
@@ -122,9 +122,8 @@ static void emit_tile(struct vc4_exec_info *exec,
 		}
 
 		rcl_u8(setup, VC4_PACKET_LOAD_TILE_BUFFER_GENERAL);
-		rcl_u16(setup, exec->args->zs_read.bits);
-		rcl_u32(setup,
-			setup->zs_read->paddr + exec->args->zs_read.offset);
+		rcl_u16(setup, args->zs_read.bits);
+		rcl_u32(setup, setup->zs_read->paddr + args->zs_read.offset);
 	}
 
 	/* Clipping depends on tile coordinates having been
@@ -147,11 +146,11 @@ static void emit_tile(struct vc4_exec_info *exec,
 
 	if (setup->zs_write) {
 		rcl_u8(setup, VC4_PACKET_STORE_TILE_BUFFER_GENERAL);
-		rcl_u16(setup, exec->args->zs_write.bits |
+		rcl_u16(setup, args->zs_write.bits |
 			(setup->color_ms_write ?
 			 VC4_STORE_TILE_BUFFER_DISABLE_COLOR_CLEAR : 0));
 		rcl_u32(setup,
-			(setup->zs_write->paddr + exec->args->zs_write.offset) |
+			(setup->zs_write->paddr + args->zs_write.offset) |
 			((last && !setup->color_ms_write) ?
 			 VC4_LOADSTORE_TILE_BUFFER_EOF : 0));
 	}
@@ -172,11 +171,12 @@ static void emit_tile(struct vc4_exec_info *exec,
 static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 			     struct vc4_rcl_setup *setup)
 {
-	bool has_bin = exec->args->bin_cl_size != 0;
-	uint8_t min_x_tile = exec->args->min_x_tile;
-	uint8_t min_y_tile = exec->args->min_y_tile;
-	uint8_t max_x_tile = exec->args->max_x_tile;
-	uint8_t max_y_tile = exec->args->max_y_tile;
+	struct drm_vc4_submit_cl *args = exec->args;
+	bool has_bin = args->bin_cl_size != 0;
+	uint8_t min_x_tile = args->min_x_tile;
+	uint8_t min_y_tile = args->min_y_tile;
+	uint8_t max_x_tile = args->max_x_tile;
+	uint8_t max_y_tile = args->max_y_tile;
 	uint8_t xtiles = max_x_tile - min_x_tile + 1;
 	uint8_t ytiles = max_y_tile - min_y_tile + 1;
 	uint8_t x, y;
@@ -185,7 +185,7 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 	size = VC4_PACKET_TILE_RENDERING_MODE_CONFIG_SIZE;
 	loop_body_size = VC4_PACKET_TILE_COORDINATES_SIZE;
 
-	if (exec->args->flags & VC4_SUBMIT_CL_USE_CLEAR_COLOR) {
+	if (args->flags & VC4_SUBMIT_CL_USE_CLEAR_COLOR) {
 		size += VC4_PACKET_CLEAR_COLORS_SIZE +
 			VC4_PACKET_TILE_COORDINATES_SIZE +
 			VC4_PACKET_STORE_TILE_BUFFER_GENERAL_SIZE;
@@ -208,7 +208,7 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 	}
 
 	if (setup->zs_write)
-		loop_body_size += VC4_PACKET_LOAD_TILE_BUFFER_GENERAL_SIZE;
+		loop_body_size += VC4_PACKET_STORE_TILE_BUFFER_GENERAL_SIZE;
 	if (setup->color_ms_write) {
 		if (setup->zs_write)
 			loop_body_size += VC4_PACKET_TILE_COORDINATES_SIZE;
@@ -226,23 +226,23 @@ static int vc4_create_rcl_bo(struct drm_device *dev, struct vc4_exec_info *exec,
 	rcl_u32(setup,
 		(setup->color_ms_write ?
 		 (setup->color_ms_write->paddr +
-		  exec->args->color_ms_write.offset) :
+		  args->color_ms_write.offset) :
 		 0));
-	rcl_u16(setup, exec->args->width);
-	rcl_u16(setup, exec->args->height);
-	rcl_u16(setup, exec->args->color_ms_write.bits);
+	rcl_u16(setup, args->width);
+	rcl_u16(setup, args->height);
+	rcl_u16(setup, args->color_ms_write.bits);
 
 	/* The tile buffer gets cleared when the previous tile is stored.  If
 	 * the clear values changed between frames, then the tile buffer has
 	 * stale clear values in it, so we have to do a store in None mode (no
 	 * writes) so that we trigger the tile buffer clear.
 	 */
-	if (exec->args->flags & VC4_SUBMIT_CL_USE_CLEAR_COLOR) {
+	if (args->flags & VC4_SUBMIT_CL_USE_CLEAR_COLOR) {
 		rcl_u8(setup, VC4_PACKET_CLEAR_COLORS);
-		rcl_u32(setup, exec->args->clear_color[0]);
-		rcl_u32(setup, exec->args->clear_color[1]);
-		rcl_u32(setup, exec->args->clear_z);
-		rcl_u8(setup, exec->args->clear_s);
+		rcl_u32(setup, args->clear_color[0]);
+		rcl_u32(setup, args->clear_color[1]);
+		rcl_u32(setup, args->clear_z);
+		rcl_u8(setup, args->clear_s);
 
 		vc4_tile_coordinates(setup, 0, 0);
 
@@ -286,7 +286,8 @@ static int vc4_rcl_surface_setup(struct vc4_exec_info *exec,
 	if (surf->hindex == ~0)
 		return 0;
 
-	if (!vc4_use_bo(exec, surf->hindex, VC4_MODE_RENDER, obj))
+	*obj = vc4_use_bo(exec, surf->hindex);
+	if (!*obj)
 		return -EINVAL;
 
 	if (surf->bits & ~(VC4_LOADSTORE_TILE_BUFFER_TILING_MASK |
@@ -365,7 +366,8 @@ vc4_rcl_ms_surface_setup(struct vc4_exec_info *exec,
 	if (surf->hindex == ~0)
 		return 0;
 
-	if (!vc4_use_bo(exec, surf->hindex, VC4_MODE_RENDER, obj))
+	*obj = vc4_use_bo(exec, surf->hindex);
+	if (!*obj)
 		return -EINVAL;
 
 	if (tiling > VC4_TILING_FORMAT_LT) {

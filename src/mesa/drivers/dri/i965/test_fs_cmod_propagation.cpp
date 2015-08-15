@@ -283,10 +283,10 @@ TEST_F(cmod_propagation_test, intervening_dest_write)
    fs_reg src1 = v->vgrf(glsl_type::float_type);
    fs_reg src2 = v->vgrf(glsl_type::vec2_type);
    fs_reg zero(0.0f);
-   bld.ADD(offset(dest, 2), src0, src1);
+   bld.ADD(offset(dest, bld, 2), src0, src1);
    bld.emit(SHADER_OPCODE_TEX, dest, src2)
       ->regs_written = 4;
-   bld.CMP(bld.null_reg_f(), offset(dest, 2), zero, BRW_CONDITIONAL_GE);
+   bld.CMP(bld.null_reg_f(), offset(dest, bld, 2), zero, BRW_CONDITIONAL_GE);
 
    /* = Before =
     *

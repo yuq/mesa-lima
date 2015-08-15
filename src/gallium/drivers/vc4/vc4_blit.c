@@ -94,7 +94,7 @@ vc4_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
         struct vc4_context *vc4 = vc4_context(ctx);
 
         if (!util_blitter_is_blit_supported(vc4->blitter, info)) {
-                fprintf(stderr, "blit unsupported %s -> %s",
+                fprintf(stderr, "blit unsupported %s -> %s\n",
                     util_format_short_name(info->src.resource->format),
                     util_format_short_name(info->dst.resource->format));
                 return false;
@@ -135,7 +135,7 @@ vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
             info.dst.resource->nr_samples <= 1 &&
             !util_format_is_depth_or_stencil(info.src.resource->format) &&
             !util_format_is_pure_integer(info.src.resource->format)) {
-                fprintf(stderr, "color resolve unimplemented");
+                fprintf(stderr, "color resolve unimplemented\n");
                 return;
         }
 
@@ -147,7 +147,7 @@ vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info)
         }
 
         if (info.mask & PIPE_MASK_S) {
-                fprintf(stderr, "cannot blit stencil, skipping");
+                fprintf(stderr, "cannot blit stencil, skipping\n");
                 info.mask &= ~PIPE_MASK_S;
         }
 

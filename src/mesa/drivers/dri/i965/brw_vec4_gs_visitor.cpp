@@ -35,12 +35,14 @@ const unsigned MAX_GS_INPUT_VERTICES = 6;
 namespace brw {
 
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
+                                 void *log_data,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
-   : vec4_visitor(compiler, &c->base, &c->gp->program.Base, &c->key.base,
+   : vec4_visitor(compiler, log_data,
+                  &c->gp->program.Base, &c->key.base,
                   &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
                   no_spills, shader_time_index),
      c(c)
@@ -49,11 +51,12 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
 
 
 dst_reg *
-vec4_gs_visitor::make_reg_for_system_value(ir_variable *ir)
+vec4_gs_visitor::make_reg_for_system_value(int location,
+                                           const glsl_type *type)
 {
-   dst_reg *reg = new(mem_ctx) dst_reg(this, ir->type);
+   dst_reg *reg = new(mem_ctx) dst_reg(this, type);
 
-   switch (ir->data.location) {
+   switch (location) {
    case SYSTEM_VALUE_INVOCATION_ID:
       this->current_annotation = "initialize gl_InvocationID";
       emit(GS_OPCODE_GET_INSTANCE_ID, *reg);
@@ -346,90 +349,82 @@ vec4_gs_visitor::emit_control_data_bits()
    if (c->control_data_header_size_bits > 128)
       urb_write_flags = urb_write_flags | BRW_URB_WRITE_PER_SLOT_OFFSET;
 
-   /* If vertex_count is 0, then no control data bits have been accumulated
-    * yet, so we should do nothing.
+   /* If we are using either channel masks or a per-slot offset, then we
+    * need to figure out which DWORD we are trying to write to, using the
+    * formula:
+    *
+    *     dword_index = (vertex_count - 1) * bits_per_vertex / 32
+    *
+    * Since bits_per_vertex is a power of two, and is known at compile
+    * time, this can be optimized to:
+    *
+    *     dword_index = (vertex_count - 1) >> (6 - log2(bits_per_vertex))
     */
-   emit(CMP(dst_null_d(), this->vertex_count, 0u, BRW_CONDITIONAL_NEQ));
-   emit(IF(BRW_PREDICATE_NORMAL));
-   {
-      /* If we are using either channel masks or a per-slot offset, then we
-       * need to figure out which DWORD we are trying to write to, using the
-       * formula:
-       *
-       *     dword_index = (vertex_count - 1) * bits_per_vertex / 32
-       *
-       * Since bits_per_vertex is a power of two, and is known at compile
-       * time, this can be optimized to:
-       *
-       *     dword_index = (vertex_count - 1) >> (6 - log2(bits_per_vertex))
-       */
-      src_reg dword_index(this, glsl_type::uint_type);
-      if (urb_write_flags) {
-         src_reg prev_count(this, glsl_type::uint_type);
-         emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
-         unsigned log2_bits_per_vertex =
-            _mesa_fls(c->control_data_bits_per_vertex);
-         emit(SHR(dst_reg(dword_index), prev_count,
-                  (uint32_t) (6 - log2_bits_per_vertex)));
-      }
-
-      /* Start building the URB write message.  The first MRF gets a copy of
-       * R0.
-       */
-      int base_mrf = 1;
-      dst_reg mrf_reg(MRF, base_mrf);
-      src_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
-      vec4_instruction *inst = emit(MOV(mrf_reg, r0));
-      inst->force_writemask_all = true;
-
-      if (urb_write_flags & BRW_URB_WRITE_PER_SLOT_OFFSET) {
-         /* Set the per-slot offset to dword_index / 4, to that we'll write to
-          * the appropriate OWORD within the control data header.
-          */
-         src_reg per_slot_offset(this, glsl_type::uint_type);
-         emit(SHR(dst_reg(per_slot_offset), dword_index, 2u));
-         emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset, 1u);
-      }
-
-      if (urb_write_flags & BRW_URB_WRITE_USE_CHANNEL_MASKS) {
-         /* Set the channel masks to 1 << (dword_index % 4), so that we'll
-          * write to the appropriate DWORD within the OWORD.  We need to do
-          * this computation with force_writemask_all, otherwise garbage data
-          * from invocation 0 might clobber the mask for invocation 1 when
-          * GS_OPCODE_PREPARE_CHANNEL_MASKS tries to OR the two masks
-          * together.
-          */
-         src_reg channel(this, glsl_type::uint_type);
-         inst = emit(AND(dst_reg(channel), dword_index, 3u));
-         inst->force_writemask_all = true;
-         src_reg one(this, glsl_type::uint_type);
-         inst = emit(MOV(dst_reg(one), 1u));
-         inst->force_writemask_all = true;
-         src_reg channel_mask(this, glsl_type::uint_type);
-         inst = emit(SHL(dst_reg(channel_mask), one, channel));
-         inst->force_writemask_all = true;
-         emit(GS_OPCODE_PREPARE_CHANNEL_MASKS, dst_reg(channel_mask),
-                                               channel_mask);
-         emit(GS_OPCODE_SET_CHANNEL_MASKS, mrf_reg, channel_mask);
-      }
-
-      /* Store the control data bits in the message payload and send it. */
-      dst_reg mrf_reg2(MRF, base_mrf + 1);
-      inst = emit(MOV(mrf_reg2, this->control_data_bits));
-      inst->force_writemask_all = true;
-      inst = emit(GS_OPCODE_URB_WRITE);
-      inst->urb_write_flags = urb_write_flags;
-      /* We need to increment Global Offset by 256-bits to make room for
-       * Broadwell's extra "Vertex Count" payload at the beginning of the
-       * URB entry.  Since this is an OWord message, Global Offset is counted
-       * in 128-bit units, so we must set it to 2.
-       */
-      if (devinfo->gen >= 8)
-         inst->offset = 2;
-      inst->base_mrf = base_mrf;
-      inst->mlen = 2;
+   src_reg dword_index(this, glsl_type::uint_type);
+   if (urb_write_flags) {
+      src_reg prev_count(this, glsl_type::uint_type);
+      emit(ADD(dst_reg(prev_count), this->vertex_count, 0xffffffffu));
+      unsigned log2_bits_per_vertex =
+         _mesa_fls(c->control_data_bits_per_vertex);
+      emit(SHR(dst_reg(dword_index), prev_count,
+               (uint32_t) (6 - log2_bits_per_vertex)));
    }
-   emit(BRW_OPCODE_ENDIF);
+
+   /* Start building the URB write message.  The first MRF gets a copy of
+    * R0.
+    */
+   int base_mrf = 1;
+   dst_reg mrf_reg(MRF, base_mrf);
+   src_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+   vec4_instruction *inst = emit(MOV(mrf_reg, r0));
+   inst->force_writemask_all = true;
+
+   if (urb_write_flags & BRW_URB_WRITE_PER_SLOT_OFFSET) {
+      /* Set the per-slot offset to dword_index / 4, to that we'll write to
+       * the appropriate OWORD within the control data header.
+       */
+      src_reg per_slot_offset(this, glsl_type::uint_type);
+      emit(SHR(dst_reg(per_slot_offset), dword_index, 2u));
+      emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, per_slot_offset, 1u);
+   }
+
+   if (urb_write_flags & BRW_URB_WRITE_USE_CHANNEL_MASKS) {
+      /* Set the channel masks to 1 << (dword_index % 4), so that we'll
+       * write to the appropriate DWORD within the OWORD.  We need to do
+       * this computation with force_writemask_all, otherwise garbage data
+       * from invocation 0 might clobber the mask for invocation 1 when
+       * GS_OPCODE_PREPARE_CHANNEL_MASKS tries to OR the two masks
+       * together.
+       */
+      src_reg channel(this, glsl_type::uint_type);
+      inst = emit(AND(dst_reg(channel), dword_index, 3u));
+      inst->force_writemask_all = true;
+      src_reg one(this, glsl_type::uint_type);
+      inst = emit(MOV(dst_reg(one), 1u));
+      inst->force_writemask_all = true;
+      src_reg channel_mask(this, glsl_type::uint_type);
+      inst = emit(SHL(dst_reg(channel_mask), one, channel));
+      inst->force_writemask_all = true;
+      emit(GS_OPCODE_PREPARE_CHANNEL_MASKS, dst_reg(channel_mask),
+                                            channel_mask);
+      emit(GS_OPCODE_SET_CHANNEL_MASKS, mrf_reg, channel_mask);
+   }
+
+   /* Store the control data bits in the message payload and send it. */
+   dst_reg mrf_reg2(MRF, base_mrf + 1);
+   inst = emit(MOV(mrf_reg2, this->control_data_bits));
+   inst->force_writemask_all = true;
+   inst = emit(GS_OPCODE_URB_WRITE);
+   inst->urb_write_flags = urb_write_flags;
+   /* We need to increment Global Offset by 256-bits to make room for
+    * Broadwell's extra "Vertex Count" payload at the beginning of the
+    * URB entry.  Since this is an OWord message, Global Offset is counted
+    * in 128-bit units, so we must set it to 2.
+    */
+   if (devinfo->gen >= 8)
+      inst->offset = 2;
+   inst->base_mrf = base_mrf;
+   inst->mlen = 2;
 }
 
 void
@@ -472,7 +467,7 @@ vec4_gs_visitor::set_stream_control_data_bits(unsigned stream_id)
 }
 
 void
-vec4_gs_visitor::visit(ir_emit_vertex *ir)
+vec4_gs_visitor::gs_emit_vertex(int stream_id)
 {
    this->current_annotation = "emit vertex: safety check";
 
@@ -486,7 +481,7 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
     * be recorded by transform feedback, we can simply discard all geometry
     * bound to these streams when transform feedback is disabled.
     */
-   if (ir->stream_id() > 0 && shader_prog->TransformFeedback.NumVarying == 0)
+   if (stream_id > 0 && shader_prog->TransformFeedback.NumVarying == 0)
       return;
 
    /* To ensure that we don't output more vertices than the shader specified
@@ -529,9 +524,17 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
             emit(AND(dst_null_d(), this->vertex_count,
                      (uint32_t) (32 / c->control_data_bits_per_vertex - 1)));
          inst->conditional_mod = BRW_CONDITIONAL_Z;
+
          emit(IF(BRW_PREDICATE_NORMAL));
          {
+            /* If vertex_count is 0, then no control data bits have been
+             * accumulated yet, so we skip emitting them.
+             */
+            emit(CMP(dst_null_d(), this->vertex_count, 0u,
+                     BRW_CONDITIONAL_NEQ));
+            emit(IF(BRW_PREDICATE_NORMAL));
             emit_control_data_bits();
+            emit(BRW_OPCODE_ENDIF);
 
             /* Reset control_data_bits to 0 so we can start accumulating a new
              * batch.
@@ -557,7 +560,7 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
           c->prog_data.control_data_format ==
              GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID) {
           this->current_annotation = "emit vertex: Stream control data bits";
-          set_stream_control_data_bits(ir->stream_id());
+          set_stream_control_data_bits(stream_id);
       }
 
       this->current_annotation = "emit vertex: increment vertex count";
@@ -570,7 +573,13 @@ vec4_gs_visitor::visit(ir_emit_vertex *ir)
 }
 
 void
-vec4_gs_visitor::visit(ir_end_primitive *)
+vec4_gs_visitor::visit(ir_emit_vertex *ir)
+{
+   gs_emit_vertex(ir->stream_id());
+}
+
+void
+vec4_gs_visitor::gs_end_primitive()
 {
    /* We can only do EndPrimitive() functionality when the control data
     * consists of cut bits.  Fortunately, the only time it isn't is when the
@@ -620,6 +629,12 @@ vec4_gs_visitor::visit(ir_end_primitive *)
    emit(OR(dst_reg(this->control_data_bits), this->control_data_bits, mask));
 }
 
+void
+vec4_gs_visitor::visit(ir_end_primitive *)
+{
+   gs_end_primitive();
+}
+
 static const unsigned *
 generate_assembly(struct brw_context *brw,
                   struct gl_shader_program *shader_prog,
@@ -662,7 +677,7 @@ brw_gs_emit(struct brw_context *brw,
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(brw->intelScreen->compiler,
+         vec4_gs_visitor v(brw->intelScreen->compiler, brw,
                            c, prog, mem_ctx, true /* no_spills */, st_index);
          if (v.run(NULL /* clip planes */)) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
@@ -704,11 +719,11 @@ brw_gs_emit(struct brw_context *brw,
    const unsigned *ret = NULL;
 
    if (brw->gen >= 7)
-      gs = new vec4_gs_visitor(brw->intelScreen->compiler,
+      gs = new vec4_gs_visitor(brw->intelScreen->compiler, brw,
                                c, prog, mem_ctx, false /* no_spills */,
                                st_index);
    else
-      gs = new gen6_gs_visitor(brw->intelScreen->compiler,
+      gs = new gen6_gs_visitor(brw->intelScreen->compiler, brw,
                                c, prog, mem_ctx, false /* no_spills */,
                                st_index);
 

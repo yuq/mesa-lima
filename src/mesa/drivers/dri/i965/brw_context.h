@@ -201,6 +201,7 @@ enum brw_state_id {
    BRW_STATE_STATS_WM,
    BRW_STATE_UNIFORM_BUFFER,
    BRW_STATE_ATOMIC_BUFFER,
+   BRW_STATE_IMAGE_UNITS,
    BRW_STATE_META_IN_PROGRESS,
    BRW_STATE_INTERPOLATION_MAP,
    BRW_STATE_PUSH_CONSTANT_ALLOCATION,
@@ -282,6 +283,7 @@ enum brw_state_id {
 #define BRW_NEW_STATS_WM                (1ull << BRW_STATE_STATS_WM)
 #define BRW_NEW_UNIFORM_BUFFER          (1ull << BRW_STATE_UNIFORM_BUFFER)
 #define BRW_NEW_ATOMIC_BUFFER           (1ull << BRW_STATE_ATOMIC_BUFFER)
+#define BRW_NEW_IMAGE_UNITS             (1ull << BRW_STATE_IMAGE_UNITS)
 #define BRW_NEW_META_IN_PROGRESS        (1ull << BRW_STATE_META_IN_PROGRESS)
 #define BRW_NEW_INTERPOLATION_MAP       (1ull << BRW_STATE_INTERPOLATION_MAP)
 #define BRW_NEW_PUSH_CONSTANT_ALLOCATION (1ull << BRW_STATE_PUSH_CONSTANT_ALLOCATION)
@@ -367,6 +369,7 @@ struct brw_stage_prog_data {
 
    GLuint nr_params;       /**< number of float params/constants */
    GLuint nr_pull_params;
+   unsigned nr_image_params;
 
    unsigned curb_read_length;
    unsigned total_scratch;
@@ -387,6 +390,59 @@ struct brw_stage_prog_data {
     */
    const gl_constant_value **param;
    const gl_constant_value **pull_param;
+
+   /**
+    * Image metadata passed to the shader as uniforms.  This is deliberately
+    * ignored by brw_stage_prog_data_compare() because its contents don't have
+    * any influence on program compilation.
+    */
+   struct brw_image_param *image_param;
+};
+
+/*
+ * Image metadata structure as laid out in the shader parameter
+ * buffer.  Entries have to be 16B-aligned for the vec4 back-end to be
+ * able to use them.  That's okay because the padding and any unused
+ * entries [most of them except when we're doing untyped surface
+ * access] will be removed by the uniform packing pass.
+ */
+#define BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET      0
+#define BRW_IMAGE_PARAM_OFFSET_OFFSET           4
+#define BRW_IMAGE_PARAM_SIZE_OFFSET             8
+#define BRW_IMAGE_PARAM_STRIDE_OFFSET           12
+#define BRW_IMAGE_PARAM_TILING_OFFSET           16
+#define BRW_IMAGE_PARAM_SWIZZLING_OFFSET        20
+#define BRW_IMAGE_PARAM_SIZE                    24
+
+struct brw_image_param {
+   /** Surface binding table index. */
+   uint32_t surface_idx;
+
+   /** Offset applied to the X and Y surface coordinates. */
+   uint32_t offset[2];
+
+   /** Surface X, Y and Z dimensions. */
+   uint32_t size[3];
+
+   /** X-stride in bytes, Y-stride in pixels, horizontal slice stride in
+    * pixels, vertical slice stride in pixels.
+    */
+   uint32_t stride[4];
+
+   /** Log2 of the tiling modulus in the X, Y and Z dimension. */
+   uint32_t tiling[3];
+
+   /**
+    * Right shift to apply for bit 6 address swizzling.  Two different
+    * swizzles can be specified and will be applied one after the other.  The
+    * resulting address will be:
+    *
+    *  addr' = addr ^ ((1 << 6) & ((addr >> swizzling[0]) ^
+    *                              (addr >> swizzling[1])))
+    *
+    * Use \c 0xff if any of the swizzles is not required.
+    */
+   uint32_t swizzling[2];
 };
 
 /* Data about a particular attempt to compile a program.  Note that
@@ -416,11 +472,13 @@ struct brw_wm_prog_data {
 
    uint8_t computed_depth_mode;
 
+   bool early_fragment_tests;
    bool no_8;
    bool dual_src_blend;
    bool uses_pos_offset;
    bool uses_omask;
    bool uses_kill;
+   bool pulls_bary;
    uint32_t prog_offset_16;
 
    /**
@@ -874,11 +932,12 @@ struct intel_batchbuffer {
    drm_intel_bo *bo;
    /** Last BO submitted to the hardware.  Used for glFinish(). */
    drm_intel_bo *last_bo;
-   /** BO for post-sync nonzero writes for gen6 workaround. */
-   drm_intel_bo *workaround_bo;
 
+#ifdef DEBUG
    uint16_t emit, total;
-   uint16_t used, reserved_space;
+#endif
+   uint16_t reserved_space;
+   uint32_t *map_next;
    uint32_t *map;
    uint32_t *cpu_map;
 #define BATCH_SZ (8192*sizeof(uint32_t))
@@ -887,10 +946,8 @@ struct intel_batchbuffer {
    enum brw_gpu_ring ring;
    bool needs_sol_reset;
 
-   uint8_t pipe_controls_since_last_cs_stall;
-
    struct {
-      uint16_t used;
+      uint32_t *map_next;
       int reloc_count;
    } saved;
 };
@@ -1040,6 +1097,10 @@ struct brw_context
 
    drm_intel_context *hw_ctx;
 
+   /** BO for post-sync nonzero writes for gen6 workaround. */
+   drm_intel_bo *workaround_bo;
+   uint8_t pipe_controls_since_last_cs_stall;
+
    /**
     * Set of drm_intel_bo * that have been rendered to within this batchbuffer
     * and would need flushing before being used from another cache domain that
@@ -1123,6 +1184,7 @@ struct brw_context
    bool is_baytrail;
    bool is_haswell;
    bool is_cherryview;
+   bool is_broxton;
 
    bool has_hiz;
    bool has_separate_stencil;
@@ -1135,6 +1197,7 @@ struct brw_context
    bool has_pln;
    bool no_simd8;
    bool use_rep_send;
+   bool use_resource_streamer;
 
    /**
     * Some versions of Gen hardware don't do centroid interpolation correctly
@@ -1241,12 +1304,12 @@ struct brw_context
     * Platform specific constants containing the maximum number of threads
     * for each pipeline stage.
     */
-   int max_vs_threads;
-   int max_hs_threads;
-   int max_ds_threads;
-   int max_gs_threads;
-   int max_wm_threads;
-   int max_cs_threads;
+   unsigned max_vs_threads;
+   unsigned max_hs_threads;
+   unsigned max_ds_threads;
+   unsigned max_gs_threads;
+   unsigned max_wm_threads;
+   unsigned max_cs_threads;
 
    /* BRW_NEW_URB_ALLOCATIONS:
     */
@@ -1398,6 +1461,12 @@ struct brw_context
       struct brw_cs_prog_data *prog_data;
    } cs;
 
+   /* RS hardware binding table */
+   struct {
+      drm_intel_bo *bo;
+      uint32_t next_offset;
+   } hw_bt_pool;
+
    struct {
       uint32_t state_offset;
       uint32_t blend_state_offset;
@@ -1453,8 +1522,8 @@ struct brw_context
    } perfmon;
 
    int num_atoms[BRW_NUM_PIPELINES];
-   const struct brw_tracked_state render_atoms[57];
-   const struct brw_tracked_state compute_atoms[3];
+   const struct brw_tracked_state render_atoms[60];
+   const struct brw_tracked_state compute_atoms[4];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
@@ -1732,11 +1801,17 @@ void brw_upload_abo_surfaces(struct brw_context *brw,
                              struct gl_shader_program *prog,
                              struct brw_stage_state *stage_state,
                              struct brw_stage_prog_data *prog_data);
+void brw_upload_image_surfaces(struct brw_context *brw,
+                               struct gl_shader *shader,
+                               struct brw_stage_state *stage_state,
+                               struct brw_stage_prog_data *prog_data);
 
 /* brw_surface_formats.c */
 bool brw_render_target_supported(struct brw_context *brw,
                                  struct gl_renderbuffer *rb);
 uint32_t brw_depth_format(struct brw_context *brw, mesa_format format);
+mesa_format brw_lower_mesa_image_format(const struct brw_device_info *devinfo,
+                                        mesa_format format);
 
 /* brw_performance_monitor.c */
 void brw_init_performance_monitors(struct brw_context *brw);
@@ -2012,6 +2087,21 @@ brw_initialize_context_constants(struct brw_context *brw);
 bool
 gen9_use_linear_1d_layout(const struct brw_context *brw,
                           const struct intel_mipmap_tree *mt);
+
+/* brw_pipe_control.c */
+int brw_init_pipe_control(struct brw_context *brw,
+			  const struct brw_device_info *info);
+void brw_fini_pipe_control(struct brw_context *brw);
+
+void brw_emit_pipe_control_flush(struct brw_context *brw, uint32_t flags);
+void brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
+                                 drm_intel_bo *bo, uint32_t offset,
+                                 uint32_t imm_lower, uint32_t imm_upper);
+void brw_emit_mi_flush(struct brw_context *brw);
+void brw_emit_post_sync_nonzero_flush(struct brw_context *brw);
+void brw_emit_depth_stall_flushes(struct brw_context *brw);
+void gen7_emit_vs_workaround_flush(struct brw_context *brw);
+void gen7_emit_cs_stall_flush(struct brw_context *brw);
 
 #ifdef __cplusplus
 }

@@ -19,8 +19,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
@@ -30,10 +28,10 @@ SIM_LDFLAGS = -lsimpenrose
 endif
 
 AM_CFLAGS = \
+	-I$(top_builddir)/src/glsl/nir \
 	$(LIBDRM_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
 	$(SIM_CFLAGS) \
-	-I$(top_srcdir)/src/mesa/ \
 	$()
 
 noinst_LTLIBRARIES = libvc4.la

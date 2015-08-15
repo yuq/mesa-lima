@@ -57,6 +57,12 @@
 #define RADEON_INFO_READ_REG		0x24
 #endif
 
+#define RADEON_INFO_VA_UNMAP_WORKING	0x25
+
+#ifndef RADEON_INFO_GPU_RESET_COUNTER
+#define RADEON_INFO_GPU_RESET_COUNTER   0x26
+#endif
+
 static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
@@ -389,16 +395,22 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         }
 
         ws->info.r600_virtual_address = FALSE;
-        if (ws->info.drm_minor >= 13) {
-            uint32_t ib_vm_max_size;
+        ws->ib_max_size = 64 * 1024;
 
+        if (ws->info.drm_minor >= 13) {
             ws->info.r600_virtual_address = TRUE;
             if (!radeon_get_drm_value(ws->fd, RADEON_INFO_VA_START, NULL,
                                       &ws->va_start))
                 ws->info.r600_virtual_address = FALSE;
-            if (!radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
-                                      &ib_vm_max_size))
+
+            if (radeon_get_drm_value(ws->fd, RADEON_INFO_IB_VM_MAX_SIZE, NULL,
+                                     &ws->ib_max_size))
+                ws->ib_max_size *= 4; /* the kernel returns the size in dwords */
+            else
                 ws->info.r600_virtual_address = FALSE;
+
+            radeon_get_drm_value(ws->fd, RADEON_INFO_VA_UNMAP_WORKING, NULL,
+                                 &ws->va_unmap_working);
         }
 	if (ws->gen == DRV_R600 && !debug_get_bool_option("RADEON_VA", FALSE))
 		ws->info.r600_virtual_address = FALSE;
@@ -484,6 +496,10 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     if (ws->gen >= DRV_R600) {
         radeon_surface_manager_free(ws->surf_man);
     }
+
+    if (ws->fd >= 0)
+        close(ws->fd);
+
     FREE(rws);
 }
 
@@ -562,6 +578,10 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     case RADEON_CURRENT_MCLK:
         radeon_get_drm_value(ws->fd, RADEON_INFO_CURRENT_GPU_MCLK,
                              "current-gpu-mclk", (uint32_t*)&retval);
+        return retval;
+    case RADEON_GPU_RESET_COUNTER:
+        radeon_get_drm_value(ws->fd, RADEON_INFO_GPU_RESET_COUNTER,
+                             "gpu-reset-counter", (uint32_t*)&retval);
         return retval;
     }
     return 0;
@@ -696,7 +716,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         return NULL;
     }
 
-    ws->fd = fd;
+    ws->fd = dup(fd);
 
     if (!do_winsys_init(ws))
         goto fail;
@@ -706,13 +726,13 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     if (!ws->kman)
         goto fail;
 
-    ws->cman = pb_cache_manager_create(ws->kman, 1000000, 2.0f, 0,
+    ws->cman = pb_cache_manager_create(ws->kman, 500000, 2.0f, 0,
                                        MIN2(ws->info.vram_size, ws->info.gart_size));
     if (!ws->cman)
         goto fail;
 
     if (ws->gen >= DRV_R600) {
-        ws->surf_man = radeon_surface_manager_new(fd);
+        ws->surf_man = radeon_surface_manager_new(ws->fd);
         if (!ws->surf_man)
             goto fail;
     }
@@ -753,7 +773,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         return NULL;
     }
 
-    util_hash_table_set(fd_tab, intptr_to_pointer(fd), ws);
+    util_hash_table_set(fd_tab, intptr_to_pointer(ws->fd), ws);
 
     /* We must unlock the mutex once the winsys is fully initialized, so that
      * other threads attempting to create the winsys from the same fd will
@@ -770,6 +790,9 @@ fail:
         ws->kman->destroy(ws->kman);
     if (ws->surf_man)
         radeon_surface_manager_free(ws->surf_man);
+    if (ws->fd >= 0)
+        close(ws->fd);
+
     FREE(ws);
     return NULL;
 }

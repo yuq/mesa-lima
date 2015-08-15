@@ -176,7 +176,7 @@ GM107LoweringPass::handlePOPCNT(Instruction *i)
                            i->getSrc(0), i->getSrc(1));
    i->setSrc(0, tmp);
    i->setSrc(1, NULL);
-   return TRUE;
+   return true;
 }
 
 //

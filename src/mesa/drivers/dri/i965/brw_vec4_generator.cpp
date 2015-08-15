@@ -1465,19 +1465,15 @@ vec4_generator::generate_code(const cfg_t *cfg)
          break;
 
       case SHADER_OPCODE_UNTYPED_ATOMIC:
-         assert(src[1].file == BRW_IMMEDIATE_VALUE &&
-                src[2].file == BRW_IMMEDIATE_VALUE);
+         assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_atomic(p, dst, src[0], src[1], src[2].dw1.ud, inst->mlen,
                             !inst->dst.is_null());
-         brw_mark_surface_used(&prog_data->base, src[1].dw1.ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
-         assert(src[1].file == BRW_IMMEDIATE_VALUE &&
-                src[2].file == BRW_IMMEDIATE_VALUE);
+         assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_surface_read(p, dst, src[0], src[1], inst->mlen,
                                   src[2].dw1.ud);
-         brw_mark_surface_used(&prog_data->base, src[1].dw1.ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
@@ -1549,7 +1545,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
           *
           * where they pack the four bytes from the low and high four DW.
           */
-         assert(is_power_of_two(dst.dw1.bits.writemask) &&
+         assert(_mesa_is_pow_two(dst.dw1.bits.writemask) &&
                 dst.dw1.bits.writemask != 0);
          unsigned offset = __builtin_ctz(dst.dw1.bits.writemask);
 

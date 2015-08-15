@@ -1124,7 +1124,7 @@ static struct name_function functions[] = {
    { "OSMesaDestroyContext", (OSMESAproc) OSMesaDestroyContext },
    { "OSMesaMakeCurrent", (OSMESAproc) OSMesaMakeCurrent },
    { "OSMesaGetCurrentContext", (OSMESAproc) OSMesaGetCurrentContext },
-   { "OSMesaPixelsStore", (OSMESAproc) OSMesaPixelStore },
+   { "OSMesaPixelStore", (OSMESAproc) OSMesaPixelStore },
    { "OSMesaGetIntegerv", (OSMESAproc) OSMesaGetIntegerv },
    { "OSMesaGetDepthBuffer", (OSMESAproc) OSMesaGetDepthBuffer },
    { "OSMesaGetColorBuffer", (OSMESAproc) OSMesaGetColorBuffer },

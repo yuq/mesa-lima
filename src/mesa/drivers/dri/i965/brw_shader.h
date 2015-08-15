@@ -26,6 +26,7 @@
 #include "brw_defines.h"
 #include "main/compiler.h"
 #include "glsl/ir.h"
+#include "program/prog_parameter.h"
 
 #ifdef __cplusplus
 #include "brw_ir_allocator.h"
@@ -268,6 +269,10 @@ public:
    void assign_common_binding_table_offsets(uint32_t next_binding_table_offset);
 
    virtual void invalidate_live_intervals() = 0;
+
+   virtual void setup_vector_uniform_values(const gl_constant_value *values,
+                                            unsigned n) = 0;
+   void setup_image_uniform_values(const gl_uniform_storage *storage);
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);

@@ -24,6 +24,7 @@
 #pragma once
 
 #include "brw_context.h"
+#include "brw_reg.h"
 #include "glsl/nir/nir.h"
 
 #ifdef __cplusplus
@@ -77,13 +78,18 @@ void brw_nir_analyze_boolean_resolves(nir_shader *nir);
 nir_shader *brw_create_nir(struct brw_context *brw,
                            const struct gl_shader_program *shader_prog,
                            const struct gl_program *prog,
-                           gl_shader_stage stage);
+                           gl_shader_stage stage,
+                           bool is_scalar);
+
+enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
+
+enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
 
 void
 brw_process_nir(nir_shader *nir,
                 const struct brw_device_info *devinfo,
                 const struct gl_shader_program *shader_prog,
-                gl_shader_stage stage);
+                gl_shader_stage stage, bool is_scalar);
 
 #ifdef __cplusplus
 }

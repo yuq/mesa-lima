@@ -1314,7 +1314,7 @@ flush_delayed_errors( struct gl_context *ctx )
    if (ctx->ErrorDebugCount) {
       _mesa_snprintf(s, MAX_DEBUG_MESSAGE_LENGTH, "%d similar %s errors", 
                      ctx->ErrorDebugCount,
-                     _mesa_lookup_enum_by_nr(ctx->ErrorValue));
+                     _mesa_enum_to_string(ctx->ErrorValue));
 
       output_if_debug("Mesa", s, GL_TRUE);
 
@@ -1503,7 +1503,7 @@ _mesa_error( struct gl_context *ctx, GLenum error, const char *fmtString, ... )
       }
 
       len = _mesa_snprintf(s2, MAX_DEBUG_MESSAGE_LENGTH, "%s in %s",
-                           _mesa_lookup_enum_by_nr(error), s);
+                           _mesa_enum_to_string(error), s);
       if (len >= MAX_DEBUG_MESSAGE_LENGTH) {
          /* Same as above. */
          assert(0);

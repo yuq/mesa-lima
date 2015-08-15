@@ -52,7 +52,7 @@ static void
 add_uniform(struct hash_table *ht, struct qreg reg)
 {
         struct hash_entry *entry;
-        void *key = (void *)(uintptr_t)reg.index;
+        void *key = (void *)(uintptr_t)(reg.index + 1);
 
         entry = _mesa_hash_table_search(ht, key);
         if (entry) {
@@ -66,7 +66,7 @@ static void
 remove_uniform(struct hash_table *ht, struct qreg reg)
 {
         struct hash_entry *entry;
-        void *key = (void *)(uintptr_t)reg.index;
+        void *key = (void *)(uintptr_t)(reg.index + 1);
 
         entry = _mesa_hash_table_search(ht, key);
         assert(entry);
@@ -122,7 +122,7 @@ qir_lower_uniforms(struct vc4_compile *c)
                 struct hash_entry *entry;
                 hash_table_foreach(ht, entry) {
                         uint32_t count = (uintptr_t)entry->data;
-                        uint32_t index = (uintptr_t)entry->key;
+                        uint32_t index = (uintptr_t)entry->key - 1;
                         if (count > max_count) {
                                 max_count = count;
                                 max_index = index;

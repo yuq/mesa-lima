@@ -25,6 +25,7 @@
  *
  */
 
+#include "nir.h"
 #include "nir_spirv.h"
 #include "nir_builder.h"
 #include "spirv.h"

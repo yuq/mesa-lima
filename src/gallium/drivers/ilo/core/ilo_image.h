@@ -29,10 +29,16 @@
 #define ILO_IMAGE_H
 
 #include "genhw/genhw.h"
-#include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
+
+/*
+ * From the Ivy Bridge PRM, volume 4 part 1, page 75:
+ *
+ *     "(MIP Count / LOD) representing [1,15] MIP levels"
+ */
+#define ILO_IMAGE_MAX_LEVEL_COUNT 15
 
 enum ilo_image_aux_type {
    ILO_IMAGE_AUX_NONE,
@@ -68,6 +74,49 @@ enum ilo_image_walk_type {
    ILO_IMAGE_WALK_3D,
 };
 
+struct ilo_image_info {
+   enum gen_surface_type type;
+
+   enum gen_surface_format format;
+   bool interleaved_stencil;
+   bool is_integer;
+   /* width, height and size of pixel blocks */
+   bool compressed;
+   unsigned block_width;
+   unsigned block_height;
+   unsigned block_size;
+
+   /* image size */
+   uint16_t width;
+   uint16_t height;
+   uint16_t depth;
+   uint16_t array_size;
+   uint8_t level_count;
+   uint8_t sample_count;
+
+   /* disable optional aux */
+   bool aux_disable;
+
+   /* tilings to consider, if any bit is set */
+   uint8_t valid_tilings;
+
+   /*
+    * prefer GEN6_TILING_NONE when the (estimated) image size exceeds the
+    * threshold
+    */
+   uint32_t prefer_linear_threshold;
+
+   /* force a stride when non-zero */
+   uint32_t force_bo_stride;
+
+   bool bind_surface_sampler;
+   bool bind_surface_dp_render;
+   bool bind_surface_dp_typed;
+   bool bind_zs;
+   bool bind_scanout;
+   bool bind_cursor;
+};
+
 /*
  * When the walk type is ILO_IMAGE_WALK_LAYER, there is only a slice in each
  * LOD and this is used to describe LODs in the first array layer.  Otherwise,
@@ -88,7 +137,10 @@ struct ilo_image_lod {
  * Texture layout.
  */
 struct ilo_image {
-   enum pipe_texture_target target;
+   enum gen_surface_type type;
+
+   enum gen_surface_format format;
+   bool interleaved_stencil;
 
    /* size, format, etc for programming hardware states */
    unsigned width0;
@@ -97,8 +149,6 @@ struct ilo_image {
    unsigned array_size;
    unsigned level_count;
    unsigned sample_count;
-   enum pipe_format format;
-   bool separate_stencil;
 
    /*
     * width, height, and size of pixel blocks for conversion between pixel
@@ -117,7 +167,7 @@ struct ilo_image {
    unsigned align_i;
    unsigned align_j;
 
-   struct ilo_image_lod lods[PIPE_MAX_TEXTURE_LEVELS];
+   struct ilo_image_lod lods[ILO_IMAGE_MAX_LEVEL_COUNT];
 
    /* physical layer height for ILO_IMAGE_WALK_LAYER */
    unsigned walk_layer_height;
@@ -136,36 +186,18 @@ struct ilo_image {
       unsigned enables;
 
       /* LOD offsets for ILO_IMAGE_WALK_LOD */
-      unsigned walk_lod_offsets[PIPE_MAX_TEXTURE_LEVELS];
+      unsigned walk_lod_offsets[ILO_IMAGE_MAX_LEVEL_COUNT];
 
       unsigned walk_layer_height;
       unsigned bo_stride;
       unsigned bo_height;
-
-      /* managed by users */
-      struct intel_bo *bo;
    } aux;
-
-   /* managed by users */
-   struct intel_bo *bo;
 };
 
-struct pipe_resource;
-
-void
+bool
 ilo_image_init(struct ilo_image *img,
                const struct ilo_dev *dev,
-               const struct pipe_resource *templ);
-
-bool
-ilo_image_init_for_imported(struct ilo_image *img,
-                            const struct ilo_dev *dev,
-                            const struct pipe_resource *templ,
-                            enum gen_surface_tiling tiling,
-                            unsigned bo_stride);
-
-bool
-ilo_image_disable_aux(struct ilo_image *img, const struct ilo_dev *dev);
+               const struct ilo_image_info *info);
 
 static inline bool
 ilo_image_can_enable_aux(const struct ilo_image *img, unsigned level)

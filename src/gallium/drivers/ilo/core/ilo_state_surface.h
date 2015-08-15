@@ -29,13 +29,9 @@
 #define ILO_STATE_SURFACE_H
 
 #include "genhw/genhw.h"
-#include "intel_winsys.h"
 
 #include "ilo_core.h"
 #include "ilo_dev.h"
-
-struct ilo_buffer;
-struct ilo_image;
 
 enum ilo_state_surface_access {
    ILO_STATE_SURFACE_ACCESS_SAMPLER,      /* sampling engine surfaces */
@@ -46,41 +42,50 @@ enum ilo_state_surface_access {
    ILO_STATE_SURFACE_ACCESS_DP_SVB,
 };
 
+struct ilo_vma;
+struct ilo_image;
+
 struct ilo_state_surface_buffer_info {
-   const struct ilo_buffer *buf;
+   const struct ilo_vma *vma;
+   uint32_t offset;
+   uint32_t size;
 
    enum ilo_state_surface_access access;
 
+   /* format_size may be less than, equal to, or greater than struct_size */
    enum gen_surface_format format;
    uint8_t format_size;
 
    bool readonly;
    uint16_t struct_size;
-
-   uint32_t offset;
-   uint32_t size;
 };
 
 struct ilo_state_surface_image_info {
    const struct ilo_image *img;
+   uint8_t level_base;
+   uint8_t level_count;
+   uint16_t slice_base;
+   uint16_t slice_count;
+
+   const struct ilo_vma *vma;
+   const struct ilo_vma *aux_vma;
 
    enum ilo_state_surface_access access;
+
+   enum gen_surface_type type;
 
    enum gen_surface_format format;
    bool is_integer;
 
    bool readonly;
-   bool is_cube_map;
    bool is_array;
-
-   uint8_t level_base;
-   uint8_t level_count;
-   uint16_t slice_base;
-   uint16_t slice_count;
 };
 
 struct ilo_state_surface {
    uint32_t surface[13];
+
+   const struct ilo_vma *vma;
+   const struct ilo_vma *aux_vma;
 
    enum gen_surface_type type;
    uint8_t min_lod;
@@ -89,15 +94,17 @@ struct ilo_state_surface {
 
    bool readonly;
    bool scanout;
-
-   /* managed by users */
-   struct intel_bo *bo;
 };
 
 bool
 ilo_state_surface_valid_format(const struct ilo_dev *dev,
                                enum ilo_state_surface_access access,
                                enum gen_surface_format format);
+
+uint32_t
+ilo_state_surface_buffer_size(const struct ilo_dev *dev,
+                              enum ilo_state_surface_access access,
+                              uint32_t size, uint32_t *alignment);
 
 bool
 ilo_state_surface_init_for_null(struct ilo_state_surface *surf,

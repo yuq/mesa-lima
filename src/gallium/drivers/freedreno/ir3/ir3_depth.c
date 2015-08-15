@@ -156,6 +156,9 @@ ir3_depth(struct ir3 *ir)
 		if (ir->outputs[i])
 			ir3_instr_depth(ir->outputs[i]);
 
+	for (i = 0; i < ir->keeps_count; i++)
+		ir3_instr_depth(ir->keeps[i]);
+
 	/* We also need to account for if-condition: */
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		if (block->condition)
@@ -165,6 +168,15 @@ ir3_depth(struct ir3 *ir)
 	/* mark un-used instructions: */
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {
 		remove_unused_by_block(block);
+	}
+
+	/* note that we can end up with unused indirects, but we should
+	 * not end up with unused predicates.
+	 */
+	for (i = 0; i < ir->indirects_count; i++) {
+		struct ir3_instruction *instr = ir->indirects[i];
+		if (instr->depth == DEPTH_UNUSED)
+			ir->indirects[i] = NULL;
 	}
 
 	/* cleanup unused inputs: */

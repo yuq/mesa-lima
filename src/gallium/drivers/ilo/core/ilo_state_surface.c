@@ -26,8 +26,8 @@
  */
 
 #include "ilo_debug.h"
-#include "ilo_buffer.h"
 #include "ilo_image.h"
+#include "ilo_vma.h"
 #include "ilo_state_surface.h"
 
 static bool
@@ -94,17 +94,129 @@ surface_set_gen7_null_SURFACE_STATE(struct ilo_state_surface *surf,
    return true;
 }
 
+static uint32_t
+surface_get_gen6_buffer_offset_alignment(const struct ilo_dev *dev,
+                                         const struct ilo_state_surface_buffer_info *info)
+{
+   uint32_t alignment;
+
+   ILO_DEV_ASSERT(dev, 6, 8);
+
+   /*
+    * From the Ivy Bridge PRM, volume 4 part 1, page 68:
+    *
+    *     "The Base Address for linear render target surfaces and surfaces
+    *      accessed with the typed surface read/write data port messages must
+    *      be element-size aligned, for non-YUV surface formats, or a multiple
+    *      of 2 element-sizes for YUV surface formats.  Other linear surfaces
+    *      have no alignment requirements (byte alignment is sufficient)."
+    *
+    *     "Certain message types used to access surfaces have more stringent
+    *      alignment requirements. Please refer to the specific message
+    *      documentation for additional restrictions."
+    */
+   switch (info->access) {
+   case ILO_STATE_SURFACE_ACCESS_SAMPLER:
+      /* no alignment requirements */
+      alignment = 1;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_RENDER:
+   case ILO_STATE_SURFACE_ACCESS_DP_TYPED:
+      /* element-size aligned */
+      alignment = info->format_size;
+
+      assert(info->struct_size % alignment == 0);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_UNTYPED:
+      /*
+       * Nothing is said about Untyped* messages, but I think they require the
+       * base address to be DWord aligned.
+       */
+      alignment = 4;
+
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 70:
+       *
+       *     "For linear surfaces with Surface Type of SURFTYPE_STRBUF, the
+       *      pitch must be a multiple of 4 bytes."
+       */
+      if (info->struct_size > 1)
+         assert(info->struct_size % alignment == 0);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_DATA:
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, and 237:
+       *
+       *     "the surface base address must be OWord aligned"
+       *
+       * for OWord Block Read/Write, Unaligned OWord Block Read, and OWord
+       * Dual Block Read/Write.
+       *
+       * From the Ivy Bridge PRM, volume 4 part 1, page 246 and 249:
+       *
+       *     "The surface base address must be DWord aligned"
+       *
+       * for DWord Scattered Read/Write and Byte Scattered Read/Write.
+       */
+      alignment = (info->format_size > 4) ? 16 : 4;
+
+      /*
+       * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, 237, and
+       * 246:
+       *
+       *     "the surface pitch is ignored, the surface is treated as a
+       *      1-dimensional surface. An element size (pitch) of 16 bytes is
+       *      used to determine the size of the buffer for out-of-bounds
+       *      checking if using the surface state model."
+       *
+       * for OWord Block Read/Write, Unaligned OWord Block Read, OWord
+       * Dual Block Read/Write, and DWord Scattered Read/Write.
+       *
+       * From the Ivy Bridge PRM, volume 4 part 1, page 248:
+       *
+       *     "The surface pitch is ignored, the surface is treated as a
+       *      1-dimensional surface. An element size (pitch) of 4 bytes is
+       *      used to determine the size of the buffer for out-of-bounds
+       *      checking if using the surface state model."
+       *
+       * for Byte Scattered Read/Write.
+       *
+       * It is programmable on Gen7.5+.
+       */
+      if (ilo_dev_gen(dev) < ILO_GEN(7.5)) {
+         const int fixed = (info->format_size > 1) ? 16 : 4;
+         assert(info->struct_size == fixed);
+      }
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_SVB:
+      /*
+       * From the Sandy Bridge PRM, volume 4 part 1, page 259:
+       *
+       *     "Both the surface base address and surface pitch must be DWord
+       *      aligned."
+       */
+      alignment = 4;
+
+      assert(info->struct_size % alignment == 0);
+      break;
+   default:
+      assert(!"unknown access");
+      alignment = 1;
+      break;
+   }
+
+   return alignment;
+}
+
 static bool
 surface_validate_gen6_buffer(const struct ilo_dev *dev,
                              const struct ilo_state_surface_buffer_info *info)
 {
+   uint32_t alignment;
+
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   /* SVB writes are Gen6-only */
-   if (ilo_dev_gen(dev) >= ILO_GEN(7))
-      assert(info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB);
-
-   if (info->offset + info->size > info->buf->bo_size) {
+   if (info->offset + info->size > info->vma->vm_size) {
       ilo_warn("invalid buffer range\n");
       return false;
    }
@@ -120,87 +232,34 @@ surface_validate_gen6_buffer(const struct ilo_dev *dev,
       return false;
    }
 
+   alignment = surface_get_gen6_buffer_offset_alignment(dev, info);
+   if (info->offset % alignment || info->vma->vm_alignment % alignment) {
+      ilo_warn("bad buffer offset\n");
+      return false;
+   }
+
+   /* no STRBUF on Gen6 */
+   if (info->format == GEN6_FORMAT_RAW && info->struct_size > 1)
+      assert(ilo_dev_gen(dev) >= ILO_GEN(7));
+
+   /* SVB writes are Gen6 only */
+   if (info->access == ILO_STATE_SURFACE_ACCESS_DP_SVB)
+      assert(ilo_dev_gen(dev) == ILO_GEN(6));
+
    /*
-    * From the Ivy Bridge PRM, volume 4 part 1, page 68:
+    * From the Ivy Bridge PRM, volume 4 part 1, page 83:
     *
-    *     "The Base Address for linear render target surfaces and surfaces
-    *      accessed with the typed surface read/write data port messages must
-    *      be element-size aligned, for non-YUV surface formats, or a multiple
-    *      of 2 element-sizes for YUV surface formats.  Other linear surfaces
-    *      have no alignment requirements (byte alignment is sufficient)."
+    *     "NOTE: "RAW" is supported only with buffers and structured buffers
+    *      accessed via the untyped surface read/write and untyped atomic
+    *      operation messages, which do not have a column in the table."
     *
-    *     "Certain message types used to access surfaces have more stringent
-    *      alignment requirements. Please refer to the specific message
-    *      documentation for additional restrictions."
+    * From the Ivy Bridge PRM, volume 4 part 1, page 252:
     *
-    * From the Ivy Bridge PRM, volume 4 part 1, page 233, 235, and 237:
-    *
-    *     "the surface base address must be OWord aligned"
-    *
-    * for OWord Block Read/Write, Unaligned OWord Block Read, and OWord Dual
-    * Block Read/Write.
-    *
-    * From the Ivy Bridge PRM, volume 4 part 1, page 246 and 249:
-    *
-    *     "The surface base address must be DWord aligned"
-    *
-    * for DWord Scattered Read/Write and Byte Scattered Read/Write.
-    *
-    * We have to rely on users to correctly set info->struct_size here.  DWord
-    * Scattered Read/Write has conflicting pitch and alignment, but we do not
-    * use them yet so we are fine.
-    *
-    * It is unclear if sampling engine surfaces require aligned offsets.
+    *     "For untyped messages, the Surface Format must be RAW and the
+    *      Surface Type must be SURFTYPE_BUFFER or SURFTYPE_STRBUF."
     */
-   if (info->access != ILO_STATE_SURFACE_ACCESS_DP_SVB) {
-      assert(info->struct_size % info->format_size == 0);
-
-      if (info->offset % info->struct_size) {
-         ilo_warn("bad buffer offset\n");
-         return false;
-      }
-   }
-
-   if (info->format == GEN6_FORMAT_RAW) {
-      /*
-       * From the Sandy Bridge PRM, volume 4 part 1, page 97:
-       *
-       *     ""RAW" is supported only with buffers and structured buffers
-       *      accessed via the untyped surface read/write and untyped atomic
-       *      operation messages, which do not have a column in the table."
-       *
-       * We do not have a specific access mode for untyped messages.
-       */
-      assert(info->access == ILO_STATE_SURFACE_ACCESS_DP_UNTYPED);
-
-      /*
-       * Nothing is said about Untyped* messages, but I guess they require the
-       * base address to be DWord aligned.
-       */
-      if (info->offset % 4) {
-         ilo_warn("bad RAW buffer offset\n");
-         return false;
-      }
-
-      if (info->struct_size > 1) {
-         /* no STRBUF on Gen6 */
-         if (ilo_dev_gen(dev) == ILO_GEN(6)) {
-            ilo_warn("no STRBUF support\n");
-            return false;
-         }
-
-         /*
-          * From the Ivy Bridge PRM, volume 4 part 1, page 70:
-          *
-          *     "For linear surfaces with Surface Type of SURFTYPE_STRBUF, the
-          *      pitch must be a multiple of 4 bytes."
-          */
-         if (info->struct_size % 4) {
-            ilo_warn("bad STRBUF pitch\n");
-            return false;
-         }
-      }
-   }
+   assert((info->access == ILO_STATE_SURFACE_ACCESS_DP_UNTYPED) ==
+          (info->format == GEN6_FORMAT_RAW));
 
    return true;
 }
@@ -215,8 +274,7 @@ surface_get_gen6_buffer_struct_count(const struct ilo_dev *dev,
    ILO_DEV_ASSERT(dev, 6, 8);
 
    c = info->size / info->struct_size;
-   if (info->access == ILO_STATE_SURFACE_ACCESS_DP_SVB &&
-       info->format_size < info->size - info->struct_size * c)
+   if (info->format_size < info->size - info->struct_size * c)
       c++;
 
    /*
@@ -367,29 +425,6 @@ surface_set_gen7_buffer_SURFACE_STATE(struct ilo_state_surface *surf,
    return true;
 }
 
-static enum gen_surface_type
-get_gen6_surface_type(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   switch (img->target) {
-   case PIPE_TEXTURE_1D:
-   case PIPE_TEXTURE_1D_ARRAY:
-      return GEN6_SURFTYPE_1D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_RECT:
-   case PIPE_TEXTURE_2D_ARRAY:
-   case PIPE_TEXTURE_CUBE_ARRAY:
-      return GEN6_SURFTYPE_2D;
-   case PIPE_TEXTURE_3D:
-      return GEN6_SURFTYPE_3D;
-   default:
-      assert(!"unknown texture target");
-      return GEN6_SURFTYPE_NULL;
-   }
-}
-
 static bool
 surface_validate_gen6_image(const struct ilo_dev *dev,
                             const struct ilo_state_surface_image_info *info)
@@ -408,6 +443,17 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
       break;
    }
 
+   assert(info->img && info->vma);
+
+   if (info->img->tiling != GEN6_TILING_NONE)
+      assert(info->vma->vm_alignment % 4096 == 0);
+
+   if (info->aux_vma) {
+      assert(ilo_image_can_enable_aux(info->img, info->level_base));
+      /* always tiled */
+      assert(info->aux_vma->vm_alignment % 4096 == 0);
+   }
+
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 78:
     *
@@ -418,16 +464,18 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
    assert(info->img->bo_stride && info->img->bo_stride <= 512 * 1024 &&
           info->img->width0 <= info->img->bo_stride);
 
-   if (info->is_cube_map) {
-      assert(get_gen6_surface_type(dev, info->img) == GEN6_SURFTYPE_2D);
-
-      /*
-       * From the Sandy Bridge PRM, volume 4 part 1, page 78:
-       *
-       *     "For cube maps, Width must be set equal to the Height."
-       */
-      assert(info->img->width0 == info->img->height0);
+   if (info->type != info->img->type) {
+      assert(info->type == GEN6_SURFTYPE_2D &&
+             info->img->type == GEN6_SURFTYPE_CUBE);
    }
+
+   /*
+    * From the Sandy Bridge PRM, volume 4 part 1, page 78:
+    *
+    *     "For cube maps, Width must be set equal to the Height."
+    */
+   if (info->type == GEN6_SURFTYPE_CUBE)
+      assert(info->img->width0 == info->img->height0);
 
    /*
     * From the Sandy Bridge PRM, volume 4 part 1, page 72:
@@ -463,20 +511,21 @@ surface_validate_gen6_image(const struct ilo_dev *dev,
 }
 
 static void
-get_gen6_max_extent(const struct ilo_dev *dev,
-                    const struct ilo_image *img,
-                    uint16_t *max_w, uint16_t *max_h)
+surface_get_gen6_image_max_extent(const struct ilo_dev *dev,
+                                  const struct ilo_state_surface_image_info *info,
+                                  uint16_t *max_w, uint16_t *max_h)
 {
    const uint16_t max_size = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 16384 : 8192;
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
       *max_w = max_size;
       *max_h = 1;
       break;
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       *max_w = max_size;
       *max_h = max_size;
       break;
@@ -504,7 +553,7 @@ surface_get_gen6_image_extent(const struct ilo_dev *dev,
    w = info->img->width0;
    h = info->img->height0;
 
-   get_gen6_max_extent(dev, info->img, &max_w, &max_h);
+   surface_get_gen6_image_max_extent(dev, info, &max_w, &max_h);
    assert(w && h && w <= max_w && h <= max_h);
 
    *width = w - 1;
@@ -555,16 +604,17 @@ surface_get_gen6_image_slices(const struct ilo_dev *dev,
     * layers to (86 * 6), about 512.
     */
 
-   switch (get_gen6_surface_type(dev, info->img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       max_slice = (ilo_dev_gen(dev) >= ILO_GEN(7.5)) ? 2048 : 512;
 
       assert(info->img->array_size <= max_slice);
       max_slice = info->img->array_size;
 
       d = info->slice_count;
-      if (info->is_cube_map) {
+      if (info->type == GEN6_SURFTYPE_CUBE) {
          if (info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER) {
             if (!d || d % 6) {
                ilo_warn("invalid cube slice count\n");
@@ -877,7 +927,6 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    uint8_t min_lod, mip_count;
    enum gen_sample_count sample_count;
    uint32_t alignments;
-   enum gen_surface_type type;
    uint32_t dw0, dw2, dw3, dw4, dw5;
 
    ILO_DEV_ASSERT(dev, 6, 6);
@@ -897,10 +946,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    if (info->img->sample_count > 1)
       assert(info->img->interleaved_samples);
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-      get_gen6_surface_type(dev, info->img);
-
-   dw0 = type << GEN6_SURFACE_DW0_TYPE__SHIFT |
+   dw0 = info->type << GEN6_SURFACE_DW0_TYPE__SHIFT |
          info->format << GEN6_SURFACE_DW0_FORMAT__SHIFT |
          GEN6_SURFACE_DW0_MIPLAYOUT_BELOW;
 
@@ -927,7 +973,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
     *     "When TEXCOORDMODE_CLAMP is used when accessing a cube map, this
     *      field must be programmed to 111111b (all faces enabled)."
     */
-   if (info->is_cube_map &&
+   if (info->type == GEN6_SURFTYPE_CUBE &&
        info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER) {
       dw0 |= GEN6_SURFACE_DW0_CUBE_MAP_CORNER_MODE_AVERAGE |
              GEN6_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
@@ -956,7 +1002,7 @@ surface_set_gen6_image_SURFACE_STATE(struct ilo_state_surface *surf,
    surf->surface[4] = dw4;
    surf->surface[5] = dw5;
 
-   surf->type = type;
+   surf->type = info->type;
    surf->min_lod = min_lod;
    surf->mip_count = mip_count;
 
@@ -972,7 +1018,6 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
    uint8_t min_lod, mip_count;
    uint32_t alignments;
    enum gen_sample_count sample_count;
-   enum gen_surface_type type;
    uint32_t dw0, dw1, dw2, dw3, dw4, dw5, dw7;
 
    ILO_DEV_ASSERT(dev, 7, 8);
@@ -986,10 +1031,7 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
        !surface_get_gen6_image_alignments(dev, info, &alignments))
       return false;
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-      get_gen6_surface_type(dev, info->img);
-
-   dw0 = type << GEN7_SURFACE_DW0_TYPE__SHIFT |
+   dw0 = info->type << GEN7_SURFACE_DW0_TYPE__SHIFT |
          info->format << GEN7_SURFACE_DW0_FORMAT__SHIFT |
          alignments;
 
@@ -1023,7 +1065,7 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
     *      field must be programmed to 111111b (all faces enabled). This field
     *      is ignored unless the Surface Type is SURFTYPE_CUBE."
     */
-   if (info->is_cube_map &&
+   if (info->type == GEN6_SURFTYPE_CUBE &&
        info->access == ILO_STATE_SURFACE_ACCESS_SAMPLER)
       dw0 |= GEN7_SURFACE_DW0_CUBE_FACE_ENABLES__MASK;
 
@@ -1087,11 +1129,59 @@ surface_set_gen7_image_SURFACE_STATE(struct ilo_state_surface *surf,
       surf->surface[12] = 0;
    }
 
-   surf->type = type;
+   surf->type = info->type;
    surf->min_lod = min_lod;
    surf->mip_count = mip_count;
 
    return true;
+}
+
+uint32_t
+ilo_state_surface_buffer_size(const struct ilo_dev *dev,
+                              enum ilo_state_surface_access access,
+                              uint32_t size, uint32_t *alignment)
+{
+   switch (access) {
+   case ILO_STATE_SURFACE_ACCESS_SAMPLER:
+      /*
+       * From the Sandy Bridge PRM, volume 1 part 1, page 118:
+       *
+       *     "For buffers, which have no inherent "height," padding
+       *      requirements are different. A buffer must be padded to the next
+       *      multiple of 256 array elements, with an additional 16 bytes
+       *      added beyond that to account for the L1 cache line."
+       *
+       * Assuming tightly packed GEN6_FORMAT_R32G32B32A32_FLOAT, the size
+       * needs to be padded to 4096 (= 16 * 256).
+       */
+      *alignment = 1;
+      size = align(size, 4096) + 16;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_RENDER:
+   case ILO_STATE_SURFACE_ACCESS_DP_TYPED:
+      /* element-size aligned for worst cases */
+      *alignment = 16;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_UNTYPED:
+      /* DWord aligned? */
+      *alignment = 4;
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_DATA:
+      /* OWord aligned */
+      *alignment = 16;
+      size = align(size, 16);
+      break;
+   case ILO_STATE_SURFACE_ACCESS_DP_SVB:
+      /* always DWord aligned */
+      *alignment = 4;
+      break;
+   default:
+      assert(!"unknown access");
+      *alignment = 1;
+      break;
+   }
+
+   return size;
 }
 
 bool
@@ -1107,6 +1197,7 @@ ilo_state_surface_init_for_null(struct ilo_state_surface *surf,
    else
       ret &= surface_set_gen6_null_SURFACE_STATE(surf, dev);
 
+   surf->vma = NULL;
    surf->type = GEN6_SURFTYPE_NULL;
    surf->readonly = true;
 
@@ -1129,6 +1220,7 @@ ilo_state_surface_init_for_buffer(struct ilo_state_surface *surf,
    else
       ret &= surface_set_gen6_buffer_SURFACE_STATE(surf, dev, info);
 
+   surf->vma = info->vma;
    surf->readonly = info->readonly;
 
    assert(ret);
@@ -1149,6 +1241,9 @@ ilo_state_surface_init_for_image(struct ilo_state_surface *surf,
       ret &= surface_set_gen7_image_SURFACE_STATE(surf, dev, info);
    else
       ret &= surface_set_gen6_image_SURFACE_STATE(surf, dev, info);
+
+   surf->vma = info->vma;
+   surf->aux_vma = info->aux_vma;
 
    surf->is_integer = info->is_integer;
    surf->readonly = info->readonly;

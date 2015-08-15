@@ -208,6 +208,7 @@ cfg_t::cfg_t(exec_list *instructions)
          cur_else = cur;
 
 	 next = new_block();
+         assert(cur_if != NULL);
 	 cur_if->add_successor(mem_ctx, next);
 
 	 set_next_block(&cur, next, ip);
@@ -274,6 +275,7 @@ cfg_t::cfg_t(exec_list *instructions)
          inst->exec_node::remove();
          cur->instructions.push_tail(inst);
 
+         assert(cur_do != NULL);
 	 cur->add_successor(mem_ctx, cur_do);
 
 	 next = new_block();
@@ -287,6 +289,7 @@ cfg_t::cfg_t(exec_list *instructions)
          inst->exec_node::remove();
          cur->instructions.push_tail(inst);
 
+         assert(cur_while != NULL);
 	 cur->add_successor(mem_ctx, cur_while);
 
 	 next = new_block();

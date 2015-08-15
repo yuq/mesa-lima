@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Broadcom
+ * Copyright © 2014-2015 Broadcom
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -94,7 +94,7 @@ vc4_bo_from_cache(struct vc4_screen *screen, uint32_t size, const char *name)
                  * allocate something new instead, since we assume that the
                  * user will proceed to CPU map it and fill it with stuff.
                  */
-                if (!vc4_bo_wait(bo, 0)) {
+                if (!vc4_bo_wait(bo, 0, NULL)) {
                         pipe_mutex_unlock(cache->lock);
                         return NULL;
                 }
@@ -381,15 +381,57 @@ vc4_bo_get_dmabuf(struct vc4_bo *bo)
 }
 
 struct vc4_bo *
-vc4_bo_alloc_mem(struct vc4_screen *screen, const void *data, uint32_t size,
-                 const char *name)
+vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data, uint32_t size)
 {
-        void *map;
         struct vc4_bo *bo;
+        int ret;
 
-        bo = vc4_bo_alloc(screen, size, name);
-        map = vc4_bo_map(bo);
-        memcpy(map, data, size);
+        bo = CALLOC_STRUCT(vc4_bo);
+        if (!bo)
+                return NULL;
+
+        pipe_reference_init(&bo->reference, 1);
+        bo->screen = screen;
+        bo->size = align(size, 4096);
+        bo->name = "code";
+        bo->private = false; /* Make sure it doesn't go back to the cache. */
+
+        if (!using_vc4_simulator) {
+                struct drm_vc4_create_shader_bo create = {
+                        .size = size,
+                        .data = (uintptr_t)data,
+                };
+
+                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_CREATE_SHADER_BO,
+                               &create);
+                bo->handle = create.handle;
+        } else {
+                struct drm_mode_create_dumb create;
+                memset(&create, 0, sizeof(create));
+
+                create.width = 128;
+                create.bpp = 8;
+                create.height = (size + 127) / 128;
+
+                ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+                bo->handle = create.handle;
+                assert(create.size >= size);
+
+                vc4_bo_map(bo);
+                memcpy(bo->map, data, size);
+        }
+        if (ret != 0) {
+                fprintf(stderr, "create shader ioctl failure\n");
+                abort();
+        }
+
+        screen->bo_count++;
+        screen->bo_size += bo->size;
+        if (dump_stats) {
+                fprintf(stderr, "Allocated shader %dkb:\n", size / 1024);
+                vc4_bo_dump_stats(screen);
+        }
+
         return bo;
 }
 
@@ -413,63 +455,91 @@ vc4_bo_flink(struct vc4_bo *bo, uint32_t *name)
         return true;
 }
 
+static int vc4_wait_seqno_ioctl(int fd, uint64_t seqno, uint64_t timeout_ns)
+{
+        if (using_vc4_simulator)
+                return 0;
+
+        struct drm_vc4_wait_seqno wait = {
+                .seqno = seqno,
+                .timeout_ns = timeout_ns,
+        };
+        int ret = drmIoctl(fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
+        if (ret == -1)
+                return -errno;
+        else
+                return 0;
+
+}
+
 bool
-vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns)
+vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns,
+               const char *reason)
 {
         if (screen->finished_seqno >= seqno)
                 return true;
 
-        struct drm_vc4_wait_seqno wait;
-        memset(&wait, 0, sizeof(wait));
-        wait.seqno = seqno;
-        wait.timeout_ns = timeout_ns;
-
-        int ret;
-        if (!using_vc4_simulator)
-                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
-        else {
-                wait.seqno = screen->finished_seqno;
-                ret = 0;
+        if (unlikely(vc4_debug & VC4_DEBUG_PERF) && timeout_ns && reason) {
+                if (vc4_wait_seqno_ioctl(screen->fd, seqno, 0) == -ETIME) {
+                        fprintf(stderr, "Blocking on seqno %lld for %s\n",
+                                (long long)seqno, reason);
+                }
         }
 
-        if (ret == 0) {
-                screen->finished_seqno = wait.seqno;
-                return true;
+        int ret = vc4_wait_seqno_ioctl(screen->fd, seqno, timeout_ns);
+        if (ret) {
+                if (ret != -ETIME) {
+                        fprintf(stderr, "wait failed: %d\n", ret);
+                        abort();
+                }
+
+                return false;
         }
 
-        if (errno != ETIME) {
-                fprintf(stderr, "wait failed: %d\n", ret);
-                abort();
-        }
+        screen->finished_seqno = seqno;
+        return true;
+}
 
-        return false;
+static int vc4_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
+{
+        if (using_vc4_simulator)
+                return 0;
+
+        struct drm_vc4_wait_bo wait = {
+                .handle = handle,
+                .timeout_ns = timeout_ns,
+        };
+        int ret = drmIoctl(fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
+        if (ret == -1)
+                return -errno;
+        else
+                return 0;
+
 }
 
 bool
-vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns)
+vc4_bo_wait(struct vc4_bo *bo, uint64_t timeout_ns, const char *reason)
 {
         struct vc4_screen *screen = bo->screen;
 
-        struct drm_vc4_wait_bo wait;
-        memset(&wait, 0, sizeof(wait));
-        wait.handle = bo->handle;
-        wait.timeout_ns = timeout_ns;
-
-        int ret;
-        if (!using_vc4_simulator)
-                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
-        else
-                ret = 0;
-
-        if (ret == 0)
-                return true;
-
-        if (errno != ETIME) {
-                fprintf(stderr, "wait failed: %d\n", ret);
-                abort();
+        if (unlikely(vc4_debug & VC4_DEBUG_PERF) && timeout_ns && reason) {
+                if (vc4_wait_bo_ioctl(screen->fd, bo->handle, 0) == -ETIME) {
+                        fprintf(stderr, "Blocking on %s BO for %s\n",
+                                bo->name, reason);
+                }
         }
 
-        return false;
+        int ret = vc4_wait_bo_ioctl(screen->fd, bo->handle, timeout_ns);
+        if (ret) {
+                if (ret != -ETIME) {
+                        fprintf(stderr, "wait failed: %d\n", ret);
+                        abort();
+                }
+
+                return false;
+        }
+
+        return true;
 }
 
 void *
@@ -515,7 +585,7 @@ vc4_bo_map(struct vc4_bo *bo)
 {
         void *map = vc4_bo_map_unsynchronized(bo);
 
-        bool ok = vc4_bo_wait(bo, PIPE_TIMEOUT_INFINITE);
+        bool ok = vc4_bo_wait(bo, PIPE_TIMEOUT_INFINITE, "bo map");
         if (!ok) {
                 fprintf(stderr, "BO wait for map failed\n");
                 abort();

@@ -45,11 +45,8 @@ extern "C" {
 #endif
 
 #include "glsl/ir.h"
+#include "glsl/nir/nir.h"
 
-
-struct brw_vec4_compile {
-   GLuint last_scratch; /**< measured in 32-byte (register size) units */
-};
 
 #ifdef __cplusplus
 extern "C" {
@@ -77,7 +74,7 @@ class vec4_visitor : public backend_shader, public ir_visitor
 {
 public:
    vec4_visitor(const struct brw_compiler *compiler,
-                struct brw_vec4_compile *c,
+                void *log_data,
                 struct gl_program *prog,
                 const struct brw_vue_prog_key *key,
                 struct brw_vue_prog_data *prog_data,
@@ -103,7 +100,6 @@ public:
       return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
    }
 
-   struct brw_vec4_compile * const c;
    const struct brw_vue_prog_key * const key;
    struct brw_vue_prog_data * const prog_data;
    unsigned int sanity_param_count;
@@ -181,9 +177,12 @@ public:
    void fail(const char *msg, ...);
 
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
+   virtual void setup_vector_uniform_values(const gl_constant_value *values,
+                                            unsigned n);
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);
+
    bool reg_allocate_trivial();
    bool reg_allocate();
    void evaluate_spill_costs(float *spill_costs, bool *no_spill);
@@ -292,14 +291,17 @@ public:
    void emit_bool_to_cond_code(ir_rvalue *ir, enum brw_predicate *predicate);
    void emit_if_gen6(ir_if *ir);
 
-   void emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
-                    src_reg src0, src_reg src1);
+   vec4_instruction *emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
+                                 src_reg src0, src_reg src1);
 
-   void emit_lrp(const dst_reg &dst,
-                 const src_reg &x, const src_reg &y, const src_reg &a);
+   vec4_instruction *emit_lrp(const dst_reg &dst, const src_reg &x,
+                              const src_reg &y, const src_reg &a);
 
-   /** Copy any live channel from \p src to the first channel of \p dst. */
-   void emit_uniformize(const dst_reg &dst, const src_reg &src);
+   /**
+    * Copy any live channel from \p src to the first channel of the
+    * result.
+    */
+   src_reg emit_uniformize(const src_reg &src);
 
    void emit_block_move(dst_reg *dst, src_reg *src,
                         const struct glsl_type *type, brw_predicate predicate);
@@ -317,11 +319,13 @@ public:
    void emit_scalar(ir_instruction *ir, enum prog_opcode op,
 		    dst_reg dst, src_reg src0, src_reg src1);
 
-   src_reg fix_3src_operand(src_reg src);
+   src_reg fix_3src_operand(const src_reg &src);
+   src_reg resolve_source_modifiers(const src_reg &src);
 
-   void emit_math(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
-                  const src_reg &src1 = src_reg());
-   src_reg fix_math_operand(src_reg src);
+   vec4_instruction *emit_math(enum opcode opcode, const dst_reg &dst, const src_reg &src0,
+                               const src_reg &src1 = src_reg());
+
+   src_reg fix_math_operand(const src_reg &src);
 
    void emit_pack_half_2x16(dst_reg dst, src_reg src0);
    void emit_unpack_half_2x16(dst_reg dst, src_reg src0);
@@ -330,10 +334,27 @@ public:
    void emit_pack_unorm_4x8(const dst_reg &dst, const src_reg &src0);
    void emit_pack_snorm_4x8(const dst_reg &dst, const src_reg &src0);
 
-   uint32_t gather_channel(ir_texture *ir, uint32_t sampler);
-   src_reg emit_mcs_fetch(ir_texture *ir, src_reg coordinate, src_reg sampler);
+   void emit_texture(ir_texture_opcode op,
+                     dst_reg dest,
+                     const glsl_type *dest_type,
+                     src_reg coordinate,
+                     int coord_components,
+                     src_reg shadow_comparitor,
+                     src_reg lod, src_reg lod2,
+                     src_reg sample_index,
+                     uint32_t constant_offset,
+                     src_reg offset_value,
+                     src_reg mcs,
+                     bool is_cube_array,
+                     uint32_t sampler, src_reg sampler_reg);
+
+   uint32_t gather_channel(unsigned gather_component, uint32_t sampler);
+   src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
+                          src_reg sampler);
    void emit_gen6_gather_wa(uint8_t wa, dst_reg dst);
-   void swizzle_result(ir_texture *ir, src_reg orig_val, uint32_t sampler);
+   void swizzle_result(ir_texture_opcode op, dst_reg dest,
+                       src_reg orig_val, uint32_t sampler,
+                       const glsl_type *dest_type);
 
    void emit_ndc_computation();
    void emit_psiz_and_flags(dst_reg reg);
@@ -388,13 +409,53 @@ public:
 
    void visit_atomic_counter_intrinsic(ir_call *ir);
 
+   int type_size(const struct glsl_type *type);
+   bool is_high_sampler(src_reg sampler);
+
+   virtual void emit_nir_code();
+   virtual void nir_setup_inputs(nir_shader *shader);
+   virtual void nir_setup_uniforms(nir_shader *shader);
+   virtual void nir_setup_uniform(nir_variable *var);
+   virtual void nir_setup_builtin_uniform(nir_variable *var);
+   virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
+   virtual void nir_setup_system_values(nir_shader *shader);
+   virtual void nir_emit_impl(nir_function_impl *impl);
+   virtual void nir_emit_cf_list(exec_list *list);
+   virtual void nir_emit_if(nir_if *if_stmt);
+   virtual void nir_emit_loop(nir_loop *loop);
+   virtual void nir_emit_block(nir_block *block);
+   virtual void nir_emit_instr(nir_instr *instr);
+   virtual void nir_emit_load_const(nir_load_const_instr *instr);
+   virtual void nir_emit_intrinsic(nir_intrinsic_instr *instr);
+   virtual void nir_emit_alu(nir_alu_instr *instr);
+   virtual void nir_emit_jump(nir_jump_instr *instr);
+   virtual void nir_emit_texture(nir_tex_instr *instr);
+
+   dst_reg get_nir_dest(nir_dest dest, enum brw_reg_type type);
+   dst_reg get_nir_dest(nir_dest dest, nir_alu_type type);
+   dst_reg get_nir_dest(nir_dest dest);
+   src_reg get_nir_src(nir_src src, enum brw_reg_type type,
+                       unsigned num_components = 4);
+   src_reg get_nir_src(nir_src src, nir_alu_type type,
+                       unsigned num_components = 4);
+   src_reg get_nir_src(nir_src src,
+                       unsigned num_components = 4);
+
+   virtual dst_reg *make_reg_for_system_value(int location,
+                                              const glsl_type *type) = 0;
+
+   dst_reg *nir_locals;
+   dst_reg *nir_ssa_values;
+   src_reg *nir_inputs;
+   unsigned *nir_uniform_driver_location;
+   dst_reg *nir_system_values;
+
 protected:
    void emit_vertex();
    void lower_attributes_to_hw_regs(const int *attribute_map,
                                     bool interleaved);
    void setup_payload_interference(struct ra_graph *g, int first_payload_node,
                                    int reg_node_count);
-   virtual dst_reg *make_reg_for_system_value(ir_variable *ir) = 0;
    virtual void assign_binding_table_offsets();
    virtual void setup_payload() = 0;
    virtual void emit_prolog() = 0;
@@ -403,6 +464,8 @@ protected:
    virtual void emit_urb_write_header(int mrf) = 0;
    virtual vec4_instruction *emit_urb_write_opcode(bool complete) = 0;
    virtual int compute_array_stride(ir_dereference_array *ir);
+   virtual void gs_emit_vertex(int stream_id);
+   virtual void gs_end_primitive();
 
 private:
    /**
@@ -411,6 +474,8 @@ private:
    const bool no_spills;
 
    int shader_time_index;
+
+   unsigned last_scratch; /**< measured in 32-byte (register size) units */
 };
 
 

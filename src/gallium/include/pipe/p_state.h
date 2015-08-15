@@ -61,7 +61,8 @@ extern "C" {
 #define PIPE_MAX_SHADER_INPUTS    80 /* 32 GENERIC + 32 PATCH + 16 others */
 #define PIPE_MAX_SHADER_OUTPUTS   80 /* 32 GENERIC + 32 PATCH + 16 others */
 #define PIPE_MAX_SHADER_SAMPLER_VIEWS 32
-#define PIPE_MAX_SHADER_RESOURCES 32
+#define PIPE_MAX_SHADER_BUFFERS   32
+#define PIPE_MAX_SHADER_IMAGES    32
 #define PIPE_MAX_TEXTURE_LEVELS   16
 #define PIPE_MAX_SO_BUFFERS        4
 #define PIPE_MAX_SO_OUTPUTS       64
@@ -222,6 +223,9 @@ struct pipe_depth_state
    unsigned enabled:1;         /**< depth test enabled? */
    unsigned writemask:1;       /**< allow depth buffer writes? */
    unsigned func:3;            /**< depth test func (PIPE_FUNC_x) */
+   unsigned bounds_test:1;     /**< depth bounds test enabled? */
+   float bounds_min;           /**< minimum depth bound */
+   float bounds_max;           /**< maximum depth bound */
 };
 
 
@@ -388,6 +392,31 @@ struct pipe_sampler_view
 
 
 /**
+ * A view into a writable buffer or texture that can be bound to a shader
+ * stage.
+ */
+struct pipe_image_view
+{
+   struct pipe_reference reference;
+   struct pipe_resource *resource; /**< resource into which this is a view  */
+   struct pipe_context *context; /**< context this view belongs to */
+   enum pipe_format format;      /**< typed PIPE_FORMAT_x */
+
+   union {
+      struct {
+         unsigned first_layer:16;     /**< first layer to use for array textures */
+         unsigned last_layer:16;      /**< last layer to use for array textures */
+         unsigned level:8;            /**< mipmap level to use */
+      } tex;
+      struct {
+         unsigned first_element;
+         unsigned last_element;
+      } buf;
+   } u;
+};
+
+
+/**
  * Subregion of 1D/2D/3D image resource.
  */
 struct pipe_box
@@ -464,6 +493,16 @@ struct pipe_constant_buffer
    unsigned buffer_offset; /**< offset to start of data in buffer, in bytes */
    unsigned buffer_size;   /**< how much data can be read in shader */
    const void *user_buffer;  /**< pointer to a user buffer if buffer == NULL */
+};
+
+
+/**
+ * An untyped shader buffer supporting loads, stores, and atomics.
+ */
+struct pipe_shader_buffer {
+   struct pipe_resource *buffer; /**< the actual buffer */
+   unsigned buffer_offset; /**< offset to start of data in buffer, in bytes */
+   unsigned buffer_size;   /**< how much data can be read in shader */
 };
 
 

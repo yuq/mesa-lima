@@ -31,8 +31,8 @@
    (NV50_TIC_0_MAPA__MASK | NV50_TIC_0_MAPB__MASK |   \
     NV50_TIC_0_MAPG__MASK | NV50_TIC_0_MAPR__MASK)
 
-static INLINE uint32_t
-nv50_tic_swizzle(uint32_t tc, unsigned swz, boolean tex_int)
+static inline uint32_t
+nv50_tic_swizzle(uint32_t tc, unsigned swz, bool tex_int)
 {
    switch (swz) {
    case PIPE_SWIZZLE_RED:
@@ -71,6 +71,7 @@ nv50_create_texture_view(struct pipe_context *pipe,
                          uint32_t flags,
                          enum pipe_texture_target target)
 {
+   const uint32_t class_3d = nouveau_context(pipe)->screen->class_3d;
    const struct util_format_description *desc;
    uint64_t addr;
    uint32_t *tic;
@@ -78,7 +79,7 @@ nv50_create_texture_view(struct pipe_context *pipe,
    uint32_t depth;
    struct nv50_tic_entry *view;
    struct nv50_miptree *mt = nv50_miptree(texture);
-   boolean tex_int;
+   bool tex_int;
 
    view = MALLOC_STRUCT(nv50_tic_entry);
    if (!view)
@@ -192,7 +193,7 @@ nv50_create_texture_view(struct pipe_context *pipe,
       break;
    default:
       NOUVEAU_ERR("invalid texture target: %d\n", mt->base.base.target);
-      return FALSE;
+      return false;
    }
 
    tic[3] = (flags & NV50_TEXVIEW_FILTER_MSAA8) ? 0x20000000 : 0x00300000;
@@ -201,11 +202,17 @@ nv50_create_texture_view(struct pipe_context *pipe,
 
    tic[5] = (mt->base.base.height0 << mt->ms_y) & 0xffff;
    tic[5] |= depth << 16;
-   tic[5] |= mt->base.base.last_level << NV50_TIC_5_LAST_LEVEL__SHIFT;
+   if (class_3d > NV50_3D_CLASS)
+      tic[5] |= mt->base.base.last_level << NV50_TIC_5_LAST_LEVEL__SHIFT;
+   else
+      tic[5] |= view->pipe.u.tex.last_level << NV50_TIC_5_LAST_LEVEL__SHIFT;
 
    tic[6] = (mt->ms_x > 1) ? 0x88000000 : 0x03000000; /* sampling points */
 
-   tic[7] = (view->pipe.u.tex.last_level << 4) | view->pipe.u.tex.first_level;
+   if (class_3d > NV50_3D_CLASS)
+      tic[7] = (view->pipe.u.tex.last_level << 4) | view->pipe.u.tex.first_level;
+   else
+      tic[7] = 0;
 
    if (unlikely(!(tic[2] & NV50_TIC_2_NORMALIZED_COORDS)))
       if (mt->base.base.last_level)
@@ -214,13 +221,13 @@ nv50_create_texture_view(struct pipe_context *pipe,
    return &view->pipe;
 }
 
-static boolean
+static bool
 nv50_validate_tic(struct nv50_context *nv50, int s)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    struct nouveau_bo *txc = nv50->screen->txc;
    unsigned i;
-   boolean need_flush = FALSE;
+   bool need_flush = false;
 
    assert(nv50->num_textures[s] <= PIPE_MAX_SAMPLERS);
    for (i = 0; i < nv50->num_textures[s]; ++i) {
@@ -263,7 +270,7 @@ nv50_validate_tic(struct nv50_context *nv50, int s)
          BEGIN_NI04(push, NV50_2D(SIFC_DATA), 8);
          PUSH_DATAp(push, &tic->tic[0], 8);
 
-         need_flush = TRUE;
+         need_flush = true;
       } else
       if (res->status & NOUVEAU_BUFFER_STATUS_GPU_WRITING) {
          BEGIN_NV04(push, NV50_3D(TEX_CACHE_CTL), 1);
@@ -309,7 +316,7 @@ nv50_validate_tic(struct nv50_context *nv50, int s)
 
 void nv50_validate_textures(struct nv50_context *nv50)
 {
-   boolean need_flush;
+   bool need_flush;
 
    need_flush  = nv50_validate_tic(nv50, 0);
    need_flush |= nv50_validate_tic(nv50, 1);
@@ -321,12 +328,12 @@ void nv50_validate_textures(struct nv50_context *nv50)
    }
 }
 
-static boolean
+static bool
 nv50_validate_tsc(struct nv50_context *nv50, int s)
 {
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
    unsigned i;
-   boolean need_flush = FALSE;
+   bool need_flush = false;
 
    assert(nv50->num_samplers[s] <= PIPE_MAX_SAMPLERS);
    for (i = 0; i < nv50->num_samplers[s]; ++i) {
@@ -343,7 +350,7 @@ nv50_validate_tsc(struct nv50_context *nv50, int s)
          nv50_sifc_linear_u8(&nv50->base, nv50->screen->txc,
                              65536 + tsc->id * 32,
                              NOUVEAU_BO_VRAM, 32, tsc->tsc);
-         need_flush = TRUE;
+         need_flush = true;
       }
       nv50->screen->tsc.lock[tsc->id / 32] |= 1 << (tsc->id % 32);
 
@@ -361,7 +368,7 @@ nv50_validate_tsc(struct nv50_context *nv50, int s)
 
 void nv50_validate_samplers(struct nv50_context *nv50)
 {
-   boolean need_flush;
+   bool need_flush;
 
    need_flush  = nv50_validate_tsc(nv50, 0);
    need_flush |= nv50_validate_tsc(nv50, 1);

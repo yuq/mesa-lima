@@ -112,6 +112,8 @@ vc4_get_bcl(struct drm_device *dev, struct vc4_exec_info *exec)
 
 	exec->ct0ca = exec->exec_bo->paddr + bin_offset;
 
+	exec->bin_u = bin;
+
 	exec->shader_rec_v = exec->exec_bo->vaddr + shader_rec_offset;
 	exec->shader_rec_p = exec->exec_bo->paddr + shader_rec_offset;
 	exec->shader_rec_size = args->shader_rec_size;

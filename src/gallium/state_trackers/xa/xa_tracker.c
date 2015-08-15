@@ -153,7 +153,7 @@ xa_tracker_create(int drm_fd)
     loader_fd = dup(drm_fd);
     if (loader_fd == -1)
         return NULL;
-    if (pipe_loader_drm_probe_fd(&xa->dev, loader_fd, false))
+    if (pipe_loader_drm_probe_fd(&xa->dev, loader_fd))
 	xa->screen = pipe_loader_create_screen(xa->dev, PIPE_SEARCH_DIR);
 #endif
     if (!xa->screen)
@@ -461,7 +461,7 @@ xa_surface_redefine(struct xa_surface *srf,
 			xa_min(save_height, template->height0), &src_box);
 	pipe->resource_copy_region(pipe, texture,
 				   0, 0, 0, 0, srf->tex, 0, &src_box);
-	pipe->flush(pipe, &xa->default_ctx->last_fence, 0);
+	xa_context_flush(xa->default_ctx);
     }
 
     pipe_resource_reference(&srf->tex, texture);

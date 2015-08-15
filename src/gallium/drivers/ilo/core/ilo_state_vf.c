@@ -26,7 +26,7 @@
  */
 
 #include "ilo_debug.h"
-#include "ilo_buffer.h"
+#include "ilo_vma.h"
 #include "ilo_state_vf.h"
 
 static bool
@@ -479,8 +479,8 @@ vertex_buffer_validate_gen6(const struct ilo_dev *dev,
 {
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   if (info->buf)
-      assert(info->offset < info->buf->bo_size && info->size);
+   if (info->vma)
+      assert(info->size && info->offset + info->size <= info->vma->vm_size);
 
    /*
     * From the Sandy Bridge PRM, volume 2 part 1, page 86:
@@ -500,6 +500,9 @@ vertex_buffer_validate_gen6(const struct ilo_dev *dev,
     *      aligned address, and BufferPitch must be a multiple of 64-bits."
     */
    if (info->cv_has_double) {
+      if (info->vma)
+         assert(info->vma->vm_alignment % 8 == 0);
+
       assert(info->stride % 8 == 0);
       assert((info->offset + info->cv_double_vertex_offset_mod_8) % 8 == 0);
    }
@@ -512,12 +515,7 @@ vertex_buffer_get_gen6_size(const struct ilo_dev *dev,
                             const struct ilo_state_vertex_buffer_info *info)
 {
    ILO_DEV_ASSERT(dev, 6, 8);
-
-   if (!info->buf)
-      return 0;
-
-   return (info->offset + info->size <= info->buf->bo_size) ? info->size :
-      info->buf->bo_size - info->offset;
+   return (info->vma) ? info->size : 0;
 }
 
 static bool
@@ -537,7 +535,7 @@ vertex_buffer_set_gen8_vertex_buffer_state(struct ilo_state_vertex_buffer *vb,
 
    if (ilo_dev_gen(dev) >= ILO_GEN(7))
       dw0 |= GEN7_VB_DW0_ADDR_MODIFIED;
-   if (!info->buf)
+   if (!info->vma)
       dw0 |= GEN6_VB_DW0_IS_NULL;
 
    STATIC_ASSERT(ARRAY_SIZE(vb->vb) >= 3);
@@ -551,7 +549,7 @@ vertex_buffer_set_gen8_vertex_buffer_state(struct ilo_state_vertex_buffer *vb,
       vb->vb[2] = (size) ? info->offset + size - 1 : 0;
    }
 
-   vb->need_bo = (info->buf != NULL);
+   vb->vma = info->vma;
 
    return true;
 }
@@ -586,8 +584,10 @@ index_buffer_validate_gen6(const struct ilo_dev *dev,
     */
    assert(info->offset % format_size == 0);
 
-   if (info->buf)
-      assert(info->offset < info->buf->bo_size && info->size);
+   if (info->vma) {
+      assert(info->vma->vm_alignment % format_size == 0);
+      assert(info->size && info->offset + info->size <= info->vma->vm_size);
+   }
 
    return true;
 }
@@ -600,12 +600,10 @@ index_buffer_get_gen6_size(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   if (!info->buf)
+   if (!info->vma)
       return 0;
 
-   size = (info->offset + info->size <= info->buf->bo_size) ? info->size :
-      info->buf->bo_size - info->offset;
-
+   size = info->size;
    if (ilo_dev_gen(dev) < ILO_GEN(8)) {
       const uint32_t format_size = get_index_format_size(info->format);
       size -= (size % format_size);
@@ -638,7 +636,7 @@ index_buffer_set_gen8_3DSTATE_INDEX_BUFFER(struct ilo_state_index_buffer *ib,
       ib->ib[2] = (size) ? info->offset + size - 1 : 0;
    }
 
-   ib->need_bo = (info->buf != NULL);
+   ib->vma = info->vma;
 
    return true;
 }
@@ -949,6 +947,15 @@ ilo_state_vf_get_delta(const struct ilo_state_vf *vf,
    }
 }
 
+uint32_t
+ilo_state_vertex_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                             uint32_t *alignment)
+{
+   /* align for doubles without padding */
+   *alignment = 8;
+   return size;
+}
+
 /**
  * No need to initialize first.
  */
@@ -964,6 +971,15 @@ ilo_state_vertex_buffer_set_info(struct ilo_state_vertex_buffer *vb,
    assert(ret);
 
    return ret;
+}
+
+uint32_t
+ilo_state_index_buffer_size(const struct ilo_dev *dev, uint32_t size,
+                            uint32_t *alignment)
+{
+   /* align for the worst case without padding */
+   *alignment = get_index_format_size(GEN6_INDEX_DWORD);
+   return size;
 }
 
 /**

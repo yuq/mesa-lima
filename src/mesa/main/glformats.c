@@ -186,7 +186,7 @@ get_map_idx(GLenum value)
       return IDX_RG;
    default:
       _mesa_problem(NULL, "Unexpected inFormat %s",
-                    _mesa_lookup_enum_by_nr(value));
+                    _mesa_enum_to_string(value));
       return 0;
    }
 }
@@ -216,8 +216,8 @@ _mesa_compute_component_mapping(GLenum inFormat, GLenum outFormat, GLubyte *map)
 
 #if 0
    printf("from %x/%s to %x/%s map %d %d %d %d %d %d\n",
-	  inFormat, _mesa_lookup_enum_by_nr(inFormat),
-	  outFormat, _mesa_lookup_enum_by_nr(outFormat),
+	  inFormat, _mesa_enum_to_string(inFormat),
+	  outFormat, _mesa_enum_to_string(outFormat),
 	  map[0],
 	  map[1],
 	  map[2],
@@ -1278,9 +1278,53 @@ _mesa_is_compressed_format(const struct gl_context *ctx, GLenum format)
    }
 }
 
+/**
+ * Convert various unpack formats to the corresponding base format.
+ */
+GLenum
+_mesa_unpack_format_to_base_format(GLenum format)
+{
+   switch(format) {
+   case GL_RED_INTEGER:
+      return GL_RED;
+   case GL_GREEN_INTEGER:
+      return GL_GREEN;
+   case GL_BLUE_INTEGER:
+      return GL_BLUE;
+   case GL_ALPHA_INTEGER:
+      return GL_ALPHA;
+   case GL_RG_INTEGER:
+      return GL_RG;
+   case GL_RGB_INTEGER:
+      return GL_RGB;
+   case GL_RGBA_INTEGER:
+      return GL_RGBA;
+   case GL_BGR_INTEGER:
+      return GL_BGR;
+   case GL_BGRA_INTEGER:
+      return GL_BGRA;
+   case GL_LUMINANCE_INTEGER_EXT:
+      return GL_LUMINANCE;
+   case GL_LUMINANCE_ALPHA_INTEGER_EXT:
+      return GL_LUMINANCE_ALPHA;
+   case GL_RED:
+   case GL_GREEN:
+   case GL_BLUE:
+   case GL_RG:
+   case GL_RGB:
+   case GL_RGBA:
+   case GL_BGR:
+   case GL_BGRA:
+   case GL_ALPHA:
+   case GL_LUMINANCE:
+   case GL_LUMINANCE_ALPHA:
+   default:
+      return format;
+   }
+}
 
 /**
- * Convert various base formats to the cooresponding integer format.
+ * Convert various base formats to the corresponding integer format.
  */
 GLenum
 _mesa_base_format_to_integer_format(GLenum format)
@@ -2605,8 +2649,6 @@ get_swizzle_from_gl_format(GLenum format, uint8_t *swizzle)
 uint32_t
 _mesa_format_from_format_and_type(GLenum format, GLenum type)
 {
-   mesa_array_format array_format;
-
    bool is_array_format = true;
    uint8_t swizzle[4];
    bool normalized = false, is_float = false, is_signed = false;
@@ -2662,15 +2704,9 @@ _mesa_format_from_format_and_type(GLenum format, GLenum type)
       normalized = !_mesa_is_enum_format_integer(format);
       num_channels = _mesa_components_in_format(format);
 
-      array_format =
-         MESA_ARRAY_FORMAT(type_size, is_signed, is_float,
-                           normalized, num_channels,
-                           swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
-
-      if (!_mesa_little_endian())
-         array_format = _mesa_array_format_flip_channels(array_format);
-
-      return array_format;
+      return MESA_ARRAY_FORMAT(type_size, is_signed, is_float,
+                               normalized, num_channels,
+                               swizzle[0], swizzle[1], swizzle[2], swizzle[3]);
    }
 
    /* Otherwise this is not an array format, so return the mesa_format

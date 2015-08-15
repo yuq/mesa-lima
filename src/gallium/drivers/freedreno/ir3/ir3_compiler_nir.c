@@ -117,10 +117,6 @@ struct ir3_compile {
 	/* for looking up which system value is which */
 	unsigned sysval_semantics[8];
 
-	/* list of kill instructions: */
-	struct ir3_instruction *kill[16];
-	unsigned int kill_count;
-
 	/* set if we encounter something we can't handle yet, so we
 	 * can bail cleanly and fallback to TGSI compiler f/e
 	 */
@@ -153,6 +149,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 	nir_opt_global_to_local(s);
 	nir_convert_to_ssa(s);
 	nir_lower_idiv(s);
+	nir_lower_load_const_to_scalar(s);
 
 	do {
 		progress = false;
@@ -261,12 +258,28 @@ compile_init(struct ir3_compiler *compiler,
 
 	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
 
-	/* one (vec4) slot for vertex id base: */
-	if (so->type == SHADER_VERTEX)
-		so->first_immediate++;
+	/* Layout of constant registers:
+	 *
+	 *    num_uniform * vec4  -  user consts
+	 *    4 * vec4            -  UBO addresses
+	 *    if (vertex shader) {
+	 *        1 * vec4        -  driver params (IR3_DP_*)
+	 *        1 * vec4        -  stream-out addresses
+	 *    }
+	 *
+	 * TODO this could be made more dynamic, to at least skip sections
+	 * that we don't need..
+	 */
 
 	/* reserve 4 (vec4) slots for ubo base addresses: */
 	so->first_immediate += 4;
+
+	if (so->type == SHADER_VERTEX) {
+		/* one (vec4) slot for driver params (see ir3_driver_param): */
+		so->first_immediate++;
+		/* one (vec4) slot for stream-output base addresses: */
+		so->first_immediate++;
+	}
 
 	return ctx;
 }
@@ -637,9 +650,8 @@ create_uniform_indirect(struct ir3_compile *ctx, unsigned n,
 	mov->cat1.dst_type = TYPE_U32;
 	ir3_reg_create(mov, 0, 0);
 	ir3_reg_create(mov, n, IR3_REG_CONST | IR3_REG_RELATIV);
-	mov->address = address;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
@@ -677,9 +689,8 @@ create_indirect_load(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	src->instr = collect;
 	src->size  = arrsz;
 	src->offset = n;
-	mov->address = address;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
@@ -700,25 +711,21 @@ create_indirect_store(struct ir3_compile *ctx, unsigned arrsz, unsigned n,
 	dst->size  = arrsz;
 	dst->offset = n;
 	ir3_reg_create(mov, 0, IR3_REG_SSA)->instr = src;
-	mov->address = address;
 	mov->fanin = collect;
 
-	array_insert(ctx->ir->indirects, mov);
+	ir3_instr_set_address(mov, address);
 
 	return mov;
 }
 
 static struct ir3_instruction *
-create_input(struct ir3_block *block, struct ir3_instruction *instr,
-		unsigned n)
+create_input(struct ir3_block *block, unsigned n)
 {
 	struct ir3_instruction *in;
 
 	in = ir3_instr_create(block, -1, OPC_META_INPUT);
 	in->inout.block = block;
 	ir3_reg_create(in, n, 0);
-	if (instr)
-		ir3_reg_create(in, 0, IR3_REG_SSA)->instr = instr;
 
 	return in;
 }
@@ -750,7 +757,7 @@ create_frag_coord(struct ir3_compile *ctx, unsigned comp)
 
 	compile_assert(ctx, !ctx->frag_coord[comp]);
 
-	ctx->frag_coord[comp] = create_input(ctx->block, NULL, 0);
+	ctx->frag_coord[comp] = create_input(ctx->block, 0);
 
 	switch (comp) {
 	case 0: /* .x */
@@ -789,7 +796,7 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 	case 0: /* .x */
 		compile_assert(ctx, !ctx->frag_face);
 
-		ctx->frag_face = create_input(block, NULL, 0);
+		ctx->frag_face = create_input(block, 0);
 		ctx->frag_face->regs[0]->flags |= IR3_REG_HALF;
 
 		/* for faceness, we always get -1 or 0 (int).. but TGSI expects
@@ -815,6 +822,14 @@ create_frag_face(struct ir3_compile *ctx, unsigned comp)
 	case 3: /* .w */
 		return create_immed(block, fui(1.0));
 	}
+}
+
+static struct ir3_instruction *
+create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
+{
+	/* first four vec4 sysval's reserved for UBOs: */
+	unsigned r = regid(ctx->so->first_driver_param + 4, dp);
+	return create_uniform(ctx, r);
 }
 
 /* helper for instructions that produce multiple consecutive scalar
@@ -1218,7 +1233,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction *load =
 				ir3_LDG(b, addr, 0, create_immed(b, 1), 0);
 		load->cat6.type = TYPE_U32;
-		load->cat6.offset = off + i * 4;    /* byte offset */
+		load->cat6.src_offset = off + i * 4;     /* byte offset */
 		dst[i] = load;
 	}
 }
@@ -1307,7 +1322,7 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			 * store_output_indirect? or move this into
 			 * create_indirect_store()?
 			 */
-			for (int j = i; j < arr->length; j += 4) {
+			for (int j = i; j < arr->length; j += intr->num_components) {
 				struct ir3_instruction *split;
 
 				split = ir3_instr_create(ctx->block, -1, OPC_META_FO);
@@ -1317,6 +1332,13 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 
 				arr->arr[j] = split;
 			}
+		}
+		/* fixup fanout/split neighbors: */
+		for (int i = 0; i < arr->length; i++) {
+			arr->arr[i]->cp.right = (i < (arr->length - 1)) ?
+					arr->arr[i+1] : NULL;
+			arr->arr[i]->cp.left = (i > 0) ?
+					arr->arr[i-1] : NULL;
 		}
 		break;
 	}
@@ -1372,6 +1394,11 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 			dst[i] = create_uniform_indirect(ctx, n,
 					get_addr(ctx, src[0]));
 		}
+		/* NOTE: if relative addressing is used, we set constlen in
+		 * the compiler (to worst-case value) since we don't know in
+		 * the assembler what the max addr reg value can be:
+		 */
+		ctx->so->constlen = ctx->s->num_uniforms;
 		break;
 	case nir_intrinsic_load_ubo:
 	case nir_intrinsic_load_ubo_indirect:
@@ -1409,9 +1436,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_base_vertex:
 		if (!ctx->basevertex) {
-			/* first four vec4 sysval's reserved for UBOs: */
-			unsigned r = regid(ctx->so->first_driver_param + 4, 0);
-			ctx->basevertex = create_uniform(ctx, r);
+			ctx->basevertex = create_driver_param(ctx, IR3_DP_VTXID_BASE);
 			add_sysval_input(ctx, TGSI_SEMANTIC_BASEVERTEX,
 					ctx->basevertex);
 		}
@@ -1419,7 +1444,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
-			ctx->vertex_id = create_input(ctx->block, NULL, 0);
+			ctx->vertex_id = create_input(ctx->block, 0);
 			add_sysval_input(ctx, TGSI_SEMANTIC_VERTEXID_NOBASE,
 					ctx->vertex_id);
 		}
@@ -1427,7 +1452,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		break;
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
-			ctx->instance_id = create_input(ctx->block, NULL, 0);
+			ctx->instance_id = create_input(ctx->block, 0);
 			add_sysval_input(ctx, TGSI_SEMANTIC_INSTANCEID,
 					ctx->instance_id);
 		}
@@ -1456,7 +1481,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		kill = ir3_KILL(b, cond, 0);
 		array_insert(ctx->ir->predicates, kill);
 
-		ctx->kill[ctx->kill_count++] = kill;
+		array_insert(ctx->ir->keeps, kill);
 		ctx->so->has_kill = true;
 
 		break;
@@ -1950,6 +1975,115 @@ emit_cf_list(struct ir3_compile *ctx, struct exec_list *list)
 	}
 }
 
+/* emit stream-out code.  At this point, the current block is the original
+ * (nir) end block, and nir ensures that all flow control paths terminate
+ * into the end block.  We re-purpose the original end block to generate
+ * the 'if (vtxcnt < maxvtxcnt)' condition, then append the conditional
+ * block holding stream-out write instructions, followed by the new end
+ * block:
+ *
+ *   blockOrigEnd {
+ *      p0.x = (vtxcnt < maxvtxcnt)
+ *      // succs: blockStreamOut, blockNewEnd
+ *   }
+ *   blockStreamOut {
+ *      ... stream-out instructions ...
+ *      // succs: blockNewEnd
+ *   }
+ *   blockNewEnd {
+ *   }
+ */
+static void
+emit_stream_out(struct ir3_compile *ctx)
+{
+	struct ir3_shader_variant *v = ctx->so;
+	struct ir3 *ir = ctx->ir;
+	struct pipe_stream_output_info *strmout =
+			&ctx->so->shader->stream_output;
+	struct ir3_block *orig_end_block, *stream_out_block, *new_end_block;
+	struct ir3_instruction *vtxcnt, *maxvtxcnt, *cond;
+	struct ir3_instruction *bases[PIPE_MAX_SO_BUFFERS];
+
+	/* create vtxcnt input in input block at top of shader,
+	 * so that it is seen as live over the entire duration
+	 * of the shader:
+	 */
+	vtxcnt = create_input(ctx->in_block, 0);
+	add_sysval_input(ctx, IR3_SEMANTIC_VTXCNT, vtxcnt);
+
+	maxvtxcnt = create_driver_param(ctx, IR3_DP_VTXCNT_MAX);
+
+	/* at this point, we are at the original 'end' block,
+	 * re-purpose this block to stream-out condition, then
+	 * append stream-out block and new-end block
+	 */
+	orig_end_block = ctx->block;
+
+	stream_out_block = ir3_block_create(ir);
+	list_addtail(&stream_out_block->node, &ir->block_list);
+
+	new_end_block = ir3_block_create(ir);
+	list_addtail(&new_end_block->node, &ir->block_list);
+
+	orig_end_block->successors[0] = stream_out_block;
+	orig_end_block->successors[1] = new_end_block;
+	stream_out_block->successors[0] = new_end_block;
+
+	/* setup 'if (vtxcnt < maxvtxcnt)' condition: */
+	cond = ir3_CMPS_S(ctx->block, vtxcnt, 0, maxvtxcnt, 0);
+	cond->regs[0]->num = regid(REG_P0, 0);
+	cond->cat2.condition = IR3_COND_LT;
+
+	/* condition goes on previous block to the conditional,
+	 * since it is used to pick which of the two successor
+	 * paths to take:
+	 */
+	orig_end_block->condition = cond;
+
+	/* switch to stream_out_block to generate the stream-out
+	 * instructions:
+	 */
+	ctx->block = stream_out_block;
+
+	/* Calculate base addresses based on vtxcnt.  Instructions
+	 * generated for bases not used in following loop will be
+	 * stripped out in the backend.
+	 */
+	for (unsigned i = 0; i < PIPE_MAX_SO_BUFFERS; i++) {
+		unsigned stride = strmout->stride[i];
+		struct ir3_instruction *base, *off;
+
+		base = create_uniform(ctx, regid(v->first_driver_param + 5, i));
+
+		/* 24-bit should be enough: */
+		off = ir3_MUL_U(ctx->block, vtxcnt, 0,
+				create_immed(ctx->block, stride * 4), 0);
+
+		bases[i] = ir3_ADD_S(ctx->block, off, 0, base, 0);
+	}
+
+	/* Generate the per-output store instructions: */
+	for (unsigned i = 0; i < strmout->num_outputs; i++) {
+		for (unsigned j = 0; j < strmout->output[i].num_components; j++) {
+			unsigned c = j + strmout->output[i].start_component;
+			struct ir3_instruction *base, *out, *stg;
+
+			base = bases[strmout->output[i].output_buffer];
+			out = ctx->ir->outputs[regid(strmout->output[i].register_index, c)];
+
+			stg = ir3_STG(ctx->block, base, 0, out, 0,
+					create_immed(ctx->block, 1), 0);
+			stg->cat6.type = TYPE_U32;
+			stg->cat6.dst_offset = (strmout->output[i].dst_offset + j) * 4;
+
+			array_insert(ctx->ir->keeps, stg);
+		}
+	}
+
+	/* and finally switch to the new_end_block: */
+	ctx->block = new_end_block;
+}
+
 static void
 emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 {
@@ -1960,6 +2094,24 @@ emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 	 * into which we emit the 'end' instruction.
 	 */
 	compile_assert(ctx, list_empty(&ctx->block->instr_list));
+
+	/* If stream-out (aka transform-feedback) enabled, emit the
+	 * stream-out instructions, followed by a new empty block (into
+	 * which the 'end' instruction lands).
+	 *
+	 * NOTE: it is done in this order, rather than inserting before
+	 * we emit end_block, because NIR guarantees that all blocks
+	 * flow into end_block, and that end_block has no successors.
+	 * So by re-purposing end_block as the first block of stream-
+	 * out, we guarantee that all exit paths flow into the stream-
+	 * out instructions.
+	 */
+	if ((ctx->so->shader->stream_output.num_outputs > 0) &&
+			!ctx->so->key.binning_pass) {
+		debug_assert(ctx->so->type == SHADER_VERTEX);
+		emit_stream_out(ctx);
+	}
+
 	ir3_END(ctx->block);
 }
 
@@ -1974,7 +2126,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	unsigned semantic_index = in->data.index;
 	unsigned n = in->data.driver_location;
 
-	DBG("; in: %u:%u, len=%ux%u, loc=%u\n",
+	DBG("; in: %u:%u, len=%ux%u, loc=%u",
 			semantic_name, semantic_index, array_len,
 			ncomp, n);
 
@@ -2045,7 +2197,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 						so->inputs[n].inloc + i - 8, use_ldlv);
 			}
 		} else {
-			instr = create_input(ctx->block, NULL, idx);
+			instr = create_input(ctx->block, idx);
 		}
 
 		ctx->ir->inputs[idx] = instr;
@@ -2069,7 +2221,7 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 	unsigned n = out->data.driver_location;
 	unsigned comp = 0;
 
-	DBG("; out: %u:%u, len=%ux%u, loc=%u\n",
+	DBG("; out: %u:%u, len=%ux%u, loc=%u",
 			semantic_name, semantic_index, array_len,
 			ncomp, n);
 
@@ -2098,6 +2250,10 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 			so->writes_pos = true;
 			break;
 		case TGSI_SEMANTIC_COLOR:
+			if (semantic_index == -1) {
+				semantic_index = 0;
+				so->color0_mrt = 1;
+			}
 			break;
 		default:
 			compile_error(ctx, "unknown FS semantic name: %s\n",
@@ -2136,13 +2292,9 @@ emit_instructions(struct ir3_compile *ctx)
 	ninputs  = exec_list_length(&ctx->s->inputs) * 4;
 	noutputs = exec_list_length(&ctx->s->outputs) * 4;
 
-	/* we need to allocate big enough outputs array so that
-	 * we can stuff the kill's at the end.  Likewise for vtx
-	 * shaders, we need to leave room for sysvals:
+	/* or vtx shaders, we need to leave room for sysvals:
 	 */
-	if (ctx->so->type == SHADER_FRAGMENT) {
-		noutputs += ARRAY_SIZE(ctx->kill);
-	} else if (ctx->so->type == SHADER_VERTEX) {
+	if (ctx->so->type == SHADER_VERTEX) {
 		ninputs += 8;
 	}
 
@@ -2153,9 +2305,7 @@ emit_instructions(struct ir3_compile *ctx)
 	ctx->in_block = ctx->block;
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
-	if (ctx->so->type == SHADER_FRAGMENT) {
-		ctx->ir->noutputs -= ARRAY_SIZE(ctx->kill);
-	} else if (ctx->so->type == SHADER_VERTEX) {
+	if (ctx->so->type == SHADER_VERTEX) {
 		ctx->ir->ninputs -= 8;
 	}
 
@@ -2254,13 +2404,13 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 	so->pos_regid = regid;
 
 	/* r0.x */
-	instr = create_input(ctx->in_block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[1]->instr = instr;
 
 	/* r0.y */
-	instr = create_input(ctx->in_block, NULL, ir->ninputs);
+	instr = create_input(ctx->in_block, ir->ninputs);
 	instr->regs[0]->num = regid++;
 	inputs[ir->ninputs++] = instr;
 	ctx->frag_pos->regs[2]->instr = instr;
@@ -2270,9 +2420,7 @@ fixup_frag_inputs(struct ir3_compile *ctx)
 
 int
 ir3_compile_shader_nir(struct ir3_compiler *compiler,
-		struct ir3_shader_variant *so,
-		const struct tgsi_token *tokens,
-		struct ir3_shader_key key)
+		struct ir3_shader_variant *so)
 {
 	struct ir3_compile *ctx;
 	struct ir3 *ir;
@@ -2282,7 +2430,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 
 	assert(!so->ir);
 
-	ctx = compile_init(compiler, so, tokens);
+	ctx = compile_init(compiler, so, so->shader->tokens);
 	if (!ctx) {
 		DBG("INIT failed!");
 		ret = -1;
@@ -2307,7 +2455,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		fixup_frag_inputs(ctx);
 
 	/* at this point, for binning pass, throw away unneeded outputs: */
-	if (key.binning_pass) {
+	if (so->key.binning_pass) {
 		for (i = 0, j = 0; i < so->outputs_count; i++) {
 			unsigned name = sem2name(so->outputs[i].semantic);
 			unsigned idx = sem2idx(so->outputs[i].semantic);
@@ -2332,7 +2480,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	/* if we want half-precision outputs, mark the output registers
 	 * as half:
 	 */
-	if (key.half_precision) {
+	if (so->key.half_precision) {
 		for (i = 0; i < ir->noutputs; i++) {
 			struct ir3_instruction *out = ir->outputs[i];
 			if (!out)
@@ -2351,15 +2499,6 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 				out->cat1.dst_type = half_type(out->cat1.dst_type);
 			}
 		}
-	}
-
-	/* at this point, we want the kill's in the outputs array too,
-	 * so that they get scheduled (since they have no dst).. we've
-	 * already ensured that the array is big enough in push_block():
-	 */
-	if (so->type == SHADER_FRAGMENT) {
-		for (i = 0; i < ctx->kill_count; i++)
-			ir->outputs[ir->noutputs++] = ctx->kill[i];
 	}
 
 	if (fd_mesa_debug & FD_DBG_OPTMSGS) {

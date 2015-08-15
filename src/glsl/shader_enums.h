@@ -38,9 +38,11 @@
 typedef enum
 {
    MESA_SHADER_VERTEX = 0,
-   MESA_SHADER_GEOMETRY = 1,
-   MESA_SHADER_FRAGMENT = 2,
-   MESA_SHADER_COMPUTE = 3,
+   MESA_SHADER_TESS_CTRL = 1,
+   MESA_SHADER_TESS_EVAL = 2,
+   MESA_SHADER_GEOMETRY = 3,
+   MESA_SHADER_FRAGMENT = 4,
+   MESA_SHADER_COMPUTE = 5,
 } gl_shader_stage;
 
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
@@ -152,7 +154,7 @@ typedef enum
     * \name Geometry shader system values
     */
    /*@{*/
-   SYSTEM_VALUE_INVOCATION_ID,
+   SYSTEM_VALUE_INVOCATION_ID,  /**< (Also in Tessellation Control shader) */
    /*@}*/
 
    /**
@@ -163,6 +165,17 @@ typedef enum
    SYSTEM_VALUE_SAMPLE_ID,
    SYSTEM_VALUE_SAMPLE_POS,
    SYSTEM_VALUE_SAMPLE_MASK_IN,
+   /*@}*/
+
+   /**
+    * \name Tessellation Evaluation shader system values
+    */
+   /*@{*/
+   SYSTEM_VALUE_TESS_COORD,
+   SYSTEM_VALUE_VERTICES_IN,    /**< Tessellation vertices in input patch */
+   SYSTEM_VALUE_PRIMITIVE_ID,   /**< (currently not used by GS) */
+   SYSTEM_VALUE_TESS_LEVEL_OUTER, /**< TES input */
+   SYSTEM_VALUE_TESS_LEVEL_INNER, /**< TES input */
    /*@}*/
 
    SYSTEM_VALUE_MAX             /**< Number of values */
@@ -322,15 +335,20 @@ typedef enum
    VARYING_SLOT_BFC0, /* Does not appear in FS */
    VARYING_SLOT_BFC1, /* Does not appear in FS */
    VARYING_SLOT_EDGE, /* Does not appear in FS */
-   VARYING_SLOT_CLIP_VERTEX, /* Does not appear in FS */ VARYING_SLOT_CLIP_DIST0,
+   VARYING_SLOT_CLIP_VERTEX, /* Does not appear in FS */
+   VARYING_SLOT_CLIP_DIST0,
    VARYING_SLOT_CLIP_DIST1,
    VARYING_SLOT_PRIMITIVE_ID, /* Does not appear in VS */
    VARYING_SLOT_LAYER, /* Appears as VS or GS output */
    VARYING_SLOT_VIEWPORT, /* Appears as VS or GS output */
    VARYING_SLOT_FACE, /* FS only */
    VARYING_SLOT_PNTC, /* FS only */
+   VARYING_SLOT_TESS_LEVEL_OUTER, /* Only appears as TCS output. */
+   VARYING_SLOT_TESS_LEVEL_INNER, /* Only appears as TCS output. */
    VARYING_SLOT_VAR0, /* First generic varying slot */
-   VARYING_SLOT_MAX = VARYING_SLOT_VAR0 + MAX_VARYING
+   VARYING_SLOT_MAX = VARYING_SLOT_VAR0 + MAX_VARYING,
+   VARYING_SLOT_PATCH0 = VARYING_SLOT_MAX,
+   VARYING_SLOT_TESS_MAX = VARYING_SLOT_PATCH0 + MAX_VARYING
 } gl_varying_slot;
 
 

@@ -37,6 +37,8 @@
 #include <xf86drm.h>
 #include <errno.h>
 
+#include "loader.h"
+
 #include "pipe/p_screen.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
@@ -293,6 +295,16 @@ vl_screen_get_private(struct vl_screen *vscreen)
    return vscreen;
 }
 
+static xcb_screen_t *
+get_xcb_screen(xcb_screen_iterator_t iter, int screen)
+{
+    for (; iter.rem; --screen, xcb_screen_next(&iter))
+        if (screen == 0)
+            return iter.data;
+
+    return NULL;
+}
+
 struct vl_screen*
 vl_screen_create(Display *display, int screen)
 {
@@ -334,8 +346,7 @@ vl_screen_create(Display *display, int screen)
       goto free_query;
 
    s = xcb_setup_roots_iterator(xcb_get_setup(scrn->conn));
-   while (screen--)
-	xcb_screen_next(&s);
+
    driverType = XCB_DRI2_DRIVER_TYPE_DRI;
 #ifdef DRI2DriverPrimeShift
    {
@@ -351,7 +362,7 @@ vl_screen_create(Display *display, int screen)
    }
 #endif
 
-   connect_cookie = xcb_dri2_connect_unchecked(scrn->conn, s.data->root, driverType);
+   connect_cookie = xcb_dri2_connect_unchecked(scrn->conn, get_xcb_screen(s, screen)->root, driverType);
    connect = xcb_dri2_connect_reply(scrn->conn, connect_cookie, NULL);
    if (connect == NULL || connect->driver_name_length + connect->device_name_length == 0)
       goto free_connect;
@@ -361,7 +372,7 @@ vl_screen_create(Display *display, int screen)
    if (!device_name)
       goto free_connect;
    memcpy(device_name, xcb_dri2_connect_device_name(connect), device_name_length);
-   fd = open(device_name, O_RDWR);
+   fd = loader_open_device(device_name);
    free(device_name);
 
    if (fd < 0)
@@ -370,7 +381,7 @@ vl_screen_create(Display *display, int screen)
    if (drmGetMagic(fd, &magic))
       goto free_connect;
 
-   authenticate_cookie = xcb_dri2_authenticate_unchecked(scrn->conn, s.data->root, magic);
+   authenticate_cookie = xcb_dri2_authenticate_unchecked(scrn->conn, get_xcb_screen(s, screen)->root, magic);
    authenticate = xcb_dri2_authenticate_reply(scrn->conn, authenticate_cookie, NULL);
 
    if (authenticate == NULL || !authenticate->authenticated)
@@ -379,7 +390,7 @@ vl_screen_create(Display *display, int screen)
 #if GALLIUM_STATIC_TARGETS
    scrn->base.pscreen = dd_create_screen(fd);
 #else
-   if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd, false))
+   if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd))
       scrn->base.pscreen = pipe_loader_create_screen(scrn->base.dev, PIPE_SEARCH_DIR);
 #endif // GALLIUM_STATIC_TARGETS
 

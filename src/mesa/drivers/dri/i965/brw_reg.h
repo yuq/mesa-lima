@@ -853,7 +853,7 @@ static inline struct brw_reg
 spread(struct brw_reg reg, unsigned s)
 {
    if (s) {
-      assert(is_power_of_two(s));
+      assert(_mesa_is_pow_two(s));
 
       if (reg.hstride)
          reg.hstride += cvt(s) - 1;
@@ -948,6 +948,12 @@ brw_set_writemask(struct brw_reg reg, unsigned mask)
    assert(reg.file != BRW_IMMEDIATE_VALUE);
    reg.dw1.bits.writemask = mask;
    return reg;
+}
+
+static inline unsigned
+brw_writemask_for_size(unsigned n)
+{
+   return (1 << n) - 1;
 }
 
 static inline struct brw_reg

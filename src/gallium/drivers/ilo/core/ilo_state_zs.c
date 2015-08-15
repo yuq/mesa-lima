@@ -25,10 +25,9 @@
  *    Chia-I Wu <olv@lunarg.com>
  */
 
-#include "intel_winsys.h"
-
 #include "ilo_debug.h"
 #include "ilo_image.h"
+#include "ilo_vma.h"
 #include "ilo_state_zs.h"
 
 static bool
@@ -56,68 +55,7 @@ zs_set_gen6_null_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[3] = 0;
    zs->depth[4] = 0;
 
-   zs->depth_format = format;
-
    return true;
-}
-
-static enum gen_surface_type
-get_gen6_surface_type(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   switch (img->target) {
-   case PIPE_TEXTURE_1D:
-   case PIPE_TEXTURE_1D_ARRAY:
-      return GEN6_SURFTYPE_1D;
-   case PIPE_TEXTURE_2D:
-   case PIPE_TEXTURE_CUBE:
-   case PIPE_TEXTURE_RECT:
-   case PIPE_TEXTURE_2D_ARRAY:
-   case PIPE_TEXTURE_CUBE_ARRAY:
-      return GEN6_SURFTYPE_2D;
-   case PIPE_TEXTURE_3D:
-      return GEN6_SURFTYPE_3D;
-   default:
-      assert(!"unknown texture target");
-      return GEN6_SURFTYPE_NULL;
-   }
-}
-
-static enum gen_depth_format
-get_gen6_depth_format(const struct ilo_dev *dev, const struct ilo_image *img)
-{
-   ILO_DEV_ASSERT(dev, 6, 8);
-
-   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
-      switch (img->format) {
-      case PIPE_FORMAT_Z32_FLOAT:
-         return GEN6_ZFORMAT_D32_FLOAT;
-      case PIPE_FORMAT_Z24X8_UNORM:
-         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-      case PIPE_FORMAT_Z16_UNORM:
-         return GEN6_ZFORMAT_D16_UNORM;
-      default:
-         assert(!"unknown depth format");
-         return GEN6_ZFORMAT_D32_FLOAT;
-      }
-   } else {
-      switch (img->format) {
-      case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-         return GEN6_ZFORMAT_D32_FLOAT_S8X24_UINT;
-      case PIPE_FORMAT_Z32_FLOAT:
-         return GEN6_ZFORMAT_D32_FLOAT;
-      case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-         return GEN6_ZFORMAT_D24_UNORM_S8_UINT;
-      case PIPE_FORMAT_Z24X8_UNORM:
-         return GEN6_ZFORMAT_D24_UNORM_X8_UINT;
-      case PIPE_FORMAT_Z16_UNORM:
-         return GEN6_ZFORMAT_D16_UNORM;
-      default:
-         assert(!"unknown depth format");
-         return GEN6_ZFORMAT_D32_FLOAT;
-      }
-   }
 }
 
 static bool
@@ -128,63 +66,102 @@ zs_validate_gen6(const struct ilo_dev *dev,
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
+   assert(!info->z_img == !info->z_vma);
+   assert(!info->s_img == !info->s_vma);
+
+   /* all tiled */
+   if (info->z_img) {
+      assert(info->z_img->tiling == GEN6_TILING_Y);
+      assert(info->z_vma->vm_alignment % 4096 == 0);
+   }
+   if (info->s_img) {
+      assert(info->s_img->tiling == GEN8_TILING_W);
+      assert(info->s_vma->vm_alignment % 4096 == 0);
+   }
+   if (info->hiz_vma) {
+      assert(info->z_img &&
+             ilo_image_can_enable_aux(info->z_img, info->level));
+      assert(info->z_vma->vm_alignment % 4096 == 0);
+   }
+
    /*
     * From the Ivy Bridge PRM, volume 2 part 1, page 315:
     *
-    *      The stencil buffer has a format of S8_UINT, and shares Surface
+    *     "The stencil buffer has a format of S8_UINT, and shares Surface
     *      Type, Height, Width, and Depth, Minimum Array Element, Render
     *      Target View Extent, Depth Coordinate Offset X/Y, LOD, and Depth
-    *      Buffer Object Control State fields of the depth buffer.
+    *      Buffer Object Control State fields of the depth buffer."
     */
-   if (info->z_img == info->s_img) {
-      assert(info->z_img->target == info->s_img->target &&
-             info->z_img->width0 == info->s_img->width0 &&
+   if (info->z_img && info->s_img && info->z_img != info->s_img) {
+      assert(info->z_img->type == info->s_img->type &&
              info->z_img->height0 == info->s_img->height0 &&
              info->z_img->depth0 == info->s_img->depth0);
+   }
+
+   if (info->type != img->type) {
+      assert(info->type == GEN6_SURFTYPE_2D &&
+             img->type == GEN6_SURFTYPE_CUBE);
+   }
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(7)) {
+      switch (info->format) {
+      case GEN6_ZFORMAT_D32_FLOAT:
+      case GEN6_ZFORMAT_D24_UNORM_X8_UINT:
+      case GEN6_ZFORMAT_D16_UNORM:
+         break;
+      default:
+         assert(!"unknown depth format");
+         break;
+      }
+   } else {
+      /*
+       * From the Ironlake PRM, volume 2 part 1, page 330:
+       *
+       *     "If this field (Separate Stencil Buffer Enable) is disabled, the
+       *      Surface Format of the depth buffer cannot be D24_UNORM_X8_UINT."
+       *
+       * From the Sandy Bridge PRM, volume 2 part 1, page 321:
+       *
+       *     "[DevSNB]: This field (Separate Stencil Buffer Enable) must be
+       *      set to the same value (enabled or disabled) as Hierarchical
+       *      Depth Buffer Enable."
+       */
+      if (info->hiz_vma)
+         assert(info->format != GEN6_ZFORMAT_D24_UNORM_S8_UINT);
+      else
+         assert(info->format != GEN6_ZFORMAT_D24_UNORM_X8_UINT);
    }
 
    assert(info->level < img->level_count);
    assert(img->bo_stride);
 
-   if (info->hiz_enable) {
-      assert(info->z_img &&
-             ilo_image_can_enable_aux(info->z_img, info->level));
-   }
-
-   if (info->is_cube_map) {
-      assert(get_gen6_surface_type(dev, img) == GEN6_SURFTYPE_2D);
-
-      /*
-       * From the Sandy Bridge PRM, volume 2 part 1, page 323:
-       *
-       *     "For cube maps, Width must be set equal to Height."
-       */
+   /*
+    * From the Sandy Bridge PRM, volume 2 part 1, page 323:
+    *
+    *     "For cube maps, Width must be set equal to Height."
+    */
+   if (info->type == GEN6_SURFTYPE_CUBE)
       assert(img->width0 == img->height0);
-   }
-
-   if (info->z_img)
-      assert(info->z_img->tiling == GEN6_TILING_Y);
-   if (info->s_img)
-      assert(info->s_img->tiling == GEN8_TILING_W);
 
    return true;
 }
 
 static void
-get_gen6_max_extent(const struct ilo_dev *dev,
-                    const struct ilo_image *img,
-                    uint16_t *max_w, uint16_t *max_h)
+zs_get_gen6_max_extent(const struct ilo_dev *dev,
+                       const struct ilo_state_zs_info *info,
+                       uint16_t *max_w, uint16_t *max_h)
 {
    const uint16_t max_size = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 16384 : 8192;
 
    ILO_DEV_ASSERT(dev, 6, 8);
 
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
       *max_w = max_size;
       *max_h = 1;
       break;
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       *max_w = max_size;
       *max_h = max_size;
       break;
@@ -274,7 +251,7 @@ zs_get_gen6_depth_extent(const struct ilo_dev *dev,
    w = img->width0;
    h = img->height0;
 
-   if (info->hiz_enable) {
+   if (info->hiz_vma) {
       uint16_t align_w, align_h;
 
       get_gen6_hiz_alignments(dev, info->z_img, &align_w, &align_h);
@@ -290,7 +267,7 @@ zs_get_gen6_depth_extent(const struct ilo_dev *dev,
       h = align(h, align_h);
    }
 
-   get_gen6_max_extent(dev, img, &max_w, &max_h);
+   zs_get_gen6_max_extent(dev, info, &max_w, &max_h);
    assert(w && h && w <= max_w && h <= max_h);
 
    *width = w - 1;
@@ -319,16 +296,17 @@ zs_get_gen6_depth_slices(const struct ilo_dev *dev,
     *      surfaces. If the volume texture is MIP-mapped, this field specifies
     *      the depth of the base MIP level."
     */
-   switch (get_gen6_surface_type(dev, img)) {
+   switch (info->type) {
    case GEN6_SURFTYPE_1D:
    case GEN6_SURFTYPE_2D:
+   case GEN6_SURFTYPE_CUBE:
       max_slice = (ilo_dev_gen(dev) >= ILO_GEN(7)) ? 2048 : 512;
 
       assert(img->array_size <= max_slice);
       max_slice = img->array_size;
 
       d = info->slice_count;
-      if (info->is_cube_map) {
+      if (info->type == GEN6_SURFTYPE_CUBE) {
          /*
           * Minumum Array Element and Depth must be 0; Render Target View
           * Extent is ignored.
@@ -408,8 +386,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_state_zs_info *info)
 {
    uint16_t width, height, depth, array_base, view_extent;
-   enum gen_surface_type type;
-   enum gen_depth_format format;
    uint32_t dw1, dw2, dw3, dw4;
 
    ILO_DEV_ASSERT(dev, 6, 6);
@@ -420,37 +396,15 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  &view_extent))
       return false;
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-          (info->z_img) ? get_gen6_surface_type(dev, info->z_img) :
-                          get_gen6_surface_type(dev, info->s_img);
-
-   format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
-      GEN6_ZFORMAT_D32_FLOAT;
-
-   /*
-    * From the Ironlake PRM, volume 2 part 1, page 330:
-    *
-    *     "If this field (Separate Stencil Buffer Enable) is disabled, the
-    *      Surface Format of the depth buffer cannot be D24_UNORM_X8_UINT."
-    *
-    * From the Sandy Bridge PRM, volume 2 part 1, page 321:
-    *
-    *     "[DevSNB]: This field (Separate Stencil Buffer Enable) must be set
-    *      to the same value (enabled or disabled) as Hierarchical Depth
-    *      Buffer Enable."
-    */
-   if (!info->hiz_enable && format == GEN6_ZFORMAT_D24_UNORM_X8_UINT)
-      format = GEN6_ZFORMAT_D24_UNORM_S8_UINT;
-
    /* info->z_readonly and info->s_readonly are ignored on Gen6 */
-   dw1 = type << GEN6_DEPTH_DW1_TYPE__SHIFT |
+   dw1 = info->type << GEN6_DEPTH_DW1_TYPE__SHIFT |
          GEN6_TILING_Y << GEN6_DEPTH_DW1_TILING__SHIFT |
-         format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
+         info->format << GEN6_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info->z_img)
       dw1 |= (info->z_img->bo_stride - 1) << GEN6_DEPTH_DW1_PITCH__SHIFT;
 
-   if (info->hiz_enable || !info->z_img) {
+   if (info->hiz_vma || !info->z_img) {
       dw1 |= GEN6_DEPTH_DW1_HIZ_ENABLE |
              GEN6_DEPTH_DW1_SEPARATE_STENCIL;
    }
@@ -471,8 +425,6 @@ zs_set_gen6_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[3] = dw4;
    zs->depth[4] = 0;
 
-   zs->depth_format = format;
-
    return true;
 }
 
@@ -481,8 +433,6 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  const struct ilo_dev *dev,
                                  const struct ilo_state_zs_info *info)
 {
-   enum gen_surface_type type;
-   enum gen_depth_format format;
    uint16_t width, height, depth;
    uint16_t array_base, view_extent;
    uint32_t dw1, dw2, dw3, dw4, dw6;
@@ -495,20 +445,13 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
                                  &view_extent))
       return false;
 
-   type = (info->is_cube_map) ? GEN6_SURFTYPE_CUBE :
-          (info->z_img) ? get_gen6_surface_type(dev, info->z_img) :
-                          get_gen6_surface_type(dev, info->s_img);
-
-   format = (info->z_img) ? get_gen6_depth_format(dev, info->z_img) :
-      GEN6_ZFORMAT_D32_FLOAT;
-
-   dw1 = type << GEN7_DEPTH_DW1_TYPE__SHIFT |
-         format << GEN7_DEPTH_DW1_FORMAT__SHIFT;
+   dw1 = info->type << GEN7_DEPTH_DW1_TYPE__SHIFT |
+         info->format << GEN7_DEPTH_DW1_FORMAT__SHIFT;
 
    if (info->z_img) {
       if (!info->z_readonly)
          dw1 |= GEN7_DEPTH_DW1_DEPTH_WRITE_ENABLE;
-      if (info->hiz_enable)
+      if (info->hiz_vma)
          dw1 |= GEN7_DEPTH_DW1_HIZ_ENABLE;
 
       dw1 |= (info->z_img->bo_stride - 1) << GEN7_DEPTH_DW1_PITCH__SHIFT;
@@ -538,8 +481,6 @@ zs_set_gen7_3DSTATE_DEPTH_BUFFER(struct ilo_state_zs *zs,
    zs->depth[2] = dw3;
    zs->depth[3] = dw4;
    zs->depth[4] = dw6;
-
-   zs->depth_format = format;
 
    return true;
 }
@@ -683,10 +624,14 @@ ilo_state_zs_init(struct ilo_state_zs *zs, const struct ilo_dev *dev,
    else
       ret &= zs_set_gen6_null_3DSTATE_STENCIL_BUFFER(zs, dev);
 
-   if (info->z_img && info->hiz_enable)
+   if (info->z_img && info->hiz_vma)
       ret &= zs_set_gen6_3DSTATE_HIER_DEPTH_BUFFER(zs, dev, info);
    else
       ret &= zs_set_gen6_null_3DSTATE_HIER_DEPTH_BUFFER(zs, dev);
+
+   zs->z_vma = info->z_vma;
+   zs->s_vma = info->s_vma;
+   zs->hiz_vma = info->hiz_vma;
 
    zs->z_readonly = info->z_readonly;
    zs->s_readonly = info->s_readonly;
@@ -703,6 +648,8 @@ ilo_state_zs_init_for_null(struct ilo_state_zs *zs,
    struct ilo_state_zs_info info;
 
    memset(&info, 0, sizeof(info));
+   info.type = GEN6_SURFTYPE_NULL;
+   info.format = GEN6_ZFORMAT_D32_FLOAT;
 
    return ilo_state_zs_init(zs, dev, &info);
 }
@@ -720,8 +667,11 @@ ilo_state_zs_disable_hiz(struct ilo_state_zs *zs,
     */
    assert(ilo_dev_gen(dev) >= ILO_GEN(7));
 
-   zs->depth[0] &= ~GEN7_DEPTH_DW1_HIZ_ENABLE;
-   zs_set_gen6_null_3DSTATE_HIER_DEPTH_BUFFER(zs, dev);
+   if (zs->hiz_vma) {
+      zs->depth[0] &= ~GEN7_DEPTH_DW1_HIZ_ENABLE;
+      zs_set_gen6_null_3DSTATE_HIER_DEPTH_BUFFER(zs, dev);
+      zs->hiz_vma = NULL;
+   }
 
    return true;
 }

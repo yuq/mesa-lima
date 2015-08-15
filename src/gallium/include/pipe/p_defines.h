@@ -351,9 +351,10 @@ enum pipe_flush_flags
 #define PIPE_BIND_CURSOR               (1 << 11) /* mouse cursor */
 #define PIPE_BIND_CUSTOM               (1 << 12) /* state-tracker/winsys usages */
 #define PIPE_BIND_GLOBAL               (1 << 13) /* set_global_binding */
-#define PIPE_BIND_SHADER_RESOURCE      (1 << 14) /* set_shader_resources */
-#define PIPE_BIND_COMPUTE_RESOURCE     (1 << 15) /* set_compute_resources */
-#define PIPE_BIND_COMMAND_ARGS_BUFFER  (1 << 16) /* pipe_draw_info.indirect */
+#define PIPE_BIND_SHADER_BUFFER        (1 << 14) /* set_shader_buffers */
+#define PIPE_BIND_SHADER_IMAGE         (1 << 15) /* set_shader_images */
+#define PIPE_BIND_COMPUTE_RESOURCE     (1 << 16) /* set_compute_resources */
+#define PIPE_BIND_COMMAND_ARGS_BUFFER  (1 << 17) /* pipe_draw_info.indirect */
 
 /**
  * The first two flags above were previously part of the amorphous
@@ -374,9 +375,9 @@ enum pipe_flush_flags
  * The third flag has been added to be able to force textures to be created
  * in linear mode (no tiling).
  */
-#define PIPE_BIND_SCANOUT     (1 << 17) /*  */
-#define PIPE_BIND_SHARED      (1 << 18) /* get_texture_handle ??? */
-#define PIPE_BIND_LINEAR      (1 << 19)
+#define PIPE_BIND_SCANOUT     (1 << 18) /*  */
+#define PIPE_BIND_SHARED      (1 << 19) /* get_texture_handle ??? */
+#define PIPE_BIND_LINEAR      (1 << 20)
 
 
 /**
@@ -605,6 +606,10 @@ enum pipe_cap
    PIPE_CAP_MULTISAMPLE_Z_RESOLVE,
    PIPE_CAP_RESOURCE_FROM_USER_MEMORY,
    PIPE_CAP_DEVICE_RESET_STATUS_QUERY,
+   PIPE_CAP_MAX_SHADER_PATCH_VARYINGS,
+   PIPE_CAP_TEXTURE_FLOAT_LINEAR,
+   PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR,
+   PIPE_CAP_DEPTH_BOUNDS_TEST,
 };
 
 #define PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_NV50 (1 << 0)
@@ -700,7 +705,8 @@ enum pipe_compute_cap
    PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE,
    PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY,
    PIPE_COMPUTE_CAP_MAX_COMPUTE_UNITS,
-   PIPE_COMPUTE_CAP_IMAGES_SUPPORTED
+   PIPE_COMPUTE_CAP_IMAGES_SUPPORTED,
+   PIPE_COMPUTE_CAP_SUBGROUP_SIZE
 };
 
 /**
@@ -759,6 +765,7 @@ union pipe_query_result
    /* PIPE_QUERY_PRIMITIVES_GENERATED */
    /* PIPE_QUERY_PRIMITIVES_EMITTED */
    /* PIPE_DRIVER_QUERY_TYPE_UINT64 */
+   /* PIPE_DRIVER_QUERY_TYPE_HZ */
    uint64_t u64;
 
    /* PIPE_DRIVER_QUERY_TYPE_UINT */
@@ -787,17 +794,28 @@ union pipe_color_union
 
 enum pipe_driver_query_type
 {
-   PIPE_DRIVER_QUERY_TYPE_UINT64     = 0,
-   PIPE_DRIVER_QUERY_TYPE_UINT       = 1,
-   PIPE_DRIVER_QUERY_TYPE_FLOAT      = 2,
-   PIPE_DRIVER_QUERY_TYPE_PERCENTAGE = 3,
-   PIPE_DRIVER_QUERY_TYPE_BYTES      = 4,
+   PIPE_DRIVER_QUERY_TYPE_UINT64       = 0,
+   PIPE_DRIVER_QUERY_TYPE_UINT         = 1,
+   PIPE_DRIVER_QUERY_TYPE_FLOAT        = 2,
+   PIPE_DRIVER_QUERY_TYPE_PERCENTAGE   = 3,
+   PIPE_DRIVER_QUERY_TYPE_BYTES        = 4,
+   PIPE_DRIVER_QUERY_TYPE_MICROSECONDS = 5,
+   PIPE_DRIVER_QUERY_TYPE_HZ           = 6,
 };
 
 enum pipe_driver_query_group_type
 {
    PIPE_DRIVER_QUERY_GROUP_TYPE_CPU = 0,
    PIPE_DRIVER_QUERY_GROUP_TYPE_GPU = 1,
+};
+
+/* Whether an average value per frame or a cumulative value should be
+ * displayed.
+ */
+enum pipe_driver_query_result_type
+{
+   PIPE_DRIVER_QUERY_RESULT_TYPE_AVERAGE = 0,
+   PIPE_DRIVER_QUERY_RESULT_TYPE_CUMULATIVE = 1,
 };
 
 union pipe_numeric_type_union
@@ -813,6 +831,7 @@ struct pipe_driver_query_info
    unsigned query_type; /* PIPE_QUERY_DRIVER_SPECIFIC + i */
    union pipe_numeric_type_union max_value; /* max value that can be returned */
    enum pipe_driver_query_type type;
+   enum pipe_driver_query_result_type result_type;
    unsigned group_id;
 };
 

@@ -27,7 +27,7 @@
 
 #include "nvc0/nvc0_context.h"
 
-static INLINE void
+static inline void
 nvc0_program_update_context_state(struct nvc0_context *nvc0,
                                   struct nvc0_program *prog, int stage)
 {
@@ -63,22 +63,22 @@ nvc0_program_update_context_state(struct nvc0_context *nvc0,
    }
 }
 
-static INLINE boolean
+static inline bool
 nvc0_program_validate(struct nvc0_context *nvc0, struct nvc0_program *prog)
 {
    if (prog->mem)
-      return TRUE;
+      return true;
 
    if (!prog->translated) {
       prog->translated = nvc0_program_translate(
          prog, nvc0->screen->base.device->chipset);
       if (!prog->translated)
-         return FALSE;
+         return false;
    }
 
    if (likely(prog->code_size))
       return nvc0_program_upload_code(nvc0, prog);
-   return TRUE; /* stream output info only */
+   return true; /* stream output info only */
 }
 
 void
@@ -147,9 +147,6 @@ nvc0_tctlprog_validate(struct nvc0_context *nvc0)
       PUSH_DATA (push, tp->code_base);
       BEGIN_NVC0(push, NVC0_3D(SP_GPR_ALLOC(2)), 1);
       PUSH_DATA (push, tp->num_gprs);
-
-      if (tp->tp.input_patch_size <= 32)
-         IMMED_NVC0(push, NVC0_3D(PATCH_VERTICES), tp->tp.input_patch_size);
    } else {
       BEGIN_NVC0(push, NVC0_3D(SP_SELECT(2)), 1);
       PUSH_DATA (push, 0x20);
@@ -192,7 +189,7 @@ nvc0_gmtyprog_validate(struct nvc0_context *nvc0)
 
    /* we allow GPs with no code for specifying stream output state only */
    if (gp && gp->code_size) {
-      const boolean gp_selects_layer = !!(gp->hdr[13] & (1 << 9));
+      const bool gp_selects_layer = !!(gp->hdr[13] & (1 << 9));
 
       BEGIN_NVC0(push, NVC0_3D(MACRO_GP_SELECT), 1);
       PUSH_DATA (push, 0x41);
@@ -280,7 +277,7 @@ nvc0_tfb_validate(struct nvc0_context *nvc0)
          nvc0_query_pushbuf_submit(push, targ->pq, 0x4);
       } else {
          PUSH_DATA(push, 0); /* TFB_BUFFER_OFFSET */
-         targ->clean = FALSE;
+         targ->clean = false;
       }
    }
    for (; b < 4; ++b)

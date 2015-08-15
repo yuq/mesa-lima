@@ -291,7 +291,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 			instr->regs[n+1] = src_reg;
 
 			if (src_reg->flags & IR3_REG_RELATIV)
-				instr->address = reg->instr->address;
+				ir3_instr_set_address(instr, reg->instr->address);
 
 			return;
 		}
@@ -300,7 +300,7 @@ reg_cp(struct ir3_instruction *instr, struct ir3_register *reg, unsigned n)
 				!conflicts(instr->address, reg->instr->address)) {
 			src_reg->flags = new_flags;
 			instr->regs[n+1] = src_reg;
-			instr->address = reg->instr->address;
+			ir3_instr_set_address(instr, reg->instr->address);
 
 			return;
 		}
@@ -389,7 +389,7 @@ instr_cp(struct ir3_instruction *instr, unsigned *flags)
 	}
 
 	if (instr->address)
-		instr->address = instr_cp(instr->address, NULL);
+		ir3_instr_set_address(instr, instr_cp(instr->address, NULL));
 
 	return instr;
 }
@@ -406,6 +406,10 @@ ir3_cp(struct ir3 *ir)
 
 			ir->outputs[i] = out;
 		}
+	}
+
+	for (unsigned i = 0; i < ir->keeps_count; i++) {
+		ir->keeps[i] = instr_cp(ir->keeps[i], NULL);
 	}
 
 	list_for_each_entry (struct ir3_block, block, &ir->block_list, node) {

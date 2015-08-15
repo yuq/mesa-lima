@@ -43,7 +43,7 @@ struct shader_translator;
 
 typedef HRESULT (*translate_instruction_func)(struct shader_translator *);
 
-static INLINE const char *d3dsio_to_string(unsigned opcode);
+static inline const char *d3dsio_to_string(unsigned opcode);
 
 
 #define NINED3D_SM1_VS 0xfffe
@@ -239,7 +239,7 @@ struct sm1_dst_param
     BYTE type;
 };
 
-static INLINE void
+static inline void
 assert_replicate_swizzle(const struct ureg_src *reg)
 {
     assert(reg->SwizzleY == reg->SwizzleX &&
@@ -608,7 +608,7 @@ tx_set_lconstb(struct shader_translator *tx, INT index, BOOL b)
        ureg_imm1f(tx->ureg, b ? 1.0f : 0.0f);
 }
 
-static INLINE struct ureg_dst
+static inline struct ureg_dst
 tx_scratch(struct shader_translator *tx)
 {
     if (tx->num_scratch >= Elements(tx->regs.t)) {
@@ -620,13 +620,13 @@ tx_scratch(struct shader_translator *tx)
     return tx->regs.t[tx->num_scratch++];
 }
 
-static INLINE struct ureg_dst
+static inline struct ureg_dst
 tx_scratch_scalar(struct shader_translator *tx)
 {
     return ureg_writemask(tx_scratch(tx), TGSI_WRITEMASK_X);
 }
 
-static INLINE struct ureg_src
+static inline struct ureg_src
 tx_src_scalar(struct ureg_dst dst)
 {
     struct ureg_src src = ureg_src(dst);
@@ -636,7 +636,7 @@ tx_src_scalar(struct ureg_dst dst)
     return src;
 }
 
-static INLINE void
+static inline void
 tx_temp_alloc(struct shader_translator *tx, INT idx)
 {
     assert(idx >= 0);
@@ -654,7 +654,7 @@ tx_temp_alloc(struct shader_translator *tx, INT idx)
         tx->regs.r[idx] = ureg_DECL_temporary(tx->ureg);
 }
 
-static INLINE void
+static inline void
 tx_addr_alloc(struct shader_translator *tx, INT idx)
 {
     assert(idx == 0);
@@ -664,7 +664,7 @@ tx_addr_alloc(struct shader_translator *tx, INT idx)
         tx->regs.a0 = ureg_DECL_temporary(tx->ureg);
 }
 
-static INLINE void
+static inline void
 tx_pred_alloc(struct shader_translator *tx, INT idx)
 {
     assert(idx == 0);
@@ -672,7 +672,7 @@ tx_pred_alloc(struct shader_translator *tx, INT idx)
         tx->regs.p = ureg_DECL_predicate(tx->ureg);
 }
 
-static INLINE void
+static inline void
 tx_texcoord_alloc(struct shader_translator *tx, INT idx)
 {
     assert(IS_PS);
@@ -682,7 +682,7 @@ tx_texcoord_alloc(struct shader_translator *tx, INT idx)
                                              TGSI_INTERPOLATE_PERSPECTIVE);
 }
 
-static INLINE unsigned *
+static inline unsigned *
 tx_bgnloop(struct shader_translator *tx)
 {
     tx->loop_depth++;
@@ -692,7 +692,7 @@ tx_bgnloop(struct shader_translator *tx)
     return &tx->loop_labels[tx->loop_depth - 1];
 }
 
-static INLINE unsigned *
+static inline unsigned *
 tx_endloop(struct shader_translator *tx)
 {
     assert(tx->loop_depth);
@@ -741,7 +741,7 @@ tx_get_loopal(struct shader_translator *tx)
     return ureg_src_undef();
 }
 
-static INLINE unsigned *
+static inline unsigned *
 tx_cond(struct shader_translator *tx)
 {
    assert(tx->cond_depth <= NINE_MAX_COND_DEPTH);
@@ -749,14 +749,14 @@ tx_cond(struct shader_translator *tx)
    return &tx->cond_labels[tx->cond_depth - 1];
 }
 
-static INLINE unsigned *
+static inline unsigned *
 tx_elsecond(struct shader_translator *tx)
 {
    assert(tx->cond_depth);
    return &tx->cond_labels[tx->cond_depth - 1];
 }
 
-static INLINE void
+static inline void
 tx_endcond(struct shader_translator *tx)
 {
    assert(tx->cond_depth);
@@ -765,7 +765,7 @@ tx_endcond(struct shader_translator *tx)
                     ureg_get_instruction_number(tx->ureg));
 }
 
-static INLINE struct ureg_dst
+static inline struct ureg_dst
 nine_ureg_dst_register(unsigned file, int index)
 {
     return ureg_dst(ureg_src_register(file, index));
@@ -1240,7 +1240,7 @@ NineTranslateInstruction_Mkxn(struct shader_translator *tx, const unsigned k, co
 #define VNOTSUPPORTED   0, 0
 #define V(maj, min)     (((maj) << 8) | (min))
 
-static INLINE const char *
+static inline const char *
 d3dsio_to_string( unsigned opcode )
 {
     static const char *names[] = {
@@ -1657,7 +1657,7 @@ DECL_SPECIAL(IF)
     return D3D_OK;
 }
 
-static INLINE unsigned
+static inline unsigned
 sm1_insn_flags_to_tgsi_setop(BYTE flags)
 {
     switch (flags) {
@@ -1724,7 +1724,7 @@ static const char *sm1_declusage_names[] =
     [D3DDECLUSAGE_SAMPLE] = "SAMPLE"
 };
 
-static INLINE unsigned
+static inline unsigned
 sm1_to_nine_declusage(struct sm1_semantic *dcl)
 {
     return nine_d3d9_to_nine_declusage(dcl->usage, dcl->usage_idx);
@@ -1833,7 +1833,7 @@ sm1_declusage_to_tgsi(struct tgsi_declaration_semantic *sem,
 #define NINED3DSTT_2D     (D3DSTT_2D >> D3DSP_TEXTURETYPE_SHIFT)
 #define NINED3DSTT_VOLUME (D3DSTT_VOLUME >> D3DSP_TEXTURETYPE_SHIFT)
 #define NINED3DSTT_CUBE   (D3DSTT_CUBE >> D3DSP_TEXTURETYPE_SHIFT)
-static INLINE unsigned
+static inline unsigned
 d3dstt_to_tgsi_tex(BYTE sampler_type)
 {
     switch (sampler_type) {
@@ -1846,7 +1846,7 @@ d3dstt_to_tgsi_tex(BYTE sampler_type)
         return TGSI_TEXTURE_UNKNOWN;
     }
 }
-static INLINE unsigned
+static inline unsigned
 d3dstt_to_tgsi_tex_shadow(BYTE sampler_type)
 {
     switch (sampler_type) {
@@ -1859,7 +1859,7 @@ d3dstt_to_tgsi_tex_shadow(BYTE sampler_type)
         return TGSI_TEXTURE_UNKNOWN;
     }
 }
-static INLINE unsigned
+static inline unsigned
 ps1x_sampler_type(const struct nine_shader_info *info, unsigned stage)
 {
     switch ((info->sampler_ps1xtypes >> (stage * 2)) & 0x3) {
@@ -1884,7 +1884,7 @@ sm1_sampler_type_name(BYTE sampler_type)
     }
 }
 
-static INLINE unsigned
+static inline unsigned
 nine_tgsi_to_interp_mode(struct tgsi_declaration_semantic *sem)
 {
     switch (sem->Name) {
@@ -2685,7 +2685,7 @@ create_op_info_map(struct shader_translator *tx)
     }
 }
 
-static INLINE HRESULT
+static inline HRESULT
 NineTranslateInstruction_Generic(struct shader_translator *tx)
 {
     struct ureg_dst dst[1];
@@ -2703,19 +2703,19 @@ NineTranslateInstruction_Generic(struct shader_translator *tx)
     return D3D_OK;
 }
 
-static INLINE DWORD
+static inline DWORD
 TOKEN_PEEK(struct shader_translator *tx)
 {
     return *(tx->parse);
 }
 
-static INLINE DWORD
+static inline DWORD
 TOKEN_NEXT(struct shader_translator *tx)
 {
     return *(tx->parse)++;
 }
 
-static INLINE void
+static inline void
 TOKEN_JUMP(struct shader_translator *tx)
 {
     if (tx->parse_next && tx->parse != tx->parse_next) {
@@ -2724,7 +2724,7 @@ TOKEN_JUMP(struct shader_translator *tx)
     }
 }
 
-static INLINE boolean
+static inline boolean
 sm1_parse_eof(struct shader_translator *tx)
 {
     return TOKEN_PEEK(tx) == NINED3DSP_END;
@@ -3063,7 +3063,7 @@ tx_dtor(struct shader_translator *tx)
     FREE(tx);
 }
 
-static INLINE unsigned
+static inline unsigned
 tgsi_processor_from_type(unsigned shader_type)
 {
     switch (shader_type) {

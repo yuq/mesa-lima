@@ -213,7 +213,7 @@ struct tgsi_sampler
  * input register files, this is the stride between two 1D
  * arrays.
  */
-#define TGSI_EXEC_MAX_INPUT_ATTRIBS PIPE_MAX_SHADER_INPUTS
+#define TGSI_EXEC_MAX_INPUT_ATTRIBS 32
 
 /* The maximum number of bytes per constant buffer.
  */
@@ -386,7 +386,7 @@ boolean
 tgsi_check_soa_dependencies(const struct tgsi_full_instruction *inst);
 
 
-static INLINE void
+static inline void
 tgsi_set_kill_mask(struct tgsi_exec_machine *mach, unsigned mask)
 {
    mach->Temps[TGSI_EXEC_TEMP_KILMASK_I].xyzw[TGSI_EXEC_TEMP_KILMASK_C].u[0] =
@@ -395,7 +395,7 @@ tgsi_set_kill_mask(struct tgsi_exec_machine *mach, unsigned mask)
 
 
 /** Set execution mask values prior to executing the shader */
-static INLINE void
+static inline void
 tgsi_set_exec_mask(struct tgsi_exec_machine *mach,
                    boolean ch0, boolean ch1, boolean ch2, boolean ch3)
 {
@@ -414,7 +414,7 @@ tgsi_exec_set_constant_buffers(struct tgsi_exec_machine *mach,
                                const unsigned *buf_sizes);
 
 
-static INLINE int
+static inline int
 tgsi_exec_get_shader_param(enum pipe_shader_cap param)
 {
    switch(param) {

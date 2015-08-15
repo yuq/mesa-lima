@@ -417,10 +417,14 @@ ir_reader::read_declaration(s_expression *expr)
 	 var->data.centroid = 1;
       } else if (strcmp(qualifier->value(), "sample") == 0) {
          var->data.sample = 1;
+      } else if (strcmp(qualifier->value(), "patch") == 0) {
+         var->data.patch = 1;
       } else if (strcmp(qualifier->value(), "invariant") == 0) {
 	 var->data.invariant = 1;
       } else if (strcmp(qualifier->value(), "uniform") == 0) {
 	 var->data.mode = ir_var_uniform;
+      } else if (strcmp(qualifier->value(), "shader_storage") == 0) {
+	 var->data.mode = ir_var_shader_storage;
       } else if (strcmp(qualifier->value(), "auto") == 0) {
 	 var->data.mode = ir_var_auto;
       } else if (strcmp(qualifier->value(), "in") == 0) {

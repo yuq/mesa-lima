@@ -62,6 +62,27 @@ namespace brw {
    class fs_live_variables;
 }
 
+static inline fs_reg
+offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
+{
+   switch (reg.file) {
+   case BAD_FILE:
+      break;
+   case GRF:
+   case MRF:
+   case HW_REG:
+   case ATTR:
+      return byte_offset(reg,
+                         delta * reg.component_size(bld.dispatch_width()));
+   case UNIFORM:
+      reg.reg_offset += delta;
+      break;
+   case IMM:
+      assert(delta == 0);
+   }
+   return reg;
+}
+
 /**
  * The fragment shader front-end.
  *
@@ -161,7 +182,9 @@ public:
    void no16(const char *msg);
    void lower_uniform_pull_constant_loads();
    bool lower_load_payload();
+   bool lower_logical_sends();
    bool lower_integer_multiplication();
+   bool lower_simd_width();
    bool opt_combine_constants();
 
    void emit_dummy_fs();
@@ -185,27 +208,6 @@ public:
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
    fs_reg rescale_texcoord(fs_reg coordinate, int coord_components,
                            bool is_rect, uint32_t sampler, int texunit);
-   fs_inst *emit_texture_gen4(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int coord_components,
-                              fs_reg shadow_comp,
-                              fs_reg lod, fs_reg lod2, int grad_components,
-                              uint32_t sampler);
-   fs_inst *emit_texture_gen4_simd16(ir_texture_opcode op, fs_reg dst,
-                                     fs_reg coordinate, int vector_elements,
-                                     fs_reg shadow_c, fs_reg lod,
-                                     uint32_t sampler);
-   fs_inst *emit_texture_gen5(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int coord_components,
-                              fs_reg shadow_comp,
-                              fs_reg lod, fs_reg lod2, int grad_components,
-                              fs_reg sample_index, uint32_t sampler,
-                              bool has_offset);
-   fs_inst *emit_texture_gen7(ir_texture_opcode op, fs_reg dst,
-                              fs_reg coordinate, int coord_components,
-                              fs_reg shadow_comp,
-                              fs_reg lod, fs_reg lod2, int grad_components,
-                              fs_reg sample_index, fs_reg mcs, fs_reg sampler,
-                              fs_reg offset_value);
    void emit_texture(ir_texture_opcode op,
                      const glsl_type *dest_type,
                      fs_reg coordinate, int components,
@@ -220,9 +222,10 @@ public:
                      uint32_t sampler,
                      fs_reg sampler_reg,
                      int texunit);
-   fs_reg emit_mcs_fetch(fs_reg coordinate, int components, fs_reg sampler);
+   fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
+                         const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
-   void resolve_source_modifiers(fs_reg *src);
+   fs_reg resolve_source_modifiers(const fs_reg &src);
    void emit_discard_jump();
    bool try_replace_with_sel();
    bool opt_peephole_sel();
@@ -249,6 +252,10 @@ public:
    void nir_emit_block(nir_block *block);
    void nir_emit_instr(nir_instr *instr);
    void nir_emit_alu(const brw::fs_builder &bld, nir_alu_instr *instr);
+   void nir_emit_load_const(const brw::fs_builder &bld,
+                            nir_load_const_instr *instr);
+   void nir_emit_undef(const brw::fs_builder &bld,
+                       nir_ssa_undef_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
    void nir_emit_texture(const brw::fs_builder &bld,
@@ -257,21 +264,19 @@ public:
                       nir_jump_instr *instr);
    fs_reg get_nir_src(nir_src src);
    fs_reg get_nir_dest(nir_dest dest);
+   fs_reg get_nir_image_deref(const nir_deref_var *deref);
    void emit_percomp(const brw::fs_builder &bld, const fs_inst &inst,
                      unsigned wr_mask);
 
    bool optimize_frontfacing_ternary(nir_alu_instr *instr,
                                      const fs_reg &result);
 
-   void setup_color_payload(fs_reg *dst, fs_reg color, unsigned components,
-                            unsigned exec_size, bool use_2nd_half);
    void emit_alpha_test();
    fs_inst *emit_single_fb_write(const brw::fs_builder &bld,
                                  fs_reg color1, fs_reg color2,
-                                 fs_reg src0_alpha, unsigned components,
-                                 unsigned exec_size, bool use_2nd_half = false);
+                                 fs_reg src0_alpha, unsigned components);
    void emit_fb_writes();
-   void emit_urb_writes(gl_clip_plane *clip_planes);
+   void emit_urb_writes();
    void emit_cs_terminate();
 
    void emit_barrier();
@@ -282,16 +287,13 @@ public:
                         int shader_time_subindex,
                         fs_reg value);
 
-   void emit_untyped_atomic(unsigned atomic_op, unsigned surf_index,
-                            fs_reg dst, fs_reg offset, fs_reg src0,
-                            fs_reg src1);
-
-   void emit_untyped_surface_read(unsigned surf_index, fs_reg dst,
-                                  fs_reg offset);
-
    fs_reg get_timestamp(const brw::fs_builder &bld);
 
    struct brw_reg interp_reg(int location, int channel);
+
+   virtual void setup_vector_uniform_values(const gl_constant_value *values,
+                                            unsigned n);
+
    int implied_mrf_writes(fs_inst *inst);
 
    virtual void dump_instructions();
@@ -345,7 +347,7 @@ public:
    unsigned max_grf;
 
    fs_reg *nir_locals;
-   fs_reg *nir_globals;
+   fs_reg *nir_ssa_values;
    fs_reg nir_inputs;
    fs_reg nir_outputs;
    fs_reg *nir_system_values;
@@ -359,7 +361,7 @@ public:
    fs_reg result;
 
    /** Register numbers for thread payload fields. */
-   struct {
+   struct thread_payload {
       uint8_t source_depth_reg;
       uint8_t source_w_reg;
       uint8_t aa_dest_stencil_reg;
@@ -467,10 +469,6 @@ private:
                                           struct brw_reg src,
                                           struct brw_reg msg_data,
                                           unsigned msg_type);
-
-   void generate_set_omask(fs_inst *inst,
-                           struct brw_reg dst,
-                           struct brw_reg sample_mask);
 
    void generate_set_sample_id(fs_inst *inst,
                                struct brw_reg dst,

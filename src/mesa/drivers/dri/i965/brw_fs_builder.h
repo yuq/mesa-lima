@@ -64,6 +64,22 @@ namespace brw {
       }
 
       /**
+       * Construct an fs_builder that inserts instructions into \p shader
+       * before instruction \p inst in basic block \p block.  The default
+       * execution controls and debug annotation are initialized from the
+       * instruction passed as argument.
+       */
+      fs_builder(backend_shader *shader, bblock_t *block, fs_inst *inst) :
+         shader(shader), block(block), cursor(inst),
+         _dispatch_width(inst->exec_size),
+         _group(inst->force_sechalf ? 8 : 0),
+         force_writemask_all(inst->force_writemask_all)
+      {
+         annotation.str = inst->annotation;
+         annotation.ir = inst->ir;
+      }
+
+      /**
        * Construct an fs_builder that inserts instructions before \p cursor in
        * basic block \p block, inheriting other code generation parameters
        * from this.
@@ -99,8 +115,8 @@ namespace brw {
       fs_builder
       group(unsigned n, unsigned i) const
       {
-         assert(n <= dispatch_width() &&
-                i < dispatch_width() / n);
+         assert(force_writemask_all ||
+                (n <= dispatch_width() && i < dispatch_width() / n));
          fs_builder bld = *this;
          bld._dispatch_width = n;
          bld._group += i * n;
@@ -160,10 +176,15 @@ namespace brw {
       dst_reg
       vgrf(enum brw_reg_type type, unsigned n = 1) const
       {
-         return dst_reg(GRF, shader->alloc.allocate(
-                           DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
-                                        REG_SIZE)),
-                        type, dispatch_width());
+         assert(dispatch_width() <= 32);
+
+         if (n > 0)
+            return dst_reg(GRF, shader->alloc.allocate(
+                              DIV_ROUND_UP(n * type_sz(type) * dispatch_width(),
+                                           REG_SIZE)),
+                           type);
+         else
+            return retype(null_reg_ud(), type);
       }
 
       /**
@@ -235,7 +256,7 @@ namespace brw {
       instruction *
       emit(enum opcode opcode, const dst_reg &dst) const
       {
-         return emit(instruction(opcode, dst));
+         return emit(instruction(opcode, dispatch_width(), dst));
       }
 
       /**
@@ -253,11 +274,11 @@ namespace brw {
          case SHADER_OPCODE_SIN:
          case SHADER_OPCODE_COS:
             return fix_math_instruction(
-               emit(instruction(opcode, dst.width, dst,
+               emit(instruction(opcode, dispatch_width(), dst,
                                 fix_math_operand(src0))));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0));
+            return emit(instruction(opcode, dispatch_width(), dst, src0));
          }
       }
 
@@ -273,12 +294,12 @@ namespace brw {
          case SHADER_OPCODE_INT_QUOTIENT:
          case SHADER_OPCODE_INT_REMAINDER:
             return fix_math_instruction(
-               emit(instruction(opcode, dst.width, dst,
+               emit(instruction(opcode, dispatch_width(), dst,
                                 fix_math_operand(src0),
                                 fix_math_operand(src1))));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0, src1));
+            return emit(instruction(opcode, dispatch_width(), dst, src0, src1));
 
          }
       }
@@ -295,14 +316,26 @@ namespace brw {
          case BRW_OPCODE_BFI2:
          case BRW_OPCODE_MAD:
          case BRW_OPCODE_LRP:
-            return emit(instruction(opcode, dst.width, dst,
+            return emit(instruction(opcode, dispatch_width(), dst,
                                     fix_3src_operand(src0),
                                     fix_3src_operand(src1),
                                     fix_3src_operand(src2)));
 
          default:
-            return emit(instruction(opcode, dst.width, dst, src0, src1, src2));
+            return emit(instruction(opcode, dispatch_width(), dst,
+                                    src0, src1, src2));
          }
+      }
+
+      /**
+       * Create and insert an instruction with a variable number of sources
+       * into the program.
+       */
+      instruction *
+      emit(enum opcode opcode, const dst_reg &dst, const src_reg srcs[],
+           unsigned n) const
+      {
+         return emit(instruction(opcode, dispatch_width(), dst, srcs, n));
       }
 
       /**
@@ -311,6 +344,7 @@ namespace brw {
       instruction *
       emit(instruction *inst) const
       {
+         assert(inst->exec_size <= 32);
          assert(inst->exec_size == dispatch_width() ||
                 force_writemask_all);
          assert(_group == 0 || _group == 8);
@@ -349,17 +383,19 @@ namespace brw {
       }
 
       /**
-       * Copy any live channel from \p src to the first channel of \p dst.
+       * Copy any live channel from \p src to the first channel of the result.
        */
-      void
-      emit_uniformize(const dst_reg &dst, const src_reg &src) const
+      src_reg
+      emit_uniformize(const src_reg &src) const
       {
          const fs_builder ubld = exec_all();
-         const dst_reg chan_index = vgrf(BRW_REGISTER_TYPE_UD);
+         const dst_reg chan_index = component(vgrf(BRW_REGISTER_TYPE_UD), 0);
+         const dst_reg dst = component(vgrf(src.type), 0);
 
-         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, component(chan_index, 0));
-         ubld.emit(SHADER_OPCODE_BROADCAST, component(dst, 0),
-                   src, component(chan_index, 0));
+         ubld.emit(SHADER_OPCODE_FIND_LIVE_CHANNEL, chan_index);
+         ubld.emit(SHADER_OPCODE_BROADCAST, dst, src, chan_index);
+
+         return src_reg(dst);
       }
 
       /**
@@ -515,20 +551,10 @@ namespace brw {
       LOAD_PAYLOAD(const dst_reg &dst, const src_reg *src,
                    unsigned sources, unsigned header_size) const
       {
-         assert(dst.width % 8 == 0);
-         instruction *inst = emit(instruction(SHADER_OPCODE_LOAD_PAYLOAD,
-                                              dst.width, dst, src, sources));
+         instruction *inst = emit(SHADER_OPCODE_LOAD_PAYLOAD, dst, src, sources);
          inst->header_size = header_size;
-
-         for (unsigned i = 0; i < header_size; i++)
-            assert(src[i].file != GRF ||
-                   src[i].width * type_sz(src[i].type) == 32);
-         inst->regs_written = header_size;
-
-         for (unsigned i = header_size; i < sources; ++i)
-            assert(src[i].file != GRF ||
-                   src[i].width == dst.width);
-         inst->regs_written += (sources - header_size) * (dst.width / 8);
+         inst->regs_written = header_size +
+                              (sources - header_size) * (dispatch_width() / 8);
 
          return inst;
       }
@@ -626,8 +652,8 @@ namespace brw {
                inst->resize_sources(1);
                inst->src[0] = src0;
 
-               at(block, inst).MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type,
-                                          dispatch_width()), src1);
+               at(block, inst).MOV(fs_reg(MRF, inst->base_mrf + 1, src1.type),
+                                   src1);
             }
          }
 

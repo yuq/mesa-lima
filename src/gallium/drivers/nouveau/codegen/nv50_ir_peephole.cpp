@@ -608,9 +608,12 @@ ConstantFolding::expr(Instruction *i,
    case OP_FMA: {
       i->op = OP_ADD;
 
+      /* Move the immediate to the second arg, otherwise the ADD operation
+       * won't be emittable
+       */
       i->setSrc(1, i->getSrc(0));
-      i->src(1).mod = i->src(2).mod;
       i->setSrc(0, i->getSrc(2));
+      i->src(0).mod = i->src(2).mod;
       i->setSrc(2, NULL);
 
       ImmediateValue src0;
@@ -2082,6 +2085,8 @@ MemoryOpt::runOpt(BasicBlock *bb)
       }
       if (ldst->getPredicate()) // TODO: handle predicated ld/st
          continue;
+      if (ldst->perPatch) // TODO: create separate per-patch lists
+         continue;
 
       if (isLoad) {
          DataFile file = ldst->src(0).getFile();
@@ -2515,6 +2520,8 @@ Instruction::isResultEqual(const Instruction *that) const
       case FILE_MEMORY_CONST:
       case FILE_SHADER_INPUT:
          return true;
+      case FILE_SHADER_OUTPUT:
+         return bb->getProgram()->getType() == Program::TYPE_TESSELLATION_EVAL;
       default:
          return false;
       }

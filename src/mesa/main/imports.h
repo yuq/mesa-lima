@@ -170,34 +170,6 @@ static inline int IROUND_POS(float f)
    return (int) (f + 0.5F);
 }
 
-#ifdef __x86_64__
-#  include <xmmintrin.h>
-#endif
-
-/**
- * Convert float to int using a fast method.  The rounding mode may vary.
- */
-static inline int F_TO_I(float f)
-{
-#if defined(USE_X86_ASM) && defined(__GNUC__) && defined(__i386__)
-   int r;
-   __asm__ ("fistpl %0" : "=m" (r) : "t" (f) : "st");
-   return r;
-#elif defined(USE_X86_ASM) && defined(_MSC_VER)
-   int r;
-   _asm {
-	 fld f
-	 fistp r
-	}
-   return r;
-#elif defined(__x86_64__)
-   return _mm_cvt_ss2si(_mm_load_ss(&f));
-#else
-   return IROUND(f);
-#endif
-}
-
-
 /** Return (as an integer) floor of float */
 static inline int IFLOOR(float f)
 {

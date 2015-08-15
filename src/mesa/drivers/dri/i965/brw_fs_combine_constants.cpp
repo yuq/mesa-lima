@@ -277,7 +277,7 @@ fs_visitor::opt_combine_constants()
        */
       exec_node *n = (imm->inst ? imm->inst :
                       imm->block->last_non_control_flow_inst()->next);
-      const fs_builder ibld = bld.at(imm->block, n).exec_all();
+      const fs_builder ibld = bld.at(imm->block, n).exec_all().group(1, 0);
 
       ibld.MOV(reg, fs_reg(imm->val));
       imm->reg = reg.reg;

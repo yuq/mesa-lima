@@ -63,7 +63,7 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    int i = 0;
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp));
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
 
    switch(mt->target) {
    case GL_TEXTURE_1D:
@@ -95,7 +95,7 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
                align_yf[i] : align_ys[i];
 
-   assert(is_power_of_two(mt->num_samples));
+   assert(_mesa_is_pow_two(mt->num_samples));
 
    switch (mt->num_samples) {
    case 2:
@@ -199,7 +199,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
           mt->target != GL_TEXTURE_1D_ARRAY);
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && is_power_of_two(bpp)) ;
+   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
 
    switch(mt->target) {
    case GL_TEXTURE_2D:
@@ -226,7 +226,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
                align_yf[i] : align_ys[i];
 
-   assert(is_power_of_two(mt->num_samples));
+   assert(_mesa_is_pow_two(mt->num_samples));
 
    switch (mt->num_samples) {
    case 4:
@@ -366,9 +366,8 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
    mt->total_width = mt->physical_width0;
 
-   if (mt->compressed) {
-       mt->total_width = ALIGN(mt->physical_width0, mt->align_w);
-   }
+   if (mt->compressed)
+       mt->total_width = ALIGN(mt->total_width, bw);
 
    /* May need to adjust width to accommodate the placement of
     * the 2nd mipmap.  This occurs when the alignment
@@ -433,9 +432,7 @@ brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
                                        const struct intel_mipmap_tree *mt,
                                        unsigned level)
 {
-   assert(brw->gen < 9);
-
-   if (mt->target == GL_TEXTURE_3D ||
+   if ((brw->gen < 9 && mt->target == GL_TEXTURE_3D) ||
        (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP)) {
       return ALIGN(minify(mt->physical_width0, level), mt->align_w);
    } else {
@@ -615,8 +612,8 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
  */
 static uint32_t
 brw_miptree_choose_tiling(struct brw_context *brw,
-                          enum intel_miptree_tiling_mode requested,
-                          const struct intel_mipmap_tree *mt)
+                          const struct intel_mipmap_tree *mt,
+                          uint32_t layout_flags)
 {
    if (mt->format == MESA_FORMAT_S_UINT8) {
       /* The stencil buffer is W tiled. However, we request from the kernel a
@@ -625,15 +622,18 @@ brw_miptree_choose_tiling(struct brw_context *brw,
       return I915_TILING_NONE;
    }
 
+   /* Do not support changing the tiling for miptrees with pre-allocated BOs. */
+   assert((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0);
+
    /* Some usages may want only one type of tiling, like depth miptrees (Y
     * tiled), or temporary BOs for uploading data once (linear).
     */
-   switch (requested) {
-   case INTEL_MIPTREE_TILING_ANY:
+   switch (layout_flags & MIPTREE_LAYOUT_TILING_ANY) {
+   case MIPTREE_LAYOUT_TILING_ANY:
       break;
-   case INTEL_MIPTREE_TILING_Y:
+   case MIPTREE_LAYOUT_TILING_Y:
       return I915_TILING_Y;
-   case INTEL_MIPTREE_TILING_NONE:
+   case MIPTREE_LAYOUT_TILING_NONE:
       return I915_TILING_NONE;
    }
 
@@ -762,15 +762,12 @@ intel_miptree_set_total_width_height(struct brw_context *brw,
        mt->total_width, mt->total_height, mt->cpp);
 }
 
-void
-brw_miptree_layout(struct brw_context *brw,
-                   struct intel_mipmap_tree *mt,
-                   enum intel_miptree_tiling_mode requested,
-                   uint32_t layout_flags)
+static void
+intel_miptree_set_alignment(struct brw_context *brw,
+                            struct intel_mipmap_tree *mt,
+                            uint32_t layout_flags)
 {
    bool gen6_hiz_or_stencil = false;
-
-   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
 
    if (brw->gen == 6 && mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
       const GLenum base_format = _mesa_get_format_base_format(mt->format);
@@ -806,7 +803,16 @@ brw_miptree_layout(struct brw_context *brw,
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);
       mt->align_h = intel_vertical_texture_alignment_unit(brw, mt);
    }
+}
 
+void
+brw_miptree_layout(struct brw_context *brw,
+                   struct intel_mipmap_tree *mt,
+                   uint32_t layout_flags)
+{
+   mt->tr_mode = INTEL_MIPTREE_TRMODE_NONE;
+
+   intel_miptree_set_alignment(brw, mt, layout_flags);
    intel_miptree_set_total_width_height(brw, mt);
 
    if (!mt->total_width || !mt->total_height) {
@@ -825,6 +831,6 @@ brw_miptree_layout(struct brw_context *brw,
    }
 
    if ((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0)
-      mt->tiling = brw_miptree_choose_tiling(brw, requested, mt);
+      mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
 }
 

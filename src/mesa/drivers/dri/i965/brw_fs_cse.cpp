@@ -61,6 +61,7 @@ is_expression(const fs_visitor *v, const fs_inst *const inst)
    case BRW_OPCODE_CMPN:
    case BRW_OPCODE_ADD:
    case BRW_OPCODE_MUL:
+   case SHADER_OPCODE_MULH:
    case BRW_OPCODE_FRC:
    case BRW_OPCODE_RNDU:
    case BRW_OPCODE_RNDD:
@@ -179,9 +180,7 @@ static void
 create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
 {
    int written = inst->regs_written;
-   int dst_width = inst->dst.width / 8;
-   const fs_builder ubld = bld.group(inst->exec_size, inst->force_sechalf)
-                              .exec_all(inst->force_writemask_all);
+   int dst_width = inst->exec_size / 8;
    fs_inst *copy;
 
    if (written > dst_width) {
@@ -200,16 +199,15 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       payload = ralloc_array(bld.shader->mem_ctx, fs_reg, sources);
       for (int i = 0; i < header_size; i++) {
          payload[i] = src;
-         payload[i].width = 8;
          src.reg_offset++;
       }
       for (int i = header_size; i < sources; i++) {
          payload[i] = src;
-         src = offset(src, 1);
+         src = offset(src, bld, 1);
       }
-      copy = ubld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
+      copy = bld.LOAD_PAYLOAD(inst->dst, payload, sources, header_size);
    } else {
-      copy = ubld.MOV(inst->dst, src);
+      copy = bld.MOV(inst->dst, src);
       copy->src[0].negate = negate;
    }
    assert(copy->regs_written == written);
@@ -259,15 +257,14 @@ fs_visitor::opt_cse_local(bblock_t *block)
              */
             bool no_existing_temp = entry->tmp.file == BAD_FILE;
             if (no_existing_temp && !entry->generator->dst.is_null()) {
+               const fs_builder ibld = fs_builder(this, block, entry->generator)
+                                       .at(block, entry->generator->next);
                int written = entry->generator->regs_written;
-               assert((written * 8) % entry->generator->dst.width == 0);
 
                entry->tmp = fs_reg(GRF, alloc.allocate(written),
-                                   entry->generator->dst.type,
-                                   entry->generator->dst.width);
+                                   entry->generator->dst.type);
 
-               create_copy_instr(bld.at(block, entry->generator->next),
-                                 entry->generator, entry->tmp, false);
+               create_copy_instr(ibld, entry->generator, entry->tmp, false);
 
                entry->generator->dst = entry->tmp;
             }
@@ -275,10 +272,10 @@ fs_visitor::opt_cse_local(bblock_t *block)
             /* dest <- temp */
             if (!inst->dst.is_null()) {
                assert(inst->regs_written == entry->generator->regs_written);
-               assert(inst->dst.width == entry->generator->dst.width);
                assert(inst->dst.type == entry->tmp.type);
+               const fs_builder ibld(this, block, inst);
 
-               create_copy_instr(bld.at(block, inst), inst, entry->tmp, negate);
+               create_copy_instr(ibld, inst, entry->tmp, negate);
             }
 
             /* Set our iterator so that next time through the loop inst->next
