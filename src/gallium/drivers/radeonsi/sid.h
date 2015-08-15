@@ -614,7 +614,6 @@
 #define   S_0085F0_DEST_BASE_1_ENA(x)                                 (((x) & 0x1) << 1)
 #define   G_0085F0_DEST_BASE_1_ENA(x)                                 (((x) >> 1) & 0x1)
 #define   C_0085F0_DEST_BASE_1_ENA                                    0xFFFFFFFD
-#define   S_0085F0_CB0_DEST_BASE_ENA_SHIFT             	              6
 #define   S_0085F0_CB0_DEST_BASE_ENA(x)                               (((x) & 0x1) << 6)
 #define   G_0085F0_CB0_DEST_BASE_ENA(x)                               (((x) >> 6) & 0x1)
 #define   C_0085F0_CB0_DEST_BASE_ENA                                  0xFFFFFFBF
