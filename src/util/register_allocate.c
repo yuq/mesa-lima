@@ -266,6 +266,29 @@ ra_add_transitive_reg_conflict(struct ra_regs *regs,
    }
 }
 
+/**
+ * Makes every conflict on the given register transitive.  In other words,
+ * every register that conflicts with r will now conflict with every other
+ * register conflicting with r.
+ *
+ * This can simplify code for setting up multiple register classes
+ * which are aggregates of some base hardware registers, compared to
+ * explicitly using ra_add_reg_conflict.
+ */
+void
+ra_make_reg_conflicts_transitive(struct ra_regs *regs, unsigned int r)
+{
+   struct ra_reg *reg = &regs->regs[r];
+   BITSET_WORD tmp;
+   int c;
+
+   BITSET_FOREACH_SET(c, tmp, reg->conflicts, regs->count) {
+      struct ra_reg *other = &regs->regs[c];
+      for (unsigned i = 0; i < BITSET_WORDS(regs->count); i++)
+         other->conflicts[i] |= reg->conflicts[i];
+   }
+}
+
 unsigned int
 ra_alloc_reg_class(struct ra_regs *regs)
 {
