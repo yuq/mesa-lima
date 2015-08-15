@@ -5596,13 +5596,13 @@ check_multisample_target(GLuint dims, GLenum target, bool dsa)
 
 
 static void
-_mesa_texture_image_multisample(struct gl_context *ctx, GLuint dims,
-                                struct gl_texture_object *texObj,
-                                GLenum target, GLsizei samples,
-                                GLint internalformat, GLsizei width,
-                                GLsizei height, GLsizei depth,
-                                GLboolean fixedsamplelocations,
-                                GLboolean immutable, const char *func)
+texture_image_multisample(struct gl_context *ctx, GLuint dims,
+                          struct gl_texture_object *texObj,
+                          GLenum target, GLsizei samples,
+                          GLint internalformat, GLsizei width,
+                          GLsizei height, GLsizei depth,
+                          GLboolean fixedsamplelocations,
+                          GLboolean immutable, const char *func)
 {
    struct gl_texture_image *texImage;
    GLboolean sizeOK, dimensionsOK, samplesOK;
@@ -5763,10 +5763,10 @@ _mesa_TexImage2DMultisample(GLenum target, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 2, texObj, target, samples,
-                                   internalformat, width, height, 1,
-                                   fixedsamplelocations, GL_FALSE,
-                                   "glTexImage2DMultisample");
+   texture_image_multisample(ctx, 2, texObj, target, samples,
+                             internalformat, width, height, 1,
+                             fixedsamplelocations, GL_FALSE,
+                             "glTexImage2DMultisample");
 }
 
 
@@ -5783,10 +5783,10 @@ _mesa_TexImage3DMultisample(GLenum target, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 3, texObj, target, samples,
-                                   internalformat, width, height, depth,
-                                   fixedsamplelocations, GL_FALSE,
-                                   "glTexImage3DMultisample");
+   texture_image_multisample(ctx, 3, texObj, target, samples,
+                             internalformat, width, height, depth,
+                             fixedsamplelocations, GL_FALSE,
+                             "glTexImage3DMultisample");
 }
 
 
@@ -5802,10 +5802,10 @@ _mesa_TexStorage2DMultisample(GLenum target, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 2, texObj, target, samples,
-                                   internalformat, width, height, 1,
-                                   fixedsamplelocations, GL_TRUE,
-                                   "glTexStorage2DMultisample");
+   texture_image_multisample(ctx, 2, texObj, target, samples,
+                             internalformat, width, height, 1,
+                             fixedsamplelocations, GL_TRUE,
+                             "glTexStorage2DMultisample");
 }
 
 void GLAPIENTRY
@@ -5821,10 +5821,10 @@ _mesa_TexStorage3DMultisample(GLenum target, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 3, texObj, target, samples,
-                                   internalformat, width, height, depth,
-                                   fixedsamplelocations, GL_TRUE,
-                                   "glTexStorage3DMultisample");
+   texture_image_multisample(ctx, 3, texObj, target, samples,
+                             internalformat, width, height, depth,
+                             fixedsamplelocations, GL_TRUE,
+                             "glTexStorage3DMultisample");
 }
 
 void GLAPIENTRY
@@ -5841,10 +5841,10 @@ _mesa_TextureStorage2DMultisample(GLuint texture, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 2, texObj, texObj->Target, samples,
-                                   internalformat, width, height, 1,
-                                   fixedsamplelocations, GL_TRUE,
-                                   "glTextureStorage2DMultisample");
+   texture_image_multisample(ctx, 2, texObj, texObj->Target, samples,
+                             internalformat, width, height, 1,
+                             fixedsamplelocations, GL_TRUE,
+                             "glTextureStorage2DMultisample");
 }
 
 void GLAPIENTRY
@@ -5862,8 +5862,8 @@ _mesa_TextureStorage3DMultisample(GLuint texture, GLsizei samples,
    if (!texObj)
       return;
 
-   _mesa_texture_image_multisample(ctx, 3, texObj, texObj->Target, samples,
-                                   internalformat, width, height, depth,
-                                   fixedsamplelocations, GL_TRUE,
-                                   "glTextureStorage3DMultisample");
+   texture_image_multisample(ctx, 3, texObj, texObj->Target, samples,
+                             internalformat, width, height, depth,
+                             fixedsamplelocations, GL_TRUE,
+                             "glTextureStorage3DMultisample");
 }
