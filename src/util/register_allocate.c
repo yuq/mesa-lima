@@ -183,7 +183,7 @@ struct ra_graph {
  * using ralloc_free().
  */
 struct ra_regs *
-ra_alloc_reg_set(void *mem_ctx, unsigned int count)
+ra_alloc_reg_set(void *mem_ctx, unsigned int count, bool need_conflict_lists)
 {
    unsigned int i;
    struct ra_regs *regs;
@@ -197,9 +197,15 @@ ra_alloc_reg_set(void *mem_ctx, unsigned int count)
                                               BITSET_WORDS(count));
       BITSET_SET(regs->regs[i].conflicts, i);
 
-      regs->regs[i].conflict_list = ralloc_array(regs->regs, unsigned int, 4);
-      regs->regs[i].conflict_list_size = 4;
-      regs->regs[i].conflict_list[0] = i;
+      if (need_conflict_lists) {
+         regs->regs[i].conflict_list = ralloc_array(regs->regs,
+                                                    unsigned int, 4);
+         regs->regs[i].conflict_list_size = 4;
+         regs->regs[i].conflict_list[0] = i;
+      } else {
+         regs->regs[i].conflict_list = NULL;
+         regs->regs[i].conflict_list_size = 0;
+      }
       regs->regs[i].num_conflicts = 1;
    }
 
@@ -227,12 +233,14 @@ ra_add_conflict_list(struct ra_regs *regs, unsigned int r1, unsigned int r2)
 {
    struct ra_reg *reg1 = &regs->regs[r1];
 
-   if (reg1->conflict_list_size == reg1->num_conflicts) {
-      reg1->conflict_list_size *= 2;
-      reg1->conflict_list = reralloc(regs->regs, reg1->conflict_list,
-				     unsigned int, reg1->conflict_list_size);
+   if (reg1->conflict_list) {
+      if (reg1->conflict_list_size == reg1->num_conflicts) {
+         reg1->conflict_list_size *= 2;
+         reg1->conflict_list = reralloc(regs->regs, reg1->conflict_list,
+                                        unsigned int, reg1->conflict_list_size);
+      }
+      reg1->conflict_list[reg1->num_conflicts++] = r2;
    }
-   reg1->conflict_list[reg1->num_conflicts++] = r2;
    BITSET_SET(reg1->conflicts, r2);
 }
 

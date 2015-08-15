@@ -113,7 +113,7 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         if (vc4->regs)
                 return;
 
-        vc4->regs = ra_alloc_reg_set(vc4, ARRAY_SIZE(vc4_regs));
+        vc4->regs = ra_alloc_reg_set(vc4, ARRAY_SIZE(vc4_regs), true);
 
         vc4->reg_class_any = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_r4_or_a = ra_alloc_reg_class(vc4->regs);

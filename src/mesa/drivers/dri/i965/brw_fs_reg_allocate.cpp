@@ -156,7 +156,7 @@ brw_alloc_reg_set(struct brw_compiler *compiler, int dispatch_width)
    }
 
    uint8_t *ra_reg_to_grf = ralloc_array(compiler, uint8_t, ra_reg_count);
-   struct ra_regs *regs = ra_alloc_reg_set(compiler, ra_reg_count);
+   struct ra_regs *regs = ra_alloc_reg_set(compiler, ra_reg_count, false);
    if (devinfo->gen >= 6)
       ra_set_allocate_round_robin(regs);
    int *classes = ralloc_array(compiler, int, class_count);
