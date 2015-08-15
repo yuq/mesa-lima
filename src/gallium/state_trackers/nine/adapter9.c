@@ -545,7 +545,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                      /*D3DDEVCAPS_RTPATCHES |*/
                      /*D3DDEVCAPS_RTPATCHHANDLEZERO |*/
                      /*D3DDEVCAPS_SEPARATETEXTUREMEMORIES |*/
-                     /*D3DDEVCAPS_TEXTURENONLOCALVIDMEM |*/
+                     D3DDEVCAPS_TEXTURENONLOCALVIDMEM |
                      /* D3DDEVCAPS_TEXTURESYSTEMMEMORY |*/
                      D3DDEVCAPS_TEXTUREVIDEOMEMORY |
                      D3DDEVCAPS_TLVERTEXSYSTEMMEMORY |
@@ -561,7 +561,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                                D3DPMISCCAPS_TSSARGTEMP |
                                D3DPMISCCAPS_BLENDOP |
                                D3DPIPECAP(INDEP_BLEND_ENABLE, D3DPMISCCAPS_INDEPENDENTWRITEMASKS) |
-                               /*D3DPMISCCAPS_PERSTAGECONSTANT |*/
+                               /*D3DPMISCCAPS_PERSTAGECONSTANT |*/ /* TODO */
                                /*D3DPMISCCAPS_POSTBLENDSRGBCONVERT |*/ /* TODO */
                                D3DPMISCCAPS_FOGANDSPECULARALPHA |
                                D3DPIPECAP(BLEND_EQUATION_SEPARATE, D3DPMISCCAPS_SEPARATEALPHABLEND) |
@@ -573,7 +573,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
 
     pCaps->RasterCaps =
         D3DPIPECAP(ANISOTROPIC_FILTER, D3DPRASTERCAPS_ANISOTROPY) |
-        /*D3DPRASTERCAPS_COLORPERSPECTIVE |*/
+        D3DPRASTERCAPS_COLORPERSPECTIVE |
         D3DPRASTERCAPS_DITHER |
         D3DPRASTERCAPS_DEPTHBIAS |
         D3DPRASTERCAPS_FOGRANGE |
@@ -697,15 +697,12 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
     pCaps->MaxAnisotropy =
         (DWORD)screen->get_paramf(screen, PIPE_CAPF_MAX_TEXTURE_ANISOTROPY);
 
-    pCaps->MaxVertexW = 1.0f; /* XXX */
-    pCaps->GuardBandLeft = screen->get_paramf(screen,
-                                              PIPE_CAPF_GUARD_BAND_LEFT);
-    pCaps->GuardBandTop = screen->get_paramf(screen,
-                                             PIPE_CAPF_GUARD_BAND_TOP);
-    pCaps->GuardBandRight = screen->get_paramf(screen,
-                                               PIPE_CAPF_GUARD_BAND_RIGHT);
-    pCaps->GuardBandBottom = screen->get_paramf(screen,
-                                                PIPE_CAPF_GUARD_BAND_BOTTOM);
+    /* Values for GeForce 9600 GT */
+    pCaps->MaxVertexW = 1e10f;
+    pCaps->GuardBandLeft = -1e9f;
+    pCaps->GuardBandTop = -1e9f;
+    pCaps->GuardBandRight = 1e9f;
+    pCaps->GuardBandBottom = 1e9f;
     pCaps->ExtentsAdjust = 0.0f;
 
     pCaps->StencilCaps =
@@ -724,8 +721,6 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
         /*D3DFVFCAPS_DONOTSTRIPELEMENTS |*/
         D3DFVFCAPS_PSIZE;
 
-    /* XXX: Some of these are probably not in SM2.0 so cap them when I figure
-     * them out. For now leave them all enabled. */
     pCaps->TextureOpCaps = D3DTEXOPCAPS_DISABLE |
                            D3DTEXOPCAPS_SELECTARG1 |
                            D3DTEXOPCAPS_SELECTARG2 |
@@ -796,7 +791,8 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
     pCaps->MaxVertexShaderConst = NINE_MAX_CONST_F;
 
     pCaps->PixelShaderVersion = D3DPS_VERSION(3,0);
-    pCaps->PixelShader1xMaxValue = 8.0f; /* XXX: wine */
+    /* Value for GeForce 9600 GT */
+    pCaps->PixelShader1xMaxValue = 65504.f;
 
     pCaps->DevCaps2 = D3DDEVCAPS2_STREAMOFFSET |
                       D3DDEVCAPS2_VERTEXELEMENTSCANSHARESTREAMOFFSET |
