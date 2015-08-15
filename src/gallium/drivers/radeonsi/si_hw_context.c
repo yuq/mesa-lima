@@ -130,6 +130,14 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	/* force to keep tiling flags */
 	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
+	/* Save the IB for debug contexts. */
+	if (ctx->is_debug) {
+		free(ctx->last_ib);
+		ctx->last_ib_dw_size = cs->cdw;
+		ctx->last_ib = malloc(cs->cdw * 4);
+		memcpy(ctx->last_ib, cs->buf, cs->cdw * 4);
+	}
+
 	/* Flush the CS. */
 	ws->cs_flush(cs, flags, &ctx->last_gfx_fence,
 		     ctx->screen->b.cs_count++);

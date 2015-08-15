@@ -81,6 +81,7 @@ static void si_destroy_context(struct pipe_context *context)
 	LLVMDisposeTargetMachine(sctx->tm);
 #endif
 
+	free(sctx->last_ib);
 	FREE(sctx);
 }
 
@@ -112,6 +113,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.b.destroy = si_destroy_context;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
+	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
 
 	if (!r600_common_context_init(&sctx->b, &sscreen->b))
 		goto fail;

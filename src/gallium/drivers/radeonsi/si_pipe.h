@@ -243,6 +243,11 @@ struct si_context {
 	struct si_shader_selector *last_tcs;
 	int			last_num_tcs_input_cp;
 	int			last_tes_sh_base;
+
+	/* Debug state. */
+	bool			is_debug;
+	uint32_t		*last_ib;
+	unsigned		last_ib_dw_size;
 };
 
 /* cik_sdma.c */
