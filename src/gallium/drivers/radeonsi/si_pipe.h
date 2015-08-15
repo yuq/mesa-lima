@@ -275,6 +275,9 @@ void si_copy_buffer(struct si_context *sctx,
 		    bool is_framebuffer);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
+/* si_debug.c */
+void si_init_debug_functions(struct si_context *sctx);
+
 /* si_dma.c */
 void si_dma_copy(struct pipe_context *ctx,
 		 struct pipe_resource *dst,
