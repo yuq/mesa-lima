@@ -61,6 +61,9 @@ prepare_rasterizer(struct NineDevice9 *device)
     device->state.commit |= NINE_STATE_COMMIT_RASTERIZER;
 }
 
+static void
+prepare_ps_constants_userbuf(struct NineDevice9 *device);
+
 #define DO_UPLOAD_CONST_F(buf,p,c,d) \
     do { \
         DBG("upload ConstantF [%u .. %u]\n", x, (x) + (c) - 1); \
@@ -122,6 +125,14 @@ upload_constants(struct NineDevice9 *device, unsigned shader_type)
         device->state.changed.group &= ~NINE_STATE_VS_CONST;
     } else {
         DBG("PS\n");
+        /* features only implemented on the userbuf path */
+        if (device->state.ps->bumpenvmat_needed || (
+            device->state.ps->byte_code.version < 0x30 &&
+            device->state.rs[D3DRS_FOGENABLE])) {
+            device->prefer_user_constbuf = TRUE;
+            prepare_ps_constants_userbuf(device);
+            return;
+        }
         buf = device->constbuf_ps;
 
         const_f = device->state.ps_const_f;
