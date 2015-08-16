@@ -2181,10 +2181,20 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
 
          return false;
       }
+   } else if (state->is_version(420, 310) &&
+              var->type->without_array()->is_image()) {
+      assert(ctx->Const.MaxImageUnits <= MAX_IMAGE_UNITS);
+      if (max_index >= ctx->Const.MaxImageUnits) {
+         _mesa_glsl_error(loc, state, "Image binding %d exceeds the "
+                          " maximum number of image units (%d)", max_index,
+                          ctx->Const.MaxImageUnits);
+         return false;
+      }
+
    } else {
       _mesa_glsl_error(loc, state,
                        "the \"binding\" qualifier only applies to uniform "
-                       "blocks, samplers, atomic counters, or arrays thereof");
+                       "blocks, opaque variables, or arrays thereof");
       return false;
    }
 
