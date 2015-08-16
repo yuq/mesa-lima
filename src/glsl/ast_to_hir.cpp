@@ -2455,10 +2455,16 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
 
          var->data.image_format = qual->image_format;
       } else {
-         if (var->data.mode == ir_var_uniform && !qual->flags.q.write_only) {
-            _mesa_glsl_error(loc, state, "uniforms not qualified with "
-                             "`writeonly' must have a format layout "
-                             "qualifier");
+         if (var->data.mode == ir_var_uniform) {
+            if (state->es_shader) {
+               _mesa_glsl_error(loc, state, "all image uniforms "
+                                "must have a format layout qualifier");
+
+            } else if (!qual->flags.q.write_only) {
+               _mesa_glsl_error(loc, state, "image uniforms not qualified with "
+                                "`writeonly' must have a format layout "
+                                "qualifier");
+            }
          }
 
          var->data.image_format = GL_NONE;
