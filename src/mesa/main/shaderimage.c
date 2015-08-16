@@ -394,17 +394,24 @@ is_image_format_supported(const struct gl_context *ctx, GLenum format)
    }
 }
 
+struct gl_image_unit
+_mesa_default_image_unit(struct gl_context *ctx)
+{
+   const struct gl_image_unit u = {
+      .Access = GL_READ_ONLY,
+      .Format = GL_R8,
+      ._ActualFormat = _mesa_get_shader_image_format(GL_R8)
+   };
+   return u;
+}
+
 void
 _mesa_init_image_units(struct gl_context *ctx)
 {
    unsigned i;
 
-   for (i = 0; i < ARRAY_SIZE(ctx->ImageUnits); ++i) {
-      struct gl_image_unit *u = &ctx->ImageUnits[i];
-      u->Access = GL_READ_ONLY;
-      u->Format = GL_R8;
-      u->_ActualFormat = _mesa_get_shader_image_format(u->Format);
-   }
+   for (i = 0; i < ARRAY_SIZE(ctx->ImageUnits); ++i)
+      ctx->ImageUnits[i] = _mesa_default_image_unit(ctx);
 }
 
 static GLboolean
