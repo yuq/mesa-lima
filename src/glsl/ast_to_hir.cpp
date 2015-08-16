@@ -3414,7 +3414,7 @@ validate_identifier(const char *identifier, YYLTYPE loc,
 static bool
 precision_qualifier_allowed(const glsl_type *type)
 {
-   /* Precision qualifiers apply to floating point, integer and sampler
+   /* Precision qualifiers apply to floating point, integer and opaque
     * types.
     *
     * Section 4.5.2 (Precision Qualifiers) of the GLSL 1.30 spec says:
@@ -3444,7 +3444,7 @@ precision_qualifier_allowed(const glsl_type *type)
    return type->is_float()
        || type->is_integer()
        || type->is_record()
-       || type->is_sampler();
+       || type->contains_opaque();
 }
 
 ir_rvalue *
@@ -4155,7 +4155,7 @@ ast_declarator_list::hir(exec_list *instructions,
 
          _mesa_glsl_error(&loc, state,
                           "precision qualifiers apply only to floating point"
-                          ", integer and sampler types");
+                          ", integer and opaque types");
       }
 
       /* From section 4.1.7 of the GLSL 4.40 spec:
@@ -5463,6 +5463,8 @@ is_valid_default_precision_type(const struct glsl_type *const type)
       /* "int" and "float" are valid, but vectors and matrices are not. */
       return type->vector_elements == 1 && type->matrix_columns == 1;
    case GLSL_TYPE_SAMPLER:
+   case GLSL_TYPE_IMAGE:
+   case GLSL_TYPE_ATOMIC_UINT:
       return true;
    default:
       return false;
@@ -5511,7 +5513,7 @@ ast_type_specifier::hir(exec_list *instructions,
       if (!is_valid_default_precision_type(type)) {
          _mesa_glsl_error(&loc, state,
                           "default precision statements apply only to "
-                          "float, int, and sampler types");
+                          "float, int, and opaque types");
          return NULL;
       }
 
