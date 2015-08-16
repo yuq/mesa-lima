@@ -644,7 +644,6 @@ update_vertex_buffers(struct NineDevice9 *device)
     struct pipe_vertex_buffer dummy_vtxbuf;
     uint32_t mask = state->changed.vtxbuf;
     unsigned i;
-    unsigned start;
 
     DBG("mask=%x\n", mask);
 
