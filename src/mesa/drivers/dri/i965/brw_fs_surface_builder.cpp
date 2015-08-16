@@ -1125,7 +1125,7 @@ namespace brw {
          if (rsize && pred)
             set_predicate(pred, bld.SEL(tmp, tmp, brw_imm_d(0)));
 
-         return tmp;
+         return retype(tmp, src0.type);
       }
    }
 }
