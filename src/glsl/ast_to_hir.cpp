@@ -2469,6 +2469,24 @@ apply_image_qualifier_to_variable(const struct ast_type_qualifier *qual,
 
          var->data.image_format = GL_NONE;
       }
+
+      /* From page 70 of the GLSL ES 3.1 specification:
+       *
+       * "Except for image variables qualified with the format qualifiers
+       *  r32f, r32i, and r32ui, image variables must specify either memory
+       *  qualifier readonly or the memory qualifier writeonly."
+       */
+      if (state->es_shader &&
+          var->data.image_format != GL_R32F &&
+          var->data.image_format != GL_R32I &&
+          var->data.image_format != GL_R32UI &&
+          !var->data.image_read_only &&
+          !var->data.image_write_only) {
+         _mesa_glsl_error(loc, state, "image variables of format other than "
+                          "r32f, r32i or r32ui must be qualified `readonly' or "
+                          "`writeonly'");
+      }
+
    } else if (qual->flags.q.read_only ||
               qual->flags.q.write_only ||
               qual->flags.q.coherent ||
