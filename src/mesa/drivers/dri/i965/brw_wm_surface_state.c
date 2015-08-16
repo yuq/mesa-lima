@@ -1117,7 +1117,7 @@ update_texture_image_param(struct brw_context *brw,
                      minify(mt->logical_depth0, u->Level) :
                      mt->logical_depth0);
 
-   intel_miptree_get_image_offset(mt, u->Level, u->Layer,
+   intel_miptree_get_image_offset(mt, u->Level, u->_Layer,
                                   &param->offset[0],
                                   &param->offset[1]);
 
@@ -1202,7 +1202,7 @@ update_image_surface(struct brw_context *brw,
                access != GL_READ_ONLY);
 
          } else {
-            const unsigned min_layer = obj->MinLayer + u->Layer;
+            const unsigned min_layer = obj->MinLayer + u->_Layer;
             const unsigned min_level = obj->MinLevel + u->Level;
             const unsigned num_layers = (!u->Layered ? 1 :
                                          obj->Target == GL_TEXTURE_CUBE_MAP ? 6 :

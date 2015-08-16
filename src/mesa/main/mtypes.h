@@ -4177,10 +4177,16 @@ struct gl_image_unit
    GLboolean _Valid;
 
    /**
+    * Layer of the texture object bound to this unit as specified by the
+    * application.
+    */
+   GLuint Layer;
+
+   /**
     * Layer of the texture object bound to this unit, or zero if the
     * whole level is bound.
     */
-   GLuint Layer;
+   GLuint _Layer;
 
    /**
     * Access allowed to this texture image.  Either \c GL_READ_ONLY,

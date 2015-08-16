@@ -362,7 +362,7 @@ validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
       return GL_FALSE;
 
    if (_mesa_tex_target_is_layered(t->Target) &&
-       u->Layer >= _mesa_get_texture_layers(t, u->Level))
+       u->_Layer >= _mesa_get_texture_layers(t, u->Level))
       return GL_FALSE;
 
    if (t->Target == GL_TEXTURE_BUFFER) {
@@ -370,7 +370,7 @@ validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
 
    } else {
       struct gl_texture_image *img = (t->Target == GL_TEXTURE_CUBE_MAP ?
-                                      t->Image[u->Layer][u->Level] :
+                                      t->Image[u->_Layer][u->Level] :
                                       t->Image[0][u->Level]);
 
       if (!img || img->Border || img->NumSamples > ctx->Const.MaxImageSamples)
@@ -488,7 +488,8 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
 
    if (u->TexObj && _mesa_tex_target_is_layered(u->TexObj->Target)) {
       u->Layered = layered;
-      u->Layer = (layered ? 0 : layer);
+      u->Layer = layer;
+      u->_Layer = (u->Layered ? 0 : u->Layer);
    } else {
       u->Layered = GL_FALSE;
       u->Layer = 0;
@@ -619,7 +620,7 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
          _mesa_reference_texobj(&u->TexObj, texObj);
          u->Level = 0;
          u->Layered = _mesa_tex_target_is_layered(texObj->Target);
-         u->Layer = 0;
+         u->_Layer = u->Layer = 0;
          u->Access = GL_READ_WRITE;
          u->Format = tex_format;
          u->_ActualFormat = _mesa_get_shader_image_format(tex_format);
@@ -629,7 +630,7 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
          _mesa_reference_texobj(&u->TexObj, NULL);
          u->Level = 0;
          u->Layered = GL_FALSE;
-         u->Layer = 0;
+         u->_Layer = u->Layer = 0;
          u->Access = GL_READ_ONLY;
          u->Format = GL_R8;
          u->_ActualFormat = MESA_FORMAT_R_UNORM8;
