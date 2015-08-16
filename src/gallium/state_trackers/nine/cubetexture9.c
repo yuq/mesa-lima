@@ -43,7 +43,7 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
     struct pipe_screen *screen = pParams->device->screen;
     enum pipe_format pf;
     unsigned i, l, f, offset, face_size = 0;
-    unsigned *level_offsets;
+    unsigned *level_offsets = NULL;
     D3DSURFACE_DESC sfdesc;
     void *p;
     HRESULT hr;
