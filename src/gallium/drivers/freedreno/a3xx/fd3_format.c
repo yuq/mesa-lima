@@ -301,7 +301,7 @@ fd3_pipe2fetchsize(enum pipe_format format)
 {
 	if (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT)
 		format = PIPE_FORMAT_Z32_FLOAT;
-	switch (util_format_get_blocksizebits(format)) {
+	switch (util_format_get_blocksizebits(format) / util_format_get_blockwidth(format)) {
 	case 8: return TFETCH_1_BYTE;
 	case 16: return TFETCH_2_BYTE;
 	case 32: return TFETCH_4_BYTE;
