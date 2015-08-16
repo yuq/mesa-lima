@@ -406,6 +406,13 @@ shader_image_load_store(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+shader_image_atomic(const _mesa_glsl_parse_state *state)
+{
+   return (state->is_version(420, 0) ||
+           state->ARB_shader_image_load_store_enable);
+}
+
+static bool
 gs_streams(const _mesa_glsl_parse_state *state)
 {
    return gpu_shader5(state) && gs_only(state);
@@ -505,7 +512,8 @@ private:
       IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE = (1 << 2),
       IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE = (1 << 3),
       IMAGE_FUNCTION_READ_ONLY = (1 << 4),
-      IMAGE_FUNCTION_WRITE_ONLY = (1 << 5)
+      IMAGE_FUNCTION_WRITE_ONLY = (1 << 5),
+      IMAGE_FUNCTION_AVAIL_ATOMIC = (1 << 6)
    };
 
    /**
@@ -2627,31 +2635,33 @@ builtin_builder::add_image_functions(bool glsl)
                        IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE |
                        IMAGE_FUNCTION_WRITE_ONLY));
 
+   const unsigned atom_flags = flags | IMAGE_FUNCTION_AVAIL_ATOMIC;
+
    add_image_function(glsl ? "imageAtomicAdd" : "__intrinsic_image_atomic_add",
-                      "__intrinsic_image_atomic_add", 1, flags);
+                      "__intrinsic_image_atomic_add", 1, atom_flags);
 
    add_image_function(glsl ? "imageAtomicMin" : "__intrinsic_image_atomic_min",
-                      "__intrinsic_image_atomic_min", 1, flags);
+                      "__intrinsic_image_atomic_min", 1, atom_flags);
 
    add_image_function(glsl ? "imageAtomicMax" : "__intrinsic_image_atomic_max",
-                      "__intrinsic_image_atomic_max", 1, flags);
+                      "__intrinsic_image_atomic_max", 1, atom_flags);
 
    add_image_function(glsl ? "imageAtomicAnd" : "__intrinsic_image_atomic_and",
-                      "__intrinsic_image_atomic_and", 1, flags);
+                      "__intrinsic_image_atomic_and", 1, atom_flags);
 
    add_image_function(glsl ? "imageAtomicOr" : "__intrinsic_image_atomic_or",
-                      "__intrinsic_image_atomic_or", 1, flags);
+                      "__intrinsic_image_atomic_or", 1, atom_flags);
 
    add_image_function(glsl ? "imageAtomicXor" : "__intrinsic_image_atomic_xor",
-                      "__intrinsic_image_atomic_xor", 1, flags);
+                      "__intrinsic_image_atomic_xor", 1, atom_flags);
 
    add_image_function((glsl ? "imageAtomicExchange" :
                        "__intrinsic_image_atomic_exchange"),
-                      "__intrinsic_image_atomic_exchange", 1, flags);
+                      "__intrinsic_image_atomic_exchange", 1, atom_flags);
 
    add_image_function((glsl ? "imageAtomicCompSwap" :
                        "__intrinsic_image_atomic_comp_swap"),
-                      "__intrinsic_image_atomic_comp_swap", 2, flags);
+                      "__intrinsic_image_atomic_comp_swap", 2, atom_flags);
 }
 
 ir_variable *
@@ -4794,8 +4804,10 @@ builtin_builder::_image_prototype(const glsl_type *image_type,
    ir_variable *coord = in_var(
       glsl_type::ivec(image_type->coordinate_components()), "coord");
 
-   ir_function_signature *sig = new_sig(
-      ret_type, shader_image_load_store, 2, image, coord);
+   const builtin_available_predicate avail =
+      (flags & IMAGE_FUNCTION_AVAIL_ATOMIC ? shader_image_atomic :
+       shader_image_load_store);
+   ir_function_signature *sig = new_sig(ret_type, avail, 2, image, coord);
 
    /* Sample index for multisample images. */
    if (image_type->sampler_dimensionality == GLSL_SAMPLER_DIM_MS)
