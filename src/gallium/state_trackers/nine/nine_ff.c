@@ -1541,6 +1541,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
         memcpy(&vs->ff_key, &key, sizeof(vs->ff_key));
 
         err = util_hash_table_set(device->ff.ht_vs, &vs->ff_key, vs);
+        (void)err;
         assert(err == PIPE_OK);
         device->ff.num_vs++;
         NineUnknown_ConvertRefToBind(NineUnknown(vs));
@@ -1643,6 +1644,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
         memcpy(&ps->ff_key, &key, sizeof(ps->ff_key));
 
         err = util_hash_table_set(device->ff.ht_ps, &ps->ff_key, ps);
+        (void)err;
         assert(err == PIPE_OK);
         device->ff.num_ps++;
         NineUnknown_ConvertRefToBind(NineUnknown(ps));
