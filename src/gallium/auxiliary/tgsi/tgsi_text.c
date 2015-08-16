@@ -259,7 +259,7 @@ struct translate_ctx
    struct tgsi_token *tokens_end;
    struct tgsi_header *header;
    unsigned processor : 4;
-   int implied_array_size : 5;
+   unsigned implied_array_size : 6;
    unsigned num_immediates;
 };
 
@@ -1622,6 +1622,10 @@ static boolean translate( struct translate_ctx *ctx )
    eat_opt_white( &ctx->cur );
    if (!parse_header( ctx ))
       return FALSE;
+
+   if (ctx->processor == TGSI_PROCESSOR_TESS_CTRL ||
+       ctx->processor == TGSI_PROCESSOR_TESS_EVAL)
+       ctx->implied_array_size = 32;
 
    while (*ctx->cur != '\0') {
       uint label_val = 0;
