@@ -754,8 +754,6 @@ builtin_variable_generator::generate_constants()
                 state->Const.MaxImageSamples);
       add_const("gl_MaxVertexImageUniforms",
                 state->Const.MaxVertexImageUniforms);
-      add_const("gl_MaxTessControlImageUniforms", 0);
-      add_const("gl_MaxTessEvaluationImageUniforms", 0);
       add_const("gl_MaxGeometryImageUniforms",
                 state->Const.MaxGeometryImageUniforms);
       add_const("gl_MaxFragmentImageUniforms",
