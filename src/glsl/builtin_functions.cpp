@@ -401,7 +401,7 @@ shader_trinary_minmax(const _mesa_glsl_parse_state *state)
 static bool
 shader_image_load_store(const _mesa_glsl_parse_state *state)
 {
-   return (state->is_version(420, 0) ||
+   return (state->is_version(420, 310) ||
            state->ARB_shader_image_load_store_enable);
 }
 
