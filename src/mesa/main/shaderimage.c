@@ -397,10 +397,11 @@ is_image_format_supported(const struct gl_context *ctx, GLenum format)
 struct gl_image_unit
 _mesa_default_image_unit(struct gl_context *ctx)
 {
+   const GLenum format = _mesa_is_desktop_gl(ctx) ? GL_R8 : GL_R32UI;
    const struct gl_image_unit u = {
       .Access = GL_READ_ONLY,
-      .Format = GL_R8,
-      ._ActualFormat = _mesa_get_shader_image_format(GL_R8)
+      .Format = format,
+      ._ActualFormat = _mesa_get_shader_image_format(format)
    };
    return u;
 }
