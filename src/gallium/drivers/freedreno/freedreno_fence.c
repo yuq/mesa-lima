@@ -78,7 +78,8 @@ boolean fd_screen_fence_finish(struct pipe_screen *screen,
 	return true;
 }
 
-struct pipe_fence_handle * fd_fence_create(struct pipe_context *pctx)
+struct pipe_fence_handle * fd_fence_create(struct pipe_context *pctx,
+		uint32_t timestamp)
 {
 	struct pipe_fence_handle *fence;
 	struct fd_context *ctx = fd_context(pctx);
@@ -91,7 +92,7 @@ struct pipe_fence_handle * fd_fence_create(struct pipe_context *pctx)
 
 	fence->ctx = ctx;
 	fence->screen = ctx->screen;
-	fence->timestamp = fd_ringbuffer_timestamp(ctx->ring);
+	fence->timestamp = timestamp;
 
 	return fence;
 }
