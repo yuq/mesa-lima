@@ -253,7 +253,7 @@ const static struct builtin_type_versions {
    T(uimage2DMS,                      420, 999)
    T(uimage2DMSArray,                 420, 999)
 
-   T(atomic_uint,                     420, 999)
+   T(atomic_uint,                     420, 310)
 };
 
 static const glsl_type *const deprecated_types[] = {
