@@ -331,6 +331,69 @@ get_image_format_class(mesa_format format)
    }
 }
 
+/**
+ * Return whether an image format should be supported based on the current API
+ * version of the context.
+ */
+static bool
+is_image_format_supported(const struct gl_context *ctx, GLenum format)
+{
+   switch (format) {
+   /* Formats supported on both desktop and ES GL, c.f. table 8.27 of the
+    * OpenGL ES 3.1 specification.
+    */
+   case GL_RGBA32F:
+   case GL_RGBA16F:
+   case GL_R32F:
+   case GL_RGBA32UI:
+   case GL_RGBA16UI:
+   case GL_RGBA8UI:
+   case GL_R32UI:
+   case GL_RGBA32I:
+   case GL_RGBA16I:
+   case GL_RGBA8I:
+   case GL_R32I:
+   case GL_RGBA8:
+   case GL_RGBA8_SNORM:
+      return true;
+
+   /* Formats supported on unextended desktop GL and the original
+    * ARB_shader_image_load_store extension, c.f. table 3.21 of the OpenGL 4.2
+    * specification.
+    */
+   case GL_RG32F:
+   case GL_RG16F:
+   case GL_R11F_G11F_B10F:
+   case GL_R16F:
+   case GL_RGB10_A2UI:
+   case GL_RG32UI:
+   case GL_RG16UI:
+   case GL_RG8UI:
+   case GL_R16UI:
+   case GL_R8UI:
+   case GL_RG32I:
+   case GL_RG16I:
+   case GL_RG8I:
+   case GL_R16I:
+   case GL_R8I:
+   case GL_RGBA16:
+   case GL_RGB10_A2:
+   case GL_RG16:
+   case GL_RG8:
+   case GL_R16:
+   case GL_R8:
+   case GL_RGBA16_SNORM:
+   case GL_RG16_SNORM:
+   case GL_RG8_SNORM:
+   case GL_R16_SNORM:
+   case GL_R8_SNORM:
+      return _mesa_is_desktop_gl(ctx);
+
+   default:
+      return false;
+   }
+}
+
 void
 _mesa_init_image_units(struct gl_context *ctx)
 {
@@ -442,7 +505,7 @@ validate_bind_image_texture(struct gl_context *ctx, GLuint unit,
       return GL_FALSE;
    }
 
-   if (!_mesa_get_shader_image_format(format)) {
+   if (!is_image_format_supported(ctx, format)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glBindImageTexture(format)");
       return GL_FALSE;
    }
@@ -600,7 +663,7 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
             tex_format = image->InternalFormat;
          }
 
-         if (_mesa_get_shader_image_format(tex_format) == MESA_FORMAT_NONE) {
+         if (!is_image_format_supported(ctx, tex_format)) {
             /* The ARB_multi_bind spec says:
              *
              *   "An INVALID_OPERATION error is generated if the internal
