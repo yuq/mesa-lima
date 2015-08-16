@@ -1890,7 +1890,7 @@ sm1_declusage_to_tgsi(struct tgsi_declaration_semantic *sem,
         sem->Index = 0;
         break;
     default:
-        assert(!"Invalid DECLUSAGE.");
+        unreachable(!"Invalid DECLUSAGE.");
         break;
     }
 }
