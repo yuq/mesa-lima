@@ -506,6 +506,9 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          if (!view)
             continue;
 
+         const struct anv_format *format =
+            anv_format_for_vk_format(view->format);
+
          struct anv_state state =
             anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
 
@@ -518,7 +521,7 @@ cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                d->dynamic_offsets[surface_slots[b].dynamic_slot];
 
             offset = view->offset + dynamic_offset;
-            anv_fill_buffer_surface_state(state.map, view->format, offset,
+            anv_fill_buffer_surface_state(state.map, format, offset,
                                           view->range - dynamic_offset);
          } else {
             offset = view->offset;

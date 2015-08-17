@@ -1318,12 +1318,9 @@ VkResult anv_DestroyBuffer(
 // Buffer view functions
 
 void
-anv_fill_buffer_surface_state(void *state, VkFormat format,
+anv_fill_buffer_surface_state(void *state, const struct anv_format *format,
                               uint32_t offset, uint32_t range)
 {
-   const struct anv_format *info;
-
-   info = anv_format_for_vk_format(format);
    /* This assumes RGBA float format. */
    uint32_t stride = 4;
    uint32_t num_elements = range / stride;
@@ -1331,7 +1328,7 @@ anv_fill_buffer_surface_state(void *state, VkFormat format,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_BUFFER,
       .SurfaceArray = false,
-      .SurfaceFormat = info->surface_format,
+      .SurfaceFormat = format->surface_format,
       .SurfaceVerticalAlignment = VALIGN4,
       .SurfaceHorizontalAlignment = HALIGN4,
       .TileMode = LINEAR,
@@ -1395,7 +1392,7 @@ VkResult anv_CreateBufferView(
    view->range = pCreateInfo->range;
 
    anv_fill_buffer_surface_state(view->surface_state.map,
-                                 pCreateInfo->format,
+                                 anv_format_for_vk_format(pCreateInfo->format),
                                  view->offset, pCreateInfo->range);
 
    *pView = anv_buffer_view_to_handle(bview);
