@@ -402,6 +402,7 @@ private:
 
    const glsl_type * const bool_t;
    const glsl_type * const int_t;
+   const glsl_type * const uint_t;
    const glsl_type * const float_t;
    const glsl_type * const vec2_t;
    const glsl_type * const vec3_t;
@@ -420,6 +421,7 @@ builtin_variable_generator::builtin_variable_generator(
    : instructions(instructions), state(state), symtab(state->symbols),
      compatibility(!state->is_version(140, 100)),
      bool_t(glsl_type::bool_type), int_t(glsl_type::int_type),
+     uint_t(glsl_type::uint_type),
      float_t(glsl_type::float_type), vec2_t(glsl_type::vec2_type),
      vec3_t(glsl_type::vec3_type), vec4_t(glsl_type::vec4_type),
      uvec3_t(glsl_type::uvec3_type),
@@ -1061,6 +1063,7 @@ builtin_variable_generator::generate_cs_special_vars()
                     "gl_LocalInvocationID");
    add_system_value(SYSTEM_VALUE_WORK_GROUP_ID, uvec3_t, "gl_WorkGroupID");
    add_variable("gl_GlobalInvocationID", uvec3_t, ir_var_auto, 0);
+   add_variable("gl_LocalInvocationIndex", uint_t, ir_var_auto, 0);
    /* TODO: finish this. */
 }
 
@@ -1252,6 +1255,25 @@ initialize_cs_derived_variables(gl_shader *shader,
       assign(gl_GlobalInvocationID,
              add(mul(gl_WorkGroupID, gl_WorkGroupSize),
                  gl_LocalInvocationID));
+   main_sig->body.push_head(inst);
+
+   /* gl_LocalInvocationIndex =
+    *    gl_LocalInvocationID.z * gl_WorkGroupSize.x * gl_WorkGroupSize.y +
+    *    gl_LocalInvocationID.y * gl_WorkGroupSize.x +
+    *    gl_LocalInvocationID.x;
+    */
+   ir_expression *index_z =
+      mul(mul(swizzle_z(gl_LocalInvocationID), swizzle_x(gl_WorkGroupSize)),
+          swizzle_y(gl_WorkGroupSize));
+   ir_expression *index_y =
+      mul(swizzle_y(gl_LocalInvocationID), swizzle_x(gl_WorkGroupSize));
+   ir_expression *index_y_plus_z = add(index_y, index_z);
+   operand index_x(swizzle_x(gl_LocalInvocationID));
+   ir_expression *index_x_plus_y_plus_z = add(index_y_plus_z, index_x);
+   ir_variable *gl_LocalInvocationIndex =
+      shader->symbols->get_variable("gl_LocalInvocationIndex");
+   assert(gl_LocalInvocationIndex);
+   inst = assign(gl_LocalInvocationIndex, index_x_plus_y_plus_z);
    main_sig->body.push_head(inst);
 }
 
