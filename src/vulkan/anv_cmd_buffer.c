@@ -299,35 +299,6 @@ void anv_CmdBindDescriptorSets(
    }
 }
 
-void anv_CmdBindIndexBuffer(
-    VkCmdBuffer                                 cmdBuffer,
-    VkBuffer                                    _buffer,
-    VkDeviceSize                                offset,
-    VkIndexType                                 indexType)
-{
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
-
-   static const uint32_t vk_to_gen_index_type[] = {
-      [VK_INDEX_TYPE_UINT16]                    = INDEX_WORD,
-      [VK_INDEX_TYPE_UINT32]                    = INDEX_DWORD,
-   };
-
-   struct GEN8_3DSTATE_VF vf = {
-      GEN8_3DSTATE_VF_header,
-      .CutIndex = (indexType == VK_INDEX_TYPE_UINT16) ? UINT16_MAX : UINT32_MAX,
-   };
-   GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state.state_vf, &vf);
-
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
-
-   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
-                  .IndexFormat = vk_to_gen_index_type[indexType],
-                  .MemoryObjectControlState = GEN8_MOCS,
-                  .BufferStartingAddress = { buffer->bo, buffer->offset + offset },
-                  .BufferSize = buffer->size - offset);
-}
-
 void anv_CmdBindVertexBuffers(
     VkCmdBuffer                                 cmdBuffer,
     uint32_t                                    startBinding,
