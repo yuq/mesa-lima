@@ -26,7 +26,7 @@
 #define UNSUPPORTED 0xffff
 
 #define fmt(__vk_fmt, ...) \
-   [__vk_fmt] = { .name = #__vk_fmt, __VA_ARGS__ }
+   [__vk_fmt] = { .vk_format = __vk_fmt, .name = #__vk_fmt, __VA_ARGS__ }
 
 static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_UNDEFINED,               RAW,                    .cpp = 1,   .num_channels = 1),

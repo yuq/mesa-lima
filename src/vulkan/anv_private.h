@@ -870,6 +870,7 @@ int anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipelin
 void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
+   const VkFormat vk_format;
    const char *name;
    uint16_t surface_format; /**< RENDER_SURFACE_STATE.SurfaceFormat */
    uint8_t cpp; /**< Bytes-per-pixel of anv_format::surface_format. */
