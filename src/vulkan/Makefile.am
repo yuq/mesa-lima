@@ -82,7 +82,7 @@ libvulkan_la_SOURCES =                                  \
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
 	anv_entrypoints.c                               \
-	anv_meta_spirv.h
+	anv_meta_spirv_autogen.h
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@
@@ -90,7 +90,7 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
 
-%_spirv.h: %.c glsl_scraper.py
+%_spirv_autogen.h: %.c glsl_scraper.py
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/glsl_scraper.py --glsl-only -o $@ $<
 
 CLEANFILES = $(BUILT_SOURCES)
