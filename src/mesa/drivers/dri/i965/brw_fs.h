@@ -225,7 +225,6 @@ public:
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
    fs_reg resolve_source_modifiers(const fs_reg &src);
    void emit_discard_jump();
-   bool try_replace_with_sel();
    bool opt_peephole_sel();
    bool opt_peephole_predicated_break();
    bool opt_saturate_propagation();
