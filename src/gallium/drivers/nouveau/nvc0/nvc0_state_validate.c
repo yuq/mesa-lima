@@ -1,4 +1,5 @@
 
+#include "util/u_format.h"
 #include "util/u_math.h"
 
 #include "nvc0/nvc0_context.h"
@@ -555,6 +556,25 @@ nvc0_validate_derived_2(struct nvc0_context *nvc0)
 }
 
 static void
+nvc0_validate_derived_3(struct nvc0_context *nvc0)
+{
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
+   uint32_t ms = 0;
+
+   if ((!fb->nr_cbufs || !fb->cbufs[0] ||
+        !util_format_is_pure_integer(fb->cbufs[0]->format)) && nvc0->blend) {
+      if (nvc0->blend->pipe.alpha_to_coverage)
+         ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_COVERAGE;
+      if (nvc0->blend->pipe.alpha_to_one)
+         ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_ONE;
+   }
+
+   BEGIN_NVC0(push, NVC0_3D(MULTISAMPLE_CTRL), 1);
+   PUSH_DATA (push, ms);
+}
+
+static void
 nvc0_validate_tess_state(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -628,6 +648,7 @@ static struct state_validate {
     { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
                                    NVC0_NEW_RASTERIZER },
     { nvc0_validate_derived_2,     NVC0_NEW_ZSA | NVC0_NEW_FRAMEBUFFER },
+    { nvc0_validate_derived_3,     NVC0_NEW_BLEND | NVC0_NEW_FRAMEBUFFER },
     { nvc0_validate_clip,          NVC0_NEW_CLIP | NVC0_NEW_RASTERIZER |
                                    NVC0_NEW_VERTPROG |
                                    NVC0_NEW_TEVLPROG |
