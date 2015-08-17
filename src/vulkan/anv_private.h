@@ -761,6 +761,21 @@ void anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
                                   struct anv_cmd_buffer *secondary);
 void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
+VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
+                                           unsigned stage, struct anv_state *bt_state);
+VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
+                                      unsigned stage, struct anv_state *state);
+void anv_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
+
+struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
+                                             uint32_t *a, uint32_t dwords,
+                                             uint32_t alignment);
+struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
+                                              uint32_t *a, uint32_t *b,
+                                              uint32_t dwords, uint32_t alignment);
+void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                  struct anv_subpass *subpass);
+
 struct anv_bo *
 anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer);
 struct anv_reloc_list *
@@ -774,9 +789,12 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
 
+void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
-void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+void gen8_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_subpass *subpass);
 
 void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);

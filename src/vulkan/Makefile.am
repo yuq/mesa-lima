@@ -73,7 +73,9 @@ VULKAN_SOURCES =                                        \
 	anv_query.c                                     \
 	anv_util.c                                      \
 	anv_x11.c					\
-	anv_gen8.c
+	gen8_state.c					\
+	gen8_cmd_buffer.c				\
+	gen8_pipeline.c
 
 libvulkan_la_SOURCES =                                  \
 	$(VULKAN_SOURCES)                               \

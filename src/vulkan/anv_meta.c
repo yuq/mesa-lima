@@ -279,7 +279,7 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                         device->meta_state.shared.cb_state);
 
-   anv_CmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, num_instances);
+   driver_layer->CmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, num_instances);
 }
 
 void
@@ -694,7 +694,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .dependencyCount = 0,
       }, &pass);
 
-   anv_CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
+   driver_layer->CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
       &(VkRenderPassBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
          .renderPass = pass,
@@ -715,9 +715,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                              device->meta_state.blit.pipeline_layout, 0, 1,
                              &set, 0, NULL);
 
-   anv_CmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, 1);
+   driver_layer->CmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, 1);
 
-   anv_CmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
+   driver_layer->CmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
 
    /* At the point where we emit the draw call, all data from the
     * descriptor sets, etc. has been used.  We are free to delete it.
@@ -1345,7 +1345,7 @@ void anv_CmdClearColorImage(
                   .dependencyCount = 0,
                }, &pass);
 
-            anv_CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
+            driver_layer->CmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
                &(VkRenderPassBeginInfo) {
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                   .renderArea = {
@@ -1373,7 +1373,7 @@ void anv_CmdClearColorImage(
             meta_emit_clear(cmd_buffer, 1, &instance_data,
                             (VkClearDepthStencilValue) {0});
 
-            anv_CmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
+            driver_layer->CmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
          }
       }
    }

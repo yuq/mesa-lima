@@ -1,0 +1,286 @@
+/*
+ * Copyright © 2015 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+#include <assert.h>
+#include <stdbool.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include "anv_private.h"
+
+VkResult gen8_CreateDynamicRasterState(
+    VkDevice                                    _device,
+    const VkDynamicRasterStateCreateInfo*       pCreateInfo,
+    VkDynamicRasterState*                       pState)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_dynamic_rs_state *state;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
+
+   state = anv_device_alloc(device, sizeof(*state), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (state == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   struct GEN8_3DSTATE_SF sf = {
+      GEN8_3DSTATE_SF_header,
+      .LineWidth = pCreateInfo->lineWidth,
+   };
+
+   GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
+
+   bool enable_bias = pCreateInfo->depthBias != 0.0f ||
+      pCreateInfo->slopeScaledDepthBias != 0.0f;
+   struct GEN8_3DSTATE_RASTER raster = {
+      .GlobalDepthOffsetEnableSolid = enable_bias,
+      .GlobalDepthOffsetEnableWireframe = enable_bias,
+      .GlobalDepthOffsetEnablePoint = enable_bias,
+      .GlobalDepthOffsetConstant = pCreateInfo->depthBias,
+      .GlobalDepthOffsetScale = pCreateInfo->slopeScaledDepthBias,
+      .GlobalDepthOffsetClamp = pCreateInfo->depthBiasClamp
+   };
+
+   GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
+
+   *pState = anv_dynamic_rs_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
+
+void
+gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
+                               uint32_t offset, uint32_t range)
+{
+   /* This assumes RGBA float format. */
+   uint32_t stride = 4;
+   uint32_t num_elements = range / stride;
+
+   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+      .SurfaceType = SURFTYPE_BUFFER,
+      .SurfaceArray = false,
+      .SurfaceFormat = format->surface_format,
+      .SurfaceVerticalAlignment = VALIGN4,
+      .SurfaceHorizontalAlignment = HALIGN4,
+      .TileMode = LINEAR,
+      .VerticalLineStride = 0,
+      .VerticalLineStrideOffset = 0,
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+      .MemoryObjectControlState = GEN8_MOCS,
+      .BaseMipLevel = 0.0,
+      .SurfaceQPitch = 0,
+      .Height = (num_elements >> 7) & 0x3fff,
+      .Width = num_elements & 0x7f,
+      .Depth = (num_elements >> 21) & 0x3f,
+      .SurfacePitch = stride - 1,
+      .MinimumArrayElement = 0,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .XOffset = 0,
+      .YOffset = 0,
+      .SurfaceMinLOD = 0,
+      .MIPCountLOD = 0,
+      .AuxiliarySurfaceMode = AUX_NONE,
+      .RedClearColor = 0,
+      .GreenClearColor = 0,
+      .BlueClearColor = 0,
+      .AlphaClearColor = 0,
+      .ShaderChannelSelectRed = SCS_RED,
+      .ShaderChannelSelectGreen = SCS_GREEN,
+      .ShaderChannelSelectBlue = SCS_BLUE,
+      .ShaderChannelSelectAlpha = SCS_ALPHA,
+      .ResourceMinLOD = 0.0,
+      /* FIXME: We assume that the image must be bound at this time. */
+      .SurfaceBaseAddress = { NULL, offset },
+   };
+
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, state, &surface_state);
+}
+
+VkResult gen8_CreateBufferView(
+    VkDevice                                    _device,
+    const VkBufferViewCreateInfo*               pCreateInfo,
+    VkBufferView*                               pView)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_buffer_view *view;
+   VkResult result;
+
+   result = anv_buffer_view_create(device, pCreateInfo, &view);
+   if (result != VK_SUCCESS)
+      return result;
+
+   const struct anv_format *format =
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   gen8_fill_buffer_surface_state(view->view.surface_state.map, format,
+                                  view->view.offset, pCreateInfo->range);
+
+   *pView = anv_buffer_view_to_handle(view);
+
+   return VK_SUCCESS;
+}
+
+VkResult gen8_CreateSampler(
+    VkDevice                                    _device,
+    const VkSamplerCreateInfo*                  pCreateInfo,
+    VkSampler*                                  pSampler)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_sampler *sampler;
+   uint32_t mag_filter, min_filter, max_anisotropy;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
+
+   sampler = anv_device_alloc(device, sizeof(*sampler), 8,
+                              VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (!sampler)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   static const uint32_t vk_to_gen_tex_filter[] = {
+      [VK_TEX_FILTER_NEAREST]                   = MAPFILTER_NEAREST,
+      [VK_TEX_FILTER_LINEAR]                    = MAPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_mipmap_mode[] = {
+      [VK_TEX_MIPMAP_MODE_BASE]                 = MIPFILTER_NONE,
+      [VK_TEX_MIPMAP_MODE_NEAREST]              = MIPFILTER_NEAREST,
+      [VK_TEX_MIPMAP_MODE_LINEAR]               = MIPFILTER_LINEAR
+   };
+
+   static const uint32_t vk_to_gen_tex_address[] = {
+      [VK_TEX_ADDRESS_WRAP]                     = TCM_WRAP,
+      [VK_TEX_ADDRESS_MIRROR]                   = TCM_MIRROR,
+      [VK_TEX_ADDRESS_CLAMP]                    = TCM_CLAMP,
+      [VK_TEX_ADDRESS_MIRROR_ONCE]              = TCM_MIRROR_ONCE,
+      [VK_TEX_ADDRESS_CLAMP_BORDER]             = TCM_CLAMP_BORDER,
+   };
+
+   static const uint32_t vk_to_gen_compare_op[] = {
+      [VK_COMPARE_OP_NEVER]                     = PREFILTEROPNEVER,
+      [VK_COMPARE_OP_LESS]                      = PREFILTEROPLESS,
+      [VK_COMPARE_OP_EQUAL]                     = PREFILTEROPEQUAL,
+      [VK_COMPARE_OP_LESS_EQUAL]                = PREFILTEROPLEQUAL,
+      [VK_COMPARE_OP_GREATER]                   = PREFILTEROPGREATER,
+      [VK_COMPARE_OP_NOT_EQUAL]                 = PREFILTEROPNOTEQUAL,
+      [VK_COMPARE_OP_GREATER_EQUAL]             = PREFILTEROPGEQUAL,
+      [VK_COMPARE_OP_ALWAYS]                    = PREFILTEROPALWAYS,
+   };
+
+   if (pCreateInfo->maxAnisotropy > 1) {
+      mag_filter = MAPFILTER_ANISOTROPIC;
+      min_filter = MAPFILTER_ANISOTROPIC;
+      max_anisotropy = (pCreateInfo->maxAnisotropy - 2) / 2;
+   } else {
+      mag_filter = vk_to_gen_tex_filter[pCreateInfo->magFilter];
+      min_filter = vk_to_gen_tex_filter[pCreateInfo->minFilter];
+      max_anisotropy = RATIO21;
+   }
+
+   struct GEN8_SAMPLER_STATE sampler_state = {
+      .SamplerDisable = false,
+      .TextureBorderColorMode = DX10OGL,
+      .LODPreClampMode = 0,
+      .BaseMipLevel = 0.0,
+      .MipModeFilter = vk_to_gen_mipmap_mode[pCreateInfo->mipMode],
+      .MagModeFilter = mag_filter,
+      .MinModeFilter = min_filter,
+      .TextureLODBias = pCreateInfo->mipLodBias * 256,
+      .AnisotropicAlgorithm = EWAApproximation,
+      .MinLOD = pCreateInfo->minLod,
+      .MaxLOD = pCreateInfo->maxLod,
+      .ChromaKeyEnable = 0,
+      .ChromaKeyIndex = 0,
+      .ChromaKeyMode = 0,
+      .ShadowFunction = vk_to_gen_compare_op[pCreateInfo->compareOp],
+      .CubeSurfaceControlMode = 0,
+
+      .IndirectStatePointer =
+         device->border_colors.offset +
+         pCreateInfo->borderColor * sizeof(float) * 4,
+
+      .LODClampMagnificationMode = MIPNONE,
+      .MaximumAnisotropy = max_anisotropy,
+      .RAddressMinFilterRoundingEnable = 0,
+      .RAddressMagFilterRoundingEnable = 0,
+      .VAddressMinFilterRoundingEnable = 0,
+      .VAddressMagFilterRoundingEnable = 0,
+      .UAddressMinFilterRoundingEnable = 0,
+      .UAddressMagFilterRoundingEnable = 0,
+      .TrilinearFilterQuality = 0,
+      .NonnormalizedCoordinateEnable = 0,
+      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressU],
+      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressV],
+      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressW],
+   };
+
+   GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
+
+   *pSampler = anv_sampler_to_handle(sampler);
+
+   return VK_SUCCESS;
+}
+
+VkResult gen8_CreateDynamicDepthStencilState(
+    VkDevice                                    _device,
+    const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
+    VkDynamicDepthStencilState*                 pState)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_dynamic_ds_state *state;
+
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
+
+   state = anv_device_alloc(device, sizeof(*state), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (state == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
+      GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
+
+      /* Is this what we need to do? */
+      .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
+
+      .StencilTestMask = pCreateInfo->stencilReadMask & 0xff,
+      .StencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
+
+      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask & 0xff,
+      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
+   };
+
+   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
+                                      &wm_depth_stencil);
+
+   struct GEN8_COLOR_CALC_STATE color_calc_state = {
+      .StencilReferenceValue = pCreateInfo->stencilFrontRef,
+      .BackFaceStencilReferenceValue = pCreateInfo->stencilBackRef
+   };
+
+   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
+
+   *pState = anv_dynamic_ds_state_to_handle(state);
+
+   return VK_SUCCESS;
+}
