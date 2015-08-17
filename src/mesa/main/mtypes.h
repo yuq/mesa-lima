@@ -3675,7 +3675,7 @@ struct gl_constants
 
    /* GL_ARB_shader_image_load_store */
    GLuint MaxImageUnits;
-   GLuint MaxCombinedImageUnitsAndFragmentOutputs;
+   GLuint MaxCombinedShaderOutputResources;
    GLuint MaxImageSamples;
    GLuint MaxCombinedImageUniforms;
 

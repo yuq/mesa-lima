@@ -141,7 +141,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
       this->Const.MaxComputeWorkGroupSize[i] = ctx->Const.MaxComputeWorkGroupSize[i];
 
    this->Const.MaxImageUnits = ctx->Const.MaxImageUnits;
-   this->Const.MaxCombinedImageUnitsAndFragmentOutputs = ctx->Const.MaxCombinedImageUnitsAndFragmentOutputs;
+   this->Const.MaxCombinedShaderOutputResources = ctx->Const.MaxCombinedShaderOutputResources;
    this->Const.MaxImageSamples = ctx->Const.MaxImageSamples;
    this->Const.MaxVertexImageUniforms = ctx->Const.Program[MESA_SHADER_VERTEX].MaxImageUniforms;
    this->Const.MaxTessControlImageUniforms = ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxImageUniforms;

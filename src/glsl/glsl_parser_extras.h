@@ -395,7 +395,7 @@ struct _mesa_glsl_parse_state {
 
       /* ARB_shader_image_load_store */
       unsigned MaxImageUnits;
-      unsigned MaxCombinedImageUnitsAndFragmentOutputs;
+      unsigned MaxCombinedShaderOutputResources;
       unsigned MaxImageSamples;
       unsigned MaxVertexImageUniforms;
       unsigned MaxTessControlImageUniforms;

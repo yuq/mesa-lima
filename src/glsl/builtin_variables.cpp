@@ -749,7 +749,7 @@ builtin_variable_generator::generate_constants()
       add_const("gl_MaxImageUnits",
                 state->Const.MaxImageUnits);
       add_const("gl_MaxCombinedImageUnitsAndFragmentOutputs",
-                state->Const.MaxCombinedImageUnitsAndFragmentOutputs);
+                state->Const.MaxCombinedShaderOutputResources);
       add_const("gl_MaxImageSamples",
                 state->Const.MaxImageSamples);
       add_const("gl_MaxVertexImageUniforms",
