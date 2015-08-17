@@ -234,7 +234,7 @@ nvc0_rasterizer_state_create(struct pipe_context *pipe,
     SB_IMMED_3D(so, MULTISAMPLE_ENABLE, cso->multisample);
 
     SB_IMMED_3D(so, LINE_SMOOTH_ENABLE, cso->line_smooth);
-    if (cso->line_smooth)
+    if (cso->line_smooth || cso->multisample)
        SB_BEGIN_3D(so, LINE_WIDTH_SMOOTH, 1);
     else
        SB_BEGIN_3D(so, LINE_WIDTH_ALIASED, 1);
