@@ -72,6 +72,13 @@ optimize_dead_builtin_variables(exec_list *instructions,
        *    gl_GlobalInvocationID =
        *       gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID
        *
+       * Similarly, we initialize gl_LocalInvocationIndex in the main function:
+       *
+       *    gl_LocalInvocationIndex =
+       *       gl_LocalInvocationID.z * gl_WorkGroupSize.x * gl_WorkGroupSize.y +
+       *       gl_LocalInvocationID.y * gl_WorkGroupSize.x +
+       *       gl_LocalInvocationID.x;
+       *
        * Matrix uniforms with "Transpose" are not eliminated because there's
        * an optimization pass that can turn references to the regular matrix
        * into references to the transpose matrix.  Eliminating the transpose
@@ -87,6 +94,7 @@ optimize_dead_builtin_variables(exec_list *instructions,
           || strcmp(var->name, "gl_WorkGroupSize") == 0
           || strcmp(var->name, "gl_LocalInvocationID") == 0
           || strcmp(var->name, "gl_GlobalInvocationID") == 0
+          || strcmp(var->name, "gl_LocalInvocationIndex") == 0
           || strstr(var->name, "Transpose") != NULL)
          continue;
 
