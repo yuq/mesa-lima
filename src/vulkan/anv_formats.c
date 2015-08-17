@@ -209,6 +209,9 @@ static const struct anv_format anv_formats[] = {
 
 #undef fmt
 
+const struct anv_format *const
+anv_format_s8_uint = &anv_formats[VK_FORMAT_S8_UINT];
+
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format)
 {

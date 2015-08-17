@@ -879,6 +879,13 @@ struct anv_format {
    bool has_stencil;
 };
 
+/**
+ * Stencil formats are often a special case. To reduce the number of lookups
+ * into the VkFormat-to-anv_format translation table when working with
+ * stencil, here is the handle to the table's entry for VK_FORMAT_S8_UINT.
+ */
+extern const struct anv_format *const anv_format_s8_uint;
+
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
 bool anv_is_vk_format_depth_or_stencil(VkFormat format);
