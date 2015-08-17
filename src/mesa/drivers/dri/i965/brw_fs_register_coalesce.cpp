@@ -110,27 +110,30 @@ can_coalesce_vars(brw::fs_live_variables *live_intervals,
        (end_from > end_to && start_to < start_from))
       return false;
 
-   int start_ip = MIN2(start_to, start_from);
+   /* Check for a write to either register in the intersection of their live
+    * ranges.
+    */
+   int start_ip = MAX2(start_to, start_from);
+   int end_ip = MIN2(end_to, end_from);
    int scan_ip = -1;
 
    foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
       scan_ip++;
 
+      /* Ignore anything before the intersection of the live ranges */
       if (scan_ip < start_ip)
          continue;
 
-      if (scan_inst->is_control_flow())
-         return false;
-
-      if (scan_ip <= live_intervals->start[var_to])
+      /* Ignore the copying instruction itself */
+      if (scan_inst == inst)
          continue;
 
-      if (scan_ip > live_intervals->end[var_to])
-         return true;
+      if (scan_ip > end_ip)
+         return true; /* registers do not interfere */
 
       if (scan_inst->overwrites_reg(inst->dst) ||
           scan_inst->overwrites_reg(inst->src[0]))
-         return false;
+         return false; /* registers interfere */
    }
 
    return true;
