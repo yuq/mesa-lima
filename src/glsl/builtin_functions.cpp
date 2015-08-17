@@ -270,6 +270,13 @@ texture_array(const _mesa_glsl_parse_state *state)
 static bool
 texture_multisample(const _mesa_glsl_parse_state *state)
 {
+   return state->is_version(150, 310) ||
+          state->ARB_texture_multisample_enable;
+}
+
+static bool
+texture_multisample_array(const _mesa_glsl_parse_state *state)
+{
    return state->is_version(150, 0) ||
           state->ARB_texture_multisample_enable;
 }
@@ -1367,9 +1374,9 @@ builtin_builder::create_builtins()
                 _textureSize(texture_multisample, glsl_type::ivec2_type, glsl_type::isampler2DMS_type),
                 _textureSize(texture_multisample, glsl_type::ivec2_type, glsl_type::usampler2DMS_type),
 
-                _textureSize(texture_multisample, glsl_type::ivec3_type, glsl_type::sampler2DMSArray_type),
-                _textureSize(texture_multisample, glsl_type::ivec3_type, glsl_type::isampler2DMSArray_type),
-                _textureSize(texture_multisample, glsl_type::ivec3_type, glsl_type::usampler2DMSArray_type),
+                _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::sampler2DMSArray_type),
+                _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::isampler2DMSArray_type),
+                _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::usampler2DMSArray_type),
                 NULL);
 
    add_function("texture",
@@ -1632,9 +1639,9 @@ builtin_builder::create_builtins()
                 _texelFetch(texture_multisample, glsl_type::ivec4_type, glsl_type::isampler2DMS_type, glsl_type::ivec2_type),
                 _texelFetch(texture_multisample, glsl_type::uvec4_type, glsl_type::usampler2DMS_type, glsl_type::ivec2_type),
 
-                _texelFetch(texture_multisample, glsl_type::vec4_type,  glsl_type::sampler2DMSArray_type,  glsl_type::ivec3_type),
-                _texelFetch(texture_multisample, glsl_type::ivec4_type, glsl_type::isampler2DMSArray_type, glsl_type::ivec3_type),
-                _texelFetch(texture_multisample, glsl_type::uvec4_type, glsl_type::usampler2DMSArray_type, glsl_type::ivec3_type),
+                _texelFetch(texture_multisample_array, glsl_type::vec4_type,  glsl_type::sampler2DMSArray_type,  glsl_type::ivec3_type),
+                _texelFetch(texture_multisample_array, glsl_type::ivec4_type, glsl_type::isampler2DMSArray_type, glsl_type::ivec3_type),
+                _texelFetch(texture_multisample_array, glsl_type::uvec4_type, glsl_type::usampler2DMSArray_type, glsl_type::ivec3_type),
                 NULL);
 
    add_function("texelFetchOffset",
