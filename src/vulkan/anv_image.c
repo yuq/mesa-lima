@@ -123,8 +123,14 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
    }
 }
 
+
+/**
+ * The \a format argument is required and overrides any format in
+ * struct anv_image_create_info.
+ */
 static VkResult
 anv_image_make_surface(const struct anv_image_create_info *create_info,
+                       const struct anv_format *format,
                        uint64_t *inout_image_size,
                        uint32_t *inout_image_alignment,
                        struct anv_surface *out_surface)
@@ -141,9 +147,6 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
-
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(create_info->vk_info->format);
 
    const uint32_t i = 4; /* FINISHME: Stop hardcoding subimage alignment */
    const uint32_t j = 4; /* FINISHME: Stop hardcoding subimage alignment */
@@ -181,7 +184,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
     */
    assert(anv_is_aligned(qpitch, j));
 
-   uint32_t stride = align_u32(mt_width * format_info->cpp, tile_info->width);
+   uint32_t stride = align_u32(mt_width * format->cpp, tile_info->width);
    if (create_info->stride > 0)
       stride = create_info->stride;
 
@@ -257,7 +260,8 @@ anv_image_create(VkDevice _device,
 
    if (likely(!image->format->has_stencil || image->format->depth_format)) {
       /* The image's primary surface is a color or depth surface. */
-      r = anv_image_make_surface(create_info, &image->size, &image->alignment,
+      r = anv_image_make_surface(create_info, image->format,
+                                 &image->size, &image->alignment,
                                  &image->primary_surface);
       if (r != VK_SUCCESS)
          goto fail;
@@ -269,15 +273,9 @@ anv_image_create(VkDevice _device,
        * stencil reside in the same image.  To satisfy Vulkan and the GPU, we
        * place the depth and stencil buffers in the same bo.
        */
-      VkImageCreateInfo stencil_info = *pCreateInfo;
-      stencil_info.format = VK_FORMAT_S8_UINT;
-
-      r = anv_image_make_surface(
-            &(struct anv_image_create_info) {
-               .vk_info = &stencil_info,
-            },
-            &image->size, &image->alignment, &image->stencil_surface);
-
+      r = anv_image_make_surface(create_info, anv_format_s8_uint,
+                                 &image->size, &image->alignment,
+                                 &image->stencil_surface);
       if (r != VK_SUCCESS)
          goto fail;
    }
