@@ -22,12 +22,16 @@
  */
 
 #include "ir.h"
+#include "ir_builder.h"
+#include "linker.h"
 #include "glsl_parser_extras.h"
 #include "glsl_symbol_table.h"
 #include "main/core.h"
 #include "main/uniforms.h"
 #include "program/prog_statevars.h"
 #include "program/prog_instruction.h"
+
+using namespace ir_builder;
 
 static const struct gl_builtin_uniform_element gl_NumSamples_elements[] = {
    {NULL, {STATE_NUM_SAMPLES, 0, 0}, SWIZZLE_XXXX}
@@ -1056,6 +1060,7 @@ builtin_variable_generator::generate_cs_special_vars()
    add_system_value(SYSTEM_VALUE_LOCAL_INVOCATION_ID, uvec3_t,
                     "gl_LocalInvocationID");
    add_system_value(SYSTEM_VALUE_WORK_GROUP_ID, uvec3_t, "gl_WorkGroupID");
+   add_variable("gl_GlobalInvocationID", uvec3_t, ir_var_auto, 0);
    /* TODO: finish this. */
 }
 
@@ -1206,4 +1211,66 @@ _mesa_glsl_initialize_variables(exec_list *instructions,
       gen.generate_cs_special_vars();
       break;
    }
+}
+
+
+/**
+ * Initialize compute shader variables with values that are derived from other
+ * compute shader variable.
+ */
+static void
+initialize_cs_derived_variables(gl_shader *shader,
+                                ir_function_signature *const main_sig)
+{
+   assert(shader->Stage == MESA_SHADER_COMPUTE);
+
+   ir_variable *gl_GlobalInvocationID =
+      shader->symbols->get_variable("gl_GlobalInvocationID");
+   assert(gl_GlobalInvocationID);
+   ir_variable *gl_WorkGroupID =
+      shader->symbols->get_variable("gl_WorkGroupID");
+   assert(gl_WorkGroupID);
+   ir_variable *gl_WorkGroupSize =
+      shader->symbols->get_variable("gl_WorkGroupSize");
+   if (gl_WorkGroupSize == NULL) {
+      void *const mem_ctx = ralloc_parent(shader->ir);
+      gl_WorkGroupSize = new(mem_ctx) ir_variable(glsl_type::uvec3_type,
+                                                  "gl_WorkGroupSize",
+                                                  ir_var_auto);
+      gl_WorkGroupSize->data.how_declared = ir_var_declared_implicitly;
+      gl_WorkGroupSize->data.read_only = true;
+      shader->ir->push_head(gl_WorkGroupSize);
+   }
+   ir_variable *gl_LocalInvocationID =
+      shader->symbols->get_variable("gl_LocalInvocationID");
+   assert(gl_LocalInvocationID);
+
+   /* gl_GlobalInvocationID =
+    *    gl_WorkGroupID * gl_WorkGroupSize + gl_LocalInvocationID
+    */
+   ir_instruction *inst =
+      assign(gl_GlobalInvocationID,
+             add(mul(gl_WorkGroupID, gl_WorkGroupSize),
+                 gl_LocalInvocationID));
+   main_sig->body.push_head(inst);
+}
+
+
+/**
+ * Initialize builtin variables with values based on other builtin variables.
+ * These are initialized in the main function.
+ */
+void
+_mesa_glsl_initialize_derived_variables(gl_shader *shader)
+{
+   /* We only need to set CS variables currently. */
+   if (shader->Stage != MESA_SHADER_COMPUTE)
+      return;
+
+   ir_function_signature *const main_sig =
+      _mesa_get_main_function_signature(shader);
+   if (main_sig == NULL)
+      return;
+
+   initialize_cs_derived_variables(shader, main_sig);
 }

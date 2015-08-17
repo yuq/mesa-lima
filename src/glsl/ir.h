@@ -2514,6 +2514,9 @@ _mesa_glsl_initialize_variables(exec_list *instructions,
 				struct _mesa_glsl_parse_state *state);
 
 extern void
+_mesa_glsl_initialize_derived_variables(gl_shader *shader);
+
+extern void
 _mesa_glsl_initialize_functions(_mesa_glsl_parse_state *state);
 
 extern void
