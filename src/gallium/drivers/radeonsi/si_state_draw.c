@@ -835,11 +835,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_emit_draw_registers(sctx, info);
 	si_emit_draw_packets(sctx, info, &ib);
 
-#if SI_TRACE_CS
-	if (sctx->screen->b.trace_bo) {
+	if (sctx->screen->b.trace_bo)
 		si_trace_emit(sctx);
-	}
-#endif
 
 	/* Workaround for a VGT hang when streamout is enabled.
 	 * It must be done after drawing. */
@@ -874,7 +871,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	sctx->b.num_draw_calls++;
 }
 
-#if SI_TRACE_CS
 void si_trace_emit(struct si_context *sctx)
 {
 	struct si_screen *sscreen = sctx->screen;
@@ -893,4 +889,3 @@ void si_trace_emit(struct si_context *sctx)
 	radeon_emit(cs, cs->cdw);
 	radeon_emit(cs, sscreen->b.cs_count);
 }
-#endif

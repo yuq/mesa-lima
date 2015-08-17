@@ -43,7 +43,6 @@
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
 
-#define SI_TRACE_CS 0
 #define SI_TRACE_CS_DWORDS		6
 
 #define SI_MAX_DRAW_CS_DWORDS \
@@ -297,10 +296,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 			  struct pipe_fence_handle **fence);
 void si_begin_new_cs(struct si_context *ctx);
 void si_need_cs_space(struct si_context *ctx, unsigned num_dw, boolean count_draw_in);
-
-#if SI_TRACE_CS
-void si_trace_emit(struct si_context *sctx);
-#endif
 
 /* si_compute.c */
 void si_init_compute_functions(struct si_context *sctx);

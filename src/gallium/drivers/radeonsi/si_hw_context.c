@@ -88,11 +88,8 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	/* Count in framebuffer cache flushes at the end of CS. */
 	num_dw += ctx->atoms.s.cache_flush->num_dw;
 
-#if SI_TRACE_CS
-	if (ctx->screen->b.trace_bo) {
+	if (ctx->screen->b.trace_bo)
 		num_dw += SI_TRACE_CS_DWORDS;
-	}
-#endif
 
 	/* Flush if there's not enough space. */
 	if (num_dw > cs->max_dw) {
@@ -145,26 +142,6 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);
-
-#if SI_TRACE_CS
-	if (ctx->screen->b.trace_bo) {
-		struct si_screen *sscreen = ctx->screen;
-		unsigned i;
-
-		for (i = 0; i < 10; i++) {
-			usleep(5);
-			if (!ws->buffer_is_busy(sscreen->b.trace_bo->buf, RADEON_USAGE_READWRITE)) {
-				break;
-			}
-		}
-		if (i == 10) {
-			fprintf(stderr, "timeout on cs lockup likely happen at cs %d dw %d\n",
-				sscreen->b.trace_ptr[1], sscreen->b.trace_ptr[0]);
-		} else {
-			fprintf(stderr, "cs %d executed in %dms\n", sscreen->b.trace_ptr[1], i * 5);
-		}
-	}
-#endif
 
 	si_begin_new_cs(ctx);
 }

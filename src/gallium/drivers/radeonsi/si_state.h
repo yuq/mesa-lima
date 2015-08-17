@@ -281,6 +281,7 @@ extern const struct r600_atom si_atom_msaa_sample_locs;
 extern const struct r600_atom si_atom_msaa_config;
 void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *atom);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);
+void si_trace_emit(struct si_context *sctx);
 
 /* si_commands.c */
 void si_cmd_context_control(struct si_pm4_state *pm4);
