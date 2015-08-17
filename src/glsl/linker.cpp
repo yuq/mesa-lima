@@ -1341,33 +1341,6 @@ move_non_declarations(exec_list *instructions, exec_node *last,
    return last;
 }
 
-/**
- * Get the function signature for main from a shader
- */
-ir_function_signature *
-link_get_main_function_signature(gl_shader *sh)
-{
-   ir_function *const f = sh->symbols->get_function("main");
-   if (f != NULL) {
-      exec_list void_parameters;
-
-      /* Look for the 'void main()' signature and ensure that it's defined.
-       * This keeps the linker from accidentally pick a shader that just
-       * contains a prototype for main.
-       *
-       * We don't have to check for multiple definitions of main (in multiple
-       * shaders) because that would have already been caught above.
-       */
-      ir_function_signature *sig =
-         f->matching_signature(NULL, &void_parameters, false);
-      if ((sig != NULL) && sig->is_defined) {
-	 return sig;
-      }
-   }
-
-   return NULL;
-}
-
 
 /**
  * This class is only used in link_intrastage_shaders() below but declaring
@@ -2040,7 +2013,7 @@ link_intrastage_shaders(void *mem_ctx,
     */
    gl_shader *main = NULL;
    for (unsigned i = 0; i < num_shaders; i++) {
-      if (link_get_main_function_signature(shader_list[i]) != NULL) {
+      if (_mesa_get_main_function_signature(shader_list[i]) != NULL) {
 	 main = shader_list[i];
 	 break;
       }
@@ -2072,7 +2045,7 @@ link_intrastage_shaders(void *mem_ctx,
     * copy of the original shader that contained the main function).
     */
    ir_function_signature *const main_sig =
-      link_get_main_function_signature(linked);
+      _mesa_get_main_function_signature(linked);
 
    /* Move any instructions other than variable declarations or function
     * declarations into main.

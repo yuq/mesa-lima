@@ -5121,4 +5121,32 @@ _mesa_glsl_get_builtin_function_shader()
    return builtins.shader;
 }
 
+
+/**
+ * Get the function signature for main from a shader
+ */
+ir_function_signature *
+_mesa_get_main_function_signature(gl_shader *sh)
+{
+   ir_function *const f = sh->symbols->get_function("main");
+   if (f != NULL) {
+      exec_list void_parameters;
+
+      /* Look for the 'void main()' signature and ensure that it's defined.
+       * This keeps the linker from accidentally pick a shader that just
+       * contains a prototype for main.
+       *
+       * We don't have to check for multiple definitions of main (in multiple
+       * shaders) because that would have already been caught above.
+       */
+      ir_function_signature *sig =
+         f->matching_signature(NULL, &void_parameters, false);
+      if ((sig != NULL) && sig->is_defined) {
+         return sig;
+      }
+   }
+
+   return NULL;
+}
+
 /** @} */

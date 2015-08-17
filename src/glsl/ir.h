@@ -2529,6 +2529,9 @@ _mesa_glsl_find_builtin_function_by_name(const char *name);
 extern gl_shader *
 _mesa_glsl_get_builtin_function_shader(void);
 
+extern ir_function_signature *
+_mesa_get_main_function_signature(gl_shader *sh);
+
 extern void
 _mesa_glsl_release_functions(void);
 
