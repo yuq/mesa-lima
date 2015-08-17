@@ -343,9 +343,6 @@ anv_image_view_init(struct anv_image_view *iview,
    struct anv_surface_view *view = &iview->view;
    struct anv_surface *surface;
 
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(pCreateInfo->format);
-
    const struct anv_image_view_info *view_type_info
       = &anv_image_view_info_table[pCreateInfo->viewType];
 
@@ -369,7 +366,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
    view->bo = image->bo;
    view->offset = image->offset + surface->offset;
-   view->format = pCreateInfo->format;
+   view->format = anv_format_for_vk_format(pCreateInfo->format);
 
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
@@ -396,7 +393,7 @@ anv_image_view_init(struct anv_image_view *iview,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = view_type_info->surface_type,
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = format_info->surface_format,
+      .SurfaceFormat = view->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
       .TileMode = surface->tile_mode,
@@ -572,8 +569,6 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_surface_view *view = &aview->view;
    struct anv_surface *surface = &image->primary_surface;
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(pCreateInfo->format);
 
    aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
@@ -583,7 +578,7 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
 
    view->bo = image->bo;
    view->offset = image->offset + surface->offset;
-   view->format = pCreateInfo->format;
+   view->format = anv_format_for_vk_format(pCreateInfo->format);
 
    aview->base.extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
@@ -609,7 +604,7 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = format_info->surface_format,
+      .SurfaceFormat = view->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
       .TileMode = surface->tile_mode,

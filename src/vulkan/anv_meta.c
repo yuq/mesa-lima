@@ -637,7 +637,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = &(VkAttachmentDescription) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .format = dest->view.format,
+            .format = dest->view.format->vk_format,
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -1289,7 +1289,7 @@ void anv_CmdClearColorImage(
                   .attachmentCount = 1,
                   .pAttachments = &(VkAttachmentDescription) {
                      .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-                     .format = view.view.format,
+                     .format = view.view.format->vk_format,
                      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                      .initialLayout = VK_IMAGE_LAYOUT_GENERAL,

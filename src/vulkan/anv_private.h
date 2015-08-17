@@ -941,7 +941,7 @@ struct anv_surface_view {
    struct anv_bo *bo;
    uint32_t offset; /**< VkBufferCreateInfo::offset */
    uint32_t range; /**< VkBufferCreateInfo::range */
-   VkFormat format; /**< VkBufferCreateInfo::format */
+   const struct anv_format *format; /**< VkBufferCreateInfo::format */
 };
 
 struct anv_buffer_view {

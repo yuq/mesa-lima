@@ -1388,11 +1388,10 @@ VkResult anv_CreateBufferView(
    view->offset = buffer->offset + pCreateInfo->offset;
    view->surface_state =
       anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   view->format = pCreateInfo->format;
+   view->format = anv_format_for_vk_format(pCreateInfo->format);
    view->range = pCreateInfo->range;
 
-   anv_fill_buffer_surface_state(view->surface_state.map,
-                                 anv_format_for_vk_format(pCreateInfo->format),
+   anv_fill_buffer_surface_state(view->surface_state.map, view->format,
                                  view->offset, pCreateInfo->range);
 
    *pView = anv_buffer_view_to_handle(bview);
