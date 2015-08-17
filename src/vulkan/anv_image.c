@@ -242,9 +242,6 @@ anv_image_create(VkDevice _device,
       return vk_error(VK_ERROR_INVALID_MEMORY_SIZE);
    }
 
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(pCreateInfo->format);
-
    image = anv_device_alloc(device, sizeof(*image), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (!image)
@@ -253,12 +250,12 @@ anv_image_create(VkDevice _device,
    memset(image, 0, sizeof(*image));
    image->type = pCreateInfo->imageType;
    image->extent = pCreateInfo->extent;
-   image->format = pCreateInfo->format;
+   image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arraySize;
    image->surf_type = surf_type;
 
-   if (likely(!format_info->has_stencil || format_info->depth_format)) {
+   if (likely(!image->format->has_stencil || image->format->depth_format)) {
       /* The image's primary surface is a color or depth surface. */
       r = anv_image_make_surface(create_info, &image->size, &image->alignment,
                                  &image->primary_surface);
@@ -266,7 +263,7 @@ anv_image_create(VkDevice _device,
          goto fail;
    }
 
-   if (format_info->has_stencil) {
+   if (image->format->has_stencil) {
       /* From the GPU's perspective, the depth buffer and stencil buffer are
        * separate buffers.  From Vulkan's perspective, though, depth and
        * stencil reside in the same image.  To satisfy Vulkan and the GPU, we
@@ -465,7 +462,6 @@ anv_validate_CreateImageView(VkDevice _device,
    const VkImageSubresourceRange *subresource;
    const struct anv_image_view_info *view_info;
    const struct anv_format *view_format_info;
-   const struct anv_format *image_format_info;
 
    /* Validate structure type before dereferencing it. */
    assert(pCreateInfo);
@@ -480,7 +476,6 @@ anv_validate_CreateImageView(VkDevice _device,
    /* Validate format is in range before using it. */
    assert(pCreateInfo->format >= VK_FORMAT_BEGIN_RANGE);
    assert(pCreateInfo->format <= VK_FORMAT_END_RANGE);
-   image_format_info = anv_format_for_vk_format(image->format);
    view_format_info = anv_format_for_vk_format(pCreateInfo->format);
 
    /* Validate channel swizzles. */
@@ -512,20 +507,20 @@ anv_validate_CreateImageView(VkDevice _device,
    /* Validate format. */
    switch (subresource->aspect) {
    case VK_IMAGE_ASPECT_COLOR:
-      assert(!image_format_info->depth_format);
-      assert(!image_format_info->has_stencil);
+      assert(!image->format->depth_format);
+      assert(!image->format->has_stencil);
       assert(!view_format_info->depth_format);
       assert(!view_format_info->has_stencil);
-      assert(view_format_info->cpp == image_format_info->cpp);
+      assert(view_format_info->cpp == image->format->cpp);
       break;
    case VK_IMAGE_ASPECT_DEPTH:
-      assert(image_format_info->depth_format);
+      assert(image->format->depth_format);
       assert(view_format_info->depth_format);
-      assert(view_format_info->cpp == image_format_info->cpp);
+      assert(view_format_info->cpp == image->format->cpp);
       break;
    case VK_IMAGE_ASPECT_STENCIL:
       /* FINISHME: Is it legal to have an R8 view of S8? */
-      assert(image_format_info->has_stencil);
+      assert(image->format->has_stencil);
       assert(view_format_info->has_stencil);
       break;
    default:
@@ -672,8 +667,6 @@ anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_surface *depth_surface = &image->primary_surface;
    struct anv_surface *stencil_surface = &image->stencil_surface;
-   const struct anv_format *format =
-      anv_format_for_vk_format(image->format);
 
    view->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
 
@@ -686,7 +679,7 @@ anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
 
    view->depth_stride = depth_surface->stride;
    view->depth_offset = image->offset + depth_surface->offset;
-   view->depth_format = format->depth_format;
+   view->depth_format = image->format->depth_format;
    view->depth_qpitch = 0; /* FINISHME: QPitch */
 
    view->stencil_stride = stencil_surface->stride;

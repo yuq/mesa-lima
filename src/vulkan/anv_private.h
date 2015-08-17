@@ -912,8 +912,8 @@ struct anv_surface {
 
 struct anv_image {
    VkImageType type;
+   const struct anv_format *format;
    VkExtent3D extent;
-   VkFormat format;
    uint32_t levels;
    uint32_t array_size;
 

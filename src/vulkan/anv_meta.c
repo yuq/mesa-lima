@@ -911,7 +911,7 @@ void anv_CmdCopyImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -933,7 +933,7 @@ void anv_CmdCopyImage(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
             .baseArraySlice = pRegions[r].destSubresource.arraySlice,
             .arraySize = 1,
@@ -980,7 +980,7 @@ void anv_CmdBlitImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -1002,7 +1002,7 @@ void anv_CmdBlitImage(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
-            .format = dest_image->format,
+            .format = dest_image->format->vk_format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
             .baseArraySlice = pRegions[r].destSubresource.arraySlice,
             .arraySize = 1,
@@ -1048,7 +1048,7 @@ void anv_CmdCopyBufferToImage(
          &(VkImageCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = dest_image->format,
+            .format = dest_image->format->vk_format,
             .extent = {
                .width = pRegions[r].imageExtent.width,
                .height = pRegions[r].imageExtent.height,
@@ -1076,7 +1076,7 @@ void anv_CmdCopyBufferToImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(src_image),
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = dest_image->format,
+            .format = dest_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -1098,7 +1098,7 @@ void anv_CmdCopyBufferToImage(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
-            .format = dest_image->format,
+            .format = dest_image->format->vk_format,
             .mipLevel = pRegions[r].imageSubresource.mipLevel,
             .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
             .arraySize = 1,
@@ -1147,7 +1147,7 @@ void anv_CmdCopyImageToBuffer(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -1169,7 +1169,7 @@ void anv_CmdCopyImageToBuffer(
          &(VkImageCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .extent = {
                .width = pRegions[r].imageExtent.width,
                .height = pRegions[r].imageExtent.height,
@@ -1196,7 +1196,7 @@ void anv_CmdCopyImageToBuffer(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
-            .format = src_image->format,
+            .format = src_image->format->vk_format,
             .mipLevel = 0,
             .baseArraySlice = 0,
             .arraySize = 1,
@@ -1259,7 +1259,7 @@ void anv_CmdClearColorImage(
                &(VkAttachmentViewCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                   .image = _image,
-                  .format = image->format,
+                  .format = image->format->vk_format,
                   .mipLevel = pRanges[r].baseMipLevel + l,
                   .baseArraySlice = pRanges[r].baseArraySlice + s,
                   .arraySize = 1,
