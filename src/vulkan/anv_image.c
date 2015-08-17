@@ -689,7 +689,10 @@ anv_CreateAttachmentView(VkDevice _device,
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
 
-   if (anv_is_vk_format_depth_or_stencil(pCreateInfo->format)) {
+   const struct anv_format *format =
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   if (anv_format_is_depth_or_stencil(format)) {
       struct anv_depth_stencil_view *view =
          anv_device_alloc(device, sizeof(*view), 8,
                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);

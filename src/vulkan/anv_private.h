@@ -888,7 +888,12 @@ extern const struct anv_format *const anv_format_s8_uint;
 
 const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
-bool anv_is_vk_format_depth_or_stencil(VkFormat format);
+
+static inline bool
+anv_format_is_depth_or_stencil(const struct anv_format *format)
+{
+   return format->depth_format || format->has_stencil;
+}
 
 /**
  * A proxy for the color surfaces, depth surfaces, and stencil surfaces.
@@ -1042,7 +1047,7 @@ struct anv_subpass {
 };
 
 struct anv_render_pass_attachment {
-   VkFormat                                     format;
+   const struct anv_format                      *format;
    uint32_t                                     samples;
    VkAttachmentLoadOp                           load_op;
    VkAttachmentLoadOp                           stencil_load_op;

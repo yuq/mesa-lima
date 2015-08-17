@@ -269,7 +269,7 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    int num_clear_layers = 0;
    for (uint32_t i = 0; i < pass->attachment_count; i++) {
       if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         if (anv_is_vk_format_depth_or_stencil(pass->attachments[i].format)) {
+         if (anv_format_is_depth_or_stencil(pass->attachments[i].format)) {
             anv_finishme("Can't clear depth-stencil yet");
             continue;
          }
@@ -286,7 +286,7 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    int layer = 0;
    for (uint32_t i = 0; i < pass->attachment_count; i++) {
       if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR &&
-          !anv_is_vk_format_depth_or_stencil(pass->attachments[i].format)) {
+          !anv_format_is_depth_or_stencil(pass->attachments[i].format)) {
          instance_data[layer] = (struct clear_instance_data) {
             .vue_header = {
                .RTAIndex = i,

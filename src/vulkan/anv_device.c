@@ -2229,7 +2229,8 @@ VkResult anv_CreateRenderPass(
    pass->attachments = anv_device_alloc(device, size, 8,
                                         VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      pass->attachments[i].format = pCreateInfo->pAttachments[i].format;
+      pass->attachments[i].format =
+         anv_format_for_vk_format(pCreateInfo->pAttachments[i].format);
       pass->attachments[i].samples = pCreateInfo->pAttachments[i].samples;
       pass->attachments[i].load_op = pCreateInfo->pAttachments[i].loadOp;
       pass->attachments[i].stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
