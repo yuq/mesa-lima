@@ -5616,6 +5616,11 @@ texture_image_multisample(struct gl_context *ctx, GLuint dims,
       return;
    }
 
+   if (samples < 1) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(samples < 1)", func);
+      return;
+   }
+
    if (!check_multisample_target(dims, target, dsa)) {
       if (dsa) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "%s(target)", func);
