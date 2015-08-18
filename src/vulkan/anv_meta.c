@@ -899,6 +899,7 @@ void anv_CmdCopyImage(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+   ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
    struct anv_saved_state saved_state;
 
@@ -933,7 +934,7 @@ void anv_CmdCopyImage(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
-            .format = src_image->format->vk_format,
+            .format = dest_image->format->vk_format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
             .baseArraySlice = pRegions[r].destSubresource.arraySlice,
             .arraySize = 1,
