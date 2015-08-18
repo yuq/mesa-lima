@@ -629,11 +629,11 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_current_surface_bbo(cmd_buffer);
 
    if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY) {
-      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END);
+      anv_batch_emit(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END);
 
       /* Round batch up to an even number of dwords. */
       if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
-         anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP);
+         anv_batch_emit(&cmd_buffer->batch, GEN7_MI_NOOP);
 
       cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
    }

@@ -518,14 +518,14 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, uint32_t stage)
 
    if (samplers.alloc_size > 0) {
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN8_3DSTATE_SAMPLER_STATE_POINTERS_VS,
+                     GEN7_3DSTATE_SAMPLER_STATE_POINTERS_VS,
                      ._3DCommandSubOpcode  = sampler_state_opcodes[stage],
                      .PointertoVSSamplerState = samplers.offset);
    }
 
    if (surfaces.alloc_size > 0) {
       anv_batch_emit(&cmd_buffer->batch,
-                     GEN8_3DSTATE_BINDING_TABLE_POINTERS_VS,
+                     GEN7_3DSTATE_BINDING_TABLE_POINTERS_VS,
                      ._3DCommandSubOpcode  = binding_table_opcodes[stage],
                      .PointertoVSBindingTable = surfaces.offset);
    }

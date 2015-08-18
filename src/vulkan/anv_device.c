@@ -1108,8 +1108,8 @@ VkResult anv_CreateFence(
       anv_gem_mmap(device, fence->bo.gem_handle, 0, fence->bo.size);
    batch.next = batch.start = fence->bo.map;
    batch.end = fence->bo.map + fence->bo.size;
-   anv_batch_emit(&batch, GEN8_MI_BATCH_BUFFER_END);
-   anv_batch_emit(&batch, GEN8_MI_NOOP);
+   anv_batch_emit(&batch, GEN7_MI_BATCH_BUFFER_END);
+   anv_batch_emit(&batch, GEN7_MI_NOOP);
 
    fence->exec2_objects[0].handle = fence->bo.gem_handle;
    fence->exec2_objects[0].relocation_count = 0;
@@ -1777,6 +1777,8 @@ VkResult anv_CreateDynamicViewportState(
       const VkViewport *vp = &pCreateInfo->pViewports[i];
       const VkRect2D *s = &pCreateInfo->pScissors[i];
 
+      /* The gen7 state struct has just the matrix and guardband fields, the
+       * gen8 struct adds the min/max viewport fields. */
       struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
          .ViewportMatrixElementm00 = vp->width / 2,
          .ViewportMatrixElementm11 = vp->height / 2,
@@ -1794,7 +1796,7 @@ VkResult anv_CreateDynamicViewportState(
          .YMaxViewPort = vp->originY + vp->height - 1,
       };
 
-      struct GEN8_CC_VIEWPORT cc_viewport = {
+      struct GEN7_CC_VIEWPORT cc_viewport = {
          .MinimumDepth = vp->minDepth,
          .MaximumDepth = vp->maxDepth
       };
@@ -1804,7 +1806,7 @@ VkResult anv_CreateDynamicViewportState(
        * 0, the clamps below produce 0 for xmin, ymin, xmax, ymax, which isn't
        * what we want. Just special case empty clips and produce a canonical
        * empty clip. */
-      static const struct GEN8_SCISSOR_RECT empty_scissor = {
+      static const struct GEN7_SCISSOR_RECT empty_scissor = {
          .ScissorRectangleYMin = 1,
          .ScissorRectangleXMin = 1,
          .ScissorRectangleYMax = 0,
@@ -1812,7 +1814,7 @@ VkResult anv_CreateDynamicViewportState(
       };
 
       const int max = 0xffff;
-      struct GEN8_SCISSOR_RECT scissor = {
+      struct GEN7_SCISSOR_RECT scissor = {
          /* Do this math using int64_t so overflow gets clamped correctly. */
          .ScissorRectangleYMin = clamp_int64(s->offset.y, 0, max),
          .ScissorRectangleXMin = clamp_int64(s->offset.x, 0, max),
@@ -1821,12 +1823,12 @@ VkResult anv_CreateDynamicViewportState(
       };
 
       GEN8_SF_CLIP_VIEWPORT_pack(NULL, state->sf_clip_vp.map + i * 64, &sf_clip_viewport);
-      GEN8_CC_VIEWPORT_pack(NULL, state->cc_vp.map + i * 32, &cc_viewport);
+      GEN7_CC_VIEWPORT_pack(NULL, state->cc_vp.map + i * 32, &cc_viewport);
 
       if (s->extent.width <= 0 || s->extent.height <= 0) {
-         GEN8_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &empty_scissor);
+         GEN7_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &empty_scissor);
       } else {
-         GEN8_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &scissor);
+         GEN7_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &scissor);
       }
    }
 
@@ -1886,14 +1888,14 @@ VkResult anv_CreateDynamicColorBlendState(
    if (state == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   struct GEN8_COLOR_CALC_STATE color_calc_state = {
+   struct GEN7_COLOR_CALC_STATE color_calc_state = {
       .BlendConstantColorRed = pCreateInfo->blendConst[0],
       .BlendConstantColorGreen = pCreateInfo->blendConst[1],
       .BlendConstantColorBlue = pCreateInfo->blendConst[2],
       .BlendConstantColorAlpha = pCreateInfo->blendConst[3]
    };
 
-   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
+   GEN7_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
 
    *pState = anv_dynamic_cb_state_to_handle(state);
 
