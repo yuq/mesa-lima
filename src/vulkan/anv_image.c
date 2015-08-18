@@ -354,7 +354,6 @@ anv_image_view_init(struct anv_image_view *iview,
       break;
    case VK_IMAGE_ASPECT_DEPTH:
    case VK_IMAGE_ASPECT_COLOR:
-      view->offset = image->offset;
       surface = &image->primary_surface;
       break;
    default:
