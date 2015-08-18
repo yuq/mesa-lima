@@ -25,10 +25,10 @@
  */
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 * @file  addrinterface.cpp
 * @brief Contains the addrlib interface functions
-***************************************************************************************************
+****************************************************************************************************
 */
 #include "addrinterface.h"
 #include "addrlib1.h"
@@ -40,7 +40,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrCreate
 *
 *   @brief
@@ -48,7 +48,7 @@
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrCreate(
     const ADDR_CREATE_INPUT*    pAddrCreateIn,  ///< [in] infomation for creating address lib object
@@ -64,7 +64,7 @@ ADDR_E_RETURNCODE ADDR_API AddrCreate(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrDestroy
 *
 *   @brief
@@ -72,7 +72,7 @@ ADDR_E_RETURNCODE ADDR_API AddrCreate(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrDestroy(
     ADDR_HANDLE hLib) ///< address lib handle
@@ -99,7 +99,7 @@ ADDR_E_RETURNCODE ADDR_API AddrDestroy(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeSurfaceInfo
 *
 *   @brief
@@ -107,7 +107,7 @@ ADDR_E_RETURNCODE ADDR_API AddrDestroy(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
     ADDR_HANDLE                             hLib, ///< address lib handle
@@ -133,7 +133,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeSurfaceAddrFromCoord
 *
 *   @brief
@@ -141,7 +141,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -165,7 +165,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeSurfaceCoordFromAddr
 *
 *   @brief
@@ -173,7 +173,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -203,7 +203,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeHtileInfo
 *
 *   @brief
@@ -211,7 +211,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
     ADDR_HANDLE                             hLib, ///< address lib handle
@@ -235,7 +235,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeHtileAddrFromCoord
 *
 *   @brief
@@ -243,7 +243,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -267,7 +267,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeHtileCoordFromAddr
 *
 *   @brief
@@ -276,7 +276,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -306,7 +306,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeCmaskInfo
 *
 *   @brief
@@ -315,7 +315,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
     ADDR_HANDLE                             hLib, ///< address lib handle
@@ -339,7 +339,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeCmaskAddrFromCoord
 *
 *   @brief
@@ -347,7 +347,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -371,7 +371,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeCmaskCoordFromAddr
 *
 *   @brief
@@ -380,7 +380,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -410,7 +410,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeFmaskInfo
 *
 *   @brief
@@ -418,7 +418,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
     ADDR_HANDLE                             hLib, ///< address lib handle
@@ -442,7 +442,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeFmaskAddrFromCoord
 *
 *   @brief
@@ -450,7 +450,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -474,7 +474,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeFmaskCoordFromAddr
 *
 *   @brief
@@ -482,7 +482,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskCoordFromAddr(
     ADDR_HANDLE                                     hLib, ///< address lib handle
@@ -512,13 +512,13 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskCoordFromAddr(
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeDccInfo
 *
 *   @brief
 *       Compute DCC key size, base alignment based on color surface size, tile info or tile index
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeDccInfo(
     ADDR_HANDLE                             hLib,   ///< handle of addrlib
@@ -548,13 +548,13 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeDccInfo(
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrGetVersion
 *
 *   @brief
 *       Get AddrLib version number. Client may check this return value against ADDRLIB_VERSION
 *       defined in addrinterface.h to see if there is a mismatch.
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 ADDR_API AddrGetVersion(ADDR_HANDLE hLib)
 {
@@ -573,12 +573,12 @@ UINT_32 ADDR_API AddrGetVersion(ADDR_HANDLE hLib)
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrUseTileIndex
 *
 *   @brief
 *       Return TRUE if tileIndex is enabled in this address library
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 ADDR_API AddrUseTileIndex(ADDR_HANDLE hLib)
 {
@@ -597,12 +597,12 @@ BOOL_32 ADDR_API AddrUseTileIndex(ADDR_HANDLE hLib)
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrUseCombinedSwizzle
 *
 *   @brief
 *       Return TRUE if combined swizzle is enabled in this address library
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 ADDR_API AddrUseCombinedSwizzle(ADDR_HANDLE hLib)
 {
@@ -621,14 +621,14 @@ BOOL_32 ADDR_API AddrUseCombinedSwizzle(ADDR_HANDLE hLib)
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrExtractBankPipeSwizzle
 *
 *   @brief
 *       Extract Bank and Pipe swizzle from base256b
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrExtractBankPipeSwizzle(
     ADDR_HANDLE                                 hLib,     ///< addrlib handle
@@ -652,14 +652,14 @@ ADDR_E_RETURNCODE ADDR_API AddrExtractBankPipeSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrCombineBankPipeSwizzle
 *
 *   @brief
 *       Combine Bank and Pipe swizzle
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrCombineBankPipeSwizzle(
     ADDR_HANDLE                                 hLib,
@@ -683,14 +683,14 @@ ADDR_E_RETURNCODE ADDR_API AddrCombineBankPipeSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeSliceSwizzle
 *
 *   @brief
 *       Compute a swizzle for slice from a base swizzle
 *   @return
 *       ADDR_OK if no error
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeSliceSwizzle(
     ADDR_HANDLE                                 hLib,
@@ -714,14 +714,14 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSliceSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputeBaseSwizzle
 *
 *   @brief
 *       Return a Combined Bank and Pipe swizzle base on surface based on surface type/index
 *   @return
 *       ADDR_OK if no error
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputeBaseSwizzle(
     ADDR_HANDLE                             hLib,
@@ -745,7 +745,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeBaseSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   ElemFlt32ToDepthPixel
 *
 *   @brief
@@ -754,7 +754,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeBaseSwizzle(
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
     ADDR_HANDLE                         hLib,    ///< addrlib handle
@@ -778,7 +778,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   ElemFlt32ToColorPixel
 *
 *   @brief
@@ -787,7 +787,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
     ADDR_HANDLE                         hLib,    ///< addrlib handle
@@ -811,7 +811,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   ElemGetExportNorm
 *
 *   @brief
@@ -820,7 +820,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
 *       FP16 can be reported as EXPORT_NORM for rv770 in r600
 *       family
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 ADDR_API ElemGetExportNorm(
     ADDR_HANDLE                     hLib, ///< addrlib handle
@@ -846,7 +846,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrConvertTileInfoToHW
 *
 *   @brief
@@ -854,7 +854,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
     ADDR_HANDLE                             hLib, ///< address lib handle
@@ -878,7 +878,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrConvertTileIndex
 *
 *   @brief
@@ -886,7 +886,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
     ADDR_HANDLE                          hLib, ///< address lib handle
@@ -910,7 +910,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrGetMacroModeIndex
 *
 *   @brief
@@ -918,7 +918,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
     ADDR_HANDLE                          hLib, ///< address lib handle
@@ -942,7 +942,7 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrConvertTileIndex1
 *
 *   @brief
@@ -950,7 +950,7 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex1(
     ADDR_HANDLE                          hLib, ///< address lib handle
@@ -974,7 +974,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex1(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrGetTileIndex
 *
 *   @brief
@@ -985,7 +985,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex1(
 *
 *   @note
 *       Only meaningful for SI (and above)
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrGetTileIndex(
     ADDR_HANDLE                     hLib,
@@ -1009,13 +1009,13 @@ ADDR_E_RETURNCODE ADDR_API AddrGetTileIndex(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrComputePrtInfo
 *
 *   @brief
 *       Interface function for ComputePrtInfo
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
     ADDR_HANDLE                 hLib,
@@ -1039,7 +1039,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   AddrGetMaxAlignments
 *
 *   @brief
@@ -1047,7 +1047,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
 *
 *   @return
 *       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
     ADDR_HANDLE                     hLib, ///< address lib handle

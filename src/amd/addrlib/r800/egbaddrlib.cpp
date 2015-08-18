@@ -25,16 +25,16 @@
  */
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 * @file  egbaddrlib.cpp
 * @brief Contains the EgBasedAddrLib class implementation
-***************************************************************************************************
+****************************************************************************************************
 */
 
 #include "egbaddrlib.h"
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::EgBasedAddrLib
 *
 *   @brief
@@ -42,7 +42,7 @@
 *
 *   @note
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 EgBasedAddrLib::EgBasedAddrLib(const AddrClient* pClient) :
     AddrLib1(pClient),
@@ -53,19 +53,19 @@ EgBasedAddrLib::EgBasedAddrLib(const AddrClient* pClient) :
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::~EgBasedAddrLib
 *
 *   @brief
 *       Destructor
-***************************************************************************************************
+****************************************************************************************************
 */
 EgBasedAddrLib::~EgBasedAddrLib()
 {
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeSurfaceInfo
 *
 *   @brief
@@ -75,7 +75,7 @@ EgBasedAddrLib::~EgBasedAddrLib()
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::DispatchComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
@@ -197,7 +197,7 @@ BOOL_32 EgBasedAddrLib::DispatchComputeSurfaceInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceInfoLinear
 *
 *   @brief
@@ -207,7 +207,7 @@ BOOL_32 EgBasedAddrLib::DispatchComputeSurfaceInfo(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoLinear(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] Input structure
@@ -292,7 +292,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoLinear(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceInfoMicroTiled
 *
 *   @brief
@@ -302,7 +302,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoLinear(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMicroTiled(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] Input structure
@@ -402,7 +402,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMicroTiled(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceInfoMacroTiled
 *
 *   @brief
@@ -412,7 +412,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMicroTiled(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] Input structure
@@ -614,7 +614,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceAlignmentsLinear
 *
 *   @brief
@@ -623,7 +623,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceInfoMacroTiled(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsLinear(
     AddrTileMode        tileMode,          ///< [in] tile mode
@@ -670,7 +670,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsLinear(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceAlignmentsMicroTiled
 *
 *   @brief
@@ -679,7 +679,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsLinear(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMicroTiled(
     AddrTileMode        tileMode,          ///< [in] tile mode
@@ -720,7 +720,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMicroTiled(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlReduceBankWidthHeight
 *
 *   @brief
@@ -729,7 +729,7 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMicroTiled(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::HwlReduceBankWidthHeight(
     UINT_32             tileSize,           ///< [in] tile size
@@ -824,7 +824,7 @@ BOOL_32 EgBasedAddrLib::HwlReduceBankWidthHeight(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled
 *
 *   @brief
@@ -833,7 +833,7 @@ BOOL_32 EgBasedAddrLib::HwlReduceBankWidthHeight(
 *
 *   @return
 *       TRUE if no error occurs
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
     AddrTileMode        tileMode,           ///< [in] tile mode
@@ -948,14 +948,14 @@ BOOL_32 EgBasedAddrLib::ComputeSurfaceAlignmentsMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::SanityCheckMacroTiled
 *
 *   @brief
 *       Check if macro-tiled parameters are valid
 *   @return
 *       TRUE if valid
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::SanityCheckMacroTiled(
     ADDR_TILEINFO* pTileInfo   ///< [in] macro-tiled parameters
@@ -1053,7 +1053,7 @@ BOOL_32 EgBasedAddrLib::SanityCheckMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceMipLevelTileMode
 *
 *   @brief
@@ -1061,7 +1061,7 @@ BOOL_32 EgBasedAddrLib::SanityCheckMacroTiled(
 *
 *   @return
 *       Suitable tile mode
-***************************************************************************************************
+****************************************************************************************************
 */
 AddrTileMode EgBasedAddrLib::ComputeSurfaceMipLevelTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
@@ -1145,13 +1145,13 @@ AddrTileMode EgBasedAddrLib::ComputeSurfaceMipLevelTileMode(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlDegradeBaseLevel
 *   @brief
 *       Check if degrade is needed for base level
 *   @return
 *       TRUE if degrade is suggested
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const
@@ -1229,7 +1229,7 @@ BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlDegradeThickTileMode
 *
 *   @brief
@@ -1237,7 +1237,7 @@ BOOL_32 EgBasedAddrLib::HwlDegradeBaseLevel(
 *
 *   @return
 *       Suitable tile mode
-***************************************************************************************************
+****************************************************************************************************
 */
 AddrTileMode EgBasedAddrLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
@@ -1302,7 +1302,7 @@ AddrTileMode EgBasedAddrLib::HwlDegradeThickTileMode(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord
 *
 *   @brief
@@ -1310,7 +1310,7 @@ AddrTileMode EgBasedAddrLib::HwlDegradeThickTileMode(
 *
 *   @return
 *       Address in bytes
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord(
     const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,    ///< [in] input structure
@@ -1467,14 +1467,14 @@ UINT_64 EgBasedAddrLib::DispatchComputeSurfaceAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeMacroTileEquation
 *
 *   @brief
 *       Computes the address equation in macro tile
 *   @return
 *       If equation can be computed
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::ComputeMacroTileEquation(
     UINT_32             log2BytesPP,            ///< [in] log2 of bytes per pixel
@@ -1598,7 +1598,7 @@ ADDR_E_RETURNCODE EgBasedAddrLib::ComputeMacroTileEquation(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceAddrFromCoordMicroTiled
 *
 *   @brief
@@ -1606,7 +1606,7 @@ ADDR_E_RETURNCODE EgBasedAddrLib::ComputeMacroTileEquation(
 *       coordinate for 2D tilied (macro tiled)
 *   @return
 *       The byte address
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMacroTiled(
     UINT_32             x,                      ///< [in] x coordinate
@@ -1873,7 +1873,7 @@ UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceAddrFromCoordMicroTiled
 *
 *   @brief
@@ -1881,7 +1881,7 @@ UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMacroTiled(
 *       (micro tiled)
 *   @return
 *       The byte address
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMicroTiled(
     UINT_32             x,                      ///< [in] x coordinate
@@ -1998,14 +1998,14 @@ UINT_64 EgBasedAddrLib::ComputeSurfaceAddrFromCoordMicroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputePixelCoordFromOffset
 *
 *   @brief
 *       Compute pixel coordinate from offset inside a micro tile
 *   @return
 *       N/A
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::HwlComputePixelCoordFromOffset(
     UINT_32         offset,             ///< [in] offset inside micro tile in bits
@@ -2187,14 +2187,14 @@ VOID EgBasedAddrLib::HwlComputePixelCoordFromOffset(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeSurfaceCoordFromAddrDispatch
 *
 *   @brief
 *       Compute (x,y,slice,sample) coordinates from surface address
 *   @return
 *       N/A
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::DispatchComputeSurfaceCoordFromAddr(
     const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,    ///< [in] input structure
@@ -2332,14 +2332,14 @@ VOID EgBasedAddrLib::DispatchComputeSurfaceCoordFromAddr(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceCoordFromAddrMacroTiled
 *
 *   @brief
 *       Compute surface coordinates from address for macro tiled surface
 *   @return
 *       N/A
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::ComputeSurfaceCoordFromAddrMacroTiled(
     UINT_64             addr,               ///< [in] byte address
@@ -2490,14 +2490,14 @@ VOID EgBasedAddrLib::ComputeSurfaceCoordFromAddrMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSurfaceCoord2DFromBankPipe
 *
 *   @brief
 *       Compute surface x,y coordinates from bank/pipe info
 *   @return
 *       N/A
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::ComputeSurfaceCoord2DFromBankPipe(
     AddrTileMode        tileMode,   ///< [in] tile mode
@@ -2676,13 +2676,13 @@ VOID EgBasedAddrLib::ComputeSurfaceCoord2DFromBankPipe(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlExtractBankPipeSwizzle
 *   @brief
 *       Entry of EgBasedAddrLib ExtractBankPipeSwizzle
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlExtractBankPipeSwizzle(
     const ADDR_EXTRACT_BANKPIPE_SWIZZLE_INPUT*  pIn,   ///< [in] input structure
@@ -2699,13 +2699,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlExtractBankPipeSwizzle(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlCombineBankPipeSwizzle
 *   @brief
 *       Combine bank/pipe swizzle
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlCombineBankPipeSwizzle(
     UINT_32         bankSwizzle,    ///< [in] bank swizzle
@@ -2730,13 +2730,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlCombineBankPipeSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeBaseSwizzle
 *   @brief
 *       Compute base swizzle
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeBaseSwizzle(
     const ADDR_COMPUTE_BASE_SWIZZLE_INPUT* pIn,
@@ -2805,13 +2805,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeBaseSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ExtractBankPipeSwizzle
 *   @brief
 *       Extract bank/pipe swizzle from base256b
 *   @return
 *       N/A
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::ExtractBankPipeSwizzle(
     UINT_32         base256b,       ///< [in] input base256b register value
@@ -2843,13 +2843,13 @@ VOID EgBasedAddrLib::ExtractBankPipeSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::GetBankPipeSwizzle
 *   @brief
 *       Combine bank/pipe swizzle
 *   @return
 *       Base256b bits (only filled bank/pipe bits)
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::GetBankPipeSwizzle(
     UINT_32         bankSwizzle,    ///< [in] bank swizzle
@@ -2869,13 +2869,13 @@ UINT_32 EgBasedAddrLib::GetBankPipeSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeSliceTileSwizzle
 *   @brief
 *       Compute cubemap/3d texture faces/slices tile swizzle
 *   @return
 *       Tile swizzle
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeSliceTileSwizzle(
     AddrTileMode        tileMode,       ///< [in] Tile mode
@@ -2934,14 +2934,14 @@ UINT_32 EgBasedAddrLib::ComputeSliceTileSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeQbStereoRightSwizzle
 *
 *   @brief
 *       Compute right eye swizzle
 *   @return
 *       swizzle
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::HwlComputeQbStereoRightSwizzle(
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pInfo  ///< [in] Surface info, must be valid
@@ -2966,14 +2966,14 @@ UINT_32 EgBasedAddrLib::HwlComputeQbStereoRightSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeBankFromCoord
 *
 *   @brief
 *       Compute bank number from coordinates
 *   @return
 *       Bank number
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeBankFromCoord(
     UINT_32         x,              ///< [in] x coordinate
@@ -3098,14 +3098,14 @@ UINT_32 EgBasedAddrLib::ComputeBankFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeBankFromAddr
 *
 *   @brief
 *       Compute the bank number from an address
 *   @return
 *       Bank number
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeBankFromAddr(
     UINT_64 addr,       ///< [in] address
@@ -3131,14 +3131,14 @@ UINT_32 EgBasedAddrLib::ComputeBankFromAddr(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputePipeRotation
 *
 *   @brief
 *       Compute pipe rotation value
 *   @return
 *       Pipe rotation
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputePipeRotation(
     AddrTileMode tileMode,  ///< [in] tile mode
@@ -3166,14 +3166,14 @@ UINT_32 EgBasedAddrLib::ComputePipeRotation(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeBankRotation
 *
 *   @brief
 *       Compute bank rotation value
 *   @return
 *       Bank rotation
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeBankRotation(
     AddrTileMode tileMode,  ///< [in] tile mode
@@ -3209,7 +3209,7 @@ UINT_32 EgBasedAddrLib::ComputeBankRotation(
 
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeHtileBytes
 *
 *   @brief
@@ -3217,7 +3217,7 @@ UINT_32 EgBasedAddrLib::ComputeBankRotation(
 *
 *   @return
 *       Htile size in bytes
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::ComputeHtileBytes(
     UINT_32 pitch,        ///< [in] pitch
@@ -3252,7 +3252,7 @@ UINT_64 EgBasedAddrLib::ComputeHtileBytes(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeFmaskInfo
 *
 *   @brief
@@ -3262,7 +3262,7 @@ UINT_64 EgBasedAddrLib::ComputeHtileBytes(
 *
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::DispatchComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,   ///< [in] input structure
@@ -3329,13 +3329,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::DispatchComputeFmaskInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlFmaskSurfaceInfo
 *   @brief
 *       Entry of EgBasedAddrLib ComputeFmaskInfo
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,   ///< [in] input structure
@@ -3371,13 +3371,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeFmaskAddrFromCoord
 *   @brief
 *       Entry of EgBasedAddrLib ComputeFmaskAddrFromCoord
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskAddrFromCoord(
     const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*   pIn,    ///< [in] input structure
@@ -3404,13 +3404,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeFmaskCoordFromAddr
 *   @brief
 *       Entry of EgBasedAddrLib ComputeFmaskCoordFromAddr
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskCoordFromAddr(
     const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT*   pIn,    ///< [in] input structure
@@ -3436,14 +3436,14 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeFmaskCoordFromAddr(
 
 #if ADDR_AM_BUILD
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeFmaskAddrFromCoord
 *
 *   @brief
 *       Computes the FMASK address and bit position from a coordinate.
 *   @return
 *       The byte address
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::DispatchComputeFmaskAddrFromCoord(
     const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*   pIn,    ///< [in] input structure
@@ -3525,7 +3525,7 @@ UINT_64 EgBasedAddrLib::DispatchComputeFmaskAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskAddrFromCoordMicroTiled
 *
 *   @brief
@@ -3533,7 +3533,7 @@ UINT_64 EgBasedAddrLib::DispatchComputeFmaskAddrFromCoord(
 *       tiled)
 *   @return
 *       The byte address
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMicroTiled(
     UINT_32             x,              ///< [in] x coordinate
@@ -3633,7 +3633,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMicroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskAddrFromCoordMacroTiled
 *
 *   @brief
@@ -3641,7 +3641,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMicroTiled(
 *       tiled)
 *   @return
 *       The byte address
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMacroTiled(
     UINT_32             x,              ///< [in] x coordinate
@@ -3755,7 +3755,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskCoordFromAddrMicroTiled
 *
 *   @brief
@@ -3763,7 +3763,7 @@ UINT_64 EgBasedAddrLib::ComputeFmaskAddrFromCoordMacroTiled(
 *   @return
 *       N/A
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMicroTiled(
     UINT_64             addr,       ///< [in] byte address
@@ -3842,7 +3842,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMicroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskCoordFromAddrMacroTiled
 *
 *   @brief
@@ -3851,7 +3851,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMicroTiled(
 *   @return
 *       N/A
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMacroTiled(
     UINT_64             addr,       ///< [in] byte address
@@ -3942,7 +3942,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMacroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::DispatchComputeFmaskCoordFromAddr
 *
 *   @brief
@@ -3951,7 +3951,7 @@ VOID EgBasedAddrLib::ComputeFmaskCoordFromAddrMacroTiled(
 *   @return
 *       N/A
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 VOID EgBasedAddrLib::DispatchComputeFmaskCoordFromAddr(
     const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT*   pIn,    ///< [in] input structure
@@ -4032,7 +4032,7 @@ VOID EgBasedAddrLib::DispatchComputeFmaskCoordFromAddr(
 #endif
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskNumPlanesFromNumSamples
 *
 *   @brief
@@ -4040,7 +4040,7 @@ VOID EgBasedAddrLib::DispatchComputeFmaskCoordFromAddr(
 *
 *   @return
 *       Number of planes
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeFmaskNumPlanesFromNumSamples(
     UINT_32 numSamples)     ///< [in] number of samples
@@ -4077,7 +4077,7 @@ UINT_32 EgBasedAddrLib::ComputeFmaskNumPlanesFromNumSamples(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::ComputeFmaskResolvedBppFromNumSamples
 *
 *   @brief
@@ -4085,7 +4085,7 @@ UINT_32 EgBasedAddrLib::ComputeFmaskNumPlanesFromNumSamples(
 *
 *   @return
 *       bpp
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::ComputeFmaskResolvedBppFromNumSamples(
     UINT_32 numSamples)     ///< number of samples
@@ -4122,14 +4122,14 @@ UINT_32 EgBasedAddrLib::ComputeFmaskResolvedBppFromNumSamples(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::IsTileInfoAllZero
 *
 *   @brief
 *       Return TRUE if all field are zero
 *   @note
 *       Since NULL input is consider to be all zero
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::IsTileInfoAllZero(
     ADDR_TILEINFO* pTileInfo)
@@ -4154,14 +4154,14 @@ BOOL_32 EgBasedAddrLib::IsTileInfoAllZero(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlTileInfoEqual
 *
 *   @brief
 *       Return TRUE if all field are equal
 *   @note
 *       Only takes care of current HWL's data
-***************************************************************************************************
+****************************************************************************************************
 */
 BOOL_32 EgBasedAddrLib::HwlTileInfoEqual(
     const ADDR_TILEINFO* pLeft, ///<[in] Left compare operand
@@ -4183,13 +4183,13 @@ BOOL_32 EgBasedAddrLib::HwlTileInfoEqual(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlConvertTileInfoToHW
 *   @brief
 *       Entry of EgBasedAddrLib ConvertTileInfoToHW
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlConvertTileInfoToHW(
     const ADDR_CONVERT_TILEINFOTOHW_INPUT* pIn, ///< [in] input structure
@@ -4451,13 +4451,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlConvertTileInfoToHW(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeSurfaceInfo
 *   @brief
 *       Entry of EgBasedAddrLib ComputeSurfaceInfo
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
@@ -4538,13 +4538,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceInfo(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeSurfaceAddrFromCoord
 *   @brief
 *       Entry of EgBasedAddrLib ComputeSurfaceAddrFromCoord
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceAddrFromCoord(
     const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,    ///< [in] input structure
@@ -4571,13 +4571,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceAddrFromCoord(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeSurfaceCoordFromAddr
 *   @brief
 *       Entry of EgBasedAddrLib ComputeSurfaceCoordFromAddr
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceCoordFromAddr(
     const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,    ///< [in] input structure
@@ -4599,13 +4599,13 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSurfaceCoordFromAddr(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeSliceTileSwizzle
 *   @brief
 *       Entry of EgBasedAddrLib ComputeSurfaceCoordFromAddr
 *   @return
 *       ADDR_E_RETURNCODE
-***************************************************************************************************
+****************************************************************************************************
 */
 ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSliceTileSwizzle(
     const ADDR_COMPUTE_SLICESWIZZLE_INPUT*  pIn,    ///< [in] input structure
@@ -4632,7 +4632,7 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSliceTileSwizzle(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeHtileBpp
 *
 *   @brief
@@ -4640,7 +4640,7 @@ ADDR_E_RETURNCODE EgBasedAddrLib::HwlComputeSliceTileSwizzle(
 *
 *   @return
 *       Htile bpp
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::HwlComputeHtileBpp(
     BOOL_32 isWidth8,   ///< [in] TRUE if block width is 8
@@ -4653,7 +4653,7 @@ UINT_32 EgBasedAddrLib::HwlComputeHtileBpp(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlComputeHtileBaseAlign
 *
 *   @brief
@@ -4661,7 +4661,7 @@ UINT_32 EgBasedAddrLib::HwlComputeHtileBpp(
 *
 *   @return
 *       Htile base alignment
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::HwlComputeHtileBaseAlign(
     BOOL_32         isTcCompatible, ///< [in] if TC compatible
@@ -4684,7 +4684,7 @@ UINT_32 EgBasedAddrLib::HwlComputeHtileBaseAlign(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled
 *
 *   @brief
@@ -4693,7 +4693,7 @@ UINT_32 EgBasedAddrLib::HwlComputeHtileBaseAlign(
 *
 *   @return
 *       pitch alignment
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(
     AddrTileMode        tileMode,          ///< [in] tile mode
@@ -4733,7 +4733,7 @@ UINT_32 EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled
 *
 *   @brief
@@ -4741,7 +4741,7 @@ UINT_32 EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(
 *
 *   @return
 *       Logical slice size in bytes
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_64 EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled(
     UINT_32             thickness,      ///< [in] thickness
@@ -4775,7 +4775,7 @@ UINT_64 EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled(
 }
 
 /**
-***************************************************************************************************
+****************************************************************************************************
 *   EgBasedAddrLib::HwlStereoCheckRightOffsetPadding
 *
 *   @brief
@@ -4784,7 +4784,7 @@ UINT_64 EgBasedAddrLib::HwlGetSizeAdjustmentMicroTiled(
 *   @return
 *       TRUE is the extra padding is needed
 *
-***************************************************************************************************
+****************************************************************************************************
 */
 UINT_32 EgBasedAddrLib::HwlStereoCheckRightOffsetPadding(
     ADDR_TILEINFO* pTileInfo    ///< Tiling info
