@@ -890,6 +890,12 @@ const struct anv_format *
 anv_format_for_vk_format(VkFormat format);
 
 static inline bool
+anv_format_is_color(const struct anv_format *format)
+{
+   return !format->depth_format && !format->has_stencil;
+}
+
+static inline bool
 anv_format_is_depth_or_stencil(const struct anv_format *format)
 {
    return format->depth_format || format->has_stencil;
