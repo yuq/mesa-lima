@@ -1119,31 +1119,18 @@ intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
  * untiled, the masks are set to 0.
  */
 void
-intel_miptree_get_tile_masks(const struct intel_mipmap_tree *mt,
-                             uint32_t *mask_x, uint32_t *mask_y,
-                             bool map_stencil_as_y_tiled)
+intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+                     bool map_stencil_as_y_tiled,
+                     uint32_t *mask_x, uint32_t *mask_y)
 {
-   int cpp = mt->cpp;
-   uint32_t tiling = mt->tiling;
-
+   uint32_t tile_w_bytes, tile_h;
    if (map_stencil_as_y_tiled)
       tiling = I915_TILING_Y;
 
-   switch (tiling) {
-   default:
-      unreachable("not reached");
-   case I915_TILING_NONE:
-      *mask_x = *mask_y = 0;
-      break;
-   case I915_TILING_X:
-      *mask_x = 512 / cpp - 1;
-      *mask_y = 7;
-      break;
-   case I915_TILING_Y:
-      *mask_x = 128 / cpp - 1;
-      *mask_y = 31;
-      break;
-   }
+   intel_get_tile_dims(tiling, tr_mode, cpp, &tile_w_bytes, &tile_h);
+
+   *mask_x = tile_w_bytes / cpp - 1;
+   *mask_y = tile_h - 1;
 }
 
 /**
@@ -1208,7 +1195,7 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
    uint32_t x, y;
    uint32_t mask_x, mask_y;
 
-   intel_miptree_get_tile_masks(mt, &mask_x, &mask_y, false);
+   intel_get_tile_masks(mt->tiling, mt->tr_mode, mt->cpp, false, &mask_x, &mask_y);
    intel_miptree_get_image_offset(mt, level, slice, &x, &y);
 
    *tile_x = x & mask_x;

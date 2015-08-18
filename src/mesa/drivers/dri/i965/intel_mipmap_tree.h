@@ -623,9 +623,9 @@ intel_miptree_get_dimensions_for_image(struct gl_texture_image *image,
                                        int *width, int *height, int *depth);
 
 void
-intel_miptree_get_tile_masks(const struct intel_mipmap_tree *mt,
-                             uint32_t *mask_x, uint32_t *mask_y,
-                             bool map_stencil_as_y_tiled);
+intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+                     bool map_stencil_as_y_tiled,
+                     uint32_t *mask_x, uint32_t *mask_y);
 
 void
 intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
