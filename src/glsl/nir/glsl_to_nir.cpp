@@ -44,7 +44,7 @@ namespace {
 class nir_visitor : public ir_visitor
 {
 public:
-   nir_visitor(nir_shader *shader, gl_shader_stage stage);
+   nir_visitor(nir_shader *shader);
    ~nir_visitor();
 
    virtual void visit(ir_variable *);
@@ -85,7 +85,6 @@ private:
    bool supports_ints;
 
    nir_shader *shader;
-   gl_shader_stage stage;
    nir_function_impl *impl;
    exec_list *cf_node_list;
    nir_instr *result; /* result of the expression tree last visited */
@@ -134,7 +133,7 @@ glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
 {
    nir_shader *shader = nir_shader_create(NULL, sh->Stage, options);
 
-   nir_visitor v1(shader, sh->Stage);
+   nir_visitor v1(shader);
    nir_function_visitor v2(&v1);
    v2.run(sh->ir);
    visit_exec_list(sh->ir, &v1);
@@ -142,11 +141,10 @@ glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
    return shader;
 }
 
-nir_visitor::nir_visitor(nir_shader *shader, gl_shader_stage stage)
+nir_visitor::nir_visitor(nir_shader *shader)
 {
    this->supports_ints = shader->options->native_integers;
    this->shader = shader;
-   this->stage = stage;
    this->is_global = true;
    this->var_table = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                              _mesa_key_pointer_equal);
@@ -263,7 +261,7 @@ nir_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_shader_in:
-      if (stage == MESA_SHADER_FRAGMENT &&
+      if (shader->stage == MESA_SHADER_FRAGMENT &&
           ir->data.location == VARYING_SLOT_FACE) {
          /* For whatever reason, GLSL IR makes gl_FrontFacing an input */
          var->data.location = SYSTEM_VALUE_FRONT_FACE;

@@ -136,7 +136,7 @@ brw_create_nir(struct brw_context *brw,
    nir_validate_shader(nir);
 
    if (shader_prog) {
-      nir_lower_samplers(nir, shader_prog, stage);
+      nir_lower_samplers(nir, shader_prog);
       nir_validate_shader(nir);
    }
 
