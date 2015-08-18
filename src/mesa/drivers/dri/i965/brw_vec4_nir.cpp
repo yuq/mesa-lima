@@ -132,9 +132,6 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 {
    uniforms = 0;
 
-   nir_uniform_driver_location =
-      rzalloc_array(mem_ctx, unsigned, this->uniform_array_size);
-
    if (shader_prog) {
       foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
          /* UBO's, atomics and samplers don't take up space in the
@@ -182,7 +179,6 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
             stage_prog_data->param[uniforms * 4 + i] = &zero;
          }
 
-         nir_uniform_driver_location[uniforms] = var->data.driver_location;
          uniforms++;
       }
    }
@@ -230,7 +226,6 @@ vec4_visitor::nir_setup_uniform(nir_variable *var)
              stage_prog_data->param[uniforms * 4 + i] = &zero;
           }
 
-          nir_uniform_driver_location[uniforms] = var->data.driver_location;
           uniforms++;
        }
     }
@@ -263,7 +258,6 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
          (var->type->is_scalar() || var->type->is_vector() ||
           var->type->is_matrix() ? var->type->vector_elements : 4);
 
-      nir_uniform_driver_location[uniforms] = var->data.driver_location;
       uniforms++;
    }
 }
@@ -570,24 +564,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
-      int uniform = instr->const_index[0] + instr->const_index[1];
-
       dest = get_nir_dest(instr->dest);
 
+      src = src_reg(dst_reg(UNIFORM, instr->const_index[0]));
+      src.reg_offset = instr->const_index[1];
+
       if (has_indirect) {
-         /* Split addressing into uniform and offset */
-         int offset = uniform - nir_uniform_driver_location[uniform];
-         assert(offset >= 0);
-
-         uniform -= offset;
-         assert(uniform >= 0);
-
-         src = src_reg(dst_reg(UNIFORM, uniform));
-         src.reg_offset = offset;
          src_reg tmp = get_nir_src(instr->src[0], BRW_REGISTER_TYPE_D, 1);
          src.reladdr = new(mem_ctx) src_reg(tmp);
-      } else {
-         src = src_reg(dst_reg(UNIFORM, uniform));
       }
 
       emit(MOV(dest, src));
