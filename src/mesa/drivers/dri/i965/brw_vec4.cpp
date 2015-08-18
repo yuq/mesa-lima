@@ -216,8 +216,9 @@ dst_reg::equals(const dst_reg &r) const
            writemask == r.writemask &&
            (reladdr == r.reladdr ||
             (reladdr && r.reladdr && reladdr->equals(*r.reladdr))) &&
-           memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
-                  sizeof(fixed_hw_reg)) == 0);
+           ((file != HW_REG && file != IMM) ||
+            memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
+                   sizeof(fixed_hw_reg)) == 0));
 }
 
 bool

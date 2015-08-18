@@ -427,7 +427,9 @@ fs_reg::equals(const fs_reg &r) const
            negate == r.negate &&
            abs == r.abs &&
            !reladdr && !r.reladdr &&
-           memcmp(&fixed_hw_reg, &r.fixed_hw_reg, sizeof(fixed_hw_reg)) == 0 &&
+           ((file != HW_REG && file != IMM) ||
+            memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
+                   sizeof(fixed_hw_reg)) == 0) &&
            stride == r.stride);
 }
 
