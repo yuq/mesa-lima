@@ -175,18 +175,8 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 void
 fs_visitor::nir_setup_uniforms(nir_shader *shader)
 {
-   num_direct_uniforms = shader->num_direct_uniforms;
-
    if (dispatch_width != 8)
       return;
-
-   /* We split the uniform register file in half.  The first half is
-    * entirely direct uniforms.  The second half is indirect.
-    */
-   if (num_direct_uniforms > 0)
-      param_size[0] = num_direct_uniforms;
-   if (shader->num_uniforms > num_direct_uniforms)
-      param_size[num_direct_uniforms] = shader->num_uniforms - num_direct_uniforms;
 
    uniforms = shader->num_uniforms;
 
@@ -200,15 +190,19 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
             nir_setup_builtin_uniform(var);
          else
             nir_setup_uniform(var);
+
+         param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
    } else {
-      /* prog_to_nir doesn't create uniform variables; set param up directly. */
+      /* prog_to_nir only creates a single giant uniform variable so we can
+       * just set param up directly. */
       for (unsigned p = 0; p < prog->Parameters->NumParameters; p++) {
          for (unsigned int i = 0; i < 4; i++) {
             stage_prog_data->param[4 * p + i] =
                &prog->Parameters->ParameterValues[p][i];
          }
       }
+      param_size[0] = prog->Parameters->NumParameters * 4;
    }
 }
 
@@ -1504,21 +1498,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
-      unsigned index = instr->const_index[0] + instr->const_index[1];
-
-      fs_reg uniform_reg;
-      if (index < num_direct_uniforms) {
-         uniform_reg = fs_reg(UNIFORM, 0);
-      } else {
-         uniform_reg = fs_reg(UNIFORM, num_direct_uniforms);
-         index -= num_direct_uniforms;
-      }
+      fs_reg uniform_reg(UNIFORM, instr->const_index[0]);
+      uniform_reg.reg_offset = instr->const_index[1];
 
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = offset(retype(uniform_reg, dest.type), bld, index);
+         fs_reg src = offset(retype(uniform_reg, dest.type), bld, j);
          if (has_indirect)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-         index++;
 
          bld.MOV(dest, src);
          dest = offset(dest, bld, 1);

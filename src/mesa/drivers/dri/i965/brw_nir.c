@@ -111,10 +111,9 @@ brw_create_nir(struct brw_context *brw,
    nir_optimize(nir, is_scalar);
 
    if (is_scalar) {
-      nir_assign_var_locations_direct_first(nir, &nir->uniforms,
-                                            &nir->num_direct_uniforms,
-                                            &nir->num_uniforms,
-                                            type_size_scalar);
+      nir_assign_var_locations(&nir->uniforms,
+                               &nir->num_uniforms,
+                               type_size_scalar);
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
       nir_lower_io(nir, type_size_scalar);
