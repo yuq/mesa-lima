@@ -570,7 +570,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
-      int uniform = instr->const_index[0];
+      int uniform = instr->const_index[0] + instr->const_index[1];
 
       dest = get_nir_dest(instr->dest);
 

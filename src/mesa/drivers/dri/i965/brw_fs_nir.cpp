@@ -1504,7 +1504,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
-      unsigned index = instr->const_index[0];
+      unsigned index = instr->const_index[0] + instr->const_index[1];
 
       fs_reg uniform_reg;
       if (index < num_direct_uniforms) {
