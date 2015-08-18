@@ -33,6 +33,7 @@
 #include "prog_instruction.h"
 #include "prog_parameter.h"
 #include "prog_print.h"
+#include "program.h"
 
 /**
  * \file prog_to_nir.c
@@ -1081,11 +1082,12 @@ prog_to_nir(const struct gl_program *prog,
 {
    struct ptn_compile *c;
    struct nir_shader *s;
+   gl_shader_stage stage = _mesa_program_enum_to_shader_stage(prog->Target);
 
    c = rzalloc(NULL, struct ptn_compile);
    if (!c)
       return NULL;
-   s = nir_shader_create(NULL, options);
+   s = nir_shader_create(NULL, stage, options);
    if (!s)
       goto fail;
    c->prog = prog;

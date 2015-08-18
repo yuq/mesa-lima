@@ -1474,6 +1474,9 @@ typedef struct nir_shader {
     * access plus one
     */
    unsigned num_inputs, num_uniforms, num_outputs;
+
+   /** The shader stage, such as MESA_SHADER_VERTEX. */
+   gl_shader_stage stage;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \
@@ -1482,6 +1485,7 @@ typedef struct nir_shader {
                          &(func)->overload_list)
 
 nir_shader *nir_shader_create(void *mem_ctx,
+                              gl_shader_stage stage,
                               const nir_shader_compiler_options *options);
 
 /** creates a register, including assigning it an index and adding it to the list */

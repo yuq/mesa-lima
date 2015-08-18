@@ -30,7 +30,9 @@
 #include <assert.h>
 
 nir_shader *
-nir_shader_create(void *mem_ctx, const nir_shader_compiler_options *options)
+nir_shader_create(void *mem_ctx,
+                  gl_shader_stage stage,
+                  const nir_shader_compiler_options *options)
 {
    nir_shader *shader = ralloc(mem_ctx, nir_shader);
 
@@ -49,6 +51,8 @@ nir_shader_create(void *mem_ctx, const nir_shader_compiler_options *options)
    shader->num_inputs = 0;
    shader->num_outputs = 0;
    shader->num_uniforms = 0;
+
+   shader->stage = stage;
 
    return shader;
 }

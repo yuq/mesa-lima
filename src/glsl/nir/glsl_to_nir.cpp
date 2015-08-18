@@ -132,7 +132,7 @@ private:
 nir_shader *
 glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
 {
-   nir_shader *shader = nir_shader_create(NULL, options);
+   nir_shader *shader = nir_shader_create(NULL, sh->Stage, options);
 
    nir_visitor v1(shader, sh->Stage);
    nir_function_visitor v2(&v1);

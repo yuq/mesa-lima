@@ -1765,6 +1765,21 @@ ttn_add_output_stores(struct ttn_compile *c)
    }
 }
 
+static gl_shader_stage
+tgsi_processor_to_shader_stage(unsigned processor)
+{
+   switch (processor) {
+   case TGSI_PROCESSOR_FRAGMENT:  return MESA_SHADER_FRAGMENT;
+   case TGSI_PROCESSOR_VERTEX:    return MESA_SHADER_VERTEX;
+   case TGSI_PROCESSOR_GEOMETRY:  return MESA_SHADER_GEOMETRY;
+   case TGSI_PROCESSOR_TESS_CTRL: return MESA_SHADER_TESS_CTRL;
+   case TGSI_PROCESSOR_TESS_EVAL: return MESA_SHADER_TESS_EVAL;
+   case TGSI_PROCESSOR_COMPUTE:   return MESA_SHADER_COMPUTE;
+   default:
+      unreachable("invalid TGSI processor");
+   };
+}
+
 struct nir_shader *
 tgsi_to_nir(const void *tgsi_tokens,
             const nir_shader_compiler_options *options)
@@ -1776,7 +1791,12 @@ tgsi_to_nir(const void *tgsi_tokens,
    int ret;
 
    c = rzalloc(NULL, struct ttn_compile);
-   s = nir_shader_create(NULL, options);
+
+   tgsi_scan_shader(tgsi_tokens, &scan);
+   c->scan = &scan;
+
+   s = nir_shader_create(NULL, tgsi_processor_to_shader_stage(scan.processor),
+                         options);
 
    nir_function *func = nir_function_create(s, "main");
    nir_function_overload *overload = nir_function_overload_create(func);
@@ -1784,9 +1804,6 @@ tgsi_to_nir(const void *tgsi_tokens,
 
    nir_builder_init(&c->build, impl);
    nir_builder_insert_after_cf_list(&c->build, &impl->body);
-
-   tgsi_scan_shader(tgsi_tokens, &scan);
-   c->scan = &scan;
 
    s->num_inputs = scan.file_max[TGSI_FILE_INPUT] + 1;
    s->num_uniforms = scan.const_file_max[0] + 1;
