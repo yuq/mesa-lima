@@ -2418,7 +2418,7 @@ static void tex_fetch_args(
 			num_deriv_channels = 1;
 			break;
 		default:
-			assert(0); /* no other targets are valid here */
+			unreachable("invalid target");
 		}
 
 		for (param = 0; param < 2; param++)

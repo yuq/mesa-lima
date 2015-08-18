@@ -181,7 +181,7 @@ static void si_shader_es(struct si_shader *shader)
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
-		assert(0);
+		unreachable("invalid shader selector type");
 
 	num_sgprs = shader->num_sgprs;
 	/* One SGPR after user SGPRs is pre-loaded with es2gs_offset */
@@ -338,7 +338,7 @@ static void si_shader_vs(struct si_shader *shader)
 		vgpr_comp_cnt = 3; /* all components are needed for TES */
 		num_user_sgprs = SI_TES_NUM_USER_SGPR;
 	} else
-		assert(0);
+		unreachable("invalid shader selector type");
 
 	num_sgprs = shader->num_sgprs;
 	if (num_user_sgprs > num_sgprs) {
