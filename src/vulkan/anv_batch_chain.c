@@ -660,14 +660,13 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
                  VK_CMD_BUFFER_OPTIMIZE_NO_SIMULTANEOUS_USE_BIT) {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_CHAIN;
 
-         /* For chaining mode, we need to increment the number of
-          * relocations.  This is because, when we chain, we need to add
-          * an MI_BATCH_BUFFER_START command.  Adding this command will
-          * also add a relocation.  In order to handle theis we'll
-          * increment it here and decrement it right before adding the
+         /* When we chain, we need to add an MI_BATCH_BUFFER_START command
+          * with its relocation.  In order to handle this we'll increment here
+          * so we can unconditionally decrement right before adding the
           * MI_BATCH_BUFFER_START command.
           */
          anv_cmd_buffer_current_batch_bo(cmd_buffer)->relocs.num_relocs++;
+         cmd_buffer->batch.next += GEN8_MI_BATCH_BUFFER_START_length * 4;
       } else {
          cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN;
       }
@@ -704,7 +703,6 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
          list_last_entry(&secondary->batch_bos, struct anv_batch_bo, link);
 
       anv_batch_emit(&primary->batch, GEN8_MI_BATCH_BUFFER_START,
-         GEN8_MI_BATCH_BUFFER_START_header,
          ._2ndLevelBatchBuffer = _1stlevelbatch,
          .AddressSpaceIndicator = ASI_PPGTT,
          .BatchBufferStartAddress = { &first_bbo->bo, 0 },
@@ -714,24 +712,18 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       assert(primary->batch.start == this_bbo->bo.map);
       uint32_t offset = primary->batch.next - primary->batch.start;
 
-      struct GEN8_MI_BATCH_BUFFER_START ret = {
-         GEN8_MI_BATCH_BUFFER_START_header,
-         ._2ndLevelBatchBuffer = _1stlevelbatch,
-         .AddressSpaceIndicator = ASI_PPGTT,
-         .BatchBufferStartAddress = { &this_bbo->bo, offset },
-      };
-      /* The pack function below is going to insert a relocation.  In order
-       * to allow us to splice this secondary into a primary multiple
-       * times, we can't have relocations from previous splices in this
-       * splice.  In order to deal with this, we simply decrement the
-       * relocation count prior to inserting the next one.  In order to
-       * handle the base case, num_relocs was artificially incremented in
-       * end_batch_buffer().
+      /* Roll back the previous MI_BATCH_BUFFER_START and its relocation so we
+       * can emit a new command and relocation for the current splice.  In
+       * order to handle the initial-use case, we incremented next and
+       * num_relocs in end_batch_buffer() so we can alyways just subtract
+       * here.
        */
       last_bbo->relocs.num_relocs--;
-      GEN8_MI_BATCH_BUFFER_START_pack(&secondary->batch,
-                                      last_bbo->bo.map + last_bbo->length,
-                                      &ret);
+      secondary->batch.next -= GEN8_MI_BATCH_BUFFER_START_length * 4;
+      anv_batch_emit(&secondary->batch, GEN8_MI_BATCH_BUFFER_START,
+         ._2ndLevelBatchBuffer = _1stlevelbatch,
+         .AddressSpaceIndicator = ASI_PPGTT,
+         .BatchBufferStartAddress = { &this_bbo->bo, offset });
 
       anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
       break;
