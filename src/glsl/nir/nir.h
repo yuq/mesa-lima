@@ -1474,9 +1474,6 @@ typedef struct nir_shader {
     * access plus one
     */
    unsigned num_inputs, num_uniforms, num_outputs;
-
-   /** the number of uniforms that are only accessed directly */
-   unsigned num_direct_uniforms;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \
@@ -1633,11 +1630,6 @@ void nir_lower_locals_to_regs(nir_shader *shader);
 void nir_assign_var_locations(struct exec_list *var_list,
                               unsigned *size,
                               int (*type_size)(const struct glsl_type *));
-void nir_assign_var_locations_direct_first(nir_shader *shader,
-                                           struct exec_list *var_list,
-                                           unsigned *direct_size,
-                                           unsigned *size,
-                                           int (*type_size)(const struct glsl_type *));
 
 void nir_lower_io(nir_shader *shader,
                   int (*type_size)(const struct glsl_type *));
