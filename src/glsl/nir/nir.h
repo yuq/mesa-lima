@@ -1479,6 +1479,14 @@ typedef struct nir_shader {
 
    /** The shader stage, such as MESA_SHADER_VERTEX. */
    gl_shader_stage stage;
+
+   struct {
+      /** The maximum number of vertices the geometry shader might write. */
+      unsigned vertices_out;
+
+      /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
+      unsigned invocations;
+   } gs;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \

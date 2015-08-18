@@ -140,6 +140,9 @@ glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
 
    nir_lower_outputs_to_temporaries(shader);
 
+   shader->gs.vertices_out = sh->Geom.VerticesOut;
+   shader->gs.invocations = sh->Geom.Invocations;
+
    return shader;
 }
 
