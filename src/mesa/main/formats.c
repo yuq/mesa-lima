@@ -83,6 +83,7 @@ static const struct gl_format_info *
 _mesa_get_format_info(mesa_format format)
 {
    const struct gl_format_info *info = &format_info[format];
+   STATIC_ASSERT(ARRAY_SIZE(format_info) == MESA_FORMAT_COUNT);
    assert(info->Name == format);
    return info;
 }
@@ -864,118 +865,6 @@ _mesa_format_row_stride(mesa_format format, GLsizei width)
 }
 
 
-/**
- * Debug/test: check that all uncompressed formats are handled in the
- * _mesa_uncompressed_format_to_type_and_comps() function. When new pixel
- * formats are added to Mesa, that function needs to be updated.
- * This is a no-op after the first call.
- */
-static void
-check_format_to_type_and_comps(void)
-{
-   mesa_format f;
-
-   for (f = MESA_FORMAT_NONE + 1; f < MESA_FORMAT_COUNT; f++) {
-      GLenum datatype = 0;
-      GLuint comps = 0;
-      /* This function will emit a problem/warning if the format is
-       * not handled.
-       */
-      if (!_mesa_is_format_compressed(f))
-         _mesa_uncompressed_format_to_type_and_comps(f, &datatype, &comps);
-   }
-}
-
-/**
- * Do sanity checking of the format info table.
- */
-void
-_mesa_test_formats(void)
-{
-   GLuint i;
-
-   STATIC_ASSERT(ARRAY_SIZE(format_info) == MESA_FORMAT_COUNT);
-
-   for (i = 0; i < MESA_FORMAT_COUNT; i++) {
-      const struct gl_format_info *info = _mesa_get_format_info(i);
-      assert(info);
-
-      assert(info->Name == i);
-
-      if (info->Name == MESA_FORMAT_NONE)
-         continue;
-
-      if (info->BlockWidth == 1 && info->BlockHeight == 1) {
-         if (info->RedBits > 0) {
-            GLuint t = info->RedBits + info->GreenBits
-               + info->BlueBits + info->AlphaBits;
-            assert(t / 8 <= info->BytesPerBlock);
-            (void) t;
-         }
-      }
-
-      assert(info->DataType == GL_UNSIGNED_NORMALIZED ||
-             info->DataType == GL_SIGNED_NORMALIZED ||
-             info->DataType == GL_UNSIGNED_INT ||
-             info->DataType == GL_INT ||
-             info->DataType == GL_FLOAT ||
-             /* Z32_FLOAT_X24S8 has DataType of GL_NONE */
-             info->DataType == GL_NONE);
-
-      if (info->BaseFormat == GL_RGB) {
-         assert(info->RedBits > 0);
-         assert(info->GreenBits > 0);
-         assert(info->BlueBits > 0);
-         assert(info->AlphaBits == 0);
-         assert(info->LuminanceBits == 0);
-         assert(info->IntensityBits == 0);
-      }
-      else if (info->BaseFormat == GL_RGBA) {
-         assert(info->RedBits > 0);
-         assert(info->GreenBits > 0);
-         assert(info->BlueBits > 0);
-         assert(info->AlphaBits > 0);
-         assert(info->LuminanceBits == 0);
-         assert(info->IntensityBits == 0);
-      }
-      else if (info->BaseFormat == GL_RG) {
-         assert(info->RedBits > 0);
-         assert(info->GreenBits > 0);
-         assert(info->BlueBits == 0);
-         assert(info->AlphaBits == 0);
-         assert(info->LuminanceBits == 0);
-         assert(info->IntensityBits == 0);
-      }
-      else if (info->BaseFormat == GL_RED) {
-         assert(info->RedBits > 0);
-         assert(info->GreenBits == 0);
-         assert(info->BlueBits == 0);
-         assert(info->AlphaBits == 0);
-         assert(info->LuminanceBits == 0);
-         assert(info->IntensityBits == 0);
-      }
-      else if (info->BaseFormat == GL_LUMINANCE) {
-         assert(info->RedBits == 0);
-         assert(info->GreenBits == 0);
-         assert(info->BlueBits == 0);
-         assert(info->AlphaBits == 0);
-         assert(info->LuminanceBits > 0);
-         assert(info->IntensityBits == 0);
-      }
-      else if (info->BaseFormat == GL_INTENSITY) {
-         assert(info->RedBits == 0);
-         assert(info->GreenBits == 0);
-         assert(info->BlueBits == 0);
-         assert(info->AlphaBits == 0);
-         assert(info->LuminanceBits == 0);
-         assert(info->IntensityBits > 0);
-      }
-   }
-
-   check_format_to_type_and_comps();
-}
-
-
 
 /**
  * Return datatype and number of components per texel for the given
@@ -1513,48 +1402,12 @@ _mesa_uncompressed_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_COUNT:
       assert(0);
       return;
-
-   case MESA_FORMAT_RGB_FXT1:
-   case MESA_FORMAT_RGBA_FXT1:
-   case MESA_FORMAT_RGB_DXT1:
-   case MESA_FORMAT_RGBA_DXT1:
-   case MESA_FORMAT_RGBA_DXT3:
-   case MESA_FORMAT_RGBA_DXT5:
-   case MESA_FORMAT_SRGB_DXT1:
-   case MESA_FORMAT_SRGBA_DXT1:
-   case MESA_FORMAT_SRGBA_DXT3:
-   case MESA_FORMAT_SRGBA_DXT5:
-   case MESA_FORMAT_R_RGTC1_UNORM:
-   case MESA_FORMAT_R_RGTC1_SNORM:
-   case MESA_FORMAT_RG_RGTC2_UNORM:
-   case MESA_FORMAT_RG_RGTC2_SNORM:
-   case MESA_FORMAT_L_LATC1_UNORM:
-   case MESA_FORMAT_L_LATC1_SNORM:
-   case MESA_FORMAT_LA_LATC2_UNORM:
-   case MESA_FORMAT_LA_LATC2_SNORM:
-   case MESA_FORMAT_ETC1_RGB8:
-   case MESA_FORMAT_ETC2_RGB8:
-   case MESA_FORMAT_ETC2_SRGB8:
-   case MESA_FORMAT_ETC2_RGBA8_EAC:
-   case MESA_FORMAT_ETC2_SRGB8_ALPHA8_EAC:
-   case MESA_FORMAT_ETC2_R11_EAC:
-   case MESA_FORMAT_ETC2_RG11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_R11_EAC:
-   case MESA_FORMAT_ETC2_SIGNED_RG11_EAC:
-   case MESA_FORMAT_ETC2_RGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_ETC2_SRGB8_PUNCHTHROUGH_ALPHA1:
-   case MESA_FORMAT_BPTC_RGBA_UNORM:
-   case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
-   case MESA_FORMAT_BPTC_RGB_SIGNED_FLOAT:
-   case MESA_FORMAT_BPTC_RGB_UNSIGNED_FLOAT:
-      assert(_mesa_is_format_compressed(format));
-   case MESA_FORMAT_NONE:
-   /* For debug builds, warn if any formats are not handled */
-#ifdef DEBUG
    default:
-#endif
+      /* Warn if any formats are not handled */
       _mesa_problem(NULL, "bad format %s in _mesa_uncompressed_format_to_type_and_comps",
                     _mesa_get_format_name(format));
+      assert(format == MESA_FORMAT_NONE ||
+             _mesa_is_format_compressed(format));
       *datatype = 0;
       *comps = 1;
    }
