@@ -137,8 +137,9 @@ protected:
         const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT* pIn,
         ADDR_COMPUTE_FMASK_COORDFROMADDR_OUTPUT* pOut) const;
 
-    virtual BOOL_32 HwlDegradeBaseLevel(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const;
+    virtual BOOL_32 HwlGetAlignmentInfoMacroTiled(
+        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
+        UINT_32* pPitchAlign, UINT_32* pHeightAlign, UINT_32* pSizeAlign) const;
 
     virtual UINT_32 HwlComputeQbStereoRightSwizzle(
         ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pInfo) const;

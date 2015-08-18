@@ -346,13 +346,8 @@ ADDR_E_RETURNCODE Lib::ComputeSurfaceInfo(
                 // HWL layer may override tile mode if necessary
                 HwlOverrideTileMode(&localIn);
 
-                AddrTileMode tileMode = localIn.tileMode;
-
                 // Optimize tile mode if possible
-                if (OptimizeTileMode(&localIn, &tileMode))
-                {
-                    localIn.tileMode = tileMode;
-                }
+                OptimizeTileMode(&localIn);
             }
         }
 
@@ -3510,72 +3505,192 @@ VOID Lib::ComputeMipLevel(
 
 /**
 ****************************************************************************************************
+*   Lib::DegradeTo1D
+*
+*   @brief
+*       Check if surface can be degraded to 1D
+*   @return
+*       TRUE if degraded
+****************************************************************************************************
+*/
+BOOL_32 Lib::DegradeTo1D(
+    UINT_32 width,                  ///< surface width
+    UINT_32 height,                 ///< surface height
+    UINT_32 macroTilePitchAlign,    ///< macro tile pitch align
+    UINT_32 macroTileHeightAlign    ///< macro tile height align
+    )
+{
+    BOOL_32 degrade = ((width < macroTilePitchAlign) || (height < macroTileHeightAlign));
+
+    // Check whether 2D tiling still has too much footprint
+    if (degrade == FALSE)
+    {
+        // Only check width and height as slices are aligned to thickness
+        UINT_64 unalignedSize = width * height;
+
+        UINT_32 alignedPitch = PowTwoAlign(width, macroTilePitchAlign);
+        UINT_32 alignedHeight = PowTwoAlign(height, macroTileHeightAlign);
+        UINT_64 alignedSize = alignedPitch * alignedHeight;
+
+        // alignedSize > 1.5 * unalignedSize
+        if (2 * alignedSize > 3 * unalignedSize)
+        {
+            degrade = TRUE;
+        }
+    }
+
+    return degrade;
+}
+
+/**
+****************************************************************************************************
 *   Lib::OptimizeTileMode
 *
 *   @brief
 *       Check if base level's tile mode can be optimized (degraded)
 *   @return
-*       TRUE if degraded, also returns degraded tile mode (unchanged if not degraded)
+*       N/A
 ****************************************************************************************************
 */
-BOOL_32 Lib::OptimizeTileMode(
-    const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] Input structure for surface info
-    AddrTileMode*                           pTileMode   ///< [out] Degraded tile mode
+VOID Lib::OptimizeTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*  pInOut     ///< [in, out] structure for surface info
     ) const
 {
-    AddrTileMode tileMode = pIn->tileMode;
-    UINT_32 thickness = Thickness(tileMode);
+    AddrTileMode tileMode = pInOut->tileMode;
+    BOOL_32 doOpt = (pInOut->flags.opt4Space == TRUE) ||
+                    (pInOut->flags.minimizeAlignment == TRUE) ||
+                    (pInOut->maxBaseAlign != 0);
 
     // Optimization can only be done on level 0 and samples <= 1
-    if ((pIn->flags.opt4Space == TRUE)      &&
-        (pIn->mipLevel == 0)                &&
-        (pIn->numSamples <= 1)              &&
-        (pIn->flags.display == FALSE)       &&
+    if ((doOpt == TRUE)                     &&
+        (pInOut->mipLevel == 0)             &&
+        (pInOut->flags.display == FALSE)    &&
         (IsPrtTileMode(tileMode) == FALSE)  &&
-        (pIn->flags.prt == FALSE))
+        (pInOut->flags.prt == FALSE))
     {
-        // Check if linear mode is optimal
-        if ((pIn->height == 1) &&
-            (IsLinear(tileMode) == FALSE) &&
-            (ElemLib::IsBlockCompressed(pIn->format) == FALSE) &&
-            (pIn->flags.depth == FALSE) &&
-            (pIn->flags.stencil == FALSE) &&
-            (m_configFlags.disableLinearOpt == FALSE) &&
-            (pIn->flags.disableLinearOpt == FALSE))
+        UINT_32 width = pInOut->width;
+        UINT_32 height = pInOut->height;
+        UINT_32 thickness = Thickness(tileMode);
+        BOOL_32 convertToPrt = FALSE;
+        BOOL_32 macroTiledOK = TRUE;
+        UINT_32 macroWidthAlign = 0;
+        UINT_32 macroHeightAlign = 0;
+        UINT_32 macroSizeAlign = 0;
+
+        if (IsMacroTiled(tileMode))
         {
-            tileMode = ADDR_TM_LINEAR_ALIGNED;
+            macroTiledOK = HwlGetAlignmentInfoMacroTiled(pInOut,
+                                                         &macroWidthAlign,
+                                                         &macroHeightAlign,
+                                                         &macroSizeAlign);
         }
-        else if (IsMacroTiled(tileMode))
+
+        if (macroTiledOK)
         {
-            if (HwlDegradeBaseLevel(pIn))
+            if ((pInOut->flags.opt4Space == TRUE) && (pInOut->numSamples <= 1))
             {
-                tileMode = (thickness == 1) ? ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
-            }
-            else if (thickness > 1)
-            {
-                // As in the following HwlComputeSurfaceInfo, thick modes may be degraded to
-                // thinner modes, we should re-evaluate whether the corresponding thinner modes
-                // need to be degraded. If so, we choose 1D thick mode instead.
-                tileMode = DegradeLargeThickTile(pIn->tileMode, pIn->bpp);
-                if (tileMode != pIn->tileMode)
+                // Check if linear mode is optimal
+                if ((pInOut->height == 1) &&
+                    (IsLinear(tileMode) == FALSE) &&
+                    (ElemLib::IsBlockCompressed(pInOut->format) == FALSE) &&
+                    (pInOut->flags.depth == FALSE) &&
+                    (pInOut->flags.stencil == FALSE) &&
+                    (m_configFlags.disableLinearOpt == FALSE) &&
+                    (pInOut->flags.disableLinearOpt == FALSE))
                 {
-                    ADDR_COMPUTE_SURFACE_INFO_INPUT input = *pIn;
-                    input.tileMode = tileMode;
-                    if (HwlDegradeBaseLevel(&input))
+                    tileMode = ADDR_TM_LINEAR_ALIGNED;
+                }
+                else if (IsMacroTiled(tileMode))
+                {
+                    if (DegradeTo1D(width, height, macroWidthAlign, macroHeightAlign))
                     {
-                        tileMode = ADDR_TM_1D_TILED_THICK;
+                        tileMode = (thickness == 1) ?
+                                   ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
+                    }
+                    else if (thickness > 1)
+                    {
+                        // As in the following HwlComputeSurfaceInfo, thick modes may be degraded to
+                        // thinner modes, we should re-evaluate whether the corresponding
+                        // thinner modes should be degraded. If so, we choose 1D thick mode instead.
+                        tileMode = DegradeLargeThickTile(pInOut->tileMode, pInOut->bpp);
+
+                        if (tileMode != pInOut->tileMode)
+                        {
+                            // Get thickness again after large thick degrade
+                            thickness = Thickness(tileMode);
+
+                            ADDR_COMPUTE_SURFACE_INFO_INPUT input = *pInOut;
+                            input.tileMode = tileMode;
+
+                            macroTiledOK = HwlGetAlignmentInfoMacroTiled(&input,
+                                                                         &macroWidthAlign,
+                                                                         &macroHeightAlign,
+                                                                         &macroSizeAlign);
+
+                            if (macroTiledOK &&
+                                DegradeTo1D(width, height, macroWidthAlign, macroHeightAlign))
+                            {
+                                tileMode = ADDR_TM_1D_TILED_THICK;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (macroTiledOK)
+            {
+                if ((pInOut->flags.minimizeAlignment == TRUE) &&
+                    (pInOut->numSamples <= 1) &&
+                    (IsMacroTiled(tileMode) == TRUE))
+                {
+                    UINT_32 macroSize = PowTwoAlign(width, macroWidthAlign) *
+                                        PowTwoAlign(height, macroHeightAlign);
+                    UINT_32 microSize = PowTwoAlign(width, MicroTileWidth) *
+                                        PowTwoAlign(height, MicroTileHeight);
+
+                    if (macroSize > microSize)
+                    {
+                        tileMode = (thickness == 1) ?
+                                   ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
+                    }
+                }
+
+                if ((pInOut->maxBaseAlign != 0) &&
+                    (IsMacroTiled(tileMode) == TRUE))
+                {
+                    if (macroSizeAlign > pInOut->maxBaseAlign)
+                    {
+                        if (pInOut->numSamples > 1)
+                        {
+                            ADDR_ASSERT(pInOut->maxBaseAlign >= Block64K);
+
+                            convertToPrt = TRUE;
+                        }
+                        else if (pInOut->maxBaseAlign < Block64K)
+                        {
+                            tileMode = (thickness == 1) ?
+                                       ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
+                        }
+                        else
+                        {
+                            convertToPrt = TRUE;
+                        }
                     }
                 }
             }
         }
+
+        if (convertToPrt)
+        {
+            HwlSetPrtTileMode(pInOut);
+        }
+        else if (tileMode != pInOut->tileMode)
+        {
+            pInOut->tileMode = tileMode;
+        }
     }
 
-    BOOL_32 optimized = (tileMode != pIn->tileMode);
-    if (optimized)
-    {
-        *pTileMode = tileMode;
-    }
-    return optimized;
+    HwlOptimizeTileMode(pInOut);
 }
 
 /**

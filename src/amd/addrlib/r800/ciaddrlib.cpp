@@ -871,6 +871,76 @@ AddrTileMode CiLib::HwlDegradeThickTileMode(
 
 /**
 ****************************************************************************************************
+*   CiLib::HwlOptimizeTileMode
+*
+*   @brief
+*       Optimize tile mode on CI
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID CiLib::HwlOptimizeTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in,out] input output structure
+    ) const
+{
+    AddrTileMode tileMode = pInOut->tileMode;
+
+    // Override 2D/3D macro tile mode to PRT_* tile mode if
+    // client driver requests this surface is equation compatible
+    if ((pInOut->flags.needEquation == TRUE) &&
+        (pInOut->numSamples <= 1) &&
+        (IsMacroTiled(tileMode) == TRUE) &&
+        (IsPrtTileMode(tileMode) == FALSE))
+    {
+        UINT_32 thickness = Thickness(tileMode);
+
+        if (pInOut->maxBaseAlign < Block64K)
+        {
+            tileMode = (thickness == 1) ? ADDR_TM_1D_TILED_THIN1 : ADDR_TM_1D_TILED_THICK;
+        }
+        else if (thickness == 1)
+        {
+            tileMode = ADDR_TM_PRT_TILED_THIN1;
+        }
+        else
+        {
+            static const UINT_32 PrtTileBytes = 0x10000;
+            // First prt thick tile index in the tile mode table
+            static const UINT_32 PrtThickTileIndex = 22;
+            ADDR_TILEINFO tileInfo = {0};
+
+            HwlComputeMacroModeIndex(PrtThickTileIndex,
+                                     pInOut->flags,
+                                     pInOut->bpp,
+                                     pInOut->numSamples,
+                                     &tileInfo);
+
+            UINT_32 macroTileBytes = ((pInOut->bpp) >> 3) * 64 * pInOut->numSamples *
+                                     thickness * HwlGetPipes(&tileInfo) *
+                                     tileInfo.banks * tileInfo.bankWidth *
+                                     tileInfo.bankHeight;
+
+            if (macroTileBytes <= PrtTileBytes)
+            {
+                tileMode = ADDR_TM_PRT_TILED_THICK;
+            }
+            else
+            {
+                tileMode = ADDR_TM_PRT_TILED_THIN1;
+            }
+        }
+    }
+
+    if (tileMode != pInOut->tileMode)
+    {
+        pInOut->tileMode = tileMode;
+    }
+}
+
+/**
+****************************************************************************************************
 *   CiLib::HwlOverrideTileMode
 *
 *   @brief
@@ -981,48 +1051,6 @@ VOID CiLib::HwlOverrideTileMode(
         }
     }
 
-    // Override 2D/3D macro tile mode to PRT_* tile mode if
-    // client driver requests this surface is equation compatible
-    if ((pInOut->flags.needEquation == TRUE) &&
-        (pInOut->numSamples <= 1) &&
-        (IsMacroTiled(tileMode) == TRUE) &&
-        (IsPrtTileMode(tileMode) == FALSE))
-    {
-        UINT_32 thickness = Thickness(tileMode);
-
-        if (thickness == 1)
-        {
-            tileMode = ADDR_TM_PRT_TILED_THIN1;
-        }
-        else
-        {
-            static const UINT_32 PrtTileBytes = 0x10000;
-            // First prt thick tile index in the tile mode table
-            static const UINT_32 PrtThickTileIndex = 22;
-            ADDR_TILEINFO tileInfo = {0};
-
-            HwlComputeMacroModeIndex(PrtThickTileIndex,
-                                     pInOut->flags,
-                                     pInOut->bpp,
-                                     pInOut->numSamples,
-                                     &tileInfo);
-
-            UINT_32 macroTileBytes = ((pInOut->bpp) >> 3) * 64 * pInOut->numSamples *
-                                     thickness * HwlGetPipes(&tileInfo) *
-                                     tileInfo.banks * tileInfo.bankWidth *
-                                     tileInfo.bankHeight;
-
-            if (macroTileBytes <= PrtTileBytes)
-            {
-                tileMode = ADDR_TM_PRT_TILED_THICK;
-            }
-            else
-            {
-                tileMode = ADDR_TM_PRT_TILED_THIN1;
-            }
-        }
-    }
-
     if (tileMode != pInOut->tileMode)
     {
         pInOut->tileMode = tileMode;
@@ -1115,15 +1143,47 @@ VOID CiLib::HwlSelectTileMode(
         (pInOut->flags.tcCompatible == FALSE))
     {
         pInOut->flags.opt4Space = TRUE;
+        pInOut->maxBaseAlign = Block64K;
 
         // Optimize tile mode if possible
-        if (OptimizeTileMode(pInOut, &tileMode))
-        {
-            pInOut->tileMode = tileMode;
-        }
+        OptimizeTileMode(pInOut);
     }
 
     HwlOverrideTileMode(pInOut);
+}
+
+/**
+****************************************************************************************************
+*   CiLib::HwlSetPrtTileMode
+*
+*   @brief
+*       Set PRT tile mode.
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID CiLib::HwlSetPrtTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in,out] input output structure
+    ) const
+{
+    AddrTileMode tileMode = pInOut->tileMode;
+    AddrTileType tileType = pInOut->tileType;
+
+    if (Thickness(tileMode) > 1)
+    {
+        tileMode = ADDR_TM_PRT_TILED_THICK;
+        tileType = (m_settings.isBonaire == TRUE) ? ADDR_NON_DISPLAYABLE : ADDR_THICK;
+    }
+    else
+    {
+        tileMode = ADDR_TM_PRT_TILED_THIN1;
+        tileType = (tileType == ADDR_THICK) ? ADDR_NON_DISPLAYABLE : tileType;
+    }
+
+    pInOut->tileMode = tileMode;
+    pInOut->tileType = tileType;
 }
 
 /**

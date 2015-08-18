@@ -3135,6 +3135,52 @@ UINT_32 SiLib::HwlComputeFmaskBits(
 
 /**
 ****************************************************************************************************
+*   SiLib::HwlOptimizeTileMode
+*
+*   @brief
+*       Optimize tile mode on SI
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID SiLib::HwlOptimizeTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in,out] input output structure
+    ) const
+{
+    AddrTileMode tileMode = pInOut->tileMode;
+
+    if ((pInOut->flags.needEquation == TRUE) &&
+        (IsMacroTiled(tileMode) == TRUE) &&
+        (pInOut->numSamples <= 1))
+    {
+        UINT_32 thickness = Thickness(tileMode);
+
+        pInOut->flags.prt = TRUE;
+
+        if (thickness > 1)
+        {
+            tileMode = ADDR_TM_1D_TILED_THICK;
+        }
+        else if (pInOut->numSlices > 1)
+        {
+            tileMode = ADDR_TM_1D_TILED_THIN1;
+        }
+        else
+        {
+            tileMode = ADDR_TM_2D_TILED_THIN1;
+        }
+    }
+
+    if (tileMode != pInOut->tileMode)
+    {
+        pInOut->tileMode = tileMode;
+    }
+}
+
+/**
+****************************************************************************************************
 *   SiLib::HwlOverrideTileMode
 *
 *   @brief
@@ -3173,34 +3219,34 @@ VOID SiLib::HwlOverrideTileMode(
             break;
     }
 
-    if ((pInOut->flags.needEquation == TRUE) &&
-        (IsMacroTiled(tileMode) == TRUE) &&
-        (pInOut->numSamples <= 1))
-    {
-        UINT_32 thickness = Thickness(tileMode);
-
-        pInOut->flags.prt = TRUE;
-
-        if (thickness > 1)
-        {
-            tileMode = ADDR_TM_1D_TILED_THICK;
-        }
-        else if (pInOut->numSlices > 1)
-        {
-            tileMode = ADDR_TM_1D_TILED_THIN1;
-        }
-        else
-        {
-            tileMode = ADDR_TM_2D_TILED_THIN1;
-        }
-    }
-
     if (tileMode != pInOut->tileMode)
     {
         pInOut->tileMode = tileMode;
 
         ADDR_ASSERT(pInOut->flags.prt == TRUE);
     }
+}
+
+/**
+****************************************************************************************************
+*   SiLib::HwlSetPrtTileMode
+*
+*   @brief
+*       Set prt tile modes.
+*
+*   @return
+*       N/A
+*
+****************************************************************************************************
+*/
+VOID SiLib::HwlSetPrtTileMode(
+    ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in,out] input output structure
+    ) const
+{
+    pInOut->tileMode = ADDR_TM_2D_TILED_THIN1;
+    pInOut->tileType = (pInOut->tileType == ADDR_DEPTH_SAMPLE_ORDER) ?
+                       ADDR_DEPTH_SAMPLE_ORDER : ADDR_NON_DISPLAYABLE;
+    pInOut->flags.prt = TRUE;
 }
 
 /**
@@ -3271,10 +3317,7 @@ VOID SiLib::HwlSelectTileMode(
     pInOut->flags.opt4Space = TRUE;
 
     // Optimize tile mode if possible
-    if (OptimizeTileMode(pInOut, &tileMode))
-    {
-        pInOut->tileMode = tileMode;
-    }
+    OptimizeTileMode(pInOut);
 
     HwlOverrideTileMode(pInOut);
 }
@@ -3492,8 +3535,6 @@ VOID SiLib::InitEquationTable()
 
                             if (m_chipFamily == ADDR_CHIP_FAMILY_SI)
                             {
-                                static const UINT_32 PrtTileSize = 0x10000;
-
                                 UINT_32 macroTileSize =
                                     m_blockWidth[equationIndex] * m_blockHeight[equationIndex] *
                                     bpp / 8;

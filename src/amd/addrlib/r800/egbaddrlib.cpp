@@ -240,6 +240,18 @@ BOOL_32 EgBasedLib::ComputeSurfaceInfoLinear(
                                    &pOut->pitchAlign,
                                    &pOut->heightAlign);
 
+    if (pIn->pitchAlign != 0)
+    {
+       ADDR_ASSERT((pIn->pitchAlign % pOut->pitchAlign) == 0);
+       pOut->pitchAlign = pIn->pitchAlign;
+    }
+
+    if (pIn->heightAlign != 0)
+    {
+       ADDR_ASSERT((pIn->heightAlign % pOut->heightAlign) == 0);
+       pOut->heightAlign = pIn->heightAlign;
+    }
+
     if ((pIn->tileMode == ADDR_TM_LINEAR_GENERAL) && pIn->flags.color && (pIn->height > 1))
     {
 #if !ALT_TEST
@@ -1139,17 +1151,20 @@ AddrTileMode EgBasedLib::ComputeSurfaceMipLevelTileMode(
 
 /**
 ****************************************************************************************************
-*   EgBasedLib::HwlDegradeBaseLevel
+*   EgBasedLib::HwlGetAlignmentInfoMacroTiled
 *   @brief
-*       Check if degrade is needed for base level
+*       Get alignment info for giving tile mode
 *   @return
-*       TRUE if degrade is suggested
+*       TRUE if getting alignment is OK
 ****************************************************************************************************
 */
-BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
-    const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const
+BOOL_32 EgBasedLib::HwlGetAlignmentInfoMacroTiled(
+    const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,             ///< [in] create surface info
+    UINT_32*                               pPitchAlign,     ///< [out] pitch alignment
+    UINT_32*                               pHeightAlign,    ///< [out] height alignment
+    UINT_32*                               pSizeAlign       ///< [out] size alignment
+    ) const
 {
-    BOOL_32 degrade = FALSE;
     BOOL_32 valid = TRUE;
 
     ADDR_ASSERT(IsMacroTiled(pIn->tileMode));
@@ -1159,6 +1174,7 @@ BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
     UINT_32 heightAlign;
     UINT_32 macroTileWidth;
     UINT_32 macroTileHeight;
+    UINT_32 numSamples = (pIn->numFrags == 0) ? pIn->numSamples : pIn->numFrags;
 
     ADDR_ASSERT(pIn->pTileInfo);
     ADDR_TILEINFO tileInfo = *pIn->pTileInfo;
@@ -1175,7 +1191,7 @@ BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
                      pIn->bpp,
                      pIn->width,
                      pIn->height,
-                     pIn->numSamples,
+                     numSamples,
                      &tileInfo,
                      &tileInfo,
                      pIn->tileType,
@@ -1185,7 +1201,7 @@ BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
                                                pIn->bpp,
                                                pIn->flags,
                                                pIn->mipLevel,
-                                               pIn->numSamples,
+                                               numSamples,
                                                &tileInfo,
                                                &baseAlign,
                                                &pitchAlign,
@@ -1195,30 +1211,12 @@ BOOL_32 EgBasedLib::HwlDegradeBaseLevel(
 
     if (valid)
     {
-        degrade = ((pIn->width < macroTileWidth) || (pIn->height < macroTileHeight));
-        // Check whether 2D tiling still has too much footprint
-        if (degrade == FALSE)
-        {
-            // Only check width and height as slices are aligned to thickness
-            UINT_64 unalignedSize = pIn->width * pIn->height;
-
-            UINT_32 alignedPitch = PowTwoAlign(pIn->width, pitchAlign);
-            UINT_32 alignedHeight = PowTwoAlign(pIn->height, heightAlign);
-            UINT_64 alignedSize = alignedPitch * alignedHeight;
-
-            // alignedSize > 1.5 * unalignedSize
-            if (2 * alignedSize > 3 * unalignedSize)
-            {
-                degrade = TRUE;
-            }
-        }
-    }
-    else
-    {
-        degrade = TRUE;
+        *pPitchAlign = pitchAlign;
+        *pHeightAlign = heightAlign;
+        *pSizeAlign = baseAlign;
     }
 
-    return degrade;
+    return valid;
 }
 
 /**

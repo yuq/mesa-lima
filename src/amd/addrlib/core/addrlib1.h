@@ -349,11 +349,18 @@ protected:
     VOID    ComputeMipLevel(
         ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const;
 
-    /// Pure Virtual function for Hwl checking degrade for base level
-    virtual BOOL_32 HwlDegradeBaseLevel(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn) const = 0;
+    /// Pure Virtual function for Hwl to get macro tiled alignment info
+    virtual BOOL_32 HwlGetAlignmentInfoMacroTiled(
+        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,
+        UINT_32* pPitchAlign, UINT_32* pHeightAlign, UINT_32* pSizeAlign) const = 0;
+
 
     virtual VOID HwlOverrideTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const
+    {
+        // not supported in hwl layer
+    }
+
+    virtual VOID HwlOptimizeTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const
     {
         // not supported in hwl layer
     }
@@ -496,8 +503,16 @@ protected:
     virtual UINT_32 HwlComputeQbStereoRightSwizzle(
         ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut) const = 0;
 
-    BOOL_32 OptimizeTileMode(
-        const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, AddrTileMode* pTileMode) const;
+    VOID OptimizeTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const;
+
+    /// Overwrite tile setting to PRT
+    virtual VOID HwlSetPrtTileMode(ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut) const
+    {
+    }
+
+    static BOOL_32 DegradeTo1D(
+        UINT_32 width, UINT_32 height,
+        UINT_32 macroTilePitchAlign, UINT_32 macroTileHeightAlign);
 
 private:
     // Disallow the copy constructor

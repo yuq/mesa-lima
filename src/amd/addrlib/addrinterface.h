@@ -515,7 +515,8 @@ typedef union _ADDR_SURFACE_FLAGS
                                           ///  which is needed by swizzle pattern equation.
         UINT_32 skipIndicesOutput    : 1; ///< Skipping indices in output.
         UINT_32 rotateDisplay        : 1; ///< Rotate micro tile type
-        UINT_32 reserved             : 6; ///< Reserved bits
+        UINT_32 minimizeAlignment    : 1; ///< Minimize alignment
+        UINT_32 reserved             : 5; ///< Reserved bits
     };
 
     UINT_32 value;
@@ -557,6 +558,9 @@ typedef struct _ADDR_COMPUTE_SURFACE_INFO_INPUT
     UINT_32             basePitch;          ///< Base level pitch in pixels, 0 means ignored, is a
                                             ///  must for mip levels from SI+.
                                             ///  Don't use pitch in blocks for compressed formats!
+    UINT_32             maxBaseAlign;       ///< Max base alignment request from client
+    UINT_32             pitchAlign;         ///< Pitch alignment request from client
+    UINT_32             heightAlign;        ///< Height alignment request from client
 } ADDR_COMPUTE_SURFACE_INFO_INPUT;
 
 /**
