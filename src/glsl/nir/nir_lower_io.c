@@ -244,9 +244,14 @@ nir_lower_io_block(nir_block *block, void *void_state)
          nir_src indirect;
          unsigned offset = get_io_offset(intrin->variables[0],
                                          &intrin->instr, &indirect, state);
-         offset += intrin->variables[0]->var->data.driver_location;
 
-         load->const_index[0] = offset;
+         unsigned location = intrin->variables[0]->var->data.driver_location;
+         if (mode == nir_var_uniform) {
+            load->const_index[0] = location;
+            load->const_index[1] = offset;
+         } else {
+            load->const_index[0] = location + offset;
+         }
 
          if (has_indirect)
             load->src[0] = indirect;
