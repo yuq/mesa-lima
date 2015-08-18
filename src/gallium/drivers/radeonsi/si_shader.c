@@ -3982,7 +3982,7 @@ static void si_dump_key(unsigned shader, union si_shader_key *key)
 			fprintf(stderr, "  es_enabled_outputs = 0x%"PRIx64"\n",
 				key->vs.es_enabled_outputs);
 		fprintf(stderr, "  as_es = %u\n", key->vs.as_es);
-		fprintf(stderr, "  as_es = %u\n", key->vs.as_ls);
+		fprintf(stderr, "  as_ls = %u\n", key->vs.as_ls);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
