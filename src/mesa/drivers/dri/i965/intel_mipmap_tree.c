@@ -557,35 +557,15 @@ static unsigned long
 intel_get_yf_ys_bo_size(struct intel_mipmap_tree *mt, unsigned *alignment,
                         unsigned long *pitch)
 {
-   const uint32_t bpp = mt->cpp * 8;
-   const uint32_t aspect_ratio = (bpp == 16 || bpp == 64) ? 2 : 1;
    uint32_t tile_width, tile_height;
    unsigned long stride, size, aligned_y;
 
    assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
-
-   switch (bpp) {
-   case 8:
-      tile_height = 64;
-      break;
-   case 16:
-   case 32:
-      tile_height = 32;
-      break;
-   case 64:
-   case 128:
-      tile_height = 16;
-      break;
-   default:
-      unreachable("not reached");
-   }
-
-   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
-      tile_height *= 4;
+   intel_get_tile_dims(mt->tiling, mt->tr_mode, mt->cpp,
+                       &tile_width, &tile_height);
 
    aligned_y = ALIGN(mt->total_height, tile_height);
    stride = mt->total_width * mt->cpp;
-   tile_width = tile_height * mt->cpp * aspect_ratio;
    stride = ALIGN(stride, tile_width);
    size = stride * aligned_y;
 
@@ -1074,6 +1054,64 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
    *x = mt->level[level].slice[slice].x_offset;
    *y = mt->level[level].slice[slice].y_offset;
 }
+
+
+/**
+ * This function computes the tile_w (in bytes) and tile_h (in rows) of
+ * different tiling patterns. If the BO is untiled, tile_w is set to cpp
+ * and tile_h is set to 1.
+ */
+void
+intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+                    uint32_t *tile_w, uint32_t *tile_h)
+{
+   if (tr_mode == INTEL_MIPTREE_TRMODE_NONE) {
+      switch (tiling) {
+      case I915_TILING_X:
+         *tile_w = 512;
+         *tile_h = 8;
+         break;
+      case I915_TILING_Y:
+         *tile_w = 128;
+         *tile_h = 32;
+         break;
+      case I915_TILING_NONE:
+         *tile_w = cpp;
+         *tile_h = 1;
+         break;
+      default:
+         unreachable("not reached");
+      }
+   } else {
+      uint32_t aspect_ratio = 1;
+      assert(_mesa_is_pow_two(cpp));
+
+      switch (cpp) {
+      case 1:
+         *tile_h = 64;
+         break;
+      case 2:
+      case 4:
+         *tile_h = 32;
+         break;
+      case 8:
+      case 16:
+         *tile_h = 16;
+         break;
+      default:
+         unreachable("not reached");
+      }
+
+      if (cpp == 2 || cpp == 8)
+         aspect_ratio = 2;
+
+      if (tr_mode == INTEL_MIPTREE_TRMODE_YS)
+         *tile_h *= 4;
+
+      *tile_w = *tile_h * aspect_ratio * cpp;
+   }
+}
+
 
 /**
  * This function computes masks that may be used to select the bits of the X
