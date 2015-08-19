@@ -115,25 +115,31 @@ can_coalesce_vars(brw::fs_live_variables *live_intervals,
     */
    int start_ip = MAX2(start_to, start_from);
    int end_ip = MIN2(end_to, end_from);
-   int scan_ip = -1;
 
-   foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
-      scan_ip++;
-
-      /* Ignore anything before the intersection of the live ranges */
-      if (scan_ip < start_ip)
+   foreach_block(block, cfg) {
+      if (block->end_ip < start_ip)
          continue;
 
-      /* Ignore the copying instruction itself */
-      if (scan_inst == inst)
-         continue;
+      int scan_ip = block->start_ip - 1;
 
-      if (scan_ip > end_ip)
-         return true; /* registers do not interfere */
+      foreach_inst_in_block(fs_inst, scan_inst, block) {
+         scan_ip++;
 
-      if (scan_inst->overwrites_reg(inst->dst) ||
-          scan_inst->overwrites_reg(inst->src[0]))
-         return false; /* registers interfere */
+         /* Ignore anything before the intersection of the live ranges */
+         if (scan_ip < start_ip)
+            continue;
+
+         /* Ignore the copying instruction itself */
+         if (scan_inst == inst)
+            continue;
+
+         if (scan_ip > end_ip)
+            return true; /* registers do not interfere */
+
+         if (scan_inst->overwrites_reg(inst->dst) ||
+             scan_inst->overwrites_reg(inst->src[0]))
+            return false; /* registers interfere */
+      }
    }
 
    return true;
