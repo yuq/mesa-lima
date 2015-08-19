@@ -124,6 +124,22 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             .cullMode = VK_CULL_MODE_NONE,
             .frontFace = VK_FRONT_FACE_CCW
          },
+         .pDepthStencilState = &(VkPipelineDepthStencilStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+            .depthTestEnable = true,
+            .depthWriteEnable = true,
+            .depthCompareOp = VK_COMPARE_OP_ALWAYS,
+            .depthBoundsEnable = false,
+            .stencilTestEnable = true,
+            .front = (VkStencilOpState) {
+               .stencilPassOp = VK_STENCIL_OP_REPLACE,
+               .stencilCompareOp = VK_COMPARE_OP_ALWAYS,
+            },
+            .back = (VkStencilOpState) {
+               .stencilPassOp = VK_STENCIL_OP_REPLACE,
+               .stencilCompareOp = VK_COMPARE_OP_ALWAYS,
+            },
+         },
          .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .attachmentCount = 1,
@@ -198,7 +214,8 @@ struct clear_instance_data {
 static void
 meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
                 int num_instances,
-                struct clear_instance_data *instance_data)
+                struct clear_instance_data *instance_data,
+                VkClearDepthStencilValue ds_clear_value)
 {
    struct anv_device *device = cmd_buffer->device;
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
@@ -207,9 +224,9 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
 
    const float vertex_data[] = {
       /* Rect-list coordinates */
-            0.0,        0.0, 0.0,
-      fb->width,        0.0, 0.0,
-      fb->width, fb->height, 0.0,
+            0.0,        0.0, ds_clear_value.depth,
+      fb->width,        0.0, ds_clear_value.depth,
+      fb->width, fb->height, ds_clear_value.depth,
 
       /* Align to 16 bytes */
       0.0, 0.0, 0.0,
@@ -272,9 +289,6 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_saved_state saved_state;
 
-   if (pass->has_depth_clear_attachment)
-      anv_finishme("depth clear");
-
    if (pass->has_stencil_clear_attachment)
       anv_finishme("stencil clear");
 
@@ -283,21 +297,33 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 
    struct clear_instance_data instance_data[pass->num_color_clear_attachments];
    uint32_t color_attachments[pass->num_color_clear_attachments];
+   uint32_t ds_attachment = VK_ATTACHMENT_UNUSED;
+   VkClearDepthStencilValue ds_clear_value = {0};
 
    int layer = 0;
    for (uint32_t i = 0; i < pass->attachment_count; i++) {
-      if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR &&
-          anv_format_is_color(pass->attachments[i].format)) {
-         instance_data[layer] = (struct clear_instance_data) {
-            .vue_header = {
-               .RTAIndex = i,
-               .ViewportIndex = 0,
-               .PointWidth = 0.0
-            },
-            .color = clear_values[i].color,
-         };
-         color_attachments[layer] = i;
-         layer++;
+      const struct anv_render_pass_attachment *att = &pass->attachments[i];
+
+      if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+         if (anv_format_is_color(att->format)) {
+            instance_data[layer] = (struct clear_instance_data) {
+               .vue_header = {
+                  .RTAIndex = i,
+                  .ViewportIndex = 0,
+                  .PointWidth = 0.0
+               },
+               .color = clear_values[i].color,
+            };
+            color_attachments[layer] = i;
+            layer++;
+         } else if (att->format->depth_format) {
+            assert(ds_attachment == VK_ATTACHMENT_UNUSED);
+            ds_attachment = i;
+            ds_clear_value= clear_values[ds_attachment].ds;
+         }
+      } else if (att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+         assert(att->format->has_stencil);
+         anv_finishme("stencil clear");
       }
    }
 
@@ -307,13 +333,13 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
       .input_count = 0,
       .color_count = pass->num_color_clear_attachments,
       .color_attachments = color_attachments,
-      .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
+      .depth_stencil_attachment = ds_attachment,
    };
 
    anv_cmd_buffer_begin_subpass(cmd_buffer, &subpass);
 
    meta_emit_clear(cmd_buffer, pass->num_color_clear_attachments,
-                   instance_data);
+                   instance_data, ds_clear_value);
 
    /* Restore API state */
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
@@ -1344,7 +1370,8 @@ void anv_CmdClearColorImage(
                .color = *pColor,
             };
 
-            meta_emit_clear(cmd_buffer, 1, &instance_data);
+            meta_emit_clear(cmd_buffer, 1, &instance_data,
+                            (VkClearDepthStencilValue) {0});
 
             anv_CmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
          }
