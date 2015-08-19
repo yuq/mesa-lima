@@ -2211,7 +2211,7 @@ VkResult anv_CreateRenderPass(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
 
    size = sizeof(*pass) +
-      pCreateInfo->subpassCount * sizeof(struct anv_subpass);
+      pCreateInfo->subpassCount * sizeof(pass->subpasses[0]);
    pass = anv_device_alloc(device, size, 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (pass == NULL)
