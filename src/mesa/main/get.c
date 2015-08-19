@@ -1969,7 +1969,8 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT64;
 
    case GL_VERTEX_BINDING_DIVISOR:
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_instanced_arrays)
+      if ((!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_instanced_arrays) &&
+          !_mesa_is_gles31(ctx))
           goto invalid_enum;
       if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)
           goto invalid_value;
@@ -1977,7 +1978,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_VERTEX_BINDING_OFFSET:
-      if (!_mesa_is_desktop_gl(ctx))
+      if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles31(ctx))
           goto invalid_enum;
       if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)
           goto invalid_value;
@@ -1985,7 +1986,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_VERTEX_BINDING_STRIDE:
-      if (!_mesa_is_desktop_gl(ctx))
+      if (!_mesa_is_desktop_gl(ctx) && !_mesa_is_gles31(ctx))
           goto invalid_enum;
       if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)
           goto invalid_value;
