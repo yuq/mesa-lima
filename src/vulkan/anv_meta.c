@@ -65,7 +65,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       .pVertexBindingDescriptions = (VkVertexInputBindingDescription[]) {
          {
             .binding = 0,
-            .strideInBytes = 8,
+            .strideInBytes = 12,
             .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
          },
          {
@@ -87,7 +87,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             /* Position */
             .location = 1,
             .binding = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offsetInBytes = 0
          },
          {
@@ -207,12 +207,12 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
 
    const float vertex_data[] = {
       /* Rect-list coordinates */
-            0.0,        0.0,
-      fb->width,        0.0,
-      fb->width, fb->height,
+            0.0,        0.0, 0.0,
+      fb->width,        0.0, 0.0,
+      fb->width, fb->height, 0.0,
 
       /* Align to 16 bytes */
-            0.0,        0.0,
+      0.0, 0.0, 0.0,
    };
 
    size = sizeof(vertex_data) + num_instances * sizeof(*instance_data);
