@@ -879,9 +879,9 @@ void si_trace_emit(struct si_context *sctx)
 	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, sctx->trace_buf,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_MIN);
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
-	radeon_emit(cs, PKT3_WRITE_DATA_DST_SEL(PKT3_WRITE_DATA_DST_SEL_MEM_SYNC) |
-				PKT3_WRITE_DATA_WR_CONFIRM |
-				PKT3_WRITE_DATA_ENGINE_SEL(PKT3_WRITE_DATA_ENGINE_SEL_ME));
+	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
+		    S_370_WR_CONFIRM(1) |
+		    S_370_ENGINE_SEL(V_370_ME));
 	radeon_emit(cs, sctx->trace_buf->gpu_address);
 	radeon_emit(cs, sctx->trace_buf->gpu_address >> 32);
 	radeon_emit(cs, sctx->trace_id);

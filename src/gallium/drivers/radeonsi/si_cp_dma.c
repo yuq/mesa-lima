@@ -47,10 +47,11 @@ static void si_emit_cp_dma_copy_buffer(struct si_context *sctx,
 				       unsigned size, unsigned flags)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? PKT3_CP_DMA_CP_SYNC : 0;
-	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? PKT3_CP_DMA_CMD_RAW_WAIT : 0;
+	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
+	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
 	uint32_t sel = flags & CIK_CP_DMA_USE_L2 ?
-			   PKT3_CP_DMA_SRC_SEL(3) | PKT3_CP_DMA_DST_SEL(3) : 0;
+			   S_411_SRC_SEL(V_411_SRC_ADDR_TC_L2) |
+			   S_411_DSL_SEL(V_411_DST_ADDR_TC_L2) : 0;
 
 	assert(size);
 	assert((size & ((1<<21)-1)) == size);
@@ -79,16 +80,16 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 					uint32_t clear_value, unsigned flags)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? PKT3_CP_DMA_CP_SYNC : 0;
-	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? PKT3_CP_DMA_CMD_RAW_WAIT : 0;
-	uint32_t dst_sel = flags & CIK_CP_DMA_USE_L2 ? PKT3_CP_DMA_DST_SEL(3) : 0;
+	uint32_t sync_flag = flags & R600_CP_DMA_SYNC ? S_411_CP_SYNC(1) : 0;
+	uint32_t raw_wait = flags & SI_CP_DMA_RAW_WAIT ? S_414_RAW_WAIT(1) : 0;
+	uint32_t dst_sel = flags & CIK_CP_DMA_USE_L2 ? S_411_DSL_SEL(V_411_DST_ADDR_TC_L2) : 0;
 
 	assert(size);
 	assert((size & ((1<<21)-1)) == size);
 
 	if (sctx->b.chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
-		radeon_emit(cs, sync_flag | dst_sel | PKT3_CP_DMA_SRC_SEL(2)); /* CP_SYNC [31] | SRC_SEL[30:29] */
+		radeon_emit(cs, sync_flag | dst_sel | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
 		radeon_emit(cs, clear_value);		/* DATA [31:0] */
 		radeon_emit(cs, 0);
 		radeon_emit(cs, dst_va);		/* DST_ADDR_LO [31:0] */
@@ -97,7 +98,7 @@ static void si_emit_cp_dma_clear_buffer(struct si_context *sctx,
 	} else {
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, clear_value);		/* DATA [31:0] */
-		radeon_emit(cs, sync_flag | PKT3_CP_DMA_SRC_SEL(2)); /* CP_SYNC [31] | SRC_SEL[30:29] */
+		radeon_emit(cs, sync_flag | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
 		radeon_emit(cs, dst_va);			/* DST_ADDR_LO [31:0] */
 		radeon_emit(cs, (dst_va >> 32) & 0xffff);	/* DST_ADDR_HI [15:0] */
 		radeon_emit(cs, size | raw_wait);		/* COMMAND [29:22] | BYTE_COUNT [20:0] */

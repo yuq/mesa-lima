@@ -229,6 +229,30 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 	case PKT3_NUM_INSTANCES:
 		si_dump_reg(f, R_030934_VGT_NUM_INSTANCES, ib[1], ~0);
 		break;
+	case PKT3_WRITE_DATA:
+		si_dump_reg(f, R_370_CONTROL, ib[1], ~0);
+		si_dump_reg(f, R_371_DST_ADDR_LO, ib[2], ~0);
+		si_dump_reg(f, R_372_DST_ADDR_HI, ib[3], ~0);
+		for (i = 2; i < count; i++) {
+			print_spaces(f, INDENT_PKT);
+			fprintf(f, "0x%08x\n", ib[2+i]);
+		}
+		break;
+	case PKT3_CP_DMA:
+		si_dump_reg(f, R_410_CP_DMA_WORD0, ib[1], ~0);
+		si_dump_reg(f, R_411_CP_DMA_WORD1, ib[2], ~0);
+		si_dump_reg(f, R_412_CP_DMA_WORD2, ib[3], ~0);
+		si_dump_reg(f, R_413_CP_DMA_WORD3, ib[4], ~0);
+		si_dump_reg(f, R_414_COMMAND, ib[5], ~0);
+		break;
+	case PKT3_DMA_DATA:
+		si_dump_reg(f, R_500_DMA_DATA_WORD0, ib[1], ~0);
+		si_dump_reg(f, R_501_SRC_ADDR_LO, ib[2], ~0);
+		si_dump_reg(f, R_502_SRC_ADDR_HI, ib[3], ~0);
+		si_dump_reg(f, R_503_DST_ADDR_LO, ib[4], ~0);
+		si_dump_reg(f, R_504_DST_ADDR_HI, ib[5], ~0);
+		si_dump_reg(f, R_414_COMMAND, ib[6], ~0);
+		break;
 	case PKT3_NOP:
 		if (ib[0] == 0xffff1000) {
 			count = -1; /* One dword NOP. */

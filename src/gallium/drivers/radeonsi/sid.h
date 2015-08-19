@@ -69,6 +69,10 @@
 
 #define R600_TEXEL_PITCH_ALIGNMENT_MASK        0x7
 
+/* All registers defined in this packet section don't exist and the only
+ * purpose of these definitions is to define packet encoding that
+ * the IB parser understands, and also to have an accurate documentation.
+ */
 #define PKT3_NOP                               0x10
 #define PKT3_SET_BASE                          0x11
 #define PKT3_CLEAR_STATE                       0x12
@@ -95,19 +99,23 @@
 #define PKT3_DRAW_INDEX_OFFSET_2               0x35
 #define PKT3_DRAW_PREAMBLE                     0x36 /* new on CIK, required on GFX7.2 and later */
 #define PKT3_WRITE_DATA                        0x37
-#define     PKT3_WRITE_DATA_DST_SEL(x)             ((x) << 8)
-#define     PKT3_WRITE_DATA_DST_SEL_REG            0
-#define     PKT3_WRITE_DATA_DST_SEL_MEM_SYNC       1
-#define     PKT3_WRITE_DATA_DST_SEL_TC_L2          2
-#define     PKT3_WRITE_DATA_DST_SEL_GDS            3
-#define     PKT3_WRITE_DATA_DST_SEL_RESERVED_4     4
-#define     PKT3_WRITE_DATA_DST_SEL_MEM_ASYNC      5
-#define     PKT3_WR_ONE_ADDR                       (1 << 16)
-#define PKT3_WRITE_DATA_WR_CONFIRM                 (1 << 20)
-#define PKT3_WRITE_DATA_ENGINE_SEL(x)              ((x) << 30)
-#define PKT3_WRITE_DATA_ENGINE_SEL_ME              0
-#define PKT3_WRITE_DATA_ENGINE_SEL_PFP             1
-#define PKT3_WRITE_DATA_ENGINE_SEL_CE              2
+#define   R_370_CONTROL				0x370 /* 0x[packet number][word index] */
+#define     S_370_ENGINE_SEL(x)			(((x) & 0x3) << 30)
+#define       V_370_ME				0
+#define       V_370_PFP				1
+#define       V_370_CE				2
+#define       V_370_DE				3
+#define     S_370_WR_CONFIRM(x)			(((x) & 0x1) << 20)
+#define     S_370_WR_ONE_ADDR(x)		(((x) & 0x1) << 16)
+#define     S_370_DST_SEL(x)			(((x) & 0xf) << 8)
+#define       V_370_MEM_MAPPED_REGISTER		0
+#define       V_370_MEMORY_SYNC			1
+#define       V_370_TC_L2			2
+#define       V_370_GDS				3
+#define       V_370_RESERVED			4
+#define       V_370_MEM_ASYNC			5
+#define   R_371_DST_ADDR_LO			0x371
+#define   R_372_DST_ADDR_HI			0x372
 #define PKT3_DRAW_INDEX_INDIRECT_MULTI         0x38
 #define PKT3_MEM_SEMAPHORE                     0x39
 #define PKT3_MPEG_INDEX                        0x3A /* not on CIK */
@@ -159,42 +167,53 @@
  * 5. DST_ADDR_HI [15:0]
  * 6. COMMAND [29:22] | BYTE_COUNT [20:0]
  */
-#define PKT3_CP_DMA_CP_SYNC       (1 << 31)
-#define PKT3_CP_DMA_SRC_SEL(x)       ((x) << 29)
-/* 0 - SRC_ADDR
- * 1 - GDS (program SAS to 1 as well)
- * 2 - DATA
- * 3 - SRC_ADDR using TC L2 (DMA_DATA only)
- */
-#define PKT3_CP_DMA_DST_SEL(x)       ((x) << 20)
-/* 0 - DST_ADDR
- * 1 - GDS (program DAS to 1 as well)
- * 3 - DST_ADDR using TC L2 (DMA_DATA only)
- */
-/* COMMAND */
-#define PKT3_CP_DMA_CMD_SRC_SWAP(x) ((x) << 23)
-/* 0 - none
- * 1 - 8 in 16
- * 2 - 8 in 32
- * 3 - 8 in 64
- */
-#define PKT3_CP_DMA_CMD_DST_SWAP(x) ((x) << 24)
-/* 0 - none
- * 1 - 8 in 16
- * 2 - 8 in 32
- * 3 - 8 in 64
- */
-#define PKT3_CP_DMA_CMD_SAS       (1 << 26)
-/* 0 - memory
- * 1 - register
- */
-#define PKT3_CP_DMA_CMD_DAS       (1 << 27)
-/* 0 - memory
- * 1 - register
- */
-#define PKT3_CP_DMA_CMD_SAIC      (1 << 28)
-#define PKT3_CP_DMA_CMD_DAIC      (1 << 29)
-#define PKT3_CP_DMA_CMD_RAW_WAIT  (1 << 30)
+#define   R_410_CP_DMA_WORD0		0x410 /* 0x[packet number][word index] */
+#define     S_410_SRC_ADDR_LO(x)	((x) & 0xffffffff)
+#define   R_411_CP_DMA_WORD1		0x411
+#define     S_411_CP_SYNC(x)		(((x) & 0x1) << 31)
+#define     S_411_SRC_SEL(x)		(((x) & 0x3) << 29)
+#define       V_411_SRC_ADDR		0
+#define       V_411_GDS			1 /* program SAS to 1 as well */
+#define       V_411_DATA		2
+#define       V_411_SRC_ADDR_TC_L2	3 /* new for CIK */
+#define     S_411_ENGINE(x)		(((x) & 0x1) << 27)
+#define       V_411_ME			0
+#define       V_411_PFP			1
+#define     S_411_DSL_SEL(x)		(((x) & 0x3) << 20)
+#define       V_411_DST_ADDR		0
+#define       V_411_GDS			1 /* program DAS to 1 as well */
+#define       V_411_DST_ADDR_TC_L2	3 /* new for CIK */
+#define     S_411_SRC_ADDR_HI(x)	((x) & 0xffff)
+#define   R_412_CP_DMA_WORD2		0x412 /* 0x[packet number][word index] */
+#define     S_412_DST_ADDR_LO(x)	((x) & 0xffffffff)
+#define   R_413_CP_DMA_WORD3		0x413 /* 0x[packet number][word index] */
+#define     S_413_DST_ADDR_HI(x)	((x) & 0xffff)
+#define   R_414_COMMAND			0x414
+#define     S_414_BYTE_COUNT(x)		((x) & 0x1fffff)
+#define     S_414_DISABLE_WR_CONFIRM(x)	(((x) & 0x1) << 21)
+#define     S_414_SRC_SWAP(x)		(((x) & 0x3) << 22)
+#define       V_414_NONE		0
+#define       V_414_8_IN_16		1
+#define       V_414_8_IN_32		2
+#define       V_414_8_IN_64		3
+#define     S_414_DST_SWAP(x)		(((x) & 0x3) << 24)
+#define       V_414_NONE		0
+#define       V_414_8_IN_16		1
+#define       V_414_8_IN_32		2
+#define       V_414_8_IN_64		3
+#define     S_414_SAS(x)		(((x) & 0x1) << 26)
+#define       V_414_MEMORY		0
+#define       V_414_REGISTER		1
+#define     S_414_DAS(x)		(((x) & 0x1) << 27)
+#define       V_414_MEMORY		0
+#define       V_414_REGISTER		1
+#define     S_414_SAIC(x)		(((x) & 0x1) << 28)
+#define       V_414_INCREMENT		0
+#define       V_414_NO_INCREMENT	1
+#define     S_414_DAIC(x)		(((x) & 0x1) << 29)
+#define       V_414_INCREMENT		0
+#define       V_414_NO_INCREMENT	1
+#define     S_414_RAW_WAIT(x)		(((x) & 0x1) << 30)
 
 #define PKT3_DMA_DATA					0x50 /* new for CIK */
 /* 1. header
@@ -205,7 +224,24 @@
  * 5. DST_ADDR_HI [31:0]
  * 6. COMMAND [29:22] | BYTE_COUNT [20:0]
  */
-
+#define   R_500_DMA_DATA_WORD0		0x500 /* 0x[packet number][word index] */
+#define     S_500_CP_SYNC(x)		(((x) & 0x1) << 31)
+#define     S_500_SRC_SEL(x)		(((x) & 0x3) << 29)
+#define       V_500_SRC_ADDR		0
+#define       V_500_GDS			1 /* program SAS to 1 as well */
+#define       V_500_DATA		2
+#define       V_500_SRC_ADDR_TC_L2	3 /* new for CIK */
+#define     S_500_DSL_SEL(x)		(((x) & 0x3) << 20)
+#define       V_500_DST_ADDR		0
+#define       V_500_GDS			1 /* program DAS to 1 as well */
+#define       V_500_DST_ADDR_TC_L2	3 /* new for CIK */
+#define     S_500_ENGINE(x)		((x) & 0x1)
+#define       V_500_ME			0
+#define       V_500_PFP			1
+#define   R_501_SRC_ADDR_LO		0x501
+#define   R_502_SRC_ADDR_HI		0x502
+#define   R_503_DST_ADDR_LO		0x503
+#define   R_504_DST_ADDR_HI		0x504
 
 #define R_000E4C_SRBM_STATUS2                                           0x000E4C
 #define   S_000E4C_SDMA_RQ_PENDING(x)                                 (((x) & 0x1) << 0)
