@@ -320,6 +320,17 @@ void anv_CmdBindVertexBuffers(
    }
 }
 
+static void
+add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
+                        struct anv_state state, struct anv_bo *bo, uint32_t offset)
+{
+   /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
+   *(uint64_t *)(state.map + 8 * 4) =
+      anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
+                         cmd_buffer->device, state.offset + 8 * 4, bo, offset);
+
+}
+
 VkResult
 anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                   unsigned stage, struct anv_state *bt_state)
@@ -379,12 +390,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       memcpy(state.map, view->view.surface_state.map, 64);
 
-      /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
-      *(uint64_t *)(state.map + 8 * 4) =
-         anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
-                            cmd_buffer->device,
-                            state.offset + 8 * 4,
-                            view->view.bo, view->view.offset);
+      add_surface_state_reloc(cmd_buffer, state, view->view.bo, view->view.offset);
 
       bt_map[a] = state.offset;
    }
@@ -426,12 +432,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             memcpy(state.map, view->surface_state.map, 64);
          }
 
-         /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
-         *(uint64_t *)(state.map + 8 * 4) =
-            anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
-                               cmd_buffer->device,
-                               state.offset + 8 * 4,
-                               view->bo, offset);
+         add_surface_state_reloc(cmd_buffer, state, view->bo, offset);
 
          bt_map[start + b] = state.offset;
       }
