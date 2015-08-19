@@ -179,10 +179,9 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                 static const struct {
                         uint32_t op;
-                        bool is_mul;
                 } translate[] = {
-#define A(name) [QOP_##name] = {QPU_A_##name, false}
-#define M(name) [QOP_##name] = {QPU_M_##name, true}
+#define A(name) [QOP_##name] = {QPU_A_##name}
+#define M(name) [QOP_##name] = {QPU_M_##name}
                         A(FADD),
                         A(FSUB),
                         A(FMIN),
@@ -504,7 +503,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
                         fixup_raddr_conflict(c, dst, &src[0], &src[1]);
 
-                        if (translate[qinst->op].is_mul) {
+                        if (qir_is_mul(qinst)) {
                                 queue(c, qpu_m_alu2(translate[qinst->op].op,
                                                     dst,
                                                     src[0], src[1]));

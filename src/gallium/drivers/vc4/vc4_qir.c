@@ -170,6 +170,18 @@ qir_is_multi_instruction(struct qinst *inst)
 }
 
 bool
+qir_is_mul(struct qinst *inst)
+{
+        switch (inst->op) {
+        case QOP_FMUL:
+        case QOP_MUL24:
+                return true;
+        default:
+                return false;
+        }
+}
+
+bool
 qir_is_tex(struct qinst *inst)
 {
         return inst->op >= QOP_TEX_S && inst->op <= QOP_TEX_DIRECT;
