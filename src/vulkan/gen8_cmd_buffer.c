@@ -812,3 +812,141 @@ gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
                   .TextureCacheInvalidationEnable = true);
 }
+
+void gen8_CmdPipelineBarrier(
+    VkCmdBuffer                                 cmdBuffer,
+    VkPipelineStageFlags                        srcStageMask,
+    VkPipelineStageFlags                        destStageMask,
+    VkBool32                                    byRegion,
+    uint32_t                                    memBarrierCount,
+    const void* const*                          ppMemBarriers)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   uint32_t b, *dw;
+
+   struct GEN8_PIPE_CONTROL cmd = {
+      GEN8_PIPE_CONTROL_header,
+      .PostSyncOperation = NoWrite,
+   };
+
+   /* XXX: I think waitEvent is a no-op on our HW.  We should verify that. */
+
+   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT)) {
+      /* This is just what PIPE_CONTROL does */
+   }
+
+   if (anv_clear_mask(&srcStageMask,
+                      VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT |
+                      VK_PIPELINE_STAGE_VERTEX_INPUT_BIT |
+                      VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TESS_CONTROL_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TESS_EVALUATION_SHADER_BIT |
+                      VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT |
+                      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                      VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
+                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)) {
+      cmd.StallAtPixelScoreboard = true;
+   }
+
+
+   if (anv_clear_mask(&srcStageMask,
+                      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
+                      VK_PIPELINE_STAGE_TRANSFER_BIT |
+                      VK_PIPELINE_STAGE_TRANSITION_BIT)) {
+      cmd.CommandStreamerStallEnable = true;
+   }
+
+   if (anv_clear_mask(&srcStageMask, VK_PIPELINE_STAGE_HOST_BIT)) {
+      anv_finishme("VK_PIPE_EVENT_CPU_SIGNAL_BIT");
+   }
+
+   /* On our hardware, all stages will wait for execution as needed. */
+   (void)destStageMask;
+
+   /* We checked all known VkPipeEventFlags. */
+   anv_assert(srcStageMask == 0);
+
+   /* XXX: Right now, we're really dumb and just flush whatever categories
+    * the app asks for.  One of these days we may make this a bit better
+    * but right now that's all the hardware allows for in most areas.
+    */
+   VkMemoryOutputFlags out_flags = 0;
+   VkMemoryInputFlags in_flags = 0;
+
+   for (uint32_t i = 0; i < memBarrierCount; i++) {
+      const struct anv_common *common = ppMemBarriers[i];
+      switch (common->sType) {
+      case VK_STRUCTURE_TYPE_MEMORY_BARRIER: {
+         ANV_COMMON_TO_STRUCT(VkMemoryBarrier, barrier, common);
+         out_flags |= barrier->outputMask;
+         in_flags |= barrier->inputMask;
+         break;
+      }
+      case VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER: {
+         ANV_COMMON_TO_STRUCT(VkBufferMemoryBarrier, barrier, common);
+         out_flags |= barrier->outputMask;
+         in_flags |= barrier->inputMask;
+         break;
+      }
+      case VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER: {
+         ANV_COMMON_TO_STRUCT(VkImageMemoryBarrier, barrier, common);
+         out_flags |= barrier->outputMask;
+         in_flags |= barrier->inputMask;
+         break;
+      }
+      default:
+         unreachable("Invalid memory barrier type");
+      }
+   }
+
+   for_each_bit(b, out_flags) {
+      switch ((VkMemoryOutputFlags)(1 << b)) {
+      case VK_MEMORY_OUTPUT_HOST_WRITE_BIT:
+         break; /* FIXME: Little-core systems */
+      case VK_MEMORY_OUTPUT_SHADER_WRITE_BIT:
+         cmd.DCFlushEnable = true;
+         break;
+      case VK_MEMORY_OUTPUT_COLOR_ATTACHMENT_BIT:
+         cmd.RenderTargetCacheFlushEnable = true;
+         break;
+      case VK_MEMORY_OUTPUT_DEPTH_STENCIL_ATTACHMENT_BIT:
+         cmd.DepthCacheFlushEnable = true;
+         break;
+      case VK_MEMORY_OUTPUT_TRANSFER_BIT:
+         cmd.RenderTargetCacheFlushEnable = true;
+         cmd.DepthCacheFlushEnable = true;
+         break;
+      default:
+         unreachable("Invalid memory output flag");
+      }
+   }
+
+   for_each_bit(b, out_flags) {
+      switch ((VkMemoryInputFlags)(1 << b)) {
+      case VK_MEMORY_INPUT_HOST_READ_BIT:
+         break; /* FIXME: Little-core systems */
+      case VK_MEMORY_INPUT_INDIRECT_COMMAND_BIT:
+      case VK_MEMORY_INPUT_INDEX_FETCH_BIT:
+      case VK_MEMORY_INPUT_VERTEX_ATTRIBUTE_FETCH_BIT:
+         cmd.VFCacheInvalidationEnable = true;
+         break;
+      case VK_MEMORY_INPUT_UNIFORM_READ_BIT:
+         cmd.ConstantCacheInvalidationEnable = true;
+         /* fallthrough */
+      case VK_MEMORY_INPUT_SHADER_READ_BIT:
+         cmd.DCFlushEnable = true;
+         cmd.TextureCacheInvalidationEnable = true;
+         break;
+      case VK_MEMORY_INPUT_COLOR_ATTACHMENT_BIT:
+      case VK_MEMORY_INPUT_DEPTH_STENCIL_ATTACHMENT_BIT:
+         break; /* XXX: Hunh? */
+      case VK_MEMORY_INPUT_TRANSFER_BIT:
+         cmd.TextureCacheInvalidationEnable = true;
+         break;
+      }
+   }
+
+   dw = anv_batch_emit_dwords(&cmd_buffer->batch, GEN8_PIPE_CONTROL_length);
+   GEN8_PIPE_CONTROL_pack(&cmd_buffer->batch, dw, &cmd);
+}
