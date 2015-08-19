@@ -916,7 +916,7 @@ _mesa_handle_bind_buffer_gen(struct gl_context *ctx,
 {
    struct gl_buffer_object *buf = *buf_handle;
 
-   if (!buf && ctx->API == API_OPENGL_CORE) {
+   if (!buf && (ctx->API == API_OPENGL_CORE || _mesa_is_gles31(ctx))) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-gen name)", caller);
       return false;
    }
