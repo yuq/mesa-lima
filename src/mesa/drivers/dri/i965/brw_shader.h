@@ -270,9 +270,11 @@ public:
 
    virtual void invalidate_live_intervals() = 0;
 
-   virtual void setup_vec4_uniform_value(const gl_constant_value *values,
+   virtual void setup_vec4_uniform_value(unsigned param_offset,
+                                         const gl_constant_value *values,
                                          unsigned n) = 0;
-   void setup_image_uniform_values(const gl_uniform_storage *storage);
+   void setup_image_uniform_values(unsigned param_offset,
+                                   const gl_uniform_storage *storage);
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);

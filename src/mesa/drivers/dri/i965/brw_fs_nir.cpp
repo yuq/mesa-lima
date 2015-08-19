@@ -244,10 +244,13 @@ fs_visitor::nir_setup_uniform(nir_variable *var)
           * space for them here at the end of the parameter array.
           */
          var->data.driver_location = uniforms;
-         param_size[uniforms] =
+         unsigned size =
             BRW_IMAGE_PARAM_SIZE * MAX2(storage->array_elements, 1);
 
-         setup_image_uniform_values(storage);
+         setup_image_uniform_values(uniforms, storage);
+
+         param_size[uniforms] = size;
+         uniforms += size;
       } else {
          unsigned slots = storage->type->component_slots();
          if (storage->array_elements)

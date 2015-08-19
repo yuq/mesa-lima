@@ -943,16 +943,17 @@ fs_visitor::import_uniforms(fs_visitor *v)
 }
 
 void
-fs_visitor::setup_vec4_uniform_value(const gl_constant_value *values,
+fs_visitor::setup_vec4_uniform_value(unsigned param_offset,
+                                     const gl_constant_value *values,
                                      unsigned n)
 {
    static const gl_constant_value zero = { 0 };
 
    for (unsigned i = 0; i < n; ++i)
-      stage_prog_data->param[uniforms++] = &values[i];
+      stage_prog_data->param[param_offset + i] = &values[i];
 
    for (unsigned i = n; i < 4; ++i)
-      stage_prog_data->param[uniforms++] = &zero;
+      stage_prog_data->param[param_offset + i] = &zero;
 }
 
 fs_reg *

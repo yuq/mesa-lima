@@ -1420,7 +1420,8 @@ backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_
 }
 
 void
-backend_shader::setup_image_uniform_values(const gl_uniform_storage *storage)
+backend_shader::setup_image_uniform_values(unsigned param_offset,
+                                           const gl_uniform_storage *storage)
 {
    const unsigned stage = _mesa_program_enum_to_shader_stage(prog->Target);
 
@@ -1431,18 +1432,19 @@ backend_shader::setup_image_uniform_values(const gl_uniform_storage *storage)
       /* Upload the brw_image_param structure.  The order is expected to match
        * the BRW_IMAGE_PARAM_*_OFFSET defines.
        */
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
          (const gl_constant_value *)&param->surface_idx, 1);
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_OFFSET_OFFSET,
          (const gl_constant_value *)param->offset, 2);
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SIZE_OFFSET,
          (const gl_constant_value *)param->size, 3);
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_STRIDE_OFFSET,
          (const gl_constant_value *)param->stride, 4);
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_TILING_OFFSET,
          (const gl_constant_value *)param->tiling, 3);
-      setup_vec4_uniform_value(
+      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
          (const gl_constant_value *)param->swizzling, 2);
+      param_offset += BRW_IMAGE_PARAM_SIZE;
 
       brw_mark_surface_used(
          stage_prog_data,
