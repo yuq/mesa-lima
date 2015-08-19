@@ -1056,6 +1056,10 @@ VkResult anv_buffer_view_create(struct anv_device *device,
                                 const VkBufferViewCreateInfo *pCreateInfo,
                                 struct anv_buffer_view **view_out);
 
+void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
+                                   const struct anv_format *format,
+                                   uint32_t offset, uint32_t range);
+
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range);
 

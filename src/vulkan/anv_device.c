@@ -1324,6 +1324,20 @@ VkResult anv_DestroyBuffer(
    return VK_SUCCESS;
 }
 
+void
+anv_fill_buffer_surface_state(struct anv_device *device, void *state,
+                              const struct anv_format *format,
+                              uint32_t offset, uint32_t range)
+{
+   switch (device->info.gen) {
+   case 8:
+      gen8_fill_buffer_surface_state(state, format, offset, range);
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
+}
+
 VkResult
 anv_buffer_view_create(
    struct anv_device *                          device,

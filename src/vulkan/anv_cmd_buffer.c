@@ -425,8 +425,9 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                d->dynamic_offsets[surface_slots[b].dynamic_slot];
 
             offset = view->offset + dynamic_offset;
-            gen8_fill_buffer_surface_state(state.map, view->format, offset,
-                                           view->range - dynamic_offset);
+            anv_fill_buffer_surface_state(cmd_buffer->device,
+                                          state.map, view->format, offset,
+                                          view->range - dynamic_offset);
          } else {
             offset = view->offset;
             memcpy(state.map, view->surface_state.map, 64);
