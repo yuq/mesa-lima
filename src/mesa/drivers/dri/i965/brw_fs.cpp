@@ -1766,21 +1766,21 @@ fs_visitor::compact_virtual_grfs()
    return progress;
 }
 
-/*
- * Implements array access of uniforms by inserting a
- * PULL_CONSTANT_LOAD instruction.
+/**
+ * Assign UNIFORM file registers to either push constants or pull constants.
  *
- * Unlike temporary GRF array access (where we don't support it due to
- * the difficulty of doing relative addressing on instruction
- * destinations), we could potentially do array access of uniforms
- * that were loaded in GRF space as push constants.  In real-world
- * usage we've seen, though, the arrays being used are always larger
- * than we could load as push constants, so just always move all
- * uniform array access out to a pull constant buffer.
+ * We allow a fragment shader to have more than the specified minimum
+ * maximum number of fragment shader uniform components (64).  If
+ * there are too many of these, they'd fill up all of register space.
+ * So, this will push some of them out to the pull constant buffer and
+ * update the program to load them.  We also use pull constants for all
+ * indirect constant loads because we don't support indirect accesses in
+ * registers yet.
  */
 void
-fs_visitor::move_uniform_array_access_to_pull_constants()
+fs_visitor::assign_constant_locations()
 {
+   /* Only the first compile (SIMD8 mode) gets to decide on locations. */
    if (dispatch_width != 8)
       return;
 
@@ -1817,23 +1817,6 @@ fs_visitor::move_uniform_array_access_to_pull_constants()
          }
       }
    }
-}
-
-/**
- * Assign UNIFORM file registers to either push constants or pull constants.
- *
- * We allow a fragment shader to have more than the specified minimum
- * maximum number of fragment shader uniform components (64).  If
- * there are too many of these, they'd fill up all of register space.
- * So, this will push some of them out to the pull constant buffer and
- * update the program to load them.
- */
-void
-fs_visitor::assign_constant_locations()
-{
-   /* Only the first compile (SIMD8 mode) gets to decide on locations. */
-   if (dispatch_width != 8)
-      return;
 
    /* Find which UNIFORM registers are still in use. */
    bool is_live[uniforms];
@@ -4805,7 +4788,6 @@ fs_visitor::optimize()
 
    split_virtual_grfs();
 
-   move_uniform_array_access_to_pull_constants();
    assign_constant_locations();
    demote_pull_constants();
 
