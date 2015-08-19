@@ -89,7 +89,7 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	num_dw += ctx->atoms.s.cache_flush->num_dw;
 
 	if (ctx->screen->b.trace_bo)
-		num_dw += SI_TRACE_CS_DWORDS;
+		num_dw += SI_TRACE_CS_DWORDS * 2;
 
 	/* Flush if there's not enough space. */
 	if (num_dw > cs->max_dw) {
@@ -127,12 +127,17 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	/* force to keep tiling flags */
 	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;
 
+	if (ctx->trace_buf)
+		si_trace_emit(ctx);
+
 	/* Save the IB for debug contexts. */
 	if (ctx->is_debug) {
 		free(ctx->last_ib);
 		ctx->last_ib_dw_size = cs->cdw;
 		ctx->last_ib = malloc(cs->cdw * 4);
 		memcpy(ctx->last_ib, cs->buf, cs->cdw * 4);
+		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
+		r600_resource_reference(&ctx->trace_buf, NULL);
 	}
 
 	/* Flush the CS. */
@@ -148,6 +153,23 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 void si_begin_new_cs(struct si_context *ctx)
 {
+	if (ctx->is_debug) {
+		uint32_t zero = 0;
+
+		/* Create a buffer used for writing trace IDs and initialize it to 0. */
+		assert(!ctx->trace_buf);
+		ctx->trace_buf = (struct r600_resource*)
+				 pipe_buffer_create(ctx->b.b.screen, PIPE_BIND_CUSTOM,
+						    PIPE_USAGE_STAGING, 4);
+		if (ctx->trace_buf)
+			pipe_buffer_write_nooverlap(&ctx->b.b, &ctx->trace_buf->b.b,
+						    0, sizeof(zero), &zero);
+		ctx->trace_id = 0;
+	}
+
+	if (ctx->trace_buf)
+		si_trace_emit(ctx);
+
 	/* Flush read caches at the beginning of CS. */
 	ctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
 			SI_CONTEXT_INV_TC_L1 |

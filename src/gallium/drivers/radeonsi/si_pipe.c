@@ -81,6 +81,8 @@ static void si_destroy_context(struct pipe_context *context)
 	LLVMDisposeTargetMachine(sctx->tm);
 #endif
 
+	r600_resource_reference(&sctx->trace_buf, NULL);
+	r600_resource_reference(&sctx->last_trace_buf, NULL);
 	free(sctx->last_ib);
 	FREE(sctx);
 }

@@ -142,7 +142,8 @@ static void si_parse_set_reg_packet(FILE *f, uint32_t *ib, unsigned count,
 		si_dump_reg(f, reg + i*4, ib[2+i], ~0);
 }
 
-static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw)
+static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
+				  int trace_id)
 {
 	unsigned count = PKT_COUNT_G(ib[0]);
 	unsigned op = PKT3_IT_OPCODE_G(ib[0]);
@@ -232,6 +233,36 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw)
 		if (ib[0] == 0xffff1000) {
 			count = -1; /* One dword NOP. */
 			break;
+		} else if (count == 0 && SI_IS_TRACE_POINT(ib[1])) {
+			unsigned packet_id = SI_GET_TRACE_POINT_ID(ib[1]);
+
+			print_spaces(f, INDENT_PKT);
+			fprintf(f, COLOR_RED "Trace point ID: %u\n", packet_id);
+
+			if (trace_id == -1)
+				break; /* tracing was disabled */
+
+			print_spaces(f, INDENT_PKT);
+			if (packet_id < trace_id)
+				fprintf(f, COLOR_RED
+					"This trace point was reached by the CP."
+					COLOR_RESET "\n");
+			else if (packet_id == trace_id)
+				fprintf(f, COLOR_RED
+					"!!!!! This is the last trace point that "
+					"was reached by the CP !!!!!"
+					COLOR_RESET "\n");
+			else if (packet_id+1 == trace_id)
+				fprintf(f, COLOR_RED
+					"!!!!! This is the first trace point that "
+					"was NOT been reached by the CP !!!!!"
+					COLOR_RESET "\n");
+			else
+				fprintf(f, COLOR_RED
+					"!!!!! This trace point was NOT reached "
+					"by the CP !!!!!"
+					COLOR_RESET "\n");
+			break;
 		}
 		/* fall through, print all dwords */
 	default:
@@ -246,7 +277,17 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw)
 	return ib;
 }
 
-static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw)
+/**
+ * Parse and print an IB into a file.
+ *
+ * \param f		file
+ * \param ib		IB
+ * \param num_dw	size of the IB
+ * \param chip_class	chip class
+ * \param trace_id	the last trace ID that is known to have been reached
+ *			and executed by the CP, typically read from a buffer
+ */
+static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id)
 {
 	fprintf(f, "------------------ IB begin ------------------\n");
 
@@ -255,7 +296,7 @@ static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw)
 
 		switch (type) {
 		case 3:
-			ib = si_parse_packet3(f, ib, &num_dw);
+			ib = si_parse_packet3(f, ib, &num_dw, trace_id);
 			break;
 		case 2:
 			/* type-2 nop */
@@ -342,9 +383,27 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	si_dump_shader(sctx->ps_shader, "Fragment", f);
 
 	if (sctx->last_ib) {
-		si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size);
+		int last_trace_id = -1;
+
+		if (sctx->last_trace_buf) {
+			/* We are expecting that the ddebug pipe has already
+			 * waited for the context, so this buffer should be idle.
+			 * If the GPU is hung, there is no point in waiting for it.
+			 */
+			uint32_t *map =
+				sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
+						       NULL,
+						       PIPE_TRANSFER_UNSYNCHRONIZED |
+						       PIPE_TRANSFER_READ);
+			if (map)
+				last_trace_id = *map;
+		}
+
+		si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
+			    last_trace_id);
 		free(sctx->last_ib); /* dump only once */
 		sctx->last_ib = NULL;
+		r600_resource_reference(&sctx->last_trace_buf, NULL);
 	}
 
 	fprintf(f, "Done.\n");

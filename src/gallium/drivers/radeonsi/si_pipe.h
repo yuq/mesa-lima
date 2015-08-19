@@ -43,7 +43,7 @@
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
 
-#define SI_TRACE_CS_DWORDS		6
+#define SI_TRACE_CS_DWORDS		7
 
 #define SI_MAX_DRAW_CS_DWORDS \
 	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
@@ -80,6 +80,10 @@
 					      SI_CONTEXT_FLUSH_AND_INV_CB_META | \
 					      SI_CONTEXT_FLUSH_AND_INV_DB | \
 					      SI_CONTEXT_FLUSH_AND_INV_DB_META)
+
+#define SI_ENCODE_TRACE_POINT(id)	(0xcafe0000 | ((id) & 0xffff))
+#define SI_IS_TRACE_POINT(x)		(((x) & 0xcafe0000) == 0xcafe0000)
+#define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
 
 struct si_compute;
 
@@ -247,6 +251,9 @@ struct si_context {
 	bool			is_debug;
 	uint32_t		*last_ib;
 	unsigned		last_ib_dw_size;
+	struct r600_resource	*last_trace_buf;
+	struct r600_resource	*trace_buf;
+	unsigned		trace_id;
 };
 
 /* cik_sdma.c */
