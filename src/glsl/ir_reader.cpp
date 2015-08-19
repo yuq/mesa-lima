@@ -26,7 +26,7 @@
 #include "glsl_types.h"
 #include "s_expression.h"
 
-const static bool debug = false;
+static const bool debug = false;
 
 namespace {
 

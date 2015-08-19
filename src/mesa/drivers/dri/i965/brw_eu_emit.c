@@ -95,7 +95,7 @@ brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
                         enum brw_reg_type type, unsigned file)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
-      const static int imm_hw_types[] = {
+      static const int imm_hw_types[] = {
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
          [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
          [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,
@@ -117,7 +117,7 @@ brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
       return imm_hw_types[type];
    } else {
       /* Non-immediate registers */
-      const static int hw_types[] = {
+      static const int hw_types[] = {
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
          [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
          [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,

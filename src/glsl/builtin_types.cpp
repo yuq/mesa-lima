@@ -127,7 +127,7 @@ static const struct glsl_struct_field gl_FogParameters_fields[] = {
 #define T(TYPE, MIN_GL, MIN_ES) \
    { glsl_type::TYPE##_type, MIN_GL, MIN_ES },
 
-const static struct builtin_type_versions {
+static const struct builtin_type_versions {
    const glsl_type *const type;
    int min_gl;
    int min_es;
