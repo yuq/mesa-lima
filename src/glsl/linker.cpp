@@ -317,38 +317,38 @@ public:
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_leave(ir_function *ir)
+   virtual ir_visitor_status visit_leave(ir_function *)
    {
       in_main = false;
       after_return = false;
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_leave(ir_return *ir)
+   virtual ir_visitor_status visit_leave(ir_return *)
    {
       after_return = true;
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_enter(ir_if *ir)
+   virtual ir_visitor_status visit_enter(ir_if *)
    {
       ++control_flow;
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_leave(ir_if *ir)
+   virtual ir_visitor_status visit_leave(ir_if *)
    {
       --control_flow;
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_enter(ir_loop *ir)
+   virtual ir_visitor_status visit_enter(ir_loop *)
    {
       ++control_flow;
       return visit_continue;
    }
 
-   virtual ir_visitor_status visit_leave(ir_loop *ir)
+   virtual ir_visitor_status visit_leave(ir_loop *)
    {
       --control_flow;
       return visit_continue;
@@ -2821,7 +2821,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 }
 
 static void
-link_calculate_subroutine_compat(struct gl_context *ctx, struct gl_shader_program *prog)
+link_calculate_subroutine_compat(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
@@ -2851,7 +2851,7 @@ link_calculate_subroutine_compat(struct gl_context *ctx, struct gl_shader_progra
 }
 
 static void
-check_subroutine_resources(struct gl_context *ctx, struct gl_shader_program *prog)
+check_subroutine_resources(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
@@ -3364,9 +3364,8 @@ validate_sampler_array_indexing(struct gl_context *ctx,
    return true;
 }
 
-void
-link_assign_subroutine_types(struct gl_context *ctx,
-                             struct gl_shader_program *prog)
+static void
+link_assign_subroutine_types(struct gl_shader_program *prog)
 {
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       gl_shader *sh = prog->_LinkedShaders[i];
@@ -3588,7 +3587,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 
    check_explicit_uniform_locations(ctx, prog);
-   link_assign_subroutine_types(ctx, prog);
+   link_assign_subroutine_types(prog);
 
    if (!prog->LinkStatus)
       goto done;
@@ -3848,9 +3847,9 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    link_assign_atomic_counter_resources(ctx, prog);
    store_fragdepth_layout(prog);
 
-   link_calculate_subroutine_compat(ctx, prog);
+   link_calculate_subroutine_compat(prog);
    check_resources(ctx, prog);
-   check_subroutine_resources(ctx, prog);
+   check_subroutine_resources(prog);
    check_image_resources(ctx, prog);
    link_check_atomic_counter_resources(ctx, prog);
 
