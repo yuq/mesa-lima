@@ -1238,7 +1238,8 @@ private:
    void handleRCP(Instruction *);
    void handleSLCT(Instruction *);
    void handleLOGOP(Instruction *);
-   void handleCVT(Instruction *);
+   void handleCVT_NEG(Instruction *);
+   void handleCVT_EXTBF(Instruction *);
    void handleSUCLAMP(Instruction *);
 
    BuildUtil bld;
@@ -1489,12 +1490,12 @@ AlgebraicOpt::handleLOGOP(Instruction *logop)
 // nv50:
 //  F2I(NEG(I2F(ABS(SET))))
 void
-AlgebraicOpt::handleCVT(Instruction *cvt)
+AlgebraicOpt::handleCVT_NEG(Instruction *cvt)
 {
+   Instruction *insn = cvt->getSrc(0)->getInsn();
    if (cvt->sType != TYPE_F32 ||
        cvt->dType != TYPE_S32 || cvt->src(0).mod != Modifier(0))
       return;
-   Instruction *insn = cvt->getSrc(0)->getInsn();
    if (!insn || insn->op != OP_NEG || insn->dType != TYPE_F32)
       return;
    if (insn->src(0).mod != Modifier(0))
@@ -1522,6 +1523,74 @@ AlgebraicOpt::handleCVT(Instruction *cvt)
    bset->setDef(0, cvt->getDef(0));
    cvt->bb->insertAfter(cvt, bset);
    delete_Instruction(prog, cvt);
+}
+
+// Some shaders extract packed bytes out of words and convert them to
+// e.g. float. The Fermi+ CVT instruction can extract those directly, as can
+// nv50 for word sizes.
+//
+// CVT(EXTBF(x, byte/word))
+// CVT(AND(bytemask, x))
+// CVT(AND(bytemask, SHR(x, 8/16/24)))
+void
+AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
+{
+   Instruction *insn = cvt->getSrc(0)->getInsn();
+   ImmediateValue imm0, imm1;
+   Value *arg = NULL;
+   unsigned width, offset;
+   if ((cvt->sType != TYPE_U32 && cvt->sType != TYPE_S32) || !insn)
+      return;
+   if (insn->op == OP_EXTBF && insn->src(1).getImmediate(imm0)) {
+      width = (imm0.reg.data.u32 >> 8) & 0xff;
+      offset = imm0.reg.data.u32 & 0xff;
+      arg = insn->getSrc(0);
+
+      if (width != 8 && width != 16)
+         return;
+      if (width == 8 && offset & 0x7)
+         return;
+      if (width == 16 && offset & 0xf)
+         return;
+   } else if (insn->op == OP_AND) {
+      int s;
+      if (insn->src(0).getImmediate(imm0))
+         s = 0;
+      else if (insn->src(1).getImmediate(imm0))
+         s = 1;
+      else
+         return;
+
+      if (imm0.reg.data.u32 == 0xff)
+         width = 8;
+      else if (imm0.reg.data.u32 == 0xffff)
+         width = 16;
+      else
+         return;
+
+      arg = insn->getSrc(!s);
+      Instruction *shift = arg->getInsn();
+      offset = 0;
+      if (shift && shift->op == OP_SHR &&
+          shift->src(1).getImmediate(imm1) &&
+          ((width == 8 && (imm1.reg.data.u32 & 0x7) == 0) ||
+           (width == 16 && (imm1.reg.data.u32 & 0xf) == 0))) {
+         arg = shift->getSrc(0);
+         offset = imm1.reg.data.u32;
+      }
+   }
+
+   if (!arg)
+      return;
+
+   if (width == 8) {
+      cvt->sType = cvt->sType == TYPE_U32 ? TYPE_U8 : TYPE_S8;
+   } else {
+      assert(width == 16);
+      cvt->sType = cvt->sType == TYPE_U32 ? TYPE_U16 : TYPE_S16;
+   }
+   cvt->setSrc(0, arg);
+   cvt->subOp = offset >> 3;
 }
 
 // SUCLAMP dst, (ADD b imm), k, 0 -> SUCLAMP dst, b, k, imm (if imm fits s6)
@@ -1594,7 +1663,9 @@ AlgebraicOpt::visit(BasicBlock *bb)
          handleLOGOP(i);
          break;
       case OP_CVT:
-         handleCVT(i);
+         handleCVT_NEG(i);
+         if (prog->getTarget()->isOpSupported(OP_EXTBF, TYPE_U32))
+             handleCVT_EXTBF(i);
          break;
       case OP_SUCLAMP:
          handleSUCLAMP(i);
