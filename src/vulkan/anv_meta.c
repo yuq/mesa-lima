@@ -150,7 +150,7 @@ struct anv_saved_state {
    struct anv_vertex_binding old_vertex_bindings[NUM_VB_USED];
    struct anv_descriptor_set *old_descriptor_set0;
    struct anv_pipeline *old_pipeline;
-   VkDynamicColorBlendState cb_state;
+   struct anv_dynamic_cb_state *old_cb_state;
 };
 
 static void
@@ -504,7 +504,7 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
                                           device->meta_state.shared.ds_state);
 
-   saved_state->cb_state = anv_dynamic_cb_state_to_handle(cmd_buffer->state.cb_state);
+   saved_state->old_cb_state = cmd_buffer->state.cb_state;
    anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                      device->meta_state.shared.cb_state);
 }
@@ -705,8 +705,9 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_saved_state *saved_state)
 {
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
-   anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
-                                     saved_state->cb_state);
+   anv_CmdBindDynamicColorBlendState(
+         anv_cmd_buffer_to_handle(cmd_buffer),
+         anv_dynamic_cb_state_to_handle(saved_state->old_cb_state));
 }
 
 static VkFormat
