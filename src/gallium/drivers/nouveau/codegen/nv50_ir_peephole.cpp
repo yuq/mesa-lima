@@ -1537,14 +1537,14 @@ void
 AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
 {
    Instruction *insn = cvt->getSrc(0)->getInsn();
-   ImmediateValue imm0, imm1;
+   ImmediateValue imm;
    Value *arg = NULL;
    unsigned width, offset;
    if ((cvt->sType != TYPE_U32 && cvt->sType != TYPE_S32) || !insn)
       return;
-   if (insn->op == OP_EXTBF && insn->src(1).getImmediate(imm0)) {
-      width = (imm0.reg.data.u32 >> 8) & 0xff;
-      offset = imm0.reg.data.u32 & 0xff;
+   if (insn->op == OP_EXTBF && insn->src(1).getImmediate(imm)) {
+      width = (imm.reg.data.u32 >> 8) & 0xff;
+      offset = imm.reg.data.u32 & 0xff;
       arg = insn->getSrc(0);
 
       if (width != 8 && width != 16)
@@ -1555,16 +1555,16 @@ AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
          return;
    } else if (insn->op == OP_AND) {
       int s;
-      if (insn->src(0).getImmediate(imm0))
+      if (insn->src(0).getImmediate(imm))
          s = 0;
-      else if (insn->src(1).getImmediate(imm0))
+      else if (insn->src(1).getImmediate(imm))
          s = 1;
       else
          return;
 
-      if (imm0.reg.data.u32 == 0xff)
+      if (imm.reg.data.u32 == 0xff)
          width = 8;
-      else if (imm0.reg.data.u32 == 0xffff)
+      else if (imm.reg.data.u32 == 0xffff)
          width = 16;
       else
          return;
@@ -1573,18 +1573,21 @@ AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
       Instruction *shift = arg->getInsn();
       offset = 0;
       if (shift && shift->op == OP_SHR &&
-          shift->src(1).getImmediate(imm1) &&
-          ((width == 8 && (imm1.reg.data.u32 & 0x7) == 0) ||
-           (width == 16 && (imm1.reg.data.u32 & 0xf) == 0))) {
+          shift->sType == cvt->sType &&
+          shift->src(1).getImmediate(imm) &&
+          ((width == 8 && (imm.reg.data.u32 & 0x7) == 0) ||
+           (width == 16 && (imm.reg.data.u32 & 0xf) == 0))) {
          arg = shift->getSrc(0);
-         offset = imm1.reg.data.u32;
+         offset = imm.reg.data.u32;
       }
-   } else if (insn->op == OP_SHR && insn->src(1).getImmediate(imm0)) {
+   } else if (insn->op == OP_SHR &&
+              insn->sType == cvt->sType &&
+              insn->src(1).getImmediate(imm)) {
       arg = insn->getSrc(0);
-      if (imm0.reg.data.u32 == 24) {
+      if (imm.reg.data.u32 == 24) {
          width = 8;
          offset = 24;
-      } else if (imm0.reg.data.u32 == 16) {
+      } else if (imm.reg.data.u32 == 16) {
          width = 16;
          offset = 16;
       } else {
@@ -1594,6 +1597,21 @@ AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
 
    if (!arg)
       return;
+
+   // Irrespective of what came earlier, we can undo a shift on the argument
+   // by adjusting the offset.
+   Instruction *shift = arg->getInsn();
+   if (shift && shift->op == OP_SHL &&
+       shift->src(1).getImmediate(imm) &&
+       ((width == 8 && (imm.reg.data.u32 & 0x7) == 0) ||
+        (width == 16 && (imm.reg.data.u32 & 0xf) == 0)) &&
+       imm.reg.data.u32 <= offset) {
+      arg = shift->getSrc(0);
+      offset -= imm.reg.data.u32;
+   }
+
+   // The unpackSnorm lowering still leaves a few shifts behind, but it's too
+   // annoying to detect them.
 
    if (width == 8) {
       cvt->sType = cvt->sType == TYPE_U32 ? TYPE_U8 : TYPE_S8;
