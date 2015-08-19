@@ -398,7 +398,21 @@ anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer)
 static void
 emit_batch_buffer_start(struct anv_batch *batch, struct anv_bo *bo, uint32_t offset)
 {
+   /* In gen8+ the address field grew to two dwords to accomodate 48 bit
+    * offsets. The high 16 bits are in the last dword, so we can use the gen8
+    * version in either case, as long as we set the instruction length in the
+    * header accordingly.  This means that we always emit three dwords here
+    * and all the padding and adjustment we do in this file works for all
+    * gens.
+    */
+
+   const uint32_t gen7_length =
+      GEN7_MI_BATCH_BUFFER_START_length - GEN7_MI_BATCH_BUFFER_START_length_bias;
+   const uint32_t gen8_length =
+      GEN8_MI_BATCH_BUFFER_START_length - GEN8_MI_BATCH_BUFFER_START_length_bias;
+
    anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
+      .DwordLength = batch->device->info.gen < 8 ? gen7_length : gen8_length,
       ._2ndLevelBatchBuffer = _1stlevelbatch,
       .AddressSpaceIndicator = ASI_PPGTT,
       .BatchBufferStartAddress = { bo, offset });
