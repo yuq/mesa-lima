@@ -943,7 +943,8 @@ fs_visitor::import_uniforms(fs_visitor *v)
 }
 
 void
-fs_visitor::setup_vector_uniform_values(const gl_constant_value *values, unsigned n)
+fs_visitor::setup_vec4_uniform_value(const gl_constant_value *values,
+                                     unsigned n)
 {
    static const gl_constant_value zero = { 0 };
 

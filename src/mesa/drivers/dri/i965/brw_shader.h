@@ -270,8 +270,8 @@ public:
 
    virtual void invalidate_live_intervals() = 0;
 
-   virtual void setup_vector_uniform_values(const gl_constant_value *values,
-                                            unsigned n) = 0;
+   virtual void setup_vec4_uniform_value(const gl_constant_value *values,
+                                         unsigned n) = 0;
    void setup_image_uniform_values(const gl_uniform_storage *storage);
 };
 

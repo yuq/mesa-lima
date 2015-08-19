@@ -1431,17 +1431,17 @@ backend_shader::setup_image_uniform_values(const gl_uniform_storage *storage)
       /* Upload the brw_image_param structure.  The order is expected to match
        * the BRW_IMAGE_PARAM_*_OFFSET defines.
        */
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)&param->surface_idx, 1);
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)param->offset, 2);
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)param->size, 3);
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)param->stride, 4);
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)param->tiling, 3);
-      setup_vector_uniform_values(
+      setup_vec4_uniform_value(
          (const gl_constant_value *)param->swizzling, 2);
 
       brw_mark_surface_used(

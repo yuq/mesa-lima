@@ -696,8 +696,8 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
 }
 
 void
-vec4_visitor::setup_vector_uniform_values(const gl_constant_value *values,
-                                          unsigned n)
+vec4_visitor::setup_vec4_uniform_value(const gl_constant_value *values,
+                                       unsigned n)
 {
    static const gl_constant_value zero = { 0 };
 
@@ -744,8 +744,8 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
       const unsigned vector_size = storage->type->vector_elements;
 
       for (unsigned s = 0; s < vector_count; s++)
-         setup_vector_uniform_values(&storage->storage[s * vector_size],
-                                     vector_size);
+         setup_vec4_uniform_value(&storage->storage[s * vector_size],
+                                  vector_size);
    }
 }
 
