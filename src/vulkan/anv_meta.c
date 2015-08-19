@@ -161,6 +161,7 @@ anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
    state->old_descriptor_set0 = cmd_buffer->state.descriptors[0].set;
    memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
           sizeof(state->old_vertex_bindings));
+   state->old_cb_state = cmd_buffer->state.cb_state;
 }
 
 static void
@@ -175,6 +176,11 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.vb_dirty |= (1 << NUM_VB_USED) - 1;
    cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
+
+   if (cmd_buffer->state.cb_state != state->old_cb_state) {
+      cmd_buffer->state.cb_state = state->old_cb_state;
+      cmd_buffer->state.dirty |= ANV_CMD_BUFFER_CB_DIRTY;
+   }
 }
 
 struct vue_header {
@@ -504,7 +510,6 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicDepthStencilState(anv_cmd_buffer_to_handle(cmd_buffer),
                                           device->meta_state.shared.ds_state);
 
-   saved_state->old_cb_state = cmd_buffer->state.cb_state;
    anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                      device->meta_state.shared.cb_state);
 }
@@ -705,9 +710,6 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
                  const struct anv_saved_state *saved_state)
 {
    anv_cmd_buffer_restore(cmd_buffer, saved_state);
-   anv_CmdBindDynamicColorBlendState(
-         anv_cmd_buffer_to_handle(cmd_buffer),
-         anv_dynamic_cb_state_to_handle(saved_state->old_cb_state));
 }
 
 static VkFormat
