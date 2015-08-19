@@ -818,6 +818,72 @@ declare_uniform_range(struct vc4_compile *c, uint32_t start, uint32_t size)
         c->ubo_ranges[array_id].used = false;
 }
 
+static bool
+ntq_src_is_only_ssa_def_user(nir_src *src)
+{
+        if (!src->is_ssa)
+                return false;
+
+        if (!list_empty(&src->ssa->if_uses))
+                return false;
+
+        return (src->ssa->uses.next == &src->use_link &&
+                src->ssa->uses.next->next == &src->ssa->uses);
+}
+
+/**
+ * In general, emits a nir_pack_unorm_4x8 as a series of MOVs with the pack
+ * bit set.
+ *
+ * However, as an optimization, it tries to find the instructions generating
+ * the sources to be packed and just emit the pack flag there, if possible.
+ */
+static void
+ntq_emit_pack_unorm_4x8(struct vc4_compile *c, nir_alu_instr *instr)
+{
+        struct qreg result = qir_get_temp(c);
+        struct nir_alu_instr *vec4 = NULL;
+
+        /* If packing from a vec4 op (as expected), identify it so that we can
+         * peek back at what generated its sources.
+         */
+        if (instr->src[0].src.is_ssa &&
+            instr->src[0].src.ssa->parent_instr->type == nir_instr_type_alu &&
+            nir_instr_as_alu(instr->src[0].src.ssa->parent_instr)->op ==
+            nir_op_vec4) {
+                vec4 = nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
+        }
+
+        for (int i = 0; i < 4; i++) {
+                int swiz = instr->src[0].swizzle[i];
+                struct qreg src;
+                if (vec4) {
+                        src = ntq_get_src(c, vec4->src[swiz].src,
+                                          vec4->src[swiz].swizzle[0]);
+                } else {
+                        src = ntq_get_src(c, instr->src[0].src, swiz);
+                }
+
+                if (vec4 &&
+                    ntq_src_is_only_ssa_def_user(&vec4->src[swiz].src) &&
+                    src.file == QFILE_TEMP &&
+                    c->defs[src.index] &&
+                    qir_is_mul(c->defs[src.index]) &&
+                    !c->defs[src.index]->dst.pack) {
+                        struct qinst *rewrite = c->defs[src.index];
+                        c->defs[src.index] = NULL;
+                        rewrite->dst = result;
+                        rewrite->dst.pack = QPU_PACK_MUL_8A + i;
+                        continue;
+                }
+
+                qir_PACK_8_F(c, result, src, i);
+        }
+
+        struct qreg *dest = ntq_get_dest(c, &instr->dest.dest);
+        *dest = result;
+}
+
 static void
 ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 {
@@ -839,16 +905,7 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         }
 
         if (instr->op == nir_op_pack_unorm_4x8) {
-                struct qreg result = qir_get_temp(c);
-
-                for (int i = 0; i < 4; i++) {
-                        qir_PACK_8_F(c, result,
-                                     ntq_get_src(c, instr->src[0].src,
-                                                 instr->src[0].swizzle[i]),
-                                     i);
-                }
-                struct qreg *dest = ntq_get_dest(c, &instr->dest.dest);
-                *dest = result;
+                ntq_emit_pack_unorm_4x8(c, instr);
                 return;
         }
 

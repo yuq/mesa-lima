@@ -58,6 +58,7 @@ enum qfile {
 struct qreg {
         enum qfile file;
         uint32_t index;
+        int pack;
 };
 
 enum qop {

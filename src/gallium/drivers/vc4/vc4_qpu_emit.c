@@ -507,6 +507,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 queue(c, qpu_m_alu2(translate[qinst->op].op,
                                                     dst,
                                                     src[0], src[1]));
+                                if (qinst->dst.pack) {
+                                        *last_inst(c) |= QPU_PM;
+                                        *last_inst(c) |= QPU_SET_FIELD(qinst->dst.pack,
+                                                                       QPU_PACK);
+                                }
                         } else {
                                 queue(c, qpu_a_alu2(translate[qinst->op].op,
                                                     dst,
