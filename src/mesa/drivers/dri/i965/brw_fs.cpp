@@ -4780,10 +4780,10 @@ fs_visitor::optimize()
     */
    bld = fs_builder(this, 64);
 
-   split_virtual_grfs();
-
    assign_constant_locations();
    demote_pull_constants();
+
+   split_virtual_grfs();
 
 #define OPT(pass, args...) ({                                           \
       pass_num++;                                                       \
