@@ -275,6 +275,14 @@ qir_opt_algebraic(struct vc4_compile *c)
                         }
                         break;
 
+                case QOP_RCP:
+                        if (is_1f(c, inst->src[0])) {
+                                replace_with_mov(c, inst, inst->src[0]);
+                                progress = true;
+                                break;
+                        }
+                        break;
+
                 default:
                         break;
                 }
