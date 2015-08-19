@@ -263,7 +263,7 @@ ra_add_reg_conflict(struct ra_regs *regs, unsigned int r1, unsigned int r2)
  */
 void
 ra_add_transitive_reg_conflict(struct ra_regs *regs,
-			       unsigned int base_reg, unsigned int reg)
+                               unsigned int base_reg, unsigned int reg)
 {
    unsigned int i;
 
@@ -292,7 +292,8 @@ ra_make_reg_conflicts_transitive(struct ra_regs *regs, unsigned int r)
 
    BITSET_FOREACH_SET(c, tmp, reg->conflicts, regs->count) {
       struct ra_reg *other = &regs->regs[c];
-      for (unsigned i = 0; i < BITSET_WORDS(regs->count); i++)
+      unsigned i;
+      for (i = 0; i < BITSET_WORDS(regs->count); i++)
          other->conflicts[i] |= reg->conflicts[i];
    }
 }
@@ -303,7 +304,7 @@ ra_alloc_reg_class(struct ra_regs *regs)
    struct ra_class *class;
 
    regs->classes = reralloc(regs->regs, regs->classes, struct ra_class *,
-			    regs->class_count + 1);
+                            regs->class_count + 1);
 
    class = rzalloc(regs, struct ra_class);
    regs->classes[regs->class_count] = class;
@@ -350,7 +351,7 @@ ra_set_finalize(struct ra_regs *regs, unsigned int **q_values)
       for (b = 0; b < regs->class_count; b++) {
          for (c = 0; c < regs->class_count; c++) {
             regs->classes[b]->q[c] = q_values[b][c];
-	 }
+         }
       }
    } else {
       /* Compute, for each class B and C, how many regs of B an
@@ -441,14 +442,14 @@ ra_alloc_interference_graph(struct ra_regs *regs, unsigned int count)
 
 void
 ra_set_node_class(struct ra_graph *g,
-		  unsigned int n, unsigned int class)
+                  unsigned int n, unsigned int class)
 {
    g->nodes[n].class = class;
 }
 
 void
 ra_add_node_interference(struct ra_graph *g,
-			 unsigned int n1, unsigned int n2)
+                         unsigned int n1, unsigned int n2)
 {
    if (!BITSET_TEST(g->nodes[n1].adjacency, n2)) {
       ra_add_node_adjacency(g, n1, n2);
@@ -476,7 +477,7 @@ decrement_q(struct ra_graph *g, unsigned int n)
 
       if (n != n2 && !g->nodes[n2].in_stack) {
          assert(g->nodes[n2].q_total >= g->regs->classes[n2_class]->q[n_class]);
-	 g->nodes[n2].q_total -= g->regs->classes[n2_class]->q[n_class];
+         g->nodes[n2].q_total -= g->regs->classes[n2_class]->q[n_class];
       }
    }
 }
