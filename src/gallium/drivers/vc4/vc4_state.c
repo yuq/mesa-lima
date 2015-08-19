@@ -51,7 +51,9 @@ vc4_set_blend_color(struct pipe_context *pctx,
                     const struct pipe_blend_color *blend_color)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        vc4->blend_color = *blend_color;
+        vc4->blend_color.f = *blend_color;
+        for (int i = 0; i < 4; i++)
+                vc4->blend_color.ub[i] = float_to_ubyte(blend_color->color[i]);
         vc4->dirty |= VC4_DIRTY_BLEND_COLOR;
 }
 
