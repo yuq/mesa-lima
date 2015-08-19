@@ -1023,27 +1023,53 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 
    case OP_AND:
    {
-      CmpInstruction *cmp = i->getSrc(t)->getInsn()->asCmp();
-      if (!cmp || cmp->op == OP_SLCT || cmp->getDef(0)->refCount() > 1)
-         return;
-      if (!prog->getTarget()->isOpSupported(cmp->op, TYPE_F32))
-         return;
-      if (imm0.reg.data.f32 != 1.0)
-         return;
-      if (i->getSrc(t)->getInsn()->dType != TYPE_U32)
-         return;
+      Instruction *src = i->getSrc(t)->getInsn();
+      ImmediateValue imm1;
+      if (imm0.reg.data.u32 == 0) {
+         i->op = OP_MOV;
+         i->setSrc(0, new_ImmediateValue(prog, 0u));
+         i->src(0).mod = Modifier(0);
+         i->setSrc(1, NULL);
+      } else if (imm0.reg.data.u32 == ~0U) {
+         i->op = i->src(t).mod.getOp();
+         if (t) {
+            i->setSrc(0, i->getSrc(t));
+            i->src(0).mod = i->src(t).mod;
+         }
+         i->setSrc(1, NULL);
+      } else if (src->asCmp()) {
+         CmpInstruction *cmp = src->asCmp();
+         if (!cmp || cmp->op == OP_SLCT || cmp->getDef(0)->refCount() > 1)
+            return;
+         if (!prog->getTarget()->isOpSupported(cmp->op, TYPE_F32))
+            return;
+         if (imm0.reg.data.f32 != 1.0)
+            return;
+         if (cmp->dType != TYPE_U32)
+            return;
 
-      i->getSrc(t)->getInsn()->dType = TYPE_F32;
-      if (i->src(t).mod != Modifier(0)) {
-         assert(i->src(t).mod == Modifier(NV50_IR_MOD_NOT));
-         i->src(t).mod = Modifier(0);
-         cmp->setCond = inverseCondCode(cmp->setCond);
-      }
-      i->op = OP_MOV;
-      i->setSrc(s, NULL);
-      if (t) {
-         i->setSrc(0, i->getSrc(t));
-         i->setSrc(t, NULL);
+         cmp->dType = TYPE_F32;
+         if (i->src(t).mod != Modifier(0)) {
+            assert(i->src(t).mod == Modifier(NV50_IR_MOD_NOT));
+            i->src(t).mod = Modifier(0);
+            cmp->setCond = inverseCondCode(cmp->setCond);
+         }
+         i->op = OP_MOV;
+         i->setSrc(s, NULL);
+         if (t) {
+            i->setSrc(0, i->getSrc(t));
+            i->setSrc(t, NULL);
+         }
+      } else if (prog->getTarget()->isOpSupported(OP_EXTBF, TYPE_U32) &&
+                 src->op == OP_SHR &&
+                 src->src(1).getImmediate(imm1) &&
+                 i->src(t).mod == Modifier(0) &&
+                 util_is_power_of_two(imm0.reg.data.u32 + 1)) {
+         // low byte = offset, high byte = width
+         uint32_t ext = (util_last_bit(imm0.reg.data.u32) << 8) | imm1.reg.data.u32;
+         i->op = OP_EXTBF;
+         i->setSrc(0, src->getSrc(0));
+         i->setSrc(1, new_ImmediateValue(prog, ext));
       }
    }
       break;
