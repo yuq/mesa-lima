@@ -2207,11 +2207,15 @@ VkResult anv_CreateRenderPass(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_render_pass *pass;
    size_t size;
+   size_t attachments_offset;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
 
-   size = sizeof(*pass) +
-      pCreateInfo->subpassCount * sizeof(pass->subpasses[0]);
+   size = sizeof(*pass);
+   size += pCreateInfo->subpassCount * sizeof(pass->subpasses[0]);
+   attachments_offset = size;
+   size += pCreateInfo->attachmentCount * sizeof(pass->attachments[0]);
+
    pass = anv_device_alloc(device, size, 8,
                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (pass == NULL)
@@ -2221,13 +2225,10 @@ VkResult anv_CreateRenderPass(
     * each array member of anv_subpass must be a valid pointer if not NULL.
     */
    memset(pass, 0, size);
-
    pass->attachment_count = pCreateInfo->attachmentCount;
    pass->subpass_count = pCreateInfo->subpassCount;
+   pass->attachments = (void *) pass + attachments_offset;
 
-   size = pCreateInfo->attachmentCount * sizeof(*pass->attachments);
-   pass->attachments = anv_device_alloc(device, size, 8,
-                                        VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
       pass->attachments[i].format =
          anv_format_for_vk_format(pCreateInfo->pAttachments[i].format);
@@ -2292,8 +2293,6 @@ VkResult anv_DestroyRenderPass(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, _pass);
-
-   anv_device_free(device, pass->attachments);
 
    for (uint32_t i = 0; i < pass->subpass_count; i++) {
       /* In VkSubpassCreateInfo, each of the attachment arrays may be null.
