@@ -1532,6 +1532,7 @@ AlgebraicOpt::handleCVT_NEG(Instruction *cvt)
 // CVT(EXTBF(x, byte/word))
 // CVT(AND(bytemask, x))
 // CVT(AND(bytemask, SHR(x, 8/16/24)))
+// CVT(SHR(x, 16/24))
 void
 AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
 {
@@ -1577,6 +1578,17 @@ AlgebraicOpt::handleCVT_EXTBF(Instruction *cvt)
            (width == 16 && (imm1.reg.data.u32 & 0xf) == 0))) {
          arg = shift->getSrc(0);
          offset = imm1.reg.data.u32;
+      }
+   } else if (insn->op == OP_SHR && insn->src(1).getImmediate(imm0)) {
+      arg = insn->getSrc(0);
+      if (imm0.reg.data.u32 == 24) {
+         width = 8;
+         offset = 24;
+      } else if (imm0.reg.data.u32 == 16) {
+         width = 16;
+         offset = 16;
+      } else {
+         return;
       }
    }
 
