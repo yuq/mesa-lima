@@ -384,7 +384,7 @@ qir_emit(struct vc4_compile *c, struct qinst *inst)
         if (inst->dst.file == QFILE_TEMP)
                 c->defs[inst->dst.index] = inst;
 
-        list_addtail(&inst->link, &c->instructions);
+        qir_emit_nodef(c, inst);
 }
 
 bool

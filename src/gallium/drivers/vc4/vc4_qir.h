@@ -446,7 +446,13 @@ struct qreg qir_uniform(struct vc4_compile *c,
                         enum quniform_contents contents,
                         uint32_t data);
 void qir_reorder_uniforms(struct vc4_compile *c);
+
 void qir_emit(struct vc4_compile *c, struct qinst *inst);
+static inline void qir_emit_nodef(struct vc4_compile *c, struct qinst *inst)
+{
+        list_addtail(&inst->link, &c->instructions);
+}
+
 struct qreg qir_get_temp(struct vc4_compile *c);
 int qir_get_op_nsrc(enum qop qop);
 bool qir_reg_equals(struct qreg a, struct qreg b);
@@ -512,6 +518,12 @@ qir_##name(struct vc4_compile *c, struct qreg a)                         \
         struct qreg t = qir_get_temp(c);                                 \
         qir_emit(c, qir_inst(QOP_##name, t, a, c->undef));               \
         return t;                                                        \
+}                                                                        \
+static inline void                                                       \
+qir_##name##_dest(struct vc4_compile *c, struct qreg dest,               \
+                  struct qreg a)                                         \
+{                                                                        \
+        qir_emit_nodef(c, qir_inst(QOP_##name, dest, a, c->undef));      \
 }
 
 #define QIR_ALU2(name)                                                   \
@@ -521,6 +533,12 @@ qir_##name(struct vc4_compile *c, struct qreg a, struct qreg b)          \
         struct qreg t = qir_get_temp(c);                                 \
         qir_emit(c, qir_inst(QOP_##name, t, a, b));                      \
         return t;                                                        \
+}                                                                        \
+static inline void                                                       \
+qir_##name##_dest(struct vc4_compile *c, struct qreg dest,               \
+                  struct qreg a, struct qreg b)                          \
+{                                                                        \
+        qir_emit_nodef(c, qir_inst(QOP_##name, dest, a, b));             \
 }
 
 #define QIR_NODST_1(name)                                               \
@@ -541,9 +559,7 @@ qir_##name(struct vc4_compile *c, struct qreg a, struct qreg b)         \
 static inline struct qreg                                                \
 qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
 {                                                                        \
-        qir_emit(c, qir_inst(QOP_##name, dest, a, c->undef));            \
-        if (dest.file == QFILE_TEMP)                                     \
-                c->defs[dest.index] = NULL;                              \
+        qir_emit_nodef(c, qir_inst(QOP_##name, dest, a, c->undef));      \
         return dest;                                                     \
 }
 
