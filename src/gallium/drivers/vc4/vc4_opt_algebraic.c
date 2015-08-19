@@ -143,15 +143,6 @@ qir_opt_algebraic(struct vc4_compile *c)
                 case QOP_SEL_X_Y_ZC:
                 case QOP_SEL_X_Y_NS:
                 case QOP_SEL_X_Y_NC:
-                        if (qir_reg_equals(inst->src[0], inst->src[1])) {
-                                /* Turn "dst = (sf == x) ? a : a)" into
-                                 * "dst = a"
-                                 */
-                                replace_with_mov(c, inst, inst->src[1]);
-                                progress = true;
-                                break;
-                        }
-
                         if (is_zero(c, inst->src[1])) {
                                 /* Replace references to a 0 uniform value
                                  * with the SEL_X_0 equivalent.
