@@ -921,12 +921,18 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
    *mt = NULL;
 }
 
+
 void
-intel_miptree_get_dimensions_for_image(struct gl_texture_image *image,
-                                       int *width, int *height, int *depth)
+intel_get_image_dims(struct gl_texture_image *image,
+                     int *width, int *height, int *depth)
 {
    switch (image->TexObject->Target) {
    case GL_TEXTURE_1D_ARRAY:
+      /* For a 1D Array texture the OpenGL API will treat the image height as
+       * the number of array slices. For Intel hardware, we treat the 1D array
+       * as a 2D Array with a height of 1. So, here we want to swap image
+       * height and depth.
+       */
       *width = image->Width;
       *height = 1;
       *depth = image->Height;
@@ -970,7 +976,7 @@ intel_miptree_match_image(struct intel_mipmap_tree *mt,
    if (image->TexFormat != mt_format)
       return false;
 
-   intel_miptree_get_dimensions_for_image(image, &width, &height, &depth);
+   intel_get_image_dims(image, &width, &height, &depth);
 
    if (mt->target == GL_TEXTURE_CUBE_MAP)
       depth = 6;

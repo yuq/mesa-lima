@@ -619,8 +619,8 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint *x, GLuint *y);
 
 void
-intel_miptree_get_dimensions_for_image(struct gl_texture_image *image,
-                                       int *width, int *height, int *depth);
+intel_get_image_dims(struct gl_texture_image *image,
+                     int *width, int *height, int *depth);
 
 void
 intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,

@@ -1027,7 +1027,7 @@ intel_renderbuffer_move_to_temp(struct brw_context *brw,
    uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
                            MIPTREE_LAYOUT_TILING_ANY;
 
-   intel_miptree_get_dimensions_for_image(rb->TexImage, &width, &height, &depth);
+   intel_get_image_dims(rb->TexImage, &width, &height, &depth);
 
    new_mt = intel_miptree_create(brw, rb->TexImage->TexObject->Target,
                                  intel_image->base.Base.TexFormat,
