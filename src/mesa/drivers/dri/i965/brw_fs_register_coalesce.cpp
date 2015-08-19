@@ -128,8 +128,8 @@ can_coalesce_vars(brw::fs_live_variables *live_intervals,
       if (scan_ip > live_intervals->end[var_to])
          return true;
 
-      if (scan_inst->dst.equals(inst->dst) ||
-          scan_inst->dst.equals(inst->src[0]))
+      if (scan_inst->overwrites_reg(inst->dst) ||
+          scan_inst->overwrites_reg(inst->src[0]))
          return false;
    }
 
