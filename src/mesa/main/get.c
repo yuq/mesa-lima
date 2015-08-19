@@ -2049,7 +2049,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_MAX_COMPUTE_WORK_GROUP_COUNT:
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
       if (index >= 3)
          goto invalid_value;
@@ -2057,7 +2057,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_MAX_COMPUTE_WORK_GROUP_SIZE:
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
       if (index >= 3)
          goto invalid_value;
