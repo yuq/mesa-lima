@@ -709,7 +709,18 @@ static inline struct r600_shader_key r600_shader_selector_key(struct pipe_contex
 	struct r600_shader_key key;
 	memset(&key, 0, sizeof(key));
 
-	if (sel->type == PIPE_SHADER_FRAGMENT) {
+	switch (sel->type) {
+	case PIPE_SHADER_VERTEX: {
+		key.vs_as_es = (rctx->gs_shader != NULL);
+		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
+			key.vs_as_gs_a = true;
+			key.vs_prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
+		}
+		break;
+	}
+	case PIPE_SHADER_GEOMETRY:
+		break;
+	case PIPE_SHADER_FRAGMENT: {
 		key.color_two_side = rctx->rasterizer && rctx->rasterizer->two_side;
 		key.alpha_to_one = rctx->alpha_to_one &&
 				   rctx->rasterizer && rctx->rasterizer->multisample_enable &&
@@ -718,13 +729,12 @@ static inline struct r600_shader_key r600_shader_selector_key(struct pipe_contex
 		/* Dual-source blending only makes sense with nr_cbufs == 1. */
 		if (key.nr_cbufs == 1 && rctx->dual_src_blend)
 			key.nr_cbufs = 2;
-	} else if (sel->type == PIPE_SHADER_VERTEX) {
-		key.vs_as_es = (rctx->gs_shader != NULL);
-		if (rctx->ps_shader->current->shader.gs_prim_id_input && !rctx->gs_shader) {
-			key.vs_as_gs_a = true;
-			key.vs_prim_id_out = rctx->ps_shader->current->shader.input[rctx->ps_shader->current->shader.ps_prim_id_input].spi_sid;
-		}
+		break;
 	}
+	default:
+		assert(0);
+	}
+
 	return key;
 }
 
