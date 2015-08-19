@@ -396,6 +396,15 @@ anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
+emit_batch_buffer_start(struct anv_batch *batch, struct anv_bo *bo, uint32_t offset)
+{
+   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
+      ._2ndLevelBatchBuffer = _1stlevelbatch,
+      .AddressSpaceIndicator = ASI_PPGTT,
+      .BatchBufferStartAddress = { bo, offset });
+}
+
+static void
 cmd_buffer_chain_to_batch_bo(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_batch_bo *bbo)
 {
@@ -410,12 +419,7 @@ cmd_buffer_chain_to_batch_bo(struct anv_cmd_buffer *cmd_buffer,
    batch->end += GEN8_MI_BATCH_BUFFER_START_length * 4;
    assert(batch->end == current_bbo->bo.map + current_bbo->bo.size);
 
-   anv_batch_emit(batch, GEN8_MI_BATCH_BUFFER_START,
-      GEN8_MI_BATCH_BUFFER_START_header,
-      ._2ndLevelBatchBuffer = _1stlevelbatch,
-      .AddressSpaceIndicator = ASI_PPGTT,
-      .BatchBufferStartAddress = { &bbo->bo, 0 },
-   );
+   emit_batch_buffer_start(batch, &bbo->bo, 0);
 
    anv_batch_bo_finish(current_bbo, batch);
 }
@@ -702,11 +706,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       struct anv_batch_bo *last_bbo =
          list_last_entry(&secondary->batch_bos, struct anv_batch_bo, link);
 
-      anv_batch_emit(&primary->batch, GEN8_MI_BATCH_BUFFER_START,
-         ._2ndLevelBatchBuffer = _1stlevelbatch,
-         .AddressSpaceIndicator = ASI_PPGTT,
-         .BatchBufferStartAddress = { &first_bbo->bo, 0 },
-      );
+      emit_batch_buffer_start(&primary->batch, &first_bbo->bo, 0);
 
       struct anv_batch_bo *this_bbo = anv_cmd_buffer_current_batch_bo(primary);
       assert(primary->batch.start == this_bbo->bo.map);
@@ -720,11 +720,7 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
        */
       last_bbo->relocs.num_relocs--;
       secondary->batch.next -= GEN8_MI_BATCH_BUFFER_START_length * 4;
-      anv_batch_emit(&secondary->batch, GEN8_MI_BATCH_BUFFER_START,
-         ._2ndLevelBatchBuffer = _1stlevelbatch,
-         .AddressSpaceIndicator = ASI_PPGTT,
-         .BatchBufferStartAddress = { &this_bbo->bo, offset });
-
+      emit_batch_buffer_start(&secondary->batch, &this_bbo->bo, offset);
       anv_cmd_buffer_add_seen_bbos(primary, &secondary->batch_bos);
       break;
    }
