@@ -136,6 +136,13 @@ v140(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+v400_fs_only(const _mesa_glsl_parse_state *state)
+{
+   return state->is_version(400, 0) &&
+          state->stage == MESA_SHADER_FRAGMENT;
+}
+
+static bool
 es31(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(0, 310);
@@ -691,7 +698,7 @@ private:
                                               const glsl_type *stream_type);
    B0(barrier)
 
-   B2(textureQueryLod);
+   BA2(textureQueryLod);
    B1(textureQueryLevels);
    B1(dFdx);
    B1(dFdy);
@@ -1977,40 +1984,77 @@ builtin_builder::create_builtins()
    add_function("barrier", _barrier(), NULL);
 
    add_function("textureQueryLOD",
-                _textureQueryLod(glsl_type::sampler1D_type,  glsl_type::float_type),
-                _textureQueryLod(glsl_type::isampler1D_type, glsl_type::float_type),
-                _textureQueryLod(glsl_type::usampler1D_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler1D_type,  glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isampler1D_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usampler1D_type, glsl_type::float_type),
 
-                _textureQueryLod(glsl_type::sampler2D_type,  glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::isampler2D_type, glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::usampler2D_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler2D_type,  glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isampler2D_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usampler2D_type, glsl_type::vec2_type),
 
-                _textureQueryLod(glsl_type::sampler3D_type,  glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::isampler3D_type, glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::usampler3D_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler3D_type,  glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isampler3D_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usampler3D_type, glsl_type::vec3_type),
 
-                _textureQueryLod(glsl_type::samplerCube_type,  glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::isamplerCube_type, glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::usamplerCube_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::samplerCube_type,  glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isamplerCube_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usamplerCube_type, glsl_type::vec3_type),
 
-                _textureQueryLod(glsl_type::sampler1DArray_type,  glsl_type::float_type),
-                _textureQueryLod(glsl_type::isampler1DArray_type, glsl_type::float_type),
-                _textureQueryLod(glsl_type::usampler1DArray_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler1DArray_type,  glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isampler1DArray_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usampler1DArray_type, glsl_type::float_type),
 
-                _textureQueryLod(glsl_type::sampler2DArray_type,  glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::isampler2DArray_type, glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::usampler2DArray_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler2DArray_type,  glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isampler2DArray_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usampler2DArray_type, glsl_type::vec2_type),
 
-                _textureQueryLod(glsl_type::samplerCubeArray_type,  glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::isamplerCubeArray_type, glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::usamplerCubeArray_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::samplerCubeArray_type,  glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::isamplerCubeArray_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::usamplerCubeArray_type, glsl_type::vec3_type),
 
-                _textureQueryLod(glsl_type::sampler1DShadow_type, glsl_type::float_type),
-                _textureQueryLod(glsl_type::sampler2DShadow_type, glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::samplerCubeShadow_type, glsl_type::vec3_type),
-                _textureQueryLod(glsl_type::sampler1DArrayShadow_type, glsl_type::float_type),
-                _textureQueryLod(glsl_type::sampler2DArrayShadow_type, glsl_type::vec2_type),
-                _textureQueryLod(glsl_type::samplerCubeArrayShadow_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler1DShadow_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler2DShadow_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::samplerCubeShadow_type, glsl_type::vec3_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler1DArrayShadow_type, glsl_type::float_type),
+                _textureQueryLod(texture_query_lod, glsl_type::sampler2DArrayShadow_type, glsl_type::vec2_type),
+                _textureQueryLod(texture_query_lod, glsl_type::samplerCubeArrayShadow_type, glsl_type::vec3_type),
+                NULL);
+
+   add_function("textureQueryLod",
+                _textureQueryLod(v400_fs_only, glsl_type::sampler1D_type,  glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isampler1D_type, glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usampler1D_type, glsl_type::float_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::sampler2D_type,  glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isampler2D_type, glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usampler2D_type, glsl_type::vec2_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::sampler3D_type,  glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isampler3D_type, glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usampler3D_type, glsl_type::vec3_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::samplerCube_type,  glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isamplerCube_type, glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usamplerCube_type, glsl_type::vec3_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::sampler1DArray_type,  glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isampler1DArray_type, glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usampler1DArray_type, glsl_type::float_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::sampler2DArray_type,  glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isampler2DArray_type, glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usampler2DArray_type, glsl_type::vec2_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::samplerCubeArray_type,  glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::isamplerCubeArray_type, glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::usamplerCubeArray_type, glsl_type::vec3_type),
+
+                _textureQueryLod(v400_fs_only, glsl_type::sampler1DShadow_type, glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::sampler2DShadow_type, glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::samplerCubeShadow_type, glsl_type::vec3_type),
+                _textureQueryLod(v400_fs_only, glsl_type::sampler1DArrayShadow_type, glsl_type::float_type),
+                _textureQueryLod(v400_fs_only, glsl_type::sampler2DArrayShadow_type, glsl_type::vec2_type),
+                _textureQueryLod(v400_fs_only, glsl_type::samplerCubeArrayShadow_type, glsl_type::vec3_type),
                 NULL);
 
    add_function("textureQueryLevels",
@@ -4365,13 +4409,14 @@ builtin_builder::_barrier()
 }
 
 ir_function_signature *
-builtin_builder::_textureQueryLod(const glsl_type *sampler_type,
+builtin_builder::_textureQueryLod(builtin_available_predicate avail,
+                                  const glsl_type *sampler_type,
                                   const glsl_type *coord_type)
 {
    ir_variable *s = in_var(sampler_type, "sampler");
    ir_variable *coord = in_var(coord_type, "coord");
    /* The sampler and coordinate always exist; add optional parameters later. */
-   MAKE_SIG(glsl_type::vec2_type, texture_query_lod, 2, s, coord);
+   MAKE_SIG(glsl_type::vec2_type, avail, 2, s, coord);
 
    ir_texture *tex = new(mem_ctx) ir_texture(ir_lod);
    tex->coordinate = var_ref(coord);
