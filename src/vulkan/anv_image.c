@@ -29,12 +29,6 @@
 
 #include "anv_private.h"
 
-struct anv_image_view_info {
-   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
-   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
-   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
-};
-
 static const uint8_t anv_halign[] = {
     [4] = HALIGN4,
     [8] = HALIGN8,
@@ -66,6 +60,12 @@ anv_image_view_info_table[] = {
    [VK_IMAGE_VIEW_TYPE_CUBE_ARRAY]  = INFO(SURFTYPE_CUBE,   .is_array = 1, .is_cube = 1),
    #undef INFO
 };
+
+const struct anv_image_view_info *
+anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
+{
+   return &anv_image_view_info_table[type];
+}
 
 static const struct anv_surf_type_limits {
    int32_t width;
@@ -329,124 +329,6 @@ anv_surface_view_fini(struct anv_device *device,
    anv_state_pool_free(&device->surface_state_pool, view->surface_state);
 }
 
-void
-anv_image_view_init(struct anv_image_view *iview,
-                    struct anv_device *device,
-                    const VkImageViewCreateInfo* pCreateInfo,
-                    struct anv_cmd_buffer *cmd_buffer)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   struct anv_surface_view *view = &iview->view;
-   struct anv_surface *surface;
-
-   const struct anv_image_view_info *view_type_info
-      = &anv_image_view_info_table[pCreateInfo->viewType];
-
-   if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
-      anv_finishme("non-2D image views");
-
-   switch (pCreateInfo->subresourceRange.aspect) {
-   case VK_IMAGE_ASPECT_STENCIL:
-      anv_finishme("stencil image views");
-      abort();
-      break;
-   case VK_IMAGE_ASPECT_DEPTH:
-   case VK_IMAGE_ASPECT_COLOR:
-      surface = &image->primary_surface;
-      break;
-   default:
-      unreachable("");
-      break;
-   }
-
-   view->bo = image->bo;
-   view->offset = image->offset + surface->offset;
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, range->baseMipLevel),
-      .height = anv_minify(image->extent.height, range->baseMipLevel),
-      .depth = anv_minify(image->extent.depth, range->baseMipLevel),
-   };
-
-   uint32_t depth = 1;
-   if (range->arraySize > 1) {
-      depth = range->arraySize;
-   } else if (image->extent.depth > 1) {
-      depth = image->extent.depth;
-   }
-
-   static const uint32_t vk_to_gen_swizzle[] = {
-      [VK_CHANNEL_SWIZZLE_ZERO]                 = SCS_ZERO,
-      [VK_CHANNEL_SWIZZLE_ONE]                  = SCS_ONE,
-      [VK_CHANNEL_SWIZZLE_R]                    = SCS_RED,
-      [VK_CHANNEL_SWIZZLE_G]                    = SCS_GREEN,
-      [VK_CHANNEL_SWIZZLE_B]                    = SCS_BLUE,
-      [VK_CHANNEL_SWIZZLE_A]                    = SCS_ALPHA
-   };
-
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = view_type_info->surface_type,
-      .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = view->format->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
-      .TileMode = surface->tile_mode,
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
-      .SamplerL2BypassModeDisable = true,
-      .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
-
-      /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
-       * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
-       * both Base Mip Level fields nonzero".
-       */
-      .BaseMipLevel = 0.0,
-
-      .SurfaceQPitch = surface->qpitch >> 2,
-      .Height = image->extent.height - 1,
-      .Width = image->extent.width - 1,
-      .Depth = depth - 1,
-      .SurfacePitch = surface->stride - 1,
-      .MinimumArrayElement = range->baseArraySlice,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
-      .XOffset = 0,
-      .YOffset = 0,
-
-      /* For sampler surfaces, the hardware interprets field MIPCount/LOD as
-       * MIPCount.  The range of levels accessible by the sampler engine is
-       * [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
-       */
-      .MIPCountLOD = range->mipLevels - 1,
-      .SurfaceMinLOD = range->baseMipLevel,
-
-      .AuxiliarySurfaceMode = AUX_NONE,
-      .RedClearColor = 0,
-      .GreenClearColor = 0,
-      .BlueClearColor = 0,
-      .AlphaClearColor = 0,
-      .ShaderChannelSelectRed = vk_to_gen_swizzle[pCreateInfo->channels.r],
-      .ShaderChannelSelectGreen = vk_to_gen_swizzle[pCreateInfo->channels.g],
-      .ShaderChannelSelectBlue = vk_to_gen_swizzle[pCreateInfo->channels.b],
-      .ShaderChannelSelectAlpha = vk_to_gen_swizzle[pCreateInfo->channels.a],
-      .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, view->offset },
-   };
-
-   if (cmd_buffer) {
-      view->surface_state =
-         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   } else {
-      view->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   }
-
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
-}
-
 VkResult
 anv_validate_CreateImageView(VkDevice _device,
                              const VkImageViewCreateInfo *pCreateInfo,
@@ -525,25 +407,36 @@ anv_validate_CreateImageView(VkDevice _device,
    return anv_CreateImageView(_device, pCreateInfo, pView);
 }
 
+void
+anv_image_view_init(struct anv_image_view *iview,
+                    struct anv_device *device,
+                    const VkImageViewCreateInfo* pCreateInfo,
+                    struct anv_cmd_buffer *cmd_buffer)
+{
+   switch (device->info.gen) {
+   case 8:
+      gen8_image_view_init(iview, device, pCreateInfo, cmd_buffer);
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
+}
+
 VkResult
 anv_CreateImageView(VkDevice _device,
                     const VkImageViewCreateInfo *pCreateInfo,
                     VkImageView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_image_view *view;
 
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_image_view_init(view, device, pCreateInfo, NULL);
-
-   *pView = anv_image_view_to_handle(view);
-
-   return VK_SUCCESS;
+   switch (device->info.gen) {
+   case 8:
+      return gen8_CreateImageView(_device, pCreateInfo, pView);
+   default:
+      unreachable("unsupported gen\n");
+   }
 }
+
 
 VkResult
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)

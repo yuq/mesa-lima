@@ -931,6 +931,15 @@ anv_format_is_depth_or_stencil(const struct anv_format *format)
    return format->depth_format || format->has_stencil;
 }
 
+struct anv_image_view_info {
+   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
+   bool is_array:1; /**< RENDER_SURFACE_STATE.SurfaceArray */
+   bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
+};
+
+const struct anv_image_view_info *
+anv_image_view_info_for_vk_image_view_type(VkImageViewType type);
+
 /**
  * A proxy for the color surfaces, depth surfaces, and stencil surfaces.
  */
@@ -1046,6 +1055,12 @@ void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,
                          const VkImageViewCreateInfo* pCreateInfo,
                          struct anv_cmd_buffer *cmd_buffer);
+
+void
+gen8_image_view_init(struct anv_image_view *iview,
+                     struct anv_device *device,
+                     const VkImageViewCreateInfo* pCreateInfo,
+                     struct anv_cmd_buffer *cmd_buffer);
 
 void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
                                     struct anv_device *device,
