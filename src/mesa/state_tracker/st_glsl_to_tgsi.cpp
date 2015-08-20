@@ -2816,7 +2816,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
        */
       glsl_to_tgsi_instruction *inst, *new_inst;
       inst = (glsl_to_tgsi_instruction *)this->instructions.get_tail();
-      new_inst = emit_asm(ir, inst->op, l, inst->src[0], inst->src[1], inst->src[2]);
+      new_inst = emit_asm(ir, inst->op, l, inst->src[0], inst->src[1], inst->src[2], inst->src[3]);
       new_inst->saturate = inst->saturate;
       inst->dead_mask = inst->dst[0].writemask;
    } else {
