@@ -189,6 +189,20 @@ clear_texture_fields(struct gl_context *ctx,
 }
 
 
+/**
+ * Update/re-validate framebuffer object.
+ */
+static void
+update_fbo_texture(struct gl_context *ctx, struct gl_texture_object *texObj)
+{
+   const unsigned numFaces = _mesa_num_tex_faces(texObj->Target);
+   for (int level = 0; level < ARRAY_SIZE(texObj->Image[0]); level++) {
+      for (unsigned face = 0; face < numFaces; face++)
+         _mesa_update_fbo_texture(ctx, texObj, face, level);
+   }
+}
+
+
 GLboolean
 _mesa_is_legal_tex_storage_format(struct gl_context *ctx, GLenum internalformat)
 {
@@ -446,6 +460,7 @@ _mesa_texture_storage(struct gl_context *ctx, GLuint dims,
 
       _mesa_set_texture_view_state(ctx, texObj, target, levels);
 
+      update_fbo_texture(ctx, texObj);
    }
 }
 
