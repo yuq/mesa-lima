@@ -35,12 +35,16 @@
 #include "addrlib1.h"
 #include "addrcommon.h"
 
+namespace Addr
+{
+namespace V1
+{
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                               Static Const Member
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-const AddrTileModeFlags AddrLib1::ModeFlags[ADDR_TM_COUNT] =
+const TileModeFlags Lib::ModeFlags[ADDR_TM_COUNT] =
 {// T   L  1  2  3  P  Pr B
     {1, 1, 0, 0, 0, 0, 0, 0}, // ADDR_TM_LINEAR_GENERAL
     {1, 1, 0, 0, 0, 0, 0, 0}, // ADDR_TM_LINEAR_ALIGNED
@@ -76,69 +80,71 @@ const AddrTileModeFlags AddrLib1::ModeFlags[ADDR_TM_COUNT] =
 
 /**
 ****************************************************************************************************
-*   AddrLib1::AddrLib1
+*   Lib::AddrLib1
 *
 *   @brief
 *       Constructor for the AddrLib1 class
 *
 ****************************************************************************************************
 */
-AddrLib1::AddrLib1() :
-    AddrLib()
+Lib::Lib()
+    :
+    Addr::Lib()
 {
 }
 
 /**
 ****************************************************************************************************
-*   AddrLib1::AddrLib1
+*   Lib::Lib
 *
 *   @brief
-*       Constructor for the AddrLib1 class with hClient as parameter
+*       Constructor for the Addr::V1::Lib class with hClient as parameter
 *
 ****************************************************************************************************
 */
-AddrLib1::AddrLib1(const AddrClient* pClient) :
-    AddrLib(pClient)
+Lib::Lib(const Client* pClient)
+    :
+    Addr::Lib(pClient)
 {
 }
 
 /**
 ****************************************************************************************************
-*   AddrLib1::~AddrLib1
+*   Lib::~AddrLib1
 *
 *   @brief
 *       Destructor for the AddrLib1 class
 *
 ****************************************************************************************************
 */
-AddrLib1::~AddrLib1()
+Lib::~Lib()
 {
 }
 
 /**
 ****************************************************************************************************
-*   AddrLib1::GetAddrLib1
+*   Lib::GetLib
 *
 *   @brief
 *       Get AddrLib1 pointer
 *
 *   @return
-*      An AddrLib1 class pointer
+*      An Addr::V1::Lib class pointer
 ****************************************************************************************************
 */
-AddrLib1* AddrLib1::GetAddrLib1(
+Lib* Lib::GetLib(
     ADDR_HANDLE hLib)   ///< [in] handle of ADDR_HANDLE
 {
-    AddrLib* pAddrLib = AddrLib::GetAddrLib(hLib);
+    Addr::Lib* pAddrLib = Addr::Lib::GetLib(hLib);
     if ((pAddrLib != NULL) &&
-        ((pAddrLib->GetAddrChipFamily() == ADDR_CHIP_FAMILY_IVLD) ||
-         (pAddrLib->GetAddrChipFamily() > ADDR_CHIP_FAMILY_VI)))
+        ((pAddrLib->GetChipFamily() == ADDR_CHIP_FAMILY_IVLD) ||
+         (pAddrLib->GetChipFamily() > ADDR_CHIP_FAMILY_VI)))
     {
         // only valid and pre-VI AISC can use AddrLib1 function.
         ADDR_ASSERT_ALWAYS();
         hLib = NULL;
     }
-    return static_cast<AddrLib1 *>(hLib);
+    return static_cast<Lib*>(hLib);
 }
 
 
@@ -149,7 +155,7 @@ AddrLib1* AddrLib1::GetAddrLib1(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceInfo
+*   Lib::ComputeSurfaceInfo
 *
 *   @brief
 *       Interface function stub of AddrComputeSurfaceInfo.
@@ -158,7 +164,7 @@ AddrLib1* AddrLib1::GetAddrLib1(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
+ADDR_E_RETURNCODE Lib::ComputeSurfaceInfo(
      const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn,    ///< [in] input structure
      ADDR_COMPUTE_SURFACE_INFO_OUTPUT*      pOut    ///< [out] output structure
      ) const
@@ -222,7 +228,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
 
         UINT_32 expandX = 1;
         UINT_32 expandY = 1;
-        AddrElemMode elemMode;
+        ElemMode elemMode;
 
         // Save outputs that may not go through HWL
         pOut->pixelBits = localIn.bpp;
@@ -435,7 +441,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceInfo
+*   Lib::ComputeSurfaceInfo
 *
 *   @brief
 *       Interface function stub of AddrComputeSurfaceInfo.
@@ -444,7 +450,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceAddrFromCoord(
+ADDR_E_RETURNCODE Lib::ComputeSurfaceAddrFromCoord(
     const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,    ///< [in] input structure
     ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT*      pOut    ///< [out] output structure
     ) const
@@ -515,7 +521,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceCoordFromAddr
+*   Lib::ComputeSurfaceCoordFromAddr
 *
 *   @brief
 *       Interface function stub of ComputeSurfaceCoordFromAddr.
@@ -524,7 +530,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceAddrFromCoord(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceCoordFromAddr(
+ADDR_E_RETURNCODE Lib::ComputeSurfaceCoordFromAddr(
     const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,    ///< [in] input structure
     ADDR_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT*      pOut    ///< [out] output structure
     ) const
@@ -590,7 +596,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSliceTileSwizzle
+*   Lib::ComputeSliceTileSwizzle
 *
 *   @brief
 *       Interface function stub of ComputeSliceTileSwizzle.
@@ -599,7 +605,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSurfaceCoordFromAddr(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeSliceTileSwizzle(
+ADDR_E_RETURNCODE Lib::ComputeSliceTileSwizzle(
     const ADDR_COMPUTE_SLICESWIZZLE_INPUT*  pIn,    ///< [in] input structure
     ADDR_COMPUTE_SLICESWIZZLE_OUTPUT*       pOut    ///< [out] output structure
     ) const
@@ -643,7 +649,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSliceTileSwizzle(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ExtractBankPipeSwizzle
+*   Lib::ExtractBankPipeSwizzle
 *
 *   @brief
 *       Interface function stub of AddrExtractBankPipeSwizzle.
@@ -652,7 +658,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeSliceTileSwizzle(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ExtractBankPipeSwizzle(
+ADDR_E_RETURNCODE Lib::ExtractBankPipeSwizzle(
     const ADDR_EXTRACT_BANKPIPE_SWIZZLE_INPUT*  pIn,    ///< [in] input structure
     ADDR_EXTRACT_BANKPIPE_SWIZZLE_OUTPUT*       pOut    ///< [out] output structure
     ) const
@@ -695,7 +701,7 @@ ADDR_E_RETURNCODE AddrLib1::ExtractBankPipeSwizzle(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::CombineBankPipeSwizzle
+*   Lib::CombineBankPipeSwizzle
 *
 *   @brief
 *       Interface function stub of AddrCombineBankPipeSwizzle.
@@ -704,7 +710,7 @@ ADDR_E_RETURNCODE AddrLib1::ExtractBankPipeSwizzle(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::CombineBankPipeSwizzle(
+ADDR_E_RETURNCODE Lib::CombineBankPipeSwizzle(
     const ADDR_COMBINE_BANKPIPE_SWIZZLE_INPUT*  pIn,    ///< [in] input structure
     ADDR_COMBINE_BANKPIPE_SWIZZLE_OUTPUT*       pOut    ///< [out] output structure
     ) const
@@ -751,7 +757,7 @@ ADDR_E_RETURNCODE AddrLib1::CombineBankPipeSwizzle(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeBaseSwizzle
+*   Lib::ComputeBaseSwizzle
 *
 *   @brief
 *       Interface function stub of AddrCompueBaseSwizzle.
@@ -759,7 +765,7 @@ ADDR_E_RETURNCODE AddrLib1::CombineBankPipeSwizzle(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeBaseSwizzle(
+ADDR_E_RETURNCODE Lib::ComputeBaseSwizzle(
     const ADDR_COMPUTE_BASE_SWIZZLE_INPUT*  pIn,
     ADDR_COMPUTE_BASE_SWIZZLE_OUTPUT* pOut) const
 {
@@ -808,7 +814,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeBaseSwizzle(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeFmaskInfo
+*   Lib::ComputeFmaskInfo
 *
 *   @brief
 *       Interface function stub of ComputeFmaskInfo.
@@ -817,7 +823,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeBaseSwizzle(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeFmaskInfo(
+ADDR_E_RETURNCODE Lib::ComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,    ///< [in] input structure
     ADDR_COMPUTE_FMASK_INFO_OUTPUT*         pOut    ///< [out] output structure
     )
@@ -902,7 +908,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeFmaskAddrFromCoord
+*   Lib::ComputeFmaskAddrFromCoord
 *
 *   @brief
 *       Interface function stub of ComputeFmaskAddrFromCoord.
@@ -911,7 +917,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeFmaskAddrFromCoord(
+ADDR_E_RETURNCODE Lib::ComputeFmaskAddrFromCoord(
     const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*   pIn,    ///< [in] input structure
     ADDR_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT*        pOut    ///< [out] output structure
     ) const
@@ -946,7 +952,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeFmaskCoordFromAddr
+*   Lib::ComputeFmaskCoordFromAddr
 *
 *   @brief
 *       Interface function stub of ComputeFmaskAddrFromCoord.
@@ -955,7 +961,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskAddrFromCoord(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeFmaskCoordFromAddr(
+ADDR_E_RETURNCODE Lib::ComputeFmaskCoordFromAddr(
     const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT*  pIn,     ///< [in] input structure
     ADDR_COMPUTE_FMASK_COORDFROMADDR_OUTPUT* pOut           ///< [out] output structure
     ) const
@@ -990,7 +996,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ConvertTileInfoToHW
+*   Lib::ConvertTileInfoToHW
 *
 *   @brief
 *       Convert tile info from real value to HW register value in HW layer
@@ -999,7 +1005,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeFmaskCoordFromAddr(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ConvertTileInfoToHW(
+ADDR_E_RETURNCODE Lib::ConvertTileInfoToHW(
     const ADDR_CONVERT_TILEINFOTOHW_INPUT* pIn, ///< [in] input structure
     ADDR_CONVERT_TILEINFOTOHW_OUTPUT* pOut      ///< [out] output structure
     ) const
@@ -1042,7 +1048,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileInfoToHW(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ConvertTileIndex
+*   Lib::ConvertTileIndex
 *
 *   @brief
 *       Convert tile index to tile mode/type/info
@@ -1051,7 +1057,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileInfoToHW(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex(
+ADDR_E_RETURNCODE Lib::ConvertTileIndex(
     const ADDR_CONVERT_TILEINDEX_INPUT* pIn, ///< [in] input structure
     ADDR_CONVERT_TILEINDEX_OUTPUT* pOut      ///< [out] output structure
     ) const
@@ -1091,7 +1097,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::GetMacroModeIndex
+*   Lib::GetMacroModeIndex
 *
 *   @brief
 *       Get macro mode index based on input info
@@ -1100,7 +1106,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::GetMacroModeIndex(
+ADDR_E_RETURNCODE Lib::GetMacroModeIndex(
     const ADDR_GET_MACROMODEINDEX_INPUT* pIn, ///< [in] input structure
     ADDR_GET_MACROMODEINDEX_OUTPUT*      pOut ///< [out] output structure
     ) const
@@ -1128,7 +1134,7 @@ ADDR_E_RETURNCODE AddrLib1::GetMacroModeIndex(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ConvertTileIndex1
+*   Lib::ConvertTileIndex1
 *
 *   @brief
 *       Convert tile index to tile mode/type/info
@@ -1137,7 +1143,7 @@ ADDR_E_RETURNCODE AddrLib1::GetMacroModeIndex(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex1(
+ADDR_E_RETURNCODE Lib::ConvertTileIndex1(
     const ADDR_CONVERT_TILEINDEX1_INPUT* pIn,   ///< [in] input structure
     ADDR_CONVERT_TILEINDEX_OUTPUT* pOut         ///< [out] output structure
     ) const
@@ -1178,7 +1184,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex1(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::GetTileIndex
+*   Lib::GetTileIndex
 *
 *   @brief
 *       Get tile index from tile mode/type/info
@@ -1187,7 +1193,7 @@ ADDR_E_RETURNCODE AddrLib1::ConvertTileIndex1(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
+ADDR_E_RETURNCODE Lib::GetTileIndex(
     const ADDR_GET_TILEINDEX_INPUT* pIn, ///< [in] input structure
     ADDR_GET_TILEINDEX_OUTPUT* pOut      ///< [out] output structure
     ) const
@@ -1213,7 +1219,7 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::Thickness
+*   Lib::Thickness
 *
 *   @brief
 *       Get tile mode thickness
@@ -1222,7 +1228,7 @@ ADDR_E_RETURNCODE AddrLib1::GetTileIndex(
 *       Tile mode thickness
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::Thickness(
+UINT_32 Lib::Thickness(
     AddrTileMode tileMode)    ///< [in] tile mode
 {
     return ModeFlags[tileMode].thickness;
@@ -1236,7 +1242,7 @@ UINT_32 AddrLib1::Thickness(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeHtileInfo
+*   Lib::ComputeHtileInfo
 *
 *   @brief
 *       Interface function stub of AddrComputeHtilenfo
@@ -1245,7 +1251,7 @@ UINT_32 AddrLib1::Thickness(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeHtileInfo(
+ADDR_E_RETURNCODE Lib::ComputeHtileInfo(
     const ADDR_COMPUTE_HTILE_INFO_INPUT*    pIn,    ///< [in] input structure
     ADDR_COMPUTE_HTILE_INFO_OUTPUT*         pOut    ///< [out] output structure
     ) const
@@ -1306,7 +1312,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskInfo
+*   Lib::ComputeCmaskInfo
 *
 *   @brief
 *       Interface function stub of AddrComputeCmaskInfo
@@ -1315,7 +1321,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
+ADDR_E_RETURNCODE Lib::ComputeCmaskInfo(
     const ADDR_COMPUTE_CMASK_INFO_INPUT*    pIn,    ///< [in] input structure
     ADDR_COMPUTE_CMASK_INFO_OUTPUT*         pOut    ///< [out] output structure
     ) const
@@ -1372,7 +1378,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeDccInfo
+*   Lib::ComputeDccInfo
 *
 *   @brief
 *       Interface function to compute DCC key info
@@ -1381,7 +1387,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
 *       return code of HwlComputeDccInfo
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeDccInfo(
+ADDR_E_RETURNCODE Lib::ComputeDccInfo(
     const ADDR_COMPUTE_DCCINFO_INPUT*    pIn,    ///< [in] input structure
     ADDR_COMPUTE_DCCINFO_OUTPUT*         pOut    ///< [out] output structure
     ) const
@@ -1422,7 +1428,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeDccInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeHtileAddrFromCoord
+*   Lib::ComputeHtileAddrFromCoord
 *
 *   @brief
 *       Interface function stub of AddrComputeHtileAddrFromCoord
@@ -1431,7 +1437,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeDccInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeHtileAddrFromCoord(
+ADDR_E_RETURNCODE Lib::ComputeHtileAddrFromCoord(
     const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*   pIn,    ///< [in] input structure
     ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*        pOut    ///< [out] output structure
     ) const
@@ -1497,7 +1503,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeHtileCoordFromAddr
+*   Lib::ComputeHtileCoordFromAddr
 *
 *   @brief
 *       Interface function stub of AddrComputeHtileCoordFromAddr
@@ -1506,7 +1512,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileAddrFromCoord(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeHtileCoordFromAddr(
+ADDR_E_RETURNCODE Lib::ComputeHtileCoordFromAddr(
     const ADDR_COMPUTE_HTILE_COORDFROMADDR_INPUT*   pIn,    ///< [in] input structure
     ADDR_COMPUTE_HTILE_COORDFROMADDR_OUTPUT*        pOut    ///< [out] output structure
     ) const
@@ -1565,7 +1571,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskAddrFromCoord
+*   Lib::ComputeCmaskAddrFromCoord
 *
 *   @brief
 *       Interface function stub of AddrComputeCmaskAddrFromCoord
@@ -1574,7 +1580,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeHtileCoordFromAddr(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeCmaskAddrFromCoord(
+ADDR_E_RETURNCODE Lib::ComputeCmaskAddrFromCoord(
     const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*   pIn,    ///< [in] input structure
     ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*        pOut    ///< [out] output structure
     ) const
@@ -1637,7 +1643,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskCoordFromAddr
+*   Lib::ComputeCmaskCoordFromAddr
 *
 *   @brief
 *       Interface function stub of AddrComputeCmaskCoordFromAddr
@@ -1646,7 +1652,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskAddrFromCoord(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeCmaskCoordFromAddr(
+ADDR_E_RETURNCODE Lib::ComputeCmaskCoordFromAddr(
     const ADDR_COMPUTE_CMASK_COORDFROMADDR_INPUT*   pIn,    ///< [in] input structure
     ADDR_COMPUTE_CMASK_COORDFROMADDR_OUTPUT*        pOut    ///< [out] output structure
     ) const
@@ -1703,7 +1709,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeTileDataWidthAndHeight
+*   Lib::ComputeTileDataWidthAndHeight
 *
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE)
@@ -1715,7 +1721,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskCoordFromAddr(
 *       MacroWidth and macroHeight are measured in pixels
 ****************************************************************************************************
 */
-VOID AddrLib1::ComputeTileDataWidthAndHeight(
+VOID Lib::ComputeTileDataWidthAndHeight(
     UINT_32         bpp,             ///< [in] bits per pixel
     UINT_32         cacheBits,       ///< [in] bits of cache
     ADDR_TILEINFO*  pTileInfo,       ///< [in] Tile info
@@ -1747,7 +1753,7 @@ VOID AddrLib1::ComputeTileDataWidthAndHeight(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlComputeTileDataWidthAndHeightLinear
+*   Lib::HwlComputeTileDataWidthAndHeightLinear
 *
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE) for linear layout
@@ -1759,7 +1765,7 @@ VOID AddrLib1::ComputeTileDataWidthAndHeight(
 *       MacroWidth and macroHeight are measured in pixels
 ****************************************************************************************************
 */
-VOID AddrLib1::HwlComputeTileDataWidthAndHeightLinear(
+VOID Lib::HwlComputeTileDataWidthAndHeightLinear(
     UINT_32*        pMacroWidth,     ///< [out] macro tile width
     UINT_32*        pMacroHeight,    ///< [out] macro tile height
     UINT_32         bpp,             ///< [in] bits per pixel
@@ -1773,7 +1779,7 @@ VOID AddrLib1::HwlComputeTileDataWidthAndHeightLinear(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeHtileInfo
+*   Lib::ComputeHtileInfo
 *
 *   @brief
 *       Compute htile pitch,width, bytes per 2D slice
@@ -1784,7 +1790,7 @@ VOID AddrLib1::HwlComputeTileDataWidthAndHeightLinear(
 *       *Htile pitch, height, total size in bytes, macro-tile dimensions and slice size*
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::ComputeHtileInfo(
+UINT_32 Lib::ComputeHtileInfo(
     ADDR_HTILE_FLAGS flags,             ///< [in] htile flags
     UINT_32          pitchIn,           ///< [in] pitch input
     UINT_32          heightIn,          ///< [in] height input
@@ -1861,7 +1867,7 @@ UINT_32 AddrLib1::ComputeHtileInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskBaseAlign
+*   Lib::ComputeCmaskBaseAlign
 *
 *   @brief
 *       Compute cmask base alignment
@@ -1870,7 +1876,7 @@ UINT_32 AddrLib1::ComputeHtileInfo(
 *       Cmask base alignment
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::ComputeCmaskBaseAlign(
+UINT_32 Lib::ComputeCmaskBaseAlign(
     ADDR_CMASK_FLAGS flags,           ///< [in] Cmask flags
     ADDR_TILEINFO*   pTileInfo        ///< [in] Tile info
     ) const
@@ -1891,7 +1897,7 @@ UINT_32 AddrLib1::ComputeCmaskBaseAlign(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskBytes
+*   Lib::ComputeCmaskBytes
 *
 *   @brief
 *       Compute cmask size in bytes
@@ -1900,7 +1906,7 @@ UINT_32 AddrLib1::ComputeCmaskBaseAlign(
 *       Cmask size in bytes
 ****************************************************************************************************
 */
-UINT_64 AddrLib1::ComputeCmaskBytes(
+UINT_64 Lib::ComputeCmaskBytes(
     UINT_32 pitch,        ///< [in] pitch
     UINT_32 height,       ///< [in] height
     UINT_32 numSlices     ///< [in] number of slices
@@ -1912,7 +1918,7 @@ UINT_64 AddrLib1::ComputeCmaskBytes(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeCmaskInfo
+*   Lib::ComputeCmaskInfo
 *
 *   @brief
 *       Compute cmask pitch,width, bytes per 2D slice
@@ -1922,7 +1928,7 @@ UINT_64 AddrLib1::ComputeCmaskBytes(
 *       macro-tile dimensions
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
+ADDR_E_RETURNCODE Lib::ComputeCmaskInfo(
     ADDR_CMASK_FLAGS flags,            ///< [in] cmask flags
     UINT_32          pitchIn,           ///< [in] pitch input
     UINT_32          heightIn,          ///< [in] height input
@@ -2027,7 +2033,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeXmaskCoordYFromPipe
+*   Lib::ComputeXmaskCoordYFromPipe
 *
 *   @brief
 *       Compute the Y coord from pipe number for cmask/htile
@@ -2037,7 +2043,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeCmaskInfo(
 *
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::ComputeXmaskCoordYFromPipe(
+UINT_32 Lib::ComputeXmaskCoordYFromPipe(
     UINT_32         pipe,       ///< [in] pipe number
     UINT_32         x           ///< [in] x coordinate
     ) const
@@ -2119,7 +2125,7 @@ UINT_32 AddrLib1::ComputeXmaskCoordYFromPipe(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlComputeXmaskCoordFromAddr
+*   Lib::HwlComputeXmaskCoordFromAddr
 *
 *   @brief
 *       Compute the coord from an address of a cmask/htile
@@ -2131,7 +2137,7 @@ UINT_32 AddrLib1::ComputeXmaskCoordYFromPipe(
 *       This method is reused by htile, so rename to Xmask
 ****************************************************************************************************
 */
-VOID AddrLib1::HwlComputeXmaskCoordFromAddr(
+VOID Lib::HwlComputeXmaskCoordFromAddr(
     UINT_64         addr,           ///< [in] address
     UINT_32         bitPosition,    ///< [in] bitPosition in a byte
     UINT_32         pitch,          ///< [in] pitch
@@ -2301,7 +2307,7 @@ VOID AddrLib1::HwlComputeXmaskCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlComputeXmaskAddrFromCoord
+*   Lib::HwlComputeXmaskAddrFromCoord
 *
 *   @brief
 *       Compute the address from an address of cmask (prior to si)
@@ -2311,7 +2317,7 @@ VOID AddrLib1::HwlComputeXmaskCoordFromAddr(
 *
 ****************************************************************************************************
 */
-UINT_64 AddrLib1::HwlComputeXmaskAddrFromCoord(
+UINT_64 Lib::HwlComputeXmaskAddrFromCoord(
     UINT_32        pitch,          ///< [in] pitch
     UINT_32        height,         ///< [in] height
     UINT_32        x,              ///< [in] x coord
@@ -2513,7 +2519,7 @@ UINT_64 AddrLib1::HwlComputeXmaskAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceAddrFromCoordLinear
+*   Lib::ComputeSurfaceAddrFromCoordLinear
 *
 *   @brief
 *       Compute address from coord for linear surface
@@ -2523,7 +2529,7 @@ UINT_64 AddrLib1::HwlComputeXmaskAddrFromCoord(
 *
 ****************************************************************************************************
 */
-UINT_64 AddrLib1::ComputeSurfaceAddrFromCoordLinear(
+UINT_64 Lib::ComputeSurfaceAddrFromCoordLinear(
     UINT_32  x,              ///< [in] x coord
     UINT_32  y,              ///< [in] y coord
     UINT_32  slice,          ///< [in] slice/depth index
@@ -2551,7 +2557,7 @@ UINT_64 AddrLib1::ComputeSurfaceAddrFromCoordLinear(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceCoordFromAddrLinear
+*   Lib::ComputeSurfaceCoordFromAddrLinear
 *
 *   @brief
 *       Compute the coord from an address of a linear surface
@@ -2560,7 +2566,7 @@ UINT_64 AddrLib1::ComputeSurfaceAddrFromCoordLinear(
 *       N/A
 ****************************************************************************************************
 */
-VOID AddrLib1::ComputeSurfaceCoordFromAddrLinear(
+VOID Lib::ComputeSurfaceCoordFromAddrLinear(
     UINT_64  addr,           ///< [in] address
     UINT_32  bitPosition,    ///< [in] bitPosition in a byte
     UINT_32  bpp,            ///< [in] bits per pixel
@@ -2584,7 +2590,7 @@ VOID AddrLib1::ComputeSurfaceCoordFromAddrLinear(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeSurfaceCoordFromAddrMicroTiled
+*   Lib::ComputeSurfaceCoordFromAddrMicroTiled
 *
 *   @brief
 *       Compute the coord from an address of a micro tiled surface
@@ -2593,7 +2599,7 @@ VOID AddrLib1::ComputeSurfaceCoordFromAddrLinear(
 *       N/A
 ****************************************************************************************************
 */
-VOID AddrLib1::ComputeSurfaceCoordFromAddrMicroTiled(
+VOID Lib::ComputeSurfaceCoordFromAddrMicroTiled(
     UINT_64         addr,               ///< [in] address
     UINT_32         bitPosition,        ///< [in] bitPosition in a byte
     UINT_32         bpp,                ///< [in] bits per pixel
@@ -2706,7 +2712,7 @@ VOID AddrLib1::ComputeSurfaceCoordFromAddrMicroTiled(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputePipeFromAddr
+*   Lib::ComputePipeFromAddr
 *
 *   @brief
 *       Compute the pipe number from an address
@@ -2716,7 +2722,7 @@ VOID AddrLib1::ComputeSurfaceCoordFromAddrMicroTiled(
 *
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::ComputePipeFromAddr(
+UINT_32 Lib::ComputePipeFromAddr(
     UINT_64 addr,        ///< [in] address
     UINT_32 numPipes     ///< [in] number of banks
     ) const
@@ -2746,7 +2752,7 @@ UINT_32 AddrLib1::ComputePipeFromAddr(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeMicroTileEquation
+*   Lib::ComputeMicroTileEquation
 *
 *   @brief
 *       Compute micro tile equation
@@ -2756,7 +2762,7 @@ UINT_32 AddrLib1::ComputePipeFromAddr(
 *
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputeMicroTileEquation(
+ADDR_E_RETURNCODE Lib::ComputeMicroTileEquation(
     UINT_32         log2BytesPP,    ///< [in] log2 of bytes per pixel
     AddrTileMode    tileMode,       ///< [in] tile mode
     AddrTileType    microTileType,  ///< [in] pixel order in display/non-display mode
@@ -2959,7 +2965,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeMicroTileEquation(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputePixelIndexWithinMicroTile
+*   Lib::ComputePixelIndexWithinMicroTile
 *
 *   @brief
 *       Compute the pixel index inside a micro tile of surface
@@ -2969,7 +2975,7 @@ ADDR_E_RETURNCODE AddrLib1::ComputeMicroTileEquation(
 *
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::ComputePixelIndexWithinMicroTile(
+UINT_32 Lib::ComputePixelIndexWithinMicroTile(
     UINT_32         x,              ///< [in] x coord
     UINT_32         y,              ///< [in] y coord
     UINT_32         z,              ///< [in] slice/depth index
@@ -3174,7 +3180,7 @@ UINT_32 AddrLib1::ComputePixelIndexWithinMicroTile(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::AdjustPitchAlignment
+*   Lib::AdjustPitchAlignment
 *
 *   @brief
 *       Adjusts pitch alignment for flipping surface
@@ -3184,7 +3190,7 @@ UINT_32 AddrLib1::ComputePixelIndexWithinMicroTile(
 *
 ****************************************************************************************************
 */
-VOID AddrLib1::AdjustPitchAlignment(
+VOID Lib::AdjustPitchAlignment(
     ADDR_SURFACE_FLAGS  flags,      ///< [in] Surface flags
     UINT_32*            pPitchAlign ///< [out] Pointer to pitch alignment
     ) const
@@ -3204,7 +3210,7 @@ VOID AddrLib1::AdjustPitchAlignment(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::PadDimensions
+*   Lib::PadDimensions
 *
 *   @brief
 *       Helper function to pad dimensions
@@ -3214,7 +3220,7 @@ VOID AddrLib1::AdjustPitchAlignment(
 *
 ****************************************************************************************************
 */
-VOID AddrLib1::PadDimensions(
+VOID Lib::PadDimensions(
     AddrTileMode        tileMode,    ///< [in] tile mode
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags
@@ -3310,7 +3316,7 @@ VOID AddrLib1::PadDimensions(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlPreHandleBaseLvl3xPitch
+*   Lib::HwlPreHandleBaseLvl3xPitch
 *
 *   @brief
 *       Pre-handler of 3x pitch (96 bit) adjustment
@@ -3319,7 +3325,7 @@ VOID AddrLib1::PadDimensions(
 *       Expected pitch
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::HwlPreHandleBaseLvl3xPitch(
+UINT_32 Lib::HwlPreHandleBaseLvl3xPitch(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] input
     UINT_32                                 expPitch    ///< [in] pitch
     ) const
@@ -3328,7 +3334,7 @@ UINT_32 AddrLib1::HwlPreHandleBaseLvl3xPitch(
     //
     // If pitch is pre-multiplied by 3, we retrieve original one here to get correct miplevel size
     //
-    if (AddrElemLib::IsExpand3x(pIn->format) &&
+    if (ElemLib::IsExpand3x(pIn->format) &&
         pIn->mipLevel == 0 &&
         pIn->tileMode == ADDR_TM_LINEAR_ALIGNED)
     {
@@ -3341,7 +3347,7 @@ UINT_32 AddrLib1::HwlPreHandleBaseLvl3xPitch(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlPostHandleBaseLvl3xPitch
+*   Lib::HwlPostHandleBaseLvl3xPitch
 *
 *   @brief
 *       Post-handler of 3x pitch adjustment
@@ -3350,7 +3356,7 @@ UINT_32 AddrLib1::HwlPreHandleBaseLvl3xPitch(
 *       Expected pitch
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::HwlPostHandleBaseLvl3xPitch(
+UINT_32 Lib::HwlPostHandleBaseLvl3xPitch(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] input
     UINT_32                                 expPitch    ///< [in] pitch
     ) const
@@ -3359,7 +3365,7 @@ UINT_32 AddrLib1::HwlPostHandleBaseLvl3xPitch(
     // 96 bits surface of sub levels require element pitch of 32 bits instead
     // So we just return pitch in 32 bit pixels without timing 3
     //
-    if (AddrElemLib::IsExpand3x(pIn->format) &&
+    if (ElemLib::IsExpand3x(pIn->format) &&
         pIn->mipLevel == 0 &&
         pIn->tileMode == ADDR_TM_LINEAR_ALIGNED)
     {
@@ -3372,7 +3378,7 @@ UINT_32 AddrLib1::HwlPostHandleBaseLvl3xPitch(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsMacroTiled
+*   Lib::IsMacroTiled
 *
 *   @brief
 *       Check if the tile mode is macro tiled
@@ -3381,7 +3387,7 @@ UINT_32 AddrLib1::HwlPostHandleBaseLvl3xPitch(
 *       TRUE if it is macro tiled (2D/2B/3D/3B)
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsMacroTiled(
+BOOL_32 Lib::IsMacroTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
    return ModeFlags[tileMode].isMacro;
@@ -3389,7 +3395,7 @@ BOOL_32 AddrLib1::IsMacroTiled(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsMacro3dTiled
+*   Lib::IsMacro3dTiled
 *
 *   @brief
 *       Check if the tile mode is 3D macro tiled
@@ -3398,7 +3404,7 @@ BOOL_32 AddrLib1::IsMacroTiled(
 *       TRUE if it is 3D macro tiled
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsMacro3dTiled(
+BOOL_32 Lib::IsMacro3dTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
     return ModeFlags[tileMode].isMacro3d;
@@ -3406,7 +3412,7 @@ BOOL_32 AddrLib1::IsMacro3dTiled(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsMicroTiled
+*   Lib::IsMicroTiled
 *
 *   @brief
 *       Check if the tile mode is micro tiled
@@ -3415,7 +3421,7 @@ BOOL_32 AddrLib1::IsMacro3dTiled(
 *       TRUE if micro tiled
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsMicroTiled(
+BOOL_32 Lib::IsMicroTiled(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
     return ModeFlags[tileMode].isMicro;
@@ -3423,7 +3429,7 @@ BOOL_32 AddrLib1::IsMicroTiled(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsLinear
+*   Lib::IsLinear
 *
 *   @brief
 *       Check if the tile mode is linear
@@ -3432,7 +3438,7 @@ BOOL_32 AddrLib1::IsMicroTiled(
 *       TRUE if linear
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsLinear(
+BOOL_32 Lib::IsLinear(
     AddrTileMode tileMode)  ///< [in] tile mode
 {
     return ModeFlags[tileMode].isLinear;
@@ -3440,7 +3446,7 @@ BOOL_32 AddrLib1::IsLinear(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsPrtNoRotationTileMode
+*   Lib::IsPrtNoRotationTileMode
 *
 *   @brief
 *       Return TRUE if it is prt tile without rotation
@@ -3448,7 +3454,7 @@ BOOL_32 AddrLib1::IsLinear(
 *       This function just used by CI
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsPrtNoRotationTileMode(
+BOOL_32 Lib::IsPrtNoRotationTileMode(
     AddrTileMode tileMode)
 {
     return ModeFlags[tileMode].isPrtNoRotation;
@@ -3456,7 +3462,7 @@ BOOL_32 AddrLib1::IsPrtNoRotationTileMode(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::IsPrtTileMode
+*   Lib::IsPrtTileMode
 *
 *   @brief
 *       Return TRUE if it is prt tile
@@ -3464,7 +3470,7 @@ BOOL_32 AddrLib1::IsPrtNoRotationTileMode(
 *       This function just used by CI
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::IsPrtTileMode(
+BOOL_32 Lib::IsPrtTileMode(
     AddrTileMode tileMode)
 {
     return ModeFlags[tileMode].isPrt;
@@ -3472,7 +3478,7 @@ BOOL_32 AddrLib1::IsPrtTileMode(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeMipLevel
+*   Lib::ComputeMipLevel
 *
 *   @brief
 *       Compute mipmap level width/height/slices
@@ -3480,11 +3486,11 @@ BOOL_32 AddrLib1::IsPrtTileMode(
 *      N/A
 ****************************************************************************************************
 */
-VOID AddrLib1::ComputeMipLevel(
+VOID Lib::ComputeMipLevel(
     ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in/out] Input structure
     ) const
 {
-    if (AddrElemLib::IsBlockCompressed(pIn->format))
+    if (ElemLib::IsBlockCompressed(pIn->format))
     {
         if (pIn->mipLevel == 0)
         {
@@ -3502,7 +3508,7 @@ VOID AddrLib1::ComputeMipLevel(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::OptimizeTileMode
+*   Lib::OptimizeTileMode
 *
 *   @brief
 *       Check if base level's tile mode can be optimized (degraded)
@@ -3510,7 +3516,7 @@ VOID AddrLib1::ComputeMipLevel(
 *       TRUE if degraded, also returns degraded tile mode (unchanged if not degraded)
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::OptimizeTileMode(
+BOOL_32 Lib::OptimizeTileMode(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] Input structure for surface info
     AddrTileMode*                           pTileMode   ///< [out] Degraded tile mode
     ) const
@@ -3529,7 +3535,7 @@ BOOL_32 AddrLib1::OptimizeTileMode(
         // Check if linear mode is optimal
         if ((pIn->height == 1) &&
             (IsLinear(tileMode) == FALSE) &&
-            (AddrElemLib::IsBlockCompressed(pIn->format) == FALSE) &&
+            (ElemLib::IsBlockCompressed(pIn->format) == FALSE) &&
             (pIn->flags.depth == FALSE) &&
             (pIn->flags.stencil == FALSE) &&
             (m_configFlags.disableLinearOpt == FALSE) &&
@@ -3572,7 +3578,7 @@ BOOL_32 AddrLib1::OptimizeTileMode(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::DegradeLargeThickTile
+*   Lib::DegradeLargeThickTile
 *
 *   @brief
 *       Check if the thickness needs to be reduced if a tile is too large
@@ -3580,7 +3586,7 @@ BOOL_32 AddrLib1::OptimizeTileMode(
 *       The degraded tile mode (unchanged if not degraded)
 ****************************************************************************************************
 */
-AddrTileMode AddrLib1::DegradeLargeThickTile(
+AddrTileMode Lib::DegradeLargeThickTile(
     AddrTileMode tileMode,
     UINT_32 bpp) const
 {
@@ -3642,14 +3648,14 @@ AddrTileMode AddrLib1::DegradeLargeThickTile(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::PostComputeMipLevel
+*   Lib::PostComputeMipLevel
 *   @brief
 *       Compute MipLevel info (including level 0) after surface adjustment
 *   @return
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::PostComputeMipLevel(
+ADDR_E_RETURNCODE Lib::PostComputeMipLevel(
     ADDR_COMPUTE_SURFACE_INFO_INPUT*    pIn,   ///< [in/out] Input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*   pOut   ///< [out] Output structure
     ) const
@@ -3682,7 +3688,7 @@ ADDR_E_RETURNCODE AddrLib1::PostComputeMipLevel(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlSetupTileCfg
+*   Lib::HwlSetupTileCfg
 *
 *   @brief
 *       Map tile index to tile setting.
@@ -3690,7 +3696,7 @@ ADDR_E_RETURNCODE AddrLib1::PostComputeMipLevel(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::HwlSetupTileCfg(
+ADDR_E_RETURNCODE Lib::HwlSetupTileCfg(
     UINT_32         bpp,              ///< Bits per pixel
     INT_32          index,            ///< [in] Tile index
     INT_32          macroModeIndex,   ///< [in] Index in macro tile mode table(CI)
@@ -3704,7 +3710,7 @@ ADDR_E_RETURNCODE AddrLib1::HwlSetupTileCfg(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::HwlGetPipes
+*   Lib::HwlGetPipes
 *
 *   @brief
 *       Get number pipes
@@ -3712,7 +3718,7 @@ ADDR_E_RETURNCODE AddrLib1::HwlSetupTileCfg(
 *       num pipes
 ****************************************************************************************************
 */
-UINT_32 AddrLib1::HwlGetPipes(
+UINT_32 Lib::HwlGetPipes(
     const ADDR_TILEINFO* pTileInfo    ///< [in] Tile info
     ) const
 {
@@ -3722,7 +3728,7 @@ UINT_32 AddrLib1::HwlGetPipes(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputeQbStereoInfo
+*   Lib::ComputeQbStereoInfo
 *
 *   @brief
 *       Get quad buffer stereo information
@@ -3730,7 +3736,7 @@ UINT_32 AddrLib1::HwlGetPipes(
 *       TRUE if no error
 ****************************************************************************************************
 */
-BOOL_32 AddrLib1::ComputeQbStereoInfo(
+BOOL_32 Lib::ComputeQbStereoInfo(
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [in/out] updated pOut+pStereoInfo
     ) const
 {
@@ -3767,7 +3773,7 @@ BOOL_32 AddrLib1::ComputeQbStereoInfo(
 
 /**
 ****************************************************************************************************
-*   AddrLib1::ComputePrtInfo
+*   Lib::ComputePrtInfo
 *
 *   @brief
 *       Compute prt surface related info
@@ -3776,7 +3782,7 @@ BOOL_32 AddrLib1::ComputeQbStereoInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib1::ComputePrtInfo(
+ADDR_E_RETURNCODE Lib::ComputePrtInfo(
     const ADDR_PRT_INFO_INPUT*  pIn,
     ADDR_PRT_INFO_OUTPUT*       pOut) const
 {
@@ -3786,12 +3792,12 @@ ADDR_E_RETURNCODE AddrLib1::ComputePrtInfo(
 
     UINT_32     expandX = 1;
     UINT_32     expandY = 1;
-    AddrElemMode elemMode;
+    ElemMode    elemMode;
 
     UINT_32     bpp = GetElemLib()->GetBitsPerPixel(pIn->format,
-                                                &elemMode,
-                                                &expandX,
-                                                &expandY);
+                                                    &elemMode,
+                                                    &expandX,
+                                                    &expandY);
 
     if (bpp <8 || bpp == 24 || bpp == 48 || bpp == 96)
     {
@@ -3895,3 +3901,5 @@ ADDR_E_RETURNCODE AddrLib1::ComputePrtInfo(
     return returnCode;
 }
 
+} // V1
+} // Addr

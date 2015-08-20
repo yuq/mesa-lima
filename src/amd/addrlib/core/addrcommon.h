@@ -47,99 +47,6 @@
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Common constants
-///////////////////////////////////////////////////////////////////////////////////////////////////
-static const UINT_32 MicroTileWidth      = 8;       ///< Micro tile width, for 1D and 2D tiling
-static const UINT_32 MicroTileHeight     = 8;       ///< Micro tile height, for 1D and 2D tiling
-static const UINT_32 ThickTileThickness  = 4;       ///< Micro tile thickness, for THICK modes
-static const UINT_32 XThickTileThickness = 8;       ///< Extra thick tiling thickness
-static const UINT_32 PowerSaveTileBytes  = 64;      ///< Nuber of bytes per tile for power save 64
-static const UINT_32 CmaskCacheBits      = 1024;    ///< Number of bits for CMASK cache
-static const UINT_32 CmaskElemBits       = 4;       ///< Number of bits for CMASK element
-static const UINT_32 HtileCacheBits      = 16384;   ///< Number of bits for HTILE cache 512*32
-
-static const UINT_32 MicroTilePixels     = MicroTileWidth * MicroTileHeight;
-
-static const INT_32 TileIndexInvalid        = TILEINDEX_INVALID;
-static const INT_32 TileIndexLinearGeneral  = TILEINDEX_LINEAR_GENERAL;
-static const INT_32 TileIndexNoMacroIndex   = -3;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// Common macros
-///////////////////////////////////////////////////////////////////////////////////////////////////
-#define BITS_PER_BYTE 8
-#define BITS_TO_BYTES(x) ( ((x) + (BITS_PER_BYTE-1)) / BITS_PER_BYTE )
-#define BYTES_TO_BITS(x) ( (x) * BITS_PER_BYTE )
-
-/// Helper macros to select a single bit from an int (undefined later in section)
-#define _BIT(v,b)      (((v) >> (b) ) & 1)
-
-/**
-****************************************************************************************************
-* @brief Enums to identify AddrLib type
-****************************************************************************************************
-*/
-enum AddrLibClass
-{
-    BASE_ADDRLIB = 0x0,
-    R600_ADDRLIB = 0x6,
-    R800_ADDRLIB = 0x8,
-    SI_ADDRLIB   = 0xa,
-    CI_ADDRLIB   = 0xb,
-};
-
-/**
-****************************************************************************************************
-* AddrChipFamily
-*
-*   @brief
-*       Neutral enums that specifies chip family.
-*
-****************************************************************************************************
-*/
-enum AddrChipFamily
-{
-    ADDR_CHIP_FAMILY_IVLD,    ///< Invalid family
-    ADDR_CHIP_FAMILY_R6XX,
-    ADDR_CHIP_FAMILY_R7XX,
-    ADDR_CHIP_FAMILY_R8XX,
-    ADDR_CHIP_FAMILY_NI,
-    ADDR_CHIP_FAMILY_SI,
-    ADDR_CHIP_FAMILY_CI,
-    ADDR_CHIP_FAMILY_VI,
-};
-
-/**
-****************************************************************************************************
-* AddrConfigFlags
-*
-*   @brief
-*       This structure is used to set configuration flags.
-****************************************************************************************************
-*/
-union AddrConfigFlags
-{
-    struct
-    {
-        /// These flags are set up internally thru AddrLib::Create() based on ADDR_CREATE_FLAGS
-        UINT_32 optimalBankSwap        : 1;    ///< New bank tiling for RV770 only
-        UINT_32 noCubeMipSlicesPad     : 1;    ///< Disables faces padding for cubemap mipmaps
-        UINT_32 fillSizeFields         : 1;    ///< If clients fill size fields in all input and
-                                               ///  output structure
-        UINT_32 ignoreTileInfo         : 1;    ///< Don't use tile info structure
-        UINT_32 useTileIndex           : 1;    ///< Make tileIndex field in input valid
-        UINT_32 useCombinedSwizzle     : 1;    ///< Use combined swizzle
-        UINT_32 checkLast2DLevel       : 1;    ///< Check the last 2D mip sub level
-        UINT_32 useHtileSliceAlign     : 1;    ///< Do htile single slice alignment
-        UINT_32 allowLargeThickTile    : 1;    ///< Allow 64*thickness*bytesPerPixel > rowSize
-        UINT_32 disableLinearOpt       : 1;    ///< Disallow tile modes to be optimized to linear
-        UINT_32 reserved               : 22;   ///< Reserved bits for future use
-    };
-
-    UINT_32 value;
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 // Platform specific debug break defines
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #if DEBUG
@@ -186,7 +93,7 @@ union AddrConfigFlags
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #if DEBUG
 
-#define ADDR_PRNT(a)    AddrObject::DebugPrint a
+#define ADDR_PRNT(a)    Object::DebugPrint a
 
 /// @brief Macro for reporting informational messages
 /// @ingroup util
@@ -255,6 +162,106 @@ union AddrConfigFlags
 
 #endif // DEBUG
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace Addr
+{
+
+namespace V1
+{
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Common constants
+///////////////////////////////////////////////////////////////////////////////////////////////////
+static const UINT_32 MicroTileWidth      = 8;       ///< Micro tile width, for 1D and 2D tiling
+static const UINT_32 MicroTileHeight     = 8;       ///< Micro tile height, for 1D and 2D tiling
+static const UINT_32 ThickTileThickness  = 4;       ///< Micro tile thickness, for THICK modes
+static const UINT_32 XThickTileThickness = 8;       ///< Extra thick tiling thickness
+static const UINT_32 PowerSaveTileBytes  = 64;      ///< Nuber of bytes per tile for power save 64
+static const UINT_32 CmaskCacheBits      = 1024;    ///< Number of bits for CMASK cache
+static const UINT_32 CmaskElemBits       = 4;       ///< Number of bits for CMASK element
+static const UINT_32 HtileCacheBits      = 16384;   ///< Number of bits for HTILE cache 512*32
+
+static const UINT_32 MicroTilePixels     = MicroTileWidth * MicroTileHeight;
+
+static const INT_32 TileIndexInvalid        = TILEINDEX_INVALID;
+static const INT_32 TileIndexLinearGeneral  = TILEINDEX_LINEAR_GENERAL;
+static const INT_32 TileIndexNoMacroIndex   = -3;
+
+} // V1
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Common macros
+///////////////////////////////////////////////////////////////////////////////////////////////////
+#define BITS_PER_BYTE 8
+#define BITS_TO_BYTES(x) ( ((x) + (BITS_PER_BYTE-1)) / BITS_PER_BYTE )
+#define BYTES_TO_BITS(x) ( (x) * BITS_PER_BYTE )
+
+/// Helper macros to select a single bit from an int (undefined later in section)
+#define _BIT(v,b)      (((v) >> (b) ) & 1)
+
+/**
+****************************************************************************************************
+* @brief Enums to identify AddrLib type
+****************************************************************************************************
+*/
+enum LibClass
+{
+    BASE_ADDRLIB = 0x0,
+    R600_ADDRLIB = 0x6,
+    R800_ADDRLIB = 0x8,
+    SI_ADDRLIB   = 0xa,
+    CI_ADDRLIB   = 0xb,
+};
+
+/**
+****************************************************************************************************
+* ChipFamily
+*
+*   @brief
+*       Neutral enums that specifies chip family.
+*
+****************************************************************************************************
+*/
+enum ChipFamily
+{
+    ADDR_CHIP_FAMILY_IVLD,    ///< Invalid family
+    ADDR_CHIP_FAMILY_R6XX,
+    ADDR_CHIP_FAMILY_R7XX,
+    ADDR_CHIP_FAMILY_R8XX,
+    ADDR_CHIP_FAMILY_NI,
+    ADDR_CHIP_FAMILY_SI,
+    ADDR_CHIP_FAMILY_CI,
+    ADDR_CHIP_FAMILY_VI,
+};
+
+/**
+****************************************************************************************************
+* ConfigFlags
+*
+*   @brief
+*       This structure is used to set configuration flags.
+****************************************************************************************************
+*/
+union ConfigFlags
+{
+    struct
+    {
+        /// These flags are set up internally thru AddrLib::Create() based on ADDR_CREATE_FLAGS
+        UINT_32 optimalBankSwap        : 1;    ///< New bank tiling for RV770 only
+        UINT_32 noCubeMipSlicesPad     : 1;    ///< Disables faces padding for cubemap mipmaps
+        UINT_32 fillSizeFields         : 1;    ///< If clients fill size fields in all input and
+                                               ///  output structure
+        UINT_32 ignoreTileInfo         : 1;    ///< Don't use tile info structure
+        UINT_32 useTileIndex           : 1;    ///< Make tileIndex field in input valid
+        UINT_32 useCombinedSwizzle     : 1;    ///< Use combined swizzle
+        UINT_32 checkLast2DLevel       : 1;    ///< Check the last 2D mip sub level
+        UINT_32 useHtileSliceAlign     : 1;    ///< Do htile single slice alignment
+        UINT_32 allowLargeThickTile    : 1;    ///< Allow 64*thickness*bytesPerPixel > rowSize
+        UINT_32 disableLinearOpt       : 1;    ///< Disallow tile modes to be optimized to linear
+        UINT_32 reserved               : 22;   ///< Reserved bits for future use
+    };
+
+    UINT_32 value;
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Misc helper functions
@@ -595,6 +602,8 @@ static inline ADDR_CHANNEL_SETTING InitChannel(
 
     return t;
 }
+
+} // Addr
 
 #endif // __ADDR_COMMON_H__
 

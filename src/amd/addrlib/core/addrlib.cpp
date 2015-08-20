@@ -81,6 +81,8 @@ UINT_32 __umoddi3(UINT_64 n, UINT_32 base)
 
 #endif // __APPLE__
 
+namespace Addr
+{
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                               Constructor/Destructor
@@ -88,14 +90,14 @@ UINT_32 __umoddi3(UINT_64 n, UINT_32 base)
 
 /**
 ****************************************************************************************************
-*   AddrLib::AddrLib
+*   Lib::Lib
 *
 *   @brief
 *       Constructor for the AddrLib class
 *
 ****************************************************************************************************
 */
-AddrLib::AddrLib() :
+Lib::Lib() :
     m_class(BASE_ADDRLIB),
     m_chipFamily(ADDR_CHIP_FAMILY_IVLD),
     m_chipRevision(0),
@@ -113,15 +115,15 @@ AddrLib::AddrLib() :
 
 /**
 ****************************************************************************************************
-*   AddrLib::AddrLib
+*   Lib::Lib
 *
 *   @brief
 *       Constructor for the AddrLib class with hClient as parameter
 *
 ****************************************************************************************************
 */
-AddrLib::AddrLib(const AddrClient* pClient) :
-    AddrObject(pClient),
+Lib::Lib(const Client* pClient) :
+    Object(pClient),
     m_class(BASE_ADDRLIB),
     m_chipFamily(ADDR_CHIP_FAMILY_IVLD),
     m_chipRevision(0),
@@ -139,14 +141,14 @@ AddrLib::AddrLib(const AddrClient* pClient) :
 
 /**
 ****************************************************************************************************
-*   AddrLib::~AddrLib
+*   Lib::~AddrLib
 *
 *   @brief
 *       Destructor for the AddrLib class
 *
 ****************************************************************************************************
 */
-AddrLib::~AddrLib()
+Lib::~Lib()
 {
     if (m_pElemLib)
     {
@@ -162,7 +164,7 @@ AddrLib::~AddrLib()
 
 /**
 ****************************************************************************************************
-*   AddrLib::Create
+*   Lib::Create
 *
 *   @brief
 *       Creates and initializes AddrLib object.
@@ -171,11 +173,11 @@ AddrLib::~AddrLib()
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib::Create(
+ADDR_E_RETURNCODE Lib::Create(
     const ADDR_CREATE_INPUT* pCreateIn,     ///< [in] pointer to ADDR_CREATE_INPUT
     ADDR_CREATE_OUTPUT*      pCreateOut)    ///< [out] pointer to ADDR_CREATE_OUTPUT
 {
-    AddrLib* pLib = NULL;
+    Lib* pLib = NULL;
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
     if (pCreateIn->createFlags.fillSizeFields == TRUE)
@@ -191,7 +193,7 @@ ADDR_E_RETURNCODE AddrLib::Create(
         (pCreateIn->callbacks.allocSysMem != NULL) &&
         (pCreateIn->callbacks.freeSysMem != NULL))
     {
-        AddrClient client = {
+        Client client = {
             pCreateIn->hClient,
             pCreateIn->callbacks
         };
@@ -202,13 +204,13 @@ ADDR_E_RETURNCODE AddrLib::Create(
                 switch (pCreateIn->chipFamily)
                 {
                     case FAMILY_SI:
-                        pLib = AddrSIHwlInit(&client);
+                        pLib = SiHwlInit(&client);
                         break;
                     case FAMILY_VI:
                     case FAMILY_CZ: // VI based fusion(carrizo)
                     case FAMILY_CI:
                     case FAMILY_KV: // CI based fusion
-                        pLib = AddrCIHwlInit(&client);
+                        pLib = CiHwlInit(&client);
                         break;
                     default:
                         ADDR_ASSERT_ALWAYS();
@@ -235,7 +237,7 @@ ADDR_E_RETURNCODE AddrLib::Create(
         pLib->m_configFlags.allowLargeThickTile = pCreateIn->createFlags.allowLargeThickTile;
         pLib->m_configFlags.disableLinearOpt    = FALSE;
 
-        pLib->SetAddrChipFamily(pCreateIn->chipFamily, pCreateIn->chipRevision);
+        pLib->SetChipFamily(pCreateIn->chipFamily, pCreateIn->chipRevision);
 
         pLib->SetMinPitchAlignPixels(pCreateIn->minPitchAlignPixels);
 
@@ -244,7 +246,7 @@ ADDR_E_RETURNCODE AddrLib::Create(
 
         if (initValid)
         {
-            pLib->m_pElemLib = AddrElemLib::Create(pLib);
+            pLib->m_pElemLib = ElemLib::Create(pLib);
         }
         else
         {
@@ -285,19 +287,19 @@ ADDR_E_RETURNCODE AddrLib::Create(
 
 /**
 ****************************************************************************************************
-*   AddrLib::SetAddrChipFamily
+*   Lib::SetChipFamily
 *
 *   @brief
-*       Convert familyID defined in atiid.h to AddrChipFamily and set m_chipFamily/m_chipRevision
+*       Convert familyID defined in atiid.h to ChipFamily and set m_chipFamily/m_chipRevision
 *   @return
 *      N/A
 ****************************************************************************************************
 */
-VOID AddrLib::SetAddrChipFamily(
+VOID Lib::SetChipFamily(
     UINT_32 uChipFamily,        ///< [in] chip family defined in atiih.h
     UINT_32 uChipRevision)      ///< [in] chip revision defined in "asic_family"_id.h
 {
-    AddrChipFamily family = HwlConvertChipFamily(uChipFamily, uChipRevision);
+    ChipFamily family = HwlConvertChipFamily(uChipFamily, uChipRevision);
 
     ADDR_ASSERT(family != ADDR_CHIP_FAMILY_IVLD);
 
@@ -307,7 +309,7 @@ VOID AddrLib::SetAddrChipFamily(
 
 /**
 ****************************************************************************************************
-*   AddrLib::SetMinPitchAlignPixels
+*   Lib::SetMinPitchAlignPixels
 *
 *   @brief
 *       Set m_minPitchAlignPixels with input param
@@ -316,7 +318,7 @@ VOID AddrLib::SetAddrChipFamily(
 *      N/A
 ****************************************************************************************************
 */
-VOID AddrLib::SetMinPitchAlignPixels(
+VOID Lib::SetMinPitchAlignPixels(
     UINT_32 minPitchAlignPixels)    ///< [in] minmum pitch alignment in pixels
 {
     m_minPitchAlignPixels = (minPitchAlignPixels == 0) ? 1 : minPitchAlignPixels;
@@ -324,7 +326,7 @@ VOID AddrLib::SetMinPitchAlignPixels(
 
 /**
 ****************************************************************************************************
-*   AddrLib::GetAddrLib
+*   Lib::GetLib
 *
 *   @brief
 *       Get AddrLib pointer
@@ -333,15 +335,15 @@ VOID AddrLib::SetMinPitchAlignPixels(
 *      An AddrLib class pointer
 ****************************************************************************************************
 */
-AddrLib * AddrLib::GetAddrLib(
+Lib* Lib::GetLib(
     ADDR_HANDLE hLib)   ///< [in] handle of ADDR_HANDLE
 {
-    return static_cast<AddrLib *>(hLib);
+    return static_cast<Addr::Lib*>(hLib);
 }
 
 /**
 ****************************************************************************************************
-*   AddrLib::GetMaxAlignments
+*   Lib::GetMaxAlignments
 *
 *   @brief
 *       Gets maximum alignments
@@ -350,7 +352,7 @@ AddrLib * AddrLib::GetAddrLib(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib::GetMaxAlignments(
+ADDR_E_RETURNCODE Lib::GetMaxAlignments(
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
     ) const
 {
@@ -374,7 +376,7 @@ ADDR_E_RETURNCODE AddrLib::GetMaxAlignments(
 
 /**
 ****************************************************************************************************
-*   AddrLib::Bits2Number
+*   Lib::Bits2Number
 *
 *   @brief
 *       Cat a array of binary bit to a number
@@ -383,7 +385,7 @@ ADDR_E_RETURNCODE AddrLib::GetMaxAlignments(
 *       The number combined with the array of bits
 ****************************************************************************************************
 */
-UINT_32 AddrLib::Bits2Number(
+UINT_32 Lib::Bits2Number(
     UINT_32 bitNum,     ///< [in] how many bits
     ...)                ///< [in] varaible bits value starting from MSB
 {
@@ -414,7 +416,7 @@ UINT_32 AddrLib::Bits2Number(
 
 /**
 ****************************************************************************************************
-*   AddrLib::Flt32ToColorPixel
+*   Lib::Flt32ToColorPixel
 *
 *   @brief
 *       Convert a FLT_32 value to a depth/stencil pixel value
@@ -422,7 +424,7 @@ UINT_32 AddrLib::Bits2Number(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib::Flt32ToDepthPixel(
+ADDR_E_RETURNCODE Lib::Flt32ToDepthPixel(
     const ELEM_FLT32TODEPTHPIXEL_INPUT* pIn,
     ELEM_FLT32TODEPTHPIXEL_OUTPUT* pOut) const
 {
@@ -492,7 +494,7 @@ ADDR_E_RETURNCODE AddrLib::Flt32ToDepthPixel(
 
 /**
 ****************************************************************************************************
-*   AddrLib::Flt32ToColorPixel
+*   Lib::Flt32ToColorPixel
 *
 *   @brief
 *       Convert a FLT_32 value to a red/green/blue/alpha pixel value
@@ -500,7 +502,7 @@ ADDR_E_RETURNCODE AddrLib::Flt32ToDepthPixel(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE AddrLib::Flt32ToColorPixel(
+ADDR_E_RETURNCODE Lib::Flt32ToColorPixel(
     const ELEM_FLT32TOCOLORPIXEL_INPUT* pIn,
     ELEM_FLT32TOCOLORPIXEL_OUTPUT* pOut) const
 {
@@ -530,7 +532,7 @@ ADDR_E_RETURNCODE AddrLib::Flt32ToColorPixel(
 
 /**
 ****************************************************************************************************
-*   AddrLib::GetExportNorm
+*   Lib::GetExportNorm
 *
 *   @brief
 *       Check one format can be EXPORT_NUM
@@ -538,7 +540,7 @@ ADDR_E_RETURNCODE AddrLib::Flt32ToColorPixel(
 *       TRUE if EXPORT_NORM can be used
 ****************************************************************************************************
 */
-BOOL_32 AddrLib::GetExportNorm(
+BOOL_32 Lib::GetExportNorm(
     const ELEM_GETEXPORTNORM_INPUT* pIn) const
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
@@ -561,3 +563,4 @@ BOOL_32 AddrLib::GetExportNorm(
     return enabled;
 }
 
+} // Addr

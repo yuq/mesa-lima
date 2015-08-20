@@ -35,6 +35,8 @@
 
 #include "addrcommon.h"
 
+using namespace Addr;
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //                               Create/Destroy/Config functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,7 +58,7 @@ ADDR_E_RETURNCODE ADDR_API AddrCreate(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    returnCode = AddrLib::Create(pAddrCreateIn, pAddrCreateOut);
+    returnCode = Lib::Create(pAddrCreateIn, pAddrCreateOut);
 
     return returnCode;
 }
@@ -81,7 +83,7 @@ ADDR_E_RETURNCODE ADDR_API AddrDestroy(
 
     if (hLib)
     {
-        AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+        Lib* pLib = Lib::GetLib(hLib);
         pLib->Destroy();
     }
     else
@@ -114,7 +116,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,  ///< [in] surface information
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut) ///< [out] surface parameters and alignments
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -148,7 +150,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceAddrFromCoord(
     const ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT* pIn,  ///< [in] surface info and coordinates
     ADDR_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT*      pOut) ///< [out] surface address
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -180,7 +182,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSurfaceCoordFromAddr(
     const ADDR_COMPUTE_SURFACE_COORDFROMADDR_INPUT* pIn,  ///< [in] surface info and address
     ADDR_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT*      pOut) ///< [out] coordinates
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -218,7 +220,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileInfo(
     const ADDR_COMPUTE_HTILE_INFO_INPUT*    pIn,  ///< [in] Htile information
     ADDR_COMPUTE_HTILE_INFO_OUTPUT*         pOut) ///< [out] Htile pitch, height and size in bytes
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -250,7 +252,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileAddrFromCoord(
     const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Htile info and coordinates
     ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Htile address
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -283,7 +285,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeHtileCoordFromAddr(
     const ADDR_COMPUTE_HTILE_COORDFROMADDR_INPUT*   pIn,  ///< [in] Htile info and address
     ADDR_COMPUTE_HTILE_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Htile coordinates
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -322,7 +324,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskInfo(
     const ADDR_COMPUTE_CMASK_INFO_INPUT*    pIn,  ///< [in] Cmask pitch and height
     ADDR_COMPUTE_CMASK_INFO_OUTPUT*         pOut) ///< [out] Cmask pitch, height and size in bytes
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -354,7 +356,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskAddrFromCoord(
     const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Cmask info and coordinates
     ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Cmask address
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -387,7 +389,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeCmaskCoordFromAddr(
     const ADDR_COMPUTE_CMASK_COORDFROMADDR_INPUT*   pIn,  ///< [in] Cmask info and address
     ADDR_COMPUTE_CMASK_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Cmask coordinates
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -425,7 +427,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,  ///< [in] Fmask information
     ADDR_COMPUTE_FMASK_INFO_OUTPUT*         pOut) ///< [out] Fmask pitch and height
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -457,7 +459,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskAddrFromCoord(
     const ADDR_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*   pIn,  ///< [in] Fmask info and coordinates
     ADDR_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT*        pOut) ///< [out] Fmask address
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -489,7 +491,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeFmaskCoordFromAddr(
     const ADDR_COMPUTE_FMASK_COORDFROMADDR_INPUT*   pIn,  ///< [in] Fmask info and address
     ADDR_COMPUTE_FMASK_COORDFROMADDR_OUTPUT*        pOut) ///< [out] Fmask coordinates
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -527,7 +529,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeDccInfo(
 {
     ADDR_E_RETURNCODE returnCode;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -560,7 +562,7 @@ UINT_32 ADDR_API AddrGetVersion(ADDR_HANDLE hLib)
 {
     UINT_32 version = 0;
 
-    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+    Addr::Lib* pLib = Lib::GetLib(hLib);
 
     ADDR_ASSERT(pLib != NULL);
 
@@ -584,7 +586,7 @@ BOOL_32 ADDR_API AddrUseTileIndex(ADDR_HANDLE hLib)
 {
     BOOL_32 useTileIndex = FALSE;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_ASSERT(pLib != NULL);
 
@@ -608,7 +610,7 @@ BOOL_32 ADDR_API AddrUseCombinedSwizzle(ADDR_HANDLE hLib)
 {
     BOOL_32 useCombinedSwizzle = FALSE;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_ASSERT(pLib != NULL);
 
@@ -637,7 +639,7 @@ ADDR_E_RETURNCODE ADDR_API AddrExtractBankPipeSwizzle(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -668,7 +670,7 @@ ADDR_E_RETURNCODE ADDR_API AddrCombineBankPipeSwizzle(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -699,7 +701,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeSliceSwizzle(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -730,7 +732,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputeBaseSwizzle(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -763,7 +765,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToDepthPixel(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+    Lib* pLib = Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -796,7 +798,7 @@ ADDR_E_RETURNCODE ADDR_API ElemFlt32ToColorPixel(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+    Lib* pLib = Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -826,7 +828,7 @@ BOOL_32 ADDR_API ElemGetExportNorm(
     ADDR_HANDLE                     hLib, ///< addrlib handle
     const ELEM_GETEXPORTNORM_INPUT* pIn)  ///< [in] input structure
 {
-    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+    Addr::Lib* pLib = Lib::GetLib(hLib);
     BOOL_32 enabled = FALSE;
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
@@ -861,7 +863,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileInfoToHW(
     const ADDR_CONVERT_TILEINFOTOHW_INPUT*  pIn,  ///< [in] tile info with real value
     ADDR_CONVERT_TILEINFOTOHW_OUTPUT*       pOut) ///< [out] tile info with HW register value
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -893,7 +895,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex(
     const ADDR_CONVERT_TILEINDEX_INPUT*  pIn,  ///< [in] input - tile index
     ADDR_CONVERT_TILEINDEX_OUTPUT*       pOut) ///< [out] tile mode/type/info
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -925,7 +927,7 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMacroModeIndex(
     const ADDR_GET_MACROMODEINDEX_INPUT* pIn,  ///< [in] input
     ADDR_GET_MACROMODEINDEX_OUTPUT*      pOut) ///< [out] macro mode index
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode;
 
@@ -957,7 +959,7 @@ ADDR_E_RETURNCODE ADDR_API AddrConvertTileIndex1(
     const ADDR_CONVERT_TILEINDEX1_INPUT* pIn,  ///< [in] input - tile index
     ADDR_CONVERT_TILEINDEX_OUTPUT*       pOut) ///< [out] tile mode/type/info
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -992,7 +994,7 @@ ADDR_E_RETURNCODE ADDR_API AddrGetTileIndex(
     const ADDR_GET_TILEINDEX_INPUT* pIn,
     ADDR_GET_TILEINDEX_OUTPUT*      pOut)
 {
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
@@ -1024,7 +1026,7 @@ ADDR_E_RETURNCODE ADDR_API AddrComputePrtInfo(
 {
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 
-    AddrLib1* pLib = AddrLib1::GetAddrLib1(hLib);
+    V1::Lib* pLib = V1::Lib::GetLib(hLib);
 
     if (pLib != NULL)
     {
@@ -1053,7 +1055,7 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
     ADDR_HANDLE                     hLib, ///< address lib handle
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) ///< [out] output structure
 {
-    AddrLib* pLib = AddrLib::GetAddrLib(hLib);
+    Addr::Lib* pLib = Lib::GetLib(hLib);
 
     ADDR_E_RETURNCODE returnCode = ADDR_OK;
 

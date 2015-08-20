@@ -38,10 +38,13 @@
 #include "addrobject.h"
 #include "addrcommon.h"
 
-class AddrLib;
+namespace Addr
+{
+
+class Lib;
 
 // The masks for property bits within the Properties INT_32
-union ADDR_COMPONENT_FLAGS
+union ComponentFlags
 {
     struct
     {
@@ -53,8 +56,8 @@ union ADDR_COMPONENT_FLAGS
     UINT_32 value;
 };
 
-// Copy from legacy lib's AddrNumberType
-enum AddrNumberType
+// Copy from legacy lib's NumberType
+enum NumberType
 {
     // The following number types have the range [-1..1]
     ADDR_NO_NUMBER,         // This component doesn't exist and has no default value
@@ -109,7 +112,7 @@ enum AddrNumberType
 };
 
 // Copy from legacy lib's AddrElement
-enum AddrElemMode
+enum ElemMode
 {
     // These formats allow both packing an unpacking
     ADDR_ROUND_BY_HALF,     // add 1/2 and truncate when packing this element
@@ -137,7 +140,7 @@ enum AddrElemMode
     ADDR_END_ELEMENT        // Used for range comparisons
 };
 
-enum AddrDepthPlanarType
+enum DepthPlanarType
 {
     ADDR_DEPTH_PLANAR_NONE = 0, // No plane z/stencl
     ADDR_DEPTH_PLANAR_R600 = 1, // R600 z and stencil planes are store within a tile
@@ -146,19 +149,19 @@ enum AddrDepthPlanarType
 
 /**
 ****************************************************************************************************
-*   ADDR_PIXEL_FORMATINFO
+*   PixelFormatInfo
 *
 *   @brief
 *       Per component info
 *
 ****************************************************************************************************
 */
-struct ADDR_PIXEL_FORMATINFO
+struct PixelFormatInfo
 {
     UINT_32             compBit[4];
-    AddrNumberType      numType[4];
+    NumberType          numType[4];
     UINT_32             compStart[4];
-    AddrElemMode        elemMode;
+    ElemMode            elemMode;
     UINT_32             comps;          ///< Number of components
 };
 
@@ -167,18 +170,18 @@ struct ADDR_PIXEL_FORMATINFO
 * @brief This class contains asic indepentent element related attributes and operations
 ****************************************************************************************************
 */
-class AddrElemLib : public AddrObject
+class ElemLib : public Object
 {
 protected:
-    AddrElemLib(AddrLib* const pAddrLib);
+    ElemLib(Lib* pAddrLib);
 
 public:
 
     /// Makes this class virtual
-    virtual ~AddrElemLib();
+    virtual ~ElemLib();
 
-    static AddrElemLib *Create(
-        const AddrLib* const pAddrLib);
+    static ElemLib* Create(
+        const Lib* pAddrLib);
 
     /// The implementation is only for R6xx/R7xx, so make it virtual in case we need for R8xx
     BOOL_32 PixGetExportNorm(
@@ -196,32 +199,32 @@ public:
         const ADDR_FLT_32 comps[4], UINT_8 *pPixel) const;
 
     static VOID    Flt32sToInt32s(
-        ADDR_FLT_32 value, UINT_32 bits, AddrNumberType numberType, UINT_32* pResult);
+        ADDR_FLT_32 value, UINT_32 bits, NumberType numberType, UINT_32* pResult);
 
     static VOID    Int32sToPixel(
         UINT_32 numComps, UINT_32* pComps, UINT_32* pCompBits, UINT_32* pCompStart,
-        ADDR_COMPONENT_FLAGS properties, UINT_32 resultBits, UINT_8* pPixel);
+        ComponentFlags properties, UINT_32 resultBits, UINT_8* pPixel);
 
     VOID    PixGetColorCompInfo(
         AddrColorFormat format, AddrSurfaceNumber number, AddrSurfaceSwap swap,
-        ADDR_PIXEL_FORMATINFO* pInfo) const;
+        PixelFormatInfo* pInfo) const;
 
     VOID    PixGetDepthCompInfo(
-        AddrDepthFormat format, ADDR_PIXEL_FORMATINFO* pInfo) const;
+        AddrDepthFormat format, PixelFormatInfo* pInfo) const;
 
     UINT_32 GetBitsPerPixel(
-        AddrFormat format, AddrElemMode* pElemMode,
+        AddrFormat format, ElemMode* pElemMode,
         UINT_32* pExpandX = NULL, UINT_32* pExpandY = NULL, UINT_32* pBitsUnused = NULL);
 
     static VOID    SetClearComps(
         ADDR_FLT_32 comps[4], BOOL_32 clearColor, BOOL_32 float32);
 
     VOID    AdjustSurfaceInfo(
-        AddrElemMode elemMode, UINT_32 expandX, UINT_32 expandY,
+        ElemMode elemMode, UINT_32 expandX, UINT_32 expandY,
         UINT_32* pBpp, UINT_32* pBasePitch, UINT_32* pWidth, UINT_32* pHeight);
 
     VOID    RestoreSurfaceInfo(
-        AddrElemMode elemMode, UINT_32 expandX, UINT_32 expandY,
+        ElemMode elemMode, UINT_32 expandX, UINT_32 expandY,
         UINT_32* pBpp, UINT_32* pWidth, UINT_32* pHeight);
 
     /// Checks if depth and stencil are planar inside a tile
@@ -231,7 +234,7 @@ public:
     }
 
     /// Sets m_configFlags, copied from AddrLib
-    VOID    SetConfigFlags(AddrConfigFlags flags)
+    VOID    SetConfigFlags(ConfigFlags flags)
     {
         m_configFlags = flags;
     }
@@ -244,27 +247,29 @@ protected:
 
     static VOID    GetCompBits(
         UINT_32 c0, UINT_32 c1, UINT_32 c2, UINT_32 c3,
-        ADDR_PIXEL_FORMATINFO* pInfo,
-        AddrElemMode elemMode = ADDR_ROUND_BY_HALF);
+        PixelFormatInfo* pInfo,
+        ElemMode elemMode = ADDR_ROUND_BY_HALF);
 
     static VOID    GetCompType(
         AddrColorFormat format, AddrSurfaceNumber numType,
-        ADDR_PIXEL_FORMATINFO* pInfo);
+        PixelFormatInfo* pInfo);
 
     static VOID    GetCompSwap(
-        AddrSurfaceSwap swap, ADDR_PIXEL_FORMATINFO* pInfo);
+        AddrSurfaceSwap swap, PixelFormatInfo* pInfo);
 
     static VOID    SwapComps(
-        UINT_32 c0, UINT_32 c1, ADDR_PIXEL_FORMATINFO* pInfo);
+        UINT_32 c0, UINT_32 c1, PixelFormatInfo* pInfo);
 
 private:
 
     UINT_32             m_fp16ExportNorm;   ///< If allow FP16 to be reported as EXPORT_NORM
-    AddrDepthPlanarType m_depthPlanarType;
+    DepthPlanarType     m_depthPlanarType;
 
-    AddrConfigFlags   m_configFlags;      ///< Copy of AddrLib's configFlags
-    AddrLib* const      m_pAddrLib;         ///< Pointer to parent addrlib instance
+    ConfigFlags         m_configFlags;      ///< Copy of AddrLib's configFlags
+    Addr::Lib* const    m_pAddrLib;         ///< Pointer to parent addrlib instance
 };
+
+} //Addr
 
 #endif
 

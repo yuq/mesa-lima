@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  siaddrlib.cpp
-* @brief Contains the implementation for the SiAddrLib class.
+* @brief Contains the implementation for the SiLib class.
 ****************************************************************************************************
 */
 
@@ -45,34 +45,40 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+namespace Addr
+{
 
 /**
 ****************************************************************************************************
-*   AddrSiHwlInit
+*   SiHwlInit
 *
 *   @brief
-*       Creates an SiAddrLib object.
+*       Creates an SiLib object.
 *
 *   @return
-*       Returns an SiAddrLib object pointer.
+*       Returns an SiLib object pointer.
 ****************************************************************************************************
 */
-AddrLib* AddrSIHwlInit(const AddrClient* pClient)
+Lib* SiHwlInit(const Client* pClient)
 {
-    return SiAddrLib::CreateObj(pClient);
+    return V1::SiLib::CreateObj(pClient);
 }
+
+namespace V1
+{
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::SiAddrLib
+*   SiLib::SiLib
 *
 *   @brief
 *       Constructor
 *
 ****************************************************************************************************
 */
-SiAddrLib::SiAddrLib(const AddrClient* pClient) :
-    EgBasedAddrLib(pClient),
+SiLib::SiLib(const Client* pClient)
+    :
+    EgBasedLib(pClient),
     m_noOfEntries(0),
     m_numEquations(0)
 {
@@ -82,19 +88,19 @@ SiAddrLib::SiAddrLib(const AddrClient* pClient) :
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::~SiAddrLib
+*   SiLib::~SiLib
 *
 *   @brief
 *       Destructor
 ****************************************************************************************************
 */
-SiAddrLib::~SiAddrLib()
+SiLib::~SiLib()
 {
 }
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetPipes
+*   SiLib::HwlGetPipes
 *
 *   @brief
 *       Get number pipes
@@ -102,7 +108,7 @@ SiAddrLib::~SiAddrLib()
 *       num pipes
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlGetPipes(
+UINT_32 SiLib::HwlGetPipes(
     const ADDR_TILEINFO* pTileInfo    ///< [in] Tile info
     ) const
 {
@@ -123,14 +129,14 @@ UINT_32 SiAddrLib::HwlGetPipes(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::GetPipePerSurf
+*   SiLib::GetPipePerSurf
 *   @brief
 *       get pipe num base on inputing tileinfo->pipeconfig
 *   @return
 *       pipe number
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::GetPipePerSurf(
+UINT_32 SiLib::GetPipePerSurf(
     AddrPipeCfg pipeConfig   ///< [in] pipe config
     ) const
 {
@@ -169,7 +175,7 @@ UINT_32 SiAddrLib::GetPipePerSurf(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::ComputeBankEquation
+*   SiLib::ComputeBankEquation
 *
 *   @brief
 *       Compute bank equation
@@ -178,7 +184,7 @@ UINT_32 SiAddrLib::GetPipePerSurf(
 *       If equation can be computed
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::ComputeBankEquation(
+ADDR_E_RETURNCODE SiLib::ComputeBankEquation(
     UINT_32         log2BytesPP,    ///< [in] log2 of bytes per pixel
     UINT_32         threshX,        ///< [in] threshold for x channel
     UINT_32         threshY,        ///< [in] threshold for y channel
@@ -303,7 +309,7 @@ ADDR_E_RETURNCODE SiAddrLib::ComputeBankEquation(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::ComputePipeEquation
+*   SiLib::ComputePipeEquation
 *
 *   @brief
 *       Compute pipe equation
@@ -312,7 +318,7 @@ ADDR_E_RETURNCODE SiAddrLib::ComputeBankEquation(
 *       If equation can be computed
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::ComputePipeEquation(
+ADDR_E_RETURNCODE SiLib::ComputePipeEquation(
     UINT_32        log2BytesPP, ///< [in] Log2 of bytes per pixel
     UINT_32        threshX,     ///< [in] Threshold for X channel
     UINT_32        threshY,     ///< [in] Threshold for Y channel
@@ -501,7 +507,7 @@ ADDR_E_RETURNCODE SiAddrLib::ComputePipeEquation(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::ComputePipeFromCoord
+*   SiLib::ComputePipeFromCoord
 *
 *   @brief
 *       Compute pipe number from coordinates
@@ -509,7 +515,7 @@ ADDR_E_RETURNCODE SiAddrLib::ComputePipeEquation(
 *       Pipe number
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::ComputePipeFromCoord(
+UINT_32 SiLib::ComputePipeFromCoord(
     UINT_32         x,              ///< [in] x coordinate
     UINT_32         y,              ///< [in] y coordinate
     UINT_32         slice,          ///< [in] slice index
@@ -652,7 +658,7 @@ UINT_32 SiAddrLib::ComputePipeFromCoord(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::ComputeTileCoordFromPipeAndElemIdx
+*   SiLib::ComputeTileCoordFromPipeAndElemIdx
 *
 *   @brief
 *       Compute (x,y) of a tile within a macro tile from address
@@ -660,7 +666,7 @@ UINT_32 SiAddrLib::ComputePipeFromCoord(
 *       Pipe number
 ****************************************************************************************************
 */
-VOID SiAddrLib::ComputeTileCoordFromPipeAndElemIdx(
+VOID SiLib::ComputeTileCoordFromPipeAndElemIdx(
     UINT_32         elemIdx,          ///< [in] per pipe element index within a macro tile
     UINT_32         pipe,             ///< [in] pipe index
     AddrPipeCfg     pipeCfg,          ///< [in] pipe config
@@ -909,7 +915,7 @@ VOID SiAddrLib::ComputeTileCoordFromPipeAndElemIdx(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::TileCoordToMaskElementIndex
+*   SiLib::TileCoordToMaskElementIndex
 *
 *   @brief
 *       Compute element index from coordinates in tiles
@@ -917,7 +923,7 @@ VOID SiAddrLib::ComputeTileCoordFromPipeAndElemIdx(
 *       Element index
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::TileCoordToMaskElementIndex(
+UINT_32 SiLib::TileCoordToMaskElementIndex(
     UINT_32         tx,                 ///< [in] x coord, in Tiles
     UINT_32         ty,                 ///< [in] y coord, in Tiles
     AddrPipeCfg     pipeConfig,         ///< [in] pipe config
@@ -1045,7 +1051,7 @@ UINT_32 SiAddrLib::TileCoordToMaskElementIndex(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeTileDataWidthAndHeightLinear
+*   SiLib::HwlComputeTileDataWidthAndHeightLinear
 *
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE) for linear layout
@@ -1057,7 +1063,7 @@ UINT_32 SiAddrLib::TileCoordToMaskElementIndex(
 *       MacroWidth and macroHeight are measured in pixels
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
+VOID SiLib::HwlComputeTileDataWidthAndHeightLinear(
     UINT_32*        pMacroWidth,     ///< [out] macro tile width
     UINT_32*        pMacroHeight,    ///< [out] macro tile height
     UINT_32         bpp,             ///< [in] bits per pixel
@@ -1091,7 +1097,7 @@ VOID SiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeHtileBytes
+*   SiLib::HwlComputeHtileBytes
 *
 *   @brief
 *       Compute htile size in bytes
@@ -1100,7 +1106,7 @@ VOID SiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 *       Htile size in bytes
 ****************************************************************************************************
 */
-UINT_64 SiAddrLib::HwlComputeHtileBytes(
+UINT_64 SiLib::HwlComputeHtileBytes(
     UINT_32     pitch,          ///< [in] pitch
     UINT_32     height,         ///< [in] height
     UINT_32     bpp,            ///< [in] bits per pixel
@@ -1115,7 +1121,7 @@ UINT_64 SiAddrLib::HwlComputeHtileBytes(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeXmaskAddrFromCoord
+*   SiLib::HwlComputeXmaskAddrFromCoord
 *
 *   @brief
 *       Compute address from coordinates for htile/cmask
@@ -1123,7 +1129,7 @@ UINT_64 SiAddrLib::HwlComputeHtileBytes(
 *       Byte address
 ****************************************************************************************************
 */
-UINT_64 SiAddrLib::HwlComputeXmaskAddrFromCoord(
+UINT_64 SiLib::HwlComputeXmaskAddrFromCoord(
     UINT_32        pitch,          ///< [in] pitch
     UINT_32        height,         ///< [in] height
     UINT_32        x,              ///< [in] x coord
@@ -1270,7 +1276,7 @@ UINT_64 SiAddrLib::HwlComputeXmaskAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeXmaskCoordFromAddr
+*   SiLib::HwlComputeXmaskCoordFromAddr
 *
 *   @brief
 *       Compute the coord from an address of a cmask/htile
@@ -1282,7 +1288,7 @@ UINT_64 SiAddrLib::HwlComputeXmaskAddrFromCoord(
 *       This method is reused by htile, so rename to Xmask
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlComputeXmaskCoordFromAddr(
+VOID SiLib::HwlComputeXmaskCoordFromAddr(
     UINT_64         addr,           ///< [in] address
     UINT_32         bitPosition,    ///< [in] bitPosition in a byte
     UINT_32         pitch,          ///< [in] pitch
@@ -1476,14 +1482,14 @@ VOID SiAddrLib::HwlComputeXmaskCoordFromAddr(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetPitchAlignmentLinear
+*   SiLib::HwlGetPitchAlignmentLinear
 *   @brief
 *       Get pitch alignment
 *   @return
 *       pitch alignment
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlGetPitchAlignmentLinear(
+UINT_32 SiLib::HwlGetPitchAlignmentLinear(
     UINT_32             bpp,    ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags   ///< [in] surface flags
     ) const
@@ -1506,7 +1512,7 @@ UINT_32 SiAddrLib::HwlGetPitchAlignmentLinear(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetSizeAdjustmentLinear
+*   SiLib::HwlGetSizeAdjustmentLinear
 *
 *   @brief
 *       Adjust linear surface pitch and slice size
@@ -1515,7 +1521,7 @@ UINT_32 SiAddrLib::HwlGetPitchAlignmentLinear(
 *       Logical slice size in bytes
 ****************************************************************************************************
 */
-UINT_64 SiAddrLib::HwlGetSizeAdjustmentLinear(
+UINT_64 SiLib::HwlGetSizeAdjustmentLinear(
     AddrTileMode        tileMode,       ///< [in] tile mode
     UINT_32             bpp,            ///< [in] bits per pixel
     UINT_32             numSamples,     ///< [in] number of samples
@@ -1567,7 +1573,7 @@ UINT_64 SiAddrLib::HwlGetSizeAdjustmentLinear(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlPreHandleBaseLvl3xPitch
+*   SiLib::HwlPreHandleBaseLvl3xPitch
 *
 *   @brief
 *       Pre-handler of 3x pitch (96 bit) adjustment
@@ -1576,7 +1582,7 @@ UINT_64 SiAddrLib::HwlGetSizeAdjustmentLinear(
 *       Expected pitch
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
+UINT_32 SiLib::HwlPreHandleBaseLvl3xPitch(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] input
     UINT_32                                 expPitch    ///< [in] pitch
     ) const
@@ -1587,7 +1593,7 @@ UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
     // do here
     if (pIn->flags.pow2Pad == FALSE)
     {
-        AddrLib1::HwlPreHandleBaseLvl3xPitch(pIn, expPitch);
+        Addr::V1::Lib::HwlPreHandleBaseLvl3xPitch(pIn, expPitch);
     }
     else
     {
@@ -1599,7 +1605,7 @@ UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlPostHandleBaseLvl3xPitch
+*   SiLib::HwlPostHandleBaseLvl3xPitch
 *
 *   @brief
 *       Post-handler of 3x pitch adjustment
@@ -1608,7 +1614,7 @@ UINT_32 SiAddrLib::HwlPreHandleBaseLvl3xPitch(
 *       Expected pitch
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
+UINT_32 SiLib::HwlPostHandleBaseLvl3xPitch(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,        ///< [in] input
     UINT_32                                 expPitch    ///< [in] pitch
     ) const
@@ -1620,7 +1626,7 @@ UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
     // From SI, the pitch is expanded 3x first, then padded to pow2, so no special handler here
     if (pIn->flags.pow2Pad == FALSE)
     {
-        AddrLib1::HwlPostHandleBaseLvl3xPitch(pIn, expPitch);
+        Addr::V1::Lib::HwlPostHandleBaseLvl3xPitch(pIn, expPitch);
     }
 
     return expPitch;
@@ -1628,7 +1634,7 @@ UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetPitchAlignmentMicroTiled
+*   SiLib::HwlGetPitchAlignmentMicroTiled
 *
 *   @brief
 *       Compute 1D tiled surface pitch alignment
@@ -1637,7 +1643,7 @@ UINT_32 SiAddrLib::HwlPostHandleBaseLvl3xPitch(
 *       pitch alignment
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlGetPitchAlignmentMicroTiled(
+UINT_32 SiLib::HwlGetPitchAlignmentMicroTiled(
     AddrTileMode        tileMode,          ///< [in] tile mode
     UINT_32             bpp,               ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,             ///< [in] surface flags
@@ -1648,7 +1654,7 @@ UINT_32 SiAddrLib::HwlGetPitchAlignmentMicroTiled(
 
     if (flags.qbStereo)
     {
-        pitchAlign = EgBasedAddrLib::HwlGetPitchAlignmentMicroTiled(tileMode,bpp,flags,numSamples);
+        pitchAlign = EgBasedLib::HwlGetPitchAlignmentMicroTiled(tileMode,bpp,flags,numSamples);
     }
     else
     {
@@ -1660,7 +1666,7 @@ UINT_32 SiAddrLib::HwlGetPitchAlignmentMicroTiled(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetSizeAdjustmentMicroTiled
+*   SiLib::HwlGetSizeAdjustmentMicroTiled
 *
 *   @brief
 *       Adjust 1D tiled surface pitch and slice size
@@ -1669,7 +1675,7 @@ UINT_32 SiAddrLib::HwlGetPitchAlignmentMicroTiled(
 *       Logical slice size in bytes
 ****************************************************************************************************
 */
-UINT_64 SiAddrLib::HwlGetSizeAdjustmentMicroTiled(
+UINT_64 SiLib::HwlGetSizeAdjustmentMicroTiled(
     UINT_32             thickness,      ///< [in] thickness
     UINT_32             bpp,            ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,          ///< [in] surface flags
@@ -1740,19 +1746,19 @@ UINT_64 SiAddrLib::HwlGetSizeAdjustmentMicroTiled(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlConvertChipFamily
+*   SiLib::HwlConvertChipFamily
 *
 *   @brief
-*       Convert familyID defined in atiid.h to AddrChipFamily and set m_chipFamily/m_chipRevision
+*       Convert familyID defined in atiid.h to ChipFamily and set m_chipFamily/m_chipRevision
 *   @return
-*       AddrChipFamily
+*       ChipFamily
 ****************************************************************************************************
 */
-AddrChipFamily SiAddrLib::HwlConvertChipFamily(
+ChipFamily SiLib::HwlConvertChipFamily(
     UINT_32 uChipFamily,        ///< [in] chip family defined in atiih.h
     UINT_32 uChipRevision)      ///< [in] chip revision defined in "asic_family"_id.h
 {
-    AddrChipFamily family = ADDR_CHIP_FAMILY_SI;
+    ChipFamily family = ADDR_CHIP_FAMILY_SI;
 
     switch (uChipFamily)
     {
@@ -1774,13 +1780,13 @@ AddrChipFamily SiAddrLib::HwlConvertChipFamily(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlSetupTileInfo
+*   SiLib::HwlSetupTileInfo
 *
 *   @brief
 *       Setup default value of tile info for SI
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlSetupTileInfo(
+VOID SiLib::HwlSetupTileInfo(
     AddrTileMode                        tileMode,       ///< [in] Tile mode
     ADDR_SURFACE_FLAGS                  flags,          ///< [in] Surface type flags
     UINT_32                             bpp,            ///< [in] Bits per pixel
@@ -2097,7 +2103,7 @@ VOID SiAddrLib::HwlSetupTileInfo(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::DecodeGbRegs
+*   SiLib::DecodeGbRegs
 *
 *   @brief
 *       Decodes GB_ADDR_CONFIG and noOfBanks/noOfRanks
@@ -2107,7 +2113,7 @@ VOID SiAddrLib::HwlSetupTileInfo(
 *
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::DecodeGbRegs(
+BOOL_32 SiLib::DecodeGbRegs(
     const ADDR_REGISTER_VALUE* pRegValue) ///< [in] create input
 {
     GB_ADDR_CONFIG  reg;
@@ -2186,7 +2192,7 @@ BOOL_32 SiAddrLib::DecodeGbRegs(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlInitGlobalParams
+*   SiLib::HwlInitGlobalParams
 *
 *   @brief
 *       Initializes global parameters
@@ -2196,7 +2202,7 @@ BOOL_32 SiAddrLib::DecodeGbRegs(
 *
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::HwlInitGlobalParams(
+BOOL_32 SiLib::HwlInitGlobalParams(
     const ADDR_CREATE_INPUT* pCreateIn) ///< [in] create input
 {
     BOOL_32 valid = TRUE;
@@ -2235,21 +2241,21 @@ BOOL_32 SiAddrLib::HwlInitGlobalParams(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlConvertTileInfoToHW
+*   SiLib::HwlConvertTileInfoToHW
 *   @brief
 *       Entry of si's ConvertTileInfoToHW
 *   @return
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::HwlConvertTileInfoToHW(
+ADDR_E_RETURNCODE SiLib::HwlConvertTileInfoToHW(
     const ADDR_CONVERT_TILEINFOTOHW_INPUT* pIn, ///< [in] input structure
     ADDR_CONVERT_TILEINFOTOHW_OUTPUT* pOut      ///< [out] output structure
     ) const
 {
     ADDR_E_RETURNCODE retCode   = ADDR_OK;
 
-    retCode = EgBasedAddrLib::HwlConvertTileInfoToHW(pIn, pOut);
+    retCode = EgBasedLib::HwlConvertTileInfoToHW(pIn, pOut);
 
     if (retCode == ADDR_OK)
     {
@@ -2277,7 +2283,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlConvertTileInfoToHW(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeXmaskCoordYFrom8Pipe
+*   SiLib::HwlComputeXmaskCoordYFrom8Pipe
 *
 *   @brief
 *       Compute the Y coord which will be added to Xmask Y
@@ -2286,7 +2292,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlConvertTileInfoToHW(
 *       Y coord
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlComputeXmaskCoordYFrom8Pipe(
+UINT_32 SiLib::HwlComputeXmaskCoordYFrom8Pipe(
     UINT_32         pipe,       ///< [in] pipe id
     UINT_32         x           ///< [in] tile coord x, which is original x coord / 8
     ) const
@@ -2300,7 +2306,7 @@ UINT_32 SiAddrLib::HwlComputeXmaskCoordYFrom8Pipe(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeSurfaceCoord2DFromBankPipe
+*   SiLib::HwlComputeSurfaceCoord2DFromBankPipe
 *
 *   @brief
 *       Compute surface x,y coordinates from bank/pipe info
@@ -2308,7 +2314,7 @@ UINT_32 SiAddrLib::HwlComputeXmaskCoordYFrom8Pipe(
 *       N/A
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlComputeSurfaceCoord2DFromBankPipe(
+VOID SiLib::HwlComputeSurfaceCoord2DFromBankPipe(
     AddrTileMode        tileMode,   ///< [in] tile mode
     UINT_32*            pX,         ///< [in/out] x coordinate
     UINT_32*            pY,         ///< [in/out] y coordinate
@@ -2465,7 +2471,7 @@ VOID SiAddrLib::HwlComputeSurfaceCoord2DFromBankPipe(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlPreAdjustBank
+*   SiLib::HwlPreAdjustBank
 *
 *   @brief
 *       Adjust bank before calculating address acoording to bank/pipe
@@ -2473,7 +2479,7 @@ VOID SiAddrLib::HwlComputeSurfaceCoord2DFromBankPipe(
 *       Adjusted bank
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlPreAdjustBank(
+UINT_32 SiLib::HwlPreAdjustBank(
     UINT_32         tileX,      ///< [in] x coordinate in unit of tile
     UINT_32         bank,       ///< [in] bank
     ADDR_TILEINFO*  pTileInfo   ///< [in] tile info
@@ -2497,7 +2503,7 @@ UINT_32 SiAddrLib::HwlPreAdjustBank(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeSurfaceInfo
+*   SiLib::HwlComputeSurfaceInfo
 *
 *   @brief
 *       Entry of si's ComputeSurfaceInfo
@@ -2505,14 +2511,14 @@ UINT_32 SiAddrLib::HwlPreAdjustBank(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::HwlComputeSurfaceInfo(
+ADDR_E_RETURNCODE SiLib::HwlComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [out] output structure
     ) const
 {
     pOut->tileIndex = pIn->tileIndex;
 
-    ADDR_E_RETURNCODE retCode = EgBasedAddrLib::HwlComputeSurfaceInfo(pIn, pOut);
+    ADDR_E_RETURNCODE retCode = EgBasedLib::HwlComputeSurfaceInfo(pIn, pOut);
 
     UINT_32 tileIndex = static_cast<UINT_32>(pOut->tileIndex);
 
@@ -2541,14 +2547,14 @@ ADDR_E_RETURNCODE SiAddrLib::HwlComputeSurfaceInfo(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeMipLevel
+*   SiLib::HwlComputeMipLevel
 *   @brief
 *       Compute MipLevel info (including level 0)
 *   @return
 *       TRUE if HWL's handled
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::HwlComputeMipLevel(
+BOOL_32 SiLib::HwlComputeMipLevel(
     ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn ///< [in/out] Input structure
     ) const
 {
@@ -2558,7 +2564,7 @@ BOOL_32 SiAddrLib::HwlComputeMipLevel(
         // Note: Don't check expand 3x formats(96 bit) as the basePitch is not pow2 even if
         // we explicity set pow2Pad flag. The 3x base pitch is padded to pow2 but after being
         // divided by expandX factor (3) - to program texture pitch, the basePitch is never pow2.
-        if (AddrElemLib::IsExpand3x(pIn->format) == FALSE)
+        if (ElemLib::IsExpand3x(pIn->format) == FALSE)
         {
             // Sublevel pitches are generated from base level pitch instead of width on SI
             // If pow2Pad is 0, we don't assert - as this is not really used for a mip chain
@@ -2579,7 +2585,7 @@ BOOL_32 SiAddrLib::HwlComputeMipLevel(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlCheckLastMacroTiledLvl
+*   SiLib::HwlCheckLastMacroTiledLvl
 *
 *   @brief
 *       Sets pOut->last2DLevel to TRUE if it is
@@ -2587,7 +2593,7 @@ BOOL_32 SiAddrLib::HwlComputeMipLevel(
 *
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlCheckLastMacroTiledLvl(
+VOID SiLib::HwlCheckLastMacroTiledLvl(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT* pIn, ///< [in] Input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pOut      ///< [in/out] Output structure (used as input, too)
     ) const
@@ -2622,7 +2628,7 @@ VOID SiAddrLib::HwlCheckLastMacroTiledLvl(
         nextHeight = pOut->height >> 1;
         // Special format such as FMT_1 and FMT_32_32_32 can be linear only so we consider block
         // compressed foramts
-        if (AddrElemLib::IsBlockCompressed(pIn->format))
+        if (ElemLib::IsBlockCompressed(pIn->format))
         {
             nextHeight = (nextHeight + 3) / 4;
         }
@@ -2654,7 +2660,7 @@ VOID SiAddrLib::HwlCheckLastMacroTiledLvl(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlDegradeThickTileMode
+*   SiLib::HwlDegradeThickTileMode
 *
 *   @brief
 *       Degrades valid tile mode for thick modes if needed
@@ -2663,18 +2669,18 @@ VOID SiAddrLib::HwlCheckLastMacroTiledLvl(
 *       Suitable tile mode
 ****************************************************************************************************
 */
-AddrTileMode SiAddrLib::HwlDegradeThickTileMode(
+AddrTileMode SiLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
     UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
     ) const
 {
-    return EgBasedAddrLib::HwlDegradeThickTileMode(baseTileMode, numSlices, pBytesPerTile);
+    return EgBasedLib::HwlDegradeThickTileMode(baseTileMode, numSlices, pBytesPerTile);
 }
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlTileInfoEqual
+*   SiLib::HwlTileInfoEqual
 *
 *   @brief
 *       Return TRUE if all field are equal
@@ -2682,7 +2688,7 @@ AddrTileMode SiAddrLib::HwlDegradeThickTileMode(
 *       Only takes care of current HWL's data
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::HwlTileInfoEqual(
+BOOL_32 SiLib::HwlTileInfoEqual(
     const ADDR_TILEINFO* pLeft, ///<[in] Left compare operand
     const ADDR_TILEINFO* pRight ///<[in] Right compare operand
     ) const
@@ -2691,7 +2697,7 @@ BOOL_32 SiAddrLib::HwlTileInfoEqual(
 
     if (pLeft->pipeConfig == pRight->pipeConfig)
     {
-        equal =  EgBasedAddrLib::HwlTileInfoEqual(pLeft, pRight);
+        equal =  EgBasedLib::HwlTileInfoEqual(pLeft, pRight);
     }
 
     return equal;
@@ -2699,7 +2705,7 @@ BOOL_32 SiAddrLib::HwlTileInfoEqual(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::GetTileSettings
+*   SiLib::GetTileSettings
 *
 *   @brief
 *       Get tile setting infos by index.
@@ -2707,7 +2713,7 @@ BOOL_32 SiAddrLib::HwlTileInfoEqual(
 *       Tile setting info.
 ****************************************************************************************************
 */
-const AddrTileConfig* SiAddrLib::GetTileSetting(
+const TileConfig* SiLib::GetTileSetting(
     UINT_32 index          ///< [in] Tile index
     ) const
 {
@@ -2717,7 +2723,7 @@ const AddrTileConfig* SiAddrLib::GetTileSetting(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlPostCheckTileIndex
+*   SiLib::HwlPostCheckTileIndex
 *
 *   @brief
 *       Map a tile setting to index if curIndex is invalid, otherwise check if curIndex matches
@@ -2726,7 +2732,7 @@ const AddrTileConfig* SiAddrLib::GetTileSetting(
 *       Tile index.
 ****************************************************************************************************
 */
-INT_32 SiAddrLib::HwlPostCheckTileIndex(
+INT_32 SiLib::HwlPostCheckTileIndex(
     const ADDR_TILEINFO* pInfo,     ///< [in] Tile Info
     AddrTileMode         mode,      ///< [in] Tile mode
     AddrTileType         type,      ///< [in] Tile type
@@ -2796,7 +2802,7 @@ INT_32 SiAddrLib::HwlPostCheckTileIndex(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlSetupTileCfg
+*   SiLib::HwlSetupTileCfg
 *
 *   @brief
 *       Map tile index to tile setting.
@@ -2804,7 +2810,7 @@ INT_32 SiAddrLib::HwlPostCheckTileIndex(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
+ADDR_E_RETURNCODE SiLib::HwlSetupTileCfg(
     UINT_32         bpp,            ///< [in] Bits per pixel
     INT_32          index,          ///< [in] Tile index
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
@@ -2846,7 +2852,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
         }
         else
         {
-            const AddrTileConfig* pCfgTable = GetTileSetting(index);
+            const TileConfig* pCfgTable = GetTileSetting(index);
 
             if (pInfo)
             {
@@ -2877,17 +2883,17 @@ ADDR_E_RETURNCODE SiAddrLib::HwlSetupTileCfg(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::ReadGbTileMode
+*   SiLib::ReadGbTileMode
 *
 *   @brief
-*       Convert GB_TILE_MODE HW value to ADDR_TILE_CONFIG.
+*       Convert GB_TILE_MODE HW value to TileConfig.
 *   @return
 *       NA.
 ****************************************************************************************************
 */
-VOID SiAddrLib::ReadGbTileMode(
-    UINT_32             regValue,   ///< [in] GB_TILE_MODE register
-    AddrTileConfig*     pCfg        ///< [out] output structure
+VOID SiLib::ReadGbTileMode(
+    UINT_32     regValue,   ///< [in] GB_TILE_MODE register
+    TileConfig* pCfg        ///< [out] output structure
     ) const
 {
     GB_TILE_MODE gbTileMode;
@@ -2917,7 +2923,7 @@ VOID SiAddrLib::ReadGbTileMode(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::InitTileSettingTable
+*   SiLib::InitTileSettingTable
 *
 *   @brief
 *       Initialize the ADDR_TILE_CONFIG table.
@@ -2925,7 +2931,7 @@ VOID SiAddrLib::ReadGbTileMode(
 *       TRUE if tile table is correctly initialized
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::InitTileSettingTable(
+BOOL_32 SiLib::InitTileSettingTable(
     const UINT_32*  pCfg,           ///< [in] Pointer to table of tile configs
     UINT_32         noOfEntries     ///< [in] Numbe of entries in the table above
     )
@@ -2968,7 +2974,7 @@ BOOL_32 SiAddrLib::InitTileSettingTable(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetTileIndex
+*   SiLib::HwlGetTileIndex
 *
 *   @brief
 *       Return the virtual/real index for given mode/type/info
@@ -2976,7 +2982,7 @@ BOOL_32 SiAddrLib::InitTileSettingTable(
 *       ADDR_OK if successful.
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::HwlGetTileIndex(
+ADDR_E_RETURNCODE SiLib::HwlGetTileIndex(
     const ADDR_GET_TILEINDEX_INPUT* pIn,
     ADDR_GET_TILEINDEX_OUTPUT*      pOut) const
 {
@@ -2989,7 +2995,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetTileIndex(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlFmaskPreThunkSurfInfo
+*   SiLib::HwlFmaskPreThunkSurfInfo
 *
 *   @brief
 *       Some preparation before thunking a ComputeSurfaceInfo call for Fmask
@@ -2997,7 +3003,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetTileIndex(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlFmaskPreThunkSurfInfo(
+VOID SiLib::HwlFmaskPreThunkSurfInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pFmaskIn,   ///< [in] Input of fmask info
     const ADDR_COMPUTE_FMASK_INFO_OUTPUT*   pFmaskOut,  ///< [in] Output of fmask info
     ADDR_COMPUTE_SURFACE_INFO_INPUT*        pSurfIn,    ///< [out] Input of thunked surface info
@@ -3009,7 +3015,7 @@ VOID SiAddrLib::HwlFmaskPreThunkSurfInfo(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlFmaskPostThunkSurfInfo
+*   SiLib::HwlFmaskPostThunkSurfInfo
 *
 *   @brief
 *       Copy hwl extra field after calling thunked ComputeSurfaceInfo
@@ -3017,7 +3023,7 @@ VOID SiAddrLib::HwlFmaskPreThunkSurfInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlFmaskPostThunkSurfInfo(
+VOID SiLib::HwlFmaskPostThunkSurfInfo(
     const ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pSurfOut,   ///< [in] Output of surface info
     ADDR_COMPUTE_FMASK_INFO_OUTPUT* pFmaskOut           ///< [out] Output of fmask info
     ) const
@@ -3028,14 +3034,14 @@ VOID SiAddrLib::HwlFmaskPostThunkSurfInfo(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlComputeFmaskBits
+*   SiLib::HwlComputeFmaskBits
 *   @brief
 *       Computes fmask bits
 *   @return
 *       Fmask bits
 ****************************************************************************************************
 */
-UINT_32 SiAddrLib::HwlComputeFmaskBits(
+UINT_32 SiLib::HwlComputeFmaskBits(
     const ADDR_COMPUTE_FMASK_INFO_INPUT* pIn,
     UINT_32* pNumSamples
     ) const
@@ -3129,7 +3135,7 @@ UINT_32 SiAddrLib::HwlComputeFmaskBits(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlOverrideTileMode
+*   SiLib::HwlOverrideTileMode
 *
 *   @brief
 *       Override tile modes (for PRT only, avoid client passes in an invalid PRT mode for SI.
@@ -3139,7 +3145,7 @@ UINT_32 SiAddrLib::HwlComputeFmaskBits(
 *
 ****************************************************************************************************
 */
-void SiAddrLib::HwlOverrideTileMode(
+VOID SiLib::HwlOverrideTileMode(
     ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut          ///< [in/out] input output structure
     ) const
 {
@@ -3199,7 +3205,7 @@ void SiAddrLib::HwlOverrideTileMode(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlSelectTileMode
+*   SiLib::HwlSelectTileMode
 *
 *   @brief
 *       Select tile modes.
@@ -3209,7 +3215,7 @@ void SiAddrLib::HwlOverrideTileMode(
 *
 ****************************************************************************************************
 */
-VOID SiAddrLib::HwlSelectTileMode(
+VOID SiLib::HwlSelectTileMode(
     ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
     ) const
 {
@@ -3275,7 +3281,7 @@ VOID SiAddrLib::HwlSelectTileMode(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::HwlGetMaxAlignments
+*   SiLib::HwlGetMaxAlignments
 *
 *   @brief
 *       Gets maximum alignments
@@ -3283,7 +3289,7 @@ VOID SiAddrLib::HwlSelectTileMode(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
+ADDR_E_RETURNCODE SiLib::HwlGetMaxAlignments(
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
     ) const
 {
@@ -3321,7 +3327,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::InitEquationTable
+*   SiLib::InitEquationTable
 *
 *   @brief
 *       Initialize Equation table.
@@ -3330,7 +3336,7 @@ ADDR_E_RETURNCODE SiAddrLib::HwlGetMaxAlignments(
 *       N/A
 ****************************************************************************************************
 */
-VOID SiAddrLib::InitEquationTable()
+VOID SiLib::InitEquationTable()
 {
     ADDR_EQUATION_KEY equationKeyTable[EquationTableSize];
     memset(equationKeyTable, 0, sizeof(equationKeyTable));
@@ -3354,7 +3360,7 @@ VOID SiAddrLib::InitEquationTable()
         {
             UINT_32 equationIndex = ADDR_INVALID_EQUATION_INDEX;
 
-            AddrTileConfig tileConfig = m_tileTable[tileIndex];
+            TileConfig tileConfig = m_tileTable[tileIndex];
 
             ADDR_SURFACE_FLAGS flags = {{0}};
 
@@ -3492,7 +3498,7 @@ VOID SiAddrLib::InitEquationTable()
 
 /**
 ****************************************************************************************************
-*   SiAddrLib::IsEquationSupported
+*   SiLib::IsEquationSupported
 *
 *   @brief
 *       Check if it is supported for given bpp and tile config to generate a equation.
@@ -3501,9 +3507,9 @@ VOID SiAddrLib::InitEquationTable()
 *       TRUE if supported
 ****************************************************************************************************
 */
-BOOL_32 SiAddrLib::IsEquationSupported(
+BOOL_32 SiLib::IsEquationSupported(
     UINT_32        bpp,         ///< Bits per pixel
-    AddrTileConfig tileConfig,  ///< Tile config
+    TileConfig tileConfig,  ///< Tile config
     INT_32         tileIndex    ///< Tile index
     ) const
 {
@@ -3540,7 +3546,7 @@ BOOL_32 SiAddrLib::IsEquationSupported(
 
         if ((supported == TRUE) && (m_chipFamily == ADDR_CHIP_FAMILY_SI))
         {
-            // Please refer to SiAddrLib::HwlSetupTileInfo for PRT tile index selecting
+            // Please refer to SiLib::HwlSetupTileInfo for PRT tile index selecting
             // Tile index 3, 6, 21-25 are for PRT single sample
             if (tileIndex == 3)
             {
@@ -3564,4 +3570,5 @@ BOOL_32 SiAddrLib::IsEquationSupported(
     return supported;
 }
 
-
+} // V1
+} // Addr

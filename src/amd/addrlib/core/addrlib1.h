@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  addrlib1.h
-* @brief Contains the AddrLib1 base class definition.
+* @brief Contains the Lib base class definition.
 ****************************************************************************************************
 */
 
@@ -36,13 +36,17 @@
 
 #include "addrlib.h"
 
+namespace Addr
+{
+namespace V1
+{
 
 /**
 ****************************************************************************************************
 * @brief Neutral enums that define bank swap size
 ****************************************************************************************************
 */
-enum AddrSampleSplitSize
+enum SampleSplitSize
 {
     ADDR_SAMPLESPLIT_1KB = 1024,
     ADDR_SAMPLESPLIT_2KB = 2048,
@@ -55,7 +59,7 @@ enum AddrSampleSplitSize
 * @brief Flags for AddrTileMode
 ****************************************************************************************************
 */
-struct AddrTileModeFlags
+struct TileModeFlags
 {
     UINT_32 thickness       : 4;
     UINT_32 isLinear        : 1;
@@ -72,12 +76,12 @@ struct AddrTileModeFlags
 * @brief This class contains asic independent address lib functionalities
 ****************************************************************************************************
 */
-class AddrLib1 : public AddrLib
+class Lib : public Addr::Lib
 {
 public:
-    virtual ~AddrLib1();
+    virtual ~Lib();
 
-    static AddrLib1* GetAddrLib1(
+    static Lib* GetLib(
         ADDR_HANDLE hLib);
 
     /// Returns tileIndex support
@@ -187,8 +191,8 @@ public:
         const ADDR_PRT_INFO_INPUT*  pIn,
         ADDR_PRT_INFO_OUTPUT*       pOut) const;
 protected:
-    AddrLib1();  // Constructor is protected
-    AddrLib1(const AddrClient* pClient);
+    Lib();  // Constructor is protected
+    Lib(const Client* pClient);
 
     /// Pure Virtual function for Hwl computing surface info
     virtual ADDR_E_RETURNCODE HwlComputeSurfaceInfo(
@@ -434,7 +438,7 @@ protected:
     //
     // Misc helper
     //
-    static const AddrTileModeFlags ModeFlags[ADDR_TM_COUNT];
+    static const TileModeFlags ModeFlags[ADDR_TM_COUNT];
 
     static UINT_32 Thickness(
         AddrTileMode tileMode);
@@ -495,10 +499,10 @@ protected:
 
 private:
     // Disallow the copy constructor
-    AddrLib1(const AddrLib1& a);
+    Lib(const Lib& a);
 
     // Disallow the assignment operator
-    AddrLib1& operator=(const AddrLib1& a);
+    Lib& operator=(const Lib& a);
 
     UINT_32 ComputeCmaskBaseAlign(
         ADDR_CMASK_FLAGS flags, ADDR_TILEINFO*  pTileInfo) const;
@@ -516,6 +520,9 @@ private:
     UINT_32 ComputeXmaskCoordYFromPipe(
         UINT_32 pipe, UINT_32 x) const;
 };
+
+} // V1
+} // Addr
 
 #endif
 

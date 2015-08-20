@@ -26,8 +26,8 @@
 
 /**
 ****************************************************************************************************
-* @file  addrobject.h
-* @brief Contains the AddrObject base class definition.
+* @file  Object.h
+* @brief Contains the Object base class definition.
 ****************************************************************************************************
 */
 
@@ -37,12 +37,15 @@
 #include "addrtypes.h"
 #include "addrcommon.h"
 
+namespace Addr
+{
+
 /**
 ****************************************************************************************************
 * @brief This structure contains client specific data
 ****************************************************************************************************
 */
-struct AddrClient
+struct Client
 {
     ADDR_CLIENT_HANDLE  handle;
     ADDR_CALLBACKS      callbacks;
@@ -52,38 +55,39 @@ struct AddrClient
 * @brief This class is the base class for all ADDR class objects.
 ****************************************************************************************************
 */
-class AddrObject
+class Object
 {
 public:
-    AddrObject();
-    AddrObject(const AddrClient* pClient);
-    virtual ~AddrObject();
+    Object();
+    Object(const Client* pClient);
+    virtual ~Object();
 
-    VOID* operator new(size_t size, const AddrClient* pClient);
-    VOID  operator delete(VOID* pObj, const AddrClient* pClient);
+    VOID* operator new(size_t size, const Client* pClient);
+    VOID  operator delete(VOID* pObj, const Client* pClient);
     VOID  operator delete(VOID* pObj);
-    VOID* AddrMalloc(size_t size) const;
-    VOID  AddrFree(VOID* pObj) const;
+    VOID* Alloc(size_t size) const;
+    VOID  Free(VOID* pObj) const;
 
     VOID DebugPrint(
         const CHAR* pDebugString,
         ...) const;
 
-    const AddrClient* GetClient() const {return &m_client;}
+    const Client* GetClient() const {return &m_client;}
 
 protected:
-    AddrClient m_client;
+    Client m_client;
 
 private:
-    static VOID* ClientAlloc(size_t size, const AddrClient* pClient);
-    static VOID  ClientFree(VOID* pObj, const AddrClient* pClient);
+    static VOID* ClientAlloc(size_t size, const Client* pClient);
+    static VOID  ClientFree(VOID* pObj, const Client* pClient);
 
     // disallow the copy constructor
-    AddrObject(const AddrObject& a);
+    Object(const Object& a);
 
     // disallow the assignment operator
-    AddrObject& operator=(const AddrObject& a);
+    Object& operator=(const Object& a);
 };
 
+} // Addr
 #endif
 

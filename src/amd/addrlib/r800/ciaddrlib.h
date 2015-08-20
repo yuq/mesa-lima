@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  ciaddrlib.h
-* @brief Contains the CiAddrLib class definition.
+* @brief Contains the CiLib class definition.
 ****************************************************************************************************
 */
 
@@ -36,6 +36,11 @@
 
 #include "addrlib1.h"
 #include "siaddrlib.h"
+
+namespace Addr
+{
+namespace V1
+{
 
 /**
 ****************************************************************************************************
@@ -74,18 +79,18 @@ struct CIChipSettings
 *        function set.
 ****************************************************************************************************
 */
-class CiAddrLib : public SiAddrLib
+class CiLib : public SiLib
 {
 public:
-    /// Creates CiAddrLib object
-    static AddrLib* CreateObj(const AddrClient* pClient)
+    /// Creates CiLib object
+    static Addr::Lib* CreateObj(const Client* pClient)
     {
-        return new(pClient) CiAddrLib(pClient);
+        return new(pClient) CiLib(pClient);
     }
 
 private:
-    CiAddrLib(const AddrClient* pClient);
-    virtual ~CiAddrLib();
+    CiLib(const Client* pClient);
+    virtual ~CiLib();
 
 protected:
 
@@ -98,7 +103,7 @@ protected:
         const ADDR_COMPUTE_FMASK_INFO_INPUT* pIn,
         ADDR_COMPUTE_FMASK_INFO_OUTPUT* pOut);
 
-    virtual AddrChipFamily HwlConvertChipFamily(
+    virtual ChipFamily HwlConvertChipFamily(
         UINT_32 uChipFamily, UINT_32 uChipRevision);
 
     virtual BOOL_32 HwlInitGlobalParams(
@@ -117,7 +122,7 @@ protected:
         ADDR_TILEINFO* pTileInfo, AddrTileMode* pTileMode = NULL, AddrTileType* pTileType = NULL
         ) const;
 
-    // Sub-hwl interface - defined in EgBasedAddrLib
+    // Sub-hwl interface - defined in EgBasedLib
     virtual VOID HwlSetupTileInfo(
         AddrTileMode tileMode, ADDR_SURFACE_FLAGS flags,
         UINT_32 bpp, UINT_32 pitch, UINT_32 height, UINT_32 numSamples,
@@ -167,7 +172,7 @@ protected:
 
 private:
     VOID ReadGbTileMode(
-        UINT_32 regValue, AddrTileConfig* pCfg) const;
+        UINT_32 regValue, TileConfig* pCfg) const;
 
     VOID ReadGbMacroTileCfg(
         UINT_32 regValue, ADDR_TILEINFO* pCfg) const;
@@ -197,6 +202,9 @@ private:
 
     CIChipSettings          m_settings;
 };
+
+} // V1
+} // Addr
 
 #endif
 

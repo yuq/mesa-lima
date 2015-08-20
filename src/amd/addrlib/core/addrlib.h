@@ -34,7 +34,6 @@
 #ifndef __ADDR_LIB_H__
 #define __ADDR_LIB_H__
 
-
 #include "addrinterface.h"
 #include "addrobject.h"
 #include "addrelemlib.h"
@@ -60,12 +59,16 @@
 #ifndef CIASICIDGFXENGINE_SEAISLAND
 #define CIASICIDGFXENGINE_SEAISLAND 0x0000000B
 #endif
+
+namespace Addr
+{
+
 /**
 ****************************************************************************************************
 * @brief Neutral enums that define pipeinterleave
 ****************************************************************************************************
 */
-enum AddrPipeInterleave
+enum PipeInterleave
 {
     ADDR_PIPEINTERLEAVE_256B = 256,
     ADDR_PIPEINTERLEAVE_512B = 512,
@@ -76,7 +79,7 @@ enum AddrPipeInterleave
 * @brief Neutral enums that define DRAM row size
 ****************************************************************************************************
 */
-enum AddrRowSize
+enum RowSize
 {
     ADDR_ROWSIZE_1KB = 1024,
     ADDR_ROWSIZE_2KB = 2048,
@@ -89,7 +92,7 @@ enum AddrRowSize
 * @brief Neutral enums that define bank interleave
 ****************************************************************************************************
 */
-enum AddrBankInterleave
+enum BankInterleave
 {
     ADDR_BANKINTERLEAVE_1 = 1,
     ADDR_BANKINTERLEAVE_2 = 2,
@@ -99,23 +102,10 @@ enum AddrBankInterleave
 
 /**
 ****************************************************************************************************
-* @brief Neutral enums that define MGPU chip tile size
-****************************************************************************************************
-*/
-enum AddrChipTileSize
-{
-    ADDR_CHIPTILESIZE_16 = 16,
-    ADDR_CHIPTILESIZE_32 = 32,
-    ADDR_CHIPTILESIZE_64 = 64,
-    ADDR_CHIPTILESIZE_128 = 128,
-};
-
-/**
-****************************************************************************************************
 * @brief Neutral enums that define shader engine tile size
 ****************************************************************************************************
 */
-enum AddrEngTileSize
+enum ShaderEngineTileSize
 {
     ADDR_SE_TILESIZE_16 = 16,
     ADDR_SE_TILESIZE_32 = 32,
@@ -126,7 +116,7 @@ enum AddrEngTileSize
 * @brief Neutral enums that define bank swap size
 ****************************************************************************************************
 */
-enum AddrBankSwapSize
+enum BankSwapSize
 {
     ADDR_BANKSWAP_128B = 128,
     ADDR_BANKSWAP_256B = 256,
@@ -134,16 +124,15 @@ enum AddrBankSwapSize
     ADDR_BANKSWAP_1KB = 1024,
 };
 
-
 /**
 ****************************************************************************************************
 * @brief This class contains asic independent address lib functionalities
 ****************************************************************************************************
 */
-class AddrLib : public AddrObject
+class Lib : public Object
 {
 public:
-    virtual ~AddrLib();
+    virtual ~Lib();
 
     static ADDR_E_RETURNCODE Create(
         const ADDR_CREATE_INPUT* pCreateInfo, ADDR_CREATE_OUTPUT* pCreateOut);
@@ -154,7 +143,7 @@ public:
         delete this;
     }
 
-    static AddrLib* GetAddrLib(ADDR_HANDLE hLib);
+    static Lib* GetLib(ADDR_HANDLE hLib);
 
     /// Returns AddrLib version (from compiled binary instead include file)
     UINT_32 GetVersion()
@@ -163,7 +152,7 @@ public:
     }
 
     /// Returns asic chip family name defined by AddrLib
-    AddrChipFamily GetAddrChipFamily()
+    ChipFamily GetChipFamily()
     {
         return m_chipFamily;
     }
@@ -181,8 +170,8 @@ public:
     ADDR_E_RETURNCODE GetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const;
 
 protected:
-    AddrLib();  // Constructor is protected
-    AddrLib(const AddrClient* pClient);
+    Lib();  // Constructor is protected
+    Lib(const Client* pClient);
 
     /// Pure virtual function to get max alignments
     virtual ADDR_E_RETURNCODE HwlGetMaxAlignments(ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut) const = 0;
@@ -194,7 +183,7 @@ protected:
     virtual BOOL_32 HwlInitGlobalParams(const ADDR_CREATE_INPUT* pCreateIn) = 0;
 
     /// Pure Virtual function for Hwl converting chip family
-    virtual AddrChipFamily HwlConvertChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision) = 0;
+    virtual ChipFamily HwlConvertChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision) = 0;
 
     /// Get equation table pointer and number of equations
     virtual UINT_32 HwlGetEquationTableInfo(const ADDR_EQUATION** ppEquationTable) const
@@ -207,15 +196,15 @@ protected:
     //
     // Misc helper
     //
-    static UINT_32 Bits2Number(UINT_32 bitNum,...);
+    static UINT_32 Bits2Number(UINT_32 bitNum, ...);
 
     static UINT_32 GetNumFragments(UINT_32 numSamples, UINT_32 numFrags)
     {
         return (numFrags != 0) ? numFrags : Max(1u, numSamples);
     }
 
-    /// Returns pointer of AddrElemLib
-    AddrElemLib* GetElemLib() const
+    /// Returns pointer of ElemLib
+    ElemLib* GetElemLib() const
     {
         return m_pElemLib;
     }
@@ -228,19 +217,19 @@ protected:
 
 private:
     // Disallow the copy constructor
-    AddrLib(const AddrLib& a);
+    Lib(const Lib& a);
 
     // Disallow the assignment operator
-    AddrLib& operator=(const AddrLib& a);
+    Lib& operator=(const Lib& a);
 
-    VOID SetAddrChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision);
+    VOID SetChipFamily(UINT_32 uChipFamily, UINT_32 uChipRevision);
 
     VOID SetMinPitchAlignPixels(UINT_32 minPitchAlignPixels);
 
 protected:
-    AddrLibClass        m_class;        ///< Store class type (HWL type)
+    LibClass            m_class;        ///< Store class type (HWL type)
 
-    AddrChipFamily      m_chipFamily;   ///< Chip family translated from the one in atiid.h
+    ChipFamily          m_chipFamily;   ///< Chip family translated from the one in atiid.h
 
     UINT_32             m_chipRevision; ///< Revision id from xxx_id.h
 
@@ -249,7 +238,7 @@ protected:
     //
     // Global parameters
     //
-    AddrConfigFlags   m_configFlags;  ///< Global configuration flags. Note this is setup by
+    ConfigFlags         m_configFlags;    ///< Global configuration flags. Note this is setup by
                                         ///  AddrLib instead of Client except forceLinearAligned
 
     UINT_32             m_pipes;        ///< Number of pipes
@@ -267,11 +256,13 @@ protected:
     UINT_32             m_minPitchAlignPixels; ///< Minimum pitch alignment in pixels
     UINT_32             m_maxSamples;   ///< Max numSamples
 private:
-    AddrElemLib*        m_pElemLib;     ///< Element Lib pointer
+    ElemLib*            m_pElemLib;     ///< Element Lib pointer
 };
 
-AddrLib* AddrSIHwlInit  (const AddrClient* pClient);
-AddrLib* AddrCIHwlInit  (const AddrClient* pClient);
+Lib* SiHwlInit  (const Client* pClient);
+Lib* CiHwlInit  (const Client* pClient);
+
+} // Addr
 
 #endif
 

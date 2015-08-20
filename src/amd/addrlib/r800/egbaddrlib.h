@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  egbaddrlib.h
-* @brief Contains the EgBasedAddrLib class definition.
+* @brief Contains the EgBasedLib class definition.
 ****************************************************************************************************
 */
 
@@ -36,7 +36,10 @@
 
 #include "addrlib1.h"
 
-
+namespace Addr
+{
+namespace V1
+{
 /// Structures for functions
 struct CoordFromBankPipe
 {
@@ -58,11 +61,11 @@ struct CoordFromBankPipe
 * @note  Abstract class
 ****************************************************************************************************
 */
-class EgBasedAddrLib : public AddrLib1
+class EgBasedLib : public Lib
 {
 protected:
-    EgBasedAddrLib(const AddrClient* pClient);
-    virtual ~EgBasedAddrLib();
+    EgBasedLib(const Client* pClient);
+    virtual ~EgBasedLib();
 
 public:
 
@@ -414,6 +417,9 @@ protected:
     UINT_32 m_logicalBanks;         ///< Logical banks = m_banks * m_ranks if m_banks != 16
     UINT_32 m_bankInterleave;       ///< Bank interleave, as a multiple of pipe interleave size
 };
+
+} // V1
+} // Addr
 
 #endif
 

@@ -27,7 +27,7 @@
 /**
 ****************************************************************************************************
 * @file  ciaddrlib.cpp
-* @brief Contains the implementation for the CiAddrLib class.
+* @brief Contains the implementation for the CiLib class.
 ****************************************************************************************************
 */
 
@@ -48,9 +48,31 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+namespace Addr
+{
+
 /**
 ****************************************************************************************************
-*   AddrMask
+*   CiHwlInit
+*
+*   @brief
+*       Creates an CiLib object.
+*
+*   @return
+*       Returns an CiLib object pointer.
+****************************************************************************************************
+*/
+Lib* CiHwlInit(const Client* pClient)
+{
+    return V1::CiLib::CreateObj(pClient);
+}
+
+namespace V1
+{
+
+/**
+****************************************************************************************************
+*   Mask
 *
 *   @brief
 *       Gets a mask of "width"
@@ -58,7 +80,7 @@
 *       Bit mask
 ****************************************************************************************************
 */
-static UINT_64 AddrMask(
+static UINT_64 Mask(
     UINT_32 width)  ///< Width of bits
 {
     UINT_64 ret;
@@ -76,7 +98,7 @@ static UINT_64 AddrMask(
 
 /**
 ****************************************************************************************************
-*   AddrGetBits
+*   GetBits
 *
 *   @brief
 *       Gets bits within a range of [msb, lsb]
@@ -84,7 +106,7 @@ static UINT_64 AddrMask(
 *       Bits of this range
 ****************************************************************************************************
 */
-static UINT_64 AddrGetBits(
+static UINT_64 GetBits(
     UINT_64 bits,   ///< Source bits
     UINT_32 msb,    ///< Most signicant bit
     UINT_32 lsb)    ///< Least signicant bit
@@ -93,14 +115,14 @@ static UINT_64 AddrGetBits(
 
     if (msb >= lsb)
     {
-        ret = (bits >> lsb) & (AddrMask(1 + msb - lsb));
+        ret = (bits >> lsb) & (Mask(1 + msb - lsb));
     }
     return ret;
 }
 
 /**
 ****************************************************************************************************
-*   AddrRemoveBits
+*   RemoveBits
 *
 *   @brief
 *       Removes bits within the range of [msb, lsb]
@@ -108,7 +130,7 @@ static UINT_64 AddrGetBits(
 *       Modified bits
 ****************************************************************************************************
 */
-static UINT_64 AddrRemoveBits(
+static UINT_64 RemoveBits(
     UINT_64 bits,   ///< Source bits
     UINT_32 msb,    ///< Most signicant bit
     UINT_32 lsb)    ///< Least signicant bit
@@ -117,15 +139,15 @@ static UINT_64 AddrRemoveBits(
 
     if (msb >= lsb)
     {
-        ret = AddrGetBits(bits, lsb - 1, 0) // low bits
-            | (AddrGetBits(bits, 8 * sizeof(bits) - 1, msb + 1) << lsb); //high bits
+        ret = GetBits(bits, lsb - 1, 0) // low bits
+            | (GetBits(bits, 8 * sizeof(bits) - 1, msb + 1) << lsb); //high bits
     }
     return ret;
 }
 
 /**
 ****************************************************************************************************
-*   AddrInsertBits
+*   InsertBits
 *
 *   @brief
 *       Inserts new bits into the range of [msb, lsb]
@@ -133,7 +155,7 @@ static UINT_64 AddrRemoveBits(
 *       Modified bits
 ****************************************************************************************************
 */
-static UINT_64 AddrInsertBits(
+static UINT_64 InsertBits(
     UINT_64 bits,       ///< Source bits
     UINT_64 newBits,    ///< New bits to be inserted
     UINT_32 msb,        ///< Most signicant bit
@@ -143,41 +165,25 @@ static UINT_64 AddrInsertBits(
 
     if (msb >= lsb)
     {
-        ret = AddrGetBits(bits, lsb - 1, 0) // old low bitss
-             | (AddrGetBits(newBits, msb - lsb, 0) << lsb) //new bits
-             | (AddrGetBits(bits, 8 * sizeof(bits) - 1, lsb) << (msb + 1)); //old high bits
+        ret = GetBits(bits, lsb - 1, 0) // old low bitss
+             | (GetBits(newBits, msb - lsb, 0) << lsb) //new bits
+             | (GetBits(bits, 8 * sizeof(bits) - 1, lsb) << (msb + 1)); //old high bits
     }
     return ret;
 }
 
-
 /**
 ****************************************************************************************************
-*   AddrCiHwlInit
-*
-*   @brief
-*       Creates an CiAddrLib object.
-*
-*   @return
-*       Returns an CiAddrLib object pointer.
-****************************************************************************************************
-*/
-AddrLib* AddrCIHwlInit(const AddrClient* pClient)
-{
-    return CiAddrLib::CreateObj(pClient);
-}
-
-/**
-****************************************************************************************************
-*   CiAddrLib::CiAddrLib
+*   CiLib::CiLib
 *
 *   @brief
 *       Constructor
 *
 ****************************************************************************************************
 */
-CiAddrLib::CiAddrLib(const AddrClient* pClient) :
-    SiAddrLib(pClient),
+CiLib::CiLib(const Client* pClient)
+    :
+    SiLib(pClient),
     m_noOfMacroEntries(0),
     m_allowNonDispThickModes(FALSE)
 {
@@ -187,19 +193,19 @@ CiAddrLib::CiAddrLib(const AddrClient* pClient) :
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::~CiAddrLib
+*   CiLib::~CiLib
 *
 *   @brief
 *       Destructor
 ****************************************************************************************************
 */
-CiAddrLib::~CiAddrLib()
+CiLib::~CiLib()
 {
 }
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeDccInfo
+*   CiLib::HwlComputeDccInfo
 *
 *   @brief
 *       Compute DCC key size, base alignment
@@ -207,7 +213,7 @@ CiAddrLib::~CiAddrLib()
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
+ADDR_E_RETURNCODE CiLib::HwlComputeDccInfo(
     const ADDR_COMPUTE_DCCINFO_INPUT*  pIn,
     ADDR_COMPUTE_DCCINFO_OUTPUT*       pOut) const
 {
@@ -281,7 +287,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeCmaskAddrFromCoord
+*   CiLib::HwlComputeCmaskAddrFromCoord
 *
 *   @brief
 *       Compute tc compatible Cmask address from fmask ram address
@@ -290,7 +296,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeDccInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
+ADDR_E_RETURNCODE CiLib::HwlComputeCmaskAddrFromCoord(
     const ADDR_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*  pIn,  ///< [in] fmask addr/bpp/tile input
     ADDR_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*       pOut  ///< [out] cmask address
     ) const
@@ -325,7 +331,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeHtileAddrFromCoord
+*   CiLib::HwlComputeHtileAddrFromCoord
 *
 *   @brief
 *       Compute tc compatible Htile address from depth/stencil address
@@ -334,7 +340,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeCmaskAddrFromCoord(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlComputeHtileAddrFromCoord(
+ADDR_E_RETURNCODE CiLib::HwlComputeHtileAddrFromCoord(
     const ADDR_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*  pIn,  ///< [in] depth/stencil addr/bpp/tile input
     ADDR_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*       pOut  ///< [out] htile address
     ) const
@@ -369,19 +375,19 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeHtileAddrFromCoord(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlConvertChipFamily
+*   CiLib::HwlConvertChipFamily
 *
 *   @brief
-*       Convert familyID defined in atiid.h to AddrChipFamily and set m_chipFamily/m_chipRevision
+*       Convert familyID defined in atiid.h to ChipFamily and set m_chipFamily/m_chipRevision
 *   @return
-*       AddrChipFamily
+*       ChipFamily
 ****************************************************************************************************
 */
-AddrChipFamily CiAddrLib::HwlConvertChipFamily(
+ChipFamily CiLib::HwlConvertChipFamily(
     UINT_32 uChipFamily,        ///< [in] chip family defined in atiih.h
     UINT_32 uChipRevision)      ///< [in] chip revision defined in "asic_family"_id.h
 {
-    AddrChipFamily family = ADDR_CHIP_FAMILY_CI;
+    ChipFamily family = ADDR_CHIP_FAMILY_CI;
 
     switch (uChipFamily)
     {
@@ -419,7 +425,7 @@ AddrChipFamily CiAddrLib::HwlConvertChipFamily(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlInitGlobalParams
+*   CiLib::HwlInitGlobalParams
 *
 *   @brief
 *       Initializes global parameters
@@ -429,7 +435,7 @@ AddrChipFamily CiAddrLib::HwlConvertChipFamily(
 *
 ****************************************************************************************************
 */
-BOOL_32 CiAddrLib::HwlInitGlobalParams(
+BOOL_32 CiLib::HwlInitGlobalParams(
     const ADDR_CREATE_INPUT* pCreateIn) ///< [in] create input
 {
     BOOL_32  valid = TRUE;
@@ -492,7 +498,7 @@ BOOL_32 CiAddrLib::HwlInitGlobalParams(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlPostCheckTileIndex
+*   CiLib::HwlPostCheckTileIndex
 *
 *   @brief
 *       Map a tile setting to index if curIndex is invalid, otherwise check if curIndex matches
@@ -501,7 +507,7 @@ BOOL_32 CiAddrLib::HwlInitGlobalParams(
 *       Tile index.
 ****************************************************************************************************
 */
-INT_32 CiAddrLib::HwlPostCheckTileIndex(
+INT_32 CiLib::HwlPostCheckTileIndex(
     const ADDR_TILEINFO* pInfo,     ///< [in] Tile Info
     AddrTileMode         mode,      ///< [in] Tile mode
     AddrTileType         type,      ///< [in] Tile type
@@ -583,7 +589,7 @@ INT_32 CiAddrLib::HwlPostCheckTileIndex(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlSetupTileCfg
+*   CiLib::HwlSetupTileCfg
 *
 *   @brief
 *       Map tile index to tile setting.
@@ -591,7 +597,7 @@ INT_32 CiAddrLib::HwlPostCheckTileIndex(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
+ADDR_E_RETURNCODE CiLib::HwlSetupTileCfg(
     UINT_32         bpp,            ///< [in] Bits per pixel
     INT_32          index,          ///< [in] Tile index
     INT_32          macroModeIndex, ///< [in] Index in macro tile mode table(CI)
@@ -620,7 +626,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
         }
         else
         {
-            const AddrTileConfig* pCfgTable = GetTileSetting(index);
+            const TileConfig* pCfgTable = GetTileSetting(index);
 
             if (pInfo != NULL)
             {
@@ -682,15 +688,15 @@ ADDR_E_RETURNCODE CiAddrLib::HwlSetupTileCfg(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeSurfaceInfo
+*   CiLib::HwlComputeSurfaceInfo
 *
 *   @brief
-*       Entry of ci's ComputeSurfaceInfo
+*       Entry of CI's ComputeSurfaceInfo
 *   @return
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlComputeSurfaceInfo(
+ADDR_E_RETURNCODE CiLib::HwlComputeSurfaceInfo(
     const ADDR_COMPUTE_SURFACE_INFO_INPUT*  pIn,    ///< [in] input structure
     ADDR_COMPUTE_SURFACE_INFO_OUTPUT*       pOut    ///< [out] output structure
     ) const
@@ -704,7 +710,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeSurfaceInfo(
     // Pass tcCompatible flag from input to output; and turn off it if tile split occurs
     pOut->tcCompatible = pIn->flags.tcCompatible;
 
-    ADDR_E_RETURNCODE retCode = SiAddrLib::HwlComputeSurfaceInfo(pIn,pOut);
+    ADDR_E_RETURNCODE retCode = SiLib::HwlComputeSurfaceInfo(pIn,pOut);
 
     if (pOut->macroModeIndex == TileIndexNoMacroIndex)
     {
@@ -716,14 +722,14 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeSurfaceInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlFmaskSurfaceInfo
+*   CiLib::HwlFmaskSurfaceInfo
 *   @brief
 *       Entry of r800's ComputeFmaskInfo
 *   @return
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlComputeFmaskInfo(
+ADDR_E_RETURNCODE CiLib::HwlComputeFmaskInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pIn,   ///< [in] input structure
     ADDR_COMPUTE_FMASK_INFO_OUTPUT*         pOut   ///< [out] output structure
     )
@@ -803,7 +809,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeFmaskInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlFmaskPreThunkSurfInfo
+*   CiLib::HwlFmaskPreThunkSurfInfo
 *
 *   @brief
 *       Some preparation before thunking a ComputeSurfaceInfo call for Fmask
@@ -811,7 +817,7 @@ ADDR_E_RETURNCODE CiAddrLib::HwlComputeFmaskInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlFmaskPreThunkSurfInfo(
+VOID CiLib::HwlFmaskPreThunkSurfInfo(
     const ADDR_COMPUTE_FMASK_INFO_INPUT*    pFmaskIn,   ///< [in] Input of fmask info
     const ADDR_COMPUTE_FMASK_INFO_OUTPUT*   pFmaskOut,  ///< [in] Output of fmask info
     ADDR_COMPUTE_SURFACE_INFO_INPUT*        pSurfIn,    ///< [out] Input of thunked surface info
@@ -824,7 +830,7 @@ VOID CiAddrLib::HwlFmaskPreThunkSurfInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlFmaskPostThunkSurfInfo
+*   CiLib::HwlFmaskPostThunkSurfInfo
 *
 *   @brief
 *       Copy hwl extra field after calling thunked ComputeSurfaceInfo
@@ -832,7 +838,7 @@ VOID CiAddrLib::HwlFmaskPreThunkSurfInfo(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlFmaskPostThunkSurfInfo(
+VOID CiLib::HwlFmaskPostThunkSurfInfo(
     const ADDR_COMPUTE_SURFACE_INFO_OUTPUT* pSurfOut,   ///< [in] Output of surface info
     ADDR_COMPUTE_FMASK_INFO_OUTPUT* pFmaskOut           ///< [out] Output of fmask info
     ) const
@@ -843,7 +849,7 @@ VOID CiAddrLib::HwlFmaskPostThunkSurfInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlDegradeThickTileMode
+*   CiLib::HwlDegradeThickTileMode
 *
 *   @brief
 *       Degrades valid tile mode for thick modes if needed
@@ -852,7 +858,7 @@ VOID CiAddrLib::HwlFmaskPostThunkSurfInfo(
 *       Suitable tile mode
 ****************************************************************************************************
 */
-AddrTileMode CiAddrLib::HwlDegradeThickTileMode(
+AddrTileMode CiLib::HwlDegradeThickTileMode(
     AddrTileMode        baseTileMode,   ///< [in] base tile mode
     UINT_32             numSlices,      ///< [in] current number of slices
     UINT_32*            pBytesPerTile   ///< [in/out] pointer to bytes per slice
@@ -863,7 +869,7 @@ AddrTileMode CiAddrLib::HwlDegradeThickTileMode(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlOverrideTileMode
+*   CiLib::HwlOverrideTileMode
 *
 *   @brief
 *       Override THICK to THIN, for specific formats on CI
@@ -873,7 +879,7 @@ AddrTileMode CiAddrLib::HwlDegradeThickTileMode(
 *
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlOverrideTileMode(
+VOID CiLib::HwlOverrideTileMode(
     ADDR_COMPUTE_SURFACE_INFO_INPUT*    pInOut      ///< [in/out] input output structure
     ) const
 {
@@ -1024,7 +1030,7 @@ VOID CiAddrLib::HwlOverrideTileMode(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlSelectTileMode
+*   CiLib::HwlSelectTileMode
 *
 *   @brief
 *       Select tile modes.
@@ -1034,7 +1040,7 @@ VOID CiAddrLib::HwlOverrideTileMode(
 *
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlSelectTileMode(
+VOID CiLib::HwlSelectTileMode(
     ADDR_COMPUTE_SURFACE_INFO_INPUT* pInOut     ///< [in/out] input output structure
     ) const
 {
@@ -1120,13 +1126,13 @@ VOID CiAddrLib::HwlSelectTileMode(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlSetupTileInfo
+*   CiLib::HwlSetupTileInfo
 *
 *   @brief
 *       Setup default value of tile info for SI
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlSetupTileInfo(
+VOID CiLib::HwlSetupTileInfo(
     AddrTileMode                        tileMode,       ///< [in] Tile mode
     ADDR_SURFACE_FLAGS                  flags,          ///< [in] Surface type flags
     UINT_32                             bpp,            ///< [in] Bits per pixel
@@ -1453,7 +1459,7 @@ VOID CiAddrLib::HwlSetupTileInfo(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::ReadGbTileMode
+*   CiLib::ReadGbTileMode
 *
 *   @brief
 *       Convert GB_TILE_MODE HW value to ADDR_TILE_CONFIG.
@@ -1461,9 +1467,9 @@ VOID CiAddrLib::HwlSetupTileInfo(
 *       NA.
 ****************************************************************************************************
 */
-VOID CiAddrLib::ReadGbTileMode(
-    UINT_32             regValue,   ///< [in] GB_TILE_MODE register
-    AddrTileConfig*     pCfg        ///< [out] output structure
+VOID CiLib::ReadGbTileMode(
+    UINT_32       regValue,   ///< [in] GB_TILE_MODE register
+    TileConfig*   pCfg        ///< [out] output structure
     ) const
 {
     GB_TILE_MODE gbTileMode;
@@ -1529,7 +1535,7 @@ VOID CiAddrLib::ReadGbTileMode(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::InitTileSettingTable
+*   CiLib::InitTileSettingTable
 *
 *   @brief
 *       Initialize the ADDR_TILE_CONFIG table.
@@ -1537,7 +1543,7 @@ VOID CiAddrLib::ReadGbTileMode(
 *       TRUE if tile table is correctly initialized
 ****************************************************************************************************
 */
-BOOL_32 CiAddrLib::InitTileSettingTable(
+BOOL_32 CiLib::InitTileSettingTable(
     const UINT_32*  pCfg,           ///< [in] Pointer to table of tile configs
     UINT_32         noOfEntries     ///< [in] Numbe of entries in the table above
     )
@@ -1598,7 +1604,7 @@ BOOL_32 CiAddrLib::InitTileSettingTable(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::ReadGbMacroTileCfg
+*   CiLib::ReadGbMacroTileCfg
 *
 *   @brief
 *       Convert GB_MACRO_TILE_CFG HW value to ADDR_TILE_CONFIG.
@@ -1606,7 +1612,7 @@ BOOL_32 CiAddrLib::InitTileSettingTable(
 *       NA.
 ****************************************************************************************************
 */
-VOID CiAddrLib::ReadGbMacroTileCfg(
+VOID CiLib::ReadGbMacroTileCfg(
     UINT_32             regValue,   ///< [in] GB_MACRO_TILE_MODE register
     ADDR_TILEINFO*      pCfg        ///< [out] output structure
     ) const
@@ -1622,7 +1628,7 @@ VOID CiAddrLib::ReadGbMacroTileCfg(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::InitMacroTileCfgTable
+*   CiLib::InitMacroTileCfgTable
 *
 *   @brief
 *       Initialize the ADDR_MACRO_TILE_CONFIG table.
@@ -1630,7 +1636,7 @@ VOID CiAddrLib::ReadGbMacroTileCfg(
 *       TRUE if macro tile table is correctly initialized
 ****************************************************************************************************
 */
-BOOL_32 CiAddrLib::InitMacroTileCfgTable(
+BOOL_32 CiLib::InitMacroTileCfgTable(
     const UINT_32*  pCfg,           ///< [in] Pointer to table of tile configs
     UINT_32         noOfMacroEntries     ///< [in] Numbe of entries in the table above
     )
@@ -1669,7 +1675,7 @@ BOOL_32 CiAddrLib::InitMacroTileCfgTable(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeMacroModeIndex
+*   CiLib::HwlComputeMacroModeIndex
 *
 *   @brief
 *       Computes macro tile mode index
@@ -1677,7 +1683,7 @@ BOOL_32 CiAddrLib::InitMacroTileCfgTable(
 *       TRUE if macro tile table is correctly initialized
 ****************************************************************************************************
 */
-INT_32 CiAddrLib::HwlComputeMacroModeIndex(
+INT_32 CiLib::HwlComputeMacroModeIndex(
     INT_32              tileIndex,      ///< [in] Tile mode index
     ADDR_SURFACE_FLAGS  flags,          ///< [in] Surface flags
     UINT_32             bpp,            ///< [in] Bit per pixel
@@ -1769,7 +1775,7 @@ INT_32 CiAddrLib::HwlComputeMacroModeIndex(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeTileDataWidthAndHeightLinear
+*   CiLib::HwlComputeTileDataWidthAndHeightLinear
 *
 *   @brief
 *       Compute the squared cache shape for per-tile data (CMASK and HTILE) for linear layout
@@ -1781,7 +1787,7 @@ INT_32 CiAddrLib::HwlComputeMacroModeIndex(
 *       MacroWidth and macroHeight are measured in pixels
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
+VOID CiLib::HwlComputeTileDataWidthAndHeightLinear(
     UINT_32*        pMacroWidth,     ///< [out] macro tile width
     UINT_32*        pMacroHeight,    ///< [out] macro tile height
     UINT_32         bpp,             ///< [in] bits per pixel
@@ -1814,7 +1820,7 @@ VOID CiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlComputeMetadataNibbleAddress
+*   CiLib::HwlComputeMetadataNibbleAddress
 *
 *   @brief
 *        calculate meta data address based on input information
@@ -1835,7 +1841,7 @@ VOID CiAddrLib::HwlComputeTileDataWidthAndHeightLinear(
 *
 ****************************************************************************************************
 */
-UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
+UINT_64 CiLib::HwlComputeMetadataNibbleAddress(
     UINT_64 uncompressedDataByteAddress,
     UINT_64 dataBaseByteAddress,
     UINT_64 metadataBaseByteAddress,
@@ -1883,7 +1889,7 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     UINT_32 lsb = pipeBits + pipeInterleaveBits;
     UINT_32 msb = bankBits - 1 + lsb;
 
-    UINT_64 bankDataBits = AddrGetBits(offset, msb, lsb);
+    UINT_64 bankDataBits = GetBits(offset, msb, lsb);
 
     ///--------------------------------------------------------------------------------------------
     /// Save pipe data bits
@@ -1891,7 +1897,7 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     lsb = pipeInterleaveBits;
     msb = pipeBits - 1 + lsb;
 
-    UINT_64 pipeDataBits = AddrGetBits(offset, msb, lsb);
+    UINT_64 pipeDataBits = GetBits(offset, msb, lsb);
 
     ///--------------------------------------------------------------------------------------------
     /// Remove pipe and bank bits
@@ -1899,7 +1905,7 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     lsb = pipeInterleaveBits;
     msb = dataMacrotileBits - 1;
 
-    UINT_64 offsetWithoutPipeBankBits = AddrRemoveBits(offset, msb, lsb);
+    UINT_64 offsetWithoutPipeBankBits = RemoveBits(offset, msb, lsb);
 
     ADDR_ASSERT((0 != blockByteSize));
     UINT_64 blockInBankpipe = offsetWithoutPipeBankBits / blockByteSize;
@@ -1917,7 +1923,7 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     }
     msb = bankBits - 1 + lsb;
 
-    UINT_64 blockInBankpipeWithBankBits = AddrInsertBits(blockInBankpipe, bankDataBits, msb, lsb);
+    UINT_64 blockInBankpipeWithBankBits = InsertBits(blockInBankpipe, bankDataBits, msb, lsb);
 
     /// NOTE *2 because we are converting to Nibble address in this step
     UINT_64 metaAddressInPipe = blockInBankpipeWithBankBits * 2 * metadataBitSize / 8;
@@ -1928,14 +1934,14 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
     ///--------------------------------------------------------------------------------------------
     lsb = pipeInterleaveBits + 1; ///<+1 due to Nibble address now gives interleave bits extra lsb.
     msb = pipeBits - 1 + lsb;
-    UINT_64 metadataAddress = AddrInsertBits(metaAddressInPipe, pipeDataBits, msb, lsb);
+    UINT_64 metadataAddress = InsertBits(metaAddressInPipe, pipeDataBits, msb, lsb);
 
     return metadataAddress;
 }
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlPadDimensions
+*   CiLib::HwlPadDimensions
 *
 *   @brief
 *       Helper function to pad dimensions
@@ -1945,7 +1951,7 @@ UINT_64 CiAddrLib::HwlComputeMetadataNibbleAddress(
 *
 ****************************************************************************************************
 */
-VOID CiAddrLib::HwlPadDimensions(
+VOID CiLib::HwlPadDimensions(
     AddrTileMode        tileMode,    ///< [in] tile mode
     UINT_32             bpp,         ///< [in] bits per pixel
     ADDR_SURFACE_FLAGS  flags,       ///< [in] surface flags
@@ -2021,7 +2027,7 @@ VOID CiAddrLib::HwlPadDimensions(
 
 /**
 ****************************************************************************************************
-*   CiAddrLib::HwlGetMaxAlignments
+*   CiLib::HwlGetMaxAlignments
 *
 *   @brief
 *       Gets maximum alignments
@@ -2029,7 +2035,7 @@ VOID CiAddrLib::HwlPadDimensions(
 *       ADDR_E_RETURNCODE
 ****************************************************************************************************
 */
-ADDR_E_RETURNCODE CiAddrLib::HwlGetMaxAlignments(
+ADDR_E_RETURNCODE CiLib::HwlGetMaxAlignments(
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut    ///< [out] output structure
     ) const
 {
@@ -2060,4 +2066,5 @@ ADDR_E_RETURNCODE CiAddrLib::HwlGetMaxAlignments(
     return ADDR_OK;
 }
 
-
+} // V1
+} // Addr
