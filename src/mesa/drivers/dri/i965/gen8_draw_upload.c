@@ -246,13 +246,24 @@ gen8_emit_vertices(struct brw_context *brw)
    }
    ADVANCE_BATCH();
 
-   for (unsigned i = 0; i < brw->vb.nr_enabled; i++) {
+   for (unsigned i = 0, j = 0; i < brw->vb.nr_enabled; i++) {
       const struct brw_vertex_element *input = brw->vb.enabled[i];
       const struct brw_vertex_buffer *buffer = &brw->vb.buffers[input->buffer];
+      unsigned element_index;
+
+      /* The edge flag element is reordered to be the last one in the code
+       * above so we need to compensate for that in the element indices used
+       * below.
+       */
+      if (input == gen6_edgeflag_input)
+         element_index = nr_elements - 1;
+      else
+         element_index = j++;
 
       BEGIN_BATCH(3);
       OUT_BATCH(_3DSTATE_VF_INSTANCING << 16 | (3 - 2));
-      OUT_BATCH(i | (buffer->step_rate ? GEN8_VF_INSTANCING_ENABLE : 0));
+      OUT_BATCH(element_index |
+                (buffer->step_rate ? GEN8_VF_INSTANCING_ENABLE : 0));
       OUT_BATCH(buffer->step_rate);
       ADVANCE_BATCH();
    }
