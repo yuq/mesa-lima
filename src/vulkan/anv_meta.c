@@ -272,22 +272,17 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_saved_state saved_state;
 
-   int num_clear_layers = 0;
-   for (uint32_t i = 0; i < pass->attachment_count; i++) {
-      if (pass->attachments[i].load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-         if (anv_format_is_depth_or_stencil(pass->attachments[i].format)) {
-            anv_finishme("Can't clear depth-stencil yet");
-            continue;
-         }
-         num_clear_layers++;
-      }
-   }
+   if (pass->has_depth_clear_attachment)
+      anv_finishme("depth clear");
 
-   if (num_clear_layers == 0)
+   if (pass->has_stencil_clear_attachment)
+      anv_finishme("stencil clear");
+
+   if (pass->num_color_clear_attachments == 0)
       return;
 
-   struct clear_instance_data instance_data[num_clear_layers];
-   uint32_t color_attachments[num_clear_layers];
+   struct clear_instance_data instance_data[pass->num_color_clear_attachments];
+   uint32_t color_attachments[pass->num_color_clear_attachments];
 
    int layer = 0;
    for (uint32_t i = 0; i < pass->attachment_count; i++) {
@@ -310,14 +305,15 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
 
    struct anv_subpass subpass = {
       .input_count = 0,
-      .color_count = num_clear_layers,
+      .color_count = pass->num_color_clear_attachments,
       .color_attachments = color_attachments,
       .depth_stencil_attachment = VK_ATTACHMENT_UNUSED,
    };
 
    anv_cmd_buffer_begin_subpass(cmd_buffer, &subpass);
 
-   meta_emit_clear(cmd_buffer, num_clear_layers, instance_data);
+   meta_emit_clear(cmd_buffer, pass->num_color_clear_attachments,
+                   instance_data);
 
    /* Restore API state */
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
