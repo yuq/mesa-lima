@@ -307,9 +307,11 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
             strstr(pScreen->get_name(pScreen), "ATI")) {
-            This->prefer_user_constbuf = TRUE;
             This->driver_bugs.buggy_barycentrics = TRUE;
         }
+
+        /* Disable NV path for now, needs some fixes */
+        This->prefer_user_constbuf = TRUE;
 
         tmpl.target = PIPE_BUFFER;
         tmpl.format = PIPE_FORMAT_R8_UNORM;
