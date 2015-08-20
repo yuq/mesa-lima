@@ -609,7 +609,13 @@ void
 anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
 {
-   gen8_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+   switch (cmd_buffer->device->info.gen) {
+   case 8:
+      gen8_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      break;
+   default:
+      unreachable("unsupported gen\n");
+   }
 }
 
 void anv_CmdSetEvent(
