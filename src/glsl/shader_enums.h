@@ -410,6 +410,7 @@ typedef enum
    /*@{*/
    SYSTEM_VALUE_LOCAL_INVOCATION_ID,
    SYSTEM_VALUE_WORK_GROUP_ID,
+   SYSTEM_VALUE_NUM_WORK_GROUPS,
    /*@}*/
 
    /**
