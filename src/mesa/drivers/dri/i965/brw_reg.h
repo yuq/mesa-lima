@@ -995,6 +995,17 @@ brw_vec1_indirect(unsigned subnr, int offset)
 }
 
 static inline struct brw_reg
+brw_VxH_indirect(unsigned subnr, int offset)
+{
+   struct brw_reg reg = brw_vec1_grf(0, 0);
+   reg.vstride = BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL;
+   reg.subnr = subnr;
+   reg.address_mode = BRW_ADDRESS_REGISTER_INDIRECT_REGISTER;
+   reg.dw1.bits.indirect_offset = offset;
+   return reg;
+}
+
+static inline struct brw_reg
 deref_4f(struct brw_indirect ptr, int offset)
 {
    return brw_vec4_indirect(ptr.addr_subnr, ptr.addr_offset + offset);
