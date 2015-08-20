@@ -2230,13 +2230,14 @@ VkResult anv_CreateRenderPass(
    pass->attachments = (void *) pass + attachments_offset;
 
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      pass->attachments[i].format =
-         anv_format_for_vk_format(pCreateInfo->pAttachments[i].format);
-      pass->attachments[i].samples = pCreateInfo->pAttachments[i].samples;
-      pass->attachments[i].load_op = pCreateInfo->pAttachments[i].loadOp;
-      pass->attachments[i].stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
-      // pass->attachments[i].store_op = pCreateInfo->pAttachments[i].storeOp;
-      // pass->attachments[i].stencil_store_op = pCreateInfo->pAttachments[i].stencilStoreOp;
+      struct anv_render_pass_attachment *att = &pass->attachments[i];
+
+      att->format = anv_format_for_vk_format(pCreateInfo->pAttachments[i].format);
+      att->samples = pCreateInfo->pAttachments[i].samples;
+      att->load_op = pCreateInfo->pAttachments[i].loadOp;
+      att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
+      // att->store_op = pCreateInfo->pAttachments[i].storeOp;
+      // att->stencil_store_op = pCreateInfo->pAttachments[i].stencilStoreOp;
    }
 
    for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
