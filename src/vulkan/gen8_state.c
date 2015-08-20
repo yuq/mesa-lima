@@ -296,6 +296,103 @@ gen8_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
+void
+gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
+                                struct anv_device *device,
+                                const VkAttachmentViewCreateInfo* pCreateInfo,
+                                struct anv_cmd_buffer *cmd_buffer)
+{
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+   struct anv_surface_view *view = &aview->view;
+   struct anv_surface *surface = &image->primary_surface;
+   const struct anv_format *format_info =
+      anv_format_for_vk_format(pCreateInfo->format);
+
+   aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
+
+   anv_assert(pCreateInfo->arraySize > 0);
+   anv_assert(pCreateInfo->mipLevel < image->levels);
+   anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
+
+   view->bo = image->bo;
+   view->offset = image->offset + surface->offset;
+   view->format = anv_format_for_vk_format(pCreateInfo->format);
+
+   aview->base.extent = (VkExtent3D) {
+      .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
+      .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
+      .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
+   };
+
+   uint32_t depth = 1;
+   if (pCreateInfo->arraySize > 1) {
+      depth = pCreateInfo->arraySize;
+   } else if (image->extent.depth > 1) {
+      depth = image->extent.depth;
+   }
+
+   if (cmd_buffer) {
+      view->surface_state =
+         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+   } else {
+      view->surface_state =
+         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   }
+
+   struct GEN8_RENDER_SURFACE_STATE surface_state = {
+      .SurfaceType = SURFTYPE_2D,
+      .SurfaceArray = image->array_size > 1,
+      .SurfaceFormat = format_info->surface_format,
+      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
+      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+      .TileMode = surface->tile_mode,
+      .VerticalLineStride = 0,
+      .VerticalLineStrideOffset = 0,
+      .SamplerL2BypassModeDisable = true,
+      .RenderCacheReadWriteMode = WriteOnlyCache,
+      .MemoryObjectControlState = GEN8_MOCS,
+
+      /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
+       * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
+       * both Base Mip Level fields nonzero".
+       */
+      .BaseMipLevel = 0.0,
+
+      .SurfaceQPitch = surface->qpitch >> 2,
+      .Height = image->extent.height - 1,
+      .Width = image->extent.width - 1,
+      .Depth = depth - 1,
+      .SurfacePitch = surface->stride - 1,
+      .MinimumArrayElement = pCreateInfo->baseArraySlice,
+      .NumberofMultisamples = MULTISAMPLECOUNT_1,
+      .XOffset = 0,
+      .YOffset = 0,
+
+      /* For render target surfaces, the hardware interprets field MIPCount/LOD as
+       * LOD. The Broadwell PRM says:
+       *
+       *    MIPCountLOD defines the LOD that will be rendered into.
+       *    SurfaceMinLOD is ignored.
+       */
+      .SurfaceMinLOD = 0,
+      .MIPCountLOD = pCreateInfo->mipLevel,
+
+      .AuxiliarySurfaceMode = AUX_NONE,
+      .RedClearColor = 0,
+      .GreenClearColor = 0,
+      .BlueClearColor = 0,
+      .AlphaClearColor = 0,
+      .ShaderChannelSelectRed = SCS_RED,
+      .ShaderChannelSelectGreen = SCS_GREEN,
+      .ShaderChannelSelectBlue = SCS_BLUE,
+      .ShaderChannelSelectAlpha = SCS_ALPHA,
+      .ResourceMinLOD = 0.0,
+      .SurfaceBaseAddress = { NULL, view->offset },
+   };
+
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
+}
+
 VkResult gen8_CreateSampler(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,

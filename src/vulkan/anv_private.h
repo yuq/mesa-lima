@@ -1067,6 +1067,11 @@ void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
 
+void gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
+                                     struct anv_device *device,
+                                     const VkAttachmentViewCreateInfo* pCreateInfo,
+                                     struct anv_cmd_buffer *cmd_buffer);
+
 VkResult anv_buffer_view_create(struct anv_device *device,
                                 const VkBufferViewCreateInfo *pCreateInfo,
                                 struct anv_buffer_view **view_out);
