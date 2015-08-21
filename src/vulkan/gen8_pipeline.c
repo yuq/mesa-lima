@@ -124,7 +124,7 @@ emit_ia_state(struct anv_pipeline *pipeline,
       GEN8_3DSTATE_VF_header,
       .IndexedDrawCutIndexEnable = info->primitiveRestartEnable,
    };
-   GEN8_3DSTATE_VF_pack(NULL, pipeline->state_vf, &vf);
+   GEN8_3DSTATE_VF_pack(NULL, pipeline->gen8.vf, &vf);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_TOPOLOGY,
                   .PrimitiveTopologyType = topology);
@@ -165,7 +165,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
 
    /* FINISHME: VkBool32 rasterizerDiscardEnable; */
 
-   GEN8_3DSTATE_SF_pack(NULL, pipeline->state_sf, &sf);
+   GEN8_3DSTATE_SF_pack(NULL, pipeline->gen8.sf, &sf);
 
    struct GEN8_3DSTATE_RASTER raster = {
       GEN8_3DSTATE_RASTER_header,
@@ -177,8 +177,6 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .ViewportZClipTestEnable = info->depthClipEnable
    };
 
-   GEN8_3DSTATE_RASTER_pack(NULL, pipeline->state_raster, &raster);
-
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
                   .ForceVertexURBEntryReadLength = false,
                   .ForceVertexURBEntryReadOffset = false,
@@ -186,6 +184,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
                   .NumberofSFOutputAttributes =
                      pipeline->wm_prog_data.num_varying_inputs);
 
+   GEN8_3DSTATE_RASTER_pack(NULL, pipeline->gen8.raster, &raster);
 }
 
 static void
@@ -311,8 +310,8 @@ emit_ds_state(struct anv_pipeline *pipeline,
       /* We're going to OR this together with the dynamic state.  We need
        * to make sure it's initialized to something useful.
        */
-      memset(pipeline->state_wm_depth_stencil, 0,
-             sizeof(pipeline->state_wm_depth_stencil));
+      memset(pipeline->gen8.wm_depth_stencil, 0,
+             sizeof(pipeline->gen8.wm_depth_stencil));
       return;
    }
 
@@ -335,7 +334,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.stencilCompareOp],
    };
 
-   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, pipeline->state_wm_depth_stencil, &wm_depth_stencil);
+   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, pipeline->gen8.wm_depth_stencil, &wm_depth_stencil);
 }
 
 VkResult

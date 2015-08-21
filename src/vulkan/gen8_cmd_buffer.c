@@ -97,19 +97,19 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
                                   ANV_CMD_BUFFER_RS_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.rs_state->state_sf,
-                           pipeline->state_sf);
+                           cmd_buffer->state.rs_state->gen8.sf,
+                           pipeline->gen8.sf);
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.rs_state->state_raster,
-                           pipeline->state_raster);
+                           cmd_buffer->state.rs_state->gen8.raster,
+                           pipeline->gen8.raster);
    }
 
    if (cmd_buffer->state.ds_state &&
        (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
                                    ANV_CMD_BUFFER_DS_DIRTY))) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.ds_state->state_wm_depth_stencil,
-                           pipeline->state_wm_depth_stencil);
+                           cmd_buffer->state.ds_state->gen8.wm_depth_stencil,
+                           pipeline->gen8.wm_depth_stencil);
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_CB_DIRTY |
@@ -117,16 +117,16 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       struct anv_state state;
       if (cmd_buffer->state.ds_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->state.cb_state->state_color_calc,
+                                             cmd_buffer->state.cb_state->color_calc_state,
                                              GEN8_COLOR_CALC_STATE_length, 64);
       else if (cmd_buffer->state.cb_state == NULL)
          state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->state.ds_state->state_color_calc,
+                                             cmd_buffer->state.ds_state->gen8.color_calc_state,
                                              GEN8_COLOR_CALC_STATE_length, 64);
       else
          state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
-                                              cmd_buffer->state.ds_state->state_color_calc,
-                                              cmd_buffer->state.cb_state->state_color_calc,
+                                              cmd_buffer->state.ds_state->gen8.color_calc_state,
+                                              cmd_buffer->state.cb_state->color_calc_state,
                                               GEN8_COLOR_CALC_STATE_length, 64);
 
       anv_batch_emit(&cmd_buffer->batch,
@@ -138,7 +138,7 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
                                   ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.state_vf, pipeline->state_vf);
+                           cmd_buffer->state.state_vf, pipeline->gen8.vf);
    }
 
    cmd_buffer->state.vb_dirty &= ~vb_emit;

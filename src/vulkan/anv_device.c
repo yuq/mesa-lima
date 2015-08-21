@@ -1909,7 +1909,7 @@ VkResult anv_CreateDynamicColorBlendState(
       .BlendConstantColorAlpha = pCreateInfo->blendConst[3]
    };
 
-   GEN7_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
+   GEN7_COLOR_CALC_STATE_pack(NULL, state->color_calc_state, &color_calc_state);
 
    *pState = anv_dynamic_cb_state_to_handle(state);
 

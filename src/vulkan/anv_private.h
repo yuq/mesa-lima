@@ -569,17 +569,21 @@ struct anv_dynamic_vp_state {
 };
 
 struct anv_dynamic_rs_state {
-   uint32_t state_sf[GEN8_3DSTATE_SF_length];
-   uint32_t state_raster[GEN8_3DSTATE_RASTER_length];
+   struct {
+      uint32_t sf[GEN8_3DSTATE_SF_length];
+      uint32_t raster[GEN8_3DSTATE_RASTER_length];
+   } gen8;
 };
 
 struct anv_dynamic_ds_state {
-   uint32_t state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
-   uint32_t state_color_calc[GEN8_COLOR_CALC_STATE_length];
+   struct {
+      uint32_t wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+      uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
+   } gen8;
 };
 
 struct anv_dynamic_cb_state {
-   uint32_t state_color_calc[GEN8_COLOR_CALC_STATE_length];
+   uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
 
 };
 
@@ -861,13 +865,15 @@ struct anv_pipeline {
    uint32_t                                     vb_used;
    uint32_t                                     binding_stride[MAX_VBS];
 
-   uint32_t                                     state_sf[GEN8_3DSTATE_SF_length];
-   uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
-   uint32_t                                     state_raster[GEN8_3DSTATE_RASTER_length];
-   uint32_t                                     state_wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
-
    uint32_t                                     cs_thread_width_max;
    uint32_t                                     cs_right_mask;
+
+   struct {
+      uint32_t                                  sf[GEN8_3DSTATE_SF_length];
+      uint32_t                                  vf[GEN8_3DSTATE_VF_length];
+      uint32_t                                  raster[GEN8_3DSTATE_RASTER_length];
+      uint32_t                                  wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
+   } gen8;
 };
 
 struct anv_graphics_pipeline_create_info {

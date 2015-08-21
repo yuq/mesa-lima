@@ -49,7 +49,7 @@ VkResult gen8_CreateDynamicRasterState(
       .LineWidth = pCreateInfo->lineWidth,
    };
 
-   GEN8_3DSTATE_SF_pack(NULL, state->state_sf, &sf);
+   GEN8_3DSTATE_SF_pack(NULL, state->gen8.sf, &sf);
 
    bool enable_bias = pCreateInfo->depthBias != 0.0f ||
       pCreateInfo->slopeScaledDepthBias != 0.0f;
@@ -62,7 +62,7 @@ VkResult gen8_CreateDynamicRasterState(
       .GlobalDepthOffsetClamp = pCreateInfo->depthBiasClamp
    };
 
-   GEN8_3DSTATE_RASTER_pack(NULL, state->state_raster, &raster);
+   GEN8_3DSTATE_RASTER_pack(NULL, state->gen8.raster, &raster);
 
    *pState = anv_dynamic_rs_state_to_handle(state);
 
@@ -506,7 +506,7 @@ VkResult gen8_CreateDynamicDepthStencilState(
       .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
    };
 
-   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->state_wm_depth_stencil,
+   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->gen8.wm_depth_stencil,
                                       &wm_depth_stencil);
 
    struct GEN8_COLOR_CALC_STATE color_calc_state = {
@@ -514,7 +514,7 @@ VkResult gen8_CreateDynamicDepthStencilState(
       .BackFaceStencilReferenceValue = pCreateInfo->stencilBackRef
    };
 
-   GEN8_COLOR_CALC_STATE_pack(NULL, state->state_color_calc, &color_calc_state);
+   GEN8_COLOR_CALC_STATE_pack(NULL, state->gen8.color_calc_state, &color_calc_state);
 
    *pState = anv_dynamic_ds_state_to_handle(state);
 
