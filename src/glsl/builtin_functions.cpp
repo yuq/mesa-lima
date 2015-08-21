@@ -2739,7 +2739,8 @@ builtin_builder::add_image_functions(bool glsl)
 
    add_image_function(glsl ? "imageSize" : "__intrinsic_image_size",
                       "__intrinsic_image_size",
-                      &builtin_builder::_image_size_prototype, 1, atom_flags);
+                      &builtin_builder::_image_size_prototype, 1,
+                      flags | IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE);
 }
 
 ir_variable *
