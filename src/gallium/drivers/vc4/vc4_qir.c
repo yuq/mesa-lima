@@ -287,26 +287,11 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
 
         qir_print_reg(c, inst->dst, true);
         if (inst->dst.pack) {
-                if (qir_is_mul(inst)) {
-                        switch (inst->dst.pack) {
-                        case QPU_PACK_MUL_8888:
-                                fprintf(stderr, ".8888");
-                                break;
-                        case QPU_PACK_MUL_8A:
-                                fprintf(stderr, ".8a");
-                                break;
-                        case QPU_PACK_MUL_8B:
-                                fprintf(stderr, ".8b");
-                                break;
-                        case QPU_PACK_MUL_8C:
-                                fprintf(stderr, ".8c");
-                                break;
-                        case QPU_PACK_MUL_8D:
-                                fprintf(stderr, ".8d");
-                                break;
-                        }
-                } else {
-                        unreachable("packs only set up for MULs so far.\n");
+                if (inst->dst.pack) {
+                        if (qir_is_mul(inst))
+                                vc4_qpu_disasm_pack_mul(stderr, inst->dst.pack);
+                        else
+                                vc4_qpu_disasm_pack_a(stderr, inst->dst.pack);
                 }
         }
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
