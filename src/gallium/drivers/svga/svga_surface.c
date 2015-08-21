@@ -512,10 +512,9 @@ static void
 svga_mark_surface_dirty(struct pipe_surface *surf)
 {
    struct svga_surface *s = svga_surface(surf);
+   struct svga_texture *tex = svga_texture(surf->texture);
 
    if (!s->dirty) {
-      struct svga_texture *tex = svga_texture(surf->texture);
-
       s->dirty = TRUE;
 
       if (s->handle == tex->handle) {
@@ -526,12 +525,12 @@ svga_mark_surface_dirty(struct pipe_surface *surf)
       else {
          /* this will happen later in svga_propagate_surface */
       }
-
-      /* Increment the view_age and texture age for this surface's mipmap
-       * level so that any sampler views into the texture are re-validated too.
-       */
-      svga_age_texture_view(tex, surf->u.tex.level);
    }
+
+   /* Increment the view_age and texture age for this surface's mipmap
+    * level so that any sampler views into the texture are re-validated too.
+    */
+   svga_age_texture_view(tex, surf->u.tex.level);
 }
 
 
