@@ -455,8 +455,8 @@ svga_set_sampler_views(struct pipe_context *pipe,
     * for the conflicted surface view.
     */
    for (i = 0; i < svga->curr.framebuffer.nr_cbufs; i++) {
-      struct svga_surface *s = svga_surface(svga->curr.framebuffer.cbufs[i]);
-      if (s) {
+      if (svga->curr.framebuffer.cbufs[i]) {
+         struct svga_surface *s = svga_surface(svga->curr.framebuffer.cbufs[i]);
          if (svga_check_sampler_view_resource_collision(svga, s->handle, shader)) {
             svga->dirty |= SVGA_NEW_FRAME_BUFFER;
             break;
