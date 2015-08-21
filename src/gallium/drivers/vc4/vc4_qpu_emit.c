@@ -402,15 +402,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         queue(c, qpu_a_FADD(dst, src[0], qpu_r5()));
                         break;
 
-                case QOP_PACK_16A_I:
-                case QOP_PACK_16B_I:
-                        queue(c,
-                              qpu_a_MOV(dst, src[0]) |
-                              QPU_SET_FIELD(qinst->op == QOP_PACK_16A_I ?
-                                            QPU_PACK_A_16A : QPU_PACK_A_16B,
-                                            QPU_PACK));
-                        break;
-
                 case QOP_TEX_S:
                 case QOP_TEX_T:
                 case QOP_TEX_R:
@@ -516,6 +507,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 queue(c, qpu_a_alu2(translate[qinst->op].op,
                                                     dst,
                                                     src[0], src[1]));
+                                if (qinst->dst.pack) {
+                                        assert(dst.mux == QPU_MUX_A);
+                                        *last_inst(c) |= QPU_SET_FIELD(qinst->dst.pack,
+                                                                       QPU_PACK);
+                                }
                         }
 
                         break;

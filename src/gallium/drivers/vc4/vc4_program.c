@@ -1186,22 +1186,23 @@ emit_frag_end(struct vc4_compile *c)
 static void
 emit_scaled_viewport_write(struct vc4_compile *c, struct qreg rcp_w)
 {
-        struct qreg xyi[2];
+        struct qreg packed = qir_get_temp(c);
 
         for (int i = 0; i < 2; i++) {
                 struct qreg scale =
                         qir_uniform(c, QUNIFORM_VIEWPORT_X_SCALE + i, 0);
 
-                xyi[i] = qir_FTOI(c, qir_FMUL(c,
-                                              qir_FMUL(c,
-                                                       c->outputs[c->output_position_index + i],
-                                                       scale),
-                                              rcp_w));
+                struct qreg packed_chan = packed;
+                packed_chan.pack = QPU_PACK_A_16A + i;
+
+                qir_FTOI_dest(c, packed_chan,
+                              qir_FMUL(c,
+                                       qir_FMUL(c,
+                                                c->outputs[c->output_position_index + i],
+                                                scale),
+                                       rcp_w));
         }
 
-        struct qreg packed = qir_get_temp(c);
-        qir_PACK_16A_I(c, packed, xyi[0]);
-        qir_PACK_16B_I(c, packed, xyi[1]);
         qir_VPM_WRITE(c, packed);
 }
 
