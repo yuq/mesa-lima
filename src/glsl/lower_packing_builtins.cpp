@@ -118,6 +118,7 @@ public:
          *rvalue = split_unpack_half_2x16(op0);
          break;
       case LOWER_PACK_UNPACK_NONE:
+      case LOWER_PACK_USE_BFI:
          assert(!"not reached");
          break;
       }
@@ -222,8 +223,15 @@ private:
 
       /* uvec2 u = UVEC2_RVAL; */
       ir_variable *u = factory.make_temp(glsl_type::uvec2_type,
-                                          "tmp_pack_uvec2_to_uint");
+                                         "tmp_pack_uvec2_to_uint");
       factory.emit(assign(u, uvec2_rval));
+
+      if (op_mask & LOWER_PACK_USE_BFI) {
+         return bitfield_insert(bit_and(swizzle_x(u), constant(0xffffu)),
+                                swizzle_y(u),
+                                constant(16),
+                                constant(16));
+      }
 
       /* return (u.y << 16) | (u.x & 0xffff); */
       return bit_or(lshift(swizzle_y(u), constant(16u)),
@@ -242,9 +250,22 @@ private:
    {
       assert(uvec4_rval->type == glsl_type::uvec4_type);
 
-      /* uvec4 u = UVEC4_RVAL; */
       ir_variable *u = factory.make_temp(glsl_type::uvec4_type,
-                                          "tmp_pack_uvec4_to_uint");
+                                         "tmp_pack_uvec4_to_uint");
+
+      if (op_mask & LOWER_PACK_USE_BFI) {
+         /* uvec4 u = UVEC4_RVAL; */
+         factory.emit(assign(u, uvec4_rval));
+
+         return bitfield_insert(bitfield_insert(
+                                   bitfield_insert(
+                                      bit_and(swizzle_x(u), constant(0xffu)),
+                                      swizzle_y(u), constant(8), constant(8)),
+                                   swizzle_z(u), constant(16), constant(8)),
+                                swizzle_w(u), constant(24), constant(8));
+      }
+
+      /* uvec4 u = UVEC4_RVAL & 0xff */
       factory.emit(assign(u, bit_and(uvec4_rval, constant(0xffu))));
 
       /* return (u.w << 24) | (u.z << 16) | (u.y << 8) | u.x; */

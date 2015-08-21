@@ -66,7 +66,9 @@ enum lower_packing_builtins_op {
    LOWER_UNPACK_SNORM_4x8               = 0x0200,
 
    LOWER_PACK_UNORM_4x8                 = 0x0400,
-   LOWER_UNPACK_UNORM_4x8               = 0x0800
+   LOWER_UNPACK_UNORM_4x8               = 0x0800,
+
+   LOWER_PACK_USE_BFI                   = 0x1000,
 };
 
 bool do_common_optimization(exec_list *ir, bool linked,
