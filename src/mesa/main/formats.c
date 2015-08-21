@@ -1013,10 +1013,13 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_R8G8B8X8_UNORM:
    case MESA_FORMAT_B8G8R8X8_UNORM:
    case MESA_FORMAT_X8R8G8B8_UNORM:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 4;
+      return;
    case MESA_FORMAT_BGR_UNORM8:
    case MESA_FORMAT_RGB_UNORM8:
       *datatype = GL_UNSIGNED_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 3;
       return;
    case MESA_FORMAT_B5G6R5_UNORM:
    case MESA_FORMAT_R5G6B5_UNORM:
@@ -1065,12 +1068,16 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_A16L16_UNORM:
    case MESA_FORMAT_R16G16_UNORM:
    case MESA_FORMAT_G16R16_UNORM:
+      *datatype = GL_UNSIGNED_SHORT;
+      *comps = 2;
+      return;
+
    case MESA_FORMAT_R_UNORM16:
    case MESA_FORMAT_A_UNORM16:
    case MESA_FORMAT_L_UNORM16:
    case MESA_FORMAT_I_UNORM16:
       *datatype = GL_UNSIGNED_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 1;
       return;
 
    case MESA_FORMAT_R3G3B2_UNORM:
@@ -1078,6 +1085,10 @@ _mesa_format_to_type_and_comps(mesa_format format,
       *comps = 3;
       return;
    case MESA_FORMAT_A4B4G4R4_UNORM:
+      *datatype = GL_UNSIGNED_SHORT_4_4_4_4;
+      *comps = 4;
+      return;
+
    case MESA_FORMAT_R4G4B4A4_UNORM:
       *datatype = GL_UNSIGNED_SHORT_4_4_4_4;
       *comps = 4;
@@ -1088,6 +1099,9 @@ _mesa_format_to_type_and_comps(mesa_format format,
       return;
    case MESA_FORMAT_A2B10G10R10_UNORM:
    case MESA_FORMAT_A2B10G10R10_UINT:
+      *datatype = GL_UNSIGNED_INT_10_10_10_2;
+      *comps = 4;
+      return;
    case MESA_FORMAT_A2R10G10B10_UNORM:
    case MESA_FORMAT_A2R10G10B10_UINT:
       *datatype = GL_UNSIGNED_INT_10_10_10_2;
@@ -1130,7 +1144,15 @@ _mesa_format_to_type_and_comps(mesa_format format,
       return;
 
    case MESA_FORMAT_Z24_UNORM_X8_UINT:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 1;
+      return;
+
    case MESA_FORMAT_X8_UINT_Z24_UNORM:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 1;
+      return;
+
    case MESA_FORMAT_Z_UNORM32:
       *datatype = GL_UNSIGNED_INT;
       *comps = 1;
@@ -1150,14 +1172,20 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_A_SNORM8:
    case MESA_FORMAT_L_SNORM8:
    case MESA_FORMAT_I_SNORM8:
+      *datatype = GL_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_R8G8_SNORM:
    case MESA_FORMAT_L8A8_SNORM:
    case MESA_FORMAT_A8L8_SNORM:
+      *datatype = GL_BYTE;
+      *comps = 2;
+      return;
    case MESA_FORMAT_A8B8G8R8_SNORM:
    case MESA_FORMAT_R8G8B8A8_SNORM:
    case MESA_FORMAT_X8B8G8R8_SNORM:
       *datatype = GL_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
 
    case MESA_FORMAT_RGBA_UNORM16:
@@ -1169,24 +1197,42 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_A_SNORM16:
    case MESA_FORMAT_L_SNORM16:
    case MESA_FORMAT_I_SNORM16:
+      *datatype = GL_SHORT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_R16G16_SNORM:
    case MESA_FORMAT_LA_SNORM16:
+      *datatype = GL_SHORT;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_SNORM16:
+      *datatype = GL_SHORT;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_SNORM16:
       *datatype = GL_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
 
    case MESA_FORMAT_BGR_SRGB8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 3;
+      return;
    case MESA_FORMAT_A8B8G8R8_SRGB:
    case MESA_FORMAT_B8G8R8A8_SRGB:
    case MESA_FORMAT_A8R8G8B8_SRGB:
    case MESA_FORMAT_R8G8B8A8_SRGB:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 4;
+      return;
    case MESA_FORMAT_L_SRGB8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_L8A8_SRGB:
    case MESA_FORMAT_A8L8_SRGB:
       *datatype = GL_UNSIGNED_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
 
    case MESA_FORMAT_RGB_FXT1:
@@ -1271,94 +1317,166 @@ _mesa_format_to_type_and_comps(mesa_format format,
    case MESA_FORMAT_A_UINT8:
    case MESA_FORMAT_L_UINT8:
    case MESA_FORMAT_I_UINT8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_UINT8:
       *datatype = GL_UNSIGNED_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
 
    case MESA_FORMAT_A_UINT16:
    case MESA_FORMAT_L_UINT16:
    case MESA_FORMAT_I_UINT16:
+      *datatype = GL_UNSIGNED_SHORT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_UINT16:
       *datatype = GL_UNSIGNED_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
    case MESA_FORMAT_A_UINT32:
    case MESA_FORMAT_L_UINT32:
    case MESA_FORMAT_I_UINT32:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_UINT32:
       *datatype = GL_UNSIGNED_INT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
    case MESA_FORMAT_A_SINT8:
    case MESA_FORMAT_L_SINT8:
    case MESA_FORMAT_I_SINT8:
+      *datatype = GL_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_SINT8:
       *datatype = GL_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
 
    case MESA_FORMAT_A_SINT16:
    case MESA_FORMAT_L_SINT16:
    case MESA_FORMAT_I_SINT16:
+      *datatype = GL_SHORT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_SINT16:
       *datatype = GL_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
 
    case MESA_FORMAT_A_SINT32:
    case MESA_FORMAT_L_SINT32:
    case MESA_FORMAT_I_SINT32:
+      *datatype = GL_INT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_LA_SINT32:
       *datatype = GL_INT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 2;
       return;
 
    case MESA_FORMAT_R_SINT8:
+      *datatype = GL_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_SINT8:
+      *datatype = GL_BYTE;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_SINT8:
+      *datatype = GL_BYTE;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_SINT8:
       *datatype = GL_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
    case MESA_FORMAT_R_SINT16:
+      *datatype = GL_SHORT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_SINT16:
+      *datatype = GL_SHORT;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_SINT16:
+      *datatype = GL_SHORT;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_SINT16:
       *datatype = GL_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
    case MESA_FORMAT_R_SINT32:
+      *datatype = GL_INT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_SINT32:
+      *datatype = GL_INT;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_SINT32:
+      *datatype = GL_INT;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_SINT32:
       *datatype = GL_INT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
 
    /**
     * \name Non-normalized unsigned integer formats.
     */
    case MESA_FORMAT_R_UINT8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_UINT8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_UINT8:
+      *datatype = GL_UNSIGNED_BYTE;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_UINT8:
       *datatype = GL_UNSIGNED_BYTE;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
    case MESA_FORMAT_R_UINT16:
+      *datatype = GL_UNSIGNED_SHORT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_UINT16:
+      *datatype = GL_UNSIGNED_SHORT;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_UINT16:
+      *datatype = GL_UNSIGNED_SHORT;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_UINT16:
       *datatype = GL_UNSIGNED_SHORT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
    case MESA_FORMAT_R_UINT32:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 1;
+      return;
    case MESA_FORMAT_RG_UINT32:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 2;
+      return;
    case MESA_FORMAT_RGB_UINT32:
+      *datatype = GL_UNSIGNED_INT;
+      *comps = 3;
+      return;
    case MESA_FORMAT_RGBA_UINT32:
       *datatype = GL_UNSIGNED_INT;
-      *comps = _mesa_format_num_components(format);
+      *comps = 4;
       return;
 
    case MESA_FORMAT_R9G9B9E5_FLOAT:
