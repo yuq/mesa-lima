@@ -527,12 +527,10 @@ gen8_graphics_pipeline_create(
    if (pipeline->vs_simd8 == NO_KERNEL || (extra && extra->disable_vs))
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
                      .FunctionEnable = false,
-                     .VertexURBEntryOutputReadOffset = 1,
                      /* Even if VS is disabled, SBE still gets the amount of
-                      * vertex data to read from this field. We use attribute
-                      * count - 1, as we don't count the VUE header here. */
-                     .VertexURBEntryOutputLength =
-                        DIV_ROUND_UP(pCreateInfo->pVertexInputState->attributeCount - 1, 2));
+                      * vertex data to read from this field. */
+                     .VertexURBEntryOutputReadOffset = offset,
+                     .VertexURBEntryOutputLength = length);
    else
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VS,
                      .KernelStartPointer = pipeline->vs_simd8,

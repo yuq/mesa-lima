@@ -34,8 +34,21 @@ static void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
    /* We don't use a vertex shader for clearing, but instead build and pass
-    * the VUEs directly to the rasterization backend.
+    * the VUEs directly to the rasterization backend.  However, we do need
+    * to provide GLSL source for the vertex shader so that the compiler
+    * does not dead-code our inputs.
     */
+   VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
+      in vec2 a_pos;
+      in vec4 a_color;
+      flat out vec4 v_color;
+      void main()
+      {
+         v_color = a_color;
+         gl_Position = vec4(a_pos, 0, 1);
+      }
+   );
+
    VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
       out vec4 f_color;
       flat in vec4 v_color;
@@ -44,6 +57,14 @@ anv_device_init_meta_clear_state(struct anv_device *device)
          f_color = v_color;
       }
    );
+
+   VkShader vs;
+   anv_CreateShader(anv_device_to_handle(device),
+      &(VkShaderCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+         .module = vsm,
+         .pName = "main",
+      }, &vs);
 
    VkShader fs;
    anv_CreateShader(anv_device_to_handle(device),
@@ -103,12 +124,20 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    anv_graphics_pipeline_create(anv_device_to_handle(device),
       &(VkGraphicsPipelineCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .stageCount = 1,
-         .pStages = &(VkPipelineShaderStageCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_FRAGMENT,
-            .shader = fs,
-            .pSpecializationInfo = NULL,
+
+         .stageCount = 2,
+         .pStages = (VkPipelineShaderStageCreateInfo[]) {
+            {
+               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .stage = VK_SHADER_STAGE_VERTEX,
+               .shader = vs,
+               .pSpecializationInfo = NULL
+            }, {
+               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+               .stage = VK_SHADER_STAGE_FRAGMENT,
+               .shader = fs,
+               .pSpecializationInfo = NULL,
+            }
          },
          .pVertexInputState = &vi_create_info,
          .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
@@ -153,6 +182,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       &(struct anv_graphics_pipeline_create_info) {
          .use_repclear = true,
          .disable_viewport = true,
+         .disable_vs = true,
          .use_rectlist = true
       },
       &device->meta_state.clear.pipeline);
