@@ -7636,6 +7636,8 @@ struct GEN75_RENDER_SURFACE_STATE {
    uint32_t                                     SurfaceType;
    bool                                         SurfaceArray;
    uint32_t                                     SurfaceFormat;
+#define     VALIGN_2                                           0
+#define     VALIGN_4                                           1
    uint32_t                                     SurfaceVerticalAlignment;
 #define     HALIGN_4                                           0
 #define     HALIGN_8                                           1
