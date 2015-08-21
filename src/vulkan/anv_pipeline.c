@@ -285,6 +285,8 @@ anv_graphics_pipeline_create(
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    switch (device->info.gen) {
+   case 7:
+      return gen7_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    case 8:
       return gen8_graphics_pipeline_create(_device, pCreateInfo, extra, pPipeline);
    default:
@@ -325,6 +327,8 @@ static VkResult anv_compute_pipeline_create(
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    switch (device->info.gen) {
+   case 7:
+      return gen7_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    case 8:
       return gen8_compute_pipeline_create(_device, pCreateInfo, pPipeline);
    default:

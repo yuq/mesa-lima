@@ -414,6 +414,9 @@ anv_image_view_init(struct anv_image_view *iview,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    switch (device->info.gen) {
+   case 7:
+      gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
+      break;
    case 8:
       gen8_image_view_init(iview, device, pCreateInfo, cmd_buffer);
       break;
@@ -428,15 +431,19 @@ anv_CreateImageView(VkDevice _device,
                     VkImageView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_image_view *view;
 
-   switch (device->info.gen) {
-   case 8:
-      return gen8_CreateImageView(_device, pCreateInfo, pView);
-   default:
-      unreachable("unsupported gen\n");
-   }
+   view = anv_device_alloc(device, sizeof(*view), 8,
+                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (view == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   anv_image_view_init(view, device, pCreateInfo, NULL);
+
+   *pView = anv_image_view_to_handle(view);
+
+   return VK_SUCCESS;
 }
-
 
 VkResult
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
@@ -484,6 +491,9 @@ anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
                                struct anv_cmd_buffer *cmd_buffer)
 {
    switch (device->info.gen) {
+   case 7:
+      gen7_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
+      break;
    case 8:
       gen8_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
       break;

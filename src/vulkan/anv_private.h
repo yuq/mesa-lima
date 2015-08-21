@@ -550,6 +550,12 @@ __gen_combine_address(struct anv_batch *batch, void *location,
       VG(VALGRIND_CHECK_MEM_IS_DEFINED(dw, ARRAY_SIZE(dwords0) * 4));\
    } while (0)
 
+static const struct GEN7_MEMORY_OBJECT_CONTROL_STATE GEN7_MOCS = {
+   .GraphicsDataTypeGFDT                        = 0,
+   .LLCCacheabilityControlLLCCC                 = 0,
+   .L3CacheabilityControlL3CC                   = 0
+};
+
 #define GEN8_MOCS {                                     \
       .MemoryTypeLLCeLLCCacheabilityControl = WB,       \
       .TargetCache = L3DefertoPATforLLCeLLCselection,   \
@@ -570,12 +576,21 @@ struct anv_dynamic_vp_state {
 
 struct anv_dynamic_rs_state {
    struct {
+      uint32_t sf[GEN7_3DSTATE_SF_length];
+   } gen7;
+
+   struct {
       uint32_t sf[GEN8_3DSTATE_SF_length];
       uint32_t raster[GEN8_3DSTATE_RASTER_length];
    } gen8;
 };
 
 struct anv_dynamic_ds_state {
+   struct {
+      uint32_t depth_stencil_state[GEN7_DEPTH_STENCIL_STATE_length];
+      uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
+   } gen7;
+
    struct {
       uint32_t wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
       uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
@@ -689,6 +704,12 @@ struct anv_cmd_state {
    uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
+
+   struct {
+      struct anv_buffer *                       index_buffer;
+      uint32_t                                  index_type;
+      uint32_t                                  index_offset;
+   } gen7;
 };
 
 struct anv_cmd_pool {
@@ -793,9 +814,13 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
 
+void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
+void gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_subpass *subpass);
 
 void gen8_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_subpass *subpass);
@@ -856,6 +881,7 @@ struct anv_pipeline {
    struct anv_state_stream                      program_stream;
    struct anv_state                             blend_state;
    uint32_t                                     vs_simd8;
+   uint32_t                                     vs_vec4;
    uint32_t                                     ps_simd8;
    uint32_t                                     ps_simd16;
    uint32_t                                     ps_ksp0;
@@ -874,6 +900,11 @@ struct anv_pipeline {
 
    uint32_t                                     cs_thread_width_max;
    uint32_t                                     cs_right_mask;
+
+   struct {
+      uint32_t                                  sf[GEN7_3DSTATE_SF_length];
+      uint32_t                                  depth_stencil_state[GEN7_DEPTH_STENCIL_STATE_length];
+   } gen7;
 
    struct {
       uint32_t                                  sf[GEN8_3DSTATE_SF_length];
@@ -913,6 +944,11 @@ gen8_graphics_pipeline_create(VkDevice _device,
                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
                               const struct anv_graphics_pipeline_create_info *extra,
                               VkPipeline *pPipeline);
+VkResult
+gen7_compute_pipeline_create(VkDevice _device,
+                             const VkComputePipelineCreateInfo *pCreateInfo,
+                             VkPipeline *pPipeline);
+
 VkResult
 gen8_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
@@ -1081,6 +1117,12 @@ void anv_image_view_init(struct anv_image_view *view,
                          struct anv_cmd_buffer *cmd_buffer);
 
 void
+gen7_image_view_init(struct anv_image_view *iview,
+                     struct anv_device *device,
+                     const VkImageViewCreateInfo* pCreateInfo,
+                     struct anv_cmd_buffer *cmd_buffer);
+
+void
 gen8_image_view_init(struct anv_image_view *iview,
                      struct anv_device *device,
                      const VkImageViewCreateInfo* pCreateInfo,
@@ -1090,6 +1132,11 @@ void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
                                     struct anv_device *device,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
+
+void gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
+                                     struct anv_device *device,
+                                     const VkAttachmentViewCreateInfo* pCreateInfo,
+                                     struct anv_cmd_buffer *cmd_buffer);
 
 void gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
                                      struct anv_device *device,
@@ -1104,6 +1151,8 @@ void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
                                    uint32_t offset, uint32_t range);
 
+void gen7_fill_buffer_surface_state(void *state, const struct anv_format *format,
+                                    uint32_t offset, uint32_t range);
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range);
 

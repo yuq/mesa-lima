@@ -261,26 +261,6 @@ gen8_image_view_init(struct anv_image_view *iview,
    GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
 }
 
-VkResult
-gen8_CreateImageView(VkDevice _device,
-                     const VkImageViewCreateInfo *pCreateInfo,
-                     VkImageView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_image_view *view;
-
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_image_view_init(view, device, pCreateInfo, NULL);
-
-   *pView = anv_image_view_to_handle(view);
-
-   return VK_SUCCESS;
-}
-
 void
 gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
                                 struct anv_device *device,

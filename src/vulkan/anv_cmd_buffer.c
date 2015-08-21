@@ -55,6 +55,8 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->vp_state = NULL;
    state->rs_state = NULL;
    state->ds_state = NULL;
+
+   state->gen7.index_buffer = NULL;
 }
 
 VkResult anv_CreateCommandBuffer(
@@ -141,6 +143,8 @@ void
 anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    switch (cmd_buffer->device->info.gen) {
+   case 7:
+      return gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
    case 8:
       return gen8_cmd_buffer_emit_state_base_address(cmd_buffer);
    default:
@@ -324,11 +328,15 @@ static void
 add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
                         struct anv_state state, struct anv_bo *bo, uint32_t offset)
 {
-   /* The address goes in dwords 8 and 9 of the SURFACE_STATE */
-   *(uint64_t *)(state.map + 8 * 4) =
-      anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
-                         cmd_buffer->device, state.offset + 8 * 4, bo, offset);
+   /* The address goes in SURFACE_STATE dword 1 for gens < 8 and dwords 8 and
+    * 9 for gen8+.  We only write the first dword for gen8+ here and rely on
+    * the initial state to set the high bits to 0. */
 
+   const uint32_t dword = cmd_buffer->device->info.gen < 8 ? 1 : 8;
+
+   *(uint32_t *)(state.map + dword * 4) =
+      anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
+                         cmd_buffer->device, state.offset + dword * 4, bo, offset);
 }
 
 VkResult
@@ -610,6 +618,9 @@ anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
 {
    switch (cmd_buffer->device->info.gen) {
+   case 7:
+      gen7_cmd_buffer_begin_subpass(cmd_buffer, subpass);
+      break;
    case 8:
       gen8_cmd_buffer_begin_subpass(cmd_buffer, subpass);
       break;

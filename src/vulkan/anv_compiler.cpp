@@ -258,7 +258,14 @@ really_do_vs_prog(struct brw_context *brw,
       return false;
    }
 
-   pipeline->vs_simd8 = upload_kernel(pipeline, program, program_size);
+   const uint32_t offset = upload_kernel(pipeline, program, program_size);
+   if (prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8) {
+      pipeline->vs_simd8 = offset;
+      pipeline->vs_vec4 = NO_KERNEL;
+   } else {
+      pipeline->vs_simd8 = NO_KERNEL;
+      pipeline->vs_vec4 = offset;
+   }
 
    ralloc_free(mem_ctx);
 
@@ -1121,6 +1128,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    } else {
       memset(&pipeline->vs_prog_data, 0, sizeof(pipeline->vs_prog_data));
       pipeline->vs_simd8 = NO_KERNEL;
+      pipeline->vs_vec4 = NO_KERNEL;
    }
 
 
