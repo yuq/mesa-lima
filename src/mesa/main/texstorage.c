@@ -308,22 +308,14 @@ tex_storage_error_check(struct gl_context *ctx,
       return GL_TRUE;
    }  
 
-   /* From section 3.8.6, page 146 of OpenGL ES 3.0 spec:
-    *
-    *    "The ETC2/EAC texture compression algorithm supports only
-    *     two-dimensional images. If internalformat is an ETC2/EAC format,
-    *     CompressedTexImage3D will generate an INVALID_OPERATION error if
-    *     target is not TEXTURE_2D_ARRAY."
-    *
-    * This should also be applicable for glTexStorage3D().
-    */
-   if (_mesa_is_compressed_format(ctx, internalformat)
-       && !_mesa_target_can_be_compressed(ctx, target, internalformat)) {
-      _mesa_error(ctx, _mesa_is_desktop_gl(ctx)?
-                  GL_INVALID_ENUM : GL_INVALID_OPERATION,
+   if (_mesa_is_compressed_format(ctx, internalformat)) {
+      GLenum err;
+      if (!_mesa_target_can_be_compressed(ctx, target, internalformat, &err)) {
+         _mesa_error(ctx, err,
                   "glTex%sStorage%dD(internalformat = %s)", suffix, dims,
                   _mesa_enum_to_string(internalformat));
-      return GL_TRUE;
+         return GL_TRUE;
+      }
    }
 
    /* levels check */

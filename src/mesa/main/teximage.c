@@ -1785,18 +1785,36 @@ compressedteximage_only_format(const struct gl_context *ctx, GLenum format)
 }
 
 
+/* Writes to an GL error pointer if non-null and returns whether or not the
+ * error is GL_NO_ERROR */
+static bool
+write_error(GLenum *err_ptr, GLenum error)
+{
+   if (err_ptr)
+      *err_ptr = error;
+
+   return error == GL_NO_ERROR;
+}
+
 /**
  * Helper function to determine whether a target and specific compression
- * format are supported.
+ * format are supported. The error parameter returns GL_NO_ERROR if the
+ * target can be compressed. Otherwise it returns either GL_INVALID_OPERATION
+ * or GL_INVALID_ENUM, whichever is more appropriate.
  */
 GLboolean
 _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
-                               GLenum intFormat)
+                               GLenum intFormat, GLenum *error)
 {
+   GLboolean target_can_be_compresed = GL_FALSE;
+   mesa_format format = _mesa_glenum_to_compressed_format(intFormat);
+   enum mesa_format_layout layout = _mesa_get_format_layout(format);
+
    switch (target) {
    case GL_TEXTURE_2D:
    case GL_PROXY_TEXTURE_2D:
-      return GL_TRUE; /* true for any compressed format so far */
+      target_can_be_compresed = GL_TRUE; /* true for any compressed format so far */
+      break;
    case GL_PROXY_TEXTURE_CUBE_MAP:
    case GL_TEXTURE_CUBE_MAP:
    case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
@@ -1805,26 +1823,46 @@ _mesa_target_can_be_compressed(const struct gl_context *ctx, GLenum target,
    case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
    case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
    case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
-      return ctx->Extensions.ARB_texture_cube_map;
+      target_can_be_compresed = ctx->Extensions.ARB_texture_cube_map;
+      break;
    case GL_PROXY_TEXTURE_2D_ARRAY_EXT:
    case GL_TEXTURE_2D_ARRAY_EXT:
-      return ctx->Extensions.EXT_texture_array;
+      target_can_be_compresed = ctx->Extensions.EXT_texture_array;
+      break;
    case GL_PROXY_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_CUBE_MAP_ARRAY:
-      return ctx->Extensions.ARB_texture_cube_map_array;
+      /* From section 3.8.6, page 146 of OpenGL ES 3.0 spec:
+       *
+       *    "The ETC2/EAC texture compression algorithm supports only
+       *     two-dimensional images. If internalformat is an ETC2/EAC format,
+       *     glCompressedTexImage3D will generate an INVALID_OPERATION error if
+       *     target is not TEXTURE_2D_ARRAY."
+       *
+       * This should also be applicable for glTexStorage3D(). Other available
+       * targets for these functions are: TEXTURE_3D and TEXTURE_CUBE_MAP_ARRAY.
+       */
+      if (layout == MESA_FORMAT_LAYOUT_ETC2 && _mesa_is_gles3(ctx))
+            return write_error(error, GL_INVALID_OPERATION);
+
+      target_can_be_compresed = ctx->Extensions.ARB_texture_cube_map_array;
+      break;
    case GL_TEXTURE_3D:
-      switch (intFormat) {
-      case GL_COMPRESSED_RGBA_BPTC_UNORM:
-      case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
-      case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
-      case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
-         return ctx->Extensions.ARB_texture_compression_bptc;
-      default:
-         return GL_FALSE;
+
+      /* See ETC2/EAC comment in switch case GL_TEXTURE_CUBE_MAP_ARRAY. */
+      if (layout == MESA_FORMAT_LAYOUT_ETC2 && _mesa_is_gles3(ctx))
+         return write_error(error, GL_INVALID_OPERATION);
+
+      if (layout == MESA_FORMAT_LAYOUT_BPTC) {
+         target_can_be_compresed = ctx->Extensions.ARB_texture_compression_bptc;
+         break;
       }
+
+      break;
    default:
-      return GL_FALSE;
+      break;
    }
+   return write_error(error,
+                      target_can_be_compresed ? GL_NO_ERROR : GL_INVALID_ENUM);
 }
 
 
@@ -2284,8 +2322,9 @@ texture_error_check( struct gl_context *ctx,
 
    /* additional checks for compressed textures */
    if (_mesa_is_compressed_format(ctx, internalFormat)) {
-      if (!_mesa_target_can_be_compressed(ctx, target, internalFormat)) {
-         _mesa_error(ctx, GL_INVALID_ENUM,
+      GLenum err;
+      if (!_mesa_target_can_be_compressed(ctx, target, internalFormat, &err)) {
+         _mesa_error(ctx, err,
                      "glTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
@@ -2340,16 +2379,8 @@ compressed_texture_error_check(struct gl_context *ctx, GLint dimensions,
    GLenum error = GL_NO_ERROR;
    char *reason = ""; /* no error */
 
-   if (!_mesa_target_can_be_compressed(ctx, target, internalFormat)) {
+   if (!_mesa_target_can_be_compressed(ctx, target, internalFormat, &error)) {
       reason = "target";
-      /* From section 3.8.6, page 146 of OpenGL ES 3.0 spec:
-       *
-       *    "The ETC2/EAC texture compression algorithm supports only
-       *     two-dimensional images. If internalformat is an ETC2/EAC format,
-       *     CompressedTexImage3D will generate an INVALID_OPERATION error if
-       *     target is not TEXTURE_2D_ARRAY."
-       */
-      error = _mesa_is_desktop_gl(ctx) ? GL_INVALID_ENUM : GL_INVALID_OPERATION;
       goto error;
    }
 
@@ -2813,9 +2844,10 @@ copytexture_error_check( struct gl_context *ctx, GLuint dimensions,
    }
 
    if (_mesa_is_compressed_format(ctx, internalFormat)) {
-      if (!_mesa_target_can_be_compressed(ctx, target, internalFormat)) {
-         _mesa_error(ctx, GL_INVALID_ENUM,
-                     "glCopyTexImage%dD(target)", dimensions);
+      GLenum err;
+      if (!_mesa_target_can_be_compressed(ctx, target, internalFormat, &err)) {
+         _mesa_error(ctx, err,
+                     "glCopyTexImage%dD(target can't be compressed)", dimensions);
          return GL_TRUE;
       }
       if (compressedteximage_only_format(ctx, internalFormat)) {
