@@ -136,13 +136,6 @@ emit_rs_state(struct anv_pipeline *pipeline,
       .ViewportZClipTestEnable = info->depthClipEnable
    };
 
-   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
-                  .ForceVertexURBEntryReadLength = false,
-                  .ForceVertexURBEntryReadOffset = false,
-                  .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
-                  .NumberofSFOutputAttributes =
-                     pipeline->wm_prog_data.num_varying_inputs);
-
    GEN8_3DSTATE_RASTER_pack(NULL, pipeline->gen8.raster, &raster);
 }
 
@@ -527,6 +520,13 @@ gen8_graphics_pipeline_create(
                      .UserClipDistanceCullTestEnableBitmask = 0);
 
    const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
+
+   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
+                  .ForceVertexURBEntryReadLength = false,
+                  .ForceVertexURBEntryReadOffset = false,
+                  .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
+                  .NumberofSFOutputAttributes =
+                     wm_prog_data->num_varying_inputs);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PS,
                   .KernelStartPointer0 = pipeline->ps_ksp0,
