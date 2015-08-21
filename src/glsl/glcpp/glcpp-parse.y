@@ -2382,6 +2382,8 @@ _glcpp_parser_handle_version_declaration(glcpp_parser_t *parser, intmax_t versio
 	         add_builtin_define(parser, "GL_OES_EGL_image_external", 1);
               if (extensions->OES_standard_derivatives)
                  add_builtin_define(parser, "GL_OES_standard_derivatives", 1);
+              if (extensions->ARB_texture_multisample)
+                 add_builtin_define(parser, "GL_OES_texture_storage_multisample_2d_array", 1);
 	   }
 	} else {
 	   add_builtin_define(parser, "GL_ARB_draw_buffers", 1);

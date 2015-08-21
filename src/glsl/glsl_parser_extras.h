@@ -548,6 +548,8 @@ struct _mesa_glsl_parse_state {
    bool OES_standard_derivatives_warn;
    bool OES_texture_3D_enable;
    bool OES_texture_3D_warn;
+   bool OES_texture_storage_multisample_2d_array_enable;
+   bool OES_texture_storage_multisample_2d_array_warn;
 
    /* All other extensions go here, sorted alphabetically.
     */
