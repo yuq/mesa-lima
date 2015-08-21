@@ -6020,7 +6020,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                LOWER_UNPACK_HALF_2x16;
 
          if (ctx->Extensions.ARB_gpu_shader5)
-            lower_inst |= LOWER_PACK_USE_BFI;
+            lower_inst |= LOWER_PACK_USE_BFI |
+                          LOWER_PACK_USE_BFE;
 
          lower_packing_builtins(ir, lower_inst);
       }
