@@ -3317,7 +3317,7 @@ handle_tess_ctrl_shader_output_decl(struct _mesa_glsl_parse_state *state,
 
    validate_layout_qualifier_vertex_count(state, loc, var, num_vertices,
                                           &state->tcs_output_size,
-                                          "geometry shader input");
+                                          "tessellation control shader output");
 }
 
 /**
