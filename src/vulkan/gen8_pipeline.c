@@ -35,29 +35,6 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 {
    const uint32_t num_dwords = 1 + info->attributeCount * 2;
    uint32_t *p;
-   bool instancing_enable[32];
-
-   pipeline->vb_used = 0;
-   for (uint32_t i = 0; i < info->bindingCount; i++) {
-      const VkVertexInputBindingDescription *desc =
-         &info->pVertexBindingDescriptions[i];
-
-      pipeline->vb_used |= 1 << desc->binding;
-      pipeline->binding_stride[desc->binding] = desc->strideInBytes;
-
-      /* Step rate is programmed per vertex element (attribute), not
-       * binding. Set up a map of which bindings step per instance, for
-       * reference by vertex element setup. */
-      switch (desc->stepRate) {
-      default:
-      case VK_VERTEX_INPUT_STEP_RATE_VERTEX:
-         instancing_enable[desc->binding] = false;
-         break;
-      case VK_VERTEX_INPUT_STEP_RATE_INSTANCE:
-         instancing_enable[desc->binding] = true;
-         break;
-      }
-   }
 
    p = anv_batch_emitn(&pipeline->batch, num_dwords,
                        GEN8_3DSTATE_VERTEX_ELEMENTS);
@@ -81,7 +58,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       GEN8_VERTEX_ELEMENT_STATE_pack(NULL, &p[1 + i * 2], &element);
 
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_INSTANCING,
-                     .InstancingEnable = instancing_enable[desc->binding],
+                     .InstancingEnable = pipeline->instancing_enable[desc->binding],
                      .VertexElementIndex = i,
                      /* Vulkan so far doesn't have an instance divisor, so
                       * this is always 1 (ignored if not instancing). */
@@ -102,32 +79,14 @@ emit_ia_state(struct anv_pipeline *pipeline,
               const VkPipelineInputAssemblyStateCreateInfo *info,
               const struct anv_graphics_pipeline_create_info *extra)
 {
-   static const uint32_t vk_to_gen_primitive_type[] = {
-      [VK_PRIMITIVE_TOPOLOGY_POINT_LIST]        = _3DPRIM_POINTLIST,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST]         = _3DPRIM_LINELIST,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP]        = _3DPRIM_LINESTRIP,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST]     = _3DPRIM_TRILIST,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP]    = _3DPRIM_TRISTRIP,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN]      = _3DPRIM_TRIFAN,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ]     = _3DPRIM_LINELIST_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ]    = _3DPRIM_LINESTRIP_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ] = _3DPRIM_TRILIST_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ] = _3DPRIM_TRISTRIP_ADJ,
-      [VK_PRIMITIVE_TOPOLOGY_PATCH]             = _3DPRIM_PATCHLIST_1
-   };
-   uint32_t topology = vk_to_gen_primitive_type[info->topology];
-
-   if (extra && extra->use_rectlist)
-      topology = _3DPRIM_RECTLIST;
-
    struct GEN8_3DSTATE_VF vf = {
       GEN8_3DSTATE_VF_header,
-      .IndexedDrawCutIndexEnable = info->primitiveRestartEnable,
+      .IndexedDrawCutIndexEnable = pipeline->primitive_restart
    };
    GEN8_3DSTATE_VF_pack(NULL, pipeline->gen8.vf, &vf);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_VF_TOPOLOGY,
-                  .PrimitiveTopologyType = topology);
+                  .PrimitiveTopologyType = pipeline->topology);
 }
 
 static void
@@ -356,6 +315,10 @@ gen8_graphics_pipeline_create(
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   result = anv_pipeline_init(pipeline, device, pCreateInfo, extra);
+   if (result != VK_SUCCESS)
+      return result;
+
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
@@ -564,26 +527,9 @@ gen8_graphics_pipeline_create(
                      .UserClipDistanceCullTestEnableBitmask = 0);
 
    const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
-   uint32_t ksp0, ksp2, grf_start0, grf_start2;
-
-   ksp2 = 0;
-   grf_start2 = 0;
-   if (pipeline->ps_simd8 != NO_KERNEL) {
-      ksp0 = pipeline->ps_simd8;
-      grf_start0 = wm_prog_data->base.dispatch_grf_start_reg;
-      if (pipeline->ps_simd16 != NO_KERNEL) {
-         ksp2 = pipeline->ps_simd16;
-         grf_start2 = wm_prog_data->dispatch_grf_start_reg_16;
-      }
-   } else if (pipeline->ps_simd16 != NO_KERNEL) {
-      ksp0 = pipeline->ps_simd16;
-      grf_start0 = wm_prog_data->dispatch_grf_start_reg_16;
-   } else {
-      unreachable("no ps shader");
-   }
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PS,
-                  .KernelStartPointer0 = ksp0,
+                  .KernelStartPointer0 = pipeline->ps_ksp0,
 
                   .SingleProgramFlow = false,
                   .VectorMaskEnable = true,
@@ -600,12 +546,12 @@ gen8_graphics_pipeline_create(
                   ._16PixelDispatchEnable = pipeline->ps_simd16 != NO_KERNEL,
                   ._32PixelDispatchEnable = false,
 
-                  .DispatchGRFStartRegisterForConstantSetupData0 = grf_start0,
+                  .DispatchGRFStartRegisterForConstantSetupData0 = pipeline->ps_grf_start0,
                   .DispatchGRFStartRegisterForConstantSetupData1 = 0,
-                  .DispatchGRFStartRegisterForConstantSetupData2 = grf_start2,
+                  .DispatchGRFStartRegisterForConstantSetupData2 = pipeline->ps_grf_start2,
 
                   .KernelStartPointer1 = 0,
-                  .KernelStartPointer2 = ksp2);
+                  .KernelStartPointer2 = pipeline->ps_ksp2);
 
    bool per_sample_ps = false;
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PS_EXTRA,

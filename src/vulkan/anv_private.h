@@ -858,12 +858,19 @@ struct anv_pipeline {
    uint32_t                                     vs_simd8;
    uint32_t                                     ps_simd8;
    uint32_t                                     ps_simd16;
+   uint32_t                                     ps_ksp0;
+   uint32_t                                     ps_ksp2;
+   uint32_t                                     ps_grf_start0;
+   uint32_t                                     ps_grf_start2;
    uint32_t                                     gs_vec4;
    uint32_t                                     gs_vertex_count;
    uint32_t                                     cs_simd;
 
    uint32_t                                     vb_used;
    uint32_t                                     binding_stride[MAX_VBS];
+   bool                                         instancing_enable[MAX_VBS];
+   bool                                         primitive_restart;
+   uint32_t                                     topology;
 
    uint32_t                                     cs_thread_width_max;
    uint32_t                                     cs_right_mask;
@@ -885,10 +892,21 @@ struct anv_graphics_pipeline_create_info {
 };
 
 VkResult
+anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
+                  const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                  const struct anv_graphics_pipeline_create_info *extra);
+
+VkResult
 anv_graphics_pipeline_create(VkDevice device,
                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                              const struct anv_graphics_pipeline_create_info *extra,
                              VkPipeline *pPipeline);
+
+VkResult
+gen7_graphics_pipeline_create(VkDevice _device,
+                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                              const struct anv_graphics_pipeline_create_info *extra,
+                              VkPipeline *pPipeline);
 
 VkResult
 gen8_graphics_pipeline_create(VkDevice _device,

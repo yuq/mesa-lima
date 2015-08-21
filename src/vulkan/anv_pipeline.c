@@ -170,6 +170,111 @@ VkResult anv_DestroyPipeline(
    return VK_SUCCESS;
 }
 
+static const uint32_t vk_to_gen_primitive_type[] = {
+   [VK_PRIMITIVE_TOPOLOGY_POINT_LIST]           = _3DPRIM_POINTLIST,
+   [VK_PRIMITIVE_TOPOLOGY_LINE_LIST]            = _3DPRIM_LINELIST,
+   [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP]           = _3DPRIM_LINESTRIP,
+   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST]        = _3DPRIM_TRILIST,
+   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP]       = _3DPRIM_TRISTRIP,
+   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN]         = _3DPRIM_TRIFAN,
+   [VK_PRIMITIVE_TOPOLOGY_LINE_LIST_ADJ]        = _3DPRIM_LINELIST_ADJ,
+   [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_ADJ]       = _3DPRIM_LINESTRIP_ADJ,
+   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_ADJ]    = _3DPRIM_TRILIST_ADJ,
+   [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ]   = _3DPRIM_TRISTRIP_ADJ,
+   [VK_PRIMITIVE_TOPOLOGY_PATCH]                = _3DPRIM_PATCHLIST_1
+};
+
+VkResult
+anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
+                  const VkGraphicsPipelineCreateInfo *pCreateInfo,
+                  const struct anv_graphics_pipeline_create_info *extra)
+{
+   pipeline->device = device;
+   pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
+   memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
+   VkResult result;
+
+   result = anv_reloc_list_init(&pipeline->batch_relocs, device);
+   if (result != VK_SUCCESS) {
+      anv_device_free(device, pipeline);
+      return result;
+   }
+   pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
+   pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
+   pipeline->batch.relocs = &pipeline->batch_relocs;
+
+   anv_state_stream_init(&pipeline->program_stream,
+                         &device->instruction_block_pool);
+
+   for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
+      pipeline->shaders[pCreateInfo->pStages[i].stage] =
+         anv_shader_from_handle(pCreateInfo->pStages[i].shader);
+   }
+
+   if (pCreateInfo->pTessellationState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
+   if (pCreateInfo->pViewportState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO");
+   if (pCreateInfo->pMultisampleState)
+      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
+
+   pipeline->use_repclear = extra && extra->use_repclear;
+
+   anv_compiler_run(device->compiler, pipeline);
+
+   const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
+
+   pipeline->ps_ksp2 = 0;
+   pipeline->ps_grf_start2 = 0;
+   if (pipeline->ps_simd8 != NO_KERNEL) {
+      pipeline->ps_ksp0 = pipeline->ps_simd8;
+      pipeline->ps_grf_start0 = wm_prog_data->base.dispatch_grf_start_reg;
+      if (pipeline->ps_simd16 != NO_KERNEL) {
+         pipeline->ps_ksp2 = pipeline->ps_simd16;
+         pipeline->ps_grf_start2 = wm_prog_data->dispatch_grf_start_reg_16;
+      }
+   } else if (pipeline->ps_simd16 != NO_KERNEL) {
+      pipeline->ps_ksp0 = pipeline->ps_simd16;
+      pipeline->ps_grf_start0 = wm_prog_data->dispatch_grf_start_reg_16;
+   } else {
+      unreachable("no ps shader");
+   }
+
+   const VkPipelineVertexInputStateCreateInfo *vi_info =
+      pCreateInfo->pVertexInputState;
+   pipeline->vb_used = 0;
+   for (uint32_t i = 0; i < vi_info->bindingCount; i++) {
+      const VkVertexInputBindingDescription *desc =
+         &vi_info->pVertexBindingDescriptions[i];
+
+      pipeline->vb_used |= 1 << desc->binding;
+      pipeline->binding_stride[desc->binding] = desc->strideInBytes;
+
+      /* Step rate is programmed per vertex element (attribute), not
+       * binding. Set up a map of which bindings step per instance, for
+       * reference by vertex element setup. */
+      switch (desc->stepRate) {
+      default:
+      case VK_VERTEX_INPUT_STEP_RATE_VERTEX:
+         pipeline->instancing_enable[desc->binding] = false;
+         break;
+      case VK_VERTEX_INPUT_STEP_RATE_INSTANCE:
+         pipeline->instancing_enable[desc->binding] = true;
+         break;
+      }
+   }
+
+   const VkPipelineInputAssemblyStateCreateInfo *ia_info =
+      pCreateInfo->pInputAssemblyState;
+   pipeline->primitive_restart = ia_info->primitiveRestartEnable;
+   pipeline->topology = vk_to_gen_primitive_type[ia_info->topology];
+
+   if (extra && extra->use_rectlist)
+      pipeline->topology = _3DPRIM_RECTLIST;
+
+   return VK_SUCCESS;
+}
+
 VkResult
 anv_graphics_pipeline_create(
    VkDevice _device,
