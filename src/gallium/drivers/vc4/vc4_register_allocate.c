@@ -116,6 +116,7 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         vc4->regs = ra_alloc_reg_set(vc4, ARRAY_SIZE(vc4_regs), true);
 
         vc4->reg_class_any = ra_alloc_reg_class(vc4->regs);
+        vc4->reg_class_a_or_b_or_acc = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_r4_or_a = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_a = ra_alloc_reg_class(vc4->regs);
         for (uint32_t i = 0; i < ARRAY_SIZE(vc4_regs); i++) {
@@ -130,10 +131,12 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
                  */
                 if (vc4_regs[i].mux == QPU_MUX_R4) {
                         ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a, i);
+                        ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
                         continue;
                 }
 
                 ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
+                ra_class_add_reg(vc4->regs, vc4->reg_class_a_or_b_or_acc, i);
         }
 
         for (uint32_t i = AB_INDEX; i < AB_INDEX + 64; i += 2) {
@@ -304,8 +307,10 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
 
                 switch (class_bits[i]) {
                 case CLASS_BIT_A | CLASS_BIT_B_OR_ACC | CLASS_BIT_R4:
-                case CLASS_BIT_A | CLASS_BIT_B_OR_ACC:
                         ra_set_node_class(g, node, vc4->reg_class_any);
+                        break;
+                case CLASS_BIT_A | CLASS_BIT_B_OR_ACC:
+                        ra_set_node_class(g, node, vc4->reg_class_a_or_b_or_acc);
                         break;
                 case CLASS_BIT_A | CLASS_BIT_R4:
                         ra_set_node_class(g, node, vc4->reg_class_r4_or_a);
