@@ -393,8 +393,8 @@ NineSurface9_LockRect( struct NineSurface9 *This,
          * and bpp 8, and the app has a workaround to work with the fact
          * that it is actually compressed. */
         if (is_ATI1_ATI2(This->base.info.format)) {
-            pLockedRect->Pitch = This->desc.Height;
-            pLockedRect->pBits = This->data + box.y * This->desc.Height + box.x;
+            pLockedRect->Pitch = This->desc.Width;
+            pLockedRect->pBits = This->data + box.y * This->desc.Width + box.x;
         } else {
             pLockedRect->Pitch = This->stride;
             pLockedRect->pBits = NineSurface9_GetSystemMemPointer(This,
