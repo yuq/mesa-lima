@@ -349,8 +349,8 @@ static void si_dump_mmapped_reg(struct si_context *sctx, FILE *f,
 	struct radeon_winsys *ws = sctx->b.ws;
 	uint32_t value;
 
-	ws->read_registers(ws, offset, 1, &value);
-	si_dump_reg(f, offset, value, ~0);
+	if (ws->read_registers(ws, offset, 1, &value))
+		si_dump_reg(f, offset, value, ~0);
 }
 
 static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
