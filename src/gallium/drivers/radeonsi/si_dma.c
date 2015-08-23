@@ -86,8 +86,8 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 	for (i = 0; i < ncopy; i++) {
 		csize = size < max_csize ? size : max_csize;
 		cs->buf[cs->cdw++] = SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, csize);
-		cs->buf[cs->cdw++] = dst_offset & 0xffffffff;
-		cs->buf[cs->cdw++] = src_offset & 0xffffffff;
+		cs->buf[cs->cdw++] = dst_offset;
+		cs->buf[cs->cdw++] = src_offset;
 		cs->buf[cs->cdw++] = (dst_offset >> 32UL) & 0xff;
 		cs->buf[cs->cdw++] = (src_offset >> 32UL) & 0xff;
 		dst_offset += csize << shift;

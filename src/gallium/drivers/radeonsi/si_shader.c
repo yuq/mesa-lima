@@ -3781,7 +3781,7 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			uint64_t scratch_va)
 {
 	unsigned i;
-	uint32_t scratch_rsrc_dword0 = scratch_va & 0xffffffff;
+	uint32_t scratch_rsrc_dword0 = scratch_va;
 	uint32_t scratch_rsrc_dword1 =
 		S_008F04_BASE_ADDRESS_HI(scratch_va >> 32)
 		|  S_008F04_STRIDE(shader->scratch_bytes_per_wave / 64);

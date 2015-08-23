@@ -341,8 +341,8 @@ static void r600_emit_query_predication(struct r600_common_context *ctx, struct 
 	
 			while (results_base < qbuf->results_end) {
 				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-				radeon_emit(cs, (va + results_base) & 0xFFFFFFFFUL);
-				radeon_emit(cs, op | (((va + results_base) >> 32UL) & 0xFF));
+				radeon_emit(cs, va + results_base);
+				radeon_emit(cs, op | (((va + results_base) >> 32) & 0xFF));
 				r600_emit_reloc(ctx, &ctx->rings.gfx, qbuf->buf, RADEON_USAGE_READ,
 						RADEON_PRIO_MIN);
 				results_base += query->result_size;
