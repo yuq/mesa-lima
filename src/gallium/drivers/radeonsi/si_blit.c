@@ -507,7 +507,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 	util_blitter_default_dst_texture(&dst_templ, dst, dst_level, dstz);
 	util_blitter_default_src_texture(&src_templ, src, src_level);
 
-	if (util_format_is_compressed(src->format) &&
+	if (util_format_is_compressed(src->format) ||
 	    util_format_is_compressed(dst->format)) {
 		unsigned blocksize = util_format_get_blocksize(src->format);
 
