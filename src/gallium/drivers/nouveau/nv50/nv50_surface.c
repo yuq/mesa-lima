@@ -1003,6 +1003,8 @@ nv50_blitctx_prepare_state(struct nv50_blitctx *blit)
    /* zsa state */
    BEGIN_NV04(push, NV50_3D(DEPTH_TEST_ENABLE), 1);
    PUSH_DATA (push, 0);
+   BEGIN_NV04(push, NV50_3D(DEPTH_BOUNDS_EN), 1);
+   PUSH_DATA (push, 0);
    BEGIN_NV04(push, NV50_3D(STENCIL_ENABLE), 1);
    PUSH_DATA (push, 0);
    BEGIN_NV04(push, NV50_3D(ALPHA_TEST_ENABLE), 1);
