@@ -37,7 +37,8 @@ NineDevice9Ex_ctor( struct NineDevice9Ex *This,
                     D3DDISPLAYMODEEX *pFullscreenDisplayMode,
                     IDirect3D9Ex *pD3D9Ex,
                     ID3DPresentGroup *pPresentationGroup,
-                    struct d3dadapter9_context *pCTX )
+                    struct d3dadapter9_context *pCTX,
+                    int minorVersionNum )
 {
     DBG("This=%p pParams=%p pScreen=%p pCreationParameters=%p pCaps=%p "
         "pPresentationParameters=%p pFullscreenDisplayMode=%p "
@@ -50,7 +51,7 @@ NineDevice9Ex_ctor( struct NineDevice9Ex *This,
                             pScreen, pCreationParameters, pCaps,
                             pPresentationParameters,
                             (IDirect3D9 *)pD3D9Ex, pPresentationGroup, pCTX,
-                            TRUE, pFullscreenDisplayMode);
+                            TRUE, pFullscreenDisplayMode, minorVersionNum);
 }
 
 static void
@@ -401,13 +402,14 @@ NineDevice9Ex_new( struct pipe_screen *pScreen,
                    IDirect3D9Ex *pD3D9Ex,
                    ID3DPresentGroup *pPresentationGroup,
                    struct d3dadapter9_context *pCTX,
-                   struct NineDevice9Ex **ppOut )
+                   struct NineDevice9Ex **ppOut,
+                   int minorVersionNum )
 {
     BOOL lock;
     lock = !!(pCreationParameters->BehaviorFlags & D3DCREATE_MULTITHREADED);
 
     NINE_NEW(Device9Ex, ppOut, lock,
              pScreen, pCreationParameters, pCaps, pPresentationParameters,
-             pFullscreenDisplayMode, pD3D9Ex, pPresentationGroup, pCTX);
+             pFullscreenDisplayMode, pD3D9Ex, pPresentationGroup, pCTX, minorVersionNum );
 }
 

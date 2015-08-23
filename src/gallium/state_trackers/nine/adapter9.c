@@ -981,7 +981,8 @@ NineAdapter9_CreateDevice( struct NineAdapter9 *This,
 
     hr = NineDevice9_new(screen, &params, &caps, pPresentationParameters,
                          pD3D9, pPresentationGroup, This->ctx, FALSE, NULL,
-                         (struct NineDevice9 **)ppReturnedDeviceInterface);
+                         (struct NineDevice9 **)ppReturnedDeviceInterface,
+                         minor);
     if (FAILED(hr)) {
         DBG("Failed to create device.\n");
         return hr;
@@ -1042,7 +1043,8 @@ NineAdapter9_CreateDeviceEx( struct NineAdapter9 *This,
     hr = NineDevice9Ex_new(screen, &params, &caps, pPresentationParameters,
                            pFullscreenDisplayMode,
                            pD3D9Ex, pPresentationGroup, This->ctx,
-                           (struct NineDevice9Ex **)ppReturnedDeviceInterface);
+                           (struct NineDevice9Ex **)ppReturnedDeviceInterface,
+                           minor);
     if (FAILED(hr)) {
         DBG("Failed to create device.\n");
         return hr;

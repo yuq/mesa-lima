@@ -44,7 +44,8 @@ NineDevice9Ex_new( struct pipe_screen *pScreen,
                    IDirect3D9Ex *pD3D9Ex,
                    ID3DPresentGroup *pPresentationGroup,
                    struct d3dadapter9_context *pCTX,
-                   struct NineDevice9Ex **ppOut );
+                   struct NineDevice9Ex **ppOut,
+                   int minorVersionNum );
 
 HRESULT WINAPI
 NineDevice9Ex_SetConvolutionMonoKernel( struct NineDevice9Ex *This,
