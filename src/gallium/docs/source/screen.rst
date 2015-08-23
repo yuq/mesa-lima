@@ -278,7 +278,9 @@ The integer capabilities:
   in the shader.
 * ``PIPE_CAP_SHAREABLE_SHADERS``: Whether shader CSOs can be used by any
   pipe_context.
-
+* ``PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS``:
+  Whether copying between compressed and plain formats is supported where
+  a compressed block is copied to/from a plain pixel of the same size.
 
 
 .. _pipe_capf:

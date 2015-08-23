@@ -298,6 +298,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_SM5:
 	case PIPE_CAP_TGSI_TXQS:
 	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
+	case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
