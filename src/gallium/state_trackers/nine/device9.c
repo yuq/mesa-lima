@@ -1455,7 +1455,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
     struct NineSurface9 *src = NineSurface9(pSourceSurface);
     struct pipe_resource *dst_res = NineSurface9_GetResource(dst);
     struct pipe_resource *src_res = NineSurface9_GetResource(src);
-    const boolean zs = util_format_is_depth_or_stencil(dst_res->format);
+    boolean zs;
     struct pipe_blit_info blit;
     boolean scaled, clamped, ms, flip_x = FALSE, flip_y = FALSE;
 
@@ -1470,6 +1470,9 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
         DBG("pDestRect=(%u,%u)-(%u,%u)\n", pDestRect->left, pDestRect->top,
             pDestRect->right, pDestRect->bottom);
 
+    user_assert(dst->base.pool == D3DPOOL_DEFAULT &&
+                src->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
+    zs = util_format_is_depth_or_stencil(dst_res->format);
     user_assert(!zs || !This->in_scene, D3DERR_INVALIDCALL);
     user_assert(!zs || !pSourceRect ||
                 (pSourceRect->left == 0 &&
@@ -1493,8 +1496,6 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                                             src_res->nr_samples,
                                             PIPE_BIND_SAMPLER_VIEW),
                 D3DERR_INVALIDCALL);
-    user_assert(dst->base.pool == D3DPOOL_DEFAULT &&
-                src->base.pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
     /* We might want to permit these, but wine thinks we shouldn't. */
     user_assert(!pDestRect ||
