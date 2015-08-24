@@ -47,6 +47,13 @@
  */
 /*@{*/
 
+static bool
+block_ends_in_jump(nir_block *block)
+{
+   return !exec_list_is_empty(&block->instr_list) &&
+          nir_block_last_instr(block)->type == nir_instr_type_jump;
+}
+
 static inline void
 block_add_pred(nir_block *block, nir_block *pred)
 {
@@ -111,14 +118,12 @@ link_non_block_to_block(nir_cf_node *node, nir_block *block)
       assert(last_else->type == nir_cf_node_block);
       nir_block *last_else_block = nir_cf_node_as_block(last_else);
 
-      if (exec_list_is_empty(&last_then_block->instr_list) ||
-          nir_block_last_instr(last_then_block)->type != nir_instr_type_jump) {
+      if (!block_ends_in_jump(last_then_block)) {
          unlink_block_successors(last_then_block);
          link_blocks(last_then_block, block, NULL);
       }
 
-      if (exec_list_is_empty(&last_else_block->instr_list) ||
-          nir_block_last_instr(last_else_block)->type != nir_instr_type_jump) {
+      if (!block_ends_in_jump(last_else_block)) {
          unlink_block_successors(last_else_block);
          link_blocks(last_else_block, block, NULL);
       }
@@ -293,14 +298,6 @@ move_successors(nir_block *source, nir_block *dest)
    unlink_block_successors(dest);
    link_blocks(dest, succ1, succ2);
 }
-
-static bool
-block_ends_in_jump(nir_block *block)
-{
-   return !exec_list_is_empty(&block->instr_list) &&
-          nir_block_last_instr(block)->type == nir_instr_type_jump;
-}
-
 
 /* Given a basic block with no successors that has been inserted into the
  * control flow tree, gives it the successors it would normally have assuming
