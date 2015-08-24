@@ -1745,10 +1745,10 @@ _mesa_BindTexture( GLenum target, GLuint texName )
  * texture object will be decremented.  It'll be deleted if the
  * count hits zero.
  */
-void
-_mesa_bind_texture_unit(struct gl_context *ctx,
-                        GLuint unit,
-                        struct gl_texture_object *texObj)
+static void
+bind_texture_unit(struct gl_context *ctx,
+                  GLuint unit,
+                  struct gl_texture_object *texObj)
 {
    struct gl_texture_unit *texUnit;
 
@@ -1837,7 +1837,7 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
    }
    assert(valid_texture_object(texObj));
 
-   _mesa_bind_texture_unit(ctx, unit, texObj);
+   bind_texture_unit(ctx, unit, texObj);
 }
 
 

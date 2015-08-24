@@ -209,10 +209,6 @@ extern void
 _mesa_delete_nameless_texture(struct gl_context *ctx,
                               struct gl_texture_object *texObj);
 
-extern void
-_mesa_bind_texture_unit(struct gl_context *ctx,
-                        GLuint unit,
-                        struct gl_texture_object *texObj);
 
 /*@}*/
 
