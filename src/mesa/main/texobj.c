@@ -1612,7 +1612,8 @@ _mesa_tex_target_to_index(const struct gl_context *ctx, GLenum target)
       return ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_texture_multisample) ||
               _mesa_is_gles31(ctx)) ? TEXTURE_2D_MULTISAMPLE_INDEX: -1;
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-      return _mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_texture_multisample
+      return ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_texture_multisample) ||
+              _mesa_is_gles31(ctx))
          ? TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX: -1;
    default:
       return -1;
