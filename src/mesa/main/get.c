@@ -361,44 +361,9 @@ static const int extra_ARB_shader_image_load_store_and_tessellation[] = {
    EXTRA_END
 };
 
-static const int extra_ARB_draw_indirect_es31[] = {
-   EXT(ARB_draw_indirect),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_shader_image_load_store_es31[] = {
-   EXT(ARB_shader_image_load_store),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_shader_atomic_counters_es31[] = {
-   EXT(ARB_shader_atomic_counters),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_texture_multisample_es31[] = {
-   EXT(ARB_texture_multisample),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_texture_gather_es31[] = {
-   EXT(ARB_texture_gather),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
+/* HACK: remove when ARB_compute_shader is actually supported */
 static const int extra_ARB_compute_shader_es31[] = {
    EXT(ARB_compute_shader),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_explicit_uniform_location_es31[] = {
-   EXT(ARB_explicit_uniform_location),
    EXTRA_API_ES31,
    EXTRA_END
 };
