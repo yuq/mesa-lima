@@ -293,13 +293,22 @@ nv50_vertex_arrays_validate(struct nv50_context *nv50)
    uint64_t addrs[PIPE_MAX_ATTRIBS];
    uint32_t limits[PIPE_MAX_ATTRIBS];
    struct nouveau_pushbuf *push = nv50->base.pushbuf;
-   struct nv50_vertex_stateobj *vertex = nv50->vertex;
+   struct nv50_vertex_stateobj dummy = {};
+   struct nv50_vertex_stateobj *vertex = nv50->vertex ? nv50->vertex : &dummy;
    struct pipe_vertex_buffer *vb;
    struct nv50_vertex_element *ve;
    uint32_t mask;
    uint32_t refd = 0;
    unsigned i;
    const unsigned n = MAX2(vertex->num_elements, nv50->state.num_vtxelts);
+
+   /* A vertexid is not generated for inline data uploads. Have to use a
+    * VBO. This check must come after the vertprog has been validated,
+    * otherwise vertexid may be unset.
+    */
+   assert(nv50->vertprog->translated);
+   if (nv50->vertprog->vp.vertexid)
+      nv50->vbo_push_hint = 0;
 
    if (unlikely(vertex->need_conversion))
       nv50->vbo_fifo = ~0;
