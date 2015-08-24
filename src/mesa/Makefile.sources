@@ -423,6 +423,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_cb_clear.h \
 	state_tracker/st_cb_condrender.c \
 	state_tracker/st_cb_condrender.h \
+	state_tracker/st_cb_copyimage.c \
+	state_tracker/st_cb_copyimage.h \
 	state_tracker/st_cb_drawpixels.c \
 	state_tracker/st_cb_drawpixels.h \
 	state_tracker/st_cb_drawpixels_shader.c \
