@@ -166,6 +166,8 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
          }
          /* FALLTHROUGH */
       case PROGRAM_STATE_VAR: {
+         assert(c->parameters != NULL);
+
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
          nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
@@ -1088,13 +1090,15 @@ prog_to_nir(const struct gl_program *prog,
       goto fail;
    c->prog = prog;
 
-   c->parameters = rzalloc(s, nir_variable);
-   c->parameters->type = glsl_array_type(glsl_vec4_type(),
-                                            prog->Parameters->NumParameters);
-   c->parameters->name = "parameters";
-   c->parameters->data.read_only = true;
-   c->parameters->data.mode = nir_var_uniform;
-   exec_list_push_tail(&s->uniforms, &c->parameters->node);
+   if (prog->Parameters->NumParameters > 0) {
+      c->parameters = rzalloc(s, nir_variable);
+      c->parameters->type =
+         glsl_array_type(glsl_vec4_type(), prog->Parameters->NumParameters);
+      c->parameters->name = "parameters";
+      c->parameters->data.read_only = true;
+      c->parameters->data.mode = nir_var_uniform;
+      exec_list_push_tail(&s->uniforms, &c->parameters->node);
+   }
 
    nir_function *func = nir_function_create(s, "main");
    nir_function_overload *overload = nir_function_overload_create(func);
