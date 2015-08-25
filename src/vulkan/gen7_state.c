@@ -322,8 +322,13 @@ gen7_image_view_init(struct anv_image_view *iview,
       .SurfaceFormat = format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+
+      /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
+       * Tiled Surface is False."
+       */
       .TiledSurface = surface->tile_mode > LINEAR,
-      .TileWalk = surface->tile_mode == XMAJOR ? TILEWALK_XMAJOR : TILEWALK_YMAJOR,
+      .TileWalk = surface->tile_mode == YMAJOR ? TILEWALK_YMAJOR : TILEWALK_XMAJOR,
+
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .RenderCacheReadWriteMode = false,
@@ -415,8 +420,13 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
       .SurfaceFormat = view->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
+
+      /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
+       * Tiled Surface is False."
+       */
       .TiledSurface = surface->tile_mode > LINEAR,
-      .TileWalk = surface->tile_mode == XMAJOR ? TILEWALK_XMAJOR : TILEWALK_YMAJOR,
+      .TileWalk = surface->tile_mode == YMAJOR ? TILEWALK_YMAJOR : TILEWALK_XMAJOR,
+
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
       .RenderCacheReadWriteMode = WriteOnlyCache,
