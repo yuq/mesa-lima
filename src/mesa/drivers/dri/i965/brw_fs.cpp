@@ -1508,21 +1508,12 @@ void
 fs_visitor::assign_vs_urb_setup()
 {
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
-   int grf, count, slot, channel, attr;
+   int grf, slot, channel, attr;
 
    assert(stage == MESA_SHADER_VERTEX);
-   count = _mesa_bitcount_64(vs_prog_data->inputs_read);
-   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid)
-      count++;
 
    /* Each attribute is 4 regs. */
-   this->first_non_payload_grf += count * 4;
-
-   unsigned vue_entries =
-      MAX2(count, vs_prog_data->base.vue_map.num_slots);
-
-   vs_prog_data->base.urb_entry_size = ALIGN(vue_entries, 4) / 4;
-   vs_prog_data->base.urb_read_length = (count + 1) / 2;
+   this->first_non_payload_grf += 4 * vs_prog_data->nr_attributes;
 
    assert(vs_prog_data->base.urb_read_length <= 15);
 
@@ -1532,7 +1523,7 @@ fs_visitor::assign_vs_urb_setup()
          if (inst->src[i].file == ATTR) {
 
             if (inst->src[i].reg == VERT_ATTRIB_MAX) {
-               slot = count - 1;
+               slot = vs_prog_data->nr_attributes - 1;
             } else {
                /* Attributes come in in a contiguous block, ordered by their
                 * gl_vert_attrib value.  That means we can compute the slot

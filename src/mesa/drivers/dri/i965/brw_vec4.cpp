@@ -1632,28 +1632,11 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
     */
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
       attribute_map[VERT_ATTRIB_MAX] = payload_reg + nr_attributes;
-      nr_attributes++;
    }
 
    lower_attributes_to_hw_regs(attribute_map, false /* interleaved */);
 
-   /* The BSpec says we always have to read at least one thing from
-    * the VF, and it appears that the hardware wedges otherwise.
-    */
-   if (nr_attributes == 0)
-      nr_attributes = 1;
-
-   prog_data->urb_read_length = (nr_attributes + 1) / 2;
-
-   unsigned vue_entries =
-      MAX2(nr_attributes, prog_data->vue_map.num_slots);
-
-   if (devinfo->gen == 6)
-      prog_data->urb_entry_size = ALIGN(vue_entries, 8) / 8;
-   else
-      prog_data->urb_entry_size = ALIGN(vue_entries, 4) / 4;
-
-   return payload_reg + nr_attributes;
+   return payload_reg + vs_prog_data->nr_attributes;
 }
 
 int
