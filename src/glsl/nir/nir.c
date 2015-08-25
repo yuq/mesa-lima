@@ -675,9 +675,10 @@ nir_instr_insert_before(nir_instr *instr, nir_instr *before)
 void
 nir_instr_insert_after(nir_instr *instr, nir_instr *after)
 {
+   assert(instr->type != nir_instr_type_jump);
+
    if (after->type == nir_instr_type_jump) {
       assert(instr == nir_block_last_instr(instr->block));
-      assert(instr->type != nir_instr_type_jump);
    }
 
    after->block = instr->block;
@@ -705,10 +706,9 @@ nir_instr_insert_before_block(nir_block *block, nir_instr *before)
 void
 nir_instr_insert_after_block(nir_block *block, nir_instr *after)
 {
-   if (after->type == nir_instr_type_jump) {
-      assert(exec_list_is_empty(&block->instr_list) ||
-             nir_block_last_instr(block)->type != nir_instr_type_jump);
-   }
+   nir_instr *last = nir_block_last_instr(block);
+   assert(last == NULL || last->type != nir_instr_type_jump);
+   (void) last;
 
    after->block = block;
    add_defs_uses(after);
