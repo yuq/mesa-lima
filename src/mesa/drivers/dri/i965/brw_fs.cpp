@@ -4517,7 +4517,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "***m%d***", inst->src[i].reg);
          break;
       case ATTR:
-         fprintf(file, "attr%d", inst->src[i].reg + inst->src[i].reg_offset);
+         fprintf(file, "attr%d+%d", inst->src[i].reg, inst->src[i].reg_offset);
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].reg + inst->src[i].reg_offset);
