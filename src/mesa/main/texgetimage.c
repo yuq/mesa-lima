@@ -361,6 +361,13 @@ get_tex_rgba_compressed(struct gl_context *ctx, GLuint dimensions,
                            tempSlice, RGBA32_FLOAT, srcStride,
                            width, height,
                            needsRebase ? rebaseSwizzle : NULL);
+
+      /* Handle byte swapping if required */
+      if (ctx->Pack.SwapBytes) {
+         _mesa_swap_bytes_2d_image(format, type, &ctx->Pack,
+                                   width, height, dest, dest);
+      }
+
       tempSlice += 4 * width * height;
    }
 
