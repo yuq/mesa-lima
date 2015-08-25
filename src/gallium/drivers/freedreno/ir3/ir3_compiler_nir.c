@@ -2312,7 +2312,7 @@ emit_instructions(struct ir3_compile *ctx)
 	ctx->ir = ir3_create(ctx->compiler, ninputs, noutputs);
 
 	/* Create inputs in first block: */
-	ctx->block = get_block(ctx, fxn->start_block);
+	ctx->block = get_block(ctx, nir_start_block(fxn));
 	ctx->in_block = ctx->block;
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 
