@@ -299,6 +299,9 @@ evaluate_${name}(unsigned num_components, unsigned bit_size,
                _src[${j}].${get_const_field(input_types[j])}[${k}],
             % endif
          % endfor
+         % for k in range(op.input_sizes[j], 4):
+            0,
+         % endfor
          };
       % endfor
 
