@@ -553,7 +553,7 @@ __gen_combine_address(struct anv_batch *batch, void *location,
 static const struct GEN7_MEMORY_OBJECT_CONTROL_STATE GEN7_MOCS = {
    .GraphicsDataTypeGFDT                        = 0,
    .LLCCacheabilityControlLLCCC                 = 0,
-   .L3CacheabilityControlL3CC                   = 0
+   .L3CacheabilityControlL3CC                   = 1
 };
 
 #define GEN8_MOCS {                                     \
