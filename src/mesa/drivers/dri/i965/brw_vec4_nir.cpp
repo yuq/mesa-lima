@@ -612,17 +612,19 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_ubo: {
+      const uint32_t set = instr->const_index[0];
       nir_const_value *const_block_index = nir_src_as_const_value(instr->src[0]);
       src_reg surf_index;
 
       dest = get_nir_dest(instr->dest);
 
       if (const_block_index) {
+         uint32_t binding = const_block_index->u[0];
+
          /* The block index is a constant, so just emit the binding table entry
           * as an immediate.
           */
-         surf_index = src_reg(prog_data->base.binding_table.ubo_start +
-                              const_block_index->u[0]);
+         surf_index = src_reg(stage_prog_data->bind_map[set].index[binding]);
       } else {
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
