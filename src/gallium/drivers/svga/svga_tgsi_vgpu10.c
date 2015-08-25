@@ -2631,6 +2631,28 @@ emit_temporaries_declaration(struct svga_shader_emitter_v10 *emit)
 
    total_temps = emit->num_shader_temps;
 
+   /* If there is indirect access to non-indexable temps in the shader,
+    * convert those temps to indexable temps. This works around a bug
+    * in the GLSL->TGSI translator exposed in piglit test
+    * glsl-1.20/execution/fs-const-array-of-struct-of-array.shader_test.
+    * Internal temps added by the driver remain as non-indexable temps.
+    */
+   if ((emit->info.indirect_files & (1 << TGSI_FILE_TEMPORARY)) &&
+       emit->num_temp_arrays == 0) {
+      unsigned arrayID;
+
+      arrayID = 1;
+      emit->num_temp_arrays = arrayID + 1; 
+      emit->temp_arrays[arrayID].start = 0;
+      emit->temp_arrays[arrayID].size = total_temps;
+
+      /* Fill in the temp_map entries for this temp array */
+      for (i = 0; i < total_temps; i++) {
+         emit->temp_map[i].arrayId = arrayID;
+         emit->temp_map[i].index = i;
+      }
+   }
+
    /* Allocate extra temps for specially-implemented instructions,
     * such as LIT.
     */
@@ -2740,15 +2762,16 @@ emit_temporaries_declaration(struct svga_shader_emitter_v10 *emit)
          emit->temp_map[i].index = reg++;
       }
    }
-   total_temps = reg;
 
    if (0) {
       debug_printf("total_temps %u\n", total_temps);
-      for (i = 0; i < 30; i++) {
+      for (i = 0; i < total_temps; i++) {
          debug_printf("temp %u ->  array %u  index %u\n",
                       i, emit->temp_map[i].arrayId, emit->temp_map[i].index);
       }
    }
+
+   total_temps = reg;
 
    /* Emit declaration of ordinary temp registers */
    if (total_temps > 0) {
