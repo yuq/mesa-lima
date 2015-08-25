@@ -466,6 +466,10 @@ void bc_dump::dump(fetch_node& n) {
 		for (unsigned k = 0; k < 3; ++k)
 			if (n.bc.offset[k])
 				s << " O" << chans[k] << ":" << n.bc.offset[k];
+		if (ctx.is_egcm() && n.bc.resource_index_mode)
+			s << " RIM:SQ_CF_INDEX_" << n.bc.resource_index_mode;
+		if (ctx.is_egcm() && n.bc.sampler_index_mode)
+			s << " SID:SQ_CF_INDEX_" << n.bc.sampler_index_mode;
 	}
 
 	sblog << s.str() << "\n";
