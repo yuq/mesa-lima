@@ -6252,6 +6252,22 @@ ast_interface_block::hir(exec_list *instructions,
       else if (state->stage == MESA_SHADER_TESS_CTRL && var_mode == ir_var_shader_out)
          handle_tess_ctrl_shader_output_decl(state, loc, var);
 
+      for (unsigned i = 0; i < num_variables; i++) {
+         /* From GLSL ES 3.10 spec, section 4.1.9 "Arrays":
+          *
+          * "If an array is declared as the last member of a shader storage
+          * block and the size is not specified at compile-time, it is
+          * sized at run-time. In all other cases, arrays are sized only
+          * at compile-time."
+          */
+         if (state->es_shader && fields[i].type->is_unsized_array()) {
+             _mesa_glsl_error(&loc, state, "unsized array `%s' definition: "
+                              "only last member of a shader storage block "
+                              "can be defined as unsized array",
+                              fields[i].name);
+         }
+      }
+
       if (ir_variable *earlier =
           state->symbols->get_variable(this->instance_name)) {
          if (!redeclaring_per_vertex) {
