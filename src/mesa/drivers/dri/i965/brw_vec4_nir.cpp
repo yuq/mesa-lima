@@ -644,7 +644,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
                                shader_prog->NumUniformBlocks - 1);
       }
 
-      unsigned const_offset = instr->const_index[0];
+      unsigned const_offset = instr->const_index[1];
       src_reg offset;
 
       if (!has_indirect)  {
