@@ -2007,7 +2007,7 @@ nir_visitor::visit(ir_dereference_array *ir)
 }
 
 void
-nir_visitor::visit(ir_barrier *ir)
+nir_visitor::visit(ir_barrier *)
 {
    nir_intrinsic_instr *instr =
       nir_intrinsic_instr_create(this->shader, nir_intrinsic_barrier);

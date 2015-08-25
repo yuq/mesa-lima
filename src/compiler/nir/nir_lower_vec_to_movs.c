@@ -118,7 +118,7 @@ has_replicated_dest(nir_alu_instr *alu)
  * can then call insert_mov as normal.
  */
 static unsigned
-try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
+try_coalesce(nir_alu_instr *vec, unsigned start_idx)
 {
    assert(start_idx < nir_op_infos[vec->op].num_inputs);
 
@@ -264,7 +264,7 @@ lower_vec_to_movs_block(nir_block *block, nir_function_impl *impl)
             continue;
 
          if (!(finished_write_mask & (1 << i)))
-            finished_write_mask |= try_coalesce(vec, i, shader);
+            finished_write_mask |= try_coalesce(vec, i);
 
          if (!(finished_write_mask & (1 << i)))
             finished_write_mask |= insert_mov(vec, i, shader);

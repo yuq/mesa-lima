@@ -144,8 +144,7 @@ get_io_offset(nir_builder *b, nir_deref_var *deref,
 }
 
 static nir_intrinsic_op
-load_op(struct lower_io_state *state,
-        nir_variable_mode mode, bool per_vertex)
+load_op(nir_variable_mode mode, bool per_vertex)
 {
    nir_intrinsic_op op;
    switch (mode) {
@@ -270,7 +269,7 @@ nir_lower_io_block(nir_block *block,
 
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(state->mem_ctx,
-                                       load_op(state, mode, per_vertex));
+                                       load_op(mode, per_vertex));
          load->num_components = intrin->num_components;
 
          nir_intrinsic_set_base(load,

@@ -893,6 +893,8 @@ src_is_valid(const nir_src *src)
 static bool
 remove_use_cb(nir_src *src, void *state)
 {
+   (void) state;
+
    if (src_is_valid(src))
       list_del(&src->use_link);
 
@@ -902,6 +904,8 @@ remove_use_cb(nir_src *src, void *state)
 static bool
 remove_def_cb(nir_dest *dest, void *state)
 {
+   (void) state;
+
    if (!dest->is_ssa)
       list_del(&dest->reg.def_link);
 
