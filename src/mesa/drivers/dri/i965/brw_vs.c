@@ -170,14 +170,16 @@ brw_codegen_vs_prog(struct brw_context *brw,
       nr_attributes++;
    }
 
-   /* The BSpec says we always have to read at least one thing from the VF,
-    * and it appears that the hardware wedges otherwise.
+   /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
+    * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
+    * vec4 mode, the hardware appears to wedge unless we read something.
     */
-   if (nr_attributes == 0 && !brw->intelScreen->compiler->scalar_vs)
-      nr_attributes = 1;
+   if (brw->intelScreen->compiler->scalar_vs)
+      prog_data.base.urb_read_length = DIV_ROUND_UP(nr_attributes, 2);
+   else
+      prog_data.base.urb_read_length = DIV_ROUND_UP(MAX2(nr_attributes, 1), 2);
 
    prog_data.nr_attributes = nr_attributes;
-   prog_data.base.urb_read_length = DIV_ROUND_UP(nr_attributes, 2);
 
    /* Since vertex shaders reuse the same VUE entry for inputs and outputs
     * (overwriting the original contents), we need to make sure the size is
