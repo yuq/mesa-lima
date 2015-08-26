@@ -116,6 +116,50 @@ upload_kernel(struct anv_pipeline *pipeline, const void *data, size_t size)
 }
 
 static void
+create_params_array(struct anv_device *device,
+                    struct gl_shader *shader,
+                    struct brw_stage_prog_data *prog_data)
+{
+   unsigned num_client_params;
+   if (shader->num_uniform_components) {
+      /* If the shader uses any push constants at all, we'll just give
+       * them the maximum possible number
+       */
+      num_client_params = MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
+   } else {
+      num_client_params = 0;
+   }
+
+   /* We'll need to add space here for images, texture rectangle, uniform
+    * offsets, etc.
+    */
+   unsigned num_driver_params = 0;
+
+   unsigned num_total_params = num_client_params + num_driver_params;
+
+   if (num_total_params == 0)
+      return;
+
+   prog_data->param = (const gl_constant_value **)
+      anv_device_alloc(device, num_total_params * sizeof(gl_constant_value *),
+                       8, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
+
+   /* We now set the param values to be offsets into a
+    * anv_push_constant_data structure.  Since the compiler doesn't
+    * actually dereference any of the gl_constant_value pointers in the
+    * params array, it doesn't really matter what we put here.
+    */
+   struct anv_push_constant_data *null_data = NULL;
+   for (unsigned i = 0; i < num_client_params; i++)
+      prog_data->param[i] =
+         (const gl_constant_value *)&null_data->client_data[i * sizeof(float)];
+
+   for (unsigned i = 0; i < num_driver_params; i++)
+      prog_data->param[num_client_params + i] =
+         (const gl_constant_value *)&null_data->driver_data[i * sizeof(float)];
+}
+
+static void
 brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vertex_program *vp,
                     struct brw_vs_prog_key *key)
@@ -178,34 +222,7 @@ really_do_vs_prog(struct brw_context *brw,
 
    mem_ctx = ralloc_context(NULL);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count;
-   if (vs) {
-      /* We add padding around uniform values below vec4 size, with the worst
-       * case being a float value that gets blown up to a vec4, so be
-       * conservative here.
-       */
-      param_count = vs->num_uniform_components * 4;
-
-   } else {
-      param_count = vp->program.Base.Parameters->NumParameters * 4;
-   }
-   /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
-    * planes as uniforms.
-    */
-   param_count += key->base.nr_userclip_plane_consts * 4;
-
-   /* Setting nr_params here NOT to the size of the param and pull_param
-    * arrays, but to the number of uniform components vec4_visitor
-    * needs. vec4_visitor::setup_uniforms() will set it back to a proper value.
-    */
-   stage_prog_data->nr_params = ALIGN(param_count, 4) / 4;
-   if (vs) {
-      stage_prog_data->nr_params += vs->num_samplers;
-   }
+   create_params_array(pipeline->device, vs, stage_prog_data);
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
@@ -476,7 +493,6 @@ really_do_wm_prog(struct brw_context *brw,
                   struct brw_fragment_program *fp,
                   struct brw_wm_prog_key *key, struct anv_pipeline *pipeline)
 {
-   struct gl_context *ctx = &brw->ctx;
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data *prog_data = &pipeline->wm_prog_data;
    struct gl_shader *fs = NULL;
@@ -495,23 +511,7 @@ really_do_wm_prog(struct brw_context *brw,
 
    prog_data->computed_depth_mode = computed_depth_mode(&fp->program);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count;
-   if (fs) {
-      param_count = fs->num_uniform_components;
-   } else {
-      param_count = fp->program.Base.Parameters->NumParameters * 4;
-   }
-   /* The backend also sometimes adds params for texture size. */
-   param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
-   prog_data->base.param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data->base.pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data->base.nr_params = param_count;
+   create_params_array(pipeline->device, fs, &prog_data->base);
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw, key->flat_shade,
@@ -605,7 +605,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
                     struct brw_compute_program *cp,
                     struct brw_cs_prog_key *key, struct anv_pipeline *pipeline)
 {
-   struct gl_context *ctx = &brw->ctx;
    const GLuint *program;
    void *mem_ctx = ralloc_context(NULL);
    GLuint program_size;
@@ -618,19 +617,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    set_binding_table_layout(&prog_data->base, pipeline, VK_SHADER_STAGE_COMPUTE);
 
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count = cs->num_uniform_components;
-
-   /* The backend also sometimes adds params for texture size. */
-   param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
-   prog_data->base.param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data->base.pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data->base.nr_params = param_count;
+   create_params_array(pipeline->device, cs, &prog_data->base);
 
    program = brw_cs_emit(brw, mem_ctx, key, prog_data,
                          &cp->program, prog, &program_size);
@@ -1203,8 +1190,10 @@ anv_compiler_free(struct anv_pipeline *pipeline)
    for (uint32_t stage = 0; stage < VK_SHADER_STAGE_NUM; stage++) {
       if (pipeline->prog_data[stage]) {
          free(pipeline->prog_data[stage]->map_entries);
-         ralloc_free(pipeline->prog_data[stage]->param);
-         ralloc_free(pipeline->prog_data[stage]->pull_param);
+         /* We only ever set up the params array because we don't do
+          * non-UBO pull constants
+          */
+         anv_device_free(pipeline->device, pipeline->prog_data[stage]->param);
       }
    }
 }
