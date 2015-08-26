@@ -74,7 +74,6 @@ _mesa_free_buffer_objects(struct gl_context *ctx);
 
 extern bool
 _mesa_handle_bind_buffer_gen(struct gl_context *ctx,
-                             GLenum target,
                              GLuint buffer,
                              struct gl_buffer_object **buf_handle,
                              const char *caller);

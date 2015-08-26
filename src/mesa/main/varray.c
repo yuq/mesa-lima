@@ -1698,8 +1698,7 @@ vertex_array_vertex_buffer(struct gl_context *ctx, struct gl_vertex_array_object
        * Otherwise, we fall back to the same compat profile behavior as other
        * object references (automatically gen it).
        */
-      if (!_mesa_handle_bind_buffer_gen(ctx, GL_ARRAY_BUFFER, buffer,
-                                        &vbo, func))
+      if (!_mesa_handle_bind_buffer_gen(ctx, buffer, &vbo, func))
          return;
    } else {
       /* The ARB_vertex_attrib_binding spec says:
