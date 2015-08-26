@@ -728,6 +728,7 @@ _mesa_get_compressed_fetch_func(mesa_format format)
    case MESA_FORMAT_LAYOUT_FXT1:
       return _mesa_get_fxt_fetch_func(format);
    case MESA_FORMAT_LAYOUT_RGTC:
+   case MESA_FORMAT_LAYOUT_LATC:
       return _mesa_get_compressed_rgtc_func(format);
    case MESA_FORMAT_LAYOUT_ETC1:
       return _mesa_get_etc_fetch_func(format);
