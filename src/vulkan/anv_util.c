@@ -82,6 +82,53 @@ anv_abortfv(const char *format, va_list va)
    abort();
 }
 
+VkResult
+__vk_error(VkResult error, const char *file, int line)
+{
+   static const char *error_names[] = {
+      "VK_ERROR_UNKNOWN",
+      "VK_ERROR_UNAVAILABLE",
+      "VK_ERROR_INITIALIZATION_FAILED",
+      "VK_ERROR_OUT_OF_HOST_MEMORY",
+      "VK_ERROR_OUT_OF_DEVICE_MEMORY",
+      "VK_ERROR_DEVICE_ALREADY_CREATED",
+      "VK_ERROR_DEVICE_LOST",
+      "VK_ERROR_INVALID_POINTER",
+      "VK_ERROR_INVALID_VALUE",
+      "VK_ERROR_INVALID_HANDLE",
+      "VK_ERROR_INVALID_ORDINAL",
+      "VK_ERROR_INVALID_MEMORY_SIZE",
+      "VK_ERROR_INVALID_EXTENSION",
+      "VK_ERROR_INVALID_FLAGS",
+      "VK_ERROR_INVALID_ALIGNMENT",
+      "VK_ERROR_INVALID_FORMAT",
+      "VK_ERROR_INVALID_IMAGE",
+      "VK_ERROR_INVALID_DESCRIPTOR_SET_DATA",
+      "VK_ERROR_INVALID_QUEUE_TYPE",
+      "VK_ERROR_UNSUPPORTED_SHADER_IL_VERSION",
+      "VK_ERROR_BAD_SHADER_CODE",
+      "VK_ERROR_BAD_PIPELINE_DATA",
+      "VK_ERROR_NOT_MAPPABLE",
+      "VK_ERROR_MEMORY_MAP_FAILED",
+      "VK_ERROR_MEMORY_UNMAP_FAILED",
+      "VK_ERROR_INCOMPATIBLE_DEVICE",
+      "VK_ERROR_INCOMPATIBLE_DRIVER",
+      "VK_ERROR_INCOMPLETE_COMMAND_BUFFER",
+      "VK_ERROR_BUILDING_COMMAND_BUFFER",
+      "VK_ERROR_MEMORY_NOT_BOUND",
+      "VK_ERROR_INCOMPATIBLE_QUEUE",
+      "VK_ERROR_INVALID_LAYER",
+   };
+
+   if (error <= VK_ERROR_UNKNOWN && error >= VK_ERROR_INVALID_LAYER)
+      fprintf(stderr, "%s:%d: %s\n",
+              file, line, error_names[-error - VK_ERROR_UNKNOWN]);
+   else
+      fprintf(stderr, "%s:%d: vk error %d\n", file, line, error);
+
+   return error;
+}
+
 int
 anv_vector_init(struct anv_vector *vector, uint32_t element_size, uint32_t size)
 {

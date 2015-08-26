@@ -120,15 +120,13 @@ struct anv_common {
  * propagating errors. Might be useful to plug in a stack trace here.
  */
 
-static inline VkResult
-vk_error(VkResult error)
-{
-#ifdef DEBUG
-   fprintf(stderr, "vk_error: %x\n", error);
-#endif
+VkResult __vk_error(VkResult error, const char *file, int line);
 
-   return error;
-}
+#ifdef DEBUG
+#define vk_error(error) __vk_error(error, __FILE__, __LINE__);
+#else
+#define vk_error(error) error
+#endif
 
 void __anv_finishme(const char *file, int line, const char *format, ...)
    anv_printflike(3, 4);
