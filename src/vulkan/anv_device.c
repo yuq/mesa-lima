@@ -1380,15 +1380,6 @@ anv_buffer_view_create(
    return VK_SUCCESS;
 }
 
-
-VkResult anv_CreateBufferView(
-    VkDevice                                    _device,
-    const VkBufferViewCreateInfo*               pCreateInfo,
-    VkBufferView*                               pView)
-{
-   return driver_layer->CreateBufferView(_device, pCreateInfo, pView);
-}
-
 VkResult anv_DestroyBufferView(
     VkDevice                                    _device,
     VkBufferView                                _bview)
@@ -1400,14 +1391,6 @@ VkResult anv_DestroyBufferView(
    anv_device_free(device, bview);
 
    return VK_SUCCESS;
-}
-
-VkResult anv_CreateSampler(
-    VkDevice                                    _device,
-    const VkSamplerCreateInfo*                  pCreateInfo,
-    VkSampler*                                  pSampler)
-{
-   return driver_layer->CreateSampler(_device, pCreateInfo, pSampler);
 }
 
 VkResult anv_DestroySampler(
@@ -1880,14 +1863,6 @@ VkResult anv_DestroyDynamicViewportState(
    return VK_SUCCESS;
 }
 
-VkResult anv_CreateDynamicRasterState(
-    VkDevice                                    _device,
-    const VkDynamicRasterStateCreateInfo*       pCreateInfo,
-    VkDynamicRasterState*                       pState)
-{
-   return driver_layer->CreateDynamicRasterState(_device, pCreateInfo, pState);
-}
-
 VkResult anv_DestroyDynamicRasterState(
     VkDevice                                    _device,
     VkDynamicRasterState                        _rs_state)
@@ -1939,14 +1914,6 @@ VkResult anv_DestroyDynamicColorBlendState(
    anv_device_free(device, cb_state);
 
    return VK_SUCCESS;
-}
-
-VkResult anv_CreateDynamicDepthStencilState(
-    VkDevice                                    _device,
-    const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
-    VkDynamicDepthStencilState*                 pState)
-{
-   return driver_layer->CreateDynamicDepthStencilState(_device, pCreateInfo, pState);
 }
 
 VkResult anv_DestroyDynamicDepthStencilState(
