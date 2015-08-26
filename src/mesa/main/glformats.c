@@ -28,6 +28,7 @@
 #include "context.h"
 #include "glformats.h"
 #include "formats.h"
+#include "texcompress.h"
 #include "enums.h"
 
 enum {
@@ -1272,95 +1273,22 @@ _mesa_is_depth_or_stencil_format(GLenum format)
 GLboolean
 _mesa_is_compressed_format(const struct gl_context *ctx, GLenum format)
 {
+   mesa_format m_format = _mesa_glenum_to_compressed_format(format);
+
+   /* Some formats in this switch have an equivalent mesa_format_layout
+    * to the compressed formats in the layout switch below and thus
+    * must be handled first.
+    */
    switch (format) {
-   case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
-   case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-   case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
-   case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-      /* Assume that the ANGLE flag will always be set if the EXT flag is set.
-       */
-      return ctx->Extensions.ANGLE_texture_compression_dxt;
    case GL_RGB_S3TC:
    case GL_RGB4_S3TC:
    case GL_RGBA_S3TC:
    case GL_RGBA4_S3TC:
       return _mesa_is_desktop_gl(ctx) &&
          ctx->Extensions.ANGLE_texture_compression_dxt;
-   case GL_COMPRESSED_SRGB_S3TC_DXT1_EXT:
-   case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT:
-   case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT:
-   case GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT:
-      return _mesa_is_desktop_gl(ctx)
-         && ctx->Extensions.EXT_texture_sRGB
-         && ctx->Extensions.EXT_texture_compression_s3tc;
-   case GL_COMPRESSED_RGB_FXT1_3DFX:
-   case GL_COMPRESSED_RGBA_FXT1_3DFX:
-      return _mesa_is_desktop_gl(ctx)
-         && ctx->Extensions.TDFX_texture_compression_FXT1;
-   case GL_COMPRESSED_RED_RGTC1:
-   case GL_COMPRESSED_SIGNED_RED_RGTC1:
-   case GL_COMPRESSED_RG_RGTC2:
-   case GL_COMPRESSED_SIGNED_RG_RGTC2:
-      return _mesa_is_desktop_gl(ctx)
-         && ctx->Extensions.ARB_texture_compression_rgtc;
-   case GL_COMPRESSED_LUMINANCE_LATC1_EXT:
-   case GL_COMPRESSED_SIGNED_LUMINANCE_LATC1_EXT:
-   case GL_COMPRESSED_LUMINANCE_ALPHA_LATC2_EXT:
-   case GL_COMPRESSED_SIGNED_LUMINANCE_ALPHA_LATC2_EXT:
-      return ctx->API == API_OPENGL_COMPAT
-         && ctx->Extensions.EXT_texture_compression_latc;
    case GL_COMPRESSED_LUMINANCE_ALPHA_3DC_ATI:
       return ctx->API == API_OPENGL_COMPAT
          && ctx->Extensions.ATI_texture_compression_3dc;
-   case GL_ETC1_RGB8_OES:
-      return _mesa_is_gles(ctx)
-         && ctx->Extensions.OES_compressed_ETC1_RGB8_texture;
-   case GL_COMPRESSED_RGB8_ETC2:
-   case GL_COMPRESSED_SRGB8_ETC2:
-   case GL_COMPRESSED_RGBA8_ETC2_EAC:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC:
-   case GL_COMPRESSED_R11_EAC:
-   case GL_COMPRESSED_RG11_EAC:
-   case GL_COMPRESSED_SIGNED_R11_EAC:
-   case GL_COMPRESSED_SIGNED_RG11_EAC:
-   case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-   case GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2:
-      return _mesa_is_gles3(ctx) || ctx->Extensions.ARB_ES3_compatibility;
-   case GL_COMPRESSED_RGBA_BPTC_UNORM:
-   case GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM:
-   case GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT:
-   case GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT:
-      return _mesa_is_desktop_gl(ctx) &&
-         ctx->Extensions.ARB_texture_compression_bptc;
-   case GL_COMPRESSED_RGBA_ASTC_4x4_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_5x4_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_5x5_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_6x5_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_6x6_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_8x5_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_8x6_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_8x8_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_10x5_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_10x6_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_10x8_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_10x10_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_12x10_KHR:
-   case GL_COMPRESSED_RGBA_ASTC_12x12_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_4x4_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x4_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_5x5_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x5_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_6x6_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x5_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x6_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_8x8_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x5_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x6_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x8_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_10x10_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x10_KHR:
-   case GL_COMPRESSED_SRGB8_ALPHA8_ASTC_12x12_KHR:
-      return ctx->Extensions.KHR_texture_compression_astc_ldr;
    case GL_PALETTE4_RGB8_OES:
    case GL_PALETTE4_RGBA8_OES:
    case GL_PALETTE4_R5_G6_B5_OES:
@@ -1372,6 +1300,39 @@ _mesa_is_compressed_format(const struct gl_context *ctx, GLenum format)
    case GL_PALETTE8_RGBA4_OES:
    case GL_PALETTE8_RGB5_A1_OES:
       return ctx->API == API_OPENGLES;
+   }
+
+   switch (_mesa_get_format_layout(m_format)) {
+   case MESA_FORMAT_LAYOUT_S3TC:
+      if (_mesa_get_format_color_encoding(m_format) == GL_LINEAR) {
+         /* Assume that the ANGLE flag will always be set if the
+          * EXT flag is set.
+          */
+         return ctx->Extensions.ANGLE_texture_compression_dxt;
+      } else {
+         return _mesa_is_desktop_gl(ctx)
+            && ctx->Extensions.EXT_texture_sRGB
+            && ctx->Extensions.EXT_texture_compression_s3tc;
+      }
+   case MESA_FORMAT_LAYOUT_FXT1:
+      return _mesa_is_desktop_gl(ctx)
+         && ctx->Extensions.TDFX_texture_compression_FXT1;
+   case MESA_FORMAT_LAYOUT_RGTC:
+      return _mesa_is_desktop_gl(ctx)
+         && ctx->Extensions.ARB_texture_compression_rgtc;
+   case MESA_FORMAT_LAYOUT_LATC:
+      return ctx->API == API_OPENGL_COMPAT
+         && ctx->Extensions.EXT_texture_compression_latc;
+   case MESA_FORMAT_LAYOUT_ETC1:
+      return _mesa_is_gles(ctx)
+         && ctx->Extensions.OES_compressed_ETC1_RGB8_texture;
+   case MESA_FORMAT_LAYOUT_ETC2:
+      return _mesa_is_gles3(ctx) || ctx->Extensions.ARB_ES3_compatibility;
+   case MESA_FORMAT_LAYOUT_BPTC:
+      return _mesa_is_desktop_gl(ctx) &&
+         ctx->Extensions.ARB_texture_compression_bptc;
+   case MESA_FORMAT_LAYOUT_ASTC:
+      return ctx->Extensions.KHR_texture_compression_astc_ldr;
    default:
       return GL_FALSE;
    }
