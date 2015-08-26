@@ -756,7 +756,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       return;
    case GL_COMPUTE_WORK_GROUP_SIZE: {
       int i;
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          break;
       if (!shProg->LinkStatus) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "glGetProgramiv(program not "

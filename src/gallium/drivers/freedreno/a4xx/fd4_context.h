@@ -97,6 +97,6 @@ fd4_context(struct fd_context *ctx)
 }
 
 struct pipe_context *
-fd4_context_create(struct pipe_screen *pscreen, void *priv);
+fd4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags);
 
 #endif /* FD4_CONTEXT_H_ */

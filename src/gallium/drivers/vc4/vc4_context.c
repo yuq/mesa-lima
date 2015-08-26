@@ -194,7 +194,7 @@ vc4_context_destroy(struct pipe_context *pctx)
 }
 
 struct pipe_context *
-vc4_context_create(struct pipe_screen *pscreen, void *priv)
+vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
         struct vc4_screen *screen = vc4_screen(pscreen);
         struct vc4_context *vc4;

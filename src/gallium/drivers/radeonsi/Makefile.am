@@ -31,3 +31,12 @@ AM_CFLAGS = \
 noinst_LTLIBRARIES = libradeonsi.la
 
 libradeonsi_la_SOURCES = $(C_SOURCES)
+
+sid_tables.h: $(srcdir)/sid_tables.py $(srcdir)/sid.h
+	$(AM_V_GEN) $(PYTHON2) $(srcdir)/sid_tables.py $(srcdir)/sid.h > $@
+
+EXTRA_DIST = \
+	sid_tables.py
+
+BUILT_SOURCES =\
+	sid_tables.h

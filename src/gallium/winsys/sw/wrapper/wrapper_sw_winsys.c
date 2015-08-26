@@ -299,7 +299,7 @@ wrapper_sw_winsys_wrap_pipe_screen(struct pipe_screen *screen)
    wsw->base.destroy = wsw_destroy;
 
    wsw->screen = screen;
-   wsw->pipe = screen->context_create(screen, NULL);
+   wsw->pipe = screen->context_create(screen, NULL, 0);
    if (!wsw->pipe)
       goto err_free;
 

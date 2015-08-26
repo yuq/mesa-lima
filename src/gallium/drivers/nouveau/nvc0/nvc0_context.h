@@ -214,7 +214,7 @@ nvc0_shader_stage(unsigned pipe)
 
 
 /* nvc0_context.c */
-struct pipe_context *nvc0_create(struct pipe_screen *, void *);
+struct pipe_context *nvc0_create(struct pipe_screen *, void *, unsigned flags);
 void nvc0_bufctx_fence(struct nvc0_context *, struct nouveau_bufctx *,
                        bool on_flush);
 void nvc0_default_kick_notify(struct nouveau_pushbuf *);

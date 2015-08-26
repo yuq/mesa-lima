@@ -81,6 +81,9 @@ static void si_destroy_context(struct pipe_context *context)
 	LLVMDisposeTargetMachine(sctx->tm);
 #endif
 
+	r600_resource_reference(&sctx->trace_buf, NULL);
+	r600_resource_reference(&sctx->last_trace_buf, NULL);
+	free(sctx->last_ib);
 	FREE(sctx);
 }
 
@@ -92,7 +95,8 @@ si_amdgpu_get_reset_status(struct pipe_context *ctx)
 	return sctx->b.ws->ctx_query_reset_status(sctx->b.ctx);
 }
 
-static struct pipe_context *si_create_context(struct pipe_screen *screen, void *priv)
+static struct pipe_context *si_create_context(struct pipe_screen *screen,
+                                              void *priv, unsigned flags)
 {
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
 	struct si_screen* sscreen = (struct si_screen *)screen;
@@ -111,6 +115,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	sctx->b.b.destroy = si_destroy_context;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;
 	sctx->screen = sscreen; /* Easy accessing of screen/winsys. */
+	sctx->is_debug = (flags & PIPE_CONTEXT_DEBUG) != 0;
 
 	if (!r600_common_context_init(&sctx->b, &sscreen->b))
 		goto fail;
@@ -121,6 +126,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen, void *
 	si_init_blit_functions(sctx);
 	si_init_compute_functions(sctx);
 	si_init_cp_dma_functions(sctx);
+	si_init_debug_functions(sctx);
 
 	if (sscreen->b.info.has_uvd) {
 		sctx->b.b.create_video_codec = si_uvd_create_decoder;
@@ -586,7 +592,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
 
 	/* Create the auxiliary context. This must be done last. */
-	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL);
+	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL, 0);
 
 	return &sscreen->b.b;
 }

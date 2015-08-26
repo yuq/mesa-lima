@@ -583,7 +583,7 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
     return 0;
 }
 
-static void radeon_read_registers(struct radeon_winsys *rws,
+static bool radeon_read_registers(struct radeon_winsys *rws,
                                   unsigned reg_offset,
                                   unsigned num_registers, uint32_t *out)
 {
@@ -593,9 +593,11 @@ static void radeon_read_registers(struct radeon_winsys *rws,
     for (i = 0; i < num_registers; i++) {
         uint32_t reg = reg_offset + i*4;
 
-        radeon_get_drm_value(ws->fd, RADEON_INFO_READ_REG, "read-reg", &reg);
+        if (!radeon_get_drm_value(ws->fd, RADEON_INFO_READ_REG, NULL, &reg))
+            return false;
         out[i] = reg;
     }
+    return true;
 }
 
 static unsigned hash_fd(void *key)

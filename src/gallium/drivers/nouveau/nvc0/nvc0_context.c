@@ -262,7 +262,7 @@ nvc0_context_get_sample_position(struct pipe_context *, unsigned, unsigned,
                                  float *);
 
 struct pipe_context *
-nvc0_create(struct pipe_screen *pscreen, void *priv)
+nvc0_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
    struct nvc0_screen *screen = nvc0_screen(pscreen);
    struct nvc0_context *nvc0;

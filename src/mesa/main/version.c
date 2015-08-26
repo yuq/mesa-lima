@@ -450,13 +450,15 @@ compute_version_es2(const struct gl_extensions *extensions)
                          extensions->ARB_arrays_of_arrays &&
                          extensions->ARB_compute_shader &&
                          extensions->ARB_draw_indirect &&
+                         extensions->ARB_explicit_uniform_location &&
                          false /*extensions->ARB_framebuffer_no_attachments*/ &&
                          extensions->ARB_shader_atomic_counters &&
                          extensions->ARB_shader_image_load_store &&
-                         false /*extensions->ARB_shader_image_size*/ &&
-                         false /*extensions->ARB_shader_storage_buffer_object*/ &&
+                         extensions->ARB_shader_image_size &&
+                         extensions->ARB_shader_storage_buffer_object &&
                          extensions->ARB_shading_language_packing &&
                          extensions->ARB_stencil_texturing &&
+                         extensions->ARB_texture_multisample &&
                          extensions->ARB_gpu_shader5 &&
                          extensions->EXT_shader_integer_mix);
 

@@ -1979,7 +1979,7 @@ _mesa_format_matches_format_and_type(mesa_format mesa_format,
    case MESA_FORMAT_X8R8G8B8_SRGB:
       return GL_FALSE;
    default:
-      assert(_mesa_is_format_compressed(format));
+      assert(_mesa_is_format_compressed(mesa_format));
       if (error)
          *error = GL_INVALID_ENUM;
    }

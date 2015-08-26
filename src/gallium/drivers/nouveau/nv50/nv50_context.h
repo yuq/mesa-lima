@@ -186,7 +186,7 @@ nv50_context_shader_stage(unsigned pipe)
 }
 
 /* nv50_context.c */
-struct pipe_context *nv50_create(struct pipe_screen *, void *);
+struct pipe_context *nv50_create(struct pipe_screen *, void *, unsigned flags);
 
 void nv50_bufctx_fence(struct nouveau_bufctx *, bool on_flush);
 

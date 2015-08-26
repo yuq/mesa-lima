@@ -81,8 +81,8 @@ static void svga_destroy( struct pipe_context *pipe )
 
 
 
-struct pipe_context *svga_context_create( struct pipe_screen *screen,
-					  void *priv )
+struct pipe_context *svga_context_create(struct pipe_screen *screen,
+					 void *priv, unsigned flags)
 {
    struct svga_screen *svgascreen = svga_screen(screen);
    struct svga_context *svga = NULL;

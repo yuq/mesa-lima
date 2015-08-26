@@ -478,7 +478,7 @@ void svga_surfaces_flush(struct svga_context *svga);
 
 struct pipe_context *
 svga_context_create(struct pipe_screen *screen,
-		    void *priv);
+		    void *priv, unsigned flags);
 
 
 /***********************************************************************

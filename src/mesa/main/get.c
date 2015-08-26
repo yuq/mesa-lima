@@ -361,44 +361,9 @@ static const int extra_ARB_shader_image_load_store_and_tessellation[] = {
    EXTRA_END
 };
 
-static const int extra_ARB_draw_indirect_es31[] = {
-   EXT(ARB_draw_indirect),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_shader_image_load_store_es31[] = {
-   EXT(ARB_shader_image_load_store),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_shader_atomic_counters_es31[] = {
-   EXT(ARB_shader_atomic_counters),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_texture_multisample_es31[] = {
-   EXT(ARB_texture_multisample),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_texture_gather_es31[] = {
-   EXT(ARB_texture_gather),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
+/* HACK: remove when ARB_compute_shader is actually supported */
 static const int extra_ARB_compute_shader_es31[] = {
    EXT(ARB_compute_shader),
-   EXTRA_API_ES31,
-   EXTRA_END
-};
-
-static const int extra_ARB_explicit_uniform_location_es31[] = {
-   EXT(ARB_explicit_uniform_location),
    EXTRA_API_ES31,
    EXTRA_END
 };
@@ -2049,7 +2014,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_MAX_COMPUTE_WORK_GROUP_COUNT:
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
       if (index >= 3)
          goto invalid_value;
@@ -2057,7 +2022,7 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       return TYPE_INT;
 
    case GL_MAX_COMPUTE_WORK_GROUP_SIZE:
-      if (!_mesa_is_desktop_gl(ctx) || !ctx->Extensions.ARB_compute_shader)
+      if (!_mesa_has_compute_shaders(ctx))
          goto invalid_enum;
       if (index >= 3)
          goto invalid_value;

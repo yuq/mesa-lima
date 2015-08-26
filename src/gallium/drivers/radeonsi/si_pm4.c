@@ -135,12 +135,6 @@ unsigned si_pm4_dirty_dw(struct si_context *sctx)
 			continue;
 
 		count += state->ndw;
-#if SI_TRACE_CS
-		/* for tracing each states */
-		if (sctx->screen->b.trace_bo) {
-			count += SI_TRACE_CS_DWORDS;
-		}
-#endif
 	}
 
 	return count;
@@ -161,12 +155,6 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 	}
 
 	cs->cdw += state->ndw;
-
-#if SI_TRACE_CS
-	if (sctx->screen->b.trace_bo) {
-		si_trace_emit(sctx);
-	}
-#endif
 }
 
 void si_pm4_emit_dirty(struct si_context *sctx)
