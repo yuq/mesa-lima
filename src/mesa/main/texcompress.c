@@ -400,15 +400,15 @@ _mesa_glenum_to_compressed_format(GLenum format)
 
    case GL_COMPRESSED_RGB_S3TC_DXT1_EXT:
    case GL_RGB_S3TC:
+   case GL_RGB4_S3TC:
       return MESA_FORMAT_RGB_DXT1;
    case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
-   case GL_RGB4_S3TC:
       return MESA_FORMAT_RGBA_DXT1;
    case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
    case GL_RGBA_S3TC:
+   case GL_RGBA4_S3TC:
       return MESA_FORMAT_RGBA_DXT3;
    case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
-   case GL_RGBA4_S3TC:
       return MESA_FORMAT_RGBA_DXT5;
 
    case GL_COMPRESSED_SRGB_S3TC_DXT1_EXT:
