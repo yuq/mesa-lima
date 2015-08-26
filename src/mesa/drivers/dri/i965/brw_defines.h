@@ -2266,6 +2266,21 @@ enum brw_pixel_shader_computed_depth_mode {
    BRW_PSCDEPTH_ON_LE = 3, /* PS guarantees output depth <= source depth */
 };
 
+enum brw_pixel_shader_coverage_mask_mode {
+   BRW_PSICMS_OFF     = 0, /* PS does not use input coverage masks. */
+   BRW_PSICMS_NORMAL  = 1, /* Input Coverage masks based on outer conservatism
+                            * and factors in SAMPLE_MASK.  If Pixel is
+                            * conservatively covered, all samples are enabled.
+                            */
+
+   BRW_PSICMS_INNER   = 2, /* Input Coverage masks based on inner conservatism
+                            * and factors in SAMPLE_MASK.  If Pixel is
+                            * conservatively *FULLY* covered, all samples are
+                            * enabled.
+                            */
+   BRW_PCICMS_DEPTH   = 3,
+};
+
 #define _3DSTATE_PS_EXTRA                       0x784F /* GEN8+ */
 /* DW1 */
 # define GEN8_PSX_PIXEL_SHADER_VALID                    (1 << 31)
@@ -2283,6 +2298,7 @@ enum brw_pixel_shader_computed_depth_mode {
 # define GEN9_PSX_SHADER_PULLS_BARY                     (1 << 3)
 # define GEN8_PSX_SHADER_HAS_UAV                        (1 << 2)
 # define GEN8_PSX_SHADER_USES_INPUT_COVERAGE_MASK       (1 << 1)
+# define GEN9_PSX_SHADER_NORMAL_COVERAGE_MASK_SHIFT     0
 
 enum brw_wm_barycentric_interp_mode {
    BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC		= 0,
