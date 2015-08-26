@@ -1090,32 +1090,29 @@ builtin_variable_generator::add_varying(int slot, const glsl_type *type,
 void
 builtin_variable_generator::generate_varyings()
 {
-#define ADD_VARYING(loc, type, name) \
-   add_varying(loc, type, name)
-
    /* gl_Position and gl_PointSize are not visible from fragment shaders. */
    if (state->stage != MESA_SHADER_FRAGMENT) {
-      ADD_VARYING(VARYING_SLOT_POS, vec4_t, "gl_Position");
-      ADD_VARYING(VARYING_SLOT_PSIZ, float_t, "gl_PointSize");
+      add_varying(VARYING_SLOT_POS, vec4_t, "gl_Position");
+      add_varying(VARYING_SLOT_PSIZ, float_t, "gl_PointSize");
    }
 
    if (state->is_version(130, 0)) {
-       ADD_VARYING(VARYING_SLOT_CLIP_DIST0, array(float_t, 0),
+       add_varying(VARYING_SLOT_CLIP_DIST0, array(float_t, 0),
                    "gl_ClipDistance");
    }
 
    if (compatibility) {
-      ADD_VARYING(VARYING_SLOT_TEX0, array(vec4_t, 0), "gl_TexCoord");
-      ADD_VARYING(VARYING_SLOT_FOGC, float_t, "gl_FogFragCoord");
+      add_varying(VARYING_SLOT_TEX0, array(vec4_t, 0), "gl_TexCoord");
+      add_varying(VARYING_SLOT_FOGC, float_t, "gl_FogFragCoord");
       if (state->stage == MESA_SHADER_FRAGMENT) {
-         ADD_VARYING(VARYING_SLOT_COL0, vec4_t, "gl_Color");
-         ADD_VARYING(VARYING_SLOT_COL1, vec4_t, "gl_SecondaryColor");
+         add_varying(VARYING_SLOT_COL0, vec4_t, "gl_Color");
+         add_varying(VARYING_SLOT_COL1, vec4_t, "gl_SecondaryColor");
       } else {
-         ADD_VARYING(VARYING_SLOT_CLIP_VERTEX, vec4_t, "gl_ClipVertex");
-         ADD_VARYING(VARYING_SLOT_COL0, vec4_t, "gl_FrontColor");
-         ADD_VARYING(VARYING_SLOT_BFC0, vec4_t, "gl_BackColor");
-         ADD_VARYING(VARYING_SLOT_COL1, vec4_t, "gl_FrontSecondaryColor");
-         ADD_VARYING(VARYING_SLOT_BFC1, vec4_t, "gl_BackSecondaryColor");
+         add_varying(VARYING_SLOT_CLIP_VERTEX, vec4_t, "gl_ClipVertex");
+         add_varying(VARYING_SLOT_COL0, vec4_t, "gl_FrontColor");
+         add_varying(VARYING_SLOT_BFC0, vec4_t, "gl_BackColor");
+         add_varying(VARYING_SLOT_COL1, vec4_t, "gl_FrontSecondaryColor");
+         add_varying(VARYING_SLOT_BFC1, vec4_t, "gl_BackSecondaryColor");
       }
    }
 
