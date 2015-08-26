@@ -191,6 +191,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 16383;
 
 	case PIPE_CAP_DEPTH_CLIP_DISABLE:
+	case PIPE_CAP_CLIP_HALFZ:
 	case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
 		return is_a3xx(screen);
 
@@ -228,7 +229,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
-	case PIPE_CAP_CLIP_HALFZ:
 	case PIPE_CAP_POLYGON_OFFSET_CLAMP:
 	case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
