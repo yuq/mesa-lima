@@ -187,7 +187,9 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       },
       &device->meta_state.clear.pipeline);
 
+   anv_DestroyShaderModule(anv_device_to_handle(device), vsm);
    anv_DestroyShaderModule(anv_device_to_handle(device), fsm);
+   anv_DestroyShader(anv_device_to_handle(device), vs);
    anv_DestroyShader(anv_device_to_handle(device), fs);
 }
 
