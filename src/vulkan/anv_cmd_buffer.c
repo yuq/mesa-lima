@@ -47,10 +47,12 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->ds_state = NULL;
    memset(&state->state_vf, 0, sizeof(state->state_vf));
    memset(&state->descriptors, 0, sizeof(state->descriptors));
+   memset(&state->push_constants, 0, sizeof(state->push_constants));
 
    state->dirty = 0;
    state->vb_dirty = 0;
    state->descriptors_dirty = 0;
+   state->push_constants_dirty = 0;
    state->pipeline = NULL;
    state->vp_state = NULL;
    state->rs_state = NULL;
@@ -210,12 +212,14 @@ void anv_CmdBindPipeline(
    case VK_PIPELINE_BIND_POINT_COMPUTE:
       cmd_buffer->state.compute_pipeline = pipeline;
       cmd_buffer->state.compute_dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_COMPUTE_BIT;
       break;
 
    case VK_PIPELINE_BIND_POINT_GRAPHICS:
       cmd_buffer->state.pipeline = pipeline;
       cmd_buffer->state.vb_dirty |= pipeline->vb_used;
       cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+      cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
       break;
 
    default:
@@ -665,7 +669,22 @@ void anv_CmdPushConstants(
     uint32_t                                    length,
     const void*                                 values)
 {
-   stub();
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+   uint32_t stage;
+
+   for_each_bit(stage, stageFlags) {
+      if (cmd_buffer->state.push_constants[stage].data == NULL) {
+         cmd_buffer->state.push_constants[stage].data =
+            anv_device_alloc(cmd_buffer->device,
+                             sizeof(struct anv_push_constant_data), 8,
+                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      }
+
+      memcpy(cmd_buffer->state.push_constants[stage].data->client_data + start,
+             values, length);
+   }
+
+   cmd_buffer->state.push_constants_dirty |= stageFlags;
 }
 
 void anv_CmdExecuteCommands(

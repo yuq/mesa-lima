@@ -289,7 +289,7 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxTexelBufferSize                       = (1 << 14),
       .maxUniformBufferSize                     = UINT32_MAX,
       .maxStorageBufferSize                     = UINT32_MAX,
-      .maxPushConstantsSize                     = 128,
+      .maxPushConstantsSize                     = MAX_PUSH_CONSTANTS_SIZE,
       .maxMemoryAllocationCount                 = UINT32_MAX,
       .bufferImageGranularity                   = 64, /* A cache line */
       .maxBoundDescriptorSets                   = MAX_SETS,

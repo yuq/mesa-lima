@@ -642,6 +642,7 @@ anv_descriptor_set_destroy(struct anv_device *device,
 #define MAX_VBS   32
 #define MAX_SETS   8
 #define MAX_RTS    8
+#define MAX_PUSH_CONSTANTS_SIZE 128
 
 struct anv_pipeline_layout {
    struct {
@@ -684,6 +685,16 @@ struct anv_descriptor_set_binding {
    uint32_t                                     dynamic_offsets[128];
 };
 
+struct anv_push_constant_data {
+    uint8_t client_data[MAX_PUSH_CONSTANTS_SIZE];
+    uint8_t driver_data[0];
+};
+
+struct anv_push_constants {
+    uint32_t driver_data_size;
+    struct anv_push_constant_data *data;
+};
+
 /** State required while building cmd buffer */
 struct anv_cmd_state {
    uint32_t                                     current_pipeline;
@@ -691,6 +702,7 @@ struct anv_cmd_state {
    uint32_t                                     dirty;
    uint32_t                                     compute_dirty;
    uint32_t                                     descriptors_dirty;
+   uint32_t                                     push_constants_dirty;
    uint32_t                                     scratch_size;
    struct anv_pipeline *                        pipeline;
    struct anv_pipeline *                        compute_pipeline;
@@ -704,6 +716,7 @@ struct anv_cmd_state {
    uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
+   struct anv_push_constants                    push_constants[VK_SHADER_STAGE_NUM];
 
    struct {
       struct anv_buffer *                       index_buffer;
