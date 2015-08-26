@@ -586,7 +586,7 @@ ir_print_visitor::visit(ir_end_primitive *ir)
 }
 
 void
-ir_print_visitor::visit(ir_barrier *ir)
+ir_print_visitor::visit(ir_barrier *)
 {
    fprintf(f, "(barrier)\n");
 }

@@ -4578,7 +4578,7 @@ ast_function::hir(exec_list *instructions,
    if (state->es_shader && state->language_version >= 300) {
       /* Local shader has no exact candidates; check the built-ins. */
       _mesa_glsl_initialize_builtin_functions();
-      if (_mesa_glsl_find_builtin_function_by_name(state, name)) {
+      if (_mesa_glsl_find_builtin_function_by_name(name)) {
          YYLTYPE loc = this->get_location();
          _mesa_glsl_error(& loc, state,
                           "A shader cannot redefine or overload built-in "

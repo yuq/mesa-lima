@@ -522,7 +522,6 @@ private:
    void add_function(const char *name, ...);
 
    typedef ir_function_signature *(builtin_builder::*image_prototype_ctr)(const glsl_type *image_type,
-                                                                          const char *intrinsic_name,
                                                                           unsigned num_arguments,
                                                                           unsigned flags);
 
@@ -738,11 +737,9 @@ private:
    B1(mid3)
 
    ir_function_signature *_image_prototype(const glsl_type *image_type,
-                                           const char *intrinsic_name,
                                            unsigned num_arguments,
                                            unsigned flags);
    ir_function_signature *_image_size_prototype(const glsl_type *image_type,
-                                                const char *intrinsic_name,
                                                 unsigned num_arguments,
                                                 unsigned flags);
    ir_function_signature *_image(image_prototype_ctr prototype,
@@ -4866,7 +4863,6 @@ builtin_builder::_mid3(const glsl_type *type)
 
 ir_function_signature *
 builtin_builder::_image_prototype(const glsl_type *image_type,
-                                  const char *intrinsic_name,
                                   unsigned num_arguments,
                                   unsigned flags)
 {
@@ -4916,9 +4912,8 @@ builtin_builder::_image_prototype(const glsl_type *image_type,
 
 ir_function_signature *
 builtin_builder::_image_size_prototype(const glsl_type *image_type,
-                                       const char *intrinsic_name,
-                                       unsigned num_arguments,
-                                       unsigned flags)
+                                       unsigned /* num_arguments */,
+                                       unsigned /* flags */)
 {
    const glsl_type *ret_type;
    unsigned num_components = image_type->coordinate_components();
@@ -4962,7 +4957,7 @@ builtin_builder::_image(image_prototype_ctr prototype,
                         unsigned num_arguments,
                         unsigned flags)
 {
-   ir_function_signature *sig = (this->*prototype)(image_type, intrinsic_name,
+   ir_function_signature *sig = (this->*prototype)(image_type,
                                                    num_arguments, flags);
 
    if (flags & IMAGE_FUNCTION_EMIT_STUB) {
@@ -5043,8 +5038,7 @@ _mesa_glsl_find_builtin_function(_mesa_glsl_parse_state *state,
 }
 
 ir_function *
-_mesa_glsl_find_builtin_function_by_name(_mesa_glsl_parse_state *state,
-                                         const char *name)
+_mesa_glsl_find_builtin_function_by_name(const char *name)
 {
    ir_function *f;
    mtx_lock(&builtins_lock);

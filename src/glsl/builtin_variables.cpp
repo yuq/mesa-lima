@@ -383,8 +383,7 @@ private:
    ir_variable *add_uniform(const glsl_type *type, const char *name);
    ir_variable *add_const(const char *name, int value);
    ir_variable *add_const_ivec3(const char *name, int x, int y, int z);
-   void add_varying(int slot, const glsl_type *type, const char *name,
-                    const char *name_as_gs_input);
+   void add_varying(int slot, const glsl_type *type, const char *name);
 
    exec_list * const instructions;
    struct _mesa_glsl_parse_state * const state;
@@ -1059,13 +1058,11 @@ builtin_variable_generator::generate_cs_special_vars()
 /**
  * Add a single "varying" variable.  The variable's type and direction (input
  * or output) are adjusted as appropriate for the type of shader being
- * compiled.  For geometry shaders using {ARB,EXT}_geometry_shader4,
- * name_as_gs_input is used for the input (to avoid ambiguity).
+ * compiled.
  */
 void
 builtin_variable_generator::add_varying(int slot, const glsl_type *type,
-                                        const char *name,
-                                        const char *name_as_gs_input)
+                                        const char *name)
 {
    switch (state->stage) {
    case MESA_SHADER_TESS_CTRL:
@@ -1094,7 +1091,7 @@ void
 builtin_variable_generator::generate_varyings()
 {
 #define ADD_VARYING(loc, type, name) \
-   add_varying(loc, type, name, name "In")
+   add_varying(loc, type, name)
 
    /* gl_Position and gl_PointSize are not visible from fragment shaders. */
    if (state->stage != MESA_SHADER_FRAGMENT) {

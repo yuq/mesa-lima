@@ -3216,8 +3216,7 @@ add_interface_variables(struct gl_shader_program *shProg,
  * resource data.
  */
 void
-build_program_resource_list(struct gl_context *ctx,
-                            struct gl_shader_program *shProg)
+build_program_resource_list(struct gl_shader_program *shProg)
 {
    /* Rebuild resource list. */
    if (shProg->ProgramResourceList) {
