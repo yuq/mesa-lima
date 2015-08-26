@@ -523,6 +523,7 @@ count_buffer_size(GLuint key, void *data, void *userData)
       (const struct gl_buffer_object *) data;
    GLuint *total = (GLuint *) userData;
 
+   (void) key;
    *total = *total + bufObj->Size;
 }
 
@@ -742,6 +743,7 @@ flush_mapped_buffer_range_fallback(struct gl_context *ctx,
    (void) offset;
    (void) length;
    (void) obj;
+   (void) index;
    /* no-op */
 }
 
