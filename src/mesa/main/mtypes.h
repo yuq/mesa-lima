@@ -94,7 +94,10 @@ struct vbo_context;
 #define PRIM_OUTSIDE_BEGIN_END   (PRIM_MAX + 1)
 #define PRIM_UNKNOWN             (PRIM_MAX + 2)
 
-
+#define VARYING_SLOT_MAX	(VARYING_SLOT_VAR0 + MAX_VARYING)
+#define VARYING_SLOT_PATCH0	(VARYING_SLOT_MAX)
+#define VARYING_SLOT_TESS_MAX	(VARYING_SLOT_PATCH0 + MAX_VARYING)
+#define FRAG_RESULT_MAX		(FRAG_RESULT_DATA0 + MAX_DRAW_BUFFERS)
 
 /**
  * Determine if the given gl_varying_slot appears in the fragment shader.
@@ -116,7 +119,6 @@ _mesa_varying_slot_in_fs(gl_varying_slot slot)
       return GL_TRUE;
    }
 }
-
 
 /**
  * Indexes for all renderbuffers
@@ -3571,7 +3573,7 @@ struct gl_constants
 
    /* GL_ARB_shader_image_load_store */
    GLuint MaxImageUnits;
-   GLuint MaxCombinedImageUnitsAndFragmentOutputs;
+   GLuint MaxCombinedShaderOutputResources;
    GLuint MaxImageSamples;
    GLuint MaxCombinedImageUniforms;
 
@@ -3656,6 +3658,7 @@ struct gl_extensions
    GLboolean ARB_shader_atomic_counters;
    GLboolean ARB_shader_bit_encoding;
    GLboolean ARB_shader_image_load_store;
+   GLboolean ARB_shader_image_size;
    GLboolean ARB_shader_precision;
    GLboolean ARB_shader_stencil_export;
    GLboolean ARB_shader_storage_buffer_object;
@@ -4073,10 +4076,16 @@ struct gl_image_unit
    GLboolean _Valid;
 
    /**
+    * Layer of the texture object bound to this unit as specified by the
+    * application.
+    */
+   GLuint Layer;
+
+   /**
     * Layer of the texture object bound to this unit, or zero if the
     * whole level is bound.
     */
-   GLuint Layer;
+   GLuint _Layer;
 
    /**
     * Access allowed to this texture image.  Either \c GL_READ_ONLY,

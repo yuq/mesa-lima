@@ -1917,7 +1917,7 @@ st_choose_matching_format(struct st_context *st, unsigned bind,
       }
 
       if (_mesa_format_matches_format_and_type(mesa_format, format, type,
-                                               swapBytes)) {
+                                               swapBytes, NULL)) {
          enum pipe_format format =
             st_mesa_format_to_pipe_format(st, mesa_format);
 

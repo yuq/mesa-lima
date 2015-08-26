@@ -123,6 +123,8 @@ INTRINSIC(image_atomic_or, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
 INTRINSIC(image_atomic_xor, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
 INTRINSIC(image_atomic_exchange, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
 INTRINSIC(image_atomic_comp_swap, 4, ARR(4, 1, 1, 1), true, 1, 1, 0, 0)
+INTRINSIC(image_size, 0, ARR(), true, 4, 1, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 #define SYSTEM_VALUE(name, components) \
    INTRINSIC(load_##name, 0, ARR(), true, components, 0, 0, \
@@ -139,12 +141,18 @@ SYSTEM_VALUE(sample_mask_in, 1)
 SYSTEM_VALUE(invocation_id, 1)
 
 /*
- * The last index is the base address to load from.  Indirect loads have an
- * additional register input, which is added to the constant address to
- * compute the final address to load from.  For UBO's (and SSBO's), the first
- * source is the (possibly constant) UBO buffer index and the indirect (if it
- * exists) is the second source, and the first index is the descriptor set
- * index.
+ * The format of the indices depends on the type of the load.  For uniforms,
+ * the first index is the base address and the second index is an offset that
+ * should be added to the base address.  (This way you can determine in the
+ * back-end which variable is being accessed even in an array.)  For inputs,
+ * the one and only index corresponds to the attribute slot.  UBO loads
+ * have two indices the first of which is the descriptor set and the second
+ * is the base address to load from.
+ *
+ * UBO loads have a (possibly constant) source which is the UBO buffer index.
+ * For each type of load, the _indirect variant has one additional source
+ * (the second in the case of UBO's) that is the is an indirect to be added to
+ * the constant address or base offset to compute the final offset.
  *
  * For vector backends, the address is in terms of one vec4, and so each array
  * element is +4 scalar components from the previous array element. For scalar
@@ -152,14 +160,14 @@ SYSTEM_VALUE(invocation_id, 1)
  * elements begin immediately after the previous array element.
  */
 
-#define LOAD(name, extra_srcs, extra_indices, flags) \
-   INTRINSIC(load_##name, extra_srcs, ARR(1), true, 0, 0, 1 + extra_indices, flags) \
+#define LOAD(name, extra_srcs, indices, flags) \
+   INTRINSIC(load_##name, extra_srcs, ARR(1), true, 0, 0, indices, flags) \
    INTRINSIC(load_##name##_indirect, extra_srcs + 1, ARR(1, 1), \
-             true, 0, 0, 1 + extra_indices, flags)
+             true, 0, 0, indices, flags)
 
-LOAD(uniform, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-LOAD(ubo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-LOAD(input, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(uniform, 0, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(ubo, 1, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(input, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* LOAD(ssbo, 1, 0) */
 
 /*

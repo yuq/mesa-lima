@@ -64,6 +64,12 @@ extern "C" {
 enum mesa_format_layout {
    MESA_FORMAT_LAYOUT_ARRAY,
    MESA_FORMAT_LAYOUT_PACKED,
+   MESA_FORMAT_LAYOUT_S3TC,
+   MESA_FORMAT_LAYOUT_RGTC,
+   MESA_FORMAT_LAYOUT_FXT1,
+   MESA_FORMAT_LAYOUT_ETC1,
+   MESA_FORMAT_LAYOUT_ETC2,
+   MESA_FORMAT_LAYOUT_BPTC,
    MESA_FORMAT_LAYOUT_OTHER,
 };
 
@@ -659,7 +665,7 @@ extern GLint
 _mesa_format_row_stride(mesa_format format, GLsizei width);
 
 extern void
-_mesa_format_to_type_and_comps(mesa_format format,
+_mesa_uncompressed_format_to_type_and_comps(mesa_format format,
                                GLenum *datatype, GLuint *comps);
 
 extern void
@@ -680,7 +686,7 @@ _mesa_format_has_color_component(mesa_format format, int component);
 GLboolean
 _mesa_format_matches_format_and_type(mesa_format mesa_format,
 				     GLenum format, GLenum type,
-                                     GLboolean swapBytes);
+				     GLboolean swapBytes, GLenum *error);
 
 #ifdef __cplusplus
 }

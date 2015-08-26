@@ -402,10 +402,6 @@ one_time_init( struct gl_context *ctx )
 		     PACKAGE_VERSION, __DATE__, __TIME__);
       }
 #endif
-
-#ifdef DEBUG
-      _mesa_test_formats();
-#endif
    }
 
    /* per-API one-time init */

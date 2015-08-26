@@ -395,7 +395,8 @@ brw_prepare_vertices(struct brw_context *brw)
    GLuint interleaved = 0;
    unsigned int min_index = brw->vb.min_index + brw->basevertex;
    unsigned int max_index = brw->vb.max_index + brw->basevertex;
-   int delta, i, j;
+   unsigned i;
+   int delta, j;
 
    struct brw_vertex_element *upload[VERT_ATTRIB_MAX];
    GLuint nr_uploads = 0;
@@ -418,10 +419,10 @@ brw_prepare_vertices(struct brw_context *brw)
    /* Accumulate the list of enabled arrays. */
    brw->vb.nr_enabled = 0;
    while (vs_inputs) {
-      GLuint i = ffsll(vs_inputs) - 1;
-      struct brw_vertex_element *input = &brw->vb.inputs[i];
+      GLuint index = ffsll(vs_inputs) - 1;
+      struct brw_vertex_element *input = &brw->vb.inputs[index];
 
-      vs_inputs &= ~BITFIELD64_BIT(i);
+      vs_inputs &= ~BITFIELD64_BIT(index);
       brw->vb.enabled[brw->vb.nr_enabled++] = input;
    }
 
@@ -438,7 +439,7 @@ brw_prepare_vertices(struct brw_context *brw)
       if (_mesa_is_bufferobj(glarray->BufferObj)) {
 	 struct intel_buffer_object *intel_buffer =
 	    intel_buffer_object(glarray->BufferObj);
-	 int k;
+	 unsigned k;
 
 	 /* If we have a VB set to be uploaded for this buffer object
 	  * already, reuse that VB state so that we emit fewer
@@ -792,21 +793,6 @@ brw_emit_vertices(struct brw_context *brw)
                     ((i * 4) << BRW_VE1_DST_OFFSET_SHIFT));
    }
 
-   if (brw->gen >= 6 && gen6_edgeflag_input) {
-      uint32_t format =
-         brw_get_vertex_surface_type(brw, gen6_edgeflag_input->glarray);
-
-      OUT_BATCH((gen6_edgeflag_input->buffer << GEN6_VE0_INDEX_SHIFT) |
-                GEN6_VE0_VALID |
-                GEN6_VE0_EDGE_FLAG_ENABLE |
-                (format << BRW_VE0_FORMAT_SHIFT) |
-                (gen6_edgeflag_input->offset << BRW_VE0_SRC_OFFSET_SHIFT));
-      OUT_BATCH((BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT) |
-                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_1_SHIFT) |
-                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT) |
-                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_3_SHIFT));
-   }
-
    if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid) {
       uint32_t dw0 = 0, dw1 = 0;
       uint32_t comp0 = BRW_VE1_COMPONENT_STORE_0;
@@ -845,6 +831,21 @@ brw_emit_vertices(struct brw_context *brw)
 
       OUT_BATCH(dw0);
       OUT_BATCH(dw1);
+   }
+
+   if (brw->gen >= 6 && gen6_edgeflag_input) {
+      uint32_t format =
+         brw_get_vertex_surface_type(brw, gen6_edgeflag_input->glarray);
+
+      OUT_BATCH((gen6_edgeflag_input->buffer << GEN6_VE0_INDEX_SHIFT) |
+                GEN6_VE0_VALID |
+                GEN6_VE0_EDGE_FLAG_ENABLE |
+                (format << BRW_VE0_FORMAT_SHIFT) |
+                (gen6_edgeflag_input->offset << BRW_VE0_SRC_OFFSET_SHIFT));
+      OUT_BATCH((BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT) |
+                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_1_SHIFT) |
+                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_2_SHIFT) |
+                (BRW_VE1_COMPONENT_STORE_0 << BRW_VE1_COMPONENT_3_SHIFT));
    }
 
    ADVANCE_BATCH();

@@ -37,6 +37,7 @@
 #include "hash.h"
 #include "imports.h"
 #include "macros.h"
+#include "shaderimage.h"
 #include "teximage.h"
 #include "texobj.h"
 #include "texstate.h"
@@ -1411,8 +1412,10 @@ unbind_texobj_from_image_units(struct gl_context *ctx,
    for (i = 0; i < ctx->Const.MaxImageUnits; i++) {
       struct gl_image_unit *unit = &ctx->ImageUnits[i];
 
-      if (texObj == unit->TexObj)
+      if (texObj == unit->TexObj) {
          _mesa_reference_texobj(&unit->TexObj, NULL);
+         *unit = _mesa_default_image_unit(ctx);
+      }
    }
 }
 
@@ -1742,10 +1745,10 @@ _mesa_BindTexture( GLenum target, GLuint texName )
  * texture object will be decremented.  It'll be deleted if the
  * count hits zero.
  */
-void
-_mesa_bind_texture_unit(struct gl_context *ctx,
-                        GLuint unit,
-                        struct gl_texture_object *texObj)
+static void
+bind_texture_unit(struct gl_context *ctx,
+                  GLuint unit,
+                  struct gl_texture_object *texObj)
 {
    struct gl_texture_unit *texUnit;
 
@@ -1834,7 +1837,7 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
    }
    assert(valid_texture_object(texObj));
 
-   _mesa_bind_texture_unit(ctx, unit, texObj);
+   bind_texture_unit(ctx, unit, texObj);
 }
 
 

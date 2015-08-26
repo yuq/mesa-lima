@@ -177,8 +177,9 @@ public:
    void fail(const char *msg, ...);
 
    void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
-   virtual void setup_vector_uniform_values(const gl_constant_value *values,
-                                            unsigned n);
+   virtual void setup_vec4_uniform_value(unsigned param_offset,
+                                         const gl_constant_value *values,
+                                         unsigned n);
    void setup_uniform_values(ir_variable *ir);
    void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);
@@ -409,7 +410,6 @@ public:
 
    void visit_atomic_counter_intrinsic(ir_call *ir);
 
-   int type_size(const struct glsl_type *type);
    bool is_high_sampler(src_reg sampler);
 
    virtual void emit_nir_code();
@@ -447,7 +447,6 @@ public:
    dst_reg *nir_locals;
    dst_reg *nir_ssa_values;
    src_reg *nir_inputs;
-   unsigned *nir_uniform_driver_location;
    dst_reg *nir_system_values;
 
 protected:

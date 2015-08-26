@@ -24,6 +24,7 @@
 
 #include "util/ralloc.h"
 #include "glsl/nir/nir.h"
+#include "glsl/nir/nir_control_flow.h"
 #include "glsl/nir/nir_builder.h"
 #include "glsl/list.h"
 #include "glsl/shader_enums.h"
@@ -307,7 +308,7 @@ ttn_emit_immediate(struct ttn_compile *c)
    for (i = 0; i < 4; i++)
       load_const->value.u[i] = tgsi_imm->u[i].Uint;
 
-   nir_instr_insert_after_cf_list(b->cf_node_list, &load_const->instr);
+   nir_builder_instr_insert(b, &load_const->instr);
 }
 
 static nir_src
@@ -363,7 +364,7 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
          load->variables[0] = ttn_array_deref(c, load, var, offset, indirect);
 
          nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
-         nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+         nir_builder_instr_insert(b, &load->instr);
 
          src = nir_src_for_ssa(&load->dest.ssa);
 
@@ -414,7 +415,7 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
       load->num_components = ncomp;
 
       nir_ssa_dest_init(&load->instr, &load->dest, ncomp, NULL);
-      nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+      nir_builder_instr_insert(b, &load->instr);
 
       src = nir_src_for_ssa(&load->dest.ssa);
       break;
@@ -476,7 +477,7 @@ ttn_src_for_file_and_index(struct ttn_compile *c, unsigned file, unsigned index,
          srcn++;
       }
       nir_ssa_dest_init(&load->instr, &load->dest, 4, NULL);
-      nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+      nir_builder_instr_insert(b, &load->instr);
 
       src = nir_src_for_ssa(&load->dest.ssa);
       break;
@@ -552,7 +553,7 @@ ttn_get_dest(struct ttn_compile *c, struct tgsi_full_dst_register *tgsi_fdst)
 
          load->dest = nir_dest_for_reg(reg);
 
-         nir_instr_insert_after_cf_list(b->cf_node_list, &load->instr);
+         nir_builder_instr_insert(b, &load->instr);
       } else {
          assert(!tgsi_dst->Indirect);
          dest.dest.reg.reg = c->temp_regs[index].reg;
@@ -667,7 +668,7 @@ ttn_alu(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
       instr->src[i].src = nir_src_for_ssa(src[i]);
 
    instr->dest = dest;
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 }
 
 static void
@@ -683,7 +684,7 @@ ttn_move_dest_masked(nir_builder *b, nir_alu_dest dest,
    mov->src[0].src = nir_src_for_ssa(def);
    for (unsigned i = def->num_components; i < 4; i++)
       mov->src[0].swizzle[i] = def->num_components - 1;
-   nir_instr_insert_after_cf_list(b->cf_node_list, &mov->instr);
+   nir_builder_instr_insert(b, &mov->instr);
 }
 
 static void
@@ -902,7 +903,7 @@ ttn_kill(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
 {
    nir_intrinsic_instr *discard =
       nir_intrinsic_instr_create(b->shader, nir_intrinsic_discard);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &discard->instr);
+   nir_builder_instr_insert(b, &discard->instr);
 }
 
 static void
@@ -912,7 +913,7 @@ ttn_kill_if(nir_builder *b, nir_op op, nir_alu_dest dest, nir_ssa_def **src)
    nir_intrinsic_instr *discard =
       nir_intrinsic_instr_create(b->shader, nir_intrinsic_discard_if);
    discard->src[0] = nir_src_for_ssa(cmp);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &discard->instr);
+   nir_builder_instr_insert(b, &discard->instr);
 }
 
 static void
@@ -976,14 +977,14 @@ static void
 ttn_cont(nir_builder *b)
 {
    nir_jump_instr *instr = nir_jump_instr_create(b->shader, nir_jump_continue);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 }
 
 static void
 ttn_brk(nir_builder *b)
 {
    nir_jump_instr *instr = nir_jump_instr_create(b->shader, nir_jump_break);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 }
 
 static void
@@ -1279,7 +1280,7 @@ ttn_tex(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    assert(src_number == num_srcs);
 
    nir_ssa_dest_init(&instr->instr, &instr->dest, 4, NULL);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &instr->instr);
+   nir_builder_instr_insert(b, &instr->instr);
 
    /* Resolve the writemask on the texture op. */
    ttn_move_dest(b, dest, &instr->dest.ssa);
@@ -1318,10 +1319,10 @@ ttn_txq(struct ttn_compile *c, nir_alu_dest dest, nir_ssa_def **src)
    txs->src[0].src_type = nir_tex_src_lod;
 
    nir_ssa_dest_init(&txs->instr, &txs->dest, 3, NULL);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &txs->instr);
+   nir_builder_instr_insert(b, &txs->instr);
 
    nir_ssa_dest_init(&qlv->instr, &qlv->dest, 1, NULL);
-   nir_instr_insert_after_cf_list(b->cf_node_list, &qlv->instr);
+   nir_builder_instr_insert(b, &qlv->instr);
 
    ttn_move_dest_masked(b, dest, &txs->dest.ssa, TGSI_WRITEMASK_XYZ);
    ttn_move_dest_masked(b, dest, &qlv->dest.ssa, TGSI_WRITEMASK_W);
@@ -1730,7 +1731,7 @@ ttn_emit_instruction(struct ttn_compile *c)
       store->variables[0] = ttn_array_deref(c, store, var, offset, indirect);
       store->src[0] = nir_src_for_reg(dest.dest.reg.reg);
 
-      nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
+      nir_builder_instr_insert(b, &store->instr);
    }
 }
 
@@ -1759,9 +1760,24 @@ ttn_add_output_stores(struct ttn_compile *c)
          store->const_index[0] = loc;
          store->src[0].reg.reg = c->output_regs[loc].reg;
          store->src[0].reg.base_offset = c->output_regs[loc].offset;
-         nir_instr_insert_after_cf_list(b->cf_node_list, &store->instr);
+         nir_builder_instr_insert(b, &store->instr);
       }
    }
+}
+
+static gl_shader_stage
+tgsi_processor_to_shader_stage(unsigned processor)
+{
+   switch (processor) {
+   case TGSI_PROCESSOR_FRAGMENT:  return MESA_SHADER_FRAGMENT;
+   case TGSI_PROCESSOR_VERTEX:    return MESA_SHADER_VERTEX;
+   case TGSI_PROCESSOR_GEOMETRY:  return MESA_SHADER_GEOMETRY;
+   case TGSI_PROCESSOR_TESS_CTRL: return MESA_SHADER_TESS_CTRL;
+   case TGSI_PROCESSOR_TESS_EVAL: return MESA_SHADER_TESS_EVAL;
+   case TGSI_PROCESSOR_COMPUTE:   return MESA_SHADER_COMPUTE;
+   default:
+      unreachable("invalid TGSI processor");
+   };
 }
 
 struct nir_shader *
@@ -1775,7 +1791,12 @@ tgsi_to_nir(const void *tgsi_tokens,
    int ret;
 
    c = rzalloc(NULL, struct ttn_compile);
-   s = nir_shader_create(NULL, options);
+
+   tgsi_scan_shader(tgsi_tokens, &scan);
+   c->scan = &scan;
+
+   s = nir_shader_create(NULL, tgsi_processor_to_shader_stage(scan.processor),
+                         options);
 
    nir_function *func = nir_function_create(s, "main");
    nir_function_overload *overload = nir_function_overload_create(func);
@@ -1783,9 +1804,6 @@ tgsi_to_nir(const void *tgsi_tokens,
 
    nir_builder_init(&c->build, impl);
    nir_builder_insert_after_cf_list(&c->build, &impl->body);
-
-   tgsi_scan_shader(tgsi_tokens, &scan);
-   c->scan = &scan;
 
    s->num_inputs = scan.file_max[TGSI_FILE_INPUT] + 1;
    s->num_uniforms = scan.const_file_max[0] + 1;

@@ -22,6 +22,7 @@
  */
 
 #include "brw_nir.h"
+#include "brw_shader.h"
 #include "glsl/glsl_parser_extras.h"
 #include "glsl/nir/glsl_to_nir.h"
 #include "program/prog_to_nir.h"
@@ -130,22 +131,24 @@ brw_process_nir(nir_shader *nir,
    nir_optimize(nir, is_scalar);
 
    if (is_scalar) {
-      nir_assign_var_locations_direct_first(nir, &nir->uniforms,
-                                            &nir->num_direct_uniforms,
-                                            &nir->num_uniforms,
-                                            is_scalar);
-      nir_assign_var_locations(&nir->outputs, &nir->num_outputs, is_scalar);
+      nir_assign_var_locations(&nir->uniforms,
+                               &nir->num_uniforms,
+                               type_size_scalar);
+      nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
+      nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
+      nir_lower_io(nir, type_size_scalar);
    } else {
       nir_assign_var_locations(&nir->uniforms,
                                &nir->num_uniforms,
-                               is_scalar);
+                               type_size_vec4);
+
+      nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_vec4);
 
       foreach_list_typed(nir_variable, var, node, &nir->outputs)
          var->data.driver_location = var->data.location;
-   }
-   nir_assign_var_locations(&nir->inputs, &nir->num_inputs, is_scalar);
 
-   nir_lower_io(nir, is_scalar);
+      nir_lower_io(nir, type_size_vec4);
+   }
 
    nir_validate_shader(nir);
 
@@ -153,7 +156,7 @@ brw_process_nir(nir_shader *nir,
    nir_validate_shader(nir);
 
    if (shader_prog) {
-      nir_lower_samplers(nir, shader_prog, stage);
+      nir_lower_samplers(nir, shader_prog);
    } else {
       nir_lower_samplers_for_vk(nir);
    }

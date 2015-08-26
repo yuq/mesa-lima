@@ -20,8 +20,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <tr1/unordered_set>
-
 #include "codegen/nv50_ir.h"
 #include "codegen/nv50_ir_build_util.h"
 
@@ -73,7 +71,7 @@ private:
    inline bool insnDominatedBy(const Instruction *, const Instruction *) const;
    void findFirstUses(const Instruction *tex, const Instruction *def,
                       std::list<TexUse>&,
-                      std::tr1::unordered_set<const Instruction *>&);
+                      unordered_set<const Instruction *>&);
    void findOverwritingDefs(const Instruction *tex, Instruction *insn,
                             const BasicBlock *term,
                             std::list<TexUse>&);
@@ -111,10 +109,11 @@ protected:
 
    void checkPredicate(Instruction *);
 
+   virtual bool visit(Instruction *);
+
 private:
    virtual bool visit(Function *);
    virtual bool visit(BasicBlock *);
-   virtual bool visit(Instruction *);
 
    void readTessCoord(LValue *dst, int c);
 

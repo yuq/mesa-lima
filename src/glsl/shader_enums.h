@@ -48,6 +48,191 @@ typedef enum
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
 
 /**
+ * Indexes for vertex program attributes.
+ * GL_NV_vertex_program aliases generic attributes over the conventional
+ * attributes.  In GL_ARB_vertex_program shader the aliasing is optional.
+ * In GL_ARB_vertex_shader / OpenGL 2.0 the aliasing is disallowed (the
+ * generic attributes are distinct/separate).
+ */
+typedef enum
+{
+   VERT_ATTRIB_POS = 0,
+   VERT_ATTRIB_WEIGHT = 1,
+   VERT_ATTRIB_NORMAL = 2,
+   VERT_ATTRIB_COLOR0 = 3,
+   VERT_ATTRIB_COLOR1 = 4,
+   VERT_ATTRIB_FOG = 5,
+   VERT_ATTRIB_COLOR_INDEX = 6,
+   VERT_ATTRIB_EDGEFLAG = 7,
+   VERT_ATTRIB_TEX0 = 8,
+   VERT_ATTRIB_TEX1 = 9,
+   VERT_ATTRIB_TEX2 = 10,
+   VERT_ATTRIB_TEX3 = 11,
+   VERT_ATTRIB_TEX4 = 12,
+   VERT_ATTRIB_TEX5 = 13,
+   VERT_ATTRIB_TEX6 = 14,
+   VERT_ATTRIB_TEX7 = 15,
+   VERT_ATTRIB_POINT_SIZE = 16,
+   VERT_ATTRIB_GENERIC0 = 17,
+   VERT_ATTRIB_GENERIC1 = 18,
+   VERT_ATTRIB_GENERIC2 = 19,
+   VERT_ATTRIB_GENERIC3 = 20,
+   VERT_ATTRIB_GENERIC4 = 21,
+   VERT_ATTRIB_GENERIC5 = 22,
+   VERT_ATTRIB_GENERIC6 = 23,
+   VERT_ATTRIB_GENERIC7 = 24,
+   VERT_ATTRIB_GENERIC8 = 25,
+   VERT_ATTRIB_GENERIC9 = 26,
+   VERT_ATTRIB_GENERIC10 = 27,
+   VERT_ATTRIB_GENERIC11 = 28,
+   VERT_ATTRIB_GENERIC12 = 29,
+   VERT_ATTRIB_GENERIC13 = 30,
+   VERT_ATTRIB_GENERIC14 = 31,
+   VERT_ATTRIB_GENERIC15 = 32,
+   VERT_ATTRIB_MAX = 33
+} gl_vert_attrib;
+
+/**
+ * Symbolic constats to help iterating over
+ * specific blocks of vertex attributes.
+ *
+ * VERT_ATTRIB_FF
+ *   includes all fixed function attributes as well as
+ *   the aliased GL_NV_vertex_program shader attributes.
+ * VERT_ATTRIB_TEX
+ *   include the classic texture coordinate attributes.
+ *   Is a subset of VERT_ATTRIB_FF.
+ * VERT_ATTRIB_GENERIC
+ *   include the OpenGL 2.0+ GLSL generic shader attributes.
+ *   These alias the generic GL_ARB_vertex_shader attributes.
+ */
+#define VERT_ATTRIB_FF(i)           (VERT_ATTRIB_POS + (i))
+#define VERT_ATTRIB_FF_MAX          VERT_ATTRIB_GENERIC0
+
+#define VERT_ATTRIB_TEX(i)          (VERT_ATTRIB_TEX0 + (i))
+#define VERT_ATTRIB_TEX_MAX         MAX_TEXTURE_COORD_UNITS
+
+#define VERT_ATTRIB_GENERIC(i)      (VERT_ATTRIB_GENERIC0 + (i))
+#define VERT_ATTRIB_GENERIC_MAX     MAX_VERTEX_GENERIC_ATTRIBS
+
+/**
+ * Bitflags for vertex attributes.
+ * These are used in bitfields in many places.
+ */
+/*@{*/
+#define VERT_BIT_POS             BITFIELD64_BIT(VERT_ATTRIB_POS)
+#define VERT_BIT_WEIGHT          BITFIELD64_BIT(VERT_ATTRIB_WEIGHT)
+#define VERT_BIT_NORMAL          BITFIELD64_BIT(VERT_ATTRIB_NORMAL)
+#define VERT_BIT_COLOR0          BITFIELD64_BIT(VERT_ATTRIB_COLOR0)
+#define VERT_BIT_COLOR1          BITFIELD64_BIT(VERT_ATTRIB_COLOR1)
+#define VERT_BIT_FOG             BITFIELD64_BIT(VERT_ATTRIB_FOG)
+#define VERT_BIT_COLOR_INDEX     BITFIELD64_BIT(VERT_ATTRIB_COLOR_INDEX)
+#define VERT_BIT_EDGEFLAG        BITFIELD64_BIT(VERT_ATTRIB_EDGEFLAG)
+#define VERT_BIT_TEX0            BITFIELD64_BIT(VERT_ATTRIB_TEX0)
+#define VERT_BIT_TEX1            BITFIELD64_BIT(VERT_ATTRIB_TEX1)
+#define VERT_BIT_TEX2            BITFIELD64_BIT(VERT_ATTRIB_TEX2)
+#define VERT_BIT_TEX3            BITFIELD64_BIT(VERT_ATTRIB_TEX3)
+#define VERT_BIT_TEX4            BITFIELD64_BIT(VERT_ATTRIB_TEX4)
+#define VERT_BIT_TEX5            BITFIELD64_BIT(VERT_ATTRIB_TEX5)
+#define VERT_BIT_TEX6            BITFIELD64_BIT(VERT_ATTRIB_TEX6)
+#define VERT_BIT_TEX7            BITFIELD64_BIT(VERT_ATTRIB_TEX7)
+#define VERT_BIT_POINT_SIZE      BITFIELD64_BIT(VERT_ATTRIB_POINT_SIZE)
+#define VERT_BIT_GENERIC0        BITFIELD64_BIT(VERT_ATTRIB_GENERIC0)
+
+#define VERT_BIT(i)              BITFIELD64_BIT(i)
+#define VERT_BIT_ALL             BITFIELD64_RANGE(0, VERT_ATTRIB_MAX)
+
+#define VERT_BIT_FF(i)           VERT_BIT(i)
+#define VERT_BIT_FF_ALL          BITFIELD64_RANGE(0, VERT_ATTRIB_FF_MAX)
+#define VERT_BIT_TEX(i)          VERT_BIT(VERT_ATTRIB_TEX(i))
+#define VERT_BIT_TEX_ALL         \
+   BITFIELD64_RANGE(VERT_ATTRIB_TEX(0), VERT_ATTRIB_TEX_MAX)
+
+#define VERT_BIT_GENERIC(i)      VERT_BIT(VERT_ATTRIB_GENERIC(i))
+#define VERT_BIT_GENERIC_ALL     \
+   BITFIELD64_RANGE(VERT_ATTRIB_GENERIC(0), VERT_ATTRIB_GENERIC_MAX)
+/*@}*/
+
+/**
+ * Indexes for vertex shader outputs, geometry shader inputs/outputs, and
+ * fragment shader inputs.
+ *
+ * Note that some of these values are not available to all pipeline stages.
+ *
+ * When this enum is updated, the following code must be updated too:
+ * - vertResults (in prog_print.c's arb_output_attrib_string())
+ * - fragAttribs (in prog_print.c's arb_input_attrib_string())
+ * - _mesa_varying_slot_in_fs()
+ */
+typedef enum
+{
+   VARYING_SLOT_POS,
+   VARYING_SLOT_COL0, /* COL0 and COL1 must be contiguous */
+   VARYING_SLOT_COL1,
+   VARYING_SLOT_FOGC,
+   VARYING_SLOT_TEX0, /* TEX0-TEX7 must be contiguous */
+   VARYING_SLOT_TEX1,
+   VARYING_SLOT_TEX2,
+   VARYING_SLOT_TEX3,
+   VARYING_SLOT_TEX4,
+   VARYING_SLOT_TEX5,
+   VARYING_SLOT_TEX6,
+   VARYING_SLOT_TEX7,
+   VARYING_SLOT_PSIZ, /* Does not appear in FS */
+   VARYING_SLOT_BFC0, /* Does not appear in FS */
+   VARYING_SLOT_BFC1, /* Does not appear in FS */
+   VARYING_SLOT_EDGE, /* Does not appear in FS */
+   VARYING_SLOT_CLIP_VERTEX, /* Does not appear in FS */
+   VARYING_SLOT_CLIP_DIST0,
+   VARYING_SLOT_CLIP_DIST1,
+   VARYING_SLOT_PRIMITIVE_ID, /* Does not appear in VS */
+   VARYING_SLOT_LAYER, /* Appears as VS or GS output */
+   VARYING_SLOT_VIEWPORT, /* Appears as VS or GS output */
+   VARYING_SLOT_FACE, /* FS only */
+   VARYING_SLOT_PNTC, /* FS only */
+   VARYING_SLOT_TESS_LEVEL_OUTER, /* Only appears as TCS output. */
+   VARYING_SLOT_TESS_LEVEL_INNER, /* Only appears as TCS output. */
+   VARYING_SLOT_VAR0, /* First generic varying slot */
+} gl_varying_slot;
+
+
+/**
+ * Bitflags for varying slots.
+ */
+/*@{*/
+#define VARYING_BIT_POS BITFIELD64_BIT(VARYING_SLOT_POS)
+#define VARYING_BIT_COL0 BITFIELD64_BIT(VARYING_SLOT_COL0)
+#define VARYING_BIT_COL1 BITFIELD64_BIT(VARYING_SLOT_COL1)
+#define VARYING_BIT_FOGC BITFIELD64_BIT(VARYING_SLOT_FOGC)
+#define VARYING_BIT_TEX0 BITFIELD64_BIT(VARYING_SLOT_TEX0)
+#define VARYING_BIT_TEX1 BITFIELD64_BIT(VARYING_SLOT_TEX1)
+#define VARYING_BIT_TEX2 BITFIELD64_BIT(VARYING_SLOT_TEX2)
+#define VARYING_BIT_TEX3 BITFIELD64_BIT(VARYING_SLOT_TEX3)
+#define VARYING_BIT_TEX4 BITFIELD64_BIT(VARYING_SLOT_TEX4)
+#define VARYING_BIT_TEX5 BITFIELD64_BIT(VARYING_SLOT_TEX5)
+#define VARYING_BIT_TEX6 BITFIELD64_BIT(VARYING_SLOT_TEX6)
+#define VARYING_BIT_TEX7 BITFIELD64_BIT(VARYING_SLOT_TEX7)
+#define VARYING_BIT_TEX(U) BITFIELD64_BIT(VARYING_SLOT_TEX0 + (U))
+#define VARYING_BITS_TEX_ANY BITFIELD64_RANGE(VARYING_SLOT_TEX0, \
+                                              MAX_TEXTURE_COORD_UNITS)
+#define VARYING_BIT_PSIZ BITFIELD64_BIT(VARYING_SLOT_PSIZ)
+#define VARYING_BIT_BFC0 BITFIELD64_BIT(VARYING_SLOT_BFC0)
+#define VARYING_BIT_BFC1 BITFIELD64_BIT(VARYING_SLOT_BFC1)
+#define VARYING_BIT_EDGE BITFIELD64_BIT(VARYING_SLOT_EDGE)
+#define VARYING_BIT_CLIP_VERTEX BITFIELD64_BIT(VARYING_SLOT_CLIP_VERTEX)
+#define VARYING_BIT_CLIP_DIST0 BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0)
+#define VARYING_BIT_CLIP_DIST1 BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1)
+#define VARYING_BIT_PRIMITIVE_ID BITFIELD64_BIT(VARYING_SLOT_PRIMITIVE_ID)
+#define VARYING_BIT_LAYER BITFIELD64_BIT(VARYING_SLOT_LAYER)
+#define VARYING_BIT_VIEWPORT BITFIELD64_BIT(VARYING_SLOT_VIEWPORT)
+#define VARYING_BIT_FACE BITFIELD64_BIT(VARYING_SLOT_FACE)
+#define VARYING_BIT_PNTC BITFIELD64_BIT(VARYING_SLOT_PNTC)
+#define VARYING_BIT_TESS_LEVEL_OUTER BITFIELD64_BIT(VARYING_SLOT_TESS_LEVEL_OUTER)
+#define VARYING_BIT_TESS_LEVEL_INNER BITFIELD64_BIT(VARYING_SLOT_TESS_LEVEL_INNER)
+#define VARYING_BIT_VAR(V) BITFIELD64_BIT(VARYING_SLOT_VAR0 + (V))
+/*@}*/
+
+/**
  * Bitflags for system values.
  */
 #define SYSTEM_BIT_SAMPLE_ID ((uint64_t)1 << SYSTEM_VALUE_SAMPLE_ID)
@@ -198,195 +383,6 @@ enum glsl_interp_qualifier
    INTERP_QUALIFIER_COUNT /**< Number of interpolation qualifiers */
 };
 
-
-/**
- * Indexes for vertex program attributes.
- * GL_NV_vertex_program aliases generic attributes over the conventional
- * attributes.  In GL_ARB_vertex_program shader the aliasing is optional.
- * In GL_ARB_vertex_shader / OpenGL 2.0 the aliasing is disallowed (the
- * generic attributes are distinct/separate).
- */
-typedef enum
-{
-   VERT_ATTRIB_POS = 0,
-   VERT_ATTRIB_WEIGHT = 1,
-   VERT_ATTRIB_NORMAL = 2,
-   VERT_ATTRIB_COLOR0 = 3,
-   VERT_ATTRIB_COLOR1 = 4,
-   VERT_ATTRIB_FOG = 5,
-   VERT_ATTRIB_COLOR_INDEX = 6,
-   VERT_ATTRIB_EDGEFLAG = 7,
-   VERT_ATTRIB_TEX0 = 8,
-   VERT_ATTRIB_TEX1 = 9,
-   VERT_ATTRIB_TEX2 = 10,
-   VERT_ATTRIB_TEX3 = 11,
-   VERT_ATTRIB_TEX4 = 12,
-   VERT_ATTRIB_TEX5 = 13,
-   VERT_ATTRIB_TEX6 = 14,
-   VERT_ATTRIB_TEX7 = 15,
-   VERT_ATTRIB_POINT_SIZE = 16,
-   VERT_ATTRIB_GENERIC0 = 17,
-   VERT_ATTRIB_GENERIC1 = 18,
-   VERT_ATTRIB_GENERIC2 = 19,
-   VERT_ATTRIB_GENERIC3 = 20,
-   VERT_ATTRIB_GENERIC4 = 21,
-   VERT_ATTRIB_GENERIC5 = 22,
-   VERT_ATTRIB_GENERIC6 = 23,
-   VERT_ATTRIB_GENERIC7 = 24,
-   VERT_ATTRIB_GENERIC8 = 25,
-   VERT_ATTRIB_GENERIC9 = 26,
-   VERT_ATTRIB_GENERIC10 = 27,
-   VERT_ATTRIB_GENERIC11 = 28,
-   VERT_ATTRIB_GENERIC12 = 29,
-   VERT_ATTRIB_GENERIC13 = 30,
-   VERT_ATTRIB_GENERIC14 = 31,
-   VERT_ATTRIB_GENERIC15 = 32,
-   VERT_ATTRIB_MAX = 33
-} gl_vert_attrib;
-
-/**
- * Symbolic constats to help iterating over
- * specific blocks of vertex attributes.
- *
- * VERT_ATTRIB_FF
- *   includes all fixed function attributes as well as
- *   the aliased GL_NV_vertex_program shader attributes.
- * VERT_ATTRIB_TEX
- *   include the classic texture coordinate attributes.
- *   Is a subset of VERT_ATTRIB_FF.
- * VERT_ATTRIB_GENERIC
- *   include the OpenGL 2.0+ GLSL generic shader attributes.
- *   These alias the generic GL_ARB_vertex_shader attributes.
- */
-#define VERT_ATTRIB_FF(i)           (VERT_ATTRIB_POS + (i))
-#define VERT_ATTRIB_FF_MAX          VERT_ATTRIB_GENERIC0
-
-#define VERT_ATTRIB_TEX(i)          (VERT_ATTRIB_TEX0 + (i))
-#define VERT_ATTRIB_TEX_MAX         MAX_TEXTURE_COORD_UNITS
-
-#define VERT_ATTRIB_GENERIC(i)      (VERT_ATTRIB_GENERIC0 + (i))
-#define VERT_ATTRIB_GENERIC_MAX     MAX_VERTEX_GENERIC_ATTRIBS
-
-/**
- * Bitflags for vertex attributes.
- * These are used in bitfields in many places.
- */
-/*@{*/
-#define VERT_BIT_POS             BITFIELD64_BIT(VERT_ATTRIB_POS)
-#define VERT_BIT_WEIGHT          BITFIELD64_BIT(VERT_ATTRIB_WEIGHT)
-#define VERT_BIT_NORMAL          BITFIELD64_BIT(VERT_ATTRIB_NORMAL)
-#define VERT_BIT_COLOR0          BITFIELD64_BIT(VERT_ATTRIB_COLOR0)
-#define VERT_BIT_COLOR1          BITFIELD64_BIT(VERT_ATTRIB_COLOR1)
-#define VERT_BIT_FOG             BITFIELD64_BIT(VERT_ATTRIB_FOG)
-#define VERT_BIT_COLOR_INDEX     BITFIELD64_BIT(VERT_ATTRIB_COLOR_INDEX)
-#define VERT_BIT_EDGEFLAG        BITFIELD64_BIT(VERT_ATTRIB_EDGEFLAG)
-#define VERT_BIT_TEX0            BITFIELD64_BIT(VERT_ATTRIB_TEX0)
-#define VERT_BIT_TEX1            BITFIELD64_BIT(VERT_ATTRIB_TEX1)
-#define VERT_BIT_TEX2            BITFIELD64_BIT(VERT_ATTRIB_TEX2)
-#define VERT_BIT_TEX3            BITFIELD64_BIT(VERT_ATTRIB_TEX3)
-#define VERT_BIT_TEX4            BITFIELD64_BIT(VERT_ATTRIB_TEX4)
-#define VERT_BIT_TEX5            BITFIELD64_BIT(VERT_ATTRIB_TEX5)
-#define VERT_BIT_TEX6            BITFIELD64_BIT(VERT_ATTRIB_TEX6)
-#define VERT_BIT_TEX7            BITFIELD64_BIT(VERT_ATTRIB_TEX7)
-#define VERT_BIT_POINT_SIZE      BITFIELD64_BIT(VERT_ATTRIB_POINT_SIZE)
-#define VERT_BIT_GENERIC0        BITFIELD64_BIT(VERT_ATTRIB_GENERIC0)
-
-#define VERT_BIT(i)              BITFIELD64_BIT(i)
-#define VERT_BIT_ALL             BITFIELD64_RANGE(0, VERT_ATTRIB_MAX)
-
-#define VERT_BIT_FF(i)           VERT_BIT(i)
-#define VERT_BIT_FF_ALL          BITFIELD64_RANGE(0, VERT_ATTRIB_FF_MAX)
-#define VERT_BIT_TEX(i)          VERT_BIT(VERT_ATTRIB_TEX(i))
-#define VERT_BIT_TEX_ALL         \
-   BITFIELD64_RANGE(VERT_ATTRIB_TEX(0), VERT_ATTRIB_TEX_MAX)
-
-#define VERT_BIT_GENERIC(i)      VERT_BIT(VERT_ATTRIB_GENERIC(i))
-#define VERT_BIT_GENERIC_ALL     \
-   BITFIELD64_RANGE(VERT_ATTRIB_GENERIC(0), VERT_ATTRIB_GENERIC_MAX)
-/*@}*/
-
-
-/**
- * Indexes for vertex shader outputs, geometry shader inputs/outputs, and
- * fragment shader inputs.
- *
- * Note that some of these values are not available to all pipeline stages.
- *
- * When this enum is updated, the following code must be updated too:
- * - vertResults (in prog_print.c's arb_output_attrib_string())
- * - fragAttribs (in prog_print.c's arb_input_attrib_string())
- * - _mesa_varying_slot_in_fs()
- */
-typedef enum
-{
-   VARYING_SLOT_POS,
-   VARYING_SLOT_COL0, /* COL0 and COL1 must be contiguous */
-   VARYING_SLOT_COL1,
-   VARYING_SLOT_FOGC,
-   VARYING_SLOT_TEX0, /* TEX0-TEX7 must be contiguous */
-   VARYING_SLOT_TEX1,
-   VARYING_SLOT_TEX2,
-   VARYING_SLOT_TEX3,
-   VARYING_SLOT_TEX4,
-   VARYING_SLOT_TEX5,
-   VARYING_SLOT_TEX6,
-   VARYING_SLOT_TEX7,
-   VARYING_SLOT_PSIZ, /* Does not appear in FS */
-   VARYING_SLOT_BFC0, /* Does not appear in FS */
-   VARYING_SLOT_BFC1, /* Does not appear in FS */
-   VARYING_SLOT_EDGE, /* Does not appear in FS */
-   VARYING_SLOT_CLIP_VERTEX, /* Does not appear in FS */
-   VARYING_SLOT_CLIP_DIST0,
-   VARYING_SLOT_CLIP_DIST1,
-   VARYING_SLOT_PRIMITIVE_ID, /* Does not appear in VS */
-   VARYING_SLOT_LAYER, /* Appears as VS or GS output */
-   VARYING_SLOT_VIEWPORT, /* Appears as VS or GS output */
-   VARYING_SLOT_FACE, /* FS only */
-   VARYING_SLOT_PNTC, /* FS only */
-   VARYING_SLOT_TESS_LEVEL_OUTER, /* Only appears as TCS output. */
-   VARYING_SLOT_TESS_LEVEL_INNER, /* Only appears as TCS output. */
-   VARYING_SLOT_VAR0, /* First generic varying slot */
-   VARYING_SLOT_MAX = VARYING_SLOT_VAR0 + MAX_VARYING,
-   VARYING_SLOT_PATCH0 = VARYING_SLOT_MAX,
-   VARYING_SLOT_TESS_MAX = VARYING_SLOT_PATCH0 + MAX_VARYING
-} gl_varying_slot;
-
-
-/**
- * Bitflags for varying slots.
- */
-/*@{*/
-#define VARYING_BIT_POS BITFIELD64_BIT(VARYING_SLOT_POS)
-#define VARYING_BIT_COL0 BITFIELD64_BIT(VARYING_SLOT_COL0)
-#define VARYING_BIT_COL1 BITFIELD64_BIT(VARYING_SLOT_COL1)
-#define VARYING_BIT_FOGC BITFIELD64_BIT(VARYING_SLOT_FOGC)
-#define VARYING_BIT_TEX0 BITFIELD64_BIT(VARYING_SLOT_TEX0)
-#define VARYING_BIT_TEX1 BITFIELD64_BIT(VARYING_SLOT_TEX1)
-#define VARYING_BIT_TEX2 BITFIELD64_BIT(VARYING_SLOT_TEX2)
-#define VARYING_BIT_TEX3 BITFIELD64_BIT(VARYING_SLOT_TEX3)
-#define VARYING_BIT_TEX4 BITFIELD64_BIT(VARYING_SLOT_TEX4)
-#define VARYING_BIT_TEX5 BITFIELD64_BIT(VARYING_SLOT_TEX5)
-#define VARYING_BIT_TEX6 BITFIELD64_BIT(VARYING_SLOT_TEX6)
-#define VARYING_BIT_TEX7 BITFIELD64_BIT(VARYING_SLOT_TEX7)
-#define VARYING_BIT_TEX(U) BITFIELD64_BIT(VARYING_SLOT_TEX0 + (U))
-#define VARYING_BITS_TEX_ANY BITFIELD64_RANGE(VARYING_SLOT_TEX0, \
-                                              MAX_TEXTURE_COORD_UNITS)
-#define VARYING_BIT_PSIZ BITFIELD64_BIT(VARYING_SLOT_PSIZ)
-#define VARYING_BIT_BFC0 BITFIELD64_BIT(VARYING_SLOT_BFC0)
-#define VARYING_BIT_BFC1 BITFIELD64_BIT(VARYING_SLOT_BFC1)
-#define VARYING_BIT_EDGE BITFIELD64_BIT(VARYING_SLOT_EDGE)
-#define VARYING_BIT_CLIP_VERTEX BITFIELD64_BIT(VARYING_SLOT_CLIP_VERTEX)
-#define VARYING_BIT_CLIP_DIST0 BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0)
-#define VARYING_BIT_CLIP_DIST1 BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1)
-#define VARYING_BIT_PRIMITIVE_ID BITFIELD64_BIT(VARYING_SLOT_PRIMITIVE_ID)
-#define VARYING_BIT_LAYER BITFIELD64_BIT(VARYING_SLOT_LAYER)
-#define VARYING_BIT_VIEWPORT BITFIELD64_BIT(VARYING_SLOT_VIEWPORT)
-#define VARYING_BIT_FACE BITFIELD64_BIT(VARYING_SLOT_FACE)
-#define VARYING_BIT_PNTC BITFIELD64_BIT(VARYING_SLOT_PNTC)
-#define VARYING_BIT_VAR(V) BITFIELD64_BIT(VARYING_SLOT_VAR0 + (V))
-/*@}*/
-
-
 /**
  * Fragment program results
  */
@@ -405,8 +401,6 @@ typedef enum
     * any are written, FRAG_RESULT_COLOR will not be written.
     */
    FRAG_RESULT_DATA0 = 4,
-   FRAG_RESULT_MAX = (FRAG_RESULT_DATA0 + MAX_DRAW_BUFFERS)
 } gl_frag_result;
-
 
 #endif /* SHADER_ENUMS_H */

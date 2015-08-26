@@ -131,7 +131,7 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
-         for (int i = 0; i < ALIGN(type_size(var->type), 4) / 4; i++) {
+         for (int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
             int output = var->data.location + i;
             this->outputs[output] = offset(reg, bld, 4 * i);
             this->output_components[output] = vector_elements;
@@ -175,18 +175,8 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 void
 fs_visitor::nir_setup_uniforms(nir_shader *shader)
 {
-   num_direct_uniforms = shader->num_direct_uniforms;
-
    if (dispatch_width != 8)
       return;
-
-   /* We split the uniform register file in half.  The first half is
-    * entirely direct uniforms.  The second half is indirect.
-    */
-   if (num_direct_uniforms > 0)
-      param_size[0] = num_direct_uniforms;
-   if (shader->num_uniforms > num_direct_uniforms)
-      param_size[num_direct_uniforms] = shader->num_uniforms - num_direct_uniforms;
 
    uniforms = shader->num_uniforms;
 
@@ -200,15 +190,19 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
             nir_setup_builtin_uniform(var);
          else
             nir_setup_uniform(var);
+
+         param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
    } else {
-      /* prog_to_nir doesn't create uniform variables; set param up directly. */
+      /* prog_to_nir only creates a single giant uniform variable so we can
+       * just set param up directly. */
       for (unsigned p = 0; p < prog->Parameters->NumParameters; p++) {
          for (unsigned int i = 0; i < 4; i++) {
             stage_prog_data->param[4 * p + i] =
                &prog->Parameters->ParameterValues[p][i];
          }
       }
+      param_size[0] = prog->Parameters->NumParameters * 4;
    }
 }
 
@@ -239,15 +233,7 @@ fs_visitor::nir_setup_uniform(nir_variable *var)
       }
 
       if (storage->type->is_image()) {
-         /* Images don't get a valid location assigned by nir_lower_io()
-          * because their size is driver-specific, so we need to allocate
-          * space for them here at the end of the parameter array.
-          */
-         var->data.driver_location = uniforms;
-         param_size[uniforms] =
-            BRW_IMAGE_PARAM_SIZE * MAX2(storage->array_elements, 1);
-
-         setup_image_uniform_values(storage);
+         setup_image_uniform_values(index, storage);
       } else {
          unsigned slots = storage->type->component_slots();
          if (storage->array_elements)
@@ -1406,6 +1392,51 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_image_size: {
+      /* Get the referenced image variable and type. */
+      const nir_variable *var = instr->variables[0]->var;
+      const glsl_type *type = var->type->without_array();
+
+      /* Get the size of the image. */
+      const fs_reg image = get_nir_image_deref(instr->variables[0]);
+      const fs_reg size = offset(image, bld, BRW_IMAGE_PARAM_SIZE_OFFSET);
+
+      /* For 1DArray image types, the array index is stored in the Z component.
+       * Fix this by swizzling the Z component to the Y component.
+       */
+      const bool is_1d_array_image =
+                  type->sampler_dimensionality == GLSL_SAMPLER_DIM_1D &&
+                  type->sampler_array;
+
+      /* For CubeArray images, we should count the number of cubes instead
+       * of the number of faces. Fix it by dividing the (Z component) by 6.
+       */
+      const bool is_cube_array_image =
+                  type->sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE &&
+                  type->sampler_array;
+
+      /* Copy all the components. */
+      const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
+      for (unsigned c = 0; c < info->dest_components; ++c) {
+         if ((int)c >= type->coordinate_components()) {
+             bld.MOV(offset(retype(dest, BRW_REGISTER_TYPE_D), bld, c),
+                     fs_reg(1));
+         } else if (c == 1 && is_1d_array_image) {
+            bld.MOV(offset(retype(dest, BRW_REGISTER_TYPE_D), bld, c),
+                    offset(size, bld, 2));
+         } else if (c == 2 && is_cube_array_image) {
+            bld.emit(SHADER_OPCODE_INT_QUOTIENT,
+                     offset(retype(dest, BRW_REGISTER_TYPE_D), bld, c),
+                     offset(size, bld, c), fs_reg(6));
+         } else {
+            bld.MOV(offset(retype(dest, BRW_REGISTER_TYPE_D), bld, c),
+                    offset(size, bld, c));
+         }
+       }
+
+      break;
+   }
+
    case nir_intrinsic_load_front_face:
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
               *emit_frontfacing_interpolation());
@@ -1467,21 +1498,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_uniform: {
-      unsigned index = instr->const_index[0];
-
-      fs_reg uniform_reg;
-      if (index < num_direct_uniforms) {
-         uniform_reg = fs_reg(UNIFORM, 0);
-      } else {
-         uniform_reg = fs_reg(UNIFORM, num_direct_uniforms);
-         index -= num_direct_uniforms;
-      }
+      fs_reg uniform_reg(UNIFORM, instr->const_index[0]);
+      uniform_reg.reg_offset = instr->const_index[1];
 
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = offset(retype(uniform_reg, dest.type), bld, index);
+         fs_reg src = offset(retype(uniform_reg, dest.type), bld, j);
          if (has_indirect)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
-         index++;
 
          bld.MOV(dest, src);
          dest = offset(dest, bld, 1);

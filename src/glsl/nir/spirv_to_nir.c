@@ -27,6 +27,7 @@
 
 #include "spirv_to_nir_private.h"
 #include "nir_vla.h"
+#include "nir_control_flow.h"
 
 static struct vtn_ssa_value *
 vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
@@ -2927,6 +2928,7 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 
 nir_shader *
 spirv_to_nir(const uint32_t *words, size_t word_count,
+             gl_shader_stage stage,
              const nir_shader_compiler_options *options)
 {
    const uint32_t *word_end = words + word_count;
@@ -2942,7 +2944,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
 
    words+= 5;
 
-   nir_shader *shader = nir_shader_create(NULL, options);
+   nir_shader *shader = nir_shader_create(NULL, stage, options);
 
    /* Initialize the stn_builder object */
    struct vtn_builder *b = rzalloc(NULL, struct vtn_builder);

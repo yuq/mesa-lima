@@ -37,6 +37,7 @@ extern "C" {
 #endif
 
 nir_shader *spirv_to_nir(const uint32_t *words, size_t word_count,
+                         gl_shader_stage stage,
                          const nir_shader_compiler_options *options);
 
 #ifdef __cplusplus

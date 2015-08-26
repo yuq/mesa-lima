@@ -887,6 +887,7 @@ nvc0_blitctx_prepare_state(struct nvc0_blitctx *blit)
 
    /* zsa state */
    IMMED_NVC0(push, NVC0_3D(DEPTH_TEST_ENABLE), 0);
+   IMMED_NVC0(push, NVC0_3D(DEPTH_BOUNDS_EN), 0);
    IMMED_NVC0(push, NVC0_3D(STENCIL_ENABLE), 0);
    IMMED_NVC0(push, NVC0_3D(ALPHA_TEST_ENABLE), 0);
 
@@ -1336,18 +1337,24 @@ nvc0_blit_eng2d(struct nvc0_context *nvc0, const struct pipe_blit_info *info)
             PUSH_DATA (push, info->dst.box.z + i);
          } else {
             const unsigned z = info->dst.box.z + i;
+            const uint64_t address = dst->base.address +
+               dst->level[info->dst.level].offset +
+               z * dst->layer_stride;
             BEGIN_NVC0(push, NVC0_2D(DST_ADDRESS_HIGH), 2);
-            PUSH_DATAh(push, dst->base.address + z * dst->layer_stride);
-            PUSH_DATA (push, dst->base.address + z * dst->layer_stride);
+            PUSH_DATAh(push, address);
+            PUSH_DATA (push, address);
          }
          if (src->layout_3d) {
             /* not possible because of depth tiling */
             assert(0);
          } else {
             const unsigned z = info->src.box.z + i;
+            const uint64_t address = src->base.address +
+               src->level[info->src.level].offset +
+               z * src->layer_stride;
             BEGIN_NVC0(push, NVC0_2D(SRC_ADDRESS_HIGH), 2);
-            PUSH_DATAh(push, src->base.address + z * src->layer_stride);
-            PUSH_DATA (push, src->base.address + z * src->layer_stride);
+            PUSH_DATAh(push, address);
+            PUSH_DATA (push, address);
          }
          BEGIN_NVC0(push, NVC0_2D(BLIT_SRC_Y_INT), 1); /* trigger */
          PUSH_DATA (push, srcy >> 32);

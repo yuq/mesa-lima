@@ -148,8 +148,13 @@ nvc0_tctlprog_validate(struct nvc0_context *nvc0)
       BEGIN_NVC0(push, NVC0_3D(SP_GPR_ALLOC(2)), 1);
       PUSH_DATA (push, tp->num_gprs);
    } else {
-      BEGIN_NVC0(push, NVC0_3D(SP_SELECT(2)), 1);
+      tp = nvc0->tcp_empty;
+      /* not a whole lot we can do to handle this failure */
+      if (!nvc0_program_validate(nvc0, tp))
+         assert(!"unable to validate empty tcp");
+      BEGIN_NVC0(push, NVC0_3D(SP_SELECT(2)), 2);
       PUSH_DATA (push, 0x20);
+      PUSH_DATA (push, tp->code_base);
    }
    nvc0_program_update_context_state(nvc0, tp, 1);
 }

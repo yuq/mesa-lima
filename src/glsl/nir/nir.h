@@ -1122,6 +1122,8 @@ typedef struct {
 
 #define nir_foreach_phi_src(phi, entry) \
    foreach_list_typed(nir_phi_src, entry, node, &(phi)->srcs)
+#define nir_foreach_phi_src_safe(phi, entry) \
+   foreach_list_typed_safe(nir_phi_src, entry, node, &(phi)->srcs)
 
 typedef struct {
    nir_instr instr;
@@ -1330,7 +1332,7 @@ typedef struct {
 
    struct exec_list body; /** < list of nir_cf_node */
 
-   nir_block *start_block, *end_block;
+   nir_block *end_block;
 
    /** list for all local variables in the function */
    struct exec_list locals;
@@ -1356,6 +1358,12 @@ typedef struct {
 
    nir_metadata valid_metadata;
 } nir_function_impl;
+
+static inline nir_block *
+nir_start_block(nir_function_impl *impl)
+{
+   return (nir_block *) exec_list_get_head(&impl->body);
+}
 
 static inline nir_cf_node *
 nir_cf_node_next(nir_cf_node *node)
@@ -1488,8 +1496,8 @@ typedef struct nir_shader {
     */
    unsigned num_inputs, num_uniforms, num_outputs;
 
-   /** the number of uniforms that are only accessed directly */
-   unsigned num_direct_uniforms;
+   /** The shader stage, such as MESA_SHADER_VERTEX. */
+   gl_shader_stage stage;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \
@@ -1498,6 +1506,7 @@ typedef struct nir_shader {
                          &(func)->overload_list)
 
 nir_shader *nir_shader_create(void *mem_ctx,
+                              gl_shader_stage stage,
                               const nir_shader_compiler_options *options);
 
 /** creates a register, including assigning it an index and adding it to the list */
@@ -1520,21 +1529,6 @@ nir_if *nir_if_create(void *mem_ctx);
 nir_loop *nir_loop_create(void *mem_ctx);
 
 nir_function_impl *nir_cf_node_get_function(nir_cf_node *node);
-
-/** puts a control flow node immediately after another control flow node */
-void nir_cf_node_insert_after(nir_cf_node *node, nir_cf_node *after);
-
-/** puts a control flow node immediately before another control flow node */
-void nir_cf_node_insert_before(nir_cf_node *node, nir_cf_node *before);
-
-/** puts a control flow node at the beginning of a list from an if, loop, or function */
-void nir_cf_node_insert_begin(struct exec_list *list, nir_cf_node *node);
-
-/** puts a control flow node at the end of a list from an if, loop, or function */
-void nir_cf_node_insert_end(struct exec_list *list, nir_cf_node *node);
-
-/** removes a control flow node, doing any cleanup necessary */
-void nir_cf_node_remove(nir_cf_node *node);
 
 /** requests that the given pieces of metadata be generated */
 void nir_metadata_require(nir_function_impl *impl, nir_metadata required);
@@ -1660,15 +1654,10 @@ void nir_lower_locals_to_regs(nir_shader *shader);
 
 void nir_assign_var_locations(struct exec_list *var_list,
                               unsigned *size,
-                              bool is_scalar);
-void nir_assign_var_locations_direct_first(nir_shader *shader,
-                                           struct exec_list *var_list,
-                                           unsigned *direct_size,
-                                           unsigned *size,
-                                           bool is_scalar);
+                              int (*type_size)(const struct glsl_type *));
 
-void nir_lower_io(nir_shader *shader, bool is_scalar);
-
+void nir_lower_io(nir_shader *shader,
+                  int (*type_size)(const struct glsl_type *));
 void nir_lower_vars_to_ssa(nir_shader *shader);
 
 void nir_remove_dead_variables(nir_shader *shader);
@@ -1680,8 +1669,7 @@ void nir_lower_load_const_to_scalar(nir_shader *shader);
 void nir_lower_phis_to_scalar(nir_shader *shader);
 
 void nir_lower_samplers(nir_shader *shader,
-                        const struct gl_shader_program *shader_program,
-                        gl_shader_stage stage);
+                        const struct gl_shader_program *shader_program);
 void nir_lower_samplers_for_vk(nir_shader *shader);
 
 void nir_lower_system_values(nir_shader *shader);

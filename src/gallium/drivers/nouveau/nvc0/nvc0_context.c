@@ -132,6 +132,9 @@ nvc0_context_unreference_resources(struct nvc0_context *nvc0)
       pipe_resource_reference(res, NULL);
    }
    util_dynarray_fini(&nvc0->global_residents);
+
+   if (nvc0->tcp_empty)
+      nvc0->base.pipe.delete_tcs_state(&nvc0->base.pipe, nvc0->tcp_empty);
 }
 
 static void
@@ -306,13 +309,6 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
    pipe->memory_barrier = nvc0_memory_barrier;
    pipe->get_sample_position = nvc0_context_get_sample_position;
 
-   if (!screen->cur_ctx) {
-      nvc0->state = screen->save_state;
-      screen->cur_ctx = nvc0;
-      nouveau_pushbuf_bufctx(screen->base.pushbuf, nvc0->bufctx);
-   }
-   screen->base.pushbuf->kick_notify = nvc0_default_kick_notify;
-
    nvc0_init_query_functions(nvc0);
    nvc0_init_surface_functions(nvc0);
    nvc0_init_state_functions(nvc0);
@@ -326,6 +322,21 @@ nvc0_create(struct pipe_screen *pscreen, void *priv)
 
    /* shader builtin library is per-screen, but we need a context for m2mf */
    nvc0_program_library_upload(nvc0);
+   nvc0_program_init_tcp_empty(nvc0);
+   if (!nvc0->tcp_empty)
+      goto out_err;
+   /* set the empty tctl prog on next draw in case one is never set */
+   nvc0->dirty |= NVC0_NEW_TCTLPROG;
+
+   /* now that there are no more opportunities for errors, set the current
+    * context if there isn't already one.
+    */
+   if (!screen->cur_ctx) {
+      nvc0->state = screen->save_state;
+      screen->cur_ctx = nvc0;
+      nouveau_pushbuf_bufctx(screen->base.pushbuf, nvc0->bufctx);
+   }
+   screen->base.pushbuf->kick_notify = nvc0_default_kick_notify;
 
    /* add permanently resident buffers to bufctxts */
 

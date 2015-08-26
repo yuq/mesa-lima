@@ -1020,6 +1020,10 @@ CodeEmitterNVC0::emitCVT(Instruction *i)
       code[0] |= util_logbase2(typeSizeof(dType)) << 20;
       code[0] |= util_logbase2(typeSizeof(i->sType)) << 23;
 
+      // for 8/16 source types, the byte/word is in subOp. word 1 is
+      // represented as 2.
+      code[1] |= i->subOp << 0x17;
+
       if (sat)
          code[0] |= 0x20;
       if (abs)
@@ -2614,11 +2618,12 @@ private:
          int imul; // integer MUL to MUL delay 3
       } res;
       struct ScoreData {
-         int r[64];
+         int r[256];
          int p[8];
          int c;
       } rd, wr;
       int base;
+      int regs;
 
       void rebase(const int base)
       {
@@ -2627,7 +2632,7 @@ private:
             return;
          this->base = 0;
 
-         for (int i = 0; i < 64; ++i) {
+         for (int i = 0; i < regs; ++i) {
             rd.r[i] += delta;
             wr.r[i] += delta;
          }
@@ -2646,16 +2651,17 @@ private:
          res.imul += delta;
          res.tex += delta;
       }
-      void wipe()
+      void wipe(int regs)
       {
          memset(&rd, 0, sizeof(rd));
          memset(&wr, 0, sizeof(wr));
          memset(&res, 0, sizeof(res));
+         this->regs = regs;
       }
       int getLatest(const ScoreData& d) const
       {
          int max = 0;
-         for (int i = 0; i < 64; ++i)
+         for (int i = 0; i < regs; ++i)
             if (d.r[i] > max)
                max = d.r[i];
          for (int i = 0; i < 8; ++i)
@@ -2690,7 +2696,7 @@ private:
       }
       void setMax(const RegScores *that)
       {
-         for (int i = 0; i < 64; ++i) {
+         for (int i = 0; i < regs; ++i) {
             rd.r[i] = MAX2(rd.r[i], that->rd.r[i]);
             wr.r[i] = MAX2(wr.r[i], that->wr.r[i]);
          }
@@ -2711,7 +2717,7 @@ private:
       }
       void print(int cycle)
       {
-         for (int i = 0; i < 64; ++i) {
+         for (int i = 0; i < regs; ++i) {
             if (rd.r[i] > cycle)
                INFO("rd $r%i @ %i\n", i, rd.r[i]);
             if (wr.r[i] > cycle)
@@ -2806,9 +2812,10 @@ SchedDataCalculator::getCycles(const Instruction *insn, int origDelay) const
 bool
 SchedDataCalculator::visit(Function *func)
 {
+   int regs = targ->getFileSize(FILE_GPR) + 1;
    scoreBoards.resize(func->cfg.getSize());
    for (size_t i = 0; i < scoreBoards.size(); ++i)
-      scoreBoards[i].wipe();
+      scoreBoards[i].wipe(regs);
    return true;
 }
 

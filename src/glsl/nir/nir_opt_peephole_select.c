@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "nir_control_flow.h"
 
 /*
  * Implements a small peephole optimization that looks for

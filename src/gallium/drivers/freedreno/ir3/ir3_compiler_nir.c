@@ -1636,6 +1636,11 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			coord[i] = ir3_SHL_B(b, coord[i], 0, lod, 0);
 	}
 
+	/* the array coord for cube arrays needs 0.5 added to it */
+	if (tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE && tex->is_array &&
+		opc != OPC_ISAML)
+		coord[3] = ir3_ADD_F(b, coord[3], 0, create_immed(b, fui(0.5)), 0);
+
 	/*
 	 * lay out the first argument in the proper order:
 	 *  - actual coordinates first
@@ -1758,6 +1763,12 @@ emit_tex_txs(struct ir3_compile *ctx, nir_tex_instr *tex)
 	unsigned flags, coords;
 
 	tex_info(tex, &flags, &coords);
+
+	/* Actually we want the number of dimensions, not coordinates. This
+	 * distinction only matters for cubes.
+	 */
+	if (tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE)
+		coords = 2;
 
 	dst = get_dst(ctx, &tex->dest, 4);
 
@@ -2301,7 +2312,7 @@ emit_instructions(struct ir3_compile *ctx)
 	ctx->ir = ir3_create(ctx->compiler, ninputs, noutputs);
 
 	/* Create inputs in first block: */
-	ctx->block = get_block(ctx, fxn->start_block);
+	ctx->block = get_block(ctx, nir_start_block(fxn));
 	ctx->in_block = ctx->block;
 	list_addtail(&ctx->block->node, &ctx->ir->block_list);
 

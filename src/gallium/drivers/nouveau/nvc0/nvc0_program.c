@@ -22,6 +22,8 @@
 
 #include "pipe/p_defines.h"
 
+#include "tgsi/tgsi_ureg.h"
+
 #include "nvc0/nvc0_context.h"
 
 #include "codegen/nv50_ir_driver.h"
@@ -798,4 +800,19 @@ nvc0_program_symbol_offset(const struct nvc0_program *prog, uint32_t label)
       if (syms[i].label == label)
          return prog->code_base + base + syms[i].offset;
    return prog->code_base; /* no symbols or symbol not found */
+}
+
+void
+nvc0_program_init_tcp_empty(struct nvc0_context *nvc0)
+{
+   struct ureg_program *ureg;
+
+   ureg = ureg_create(TGSI_PROCESSOR_TESS_CTRL);
+   if (!ureg)
+      return;
+
+   ureg_property(ureg, TGSI_PROPERTY_TCS_VERTICES_OUT, 1);
+   ureg_END(ureg);
+
+   nvc0->tcp_empty = ureg_create_shader_and_destroy(ureg, &nvc0->base.pipe);
 }

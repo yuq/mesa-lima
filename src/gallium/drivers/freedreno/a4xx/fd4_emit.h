@@ -56,6 +56,7 @@ struct fd4_emit {
 	uint32_t sprite_coord_enable;  /* bitmask */
 	bool sprite_coord_mode;
 	bool rasterflat;
+	bool no_decode_srgb;
 
 	/* cached to avoid repeated lookups of same variants: */
 	struct ir3_shader_variant *vp, *fp;

@@ -1886,7 +1886,7 @@ generate_mipmap_uncompressed(struct gl_context *ctx, GLenum target,
    GLenum datatype;
    GLuint comps;
 
-   _mesa_format_to_type_and_comps(srcImage->TexFormat, &datatype, &comps);
+   _mesa_uncompressed_format_to_type_and_comps(srcImage->TexFormat, &datatype, &comps);
 
    for (level = texObj->BaseLevel; level < maxLevel; level++) {
       /* generate image[level+1] from image[level] */

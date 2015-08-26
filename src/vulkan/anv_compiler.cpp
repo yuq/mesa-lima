@@ -1007,7 +1007,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
 
    mesa_shader->Program->nir =
       spirv_to_nir((uint32_t *)shader->module->data, shader->module->size / 4,
-                   glsl_options->NirOptions);
+                   stage_info[stage].stage, glsl_options->NirOptions);
    nir_validate_shader(mesa_shader->Program->nir);
 
    brw_process_nir(mesa_shader->Program->nir,

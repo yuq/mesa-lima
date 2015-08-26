@@ -115,6 +115,7 @@ fd3_sampler_state_create(struct pipe_context *pctx,
 
 	so->texsamp0 =
 			COND(!cso->normalized_coords, A3XX_TEX_SAMP_0_UNNORM_COORDS) |
+			COND(!cso->seamless_cube_map, A3XX_TEX_SAMP_0_CUBEMAPSEAMLESSFILTOFF) |
 			COND(miplinear, A3XX_TEX_SAMP_0_MIPFILTER_LINEAR) |
 			A3XX_TEX_SAMP_0_XY_MAG(tex_filter(cso->mag_img_filter, aniso)) |
 			A3XX_TEX_SAMP_0_XY_MIN(tex_filter(cso->min_img_filter, aniso)) |
@@ -239,7 +240,7 @@ fd3_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A3XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
 	/* when emitted, A3XX_TEX_CONST_2_INDX() must be OR'd in: */
 	so->texconst2 =
-			A3XX_TEX_CONST_2_PITCH(rsc->slices[lvl].pitch * rsc->cpp);
+			A3XX_TEX_CONST_2_PITCH(util_format_get_nblocksx(cso->format, rsc->slices[lvl].pitch) * rsc->cpp);
 	switch (prsc->target) {
 	case PIPE_TEXTURE_1D_ARRAY:
 	case PIPE_TEXTURE_2D_ARRAY:

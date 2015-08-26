@@ -270,9 +270,11 @@ public:
 
    virtual void invalidate_live_intervals() = 0;
 
-   virtual void setup_vector_uniform_values(const gl_constant_value *values,
-                                            unsigned n) = 0;
-   void setup_image_uniform_values(const gl_uniform_storage *storage);
+   virtual void setup_vec4_uniform_value(unsigned param_offset,
+                                         const gl_constant_value *values,
+                                         unsigned n) = 0;
+   void setup_image_uniform_values(unsigned param_offset,
+                                   const gl_uniform_storage *storage);
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);
@@ -306,6 +308,9 @@ bool brw_fs_precompile(struct gl_context *ctx,
 bool brw_cs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,
                        struct gl_program *prog);
+
+int type_size_scalar(const struct glsl_type *type);
+int type_size_vec4(const struct glsl_type *type);
 
 #ifdef __cplusplus
 }

@@ -192,12 +192,12 @@ lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_progr
 }
 
 extern "C" void
-nir_lower_samplers(nir_shader *shader, const struct gl_shader_program *shader_program,
-                   gl_shader_stage stage)
+nir_lower_samplers(nir_shader *shader,
+                   const struct gl_shader_program *shader_program)
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         lower_impl(overload->impl, shader_program, stage);
+         lower_impl(overload->impl, shader_program, shader->stage);
    }
 }
 

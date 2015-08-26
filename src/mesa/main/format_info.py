@@ -98,14 +98,6 @@ def get_gl_data_type(fmat):
    else:
       assert False
 
-def get_mesa_layout(fmat):
-   if fmat.layout == 'array':
-      return 'MESA_FORMAT_LAYOUT_ARRAY'
-   elif fmat.layout == 'packed':
-      return 'MESA_FORMAT_LAYOUT_PACKED'
-   else:
-      return 'MESA_FORMAT_LAYOUT_OTHER'
-
 def get_channel_bits(fmat, chan_name):
    if fmat.is_compressed():
       # These values are pretty-much bogus, but OpenGL requires that we
@@ -179,7 +171,7 @@ for fmat in formats:
    print '   {'
    print '      {0},'.format(fmat.name)
    print '      "{0}",'.format(fmat.name)
-   print '      {0},'.format(get_mesa_layout(fmat))
+   print '      {0},'.format('MESA_FORMAT_LAYOUT_' + fmat.layout.upper())
    print '      {0},'.format(get_gl_base_format(fmat))
    print '      {0},'.format(get_gl_data_type(fmat))
 
@@ -187,6 +179,8 @@ for fmat in formats:
    print '      {0},'.format(', '.join(map(str, bits)))
    bits = [ get_channel_bits(fmat, name) for name in ['l', 'i', 'z', 's']]
    print '      {0},'.format(', '.join(map(str, bits)))
+
+   print '      {0:d},'.format(fmat.colorspace == 'srgb')
 
    print '      {0}, {1}, {2},'.format(fmat.block_width, fmat.block_height,
                                        int(fmat.block_size() / 8))

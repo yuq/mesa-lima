@@ -25,6 +25,9 @@ NIR_FILES = \
 	nir/nir_array.h \
 	nir/nir_builder.h \
 	nir/nir_constant_expressions.h \
+	nir/nir_control_flow.c \
+	nir/nir_control_flow.h \
+	nir/nir_control_flow_private.h \
 	nir/nir_dominance.c \
 	nir/nir_from_ssa.c \
 	nir/nir_intrinsics.c \

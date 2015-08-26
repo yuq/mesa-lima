@@ -49,6 +49,6 @@ int main(int argc, char **argv)
    const void *map = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
    assert(map != NULL);
 
-   nir_shader *shader = spirv_to_nir(map, word_count, NULL);
+   nir_shader *shader = spirv_to_nir(map, word_count, MESA_SHADER_FRAGMENT, NULL);
    nir_print_shader(shader, stderr);
 }

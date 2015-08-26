@@ -189,6 +189,20 @@ clear_texture_fields(struct gl_context *ctx,
 }
 
 
+/**
+ * Update/re-validate framebuffer object.
+ */
+static void
+update_fbo_texture(struct gl_context *ctx, struct gl_texture_object *texObj)
+{
+   const unsigned numFaces = _mesa_num_tex_faces(texObj->Target);
+   for (int level = 0; level < ARRAY_SIZE(texObj->Image[0]); level++) {
+      for (unsigned face = 0; face < numFaces; face++)
+         _mesa_update_fbo_texture(ctx, texObj, face, level);
+   }
+}
+
+
 GLboolean
 _mesa_is_legal_tex_storage_format(struct gl_context *ctx, GLenum internalformat)
 {
@@ -287,29 +301,21 @@ tex_storage_error_check(struct gl_context *ctx,
     * order to allow meta functions to use legacy formats. */
 
    /* size check */
-   if (width < 1 || height < 1 || depth < 1) {
+   if (!_mesa_valid_tex_storage_dim(width, height, depth)) {
       _mesa_error(ctx, GL_INVALID_VALUE,
                   "glTex%sStorage%uD(width, height or depth < 1)",
                   suffix, dims);
       return GL_TRUE;
    }  
 
-   /* From section 3.8.6, page 146 of OpenGL ES 3.0 spec:
-    *
-    *    "The ETC2/EAC texture compression algorithm supports only
-    *     two-dimensional images. If internalformat is an ETC2/EAC format,
-    *     CompressedTexImage3D will generate an INVALID_OPERATION error if
-    *     target is not TEXTURE_2D_ARRAY."
-    *
-    * This should also be applicable for glTexStorage3D().
-    */
-   if (_mesa_is_compressed_format(ctx, internalformat)
-       && !_mesa_target_can_be_compressed(ctx, target, internalformat)) {
-      _mesa_error(ctx, _mesa_is_desktop_gl(ctx)?
-                  GL_INVALID_ENUM : GL_INVALID_OPERATION,
+   if (_mesa_is_compressed_format(ctx, internalformat)) {
+      GLenum err;
+      if (!_mesa_target_can_be_compressed(ctx, target, internalformat, &err)) {
+         _mesa_error(ctx, err,
                   "glTex%sStorage%dD(internalformat = %s)", suffix, dims,
                   _mesa_enum_to_string(internalformat));
-      return GL_TRUE;
+         return GL_TRUE;
+      }
    }
 
    /* levels check */
@@ -446,6 +452,7 @@ _mesa_texture_storage(struct gl_context *ctx, GLuint dims,
 
       _mesa_set_texture_view_state(ctx, texObj, target, levels);
 
+      update_fbo_texture(ctx, texObj);
    }
 }
 

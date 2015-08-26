@@ -455,8 +455,8 @@ fs_reg::component_size(unsigned width) const
    return MAX2(width * stride, 1) * type_sz(type);
 }
 
-int
-fs_visitor::type_size(const struct glsl_type *type)
+extern "C" int
+type_size_scalar(const struct glsl_type *type)
 {
    unsigned int size, i;
 
@@ -467,11 +467,11 @@ fs_visitor::type_size(const struct glsl_type *type)
    case GLSL_TYPE_BOOL:
       return type->components();
    case GLSL_TYPE_ARRAY:
-      return type_size(type->fields.array) * type->length;
+      return type_size_scalar(type->fields.array) * type->length;
    case GLSL_TYPE_STRUCT:
       size = 0;
       for (i = 0; i < type->length; i++) {
-	 size += type_size(type->fields.structure[i].type);
+	 size += type_size_scalar(type->fields.structure[i].type);
       }
       return size;
    case GLSL_TYPE_SAMPLER:
@@ -907,7 +907,7 @@ fs_reg
 fs_visitor::vgrf(const glsl_type *const type)
 {
    int reg_width = dispatch_width / 8;
-   return fs_reg(GRF, alloc.allocate(type_size(type) * reg_width),
+   return fs_reg(GRF, alloc.allocate(type_size_scalar(type) * reg_width),
                  brw_type_for_base_type(type));
 }
 
@@ -944,15 +944,17 @@ fs_visitor::import_uniforms(fs_visitor *v)
 }
 
 void
-fs_visitor::setup_vector_uniform_values(const gl_constant_value *values, unsigned n)
+fs_visitor::setup_vec4_uniform_value(unsigned param_offset,
+                                     const gl_constant_value *values,
+                                     unsigned n)
 {
    static const gl_constant_value zero = { 0 };
 
    for (unsigned i = 0; i < n; ++i)
-      stage_prog_data->param[uniforms++] = &values[i];
+      stage_prog_data->param[param_offset + i] = &values[i];
 
    for (unsigned i = n; i < 4; ++i)
-      stage_prog_data->param[uniforms++] = &zero;
+      stage_prog_data->param[param_offset + i] = &zero;
 }
 
 fs_reg *
@@ -1769,21 +1771,21 @@ fs_visitor::compact_virtual_grfs()
    return progress;
 }
 
-/*
- * Implements array access of uniforms by inserting a
- * PULL_CONSTANT_LOAD instruction.
+/**
+ * Assign UNIFORM file registers to either push constants or pull constants.
  *
- * Unlike temporary GRF array access (where we don't support it due to
- * the difficulty of doing relative addressing on instruction
- * destinations), we could potentially do array access of uniforms
- * that were loaded in GRF space as push constants.  In real-world
- * usage we've seen, though, the arrays being used are always larger
- * than we could load as push constants, so just always move all
- * uniform array access out to a pull constant buffer.
+ * We allow a fragment shader to have more than the specified minimum
+ * maximum number of fragment shader uniform components (64).  If
+ * there are too many of these, they'd fill up all of register space.
+ * So, this will push some of them out to the pull constant buffer and
+ * update the program to load them.  We also use pull constants for all
+ * indirect constant loads because we don't support indirect accesses in
+ * registers yet.
  */
 void
-fs_visitor::move_uniform_array_access_to_pull_constants()
+fs_visitor::assign_constant_locations()
 {
+   /* Only the first compile (SIMD8 mode) gets to decide on locations. */
    if (dispatch_width != 8)
       return;
 
@@ -1820,23 +1822,6 @@ fs_visitor::move_uniform_array_access_to_pull_constants()
          }
       }
    }
-}
-
-/**
- * Assign UNIFORM file registers to either push constants or pull constants.
- *
- * We allow a fragment shader to have more than the specified minimum
- * maximum number of fragment shader uniform components (64).  If
- * there are too many of these, they'd fill up all of register space.
- * So, this will push some of them out to the pull constant buffer and
- * update the program to load them.
- */
-void
-fs_visitor::assign_constant_locations()
-{
-   /* Only the first compile (SIMD8 mode) gets to decide on locations. */
-   if (dispatch_width != 8)
-      return;
 
    /* Find which UNIFORM registers are still in use. */
    bool is_live[uniforms];
@@ -4823,7 +4808,6 @@ fs_visitor::optimize()
 
    split_virtual_grfs();
 
-   move_uniform_array_access_to_pull_constants();
    assign_constant_locations();
    demote_pull_constants();
 
