@@ -542,14 +542,7 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
-   switch (physical_device->info->gen) {
-   case 7:
-      driver_layer = &gen7_layer;
-      break;
-   case 8:
-      driver_layer = &gen8_layer;
-      break;
-   }
+   anv_set_dispatch_gen(physical_device->info->gen);
 
    device = anv_instance_alloc(instance, sizeof(*device), 8,
                                VK_SYSTEM_ALLOC_TYPE_API_OBJECT);

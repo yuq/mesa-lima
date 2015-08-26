@@ -91,9 +91,7 @@ if opt_header:
     print "   };\n"
     print "};\n"
 
-    print "extern const struct anv_layer gen7_layer;\n"
-    print "extern const struct anv_layer gen8_layer;\n"
-    print "extern const struct anv_layer *driver_layer;\n"
+    print "void anv_set_dispatch_gen(uint32_t gen);\n"
 
     for type, name, args, num, h in entrypoints:
         print "%s anv_%s%s;" % (type, name, args)
@@ -195,7 +193,13 @@ determine_validate(void)
       enable_validate = atoi(s);
 }
 
-const struct anv_layer *driver_layer = &anv_layer;
+static uint32_t dispatch_gen;
+
+void
+anv_set_dispatch_gen(uint32_t gen)
+{
+   dispatch_gen = gen;   
+}
 
 static void * __attribute__ ((noinline))
 resolve_entrypoint(uint32_t index)
@@ -203,10 +207,20 @@ resolve_entrypoint(uint32_t index)
    if (enable_validate && validate_layer.entrypoints[index])
       return validate_layer.entrypoints[index];
 
-   if (driver_layer && driver_layer->entrypoints[index])
-      return driver_layer->entrypoints[index];
-
-   return anv_layer.entrypoints[index];
+   switch (dispatch_gen) {
+   case 8:
+      if (gen8_layer.entrypoints[index])
+         return gen8_layer.entrypoints[index];
+      /* fall through */
+   case 7:
+      if (gen7_layer.entrypoints[index])
+         return gen7_layer.entrypoints[index];
+      /* fall through */
+   case 0:
+      return anv_layer.entrypoints[index];
+   default:
+      unreachable("unsupported gen\\n");
+   }
 }
 """
 
