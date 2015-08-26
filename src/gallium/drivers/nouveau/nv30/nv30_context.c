@@ -190,7 +190,7 @@ nv30_context_destroy(struct pipe_context *pipe)
    } while(0)
 
 struct pipe_context *
-nv30_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
+nv30_context_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 {
    struct nv30_screen *screen = nv30_screen(pscreen);
    struct nv30_context *nv30 = CALLOC_STRUCT(nv30_context);

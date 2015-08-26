@@ -240,7 +240,7 @@ nv50_context_get_sample_position(struct pipe_context *, unsigned, unsigned,
                                  float *);
 
 struct pipe_context *
-nv50_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
+nv50_create(struct pipe_screen *pscreen, void *priv, unsigned ctxflags)
 {
    struct nv50_screen *screen = nv50_screen(pscreen);
    struct nv50_context *nv50;
