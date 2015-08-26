@@ -1123,6 +1123,34 @@ type_size(const struct glsl_type *type)
    return 0;
 }
 
+
+/**
+ * If the given GLSL type is an array or matrix or a structure containing
+ * an array/matrix member, return true.  Else return false.
+ *
+ * This is used to determine which kind of temp storage (PROGRAM_TEMPORARY
+ * or PROGRAM_ARRAY) should be used for variables of this type.  Anytime
+ * we have an array that might be indexed with a variable, we need to use
+ * the later storage type.
+ */
+static bool
+type_has_array_or_matrix(const glsl_type *type)
+{
+   if (type->is_array() || type->is_matrix())
+      return true;
+
+   if (type->is_record()) {
+      for (unsigned i = 0; i < type->length; i++) {
+         if (type_has_array_or_matrix(type->fields.structure[i].type)) {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
+
 /**
  * In the initial pass of codegen, we assign temporary numbers to
  * intermediate results.  (not SSA -- variable assignments will reuse
@@ -1137,9 +1165,7 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
    src.reladdr = NULL;
    src.negate = 0;
 
-   if (!options->EmitNoIndirectTemp &&
-       (type->is_array() || type->is_matrix())) {
-
+   if (!options->EmitNoIndirectTemp && type_has_array_or_matrix(type)) {
       if (next_array >= max_num_arrays) {
          max_num_arrays += 32;
          array_sizes = (unsigned*)
