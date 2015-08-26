@@ -259,8 +259,7 @@ anv_image_create(VkDevice _device,
        extent->height > limits->height ||
        extent->depth > limits->depth) {
       /* TODO(chadv): What is the correct error? */
-      anv_loge("image extent is too large");
-      return vk_error(VK_ERROR_INVALID_MEMORY_SIZE);
+      return vk_errorf(VK_ERROR_INVALID_MEMORY_SIZE, "image extent is too large");
    }
 
    image = anv_device_alloc(device, sizeof(*image), 8,

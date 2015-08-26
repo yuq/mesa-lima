@@ -163,13 +163,13 @@ VkResult anv_CreateSwapChainWSI(
       ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
                                surface->stride, I915_TILING_X);
       if (ret) {
-         result = vk_error(VK_ERROR_UNKNOWN);
+         result = vk_errorf(VK_ERROR_UNKNOWN, "set_tiling failed: %m");
          goto fail;
       }
 
       int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
       if (fd == -1) {
-         result = vk_error(VK_ERROR_UNKNOWN);
+         result = vk_errorf(VK_ERROR_UNKNOWN, "handle_to_fd failed: %m");
          goto fail;
       }
 

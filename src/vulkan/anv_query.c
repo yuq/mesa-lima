@@ -123,7 +123,7 @@ VkResult anv_GetQueryPoolResults(
    if (flags & VK_QUERY_RESULT_WAIT_BIT) {
       ret = anv_gem_wait(device, pool->bo.gem_handle, &timeout);
       if (ret == -1)
-         return vk_error(VK_ERROR_UNKNOWN);
+         return vk_errorf(VK_ERROR_UNKNOWN, "gem_wait failed %m");
    }
 
    for (uint32_t i = 0; i < queryCount; i++) {

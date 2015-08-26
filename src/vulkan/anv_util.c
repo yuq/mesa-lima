@@ -83,8 +83,11 @@ anv_abortfv(const char *format, va_list va)
 }
 
 VkResult
-__vk_error(VkResult error, const char *file, int line)
+__vk_errorf(VkResult error, const char *file, int line, const char *format, ...)
 {
+   va_list ap;
+   char buffer[256];
+
    static const char *error_names[] = {
       "VK_ERROR_UNKNOWN",
       "VK_ERROR_UNAVAILABLE",
@@ -120,11 +123,18 @@ __vk_error(VkResult error, const char *file, int line)
       "VK_ERROR_INVALID_LAYER",
    };
 
-   if (error <= VK_ERROR_UNKNOWN && error >= VK_ERROR_INVALID_LAYER)
-      fprintf(stderr, "%s:%d: %s\n",
-              file, line, error_names[-error - VK_ERROR_UNKNOWN]);
-   else
-      fprintf(stderr, "%s:%d: vk error %d\n", file, line, error);
+   assert(error <= VK_ERROR_UNKNOWN && error >= VK_ERROR_INVALID_LAYER);
+
+   if (format) {
+      va_start(ap, format);
+      vsnprintf(buffer, sizeof(buffer), format, ap);
+      va_end(ap);
+
+      fprintf(stderr, "%s:%d: %s (%s)\n", file, line,
+              buffer, error_names[-error - 1]);
+   } else {
+      fprintf(stderr, "%s:%d: %s\n", file, line, error_names[-error - 1]);
+   }
 
    return error;
 }

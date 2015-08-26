@@ -36,38 +36,53 @@ anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
                          const char *path)
 {
+   VkResult result;
    int fd;
 
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
-      return vk_error(VK_ERROR_UNAVAILABLE);
+      return vk_errorf(VK_ERROR_UNAVAILABLE, "failed to open %s: %m", path);
 
    device->instance = instance;
    device->path = path;
    
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
-   if (!device->chipset_id)
+   if (!device->chipset_id) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get chipset id: %m");
       goto fail;
+   }
 
    device->name = brw_get_device_name(device->chipset_id);
    device->info = brw_get_device_info(device->chipset_id, -1);
-   if (!device->info)
+   if (!device->info) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get device info");
       goto fail;
+   }
    
-   if (anv_gem_get_aperture(fd, &device->aperture_size) == -1)
+   if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get aperture size: %m");
       goto fail;
+   }
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT)) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing gem wait");
       goto fail;
+   }
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2)) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing execbuf2");
       goto fail;
+   }
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC)) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "non-llc gpu");
       goto fail;
+   }
 
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CONSTANTS))
+   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CONSTANTS)) {
+      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing exec constants");
       goto fail;
+   }
    
    close(fd);
 
@@ -75,7 +90,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    
 fail:
    close(fd);
-   return vk_error(VK_ERROR_UNAVAILABLE);
+   return result;
 }
 
 static void *default_alloc(
@@ -729,12 +744,12 @@ VkResult anv_QueueSubmit(
 
       ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
       if (ret != 0)
-         return vk_error(VK_ERROR_UNKNOWN);
+         return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
 
       if (fence) {
          ret = anv_gem_execbuffer(device, &fence->execbuf);
          if (ret != 0)
-            return vk_error(VK_ERROR_UNKNOWN);
+            return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
       }
 
       for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
@@ -797,14 +812,14 @@ VkResult anv_DeviceWaitIdle(
 
    ret = anv_gem_execbuffer(device, &execbuf);
    if (ret != 0) {
-      result = vk_error(VK_ERROR_UNKNOWN);
+      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
       goto fail;
    }
 
    timeout = INT64_MAX;
    ret = anv_gem_wait(device, bo->gem_handle, &timeout);
    if (ret != 0) {
-      result = vk_error(VK_ERROR_UNKNOWN);
+      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
       goto fail;
    }
 
@@ -1211,7 +1226,7 @@ VkResult anv_WaitForFences(
       if (ret == -1 && errno == ETIME)
          return VK_TIMEOUT;
       else if (ret == -1)
-         return vk_error(VK_ERROR_UNKNOWN);
+         return vk_errorf(VK_ERROR_UNKNOWN, "gem wait failed: %m");
    }
 
    return VK_SUCCESS;
