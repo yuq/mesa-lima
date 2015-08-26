@@ -312,38 +312,6 @@ gen8_graphics_pipeline_create(
    if (result != VK_SUCCESS)
       return result;
 
-   pipeline->device = device;
-   pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
-   memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
-
-   result = anv_reloc_list_init(&pipeline->batch_relocs, device);
-   if (result != VK_SUCCESS) {
-      anv_device_free(device, pipeline);
-      return result;
-   }
-   pipeline->batch.next = pipeline->batch.start = pipeline->batch_data;
-   pipeline->batch.end = pipeline->batch.start + sizeof(pipeline->batch_data);
-   pipeline->batch.relocs = &pipeline->batch_relocs;
-
-   anv_state_stream_init(&pipeline->program_stream,
-                         &device->instruction_block_pool);
-
-   for (uint32_t i = 0; i < pCreateInfo->stageCount; i++) {
-      pipeline->shaders[pCreateInfo->pStages[i].stage] =
-         anv_shader_from_handle(pCreateInfo->pStages[i].shader);
-   }
-
-   if (pCreateInfo->pTessellationState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
-   if (pCreateInfo->pViewportState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO");
-   if (pCreateInfo->pMultisampleState)
-      anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
-
-   pipeline->use_repclear = extra && extra->use_repclear;
-
-   anv_compiler_run(device->compiler, pipeline);
-
    /* FIXME: The compiler dead-codes FS inputs when we don't have a VS, so we
     * hard code this to num_attributes - 2. This is because the attributes
     * include VUE header and position, which aren't counted as varying

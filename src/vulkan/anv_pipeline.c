@@ -189,10 +189,11 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
                   const struct anv_graphics_pipeline_create_info *extra)
 {
+   VkResult result;
+
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
-   VkResult result;
 
    result = anv_reloc_list_init(&pipeline->batch_relocs, device);
    if (result != VK_SUCCESS) {
