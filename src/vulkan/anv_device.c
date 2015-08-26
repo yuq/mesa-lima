@@ -78,11 +78,6 @@ anv_physical_device_init(struct anv_physical_device *device,
       result = vk_errorf(VK_ERROR_UNAVAILABLE, "non-llc gpu");
       goto fail;
    }
-
-   if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXEC_CONSTANTS)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing exec constants");
-      goto fail;
-   }
    
    close(fd);
 
