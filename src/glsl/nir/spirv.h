@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2015 The Khronos Group Inc.
+** Copyright (c) 2014-2015 The Khronos Group Inc.
 ** 
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and/or associated documentation files (the "Materials"),
@@ -53,6 +53,7 @@ typedef unsigned int SpvId;
 
 static const unsigned int SpvMagicNumber = 0x07230203;
 static const unsigned int SpvVersion = 99;
+static const unsigned int SpvRevision = 31;
 static const unsigned int SpvOpCodeMask = 0xffff;
 static const unsigned int SpvWordCountShift = 16;
 
@@ -130,7 +131,6 @@ typedef enum SpvStorageClass_ {
     SpvStorageClassPrivateGlobal = 6,
     SpvStorageClassFunction = 7,
     SpvStorageClassGeneric = 8,
-    SpvStorageClassPushConstant = 9,
     SpvStorageClassAtomicCounter = 10,
     SpvStorageClassImage = 11,
 } SpvStorageClass;
@@ -245,9 +245,10 @@ typedef enum SpvImageOperandsShift_ {
     SpvImageOperandsBiasShift = 0,
     SpvImageOperandsLodShift = 1,
     SpvImageOperandsGradShift = 2,
-    SpvImageOperandsOffsetShift = 3,
-    SpvImageOperandsOffsetsShift = 4,
-    SpvImageOperandsSampleShift = 5,
+    SpvImageOperandsConstOffsetShift = 3,
+    SpvImageOperandsOffsetShift = 4,
+    SpvImageOperandsConstOffsetsShift = 5,
+    SpvImageOperandsSampleShift = 6,
 } SpvImageOperandsShift;
 
 typedef enum SpvImageOperandsMask_ {
@@ -255,9 +256,10 @@ typedef enum SpvImageOperandsMask_ {
     SpvImageOperandsBiasMask = 0x00000001,
     SpvImageOperandsLodMask = 0x00000002,
     SpvImageOperandsGradMask = 0x00000004,
-    SpvImageOperandsOffsetMask = 0x00000008,
-    SpvImageOperandsOffsetsMask = 0x00000010,
-    SpvImageOperandsSampleMask = 0x00000020,
+    SpvImageOperandsConstOffsetMask = 0x00000008,
+    SpvImageOperandsOffsetMask = 0x00000010,
+    SpvImageOperandsConstOffsetsMask = 0x00000020,
+    SpvImageOperandsSampleMask = 0x00000040,
 } SpvImageOperandsMask;
 
 typedef enum SpvFPFastMathModeShift_ {
@@ -302,9 +304,8 @@ typedef enum SpvFunctionParameterAttribute_ {
     SpvFunctionParameterAttributeSret = 3,
     SpvFunctionParameterAttributeNoAlias = 4,
     SpvFunctionParameterAttributeNoCapture = 5,
-    SpvFunctionParameterAttributeSVM = 6,
-    SpvFunctionParameterAttributeNoWrite = 7,
-    SpvFunctionParameterAttributeNoReadWrite = 8,
+    SpvFunctionParameterAttributeNoWrite = 6,
+    SpvFunctionParameterAttributeNoReadWrite = 7,
 } SpvFunctionParameterAttribute;
 
 typedef enum SpvDecoration_ {
@@ -355,7 +356,6 @@ typedef enum SpvDecoration_ {
 typedef enum SpvBuiltIn_ {
     SpvBuiltInPosition = 0,
     SpvBuiltInPointSize = 1,
-    SpvBuiltInClipVertex = 2,
     SpvBuiltInClipDistance = 3,
     SpvBuiltInCullDistance = 4,
     SpvBuiltInVertexId = 5,
@@ -525,6 +525,19 @@ typedef enum SpvCapability_ {
     SpvCapabilityLiteralSampler = 20,
     SpvCapabilityAtomicStorage = 21,
     SpvCapabilityInt16 = 22,
+    SpvCapabilityTessellationPointSize = 23,
+    SpvCapabilityGeometryPointSize = 24,
+    SpvCapabilityImageGatherExtended = 25,
+    SpvCapabilityStorageImageExtendedFormats = 26,
+    SpvCapabilityStorageImageMultisample = 27,
+    SpvCapabilityUniformBufferArrayDynamicIndexing = 28,
+    SpvCapabilitySampledImageArrayDynamicIndexing = 29,
+    SpvCapabilityStorageBufferArrayDynamicIndexing = 30,
+    SpvCapabilityStorageImageArrayDynamicIndexing = 31,
+    SpvCapabilityClipDistance = 32,
+    SpvCapabilityCullDistance = 33,
+    SpvCapabilityImageCubeArray = 34,
+    SpvCapabilitySampleRateShading = 35,
 } SpvCapability;
 
 typedef enum SpvOp_ {
@@ -740,9 +753,9 @@ typedef enum SpvOp_ {
     SpvOpAtomicIDecrement = 233,
     SpvOpAtomicIAdd = 234,
     SpvOpAtomicISub = 235,
-    SpvOpAtomicIMin = 236,
+    SpvOpAtomicSMin = 236,
     SpvOpAtomicUMin = 237,
-    SpvOpAtomicIMax = 238,
+    SpvOpAtomicSMax = 238,
     SpvOpAtomicUMax = 239,
     SpvOpAtomicAnd = 240,
     SpvOpAtomicOr = 241,

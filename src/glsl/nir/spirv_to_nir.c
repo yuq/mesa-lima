@@ -636,10 +636,6 @@ vtn_get_builtin_location(SpvBuiltIn builtin, int *location,
       *location = VARYING_SLOT_PSIZ;
       *mode = nir_var_shader_out;
       break;
-   case SpvBuiltInClipVertex:
-      *location = VARYING_SLOT_CLIP_VERTEX;
-      *mode = nir_var_shader_out;
-      break;
    case SpvBuiltInClipDistance:
       *location = VARYING_SLOT_CLIP_DIST0; /* XXX CLIP_DIST1? */
       *mode = nir_var_shader_in;
