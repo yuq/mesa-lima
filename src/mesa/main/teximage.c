@@ -3805,12 +3805,12 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
       rowStride = _mesa_image_image_stride(&ctx->Unpack, width, height,
                                            format, type);
       /* Copy in each face. */
-      for (i = 0; i < 6; ++i) {
+      for (i = zoffset; i < zoffset + depth; ++i) {
          texImage = texObj->Image[i][level];
          assert(texImage);
 
          _mesa_texture_sub_image(ctx, 3, texObj, texImage, texObj->Target,
-                                 level, xoffset, yoffset, zoffset,
+                                 level, xoffset, yoffset, 0,
                                  width, height, 1, format,
                                  type, pixels, true);
          pixels = (GLubyte *) pixels + rowStride;
