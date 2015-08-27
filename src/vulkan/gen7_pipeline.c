@@ -561,31 +561,6 @@ gen7_graphics_pipeline_create(
    return VK_SUCCESS;
 }
 
-VkResult gen7_CreateGraphicsPipelines(
-    VkDevice                                    _device,
-    VkPipelineCache                             pipelineCache,
-    uint32_t                                    count,
-    const VkGraphicsPipelineCreateInfo*         pCreateInfos,
-    VkPipeline*                                 pPipelines)
-{
-   VkResult result = VK_SUCCESS;
-
-   unsigned i = 0;
-   for (; i < count; i++) {
-      result = gen7_graphics_pipeline_create(_device, &pCreateInfos[i],
-                                             NULL, &pPipelines[i]);
-      if (result != VK_SUCCESS) {
-         for (unsigned j = 0; j < i; j++) {
-            anv_DestroyPipeline(_device, pPipelines[j]);
-         }
-
-         return result;
-      }
-   }
-
-   return VK_SUCCESS;
-}
-
 VkResult gen7_compute_pipeline_create(
     VkDevice                                    _device,
     const VkComputePipelineCreateInfo*          pCreateInfo,
