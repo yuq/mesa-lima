@@ -336,6 +336,11 @@ struct array_decl {
    unsigned array_size;
 };
 
+struct rename_reg_pair {
+   int old_reg;
+   int new_reg;
+};
+
 struct glsl_to_tgsi_visitor : public ir_visitor {
 public:
    glsl_to_tgsi_visitor();
@@ -479,7 +484,7 @@ public:
 
    void simplify_cmp(void);
 
-   void rename_temp_register(int index, int new_index);
+   void rename_temp_registers(int num_renames, struct rename_reg_pair *renames);
    void get_first_temp_read(int *first_reads);
    void get_last_temp_read_first_temp_write(int *last_reads, int *first_writes);
    void get_last_temp_write(int *last_writes);
@@ -3686,29 +3691,30 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
 
 /* Replaces all references to a temporary register index with another index. */
 void
-glsl_to_tgsi_visitor::rename_temp_register(int index, int new_index)
+glsl_to_tgsi_visitor::rename_temp_registers(int num_renames, struct rename_reg_pair *renames)
 {
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
       unsigned j;
-
+      int k;
       for (j = 0; j < num_inst_src_regs(inst); j++) {
-         if (inst->src[j].file == PROGRAM_TEMPORARY &&
-             inst->src[j].index == index) {
-            inst->src[j].index = new_index;
-         }
+         if (inst->src[j].file == PROGRAM_TEMPORARY)
+            for (k = 0; k < num_renames; k++)
+               if (inst->src[j].index == renames[k].old_reg)
+                  inst->src[j].index = renames[k].new_reg;
       }
 
       for (j = 0; j < inst->tex_offset_num_offset; j++) {
-         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY &&
-             inst->tex_offsets[j].index == index) {
-            inst->tex_offsets[j].index = new_index;
-         }
+         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY)
+            for (k = 0; k < num_renames; k++)
+               if (inst->tex_offsets[j].index == renames[k].old_reg)
+                  inst->tex_offsets[j].index = renames[k].new_reg;
       }
 
       for (j = 0; j < num_inst_dst_regs(inst); j++) {
-         if (inst->dst[j].file == PROGRAM_TEMPORARY && inst->dst[j].index == index) {
-            inst->dst[j].index = new_index;
-         }
+         if (inst->dst[j].file == PROGRAM_TEMPORARY)
+             for (k = 0; k < num_renames; k++)
+                if (inst->dst[j].index == renames[k].old_reg)
+                   inst->dst[j].index = renames[k].new_reg;
       }
    }
 }
@@ -4239,7 +4245,9 @@ glsl_to_tgsi_visitor::merge_registers(void)
 {
    int *last_reads = rzalloc_array(mem_ctx, int, this->next_temp);
    int *first_writes = rzalloc_array(mem_ctx, int, this->next_temp);
+   struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
    int i, j;
+   int num_renames = 0;
 
    /* Read the indices of the last read and first write to each temp register
     * into an array so that we don't have to traverse the instruction list as
@@ -4266,7 +4274,9 @@ glsl_to_tgsi_visitor::merge_registers(void)
           * as the register at index j. */
          if (first_writes[i] <= first_writes[j] &&
              last_reads[i] <= first_writes[j]) {
-            rename_temp_register(j, i); /* Replace all references to j with i.*/
+            renames[num_renames].old_reg = j;
+            renames[num_renames].new_reg = i;
+            num_renames++;
 
             /* Update the first_writes and last_reads arrays with the new
              * values for the merged register index, and mark the newly unused
@@ -4278,6 +4288,8 @@ glsl_to_tgsi_visitor::merge_registers(void)
       }
    }
 
+   rename_temp_registers(num_renames, renames);
+   ralloc_free(renames);
    ralloc_free(last_reads);
    ralloc_free(first_writes);
 }
@@ -4290,19 +4302,26 @@ glsl_to_tgsi_visitor::renumber_registers(void)
    int i = 0;
    int new_index = 0;
    int *first_reads = rzalloc_array(mem_ctx, int, this->next_temp);
-
-   for (i = 0; i < this->next_temp; i++)
+   struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
+   int num_renames = 0;
+   for (i = 0; i < this->next_temp; i++) {
       first_reads[i] = -1;
+   }
    get_first_temp_read(first_reads);
 
    for (i = 0; i < this->next_temp; i++) {
       if (first_reads[i] < 0) continue;
-      if (i != new_index)
-         rename_temp_register(i, new_index);
+      if (i != new_index) {
+         renames[num_renames].old_reg = i;
+         renames[num_renames].new_reg = new_index;
+         num_renames++;
+      }
       new_index++;
    }
 
+   rename_temp_registers(num_renames, renames);
    this->next_temp = new_index;
+   ralloc_free(renames);
    ralloc_free(first_reads);
 }
 
