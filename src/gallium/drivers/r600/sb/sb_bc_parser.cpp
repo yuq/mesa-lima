@@ -792,6 +792,9 @@ int bc_parser::prepare_if(cf_node* c) {
 	assert(c->bc.addr-1 < cf_map.size());
 	cf_node *c_else = NULL, *end = cf_map[c->bc.addr];
 
+	if (!end)
+		return 0; // not quite sure how this happens, malformed input?
+
 	BCP_DUMP(
 		sblog << "parsing JUMP @" << c->bc.id;
 		sblog << "\n";
@@ -817,7 +820,7 @@ int bc_parser::prepare_if(cf_node* c) {
 	if (c_else->parent != c->parent)
 		c_else = NULL;
 
-	if (end->parent != c->parent)
+	if (end && end->parent != c->parent)
 		end = NULL;
 
 	region_node *reg = sh->create_region();
