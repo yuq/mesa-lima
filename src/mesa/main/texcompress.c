@@ -100,6 +100,12 @@ _mesa_gl_compressed_format_base_format(GLenum format)
    case GL_ETC1_RGB8_OES:
    case GL_COMPRESSED_RGB8_ETC2:
    case GL_COMPRESSED_SRGB8_ETC2:
+   case GL_RGB_S3TC:
+   case GL_RGB4_S3TC:
+   case GL_PALETTE4_RGB8_OES:
+   case GL_PALETTE4_R5_G6_B5_OES:
+   case GL_PALETTE8_RGB8_OES:
+   case GL_PALETTE8_R5_G6_B5_OES:
       return GL_RGB;
 
    case GL_COMPRESSED_RGBA:
@@ -117,6 +123,14 @@ _mesa_gl_compressed_format_base_format(GLenum format)
    case GL_COMPRESSED_SRGB8_ALPHA8_ETC2_EAC:
    case GL_COMPRESSED_RGB8_PUNCHTHROUGH_ALPHA1_ETC2:
    case GL_COMPRESSED_SRGB8_PUNCHTHROUGH_ALPHA1_ETC2:
+   case GL_RGBA_S3TC:
+   case GL_RGBA4_S3TC:
+   case GL_PALETTE4_RGBA8_OES:
+   case GL_PALETTE8_RGB5_A1_OES:
+   case GL_PALETTE4_RGBA4_OES:
+   case GL_PALETTE4_RGB5_A1_OES:
+   case GL_PALETTE8_RGBA8_OES:
+   case GL_PALETTE8_RGBA4_OES:
       return GL_RGBA;
 
    case GL_COMPRESSED_ALPHA:
