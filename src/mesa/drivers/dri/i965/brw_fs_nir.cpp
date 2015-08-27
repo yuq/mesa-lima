@@ -42,7 +42,8 @@ fs_visitor::emit_nir_code()
     */
    nir_setup_inputs(nir);
    nir_setup_outputs(nir);
-   nir_setup_uniforms(nir);
+   uniforms = nir->num_uniforms;
+   //nir_setup_uniforms(nir);
    nir_emit_system_values(nir);
 
    /* get the main function and emit it */
