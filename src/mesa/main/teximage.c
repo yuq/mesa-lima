@@ -558,7 +558,8 @@ _mesa_base_tex_format( struct gl_context *ctx, GLint internalFormat )
       }
    }
 
-   if (ctx->Extensions.OES_compressed_ETC1_RGB8_texture) {
+   if (_mesa_is_gles(ctx) &&
+      ctx->Extensions.OES_compressed_ETC1_RGB8_texture) {
       switch (internalFormat) {
       case GL_ETC1_RGB8_OES:
          return GL_RGB;
