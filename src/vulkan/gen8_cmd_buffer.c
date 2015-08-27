@@ -30,6 +30,41 @@
 #include "anv_private.h"
 
 static void
+gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
+{
+   uint32_t stage;
+
+   static const uint32_t push_constant_opcodes[] = {
+      [VK_SHADER_STAGE_VERTEX]                  = 21,
+      [VK_SHADER_STAGE_TESS_CONTROL]            = 25, /* HS */
+      [VK_SHADER_STAGE_TESS_EVALUATION]         = 26, /* DS */
+      [VK_SHADER_STAGE_GEOMETRY]                = 22,
+      [VK_SHADER_STAGE_FRAGMENT]                = 23,
+      [VK_SHADER_STAGE_COMPUTE]                 = 0,
+   };
+
+   uint32_t flushed = 0;
+
+   for_each_bit(stage, cmd_buffer->state.push_constants_dirty) {
+      struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);
+
+      if (state.offset == 0)
+         continue;
+
+      anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_CONSTANT_VS,
+                     ._3DCommandSubOpcode = push_constant_opcodes[stage],
+                     .ConstantBody = {
+                        .PointerToConstantBuffer0 = { .offset = state.offset },
+                        .ConstantBuffer0ReadLength = DIV_ROUND_UP(state.alloc_size, 32),
+                     });
+
+      flushed |= 1 << stage;
+   }
+
+   cmd_buffer->state.push_constants_dirty &= ~flushed;
+}
+
+static void
 gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -83,6 +118,9 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.descriptors_dirty)
       anv_flush_descriptor_sets(cmd_buffer);
+
+   if (cmd_buffer->state.push_constants_dirty)
+      gen8_cmd_buffer_flush_push_constants(cmd_buffer);
 
    if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_VP_DIRTY) {
       struct anv_dynamic_vp_state *vp_state = cmd_buffer->state.vp_state;

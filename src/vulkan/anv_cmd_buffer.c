@@ -661,6 +661,34 @@ void anv_CmdWaitEvents(
    stub();
 }
 
+struct anv_state
+anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
+                              VkShaderStage stage)
+{
+   struct anv_push_constant_data *data =
+      cmd_buffer->state.push_constants[stage].data;
+   struct brw_stage_prog_data *prog_data =
+      cmd_buffer->state.pipeline->prog_data[stage];
+
+   /* If we don't actually have any push constants, bail. */
+   if (data == NULL || prog_data->nr_params == 0)
+      return (struct anv_state) { .offset = 0 };
+
+   struct anv_state state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                         prog_data->nr_params * sizeof(float),
+                                         32 /* bottom 5 bits MBZ */);
+
+   /* Walk through the param array and fill the buffer with data */
+   uint32_t *u32_map = state.map;
+   for (unsigned i = 0; i < prog_data->nr_params; i++) {
+      uint32_t offset = (uintptr_t)prog_data->param[i];
+      u32_map[i] = *(uint32_t *)((uint8_t *)data + offset);
+   }
+
+   return state;
+}
+
 void anv_CmdPushConstants(
     VkCmdBuffer                                 cmdBuffer,
     VkPipelineLayout                            layout,
