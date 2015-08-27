@@ -121,15 +121,6 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 
-   /* In order for legacy clipping to work, we need to populate the clip
-    * distance varying slots whenever clipping is enabled, even if the vertex
-    * shader doesn't write to gl_ClipDistance.
-    */
-   if (c.key.base.userclip_active) {
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
-   }
-
    brw_compute_vue_map(brw->intelScreen->devinfo,
                        &c.prog_data.base.vue_map, outputs_written);
 
@@ -310,8 +301,6 @@ brw_gs_populate_key(struct brw_context *brw,
    memset(key, 0, sizeof(*key));
 
    key->base.program_string_id = gp->id;
-   brw_setup_vue_key_clip_info(brw, &key->base,
-                               gp->program.Base.UsesClipDistanceOut);
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,

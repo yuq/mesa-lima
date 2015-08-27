@@ -2058,11 +2058,6 @@ void gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
 uint32_t get_hw_prim_for_gl_prim(int mode);
 
 void
-brw_setup_vue_key_clip_info(struct brw_context *brw,
-                            struct brw_vue_prog_key *key,
-                            bool program_uses_clip_distance);
-
-void
 gen6_upload_push_constants(struct brw_context *brw,
                            const struct gl_program *prog,
                            const struct brw_stage_prog_data *prog_data,

@@ -279,21 +279,6 @@ brw_vs_debug_recompile(struct brw_context *brw,
    }
 }
 
-
-void
-brw_setup_vue_key_clip_info(struct brw_context *brw,
-                            struct brw_vue_prog_key *key,
-                            bool program_uses_clip_distance)
-{
-   struct gl_context *ctx = &brw->ctx;
-
-   key->userclip_active = (ctx->Transform.ClipPlanesEnabled != 0);
-   if (key->userclip_active && !program_uses_clip_distance) {
-      key->nr_userclip_plane_consts
-         = _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
-   }
-}
-
 static bool
 brw_vs_state_dirty(struct brw_context *brw)
 {
@@ -325,8 +310,14 @@ brw_vs_populate_key(struct brw_context *brw,
     * the inputs it asks for, whether they are varying or not.
     */
    key->base.program_string_id = vp->id;
-   brw_setup_vue_key_clip_info(brw, &key->base,
-                               vp->program.Base.UsesClipDistanceOut);
+
+   if (ctx->Transform.ClipPlanesEnabled != 0) {
+      key->base.userclip_active = true;
+      if (!vp->program.Base.UsesClipDistanceOut) {
+         key->base.nr_userclip_plane_consts =
+            _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
+      }
+   }
 
    /* _NEW_POLYGON */
    if (brw->gen < 6) {
