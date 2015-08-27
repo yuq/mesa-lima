@@ -41,7 +41,7 @@ extern "C" {
     ((major << 22) | (minor << 12) | patch)
 
 // Vulkan API version supported by this file
-#define VK_API_VERSION VK_MAKE_VERSION(0, 138, 1)
+#define VK_API_VERSION VK_MAKE_VERSION(0, 138, 2)
 
 
 #define VK_DEFINE_HANDLE(obj) typedef struct obj##_T* obj;
@@ -61,8 +61,8 @@ extern "C" {
     #endif
     #define VK_DEFINE_NONDISP_HANDLE(obj) \
         struct obj { \
-            obj() { } \
-            obj(uint64_t x) { handle = x; } \
+            obj() : handle(0) { } \
+            obj(uint64_t x) : handle(x) { } \
             obj& operator =(uint64_t x) { handle = x; return *this; } \
             bool operator==(const obj& other) const { return handle == other.handle; } \
             bool operator!=(const obj& other) const { return handle != other.handle; } \
@@ -1400,7 +1400,8 @@ typedef struct {
 } VkSparseImageMemoryRequirements;
 
 typedef struct {
-    VkDeviceSize                                offset;
+    VkDeviceSize                                rangeOffset;
+    VkDeviceSize                                rangeSize;
     VkDeviceSize                                memOffset;
     VkDeviceMemory                              mem;
     VkSparseMemoryBindFlags                     flags;
@@ -1567,7 +1568,7 @@ typedef struct {
 typedef struct {
     uint32_t                                    mapEntryCount;
     const VkSpecializationMapEntry*             pMap;
-    const size_t                                dataSize;
+    size_t                                      dataSize;
     const void*                                 pData;
 } VkSpecializationInfo;
 
