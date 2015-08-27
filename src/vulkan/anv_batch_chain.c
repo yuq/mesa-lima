@@ -928,7 +928,8 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       .num_cliprects = 0,
       .DR1 = 0,
       .DR4 = 0,
-      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER,
+      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER |
+               I915_EXEC_CONSTANTS_REL_GENERAL,
       .rsvd1 = cmd_buffer->device->context_id,
       .rsvd2 = 0,
    };
