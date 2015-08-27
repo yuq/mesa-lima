@@ -3764,7 +3764,7 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
 
    /* Must handle special case GL_TEXTURE_CUBE_MAP. */
    if (texObj->Target == GL_TEXTURE_CUBE_MAP) {
-      GLint rowStride;
+      GLint imageStride;
 
       /*
        * What do we do if the user created a texture with the following code
@@ -3802,8 +3802,8 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
          return;
       }
 
-      rowStride = _mesa_image_image_stride(&ctx->Unpack, width, height,
-                                           format, type);
+      imageStride = _mesa_image_image_stride(&ctx->Unpack, width, height,
+                                             format, type);
       /* Copy in each face. */
       for (i = zoffset; i < zoffset + depth; ++i) {
          texImage = texObj->Image[i][level];
@@ -3813,7 +3813,7 @@ texturesubimage(struct gl_context *ctx, GLuint dims,
                                  level, xoffset, yoffset, 0,
                                  width, height, 1, format,
                                  type, pixels, true);
-         pixels = (GLubyte *) pixels + rowStride;
+         pixels = (GLubyte *) pixels + imageStride;
       }
    }
    else {
