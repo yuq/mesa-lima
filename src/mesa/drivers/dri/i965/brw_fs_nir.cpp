@@ -1436,6 +1436,11 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_image_samples:
+      /* The driver does not support multi-sampled images. */
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_D), fs_reg(1));
+      break;
+
    case nir_intrinsic_load_front_face:
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_D),
               *emit_frontfacing_interpolation());
