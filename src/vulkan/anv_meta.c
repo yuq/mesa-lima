@@ -324,7 +324,8 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    if (pass->has_stencil_clear_attachment)
       anv_finishme("stencil clear");
 
-   if (pass->num_color_clear_attachments == 0)
+   if (pass->num_color_clear_attachments == 0 &&
+       !pass->has_depth_clear_attachment)
       return;
 
    struct clear_instance_data instance_data[pass->num_color_clear_attachments];
