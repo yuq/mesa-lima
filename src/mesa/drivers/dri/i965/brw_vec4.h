@@ -360,7 +360,7 @@ public:
    void emit_ndc_computation();
    void emit_psiz_and_flags(dst_reg reg);
    vec4_instruction *emit_generic_urb_slot(dst_reg reg, int varying);
-   void emit_urb_slot(dst_reg reg, int varying);
+   virtual void emit_urb_slot(dst_reg reg, int varying);
 
    void emit_shader_time_begin();
    void emit_shader_time_end();

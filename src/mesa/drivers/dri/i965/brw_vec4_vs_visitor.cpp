@@ -202,6 +202,32 @@ vec4_vs_visitor::emit_urb_write_opcode(bool complete)
 
 
 void
+vec4_vs_visitor::emit_urb_slot(dst_reg reg, int varying)
+{
+   reg.type = BRW_REGISTER_TYPE_F;
+   output_reg[varying].type = reg.type;
+
+   switch (varying) {
+   case VARYING_SLOT_COL0:
+   case VARYING_SLOT_COL1:
+   case VARYING_SLOT_BFC0:
+   case VARYING_SLOT_BFC1: {
+      /* These built-in varyings are only supported in compatibility mode,
+       * and we only support GS in core profile.  So, this must be a vertex
+       * shader.
+       */
+      vec4_instruction *inst = emit_generic_urb_slot(reg, varying);
+      if (key->clamp_vertex_color)
+         inst->saturate = true;
+      break;
+   }
+   default:
+      return vec4_visitor::emit_urb_slot(reg, varying);
+   }
+}
+
+
+void
 vec4_vs_visitor::emit_clip_distances(dst_reg reg, int offset)
 {
    /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):

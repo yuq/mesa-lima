@@ -103,6 +103,7 @@ protected:
    virtual void emit_program_code();
    virtual void emit_thread_end();
    virtual void emit_urb_write_header(int mrf);
+   virtual void emit_urb_slot(dst_reg reg, int varying);
    virtual vec4_instruction *emit_urb_write_opcode(bool complete);
 
 private:
