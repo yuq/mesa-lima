@@ -492,7 +492,6 @@ anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect)
    case VK_IMAGE_ASPECT_STENCIL:
       assert(image->format->has_stencil);
       anv_finishme("stencil image views");
-      abort();
       return &image->stencil_surface;
     default:
        unreachable("image does not have aspect");
