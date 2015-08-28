@@ -146,14 +146,14 @@ static const uint32_t vk_to_gen_compare_op[] = {
 };
 
 static const uint32_t vk_to_gen_stencil_op[] = {
-   [VK_STENCIL_OP_KEEP]                         = 0,
-   [VK_STENCIL_OP_ZERO]                         = 0,
-   [VK_STENCIL_OP_REPLACE]                      = 0,
-   [VK_STENCIL_OP_INC_CLAMP]                    = 0,
-   [VK_STENCIL_OP_DEC_CLAMP]                    = 0,
-   [VK_STENCIL_OP_INVERT]                       = 0,
-   [VK_STENCIL_OP_INC_WRAP]                     = 0,
-   [VK_STENCIL_OP_DEC_WRAP]                     = 0
+   [VK_STENCIL_OP_KEEP]                         = STENCILOP_KEEP,
+   [VK_STENCIL_OP_ZERO]                         = STENCILOP_ZERO,
+   [VK_STENCIL_OP_REPLACE]                      = STENCILOP_REPLACE,
+   [VK_STENCIL_OP_INC_CLAMP]                    = STENCILOP_INCRSAT,
+   [VK_STENCIL_OP_DEC_CLAMP]                    = STENCILOP_DECRSAT,
+   [VK_STENCIL_OP_INVERT]                       = STENCILOP_INVERT,
+   [VK_STENCIL_OP_INC_WRAP]                     = STENCILOP_INCR,
+   [VK_STENCIL_OP_DEC_WRAP]                     = STENCILOP_DECR,
 };
 
 static const uint32_t vk_to_gen_blend_op[] = {
