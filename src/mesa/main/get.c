@@ -994,16 +994,7 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
       {
          struct gl_sampler_object *samp =
             ctx->Texture.Unit[ctx->Texture.CurrentUnit].Sampler;
-
-         /*
-          * The sampler object may have been deleted on another context,
-          * so we try to lookup the sampler object before returning its Name.
-          */
-         if (samp && _mesa_lookup_samplerobj(ctx, samp->Name)) {
-            v->value_int = samp->Name;
-         } else {
-            v->value_int = 0;
-         }
+         v->value_int = samp ? samp->Name : 0;
       }
       break;
    /* GL_ARB_uniform_buffer_object */
