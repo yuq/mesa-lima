@@ -988,7 +988,7 @@ glsl_type::get_function_instance(const glsl_type *return_type,
       const glsl_type *t = new glsl_type(return_type, params, num_params);
       mtx_lock(&glsl_type::mutex);
 
-      _mesa_hash_table_insert(function_types, t, (void *) t);
+      entry = _mesa_hash_table_insert(function_types, t, (void *) t);
    }
 
    const glsl_type *t = (const glsl_type *)entry->data;
