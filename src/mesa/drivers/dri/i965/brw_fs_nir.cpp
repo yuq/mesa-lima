@@ -190,8 +190,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
             nir_setup_builtin_uniform(var);
          else
             nir_setup_uniform(var);
-
-         param_size[var->data.driver_location] = type_size_scalar(var->type);
+         if(type_size_scalar(var->type) > 0)
+            param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
    } else {
       /* prog_to_nir only creates a single giant uniform variable so we can
@@ -202,7 +202,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
                &prog->Parameters->ParameterValues[p][i];
          }
       }
-      param_size[0] = prog->Parameters->NumParameters * 4;
+      if(prog->Parameters->NumParameters > 0)
+         param_size[0] = prog->Parameters->NumParameters * 4;
    }
 }
 
