@@ -469,6 +469,7 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       view = (const struct anv_depth_stencil_view *)aview;
    }
 
+   const struct anv_image *image = view ? view->image : NULL;
    const bool has_depth = view && view->format->depth_format;
    const bool has_stencil = view && view->format->has_stencil;
 
@@ -483,8 +484,11 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
          .SurfaceFormat = view->format->depth_format,
-         .SurfacePitch = view->depth_stride - 1,
-         .SurfaceBaseAddress = { view->bo,  view->depth_offset },
+         .SurfacePitch = image->depth_surface.stride - 1,
+         .SurfaceBaseAddress = {
+            .bo = image->bo,
+            .offset = image->depth_surface.offset,
+         },
          .Height = fb->height - 1,
          .Width = fb->width - 1,
          .LOD = 0,
@@ -492,7 +496,7 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .MinimumArrayElement = 0,
          .DepthBufferObjectControlState = GEN8_MOCS,
          .RenderTargetViewExtent = 1 - 1,
-         .SurfaceQPitch = view->depth_qpitch >> 2);
+         .SurfaceQPitch = image->depth_surface.qpitch >> 2);
    } else {
       /* Even when no depth buffer is present, the hardware requires that
        * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
@@ -524,9 +528,12 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STENCIL_BUFFER,
          .StencilBufferEnable = true,
          .StencilBufferObjectControlState = GEN8_MOCS,
-         .SurfacePitch = view->stencil_stride - 1,
-         .SurfaceBaseAddress = { view->bo, view->stencil_offset },
-         .SurfaceQPitch = view->stencil_qpitch >> 2);
+         .SurfacePitch = image->stencil_surface.stride - 1,
+         .SurfaceBaseAddress = {
+            .bo = image->bo,
+            .offset = image->offset + image->stencil_surface.offset,
+         },
+         .SurfaceQPitch = image->stencil_surface.stride >> 2);
    } else {
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_STENCIL_BUFFER);
    }

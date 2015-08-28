@@ -539,6 +539,7 @@ gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       view = (const struct anv_depth_stencil_view *)aview;
    }
 
+   const struct anv_image *image = view ? view->image : NULL;
    const bool has_depth = view && view->format->depth_format;
    const bool has_stencil = view && view->format->has_stencil;
 
@@ -550,8 +551,11 @@ gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
          .SurfaceFormat = view->format->depth_format,
-         .SurfacePitch = view->depth_stride - 1,
-         .SurfaceBaseAddress = { view->bo,  view->depth_offset },
+         .SurfacePitch = image->depth_surface.stride - 1,
+         .SurfaceBaseAddress = {
+            .bo = image->bo,
+            .offset = image->depth_surface.offset,
+         },
          .Height = fb->height - 1,
          .Width = fb->width - 1,
          .LOD = 0,
@@ -589,8 +593,11 @@ gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (has_stencil) {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
          .StencilBufferObjectControlState = GEN7_MOCS,
-         .SurfacePitch = view->stencil_stride - 1,
-         .SurfaceBaseAddress = { view->bo, view->stencil_offset });
+         .SurfacePitch = image->stencil_surface.stride - 1,
+         .SurfaceBaseAddress = {
+            .bo = image->bo,
+            .offset = image->offset + image->stencil_surface.offset,
+         });
    } else {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER);
    }

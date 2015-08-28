@@ -1119,18 +1119,8 @@ struct anv_color_attachment_view {
 
 struct anv_depth_stencil_view {
    struct anv_attachment_view base;
+   const struct anv_image *image; /**< VkAttachmentViewCreateInfo::image */
    const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
-
-   struct anv_bo *bo;
-
-   uint32_t depth_offset; /**< Offset into bo. */
-   uint32_t depth_stride; /**< 3DSTATE_DEPTH_BUFFER.SurfacePitch */
-   uint32_t depth_format; /**< 3DSTATE_DEPTH_BUFFER.SurfaceFormat */
-   uint16_t depth_qpitch; /**< 3DSTATE_DEPTH_BUFFER.SurfaceQPitch */
-
-   uint32_t stencil_offset; /**< Offset into bo. */
-   uint32_t stencil_stride; /**< 3DSTATE_STENCIL_BUFFER.SurfacePitch */
-   uint16_t stencil_qpitch; /**< 3DSTATE_STENCIL_BUFFER.SurfaceQPitch */
 };
 
 struct anv_image_create_info {

@@ -468,35 +468,15 @@ anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
    view->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
 
    /* XXX: We don't handle any of these */
-   assert(anv_format_is_depth_or_stencil(image->format));
    anv_assert(pCreateInfo->mipLevel == 0);
    anv_assert(pCreateInfo->baseArraySlice == 0);
    anv_assert(pCreateInfo->arraySize == 1);
 
-   view->bo = image->bo;
-
+   view->image = image;
    view->format = anv_format_for_vk_format(pCreateInfo->format);
+
+   assert(anv_format_is_depth_or_stencil(image->format));
    assert(anv_format_is_depth_or_stencil(view->format));
-
-   if (view->format->depth_format) {
-      view->depth_stride = image->depth_surface.stride;
-      view->depth_offset = image->offset + image->depth_surface.offset;
-      view->depth_qpitch = 0; /* FINISHME: QPitch */
-   } else {
-      view->depth_stride = 0;
-      view->depth_offset = 0;
-      view->depth_qpitch = 0;
-   }
-
-   if (view->format->has_stencil) {
-      view->stencil_stride = image->stencil_surface.stride;
-      view->stencil_offset = image->offset + image->stencil_surface.offset;
-      view->stencil_qpitch = 0; /* FINISHME: QPitch */
-   } else {
-      view->stencil_stride = 0;
-      view->stencil_offset = 0;
-      view->stencil_qpitch = 0;
-   }
 }
 
 struct anv_surface *
