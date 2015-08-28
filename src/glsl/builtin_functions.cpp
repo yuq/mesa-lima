@@ -428,6 +428,13 @@ shader_image_size(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+shader_samples(const _mesa_glsl_parse_state *state)
+{
+   return state->is_version(450, 0) ||
+          state->ARB_shader_texture_image_samples_enable;
+}
+
+static bool
 gs_streams(const _mesa_glsl_parse_state *state)
 {
    return gpu_shader5(state) && gs_only(state);
@@ -666,6 +673,7 @@ private:
    B1(all);
    B1(not);
    BA2(textureSize);
+   B1(textureSamples);
 
 /** Flags to _texture() */
 #define TEX_PROJECT 1
@@ -1405,6 +1413,16 @@ builtin_builder::create_builtins()
                 _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::sampler2DMSArray_type),
                 _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::isampler2DMSArray_type),
                 _textureSize(texture_multisample_array, glsl_type::ivec3_type, glsl_type::usampler2DMSArray_type),
+                NULL);
+
+   add_function("textureSamples",
+                _textureSamples(glsl_type::sampler2DMS_type),
+                _textureSamples(glsl_type::isampler2DMS_type),
+                _textureSamples(glsl_type::usampler2DMS_type),
+
+                _textureSamples(glsl_type::sampler2DMSArray_type),
+                _textureSamples(glsl_type::isampler2DMSArray_type),
+                _textureSamples(glsl_type::usampler2DMSArray_type),
                 NULL);
 
    add_function("texture",
@@ -4164,6 +4182,19 @@ builtin_builder::_textureSize(builtin_available_predicate avail,
       tex->lod_info.lod = imm(0u);
    }
 
+   body.emit(ret(tex));
+
+   return sig;
+}
+
+ir_function_signature *
+builtin_builder::_textureSamples(const glsl_type *sampler_type)
+{
+   ir_variable *s = in_var(sampler_type, "sampler");
+   MAKE_SIG(glsl_type::int_type, shader_samples, 1, s);
+
+   ir_texture *tex = new(mem_ctx) ir_texture(ir_texture_samples);
+   tex->set_sampler(new(mem_ctx) ir_dereference_variable(s), glsl_type::int_type);
    body.emit(ret(tex));
 
    return sig;
