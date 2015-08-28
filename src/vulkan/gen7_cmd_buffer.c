@@ -585,7 +585,14 @@ gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (has_stencil) {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
          .StencilBufferObjectControlState = GEN7_MOCS,
-         .SurfacePitch = image->stencil_surface.stride - 1,
+
+         /* Stencil buffers have strange pitch. The PRM says:
+          *
+          *    The pitch must be set to 2x the value computed based on width,
+          *    as the stencil buffer is stored with two rows interleaved.
+          */
+         .SurfacePitch = 2 * image->stencil_surface.stride - 1,
+
          .SurfaceBaseAddress = {
             .bo = image->bo,
             .offset = image->offset + image->stencil_surface.offset,
