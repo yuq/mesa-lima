@@ -644,6 +644,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_memory_barrier;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_size") == 0) {
          op = nir_intrinsic_image_size;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_image_samples") == 0) {
+         op = nir_intrinsic_image_samples;
       } else {
          unreachable("not reached");
       }
@@ -670,6 +672,7 @@ nir_visitor::visit(ir_call *ir)
       case nir_intrinsic_image_atomic_xor:
       case nir_intrinsic_image_atomic_exchange:
       case nir_intrinsic_image_atomic_comp_swap:
+      case nir_intrinsic_image_samples:
       case nir_intrinsic_image_size: {
          nir_ssa_undef_instr *instr_undef =
             nir_ssa_undef_instr_create(shader, 1);
@@ -693,7 +696,8 @@ nir_visitor::visit(ir_call *ir)
                               info->dest_components, NULL);
          }
 
-         if (op == nir_intrinsic_image_size)
+         if (op == nir_intrinsic_image_size ||
+             op == nir_intrinsic_image_samples)
             break;
 
          /* Set the address argument, extending the coordinate vector to four
