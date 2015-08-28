@@ -526,26 +526,50 @@ static void si_set_scissor_states(struct pipe_context *ctx,
                                   const struct pipe_scissor_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_state_scissor *scissor;
-	struct si_pm4_state *pm4;
 	int i;
 
-	for (i = start_slot; i < start_slot + num_scissors; i++) {
-		int idx = i - start_slot;
-		int offset = i * 4 * 2;
+	for (i = 0; i < num_scissors; i++)
+		sctx->scissors.states[start_slot + i] = state[i];
 
-		scissor = CALLOC_STRUCT(si_state_scissor);
-		if (scissor == NULL)
-			return;
-		pm4 = &scissor->pm4;
-		scissor->scissor = state[idx];
-		si_pm4_set_reg(pm4, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset,
-			       S_028250_TL_X(state[idx].minx) | S_028250_TL_Y(state[idx].miny) |
-			       S_028250_WINDOW_OFFSET_DISABLE(1));
-		si_pm4_set_reg(pm4, R_028254_PA_SC_VPORT_SCISSOR_0_BR + offset,
-			       S_028254_BR_X(state[idx].maxx) | S_028254_BR_Y(state[idx].maxy));
-		si_pm4_set_state(sctx, scissor[i], scissor);
+	sctx->scissors.dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
+	si_mark_atom_dirty(sctx, &sctx->scissors.atom);
+}
+
+static void si_emit_scissors(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct pipe_scissor_state *states = sctx->scissors.states;
+	unsigned mask = sctx->scissors.dirty_mask;
+
+	/* The simple case: Only 1 viewport is active. */
+	if (mask & 1 &&
+	    !si_get_vs_info(sctx)->writes_viewport_index) {
+		r600_write_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
+		radeon_emit(cs, S_028250_TL_X(states[0].minx) |
+				S_028250_TL_Y(states[0].miny) |
+				S_028250_WINDOW_OFFSET_DISABLE(1));
+		radeon_emit(cs, S_028254_BR_X(states[0].maxx) |
+				S_028254_BR_Y(states[0].maxy));
+		sctx->scissors.dirty_mask &= ~1; /* clear one bit */
+		return;
 	}
+
+	while (mask) {
+		int start, count, i;
+
+		u_bit_scan_consecutive_range(&mask, &start, &count);
+
+		r600_write_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL +
+					       start * 4 * 2, count * 2);
+		for (i = start; i < start+count; i++) {
+			radeon_emit(cs, S_028250_TL_X(states[i].minx) |
+					S_028250_TL_Y(states[i].miny) |
+					S_028250_WINDOW_OFFSET_DISABLE(1));
+			radeon_emit(cs, S_028254_BR_X(states[i].maxx) |
+					S_028254_BR_Y(states[i].maxy));
+		}
+	}
+	sctx->scissors.dirty_mask = 0;
 }
 
 static void si_set_viewport_states(struct pipe_context *ctx,
@@ -2986,6 +3010,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(&sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
 	si_init_atom(&sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
 	si_init_atom(&sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
+	si_init_atom(&sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;

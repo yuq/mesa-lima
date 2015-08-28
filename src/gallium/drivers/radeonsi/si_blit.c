@@ -68,9 +68,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	if (sctx->queued.named.viewport[0]) {
 		util_blitter_save_viewport(sctx->blitter, &sctx->queued.named.viewport[0]->viewport);
 	}
-	if (sctx->queued.named.scissor[0]) {
-		util_blitter_save_scissor(sctx->blitter, &sctx->queued.named.scissor[0]->scissor);
-	}
+	util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
 	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
 	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,
 				     (struct pipe_stream_output_target**)sctx->b.streamout.targets);

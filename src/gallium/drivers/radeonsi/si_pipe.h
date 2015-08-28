@@ -85,6 +85,8 @@
 #define SI_IS_TRACE_POINT(x)		(((x) & 0xcafe0000) == 0xcafe0000)
 #define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
 
+#define SI_MAX_VIEWPORTS	16
+
 struct si_compute;
 
 struct si_screen {
@@ -127,6 +129,12 @@ struct si_framebuffer {
 	unsigned			export_16bpc;
 };
 
+struct si_scissors {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
+};
+
 #define SI_NUM_ATOMS(sctx) (sizeof((sctx)->atoms)/sizeof((sctx)->atoms.array[0]))
 
 struct si_context {
@@ -154,6 +162,7 @@ struct si_context {
 			struct r600_atom *msaa_config;
 			struct r600_atom *clip_regs;
 			struct r600_atom *shader_userdata;
+			struct r600_atom *scissors;
 		} s;
 		struct r600_atom *array[0];
 	} atoms;
@@ -181,6 +190,7 @@ struct si_context {
 	struct r600_resource		*border_color_table;
 	unsigned			border_color_offset;
 
+	struct si_scissors		scissors;
 	struct r600_atom		clip_regs;
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;

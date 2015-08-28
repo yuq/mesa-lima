@@ -194,6 +194,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
 	si_all_descriptors_begin_new_cs(ctx);
 
+	ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+	si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+
 	r600_postflush_resume_features(&ctx->b);
 
 	ctx->b.initial_gfx_cs_size = ctx->b.rings.gfx.cs->cdw;
