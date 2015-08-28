@@ -35,13 +35,15 @@
 #include "util/u_memory.h"
 #include "util/u_pstipple.h"
 
-static void si_init_atom(struct r600_atom *atom, struct r600_atom **list_elem,
+static void si_init_atom(struct si_context *sctx,
+			 struct r600_atom *atom, struct r600_atom **list_elem,
 			 void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
 			 unsigned num_dw)
 {
 	atom->emit = (void*)emit_func;
 	atom->num_dw = num_dw;
 	atom->dirty = false;
+	atom->id = list_elem - sctx->atoms.array + 1; /* index+1 in the atom array */
 	*list_elem = atom;
 }
 
@@ -3030,11 +3032,11 @@ static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
 {
-	si_init_atom(&sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
-	si_init_atom(&sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
-	si_init_atom(&sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
-	si_init_atom(&sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
-	si_init_atom(&sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);
+	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
+	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
+	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
+	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
+	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;
