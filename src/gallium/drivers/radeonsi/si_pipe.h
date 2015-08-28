@@ -155,6 +155,7 @@ struct si_context {
 	struct si_shader_selector	*fixed_func_tcs_shader;
 
 	union si_state_atoms		atoms;
+	unsigned			dirty_atoms; /* mask */
 
 	struct si_framebuffer		framebuffer;
 	struct si_vertex_element	*vertex_elements;
@@ -339,7 +340,12 @@ static inline void
 si_set_atom_dirty(struct si_context *sctx,
 		  struct r600_atom *atom, bool dirty)
 {
-	atom->dirty = dirty;
+	unsigned bit = 1 << (atom->id - 1);
+
+	if (dirty)
+		sctx->dirty_atoms |= bit;
+	else
+		sctx->dirty_atoms &= ~bit;
 }
 
 static inline void

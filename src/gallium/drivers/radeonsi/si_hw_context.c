@@ -31,7 +31,6 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 			boolean count_draw_in)
 {
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
-	int i;
 
 	/* There are two memory usage counters in the winsys for all buffers
 	 * that have been added (cs_add_reloc) and two counters in the pipe
@@ -59,11 +58,10 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	num_dw += cs->cdw;
 
 	if (count_draw_in) {
-		for (i = 0; i < SI_NUM_ATOMS; i++) {
-			if (ctx->atoms.array[i]->dirty) {
-				num_dw += ctx->atoms.array[i]->num_dw;
-			}
-		}
+		unsigned mask = ctx->dirty_atoms;
+
+		while (mask)
+			num_dw += ctx->atoms.array[u_bit_scan(&mask)]->num_dw;
 
 		/* The number of dwords all the dirty states would take. */
 		num_dw += si_pm4_dirty_dw(ctx);

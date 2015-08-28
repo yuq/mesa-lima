@@ -729,7 +729,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct pipe_index_buffer ib = {};
-	unsigned i;
+	unsigned mask;
 
 	if (!info->count && !info->indirect &&
 	    (info->indexed || !info->count_from_stream_output))
@@ -821,12 +821,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_need_cs_space(sctx, 0, TRUE);
 
 	/* Emit states. */
-	for (i = 0; i < SI_NUM_ATOMS; i++) {
-		if (sctx->atoms.array[i]->dirty) {
-			sctx->atoms.array[i]->emit(&sctx->b, sctx->atoms.array[i]);
-			sctx->atoms.array[i]->dirty = false;
-		}
+	mask = sctx->dirty_atoms;
+	while (mask) {
+		struct r600_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
+
+		atom->emit(&sctx->b, atom);
 	}
+	sctx->dirty_atoms = 0;
 
 	si_pm4_emit_dirty(sctx);
 	si_emit_scratch_reloc(sctx);
