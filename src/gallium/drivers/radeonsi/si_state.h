@@ -31,6 +31,7 @@
 #include "radeon/r600_pipe_common.h"
 
 #define SI_NUM_SHADERS (PIPE_SHADER_TESS_EVAL+1)
+#define SI_MAX_ATTRIBS 16
 
 struct si_screen;
 struct si_shader;
@@ -84,9 +85,9 @@ struct si_state_dsa {
 struct si_vertex_element
 {
 	unsigned			count;
-	uint32_t			rsrc_word3[PIPE_MAX_ATTRIBS];
-	uint32_t			format_size[PIPE_MAX_ATTRIBS];
-	struct pipe_vertex_element	elements[PIPE_MAX_ATTRIBS];
+	uint32_t			rsrc_word3[SI_MAX_ATTRIBS];
+	uint32_t			format_size[SI_MAX_ATTRIBS];
+	struct pipe_vertex_element	elements[SI_MAX_ATTRIBS];
 };
 
 union si_state {
@@ -156,7 +157,7 @@ struct si_shader_data {
 #define SI_SO_BUF_OFFSET	SI_NUM_RING_BUFFERS
 #define SI_NUM_RW_BUFFERS	(SI_SO_BUF_OFFSET + 4)
 
-#define SI_NUM_VERTEX_BUFFERS	16
+#define SI_NUM_VERTEX_BUFFERS	SI_MAX_ATTRIBS
 
 
 /* This represents descriptors in memory, such as buffer resources,
