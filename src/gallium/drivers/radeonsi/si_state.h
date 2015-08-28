@@ -106,6 +106,26 @@ union si_state {
 	struct si_pm4_state	*array[0];
 };
 
+union si_state_atoms {
+	struct {
+		/* The order matters. */
+		struct r600_atom *cache_flush;
+		struct r600_atom *streamout_begin;
+		struct r600_atom *streamout_enable; /* must be after streamout_begin */
+		struct r600_atom *framebuffer;
+		struct r600_atom *msaa_sample_locs;
+		struct r600_atom *db_render_state;
+		struct r600_atom *msaa_config;
+		struct r600_atom *clip_regs;
+		struct r600_atom *shader_userdata;
+		struct r600_atom *scissors;
+		struct r600_atom *viewports;
+	} s;
+	struct r600_atom *array[0];
+};
+
+#define SI_NUM_ATOMS (sizeof(union si_state_atoms)/sizeof(struct r600_atom*))
+
 struct si_shader_data {
 	struct r600_atom	atom;
 	uint32_t		sh_base[SI_NUM_SHADERS];

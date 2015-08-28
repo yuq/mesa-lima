@@ -59,7 +59,7 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	num_dw += cs->cdw;
 
 	if (count_draw_in) {
-		for (i = 0; i < SI_NUM_ATOMS(ctx); i++) {
+		for (i = 0; i < SI_NUM_ATOMS; i++) {
 			if (ctx->atoms.array[i]->dirty) {
 				num_dw += ctx->atoms.array[i]->num_dw;
 			}

@@ -141,8 +141,6 @@ struct si_viewports {
 	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
 };
 
-#define SI_NUM_ATOMS(sctx) (sizeof((sctx)->atoms)/sizeof((sctx)->atoms.array[0]))
-
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -156,23 +154,7 @@ struct si_context {
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_selector	*fixed_func_tcs_shader;
 
-	union {
-		struct {
-			/* The order matters. */
-			struct r600_atom *cache_flush;
-			struct r600_atom *streamout_begin;
-			struct r600_atom *streamout_enable; /* must be after streamout_begin */
-			struct r600_atom *framebuffer;
-			struct r600_atom *msaa_sample_locs;
-			struct r600_atom *db_render_state;
-			struct r600_atom *msaa_config;
-			struct r600_atom *clip_regs;
-			struct r600_atom *shader_userdata;
-			struct r600_atom *scissors;
-			struct r600_atom *viewports;
-		} s;
-		struct r600_atom *array[0];
-	} atoms;
+	union si_state_atoms		atoms;
 
 	struct si_framebuffer		framebuffer;
 	struct si_vertex_element	*vertex_elements;

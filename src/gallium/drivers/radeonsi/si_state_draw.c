@@ -822,7 +822,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	si_need_cs_space(sctx, 0, TRUE);
 
 	/* Emit states. */
-	for (i = 0; i < SI_NUM_ATOMS(sctx); i++) {
+	for (i = 0; i < SI_NUM_ATOMS; i++) {
 		if (sctx->atoms.array[i]->dirty) {
 			sctx->atoms.array[i]->emit(&sctx->b, sctx->atoms.array[i]);
 			sctx->atoms.array[i]->dirty = false;
