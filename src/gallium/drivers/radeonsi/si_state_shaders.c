@@ -1260,8 +1260,6 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					   PIPE_USAGE_DEFAULT,
 					   32768 * sctx->screen->b.info.max_se);
-	sctx->b.clear_buffer(&sctx->b.b, sctx->tf_ring, 0,
-			     sctx->tf_ring->width0, fui(0), false);
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
 	/* Append these registers to the init config state. */
