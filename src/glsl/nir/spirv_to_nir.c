@@ -1147,7 +1147,7 @@ vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
    nir_deref *src_tail = get_deref_tail(src);
 
    struct vtn_ssa_value *val;
-   if (src->var->interface_type)
+   if (src->var->interface_type && src->var->data.mode == nir_var_uniform)
       val = vtn_block_load(b, src, src_type, src_tail);
    else
       val = _vtn_variable_load(b, src, src_type, src_tail);
