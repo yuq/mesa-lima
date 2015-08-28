@@ -203,7 +203,6 @@ struct si_context {
 	struct si_pm4_state	*vgt_shader_config[4];
 	struct pipe_resource	*esgs_ring;
 	struct pipe_resource	*gsvs_ring;
-	struct si_pm4_state	*tf_state;
 	struct pipe_resource	*tf_ring;
 
 	LLVMTargetMachineRef		tm;

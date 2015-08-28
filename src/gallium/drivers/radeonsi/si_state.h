@@ -96,7 +96,6 @@ union si_state {
 		struct si_pm4_state		*hs;
 		struct si_pm4_state		*es;
 		struct si_pm4_state		*gs;
-		struct si_pm4_state		*tf_ring;
 		struct si_pm4_state		*vgt_shader_config;
 		struct si_pm4_state		*vs;
 		struct si_pm4_state		*ps;

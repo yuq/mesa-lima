@@ -49,7 +49,6 @@ static void si_destroy_context(struct pipe_context *context)
 	sctx->b.ws->fence_reference(&sctx->last_gfx_fence, NULL);
 
 	si_pm4_free_state(sctx, sctx->init_config, ~0);
-	si_pm4_delete_state(sctx, tf_ring, sctx->tf_state);
 	for (i = 0; i < Elements(sctx->vgt_shader_config); i++)
 		si_pm4_delete_state(sctx, vgt_shader_config, sctx->vgt_shader_config[i]);
 

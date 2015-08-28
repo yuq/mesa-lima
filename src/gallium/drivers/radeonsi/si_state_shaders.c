@@ -1255,8 +1255,7 @@ static void si_update_spi_tmpring_size(struct si_context *sctx)
 
 static void si_init_tess_factor_ring(struct si_context *sctx)
 {
-	assert(!sctx->tf_state);
-	sctx->tf_state = CALLOC_STRUCT(si_pm4_state);
+	assert(!sctx->tf_ring);
 
 	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					   PIPE_USAGE_DEFAULT,
@@ -1265,26 +1264,28 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 			     sctx->tf_ring->width0, fui(0), false);
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
+	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
-		si_pm4_set_reg(sctx->tf_state, R_030938_VGT_TF_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_030938_VGT_TF_RING_SIZE,
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
-		si_pm4_set_reg(sctx->tf_state, R_030940_VGT_TF_MEMORY_BASE,
+		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 	} else {
-		si_pm4_set_reg(sctx->tf_state, R_008988_VGT_TF_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_008988_VGT_TF_RING_SIZE,
 			       S_008988_SIZE(sctx->tf_ring->width0 / 4));
-		si_pm4_set_reg(sctx->tf_state, R_0089B8_VGT_TF_MEMORY_BASE,
+		si_pm4_set_reg(sctx->init_config, R_0089B8_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
 	}
-	si_pm4_add_bo(sctx->tf_state, r600_resource(sctx->tf_ring),
-		      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RESOURCE_RW);
-	si_pm4_bind_state(sctx, tf_ring, sctx->tf_state);
+
+	/* Flush the context to re-emit the init_config state.
+	 * This is done only once in a lifetime of a context.
+	 */
+	sctx->b.initial_gfx_cs_size = 0; /* force flush */
+	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
 	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_TESS_CTRL,
 			   SI_RING_TESS_FACTOR, sctx->tf_ring, 0,
 			   sctx->tf_ring->width0, false, false, 0, 0, 0);
-
-	sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 }
 
 /**
@@ -1373,7 +1374,7 @@ void si_update_shaders(struct si_context *sctx)
 
 	/* Update stages before GS. */
 	if (sctx->tes_shader) {
-		if (!sctx->tf_state)
+		if (!sctx->tf_ring)
 			si_init_tess_factor_ring(sctx);
 
 		/* VS as LS */
