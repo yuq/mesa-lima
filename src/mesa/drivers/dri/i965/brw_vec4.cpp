@@ -2011,16 +2011,4 @@ brw_vs_emit(struct brw_context *brw,
    return assembly;
 }
 
-
-void
-brw_vue_setup_prog_key_for_precompile(struct gl_context *ctx,
-                                      struct brw_vue_prog_key *key,
-                                      GLuint id, struct gl_program *prog)
-{
-   struct brw_context *brw = brw_context(ctx);
-   key->program_string_id = id;
-
-   brw_setup_tex_for_precompile(brw, &key->tex, prog);
-}
-
 } /* extern "C" */

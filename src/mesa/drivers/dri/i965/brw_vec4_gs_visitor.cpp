@@ -42,7 +42,7 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  bool no_spills,
                                  int shader_time_index)
    : vec4_visitor(compiler, log_data,
-                  &c->gp->program.Base, &c->key.base,
+                  &c->gp->program.Base, &c->key.tex,
                   &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
                   no_spills, shader_time_index),
      c(c)

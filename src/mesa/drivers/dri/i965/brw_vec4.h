@@ -52,11 +52,6 @@ extern "C" {
 extern "C" {
 #endif
 
-void
-brw_vue_setup_prog_key_for_precompile(struct gl_context *ctx,
-                                      struct brw_vue_prog_key *key,
-                                      GLuint id, struct gl_program *prog);
-
 #ifdef __cplusplus
 } /* extern "C" */
 
@@ -76,7 +71,7 @@ public:
    vec4_visitor(const struct brw_compiler *compiler,
                 void *log_data,
                 struct gl_program *prog,
-                const struct brw_vue_prog_key *key,
+                const struct brw_sampler_prog_key_data *key,
                 struct brw_vue_prog_data *prog_data,
 		struct gl_shader_program *shader_prog,
                 gl_shader_stage stage,
@@ -100,7 +95,6 @@ public:
       return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
    }
 
-   const struct brw_vue_prog_key * const key;
    const struct brw_sampler_prog_key_data * const key_tex;
    struct brw_vue_prog_data * const prog_data;
    unsigned int sanity_param_count;

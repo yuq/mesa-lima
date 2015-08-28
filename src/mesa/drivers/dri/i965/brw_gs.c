@@ -300,11 +300,11 @@ brw_gs_populate_key(struct brw_context *brw,
 
    memset(key, 0, sizeof(*key));
 
-   key->base.program_string_id = gp->id;
+   key->program_string_id = gp->id;
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                      &key->base.tex);
+                                      &key->tex);
 
    /* BRW_NEW_VUE_MAP_VS */
    key->input_varyings = brw->vue_map_vs.slots_valid;
@@ -381,7 +381,8 @@ brw_gs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
-   brw_vue_setup_prog_key_for_precompile(ctx, &key.base, bgp->id, &gp->Base);
+   brw_setup_tex_for_precompile(brw, &key.tex, prog);
+   key.program_string_id = bgp->id;
 
    /* Assume that the set of varyings coming in from the vertex shader exactly
     * matches what the geometry shader requires.

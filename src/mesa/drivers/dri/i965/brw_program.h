@@ -78,24 +78,9 @@ struct brw_sampler_prog_key_data {
 };
 
 
-struct brw_vue_prog_key {
-   unsigned program_string_id;
-
-   /**
-    * How many user clipping planes are being uploaded to the vertex shader as
-    * push constants.
-    *
-    * These are used for lowering legacy gl_ClipVertex/gl_Position clipping to
-    * clip distances.
-    */
-   unsigned nr_userclip_plane_consts:4;
-
-   struct brw_sampler_prog_key_data tex;
-};
-
 /** The program key for Vertex Shaders. */
 struct brw_vs_prog_key {
-   struct brw_vue_prog_key base;
+   unsigned program_string_id;
 
    /*
     * Per-attribute workaround flags
@@ -107,6 +92,15 @@ struct brw_vs_prog_key {
    bool clamp_vertex_color:1;
 
    /**
+    * How many user clipping planes are being uploaded to the vertex shader as
+    * push constants.
+    *
+    * These are used for lowering legacy gl_ClipVertex/gl_Position clipping to
+    * clip distances.
+    */
+   unsigned nr_userclip_plane_consts:4;
+
+   /**
     * For pre-Gen6 hardware, a bitfield indicating which texture coordinates
     * are going to be replaced with point coordinates (as a consequence of a
     * call to glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE)).  Because
@@ -115,14 +109,18 @@ struct brw_vs_prog_key {
     * the VUE, even if they aren't written by the vertex shader.
     */
    uint8_t point_coord_replace;
+
+   struct brw_sampler_prog_key_data tex;
 };
 
 /** The program key for Geometry Shaders. */
 struct brw_gs_prog_key
 {
-   struct brw_vue_prog_key base;
+   unsigned program_string_id;
 
    uint64_t input_varyings;
+
+   struct brw_sampler_prog_key_data tex;
 };
 
 /** The program key for Fragment/Pixel Shaders. */

@@ -783,8 +783,8 @@ fs_visitor::emit_fb_writes()
 void
 fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
 {
-   const struct brw_vue_prog_key *key =
-      (const struct brw_vue_prog_key *) this->key;
+   const struct brw_vs_prog_key *key =
+      (const struct brw_vs_prog_key *) this->key;
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       this->userplane[i] = fs_reg(UNIFORM, uniforms);
@@ -806,8 +806,8 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
    struct brw_vue_prog_data *vue_prog_data =
       (struct brw_vue_prog_data *) prog_data;
-   const struct brw_vue_prog_key *key =
-      (const struct brw_vue_prog_key *) this->key;
+   const struct brw_vs_prog_key *key =
+      (const struct brw_vs_prog_key *) this->key;
 
    /* Bail unless some sort of legacy clipping is enabled */
    if (key->nr_userclip_plane_consts == 0)
@@ -1076,8 +1076,10 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
       key_tex = &((const brw_wm_prog_key *) key)->tex;
       break;
    case MESA_SHADER_VERTEX:
+      key_tex = &((const brw_vs_prog_key *) key)->tex;
+      break;
    case MESA_SHADER_GEOMETRY:
-      key_tex = &((const brw_vue_prog_key *) key)->tex;
+      key_tex = &((const brw_gs_prog_key *) key)->tex;
       break;
    case MESA_SHADER_COMPUTE:
       key_tex = &((const brw_cs_prog_key*) key)->tex;

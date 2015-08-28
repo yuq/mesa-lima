@@ -247,7 +247,7 @@ vec4_vs_visitor::emit_clip_distances(dst_reg reg, int offset)
       clip_vertex = VARYING_SLOT_POS;
    }
 
-   for (int i = 0; i + offset < key->base.nr_userclip_plane_consts && i < 4;
+   for (int i = 0; i + offset < key->nr_userclip_plane_consts && i < 4;
         ++i) {
       reg.writemask = 1 << i;
       emit(DP4(reg,
@@ -260,7 +260,7 @@ vec4_vs_visitor::emit_clip_distances(dst_reg reg, int offset)
 void
 vec4_vs_visitor::setup_uniform_clipplane_values()
 {
-   for (int i = 0; i < key->base.nr_userclip_plane_consts; ++i) {
+   for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
       assert(this->uniforms < uniform_array_size);
       this->uniform_vector_size[this->uniforms] = 4;
       this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
@@ -280,7 +280,7 @@ vec4_vs_visitor::emit_thread_end()
    setup_uniform_clipplane_values();
 
    /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->base.nr_userclip_plane_consts > 0) {
+   if (key->nr_userclip_plane_consts > 0) {
       current_annotation = "user clip distances";
 
       output_reg[VARYING_SLOT_CLIP_DIST0] = dst_reg(this, glsl_type::vec4_type);
@@ -309,7 +309,7 @@ vec4_vs_visitor::vec4_vs_visitor(const struct brw_compiler *compiler,
                                  int shader_time_index,
                                  bool use_legacy_snorm_formula)
    : vec4_visitor(compiler, log_data,
-                  &vp->Base, &key->base, &vs_prog_data->base, prog,
+                  &vp->Base, &key->tex, &vs_prog_data->base, prog,
                   MESA_SHADER_VERTEX,
                   mem_ctx, false /* no_spills */,
                   shader_time_index),
