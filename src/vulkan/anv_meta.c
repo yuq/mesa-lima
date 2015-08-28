@@ -1230,12 +1230,17 @@ void anv_CmdCopyImageToBuffer(
          },
          cmd_buffer);
 
+      VkFormat dest_format = src_image->format->vk_format;
+      if (dest_format == VK_FORMAT_S8_UINT) {
+         dest_format = VK_FORMAT_R8_UINT;
+      }
+
       VkImage destImage;
       anv_CreateImage(vk_device,
          &(VkImageCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = src_image->format->vk_format,
+            .format = dest_format,
             .extent = {
                .width = pRegions[r].imageExtent.width,
                .height = pRegions[r].imageExtent.height,
@@ -1262,7 +1267,7 @@ void anv_CmdCopyImageToBuffer(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
-            .format = src_image->format->vk_format,
+            .format = dest_format,
             .mipLevel = 0,
             .baseArraySlice = 0,
             .arraySize = 1,
