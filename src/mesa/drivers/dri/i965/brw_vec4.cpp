@@ -332,6 +332,7 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
    case SHADER_OPCODE_TG4:
    case SHADER_OPCODE_TG4_OFFSET:
    case SHADER_OPCODE_SAMPLEINFO:
+   case VS_OPCODE_GET_BUFFER_SIZE:
       return inst->header_size;
    default:
       unreachable("not reached");

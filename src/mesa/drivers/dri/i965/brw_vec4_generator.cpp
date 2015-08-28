@@ -1033,6 +1033,32 @@ vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
 }
 
 void
+vec4_generator::generate_get_buffer_size(vec4_instruction *inst,
+                                         struct brw_reg dst,
+                                         struct brw_reg src,
+                                         struct brw_reg surf_index)
+{
+   assert(devinfo->gen >= 7);
+   assert(surf_index.type == BRW_REGISTER_TYPE_UD &&
+          surf_index.file == BRW_IMMEDIATE_VALUE);
+
+   brw_SAMPLE(p,
+              dst,
+              inst->base_mrf,
+              src,
+              surf_index.dw1.ud,
+              0,
+              GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO,
+              1, /* response length */
+              inst->mlen,
+              inst->header_size > 0,
+              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
+              BRW_SAMPLER_RETURN_FORMAT_SINT32);
+
+   brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
+}
+
+void
 vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
                                                  struct brw_reg dst,
                                                  struct brw_reg surf_index,
@@ -1407,6 +1433,11 @@ vec4_generator::generate_code(const cfg_t *cfg)
 
       case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
          generate_set_simd4x2_header_gen9(inst, dst);
+         break;
+
+
+      case VS_OPCODE_GET_BUFFER_SIZE:
+         generate_get_buffer_size(inst, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_URB_WRITE:
