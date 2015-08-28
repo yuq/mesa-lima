@@ -142,10 +142,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	sctx->b.rings.gfx.flush = si_context_gfx_flush;
 
 	si_init_all_descriptors(sctx);
-
-	sctx->atoms.s.streamout_begin = &sctx->b.streamout.begin_atom;
-	sctx->atoms.s.streamout_enable = &sctx->b.streamout.enable_atom;
-
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
 

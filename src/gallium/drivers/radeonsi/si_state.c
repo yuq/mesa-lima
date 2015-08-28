@@ -35,6 +35,16 @@
 #include "util/u_memory.h"
 #include "util/u_pstipple.h"
 
+/* Initialize an external atom (owned by ../radeon). */
+static void
+si_init_external_atom(struct si_context *sctx, struct r600_atom *atom,
+		      struct r600_atom **list_elem)
+{
+	atom->id = list_elem - sctx->atoms.array + 1;
+	*list_elem = atom;
+}
+
+/* Initialize an atom owned by radeonsi.  */
 void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 		  struct r600_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
@@ -3027,6 +3037,9 @@ static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
 {
+	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
+	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
+
 	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush, 24);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
 	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs, 18);
