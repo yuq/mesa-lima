@@ -783,3 +783,23 @@ VkResult anv_ResetCommandPool(
 
    return VK_SUCCESS;
 }
+
+/**
+ * Return NULL if the current subpass has no depthstencil attachment.
+ */
+const struct anv_depth_stencil_view *
+anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
+{
+   const struct anv_subpass *subpass = cmd_buffer->state.subpass;
+   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+
+   if (subpass->depth_stencil_attachment == VK_ATTACHMENT_UNUSED)
+      return NULL;
+
+   const struct anv_attachment_view *aview =
+      fb->attachments[subpass->depth_stencil_attachment];
+
+   assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL);
+
+   return (const struct anv_depth_stencil_view *) aview;
+}

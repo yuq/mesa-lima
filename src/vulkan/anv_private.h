@@ -848,6 +848,8 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_render_pass *pass,
                                       const VkClearValue *clear_values);
+const struct anv_depth_stencil_view *
+anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
 

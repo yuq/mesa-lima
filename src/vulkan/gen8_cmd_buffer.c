@@ -458,17 +458,9 @@ void gen8_CmdDispatchIndirect(
 static void
 gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
-   const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   const struct anv_depth_stencil_view *view = NULL;
-
-   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
-      const struct anv_attachment_view *aview =
-         fb->attachments[subpass->depth_stencil_attachment];
-      assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL);
-      view = (const struct anv_depth_stencil_view *)aview;
-   }
-
+   const struct anv_depth_stencil_view *view =
+      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = view ? view->image : NULL;
    const bool has_depth = view && view->format->depth_format;
    const bool has_stencil = view && view->format->has_stencil;
