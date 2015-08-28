@@ -3658,6 +3658,7 @@ struct gl_extensions
    GLboolean ARB_shader_stencil_export;
    GLboolean ARB_shader_storage_buffer_object;
    GLboolean ARB_shader_subroutine;
+   GLboolean ARB_shader_texture_image_samples;
    GLboolean ARB_shader_texture_lod;
    GLboolean ARB_shading_language_packing;
    GLboolean ARB_shading_language_420pack;
