@@ -159,6 +159,10 @@ struct brw_wm_prog_key {
 extern "C" {
 #endif
 
+void brw_setup_tex_for_precompile(struct brw_context *brw,
+                                  struct brw_sampler_prog_key_data *tex,
+                                  struct gl_program *prog);
+
 void brw_populate_sampler_prog_key_data(struct gl_context *ctx,
 				        const struct gl_program *prog,
                                         unsigned sampler_count,
