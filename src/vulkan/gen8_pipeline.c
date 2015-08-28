@@ -36,8 +36,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    const uint32_t num_dwords = 1 + info->attributeCount * 2;
    uint32_t *p;
 
-   p = anv_batch_emitn(&pipeline->batch, num_dwords,
-                       GEN8_3DSTATE_VERTEX_ELEMENTS);
+   if (info->attributeCount > 0) {
+      p = anv_batch_emitn(&pipeline->batch, num_dwords,
+                          GEN8_3DSTATE_VERTEX_ELEMENTS);
+   }
 
    for (uint32_t i = 0; i < info->attributeCount; i++) {
       const VkVertexInputAttributeDescription *desc =
