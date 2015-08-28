@@ -755,22 +755,6 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
    }
 }
 
-void
-vec4_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
-{
-   for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
-      assert(this->uniforms < uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 4;
-      this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
-      this->userplane[i].type = BRW_REGISTER_TYPE_F;
-      for (int j = 0; j < 4; ++j) {
-         stage_prog_data->param[this->uniforms * 4 + j] =
-            (gl_constant_value *) &clip_planes[i][j];
-      }
-      ++this->uniforms;
-   }
-}
-
 /* Our support for builtin uniforms is even scarier than non-builtin.
  * It sits on top of the PROG_STATE_VAR parameters that are
  * automatically updated from GL context state.
@@ -3203,35 +3187,6 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
    }
 }
 
-void
-vec4_visitor::emit_clip_distances(dst_reg reg, int offset)
-{
-   /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
-    *
-    *     "If a linked set of shaders forming the vertex stage contains no
-    *     static write to gl_ClipVertex or gl_ClipDistance, but the
-    *     application has requested clipping against user clip planes through
-    *     the API, then the coordinate written to gl_Position is used for
-    *     comparison against the user clip planes."
-    *
-    * This function is only called if the shader didn't write to
-    * gl_ClipDistance.  Accordingly, we use gl_ClipVertex to perform clipping
-    * if the user wrote to it; otherwise we use gl_Position.
-    */
-   gl_varying_slot clip_vertex = VARYING_SLOT_CLIP_VERTEX;
-   if (!(prog_data->vue_map.slots_valid & VARYING_BIT_CLIP_VERTEX)) {
-      clip_vertex = VARYING_SLOT_POS;
-   }
-
-   for (int i = 0; i + offset < key->nr_userclip_plane_consts && i < 4;
-        ++i) {
-      reg.writemask = 1 << i;
-      emit(DP4(reg,
-               src_reg(output_reg[clip_vertex]),
-               src_reg(this->userplane[i + offset])));
-   }
-}
-
 vec4_instruction *
 vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
 {
@@ -3352,17 +3307,6 @@ vec4_visitor::emit_vertex()
 
    if (devinfo->gen < 6) {
       emit_ndc_computation();
-   }
-
-   /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->nr_userclip_plane_consts > 0) {
-      current_annotation = "user clip distances";
-
-      output_reg[VARYING_SLOT_CLIP_DIST0] = dst_reg(this, glsl_type::vec4_type);
-      output_reg[VARYING_SLOT_CLIP_DIST1] = dst_reg(this, glsl_type::vec4_type);
-
-      emit_clip_distances(output_reg[VARYING_SLOT_CLIP_DIST0], 0);
-      emit_clip_distances(output_reg[VARYING_SLOT_CLIP_DIST1], 4);
    }
 
    /* We may need to split this up into several URB writes, so do them in a

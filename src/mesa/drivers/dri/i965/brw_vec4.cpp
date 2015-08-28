@@ -1721,7 +1721,7 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 }
 
 bool
-vec4_visitor::run(gl_clip_plane *clip_planes)
+vec4_visitor::run()
 {
    bool use_vec4_nir =
       compiler->glsl_compiler_options[stage].NirOptions != NULL;
@@ -1749,9 +1749,6 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
       emit_program_code();
    }
    base_ir = NULL;
-
-   if (key->nr_userclip_plane_consts > 0)
-      setup_uniform_clipplane_values(clip_planes);
 
    emit_thread_end();
 
@@ -1979,9 +1976,10 @@ brw_vs_emit(struct brw_context *brw,
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
       vec4_vs_visitor v(brw->intelScreen->compiler, brw, key, prog_data,
-                        vp, prog, mem_ctx, st_index,
+                        vp, prog, brw_select_clip_planes(&brw->ctx),
+                        mem_ctx, st_index,
                         !_mesa_is_gles3(&brw->ctx));
-      if (!v.run(brw_select_clip_planes(&brw->ctx))) {
+      if (!v.run()) {
          if (prog) {
             prog->LinkStatus = false;
             ralloc_strcat(&prog->InfoLog, v.fail_msg);

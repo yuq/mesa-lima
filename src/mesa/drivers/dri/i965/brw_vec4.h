@@ -173,10 +173,9 @@ public:
 
    struct hash_table *variable_ht;
 
-   bool run(gl_clip_plane *clip_planes);
+   bool run();
    void fail(const char *msg, ...);
 
-   void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    virtual void setup_vec4_uniform_value(unsigned param_offset,
                                          const gl_constant_value *values,
                                          unsigned n);
@@ -359,7 +358,6 @@ public:
 
    void emit_ndc_computation();
    void emit_psiz_and_flags(dst_reg reg);
-   void emit_clip_distances(dst_reg reg, int offset);
    vec4_instruction *emit_generic_urb_slot(dst_reg reg, int varying);
    void emit_urb_slot(dst_reg reg, int varying);
 

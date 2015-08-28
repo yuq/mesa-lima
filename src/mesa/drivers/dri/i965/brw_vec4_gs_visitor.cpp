@@ -679,7 +679,7 @@ brw_gs_emit(struct brw_context *brw,
 
          vec4_gs_visitor v(brw->intelScreen->compiler, brw,
                            c, prog, mem_ctx, true /* no_spills */, st_index);
-         if (v.run(NULL /* clip planes */)) {
+         if (v.run()) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
                                      &c->prog_data.base, mem_ctx, v.cfg,
                                      final_assembly_size);
@@ -727,7 +727,7 @@ brw_gs_emit(struct brw_context *brw,
                                c, prog, mem_ctx, false /* no_spills */,
                                st_index);
 
-   if (!gs->run(NULL /* clip planes */)) {
+   if (!gs->run()) {
       prog->LinkStatus = false;
       ralloc_strcat(&prog->InfoLog, gs->fail_msg);
    } else {

@@ -90,6 +90,7 @@ public:
                    struct brw_vs_prog_data *vs_prog_data,
                    struct gl_vertex_program *vp,
                    struct gl_shader_program *prog,
+                   gl_clip_plane *clip_planes,
                    void *mem_ctx,
                    int shader_time_index,
                    bool use_legacy_snorm_formula);
@@ -107,6 +108,8 @@ protected:
 private:
    int setup_attributes(int payload_reg);
    void setup_vp_regs();
+   void setup_uniform_clipplane_values();
+   void emit_clip_distances(dst_reg reg, int offset);
    dst_reg get_vp_dst_reg(const prog_dst_register &dst);
    src_reg get_vp_src_reg(const prog_src_register &src);
 
@@ -115,6 +118,8 @@ private:
    struct gl_vertex_program *const vp;
    src_reg *vp_temp_regs;
    src_reg vp_addr_reg;
+
+   gl_clip_plane *clip_planes;
 
    bool use_legacy_snorm_formula;
 };
