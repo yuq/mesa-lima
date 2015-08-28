@@ -528,8 +528,8 @@ void gen7_CmdPipelineBarrier(
 static void
 gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   const struct anv_subpass *subpass = cmd_buffer->state.subpass;
+   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_depth_stencil_view *view = NULL;
 
    if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
