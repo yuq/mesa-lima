@@ -103,20 +103,32 @@ static const struct anv_tile_info {
    [WMAJOR] = { 128, 32, 4096 },
 };
 
-static uint32_t
+/**
+ * Return -1 on failure.
+ */
+static int8_t
 anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 {
    if (anv_info->force_tile_mode)
       return anv_info->tile_mode;
 
-   if (anv_info->vk_info->format == VK_FORMAT_S8_UINT)
-      return WMAJOR;
+   /* The Sandybridge PRM says that the stencil buffer "is supported
+    * only in Tile W memory".
+    */
 
    switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
-      return LINEAR;
+      if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
+         return -1;
+      } else {
+         return LINEAR;
+      }
    case VK_IMAGE_TILING_OPTIMAL:
-      return YMAJOR;
+      if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
+         return WMAJOR;
+      } else {
+         return YMAJOR;
+      }
    default:
       assert(!"bad VKImageTiling");
       return LINEAR;
@@ -143,7 +155,9 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const uint32_t levels = create_info->vk_info->mipLevels;
    const uint32_t array_size = create_info->vk_info->arraySize;
 
-   const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
+   const int8_t tile_mode = anv_image_choose_tile_mode(create_info);
+   if (tile_mode == -1)
+      return vk_error(VK_ERROR_INVALID_IMAGE);
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
