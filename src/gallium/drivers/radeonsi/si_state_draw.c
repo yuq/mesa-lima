@@ -595,8 +595,9 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 #define BOTH_ICACHE_KCACHE (SI_CONTEXT_INV_ICACHE | SI_CONTEXT_INV_KCACHE)
 
-void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *atom)
+void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 {
+	struct r600_common_context *sctx = &si_ctx->b;
 	struct radeon_winsys_cs *cs = sctx->rings.gfx.cs;
 	uint32_t cp_coher_cntl = 0;
 	uint32_t compute =
@@ -705,8 +706,6 @@ void si_emit_cache_flush(struct r600_common_context *sctx, struct r600_atom *ato
 
 	sctx->flags = 0;
 }
-
-const struct r600_atom si_atom_cache_flush = { si_emit_cache_flush, 24 }; /* number of CS dwords */
 
 static void si_get_draw_start_count(struct si_context *sctx,
 				    const struct pipe_draw_info *info,

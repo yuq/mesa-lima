@@ -123,7 +123,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 			SI_CONTEXT_INV_TC_L2 |
 			/* this is probably not needed anymore */
 			SI_CONTEXT_PS_PARTIAL_FLUSH;
-	si_emit_cache_flush(&ctx->b, NULL);
+	si_emit_cache_flush(ctx, NULL);
 
 	/* force to keep tiling flags */
 	flags |= RADEON_FLUSH_KEEP_TILING_FLAGS;

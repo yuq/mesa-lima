@@ -35,10 +35,10 @@
 #include "util/u_memory.h"
 #include "util/u_pstipple.h"
 
-static void si_init_atom(struct si_context *sctx,
-			 struct r600_atom *atom, struct r600_atom **list_elem,
-			 void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
-			 unsigned num_dw)
+void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
+		  struct r600_atom **list_elem,
+		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
+		  unsigned num_dw)
 {
 	atom->emit = (void*)emit_func;
 	atom->num_dw = num_dw;
@@ -2306,10 +2306,9 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			       S_028208_BR_X(state->width) | S_028208_BR_Y(state->height));
 }
 
-static void si_emit_msaa_sample_locs(struct r600_common_context *rctx,
+static void si_emit_msaa_sample_locs(struct si_context *sctx,
 				     struct r600_atom *atom)
 {
-	struct si_context *sctx = (struct si_context *)rctx;
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	unsigned nr_samples = sctx->framebuffer.nr_samples;
 
@@ -2317,11 +2316,8 @@ static void si_emit_msaa_sample_locs(struct r600_common_context *rctx,
 						SI_NUM_SMOOTH_AA_SAMPLES);
 }
 
-const struct r600_atom si_atom_msaa_sample_locs = { si_emit_msaa_sample_locs, 18 }; /* number of CS dwords */
-
-static void si_emit_msaa_config(struct r600_common_context *rctx, struct r600_atom *atom)
+static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 {
-	struct si_context *sctx = (struct si_context *)rctx;
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
 	cayman_emit_msaa_config(cs, sctx->framebuffer.nr_samples,
@@ -2329,7 +2325,6 @@ static void si_emit_msaa_config(struct r600_common_context *rctx, struct r600_at
 				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0);
 }
 
-const struct r600_atom si_atom_msaa_config = { si_emit_msaa_config, 10 }; /* number of CS dwords */
 
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
 {
@@ -3032,8 +3027,11 @@ static void si_init_config(struct si_context *sctx);
 
 void si_init_state_functions(struct si_context *sctx)
 {
+	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush, 24);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
+	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs, 18);
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
+	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config, 10);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
 	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);

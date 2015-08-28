@@ -143,16 +143,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	si_init_all_descriptors(sctx);
 
-	/* Initialize cache_flush. */
-	sctx->cache_flush = si_atom_cache_flush;
-	sctx->atoms.s.cache_flush = &sctx->cache_flush;
-
-	sctx->msaa_sample_locs = si_atom_msaa_sample_locs;
-	sctx->atoms.s.msaa_sample_locs = &sctx->msaa_sample_locs;
-
-	sctx->msaa_config = si_atom_msaa_config;
-	sctx->atoms.s.msaa_config = &sctx->msaa_config;
-
 	sctx->atoms.s.streamout_begin = &sctx->b.streamout.begin_atom;
 	sctx->atoms.s.streamout_enable = &sctx->b.streamout.enable_atom;
 

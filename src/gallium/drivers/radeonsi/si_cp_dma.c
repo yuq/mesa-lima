@@ -166,7 +166,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		/* Flush the caches for the first copy only.
 		 * Also wait for the previous CP DMA operations. */
 		if (sctx->b.flags) {
-			si_emit_cache_flush(&sctx->b, NULL);
+			si_emit_cache_flush(sctx, NULL);
 			dma_flags |= SI_CP_DMA_RAW_WAIT; /* same as WAIT_UNTIL=CP_DMA_IDLE */
 		}
 
@@ -230,7 +230,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 		/* Flush the caches for the first copy only. Also wait for old CP DMA packets to complete. */
 		if (sctx->b.flags) {
-			si_emit_cache_flush(&sctx->b, NULL);
+			si_emit_cache_flush(sctx, NULL);
 			sync_flags |= SI_CP_DMA_RAW_WAIT;
 		}
 

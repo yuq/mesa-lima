@@ -262,7 +262,7 @@ static void si_launch_grid(
 			 SI_CONTEXT_INV_KCACHE |
 			 SI_CONTEXT_FLUSH_WITH_INV_L2 |
 			 SI_CONTEXT_FLAG_COMPUTE;
-	si_emit_cache_flush(&sctx->b, NULL);
+	si_emit_cache_flush(sctx, NULL);
 
 	pm4->compute_pkt = true;
 
@@ -453,7 +453,7 @@ static void si_launch_grid(
 			 SI_CONTEXT_INV_ICACHE |
 			 SI_CONTEXT_INV_KCACHE |
 			 SI_CONTEXT_FLAG_COMPUTE;
-	si_emit_cache_flush(&sctx->b, NULL);
+	si_emit_cache_flush(sctx, NULL);
 }
 
 
