@@ -1119,6 +1119,7 @@ struct anv_color_attachment_view {
 
 struct anv_depth_stencil_view {
    struct anv_attachment_view base;
+   const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
 
    struct anv_bo *bo;
 

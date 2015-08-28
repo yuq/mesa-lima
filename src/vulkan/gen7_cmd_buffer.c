@@ -543,14 +543,18 @@ gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
       view = (const struct anv_depth_stencil_view *)aview;
    }
 
-   if (view) {
+   const bool has_depth = view && view->format->depth_format;
+   const bool has_stencil = view && view->format->has_stencil;
+
+   /* Emit 3DSTATE_DEPTH_BUFFER */
+   if (has_depth) {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
          .SurfaceType = SURFTYPE_2D,
-         .DepthWriteEnable = view->depth_stride > 0,
-         .StencilWriteEnable = view->stencil_stride > 0,
+         .DepthWriteEnable = view->format->depth_format,
+         .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = view->depth_format,
-         .SurfacePitch = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
+         .SurfaceFormat = view->format->depth_format,
+         .SurfacePitch = view->depth_stride - 1,
          .SurfaceBaseAddress = { view->bo,  view->depth_offset },
          .Height = fb->height - 1,
          .Width = fb->width - 1,
@@ -559,11 +563,6 @@ gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          .MinimumArrayElement = 0,
          .DepthBufferObjectControlState = GEN7_MOCS,
          .RenderTargetViewExtent = 1 - 1);
-
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
-         .StencilBufferObjectControlState = GEN7_MOCS,
-         .SurfacePitch = view->stencil_stride > 0 ? view->stencil_stride - 1 : 0,
-         .SurfaceBaseAddress = { view->bo, view->stencil_offset });
    } else {
       /* Even when no depth buffer is present, the hardware requires that
        * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
@@ -579,15 +578,24 @@ gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
        *       3DSTATE_WM_DEPTH_STENCIL.DepthBufferWriteEnable = 0
        *
        * The PRM is wrong, though. The width and height must be programmed to
-       * actual framebuffer's width and height.
+       * actual framebuffer's width and height, even when neither depth buffer
+       * nor stencil buffer is present.
        */
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
          .SurfaceType = SURFTYPE_2D,
          .SurfaceFormat = D16_UNORM,
          .Width = fb->width - 1,
-         .Height = fb->height - 1);
+         .Height = fb->height - 1,
+         .StencilWriteEnable = has_stencil);
+   }
 
-      /* Disable the stencil buffer. */
+   /* Emit 3DSTATE_STENCIL_BUFFER */
+   if (has_stencil) {
+      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
+         .StencilBufferObjectControlState = GEN7_MOCS,
+         .SurfacePitch = view->stencil_stride - 1,
+         .SurfaceBaseAddress = { view->bo, view->stencil_offset });
+   } else {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER);
    }
 
