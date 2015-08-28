@@ -65,9 +65,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 		util_blitter_save_sample_mask(sctx->blitter,
 					      sctx->queued.named.sample_mask->sample_mask);
 	}
-	if (sctx->queued.named.viewport[0]) {
-		util_blitter_save_viewport(sctx->blitter, &sctx->queued.named.viewport[0]->viewport);
-	}
+	util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
 	util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
 	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
 	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,

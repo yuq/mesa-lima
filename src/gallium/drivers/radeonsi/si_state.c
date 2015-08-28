@@ -578,29 +578,52 @@ static void si_set_viewport_states(struct pipe_context *ctx,
                                    const struct pipe_viewport_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_state_viewport *viewport;
-	struct si_pm4_state *pm4;
 	int i;
 
-	for (i = start_slot; i < start_slot + num_viewports; i++) {
-		int idx = i - start_slot;
-		int offset = i * 4 * 6;
+	for (i = 0; i < num_viewports; i++)
+		sctx->viewports.states[start_slot + i] = state[i];
 
-		viewport = CALLOC_STRUCT(si_state_viewport);
-		if (!viewport)
-			return;
-		pm4 = &viewport->pm4;
+	sctx->viewports.dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
+	si_mark_atom_dirty(sctx, &sctx->viewports.atom);
+}
 
-		viewport->viewport = state[idx];
-		si_pm4_set_reg(pm4, R_02843C_PA_CL_VPORT_XSCALE + offset, fui(state[idx].scale[0]));
-		si_pm4_set_reg(pm4, R_028440_PA_CL_VPORT_XOFFSET + offset, fui(state[idx].translate[0]));
-		si_pm4_set_reg(pm4, R_028444_PA_CL_VPORT_YSCALE + offset, fui(state[idx].scale[1]));
-		si_pm4_set_reg(pm4, R_028448_PA_CL_VPORT_YOFFSET + offset, fui(state[idx].translate[1]));
-		si_pm4_set_reg(pm4, R_02844C_PA_CL_VPORT_ZSCALE + offset, fui(state[idx].scale[2]));
-		si_pm4_set_reg(pm4, R_028450_PA_CL_VPORT_ZOFFSET + offset, fui(state[idx].translate[2]));
+static void si_emit_viewports(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct pipe_viewport_state *states = sctx->viewports.states;
+	unsigned mask = sctx->viewports.dirty_mask;
 
-		si_pm4_set_state(sctx, viewport[i], viewport);
+	/* The simple case: Only 1 viewport is active. */
+	if (mask & 1 &&
+	    !si_get_vs_info(sctx)->writes_viewport_index) {
+		r600_write_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
+		radeon_emit(cs, fui(states[0].scale[0]));
+		radeon_emit(cs, fui(states[0].translate[0]));
+		radeon_emit(cs, fui(states[0].scale[1]));
+		radeon_emit(cs, fui(states[0].translate[1]));
+		radeon_emit(cs, fui(states[0].scale[2]));
+		radeon_emit(cs, fui(states[0].translate[2]));
+		sctx->viewports.dirty_mask &= ~1; /* clear one bit */
+		return;
 	}
+
+	while (mask) {
+		int start, count, i;
+
+		u_bit_scan_consecutive_range(&mask, &start, &count);
+
+		r600_write_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE +
+					       start * 4 * 6, count * 6);
+		for (i = start; i < start+count; i++) {
+			radeon_emit(cs, fui(states[i].scale[0]));
+			radeon_emit(cs, fui(states[i].translate[0]));
+			radeon_emit(cs, fui(states[i].scale[1]));
+			radeon_emit(cs, fui(states[i].translate[1]));
+			radeon_emit(cs, fui(states[i].scale[2]));
+			radeon_emit(cs, fui(states[i].translate[2]));
+		}
+	}
+	sctx->viewports.dirty_mask = 0;
 }
 
 /*
@@ -3011,6 +3034,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(&sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
 	si_init_atom(&sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 	si_init_atom(&sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
+	si_init_atom(&sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;

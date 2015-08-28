@@ -775,6 +775,8 @@ static void si_update_viewports_and_scissors(struct si_context *sctx)
 
 	if (sctx->scissors.dirty_mask)
 	    si_mark_atom_dirty(sctx, &sctx->scissors.atom);
+	if (sctx->viewports.dirty_mask)
+	    si_mark_atom_dirty(sctx, &sctx->viewports.atom);
 }
 
 static void si_bind_vs_shader(struct pipe_context *ctx, void *state)

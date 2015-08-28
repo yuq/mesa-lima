@@ -195,7 +195,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_all_descriptors_begin_new_cs(ctx);
 
 	ctx->scissors.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
+	ctx->viewports.dirty_mask = (1 << SI_MAX_VIEWPORTS) - 1;
 	si_mark_atom_dirty(ctx, &ctx->scissors.atom);
+	si_mark_atom_dirty(ctx, &ctx->viewports.atom);
 
 	r600_postflush_resume_features(&ctx->b);
 

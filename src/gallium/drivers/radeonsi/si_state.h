@@ -48,11 +48,6 @@ struct si_state_sample_mask {
 	uint16_t		sample_mask;
 };
 
-struct si_state_viewport {
-	struct si_pm4_state		pm4;
-	struct pipe_viewport_state	viewport;
-};
-
 struct si_state_rasterizer {
 	struct si_pm4_state	pm4;
 	bool			flatshade;
@@ -91,7 +86,6 @@ union si_state {
 		struct si_pm4_state		*blend_color;
 		struct si_pm4_state		*clip;
 		struct si_state_sample_mask	*sample_mask;
-		struct si_state_viewport	*viewport[16];
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*fb_rs;

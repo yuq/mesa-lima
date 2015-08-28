@@ -135,6 +135,12 @@ struct si_scissors {
 	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
 };
 
+struct si_viewports {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
+};
+
 #define SI_NUM_ATOMS(sctx) (sizeof((sctx)->atoms)/sizeof((sctx)->atoms.array[0]))
 
 struct si_context {
@@ -163,6 +169,7 @@ struct si_context {
 			struct r600_atom *clip_regs;
 			struct r600_atom *shader_userdata;
 			struct r600_atom *scissors;
+			struct r600_atom *viewports;
 		} s;
 		struct r600_atom *array[0];
 	} atoms;
@@ -191,6 +198,7 @@ struct si_context {
 	unsigned			border_color_offset;
 
 	struct si_scissors		scissors;
+	struct si_viewports		viewports;
 	struct r600_atom		clip_regs;
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
