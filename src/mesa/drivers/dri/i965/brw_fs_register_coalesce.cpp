@@ -95,26 +95,26 @@ is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
 static bool
 can_coalesce_vars(brw::fs_live_variables *live_intervals,
                   const cfg_t *cfg, const fs_inst *inst,
-                  int var_to, int var_from)
+                  int dst_var, int src_var)
 {
-   if (!live_intervals->vars_interfere(var_from, var_to))
+   if (!live_intervals->vars_interfere(src_var, dst_var))
       return true;
 
-   int start_to = live_intervals->start[var_to];
-   int end_to = live_intervals->end[var_to];
-   int start_from = live_intervals->start[var_from];
-   int end_from = live_intervals->end[var_from];
+   int dst_start = live_intervals->start[dst_var];
+   int dst_end = live_intervals->end[dst_var];
+   int src_start = live_intervals->start[src_var];
+   int src_end = live_intervals->end[src_var];
 
    /* Variables interfere and one line range isn't a subset of the other. */
-   if ((end_to > end_from && start_from < start_to) ||
-       (end_from > end_to && start_to < start_from))
+   if ((dst_end > src_end && src_start < dst_start) ||
+       (src_end > dst_end && dst_start < src_start))
       return false;
 
    /* Check for a write to either register in the intersection of their live
     * ranges.
     */
-   int start_ip = MAX2(start_to, start_from);
-   int end_ip = MIN2(end_to, end_from);
+   int start_ip = MAX2(dst_start, src_start);
+   int end_ip = MIN2(dst_end, src_end);
 
    foreach_block(block, cfg) {
       if (block->end_ip < start_ip)
@@ -154,11 +154,11 @@ fs_visitor::register_coalesce()
 
    int src_size = 0;
    int channels_remaining = 0;
-   int reg_from = -1, reg_to = -1;
-   int reg_to_offset[MAX_VGRF_SIZE];
+   int src_reg = -1, dst_reg = -1;
+   int dst_reg_offset[MAX_VGRF_SIZE];
    fs_inst *mov[MAX_VGRF_SIZE];
-   int var_to[MAX_VGRF_SIZE];
-   int var_from[MAX_VGRF_SIZE];
+   int dst_var[MAX_VGRF_SIZE];
+   int src_var[MAX_VGRF_SIZE];
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (!is_coalesce_candidate(this, inst))
@@ -170,8 +170,8 @@ fs_visitor::register_coalesce()
          continue;
       }
 
-      if (reg_from != inst->src[0].reg) {
-         reg_from = inst->src[0].reg;
+      if (src_reg != inst->src[0].reg) {
+         src_reg = inst->src[0].reg;
 
          src_size = alloc.sizes[inst->src[0].reg];
          assert(src_size <= MAX_VGRF_SIZE);
@@ -179,15 +179,15 @@ fs_visitor::register_coalesce()
          channels_remaining = src_size;
          memset(mov, 0, sizeof(mov));
 
-         reg_to = inst->dst.reg;
+         dst_reg = inst->dst.reg;
       }
 
-      if (reg_to != inst->dst.reg)
+      if (dst_reg != inst->dst.reg)
          continue;
 
       if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
          for (int i = 0; i < src_size; i++) {
-            reg_to_offset[i] = i;
+            dst_reg_offset[i] = i;
          }
          mov[0] = inst;
          channels_remaining -= inst->regs_written;
@@ -203,9 +203,9 @@ fs_visitor::register_coalesce()
             channels_remaining = -1;
             continue;
          }
-         reg_to_offset[offset] = inst->dst.reg_offset;
+         dst_reg_offset[offset] = inst->dst.reg_offset;
          if (inst->regs_written > 1)
-            reg_to_offset[offset + 1] = inst->dst.reg_offset + 1;
+            dst_reg_offset[offset + 1] = inst->dst.reg_offset + 1;
          mov[offset] = inst;
          channels_remaining -= inst->regs_written;
       }
@@ -215,20 +215,20 @@ fs_visitor::register_coalesce()
 
       bool can_coalesce = true;
       for (int i = 0; i < src_size; i++) {
-         if (reg_to_offset[i] != reg_to_offset[0] + i) {
+         if (dst_reg_offset[i] != dst_reg_offset[0] + i) {
             /* Registers are out-of-order. */
             can_coalesce = false;
-            reg_from = -1;
+            src_reg = -1;
             break;
          }
 
-         var_to[i] = live_intervals->var_from_vgrf[reg_to] + reg_to_offset[i];
-         var_from[i] = live_intervals->var_from_vgrf[reg_from] + i;
+         dst_var[i] = live_intervals->var_from_vgrf[dst_reg] + dst_reg_offset[i];
+         src_var[i] = live_intervals->var_from_vgrf[src_reg] + i;
 
          if (!can_coalesce_vars(live_intervals, cfg, inst,
-                                var_to[i], var_from[i])) {
+                                dst_var[i], src_var[i])) {
             can_coalesce = false;
-            reg_from = -1;
+            src_reg = -1;
             break;
          }
       }
@@ -251,31 +251,31 @@ fs_visitor::register_coalesce()
 
       foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
          if (scan_inst->dst.file == GRF &&
-             scan_inst->dst.reg == reg_from) {
-            scan_inst->dst.reg = reg_to;
+             scan_inst->dst.reg == src_reg) {
+            scan_inst->dst.reg = dst_reg;
             scan_inst->dst.reg_offset =
-               reg_to_offset[scan_inst->dst.reg_offset];
+               dst_reg_offset[scan_inst->dst.reg_offset];
          }
 
          for (int j = 0; j < scan_inst->sources; j++) {
             if (scan_inst->src[j].file == GRF &&
-                scan_inst->src[j].reg == reg_from) {
-               scan_inst->src[j].reg = reg_to;
+                scan_inst->src[j].reg == src_reg) {
+               scan_inst->src[j].reg = dst_reg;
                scan_inst->src[j].reg_offset =
-                  reg_to_offset[scan_inst->src[j].reg_offset];
+                  dst_reg_offset[scan_inst->src[j].reg_offset];
             }
          }
       }
 
       for (int i = 0; i < src_size; i++) {
-         live_intervals->start[var_to[i]] =
-            MIN2(live_intervals->start[var_to[i]],
-                 live_intervals->start[var_from[i]]);
-         live_intervals->end[var_to[i]] =
-            MAX2(live_intervals->end[var_to[i]],
-                 live_intervals->end[var_from[i]]);
+         live_intervals->start[dst_var[i]] =
+            MIN2(live_intervals->start[dst_var[i]],
+                 live_intervals->start[src_var[i]]);
+         live_intervals->end[dst_var[i]] =
+            MAX2(live_intervals->end[dst_var[i]],
+                 live_intervals->end[src_var[i]]);
       }
-      reg_from = -1;
+      src_reg = -1;
    }
 
    if (progress) {
