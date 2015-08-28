@@ -3228,6 +3228,8 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    case ir_lod:
       opcode = TGSI_OPCODE_LODQ;
       break;
+   case ir_texture_samples:
+      unreachable("unexpected texture op");
    }
 
    if (ir->projector) {

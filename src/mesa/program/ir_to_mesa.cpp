@@ -1919,6 +1919,8 @@ ir_to_mesa_visitor::visit(ir_texture *ir)
    case ir_query_levels:
       assert(!"Unexpected ir_query_levels opcode");
       break;
+   case ir_texture_samples:
+      unreachable("Unexpected ir_texture_samples opcode");
    }
 
    const glsl_type *sampler_type = ir->sampler->type;

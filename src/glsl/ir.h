@@ -1914,7 +1914,8 @@ enum ir_texture_opcode {
    ir_txs,		/**< Texture size */
    ir_lod,		/**< Texture lod query */
    ir_tg4,		/**< Texture gather */
-   ir_query_levels      /**< Texture levels query */
+   ir_query_levels,     /**< Texture levels query */
+   ir_texture_samples,  /**< Texture samples query */
 };
 
 
