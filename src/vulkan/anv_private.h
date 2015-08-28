@@ -1063,11 +1063,26 @@ struct anv_image {
    /** RENDER_SURFACE_STATE.SurfaceType */
    uint8_t surf_type;
 
-   /** Primary surface is either color or depth. */
-   struct anv_surface primary_surface;
+   /**
+    * Image subsurfaces
+    *
+    * For each foo, anv_image::foo_surface is valid if and only if
+    * anv_image::format has a foo aspect.
+    *
+    * The hardware requires that the depth buffer and stencil buffer be
+    * separate surfaces.  From Vulkan's perspective, though, depth and stencil
+    * reside in the same VkImage.  To satisfy both the hardware and Vulkan, we
+    * allocate the depth and stencil buffers as separate surfaces in the same
+    * bo.
+    */
+   union {
+      struct anv_surface color_surface;
 
-   /** Stencil surface is optional. */
-   struct anv_surface stencil_surface;
+      struct {
+         struct anv_surface depth_surface;
+         struct anv_surface stencil_surface;
+      };
+   };
 };
 
 struct anv_surface_view {
@@ -1127,6 +1142,12 @@ struct anv_image_create_info {
 VkResult anv_image_create(VkDevice _device,
                           const struct anv_image_create_info *info,
                           VkImage *pImage);
+
+struct anv_surface *
+anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect);
+
+struct anv_surface *
+anv_image_get_surface_for_color_attachment(struct anv_image *image);
 
 void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,

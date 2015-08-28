@@ -145,7 +145,7 @@ VkResult anv_CreateSwapChainWSI(
       image = anv_image_from_handle(image_h);
       assert(anv_format_is_color(image->format));
 
-      surface = &image->primary_surface;
+      surface = &image->color_surface;
 
       anv_AllocMemory(_device,
                       &(VkMemoryAllocInfo) {

@@ -258,26 +258,28 @@ anv_image_create(VkDevice _device,
    image->array_size = pCreateInfo->arraySize;
    image->surf_type = surf_type;
 
-   if (likely(!image->format->has_stencil || image->format->depth_format)) {
-      /* The image's primary surface is a color or depth surface. */
+   if (likely(anv_format_is_color(image->format))) {
       r = anv_image_make_surface(create_info, image->format,
                                  &image->size, &image->alignment,
-                                 &image->primary_surface);
+                                 &image->color_surface);
       if (r != VK_SUCCESS)
          goto fail;
-   }
+   } else {
+      if (image->format->depth_format) {
+         r = anv_image_make_surface(create_info, image->format,
+                                    &image->size, &image->alignment,
+                                    &image->depth_surface);
+         if (r != VK_SUCCESS)
+            goto fail;
+      }
 
-   if (image->format->has_stencil) {
-      /* From the GPU's perspective, the depth buffer and stencil buffer are
-       * separate buffers.  From Vulkan's perspective, though, depth and
-       * stencil reside in the same image.  To satisfy Vulkan and the GPU, we
-       * place the depth and stencil buffers in the same bo.
-       */
-      r = anv_image_make_surface(create_info, anv_format_s8_uint,
-                                 &image->size, &image->alignment,
-                                 &image->stencil_surface);
-      if (r != VK_SUCCESS)
-         goto fail;
+      if (image->format->has_stencil) {
+         r = anv_image_make_surface(create_info, anv_format_s8_uint,
+                                    &image->size, &image->alignment,
+                                    &image->stencil_surface);
+         if (r != VK_SUCCESS)
+            goto fail;
+      }
    }
 
    *pImage = anv_image_to_handle(image);
@@ -462,26 +464,62 @@ anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
                             const VkAttachmentViewCreateInfo *pCreateInfo)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_surface *depth_surface = &image->primary_surface;
-   struct anv_surface *stencil_surface = &image->stencil_surface;
 
    view->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
 
    /* XXX: We don't handle any of these */
+   assert(anv_format_is_depth_or_stencil(image->format));
    anv_assert(pCreateInfo->mipLevel == 0);
    anv_assert(pCreateInfo->baseArraySlice == 0);
    anv_assert(pCreateInfo->arraySize == 1);
 
    view->bo = image->bo;
 
-   view->depth_stride = depth_surface->stride;
-   view->depth_offset = image->offset + depth_surface->offset;
+   view->depth_stride = image->depth_surface.stride;
+   view->depth_offset = image->offset + image->depth_surface.offset;
    view->depth_format = image->format->depth_format;
    view->depth_qpitch = 0; /* FINISHME: QPitch */
 
-   view->stencil_stride = stencil_surface->stride;
-   view->stencil_offset = image->offset + stencil_surface->offset;
+   view->stencil_stride = image->stencil_surface.stride;
+   view->stencil_offset = image->offset + image->stencil_surface.offset;
    view->stencil_qpitch = 0; /* FINISHME: QPitch */
+}
+
+struct anv_surface *
+anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect)
+{
+   switch (aspect) {
+   case VK_IMAGE_ASPECT_COLOR:
+      assert(anv_format_is_color(image->format));
+      return &image->color_surface;
+   case VK_IMAGE_ASPECT_DEPTH:
+      assert(image->format->depth_format);
+      return &image->depth_surface;
+   case VK_IMAGE_ASPECT_STENCIL:
+      assert(image->format->has_stencil);
+      anv_finishme("stencil image views");
+      abort();
+      return &image->stencil_surface;
+    default:
+       unreachable("image does not have aspect");
+       return NULL;
+   }
+}
+
+/** The attachment may be a color view into a non-color image.  */
+struct anv_surface *
+anv_image_get_surface_for_color_attachment(struct anv_image *image)
+{
+   if (anv_format_is_color(image->format)) {
+      return &image->color_surface;
+   } else if (image->format->depth_format) {
+      return &image->depth_surface;
+   } else if (image->format->has_stencil) {
+      return &image->stencil_surface;
+   } else {
+      unreachable("image has bad format");
+      return NULL;
+   }
 }
 
 void

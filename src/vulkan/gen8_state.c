@@ -149,7 +149,8 @@ gen8_image_view_init(struct anv_image_view *iview,
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
    struct anv_surface_view *view = &iview->view;
-   struct anv_surface *surface;
+   struct anv_surface *surface =
+      anv_image_get_surface_for_aspect(image, range->aspect);
 
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
@@ -159,21 +160,6 @@ gen8_image_view_init(struct anv_image_view *iview,
 
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
-
-   switch (pCreateInfo->subresourceRange.aspect) {
-   case VK_IMAGE_ASPECT_STENCIL:
-      anv_finishme("stencil image views");
-      abort();
-      break;
-   case VK_IMAGE_ASPECT_DEPTH:
-   case VK_IMAGE_ASPECT_COLOR:
-      view->offset = image->offset;
-      surface = &image->primary_surface;
-      break;
-   default:
-      unreachable("");
-      break;
-   }
 
    view->bo = image->bo;
    view->offset = image->offset + surface->offset;
@@ -269,7 +255,8 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_surface_view *view = &aview->view;
-   struct anv_surface *surface = &image->primary_surface;
+   struct anv_surface *surface =
+      anv_image_get_surface_for_color_attachment(image);
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
