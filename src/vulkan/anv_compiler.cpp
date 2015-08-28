@@ -966,19 +966,26 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    fail_if(mesa_shader == NULL,
            "failed to create %s shader\n", stage_info[stage].name);
 
+   bool is_scalar;
    switch (stage) {
    case VK_SHADER_STAGE_VERTEX:
       mesa_shader->Program = &rzalloc(mesa_shader, struct brw_vertex_program)->program.Base;
+      is_scalar = compiler->screen->compiler->scalar_vs;
       break;
    case VK_SHADER_STAGE_GEOMETRY:
       mesa_shader->Program = &rzalloc(mesa_shader, struct brw_geometry_program)->program.Base;
+      is_scalar = false;
       break;
    case VK_SHADER_STAGE_FRAGMENT:
       mesa_shader->Program = &rzalloc(mesa_shader, struct brw_fragment_program)->program.Base;
+      is_scalar = true;
       break;
    case VK_SHADER_STAGE_COMPUTE:
       mesa_shader->Program = &rzalloc(mesa_shader, struct brw_compute_program)->program.Base;
+      is_scalar = true;
       break;
+   default:
+      unreachable("Unsupported shader stage");
    }
 
    mesa_shader->Program->Parameters =
@@ -999,7 +1006,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
 
    brw_process_nir(mesa_shader->Program->nir,
                    compiler->screen->devinfo,
-                   NULL, mesa_shader->Stage, false);
+                   NULL, mesa_shader->Stage, is_scalar);
 
    setup_nir_io(mesa_shader->Program, mesa_shader->Program->nir);
 
