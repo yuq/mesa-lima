@@ -529,11 +529,8 @@ void
 gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
 {
-   static const struct anv_depth_stencil_view null_view =
-      { .depth_format = D16_UNORM, .depth_stride = 0, .stencil_stride = 0 };
-
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   const struct anv_depth_stencil_view *view;
+   const struct anv_depth_stencil_view *view = NULL;
 
    cmd_buffer->state.subpass = subpass;
 
@@ -544,33 +541,58 @@ gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
          fb->attachments[subpass->depth_stencil_attachment];
       assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL);
       view = (const struct anv_depth_stencil_view *)aview;
-   } else {
-      view = &null_view;
    }
 
-   anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
-      .SurfaceType                              = SURFTYPE_2D,
-      .DepthWriteEnable                         = view->depth_stride > 0,
-      .StencilWriteEnable                       = view->stencil_stride > 0,
-      .HierarchicalDepthBufferEnable            = false,
-      .SurfaceFormat                            = view->depth_format,
-      .SurfacePitch                             = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
-      .SurfaceBaseAddress                       = { view->bo,  view->depth_offset },
-      .Height                                   = cmd_buffer->state.framebuffer->height - 1,
-      .Width                                    = cmd_buffer->state.framebuffer->width - 1,
-      .LOD                                      = 0,
-      .Depth                                    = 1 - 1,
-      .MinimumArrayElement                      = 0,
-      .DepthBufferObjectControlState            = GEN7_MOCS,
-      .RenderTargetViewExtent                   = 1 - 1);
+   if (view) {
+      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
+         .SurfaceType = SURFTYPE_2D,
+         .DepthWriteEnable = view->depth_stride > 0,
+         .StencilWriteEnable = view->stencil_stride > 0,
+         .HierarchicalDepthBufferEnable = false,
+         .SurfaceFormat = view->depth_format,
+         .SurfacePitch = view->depth_stride > 0 ? view->depth_stride - 1 : 0,
+         .SurfaceBaseAddress = { view->bo,  view->depth_offset },
+         .Height = fb->height - 1,
+         .Width = fb->width - 1,
+         .LOD = 0,
+         .Depth = 1 - 1,
+         .MinimumArrayElement = 0,
+         .DepthBufferObjectControlState = GEN7_MOCS,
+         .RenderTargetViewExtent = 1 - 1);
+
+      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
+         .StencilBufferObjectControlState = GEN7_MOCS,
+         .SurfacePitch = view->stencil_stride > 0 ? view->stencil_stride - 1 : 0,
+         .SurfaceBaseAddress = { view->bo, view->stencil_offset });
+   } else {
+      /* Even when no depth buffer is present, the hardware requires that
+       * 3DSTATE_DEPTH_BUFFER be programmed correctly. The Broadwell PRM says:
+       *
+       *    If a null depth buffer is bound, the driver must instead bind depth as:
+       *       3DSTATE_DEPTH.SurfaceType = SURFTYPE_2D
+       *       3DSTATE_DEPTH.Width = 1
+       *       3DSTATE_DEPTH.Height = 1
+       *       3DSTATE_DEPTH.SuraceFormat = D16_UNORM
+       *       3DSTATE_DEPTH.SurfaceBaseAddress = 0
+       *       3DSTATE_DEPTH.HierarchicalDepthBufferEnable = 0
+       *       3DSTATE_WM_DEPTH_STENCIL.DepthTestEnable = 0
+       *       3DSTATE_WM_DEPTH_STENCIL.DepthBufferWriteEnable = 0
+       *
+       * The PRM is wrong, though. The width and height must be programmed to
+       * actual framebuffer's width and height.
+       */
+      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
+         .SurfaceType = SURFTYPE_2D,
+         .SurfaceFormat = D16_UNORM,
+         .Width = fb->width - 1,
+         .Height = fb->height - 1);
+
+      /* Disable the stencil buffer. */
+      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER);
+   }
 
    /* Disable hierarchial depth buffers. */
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_HIER_DEPTH_BUFFER);
-
-   anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_STENCIL_BUFFER,
-                  .StencilBufferObjectControlState = GEN7_MOCS,
-                  .SurfacePitch = view->stencil_stride > 0 ? view->stencil_stride - 1 : 0,
-                  .SurfaceBaseAddress = { view->bo, view->stencil_offset });
 
    /* Clear the clear params. */
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_CLEAR_PARAMS);
