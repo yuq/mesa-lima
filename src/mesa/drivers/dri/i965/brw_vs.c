@@ -172,7 +172,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
     * distance varying slots whenever clipping is enabled, even if the vertex
     * shader doesn't write to gl_ClipDistance.
     */
-   if (key->base.userclip_active) {
+   if (key->base.nr_userclip_plane_consts > 0) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
    }
@@ -257,10 +257,7 @@ brw_vs_debug_recompile(struct brw_context *brw,
                          key->gl_attrib_wa_flags[i]);
    }
 
-   found |= key_debug(brw, "user clip flags",
-                      old_key->base.userclip_active, key->base.userclip_active);
-
-   found |= key_debug(brw, "user clipping planes as push constants",
+   found |= key_debug(brw, "legacy user clipping",
                       old_key->base.nr_userclip_plane_consts,
                       key->base.nr_userclip_plane_consts);
 
@@ -311,12 +308,10 @@ brw_vs_populate_key(struct brw_context *brw,
     */
    key->base.program_string_id = vp->id;
 
-   if (ctx->Transform.ClipPlanesEnabled != 0) {
-      key->base.userclip_active = true;
-      if (!vp->program.Base.UsesClipDistanceOut) {
-         key->base.nr_userclip_plane_consts =
-            _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
-      }
+   if (ctx->Transform.ClipPlanesEnabled != 0 &&
+       !vp->program.Base.UsesClipDistanceOut) {
+      key->base.nr_userclip_plane_consts =
+         _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
    }
 
    /* _NEW_POLYGON */

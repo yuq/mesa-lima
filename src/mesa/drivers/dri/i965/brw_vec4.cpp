@@ -1750,7 +1750,7 @@ vec4_visitor::run(gl_clip_plane *clip_planes)
    }
    base_ir = NULL;
 
-   if (key->userclip_active && !prog->UsesClipDistanceOut)
+   if (key->nr_userclip_plane_consts > 0)
       setup_uniform_clipplane_values(clip_planes);
 
    emit_thread_end();

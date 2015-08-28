@@ -3121,7 +3121,8 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
 {
    if (devinfo->gen < 6 &&
        ((prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) ||
-        key->userclip_active || devinfo->has_negative_rhw_bug)) {
+        output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE ||
+        devinfo->has_negative_rhw_bug)) {
       dst_reg header1 = dst_reg(this, glsl_type::uvec4_type);
       dst_reg header1_w = header1;
       header1_w.writemask = WRITEMASK_W;
@@ -3136,7 +3137,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
 	 emit(AND(header1_w, src_reg(header1_w), 0x7ff << 8));
       }
 
-      if (key->userclip_active) {
+      if (output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE) {
          current_annotation = "Clipping flags";
          dst_reg flags0 = dst_reg(this, glsl_type::uint_type);
          dst_reg flags1 = dst_reg(this, glsl_type::uint_type);
@@ -3354,7 +3355,7 @@ vec4_visitor::emit_vertex()
    }
 
    /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->userclip_active && !prog->UsesClipDistanceOut) {
+   if (key->nr_userclip_plane_consts > 0) {
       current_annotation = "user clip distances";
 
       output_reg[VARYING_SLOT_CLIP_DIST0] = dst_reg(this, glsl_type::vec4_type);

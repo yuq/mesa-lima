@@ -810,7 +810,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
       (const struct brw_vue_prog_key *) this->key;
 
    /* Bail unless some sort of legacy clipping is enabled */
-   if (!key->userclip_active || prog->UsesClipDistanceOut)
+   if (key->nr_userclip_plane_consts == 0)
       return;
 
    /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):

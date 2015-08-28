@@ -82,14 +82,11 @@ struct brw_vue_prog_key {
    unsigned program_string_id;
 
    /**
-    * True if at least one clip flag is enabled, regardless of whether the
-    * shader uses clip planes or gl_ClipDistance.
-    */
-   bool userclip_active:1;
-
-   /**
     * How many user clipping planes are being uploaded to the vertex shader as
     * push constants.
+    *
+    * These are used for lowering legacy gl_ClipVertex/gl_Position clipping to
+    * clip distances.
     */
    unsigned nr_userclip_plane_consts:4;
 
