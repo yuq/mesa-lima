@@ -1718,6 +1718,11 @@ nir_visitor::visit(ir_texture *ir)
       num_srcs = 0;
       break;
 
+   case ir_texture_samples:
+      op = nir_texop_texture_samples;
+      num_srcs = 0;
+      break;
+
    default:
       unreachable("not reached");
    }

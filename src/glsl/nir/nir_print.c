@@ -417,6 +417,9 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
    case nir_texop_query_levels:
       fprintf(fp, "query_levels ");
       break;
+   case nir_texop_texture_samples:
+      fprintf(fp, "texture_samples ");
+      break;
 
    default:
       unreachable("Invalid texture operation");

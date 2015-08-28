@@ -944,7 +944,8 @@ typedef enum {
    nir_texop_txs,                /**< Texture size */
    nir_texop_lod,                /**< Texture lod query */
    nir_texop_tg4,                /**< Texture gather */
-   nir_texop_query_levels       /**< Texture levels query */
+   nir_texop_query_levels,       /**< Texture levels query */
+   nir_texop_texture_samples,    /**< Texture samples query */
 } nir_texop;
 
 typedef struct {
@@ -1016,6 +1017,7 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
    case nir_texop_lod:
       return 2;
 
+   case nir_texop_texture_samples:
    case nir_texop_query_levels:
       return 1;
 
