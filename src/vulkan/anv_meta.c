@@ -198,6 +198,7 @@ struct anv_saved_state {
    struct anv_vertex_binding old_vertex_bindings[NUM_VB_USED];
    struct anv_descriptor_set *old_descriptor_set0;
    struct anv_pipeline *old_pipeline;
+   struct anv_dynamic_ds_state *old_ds_state;
    struct anv_dynamic_cb_state *old_cb_state;
 };
 
@@ -209,6 +210,7 @@ anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
    state->old_descriptor_set0 = cmd_buffer->state.descriptors[0].set;
    memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
           sizeof(state->old_vertex_bindings));
+   state->old_ds_state = cmd_buffer->state.ds_state;
    state->old_cb_state = cmd_buffer->state.cb_state;
 }
 
@@ -224,6 +226,11 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.vb_dirty |= (1 << NUM_VB_USED) - 1;
    cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
+
+   if (cmd_buffer->state.ds_state != state->old_ds_state) {
+      cmd_buffer->state.ds_state = state->old_ds_state;
+      cmd_buffer->state.dirty |= ANV_CMD_BUFFER_DS_DIRTY;
+   }
 
    if (cmd_buffer->state.cb_state != state->old_cb_state) {
       cmd_buffer->state.cb_state = state->old_cb_state;
