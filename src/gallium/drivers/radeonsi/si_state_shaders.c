@@ -1050,8 +1050,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 	unsigned esgs_ring_size = 128 * 1024;
 	unsigned gsvs_ring_size = 60 * 1024 * 1024;
 
-	assert(!sctx->gs_rings);
-	sctx->gs_rings = CALLOC_STRUCT(si_pm4_state);
+	assert(!sctx->esgs_ring && !sctx->gsvs_ring);
 
 	sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 				       PIPE_USAGE_DEFAULT, esgs_ring_size);
@@ -1059,6 +1058,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 	sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					     PIPE_USAGE_DEFAULT, gsvs_ring_size);
 
+	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
 		if (sctx->b.chip_class >= VI) {
 			/* The maximum sizes are 63.999 MB on VI, because
@@ -1066,16 +1066,22 @@ static void si_init_gs_rings(struct si_context *sctx)
 			assert(esgs_ring_size / 256 < (1 << 18));
 			assert(gsvs_ring_size / 256 < (1 << 18));
 		}
-		si_pm4_set_reg(sctx->gs_rings, R_030900_VGT_ESGS_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_030900_VGT_ESGS_RING_SIZE,
 			       esgs_ring_size / 256);
-		si_pm4_set_reg(sctx->gs_rings, R_030904_VGT_GSVS_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_030904_VGT_GSVS_RING_SIZE,
 			       gsvs_ring_size / 256);
 	} else {
-		si_pm4_set_reg(sctx->gs_rings, R_0088C8_VGT_ESGS_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_0088C8_VGT_ESGS_RING_SIZE,
 			       esgs_ring_size / 256);
-		si_pm4_set_reg(sctx->gs_rings, R_0088CC_VGT_GSVS_RING_SIZE,
+		si_pm4_set_reg(sctx->init_config, R_0088CC_VGT_GSVS_RING_SIZE,
 			       gsvs_ring_size / 256);
 	}
+
+	/* Flush the context to re-emit the init_config state.
+	 * This is done only once in a lifetime of a context.
+	 */
+	sctx->b.initial_gfx_cs_size = 0; /* force flush */
+	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
 	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_VERTEX, SI_RING_ESGS,
 			   sctx->esgs_ring, 0, esgs_ring_size,
@@ -1113,8 +1119,8 @@ static void si_update_gs_rings(struct si_context *sctx)
 	si_set_ring_buffer(&sctx->b.b, PIPE_SHADER_GEOMETRY, SI_RING_GSVS_3,
 			   sctx->gsvs_ring, gsvs_itemsize,
 			   64, true, true, 4, 16, offset);
-
 }
+
 /**
  * @returns 1 if \p sel has been updated to use a new scratch buffer and 0
  *          otherwise.
@@ -1412,16 +1418,11 @@ void si_update_shaders(struct si_context *sctx)
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
 		si_update_so(sctx, sctx->gs_shader);
 
-		if (!sctx->gs_rings)
+		if (!sctx->gsvs_ring)
 			si_init_gs_rings(sctx);
-
-		if (sctx->emitted.named.gs_rings != sctx->gs_rings)
-			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
-		si_pm4_bind_state(sctx, gs_rings, sctx->gs_rings);
 
 		si_update_gs_rings(sctx);
 	} else {
-		si_pm4_bind_state(sctx, gs_rings, NULL);
 		si_pm4_bind_state(sctx, gs, NULL);
 		si_pm4_bind_state(sctx, es, NULL);
 	}

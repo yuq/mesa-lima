@@ -201,7 +201,6 @@ struct si_context {
 
 	/* VGT states. */
 	struct si_pm4_state	*vgt_shader_config[4];
-	struct si_pm4_state	*gs_rings;
 	struct pipe_resource	*esgs_ring;
 	struct pipe_resource	*gsvs_ring;
 	struct si_pm4_state	*tf_state;
