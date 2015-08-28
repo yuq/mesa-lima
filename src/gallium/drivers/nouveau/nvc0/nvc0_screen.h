@@ -173,26 +173,6 @@ nvc0_screen(struct pipe_screen *screen)
 #define NVE4_PM_QUERY_METRIC_MP_EFFICIENCY      47
 #define NVE4_PM_QUERY_METRIC_INST_REPLAY_OHEAD  48
 
-/*
-#define NVE4_PM_QUERY_GR_IDLE                   50
-#define NVE4_PM_QUERY_BSP_IDLE                  51
-#define NVE4_PM_QUERY_VP_IDLE                   52
-#define NVE4_PM_QUERY_PPP_IDLE                  53
-#define NVE4_PM_QUERY_CE0_IDLE                  54
-#define NVE4_PM_QUERY_CE1_IDLE                  55
-#define NVE4_PM_QUERY_CE2_IDLE                  56
-*/
-/* L2 queries (PCOUNTER) */
-/*
-#define NVE4_PM_QUERY_L2_SUBP_WRITE_L1_SECTOR_QUERIES 57
-...
-*/
-/* TEX queries (PCOUNTER) */
-/*
-#define NVE4_PM_QUERY_TEX0_CACHE_SECTOR_QUERIES 58
-...
-*/
-
 #define NVC0_PM_QUERY_COUNT 31
 #define NVC0_PM_QUERY(i)    (PIPE_QUERY_DRIVER_SPECIFIC + 2048 + (i))
 #define NVC0_PM_QUERY_LAST   NVC0_PM_QUERY(NVC0_PM_QUERY_COUNT - 1)
