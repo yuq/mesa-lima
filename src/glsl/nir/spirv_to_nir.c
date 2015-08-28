@@ -644,7 +644,10 @@ vtn_get_builtin_location(SpvBuiltIn builtin, int *location,
       /* XXX figure this out */
       unreachable("unhandled builtin");
    case SpvBuiltInVertexId:
-      *location = SYSTEM_VALUE_VERTEX_ID;
+      /* Vulkan defines VertexID to be zero-based and reserves the new
+       * builtin keyword VertexIndex to indicate the non-zero-based value.
+       */
+      *location = SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
       *mode = nir_var_system_value;
       break;
    case SpvBuiltInInstanceId:
