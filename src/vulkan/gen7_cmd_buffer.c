@@ -525,16 +525,12 @@ void gen7_CmdPipelineBarrier(
    stub();
 }
 
-void
-gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_subpass *subpass)
+static void
+gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_depth_stencil_view *view = NULL;
-
-   cmd_buffer->state.subpass = subpass;
-
-   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
 
    if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
       const struct anv_attachment_view *aview =
@@ -604,6 +600,16 @@ gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
 
    /* Clear the clear params. */
    anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_CLEAR_PARAMS);
+}
+
+void
+gen7_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_subpass *subpass)
+{
+   cmd_buffer->state.subpass = subpass;
+   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
+   gen7_cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
 
 static void
