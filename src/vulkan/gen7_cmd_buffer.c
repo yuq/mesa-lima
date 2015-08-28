@@ -387,7 +387,7 @@ gen7_batch_lrm(struct anv_batch *batch,
 static void
 gen7_batch_lri(struct anv_batch *batch, uint32_t reg, uint32_t imm)
 {
-   anv_batch_emit(batch, GEN8_MI_LOAD_REGISTER_IMM,
+   anv_batch_emit(batch, GEN7_MI_LOAD_REGISTER_IMM,
                   .RegisterOffset = reg,
                   .DataDWord = imm);
 }
