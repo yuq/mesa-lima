@@ -1409,7 +1409,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
     * emitting anything other than setting up the constant result.
     */
    if (instr->op == nir_texop_tg4) {
-      int swiz = GET_SWZ(key->tex.swizzles[sampler], instr->component);
+      int swiz = GET_SWZ(key_tex->swizzles[sampler], instr->component);
       if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
          emit(MOV(dest, src_reg(swiz == SWIZZLE_ONE ? 1.0f : 0.0f)));
          return;
@@ -1471,7 +1471,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
          sample_index = get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 1);
          assert(coord_type != NULL);
          if (devinfo->gen >= 7 &&
-             key->tex.compressed_multisample_layout_mask & (1<<sampler)) {
+             key_tex->compressed_multisample_layout_mask & (1 << sampler)) {
             mcs = emit_mcs_fetch(coord_type, coordinate, sampler_reg);
          } else {
             mcs = src_reg(0u);

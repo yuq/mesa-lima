@@ -2693,7 +2693,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    }
 
    if (devinfo->gen == 6 && op == ir_tg4) {
-      emit_gen6_gather_wa(key->tex.gen6_gather_wa[sampler], inst->dst);
+      emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], inst->dst);
    }
 
    swizzle_result(op, dest,
@@ -2745,7 +2745,7 @@ vec4_visitor::visit(ir_texture *ir)
     */
    if (ir->op == ir_tg4) {
       ir_constant *chan = ir->lod_info.component->as_constant();
-      int swiz = GET_SWZ(key->tex.swizzles[sampler], chan->value.i[0]);
+      int swiz = GET_SWZ(key_tex->swizzles[sampler], chan->value.i[0]);
       if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
          dst_reg result(this, ir->type);
          this->result = src_reg(result);
@@ -2803,7 +2803,7 @@ vec4_visitor::visit(ir_texture *ir)
       ir->lod_info.sample_index->accept(this);
       sample_index = this->result;
 
-      if (devinfo->gen >= 7 && key->tex.compressed_multisample_layout_mask & (1<<sampler))
+      if (devinfo->gen >= 7 && key_tex->compressed_multisample_layout_mask & (1 << sampler))
          mcs = emit_mcs_fetch(ir->coordinate->type, coordinate, sampler_reg);
       else
          mcs = src_reg(0u);
@@ -2881,14 +2881,14 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
 uint32_t
 vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
 {
-   int swiz = GET_SWZ(key->tex.swizzles[sampler], gather_component);
+   int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
    switch (swiz) {
       case SWIZZLE_X: return 0;
       case SWIZZLE_Y:
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
-         if (key->tex.gather_channel_quirk_mask & (1<<sampler))
+         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
             return 2;
          return 1;
       case SWIZZLE_Z: return 2;
@@ -2903,7 +2903,7 @@ vec4_visitor::swizzle_result(ir_texture_opcode op, dst_reg dest,
                              src_reg orig_val, uint32_t sampler,
                              const glsl_type *dest_type)
 {
-   int s = key->tex.swizzles[sampler];
+   int s = key_tex->swizzles[sampler];
 
    dst_reg swizzled_result = dest;
 
@@ -3717,6 +3717,7 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
    : backend_shader(compiler, log_data, mem_ctx,
                     shader_prog, prog, &prog_data->base, stage),
      key(key),
+     key_tex(&key->tex),
      prog_data(prog_data),
      sanity_param_count(0),
      fail_msg(NULL),
