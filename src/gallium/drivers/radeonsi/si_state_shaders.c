@@ -873,7 +873,7 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	}
 
 	sctx->ps_shader = sel;
-	si_update_fb_blend_state(sctx);
+	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 }
 
 static void si_delete_shader_selector(struct pipe_context *ctx,

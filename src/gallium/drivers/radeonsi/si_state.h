@@ -91,7 +91,6 @@ union si_state {
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*fb_rs;
-		struct si_pm4_state		*fb_blend;
 		struct si_pm4_state		*ta_bordercolor_base;
 		struct si_pm4_state		*ls;
 		struct si_pm4_state		*hs;
@@ -116,6 +115,7 @@ union si_state_atoms {
 		struct r600_atom *db_render_state;
 		struct r600_atom *msaa_config;
 		struct r600_atom *sample_mask;
+		struct r600_atom *cb_target_mask;
 		struct r600_atom *blend_color;
 		struct r600_atom *clip_regs;
 		struct r600_atom *clip_state;
@@ -269,7 +269,6 @@ void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 		  struct r600_atom **list_elem,
 		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
 		  unsigned num_dw);
-void si_update_fb_blend_state(struct si_context *sctx);
 boolean si_is_format_supported(struct pipe_screen *screen,
                                enum pipe_format format,
                                enum pipe_texture_target target,

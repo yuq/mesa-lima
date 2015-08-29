@@ -249,23 +249,18 @@ static unsigned si_pack_float_12p4(float x)
  *
  * Another reason is to avoid a hang with dual source blending.
  */
-void si_update_fb_blend_state(struct si_context *sctx)
+static void si_emit_cb_target_mask(struct si_context *sctx, struct r600_atom *atom)
 {
-	struct si_pm4_state *pm4;
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	struct si_state_blend *blend = sctx->queued.named.blend;
 	uint32_t mask = 0, i;
-
-	if (blend == NULL)
-		return;
-
-	pm4 = CALLOC_STRUCT(si_pm4_state);
-	if (pm4 == NULL)
-		return;
 
 	for (i = 0; i < sctx->framebuffer.state.nr_cbufs; i++)
 		if (sctx->framebuffer.state.cbufs[i])
 			mask |= 0xf << (4*i);
-	mask &= blend->cb_target_mask;
+
+	if (blend)
+		mask &= blend->cb_target_mask;
 
 	/* Avoid a hang that happens when dual source blending is enabled
 	 * but there is not enough color outputs. This is undefined behavior,
@@ -277,8 +272,7 @@ void si_update_fb_blend_state(struct si_context *sctx)
 	    (sctx->ps_shader->ps_colors_written & 0x3) != 0x3)
 		mask = 0;
 
-	si_pm4_set_reg(pm4, R_028238_CB_TARGET_MASK, mask);
-	si_pm4_set_state(sctx, fb_blend, pm4);
+	r600_write_context_reg(cs, R_028238_CB_TARGET_MASK, mask);
 }
 
 /*
@@ -439,7 +433,7 @@ static void si_bind_blend_state(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	si_pm4_bind_state(sctx, blend, (struct si_state_blend *)state);
-	si_update_fb_blend_state(sctx);
+	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 }
 
 static void si_delete_blend_state(struct pipe_context *ctx, void *state)
@@ -2164,7 +2158,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	}
 
 	si_update_fb_rs_state(sctx);
-	si_update_fb_blend_state(sctx);
+	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 
 	sctx->framebuffer.atom.num_dw = state->nr_cbufs*16 + (8 - state->nr_cbufs)*3;
 	sctx->framebuffer.atom.num_dw += state->zsbuf ? 26 : 4;
@@ -3063,6 +3057,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
 	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config, 10);
 	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask, 4);
+	si_init_atom(sctx, &sctx->cb_target_mask, &sctx->atoms.s.cb_target_mask, si_emit_cb_target_mask, 3);
 	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color, 6);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state, 2+6*4);
