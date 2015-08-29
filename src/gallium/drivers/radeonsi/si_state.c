@@ -635,48 +635,25 @@ static void si_emit_viewports(struct si_context *sctx, struct r600_atom *atom)
 /*
  * inferred state between framebuffer and rasterizer
  */
-static void si_update_fb_rs_state(struct si_context *sctx)
+static void si_update_poly_offset_state(struct si_context *sctx)
 {
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-	struct si_pm4_state *pm4;
-	float offset_units;
 
 	if (!rs || !sctx->framebuffer.state.zsbuf)
 		return;
 
-	offset_units = sctx->queued.named.rasterizer->offset_units;
 	switch (sctx->framebuffer.state.zsbuf->texture->format) {
-	case PIPE_FORMAT_S8_UINT_Z24_UNORM:
-	case PIPE_FORMAT_X8Z24_UNORM:
-	case PIPE_FORMAT_Z24X8_UNORM:
-	case PIPE_FORMAT_Z24_UNORM_S8_UINT:
-		offset_units *= 2.0f;
+	case PIPE_FORMAT_Z16_UNORM:
+		si_pm4_bind_state(sctx, poly_offset, &rs->pm4_poly_offset[0]);
+		break;
+	default: /* 24-bit */
+		si_pm4_bind_state(sctx, poly_offset, &rs->pm4_poly_offset[1]);
 		break;
 	case PIPE_FORMAT_Z32_FLOAT:
 	case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
-		offset_units *= 1.0f;
+		si_pm4_bind_state(sctx, poly_offset, &rs->pm4_poly_offset[2]);
 		break;
-	case PIPE_FORMAT_Z16_UNORM:
-		offset_units *= 4.0f;
-		break;
-	default:
-		return;
 	}
-
-	pm4 = CALLOC_STRUCT(si_pm4_state);
-
-	if (pm4 == NULL)
-		return;
-
-	/* FIXME some of those reg can be computed with cso */
-	si_pm4_set_reg(pm4, R_028B80_PA_SU_POLY_OFFSET_FRONT_SCALE,
-		       fui(sctx->queued.named.rasterizer->offset_scale));
-	si_pm4_set_reg(pm4, R_028B84_PA_SU_POLY_OFFSET_FRONT_OFFSET, fui(offset_units));
-	si_pm4_set_reg(pm4, R_028B88_PA_SU_POLY_OFFSET_BACK_SCALE,
-		       fui(sctx->queued.named.rasterizer->offset_scale));
-	si_pm4_set_reg(pm4, R_028B8C_PA_SU_POLY_OFFSET_BACK_OFFSET, fui(offset_units));
-
-	si_pm4_set_state(sctx, fb_rs, pm4);
 }
 
 /*
@@ -703,7 +680,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 {
 	struct si_state_rasterizer *rs = CALLOC_STRUCT(si_state_rasterizer);
 	struct si_pm4_state *pm4 = &rs->pm4;
-	unsigned tmp;
+	unsigned tmp, i;
 	float psize_min, psize_max;
 
 	if (rs == NULL) {
@@ -730,10 +707,6 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		S_028810_ZCLIP_FAR_DISABLE(!state->depth_clip) |
 		S_028810_DX_RASTERIZATION_KILL(state->rasterizer_discard) |
 		S_028810_DX_LINEAR_ATTR_CLIP_ENA(1);
-
-	/* offset */
-	rs->offset_units = state->offset_units;
-	rs->offset_scale = state->offset_scale * 16.0f;
 
 	si_pm4_set_reg(pm4, R_0286D4_SPI_INTERP_CONTROL_0,
 		S_0286D4_FLAT_SHADE_ENA(1) |
@@ -787,6 +760,35 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 				   state->fill_back != PIPE_POLYGON_MODE_FILL) |
 		S_028814_POLYMODE_FRONT_PTYPE(si_translate_fill(state->fill_front)) |
 		S_028814_POLYMODE_BACK_PTYPE(si_translate_fill(state->fill_back)));
+
+	/* Precalculate polygon offset states for 16-bit, 24-bit, and 32-bit zbuffers. */
+	for (i = 0; i < 3; i++) {
+		struct si_pm4_state *pm4 = &rs->pm4_poly_offset[i];
+		float offset_units = state->offset_units;
+		float offset_scale = state->offset_scale * 16.0f;
+
+		switch (i) {
+		case 0: /* 16-bit zbuffer */
+			offset_units *= 4.0f;
+			break;
+		case 1: /* 24-bit zbuffer */
+			offset_units *= 2.0f;
+			break;
+		case 2: /* 32-bit zbuffer */
+			offset_units *= 1.0f;
+			break;
+		}
+
+		si_pm4_set_reg(pm4, R_028B80_PA_SU_POLY_OFFSET_FRONT_SCALE,
+			       fui(offset_scale));
+		si_pm4_set_reg(pm4, R_028B84_PA_SU_POLY_OFFSET_FRONT_OFFSET,
+			       fui(offset_units));
+		si_pm4_set_reg(pm4, R_028B88_PA_SU_POLY_OFFSET_BACK_SCALE,
+			       fui(offset_scale));
+		si_pm4_set_reg(pm4, R_028B8C_PA_SU_POLY_OFFSET_BACK_OFFSET,
+			       fui(offset_units));
+	}
+
 	return rs;
 }
 
@@ -805,7 +807,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
-	si_update_fb_rs_state(sctx);
+	si_update_poly_offset_state(sctx);
 
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 }
@@ -813,6 +815,9 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 static void si_delete_rs_state(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+
+	if (sctx->queued.named.rasterizer == state)
+		si_pm4_bind_state(sctx, poly_offset, NULL);
 	si_pm4_delete_state(sctx, rasterizer, (struct si_state_rasterizer *)state);
 }
 
@@ -2157,7 +2162,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		r600_context_add_resource_size(ctx, surf->base.texture);
 	}
 
-	si_update_fb_rs_state(sctx);
+	si_update_poly_offset_state(sctx);
 	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 
 	sctx->framebuffer.atom.num_dw = state->nr_cbufs*16 + (8 - state->nr_cbufs)*3;

@@ -45,6 +45,8 @@ struct si_state_blend {
 
 struct si_state_rasterizer {
 	struct si_pm4_state	pm4;
+	/* poly offset states for 16-bit, 24-bit, and 32-bit zbuffers */
+	struct si_pm4_state	pm4_poly_offset[3];
 	bool			flatshade;
 	bool			two_side;
 	bool			multisample_enable;
@@ -53,8 +55,6 @@ struct si_state_rasterizer {
 	unsigned		pa_sc_line_stipple;
 	unsigned		pa_cl_clip_cntl;
 	unsigned		clip_plane_enable;
-	float			offset_units;
-	float			offset_scale;
 	bool			poly_stipple_enable;
 	bool			line_smooth;
 	bool			poly_smooth;
@@ -90,7 +90,7 @@ union si_state {
 		struct si_state_blend		*blend;
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
-		struct si_pm4_state		*fb_rs;
+		struct si_pm4_state		*poly_offset;
 		struct si_pm4_state		*ta_bordercolor_base;
 		struct si_pm4_state		*ls;
 		struct si_pm4_state		*hs;
