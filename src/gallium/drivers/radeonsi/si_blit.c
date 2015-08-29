@@ -336,8 +336,10 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		zsbuf ? (struct r600_texture*)zsbuf->texture : NULL;
 
 	if (buffers & PIPE_CLEAR_COLOR) {
-		evergreen_do_fast_color_clear(&sctx->b, fb, &sctx->framebuffer.atom,
-					      &buffers, color);
+		evergreen_do_fast_color_clear(&sctx->b, fb,
+					      &sctx->framebuffer.atom, &buffers,
+					      &sctx->framebuffer.dirty_cbufs,
+					      color);
 		if (!buffers)
 			return; /* all buffers have been fast cleared */
 	}
@@ -374,6 +376,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		}
 
 		zstex->depth_clear_value = depth;
+		sctx->framebuffer.dirty_zsbuf = true;
 		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
 		sctx->db_depth_clear = true;
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);

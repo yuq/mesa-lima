@@ -127,6 +127,8 @@ struct si_framebuffer {
 	unsigned			cb0_is_integer;
 	unsigned			compressed_cb_mask;
 	unsigned			export_16bpc;
+	unsigned			dirty_cbufs;
+	bool				dirty_zsbuf;
 };
 
 struct si_scissors {

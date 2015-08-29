@@ -184,8 +184,11 @@ void si_begin_new_cs(struct si_context *ctx)
 	/* The CS initialization should be emitted before everything else. */
 	si_pm4_emit(ctx, ctx->init_config);
 
-	si_mark_atom_dirty(ctx, &ctx->clip_regs);
+	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
+	ctx->framebuffer.dirty_zsbuf = true;
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);
+
+	si_mark_atom_dirty(ctx, &ctx->clip_regs);
 	si_mark_atom_dirty(ctx, &ctx->msaa_sample_locs);
 	si_mark_atom_dirty(ctx, &ctx->msaa_config);
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);

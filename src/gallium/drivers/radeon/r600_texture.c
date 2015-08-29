@@ -1217,7 +1217,7 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
-				   unsigned *buffers,
+				   unsigned *buffers, unsigned *dirty_cbufs,
 				   const union pipe_color_union *color)
 {
 	int i;
@@ -1279,6 +1279,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   tex->cmask.offset, tex->cmask.size, 0, true);
 
 		tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
+		if (dirty_cbufs)
+			*dirty_cbufs |= 1 << i;
 		rctx->set_atom_dirty(rctx, fb_state, true);
 		*buffers &= ~clear_bit;
 	}

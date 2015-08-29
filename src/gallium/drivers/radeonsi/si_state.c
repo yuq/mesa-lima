@@ -2109,6 +2109,13 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			 SI_CONTEXT_INV_TC_L2 |
 			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
+	/* Take the maximum of the old and new count. If the new count is lower,
+	 * dirtying is needed to disable the unbound colorbuffers.
+	 */
+	sctx->framebuffer.dirty_cbufs |=
+		(1 << MAX2(sctx->framebuffer.state.nr_cbufs, state->nr_cbufs)) - 1;
+	sctx->framebuffer.dirty_zsbuf |= sctx->framebuffer.state.zsbuf != state->zsbuf;
+
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
 	sctx->framebuffer.export_16bpc = 0;
@@ -2219,6 +2226,9 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
+		if (!(sctx->framebuffer.dirty_cbufs & (1 << i)))
+			continue;
+
 		cb = (struct r600_surface*)state->cbufs[i];
 		if (!cb) {
 			r600_write_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
@@ -2259,17 +2269,18 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 			radeon_emit(cs, 0);	/* R_028C94_CB_COLOR0_DCC_BASE */
 	}
 	/* set CB_COLOR1_INFO for possible dual-src blending */
-	if (i == 1 && state->cbufs[0]) {
+	if (i == 1 && state->cbufs[0] &&
+	    sctx->framebuffer.dirty_cbufs & (1 << 0)) {
 		r600_write_context_reg(cs, R_028C70_CB_COLOR0_INFO + 1 * 0x3C,
 				       cb->cb_color_info | tex->cb_color_info);
 		i++;
 	}
-	for (; i < 8 ; i++) {
-		r600_write_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C, 0);
-	}
+	for (; i < 8 ; i++)
+		if (sctx->framebuffer.dirty_cbufs & (1 << i))
+			r600_write_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C, 0);
 
 	/* ZS buffer. */
-	if (state->zsbuf) {
+	if (state->zsbuf && sctx->framebuffer.dirty_zsbuf) {
 		struct r600_surface *zb = (struct r600_surface*)state->zsbuf;
 		struct r600_texture *rtex = (struct r600_texture*)zb->base.texture;
 
@@ -2304,7 +2315,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		r600_write_context_reg(cs, R_02802C_DB_DEPTH_CLEAR, fui(rtex->depth_clear_value));
 		r600_write_context_reg(cs, R_028B78_PA_SU_POLY_OFFSET_DB_FMT_CNTL,
 				       zb->pa_su_poly_offset_db_fmt_cntl);
-	} else {
+	} else if (sctx->framebuffer.dirty_zsbuf) {
 		r600_write_context_reg_seq(cs, R_028040_DB_Z_INFO, 2);
 		radeon_emit(cs, S_028040_FORMAT(V_028040_Z_INVALID)); /* R_028040_DB_Z_INFO */
 		radeon_emit(cs, S_028044_FORMAT(V_028044_STENCIL_INVALID)); /* R_028044_DB_STENCIL_INFO */
@@ -2314,6 +2325,9 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
         /* PA_SC_WINDOW_SCISSOR_TL is set in si_init_config() */
 	r600_write_context_reg(cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(state->width) | S_028208_BR_Y(state->height));
+
+	sctx->framebuffer.dirty_cbufs = 0;
+	sctx->framebuffer.dirty_zsbuf = false;
 }
 
 static void si_emit_msaa_sample_locs(struct si_context *sctx,

@@ -395,7 +395,7 @@ static void r600_clear(struct pipe_context *ctx, unsigned buffers,
 
 	if (buffers & PIPE_CLEAR_COLOR && rctx->b.chip_class >= EVERGREEN) {
 		evergreen_do_fast_color_clear(&rctx->b, fb, &rctx->framebuffer.atom,
-					      &buffers, color);
+					      &buffers, NULL, color);
 		if (!buffers)
 			return; /* all buffers have been fast cleared */
 	}
