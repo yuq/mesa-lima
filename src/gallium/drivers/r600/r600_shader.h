@@ -79,7 +79,6 @@ struct r600_shader {
 	boolean			uses_index_registers;
 
 	/* geometry shader properties */
-	unsigned		gs_input_prim;
 	unsigned		gs_output_prim;
 	unsigned		gs_max_out_vertices;
 	unsigned		gs_num_invocations;

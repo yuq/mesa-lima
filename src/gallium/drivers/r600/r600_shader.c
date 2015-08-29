@@ -2009,9 +2009,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 			case TGSI_PROPERTY_VS_PROHIBIT_UCPS:
 				/* we don't need this one */
 				break;
-			case TGSI_PROPERTY_GS_INPUT_PRIM:
-				shader->gs_input_prim = property->u[0].Data;
-				break;
 			case TGSI_PROPERTY_GS_OUTPUT_PRIM:
 				shader->gs_output_prim = property->u[0].Data;
 				break;
