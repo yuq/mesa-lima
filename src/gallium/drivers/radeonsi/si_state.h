@@ -60,11 +60,21 @@ struct si_state_rasterizer {
 	bool			poly_smooth;
 };
 
-struct si_state_dsa {
-	struct si_pm4_state	pm4;
-	unsigned		alpha_func;
+struct si_dsa_stencil_ref_part {
 	uint8_t			valuemask[2];
 	uint8_t			writemask[2];
+};
+
+struct si_state_dsa {
+	struct si_pm4_state		pm4;
+	unsigned			alpha_func;
+	struct si_dsa_stencil_ref_part	stencil_ref;
+};
+
+struct si_stencil_ref {
+	struct r600_atom		atom;
+	struct pipe_stencil_ref		state;
+	struct si_dsa_stencil_ref_part	dsa_part;
 };
 
 struct si_vertex_element
@@ -82,7 +92,6 @@ union si_state {
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*fb_rs;
 		struct si_pm4_state		*fb_blend;
-		struct si_pm4_state		*dsa_stencil_ref;
 		struct si_pm4_state		*ta_bordercolor_base;
 		struct si_pm4_state		*ls;
 		struct si_pm4_state		*hs;
@@ -113,6 +122,7 @@ union si_state_atoms {
 		struct r600_atom *shader_userdata;
 		struct r600_atom *scissors;
 		struct r600_atom *viewports;
+		struct r600_atom *stencil_ref;
 	} s;
 	struct r600_atom *array[0];
 };

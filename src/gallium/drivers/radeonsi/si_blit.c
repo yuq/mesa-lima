@@ -53,7 +53,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 
 	util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
 	util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
-	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref);
+	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
 	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
 	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader);
 	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader);

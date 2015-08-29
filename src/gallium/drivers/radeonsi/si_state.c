@@ -825,39 +825,33 @@ static void si_delete_rs_state(struct pipe_context *ctx, void *state)
 /*
  * infeered state between dsa and stencil ref
  */
-static void si_update_dsa_stencil_ref(struct si_context *sctx)
+static void si_emit_stencil_ref(struct si_context *sctx, struct r600_atom *atom)
 {
-	struct si_pm4_state *pm4;
-	struct pipe_stencil_ref *ref = &sctx->stencil_ref;
-	struct si_state_dsa *dsa = sctx->queued.named.dsa;
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct pipe_stencil_ref *ref = &sctx->stencil_ref.state;
+	struct si_dsa_stencil_ref_part *dsa = &sctx->stencil_ref.dsa_part;
 
-	if (!dsa)
-		return;
-
-	pm4 = CALLOC_STRUCT(si_pm4_state);
-	if (pm4 == NULL)
-		return;
-
-	si_pm4_set_reg(pm4, R_028430_DB_STENCILREFMASK,
-		       S_028430_STENCILTESTVAL(ref->ref_value[0]) |
-		       S_028430_STENCILMASK(dsa->valuemask[0]) |
-		       S_028430_STENCILWRITEMASK(dsa->writemask[0]) |
-		       S_028430_STENCILOPVAL(1));
-	si_pm4_set_reg(pm4, R_028434_DB_STENCILREFMASK_BF,
-		       S_028434_STENCILTESTVAL_BF(ref->ref_value[1]) |
-		       S_028434_STENCILMASK_BF(dsa->valuemask[1]) |
-		       S_028434_STENCILWRITEMASK_BF(dsa->writemask[1]) |
-		       S_028434_STENCILOPVAL_BF(1));
-
-	si_pm4_set_state(sctx, dsa_stencil_ref, pm4);
+	r600_write_context_reg_seq(cs, R_028430_DB_STENCILREFMASK, 2);
+	radeon_emit(cs, S_028430_STENCILTESTVAL(ref->ref_value[0]) |
+			S_028430_STENCILMASK(dsa->valuemask[0]) |
+			S_028430_STENCILWRITEMASK(dsa->writemask[0]) |
+			S_028430_STENCILOPVAL(1));
+	radeon_emit(cs, S_028434_STENCILTESTVAL_BF(ref->ref_value[1]) |
+			S_028434_STENCILMASK_BF(dsa->valuemask[1]) |
+			S_028434_STENCILWRITEMASK_BF(dsa->writemask[1]) |
+			S_028434_STENCILOPVAL_BF(1));
 }
 
-static void si_set_pipe_stencil_ref(struct pipe_context *ctx,
-				    const struct pipe_stencil_ref *state)
+static void si_set_stencil_ref(struct pipe_context *ctx,
+			       const struct pipe_stencil_ref *state)
 {
         struct si_context *sctx = (struct si_context *)ctx;
-        sctx->stencil_ref = *state;
-	si_update_dsa_stencil_ref(sctx);
+
+	if (memcmp(&sctx->stencil_ref.state, state, sizeof(*state)) == 0)
+		return;
+
+	sctx->stencil_ref.state = *state;
+	si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
 }
 
 
@@ -904,10 +898,10 @@ static void *si_create_dsa_state(struct pipe_context *ctx,
 		return NULL;
 	}
 
-	dsa->valuemask[0] = state->stencil[0].valuemask;
-	dsa->valuemask[1] = state->stencil[1].valuemask;
-	dsa->writemask[0] = state->stencil[0].writemask;
-	dsa->writemask[1] = state->stencil[1].writemask;
+	dsa->stencil_ref.valuemask[0] = state->stencil[0].valuemask;
+	dsa->stencil_ref.valuemask[1] = state->stencil[1].valuemask;
+	dsa->stencil_ref.writemask[0] = state->stencil[0].writemask;
+	dsa->stencil_ref.writemask[1] = state->stencil[1].writemask;
 
 	db_depth_control = S_028800_Z_ENABLE(state->depth.enabled) |
 		S_028800_Z_WRITE_ENABLE(state->depth.writemask) |
@@ -960,7 +954,12 @@ static void si_bind_dsa_state(struct pipe_context *ctx, void *state)
                 return;
 
 	si_pm4_bind_state(sctx, dsa, dsa);
-	si_update_dsa_stencil_ref(sctx);
+
+	if (memcmp(&dsa->stencil_ref, &sctx->stencil_ref.dsa_part,
+		   sizeof(struct si_dsa_stencil_ref_part)) != 0) {
+		sctx->stencil_ref.dsa_part = dsa->stencil_ref;
+		si_mark_atom_dirty(sctx, &sctx->stencil_ref.atom);
+	}
 }
 
 static void si_delete_dsa_state(struct pipe_context *ctx, void *state)
@@ -3069,6 +3068,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state, 2+6*4);
 	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
 	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);
+	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref, 4);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;
@@ -3091,7 +3091,7 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.set_clip_state = si_set_clip_state;
 	sctx->b.b.set_scissor_states = si_set_scissor_states;
 	sctx->b.b.set_viewport_states = si_set_viewport_states;
-	sctx->b.b.set_stencil_ref = si_set_pipe_stencil_ref;
+	sctx->b.b.set_stencil_ref = si_set_stencil_ref;
 
 	sctx->b.b.set_framebuffer_state = si_set_framebuffer_state;
 	sctx->b.b.get_sample_position = cayman_get_sample_position;

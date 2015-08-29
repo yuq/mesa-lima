@@ -177,7 +177,6 @@ struct si_context {
 	struct si_framebuffer		framebuffer;
 	struct si_vertex_element	*vertex_elements;
 	/* for saving when using blitter */
-	struct pipe_stencil_ref		stencil_ref;
 	/* shaders */
 	struct si_shader_selector	*ps_shader;
 	struct si_shader_selector	*gs_shader;
@@ -198,6 +197,7 @@ struct si_context {
 	unsigned			border_color_offset;
 
 	struct si_blend_color		blend_color;
+	struct si_stencil_ref		stencil_ref;
 	struct si_scissors		scissors;
 	struct si_viewports		viewports;
 	struct si_clip_state		clip_state;
