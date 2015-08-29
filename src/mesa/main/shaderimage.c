@@ -415,8 +415,8 @@ _mesa_init_image_units(struct gl_context *ctx)
       ctx->ImageUnits[i] = _mesa_default_image_unit(ctx);
 }
 
-static GLboolean
-validate_image_unit(struct gl_context *ctx, struct gl_image_unit *u)
+GLboolean
+_mesa_is_image_unit_valid(struct gl_context *ctx, struct gl_image_unit *u)
 {
    struct gl_texture_object *t = u->TexObj;
    mesa_format tex_format;
@@ -567,7 +567,7 @@ _mesa_BindImageTexture(GLuint unit, GLuint texture, GLint level,
    u->Access = access;
    u->Format = format;
    u->_ActualFormat = _mesa_get_shader_image_format(format);
-   u->_Valid = validate_image_unit(ctx, u);
+   u->_Valid = _mesa_is_image_unit_valid(ctx, u);
 
    if (u->TexObj && _mesa_tex_target_is_layered(u->TexObj->Target)) {
       u->Layered = layered;
@@ -703,7 +703,7 @@ _mesa_BindImageTextures(GLuint first, GLsizei count, const GLuint *textures)
          u->Access = GL_READ_WRITE;
          u->Format = tex_format;
          u->_ActualFormat = _mesa_get_shader_image_format(tex_format);
-         u->_Valid = validate_image_unit(ctx, u);
+         u->_Valid = _mesa_is_image_unit_valid(ctx, u);
       } else {
          /* Unbind the texture from the unit */
          _mesa_reference_texobj(&u->TexObj, NULL);
