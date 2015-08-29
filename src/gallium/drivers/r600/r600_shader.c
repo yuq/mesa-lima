@@ -1839,7 +1839,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->indirect_files = ctx.info.indirect_files;
 	indirect_gprs = ctx.info.indirect_files & ~(1 << TGSI_FILE_CONSTANT);
 	tgsi_parse_init(&ctx.parse, tokens);
-	ctx.type = ctx.parse.FullHeader.Processor.Processor;
+	ctx.type = ctx.info.processor;
 	shader->processor_type = ctx.type;
 	ctx.bc->type = shader->processor_type;
 
