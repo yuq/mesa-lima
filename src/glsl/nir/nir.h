@@ -1617,6 +1617,17 @@ nir_after_instr(nir_instr *instr)
 }
 
 static inline nir_cursor
+nir_after_block_before_jump(nir_block *block)
+{
+   nir_instr *last_instr = nir_block_last_instr(block);
+   if (last_instr && last_instr->type == nir_instr_type_jump) {
+      return nir_before_instr(last_instr);
+   } else {
+      return nir_after_block(block);
+   }
+}
+
+static inline nir_cursor
 nir_before_cf_node(nir_cf_node *node)
 {
    if (node->type == nir_cf_node_block)
