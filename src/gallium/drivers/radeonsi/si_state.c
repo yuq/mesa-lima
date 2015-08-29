@@ -3180,6 +3180,7 @@ static void si_init_config(struct si_context *sctx)
 	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
 	unsigned raster_config, raster_config_1;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
+	int i;
 
 	if (pm4 == NULL)
 		return;
@@ -3209,6 +3210,11 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
 
 	si_pm4_set_reg(pm4, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
+
+	for (i = 0; i < 16; i++) {
+		si_pm4_set_reg(pm4, R_0282D0_PA_SC_VPORT_ZMIN_0 + i*8, 0);
+		si_pm4_set_reg(pm4, R_0282D4_PA_SC_VPORT_ZMAX_0 + i*8, fui(1.0));
+	}
 
 	switch (sctx->screen->b.family) {
 	case CHIP_TAHITI:
@@ -3296,8 +3302,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028230_PA_SC_EDGERULE, 0xAAAAAAAA);
 	/* PA_SU_HARDWARE_SCREEN_OFFSET must be 0 due to hw bug on SI */
 	si_pm4_set_reg(pm4, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
-	si_pm4_set_reg(pm4, R_0282D0_PA_SC_VPORT_ZMIN_0, 0);
-	si_pm4_set_reg(pm4, R_0282D4_PA_SC_VPORT_ZMAX_0, fui(1.0));
 	si_pm4_set_reg(pm4, R_028820_PA_CL_NANINF_CNTL, 0);
 	si_pm4_set_reg(pm4, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, fui(1.0));
 	si_pm4_set_reg(pm4, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
