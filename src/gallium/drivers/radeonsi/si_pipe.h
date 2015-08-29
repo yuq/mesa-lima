@@ -234,6 +234,7 @@ struct si_context {
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
 	int			current_rast_prim; /* primitive type after TES, GS */
+	unsigned		last_gsvs_itemsize;
 
 	/* Scratch buffer */
 	boolean                 emit_scratch_reloc;
