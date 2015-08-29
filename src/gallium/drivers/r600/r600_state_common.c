@@ -34,6 +34,7 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
 #include "tgsi/tgsi_parse.h"
+#include "tgsi/tgsi_scan.h"
 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw)
 {
@@ -818,6 +819,19 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	sel->so = state->stream_output;
+	tgsi_scan_shader(state->tokens, &sel->info);
+
+	switch (pipe_shader_type) {
+	case PIPE_SHADER_GEOMETRY:
+		sel->gs_output_prim =
+			sel->info.properties[TGSI_PROPERTY_GS_OUTPUT_PRIM];
+		sel->gs_max_out_vertices =
+			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
+		sel->gs_num_invocations =
+			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
+		break;
+	}
+
 	return sel;
 }
 

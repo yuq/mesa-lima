@@ -36,6 +36,8 @@
 #include "util/list.h"
 #include "util/u_transfer.h"
 
+#include "tgsi/tgsi_scan.h"
+
 #define R600_NUM_ATOMS 75
 
 #define R600_MAX_VIEWPORTS 16
@@ -305,6 +307,7 @@ struct r600_pipe_shader_selector {
 
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
+	struct tgsi_shader_info		info;
 
 	unsigned	num_shaders;
 
