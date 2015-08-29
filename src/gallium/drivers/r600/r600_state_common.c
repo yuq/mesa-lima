@@ -1524,7 +1524,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		unsigned prim = info.mode;
 
 		if (rctx->gs_shader) {
-			prim = rctx->gs_shader->current->shader.gs_output_prim;
+			prim = rctx->gs_shader->gs_output_prim;
 		}
 		prim = r600_conv_prim_to_gs_out(prim); /* decrease the number of types to 3 */
 

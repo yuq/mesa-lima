@@ -311,6 +311,11 @@ struct r600_pipe_shader_selector {
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
 
+	/* geometry shader properties */
+	unsigned	gs_output_prim;
+	unsigned	gs_max_out_vertices;
+	unsigned	gs_num_invocations;
+
 	unsigned	nr_ps_max_color_exports;
 };
 

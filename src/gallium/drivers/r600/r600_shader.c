@@ -2010,13 +2010,13 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				/* we don't need this one */
 				break;
 			case TGSI_PROPERTY_GS_OUTPUT_PRIM:
-				shader->gs_output_prim = property->u[0].Data;
+				pipeshader->selector->gs_output_prim = property->u[0].Data;
 				break;
 			case TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES:
-				shader->gs_max_out_vertices = property->u[0].Data;
+				pipeshader->selector->gs_max_out_vertices = property->u[0].Data;
 				break;
 			case TGSI_PROPERTY_GS_INVOCATIONS:
-				shader->gs_num_invocations = property->u[0].Data;
+				pipeshader->selector->gs_num_invocations = property->u[0].Data;
 				break;
 			}
 			break;
