@@ -118,8 +118,6 @@ struct brw_gs_prog_key
 {
    unsigned program_string_id;
 
-   uint64_t input_varyings;
-
    struct brw_sampler_prog_key_data tex;
 };
 

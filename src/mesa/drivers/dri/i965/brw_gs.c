@@ -243,8 +243,21 @@ brw_codegen_gs_prog(struct brw_context *brw,
    c.prog_data.output_topology =
       get_hw_prim_for_gl_prim(gp->program.OutputType);
 
+   /* The GLSL linker will have already matched up GS inputs and the outputs
+    * of prior stages.  The driver does extend VS outputs in some cases, but
+    * only for legacy OpenGL or Gen4-5 hardware, neither of which offer
+    * geometry shader support.  So we can safely ignore that.
+    *
+    * For SSO pipelines, we use a fixed VUE map layout based on variable
+    * locations, so we can rely on rendezvous-by-location making this work.
+    *
+    * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
+    * written by previous stages and shows up via payload magic.
+    */
+   GLbitfield64 inputs_read =
+      gp->program.Base.InputsRead & ~VARYING_BIT_PRIMITIVE_ID;
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &c.input_vue_map, c.key.input_varyings,
+                       &c.input_vue_map, inputs_read,
                        prog->SeparateShader);
 
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
@@ -305,9 +318,6 @@ brw_gs_populate_key(struct brw_context *brw,
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
                                       &key->tex);
-
-   /* BRW_NEW_VUE_MAP_VS */
-   key->input_varyings = brw->vue_map_vs.slots_valid;
 }
 
 void
@@ -385,11 +395,6 @@ brw_gs_precompile(struct gl_context *ctx,
 
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
    key.program_string_id = bgp->id;
-
-   /* Assume that the set of varyings coming in from the vertex shader exactly
-    * matches what the geometry shader requires.
-    */
-   key.input_varyings = gp->Base.InputsRead;
 
    success = brw_codegen_gs_prog(brw, shader_prog, bgp, &key);
 
