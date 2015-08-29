@@ -136,6 +136,11 @@ struct si_clip_state {
 	struct pipe_clip_state		state;
 };
 
+struct si_sample_mask {
+	struct r600_atom	atom;
+	uint16_t		sample_mask;
+};
+
 struct si_scissors {
 	struct r600_atom		atom;
 	unsigned			dirty_mask;
@@ -191,6 +196,7 @@ struct si_context {
 	struct si_viewports		viewports;
 	struct si_clip_state		clip_state;
 	struct r600_atom		clip_regs;
+	struct si_sample_mask		sample_mask;
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;

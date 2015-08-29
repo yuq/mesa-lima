@@ -2819,18 +2819,22 @@ static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
 static void si_set_sample_mask(struct pipe_context *ctx, unsigned sample_mask)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_state_sample_mask *state = CALLOC_STRUCT(si_state_sample_mask);
-	struct si_pm4_state *pm4 = &state->pm4;
-	uint16_t mask = sample_mask;
 
-        if (state == NULL)
-                return;
+	if (sctx->sample_mask.sample_mask == (uint16_t)sample_mask)
+		return;
 
-	state->sample_mask = mask;
-	si_pm4_set_reg(pm4, R_028C38_PA_SC_AA_MASK_X0Y0_X1Y0, mask | (mask << 16));
-	si_pm4_set_reg(pm4, R_028C3C_PA_SC_AA_MASK_X0Y1_X1Y1, mask | (mask << 16));
+	sctx->sample_mask.sample_mask = sample_mask;
+	si_mark_atom_dirty(sctx, &sctx->sample_mask.atom);
+}
 
-	si_pm4_set_state(sctx, sample_mask, state);
+static void si_emit_sample_mask(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	unsigned mask = sctx->sample_mask.sample_mask;
+
+	r600_write_context_reg_seq(cs, R_028C38_PA_SC_AA_MASK_X0Y0_X1Y0, 2);
+	radeon_emit(cs, mask | (mask << 16));
+	radeon_emit(cs, mask | (mask << 16));
 }
 
 static void si_delete_sampler_state(struct pipe_context *ctx, void *state)
@@ -3056,6 +3060,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs, 18);
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
 	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config, 10);
+	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask, 4);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state, 2+6*4);
 	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);

@@ -151,6 +151,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		goto fail;
 	sctx->blitter->draw_rectangle = r600_draw_rectangle;
 
+	sctx->sample_mask.sample_mask = 0xffff;
+
 	/* these must be last */
 	si_begin_new_cs(sctx);
 	r600_query_init_backend_mask(&sctx->b); /* this emits commands and must be last */
