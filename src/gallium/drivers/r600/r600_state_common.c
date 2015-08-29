@@ -85,10 +85,10 @@ void r600_emit_alphatest_state(struct r600_context *rctx, struct r600_atom *atom
 		alpha_ref &= ~0x1FFF;
 	}
 
-	r600_write_context_reg(cs, R_028410_SX_ALPHA_TEST_CONTROL,
+	radeon_set_context_reg(cs, R_028410_SX_ALPHA_TEST_CONTROL,
 			       a->sx_alpha_test_control |
 			       S_028410_ALPHA_TEST_BYPASS(a->bypass));
-	r600_write_context_reg(cs, R_028438_SX_ALPHA_REF, alpha_ref);
+	radeon_set_context_reg(cs, R_028438_SX_ALPHA_REF, alpha_ref);
 }
 
 static void r600_texture_barrier(struct pipe_context *ctx)
@@ -215,7 +215,7 @@ void r600_emit_blend_color(struct r600_context *rctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct pipe_blend_color *state = &rctx->blend_color.state;
 
-	r600_write_context_reg_seq(cs, R_028414_CB_BLEND_RED, 4);
+	radeon_set_context_reg_seq(cs, R_028414_CB_BLEND_RED, 4);
 	radeon_emit(cs, fui(state->color[0])); /* R_028414_CB_BLEND_RED */
 	radeon_emit(cs, fui(state->color[1])); /* R_028418_CB_BLEND_GREEN */
 	radeon_emit(cs, fui(state->color[2])); /* R_02841C_CB_BLEND_BLUE */
@@ -227,13 +227,13 @@ void r600_emit_vgt_state(struct r600_context *rctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct r600_vgt_state *a = (struct r600_vgt_state *)atom;
 
-	r600_write_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, a->vgt_multi_prim_ib_reset_en);
-	r600_write_context_reg_seq(cs, R_028408_VGT_INDX_OFFSET, 2);
+	radeon_set_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, a->vgt_multi_prim_ib_reset_en);
+	radeon_set_context_reg_seq(cs, R_028408_VGT_INDX_OFFSET, 2);
 	radeon_emit(cs, a->vgt_indx_offset); /* R_028408_VGT_INDX_OFFSET */
 	radeon_emit(cs, a->vgt_multi_prim_ib_reset_indx); /* R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX */
 	if (a->last_draw_was_indirect) {
 		a->last_draw_was_indirect = false;
-		r600_write_ctl_const(cs, R_03CFF0_SQ_VTX_BASE_VTX_LOC, 0);
+		radeon_set_ctl_const(cs, R_03CFF0_SQ_VTX_BASE_VTX_LOC, 0);
 	}
 }
 
@@ -268,7 +268,7 @@ void r600_emit_stencil_ref(struct r600_context *rctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct r600_stencil_ref_state *a = (struct r600_stencil_ref_state*)atom;
 
-	r600_write_context_reg_seq(cs, R_028430_DB_STENCILREFMASK, 2);
+	radeon_set_context_reg_seq(cs, R_028430_DB_STENCILREFMASK, 2);
 	radeon_emit(cs, /* R_028430_DB_STENCILREFMASK */
 			 S_028430_STENCILREF(a->state.ref_value[0]) |
 			 S_028430_STENCILMASK(a->state.valuemask[0]) |
@@ -718,7 +718,7 @@ void r600_emit_viewport_state(struct r600_context *rctx, struct r600_atom *atom)
 	struct pipe_viewport_state *state = &rstate->state;
 	int offset = rstate->idx * 6 * 4;
 
-	r600_write_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, 6);
+	radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, 6);
 	radeon_emit(cs, fui(state->scale[0]));     /* R_02843C_PA_CL_VPORT_XSCALE_0  */
 	radeon_emit(cs, fui(state->translate[0])); /* R_028440_PA_CL_VPORT_XOFFSET_0 */
 	radeon_emit(cs, fui(state->scale[1]));     /* R_028444_PA_CL_VPORT_YSCALE_0  */
@@ -1401,11 +1401,11 @@ void r600_emit_clip_misc_state(struct r600_context *rctx, struct r600_atom *atom
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct r600_clip_misc_state *state = &rctx->clip_misc_state;
 
-	r600_write_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
+	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
 			       state->pa_cl_clip_cntl |
 			       (state->clip_dist_write ? 0 : state->clip_plane_enable & 0x3F) |
                                S_028810_CLIP_DISABLE(state->clip_disable));
-	r600_write_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
+	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
 			       state->pa_cl_vs_out_cntl |
 			       (state->clip_plane_enable & state->clip_dist_write));
 }
@@ -1550,7 +1550,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		    rctx->b.streamout.prims_gen_query_enabled)
 			partial_vs_wave = true;
 
-		r600_write_context_reg(cs, CM_R_028AA8_IA_MULTI_VGT_PARAM,
+		radeon_set_context_reg(cs, CM_R_028AA8_IA_MULTI_VGT_PARAM,
 				       S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 				       S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 				       S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1));
@@ -1572,12 +1572,12 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		    info.mode == R600_PRIM_RECTANGLE_LIST) {
 			su_sc_mode_cntl &= C_028814_CULL_FRONT;
 		}
-		r600_write_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL, su_sc_mode_cntl);
+		radeon_set_context_reg(cs, R_028814_PA_SU_SC_MODE_CNTL, su_sc_mode_cntl);
 	}
 
 	/* Update start instance. */
 	if (!info.indirect && rctx->last_start_instance != info.start_instance) {
-		r600_write_ctl_const(cs, R_03CFF4_SQ_VTX_START_INST_LOC, info.start_instance);
+		radeon_set_ctl_const(cs, R_03CFF4_SQ_VTX_START_INST_LOC, info.start_instance);
 		rctx->last_start_instance = info.start_instance;
 	}
 
@@ -1591,10 +1591,10 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			 info.mode == PIPE_PRIM_LINE_LOOP)
 			ls_mask = 2;
 
-		r600_write_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
+		radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
 				       S_028A0C_AUTO_RESET_CNTL(ls_mask) |
 				       (rctx->rasterizer ? rctx->rasterizer->pa_sc_line_stipple : 0));
-		r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE,
+		radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE,
 				      r600_conv_pipe_prim(info.mode));
 
 		rctx->last_primitive_type = info.mode;
@@ -1678,7 +1678,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			struct r600_so_target *t = (struct r600_so_target*)info.count_from_stream_output;
 			uint64_t va = t->buf_filled_size->gpu_address + t->buf_filled_size_offset;
 
-			r600_write_context_reg(cs, R_028B30_VGT_STRMOUT_DRAW_OPAQUE_VERTEX_STRIDE, t->stride_in_dw);
+			radeon_set_context_reg(cs, R_028B30_VGT_STRMOUT_DRAW_OPAQUE_VERTEX_STRIDE, t->stride_in_dw);
 
 			cs->buf[cs->cdw++] = PKT3(PKT3_COPY_DW, 4, 0);
 			cs->buf[cs->cdw++] = COPY_DW_SRC_IS_MEM | COPY_DW_DST_IS_REG;

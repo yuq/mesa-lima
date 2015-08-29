@@ -235,7 +235,7 @@ void r600_flush_emit(struct r600_context *rctx)
 		/* Use of WAIT_UNTIL is deprecated on Cayman+ */
 		if (rctx->b.family < CHIP_CAYMAN) {
 			/* wait for things to settle */
-			r600_write_config_reg(cs, R_008040_WAIT_UNTIL, wait_until);
+			radeon_set_config_reg(cs, R_008040_WAIT_UNTIL, wait_until);
 		}
 	}
 
@@ -269,7 +269,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 
 	/* old kernels and userspace don't set SX_MISC, so we must reset it to 0 here */
 	if (ctx->b.chip_class == R600) {
-		r600_write_context_reg(cs, R_028350_SX_MISC, 0);
+		radeon_set_context_reg(cs, R_028350_SX_MISC, 0);
 	}
 
 	/* force to keep tiling flags */

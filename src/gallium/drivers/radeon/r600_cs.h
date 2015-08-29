@@ -74,7 +74,7 @@ static inline void r600_emit_reloc(struct r600_common_context *rctx,
 	}
 }
 
-static inline void r600_write_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_config_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg < R600_CONTEXT_REG_OFFSET);
 	assert(cs->cdw+2+num <= cs->max_dw);
@@ -82,13 +82,13 @@ static inline void r600_write_config_reg_seq(struct radeon_winsys_cs *cs, unsign
 	radeon_emit(cs, (reg - R600_CONFIG_REG_OFFSET) >> 2);
 }
 
-static inline void r600_write_config_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_config_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	r600_write_config_reg_seq(cs, reg, 1);
+	radeon_set_config_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static inline void r600_write_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CONTEXT_REG_OFFSET);
 	assert(cs->cdw+2+num <= cs->max_dw);
@@ -96,13 +96,13 @@ static inline void r600_write_context_reg_seq(struct radeon_winsys_cs *cs, unsig
 	radeon_emit(cs, (reg - R600_CONTEXT_REG_OFFSET) >> 2);
 }
 
-static inline void r600_write_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	r600_write_context_reg_seq(cs, reg, 1);
+	radeon_set_context_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static inline void si_write_sh_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_sh_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= SI_SH_REG_OFFSET && reg < SI_SH_REG_END);
 	assert(cs->cdw+2+num <= cs->max_dw);
@@ -110,13 +110,13 @@ static inline void si_write_sh_reg_seq(struct radeon_winsys_cs *cs, unsigned reg
 	radeon_emit(cs, (reg - SI_SH_REG_OFFSET) >> 2);
 }
 
-static inline void si_write_sh_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_sh_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	si_write_sh_reg_seq(cs, reg, 1);
+	radeon_set_sh_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static inline void cik_write_uconfig_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_uconfig_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= CIK_UCONFIG_REG_OFFSET && reg < CIK_UCONFIG_REG_END);
 	assert(cs->cdw+2+num <= cs->max_dw);
@@ -124,9 +124,9 @@ static inline void cik_write_uconfig_reg_seq(struct radeon_winsys_cs *cs, unsign
 	radeon_emit(cs, (reg - CIK_UCONFIG_REG_OFFSET) >> 2);
 }
 
-static inline void cik_write_uconfig_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_uconfig_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	cik_write_uconfig_reg_seq(cs, reg, 1);
+	radeon_set_uconfig_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 

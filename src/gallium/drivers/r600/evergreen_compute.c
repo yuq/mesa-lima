@@ -379,17 +379,17 @@ static void evergreen_emit_direct_dispatch(
 				"allocating %u dwords lds.\n",
 				num_pipes, num_waves, lds_size);
 
-	r600_write_config_reg(cs, R_008970_VGT_NUM_INDICES, group_size);
+	radeon_set_config_reg(cs, R_008970_VGT_NUM_INDICES, group_size);
 
-	r600_write_config_reg_seq(cs, R_00899C_VGT_COMPUTE_START_X, 3);
+	radeon_set_config_reg_seq(cs, R_00899C_VGT_COMPUTE_START_X, 3);
 	radeon_emit(cs, 0); /* R_00899C_VGT_COMPUTE_START_X */
 	radeon_emit(cs, 0); /* R_0089A0_VGT_COMPUTE_START_Y */
 	radeon_emit(cs, 0); /* R_0089A4_VGT_COMPUTE_START_Z */
 
-	r600_write_config_reg(cs, R_0089AC_VGT_COMPUTE_THREAD_GROUP_SIZE,
+	radeon_set_config_reg(cs, R_0089AC_VGT_COMPUTE_THREAD_GROUP_SIZE,
 								group_size);
 
-	r600_write_compute_context_reg_seq(cs, R_0286EC_SPI_COMPUTE_NUM_THREAD_X, 3);
+	radeon_compute_set_context_reg_seq(cs, R_0286EC_SPI_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cs, block_layout[0]); /* R_0286EC_SPI_COMPUTE_NUM_THREAD_X */
 	radeon_emit(cs, block_layout[1]); /* R_0286F0_SPI_COMPUTE_NUM_THREAD_Y */
 	radeon_emit(cs, block_layout[2]); /* R_0286F4_SPI_COMPUTE_NUM_THREAD_Z */
@@ -402,7 +402,7 @@ static void evergreen_emit_direct_dispatch(
 		assert(lds_size <= 8160);
 	}
 
-	r600_write_compute_context_reg(cs, CM_R_0288E8_SQ_LDS_ALLOC,
+	radeon_compute_set_context_reg(cs, CM_R_0288E8_SQ_LDS_ALLOC,
 					lds_size | (num_waves << 14));
 
 	/* Dispatch packet */
@@ -444,7 +444,7 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 						       RADEON_USAGE_READWRITE,
 						       RADEON_PRIO_SHADER_RESOURCE_RW);
 
-		r600_write_compute_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C, 7);
+		radeon_compute_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C, 7);
 		radeon_emit(cs, cb->cb_color_base);	/* R_028C60_CB_COLOR0_BASE */
 		radeon_emit(cs, cb->cb_color_pitch);	/* R_028C64_CB_COLOR0_PITCH */
 		radeon_emit(cs, cb->cb_color_slice);	/* R_028C68_CB_COLOR0_SLICE */
@@ -466,17 +466,17 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 	}
 	if (ctx->keep_tiling_flags) {
 		for (; i < 8 ; i++) {
-			r600_write_compute_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
+			radeon_compute_set_context_reg(cs, R_028C70_CB_COLOR0_INFO + i * 0x3C,
 						       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
 		}
 		for (; i < 12; i++) {
-			r600_write_compute_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C,
+			radeon_compute_set_context_reg(cs, R_028E50_CB_COLOR8_INFO + (i - 8) * 0x1C,
 						       S_028C70_FORMAT(V_028C70_COLOR_INVALID));
 		}
 	}
 
 	/* Set CB_TARGET_MASK  XXX: Use cb_misc_state */
-	r600_write_compute_context_reg(cs, R_028238_CB_TARGET_MASK,
+	radeon_compute_set_context_reg(cs, R_028238_CB_TARGET_MASK,
 					ctx->compute_cb_target_mask);
 
 
@@ -556,7 +556,7 @@ void evergreen_emit_cs_shader(
 	nstack = shader->bc.nstack;
 #endif
 
-	r600_write_compute_context_reg_seq(cs, R_0288D0_SQ_PGM_START_LS, 3);
+	radeon_compute_set_context_reg_seq(cs, R_0288D0_SQ_PGM_START_LS, 3);
 	radeon_emit(cs, va >> 8); /* R_0288D0_SQ_PGM_START_LS */
 	radeon_emit(cs,           /* R_0288D4_SQ_PGM_RESOURCES_LS */
 			S_0288D4_NUM_GPRS(ngpr)

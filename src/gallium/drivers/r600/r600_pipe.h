@@ -880,14 +880,14 @@ static inline void eg_store_loop_const(struct r600_command_buffer *cb, unsigned 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw);
 void r600_release_command_buffer(struct r600_command_buffer *cb);
 
-static inline void r600_write_compute_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_compute_set_context_reg_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
-	r600_write_context_reg_seq(cs, reg, num);
+	radeon_set_context_reg_seq(cs, reg, num);
 	/* Set the compute bit on the packet header */
 	cs->buf[cs->cdw - 2] |= RADEON_CP_PACKET3_COMPUTE_MODE;
 }
 
-static inline void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
+static inline void radeon_set_ctl_const_seq(struct radeon_winsys_cs *cs, unsigned reg, unsigned num)
 {
 	assert(reg >= R600_CTL_CONST_OFFSET);
 	assert(cs->cdw+2+num <= cs->max_dw);
@@ -895,24 +895,24 @@ static inline void r600_write_ctl_const_seq(struct radeon_winsys_cs *cs, unsigne
 	cs->buf[cs->cdw++] = (reg - R600_CTL_CONST_OFFSET) >> 2;
 }
 
-static inline void r600_write_compute_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_compute_set_context_reg(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	r600_write_compute_context_reg_seq(cs, reg, 1);
+	radeon_compute_set_context_reg_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 
-static inline void r600_write_context_reg_flag(struct radeon_winsys_cs *cs, unsigned reg, unsigned value, unsigned flag)
+static inline void radeon_set_context_reg_flag(struct radeon_winsys_cs *cs, unsigned reg, unsigned value, unsigned flag)
 {
 	if (flag & RADEON_CP_PACKET3_COMPUTE_MODE) {
-		r600_write_compute_context_reg(cs, reg, value);
+		radeon_compute_set_context_reg(cs, reg, value);
 	} else {
-		r600_write_context_reg(cs, reg, value);
+		radeon_set_context_reg(cs, reg, value);
 	}
 }
 
-static inline void r600_write_ctl_const(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
+static inline void radeon_set_ctl_const(struct radeon_winsys_cs *cs, unsigned reg, unsigned value)
 {
-	r600_write_ctl_const_seq(cs, reg, 1);
+	radeon_set_ctl_const_seq(cs, reg, 1);
 	radeon_emit(cs, value);
 }
 

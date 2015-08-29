@@ -176,8 +176,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	/* Due to a hw bug, RSRC2_LS must be written twice with another
 	 * LS register written in between. */
 	if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
-		si_write_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
-	si_write_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
+		radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
+	radeon_set_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
 	radeon_emit(cs, ls->current->ls_rsrc1);
 	radeon_emit(cs, ls_rsrc2);
 
@@ -199,19 +199,19 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 			  ((perpatch_output_offset / 16) << 16);
 
 	/* Set them for LS. */
-	si_write_sh_reg(cs,
+	radeon_set_sh_reg(cs,
 		R_00B530_SPI_SHADER_USER_DATA_LS_0 + SI_SGPR_LS_OUT_LAYOUT * 4,
 		tcs_in_layout);
 
 	/* Set them for TCS. */
-	si_write_sh_reg_seq(cs,
+	radeon_set_sh_reg_seq(cs,
 		R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OUT_OFFSETS * 4, 3);
 	radeon_emit(cs, tcs_out_offsets);
 	radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
 	radeon_emit(cs, tcs_in_layout);
 
 	/* Set them for TES. */
-	si_write_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OUT_OFFSETS * 4, 2);
+	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OUT_OFFSETS * 4, 2);
 	radeon_emit(cs, tcs_out_offsets);
 	radeon_emit(cs, tcs_out_layout | (num_tcs_output_cp << 26));
 }
@@ -347,7 +347,7 @@ static void si_emit_scratch_reloc(struct si_context *sctx)
 	if (!sctx->emit_scratch_reloc)
 		return;
 
-	r600_write_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
+	radeon_set_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
 			       sctx->spi_tmpring_size);
 
 	if (sctx->scratch_buffer) {
@@ -378,7 +378,7 @@ static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 	    rs->pa_sc_line_stipple == sctx->last_sc_line_stipple)
 		return;
 
-	r600_write_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
+	radeon_set_context_reg(cs, R_028A0C_PA_SC_LINE_STIPPLE,
 		rs->pa_sc_line_stipple |
 		S_028A0C_AUTO_RESET_CNTL(rast_prim == PIPE_PRIM_LINES ? 1 :
 					 rast_prim == PIPE_PRIM_LINE_STRIP ? 2 : 0));
@@ -411,9 +411,9 @@ static void si_emit_draw_registers(struct si_context *sctx,
 			radeon_emit(cs, ia_multi_vgt_param); /* IA_MULTI_VGT_PARAM */
 			radeon_emit(cs, ls_hs_config); /* VGT_LS_HS_CONFIG */
 		} else {
-			r600_write_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
-			r600_write_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
-			r600_write_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
+			radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
+			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
+			radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
 		}
 		sctx->last_prim = prim;
 		sctx->last_multi_vgt_param = ia_multi_vgt_param;
@@ -421,19 +421,19 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	}
 
 	if (gs_out_prim != sctx->last_gs_out_prim) {
-		r600_write_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
+		radeon_set_context_reg(cs, R_028A6C_VGT_GS_OUT_PRIM_TYPE, gs_out_prim);
 		sctx->last_gs_out_prim = gs_out_prim;
 	}
 
 	/* Primitive restart. */
 	if (info->primitive_restart != sctx->last_primitive_restart_en) {
-		r600_write_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
+		radeon_set_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
 		sctx->last_primitive_restart_en = info->primitive_restart;
 
 		if (info->primitive_restart &&
 		    (info->restart_index != sctx->last_restart_index ||
 		     sctx->last_restart_index == SI_RESTART_INDEX_UNKNOWN)) {
-			r600_write_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
+			radeon_set_context_reg(cs, R_02840C_VGT_MULTI_PRIM_IB_RESET_INDX,
 					       info->restart_index);
 			sctx->last_restart_index = info->restart_index;
 		}
@@ -453,7 +453,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		uint64_t va = t->buf_filled_size->gpu_address +
 			      t->buf_filled_size_offset;
 
-		r600_write_context_reg(cs, R_028B30_VGT_STRMOUT_DRAW_OPAQUE_VERTEX_STRIDE,
+		radeon_set_context_reg(cs, R_028B30_VGT_STRMOUT_DRAW_OPAQUE_VERTEX_STRIDE,
 				       t->stride_in_dw);
 
 		radeon_emit(cs, PKT3(PKT3_COPY_DATA, 4, 0));
@@ -508,7 +508,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		    sctx->last_base_vertex == SI_BASE_VERTEX_UNKNOWN ||
 		    info->start_instance != sctx->last_start_instance ||
 		    sh_base_reg != sctx->last_sh_base_reg) {
-			si_write_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 2);
+			radeon_set_sh_reg_seq(cs, sh_base_reg + SI_SGPR_BASE_VERTEX * 4, 2);
 			radeon_emit(cs, base_vertex);
 			radeon_emit(cs, info->start_instance);
 
