@@ -940,9 +940,10 @@ anv_compile_shader_glsl(struct anv_compiler *compiler,
 }
 
 static void
-setup_nir_io(struct gl_program *prog,
+setup_nir_io(struct gl_shader *mesa_shader,
              nir_shader *shader)
 {
+   struct gl_program *prog = mesa_shader->Program;
    foreach_list_typed(nir_variable, var, node, &shader->inputs) {
       prog->InputsRead |= BITFIELD64_BIT(var->data.location);
    }
@@ -950,6 +951,8 @@ setup_nir_io(struct gl_program *prog,
    foreach_list_typed(nir_variable, var, node, &shader->outputs) {
       prog->OutputsWritten |= BITFIELD64_BIT(var->data.location);
    }
+
+   mesa_shader->num_uniform_components = shader->num_uniforms;
 }
 
 static void
@@ -1008,7 +1011,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
                    compiler->screen->devinfo,
                    NULL, mesa_shader->Stage, is_scalar);
 
-   setup_nir_io(mesa_shader->Program, mesa_shader->Program->nir);
+   setup_nir_io(mesa_shader, mesa_shader->Program->nir);
 
    fail_if(mesa_shader->Program->nir == NULL,
            "failed to translate SPIR-V to NIR\n");
