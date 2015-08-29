@@ -594,7 +594,6 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_GS_CONSTBUF),
    DEFINE_BIT(BRW_NEW_PROGRAM_CACHE),
    DEFINE_BIT(BRW_NEW_STATE_BASE_ADDRESS),
-   DEFINE_BIT(BRW_NEW_VUE_MAP_VS),
    DEFINE_BIT(BRW_NEW_VUE_MAP_GEOM_OUT),
    DEFINE_BIT(BRW_NEW_TRANSFORM_FEEDBACK),
    DEFINE_BIT(BRW_NEW_RASTERIZER_DISCARD),
@@ -648,6 +647,21 @@ brw_upload_programs(struct brw_context *brw,
          brw_upload_ff_gs_prog(brw);
       else
          brw_upload_gs_prog(brw);
+
+      /* Update the VUE map for data exiting the GS stage of the pipeline.
+       * This comes from the last enabled shader stage.
+       */
+      GLbitfield64 old_slots = brw->vue_map_geom_out.slots_valid;
+      bool old_separate = brw->vue_map_geom_out.separate;
+      if (brw->geometry_program)
+         brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
+      else
+         brw->vue_map_geom_out = brw->vs.prog_data->base.vue_map;
+
+      /* If the layout has changed, signal BRW_NEW_VUE_MAP_GEOM_OUT. */
+      if (old_slots != brw->vue_map_geom_out.slots_valid ||
+          old_separate != brw->vue_map_geom_out.separate)
+         brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_GEOM_OUT;
 
       brw_upload_wm_prog(brw);
    } else if (pipeline == BRW_COMPUTE_PIPELINE) {
