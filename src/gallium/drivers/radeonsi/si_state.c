@@ -452,17 +452,20 @@ static void si_set_blend_color(struct pipe_context *ctx,
 			       const struct pipe_blend_color *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 
-        if (pm4 == NULL)
-                return;
+	if (memcmp(&sctx->blend_color.state, state, sizeof(*state)) == 0)
+		return;
 
-	si_pm4_set_reg(pm4, R_028414_CB_BLEND_RED, fui(state->color[0]));
-	si_pm4_set_reg(pm4, R_028418_CB_BLEND_GREEN, fui(state->color[1]));
-	si_pm4_set_reg(pm4, R_02841C_CB_BLEND_BLUE, fui(state->color[2]));
-	si_pm4_set_reg(pm4, R_028420_CB_BLEND_ALPHA, fui(state->color[3]));
+	sctx->blend_color.state = *state;
+	si_mark_atom_dirty(sctx, &sctx->blend_color.atom);
+}
 
-	si_pm4_set_state(sctx, blend_color, pm4);
+static void si_emit_blend_color(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+
+	r600_write_context_reg_seq(cs, R_028414_CB_BLEND_RED, 4);
+	radeon_emit_array(cs, (uint32_t*)sctx->blend_color.state.color, 4);
 }
 
 /*
@@ -3061,6 +3064,7 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
 	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config, 10);
 	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask, 4);
+	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color, 6);
 	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
 	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state, 2+6*4);
 	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);

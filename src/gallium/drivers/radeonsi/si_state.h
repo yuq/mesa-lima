@@ -78,7 +78,6 @@ struct si_vertex_element
 union si_state {
 	struct {
 		struct si_state_blend		*blend;
-		struct si_pm4_state		*blend_color;
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*fb_rs;
@@ -108,6 +107,7 @@ union si_state_atoms {
 		struct r600_atom *db_render_state;
 		struct r600_atom *msaa_config;
 		struct r600_atom *sample_mask;
+		struct r600_atom *blend_color;
 		struct r600_atom *clip_regs;
 		struct r600_atom *clip_state;
 		struct r600_atom *shader_userdata;

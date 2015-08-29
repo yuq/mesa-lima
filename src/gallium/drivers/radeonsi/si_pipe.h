@@ -93,6 +93,11 @@ struct si_screen {
 	struct r600_common_screen	b;
 };
 
+struct si_blend_color {
+	struct r600_atom		atom;
+	struct pipe_blend_color		state;
+};
+
 struct si_sampler_view {
 	struct pipe_sampler_view	base;
 	struct list_head		list;
@@ -192,6 +197,7 @@ struct si_context {
 	struct r600_resource		*border_color_table;
 	unsigned			border_color_offset;
 
+	struct si_blend_color		blend_color;
 	struct si_scissors		scissors;
 	struct si_viewports		viewports;
 	struct si_clip_state		clip_state;
