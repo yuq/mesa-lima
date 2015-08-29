@@ -2973,6 +2973,11 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
                               vtn_handle_phi_second_pass);
    }
 
+   /* Because we can still have output reads in NIR, we need to lower
+    * outputs to temporaries before we are truely finished.
+    */
+   nir_lower_outputs_to_temporaries(shader);
+
    ralloc_free(b);
 
    return shader;
