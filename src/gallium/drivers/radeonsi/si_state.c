@@ -29,6 +29,7 @@
 #include "sid.h"
 #include "radeon/r600_cs.h"
 
+#include "util/u_dual_blend.h"
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_memory.h"
@@ -233,8 +234,10 @@ static unsigned si_pack_float_12p4(float x)
  * - The COLOR1 format isn't INVALID because of possible dual-source blending,
  *   so COLOR1 is enabled pretty much all the time.
  * So CB_TARGET_MASK is the only register that can disable COLOR1.
+ *
+ * Another reason is to avoid a hang with dual source blending.
  */
-static void si_update_fb_blend_state(struct si_context *sctx)
+void si_update_fb_blend_state(struct si_context *sctx)
 {
 	struct si_pm4_state *pm4;
 	struct si_state_blend *blend = sctx->queued.named.blend;
@@ -251,6 +254,16 @@ static void si_update_fb_blend_state(struct si_context *sctx)
 		if (sctx->framebuffer.state.cbufs[i])
 			mask |= 0xf << (4*i);
 	mask &= blend->cb_target_mask;
+
+	/* Avoid a hang that happens when dual source blending is enabled
+	 * but there is not enough color outputs. This is undefined behavior,
+	 * so disable color writes completely.
+	 *
+	 * Reproducible with Unigine Heaven 4.0 and drirc missing.
+	 */
+	if (blend->dual_src_blend &&
+	    (sctx->ps_shader->ps_colors_written & 0x3) != 0x3)
+		mask = 0;
 
 	si_pm4_set_reg(pm4, R_028238_CB_TARGET_MASK, mask);
 	si_pm4_set_state(sctx, fb_blend, pm4);
@@ -343,6 +356,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		return NULL;
 
 	blend->alpha_to_one = state->alpha_to_one;
+	blend->dual_src_blend = util_blend_state_is_dual(state, 0);
 
 	if (state->logicop_enable) {
 		color_control |= S_028808_ROP3(state->logicop_func | (state->logicop_func << 4));
