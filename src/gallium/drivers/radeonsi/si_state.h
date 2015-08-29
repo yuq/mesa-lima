@@ -84,7 +84,6 @@ union si_state {
 	struct {
 		struct si_state_blend		*blend;
 		struct si_pm4_state		*blend_color;
-		struct si_pm4_state		*clip;
 		struct si_state_sample_mask	*sample_mask;
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
@@ -115,6 +114,7 @@ union si_state_atoms {
 		struct r600_atom *db_render_state;
 		struct r600_atom *msaa_config;
 		struct r600_atom *clip_regs;
+		struct r600_atom *clip_state;
 		struct r600_atom *shader_userdata;
 		struct r600_atom *scissors;
 		struct r600_atom *viewports;

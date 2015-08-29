@@ -189,6 +189,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);
 
 	si_mark_atom_dirty(ctx, &ctx->clip_regs);
+	si_mark_atom_dirty(ctx, &ctx->clip_state.atom);
 	si_mark_atom_dirty(ctx, &ctx->msaa_sample_locs);
 	si_mark_atom_dirty(ctx, &ctx->msaa_config);
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);

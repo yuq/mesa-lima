@@ -131,6 +131,11 @@ struct si_framebuffer {
 	bool				dirty_zsbuf;
 };
 
+struct si_clip_state {
+	struct r600_atom		atom;
+	struct pipe_clip_state		state;
+};
+
 struct si_scissors {
 	struct r600_atom		atom;
 	unsigned			dirty_mask;
@@ -184,6 +189,7 @@ struct si_context {
 
 	struct si_scissors		scissors;
 	struct si_viewports		viewports;
+	struct si_clip_state		clip_state;
 	struct r600_atom		clip_regs;
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
