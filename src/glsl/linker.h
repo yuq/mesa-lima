@@ -178,6 +178,8 @@ protected:
    virtual void leave_record(const glsl_type *type, const char *name,
                              bool row_major);
 
+   virtual void set_record_array_count(unsigned record_array_count);
+
 private:
    /**
     * \param name_length  Length of the current name \b not including the
@@ -188,7 +190,7 @@ private:
     */
    void recursion(const glsl_type *t, char **name, size_t name_length,
                   bool row_major, const glsl_type *record_type,
-                  bool last_field);
+                  bool last_field, unsigned record_array_count);
 };
 
 void

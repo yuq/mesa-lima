@@ -28,6 +28,7 @@
 #include "glsl_symbol_table.h"
 #include "program/hash_table.h"
 #include "program.h"
+#include "util/hash_table.h"
 
 /**
  * \file link_uniforms.cpp
@@ -62,14 +63,17 @@ program_resource_visitor::process(const glsl_type *type, const char *name)
    assert(type->without_array()->is_record()
           || type->without_array()->is_interface());
 
+   unsigned record_array_count = 1;
    char *name_copy = ralloc_strdup(NULL, name);
-   recursion(type, &name_copy, strlen(name), false, NULL, false);
+   recursion(type, &name_copy, strlen(name), false, NULL, false,
+             record_array_count);
    ralloc_free(name_copy);
 }
 
 void
 program_resource_visitor::process(ir_variable *var)
 {
+   unsigned record_array_count = 1;
    const glsl_type *t = var->type;
    const bool row_major =
       var->data.matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
@@ -110,7 +114,8 @@ program_resource_visitor::process(ir_variable *var)
           * lowering is only applied to non-uniform interface blocks, so we
           * can safely pass false for row_major.
           */
-         recursion(var->type, &name, new_length, row_major, NULL, false);
+         recursion(var->type, &name, new_length, row_major, NULL, false,
+                   record_array_count);
       }
       ralloc_free(name);
    } else if (var->data.from_named_ifc_block_nonarray) {
@@ -134,19 +139,23 @@ program_resource_visitor::process(ir_variable *var)
        * is only applied to non-uniform interface blocks, so we can safely
        * pass false for row_major.
        */
-      recursion(var->type, &name, strlen(name), row_major, NULL, false);
+      recursion(var->type, &name, strlen(name), row_major, NULL, false,
+                record_array_count);
       ralloc_free(name);
    } else if (t->without_array()->is_record()) {
       char *name = ralloc_strdup(NULL, var->name);
-      recursion(var->type, &name, strlen(name), row_major, NULL, false);
+      recursion(var->type, &name, strlen(name), row_major, NULL, false,
+                record_array_count);
       ralloc_free(name);
    } else if (t->is_interface()) {
       char *name = ralloc_strdup(NULL, var->type->name);
-      recursion(var->type, &name, strlen(name), row_major, NULL, false);
+      recursion(var->type, &name, strlen(name), row_major, NULL, false,
+                record_array_count);
       ralloc_free(name);
    } else if (t->is_array() && t->fields.array->is_interface()) {
       char *name = ralloc_strdup(NULL, var->type->fields.array->name);
-      recursion(var->type, &name, strlen(name), row_major, NULL, false);
+      recursion(var->type, &name, strlen(name), row_major, NULL, false,
+                record_array_count);
       ralloc_free(name);
    } else {
       this->visit_field(t, var->name, row_major, NULL, false);
@@ -157,7 +166,8 @@ void
 program_resource_visitor::recursion(const glsl_type *t, char **name,
                                     size_t name_length, bool row_major,
                                     const glsl_type *record_type,
-                                    bool last_field)
+                                    bool last_field,
+                                    unsigned record_array_count)
 {
    /* Records need to have each field processed individually.
     *
@@ -204,7 +214,7 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          recursion(t->fields.structure[i].type, name, new_length,
                    field_row_major,
                    record_type,
-                   (i + 1) == t->length);
+                   (i + 1) == t->length, record_array_count);
 
          /* Only the first leaf-field of the record gets called with the
           * record type pointer.
@@ -221,6 +231,8 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
       if (record_type == NULL && t->fields.array->is_record())
          record_type = t->fields.array;
 
+      record_array_count *= t->length;
+
       for (unsigned i = 0; i < t->length; i++) {
 	 size_t new_length = name_length;
 
@@ -229,7 +241,7 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
 
          recursion(t->fields.array, name, new_length, row_major,
                    record_type,
-                   (i + 1) == t->length);
+                   (i + 1) == t->length, record_array_count);
 
          /* Only the first leaf-field of the record gets called with the
           * record type pointer.
@@ -237,6 +249,7 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          record_type = NULL;
       }
    } else {
+      this->set_record_array_count(record_array_count);
       this->visit_field(t, *name, row_major, record_type, last_field);
    }
 }
@@ -264,6 +277,11 @@ program_resource_visitor::enter_record(const glsl_type *, const char *, bool)
 
 void
 program_resource_visitor::leave_record(const glsl_type *, const char *, bool)
+{
+}
+
+void
+program_resource_visitor::set_record_array_count(unsigned)
 {
 }
 
@@ -431,6 +449,7 @@ public:
       this->next_sampler = 0;
       this->next_image = 0;
       this->next_subroutine = 0;
+      this->record_array_count = 1;
       memset(this->targets, 0, sizeof(this->targets));
    }
 
@@ -439,6 +458,7 @@ public:
    {
       current_var = var;
       field_counter = 0;
+      this->record_next_sampler = new string_to_uint_map;
 
       ubo_block_index = -1;
       if (var->is_in_buffer_block()) {
@@ -492,6 +512,8 @@ public:
             process(var);
       } else
          process(var);
+      }
+      delete this->record_next_sampler;
    }
 
    int ubo_block_index;
@@ -500,17 +522,65 @@ public:
 
 private:
    void handle_samplers(const glsl_type *base_type,
-                        struct gl_uniform_storage *uniform)
+                        struct gl_uniform_storage *uniform, const char *name)
    {
       if (base_type->is_sampler()) {
-         uniform->sampler[shader_type].index = this->next_sampler;
          uniform->sampler[shader_type].active = true;
 
-         /* Increment the sampler by 1 for non-arrays and by the number of
-          * array elements for arrays.
-          */
-         this->next_sampler +=
-               MAX2(1, uniform->array_elements);
+         /* Handle multiple samplers inside struct arrays */
+         if (this->record_array_count > 1) {
+            unsigned inner_array_size = MAX2(1, uniform->array_elements);
+            char *name_copy = ralloc_strdup(NULL, name);
+
+            /* Remove all array subscripts from the sampler name */
+            char *str_start;
+            const char *str_end;
+            while((str_start = strchr(name_copy, '[')) &&
+                  (str_end = strchr(name_copy, ']'))) {
+               memmove(str_start, str_end + 1, 1 + strlen(str_end));
+            }
+
+            unsigned index = 0;
+            if (this->record_next_sampler->get(index, name_copy)) {
+               /* In this case, we've already seen this uniform so we just use
+                * the next sampler index recorded the last time we visited.
+                */
+               uniform->sampler[shader_type].index = index;
+               index = inner_array_size + uniform->sampler[shader_type].index;
+               this->record_next_sampler->put(index, name_copy);
+
+               ralloc_free(name_copy);
+               /* Return as everything else has already been initialised in a
+                * previous pass.
+                */
+               return;
+            } else {
+               /* We've never seen this uniform before so we need to allocate
+                * enough indices to store it.
+                *
+                * Nested struct arrays behave like arrays of arrays so we need
+                * to increase the index by the total number of elements of the
+                * sampler in case there is more than one sampler inside the
+                * structs. This allows the offset to be easily calculated for
+                * indirect indexing.
+                */
+               uniform->sampler[shader_type].index = this->next_sampler;
+               this->next_sampler +=
+                  inner_array_size * this->record_array_count;
+
+               /* Store the next index for future passes over the struct array
+                */
+               index = uniform->sampler[shader_type].index + inner_array_size;
+               this->record_next_sampler->put(index, name_copy);
+               ralloc_free(name_copy);
+            }
+         } else {
+            /* Increment the sampler by 1 for non-arrays and by the number of
+             * array elements for arrays.
+             */
+            uniform->sampler[shader_type].index = this->next_sampler;
+            this->next_sampler += MAX2(1, uniform->array_elements);
+         }
 
          const gl_texture_index target = base_type->sampler_index();
          const unsigned shadow = base_type->sampler_shadow;
@@ -561,6 +631,11 @@ private:
          uniform->subroutine[shader_type].index = ~0;
          uniform->subroutine[shader_type].active = false;
       }
+   }
+
+   virtual void set_record_array_count(unsigned record_array_count)
+   {
+      this->record_array_count = record_array_count;
    }
 
    virtual void visit_field(const glsl_type *type, const char *name,
@@ -614,7 +689,7 @@ private:
       }
 
       /* This assigns uniform indices to sampler and image uniforms. */
-      handle_samplers(base_type, &this->uniforms[id]);
+      handle_samplers(base_type, &this->uniforms[id], name);
       handle_images(base_type, &this->uniforms[id]);
       handle_subroutines(base_type, &this->uniforms[id]);
 
@@ -702,6 +777,14 @@ private:
    unsigned next_sampler;
    unsigned next_image;
    unsigned next_subroutine;
+
+   /* Stores total struct array elements including nested structs */
+   unsigned record_array_count;
+
+   /* Map for temporarily storing next sampler index when handling samplers in
+    * struct arrays.
+    */
+   struct string_to_uint_map *record_next_sampler;
 
 public:
    union gl_constant_value *values;
