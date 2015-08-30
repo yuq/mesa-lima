@@ -273,12 +273,16 @@ static void si_sampler_states_begin_new_cs(struct si_context *sctx,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
 }
 
-void si_set_sampler_descriptors(struct si_context *sctx, unsigned shader,
-				unsigned start, unsigned count, void **states)
+static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
+                                   unsigned start, unsigned count, void **states)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_sampler_states *samplers = &sctx->samplers[shader].states;
 	struct si_sampler_state **sstates = (struct si_sampler_state**)states;
 	int i;
+
+	if (!count || shader >= SI_NUM_SHADERS)
+		return;
 
 	if (start == 0)
 		samplers->saved_states[0] = states[0];
@@ -1022,6 +1026,7 @@ void si_init_all_descriptors(struct si_context *sctx)
 			    4, SI_NUM_VERTEX_BUFFERS);
 
 	/* Set pipe_context functions. */
+	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
 	sctx->b.b.set_constant_buffer = si_set_constant_buffer;
 	sctx->b.b.set_sampler_views = si_set_sampler_views;
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;

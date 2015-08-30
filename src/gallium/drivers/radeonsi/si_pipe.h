@@ -79,6 +79,7 @@
 #define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
 
 #define SI_MAX_VIEWPORTS	16
+#define SI_MAX_BORDER_COLORS	4096
 
 struct si_compute;
 
@@ -103,7 +104,6 @@ struct si_sampler_view {
 
 struct si_sampler_state {
 	uint32_t			val[4];
-	uint32_t			border_color[4];
 };
 
 struct si_cs_shader_state {
@@ -219,8 +219,10 @@ struct si_context {
 	struct pipe_resource		*esgs_ring;
 	struct pipe_resource		*gsvs_ring;
 	struct pipe_resource		*tf_ring;
-	struct r600_resource		*border_color_table;
-	unsigned			border_color_offset;
+	union pipe_color_union		*border_color_table; /* in CPU memory, any endian */
+	struct r600_resource		*border_color_buffer;
+	union pipe_color_union		*border_color_map; /* in VRAM (slow access), little endian */
+	unsigned			border_color_count;
 
 	/* Vertex and index buffers. */
 	bool				vertex_buffers_dirty;

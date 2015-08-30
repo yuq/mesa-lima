@@ -91,7 +91,6 @@ union si_state {
 		struct si_state_rasterizer	*rasterizer;
 		struct si_state_dsa		*dsa;
 		struct si_pm4_state		*poly_offset;
-		struct si_pm4_state		*ta_bordercolor_base;
 		struct si_pm4_state		*ls;
 		struct si_pm4_state		*hs;
 		struct si_pm4_state		*es;
@@ -246,8 +245,6 @@ struct si_buffer_resources {
 	} while(0)
 
 /* si_descriptors.c */
-void si_set_sampler_descriptors(struct si_context *sctx, unsigned shader,
-				unsigned start, unsigned count, void **states);
 void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			struct pipe_resource *buffer,
 			unsigned stride, unsigned num_records,

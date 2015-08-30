@@ -2701,9 +2701,10 @@ static bool sampler_state_needs_border_color(const struct pipe_sampler_state *st
 static void *si_create_sampler_state(struct pipe_context *ctx,
 				     const struct pipe_sampler_state *state)
 {
+	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_sampler_state *rstate = CALLOC_STRUCT(si_sampler_state);
 	unsigned aniso_flag_offset = state->max_anisotropy > 1 ? 2 : 0;
-	unsigned border_color_type;
+	unsigned border_color_type, border_color_index = 0;
 
 	if (rstate == NULL) {
 		return NULL;
@@ -2726,8 +2727,37 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 		 state->border_color.f[2] == 1 &&
 		 state->border_color.f[3] == 1)
 		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_WHITE;
-	else
+	else {
+		int i;
+
 		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER;
+
+		/* Check if the border has been uploaded already. */
+		for (i = 0; i < sctx->border_color_count; i++)
+			if (memcmp(&sctx->border_color_table[i], &state->border_color,
+				   sizeof(state->border_color)) == 0)
+				break;
+
+		if (i >= SI_MAX_BORDER_COLORS) {
+			/* Getting 4096 unique border colors is very unlikely. */
+			fprintf(stderr, "radeonsi: The border color table is full. "
+				"Any new border colors will be just black. "
+				"Please file a bug.\n");
+			border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_TRANS_BLACK;
+		} else {
+			if (i == sctx->border_color_count) {
+				/* Upload a new border color. */
+				memcpy(&sctx->border_color_table[i], &state->border_color,
+				       sizeof(state->border_color));
+				util_memcpy_cpu_to_le32(&sctx->border_color_map[i],
+							&state->border_color,
+							sizeof(state->border_color));
+				sctx->border_color_count++;
+			}
+
+			border_color_index = i;
+		}
+	}
 
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
@@ -2742,87 +2772,9 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F38_XY_MAG_FILTER(si_tex_filter(state->mag_img_filter) | aniso_flag_offset) |
 			  S_008F38_XY_MIN_FILTER(si_tex_filter(state->min_img_filter) | aniso_flag_offset) |
 			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)));
-	rstate->val[3] = S_008F3C_BORDER_COLOR_TYPE(border_color_type);
-
-	if (border_color_type == V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER) {
-		memcpy(rstate->border_color, state->border_color.ui,
-		       sizeof(rstate->border_color));
-	}
-
+	rstate->val[3] = S_008F3C_BORDER_COLOR_PTR(border_color_index) |
+			 S_008F3C_BORDER_COLOR_TYPE(border_color_type);
 	return rstate;
-}
-
-/* Upload border colors and update the pointers in resource descriptors.
- * There can only be 4096 border colors per context.
- *
- * XXX: This is broken if the buffer gets reallocated.
- */
-static void si_set_border_colors(struct si_context *sctx, unsigned count,
-				 void **states)
-{
-	struct si_sampler_state **rstates = (struct si_sampler_state **)states;
-	uint32_t *border_color_table = NULL;
-	int i, j;
-
-	for (i = 0; i < count; i++) {
-		if (rstates[i] &&
-		    G_008F3C_BORDER_COLOR_TYPE(rstates[i]->val[3]) ==
-		    V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER) {
-			if (!sctx->border_color_table ||
-			    ((sctx->border_color_offset + count - i) &
-			     C_008F3C_BORDER_COLOR_PTR)) {
-				r600_resource_reference(&sctx->border_color_table, NULL);
-				sctx->border_color_offset = 0;
-
-				sctx->border_color_table =
-					si_resource_create_custom(&sctx->screen->b.b,
-								  PIPE_USAGE_DYNAMIC,
-								  4096 * 4 * 4);
-			}
-
-			if (!border_color_table) {
-			        border_color_table =
-					sctx->b.ws->buffer_map(sctx->border_color_table->cs_buf,
-							     sctx->b.rings.gfx.cs,
-							     PIPE_TRANSFER_WRITE |
-							     PIPE_TRANSFER_UNSYNCHRONIZED);
-			}
-
-			for (j = 0; j < 4; j++) {
-				border_color_table[4 * sctx->border_color_offset + j] =
-					util_le32_to_cpu(rstates[i]->border_color[j]);
-			}
-
-			rstates[i]->val[3] &= C_008F3C_BORDER_COLOR_PTR;
-			rstates[i]->val[3] |= S_008F3C_BORDER_COLOR_PTR(sctx->border_color_offset++);
-		}
-	}
-
-	if (border_color_table) {
-		struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-
-		uint64_t va_offset = sctx->border_color_table->gpu_address;
-
-		si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, va_offset >> 8);
-		if (sctx->b.chip_class >= CIK)
-			si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, va_offset >> 40);
-		si_pm4_add_bo(pm4, sctx->border_color_table, RADEON_USAGE_READ,
-			      RADEON_PRIO_SHADER_DATA);
-		si_pm4_set_state(sctx, ta_bordercolor_base, pm4);
-	}
-}
-
-static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
-                                   unsigned start, unsigned count,
-                                   void **states)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-
-	if (!count || shader >= SI_NUM_SHADERS)
-		return;
-
-	si_set_border_colors(sctx, count, states);
-	si_set_sampler_descriptors(sctx, shader, start, count, states);
 }
 
 static void si_set_sample_mask(struct pipe_context *ctx, unsigned sample_mask)
@@ -3105,7 +3057,6 @@ void si_init_state_functions(struct si_context *sctx)
 	sctx->b.b.get_sample_position = cayman_get_sample_position;
 
 	sctx->b.b.create_sampler_state = si_create_sampler_state;
-	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
 	sctx->b.b.delete_sampler_state = si_delete_sampler_state;
 
 	sctx->b.b.create_sampler_view = si_create_sampler_view;
@@ -3270,6 +3221,7 @@ static void si_init_config(struct si_context *sctx)
 	unsigned num_rb = MIN2(sctx->screen->b.info.r600_num_backends, 16);
 	unsigned rb_mask = sctx->screen->b.info.si_backend_enabled_mask;
 	unsigned raster_config, raster_config_1;
+	uint64_t border_color_va = sctx->border_color_buffer->gpu_address;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
 	int i;
 
@@ -3433,6 +3385,12 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL, 30);
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 32);
 	}
+
+	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);
+	if (sctx->b.chip_class >= CIK)
+		si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, border_color_va >> 40);
+	si_pm4_add_bo(pm4, sctx->border_color_buffer, RADEON_USAGE_READ,
+		      RADEON_PRIO_SHADER_DATA);
 
 	sctx->init_config = pm4;
 }

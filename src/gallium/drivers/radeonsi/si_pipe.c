@@ -44,7 +44,8 @@ static void si_destroy_context(struct pipe_context *context)
 	pipe_resource_reference(&sctx->gsvs_ring, NULL);
 	pipe_resource_reference(&sctx->tf_ring, NULL);
 	pipe_resource_reference(&sctx->null_const_buf.buffer, NULL);
-	r600_resource_reference(&sctx->border_color_table, NULL);
+	r600_resource_reference(&sctx->border_color_buffer, NULL);
+	free(sctx->border_color_table);
 	r600_resource_reference(&sctx->scratch_buffer, NULL);
 	sctx->b.ws->fence_reference(&sctx->last_gfx_fence, NULL);
 
@@ -139,6 +140,25 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 						sscreen->b.trace_bo->cs_buf : NULL);
 	sctx->b.rings.gfx.flush = si_context_gfx_flush;
 
+	/* Border colors. */
+	sctx->border_color_table = malloc(SI_MAX_BORDER_COLORS *
+					  sizeof(*sctx->border_color_table));
+	if (!sctx->border_color_table)
+		goto fail;
+
+	sctx->border_color_buffer = (struct r600_resource*)
+		pipe_buffer_create(screen, PIPE_BIND_CUSTOM, PIPE_USAGE_DEFAULT,
+				   SI_MAX_BORDER_COLORS *
+				   sizeof(*sctx->border_color_table));
+	if (!sctx->border_color_buffer)
+		goto fail;
+
+	sctx->border_color_map =
+		ws->buffer_map(sctx->border_color_buffer->cs_buf,
+			       NULL, PIPE_TRANSFER_WRITE);
+	if (!sctx->border_color_map)
+		goto fail;
+
 	si_init_all_descriptors(sctx);
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
@@ -197,6 +217,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	return &sctx->b.b;
 fail:
+	fprintf(stderr, "radeonsi: Failed to create a context.\n");
 	si_destroy_context(&sctx->b.b);
 	return NULL;
 }
