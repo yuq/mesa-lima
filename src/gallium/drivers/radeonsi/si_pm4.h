@@ -54,10 +54,6 @@ struct si_pm4_state
 	enum radeon_bo_usage	bo_usage[SI_PM4_MAX_BO];
 	enum radeon_bo_priority	bo_priority[SI_PM4_MAX_BO];
 
-	/* relocs for shader data */
-	unsigned	nrelocs;
-	unsigned	relocs[SI_PM4_MAX_RELOCS];
-
 	bool compute_pkt;
 };
 
@@ -76,7 +72,6 @@ void si_pm4_free_state(struct si_context *sctx,
 		       struct si_pm4_state *state,
 		       unsigned idx);
 
-unsigned si_pm4_dirty_dw(struct si_context *sctx);
 void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state);
 void si_pm4_emit_dirty(struct si_context *sctx);
 void si_pm4_reset_emitted(struct si_context *sctx);
