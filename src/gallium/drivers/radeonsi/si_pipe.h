@@ -160,16 +160,41 @@ struct si_context {
 	void				*custom_blend_fastclear;
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
-	struct si_pm4_state		*init_config;
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_selector	*fixed_func_tcs_shader;
+	LLVMTargetMachineRef		tm;
 
+	/* Atoms (direct states). */
 	union si_state_atoms		atoms;
 	unsigned			dirty_atoms; /* mask */
+	/* PM4 states (precomputed immutable states) */
+	union si_state			queued;
+	union si_state			emitted;
 
+	/* Atom declarations. */
+	struct r600_atom		cache_flush;
 	struct si_framebuffer		framebuffer;
-	struct si_vertex_element	*vertex_elements;
-	/* for saving when using blitter */
+	struct r600_atom		msaa_sample_locs;
+	struct r600_atom		db_render_state;
+	struct r600_atom		msaa_config;
+	struct si_sample_mask		sample_mask;
+	struct r600_atom		cb_target_mask;
+	struct si_blend_color		blend_color;
+	struct r600_atom		clip_regs;
+	struct si_clip_state		clip_state;
+	struct si_shader_data		shader_userdata;
+	struct si_scissors		scissors;
+	struct si_viewports		viewports;
+	struct si_stencil_ref		stencil_ref;
+	struct r600_atom		spi_map;
+
+	/* Precomputed states. */
+	struct si_pm4_state		*init_config;
+	struct si_pm4_state		*vgt_shader_config[4];
+	/* With rasterizer discard, there doesn't have to be a pixel shader.
+	 * In that case, we bind this one: */
+	void				*dummy_pixel_shader;
+
 	/* shaders */
 	struct si_shader_selector	*ps_shader;
 	struct si_shader_selector	*gs_shader;
@@ -177,57 +202,36 @@ struct si_context {
 	struct si_shader_selector	*tcs_shader;
 	struct si_shader_selector	*tes_shader;
 	struct si_cs_shader_state	cs_shader_state;
-	struct si_shader_data		shader_userdata;
+
 	/* shader information */
+	struct si_vertex_element	*vertex_elements;
 	unsigned			sprite_coord_enable;
 	bool				flatshade;
+
+	/* shader descriptors */
 	struct si_descriptors		vertex_buffers;
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
-	struct r600_resource		*scratch_buffer;
+
+	/* other shader resources */
+	struct pipe_constant_buffer	null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
+	struct pipe_resource		*esgs_ring;
+	struct pipe_resource		*gsvs_ring;
+	struct pipe_resource		*tf_ring;
 	struct r600_resource		*border_color_table;
 	unsigned			border_color_offset;
 
-	struct si_blend_color		blend_color;
-	struct si_stencil_ref		stencil_ref;
-	struct si_scissors		scissors;
-	struct si_viewports		viewports;
-	struct si_clip_state		clip_state;
-	struct r600_atom		clip_regs;
-	struct si_sample_mask		sample_mask;
-	struct r600_atom		cb_target_mask;
-	struct r600_atom		spi_map;
-	struct r600_atom		msaa_sample_locs;
-	struct r600_atom		msaa_config;
+	/* Vertex and index buffers. */
+	bool				vertex_buffers_dirty;
+	struct pipe_index_buffer	index_buffer;
+	struct pipe_vertex_buffer	vertex_buffer[SI_NUM_VERTEX_BUFFERS];
+
+	/* MSAA config state. */
 	int				ps_iter_samples;
 	bool				smoothing_enabled;
 
-	/* Vertex and index buffers. */
-	bool			vertex_buffers_dirty;
-	struct pipe_index_buffer index_buffer;
-	struct pipe_vertex_buffer vertex_buffer[SI_NUM_VERTEX_BUFFERS];
-
-	/* With rasterizer discard, there doesn't have to be a pixel shader.
-	 * In that case, we bind this one: */
-	void			*dummy_pixel_shader;
-	struct r600_atom	cache_flush;
-	struct pipe_constant_buffer null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
-
-	/* VGT states. */
-	struct si_pm4_state	*vgt_shader_config[4];
-	struct pipe_resource	*esgs_ring;
-	struct pipe_resource	*gsvs_ring;
-	struct pipe_resource	*tf_ring;
-
-	LLVMTargetMachineRef		tm;
-
-	/* SI state handling */
-	union si_state	queued;
-	union si_state	emitted;
-
 	/* DB render state. */
-	struct r600_atom	db_render_state;
 	bool			dbcb_depth_copy_enabled;
 	bool			dbcb_stencil_copy_enabled;
 	unsigned		dbcb_copy_sample;
@@ -252,6 +256,7 @@ struct si_context {
 	unsigned		last_gsvs_itemsize;
 
 	/* Scratch buffer */
+	struct r600_resource	*scratch_buffer;
 	boolean                 emit_scratch_reloc;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
