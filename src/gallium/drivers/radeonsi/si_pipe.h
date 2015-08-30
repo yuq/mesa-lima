@@ -43,13 +43,6 @@
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
 
-#define SI_TRACE_CS_DWORDS		7
-
-#define SI_MAX_DRAW_CS_DWORDS \
-	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
-	 /*draw regs:*/ 18 + /*draw packets:*/ 31 +\
-	 /*derived tess state:*/ 19)
-
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
 /* Cache used by scalar memory (SMEM) instructions. They also use TC

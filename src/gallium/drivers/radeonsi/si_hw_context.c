@@ -35,8 +35,9 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	/* There are two memory usage counters in the winsys for all buffers
 	 * that have been added (cs_add_reloc) and two counters in the pipe
 	 * driver for those that haven't been added yet.
-	 * */
-	if (!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs, ctx->b.vram, ctx->b.gtt)) {
+	 */
+	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs,
+						       ctx->b.vram, ctx->b.gtt))) {
 		ctx->b.gtt = 0;
 		ctx->b.vram = 0;
 		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
@@ -46,54 +47,10 @@ void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
 	ctx->b.vram = 0;
 
 	/* If the CS is sufficiently large, don't count the space needed
-	 * and just flush if there is less than 8096 dwords left.
+	 * and just flush if there is not enough space left.
 	 */
-	if (cs->max_dw >= 24 * 1024) {
-		if (cs->cdw > cs->max_dw - 8 * 1024)
-			ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
-		return;
-	}
-
-	/* The number of dwords we already used in the CS so far. */
-	num_dw += cs->cdw;
-
-	if (count_draw_in) {
-		unsigned mask = ctx->dirty_atoms;
-
-		while (mask)
-			num_dw += ctx->atoms.array[u_bit_scan(&mask)]->num_dw;
-
-		/* The number of dwords all the dirty states would take. */
-		num_dw += si_pm4_dirty_dw(ctx);
-
-		/* The upper-bound of how much a draw command would take. */
-		num_dw += SI_MAX_DRAW_CS_DWORDS;
-	}
-
-	/* Count in queries_suspend. */
-	num_dw += ctx->b.num_cs_dw_nontimer_queries_suspend +
-		  ctx->b.num_cs_dw_timer_queries_suspend;
-
-	/* Count in streamout_end at the end of CS. */
-	if (ctx->b.streamout.begin_emitted) {
-		num_dw += ctx->b.streamout.num_dw_for_end;
-	}
-
-	/* Count in render_condition(NULL) at the end of CS. */
-	if (ctx->b.predicate_drawing) {
-		num_dw += 3;
-	}
-
-	/* Count in framebuffer cache flushes at the end of CS. */
-	num_dw += ctx->atoms.s.cache_flush->num_dw;
-
-	if (ctx->screen->b.trace_bo)
-		num_dw += SI_TRACE_CS_DWORDS * 2;
-
-	/* Flush if there's not enough space. */
-	if (num_dw > cs->max_dw) {
+	if (unlikely(cs->cdw > cs->max_dw - 2048))
 		ctx->b.rings.gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
-	}
 }
 
 void si_context_gfx_flush(void *context, unsigned flags,
