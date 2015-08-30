@@ -28,6 +28,7 @@
 #include "si_pipe.h"
 #include "si_shader.h"
 #include "sid.h"
+#include "radeon/r600_cs.h"
 
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
@@ -980,14 +981,19 @@ static void si_delete_tes_shader(struct pipe_context *ctx, void *state)
 	si_delete_shader_selector(ctx, sel);
 }
 
-static void si_update_spi_map(struct si_context *sctx)
+static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 {
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader->current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo = &ps->selector->info;
 	struct tgsi_shader_info *vsinfo = &vs->selector->info;
-	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	unsigned i, j, tmp;
+	unsigned i, j, tmp, num_written = 0;
+
+	if (!ps->nparam)
+		return;
+
+	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, ps->nparam);
 
 	for (i = 0; i < psinfo->num_inputs; i++) {
 		unsigned name = psinfo->input_semantic_name[i];
@@ -1031,9 +1037,9 @@ bcolor:
 			tmp = S_028644_OFFSET(0x20);
 		}
 
-		si_pm4_set_reg(pm4,
-			       R_028644_SPI_PS_INPUT_CNTL_0 + param_offset * 4,
-			       tmp);
+		assert(param_offset == num_written);
+		radeon_emit(cs, tmp);
+		num_written++;
 
 		if (name == TGSI_SEMANTIC_COLOR &&
 		    ps->key.ps.color_two_side) {
@@ -1042,8 +1048,7 @@ bcolor:
 			goto bcolor;
 		}
 	}
-
-	si_pm4_set_state(sctx, spi, pm4);
+	assert(ps->nparam == num_written);
 }
 
 /* Initialize state related to ESGS / GSVS ring buffers */
@@ -1452,7 +1457,7 @@ void si_update_shaders(struct si_context *sctx)
 	    sctx->flatshade != rs->flatshade) {
 		sctx->sprite_coord_enable = rs->sprite_coord_enable;
 		sctx->flatshade = rs->flatshade;
-		si_update_spi_map(sctx);
+		si_mark_atom_dirty(sctx, &sctx->spi_map);
 	}
 
 	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
@@ -1476,6 +1481,8 @@ void si_update_shaders(struct si_context *sctx)
 
 void si_init_shader_functions(struct si_context *sctx)
 {
+	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map, 2+31);
+
 	sctx->b.b.create_vs_state = si_create_vs_state;
 	sctx->b.b.create_tcs_state = si_create_tcs_state;
 	sctx->b.b.create_tes_state = si_create_tes_state;

@@ -99,7 +99,6 @@ union si_state {
 		struct si_pm4_state		*vgt_shader_config;
 		struct si_pm4_state		*vs;
 		struct si_pm4_state		*ps;
-		struct si_pm4_state		*spi;
 	} named;
 	struct si_pm4_state	*array[0];
 };
@@ -123,6 +122,7 @@ union si_state_atoms {
 		struct r600_atom *scissors;
 		struct r600_atom *viewports;
 		struct r600_atom *stencil_ref;
+		struct r600_atom *spi_map;
 	} s;
 	struct r600_atom *array[0];
 };

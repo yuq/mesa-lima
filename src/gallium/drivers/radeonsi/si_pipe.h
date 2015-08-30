@@ -204,6 +204,7 @@ struct si_context {
 	struct r600_atom		clip_regs;
 	struct si_sample_mask		sample_mask;
 	struct r600_atom		cb_target_mask;
+	struct r600_atom		spi_map;
 	struct r600_atom		msaa_sample_locs;
 	struct r600_atom		msaa_config;
 	int				ps_iter_samples;
