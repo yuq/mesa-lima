@@ -200,17 +200,19 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
 
 static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
 {
-   /* The maximum size is 4MB - 1B, which is unaligned.
-    * Use aligned size 4MB - 16B. */
-   const unsigned max_ib_size = (1024 * 1024 - 16) * 4;
-   const unsigned min_ib_size = 24 * 1024 * 4;
+   /* Small IBs are better than big IBs, because the GPU goes idle quicker
+    * and there is less waiting for buffers and fences. Proof:
+    *   http://www.phoronix.com/scan.php?page=article&item=mesa-111-si&num=1
+    */
+   const unsigned buffer_size = 128 * 1024 * 4;
+   const unsigned ib_size = 20 * 1024 * 4;
 
    cs->base.cdw = 0;
    cs->base.buf = NULL;
 
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!cs->big_ib_buffer ||
-       cs->used_ib_space + min_ib_size > cs->big_ib_buffer->size) {
+       cs->used_ib_space + ib_size > cs->big_ib_buffer->size) {
       struct radeon_winsys *ws = &cs->ctx->ws->base;
       struct radeon_winsys_cs_handle *winsys_bo;
 
@@ -219,7 +221,7 @@ static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
       cs->ib_mapped = NULL;
       cs->used_ib_space = 0;
 
-      cs->big_ib_buffer = ws->buffer_create(ws, max_ib_size,
+      cs->big_ib_buffer = ws->buffer_create(ws, buffer_size,
                                             4096, true,
                                             RADEON_DOMAIN_GTT,
                                             RADEON_FLAG_CPU_ACCESS);
@@ -239,7 +241,7 @@ static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
 
    cs->ib.ib_mc_address = cs->big_ib_winsys_buffer->va + cs->used_ib_space;
    cs->base.buf = (uint32_t*)(cs->ib_mapped + cs->used_ib_space);
-   cs->base.max_dw = (cs->big_ib_buffer->size - cs->used_ib_space) / 4;
+   cs->base.max_dw = ib_size / 4;
    return true;
 }
 
