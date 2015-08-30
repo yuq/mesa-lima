@@ -1410,7 +1410,7 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 			/* COLOR_BASE */
 			radeon_set_context_reg(cs, R_028040_CB_COLOR0_BASE + i*4, cb[i]->cb_color_base);
 
-			reloc = r600_context_bo_reloc(&rctx->b,
+			reloc = radeon_add_to_buffer_list(&rctx->b,
 						      &rctx->b.rings.gfx,
 						      (struct r600_resource*)cb[i]->base.texture,
 						      RADEON_USAGE_READWRITE,
@@ -1423,7 +1423,7 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 			/* FMASK */
 			radeon_set_context_reg(cs, R_0280E0_CB_COLOR0_FRAG + i*4, cb[i]->cb_color_fmask);
 
-			reloc = r600_context_bo_reloc(&rctx->b,
+			reloc = radeon_add_to_buffer_list(&rctx->b,
 						      &rctx->b.rings.gfx,
 						      cb[i]->cb_buffer_fmask,
 						      RADEON_USAGE_READWRITE,
@@ -1436,7 +1436,7 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 			/* CMASK */
 			radeon_set_context_reg(cs, R_0280C0_CB_COLOR0_TILE + i*4, cb[i]->cb_color_cmask);
 
-			reloc = r600_context_bo_reloc(&rctx->b,
+			reloc = radeon_add_to_buffer_list(&rctx->b,
 						      &rctx->b.rings.gfx,
 						      cb[i]->cb_buffer_cmask,
 						      RADEON_USAGE_READWRITE,
@@ -1475,7 +1475,7 @@ static void r600_emit_framebuffer_state(struct r600_context *rctx, struct r600_a
 	/* Zbuffer. */
 	if (state->zsbuf) {
 		struct r600_surface *surf = (struct r600_surface*)state->zsbuf;
-		unsigned reloc = r600_context_bo_reloc(&rctx->b,
+		unsigned reloc = radeon_add_to_buffer_list(&rctx->b,
 						       &rctx->b.rings.gfx,
 						       (struct r600_resource*)state->zsbuf->texture,
 						       RADEON_USAGE_READWRITE,
@@ -1589,7 +1589,7 @@ static void r600_emit_db_state(struct r600_context *rctx, struct r600_atom *atom
 		radeon_set_context_reg(cs, R_02802C_DB_DEPTH_CLEAR, fui(rtex->depth_clear_value));
 		radeon_set_context_reg(cs, R_028D24_DB_HTILE_SURFACE, a->rsurf->db_htile_surface);
 		radeon_set_context_reg(cs, R_028014_DB_HTILE_DATA_BASE, a->rsurf->db_htile_data_base);
-		reloc_idx = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rtex->htile_buffer,
+		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rtex->htile_buffer,
 						  RADEON_USAGE_READWRITE, RADEON_PRIO_DEPTH_META);
 		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 		cs->buf[cs->cdw++] = reloc_idx;
@@ -1704,7 +1704,7 @@ static void r600_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom
 		radeon_emit(cs, 0xc0000000); /* RESOURCEi_WORD6 */
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
 	}
 }
@@ -1737,7 +1737,7 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 		}
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
 
 		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 7, 0));
@@ -1753,7 +1753,7 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 		radeon_emit(cs, 0xc0000000); /* RESOURCEi_WORD6 */
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
 
 		dirty_mask &= ~(1 << buffer_index);
@@ -1801,7 +1801,7 @@ static void r600_emit_sampler_views(struct r600_context *rctx,
 		radeon_emit(cs, (resource_id_base + resource_index) * 7);
 		radeon_emit_array(cs, rview->tex_resource_words, 7);
 
-		reloc = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rview->tex_resource,
+		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rview->tex_resource,
 					      RADEON_USAGE_READ,
 					      rview->tex_resource->b.b.nr_samples > 1 ?
 						      RADEON_PRIO_SHADER_TEXTURE_MSAA :
@@ -1932,7 +1932,7 @@ static void r600_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600
 
 	radeon_set_context_reg(cs, R_028894_SQ_PGM_START_FS, shader->offset >> 8);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, shader->buffer,
+	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, shader->buffer,
 					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA));
 }
 
@@ -1985,7 +1985,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		rbuffer =(struct r600_resource*)state->esgs_ring.buffer;
 		radeon_set_config_reg(cs, R_008C40_SQ_ESGS_RING_BASE, 0);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
 						      RADEON_PRIO_SHADER_RESOURCE_RW));
 		radeon_set_config_reg(cs, R_008C44_SQ_ESGS_RING_SIZE,
@@ -1994,7 +1994,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		rbuffer =(struct r600_resource*)state->gsvs_ring.buffer;
 		radeon_set_config_reg(cs, R_008C48_SQ_GSVS_RING_BASE, 0);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-		radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rbuffer,
+		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
 						      RADEON_PRIO_SHADER_RESOURCE_RW));
 		radeon_set_config_reg(cs, R_008C4C_SQ_GSVS_RING_SIZE,
@@ -2901,9 +2901,9 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 		cheight = cheight > copy_height ? copy_height : cheight;
 		size = (cheight * pitch) / 4;
 		/* emit reloc before writing cs so that cs is always in consistent state */
-		r600_context_bo_reloc(&rctx->b, &rctx->b.rings.dma, &rsrc->resource, RADEON_USAGE_READ,
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rsrc->resource, RADEON_USAGE_READ,
 				      RADEON_PRIO_MIN);
-		r600_context_bo_reloc(&rctx->b, &rctx->b.rings.dma, &rdst->resource, RADEON_USAGE_WRITE,
+		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rdst->resource, RADEON_USAGE_WRITE,
 				      RADEON_PRIO_MIN);
 		cs->buf[cs->cdw++] = DMA_PACKET(DMA_PACKET_COPY, 1, 0, size);
 		cs->buf[cs->cdw++] = base >> 8;

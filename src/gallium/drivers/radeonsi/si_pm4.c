@@ -144,7 +144,7 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	for (int i = 0; i < state->nbo; ++i) {
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, state->bo[i],
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, state->bo[i],
 				      state->bo_usage[i], state->bo_priority[i]);
 	}
 

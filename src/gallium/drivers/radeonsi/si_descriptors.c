@@ -117,7 +117,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 
 	util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
 
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, desc->buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, desc->buffer,
 			      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
 
 	desc->list_dirty = false;
@@ -163,14 +163,14 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 		if (!rview->resource)
 			continue;
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      rview->resource, RADEON_USAGE_READ,
 				      si_get_resource_ro_priority(rview->resource));
 	}
 
 	if (!views->desc.buffer)
 		return;
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, views->desc.buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, views->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
 }
 
@@ -188,7 +188,7 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 			(struct si_sampler_view*)view;
 
 		if (rview->resource)
-			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				rview->resource, RADEON_USAGE_READ,
 				si_get_resource_ro_priority(rview->resource));
 
@@ -269,7 +269,7 @@ static void si_sampler_states_begin_new_cs(struct si_context *sctx,
 {
 	if (!states->desc.buffer)
 		return;
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, states->desc.buffer,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, states->desc.buffer,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
 }
 
@@ -335,14 +335,14 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)buffers->buffers[i],
 				      buffers->shader_usage, buffers->priority);
 	}
 
 	if (!buffers->desc.buffer)
 		return;
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      buffers->desc.buffer, RADEON_USAGE_READWRITE,
 			      RADEON_PRIO_SHADER_DATA);
 }
@@ -363,14 +363,14 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 		if (!sctx->vertex_buffer[vb].buffer)
 			continue;
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
 	}
 
 	if (!desc->buffer)
 		return;
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_SHADER_DATA);
 }
@@ -397,7 +397,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	if (!desc->buffer)
 		return false;
 
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_SHADER_DATA);
 
@@ -441,7 +441,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		desc[3] = sctx->vertex_elements->rsrc_word3[i];
 
 		if (!bound[ve->vertex_buffer_index]) {
-			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					      (struct r600_resource*)vb->buffer,
 					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
 			bound[ve->vertex_buffer_index] = true;
@@ -520,7 +520,7 @@ static void si_set_constant_buffer(struct pipe_context *ctx, uint shader, uint s
 			  S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32);
 
 		buffers->buffers[slot] = buffer;
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
 		buffers->desc.enabled_mask |= 1llu << slot;
@@ -615,7 +615,7 @@ void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			  S_008F0C_ADD_TID_ENABLE(add_tid);
 
 		pipe_resource_reference(&buffers->buffers[slot], buffer);
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)buffer,
 				      buffers->shader_usage, buffers->priority);
 		buffers->desc.enabled_mask |= 1llu << slot;
@@ -705,7 +705,7 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 			/* Set the resource. */
 			pipe_resource_reference(&buffers->buffers[bufidx],
 						buffer);
-			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					      (struct r600_resource*)buffer,
 					      buffers->shader_usage, buffers->priority);
 			buffers->desc.enabled_mask |= 1llu << bufidx;
@@ -804,7 +804,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				buffers->desc.list_dirty = true;
 
-				r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 						      rbuffer, buffers->shader_usage,
 						      buffers->priority);
 
@@ -833,7 +833,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				buffers->desc.list_dirty = true;
 
-				r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 						      rbuffer, buffers->shader_usage,
 						      buffers->priority);
 			}
@@ -858,7 +858,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 							    old_va, buf);
 				views->desc.list_dirty = true;
 
-				r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 						      rbuffer, RADEON_USAGE_READ,
 						      RADEON_PRIO_SHADER_BUFFER_RO);
 			}

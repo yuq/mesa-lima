@@ -2235,14 +2235,14 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		}
 
 		tex = (struct r600_texture *)cb->base.texture;
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      &tex->resource, RADEON_USAGE_READWRITE,
 				      tex->surface.nsamples > 1 ?
 					      RADEON_PRIO_COLOR_BUFFER_MSAA :
 					      RADEON_PRIO_COLOR_BUFFER);
 
 		if (tex->cmask_buffer && tex->cmask_buffer != &tex->resource) {
-			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				tex->cmask_buffer, RADEON_USAGE_READWRITE,
 				RADEON_PRIO_COLOR_META);
 		}
@@ -2282,14 +2282,14 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		struct r600_surface *zb = (struct r600_surface*)state->zsbuf;
 		struct r600_texture *rtex = (struct r600_texture*)zb->base.texture;
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      &rtex->resource, RADEON_USAGE_READWRITE,
 				      zb->base.texture->nr_samples > 1 ?
 					      RADEON_PRIO_DEPTH_BUFFER_MSAA :
 					      RADEON_PRIO_DEPTH_BUFFER);
 
 		if (zb->db_htile_data_base) {
-			r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					      rtex->htile_buffer, RADEON_USAGE_READWRITE,
 					      RADEON_PRIO_DEPTH_META);
 		}

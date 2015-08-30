@@ -351,7 +351,7 @@ static void si_emit_scratch_reloc(struct si_context *sctx)
 			       sctx->spi_tmpring_size);
 
 	if (sctx->scratch_buffer) {
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
 				      RADEON_PRIO_SHADER_RESOURCE_RW);
 
@@ -465,7 +465,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_emit(cs, R_028B2C_VGT_STRMOUT_DRAW_OPAQUE_BUFFER_FILLED_SIZE >> 2);
 		radeon_emit(cs, 0); /* unused */
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      t->buf_filled_size, RADEON_USAGE_READ,
 				      RADEON_PRIO_MIN);
 	}
@@ -519,7 +519,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	} else {
 		si_invalidate_draw_sh_constants(sctx);
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource *)info->indirect,
 				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
 	}
@@ -529,7 +529,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 					  ib->index_size;
 		uint64_t index_va = r600_resource(ib->buffer)->gpu_address + ib->offset;
 
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource *)ib->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
 
@@ -876,7 +876,7 @@ void si_trace_emit(struct si_context *sctx)
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 
 	sctx->trace_id++;
-	r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, sctx->trace_buf,
+	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, sctx->trace_buf,
 			      RADEON_USAGE_READWRITE, RADEON_PRIO_MIN);
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |

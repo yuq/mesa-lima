@@ -33,11 +33,21 @@
 #include "r600_pipe_common.h"
 #include "r600d_common.h"
 
-static inline unsigned r600_context_bo_reloc(struct r600_common_context *rctx,
-					     struct r600_ring *ring,
-					     struct r600_resource *rbo,
-					     enum radeon_bo_usage usage,
-					     enum radeon_bo_priority priority)
+/**
+ * Add a buffer to the buffer list for the given command stream (CS).
+ *
+ * All buffers used by a CS must be added to the list. This tells the kernel
+ * driver which buffers are used by GPU commands. Other buffers can
+ * be swapped out (not accessible) during execution.
+ *
+ * The buffer list becomes empty after every context flush and must be
+ * rebuilt.
+ */
+static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rctx,
+						 struct r600_ring *ring,
+						 struct r600_resource *rbo,
+						 enum radeon_bo_usage usage,
+						 enum radeon_bo_priority priority)
 {
 	assert(usage);
 
@@ -66,7 +76,7 @@ static inline void r600_emit_reloc(struct r600_common_context *rctx,
 {
 	struct radeon_winsys_cs *cs = ring->cs;
 	bool has_vm = ((struct r600_common_screen*)rctx->b.screen)->info.r600_virtual_address;
-	unsigned reloc = r600_context_bo_reloc(rctx, ring, rbo, usage, priority);
+	unsigned reloc = radeon_add_to_buffer_list(rctx, ring, rbo, usage, priority);
 
 	if (!has_vm) {
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));

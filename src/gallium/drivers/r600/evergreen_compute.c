@@ -439,7 +439,7 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 	/* XXX support more than 8 colorbuffers (the offsets are not a multiple of 0x3C for CB8-11) */
 	for (i = 0; i < 8 && i < ctx->framebuffer.state.nr_cbufs; i++) {
 		struct r600_surface *cb = (struct r600_surface*)ctx->framebuffer.state.cbufs[i];
-		unsigned reloc = r600_context_bo_reloc(&ctx->b, &ctx->b.rings.gfx,
+		unsigned reloc = radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.gfx,
 						       (struct r600_resource*)cb->base.texture,
 						       RADEON_USAGE_READWRITE,
 						       RADEON_PRIO_SHADER_RESOURCE_RW);
@@ -564,7 +564,7 @@ void evergreen_emit_cs_shader(
 	radeon_emit(cs, 0);	/* R_0288D8_SQ_PGM_RESOURCES_LS_2 */
 
 	radeon_emit(cs, PKT3C(PKT3_NOP, 0, 0));
-	radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 					      code_bo, RADEON_USAGE_READ,
 					      RADEON_PRIO_SHADER_DATA));
 }

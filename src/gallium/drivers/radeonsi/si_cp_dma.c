@@ -159,7 +159,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 				 FALSE);
 
 		/* This must be done after need_cs_space. */
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)dst, RADEON_USAGE_WRITE,
 				      RADEON_PRIO_MIN);
 
@@ -240,9 +240,9 @@ void si_copy_buffer(struct si_context *sctx,
 		}
 
 		/* This must be done after r600_need_cs_space. */
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)src,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)src,
 				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)dst,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)dst,
 				      RADEON_USAGE_WRITE, RADEON_PRIO_MIN);
 
 		si_emit_cp_dma_copy_buffer(sctx, dst_offset, src_offset, byte_count, sync_flags);

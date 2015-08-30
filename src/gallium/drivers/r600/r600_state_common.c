@@ -1620,7 +1620,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
 
 		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
-		cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+		cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 							   (struct r600_resource*)info.indirect,
 							   RADEON_USAGE_READ, RADEON_PRIO_MIN);
 	}
@@ -1649,7 +1649,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				cs->buf[cs->cdw++] = info.count;
 				cs->buf[cs->cdw++] = V_0287F0_DI_SRC_SEL_DMA;
 				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
-				cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 									   (struct r600_resource*)ib.buffer,
 									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
 			}
@@ -1661,7 +1661,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				cs->buf[cs->cdw++] = (va >> 32UL) & 0xFF;
 
 				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
-				cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 									   (struct r600_resource*)ib.buffer,
 									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
 
@@ -1688,7 +1688,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			cs->buf[cs->cdw++] = 0; /* unused */
 
 			cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
-			cs->buf[cs->cdw++] = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx,
+			cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 								   t->buf_filled_size, RADEON_USAGE_READ,
 								   RADEON_PRIO_MIN);
 		}
@@ -1879,7 +1879,7 @@ void r600_emit_shader(struct r600_context *rctx, struct r600_atom *a)
 
 	r600_emit_command_buffer(cs, &shader->command_buffer);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, shader->bo,
+	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, shader->bo,
 					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA));
 }
 
@@ -2607,7 +2607,7 @@ void r600_trace_emit(struct r600_context *rctx)
 	uint32_t reloc;
 
 	va = rscreen->b.trace_bo->gpu_address;
-	reloc = r600_context_bo_reloc(&rctx->b, &rctx->b.rings.gfx, rscreen->b.trace_bo,
+	reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rscreen->b.trace_bo,
 				      RADEON_USAGE_READWRITE, RADEON_PRIO_MIN);
 	radeon_emit(cs, PKT3(PKT3_MEM_WRITE, 3, 0));
 	radeon_emit(cs, va & 0xFFFFFFFFUL);
