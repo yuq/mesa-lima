@@ -234,16 +234,6 @@ struct si_buffer_resources {
 				  si_pm4_block_idx(member)); \
 	} while(0)
 
-#define si_pm4_set_state(sctx, member, value) \
-	do { \
-		if ((sctx)->queued.named.member != (value)) { \
-			si_pm4_free_state(sctx, \
-				(struct si_pm4_state *)(sctx)->queued.named.member, \
-				si_pm4_block_idx(member)); \
-			(sctx)->queued.named.member = (value); \
-		} \
-	} while(0)
-
 /* si_descriptors.c */
 void si_set_ring_buffer(struct pipe_context *ctx, uint shader, uint slot,
 			struct pipe_resource *buffer,
