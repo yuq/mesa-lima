@@ -3039,7 +3039,7 @@ static void *si_create_blend_custom(struct si_context *sctx, unsigned mode)
 static void si_need_gfx_cs_space(struct pipe_context *ctx, unsigned num_dw,
 				 bool include_draw_vbo)
 {
-	si_need_cs_space((struct si_context*)ctx, num_dw, include_draw_vbo);
+	si_need_cs_space((struct si_context*)ctx);
 }
 
 static void si_init_config(struct si_context *sctx);

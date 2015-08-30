@@ -27,8 +27,7 @@
 #include "si_pipe.h"
 
 /* initialize */
-void si_need_cs_space(struct si_context *ctx, unsigned num_dw,
-			boolean count_draw_in)
+void si_need_cs_space(struct si_context *ctx)
 {
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
 

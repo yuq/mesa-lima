@@ -155,8 +155,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 		unsigned dma_flags = tc_l2_flag;
 
-		si_need_cs_space(sctx, 7 + (sctx->b.flags ? sctx->cache_flush.num_dw : 0),
-				 FALSE);
+		si_need_cs_space(sctx);
 
 		/* This must be done after need_cs_space. */
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
@@ -226,7 +225,7 @@ void si_copy_buffer(struct si_context *sctx,
 		unsigned sync_flags = tc_l2_flag;
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 
-		si_need_cs_space(sctx, 7 + (sctx->b.flags ? sctx->cache_flush.num_dw : 0), FALSE);
+		si_need_cs_space(sctx);
 
 		/* Flush the caches for the first copy only. Also wait for old CP DMA packets to complete. */
 		if (sctx->b.flags) {

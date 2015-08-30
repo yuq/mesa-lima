@@ -818,7 +818,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.flags)
 		si_mark_atom_dirty(sctx, sctx->atoms.s.cache_flush);
 
-	si_need_cs_space(sctx, 0, TRUE);
+	si_need_cs_space(sctx);
 
 	/* Emit states. */
 	mask = sctx->dirty_atoms;
