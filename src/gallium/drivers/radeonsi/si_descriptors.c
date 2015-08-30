@@ -1027,12 +1027,9 @@ void si_init_all_descriptors(struct si_context *sctx)
 	sctx->b.b.set_stream_output_targets = si_set_streamout_targets;
 	sctx->b.invalidate_buffer = si_invalidate_buffer;
 
-	/* Shader user data.
-	 * The number of dwords is set to the upper bound:
-	 *   4 pointers per shader, +1 for vertex buffers, +2 for the VS copy shader.
-	 */
+	/* Shader user data. */
 	si_init_atom(sctx, &sctx->shader_userdata.atom, &sctx->atoms.s.shader_userdata,
-		     si_emit_shader_userdata, (SI_NUM_SHADERS * 4 + 1 + 2) * 4);
+		     si_emit_shader_userdata);
 
 	/* Set default and immutable mappings. */
 	si_set_user_data_base(sctx, PIPE_SHADER_VERTEX, R_00B130_SPI_SHADER_USER_DATA_VS_0);

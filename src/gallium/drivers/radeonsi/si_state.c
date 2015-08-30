@@ -47,11 +47,9 @@ si_init_external_atom(struct si_context *sctx, struct r600_atom *atom,
 /* Initialize an atom owned by radeonsi.  */
 void si_init_atom(struct si_context *sctx, struct r600_atom *atom,
 		  struct r600_atom **list_elem,
-		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
-		  unsigned num_dw)
+		  void (*emit_func)(struct si_context *ctx, struct r600_atom *state))
 {
 	atom->emit = (void*)emit_func;
-	atom->num_dw = num_dw;
 	atom->dirty = false;
 	atom->id = list_elem - sctx->atoms.array + 1; /* index+1 in the atom array */
 	*list_elem = atom;
@@ -2164,11 +2162,6 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	si_update_poly_offset_state(sctx);
 	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
-
-	sctx->framebuffer.atom.num_dw = state->nr_cbufs*16 + (8 - state->nr_cbufs)*3;
-	sctx->framebuffer.atom.num_dw += state->zsbuf ? 26 : 4;
-	sctx->framebuffer.atom.num_dw += 3; /* WINDOW_SCISSOR_BR */
-	sctx->framebuffer.atom.num_dw += 18; /* MSAA sample locations */
 	si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
 
 	if (sctx->framebuffer.nr_samples != old_nr_samples) {
@@ -3056,19 +3049,19 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_external_atom(sctx, &sctx->b.streamout.begin_atom, &sctx->atoms.s.streamout_begin);
 	si_init_external_atom(sctx, &sctx->b.streamout.enable_atom, &sctx->atoms.s.streamout_enable);
 
-	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush, 24);
-	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state, 0);
-	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs, 18);
-	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state, 10);
-	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config, 10);
-	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask, 4);
-	si_init_atom(sctx, &sctx->cb_target_mask, &sctx->atoms.s.cb_target_mask, si_emit_cb_target_mask, 3);
-	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color, 6);
-	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs, 6);
-	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state, 2+6*4);
-	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors, 16*4);
-	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports, 16*8);
-	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref, 4);
+	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush);
+	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
+	si_init_atom(sctx, &sctx->msaa_sample_locs, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
+	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state);
+	si_init_atom(sctx, &sctx->msaa_config, &sctx->atoms.s.msaa_config, si_emit_msaa_config);
+	si_init_atom(sctx, &sctx->sample_mask.atom, &sctx->atoms.s.sample_mask, si_emit_sample_mask);
+	si_init_atom(sctx, &sctx->cb_target_mask, &sctx->atoms.s.cb_target_mask, si_emit_cb_target_mask);
+	si_init_atom(sctx, &sctx->blend_color.atom, &sctx->atoms.s.blend_color, si_emit_blend_color);
+	si_init_atom(sctx, &sctx->clip_regs, &sctx->atoms.s.clip_regs, si_emit_clip_regs);
+	si_init_atom(sctx, &sctx->clip_state.atom, &sctx->atoms.s.clip_state, si_emit_clip_state);
+	si_init_atom(sctx, &sctx->scissors.atom, &sctx->atoms.s.scissors, si_emit_scissors);
+	si_init_atom(sctx, &sctx->viewports.atom, &sctx->atoms.s.viewports, si_emit_viewports);
+	si_init_atom(sctx, &sctx->stencil_ref.atom, &sctx->atoms.s.stencil_ref, si_emit_stencil_ref);
 
 	sctx->b.b.create_blend_state = si_create_blend_state;
 	sctx->b.b.bind_blend_state = si_bind_blend_state;

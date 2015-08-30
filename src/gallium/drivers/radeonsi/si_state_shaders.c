@@ -1481,7 +1481,7 @@ void si_update_shaders(struct si_context *sctx)
 
 void si_init_shader_functions(struct si_context *sctx)
 {
-	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map, 2+31);
+	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
 
 	sctx->b.b.create_vs_state = si_create_vs_state;
 	sctx->b.b.create_tcs_state = si_create_tcs_state;
