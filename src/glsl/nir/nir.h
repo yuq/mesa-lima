@@ -278,6 +278,7 @@ typedef struct {
        *   - Fragment shader output: one of the values from \c gl_frag_result.
        *   - Uniforms: Per-stage uniform slot number for default uniform block.
        *   - Uniforms: Index within the uniform block definition for UBO members.
+       *   - Non-UBO Uniforms: uniform slot number.
        *   - Other: This field is not currently used.
        *
        * If the variable is a uniform, shader input, or shader output, and the

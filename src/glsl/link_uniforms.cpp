@@ -527,7 +527,13 @@ public:
                     var->get_interface_type()->name);
          else
             process(var);
-      } else
+      } else {
+         /* Store any explicit location and reset data location so we can
+          * reuse this variable for storing the uniform slot number.
+          */
+         this->explicit_location = current_var->data.location;
+         current_var->data.location = -1;
+
          process(var);
       }
       delete this->record_next_sampler;
@@ -710,6 +716,13 @@ private:
       handle_images(base_type, &this->uniforms[id]);
       handle_subroutines(base_type, &this->uniforms[id]);
 
+      /* For array of arrays or struct arrays the base location may have
+       * already been set so dont set it again.
+       */
+      if (ubo_block_index == -1 && current_var->data.location == -1) {
+         current_var->data.location = id;
+      }
+
       /* If there is already storage associated with this uniform or if the
        * uniform is set as builtin, it means that it was set while processing
        * an earlier shader stage.  For example, we may be processing the
@@ -726,10 +739,10 @@ private:
          if (record_type != NULL) {
             const unsigned entries = MAX2(1, this->uniforms[id].array_elements);
             this->uniforms[id].remap_location =
-               current_var->data.location + field_counter;
+               this->explicit_location + field_counter;
             field_counter += entries;
          } else {
-            this->uniforms[id].remap_location = current_var->data.location;
+         this->uniforms[id].remap_location = this->explicit_location;
          }
       } else {
          /* Initialize to to indicate that no location is set */
@@ -794,6 +807,11 @@ private:
    unsigned next_sampler;
    unsigned next_image;
    unsigned next_subroutine;
+
+   /* Used to store the explicit location from current_var so that we can
+    * reuse the location field for storing the uniform slot id.
+    */
+   int explicit_location;
 
    /* Stores total struct array elements including nested structs */
    unsigned record_array_count;
