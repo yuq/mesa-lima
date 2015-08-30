@@ -3392,5 +3392,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_add_bo(pm4, sctx->border_color_buffer, RADEON_USAGE_READ,
 		      RADEON_PRIO_SHADER_DATA);
 
+	si_pm4_upload_indirect_buffer(sctx, pm4);
 	sctx->init_config = pm4;
 }

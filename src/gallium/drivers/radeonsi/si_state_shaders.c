@@ -1087,6 +1087,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 	/* Flush the context to re-emit the init_config state.
 	 * This is done only once in a lifetime of a context.
 	 */
+	si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
 	sctx->b.initial_gfx_cs_size = 0; /* force flush */
 	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
@@ -1288,6 +1289,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	/* Flush the context to re-emit the init_config state.
 	 * This is done only once in a lifetime of a context.
 	 */
+	si_pm4_upload_indirect_buffer(sctx, sctx->init_config);
 	sctx->b.initial_gfx_cs_size = 0; /* force flush */
 	si_context_gfx_flush(sctx, RADEON_FLUSH_ASYNC, NULL);
 
