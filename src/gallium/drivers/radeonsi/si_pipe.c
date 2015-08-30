@@ -72,8 +72,6 @@ static void si_destroy_context(struct pipe_context *context)
 	if (sctx->blitter)
 		util_blitter_destroy(sctx->blitter);
 
-	si_pm4_cleanup(sctx);
-
 	r600_common_context_cleanup(&sctx->b);
 
 #if HAVE_LLVM >= 0x0306
