@@ -2709,10 +2709,25 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 		return NULL;
 	}
 
-	if (sampler_state_needs_border_color(state))
-		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER;
-	else
+	if (!sampler_state_needs_border_color(state))
 		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_TRANS_BLACK;
+	else if (state->border_color.f[0] == 0 &&
+		 state->border_color.f[1] == 0 &&
+		 state->border_color.f[2] == 0 &&
+		 state->border_color.f[3] == 0)
+		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_TRANS_BLACK;
+	else if (state->border_color.f[0] == 0 &&
+		 state->border_color.f[1] == 0 &&
+		 state->border_color.f[2] == 0 &&
+		 state->border_color.f[3] == 1)
+		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_BLACK;
+	else if (state->border_color.f[0] == 1 &&
+		 state->border_color.f[1] == 1 &&
+		 state->border_color.f[2] == 1 &&
+		 state->border_color.f[3] == 1)
+		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_OPAQUE_WHITE;
+	else
+		border_color_type = V_008F3C_SQ_TEX_BORDER_COLOR_REGISTER;
 
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
