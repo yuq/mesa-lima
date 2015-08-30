@@ -3261,7 +3261,10 @@ static void si_init_config(struct si_context *sctx)
 	if (pm4 == NULL)
 		return;
 
-	si_cmd_context_control(pm4);
+	si_pm4_cmd_begin(pm4, PKT3_CONTEXT_CONTROL);
+	si_pm4_cmd_add(pm4, 0x80000000);
+	si_pm4_cmd_add(pm4, 0x80000000);
+	si_pm4_cmd_end(pm4, false);
 
 	si_pm4_set_reg(pm4, R_028A18_VGT_HOS_MAX_TESS_LEVEL, fui(64));
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
