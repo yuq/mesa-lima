@@ -49,8 +49,7 @@ nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
    nir_instr_insert(build->cursor, instr);
 
    /* Move the cursor forward. */
-   if (build->cursor.option == nir_cursor_after_instr)
-      build->cursor.instr = instr;
+   build->cursor = nir_after_instr(instr);
 }
 
 static inline void
