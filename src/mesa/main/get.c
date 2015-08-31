@@ -1992,6 +1992,14 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       v->value_int = ctx->Array.VAO->VertexBinding[VERT_ATTRIB_GENERIC(index)].Stride;
       return TYPE_INT;
 
+   case GL_VERTEX_BINDING_BUFFER:
+      if (ctx->API == API_OPENGLES2 && ctx->Version < 31)
+         goto invalid_enum;
+      if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs)
+         goto invalid_value;
+      v->value_int = ctx->Array.VAO->VertexBinding[VERT_ATTRIB_GENERIC(index)].BufferObj->Name;
+      return TYPE_INT;
+
    /* ARB_shader_image_load_store */
    case GL_IMAGE_BINDING_NAME: {
       struct gl_texture_object *t;
