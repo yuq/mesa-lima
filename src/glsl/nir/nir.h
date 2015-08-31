@@ -1580,6 +1580,17 @@ typedef struct {
    };
 } nir_cursor;
 
+static inline nir_block *
+nir_cursor_current_block(nir_cursor cursor)
+{
+   if (cursor.option == nir_cursor_before_instr ||
+       cursor.option == nir_cursor_after_instr) {
+      return cursor.instr->block;
+   } else {
+      return cursor.block;
+   }
+}
+
 static inline nir_cursor
 nir_before_block(nir_block *block)
 {
