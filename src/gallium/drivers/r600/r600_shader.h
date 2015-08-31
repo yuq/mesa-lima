@@ -78,11 +78,6 @@ struct r600_shader {
 	/* Temporarily workaround SB not handling CF_INDEX_[01] index registers */
 	boolean			uses_index_registers;
 
-	/* geometry shader properties */
-	unsigned		gs_input_prim;
-	unsigned		gs_output_prim;
-	unsigned		gs_max_out_vertices;
-	unsigned		gs_num_invocations;
 	/* size in bytes of a data item in the ring (single vertex data) */
 	unsigned		ring_item_size;
 

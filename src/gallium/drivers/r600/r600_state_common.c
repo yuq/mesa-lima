@@ -34,6 +34,7 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
 #include "tgsi/tgsi_parse.h"
+#include "tgsi/tgsi_scan.h"
 
 void r600_init_command_buffer(struct r600_command_buffer *cb, unsigned num_dw)
 {
@@ -121,6 +122,31 @@ static unsigned r600_conv_pipe_prim(unsigned prim)
 	};
 	assert(prim < Elements(prim_conv));
 	return prim_conv[prim];
+}
+
+unsigned r600_conv_prim_to_gs_out(unsigned mode)
+{
+	static const int prim_conv[] = {
+		[PIPE_PRIM_POINTS]			= V_028A6C_OUTPRIM_TYPE_POINTLIST,
+		[PIPE_PRIM_LINES]			= V_028A6C_OUTPRIM_TYPE_LINESTRIP,
+		[PIPE_PRIM_LINE_LOOP]			= V_028A6C_OUTPRIM_TYPE_LINESTRIP,
+		[PIPE_PRIM_LINE_STRIP]			= V_028A6C_OUTPRIM_TYPE_LINESTRIP,
+		[PIPE_PRIM_TRIANGLES]			= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_TRIANGLE_STRIP]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_TRIANGLE_FAN]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_QUADS]			= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_QUAD_STRIP]			= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_POLYGON]			= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_LINES_ADJACENCY]		= V_028A6C_OUTPRIM_TYPE_LINESTRIP,
+		[PIPE_PRIM_LINE_STRIP_ADJACENCY]	= V_028A6C_OUTPRIM_TYPE_LINESTRIP,
+		[PIPE_PRIM_TRIANGLES_ADJACENCY]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY]	= V_028A6C_OUTPRIM_TYPE_TRISTRIP,
+		[PIPE_PRIM_PATCHES]			= V_028A6C_OUTPRIM_TYPE_POINTLIST,
+		[R600_PRIM_RECTANGLE_LIST]		= V_028A6C_OUTPRIM_TYPE_TRISTRIP
+	};
+	assert(mode < Elements(prim_conv));
+
+	return prim_conv[mode];
 }
 
 /* common state between evergreen and r600 */
@@ -818,6 +844,19 @@ static void *r600_create_shader_state(struct pipe_context *ctx,
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	sel->so = state->stream_output;
+	tgsi_scan_shader(state->tokens, &sel->info);
+
+	switch (pipe_shader_type) {
+	case PIPE_SHADER_GEOMETRY:
+		sel->gs_output_prim =
+			sel->info.properties[TGSI_PROPERTY_GS_OUTPUT_PRIM];
+		sel->gs_max_out_vertices =
+			sel->info.properties[TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES];
+		sel->gs_num_invocations =
+			sel->info.properties[TGSI_PROPERTY_GS_INVOCATIONS];
+		break;
+	}
+
 	return sel;
 }
 
@@ -1524,7 +1563,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		unsigned prim = info.mode;
 
 		if (rctx->gs_shader) {
-			prim = rctx->gs_shader->current->shader.gs_output_prim;
+			prim = rctx->gs_shader->gs_output_prim;
 		}
 		prim = r600_conv_prim_to_gs_out(prim); /* decrease the number of types to 3 */
 

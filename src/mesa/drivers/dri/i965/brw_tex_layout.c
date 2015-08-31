@@ -123,12 +123,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
       return 16;
 
    /**
-    * From the "Alignment Unit Size" section of various specs, namely:
-    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
-    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
-    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
-    * - BSpec (for Ivybridge and slight variations in separate stencil)
-    *
     * +----------------------------------------------------------------------+
     * |                                        | alignment unit width  ("i") |
     * | Surface Property                       |-----------------------------|
@@ -146,32 +140,6 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
     * On IVB+, non-special cases can be overridden by setting the SURFACE_STATE
     * "Surface Horizontal Alignment" field to HALIGN_4 or HALIGN_8.
     */
-    if (_mesa_is_format_compressed(mt->format)) {
-       /* The hardware alignment requirements for compressed textures
-        * happen to match the block boundaries.
-        */
-      unsigned int i, j;
-      _mesa_get_format_block_size(mt->format, &i, &j);
-
-      /* On Gen9+ we can pick our own alignment for compressed textures but it
-       * has to be a multiple of the block size. The minimum alignment we can
-       * pick is 4 so we effectively have to align to 4 times the block
-       * size
-       */
-      if (brw->gen >= 9)
-         return i * 4;
-      else
-         return i;
-    }
-
-   if (mt->format == MESA_FORMAT_S_UINT8)
-      return 8;
-
-   if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
-      uint32_t align = tr_mode_horizontal_texture_alignment(brw, mt);
-      /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32. */
-      return align < 32 ? 32 : align;
-   }
 
    if (brw->gen >= 7 && mt->format == MESA_FORMAT_Z_UNORM16)
       return 8;
@@ -248,12 +216,6 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
                                       const struct intel_mipmap_tree *mt)
 {
    /**
-    * From the "Alignment Unit Size" section of various specs, namely:
-    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
-    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
-    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
-    * - BSpec (for Ivybridge and slight variations in separate stencil)
-    *
     * +----------------------------------------------------------------------+
     * |                                        | alignment unit height ("j") |
     * | Surface Property                       |-----------------------------|
@@ -270,18 +232,6 @@ intel_vertical_texture_alignment_unit(struct brw_context *brw,
     * Where "*" means either VALIGN_2 or VALIGN_4 depending on the setting of
     * the SURFACE_STATE "Surface Vertical Alignment" field.
     */
-   if (_mesa_is_format_compressed(mt->format))
-      /* See comment above for the horizontal alignment */
-      return brw->gen >= 9 ? 16 : 4;
-
-   if (mt->format == MESA_FORMAT_S_UINT8)
-      return brw->gen >= 7 ? 8 : 4;
-
-   if (mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
-      uint32_t align = tr_mode_vertical_texture_alignment(brw, mt);
-      /* XY_FAST_COPY_BLT doesn't support vertical alignment < 64 */
-      return align < 64 ? 64 : align;
-   }
 
    /* Broadwell only supports VALIGN of 4, 8, and 16.  The BSpec says 4
     * should always be used, except for stencil buffers, which should be 8.
@@ -367,7 +317,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    mt->total_width = mt->physical_width0;
 
    if (mt->compressed)
-       mt->total_width = ALIGN(mt->total_width, bw);
+       mt->total_width = ALIGN_NPOT(mt->total_width, bw);
 
    /* May need to adjust width to accommodate the placement of
     * the 2nd mipmap.  This occurs when the alignment
@@ -378,10 +328,10 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
        unsigned mip1_width;
 
        if (mt->compressed) {
-          mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
-             ALIGN(minify(mt->physical_width0, 2), bw);
+          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->align_w) +
+             ALIGN_NPOT(minify(mt->physical_width0, 2), bw);
        } else {
-          mip1_width = ALIGN(minify(mt->physical_width0, 1), mt->align_w) +
+          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->align_w) +
              minify(mt->physical_width0, 2);
        }
 
@@ -390,6 +340,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
        }
    }
 
+   mt->total_width /= bw;
    mt->total_height = 0;
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
@@ -397,7 +348,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
 
       intel_miptree_set_level_info(mt, level, x, y, depth);
 
-      img_height = ALIGN(height, mt->align_h);
+      img_height = ALIGN_NPOT(height, mt->align_h);
       if (mt->compressed)
 	 img_height /= bh;
 
@@ -414,7 +365,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
       /* Layout_below: step right after second mipmap.
        */
       if (level == mt->first_level + 1) {
-	 x += ALIGN(width, mt->align_w);
+	 x += ALIGN_NPOT(width, mt->align_w) / bw;
       } else {
 	 y += img_height;
       }
@@ -434,7 +385,7 @@ brw_miptree_get_horizontal_slice_pitch(const struct brw_context *brw,
 {
    if ((brw->gen < 9 && mt->target == GL_TEXTURE_3D) ||
        (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP)) {
-      return ALIGN(minify(mt->physical_width0, level), mt->align_w);
+      return ALIGN_NPOT(minify(mt->physical_width0, level), mt->align_w);
    } else {
       return 0;
    }
@@ -475,11 +426,11 @@ brw_miptree_get_vertical_slice_pitch(const struct brw_context *brw,
    } else if (mt->target == GL_TEXTURE_3D ||
               (brw->gen == 4 && mt->target == GL_TEXTURE_CUBE_MAP) ||
               mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-      return ALIGN(minify(mt->physical_height0, level), mt->align_h);
+      return ALIGN_NPOT(minify(mt->physical_height0, level), mt->align_h);
 
    } else {
-      const unsigned h0 = ALIGN(mt->physical_height0, mt->align_h);
-      const unsigned h1 = ALIGN(minify(mt->physical_height0, 1), mt->align_h);
+      const unsigned h0 = ALIGN_NPOT(mt->physical_height0, mt->align_h);
+      const unsigned h1 = ALIGN_NPOT(minify(mt->physical_height0, 1), mt->align_h);
 
       return h0 + h1 + (brw->gen >= 7 ? 12 : 11) * mt->align_h;
    }
@@ -551,7 +502,7 @@ brw_miptree_layout_texture_array(struct brw_context *brw,
 
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
       unsigned img_height;
-      img_height = ALIGN(height, mt->align_h);
+      img_height = ALIGN_NPOT(height, mt->align_h);
       if (mt->compressed)
          img_height /= mt->align_h;
 
@@ -574,18 +525,20 @@ static void
 brw_miptree_layout_texture_3d(struct brw_context *brw,
                               struct intel_mipmap_tree *mt)
 {
-   unsigned yscale = mt->compressed ? 4 : 1;
-
    mt->total_width = 0;
    mt->total_height = 0;
 
    unsigned ysum = 0;
+   unsigned bh, bw;
+
+   _mesa_get_format_block_size(mt->format, &bw, &bh);
+
    for (unsigned level = mt->first_level; level <= mt->last_level; level++) {
       unsigned WL = MAX2(mt->physical_width0 >> level, 1);
       unsigned HL = MAX2(mt->physical_height0 >> level, 1);
       unsigned DL = MAX2(mt->physical_depth0 >> level, 1);
-      unsigned wL = ALIGN(WL, mt->align_w);
-      unsigned hL = ALIGN(HL, mt->align_h);
+      unsigned wL = ALIGN_NPOT(WL, mt->align_w);
+      unsigned hL = ALIGN_NPOT(HL, mt->align_h);
 
       if (mt->target == GL_TEXTURE_CUBE_MAP)
          DL = 6;
@@ -596,9 +549,9 @@ brw_miptree_layout_texture_3d(struct brw_context *brw,
          unsigned x = (q % (1 << level)) * wL;
          unsigned y = ysum + (q >> level) * hL;
 
-         intel_miptree_set_image_offset(mt, level, q, x, y / yscale);
-         mt->total_width = MAX2(mt->total_width, x + wL);
-         mt->total_height = MAX2(mt->total_height, (y + hL) / yscale);
+         intel_miptree_set_image_offset(mt, level, q, x / bw, y / bh);
+         mt->total_width = MAX2(mt->total_width, (x + wL) / bw);
+         mt->total_height = MAX2(mt->total_height, (y + hL) / bh);
       }
 
       ysum += ALIGN(DL, 1 << level) / (1 << level) * hL;
@@ -767,6 +720,13 @@ intel_miptree_set_alignment(struct brw_context *brw,
                             struct intel_mipmap_tree *mt,
                             uint32_t layout_flags)
 {
+   /**
+    * From the "Alignment Unit Size" section of various specs, namely:
+    * - Gen3 Spec: "Memory Data Formats" Volume,         Section 1.20.1.4
+    * - i965 and G45 PRMs:             Volume 1,         Section 6.17.3.4.
+    * - Ironlake and Sandybridge PRMs: Volume 1, Part 1, Section 7.18.3.4
+    * - BSpec (for Ivybridge and slight variations in separate stencil)
+    */
    bool gen6_hiz_or_stencil = false;
 
    if (brw->gen == 6 && mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
@@ -798,6 +758,29 @@ intel_miptree_set_alignment(struct brw_context *brw,
          mt->align_w = 128 / mt->cpp;
          mt->align_h = 32;
       }
+   } else if (mt->compressed) {
+       /* The hardware alignment requirements for compressed textures
+        * happen to match the block boundaries.
+        */
+      _mesa_get_format_block_size(mt->format, &mt->align_w, &mt->align_h);
+
+      /* On Gen9+ we can pick our own alignment for compressed textures but it
+       * has to be a multiple of the block size. The minimum alignment we can
+       * pick is 4 so we effectively have to align to 4 times the block
+       * size
+       */
+      if (brw->gen >= 9) {
+         mt->align_w *= 4;
+         mt->align_h *= 4;
+      }
+   } else if (mt->format == MESA_FORMAT_S_UINT8) {
+      mt->align_w = 8;
+      mt->align_h = brw->gen >= 7 ? 8 : 4;
+   } else if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
+      /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32 or
+       * vertical alignment < 64. */
+      mt->align_w = MAX2(tr_mode_horizontal_texture_alignment(brw, mt), 32);
+      mt->align_h = MAX2(tr_mode_vertical_texture_alignment(brw, mt), 64);
    } else {
       mt->align_w =
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);

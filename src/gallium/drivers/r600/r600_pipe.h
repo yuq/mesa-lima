@@ -36,6 +36,8 @@
 #include "util/list.h"
 #include "util/u_transfer.h"
 
+#include "tgsi/tgsi_scan.h"
+
 #define R600_NUM_ATOMS 75
 
 #define R600_MAX_VIEWPORTS 16
@@ -305,11 +307,17 @@ struct r600_pipe_shader_selector {
 
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
+	struct tgsi_shader_info		info;
 
 	unsigned	num_shaders;
 
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
+
+	/* geometry shader properties */
+	unsigned	gs_output_prim;
+	unsigned	gs_max_out_vertices;
+	unsigned	gs_num_invocations;
 
 	unsigned	nr_ps_max_color_exports;
 };
@@ -936,28 +944,5 @@ static inline bool r600_can_read_depth(struct r600_texture *rtex)
 #define     V_028A6C_OUTPRIM_TYPE_LINESTRIP            1
 #define     V_028A6C_OUTPRIM_TYPE_TRISTRIP             2
 
-static inline unsigned r600_conv_prim_to_gs_out(unsigned mode)
-{
-	static const int prim_conv[] = {
-		V_028A6C_OUTPRIM_TYPE_POINTLIST,
-		V_028A6C_OUTPRIM_TYPE_LINESTRIP,
-		V_028A6C_OUTPRIM_TYPE_LINESTRIP,
-		V_028A6C_OUTPRIM_TYPE_LINESTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_LINESTRIP,
-		V_028A6C_OUTPRIM_TYPE_LINESTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP,
-		V_028A6C_OUTPRIM_TYPE_TRISTRIP
-	};
-	assert(mode < Elements(prim_conv));
-
-	return prim_conv[mode];
-}
-
+unsigned r600_conv_prim_to_gs_out(unsigned mode);
 #endif

@@ -56,7 +56,7 @@ static void
 vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                     nir_intrinsic_instr *intr)
 {
-        nir_builder_insert_before_instr(b, &intr->instr);
+        b->cursor = nir_before_instr(&intr->instr);
 
         if (c->stage == QSTAGE_FRAG && intr->const_index[0] ==
             VC4_NIR_TLB_COLOR_READ_INPUT) {
@@ -160,7 +160,7 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
         /* All TGSI-to-NIR outputs are VEC4. */
         assert(intr->num_components == 4);
 
-        nir_builder_insert_before_instr(b, &intr->instr);
+        b->cursor = nir_before_instr(&intr->instr);
 
         for (unsigned i = 0; i < intr->num_components; i++) {
                 nir_intrinsic_instr *intr_comp =
@@ -189,7 +189,7 @@ vc4_nir_lower_uniform(struct vc4_compile *c, nir_builder *b,
                 return;
         assert(intr->num_components == 4);
 
-        nir_builder_insert_before_instr(b, &intr->instr);
+        b->cursor = nir_before_instr(&intr->instr);
 
         /* Generate scalar loads equivalent to the original VEC4. */
         nir_ssa_def *dests[4];

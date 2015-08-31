@@ -35,10 +35,10 @@
 #include "util/u_pstipple.h"
 
 static void si_init_atom(struct r600_atom *atom, struct r600_atom **list_elem,
-			 void (*emit)(struct si_context *ctx, struct r600_atom *state),
+			 void (*emit_func)(struct si_context *ctx, struct r600_atom *state),
 			 unsigned num_dw)
 {
-	atom->emit = (void*)emit;
+	atom->emit = (void*)emit_func;
 	atom->num_dw = num_dw;
 	atom->dirty = false;
 	*list_elem = atom;

@@ -50,7 +50,7 @@ convert_instr(nir_builder *bld, nir_alu_instr *alu)
 
    is_signed = (op == nir_op_idiv);
 
-   nir_builder_insert_before_instr(bld, &alu->instr);
+   bld->cursor = nir_before_instr(&alu->instr);
 
    numer = nir_ssa_for_src(bld, alu->src[0].src,
                            nir_ssa_alu_instr_src_components(alu, 0));

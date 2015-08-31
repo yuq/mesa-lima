@@ -347,9 +347,9 @@ usampler2DArray		KEYWORD(130, 300, 130, 300, USAMPLER2DARRAY);
 sampler2DMS        KEYWORD_WITH_ALT(150, 300, 150, 310, yyextra->ARB_texture_multisample_enable, SAMPLER2DMS);
 isampler2DMS       KEYWORD_WITH_ALT(150, 300, 150, 310, yyextra->ARB_texture_multisample_enable, ISAMPLER2DMS);
 usampler2DMS       KEYWORD_WITH_ALT(150, 300, 150, 310, yyextra->ARB_texture_multisample_enable, USAMPLER2DMS);
-sampler2DMSArray   KEYWORD_WITH_ALT(150, 300, 150, 0, yyextra->ARB_texture_multisample_enable, SAMPLER2DMSARRAY);
-isampler2DMSArray  KEYWORD_WITH_ALT(150, 300, 150, 0, yyextra->ARB_texture_multisample_enable, ISAMPLER2DMSARRAY);
-usampler2DMSArray  KEYWORD_WITH_ALT(150, 300, 150, 0, yyextra->ARB_texture_multisample_enable, USAMPLER2DMSARRAY);
+sampler2DMSArray   KEYWORD_WITH_ALT(150, 300, 150, 320, yyextra->ARB_texture_multisample_enable || yyextra->OES_texture_storage_multisample_2d_array_enable, SAMPLER2DMSARRAY);
+isampler2DMSArray  KEYWORD_WITH_ALT(150, 300, 150, 320, yyextra->ARB_texture_multisample_enable || yyextra->OES_texture_storage_multisample_2d_array_enable, ISAMPLER2DMSARRAY);
+usampler2DMSArray  KEYWORD_WITH_ALT(150, 300, 150, 320, yyextra->ARB_texture_multisample_enable || yyextra->OES_texture_storage_multisample_2d_array_enable, USAMPLER2DMSARRAY);
 
    /* keywords available with ARB_texture_cube_map_array_enable extension on desktop GLSL */
 samplerCubeArray   KEYWORD_WITH_ALT(400, 0, 400, 0, yyextra->ARB_texture_cube_map_array_enable, SAMPLERCUBEARRAY);

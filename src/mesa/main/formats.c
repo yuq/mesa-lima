@@ -197,6 +197,7 @@ _mesa_get_format_max_bits(mesa_format format)
  *    MESA_FORMAT_LAYOUT_ETC1
  *    MESA_FORMAT_LAYOUT_ETC2
  *    MESA_FORMAT_LAYOUT_BPTC
+ *    MESA_FORMAT_LAYOUT_ASTC
  *    MESA_FORMAT_LAYOUT_OTHER
  */
 extern enum mesa_format_layout
@@ -662,6 +663,48 @@ _mesa_get_srgb_format_linear(mesa_format format)
       break;
    case MESA_FORMAT_BPTC_SRGB_ALPHA_UNORM:
       format = MESA_FORMAT_BPTC_RGBA_UNORM;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_4x4:
+      format = MESA_FORMAT_RGBA_ASTC_4x4;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x4:
+      format = MESA_FORMAT_RGBA_ASTC_5x4;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_5x5:
+      format = MESA_FORMAT_RGBA_ASTC_5x5;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x5:
+      format = MESA_FORMAT_RGBA_ASTC_6x5;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_6x6:
+      format = MESA_FORMAT_RGBA_ASTC_6x6;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x5:
+      format = MESA_FORMAT_RGBA_ASTC_8x5;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x6:
+      format = MESA_FORMAT_RGBA_ASTC_8x6;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_8x8:
+      format = MESA_FORMAT_RGBA_ASTC_8x8;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x5:
+      format = MESA_FORMAT_RGBA_ASTC_10x5;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x6:
+      format = MESA_FORMAT_RGBA_ASTC_10x6;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x8:
+      format = MESA_FORMAT_RGBA_ASTC_10x8;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_10x10:
+      format = MESA_FORMAT_RGBA_ASTC_10x10;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x10:
+      format = MESA_FORMAT_RGBA_ASTC_12x10;
+      break;
+   case MESA_FORMAT_SRGB8_ALPHA8_ASTC_12x12:
+      format = MESA_FORMAT_RGBA_ASTC_12x12;
       break;
    case MESA_FORMAT_B8G8R8X8_SRGB:
       format = MESA_FORMAT_B8G8R8X8_UNORM;

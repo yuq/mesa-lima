@@ -41,7 +41,6 @@ copy_image_with_blitter(struct brw_context *brw,
 {
    GLuint bw, bh;
    uint32_t src_image_x, src_image_y, dst_image_x, dst_image_y;
-   int cpp;
 
    /* The blitter doesn't understand multisampling at all. */
    if (src_mt->num_samples > 0 || dst_mt->num_samples > 0)
@@ -86,16 +85,6 @@ copy_image_with_blitter(struct brw_context *brw,
       src_y /= (int)bh;
       src_width /= (int)bw;
       src_height /= (int)bh;
-
-      /* Inside of the miptree, the x offsets are stored in pixels while
-       * the y offsets are stored in blocks.  We need to scale just the x
-       * offset.
-       */
-      src_image_x /= bw;
-
-      cpp = _mesa_get_format_bytes(src_mt->format);
-   } else {
-      cpp = src_mt->cpp;
    }
    src_x += src_image_x;
    src_y += src_image_y;
@@ -111,18 +100,12 @@ copy_image_with_blitter(struct brw_context *brw,
 
       dst_x /= (int)bw;
       dst_y /= (int)bh;
-
-      /* Inside of the miptree, the x offsets are stored in pixels while
-       * the y offsets are stored in blocks.  We need to scale just the x
-       * offset.
-       */
-      dst_image_x /= bw;
    }
    dst_x += dst_image_x;
    dst_y += dst_image_y;
 
    return intelEmitCopyBlit(brw,
-                            cpp,
+                            src_mt->cpp,
                             src_mt->pitch,
                             src_mt->bo, src_mt->offset,
                             src_mt->tiling,

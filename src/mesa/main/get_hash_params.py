@@ -434,6 +434,9 @@ descriptor=[
   [ "SAMPLE_MASK", "CONTEXT_BOOL(Multisample.SampleMask), extra_ARB_texture_multisample" ],
   [ "MAX_SAMPLE_MASK_WORDS", "CONST(1), extra_ARB_texture_multisample" ],
 
+# GL_ARB_texture_multisample / ES 3.1 with GL_OES_texture_storage_multisample_2d_array
+  [ "TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY", "LOC_CUSTOM, TYPE_INT, TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX, extra_ARB_texture_multisample" ],
+
 # GL_ARB_texture_gather / GLES 3.1
   [ "MIN_PROGRAM_TEXTURE_GATHER_OFFSET", "CONTEXT_INT(Const.MinProgramTextureGatherOffset), extra_ARB_texture_gather"],
   [ "MAX_PROGRAM_TEXTURE_GATHER_OFFSET", "CONTEXT_INT(Const.MaxProgramTextureGatherOffset), extra_ARB_texture_gather"],
@@ -739,9 +742,6 @@ descriptor=[
   [ "TEXTURE_BUFFER_DATA_STORE_BINDING_ARB", "LOC_CUSTOM, TYPE_INT, TEXTURE_BUFFER_INDEX, extra_texture_buffer_object" ],
   [ "TEXTURE_BUFFER_FORMAT_ARB", "LOC_CUSTOM, TYPE_INT, 0, extra_texture_buffer_object" ],
   [ "TEXTURE_BUFFER_ARB", "LOC_CUSTOM, TYPE_INT, 0, extra_texture_buffer_object" ],
-
-# GL_ARB_texture_multisample / GL 3.2
-  [ "TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY", "LOC_CUSTOM, TYPE_INT, TEXTURE_2D_MULTISAMPLE_ARRAY_INDEX, extra_ARB_texture_multisample" ],
 
 # GL 3.0
   [ "CONTEXT_FLAGS", "CONTEXT_INT(Const.ContextFlags), extra_version_30" ],

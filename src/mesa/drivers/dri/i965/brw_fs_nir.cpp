@@ -132,7 +132,7 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
-         for (int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
+         for (unsigned int i = 0; i < ALIGN(type_size_scalar(var->type), 4) / 4; i++) {
             int output = var->data.location + i;
             this->outputs[output] = offset(reg, bld, 4 * i);
             this->output_components[output] = vector_elements;
@@ -191,8 +191,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
             nir_setup_builtin_uniform(var);
          else
             nir_setup_uniform(var);
-
-         param_size[var->data.driver_location] = type_size_scalar(var->type);
+         if(type_size_scalar(var->type) > 0)
+            param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
    } else {
       /* prog_to_nir only creates a single giant uniform variable so we can
@@ -203,7 +203,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
                &prog->Parameters->ParameterValues[p][i];
          }
       }
-      param_size[0] = prog->Parameters->NumParameters * 4;
+      if(prog->Parameters->NumParameters > 0)
+         param_size[0] = prog->Parameters->NumParameters * 4;
    }
 }
 
@@ -416,8 +417,6 @@ fs_visitor::nir_emit_if(nir_if *if_stmt)
    nir_emit_cf_list(&if_stmt->else_list);
 
    bld.emit(BRW_OPCODE_ENDIF);
-
-   try_replace_with_sel();
 }
 
 void

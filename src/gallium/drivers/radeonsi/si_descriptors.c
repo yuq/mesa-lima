@@ -426,7 +426,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		va = rbuffer->gpu_address + offset;
 
 		/* Fill in T# buffer resource description */
-		desc[0] = va & 0xFFFFFFFF;
+		desc[0] = va;
 		desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 			  S_008F04_STRIDE(vb->stride);
 

@@ -43,7 +43,7 @@ lower_load_const_instr_scalar(nir_load_const_instr *lower)
 
    nir_builder b;
    nir_builder_init(&b, nir_cf_node_get_function(&lower->instr.block->cf_node));
-   nir_builder_insert_before_instr(&b, &lower->instr);
+   b.cursor = nir_before_instr(&lower->instr);
 
    /* Emit the individual loads. */
    nir_ssa_def *loads[4];

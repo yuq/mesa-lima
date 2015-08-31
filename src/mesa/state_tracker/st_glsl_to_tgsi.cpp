@@ -262,6 +262,7 @@ public:
    int dead_mask; /**< Used in dead code elimination */
 
    class function_entry *function; /* Set on TGSI_OPCODE_CAL or TGSI_OPCODE_BGNSUB */
+   const struct tgsi_opcode_info *info;
 };
 
 class variable_storage : public exec_node {
@@ -333,6 +334,11 @@ struct array_decl {
    unsigned mesa_index;
    unsigned array_id;
    unsigned array_size;
+};
+
+struct rename_reg_pair {
+   int old_reg;
+   int new_reg;
 };
 
 struct glsl_to_tgsi_visitor : public ir_visitor {
@@ -478,11 +484,10 @@ public:
 
    void simplify_cmp(void);
 
-   void rename_temp_register(int index, int new_index);
-   int get_first_temp_read(int index);
-   int get_first_temp_write(int index);
-   int get_last_temp_read(int index);
-   int get_last_temp_write(int index);
+   void rename_temp_registers(int num_renames, struct rename_reg_pair *renames);
+   void get_first_temp_read(int *first_reads);
+   void get_last_temp_read_first_temp_write(int *last_reads, int *first_writes);
+   void get_last_temp_write(int *last_writes);
 
    void copy_propagate(void);
    int eliminate_dead_code(void);
@@ -530,25 +535,16 @@ swizzle_for_size(int size)
    return size_swizzles[size - 1];
 }
 
-static bool
-is_tex_instruction(unsigned opcode)
+static unsigned
+num_inst_dst_regs(const glsl_to_tgsi_instruction *op)
 {
-   const tgsi_opcode_info* info = tgsi_get_opcode_info(opcode);
-   return info->is_tex;
+   return op->info->num_dst;
 }
 
 static unsigned
-num_inst_dst_regs(unsigned opcode)
+num_inst_src_regs(const glsl_to_tgsi_instruction *op)
 {
-   const tgsi_opcode_info* info = tgsi_get_opcode_info(opcode);
-   return info->num_dst;
-}
-
-static unsigned
-num_inst_src_regs(unsigned opcode)
-{
-   const tgsi_opcode_info* info = tgsi_get_opcode_info(opcode);
-   return info->is_tex ? info->num_src - 1 : info->num_src;
+   return op->info->is_tex ? op->info->num_src - 1 : op->info->num_src;
 }
 
 glsl_to_tgsi_instruction *
@@ -592,6 +588,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    assert(num_reladdr == 0);
 
    inst->op = op;
+   inst->info = tgsi_get_opcode_info(op);
    inst->dst[0] = dst;
    inst->dst[1] = dst1;
    inst->src[0] = src0;
@@ -1123,6 +1120,34 @@ type_size(const struct glsl_type *type)
    return 0;
 }
 
+
+/**
+ * If the given GLSL type is an array or matrix or a structure containing
+ * an array/matrix member, return true.  Else return false.
+ *
+ * This is used to determine which kind of temp storage (PROGRAM_TEMPORARY
+ * or PROGRAM_ARRAY) should be used for variables of this type.  Anytime
+ * we have an array that might be indexed with a variable, we need to use
+ * the later storage type.
+ */
+static bool
+type_has_array_or_matrix(const glsl_type *type)
+{
+   if (type->is_array() || type->is_matrix())
+      return true;
+
+   if (type->is_record()) {
+      for (unsigned i = 0; i < type->length; i++) {
+         if (type_has_array_or_matrix(type->fields.structure[i].type)) {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
+
 /**
  * In the initial pass of codegen, we assign temporary numbers to
  * intermediate results.  (not SSA -- variable assignments will reuse
@@ -1137,9 +1162,7 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
    src.reladdr = NULL;
    src.negate = 0;
 
-   if (!options->EmitNoIndirectTemp &&
-       (type->is_array() || type->is_matrix())) {
-
+   if (!options->EmitNoIndirectTemp && type_has_array_or_matrix(type)) {
       if (next_array >= max_num_arrays) {
          max_num_arrays += 32;
          array_sizes = (unsigned*)
@@ -3538,7 +3561,7 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
    v->samplers_used = 0;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &v->instructions) {
-      if (is_tex_instruction(inst->op)) {
+      if (inst->info->is_tex) {
          for (int i = 0; i < inst->sampler_array_size; i++) {
             unsigned idx = inst->sampler.index + i;
             v->samplers_used |= 1 << idx;
@@ -3668,51 +3691,52 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
 
 /* Replaces all references to a temporary register index with another index. */
 void
-glsl_to_tgsi_visitor::rename_temp_register(int index, int new_index)
+glsl_to_tgsi_visitor::rename_temp_registers(int num_renames, struct rename_reg_pair *renames)
 {
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
       unsigned j;
-
-      for (j = 0; j < num_inst_src_regs(inst->op); j++) {
-         if (inst->src[j].file == PROGRAM_TEMPORARY &&
-             inst->src[j].index == index) {
-            inst->src[j].index = new_index;
-         }
+      int k;
+      for (j = 0; j < num_inst_src_regs(inst); j++) {
+         if (inst->src[j].file == PROGRAM_TEMPORARY)
+            for (k = 0; k < num_renames; k++)
+               if (inst->src[j].index == renames[k].old_reg)
+                  inst->src[j].index = renames[k].new_reg;
       }
 
       for (j = 0; j < inst->tex_offset_num_offset; j++) {
-         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY &&
-             inst->tex_offsets[j].index == index) {
-            inst->tex_offsets[j].index = new_index;
-         }
+         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY)
+            for (k = 0; k < num_renames; k++)
+               if (inst->tex_offsets[j].index == renames[k].old_reg)
+                  inst->tex_offsets[j].index = renames[k].new_reg;
       }
 
-      for (j = 0; j < num_inst_dst_regs(inst->op); j++) {
-         if (inst->dst[j].file == PROGRAM_TEMPORARY && inst->dst[j].index == index) {
-            inst->dst[j].index = new_index;
-         }
+      for (j = 0; j < num_inst_dst_regs(inst); j++) {
+         if (inst->dst[j].file == PROGRAM_TEMPORARY)
+             for (k = 0; k < num_renames; k++)
+                if (inst->dst[j].index == renames[k].old_reg)
+                   inst->dst[j].index = renames[k].new_reg;
       }
    }
 }
 
-int
-glsl_to_tgsi_visitor::get_first_temp_read(int index)
+void
+glsl_to_tgsi_visitor::get_first_temp_read(int *first_reads)
 {
    int depth = 0; /* loop depth */
    int loop_start = -1; /* index of the first active BGNLOOP (if any) */
    unsigned i = 0, j;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      for (j = 0; j < num_inst_src_regs(inst->op); j++) {
-         if (inst->src[j].file == PROGRAM_TEMPORARY &&
-             inst->src[j].index == index) {
-            return (depth == 0) ? i : loop_start;
+      for (j = 0; j < num_inst_src_regs(inst); j++) {
+         if (inst->src[j].file == PROGRAM_TEMPORARY) {
+            if (first_reads[inst->src[j].index] == -1)
+                first_reads[inst->src[j].index] = (depth == 0) ? i : loop_start;
          }
       }
       for (j = 0; j < inst->tex_offset_num_offset; j++) {
-         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY &&
-             inst->tex_offsets[j].index == index) {
-            return (depth == 0) ? i : loop_start;
+         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY) {
+            if (first_reads[inst->tex_offsets[j].index] == -1)
+               first_reads[inst->tex_offsets[j].index] = (depth == 0) ? i : loop_start;
          }
       }
       if (inst->op == TGSI_OPCODE_BGNLOOP) {
@@ -3725,91 +3749,73 @@ glsl_to_tgsi_visitor::get_first_temp_read(int index)
       assert(depth >= 0);
       i++;
    }
-   return -1;
 }
 
-int
-glsl_to_tgsi_visitor::get_first_temp_write(int index)
+void
+glsl_to_tgsi_visitor::get_last_temp_read_first_temp_write(int *last_reads, int *first_writes)
 {
    int depth = 0; /* loop depth */
    int loop_start = -1; /* index of the first active BGNLOOP (if any) */
-   int i = 0;
-   unsigned j;
-
+   unsigned i = 0, j;
+   int k;
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      for (j = 0; j < num_inst_dst_regs(inst->op); j++) {
-         if (inst->dst[j].file == PROGRAM_TEMPORARY && inst->dst[j].index == index) {
-            return (depth == 0) ? i : loop_start;
-         }
+      for (j = 0; j < num_inst_src_regs(inst); j++) {
+         if (inst->src[j].file == PROGRAM_TEMPORARY)
+            last_reads[inst->src[j].index] = (depth == 0) ? i : -2;
+      }
+      for (j = 0; j < num_inst_dst_regs(inst); j++) {
+         if (inst->dst[j].file == PROGRAM_TEMPORARY)
+            if (first_writes[inst->dst[j].index] == -1)
+               first_writes[inst->dst[j].index] = (depth == 0) ? i : loop_start;
+      }
+      for (j = 0; j < inst->tex_offset_num_offset; j++) {
+         if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY)
+            last_reads[inst->tex_offsets[j].index] = (depth == 0) ? i : -2;
       }
       if (inst->op == TGSI_OPCODE_BGNLOOP) {
          if(depth++ == 0)
             loop_start = i;
       } else if (inst->op == TGSI_OPCODE_ENDLOOP) {
-         if (--depth == 0)
+         if (--depth == 0) {
             loop_start = -1;
-      }
-      assert(depth >= 0);
-      i++;
-   }
-   return -1;
-}
-
-int
-glsl_to_tgsi_visitor::get_last_temp_read(int index)
-{
-   int depth = 0; /* loop depth */
-   int last = -1; /* index of last instruction that reads the temporary */
-   unsigned i = 0, j;
-
-   foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      for (j = 0; j < num_inst_src_regs(inst->op); j++) {
-         if (inst->src[j].file == PROGRAM_TEMPORARY &&
-             inst->src[j].index == index) {
-            last = (depth == 0) ? i : -2;
+            for (k = 0; k < this->next_temp; k++) {
+               if (last_reads[k] == -2) {
+                  last_reads[k] = i;
+               }
+            }
          }
       }
-      for (j = 0; j < inst->tex_offset_num_offset; j++) {
-          if (inst->tex_offsets[j].file == PROGRAM_TEMPORARY &&
-              inst->tex_offsets[j].index == index)
-              last = (depth == 0) ? i : -2;
-      }
-      if (inst->op == TGSI_OPCODE_BGNLOOP)
-         depth++;
-      else if (inst->op == TGSI_OPCODE_ENDLOOP)
-         if (--depth == 0 && last == -2)
-            last = i;
       assert(depth >= 0);
       i++;
    }
-   assert(last >= -1);
-   return last;
 }
 
-int
-glsl_to_tgsi_visitor::get_last_temp_write(int index)
+void
+glsl_to_tgsi_visitor::get_last_temp_write(int *last_writes)
 {
    int depth = 0; /* loop depth */
-   int last = -1; /* index of last instruction that writes to the temporary */
-   int i = 0;
+   int i = 0, k;
    unsigned j;
 
    foreach_in_list(glsl_to_tgsi_instruction, inst, &this->instructions) {
-      for (j = 0; j < num_inst_dst_regs(inst->op); j++) {
-         if (inst->dst[j].file == PROGRAM_TEMPORARY && inst->dst[j].index == index)
-            last = (depth == 0) ? i : -2;
+      for (j = 0; j < num_inst_dst_regs(inst); j++) {
+         if (inst->dst[j].file == PROGRAM_TEMPORARY)
+            last_writes[inst->dst[j].index] = (depth == 0) ? i : -2;
       }
 
       if (inst->op == TGSI_OPCODE_BGNLOOP)
          depth++;
       else if (inst->op == TGSI_OPCODE_ENDLOOP)
-         if (--depth == 0 && last == -2)
-            last = i;
+         if (--depth == 0) {
+            for (k = 0; k < this->next_temp; k++) {
+               if (last_writes[k] == -2) {
+                  last_writes[k] = i;
+               }
+            }
+         }
       assert(depth >= 0);
       i++;
    }
-   assert(last >= -1);
-   return last;
 }
 
 /*
@@ -4193,7 +4199,7 @@ glsl_to_tgsi_visitor::merge_two_dsts(void)
    foreach_in_list_safe(glsl_to_tgsi_instruction, inst, &this->instructions) {
       glsl_to_tgsi_instruction *inst2;
       bool merged;
-      if (num_inst_dst_regs(inst->op) != 2)
+      if (num_inst_dst_regs(inst) != 2)
          continue;
 
       if (inst->dst[0].file != PROGRAM_UNDEFINED &&
@@ -4239,15 +4245,18 @@ glsl_to_tgsi_visitor::merge_registers(void)
 {
    int *last_reads = rzalloc_array(mem_ctx, int, this->next_temp);
    int *first_writes = rzalloc_array(mem_ctx, int, this->next_temp);
+   struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
    int i, j;
+   int num_renames = 0;
 
    /* Read the indices of the last read and first write to each temp register
     * into an array so that we don't have to traverse the instruction list as
     * much. */
    for (i = 0; i < this->next_temp; i++) {
-      last_reads[i] = get_last_temp_read(i);
-      first_writes[i] = get_first_temp_write(i);
+      last_reads[i] = -1;
+      first_writes[i] = -1;
    }
+   get_last_temp_read_first_temp_write(last_reads, first_writes);
 
    /* Start looking for registers with non-overlapping usages that can be
     * merged together. */
@@ -4265,7 +4274,9 @@ glsl_to_tgsi_visitor::merge_registers(void)
           * as the register at index j. */
          if (first_writes[i] <= first_writes[j] &&
              last_reads[i] <= first_writes[j]) {
-            rename_temp_register(j, i); /* Replace all references to j with i.*/
+            renames[num_renames].old_reg = j;
+            renames[num_renames].new_reg = i;
+            num_renames++;
 
             /* Update the first_writes and last_reads arrays with the new
              * values for the merged register index, and mark the newly unused
@@ -4277,6 +4288,8 @@ glsl_to_tgsi_visitor::merge_registers(void)
       }
    }
 
+   rename_temp_registers(num_renames, renames);
+   ralloc_free(renames);
    ralloc_free(last_reads);
    ralloc_free(first_writes);
 }
@@ -4288,15 +4301,28 @@ glsl_to_tgsi_visitor::renumber_registers(void)
 {
    int i = 0;
    int new_index = 0;
+   int *first_reads = rzalloc_array(mem_ctx, int, this->next_temp);
+   struct rename_reg_pair *renames = rzalloc_array(mem_ctx, struct rename_reg_pair, this->next_temp);
+   int num_renames = 0;
+   for (i = 0; i < this->next_temp; i++) {
+      first_reads[i] = -1;
+   }
+   get_first_temp_read(first_reads);
 
    for (i = 0; i < this->next_temp; i++) {
-      if (get_first_temp_read(i) < 0) continue;
-      if (i != new_index)
-         rename_temp_register(i, new_index);
+      if (first_reads[i] < 0) continue;
+      if (i != new_index) {
+         renames[num_renames].old_reg = i;
+         renames[num_renames].new_reg = new_index;
+         num_renames++;
+      }
       new_index++;
    }
 
+   rename_temp_registers(num_renames, renames);
    this->next_temp = new_index;
+   ralloc_free(renames);
+   ralloc_free(first_reads);
 }
 
 /**
@@ -4969,8 +4995,8 @@ compile_tgsi_instruction(struct st_translate *t,
    unsigned num_src;
    unsigned tex_target;
 
-   num_dst = num_inst_dst_regs(inst->op);
-   num_src = num_inst_src_regs(inst->op);
+   num_dst = num_inst_dst_regs(inst);
+   num_src = num_inst_src_regs(inst);
 
    for (i = 0; i < num_dst; i++)
       dst[i] = translate_dst(t,
@@ -5771,14 +5797,31 @@ get_mesa_program(struct gl_context *ctx,
 #if 0
    /* Print out some information (for debugging purposes) used by the
     * optimization passes. */
-   for (i = 0; i < v->next_temp; i++) {
-      int fr = v->get_first_temp_read(i);
-      int fw = v->get_first_temp_write(i);
-      int lr = v->get_last_temp_read(i);
-      int lw = v->get_last_temp_write(i);
+   {
+      int i;
+      int *first_writes = rzalloc_array(v->mem_ctx, int, v->next_temp);
+      int *first_reads = rzalloc_array(v->mem_ctx, int, v->next_temp);
+      int *last_writes = rzalloc_array(v->mem_ctx, int, v->next_temp);
+      int *last_reads = rzalloc_array(v->mem_ctx, int, v->next_temp);
 
-      printf("Temp %d: FR=%3d FW=%3d LR=%3d LW=%3d\n", i, fr, fw, lr, lw);
-      assert(fw <= fr);
+      for (i = 0; i < v->next_temp; i++) {
+         first_writes[i] = -1;
+         first_reads[i] = -1;
+         last_writes[i] = -1;
+         last_reads[i] = -1;
+      }
+      v->get_first_temp_read(first_reads);
+      v->get_last_temp_read_first_temp_write(last_reads, first_writes);
+      v->get_last_temp_write(last_writes);
+      for (i = 0; i < v->next_temp; i++)
+         printf("Temp %d: FR=%3d FW=%3d LR=%3d LW=%3d\n", i, first_reads[i],
+                first_writes[i],
+                last_reads[i],
+                last_writes[i]);
+      ralloc_free(first_writes);
+      ralloc_free(first_reads);
+      ralloc_free(last_writes);
+      ralloc_free(last_reads);
    }
 #endif
 
@@ -5992,6 +6035,10 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                LOWER_PACK_UNORM_4x8 |
                                LOWER_PACK_HALF_2x16 |
                                LOWER_UNPACK_HALF_2x16;
+
+         if (ctx->Extensions.ARB_gpu_shader5)
+            lower_inst |= LOWER_PACK_USE_BFI |
+                          LOWER_PACK_USE_BFE;
 
          lower_packing_builtins(ir, lower_inst);
       }

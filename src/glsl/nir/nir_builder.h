@@ -24,16 +24,12 @@
 #ifndef NIR_BUILDER_H
 #define NIR_BUILDER_H
 
+#include "nir_control_flow.h"
+
 struct exec_list;
 
 typedef struct nir_builder {
-   struct exec_list *cf_node_list;
-
-   nir_block *before_block;
-   nir_block *after_block;
-
-   nir_instr *before_instr;
-   nir_instr *after_instr;
+   nir_cursor cursor;
 
    nir_shader *shader;
    nir_function_impl *impl;
@@ -48,74 +44,19 @@ nir_builder_init(nir_builder *build, nir_function_impl *impl)
 }
 
 static inline void
-nir_builder_insert_after_cf_list(nir_builder *build,
-                                 struct exec_list *cf_node_list)
-{
-   build->cf_node_list = cf_node_list;
-   build->before_block = NULL;
-   build->after_block = NULL;
-   build->before_instr = NULL;
-   build->after_instr = NULL;
-}
-
-static inline void
-nir_builder_insert_before_block(nir_builder *build,
-                                nir_block *block)
-{
-   build->cf_node_list = NULL;
-   build->before_block = block;
-   build->after_block = NULL;
-   build->before_instr = NULL;
-   build->after_instr = NULL;
-}
-
-static inline void
-nir_builder_insert_after_block(nir_builder *build,
-                                nir_block *block)
-{
-   build->cf_node_list = NULL;
-   build->before_block = NULL;
-   build->after_block = block;
-   build->before_instr = NULL;
-   build->after_instr = NULL;
-}
-
-static inline void
-nir_builder_insert_before_instr(nir_builder *build, nir_instr *before_instr)
-{
-   build->cf_node_list = NULL;
-   build->before_block = NULL;
-   build->after_block = NULL;
-   build->before_instr = before_instr;
-   build->after_instr = NULL;
-}
-
-static inline void
-nir_builder_insert_after_instr(nir_builder *build, nir_instr *after_instr)
-{
-   build->cf_node_list = NULL;
-   build->before_block = NULL;
-   build->after_block = NULL;
-   build->before_instr = NULL;
-   build->after_instr = after_instr;
-}
-
-static inline void
 nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
 {
-   if (build->cf_node_list) {
-      nir_instr_insert_after_cf_list(build->cf_node_list, instr);
-   } else if (build->before_block) {
-      nir_instr_insert_before_block(build->before_block, instr);
-   } else if (build->after_block) {
-      nir_instr_insert_after_block(build->after_block, instr);
-   } else if (build->before_instr) {
-      nir_instr_insert_before(build->before_instr, instr);
-   } else {
-      assert(build->after_instr);
-      nir_instr_insert_after(build->after_instr, instr);
-      build->after_instr = instr;
-   }
+   nir_instr_insert(build->cursor, instr);
+
+   /* Move the cursor forward. */
+   if (build->cursor.option == nir_cursor_after_instr)
+      build->cursor.instr = instr;
+}
+
+static inline void
+nir_builder_cf_insert(nir_builder *build, nir_cf_node *cf)
+{
+   nir_cf_node_insert(build->cursor, cf);
 }
 
 static inline nir_ssa_def *

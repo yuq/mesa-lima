@@ -409,7 +409,7 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
                         nir_cf_node_get_function(&block->cf_node);
                 nir_builder b;
                 nir_builder_init(&b, impl);
-                nir_builder_insert_before_instr(&b, &intr->instr);
+                b.cursor = nir_before_instr(&intr->instr);
                 vc4_nir_lower_blend_instr(c, &b, intr);
         }
         return true;

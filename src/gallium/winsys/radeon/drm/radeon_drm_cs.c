@@ -645,29 +645,8 @@ static bool radeon_fence_wait(struct radeon_winsys *ws,
                               struct pipe_fence_handle *fence,
                               uint64_t timeout)
 {
-    struct pb_buffer *rfence = (struct pb_buffer*)fence;
-
-    if (timeout == 0)
-        return ws->buffer_wait(rfence, 0, RADEON_USAGE_READWRITE);
-
-    if (timeout != PIPE_TIMEOUT_INFINITE) {
-        int64_t start_time = os_time_get();
-
-        /* Convert to microseconds. */
-        timeout /= 1000;
-
-        /* Wait in a loop. */
-        while (!ws->buffer_wait(rfence, 0, RADEON_USAGE_READWRITE)) {
-            if (os_time_get() - start_time >= timeout) {
-                return FALSE;
-            }
-            os_time_sleep(10);
-        }
-        return TRUE;
-    }
-
-    ws->buffer_wait(rfence, PIPE_TIMEOUT_INFINITE, RADEON_USAGE_READWRITE);
-    return TRUE;
+    return ws->buffer_wait((struct pb_buffer*)fence, timeout,
+                           RADEON_USAGE_READWRITE);
 }
 
 static void radeon_fence_reference(struct pipe_fence_handle **dst,

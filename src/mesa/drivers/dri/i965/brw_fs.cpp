@@ -427,7 +427,9 @@ fs_reg::equals(const fs_reg &r) const
            negate == r.negate &&
            abs == r.abs &&
            !reladdr && !r.reladdr &&
-           memcmp(&fixed_hw_reg, &r.fixed_hw_reg, sizeof(fixed_hw_reg)) == 0 &&
+           ((file != HW_REG && file != IMM) ||
+            memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
+                   sizeof(fixed_hw_reg)) == 0) &&
            stride == r.stride);
 }
 
@@ -1789,54 +1791,46 @@ fs_visitor::assign_constant_locations()
    if (dispatch_width != 8)
       return;
 
+   unsigned int num_pull_constants = 0;
+
    pull_constant_loc = ralloc_array(mem_ctx, int, uniforms);
    memset(pull_constant_loc, -1, sizeof(pull_constant_loc[0]) * uniforms);
 
-   /* Walk through and find array access of uniforms.  Put a copy of that
-    * uniform in the pull constant buffer.
+   bool is_live[uniforms];
+   memset(is_live, 0, sizeof(is_live));
+
+   /* First, we walk through the instructions and do two things:
+    *
+    *  1) Figure out which uniforms are live.
+    *
+    *  2) Find all indirect access of uniform arrays and flag them as needing
+    *     to go into the pull constant buffer.
     *
     * Note that we don't move constant-indexed accesses to arrays.  No
     * testing has been done of the performance impact of this choice.
     */
    foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
       for (int i = 0 ; i < inst->sources; i++) {
-         if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
-            continue;
-
-         int uniform = inst->src[i].reg;
-
-         /* If this array isn't already present in the pull constant buffer,
-          * add it.
-          */
-         if (pull_constant_loc[uniform] == -1) {
-            const gl_constant_value **values = &stage_prog_data->param[uniform];
-
-            assert(param_size[uniform]);
-
-            for (int j = 0; j < param_size[uniform]; j++) {
-               pull_constant_loc[uniform + j] = stage_prog_data->nr_pull_params;
-
-               stage_prog_data->pull_param[stage_prog_data->nr_pull_params++] =
-                  values[j];
-            }
-         }
-      }
-   }
-
-   /* Find which UNIFORM registers are still in use. */
-   bool is_live[uniforms];
-   for (unsigned int i = 0; i < uniforms; i++) {
-      is_live[i] = false;
-   }
-
-   foreach_block_and_inst(block, fs_inst, inst, cfg) {
-      for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         int constant_nr = inst->src[i].reg + inst->src[i].reg_offset;
-         if (constant_nr >= 0 && constant_nr < (int) uniforms)
-            is_live[constant_nr] = true;
+         if (inst->src[i].reladdr) {
+            int uniform = inst->src[i].reg;
+
+            /* If this array isn't already present in the pull constant buffer,
+             * add it.
+             */
+            if (pull_constant_loc[uniform] == -1) {
+               assert(param_size[uniform]);
+               for (int j = 0; j < param_size[uniform]; j++)
+                  pull_constant_loc[uniform + j] = num_pull_constants++;
+            }
+         } else {
+            /* Mark the the one accessed uniform as live */
+            int constant_nr = inst->src[i].reg + inst->src[i].reg_offset;
+            if (constant_nr >= 0 && constant_nr < (int) uniforms)
+               is_live[constant_nr] = true;
+         }
       }
    }
 
@@ -1870,27 +1864,29 @@ fs_visitor::assign_constant_locations()
       } else {
          /* Demote to a pull constant. */
          push_constant_loc[i] = -1;
-
-         int pull_index = stage_prog_data->nr_pull_params++;
-         stage_prog_data->pull_param[pull_index] = stage_prog_data->param[i];
-         pull_constant_loc[i] = pull_index;
+         pull_constant_loc[i] = num_pull_constants++;
       }
    }
 
    stage_prog_data->nr_params = num_push_constants;
+   stage_prog_data->nr_pull_params = num_pull_constants;
 
    /* Up until now, the param[] array has been indexed by reg + reg_offset
-    * of UNIFORM registers.  Condense it to only contain the uniforms we
-    * chose to upload as push constants.
+    * of UNIFORM registers.  Move pull constants into pull_param[] and
+    * condense param[] to only contain the uniforms we chose to push.
+    *
+    * NOTE: Because we are condensing the params[] array, we know that
+    * push_constant_loc[i] <= i and we can do it in one smooth loop without
+    * having to make a copy.
     */
    for (unsigned int i = 0; i < uniforms; i++) {
-      int remapped = push_constant_loc[i];
+      const gl_constant_value *value = stage_prog_data->param[i];
 
-      if (remapped == -1)
-         continue;
-
-      assert(remapped <= (int)i);
-      stage_prog_data->param[remapped] = stage_prog_data->param[i];
+      if (pull_constant_loc[i] != -1) {
+         stage_prog_data->pull_param[pull_constant_loc[i]] = value;
+      } else if (push_constant_loc[i] != -1) {
+         stage_prog_data->param[push_constant_loc[i]] = value;
+      }
    }
 }
 
@@ -4806,10 +4802,10 @@ fs_visitor::optimize()
     */
    bld = fs_builder(this, 64);
 
-   split_virtual_grfs();
-
    assign_constant_locations();
    demote_pull_constants();
+
+   split_virtual_grfs();
 
 #define OPT(pass, args...) ({                                           \
       pass_num++;                                                       \

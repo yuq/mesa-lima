@@ -172,7 +172,7 @@ flatten_block(nir_builder *bld, nir_block *if_block, nir_block *prev_block,
 					(intr->intrinsic == nir_intrinsic_discard_if)) {
 				nir_ssa_def *discard_cond;
 
-				nir_builder_insert_after_instr(bld,
+				bld->cursor = nir_after_instr(
 						nir_block_last_instr(prev_block));
 
 				if (invert) {

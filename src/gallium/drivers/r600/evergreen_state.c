@@ -2143,11 +2143,11 @@ static void evergreen_emit_shader_stages(struct r600_context *rctx, struct r600_
 	if (state->geom_enable) {
 		uint32_t cut_val;
 
-		if (rctx->gs_shader->current->shader.gs_max_out_vertices <= 128)
+		if (rctx->gs_shader->gs_max_out_vertices <= 128)
 			cut_val = V_028A40_GS_CUT_128;
-		else if (rctx->gs_shader->current->shader.gs_max_out_vertices <= 256)
+		else if (rctx->gs_shader->gs_max_out_vertices <= 256)
 			cut_val = V_028A40_GS_CUT_256;
-		else if (rctx->gs_shader->current->shader.gs_max_out_vertices <= 512)
+		else if (rctx->gs_shader->gs_max_out_vertices <= 512)
 			cut_val = V_028A40_GS_CUT_512;
 		else
 			cut_val = V_028A40_GS_CUT_1024;
@@ -3013,7 +3013,7 @@ void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader
 	struct r600_shader *rshader = &shader->shader;
 	struct r600_shader *cp_shader = &shader->gs_copy_shader->shader;
 	unsigned gsvs_itemsize =
-			(cp_shader->ring_item_size * rshader->gs_max_out_vertices) >> 2;
+			(cp_shader->ring_item_size * shader->selector->gs_max_out_vertices) >> 2;
 
 	r600_init_command_buffer(cb, 64);
 
@@ -3022,14 +3022,14 @@ void evergreen_update_gs_state(struct pipe_context *ctx, struct r600_pipe_shader
 	r600_store_context_reg(cb, R_028AB8_VGT_VTX_CNT_EN, 1);
 
 	r600_store_context_reg(cb, R_028B38_VGT_GS_MAX_VERT_OUT,
-			       S_028B38_MAX_VERT_OUT(rshader->gs_max_out_vertices));
+			       S_028B38_MAX_VERT_OUT(shader->selector->gs_max_out_vertices));
 	r600_store_context_reg(cb, R_028A6C_VGT_GS_OUT_PRIM_TYPE,
-			       r600_conv_prim_to_gs_out(rshader->gs_output_prim));
+			       r600_conv_prim_to_gs_out(shader->selector->gs_output_prim));
 
 	if (rctx->screen->b.info.drm_minor >= 35) {
 		r600_store_context_reg(cb, R_028B90_VGT_GS_INSTANCE_CNT,
-				S_028B90_CNT(MIN2(rshader->gs_num_invocations, 127)) |
-				S_028B90_ENABLE(rshader->gs_num_invocations > 0));
+				S_028B90_CNT(MIN2(shader->selector->gs_num_invocations, 127)) |
+				S_028B90_ENABLE(shader->selector->gs_num_invocations > 0));
 	}
 	r600_store_context_reg_seq(cb, R_02891C_SQ_GS_VERT_ITEMSIZE, 4);
 	r600_store_value(cb, cp_shader->ring_item_size >> 2);

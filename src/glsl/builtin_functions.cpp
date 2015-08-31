@@ -284,8 +284,9 @@ texture_multisample(const _mesa_glsl_parse_state *state)
 static bool
 texture_multisample_array(const _mesa_glsl_parse_state *state)
 {
-   return state->is_version(150, 0) ||
-          state->ARB_texture_multisample_enable;
+   return state->is_version(150, 320) ||
+          state->ARB_texture_multisample_enable ||
+          state->OES_texture_storage_multisample_2d_array_enable;
 }
 
 static bool
@@ -665,10 +666,7 @@ private:
    B1(any);
    B1(all);
    B1(not);
-   B2(textureSize);
-   ir_function_signature *_textureSize(builtin_available_predicate avail,
-                                       const glsl_type *return_type,
-                                       const glsl_type *sampler_type);
+   BA2(textureSize);
 
 /** Flags to _texture() */
 #define TEX_PROJECT 1

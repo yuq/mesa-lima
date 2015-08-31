@@ -336,12 +336,15 @@ static const struct extension extension_table[] = {
    { "GL_OES_texture_half_float",                  o(OES_texture_half_float),                             ES2, 2005 },
    { "GL_OES_texture_half_float_linear",           o(OES_texture_half_float_linear),                      ES2, 2005 },
    { "GL_OES_texture_mirrored_repeat",             o(dummy_true),                                   ES1,       2005 },
+   { "GL_OES_texture_storage_multisample_2d_array",o(ARB_texture_multisample),                           ES31, 2014 },
    { "GL_OES_texture_npot",                        o(ARB_texture_non_power_of_two),                 ES1 | ES2, 2005 },
    { "GL_OES_vertex_array_object",                 o(dummy_true),                                   ES1 | ES2, 2010 },
 
    /* KHR extensions */
    { "GL_KHR_debug",                               o(dummy_true),                              GL,             2012 },
    { "GL_KHR_context_flush_control",               o(dummy_true),                              GL       | ES2, 2014 },
+   { "GL_KHR_texture_compression_astc_hdr",        o(KHR_texture_compression_astc_hdr),        GL       | ES2, 2012 },
+   { "GL_KHR_texture_compression_astc_ldr",        o(KHR_texture_compression_astc_ldr),        GL       | ES2, 2012 },
 
    /* Vendor extensions */
    { "GL_3DFX_texture_compression_FXT1",           o(TDFX_texture_compression_FXT1),           GL,             1999 },

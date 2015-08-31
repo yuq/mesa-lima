@@ -620,7 +620,7 @@ struct glsl_type {
    const glsl_type *field_type(const char *name) const;
 
    /**
-    * Get the location of a filed within a record type
+    * Get the location of a field within a record type
     */
    int field_index(const char *name) const;
 

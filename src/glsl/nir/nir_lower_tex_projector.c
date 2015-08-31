@@ -46,7 +46,7 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
          continue;
 
       nir_tex_instr *tex = nir_instr_as_tex(instr);
-      nir_builder_insert_before_instr(b, &tex->instr);
+      b->cursor = nir_before_instr(&tex->instr);
 
       /* Find the projector in the srcs list, if present. */
       int proj_index;

@@ -686,7 +686,7 @@ namespace {
                if (is_signed)
                   bld.emit_minmax(offset(dst, bld, c), offset(dst, bld, c),
                                   fs_reg(-(int)scale(widths[c] - s) - 1),
-                                  BRW_CONDITIONAL_G);
+                                  BRW_CONDITIONAL_GE);
             }
          }
 
@@ -717,7 +717,7 @@ namespace {
                if (is_signed)
                   bld.emit_minmax(offset(dst, bld, c),
                                   offset(dst, bld, c), fs_reg(-1.0f),
-                                  BRW_CONDITIONAL_G);
+                                  BRW_CONDITIONAL_GE);
             }
          }
          return dst;
@@ -741,7 +741,7 @@ namespace {
                /* Clamp the normalized floating-point argument. */
                if (is_signed) {
                   bld.emit_minmax(offset(fdst, bld, c), offset(src, bld, c),
-                                  fs_reg(-1.0f), BRW_CONDITIONAL_G);
+                                  fs_reg(-1.0f), BRW_CONDITIONAL_GE);
 
                   bld.emit_minmax(offset(fdst, bld, c), offset(fdst, bld, c),
                                   fs_reg(1.0f), BRW_CONDITIONAL_L);
@@ -812,7 +812,7 @@ namespace {
                /* Clamp to the minimum value. */
                if (widths[c] < 16)
                   bld.emit_minmax(offset(fdst, bld, c), offset(fdst, bld, c),
-                                  fs_reg(0.0f), BRW_CONDITIONAL_G);
+                                  fs_reg(0.0f), BRW_CONDITIONAL_GE);
 
                /* Convert to 16-bit floating-point. */
                bld.F32TO16(offset(dst, bld, c), offset(fdst, bld, c));

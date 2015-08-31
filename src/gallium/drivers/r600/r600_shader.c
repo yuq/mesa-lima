@@ -1809,7 +1809,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	struct tgsi_token *tokens = pipeshader->selector->tokens;
 	struct pipe_stream_output_info so = pipeshader->selector->so;
 	struct tgsi_full_immediate *immediate;
-	struct tgsi_full_property *property;
 	struct r600_shader_ctx ctx;
 	struct r600_bytecode_output output[32];
 	unsigned output_done, noutput;
@@ -1840,7 +1839,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	shader->indirect_files = ctx.info.indirect_files;
 	indirect_gprs = ctx.info.indirect_files & ~(1 << TGSI_FILE_CONSTANT);
 	tgsi_parse_init(&ctx.parse, tokens);
-	ctx.type = ctx.parse.FullHeader.Processor.Processor;
+	ctx.type = ctx.info.processor;
 	shader->processor_type = ctx.type;
 	ctx.bc->type = shader->processor_type;
 
@@ -1968,6 +1967,12 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.nliterals = 0;
 	ctx.literals = NULL;
 	shader->fs_write_all = FALSE;
+	if (ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+		shader->fs_write_all = TRUE;
+
+	shader->vs_position_window_space = FALSE;
+	if (ctx.info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION])
+		shader->vs_position_window_space = TRUE;
 
 	if (shader->vs_as_gs_a)
 		vs_add_primid_output(&ctx, key.vs.prim_id_out);
@@ -1994,34 +1999,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				goto out_err;
 			break;
 		case TGSI_TOKEN_TYPE_INSTRUCTION:
-			break;
 		case TGSI_TOKEN_TYPE_PROPERTY:
-			property = &ctx.parse.FullToken.FullProperty;
-			switch (property->Property.PropertyName) {
-			case TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS:
-				if (property->u[0].Data == 1)
-					shader->fs_write_all = TRUE;
-				break;
-			case TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION:
-				if (property->u[0].Data == 1)
-					shader->vs_position_window_space = TRUE;
-				break;
-			case TGSI_PROPERTY_VS_PROHIBIT_UCPS:
-				/* we don't need this one */
-				break;
-			case TGSI_PROPERTY_GS_INPUT_PRIM:
-				shader->gs_input_prim = property->u[0].Data;
-				break;
-			case TGSI_PROPERTY_GS_OUTPUT_PRIM:
-				shader->gs_output_prim = property->u[0].Data;
-				break;
-			case TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES:
-				shader->gs_max_out_vertices = property->u[0].Data;
-				break;
-			case TGSI_PROPERTY_GS_INVOCATIONS:
-				shader->gs_num_invocations = property->u[0].Data;
-				break;
-			}
 			break;
 		default:
 			R600_ERR("unsupported token type %d\n", ctx.parse.FullToken.Token.Type);

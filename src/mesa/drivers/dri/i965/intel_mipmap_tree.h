@@ -390,7 +390,7 @@ struct intel_mipmap_tree
     */
    GLuint physical_width0, physical_height0, physical_depth0;
 
-   GLuint cpp; /**< bytes per pixel */
+   GLuint cpp; /**< bytes per pixel (or bytes per block if compressed) */
    GLuint num_samples;
    bool compressed;
 

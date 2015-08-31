@@ -238,6 +238,20 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
       surf[0] |= BRW_SURFACE_CUBEFACE_ENABLES;
    }
 
+   /* From the CHV PRM, Volume 2d, page 321 (RENDER_SURFACE_STATE dword 0
+    * bit 9 "Sampler L2 Bypass Mode Disable" Programming Notes):
+    *
+    *    This bit must be set for the following surface types: BC2_UNORM
+    *    BC3_UNORM BC5_UNORM BC5_SNORM BC7_UNORM
+    */
+   if ((brw->gen >= 9 || brw->is_cherryview) &&
+       (format == BRW_SURFACEFORMAT_BC2_UNORM ||
+        format == BRW_SURFACEFORMAT_BC3_UNORM ||
+        format == BRW_SURFACEFORMAT_BC5_UNORM ||
+        format == BRW_SURFACEFORMAT_BC5_SNORM ||
+        format == BRW_SURFACEFORMAT_BC7_UNORM))
+      surf[0] |= GEN8_SURFACE_SAMPLER_L2_BYPASS_DISABLE;
+
    if (_mesa_is_array_texture(target) || target == GL_TEXTURE_CUBE_MAP)
       surf[0] |= GEN8_SURFACE_IS_ARRAY;
 

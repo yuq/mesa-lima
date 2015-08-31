@@ -2310,7 +2310,7 @@ vtn_get_phi_node_src(struct vtn_builder *b, nir_block *block,
       }
    }
 
-   nir_builder_insert_before_block(&b->nb, block);
+   b->nb.cursor = nir_before_block(block);
    struct vtn_ssa_value *phi = vtn_phi_node_create(b, type);
 
    struct set_entry *entry2;
@@ -2569,10 +2569,7 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       struct vtn_block *block = vtn_value(b, w[1], vtn_value_type_block)->block;
       assert(block->block == NULL);
 
-      struct exec_node *list_tail = exec_list_get_tail(b->nb.cf_node_list);
-      nir_cf_node *tail_node = exec_node_data(nir_cf_node, list_tail, node);
-      assert(tail_node->type == nir_cf_node_block);
-      block->block = nir_cf_node_as_block(tail_node);
+      block->block = nir_cursor_current_block(b->nb.cursor);
       break;
    }
 
@@ -2754,17 +2751,15 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
             vtn_value(b, block->merge_block_id, vtn_value_type_block)->block;
 
          nir_loop *loop = nir_loop_create(b->shader);
-         nir_cf_node_insert_end(b->nb.cf_node_list, &loop->cf_node);
-
-         struct exec_list *old_list = b->nb.cf_node_list;
+         nir_cf_node_insert(b->nb.cursor, &loop->cf_node);
 
          /* Reset the merge_op to prerevent infinite recursion */
          block->merge_op = SpvOpNop;
 
-         nir_builder_insert_after_cf_list(&b->nb, &loop->body);
+         b->nb.cursor = nir_after_cf_list(&loop->body);
          vtn_walk_blocks(b, block, new_break_block, new_cont_block, NULL);
 
-         nir_builder_insert_after_cf_list(&b->nb, old_list);
+         b->nb.cursor = nir_after_cf_node(&loop->cf_node);
          block = new_break_block;
          continue;
       }
@@ -2776,10 +2771,8 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
       vtn_foreach_instruction(b, block->label, block->branch,
                               vtn_handle_body_instruction);
 
-      nir_cf_node *cur_cf_node =
-         exec_node_data(nir_cf_node, exec_list_get_tail(b->nb.cf_node_list),
-                        node);
-      nir_block *cur_block = nir_cf_node_as_block(cur_cf_node);
+      nir_block *cur_block = nir_cursor_current_block(b->nb.cursor);
+      assert(cur_block == block->block);
       _mesa_hash_table_insert(b->block_table, cur_block, block);
 
       switch (branch_op) {
@@ -2824,7 +2817,7 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
 
          nir_if *if_stmt = nir_if_create(b->shader);
          if_stmt->condition = nir_src_for_ssa(vtn_ssa_value(b, w[1])->def);
-         nir_cf_node_insert_end(b->nb.cf_node_list, &if_stmt->cf_node);
+         nir_cf_node_insert(b->nb.cursor, &if_stmt->cf_node);
 
          if (then_block == break_block) {
             nir_jump_instr *jump = nir_jump_instr_create(b->shader,
@@ -2859,15 +2852,13 @@ vtn_walk_blocks(struct vtn_builder *b, struct vtn_block *start,
             struct vtn_block *merge_block =
                vtn_value(b, block->merge_block_id, vtn_value_type_block)->block;
 
-            struct exec_list *old_list = b->nb.cf_node_list;
-
-            nir_builder_insert_after_cf_list(&b->nb, &if_stmt->then_list);
+            b->nb.cursor = nir_after_cf_list(&if_stmt->then_list);
             vtn_walk_blocks(b, then_block, break_block, cont_block, merge_block);
 
-            nir_builder_insert_after_cf_list(&b->nb, &if_stmt->else_list);
+            b->nb.cursor = nir_after_cf_list(&if_stmt->else_list);
             vtn_walk_blocks(b, else_block, break_block, cont_block, merge_block);
 
-            nir_builder_insert_after_cf_list(&b->nb, old_list);
+            b->nb.cursor = nir_after_cf_node(&if_stmt->cf_node);
             block = merge_block;
             continue;
          }
@@ -2967,7 +2958,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
       b->block_table = _mesa_hash_table_create(b, _mesa_hash_pointer,
                                                _mesa_key_pointer_equal);
       nir_builder_init(&b->nb, b->impl);
-      nir_builder_insert_after_cf_list(&b->nb, &b->impl->body);
+      b->nb.cursor = nir_after_cf_list(&b->impl->body);
       vtn_walk_blocks(b, func->start_block, NULL, NULL, NULL);
       vtn_foreach_instruction(b, func->start_block->label, func->end,
                               vtn_handle_phi_second_pass);

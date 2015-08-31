@@ -1223,6 +1223,7 @@ legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
    case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z_ARB:
       return ctx->Extensions.ARB_texture_cube_map;
    case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return ctx->Extensions.ARB_texture_multisample;
    }
 
@@ -1267,7 +1268,6 @@ legal_get_tex_level_parameter_target(struct gl_context *ctx, GLenum target,
        * "target may also be TEXTURE_BUFFER, indicating the texture buffer."
        */
       return ctx->API == API_OPENGL_CORE && ctx->Version >= 31;
-   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE:
    case GL_PROXY_TEXTURE_2D_MULTISAMPLE_ARRAY:
       return ctx->Extensions.ARB_texture_multisample;
@@ -1926,6 +1926,12 @@ get_tex_parameterfv(struct gl_context *ctx,
          *params = (GLfloat) obj->ImageFormatCompatibilityType;
          break;
 
+      case GL_TEXTURE_TARGET:
+         if (ctx->API != API_OPENGL_CORE)
+            goto invalid_pname;
+         *params = ENUM_TO_FLOAT(obj->Target);
+         break;
+
       default:
          goto invalid_pname;
    }
@@ -2149,6 +2155,12 @@ get_tex_parameteriv(struct gl_context *ctx,
          if (!ctx->Extensions.ARB_shader_image_load_store)
             goto invalid_pname;
          *params = obj->ImageFormatCompatibilityType;
+         break;
+
+      case GL_TEXTURE_TARGET:
+         if (ctx->API != API_OPENGL_CORE)
+            goto invalid_pname;
+         *params = (GLint) obj->Target;
          break;
 
       default:
