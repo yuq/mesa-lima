@@ -1388,6 +1388,213 @@ glsl_type::std140_size(bool row_major) const
    return -1;
 }
 
+unsigned
+glsl_type::std430_base_alignment(bool row_major) const
+{
+
+   unsigned N = is_double() ? 8 : 4;
+
+   /* (1) If the member is a scalar consuming <N> basic machine units, the
+    *     base alignment is <N>.
+    *
+    * (2) If the member is a two- or four-component vector with components
+    *     consuming <N> basic machine units, the base alignment is 2<N> or
+    *     4<N>, respectively.
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_scalar() || this->is_vector()) {
+      switch (this->vector_elements) {
+      case 1:
+         return N;
+      case 2:
+         return 2 * N;
+      case 3:
+      case 4:
+         return 4 * N;
+      }
+   }
+
+   /* OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout":
+    *
+    * "When using the std430 storage layout, shader storage blocks will be
+    * laid out in buffer storage identically to uniform and shader storage
+    * blocks using the std140 layout, except that the base alignment and
+    * stride of arrays of scalars and vectors in rule 4 and of structures
+    * in rule 9 are not rounded up a multiple of the base alignment of a vec4.
+    */
+
+   /* (1) If the member is a scalar consuming <N> basic machine units, the
+    *     base alignment is <N>.
+    *
+    * (2) If the member is a two- or four-component vector with components
+    *     consuming <N> basic machine units, the base alignment is 2<N> or
+    *     4<N>, respectively.
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_array())
+      return this->fields.array->std430_base_alignment(row_major);
+
+   /* (5) If the member is a column-major matrix with <C> columns and
+    *     <R> rows, the matrix is stored identically to an array of
+    *     <C> column vectors with <R> components each, according to
+    *     rule (4).
+    *
+    * (7) If the member is a row-major matrix with <C> columns and <R>
+    *     rows, the matrix is stored identically to an array of <R>
+    *     row vectors with <C> components each, according to rule (4).
+    */
+   if (this->is_matrix()) {
+      const struct glsl_type *vec_type, *array_type;
+      int c = this->matrix_columns;
+      int r = this->vector_elements;
+
+      if (row_major) {
+         vec_type = get_instance(base_type, c, 1);
+         array_type = glsl_type::get_array_instance(vec_type, r);
+      } else {
+         vec_type = get_instance(base_type, r, 1);
+         array_type = glsl_type::get_array_instance(vec_type, c);
+      }
+
+      return array_type->std430_base_alignment(false);
+   }
+
+      /* (9) If the member is a structure, the base alignment of the
+    *     structure is <N>, where <N> is the largest base alignment
+    *     value of any of its members, and rounded up to the base
+    *     alignment of a vec4. The individual members of this
+    *     sub-structure are then assigned offsets by applying this set
+    *     of rules recursively, where the base offset of the first
+    *     member of the sub-structure is equal to the aligned offset
+    *     of the structure. The structure may have padding at the end;
+    *     the base offset of the member following the sub-structure is
+    *     rounded up to the next multiple of the base alignment of the
+    *     structure.
+    */
+   if (this->is_record()) {
+      unsigned base_alignment = 0;
+      for (unsigned i = 0; i < this->length; i++) {
+         bool field_row_major = row_major;
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(this->fields.structure[i].matrix_layout);
+         if (matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR) {
+            field_row_major = true;
+         } else if (matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR) {
+            field_row_major = false;
+         }
+
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         base_alignment = MAX2(base_alignment,
+                               field_type->std430_base_alignment(field_row_major));
+      }
+      return base_alignment;
+   }
+   assert(!"not reached");
+   return -1;
+}
+
+unsigned
+glsl_type::std430_array_stride(bool row_major) const
+{
+   unsigned N = is_double() ? 8 : 4;
+
+   /* Notice that the array stride of a vec3 is not 3 * N but 4 * N.
+    * See OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout"
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_vector() && this->vector_elements == 3)
+      return 4 * N;
+
+   /* By default use std430_size(row_major) */
+   return this->std430_size(row_major);
+}
+
+unsigned
+glsl_type::std430_size(bool row_major) const
+{
+   unsigned N = is_double() ? 8 : 4;
+
+   /* OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout":
+    *
+    * "When using the std430 storage layout, shader storage blocks will be
+    * laid out in buffer storage identically to uniform and shader storage
+    * blocks using the std140 layout, except that the base alignment and
+    * stride of arrays of scalars and vectors in rule 4 and of structures
+    * in rule 9 are not rounded up a multiple of the base alignment of a vec4.
+    */
+   if (this->is_scalar() || this->is_vector())
+         return this->vector_elements * N;
+
+   if (this->without_array()->is_matrix()) {
+      const struct glsl_type *element_type;
+      const struct glsl_type *vec_type;
+      unsigned int array_len;
+
+      if (this->is_array()) {
+         element_type = this->fields.array;
+         array_len = this->length;
+      } else {
+         element_type = this;
+         array_len = 1;
+      }
+
+      if (row_major) {
+         vec_type = get_instance(element_type->base_type,
+                                 element_type->matrix_columns, 1);
+
+         array_len *= element_type->vector_elements;
+      } else {
+         vec_type = get_instance(element_type->base_type,
+                                 element_type->vector_elements, 1);
+         array_len *= element_type->matrix_columns;
+      }
+      const glsl_type *array_type = glsl_type::get_array_instance(vec_type,
+                                                                  array_len);
+
+      return array_type->std430_size(false);
+   }
+
+   if (this->is_array()) {
+      if (this->fields.array->is_record())
+         return this->length * this->fields.array->std430_size(row_major);
+      else
+         return this->length * this->fields.array->std430_base_alignment(row_major);
+   }
+
+   if (this->is_record() || this->is_interface()) {
+      unsigned size = 0;
+      unsigned max_align = 0;
+
+      for (unsigned i = 0; i < this->length; i++) {
+         bool field_row_major = row_major;
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(this->fields.structure[i].matrix_layout);
+         if (matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR) {
+            field_row_major = true;
+         } else if (matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR) {
+            field_row_major = false;
+         }
+
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         unsigned align = field_type->std430_base_alignment(field_row_major);
+         size = glsl_align(size, align);
+         size += field_type->std430_size(field_row_major);
+
+         max_align = MAX2(align, max_align);
+      }
+      size = glsl_align(size, max_align);
+      return size;
+   }
+
+   assert(!"not reached");
+   return -1;
+}
 
 unsigned
 glsl_type::count_attribute_slots() const

@@ -334,6 +334,25 @@ struct glsl_type {
    unsigned std140_size(bool row_major) const;
 
    /**
+    * Alignment in bytes of the start of this type in a std430 shader
+    * storage block.
+    */
+   unsigned std430_base_alignment(bool row_major) const;
+
+   /**
+    * Calculate array stride in bytes of this type in a std430 shader storage
+    * block.
+    */
+   unsigned std430_array_stride(bool row_major) const;
+
+   /**
+    * Size in bytes of this type in a std430 shader storage block.
+    *
+    * Note that this is not GL_BUFFER_SIZE
+    */
+   unsigned std430_size(bool row_major) const;
+
+   /**
     * \brief Can this type be implicitly converted to another?
     *
     * \return True if the types are identical or if this type can be converted
