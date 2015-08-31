@@ -145,8 +145,9 @@ SYSTEM_VALUE(invocation_id, 1)
  * the first index is the base address and the second index is an offset that
  * should be added to the base address.  (This way you can determine in the
  * back-end which variable is being accessed even in an array.)  For inputs,
- * the one and only index corresponds to the attribute slot.  UBO loads also
- * have a single index which is the base address to load from.
+ * the one and only index corresponds to the attribute slot.  UBO loads
+ * have two indices the first of which is the descriptor set and the second
+ * is the base address to load from.
  *
  * UBO loads have a (possibly constant) source which is the UBO buffer index.
  * For each type of load, the _indirect variant has one additional source
@@ -165,7 +166,7 @@ SYSTEM_VALUE(invocation_id, 1)
              true, 0, 0, indices, flags)
 
 LOAD(uniform, 0, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-LOAD(ubo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+LOAD(ubo, 1, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(input, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 /* LOAD(ssbo, 1, 0) */
 
