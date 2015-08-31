@@ -45,6 +45,114 @@ typedef enum
 
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
 
+
+/**
+ * Indexes for vertex program attributes.
+ * GL_NV_vertex_program aliases generic attributes over the conventional
+ * attributes.  In GL_ARB_vertex_program shader the aliasing is optional.
+ * In GL_ARB_vertex_shader / OpenGL 2.0 the aliasing is disallowed (the
+ * generic attributes are distinct/separate).
+ */
+typedef enum
+{
+   VERT_ATTRIB_POS = 0,
+   VERT_ATTRIB_WEIGHT = 1,
+   VERT_ATTRIB_NORMAL = 2,
+   VERT_ATTRIB_COLOR0 = 3,
+   VERT_ATTRIB_COLOR1 = 4,
+   VERT_ATTRIB_FOG = 5,
+   VERT_ATTRIB_COLOR_INDEX = 6,
+   VERT_ATTRIB_EDGEFLAG = 7,
+   VERT_ATTRIB_TEX0 = 8,
+   VERT_ATTRIB_TEX1 = 9,
+   VERT_ATTRIB_TEX2 = 10,
+   VERT_ATTRIB_TEX3 = 11,
+   VERT_ATTRIB_TEX4 = 12,
+   VERT_ATTRIB_TEX5 = 13,
+   VERT_ATTRIB_TEX6 = 14,
+   VERT_ATTRIB_TEX7 = 15,
+   VERT_ATTRIB_POINT_SIZE = 16,
+   VERT_ATTRIB_GENERIC0 = 17,
+   VERT_ATTRIB_GENERIC1 = 18,
+   VERT_ATTRIB_GENERIC2 = 19,
+   VERT_ATTRIB_GENERIC3 = 20,
+   VERT_ATTRIB_GENERIC4 = 21,
+   VERT_ATTRIB_GENERIC5 = 22,
+   VERT_ATTRIB_GENERIC6 = 23,
+   VERT_ATTRIB_GENERIC7 = 24,
+   VERT_ATTRIB_GENERIC8 = 25,
+   VERT_ATTRIB_GENERIC9 = 26,
+   VERT_ATTRIB_GENERIC10 = 27,
+   VERT_ATTRIB_GENERIC11 = 28,
+   VERT_ATTRIB_GENERIC12 = 29,
+   VERT_ATTRIB_GENERIC13 = 30,
+   VERT_ATTRIB_GENERIC14 = 31,
+   VERT_ATTRIB_GENERIC15 = 32,
+   VERT_ATTRIB_MAX = 33
+} gl_vert_attrib;
+
+/**
+ * Symbolic constats to help iterating over
+ * specific blocks of vertex attributes.
+ *
+ * VERT_ATTRIB_FF
+ *   includes all fixed function attributes as well as
+ *   the aliased GL_NV_vertex_program shader attributes.
+ * VERT_ATTRIB_TEX
+ *   include the classic texture coordinate attributes.
+ *   Is a subset of VERT_ATTRIB_FF.
+ * VERT_ATTRIB_GENERIC
+ *   include the OpenGL 2.0+ GLSL generic shader attributes.
+ *   These alias the generic GL_ARB_vertex_shader attributes.
+ */
+#define VERT_ATTRIB_FF(i)           (VERT_ATTRIB_POS + (i))
+#define VERT_ATTRIB_FF_MAX          VERT_ATTRIB_GENERIC0
+
+#define VERT_ATTRIB_TEX(i)          (VERT_ATTRIB_TEX0 + (i))
+#define VERT_ATTRIB_TEX_MAX         MAX_TEXTURE_COORD_UNITS
+
+#define VERT_ATTRIB_GENERIC(i)      (VERT_ATTRIB_GENERIC0 + (i))
+#define VERT_ATTRIB_GENERIC_MAX     MAX_VERTEX_GENERIC_ATTRIBS
+
+/**
+ * Bitflags for vertex attributes.
+ * These are used in bitfields in many places.
+ */
+/*@{*/
+#define VERT_BIT_POS             BITFIELD64_BIT(VERT_ATTRIB_POS)
+#define VERT_BIT_WEIGHT          BITFIELD64_BIT(VERT_ATTRIB_WEIGHT)
+#define VERT_BIT_NORMAL          BITFIELD64_BIT(VERT_ATTRIB_NORMAL)
+#define VERT_BIT_COLOR0          BITFIELD64_BIT(VERT_ATTRIB_COLOR0)
+#define VERT_BIT_COLOR1          BITFIELD64_BIT(VERT_ATTRIB_COLOR1)
+#define VERT_BIT_FOG             BITFIELD64_BIT(VERT_ATTRIB_FOG)
+#define VERT_BIT_COLOR_INDEX     BITFIELD64_BIT(VERT_ATTRIB_COLOR_INDEX)
+#define VERT_BIT_EDGEFLAG        BITFIELD64_BIT(VERT_ATTRIB_EDGEFLAG)
+#define VERT_BIT_TEX0            BITFIELD64_BIT(VERT_ATTRIB_TEX0)
+#define VERT_BIT_TEX1            BITFIELD64_BIT(VERT_ATTRIB_TEX1)
+#define VERT_BIT_TEX2            BITFIELD64_BIT(VERT_ATTRIB_TEX2)
+#define VERT_BIT_TEX3            BITFIELD64_BIT(VERT_ATTRIB_TEX3)
+#define VERT_BIT_TEX4            BITFIELD64_BIT(VERT_ATTRIB_TEX4)
+#define VERT_BIT_TEX5            BITFIELD64_BIT(VERT_ATTRIB_TEX5)
+#define VERT_BIT_TEX6            BITFIELD64_BIT(VERT_ATTRIB_TEX6)
+#define VERT_BIT_TEX7            BITFIELD64_BIT(VERT_ATTRIB_TEX7)
+#define VERT_BIT_POINT_SIZE      BITFIELD64_BIT(VERT_ATTRIB_POINT_SIZE)
+#define VERT_BIT_GENERIC0        BITFIELD64_BIT(VERT_ATTRIB_GENERIC0)
+
+#define VERT_BIT(i)              BITFIELD64_BIT(i)
+#define VERT_BIT_ALL             BITFIELD64_RANGE(0, VERT_ATTRIB_MAX)
+
+#define VERT_BIT_FF(i)           VERT_BIT(i)
+#define VERT_BIT_FF_ALL          BITFIELD64_RANGE(0, VERT_ATTRIB_FF_MAX)
+#define VERT_BIT_TEX(i)          VERT_BIT(VERT_ATTRIB_TEX(i))
+#define VERT_BIT_TEX_ALL         \
+   BITFIELD64_RANGE(VERT_ATTRIB_TEX(0), VERT_ATTRIB_TEX_MAX)
+
+#define VERT_BIT_GENERIC(i)      VERT_BIT(VERT_ATTRIB_GENERIC(i))
+#define VERT_BIT_GENERIC_ALL     \
+   BITFIELD64_RANGE(VERT_ATTRIB_GENERIC(0), VERT_ATTRIB_GENERIC_MAX)
+/*@}*/
+
+
 /**
  * Indexes for vertex shader outputs, geometry shader inputs/outputs, and
  * fragment shader inputs.
