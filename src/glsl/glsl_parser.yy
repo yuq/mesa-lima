@@ -1199,6 +1199,8 @@ layout_qualifier_id:
             $$.flags.q.std140 = 1;
          } else if (match_layout_qualifier($1, "shared", state) == 0) {
             $$.flags.q.shared = 1;
+         } else if (match_layout_qualifier($1, "std430", state) == 0) {
+            $$.flags.q.std430 = 1;
          } else if (match_layout_qualifier($1, "column_major", state) == 0) {
             $$.flags.q.column_major = 1;
          /* "row_major" is a reserved word in GLSL 1.30+. Its token is parsed

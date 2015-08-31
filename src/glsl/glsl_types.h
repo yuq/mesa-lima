@@ -77,7 +77,8 @@ enum glsl_sampler_dim {
 enum glsl_interface_packing {
    GLSL_INTERFACE_PACKING_STD140,
    GLSL_INTERFACE_PACKING_SHARED,
-   GLSL_INTERFACE_PACKING_PACKED
+   GLSL_INTERFACE_PACKING_PACKED,
+   GLSL_INTERFACE_PACKING_STD430
 };
 
 enum glsl_matrix_layout {

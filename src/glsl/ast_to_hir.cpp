@@ -2920,11 +2920,13 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
        var->data.depth_layout = ir_depth_layout_none;
 
    if (qual->flags.q.std140 ||
+       qual->flags.q.std430 ||
        qual->flags.q.packed ||
        qual->flags.q.shared) {
       _mesa_glsl_error(loc, state,
-                       "uniform block layout qualifiers std140, packed, and "
-                       "shared can only be applied to uniform blocks, not "
+                       "uniform and shader storage block layout qualifiers "
+                       "std140, std430, packed, and shared can only be "
+                       "applied to uniform or shader storage blocks, not "
                        "members");
    }
 
@@ -5691,12 +5693,14 @@ ast_process_structure_or_interface_block(exec_list *instructions,
          const struct ast_type_qualifier *const qual =
             & decl_list->type->qualifier;
          if (qual->flags.q.std140 ||
+             qual->flags.q.std430 ||
              qual->flags.q.packed ||
              qual->flags.q.shared) {
             _mesa_glsl_error(&loc, state,
                              "uniform/shader storage block layout qualifiers "
-                             "std140, packed, and shared can only be applied "
-                             "to uniform/shader storage blocks, not members");
+                             "std140, std430, packed, and shared can only be "
+                             "applied to uniform/shader storage blocks, not "
+                             "members");
          }
 
          if (qual->flags.q.constant) {
@@ -5908,6 +5912,13 @@ ast_interface_block::hir(exec_list *instructions,
                        this->block_name);
    }
 
+   if (!this->layout.flags.q.buffer &&
+       this->layout.flags.q.std430) {
+      _mesa_glsl_error(&loc, state,
+                       "std430 storage block layout qualifier is supported "
+                       "only for shader storage blocks");
+   }
+
    /* The ast_interface_block has a list of ast_declarator_lists.  We
     * need to turn those into ir_variables with an association
     * with this uniform block.
@@ -5917,6 +5928,8 @@ ast_interface_block::hir(exec_list *instructions,
       packing = GLSL_INTERFACE_PACKING_SHARED;
    } else if (this->layout.flags.q.packed) {
       packing = GLSL_INTERFACE_PACKING_PACKED;
+   } else if (this->layout.flags.q.std430) {
+      packing = GLSL_INTERFACE_PACKING_STD430;
    } else {
       /* The default layout is std140.
        */

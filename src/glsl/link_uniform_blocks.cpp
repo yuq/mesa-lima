@@ -119,8 +119,16 @@ private:
          v->IndexName = v->Name;
       }
 
-      const unsigned alignment = type->std140_base_alignment(v->RowMajor);
-      unsigned size = type->std140_size(v->RowMajor);
+      unsigned alignment = 0;
+      unsigned size = 0;
+
+      if (v->Type->interface_packing == GLSL_INTERFACE_PACKING_STD430) {
+         alignment = type->std430_base_alignment(v->RowMajor);
+         size = type->std430_size(v->RowMajor);
+      } else {
+         alignment = type->std140_base_alignment(v->RowMajor);
+         size = type->std140_size(v->RowMajor);
+      }
 
       this->offset = glsl_align(this->offset, alignment);
       v->Offset = this->offset;
@@ -255,7 +263,8 @@ link_uniform_blocks(void *mem_ctx,
                  == unsigned(ubo_packing_shared));
    STATIC_ASSERT(unsigned(GLSL_INTERFACE_PACKING_PACKED)
                  == unsigned(ubo_packing_packed));
-
+   STATIC_ASSERT(unsigned(GLSL_INTERFACE_PACKING_STD430)
+                 == unsigned(ubo_packing_std430));
 
    hash_table_foreach (block_hash, entry) {
       const struct link_uniform_block_active *const b =
