@@ -139,13 +139,14 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
                    const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
-   val->type = vtn_value(b, w[1], vtn_value_type_type)->type;
+   val->ssa = rzalloc(b, struct vtn_ssa_value);
+   val->ssa->type = vtn_value(b, w[1], vtn_value_type_type)->type->type;
 
    /* Collect the various SSA sources */
    unsigned num_inputs = count - 5;
    nir_ssa_def *src[3];
    for (unsigned i = 0; i < num_inputs; i++)
-      src[i] = vtn_ssa_value(b, w[i + 5]);
+      src[i] = vtn_ssa_value(b, w[i + 5])->def;
 
    nir_op op;
    switch (entrypoint) {
@@ -158,16 +159,16 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    case Ceil:        op = nir_op_fceil;         break;
    case Fract:       op = nir_op_ffract;        break;
    case Radians:
-      val->ssa = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 0.01745329251));
+      val->ssa->def = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 0.01745329251));
       return;
    case Degrees:
-      val->ssa = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 57.2957795131));
+      val->ssa->def = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 57.2957795131));
       return;
    case Sin:         op = nir_op_fsin;       break;
    case Cos:         op = nir_op_fcos;       break;
    case Tan:
-      val->ssa = nir_fdiv(&b->nb, nir_fsin(&b->nb, src[0]),
-                                  nir_fcos(&b->nb, src[0]));
+      val->ssa->def = nir_fdiv(&b->nb, nir_fsin(&b->nb, src[0]),
+                               nir_fcos(&b->nb, src[0]));
       return;
    case Pow:         op = nir_op_fpow;       break;
    case Exp2:        op = nir_op_fexp2;      break;
@@ -180,7 +181,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    case Max:         op = nir_op_fmax;       break;
    case Mix:         op = nir_op_flrp;       break;
    case Step:
-      val->ssa = nir_sge(&b->nb, src[1], src[0]);
+      val->ssa->def = nir_sge(&b->nb, src[1], src[0]);
       return;
 
    case FloatBitsToInt:
@@ -188,7 +189,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    case IntBitsToFloat:
    case UintBitsToFloat:
       /* Probably going to be removed from the final version of the spec. */
-      val->ssa = src[0];
+      val->ssa->def = src[0];
       return;
 
    case Fma:         op = nir_op_ffma;       break;
@@ -207,13 +208,13 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    case UnpackHalf2x16:    op = nir_op_unpack_half_2x16;    break;
 
    case Length:
-      val->ssa = build_length(&b->nb, src[0]);
+      val->ssa->def = build_length(&b->nb, src[0]);
       return;
    case Distance:
-      val->ssa = build_length(&b->nb, nir_fsub(&b->nb, src[0], src[1]));
+      val->ssa->def = build_length(&b->nb, nir_fsub(&b->nb, src[0], src[1]));
       return;
    case Normalize:
-      val->ssa = nir_fdiv(&b->nb, src[0], build_length(&b->nb, src[0]));
+      val->ssa->def = nir_fdiv(&b->nb, src[0], build_length(&b->nb, src[0]));
       return;
 
    case UaddCarry:         op = nir_op_uadd_carry;          break;
@@ -255,8 +256,8 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
 
    nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
-                     glsl_get_vector_elements(val->type), val->name);
-   val->ssa = &instr->dest.dest.ssa;
+                     glsl_get_vector_elements(val->ssa->type), val->name);
+   val->ssa->def = &instr->dest.dest.ssa;
 
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
       instr->src[i].src = nir_src_for_ssa(src[i]);

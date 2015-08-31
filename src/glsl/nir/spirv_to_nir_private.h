@@ -25,6 +25,7 @@
  *
  */
 
+#include "nir.h"
 #include "nir_spirv.h"
 #include "nir_builder.h"
 #include "spirv.h"
@@ -60,30 +61,88 @@ struct vtn_function {
 
    nir_function_overload *overload;
    struct vtn_block *start_block;
+
+   const uint32_t *end;
 };
 
 typedef bool (*vtn_instruction_handler)(struct vtn_builder *, uint32_t,
                                         const uint32_t *, unsigned);
 
+struct vtn_ssa_value {
+   union {
+      nir_ssa_def *def;
+      struct vtn_ssa_value **elems;
+   };
+
+   /* For matrices, a transposed version of the value, or NULL if it hasn't
+    * been computed
+    */
+   struct vtn_ssa_value *transposed;
+
+   const struct glsl_type *type;
+};
+
+struct vtn_type {
+   const struct glsl_type *type;
+
+   /* for matrices, whether the matrix is stored row-major */
+   bool row_major;
+
+   /* for structs, the offset of each member */
+   unsigned *offsets;
+
+   /* for structs, whether it was decorated as a "non-SSBO-like" block */
+   bool block;
+
+   /* for structs, whether it was decorated as an "SSBO-like" block */
+   bool buffer_block;
+
+   /* for structs with block == true, whether this is a builtin block (i.e. a
+    * block that contains only builtins).
+    */
+   bool builtin_block;
+
+   /* for arrays and matrices, the array stride */
+   unsigned stride;
+
+   /* for arrays, the vtn_type for the elements of the array */
+   struct vtn_type *array_element;
+
+   /* for structures, the vtn_type for each member */
+   struct vtn_type **members;
+
+   /* Whether this type, or a parent type, has been decorated as a builtin */
+   bool is_builtin;
+
+   SpvBuiltIn builtin;
+};
+
 struct vtn_value {
    enum vtn_value_type value_type;
    const char *name;
    struct vtn_decoration *decoration;
-   const struct glsl_type *type;
    union {
       void *ptr;
       char *str;
-      nir_constant *constant;
-      nir_deref_var *deref;
+      struct vtn_type *type;
+      struct {
+         nir_constant *constant;
+         const struct glsl_type *const_type;
+      };
+      struct {
+         nir_deref_var *deref;
+         struct vtn_type *deref_type;
+      };
       struct vtn_function *func;
       struct vtn_block *block;
-      nir_ssa_def *ssa;
+      struct vtn_ssa_value *ssa;
       vtn_instruction_handler ext_handler;
    };
 };
 
 struct vtn_decoration {
    struct vtn_decoration *next;
+   int member; /* -1 if not a member decoration */
    const uint32_t *literals;
    struct vtn_value *group;
    SpvDecoration decoration;
@@ -95,6 +154,25 @@ struct vtn_builder {
    nir_shader *shader;
    nir_function_impl *impl;
    struct vtn_block *block;
+
+   /*
+    * In SPIR-V, constants are global, whereas in NIR, the load_const
+    * instruction we use is per-function. So while we parse each function, we
+    * keep a hash table of constants we've resolved to nir_ssa_value's so
+    * far, and we lazily resolve them when we see them used in a function.
+    */
+   struct hash_table *const_table;
+
+   /*
+    * Map from nir_block to the vtn_block which ends with it -- used for
+    * handling phi nodes.
+    */
+   struct hash_table *block_table;
+
+   /*
+    * NIR variable for each SPIR-V builtin.
+    */
+   nir_variable *builtins[42]; /* XXX need symbolic constant from SPIR-V header */
 
    unsigned value_id_bound;
    struct vtn_value *values;
@@ -134,10 +212,11 @@ vtn_value(struct vtn_builder *b, uint32_t value_id,
    return val;
 }
 
-nir_ssa_def *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
+struct vtn_ssa_value *vtn_ssa_value(struct vtn_builder *b, uint32_t value_id);
 
 typedef void (*vtn_decoration_foreach_cb)(struct vtn_builder *,
                                           struct vtn_value *,
+                                          int member,
                                           const struct vtn_decoration *,
                                           void *);
 
