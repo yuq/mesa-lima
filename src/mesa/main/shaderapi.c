@@ -53,14 +53,12 @@
 #include "program/prog_parameter.h"
 #include "util/ralloc.h"
 #include "util/hash_table.h"
+#include "util/mesa-sha1.h"
 #include <stdbool.h>
 #include "../glsl/glsl_parser_extras.h"
 #include "../glsl/ir.h"
 #include "../glsl/ir_uniform.h"
 #include "../glsl/program.h"
-
-/** Define this to enable shader substitution (see below) */
-#define SHADER_SUBST 0
 
 
 /**
@@ -1512,23 +1510,99 @@ _mesa_LinkProgram(GLhandleARB programObj)
    link_program(ctx, programObj);
 }
 
+#if defined(HAVE_SHA1)
+/**
+ * Generate a SHA-1 hash value string for given source string.
+ */
+static void
+generate_sha1(const char *source, char sha_str[64])
+{
+   unsigned char sha[20];
+   _mesa_sha1_compute(source, strlen(source), sha);
+   _mesa_sha1_format(sha_str, sha);
+}
 
+/**
+ * Construct a full path for shader replacement functionality using
+ * following format:
+ *
+ * <path>/<stage prefix>_<CHECKSUM>.glsl
+ */
+static void
+construct_name(const gl_shader_stage stage, const char *source,
+               const char *path, char *name, unsigned length)
+{
+   char sha[64];
+   static const char *types[] = {
+      "VS", "TC", "TE", "GS", "FS", "CS",
+   };
+
+   generate_sha1(source, sha);
+   _mesa_snprintf(name, length, "%s/%s_%s.glsl", path, types[stage],
+                  sha);
+}
+
+/**
+ * Write given shader source to a file in MESA_SHADER_DUMP_PATH.
+ */
+static void
+dump_shader(const gl_shader_stage stage, const char *source)
+{
+   char name[PATH_MAX];
+   static bool path_exists = true;
+   char *dump_path;
+   FILE *f;
+
+   if (!path_exists)
+      return;
+
+   dump_path = getenv("MESA_SHADER_DUMP_PATH");
+   if (!dump_path) {
+      path_exists = false;
+      return;
+   }
+
+   construct_name(stage, source, dump_path, name, PATH_MAX);
+
+   f = fopen(name, "w");
+   if (f) {
+      fputs(source, f);
+      fclose(f);
+   } else {
+      GET_CURRENT_CONTEXT(ctx);
+      _mesa_warning(ctx, "could not open %s for dumping shader (%s)", name,
+                    strerror(errno));
+   }
+}
 
 /**
  * Read shader source code from a file.
  * Useful for debugging to override an app's shader.
  */
 static GLcharARB *
-read_shader(const char *fname)
+read_shader(const gl_shader_stage stage, const char *source)
 {
-   int shader_size = 0;
-   FILE *f = fopen(fname, "r");
-   GLcharARB *buffer, *shader;
-   int len;
+   char name[PATH_MAX];
+   char *read_path;
+   static bool path_exists = true;
+   int len, shader_size = 0;
+   GLcharARB *buffer;
+   FILE *f;
 
-   if (!f) {
+   if (!path_exists)
+      return NULL;
+
+   read_path = getenv("MESA_SHADER_READ_PATH");
+   if (!read_path) {
+      path_exists = false;
       return NULL;
    }
+
+   construct_name(stage, source, read_path, name, PATH_MAX);
+
+   f = fopen(name, "r");
+   if (!f)
+      return NULL;
 
    /* allocate enough room for the entire shader */
    fseek(f, 0, SEEK_END);
@@ -1547,12 +1621,9 @@ read_shader(const char *fname)
 
    fclose(f);
 
-   shader = strdup(buffer);
-   free(buffer);
-
-   return shader;
+   return buffer;
 }
-
+#endif /* HAVE_SHA1 */
 
 /**
  * Called via glShaderSource() and glShaderSourceARB() API functions.
@@ -1567,7 +1638,11 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
    GLint *offsets;
    GLsizei i, totalLength;
    GLcharARB *source;
-   GLuint checksum;
+
+#if defined(HAVE_SHA1)
+   GLcharARB *replacement;
+   struct gl_shader *sh;
+#endif /* HAVE_SHA1 */
 
    if (!shaderObj || string == NULL) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glShaderSourceARB");
@@ -1620,34 +1695,22 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
    source[totalLength - 1] = '\0';
    source[totalLength - 2] = '\0';
 
-   if (SHADER_SUBST) {
-      /* Compute the shader's source code checksum then try to open a file
-       * named newshader_<CHECKSUM>.  If it exists, use it in place of the
-       * original shader source code.  For debugging.
-       */
-      char filename[100];
-      GLcharARB *newSource;
+#if defined(HAVE_SHA1)
+   sh = _mesa_lookup_shader(ctx, shaderObj);
 
-      checksum = _mesa_str_checksum(source);
+   /* Dump original shader source to MESA_SHADER_DUMP_PATH and replace
+    * if corresponding entry found from MESA_SHADER_READ_PATH.
+    */
+   dump_shader(sh->Stage, source);
 
-      _mesa_snprintf(filename, sizeof(filename), "newshader_%d", checksum);
-
-      newSource = read_shader(filename);
-      if (newSource) {
-         fprintf(stderr, "Mesa: Replacing shader %u chksum=%d with %s\n",
-                       shaderObj, checksum, filename);
-         free(source);
-         source = newSource;
-      }
+   replacement = read_shader(sh->Stage, source);
+   if (replacement) {
+      free(source);
+      source = replacement;
    }
+#endif /* HAVE_SHA1 */
 
    shader_source(ctx, shaderObj, source);
-
-   if (SHADER_SUBST) {
-      struct gl_shader *sh = _mesa_lookup_shader(ctx, shaderObj);
-      if (sh)
-         sh->SourceChecksum = checksum; /* save original checksum */
-   }
 
    free(offsets);
 }
