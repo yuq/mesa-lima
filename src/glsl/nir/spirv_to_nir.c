@@ -556,7 +556,7 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
    default:
       unreachable("Unhandled opcode");
    }
-   
+
    vtn_foreach_decoration(b, val, type_decoration_cb, NULL);
 }
 
@@ -644,10 +644,7 @@ vtn_get_builtin_location(SpvBuiltIn builtin, int *location,
       /* XXX figure this out */
       unreachable("unhandled builtin");
    case SpvBuiltInVertexId:
-      /* Vulkan defines VertexID to be zero-based and reserves the new
-       * builtin keyword VertexIndex to indicate the non-zero-based value.
-       */
-      *location = SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
+      *location = SYSTEM_VALUE_VERTEX_ID;
       *mode = nir_var_system_value;
       break;
    case SpvBuiltInInstanceId:
@@ -825,7 +822,7 @@ get_builtin_variable(struct vtn_builder *b,
    if (!var) {
       var = ralloc(b->shader, nir_variable);
       var->type = type;
-      
+
       nir_variable_mode mode;
       vtn_get_builtin_location(builtin, &var->data.location, &mode);
       var->data.mode = mode;
@@ -1060,10 +1057,10 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
                struct vtn_type *type, nir_deref *src_tail)
 {
    unsigned set = src->var->data.descriptor_set;
-   
+
    nir_ssa_def *binding = nir_imm_int(&b->nb, src->var->data.binding);
    nir_deref *deref = &src->deref;
-   
+
    /* The block variable may be an array, in which case the array index adds
     * an offset to the binding. Figure out that index now.
     */
@@ -1097,7 +1094,7 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
          type = type->array_element;
          break;
       }
-      
+
       case nir_deref_type_struct: {
          nir_deref_struct *deref_struct = nir_deref_as_struct(deref);
          offset += type->offsets[deref_struct->index];
@@ -1461,7 +1458,7 @@ vtn_create_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
 {
    struct vtn_ssa_value *val = rzalloc(b, struct vtn_ssa_value);
    val->type = type;
-   
+
    if (!glsl_type_is_vector_or_scalar(type)) {
       unsigned elems = glsl_get_length(type);
       val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
@@ -1517,16 +1514,16 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    unsigned coord_components = 0;
    switch (opcode) {
    case SpvOpImageSampleImplicitLod:
-   case SpvOpImageSampleExplicitLod: 
-   case SpvOpImageSampleDrefImplicitLod: 
-   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleExplicitLod:
+   case SpvOpImageSampleDrefImplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
    case SpvOpImageSampleProjImplicitLod:
-   case SpvOpImageSampleProjExplicitLod: 
-   case SpvOpImageSampleProjDrefImplicitLod: 
-   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
    case SpvOpImageFetch:
    case SpvOpImageGather:
-   case SpvOpImageDrefGather: 
+   case SpvOpImageDrefGather:
    case SpvOpImageQueryLod: {
       /* All these types have the coordinate as their first real argument */
       struct vtn_ssa_value *coord = vtn_ssa_value(b, w[idx++]);
@@ -1547,16 +1544,16 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       texop = nir_texop_tex;
       break;
 
-   case SpvOpImageSampleExplicitLod: 
-   case SpvOpImageSampleDrefImplicitLod: 
-   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleExplicitLod:
+   case SpvOpImageSampleDrefImplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
    case SpvOpImageSampleProjImplicitLod:
-   case SpvOpImageSampleProjExplicitLod: 
-   case SpvOpImageSampleProjDrefImplicitLod: 
-   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
    case SpvOpImageFetch:
    case SpvOpImageGather:
-   case SpvOpImageDrefGather: 
+   case SpvOpImageDrefGather:
    case SpvOpImageQuerySizeLod:
    case SpvOpImageQuerySize:
    case SpvOpImageQueryLod:
@@ -1753,7 +1750,7 @@ vtn_matrix_multiply(struct vtn_builder *b,
          }
       }
    }
-   
+
    dest = vtn_unwrap_matrix(dest);
 
    if (transpose_result)
@@ -2386,10 +2383,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpExecutionMode:
-      /*
-       * TODO handle these - for Vulkan OriginUpperLeft is always set for
-       * fragment shaders, so we can ignore this for now
-       */
+      /* TODO */
       break;
 
    case SpvOpString:
@@ -2603,16 +2597,16 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpImageSampleImplicitLod:
-   case SpvOpImageSampleExplicitLod: 
-   case SpvOpImageSampleDrefImplicitLod: 
-   case SpvOpImageSampleDrefExplicitLod: 
+   case SpvOpImageSampleExplicitLod:
+   case SpvOpImageSampleDrefImplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
    case SpvOpImageSampleProjImplicitLod:
-   case SpvOpImageSampleProjExplicitLod: 
-   case SpvOpImageSampleProjDrefImplicitLod: 
-   case SpvOpImageSampleProjDrefExplicitLod: 
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
    case SpvOpImageFetch:
    case SpvOpImageGather:
-   case SpvOpImageDrefGather: 
+   case SpvOpImageDrefGather:
    case SpvOpImageQuerySizeLod:
    case SpvOpImageQuerySize:
    case SpvOpImageQueryLod:

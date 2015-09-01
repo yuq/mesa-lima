@@ -23,8 +23,6 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "main/config.h"
-
 #ifndef SHADER_ENUMS_H
 #define SHADER_ENUMS_H
 
@@ -46,6 +44,7 @@ typedef enum
 } gl_shader_stage;
 
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
+
 
 /**
  * Indexes for vertex program attributes.
@@ -152,6 +151,7 @@ typedef enum
 #define VERT_BIT_GENERIC_ALL     \
    BITFIELD64_RANGE(VERT_ATTRIB_GENERIC(0), VERT_ATTRIB_GENERIC_MAX)
 /*@}*/
+
 
 /**
  * Indexes for vertex shader outputs, geometry shader inputs/outputs, and

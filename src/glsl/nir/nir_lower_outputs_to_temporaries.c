@@ -53,11 +53,7 @@ emit_output_copies(nir_shader *shader, nir_variable *temp, nir_variable *output)
          copy->variables[0] = nir_deref_var_create(copy, output);
          copy->variables[1] = nir_deref_var_create(copy, temp);
 
-         nir_instr *last_instr = nir_block_last_instr(block);
-         if (last_instr && last_instr->type == nir_instr_type_jump)
-            nir_instr_insert_before(last_instr, &copy->instr);
-         else
-            nir_instr_insert_after_block(block, &copy->instr);
+         nir_instr_insert(nir_after_block_before_jump(block), &copy->instr);
       }
    }
 }
@@ -83,8 +79,8 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
       if (output->name)
          ralloc_steal(output, output->name);
 
-      /* Give the temporary a new name with @out-temp appended */
-      temp->name = ralloc_asprintf(temp, "%s@out-temp", output->name);
+      /* Give the output a new name with @out-temp appended */
+      temp->name = ralloc_asprintf(var, "%s@out-temp", output->name);
       temp->data.mode = nir_var_global;
       temp->constant_initializer = NULL;
 
@@ -93,5 +89,5 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
       emit_output_copies(shader, temp, output);
    }
 
-   exec_list_append(&shader->globals, &old_outputs); 
+   exec_list_append(&shader->globals, &old_outputs);
 }

@@ -266,15 +266,16 @@ struct glsl_type {
 						  const char *block_name);
 
    /**
+    * Get the instance of an subroutine type
+    */
+   static const glsl_type *get_subroutine_instance(const char *subroutine_name);
+
+   /**
     * Get the instance of a function type
     */
    static const glsl_type *get_function_instance(const struct glsl_type *return_type,
                                                  const glsl_function_param *parameters,
                                                  unsigned num_params);
-   /**
-    * Get the instance of an subroutine type
-    */
-   static const glsl_type *get_subroutine_instance(const char *subroutine_name);
 
    /**
     * Get the type resulting from a multiplication of \p type_a * \p type_b
@@ -715,11 +716,11 @@ private:
    /** Hash table containing the known interface types. */
    static struct hash_table *interface_types;
 
-   /** Hash table containing the known function types. */
-   static struct hash_table *function_types;
-
    /** Hash table containing the known subroutine types. */
    static struct hash_table *subroutine_types;
+
+   /** Hash table containing the known function types. */
+   static struct hash_table *function_types;
 
    static bool record_key_compare(const void *a, const void *b);
    static unsigned record_key_hash(const void *key);

@@ -249,12 +249,7 @@ add_parallel_copy_to_end_of_block(nir_block *block, void *void_state)
       nir_parallel_copy_instr *pcopy =
          nir_parallel_copy_instr_create(state->dead_ctx);
 
-      nir_instr *last_instr = nir_block_last_instr(block);
-      if (last_instr && last_instr->type == nir_instr_type_jump) {
-         nir_instr_insert_before(last_instr, &pcopy->instr);
-      } else {
-         nir_instr_insert_after_block(block, &pcopy->instr);
-      }
+      nir_instr_insert(nir_after_block_before_jump(block), &pcopy->instr);
    }
 
    return true;

@@ -1131,6 +1131,7 @@ glsl_type::component_slots() const
       return 1;
    case GLSL_TYPE_SUBROUTINE:
      return 1;
+
    case GLSL_TYPE_FUNCTION:
    case GLSL_TYPE_SAMPLER:
    case GLSL_TYPE_ATOMIC_UINT:

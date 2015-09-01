@@ -297,11 +297,15 @@ typedef struct {
       int index;
 
       /**
+       * Descriptor set binding for sampler or UBO.
+       */
+      int descriptor_set;
+
+      /**
        * Initial binding point for a sampler or UBO.
        *
        * For array types, this represents the binding point for the first element.
        */
-      int descriptor_set;
       int binding;
 
       /**
