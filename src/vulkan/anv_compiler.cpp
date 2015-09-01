@@ -946,6 +946,16 @@ setup_nir_io(struct gl_shader *mesa_shader,
    struct gl_program *prog = mesa_shader->Program;
    foreach_list_typed(nir_variable, var, node, &shader->inputs) {
       prog->InputsRead |= BITFIELD64_BIT(var->data.location);
+      if (shader->stage == MESA_SHADER_FRAGMENT) {
+         struct gl_fragment_program *fprog = (struct gl_fragment_program *)prog;
+
+         fprog->InterpQualifier[var->data.location] =
+            (glsl_interp_qualifier)var->data.interpolation;
+         if (var->data.centroid)
+            fprog->IsCentroid |= BITFIELD64_BIT(var->data.location);
+         if (var->data.sample)
+            fprog->IsSample |= BITFIELD64_BIT(var->data.location);
+      }
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->outputs) {
