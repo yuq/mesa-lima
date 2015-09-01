@@ -399,7 +399,8 @@ static inline void
 tgsi_transform_kill_inst(struct tgsi_transform_context *ctx,
                          unsigned src_file,
                          unsigned src_index,
-                         unsigned src_swizzle)
+                         unsigned src_swizzle,
+                         boolean negate)
 {
    struct tgsi_full_instruction inst;
 
@@ -413,7 +414,7 @@ tgsi_transform_kill_inst(struct tgsi_transform_context *ctx,
    inst.Src[0].Register.SwizzleY =
    inst.Src[0].Register.SwizzleZ =
    inst.Src[0].Register.SwizzleW = src_swizzle;
-   inst.Src[0].Register.Negate = 1;
+   inst.Src[0].Register.Negate = negate;
 
    ctx->emit_instruction(ctx, &inst);
 }
