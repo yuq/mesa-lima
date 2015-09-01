@@ -646,7 +646,7 @@ VkResult anv_GetGlobalExtensionProperties(
       return VK_SUCCESS;
    }
 
-   assert(*pCount < ARRAY_SIZE(global_extensions));
+   assert(*pCount <= ARRAY_SIZE(global_extensions));
 
    *pCount = ARRAY_SIZE(global_extensions);
    memcpy(pProperties, global_extensions, sizeof(global_extensions));
