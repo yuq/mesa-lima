@@ -87,7 +87,12 @@ u_rect_possible_intersection(const struct u_rect *a,
       u_rect_find_intersection(a,b);
    }
    else {
-      b->x0 = b->x1 = b->y0 = b->y1 = 0;
+      /*
+       * Note the u_rect_xx tests deal with inclusive coordinates
+       * hence all-zero would not be an empty box.
+       */
+      b->x0 = b->y0 = 0;
+      b->x1 = b->y1 = -1;
    }
 }
 
