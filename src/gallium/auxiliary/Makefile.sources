@@ -144,6 +144,8 @@ C_SOURCES := \
 	tgsi/tgsi_opcode_tmp.h \
 	tgsi/tgsi_parse.c \
 	tgsi/tgsi_parse.h \
+	tgsi/tgsi_point_sprite.c \
+	tgsi/tgsi_point_sprite.h \
 	tgsi/tgsi_sanity.c \
 	tgsi/tgsi_sanity.h \
 	tgsi/tgsi_scan.c \
