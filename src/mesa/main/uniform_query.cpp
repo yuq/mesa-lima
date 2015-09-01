@@ -992,10 +992,6 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
                      const GLvoid *values, enum glsl_base_type basicType)
 {
    unsigned offset;
-   unsigned vectors;
-   unsigned components;
-   unsigned elements;
-   int size_mul;
    struct gl_uniform_storage *const uni =
       validate_uniform_parameters(ctx, shProg, location, count,
                                   &offset, "glUniformMatrix");
@@ -1009,11 +1005,11 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
    }
 
    assert(basicType == GLSL_TYPE_FLOAT || basicType == GLSL_TYPE_DOUBLE);
-   size_mul = basicType == GLSL_TYPE_DOUBLE ? 2 : 1;
+   const unsigned size_mul = basicType == GLSL_TYPE_DOUBLE ? 2 : 1;
 
    assert(!uni->type->is_sampler());
-   vectors = uni->type->matrix_columns;
-   components = uni->type->vector_elements;
+   const unsigned vectors = uni->type->matrix_columns;
+   const unsigned components = uni->type->vector_elements;
 
    /* Verify that the types are compatible.  This is greatly simplified for
     * matrices because they can only have a float base type.
@@ -1084,7 +1080,7 @@ _mesa_uniform_matrix(struct gl_context *ctx, struct gl_shader_program *shProg,
 
    /* Store the data in the "actual type" backing storage for the uniform.
     */
-   elements = components * vectors;
+   const unsigned elements = components * vectors;
 
    if (!transpose) {
       memcpy(&uni->storage[size_mul * elements * offset], values,
