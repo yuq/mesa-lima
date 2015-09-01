@@ -1140,13 +1140,22 @@ void anv_CmdCopyBufferToImage(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
+   const VkFormat orig_format = dest_image->format->vk_format;
    struct anv_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      VkFormat proxy_format = orig_format;
+      VkImageAspect proxy_aspect = pRegions[r].imageSubresource.aspect;
+
+      if (orig_format == VK_FORMAT_S8_UINT) {
+         proxy_format = VK_FORMAT_R8_UINT;
+         proxy_aspect = VK_IMAGE_ASPECT_COLOR;
+      }
+
       VkImage srcImage = make_image_for_buffer(vk_device, srcBuffer,
-                                               dest_image->format->vk_format,
+                                               proxy_format,
                                                &pRegions[r]);
 
       struct anv_image_view src_view;
@@ -1155,7 +1164,7 @@ void anv_CmdCopyBufferToImage(
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = dest_image->format->vk_format,
+            .format = proxy_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
                VK_CHANNEL_SWIZZLE_G,
@@ -1163,7 +1172,7 @@ void anv_CmdCopyBufferToImage(
                VK_CHANNEL_SWIZZLE_A
             },
             .subresourceRange = {
-               .aspect = pRegions[r].imageSubresource.aspect,
+               .aspect = proxy_aspect,
                .baseMipLevel = 0,
                .mipLevels = 1,
                .baseArraySlice = 0,
@@ -1177,7 +1186,7 @@ void anv_CmdCopyBufferToImage(
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
-            .format = dest_image->format->vk_format,
+            .format = proxy_format,
             .mipLevel = pRegions[r].imageSubresource.mipLevel,
             .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
             .arraySize = 1,
