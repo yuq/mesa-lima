@@ -523,7 +523,8 @@ read_rgba_pixels( struct gl_context *ctx,
        * convert to, then we can convert directly into the dst buffer and avoid
        * the final conversion/copy from the rgba buffer to the dst buffer.
        */
-      if (dst_format == rgba_format) {
+      if (dst_format == rgba_format &&
+          dst_stride == rgba_stride) {
          need_convert = false;
          rgba = dst;
       } else {
