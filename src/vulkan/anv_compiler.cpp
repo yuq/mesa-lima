@@ -969,27 +969,32 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    fail_if(mesa_shader == NULL,
            "failed to create %s shader\n", stage_info[stage].name);
 
+#define CREATE_PROGRAM(stage) \
+   _mesa_init_##stage##_program(&brw->ctx, &ralloc(mesa_shader, struct brw_##stage##_program)->program, 0, 0)
+
    bool is_scalar;
+   struct gl_program *prog;
    switch (stage) {
    case VK_SHADER_STAGE_VERTEX:
-      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_vertex_program)->program.Base;
+      prog = CREATE_PROGRAM(vertex);
       is_scalar = compiler->screen->compiler->scalar_vs;
       break;
    case VK_SHADER_STAGE_GEOMETRY:
-      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_geometry_program)->program.Base;
+      prog = CREATE_PROGRAM(geometry);
       is_scalar = false;
       break;
    case VK_SHADER_STAGE_FRAGMENT:
-      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_fragment_program)->program.Base;
+      prog = CREATE_PROGRAM(fragment);
       is_scalar = true;
       break;
    case VK_SHADER_STAGE_COMPUTE:
-      mesa_shader->Program = &rzalloc(mesa_shader, struct brw_compute_program)->program.Base;
+      prog = CREATE_PROGRAM(compute);
       is_scalar = true;
       break;
    default:
       unreachable("Unsupported shader stage");
    }
+   _mesa_reference_program(&brw->ctx, &mesa_shader->Program, prog);
 
    mesa_shader->Program->Parameters =
       rzalloc(mesa_shader, struct gl_program_parameter_list);
@@ -1016,7 +1021,8 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    fail_if(mesa_shader->Program->nir == NULL,
            "failed to translate SPIR-V to NIR\n");
 
-   program->Shaders[program->NumShaders] = mesa_shader;
+   _mesa_reference_shader(&brw->ctx, &program->Shaders[program->NumShaders],
+                          mesa_shader);
    program->NumShaders++;
 }
 
@@ -1176,11 +1182,7 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
                          &pipeline->cs_prog_data.base);
    }
 
-   /* XXX: Deleting the shader is broken with our current SPIR-V hacks.  We
-    * need to fix this ASAP.
-    */
-   if (!all_spirv)
-      brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
+   brw->ctx.Driver.DeleteShaderProgram(&brw->ctx, program);
 
    struct anv_device *device = compiler->device;
    while (device->scratch_block_pool.bo.size < pipeline->total_scratch)
