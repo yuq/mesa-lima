@@ -72,7 +72,7 @@ VULKAN_SOURCES =                                        \
 	anv_private.h                                   \
 	anv_query.c                                     \
 	anv_util.c                                      \
-	anv_x11.c					\
+	anv_wsi_x11.c					\
 	gen8_state.c					\
 	gen8_cmd_buffer.c				\
 	gen8_pipeline.c					\
