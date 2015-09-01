@@ -389,6 +389,26 @@ unsigned ffs( unsigned u )
 #define ffs __builtin_ffs
 #endif
 
+#ifdef HAVE___BUILTIN_FFSLL
+#define ffsll __builtin_ffsll
+#else
+static inline int
+ffsll(long long int val)
+{
+   int bit;
+
+   bit = ffs((unsigned) (val & 0xffffffff));
+   if (bit != 0)
+      return bit;
+
+   bit = ffs((unsigned) (val >> 32));
+   if (bit != 0)
+      return 32 + bit;
+
+   return 0;
+}
+#endif
+
 #endif /* FFS_DEFINED */
 
 /**
