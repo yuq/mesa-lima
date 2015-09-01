@@ -451,6 +451,11 @@ descriptor=[
   [ "MAX_COMPUTE_UNIFORM_COMPONENTS", "CONST(MAX_COMPUTE_UNIFORM_COMPONENTS), extra_ARB_compute_shader_es31" ],
   [ "MAX_COMPUTE_IMAGE_UNIFORMS", "CONST(MAX_COMPUTE_IMAGE_UNIFORMS), extra_ARB_compute_shader_es31" ],
 
+# GL_ARB_framebuffer_no_attachments / GLES 3.1
+  ["MAX_FRAMEBUFFER_WIDTH", "CONTEXT_INT(Const.MaxFramebufferWidth), extra_ARB_framebuffer_no_attachments"],
+  ["MAX_FRAMEBUFFER_HEIGHT", "CONTEXT_INT(Const.MaxFramebufferHeight), extra_ARB_framebuffer_no_attachments"],
+  ["MAX_FRAMEBUFFER_SAMPLES", "CONTEXT_INT(Const.MaxFramebufferSamples), extra_ARB_framebuffer_no_attachments"],
+
 # GL_ARB_explicit_uniform_location / GLES 3.1
   [ "MAX_UNIFORM_LOCATIONS", "CONTEXT_INT(Const.MaxUserAssignableUniformLocations), extra_ARB_explicit_uniform_location" ],
 ]},
@@ -811,10 +816,7 @@ descriptor=[
   [ "MAX_GEOMETRY_IMAGE_UNIFORMS", "CONTEXT_INT(Const.Program[MESA_SHADER_GEOMETRY].MaxImageUniforms), extra_ARB_shader_image_load_store_and_geometry_shader"],
 
 # GL_ARB_framebuffer_no_attachments
-  ["MAX_FRAMEBUFFER_WIDTH", "CONTEXT_INT(Const.MaxFramebufferWidth), extra_ARB_framebuffer_no_attachments"],
-  ["MAX_FRAMEBUFFER_HEIGHT", "CONTEXT_INT(Const.MaxFramebufferHeight), extra_ARB_framebuffer_no_attachments"],
   ["MAX_FRAMEBUFFER_LAYERS", "CONTEXT_INT(Const.MaxFramebufferLayers), extra_ARB_framebuffer_no_attachments"],
-  ["MAX_FRAMEBUFFER_SAMPLES", "CONTEXT_INT(Const.MaxFramebufferSamples), extra_ARB_framebuffer_no_attachments"],
 
 # GL_EXT_polygon_offset_clamp
   [ "POLYGON_OFFSET_CLAMP_EXT", "CONTEXT_FLOAT(Polygon.OffsetClamp), extra_EXT_polygon_offset_clamp" ],

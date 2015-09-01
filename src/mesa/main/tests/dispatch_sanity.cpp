@@ -2405,10 +2405,8 @@ const struct function gles31_functions_possible[] = {
    { "glDrawArraysIndirect", 31, -1 },
    { "glDrawElementsIndirect", 31, -1 },
 
-   // FINISHME: These two functions have not been implemented yet.  They come
-   // FINISHME: from the ARB_framebuffer_no_attachments extension.
-   // { "glFramebufferParameteri", 31, -1 },
-   // { "glGetFramebufferParameteriv", 31, -1 },
+   { "glFramebufferParameteri", 31, -1 },
+   { "glGetFramebufferParameteriv", 31, -1 },
 
    { "glGetProgramInterfaceiv", 31, -1 },
    { "glGetProgramResourceIndex", 31, -1 },

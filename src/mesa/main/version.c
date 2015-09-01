@@ -451,7 +451,7 @@ compute_version_es2(const struct gl_extensions *extensions)
                          extensions->ARB_compute_shader &&
                          extensions->ARB_draw_indirect &&
                          extensions->ARB_explicit_uniform_location &&
-                         false /*extensions->ARB_framebuffer_no_attachments*/ &&
+                         extensions->ARB_framebuffer_no_attachments &&
                          extensions->ARB_shader_atomic_counters &&
                          extensions->ARB_shader_image_load_store &&
                          extensions->ARB_shader_image_size &&
