@@ -129,6 +129,8 @@ C_SOURCES := \
 	rtasm/rtasm_execmem.h \
 	rtasm/rtasm_x86sse.c \
 	rtasm/rtasm_x86sse.h \
+	tgsi/tgsi_aa_point.c \
+	tgsi/tgsi_aa_point.h \
 	tgsi/tgsi_build.c \
 	tgsi/tgsi_build.h \
 	tgsi/tgsi_dump.c \
