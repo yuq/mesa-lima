@@ -1087,6 +1087,48 @@ void anv_CmdBlitImage(
    meta_finish_blit(cmd_buffer, &saved_state);
 }
 
+static VkImage
+make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
+                      const VkBufferImageCopy *copy)
+{
+   ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
+
+   if (copy->bufferRowLength != 0)
+      anv_finishme("bufferRowLength not supported in CopyBufferToImage");
+   if (copy->bufferImageHeight != 0)
+      anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
+
+   VkImage vk_image;
+   VkResult result = anv_CreateImage(vk_device,
+      &(VkImageCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = format,
+         .extent = {
+            .width = copy->imageExtent.width,
+            .height = copy->imageExtent.height,
+            .depth = 1,
+         },
+         .mipLevels = 1,
+         .arraySize = 1,
+         .samples = 1,
+         .tiling = VK_IMAGE_TILING_LINEAR,
+         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+         .flags = 0,
+      }, &vk_image);
+   assert(result == VK_SUCCESS);
+
+   ANV_FROM_HANDLE(anv_image, image, vk_image);
+
+   /* We could use a vk call to bind memory, but that would require
+    * creating a dummy memory object etc. so there's really no point.
+    */
+   image->bo = buffer->bo;
+   image->offset = buffer->offset + copy->bufferOffset;
+
+   return anv_image_to_handle(image);
+}
+
 void anv_CmdCopyBufferToImage(
     VkCmdBuffer                                 cmdBuffer,
     VkBuffer                                    srcBuffer,
@@ -1096,7 +1138,6 @@ void anv_CmdCopyBufferToImage(
     const VkBufferImageCopy*                    pRegions)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_buffer, src_buffer, srcBuffer);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_saved_state saved_state;
@@ -1104,43 +1145,15 @@ void anv_CmdCopyBufferToImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      if (pRegions[r].bufferRowLength != 0)
-         anv_finishme("bufferRowLength not supported in CopyBufferToImage");
-      if (pRegions[r].bufferImageHeight != 0)
-         anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
-
-      VkImage srcImage;
-      anv_CreateImage(vk_device,
-         &(VkImageCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = dest_image->format->vk_format,
-            .extent = {
-               .width = pRegions[r].imageExtent.width,
-               .height = pRegions[r].imageExtent.height,
-               .depth = 1,
-            },
-            .mipLevels = 1,
-            .arraySize = 1,
-            .samples = 1,
-            .tiling = VK_IMAGE_TILING_LINEAR,
-            .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-            .flags = 0,
-         }, &srcImage);
-
-      ANV_FROM_HANDLE(anv_image, src_image, srcImage);
-
-      /* We could use a vk call to bind memory, but that would require
-       * creating a dummy memory object etc. so there's really no point.
-       */
-      src_image->bo = src_buffer->bo;
-      src_image->offset = src_buffer->offset + pRegions[r].bufferOffset;
+      VkImage srcImage = make_image_for_buffer(vk_device, srcBuffer,
+                                               dest_image->format->vk_format,
+                                               &pRegions[r]);
 
       struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = anv_image_to_handle(src_image),
+            .image = srcImage,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = dest_image->format->vk_format,
             .channels = {
@@ -1195,18 +1208,12 @@ void anv_CmdCopyImageToBuffer(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
-   ANV_FROM_HANDLE(anv_buffer, dest_buffer, destBuffer);
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      if (pRegions[r].bufferRowLength != 0)
-         anv_finishme("bufferRowLength not supported in CopyBufferToImage");
-      if (pRegions[r].bufferImageHeight != 0)
-         anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
-
       struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
@@ -1235,32 +1242,9 @@ void anv_CmdCopyImageToBuffer(
          dest_format = VK_FORMAT_R8_UINT;
       }
 
-      VkImage destImage;
-      anv_CreateImage(vk_device,
-         &(VkImageCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = dest_format,
-            .extent = {
-               .width = pRegions[r].imageExtent.width,
-               .height = pRegions[r].imageExtent.height,
-               .depth = 1,
-            },
-            .mipLevels = 1,
-            .arraySize = 1,
-            .samples = 1,
-            .tiling = VK_IMAGE_TILING_LINEAR,
-            .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
-            .flags = 0,
-         }, &destImage);
-
-      ANV_FROM_HANDLE(anv_image, dest_image, destImage);
-
-      /* We could use a vk call to bind memory, but that would require
-       * creating a dummy memory object etc. so there's really no point.
-       */
-      dest_image->bo = dest_buffer->bo;
-      dest_image->offset = dest_buffer->offset + pRegions[r].bufferOffset;
+      VkImage destImage = make_image_for_buffer(vk_device, destBuffer,
+                                                dest_format,
+                                                &pRegions[r]);
 
       struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
