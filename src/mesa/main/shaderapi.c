@@ -771,7 +771,8 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       return;
    }
    case GL_PROGRAM_SEPARABLE:
-      *params = shProg->SeparateShader;
+      /* If the program has not been linked, return initial value 0. */
+      *params = (shProg->LinkStatus == GL_FALSE) ? 0 : shProg->SeparateShader;
       return;
 
    /* ARB_tessellation_shader */
