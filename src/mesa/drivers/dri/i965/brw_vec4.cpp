@@ -61,6 +61,8 @@ src_reg::src_reg(register_file file, int reg, const glsl_type *type)
       this->swizzle = brw_swizzle_for_size(type->vector_elements);
    else
       this->swizzle = BRW_SWIZZLE_XYZW;
+   if (type)
+      this->type = brw_type_for_base_type(type);
 }
 
 /** Generic unset register constructor. */
