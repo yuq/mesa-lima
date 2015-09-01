@@ -808,6 +808,17 @@ private:
    unsigned next_image;
    unsigned next_subroutine;
 
+   /**
+    * Field counter is used to take care that uniform structures
+    * with explicit locations get sequential locations.
+    */
+   unsigned field_counter;
+
+   /**
+    * Current variable being processed.
+    */
+   ir_variable *current_var;
+
    /* Used to store the explicit location from current_var so that we can
     * reuse the location field for storing the uniform slot id.
     */
@@ -825,17 +836,6 @@ public:
    union gl_constant_value *values;
 
    gl_texture_index targets[MAX_SAMPLERS];
-
-   /**
-    * Current variable being processed.
-    */
-   ir_variable *current_var;
-
-   /**
-    * Field counter is used to take care that uniform structures
-    * with explicit locations get sequential locations.
-    */
-   unsigned field_counter;
 
    /**
     * Mask of samplers used by the current shader stage.
