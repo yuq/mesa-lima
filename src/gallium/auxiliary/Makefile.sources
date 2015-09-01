@@ -154,6 +154,8 @@ C_SOURCES := \
 	tgsi/tgsi_text.h \
 	tgsi/tgsi_transform.c \
 	tgsi/tgsi_transform.h \
+	tgsi/tgsi_two_side.c \
+	tgsi/tgsi_two_side.h \
 	tgsi/tgsi_ureg.c \
 	tgsi/tgsi_ureg.h \
 	tgsi/tgsi_util.c \
