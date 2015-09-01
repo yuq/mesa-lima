@@ -1966,13 +1966,9 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 
 	ctx.nliterals = 0;
 	ctx.literals = NULL;
-	shader->fs_write_all = FALSE;
-	if (ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
-		shader->fs_write_all = TRUE;
 
-	shader->vs_position_window_space = FALSE;
-	if (ctx.info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION])
-		shader->vs_position_window_space = TRUE;
+	shader->fs_write_all = ctx.info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS];
+	shader->vs_position_window_space = ctx.info.properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 
 	if (shader->vs_as_gs_a)
 		vs_add_primid_output(&ctx, key.vs.prim_id_out);
