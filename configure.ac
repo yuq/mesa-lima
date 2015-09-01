@@ -99,6 +99,7 @@ AM_PROG_CC_C_O
 AM_PROG_AS
 AX_CHECK_GNU_MAKE
 AC_CHECK_PROGS([PYTHON2], [python2 python])
+AC_CHECK_PROGS([PYTHON3], [python3])
 AC_PROG_SED
 AC_PROG_MKDIR_P
 
@@ -1523,6 +1524,10 @@ AC_SUBST([GBM_PC_LIB_PRIV])
 
 AM_CONDITIONAL(HAVE_VULKAN, true)
 
+AC_ARG_VAR([GLSLC], [Path to the glslc executable])
+AC_CHECK_PROGS([GLSLC], [glslc])
+AC_SUBST([GLSLC])
+
 dnl
 dnl EGL configuration
 dnl
@@ -2533,6 +2538,7 @@ if test "x$MESA_LLVM" = x1; then
     echo ""
 fi
 echo "        PYTHON2:         $PYTHON2"
+echo "        PYTHON3:         $PYTHON3"
 
 echo ""
 echo "        Run '${MAKE-make}' to build Mesa"

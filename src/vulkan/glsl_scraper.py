@@ -1,7 +1,7 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 import argparse
-import cStringIO
+import io
 import os
 import re
 import shutil
@@ -11,231 +11,223 @@ import sys
 import tempfile
 from textwrap import dedent
 
+class ShaderCompileError(RuntimeError):
+    def __init__(self):
+        super(ShaderCompileError, self).__init__('Compile error')
+
 class Shader:
-   def __init__(self, stage):
-      self.stream = cStringIO.StringIO()
-      self.stage = stage
+    def __init__(self, stage):
+        self.stream = io.StringIO()
+        self.stage = stage
+        self.dwords = None
 
-      if self.stage == 'VERTEX':
-         self.ext = 'vert'
-      elif self.stage == 'TESS_CONTROL':
-         self.ext = 'tesc'
-      elif self.stage == 'TESS_EVALUATION':
-         self.ext = 'tese'
-      elif self.stage == 'GEOMETRY':
-         self.ext = 'geom'
-      elif self.stage == 'FRAGMENT':
-         self.ext = 'frag'
-      elif self.stage == 'COMPUTE':
-         self.ext = 'comp'
-      else:
-         assert False
+    def add_text(self, s):
+        self.stream.write(s)
 
-   def add_text(self, s):
-      self.stream.write(s)
+    def finish_text(self, line):
+        self.line = line
 
-   def finish_text(self, line):
-      self.line = line
+    def glsl_source(self):
+        return dedent(self.stream.getvalue())
 
-   def glsl_source(self):
-      return self.stream.getvalue()
+    def __run_glslc(self, extra_args=[]):
+        stage_flag = '-fshader-stage='
+        if self.stage == 'VERTEX':
+            stage_flag += 'vertex'
+        elif self.stage == 'TESS_CONTROL':
+            stage_flag += 'tesscontrol'
+        elif self.stage == 'TESS_EVALUATION':
+            stage_flag += 'tesseval'
+        elif self.stage == 'GEOMETRY':
+            stage_flag += 'geometry'
+        elif self.stage == 'FRAGMENT':
+            stage_flag += 'fragment'
+        elif self.stage == 'COMPUTE':
+            stage_flag += 'compute'
+        else:
+            assert False
 
-   def compile(self):
-      # We can assume if we got here that we have a temp directory and that
-      # we're currently living in it.
-      glsl_fname = 'shader{0}.{1}'.format(self.line, self.ext)
-      spirv_fname = self.ext + '.spv'
+        with subprocess.Popen([glslc] + extra_args +
+                              [stage_flag, '-std=430core', '-o', '-', '-'],
+                              stdout = subprocess.PIPE,
+                              stdin = subprocess.PIPE) as proc:
 
-      glsl_file = open(glsl_fname, 'w')
-      glsl_file.write('#version 420 core\n')
-      glsl_file.write(self.glsl_source())
-      glsl_file.close()
+            proc.stdin.write(self.glsl_source().encode('utf-8'))
+            out, err = proc.communicate(timeout=30)
 
-      out = open('glslang.out', 'wb')
-      err = subprocess.call([glslang, '-V', glsl_fname], stdout=out)
-      if err != 0:
-         out = open('glslang.out', 'r')
-         sys.stderr.write(out.read())
-         out.close()
-         exit(1)
+            if proc.returncode != 0:
+                raise ShaderCompileError()
 
-      def dwords(f):
-         while True:
-            dword_str = f.read(4)
-            if not dword_str:
-               return
-            assert len(dword_str) == 4
-            yield struct.unpack('I', dword_str)[0]
+            return out
 
-      spirv_file = open(spirv_fname, 'rb')
-      self.dwords = list(dwords(spirv_file))
-      spirv_file.close()
+    def compile(self):
+        def dwords(f):
+            while True:
+                dword_str = f.read(4)
+                if not dword_str:
+                    return
+                assert len(dword_str) == 4
+                yield struct.unpack('I', dword_str)[0]
 
-      os.remove(glsl_fname)
-      os.remove(spirv_fname)
+        spirv = self.__run_glslc()
+        self.dwords = list(dwords(io.BytesIO(spirv)))
+        self.assembly = str(self.__run_glslc(['-S']), 'utf-8')
 
-   def dump_c_code(self, f, glsl_only = False):
-      f.write('\n\n')
-      var_prefix = '_glsl_helpers_shader{0}'.format(self.line)
+    def dump_c_code(self, f):
+        f.write('\n\n')
+        prefix = '_anv_glsl_helpers_shader{0}'.format(self.line)
 
-      # First dump the GLSL source as strings
-      f.write('static const char {0}_glsl_src[] ='.format(var_prefix))
-      f.write('\n_ANV_SPIRV_' + self.stage)
-      f.write('\n"#version 330\\n"')
-      for line in self.glsl_source().splitlines():
-         if not line.strip():
-            continue
-         f.write('\n"{0}\\n"'.format(line))
-      f.write(';\n\n')
+        f.write('/* GLSL Source code:\n')
+        for line in self.glsl_source().splitlines():
+            f.write(' * ' + line + '\n')
 
-      if glsl_only:
-         return
+        f.write(' *\n')
 
-      # Now dump the SPIR-V source
-      f.write('static const uint32_t {0}_spir_v_src[] = {{'.format(var_prefix))
-      line_start = 0
-      while line_start < len(self.dwords):
-         f.write('\n   ')
-         for i in range(line_start, min(line_start + 6, len(self.dwords))):
-            f.write(' 0x{:08x},'.format(self.dwords[i]))
-         line_start += 6
-      f.write('\n};\n')
+        f.write(' * SPIR-V Assembly:\n')
+        f.write(' *\n')
+        for line in self.assembly.splitlines():
+            f.write(' * ' + line + '\n')
+        f.write(' */\n')
+
+        f.write('static const uint32_t {0}_spirv_code[] = {{'.format(prefix))
+        line_start = 0
+        while line_start < len(self.dwords):
+            f.write('\n    ')
+            for i in range(line_start, min(line_start + 6, len(self.dwords))):
+                f.write(' 0x{:08x},'.format(self.dwords[i]))
+            line_start += 6
+        f.write('\n};\n')
+
+        f.write(dedent("""\
+            static const VkShaderModuleCreateInfo {0}_info = {{
+                .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+                .codeSize = sizeof({0}_spirv_code),
+                .pCode = {0}_spirv_code,
+            }};
+            """.format(prefix)))
 
 token_exp = re.compile(r'(GLSL_VK_SHADER_MODULE|\(|\)|,)')
 
 class Parser:
-   def __init__(self, f):
-      self.infile = f
-      self.paren_depth = 0
-      self.shader = None
-      self.line_number = 1
-      self.shaders = []
+    def __init__(self, f):
+        self.infile = f
+        self.paren_depth = 0
+        self.shader = None
+        self.line_number = 1
+        self.shaders = []
 
-      def tokenize(f):
-         leftover = ''
-         for line in f:
-            pos = 0
-            while True:
-               m = token_exp.search(line, pos)
-               if m:
-                  if m.start() > pos:
-                     leftover += line[pos:m.start()]
-                  pos = m.end()
+        def tokenize(f):
+            leftover = ''
+            for line in f:
+                pos = 0
+                while True:
+                    m = token_exp.search(line, pos)
+                    if m:
+                        if m.start() > pos:
+                            leftover += line[pos:m.start()]
+                        pos = m.end()
 
-                  if leftover:
-                     yield leftover
-                     leftover = ''
+                        if leftover:
+                            yield leftover
+                            leftover = ''
 
-                  yield m.group(0)
+                        yield m.group(0)
 
-               else:
-                  leftover += line[pos:]
-                  break
+                    else:
+                        leftover += line[pos:]
+                        break
 
-            self.line_number += 1
+                self.line_number += 1
 
-         if leftover:
-            yield leftover
+            if leftover:
+                yield leftover
 
-      self.token_iter = tokenize(self.infile)
+        self.token_iter = tokenize(self.infile)
 
-   def handle_shader_src(self):
-      paren_depth = 1
-      for t in self.token_iter:
-         if t == '(':
-            paren_depth += 1
-         elif t == ')':
-            paren_depth -= 1
-            if paren_depth == 0:
-               return
+    def handle_shader_src(self):
+        paren_depth = 1
+        for t in self.token_iter:
+            if t == '(':
+                paren_depth += 1
+            elif t == ')':
+                paren_depth -= 1
+                if paren_depth == 0:
+                    return
 
-         self.current_shader.add_text(t)
+            self.current_shader.add_text(t)
 
-   def handle_macro(self):
-      t = self.token_iter.next()
-      assert t == '('
-      t = self.token_iter.next()
-      t = self.token_iter.next()
-      assert t == ','
+    def handle_macro(self, macro):
+        t = next(self.token_iter)
+        assert t == '('
 
-      stage = self.token_iter.next().strip()
+        # Throw away the device parameter
+        t = next(self.token_iter)
+        t = next(self.token_iter)
+        assert t == ','
 
-      t = self.token_iter.next()
-      assert t == ','
+        stage = next(self.token_iter).strip()
 
-      self.current_shader = Shader(stage)
-      self.handle_shader_src()
-      self.current_shader.finish_text(self.line_number)
+        t = next(self.token_iter)
+        assert t == ','
 
-      self.shaders.append(self.current_shader)
-      self.current_shader = None
+        self.current_shader = Shader(stage)
+        self.handle_shader_src()
+        self.current_shader.finish_text(self.line_number)
 
-   def run(self):
-      for t in self.token_iter:
-         if t == 'GLSL_VK_SHADER_MODULE':
-            self.handle_macro()
+        self.shaders.append(self.current_shader)
+        self.current_shader = None
+
+    def run(self):
+        for t in self.token_iter:
+            if t == 'GLSL_VK_SHADER_MODULE':
+                self.handle_macro(t)
 
 def open_file(name, mode):
-   if name == '-':
-      if mode == 'w':
-         return sys.stdout
-      elif mode == 'r':
-         return sys.stdin
-      else:
-         assert False
-   else:
-      return open(name, mode)
+    if name == '-':
+        if mode == 'w':
+            return sys.stdout
+        elif mode == 'r':
+            return sys.stdin
+        else:
+            assert False
+    else:
+        return open(name, mode)
 
 def parse_args():
-   description = dedent("""\
-      This program scrapes a C file for any instance of the
-      GLSL_VK_SHADER_MODULE macro, grabs the GLSL source code, compiles it
-      to SPIR-V.  The resulting SPIR-V code is written to another C file as
-      an array of 32-bit words.
+    description = dedent("""\
+        This program scrapes a C file for any instance of the
+        qoShaderCreateInfoGLSL and qoCreateShaderGLSL macaros, grabs the
+        GLSL source code, compiles it to SPIR-V.  The resulting SPIR-V code
+        is written to another C file as an array of 32-bit words.
 
-      If '-' is passed as the input file or output file, stdin or stdout will be
-      used instead of a file on disc.""")
+        If '-' is passed as the input file or output file, stdin or stdout
+        will be used instead of a file on disc.""")
 
-   p = argparse.ArgumentParser(
-         description=description,
-         formatter_class=argparse.RawDescriptionHelpFormatter)
-   p.add_argument('-o', '--outfile', default='-',
-                  help='Output to the given file (default: stdout).')
-   p.add_argument('--with-glslang', metavar='PATH',
-                  default='glslangValidator',
-                  dest='glslang',
-                  help='Full path to the glslangValidator program.')
-   p.add_argument('--glsl-only', action='store_true')
-   p.add_argument('infile', metavar='INFILE')
+    p = argparse.ArgumentParser(
+            description=description,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument('-o', '--outfile', default='-',
+                        help='Output to the given file (default: stdout).')
+    p.add_argument('--with-glslc', metavar='PATH',
+                        default='glslc',
+                        dest='glslc',
+                        help='Full path to the glslc shader compiler.')
+    p.add_argument('infile', metavar='INFILE')
 
-   return p.parse_args()
+    return p.parse_args()
 
 
 args = parse_args()
 infname = args.infile
 outfname = args.outfile
-glslang = args.glslang
-glsl_only = args.glsl_only
+glslc = args.glslc
 
 with open_file(infname, 'r') as infile:
-   parser = Parser(infile)
-   parser.run()
+    parser = Parser(infile)
+    parser.run()
 
-if not glsl_only:
-   # glslangValidator has an absolutely *insane* interface.  We pretty much
-   # have to run in a temporary directory.  Sad day.
-   current_dir = os.getcwd()
-   tmpdir = tempfile.mkdtemp('glsl_scraper')
-
-   try:
-      os.chdir(tmpdir)
-
-      for shader in parser.shaders:
-         shader.compile()
-
-      os.chdir(current_dir)
-   finally:
-      shutil.rmtree(tmpdir)
+for shader in parser.shaders:
+    shader.compile()
 
 with open_file(outfname, 'w') as outfile:
    outfile.write(dedent("""\
@@ -245,30 +237,16 @@ with open_file(outfname, 'w') as outfile:
 
       #include <stdint.h>
 
-      #define _ANV_SPIRV_MAGIC "\\x03\\x02\\x23\\x07\\0\\0\\0\\0"
-
-      #define _ANV_SPIRV_VERTEX           _ANV_SPIRV_MAGIC "\\0\\0\\0\\0"
-      #define _ANV_SPIRV_TESS_CONTROL     _ANV_SPIRV_MAGIC "\\1\\0\\0\\0"
-      #define _ANV_SPIRV_TESS_EVALUATION  _ANV_SPIRV_MAGIC "\\2\\0\\0\\0"
-      #define _ANV_SPIRV_GEOMETRY         _ANV_SPIRV_MAGIC "\\3\\0\\0\\0"
-      #define _ANV_SPIRV_FRAGMENT         _ANV_SPIRV_MAGIC "\\4\\0\\0\\0"
-      #define _ANV_SPIRV_COMPUTE          _ANV_SPIRV_MAGIC "\\5\\0\\0\\0"
-
-      #define _ANV_GLSL_SRC_VAR2(_line) _glsl_helpers_shader ## _line ## _glsl_src
-      #define _ANV_GLSL_SRC_VAR(_line) _ANV_GLSL_SRC_VAR2(_line)
+      #define _ANV_SPIRV_MODULE_INFO2(_line) _anv_glsl_helpers_shader ## _line ## _info
+      #define _ANV_SPIRV_MODULE_INFO(_line) _ANV_SPIRV_MODULE_INFO2(_line)
 
       #define GLSL_VK_SHADER_MODULE(device, stage, ...) ({                    \\
          VkShaderModule __module;                                             \\
-         VkShaderModuleCreateInfo __shader_create_info = {                    \\
-            .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,             \\
-            .codeSize = sizeof(_ANV_GLSL_SRC_VAR(__LINE__)),                  \\
-            .pCode = _ANV_GLSL_SRC_VAR(__LINE__),                             \\
-         };                                                                   \\
          vkCreateShaderModule(anv_device_to_handle(device),                   \\
-                              &__shader_create_info, &__module);              \\
+                              &_ANV_SPIRV_MODULE_INFO(__LINE__), &__module);  \\
          __module;                                                            \\
       })
       """))
 
    for shader in parser.shaders:
-      shader.dump_c_code(outfile, glsl_only)
+      shader.dump_c_code(outfile)
