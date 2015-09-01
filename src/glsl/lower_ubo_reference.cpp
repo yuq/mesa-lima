@@ -57,7 +57,7 @@ using namespace ir_builder;
  * thing referenced is row-major.
  */
 static bool
-is_dereferenced_thing_row_major(const ir_dereference *deref)
+is_dereferenced_thing_row_major(const ir_rvalue *deref)
 {
    bool matrix = false;
    const ir_rvalue *ir = deref;
@@ -143,7 +143,7 @@ public:
    ir_visitor_status visit_enter(ir_assignment *ir);
 
    void setup_for_load_or_store(ir_variable *var,
-                                ir_dereference *deref,
+                                ir_rvalue *deref,
                                 ir_rvalue **offset,
                                 unsigned *const_offset,
                                 bool *row_major,
@@ -196,7 +196,7 @@ public:
  * \c UniformBlocks array.
  */
 static const char *
-interface_field_name(void *mem_ctx, char *base_name, ir_dereference *d,
+interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
                      ir_rvalue **nonconst_block_index)
 {
    ir_rvalue *previous_index = NULL;
@@ -255,7 +255,7 @@ interface_field_name(void *mem_ctx, char *base_name, ir_dereference *d,
 
 void
 lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
-                                                     ir_dereference *deref,
+                                                     ir_rvalue *deref,
                                                      ir_rvalue **offset,
                                                      unsigned *const_offset,
                                                      bool *row_major,
