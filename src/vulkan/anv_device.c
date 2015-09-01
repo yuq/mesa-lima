@@ -657,6 +657,9 @@ VkResult anv_GetGlobalExtensionProperties(
    return VK_SUCCESS;
 }
 
+static const VkExtensionProperties device_extensions[] = {
+};
+
 VkResult anv_GetPhysicalDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
@@ -664,12 +667,16 @@ VkResult anv_GetPhysicalDeviceExtensionProperties(
     VkExtensionProperties*                      pProperties)
 {
    if (pProperties == NULL) {
-      *pCount = 0;
+      *pCount = ARRAY_SIZE(device_extensions);
       return VK_SUCCESS;
    }
 
-   /* None supported at this time */
-   return vk_error(VK_ERROR_INVALID_EXTENSION);
+   assert(*pCount < ARRAY_SIZE(device_extensions));
+
+   *pCount = ARRAY_SIZE(device_extensions);
+   memcpy(pProperties, device_extensions, sizeof(device_extensions));
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_GetGlobalLayerProperties(
