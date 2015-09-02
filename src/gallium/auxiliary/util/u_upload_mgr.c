@@ -179,12 +179,13 @@ u_upload_alloc_buffer( struct u_upload_mgr *upload,
    return PIPE_OK;
 }
 
-enum pipe_error u_upload_alloc( struct u_upload_mgr *upload,
-                                unsigned min_out_offset,
-                                unsigned size,
-                                unsigned *out_offset,
-                                struct pipe_resource **outbuf,
-                                void **ptr )
+void
+u_upload_alloc(struct u_upload_mgr *upload,
+               unsigned min_out_offset,
+               unsigned size,
+               unsigned *out_offset,
+               struct pipe_resource **outbuf,
+               void **ptr)
 {
    unsigned alloc_size = align(size, upload->alignment);
    unsigned alloc_offset = align(min_out_offset, upload->alignment);
@@ -200,7 +201,7 @@ enum pipe_error u_upload_alloc( struct u_upload_mgr *upload,
          *out_offset = ~0;
          pipe_resource_reference(outbuf, NULL);
          *ptr = NULL;
-         return ret;
+         return;
       }
 
       buffer_size = upload->buffer->width0;
@@ -219,7 +220,7 @@ enum pipe_error u_upload_alloc( struct u_upload_mgr *upload,
          *out_offset = ~0;
          pipe_resource_reference(outbuf, NULL);
          *ptr = NULL;
-         return PIPE_ERROR_OUT_OF_MEMORY;
+         return;
       }
 
       upload->map -= offset;
@@ -235,7 +236,6 @@ enum pipe_error u_upload_alloc( struct u_upload_mgr *upload,
    *out_offset = offset;
 
    upload->offset = offset + alloc_size;
-   return PIPE_OK;
 }
 
 enum pipe_error u_upload_data( struct u_upload_mgr *upload,
@@ -246,11 +246,12 @@ enum pipe_error u_upload_data( struct u_upload_mgr *upload,
                                struct pipe_resource **outbuf)
 {
    uint8_t *ptr;
-   enum pipe_error ret = u_upload_alloc(upload, min_out_offset, size,
-                                        out_offset, outbuf,
-                                        (void**)&ptr);
-   if (ret != PIPE_OK)
-      return ret;
+
+   u_upload_alloc(upload, min_out_offset, size,
+                  out_offset, outbuf,
+                  (void**)&ptr);
+   if (!outbuf)
+      return PIPE_ERROR_OUT_OF_MEMORY;
 
    memcpy(ptr, data, size);
    return PIPE_OK;

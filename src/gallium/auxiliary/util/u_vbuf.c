@@ -406,7 +406,6 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
    struct pipe_resource *out_buffer = NULL;
    uint8_t *out_map;
    unsigned out_offset, mask;
-   enum pipe_error err;
 
    /* Get a translate object. */
    tr = translate_cache_find(mgr->translate_cache, key);
@@ -454,12 +453,12 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
       assert((ib->buffer || ib->user_buffer) && ib->index_size);
 
       /* Create and map the output buffer. */
-      err = u_upload_alloc(mgr->uploader, 0,
-                           key->output_stride * num_indices,
-                           &out_offset, &out_buffer,
-                           (void**)&out_map);
-      if (err != PIPE_OK)
-         return err;
+      u_upload_alloc(mgr->uploader, 0,
+                     key->output_stride * num_indices,
+                     &out_offset, &out_buffer,
+                     (void**)&out_map);
+      if (!out_buffer)
+         return PIPE_ERROR_OUT_OF_MEMORY;
 
       if (ib->user_buffer) {
          map = (uint8_t*)ib->user_buffer + offset;
@@ -486,13 +485,13 @@ u_vbuf_translate_buffers(struct u_vbuf *mgr, struct translate_key *key,
       }
    } else {
       /* Create and map the output buffer. */
-      err = u_upload_alloc(mgr->uploader,
-                           key->output_stride * start_vertex,
-                           key->output_stride * num_vertices,
-                           &out_offset, &out_buffer,
-                           (void**)&out_map);
-      if (err != PIPE_OK)
-         return err;
+      u_upload_alloc(mgr->uploader,
+                     key->output_stride * start_vertex,
+                     key->output_stride * num_vertices,
+                     &out_offset, &out_buffer,
+                     (void**)&out_map);
+      if (!out_buffer)
+         return PIPE_ERROR_OUT_OF_MEMORY;
 
       out_offset -= key->output_stride * start_vertex;
 

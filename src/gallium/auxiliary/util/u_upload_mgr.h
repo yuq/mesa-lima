@@ -78,12 +78,12 @@ void u_upload_unmap( struct u_upload_mgr *upload );
  * \param outbuf           Pointer to where the upload buffer will be returned.
  * \param ptr              Pointer to the allocated memory that is returned.
  */
-enum pipe_error u_upload_alloc( struct u_upload_mgr *upload,
-                                unsigned min_out_offset,
-                                unsigned size,
-                                unsigned *out_offset,
-                                struct pipe_resource **outbuf,
-                                void **ptr );
+void u_upload_alloc(struct u_upload_mgr *upload,
+                    unsigned min_out_offset,
+                    unsigned size,
+                    unsigned *out_offset,
+                    struct pipe_resource **outbuf,
+                    void **ptr);
 
 
 /**
