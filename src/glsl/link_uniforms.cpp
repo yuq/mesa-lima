@@ -299,11 +299,12 @@ namespace {
  */
 class count_uniform_size : public program_resource_visitor {
 public:
-   count_uniform_size(struct string_to_uint_map *map)
-      : num_active_uniforms(0), num_values(0), num_shader_samplers(0),
-        num_shader_images(0), num_shader_uniform_components(0),
-        num_shader_subroutines(0),
-        is_ubo_var(false), map(map)
+   count_uniform_size(struct string_to_uint_map *map,
+                      struct string_to_uint_map *hidden_map)
+      : num_active_uniforms(0), num_hidden_uniforms(0), num_values(0),
+        num_shader_samplers(0), num_shader_images(0),
+        num_shader_uniform_components(0), num_shader_subroutines(0),
+        is_ubo_var(false), map(map), hidden_map(hidden_map)
    {
       /* empty */
    }
@@ -318,6 +319,7 @@ public:
 
    void process(ir_variable *var)
    {
+      this->current_var = var;
       this->is_ubo_var = var->is_in_buffer_block();
       if (var->is_interface_instance())
          program_resource_visitor::process(var->get_interface_type(),
@@ -330,6 +332,8 @@ public:
     * Total number of active uniforms counted
     */
    unsigned num_active_uniforms;
+
+   unsigned num_hidden_uniforms;
 
    /**
     * Number of data values required to back the storage for the active uniforms
@@ -357,6 +361,8 @@ public:
    unsigned num_shader_subroutines;
 
    bool is_ubo_var;
+
+   struct string_to_uint_map *map;
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
@@ -401,7 +407,13 @@ private:
       if (this->map->get(id, name))
 	 return;
 
-      this->map->put(this->num_active_uniforms, name);
+      if (this->current_var->data.how_declared == ir_var_hidden) {
+         this->hidden_map->put(this->num_hidden_uniforms, name);
+         this->num_hidden_uniforms++;
+      } else {
+         this->map->put(this->num_active_uniforms-this->num_hidden_uniforms,
+                        name);
+      }
 
       /* Each leaf uniform occupies one entry in the list of active
        * uniforms.
@@ -410,7 +422,12 @@ private:
       this->num_values += values;
    }
 
-   struct string_to_uint_map *map;
+   struct string_to_uint_map *hidden_map;
+
+   /**
+    * Current variable being processed.
+    */
+   ir_variable *current_var;
 };
 
 } /* anonymous namespace */
@@ -965,47 +982,19 @@ link_set_image_access_qualifiers(struct gl_shader_program *prog)
 }
 
 /**
- * Sort the array of uniform storage so that the non-hidden uniforms are first
- *
- * This function sorts the list "in place."  This is important because some of
- * the storage accessible from \c uniforms has \c uniforms as its \c ralloc
- * context.  If \c uniforms is freed, some other storage will also be freed.
+ * Combine the hidden uniform hash map with the uniform hash map so that the
+ * hidden uniforms will be given indicies at the end of the uniform storage
+ * array.
  */
-static unsigned
-move_hidden_uniforms_to_end(struct gl_shader_program *prog,
-                            struct gl_uniform_storage *uniforms,
-                            unsigned num_elements)
+static void
+assign_hidden_uniform_slot_id(const char *name, unsigned hidden_id,
+                              void *closure)
 {
-   struct gl_uniform_storage *sorted_uniforms =
-      ralloc_array(prog, struct gl_uniform_storage, num_elements);
-   unsigned hidden_uniforms = 0;
-   unsigned j = 0;
+   count_uniform_size *uniform_size = (count_uniform_size *) closure;
+   unsigned hidden_uniform_start = uniform_size->num_active_uniforms -
+      uniform_size->num_hidden_uniforms;
 
-   /* Add the non-hidden uniforms. */
-   for (unsigned i = 0; i < num_elements; i++) {
-      if (!uniforms[i].hidden)
-         sorted_uniforms[j++] = uniforms[i];
-   }
-
-   /* Add and count the hidden uniforms. */
-   for (unsigned i = 0; i < num_elements; i++) {
-      if (uniforms[i].hidden) {
-         sorted_uniforms[j++] = uniforms[i];
-         hidden_uniforms++;
-      }
-   }
-
-   assert(prog->UniformHash != NULL);
-   prog->UniformHash->clear();
-   for (unsigned i = 0; i < num_elements; i++) {
-      if (sorted_uniforms[i].name != NULL)
-         prog->UniformHash->put(i, sorted_uniforms[i].name);
-   }
-
-   memcpy(uniforms, sorted_uniforms, sizeof(uniforms[0]) * num_elements);
-   ralloc_free(sorted_uniforms);
-
-   return hidden_uniforms;
+   uniform_size->map->put(hidden_uniform_start + hidden_id, name);
 }
 
 void
@@ -1029,7 +1018,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
     * Note: this is *NOT* the index that is returned to the application by
     * glGetUniformLocation.
     */
-   count_uniform_size uniform_size(prog->UniformHash);
+   struct string_to_uint_map *hiddenUniforms = new string_to_uint_map;
+   count_uniform_size uniform_size(prog->UniformHash, hiddenUniforms);
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
@@ -1077,11 +1067,16 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 
    const unsigned num_uniforms = uniform_size.num_active_uniforms;
    const unsigned num_data_slots = uniform_size.num_values;
+   const unsigned hidden_uniforms = uniform_size.num_hidden_uniforms;
 
    /* On the outside chance that there were no uniforms, bail out.
     */
    if (num_uniforms == 0)
       return;
+
+   /* assign hidden uniforms a slot id */
+   hiddenUniforms->iterate(assign_hidden_uniform_slot_id, &uniform_size);
+   delete hiddenUniforms;
 
    struct gl_uniform_storage *uniforms =
       rzalloc_array(prog, struct gl_uniform_storage, num_uniforms);
@@ -1115,9 +1110,6 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
              sizeof(prog->_LinkedShaders[i]->SamplerTargets));
    }
-
-   const unsigned hidden_uniforms =
-      move_hidden_uniforms_to_end(prog, uniforms, num_uniforms);
 
    /* Reserve all the explicit locations of the active uniforms. */
    for (unsigned i = 0; i < num_uniforms; i++) {
