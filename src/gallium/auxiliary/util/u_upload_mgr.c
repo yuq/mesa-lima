@@ -255,21 +255,15 @@ enum pipe_error u_upload_data( struct u_upload_mgr *upload,
    return PIPE_OK;
 }
 
-
-/* As above, but upload the full contents of a buffer.  Useful for
- * uploading user buffers, avoids generating an explosion of GPU
- * buffers if you have an app that does lots of small vertex buffer
- * renders or DrawElements calls.
- */
-enum pipe_error u_upload_buffer( struct u_upload_mgr *upload,
-                                 unsigned min_out_offset,
-                                 unsigned offset,
-                                 unsigned size,
-                                 struct pipe_resource *inbuf,
-                                 unsigned *out_offset,
-                                 struct pipe_resource **outbuf)
+/* XXX: Remove. It's basically a CPU fallback of resource_copy_region. */
+void u_upload_buffer(struct u_upload_mgr *upload,
+                     unsigned min_out_offset,
+                     unsigned offset,
+                     unsigned size,
+                     struct pipe_resource *inbuf,
+                     unsigned *out_offset,
+                     struct pipe_resource **outbuf)
 {
-   enum pipe_error ret = PIPE_OK;
    struct pipe_transfer *transfer = NULL;
    const char *map = NULL;
 
@@ -280,20 +274,13 @@ enum pipe_error u_upload_buffer( struct u_upload_mgr *upload,
                                              &transfer);
 
    if (map == NULL) {
-      return PIPE_ERROR_OUT_OF_MEMORY;
+      pipe_resource_reference(outbuf, NULL);
+      return;
    }
 
    if (0)
       debug_printf("upload ptr %p ofs %d sz %d\n", map, offset, size);
 
-   ret = u_upload_data( upload,
-                        min_out_offset,
-                        size,
-                        map,
-                        out_offset,
-                        outbuf);
-
+   u_upload_data(upload, min_out_offset, size, map, out_offset, outbuf);
    pipe_buffer_unmap( upload->pipe, transfer );
-
-   return ret;
 }

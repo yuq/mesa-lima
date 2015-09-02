@@ -106,13 +106,13 @@ enum pipe_error u_upload_data( struct u_upload_mgr *upload,
  * Same as u_upload_data, except that the input data comes from a buffer
  * instead of a user pointer.
  */
-enum pipe_error u_upload_buffer( struct u_upload_mgr *upload,
-                                 unsigned min_out_offset,
-                                 unsigned offset,
-                                 unsigned size,
-                                 struct pipe_resource *inbuf,
-                                 unsigned *out_offset,
-                                 struct pipe_resource **outbuf);
+void u_upload_buffer(struct u_upload_mgr *upload,
+                     unsigned min_out_offset,
+                     unsigned offset,
+                     unsigned size,
+                     struct pipe_resource *inbuf,
+                     unsigned *out_offset,
+                     struct pipe_resource **outbuf);
 
 
 
