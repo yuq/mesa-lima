@@ -48,16 +48,15 @@ void r600_need_cs_space(struct r600_context *ctx, unsigned num_dw,
 	num_dw += ctx->b.rings.gfx.cs->cdw;
 
 	if (count_draw_in) {
-		unsigned i;
+		uint64_t mask;
 
 		/* The number of dwords all the dirty states would take. */
-		i = r600_next_dirty_atom(ctx, 0);
-		while (i < R600_NUM_ATOMS) {
-			num_dw += ctx->atoms[i]->num_dw;
+		mask = ctx->dirty_atoms;
+		while (mask != 0) {
+			num_dw += ctx->atoms[u_bit_scan64(&mask)]->num_dw;
 			if (ctx->screen->b.trace_bo) {
 				num_dw += R600_TRACE_CS_DWORDS;
 			}
-			i = r600_next_dirty_atom(ctx, i + 1);
 		}
 
 		/* The upper-bound of how much space a draw command would take. */

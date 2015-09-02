@@ -1427,8 +1427,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	struct r600_context *rctx = (struct r600_context *)ctx;
 	struct pipe_draw_info info = *dinfo;
 	struct pipe_index_buffer ib = {};
-	unsigned i;
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
+	uint64_t mask;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
@@ -1538,10 +1538,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	r600_need_cs_space(rctx, ib.user_buffer ? 5 : 0, TRUE);
 	r600_flush_emit(rctx);
 
-	i = r600_next_dirty_atom(rctx, 0);
-	while (i < R600_NUM_ATOMS) {
-		r600_emit_atom(rctx, rctx->atoms[i]);
-		i = r600_next_dirty_atom(rctx, i + 1);
+	mask = rctx->dirty_atoms;
+	while (mask != 0) {
+		r600_emit_atom(rctx, rctx->atoms[u_bit_scan64(&mask)]);
 	}
 
 	if (rctx->b.chip_class == CAYMAN) {

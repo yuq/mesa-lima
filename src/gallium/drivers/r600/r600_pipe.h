@@ -87,9 +87,6 @@
 #define R600_BIG_ENDIAN 0
 #endif
 
-#define R600_DIRTY_ATOM_WORD_BITS (sizeof(unsigned long) * 8)
-#define R600_DIRTY_ATOM_ARRAY_LEN DIV_ROUND_UP(R600_NUM_ATOMS, R600_DIRTY_ATOM_WORD_BITS)
-
 struct r600_context;
 struct r600_bytecode;
 union  r600_shader_key;
@@ -438,7 +435,7 @@ struct r600_context {
 	/* State binding slots are here. */
 	struct r600_atom		*atoms[R600_NUM_ATOMS];
 	/* Dirty atom bitmask for fast tests */
-	unsigned long			dirty_atoms[R600_DIRTY_ATOM_ARRAY_LEN];
+	uint64_t			dirty_atoms;
 	/* States for CS initialization. */
 	struct r600_command_buffer	start_cs_cmd; /* invariant state mostly */
 	/** Compute specific registers initializations.  The start_cs_cmd atom
@@ -515,53 +512,23 @@ static inline void r600_set_atom_dirty(struct r600_context *rctx,
 				       struct r600_atom *atom,
 				       bool dirty)
 {
-	unsigned long mask;
-	unsigned int w;
+	uint64_t mask;
 
 	atom->dirty = dirty;
 
 	assert(atom->id != 0);
-	w = atom->id / R600_DIRTY_ATOM_WORD_BITS;
-	mask = 1ul << (atom->id % R600_DIRTY_ATOM_WORD_BITS);
+	assert(atom->id < sizeof(mask) * 8);
+	mask = 1ull << atom->id;
 	if (dirty)
-		rctx->dirty_atoms[w] |= mask;
+		rctx->dirty_atoms |= mask;
 	else
-		rctx->dirty_atoms[w] &= ~mask;
+		rctx->dirty_atoms &= ~mask;
 }
 
 static inline void r600_mark_atom_dirty(struct r600_context *rctx,
 					struct r600_atom *atom)
 {
 	r600_set_atom_dirty(rctx, atom, true);
-}
-
-static inline unsigned int r600_next_dirty_atom(struct r600_context *rctx,
-						unsigned int id)
-{
-#if !defined(DEBUG) && defined(HAVE___BUILTIN_CTZ)
-	unsigned int w = id / R600_DIRTY_ATOM_WORD_BITS;
-	unsigned int bit = id % R600_DIRTY_ATOM_WORD_BITS;
-	unsigned long bits, mask = (1ul << bit) - 1;
-
-	for (; w < R600_DIRTY_ATOM_ARRAY_LEN; w++, mask = 0ul) {
-		bits = rctx->dirty_atoms[w] & ~mask;
-		if (bits == 0)
-			continue;
-		return w * R600_DIRTY_ATOM_WORD_BITS + __builtin_ctzl(bits);
-	}
-
-	return R600_NUM_ATOMS;
-#else
-	for (; id < R600_NUM_ATOMS; id++) {
-		bool dirty = !!(rctx->dirty_atoms[id / R600_DIRTY_ATOM_WORD_BITS] &
-			(1ul << (id % R600_DIRTY_ATOM_WORD_BITS)));
-		assert(dirty == (rctx->atoms[id] && rctx->atoms[id]->dirty));
-		if (dirty)
-			break;
-	}
-
-	return id;
-#endif
 }
 
 void r600_trace_emit(struct r600_context *rctx);
