@@ -771,15 +771,15 @@ static void r600_emit_scissor_state(struct r600_context *rctx, struct r600_atom 
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
 	struct r600_scissor_state *rstate = &rctx->scissor;
 	struct pipe_scissor_state *state;
+	bool do_disable_workaround = false;
 	uint32_t dirty_mask;
 	unsigned i, offset;
+	uint32_t tl, br;
 
 	if (rctx->b.chip_class == R600 && !rctx->scissor.enable) {
-		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL, 2);
-		radeon_emit(cs, S_028240_TL_X(0) | S_028240_TL_Y(0) |
-				     S_028240_WINDOW_OFFSET_DISABLE(1));
-		radeon_emit(cs, S_028244_BR_X(8192) | S_028244_BR_Y(8192));
-		return;
+		tl = S_028240_TL_X(0) | S_028240_TL_Y(0) | S_028240_WINDOW_OFFSET_DISABLE(1);
+		br = S_028244_BR_X(8192) | S_028244_BR_Y(8192);
+		do_disable_workaround = true;
 	}
 
 	dirty_mask = rstate->dirty_mask;
@@ -787,11 +787,15 @@ static void r600_emit_scissor_state(struct r600_context *rctx, struct r600_atom 
 	{
 		i = u_bit_scan(&dirty_mask);
 		offset = i * 4 * 2;
-		state = &rstate->scissor[i];
 		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset, 2);
-		radeon_emit(cs, S_028240_TL_X(state->minx) | S_028240_TL_Y(state->miny) |
-				     S_028240_WINDOW_OFFSET_DISABLE(1));
-		radeon_emit(cs, S_028244_BR_X(state->maxx) | S_028244_BR_Y(state->maxy));
+		if (!do_disable_workaround) {
+			state = &rstate->scissor[i];
+			tl = S_028240_TL_X(state->minx) | S_028240_TL_Y(state->miny) |
+				S_028240_WINDOW_OFFSET_DISABLE(1);
+			br = S_028244_BR_X(state->maxx) | S_028244_BR_Y(state->maxy);
+		}
+		radeon_emit(cs, tl);
+		radeon_emit(cs, br);
 	}
 	rstate->dirty_mask = 0;
 	rstate->atom.num_dw = 0;

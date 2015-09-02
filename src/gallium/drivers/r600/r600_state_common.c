@@ -374,6 +374,7 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 	if (rctx->b.chip_class == R600 &&
 	    rs->scissor_enable != rctx->scissor.enable) {
 		rctx->scissor.enable = rs->scissor_enable;
+		rctx->scissor.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 		r600_mark_atom_dirty(rctx, &rctx->scissor.atom);
 	}
 
