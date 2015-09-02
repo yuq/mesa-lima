@@ -594,6 +594,10 @@ intel_miptree_check_level_layer(struct intel_mipmap_tree *mt,
                                 uint32_t level,
                                 uint32_t layer)
 {
+   (void) mt;
+   (void) level;
+   (void) layer;
+
    assert(level >= mt->first_level);
    assert(level <= mt->last_level);
    assert(layer < mt->level[level].depth);
