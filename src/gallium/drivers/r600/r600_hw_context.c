@@ -287,7 +287,7 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 void r600_begin_new_cs(struct r600_context *ctx)
 {
 	unsigned shader;
-	int i;
+
 	ctx->b.flags = 0;
 	ctx->b.gtt = 0;
 	ctx->b.vram = 0;
@@ -311,9 +311,9 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	ctx->scissor.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	ctx->scissor.atom.num_dw = R600_MAX_VIEWPORTS * 4;
 	r600_mark_atom_dirty(ctx, &ctx->scissor.atom);
-	for (i = 0; i < R600_MAX_VIEWPORTS; i++) {
-		r600_mark_atom_dirty(ctx, &ctx->viewport[i].atom);
-	}
+	ctx->viewport.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+	ctx->viewport.atom.num_dw = R600_MAX_VIEWPORTS * 8;
+	r600_mark_atom_dirty(ctx, &ctx->viewport.atom);
 	if (ctx->b.chip_class < EVERGREEN) {
 		r600_mark_atom_dirty(ctx, &ctx->config_state.atom);
 	}

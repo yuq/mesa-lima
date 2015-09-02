@@ -3450,7 +3450,7 @@ fallback:
 void evergreen_init_state_functions(struct r600_context *rctx)
 {
 	unsigned id = 4;
-	int i;
+
 	/* !!!
 	 *  To avoid GPU lockup registers must be emited in a specific order
 	 * (no kidding ...). The order below is important and have been
@@ -3503,10 +3503,7 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, evergreen_emit_polygon_offset, 6);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
 	r600_init_atom(rctx, &rctx->scissor.atom, id++, evergreen_emit_scissor_state, 0);
-	for (i = 0; i < R600_MAX_VIEWPORTS; i++) {
-		r600_init_atom(rctx, &rctx->viewport[i].atom, id++, r600_emit_viewport_state, 8);
-		rctx->viewport[i].idx = i;
-	}
+	r600_init_atom(rctx, &rctx->viewport.atom, id++, r600_emit_viewport_state, 0);
 	r600_init_atom(rctx, &rctx->stencil_ref.atom, id++, r600_emit_stencil_ref, 4);
 	r600_init_atom(rctx, &rctx->vertex_fetch_shader.atom, id++, evergreen_emit_vertex_fetch_shader, 5);
 	r600_add_atom(rctx, &rctx->b.streamout.begin_atom, id++);

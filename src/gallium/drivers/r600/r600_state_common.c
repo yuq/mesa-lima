@@ -704,28 +704,39 @@ static void r600_set_viewport_states(struct pipe_context *ctx,
                                      const struct pipe_viewport_state *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct r600_viewport_state *rstate = &rctx->viewport;
 	int i;
 
-	for (i = start_slot; i < start_slot + num_viewports; i++) {
-		rctx->viewport[i].state = state[i - start_slot];
-		r600_mark_atom_dirty(rctx, &rctx->viewport[i].atom);
-	}
+	for (i = start_slot; i < start_slot + num_viewports; i++)
+		rstate->state[i] = state[i - start_slot];
+	rstate->dirty_mask |= ((1 << num_viewports) - 1) << start_slot;
+	rstate->atom.num_dw = util_bitcount(rstate->dirty_mask) * 8;
+	r600_mark_atom_dirty(rctx, &rctx->viewport.atom);
 }
 
 void r600_emit_viewport_state(struct r600_context *rctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
-	struct r600_viewport_state *rstate = (struct r600_viewport_state *)atom;
-	struct pipe_viewport_state *state = &rstate->state;
-	int offset = rstate->idx * 6 * 4;
+	struct r600_viewport_state *rstate = &rctx->viewport;
+	struct pipe_viewport_state *state;
+	uint32_t dirty_mask;
+	unsigned i, offset;
 
-	radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, 6);
-	radeon_emit(cs, fui(state->scale[0]));     /* R_02843C_PA_CL_VPORT_XSCALE_0  */
-	radeon_emit(cs, fui(state->translate[0])); /* R_028440_PA_CL_VPORT_XOFFSET_0 */
-	radeon_emit(cs, fui(state->scale[1]));     /* R_028444_PA_CL_VPORT_YSCALE_0  */
-	radeon_emit(cs, fui(state->translate[1])); /* R_028448_PA_CL_VPORT_YOFFSET_0 */
-	radeon_emit(cs, fui(state->scale[2]));     /* R_02844C_PA_CL_VPORT_ZSCALE_0  */
-	radeon_emit(cs, fui(state->translate[2])); /* R_028450_PA_CL_VPORT_ZOFFSET_0 */
+	dirty_mask = rstate->dirty_mask;
+	while (dirty_mask != 0) {
+		i = u_bit_scan(&dirty_mask);
+		offset = i * 6 * 4;
+		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE_0 + offset, 6);
+		state = &rstate->state[i];
+		radeon_emit(cs, fui(state->scale[0]));     /* R_02843C_PA_CL_VPORT_XSCALE_0  */
+		radeon_emit(cs, fui(state->translate[0])); /* R_028440_PA_CL_VPORT_XOFFSET_0 */
+		radeon_emit(cs, fui(state->scale[1]));     /* R_028444_PA_CL_VPORT_YSCALE_0  */
+		radeon_emit(cs, fui(state->translate[1])); /* R_028448_PA_CL_VPORT_YOFFSET_0 */
+		radeon_emit(cs, fui(state->scale[2]));     /* R_02844C_PA_CL_VPORT_ZSCALE_0  */
+		radeon_emit(cs, fui(state->translate[2])); /* R_028450_PA_CL_VPORT_ZOFFSET_0 */
+	}
+	rstate->dirty_mask = 0;
+	rstate->atom.num_dw = 0;
 }
 
 /* Compute the key for the hw shader variant */

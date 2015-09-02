@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 60
+#define R600_NUM_ATOMS 45
 
 #define R600_MAX_VIEWPORTS 16
 
@@ -208,8 +208,8 @@ struct r600_stencil_ref_state {
 
 struct r600_viewport_state {
 	struct r600_atom atom;
-	struct pipe_viewport_state state;
-	int idx;
+	struct pipe_viewport_state state[R600_MAX_VIEWPORTS];
+	uint32_t dirty_mask;
 };
 
 struct r600_shader_stages_state {
@@ -463,7 +463,7 @@ struct r600_context {
 	struct r600_config_state	config_state;
 	struct r600_stencil_ref_state	stencil_ref;
 	struct r600_vgt_state		vgt_state;
-	struct r600_viewport_state	viewport[R600_MAX_VIEWPORTS];
+	struct r600_viewport_state	viewport;
 	/* Shaders and shader resources. */
 	struct r600_cso_state		vertex_fetch_shader;
 	struct r600_shader_state	vertex_shader;
