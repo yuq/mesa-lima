@@ -515,8 +515,7 @@ struct intel_mipmap_tree
 };
 
 void
-intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt,
+intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height);
 bool
 intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling);

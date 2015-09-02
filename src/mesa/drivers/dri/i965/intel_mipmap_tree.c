@@ -57,7 +57,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
  * created, based on the chip generation and the surface type.
  */
 static enum intel_msaa_layout
-compute_msaa_layout(struct brw_context *brw, mesa_format format, GLenum target,
+compute_msaa_layout(struct brw_context *brw, mesa_format format,
                     bool disable_aux_buffers)
 {
    /* Prior to Gen7, all MSAA surfaces used IMS layout. */
@@ -138,8 +138,7 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format, GLenum target,
  *   by half the block width, and Y coordinates by half the block height.
  */
 void
-intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt,
+intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height)
 {
    switch (mt->tiling) {
@@ -320,7 +319,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    if (num_samples > 1) {
       /* Adjust width/height/depth for MSAA */
       mt->msaa_layout = compute_msaa_layout(brw, format,
-                                            mt->target, mt->disable_aux_buffers);
+                                            mt->disable_aux_buffers);
       if (mt->msaa_layout == INTEL_MSAA_LAYOUT_IMS) {
          /* From the Ivybridge PRM, Volume 1, Part 1, page 108:
           * "If the surface is multisampled and it is a depth or stencil
@@ -1425,7 +1424,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    const mesa_format format = MESA_FORMAT_R_UINT32;
    unsigned block_width_px;
    unsigned block_height;
-   intel_get_non_msrt_mcs_alignment(brw, mt, &block_width_px, &block_height);
+   intel_get_non_msrt_mcs_alignment(mt, &block_width_px, &block_height);
    unsigned width_divisor = block_width_px * 4;
    unsigned height_divisor = block_height * 8;
    unsigned mcs_width =
