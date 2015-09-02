@@ -3031,7 +3031,7 @@ fallback:
 
 void r600_init_state_functions(struct r600_context *rctx)
 {
-	unsigned id = 4;
+	unsigned id = 1;
 
 	/* !!!
 	 *  To avoid GPU lockup registers must be emited in a specific order
