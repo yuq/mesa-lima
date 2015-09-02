@@ -514,8 +514,6 @@ static inline void r600_set_atom_dirty(struct r600_context *rctx,
 {
 	uint64_t mask;
 
-	atom->dirty = dirty;
-
 	assert(atom->id != 0);
 	assert(atom->id < sizeof(mask) * 8);
 	mask = 1ull << atom->id;

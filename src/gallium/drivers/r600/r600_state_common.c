@@ -56,7 +56,6 @@ void r600_add_atom(struct r600_context *rctx,
 	assert(rctx->atoms[id] == NULL);
 	rctx->atoms[id] = atom;
 	atom->id = id;
-	atom->dirty = false;
 }
 
 void r600_init_atom(struct r600_context *rctx,
