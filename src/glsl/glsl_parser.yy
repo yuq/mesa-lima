@@ -2595,9 +2595,15 @@ interface_block:
    {
       $$ = $1;
    }
-   | layout_qualifier basic_interface_block
+   | layout_qualifier interface_block
    {
-      ast_interface_block *block = $2;
+      ast_interface_block *block = (ast_interface_block *) $2;
+
+      if (!state->has_420pack() && block->layout.has_layout()) {
+         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
+         YYERROR;
+      }
+
       if (!block->layout.merge_qualifier(& @1, state, $1)) {
          YYERROR;
       }
