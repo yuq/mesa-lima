@@ -426,6 +426,24 @@ typedef unsigned short extension_index;
 
 
 /**
+ * Given an extension enum, return whether or not the extension is supported
+ * dependent on the following factors:
+ * There's driver support and the OpenGL/ES version is at least that
+ * specified in the extension_table.
+ */
+static inline bool
+_mesa_extension_supported(const struct gl_context *ctx, extension_index i)
+{
+   const bool *base = (bool *) &ctx->Extensions;
+   const struct extension *ext = extension_table + i;
+   const uint8_t api_bit = 1 << ctx->API;
+
+   return (ext->api_set & api_bit) &&
+          (ctx->Version >= ext->version[ctx->API]) &&
+          base[ext->offset];
+}
+
+/**
  * Compare two entries of the extensions table.  Sorts first by year,
  * then by name.
  *
