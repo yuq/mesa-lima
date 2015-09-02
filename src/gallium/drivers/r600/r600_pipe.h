@@ -38,7 +38,7 @@
 
 #include "tgsi/tgsi_scan.h"
 
-#define R600_NUM_ATOMS 75
+#define R600_NUM_ATOMS 60
 
 #define R600_MAX_VIEWPORTS 16
 
@@ -393,9 +393,9 @@ struct r600_cso_state
 struct r600_scissor_state
 {
 	struct r600_atom		atom;
-	struct pipe_scissor_state	scissor;
+	struct pipe_scissor_state	scissor[R600_MAX_VIEWPORTS];
+	uint32_t			dirty_mask;
 	bool				enable; /* r6xx only */
-	int idx;
 };
 
 struct r600_fetch_shader {
@@ -458,7 +458,7 @@ struct r600_context {
 	struct r600_poly_offset_state	poly_offset_state;
 	struct r600_cso_state		rasterizer_state;
 	struct r600_sample_mask		sample_mask;
-	struct r600_scissor_state	scissor[R600_MAX_VIEWPORTS];
+	struct r600_scissor_state	scissor;
 	struct r600_seamless_cube_map	seamless_cube_map;
 	struct r600_config_state	config_state;
 	struct r600_stencil_ref_state	stencil_ref;

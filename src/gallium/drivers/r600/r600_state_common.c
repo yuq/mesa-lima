@@ -372,9 +372,9 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 
 	/* Workaround for a missing scissor enable on r600. */
 	if (rctx->b.chip_class == R600 &&
-	    rs->scissor_enable != rctx->scissor[0].enable) {
-		rctx->scissor[0].enable = rs->scissor_enable;
-		r600_mark_atom_dirty(rctx, &rctx->scissor[0].atom);
+	    rs->scissor_enable != rctx->scissor.enable) {
+		rctx->scissor.enable = rs->scissor_enable;
+		r600_mark_atom_dirty(rctx, &rctx->scissor.atom);
 	}
 
 	/* Re-emit PA_SC_LINE_STIPPLE. */

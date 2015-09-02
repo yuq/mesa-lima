@@ -892,27 +892,38 @@ static void evergreen_set_scissor_states(struct pipe_context *ctx,
 					const struct pipe_scissor_state *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
+	struct r600_scissor_state *rstate = &rctx->scissor;
 	int i;
 
-	for (i = start_slot; i < start_slot + num_scissors; i++) {
-		rctx->scissor[i].scissor = state[i - start_slot];
-		r600_mark_atom_dirty(rctx, &rctx->scissor[i].atom);
-	}
+	for (i = start_slot; i < start_slot + num_scissors; i++)
+		rstate->scissor[i] = state[i - start_slot];
+	rstate->dirty_mask |= ((1 << num_scissors) - 1) << start_slot;
+	rstate->atom.num_dw = util_bitcount(rstate->dirty_mask) * 4;
+	r600_mark_atom_dirty(rctx, &rstate->atom);
 }
 
 static void evergreen_emit_scissor_state(struct r600_context *rctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = rctx->b.rings.gfx.cs;
-	struct r600_scissor_state *rstate = (struct r600_scissor_state *)atom;
-	struct pipe_scissor_state *state = &rstate->scissor;
-	unsigned offset = rstate->idx * 4 * 2;
+	struct r600_scissor_state *rstate = &rctx->scissor;
+	struct pipe_scissor_state *state;
+	uint32_t dirty_mask;
+	unsigned i, offset;
 	uint32_t tl, br;
 
-	evergreen_get_scissor_rect(rctx, state->minx, state->miny, state->maxx, state->maxy, &tl, &br);
+	dirty_mask = rstate->dirty_mask;
+	while (dirty_mask != 0) {
+		i = u_bit_scan(&dirty_mask);
+		state = &rstate->scissor[i];
+		evergreen_get_scissor_rect(rctx, state->minx, state->miny, state->maxx, state->maxy, &tl, &br);
 
-	radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset, 2);
-	radeon_emit(cs, tl);
-	radeon_emit(cs, br);
+		offset = i * 4 * 2;
+		radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + offset, 2);
+		radeon_emit(cs, tl);
+		radeon_emit(cs, br);
+	}
+	rstate->dirty_mask = 0;
+	rstate->atom.num_dw = 0;
 }
 
 /**
@@ -3491,11 +3502,10 @@ void evergreen_init_state_functions(struct r600_context *rctx)
 	r600_init_atom(rctx, &rctx->dsa_state.atom, id++, r600_emit_cso_state, 0);
 	r600_init_atom(rctx, &rctx->poly_offset_state.atom, id++, evergreen_emit_polygon_offset, 6);
 	r600_init_atom(rctx, &rctx->rasterizer_state.atom, id++, r600_emit_cso_state, 0);
+	r600_init_atom(rctx, &rctx->scissor.atom, id++, evergreen_emit_scissor_state, 0);
 	for (i = 0; i < R600_MAX_VIEWPORTS; i++) {
 		r600_init_atom(rctx, &rctx->viewport[i].atom, id++, r600_emit_viewport_state, 8);
-		r600_init_atom(rctx, &rctx->scissor[i].atom, id++, evergreen_emit_scissor_state, 4);
 		rctx->viewport[i].idx = i;
-		rctx->scissor[i].idx = i;
 	}
 	r600_init_atom(rctx, &rctx->stencil_ref.atom, id++, r600_emit_stencil_ref, 4);
 	r600_init_atom(rctx, &rctx->vertex_fetch_shader.atom, id++, evergreen_emit_vertex_fetch_shader, 5);
