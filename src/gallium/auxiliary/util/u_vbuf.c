@@ -976,7 +976,6 @@ u_vbuf_upload_buffers(struct u_vbuf *mgr,
       unsigned start, end;
       struct pipe_vertex_buffer *real_vb;
       const uint8_t *ptr;
-      enum pipe_error err;
 
       i = u_bit_scan(&buffer_mask);
 
@@ -987,10 +986,10 @@ u_vbuf_upload_buffers(struct u_vbuf *mgr,
       real_vb = &mgr->real_vertex_buffer[i];
       ptr = mgr->vertex_buffer[i].user_buffer;
 
-      err = u_upload_data(mgr->uploader, start, end - start, ptr + start,
-                          &real_vb->buffer_offset, &real_vb->buffer);
-      if (err != PIPE_OK)
-         return err;
+      u_upload_data(mgr->uploader, start, end - start, ptr + start,
+                    &real_vb->buffer_offset, &real_vb->buffer);
+      if (!real_vb->buffer)
+         return PIPE_ERROR_OUT_OF_MEMORY;
 
       real_vb->buffer_offset -= start;
    }

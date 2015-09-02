@@ -92,12 +92,12 @@ void u_upload_alloc(struct u_upload_mgr *upload,
  * Same as u_upload_alloc, but in addition to that, it copies "data"
  * to the pointer returned from u_upload_alloc.
  */
-enum pipe_error u_upload_data( struct u_upload_mgr *upload,
-                               unsigned min_out_offset,
-                               unsigned size,
-                               const void *data,
-                               unsigned *out_offset,
-                               struct pipe_resource **outbuf);
+void u_upload_data(struct u_upload_mgr *upload,
+                   unsigned min_out_offset,
+                   unsigned size,
+                   const void *data,
+                   unsigned *out_offset,
+                   struct pipe_resource **outbuf);
 
 
 /**

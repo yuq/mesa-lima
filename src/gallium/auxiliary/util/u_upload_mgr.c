@@ -236,23 +236,20 @@ u_upload_alloc(struct u_upload_mgr *upload,
    upload->offset = offset + alloc_size;
 }
 
-enum pipe_error u_upload_data( struct u_upload_mgr *upload,
-                               unsigned min_out_offset,
-                               unsigned size,
-                               const void *data,
-                               unsigned *out_offset,
-                               struct pipe_resource **outbuf)
+void u_upload_data(struct u_upload_mgr *upload,
+                   unsigned min_out_offset,
+                   unsigned size,
+                   const void *data,
+                   unsigned *out_offset,
+                   struct pipe_resource **outbuf)
 {
    uint8_t *ptr;
 
    u_upload_alloc(upload, min_out_offset, size,
                   out_offset, outbuf,
                   (void**)&ptr);
-   if (!outbuf)
-      return PIPE_ERROR_OUT_OF_MEMORY;
-
-   memcpy(ptr, data, size);
-   return PIPE_OK;
+   if (ptr)
+      memcpy(ptr, data, size);
 }
 
 /* XXX: Remove. It's basically a CPU fallback of resource_copy_region. */
