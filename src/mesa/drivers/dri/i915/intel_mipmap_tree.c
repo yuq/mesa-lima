@@ -723,8 +723,7 @@ intel_miptree_map_raw(struct intel_context *intel, struct intel_mipmap_tree *mt)
 }
 
 void
-intel_miptree_unmap_raw(struct intel_context *intel,
-                        struct intel_mipmap_tree *mt)
+intel_miptree_unmap_raw(struct intel_mipmap_tree *mt)
 {
    drm_intel_bo_unmap(mt->region->bo);
 }
@@ -778,7 +777,7 @@ intel_miptree_unmap_gtt(struct intel_context *intel,
 			unsigned int level,
 			unsigned int slice)
 {
-   intel_miptree_unmap_raw(intel, mt);
+   intel_miptree_unmap_raw(mt);
 }
 
 static void
@@ -833,7 +832,7 @@ intel_miptree_unmap_blit(struct intel_context *intel,
 {
    struct gl_context *ctx = &intel->ctx;
 
-   intel_miptree_unmap_raw(intel, map->mt);
+   intel_miptree_unmap_raw(map->mt);
 
    if (map->mode & GL_MAP_WRITE_BIT) {
       bool ok = intel_miptree_blit(intel,
