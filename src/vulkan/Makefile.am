@@ -28,7 +28,7 @@ vulkan_include_HEADERS =				\
 	$(top_srcdir)/include/vulkan/vulkan.h		\
 	$(top_srcdir)/include/vulkan/vulkan_intel.h	\
 	$(top_srcdir)/include/vulkan/vk_wsi_swapchain.h	\
-	$(top_srcdir)/include/vulkan/vk_wsi_lunarg.h
+	$(top_srcdir)/include/vulkan/vk_wsi_device_swapchain.h
 
 lib_LTLIBRARIES = libvulkan.la
 

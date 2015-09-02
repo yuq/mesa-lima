@@ -637,10 +637,6 @@ static const VkExtensionProperties global_extensions[] = {
       .extName = "VK_WSI_swapchain",
       .specVersion = 12
    },
-   {
-      .extName = "VK_WSI_LunarG",
-      .specVersion = 3
-   }
 };
 
 VkResult anv_GetGlobalExtensionProperties(
@@ -662,6 +658,10 @@ VkResult anv_GetGlobalExtensionProperties(
 }
 
 static const VkExtensionProperties device_extensions[] = {
+   {
+      .extName = "VK_WSI_device_swapchain",
+      .specVersion = 12
+   },
 };
 
 VkResult anv_GetPhysicalDeviceExtensionProperties(

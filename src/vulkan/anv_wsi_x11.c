@@ -21,11 +21,11 @@
  * IN THE SOFTWARE.
  */
 
-#include "anv_private.h"
-
 #include <xcb/xcb.h>
 #include <xcb/dri3.h>
 #include <xcb/present.h>
+
+#include "anv_wsi.h"
 
 static const VkFormat formats[] = {
    VK_FORMAT_B5G6R5_UNORM,
@@ -33,49 +33,74 @@ static const VkFormat formats[] = {
    VK_FORMAT_B8G8R8A8_SRGB,
 };
 
-VkResult anv_GetDisplayInfoWSI(
-    VkDisplayWSI                            display,
-    VkDisplayInfoTypeWSI                    infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
-{
-   VkDisplayFormatPropertiesWSI *properties = pData;
-   size_t size;
+static const VkSurfacePresentModePropertiesWSI present_modes[] = {
+   { VK_PRESENT_MODE_MAILBOX_WSI },
+};
 
+VkResult
+anv_x11_get_surface_info(struct anv_device *device,
+                         VkSurfaceDescriptionWindowWSI *window,
+                         VkSurfaceInfoTypeWSI infoType,
+                         size_t* pDataSize, void* pData)
+{
    if (pDataSize == NULL)
-      return VK_ERROR_INVALID_POINTER;
+      return vk_error(VK_ERROR_INVALID_POINTER);
 
    switch (infoType) {
-   case VK_DISPLAY_INFO_TYPE_FORMAT_PROPERTIES_WSI:
-      size = sizeof(properties[0]) * ARRAY_SIZE(formats);
+   case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI: {
+      assert(*pDataSize >= sizeof(VkSurfacePropertiesWSI));
+      VkSurfacePropertiesWSI *props = pData;
 
+      props->minImageCount = 2;
+      props->maxImageCount = 4;
+      props->currentExtent = (VkExtent2D) { -1, -1 };
+      props->minImageExtent = (VkExtent2D) { 1, 1 };
+      props->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
+      props->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_WSI;
+      props->currentTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
+      props->maxImageArraySize = 1;
+      props->supportedUsageFlags =
+         VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT |
+         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+      return VK_SUCCESS;
+   }
+
+   case VK_SURFACE_INFO_TYPE_FORMATS_WSI:
       if (pData == NULL) {
-         *pDataSize = size;
+         *pDataSize = sizeof(formats);
          return VK_SUCCESS;
       }
 
-      if (*pDataSize < size)
-         return vk_error(VK_ERROR_INVALID_VALUE);
-
-      *pDataSize = size;
-
-      for (uint32_t i = 0; i < ARRAY_SIZE(formats); i++)
-         properties[i].swapChainFormat = formats[i];
+      assert(*pDataSize >= sizeof(formats));
+      memcpy(pData, formats, *pDataSize);
 
       return VK_SUCCESS;
 
+   case VK_SURFACE_INFO_TYPE_PRESENT_MODES_WSI:
+      if (pData == NULL) {
+         *pDataSize = sizeof(present_modes);
+         return VK_SUCCESS;
+      }
+
+      assert(*pDataSize >= sizeof(present_modes));
+      memcpy(pData, present_modes, *pDataSize);
+
+      return VK_SUCCESS;
    default:
-      return VK_UNSUPPORTED;
+      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
-struct anv_swap_chain {
-   struct anv_device *                          device;
+struct anv_x11_swap_chain {
+   struct anv_swap_chain                        base;
+
    xcb_connection_t *                           conn;
    xcb_window_t                                 window;
    xcb_gc_t                                     gc;
    VkExtent2D                                   extent;
-   uint32_t                                     count;
+   uint32_t                                     image_count;
+   uint32_t                                     next_image;
    struct {
       struct anv_image *                        image;
       struct anv_device_memory *                memory;
@@ -83,41 +108,50 @@ struct anv_swap_chain {
    }                                            images[0];
 };
 
-VkResult anv_CreateSwapChainWSI(
-    VkDevice                                _device,
-    const VkSwapChainCreateInfoWSI*         pCreateInfo,
-    VkSwapChainWSI*                         pSwapChain)
+VkResult
+anv_x11_create_swap_chain(struct anv_device *device,
+                          const VkSwapChainCreateInfoWSI *pCreateInfo,
+                          struct anv_x11_swap_chain **swap_chain_out)
 {
-   ANV_FROM_HANDLE(anv_device, device, _device);
-
-   struct anv_swap_chain *chain;
+   struct anv_x11_swap_chain *chain;
    xcb_void_cookie_t cookie;
    VkResult result;
-   size_t size;
-   int ret;
+
+   assert(pCreateInfo->pSurfaceDescription->sType ==
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI);
+   VkSurfaceDescriptionWindowWSI *vk_window =
+      (VkSurfaceDescriptionWindowWSI *)pCreateInfo->pSurfaceDescription;
+   assert(vk_window->platform == VK_PLATFORM_XCB_WSI);
+
+   int num_images = pCreateInfo->minImageCount;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAP_CHAIN_CREATE_INFO_WSI);
 
-   size = sizeof(*chain) + pCreateInfo->imageCount * sizeof(chain->images[0]);
+   size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
    chain = anv_device_alloc(device, size, 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->device = device;
-   chain->conn = (xcb_connection_t *) pCreateInfo->pNativeWindowSystemHandle;
-   chain->window = (xcb_window_t) (uintptr_t) pCreateInfo->pNativeWindowHandle;
-   chain->count = pCreateInfo->imageCount;
-   chain->extent = pCreateInfo->imageExtent;
+   chain->base.type = ANV_SWAP_CHAIN_TYPE_X11;
+   chain->base.device = device;
 
-   for (uint32_t i = 0; i < chain->count; i++) {
+   VkPlatformHandleXcbWSI *vk_xcb_handle = vk_window->pPlatformHandle;
+
+   chain->conn = (xcb_connection_t *) vk_xcb_handle->connection;
+   chain->window = (xcb_window_t) (uintptr_t)vk_window->pPlatformWindow;
+   chain->extent = pCreateInfo->imageExtent;
+   chain->image_count = num_images;
+   chain->next_image = 0;
+
+   for (uint32_t i = 0; i < chain->image_count; i++) {
       VkDeviceMemory memory_h;
       VkImage image_h;
       struct anv_image *image;
       struct anv_surface *surface;
       struct anv_device_memory *memory;
 
-      anv_image_create(_device,
+      anv_image_create(anv_device_to_handle(device),
          &(struct anv_image_create_info) {
             .force_tile_mode = true,
             .tile_mode = XMAJOR,
@@ -147,7 +181,7 @@ VkResult anv_CreateSwapChainWSI(
 
       surface = &image->color_surface;
 
-      anv_AllocMemory(_device,
+      anv_AllocMemory(anv_device_to_handle(device),
                       &(VkMemoryAllocInfo) {
                          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO,
                          .allocationSize = image->size,
@@ -160,8 +194,8 @@ VkResult anv_CreateSwapChainWSI(
       anv_BindImageMemory(VK_NULL_HANDLE, anv_image_to_handle(image),
                           memory_h, 0);
 
-      ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
-                               surface->stride, I915_TILING_X);
+      int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
+                                   surface->stride, I915_TILING_X);
       if (ret) {
          result = vk_errorf(VK_ERROR_UNKNOWN, "set_tiling failed: %m");
          goto fail;
@@ -190,7 +224,6 @@ VkResult anv_CreateSwapChainWSI(
       chain->images[i].image = image;
       chain->images[i].memory = memory;
       chain->images[i].pixmap = pixmap;
-      image->swap_chain = chain;
 
       xcb_discard_reply(chain->conn, cookie.sequence);
    }
@@ -208,7 +241,7 @@ VkResult anv_CreateSwapChainWSI(
                           (uint32_t []) { 0 });
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   *pSwapChain = anv_swap_chain_to_handle(chain);
+   *swap_chain_out = chain;
 
    return VK_SUCCESS;
 
@@ -216,72 +249,66 @@ VkResult anv_CreateSwapChainWSI(
    return result;
 }
 
-VkResult anv_DestroySwapChainWSI(
-    VkSwapChainWSI                          _chain)
+VkResult
+anv_x11_destroy_swap_chain(struct anv_x11_swap_chain *chain)
 {
-   ANV_FROM_HANDLE(anv_swap_chain, chain, _chain);
-
-   anv_device_free(chain->device, chain);
+   anv_device_free(chain->base.device, chain);
 
    return VK_SUCCESS;
 }
 
-VkResult anv_GetSwapChainInfoWSI(
-    VkSwapChainWSI                          _chain,
-    VkSwapChainInfoTypeWSI                  infoType,
-    size_t*                                 pDataSize,
-    void*                                   pData)
+VkResult
+anv_x11_get_swap_chain_info(struct anv_x11_swap_chain *chain,
+                            VkSwapChainInfoTypeWSI infoType,
+                            size_t* pDataSize, void* pData)
 {
-   ANV_FROM_HANDLE(anv_swap_chain, chain, _chain);
-
-   VkSwapChainImageInfoWSI *images;
    size_t size;
 
    switch (infoType) {
-   case VK_SWAP_CHAIN_INFO_TYPE_PERSISTENT_IMAGES_WSI:
-      size = sizeof(*images) * chain->count;
-      if (pData && *pDataSize < size)
-         return VK_ERROR_INVALID_VALUE;
+   case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI: {
+      VkSwapChainImagePropertiesWSI *images = pData;
 
-      *pDataSize = size;
-      if (!pData)
+      size = chain->image_count * sizeof(*images);
+
+      if (pData == NULL) {
+         *pDataSize = size;
          return VK_SUCCESS;
-
-      images = pData;
-      for (uint32_t i = 0; i < chain->count; i++) {
-         images[i].image = anv_image_to_handle(chain->images[i].image);
-         images[i].memory = anv_device_memory_to_handle(chain->images[i].memory);
       }
 
+      assert(size <= *pDataSize);
+      for (uint32_t i = 0; i < chain->image_count; i++)
+         images[i].image = anv_image_to_handle(chain->images[i].image);
+
+      *pDataSize = size;
+
       return VK_SUCCESS;
+   }
 
    default:
-      return VK_UNSUPPORTED;
+      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
-VkResult anv_QueuePresentWSI(
-    VkQueue                                 queue_,
-    const VkPresentInfoWSI*                 pPresentInfo)
+VkResult
+anv_x11_acquire_next_image(struct anv_x11_swap_chain *chain,
+                           uint64_t timeout,
+                           VkSemaphore semaphore,
+                           uint32_t *image_index)
 {
-   ANV_FROM_HANDLE(anv_image, image, pPresentInfo->image);
+   anv_finishme("Implement real blocking AcquireNextImage");
+   *image_index = chain->next_image;
+   chain->next_image = (chain->next_image + 1) % chain->image_count;
+   return VK_SUCCESS;
+}
 
-   struct anv_swap_chain *chain = image->swap_chain;
+VkResult
+anv_x11_queue_present(struct anv_queue *queue,
+                      struct anv_x11_swap_chain *chain,
+                      uint32_t image_index)
+{
    xcb_void_cookie_t cookie;
-   xcb_pixmap_t pixmap;
 
-   assert(pPresentInfo->sType == VK_STRUCTURE_TYPE_PRESENT_INFO_WSI);
-
-   if (chain == NULL)
-      return vk_error(VK_ERROR_INVALID_VALUE);
-
-   pixmap = XCB_NONE;
-   for (uint32_t i = 0; i < chain->count; i++) {
-      if (image == chain->images[i].image) {
-         pixmap = chain->images[i].pixmap;
-         break;
-      }
-   }
+   xcb_pixmap_t pixmap = chain->images[image_index].pixmap;
 
    if (pixmap == XCB_NONE)
       return vk_error(VK_ERROR_INVALID_VALUE);

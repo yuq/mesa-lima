@@ -46,8 +46,8 @@
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
-#include <vulkan/vk_wsi_lunarg.h>
 #include <vulkan/vk_wsi_swapchain.h>
+#include <vulkan/vk_wsi_device_swapchain.h>
 
 #include "anv_entrypoints.h"
 
@@ -1060,8 +1060,6 @@ struct anv_image {
    struct anv_bo *bo;
    VkDeviceSize offset;
 
-   struct anv_swap_chain *swap_chain;
-
    /** RENDER_SURFACE_STATE.SurfaceType */
    uint8_t surf_type;
 
@@ -1287,7 +1285,6 @@ ANV_DEFINE_HANDLE_CASTS(anv_device, VkDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_instance, VkInstance)
 ANV_DEFINE_HANDLE_CASTS(anv_physical_device, VkPhysicalDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
-ANV_DEFINE_HANDLE_CASTS(anv_swap_chain, VkSwapChainWSI);
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCmdPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_attachment_view, VkAttachmentView)
