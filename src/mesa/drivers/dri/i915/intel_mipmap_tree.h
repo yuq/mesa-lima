@@ -240,8 +240,7 @@ intel_miptree_create_layout(struct intel_context *intel,
                             GLuint last_level,
                             GLuint width0,
                             GLuint height0,
-                            GLuint depth0,
-                            bool for_bo);
+                            GLuint depth0);
 
 struct intel_mipmap_tree *
 intel_miptree_create_for_bo(struct intel_context *intel,

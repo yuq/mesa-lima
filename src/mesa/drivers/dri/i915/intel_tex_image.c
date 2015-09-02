@@ -241,8 +241,7 @@ intel_set_texture_image_region(struct gl_context *ctx,
 
    intel_image->mt = intel_miptree_create_layout(intel, target, image->TexFormat,
                                                  0, 0,
-                                                 width, height, 1,
-                                                 true);
+                                                 width, height, 1);
    if (intel_image->mt == NULL)
        return;
    intel_region_reference(&intel_image->mt->region, region);
