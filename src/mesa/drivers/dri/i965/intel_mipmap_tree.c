@@ -2126,11 +2126,7 @@ intel_miptree_map_gtt(struct brw_context *brw,
 }
 
 static void
-intel_miptree_unmap_gtt(struct brw_context *brw,
-			struct intel_mipmap_tree *mt,
-			struct intel_miptree_map *map,
-			unsigned int level,
-			unsigned int slice)
+intel_miptree_unmap_gtt(struct intel_mipmap_tree *mt)
 {
    intel_miptree_unmap_raw(mt);
 }
@@ -2736,7 +2732,7 @@ intel_miptree_unmap(struct brw_context *brw,
       intel_miptree_unmap_movntdqa(brw, mt, map, level, slice);
 #endif
    } else {
-      intel_miptree_unmap_gtt(brw, mt, map, level, slice);
+      intel_miptree_unmap_gtt(mt);
    }
 
    intel_miptree_release_map(mt, level, slice);
