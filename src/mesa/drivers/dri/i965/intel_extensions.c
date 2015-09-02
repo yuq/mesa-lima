@@ -355,6 +355,8 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_viewport_array = true;
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
          ctx->Extensions.ARB_shader_subroutine = true;
+         if (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024)
+            ctx->Extensions.ARB_compute_shader = true;
       }
    }
 

@@ -349,7 +349,9 @@ brw_initialize_context_constants(struct brw_context *brw)
       [MESA_SHADER_TESS_EVAL] = brw->gen >= 8,
       [MESA_SHADER_GEOMETRY] = brw->gen >= 6,
       [MESA_SHADER_FRAGMENT] = true,
-      [MESA_SHADER_COMPUTE] = _mesa_extension_override_enables.ARB_compute_shader,
+      [MESA_SHADER_COMPUTE] =
+         (ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) ||
+         _mesa_extension_override_enables.ARB_compute_shader,
    };
 
    unsigned num_stages = 0;
@@ -638,7 +640,7 @@ brw_initialize_context_constants(struct brw_context *brw)
 }
 
 static void
-brw_adjust_cs_context_constants(struct brw_context *brw)
+brw_initialize_cs_context_constants(struct brw_context *brw, unsigned max_threads)
 {
    struct gl_context *ctx = &brw->ctx;
 
@@ -652,7 +654,7 @@ brw_adjust_cs_context_constants(struct brw_context *brw)
     */
    const int simd_size = ctx->API == API_OPENGL_CORE ? 16 : 8;
 
-   const uint32_t max_invocations = simd_size * brw->max_cs_threads;
+   const uint32_t max_invocations = simd_size * max_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[2] = max_invocations;
@@ -844,6 +846,7 @@ brwCreateContext(gl_api api,
    if (INTEL_DEBUG & DEBUG_PERF)
       brw->perf_debug = true;
 
+   brw_initialize_cs_context_constants(brw, devinfo->max_cs_threads);
    brw_initialize_context_constants(brw);
 
    ctx->Const.ResetStrategy = notify_reset
@@ -897,8 +900,6 @@ brwCreateContext(gl_api api,
    brw->urb.max_hs_entries = devinfo->urb.max_hs_entries;
    brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
    brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
-
-   brw_adjust_cs_context_constants(brw);
 
    /* Estimate the size of the mappable aperture into the GTT.  There's an
     * ioctl to get the whole GTT size, but not one to get the mappable subset.
