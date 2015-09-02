@@ -634,6 +634,10 @@ VkResult anv_DestroyDevice(
 
 static const VkExtensionProperties global_extensions[] = {
    {
+      .extName = "VK_WSI_swapchain",
+      .specVersion = 12
+   },
+   {
       .extName = "VK_WSI_LunarG",
       .specVersion = 3
    }

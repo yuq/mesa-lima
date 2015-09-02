@@ -27,6 +27,7 @@ vulkan_include_HEADERS =				\
 	$(top_srcdir)/include/vulkan/vk_platform.h	\
 	$(top_srcdir)/include/vulkan/vulkan.h		\
 	$(top_srcdir)/include/vulkan/vulkan_intel.h	\
+	$(top_srcdir)/include/vulkan/vk_wsi_swapchain.h	\
 	$(top_srcdir)/include/vulkan/vk_wsi_lunarg.h
 
 lib_LTLIBRARIES = libvulkan.la
@@ -72,6 +73,7 @@ VULKAN_SOURCES =                                        \
 	anv_private.h                                   \
 	anv_query.c                                     \
 	anv_util.c                                      \
+	anv_wsi.c					\
 	anv_wsi_x11.c					\
 	gen8_state.c					\
 	gen8_cmd_buffer.c				\

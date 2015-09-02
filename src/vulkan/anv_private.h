@@ -47,6 +47,7 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
 #include <vulkan/vk_wsi_lunarg.h>
+#include <vulkan/vk_wsi_swapchain.h>
 
 #include "anv_entrypoints.h"
 
