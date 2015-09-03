@@ -646,21 +646,6 @@ brw_cs_populate_key(struct brw_context *brw,
    key->program_string_id = bcp->id;
 }
 
-static void
-fail_on_compile_error(int status, const char *msg)
-{
-   int source, line, column;
-   char error[256];
-
-   if (status)
-      return;
-
-   if (sscanf(msg, "%d:%d(%d): error: %255[^\n]", &source, &line, &column, error) == 4)
-      fail_if(!status, "%d:%s\n", line, error);
-   else
-      fail_if(!status, "%s\n", msg);
-}
-
 struct anv_compiler {
    struct anv_device *device;
    struct intel_screen *screen;
@@ -725,10 +710,6 @@ anv_compiler_create(struct anv_device *device)
    _mesa_init_shader_object_functions(&ctx->Driver);
 
    _mesa_init_constants(&ctx->Const, API_OPENGL_CORE);
-
-   brw_initialize_context_constants(compiler->brw);
-
-   intelInitExtensions(ctx);
 
    /* Set dd::NewShader */
    brwInitFragProgFuncs(&ctx->Driver);
@@ -898,47 +879,6 @@ struct spirv_header{
    uint32_t gen_magic;
 };
 
-static const char *
-src_as_glsl(const char *data)
-{
-   const struct spirv_header *as_spirv = (const struct spirv_header *)data;
-
-   /* Check alignment */
-   if ((intptr_t)data & 0x3) {
-      return data;
-   }
-
-   if (as_spirv->magic == SPIR_V_MAGIC_NUMBER) {
-      /* LunarG back-door */
-      if (as_spirv->version == 0)
-         return data + 12;
-      else
-         return NULL;
-   } else {
-      return data;
-   }
-}
-
-static void
-anv_compile_shader_glsl(struct anv_compiler *compiler,
-                   struct gl_shader_program *program,
-                   struct anv_pipeline *pipeline, uint32_t stage)
-{
-   struct brw_context *brw = compiler->brw;
-   struct gl_shader *shader;
-   int name = 0;
-
-   shader = brw_new_shader(&brw->ctx, name, stage_info[stage].token);
-   fail_if(shader == NULL, "failed to create %s shader\n", stage_info[stage].name);
-
-   shader->Source = strdup(src_as_glsl(pipeline->shaders[stage]->module->data));
-   _mesa_glsl_compile_shader(&brw->ctx, shader, false, false);
-   fail_on_compile_error(shader->CompileStatus, shader->InfoLog);
-
-   program->Shaders[program->NumShaders] = shader;
-   program->NumShaders++;
-}
-
 static void
 setup_nir_io(struct gl_shader *mesa_shader,
              nir_shader *shader)
@@ -1085,41 +1025,14 @@ anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline)
    fail_if(program == NULL || program->Shaders == NULL,
            "failed to create program\n");
 
-   bool all_spirv = true;
    for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
-      if (pipeline->shaders[i] == NULL)
-         continue;
-
-      /* You need at least this much for "void main() { }" anyway */
-      assert(pipeline->shaders[i]->module->size >= 12);
-
-      if (src_as_glsl(pipeline->shaders[i]->module->data)) {
-         all_spirv = false;
-         break;
-      }
-
-      assert(pipeline->shaders[i]->module->size % 4 == 0);
+      if (pipeline->shaders[i])
+         anv_compile_shader_spirv(compiler, program, pipeline, i);
    }
 
-   if (all_spirv) {
-      for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
-         if (pipeline->shaders[i])
-            anv_compile_shader_spirv(compiler, program, pipeline, i);
-      }
-
-      for (unsigned i = 0; i < program->NumShaders; i++) {
-         struct gl_shader *shader = program->Shaders[i];
-         program->_LinkedShaders[shader->Stage] = shader;
-      }
-   } else {
-      for (unsigned i = 0; i < VK_SHADER_STAGE_NUM; i++) {
-         if (pipeline->shaders[i])
-            anv_compile_shader_glsl(compiler, program, pipeline, i);
-      }
-
-      _mesa_glsl_link_shader(&brw->ctx, program);
-      fail_on_compile_error(program->LinkStatus,
-                            program->InfoLog);
+   for (unsigned i = 0; i < program->NumShaders; i++) {
+      struct gl_shader *shader = program->Shaders[i];
+      program->_LinkedShaders[shader->Stage] = shader;
    }
 
    bool success;
