@@ -613,9 +613,9 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
     */
    new_buf_size = align(new_buf_size, 16);
 
-   ret = u_upload_alloc(svga->const0_upload, 0, new_buf_size, &offset,
-                        &dst_buffer, &dst_map);
-   if (ret != PIPE_OK || !dst_map) {
+   u_upload_alloc(svga->const0_upload, 0, new_buf_size, &offset,
+                  &dst_buffer, &dst_map);
+   if (!dst_map) {
       if (src_map)
          pipe_buffer_unmap(&svga->pipe, src_transfer);
       return PIPE_ERROR_OUT_OF_MEMORY;
