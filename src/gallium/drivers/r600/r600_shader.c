@@ -3194,7 +3194,7 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
 	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
 	int t1 = ctx->temp_reg;
 
-	for (k = 0; k <= 2; k++) {
+	for (k = 0; k < 2; k++) {
 		if (!(inst->Dst[0].Register.WriteMask & (0x3 << (k * 2))))
 			continue;
 
