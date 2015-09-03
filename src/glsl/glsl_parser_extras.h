@@ -275,6 +275,13 @@ struct _mesa_glsl_parse_state {
    struct ast_type_qualifier *default_uniform_qualifier;
 
    /**
+    * Default shader storage layout qualifiers tracked during parsing.
+    * Currently affects shader storage blocks and shader storage buffer
+    * variables in those blocks.
+    */
+   struct ast_type_qualifier *default_shader_storage_qualifier;
+
+   /**
     * Variables to track different cases if a fragment shader redeclares
     * built-in variable gl_FragCoord.
     *

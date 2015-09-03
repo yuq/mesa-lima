@@ -169,6 +169,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %token <identifier> IDENTIFIER TYPE_IDENTIFIER NEW_IDENTIFIER
 %type <identifier> any_identifier
 %type <interface_block> instance_name_opt
+%type <interface_block> buffer_instance_name_opt
 %token <real> FLOATCONSTANT
 %token <dreal> DOUBLECONSTANT
 %token <n> INTCONSTANT UINTCONSTANT BOOLCONSTANT
@@ -218,6 +219,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <type_qualifier> subroutine_qualifier
 %type <subroutine_list> subroutine_type_list
 %type <type_qualifier> interface_qualifier
+%type <type_qualifier> buffer_interface_qualifier
 %type <type_specifier> type_specifier
 %type <type_specifier> type_specifier_nonarray
 %type <array_specifier> array_specifier
@@ -2638,6 +2640,17 @@ basic_interface_block:
 
       $$ = block;
    }
+   | buffer_interface_qualifier NEW_IDENTIFIER '{' member_list '}' buffer_instance_name_opt ';'
+   {
+      ast_interface_block *const block = $6;
+
+      block->block_name = $2;
+      block->declarations.push_degenerate_list_at_head(& $4->link);
+
+      _mesa_ast_process_interface_block(& @1, state, block, $1);
+
+      $$ = block;
+   }
    ;
 
 interface_qualifier:
@@ -2656,7 +2669,10 @@ interface_qualifier:
       memset(& $$, 0, sizeof($$));
       $$.flags.q.uniform = 1;
    }
-   | BUFFER
+   ;
+
+buffer_interface_qualifier:
+   BUFFER
    {
       memset(& $$, 0, sizeof($$));
       $$.flags.q.buffer = 1;
@@ -2678,6 +2694,26 @@ instance_name_opt:
    | NEW_IDENTIFIER array_specifier
    {
       $$ = new(state) ast_interface_block(*state->default_uniform_qualifier,
+                                          $1, $2);
+      $$->set_location_range(@1, @2);
+   }
+   ;
+
+buffer_instance_name_opt:
+   /* empty */
+   {
+      $$ = new(state) ast_interface_block(*state->default_shader_storage_qualifier,
+                                          NULL, NULL);
+   }
+   | NEW_IDENTIFIER
+   {
+      $$ = new(state) ast_interface_block(*state->default_shader_storage_qualifier,
+                                          $1, NULL);
+      $$->set_location(@1);
+   }
+   | NEW_IDENTIFIER array_specifier
+   {
+      $$ = new(state) ast_interface_block(*state->default_shader_storage_qualifier,
                                           $1, $2);
       $$->set_location_range(@1, @2);
    }
@@ -2724,6 +2760,14 @@ layout_defaults:
    layout_qualifier UNIFORM ';'
    {
       if (!state->default_uniform_qualifier->merge_qualifier(& @1, state, $1)) {
+         YYERROR;
+      }
+      $$ = NULL;
+   }
+
+   | layout_qualifier BUFFER ';'
+   {
+      if (!state->default_shader_storage_qualifier->merge_qualifier(& @1, state, $1)) {
          YYERROR;
       }
       $$ = NULL;

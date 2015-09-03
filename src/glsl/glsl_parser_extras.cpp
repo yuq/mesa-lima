@@ -244,6 +244,11 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->default_uniform_qualifier->flags.q.column_major = 1;
    this->default_uniform_qualifier->is_default_qualifier = true;
 
+   this->default_shader_storage_qualifier = new(this) ast_type_qualifier();
+   this->default_shader_storage_qualifier->flags.q.shared = 1;
+   this->default_shader_storage_qualifier->flags.q.column_major = 1;
+   this->default_shader_storage_qualifier->is_default_qualifier = true;
+
    this->fs_uses_gl_fragcoord = false;
    this->fs_redeclares_gl_fragcoord = false;
    this->fs_origin_upper_left = false;
@@ -865,7 +870,17 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
                                   ast_interface_block *const block,
                                   const struct ast_type_qualifier q)
 {
-   if (q.flags.q.uniform) {
+   if (q.flags.q.buffer) {
+      if (!state->has_shader_storage_buffer_objects()) {
+         _mesa_glsl_error(locp, state,
+                          "#version 430 / GL_ARB_shader_storage_buffer_object "
+                          "required for defining shader storage blocks");
+      } else if (state->ARB_shader_storage_buffer_object_warn) {
+         _mesa_glsl_warning(locp, state,
+                            "#version 430 / GL_ARB_shader_storage_buffer_object "
+                            "required for defining shader storage blocks");
+      }
+   } else if (q.flags.q.uniform) {
       if (!state->has_uniform_buffer_objects()) {
          _mesa_glsl_error(locp, state,
                           "#version 140 / GL_ARB_uniform_buffer_object "
@@ -909,7 +924,7 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
    uint64_t interface_type_mask;
    struct ast_type_qualifier temp_type_qualifier;
 
-   /* Get a bitmask containing only the in/out/uniform
+   /* Get a bitmask containing only the in/out/uniform/buffer
     * flags, allowing us to ignore other irrelevant flags like
     * interpolation qualifiers.
     */
@@ -917,6 +932,7 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
    temp_type_qualifier.flags.q.uniform = true;
    temp_type_qualifier.flags.q.in = true;
    temp_type_qualifier.flags.q.out = true;
+   temp_type_qualifier.flags.q.buffer = true;
    interface_type_mask = temp_type_qualifier.flags.i;
 
    /* Get the block's interface qualifier.  The interface_qualifier
