@@ -60,6 +60,16 @@ block_add_pred(nir_block *block, nir_block *pred)
    _mesa_set_add(block->predecessors, pred);
 }
 
+static inline void
+block_remove_pred(nir_block *block, nir_block *pred)
+{
+   struct set_entry *entry = _mesa_set_search(block->predecessors, pred);
+
+   assert(entry);
+
+   _mesa_set_remove(block->predecessors, entry);
+}
+
 static void
 link_blocks(nir_block *pred, nir_block *succ1, nir_block *succ2)
 {
@@ -83,11 +93,7 @@ unlink_blocks(nir_block *pred, nir_block *succ)
       pred->successors[1] = NULL;
    }
 
-   struct set_entry *entry = _mesa_set_search(succ->predecessors, pred);
-
-   assert(entry);
-
-   _mesa_set_remove(succ->predecessors, entry);
+   block_remove_pred(succ, pred);
 }
 
 static void
