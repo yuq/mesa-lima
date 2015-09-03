@@ -320,6 +320,8 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    brw->predicate.supported = false;
+   brw->can_do_pipelined_register_writes =
+      can_do_pipelined_register_writes(brw);
 
    if (brw->gen >= 7) {
       ctx->Extensions.ARB_conservative_depth = true;
@@ -336,7 +338,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_storage_buffer_object = true;
       ctx->Extensions.EXT_shader_samples_identical = true;
 
-      if (can_do_pipelined_register_writes(brw)) {
+      if (brw->can_do_pipelined_register_writes) {
          ctx->Extensions.ARB_draw_indirect = true;
          ctx->Extensions.ARB_transform_feedback2 = true;
          ctx->Extensions.ARB_transform_feedback3 = true;

@@ -866,6 +866,11 @@ struct brw_context
    bool use_resource_streamer;
 
    /**
+    * Whether LRI can be used to write register values from the batch buffer.
+    */
+   bool can_do_pipelined_register_writes;
+
+   /**
     * Some versions of Gen hardware don't do centroid interpolation correctly
     * on unlit pixels, causing incorrect values for derivatives near triangle
     * edges.  Enabling this flag causes the fragment shader to use
