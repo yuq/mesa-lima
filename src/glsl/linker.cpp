@@ -3889,10 +3889,31 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     * behavior specified in GLSL specification.
     */
    if (!prog->SeparateShader && ctx->API == API_OPENGLES2) {
-      if (prog->_LinkedShaders[MESA_SHADER_VERTEX] == NULL) {
-	 linker_error(prog, "program lacks a vertex shader\n");
-      } else if (prog->_LinkedShaders[MESA_SHADER_FRAGMENT] == NULL) {
-	 linker_error(prog, "program lacks a fragment shader\n");
+      /* With ES < 3.1 one needs to have always vertex + fragment shader. */
+      if (ctx->Version < 31) {
+         if (prog->_LinkedShaders[MESA_SHADER_VERTEX] == NULL) {
+	    linker_error(prog, "program lacks a vertex shader\n");
+         } else if (prog->_LinkedShaders[MESA_SHADER_FRAGMENT] == NULL) {
+	    linker_error(prog, "program lacks a fragment shader\n");
+         }
+      } else {
+         /* From OpenGL ES 3.1 specification (7.3 Program Objects):
+          *     "Linking can fail for a variety of reasons as specified in the
+          *     OpenGL ES Shading Language Specification, as well as any of the
+          *     following reasons:
+          *
+          *     ...
+          *
+          *     * program contains objects to form either a vertex shader or
+          *       fragment shader, and program is not separable, and does not
+          *       contain objects to form both a vertex shader and fragment
+          *       shader."
+          */
+         if (!!prog->_LinkedShaders[MESA_SHADER_VERTEX] ^
+             !!prog->_LinkedShaders[MESA_SHADER_FRAGMENT]) {
+            linker_error(prog, "Program needs to contain both vertex and "
+                         "fragment shaders.\n");
+         }
       }
    }
 
