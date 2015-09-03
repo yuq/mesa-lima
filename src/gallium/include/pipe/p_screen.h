@@ -173,6 +173,10 @@ struct pipe_screen {
     * Create a texture from a winsys_handle. The handle is often created in
     * another process by first creating a pipe texture and then calling
     * resource_get_handle.
+    *
+    * NOTE: in the case of DRM_API_HANDLE_TYPE_FD handles, the caller
+    * retains ownership of the FD.  (This is consistent with
+    * EGL_EXT_image_dma_buf_import)
     */
    struct pipe_resource * (*resource_from_handle)(struct pipe_screen *,
 						  const struct pipe_resource *templat,
@@ -190,6 +194,10 @@ struct pipe_screen {
     * Get a winsys_handle from a texture. Some platforms/winsys requires
     * that the texture is created with a special usage flag like
     * DISPLAYTARGET or PRIMARY.
+    *
+    * NOTE: in the case of DRM_API_HANDLE_TYPE_FD handles, the caller
+    * takes ownership of the FD.  (This is consistent with
+    * EGL_MESA_image_dma_buf_export)
     */
    boolean (*resource_get_handle)(struct pipe_screen *,
 				  struct pipe_resource *tex,
