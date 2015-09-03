@@ -172,64 +172,62 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
 {
    this->current_annotation = "gen6 emit vertex";
 
-   {
-      /* Buffer all output slots for this vertex in vertex_output */
-      for (int slot = 0; slot < prog_data->vue_map.num_slots; ++slot) {
-         int varying = prog_data->vue_map.slot_to_varying[slot];
-         if (varying != VARYING_SLOT_PSIZ) {
-            dst_reg dst(this->vertex_output);
-            dst.reladdr = ralloc(mem_ctx, src_reg);
-            memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-            emit_urb_slot(dst, varying);
-         } else {
-            /* The PSIZ slot can pack multiple varyings in different channels
-             * and emit_urb_slot() will produce a MOV instruction for each of
-             * them. Since we are writing to an array, that will translate to
-             * possibly multiple MOV instructions with an array destination and
-             * each will generate a scratch write with the same offset into
-             * scratch space (thus, each one overwriting the previous). This is
-             * not what we want. What we will do instead is emit PSIZ to a
-             * a regular temporary register, then move that resgister into the
-             * array. This way we only have one instruction with an array
-             * destination and we only produce a single scratch write.
-             */
-            dst_reg tmp = dst_reg(src_reg(this, glsl_type::uvec4_type));
-            emit_urb_slot(tmp, varying);
-            dst_reg dst(this->vertex_output);
-            dst.reladdr = ralloc(mem_ctx, src_reg);
-            memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-            vec4_instruction *inst = emit(MOV(dst, src_reg(tmp)));
-            inst->force_writemask_all = true;
-         }
-
-         emit(ADD(dst_reg(this->vertex_output_offset),
-                  this->vertex_output_offset, 1u));
-      }
-
-      /* Now buffer flags for this vertex */
-      dst_reg dst(this->vertex_output);
-      dst.reladdr = ralloc(mem_ctx, src_reg);
-      memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-      if (c->gp->program.OutputType == GL_POINTS) {
-         /* If we are outputting points, then every vertex has PrimStart and
-          * PrimEnd set.
-          */
-         emit(MOV(dst, (_3DPRIM_POINTLIST << URB_WRITE_PRIM_TYPE_SHIFT) |
-                  URB_WRITE_PRIM_START | URB_WRITE_PRIM_END));
-         emit(ADD(dst_reg(this->prim_count), this->prim_count, 1u));
+   /* Buffer all output slots for this vertex in vertex_output */
+   for (int slot = 0; slot < prog_data->vue_map.num_slots; ++slot) {
+      int varying = prog_data->vue_map.slot_to_varying[slot];
+      if (varying != VARYING_SLOT_PSIZ) {
+         dst_reg dst(this->vertex_output);
+         dst.reladdr = ralloc(mem_ctx, src_reg);
+         memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
+         emit_urb_slot(dst, varying);
       } else {
-         /* Otherwise, we can only set the PrimStart flag, which we have stored
-          * in the first_vertex register. We will have to wait until we execute
-          * EndPrimitive() or we end the thread to set the PrimEnd flag on a
-          * vertex.
+         /* The PSIZ slot can pack multiple varyings in different channels
+          * and emit_urb_slot() will produce a MOV instruction for each of
+          * them. Since we are writing to an array, that will translate to
+          * possibly multiple MOV instructions with an array destination and
+          * each will generate a scratch write with the same offset into
+          * scratch space (thus, each one overwriting the previous). This is
+          * not what we want. What we will do instead is emit PSIZ to a
+          * a regular temporary register, then move that resgister into the
+          * array. This way we only have one instruction with an array
+          * destination and we only produce a single scratch write.
           */
-         emit(OR(dst, this->first_vertex,
-                 (c->prog_data.output_topology << URB_WRITE_PRIM_TYPE_SHIFT)));
-         emit(MOV(dst_reg(this->first_vertex), 0u));
+         dst_reg tmp = dst_reg(src_reg(this, glsl_type::uvec4_type));
+         emit_urb_slot(tmp, varying);
+         dst_reg dst(this->vertex_output);
+         dst.reladdr = ralloc(mem_ctx, src_reg);
+         memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
+         vec4_instruction *inst = emit(MOV(dst, src_reg(tmp)));
+         inst->force_writemask_all = true;
       }
+
       emit(ADD(dst_reg(this->vertex_output_offset),
                this->vertex_output_offset, 1u));
    }
+
+   /* Now buffer flags for this vertex */
+   dst_reg dst(this->vertex_output);
+   dst.reladdr = ralloc(mem_ctx, src_reg);
+   memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
+   if (c->gp->program.OutputType == GL_POINTS) {
+      /* If we are outputting points, then every vertex has PrimStart and
+       * PrimEnd set.
+       */
+      emit(MOV(dst, (_3DPRIM_POINTLIST << URB_WRITE_PRIM_TYPE_SHIFT) |
+               URB_WRITE_PRIM_START | URB_WRITE_PRIM_END));
+      emit(ADD(dst_reg(this->prim_count), this->prim_count, 1u));
+   } else {
+      /* Otherwise, we can only set the PrimStart flag, which we have stored
+       * in the first_vertex register. We will have to wait until we execute
+       * EndPrimitive() or we end the thread to set the PrimEnd flag on a
+       * vertex.
+       */
+      emit(OR(dst, this->first_vertex,
+              (c->prog_data.output_topology << URB_WRITE_PRIM_TYPE_SHIFT)));
+      emit(MOV(dst_reg(this->first_vertex), 0u));
+   }
+   emit(ADD(dst_reg(this->vertex_output_offset),
+            this->vertex_output_offset, 1u));
 }
 
 void
