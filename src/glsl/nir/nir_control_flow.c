@@ -200,6 +200,23 @@ link_block_to_non_block(nir_block *block, nir_cf_node *node)
 }
 
 /**
+ * Replace a block's successor with a different one.
+ */
+static void
+replace_successor(nir_block *block, nir_block *old_succ, nir_block *new_succ)
+{
+   if (block->successors[0] == old_succ) {
+      block->successors[0] = new_succ;
+   } else {
+      assert(block->successors[1] == old_succ);
+      block->successors[1] = new_succ;
+   }
+
+   block_remove_pred(old_succ, block);
+   block_add_pred(new_succ, block);
+}
+
+/**
  * Takes a basic block and inserts a new empty basic block before it, making its
  * predecessors point to the new block. This essentially splits the block into
  * an empty header and a body so that another non-block CF node can be inserted
@@ -217,9 +234,7 @@ split_block_beginning(nir_block *block)
    struct set_entry *entry;
    set_foreach(block->predecessors, entry) {
       nir_block *pred = (nir_block *) entry->key;
-
-      unlink_blocks(pred, block);
-      link_blocks(pred, new_block, NULL);
+      replace_successor(pred, block, new_block);
    }
 
    /* Any phi nodes must stay part of the new block, or else their
