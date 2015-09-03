@@ -180,6 +180,10 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
       uint32_t h1 = align_u32(anv_minify(extent->height, 1), j);
       uint32_t w2 = align_u32(anv_minify(extent->width, 2), i);
 
+      /* The QPitch equation is found in the Broadwell PRM >> Volume 5: Memory
+       * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
+       * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
+       */
       qpitch = h0 + h1 + 11 * j;
       mt_width = MAX(w0, w1 + w2);
       mt_height = array_size * qpitch;
