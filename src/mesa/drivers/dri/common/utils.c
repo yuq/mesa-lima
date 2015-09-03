@@ -43,19 +43,17 @@
 
 
 uint64_t
-driParseDebugString( const char * debug, 
-		     const struct dri_debug_control * control  )
+driParseDebugString(const char *debug,
+                    const struct dri_debug_control *control)
 {
    uint64_t flag = 0;
 
-   if ( debug != NULL ) {
-      while( control->string != NULL ) {
-	 if ( !strcmp( debug, "all" ) ||
-	      strstr( debug, control->string ) != NULL ) {
+   if (debug != NULL) {
+      for (; control->string != NULL; control++) {
+	 if (!strcmp(debug, "all") ||
+	     strstr(debug, control->string) != NULL) {
 	    flag |= control->flag;
 	 }
-
-	 control++;
       }
    }
 
