@@ -1110,6 +1110,11 @@ AC_MSG_RESULT([$with_sha1])
 AC_SUBST(SHA1_LIBS)
 AC_SUBST(SHA1_CFLAGS)
 
+# Enable a define for SHA1
+if test "x$with_sha1" != "x"; then
+	DEFINES="$DEFINES -DHAVE_SHA1"
+fi
+
 # Allow user to configure out the shader-cache feature
 AC_ARG_ENABLE([shader-cache],
     AS_HELP_STRING([--disable-shader-cache], [Disable binary shader cache]),
