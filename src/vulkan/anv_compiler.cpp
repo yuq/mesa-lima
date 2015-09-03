@@ -974,6 +974,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    struct anv_shader *shader = pipeline->shaders[stage];
    struct gl_shader *mesa_shader;
    int name = 0;
+   uint32_t *spirv;
 
    mesa_shader = brw_new_shader(&brw->ctx, name, stage_info[stage].token);
    fail_if(mesa_shader == NULL,
@@ -1012,13 +1013,15 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    mesa_shader->Type = stage_info[stage].token;
    mesa_shader->Stage = stage_info[stage].stage;
 
-   assert(shader->module->size % 4 == 0);
-
    struct gl_shader_compiler_options *glsl_options =
       &compiler->screen->compiler->glsl_compiler_options[stage_info[stage].stage];
 
+   spirv = (uint32_t *) shader->module->data;
+   assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
+   assert(shader->module->size % 4 == 0);
+
    mesa_shader->Program->nir =
-      spirv_to_nir((uint32_t *)shader->module->data, shader->module->size / 4,
+      spirv_to_nir(spirv, shader->module->size / 4,
                    stage_info[stage].stage, glsl_options->NirOptions);
    nir_validate_shader(mesa_shader->Program->nir);
 
