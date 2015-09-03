@@ -59,7 +59,9 @@ struct brw_l3_config {
 };
 
 /**
- * IVB/HSW validated L3 configurations.
+ * IVB/HSW validated L3 configurations.  The first entry will be used as
+ * default by gen7_restore_default_l3_config(), otherwise the ordering is
+ * unimportant.
  */
 static const struct brw_l3_config ivb_l3_configs[] = {
    /* SLM URB ALL DC  RO  IS   C   T */
@@ -81,7 +83,7 @@ static const struct brw_l3_config ivb_l3_configs[] = {
 };
 
 /**
- * VLV validated L3 configurations.
+ * VLV validated L3 configurations.  \sa ivb_l3_configs.
  */
 static const struct brw_l3_config vlv_l3_configs[] = {
    /* SLM URB ALL DC  RO  IS   C   T */
@@ -97,7 +99,7 @@ static const struct brw_l3_config vlv_l3_configs[] = {
 };
 
 /**
- * BDW validated L3 configurations.
+ * BDW validated L3 configurations.  \sa ivb_l3_configs.
  */
 static const struct brw_l3_config bdw_l3_configs[] = {
    /* SLM URB ALL DC  RO  IS   C   T */
@@ -113,7 +115,7 @@ static const struct brw_l3_config bdw_l3_configs[] = {
 };
 
 /**
- * CHV/SKL validated L3 configurations.
+ * CHV/SKL validated L3 configurations.  \sa ivb_l3_configs.
  */
 static const struct brw_l3_config chv_l3_configs[] = {
    /* SLM URB ALL DC  RO  IS   C   T */
@@ -520,3 +522,54 @@ const struct brw_tracked_state gen7_l3_state = {
    },
    .emit = emit_l3_state
 };
+
+/**
+ * Hack to restore the default L3 configuration.
+ *
+ * This will be called at the end of every batch in order to reset the L3
+ * configuration to the default values for the time being until the kernel is
+ * fixed.  Until kernel commit 6702cf16e0ba8b0129f5aa1b6609d4e9c70bc13b
+ * (included in v4.1) we would set the MI_RESTORE_INHIBIT bit when submitting
+ * batch buffers for the default context used by the DDX, which meant that any
+ * context state changed by the GL would leak into the DDX, the assumption
+ * being that the DDX would initialize any state it cares about manually.  The
+ * DDX is however not careful enough to program an L3 configuration
+ * explicitly, and it makes assumptions about it (URB size) which won't hold
+ * and cause it to misrender if we let our L3 set-up to leak into the DDX.
+ *
+ * Since v4.1 of the Linux kernel the default context is saved and restored
+ * normally, so it's far less likely for our L3 programming to interfere with
+ * other contexts -- In fact restoring the default L3 configuration at the end
+ * of the batch will be redundant most of the time.  A kind of state leak is
+ * still possible though if the context making assumptions about L3 state is
+ * created immediately after our context was active (e.g. without the DDX
+ * default context being scheduled in between) because at present the DRM
+ * doesn't fully initialize the contents of newly created contexts and instead
+ * sets the MI_RESTORE_INHIBIT flag causing it to inherit the state from the
+ * last active context.
+ *
+ * It's possible to realize such a scenario if, say, an X server (or a GL
+ * application using an outdated non-L3-aware Mesa version) is started while
+ * another GL application is running and happens to have modified the L3
+ * configuration, or if no X server is running at all and a GL application
+ * using a non-L3-aware Mesa version is started after another GL application
+ * ran and modified the L3 configuration -- The latter situation can actually
+ * be reproduced easily on IVB in our CI system.
+ */
+void
+gen7_restore_default_l3_config(struct brw_context *brw)
+{
+   const struct brw_device_info *devinfo = brw->intelScreen->devinfo;
+   /* For efficiency assume that the first entry of the array matches the
+    * default configuration.
+    */
+   const struct brw_l3_config *const cfg = get_l3_configs(devinfo);
+   assert(cfg == get_l3_config(devinfo,
+                               get_default_l3_weights(devinfo, false, false)));
+
+   if (cfg != brw->l3.config && brw->can_do_pipelined_register_writes) {
+      setup_l3_config(brw, cfg);
+      update_urb_size(brw, cfg);
+      brw->l3.config = cfg;
+   }
+}

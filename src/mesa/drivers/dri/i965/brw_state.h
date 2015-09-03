@@ -383,6 +383,10 @@ void gen7_update_binding_table_from_array(struct brw_context *brw,
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 
+/* gen7_l3_state.c */
+void
+gen7_restore_default_l3_config(struct brw_context *brw);
+
 #ifdef __cplusplus
 }
 #endif
