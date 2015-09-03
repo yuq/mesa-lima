@@ -300,6 +300,7 @@ struct brw_stage_prog_data {
 
    unsigned curb_read_length;
    unsigned total_scratch;
+   unsigned total_shared;
 
    /**
     * Register where the thread expects to find input data from the URB

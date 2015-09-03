@@ -262,6 +262,59 @@ get_l3_config(const struct brw_device_info *devinfo, struct brw_l3_weights w0)
 }
 
 /**
+ * Return a reasonable default L3 configuration for the specified device based
+ * on whether SLM and DC are required.  In the non-SLM non-DC case the result
+ * is intended to approximately resemble the hardware defaults.
+ */
+static struct brw_l3_weights
+get_default_l3_weights(const struct brw_device_info *devinfo,
+                       bool needs_dc, bool needs_slm)
+{
+   struct brw_l3_weights w = {{ 0 }};
+
+   w.w[L3P_SLM] = needs_slm;
+   w.w[L3P_URB] = 1.0;
+
+   if (devinfo->gen >= 8) {
+      w.w[L3P_ALL] = 1.0;
+   } else {
+      w.w[L3P_DC] = needs_dc ? 0.1 : 0;
+      w.w[L3P_RO] = devinfo->is_baytrail ? 0.5 : 1.0;
+   }
+
+   return norm_l3_weights(w);
+}
+
+/**
+ * Calculate the desired L3 partitioning based on the current state of the
+ * pipeline.  For now this simply returns the conservative defaults calculated
+ * by get_default_l3_weights(), but we could probably do better by gathering
+ * more statistics from the pipeline state (e.g. guess of expected URB usage
+ * and bound surfaces), or by using feed-back from performance counters.
+ */
+static struct brw_l3_weights
+get_pipeline_state_l3_weights(const struct brw_context *brw)
+{
+   const struct brw_stage_state *stage_states[] = {
+      &brw->vs.base, &brw->gs.base, &brw->wm.base, &brw->cs.base
+   };
+   bool needs_dc = false, needs_slm = false;
+
+   for (unsigned i = 0; i < ARRAY_SIZE(stage_states); i++) {
+      const struct gl_shader_program *prog =
+         brw->ctx._Shader->CurrentProgram[stage_states[i]->stage];
+      const struct brw_stage_prog_data *prog_data = stage_states[i]->prog_data;
+
+      needs_dc |= (prog && prog->NumAtomicBuffers) ||
+         (prog_data && (prog_data->total_scratch || prog_data->nr_image_params));
+      needs_slm |= prog_data && prog_data->total_shared;
+   }
+
+   return get_default_l3_weights(brw->intelScreen->devinfo,
+                                 needs_dc, needs_slm);
+}
+
+/**
  * Program the hardware to use the specified L3 configuration.
  */
 static void
