@@ -258,5 +258,19 @@ setup_l3_config(struct brw_context *brw, const struct brw_l3_config *cfg)
                 SET_FIELD(cfg->n[L3P_T], GEN7_L3CNTLREG3_T_ALLOC));
 
       ADVANCE_BATCH();
+
+      if (brw->is_haswell && brw->intelScreen->cmd_parser_version >= 4) {
+         /* Enable L3 atomics on HSW if we have a DC partition, otherwise keep
+          * them disabled to avoid crashing the system hard.
+          */
+         BEGIN_BATCH(5);
+         OUT_BATCH(MI_LOAD_REGISTER_IMM | (5 - 2));
+         OUT_BATCH(HSW_SCRATCH1);
+         OUT_BATCH(has_dc ? 0 : HSW_SCRATCH1_L3_ATOMIC_DISABLE);
+         OUT_BATCH(HSW_ROW_CHICKEN3);
+         OUT_BATCH(HSW_ROW_CHICKEN3_L3_ATOMIC_DISABLE << 16 |
+                   (has_dc ? 0 : HSW_ROW_CHICKEN3_L3_ATOMIC_DISABLE));
+         ADVANCE_BATCH();
+      }
    }
 }
