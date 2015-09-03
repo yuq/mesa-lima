@@ -145,21 +145,18 @@ nv30_resource_copy_region(struct pipe_context *pipe,
    nv30_transfer_rect(nv30, NEAREST, &src, &dst);
 }
 
-void
-nv30_resource_resolve(struct pipe_context *pipe,
-                      const struct pipe_resolve_info *info)
+static void
+nv30_resource_resolve(struct nv30_context *nv30,
+                      const struct pipe_blit_info *info)
 {
-#if 0
-   struct nv30_context *nv30 = nv30_context(pipe);
    struct nv30_rect src, dst;
 
-   define_rect(info->src.res, 0, 0, info->src.x0, info->src.y0,
-               info->src.x1 - info->src.x0, info->src.y1 - info->src.y0, &src);
-   define_rect(info->dst.res, info->dst.level, 0, info->dst.x0, info->dst.y0,
-               info->dst.x1 - info->dst.x0, info->dst.y1 - info->dst.y0, &dst);
+   define_rect(info->src.resource, 0, info->src.box.z, info->src.box.x,
+      info->src.box.y, info->src.box.width, info->src.box.height, &src);
+   define_rect(info->dst.resource, 0, info->dst.box.z, info->dst.box.x,
+      info->dst.box.y, info->dst.box.width, info->dst.box.height, &dst);
 
    nv30_transfer_rect(nv30, BILINEAR, &src, &dst);
-#endif
 }
 
 void
@@ -173,7 +170,7 @@ nv30_blit(struct pipe_context *pipe,
        info.dst.resource->nr_samples <= 1 &&
        !util_format_is_depth_or_stencil(info.src.resource->format) &&
        !util_format_is_pure_integer(info.src.resource->format)) {
-      debug_printf("nv30: color resolve unimplemented\n");
+      nv30_resource_resolve(nv30, blit_info);
       return;
    }
 
