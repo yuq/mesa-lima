@@ -2390,7 +2390,6 @@ assign_attribute_or_color_locations(gl_shader_program *prog,
    } to_assign[16];
 
    unsigned num_attr = 0;
-   unsigned total_attribs_size = 0;
 
    foreach_in_list(ir_instruction, node, sh->ir) {
       ir_variable *const var = node->as_variable();
