@@ -167,6 +167,101 @@ get_l3_way_size(const struct brw_device_info *devinfo)
 }
 
 /**
+ * L3 configuration represented as a vector of weights giving the desired
+ * relative size of each partition.  The scale is arbitrary, only the ratios
+ * between weights will have an influence on the selection of the closest L3
+ * configuration.
+ */
+struct brw_l3_weights {
+   float w[NUM_L3P];
+};
+
+/**
+ * L1-normalize a vector of L3 partition weights.
+ */
+static struct brw_l3_weights
+norm_l3_weights(struct brw_l3_weights w)
+{
+   float sz = 0;
+
+   for (unsigned i = 0; i < NUM_L3P; i++)
+      sz += w.w[i];
+
+   for (unsigned i = 0; i < NUM_L3P; i++)
+      w.w[i] /= sz;
+
+   return w;
+}
+
+/**
+ * Get the relative partition weights of the specified L3 configuration.
+ */
+static struct brw_l3_weights
+get_config_l3_weights(const struct brw_l3_config *cfg)
+{
+   if (cfg) {
+      struct brw_l3_weights w;
+
+      for (unsigned i = 0; i < NUM_L3P; i++)
+         w.w[i] = cfg->n[i];
+
+      return norm_l3_weights(w);
+   } else {
+      const struct brw_l3_weights w = { { 0 } };
+      return w;
+   }
+}
+
+/**
+ * Distance between two L3 configurations represented as vectors of weights.
+ * Usually just the L1 metric except when the two configurations are
+ * considered incompatible in which case the distance will be infinite.  Note
+ * that the compatibility condition is asymmetric -- They will be considered
+ * incompatible whenever the reference configuration \p w0 requires SLM, DC,
+ * or URB but \p w1 doesn't provide it.
+ */
+static float
+diff_l3_weights(struct brw_l3_weights w0, struct brw_l3_weights w1)
+{
+   if ((w0.w[L3P_SLM] && !w1.w[L3P_SLM]) ||
+       (w0.w[L3P_DC] && !w1.w[L3P_DC] && !w1.w[L3P_ALL]) ||
+       (w0.w[L3P_URB] && !w1.w[L3P_URB])) {
+      return HUGE_VALF;
+
+   } else {
+      float dw = 0;
+
+      for (unsigned i = 0; i < NUM_L3P; i++)
+         dw += fabs(w0.w[i] - w1.w[i]);
+
+      return dw;
+   }
+}
+
+/**
+ * Return the closest validated L3 configuration for the specified device and
+ * weight vector.
+ */
+static const struct brw_l3_config *
+get_l3_config(const struct brw_device_info *devinfo, struct brw_l3_weights w0)
+{
+   const struct brw_l3_config *const cfgs = get_l3_configs(devinfo);
+   const struct brw_l3_config *cfg_best = NULL;
+   float dw_best = HUGE_VALF;
+
+   for (const struct brw_l3_config *cfg = cfgs; cfg->n[L3P_URB]; cfg++) {
+      const float dw = diff_l3_weights(w0, get_config_l3_weights(cfg));
+
+      if (dw < dw_best) {
+         cfg_best = cfg;
+         dw_best = dw;
+      }
+   }
+
+   return cfg_best;
+}
+
+/**
  * Program the hardware to use the specified L3 configuration.
  */
 static void
