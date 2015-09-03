@@ -60,7 +60,7 @@ static const struct dri_debug_control debug_control[] = {
    { "urb",         DEBUG_URB },
    { "vs",          DEBUG_VS },
    { "clip",        DEBUG_CLIP },
-   { "foob",        DEBUG_AUB }, /* disable aub dumbing in the dri driver */
+   { "aub",         DEBUG_AUB },
    { "shader_time", DEBUG_SHADER_TIME },
    { "no16",        DEBUG_NO16 },
    { "blorp",       DEBUG_BLORP },

@@ -1,4 +1,3 @@
-#include <stdlib.h>
 #include "main/glheader.h"
 #include "main/compiler.h"
 #include "glapi/glapi.h"
@@ -34,14 +33,12 @@ _glapi_check_multithread(void)
 
 PUBLIC void
 _glapi_set_context(void *context)
-{
-        _glapi_Context = context;
-}
+{}
 
 PUBLIC void *
 _glapi_get_context(void)
 {
-        return _glapi_Context;
+	return 0;
 }
 
 PUBLIC void
@@ -87,7 +84,7 @@ _glapi_set_nop_handler(_glapi_nop_handler_proc func)
 PUBLIC struct _glapi_table *
 _glapi_new_nop_table(unsigned num_entries)
 {
-        return malloc(16);
+	return NULL;
 }
 
 #ifndef NO_MAIN

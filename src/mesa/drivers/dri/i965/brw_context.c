@@ -815,7 +815,6 @@ brwCreateContext(gl_api api,
 
    intel_batchbuffer_init(brw);
 
-#if 0
    if (brw->gen >= 6) {
       /* Create a new hardware context.  Using a hardware context means that
        * our GPU state will be saved/restored on context switch, allowing us
@@ -840,7 +839,6 @@ brwCreateContext(gl_api api,
    }
 
    brw_init_state(brw);
-#endif
 
    intelInitExtensions(ctx);
 
@@ -908,10 +906,8 @@ brwCreateContext(gl_api api,
 
    _mesa_compute_version(ctx);
 
-#if 0
    _mesa_initialize_dispatch_tables(ctx);
    _mesa_initialize_vbo_vtxfmt(ctx);
-#endif
 
    if (ctx->Extensions.AMD_performance_monitor) {
       brw_init_performance_monitors(brw);

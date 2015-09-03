@@ -1162,10 +1162,6 @@ AC_ARG_ENABLE([driglx-direct],
     [driglx_direct="$enableval"],
     [driglx_direct="yes"])
 
-# Check for libcaca
-PKG_CHECK_EXISTS([caca], [have_libcaca=yes], [have_libcaca=no])
-AM_CONDITIONAL([HAVE_LIBCACA], [test x$have_libcaca = xyes])
-
 dnl
 dnl libGL configuration per driver
 dnl
