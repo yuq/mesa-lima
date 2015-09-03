@@ -636,7 +636,7 @@ static void si_update_poly_offset_state(struct si_context *sctx)
 {
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
-	if (!rs || !sctx->framebuffer.state.zsbuf)
+	if (!rs || !rs->uses_poly_offset || !sctx->framebuffer.state.zsbuf)
 		return;
 
 	switch (sctx->framebuffer.state.zsbuf->texture->format) {
@@ -691,6 +691,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->poly_stipple_enable = state->poly_stipple_enable;
 	rs->line_smooth = state->line_smooth;
 	rs->poly_smooth = state->poly_smooth;
+	rs->uses_poly_offset = state->offset_point || state->offset_line ||
+			       state->offset_tri;
 
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;

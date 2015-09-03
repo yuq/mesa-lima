@@ -58,6 +58,7 @@ struct si_state_rasterizer {
 	bool			poly_stipple_enable;
 	bool			line_smooth;
 	bool			poly_smooth;
+	bool			uses_poly_offset;
 };
 
 struct si_dsa_stencil_ref_part {
