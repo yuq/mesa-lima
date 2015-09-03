@@ -639,6 +639,9 @@ struct ast_type_qualifier {
     */
    glsl_base_type image_base_type;
 
+   /** Flag to know if this represents a default value for a qualifier */
+   bool is_default_qualifier;
+
    /**
     * Return true if and only if an interpolation qualifier is present.
     */

@@ -2599,7 +2599,8 @@ interface_block:
    {
       ast_interface_block *block = (ast_interface_block *) $2;
 
-      if (!state->has_420pack() && block->layout.has_layout()) {
+      if (!state->has_420pack() && block->layout.has_layout() &&
+          !block->layout.is_default_qualifier) {
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
          YYERROR;
       }
@@ -2607,6 +2608,8 @@ interface_block:
       if (!block->layout.merge_qualifier(& @1, state, $1)) {
          YYERROR;
       }
+
+      block->layout.is_default_qualifier = false;
 
       foreach_list_typed (ast_declarator_list, member, link, &block->declarations) {
          ast_type_qualifier& qualifier = member->type->qualifier;

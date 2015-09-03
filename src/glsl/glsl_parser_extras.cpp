@@ -242,6 +242,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->default_uniform_qualifier = new(this) ast_type_qualifier();
    this->default_uniform_qualifier->flags.q.shared = 1;
    this->default_uniform_qualifier->flags.q.column_major = 1;
+   this->default_uniform_qualifier->is_default_qualifier = true;
 
    this->fs_uses_gl_fragcoord = false;
    this->fs_redeclares_gl_fragcoord = false;
