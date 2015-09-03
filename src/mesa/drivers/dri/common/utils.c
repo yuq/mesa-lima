@@ -50,10 +50,19 @@ driParseDebugString(const char *debug,
 
    if (debug != NULL) {
       for (; control->string != NULL; control++) {
-	 if (!strcmp(debug, "all") ||
-	     strstr(debug, control->string) != NULL) {
-	    flag |= control->flag;
-	 }
+         if (!strcmp(debug, "all")) {
+            flag |= control->flag;
+
+         } else {
+            const char *s = debug;
+            unsigned n;
+
+            for (; n = strcspn(s, ", "), *s; s += MAX2(1, n)) {
+               if (strlen(control->string) == n &&
+                   !strncmp(control->string, s, n))
+                  flag |= control->flag;
+            }
+         }
       }
    }
 
