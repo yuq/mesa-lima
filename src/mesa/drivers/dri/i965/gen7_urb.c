@@ -153,6 +153,7 @@ gen7_upload_urb(struct brw_context *brw)
     * skip the rest of the logic.
     */
    if (!(brw->ctx.NewDriverState & BRW_NEW_CONTEXT) &&
+       !(brw->ctx.NewDriverState & BRW_NEW_URB_SIZE) &&
        brw->urb.vsize == vs_size &&
        brw->urb.gs_present == gs_present &&
        brw->urb.gsize == gs_size) {
@@ -176,6 +177,7 @@ gen7_upload_urb(struct brw_context *brw)
    unsigned chunk_size_bytes = 8192;
 
    /* Determine the size of the URB in chunks.
+    * BRW_NEW_URB_SIZE
     */
    unsigned urb_chunks = brw->urb.size * 1024 / chunk_size_bytes;
 
@@ -314,6 +316,7 @@ const struct brw_tracked_state gen7_urb = {
    .dirty = {
       .mesa = 0,
       .brw = BRW_NEW_CONTEXT |
+             BRW_NEW_URB_SIZE |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_GS_PROG_DATA |
              BRW_NEW_VS_PROG_DATA,
