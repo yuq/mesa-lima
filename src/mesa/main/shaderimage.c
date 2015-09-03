@@ -424,7 +424,8 @@ _mesa_is_image_unit_valid(struct gl_context *ctx, struct gl_image_unit *u)
    if (!t)
       return GL_FALSE;
 
-   _mesa_test_texobj_completeness(ctx, t);
+   if (!t->_BaseComplete && !t->_MipmapComplete)
+       _mesa_test_texobj_completeness(ctx, t);
 
    if (u->Level < t->BaseLevel ||
        u->Level > t->_MaxLevel ||
