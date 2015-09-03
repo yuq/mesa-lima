@@ -3466,6 +3466,25 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    prog->Version = max_version;
    prog->IsES = is_es_prog;
 
+   /* From OpenGL 4.5 Core specification (7.3 Program Objects):
+    *     "Linking can fail for a variety of reasons as specified in the OpenGL
+    *     Shading Language Specification, as well as any of the following
+    *     reasons:
+    *
+    *     * No shader objects are attached to program.
+    *
+    *     ..."
+    *
+    *     Same rule applies for OpenGL ES >= 3.1.
+    */
+
+   if (prog->NumShaders == 0 &&
+       ((ctx->API == API_OPENGL_CORE && ctx->Version >= 45) ||
+        (ctx->API == API_OPENGLES2 && ctx->Version >= 31))) {
+      linker_error(prog, "No shader objects are attached to program.\n");
+      goto done;
+   }
+
    /* Some shaders have to be linked with some other shaders present.
     */
    if (num_shaders[MESA_SHADER_GEOMETRY] > 0 &&
