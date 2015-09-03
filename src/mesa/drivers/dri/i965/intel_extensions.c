@@ -38,8 +38,11 @@
 static bool
 can_do_pipelined_register_writes(struct brw_context *brw)
 {
-   /* Supposedly, Broadwell just works. */
-   if (brw->gen >= 8)
+   /**
+    * gen >= 8 specifically allows these writes. gen <= 6 also
+    * doesn't block them.
+    */
+   if (brw->gen != 7)
       return true;
 
    static int result = -1;
