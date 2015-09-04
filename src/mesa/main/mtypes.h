@@ -2292,6 +2292,7 @@ struct gl_shader
    struct gl_uniform_block *UniformBlocks;
 
    struct exec_list *ir;
+   struct exec_list *packed_varyings;
    struct glsl_symbol_table *symbols;
 
    bool uses_builtin_functions;
