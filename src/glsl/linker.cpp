@@ -3087,6 +3087,35 @@ add_program_resource(struct gl_shader_program *prog, GLenum type,
    return true;
 }
 
+/* Function checks if a variable var is a packed varying and
+ * if given name is part of packed varying's list.
+ *
+ * If a variable is a packed varying, it has a name like
+ * 'packed:a,b,c' where a, b and c are separate variables.
+ */
+static bool
+included_in_packed_varying(ir_variable *var, const char *name)
+{
+   if (strncmp(var->name, "packed:", 7) != 0)
+      return false;
+
+   char *list = strdup(var->name + 7);
+   assert(list);
+
+   bool found = false;
+   char *saveptr;
+   char *token = strtok_r(list, ",", &saveptr);
+   while (token) {
+      if (strcmp(token, name) == 0) {
+         found = true;
+         break;
+      }
+      token = strtok_r(NULL, ",", &saveptr);
+   }
+   free(list);
+   return found;
+}
+
 /**
  * Function builds a stage reference bitmask from variable name.
  */
@@ -3114,6 +3143,11 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
          if (var) {
             unsigned baselen = strlen(var->name);
 
+            if (included_in_packed_varying(var, name)) {
+                  stages |= (1 << i);
+                  break;
+            }
+
             /* Type needs to match if specified, otherwise we might
              * pick a variable with same name but different interface.
              */
@@ -3139,9 +3173,9 @@ build_stageref(struct gl_shader_program *shProg, const char *name,
 
 static bool
 add_interface_variables(struct gl_shader_program *shProg,
-                        struct gl_shader *sh, GLenum programInterface)
+                        exec_list *ir, GLenum programInterface)
 {
-   foreach_in_list(ir_instruction, node, sh->ir) {
+   foreach_in_list(ir_instruction, node, ir) {
       ir_variable *var = node->as_variable();
       uint8_t mask = 0;
 
@@ -3176,10 +3210,43 @@ add_interface_variables(struct gl_shader_program *shProg,
          continue;
       };
 
+      /* Skip packed varyings, packed varyings are handled separately
+       * by add_packed_varyings.
+       */
+      if (strncmp(var->name, "packed:", 7) == 0)
+         continue;
+
       if (!add_program_resource(shProg, programInterface, var,
                                 build_stageref(shProg, var->name,
                                                var->data.mode) | mask))
          return false;
+   }
+   return true;
+}
+
+static bool
+add_packed_varyings(struct gl_shader_program *shProg, int stage)
+{
+   struct gl_shader *sh = shProg->_LinkedShaders[stage];
+   GLenum iface;
+
+   if (!sh || !sh->packed_varyings)
+      return true;
+
+   foreach_in_list(ir_instruction, node, sh->packed_varyings) {
+      ir_variable *var = node->as_variable();
+      if (var) {
+         switch (var->data.mode) {
+         case ir_var_shader_in:
+            iface = GL_PROGRAM_INPUT;
+         case ir_var_shader_out:
+            iface = GL_PROGRAM_OUTPUT;
+         }
+         if (!add_program_resource(shProg, iface, var,
+                                   build_stageref(shProg, var->name,
+                                                  var->data.mode)))
+            return false;
+      }
    }
    return true;
 }
@@ -3216,12 +3283,17 @@ build_program_resource_list(struct gl_shader_program *shProg)
    if (input_stage == MESA_SHADER_STAGES && output_stage == 0)
       return;
 
+   if (!add_packed_varyings(shProg, input_stage))
+      return;
+   if (!add_packed_varyings(shProg, output_stage))
+      return;
+
    /* Add inputs and outputs to the resource list. */
-   if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage],
+   if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage]->ir,
                                 GL_PROGRAM_INPUT))
       return;
 
-   if (!add_interface_variables(shProg, shProg->_LinkedShaders[output_stage],
+   if (!add_interface_variables(shProg, shProg->_LinkedShaders[output_stage]->ir,
                                 GL_PROGRAM_OUTPUT))
       return;
 
