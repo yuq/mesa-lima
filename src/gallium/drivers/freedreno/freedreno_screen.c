@@ -483,6 +483,7 @@ fd_screen_create(struct fd_device *dev)
 	pscreen = &screen->base;
 
 	screen->dev = dev;
+	screen->refcnt = 1;
 
 	// maybe this should be in context?
 	screen->pipe = fd_pipe_new(screen->dev, FD_PIPE_3D);
