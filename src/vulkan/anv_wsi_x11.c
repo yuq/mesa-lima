@@ -92,7 +92,7 @@ anv_x11_get_surface_info(struct anv_device *device,
    }
 }
 
-struct anv_x11_swap_chain {
+struct x11_swap_chain {
    struct anv_swap_chain                        base;
 
    xcb_connection_t *                           conn;
@@ -108,12 +108,96 @@ struct anv_x11_swap_chain {
    }                                            images[0];
 };
 
+static VkResult
+x11_get_swap_chain_info(struct anv_swap_chain *anv_chain,
+                        VkSwapChainInfoTypeWSI infoType,
+                        size_t* pDataSize, void* pData)
+{
+   struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+   size_t size;
+
+   switch (infoType) {
+   case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI: {
+      VkSwapChainImagePropertiesWSI *images = pData;
+
+      size = chain->image_count * sizeof(*images);
+
+      if (pData == NULL) {
+         *pDataSize = size;
+         return VK_SUCCESS;
+      }
+
+      assert(size <= *pDataSize);
+      for (uint32_t i = 0; i < chain->image_count; i++)
+         images[i].image = anv_image_to_handle(chain->images[i].image);
+
+      *pDataSize = size;
+
+      return VK_SUCCESS;
+   }
+
+   default:
+      return vk_error(VK_ERROR_INVALID_VALUE);
+   }
+}
+
+static VkResult
+x11_acquire_next_image(struct anv_swap_chain *anv_chain,
+                       uint64_t timeout,
+                       VkSemaphore semaphore,
+                       uint32_t *image_index)
+{
+   struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+
+   anv_finishme("Implement real blocking AcquireNextImage");
+   *image_index = chain->next_image;
+   chain->next_image = (chain->next_image + 1) % chain->image_count;
+   return VK_SUCCESS;
+}
+
+static VkResult
+x11_queue_present(struct anv_swap_chain *anv_chain,
+                  struct anv_queue *queue,
+                  uint32_t image_index)
+{
+   struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+
+   xcb_void_cookie_t cookie;
+
+   xcb_pixmap_t pixmap = chain->images[image_index].pixmap;
+
+   if (pixmap == XCB_NONE)
+      return vk_error(VK_ERROR_INVALID_VALUE);
+
+   cookie = xcb_copy_area(chain->conn,
+                          pixmap,
+                          chain->window,
+                          chain->gc,
+                          0, 0,
+                          0, 0,
+                          chain->extent.width,
+                          chain->extent.height);
+   xcb_discard_reply(chain->conn, cookie.sequence);
+
+   xcb_flush(chain->conn);
+
+   return VK_SUCCESS;
+}
+
+static VkResult
+x11_destroy_swap_chain(struct anv_swap_chain *chain)
+{
+   anv_device_free(chain->device, chain);
+
+   return VK_SUCCESS;
+}
+
 VkResult
 anv_x11_create_swap_chain(struct anv_device *device,
                           const VkSwapChainCreateInfoWSI *pCreateInfo,
-                          struct anv_x11_swap_chain **swap_chain_out)
+                          struct anv_swap_chain **swap_chain_out)
 {
-   struct anv_x11_swap_chain *chain;
+   struct x11_swap_chain *chain;
    xcb_void_cookie_t cookie;
    VkResult result;
 
@@ -133,8 +217,11 @@ anv_x11_create_swap_chain(struct anv_device *device,
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->base.type = ANV_SWAP_CHAIN_TYPE_X11;
    chain->base.device = device;
+   chain->base.destroy = x11_destroy_swap_chain;
+   chain->base.get_swap_chain_info = x11_get_swap_chain_info;
+   chain->base.acquire_next_image = x11_acquire_next_image;
+   chain->base.queue_present = x11_queue_present;
 
    VkPlatformHandleXcbWSI *vk_xcb_handle = vk_window->pPlatformHandle;
 
@@ -241,89 +328,10 @@ anv_x11_create_swap_chain(struct anv_device *device,
                           (uint32_t []) { 0 });
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   *swap_chain_out = chain;
+   *swap_chain_out = &chain->base;
 
    return VK_SUCCESS;
 
  fail:
    return result;
-}
-
-VkResult
-anv_x11_destroy_swap_chain(struct anv_x11_swap_chain *chain)
-{
-   anv_device_free(chain->base.device, chain);
-
-   return VK_SUCCESS;
-}
-
-VkResult
-anv_x11_get_swap_chain_info(struct anv_x11_swap_chain *chain,
-                            VkSwapChainInfoTypeWSI infoType,
-                            size_t* pDataSize, void* pData)
-{
-   size_t size;
-
-   switch (infoType) {
-   case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI: {
-      VkSwapChainImagePropertiesWSI *images = pData;
-
-      size = chain->image_count * sizeof(*images);
-
-      if (pData == NULL) {
-         *pDataSize = size;
-         return VK_SUCCESS;
-      }
-
-      assert(size <= *pDataSize);
-      for (uint32_t i = 0; i < chain->image_count; i++)
-         images[i].image = anv_image_to_handle(chain->images[i].image);
-
-      *pDataSize = size;
-
-      return VK_SUCCESS;
-   }
-
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
-}
-
-VkResult
-anv_x11_acquire_next_image(struct anv_x11_swap_chain *chain,
-                           uint64_t timeout,
-                           VkSemaphore semaphore,
-                           uint32_t *image_index)
-{
-   anv_finishme("Implement real blocking AcquireNextImage");
-   *image_index = chain->next_image;
-   chain->next_image = (chain->next_image + 1) % chain->image_count;
-   return VK_SUCCESS;
-}
-
-VkResult
-anv_x11_queue_present(struct anv_queue *queue,
-                      struct anv_x11_swap_chain *chain,
-                      uint32_t image_index)
-{
-   xcb_void_cookie_t cookie;
-
-   xcb_pixmap_t pixmap = chain->images[image_index].pixmap;
-
-   if (pixmap == XCB_NONE)
-      return vk_error(VK_ERROR_INVALID_VALUE);
-
-   cookie = xcb_copy_area(chain->conn,
-                          pixmap,
-                          chain->window,
-                          chain->gc,
-                          0, 0,
-                          0, 0,
-                          chain->extent.width,
-                          chain->extent.height);
-   xcb_discard_reply(chain->conn, cookie.sequence);
-
-   xcb_flush(chain->conn);
-
-   return VK_SUCCESS;
 }

@@ -103,12 +103,7 @@ anv_DestroySwapChainWSI(
 
    assert(swap_chain->device == anv_device_from_handle(device));
 
-   switch (swap_chain->type) {
-   case ANV_SWAP_CHAIN_TYPE_X11:
-      return anv_x11_destroy_swap_chain((void *)swap_chain);
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   return swap_chain->destroy(swap_chain);
 }
 
 VkResult
@@ -123,13 +118,8 @@ anv_GetSwapChainInfoWSI(
 
    assert(swap_chain->device == anv_device_from_handle(device));
 
-   switch (swap_chain->type) {
-   case ANV_SWAP_CHAIN_TYPE_X11:
-      return anv_x11_get_swap_chain_info((void *)swap_chain,
-                                         infoType, pDataSize, pData);
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   return swap_chain->get_swap_chain_info(swap_chain, infoType,
+                                          pDataSize, pData);
 }
 
 VkResult
@@ -144,13 +134,8 @@ anv_AcquireNextImageWSI(
 
    assert(swap_chain->device == anv_device_from_handle(device));
 
-   switch (swap_chain->type) {
-   case ANV_SWAP_CHAIN_TYPE_X11:
-      return anv_x11_acquire_next_image((void *)swap_chain,
-                                        timeout, semaphore, pImageIndex);
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   return swap_chain->acquire_next_image(swap_chain,
+                                         timeout, semaphore, pImageIndex);
 }
 
 VkResult
@@ -166,19 +151,11 @@ anv_QueuePresentWSI(
 
       assert(swap_chain->device == queue->device);
 
-      switch (swap_chain->type) {
-      case ANV_SWAP_CHAIN_TYPE_X11:
-         result = anv_x11_queue_present(queue, (void *)swap_chain,
-                                        pPresentInfo->imageIndices[i]);
-         /* TODO: What if one of them returns OUT_OF_DATE? */
-         if (result != VK_SUCCESS)
-            return result;
-         else
-            continue;
-
-      default:
-         return vk_error(VK_ERROR_INVALID_VALUE);
-      }
+      result = swap_chain->queue_present(swap_chain, queue,
+                                         pPresentInfo->imageIndices[i]);
+      /* TODO: What if one of them returns OUT_OF_DATE? */
+      if (result != VK_SUCCESS)
+         return result;
    }
 
    return VK_SUCCESS;
