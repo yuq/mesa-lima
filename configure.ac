@@ -533,15 +533,32 @@ AM_CONDITIONAL(HAVE_COMPAT_SYMLINKS, test "x$HAVE_COMPAT_SYMLINKS" = xyes)
 dnl
 dnl library names
 dnl
+dnl Unfortunately we need to do a few things that libtool can't help us with,
+dnl so we need some knowledge of shared library filenames:
+dnl
+dnl LIB_EXT is the extension used when creating symlinks for alternate
+dnl filenames for a shared library which will be dynamically loaded
+dnl
+dnl IMP_LIB_EXT is the extension used when checking for the presence of a
+dnl the file for a shared library we wish to link with
+dnl
 case "$host_os" in
 darwin* )
-    LIB_EXT='dylib' ;;
+    LIB_EXT='dylib'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 cygwin* )
-    LIB_EXT='dll' ;;
+    LIB_EXT='dll'
+    IMP_LIB_EXT='dll.a'
+    ;;
 aix* )
-    LIB_EXT='a' ;;
+    LIB_EXT='a'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 * )
-    LIB_EXT='so' ;;
+    LIB_EXT='so'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 esac
 
 AC_SUBST([LIB_EXT])
@@ -2168,10 +2185,14 @@ if test "x$MESA_LLVM" != x0; then
 
     LLVM_LIBS="`$LLVM_CONFIG --libs ${LLVM_COMPONENTS}`"
 
+    dnl llvm-config may not give the right answer when llvm is a built as a
+    dnl single shared library, so we must work the library name out for
+    dnl ourselves.
+    dnl (See https://llvm.org/bugs/show_bug.cgi?id=6823)
     if test "x$enable_llvm_shared_libs" = xyes; then
         dnl We can't use $LLVM_VERSION because it has 'svn' stripped out,
         LLVM_SO_NAME=LLVM-`$LLVM_CONFIG --version`
-        AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.so"], [llvm_have_one_so=yes])
+        AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.$IMP_LIB_EXT"], [llvm_have_one_so=yes])
 
         if test "x$llvm_have_one_so" = xyes; then
             dnl LLVM was built using auto*, so there is only one shared object.
@@ -2179,7 +2200,7 @@ if test "x$MESA_LLVM" != x0; then
         else
             dnl If LLVM was built with CMake, there will be one shared object per
             dnl component.
-            AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.so"],
+            AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.$IMP_LIB_EXT"],
                     [AC_MSG_ERROR([Could not find llvm shared libraries:
 	Please make sure you have built llvm with the --enable-shared option
 	and that your llvm libraries are installed in $LLVM_LIBDIR
