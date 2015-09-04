@@ -311,7 +311,7 @@ brw_init_driver_functions(struct brw_context *brw,
       functions->GetSamplePosition = gen6_get_sample_position;
 }
 
-void
+static void
 brw_initialize_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -390,8 +390,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    int max_samples;
    const int *msaa_modes = intel_supported_msaa_modes(brw->intelScreen);
    const int clamp_max_samples =
-      brw->optionCache.info != NULL ?
-         driQueryOptioni(&brw->optionCache, "clamp_max_samples") : -1;
+      driQueryOptioni(&brw->optionCache, "clamp_max_samples");
 
    if (clamp_max_samples < 0) {
       max_samples = msaa_modes[0];

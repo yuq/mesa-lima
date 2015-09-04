@@ -676,8 +676,6 @@ anv_compiler_create(struct anv_device *device)
 
    compiler->device = device;
 
-   compiler->brw->optionCache.info = NULL;
-   compiler->brw->bufmgr = NULL;
    compiler->brw->gen = devinfo->gen;
    compiler->brw->is_g4x = devinfo->is_g4x;
    compiler->brw->is_baytrail = devinfo->is_baytrail;
@@ -709,14 +707,8 @@ anv_compiler_create(struct anv_device *device)
    ctx = &compiler->brw->ctx;
    _mesa_init_shader_object_functions(&ctx->Driver);
 
-   _mesa_init_constants(&ctx->Const, API_OPENGL_CORE);
-
-   /* Set dd::NewShader */
-   brwInitFragProgFuncs(&ctx->Driver);
-
+   /* brw_select_clip_planes() needs this for bogus reasons. */
    ctx->_Shader = &compiler->pipeline;
-
-   compiler->brw->precompile = false;
 
    return compiler;
 

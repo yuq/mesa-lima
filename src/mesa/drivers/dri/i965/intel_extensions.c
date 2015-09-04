@@ -275,17 +275,14 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_shader_integer_mix = ctx->Const.GLSLVersion >= 130;
       ctx->Extensions.EXT_timer_query = true;
 
-      if (brw->bufmgr) {
-         if (brw->gen == 5 || can_write_oacontrol(brw)) {
-            ctx->Extensions.AMD_performance_monitor = true;
-            ctx->Extensions.INTEL_performance_query = true;
-         }
+      if (brw->gen == 5 || can_write_oacontrol(brw)) {
+         ctx->Extensions.AMD_performance_monitor = true;
+         ctx->Extensions.INTEL_performance_query = true;
       }
    }
 
    if (brw->gen >= 6) {
       ctx->Extensions.ARB_blend_func_extended =
-         brw->optionCache.info == NULL ||
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
       ctx->Extensions.ARB_conditional_render_inverted = true;
       ctx->Extensions.ARB_draw_buffers_blend = true;
@@ -308,9 +305,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_transform_feedback = true;
       ctx->Extensions.OES_depth_texture_cube_map = true;
 
-      /* Test if the kernel has the ioctl. */
-      if (brw->intelScreen->hw_has_timestamp)
-         ctx->Extensions.ARB_timer_query = true;
+      ctx->Extensions.ARB_timer_query = brw->intelScreen->hw_has_timestamp;
 
       /* Only enable this in core profile because other parts of Mesa behave
        * slightly differently when the extension is enabled.
@@ -335,8 +330,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_compression_bptc = true;
       ctx->Extensions.ARB_texture_view = true;
 
-      if (brw->bufmgr &&
-          can_do_pipelined_register_writes(brw)) {
+      if (can_do_pipelined_register_writes(brw)) {
          ctx->Extensions.ARB_draw_indirect = true;
          ctx->Extensions.ARB_transform_feedback2 = true;
          ctx->Extensions.ARB_transform_feedback3 = true;
@@ -365,9 +359,7 @@ intelInitExtensions(struct gl_context *ctx)
    if (ctx->API != API_OPENGL_CORE)
       ctx->Extensions.ARB_color_buffer_float = true;
 
-   if (ctx->Mesa_DXTn ||
-       (brw->optionCache.info != NULL &&
-        driQueryOptionb(&brw->optionCache, "force_s3tc_enable")))
+   if (ctx->Mesa_DXTn || driQueryOptionb(&brw->optionCache, "force_s3tc_enable"))
       ctx->Extensions.EXT_texture_compression_s3tc = true;
 
    ctx->Extensions.ANGLE_texture_compression_dxt = true;
