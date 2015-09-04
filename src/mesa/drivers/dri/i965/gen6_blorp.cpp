@@ -486,7 +486,6 @@ gen6_blorp_emit_sampler_state(struct brw_context *brw,
                           0, /* min LOD */
                           max_lod,
                           0, /* LOD bias */
-                          0, /* base miplevel */
                           0, /* shadow function */
                           non_normalized_coords,
                           0); /* border color offset - unused */

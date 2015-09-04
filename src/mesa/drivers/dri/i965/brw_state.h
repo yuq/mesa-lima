@@ -312,7 +312,6 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             unsigned min_lod,
                             unsigned max_lod,
                             int lod_bias,
-                            unsigned base_level,
                             unsigned shadow_function,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
