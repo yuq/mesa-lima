@@ -296,6 +296,11 @@ svga_create_surface_view(struct pipe_context *pipe,
       s->handle = svga_texture_view_surface(svga, tex, bind, flags, tex->key.format,
                                             surf_tmpl->u.tex.level, 1,
                                             layer, nlayers, zslice, &s->key);
+      if (!s->handle) {
+         FREE(s);
+         return NULL;
+      }
+
       s->key.format = format;
       s->real_layer = 0;
       s->real_level = 0;
@@ -358,6 +363,8 @@ create_backed_surface_view(struct svga_context *svga, struct svga_surface *s)
                                              &tex->b.b,
                                              &s->base,
                                              TRUE);
+      if (!backed_view)
+         return NULL;
 
       bs = svga_surface(backed_view);
       s->backed = bs;
@@ -376,7 +383,6 @@ struct pipe_surface *
 svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    enum pipe_error ret = PIPE_OK;
-   int try;
    unsigned shader;
 
    assert(svga_have_vgpu10(svga));
@@ -395,6 +401,9 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
                   "same resource used in shaderResource and renderTarget 0x%x\n",
                   s->handle);
          s = create_backed_surface_view(svga, s);
+         if (!s)
+            return NULL;
+
          break;
       }
    }
@@ -430,32 +439,27 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
          resType = SVGA3D_RESOURCE_TEXTURE2D;
       }
 
-      for (try = 0; try < 2; try++) {
-         if (util_format_is_depth_or_stencil(s->base.format)) {
-            ret = SVGA3D_vgpu10_DefineDepthStencilView(svga->swc,
-                                                       s->view_id,
-                                                       s->handle,
-                                                       s->key.format,
-                                                       resType,
-                                                       &desc);
-         }
-         else {
-            ret = SVGA3D_vgpu10_DefineRenderTargetView(svga->swc,
-                                                       s->view_id,
-                                                       s->handle,
-                                                       s->key.format,
-                                                       resType,
-                                                       &desc);
-         }
-         if (ret == PIPE_OK)
-            break;
-         svga_context_flush(svga, NULL);
+      if (util_format_is_depth_or_stencil(s->base.format)) {
+         ret = SVGA3D_vgpu10_DefineDepthStencilView(svga->swc,
+                                                    s->view_id,
+                                                    s->handle,
+                                                    s->key.format,
+                                                    resType,
+                                                    &desc);
+      }
+      else {
+         ret = SVGA3D_vgpu10_DefineRenderTargetView(svga->swc,
+                                                    s->view_id,
+                                                    s->handle,
+                                                    s->key.format,
+                                                    resType,
+                                                    &desc);
       }
 
-      assert(ret == PIPE_OK);
       if (ret != PIPE_OK) {
          util_bitmask_clear(svga->surface_view_id_bm, s->view_id);
          s->view_id = SVGA3D_INVALID_ID;
+         return NULL;
       }
    }
    return &s->base;
