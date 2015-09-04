@@ -290,6 +290,8 @@ _mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
 
 #endif
 
+#ifdef HAVE_SHA1
+
 void
 _mesa_sha1_compute(const void *data, size_t size, unsigned char result[20])
 {
@@ -314,3 +316,5 @@ _mesa_sha1_format(char *buf, const unsigned char *sha1)
 
    return buf;
 }
+
+#endif
