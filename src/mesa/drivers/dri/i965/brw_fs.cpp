@@ -5240,64 +5240,6 @@ brw_wm_fs_emit(struct brw_context *brw,
    return g.get_assembly(final_assembly_size);
 }
 
-extern "C" bool
-brw_fs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
-{
-   struct brw_context *brw = brw_context(ctx);
-   struct brw_wm_prog_key key;
-
-   struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
-   struct brw_fragment_program *bfp = brw_fragment_program(fp);
-   bool program_uses_dfdy = fp->UsesDFdy;
-
-   memset(&key, 0, sizeof(key));
-
-   if (brw->gen < 6) {
-      if (fp->UsesKill)
-         key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
-
-      if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
-         key.iz_lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
-
-      /* Just assume depth testing. */
-      key.iz_lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
-      key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
-   }
-
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.InputsRead &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16)
-      key.input_slots_valid = fp->Base.InputsRead | VARYING_BIT_POS;
-
-   brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
-
-   if (fp->Base.InputsRead & VARYING_BIT_POS) {
-      key.drawable_height = ctx->DrawBuffer->Height;
-   }
-
-   key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
-         ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
-         BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
-
-   if ((fp->Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
-      key.render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer) ||
-                          key.nr_color_regions > 1;
-   }
-
-   key.program_string_id = bfp->id;
-
-   uint32_t old_prog_offset = brw->wm.base.prog_offset;
-   struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
-
-   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key);
-
-   brw->wm.base.prog_offset = old_prog_offset;
-   brw->wm.prog_data = old_prog_data;
-
-   return success;
-}
-
 fs_reg *
 fs_visitor::emit_cs_local_invocation_id_setup()
 {
