@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 - 2015 Intel Corporation
+ * Copyright © 2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -21,288 +21,15 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-
 #include "util/ralloc.h"
 #include "brw_context.h"
 #include "brw_cs.h"
-#include "brw_fs.h"
 #include "brw_eu.h"
 #include "brw_wm.h"
+#include "brw_shader.h"
 #include "intel_mipmap_tree.h"
-#include "brw_state.h"
 #include "intel_batchbuffer.h"
-
-extern "C"
-bool
-brw_cs_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_cs_prog_data *a =
-      (const struct brw_cs_prog_data *)in_a;
-   const struct brw_cs_prog_data *b =
-      (const struct brw_cs_prog_data *)in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base, &b->base))
-      return false;
-
-   /* Compare the rest of the structure. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_cs_prog_data) - offset))
-      return false;
-
-   return true;
-}
-
-
-static const unsigned *
-brw_cs_emit(struct brw_context *brw,
-            void *mem_ctx,
-            const struct brw_cs_prog_key *key,
-            struct brw_cs_prog_data *prog_data,
-            struct gl_compute_program *cp,
-            struct gl_shader_program *prog,
-            unsigned *final_assembly_size)
-{
-   bool start_busy = false;
-   double start_time = 0;
-
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
-
-   struct brw_shader *shader =
-      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
-
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      brw_dump_ir("compute", prog, &shader->base, &cp->Base);
-
-   prog_data->local_size[0] = cp->LocalSize[0];
-   prog_data->local_size[1] = cp->LocalSize[1];
-   prog_data->local_size[2] = cp->LocalSize[2];
-   unsigned local_workgroup_size =
-      cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
-
-   cfg_t *cfg = NULL;
-   const char *fail_msg = NULL;
-
-   int st_index = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
-
-   /* Now the main event: Visit the shader IR and generate our CS IR for it.
-    */
-   fs_visitor v8(brw->intelScreen->compiler, brw,
-                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                 &cp->Base, 8, st_index);
-   if (!v8.run_cs()) {
-      fail_msg = v8.fail_msg;
-   } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
-      cfg = v8.cfg;
-      prog_data->simd_size = 8;
-   }
-
-   fs_visitor v16(brw->intelScreen->compiler, brw,
-                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                  &cp->Base, 16, st_index);
-   if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
-       !fail_msg && !v8.simd16_unsupported &&
-       local_workgroup_size <= 16 * brw->max_cs_threads) {
-      /* Try a SIMD16 compile */
-      v16.import_uniforms(&v8);
-      if (!v16.run_cs()) {
-         perf_debug("SIMD16 shader failed to compile: %s", v16.fail_msg);
-         if (!cfg) {
-            fail_msg =
-               "Couldn't generate SIMD16 program and not "
-               "enough threads for SIMD8";
-         }
-      } else {
-         cfg = v16.cfg;
-         prog_data->simd_size = 16;
-      }
-   }
-
-   if (unlikely(cfg == NULL)) {
-      assert(fail_msg);
-      prog->LinkStatus = false;
-      ralloc_strcat(&prog->InfoLog, fail_msg);
-      _mesa_problem(NULL, "Failed to compile compute shader: %s\n",
-                    fail_msg);
-      return NULL;
-   }
-
-   fs_generator g(brw->intelScreen->compiler, brw,
-                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
-                  v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
-   if (INTEL_DEBUG & DEBUG_CS) {
-      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
-                                   prog->Label ? prog->Label : "unnamed",
-                                   prog->Name);
-      g.enable_debug(name);
-   }
-
-   g.generate_code(cfg, prog_data->simd_size);
-
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once) {
-         _mesa_problem(&brw->ctx, "CS programs shouldn't need recompiles");
-      }
-      shader->compiled_once = true;
-
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("CS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-   }
-
-   return g.get_assembly(final_assembly_size);
-}
-
-static bool
-brw_codegen_cs_prog(struct brw_context *brw,
-                    struct gl_shader_program *prog,
-                    struct brw_compute_program *cp,
-                    struct brw_cs_prog_key *key)
-{
-   struct gl_context *ctx = &brw->ctx;
-   const GLuint *program;
-   void *mem_ctx = ralloc_context(NULL);
-   GLuint program_size;
-   struct brw_cs_prog_data prog_data;
-
-   struct gl_shader *cs = prog->_LinkedShaders[MESA_SHADER_COMPUTE];
-   assert (cs);
-
-   memset(&prog_data, 0, sizeof(prog_data));
-
-   /* Allocate the references to the uniforms that will end up in the
-    * prog_data associated with the compiled program, and which will be freed
-    * by the state cache.
-    */
-   int param_count = cs->num_uniform_components +
-                     cs->NumImages * BRW_IMAGE_PARAM_SIZE;
-
-   /* The backend also sometimes adds params for texture size. */
-   param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
-   prog_data.base.param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.pull_param =
-      rzalloc_array(NULL, const gl_constant_value *, param_count);
-   prog_data.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param, cs->NumImages);
-   prog_data.base.nr_params = param_count;
-   prog_data.base.nr_image_params = cs->NumImages;
-
-   program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
-                         &cp->program, prog, &program_size);
-   if (program == NULL) {
-      ralloc_free(mem_ctx);
-      return false;
-   }
-
-   if (prog_data.base.total_scratch) {
-      brw_get_scratch_bo(brw, &brw->cs.base.scratch_bo,
-                         prog_data.base.total_scratch * brw->max_cs_threads);
-   }
-
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      fprintf(stderr, "\n");
-
-   brw_upload_cache(&brw->cache, BRW_CACHE_CS_PROG,
-                    key, sizeof(*key),
-                    program, program_size,
-                    &prog_data, sizeof(prog_data),
-                    &brw->cs.base.prog_offset, &brw->cs.prog_data);
-   ralloc_free(mem_ctx);
-
-   return true;
-}
-
-
-static void
-brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
-{
-   struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_COMPUTE_PROGRAM */
-   const struct brw_compute_program *cp =
-      (struct brw_compute_program *) brw->compute_program;
-   const struct gl_program *prog = (struct gl_program *) cp;
-
-   memset(key, 0, sizeof(*key));
-
-   /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, brw->cs.base.sampler_count,
-                                      &key->tex);
-
-   /* The unique compute program ID */
-   key->program_string_id = cp->id;
-}
-
-
-extern "C"
-void
-brw_upload_cs_prog(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_cs_prog_key key;
-   struct brw_compute_program *cp = (struct brw_compute_program *)
-      brw->compute_program;
-
-   if (!cp)
-      return;
-
-   if (!brw_state_dirty(brw, _NEW_TEXTURE, BRW_NEW_COMPUTE_PROGRAM))
-      return;
-
-   brw->cs.base.sampler_count =
-      _mesa_fls(ctx->ComputeProgram._Current->Base.SamplersUsed);
-
-   brw_cs_populate_key(brw, &key);
-
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_CS_PROG,
-                         &key, sizeof(key),
-                         &brw->cs.base.prog_offset, &brw->cs.prog_data)) {
-      bool success =
-         brw_codegen_cs_prog(brw,
-                             ctx->Shader.CurrentProgram[MESA_SHADER_COMPUTE],
-                             cp, &key);
-      (void) success;
-      assert(success);
-   }
-   brw->cs.base.prog_data = &brw->cs.prog_data->base;
-}
-
-
-extern "C" bool
-brw_cs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
-{
-   struct brw_context *brw = brw_context(ctx);
-   struct brw_cs_prog_key key;
-
-   struct gl_compute_program *cp = (struct gl_compute_program *) prog;
-   struct brw_compute_program *bcp = brw_compute_program(cp);
-
-   memset(&key, 0, sizeof(key));
-   key.program_string_id = bcp->id;
-
-   brw_setup_tex_for_precompile(brw, &key.tex, prog);
-
-   uint32_t old_prog_offset = brw->cs.base.prog_offset;
-   struct brw_cs_prog_data *old_prog_data = brw->cs.prog_data;
-
-   bool success = brw_codegen_cs_prog(brw, shader_prog, bcp, &key);
-
-   brw->cs.base.prog_offset = old_prog_offset;
-   brw->cs.prog_data = old_prog_data;
-
-   return success;
-}
-
+#include "brw_state.h"
 
 static unsigned
 get_cs_thread_count(const struct brw_cs_prog_data *cs_prog_data)
@@ -451,17 +178,13 @@ brw_upload_cs_state(struct brw_context *brw)
    ADVANCE_BATCH();
 }
 
-
-extern "C"
 const struct brw_tracked_state brw_cs_state = {
-   /* explicit initialisers aren't valid C++, comment
-    * them for documentation purposes */
-   /* .dirty = */{
-      /* .mesa = */ _NEW_PROGRAM_CONSTANTS,
-      /* .brw = */  BRW_NEW_CS_PROG_DATA |
-                    BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
-   /* .emit = */ brw_upload_cs_state
+   .emit = brw_upload_cs_state
 };
 
 
@@ -523,26 +246,6 @@ fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
 }
 
 
-fs_reg *
-fs_visitor::emit_cs_local_invocation_id_setup()
-{
-   assert(stage == MESA_SHADER_COMPUTE);
-
-   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
-
-   struct brw_reg src =
-      brw_vec8_grf(payload.local_invocation_id_reg, 0);
-   src = retype(src, BRW_REGISTER_TYPE_UD);
-   bld.MOV(*reg, src);
-   src.nr += dispatch_width / 8;
-   bld.MOV(offset(*reg, bld, 1), src);
-   src.nr += dispatch_width / 8;
-   bld.MOV(offset(*reg, bld, 2), src);
-
-   return reg;
-}
-
-
 /**
  * Creates a region containing the push constants for the CS on gen7+.
  *
@@ -562,7 +265,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_prog_data *prog_data =
-      (brw_stage_prog_data*) cs_prog_data;
+      (struct brw_stage_prog_data*) cs_prog_data;
    unsigned local_id_dwords = 0;
 
    if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
@@ -634,31 +337,11 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
    }
 }
 
-
 const struct brw_tracked_state gen7_cs_push_constants = {
-   /* .dirty = */{
-      /* .mesa  = */ _NEW_PROGRAM_CONSTANTS,
-      /* .brw   = */ BRW_NEW_COMPUTE_PROGRAM |
-                     BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+   .dirty = {
+      .mesa = _NEW_PROGRAM_CONSTANTS,
+      .brw = BRW_NEW_COMPUTE_PROGRAM |
+             BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
-   /* .emit = */ gen7_upload_cs_push_constants,
+   .emit = gen7_upload_cs_push_constants,
 };
-
-
-fs_reg *
-fs_visitor::emit_cs_work_group_id_setup()
-{
-   assert(stage == MESA_SHADER_COMPUTE);
-
-   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
-
-   struct brw_reg r0_1(retype(brw_vec1_grf(0, 1), BRW_REGISTER_TYPE_UD));
-   struct brw_reg r0_6(retype(brw_vec1_grf(0, 6), BRW_REGISTER_TYPE_UD));
-   struct brw_reg r0_7(retype(brw_vec1_grf(0, 7), BRW_REGISTER_TYPE_UD));
-
-   bld.MOV(*reg, r0_1);
-   bld.MOV(offset(*reg, bld, 1), r0_6);
-   bld.MOV(offset(*reg, bld, 2), r0_7);
-
-   return reg;
-}

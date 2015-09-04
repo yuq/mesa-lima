@@ -21,7 +21,7 @@ i965_FILES = \
 	brw_conditional_render.c \
 	brw_context.c \
 	brw_context.h \
-	brw_cs.cpp \
+	brw_cs.c \
 	brw_cs.h \
 	brw_cubemap_normalize.cpp \
 	brw_curbe.c \
@@ -163,6 +163,7 @@ i965_FILES = \
 	gen6_wm_state.c \
 	gen7_blorp.cpp \
 	gen7_blorp.h \
+	gen7_cs_state.c \
 	gen7_disable.c \
 	gen7_gs_state.c \
 	gen7_misc_state.c \

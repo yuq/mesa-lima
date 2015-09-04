@@ -5297,3 +5297,146 @@ brw_fs_precompile(struct gl_context *ctx,
 
    return success;
 }
+
+fs_reg *
+fs_visitor::emit_cs_local_invocation_id_setup()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
+
+   struct brw_reg src =
+      brw_vec8_grf(payload.local_invocation_id_reg, 0);
+   src = retype(src, BRW_REGISTER_TYPE_UD);
+   bld.MOV(*reg, src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 1), src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 2), src);
+
+   return reg;
+}
+
+fs_reg *
+fs_visitor::emit_cs_work_group_id_setup()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
+
+   struct brw_reg r0_1(retype(brw_vec1_grf(0, 1), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_6(retype(brw_vec1_grf(0, 6), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_7(retype(brw_vec1_grf(0, 7), BRW_REGISTER_TYPE_UD));
+
+   bld.MOV(*reg, r0_1);
+   bld.MOV(offset(*reg, bld, 1), r0_6);
+   bld.MOV(offset(*reg, bld, 2), r0_7);
+
+   return reg;
+}
+
+const unsigned *
+brw_cs_emit(struct brw_context *brw,
+            void *mem_ctx,
+            const struct brw_cs_prog_key *key,
+            struct brw_cs_prog_data *prog_data,
+            struct gl_compute_program *cp,
+            struct gl_shader_program *prog,
+            unsigned *final_assembly_size)
+{
+   bool start_busy = false;
+   double start_time = 0;
+
+   if (unlikely(brw->perf_debug)) {
+      start_busy = (brw->batch.last_bo &&
+                    drm_intel_bo_busy(brw->batch.last_bo));
+      start_time = get_time();
+   }
+
+   struct brw_shader *shader =
+      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
+
+   if (unlikely(INTEL_DEBUG & DEBUG_CS))
+      brw_dump_ir("compute", prog, &shader->base, &cp->Base);
+
+   prog_data->local_size[0] = cp->LocalSize[0];
+   prog_data->local_size[1] = cp->LocalSize[1];
+   prog_data->local_size[2] = cp->LocalSize[2];
+   unsigned local_workgroup_size =
+      cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
+
+   cfg_t *cfg = NULL;
+   const char *fail_msg = NULL;
+
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
+
+   /* Now the main event: Visit the shader IR and generate our CS IR for it.
+    */
+   fs_visitor v8(brw->intelScreen->compiler, brw,
+                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                 &cp->Base, 8, st_index);
+   if (!v8.run_cs()) {
+      fail_msg = v8.fail_msg;
+   } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
+      cfg = v8.cfg;
+      prog_data->simd_size = 8;
+   }
+
+   fs_visitor v16(brw->intelScreen->compiler, brw,
+                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                  &cp->Base, 16, st_index);
+   if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
+       !fail_msg && !v8.simd16_unsupported &&
+       local_workgroup_size <= 16 * brw->max_cs_threads) {
+      /* Try a SIMD16 compile */
+      v16.import_uniforms(&v8);
+      if (!v16.run_cs()) {
+         perf_debug("SIMD16 shader failed to compile: %s", v16.fail_msg);
+         if (!cfg) {
+            fail_msg =
+               "Couldn't generate SIMD16 program and not "
+               "enough threads for SIMD8";
+         }
+      } else {
+         cfg = v16.cfg;
+         prog_data->simd_size = 16;
+      }
+   }
+
+   if (unlikely(cfg == NULL)) {
+      assert(fail_msg);
+      prog->LinkStatus = false;
+      ralloc_strcat(&prog->InfoLog, fail_msg);
+      _mesa_problem(NULL, "Failed to compile compute shader: %s\n",
+                    fail_msg);
+      return NULL;
+   }
+
+   fs_generator g(brw->intelScreen->compiler, brw,
+                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
+                  v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
+   if (INTEL_DEBUG & DEBUG_CS) {
+      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
+                                   prog->Label ? prog->Label : "unnamed",
+                                   prog->Name);
+      g.enable_debug(name);
+   }
+
+   g.generate_code(cfg, prog_data->simd_size);
+
+   if (unlikely(brw->perf_debug) && shader) {
+      if (shader->compiled_once) {
+         _mesa_problem(&brw->ctx, "CS programs shouldn't need recompiles");
+      }
+      shader->compiled_once = true;
+
+      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+         perf_debug("CS compile took %.03f ms and stalled the GPU\n",
+                    (get_time() - start_time) * 1000);
+      }
+   }
+
+   return g.get_assembly(final_assembly_size);
+}
