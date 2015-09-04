@@ -150,6 +150,7 @@ protected:
     */
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *record_type,
+                            const unsigned packing,
                             bool last_field);
 
    /**
@@ -173,10 +174,10 @@ protected:
    virtual void visit_field(const glsl_struct_field *field);
 
    virtual void enter_record(const glsl_type *type, const char *name,
-                             bool row_major);
+                             bool row_major, const unsigned packing);
 
    virtual void leave_record(const glsl_type *type, const char *name,
-                             bool row_major);
+                             bool row_major, const unsigned packing);
 
    virtual void set_record_array_count(unsigned record_array_count);
 
@@ -190,6 +191,7 @@ private:
     */
    void recursion(const glsl_type *t, char **name, size_t name_length,
                   bool row_major, const glsl_type *record_type,
+                  const unsigned packing,
                   bool last_field, unsigned record_array_count);
 };
 

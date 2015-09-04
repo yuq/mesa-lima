@@ -68,14 +68,18 @@ private:
    }
 
    virtual void enter_record(const glsl_type *type, const char *,
-                             bool row_major) {
+                             bool row_major, const unsigned packing) {
       assert(type->is_record());
-      this->offset = glsl_align(
+      if (packing == GLSL_INTERFACE_PACKING_STD430)
+         this->offset = glsl_align(
+            this->offset, type->std430_base_alignment(row_major));
+      else
+         this->offset = glsl_align(
             this->offset, type->std140_base_alignment(row_major));
    }
 
    virtual void leave_record(const glsl_type *type, const char *,
-                             bool row_major) {
+                             bool row_major, const unsigned packing) {
       assert(type->is_record());
 
       /* If this is the last field of a structure, apply rule #9.  The
@@ -85,12 +89,17 @@ private:
        *     the member following the sub-structure is rounded up to the next
        *     multiple of the base alignment of the structure."
        */
-      this->offset = glsl_align(
+      if (packing == GLSL_INTERFACE_PACKING_STD430)
+         this->offset = glsl_align(
+            this->offset, type->std430_base_alignment(row_major));
+      else
+         this->offset = glsl_align(
             this->offset, type->std140_base_alignment(row_major));
    }
 
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *,
+                            const unsigned packing,
                             bool /* last_field */)
    {
       assert(this->index < this->num_variables);
@@ -122,7 +131,7 @@ private:
       unsigned alignment = 0;
       unsigned size = 0;
 
-      if (v->Type->interface_packing == GLSL_INTERFACE_PACKING_STD430) {
+      if (packing == GLSL_INTERFACE_PACKING_STD430) {
          alignment = type->std430_base_alignment(v->RowMajor);
          size = type->std430_size(v->RowMajor);
       } else {
