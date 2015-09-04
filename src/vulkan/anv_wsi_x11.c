@@ -37,11 +37,22 @@ static const VkSurfacePresentModePropertiesWSI present_modes[] = {
    { VK_PRESENT_MODE_MAILBOX_WSI },
 };
 
-VkResult
-anv_x11_get_surface_info(struct anv_device *device,
-                         VkSurfaceDescriptionWindowWSI *window,
-                         VkSurfaceInfoTypeWSI infoType,
-                         size_t* pDataSize, void* pData)
+static VkResult
+x11_get_window_supported(struct anv_wsi_implementation *impl,
+                         struct anv_physical_device *physical_device,
+                         const VkSurfaceDescriptionWindowWSI *window,
+                         VkBool32 *pSupported)
+{
+   *pSupported = true;
+   stub_return(VK_SUCCESS);
+}
+
+static VkResult
+x11_get_surface_info(struct anv_wsi_implementation *impl,
+                     struct anv_device *device,
+                     VkSurfaceDescriptionWindowWSI *window,
+                     VkSurfaceInfoTypeWSI infoType,
+                     size_t* pDataSize, void* pData)
 {
    if (pDataSize == NULL)
       return vk_error(VK_ERROR_INVALID_POINTER);
@@ -192,10 +203,11 @@ x11_destroy_swap_chain(struct anv_swap_chain *chain)
    return VK_SUCCESS;
 }
 
-VkResult
-anv_x11_create_swap_chain(struct anv_device *device,
-                          const VkSwapChainCreateInfoWSI *pCreateInfo,
-                          struct anv_swap_chain **swap_chain_out)
+static VkResult
+x11_create_swap_chain(struct anv_wsi_implementation *impl,
+                      struct anv_device *device,
+                      const VkSwapChainCreateInfoWSI *pCreateInfo,
+                      struct anv_swap_chain **swap_chain_out)
 {
    struct x11_swap_chain *chain;
    xcb_void_cookie_t cookie;
@@ -334,4 +346,29 @@ anv_x11_create_swap_chain(struct anv_device *device,
 
  fail:
    return result;
+}
+
+VkResult
+anv_x11_init_wsi(struct anv_instance *instance)
+{
+   struct anv_wsi_implementation *impl;
+
+   impl = anv_instance_alloc(instance, sizeof(*impl), 8,
+                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+   if (!impl)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   impl->get_window_supported = x11_get_window_supported;
+   impl->get_surface_info = x11_get_surface_info;
+   impl->create_swap_chain = x11_create_swap_chain;
+
+   instance->wsi_impl[VK_PLATFORM_XCB_WSI] = impl;
+
+   return VK_SUCCESS;
+}
+
+void
+anv_x11_finish_wsi(struct anv_instance *instance)
+{
+   anv_instance_free(instance, instance->wsi_impl[VK_PLATFORM_XCB_WSI]);
 }

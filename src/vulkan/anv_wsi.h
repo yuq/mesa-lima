@@ -42,10 +42,21 @@ struct anv_swap_chain {
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swap_chain, VkSwapChainWSI)
 
-VkResult anv_x11_get_surface_info(struct anv_device *device,
-                                  VkSurfaceDescriptionWindowWSI *window,
-                                  VkSurfaceInfoTypeWSI infoType,
-                                  size_t* pDataSize, void* pData);
-VkResult anv_x11_create_swap_chain(struct anv_device *device,
-                                   const VkSwapChainCreateInfoWSI *pCreateInfo,
-                                   struct anv_swap_chain **swap_chain);
+struct anv_wsi_implementation {
+   VkResult (*get_window_supported)(struct anv_wsi_implementation *impl,
+                                    struct anv_physical_device *physical_device,
+                                    const VkSurfaceDescriptionWindowWSI *window,
+                                    VkBool32 *pSupported);
+   VkResult (*get_surface_info)(struct anv_wsi_implementation *impl,
+                                struct anv_device *device,
+                                VkSurfaceDescriptionWindowWSI *window,
+                                VkSurfaceInfoTypeWSI infoType,
+                                size_t* pDataSize, void* pData);
+   VkResult (*create_swap_chain)(struct anv_wsi_implementation *impl,
+                                 struct anv_device *device,
+                                 const VkSwapChainCreateInfoWSI *pCreateInfo,
+                                 struct anv_swap_chain **swap_chain);
+};
+
+VkResult anv_x11_init_wsi(struct anv_instance *instance);
+void anv_x11_finish_wsi(struct anv_instance *instance);

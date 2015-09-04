@@ -24,20 +24,42 @@
 #include "anv_wsi.h"
 
 VkResult
+anv_init_wsi(struct anv_instance *instance)
+{
+   memset(instance->wsi_impl, 0, sizeof(instance->wsi_impl));
+   return anv_x11_init_wsi(instance);
+}
+
+void
+anv_finish_wsi(struct anv_instance *instance)
+{
+   anv_x11_finish_wsi(instance);
+}
+
+VkResult
 anv_GetPhysicalDeviceSurfaceSupportWSI(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
     const VkSurfaceDescriptionWSI*          pSurfaceDescription,
     VkBool32*                               pSupported)
 {
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+
    assert(pSurfaceDescription->sType ==
           VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI);
 
    VkSurfaceDescriptionWindowWSI *window = (void *)pSurfaceDescription;
 
-   *pSupported = window->platform == VK_PLATFORM_XCB_WSI;
+   struct anv_wsi_implementation *impl =
+      physical_device->instance->wsi_impl[window->platform];
 
-   return VK_SUCCESS;
+   if (impl) {
+      return impl->get_window_supported(impl, physical_device,
+                                        window, pSupported);
+   } else {
+      *pSupported = false;
+      return VK_SUCCESS;
+   }
 }
 
 VkResult
@@ -55,13 +77,13 @@ anv_GetSurfaceInfoWSI(
    VkSurfaceDescriptionWindowWSI *window =
       (VkSurfaceDescriptionWindowWSI *)pSurfaceDescription;
 
-   switch (window->platform) {
-   case VK_PLATFORM_XCB_WSI:
-      return anv_x11_get_surface_info(device, window, infoType,
-                                      pDataSize, pData);
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   struct anv_wsi_implementation *impl =
+      device->instance->wsi_impl[window->platform];
+
+   assert(impl);
+
+   return impl->get_surface_info(impl, device, window, infoType,
+                                 pDataSize, pData);
 }
 
 VkResult
@@ -79,14 +101,12 @@ anv_CreateSwapChainWSI(
    VkSurfaceDescriptionWindowWSI *window =
       (VkSurfaceDescriptionWindowWSI *)pCreateInfo->pSurfaceDescription;
 
-   switch (window->platform) {
-   case VK_PLATFORM_XCB_WSI:
-      result = anv_x11_create_swap_chain(device, pCreateInfo,
-                                         (void *)&swap_chain);
-      break;
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   struct anv_wsi_implementation *impl =
+      device->instance->wsi_impl[window->platform];
+
+   assert(impl);
+
+   result = impl->create_swap_chain(impl, device, pCreateInfo, &swap_chain);
 
    if (result == VK_SUCCESS)
       *pSwapChain = anv_swap_chain_to_handle(swap_chain);

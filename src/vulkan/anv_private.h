@@ -343,7 +343,12 @@ struct anv_instance {
     uint32_t                                    apiVersion;
     uint32_t                                    physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
+
+    struct anv_wsi_implementation *             wsi_impl[VK_PLATFORM_NUM_WSI];
 };
+
+VkResult anv_init_wsi(struct anv_instance *instance);
+void anv_finish_wsi(struct anv_instance *instance);
 
 struct anv_meta_state {
    struct {

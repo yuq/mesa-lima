@@ -139,6 +139,8 @@ VkResult anv_CreateInstance(
 
    VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
 
+   anv_init_wsi(instance);
+
    *pInstance = anv_instance_to_handle(instance);
 
    return VK_SUCCESS;
@@ -148,6 +150,8 @@ VkResult anv_DestroyInstance(
     VkInstance                                  _instance)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
+
+   anv_finish_wsi(instance);
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
 
