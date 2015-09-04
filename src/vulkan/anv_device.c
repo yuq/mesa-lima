@@ -158,7 +158,7 @@ VkResult anv_DestroyInstance(
    return VK_SUCCESS;
 }
 
-static void *
+void *
 anv_instance_alloc(struct anv_instance *instance, size_t size,
                    size_t alignment, VkSystemAllocType allocType)
 {
@@ -171,7 +171,7 @@ anv_instance_alloc(struct anv_instance *instance, size_t size,
    return mem;
 }
 
-static void
+void
 anv_instance_free(struct anv_instance *instance, void *mem)
 {
    if (mem == NULL)

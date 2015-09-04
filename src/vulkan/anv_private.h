@@ -412,6 +412,16 @@ struct anv_device {
 };
 
 void *
+anv_instance_alloc(struct anv_instance *        instance,
+                   size_t                       size,
+                   size_t                       alignment,
+                   VkSystemAllocType            allocType);
+
+void
+anv_instance_free(struct anv_instance *         instance,
+                  void *                        mem);
+
+void *
 anv_device_alloc(struct anv_device *            device,
                  size_t                         size,
                  size_t                         alignment,
