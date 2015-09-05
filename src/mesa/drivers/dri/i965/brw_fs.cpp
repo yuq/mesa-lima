@@ -5140,15 +5140,6 @@ brw_wm_fs_emit(struct brw_context *brw,
                struct gl_shader_program *prog,
                unsigned *final_assembly_size)
 {
-   bool start_busy = false;
-   double start_time = 0;
-
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
-
    struct brw_shader *shader = NULL;
    if (prog)
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
@@ -5226,17 +5217,6 @@ brw_wm_fs_emit(struct brw_context *brw,
    if (simd16_cfg)
       prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once)
-         brw_wm_debug_recompile(brw, prog, key);
-      shader->compiled_once = true;
-
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("FS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-   }
-
    return g.get_assembly(final_assembly_size);
 }
 
@@ -5286,15 +5266,6 @@ brw_cs_emit(struct brw_context *brw,
             struct gl_shader_program *prog,
             unsigned *final_assembly_size)
 {
-   bool start_busy = false;
-   double start_time = 0;
-
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
-
    struct brw_shader *shader =
       (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
 
@@ -5367,18 +5338,6 @@ brw_cs_emit(struct brw_context *brw,
    }
 
    g.generate_code(cfg, prog_data->simd_size);
-
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once) {
-         _mesa_problem(&brw->ctx, "CS programs shouldn't need recompiles");
-      }
-      shader->compiled_once = true;
-
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("CS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-   }
 
    return g.get_assembly(final_assembly_size);
 }

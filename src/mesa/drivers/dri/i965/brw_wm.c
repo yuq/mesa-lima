@@ -165,11 +165,13 @@ brw_codegen_wm_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data prog_data;
    const GLuint *program;
-   struct gl_shader *fs = NULL;
+   struct brw_shader *fs = NULL;
    GLuint program_size;
+   bool start_busy = false;
+   double start_time = 0;
 
    if (prog)
-      fs = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
+      fs = (struct brw_shader *)prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    memset(&prog_data, 0, sizeof(prog_data));
    /* key->alpha_test_func means simulating alpha testing via discards,
@@ -180,7 +182,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
       fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    prog_data.computed_depth_mode = computed_depth_mode(&fp->program);
 
-   prog_data.early_fragment_tests = fs && fs->EarlyFragmentTests;
+   prog_data.early_fragment_tests = fs && fs->base.EarlyFragmentTests;
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
    if (!prog)
@@ -192,9 +194,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
     */
    int param_count;
    if (fs) {
-      param_count = fs->num_uniform_components +
-                    fs->NumImages * BRW_IMAGE_PARAM_SIZE;
-      prog_data.base.nr_image_params = fs->NumImages;
+      param_count = fs->base.num_uniform_components +
+                    fs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+      prog_data.base.nr_image_params = fs->base.NumImages;
    } else {
       param_count = fp->program.Base.Parameters->NumParameters * 4;
    }
@@ -214,11 +216,28 @@ brw_codegen_wm_prog(struct brw_context *brw,
                                            key->persample_shading,
                                            &fp->program);
 
+   if (unlikely(brw->perf_debug)) {
+      start_busy = (brw->batch.last_bo &&
+                    drm_intel_bo_busy(brw->batch.last_bo));
+      start_time = get_time();
+   }
+
    program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
                             &fp->program, prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
+   }
+
+   if (unlikely(brw->perf_debug) && fs) {
+      if (fs->compiled_once)
+         brw_wm_debug_recompile(brw, prog, key);
+      fs->compiled_once = true;
+
+      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+         perf_debug("FS compile took %.03f ms and stalled the GPU\n",
+                    (get_time() - start_time) * 1000);
+      }
    }
 
    if (prog_data.base.total_scratch) {

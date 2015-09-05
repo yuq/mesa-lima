@@ -63,8 +63,11 @@ brw_codegen_cs_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    GLuint program_size;
    struct brw_cs_prog_data prog_data;
+   bool start_busy = false;
+   double start_time = 0;
 
-   struct gl_shader *cs = prog->_LinkedShaders[MESA_SHADER_COMPUTE];
+   struct brw_shader *cs =
+      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
    assert (cs);
 
    memset(&prog_data, 0, sizeof(prog_data));
@@ -73,8 +76,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = cs->num_uniform_components +
-                     cs->NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = cs->base.num_uniform_components +
+                     cs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
@@ -83,15 +86,33 @@ brw_codegen_cs_prog(struct brw_context *brw,
    prog_data.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param, cs->NumImages);
+      rzalloc_array(NULL, struct brw_image_param, cs->base.NumImages);
    prog_data.base.nr_params = param_count;
-   prog_data.base.nr_image_params = cs->NumImages;
+   prog_data.base.nr_image_params = cs->base.NumImages;
+
+   if (unlikely(brw->perf_debug)) {
+      start_busy = (brw->batch.last_bo &&
+                    drm_intel_bo_busy(brw->batch.last_bo));
+      start_time = get_time();
+   }
 
    program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
                          &cp->program, prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
+   }
+
+   if (unlikely(brw->perf_debug) && cs) {
+      if (cs->compiled_once) {
+         _mesa_problem(&brw->ctx, "CS programs shouldn't need recompiles");
+      }
+      cs->compiled_once = true;
+
+      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+         perf_debug("CS compile took %.03f ms and stalled the GPU\n",
+                    (get_time() - start_time) * 1000);
+      }
    }
 
    if (prog_data.base.total_scratch) {

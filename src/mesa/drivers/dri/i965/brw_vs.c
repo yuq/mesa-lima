@@ -98,10 +98,12 @@ brw_codegen_vs_prog(struct brw_context *brw,
    struct brw_stage_prog_data *stage_prog_data = &prog_data.base.base;
    void *mem_ctx;
    int i;
-   struct gl_shader *vs = NULL;
+   struct brw_shader *vs = NULL;
+   bool start_busy = false;
+   double start_time = 0;
 
    if (prog)
-      vs = prog->_LinkedShaders[MESA_SHADER_VERTEX];
+      vs = (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
    memset(&prog_data, 0, sizeof(prog_data));
 
@@ -121,9 +123,9 @@ brw_codegen_vs_prog(struct brw_context *brw,
        * case being a float value that gets blown up to a vec4, so be
        * conservative here.
        */
-      param_count = vs->num_uniform_components * 4 +
-                    vs->NumImages * BRW_IMAGE_PARAM_SIZE;
-      stage_prog_data->nr_image_params = vs->NumImages;
+      param_count = vs->base.num_uniform_components * 4 +
+                    vs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+      stage_prog_data->nr_image_params = vs->base.NumImages;
    } else {
       param_count = vp->program.Base.Parameters->NumParameters * 4;
    }
@@ -185,6 +187,12 @@ brw_codegen_vs_prog(struct brw_context *brw,
 			       true);
    }
 
+   if (unlikely(brw->perf_debug)) {
+      start_busy = (brw->batch.last_bo &&
+                    drm_intel_bo_busy(brw->batch.last_bo));
+      start_time = get_time();
+   }
+
    /* Emit GEN4 code.
     */
    program = brw_vs_emit(brw, mem_ctx, key, &prog_data,
@@ -192,6 +200,17 @@ brw_codegen_vs_prog(struct brw_context *brw,
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
+   }
+
+   if (unlikely(brw->perf_debug) && vs) {
+      if (vs->compiled_once) {
+         brw_vs_debug_recompile(brw, prog, key);
+      }
+      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+         perf_debug("VS compile took %.03f ms and stalled the GPU\n",
+                    (get_time() - start_time) * 1000);
+      }
+      vs->compiled_once = true;
    }
 
    /* Scratch space is used for register spilling */

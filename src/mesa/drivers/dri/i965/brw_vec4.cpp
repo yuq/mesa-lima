@@ -1930,15 +1930,7 @@ brw_vs_emit(struct brw_context *brw,
             struct gl_shader_program *prog,
             unsigned *final_assembly_size)
 {
-   bool start_busy = false;
-   double start_time = 0;
    const unsigned *assembly = NULL;
-
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
 
    struct brw_shader *shader = NULL;
    if (prog)
@@ -2027,17 +2019,6 @@ brw_vs_emit(struct brw_context *brw,
                        prog, &vp->Base, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
       assembly = g.generate_assembly(v.cfg, final_assembly_size);
-   }
-
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once) {
-         brw_vs_debug_recompile(brw, prog, key);
-      }
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("VS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-      shader->compiled_once = true;
    }
 
    return assembly;
