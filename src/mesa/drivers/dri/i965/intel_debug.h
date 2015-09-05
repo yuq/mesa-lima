@@ -71,6 +71,7 @@ extern uint64_t INTEL_DEBUG;
 #define DEBUG_NO_COMPACTION       (1ull << 35)
 #define DEBUG_TCS                 (1ull << 36)
 #define DEBUG_TES                 (1ull << 37)
+#define DEBUG_L3                  (1ull << 38)
 
 #ifdef HAVE_ANDROID_PLATFORM
 #define LOG_TAG "INTEL-MESA"

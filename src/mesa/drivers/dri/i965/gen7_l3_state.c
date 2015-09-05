@@ -460,6 +460,18 @@ update_urb_size(struct brw_context *brw, const struct brw_l3_config *cfg)
    }
 }
 
+/**
+ * Print out the specified L3 configuration.
+ */
+static void
+dump_l3_config(const struct brw_l3_config *cfg)
+{
+   fprintf(stderr, "SLM=%d URB=%d ALL=%d DC=%d RO=%d IS=%d C=%d T=%d\n",
+           cfg->n[L3P_SLM], cfg->n[L3P_URB], cfg->n[L3P_ALL],
+           cfg->n[L3P_DC], cfg->n[L3P_RO],
+           cfg->n[L3P_IS], cfg->n[L3P_C], cfg->n[L3P_T]);
+}
+
 static void
 emit_l3_state(struct brw_context *brw)
 {
@@ -489,6 +501,11 @@ emit_l3_state(struct brw_context *brw)
       setup_l3_config(brw, cfg);
       update_urb_size(brw, cfg);
       brw->l3.config = cfg;
+
+      if (unlikely(INTEL_DEBUG & DEBUG_L3)) {
+         fprintf(stderr, "L3 config transition (%f > %f): ", dw, dw_threshold);
+         dump_l3_config(cfg);
+      }
    }
 }
 
