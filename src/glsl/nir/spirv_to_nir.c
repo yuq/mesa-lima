@@ -1282,8 +1282,6 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       val->deref = nir_deref_var_create(b, var);
       val->deref_type = type;
 
-      vtn_foreach_decoration(b, val, var_decoration_cb, var);
-
       if (b->execution_model == SpvExecutionModelFragment &&
           var->data.mode == nir_var_shader_out) {
          var->data.location += FRAG_RESULT_DATA0;
@@ -1294,6 +1292,12 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                  var->data.mode == nir_var_shader_out) {
          var->data.location += VARYING_SLOT_VAR0;
       }
+
+      /* We handle decorations last because decorations might cause us to
+       * over-write other things such as the variable's location and we want
+       * those changes to stick.
+       */
+      vtn_foreach_decoration(b, val, var_decoration_cb, var);
 
       /* If this was a uniform block, then we're not going to actually use the
        * variable (we're only going to use it to compute offsets), so don't
