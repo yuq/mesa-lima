@@ -2624,7 +2624,6 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 	    mrf = param_base;
 	    writemask = WRITEMASK_W;
 	 }
-         lod.swizzle = BRW_SWIZZLE_XXXX;
 	 emit(MOV(dst_reg(MRF, mrf, lod.type, writemask), lod));
       } else if (op == ir_txf) {
          emit(MOV(dst_reg(MRF, param_base, lod.type, WRITEMASK_W), lod));
