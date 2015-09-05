@@ -42,7 +42,6 @@ AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
@@ -83,19 +82,32 @@ VULKAN_SOURCES =                                        \
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c
 
+BUILT_SOURCES =                                         \
+	anv_entrypoints.h                               \
+	anv_entrypoints.c                               \
+	anv_meta_spirv_autogen.h
+
 if HAVE_EGL_PLATFORM_WAYLAND
-VULKAN_SOURCES += anv_wsi_wayland.c
+BUILT_SOURCES += \
+	wayland-drm-protocol.c \
+	wayland-drm-client-protocol.h
+
+%-protocol.c : $(top_srcdir)/src/egl/wayland/wayland-drm/%.xml
+	$(AM_V_GEN)$(WAYLAND_SCANNER) code < $< > $@
+
+%-client-protocol.h : $(top_srcdir)/src/egl/wayland/wayland-drm/%.xml
+	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+
+AM_CPPFLAGS += -I$(top_srcdir)/src/egl/wayland/wayland-drm
+VULKAN_SOURCES += \
+	wayland-drm-protocol.c \
+	anv_wsi_wayland.c
 libvulkan_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 endif
 
 libvulkan_la_SOURCES =                                  \
 	$(VULKAN_SOURCES)                               \
 	anv_gem.c
-
-BUILT_SOURCES =                                         \
-	anv_entrypoints.h                               \
-	anv_entrypoints.c                               \
-	anv_meta_spirv_autogen.h
 
 anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< header > $@
@@ -108,7 +120,7 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 
 CLEANFILES = $(BUILT_SOURCES)
 
-libvulkan_la_LIBADD = -lxcb -lxcb-dri3 \
+libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
 
 # Libvulkan with dummy gem. Used for unit tests.
