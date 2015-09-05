@@ -351,7 +351,7 @@ setup_bitmap_vertex_data(struct st_context *st, bool normalized,
 
    u_upload_alloc(st->uploader, 0, 4 * sizeof(vertices[0]),
                   vbuf_offset, vbuf, (void **) &vertices);
-   if (!vbuf) {
+   if (!*vbuf) {
       return;
    }
 
