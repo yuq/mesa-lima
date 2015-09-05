@@ -150,6 +150,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
                      glsl_get_vector_elements(val->ssa->type), val->name);
+   instr->dest.write_mask = (1 << instr->dest.dest.ssa.num_components) - 1;
    val->ssa->def = &instr->dest.dest.ssa;
 
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
