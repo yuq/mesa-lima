@@ -653,7 +653,7 @@ VkResult anv_GetGlobalExtensionProperties(
       return VK_SUCCESS;
    }
 
-   assert(*pCount <= ARRAY_SIZE(global_extensions));
+   assert(*pCount >= ARRAY_SIZE(global_extensions));
 
    *pCount = ARRAY_SIZE(global_extensions);
    memcpy(pProperties, global_extensions, sizeof(global_extensions));
@@ -679,7 +679,7 @@ VkResult anv_GetPhysicalDeviceExtensionProperties(
       return VK_SUCCESS;
    }
 
-   assert(*pCount < ARRAY_SIZE(device_extensions));
+   assert(*pCount >= ARRAY_SIZE(device_extensions));
 
    *pCount = ARRAY_SIZE(device_extensions);
    memcpy(pProperties, device_extensions, sizeof(device_extensions));

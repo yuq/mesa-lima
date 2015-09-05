@@ -59,8 +59,14 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
 
    switch (infoType) {
    case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI: {
-      assert(*pDataSize >= sizeof(VkSurfacePropertiesWSI));
       VkSurfacePropertiesWSI *props = pData;
+
+      if (pData == NULL) {
+         *pDataSize = sizeof(*props);
+         return VK_SUCCESS;
+      }
+
+      assert(*pDataSize >= sizeof(*props));
 
       props->minImageCount = 2;
       props->maxImageCount = 4;
