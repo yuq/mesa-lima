@@ -365,6 +365,9 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationOffset:
       ctx->type->offsets[member] = dec->literals[0];
       break;
+   case SpvDecorationMatrixStride:
+      ctx->type->members[member]->stride = dec->literals[0];
+      break;
    case SpvDecorationColMajor:
       break; /* Nothing to do here.  Column-major is the default. */
    default:
