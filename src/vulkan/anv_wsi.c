@@ -26,13 +26,27 @@
 VkResult
 anv_init_wsi(struct anv_instance *instance)
 {
+   VkResult result;
+
    memset(instance->wsi_impl, 0, sizeof(instance->wsi_impl));
-   return anv_x11_init_wsi(instance);
+
+   result = anv_x11_init_wsi(instance);
+   if (result != VK_SUCCESS)
+      return result;
+
+   result = anv_wl_init_wsi(instance);
+   if (result != VK_SUCCESS) {
+      anv_x11_finish_wsi(instance);
+      return result;
+   }
+
+   return VK_SUCCESS;
 }
 
 void
 anv_finish_wsi(struct anv_instance *instance)
 {
+   anv_wl_finish_wsi(instance);
    anv_x11_finish_wsi(instance);
 }
 

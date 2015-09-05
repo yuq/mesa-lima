@@ -42,6 +42,7 @@ AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
 	-I$(top_srcdir)/src/mesa/drivers/dri/common \
@@ -74,6 +75,7 @@ VULKAN_SOURCES =                                        \
 	anv_query.c                                     \
 	anv_util.c                                      \
 	anv_wsi.c					\
+	anv_wsi_wayland.c				\
 	anv_wsi_x11.c					\
 	gen8_state.c					\
 	gen8_cmd_buffer.c				\

@@ -60,3 +60,5 @@ struct anv_wsi_implementation {
 
 VkResult anv_x11_init_wsi(struct anv_instance *instance);
 void anv_x11_finish_wsi(struct anv_instance *instance);
+VkResult anv_wl_init_wsi(struct anv_instance *instance);
+void anv_wl_finish_wsi(struct anv_instance *instance);
