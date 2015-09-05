@@ -66,6 +66,7 @@ optimizations = [
    (('imul', a, 1), a),
    (('fmul', a, -1.0), ('fneg', a)),
    (('imul', a, -1), ('ineg', a)),
+   (('fdiv', a, b), ('fmul', a, ('frcp', b)), 'options->lower_fdiv'),
    (('ffma', 0.0, a, b), b),
    (('ffma', a, 0.0, b), b),
    (('ffma', a, b, 0.0), ('fmul', a, b)),

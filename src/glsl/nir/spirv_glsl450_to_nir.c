@@ -26,100 +26,7 @@
  */
 
 #include "spirv_to_nir_private.h"
-
-enum GLSL450Entrypoint {
-    Round = 0,
-    RoundEven = 1,
-    Trunc = 2,
-    Abs = 3,
-    Sign = 4,
-    Floor = 5,
-    Ceil = 6,
-    Fract = 7,
-
-    Radians = 8,
-    Degrees = 9,
-    Sin = 10,
-    Cos = 11,
-    Tan = 12,
-    Asin = 13,
-    Acos = 14,
-    Atan = 15,
-    Sinh = 16,
-    Cosh = 17,
-    Tanh = 18,
-    Asinh = 19,
-    Acosh = 20,
-    Atanh = 21,
-    Atan2 = 22,
-
-    Pow = 23,
-    Exp = 24,
-    Log = 25,
-    Exp2 = 26,
-    Log2 = 27,
-    Sqrt = 28,
-    InverseSqrt = 29,
-
-    Determinant = 30,
-    MatrixInverse = 31,
-
-    Modf = 32,            // second argument needs the OpVariable = , not an OpLoad
-    Min = 33,
-    Max = 34,
-    Clamp = 35,
-    Mix = 36,
-    Step = 37,
-    SmoothStep = 38,
-
-    FloatBitsToInt = 39,
-    FloatBitsToUint = 40,
-    IntBitsToFloat = 41,
-    UintBitsToFloat = 42,
-
-    Fma = 43,
-    Frexp = 44,
-    Ldexp = 45,
-
-    PackSnorm4x8 = 46,
-    PackUnorm4x8 = 47,
-    PackSnorm2x16 = 48,
-    PackUnorm2x16 = 49,
-    PackHalf2x16 = 50,
-    PackDouble2x32 = 51,
-    UnpackSnorm2x16 = 52,
-    UnpackUnorm2x16 = 53,
-    UnpackHalf2x16 = 54,
-    UnpackSnorm4x8 = 55,
-    UnpackUnorm4x8 = 56,
-    UnpackDouble2x32 = 57,
-
-    Length = 58,
-    Distance = 59,
-    Cross = 60,
-    Normalize = 61,
-    Ftransform = 62,
-    FaceForward = 63,
-    Reflect = 64,
-    Refract = 65,
-
-    UaddCarry = 66,
-    UsubBorrow = 67,
-    UmulExtended = 68,
-    ImulExtended = 69,
-    BitfieldExtract = 70,
-    BitfieldInsert = 71,
-    BitfieldReverse = 72,
-    BitCount = 73,
-    FindLSB = 74,
-    FindMSB = 75,
-
-    InterpolateAtCentroid = 76,
-    InterpolateAtSample = 77,
-    InterpolateAtOffset = 78,
-
-    Count
-};
+#include "spirv_glsl450.h"
 
 static nir_ssa_def*
 build_length(nir_builder *b, nir_ssa_def *vec)
@@ -135,7 +42,7 @@ build_length(nir_builder *b, nir_ssa_def *vec)
 }
 
 static void
-handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
+handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
                    const uint32_t *w, unsigned count)
 {
    struct vtn_value *val = vtn_push_value(b, w[2], vtn_value_type_ssa);
@@ -150,106 +57,92 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
 
    nir_op op;
    switch (entrypoint) {
-   case Round:       op = nir_op_fround_even;   break; /* TODO */
-   case RoundEven:   op = nir_op_fround_even;   break;
-   case Trunc:       op = nir_op_ftrunc;        break;
-   case Abs:         op = nir_op_fabs;          break;
-   case Sign:        op = nir_op_fsign;         break;
-   case Floor:       op = nir_op_ffloor;        break;
-   case Ceil:        op = nir_op_fceil;         break;
-   case Fract:       op = nir_op_ffract;        break;
-   case Radians:
+   case GLSLstd450Round:       op = nir_op_fround_even;   break; /* TODO */
+   case GLSLstd450RoundEven:   op = nir_op_fround_even;   break;
+   case GLSLstd450Trunc:       op = nir_op_ftrunc;        break;
+   case GLSLstd450FAbs:        op = nir_op_fabs;          break;
+   case GLSLstd450FSign:       op = nir_op_fsign;         break;
+   case GLSLstd450Floor:       op = nir_op_ffloor;        break;
+   case GLSLstd450Ceil:        op = nir_op_fceil;         break;
+   case GLSLstd450Fract:       op = nir_op_ffract;        break;
+   case GLSLstd450Radians:
       val->ssa->def = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 0.01745329251));
       return;
-   case Degrees:
+   case GLSLstd450Degrees:
       val->ssa->def = nir_fmul(&b->nb, src[0], nir_imm_float(&b->nb, 57.2957795131));
       return;
-   case Sin:         op = nir_op_fsin;       break;
-   case Cos:         op = nir_op_fcos;       break;
-   case Tan:
+   case GLSLstd450Sin:         op = nir_op_fsin;       break;
+   case GLSLstd450Cos:         op = nir_op_fcos;       break;
+   case GLSLstd450Tan:
       val->ssa->def = nir_fdiv(&b->nb, nir_fsin(&b->nb, src[0]),
                                nir_fcos(&b->nb, src[0]));
       return;
-   case Pow:         op = nir_op_fpow;       break;
-   case Exp2:        op = nir_op_fexp2;      break;
-   case Log2:        op = nir_op_flog2;      break;
-   case Sqrt:        op = nir_op_fsqrt;      break;
-   case InverseSqrt: op = nir_op_frsq;       break;
+   case GLSLstd450Pow:         op = nir_op_fpow;       break;
+   case GLSLstd450Exp2:        op = nir_op_fexp2;      break;
+   case GLSLstd450Log2:        op = nir_op_flog2;      break;
+   case GLSLstd450Sqrt:        op = nir_op_fsqrt;      break;
+   case GLSLstd450InverseSqrt: op = nir_op_frsq;       break;
 
-   case Modf:        op = nir_op_fmod;       break;
-   case Min:         op = nir_op_fmin;       break;
-   case Max:         op = nir_op_fmax;       break;
-   case Mix:         op = nir_op_flrp;       break;
-   case Step:
+   case GLSLstd450Modf:        op = nir_op_fmod;       break;
+   case GLSLstd450FMin:        op = nir_op_fmin;       break;
+   case GLSLstd450FMax:        op = nir_op_fmax;       break;
+   case GLSLstd450Mix:         op = nir_op_flrp;       break;
+   case GLSLstd450Step:
       val->ssa->def = nir_sge(&b->nb, src[1], src[0]);
       return;
 
-   case FloatBitsToInt:
-   case FloatBitsToUint:
-   case IntBitsToFloat:
-   case UintBitsToFloat:
-      /* Probably going to be removed from the final version of the spec. */
-      val->ssa->def = src[0];
-      return;
-
-   case Fma:         op = nir_op_ffma;       break;
-   case Ldexp:       op = nir_op_ldexp;      break;
+   case GLSLstd450Fma:         op = nir_op_ffma;       break;
+   case GLSLstd450Ldexp:       op = nir_op_ldexp;      break;
 
    /* Packing/Unpacking functions */
-   case PackSnorm4x8:      op = nir_op_pack_snorm_4x8;      break;
-   case PackUnorm4x8:      op = nir_op_pack_unorm_4x8;      break;
-   case PackSnorm2x16:     op = nir_op_pack_snorm_2x16;     break;
-   case PackUnorm2x16:     op = nir_op_pack_unorm_2x16;     break;
-   case PackHalf2x16:      op = nir_op_pack_half_2x16;      break;
-   case UnpackSnorm4x8:    op = nir_op_unpack_snorm_4x8;    break;
-   case UnpackUnorm4x8:    op = nir_op_unpack_unorm_4x8;    break;
-   case UnpackSnorm2x16:   op = nir_op_unpack_snorm_2x16;   break;
-   case UnpackUnorm2x16:   op = nir_op_unpack_unorm_2x16;   break;
-   case UnpackHalf2x16:    op = nir_op_unpack_half_2x16;    break;
+   case GLSLstd450PackSnorm4x8:      op = nir_op_pack_snorm_4x8;      break;
+   case GLSLstd450PackUnorm4x8:      op = nir_op_pack_unorm_4x8;      break;
+   case GLSLstd450PackSnorm2x16:     op = nir_op_pack_snorm_2x16;     break;
+   case GLSLstd450PackUnorm2x16:     op = nir_op_pack_unorm_2x16;     break;
+   case GLSLstd450PackHalf2x16:      op = nir_op_pack_half_2x16;      break;
+   case GLSLstd450UnpackSnorm4x8:    op = nir_op_unpack_snorm_4x8;    break;
+   case GLSLstd450UnpackUnorm4x8:    op = nir_op_unpack_unorm_4x8;    break;
+   case GLSLstd450UnpackSnorm2x16:   op = nir_op_unpack_snorm_2x16;   break;
+   case GLSLstd450UnpackUnorm2x16:   op = nir_op_unpack_unorm_2x16;   break;
+   case GLSLstd450UnpackHalf2x16:    op = nir_op_unpack_half_2x16;    break;
 
-   case Length:
+   case GLSLstd450Length:
       val->ssa->def = build_length(&b->nb, src[0]);
       return;
-   case Distance:
+   case GLSLstd450Distance:
       val->ssa->def = build_length(&b->nb, nir_fsub(&b->nb, src[0], src[1]));
       return;
-   case Normalize:
+   case GLSLstd450Normalize:
       val->ssa->def = nir_fdiv(&b->nb, src[0], build_length(&b->nb, src[0]));
       return;
 
-   case UaddCarry:         op = nir_op_uadd_carry;          break;
-   case UsubBorrow:        op = nir_op_usub_borrow;         break;
-   case BitfieldExtract:   op = nir_op_ubitfield_extract;   break; /* TODO */
-   case BitfieldInsert:    op = nir_op_bitfield_insert;     break;
-   case BitfieldReverse:   op = nir_op_bitfield_reverse;    break;
-   case BitCount:          op = nir_op_bit_count;           break;
-   case FindLSB:           op = nir_op_find_lsb;            break;
-   case FindMSB:           op = nir_op_ufind_msb;           break; /* TODO */
+   case GLSLstd450AddCarry:         op = nir_op_uadd_carry;          break;
+   case GLSLstd450SubBorrow:        op = nir_op_usub_borrow;         break;
 
-   case Exp:
-   case Log:
-   case Clamp:
-   case Asin:
-   case Acos:
-   case Atan:
-   case Atan2:
-   case Sinh:
-   case Cosh:
-   case Tanh:
-   case Asinh:
-   case Acosh:
-   case Atanh:
-   case SmoothStep:
-   case Frexp:
-   case PackDouble2x32:
-   case UnpackDouble2x32:
-   case Cross:
-   case Ftransform:
-   case FaceForward:
-   case Reflect:
-   case Refract:
-   case UmulExtended:
-   case ImulExtended:
+   case GLSLstd450Exp:
+   case GLSLstd450Log:
+   case GLSLstd450FClamp:
+   case GLSLstd450UClamp:
+   case GLSLstd450SClamp:
+   case GLSLstd450Asin:
+   case GLSLstd450Acos:
+   case GLSLstd450Atan:
+   case GLSLstd450Atan2:
+   case GLSLstd450Sinh:
+   case GLSLstd450Cosh:
+   case GLSLstd450Tanh:
+   case GLSLstd450Asinh:
+   case GLSLstd450Acosh:
+   case GLSLstd450Atanh:
+   case GLSLstd450SmoothStep:
+   case GLSLstd450Frexp:
+   case GLSLstd450PackDouble2x32:
+   case GLSLstd450UnpackDouble2x32:
+   case GLSLstd450Cross:
+   case GLSLstd450FaceForward:
+   case GLSLstd450Reflect:
+   case GLSLstd450Refract:
+   case GLSLstd450MulExtended:
    default:
       unreachable("Unhandled opcode");
    }
@@ -257,6 +150,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSL450Entrypoint entrypoint,
    nir_alu_instr *instr = nir_alu_instr_create(b->shader, op);
    nir_ssa_dest_init(&instr->instr, &instr->dest.dest,
                      glsl_get_vector_elements(val->ssa->type), val->name);
+   instr->dest.write_mask = (1 << instr->dest.dest.ssa.num_components) - 1;
    val->ssa->def = &instr->dest.dest.ssa;
 
    for (unsigned i = 0; i < nir_op_infos[op].num_inputs; i++)
@@ -269,16 +163,16 @@ bool
 vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
                                const uint32_t *words, unsigned count)
 {
-   switch ((enum GLSL450Entrypoint)ext_opcode) {
-   case Determinant:
-   case MatrixInverse:
-   case InterpolateAtCentroid:
-   case InterpolateAtSample:
-   case InterpolateAtOffset:
+   switch ((enum GLSLstd450)ext_opcode) {
+   case GLSLstd450Determinant:
+   case GLSLstd450MatrixInverse:
+   case GLSLstd450InterpolateAtCentroid:
+   case GLSLstd450InterpolateAtSample:
+   case GLSLstd450InterpolateAtOffset:
       unreachable("Unhandled opcode");
 
    default:
-      handle_glsl450_alu(b, (enum GLSL450Entrypoint)ext_opcode, words, count);
+      handle_glsl450_alu(b, (enum GLSLstd450)ext_opcode, words, count);
    }
 
    return true;

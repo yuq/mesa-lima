@@ -96,6 +96,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
     */
    nir_options->lower_ffma = true;
    nir_options->lower_sub = true;
+   nir_options->lower_fdiv = true;
 
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
