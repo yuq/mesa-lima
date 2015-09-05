@@ -75,7 +75,6 @@ VULKAN_SOURCES =                                        \
 	anv_query.c                                     \
 	anv_util.c                                      \
 	anv_wsi.c					\
-	anv_wsi_wayland.c				\
 	anv_wsi_x11.c					\
 	gen8_state.c					\
 	gen8_cmd_buffer.c				\
@@ -83,6 +82,11 @@ VULKAN_SOURCES =                                        \
 	gen7_state.c					\
 	gen7_cmd_buffer.c				\
 	gen7_pipeline.c
+
+if HAVE_EGL_PLATFORM_WAYLAND
+VULKAN_SOURCES += anv_wsi_wayland.c
+libvulkan_la_CFLAGS += -DHAVE_WAYLAND_PLATFORM
+endif
 
 libvulkan_la_SOURCES =                                  \
 	$(VULKAN_SOURCES)                               \

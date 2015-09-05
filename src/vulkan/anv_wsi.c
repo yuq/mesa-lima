@@ -34,11 +34,13 @@ anv_init_wsi(struct anv_instance *instance)
    if (result != VK_SUCCESS)
       return result;
 
+#ifdef HAVE_WAYLAND_PLATFORM
    result = anv_wl_init_wsi(instance);
    if (result != VK_SUCCESS) {
       anv_x11_finish_wsi(instance);
       return result;
    }
+#endif
 
    return VK_SUCCESS;
 }
@@ -46,7 +48,9 @@ anv_init_wsi(struct anv_instance *instance)
 void
 anv_finish_wsi(struct anv_instance *instance)
 {
+#ifdef HAVE_WAYLAND_PLATFORM
    anv_wl_finish_wsi(instance);
+#endif
    anv_x11_finish_wsi(instance);
 }
 
