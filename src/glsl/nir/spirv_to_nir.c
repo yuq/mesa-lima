@@ -1547,12 +1547,22 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
+   /* These all have an explicit depth value as their next source */
+   switch (opcode) {
+   case SpvOpImageSampleDrefImplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
+   case SpvOpImageSampleProjDrefImplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
+      (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_comparitor);
+      break;
+   default:
+      break;
+   }
+
+   /* Figure out the base texture operation */
    nir_texop texop;
    switch (opcode) {
    case SpvOpImageSampleImplicitLod:
-      texop = nir_texop_tex;
-      break;
-
    case SpvOpImageSampleExplicitLod:
    case SpvOpImageSampleDrefImplicitLod:
    case SpvOpImageSampleDrefExplicitLod:
@@ -1560,24 +1570,74 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageSampleProjExplicitLod:
    case SpvOpImageSampleProjDrefImplicitLod:
    case SpvOpImageSampleProjDrefExplicitLod:
+      texop = nir_texop_tex;
+      break;
+
    case SpvOpImageFetch:
+      texop = nir_texop_txf;
+      break;
+
    case SpvOpImageGather:
    case SpvOpImageDrefGather:
+      texop = nir_texop_tg4;
+      break;
+
    case SpvOpImageQuerySizeLod:
    case SpvOpImageQuerySize:
+      texop = nir_texop_txs;
+      break;
+
    case SpvOpImageQueryLod:
+      texop = nir_texop_lod;
+      break;
+
    case SpvOpImageQueryLevels:
+      texop = nir_texop_query_levels;
+      break;
+
    case SpvOpImageQuerySamples:
    default:
       unreachable("Unhandled opcode");
    }
 
-   /* From now on, the remaining sources are "Optional Image Operands." */
+   /* Now we need to handle some number of optional arguments */
    if (idx < count) {
-      /* XXX handle these (bias, lod, etc.) */
-      assert(0);
-   }
+      uint32_t operands = w[idx++];
 
+      if (operands & SpvImageOperandsBiasMask) {
+         assert(texop == nir_texop_tex);
+         texop = nir_texop_txb;
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_bias);
+      }
+
+      if (operands & SpvImageOperandsLodMask) {
+         assert(texop == nir_texop_tex);
+         texop = nir_texop_txl;
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
+      }
+
+      if (operands & SpvImageOperandsGradMask) {
+         assert(texop == nir_texop_tex);
+         texop = nir_texop_txd;
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddx);
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ddy);
+      }
+
+      if (operands & SpvImageOperandsOffsetMask ||
+          operands & SpvImageOperandsConstOffsetMask)
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_offset);
+
+      if (operands & SpvImageOperandsConstOffsetsMask)
+         assert(!"Constant offsets to texture gather not yet implemented");
+
+      if (operands & SpvImageOperandsSampleMask) {
+         assert(texop == nir_texop_txf);
+         texop = nir_texop_txf_ms;
+         (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_ms_index);
+      }
+   }
+   /* We should have now consumed exactly all of the arguments */
+   assert(idx == count);
 
    nir_tex_instr *instr = nir_tex_instr_create(b->shader, p - srcs);
 
