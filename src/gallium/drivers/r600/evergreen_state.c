@@ -3375,11 +3375,11 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 	}
 
 	if (src->format != dst->format || src_box->depth > 1 ||
-	    rdst->dirty_level_mask != 0) {
+	    (rdst->dirty_level_mask | rdst->stencil_dirty_level_mask) & (1 << dst_level)) {
 		goto fallback;
 	}
 
-	if (rsrc->dirty_level_mask) {
+	if (rsrc->dirty_level_mask & (1 << src_level)) {
 		ctx->flush_resource(ctx, src);
 	}
 
