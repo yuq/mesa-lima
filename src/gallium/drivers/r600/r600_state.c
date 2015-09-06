@@ -710,6 +710,12 @@ r600_create_sampler_view_custom(struct pipe_context *ctx,
 		break;
 	}
 
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
+
 	view->tex_resource = &tmp->resource;
 	view->tex_resource_words[0] = (S_038000_DIM(r600_tex_dim(texture->target, texture->nr_samples)) |
 				       S_038000_TILE_MODE(array_mode) |
@@ -1659,9 +1665,9 @@ static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom 
 		if (rctx->b.family == CHIP_RV610 || rctx->b.family == CHIP_RV630 ||
 		    rctx->b.family == CHIP_RV620 || rctx->b.family == CHIP_RV635)
 			db_render_override |= S_028D10_FORCE_HIZ_ENABLE(V_028D10_FORCE_DISABLE);
-	} else if (a->flush_depthstencil_in_place) {
-		db_render_control |= S_028D0C_DEPTH_COMPRESS_DISABLE(1) |
-				     S_028D0C_STENCIL_COMPRESS_DISABLE(1);
+	} else if (a->flush_depth_inplace || a->flush_stencil_inplace) {
+		db_render_control |= S_028D0C_DEPTH_COMPRESS_DISABLE(a->flush_depth_inplace) |
+				     S_028D0C_STENCIL_COMPRESS_DISABLE(a->flush_stencil_inplace);
 		db_render_override |= S_028D10_NOOP_CULL_DISABLE(1);
 	}
 	if (a->htile_clear) {

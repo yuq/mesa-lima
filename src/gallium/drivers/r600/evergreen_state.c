@@ -783,6 +783,12 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 
 	va = tmp->resource.gpu_address;
 
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
+
 	view->tex_resource = &tmp->resource;
 	view->tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(texture->target, texture->nr_samples)) |
 				       S_030000_PITCH((pitch / 8) - 1) |
@@ -1823,9 +1829,9 @@ static void evergreen_emit_db_misc_state(struct r600_context *rctx, struct r600_
 				     S_028000_STENCIL_COPY_ENABLE(a->copy_stencil) |
 				     S_028000_COPY_CENTROID(1) |
 				     S_028000_COPY_SAMPLE(a->copy_sample);
-	} else if (a->flush_depthstencil_in_place) {
-		db_render_control |= S_028000_DEPTH_COMPRESS_DISABLE(1) |
-				     S_028000_STENCIL_COMPRESS_DISABLE(1);
+	} else if (a->flush_depth_inplace || a->flush_stencil_inplace) {
+		db_render_control |= S_028000_DEPTH_COMPRESS_DISABLE(a->flush_depth_inplace) |
+				     S_028000_STENCIL_COMPRESS_DISABLE(a->flush_stencil_inplace);
 		db_render_override |= S_02800C_DISABLE_PIXEL_RATE_TILES(1);
 	}
 	if (a->htile_clear) {
