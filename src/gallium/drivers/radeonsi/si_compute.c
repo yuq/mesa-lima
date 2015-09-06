@@ -33,14 +33,11 @@
 #include "sid.h"
 
 #define MAX_GLOBAL_BUFFERS 20
-#if HAVE_LLVM < 0x0305
-#define NUM_USER_SGPRS 2
-#else
+
 /* XXX: Even though we don't pass the scratch buffer via user sgprs any more
  * LLVM still expects that we specify 4 USER_SGPRS so it can remain compatible
  * with older mesa. */
 #define NUM_USER_SGPRS 4
-#endif
 
 struct si_compute {
 	struct si_context *ctx;

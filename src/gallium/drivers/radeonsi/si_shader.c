@@ -2276,7 +2276,7 @@ static void tex_fetch_args(
 	unsigned sampler_src;
 	unsigned sampler_index;
 	unsigned num_deriv_channels = 0;
-	bool has_offset = HAVE_LLVM >= 0x0305 ? inst->Texture.NumOffsets > 0 : false;
+	bool has_offset = inst->Texture.NumOffsets > 0;
 	LLVMValueRef res_ptr, samp_ptr, fmask_ptr = NULL;
 
 	sampler_src = emit_data->inst->Instruction.NumSrcRegs - 1;
@@ -2682,8 +2682,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action * action,
 	unsigned opcode = emit_data->inst->Instruction.Opcode;
 	unsigned target = emit_data->inst->Texture.Texture;
 	char intr_name[127];
-	bool has_offset = HAVE_LLVM >= 0x0305 ?
-				emit_data->inst->Texture.NumOffsets > 0 : false;
+	bool has_offset = emit_data->inst->Texture.NumOffsets > 0;
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		emit_data->output[emit_data->chan] = lp_build_intrinsic(

@@ -2073,7 +2073,7 @@ radeon_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
-    llvm_check_version_for "3" "4" "2" $1 
+    llvm_check_version_for "3" "5" "0" $1
     if test true && $LLVM_CONFIG --targets-built | grep -iqvw $amdgpu_llvm_target_name ; then
         AC_MSG_ERROR([LLVM $amdgpu_llvm_target_name not enabled in your LLVM build.])
     fi

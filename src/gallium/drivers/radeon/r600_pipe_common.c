@@ -531,11 +531,7 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_KAVERI: return "kaveri";
 	case CHIP_HAWAII: return "hawaii";
 	case CHIP_MULLINS:
-#if HAVE_LLVM >= 0x0305
 		return "mullins";
-#else
-		return "kabini";
-#endif
 	case CHIP_TONGA: return "tonga";
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";

@@ -282,6 +282,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
 	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
+	case PIPE_CAP_TEXTURE_QUERY_LOD:
+	case PIPE_CAP_TEXTURE_GATHER_SM5:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -304,6 +306,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
 	case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
+	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return 4;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
@@ -311,12 +314,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 
 	case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
 		return MIN2(sscreen->b.info.vram_size, 0xFFFFFFFF);
-
-	case PIPE_CAP_TEXTURE_QUERY_LOD:
-	case PIPE_CAP_TEXTURE_GATHER_SM5:
-		return HAVE_LLVM >= 0x0305;
-	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
-		return HAVE_LLVM >= 0x0305 ? 4 : 0;
 
 	/* Unsupported features. */
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
