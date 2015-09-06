@@ -813,9 +813,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
-	/* TODO: VI should read index buffers through TC, so this shouldn't be
-	 * needed on VI. */
-	if (info->indexed && r600_resource(ib.buffer)->TC_L2_dirty) {
+	/* VI reads index buffers through TC L2. */
+	if (info->indexed && sctx->b.chip_class <= CIK &&
+	    r600_resource(ib.buffer)->TC_L2_dirty) {
 		sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
 		r600_resource(ib.buffer)->TC_L2_dirty = false;
 	}
