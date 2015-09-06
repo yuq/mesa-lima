@@ -100,6 +100,7 @@ struct si_sampler_view {
          * [4..7] = buffer descriptor */
 	uint32_t			state[8];
 	uint32_t			fmask_state[8];
+	bool is_stencil_sampler;
 };
 
 struct si_sampler_state {
@@ -237,7 +238,8 @@ struct si_context {
 	bool			dbcb_depth_copy_enabled;
 	bool			dbcb_stencil_copy_enabled;
 	unsigned		dbcb_copy_sample;
-	bool			db_inplace_flush_enabled;
+	bool			db_flush_depth_inplace;
+	bool			db_flush_stencil_inplace;
 	bool			db_depth_clear;
 	bool			db_depth_disable_expclear;
 	unsigned		ps_db_shader_control;

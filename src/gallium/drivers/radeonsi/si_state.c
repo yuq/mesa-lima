@@ -998,10 +998,10 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 			    S_028000_STENCIL_COPY(sctx->dbcb_stencil_copy_enabled) |
 			    S_028000_COPY_CENTROID(1) |
 			    S_028000_COPY_SAMPLE(sctx->dbcb_copy_sample));
-	} else if (sctx->db_inplace_flush_enabled) {
+	} else if (sctx->db_flush_depth_inplace || sctx->db_flush_stencil_inplace) {
 		radeon_emit(cs,
-			    S_028000_DEPTH_COMPRESS_DISABLE(1) |
-			    S_028000_STENCIL_COMPRESS_DISABLE(1));
+			    S_028000_DEPTH_COMPRESS_DISABLE(sctx->db_flush_depth_inplace) |
+			    S_028000_STENCIL_COMPRESS_DISABLE(sctx->db_flush_stencil_inplace));
 	} else if (sctx->db_depth_clear) {
 		radeon_emit(cs, S_028000_DEPTH_CLEAR_ENABLE(1));
 	} else {
@@ -2410,6 +2410,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 
 	pipe_resource_reference(&view->base.texture, texture);
 	view->resource = &tmp->resource;
+
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
 
 	/* Buffer resource. */
 	if (texture->target == PIPE_BUFFER) {

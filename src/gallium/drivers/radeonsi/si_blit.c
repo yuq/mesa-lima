@@ -180,19 +180,27 @@ static void si_blit_decompress_depth(struct pipe_context *ctx,
 
 static void si_blit_decompress_depth_in_place(struct si_context *sctx,
                                               struct r600_texture *texture,
+					      bool is_stencil_sampler,
                                               unsigned first_level, unsigned last_level,
                                               unsigned first_layer, unsigned last_layer)
 {
 	struct pipe_surface *zsurf, surf_tmpl = {{0}};
 	unsigned layer, max_layer, checked_last_layer, level;
+	unsigned *dirty_level_mask;
 
-	sctx->db_inplace_flush_enabled = true;
+	if (is_stencil_sampler) {
+		sctx->db_flush_stencil_inplace = true;
+		dirty_level_mask = &texture->stencil_dirty_level_mask;
+	} else {
+		sctx->db_flush_depth_inplace = true;
+		dirty_level_mask = &texture->dirty_level_mask;
+	}
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	surf_tmpl.format = texture->resource.b.b.format;
 
 	for (level = first_level; level <= last_level; level++) {
-		if (!(texture->dirty_level_mask & (1 << level)))
+		if (!(*dirty_level_mask & (1 << level)))
 			continue;
 
 		surf_tmpl.u.tex.level = level;
@@ -220,11 +228,12 @@ static void si_blit_decompress_depth_in_place(struct si_context *sctx,
 		/* The texture will always be dirty if some layers aren't flushed.
 		 * I don't think this case occurs often though. */
 		if (first_layer == 0 && last_layer == max_layer) {
-			texture->dirty_level_mask &= ~(1 << level);
+			*dirty_level_mask &= ~(1 << level);
 		}
 	}
 
-	sctx->db_inplace_flush_enabled = false;
+	sctx->db_flush_depth_inplace = false;
+	sctx->db_flush_stencil_inplace = false;
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
 }
 
@@ -236,17 +245,20 @@ void si_flush_depth_textures(struct si_context *sctx,
 
 	while (mask) {
 		struct pipe_sampler_view *view;
+		struct si_sampler_view *sview;
 		struct r600_texture *tex;
 
 		i = u_bit_scan(&mask);
 
 		view = textures->views.views[i];
 		assert(view);
+		sview = (struct si_sampler_view*)view;
 
 		tex = (struct r600_texture *)view->texture;
 		assert(tex->is_depth && !tex->is_flushing_texture);
 
 		si_blit_decompress_depth_in_place(sctx, tex,
+						  sview->is_stencil_sampler,
 						  view->u.tex.first_level, view->u.tex.last_level,
 						  0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
 	}
@@ -436,9 +448,13 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 	struct r600_texture *rtex = (struct r600_texture*)tex;
 
 	if (rtex->is_depth && !rtex->is_flushing_texture) {
-		si_blit_decompress_depth_in_place(sctx, rtex,
+		si_blit_decompress_depth_in_place(sctx, rtex, false,
 						  level, level,
 						  first_layer, last_layer);
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+			si_blit_decompress_depth_in_place(sctx, rtex, true,
+							  level, level,
+							  first_layer, last_layer);
 	} else if (rtex->fmask.size || rtex->cmask.size) {
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer);
