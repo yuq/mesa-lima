@@ -231,7 +231,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 		rctx->max_db = 4;
 
 	rctx->b.transfer_map = u_transfer_map_vtbl;
-	rctx->b.transfer_flush_region = u_default_transfer_flush_region;
+	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
 	rctx->b.transfer_inline_write = u_default_transfer_inline_write;
         rctx->b.memory_barrier = r600_memory_barrier;
