@@ -26,6 +26,8 @@
 
 #include "mesa-sha1.h"
 
+#ifdef HAVE_SHA1
+
 #if defined(HAVE_SHA1_IN_LIBMD)  /* Use libmd for SHA1 */ \
 	|| defined(HAVE_SHA1_IN_LIBC)   /* Use libc for SHA1 */
 
@@ -289,8 +291,6 @@ _mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
 }
 
 #endif
-
-#ifdef HAVE_SHA1
 
 void
 _mesa_sha1_compute(const void *data, size_t size, unsigned char result[20])
