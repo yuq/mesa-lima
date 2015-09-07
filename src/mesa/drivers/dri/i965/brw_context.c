@@ -84,6 +84,12 @@ brw_query_samples_for_format(struct gl_context *ctx, GLenum target,
 
    switch (brw->gen) {
    case 9:
+      samples[0] = 16;
+      samples[1] = 8;
+      samples[2] = 4;
+      samples[3] = 2;
+      return 4;
+
    case 8:
       samples[0] = 8;
       samples[1] = 4;
