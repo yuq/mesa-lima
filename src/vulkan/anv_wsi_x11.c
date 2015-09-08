@@ -189,7 +189,7 @@ x11_acquire_next_image(struct anv_swap_chain *anv_chain,
       if (geom->width != chain->extent.width ||
           geom->height != chain->extent.height) {
          free(geom);
-         return VK_ERROR_OUT_OF_DATE_WSI;
+         return vk_error(VK_ERROR_OUT_OF_DATE_WSI);
       }
       free(geom);
    }
