@@ -49,7 +49,7 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
       b->cursor = nir_before_instr(&tex->instr);
 
       /* Find the projector in the srcs list, if present. */
-      int proj_index;
+      unsigned proj_index;
       for (proj_index = 0; proj_index < tex->num_srcs; proj_index++) {
          if (tex->src[proj_index].src_type == nir_tex_src_projector)
             break;
@@ -60,7 +60,7 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
          nir_frcp(b, nir_ssa_for_src(b, tex->src[proj_index].src, 1));
 
       /* Walk through the sources projecting the arguments. */
-      for (int i = 0; i < tex->num_srcs; i++) {
+      for (unsigned i = 0; i < tex->num_srcs; i++) {
          switch (tex->src[i].src_type) {
          case nir_tex_src_coord:
          case nir_tex_src_comparitor:
@@ -111,7 +111,7 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
        */
       nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src,
                             NIR_SRC_INIT);
-      for (int i = proj_index + 1; i < tex->num_srcs; i++) {
+      for (unsigned i = proj_index + 1; i < tex->num_srcs; i++) {
          tex->src[i-1].src_type = tex->src[i].src_type;
          nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
       }

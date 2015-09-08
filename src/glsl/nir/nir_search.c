@@ -81,7 +81,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
       swizzle = identity_swizzle;
    }
 
-   for (int i = 0; i < num_components; ++i)
+   for (unsigned i = 0; i < num_components; ++i)
       new_swizzle[i] = instr->src[src].swizzle[swizzle[i]];
 
    switch (value->type) {
@@ -107,7 +107,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
 
          assert(!instr->src[src].abs && !instr->src[src].negate);
 
-         for (int i = 0; i < num_components; ++i) {
+         for (unsigned i = 0; i < num_components; ++i) {
             if (state->variables[var->variable].swizzle[i] != new_swizzle[i])
                return false;
          }
@@ -135,7 +135,7 @@ match_value(const nir_search_value *value, nir_alu_instr *instr, unsigned src,
          state->variables[var->variable].abs = false;
          state->variables[var->variable].negate = false;
 
-         for (int i = 0; i < 4; ++i) {
+         for (unsigned i = 0; i < 4; ++i) {
             if (i < num_components)
                state->variables[var->variable].swizzle[i] = new_swizzle[i];
             else

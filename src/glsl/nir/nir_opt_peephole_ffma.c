@@ -127,7 +127,7 @@ get_mul_for_src(nir_alu_src *src, int num_components,
     *   If we reuse swizzle in the loop, then output swizzle would be zyzz.
     */
    memcpy(swizzle_tmp, swizzle, 4*sizeof(uint8_t));
-   for (unsigned i = 0; i < num_components; i++)
+   for (int i = 0; i < num_components; i++)
       swizzle[i] = swizzle_tmp[src->swizzle[i]];
 
    return alu;
