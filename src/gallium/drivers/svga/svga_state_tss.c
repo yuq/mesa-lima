@@ -90,7 +90,7 @@ emit_tex_binding_unit(struct svga_context *svga,
       }
       else {
          last_level = MIN2(sv->u.tex.last_level, sv->texture->last_level);
-         min_lod = MAX2(0, (s->view_min_lod + sv->u.tex.first_level));
+         min_lod = s->view_min_lod + sv->u.tex.first_level;
          min_lod = MIN2(min_lod, last_level);
          max_lod = MIN2(s->view_max_lod + sv->u.tex.first_level, last_level);
       }
