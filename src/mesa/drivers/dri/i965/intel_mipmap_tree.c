@@ -1509,23 +1509,21 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
    /* Gen7 PRM Volume 2, Part 1, 11.5.3 "Hierarchical Depth Buffer" documents
     * adjustments required for Z_Height and Z_Width based on multisampling.
     */
-   if (brw->gen < 9) {
-      switch (mt->num_samples) {
-      case 0:
-      case 1:
-         break;
-      case 2:
-      case 4:
-         z_width *= 2;
-         z_height *= 2;
-         break;
-      case 8:
-         z_width *= 4;
-         z_height *= 2;
-         break;
-      default:
-         unreachable("unsupported sample count");
-      }
+   switch (mt->num_samples) {
+   case 0:
+   case 1:
+      break;
+   case 2:
+   case 4:
+      z_width *= 2;
+      z_height *= 2;
+      break;
+   case 8:
+      z_width *= 4;
+      z_height *= 2;
+      break;
+   default:
+      unreachable("unsupported sample count");
    }
 
    const unsigned vertical_align = 8; /* 'j' in the docs */
@@ -1605,21 +1603,23 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
    /* Gen7 PRM Volume 2, Part 1, 11.5.3 "Hierarchical Depth Buffer" documents
     * adjustments required for Z_Height and Z_Width based on multisampling.
     */
-   switch (mt->num_samples) {
-   case 0:
-   case 1:
-      break;
-   case 2:
-   case 4:
-      z_width *= 2;
-      z_height *= 2;
-      break;
-   case 8:
-      z_width *= 4;
-      z_height *= 2;
-      break;
-   default:
-      unreachable("unsupported sample count");
+   if (brw->gen < 9) {
+      switch (mt->num_samples) {
+      case 0:
+      case 1:
+         break;
+      case 2:
+      case 4:
+         z_width *= 2;
+         z_height *= 2;
+         break;
+      case 8:
+         z_width *= 4;
+         z_height *= 2;
+         break;
+      default:
+         unreachable("unsupported sample count");
+      }
    }
 
    const unsigned vertical_align = 8; /* 'j' in the docs */
