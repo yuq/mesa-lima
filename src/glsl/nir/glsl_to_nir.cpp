@@ -138,6 +138,8 @@ glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
    v2.run(sh->ir);
    visit_exec_list(sh->ir, &v1);
 
+   nir_lower_outputs_to_temporaries(shader);
+
    return shader;
 }
 
