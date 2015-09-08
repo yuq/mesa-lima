@@ -591,7 +591,6 @@ vmw_swc_commit(struct svga_winsys_context *swc)
 {
    struct vmw_svga_winsys_context *vswc = vmw_svga_winsys_context(swc);
 
-   assert(vswc->command.reserved >= 0);
    assert(vswc->command.used + vswc->command.reserved <= vswc->command.size);
    vswc->command.used += vswc->command.reserved;
    vswc->command.reserved = 0;
