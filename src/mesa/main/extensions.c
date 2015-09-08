@@ -49,8 +49,6 @@ enum {
    GL  = (1 << API_OPENGL_COMPAT) | (1 << API_OPENGL_CORE),
    ES1 = 1 << API_OPENGLES,
    ES2 = 1 << API_OPENGLES2,
-   ES3 = 1 << (API_OPENGL_LAST + 1),
-   ES31 = 1 << (API_OPENGL_LAST + 2),
 };
 
 /**
@@ -485,15 +483,9 @@ _mesa_make_extension_string(struct gl_context *ctx)
    extension_index *extension_indices;
    /* String of extra extensions. */
    char *extra_extensions = get_extension_override(ctx);
-   GLboolean *base = (GLboolean *) &ctx->Extensions;
    unsigned k;
    unsigned j;
    unsigned maxYear = ~0;
-   unsigned api_set = (1 << ctx->API);
-   if (_mesa_is_gles3(ctx))
-      api_set |= ES3;
-   if (_mesa_is_gles31(ctx))
-      api_set |= ES31;
 
    /* Check if the MESA_EXTENSION_MAX_YEAR env var is set */
    {
@@ -510,9 +502,8 @@ _mesa_make_extension_string(struct gl_context *ctx)
    for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
       const struct extension *i = extension_table + k;
 
-      if (base[i->offset] &&
-          i->year <= maxYear &&
-          (i->api_set & api_set)) {
+      if (i->year <= maxYear &&
+          _mesa_extension_supported(ctx, k)) {
 	 length += strlen(i->name) + 1; /* +1 for space */
 	 ++count;
       }
@@ -540,11 +531,8 @@ _mesa_make_extension_string(struct gl_context *ctx)
     */
    j = 0;
    for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
-      const struct extension *i = extension_table + k;
-
-      if (base[i->offset] &&
-          i->year <= maxYear &&
-          (i->api_set & api_set)) {
+      if (extension_table[k].year <= maxYear &&
+         _mesa_extension_supported(ctx, k)) {
          extension_indices[j++] = k;
       }
    }
@@ -555,7 +543,7 @@ _mesa_make_extension_string(struct gl_context *ctx)
    /* Build the extension string.*/
    for (j = 0; j < count; ++j) {
       const struct extension *i = &extension_table[extension_indices[j]];
-      assert(base[i->offset] && (i->api_set & api_set));
+      assert(_mesa_extension_supported(ctx, extension_indices[j]));
       strcat(exts, i->name);
       strcat(exts, " ");
    }
@@ -574,25 +562,15 @@ _mesa_make_extension_string(struct gl_context *ctx)
 GLuint
 _mesa_get_extension_count(struct gl_context *ctx)
 {
-   GLboolean *base;
    unsigned k;
-   unsigned api_set = (1 << ctx->API);
-   if (_mesa_is_gles3(ctx))
-      api_set |= ES3;
-   if (_mesa_is_gles31(ctx))
-      api_set |= ES31;
 
    /* only count once */
    if (ctx->Extensions.Count != 0)
       return ctx->Extensions.Count;
 
-   base = (GLboolean *) &ctx->Extensions;
    for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
-      const struct extension *i = extension_table + k;
-
-      if (base[i->offset] && (i->api_set & api_set)) {
+      if (_mesa_extension_supported(ctx, k))
 	 ctx->Extensions.Count++;
-      }
    }
    return ctx->Extensions.Count;
 }
@@ -603,23 +581,13 @@ _mesa_get_extension_count(struct gl_context *ctx)
 const GLubyte *
 _mesa_get_enabled_extension(struct gl_context *ctx, GLuint index)
 {
-   const GLboolean *base;
-   size_t n;
-   unsigned k;
-   unsigned api_set = (1 << ctx->API);
-   if (_mesa_is_gles3(ctx))
-      api_set |= ES3;
-   if (_mesa_is_gles31(ctx))
-      api_set |= ES31;
+   size_t n = 0;
+   unsigned i;
 
-   base = (GLboolean*) &ctx->Extensions;
-   n = 0;
-   for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
-      const struct extension *i = extension_table + k;
-
-      if (base[i->offset] && (i->api_set & api_set)) {
+   for (i = 0; i < ARRAY_SIZE(extension_table); ++i) {
+      if (_mesa_extension_supported(ctx, i)) {
          if (n == index)
-            return (const GLubyte*) i->name;
+            return (const GLubyte*) extension_table[i].name;
          else
             ++n;
       }

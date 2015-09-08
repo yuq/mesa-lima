@@ -171,7 +171,7 @@ EXT(EXT_rescale_normal                      , dummy_true                        
 EXT(EXT_secondary_color                     , dummy_true                             , GLL            ,  0,  0,  0,  0, 1999)
 EXT(EXT_separate_shader_objects             , dummy_true                             ,            ES2 ,  0,  0,  0,  0, 2013)
 EXT(EXT_separate_specular_color             , dummy_true                             , GLL            ,  0,  0,  0,  0, 1997)
-EXT(EXT_shader_integer_mix                  , EXT_shader_integer_mix                 , GL       | ES3 ,  0,  0,  0,  0, 2013)
+EXT(EXT_shader_integer_mix                  , EXT_shader_integer_mix                 , GL       | ES2 ,  0,  0,  0, 30, 2013)
 EXT(EXT_shadow_funcs                        , ARB_shadow                             , GLL            ,  0,  0,  0,  0, 2002)
 EXT(EXT_stencil_two_side                    , EXT_stencil_two_side                   , GLL            ,  0,  0,  0,  0, 2001)
 EXT(EXT_stencil_wrap                        , dummy_true                             , GLL            ,  0,  0,  0,  0, 2002)
@@ -210,7 +210,7 @@ EXT(EXT_transform_feedback                  , EXT_transform_feedback            
 EXT(EXT_unpack_subimage                     , dummy_true                             ,            ES2 ,  0,  0,  0,  0, 2011)
 EXT(EXT_vertex_array_bgra                   , EXT_vertex_array_bgra                  , GL             ,  0,  0,  0,  0, 2008)
 EXT(EXT_vertex_array                        , dummy_true                             , GLL            ,  0,  0,  0,  0, 1995)
-EXT(EXT_color_buffer_float                  , dummy_true                             ,            ES3 ,  0,  0,  0,  0, 2013)
+EXT(EXT_color_buffer_float                  , dummy_true                             ,            ES2 ,  0,  0,  0, 30, 2013)
 
 
 EXT(OES_blend_equation_separate             , EXT_blend_equation_separate            ,      ES1       ,  0,  0,  0,  0, 2009)
@@ -255,7 +255,7 @@ EXT(OES_texture_float_linear                , OES_texture_float_linear          
 EXT(OES_texture_half_float                  , OES_texture_half_float                 ,            ES2 ,  0,  0,  0,  0, 2005)
 EXT(OES_texture_half_float_linear           , OES_texture_half_float_linear          ,            ES2 ,  0,  0,  0,  0, 2005)
 EXT(OES_texture_mirrored_repeat             , dummy_true                             ,      ES1       ,  0,  0,  0,  0, 2005)
-EXT(OES_texture_storage_multisample_2d_array, ARB_texture_multisample                ,           ES31 ,  0,  0,  0,  0, 2014)
+EXT(OES_texture_storage_multisample_2d_array, ARB_texture_multisample                ,            ES2 ,  0,  0,  0, 31, 2014)
 EXT(OES_texture_npot                        , ARB_texture_non_power_of_two           ,      ES1 | ES2 ,  0,  0,  0,  0, 2005)
 EXT(OES_vertex_array_object                 , dummy_true                             ,      ES1 | ES2 ,  0,  0,  0,  0, 2010)
 
