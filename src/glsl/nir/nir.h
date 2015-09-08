@@ -418,6 +418,9 @@ typedef struct nir_instr {
    nir_instr_type type;
    struct nir_block *block;
 
+   /** generic instruction index. */
+   unsigned index;
+
    /* A temporary for optimization and analysis passes to use for storing
     * flags.  For instance, DCE uses this to store the "dead/live" info.
     */
@@ -1773,6 +1776,7 @@ nir_loop *nir_block_get_following_loop(nir_block *block);
 void nir_index_local_regs(nir_function_impl *impl);
 void nir_index_global_regs(nir_shader *shader);
 void nir_index_ssa_defs(nir_function_impl *impl);
+unsigned nir_index_instrs(nir_function_impl *impl);
 
 void nir_index_blocks(nir_function_impl *impl);
 

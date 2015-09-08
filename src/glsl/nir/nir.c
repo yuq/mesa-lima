@@ -1435,6 +1435,24 @@ nir_index_ssa_defs(nir_function_impl *impl)
    impl->ssa_alloc = index;
 }
 
+static bool
+index_instrs_block(nir_block *block, void *state)
+{
+   unsigned *index = state;
+   nir_foreach_instr(block, instr)
+      instr->index = (*index)++;
+
+   return true;
+}
+
+unsigned
+nir_index_instrs(nir_function_impl *impl)
+{
+   unsigned index = 0;
+   nir_foreach_block(impl, index_instrs_block, &index);
+   return index;
+}
+
 gl_system_value
 nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
 {
