@@ -187,6 +187,9 @@ brw_create_nir(struct brw_context *brw,
    nir_validate_shader(nir);
 
    if (!is_scalar) {
+      nir_move_vec_src_uses_to_dest(nir);
+      nir_validate_shader(nir);
+
       nir_lower_vec_to_movs(nir);
       nir_validate_shader(nir);
    }
