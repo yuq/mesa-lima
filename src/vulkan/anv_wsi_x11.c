@@ -50,7 +50,7 @@ x11_get_window_supported(struct anv_wsi_implementation *impl,
 static VkResult
 x11_get_surface_info(struct anv_wsi_implementation *impl,
                      struct anv_device *device,
-                     VkSurfaceDescriptionWindowWSI *window,
+                     VkSurfaceDescriptionWindowWSI *vk_window,
                      VkSurfaceInfoTypeWSI infoType,
                      size_t* pDataSize, void* pData)
 {
@@ -68,11 +68,21 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
 
       assert(*pDataSize >= sizeof(*props));
 
+      VkPlatformHandleXcbWSI *vk_xcb_handle = vk_window->pPlatformHandle;
+      xcb_connection_t *conn = vk_xcb_handle->connection;
+      xcb_window_t win = (xcb_window_t)(uintptr_t)vk_window->pPlatformWindow;
+
+      xcb_get_geometry_cookie_t cookie = xcb_get_geometry(conn, win);
+      xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, cookie,
+                                                              NULL);
+      VkExtent2D extent = { geom->width, geom->height };
+      free(geom);
+
       props->minImageCount = 2;
       props->maxImageCount = 4;
-      props->currentExtent = (VkExtent2D) { -1, -1 };
-      props->minImageExtent = (VkExtent2D) { 1, 1 };
-      props->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
+      props->currentExtent = extent;
+      props->minImageExtent = extent;
+      props->maxImageExtent = extent;
       props->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_WSI;
       props->currentTransform = VK_SURFACE_TRANSFORM_NONE_WSI;
       props->maxImageArraySize = 1;
@@ -109,6 +119,14 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
    }
 }
 
+struct x11_image {
+   struct anv_image *                        image;
+   struct anv_device_memory *                memory;
+   xcb_pixmap_t                              pixmap;
+   xcb_get_geometry_cookie_t                 geom_cookie;
+   bool                                      busy;
+};
+
 struct x11_swap_chain {
    struct anv_swap_chain                        base;
 
@@ -118,11 +136,7 @@ struct x11_swap_chain {
    VkExtent2D                                   extent;
    uint32_t                                     image_count;
    uint32_t                                     next_image;
-   struct {
-      struct anv_image *                        image;
-      struct anv_device_memory *                memory;
-      xcb_pixmap_t                              pixmap;
-   }                                            images[0];
+   struct x11_image                             images[0];
 };
 
 static VkResult
@@ -165,8 +179,21 @@ x11_acquire_next_image(struct anv_swap_chain *anv_chain,
                        uint32_t *image_index)
 {
    struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+   struct x11_image *image = &chain->images[chain->next_image];
 
-   anv_finishme("Implement real blocking AcquireNextImage");
+   if (image->busy) {
+      xcb_get_geometry_reply_t *geom =
+         xcb_get_geometry_reply(chain->conn, image->geom_cookie, NULL);
+      image->busy = false;
+
+      if (geom->width != chain->extent.width ||
+          geom->height != chain->extent.height) {
+         free(geom);
+         return VK_ERROR_OUT_OF_DATE_WSI;
+      }
+      free(geom);
+   }
+
    *image_index = chain->next_image;
    chain->next_image = (chain->next_image + 1) % chain->image_count;
    return VK_SUCCESS;
@@ -178,16 +205,14 @@ x11_queue_present(struct anv_swap_chain *anv_chain,
                   uint32_t image_index)
 {
    struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+   struct x11_image *image = &chain->images[image_index];
+
+   assert(image_index < chain->image_count);
 
    xcb_void_cookie_t cookie;
 
-   xcb_pixmap_t pixmap = chain->images[image_index].pixmap;
-
-   if (pixmap == XCB_NONE)
-      return vk_error(VK_ERROR_INVALID_VALUE);
-
    cookie = xcb_copy_area(chain->conn,
-                          pixmap,
+                          image->pixmap,
                           chain->window,
                           chain->gc,
                           0, 0,
@@ -196,15 +221,33 @@ x11_queue_present(struct anv_swap_chain *anv_chain,
                           chain->extent.height);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
+   image->geom_cookie = xcb_get_geometry(chain->conn, chain->window);
+   image->busy = true;
+
    xcb_flush(chain->conn);
 
    return VK_SUCCESS;
 }
 
 static VkResult
-x11_destroy_swap_chain(struct anv_swap_chain *chain)
+x11_destroy_swap_chain(struct anv_swap_chain *anv_chain)
 {
-   anv_device_free(chain->device, chain);
+   struct x11_swap_chain *chain = (struct x11_swap_chain *)anv_chain;
+   xcb_void_cookie_t cookie;
+
+   for (uint32_t i = 0; i < chain->image_count; i++) {
+      struct x11_image *image = &chain->images[i];
+
+      if (image->busy)
+         xcb_discard_reply(chain->conn, image->geom_cookie.sequence);
+
+      cookie = xcb_free_pixmap(chain->conn, image->pixmap);
+      xcb_discard_reply(chain->conn, cookie.sequence);
+
+      /* TODO: Delete images and free memory */
+   }
+
+   anv_device_free(chain->base.device, chain);
 
    return VK_SUCCESS;
 }
@@ -329,6 +372,7 @@ x11_create_swap_chain(struct anv_wsi_implementation *impl,
       chain->images[i].image = image;
       chain->images[i].memory = memory;
       chain->images[i].pixmap = pixmap;
+      chain->images[i].busy = false;
 
       xcb_discard_reply(chain->conn, cookie.sequence);
    }
