@@ -1539,7 +1539,7 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
       unsigned H_i = H0;
       unsigned Z_i = Z0;
       hz_height = 0;
-      for (int level = mt->first_level; level <= mt->last_level; ++level) {
+      for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
          unsigned h_i = ALIGN(H_i, vertical_align);
          /* sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
          hz_height += h_i * Z_i;
@@ -1635,7 +1635,7 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
    unsigned Z_i = Z0;
    unsigned sum_h_i = 0;
    unsigned hz_height_3d_sum = 0;
-   for (int level = mt->first_level; level <= mt->last_level; ++level) {
+   for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
       unsigned i = level - mt->first_level;
       unsigned h_i = ALIGN(H_i, vertical_align);
       /* sum(i=2 to m; h_i) */
@@ -1768,11 +1768,11 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
       return false;
 
    /* Mark that all slices need a HiZ resolve. */
-   for (int level = mt->first_level; level <= mt->last_level; ++level) {
+   for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
       if (!intel_miptree_level_enable_hiz(brw, mt, level))
          continue;
 
-      for (int layer = 0; layer < mt->level[level].depth; ++layer) {
+      for (unsigned layer = 0; layer < mt->level[level].depth; ++layer) {
          struct intel_resolve_map *m = malloc(sizeof(struct intel_resolve_map));
          exec_node_init(&m->link);
          m->level = level;
