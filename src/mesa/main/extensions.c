@@ -66,6 +66,12 @@ struct extension {
    /** Set of API's in which the extension exists, as a bitset. */
    uint8_t api_set;
 
+   /** Minimum version the extension requires for the given API
+    * (see gl_api defined in mtypes.h). The value is equal to:
+    * 10 * major_version + minor_version
+    */
+   uint8_t version[API_OPENGL_LAST + 1];
+
    /** Year the extension was proposed or approved.  Used to sort the 
     * extension string chronologically. */
    uint16_t year;
@@ -83,8 +89,16 @@ struct extension {
  * \brief Table of supported OpenGL extensions for all API's.
  */
 static const struct extension extension_table[] = {
-#define EXT(name_str, driver_cap, api_flags, yyyy) \
-        { .name = "GL_" #name_str, .offset = o(driver_cap), .api_set = api_flags, .year = yyyy},
+#define EXT(name_str, driver_cap, api_flags, gll_ver, glc_ver, gles_ver, gles2_ver, yyyy) \
+        { .name = "GL_" #name_str, .offset = o(driver_cap), .api_set = api_flags, \
+          .version = { \
+            [API_OPENGL_COMPAT] = gll_ver, \
+            [API_OPENGL_CORE]   = glc_ver, \
+            [API_OPENGLES]      = gles_ver, \
+            [API_OPENGLES2]     = gles2_ver, \
+           }, \
+           .year = yyyy \
+        },
 #include "extensions_table.h"
 #undef EXT
 };
