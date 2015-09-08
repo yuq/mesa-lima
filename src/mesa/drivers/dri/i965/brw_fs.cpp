@@ -717,6 +717,7 @@ fs_inst::components_read(unsigned i) const
    case SHADER_OPCODE_TXS_LOGICAL:
    case FS_OPCODE_TXB_LOGICAL:
    case SHADER_OPCODE_TXF_CMS_LOGICAL:
+   case SHADER_OPCODE_TXF_CMS_W_LOGICAL:
    case SHADER_OPCODE_TXF_UMS_LOGICAL:
    case SHADER_OPCODE_TXF_MCS_LOGICAL:
    case SHADER_OPCODE_LOD_LOGICAL:
@@ -731,6 +732,9 @@ fs_inst::components_read(unsigned i) const
          return src[9].fixed_hw_reg.dw1.ud;
       /* Texture offset. */
       else if (i == 7)
+         return 2;
+      /* MCS */
+      else if (i == 5 && opcode == SHADER_OPCODE_TXF_CMS_W_LOGICAL)
          return 2;
       else
          return 1;
@@ -896,6 +900,7 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    case SHADER_OPCODE_TXD:
    case SHADER_OPCODE_TXF:
    case SHADER_OPCODE_TXF_CMS:
+   case SHADER_OPCODE_TXF_CMS_W:
    case SHADER_OPCODE_TXF_MCS:
    case SHADER_OPCODE_TG4:
    case SHADER_OPCODE_TG4_OFFSET:
@@ -3920,17 +3925,31 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       coordinate_done = true;
       break;
    case SHADER_OPCODE_TXF_CMS:
+   case SHADER_OPCODE_TXF_CMS_W:
    case SHADER_OPCODE_TXF_UMS:
    case SHADER_OPCODE_TXF_MCS:
-      if (op == SHADER_OPCODE_TXF_UMS || op == SHADER_OPCODE_TXF_CMS) {
+      if (op == SHADER_OPCODE_TXF_UMS ||
+          op == SHADER_OPCODE_TXF_CMS ||
+          op == SHADER_OPCODE_TXF_CMS_W) {
          bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), sample_index);
          length++;
       }
 
-      if (op == SHADER_OPCODE_TXF_CMS) {
+      if (op == SHADER_OPCODE_TXF_CMS || op == SHADER_OPCODE_TXF_CMS_W) {
          /* Data from the multisample control surface. */
          bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD), mcs);
          length++;
+
+         /* On Gen9+ we'll use ld2dms_w instead which has two registers for
+          * the MCS data.
+          */
+         if (op == SHADER_OPCODE_TXF_CMS_W) {
+            bld.MOV(retype(sources[length], BRW_REGISTER_TYPE_UD),
+                    mcs.file == IMM ?
+                    mcs :
+                    offset(mcs, bld, 1));
+            length++;
+         }
       }
 
       /* There is no offsetting for this message; just copy in the integer
@@ -4144,6 +4163,10 @@ fs_visitor::lower_logical_sends()
          lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_CMS);
          break;
 
+      case SHADER_OPCODE_TXF_CMS_W_LOGICAL:
+         lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_CMS_W);
+         break;
+
       case SHADER_OPCODE_TXF_UMS_LOGICAL:
          lower_sampler_logical_send(ibld, inst, SHADER_OPCODE_TXF_UMS);
          break;
@@ -4335,6 +4358,21 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
          return 16;
       else
          return inst->exec_size;
+
+   case SHADER_OPCODE_TXF_CMS_W_LOGICAL: {
+      /* This opcode can take up to 6 arguments which means that in some
+       * circumstances it can end up with a message that is too long in SIMD16
+       * mode.
+       */
+      const unsigned coord_components = inst->src[8].fixed_hw_reg.dw1.ud;
+      /* First three arguments are the sample index and the two arguments for
+       * the MCS data.
+       */
+      if ((coord_components + 3) * 2 > MAX_SAMPLER_MESSAGE_SIZE)
+         return 8;
+      else
+         return inst->exec_size;
+   }
 
    case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
    case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:

@@ -208,8 +208,8 @@ fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
    fs_inst *inst = bld.emit(SHADER_OPCODE_TXF_MCS_LOGICAL, dest, srcs,
                             ARRAY_SIZE(srcs));
 
-   /* We only care about one reg of response, but the sampler always writes
-    * 4/8.
+   /* We only care about one or two regs of response, but the sampler always
+    * writes 4/8.
     */
    inst->regs_written = 4 * dispatch_width / 8;
 
@@ -295,7 +295,10 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       opcode = SHADER_OPCODE_TXF_LOGICAL;
       break;
    case ir_txf_ms:
-      opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
+      if (devinfo->gen >= 9)
+         opcode = SHADER_OPCODE_TXF_CMS_W_LOGICAL;
+      else
+         opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;
       break;
    case ir_txs:
    case ir_query_levels:
