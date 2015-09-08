@@ -1056,7 +1056,7 @@ setup_registers_and_variables(struct ptn_compile *c)
    c->temp_regs = rzalloc_array(c, nir_register *, c->prog->NumTemporaries);
 
    nir_register *reg;
-   for (int i = 0; i < c->prog->NumTemporaries; i++) {
+   for (unsigned i = 0; i < c->prog->NumTemporaries; i++) {
       reg = nir_local_reg_create(b->impl);
       if (!reg) {
          c->error = true;
