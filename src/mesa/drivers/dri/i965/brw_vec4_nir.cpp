@@ -367,6 +367,10 @@ vec4_visitor::nir_emit_instr(nir_instr *instr)
       nir_emit_texture(nir_instr_as_tex(instr));
       break;
 
+   case nir_instr_type_ssa_undef:
+      nir_emit_undef(nir_instr_as_ssa_undef(instr));
+      break;
+
    default:
       fprintf(stderr, "VS instruction not yet implemented by NIR->vec4\n");
       break;
@@ -393,9 +397,14 @@ dst_reg_for_nir_reg(vec4_visitor *v, nir_register *nir_reg,
 dst_reg
 vec4_visitor::get_nir_dest(nir_dest dest)
 {
-   assert(!dest.is_ssa);
-   return dst_reg_for_nir_reg(this, dest.reg.reg, dest.reg.base_offset,
-                              dest.reg.indirect);
+   if (dest.is_ssa) {
+      dst_reg dst = dst_reg(GRF, alloc.allocate(1));
+      nir_ssa_values[dest.ssa.index] = dst;
+      return dst;
+   } else {
+      return dst_reg_for_nir_reg(this, dest.reg.reg, dest.reg.base_offset,
+                                 dest.reg.indirect);
+   }
 }
 
 dst_reg
@@ -1527,6 +1536,12 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                 lod, lod2, sample_index,
                 constant_offset, offset_value,
                 mcs, is_cube_array, sampler, sampler_reg);
+}
+
+void
+vec4_visitor::nir_emit_undef(nir_ssa_undef_instr *instr)
+{
+   nir_ssa_values[instr->def.index] = dst_reg(GRF, alloc.allocate(1));
 }
 
 }
