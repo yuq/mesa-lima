@@ -44,13 +44,13 @@
 #include "brw_context.h"
 
 static inline void
-assign_vue_slot(struct brw_vue_map *vue_map, int varying)
+assign_vue_slot(struct brw_vue_map *vue_map, int varying, int slot)
 {
    /* Make sure this varying hasn't been assigned a slot already */
    assert (vue_map->varying_to_slot[varying] == -1);
 
-   vue_map->varying_to_slot[varying] = vue_map->num_slots;
-   vue_map->slot_to_varying[vue_map->num_slots++] = varying;
+   vue_map->varying_to_slot[varying] = slot;
+   vue_map->slot_to_varying[slot] = varying;
 }
 
 /**
@@ -77,11 +77,12 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
     */
    STATIC_ASSERT(BRW_VARYING_SLOT_COUNT <= 127);
 
-   vue_map->num_slots = 0;
    for (i = 0; i < BRW_VARYING_SLOT_COUNT; ++i) {
       vue_map->varying_to_slot[i] = -1;
       vue_map->slot_to_varying[i] = BRW_VARYING_SLOT_PAD;
    }
+
+   int slot = 0;
 
    /* VUE header: format depends on chip generation and whether clipping is
     * enabled.
@@ -98,9 +99,9 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
        * On Ironlake the VUE header is nominally 20 dwords, but the hardware
        * will accept the same header layout as Gen4 [and should be a bit faster]
        */
-      assign_vue_slot(vue_map, VARYING_SLOT_PSIZ);
-      assign_vue_slot(vue_map, BRW_VARYING_SLOT_NDC);
-      assign_vue_slot(vue_map, VARYING_SLOT_POS);
+      assign_vue_slot(vue_map, VARYING_SLOT_PSIZ, slot++);
+      assign_vue_slot(vue_map, BRW_VARYING_SLOT_NDC, slot++);
+      assign_vue_slot(vue_map, VARYING_SLOT_POS, slot++);
    } else {
       /* There are 8 or 16 DWs (D0-D15) in VUE header on Sandybridge:
        * dword 0-3 of the header is indices, point width, clip flags.
@@ -109,25 +110,25 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
        * enabled.
        * dword 8-11 or 16-19 is the first vertex element data we fill.
        */
-      assign_vue_slot(vue_map, VARYING_SLOT_PSIZ);
-      assign_vue_slot(vue_map, VARYING_SLOT_POS);
+      assign_vue_slot(vue_map, VARYING_SLOT_PSIZ, slot++);
+      assign_vue_slot(vue_map, VARYING_SLOT_POS, slot++);
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0))
-         assign_vue_slot(vue_map, VARYING_SLOT_CLIP_DIST0);
+         assign_vue_slot(vue_map, VARYING_SLOT_CLIP_DIST0, slot++);
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1))
-         assign_vue_slot(vue_map, VARYING_SLOT_CLIP_DIST1);
+         assign_vue_slot(vue_map, VARYING_SLOT_CLIP_DIST1, slot++);
 
       /* front and back colors need to be consecutive so that we can use
        * ATTRIBUTE_SWIZZLE_INPUTATTR_FACING to swizzle them when doing
        * two-sided color.
        */
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_COL0))
-         assign_vue_slot(vue_map, VARYING_SLOT_COL0);
+         assign_vue_slot(vue_map, VARYING_SLOT_COL0, slot++);
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_BFC0))
-         assign_vue_slot(vue_map, VARYING_SLOT_BFC0);
+         assign_vue_slot(vue_map, VARYING_SLOT_BFC0, slot++);
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_COL1))
-         assign_vue_slot(vue_map, VARYING_SLOT_COL1);
+         assign_vue_slot(vue_map, VARYING_SLOT_COL1, slot++);
       if (slots_valid & BITFIELD64_BIT(VARYING_SLOT_BFC1))
-         assign_vue_slot(vue_map, VARYING_SLOT_BFC1);
+         assign_vue_slot(vue_map, VARYING_SLOT_BFC1, slot++);
    }
 
    /* The hardware doesn't care about the rest of the vertex outputs, so just
@@ -142,7 +143,9 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
    for (int i = 0; i < VARYING_SLOT_MAX; ++i) {
       if ((slots_valid & BITFIELD64_BIT(i)) &&
           vue_map->varying_to_slot[i] == -1) {
-         assign_vue_slot(vue_map, i);
+         assign_vue_slot(vue_map, i, slot++);
       }
    }
+
+   vue_map->num_slots = slot;
 }
