@@ -84,8 +84,11 @@ insert_mov(nir_alu_instr *vec, unsigned start_channel,
 }
 
 static bool
-lower_vec_to_movs_block(nir_block *block, void *shader)
+lower_vec_to_movs_block(nir_block *block, void *void_impl)
 {
+   nir_function_impl *impl = void_impl;
+   nir_shader *shader = impl->overload->function->shader;
+
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_alu)
          continue;
@@ -101,8 +104,16 @@ lower_vec_to_movs_block(nir_block *block, void *shader)
          continue; /* The loop */
       }
 
-      /* Since we insert multiple MOVs, we have to be non-SSA. */
-      assert(!vec->dest.dest.is_ssa);
+      if (vec->dest.dest.is_ssa) {
+         /* Since we insert multiple MOVs, we have a register destination. */
+         nir_register *reg = nir_local_reg_create(impl);
+         reg->num_components = vec->dest.dest.ssa.num_components;
+
+         nir_ssa_def_rewrite_uses(&vec->dest.dest.ssa, nir_src_for_reg(reg));
+
+         nir_instr_rewrite_dest(&vec->instr, &vec->dest.dest,
+                                nir_dest_for_reg(reg));
+      }
 
       unsigned finished_write_mask = 0;
 
@@ -142,9 +153,7 @@ lower_vec_to_movs_block(nir_block *block, void *shader)
 static void
 nir_lower_vec_to_movs_impl(nir_function_impl *impl)
 {
-   nir_shader *shader = impl->overload->function->shader;
-
-   nir_foreach_block(impl, lower_vec_to_movs_block, shader);
+   nir_foreach_block(impl, lower_vec_to_movs_block, impl);
 }
 
 void
