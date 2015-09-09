@@ -79,6 +79,88 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
    return mov->dest.write_mask;
 }
 
+/* Attempts to coalesce the "move" from the given source of the vec to the
+ * destination of the instruction generating the value. If, for whatever
+ * reason, we cannot coalesce the mmove, it does nothing and returns 0.  We
+ * can then call insert_mov as normal.
+ */
+static unsigned
+try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
+{
+   assert(start_idx < nir_op_infos[vec->op].num_inputs);
+
+   /* We will only even try if the source is SSA */
+   if (!vec->src[start_idx].src.is_ssa)
+      return 0;
+
+   assert(vec->src[start_idx].src.ssa);
+
+   /* If we are going to do a reswizzle, then the vecN operation must be the
+    * only use of the source value.  We also can't have any source modifiers.
+    */
+   nir_foreach_use(vec->src[start_idx].src.ssa, src) {
+      if (src->parent_instr != &vec->instr)
+         return 0;
+
+      nir_alu_src *alu_src = exec_node_data(nir_alu_src, src, src);
+      if (alu_src->abs || alu_src->negate)
+         return 0;
+   }
+
+   if (!list_empty(&vec->src[start_idx].src.ssa->if_uses))
+      return 0;
+
+   if (vec->src[start_idx].src.ssa->parent_instr->type != nir_instr_type_alu)
+      return 0;
+
+   nir_alu_instr *src_alu =
+      nir_instr_as_alu(vec->src[start_idx].src.ssa->parent_instr);
+
+   /* We only care about being able to re-swizzle the instruction if it is
+    * something that we can reswizzle.  It must be per-component.
+    */
+   if (nir_op_infos[src_alu->op].output_size != 0)
+      return 0;
+
+   /* If we are going to reswizzle the instruction, we can't have any
+    * non-per-component sources either.
+    */
+   for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
+      if (nir_op_infos[src_alu->op].input_sizes[j] != 0)
+         return 0;
+
+   /* Stash off all of the ALU instruction's swizzles. */
+   uint8_t swizzles[4][4];
+   for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
+      for (unsigned i = 0; i < 4; i++)
+         swizzles[j][i] = src_alu->src[j].swizzle[i];
+
+   unsigned write_mask = 0;
+   for (unsigned i = start_idx; i < 4; i++) {
+      if (!(vec->dest.write_mask & (1 << i)))
+         continue;
+
+      if (!vec->src[i].src.is_ssa ||
+          vec->src[i].src.ssa != &src_alu->dest.dest.ssa)
+         continue;
+
+      /* At this point, the give vec source matchese up with the ALU
+       * instruction so we can re-swizzle that component to match.
+       */
+      write_mask |= 1 << i;
+      for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
+         src_alu->src[j].swizzle[i] = swizzles[j][vec->src[i].swizzle[0]];
+
+      /* Clear the no longer needed vec source */
+      nir_instr_rewrite_src(&vec->instr, &vec->src[i].src, NIR_SRC_INIT);
+   }
+
+   nir_instr_rewrite_dest(&src_alu->instr, &src_alu->dest.dest, vec->dest.dest);
+   src_alu->dest.write_mask = write_mask;
+
+   return write_mask;
+}
+
 static bool
 lower_vec_to_movs_block(nir_block *block, void *void_impl)
 {
@@ -131,6 +213,9 @@ lower_vec_to_movs_block(nir_block *block, void *void_impl)
       for (unsigned i = 0; i < 4; i++) {
          if (!(vec->dest.write_mask & (1 << i)))
             continue;
+
+         if (!(finished_write_mask & (1 << i)))
+            finished_write_mask |= try_coalesce(vec, i, shader);
 
          if (!(finished_write_mask & (1 << i)))
             finished_write_mask |= insert_mov(vec, i, shader);
