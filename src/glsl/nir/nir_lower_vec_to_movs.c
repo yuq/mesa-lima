@@ -53,29 +53,25 @@ src_matches_dest_reg(nir_dest *dest, nir_src *src)
  * which ones have been processed.
  */
 static unsigned
-insert_mov(nir_alu_instr *vec, unsigned start_channel,
-           unsigned start_src_idx, nir_shader *shader)
+insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
 {
-   unsigned src_idx = start_src_idx;
-   assert(src_idx < nir_op_infos[vec->op].num_inputs);
+   assert(start_idx < nir_op_infos[vec->op].num_inputs);
 
    nir_alu_instr *mov = nir_alu_instr_create(shader, nir_op_imov);
-   nir_alu_src_copy(&mov->src[0], &vec->src[src_idx], mov);
+   nir_alu_src_copy(&mov->src[0], &vec->src[start_idx], mov);
    nir_alu_dest_copy(&mov->dest, &vec->dest, mov);
 
-   mov->dest.write_mask = (1u << start_channel);
-   mov->src[0].swizzle[start_channel] = vec->src[src_idx].swizzle[0];
-   src_idx++;
+   mov->dest.write_mask = (1u << start_idx);
+   mov->src[0].swizzle[start_idx] = vec->src[start_idx].swizzle[0];
 
-   for (unsigned i = start_channel + 1; i < 4; i++) {
+   for (unsigned i = start_idx + 1; i < 4; i++) {
       if (!(vec->dest.write_mask & (1 << i)))
          continue;
 
-      if (nir_srcs_equal(vec->src[src_idx].src, vec->src[start_src_idx].src)) {
+      if (nir_srcs_equal(vec->src[i].src, vec->src[start_idx].src)) {
          mov->dest.write_mask |= (1 << i);
-         mov->src[0].swizzle[i] = vec->src[src_idx].swizzle[0];
+         mov->src[0].swizzle[i] = vec->src[i].swizzle[0];
       }
-      src_idx++;
    }
 
    nir_instr_insert_before(&vec->instr, &mov->instr);
@@ -121,26 +117,23 @@ lower_vec_to_movs_block(nir_block *block, void *void_impl)
        * destination reg, in case other values we're populating in the dest
        * might overwrite them.
        */
-      for (unsigned i = 0, src_idx = 0; i < 4; i++) {
+      for (unsigned i = 0; i < 4; i++) {
          if (!(vec->dest.write_mask & (1 << i)))
             continue;
 
-         if (src_matches_dest_reg(&vec->dest.dest, &vec->src[src_idx].src)) {
-            finished_write_mask |= insert_mov(vec, i, src_idx, shader);
+         if (src_matches_dest_reg(&vec->dest.dest, &vec->src[i].src)) {
+            finished_write_mask |= insert_mov(vec, i, shader);
             break;
          }
-         src_idx++;
       }
 
       /* Now, emit MOVs for all the other src channels. */
-      for (unsigned i = 0, src_idx = 0; i < 4; i++) {
+      for (unsigned i = 0; i < 4; i++) {
          if (!(vec->dest.write_mask & (1 << i)))
             continue;
 
          if (!(finished_write_mask & (1 << i)))
-            finished_write_mask |= insert_mov(vec, i, src_idx, shader);
-
-         src_idx++;
+            finished_write_mask |= insert_mov(vec, i, shader);
       }
 
       nir_instr_remove(&vec->instr);
