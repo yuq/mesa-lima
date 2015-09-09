@@ -1313,9 +1313,15 @@ fs_visitor::emit_sampleid_setup()
        * are sample 1 of subspan 0; the third group is sample 0 of
        * subspan 1, and finally sample 1 of subspan 1.
        */
+
+      /* SKL+ has an extra bit for the Starting Sample Pair Index to
+       * accomodate 16x MSAA.
+       */
+      unsigned sspi_mask = devinfo->gen >= 9 ? 0x1c0 : 0xc0;
+
       abld.exec_all().group(1, 0)
           .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
-               fs_reg(0xc0));
+               fs_reg(sspi_mask));
       abld.exec_all().group(1, 0).SHR(t1, t1, fs_reg(5));
 
       /* This works for both SIMD8 and SIMD16 */
