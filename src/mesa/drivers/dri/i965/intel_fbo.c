@@ -412,6 +412,7 @@ static GLboolean
 intel_alloc_window_storage(struct gl_context * ctx, struct gl_renderbuffer *rb,
                            GLenum internalFormat, GLuint width, GLuint height)
 {
+   (void) ctx;
    assert(rb->Name == 0);
    rb->Width = width;
    rb->Height = height;
@@ -425,6 +426,10 @@ static GLboolean
 intel_nop_alloc_storage(struct gl_context * ctx, struct gl_renderbuffer *rb,
                         GLenum internalFormat, GLuint width, GLuint height)
 {
+   (void) rb;
+   (void) internalFormat;
+   (void) width;
+   (void) height;
    _mesa_problem(ctx, "intel_nop_alloc_storage should never be called.");
    return false;
 }
@@ -784,7 +789,7 @@ intel_blit_framebuffer_with_blitter(struct gl_context *ctx,
                                     GLint srcX1, GLint srcY1,
                                     GLint dstX0, GLint dstY0,
                                     GLint dstX1, GLint dstY1,
-                                    GLbitfield mask, GLenum filter)
+                                    GLbitfield mask)
 {
    struct brw_context *brw = brw_context(ctx);
 
@@ -904,7 +909,7 @@ intel_blit_framebuffer(struct gl_context *ctx,
    mask = intel_blit_framebuffer_with_blitter(ctx, readFb, drawFb,
                                               srcX0, srcY0, srcX1, srcY1,
                                               dstX0, dstY0, dstX1, dstY1,
-                                              mask, filter);
+                                              mask);
    if (mask == 0x0)
       return;
 
@@ -942,7 +947,7 @@ gen4_blit_framebuffer(struct gl_context *ctx,
    mask = intel_blit_framebuffer_with_blitter(ctx, readFb, drawFb,
                                               srcX0, srcY0, srcX1, srcY1,
                                               dstX0, dstY0, dstX1, dstY1,
-                                              mask, filter);
+                                              mask);
    if (mask == 0x0)
       return;
 
