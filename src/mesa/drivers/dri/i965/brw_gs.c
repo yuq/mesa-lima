@@ -120,7 +120,8 @@ brw_codegen_gs_prog(struct brw_context *brw,
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &c.prog_data.base.vue_map, outputs_written);
+                       &c.prog_data.base.vue_map, outputs_written,
+                       prog ? prog->SeparateShader : false);
 
    /* Compute the output vertex size.
     *
@@ -243,7 +244,8 @@ brw_codegen_gs_prog(struct brw_context *brw,
       get_hw_prim_for_gl_prim(gp->program.OutputType);
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &c.input_vue_map, c.key.input_varyings);
+                       &c.input_vue_map, c.key.input_varyings,
+                       prog->SeparateShader);
 
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
     * need to program a URB read length of ceiling(num_slots / 2).
@@ -357,7 +359,9 @@ brw_upload_gs_prog(struct brw_context *brw)
    brw->gs.base.prog_data = &brw->gs.prog_data->base.base;
 
    if (brw->gs.prog_data->base.vue_map.slots_valid !=
-       brw->vue_map_geom_out.slots_valid) {
+       brw->vue_map_geom_out.slots_valid ||
+       brw->gs.prog_data->base.vue_map.separate !=
+       brw->vue_map_geom_out.separate) {
       brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
       brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_GEOM_OUT;
    }

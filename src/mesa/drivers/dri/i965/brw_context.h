@@ -541,6 +541,17 @@ struct brw_vue_map {
    GLbitfield64 slots_valid;
 
    /**
+    * Is this VUE map for a separate shader pipeline?
+    *
+    * Separable programs (GL_ARB_separate_shader_objects) can be mixed and matched
+    * without the linker having a chance to dead code eliminate unused varyings.
+    *
+    * This means that we have to use a fixed slot layout, based on the output's
+    * location field, rather than assigning slots in a compact contiguous block.
+    */
+   bool separate;
+
+   /**
     * Map from gl_varying_slot value to VUE slot.  For gl_varying_slots that are
     * not stored in a slot (because they are not written, or because
     * additional processing is applied before storing them in the VUE), the
@@ -585,7 +596,8 @@ static inline GLuint brw_varying_to_offset(struct brw_vue_map *vue_map,
 
 void brw_compute_vue_map(const struct brw_device_info *devinfo,
                          struct brw_vue_map *vue_map,
-                         GLbitfield64 slots_valid);
+                         GLbitfield64 slots_valid,
+                         bool separate_shader);
 
 
 /**

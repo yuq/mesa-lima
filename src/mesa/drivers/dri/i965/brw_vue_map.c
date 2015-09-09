@@ -59,10 +59,18 @@ assign_vue_slot(struct brw_vue_map *vue_map, int varying, int slot)
 void
 brw_compute_vue_map(const struct brw_device_info *devinfo,
                     struct brw_vue_map *vue_map,
-                    GLbitfield64 slots_valid)
+                    GLbitfield64 slots_valid,
+                    bool separate)
 {
+   /* Keep using the packed/contiguous layout on old hardware - we only need
+    * the SSO layout when using geometry/tessellation shaders or 32 FS input
+    * varyings, which only exist on Gen >= 6.  It's also a bit more efficient.
+    */
+   if (devinfo->gen < 6)
+      separate = false;
+
    vue_map->slots_valid = slots_valid;
-   int i;
+   vue_map->separate = separate;
 
    /* gl_Layer and gl_ViewportIndex don't get their own varying slots -- they
     * are stored in the first VUE slot (VARYING_SLOT_PSIZ).
@@ -77,7 +85,7 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
     */
    STATIC_ASSERT(BRW_VARYING_SLOT_COUNT <= 127);
 
-   for (i = 0; i < BRW_VARYING_SLOT_COUNT; ++i) {
+   for (int i = 0; i < BRW_VARYING_SLOT_COUNT; ++i) {
       vue_map->varying_to_slot[i] = -1;
       vue_map->slot_to_varying[i] = BRW_VARYING_SLOT_PAD;
    }
@@ -131,21 +139,42 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
          assign_vue_slot(vue_map, VARYING_SLOT_BFC1, slot++);
    }
 
-   /* The hardware doesn't care about the rest of the vertex outputs, so just
-    * assign them contiguously.  Don't reassign outputs that already have a
-    * slot.
+   /* The hardware doesn't care about the rest of the vertex outputs, so we
+    * can assign them however we like.  For normal programs, we simply assign
+    * them contiguously.
+    *
+    * For separate shader pipelines, we first assign built-in varyings
+    * contiguous slots.  This works because ARB_separate_shader_objects
+    * requires that all shaders have matching built-in varying interface
+    * blocks.  Next, we assign generic varyings based on their location
+    * (either explicit or linker assigned).  This guarantees a fixed layout.
     *
     * We generally don't need to assign a slot for VARYING_SLOT_CLIP_VERTEX,
     * since it's encoded as the clip distances by emit_clip_distances().
     * However, it may be output by transform feedback, and we'd rather not
     * recompute state when TF changes, so we just always include it.
     */
-   for (int i = 0; i < VARYING_SLOT_MAX; ++i) {
-      if ((slots_valid & BITFIELD64_BIT(i)) &&
-          vue_map->varying_to_slot[i] == -1) {
-         assign_vue_slot(vue_map, i, slot++);
+   GLbitfield64 builtins = slots_valid & BITFIELD64_MASK(VARYING_SLOT_VAR0);
+   while (builtins != 0) {
+      const int varying = ffsll(builtins) - 1;
+      if (vue_map->varying_to_slot[varying] == -1) {
+         assign_vue_slot(vue_map, varying, slot++);
       }
+      builtins &= ~BITFIELD64_BIT(varying);
    }
 
-   vue_map->num_slots = slot;
+   const int first_generic_slot = slot;
+   GLbitfield64 generics = slots_valid & ~BITFIELD64_MASK(VARYING_SLOT_VAR0);
+   while (generics != 0) {
+      const int varying = ffsll(generics) - 1;
+      if (separate) {
+         slot = first_generic_slot + varying - VARYING_SLOT_VAR0;
+         assign_vue_slot(vue_map, varying, slot);
+      } else {
+         assign_vue_slot(vue_map, varying, slot++);
+      }
+      generics &= ~BITFIELD64_BIT(varying);
+   }
+
+   vue_map->num_slots = separate ? slot + 1 : slot;
 }

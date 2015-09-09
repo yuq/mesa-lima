@@ -180,7 +180,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &prog_data.base.vue_map, outputs_written);
+                       &prog_data.base.vue_map, outputs_written,
+                       prog ? prog->SeparateShader : false);
 
    if (0) {
       _mesa_fprint_program_opt(stderr, &vp->program.Base, PROG_PRINT_DEBUG,
@@ -388,7 +389,9 @@ brw_upload_vs_prog(struct brw_context *brw)
    brw->vs.base.prog_data = &brw->vs.prog_data->base.base;
 
    if (brw->vs.prog_data->base.vue_map.slots_valid !=
-       brw->vue_map_geom_out.slots_valid) {
+       brw->vue_map_geom_out.slots_valid ||
+       brw->vs.prog_data->base.vue_map.separate !=
+       brw->vue_map_geom_out.separate) {
       brw->vue_map_vs = brw->vs.prog_data->base.vue_map;
       brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_VS;
       if (brw->gen < 6) {
