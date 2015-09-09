@@ -56,6 +56,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
 {
    uint procType, i;
    struct tgsi_parse_context parse;
+   unsigned current_depth = 0;
 
    memset(info, 0, sizeof(*info));
    for (i = 0; i < TGSI_FILE_COUNT; i++)
@@ -99,6 +100,21 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
 
             assert(fullinst->Instruction.Opcode < TGSI_OPCODE_LAST);
             info->opcode_count[fullinst->Instruction.Opcode]++;
+
+            switch (fullinst->Instruction.Opcode) {
+            case TGSI_OPCODE_IF:
+            case TGSI_OPCODE_UIF:
+            case TGSI_OPCODE_BGNLOOP:
+               current_depth++;
+               info->max_depth = MAX2(info->max_depth, current_depth);
+               break;
+            case TGSI_OPCODE_ENDIF:
+            case TGSI_OPCODE_ENDLOOP:
+               current_depth--;
+               break;
+            default:
+               break;
+            }
 
             if (fullinst->Instruction.Opcode >= TGSI_OPCODE_F2D &&
                 fullinst->Instruction.Opcode <= TGSI_OPCODE_DSSG)

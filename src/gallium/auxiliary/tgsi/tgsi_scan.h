@@ -113,6 +113,11 @@ struct tgsi_shader_info
    unsigned indirect_files_written;
 
    unsigned properties[TGSI_PROPERTY_COUNT]; /* index with TGSI_PROPERTY_ */
+
+   /**
+    * Max nesting limit of loops/if's
+    */
+   unsigned max_depth;
 };
 
 extern void
