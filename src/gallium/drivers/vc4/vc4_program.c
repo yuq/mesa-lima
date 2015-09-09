@@ -30,7 +30,6 @@
 #include "util/ralloc.h"
 #include "util/hash_table.h"
 #include "tgsi/tgsi_dump.h"
-#include "tgsi/tgsi_info.h"
 #include "tgsi/tgsi_lowering.h"
 #include "tgsi/tgsi_parse.h"
 #include "glsl/nir/nir.h"
@@ -738,41 +737,36 @@ emit_fragcoord_input(struct vc4_compile *c, int attr)
 }
 
 static struct qreg
-emit_fragment_varying(struct vc4_compile *c, uint8_t semantic,
-                      uint8_t index, uint8_t swizzle)
+emit_fragment_varying(struct vc4_compile *c, gl_varying_slot slot,
+                      uint8_t swizzle)
 {
-        uint32_t i = c->num_input_semantics++;
+        uint32_t i = c->num_input_slots++;
         struct qreg vary = {
                 QFILE_VARY,
                 i
         };
 
-        if (c->num_input_semantics >= c->input_semantics_array_size) {
-                c->input_semantics_array_size =
-                        MAX2(4, c->input_semantics_array_size * 2);
+        if (c->num_input_slots >= c->input_slots_array_size) {
+                c->input_slots_array_size =
+                        MAX2(4, c->input_slots_array_size * 2);
 
-                c->input_semantics = reralloc(c, c->input_semantics,
-                                              struct vc4_varying_semantic,
-                                              c->input_semantics_array_size);
+                c->input_slots = reralloc(c, c->input_slots,
+                                          struct vc4_varying_slot,
+                                          c->input_slots_array_size);
         }
 
-        c->input_semantics[i].semantic = semantic;
-        c->input_semantics[i].index = index;
-        c->input_semantics[i].swizzle = swizzle;
+        c->input_slots[i].slot = slot;
+        c->input_slots[i].swizzle = swizzle;
 
         return qir_VARY_ADD_C(c, qir_FMUL(c, vary, qir_FRAG_W(c)));
 }
 
 static void
-emit_fragment_input(struct vc4_compile *c, int attr,
-                    unsigned semantic_name, unsigned semantic_index)
+emit_fragment_input(struct vc4_compile *c, int attr, gl_varying_slot slot)
 {
         for (int i = 0; i < 4; i++) {
                 c->inputs[attr * 4 + i] =
-                        emit_fragment_varying(c,
-                                              semantic_name,
-                                              semantic_index,
-                                              i);
+                        emit_fragment_varying(c, slot, i);
                 c->num_inputs++;
         }
 }
@@ -780,24 +774,22 @@ emit_fragment_input(struct vc4_compile *c, int attr,
 static void
 add_output(struct vc4_compile *c,
            uint32_t decl_offset,
-           uint8_t semantic_name,
-           uint8_t semantic_index,
-           uint8_t semantic_swizzle)
+           uint8_t slot,
+           uint8_t swizzle)
 {
         uint32_t old_array_size = c->outputs_array_size;
         resize_qreg_array(c, &c->outputs, &c->outputs_array_size,
                           decl_offset + 1);
 
         if (old_array_size != c->outputs_array_size) {
-                c->output_semantics = reralloc(c,
-                                               c->output_semantics,
-                                               struct vc4_varying_semantic,
-                                               c->outputs_array_size);
+                c->output_slots = reralloc(c,
+                                           c->output_slots,
+                                           struct vc4_varying_slot,
+                                           c->outputs_array_size);
         }
 
-        c->output_semantics[decl_offset].semantic = semantic_name;
-        c->output_semantics[decl_offset].index = semantic_index;
-        c->output_semantics[decl_offset].swizzle = semantic_swizzle;
+        c->output_slots[decl_offset].slot = slot;
+        c->output_slots[decl_offset].swizzle = swizzle;
 }
 
 static void
@@ -1129,10 +1121,10 @@ clip_distance_discard(struct vc4_compile *c)
                 if (!(c->key->ucp_enables & (1 << i)))
                         continue;
 
-                struct qreg dist = emit_fragment_varying(c,
-                                                         TGSI_SEMANTIC_CLIPDIST,
-                                                         i,
-                                                         TGSI_SWIZZLE_X);
+                struct qreg dist =
+                        emit_fragment_varying(c,
+                                              VARYING_SLOT_CLIP_DIST0 + (i / 4),
+                                              i % 4);
 
                 qir_SF(c, dist);
 
@@ -1285,9 +1277,8 @@ emit_ucp_clipdistance(struct vc4_compile *c)
                  */
                 uint32_t output_index = c->num_outputs++;
                 add_output(c, output_index,
-                           TGSI_SEMANTIC_CLIPDIST,
-                           plane,
-                           TGSI_SWIZZLE_X);
+                           VARYING_SLOT_CLIP_DIST0 + plane / 4,
+                           plane % 4);
 
 
                 struct qreg dist = qir_uniform_f(c, 0.0);
@@ -1305,7 +1296,7 @@ emit_ucp_clipdistance(struct vc4_compile *c)
 
 static void
 emit_vert_end(struct vc4_compile *c,
-              struct vc4_varying_semantic *fs_inputs,
+              struct vc4_varying_slot *fs_inputs,
               uint32_t num_fs_inputs)
 {
         struct qreg rcp_w = qir_RCP(c, c->outputs[c->output_position_index + 3]);
@@ -1320,15 +1311,14 @@ emit_vert_end(struct vc4_compile *c,
                 emit_point_size_write(c);
 
         for (int i = 0; i < num_fs_inputs; i++) {
-                struct vc4_varying_semantic *input = &fs_inputs[i];
+                struct vc4_varying_slot *input = &fs_inputs[i];
                 int j;
 
                 for (j = 0; j < c->num_outputs; j++) {
-                        struct vc4_varying_semantic *output =
-                                &c->output_semantics[j];
+                        struct vc4_varying_slot *output =
+                                &c->output_slots[j];
 
-                        if (input->semantic == output->semantic &&
-                            input->index == output->index &&
+                        if (input->slot == output->slot &&
                             input->swizzle == output->swizzle) {
                                 qir_VPM_WRITE(c, c->outputs[j]);
                                 break;
@@ -1412,11 +1402,7 @@ ntq_setup_inputs(struct vc4_compile *c)
         for (unsigned i = 0; i < num_entries; i++) {
                 nir_variable *var = vars[i];
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
-                unsigned semantic_name, semantic_index;
                 unsigned loc = var->data.driver_location;
-
-                varying_slot_to_tgsi_semantic(var->data.location,
-                                              &semantic_name, &semantic_index);
 
                 assert(array_len == 1);
                 (void)array_len;
@@ -1424,19 +1410,18 @@ ntq_setup_inputs(struct vc4_compile *c)
                                   (loc + 1) * 4);
 
                 if (c->stage == QSTAGE_FRAG) {
-                        if (semantic_name == TGSI_SEMANTIC_POSITION) {
+                        if (var->data.location == VARYING_SLOT_POS) {
                                 emit_fragcoord_input(c, loc);
-                        } else if (semantic_name == TGSI_SEMANTIC_FACE) {
+                        } else if (var->data.location == VARYING_SLOT_FACE) {
                                 c->inputs[loc * 4 + 0] = qir_FRAG_REV_FLAG(c);
-                        } else if (semantic_name == TGSI_SEMANTIC_GENERIC &&
+                        } else if (var->data.location >= VARYING_SLOT_VAR0 &&
                                    (c->fs_key->point_sprite_mask &
-                                    (1 << semantic_index))) {
+                                    (1 << (var->data.location -
+                                           VARYING_SLOT_VAR0)))) {
                                 c->inputs[loc * 4 + 0] = c->point_x;
                                 c->inputs[loc * 4 + 1] = c->point_y;
                         } else {
-                                emit_fragment_input(c, loc,
-                                                    semantic_name,
-                                                    semantic_index);
+                                emit_fragment_input(c, loc, var->data.location);
                         }
                 } else {
                         emit_vertex_input(c, loc);
@@ -1449,49 +1434,37 @@ ntq_setup_outputs(struct vc4_compile *c)
 {
         foreach_list_typed(nir_variable, var, node, &c->s->outputs) {
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
-                unsigned semantic_name, semantic_index;
                 unsigned loc = var->data.driver_location * 4;
-
-                if (c->stage == QSTAGE_FRAG) {
-                        frag_result_to_tgsi_semantic(var->data.location,
-                                                     &semantic_name, &semantic_index);
-                } else {
-                        varying_slot_to_tgsi_semantic(var->data.location,
-                                                      &semantic_name, &semantic_index);
-                }
 
                 assert(array_len == 1);
                 (void)array_len;
 
-                /* NIR hack to pass through
-                 * TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS */
-                if (semantic_name == TGSI_SEMANTIC_COLOR &&
-                    semantic_index == -1)
-                        semantic_index = 0;
+                for (int i = 0; i < 4; i++)
+                        add_output(c, loc + i, var->data.location, i);
 
-                for (int i = 0; i < 4; i++) {
-                        add_output(c,
-                                   loc + i,
-                                   semantic_name,
-                                   semantic_index,
-                                   i);
+                if (c->stage == QSTAGE_FRAG) {
+                        switch (var->data.location) {
+                        case FRAG_RESULT_COLOR:
+                        case FRAG_RESULT_DATA0:
+                                c->output_color_index = loc;
+                                break;
+                        case FRAG_RESULT_DEPTH:
+                                c->output_position_index = loc;
+                                break;
+                        }
+                } else {
+                        switch (var->data.location) {
+                        case VARYING_SLOT_POS:
+                                c->output_position_index = loc;
+                                break;
+                        case VARYING_SLOT_CLIP_VERTEX:
+                                c->output_clipvertex_index = loc;
+                                break;
+                        case VARYING_SLOT_PSIZ:
+                                c->output_point_size_index = loc;
+                                break;
+                        }
                 }
-
-                switch (semantic_name) {
-                case TGSI_SEMANTIC_POSITION:
-                        c->output_position_index = loc;
-                        break;
-                case TGSI_SEMANTIC_CLIPVERTEX:
-                        c->output_clipvertex_index = loc;
-                        break;
-                case TGSI_SEMANTIC_COLOR:
-                        c->output_color_index = loc;
-                        break;
-                case TGSI_SEMANTIC_PSIZE:
-                        c->output_point_size_index = loc;
-                        break;
-                }
-
         }
 }
 
@@ -1750,10 +1723,10 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         case QSTAGE_FRAG:
                 c->fs_key = (struct vc4_fs_key *)key;
                 if (c->fs_key->is_points) {
-                        c->point_x = emit_fragment_varying(c, ~0, ~0, 0);
-                        c->point_y = emit_fragment_varying(c, ~0, ~0, 0);
+                        c->point_x = emit_fragment_varying(c, ~0, 0);
+                        c->point_y = emit_fragment_varying(c, ~0, 0);
                 } else if (c->fs_key->is_lines) {
-                        c->line_x = emit_fragment_varying(c, ~0, ~0, 0);
+                        c->line_x = emit_fragment_varying(c, ~0, 0);
                 }
                 break;
         case QSTAGE_VERT:
@@ -1831,7 +1804,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
                 break;
         case QSTAGE_VERT:
                 emit_vert_end(c,
-                              vc4->prog.fs->input_semantics,
+                              vc4->prog.fs->input_slots,
                               vc4->prog.fs->num_inputs);
                 break;
         case QSTAGE_COORD:
@@ -1932,7 +1905,7 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
 
         shader->program_id = vc4->next_compiled_program_id++;
         if (stage == QSTAGE_FRAG) {
-                bool input_live[c->num_input_semantics];
+                bool input_live[c->num_input_slots];
 
                 memset(input_live, 0, sizeof(input_live));
                 list_for_each_entry(struct qinst, inst, &c->instructions, link) {
@@ -1942,26 +1915,28 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                         }
                 }
 
-                shader->input_semantics = ralloc_array(shader,
-                                                       struct vc4_varying_semantic,
-                                                       c->num_input_semantics);
+                shader->input_slots = ralloc_array(shader,
+                                                   struct vc4_varying_slot,
+                                                   c->num_input_slots);
 
-                for (int i = 0; i < c->num_input_semantics; i++) {
-                        struct vc4_varying_semantic *sem = &c->input_semantics[i];
+                for (int i = 0; i < c->num_input_slots; i++) {
+                        struct vc4_varying_slot *slot = &c->input_slots[i];
 
                         if (!input_live[i])
                                 continue;
 
                         /* Skip non-VS-output inputs. */
-                        if (sem->semantic == (uint8_t)~0)
+                        if (slot->slot == (uint8_t)~0)
                                 continue;
 
-                        if (sem->semantic == TGSI_SEMANTIC_COLOR ||
-                            sem->semantic == TGSI_SEMANTIC_BCOLOR) {
+                        if (slot->slot == VARYING_SLOT_COL0 ||
+                            slot->slot == VARYING_SLOT_COL1 ||
+                            slot->slot == VARYING_SLOT_BFC0 ||
+                            slot->slot == VARYING_SLOT_BFC1) {
                                 shader->color_inputs |= (1 << shader->num_inputs);
                         }
 
-                        shader->input_semantics[shader->num_inputs] = *sem;
+                        shader->input_slots[shader->num_inputs] = *slot;
                         shader->num_inputs++;
                 }
         } else {

@@ -158,18 +158,17 @@ struct vc4_compiled_shader {
          * It doesn't include those that aren't part of the VPM, like
          * point/line coordinates.
          */
-        struct vc4_varying_semantic *input_semantics;
+        struct vc4_varying_slot *input_slots;
 };
 
 struct vc4_program_stateobj {
         struct vc4_uncompiled_shader *bind_vs, *bind_fs;
         struct vc4_compiled_shader *cs, *vs, *fs;
         uint8_t num_exports;
-        /* Indexed by semantic name or TGSI_SEMANTIC_COUNT + semantic index
-         * for TGSI_SEMANTIC_GENERIC.  Special vs exports (position and point-
-         * size) are not included in this
+        /* Indexed by slot.  Special vs exports (position and pointsize) are
+         * not included in this
          */
-        uint8_t export_linkage[63];
+        uint8_t export_linkage[VARYING_SLOT_VAR0 + 8];
 };
 
 struct vc4_constbuf_stateobj {

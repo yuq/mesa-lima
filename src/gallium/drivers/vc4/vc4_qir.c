@@ -147,7 +147,7 @@ qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst)
          */
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                 if (inst->src[i].file == QFILE_VARY &&
-                    c->input_semantics[inst->src[i].index].semantic == 0xff) {
+                    c->input_slots[inst->src[i].index].slot == 0xff) {
                         return true;
                 }
 

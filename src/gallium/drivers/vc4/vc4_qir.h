@@ -254,9 +254,8 @@ enum quniform_contents {
         QUNIFORM_ALPHA_REF,
 };
 
-struct vc4_varying_semantic {
-        uint8_t semantic;
-        uint8_t index;
+struct vc4_varying_slot {
+        uint8_t slot;
         uint8_t swizzle;
 };
 
@@ -372,21 +371,21 @@ struct vc4_compile {
         uint8_t vattr_sizes[8];
 
         /**
-         * Array of the TGSI semantics of all FS QFILE_VARY reads.
+         * Array of the VARYING_SLOT_* of all FS QFILE_VARY reads.
          *
          * This includes those that aren't part of the VPM varyings, like
          * point/line coordinates.
          */
-        struct vc4_varying_semantic *input_semantics;
-        uint32_t num_input_semantics;
-        uint32_t input_semantics_array_size;
+        struct vc4_varying_slot *input_slots;
+        uint32_t num_input_slots;
+        uint32_t input_slots_array_size;
 
         /**
-         * An entry per outputs[] in the VS indicating what the semantic of
-         * the output is.  Used to emit from the VS in the order that the FS
-         * needs.
+         * An entry per outputs[] in the VS indicating what the VARYING_SLOT_*
+         * of the output is.  Used to emit from the VS in the order that the
+         * FS needs.
          */
-        struct vc4_varying_semantic *output_semantics;
+        struct vc4_varying_slot *output_slots;
 
         struct pipe_shader_state *shader_state;
         struct vc4_key *key;

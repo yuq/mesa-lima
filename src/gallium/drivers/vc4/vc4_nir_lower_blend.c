@@ -38,7 +38,6 @@
 #include "util/u_format.h"
 #include "vc4_qir.h"
 #include "glsl/nir/nir_builder.h"
-#include "nir/tgsi_to_nir.h"
 #include "vc4_context.h"
 
 /** Emits a load of the previous fragment color from the tile buffer. */
@@ -401,13 +400,11 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
                         }
                 }
                 assert(output_var);
-                unsigned semantic_name, semantic_index;
 
-                varying_slot_to_tgsi_semantic(output_var->data.location,
-                                              &semantic_name, &semantic_index);
-
-                if (semantic_name != TGSI_SEMANTIC_COLOR)
+                if (output_var->data.location != FRAG_RESULT_COLOR &&
+                    output_var->data.location != FRAG_RESULT_DATA0) {
                         continue;
+                }
 
                 nir_function_impl *impl =
                         nir_cf_node_get_function(&block->cf_node);
