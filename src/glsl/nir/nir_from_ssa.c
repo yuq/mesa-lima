@@ -512,9 +512,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
     */
    nir_dest *dest = exec_node_data(nir_dest, def, ssa);
 
-   *dest = nir_dest_for_reg(reg);
-   dest->reg.parent_instr = state->instr;
-   list_addtail(&dest->reg.def_link, &reg->defs);
+   nir_instr_rewrite_dest(state->instr, dest, nir_dest_for_reg(reg));
 
    return true;
 }
