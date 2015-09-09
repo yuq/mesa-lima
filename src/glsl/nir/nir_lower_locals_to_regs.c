@@ -221,8 +221,7 @@ lower_locals_to_regs_block(nir_block *block, void *void_state)
             nir_ssa_dest_init(&mov->instr, &mov->dest.dest,
                               intrin->num_components, NULL);
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                     nir_src_for_ssa(&mov->dest.dest.ssa),
-                                     state->shader);
+                                     nir_src_for_ssa(&mov->dest.dest.ssa));
          } else {
             nir_dest_copy(&mov->dest.dest, &intrin->dest, &mov->instr);
          }

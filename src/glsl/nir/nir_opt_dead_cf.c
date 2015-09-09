@@ -83,8 +83,6 @@ remove_after_cf_node(nir_cf_node *node)
 static void
 opt_constant_if(nir_if *if_stmt, bool condition)
 {
-   void *mem_ctx = ralloc_parent(if_stmt);
-
    /* First, we need to remove any phi nodes after the if by rewriting uses to
     * point to the correct source.
     */
@@ -109,7 +107,7 @@ opt_constant_if(nir_if *if_stmt, bool condition)
 
       assert(def);
       assert(phi->dest.is_ssa);
-      nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def), mem_ctx);
+      nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def));
       nir_instr_remove(instr);
    }
 

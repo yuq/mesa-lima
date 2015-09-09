@@ -359,8 +359,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
       exec_list_push_tail(&block_pcopy->entries, &entry->node);
 
       nir_ssa_def_rewrite_uses(&phi->dest.ssa,
-                               nir_src_for_ssa(&entry->dest.ssa),
-                               state->mem_ctx);
+                               nir_src_for_ssa(&entry->dest.ssa));
 
       nir_instr_rewrite_src(&block_pcopy->instr, &entry->src,
                             nir_src_for_ssa(&phi->dest.ssa));
@@ -493,7 +492,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
       reg->num_array_elems = 0;
    }
 
-   nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg), state->mem_ctx);
+   nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg));
    assert(list_empty(&def->uses) && list_empty(&def->if_uses));
 
    if (def->parent_instr->type == nir_instr_type_ssa_undef) {

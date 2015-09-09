@@ -224,8 +224,7 @@ nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
                         add->dest.dest.ssa.num_components,
                         add->dest.dest.ssa.name);
       nir_ssa_def_rewrite_uses(&add->dest.dest.ssa,
-                               nir_src_for_ssa(&ffma->dest.dest.ssa),
-                               state->mem_ctx);
+                               nir_src_for_ssa(&ffma->dest.dest.ssa));
 
       nir_instr_insert_before(&add->instr, &ffma->instr);
       assert(list_empty(&add->dest.dest.ssa.uses));

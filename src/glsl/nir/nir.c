@@ -1205,7 +1205,7 @@ nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
 }
 
 void
-nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx)
+nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src)
 {
    assert(!new_src.is_ssa || def != new_src.ssa);
 

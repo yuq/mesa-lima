@@ -70,8 +70,7 @@ lower_reduction(nir_alu_instr *instr, nir_op chan_op, nir_op merge_op,
    }
 
    assert(instr->dest.write_mask == 1);
-   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(last),
-                            mem_ctx);
+   nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(last));
    nir_instr_remove(&instr->instr);
 }
 
@@ -168,8 +167,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, void *mem_ctx)
    nir_instr_insert_before(&instr->instr, &vec_instr->instr);
 
    nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa,
-                            nir_src_for_ssa(&vec_instr->dest.dest.ssa),
-                            mem_ctx);
+                            nir_src_for_ssa(&vec_instr->dest.dest.ssa));
 
    nir_instr_remove(&instr->instr);
 }

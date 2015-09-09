@@ -272,8 +272,7 @@ nir_opt_cse_instr(nir_instr *instr, struct cse_state *state)
       if (nir_instrs_equal(instr, other)) {
          nir_ssa_def *other_def = nir_instr_get_dest_ssa_def(other);
          nir_ssa_def_rewrite_uses(nir_instr_get_dest_ssa_def(instr),
-                                  nir_src_for_ssa(other_def),
-                                  state->mem_ctx);
+                                  nir_src_for_ssa(other_def));
          nir_instr_remove(instr);
          state->progress = true;
          return;
@@ -286,8 +285,7 @@ nir_opt_cse_instr(nir_instr *instr, struct cse_state *state)
          if (nir_instrs_equal(instr, other)) {
             nir_ssa_def *other_def = nir_instr_get_dest_ssa_def(other);
             nir_ssa_def_rewrite_uses(nir_instr_get_dest_ssa_def(instr),
-                                     nir_src_for_ssa(other_def),
-                                     state->mem_ctx);
+                                     nir_src_for_ssa(other_def));
             nir_instr_remove(instr);
             state->progress = true;
             return;

@@ -47,8 +47,6 @@ remove_phis_block(nir_block *block, void *state)
 {
    bool *progress = state;
 
-   void *mem_ctx = ralloc_parent(block);
-
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_phi)
          break;
@@ -75,8 +73,7 @@ remove_phis_block(nir_block *block, void *state)
          continue;
 
       assert(phi->dest.is_ssa);
-      nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def),
-                               mem_ctx);
+      nir_ssa_def_rewrite_uses(&phi->dest.ssa, nir_src_for_ssa(def));
       nir_instr_remove(instr);
 
       *progress = true;

@@ -116,9 +116,7 @@ convert_instr(nir_builder *bld, nir_alu_instr *alu)
    }
 
    assert(alu->dest.dest.is_ssa);
-   nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa,
-                            nir_src_for_ssa(q),
-                            ralloc_parent(alu));
+   nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa, nir_src_for_ssa(q));
 }
 
 static bool

@@ -242,8 +242,7 @@ lower_phis_to_scalar_block(nir_block *block, void *void_state)
       nir_instr_insert_after(&last_phi->instr, &vec->instr);
 
       nir_ssa_def_rewrite_uses(&phi->dest.ssa,
-                               nir_src_for_ssa(&vec->dest.dest.ssa),
-                               state->mem_ctx);
+                               nir_src_for_ssa(&vec->dest.dest.ssa));
 
       ralloc_steal(state->dead_ctx, phi);
       nir_instr_remove(&phi->instr);

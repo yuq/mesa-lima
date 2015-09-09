@@ -71,8 +71,7 @@ lower_load_const_instr_scalar(nir_load_const_instr *lower)
    }
 
    /* Replace the old load with a reference to our reconstructed vector. */
-   nir_ssa_def_rewrite_uses(&lower->def, nir_src_for_ssa(vec),
-                            ralloc_parent(b.impl));
+   nir_ssa_def_rewrite_uses(&lower->def, nir_src_for_ssa(vec));
    nir_instr_remove(&lower->instr);
 }
 

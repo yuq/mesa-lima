@@ -625,8 +625,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
                nir_instr_remove(&intrin->instr);
 
                nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                        nir_src_for_ssa(&undef->def),
-                                        state->shader);
+                                        nir_src_for_ssa(&undef->def));
                continue;
             }
 
@@ -650,8 +649,7 @@ rename_variables_block(nir_block *block, struct lower_variables_state *state)
             nir_instr_remove(&intrin->instr);
 
             nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                                     nir_src_for_ssa(&mov->dest.dest.ssa),
-                                     state->shader);
+                                     nir_src_for_ssa(&mov->dest.dest.ssa));
             break;
          }
 
