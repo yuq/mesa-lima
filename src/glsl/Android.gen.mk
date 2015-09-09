@@ -93,8 +93,7 @@ $(intermediates)/nir/nir_builder_opcodes.h: $(nir_builder_opcodes_deps)
 nir_constant_expressions_gen := $(LOCAL_PATH)/nir/nir_constant_expressions.py
 nir_constant_expressions_deps := \
 	$(LOCAL_PATH)/nir/nir_opcodes.py \
-	$(LOCAL_PATH)/nir/nir_constant_expressions.py \
-	$(LOCAL_PATH)/nir/nir_constant_expressions.h
+	$(LOCAL_PATH)/nir/nir_constant_expressions.py
 
 $(intermediates)/nir/nir_constant_expressions.c: $(nir_constant_expressions_deps)
 	@mkdir -p $(dir $@)
