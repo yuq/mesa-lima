@@ -717,9 +717,16 @@ nir_instr_insert(nir_cursor cursor, nir_instr *instr)
 }
 
 static bool
+src_is_valid(const nir_src *src)
+{
+   return src->is_ssa ? (src->ssa != NULL) : (src->reg.reg != NULL);
+}
+
+static bool
 remove_use_cb(nir_src *src, void *state)
 {
-   list_del(&src->use_link);
+   if (src_is_valid(src))
+      list_del(&src->use_link);
 
    return true;
 }
@@ -1100,12 +1107,6 @@ nir_srcs_equal(nir_src src1, nir_src src2)
                 src1.reg.base_offset == src2.reg.base_offset;
       }
    }
-}
-
-static bool
-src_is_valid(const nir_src *src)
-{
-   return src->is_ssa ? (src->ssa != NULL) : (src->reg.reg != NULL);
 }
 
 static void
