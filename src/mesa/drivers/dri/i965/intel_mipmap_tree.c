@@ -1427,6 +1427,12 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
        */
       format = MESA_FORMAT_R_UINT32;
       break;
+   case 16:
+      /* 64 bits/pixel are required for MCS data when using 16x MSAA (4 bits
+       * for each sample).
+       */
+      format = MESA_FORMAT_RG_UINT32;
+      break;
    default:
       unreachable("Unrecognized sample count in intel_miptree_alloc_mcs");
    };
