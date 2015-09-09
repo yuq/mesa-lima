@@ -921,10 +921,6 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
 {
    nir_builder *b = &c->build;
 
-   /* Save the outside-of-the-if-statement node list. */
-   c->if_stack[c->if_stack_pos] = b->cursor;
-   c->if_stack_pos++;
-
    src = ttn_channel(b, src, X);
 
    nir_if *if_stmt = nir_if_create(b->shader);
@@ -934,6 +930,9 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
       if_stmt->condition = nir_src_for_ssa(nir_fne(b, src, nir_imm_int(b, 0)));
    }
    nir_builder_cf_insert(b, &if_stmt->cf_node);
+
+   c->if_stack[c->if_stack_pos] = nir_after_cf_node(&if_stmt->cf_node);
+   c->if_stack_pos++;
 
    b->cursor = nir_after_cf_list(&if_stmt->then_list);
 
@@ -963,12 +962,11 @@ ttn_bgnloop(struct ttn_compile *c)
 {
    nir_builder *b = &c->build;
 
-   /* Save the outside-of-the-loop node list. */
-   c->loop_stack[c->loop_stack_pos] = b->cursor;
-   c->loop_stack_pos++;
-
    nir_loop *loop = nir_loop_create(b->shader);
    nir_builder_cf_insert(b, &loop->cf_node);
+
+   c->loop_stack[c->loop_stack_pos] = nir_after_cf_node(&loop->cf_node);
+   c->loop_stack_pos++;
 
    b->cursor = nir_after_cf_list(&loop->body);
 }
