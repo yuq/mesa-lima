@@ -1178,6 +1178,30 @@ nir_if_rewrite_condition(nir_if *if_stmt, nir_src new_src)
 }
 
 void
+nir_instr_rewrite_dest(nir_instr *instr, nir_dest *dest, nir_dest new_dest)
+{
+   if (dest->is_ssa) {
+      /* We can only overwrite an SSA destination if it has no uses. */
+      assert(list_empty(&dest->ssa.uses) && list_empty(&dest->ssa.if_uses));
+   } else {
+      list_del(&dest->reg.def_link);
+      if (dest->reg.indirect)
+         src_remove_all_uses(dest->reg.indirect);
+   }
+
+   /* We can't re-write with an SSA def */
+   assert(!new_dest.is_ssa);
+
+   nir_dest_copy(dest, &new_dest, instr);
+
+   dest->reg.parent_instr = instr;
+   list_addtail(&dest->reg.def_link, &new_dest.reg.reg->defs);
+
+   if (dest->reg.indirect)
+      src_add_all_uses(dest->reg.indirect, instr, NULL);
+}
+
+void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
 {
