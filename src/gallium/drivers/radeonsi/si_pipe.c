@@ -180,6 +180,8 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	if (sctx->b.chip_class == CIK) {
 		sctx->null_const_buf.buffer = pipe_buffer_create(screen, PIPE_BIND_CONSTANT_BUFFER,
 								 PIPE_USAGE_DEFAULT, 16);
+		if (!sctx->null_const_buf.buffer)
+			goto fail;
 		sctx->null_const_buf.buffer_size = sctx->null_const_buf.buffer->width0;
 
 		for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
