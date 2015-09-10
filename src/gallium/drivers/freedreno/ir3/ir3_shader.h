@@ -30,6 +30,7 @@
 #define IR3_SHADER_H_
 
 #include "pipe/p_state.h"
+#include "glsl/shader_enums.h"
 
 #include "ir3.h"
 #include "disasm.h"
@@ -82,8 +83,8 @@ struct ir3_shader_key {
 			 */
 			unsigned color_two_side : 1;
 			unsigned half_precision : 1;
-			/* used when shader needs to handle flat varyings (a4xx),
-			 * for TGSI_INTERPOLATE_COLOR:
+			/* used when shader needs to handle flat varyings (a4xx)
+			 * for front/back color inputs to frag shader:
 			 */
 			unsigned rasterflat : 1;
 		};
@@ -174,8 +175,10 @@ struct ir3_shader_variant {
 		 * spots where inloc is used.
 		 */
 		uint8_t inloc;
-		uint8_t bary;
-		uint8_t interpolate;
+		/* fragment shader specfic: */
+		bool    bary       : 1;   /* fetched varying (vs one loaded into reg) */
+		bool    rasterflat : 1;   /* special handling for emit->rasterflat */
+		enum glsl_interp_qualifier interpolate;
 	} inputs[16 + 2];  /* +POSITION +FACE */
 
 	unsigned total_in;       /* sum of inputs (scalar) */

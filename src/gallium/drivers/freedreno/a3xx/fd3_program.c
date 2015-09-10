@@ -394,7 +394,6 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 
 		/* figure out VARYING_INTERP / FLAT_SHAD register values: */
 		for (j = -1; (j = ir3_next_varying(fp, j)) < (int)fp->inputs_count; ) {
-			uint32_t interp = fp->inputs[j].interpolate;
 
 			/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
 			 * instead.. rather than -8 everywhere else..
@@ -406,8 +405,8 @@ fd3_program_emit(struct fd_ringbuffer *ring, struct fd3_emit *emit,
 			 */
 			debug_assert((inloc % 4) == 0);
 
-			if ((interp == TGSI_INTERPOLATE_CONSTANT) ||
-					((interp == TGSI_INTERPOLATE_COLOR) && emit->rasterflat)) {
+			if ((fp->inputs[j].interpolate == INTERP_QUALIFIER_FLAT) ||
+					(fp->inputs[j].rasterflat && emit->rasterflat)) {
 				uint32_t loc = inloc;
 				for (i = 0; i < 4; i++, loc++) {
 					vinterp[loc / 16] |= FLAT << ((loc % 16) * 2);

@@ -1359,7 +1359,7 @@ static void add_sysval_input(struct ir3_compile *ctx, unsigned name,
 	so->inputs[n].semantic = ir3_semantic_name(name, 0);
 	so->inputs[n].compmask = 1;
 	so->inputs[n].regid = r;
-	so->inputs[n].interpolate = TGSI_INTERPOLATE_CONSTANT;
+	so->inputs[n].interpolate = INTERP_QUALIFIER_FLAT;
 	so->total_in++;
 
 	ctx->ir->ninputs = MAX2(ctx->ir->ninputs, r + 1);
@@ -2141,23 +2141,9 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 
 	so->inputs[n].compmask = (1 << ncomp) - 1;
 	so->inputs[n].inloc = ctx->next_inloc;
-	so->inputs[n].interpolate = 0;
+	so->inputs[n].interpolate = INTERP_QUALIFIER_NONE;
 	so->inputs_count = MAX2(so->inputs_count, n + 1);
-
-	/* the fdN_program_emit() code expects tgsi consts here, so map
-	 * things back to tgsi for now:
-	 */
-	switch (in->data.interpolation) {
-	case INTERP_QUALIFIER_FLAT:
-		so->inputs[n].interpolate = TGSI_INTERPOLATE_CONSTANT;
-		break;
-	case INTERP_QUALIFIER_NOPERSPECTIVE:
-		so->inputs[n].interpolate = TGSI_INTERPOLATE_LINEAR;
-		break;
-	case INTERP_QUALIFIER_SMOOTH:
-		so->inputs[n].interpolate = TGSI_INTERPOLATE_PERSPECTIVE;
-		break;
-	}
+	so->inputs[n].interpolate = in->data.interpolation;
 
 	if (ctx->so->type == SHADER_FRAGMENT) {
 		unsigned semantic_name, semantic_index;
@@ -2183,27 +2169,19 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 			} else {
 				bool use_ldlv = false;
 
-				/* with NIR, we need to infer TGSI_INTERPOLATE_COLOR
-				 * from the semantic name:
+				/* detect the special case for front/back colors where
+				 * we need to do flat vs smooth shading depending on
+				 * rast state:
 				 */
 				if ((in->data.interpolation == INTERP_QUALIFIER_NONE) &&
 						((semantic_name == TGSI_SEMANTIC_COLOR) ||
 							(semantic_name == TGSI_SEMANTIC_BCOLOR)))
-					so->inputs[n].interpolate = TGSI_INTERPOLATE_COLOR;
+					so->inputs[n].rasterflat = true;
 
 				if (ctx->flat_bypass) {
-					/* with NIR, we need to infer TGSI_INTERPOLATE_COLOR
-					 * from the semantic name:
-					 */
-					switch (so->inputs[n].interpolate) {
-					case TGSI_INTERPOLATE_COLOR:
-						if (!ctx->so->key.rasterflat)
-							break;
-						/* fallthrough */
-					case TGSI_INTERPOLATE_CONSTANT:
+					if ((so->inputs[n].interpolate == INTERP_QUALIFIER_FLAT) ||
+							(so->inputs[n].rasterflat && ctx->so->key.rasterflat))
 						use_ldlv = true;
-						break;
-					}
 				}
 
 				so->inputs[n].bary = true;
