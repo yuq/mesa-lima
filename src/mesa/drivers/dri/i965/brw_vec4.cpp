@@ -954,6 +954,14 @@ vec4_instruction::can_reswizzle(int dst_writemask,
    if (mlen > 0)
       return false;
 
+   /* We can't use swizzles on the accumulator and that's really the only
+    * HW_REG we would care to reswizzle so just disallow them all.
+    */
+   for (int i = 0; i < 3; i++) {
+      if (src[i].file == HW_REG)
+         return false;
+   }
+
    return true;
 }
 
