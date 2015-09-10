@@ -127,7 +127,8 @@ struct ir3_compile {
 static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
 static struct ir3_block * get_block(struct ir3_compile *ctx, nir_block *nblock);
 
-static struct nir_shader *to_nir(const struct tgsi_token *tokens)
+static struct nir_shader *to_nir(const struct tgsi_token *tokens,
+		struct ir3_shader_variant *so)
 {
 	struct nir_shader_compiler_options options = {
 			.lower_fpow = true,
@@ -149,6 +150,11 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 
 	nir_opt_global_to_local(s);
 	nir_convert_to_ssa(s);
+	if (s->stage == MESA_SHADER_VERTEX) {
+		nir_lower_clip_vs(s, so->key.ucp_enables);
+	} else if (s->stage == MESA_SHADER_FRAGMENT) {
+		nir_lower_clip_fs(s, so->key.ucp_enables);
+	}
 	nir_lower_idiv(s);
 	nir_lower_load_const_to_scalar(s);
 
@@ -251,7 +257,7 @@ compile_init(struct ir3_compiler *compiler,
 	lowered_tokens = lower_tgsi(ctx, tokens, so);
 	if (!lowered_tokens)
 		lowered_tokens = tokens;
-	ctx->s = to_nir(lowered_tokens);
+	ctx->s = to_nir(lowered_tokens, so);
 
 	if (lowered_tokens != tokens)
 		free((void *)lowered_tokens);
@@ -263,7 +269,7 @@ compile_init(struct ir3_compiler *compiler,
 	 *    num_uniform * vec4  -  user consts
 	 *    4 * vec4            -  UBO addresses
 	 *    if (vertex shader) {
-	 *        1 * vec4        -  driver params (IR3_DP_*)
+	 *        N * vec4        -  driver params (IR3_DP_*)
 	 *        1 * vec4        -  stream-out addresses
 	 *    }
 	 *
@@ -275,8 +281,8 @@ compile_init(struct ir3_compiler *compiler,
 	so->first_immediate += 4;
 
 	if (so->type == SHADER_VERTEX) {
-		/* one (vec4) slot for driver params (see ir3_driver_param): */
-		so->first_immediate++;
+		/* driver params (see ir3_driver_param): */
+		so->first_immediate += IR3_DP_COUNT/4;  /* convert to vec4 */
 		/* one (vec4) slot for stream-output base addresses: */
 		so->first_immediate++;
 	}
@@ -828,7 +834,9 @@ static struct ir3_instruction *
 create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
 {
 	/* first four vec4 sysval's reserved for UBOs: */
-	unsigned r = regid(ctx->so->first_driver_param + 4, dp);
+	/* NOTE: dp is in scalar, but there can be >4 dp components: */
+	unsigned n = ctx->so->first_driver_param + IR3_DRIVER_PARAM_OFF;
+	unsigned r = regid(n + dp / 4, dp % 4);
 	return create_uniform(ctx, r);
 }
 
@@ -1199,7 +1207,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 	struct ir3_block *b = ctx->block;
 	struct ir3_instruction *addr, *src0, *src1;
 	/* UBO addresses are the first driver params: */
-	unsigned ubo = regid(ctx->so->first_driver_param, 0);
+	unsigned ubo = regid(ctx->so->first_driver_param + IR3_UBOS_OFF, 0);
 	unsigned off = intr->const_index[0];
 
 	/* First src is ubo index, which could either be an immed or not: */
@@ -1458,6 +1466,12 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 					ctx->instance_id);
 		}
 		dst[0] = ctx->instance_id;
+		break;
+	case nir_intrinsic_load_user_clip_plane:
+		for (int i = 0; i < intr->num_components; i++) {
+			unsigned n = idx * 4 + i;
+			dst[i] = create_driver_param(ctx, IR3_DP_UCP0_X + n);
+		}
 		break;
 	case nir_intrinsic_discard_if:
 	case nir_intrinsic_discard: {
@@ -2066,7 +2080,7 @@ emit_stream_out(struct ir3_compile *ctx)
 		unsigned stride = strmout->stride[i];
 		struct ir3_instruction *base, *off;
 
-		base = create_uniform(ctx, regid(v->first_driver_param + 5, i));
+		base = create_uniform(ctx, regid(v->first_driver_param + IR3_TFBOS_OFF, i));
 
 		/* 24-bit should be enough: */
 		off = ir3_MUL_U(ctx->block, vtxcnt, 0,
@@ -2250,6 +2264,8 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 		case VARYING_SLOT_BFC0:
 		case VARYING_SLOT_BFC1:
 		case VARYING_SLOT_FOGC:
+		case VARYING_SLOT_CLIP_DIST0:
+		case VARYING_SLOT_CLIP_DIST1:
 			break;
 		default:
 			if (slot >= VARYING_SLOT_VAR0)

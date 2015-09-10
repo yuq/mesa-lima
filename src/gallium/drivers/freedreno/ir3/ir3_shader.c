@@ -501,7 +501,7 @@ static void
 emit_ubos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 		struct fd_constbuf_stateobj *constbuf)
 {
-	uint32_t offset = v->first_driver_param;  /* UBOs after user consts */
+	uint32_t offset = v->first_driver_param + IR3_UBOS_OFF;
 	if (v->constlen > offset) {
 		struct fd_context *ctx = fd_context(v->shader->pctx);
 		uint32_t params = MIN2(4, v->constlen - offset) * 4;
@@ -554,7 +554,8 @@ emit_immediates(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
 static void
 emit_tfbos(struct ir3_shader_variant *v, struct fd_ringbuffer *ring)
 {
-	uint32_t offset = v->first_driver_param + 5;  /* streamout addresses after driver-params*/
+	/* streamout addresses after driver-params: */
+	uint32_t offset = v->first_driver_param + IR3_TFBOS_OFF;
 	if (v->constlen > offset) {
 		struct fd_context *ctx = fd_context(v->shader->pctx);
 		struct fd_streamout_stateobj *so = &ctx->streamout;
@@ -657,17 +658,33 @@ ir3_emit_consts(struct ir3_shader_variant *v, struct fd_ringbuffer *ring,
 	/* emit driver params every time: */
 	/* TODO skip emit if shader doesn't use driver params to avoid WFI.. */
 	if (info && (v->type == SHADER_VERTEX)) {
-		uint32_t offset = v->first_driver_param + 4;  /* driver params after UBOs */
+		uint32_t offset = v->first_driver_param + IR3_DRIVER_PARAM_OFF;
 		if (v->constlen >= offset) {
-			uint32_t vertex_params[4] = {
+			uint32_t vertex_params[IR3_DP_COUNT] = {
 				[IR3_DP_VTXID_BASE] = info->indexed ?
 						info->index_bias : info->start,
 				[IR3_DP_VTXCNT_MAX] = max_tf_vtx(v),
 			};
+			/* if no user-clip-planes, we don't need to emit the
+			 * entire thing:
+			 */
+			uint32_t vertex_params_size = 4;
+
+			if (v->key.ucp_enables) {
+				struct pipe_clip_state *ucp = &ctx->ucp;
+				unsigned pos = IR3_DP_UCP0_X;
+				for (unsigned i = 0; pos <= IR3_DP_UCP7_W; i++) {
+					for (unsigned j = 0; j < 4; j++) {
+						vertex_params[pos] = fui(ucp->ucp[i][j]);
+						pos++;
+					}
+				}
+				vertex_params_size = ARRAY_SIZE(vertex_params);
+			}
 
 			fd_wfi(ctx, ring);
 			ctx->emit_const(ring, SHADER_VERTEX, offset * 4, 0,
-					ARRAY_SIZE(vertex_params), vertex_params, NULL);
+					vertex_params_size, vertex_params, NULL);
 
 			/* if needed, emit stream-out buffer addresses: */
 			if (vertex_params[IR3_DP_VTXCNT_MAX] > 0) {

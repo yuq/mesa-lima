@@ -94,6 +94,7 @@ static void print_usage(void)
 	printf("    --saturate-t MASK - bitmask of samplers to saturate T coord\n");
 	printf("    --saturate-r MASK - bitmask of samplers to saturate R coord\n");
 	printf("    --stream-out      - enable stream-out (aka transform feedback)\n");
+	printf("    --ucp MASK        - bitmask of enabled user-clip-planes\n");
 	printf("    --help            - show this message\n");
 }
 
@@ -187,6 +188,13 @@ int main(int argc, char **argv)
 			so->output[0].dst_offset = 2;
 			so->output[0].stream = 0;
 			n++;
+			continue;
+		}
+
+		if (!strcmp(argv[n], "--ucp")) {
+			debug_printf(" %s %s", argv[n], argv[n+1]);
+			key.ucp_enables = strtol(argv[n+1], NULL, 0);
+			n += 2;
 			continue;
 		}
 

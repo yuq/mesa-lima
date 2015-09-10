@@ -39,7 +39,28 @@
 enum ir3_driver_param {
 	IR3_DP_VTXID_BASE = 0,
 	IR3_DP_VTXCNT_MAX = 1,
+	/* user-clip-plane components, up to 8x vec4's: */
+	IR3_DP_UCP0_X     = 4,
+	/* .... */
+	IR3_DP_UCP7_W     = 35,
+	IR3_DP_COUNT      = 36   /* must be aligned to vec4 */
 };
+
+/* Layout of constant registers:
+ *
+ *    num_uniform * vec4  -  user consts
+ *    4 * vec4            -  UBO addresses
+ *    if (vertex shader) {
+ *        N * vec4        -  driver params (IR3_DP_*)
+ *        1 * vec4        -  stream-out addresses
+ *    }
+ *
+ * TODO this could be made more dynamic, to at least skip sections
+ * that we don't need..
+ */
+#define IR3_UBOS_OFF         0  /* UBOs after user consts */
+#define IR3_DRIVER_PARAM_OFF 4  /* driver params after UBOs */
+#define IR3_TFBOS_OFF       (IR3_DRIVER_PARAM_OFF + IR3_DP_COUNT/4)
 
 /* Configuration key used to identify a shader variant.. different
  * shader variants can be used to implement features not supported
@@ -48,6 +69,11 @@ enum ir3_driver_param {
 struct ir3_shader_key {
 	union {
 		struct {
+			/*
+			 * Combined Vertex/Fragment shader parameters:
+			 */
+			unsigned ucp_enables : 8;
+
 			/* do we need to check {v,f}saturate_{s,t,r}? */
 			unsigned has_per_samp : 1;
 
