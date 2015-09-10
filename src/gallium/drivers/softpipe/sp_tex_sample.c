@@ -1855,6 +1855,54 @@ compute_lod(const struct pipe_sampler_state *sampler,
 }
 
 
+/* Calculate level of detail for every fragment. The computed value is not
+ * clamped to lod_min and lod_max.
+ * \param lod_in per-fragment lod_bias or explicit_lod.
+ * \param lod results per-fragment lod.
+ */
+static inline void
+compute_lambda_lod_unclamped(struct sp_sampler_view *sp_sview,
+                             struct sp_sampler *sp_samp,
+                             const float s[TGSI_QUAD_SIZE],
+                             const float t[TGSI_QUAD_SIZE],
+                             const float p[TGSI_QUAD_SIZE],
+                             const float lod_in[TGSI_QUAD_SIZE],
+                             enum tgsi_sampler_control control,
+                             float lod[TGSI_QUAD_SIZE])
+{
+   const struct pipe_sampler_state *sampler = &sp_samp->base;
+   const float lod_bias = sampler->lod_bias;
+   float lambda;
+   uint i;
+
+   switch (control) {
+   case tgsi_sampler_lod_none:
+      /* XXX FIXME */
+   case tgsi_sampler_derivs_explicit:
+      lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
+      lod[0] = lod[1] = lod[2] = lod[3] = lambda;
+      break;
+   case tgsi_sampler_lod_bias:
+      lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
+      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+         lod[i] = lambda + lod_in[i];
+      }
+      break;
+   case tgsi_sampler_lod_explicit:
+      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+         lod[i] = lod_in[i] + lod_bias;
+      }
+      break;
+   case tgsi_sampler_lod_zero:
+   case tgsi_sampler_gather:
+      lod[0] = lod[1] = lod[2] = lod[3] = lod_bias;
+      break;
+   default:
+      assert(0);
+      lod[0] = lod[1] = lod[2] = lod[3] = 0.0f;
+   }
+}
+
 /* Calculate level of detail for every fragment.
  * \param lod_in per-fragment lod_bias or explicit_lod.
  * \param lod results per-fragment lod.
@@ -1870,39 +1918,14 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
                    float lod[TGSI_QUAD_SIZE])
 {
    const struct pipe_sampler_state *sampler = &sp_samp->base;
-   float lod_bias = sampler->lod_bias;
-   float min_lod = sampler->min_lod;
-   float max_lod = sampler->max_lod;
-   float lambda;
-   uint i;
+   const float min_lod = sampler->min_lod;
+   const float max_lod = sampler->max_lod;
+   int i;
 
-   switch (control) {
-   case tgsi_sampler_lod_none:
-      /* XXX FIXME */
-   case tgsi_sampler_derivs_explicit:
-      lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
-      lod[0] = lod[1] = lod[2] = lod[3] = CLAMP(lambda, min_lod, max_lod);
-      break;
-   case tgsi_sampler_lod_bias:
-      lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
-      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-         lod[i] = lambda + lod_in[i];
-         lod[i] = CLAMP(lod[i], min_lod, max_lod);
-      }
-      break;
-   case tgsi_sampler_lod_explicit:
-      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-         lod[i] = CLAMP(lod_in[i] + lod_bias, min_lod, max_lod);
-      }
-      break;
-   case tgsi_sampler_lod_zero:
-   case tgsi_sampler_gather:
-      /* this is all static state in the sampler really need clamp here? */
-      lod[0] = lod[1] = lod[2] = lod[3] = CLAMP(lod_bias, min_lod, max_lod);
-      break;
-   default:
-      assert(0);
-      lod[0] = lod[1] = lod[2] = lod[3] = 0.0f;
+   compute_lambda_lod_unclamped(sp_sview, sp_samp,
+                                s, t, p, lod_in, control, lod);
+   for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+      lod[i] = CLAMP(lod[i], min_lod, max_lod);
    }
 }
 
