@@ -240,6 +240,9 @@ late_optimizations = [
    (('fge', ('fadd', a, b), 0.0), ('fge', a, ('fneg', b))),
    (('feq', ('fadd', a, b), 0.0), ('feq', a, ('fneg', b))),
    (('fne', ('fadd', a, b), 0.0), ('fne', a, ('fneg', b))),
+   (('fdot2', a, b), ('fdot_replicated2', a, b), 'options->fdot_replicates'),
+   (('fdot3', a, b), ('fdot_replicated3', a, b), 'options->fdot_replicates'),
+   (('fdot4', a, b), ('fdot_replicated4', a, b), 'options->fdot_replicates'),
 ]
 
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()

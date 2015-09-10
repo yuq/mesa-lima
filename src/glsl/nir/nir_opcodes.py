@@ -453,6 +453,9 @@ binop("fxor", tfloat, commutative,
 binop_reduce("fdot", 1, tfloat, tfloat, "{src0} * {src1}", "{src0} + {src1}",
              "{src}")
 
+binop_reduce("fdot_replicated", 4, tfloat, tfloat,
+             "{src0} * {src1}", "{src0} + {src1}", "{src}")
+
 binop("fmin", tfloat, "", "fminf(src0, src1)")
 binop("imin", tint, commutative + associative, "src1 > src0 ? src0 : src1")
 binop("umin", tunsigned, commutative + associative, "src1 > src0 ? src0 : src1")
