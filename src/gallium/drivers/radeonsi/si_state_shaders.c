@@ -666,8 +666,16 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	struct si_shader_selector *sel = CALLOC_STRUCT(si_shader_selector);
 	int i;
 
+	if (!sel)
+		return NULL;
+
 	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
+	if (!sel->tokens) {
+		FREE(sel);
+		return NULL;
+	}
+
 	sel->so = state->stream_output;
 	tgsi_scan_shader(state->tokens, &sel->info);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
