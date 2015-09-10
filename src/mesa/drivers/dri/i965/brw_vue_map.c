@@ -80,7 +80,7 @@ brw_compute_vue_map(const struct brw_device_info *devinfo,
    vue_map->num_slots = 0;
    for (i = 0; i < BRW_VARYING_SLOT_COUNT; ++i) {
       vue_map->varying_to_slot[i] = -1;
-      vue_map->slot_to_varying[i] = BRW_VARYING_SLOT_COUNT;
+      vue_map->slot_to_varying[i] = BRW_VARYING_SLOT_PAD;
    }
 
    /* VUE header: format depends on chip generation and whether clipping is
