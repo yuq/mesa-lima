@@ -1351,7 +1351,6 @@ static void si_generate_fixed_func_tcs(struct si_context *sctx)
 
 	sctx->fixed_func_tcs_shader =
 		ureg_create_shader_and_destroy(ureg, &sctx->b.b);
-	assert(sctx->fixed_func_tcs_shader);
 }
 
 static void si_update_vgt_shader_config(struct si_context *sctx)
@@ -1420,8 +1419,12 @@ bool si_update_shaders(struct si_context *sctx)
 			si_shader_select(ctx, sctx->tcs_shader);
 			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
 		} else {
-			if (!sctx->fixed_func_tcs_shader)
+			if (!sctx->fixed_func_tcs_shader) {
 				si_generate_fixed_func_tcs(sctx);
+				if (!sctx->fixed_func_tcs_shader)
+					return false;
+			}
+
 			si_shader_select(ctx, sctx->fixed_func_tcs_shader);
 			si_pm4_bind_state(sctx, hs,
 					  sctx->fixed_func_tcs_shader->current->pm4);
