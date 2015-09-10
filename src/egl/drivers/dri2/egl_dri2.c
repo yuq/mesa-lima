@@ -786,7 +786,7 @@ dri2_terminate(_EGLDriver *drv, _EGLDisplay *disp)
 
    if (dri2_dpy->own_dri_screen)
       dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
-   if (dri2_dpy->fd)
+   if (dri2_dpy->fd >= 0)
       close(dri2_dpy->fd);
    if (dri2_dpy->driver)
       dlclose(dri2_dpy->driver);
