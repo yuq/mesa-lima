@@ -40,46 +40,7 @@ convert_instr(nir_intrinsic_instr *instr)
 
    void *mem_ctx = ralloc_parent(instr);
 
-   nir_intrinsic_op op;
-
-   switch (var->data.location) {
-   case SYSTEM_VALUE_FRONT_FACE:
-      op = nir_intrinsic_load_front_face;
-      break;
-   case SYSTEM_VALUE_VERTEX_ID:
-      op = nir_intrinsic_load_vertex_id;
-      break;
-   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
-      op = nir_intrinsic_load_vertex_id_zero_base;
-      break;
-   case SYSTEM_VALUE_BASE_VERTEX:
-      op = nir_intrinsic_load_base_vertex;
-      break;
-   case SYSTEM_VALUE_INSTANCE_ID:
-      op = nir_intrinsic_load_instance_id;
-      break;
-   case SYSTEM_VALUE_SAMPLE_ID:
-      op = nir_intrinsic_load_sample_id;
-      break;
-   case SYSTEM_VALUE_SAMPLE_POS:
-      op = nir_intrinsic_load_sample_pos;
-      break;
-   case SYSTEM_VALUE_SAMPLE_MASK_IN:
-      op = nir_intrinsic_load_sample_mask_in;
-      break;
-   case SYSTEM_VALUE_INVOCATION_ID:
-      op = nir_intrinsic_load_invocation_id;
-      break;
-   case SYSTEM_VALUE_LOCAL_INVOCATION_ID:
-      op = nir_intrinsic_load_local_invocation_id;
-      break;
-   case SYSTEM_VALUE_WORK_GROUP_ID:
-      op = nir_intrinsic_load_work_group_id;
-      break;
-   default:
-      unreachable("not reached");
-   }
-
+   nir_intrinsic_op op = nir_intrinsic_from_system_value(var->data.location);
    nir_intrinsic_instr *new_instr = nir_intrinsic_instr_create(mem_ctx, op);
 
    if (instr->dest.is_ssa) {

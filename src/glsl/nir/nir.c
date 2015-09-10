@@ -1461,6 +1461,44 @@ nir_index_instrs(nir_function_impl *impl)
    return index;
 }
 
+nir_intrinsic_op
+nir_intrinsic_from_system_value(gl_system_value val)
+{
+   switch (val) {
+   case SYSTEM_VALUE_VERTEX_ID:
+      return nir_intrinsic_load_vertex_id;
+   case SYSTEM_VALUE_INSTANCE_ID:
+      return nir_intrinsic_load_instance_id;
+   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+      return nir_intrinsic_load_vertex_id_zero_base;
+   case SYSTEM_VALUE_BASE_VERTEX:
+      return nir_intrinsic_load_base_vertex;
+   case SYSTEM_VALUE_INVOCATION_ID:
+      return nir_intrinsic_load_invocation_id;
+   case SYSTEM_VALUE_FRONT_FACE:
+      return nir_intrinsic_load_front_face;
+   case SYSTEM_VALUE_SAMPLE_ID:
+      return nir_intrinsic_load_sample_id;
+   case SYSTEM_VALUE_SAMPLE_POS:
+      return nir_intrinsic_load_sample_pos;
+   case SYSTEM_VALUE_SAMPLE_MASK_IN:
+      return nir_intrinsic_load_sample_mask_in;
+   case SYSTEM_VALUE_LOCAL_INVOCATION_ID:
+      return nir_intrinsic_load_local_invocation_id;
+   case SYSTEM_VALUE_WORK_GROUP_ID:
+      return nir_intrinsic_load_work_group_id;
+   /* FINISHME: Add tessellation intrinsics.
+   case SYSTEM_VALUE_TESS_COORD:
+   case SYSTEM_VALUE_VERTICES_IN:
+   case SYSTEM_VALUE_PRIMITIVE_ID:
+   case SYSTEM_VALUE_TESS_LEVEL_OUTER:
+   case SYSTEM_VALUE_TESS_LEVEL_INNER:
+    */
+   default:
+      unreachable("system value does not directly correspond to intrinsic");
+   }
+}
+
 gl_system_value
 nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
 {
