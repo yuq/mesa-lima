@@ -2132,6 +2132,46 @@ exec_tex(struct tgsi_exec_machine *mach,
    }
 }
 
+static void
+exec_lodq(struct tgsi_exec_machine *mach,
+          const struct tgsi_full_instruction *inst)
+{
+   uint unit;
+   int dim;
+   int i;
+   union tgsi_exec_channel coords[4];
+   const union tgsi_exec_channel *args[Elements(coords)];
+   union tgsi_exec_channel r[2];
+
+   unit = fetch_sampler_unit(mach, inst, 1);
+   dim = tgsi_util_get_texture_coord_dim(inst->Texture.Texture, NULL);
+   assert(dim <= Elements(coords));
+   /* fetch coordinates */
+   for (i = 0; i < dim; i++) {
+      FETCH(&coords[i], 0, TGSI_CHAN_X + i);
+      args[i] = &coords[i];
+   }
+   for (i = dim; i < Elements(coords); i++) {
+      args[i] = &ZeroVec;
+   }
+   mach->Sampler->query_lod(mach->Sampler, unit, unit,
+                            args[0]->f,
+                            args[1]->f,
+                            args[2]->f,
+                            args[3]->f,
+                            tgsi_sampler_lod_none,
+                            r[0].f,
+                            r[1].f);
+
+   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_X) {
+      store_dest(mach, &r[0], &inst->Dst[0], inst, TGSI_CHAN_X,
+                 TGSI_EXEC_DATA_FLOAT);
+   }
+   if (inst->Dst[0].Register.WriteMask & TGSI_WRITEMASK_Y) {
+      store_dest(mach, &r[1], &inst->Dst[0], inst, TGSI_CHAN_Y,
+                 TGSI_EXEC_DATA_FLOAT);
+   }
+}
 
 static void
 exec_txd(struct tgsi_exec_machine *mach,
@@ -4376,6 +4416,12 @@ exec_instruction(
       /* src[1] = component */
       /* src[2] = sampler unit */
       exec_tex(mach, inst, TEX_MODIFIER_GATHER, 2);
+      break;
+
+   case TGSI_OPCODE_LODQ:
+      /* src[0] = texcoord */
+      /* src[1] = sampler unit */
+      exec_lodq(mach, inst);
       break;
 
    case TGSI_OPCODE_UP2H:
