@@ -736,7 +736,12 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	}
 
 	if (sscreen->b.debug_flags & DBG_PRECOMPILE)
-		si_shader_select(ctx, sel);
+		if (si_shader_select(ctx, sel)) {
+			fprintf(stderr, "radeonsi: can't create a shader\n");
+			tgsi_free_tokens(sel->tokens);
+			FREE(sel);
+			return NULL;
+		}
 
 	return sel;
 }
