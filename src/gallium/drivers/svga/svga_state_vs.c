@@ -127,13 +127,8 @@ compile_vs(struct svga_context *svga,
       debug_printf("Failed to compile vertex shader,"
                    " using dummy shader instead.\n");
       variant = get_compiled_dummy_vertex_shader(svga, vs, key);
-      if (!variant) {
-         ret = PIPE_ERROR;
-         goto fail;
-      }
    }
-
-   if (svga_shader_too_large(svga, variant)) {
+   else if (svga_shader_too_large(svga, variant)) {
       /* too big, use dummy shader */
       debug_printf("Shader too large (%u bytes),"
                    " using dummy shader instead.\n",
@@ -143,26 +138,23 @@ compile_vs(struct svga_context *svga,
       svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_VS, variant);
       /* Use simple pass-through shader instead */
       variant = get_compiled_dummy_vertex_shader(svga, vs, key);
-      if (!variant) {
-         ret = PIPE_ERROR;
-         goto fail;
-      }
+   }
+
+   if (!variant) {
+      return PIPE_ERROR;
    }
 
    ret = svga_define_shader(svga, SVGA3D_SHADERTYPE_VS, variant);
-   if (ret != PIPE_OK)
-      goto fail;
+   if (ret != PIPE_OK) {
+      svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_VS, variant);
+      return ret;
+   }
 
    *out_variant = variant;
 
    return PIPE_OK;
-
-fail:
-   if (variant) {
-      svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_VS, variant);
-   }
-   return ret;
 }
+
 
 /* SVGA_NEW_PRESCALE, SVGA_NEW_RAST, SVGA_NEW_FS
  */

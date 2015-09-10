@@ -80,33 +80,28 @@ compile_gs(struct svga_context *svga,
       /* some problem during translation, try the dummy shader */
       const struct tgsi_token *dummy = get_dummy_geometry_shader();
       if (!dummy) {
-         ret = PIPE_ERROR_OUT_OF_MEMORY;
-         goto fail;
+         return PIPE_ERROR_OUT_OF_MEMORY;
       }
       debug_printf("Failed to compile geometry shader, using dummy shader instead.\n");
       FREE((void *) gs->base.tokens);
       gs->base.tokens = dummy;
       variant = translate_geometry_program(svga, gs, key);
       if (variant == NULL) {
-         ret = PIPE_ERROR;
-         goto fail;
+         return PIPE_ERROR;
       }
    }
 
    ret = svga_define_shader(svga, SVGA3D_SHADERTYPE_GS, variant);
-   if (ret != PIPE_OK)
-      goto fail;
+   if (ret != PIPE_OK) {
+      svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_GS, variant);
+      return ret;
+   }
 
    *out_variant = variant;
 
    return PIPE_OK;
-
-fail:
-   if (variant) {
-      svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_GS, variant);
-   }
-   return ret;
 }
+
 
 static void
 make_gs_key(struct svga_context *svga, struct svga_compile_key *key)
