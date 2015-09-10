@@ -1069,9 +1069,15 @@ static void si_init_gs_rings(struct si_context *sctx)
 
 	sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 				       PIPE_USAGE_DEFAULT, esgs_ring_size);
+	if (!sctx->esgs_ring)
+		return;
 
 	sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					     PIPE_USAGE_DEFAULT, gsvs_ring_size);
+	if (!sctx->gsvs_ring) {
+		pipe_resource_reference(&sctx->esgs_ring, NULL);
+		return;
+	}
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
@@ -1443,8 +1449,11 @@ bool si_update_shaders(struct si_context *sctx)
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
 		si_update_so(sctx, sctx->gs_shader);
 
-		if (!sctx->gsvs_ring)
+		if (!sctx->gsvs_ring) {
 			si_init_gs_rings(sctx);
+			if (!sctx->gsvs_ring)
+				return false;
+		}
 
 		si_update_gs_rings(sctx);
 	} else {
