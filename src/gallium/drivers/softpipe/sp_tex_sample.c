@@ -2515,6 +2515,29 @@ mip_filter_linear_2d_linear_repeat_POT(
    }
 }
 
+static const struct sp_filter_funcs funcs_linear = {
+   mip_filter_linear
+};
+
+static const struct sp_filter_funcs funcs_nearest = {
+   mip_filter_nearest
+};
+
+static const struct sp_filter_funcs funcs_none = {
+   mip_filter_none
+};
+
+static const struct sp_filter_funcs funcs_none_no_filter_select = {
+   mip_filter_none_no_filter_select
+};
+
+static const struct sp_filter_funcs funcs_linear_aniso = {
+   mip_filter_linear_aniso
+};
+
+static const struct sp_filter_funcs funcs_linear_2d_linear_repeat_POT = {
+   mip_filter_linear_2d_linear_repeat_POT
+};
 
 /**
  * Do shadow/depth comparisons.
@@ -2918,18 +2941,18 @@ sample_mip(struct sp_sampler_view *sp_sview,
            const struct filter_args *filt_args,
            float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
-   mip_filter_func mip_filter;
+   const struct sp_filter_funcs *funcs = NULL;
    img_filter_func min_img_filter = NULL;
    img_filter_func mag_img_filter = NULL;
 
    if (filt_args->control == tgsi_sampler_gather) {
-      mip_filter = mip_filter_nearest;
+      funcs = &funcs_nearest;
       min_img_filter = get_img_filter(sp_sview, &sp_samp->base, PIPE_TEX_FILTER_LINEAR, true);
    } else if (sp_sview->pot2d & sp_samp->min_mag_equal_repeat_linear) {
-      mip_filter = mip_filter_linear_2d_linear_repeat_POT;
+      funcs = &funcs_linear_2d_linear_repeat_POT;
    }
    else {
-      mip_filter = sp_samp->mip_filter;
+      funcs = sp_samp->filter_funcs;
       min_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->min_img_filter, false);
       if (sp_samp->min_mag_equal) {
          mag_img_filter = min_img_filter;
@@ -2939,8 +2962,8 @@ sample_mip(struct sp_sampler_view *sp_sview,
       }
    }
 
-   mip_filter(sp_sview, sp_samp, min_img_filter, mag_img_filter,
-              s, t, p, c0, lod, filt_args, rgba);
+   funcs->filter(sp_sview, sp_samp, min_img_filter, mag_img_filter,
+                 s, t, p, c0, lod, filt_args, rgba);
 
    if (sp_samp->base.compare_mode != PIPE_TEX_COMPARE_NONE) {
       sample_compare(sp_sview, sp_samp, s, t, p, c0, lod, filt_args->control, rgba);
@@ -3239,13 +3262,13 @@ softpipe_create_sampler_state(struct pipe_context *pipe,
    switch (sampler->min_mip_filter) {
    case PIPE_TEX_MIPFILTER_NONE:
       if (sampler->min_img_filter == sampler->mag_img_filter)
-         samp->mip_filter = mip_filter_none_no_filter_select;
+         samp->filter_funcs = &funcs_none_no_filter_select;
       else
-         samp->mip_filter = mip_filter_none;
+         samp->filter_funcs = &funcs_none;
       break;
 
    case PIPE_TEX_MIPFILTER_NEAREST:
-      samp->mip_filter = mip_filter_nearest;
+      samp->filter_funcs = &funcs_nearest;
       break;
 
    case PIPE_TEX_MIPFILTER_LINEAR:
@@ -3257,11 +3280,11 @@ softpipe_create_sampler_state(struct pipe_context *pipe,
           sampler->max_anisotropy <= 1) {
          samp->min_mag_equal_repeat_linear = TRUE;
       }
-      samp->mip_filter = mip_filter_linear;
+      samp->filter_funcs = &funcs_linear;
 
       /* Anisotropic filtering extension. */
       if (sampler->max_anisotropy > 1) {
-         samp->mip_filter = mip_filter_linear_aniso;
+         samp->filter_funcs = &funcs_linear_aniso;
 
          /* Override min_img_filter:
           * min_img_filter needs to be set to NEAREST since we need to access

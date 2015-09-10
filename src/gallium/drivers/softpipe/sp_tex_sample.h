@@ -128,6 +128,9 @@ struct sp_sampler_view
 
 };
 
+struct sp_filter_funcs {
+   mip_filter_func filter;
+};
 
 struct sp_sampler {
    struct pipe_sampler_state base;
@@ -144,7 +147,7 @@ struct sp_sampler {
    wrap_linear_func linear_texcoord_t;
    wrap_linear_func linear_texcoord_p;
 
-   mip_filter_func mip_filter;
+   const struct sp_filter_funcs *filter_funcs;
 };
 
 
