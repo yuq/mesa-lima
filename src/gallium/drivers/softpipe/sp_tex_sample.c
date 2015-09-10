@@ -1831,19 +1831,19 @@ compute_lod(const struct pipe_sampler_state *sampler,
    uint i;
 
    switch (control) {
-   case tgsi_sampler_lod_none:
-   case tgsi_sampler_lod_zero:
+   case TGSI_SAMPLER_LOD_NONE:
+   case TGSI_SAMPLER_LOD_ZERO:
    /* XXX FIXME */
-   case tgsi_sampler_derivs_explicit:
+   case TGSI_SAMPLER_DERIVS_EXPLICIT:
       lod[0] = lod[1] = lod[2] = lod[3] = CLAMP(biased_lambda, min_lod, max_lod);
       break;
-   case tgsi_sampler_lod_bias:
+   case TGSI_SAMPLER_LOD_BIAS:
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
          lod[i] = biased_lambda + lod_in[i];
          lod[i] = CLAMP(lod[i], min_lod, max_lod);
       }
       break;
-   case tgsi_sampler_lod_explicit:
+   case TGSI_SAMPLER_LOD_EXPLICIT:
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
          lod[i] = CLAMP(lod_in[i], min_lod, max_lod);
       }
@@ -1876,25 +1876,25 @@ compute_lambda_lod_unclamped(struct sp_sampler_view *sp_sview,
    uint i;
 
    switch (control) {
-   case tgsi_sampler_lod_none:
+   case TGSI_SAMPLER_LOD_NONE:
       /* XXX FIXME */
-   case tgsi_sampler_derivs_explicit:
+   case TGSI_SAMPLER_DERIVS_EXPLICIT:
       lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
       lod[0] = lod[1] = lod[2] = lod[3] = lambda;
       break;
-   case tgsi_sampler_lod_bias:
+   case TGSI_SAMPLER_LOD_BIAS:
       lambda = sp_sview->compute_lambda(sp_sview, s, t, p) + lod_bias;
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
          lod[i] = lambda + lod_in[i];
       }
       break;
-   case tgsi_sampler_lod_explicit:
+   case TGSI_SAMPLER_LOD_EXPLICIT:
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
          lod[i] = lod_in[i] + lod_bias;
       }
       break;
-   case tgsi_sampler_lod_zero:
-   case tgsi_sampler_gather:
+   case TGSI_SAMPLER_LOD_ZERO:
+   case TGSI_SAMPLER_GATHER:
       lod[0] = lod[1] = lod[2] = lod[3] = lod_bias;
       break;
    default:
@@ -1994,7 +1994,7 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
    args.offset = filt_args->offset;
-   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
    args.gather_comp = get_gather_component(lod_in);
 
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
@@ -2078,7 +2078,7 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
 
    args.offset = filt_args->offset;
-   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
    args.gather_comp = get_gather_component(lod_in);
 
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
@@ -2140,7 +2140,7 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
 
    args.level = sp_sview->base.u.tex.first_level;
    args.offset = filt_args->offset;
-   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
 
    compute_lambda_lod(sp_sview, sp_samp, s, t, p, lod_in, filt_args->control, lod);
 
@@ -2188,7 +2188,7 @@ mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
    struct img_filter_args args;
    args.level = sp_sview->base.u.tex.first_level;
    args.offset = filt_args->offset;
-   args.gather_only = filt_args->control == tgsi_sampler_gather;
+   args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
    for (j = 0; j < TGSI_QUAD_SIZE; j++) {
       args.s = s[j];
       args.t = t[j];
@@ -2465,10 +2465,10 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
    float dvdy = (t[QUAD_TOP_LEFT]     - t[QUAD_BOTTOM_LEFT]) * t_to_v;
    struct img_filter_args args;
 
-   if (filt_args->control == tgsi_sampler_lod_bias ||
-       filt_args->control == tgsi_sampler_lod_none ||
+   if (filt_args->control == TGSI_SAMPLER_LOD_BIAS ||
+       filt_args->control == TGSI_SAMPLER_LOD_NONE ||
        /* XXX FIXME */
-       filt_args->control == tgsi_sampler_derivs_explicit) {
+       filt_args->control == TGSI_SAMPLER_DERIVS_EXPLICIT) {
       /* note: instead of working with Px and Py, we will use the 
        * squared length instead, to avoid sqrt.
        */
@@ -2508,8 +2508,8 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
       compute_lod(&sp_samp->base, filt_args->control, lambda, lod_in, lod);
    }
    else {
-      assert(filt_args->control == tgsi_sampler_lod_explicit ||
-             filt_args->control == tgsi_sampler_lod_zero);
+      assert(filt_args->control == TGSI_SAMPLER_LOD_EXPLICIT ||
+             filt_args->control == TGSI_SAMPLER_LOD_ZERO);
       compute_lod(&sp_samp->base, filt_args->control, sp_samp->base.lod_bias, lod_in, lod);
    }
    
@@ -2592,7 +2592,7 @@ mip_filter_linear_2d_linear_repeat_POT(
       args.p = p[j];
       args.face_id = sp_sview->faces[j];
       args.offset = filt_args->offset;
-      args.gather_only = filt_args->control == tgsi_sampler_gather;
+      args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
       if ((unsigned)level0 >= psview->u.tex.last_level) {
          if (level0 < 0)
             args.level = psview->u.tex.first_level;
@@ -2672,7 +2672,7 @@ sample_compare(struct sp_sampler_view *sp_sview,
    float pc[4];
    const struct util_format_description *format_desc;
    unsigned chan_type;
-   bool is_gather = (control == tgsi_sampler_gather);
+   bool is_gather = (control == TGSI_SAMPLER_GATHER);
 
    /**
     * Compare texcoord 'p' (aka R) against texture value 'rgba[0]'
@@ -3056,7 +3056,7 @@ get_filters(struct sp_sampler_view *sp_sview,
             img_filter_func *mag)
 {
    assert(funcs);
-   if (control == tgsi_sampler_gather) {
+   if (control == TGSI_SAMPLER_GATHER) {
       *funcs = &funcs_nearest;
       if (min) {
          *min = get_img_filter(sp_sview, &sp_samp->base,
@@ -3106,7 +3106,7 @@ sample_mip(struct sp_sampler_view *sp_sview,
                      lod, filt_args->control, rgba);
    }
 
-   if (sp_sview->need_swizzle && filt_args->control != tgsi_sampler_gather) {
+   if (sp_sview->need_swizzle && filt_args->control != TGSI_SAMPLER_GATHER) {
       float rgba_temp[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE];
       memcpy(rgba_temp, rgba, sizeof(rgba_temp));
       do_swizzling(&sp_sview->base, rgba_temp, rgba);

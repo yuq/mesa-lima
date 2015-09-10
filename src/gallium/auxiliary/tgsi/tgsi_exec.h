@@ -88,13 +88,14 @@ struct tgsi_interp_coef
    float dady[TGSI_NUM_CHANNELS];
 };
 
-enum tgsi_sampler_control {
-   tgsi_sampler_lod_none,
-   tgsi_sampler_lod_bias,
-   tgsi_sampler_lod_explicit,
-   tgsi_sampler_lod_zero,
-   tgsi_sampler_derivs_explicit,
-   tgsi_sampler_gather,
+enum tgsi_sampler_control
+{
+   TGSI_SAMPLER_LOD_NONE,
+   TGSI_SAMPLER_LOD_BIAS,
+   TGSI_SAMPLER_LOD_EXPLICIT,
+   TGSI_SAMPLER_LOD_ZERO,
+   TGSI_SAMPLER_DERIVS_EXPLICIT,
+   TGSI_SAMPLER_GATHER,
 };
 
 /**
