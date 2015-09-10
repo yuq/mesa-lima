@@ -32,6 +32,11 @@
  * moves with partial writes.
  */
 
+struct vec_to_movs_state {
+   nir_function_impl *impl;
+   bool progress;
+};
+
 static bool
 src_matches_dest_reg(nir_dest *dest, nir_src *src)
 {
@@ -185,9 +190,10 @@ try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
 }
 
 static bool
-lower_vec_to_movs_block(nir_block *block, void *void_impl)
+lower_vec_to_movs_block(nir_block *block, void *void_state)
 {
-   nir_function_impl *impl = void_impl;
+   struct vec_to_movs_state *state = void_state;
+   nir_function_impl *impl = state->impl;
    nir_shader *shader = impl->overload->function->shader;
 
    nir_foreach_instr_safe(block, instr) {
@@ -246,22 +252,31 @@ lower_vec_to_movs_block(nir_block *block, void *void_impl)
 
       nir_instr_remove(&vec->instr);
       ralloc_free(vec);
+      state->progress = true;
    }
 
    return true;
 }
 
-static void
+static bool
 nir_lower_vec_to_movs_impl(nir_function_impl *impl)
 {
-   nir_foreach_block(impl, lower_vec_to_movs_block, impl);
+   struct vec_to_movs_state state = { impl, false };
+
+   nir_foreach_block(impl, lower_vec_to_movs_block, &state);
+
+   return state.progress;
 }
 
-void
+bool
 nir_lower_vec_to_movs(nir_shader *shader)
 {
+   bool progress = false;
+
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_vec_to_movs_impl(overload->impl);
+         progress = nir_lower_vec_to_movs_impl(overload->impl) || progress;
    }
+
+   return progress;
 }

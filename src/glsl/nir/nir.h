@@ -1826,7 +1826,7 @@ void nir_lower_vars_to_ssa(nir_shader *shader);
 void nir_remove_dead_variables(nir_shader *shader);
 
 void nir_move_vec_src_uses_to_dest(nir_shader *shader);
-void nir_lower_vec_to_movs(nir_shader *shader);
+bool nir_lower_vec_to_movs(nir_shader *shader);
 void nir_lower_alu_to_scalar(nir_shader *shader);
 void nir_lower_load_const_to_scalar(nir_shader *shader);
 
