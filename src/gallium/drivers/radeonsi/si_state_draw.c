@@ -759,8 +759,8 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	else
 		sctx->current_rast_prim = info->mode;
 
-	si_update_shaders(sctx);
-	if (!si_upload_shader_descriptors(sctx))
+	if (!si_update_shaders(sctx) ||
+	    !si_upload_shader_descriptors(sctx))
 		return;
 
 	if (info->indexed) {

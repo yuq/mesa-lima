@@ -1279,6 +1279,9 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
 					   PIPE_USAGE_DEFAULT,
 					   32768 * sctx->screen->b.info.max_se);
+	if (!sctx->tf_ring)
+		return;
+
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
 	/* Append these registers to the init config state. */
@@ -1385,15 +1388,18 @@ static void si_update_so(struct si_context *sctx, struct si_shader_selector *sha
 	sctx->b.streamout.stride_in_dw = shader->so.stride;
 }
 
-void si_update_shaders(struct si_context *sctx)
+bool si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 
 	/* Update stages before GS. */
 	if (sctx->tes_shader) {
-		if (!sctx->tf_ring)
+		if (!sctx->tf_ring) {
 			si_init_tess_factor_ring(sctx);
+			if (!sctx->tf_ring)
+				return false;
+		}
 
 		/* VS as LS */
 		si_shader_select(ctx, sctx->vs_shader);
@@ -1487,6 +1493,7 @@ void si_update_shaders(struct si_context *sctx)
 		if (sctx->b.chip_class == SI)
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
+	return true;
 }
 
 void si_init_shader_functions(struct si_context *sctx)
