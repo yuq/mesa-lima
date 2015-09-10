@@ -235,6 +235,15 @@ validate_reg(const struct brw_device_info *devinfo,
        reg.file == BRW_ARF_NULL)
       return;
 
+   /* From the IVB PRM Vol. 4, Pt. 3, Section 3.3.3.5:
+    *
+    *    "Swizzling is not allowed when an accumulator is used as an implicit
+    *    source or an explicit source in an instruction."
+    */
+   if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
+       reg.nr == BRW_ARF_ACCUMULATOR)
+      assert(reg.dw1.bits.swizzle == BRW_SWIZZLE_XYZW);
+
    assert(reg.hstride >= 0 && reg.hstride < ARRAY_SIZE(hstride_for_reg));
    hstride = hstride_for_reg[reg.hstride];
 
@@ -442,6 +451,14 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 
    if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
+
+   /* From the IVB PRM Vol. 4, Pt. 3, Section 3.3.3.5:
+    *
+    *    "Accumulator registers may be accessed explicitly as src0
+    *    operands only."
+    */
+   assert(reg.file != BRW_ARCHITECTURE_REGISTER_FILE ||
+          reg.nr != BRW_ARF_ACCUMULATOR);
 
    gen7_convert_mrf_to_grf(p, &reg);
    assert(reg.file != BRW_MESSAGE_REGISTER_FILE);
