@@ -1936,6 +1936,43 @@ get_gather_component(const float lod_in[TGSI_QUAD_SIZE])
    return (*(unsigned int *)lod_in) & 0x3;
 }
 
+/**
+ * Clamps given lod to both lod limits and mip level limits. Clamping to the
+ * latter limits is done so that lod is relative to the first (base) level.
+ */
+static void
+clamp_lod(const struct sp_sampler_view *sp_sview,
+          const struct sp_sampler *sp_samp,
+          const float lod[TGSI_QUAD_SIZE],
+          float clamped[TGSI_QUAD_SIZE])
+{
+   const float min_lod = sp_samp->base.min_lod;
+   const float max_lod = sp_samp->base.max_lod;
+   const float min_level = sp_sview->base.u.tex.first_level;
+   const float max_level = sp_sview->base.u.tex.last_level;
+   int i;
+
+   for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+      float cl = lod[i];
+
+      cl = CLAMP(cl, min_lod, max_lod);
+      cl = CLAMP(cl, 0, max_level - min_level);
+      clamped[i] = cl;
+   }
+}
+
+/**
+ * Get mip level relative to base level for linear mip filter
+ */
+static void
+mip_rel_level_linear(struct sp_sampler_view *sp_sview,
+                     struct sp_sampler *sp_samp,
+                     const float lod[TGSI_QUAD_SIZE],
+                     float level[TGSI_QUAD_SIZE])
+{
+   clamp_lod(sp_sview, sp_samp, lod, level);
+}
+
 static void
 mip_filter_linear(struct sp_sampler_view *sp_sview,
                   struct sp_sampler *sp_samp,
@@ -1999,6 +2036,25 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
 
 
 /**
+ * Get mip level relative to base level for nearest mip filter
+ */
+static void
+mip_rel_level_nearest(struct sp_sampler_view *sp_sview,
+                      struct sp_sampler *sp_samp,
+                      const float lod[TGSI_QUAD_SIZE],
+                      float level[TGSI_QUAD_SIZE])
+{
+   int j;
+
+   clamp_lod(sp_sview, sp_samp, lod, level);
+   for (j = 0; j < TGSI_QUAD_SIZE; j++)
+      /* TODO: It should rather be:
+       * level[j] = ceil(level[j] + 0.5F) - 1.0F;
+       */
+      level[j] = (int)(level[j] + 0.5F);
+}
+
+/**
  * Compute nearest mipmap level from texcoords.
  * Then sample the texture level for four elements of a quad.
  * \param c0  the LOD bias factors, or absolute LODs (depending on control)
@@ -2049,6 +2105,22 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
 }
 
 
+/**
+ * Get mip level relative to base level for none mip filter
+ */
+static void
+mip_rel_level_none(struct sp_sampler_view *sp_sview,
+                   struct sp_sampler *sp_samp,
+                   const float lod[TGSI_QUAD_SIZE],
+                   float level[TGSI_QUAD_SIZE])
+{
+   int j;
+
+   for (j = 0; j < TGSI_QUAD_SIZE; j++) {
+      level[j] = 0;
+   }
+}
+
 static void
 mip_filter_none(struct sp_sampler_view *sp_sview,
                 struct sp_sampler *sp_samp,
@@ -2086,6 +2158,18 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
    }
 }
 
+
+/**
+ * Get mip level relative to base level for none mip filter
+ */
+static void
+mip_rel_level_none_no_filter_select(struct sp_sampler_view *sp_sview,
+                                    struct sp_sampler *sp_samp,
+                                    const float lod[TGSI_QUAD_SIZE],
+                                    float level[TGSI_QUAD_SIZE])
+{
+   mip_rel_level_none(sp_sview, sp_samp, lod, level);
+}
 
 static void
 mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
@@ -2340,6 +2424,18 @@ img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
 
 
 /**
+ * Get mip level relative to base level for linear mip filter
+ */
+static void
+mip_rel_level_linear_aniso(struct sp_sampler_view *sp_sview,
+                           struct sp_sampler *sp_samp,
+                           const float lod[TGSI_QUAD_SIZE],
+                           float level[TGSI_QUAD_SIZE])
+{
+   mip_rel_level_linear(sp_sview, sp_samp, lod, level);
+}
+
+/**
  * Sample 2D texture using an anisotropic filter.
  */
 static void
@@ -2450,6 +2546,17 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
    }
 }
 
+/**
+ * Get mip level relative to base level for linear mip filter
+ */
+static void
+mip_rel_level_linear_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
+                                          struct sp_sampler *sp_samp,
+                                          const float lod[TGSI_QUAD_SIZE],
+                                          float level[TGSI_QUAD_SIZE])
+{
+   mip_rel_level_linear(sp_sview, sp_samp, lod, level);
+}
 
 /**
  * Specialized version of mip_filter_linear with hard-wired calls to
@@ -2516,26 +2623,32 @@ mip_filter_linear_2d_linear_repeat_POT(
 }
 
 static const struct sp_filter_funcs funcs_linear = {
+   mip_rel_level_linear,
    mip_filter_linear
 };
 
 static const struct sp_filter_funcs funcs_nearest = {
+   mip_rel_level_nearest,
    mip_filter_nearest
 };
 
 static const struct sp_filter_funcs funcs_none = {
+   mip_rel_level_none,
    mip_filter_none
 };
 
 static const struct sp_filter_funcs funcs_none_no_filter_select = {
+   mip_rel_level_none_no_filter_select,
    mip_filter_none_no_filter_select
 };
 
 static const struct sp_filter_funcs funcs_linear_aniso = {
+   mip_rel_level_linear_aniso,
    mip_filter_linear_aniso
 };
 
 static const struct sp_filter_funcs funcs_linear_2d_linear_repeat_POT = {
+   mip_rel_level_linear_2d_linear_repeat_POT,
    mip_filter_linear_2d_linear_repeat_POT
 };
 
