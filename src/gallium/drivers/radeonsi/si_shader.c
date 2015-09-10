@@ -3774,11 +3774,14 @@ int si_shader_binary_read(struct si_screen *sscreen, struct si_shader *shader)
 {
 	const struct radeon_shader_binary *binary = &shader->binary;
 	unsigned i;
+	int r;
 	bool dump  = r600_can_dump_shader(&sscreen->b,
 		shader->selector ? shader->selector->tokens : NULL);
 
 	si_shader_binary_read_config(sscreen, shader, 0);
-	si_shader_binary_upload(sscreen, shader);
+	r = si_shader_binary_upload(sscreen, shader);
+	if (r)
+		return r;
 
 	if (dump) {
 		if (!(sscreen->b.debug_flags & DBG_NO_ASM)) {
