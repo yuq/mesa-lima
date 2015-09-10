@@ -96,6 +96,14 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
     */
    nir_options->lower_ffma = true;
    nir_options->lower_sub = true;
+   /* In the vec4 backend, our dpN instruction replicates its result to all
+    * the components of a vec4.  We would like NIR to give us replicated fdot
+    * instructions because it can optimize better for us.
+    *
+    * For the FS backend, it should be lowered away by the scalarizing pass so
+    * we should never see fdot anyway.
+    */
+   nir_options->fdot_replicates = true;
 
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
