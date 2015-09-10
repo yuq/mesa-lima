@@ -1534,8 +1534,12 @@ bool si_update_shaders(struct si_context *sctx)
 		si_mark_atom_dirty(sctx, &sctx->spi_map);
 	}
 
-	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
-	    si_pm4_state_changed(sctx, gs)) {
+	if (si_pm4_state_changed(sctx, ls) ||
+	    si_pm4_state_changed(sctx, hs) ||
+	    si_pm4_state_changed(sctx, es) ||
+	    si_pm4_state_changed(sctx, gs) ||
+	    si_pm4_state_changed(sctx, vs) ||
+	    si_pm4_state_changed(sctx, ps)) {
 		if (!si_update_spi_tmpring_size(sctx))
 			return false;
 	}
