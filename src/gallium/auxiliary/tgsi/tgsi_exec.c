@@ -2021,7 +2021,7 @@ fetch_sampler_unit(struct tgsi_exec_machine *mach,
 /*
  * execute a texture instruction.
  *
- * modifier is used to control the channel routing for the\
+ * modifier is used to control the channel routing for the
  * instruction variants like proj, lod, and texture with lod bias.
  * sampler indicates which src register the sampler is contained in.
  */
