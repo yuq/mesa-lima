@@ -33,12 +33,6 @@
  * or 1.0.  This is based on the old GLSL IR based pass by Eric.
  */
 
-static nir_ssa_def *
-channel(nir_builder *b, nir_ssa_def *def, int c)
-{
-   return nir_swizzle(b, def, (unsigned[4]){c, c, c, c}, 1, false);
-}
-
 static bool
 normalize_cubemap_coords_block(nir_block *block, void *void_state)
 {
@@ -63,9 +57,9 @@ normalize_cubemap_coords_block(nir_block *block, void *void_state)
          assert(orig_coord->num_components >= 3);
 
          nir_ssa_def *abs = nir_fabs(b, orig_coord);
-         nir_ssa_def *norm = nir_fmax(b, channel(b, abs, 0),
-                                         nir_fmax(b, channel(b, abs, 1),
-                                                     channel(b, abs, 2)));
+         nir_ssa_def *norm = nir_fmax(b, nir_channel(b, abs, 0),
+                                         nir_fmax(b, nir_channel(b, abs, 1),
+                                                     nir_channel(b, abs, 2)));
 
          nir_ssa_def *normalized = nir_fmul(b, orig_coord, nir_frcp(b, norm));
 
@@ -74,10 +68,10 @@ normalize_cubemap_coords_block(nir_block *block, void *void_state)
           */
          if (tex->coord_components == 4) {
             normalized = nir_vec4(b,
-                                  channel(b, normalized, 0),
-                                  channel(b, normalized, 1),
-                                  channel(b, normalized, 2),
-                                  channel(b, orig_coord, 3));
+                                  nir_channel(b, normalized, 0),
+                                  nir_channel(b, normalized, 1),
+                                  nir_channel(b, normalized, 2),
+                                  nir_channel(b, orig_coord, 3));
          }
 
          nir_instr_rewrite_src(&tex->instr,

@@ -216,6 +216,12 @@ nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
                      nir_imov_alu(build, alu_src, num_components);
 }
 
+static inline nir_ssa_def *
+nir_channel(nir_builder *b, nir_ssa_def *def, int c)
+{
+   return nir_swizzle(b, def, (unsigned[4]){c, c, c, c}, 1, false);
+}
+
 /**
  * Turns a nir_src into a nir_ssa_def * so it can be passed to
  * nir_build_alu()-based builder calls.

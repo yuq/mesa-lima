@@ -30,12 +30,6 @@
 #include "nir.h"
 #include "nir_builder.h"
 
-static nir_ssa_def *
-channel(nir_builder *b, nir_ssa_def *def, int c)
-{
-   return nir_swizzle(b, def, (unsigned[4]){c, c, c, c}, 1, false);
-}
-
 static bool
 nir_lower_tex_projector_block(nir_block *block, void *void_state)
 {
@@ -79,21 +73,21 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
             switch (tex->coord_components) {
             case 4:
                projected = nir_vec4(b,
-                                    channel(b, projected, 0),
-                                    channel(b, projected, 1),
-                                    channel(b, projected, 2),
-                                    channel(b, unprojected, 3));
+                                    nir_channel(b, projected, 0),
+                                    nir_channel(b, projected, 1),
+                                    nir_channel(b, projected, 2),
+                                    nir_channel(b, unprojected, 3));
                break;
             case 3:
                projected = nir_vec3(b,
-                                    channel(b, projected, 0),
-                                    channel(b, projected, 1),
-                                    channel(b, unprojected, 2));
+                                    nir_channel(b, projected, 0),
+                                    nir_channel(b, projected, 1),
+                                    nir_channel(b, unprojected, 2));
                break;
             case 2:
                projected = nir_vec2(b,
-                                    channel(b, projected, 0),
-                                    channel(b, unprojected, 1));
+                                    nir_channel(b, projected, 0),
+                                    nir_channel(b, unprojected, 1));
                break;
             default:
                unreachable("bad texture coord count for array");
