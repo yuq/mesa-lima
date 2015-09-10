@@ -148,6 +148,9 @@ compile_fs(struct svga_context *svga,
                    " using dummy shader instead.\n",
                    (unsigned) (variant->nr_tokens
                                * sizeof(variant->tokens[0])));
+      /* Free the too-large variant */
+      svga_destroy_shader_variant(svga, SVGA3D_SHADERTYPE_PS, variant);
+      /* Use simple pass-through shader instead */
       variant = get_compiled_dummy_shader(svga, fs, key);
       if (!variant) {
          ret = PIPE_ERROR;
