@@ -1172,4 +1172,9 @@ extern void
 check_builtin_array_max_size(const char *name, unsigned size,
                              YYLTYPE loc, struct _mesa_glsl_parse_state *state);
 
+extern void _mesa_ast_process_interface_block(YYLTYPE *locp,
+                                              _mesa_glsl_parse_state *state,
+                                              ast_interface_block *const block,
+                                              const struct ast_type_qualifier q);
+
 #endif /* AST_H */
