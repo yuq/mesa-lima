@@ -1402,6 +1402,7 @@ bool si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+	int r;
 
 	/* Update stages before GS. */
 	if (sctx->tes_shader) {
@@ -1412,11 +1413,15 @@ bool si_update_shaders(struct si_context *sctx)
 		}
 
 		/* VS as LS */
-		si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, sctx->vs_shader);
+		if (r)
+			return false;
 		si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
 
 		if (sctx->tcs_shader) {
-			si_shader_select(ctx, sctx->tcs_shader);
+			r = si_shader_select(ctx, sctx->tcs_shader);
+			if (r)
+				return false;
 			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
 		} else {
 			if (!sctx->fixed_func_tcs_shader) {
@@ -1425,12 +1430,17 @@ bool si_update_shaders(struct si_context *sctx)
 					return false;
 			}
 
-			si_shader_select(ctx, sctx->fixed_func_tcs_shader);
+			r = si_shader_select(ctx, sctx->fixed_func_tcs_shader);
+			if (r)
+				return false;
 			si_pm4_bind_state(sctx, hs,
 					  sctx->fixed_func_tcs_shader->current->pm4);
 		}
 
-		si_shader_select(ctx, sctx->tes_shader);
+		r = si_shader_select(ctx, sctx->tes_shader);
+		if (r)
+			return false;
+
 		if (sctx->gs_shader) {
 			/* TES as ES */
 			si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
@@ -1441,18 +1451,24 @@ bool si_update_shaders(struct si_context *sctx)
 		}
 	} else if (sctx->gs_shader) {
 		/* VS as ES */
-		si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, sctx->vs_shader);
+		if (r)
+			return false;
 		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
 	} else {
 		/* VS as VS */
-		si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, sctx->vs_shader);
+		if (r)
+			return false;
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
 		si_update_so(sctx, sctx->vs_shader);
 	}
 
 	/* Update GS. */
 	if (sctx->gs_shader) {
-		si_shader_select(ctx, sctx->gs_shader);
+		r = si_shader_select(ctx, sctx->gs_shader);
+		if (r)
+			return false;
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
 		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
 		si_update_so(sctx, sctx->gs_shader);
