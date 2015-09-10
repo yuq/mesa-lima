@@ -1892,7 +1892,7 @@ compute_lambda_lod(struct sp_sampler_view *sp_sview,
       break;
    case tgsi_sampler_lod_explicit:
       for (i = 0; i < TGSI_QUAD_SIZE; i++) {
-         lod[i] = CLAMP(lod_in[i], min_lod, max_lod);
+         lod[i] = CLAMP(lod_in[i] + lod_bias, min_lod, max_lod);
       }
       break;
    case tgsi_sampler_lod_zero:
