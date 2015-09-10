@@ -79,6 +79,14 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
    return mov->dest.write_mask;
 }
 
+static bool
+has_replicated_dest(nir_alu_instr *alu)
+{
+   return alu->op == nir_op_fdot_replicated2 ||
+          alu->op == nir_op_fdot_replicated3 ||
+          alu->op == nir_op_fdot_replicated4;
+}
+
 /* Attempts to coalesce the "move" from the given source of the vec to the
  * destination of the instruction generating the value. If, for whatever
  * reason, we cannot coalesce the mmove, it does nothing and returns 0.  We
@@ -116,18 +124,27 @@ try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
    nir_alu_instr *src_alu =
       nir_instr_as_alu(vec->src[start_idx].src.ssa->parent_instr);
 
-   /* We only care about being able to re-swizzle the instruction if it is
-    * something that we can reswizzle.  It must be per-component.
-    */
-   if (nir_op_infos[src_alu->op].output_size != 0)
-      return 0;
-
-   /* If we are going to reswizzle the instruction, we can't have any
-    * non-per-component sources either.
-    */
-   for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
-      if (nir_op_infos[src_alu->op].input_sizes[j] != 0)
+   if (has_replicated_dest(src_alu)) {
+      /* The fdot instruction is special: It replicates its result to all
+       * components.  This means that we can always rewrite its destination
+       * and we don't need to swizzle anything.
+       */
+   } else {
+      /* We only care about being able to re-swizzle the instruction if it is
+       * something that we can reswizzle.  It must be per-component.  The one
+       * exception to this is the fdotN instructions which implicitly splat
+       * their result out to all channels.
+       */
+      if (nir_op_infos[src_alu->op].output_size != 0)
          return 0;
+
+      /* If we are going to reswizzle the instruction, we can't have any
+       * non-per-component sources either.
+       */
+      for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
+         if (nir_op_infos[src_alu->op].input_sizes[j] != 0)
+            return 0;
+   }
 
    /* Stash off all of the ALU instruction's swizzles. */
    uint8_t swizzles[4][4];
@@ -148,8 +165,14 @@ try_coalesce(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
        * instruction so we can re-swizzle that component to match.
        */
       write_mask |= 1 << i;
-      for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
-         src_alu->src[j].swizzle[i] = swizzles[j][vec->src[i].swizzle[0]];
+      if (has_replicated_dest(src_alu)) {
+         /* Since the destination is a single replicated value, we don't need
+          * to do any reswizzling
+          */
+      } else {
+         for (unsigned j = 0; j < nir_op_infos[src_alu->op].num_inputs; j++)
+            src_alu->src[j].swizzle[i] = swizzles[j][vec->src[i].swizzle[0]];
+      }
 
       /* Clear the no longer needed vec source */
       nir_instr_rewrite_src(&vec->instr, &vec->src[i].src, NIR_SRC_INIT);
