@@ -2929,6 +2929,43 @@ get_img_filter(const struct sp_sampler_view *sp_sview,
    }
 }
 
+/**
+ * Get mip filter funcs, and optionally both img min filter and img mag
+ * filter. Note that both img filter function pointers must be either non-NULL
+ * or NULL.
+ */
+static void
+get_filters(struct sp_sampler_view *sp_sview,
+            struct sp_sampler *sp_samp,
+            enum tgsi_sampler_control control,
+            const struct sp_filter_funcs **funcs,
+            img_filter_func *min,
+            img_filter_func *mag)
+{
+   assert(funcs);
+   if (control == tgsi_sampler_gather) {
+      *funcs = &funcs_nearest;
+      if (min) {
+         *min = get_img_filter(sp_sview, &sp_samp->base,
+                               PIPE_TEX_FILTER_LINEAR, true);
+      }
+   } else if (sp_sview->pot2d & sp_samp->min_mag_equal_repeat_linear) {
+      *funcs = &funcs_linear_2d_linear_repeat_POT;
+   } else {
+      *funcs = sp_samp->filter_funcs;
+      if (min) {
+         assert(mag);
+         *min = get_img_filter(sp_sview, &sp_samp->base,
+                               sp_samp->min_img_filter, false);
+         if (sp_samp->min_mag_equal) {
+            *mag = *min;
+         } else {
+            *mag = get_img_filter(sp_sview, &sp_samp->base,
+                                  sp_samp->base.mag_img_filter, false);
+         }
+      }
+   }
+}
 
 static void
 sample_mip(struct sp_sampler_view *sp_sview,
@@ -2945,28 +2982,15 @@ sample_mip(struct sp_sampler_view *sp_sview,
    img_filter_func min_img_filter = NULL;
    img_filter_func mag_img_filter = NULL;
 
-   if (filt_args->control == tgsi_sampler_gather) {
-      funcs = &funcs_nearest;
-      min_img_filter = get_img_filter(sp_sview, &sp_samp->base, PIPE_TEX_FILTER_LINEAR, true);
-   } else if (sp_sview->pot2d & sp_samp->min_mag_equal_repeat_linear) {
-      funcs = &funcs_linear_2d_linear_repeat_POT;
-   }
-   else {
-      funcs = sp_samp->filter_funcs;
-      min_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->min_img_filter, false);
-      if (sp_samp->min_mag_equal) {
-         mag_img_filter = min_img_filter;
-      }
-      else {
-         mag_img_filter = get_img_filter(sp_sview, &sp_samp->base, sp_samp->base.mag_img_filter, false);
-      }
-   }
+   get_filters(sp_sview, sp_samp, filt_args->control,
+               &funcs, &min_img_filter, &mag_img_filter);
 
    funcs->filter(sp_sview, sp_samp, min_img_filter, mag_img_filter,
                  s, t, p, c0, lod, filt_args, rgba);
 
    if (sp_samp->base.compare_mode != PIPE_TEX_COMPARE_NONE) {
-      sample_compare(sp_sview, sp_samp, s, t, p, c0, lod, filt_args->control, rgba);
+      sample_compare(sp_sview, sp_samp, s, t, p, c0,
+                     lod, filt_args->control, rgba);
    }
 
    if (sp_sview->need_swizzle && filt_args->control != tgsi_sampler_gather) {
