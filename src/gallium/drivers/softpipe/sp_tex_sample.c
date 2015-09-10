@@ -3003,27 +3003,22 @@ sample_mip(struct sp_sampler_view *sp_sview,
 
 
 /**
- * Use 3D texcoords to choose a cube face, then sample the 2D cube faces.
- * Put face info into the sampler faces[] array.
+ * This function uses cube texture coordinates to choose a face of a cube and
+ * computes the 2D cube face coordinates. Puts face info into the sampler
+ * faces[] array.
  */
 static void
-sample_cube(struct sp_sampler_view *sp_sview,
-            struct sp_sampler *sp_samp,
-            const float s[TGSI_QUAD_SIZE],
-            const float t[TGSI_QUAD_SIZE],
-            const float p[TGSI_QUAD_SIZE],
-            const float c0[TGSI_QUAD_SIZE],
-            const float c1[TGSI_QUAD_SIZE],
-            const struct filter_args *filt_args,
-            float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
+convert_cube(struct sp_sampler_view *sp_sview,
+             struct sp_sampler *sp_samp,
+             const float s[TGSI_QUAD_SIZE],
+             const float t[TGSI_QUAD_SIZE],
+             const float p[TGSI_QUAD_SIZE],
+             const float c0[TGSI_QUAD_SIZE],
+             float ssss[TGSI_QUAD_SIZE],
+             float tttt[TGSI_QUAD_SIZE],
+             float pppp[TGSI_QUAD_SIZE])
 {
    unsigned j;
-   float ssss[4], tttt[4];
-
-   /* Not actually used, but the intermediate steps that do the
-    * dereferencing don't know it.
-    */
-   static float pppp[4] = { 0, 0, 0, 0 };
 
    pppp[0] = c0[0];
    pppp[1] = c0[1];
@@ -3061,8 +3056,9 @@ sample_cube(struct sp_sampler_view *sp_sview,
       const float arx = fabsf(rx), ary = fabsf(ry), arz = fabsf(rz);
 
       if (arx >= ary && arx >= arz) {
-         float sign = (rx >= 0.0F) ? 1.0F : -1.0F;
-         uint face = (rx >= 0.0F) ? PIPE_TEX_FACE_POS_X : PIPE_TEX_FACE_NEG_X;
+         const float sign = (rx >= 0.0F) ? 1.0F : -1.0F;
+         const uint face = (rx >= 0.0F) ?
+            PIPE_TEX_FACE_POS_X : PIPE_TEX_FACE_NEG_X;
          for (j = 0; j < TGSI_QUAD_SIZE; j++) {
             const float ima = -0.5F / fabsf(s[j]);
             ssss[j] = sign *  p[j] * ima + 0.5F;
@@ -3071,8 +3067,9 @@ sample_cube(struct sp_sampler_view *sp_sview,
          }
       }
       else if (ary >= arx && ary >= arz) {
-         float sign = (ry >= 0.0F) ? 1.0F : -1.0F;
-         uint face = (ry >= 0.0F) ? PIPE_TEX_FACE_POS_Y : PIPE_TEX_FACE_NEG_Y;
+         const float sign = (ry >= 0.0F) ? 1.0F : -1.0F;
+         const uint face = (ry >= 0.0F) ?
+            PIPE_TEX_FACE_POS_Y : PIPE_TEX_FACE_NEG_Y;
          for (j = 0; j < TGSI_QUAD_SIZE; j++) {
             const float ima = -0.5F / fabsf(t[j]);
             ssss[j] =        -s[j] * ima + 0.5F;
@@ -3081,8 +3078,9 @@ sample_cube(struct sp_sampler_view *sp_sview,
          }
       }
       else {
-         float sign = (rz >= 0.0F) ? 1.0F : -1.0F;
-         uint face = (rz >= 0.0F) ? PIPE_TEX_FACE_POS_Z : PIPE_TEX_FACE_NEG_Z;
+         const float sign = (rz >= 0.0F) ? 1.0F : -1.0F;
+         const uint face = (rz >= 0.0F) ?
+            PIPE_TEX_FACE_POS_Z : PIPE_TEX_FACE_NEG_Z;
          for (j = 0; j < TGSI_QUAD_SIZE; j++) {
             const float ima = -0.5F / fabsf(p[j]);
             ssss[j] = sign * -s[j] * ima + 0.5F;
@@ -3091,8 +3089,6 @@ sample_cube(struct sp_sampler_view *sp_sview,
          }
       }
    }
-
-   sample_mip(sp_sview, sp_samp, ssss, tttt, pppp, c0, c1, filt_args, rgba);
 }
 
 
@@ -3411,12 +3407,8 @@ softpipe_create_sampler_view(struct pipe_context *pipe,
          sview->need_swizzle = TRUE;
       }
 
-      if (view->target == PIPE_TEXTURE_CUBE ||
-          view->target == PIPE_TEXTURE_CUBE_ARRAY)
-         sview->get_samples = sample_cube;
-      else {
-         sview->get_samples = sample_mip;
-      }
+      sview->need_cube_convert = (view->target == PIPE_TEXTURE_CUBE ||
+                                  view->target == PIPE_TEXTURE_CUBE_ARRAY);
       sview->pot2d = spr->pot &&
                      (view->target == PIPE_TEXTURE_2D ||
                       view->target == PIPE_TEXTURE_RECT);
@@ -3460,13 +3452,19 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
                     enum tgsi_sampler_control control,
                     float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
-   struct sp_tgsi_sampler *sp_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
+   struct sp_tgsi_sampler *sp_tgsi_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
+   struct sp_sampler_view *sp_sview;
+   struct sp_sampler *sp_samp;
    struct filter_args filt_args;
+
    assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
    assert(sampler_index < PIPE_MAX_SAMPLERS);
-   assert(sp_samp->sp_sampler[sampler_index]);
+   assert(sp_tgsi_samp->sp_sampler[sampler_index]);
+
+   sp_sview = &sp_tgsi_samp->sp_sview[sview_index];
+   sp_samp = sp_tgsi_samp->sp_sampler[sampler_index];
    /* always have a view here but texture is NULL if no sampler view was set. */
-   if (!sp_samp->sp_sview[sview_index].base.texture) {
+   if (!sp_sview->base.texture) {
       int i, j;
       for (j = 0; j < TGSI_NUM_CHANNELS; j++) {
          for (i = 0; i < TGSI_QUAD_SIZE; i++) {
@@ -3478,9 +3476,18 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
 
    filt_args.control = control;
    filt_args.offset = offset;
-   sp_samp->sp_sview[sview_index].get_samples(&sp_samp->sp_sview[sview_index],
-                                              sp_samp->sp_sampler[sampler_index],
-                                              s, t, p, c0, lod, &filt_args, rgba);
+
+   if (sp_sview->need_cube_convert) {
+      float cs[TGSI_QUAD_SIZE];
+      float ct[TGSI_QUAD_SIZE];
+      float cp[TGSI_QUAD_SIZE];
+
+      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp);
+
+      sample_mip(sp_sview, sp_samp, cs, ct, cp, c0, lod, &filt_args, rgba);
+   } else {
+      sample_mip(sp_sview, sp_samp, s, t, p, c0, lod, &filt_args, rgba);
+   }
 }
 
 

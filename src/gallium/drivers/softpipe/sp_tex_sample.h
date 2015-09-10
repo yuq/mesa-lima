@@ -86,18 +86,6 @@ typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
                                 const struct filter_args *args,
                                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
 
-
-typedef void (*filter_func)(struct sp_sampler_view *sp_sview,
-                            struct sp_sampler *sp_samp,
-                            const float s[TGSI_QUAD_SIZE],
-                            const float t[TGSI_QUAD_SIZE],
-                            const float p[TGSI_QUAD_SIZE],
-                            const float c0[TGSI_QUAD_SIZE],
-                            const float lod[TGSI_QUAD_SIZE],
-                            const struct filter_args *args,
-                            float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
-
-
 typedef void (*fetch_func)(struct sp_sampler_view *sp_sview,
                            const int i[TGSI_QUAD_SIZE],
                            const int j[TGSI_QUAD_SIZE], const int k[TGSI_QUAD_SIZE],
@@ -116,8 +104,7 @@ struct sp_sampler_view
 
    boolean need_swizzle;
    boolean pot2d;
-
-   filter_func get_samples;
+   boolean need_cube_convert;
 
    /* this is just abusing the sampler_view object as local storage */
    unsigned faces[TGSI_QUAD_SIZE];
