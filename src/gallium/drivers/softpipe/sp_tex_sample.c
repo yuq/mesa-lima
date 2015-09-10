@@ -3603,6 +3603,59 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
    }
 }
 
+static void
+sp_tgsi_query_lod(struct tgsi_sampler *tgsi_sampler,
+                  const unsigned sview_index,
+                  const unsigned sampler_index,
+                  const float s[TGSI_QUAD_SIZE],
+                  const float t[TGSI_QUAD_SIZE],
+                  const float p[TGSI_QUAD_SIZE],
+                  const float c0[TGSI_QUAD_SIZE],
+                  const enum tgsi_sampler_control control,
+                  float mipmap[TGSI_QUAD_SIZE],
+                  float lod[TGSI_QUAD_SIZE])
+{
+   static const float lod_in[TGSI_QUAD_SIZE] = { 0.0, 0.0, 0.0, 0.0 };
+
+   struct sp_tgsi_sampler *sp_tgsi_samp =
+      (struct sp_tgsi_sampler *)tgsi_sampler;
+   struct sp_sampler_view *sp_sview;
+   struct sp_sampler *sp_samp;
+   const struct sp_filter_funcs *funcs;
+   int i;
+
+   assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
+   assert(sampler_index < PIPE_MAX_SAMPLERS);
+   assert(sp_tgsi_samp->sp_sampler[sampler_index]);
+
+   sp_sview = &sp_tgsi_samp->sp_sview[sview_index];
+   sp_samp = sp_tgsi_samp->sp_sampler[sampler_index];
+   /* always have a view here but texture is NULL if no sampler view was
+    * set. */
+   if (!sp_sview->base.texture) {
+      for (i = 0; i < TGSI_QUAD_SIZE; i++) {
+         mipmap[i] = 0.0f;
+         lod[i] = 0.0f;
+      }
+      return;
+   }
+
+   if (sp_sview->need_cube_convert) {
+      float cs[TGSI_QUAD_SIZE];
+      float ct[TGSI_QUAD_SIZE];
+      float cp[TGSI_QUAD_SIZE];
+
+      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp);
+      compute_lambda_lod_unclamped(sp_sview, sp_samp,
+                                   cs, ct, cp, lod_in, control, lod);
+   } else {
+      compute_lambda_lod_unclamped(sp_sview, sp_samp,
+                                   s, t, p, lod_in, control, lod);
+   }
+
+   get_filters(sp_sview, sp_samp, control, &funcs, NULL, NULL);
+   funcs->relative_level(sp_sview, sp_samp, lod, mipmap);
+}
 
 static void
 sp_tgsi_get_texel(struct tgsi_sampler *tgsi_sampler,
@@ -3639,7 +3692,7 @@ sp_create_tgsi_sampler(void)
    samp->base.get_dims = sp_tgsi_get_dims;
    samp->base.get_samples = sp_tgsi_get_samples;
    samp->base.get_texel = sp_tgsi_get_texel;
+   samp->base.query_lod = sp_tgsi_query_lod;
 
    return samp;
 }
-
