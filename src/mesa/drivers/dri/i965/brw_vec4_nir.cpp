@@ -712,6 +712,60 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_load_ssbo_indirect:
+      has_indirect = true;
+      /* fallthrough */
+   case nir_intrinsic_load_ssbo: {
+      assert(devinfo->gen >= 7);
+
+      nir_const_value *const_uniform_block =
+         nir_src_as_const_value(instr->src[0]);
+
+      src_reg surf_index;
+      if (const_uniform_block) {
+         unsigned index = prog_data->base.binding_table.ubo_start +
+                          const_uniform_block->u[0];
+         surf_index = src_reg(index);
+
+         brw_mark_surface_used(&prog_data->base, index);
+      } else {
+         surf_index = src_reg(this, glsl_type::uint_type);
+         emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[0], 1),
+                  src_reg(prog_data->base.binding_table.ubo_start)));
+         surf_index = emit_uniformize(surf_index);
+
+         /* Assume this may touch any UBO. It would be nice to provide
+          * a tighter bound, but the array information is already lowered away.
+          */
+         brw_mark_surface_used(&prog_data->base,
+                               prog_data->base.binding_table.ubo_start +
+                               shader_prog->NumUniformBlocks - 1);
+      }
+
+      src_reg offset_reg = src_reg(this, glsl_type::uint_type);
+      unsigned const_offset_bytes = 0;
+      if (has_indirect) {
+         emit(MOV(dst_reg(offset_reg), get_nir_src(instr->src[1], 1)));
+      } else {
+         const_offset_bytes = instr->const_index[0];
+         emit(MOV(dst_reg(offset_reg), src_reg(const_offset_bytes)));
+      }
+
+      /* Read the vector */
+      const vec4_builder bld = vec4_builder(this).at_end()
+         .annotate(current_annotation, base_ir);
+
+      src_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                              1 /* dims */, 4 /* size*/,
+                                              BRW_PREDICATE_NONE);
+      dst_reg dest = get_nir_dest(instr->dest);
+      read_result.type = dest.type;
+      read_result.swizzle = brw_swizzle_for_size(instr->num_components);
+      emit(MOV(dest, read_result));
+
+      break;
+   }
+
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
 
