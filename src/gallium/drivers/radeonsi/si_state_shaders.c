@@ -1487,18 +1487,9 @@ bool si_update_shaders(struct si_context *sctx)
 
 	si_update_vgt_shader_config(sctx);
 
-	si_shader_select(ctx, sctx->ps_shader);
-
-	if (!sctx->ps_shader->current) {
-		struct si_shader_selector *sel;
-
-		/* use a dummy shader if compiling the shader (variant) failed */
-		si_make_dummy_ps(sctx);
-		sel = sctx->dummy_pixel_shader;
-		si_shader_select(ctx, sel);
-		sctx->ps_shader->current = sel->current;
-	}
-
+	r = si_shader_select(ctx, sctx->ps_shader);
+	if (r)
+		return false;
 	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
 
 	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
