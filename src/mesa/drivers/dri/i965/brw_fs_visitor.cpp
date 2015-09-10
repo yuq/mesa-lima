@@ -939,9 +939,6 @@ fs_visitor::emit_urb_writes()
          unreachable("unexpected scalar vs output");
          break;
 
-      case BRW_VARYING_SLOT_PAD:
-         break;
-
       default:
          /* gl_Position is always in the vue map, but isn't always written by
           * the shader.  Other varyings (clip distances) get added to the vue
@@ -951,7 +948,8 @@ fs_visitor::emit_urb_writes()
           * slot for writing we flush a mlen 5 urb write, otherwise we just
           * advance the urb_offset.
           */
-         if (this->outputs[varying].file == BAD_FILE) {
+         if (varying == BRW_VARYING_SLOT_PAD ||
+             this->outputs[varying].file == BAD_FILE) {
             if (length > 0)
                flush = true;
             else
