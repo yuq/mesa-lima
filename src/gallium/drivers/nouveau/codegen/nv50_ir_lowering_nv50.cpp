@@ -617,6 +617,7 @@ private:
    bool handleTXL(TexInstruction *); // hate
    bool handleTXD(TexInstruction *); // these 3
    bool handleTXLQ(TexInstruction *);
+   bool handleTXQ(TexInstruction *);
 
    bool handleCALL(Instruction *);
    bool handlePRECONT(Instruction *);
@@ -973,6 +974,23 @@ NV50LoweringPreSSA::handleTXLQ(TexInstruction *i)
    }
    return true;
 }
+
+bool
+NV50LoweringPreSSA::handleTXQ(TexInstruction *i)
+{
+   Value *ms, *ms_x, *ms_y;
+   if (i->tex.query == TXQ_DIMS)
+      return true;
+   assert(i->tex.query == TXQ_TYPE);
+   assert(i->tex.mask == 4);
+
+   loadTexMsInfo(i->tex.r * 4 * 2, &ms, &ms_x, &ms_y);
+   bld.mkOp2(OP_SHL, TYPE_U32, i->getDef(0), bld.loadImm(NULL, 1), ms);
+   i->bb->remove(i);
+
+   return true;
+}
+
 
 bool
 NV50LoweringPreSSA::handleSET(Instruction *i)
@@ -1333,6 +1351,8 @@ NV50LoweringPreSSA::visit(Instruction *i)
       return handleTXD(i->asTex());
    case OP_TXLQ:
       return handleTXLQ(i->asTex());
+   case OP_TXQ:
+      return handleTXQ(i->asTex());
    case OP_EX2:
       bld.mkOp1(OP_PREEX2, TYPE_F32, i->getDef(0), i->getSrc(0));
       i->setSrc(0, i->getDef(0));

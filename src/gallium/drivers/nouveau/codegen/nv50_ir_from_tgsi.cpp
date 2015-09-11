@@ -631,6 +631,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(SAD, SAD);
    NV50_IR_OPCODE_CASE(TXF, TXF);
    NV50_IR_OPCODE_CASE(TXQ, TXQ);
+   NV50_IR_OPCODE_CASE(TXQS, TXQ);
    NV50_IR_OPCODE_CASE(TG4, TXG);
    NV50_IR_OPCODE_CASE(LODQ, TXLQ);
 
@@ -1324,7 +1325,7 @@ private:
    void setTexRS(TexInstruction *, unsigned int& s, int R, int S);
    void handleTEX(Value *dst0[4], int R, int S, int L, int C, int Dx, int Dy);
    void handleTXF(Value *dst0[4], int R, int L_M);
-   void handleTXQ(Value *dst0[4], enum TexQuery);
+   void handleTXQ(Value *dst0[4], enum TexQuery, int R);
    void handleLIT(Value *dst0[4]);
    void handleUserClipPlanes();
 
@@ -1795,7 +1796,7 @@ Converter::setTexRS(TexInstruction *tex, unsigned int& s, int R, int S)
 }
 
 void
-Converter::handleTXQ(Value *dst0[4], enum TexQuery query)
+Converter::handleTXQ(Value *dst0[4], enum TexQuery query, int R)
 {
    TexInstruction *tex = new_TexInstruction(func, OP_TXQ);
    tex->tex.query = query;
@@ -1807,9 +1808,12 @@ Converter::handleTXQ(Value *dst0[4], enum TexQuery query)
       tex->tex.mask |= 1 << c;
       tex->setDef(d++, dst0[c]);
    }
-   tex->setSrc((c = 0), fetchSrc(0, 0)); // mip level
+   if (query == TXQ_DIMS)
+      tex->setSrc((c = 0), fetchSrc(0, 0)); // mip level
+   else
+      tex->setSrc((c = 0), zero);
 
-   setTexRS(tex, ++c, 1, -1);
+   setTexRS(tex, ++c, R, -1);
 
    bb->insertTail(tex);
 }
@@ -2764,7 +2768,15 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       break;
    case TGSI_OPCODE_TXQ:
    case TGSI_OPCODE_SVIEWINFO:
-      handleTXQ(dst0, TXQ_DIMS);
+      handleTXQ(dst0, TXQ_DIMS, 1);
+      break;
+   case TGSI_OPCODE_TXQS:
+      // The TXQ_TYPE query returns samples in its 3rd arg, but we need it to
+      // be in .x
+      dst0[1] = dst0[2] = dst0[3] = NULL;
+      std::swap(dst0[0], dst0[2]);
+      handleTXQ(dst0, TXQ_TYPE, 0);
+      std::swap(dst0[0], dst0[2]);
       break;
    case TGSI_OPCODE_F2I:
    case TGSI_OPCODE_F2U:
