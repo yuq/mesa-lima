@@ -88,8 +88,8 @@ typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
                                 float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
 
 
-typedef void (*mip_level_func)(struct sp_sampler_view *sp_sview,
-                               struct sp_sampler *sp_samp,
+typedef void (*mip_level_func)(const struct sp_sampler_view *sp_sview,
+                               const struct sp_sampler *sp_samp,
                                const float lod[TGSI_QUAD_SIZE],
                                float level[TGSI_QUAD_SIZE]);
 

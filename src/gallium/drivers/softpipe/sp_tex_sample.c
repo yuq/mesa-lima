@@ -1861,8 +1861,8 @@ compute_lod(const struct pipe_sampler_state *sampler,
  * \param lod results per-fragment lod.
  */
 static inline void
-compute_lambda_lod_unclamped(struct sp_sampler_view *sp_sview,
-                             struct sp_sampler *sp_samp,
+compute_lambda_lod_unclamped(const struct sp_sampler_view *sp_sview,
+                             const struct sp_sampler *sp_samp,
                              const float s[TGSI_QUAD_SIZE],
                              const float t[TGSI_QUAD_SIZE],
                              const float p[TGSI_QUAD_SIZE],
@@ -1965,8 +1965,8 @@ clamp_lod(const struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for linear mip filter
  */
 static void
-mip_rel_level_linear(struct sp_sampler_view *sp_sview,
-                     struct sp_sampler *sp_samp,
+mip_rel_level_linear(const struct sp_sampler_view *sp_sview,
+                     const struct sp_sampler *sp_samp,
                      const float lod[TGSI_QUAD_SIZE],
                      float level[TGSI_QUAD_SIZE])
 {
@@ -2039,8 +2039,8 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for nearest mip filter
  */
 static void
-mip_rel_level_nearest(struct sp_sampler_view *sp_sview,
-                      struct sp_sampler *sp_samp,
+mip_rel_level_nearest(const struct sp_sampler_view *sp_sview,
+                      const struct sp_sampler *sp_samp,
                       const float lod[TGSI_QUAD_SIZE],
                       float level[TGSI_QUAD_SIZE])
 {
@@ -2109,8 +2109,8 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for none mip filter
  */
 static void
-mip_rel_level_none(struct sp_sampler_view *sp_sview,
-                   struct sp_sampler *sp_samp,
+mip_rel_level_none(const struct sp_sampler_view *sp_sview,
+                   const struct sp_sampler *sp_samp,
                    const float lod[TGSI_QUAD_SIZE],
                    float level[TGSI_QUAD_SIZE])
 {
@@ -2163,8 +2163,8 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for none mip filter
  */
 static void
-mip_rel_level_none_no_filter_select(struct sp_sampler_view *sp_sview,
-                                    struct sp_sampler *sp_samp,
+mip_rel_level_none_no_filter_select(const struct sp_sampler_view *sp_sview,
+                                    const struct sp_sampler *sp_samp,
                                     const float lod[TGSI_QUAD_SIZE],
                                     float level[TGSI_QUAD_SIZE])
 {
@@ -2428,8 +2428,8 @@ img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for linear mip filter
  */
 static void
-mip_rel_level_linear_aniso(struct sp_sampler_view *sp_sview,
-                           struct sp_sampler *sp_samp,
+mip_rel_level_linear_aniso(const struct sp_sampler_view *sp_sview,
+                           const struct sp_sampler *sp_samp,
                            const float lod[TGSI_QUAD_SIZE],
                            float level[TGSI_QUAD_SIZE])
 {
@@ -2551,10 +2551,11 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
  * Get mip level relative to base level for linear mip filter
  */
 static void
-mip_rel_level_linear_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
-                                          struct sp_sampler *sp_samp,
-                                          const float lod[TGSI_QUAD_SIZE],
-                                          float level[TGSI_QUAD_SIZE])
+mip_rel_level_linear_2d_linear_repeat_POT(
+   const struct sp_sampler_view *sp_sview,
+   const struct sp_sampler *sp_samp,
+   const float lod[TGSI_QUAD_SIZE],
+   float level[TGSI_QUAD_SIZE])
 {
    mip_rel_level_linear(sp_sview, sp_samp, lod, level);
 }
@@ -3049,9 +3050,9 @@ get_img_filter(const struct sp_sampler_view *sp_sview,
  * or NULL.
  */
 static void
-get_filters(struct sp_sampler_view *sp_sview,
-            struct sp_sampler *sp_samp,
-            enum tgsi_sampler_control control,
+get_filters(const struct sp_sampler_view *sp_sview,
+            const struct sp_sampler *sp_samp,
+            const enum tgsi_sampler_control control,
             const struct sp_filter_funcs **funcs,
             img_filter_func *min,
             img_filter_func *mag)
@@ -3122,8 +3123,8 @@ sample_mip(struct sp_sampler_view *sp_sview,
  * faces[] array.
  */
 static void
-convert_cube(struct sp_sampler_view *sp_sview,
-             struct sp_sampler *sp_samp,
+convert_cube(const struct sp_sampler_view *sp_sview,
+             const struct sp_sampler *sp_samp,
              const float s[TGSI_QUAD_SIZE],
              const float t[TGSI_QUAD_SIZE],
              const float p[TGSI_QUAD_SIZE],
@@ -3624,10 +3625,10 @@ sp_tgsi_query_lod(struct tgsi_sampler *tgsi_sampler,
 {
    static const float lod_in[TGSI_QUAD_SIZE] = { 0.0, 0.0, 0.0, 0.0 };
 
-   struct sp_tgsi_sampler *sp_tgsi_samp =
-      (struct sp_tgsi_sampler *)tgsi_sampler;
-   struct sp_sampler_view *sp_sview;
-   struct sp_sampler *sp_samp;
+   const struct sp_tgsi_sampler *sp_tgsi_samp =
+      (const struct sp_tgsi_sampler *)tgsi_sampler;
+   const struct sp_sampler_view *sp_sview;
+   const struct sp_sampler *sp_samp;
    const struct sp_filter_funcs *funcs;
    int i;
 
