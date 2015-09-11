@@ -43,6 +43,8 @@ typedef enum
    MESA_SHADER_COMPUTE = 5,
 } gl_shader_stage;
 
+const char * gl_shader_stage_name(gl_shader_stage stage);
+
 #define MESA_SHADER_STAGES (MESA_SHADER_COMPUTE + 1)
 
 
@@ -90,6 +92,8 @@ typedef enum
    VERT_ATTRIB_GENERIC15 = 32,
    VERT_ATTRIB_MAX = 33
 } gl_vert_attrib;
+
+const char * gl_vert_attrib_name(gl_vert_attrib attrib);
 
 /**
  * Symbolic constats to help iterating over
@@ -193,8 +197,43 @@ typedef enum
    VARYING_SLOT_TESS_LEVEL_OUTER, /* Only appears as TCS output. */
    VARYING_SLOT_TESS_LEVEL_INNER, /* Only appears as TCS output. */
    VARYING_SLOT_VAR0, /* First generic varying slot */
+   /* the remaining are simply for the benefit of gl_varying_slot_name()
+    * and not to be construed as an upper bound:
+    */
+   VARYING_SLOT_VAR1,
+   VARYING_SLOT_VAR2,
+   VARYING_SLOT_VAR3,
+   VARYING_SLOT_VAR4,
+   VARYING_SLOT_VAR5,
+   VARYING_SLOT_VAR6,
+   VARYING_SLOT_VAR7,
+   VARYING_SLOT_VAR8,
+   VARYING_SLOT_VAR9,
+   VARYING_SLOT_VAR10,
+   VARYING_SLOT_VAR11,
+   VARYING_SLOT_VAR12,
+   VARYING_SLOT_VAR13,
+   VARYING_SLOT_VAR14,
+   VARYING_SLOT_VAR15,
+   VARYING_SLOT_VAR16,
+   VARYING_SLOT_VAR17,
+   VARYING_SLOT_VAR18,
+   VARYING_SLOT_VAR19,
+   VARYING_SLOT_VAR20,
+   VARYING_SLOT_VAR21,
+   VARYING_SLOT_VAR22,
+   VARYING_SLOT_VAR23,
+   VARYING_SLOT_VAR24,
+   VARYING_SLOT_VAR25,
+   VARYING_SLOT_VAR26,
+   VARYING_SLOT_VAR27,
+   VARYING_SLOT_VAR28,
+   VARYING_SLOT_VAR29,
+   VARYING_SLOT_VAR30,
+   VARYING_SLOT_VAR31,
 } gl_varying_slot;
 
+const char * gl_varying_slot_name(gl_varying_slot slot);
 
 /**
  * Bitflags for varying slots.
@@ -376,6 +415,7 @@ typedef enum
    SYSTEM_VALUE_MAX             /**< Number of values */
 } gl_system_value;
 
+const char * gl_system_value_name(gl_system_value sysval);
 
 /**
  * The possible interpolation qualifiers that can be applied to a fragment
@@ -393,6 +433,8 @@ enum glsl_interp_qualifier
    INTERP_QUALIFIER_COUNT /**< Number of interpolation qualifiers */
 };
 
+const char * glsl_interp_qualifier_name(enum glsl_interp_qualifier qual);
+
 /**
  * Fragment program results
  */
@@ -409,8 +451,19 @@ typedef enum
    /* FRAG_RESULT_DATAn are the per-render-target (GLSL gl_FragData[n]
     * or ARB_fragment_program fragment.color[n]) color results.  If
     * any are written, FRAG_RESULT_COLOR will not be written.
+    * FRAG_RESULT_DATA1 and up are simply for the benefit of
+    * gl_frag_result_name() and not to be construed as an upper bound
     */
    FRAG_RESULT_DATA0 = 4,
+   FRAG_RESULT_DATA1,
+   FRAG_RESULT_DATA2,
+   FRAG_RESULT_DATA3,
+   FRAG_RESULT_DATA4,
+   FRAG_RESULT_DATA5,
+   FRAG_RESULT_DATA6,
+   FRAG_RESULT_DATA7,
 } gl_frag_result;
+
+const char * gl_frag_result_name(gl_frag_result result);
 
 #endif /* SHADER_ENUMS_H */
