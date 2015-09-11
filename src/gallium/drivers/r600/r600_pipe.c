@@ -341,6 +341,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
+	case PIPE_CAP_TGSI_TXQS:
 		return 0;
 
 	/* Stream output. */
