@@ -3059,6 +3059,96 @@ static int tgsi_dfracexp(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+
+static int egcm_int_to_double(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	struct r600_bytecode_alu alu;
+	int i, r;
+	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
+
+	assert(inst->Instruction.Opcode == TGSI_OPCODE_I2D ||
+		inst->Instruction.Opcode == TGSI_OPCODE_U2D);
+
+	for (i = 0; i <= (lasti+1)/2; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ctx->inst_info->op;
+
+		r600_bytecode_src(&alu.src[0], &ctx->src[0], i);
+		alu.dst.sel = ctx->temp_reg;
+		alu.dst.chan = i;
+		alu.dst.write = 1;
+		alu.last = 1;
+
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	for (i = 0; i <= lasti; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_FLT32_TO_FLT64;
+
+		alu.src[0].chan = i/2;
+		if (i%2 == 0)
+			alu.src[0].sel = ctx->temp_reg;
+		else {
+			alu.src[0].sel = V_SQ_ALU_SRC_LITERAL;
+			alu.src[0].value = 0x0;
+		}
+		tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
+		alu.last = i == lasti;
+
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	return 0;
+}
+
+static int egcm_double_to_int(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	struct r600_bytecode_alu alu;
+	int i, r;
+	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
+
+	assert(inst->Instruction.Opcode == TGSI_OPCODE_D2I ||
+		inst->Instruction.Opcode == TGSI_OPCODE_D2U);
+
+	for (i = 0; i <= lasti; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_FLT64_TO_FLT32;
+
+		r600_bytecode_src(&alu.src[0], &ctx->src[0], fp64_switch(i));
+		alu.dst.chan = i;
+		alu.dst.sel = ctx->temp_reg;
+		alu.dst.write = i%2 == 0;
+		alu.last = i == lasti;
+
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	for (i = 0; i <= (lasti+1)/2; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ctx->inst_info->op;
+
+		alu.src[0].chan = i*2;
+		alu.src[0].sel = ctx->temp_reg;
+		tgsi_dst(ctx, &inst->Dst[0], 0, &alu.dst);
+		alu.last = 1;
+
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	return 0;
+}
+
 static int cayman_emit_double_instr(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
@@ -8153,10 +8243,10 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_DFRAC]	= { ALU_OP1_FRACT_64, tgsi_op2_64},
 	[TGSI_OPCODE_DLDEXP]	= { ALU_OP2_LDEXP_64, tgsi_op2_64},
 	[TGSI_OPCODE_DFRACEXP]	= { ALU_OP1_FREXP_64, tgsi_dfracexp},
-	[TGSI_OPCODE_D2I]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_I2D]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_D2U]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_U2D]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_D2I]	= { ALU_OP1_FLT_TO_INT, egcm_double_to_int},
+	[TGSI_OPCODE_I2D]	= { ALU_OP1_INT_TO_FLT, egcm_int_to_double},
+	[TGSI_OPCODE_D2U]	= { ALU_OP1_FLT_TO_UINT, egcm_double_to_int},
+	[TGSI_OPCODE_U2D]	= { ALU_OP1_UINT_TO_FLT, egcm_int_to_double},
 	[TGSI_OPCODE_DRSQ]	= { ALU_OP2_RECIPSQRT_64, cayman_emit_double_instr},
 	[TGSI_OPCODE_LAST]	= { ALU_OP0_NOP, tgsi_unsupported},
 };
@@ -8375,10 +8465,10 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_DFRAC]	= { ALU_OP1_FRACT_64, tgsi_op2_64},
 	[TGSI_OPCODE_DLDEXP]	= { ALU_OP2_LDEXP_64, tgsi_op2_64},
 	[TGSI_OPCODE_DFRACEXP]	= { ALU_OP1_FREXP_64, tgsi_dfracexp},
-	[TGSI_OPCODE_D2I]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_I2D]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_D2U]	= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_U2D]	= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_D2I]	= { ALU_OP1_FLT_TO_INT, egcm_double_to_int},
+	[TGSI_OPCODE_I2D]	= { ALU_OP1_INT_TO_FLT, egcm_int_to_double},
+	[TGSI_OPCODE_D2U]	= { ALU_OP1_FLT_TO_UINT, egcm_double_to_int},
+	[TGSI_OPCODE_U2D]	= { ALU_OP1_UINT_TO_FLT, egcm_int_to_double},
 	[TGSI_OPCODE_DRSQ]	= { ALU_OP2_RECIPSQRT_64, cayman_emit_double_instr},
 	[TGSI_OPCODE_LAST]	= { ALU_OP0_NOP, tgsi_unsupported},
 };
