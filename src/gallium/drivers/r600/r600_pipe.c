@@ -500,6 +500,9 @@ static int r600_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
 			return PIPE_SHADER_IR_TGSI;
 		}
 	case PIPE_SHADER_CAP_DOUBLES:
+		if (rscreen->b.family == CHIP_CYPRESS ||
+			rscreen->b.family == CHIP_CAYMAN || rscreen->b.family == CHIP_ARUBA)
+			return 1;
 		return 0;
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
