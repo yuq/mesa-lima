@@ -449,7 +449,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       struct anv_descriptor_slot *surface_slots =
          set_layout->stage[stage].surface_start;
 
-      uint32_t start = bias + layout->set[set].surface_start[stage];
+      uint32_t start = bias + layout->set[set].stage[stage].surface_start;
 
       for (uint32_t b = 0; b < set_layout->stage[stage].surface_count; b++) {
          struct anv_surface_view *view =
@@ -515,7 +515,7 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       struct anv_descriptor_slot *sampler_slots =
          set_layout->stage[stage].sampler_start;
 
-      uint32_t start = layout->set[set].sampler_start[stage];
+      uint32_t start = layout->set[set].stage[stage].sampler_start;
 
       for (uint32_t b = 0; b < set_layout->stage[stage].sampler_count; b++) {
          struct anv_sampler *sampler =

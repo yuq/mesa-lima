@@ -664,8 +664,10 @@ anv_descriptor_set_destroy(struct anv_device *device,
 struct anv_pipeline_layout {
    struct {
       struct anv_descriptor_set_layout *layout;
-      uint32_t surface_start[VK_SHADER_STAGE_NUM];
-      uint32_t sampler_start[VK_SHADER_STAGE_NUM];
+      struct {
+         uint32_t surface_start;
+         uint32_t sampler_start;
+      } stage[VK_SHADER_STAGE_NUM];
    } set[MAX_SETS];
 
    uint32_t num_sets;

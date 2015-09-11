@@ -395,9 +395,9 @@ VkResult anv_CreatePipelineLayout(
 
       layout->set[i].layout = set_layout;
       for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
-         layout->set[i].surface_start[s] = surface_start[s];
+         layout->set[i].stage[s].surface_start = surface_start[s];
          surface_start[s] += set_layout->stage[s].surface_count;
-         layout->set[i].sampler_start[s] = sampler_start[s];
+         layout->set[i].stage[s].sampler_start = sampler_start[s];
          sampler_start[s] += set_layout->stage[s].sampler_count;
 
          layout->stage[s].surface_count += set_layout->stage[s].surface_count;
