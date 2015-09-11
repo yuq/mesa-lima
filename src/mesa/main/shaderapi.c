@@ -729,7 +729,11 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_ubo)
          break;
 
-      *params = shProg->NumUniformBlocks;
+      *params = 0;
+      for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
+         if (!shProg->UniformBlocks[i].IsShaderStorage)
+            (*params)++;
+      }
       return;
    case GL_PROGRAM_BINARY_RETRIEVABLE_HINT:
       /* This enum isn't part of the OES extension for OpenGL ES 2.0.  It is
