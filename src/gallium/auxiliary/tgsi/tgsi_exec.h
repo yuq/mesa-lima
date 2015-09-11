@@ -139,7 +139,7 @@ struct tgsi_sampler
                      const int j[TGSI_QUAD_SIZE], const int k[TGSI_QUAD_SIZE],
                      const int lod[TGSI_QUAD_SIZE], const int8_t offset[3],
                      float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE]);
-   void (*query_lod)(struct tgsi_sampler *tgsi_sampler,
+   void (*query_lod)(const struct tgsi_sampler *tgsi_sampler,
                      const unsigned sview_index,
                      const unsigned sampler_index,
                      const float s[TGSI_QUAD_SIZE],

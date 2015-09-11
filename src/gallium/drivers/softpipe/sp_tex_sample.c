@@ -3612,7 +3612,7 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
 }
 
 static void
-sp_tgsi_query_lod(struct tgsi_sampler *tgsi_sampler,
+sp_tgsi_query_lod(const struct tgsi_sampler *tgsi_sampler,
                   const unsigned sview_index,
                   const unsigned sampler_index,
                   const float s[TGSI_QUAD_SIZE],
