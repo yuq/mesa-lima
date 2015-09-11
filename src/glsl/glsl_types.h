@@ -292,6 +292,14 @@ struct glsl_type {
    unsigned component_slots() const;
 
    /**
+    * Calculate offset between the base location of the struct in
+    * uniform storage and a struct member.
+    * For the initial call, length is the index of the member to find the
+    * offset for.
+    */
+   unsigned record_location_offset(unsigned length) const;
+
+   /**
     * Calculate the number of unique values from glGetUniformLocation for the
     * elements of the type.
     *

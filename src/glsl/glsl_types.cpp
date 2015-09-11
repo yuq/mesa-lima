@@ -1040,6 +1040,32 @@ glsl_type::component_slots() const
 }
 
 unsigned
+glsl_type::record_location_offset(unsigned length) const
+{
+   unsigned offset = 0;
+   const glsl_type *t = this->without_array();
+   if (t->is_record()) {
+      assert(length <= t->length);
+
+      for (unsigned i = 0; i < length; i++) {
+         const glsl_type *st = t->fields.structure[i].type;
+         const glsl_type *wa = st->without_array();
+         if (wa->is_record()) {
+            unsigned r_offset = wa->record_location_offset(wa->length);
+            offset += st->is_array() ? st->length * r_offset : r_offset;
+         } else {
+            /* We dont worry about arrays here because unless the array
+             * contains a structure or another array it only takes up a single
+             * uniform slot.
+             */
+            offset += 1;
+         }
+      }
+   }
+   return offset;
+}
+
+unsigned
 glsl_type::uniform_locations() const
 {
    unsigned size = 0;
