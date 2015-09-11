@@ -240,17 +240,10 @@ static void r600_set_clip_state(struct pipe_context *ctx,
 				const struct pipe_clip_state *state)
 {
 	struct r600_context *rctx = (struct r600_context *)ctx;
-	struct pipe_constant_buffer cb;
 
 	rctx->clip_state.state = *state;
 	r600_mark_atom_dirty(rctx, &rctx->clip_state.atom);
-
-	cb.buffer = NULL;
-	cb.user_buffer = state->ucp;
-	cb.buffer_offset = 0;
-	cb.buffer_size = 4*4*8;
-	ctx->set_constant_buffer(ctx, PIPE_SHADER_VERTEX, R600_UCP_CONST_BUFFER, &cb);
-	pipe_resource_reference(&cb.buffer, NULL);
+	rctx->driver_consts[PIPE_SHADER_VERTEX].vs_ucp_dirty = true;
 }
 
 static void r600_set_stencil_ref(struct pipe_context *ctx,
@@ -1053,6 +1046,74 @@ static void r600_set_sample_mask(struct pipe_context *pipe, unsigned sample_mask
 	r600_mark_atom_dirty(rctx, &rctx->sample_mask.atom);
 }
 
+static void r600_update_driver_const_buffers(struct r600_context *rctx)
+{
+	int sh, size;;
+	void *ptr;
+	struct pipe_constant_buffer cb;
+	for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
+		struct r600_shader_driver_constants_info *info = &rctx->driver_consts[sh];
+		if (!info->vs_ucp_dirty &&
+		    !info->texture_const_dirty &&
+		    !info->ps_sample_pos_dirty)
+			continue;
+
+		ptr = info->constants;
+		size = info->alloc_size;
+		if (info->vs_ucp_dirty) {
+			assert(sh == PIPE_SHADER_VERTEX);
+			if (!size) {
+				ptr = rctx->clip_state.state.ucp;
+				size = R600_UCP_SIZE;
+			} else {
+				memcpy(ptr, rctx->clip_state.state.ucp, R600_UCP_SIZE);
+			}
+			info->vs_ucp_dirty = false;
+		}
+
+		if (info->ps_sample_pos_dirty) {
+			assert(sh == PIPE_SHADER_FRAGMENT);
+			if (!size) {
+				ptr = rctx->sample_positions;
+				size = R600_UCP_SIZE;
+			} else {
+				memcpy(ptr, rctx->sample_positions, R600_UCP_SIZE);
+			}
+			info->ps_sample_pos_dirty = false;
+		}
+
+		if (info->texture_const_dirty) {
+			assert (ptr);
+			assert (size);
+			if (sh == PIPE_SHADER_VERTEX)
+				memcpy(ptr, rctx->clip_state.state.ucp, R600_UCP_SIZE);
+			if (sh == PIPE_SHADER_FRAGMENT)
+				memcpy(ptr, rctx->sample_positions, R600_UCP_SIZE);
+		}
+		info->texture_const_dirty = false;
+
+		cb.buffer = NULL;
+		cb.user_buffer = ptr;
+		cb.buffer_offset = 0;
+		cb.buffer_size = size;
+		rctx->b.b.set_constant_buffer(&rctx->b.b, sh, R600_BUFFER_INFO_CONST_BUFFER, &cb);
+		pipe_resource_reference(&cb.buffer, NULL);
+	}
+}
+
+static void *r600_alloc_buf_consts(struct r600_context *rctx, int shader_type,
+				   int array_size, uint32_t *base_offset)
+{
+	struct r600_shader_driver_constants_info *info = &rctx->driver_consts[shader_type];
+	if (array_size + R600_UCP_SIZE > info->alloc_size) {
+		info->constants = realloc(info->constants, array_size + R600_UCP_SIZE);
+		info->alloc_size = array_size + R600_UCP_SIZE;
+	}
+	memset(info->constants + (R600_UCP_SIZE / 4), 0, array_size);
+	info->texture_const_dirty = true;
+	*base_offset = R600_UCP_SIZE;
+	return info->constants;
+}
 /*
  * On r600/700 hw we don't have vertex fetch swizzle, though TBO
  * doesn't require full swizzles it does need masking and setting alpha
@@ -1067,9 +1128,9 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
 	int bits;
 	uint32_t array_size;
-	struct pipe_constant_buffer cb;
 	int i, j;
-
+	uint32_t *constants;
+	uint32_t base_offset;
 	if (!samplers->views.dirty_buffer_constants)
 		return;
 
@@ -1077,38 +1138,33 @@ static void r600_setup_buffer_constants(struct r600_context *rctx, int shader_ty
 
 	bits = util_last_bit(samplers->views.enabled_mask);
 	array_size = bits * 8 * sizeof(uint32_t) * 4;
-	samplers->buffer_constants = realloc(samplers->buffer_constants, array_size);
-	memset(samplers->buffer_constants, 0, array_size);
+
+	constants = r600_alloc_buf_consts(rctx, shader_type, array_size, &base_offset);
+
 	for (i = 0; i < bits; i++) {
 		if (samplers->views.enabled_mask & (1 << i)) {
-			int offset = i * 8;
+			int offset = (base_offset / 4) + i * 8;
 			const struct util_format_description *desc;
 			desc = util_format_description(samplers->views.views[i]->base.format);
 
 			for (j = 0; j < 4; j++)
 				if (j < desc->nr_channels)
-					samplers->buffer_constants[offset+j] = 0xffffffff;
+					constants[offset+j] = 0xffffffff;
 				else
-					samplers->buffer_constants[offset+j] = 0x0;
+					constants[offset+j] = 0x0;
 			if (desc->nr_channels < 4) {
 				if (desc->channel[0].pure_integer)
-					samplers->buffer_constants[offset+4] = 1;
+					constants[offset+4] = 1;
 				else
-					samplers->buffer_constants[offset+4] = fui(1.0);
+					constants[offset+4] = fui(1.0);
 			} else
-				samplers->buffer_constants[offset + 4] = 0;
+				constants[offset + 4] = 0;
 
-			samplers->buffer_constants[offset + 5] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
-			samplers->buffer_constants[offset + 6] = samplers->views.views[i]->base.texture->array_size / 6;
+			constants[offset + 5] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+			constants[offset + 6] = samplers->views.views[i]->base.texture->array_size / 6;
 		}
 	}
 
-	cb.buffer = NULL;
-	cb.user_buffer = samplers->buffer_constants;
-	cb.buffer_offset = 0;
-	cb.buffer_size = array_size;
-	rctx->b.b.set_constant_buffer(&rctx->b.b, shader_type, R600_BUFFER_INFO_CONST_BUFFER, &cb);
-	pipe_resource_reference(&cb.buffer, NULL);
 }
 
 /* On evergreen we store two values
@@ -1120,9 +1176,9 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 	struct r600_textures_info *samplers = &rctx->samplers[shader_type];
 	int bits;
 	uint32_t array_size;
-	struct pipe_constant_buffer cb;
 	int i;
-
+	uint32_t *constants;
+	uint32_t base_offset;
 	if (!samplers->views.dirty_buffer_constants)
 		return;
 
@@ -1130,45 +1186,37 @@ static void eg_setup_buffer_constants(struct r600_context *rctx, int shader_type
 
 	bits = util_last_bit(samplers->views.enabled_mask);
 	array_size = bits * 2 * sizeof(uint32_t) * 4;
-	samplers->buffer_constants = realloc(samplers->buffer_constants, array_size);
-	memset(samplers->buffer_constants, 0, array_size);
+
+	constants = r600_alloc_buf_consts(rctx, shader_type, array_size,
+					  &base_offset);
+
 	for (i = 0; i < bits; i++) {
 		if (samplers->views.enabled_mask & (1 << i)) {
-			uint32_t offset = i * 2;
-			samplers->buffer_constants[offset] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
-			samplers->buffer_constants[offset + 1] = samplers->views.views[i]->base.texture->array_size / 6;
+			uint32_t offset = (base_offset / 4) + i * 2;
+			constants[offset] = samplers->views.views[i]->base.texture->width0 / util_format_get_blocksize(samplers->views.views[i]->base.format);
+			constants[offset + 1] = samplers->views.views[i]->base.texture->array_size / 6;
 		}
 	}
-
-	cb.buffer = NULL;
-	cb.user_buffer = samplers->buffer_constants;
-	cb.buffer_offset = 0;
-	cb.buffer_size = array_size;
-	rctx->b.b.set_constant_buffer(&rctx->b.b, shader_type, R600_BUFFER_INFO_CONST_BUFFER, &cb);
-	pipe_resource_reference(&cb.buffer, NULL);
 }
 
 /* set sample xy locations as array of fragment shader constants */
 void r600_set_sample_locations_constant_buffer(struct r600_context *rctx)
 {
-	struct pipe_constant_buffer constbuf = {0};
-	float values[4*16] = {0.0f};
 	int i;
 	struct pipe_context *ctx = &rctx->b.b;
 
-	assert(rctx->framebuffer.nr_samples <= Elements(values)/4);
+	assert(rctx->framebuffer.nr_samples < R600_UCP_SIZE);
+	assert(rctx->framebuffer.nr_samples <= Elements(rctx->sample_positions)/4);
+
+	memset(rctx->sample_positions, 0, 4 * 4 * 16);
 	for (i = 0; i < rctx->framebuffer.nr_samples; i++) {
-		ctx->get_sample_position(ctx, rctx->framebuffer.nr_samples, i, &values[4*i]);
+		ctx->get_sample_position(ctx, rctx->framebuffer.nr_samples, i, &rctx->sample_positions[4*i]);
 		/* Also fill in center-zeroed positions used for interpolateAtSample */
-		values[4*i + 2] = values[4*i + 0] - 0.5f;
-		values[4*i + 3] = values[4*i + 1] - 0.5f;
+		rctx->sample_positions[4*i + 2] = rctx->sample_positions[4*i + 0] - 0.5f;
+		rctx->sample_positions[4*i + 3] = rctx->sample_positions[4*i + 1] - 0.5f;
 	}
 
-	constbuf.user_buffer = values;
-	constbuf.buffer_size = rctx->framebuffer.nr_samples * 4 * 4;
-	ctx->set_constant_buffer(ctx, PIPE_SHADER_FRAGMENT,
-		R600_SAMPLE_POSITIONS_CONST_BUFFER, &constbuf);
-	pipe_resource_reference(&constbuf.buffer, NULL);
+	rctx->driver_consts[PIPE_SHADER_FRAGMENT].ps_sample_pos_dirty = true;
 }
 
 static void update_shader_atom(struct pipe_context *ctx,
@@ -1386,6 +1434,8 @@ static bool r600_update_derived_state(struct r600_context *rctx)
 				eg_setup_buffer_constants(rctx, PIPE_SHADER_GEOMETRY);
 		}
 	}
+
+	r600_update_driver_const_buffers(rctx);
 
 	if (rctx->b.chip_class < EVERGREEN && rctx->ps_shader && rctx->vs_shader) {
 		if (!r600_adjust_gprs(rctx)) {

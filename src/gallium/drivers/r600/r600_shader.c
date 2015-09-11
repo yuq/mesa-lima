@@ -60,6 +60,7 @@ issued in the w slot as well.
 The compiler must issue the source argument to slots z, y, and x
 */
 
+#define R600_SHADER_BUFFER_INFO_SEL (512 + R600_BUFFER_INFO_OFFSET / 16)
 static int r600_shader_from_tgsi(struct r600_context *rctx,
 				 struct r600_pipe_shader *pipeshader,
 				 union r600_shader_key key);
@@ -947,7 +948,7 @@ static int load_sample_position(struct r600_shader_ctx *ctx, struct r600_shader_
 
 	memset(&vtx, 0, sizeof(struct r600_bytecode_vtx));
 	vtx.op = FETCH_OP_VFETCH;
-	vtx.buffer_id = R600_SAMPLE_POSITIONS_CONST_BUFFER;
+	vtx.buffer_id = R600_BUFFER_INFO_CONST_BUFFER;
 	vtx.fetch_type = SQ_VTX_FETCH_NO_INDEX_OFFSET;
 	if (sample_id == NULL) {
 		vtx.src_gpr = ctx->fixed_pt_position_gpr; // SAMPLEID is in .w;
@@ -2307,7 +2308,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 				alu.src[0].chan = j;
 
 				alu.src[1].sel = 512 + i;
-				alu.src[1].kc_bank = R600_UCP_CONST_BUFFER;
+				alu.src[1].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
 				alu.src[1].chan = j;
 
 				alu.dst.sel = clipdist_temp[oreg];
@@ -5499,7 +5500,8 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 		alu.src[0].sel = vtx.dst_gpr;
 		alu.src[0].chan = i;
 
-		alu.src[1].sel = 512 + (id * 2);
+		alu.src[1].sel = R600_SHADER_BUFFER_INFO_SEL;
+		alu.src[1].sel += (id * 2);
 		alu.src[1].chan = i % 4;
 		alu.src[1].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
 
@@ -5521,7 +5523,7 @@ static int do_vtx_fetch_inst(struct r600_shader_ctx *ctx, boolean src_requires_l
 		alu.src[0].sel = vtx.dst_gpr;
 		alu.src[0].chan = 3;
 
-		alu.src[1].sel = 512 + (id * 2) + 1;
+		alu.src[1].sel = R600_SHADER_BUFFER_INFO_SEL + (id * 2) + 1;
 		alu.src[1].chan = 0;
 		alu.src[1].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
 
@@ -5542,14 +5544,14 @@ static int r600_do_buffer_txq(struct r600_shader_ctx *ctx)
 
 	memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 	alu.op = ALU_OP1_MOV;
-
+	alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 	if (ctx->bc->chip_class >= EVERGREEN) {
 		/* channel 0 or 2 of each word */
-		alu.src[0].sel = 512 + (id / 2);
+		alu.src[0].sel += (id / 2);
 		alu.src[0].chan = (id % 2) * 2;
 	} else {
 		/* r600 we have them at channel 2 of the second dword */
-		alu.src[0].sel = 512 + (id * 2) + 1;
+		alu.src[0].sel += (id * 2) + 1;
 		alu.src[0].chan = 1;
 	}
 	alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;
@@ -6207,13 +6209,14 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
 		alu.op = ALU_OP1_MOV;
 
+		alu.src[0].sel = R600_SHADER_BUFFER_INFO_SEL;
 		if (ctx->bc->chip_class >= EVERGREEN) {
 			/* channel 1 or 3 of each word */
-			alu.src[0].sel = 512 + (id / 2);
+			alu.src[0].sel += (id / 2);
 			alu.src[0].chan = ((id % 2) * 2) + 1;
 		} else {
 			/* r600 we have them at channel 2 of the second dword */
-			alu.src[0].sel = 512 + (id * 2) + 1;
+			alu.src[0].sel += (id * 2) + 1;
 			alu.src[0].chan = 2;
 		}
 		alu.src[0].kc_bank = R600_BUFFER_INFO_CONST_BUFFER;

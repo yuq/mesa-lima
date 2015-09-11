@@ -63,13 +63,15 @@
 #define R600_TRACE_CS_DWORDS		7
 
 #define R600_MAX_USER_CONST_BUFFERS 13
-#define R600_MAX_DRIVER_CONST_BUFFERS 3
+#define R600_MAX_DRIVER_CONST_BUFFERS 2
 #define R600_MAX_CONST_BUFFERS (R600_MAX_USER_CONST_BUFFERS + R600_MAX_DRIVER_CONST_BUFFERS)
 
 /* start driver buffers after user buffers */
-#define R600_UCP_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
-#define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
-#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 2)
+#define R600_BUFFER_INFO_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
+#define R600_UCP_SIZE (4*4*8)
+#define R600_BUFFER_INFO_OFFSET (R600_UCP_SIZE)
+
+#define R600_GS_RING_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS + 1)
 /* Currently R600_MAX_CONST_BUFFERS just fits on the hw, which has a limit
  * of 16 const buffers.
  * UCP/SAMPLE_POSITIONS are never accessed by same shader stage so they can use the same id.
@@ -77,8 +79,6 @@
  * In order to support d3d 11 mandated minimum of 15 user const buffers
  * we'd have to squash all use cases into one driver buffer.
  */
-#define R600_SAMPLE_POSITIONS_CONST_BUFFER (R600_MAX_USER_CONST_BUFFERS)
-
 #define R600_MAX_CONST_BUFFER_SIZE (4096 * sizeof(float[4]))
 
 #ifdef PIPE_ARCH_BIG_ENDIAN
@@ -356,11 +356,15 @@ struct r600_textures_info {
 	struct r600_samplerview_state	views;
 	struct r600_sampler_states	states;
 	bool				is_array_sampler[NUM_TEX_UNITS];
+};
 
-	/* cube array txq workaround */
-	uint32_t			*txq_constants;
-	/* buffer related workarounds */
-	uint32_t			*buffer_constants;
+struct r600_shader_driver_constants_info {
+	/* currently 128 bytes for UCP/samplepos + sampler buffer constants */
+	uint32_t			*constants;
+	uint32_t			alloc_size;
+	bool				vs_ucp_dirty;
+	bool				texture_const_dirty;
+	bool				ps_sample_pos_dirty;
 };
 
 struct r600_constbuf_state
@@ -472,6 +476,9 @@ struct r600_context {
 	struct r600_gs_rings_state	gs_rings;
 	struct r600_constbuf_state	constbuf_state[PIPE_SHADER_TYPES];
 	struct r600_textures_info	samplers[PIPE_SHADER_TYPES];
+
+	struct r600_shader_driver_constants_info driver_consts[PIPE_SHADER_TYPES];
+
 	/** Vertex buffers for fetch shaders */
 	struct r600_vertexbuf_state	vertex_buffer_state;
 	/** Vertex buffers for compute shaders */
@@ -498,6 +505,7 @@ struct r600_context {
 
 	void				*sb_context;
 	struct r600_isa		*isa;
+	float sample_positions[4 * 16];
 };
 
 static inline void r600_emit_command_buffer(struct radeon_winsys_cs *cs,
