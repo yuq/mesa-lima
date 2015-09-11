@@ -410,8 +410,6 @@ static const struct extension extension_table[] = {
    { "GL_SGIS_texture_edge_clamp",                 o(dummy_true),                              GLL,            1997 },
    { "GL_SGIS_texture_lod",                        o(dummy_true),                              GLL,            1997 },
    { "GL_SUN_multi_draw_arrays",                   o(dummy_true),                              GLL,            1999 },
-
-   { 0, 0, 0, 0 },
 };
 
 
@@ -426,14 +424,14 @@ static const struct extension extension_table[] = {
 static size_t
 name_to_offset(const char* name)
 {
-   const struct extension *i;
+   unsigned i;
 
    if (name == 0)
       return 0;
 
-   for (i = extension_table; i->name != 0; ++i) {
-      if (strcmp(name, i->name) == 0)
-	 return i->offset;
+   for (i = 0; i < ARRAY_SIZE(extension_table); ++i) {
+      if (strcmp(name, extension_table[i].name) == 0)
+	 return extension_table[i].offset;
    }
 
    return 0;
@@ -446,15 +444,16 @@ name_to_offset(const char* name)
 static void
 override_extensions_in_context(struct gl_context *ctx)
 {
-   const struct extension *i;
+   unsigned i;
    const GLboolean *enables =
       (GLboolean*) &_mesa_extension_override_enables;
    const GLboolean *disables =
       (GLboolean*) &_mesa_extension_override_disables;
    GLboolean *ctx_ext = (GLboolean*)&ctx->Extensions;
 
-   for (i = extension_table; i->name != 0; ++i) {
-      size_t offset = i->offset;
+   for (i = 0; i < ARRAY_SIZE(extension_table); ++i) {
+      size_t offset = extension_table[i].offset;
+
       assert(!enables[offset] || !disables[offset]);
       if (enables[offset]) {
          ctx_ext[offset] = 1;
@@ -778,7 +777,7 @@ _mesa_make_extension_string(struct gl_context *ctx)
    /* String of extra extensions. */
    char *extra_extensions = get_extension_override(ctx);
    GLboolean *base = (GLboolean *) &ctx->Extensions;
-   const struct extension *i;
+   unsigned k;
    unsigned j;
    unsigned maxYear = ~0;
    unsigned api_set = (1 << ctx->API);
@@ -799,7 +798,9 @@ _mesa_make_extension_string(struct gl_context *ctx)
 
    /* Compute length of the extension string. */
    count = 0;
-   for (i = extension_table; i->name != 0; ++i) {
+   for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
+      const struct extension *i = extension_table + k;
+
       if (base[i->offset] &&
           i->year <= maxYear &&
           (i->api_set & api_set)) {
@@ -829,11 +830,13 @@ _mesa_make_extension_string(struct gl_context *ctx)
     * expect will fit into that buffer.
     */
    j = 0;
-   for (i = extension_table; i->name != 0; ++i) {
+   for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
+      const struct extension *i = extension_table + k;
+
       if (base[i->offset] &&
           i->year <= maxYear &&
           (i->api_set & api_set)) {
-         extension_indices[j++] = i - extension_table;
+         extension_indices[j++] = k;
       }
    }
    assert(j == count);
@@ -842,7 +845,7 @@ _mesa_make_extension_string(struct gl_context *ctx)
 
    /* Build the extension string.*/
    for (j = 0; j < count; ++j) {
-      i = &extension_table[extension_indices[j]];
+      const struct extension *i = &extension_table[extension_indices[j]];
       assert(base[i->offset] && (i->api_set & api_set));
       strcat(exts, i->name);
       strcat(exts, " ");
@@ -863,7 +866,7 @@ GLuint
 _mesa_get_extension_count(struct gl_context *ctx)
 {
    GLboolean *base;
-   const struct extension *i;
+   unsigned k;
    unsigned api_set = (1 << ctx->API);
    if (_mesa_is_gles3(ctx))
       api_set |= ES3;
@@ -875,7 +878,9 @@ _mesa_get_extension_count(struct gl_context *ctx)
       return ctx->Extensions.Count;
 
    base = (GLboolean *) &ctx->Extensions;
-   for (i = extension_table; i->name != 0; ++i) {
+   for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
+      const struct extension *i = extension_table + k;
+
       if (base[i->offset] && (i->api_set & api_set)) {
 	 ctx->Extensions.Count++;
       }
@@ -891,7 +896,7 @@ _mesa_get_enabled_extension(struct gl_context *ctx, GLuint index)
 {
    const GLboolean *base;
    size_t n;
-   const struct extension *i;
+   unsigned k;
    unsigned api_set = (1 << ctx->API);
    if (_mesa_is_gles3(ctx))
       api_set |= ES3;
@@ -900,7 +905,9 @@ _mesa_get_enabled_extension(struct gl_context *ctx, GLuint index)
 
    base = (GLboolean*) &ctx->Extensions;
    n = 0;
-   for (i = extension_table; i->name != 0; ++i) {
+   for (k = 0; k < ARRAY_SIZE(extension_table); ++k) {
+      const struct extension *i = extension_table + k;
+
       if (base[i->offset] && (i->api_set & api_set)) {
          if (n == index)
             return (const GLubyte*) i->name;
