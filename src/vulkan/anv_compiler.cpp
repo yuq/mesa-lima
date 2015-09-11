@@ -26,6 +26,7 @@
 #include <fcntl.h>
 
 #include "anv_private.h"
+#include "anv_nir.h"
 
 #include <brw_context.h>
 #include <brw_wm.h> /* brw_new_shader_program is here */
@@ -130,6 +131,9 @@ create_params_array(struct anv_pipeline *pipeline,
       num_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
+   if (pipeline->layout && pipeline->layout->stage[stage].has_dynamic_offsets)
+      num_params += MAX_DYNAMIC_BUFFERS;
+
    if (num_params == 0)
       return;
 
@@ -212,6 +216,8 @@ really_do_vs_prog(struct brw_context *brw,
    mem_ctx = ralloc_context(NULL);
 
    create_params_array(pipeline, vs, &prog_data->base.base);
+   anv_nir_apply_dynamic_offsets(pipeline, vs->Program->nir,
+                                 &prog_data->base.base);
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
@@ -501,6 +507,7 @@ really_do_wm_prog(struct brw_context *brw,
    prog_data->computed_depth_mode = computed_depth_mode(&fp->program);
 
    create_params_array(pipeline, fs, &prog_data->base);
+   anv_nir_apply_dynamic_offsets(pipeline, fs->Program->nir, &prog_data->base);
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw, key->flat_shade,
@@ -607,6 +614,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    set_binding_table_layout(&prog_data->base, pipeline, VK_SHADER_STAGE_COMPUTE);
 
    create_params_array(pipeline, cs, &prog_data->base);
+   anv_nir_apply_dynamic_offsets(pipeline, cs->Program->nir, &prog_data->base);
 
    program = brw_cs_emit(brw, mem_ctx, key, prog_data,
                          &cp->program, prog, &program_size);

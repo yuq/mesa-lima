@@ -326,17 +326,28 @@ void anv_CmdBindDescriptorSets(
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
-      cmd_buffer->state.descriptors[firstSet + i].set = set;
+      if (cmd_buffer->state.descriptors[firstSet + i].set != set) {
+         cmd_buffer->state.descriptors[firstSet + i].set = set;
+         cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+      }
 
-      assert(set_layout->num_dynamic_buffers <
-             ARRAY_SIZE(cmd_buffer->state.descriptors[0].dynamic_offsets));
-      memcpy(cmd_buffer->state.descriptors[firstSet + i].dynamic_offsets,
-             pDynamicOffsets + dynamic_slot,
-             set_layout->num_dynamic_buffers * sizeof(*pDynamicOffsets));
+      if (set_layout->num_dynamic_buffers > 0) {
+         uint32_t s;
+         for_each_bit(s, set_layout->shader_stages) {
+            anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s,
+                                                      dynamic_offsets);
+            uint32_t *offsets =
+               cmd_buffer->state.push_constants[s]->dynamic_offsets +
+               layout->set[firstSet + i].dynamic_offset_start;
 
-      cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+            memcpy(offsets, pDynamicOffsets + dynamic_slot,
+                   set_layout->num_dynamic_buffers * sizeof(*pDynamicOffsets));
 
-      dynamic_slot += set_layout->num_dynamic_buffers;
+         }
+         cmd_buffer->state.push_constants_dirty |= set_layout->shader_stages;
+
+         dynamic_slot += set_layout->num_dynamic_buffers;
+      }
    }
 }
 
@@ -464,21 +475,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          if (state.map == NULL)
             return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-         uint32_t offset;
-         if (surface_slots[b].dynamic_slot >= 0) {
-            uint32_t dynamic_offset =
-               d->dynamic_offsets[surface_slots[b].dynamic_slot];
-
-            offset = view->offset + dynamic_offset;
-            anv_fill_buffer_surface_state(cmd_buffer->device,
-                                          state.map, view->format, offset,
-                                          view->range - dynamic_offset);
-         } else {
-            offset = view->offset;
-            memcpy(state.map, view->surface_state.map, 64);
-         }
-
-         add_surface_state_reloc(cmd_buffer, state, view->bo, offset);
+         memcpy(state.map, view->surface_state.map, 64);
+         add_surface_state_reloc(cmd_buffer, state, view->bo, view->offset);
 
          bt_map[start + b] = state.offset;
       }
