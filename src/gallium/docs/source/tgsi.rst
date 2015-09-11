@@ -960,7 +960,6 @@ XXX doesn't look like most of the opcodes really belong here.
   For components which don't return a resource dimension, their value
   is undefined.
 
-
 .. math::
 
   lod = src0.x
@@ -972,6 +971,17 @@ XXX doesn't look like most of the opcodes really belong here.
   dst.z = texture\_depth(unit, lod)
 
   dst.w = texture\_levels(unit)
+
+
+.. opcode:: TXQS - Texture Samples Query
+
+  This retrieves the number of samples in the texture, and stores it
+  into the x component. The other components are undefined.
+
+.. math::
+
+  dst.x = texture\_samples(unit)
+
 
 .. opcode:: TG4 - Texture Gather
 
