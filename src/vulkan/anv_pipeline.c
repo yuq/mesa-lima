@@ -385,16 +385,23 @@ VkResult anv_CreatePipelineLayout(
    uint32_t sampler_start[VK_SHADER_STAGE_NUM] = { 0, };
 
    for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+      layout->stage[s].has_dynamic_offsets = false;
       layout->stage[s].surface_count = 0;
       layout->stage[s].sampler_count = 0;
    }
 
+   uint32_t num_dynamic_offsets = 0;
    for (uint32_t i = 0; i < pCreateInfo->descriptorSetCount; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
                       pCreateInfo->pSetLayouts[i]);
 
       layout->set[i].layout = set_layout;
+      layout->set[i].dynamic_offset_start = num_dynamic_offsets;
+      num_dynamic_offsets += set_layout->num_dynamic_buffers;
       for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+         if (set_layout->num_dynamic_buffers > 0)
+            layout->stage[s].has_dynamic_offsets = true;
+
          layout->set[i].stage[s].surface_start = surface_start[s];
          surface_start[s] += set_layout->stage[s].surface_count;
          layout->set[i].stage[s].sampler_start = sampler_start[s];

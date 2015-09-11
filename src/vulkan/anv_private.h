@@ -664,6 +664,7 @@ anv_descriptor_set_destroy(struct anv_device *device,
 struct anv_pipeline_layout {
    struct {
       struct anv_descriptor_set_layout *layout;
+      uint32_t dynamic_offset_start;
       struct {
          uint32_t surface_start;
          uint32_t sampler_start;
@@ -673,6 +674,7 @@ struct anv_pipeline_layout {
    uint32_t num_sets;
 
    struct {
+      bool has_dynamic_offsets;
       uint32_t surface_count;
       uint32_t sampler_count;
    } stage[VK_SHADER_STAGE_NUM];
