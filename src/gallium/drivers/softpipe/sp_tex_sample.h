@@ -75,8 +75,8 @@ struct filter_args {
    const float *faces;
 };
 
-typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
-                                struct sp_sampler *sp_samp,
+typedef void (*mip_filter_func)(const struct sp_sampler_view *sp_sview,
+                                const struct sp_sampler *sp_samp,
                                 img_filter_func min_filter,
                                 img_filter_func mag_filter,
                                 const float s[TGSI_QUAD_SIZE],

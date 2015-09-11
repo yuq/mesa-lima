@@ -1908,8 +1908,8 @@ compute_lambda_lod_unclamped(const struct sp_sampler_view *sp_sview,
  * \param lod results per-fragment lod.
  */
 static inline void
-compute_lambda_lod(struct sp_sampler_view *sp_sview,
-                   struct sp_sampler *sp_samp,
+compute_lambda_lod(const struct sp_sampler_view *sp_sview,
+                   const struct sp_sampler *sp_samp,
                    const float s[TGSI_QUAD_SIZE],
                    const float t[TGSI_QUAD_SIZE],
                    const float p[TGSI_QUAD_SIZE],
@@ -1974,8 +1974,8 @@ mip_rel_level_linear(const struct sp_sampler_view *sp_sview,
 }
 
 static void
-mip_filter_linear(struct sp_sampler_view *sp_sview,
-                  struct sp_sampler *sp_samp,
+mip_filter_linear(const struct sp_sampler_view *sp_sview,
+                  const struct sp_sampler *sp_samp,
                   img_filter_func min_filter,
                   img_filter_func mag_filter,
                   const float s[TGSI_QUAD_SIZE],
@@ -2060,8 +2060,8 @@ mip_rel_level_nearest(const struct sp_sampler_view *sp_sview,
  * \param c0  the LOD bias factors, or absolute LODs (depending on control)
  */
 static void
-mip_filter_nearest(struct sp_sampler_view *sp_sview,
-                   struct sp_sampler *sp_samp,
+mip_filter_nearest(const struct sp_sampler_view *sp_sview,
+                   const struct sp_sampler *sp_samp,
                    img_filter_func min_filter,
                    img_filter_func mag_filter,
                    const float s[TGSI_QUAD_SIZE],
@@ -2122,8 +2122,8 @@ mip_rel_level_none(const struct sp_sampler_view *sp_sview,
 }
 
 static void
-mip_filter_none(struct sp_sampler_view *sp_sview,
-                struct sp_sampler *sp_samp,
+mip_filter_none(const struct sp_sampler_view *sp_sview,
+                const struct sp_sampler *sp_samp,
                 img_filter_func min_filter,
                 img_filter_func mag_filter,
                 const float s[TGSI_QUAD_SIZE],
@@ -2172,8 +2172,8 @@ mip_rel_level_none_no_filter_select(const struct sp_sampler_view *sp_sview,
 }
 
 static void
-mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
-                                 struct sp_sampler *sp_samp,
+mip_filter_none_no_filter_select(const struct sp_sampler_view *sp_sview,
+                                 const struct sp_sampler *sp_samp,
                                  img_filter_func min_filter,
                                  img_filter_func mag_filter,
                                  const float s[TGSI_QUAD_SIZE],
@@ -2232,8 +2232,8 @@ create_filter_table(void)
  * "Fundamentals of Texture Mapping and Image Warping" (1989)
  */
 static void
-img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
-                  struct sp_sampler *sp_samp,
+img_filter_2d_ewa(const struct sp_sampler_view *sp_sview,
+                  const struct sp_sampler *sp_samp,
                   img_filter_func min_filter,
                   img_filter_func mag_filter,
                   const float s[TGSI_QUAD_SIZE],
@@ -2440,8 +2440,8 @@ mip_rel_level_linear_aniso(const struct sp_sampler_view *sp_sview,
  * Sample 2D texture using an anisotropic filter.
  */
 static void
-mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
-                        struct sp_sampler *sp_samp,
+mip_filter_linear_aniso(const struct sp_sampler_view *sp_sview,
+                        const struct sp_sampler *sp_samp,
                         img_filter_func min_filter,
                         img_filter_func mag_filter,
                         const float s[TGSI_QUAD_SIZE],
@@ -2566,8 +2566,8 @@ mip_rel_level_linear_2d_linear_repeat_POT(
  */
 static void
 mip_filter_linear_2d_linear_repeat_POT(
-   struct sp_sampler_view *sp_sview,
-   struct sp_sampler *sp_samp,
+   const struct sp_sampler_view *sp_sview,
+   const struct sp_sampler *sp_samp,
    img_filter_func min_filter,
    img_filter_func mag_filter,
    const float s[TGSI_QUAD_SIZE],
