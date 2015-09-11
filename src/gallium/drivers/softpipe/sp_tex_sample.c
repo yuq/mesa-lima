@@ -2003,7 +2003,7 @@ mip_filter_linear(struct sp_sampler_view *sp_sview,
       args.s = s[j];
       args.t = t[j];
       args.p = p[j];
-      args.face_id = sp_sview->faces[j];
+      args.face_id = filt_args->faces[j];
 
       if (lod[j] < 0.0) {
          args.level = psview->u.tex.first_level;
@@ -2087,7 +2087,7 @@ mip_filter_nearest(struct sp_sampler_view *sp_sview,
       args.s = s[j];
       args.t = t[j];
       args.p = p[j];
-      args.face_id = sp_sview->faces[j];
+      args.face_id = filt_args->faces[j];
 
       if (lod[j] < 0.0) {
          args.level = psview->u.tex.first_level;
@@ -2148,7 +2148,7 @@ mip_filter_none(struct sp_sampler_view *sp_sview,
       args.s = s[j];
       args.t = t[j];
       args.p = p[j];
-      args.face_id = sp_sview->faces[j];
+      args.face_id = filt_args->faces[j];
       if (lod[j] < 0.0) {
          mag_filter(sp_sview, sp_samp, &args, &rgba[0][j]);
       }
@@ -2193,7 +2193,7 @@ mip_filter_none_no_filter_select(struct sp_sampler_view *sp_sview,
       args.s = s[j];
       args.t = t[j];
       args.p = p[j];
-      args.face_id = sp_sview->faces[j];
+      args.face_id = filt_args->faces[j];
       mag_filter(sp_sview, sp_samp, &args, &rgba[0][j]);
    }
 }
@@ -2239,6 +2239,7 @@ img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
                   const float s[TGSI_QUAD_SIZE],
                   const float t[TGSI_QUAD_SIZE],
                   const float p[TGSI_QUAD_SIZE],
+                  const float faces[TGSI_QUAD_SIZE],
                   unsigned level,
                   const float dudx, const float dvdx,
                   const float dudy, const float dvdy,
@@ -2319,7 +2320,7 @@ img_filter_2d_ewa(struct sp_sampler_view *sp_sview,
       float num[4] = {0.0F, 0.0F, 0.0F, 0.0F};
       buffer_next = 0;
       den = 0;
-      args.face_id = sp_sview->faces[j];
+      args.face_id = faces[j];
 
       U = u0 - tex_u;
       for (v = v0; v <= v1; ++v) {
@@ -2528,7 +2529,7 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
          args.t = t[j];
          args.p = p[j];
          args.level = psview->u.tex.last_level;
-         args.face_id = sp_sview->faces[j];
+         args.face_id = filt_args->faces[j];
          min_filter(sp_sview, sp_samp, &args, &rgba[0][j]);
       }
    }
@@ -2537,7 +2538,7 @@ mip_filter_linear_aniso(struct sp_sampler_view *sp_sview,
        * seem to be worth the extra running time.
        */
       img_filter_2d_ewa(sp_sview, sp_samp, min_filter, mag_filter,
-                        s, t, p, level0,
+                        s, t, p, filt_args->faces, level0,
                         dudx, dvdx, dudy, dvdy, rgba);
    }
 
@@ -2590,7 +2591,7 @@ mip_filter_linear_2d_linear_repeat_POT(
       args.s = s[j];
       args.t = t[j];
       args.p = p[j];
-      args.face_id = sp_sview->faces[j];
+      args.face_id = filt_args->faces[j];
       args.offset = filt_args->offset;
       args.gather_only = filt_args->control == TGSI_SAMPLER_GATHER;
       if ((unsigned)level0 >= psview->u.tex.last_level) {
@@ -3129,7 +3130,8 @@ convert_cube(struct sp_sampler_view *sp_sview,
              const float c0[TGSI_QUAD_SIZE],
              float ssss[TGSI_QUAD_SIZE],
              float tttt[TGSI_QUAD_SIZE],
-             float pppp[TGSI_QUAD_SIZE])
+             float pppp[TGSI_QUAD_SIZE],
+             float faces[TGSI_QUAD_SIZE])
 {
    unsigned j;
 
@@ -3176,7 +3178,7 @@ convert_cube(struct sp_sampler_view *sp_sview,
             const float ima = -0.5F / fabsf(s[j]);
             ssss[j] = sign *  p[j] * ima + 0.5F;
             tttt[j] =         t[j] * ima + 0.5F;
-            sp_sview->faces[j] = face;
+            faces[j] = face;
          }
       }
       else if (ary >= arx && ary >= arz) {
@@ -3187,7 +3189,7 @@ convert_cube(struct sp_sampler_view *sp_sview,
             const float ima = -0.5F / fabsf(t[j]);
             ssss[j] =        -s[j] * ima + 0.5F;
             tttt[j] = sign * -p[j] * ima + 0.5F;
-            sp_sview->faces[j] = face;
+            faces[j] = face;
          }
       }
       else {
@@ -3198,7 +3200,7 @@ convert_cube(struct sp_sampler_view *sp_sview,
             const float ima = -0.5F / fabsf(p[j]);
             ssss[j] = sign * -s[j] * ima + 0.5F;
             tttt[j] =         t[j] * ima + 0.5F;
-            sp_sview->faces[j] = face;
+            faces[j] = face;
          }
       }
    }
@@ -3594,11 +3596,16 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
       float cs[TGSI_QUAD_SIZE];
       float ct[TGSI_QUAD_SIZE];
       float cp[TGSI_QUAD_SIZE];
+      float faces[TGSI_QUAD_SIZE];
 
-      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp);
+      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp, faces);
 
+      filt_args.faces = faces;
       sample_mip(sp_sview, sp_samp, cs, ct, cp, c0, lod, &filt_args, rgba);
    } else {
+      static const float zero_faces[TGSI_QUAD_SIZE] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+      filt_args.faces = zero_faces;
       sample_mip(sp_sview, sp_samp, s, t, p, c0, lod, &filt_args, rgba);
    }
 }
@@ -3644,8 +3651,9 @@ sp_tgsi_query_lod(struct tgsi_sampler *tgsi_sampler,
       float cs[TGSI_QUAD_SIZE];
       float ct[TGSI_QUAD_SIZE];
       float cp[TGSI_QUAD_SIZE];
+      float unused_faces[TGSI_QUAD_SIZE];
 
-      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp);
+      convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp, unused_faces);
       compute_lambda_lod_unclamped(sp_sview, sp_samp,
                                    cs, ct, cp, lod_in, control, lod);
    } else {

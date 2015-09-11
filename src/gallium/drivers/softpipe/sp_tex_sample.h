@@ -72,6 +72,7 @@ typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
 struct filter_args {
    enum tgsi_sampler_control control;
    const int8_t *offset;
+   const float *faces;
 };
 
 typedef void (*mip_filter_func)(struct sp_sampler_view *sp_sview,
@@ -111,9 +112,6 @@ struct sp_sampler_view
    boolean need_swizzle;
    boolean pot2d;
    boolean need_cube_convert;
-
-   /* this is just abusing the sampler_view object as local storage */
-   unsigned faces[TGSI_QUAD_SIZE];
 
    /* these are different per shader type */
    struct softpipe_tex_tile_cache *cache;
