@@ -1705,9 +1705,9 @@ static void r600_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom
 
 		offset = vb->buffer_offset;
 
-		/* fetch resources start at index 320 */
+		/* fetch resources start at index 320 (OFFSET_FS) */
 		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 7, 0));
-		radeon_emit(cs, (320 + buffer_index) * 7);
+		radeon_emit(cs, (R600_FETCH_CONSTANTS_OFFSET_FS + buffer_index) * 7);
 		radeon_emit(cs, offset); /* RESOURCEi_WORD0 */
 		radeon_emit(cs, rbuffer->b.b.width0 - offset - 1); /* RESOURCEi_WORD1 */
 		radeon_emit(cs, /* RESOURCEi_WORD2 */
@@ -1778,21 +1778,24 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 
 static void r600_emit_vs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX], 160,
+	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX],
+				   R600_FETCH_CONSTANTS_OFFSET_VS,
 				   R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
 				   R_028980_ALU_CONST_CACHE_VS_0);
 }
 
 static void r600_emit_gs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_GEOMETRY], 336,
+	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_GEOMETRY],
+				   R600_FETCH_CONSTANTS_OFFSET_GS,
 				   R_0281C0_ALU_CONST_BUFFER_SIZE_GS_0,
 				   R_0289C0_ALU_CONST_CACHE_GS_0);
 }
 
 static void r600_emit_ps_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_FRAGMENT], 0,
+	r600_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_FRAGMENT],
+				   R600_FETCH_CONSTANTS_OFFSET_PS,
 				   R_028140_ALU_CONST_BUFFER_SIZE_PS_0,
 				   R_028940_ALU_CONST_CACHE_PS_0);
 }
@@ -1829,26 +1832,20 @@ static void r600_emit_sampler_views(struct r600_context *rctx,
 	state->dirty_mask = 0;
 }
 
-/* Resource IDs:
- *   PS: 0   .. +160
- *   VS: 160 .. +160
- *   FS: 320 .. +16
- *   GS: 336 .. +160
- */
 
 static void r600_emit_vs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views, 160 + R600_MAX_CONST_BUFFERS);
+	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views, R600_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS);
 }
 
 static void r600_emit_gs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views, 336 + R600_MAX_CONST_BUFFERS);
+	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views, R600_FETCH_CONSTANTS_OFFSET_GS + R600_MAX_CONST_BUFFERS);
 }
 
 static void r600_emit_ps_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
-	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views, R600_MAX_CONST_BUFFERS);
+	r600_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views, R600_FETCH_CONSTANTS_OFFSET_PS + R600_MAX_CONST_BUFFERS);
 }
 
 static void r600_emit_sampler_states(struct r600_context *rctx,

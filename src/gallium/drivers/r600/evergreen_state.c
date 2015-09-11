@@ -1888,12 +1888,12 @@ static void evergreen_emit_vertex_buffers(struct r600_context *rctx,
 
 static void evergreen_fs_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom * atom)
 {
-	evergreen_emit_vertex_buffers(rctx, &rctx->vertex_buffer_state, 992, 0);
+	evergreen_emit_vertex_buffers(rctx, &rctx->vertex_buffer_state, EG_FETCH_CONSTANTS_OFFSET_FS, 0);
 }
 
 static void evergreen_cs_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom * atom)
 {
-	evergreen_emit_vertex_buffers(rctx, &rctx->cs_vertex_buffer_state, 816,
+	evergreen_emit_vertex_buffers(rctx, &rctx->cs_vertex_buffer_state, EG_FETCH_CONSTANTS_OFFSET_CS,
 				      RADEON_CP_PACKET3_COMPUTE_MODE);
 }
 
@@ -1963,7 +1963,8 @@ static void evergreen_emit_constant_buffers(struct r600_context *rctx,
 
 static void evergreen_emit_vs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX], 176,
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_VERTEX],
+					EG_FETCH_CONSTANTS_OFFSET_VS,
 					R_028180_ALU_CONST_BUFFER_SIZE_VS_0,
 					R_028980_ALU_CONST_CACHE_VS_0,
 					0 /* PKT3 flags */);
@@ -1971,7 +1972,8 @@ static void evergreen_emit_vs_constant_buffers(struct r600_context *rctx, struct
 
 static void evergreen_emit_gs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_GEOMETRY], 336,
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_GEOMETRY],
+					EG_FETCH_CONSTANTS_OFFSET_GS,
 					R_0281C0_ALU_CONST_BUFFER_SIZE_GS_0,
 					R_0289C0_ALU_CONST_CACHE_GS_0,
 					0 /* PKT3 flags */);
@@ -1979,15 +1981,17 @@ static void evergreen_emit_gs_constant_buffers(struct r600_context *rctx, struct
 
 static void evergreen_emit_ps_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_FRAGMENT], 0,
-				       R_028140_ALU_CONST_BUFFER_SIZE_PS_0,
-				       R_028940_ALU_CONST_CACHE_PS_0,
-				       0 /* PKT3 flags */);
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_FRAGMENT],
+					EG_FETCH_CONSTANTS_OFFSET_PS,
+					R_028140_ALU_CONST_BUFFER_SIZE_PS_0,
+					R_028940_ALU_CONST_CACHE_PS_0,
+					0 /* PKT3 flags */);
 }
 
 static void evergreen_emit_cs_constant_buffers(struct r600_context *rctx, struct r600_atom *atom)
 {
-	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_COMPUTE], 816,
+	evergreen_emit_constant_buffers(rctx, &rctx->constbuf_state[PIPE_SHADER_COMPUTE],
+					EG_FETCH_CONSTANTS_OFFSET_CS,
 					R_028FC0_ALU_CONST_BUFFER_SIZE_LS_0,
 					R_028F40_ALU_CONST_CACHE_LS_0,
 					RADEON_CP_PACKET3_COMPUTE_MODE);
@@ -2031,25 +2035,25 @@ static void evergreen_emit_sampler_views(struct r600_context *rctx,
 static void evergreen_emit_vs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_VERTEX].views,
-	                             176 + R600_MAX_CONST_BUFFERS, 0);
+	                             EG_FETCH_CONSTANTS_OFFSET_VS + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_gs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_GEOMETRY].views,
-	                             336 + R600_MAX_CONST_BUFFERS, 0);
+	                             EG_FETCH_CONSTANTS_OFFSET_GS + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_ps_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_FRAGMENT].views,
-	                             R600_MAX_CONST_BUFFERS, 0);
+	                             EG_FETCH_CONSTANTS_OFFSET_PS + R600_MAX_CONST_BUFFERS, 0);
 }
 
 static void evergreen_emit_cs_sampler_views(struct r600_context *rctx, struct r600_atom *atom)
 {
 	evergreen_emit_sampler_views(rctx, &rctx->samplers[PIPE_SHADER_COMPUTE].views,
-	                             816 + 2, RADEON_CP_PACKET3_COMPUTE_MODE);
+	                             EG_FETCH_CONSTANTS_OFFSET_CS + 2, RADEON_CP_PACKET3_COMPUTE_MODE);
 }
 
 static void evergreen_emit_sampler_states(struct r600_context *rctx,
