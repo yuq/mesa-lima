@@ -149,14 +149,10 @@ create_params_array(struct anv_device *device,
     * actually dereference any of the gl_constant_value pointers in the
     * params array, it doesn't really matter what we put here.
     */
-   struct anv_push_constant_data *null_data = NULL;
+   struct anv_push_constants *null_data = NULL;
    for (unsigned i = 0; i < num_client_params; i++)
       prog_data->param[i] =
          (const gl_constant_value *)&null_data->client_data[i * sizeof(float)];
-
-   for (unsigned i = 0; i < num_driver_params; i++)
-      prog_data->param[num_client_params + i] =
-         (const gl_constant_value *)&null_data->driver_data[i * sizeof(float)];
 }
 
 static void

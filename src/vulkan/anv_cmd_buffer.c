@@ -61,6 +61,39 @@ anv_cmd_state_init(struct anv_cmd_state *state)
    state->gen7.index_buffer = NULL;
 }
 
+static VkResult
+anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
+                                          VkShaderStage stage, uint32_t size)
+{
+   struct anv_push_constants **ptr = &cmd_buffer->state.push_constants[stage];
+
+   if (*ptr == NULL) {
+      *ptr = anv_device_alloc(cmd_buffer->device, size, 8,
+                              VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      if (*ptr == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      (*ptr)->size = size;
+   } else if ((*ptr)->size < size) {
+      void *new_data = anv_device_alloc(cmd_buffer->device, size, 8,
+                                        VK_SYSTEM_ALLOC_TYPE_INTERNAL);
+      if (new_data == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      memcpy(new_data, *ptr, (*ptr)->size);
+      anv_device_free(cmd_buffer->device, *ptr);
+
+      *ptr = new_data;
+      (*ptr)->size = size;
+   }
+
+   return VK_SUCCESS;
+}
+
+#define anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, field) \
+   anv_cmd_buffer_ensure_push_constants_size(cmd_buffer, stage, \
+      (offsetof(struct anv_push_constants, field) + \
+       sizeof(cmd_buffer->state.push_constants[0]->field)))
+
 VkResult anv_CreateCommandBuffer(
     VkDevice                                    _device,
     const VkCmdBufferCreateInfo*                pCreateInfo,
@@ -665,8 +698,8 @@ struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               VkShaderStage stage)
 {
-   struct anv_push_constant_data *data =
-      cmd_buffer->state.push_constants[stage].data;
+   struct anv_push_constants *data =
+      cmd_buffer->state.push_constants[stage];
    struct brw_stage_prog_data *prog_data =
       cmd_buffer->state.pipeline->prog_data[stage];
 
@@ -701,14 +734,9 @@ void anv_CmdPushConstants(
    uint32_t stage;
 
    for_each_bit(stage, stageFlags) {
-      if (cmd_buffer->state.push_constants[stage].data == NULL) {
-         cmd_buffer->state.push_constants[stage].data =
-            anv_device_alloc(cmd_buffer->device,
-                             sizeof(struct anv_push_constant_data), 8,
-                             VK_SYSTEM_ALLOC_TYPE_INTERNAL);
-      }
+      anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, client_data);
 
-      memcpy(cmd_buffer->state.push_constants[stage].data->client_data + start,
+      memcpy(cmd_buffer->state.push_constants[stage]->client_data + start,
              values, length);
    }
 

@@ -658,6 +658,8 @@ anv_descriptor_set_destroy(struct anv_device *device,
 #define MAX_SETS   8
 #define MAX_RTS    8
 #define MAX_PUSH_CONSTANTS_SIZE 128
+#define MAX_DYNAMIC_BUFFERS 16
+#define MAX_IMAGES 8
 
 struct anv_pipeline_layout {
    struct {
@@ -700,14 +702,28 @@ struct anv_descriptor_set_binding {
    uint32_t                                     dynamic_offsets[128];
 };
 
-struct anv_push_constant_data {
-    uint8_t client_data[MAX_PUSH_CONSTANTS_SIZE];
-    uint8_t driver_data[0];
-};
-
 struct anv_push_constants {
-    uint32_t driver_data_size;
-    struct anv_push_constant_data *data;
+   /* Current allocated size of this push constants data structure.
+    * Because a decent chunk of it may not be used (images on SKL, for
+    * instance), we won't actually allocate the entire structure up-front.
+    */
+   uint32_t size;
+
+   /* Push constant data provided by the client through vkPushConstants */
+   uint8_t client_data[MAX_PUSH_CONSTANTS_SIZE];
+
+   /* Our hardware only provides zero-based vertex and instance id so, in
+    * order to satisfy the vulkan requirements, we may have to push one or
+    * both of these into the shader.
+    */
+   uint32_t base_vertex;
+   uint32_t base_instance;
+
+   /* Offsets for dynamically bound buffers */
+   uint32_t dynamic_offsets[MAX_DYNAMIC_BUFFERS];
+
+   /* Image data for image_load_store on pre-SKL */
+   struct brw_image_param images[MAX_IMAGES];
 };
 
 /** State required while building cmd buffer */
@@ -731,7 +747,7 @@ struct anv_cmd_state {
    uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
-   struct anv_push_constants                    push_constants[VK_SHADER_STAGE_NUM];
+   struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
 
    struct {
       struct anv_buffer *                       index_buffer;
