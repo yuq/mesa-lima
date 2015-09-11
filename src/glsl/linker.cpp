@@ -1187,7 +1187,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
       for (unsigned int j = 0; j < sh->NumUniformBlocks; j++) {
 	 int index = link_cross_validate_uniform_block(prog,
 						       &prog->UniformBlocks,
-						       &prog->NumUniformBlocks,
+						       &prog->NumBufferInterfaceBlocks,
 						       &sh->UniformBlocks[j]);
 
 	 if (index == -1) {
@@ -2802,7 +2802,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
    unsigned shader_blocks[MESA_SHADER_STAGES] = {0};
    unsigned total_shader_storage_blocks = 0;
 
-   for (unsigned i = 0; i < prog->NumUniformBlocks; i++) {
+   for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
       /* Don't check SSBOs for Uniform Block Size */
       if (!prog->UniformBlocks[i].IsShaderStorage &&
           prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
@@ -2836,7 +2836,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
       if (total_uniform_blocks > ctx->Const.MaxCombinedUniformBlocks) {
 	 linker_error(prog, "Too many combined uniform blocks (%d/%d)\n",
-		      prog->NumUniformBlocks,
+		      prog->NumBufferInterfaceBlocks,
 		      ctx->Const.MaxCombinedUniformBlocks);
       } else {
 	 for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -2939,7 +2939,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
          total_image_units += sh->NumImages;
 
-         for (unsigned j = 0; j < prog->NumUniformBlocks; j++) {
+         for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
             int stage_index = prog->UniformBlockStageIndex[i][j];
             if (stage_index != -1 && sh->UniformBlocks[stage_index].IsShaderStorage)
                total_shader_storage_blocks++;
@@ -3418,7 +3418,7 @@ build_program_resource_list(struct gl_shader_program *shProg)
    }
 
    /* Add program uniform blocks and shader storage blocks. */
-   for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
+   for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
       bool is_shader_storage = shProg->UniformBlocks[i].IsShaderStorage;
       GLenum type = is_shader_storage ? GL_SHADER_STORAGE_BLOCK : GL_UNIFORM_BLOCK;
       if (!add_program_resource(shProg, type,

@@ -1530,7 +1530,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           */
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumUniformBlocks - 1);
+                               shader_prog->NumBufferInterfaceBlocks - 1);
       }
 
       if (has_indirect) {
@@ -1593,7 +1593,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           */
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumUniformBlocks - 1);
+                               shader_prog->NumBufferInterfaceBlocks - 1);
       }
 
       /* Get the offset to read from */
@@ -1786,7 +1786,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumUniformBlocks - 1);
+                               shader_prog->NumBufferInterfaceBlocks - 1);
       }
 
       /* Offset */
@@ -1952,7 +1952,7 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
        */
       brw_mark_surface_used(prog_data,
                             stage_prog_data->binding_table.ubo_start +
-                            shader_prog->NumUniformBlocks - 1);
+                            shader_prog->NumBufferInterfaceBlocks - 1);
    }
 
    fs_reg offset = get_nir_src(instr->src[1]);

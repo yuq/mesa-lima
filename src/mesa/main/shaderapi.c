@@ -713,7 +713,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_ubo)
          break;
 
-      for (i = 0; i < shProg->NumUniformBlocks; i++) {
+      for (i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
 	 /* Add one for the terminating NUL character.
 	  */
 	 const GLint len = strlen(shProg->UniformBlocks[i].Name) + 1;
@@ -730,7 +730,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
 
       *params = 0;
-      for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
+      for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
          if (!shProg->UniformBlocks[i].IsShaderStorage)
             (*params)++;
       }

@@ -1872,7 +1872,7 @@ vec4_visitor::visit(ir_expression *ir)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               shader_prog->NumUniformBlocks - 1);
+                               shader_prog->NumBufferInterfaceBlocks - 1);
       }
 
       if (const_offset_ir) {

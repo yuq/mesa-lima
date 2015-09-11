@@ -48,7 +48,7 @@ static unsigned
 get_uniform_block_index(const gl_shader_program *shProg,
                         const char *uniformBlockName)
 {
-   for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
+   for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
       if (!strcmp(shProg->UniformBlocks[i].Name, uniformBlockName))
 	 return i;
    }
