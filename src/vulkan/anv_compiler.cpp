@@ -116,32 +116,26 @@ upload_kernel(struct anv_pipeline *pipeline, const void *data, size_t size)
 }
 
 static void
-create_params_array(struct anv_device *device,
+create_params_array(struct anv_pipeline *pipeline,
                     struct gl_shader *shader,
                     struct brw_stage_prog_data *prog_data)
 {
-   unsigned num_client_params;
+   VkShaderStage stage = anv_vk_shader_stage_for_mesa_stage(shader->Stage);
+   unsigned num_params = 0;
+
    if (shader->num_uniform_components) {
       /* If the shader uses any push constants at all, we'll just give
        * them the maximum possible number
        */
-      num_client_params = MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
-   } else {
-      num_client_params = 0;
+      num_params += MAX_PUSH_CONSTANTS_SIZE / sizeof(float);
    }
 
-   /* We'll need to add space here for images, texture rectangle, uniform
-    * offsets, etc.
-    */
-   unsigned num_driver_params = 0;
-
-   unsigned num_total_params = num_client_params + num_driver_params;
-
-   if (num_total_params == 0)
+   if (num_params == 0)
       return;
 
    prog_data->param = (const gl_constant_value **)
-      anv_device_alloc(device, num_total_params * sizeof(gl_constant_value *),
+      anv_device_alloc(pipeline->device,
+                       num_params * sizeof(gl_constant_value *),
                        8, VK_SYSTEM_ALLOC_TYPE_INTERNAL_SHADER);
 
    /* We now set the param values to be offsets into a
@@ -150,7 +144,7 @@ create_params_array(struct anv_device *device,
     * params array, it doesn't really matter what we put here.
     */
    struct anv_push_constants *null_data = NULL;
-   for (unsigned i = 0; i < num_client_params; i++)
+   for (unsigned i = 0; i < num_params; i++)
       prog_data->param[i] =
          (const gl_constant_value *)&null_data->client_data[i * sizeof(float)];
 }
@@ -207,7 +201,6 @@ really_do_vs_prog(struct brw_context *brw,
    GLuint program_size;
    const GLuint *program;
    struct brw_vs_prog_data *prog_data = &pipeline->vs_prog_data;
-   struct brw_stage_prog_data *stage_prog_data = &prog_data->base.base;
    void *mem_ctx;
    struct gl_shader *vs = NULL;
 
@@ -218,7 +211,7 @@ really_do_vs_prog(struct brw_context *brw,
 
    mem_ctx = ralloc_context(NULL);
 
-   create_params_array(pipeline->device, vs, stage_prog_data);
+   create_params_array(pipeline, vs, &prog_data->base.base);
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
@@ -507,7 +500,7 @@ really_do_wm_prog(struct brw_context *brw,
 
    prog_data->computed_depth_mode = computed_depth_mode(&fp->program);
 
-   create_params_array(pipeline->device, fs, &prog_data->base);
+   create_params_array(pipeline, fs, &prog_data->base);
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw, key->flat_shade,
@@ -613,7 +606,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    set_binding_table_layout(&prog_data->base, pipeline, VK_SHADER_STAGE_COMPUTE);
 
-   create_params_array(pipeline->device, cs, &prog_data->base);
+   create_params_array(pipeline, cs, &prog_data->base);
 
    program = brw_cs_emit(brw, mem_ctx, key, prog_data,
                          &cp->program, prog, &program_size);
