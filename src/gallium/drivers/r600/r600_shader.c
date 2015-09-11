@@ -5674,6 +5674,7 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	/* Texture fetch instructions can only use gprs as source.
 	 * Also they cannot negate the source or take the absolute value */
 	const boolean src_requires_loading = (inst->Instruction.Opcode != TGSI_OPCODE_TXQ_LZ &&
+					      inst->Instruction.Opcode != TGSI_OPCODE_TXQS &&
                                               tgsi_tex_src_requires_loading(ctx, 0)) ||
 					     read_compressed_msaa || txf_add_offsets;
 
@@ -6419,6 +6420,12 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		tex.dst_sel_z = 7;
 		tex.dst_sel_w = 7;
 	}
+	else if (inst->Instruction.Opcode == TGSI_OPCODE_TXQS) {
+		tex.dst_sel_x = 3;
+		tex.dst_sel_y = 7;
+		tex.dst_sel_z = 7;
+		tex.dst_sel_w = 7;
+	}
 	else {
 		tex.dst_sel_x = (inst->Dst[0].Register.WriteMask & 1) ? 0 : 7;
 		tex.dst_sel_y = (inst->Dst[0].Register.WriteMask & 2) ? 1 : 7;
@@ -6427,7 +6434,8 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 	}
 
 
-	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ_LZ) {
+	if (inst->Instruction.Opcode == TGSI_OPCODE_TXQ_LZ ||
+	    inst->Instruction.Opcode == TGSI_OPCODE_TXQS) {
 		tex.src_sel_x = 4;
 		tex.src_sel_y = 4;
 		tex.src_sel_z = 4;
@@ -7935,7 +7943,7 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[TGSI_OPCODE_ENDLOOP]	= { ALU_OP0_NOP, tgsi_endloop},
 	[TGSI_OPCODE_ENDSUB]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_TXQ_LZ]	= { FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	[104]			= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_TXQS]	= { FETCH_OP_GET_NUMBER_OF_SAMPLES, tgsi_tex},
 	[105]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[106]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_NOP]	= { ALU_OP0_NOP, tgsi_unsupported},
@@ -8134,7 +8142,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_ENDLOOP]	= { ALU_OP0_NOP, tgsi_endloop},
 	[TGSI_OPCODE_ENDSUB]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_TXQ_LZ]	= { FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	[104]			= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_TXQS]	= { FETCH_OP_GET_NUMBER_OF_SAMPLES, tgsi_tex},
 	[105]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[106]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_NOP]	= { ALU_OP0_NOP, tgsi_unsupported},
@@ -8356,7 +8364,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_ENDLOOP]	= { ALU_OP0_NOP, tgsi_endloop},
 	[TGSI_OPCODE_ENDSUB]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_TXQ_LZ]	= { FETCH_OP_GET_TEXTURE_RESINFO, tgsi_tex},
-	[104]			= { ALU_OP0_NOP, tgsi_unsupported},
+	[TGSI_OPCODE_TXQS]	= { FETCH_OP_GET_NUMBER_OF_SAMPLES, tgsi_tex},
 	[105]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[106]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_NOP]	= { ALU_OP0_NOP, tgsi_unsupported},
