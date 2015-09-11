@@ -351,15 +351,27 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	unsigned vtxcnt_regid = regid(63, 0);
 
 	for (i = 0; i < vp->inputs_count; i++) {
-		uint8_t semantic = sem2name(vp->inputs[i].semantic);
-		if (semantic == TGSI_SEMANTIC_VERTEXID_NOBASE)
-			vertex_regid = vp->inputs[i].regid;
-		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
-			instance_regid = vp->inputs[i].regid;
-		else if (semantic == IR3_SEMANTIC_VTXCNT)
-			vtxcnt_regid = vp->inputs[i].regid;
-		else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask)
+		if (vp->inputs[i].sysval) {
+			switch(vp->inputs[i].slot) {
+			case SYSTEM_VALUE_BASE_VERTEX:
+				/* handled elsewhere */
+				break;
+			case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+				vertex_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_INSTANCE_ID:
+				instance_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_VERTEX_CNT:
+				vtxcnt_regid = vp->inputs[i].regid;
+				break;
+			default:
+				unreachable("invalid system value");
+				break;
+			}
+		} else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask) {
 			last = i;
+		}
 	}
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
@@ -370,7 +382,7 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
-		assert(sem2name(vp->inputs[i].semantic) == 0);
+		assert(!vp->inputs[i].sysval);
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
 			const struct pipe_vertex_buffer *vb =

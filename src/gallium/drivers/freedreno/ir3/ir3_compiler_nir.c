@@ -1349,14 +1349,15 @@ emit_intrinisic_store_var(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	}
 }
 
-static void add_sysval_input(struct ir3_compile *ctx, unsigned name,
+static void add_sysval_input(struct ir3_compile *ctx, gl_system_value slot,
 		struct ir3_instruction *instr)
 {
 	struct ir3_shader_variant *so = ctx->so;
 	unsigned r = regid(so->inputs_count, 0);
 	unsigned n = so->inputs_count++;
 
-	so->inputs[n].semantic = ir3_semantic_name(name, 0);
+	so->inputs[n].sysval = true;
+	so->inputs[n].slot = slot;
 	so->inputs[n].compmask = 1;
 	so->inputs[n].regid = r;
 	so->inputs[n].interpolate = INTERP_QUALIFIER_FLAT;
@@ -1437,7 +1438,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_load_base_vertex:
 		if (!ctx->basevertex) {
 			ctx->basevertex = create_driver_param(ctx, IR3_DP_VTXID_BASE);
-			add_sysval_input(ctx, TGSI_SEMANTIC_BASEVERTEX,
+			add_sysval_input(ctx, SYSTEM_VALUE_BASE_VERTEX,
 					ctx->basevertex);
 		}
 		dst[0] = ctx->basevertex;
@@ -1445,7 +1446,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_load_vertex_id_zero_base:
 		if (!ctx->vertex_id) {
 			ctx->vertex_id = create_input(ctx->block, 0);
-			add_sysval_input(ctx, TGSI_SEMANTIC_VERTEXID_NOBASE,
+			add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
 					ctx->vertex_id);
 		}
 		dst[0] = ctx->vertex_id;
@@ -1453,7 +1454,7 @@ emit_intrinisic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 	case nir_intrinsic_load_instance_id:
 		if (!ctx->instance_id) {
 			ctx->instance_id = create_input(ctx->block, 0);
-			add_sysval_input(ctx, TGSI_SEMANTIC_INSTANCEID,
+			add_sysval_input(ctx, SYSTEM_VALUE_INSTANCE_ID,
 					ctx->instance_id);
 		}
 		dst[0] = ctx->instance_id;
@@ -2021,7 +2022,7 @@ emit_stream_out(struct ir3_compile *ctx)
 	 * of the shader:
 	 */
 	vtxcnt = create_input(ctx->in_block, 0);
-	add_sysval_input(ctx, IR3_SEMANTIC_VTXCNT, vtxcnt);
+	add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_CNT, vtxcnt);
 
 	maxvtxcnt = create_driver_param(ctx, IR3_DP_VTXCNT_MAX);
 
@@ -2139,6 +2140,7 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	DBG("; in: slot=%u, len=%ux%u, drvloc=%u",
 			slot, array_len, ncomp, n);
 
+	so->inputs[n].slot = slot;
 	so->inputs[n].compmask = (1 << ncomp) - 1;
 	so->inputs[n].inloc = ctx->next_inloc;
 	so->inputs[n].interpolate = INTERP_QUALIFIER_NONE;
@@ -2146,23 +2148,15 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 	so->inputs[n].interpolate = in->data.interpolation;
 
 	if (ctx->so->type == SHADER_FRAGMENT) {
-		unsigned semantic_name, semantic_index;
-
-		varying_slot_to_tgsi_semantic(slot,
-				&semantic_name, &semantic_index);
-
-		so->inputs[n].semantic =
-				ir3_semantic_name(semantic_name, semantic_index);
-
 		for (int i = 0; i < ncomp; i++) {
 			struct ir3_instruction *instr = NULL;
 			unsigned idx = (n * 4) + i;
 
-			if (semantic_name == TGSI_SEMANTIC_POSITION) {
+			if (slot == VARYING_SLOT_POS) {
 				so->inputs[n].bary = false;
 				so->frag_coord = true;
 				instr = create_frag_coord(ctx, i);
-			} else if (semantic_name == TGSI_SEMANTIC_FACE) {
+			} else if (slot == VARYING_SLOT_FACE) {
 				so->inputs[n].bary = false;
 				so->frag_face = true;
 				instr = create_frag_face(ctx, i);
@@ -2173,10 +2167,18 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 				 * we need to do flat vs smooth shading depending on
 				 * rast state:
 				 */
-				if ((in->data.interpolation == INTERP_QUALIFIER_NONE) &&
-						((semantic_name == TGSI_SEMANTIC_COLOR) ||
-							(semantic_name == TGSI_SEMANTIC_BCOLOR)))
-					so->inputs[n].rasterflat = true;
+				if (in->data.interpolation == INTERP_QUALIFIER_NONE) {
+					switch (slot) {
+					case VARYING_SLOT_COL0:
+					case VARYING_SLOT_COL1:
+					case VARYING_SLOT_BFC0:
+					case VARYING_SLOT_BFC1:
+						so->inputs[n].rasterflat = true;
+						break;
+					default:
+						break;
+					}
+				}
 
 				if (ctx->flat_bypass) {
 					if ((so->inputs[n].interpolate == INTERP_QUALIFIER_FLAT) ||
@@ -2193,7 +2195,6 @@ setup_input(struct ir3_compile *ctx, nir_variable *in)
 			ctx->ir->inputs[idx] = instr;
 		}
 	} else if (ctx->so->type == SHADER_VERTEX) {
-		so->inputs[n].semantic = 0;
 		for (int i = 0; i < ncomp; i++) {
 			unsigned idx = (n * 4) + i;
 			ctx->ir->inputs[idx] = create_input(ctx->block, idx);
@@ -2214,7 +2215,6 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 	struct ir3_shader_variant *so = ctx->so;
 	unsigned array_len = MAX2(glsl_get_length(out->type), 1);
 	unsigned ncomp = glsl_get_components(out->type);
-	unsigned semantic_name, semantic_index;
 	unsigned n = out->data.driver_location;
 	unsigned slot = out->data.location;
 	unsigned comp = 0;
@@ -2222,45 +2222,42 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 	DBG("; out: slot=%u, len=%ux%u, drvloc=%u",
 			slot, array_len, ncomp, n);
 
-	if (ctx->so->type == SHADER_VERTEX) {
-		varying_slot_to_tgsi_semantic(slot,
-				&semantic_name, &semantic_index);
-
-		switch (semantic_name) {
-		case TGSI_SEMANTIC_POSITION:
-			so->writes_pos = true;
-			break;
-		case TGSI_SEMANTIC_PSIZE:
-			so->writes_psize = true;
-			break;
-		case TGSI_SEMANTIC_COLOR:
-		case TGSI_SEMANTIC_BCOLOR:
-		case TGSI_SEMANTIC_GENERIC:
-		case TGSI_SEMANTIC_FOG:
-		case TGSI_SEMANTIC_TEXCOORD:
-			break;
-		default:
-			compile_error(ctx, "unknown VS semantic name: %s\n",
-					tgsi_semantic_names[semantic_name]);
-		}
-	} else if (ctx->so->type == SHADER_FRAGMENT) {
-		frag_result_to_tgsi_semantic(slot,
-				&semantic_name, &semantic_index);
-
-		switch (semantic_name) {
-		case TGSI_SEMANTIC_POSITION:
+	if (ctx->so->type == SHADER_FRAGMENT) {
+		switch (slot) {
+		case FRAG_RESULT_DEPTH:
 			comp = 2;  /* tgsi will write to .z component */
 			so->writes_pos = true;
 			break;
-		case TGSI_SEMANTIC_COLOR:
-			if (semantic_index == -1) {
-				semantic_index = 0;
-				so->color0_mrt = 1;
-			}
+		case FRAG_RESULT_COLOR:
+			so->color0_mrt = 1;
 			break;
 		default:
-			compile_error(ctx, "unknown FS semantic name: %s\n",
-					tgsi_semantic_names[semantic_name]);
+			if (slot >= FRAG_RESULT_DATA0)
+				break;
+			compile_error(ctx, "unknown FS output name: %s\n",
+					gl_frag_result_name(slot));
+		}
+	} else if (ctx->so->type == SHADER_VERTEX) {
+		switch (slot) {
+		case VARYING_SLOT_POS:
+			so->writes_pos = true;
+			break;
+		case VARYING_SLOT_PSIZ:
+			so->writes_psize = true;
+			break;
+		case VARYING_SLOT_COL0:
+		case VARYING_SLOT_COL1:
+		case VARYING_SLOT_BFC0:
+		case VARYING_SLOT_BFC1:
+		case VARYING_SLOT_FOGC:
+			break;
+		default:
+			if (slot >= VARYING_SLOT_VAR0)
+				break;
+			if ((VARYING_SLOT_TEX0 <= slot) && (slot <= VARYING_SLOT_TEX7))
+				break;
+			compile_error(ctx, "unknown VS output name: %s\n",
+					gl_varying_slot_name(slot));
 		}
 	} else {
 		compile_error(ctx, "unknown shader type: %d\n", ctx->so->type);
@@ -2268,8 +2265,7 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 
 	compile_assert(ctx, n < ARRAY_SIZE(so->outputs));
 
-	so->outputs[n].semantic =
-			ir3_semantic_name(semantic_name, semantic_index);
+	so->outputs[n].slot = slot;
 	so->outputs[n].regid = regid(n, comp);
 	so->outputs_count = MAX2(so->outputs_count, n + 1);
 
@@ -2462,12 +2458,10 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	/* at this point, for binning pass, throw away unneeded outputs: */
 	if (so->key.binning_pass) {
 		for (i = 0, j = 0; i < so->outputs_count; i++) {
-			unsigned name = sem2name(so->outputs[i].semantic);
-			unsigned idx = sem2idx(so->outputs[i].semantic);
+			unsigned slot = so->outputs[i].slot;
 
 			/* throw away everything but first position/psize */
-			if ((idx == 0) && ((name == TGSI_SEMANTIC_POSITION) ||
-					(name == TGSI_SEMANTIC_PSIZE))) {
+			if ((slot == VARYING_SLOT_POS) || (slot == VARYING_SLOT_PSIZ)) {
 				if (i != j) {
 					so->outputs[j] = so->outputs[i];
 					ir->outputs[(j*4)+0] = ir->outputs[(i*4)+0];
@@ -2566,7 +2560,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 		 * but what we give the hw is the scalar register:
 		 */
 		if ((so->type == SHADER_FRAGMENT) &&
-			(sem2name(so->outputs[i].semantic) == TGSI_SEMANTIC_POSITION))
+			(so->outputs[i].slot == FRAG_RESULT_DEPTH))
 			so->outputs[i].regid += 2;
 	}
 

@@ -41,28 +41,6 @@ enum ir3_driver_param {
 	IR3_DP_VTXCNT_MAX = 1,
 };
 
-/* internal semantic used for passing vtxcnt to vertex shader to
- * implement transform feedback:
- */
-#define IR3_SEMANTIC_VTXCNT (TGSI_SEMANTIC_COUNT + 0)
-
-typedef uint16_t ir3_semantic;  /* semantic name + index */
-static inline ir3_semantic
-ir3_semantic_name(uint8_t name, uint16_t index)
-{
-	return (name << 8) | (index & 0xff);
-}
-
-static inline uint8_t sem2name(ir3_semantic sem)
-{
-	return sem >> 8;
-}
-
-static inline uint16_t sem2idx(ir3_semantic sem)
-{
-	return sem & 0xff;
-}
-
 /* Configuration key used to identify a shader variant.. different
  * shader variants can be used to implement features not supported
  * in hw (two sided color), binning-pass vertex shader, etc.
@@ -148,10 +126,16 @@ struct ir3_shader_variant {
 	uint8_t pos_regid;
 	bool frag_coord, frag_face, color0_mrt;
 
+	/* NOTE: for input/outputs, slot is:
+	 *   gl_vert_attrib  - for VS inputs
+	 *   gl_varying_slot - for VS output / FS input
+	 *   gl_frag_result  - for FS output
+	 */
+
 	/* varyings/outputs: */
 	unsigned outputs_count;
 	struct {
-		ir3_semantic semantic;
+		uint8_t slot;
 		uint8_t regid;
 	} outputs[16 + 2];  /* +POSITION +PSIZE */
 	bool writes_pos, writes_psize;
@@ -159,7 +143,7 @@ struct ir3_shader_variant {
 	/* vertices/inputs: */
 	unsigned inputs_count;
 	struct {
-		ir3_semantic semantic;
+		uint8_t slot;
 		uint8_t regid;
 		uint8_t compmask;
 		uint8_t ncomp;
@@ -175,7 +159,9 @@ struct ir3_shader_variant {
 		 * spots where inloc is used.
 		 */
 		uint8_t inloc;
-		/* fragment shader specfic: */
+		/* vertex shader specific: */
+		bool    sysval     : 1;   /* slot is a gl_system_value */
+		/* fragment shader specific: */
 		bool    bary       : 1;   /* fetched varying (vs one loaded into reg) */
 		bool    rasterflat : 1;   /* special handling for emit->rasterflat */
 		enum glsl_interp_qualifier interpolate;
@@ -257,12 +243,12 @@ ir3_shader_stage(struct ir3_shader *shader)
 #include "pipe/p_shader_tokens.h"
 
 static inline int
-ir3_find_output(const struct ir3_shader_variant *so, ir3_semantic semantic)
+ir3_find_output(const struct ir3_shader_variant *so, gl_varying_slot slot)
 {
 	int j;
 
 	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
+		if (so->outputs[j].slot == slot)
 			return j;
 
 	/* it seems optional to have a OUT.BCOLOR[n] for each OUT.COLOR[n]
@@ -272,18 +258,20 @@ ir3_find_output(const struct ir3_shader_variant *so, ir3_semantic semantic)
 	 * OUT.COLOR[n] to IN.BCOLOR[n].  And visa versa if there is only
 	 * a OUT.BCOLOR[n] but no matching OUT.COLOR[n]
 	 */
-	if (sem2name(semantic) == TGSI_SEMANTIC_BCOLOR) {
-		unsigned idx = sem2idx(semantic);
-		semantic = ir3_semantic_name(TGSI_SEMANTIC_COLOR, idx);
-	} else if (sem2name(semantic) == TGSI_SEMANTIC_COLOR) {
-		unsigned idx = sem2idx(semantic);
-		semantic = ir3_semantic_name(TGSI_SEMANTIC_BCOLOR, idx);
+	if (slot == VARYING_SLOT_BFC0) {
+		slot = VARYING_SLOT_COL0;
+	} else if (slot == VARYING_SLOT_BFC1) {
+		slot = VARYING_SLOT_COL1;
+	} else if (slot == VARYING_SLOT_COL0) {
+		slot = VARYING_SLOT_BFC0;
+	} else if (slot == VARYING_SLOT_COL1) {
+		slot = VARYING_SLOT_BFC1;
 	} else {
 		return 0;
 	}
 
 	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
+		if (so->outputs[j].slot == slot)
 			return j;
 
 	debug_assert(0);
@@ -301,11 +289,11 @@ ir3_next_varying(const struct ir3_shader_variant *so, int i)
 }
 
 static inline uint32_t
-ir3_find_output_regid(const struct ir3_shader_variant *so, ir3_semantic semantic)
+ir3_find_output_regid(const struct ir3_shader_variant *so, unsigned slot)
 {
 	int j;
 	for (j = 0; j < so->outputs_count; j++)
-		if (so->outputs[j].semantic == semantic)
+		if (so->outputs[j].slot == slot)
 			return so->outputs[j].regid;
 	return regid(63, 0);
 }
