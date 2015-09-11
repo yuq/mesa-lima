@@ -163,6 +163,13 @@ static const char *fs_tmpl =
    "      txl_coords.x = ((X & int(0xfff8)) >> 2) | (X & int(0x1));\n"
    "      txl_coords.y = ((Y & int(0xfffc)) >> 1) | (Y & int(0x1));\n"
    "      sample_index = (X & 0x4) | (Y & 0x2) | ((X & 0x2) >> 1);\n"
+   "      break;\n"
+   "   case 16:\n"
+   "      txl_coords.x = ((X & int(0xfff8)) >> 2) | (X & int(0x1));\n"
+   "      txl_coords.y = ((Y & int(0xfff8)) >> 2) | (Y & int(0x1));\n"
+   "      sample_index = (((Y & 0x4) << 1) | (X & 0x4) | (Y & 0x2) |\n"
+   "                      ((X & 0x2) >> 1));\n"
+   "      break;\n"
    "   }\n"
    "}\n"
    "\n"
@@ -313,11 +320,16 @@ adjust_msaa(struct blit_dims *dims, int num_samples)
       dims->dst_x0 *= 2;
       dims->dst_x1 *= 2;
    } else if (num_samples) {
-      const int x_num_samples = num_samples / 2;
-      dims->dst_x0 = ROUND_DOWN_TO(dims->dst_x0 * x_num_samples, num_samples);
-      dims->dst_y0 = ROUND_DOWN_TO(dims->dst_y0 * 2, 4);
-      dims->dst_x1 = ALIGN(dims->dst_x1 * x_num_samples, num_samples);
-      dims->dst_y1 = ALIGN(dims->dst_y1 * 2, 4);
+      const int y_num_samples = num_samples >= 16 ? 4 : 2;
+      const int x_num_samples = num_samples / y_num_samples;
+      dims->dst_x0 = ROUND_DOWN_TO(dims->dst_x0 * x_num_samples,
+                                   x_num_samples * 2);
+      dims->dst_y0 = ROUND_DOWN_TO(dims->dst_y0 * y_num_samples,
+                                   y_num_samples * 2);
+      dims->dst_x1 = ALIGN(dims->dst_x1 * x_num_samples,
+                           x_num_samples * 2);
+      dims->dst_y1 = ALIGN(dims->dst_y1 * y_num_samples,
+                           y_num_samples * 2);
    }
 }
 
