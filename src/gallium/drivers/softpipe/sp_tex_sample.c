@@ -2658,8 +2658,8 @@ static const struct sp_filter_funcs funcs_linear_2d_linear_repeat_POT = {
  * Do shadow/depth comparisons.
  */
 static void
-sample_compare(struct sp_sampler_view *sp_sview,
-               struct sp_sampler *sp_samp,
+sample_compare(const struct sp_sampler_view *sp_sview,
+               const struct sp_sampler *sp_samp,
                const float s[TGSI_QUAD_SIZE],
                const float t[TGSI_QUAD_SIZE],
                const float p[TGSI_QUAD_SIZE],
@@ -3083,8 +3083,8 @@ get_filters(const struct sp_sampler_view *sp_sview,
 }
 
 static void
-sample_mip(struct sp_sampler_view *sp_sview,
-           struct sp_sampler *sp_samp,
+sample_mip(const struct sp_sampler_view *sp_sview,
+           const struct sp_sampler *sp_samp,
            const float s[TGSI_QUAD_SIZE],
            const float t[TGSI_QUAD_SIZE],
            const float p[TGSI_QUAD_SIZE],
@@ -3209,7 +3209,8 @@ convert_cube(const struct sp_sampler_view *sp_sview,
 
 
 static void
-sp_get_dims(struct sp_sampler_view *sp_sview, int level,
+sp_get_dims(const struct sp_sampler_view *sp_sview,
+            int level,
             int dims[4])
 {
    const struct pipe_sampler_view *view = &sp_sview->base;
@@ -3267,7 +3268,7 @@ sp_get_dims(struct sp_sampler_view *sp_sview, int level,
  * coords to the texture image size.
  */
 static void
-sp_get_texels(struct sp_sampler_view *sp_sview,
+sp_get_texels(const struct sp_sampler_view *sp_sview,
               const int v_i[TGSI_QUAD_SIZE],
               const int v_j[TGSI_QUAD_SIZE],
               const int v_k[TGSI_QUAD_SIZE],
@@ -3537,12 +3538,20 @@ softpipe_create_sampler_view(struct pipe_context *pipe,
 }
 
 
+static inline const struct sp_tgsi_sampler *
+sp_tgsi_sampler_cast_c(const struct tgsi_sampler *sampler)
+{
+   return (const struct sp_tgsi_sampler *)sampler;
+}
+
+
 static void
 sp_tgsi_get_dims(struct tgsi_sampler *tgsi_sampler,
                  const unsigned sview_index,
                  int level, int dims[4])
 {
-   struct sp_tgsi_sampler *sp_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
+   const struct sp_tgsi_sampler *sp_samp =
+      sp_tgsi_sampler_cast_c(tgsi_sampler);
 
    assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
    /* always have a view here but texture is NULL if no sampler view was set. */
@@ -3568,9 +3577,10 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
                     enum tgsi_sampler_control control,
                     float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
-   struct sp_tgsi_sampler *sp_tgsi_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
-   struct sp_sampler_view *sp_sview;
-   struct sp_sampler *sp_samp;
+   const struct sp_tgsi_sampler *sp_tgsi_samp =
+      sp_tgsi_sampler_cast_c(tgsi_sampler);
+   const struct sp_sampler_view *sp_sview;
+   const struct sp_sampler *sp_samp;
    struct filter_args filt_args;
 
    assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
@@ -3626,7 +3636,7 @@ sp_tgsi_query_lod(const struct tgsi_sampler *tgsi_sampler,
    static const float lod_in[TGSI_QUAD_SIZE] = { 0.0, 0.0, 0.0, 0.0 };
 
    const struct sp_tgsi_sampler *sp_tgsi_samp =
-      (const struct sp_tgsi_sampler *)tgsi_sampler;
+      sp_tgsi_sampler_cast_c(tgsi_sampler);
    const struct sp_sampler_view *sp_sview;
    const struct sp_sampler *sp_samp;
    const struct sp_filter_funcs *funcs;
@@ -3674,7 +3684,8 @@ sp_tgsi_get_texel(struct tgsi_sampler *tgsi_sampler,
                   const int lod[TGSI_QUAD_SIZE], const int8_t offset[3],
                   float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZE])
 {
-   struct sp_tgsi_sampler *sp_samp = (struct sp_tgsi_sampler *)tgsi_sampler;
+   const struct sp_tgsi_sampler *sp_samp =
+      sp_tgsi_sampler_cast_c(tgsi_sampler);
 
    assert(sview_index < PIPE_MAX_SHADER_SAMPLER_VIEWS);
    /* always have a view here but texture is NULL if no sampler view was set. */
