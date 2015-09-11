@@ -2836,7 +2836,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
       if (total_uniform_blocks > ctx->Const.MaxCombinedUniformBlocks) {
 	 linker_error(prog, "Too many combined uniform blocks (%d/%d)\n",
-		      prog->NumBufferInterfaceBlocks,
+		      total_uniform_blocks,
 		      ctx->Const.MaxCombinedUniformBlocks);
       } else {
 	 for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
