@@ -64,8 +64,8 @@ struct img_filter_args {
    int gather_comp;
 };
 
-typedef void (*img_filter_func)(struct sp_sampler_view *sp_sview,
-                                struct sp_sampler *sp_samp,
+typedef void (*img_filter_func)(const struct sp_sampler_view *sp_sview,
+                                const struct sp_sampler *sp_samp,
                                 const struct img_filter_args *args,
                                 float *rgba);
 

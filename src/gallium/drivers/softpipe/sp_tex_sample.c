@@ -1017,8 +1017,8 @@ print_sample_4(const char *function, float rgba[TGSI_NUM_CHANNELS][TGSI_QUAD_SIZ
 /* Some image-filter fastpaths:
  */
 static inline void
-img_filter_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
-                                struct sp_sampler *sp_samp,
+img_filter_2d_linear_repeat_POT(const struct sp_sampler_view *sp_sview,
+                                const struct sp_sampler *sp_samp,
                                 const struct img_filter_args *args,
                                 float *rgba)
 {
@@ -1071,8 +1071,8 @@ img_filter_2d_linear_repeat_POT(struct sp_sampler_view *sp_sview,
 
 
 static inline void
-img_filter_2d_nearest_repeat_POT(struct sp_sampler_view *sp_sview,
-                                 struct sp_sampler *sp_samp,
+img_filter_2d_nearest_repeat_POT(const struct sp_sampler_view *sp_sview,
+                                 const struct sp_sampler *sp_samp,
                                  const struct img_filter_args *args,
                                  float rgba[TGSI_QUAD_SIZE])
 {
@@ -1105,8 +1105,8 @@ img_filter_2d_nearest_repeat_POT(struct sp_sampler_view *sp_sview,
 
 
 static inline void
-img_filter_2d_nearest_clamp_POT(struct sp_sampler_view *sp_sview,
-                                struct sp_sampler *sp_samp,
+img_filter_2d_nearest_clamp_POT(const struct sp_sampler_view *sp_sview,
+                                const struct sp_sampler *sp_samp,
                                 const struct img_filter_args *args,
                                 float rgba[TGSI_QUAD_SIZE])
 {
@@ -1147,8 +1147,8 @@ img_filter_2d_nearest_clamp_POT(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_1d_nearest(struct sp_sampler_view *sp_sview,
-                      struct sp_sampler *sp_samp,
+img_filter_1d_nearest(const struct sp_sampler_view *sp_sview,
+                      const struct sp_sampler *sp_samp,
                       const struct img_filter_args *args,
                       float rgba[TGSI_QUAD_SIZE])
 {
@@ -1179,8 +1179,8 @@ img_filter_1d_nearest(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_1d_array_nearest(struct sp_sampler_view *sp_sview,
-                            struct sp_sampler *sp_samp,
+img_filter_1d_array_nearest(const struct sp_sampler_view *sp_sview,
+                            const struct sp_sampler *sp_samp,
                             const struct img_filter_args *args,
                             float *rgba)
 {
@@ -1213,8 +1213,8 @@ img_filter_1d_array_nearest(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_2d_nearest(struct sp_sampler_view *sp_sview,
-                      struct sp_sampler *sp_samp,
+img_filter_2d_nearest(const struct sp_sampler_view *sp_sview,
+                      const struct sp_sampler *sp_samp,
                       const struct img_filter_args *args,
                       float *rgba)
 {
@@ -1248,8 +1248,8 @@ img_filter_2d_nearest(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_2d_array_nearest(struct sp_sampler_view *sp_sview,
-                            struct sp_sampler *sp_samp,
+img_filter_2d_array_nearest(const struct sp_sampler_view *sp_sview,
+                            const struct sp_sampler *sp_samp,
                             const struct img_filter_args *args,
                             float *rgba)
 {
@@ -1285,8 +1285,8 @@ img_filter_2d_array_nearest(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_cube_nearest(struct sp_sampler_view *sp_sview,
-                        struct sp_sampler *sp_samp,
+img_filter_cube_nearest(const struct sp_sampler_view *sp_sview,
+                        const struct sp_sampler *sp_samp,
                         const struct img_filter_args *args,
                         float *rgba)
 {
@@ -1330,8 +1330,8 @@ img_filter_cube_nearest(struct sp_sampler_view *sp_sview,
 }
 
 static void
-img_filter_cube_array_nearest(struct sp_sampler_view *sp_sview,
-                              struct sp_sampler *sp_samp,
+img_filter_cube_array_nearest(const struct sp_sampler_view *sp_sview,
+                              const struct sp_sampler *sp_samp,
                               const struct img_filter_args *args,
                               float *rgba)
 {
@@ -1367,8 +1367,8 @@ img_filter_cube_array_nearest(struct sp_sampler_view *sp_sview,
 }
 
 static void
-img_filter_3d_nearest(struct sp_sampler_view *sp_sview,
-                      struct sp_sampler *sp_samp,
+img_filter_3d_nearest(const struct sp_sampler_view *sp_sview,
+                      const struct sp_sampler *sp_samp,
                       const struct img_filter_args *args,
                       float *rgba)
 {
@@ -1401,8 +1401,8 @@ img_filter_3d_nearest(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_1d_linear(struct sp_sampler_view *sp_sview,
-                     struct sp_sampler *sp_samp,
+img_filter_1d_linear(const struct sp_sampler_view *sp_sview,
+                     const struct sp_sampler *sp_samp,
                      const struct img_filter_args *args,
                      float *rgba)
 {
@@ -1433,8 +1433,8 @@ img_filter_1d_linear(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_1d_array_linear(struct sp_sampler_view *sp_sview,
-                           struct sp_sampler *sp_samp,
+img_filter_1d_array_linear(const struct sp_sampler_view *sp_sview,
+                           const struct sp_sampler *sp_samp,
                            const struct img_filter_args *args,
                            float *rgba)
 {
@@ -1533,8 +1533,8 @@ get_gather_value(const struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_2d_linear(struct sp_sampler_view *sp_sview,
-                     struct sp_sampler *sp_samp,
+img_filter_2d_linear(const struct sp_sampler_view *sp_sview,
+                     const struct sp_sampler *sp_samp,
                      const struct img_filter_args *args,
                      float *rgba)
 {
@@ -1579,8 +1579,8 @@ img_filter_2d_linear(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
-                           struct sp_sampler *sp_samp,
+img_filter_2d_array_linear(const struct sp_sampler_view *sp_sview,
+                           const struct sp_sampler *sp_samp,
                            const struct img_filter_args *args,
                            float *rgba)
 {
@@ -1627,8 +1627,8 @@ img_filter_2d_array_linear(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_cube_linear(struct sp_sampler_view *sp_sview,
-                       struct sp_sampler *sp_samp,
+img_filter_cube_linear(const struct sp_sampler_view *sp_sview,
+                       const struct sp_sampler *sp_samp,
                        const struct img_filter_args *args,
                        float *rgba)
 {
@@ -1695,8 +1695,8 @@ img_filter_cube_linear(struct sp_sampler_view *sp_sview,
 
 
 static void
-img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
-                             struct sp_sampler *sp_samp,
+img_filter_cube_array_linear(const struct sp_sampler_view *sp_sview,
+                             const struct sp_sampler *sp_samp,
                              const struct img_filter_args *args,
                              float *rgba)
 {
@@ -1764,8 +1764,8 @@ img_filter_cube_array_linear(struct sp_sampler_view *sp_sview,
 }
 
 static void
-img_filter_3d_linear(struct sp_sampler_view *sp_sview,
-                     struct sp_sampler *sp_samp,
+img_filter_3d_linear(const struct sp_sampler_view *sp_sview,
+                     const struct sp_sampler *sp_samp,
                      const struct img_filter_args *args,
                      float *rgba)
 {
