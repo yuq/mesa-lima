@@ -169,6 +169,7 @@ const char * gl_system_value_name(gl_system_value sysval)
      ENUM(SYSTEM_VALUE_TESS_LEVEL_INNER),
      ENUM(SYSTEM_VALUE_LOCAL_INVOCATION_ID),
      ENUM(SYSTEM_VALUE_WORK_GROUP_ID),
+     ENUM(SYSTEM_VALUE_VERTEX_CNT),
    };
    return NAME(sysval);
 }

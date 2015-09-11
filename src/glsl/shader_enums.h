@@ -412,6 +412,12 @@ typedef enum
    SYSTEM_VALUE_WORK_GROUP_ID,
    /*@}*/
 
+   /**
+    * Driver internal vertex-count, used (for example) for drivers to
+    * calculate stride for stream-out outputs.  Not externally visible.
+    */
+   SYSTEM_VALUE_VERTEX_CNT,
+
    SYSTEM_VALUE_MAX             /**< Number of values */
 } gl_system_value;
 
