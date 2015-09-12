@@ -2200,7 +2200,7 @@ img_filter_2d_ewa(const struct sp_sampler_view *sp_sview,
                   const float s[TGSI_QUAD_SIZE],
                   const float t[TGSI_QUAD_SIZE],
                   const float p[TGSI_QUAD_SIZE],
-                  const float faces[TGSI_QUAD_SIZE],
+                  const uint faces[TGSI_QUAD_SIZE],
                   unsigned level,
                   const float dudx, const float dvdx,
                   const float dudy, const float dvdy,
@@ -3089,7 +3089,7 @@ convert_cube(const struct sp_sampler_view *sp_sview,
              float ssss[TGSI_QUAD_SIZE],
              float tttt[TGSI_QUAD_SIZE],
              float pppp[TGSI_QUAD_SIZE],
-             float faces[TGSI_QUAD_SIZE])
+             uint faces[TGSI_QUAD_SIZE])
 {
    unsigned j;
 
@@ -3564,14 +3564,14 @@ sp_tgsi_get_samples(struct tgsi_sampler *tgsi_sampler,
       float cs[TGSI_QUAD_SIZE];
       float ct[TGSI_QUAD_SIZE];
       float cp[TGSI_QUAD_SIZE];
-      float faces[TGSI_QUAD_SIZE];
+      uint faces[TGSI_QUAD_SIZE];
 
       convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp, faces);
 
       filt_args.faces = faces;
       sample_mip(sp_sview, sp_samp, cs, ct, cp, c0, lod, &filt_args, rgba);
    } else {
-      static const float zero_faces[TGSI_QUAD_SIZE] = {0.0f, 0.0f, 0.0f, 0.0f};
+      static const uint zero_faces[TGSI_QUAD_SIZE] = {0, 0, 0, 0};
 
       filt_args.faces = zero_faces;
       sample_mip(sp_sview, sp_samp, s, t, p, c0, lod, &filt_args, rgba);
@@ -3619,7 +3619,7 @@ sp_tgsi_query_lod(const struct tgsi_sampler *tgsi_sampler,
       float cs[TGSI_QUAD_SIZE];
       float ct[TGSI_QUAD_SIZE];
       float cp[TGSI_QUAD_SIZE];
-      float unused_faces[TGSI_QUAD_SIZE];
+      uint unused_faces[TGSI_QUAD_SIZE];
 
       convert_cube(sp_sview, sp_samp, s, t, p, c0, cs, ct, cp, unused_faces);
       compute_lambda_lod_unclamped(sp_sview, sp_samp,

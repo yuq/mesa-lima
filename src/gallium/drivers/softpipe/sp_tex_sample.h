@@ -72,7 +72,7 @@ typedef void (*img_filter_func)(const struct sp_sampler_view *sp_sview,
 struct filter_args {
    enum tgsi_sampler_control control;
    const int8_t *offset;
-   const float *faces;
+   const uint *faces;
 };
 
 typedef void (*mip_filter_func)(const struct sp_sampler_view *sp_sview,
