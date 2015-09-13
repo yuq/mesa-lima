@@ -163,7 +163,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
-	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
 	case PIPE_CAP_START_INSTANCE:
 	case PIPE_CAP_COMPUTE:
 		return 0;
@@ -278,6 +277,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	/* Render targets. */
 	case PIPE_CAP_MAX_RENDER_TARGETS:
 		return screen->max_rts;
+	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
+		return is_a3xx(screen) ? 1 : 0;
 
 	/* Queries. */
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
