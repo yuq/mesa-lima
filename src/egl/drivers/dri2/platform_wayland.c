@@ -1645,6 +1645,7 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct wl_egl_window *window = native_window;
    struct dri2_egl_surface *dri2_surf;
+   const __DRIconfig *config;
 
    (void) drv;
 
@@ -1669,10 +1670,12 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->base.Width = -1;
    dri2_surf->base.Height = -1;
 
+   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
+                                dri2_surf->base.GLColorspace);
+
    dri2_surf->dri_drawable =
-      (*dri2_dpy->swrast->createNewDrawable) (dri2_dpy->dri_screen,
-                                              dri2_conf->dri_double_config,
-                                              dri2_surf);
+      (*dri2_dpy->swrast->createNewDrawable)(dri2_dpy->dri_screen,
+                                             config, dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "swrast->createNewDrawable");
       goto cleanup_dri_drawable;

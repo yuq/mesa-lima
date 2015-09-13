@@ -206,6 +206,7 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    xcb_generic_error_t *error;
    xcb_drawable_t drawable;
    xcb_screen_t *screen;
+   const __DRIconfig *config;
 
    STATIC_ASSERT(sizeof(uintptr_t) == sizeof(native_surface));
    drawable = (uintptr_t) native_surface;
@@ -245,19 +246,18 @@ dri2_x11_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       dri2_surf->drawable = drawable;
    }
 
-   if (dri2_dpy->dri2) {
-      const __DRIconfig *config =
-         dri2_get_dri_config(dri2_conf, type, dri2_surf->base.GLColorspace);
+   config = dri2_get_dri_config(dri2_conf, type,
+                                dri2_surf->base.GLColorspace);
 
+   if (dri2_dpy->dri2) {
       dri2_surf->dri_drawable =
 	 (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
 					      dri2_surf);
    } else {
       assert(dri2_dpy->swrast);
       dri2_surf->dri_drawable = 
-	 (*dri2_dpy->swrast->createNewDrawable) (dri2_dpy->dri_screen,
-						 dri2_conf->dri_double_config,
-						 dri2_surf);
+         (*dri2_dpy->swrast->createNewDrawable)(dri2_dpy->dri_screen, config,
+                                                dri2_surf);
    }
 
    if (dri2_surf->dri_drawable == NULL) {
