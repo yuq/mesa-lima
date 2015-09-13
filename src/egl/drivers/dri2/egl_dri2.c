@@ -131,12 +131,10 @@ const __DRIconfig *
 dri2_get_dri_config(struct dri2_egl_config *conf, EGLint surface_type,
                     EGLenum colorspace)
 {
-   if (colorspace == EGL_GL_COLORSPACE_SRGB_KHR)
-      return surface_type == EGL_WINDOW_BIT ? conf->dri_srgb_double_config :
-                                              conf->dri_srgb_single_config;
-   else
-      return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config :
-                                              conf->dri_single_config;
+   const bool srgb = colorspace == EGL_GL_COLORSPACE_SRGB_KHR;
+
+   return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config[srgb] :
+                                           conf->dri_single_config[srgb];
 }
 
 static EGLBoolean
@@ -284,14 +282,10 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    if (num_configs == 1) {
       conf = (struct dri2_egl_config *) matching_config;
 
-      if (double_buffer && srgb && !conf->dri_srgb_double_config)
-         conf->dri_srgb_double_config = dri_config;
-      else if (double_buffer && !srgb && !conf->dri_double_config)
-         conf->dri_double_config = dri_config;
-      else if (!double_buffer && srgb && !conf->dri_srgb_single_config)
-         conf->dri_srgb_single_config = dri_config;
-      else if (!double_buffer && !srgb && !conf->dri_single_config)
-         conf->dri_single_config = dri_config;
+      if (double_buffer && !conf->dri_double_config[srgb])
+         conf->dri_double_config[srgb] = dri_config;
+      else if (!double_buffer && !conf->dri_single_config[srgb])
+         conf->dri_single_config[srgb] = dri_config;
       else
          /* a similar config type is already added (unlikely) => discard */
          return NULL;
@@ -301,17 +295,10 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
       if (conf == NULL)
          return NULL;
 
-      if (double_buffer) {
-         if (srgb)
-            conf->dri_srgb_double_config = dri_config;
-         else
-            conf->dri_double_config = dri_config;
-      } else {
-         if (srgb)
-            conf->dri_srgb_single_config = dri_config;
-         else
-            conf->dri_single_config = dri_config;
-      }
+      if (double_buffer)
+         conf->dri_double_config[srgb] = dri_config;
+      else
+         conf->dri_single_config[srgb] = dri_config;
 
       memcpy(&conf->base, &base, sizeof base);
       conf->base.SurfaceType = 0;

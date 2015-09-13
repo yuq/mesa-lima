@@ -284,10 +284,8 @@ struct dri2_egl_surface
 struct dri2_egl_config
 {
    _EGLConfig         base;
-   const __DRIconfig *dri_single_config;
-   const __DRIconfig *dri_double_config;
-   const __DRIconfig *dri_srgb_single_config;
-   const __DRIconfig *dri_srgb_double_config;
+   const __DRIconfig *dri_single_config[2];
+   const __DRIconfig *dri_double_config[2];
 };
 
 struct dri2_egl_image
