@@ -233,7 +233,7 @@ GLES3.2, GLSL ES 3.2
   GL_KHR_blend_equation_advanced                       not started
   GL_KHR_debug                                         DONE (all drivers)
   GL_KHR_robustness                                    90% done (the ARB variant)
-  GL_KHR_texture_compression_astc_hdr                  DONE (i965/gen9+)
+  GL_KHR_texture_compression_astc_ldr                  DONE (i965/gen9+)
   GL_OES_copy_image                                    not started (based on GL_ARB_copy_image, which is done for some drivers)
   GL_OES_draw_buffers_indexed                          not started
   GL_OES_draw_elements_base_vertex                     not started (based on GL_ARB_draw_elements_base_verte, which is done for all drivers)
