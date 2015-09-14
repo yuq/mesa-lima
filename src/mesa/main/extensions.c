@@ -342,7 +342,7 @@ static const struct extension extension_table[] = {
    { "GL_OES_vertex_array_object",                 o(dummy_true),                                   ES1 | ES2, 2010 },
 
    /* KHR extensions */
-   { "GL_KHR_debug",                               o(dummy_true),                              GL,             2012 },
+   { "GL_KHR_debug",                               o(dummy_true),                              GL | ES1 | ES2, 2012 },
    { "GL_KHR_context_flush_control",               o(dummy_true),                              GL       | ES2, 2014 },
    { "GL_KHR_texture_compression_astc_hdr",        o(KHR_texture_compression_astc_hdr),        GL       | ES2, 2012 },
    { "GL_KHR_texture_compression_astc_ldr",        o(KHR_texture_compression_astc_ldr),        GL       | ES2, 2012 },
