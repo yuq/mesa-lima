@@ -244,6 +244,7 @@ CodeEmitterGM107::emitSYS(int pos, const Value *val)
    case SV_LANEID         : id = 0x00; break;
    case SV_VERTEX_COUNT   : id = 0x10; break;
    case SV_INVOCATION_ID  : id = 0x11; break;
+   case SV_THREAD_KILL    : id = 0x13; break;
    case SV_INVOCATION_INFO: id = 0x1d; break;
    default:
       assert(!"invalid system value");

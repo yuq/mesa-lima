@@ -376,6 +376,7 @@ static nv50_ir::SVSemantic translateSysVal(uint sysval)
    case TGSI_SEMANTIC_TESSOUTER:  return nv50_ir::SV_TESS_OUTER;
    case TGSI_SEMANTIC_TESSINNER:  return nv50_ir::SV_TESS_INNER;
    case TGSI_SEMANTIC_VERTICESIN: return nv50_ir::SV_VERTEX_COUNT;
+   case TGSI_SEMANTIC_HELPER_INVOCATION: return nv50_ir::SV_THREAD_KILL;
    default:
       assert(0);
       return nv50_ir::SV_CLOCK;
