@@ -214,10 +214,7 @@ static void TAG(render_line_loop_verts)( struct gl_context *ctx,
 
       INIT( GL_LINE_STRIP );
 
-      if (flags & PRIM_BEGIN)
-	 j = 0;
-      else
-	 j = 1;
+      j = (flags & PRIM_BEGIN) ? 0 : 1;
 
       /* Ensure last vertex won't wrap buffers:
        */
@@ -234,7 +231,7 @@ static void TAG(render_line_loop_verts)( struct gl_context *ctx,
 	    nr = MIN2( currentsz, count - j );
 
 	    if (j + nr >= count &&
-		0 < count - 1 &&
+		count > 1 &&
 		(flags & PRIM_END)) 
 	    {
 	       void *tmp;
@@ -250,7 +247,7 @@ static void TAG(render_line_loop_verts)( struct gl_context *ctx,
 	 }
 
       }
-      else if (1 < count && (flags & PRIM_END)) {
+      else if (count > 1 && (flags & PRIM_END)) {
 	 void *tmp;
 	 tmp = ALLOC_VERTS(2);
 	 tmp = TAG(emit_verts)( ctx, start+1, 1, tmp );
@@ -798,10 +795,7 @@ static void TAG(render_line_loop_elts)( struct gl_context *ctx,
       FLUSH();
       ELT_INIT( GL_LINE_STRIP );
 
-      if (flags & PRIM_BEGIN)
-	 j = 0;
-      else
-	 j = 1;
+      j = (flags & PRIM_BEGIN) ? 0 : 1;
 
       currentsz = GET_CURRENT_VB_MAX_ELTS();
       if (currentsz < 8) {
@@ -818,7 +812,7 @@ static void TAG(render_line_loop_elts)( struct gl_context *ctx,
 	    nr = MIN2( currentsz, count - j );
 
 	    if (j + nr >= count &&
-		0 < count - 1 &&
+		count > 1 &&
 		(flags & PRIM_END)) 
 	    {
 	       void *tmp;
@@ -834,7 +828,7 @@ static void TAG(render_line_loop_elts)( struct gl_context *ctx,
 	 }
 
       }
-      else if (1 < count && (flags & PRIM_END)) {
+      else if (count > 1 && (flags & PRIM_END)) {
 	 void *tmp;
 	 tmp = ALLOC_ELTS(2);
 	 tmp = TAG(emit_elts)( ctx, elts+start+1, 1, tmp );
