@@ -585,10 +585,10 @@ struct blit_region {
 
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
-               struct anv_image_view *src,
+               struct anv_image_view *src_view,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
-               struct anv_color_attachment_view *dest,
+               struct anv_color_attachment_view *dest_view,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
 {
@@ -613,8 +613,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)(src_offset.x + src_extent.width) / (float)src->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+         (float)(src_offset.x + src_extent.width) / (float)src_view->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
       },
    };
 
@@ -624,8 +624,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src->extent.height,
+         (float)src_offset.x / (float)src_view->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
       },
    };
 
@@ -635,8 +635,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src->extent.width,
-         (float)src_offset.y / (float)src->extent.height,
+         (float)src_offset.x / (float)src_view->extent.width,
+         (float)src_offset.y / (float)src_view->extent.height,
       },
    };
 
@@ -674,7 +674,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .pDescriptors = (VkDescriptorInfo[]) {
                {
-                  .imageView = anv_image_view_to_handle(src),
+                  .imageView = anv_image_view_to_handle(src_view),
                   .imageLayout = VK_IMAGE_LAYOUT_GENERAL
                },
             }
@@ -688,12 +688,12 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = (VkAttachmentBindInfo[]) {
             {
-               .view = anv_attachment_view_to_handle(&dest->base),
+               .view = anv_attachment_view_to_handle(&dest_view->base),
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
-         .width = dest->base.extent.width,
-         .height = dest->base.extent.height,
+         .width = dest_view->base.extent.width,
+         .height = dest_view->base.extent.height,
          .layers = 1
       }, &fb);
 
@@ -704,7 +704,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = &(VkAttachmentDescription) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .format = dest->view.format->vk_format,
+            .format = dest_view->view.format->vk_format,
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
