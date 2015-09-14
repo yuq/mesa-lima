@@ -167,86 +167,81 @@ static void TAG(render_lines_verts)(struct gl_context *ctx,
 }
 
 
-static void TAG(render_line_strip_verts)( struct gl_context *ctx,
-					  GLuint start,
-					  GLuint count,
-					  GLuint flags )
+static void TAG(render_line_strip_verts)(struct gl_context *ctx,
+                                         GLuint start,
+                                         GLuint count,
+                                         GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   int currentsz;
+   GLuint j, nr;
 
-      INIT( GL_LINE_STRIP );
+   INIT(GL_LINE_STRIP);
 
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
-      if (currentsz < 8)
-	 currentsz = dmasz;
+   currentsz = GET_CURRENT_VB_MAX_VERTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      for (j = 0; j + 1 < count; j += nr - 1 ) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
-      }
+   for (j = 0; j + 1 < count; j += nr - 1) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
+      currentsz = dmasz;
+   }
  
-      FLUSH();
+   FLUSH();
 }
 
 
-static void TAG(render_line_loop_verts)( struct gl_context *ctx,
-					 GLuint start,
-					 GLuint count,
-					 GLuint flags )
+static void TAG(render_line_loop_verts)(struct gl_context *ctx,
+                                        GLuint start,
+                                        GLuint count,
+                                        GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   int currentsz;
+   GLuint j, nr;
 
-      INIT( GL_LINE_STRIP );
+   INIT(GL_LINE_STRIP);
 
-      j = (flags & PRIM_BEGIN) ? 0 : 1;
+   j = (flags & PRIM_BEGIN) ? 0 : 1;
 
-      /* Ensure last vertex won't wrap buffers:
-       */
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
-      currentsz--;
-      dmasz--;
+   /* Ensure last vertex won't wrap buffers:
+    */
+   currentsz = GET_CURRENT_VB_MAX_VERTS();
+   currentsz--;
+   dmasz--;
 
-      if (currentsz < 8) {
-	 currentsz = dmasz;
+   if (currentsz < 8)
+      currentsz = dmasz;
+
+   if (j + 1 < count) {
+      for (/* empty */; j + 1 < count; j += nr - 1) {
+         nr = MIN2(currentsz, count - j);
+
+         if (j + nr >= count &&
+             count > 1 &&
+             (flags & PRIM_END)) {
+            void *tmp;
+            tmp = ALLOC_VERTS(nr+1);
+            tmp = TAG(emit_verts)(ctx, start + j, nr, tmp);
+            tmp = TAG(emit_verts)( ctx, start, 1, tmp );
+            (void) tmp;
+         } else {
+            TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
+            currentsz = dmasz;
+         }
       }
+   } else if (count > 1 && (flags & PRIM_END)) {
+      void *tmp;
+      tmp = ALLOC_VERTS(2);
+      tmp = TAG(emit_verts)( ctx, start+1, 1, tmp );
+      tmp = TAG(emit_verts)( ctx, start, 1, tmp );
+      (void) tmp;
+   }
 
-      if (j + 1 < count) {
-	 for ( ; j + 1 < count; j += nr - 1 ) {
-	    nr = MIN2( currentsz, count - j );
-
-	    if (j + nr >= count &&
-		count > 1 &&
-		(flags & PRIM_END)) 
-	    {
-	       void *tmp;
-	       tmp = ALLOC_VERTS(nr+1);
-               tmp = TAG(emit_verts)(ctx, start + j, nr, tmp);
-	       tmp = TAG(emit_verts)( ctx, start, 1, tmp );
-	       (void) tmp;
-	    }
-	    else {
-               TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	       currentsz = dmasz;
-	    }
-	 }
-
-      }
-      else if (count > 1 && (flags & PRIM_END)) {
-	 void *tmp;
-	 tmp = ALLOC_VERTS(2);
-	 tmp = TAG(emit_verts)( ctx, start+1, 1, tmp );
-	 tmp = TAG(emit_verts)( ctx, start, 1, tmp );
-	 (void) tmp;
-      }
-
-      FLUSH();
+   FLUSH();
 }
 
 
@@ -682,89 +677,84 @@ static void TAG(render_lines_elts)(struct gl_context *ctx,
 }
 
 
-static void TAG(render_line_strip_elts)( struct gl_context *ctx,
-					 GLuint start,
-					 GLuint count,
-					 GLuint flags )
+static void TAG(render_line_strip_elts)(struct gl_context *ctx,
+                                        GLuint start,
+                                        GLuint count,
+                                        GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   GLuint j, nr;
 
-      FLUSH(); /* always a new primitive */
-      ELT_INIT( GL_LINE_STRIP );
+   FLUSH(); /* always a new primitive */
+   ELT_INIT(GL_LINE_STRIP);
 
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
-      if (currentsz < 8)
-	 currentsz = dmasz;
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      for (j = 0; j + 1 < count; j += nr - 1) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_elts)( ctx, elts + start + j, nr, ALLOC_ELTS(nr));
-	 FLUSH();
-	 currentsz = dmasz;
-      }
+   for (j = 0; j + 1 < count; j += nr - 1) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
+      FLUSH();
+      currentsz = dmasz;
+   }
 }
 
 
-static void TAG(render_line_loop_elts)( struct gl_context *ctx,
-					GLuint start,
-					GLuint count,
-					GLuint flags )
+static void TAG(render_line_loop_elts)(struct gl_context *ctx,
+                                       GLuint start,
+                                       GLuint count,
+                                       GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   GLuint j, nr;
 
-      FLUSH();
-      ELT_INIT( GL_LINE_STRIP );
+   FLUSH();
+   ELT_INIT(GL_LINE_STRIP);
 
-      j = (flags & PRIM_BEGIN) ? 0 : 1;
+   j = (flags & PRIM_BEGIN) ? 0 : 1;
 
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
-      if (currentsz < 8) {
-	 currentsz = dmasz;
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
+
+   /* Ensure last vertex doesn't wrap:
+    */
+   currentsz--;
+   dmasz--;
+
+   if (j + 1 < count) {
+      for (/* empty */; j + 1 < count; j += nr - 1) {
+         nr = MIN2(currentsz, count - j);
+
+         if (j + nr >= count &&
+             count > 1 &&
+             (flags & PRIM_END)) {
+            void *tmp;
+            tmp = ALLOC_ELTS(nr+1);
+            tmp = TAG(emit_elts)(ctx, elts + start + j, nr, tmp);
+            tmp = TAG(emit_elts)(ctx, elts + start, 1, tmp);
+            (void) tmp;
+         } else {
+            TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
+            currentsz = dmasz;
+         }
       }
+   } else if (count > 1 && (flags & PRIM_END)) {
+      void *tmp;
+      tmp = ALLOC_ELTS(2);
+      tmp = TAG(emit_elts)( ctx, elts+start+1, 1, tmp );
+      tmp = TAG(emit_elts)( ctx, elts+start, 1, tmp );
+      (void) tmp;
+   }
 
-      /* Ensure last vertex doesn't wrap:
-       */
-      currentsz--;
-      dmasz--;
-
-      if (j + 1 < count) {
-	 for ( ; j + 1 < count; j += nr - 1 ) {
-	    nr = MIN2( currentsz, count - j );
-
-	    if (j + nr >= count &&
-		count > 1 &&
-		(flags & PRIM_END)) 
-	    {
-	       void *tmp;
-	       tmp = ALLOC_ELTS(nr+1);
-               tmp = TAG(emit_elts)(ctx, elts + start + j, nr, tmp);
-	       tmp = TAG(emit_elts)( ctx, elts+start, 1, tmp );
-	       (void) tmp;
-	    }
-	    else {
-               TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
-	       currentsz = dmasz;
-	    }
-	 }
-
-      }
-      else if (count > 1 && (flags & PRIM_END)) {
-	 void *tmp;
-	 tmp = ALLOC_ELTS(2);
-	 tmp = TAG(emit_elts)( ctx, elts+start+1, 1, tmp );
-	 tmp = TAG(emit_elts)( ctx, elts+start, 1, tmp );
-	 (void) tmp;
-      }
-
-      FLUSH();
+   FLUSH();
 }
 
 
@@ -1086,11 +1076,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = HAVE_POINTS;
 	 break;
       case GL_LINES:
-	 ok = !ctx->Line.StippleFlag;
-	 break;
       case GL_LINE_STRIP:
-	 ok = !ctx->Line.StippleFlag;
-	 break;
       case GL_LINE_LOOP:
 	 ok = !ctx->Line.StippleFlag;
 	 break;
