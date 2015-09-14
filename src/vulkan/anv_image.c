@@ -164,29 +164,43 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
 
    const uint32_t i = 4; /* FINISHME: Stop hardcoding subimage alignment */
    const uint32_t j = 4; /* FINISHME: Stop hardcoding subimage alignment */
-   const uint32_t w0 = align_u32(extent->width, i);
-   const uint32_t h0 = align_u32(extent->height, j);
 
-   uint16_t qpitch;
-   uint32_t mt_width;
-   uint32_t mt_height;
+   uint16_t qpitch = min_qpitch;
+   uint32_t mt_width = 0;
+   uint32_t mt_height = 0;
 
-   if (levels == 1 && array_size == 1) {
-      qpitch = min_qpitch;
-      mt_width = w0;
-      mt_height = h0;
-   } else {
-      uint32_t w1 = align_u32(anv_minify(extent->width, 1), i);
-      uint32_t h1 = align_u32(anv_minify(extent->height, 1), j);
-      uint32_t w2 = align_u32(anv_minify(extent->width, 2), i);
+   switch (create_info->vk_info->imageType) {
+   case VK_IMAGE_TYPE_1D:
+      anv_finishme("VK_IMAGE_TYPE_1D");
+      break;
+   case VK_IMAGE_TYPE_2D: {
+      const uint32_t w0 = align_u32(extent->width, i);
+      const uint32_t h0 = align_u32(extent->height, j);
 
-      /* The QPitch equation is found in the Broadwell PRM >> Volume 5: Memory
-       * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
-       * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
-       */
-      qpitch = h0 + h1 + 11 * j;
-      mt_width = MAX(w0, w1 + w2);
-      mt_height = array_size * qpitch;
+      if (levels == 1 && array_size == 1) {
+         qpitch = min_qpitch;
+         mt_width = w0;
+         mt_height = h0;
+      } else {
+         uint32_t w1 = align_u32(anv_minify(extent->width, 1), i);
+         uint32_t h1 = align_u32(anv_minify(extent->height, 1), j);
+         uint32_t w2 = align_u32(anv_minify(extent->width, 2), i);
+
+         /* The QPitch equation is found in the Broadwell PRM >> Volume 5: Memory
+          * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
+          * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
+          */
+         qpitch = h0 + h1 + 11 * j;
+         mt_width = MAX(w0, w1 + w2);
+         mt_height = array_size * qpitch;
+      }
+      break;
+   }
+   case VK_IMAGE_TYPE_3D:
+      anv_finishme("VK_IMAGE_TYPE_3D");
+      break;
+   default:
+      unreachable(!"bad VkImageType");
    }
 
    assert(qpitch >= min_qpitch);
