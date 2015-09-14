@@ -4408,7 +4408,7 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
    TGSI_SEMANTIC_SAMPLEID,
    TGSI_SEMANTIC_SAMPLEPOS,
    TGSI_SEMANTIC_SAMPLEMASK,
-   0, /* gl_HelperInvocation */
+   TGSI_SEMANTIC_HELPER_INVOCATION,
 
    /* Tessellation shaders
     */
@@ -5139,6 +5139,8 @@ st_translate_program(
           TGSI_SEMANTIC_BASEVERTEX);
    assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_TESS_COORD] ==
           TGSI_SEMANTIC_TESSCOORD);
+   assert(_mesa_sysval_to_semantic[SYSTEM_VALUE_HELPER_INVOCATION] ==
+          TGSI_SEMANTIC_HELPER_INVOCATION);
 
    t = CALLOC_STRUCT(st_translate);
    if (!t) {

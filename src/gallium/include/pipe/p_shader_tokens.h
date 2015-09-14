@@ -185,7 +185,8 @@ struct tgsi_declaration_interp
 #define TGSI_SEMANTIC_TESSOUTER  32 /**< outer tessellation levels */
 #define TGSI_SEMANTIC_TESSINNER  33 /**< inner tessellation levels */
 #define TGSI_SEMANTIC_VERTICESIN 34 /**< number of input vertices */
-#define TGSI_SEMANTIC_COUNT      35 /**< number of semantic values */
+#define TGSI_SEMANTIC_HELPER_INVOCATION 35 /**< current invocation is helper */
+#define TGSI_SEMANTIC_COUNT      36 /**< number of semantic values */
 
 struct tgsi_declaration_semantic
 {

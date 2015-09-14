@@ -2941,6 +2941,14 @@ TGSI_SEMANTIC_VERTICESIN
 For tessellation evaluation/control shaders, this semantic label indicates the
 number of vertices provided in the input patch. Only the X value is defined.
 
+TGSI_SEMANTIC_HELPER_INVOCATION
+"""""""""""""""""""""""""""""""
+
+For fragment shaders, this semantic indicates whether the current
+invocation is covered or not. Helper invocations are created in order
+to properly compute derivatives, however it may be desirable to skip
+some of the logic in those cases. See ``gl_HelperInvocation`` documentation.
+
 
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
