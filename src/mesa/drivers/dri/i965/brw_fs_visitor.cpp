@@ -974,8 +974,10 @@ fs_visitor::emit_urb_writes()
                sources[length++] = reg;
             }
          } else {
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < output_components[varying]; i++)
                sources[length++] = offset(this->outputs[varying], bld, i);
+            for (int i = output_components[varying]; i < 4; i++)
+               sources[length++] = fs_reg(0);
          }
          break;
       }
