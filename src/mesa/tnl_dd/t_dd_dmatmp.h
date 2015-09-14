@@ -43,8 +43,8 @@
 #error "must have at least triangles to use render template"
 #endif
 
-#if HAVE_QUAD_STRIPS
-#error "quad strips not supported by render template"
+#if HAVE_QUAD_STRIPS || HAVE_QUADS
+#error "quads and quad strips not supported by render template"
 #endif
 
 #if !HAVE_ELTS
@@ -525,25 +525,7 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
    /* Emit whole number of quads in total. */
    count -= count & 3;
 
-   if (HAVE_QUADS) {
-      LOCAL_VARS;
-      int dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS()/4) * 4;
-      int currentsz;
-      GLuint j, nr;
-
-      INIT(GL_QUADS);
-
-      currentsz = (GET_CURRENT_VB_MAX_VERTS()/4) * 4;
-      if (currentsz < 8)
-         currentsz = dmasz;
-
-      for (j = 0; j < count; j += nr) {
-         nr = MIN2( currentsz, count - j );
-         TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-         currentsz = dmasz;
-      }
-   }
-   else if (HAVE_ELTS) {
+   if (HAVE_ELTS) {
       /* Hardware doesn't have a quad primitive type -- try to
        * simulate it using indexed vertices and the triangle
        * primitive:
@@ -1048,28 +1030,7 @@ static void TAG(render_quads_elts)( struct gl_context *ctx,
    /* Emit whole number of quads in total. */
    count -= count & 3;
 
-   if (HAVE_QUADS) {
-      LOCAL_VARS;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS()/4*4;
-      int currentsz;
-      GLuint j, nr;
-
-      FLUSH();
-      ELT_INIT( GL_TRIANGLES );
-
-      currentsz = GET_CURRENT_VB_MAX_ELTS()/4*4;
-
-      if (currentsz < 8)
-	 currentsz = dmasz;
-
-      for (j = 0; j < count; j += nr) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
-	 FLUSH();
-	 currentsz = dmasz;
-      }
-   } else {
+   {
       LOCAL_VARS;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
@@ -1208,9 +1169,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	    ok = HAVE_TRI_STRIPS;
 	 break;
       case GL_QUADS:
-	 if (HAVE_QUADS) {
-	    ok = GL_TRUE;
-	 } else if (HAVE_ELTS) {
+         if (HAVE_ELTS) {
 	    ok = (GLint) count < GET_SUBSEQUENT_VB_MAX_ELTS();
 	 }
 	 else {

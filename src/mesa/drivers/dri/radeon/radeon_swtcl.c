@@ -355,7 +355,6 @@ void r100_swtcl_flush(struct gl_context *ctx, uint32_t current_offset)
 #define HAVE_TRI_STRIPS  1
 #define HAVE_TRI_STRIP_1 0
 #define HAVE_TRI_FANS    1
-#define HAVE_QUADS       0
 #define HAVE_POLYGONS    0
 /* \todo: is it possible to make "ELTS" work with t_vertex code ? */
 #define HAVE_ELTS        0
