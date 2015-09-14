@@ -43,6 +43,10 @@
 #error "must have at least triangles to use render template"
 #endif
 
+#if HAVE_QUAD_STRIPS
+#error "quad strips not supported by render template"
+#endif
+
 #if !HAVE_ELTS
 #define ELTS_VARS(buf)
 #define ALLOC_ELTS(nr) 0
@@ -418,33 +422,9 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
 {
    GLuint j, nr;
 
-   if (HAVE_QUAD_STRIPS) {
-      LOCAL_VARS;
-      GLuint j, nr;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
-
-      INIT(GL_QUAD_STRIP);
-
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
-      if (currentsz < 8) {
-	 currentsz = dmasz;
-      }
-
-      dmasz -= (dmasz & 2);
-      currentsz -= (currentsz & 2);
-
-      for (j = 0; j + 3 < count; j += nr - 2 ) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
-      }
-
-      FLUSH();
-
-   } else if (HAVE_TRI_STRIPS && 
-	      ctx->Light.ShadeModel == GL_FLAT &&
-	      TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
+   if (HAVE_TRI_STRIPS &&
+       ctx->Light.ShadeModel == GL_FLAT &&
+       TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
       if (HAVE_ELTS) {
 	 LOCAL_VARS;
 	 int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
@@ -999,9 +979,7 @@ static void TAG(render_quad_strip_elts)( struct gl_context *ctx,
 					 GLuint count,
 					 GLuint flags )
 {
-   if (HAVE_QUAD_STRIPS && 0) {
-   }
-   else if (HAVE_TRI_STRIPS) {
+   if (HAVE_TRI_STRIPS) {
       LOCAL_VARS;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
@@ -1216,9 +1194,6 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
       case GL_QUAD_STRIP:
 	 if (VB->Elts) {
 	    ok = HAVE_TRI_STRIPS;
-	 }
-	 else if (HAVE_QUAD_STRIPS) {
-	    ok = GL_TRUE;
 	 } else if (HAVE_TRI_STRIPS && 
 		    ctx->Light.ShadeModel == GL_FLAT &&
 		    VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride != 0) {
