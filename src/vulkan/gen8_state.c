@@ -152,6 +152,8 @@ gen8_image_view_init(struct anv_image_view *iview,
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect(image, range->aspect);
 
+   uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
+
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
@@ -171,11 +173,28 @@ gen8_image_view_init(struct anv_image_view *iview,
       .depth = anv_minify(image->extent.depth, range->baseMipLevel),
    };
 
-   uint32_t depth = 1;
-   if (range->arraySize > 1) {
+   switch (image->type) {
+   case VK_IMAGE_TYPE_1D:
+   case VK_IMAGE_TYPE_2D:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
+       *    by one for each increase from zero of Minimum Array Element. For
+       *    example, if Minimum Array Element is set to 1024 on a 2D surface,
+       *    the range of this field is reduced to [0,1023].
+       */
       depth = range->arraySize;
-   } else if (image->extent.depth > 1) {
+      break;
+   case VK_IMAGE_TYPE_3D:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    If the volume texture is MIP-mapped, this field specifies the
+       *    depth of the base MIP level.
+       */
       depth = image->extent.depth;
+      break;
+   default:
+      unreachable(!"bad VkImageType");
    }
 
    static const uint32_t vk_to_gen_swizzle[] = {
@@ -260,6 +279,8 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
+   uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
+
    aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
    anv_assert(pCreateInfo->arraySize > 0);
@@ -276,11 +297,28 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
    };
 
-   uint32_t depth = 1;
-   if (pCreateInfo->arraySize > 1) {
+   switch (image->type) {
+   case VK_IMAGE_TYPE_1D:
+   case VK_IMAGE_TYPE_2D:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
+       *    by one for each increase from zero of Minimum Array Element. For
+       *    example, if Minimum Array Element is set to 1024 on a 2D surface,
+       *    the range of this field is reduced to [0,1023].
+       */
       depth = pCreateInfo->arraySize;
-   } else if (image->extent.depth > 1) {
+      break;
+   case VK_IMAGE_TYPE_3D:
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
+       *
+       *    If the volume texture is MIP-mapped, this field specifies the
+       *    depth of the base MIP level.
+       */
       depth = image->extent.depth;
+      break;
+   default:
+      unreachable(!"bad VkImageType");
    }
 
    if (cmd_buffer) {
