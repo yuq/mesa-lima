@@ -363,7 +363,7 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
    }
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = SURFTYPE_2D,
+      .SurfaceType = image->type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],

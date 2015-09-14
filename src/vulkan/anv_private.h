@@ -356,7 +356,12 @@ struct anv_meta_state {
    } clear;
 
    struct {
-      VkPipeline                                pipeline;
+      /** Pipeline that blits from a 2D image. */
+      VkPipeline pipeline_2d_src;
+
+      /** Pipeline that blits from a 3D image. */
+      VkPipeline pipeline_3d_src;
+
       VkPipelineLayout                          pipeline_layout;
       VkDescriptorSetLayout                     ds_layout;
    } blit;

@@ -385,6 +385,43 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    anv_cmd_buffer_restore(cmd_buffer, &saved_state);
 }
 
+static VkImageViewType
+meta_blit_get_src_image_view_type(const struct anv_image *src_image)
+{
+   switch (src_image->type) {
+   case VK_IMAGE_TYPE_1D:
+      return VK_IMAGE_VIEW_TYPE_1D;
+   case VK_IMAGE_TYPE_2D:
+      return VK_IMAGE_VIEW_TYPE_2D;
+   case VK_IMAGE_TYPE_3D:
+      return VK_IMAGE_VIEW_TYPE_3D;
+   default:
+      assert(!"bad VkImageType");
+      return 0;
+   }
+}
+
+static uint32_t
+meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
+                                         const VkImageSubresource *dest_subresource,
+                                         const VkOffset3D *dest_offset)
+{
+   switch (dest_image->type) {
+   case VK_IMAGE_TYPE_1D:
+   case VK_IMAGE_TYPE_2D:
+      return dest_subresource->arraySlice;
+   case VK_IMAGE_TYPE_3D:
+      /* HACK: Vulkan does not allow attaching a 3D image to a framebuffer,
+       * but meta does it anyway. When doing so, we translate the
+       * destination's z offset into an array offset.
+       */
+      return dest_offset->z;
+   default:
+      assert(!"bad VkImageType");
+      return 0;
+   }
+}
+
 static void
 anv_device_init_meta_blit_state(struct anv_device *device)
 {
@@ -404,13 +441,23 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       }
    );
 
-   VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
+   VkShaderModule fsm_2d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
       out vec4 f_color;
       in vec4 v_tex_coord;
       layout(set = 0, binding = 0) uniform sampler2D u_tex;
       void main()
       {
          f_color = texture(u_tex, v_tex_coord.xy);
+      }
+   );
+
+   VkShaderModule fsm_3d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
+      out vec4 f_color;
+      in vec4 v_tex_coord;
+      layout(set = 0, binding = 0) uniform sampler3D u_tex;
+      void main()
+      {
+         f_color = texture(u_tex, v_tex_coord.xyz);
       }
    );
 
@@ -422,13 +469,21 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .pName = "main",
       }, &vs);
 
-   VkShader fs;
+   VkShader fs_2d;
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = fsm,
+         .module = fsm_2d,
          .pName = "main",
-      }, &fs);
+      }, &fs_2d);
+
+   VkShader fs_3d;
+   anv_CreateShader(anv_device_to_handle(device),
+      &(VkShaderCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
+         .module = fsm_3d,
+         .pName = "main",
+      }, &fs_3d);
 
    VkPipelineVertexInputStateCreateInfo vi_create_info = {
       .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -441,7 +496,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          },
          {
             .binding = 1,
-            .strideInBytes = 16,
+            .strideInBytes = 5 * sizeof(float),
             .stepRate = VK_VERTEX_INPUT_STEP_RATE_VERTEX
          },
       },
@@ -465,7 +520,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
             /* Texture Coordinate */
             .location = 2,
             .binding = 1,
-            .format = VK_FORMAT_R32G32_SFLOAT,
+            .format = VK_FORMAT_R32G32B32_SFLOAT,
             .offsetInBytes = 8
          }
       }
@@ -494,61 +549,74 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       &device->meta_state.blit.pipeline_layout);
 
+   VkPipelineShaderStageCreateInfo pipeline_shader_stages[] = {
+      {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_VERTEX,
+         .shader = vs,
+         .pSpecializationInfo = NULL
+      }, {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+         .stage = VK_SHADER_STAGE_FRAGMENT,
+         .shader = {0}, /* TEMPLATE VALUE! FILL ME IN! */
+         .pSpecializationInfo = NULL
+      },
+   };
+
+   const VkGraphicsPipelineCreateInfo vk_pipeline_info = {
+      .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+      .stageCount = ARRAY_SIZE(pipeline_shader_stages),
+      .pStages = pipeline_shader_stages,
+      .pVertexInputState = &vi_create_info,
+      .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+         .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+         .primitiveRestartEnable = false,
+      },
+      .pRasterState = &(VkPipelineRasterStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
+         .depthClipEnable = true,
+         .rasterizerDiscardEnable = false,
+         .fillMode = VK_FILL_MODE_SOLID,
+         .cullMode = VK_CULL_MODE_NONE,
+         .frontFace = VK_FRONT_FACE_CCW
+      },
+      .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+         .attachmentCount = 1,
+         .pAttachments = (VkPipelineColorBlendAttachmentState []) {
+            { .channelWriteMask = VK_CHANNEL_A_BIT |
+                 VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
+         }
+      },
+      .flags = 0,
+      .layout = device->meta_state.blit.pipeline_layout,
+   };
+
+   const struct anv_graphics_pipeline_create_info anv_pipeline_info = {
+      .use_repclear = false,
+      .disable_viewport = true,
+      .disable_scissor = true,
+      .disable_vs = true,
+      .use_rectlist = true
+   };
+
+   pipeline_shader_stages[1].shader = fs_2d;
    anv_graphics_pipeline_create(anv_device_to_handle(device),
-      &(VkGraphicsPipelineCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-         .stageCount = 2,
-         .pStages = (VkPipelineShaderStageCreateInfo[]) {
-            {
-               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-               .stage = VK_SHADER_STAGE_VERTEX,
-               .shader = vs,
-               .pSpecializationInfo = NULL
-            }, {
-               .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-               .stage = VK_SHADER_STAGE_FRAGMENT,
-               .shader = fs,
-               .pSpecializationInfo = NULL
-            },
-         },
-         .pVertexInputState = &vi_create_info,
-         .pInputAssemblyState = &(VkPipelineInputAssemblyStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-            .primitiveRestartEnable = false,
-         },
-         .pRasterState = &(VkPipelineRasterStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
-            .depthClipEnable = true,
-            .rasterizerDiscardEnable = false,
-            .fillMode = VK_FILL_MODE_SOLID,
-            .cullMode = VK_CULL_MODE_NONE,
-            .frontFace = VK_FRONT_FACE_CCW
-         },
-         .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-            .attachmentCount = 1,
-            .pAttachments = (VkPipelineColorBlendAttachmentState []) {
-               { .channelWriteMask = VK_CHANNEL_A_BIT |
-                    VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
-            }
-         },
-         .flags = 0,
-         .layout = device->meta_state.blit.pipeline_layout,
-      },
-      &(struct anv_graphics_pipeline_create_info) {
-         .use_repclear = false,
-         .disable_viewport = true,
-         .disable_scissor = true,
-         .disable_vs = true,
-         .use_rectlist = true
-      },
-      &device->meta_state.blit.pipeline);
+      &vk_pipeline_info, &anv_pipeline_info,
+      &device->meta_state.blit.pipeline_2d_src);
+
+   pipeline_shader_stages[1].shader = fs_3d;
+   anv_graphics_pipeline_create(anv_device_to_handle(device),
+      &vk_pipeline_info, &anv_pipeline_info,
+      &device->meta_state.blit.pipeline_3d_src);
 
    anv_DestroyShaderModule(anv_device_to_handle(device), vsm);
    anv_DestroyShader(anv_device_to_handle(device), vs);
-   anv_DestroyShaderModule(anv_device_to_handle(device), fsm);
-   anv_DestroyShader(anv_device_to_handle(device), fs);
+   anv_DestroyShaderModule(anv_device_to_handle(device), fsm_2d);
+   anv_DestroyShader(anv_device_to_handle(device), fs_2d);
+   anv_DestroyShaderModule(anv_device_to_handle(device), fsm_3d);
+   anv_DestroyShader(anv_device_to_handle(device), fs_3d);
 }
 
 static void
@@ -558,11 +626,6 @@ meta_prepare_blit(struct anv_cmd_buffer *cmd_buffer,
    struct anv_device *device = cmd_buffer->device;
 
    anv_cmd_buffer_save(cmd_buffer, saved_state);
-
-   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(device->meta_state.blit.pipeline))
-      anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
-                          VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          device->meta_state.blit.pipeline);
 
    /* We don't need anything here, only set if not already set. */
    if (cmd_buffer->state.rs_state == NULL)
@@ -585,9 +648,11 @@ struct blit_region {
 
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
+               struct anv_image *src_image,
                struct anv_image_view *src_view,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
+               struct anv_image *dest_image,
                struct anv_color_attachment_view *dest_view,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
@@ -597,7 +662,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
 
    struct blit_vb_data {
       float pos[2];
-      float tex_coord[2];
+      float tex_coord[3];
    } *vb_data;
 
    unsigned vb_size = sizeof(struct vue_header) + 3 * sizeof(*vb_data);
@@ -615,6 +680,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          (float)(src_offset.x + src_extent.width) / (float)src_view->extent.width,
          (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
+         (float)(src_offset.z + src_extent.depth) / (float)src_view->extent.depth,
       },
    };
 
@@ -626,6 +692,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          (float)src_offset.x / (float)src_view->extent.width,
          (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
+         (float)(src_offset.z + src_extent.depth) / (float)src_view->extent.depth,
       },
    };
 
@@ -637,6 +704,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       .tex_coord = {
          (float)src_offset.x / (float)src_view->extent.width,
          (float)src_offset.y / (float)src_view->extent.height,
+         (float)src_offset.z / (float)src_view->extent.depth,
       },
    };
 
@@ -746,6 +814,28 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachmentClearValues = NULL,
       }, VK_RENDER_PASS_CONTENTS_INLINE);
+
+   VkPipeline pipeline;
+
+   switch (src_image->type) {
+   case VK_IMAGE_TYPE_1D:
+      anv_finishme("VK_IMAGE_TYPE_1D");
+      pipeline = device->meta_state.blit.pipeline_2d_src;
+      break;
+   case VK_IMAGE_TYPE_2D:
+      pipeline = device->meta_state.blit.pipeline_2d_src;
+      break;
+   case VK_IMAGE_TYPE_3D:
+      pipeline = device->meta_state.blit.pipeline_3d_src;
+      break;
+   default:
+      unreachable(!"bad VkImageType");
+   }
+
+   if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
+      anv_CmdBindPipeline(anv_cmd_buffer_to_handle(cmd_buffer),
+                          VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+   }
 
    anv_CmdBindDynamicViewportState(anv_cmd_buffer_to_handle(cmd_buffer),
                                    anv_framebuffer_from_handle(fb)->vp_state);
@@ -864,9 +954,11 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer);
 
    meta_emit_blit(cmd_buffer,
+                  anv_image_from_handle(src_image),
                   &src_view,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
+                  anv_image_from_handle(dest_image),
                   &dest_view,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 });
@@ -966,6 +1058,9 @@ void anv_CmdCopyImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
+   const VkImageViewType src_view_type =
+      meta_blit_get_src_image_view_type(src_image);
+
    struct anv_saved_state saved_state;
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -976,7 +1071,7 @@ void anv_CmdCopyImage(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .viewType = src_view_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -994,6 +1089,20 @@ void anv_CmdCopyImage(
          },
          cmd_buffer);
 
+      const VkOffset3D dest_offset = {
+         .x = pRegions[r].destOffset.x,
+         .y = pRegions[r].destOffset.y,
+         .z = 0,
+      };
+
+      const uint32_t dest_array_slice =
+         meta_blit_get_dest_view_base_array_slice(dest_image,
+                                                  &pRegions[r].destSubresource,
+                                                  &pRegions[r].destOffset);
+
+      if (pRegions[r].extent.depth > 1)
+         anv_finishme("FINISHME: copy multiple depth layers");
+
       struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
@@ -1001,17 +1110,17 @@ void anv_CmdCopyImage(
             .image = destImage,
             .format = dest_image->format->vk_format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
-            .baseArraySlice = pRegions[r].destSubresource.arraySlice,
+            .baseArraySlice = dest_array_slice,
             .arraySize = 1,
          },
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     src_image, &src_view,
                      pRegions[r].srcOffset,
                      pRegions[r].extent,
-                     &dest_view,
-                     pRegions[r].destOffset,
+                     dest_image, &dest_view,
+                     dest_offset,
                      pRegions[r].extent);
    }
 
@@ -1033,6 +1142,9 @@ void anv_CmdBlitImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
+   const VkImageViewType src_view_type =
+      meta_blit_get_src_image_view_type(src_image);
+
    struct anv_saved_state saved_state;
 
    anv_finishme("respect VkTexFilter");
@@ -1045,7 +1157,7 @@ void anv_CmdBlitImage(
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .viewType = src_view_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -1063,6 +1175,20 @@ void anv_CmdBlitImage(
          },
          cmd_buffer);
 
+      const VkOffset3D dest_offset = {
+         .x = pRegions[r].destOffset.x,
+         .y = pRegions[r].destOffset.y,
+         .z = 0,
+      };
+
+      const uint32_t dest_array_slice =
+         meta_blit_get_dest_view_base_array_slice(dest_image,
+                                                  &pRegions[r].destSubresource,
+                                                  &pRegions[r].destOffset);
+
+      if (pRegions[r].destExtent.depth > 1)
+         anv_finishme("FINISHME: copy multiple depth layers");
+
       struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
@@ -1070,17 +1196,17 @@ void anv_CmdBlitImage(
             .image = destImage,
             .format = dest_image->format->vk_format,
             .mipLevel = pRegions[r].destSubresource.mipLevel,
-            .baseArraySlice = pRegions[r].destSubresource.arraySlice,
+            .baseArraySlice = dest_array_slice,
             .arraySize = 1,
          },
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     &src_view,
+                     src_image, &src_view,
                      pRegions[r].srcOffset,
                      pRegions[r].srcExtent,
-                     &dest_view,
-                     pRegions[r].destOffset,
+                     dest_image, &dest_view,
+                     dest_offset,
                      pRegions[r].destExtent);
    }
 
@@ -1181,6 +1307,20 @@ void anv_CmdCopyBufferToImage(
          },
          cmd_buffer);
 
+      const VkOffset3D dest_offset = {
+         .x = pRegions[r].imageOffset.x,
+         .y = pRegions[r].imageOffset.y,
+         .z = 0,
+      };
+
+      const uint32_t dest_array_slice =
+         meta_blit_get_dest_view_base_array_slice(dest_image,
+                                                  &pRegions[r].imageSubresource,
+                                                  &pRegions[r].imageOffset);
+
+      if (pRegions[r].imageExtent.depth > 1)
+         anv_finishme("FINISHME: copy multiple depth layers");
+
       struct anv_color_attachment_view dest_view;
       anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
@@ -1188,17 +1328,19 @@ void anv_CmdCopyBufferToImage(
             .image = anv_image_to_handle(dest_image),
             .format = proxy_format,
             .mipLevel = pRegions[r].imageSubresource.mipLevel,
-            .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
+            .baseArraySlice = dest_array_slice,
             .arraySize = 1,
          },
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
+                     anv_image_from_handle(srcImage),
                      &src_view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent,
+                     dest_image,
                      &dest_view,
-                     pRegions[r].imageOffset,
+                     dest_offset,
                      pRegions[r].imageExtent);
 
       anv_DestroyImage(vk_device, srcImage);
@@ -1220,15 +1362,21 @@ void anv_CmdCopyImageToBuffer(
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_saved_state saved_state;
 
+   const VkImageViewType src_view_type =
+      meta_blit_get_src_image_view_type(src_image);
+
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      if (pRegions[r].imageExtent.depth > 1)
+         anv_finishme("FINISHME: copy multiple depth layers");
+
       struct anv_image_view src_view;
       anv_image_view_init(&src_view, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
+            .viewType = src_view_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -1268,9 +1416,11 @@ void anv_CmdCopyImageToBuffer(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
+                     anv_image_from_handle(srcImage),
                      &src_view,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
+                     anv_image_from_handle(destImage),
                      &dest_view,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
@@ -1501,7 +1651,9 @@ anv_device_finish_meta(struct anv_device *device)
 
    /* Blit */
    anv_DestroyPipeline(anv_device_to_handle(device),
-                       device->meta_state.blit.pipeline);
+                       device->meta_state.blit.pipeline_2d_src);
+   anv_DestroyPipeline(anv_device_to_handle(device),
+                       device->meta_state.blit.pipeline_3d_src);
    anv_DestroyPipelineLayout(anv_device_to_handle(device),
                              device->meta_state.blit.pipeline_layout);
    anv_DestroyDescriptorSetLayout(anv_device_to_handle(device),
