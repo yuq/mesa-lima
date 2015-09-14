@@ -39,8 +39,8 @@
  * tristrips, lineloops to linestrips), or to indexed vertices.
  */
 
-#if !HAVE_TRIANGLES || !HAVE_LINES || !HAVE_LINE_STRIPS
-#error "must have lines, line strips, and triangles to use render template"
+#if !HAVE_TRIANGLES || !HAVE_LINES || !HAVE_LINE_STRIPS || !HAVE_TRI_STRIPS
+#error "must have lines, line strips, triangles, and triangle strips to use render template"
 #endif
 
 #if HAVE_QUAD_STRIPS || HAVE_QUADS
@@ -281,7 +281,6 @@ static void TAG(render_tri_strip_verts)( struct gl_context *ctx,
 					 GLuint count,
 					 GLuint flags )
 {
-   if (HAVE_TRI_STRIPS) {
       LOCAL_VARS;
       GLuint j, nr;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
@@ -307,11 +306,6 @@ static void TAG(render_tri_strip_verts)( struct gl_context *ctx,
       }
 
       FLUSH();
-
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 static void TAG(render_tri_fan_verts)( struct gl_context *ctx,
@@ -399,8 +393,7 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
 {
    GLuint j, nr;
 
-   if (HAVE_TRI_STRIPS &&
-       ctx->Light.ShadeModel == GL_FLAT &&
+   if (ctx->Light.ShadeModel == GL_FLAT &&
        TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
       if (HAVE_ELTS) {
 	 LOCAL_VARS;
@@ -458,7 +451,7 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
 	 return;
       }
    }
-   else if (HAVE_TRI_STRIPS) {
+   else {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       int currentsz;
@@ -486,10 +479,6 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
       }
 
       FLUSH();
-
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
    }
 }
 
@@ -795,7 +784,6 @@ static void TAG(render_tri_strip_elts)( struct gl_context *ctx,
 					GLuint count,
 					GLuint flags )
 {
-   if (HAVE_TRI_STRIPS) {
       LOCAL_VARS;
       GLuint j, nr;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
@@ -821,11 +809,6 @@ static void TAG(render_tri_strip_elts)( struct gl_context *ctx,
 	 FLUSH();
 	 currentsz = dmasz;
       }
-   } else {
-      /* TODO: try to emit as indexed triangles */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 static void TAG(render_tri_fan_elts)( struct gl_context *ctx,
@@ -909,7 +892,6 @@ static void TAG(render_quad_strip_elts)( struct gl_context *ctx,
 					 GLuint count,
 					 GLuint flags )
 {
-   if (HAVE_TRI_STRIPS) {
       LOCAL_VARS;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
@@ -966,7 +948,6 @@ static void TAG(render_quad_strip_elts)( struct gl_context *ctx,
 	    currentsz = dmasz;
 	 }
       }
-   }
 }
 
 
@@ -1078,7 +1059,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = GL_TRUE;
 	 break;
       case GL_TRIANGLE_STRIP:
-	 ok = HAVE_TRI_STRIPS;
+	 ok = GL_TRUE;
 	 break;
       case GL_TRIANGLE_FAN:
 	 ok = HAVE_TRI_FANS;
@@ -1093,9 +1074,8 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 break;
       case GL_QUAD_STRIP:
 	 if (VB->Elts) {
-	    ok = HAVE_TRI_STRIPS;
-	 } else if (HAVE_TRI_STRIPS && 
-		    ctx->Light.ShadeModel == GL_FLAT &&
+	    ok = GL_TRUE;
+	 } else if (ctx->Light.ShadeModel == GL_FLAT &&
 		    VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride != 0) {
 	    if (HAVE_ELTS) {
 	       ok = (GLint) count < GET_SUBSEQUENT_VB_MAX_ELTS();
@@ -1105,7 +1085,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	    }
 	 }
 	 else 
-	    ok = HAVE_TRI_STRIPS;
+	    ok = GL_TRUE;
 	 break;
       case GL_QUADS:
          if (HAVE_ELTS) {
