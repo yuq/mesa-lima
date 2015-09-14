@@ -39,8 +39,8 @@
  * tristrips, lineloops to linestrips), or to indexed vertices.
  */
 
-#if !defined(HAVE_TRIANGLES)
-#error "must have at least triangles to use render template"
+#if !defined(HAVE_TRIANGLES) || !HAVE_LINES
+#error "must have lines and triangles to use render template"
 #endif
 
 #if HAVE_QUAD_STRIPS || HAVE_QUADS
@@ -142,7 +142,6 @@ static void TAG(render_lines_verts)( struct gl_context *ctx,
 				     GLuint count,
 				     GLuint flags )
 {
-   if (HAVE_LINES) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       int currentsz;
@@ -165,11 +164,6 @@ static void TAG(render_lines_verts)( struct gl_context *ctx,
          TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
 	 currentsz = dmasz;
       }
-
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -673,7 +667,6 @@ static void TAG(render_lines_elts)( struct gl_context *ctx,
 				    GLuint count,
 				    GLuint flags )
 {
-   if (HAVE_LINES) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
       int currentsz;
@@ -698,10 +691,6 @@ static void TAG(render_lines_elts)( struct gl_context *ctx,
 	 FLUSH();
 	 currentsz = dmasz;
       }
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -1122,7 +1111,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = HAVE_POINTS;
 	 break;
       case GL_LINES:
-	 ok = HAVE_LINES && !ctx->Line.StippleFlag;
+	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_LINE_STRIP:
 	 ok = HAVE_LINE_STRIPS && !ctx->Line.StippleFlag;
