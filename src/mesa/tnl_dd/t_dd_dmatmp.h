@@ -623,7 +623,7 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
 
       INIT(GL_TRIANGLES);
 
-      for (j = 0; j < count-3; j += 4) {
+      for (j = 0; j + 3 < count; j += 4) {
 	 void *tmp = ALLOC_VERTS( 6 );
 	 /* Send v0, v1, v3
 	  */
