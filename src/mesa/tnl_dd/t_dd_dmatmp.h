@@ -542,6 +542,9 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
 				     GLuint count,
 				     GLuint flags )
 {
+   /* Emit whole number of quads in total. */
+   count -= count & 3;
+
    if (HAVE_QUADS) {
       LOCAL_VARS;
       int dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS()/4) * 4;
@@ -549,11 +552,6 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
       GLuint j, nr;
 
       INIT(GL_QUADS);
-
-      /* Emit whole number of quads in total.  dmasz is already a multiple
-       * of 4.
-       */
-      count -= count & 3;
 
       currentsz = (GET_CURRENT_VB_MAX_VERTS()/4) * 4;
       if (currentsz < 8)
@@ -584,7 +582,6 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
       /* Emit whole number of quads in total, and in each buffer.
        */
       dmasz -= dmasz & 3;
-      count -= count & 3;
       currentsz -= currentsz & 3;
 
       /* Adjust for rendering as triangles:
@@ -1070,6 +1067,9 @@ static void TAG(render_quads_elts)( struct gl_context *ctx,
 				    GLuint count,
 				    GLuint flags )
 {
+   /* Emit whole number of quads in total. */
+   count -= count & 3;
+
    if (HAVE_QUADS) {
       LOCAL_VARS;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
@@ -1081,8 +1081,6 @@ static void TAG(render_quads_elts)( struct gl_context *ctx,
       ELT_INIT( GL_TRIANGLES );
 
       currentsz = GET_CURRENT_VB_MAX_ELTS()/4*4;
-
-      count -= count & 3;
 
       if (currentsz < 8)
 	 currentsz = dmasz;
@@ -1106,7 +1104,6 @@ static void TAG(render_quads_elts)( struct gl_context *ctx,
       /* Emit whole number of quads in total, and in each buffer.
        */
       dmasz -= dmasz & 3;
-      count -= count & 3;
       currentsz -= currentsz & 3;
 
       /* Adjust for rendering as triangles:
