@@ -39,8 +39,8 @@
  * tristrips, lineloops to linestrips), or to indexed vertices.
  */
 
-#if !defined(HAVE_TRIANGLES) || !HAVE_LINES
-#error "must have lines and triangles to use render template"
+#if !defined(HAVE_TRIANGLES) || !HAVE_LINES || !HAVE_LINE_STRIPS
+#error "must have lines, line strips, and triangles to use render template"
 #endif
 
 #if HAVE_QUAD_STRIPS || HAVE_QUADS
@@ -172,7 +172,6 @@ static void TAG(render_line_strip_verts)( struct gl_context *ctx,
 					  GLuint count,
 					  GLuint flags )
 {
-   if (HAVE_LINE_STRIPS) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       int currentsz;
@@ -191,11 +190,6 @@ static void TAG(render_line_strip_verts)( struct gl_context *ctx,
       }
  
       FLUSH();
-
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -204,7 +198,6 @@ static void TAG(render_line_loop_verts)( struct gl_context *ctx,
 					 GLuint count,
 					 GLuint flags )
 {
-   if (HAVE_LINE_STRIPS) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       int currentsz;
@@ -254,11 +247,6 @@ static void TAG(render_line_loop_verts)( struct gl_context *ctx,
       }
 
       FLUSH();
-
-   } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -699,7 +687,6 @@ static void TAG(render_line_strip_elts)( struct gl_context *ctx,
 					 GLuint count,
 					 GLuint flags )
 {
-   if (HAVE_LINE_STRIPS) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
       int currentsz;
@@ -719,12 +706,6 @@ static void TAG(render_line_strip_elts)( struct gl_context *ctx,
 	 FLUSH();
 	 currentsz = dmasz;
       }
-   } else {
-      /* TODO: Try to emit as indexed lines.
-       */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -733,7 +714,6 @@ static void TAG(render_line_loop_elts)( struct gl_context *ctx,
 					GLuint count,
 					GLuint flags )
 {
-   if (HAVE_LINE_STRIPS) {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
       int currentsz;
@@ -785,11 +765,6 @@ static void TAG(render_line_loop_elts)( struct gl_context *ctx,
       }
 
       FLUSH();
-   } else {
-      /* TODO: Try to emit as indexed lines */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -1114,10 +1089,10 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_LINE_STRIP:
-	 ok = HAVE_LINE_STRIPS && !ctx->Line.StippleFlag;
+	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_LINE_LOOP:
-	 ok = HAVE_LINE_STRIPS && !ctx->Line.StippleFlag;
+	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_TRIANGLES:
 	 ok = HAVE_TRIANGLES;
