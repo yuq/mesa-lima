@@ -39,8 +39,8 @@
  * tristrips, lineloops to linestrips), or to indexed vertices.
  */
 
-#if !HAVE_TRIANGLES || !HAVE_LINES || !HAVE_LINE_STRIPS || !HAVE_TRI_STRIPS
-#error "must have lines, line strips, triangles, and triangle strips to use render template"
+#if !HAVE_TRIANGLES || !HAVE_LINES || !HAVE_LINE_STRIPS || !HAVE_TRI_STRIPS || !HAVE_TRI_FANS
+#error "must have lines, line strips, triangles, triangle fans, and triangle strips to use render template"
 #endif
 
 #if HAVE_QUAD_STRIPS || HAVE_QUADS
@@ -312,7 +312,6 @@ static void TAG(render_tri_fan_verts)( struct gl_context *ctx,
 				       GLuint count,
 				       GLuint flags )
 {
-   if (HAVE_TRI_FANS) {
       LOCAL_VARS;
       GLuint j, nr;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
@@ -336,14 +335,6 @@ static void TAG(render_tri_fan_verts)( struct gl_context *ctx,
       }
 
       FLUSH();
-   }
-   else {
-      /* Could write code to emit these as indexed vertices (for the
-       * g400, for instance).
-       */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -377,7 +368,7 @@ static void TAG(render_poly_verts)( struct gl_context *ctx,
 
       FLUSH();
    }
-   else if (HAVE_TRI_FANS && ctx->Light.ShadeModel == GL_SMOOTH) {
+   else if (ctx->Light.ShadeModel == GL_SMOOTH) {
       TAG(render_tri_fan_verts)( ctx, start, count, flags );
    } else {
       fprintf(stderr, "%s - cannot draw primitive\n", __func__);
@@ -812,7 +803,6 @@ static void TAG(render_tri_fan_elts)( struct gl_context *ctx,
 				      GLuint count,
 				      GLuint flags )
 {
-   if (HAVE_TRI_FANS) {
       LOCAL_VARS;
       GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
       GLuint j, nr;
@@ -837,11 +827,6 @@ static void TAG(render_tri_fan_elts)( struct gl_context *ctx,
 	 FLUSH();
 	 currentsz = dmasz;
       }
-   } else {
-      /* TODO: try to emit as indexed triangles */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   }
 }
 
 
@@ -875,7 +860,7 @@ static void TAG(render_poly_elts)( struct gl_context *ctx,
 	 FLUSH();
 	 currentsz = dmasz;
       }
-   } else if (HAVE_TRI_FANS && ctx->Light.ShadeModel == GL_SMOOTH) {
+   } else if (ctx->Light.ShadeModel == GL_SMOOTH) {
       TAG(render_tri_fan_verts)( ctx, start, count, flags );
    } else {
       fprintf(stderr, "%s - cannot draw primitive\n", __func__);
@@ -1054,14 +1039,14 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = GL_TRUE;
 	 break;
       case GL_TRIANGLE_FAN:
-	 ok = HAVE_TRI_FANS;
+	 ok = GL_TRUE;
 	 break;
       case GL_POLYGON:
 	 if (HAVE_POLYGONS) {
 	    ok = GL_TRUE;
 	 }
 	 else {
-	    ok = (HAVE_TRI_FANS && ctx->Light.ShadeModel == GL_SMOOTH);
+	    ok = (ctx->Light.ShadeModel == GL_SMOOTH);
          }
 	 break;
       case GL_QUAD_STRIP:
