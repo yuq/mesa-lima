@@ -39,7 +39,7 @@
  * tristrips, lineloops to linestrips), or to indexed vertices.
  */
 
-#if !defined(HAVE_TRIANGLES) || !HAVE_LINES || !HAVE_LINE_STRIPS
+#if !HAVE_TRIANGLES || !HAVE_LINES || !HAVE_LINE_STRIPS
 #error "must have lines, line strips, and triangles to use render template"
 #endif
 
@@ -552,7 +552,7 @@ static void TAG(render_quads_verts)(struct gl_context *ctx,
 
       RELEASE_ELT_VERTS();
    }
-   else if (HAVE_TRIANGLES) {
+   else {
       /* Hardware doesn't have a quad primitive type -- try to
        * simulate it using triangle primitive.  This is a win for
        * gears, but is it useful in the broader world?
@@ -573,12 +573,6 @@ static void TAG(render_quads_verts)(struct gl_context *ctx,
 	 tmp = EMIT_VERTS(ctx, start + j + 1, 3, tmp);
 	 (void) tmp;
       }
-   }
-   else {
-      /* Vertices won't fit in a single buffer, should never happen.
-       */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
    }
 }
 
@@ -1081,7 +1075,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_TRIANGLES:
-	 ok = HAVE_TRIANGLES;
+	 ok = GL_TRUE;
 	 break;
       case GL_TRIANGLE_STRIP:
 	 ok = HAVE_TRI_STRIPS;
@@ -1118,7 +1112,7 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	    ok = (GLint) count < GET_SUBSEQUENT_VB_MAX_ELTS();
 	 }
 	 else {
-	    ok = HAVE_TRIANGLES; /* flatshading is ok. */
+	    ok = GL_TRUE; /* flatshading is ok. */
 	 }
 	 break;
       default:
