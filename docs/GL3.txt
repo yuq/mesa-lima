@@ -223,10 +223,11 @@ GLES3.1, GLSL ES 3.1
   GS5 Packing/bitfield/conversion functions            DONE (i965, nvc0, r600, radeonsi)
   GL_EXT_shader_integer_mix                            DONE (all drivers that support GLSL)
 
-  Additional functions not covered above:
-      glMemoryBarrierByRegion
-      glGetTexLevelParameter[fi]v - needs updates to restrict to GLES enums
-      glGetBooleani_v - needs updates to restrict to GLES enums
+  Additional functionality not covered above:
+      glMemoryBarrierByRegion                          DONE
+      glGetTexLevelParameter[fi]v - needs updates      DONE
+      glGetBooleani_v - restrict to GLES enums
+      gl_HelperInvocation support
 
 GLES3.2, GLSL ES 3.2
   GL_EXT_color_buffer_float                            DONE (all drivers)
@@ -250,7 +251,7 @@ GLES3.2, GLSL ES 3.2
   GL_OES_texture_buffer                                not started (based on GL_ARB_texture_buffer_object, GL_ARB_texture_buffer_range, and GL_ARB_texture_buffer_object_rgb32 that are all done)
   GL_OES_texture_cube_map_array                        not started (based on GL_ARB_texture_cube_map_array, which is done for all drivers)
   GL_OES_texture_stencil8                              not started (based on GL_ARB_texture_stencil8, which is done for some drivers)
-  GL_OES_texture_storage_multisample_2d_array          in progress (Tapani Pälli)
+  GL_OES_texture_storage_multisample_2d_array          DONE (all drivers that support GL_ARB_texture_multisample)
 
 More info about these features and the work involved can be found at
 http://dri.freedesktop.org/wiki/MissingFunctionality
