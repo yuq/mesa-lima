@@ -517,10 +517,10 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
 }
 
 
-static void TAG(render_quads_verts)( struct gl_context *ctx,
-				     GLuint start,
-				     GLuint count,
-				     GLuint flags )
+static void TAG(render_quads_verts)(struct gl_context *ctx,
+                                    GLuint start,
+                                    GLuint count,
+                                    GLuint flags)
 {
    /* Emit whole number of quads in total. */
    count -= count & 3;
@@ -1022,58 +1022,53 @@ static void TAG(render_quad_strip_elts)( struct gl_context *ctx,
 }
 
 
-static void TAG(render_quads_elts)( struct gl_context *ctx,
-				    GLuint start,
-				    GLuint count,
-				    GLuint flags )
+static void TAG(render_quads_elts)(struct gl_context *ctx,
+                                   GLuint start,
+                                   GLuint count,
+                                   GLuint flags)
 {
-   /* Emit whole number of quads in total. */
+   LOCAL_VARS;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
+   GLuint j, nr;
+
+   ELT_INIT(GL_TRIANGLES);
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+
+   /* Emit whole number of quads in total, and in each buffer.
+    */
    count -= count & 3;
+   dmasz -= dmasz & 3;
+   currentsz -= currentsz & 3;
 
-   {
-      LOCAL_VARS;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
-      GLuint j, nr;
+   /* Adjust for rendering as triangles:
+    */
+   currentsz = currentsz / 6 * 4;
+   dmasz = dmasz / 6 * 4;
 
-      ELT_INIT( GL_TRIANGLES );
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      /* Emit whole number of quads in total, and in each buffer.
-       */
-      dmasz -= dmasz & 3;
-      currentsz -= currentsz & 3;
+   for (j = 0; j + 3 < count; j += nr - 2) {
+      nr = MIN2(currentsz, count - j);
 
-      /* Adjust for rendering as triangles:
-       */
-      currentsz = currentsz/6*4;
-      dmasz = dmasz/6*4;
+      if (nr >= 4) {
+         GLint quads = nr / 4;
+         GLint i;
+         ELTS_VARS(ALLOC_ELTS(quads * 6));
 
-      if (currentsz < 8)
-	 currentsz = dmasz;
+         for (i = j; i < j + quads; i++, elts += 4) {
+            EMIT_TWO_ELTS(0, elts[0], elts[1]);
+            EMIT_TWO_ELTS(2, elts[3], elts[1]);
+            EMIT_TWO_ELTS(4, elts[2], elts[3]);
+            INCR_ELTS(6);
+         }
 
-      for (j = 0; j + 3 < count; j += nr - 2) {
-	 nr = MIN2( currentsz, count - j );
-
-	 if (nr >= 4)
-	 {
-	    GLint quads = nr/4;
-	    GLint i;
-	    ELTS_VARS( ALLOC_ELTS( quads * 6 ) );
-
-	    for (i = j; i < j + quads; i++, elts += 4) {
-	       EMIT_TWO_ELTS( 0, elts[0], elts[1] );
-	       EMIT_TWO_ELTS( 2, elts[3], elts[1] );
-	       EMIT_TWO_ELTS( 4, elts[2], elts[3] );
-	       INCR_ELTS( 6 );
-	    }
-
-	    FLUSH();
-	 }
-
-	 currentsz = dmasz;
+         FLUSH();
       }
+
+      currentsz = dmasz;
    }
 }
 
