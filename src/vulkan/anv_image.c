@@ -197,7 +197,21 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
       break;
    }
    case VK_IMAGE_TYPE_3D:
-      anv_finishme("VK_IMAGE_TYPE_3D");
+      /* The layout of 3D surfaces is described by the Broadwell PRM >>
+       * Volume 5: Memory Views >> Common Surface Formats >> Surface Layout >>
+       * 3D Surfaces.
+       */
+      for (uint32_t l = 0; l < levels; ++l) {
+         const uint32_t w_l = align_u32(anv_minify(extent->width, l), i);
+         const uint32_t h_l = align_u32(anv_minify(extent->height, l), j);
+         const uint32_t d_l = anv_minify(extent->depth, l);
+
+         const uint32_t max_layers_horiz = MIN(d_l, 1u << l);
+         const uint32_t max_layers_vert = align_u32(d_l, 1u << l) / (1u << l);
+
+         mt_width = MAX(mt_width, w_l * max_layers_horiz);
+         mt_height += h_l * max_layers_vert;
+      }
       break;
    default:
       unreachable(!"bad VkImageType");
@@ -254,7 +268,8 @@ anv_image_create(VkDevice _device,
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
    /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D);
+   anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D ||
+              pCreateInfo->imageType == VK_IMAGE_TYPE_3D);
    anv_assert(pCreateInfo->mipLevels > 0);
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->samples == 1);
