@@ -905,7 +905,7 @@ namespace brw {
             tmp = emit_untyped_read(bld, image, laddr, 1, size, pred);
 
             /* An out of bounds surface access should give zero as result. */
-            for (unsigned c = 0; c < 4; ++c)
+            for (unsigned c = 0; c < size; ++c)
                set_predicate(pred, bld.SEL(offset(tmp, bld, c),
                                            offset(tmp, bld, c), fs_reg(0)));
          }
