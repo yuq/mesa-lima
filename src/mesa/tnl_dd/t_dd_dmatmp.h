@@ -276,36 +276,35 @@ static void TAG(render_triangles_verts)( struct gl_context *ctx,
 
 
 
-static void TAG(render_tri_strip_verts)( struct gl_context *ctx,
-					 GLuint start,
-					 GLuint count,
-					 GLuint flags )
+static void TAG(render_tri_strip_verts)(struct gl_context *ctx,
+                                        GLuint start,
+                                        GLuint count,
+                                        GLuint flags)
 {
-      LOCAL_VARS;
-      GLuint j, nr;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
+   LOCAL_VARS;
+   GLuint j, nr;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   int currentsz;
 
-      INIT(GL_TRIANGLE_STRIP);
+   INIT(GL_TRIANGLE_STRIP);
 
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
+   currentsz = GET_CURRENT_VB_MAX_VERTS();
 
-      if (currentsz < 8) {
-	 currentsz = dmasz;
-      }
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      /* From here on emit even numbers of tris when wrapping over buffers:
-       */
-      dmasz -= (dmasz & 1);
-      currentsz -= (currentsz & 1);
+   /* From here on emit even numbers of tris when wrapping over buffers:
+    */
+   dmasz -= (dmasz & 1);
+   currentsz -= (currentsz & 1);
 
-      for (j = 0; j + 2 < count; j += nr - 2) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
-      }
+   for (j = 0; j + 2 < count; j += nr - 2) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
+      currentsz = dmasz;
+   }
 
-      FLUSH();
+   FLUSH();
 }
 
 static void TAG(render_tri_fan_verts)( struct gl_context *ctx,
@@ -450,8 +449,7 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
         fprintf(stderr, "%s - cannot draw primitive\n", __func__);
 	 return;
       }
-   }
-   else {
+   } else {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       int currentsz;
@@ -459,7 +457,7 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
       /* Emit smooth-shaded quadstrips as tristrips:
        */
       FLUSH();
-      INIT( GL_TRIANGLE_STRIP );
+      INIT(GL_TRIANGLE_STRIP);
 
       /* Emit whole number of quads in total, and in each buffer.
        */
@@ -468,12 +466,11 @@ static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
       currentsz -= currentsz & 1;
       count -= count & 1;
 
-      if (currentsz < 8) {
+      if (currentsz < 8)
 	 currentsz = dmasz;
-      }
 
       for (j = 0; j + 3 < count; j += nr - 2) {
-	 nr = MIN2( currentsz, count - j );
+         nr = MIN2(currentsz, count - j);
          TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
 	 currentsz = dmasz;
       }
@@ -779,36 +776,35 @@ static void TAG(render_triangles_elts)( struct gl_context *ctx,
 
 
 
-static void TAG(render_tri_strip_elts)( struct gl_context *ctx,
-					GLuint start,
-					GLuint count,
-					GLuint flags )
+static void TAG(render_tri_strip_elts)(struct gl_context *ctx,
+                                       GLuint start,
+                                       GLuint count,
+                                       GLuint flags)
 {
-      LOCAL_VARS;
-      GLuint j, nr;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
+   LOCAL_VARS;
+   GLuint j, nr;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
 
+   FLUSH();
+   ELT_INIT(GL_TRIANGLE_STRIP);
+
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
+
+   /* Keep the same winding over multiple buffers:
+    */
+   dmasz -= (dmasz & 1);
+   currentsz -= (currentsz & 1);
+
+   for (j = 0; j + 2 < count; j += nr - 2) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_elts)( ctx, elts + start + j, nr, ALLOC_ELTS(nr) );
       FLUSH();
-      ELT_INIT( GL_TRIANGLE_STRIP );
-
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
-      if (currentsz < 8) {
-	 currentsz = dmasz;
-      }
-
-      /* Keep the same winding over multiple buffers:
-       */
-      dmasz -= (dmasz & 1);
-      currentsz -= (currentsz & 1);
-
-      for (j = 0; j + 2 < count; j += nr - 2) {
-	 nr = MIN2( currentsz, count - j );
-	 TAG(emit_elts)( ctx, elts + start + j, nr, ALLOC_ELTS(nr) );
-	 FLUSH();
-	 currentsz = dmasz;
-      }
+      currentsz = dmasz;
+   }
 }
 
 static void TAG(render_tri_fan_elts)( struct gl_context *ctx,
@@ -887,67 +883,65 @@ static void TAG(render_poly_elts)( struct gl_context *ctx,
    }
 }
 
-static void TAG(render_quad_strip_elts)( struct gl_context *ctx,
-					 GLuint start,
-					 GLuint count,
-					 GLuint flags )
+static void TAG(render_quad_strip_elts)(struct gl_context *ctx,
+                                        GLuint start,
+                                        GLuint count,
+                                        GLuint flags)
 {
-      LOCAL_VARS;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
-      GLuint j, nr;
+   LOCAL_VARS;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
+   GLuint j, nr;
 
-      FLUSH();
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
+   FLUSH();
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
 
-      /* Emit whole number of quads in total, and in each buffer.
-       */
-      dmasz -= dmasz & 1;
-      count -= count & 1;
-      currentsz -= currentsz & 1;
+   /* Emit whole number of quads in total, and in each buffer.
+    */
+   dmasz -= dmasz & 1;
+   count -= count & 1;
+   currentsz -= currentsz & 1;
 
-      if (currentsz < 12)
-	 currentsz = dmasz;
+   if (currentsz < 12)
+      currentsz = dmasz;
 
-      if (ctx->Light.ShadeModel == GL_FLAT) {
-	 ELT_INIT( GL_TRIANGLES );
+   if (ctx->Light.ShadeModel == GL_FLAT) {
+      ELT_INIT(GL_TRIANGLES);
 
-	 currentsz = currentsz/6*2;
-	 dmasz = dmasz/6*2;
+      currentsz = currentsz / 6 * 2;
+      dmasz = dmasz / 6 * 2;
 
-         for (j = 0; j + 3 < count; j += nr - 2) {
-	    nr = MIN2( currentsz, count - j );
+      for (j = 0; j + 3 < count; j += nr - 2) {
+         nr = MIN2(currentsz, count - j);
 
-	    if (nr >= 4)
-	    {
-	       GLint i;
-	       GLint quads = (nr/2)-1;
-	       ELTS_VARS( ALLOC_ELTS( quads*6 ) );
+         if (nr >= 4) {
+            GLint i;
+            GLint quads = (nr / 2) - 1;
+            ELTS_VARS(ALLOC_ELTS( quads * 6));
 
-               for (i = j; i < j + quads; i++, elts += 2) {
-		  EMIT_TWO_ELTS( 0, elts[0], elts[1] );
-		  EMIT_TWO_ELTS( 2, elts[2], elts[1] );
-		  EMIT_TWO_ELTS( 4, elts[3], elts[2] );
-		  INCR_ELTS( 6 );
-	       }
+            for (i = j; i < j + quads; i++, elts += 2) {
+               EMIT_TWO_ELTS(0, elts[0], elts[1]);
+               EMIT_TWO_ELTS(2, elts[2], elts[1]);
+               EMIT_TWO_ELTS(4, elts[3], elts[2]);
+               INCR_ELTS(6);
+            }
 
-	       FLUSH();
-	    }
+            FLUSH();
+         }
 
-	    currentsz = dmasz;
-	 }
+         currentsz = dmasz;
       }
-      else {
-	 ELT_INIT( GL_TRIANGLE_STRIP );
+   } else {
+      ELT_INIT(GL_TRIANGLE_STRIP);
 
-         for (j = 0; j + 3 < count; j += nr - 2) {
-	    nr = MIN2( currentsz, count - j );
-            TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
-	    FLUSH();
-	    currentsz = dmasz;
-	 }
+      for (j = 0; j + 3 < count; j += nr - 2) {
+         nr = MIN2(currentsz, count - j);
+         TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
+         FLUSH();
+         currentsz = dmasz;
       }
+   }
 }
 
 
@@ -1056,8 +1050,6 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 ok = !ctx->Line.StippleFlag;
 	 break;
       case GL_TRIANGLES:
-	 ok = GL_TRUE;
-	 break;
       case GL_TRIANGLE_STRIP:
 	 ok = GL_TRUE;
 	 break;
