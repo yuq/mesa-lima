@@ -11,10 +11,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    364 bytes, from 2015-05-20 20:03:07)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2015-05-20 20:03:07)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10551 bytes, from 2015-05-20 20:03:14)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10755 bytes, from 2015-09-14 20:46:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67120 bytes, from 2015-08-14 23:22:03)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63915 bytes, from 2015-08-24 16:56:28)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67771 bytes, from 2015-09-14 20:46:55)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63970 bytes, from 2015-09-14 20:50:12)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -280,6 +280,8 @@ enum a3xx_rb_blend_opcode {
 enum a3xx_intp_mode {
 	SMOOTH = 0,
 	FLAT = 1,
+	ZERO = 2,
+	ONE = 3,
 };
 
 enum a3xx_repl_mode {
@@ -684,6 +686,12 @@ static inline uint32_t REG_A3XX_CP_PROTECT_REG(uint32_t i0) { return 0x00000460 
 #define A3XX_GRAS_CL_CLIP_CNTL_ZCOORD				0x00800000
 #define A3XX_GRAS_CL_CLIP_CNTL_WCOORD				0x01000000
 #define A3XX_GRAS_CL_CLIP_CNTL_ZCLIP_DISABLE			0x02000000
+#define A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES__MASK	0x1c000000
+#define A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES__SHIFT	26
+static inline uint32_t A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES(uint32_t val)
+{
+	return ((val) << A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES__SHIFT) & A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES__MASK;
+}
 
 #define REG_A3XX_GRAS_CL_GB_CLIP_ADJ				0x00002044
 #define A3XX_GRAS_CL_GB_CLIP_ADJ_HORZ__MASK			0x000003ff
@@ -774,7 +782,7 @@ static inline uint32_t A3XX_GRAS_SU_POINT_SIZE(float val)
 #define A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL__SHIFT		0
 static inline uint32_t A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL(float val)
 {
-	return ((((int32_t)(val * 16384.0))) << A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL__SHIFT) & A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL__MASK;
+	return ((((int32_t)(val * 1048576.0))) << A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL__SHIFT) & A3XX_GRAS_SU_POLY_OFFSET_SCALE_VAL__MASK;
 }
 
 #define REG_A3XX_GRAS_SU_POLY_OFFSET_OFFSET			0x0000206d
@@ -895,6 +903,9 @@ static inline uint32_t A3XX_RB_MODE_CONTROL_MRT(uint32_t val)
 #define A3XX_RB_MODE_CONTROL_PACKER_TIMER_ENABLE		0x00010000
 
 #define REG_A3XX_RB_RENDER_CONTROL				0x000020c1
+#define A3XX_RB_RENDER_CONTROL_DUAL_COLOR_IN_ENABLE		0x00000001
+#define A3XX_RB_RENDER_CONTROL_YUV_IN_ENABLE			0x00000002
+#define A3XX_RB_RENDER_CONTROL_COV_VALUE_INPUT_ENABLE		0x00000004
 #define A3XX_RB_RENDER_CONTROL_FACENESS				0x00000008
 #define A3XX_RB_RENDER_CONTROL_BIN_WIDTH__MASK			0x00000ff0
 #define A3XX_RB_RENDER_CONTROL_BIN_WIDTH__SHIFT			4
@@ -908,6 +919,8 @@ static inline uint32_t A3XX_RB_RENDER_CONTROL_BIN_WIDTH(uint32_t val)
 #define A3XX_RB_RENDER_CONTROL_YCOORD				0x00008000
 #define A3XX_RB_RENDER_CONTROL_ZCOORD				0x00010000
 #define A3XX_RB_RENDER_CONTROL_WCOORD				0x00020000
+#define A3XX_RB_RENDER_CONTROL_I_CLAMP_ENABLE			0x00080000
+#define A3XX_RB_RENDER_CONTROL_COV_VALUE_OUTPUT_ENABLE		0x00100000
 #define A3XX_RB_RENDER_CONTROL_ALPHA_TEST			0x00400000
 #define A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC__MASK		0x07000000
 #define A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC__SHIFT		24
@@ -915,6 +928,8 @@ static inline uint32_t A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC(enum adreno_compar
 {
 	return ((val) << A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC__SHIFT) & A3XX_RB_RENDER_CONTROL_ALPHA_TEST_FUNC__MASK;
 }
+#define A3XX_RB_RENDER_CONTROL_ALPHA_TO_COVERAGE		0x40000000
+#define A3XX_RB_RENDER_CONTROL_ALPHA_TO_ONE			0x80000000
 
 #define REG_A3XX_RB_MSAA_CONTROL				0x000020c2
 #define A3XX_RB_MSAA_CONTROL_DISABLE				0x00000400
