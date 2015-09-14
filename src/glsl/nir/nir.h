@@ -1440,6 +1440,9 @@ typedef struct nir_shader_compiler_options {
     */
    bool fdot_replicates;
 
+   /** lowers ffract to fsub+ffloor: */
+   bool lower_ffract;
+
    /**
     * Does the driver support real 32-bit integers?  (Otherwise, integers
     * are simulated by floats.)

@@ -76,6 +76,7 @@ optimizations = [
    (('flrp', a, a, b), a),
    (('flrp', 0.0, a, b), ('fmul', a, b)),
    (('flrp', a, b, c), ('fadd', ('fmul', c, ('fsub', b, a)), a), 'options->lower_flrp'),
+   (('ffract', a), ('fsub', a, ('ffloor', a)), 'options->lower_ffract'),
    (('fadd', ('fmul', a, ('fadd', 1.0, ('fneg', c))), ('fmul', b, c)), ('flrp', a, b, c), '!options->lower_flrp'),
    (('fadd', a, ('fmul', c, ('fadd', b, ('fneg', a)))), ('flrp', a, b, c), '!options->lower_flrp'),
    (('ffma', a, b, c), ('fadd', ('fmul', a, b), c), 'options->lower_ffma'),
