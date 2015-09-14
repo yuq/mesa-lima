@@ -134,6 +134,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens)
 			.lower_fsat = true,
 			.lower_scmp = true,
 			.lower_flrp = true,
+			.lower_ffract = true,
 			.native_integers = true,
 	};
 	bool progress;
@@ -187,7 +188,6 @@ lower_tgsi(struct ir3_compile *ctx, const struct tgsi_token *tokens,
 	struct tgsi_shader_info info;
 	struct tgsi_lowering_config lconfig = {
 			.color_two_side = so->key.color_two_side,
-			.lower_FRC = true,
 	};
 
 	switch (so->type) {
