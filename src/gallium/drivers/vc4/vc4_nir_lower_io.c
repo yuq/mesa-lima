@@ -47,8 +47,7 @@ replace_intrinsic_with_vec4(nir_builder *b, nir_intrinsic_instr *intr,
         /* Replace the old intrinsic with a reference to our reconstructed
          * vec4.
          */
-        nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(vec),
-                                 ralloc_parent(b->impl));
+        nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(vec));
         nir_instr_remove(&intr->instr);
 }
 
