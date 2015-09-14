@@ -553,7 +553,7 @@ static void TAG(render_quads_verts)( struct gl_context *ctx,
       /* Emit whole number of quads in total.  dmasz is already a multiple
        * of 4.
        */
-      count -= count % 4;
+      count -= count & 3;
 
       currentsz = (GET_CURRENT_VB_MAX_VERTS()/4) * 4;
       if (currentsz < 8)
@@ -1082,7 +1082,7 @@ static void TAG(render_quads_elts)( struct gl_context *ctx,
 
       currentsz = GET_CURRENT_VB_MAX_ELTS()/4*4;
 
-      count -= count % 4;
+      count -= count & 3;
 
       if (currentsz < 8)
 	 currentsz = dmasz;
