@@ -72,7 +72,7 @@ static const struct anv_surf_type_limits {
    int32_t height;
    int32_t depth;
 } anv_surf_type_limits[] = {
-   [SURFTYPE_1D]     = {16384,       0,   2048},
+   [SURFTYPE_1D]     = {16384,       1,   2048},
    [SURFTYPE_2D]     = {16384,   16384,   2048},
    [SURFTYPE_3D]     = {2048,     2048,   2048},
    [SURFTYPE_CUBE]   = {16384,   16384,    340},
@@ -171,8 +171,13 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
 
    switch (create_info->vk_info->imageType) {
    case VK_IMAGE_TYPE_1D:
-      anv_finishme("VK_IMAGE_TYPE_1D");
-      break;
+      /* From the Broadwell PRM >> Memory Views >> Common Surface Formats >>
+       * Surface Layout >> 1D Surfaces:
+       *
+       *    One-dimensional surfaces are identical to 2D surfaces with height of one.
+       *
+       * So fallthrough...
+       */
    case VK_IMAGE_TYPE_2D: {
       const uint32_t w0 = align_u32(extent->width, i);
       const uint32_t h0 = align_u32(extent->height, j);
@@ -267,9 +272,6 @@ anv_image_create(VkDevice _device,
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
-   /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->imageType == VK_IMAGE_TYPE_2D ||
-              pCreateInfo->imageType == VK_IMAGE_TYPE_3D);
    anv_assert(pCreateInfo->mipLevels > 0);
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->samples == 1);
