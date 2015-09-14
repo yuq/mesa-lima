@@ -153,6 +153,7 @@ gen8_image_view_init(struct anv_image_view *iview,
       anv_image_get_surface_for_aspect(image, range->aspect);
 
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
+   uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
 
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
@@ -184,6 +185,13 @@ gen8_image_view_init(struct anv_image_view *iview,
        *    the range of this field is reduced to [0,1023].
        */
       depth = range->arraySize;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 1D and 2D Surfaces:
+       *    This field must be set to the same value as the Depth field.
+       */
+      rt_view_extent = depth;
       break;
    case VK_IMAGE_TYPE_3D:
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
@@ -192,6 +200,14 @@ gen8_image_view_init(struct anv_image_view *iview,
        *    depth of the base MIP level.
        */
       depth = image->extent.depth;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 3D Surfaces: This field
+       *    indicates the extent of the accessible 'R' coordinates minus 1 on
+       *    the LOD currently being rendered to.
+       */
+      rt_view_extent = iview->extent.depth;
       break;
    default:
       unreachable(!"bad VkImageType");
@@ -230,6 +246,7 @@ gen8_image_view_init(struct anv_image_view *iview,
       .Width = image->extent.width - 1,
       .Depth = depth - 1,
       .SurfacePitch = surface->stride - 1,
+      .RenderTargetViewExtent = rt_view_extent - 1,
       .MinimumArrayElement = range->baseArraySlice,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
@@ -280,6 +297,7 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
       anv_format_for_vk_format(pCreateInfo->format);
 
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
+   uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
 
    aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
@@ -308,6 +326,13 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
        *    the range of this field is reduced to [0,1023].
        */
       depth = pCreateInfo->arraySize;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 1D and 2D Surfaces:
+       *    This field must be set to the same value as the Depth field.
+       */
+      rt_view_extent = depth;
       break;
    case VK_IMAGE_TYPE_3D:
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
@@ -316,6 +341,14 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
        *    depth of the base MIP level.
        */
       depth = image->extent.depth;
+
+      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
+       *
+       *    For Render Target and Typed Dataport 3D Surfaces: This field
+       *    indicates the extent of the accessible 'R' coordinates minus 1 on
+       *    the LOD currently being rendered to.
+       */
+      rt_view_extent = aview->base.extent.depth;
       break;
    default:
       unreachable(!"bad VkImageType");
@@ -353,6 +386,7 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
       .Width = image->extent.width - 1,
       .Depth = depth - 1,
       .SurfacePitch = surface->stride - 1,
+      .RenderTargetViewExtent = rt_view_extent - 1,
       .MinimumArrayElement = pCreateInfo->baseArraySlice,
       .NumberofMultisamples = MULTISAMPLECOUNT_1,
       .XOffset = 0,
