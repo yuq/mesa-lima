@@ -89,13 +89,14 @@ static struct fd4_format formats[PIPE_FORMAT_COUNT] = {
 	_T(L8_UNORM,   8_UNORM, R8_UNORM, WZYX),
 	_T(I8_UNORM,   8_UNORM, NONE,     WZYX),
 
-	/* NOTE: should be TFMT_8_UINT (which then gets remapped to
-	 * TFMT_8_UNORM for mem2gmem in _gmem_restore_format()), but
-	 * we don't know TFMT_8_UINT yet.. so just use TFMT_8_UNORM
-	 * for now.. sampling from stencil as a texture might not
-	 * work right, but at least should be fine for zsbuf..
-	 */
-	_T(S8_UINT,    8_UNORM,  R8_UNORM, WZYX),
+	_T(A8_UINT,    8_UINT,  NONE,     WZYX),
+	_T(A8_SINT,    8_SINT,  NONE,     WZYX),
+	_T(L8_UINT,    8_UINT,  NONE,     WZYX),
+	_T(L8_SINT,    8_SINT,  NONE,     WZYX),
+	_T(I8_UINT,    8_UINT,  NONE,     WZYX),
+	_T(I8_SINT,    8_SINT,  NONE,     WZYX),
+
+	_T(S8_UINT,    8_UINT,  R8_UNORM, WZYX),
 
 	/* 16-bit */
 	V_(R16_UNORM,   16_UNORM, NONE,     WZYX),
