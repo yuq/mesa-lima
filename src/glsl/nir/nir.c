@@ -1427,6 +1427,10 @@ index_ssa_block(nir_block *block, void *state)
    return true;
 }
 
+/**
+ * The indices are applied top-to-bottom which has the very nice property
+ * that, if A dominates B, then A->index <= B->index.
+ */
 void
 nir_index_ssa_defs(nir_function_impl *impl)
 {
@@ -1445,6 +1449,10 @@ index_instrs_block(nir_block *block, void *state)
    return true;
 }
 
+/**
+ * The indices are applied top-to-bottom which has the very nice property
+ * that, if A dominates B, then A->index <= B->index.
+ */
 unsigned
 nir_index_instrs(nir_function_impl *impl)
 {
