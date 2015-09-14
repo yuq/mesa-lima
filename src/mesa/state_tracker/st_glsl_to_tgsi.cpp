@@ -4408,6 +4408,7 @@ const unsigned _mesa_sysval_to_semantic[SYSTEM_VALUE_MAX] = {
    TGSI_SEMANTIC_SAMPLEID,
    TGSI_SEMANTIC_SAMPLEPOS,
    TGSI_SEMANTIC_SAMPLEMASK,
+   0, /* gl_HelperInvocation */
 
    /* Tessellation shaders
     */
