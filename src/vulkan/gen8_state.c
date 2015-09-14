@@ -161,9 +161,6 @@ gen8_image_view_init(struct anv_image_view *iview,
    const struct anv_image_view_info *view_type_info =
       anv_image_view_info_for_vk_image_view_type(pCreateInfo->viewType);
 
-   if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
-      anv_finishme("non-2D image views");
-
    view->bo = image->bo;
    view->offset = image->offset + surface->offset;
    view->format = format_info;
