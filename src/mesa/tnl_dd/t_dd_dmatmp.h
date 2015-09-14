@@ -137,33 +137,33 @@ static void TAG(render_points_verts)( struct gl_context *ctx,
    }
 }
 
-static void TAG(render_lines_verts)( struct gl_context *ctx,
-				     GLuint start,
-				     GLuint count,
-				     GLuint flags )
+static void TAG(render_lines_verts)(struct gl_context *ctx,
+                                    GLuint start,
+                                    GLuint count,
+                                    GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   int currentsz;
+   GLuint j, nr;
 
-      INIT( GL_LINES );
+   INIT(GL_LINES);
 
-      /* Emit whole number of lines in total and in each buffer:
-       */
-      count -= count & 1;
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
-      currentsz -= currentsz & 1;
-      dmasz -= dmasz & 1;
+   /* Emit whole number of lines in total and in each buffer:
+    */
+   count -= count & 1;
+   currentsz = GET_CURRENT_VB_MAX_VERTS();
+   currentsz -= currentsz & 1;
+   dmasz -= dmasz & 1;
 
-      if (currentsz < 8)
-	 currentsz = dmasz;
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      for (j = 0; j < count; j += nr) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
-      }
+   for (j = 0; j < count; j += nr) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
+      currentsz = dmasz;
+   }
 }
 
 
@@ -662,35 +662,35 @@ static void TAG(render_points_elts)( struct gl_context *ctx,
 
 
 
-static void TAG(render_lines_elts)( struct gl_context *ctx,
-				    GLuint start,
-				    GLuint count,
-				    GLuint flags )
+static void TAG(render_lines_elts)(struct gl_context *ctx,
+                                   GLuint start,
+                                   GLuint count,
+                                   GLuint flags)
 {
-      LOCAL_VARS;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      GLuint j, nr;
+   LOCAL_VARS;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   GLuint j, nr;
 
-      ELT_INIT( GL_LINES );
+   ELT_INIT(GL_LINES);
 
-      /* Emit whole number of lines in total and in each buffer:
-       */
-      count -= count & 1;
-      currentsz -= currentsz & 1;
-      dmasz -= dmasz & 1;
+   /* Emit whole number of lines in total and in each buffer:
+    */
+   count -= count & 1;
+   currentsz -= currentsz & 1;
+   dmasz -= dmasz & 1;
 
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
-      if (currentsz < 8)
-	 currentsz = dmasz;
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      for (j = 0; j < count; j += nr ) {
-	 nr = MIN2( currentsz, count - j );
-         TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
-	 FLUSH();
-	 currentsz = dmasz;
-      }
+   for (j = 0; j < count; j += nr ) {
+      nr = MIN2(currentsz, count - j);
+      TAG(emit_elts)(ctx, elts + start + j, nr, ALLOC_ELTS(nr));
+      FLUSH();
+      currentsz = dmasz;
+   }
 }
 
 
