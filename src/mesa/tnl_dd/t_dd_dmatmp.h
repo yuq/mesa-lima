@@ -307,34 +307,33 @@ static void TAG(render_tri_strip_verts)(struct gl_context *ctx,
    FLUSH();
 }
 
-static void TAG(render_tri_fan_verts)( struct gl_context *ctx,
-				       GLuint start,
-				       GLuint count,
-				       GLuint flags )
+static void TAG(render_tri_fan_verts)(struct gl_context *ctx,
+                                      GLuint start,
+                                      GLuint count,
+                                      GLuint flags)
 {
-      LOCAL_VARS;
-      GLuint j, nr;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
-      int currentsz;
+   LOCAL_VARS;
+   GLuint j, nr;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   int currentsz;
 
-      INIT(GL_TRIANGLE_FAN);
+   INIT(GL_TRIANGLE_FAN);
 
-      currentsz = GET_CURRENT_VB_MAX_VERTS();
-      if (currentsz < 8) {
-	 currentsz = dmasz;
-      }
+   currentsz = GET_CURRENT_VB_MAX_VERTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
 
-      for (j = 1; j + 1 < count; j += nr - 2) {
-	 void *tmp;
-	 nr = MIN2( currentsz, count - j + 1 );
-	 tmp = ALLOC_VERTS( nr );
-	 tmp = TAG(emit_verts)( ctx, start, 1, tmp );
-         tmp = TAG(emit_verts)( ctx, start + j, nr - 1, tmp );
-	 (void) tmp;
-	 currentsz = dmasz;
-      }
+   for (j = 1; j + 1 < count; j += nr - 2) {
+      void *tmp;
+      nr = MIN2(currentsz, count - j + 1);
+      tmp = ALLOC_VERTS(nr);
+      tmp = TAG(emit_verts)(ctx, start, 1, tmp);
+      tmp = TAG(emit_verts)(ctx, start + j, nr - 1, tmp);
+      (void) tmp;
+      currentsz = dmasz;
+   }
 
-      FLUSH();
+   FLUSH();
 }
 
 
@@ -798,35 +797,34 @@ static void TAG(render_tri_strip_elts)(struct gl_context *ctx,
    }
 }
 
-static void TAG(render_tri_fan_elts)( struct gl_context *ctx,
-				      GLuint start,
-				      GLuint count,
-				      GLuint flags )
+static void TAG(render_tri_fan_elts)(struct gl_context *ctx,
+                                     GLuint start,
+                                     GLuint count,
+                                     GLuint flags)
 {
-      LOCAL_VARS;
-      GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
-      GLuint j, nr;
-      int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
-      int currentsz;
+   LOCAL_VARS;
+   GLuint *elts = TNL_CONTEXT(ctx)->vb.Elts;
+   GLuint j, nr;
+   int dmasz = GET_SUBSEQUENT_VB_MAX_ELTS();
+   int currentsz;
 
+   FLUSH();
+   ELT_INIT(GL_TRIANGLE_FAN);
+
+   currentsz = GET_CURRENT_VB_MAX_ELTS();
+   if (currentsz < 8)
+      currentsz = dmasz;
+
+   for (j = 1; j + 1 < count; j += nr - 2) {
+      void *tmp;
+      nr = MIN2(currentsz, count - j + 1);
+      tmp = ALLOC_ELTS(nr);
+      tmp = TAG(emit_elts)(ctx, elts + start, 1, tmp);
+      tmp = TAG(emit_elts)(ctx, elts + start + j, nr - 1, tmp);
+      (void) tmp;
       FLUSH();
-      ELT_INIT( GL_TRIANGLE_FAN );
-
-      currentsz = GET_CURRENT_VB_MAX_ELTS();
-      if (currentsz < 8) {
-	 currentsz = dmasz;
-      }
-
-      for (j = 1; j + 1 < count; j += nr - 2) {
-	 void *tmp;
-	 nr = MIN2( currentsz, count - j + 1 );
-	 tmp = ALLOC_ELTS( nr );
-	 tmp = TAG(emit_elts)( ctx, elts+start, 1, tmp );
-         tmp = TAG(emit_elts)(ctx, elts + start + j, nr - 1, tmp);
-	 (void) tmp;
-	 FLUSH();
-	 currentsz = dmasz;
-      }
+      currentsz = dmasz;
+   }
 }
 
 
@@ -1036,18 +1034,11 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
 	 break;
       case GL_TRIANGLES:
       case GL_TRIANGLE_STRIP:
-	 ok = GL_TRUE;
-	 break;
       case GL_TRIANGLE_FAN:
 	 ok = GL_TRUE;
 	 break;
       case GL_POLYGON:
-	 if (HAVE_POLYGONS) {
-	    ok = GL_TRUE;
-	 }
-	 else {
-	    ok = (ctx->Light.ShadeModel == GL_SMOOTH);
-         }
+         ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH;
 	 break;
       case GL_QUAD_STRIP:
 	 if (VB->Elts) {
