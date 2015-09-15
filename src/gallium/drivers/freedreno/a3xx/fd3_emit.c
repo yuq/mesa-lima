@@ -149,6 +149,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			&fd3_ctx->border_color_buf,
 			&ptr);
 
+	fd_setup_border_colors(tex, ptr, tex_off[sb]);
+
 	if (tex->num_samplers > 0) {
 		/* output sampler state: */
 		OUT_PKT3(ring, CP_LOAD_STATE, 2 + (2 * tex->num_samplers));
@@ -163,57 +165,6 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd3_sampler_stateobj *sampler = tex->samplers[i] ?
 					fd3_sampler_stateobj(tex->samplers[i]) :
 					&dummy_sampler;
-			uint16_t *bcolor = (uint16_t *)((uint8_t *)ptr +
-					(BORDERCOLOR_SIZE * tex_off[sb]) +
-					(BORDERCOLOR_SIZE * i));
-			uint32_t *bcolor32 = (uint32_t *)&bcolor[16];
-
-			/*
-			 * XXX HACK ALERT XXX
-			 *
-			 * The border colors need to be swizzled in a particular
-			 * format-dependent order. Even though samplers don't know about
-			 * formats, we can assume that with a GL state tracker, there's a
-			 * 1:1 correspondence between sampler and texture. Take advantage
-			 * of that knowledge.
-			 */
-			if (i < tex->num_textures && tex->textures[i]) {
-				const struct util_format_description *desc =
-					util_format_description(tex->textures[i]->format);
-				for (j = 0; j < 4; j++) {
-					if (desc->swizzle[j] >= 4)
-						continue;
-
-					const struct util_format_channel_description *chan =
-						&desc->channel[desc->swizzle[j]];
-					int size = chan->size;
-
-					/* The Z16 texture format we use seems to look in the
-					 * 32-bit border color slots
-					 */
-					if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
-						size = 32;
-
-					/* Formats like R11G11B10 or RGB9_E5 don't specify
-					 * per-channel sizes properly.
-					 */
-					if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
-						size = 16;
-
-					if (chan->pure_integer && size > 16)
-						bcolor32[desc->swizzle[j] + 4] =
-							sampler->base.border_color.i[j];
-					else if (size > 16)
-						bcolor32[desc->swizzle[j]] =
-							fui(sampler->base.border_color.f[j]);
-					else if (chan->pure_integer)
-						bcolor[desc->swizzle[j] + 8] =
-							sampler->base.border_color.i[j];
-					else
-						bcolor[desc->swizzle[j]] =
-							util_float_to_half(sampler->base.border_color.f[j]);
-				}
-			}
 
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
