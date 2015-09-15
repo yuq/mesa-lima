@@ -494,7 +494,8 @@ _mesa_bytes_per_pixel(GLenum format, GLenum type)
       else
          return -1;
    case GL_UNSIGNED_INT_24_8_EXT:
-      if (format == GL_DEPTH_STENCIL_EXT)
+      if (format == GL_DEPTH_COMPONENT ||
+          format == GL_DEPTH_STENCIL_EXT)
          return sizeof(GLuint);
       else
          return -1;
@@ -1789,6 +1790,10 @@ _mesa_error_check_format_and_type(const struct gl_context *ctx,
       return GL_INVALID_OPERATION;
 
    case GL_UNSIGNED_INT_24_8:
+      /* Depth buffer OK to read in OpenGL ES (NV_read_depth). */
+      if (ctx->API == API_OPENGLES2 && format == GL_DEPTH_COMPONENT)
+         return GL_NO_ERROR;
+
       if (format != GL_DEPTH_STENCIL) {
          return GL_INVALID_OPERATION;
       }
