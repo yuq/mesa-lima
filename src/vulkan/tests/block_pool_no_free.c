@@ -51,6 +51,7 @@ static void run_test()
    struct anv_device device;
    struct anv_block_pool pool;
 
+   pthread_mutex_init(&device.mutex, NULL);
    anv_block_pool_init(&pool, &device, 16);
 
    for (unsigned i = 0; i < NUM_THREADS; i++) {
@@ -95,6 +96,7 @@ static void run_test()
    }
 
    anv_block_pool_finish(&pool);
+   pthread_mutex_destroy(&device.mutex);
 }
 
 int main(int argc, char **argv)

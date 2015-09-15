@@ -38,6 +38,8 @@ int main(int argc, char **argv)
    struct anv_block_pool block_pool;
    struct anv_state_pool state_pool;
 
+   pthread_mutex_init(&device.mutex, NULL);
+
    for (unsigned i = 0; i < NUM_RUNS; i++) {
       anv_block_pool_init(&block_pool, &device, 256);
       anv_state_pool_init(&state_pool, &block_pool);
@@ -50,4 +52,6 @@ int main(int argc, char **argv)
       anv_state_pool_finish(&state_pool);
       anv_block_pool_finish(&block_pool);
    }
+
+   pthread_mutex_destroy(&device.mutex);
 }

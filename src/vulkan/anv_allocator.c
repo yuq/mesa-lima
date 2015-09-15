@@ -287,6 +287,8 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
    int gem_handle;
    struct anv_mmap_cleanup *cleanup;
 
+   pthread_mutex_lock(&pool->device->mutex);
+
    if (old_size == 0) {
       size = 32 * pool->block_size;
    } else {
@@ -295,17 +297,17 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
 
    cleanup = anv_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
-      return 0;
+      goto fail;
    *cleanup = ANV_MMAP_CLEANUP_INIT;
 
    if (old_size == 0)
       pool->fd = memfd_create("block pool", MFD_CLOEXEC);
 
    if (pool->fd == -1)
-      return 0;
+      goto fail;
 
    if (ftruncate(pool->fd, size) == -1)
-      return 0;
+      goto fail;
 
    /* First try to see if mremap can grow the map in place. */
    map = MAP_FAILED;
@@ -324,11 +326,11 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
       cleanup->size = size;
    }
    if (map == MAP_FAILED)
-      return 0;
+      goto fail;
 
    gem_handle = anv_gem_userptr(pool->device, map, size);
    if (gem_handle == 0)
-      return 0;
+      goto fail;
    cleanup->gem_handle = gem_handle;
 
    /* Now that we successfull allocated everything, we can write the new
@@ -339,7 +341,13 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
    pool->bo.map = map;
    pool->bo.index = 0;
 
+   pthread_mutex_unlock(&pool->device->mutex);
+
    return size;
+
+fail:
+   pthread_mutex_unlock(&pool->device->mutex);
+   return 0;
 }
 
 uint32_t
