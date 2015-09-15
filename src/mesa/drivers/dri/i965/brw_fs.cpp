@@ -797,6 +797,7 @@ fs_inst::regs_read(int arg) const
       break;
 
    case CS_OPCODE_CS_TERMINATE:
+   case SHADER_OPCODE_BARRIER:
       return 1;
 
    default:
