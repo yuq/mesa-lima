@@ -657,7 +657,7 @@ _mesa_PointSizePointerOES(GLenum type, GLsizei stride, const GLvoid *ptr)
                   "glPointSizePointer(ES 1.x only)");
       return;
    }
-      
+
    update_array(ctx, "glPointSizePointer", VERT_ATTRIB_POINT_SIZE,
                 legalTypes, 1, 1,
                 1, type, stride, GL_FALSE, GL_FALSE, GL_FALSE, ptr);
@@ -933,7 +933,8 @@ get_current_attrib(struct gl_context *ctx, GLuint index, const char *function)
       return NULL;
    }
 
-   assert(VERT_ATTRIB_GENERIC(index) < ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) <
+          ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
 
    FLUSH_CURRENT(ctx, 0);
    return ctx->Current.Attrib[VERT_ATTRIB_GENERIC(index)];
@@ -985,7 +986,9 @@ _mesa_GetVertexAttribLdv(GLuint index, GLenum pname, GLdouble *params)
    GET_CURRENT_CONTEXT(ctx);
 
    if (pname == GL_CURRENT_VERTEX_ATTRIB_ARB) {
-      const GLdouble *v = (const GLdouble *)get_current_attrib(ctx, index, "glGetVertexAttribLdv");
+      const GLdouble *v =
+         (const GLdouble *)get_current_attrib(ctx, index,
+                                              "glGetVertexAttribLdv");
       if (v != NULL) {
          params[0] = v[0];
          params[1] = v[1];
@@ -1080,9 +1083,11 @@ _mesa_GetVertexAttribPointerv(GLuint index, GLenum pname, GLvoid **pointer)
       return;
    }
 
-   assert(VERT_ATTRIB_GENERIC(index) < ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
+   assert(VERT_ATTRIB_GENERIC(index) <
+          ARRAY_SIZE(ctx->Array.VAO->VertexAttrib));
 
-   *pointer = (GLvoid *) ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Ptr;
+   *pointer = (GLvoid *)
+      ctx->Array.VAO->VertexAttrib[VERT_ATTRIB_GENERIC(index)].Ptr;
 }
 
 
@@ -1193,8 +1198,8 @@ _mesa_GetVertexArrayIndexed64iv(GLuint vaobj, GLuint index,
     * required to be the same, so in practice this doesn't matter.
     */
    if (index >= ctx->Const.MaxVertexAttribBindings) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glGetVertexArrayIndexed64iv("
-                  "index %d >= the value of GL_MAX_VERTEX_ATTRIB_BINDINGS (%d))",
+      _mesa_error(ctx, GL_INVALID_VALUE, "glGetVertexArrayIndexed64iv(index"
+                  "%d >= the value of GL_MAX_VERTEX_ATTRIB_BINDINGS (%d))",
                   index, ctx->Const.MaxVertexAttribBindings);
       return;
    }
@@ -1637,7 +1642,8 @@ _mesa_primitive_restart_index(const struct gl_context *ctx, GLenum ib_type)
  * GL_ARB_vertex_attrib_binding
  */
 static void
-vertex_array_vertex_buffer(struct gl_context *ctx, struct gl_vertex_array_object *vao,
+vertex_array_vertex_buffer(struct gl_context *ctx,
+                           struct gl_vertex_array_object *vao,
                            GLuint bindingIndex, GLuint buffer, GLintptr offset,
                            GLsizei stride, const char *func)
 {
@@ -1683,7 +1689,8 @@ vertex_array_vertex_buffer(struct gl_context *ctx, struct gl_vertex_array_object
       return;
    }
 
-   if (buffer == vao->VertexBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
+   if (buffer ==
+       vao->VertexBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
       vbo = vao->VertexBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj;
    } else if (buffer != 0) {
       vbo = _mesa_lookup_bufferobj(ctx, buffer);
@@ -2223,7 +2230,8 @@ _mesa_VertexBindingDivisor(GLuint bindingIndex, GLuint divisor)
 
 
 void GLAPIENTRY
-_mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex, GLuint divisor)
+_mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
+                                GLuint divisor)
 {
    struct gl_vertex_array_object *vao;
    GET_CURRENT_CONTEXT(ctx);
@@ -2343,7 +2351,7 @@ _mesa_print_arrays(struct gl_context *ctx)
 /**
  * Initialize vertex array state for given context.
  */
-void 
+void
 _mesa_init_varray(struct gl_context *ctx)
 {
    ctx->Array.DefaultVAO = ctx->Driver.NewArrayObject(ctx, 0);
@@ -2369,7 +2377,7 @@ delete_arrayobj_cb(GLuint id, void *data, void *userData)
 /**
  * Free vertex array state for given context.
  */
-void 
+void
 _mesa_free_varray_data(struct gl_context *ctx)
 {
    _mesa_HashDeleteAll(ctx->Array.Objects, delete_arrayobj_cb, ctx);
