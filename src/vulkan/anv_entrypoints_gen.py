@@ -98,6 +98,7 @@ if opt_header:
         print "%s gen7_%s%s;" % (type, name, args)
         print "%s gen75_%s%s;" % (type, name, args)
         print "%s gen8_%s%s;" % (type, name, args)
+        print "%s gen9_%s%s;" % (type, name, args)
         print "%s anv_validate_%s%s;" % (type, name, args)
     exit()
 
@@ -164,7 +165,7 @@ for type, name, args, num, h in entrypoints:
     print "   { %5d, 0x%08x }," % (offsets[num], h)
 print "};\n"
 
-for layer in [ "anv", "validate", "gen7", "gen75", "gen8" ]:
+for layer in [ "anv", "validate", "gen7", "gen75", "gen8", "gen9" ]:
     for type, name, args, num, h in entrypoints:
         print "%s %s_%s%s __attribute__ ((weak));" % (type, layer, name, args)
     print "\nconst struct anv_dispatch_table %s_layer = {" % layer
@@ -214,6 +215,10 @@ anv_resolve_entrypoint(uint32_t index)
    }
 
    switch (dispatch_devinfo->gen) {
+   case 9:
+      if (gen9_layer.entrypoints[index])
+         return gen9_layer.entrypoints[index];
+      /* fall through */
    case 8:
       if (gen8_layer.entrypoints[index])
          return gen8_layer.entrypoints[index];
