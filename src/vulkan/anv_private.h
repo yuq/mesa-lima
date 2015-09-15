@@ -206,8 +206,19 @@ anv_vector_finish(struct anv_vector *queue)
 
 struct anv_bo {
    int gem_handle;
+
+   /* Index into the current validation list.  This is used by the
+    * validation list building alrogithm to track which buffers are already
+    * in the validation list so that we can ensure uniqueness.
+    */
    uint32_t index;
+
+   /* Last known offset.  This value is provided by the kernel when we
+    * execbuf and is used as the presumed offset for the next bunch of
+    * relocations.
+    */
    uint64_t offset;
+
    uint64_t size;
    void *map;
 };
