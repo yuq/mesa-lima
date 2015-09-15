@@ -24,7 +24,7 @@
  * Authors:
  *    Keith Whitwell <keithw@vmware.com>
  */
-
+#include <stdbool.h>
 
 /**
  * \file t_dd_dmatmp.h
@@ -431,21 +431,21 @@ static tnl_render_func TAG(render_tab_verts)[GL_POLYGON+2] =
 /* Pre-check the primitives in the VB to prevent the need for
  * fallbacks later on.
  */
-static GLboolean TAG(validate_render)(struct gl_context *ctx,
-                                      struct vertex_buffer *VB)
+static bool TAG(validate_render)(struct gl_context *ctx,
+                                 struct vertex_buffer *VB)
 {
    GLint i;
 
    if (VB->ClipOrMask & ~CLIP_CULL_BIT)
-      return GL_FALSE;
+      return false;
 
    if (VB->Elts)
-      return GL_FALSE;
+      return false;
 
    for (i = 0 ; i < VB->PrimitiveCount ; i++) {
       GLuint prim = VB->Primitive[i].mode;
       GLuint count = VB->Primitive[i].count;
-      GLboolean ok = GL_FALSE;
+      bool ok = false;
 
       if (!count)
          continue;
@@ -462,7 +462,7 @@ static GLboolean TAG(validate_render)(struct gl_context *ctx,
       case GL_TRIANGLES:
       case GL_TRIANGLE_STRIP:
       case GL_TRIANGLE_FAN:
-         ok = GL_TRUE;
+         ok = true;
          break;
       case GL_POLYGON:
          ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH;
@@ -473,7 +473,7 @@ static GLboolean TAG(validate_render)(struct gl_context *ctx,
                VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride == 0);
          break;
       case GL_QUADS:
-         ok = GL_TRUE; /* flatshading is ok. */
+         ok = true; /* flatshading is ok. */
          break;
       default:
          break;
@@ -481,10 +481,10 @@ static GLboolean TAG(validate_render)(struct gl_context *ctx,
       
       if (!ok) {
 /*          fprintf(stderr, "not ok %s\n", _mesa_enum_to_string(prim & PRIM_MODE_MASK)); */
-         return GL_FALSE;
+         return false;
       }
    }
 
-   return GL_TRUE;
+   return true;
 }
 
