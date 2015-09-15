@@ -268,6 +268,9 @@ struct anv_block_pool {
    struct anv_block_state state;
 };
 
+/* Block pools are backed by a fixed-size 2GB memfd */
+#define BLOCK_POOL_MEMFD_SIZE (1ull << 32)
+
 static inline uint32_t
 anv_block_pool_size(struct anv_block_pool *pool)
 {

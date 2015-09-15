@@ -254,6 +254,18 @@ anv_block_pool_init(struct anv_block_pool *pool,
    pool->bo.offset = 0;
    pool->block_size = block_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
+
+   pool->fd = memfd_create("block pool", MFD_CLOEXEC);
+   if (pool->fd == -1)
+      return;
+
+   /* Just make it 2GB up-front.  The Linux kernel won't actually back it
+    * with pages until we either map and fault on one of them or we use
+    * userptr and send a chunk of it off to the GPU.
+    */
+   if (ftruncate(pool->fd, BLOCK_POOL_MEMFD_SIZE) == -1)
+      return;
+
    anv_vector_init(&pool->mmap_cleanups,
                    round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
 
@@ -299,15 +311,6 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
    if (!cleanup)
       goto fail;
    *cleanup = ANV_MMAP_CLEANUP_INIT;
-
-   if (old_size == 0)
-      pool->fd = memfd_create("block pool", MFD_CLOEXEC);
-
-   if (pool->fd == -1)
-      goto fail;
-
-   if (ftruncate(pool->fd, size) == -1)
-      goto fail;
 
    /* First try to see if mremap can grow the map in place. */
    map = MAP_FAILED;
