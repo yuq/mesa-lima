@@ -69,7 +69,7 @@ static void TAG(render_points_verts)(struct gl_context *ctx,
 {
    if (HAVE_POINTS) {
       LOCAL_VARS;
-      unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+      const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       unsigned currentsz;
       GLuint j, nr;
 
@@ -96,7 +96,7 @@ static void TAG(render_lines_verts)(struct gl_context *ctx,
                                     GLuint flags)
 {
    LOCAL_VARS;
-   unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() & ~1;
    unsigned currentsz;
    GLuint j, nr;
 
@@ -107,7 +107,6 @@ static void TAG(render_lines_verts)(struct gl_context *ctx,
    count -= count & 1;
    currentsz = GET_CURRENT_VB_MAX_VERTS();
    currentsz -= currentsz & 1;
-   dmasz -= dmasz & 1;
 
    if (currentsz < 8)
       currentsz = dmasz;
@@ -126,7 +125,7 @@ static void TAG(render_line_strip_verts)(struct gl_context *ctx,
                                          GLuint flags)
 {
    LOCAL_VARS;
-   unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
    unsigned currentsz;
    GLuint j, nr;
 
@@ -152,7 +151,7 @@ static void TAG(render_line_loop_verts)(struct gl_context *ctx,
                                         GLuint flags)
 {
    LOCAL_VARS;
-   unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() - 1;
    unsigned currentsz;
    GLuint j, nr;
 
@@ -164,7 +163,6 @@ static void TAG(render_line_loop_verts)(struct gl_context *ctx,
     */
    currentsz = GET_CURRENT_VB_MAX_VERTS();
    currentsz--;
-   dmasz--;
 
    if (currentsz < 8)
       currentsz = dmasz;
@@ -204,7 +202,7 @@ static void TAG(render_triangles_verts)(struct gl_context *ctx,
                                         GLuint flags)
 {
    LOCAL_VARS;
-   unsigned dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS() / 3) * 3;
+   const unsigned dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS() / 3) * 3;
    unsigned currentsz;
    GLuint j, nr;
 
@@ -236,7 +234,7 @@ static void TAG(render_tri_strip_verts)(struct gl_context *ctx,
 {
    LOCAL_VARS;
    GLuint j, nr;
-   unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() & ~1;
    unsigned currentsz;
 
    INIT(GL_TRIANGLE_STRIP);
@@ -248,7 +246,6 @@ static void TAG(render_tri_strip_verts)(struct gl_context *ctx,
 
    /* From here on emit even numbers of tris when wrapping over buffers:
     */
-   dmasz -= (dmasz & 1);
    currentsz -= (currentsz & 1);
 
    for (j = 0; j + 2 < count; j += nr - 2) {
@@ -267,7 +264,7 @@ static void TAG(render_tri_fan_verts)(struct gl_context *ctx,
 {
    LOCAL_VARS;
    GLuint j, nr;
-   unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+   const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
    unsigned currentsz;
 
    INIT(GL_TRIANGLE_FAN);
@@ -298,7 +295,7 @@ static void TAG(render_poly_verts)(struct gl_context *ctx,
    if (HAVE_POLYGONS) {
       LOCAL_VARS;
       GLuint j, nr;
-      unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+      const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
       unsigned currentsz;
 
       INIT(GL_POLYGON);
@@ -343,7 +340,7 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
       return;
    } else {
       LOCAL_VARS;
-      unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
+      const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() & ~1;
       unsigned currentsz;
 
       /* Emit smooth-shaded quadstrips as tristrips:
@@ -353,7 +350,6 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
 
       /* Emit whole number of quads in total, and in each buffer.
        */
-      dmasz -= dmasz & 1;
       currentsz = GET_CURRENT_VB_MAX_VERTS();
       currentsz -= currentsz & 1;
       count -= count & 1;
