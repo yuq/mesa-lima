@@ -229,7 +229,7 @@ struct anv_bo {
  */
 union anv_free_list {
    struct {
-      uint32_t offset;
+      int32_t offset;
 
       /* A simple count that is incremented every time the head changes. */
       uint32_t count;

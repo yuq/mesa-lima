@@ -151,7 +151,7 @@ round_to_power_of_two(uint32_t value)
 }
 
 static bool
-anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
+anv_free_list_pop(union anv_free_list *list, void **map, int32_t *offset)
 {
    union anv_free_list current, new, old;
 
@@ -164,7 +164,7 @@ anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
        */
       __sync_synchronize();
 
-      uint32_t *next_ptr = *map + current.offset;
+      int32_t *next_ptr = *map + current.offset;
       new.offset = VG_NOACCESS_READ(next_ptr);
       new.count = current.count + 1;
       old.u64 = __sync_val_compare_and_swap(&list->u64, current.u64, new.u64);
@@ -179,10 +179,10 @@ anv_free_list_pop(union anv_free_list *list, void **map, uint32_t *offset)
 }
 
 static void
-anv_free_list_push(union anv_free_list *list, void *map, uint32_t offset)
+anv_free_list_push(union anv_free_list *list, void *map, int32_t offset)
 {
    union anv_free_list current, old, new;
-   uint32_t *next_ptr = map + offset;
+   int32_t *next_ptr = map + offset;
 
    old = *list;
    do {
@@ -307,6 +307,12 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
       size = old_size * 2;
    }
 
+   /* We can't have a block pool bigger than 1GB because we use signed
+    * 32-bit offsets in the free list and we don't want overflow.  We
+    * should never need a block pool bigger than 1GB anyway.
+    */
+   assert(size <= (1u << 31));
+
    cleanup = anv_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
       goto fail;
@@ -356,11 +362,12 @@ fail:
 uint32_t
 anv_block_pool_alloc(struct anv_block_pool *pool)
 {
-   uint32_t offset;
+   int32_t offset;
    struct anv_block_state state, old, new;
 
    /* Try free list first. */
    if (anv_free_list_pop(&pool->free_list, &pool->map, &offset)) {
+      assert(offset >= 0);
       assert(pool->map);
       return offset;
    }
@@ -411,12 +418,14 @@ static uint32_t
 anv_fixed_size_state_pool_alloc(struct anv_fixed_size_state_pool *pool,
                                 struct anv_block_pool *block_pool)
 {
-   uint32_t offset;
+   int32_t offset;
    struct anv_block_state block, old, new;
 
    /* Try free list first. */
-   if (anv_free_list_pop(&pool->free_list, &block_pool->map, &offset))
+   if (anv_free_list_pop(&pool->free_list, &block_pool->map, &offset)) {
+      assert(offset >= 0);
       return offset;
+   }
 
    /* If free list was empty (or somebody raced us and took the items) we
     * allocate a new item from the end of the block */
