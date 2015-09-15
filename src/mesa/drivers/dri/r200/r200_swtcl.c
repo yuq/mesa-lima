@@ -350,7 +350,6 @@ static void r200ResetLineStipple( struct gl_context *ctx );
 #define HAVE_LINE_STRIPS 1
 #define HAVE_TRIANGLES   1
 #define HAVE_TRI_STRIPS  1
-#define HAVE_TRI_STRIP_1 0
 #define HAVE_TRI_FANS    1
 #define HAVE_QUADS       0
 #define HAVE_QUAD_STRIPS 0

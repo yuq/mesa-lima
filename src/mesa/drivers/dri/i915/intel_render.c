@@ -61,7 +61,6 @@
 #define HAVE_LINE_STRIPS 1
 #define HAVE_TRIANGLES   1
 #define HAVE_TRI_STRIPS  1
-#define HAVE_TRI_STRIP_1 0      /* has it, template can't use it yet */
 #define HAVE_TRI_FANS    1
 #define HAVE_POLYGONS    1
 
