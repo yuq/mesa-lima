@@ -26,6 +26,7 @@
  */
 
 #include "nir.h"
+#include "shader_enums.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -38,6 +39,7 @@ print_tabs(unsigned num_tabs, FILE *fp)
 
 typedef struct {
    FILE *fp;
+   nir_shader *shader;
    /** map from nir_variable -> printable name */
    struct hash_table *ht;
 
@@ -229,10 +231,10 @@ print_var_decl(nir_variable *var, print_state *state)
    const char *const inv = (var->data.invariant) ? "invariant " : "";
    const char *const mode[] = { "shader_in ", "shader_out ", "", "",
                                 "uniform ", "shader_storage", "system " };
-   const char *const interp[] = { "", "smooth", "flat", "noperspective" };
 
    fprintf(fp, "%s%s%s%s%s ",
-      cent, samp, inv, mode[var->data.mode], interp[var->data.interpolation]);
+      cent, samp, inv, mode[var->data.mode],
+	  glsl_interp_qualifier_name(var->data.interpolation));
 
    glsl_print_type(var->type, fp);
 
@@ -255,7 +257,41 @@ print_var_decl(nir_variable *var, print_state *state)
        var->data.mode == nir_var_shader_out ||
        var->data.mode == nir_var_uniform ||
        var->data.mode == nir_var_shader_storage) {
-      fprintf(fp, " (%u, %u)", var->data.location, var->data.driver_location);
+      const char *loc = NULL;
+      char buf[4];
+
+      switch (state->shader->stage) {
+      case MESA_SHADER_VERTEX:
+         if (var->data.mode == nir_var_shader_in)
+            loc = gl_vert_attrib_name(var->data.location);
+         else if (var->data.mode == nir_var_shader_out)
+            loc = gl_varying_slot_name(var->data.location);
+         break;
+      case MESA_SHADER_GEOMETRY:
+         if ((var->data.mode == nir_var_shader_in) ||
+             (var->data.mode == nir_var_shader_out))
+            loc = gl_varying_slot_name(var->data.location);
+         break;
+      case MESA_SHADER_FRAGMENT:
+         if (var->data.mode == nir_var_shader_in)
+            loc = gl_varying_slot_name(var->data.location);
+         else if (var->data.mode == nir_var_shader_out)
+            loc = gl_frag_result_name(var->data.location);
+         break;
+      case MESA_SHADER_TESS_CTRL:
+      case MESA_SHADER_TESS_EVAL:
+      case MESA_SHADER_COMPUTE:
+      default:
+         /* TODO */
+         break;
+      }
+
+      if (!loc) {
+         snprintf(buf, sizeof(buf), "%u", var->data.location);
+         loc = buf;
+      }
+
+      fprintf(fp, " (%s, %u)", loc, var->data.driver_location);
    }
 
    fprintf(fp, "\n");
@@ -881,6 +917,7 @@ static void
 init_print_state(print_state *state, nir_shader *shader, FILE *fp)
 {
    state->fp = fp;
+   state->shader = shader;
    state->ht = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                        _mesa_key_pointer_equal);
    state->syms = _mesa_set_create(NULL, _mesa_key_hash_string,
@@ -900,6 +937,8 @@ nir_print_shader(nir_shader *shader, FILE *fp)
 {
    print_state state;
    init_print_state(&state, shader, fp);
+
+   fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
 
    foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
       print_var_decl(var, &state);
