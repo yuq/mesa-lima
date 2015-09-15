@@ -161,7 +161,7 @@ public:
                     const src_reg &src1 = src_reg(),
                     const src_reg &src2 = src_reg());
 
-   struct brw_reg get_dst(void);
+   struct brw_reg get_dst(unsigned gen);
    struct brw_reg get_src(const struct brw_vue_prog_data *prog_data, int i);
 
    dst_reg dst;

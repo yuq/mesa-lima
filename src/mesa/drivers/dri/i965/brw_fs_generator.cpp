@@ -48,13 +48,13 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
 }
 
 static struct brw_reg
-brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg)
+brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 {
    struct brw_reg brw_reg;
 
    switch (reg->file) {
    case MRF:
-      assert((reg->reg & ~(1 << 7)) < BRW_MAX_MRF);
+      assert((reg->reg & ~(1 << 7)) < BRW_MAX_MRF(gen));
       /* Fallthrough */
    case GRF:
       if (reg->stride == 0) {
@@ -420,7 +420,7 @@ fs_generator::generate_blorp_fb_write(fs_inst *inst)
    brw_fb_WRITE(p,
                 16 /* dispatch_width */,
                 brw_message_reg(inst->base_mrf),
-                brw_reg_from_fs_reg(inst, &inst->src[0]),
+                brw_reg_from_fs_reg(inst, &inst->src[0], devinfo->gen),
                 BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE,
                 inst->target,
                 inst->mlen,
@@ -1538,7 +1538,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i]);
+	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen);
 
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1550,7 +1550,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(inst, &inst->dst);
+      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen);
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
@@ -1560,7 +1560,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
-      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF);
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       switch (inst->exec_size) {

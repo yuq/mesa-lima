@@ -147,7 +147,7 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
    const struct brw_device_info *devinfo = p->devinfo;
 
    if (dest.file == BRW_MESSAGE_REGISTER_FILE)
-      assert(dest.nr < BRW_MAX_MRF);
+      assert(dest.nr < BRW_MAX_MRF(devinfo->gen));
    else if (dest.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(dest.nr < 128);
 
@@ -311,7 +311,7 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    const struct brw_device_info *devinfo = p->devinfo;
 
    if (reg.file == BRW_MESSAGE_REGISTER_FILE)
-      assert(reg.nr < BRW_MAX_MRF);
+      assert(reg.nr < BRW_MAX_MRF(devinfo->gen));
    else if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
 
@@ -2485,7 +2485,7 @@ void brw_urb_WRITE(struct brw_codegen *p,
 
    insn = next_insn(p, BRW_OPCODE_SEND);
 
-   assert(msg_length < BRW_MAX_MRF);
+   assert(msg_length < BRW_MAX_MRF(devinfo->gen));
 
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);

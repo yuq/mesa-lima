@@ -2795,7 +2795,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
 {
    int write_len = inst->regs_written;
    int first_write_grf = inst->dst.reg;
-   bool needs_dep[BRW_MAX_MRF];
+   bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
    memset(needs_dep, false, sizeof(needs_dep));
@@ -2866,7 +2866,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
 {
    int write_len = inst->regs_written;
    int first_write_grf = inst->dst.reg;
-   bool needs_dep[BRW_MAX_MRF];
+   bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
    memset(needs_dep, false, sizeof(needs_dep));

@@ -70,7 +70,7 @@ struct brw_device_info;
 #define GEN7_MRF_HACK_START 112
 
 /** Number of message register file registers */
-#define BRW_MAX_MRF 16
+#define BRW_MAX_MRF(gen) (gen == 6 ? 24 : 16)
 
 #define BRW_SWIZZLE4(a,b,c,d) (((a)<<0) | ((b)<<2) | ((c)<<4) | ((d)<<6))
 #define BRW_GET_SWZ(swz, idx) (((swz) >> ((idx)*2)) & 0x3)

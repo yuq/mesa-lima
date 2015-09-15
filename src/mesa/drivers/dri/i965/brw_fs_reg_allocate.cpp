@@ -478,7 +478,7 @@ get_used_mrfs(fs_visitor *v, bool *mrf_used)
 {
    int reg_width = v->dispatch_width / 8;
 
-   memset(mrf_used, 0, BRW_MAX_MRF * sizeof(bool));
+   memset(mrf_used, 0, BRW_MAX_MRF(v->devinfo->gen) * sizeof(bool));
 
    foreach_block_and_inst(block, fs_inst, inst, v->cfg) {
       if (inst->dst.file == MRF) {
@@ -509,11 +509,11 @@ static void
 setup_mrf_hack_interference(fs_visitor *v, struct ra_graph *g,
                             int first_mrf_node, int *first_used_mrf)
 {
-   bool mrf_used[BRW_MAX_MRF];
+   bool mrf_used[BRW_MAX_MRF(v->devinfo->gen)];
    get_used_mrfs(v, mrf_used);
 
-   *first_used_mrf = BRW_MAX_MRF;
-   for (int i = 0; i < BRW_MAX_MRF; i++) {
+   *first_used_mrf = BRW_MAX_MRF(v->devinfo->gen);
+   for (int i = 0; i < BRW_MAX_MRF(v->devinfo->gen); i++) {
       /* Mark each MRF reg node as being allocated to its physical register.
        *
        * The alternative would be to have per-physical-register classes, which
@@ -593,7 +593,7 @@ fs_visitor::assign_regs(bool allow_spilling)
 
    setup_payload_interference(g, payload_node_count, first_payload_node);
    if (devinfo->gen >= 7) {
-      int first_used_mrf = BRW_MAX_MRF;
+      int first_used_mrf = BRW_MAX_MRF(devinfo->gen);
       setup_mrf_hack_interference(this, g, first_mrf_hack_node,
                                   &first_used_mrf);
 
@@ -616,7 +616,7 @@ fs_visitor::assign_regs(bool allow_spilling)
              * register early enough in the register file that we don't
              * conflict with any used MRF hack registers.
              */
-            reg -= BRW_MAX_MRF - first_used_mrf;
+            reg -= BRW_MAX_MRF(devinfo->gen) - first_used_mrf;
 
             ra_set_node_reg(g, inst->src[0].reg, reg);
             break;
@@ -853,10 +853,10 @@ fs_visitor::spill_reg(int spill_reg)
     * SIMD16 mode, because we'd stomp the FB writes.
     */
    if (!spilled_any_registers) {
-      bool mrf_used[BRW_MAX_MRF];
+      bool mrf_used[BRW_MAX_MRF(devinfo->gen)];
       get_used_mrfs(this, mrf_used);
 
-      for (int i = spill_base_mrf; i < BRW_MAX_MRF; i++) {
+      for (int i = spill_base_mrf; i < BRW_MAX_MRF(devinfo->gen); i++) {
          if (mrf_used[i]) {
             fail("Register spilling not supported with m%d used", i);
           return;

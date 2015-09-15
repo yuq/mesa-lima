@@ -34,7 +34,7 @@ extern "C" {
 namespace brw {
 
 struct brw_reg
-vec4_instruction::get_dst(void)
+vec4_instruction::get_dst(unsigned gen)
 {
    struct brw_reg brw_reg;
 
@@ -46,7 +46,7 @@ vec4_instruction::get_dst(void)
       break;
 
    case MRF:
-      assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF);
+      assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF(gen));
       brw_reg = brw_message_reg(dst.reg + dst.reg_offset);
       brw_reg = retype(brw_reg, dst.type);
       brw_reg.dw1.bits.writemask = dst.writemask;
@@ -490,7 +490,7 @@ vec4_generator::generate_gs_urb_write_allocate(vec4_instruction *inst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, get_element_ud(inst->get_dst(), 0),
+   brw_MOV(p, get_element_ud(inst->get_dst(devinfo->gen), 0),
            get_element_ud(inst->get_src(this->prog_data, 0), 0));
    brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
@@ -1126,7 +1126,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       for (unsigned int i = 0; i < 3; i++) {
 	 src[i] = inst->get_src(this->prog_data, i);
       }
-      dst = inst->get_dst();
+      dst = inst->get_dst(devinfo->gen);
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
@@ -1135,7 +1135,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
 
-      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF);
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       unsigned pre_emit_nr_insn = p->nr_insn;
