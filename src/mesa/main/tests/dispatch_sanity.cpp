@@ -844,7 +844,7 @@ const struct function common_desktop_functions_possible[] = {
    { "glGetProgramResourceiv", 43, -1 },
    { "glGetProgramResourceLocation", 43, -1 },
    { "glGetProgramResourceLocationIndex", 43, -1 },
-// { "glShaderStorageBlockBinding", 43, -1 },           // XXX: Add to xml
+   { "glShaderStorageBlockBinding", 43, -1 },
 // { "glTextureBufferRangeEXT", 43, -1 },               // XXX: Add to xml
    { "glTexStorage2DMultisample", 43, -1 },
    { "glTexStorage3DMultisample", 43, -1 },
