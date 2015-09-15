@@ -134,6 +134,8 @@ MAIN_FILES = \
 	main/multisample.h \
 	main/objectlabel.c \
 	main/objectlabel.h \
+	main/objectpurge.c \
+	main/objectpurge.h \
 	main/pack.c \
 	main/pack.h \
 	main/pbo.c \

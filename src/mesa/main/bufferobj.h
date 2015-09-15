@@ -317,16 +317,6 @@ void GLAPIENTRY
 _mesa_FlushMappedNamedBufferRange(GLuint buffer, GLintptr offset,
                                   GLsizeiptr length);
 
-GLenum GLAPIENTRY
-_mesa_ObjectPurgeableAPPLE(GLenum objectType, GLuint name, GLenum option);
-
-GLenum GLAPIENTRY
-_mesa_ObjectUnpurgeableAPPLE(GLenum objectType, GLuint name, GLenum option);
-
-void GLAPIENTRY
-_mesa_GetObjectParameterivAPPLE(GLenum objectType, GLuint name,
-                                GLenum pname, GLint* params);
-
 void GLAPIENTRY
 _mesa_BindBufferRange(GLenum target, GLuint index,
                       GLuint buffer, GLintptr offset, GLsizeiptr size);
