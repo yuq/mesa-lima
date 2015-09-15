@@ -37,6 +37,7 @@ print_tabs(unsigned num_tabs, FILE *fp)
 }
 
 typedef struct {
+   FILE *fp;
    /** map from nir_variable -> printable name */
    struct hash_table *ht;
 
@@ -45,11 +46,12 @@ typedef struct {
 
    /* an index used to make new non-conflicting names */
    unsigned index;
-} print_var_state;
+} print_state;
 
 static void
-print_register(nir_register *reg, FILE *fp)
+print_register(nir_register *reg, print_state *state)
 {
+   FILE *fp = state->fp;
    if (reg->name != NULL)
       fprintf(fp, "/* %s */ ", reg->name);
    if (reg->is_global)
@@ -61,90 +63,97 @@ print_register(nir_register *reg, FILE *fp)
 static const char *sizes[] = { "error", "vec1", "vec2", "vec3", "vec4" };
 
 static void
-print_register_decl(nir_register *reg, FILE *fp)
+print_register_decl(nir_register *reg, print_state *state)
 {
+   FILE *fp = state->fp;
    fprintf(fp, "decl_reg %s ", sizes[reg->num_components]);
    if (reg->is_packed)
       fprintf(fp, "(packed) ");
-   print_register(reg, fp);
+   print_register(reg, state);
    if (reg->num_array_elems != 0)
       fprintf(fp, "[%u]", reg->num_array_elems);
    fprintf(fp, "\n");
 }
 
 static void
-print_ssa_def(nir_ssa_def *def, FILE *fp)
+print_ssa_def(nir_ssa_def *def, print_state *state)
 {
+   FILE *fp = state->fp;
    if (def->name != NULL)
       fprintf(fp, "/* %s */ ", def->name);
    fprintf(fp, "%s ssa_%u", sizes[def->num_components], def->index);
 }
 
 static void
-print_ssa_use(nir_ssa_def *def, FILE *fp)
+print_ssa_use(nir_ssa_def *def, print_state *state)
 {
+   FILE *fp = state->fp;
    if (def->name != NULL)
       fprintf(fp, "/* %s */ ", def->name);
    fprintf(fp, "ssa_%u", def->index);
 }
 
-static void print_src(nir_src *src, FILE *fp);
+static void print_src(nir_src *src, print_state *state);
 
 static void
-print_reg_src(nir_reg_src *src, FILE *fp)
+print_reg_src(nir_reg_src *src, print_state *state)
 {
-   print_register(src->reg, fp);
+   FILE *fp = state->fp;
+   print_register(src->reg, state);
    if (src->reg->num_array_elems != 0) {
       fprintf(fp, "[%u", src->base_offset);
       if (src->indirect != NULL) {
          fprintf(fp, " + ");
-         print_src(src->indirect, fp);
+         print_src(src->indirect, state);
       }
       fprintf(fp, "]");
    }
 }
 
 static void
-print_reg_dest(nir_reg_dest *dest, FILE *fp)
+print_reg_dest(nir_reg_dest *dest, print_state *state)
 {
-   print_register(dest->reg, fp);
+   FILE *fp = state->fp;
+   print_register(dest->reg, state);
    if (dest->reg->num_array_elems != 0) {
       fprintf(fp, "[%u", dest->base_offset);
       if (dest->indirect != NULL) {
          fprintf(fp, " + ");
-         print_src(dest->indirect, fp);
+         print_src(dest->indirect, state);
       }
       fprintf(fp, "]");
    }
 }
 
 static void
-print_src(nir_src *src, FILE *fp)
+print_src(nir_src *src, print_state *state)
 {
    if (src->is_ssa)
-      print_ssa_use(src->ssa, fp);
+      print_ssa_use(src->ssa, state);
    else
-      print_reg_src(&src->reg, fp);
+      print_reg_src(&src->reg, state);
 }
 
 static void
-print_dest(nir_dest *dest, FILE *fp)
+print_dest(nir_dest *dest, print_state *state)
 {
    if (dest->is_ssa)
-      print_ssa_def(&dest->ssa, fp);
+      print_ssa_def(&dest->ssa, state);
    else
-      print_reg_dest(&dest->reg, fp);
+      print_reg_dest(&dest->reg, state);
 }
 
 static void
-print_alu_src(nir_alu_instr *instr, unsigned src, FILE *fp)
+print_alu_src(nir_alu_instr *instr, unsigned src, print_state *state)
 {
+   FILE *fp = state->fp;
+
    if (instr->src[src].negate)
       fprintf(fp, "-");
    if (instr->src[src].abs)
       fprintf(fp, "abs(");
 
-   print_src(&instr->src[src].src, fp);
+   print_src(&instr->src[src].src, state);
 
    bool print_swizzle = false;
    for (unsigned i = 0; i < 4; i++) {
@@ -172,11 +181,12 @@ print_alu_src(nir_alu_instr *instr, unsigned src, FILE *fp)
 }
 
 static void
-print_alu_dest(nir_alu_dest *dest, FILE *fp)
+print_alu_dest(nir_alu_dest *dest, print_state *state)
 {
+   FILE *fp = state->fp;
    /* we're going to print the saturate modifier later, after the opcode */
 
-   print_dest(&dest->dest, fp);
+   print_dest(&dest->dest, state);
 
    if (!dest->dest.is_ssa &&
        dest->write_mask != (1 << dest->dest.reg.reg->num_components) - 1) {
@@ -188,9 +198,11 @@ print_alu_dest(nir_alu_dest *dest, FILE *fp)
 }
 
 static void
-print_alu_instr(nir_alu_instr *instr, FILE *fp)
+print_alu_instr(nir_alu_instr *instr, print_state *state)
 {
-   print_alu_dest(&instr->dest, fp);
+   FILE *fp = state->fp;
+
+   print_alu_dest(&instr->dest, state);
 
    fprintf(fp, " = %s", nir_op_infos[instr->op].name);
    if (instr->dest.saturate)
@@ -201,13 +213,15 @@ print_alu_instr(nir_alu_instr *instr, FILE *fp)
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_alu_src(instr, i, fp);
+      print_alu_src(instr, i, state);
    }
 }
 
 static void
-print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
+print_var_decl(nir_variable *var, print_state *state)
 {
+   FILE *fp = state->fp;
+
    fprintf(fp, "decl_var ");
 
    const char *const cent = (var->data.centroid) ? "centroid " : "";
@@ -223,7 +237,7 @@ print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
    glsl_print_type(var->type, fp);
 
    struct set_entry *entry = NULL;
-   if (state)
+   if (state->syms)
       entry = _mesa_set_search(state->syms, var->name);
 
    char *name;
@@ -253,10 +267,11 @@ print_var_decl(nir_variable *var, print_var_state *state, FILE *fp)
 }
 
 static void
-print_var(nir_variable *var, print_var_state *state, FILE *fp)
+print_var(nir_variable *var, print_state *state)
 {
+   FILE *fp = state->fp;
    const char *name;
-   if (state) {
+   if (state->ht) {
       struct hash_entry *entry = _mesa_hash_table_search(state->ht, var);
 
       assert(entry != NULL);
@@ -269,14 +284,15 @@ print_var(nir_variable *var, print_var_state *state, FILE *fp)
 }
 
 static void
-print_deref_var(nir_deref_var *deref, print_var_state *state, FILE *fp)
+print_deref_var(nir_deref_var *deref, print_state *state)
 {
-   print_var(deref->var, state, fp);
+   print_var(deref->var, state);
 }
 
 static void
-print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
+print_deref_array(nir_deref_array *deref, print_state *state)
 {
+   FILE *fp = state->fp;
    fprintf(fp, "[");
    switch (deref->deref_array_type) {
    case nir_deref_array_type_direct:
@@ -285,7 +301,7 @@ print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
    case nir_deref_array_type_indirect:
       if (deref->base_offset != 0)
          fprintf(fp, "%u + ", deref->base_offset);
-      print_src(&deref->indirect, fp);
+      print_src(&deref->indirect, state);
       break;
    case nir_deref_array_type_wildcard:
       fprintf(fp, "*");
@@ -296,13 +312,14 @@ print_deref_array(nir_deref_array *deref, print_var_state *state, FILE *fp)
 
 static void
 print_deref_struct(nir_deref_struct *deref, const struct glsl_type *parent_type,
-                   print_var_state *state, FILE *fp)
+                   print_state *state)
 {
+   FILE *fp = state->fp;
    fprintf(fp, ".%s", glsl_get_struct_elem_name(parent_type, deref->index));
 }
 
 static void
-print_deref(nir_deref_var *deref, print_var_state *state, FILE *fp)
+print_deref(nir_deref_var *deref, print_state *state)
 {
    nir_deref *tail = &deref->deref;
    nir_deref *pretail = NULL;
@@ -311,18 +328,18 @@ print_deref(nir_deref_var *deref, print_var_state *state, FILE *fp)
       case nir_deref_type_var:
          assert(pretail == NULL);
          assert(tail == &deref->deref);
-         print_deref_var(deref, state, fp);
+         print_deref_var(deref, state);
          break;
 
       case nir_deref_type_array:
          assert(pretail != NULL);
-         print_deref_array(nir_deref_as_array(tail), state, fp);
+         print_deref_array(nir_deref_as_array(tail), state);
          break;
 
       case nir_deref_type_struct:
          assert(pretail != NULL);
          print_deref_struct(nir_deref_as_struct(tail),
-                            pretail->type, state, fp);
+                            pretail->type, state);
          break;
 
       default:
@@ -335,13 +352,13 @@ print_deref(nir_deref_var *deref, print_var_state *state, FILE *fp)
 }
 
 static void
-print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
-                      FILE *fp)
+print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
 {
    unsigned num_srcs = nir_intrinsic_infos[instr->intrinsic].num_srcs;
+   FILE *fp = state->fp;
 
    if (nir_intrinsic_infos[instr->intrinsic].has_dest) {
-      print_dest(&instr->dest, fp);
+      print_dest(&instr->dest, state);
       fprintf(fp, " = ");
    }
 
@@ -351,7 +368,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_src(&instr->src[i], fp);
+      print_src(&instr->src[i], state);
    }
 
    fprintf(fp, ") (");
@@ -362,7 +379,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_deref(instr->variables[i], state, fp);
+      print_deref(instr->variables[i], state);
    }
 
    fprintf(fp, ") (");
@@ -380,9 +397,11 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_var_state *state,
 }
 
 static void
-print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
+print_tex_instr(nir_tex_instr *instr, print_state *state)
 {
-   print_dest(&instr->dest, fp);
+   FILE *fp = state->fp;
+
+   print_dest(&instr->dest, state);
 
    fprintf(fp, " = ");
 
@@ -427,7 +446,7 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
    }
 
    for (unsigned i = 0; i < instr->num_srcs; i++) {
-      print_src(&instr->src[i].src, fp);
+      print_src(&instr->src[i].src, state);
 
       fprintf(fp, " ");
 
@@ -490,7 +509,7 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
    }
 
    if (instr->sampler) {
-      print_deref(instr->sampler, state, fp);
+      print_deref(instr->sampler, state);
    } else {
       fprintf(fp, "%u", instr->sampler_index);
    }
@@ -499,29 +518,33 @@ print_tex_instr(nir_tex_instr *instr, print_var_state *state, FILE *fp)
 }
 
 static void
-print_call_instr(nir_call_instr *instr, print_var_state *state, FILE *fp)
+print_call_instr(nir_call_instr *instr, print_state *state)
 {
+   FILE *fp = state->fp;
+
    fprintf(fp, "call %s ", instr->callee->function->name);
 
    for (unsigned i = 0; i < instr->num_params; i++) {
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_deref(instr->params[i], state, fp);
+      print_deref(instr->params[i], state);
    }
 
    if (instr->return_deref != NULL) {
       if (instr->num_params != 0)
          fprintf(fp, ", ");
       fprintf(fp, "returning ");
-      print_deref(instr->return_deref, state, fp);
+      print_deref(instr->return_deref, state);
    }
 }
 
 static void
-print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
+print_load_const_instr(nir_load_const_instr *instr, print_state *state)
 {
-   print_ssa_def(&instr->def, fp);
+   FILE *fp = state->fp;
+
+   print_ssa_def(&instr->def, state);
 
    fprintf(fp, " = load_const (");
 
@@ -542,8 +565,10 @@ print_load_const_instr(nir_load_const_instr *instr, unsigned tabs, FILE *fp)
 }
 
 static void
-print_jump_instr(nir_jump_instr *instr, FILE *fp)
+print_jump_instr(nir_jump_instr *instr, print_state *state)
 {
+   FILE *fp = state->fp;
+
    switch (instr->type) {
    case nir_jump_break:
       fprintf(fp, "break");
@@ -560,79 +585,83 @@ print_jump_instr(nir_jump_instr *instr, FILE *fp)
 }
 
 static void
-print_ssa_undef_instr(nir_ssa_undef_instr* instr, FILE *fp)
+print_ssa_undef_instr(nir_ssa_undef_instr* instr, print_state *state)
 {
-   print_ssa_def(&instr->def, fp);
+   FILE *fp = state->fp;
+   print_ssa_def(&instr->def, state);
    fprintf(fp, " = undefined");
 }
 
 static void
-print_phi_instr(nir_phi_instr *instr, FILE *fp)
+print_phi_instr(nir_phi_instr *instr, print_state *state)
 {
-   print_dest(&instr->dest, fp);
+   FILE *fp = state->fp;
+   print_dest(&instr->dest, state);
    fprintf(fp, " = phi ");
    nir_foreach_phi_src(instr, src) {
       if (&src->node != exec_list_get_head(&instr->srcs))
          fprintf(fp, ", ");
 
       fprintf(fp, "block_%u: ", src->pred->index);
-      print_src(&src->src, fp);
+      print_src(&src->src, state);
    }
 }
 
 static void
-print_parallel_copy_instr(nir_parallel_copy_instr *instr, FILE *fp)
+print_parallel_copy_instr(nir_parallel_copy_instr *instr, print_state *state)
 {
+   FILE *fp = state->fp;
    nir_foreach_parallel_copy_entry(instr, entry) {
       if (&entry->node != exec_list_get_head(&instr->entries))
          fprintf(fp, "; ");
 
-      print_dest(&entry->dest, fp);
+      print_dest(&entry->dest, state);
       fprintf(fp, " = ");
-      print_src(&entry->src, fp);
+      print_src(&entry->src, state);
    }
 }
 
 static void
-print_instr(const nir_instr *instr, print_var_state *state, unsigned tabs, FILE *fp)
+print_instr(const nir_instr *instr, print_state *state, unsigned tabs)
 {
+   FILE *fp = state->fp;
    print_tabs(tabs, fp);
 
    switch (instr->type) {
    case nir_instr_type_alu:
-      print_alu_instr(nir_instr_as_alu(instr), fp);
+      print_alu_instr(nir_instr_as_alu(instr), state);
       break;
 
    case nir_instr_type_call:
-      print_call_instr(nir_instr_as_call(instr), state, fp);
+      print_call_instr(nir_instr_as_call(instr), state);
       break;
 
    case nir_instr_type_intrinsic:
-      print_intrinsic_instr(nir_instr_as_intrinsic(instr), state, fp);
+      print_intrinsic_instr(nir_instr_as_intrinsic(instr), state);
       break;
 
    case nir_instr_type_tex:
-      print_tex_instr(nir_instr_as_tex(instr), state, fp);
+      print_tex_instr(nir_instr_as_tex(instr), state);
       break;
 
    case nir_instr_type_load_const:
-      print_load_const_instr(nir_instr_as_load_const(instr), tabs, fp);
+      print_load_const_instr(nir_instr_as_load_const(instr), state);
       break;
 
    case nir_instr_type_jump:
-      print_jump_instr(nir_instr_as_jump(instr), fp);
+      print_jump_instr(nir_instr_as_jump(instr), state);
       break;
 
    case nir_instr_type_ssa_undef:
-      print_ssa_undef_instr(nir_instr_as_ssa_undef(instr), fp);
+      print_ssa_undef_instr(nir_instr_as_ssa_undef(instr), state);
       break;
 
    case nir_instr_type_phi:
-      print_phi_instr(nir_instr_as_phi(instr), fp);
+      print_phi_instr(nir_instr_as_phi(instr), state);
       break;
 
    case nir_instr_type_parallel_copy:
-      print_parallel_copy_instr(nir_instr_as_parallel_copy(instr), fp);
+      print_parallel_copy_instr(nir_instr_as_parallel_copy(instr), state);
       break;
 
    default:
@@ -650,12 +679,14 @@ compare_block_index(const void *p1, const void *p2)
    return (int) block1->index - (int) block2->index;
 }
 
-static void print_cf_node(nir_cf_node *node, print_var_state *state,
-                          unsigned tabs, FILE *fp);
+static void print_cf_node(nir_cf_node *node, print_state *state,
+                          unsigned tabs);
 
 static void
-print_block(nir_block *block, print_var_state *state, unsigned tabs, FILE *fp)
+print_block(nir_block *block, print_state *state, unsigned tabs)
 {
+   FILE *fp = state->fp;
+
    print_tabs(tabs, fp);
    fprintf(fp, "block block_%u:\n", block->index);
 
@@ -683,7 +714,7 @@ print_block(nir_block *block, print_var_state *state, unsigned tabs, FILE *fp)
    free(preds);
 
    nir_foreach_instr(block, instr) {
-      print_instr(instr, state, tabs, fp);
+      print_instr(instr, state, tabs);
       fprintf(fp, "\n");
    }
 
@@ -697,51 +728,54 @@ print_block(nir_block *block, print_var_state *state, unsigned tabs, FILE *fp)
 }
 
 static void
-print_if(nir_if *if_stmt, print_var_state *state, unsigned tabs, FILE *fp)
+print_if(nir_if *if_stmt, print_state *state, unsigned tabs)
 {
+   FILE *fp = state->fp;
+
    print_tabs(tabs, fp);
    fprintf(fp, "if ");
-   print_src(&if_stmt->condition, fp);
+   print_src(&if_stmt->condition, state);
    fprintf(fp, " {\n");
    foreach_list_typed(nir_cf_node, node, node, &if_stmt->then_list) {
-      print_cf_node(node, state, tabs + 1, fp);
+      print_cf_node(node, state, tabs + 1);
    }
    print_tabs(tabs, fp);
    fprintf(fp, "} else {\n");
    foreach_list_typed(nir_cf_node, node, node, &if_stmt->else_list) {
-      print_cf_node(node, state, tabs + 1, fp);
+      print_cf_node(node, state, tabs + 1);
    }
    print_tabs(tabs, fp);
    fprintf(fp, "}\n");
 }
 
 static void
-print_loop(nir_loop *loop, print_var_state *state, unsigned tabs, FILE *fp)
+print_loop(nir_loop *loop, print_state *state, unsigned tabs)
 {
+   FILE *fp = state->fp;
+
    print_tabs(tabs, fp);
    fprintf(fp, "loop {\n");
    foreach_list_typed(nir_cf_node, node, node, &loop->body) {
-      print_cf_node(node, state, tabs + 1, fp);
+      print_cf_node(node, state, tabs + 1);
    }
    print_tabs(tabs, fp);
    fprintf(fp, "}\n");
 }
 
 static void
-print_cf_node(nir_cf_node *node, print_var_state *state, unsigned int tabs,
-              FILE *fp)
+print_cf_node(nir_cf_node *node, print_state *state, unsigned int tabs)
 {
    switch (node->type) {
    case nir_cf_node_block:
-      print_block(nir_cf_node_as_block(node), state, tabs, fp);
+      print_block(nir_cf_node_as_block(node), state, tabs);
       break;
 
    case nir_cf_node_if:
-      print_if(nir_cf_node_as_if(node), state, tabs, fp);
+      print_if(nir_cf_node_as_if(node), state, tabs);
       break;
 
    case nir_cf_node_loop:
-      print_loop(nir_cf_node_as_loop(node), state, tabs, fp);
+      print_loop(nir_cf_node_as_loop(node), state, tabs);
       break;
 
    default:
@@ -750,40 +784,42 @@ print_cf_node(nir_cf_node *node, print_var_state *state, unsigned int tabs,
 }
 
 static void
-print_function_impl(nir_function_impl *impl, print_var_state *state, FILE *fp)
+print_function_impl(nir_function_impl *impl, print_state *state)
 {
+   FILE *fp = state->fp;
+
    fprintf(fp, "\nimpl %s ", impl->overload->function->name);
 
    for (unsigned i = 0; i < impl->num_params; i++) {
       if (i != 0)
          fprintf(fp, ", ");
 
-      print_var(impl->params[i], state, fp);
+      print_var(impl->params[i], state);
    }
 
    if (impl->return_var != NULL) {
       if (impl->num_params != 0)
          fprintf(fp, ", ");
       fprintf(fp, "returning ");
-      print_var(impl->return_var, state, fp);
+      print_var(impl->return_var, state);
    }
 
    fprintf(fp, "{\n");
 
    foreach_list_typed(nir_variable, var, node, &impl->locals) {
       fprintf(fp, "\t");
-      print_var_decl(var, state, fp);
+      print_var_decl(var, state);
    }
 
    foreach_list_typed(nir_register, reg, node, &impl->registers) {
       fprintf(fp, "\t");
-      print_register_decl(reg, fp);
+      print_register_decl(reg, state);
    }
 
    nir_index_blocks(impl);
 
    foreach_list_typed(nir_cf_node, node, node, &impl->body) {
-      print_cf_node(node, state, 1, fp);
+      print_cf_node(node, state, 1);
    }
 
    fprintf(fp, "\tblock block_%u:\n}\n\n", impl->end_block->index);
@@ -791,8 +827,10 @@ print_function_impl(nir_function_impl *impl, print_var_state *state, FILE *fp)
 
 static void
 print_function_overload(nir_function_overload *overload,
-                        print_var_state *state, FILE *fp)
+                        print_state *state)
 {
+   FILE *fp = state->fp;
+
    fprintf(fp, "decl_overload %s ", overload->function->name);
 
    for (unsigned i = 0; i < overload->num_params; i++) {
@@ -826,22 +864,23 @@ print_function_overload(nir_function_overload *overload,
    fprintf(fp, "\n");
 
    if (overload->impl != NULL) {
-      print_function_impl(overload->impl, state, fp);
+      print_function_impl(overload->impl, state);
       return;
    }
 }
 
 static void
-print_function(nir_function *func, print_var_state *state, FILE *fp)
+print_function(nir_function *func, print_state *state)
 {
    foreach_list_typed(nir_function_overload, overload, node, &func->overload_list) {
-      print_function_overload(overload, state, fp);
+      print_function_overload(overload, state);
    }
 }
 
 static void
-init_print_state(print_var_state *state)
+init_print_state(print_state *state, nir_shader *shader, FILE *fp)
 {
+   state->fp = fp;
    state->ht = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
                                        _mesa_key_pointer_equal);
    state->syms = _mesa_set_create(NULL, _mesa_key_hash_string,
@@ -850,7 +889,7 @@ init_print_state(print_var_state *state)
 }
 
 static void
-destroy_print_state(print_var_state *state)
+destroy_print_state(print_state *state)
 {
    _mesa_hash_table_destroy(state->ht, NULL);
    _mesa_set_destroy(state->syms, NULL);
@@ -859,35 +898,35 @@ destroy_print_state(print_var_state *state)
 void
 nir_print_shader(nir_shader *shader, FILE *fp)
 {
-   print_var_state state;
-   init_print_state(&state);
+   print_state state;
+   init_print_state(&state, shader, fp);
 
    foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
-      print_var_decl(var, &state, fp);
+      print_var_decl(var, &state);
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->inputs) {
-      print_var_decl(var, &state, fp);
+      print_var_decl(var, &state);
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->outputs) {
-      print_var_decl(var, &state, fp);
+      print_var_decl(var, &state);
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->globals) {
-      print_var_decl(var, &state, fp);
+      print_var_decl(var, &state);
    }
 
    foreach_list_typed(nir_variable, var, node, &shader->system_values) {
-      print_var_decl(var, &state, fp);
+      print_var_decl(var, &state);
    }
 
    foreach_list_typed(nir_register, reg, node, &shader->registers) {
-      print_register_decl(reg, fp);
+      print_register_decl(reg, &state);
    }
 
    foreach_list_typed(nir_function, func, node, &shader->functions) {
-      print_function(func, &state, fp);
+      print_function(func, &state);
    }
 
    destroy_print_state(&state);
@@ -896,5 +935,9 @@ nir_print_shader(nir_shader *shader, FILE *fp)
 void
 nir_print_instr(const nir_instr *instr, FILE *fp)
 {
-   print_instr(instr, NULL, 0, fp);
+   print_state state = {
+      .fp = fp,
+   };
+   print_instr(instr, &state, 0);
+
 }
