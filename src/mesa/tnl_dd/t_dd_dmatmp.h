@@ -329,20 +329,20 @@ static void TAG(render_poly_verts)( struct gl_context *ctx,
    }
 }
 
-static void TAG(render_quad_strip_verts)( struct gl_context *ctx,
-					  GLuint start,
-					  GLuint count,
-					  GLuint flags )
+static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
+                                         GLuint start,
+                                         GLuint count,
+                                         GLuint flags)
 {
    GLuint j, nr;
 
    if (ctx->Light.ShadeModel == GL_FLAT &&
        TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
-	 /* Vertices won't fit in a single buffer or elts not
-	  * available - should never happen.
-	  */
-        fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-	 return;
+      /* Vertices won't fit in a single buffer or elts not available - should
+       * never happen.
+       */
+      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
+      return;
    } else {
       LOCAL_VARS;
       int dmasz = GET_SUBSEQUENT_VB_MAX_VERTS();
@@ -379,30 +379,28 @@ static void TAG(render_quads_verts)(struct gl_context *ctx,
                                     GLuint count,
                                     GLuint flags)
 {
+   LOCAL_VARS;
+   GLuint j;
+
    /* Emit whole number of quads in total. */
    count -= count & 3;
 
-   {
-      /* Hardware doesn't have a quad primitive type -- try to
-       * simulate it using triangle primitive.  This is a win for
-       * gears, but is it useful in the broader world?
+   /* Hardware doesn't have a quad primitive type -- try to simulate it using
+    * triangle primitive.  This is a win for gears, but is it useful in the
+    * broader world?
+    */
+   INIT(GL_TRIANGLES);
+
+   for (j = 0; j + 3 < count; j += 4) {
+      void *tmp = ALLOC_VERTS(6);
+      /* Send v0, v1, v3
        */
-      LOCAL_VARS;
-      GLuint j;
-
-      INIT(GL_TRIANGLES);
-
-      for (j = 0; j + 3 < count; j += 4) {
-	 void *tmp = ALLOC_VERTS( 6 );
-	 /* Send v0, v1, v3
-	  */
-	 tmp = EMIT_VERTS(ctx, start + j,     2, tmp);
-	 tmp = EMIT_VERTS(ctx, start + j + 3, 1, tmp);
-	 /* Send v1, v2, v3
-	  */
-	 tmp = EMIT_VERTS(ctx, start + j + 1, 3, tmp);
-	 (void) tmp;
-      }
+      tmp = EMIT_VERTS(ctx, start + j,     2, tmp);
+      tmp = EMIT_VERTS(ctx, start + j + 3, 1, tmp);
+      /* Send v1, v2, v3
+       */
+      tmp = EMIT_VERTS(ctx, start + j + 1, 3, tmp);
+      (void) tmp;
    }
 }
 
@@ -471,17 +469,12 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
          ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH;
 	 break;
       case GL_QUAD_STRIP:
-	 if (VB->Elts) {
-	    ok = GL_TRUE;
-	 } else if (ctx->Light.ShadeModel == GL_FLAT &&
-		    VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride != 0) {
-	       ok = GL_FALSE;
-	 }
-	 else 
-	    ok = GL_TRUE;
+         ok = VB->Elts ||
+              (ctx->Light.ShadeModel != GL_FLAT ||
+               VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride == 0);
 	 break;
       case GL_QUADS:
-	    ok = GL_TRUE; /* flatshading is ok. */
+         ok = GL_TRUE; /* flatshading is ok. */
 	 break;
       default:
 	 break;
