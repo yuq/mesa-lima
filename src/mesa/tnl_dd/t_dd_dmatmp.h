@@ -52,8 +52,8 @@
 /*                  Render whole begin/end objects                    */
 /**********************************************************************/
 
-static __inline void *TAG(emit_verts)( struct gl_context *ctx, GLuint start, 
-				     GLuint count, void *buf )
+static inline void *TAG(emit_verts)(struct gl_context *ctx, GLuint start,
+                                    GLuint count, void *buf)
 {
    return EMIT_VERTS(ctx, start, count, buf);
 }
@@ -62,10 +62,10 @@ static __inline void *TAG(emit_verts)( struct gl_context *ctx, GLuint start,
  *                    Render non-indexed primitives.
  ***********************************************************************/
 
-static void TAG(render_points_verts)( struct gl_context *ctx,
-				      GLuint start,
-				      GLuint count,
-				      GLuint flags )
+static void TAG(render_points_verts)(struct gl_context *ctx,
+                                     GLuint start,
+                                     GLuint count,
+                                     GLuint flags)
 {
    if (HAVE_POINTS) {
       LOCAL_VARS;
@@ -73,18 +73,17 @@ static void TAG(render_points_verts)( struct gl_context *ctx,
       int currentsz;
       GLuint j, nr;
 
-      INIT( GL_POINTS );
+      INIT(GL_POINTS);
 
       currentsz = GET_CURRENT_VB_MAX_VERTS();
       if (currentsz < 8)
-	 currentsz = dmasz;
+         currentsz = dmasz;
 
       for (j = 0; j < count; j += nr) {
-	 nr = MIN2( currentsz, count - j );
+         nr = MIN2(currentsz, count - j);
          TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
+         currentsz = dmasz;
       }
-
    } else {
       fprintf(stderr, "%s - cannot draw primitive\n", __func__);
       return;
@@ -199,19 +198,19 @@ static void TAG(render_line_loop_verts)(struct gl_context *ctx,
 }
 
 
-static void TAG(render_triangles_verts)( struct gl_context *ctx,
-					 GLuint start,
-					 GLuint count,
-					 GLuint flags )
+static void TAG(render_triangles_verts)(struct gl_context *ctx,
+                                        GLuint start,
+                                        GLuint count,
+                                        GLuint flags)
 {
    LOCAL_VARS;
-   int dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS()/3) * 3;
+   int dmasz = (GET_SUBSEQUENT_VB_MAX_VERTS() / 3) * 3;
    int currentsz;
    GLuint j, nr;
 
    INIT(GL_TRIANGLES);
 
-   currentsz = (GET_CURRENT_VB_MAX_VERTS()/3) * 3;
+   currentsz = (GET_CURRENT_VB_MAX_VERTS() / 3) * 3;
 
    /* Emit whole number of tris in total.  dmasz is already a multiple
     * of 3.
@@ -222,7 +221,7 @@ static void TAG(render_triangles_verts)( struct gl_context *ctx,
       currentsz = dmasz;
 
    for (j = 0; j < count; j += nr) {
-      nr = MIN2( currentsz, count - j );
+      nr = MIN2(currentsz, count - j);
       TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
       currentsz = dmasz;
    }
@@ -291,10 +290,10 @@ static void TAG(render_tri_fan_verts)(struct gl_context *ctx,
 }
 
 
-static void TAG(render_poly_verts)( struct gl_context *ctx,
-				    GLuint start,
-				    GLuint count,
-				    GLuint flags )
+static void TAG(render_poly_verts)(struct gl_context *ctx,
+                                   GLuint start,
+                                   GLuint count,
+                                   GLuint flags)
 {
    if (HAVE_POLYGONS) {
       LOCAL_VARS;
@@ -306,22 +305,21 @@ static void TAG(render_poly_verts)( struct gl_context *ctx,
 
       currentsz = GET_CURRENT_VB_MAX_VERTS();
       if (currentsz < 8) {
-	 currentsz = dmasz;
+         currentsz = dmasz;
       }
 
-      for (j = 1 ; j + 1 < count ; j += nr - 2 ) {
-	 void *tmp;
-	 nr = MIN2( currentsz, count - j + 1 );
-	 tmp = ALLOC_VERTS( nr );
-	 tmp = TAG(emit_verts)( ctx, start, 1, tmp );
+      for (j = 1; j + 1 < count; j += nr - 2) {
+         void *tmp;
+         nr = MIN2(currentsz, count - j + 1);
+         tmp = ALLOC_VERTS(nr);
+         tmp = TAG(emit_verts)(ctx, start, 1, tmp);
          tmp = TAG(emit_verts)(ctx, start + j, nr - 1, tmp);
-	 (void) tmp;
-	 currentsz = dmasz;
+         (void) tmp;
+         currentsz = dmasz;
       }
 
       FLUSH();
-   }
-   else if (ctx->Light.ShadeModel == GL_SMOOTH) {
+   } else if (ctx->Light.ShadeModel == GL_SMOOTH) {
       TAG(render_tri_fan_verts)( ctx, start, count, flags );
    } else {
       fprintf(stderr, "%s - cannot draw primitive\n", __func__);
@@ -361,12 +359,12 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
       count -= count & 1;
 
       if (currentsz < 8)
-	 currentsz = dmasz;
+         currentsz = dmasz;
 
       for (j = 0; j + 3 < count; j += nr - 2) {
          nr = MIN2(currentsz, count - j);
          TAG(emit_verts)(ctx, start + j, nr, ALLOC_VERTS(nr));
-	 currentsz = dmasz;
+         currentsz = dmasz;
       }
 
       FLUSH();
@@ -404,15 +402,16 @@ static void TAG(render_quads_verts)(struct gl_context *ctx,
    }
 }
 
-static void TAG(render_noop)( struct gl_context *ctx,
-			      GLuint start,
-			      GLuint count,
-			      GLuint flags )
+static void TAG(render_noop)(struct gl_context *ctx,
+                             GLuint start,
+                             GLuint count,
+                             GLuint flags)
 {
+   (void) ctx;
+   (void) start;
+   (void) count;
+   (void) flags;
 }
-
-
-
 
 static tnl_render_func TAG(render_tab_verts)[GL_POLYGON+2] =
 {
@@ -432,8 +431,8 @@ static tnl_render_func TAG(render_tab_verts)[GL_POLYGON+2] =
 /* Pre-check the primitives in the VB to prevent the need for
  * fallbacks later on.
  */
-static GLboolean TAG(validate_render)( struct gl_context *ctx,
-				       struct vertex_buffer *VB )
+static GLboolean TAG(validate_render)(struct gl_context *ctx,
+                                      struct vertex_buffer *VB)
 {
    GLint i;
 
@@ -449,40 +448,40 @@ static GLboolean TAG(validate_render)( struct gl_context *ctx,
       GLboolean ok = GL_FALSE;
 
       if (!count)
-	 continue;
+         continue;
 
       switch (prim & PRIM_MODE_MASK) {
       case GL_POINTS:
-	 ok = HAVE_POINTS;
-	 break;
+         ok = HAVE_POINTS;
+         break;
       case GL_LINES:
       case GL_LINE_STRIP:
       case GL_LINE_LOOP:
-	 ok = !ctx->Line.StippleFlag;
-	 break;
+         ok = !ctx->Line.StippleFlag;
+         break;
       case GL_TRIANGLES:
       case GL_TRIANGLE_STRIP:
       case GL_TRIANGLE_FAN:
-	 ok = GL_TRUE;
-	 break;
+         ok = GL_TRUE;
+         break;
       case GL_POLYGON:
          ok = (HAVE_POLYGONS) || ctx->Light.ShadeModel == GL_SMOOTH;
-	 break;
+         break;
       case GL_QUAD_STRIP:
          ok = VB->Elts ||
               (ctx->Light.ShadeModel != GL_FLAT ||
                VB->AttribPtr[_TNL_ATTRIB_COLOR0]->stride == 0);
-	 break;
+         break;
       case GL_QUADS:
          ok = GL_TRUE; /* flatshading is ok. */
-	 break;
+         break;
       default:
-	 break;
+         break;
       }
       
       if (!ok) {
-/* 	 fprintf(stderr, "not ok %s\n", _mesa_enum_to_string(prim & PRIM_MODE_MASK)); */
-	 return GL_FALSE;
+/*          fprintf(stderr, "not ok %s\n", _mesa_enum_to_string(prim & PRIM_MODE_MASK)); */
+         return GL_FALSE;
       }
    }
 
