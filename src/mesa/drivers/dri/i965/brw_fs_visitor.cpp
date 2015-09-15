@@ -295,7 +295,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       opcode = SHADER_OPCODE_TXF_LOGICAL;
       break;
    case ir_txf_ms:
-      if (devinfo->gen >= 9)
+      if ((key_tex->msaa_16 & (1 << sampler)))
          opcode = SHADER_OPCODE_TXF_CMS_W_LOGICAL;
       else
          opcode = SHADER_OPCODE_TXF_CMS_LOGICAL;

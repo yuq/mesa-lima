@@ -212,6 +212,9 @@ brw_debug_recompile_sampler_key(struct brw_context *brw,
    found |= key_debug(brw, "compressed multisample layout",
                       old_key->compressed_multisample_layout_mask,
                       key->compressed_multisample_layout_mask);
+   found |= key_debug(brw, "16x msaa",
+                      old_key->msaa_16,
+                      key->msaa_16);
 
    for (unsigned int i = 0; i < MAX_SAMPLERS; i++) {
       found |= key_debug(brw, "textureGather workarounds",
@@ -371,6 +374,11 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          if (brw->gen >= 7 &&
              intel_tex->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
             key->compressed_multisample_layout_mask |= 1 << s;
+
+            if (intel_tex->mt->num_samples >= 16) {
+               assert(brw->gen >= 9);
+               key->msaa_16 |= 1 << s;
+            }
          }
       }
    }
