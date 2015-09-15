@@ -30,6 +30,8 @@
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
 
+#define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
+
 using namespace brw;
 
 static void
@@ -727,7 +729,7 @@ fs_visitor::emit_unspill(bblock_t *block, fs_inst *inst, fs_reg dst,
       unspill_inst->regs_written = reg_size;
 
       if (!gen7_read) {
-         unspill_inst->base_mrf = 14;
+         unspill_inst->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
          unspill_inst->mlen = 1; /* header contains offset */
       }
 
@@ -741,9 +743,9 @@ fs_visitor::emit_spill(bblock_t *block, fs_inst *inst, fs_reg src,
                        uint32_t spill_offset, int count)
 {
    int reg_size = 1;
-   int spill_base_mrf = 14;
+   int spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
    if (dispatch_width == 16 && count % 2 == 0) {
-      spill_base_mrf = 13;
+      spill_base_mrf = FIRST_SPILL_MRF(devinfo->gen);
       reg_size = 2;
    }
 
@@ -843,7 +845,8 @@ fs_visitor::spill_reg(int spill_reg)
    int size = alloc.sizes[spill_reg];
    unsigned int spill_offset = last_scratch;
    assert(ALIGN(spill_offset, 16) == spill_offset); /* oword read/write req. */
-   int spill_base_mrf = dispatch_width > 8 ? 13 : 14;
+   int spill_base_mrf = dispatch_width > 8 ? FIRST_SPILL_MRF(devinfo->gen) :
+                                             FIRST_SPILL_MRF(devinfo->gen) + 1;
 
    /* Spills may use MRFs 13-15 in the SIMD16 case.  Our texturing is done
     * using up to 11 MRFs starting from either m1 or m2, and fb writes can use
