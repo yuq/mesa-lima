@@ -391,7 +391,7 @@ convert_clear_buffer_data(struct gl_context *ctx,
 
 /**
  * Allocate and initialize a new buffer object.
- * 
+ *
  * Default callback for the \c dd_function_table::NewBufferObject() hook.
  */
 static struct gl_buffer_object *
@@ -409,7 +409,7 @@ _mesa_new_buffer_object(struct gl_context *ctx, GLuint name)
 
 /**
  * Delete a buffer object.
- * 
+ *
  * Default callback for the \c dd_function_table::DeleteBuffer() hook.
  */
 static void
@@ -980,7 +980,7 @@ bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
                                         &newBufObj, "glBindBuffer"))
          return;
    }
-   
+
    /* bind new buffer */
    _mesa_reference_buffer_object(ctx, bindTarget, newBufObj);
 }
@@ -988,7 +988,7 @@ bind_buffer_object(struct gl_context *ctx, GLenum target, GLuint buffer)
 
 /**
  * Update the default buffer objects in the given context to reference those
- * specified in the shared state and release those referencing the old 
+ * specified in the shared state and release those referencing the old
  * shared state.
  */
 void
@@ -1192,7 +1192,7 @@ _mesa_BindBuffer(GLenum target, GLuint buffer)
 
 /**
  * Delete a set of buffer objects.
- * 
+ *
  * \param n      Number of buffer objects to delete.
  * \param ids    Array of \c n buffer object IDs.
  */
@@ -1410,9 +1410,9 @@ _mesa_CreateBuffers(GLsizei n, GLuint *buffers)
 
 /**
  * Determine if ID is the name of a buffer object.
- * 
+ *
  * \param id  ID of the potential buffer object.
- * \return  \c GL_TRUE if \c id is the name of a buffer object, 
+ * \return  \c GL_TRUE if \c id is the name of a buffer object,
  *          \c GL_FALSE otherwise.
  */
 GLboolean GLAPIENTRY
