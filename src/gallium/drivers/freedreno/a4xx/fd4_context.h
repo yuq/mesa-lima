@@ -29,6 +29,8 @@
 #ifndef FD4_CONTEXT_H_
 #define FD4_CONTEXT_H_
 
+#include "util/u_upload_mgr.h"
+
 #include "freedreno_drmif.h"
 
 #include "freedreno_context.h"
@@ -69,6 +71,9 @@ struct fd4_context {
 	 *    - solid_vbuf / 12 / R32G32B32_FLOAT
 	 */
 	struct fd_vertex_state blit_vbuf_state;
+
+	struct u_upload_mgr *border_color_uploader;
+	struct pipe_resource *border_color_buf;
 
 	/* if *any* of bits are set in {v,f}saturate_{s,t,r} */
 	bool vsaturate, fsaturate;

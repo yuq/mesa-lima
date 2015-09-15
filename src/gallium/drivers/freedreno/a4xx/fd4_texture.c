@@ -49,12 +49,13 @@ tex_clamp(unsigned wrap, bool clamp_to_edge)
 		return A4XX_TEX_REPEAT;
 	case PIPE_TEX_WRAP_CLAMP_TO_EDGE:
 		return A4XX_TEX_CLAMP_TO_EDGE;
+	case PIPE_TEX_WRAP_CLAMP_TO_BORDER:
+		return A4XX_TEX_CLAMP_TO_BORDER;
 	case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_EDGE:
 		/* only works for PoT.. need to emulate otherwise! */
 		return A4XX_TEX_MIRROR_CLAMP;
 	case PIPE_TEX_WRAP_MIRROR_REPEAT:
 		return A4XX_TEX_MIRROR_REPEAT;
-	case PIPE_TEX_WRAP_CLAMP_TO_BORDER:
 	case PIPE_TEX_WRAP_MIRROR_CLAMP:
 	case PIPE_TEX_WRAP_MIRROR_CLAMP_TO_BORDER:
 		/* these two we could perhaps emulate, but we currently
