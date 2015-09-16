@@ -41,10 +41,30 @@ struct job {
 static void *alloc_blocks(void *_job)
 {
    struct job *job = _job;
+   int32_t block, *data;
 
    for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++) {
-      job->blocks[i] = anv_block_pool_alloc(job->pool);
-      job->back_blocks[i] = -anv_block_pool_alloc_back(job->pool);
+      block = anv_block_pool_alloc(job->pool);
+      data = job->pool->map + block;
+      *data = block;
+      assert(block >= 0);
+      job->blocks[i] = block;
+
+      block = anv_block_pool_alloc_back(job->pool);
+      data = job->pool->map + block;
+      *data = block;
+      assert(block < 0);
+      job->back_blocks[i] = -block;
+   }
+
+   for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++) {
+      block = job->blocks[i];
+      data = job->pool->map + block;
+      assert(*data == block);
+
+      block = -job->back_blocks[i];
+      data = job->pool->map + block;
+      assert(*data == block);
    }
 
    return NULL;
