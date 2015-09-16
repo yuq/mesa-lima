@@ -46,6 +46,41 @@ static void *alloc_blocks(void *_job)
    return NULL;
 }
 
+static void validate_monotonic(uint32_t **blocks)
+{
+   /* A list of indices, one per thread */
+   unsigned next[NUM_THREADS];
+   memset(next, 0, sizeof(next));
+
+   int highest = -1;
+   while (true) {
+      /* First, we find which thread has the highest next element */
+      int thread_max = -1;
+      int max_thread_idx = -1;
+      for (unsigned i = 0; i < NUM_THREADS; i++) {
+         if (next[i] >= BLOCKS_PER_THREAD)
+            continue;
+
+         if (thread_max < blocks[i][next[i]]) {
+            thread_max = blocks[i][next[i]];
+            max_thread_idx = i;
+         }
+      }
+
+      /* The only way this can happen is if all of the next[] values are at
+       * BLOCKS_PER_THREAD, in which case, we're done.
+       */
+      if (thread_max == -1)
+         break;
+
+      /* That next element had better be higher than the previous highest */
+      assert(blocks[max_thread_idx][next[max_thread_idx]] > highest);
+
+      highest = blocks[max_thread_idx][next[max_thread_idx]];
+      next[max_thread_idx]++;
+   }
+}
+
 static void run_test()
 {
    struct anv_device device;
@@ -63,37 +98,11 @@ static void run_test()
    for (unsigned i = 0; i < NUM_THREADS; i++)
       pthread_join(jobs[i].thread, NULL);
 
-   /* A list of indices, one per thread */
-   unsigned next[NUM_THREADS];
-   memset(next, 0, sizeof(next));
+   uint32_t *block_ptrs[NUM_THREADS];
+   for (unsigned i = 0; i < NUM_THREADS; i++)
+      block_ptrs[i] = jobs[i].blocks;
 
-   int highest = -1;
-   while (true) {
-      /* First, we find which thread has the highest next element */
-      int thread_max = -1;
-      int max_thread_idx = -1;
-      for (unsigned i = 0; i < NUM_THREADS; i++) {
-         if (next[i] >= BLOCKS_PER_THREAD)
-            continue;
-
-         if (thread_max < jobs[i].blocks[next[i]]) {
-            thread_max = jobs[i].blocks[next[i]];
-            max_thread_idx = i;
-         }
-      }
-
-      /* The only way this can happen is if all of the next[] values are at
-       * BLOCKS_PER_THREAD, in which case, we're done.
-       */
-      if (thread_max == -1)
-         break;
-
-      /* That next element had better be higher than the previous highest */
-      assert(jobs[max_thread_idx].blocks[next[max_thread_idx]] > highest);
-
-      highest = jobs[max_thread_idx].blocks[next[max_thread_idx]];
-      next[max_thread_idx]++;
-   }
+   validate_monotonic(block_ptrs);
 
    anv_block_pool_finish(&pool);
    pthread_mutex_destroy(&device.mutex);
