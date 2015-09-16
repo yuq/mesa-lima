@@ -127,10 +127,10 @@ struct ir3_compile {
 static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
 static struct ir3_block * get_block(struct ir3_compile *ctx, nir_block *nblock);
 
-static struct nir_shader *to_nir(const struct tgsi_token *tokens,
-		struct ir3_shader_variant *so)
+static struct nir_shader *to_nir(struct ir3_compile *ctx,
+		const struct tgsi_token *tokens, struct ir3_shader_variant *so)
 {
-	struct nir_shader_compiler_options options = {
+	static const nir_shader_compiler_options options = {
 			.lower_fpow = true,
 			.lower_fsat = true,
 			.lower_scmp = true,
@@ -138,7 +138,32 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens,
 			.lower_ffract = true,
 			.native_integers = true,
 	};
+	struct nir_lower_tex_options tex_options = {
+			.lower_rect = 0,
+	};
 	bool progress;
+
+	switch (so->type) {
+	case SHADER_FRAGMENT:
+	case SHADER_COMPUTE:
+		tex_options.saturate_s = so->key.fsaturate_s;
+		tex_options.saturate_t = so->key.fsaturate_t;
+		tex_options.saturate_r = so->key.fsaturate_r;
+		break;
+	case SHADER_VERTEX:
+		tex_options.saturate_s = so->key.vsaturate_s;
+		tex_options.saturate_t = so->key.vsaturate_t;
+		tex_options.saturate_r = so->key.vsaturate_r;
+		break;
+	}
+
+	if (ctx->compiler->gpu_id >= 400) {
+		/* a4xx seems to have *no* sam.p */
+		tex_options.lower_txp = ~0;  /* lower all txp */
+	} else {
+		/* a3xx just needs to avoid sam.p for 3d tex */
+		tex_options.lower_txp = (1 << GLSL_SAMPLER_DIM_3D);
+	}
 
 	struct nir_shader *s = tgsi_to_nir(tokens, &options);
 
@@ -155,6 +180,7 @@ static struct nir_shader *to_nir(const struct tgsi_token *tokens,
 	} else if (s->stage == MESA_SHADER_FRAGMENT) {
 		nir_lower_clip_fs(s, so->key.ucp_enables);
 	}
+	nir_lower_tex(s, &tex_options);
 	nir_lower_idiv(s);
 	nir_lower_load_const_to_scalar(s);
 
@@ -196,28 +222,6 @@ lower_tgsi(struct ir3_compile *ctx, const struct tgsi_token *tokens,
 			.color_two_side = so->key.color_two_side,
 	};
 
-	switch (so->type) {
-	case SHADER_FRAGMENT:
-	case SHADER_COMPUTE:
-		lconfig.saturate_s = so->key.fsaturate_s;
-		lconfig.saturate_t = so->key.fsaturate_t;
-		lconfig.saturate_r = so->key.fsaturate_r;
-		break;
-	case SHADER_VERTEX:
-		lconfig.saturate_s = so->key.vsaturate_s;
-		lconfig.saturate_t = so->key.vsaturate_t;
-		lconfig.saturate_r = so->key.vsaturate_r;
-		break;
-	}
-
-	if (ctx->compiler->gpu_id >= 400) {
-		/* a4xx seems to have *no* sam.p */
-		lconfig.lower_TXP = ~0;  /* lower all txp */
-	} else {
-		/* a3xx just needs to avoid sam.p for 3d tex */
-		lconfig.lower_TXP = (1 << TGSI_TEXTURE_3D);
-	}
-
 	return tgsi_transform_lowering(&lconfig, tokens, &info);
 }
 
@@ -257,7 +261,7 @@ compile_init(struct ir3_compiler *compiler,
 	lowered_tokens = lower_tgsi(ctx, tokens, so);
 	if (!lowered_tokens)
 		lowered_tokens = tokens;
-	ctx->s = to_nir(lowered_tokens, so);
+	ctx->s = to_nir(ctx, lowered_tokens, so);
 
 	if (lowered_tokens != tokens)
 		free((void *)lowered_tokens);
