@@ -2161,11 +2161,8 @@ if test -n "$with_gallium_drivers"; then
             gallium_require_drm "vc4"
             gallium_require_drm_loader
 
-            case "$host_cpu" in
-                i?86 | x86_64 | amd64)
-                USE_VC4_SIMULATOR=yes
-                ;;
-            esac
+            PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
+                              [USE_VC4_SIMULATOR=yes], [USE_VC4_SIMULATOR=no])
             ;;
         *)
             AC_MSG_ERROR([Unknown Gallium driver: $driver])
