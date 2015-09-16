@@ -30,6 +30,82 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+static void
+project_src(nir_builder *b, nir_tex_instr *tex)
+{
+   /* Find the projector in the srcs list, if present. */
+   unsigned proj_index;
+   for (proj_index = 0; proj_index < tex->num_srcs; proj_index++) {
+      if (tex->src[proj_index].src_type == nir_tex_src_projector)
+         break;
+   }
+   if (proj_index == tex->num_srcs)
+      return;
+
+   b->cursor = nir_before_instr(&tex->instr);
+
+   nir_ssa_def *inv_proj =
+      nir_frcp(b, nir_ssa_for_src(b, tex->src[proj_index].src, 1));
+
+   /* Walk through the sources projecting the arguments. */
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      switch (tex->src[i].src_type) {
+      case nir_tex_src_coord:
+      case nir_tex_src_comparitor:
+         break;
+      default:
+         continue;
+      }
+      nir_ssa_def *unprojected =
+         nir_ssa_for_src(b, tex->src[i].src, nir_tex_instr_src_size(tex, i));
+      nir_ssa_def *projected = nir_fmul(b, unprojected, inv_proj);
+
+      /* Array indices don't get projected, so make an new vector with the
+       * coordinate's array index untouched.
+       */
+      if (tex->is_array && tex->src[i].src_type == nir_tex_src_coord) {
+         switch (tex->coord_components) {
+         case 4:
+            projected = nir_vec4(b,
+                                 nir_channel(b, projected, 0),
+                                 nir_channel(b, projected, 1),
+                                 nir_channel(b, projected, 2),
+                                 nir_channel(b, unprojected, 3));
+            break;
+         case 3:
+            projected = nir_vec3(b,
+                                 nir_channel(b, projected, 0),
+                                 nir_channel(b, projected, 1),
+                                 nir_channel(b, unprojected, 2));
+            break;
+         case 2:
+            projected = nir_vec2(b,
+                                 nir_channel(b, projected, 0),
+                                 nir_channel(b, unprojected, 1));
+            break;
+         default:
+            unreachable("bad texture coord count for array");
+            break;
+         }
+      }
+
+      nir_instr_rewrite_src(&tex->instr,
+                            &tex->src[i].src,
+                            nir_src_for_ssa(projected));
+   }
+
+   /* Now move the later tex sources down the array so that the projector
+    * disappears.
+    */
+   nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src,
+                         NIR_SRC_INIT);
+   for (unsigned i = proj_index + 1; i < tex->num_srcs; i++) {
+      tex->src[i-1].src_type = tex->src[i].src_type;
+      nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
+   }
+   tex->num_srcs--;
+}
+
 static bool
 nir_lower_tex_block(nir_block *block, void *void_state)
 {
@@ -40,76 +116,8 @@ nir_lower_tex_block(nir_block *block, void *void_state)
          continue;
 
       nir_tex_instr *tex = nir_instr_as_tex(instr);
-      b->cursor = nir_before_instr(&tex->instr);
 
-      /* Find the projector in the srcs list, if present. */
-      unsigned proj_index;
-      for (proj_index = 0; proj_index < tex->num_srcs; proj_index++) {
-         if (tex->src[proj_index].src_type == nir_tex_src_projector)
-            break;
-      }
-      if (proj_index == tex->num_srcs)
-         continue;
-      nir_ssa_def *inv_proj =
-         nir_frcp(b, nir_ssa_for_src(b, tex->src[proj_index].src, 1));
-
-      /* Walk through the sources projecting the arguments. */
-      for (unsigned i = 0; i < tex->num_srcs; i++) {
-         switch (tex->src[i].src_type) {
-         case nir_tex_src_coord:
-         case nir_tex_src_comparitor:
-            break;
-         default:
-            continue;
-         }
-         nir_ssa_def *unprojected =
-            nir_ssa_for_src(b, tex->src[i].src, nir_tex_instr_src_size(tex, i));
-         nir_ssa_def *projected = nir_fmul(b, unprojected, inv_proj);
-
-         /* Array indices don't get projected, so make an new vector with the
-          * coordinate's array index untouched.
-          */
-         if (tex->is_array && tex->src[i].src_type == nir_tex_src_coord) {
-            switch (tex->coord_components) {
-            case 4:
-               projected = nir_vec4(b,
-                                    nir_channel(b, projected, 0),
-                                    nir_channel(b, projected, 1),
-                                    nir_channel(b, projected, 2),
-                                    nir_channel(b, unprojected, 3));
-               break;
-            case 3:
-               projected = nir_vec3(b,
-                                    nir_channel(b, projected, 0),
-                                    nir_channel(b, projected, 1),
-                                    nir_channel(b, unprojected, 2));
-               break;
-            case 2:
-               projected = nir_vec2(b,
-                                    nir_channel(b, projected, 0),
-                                    nir_channel(b, unprojected, 1));
-               break;
-            default:
-               unreachable("bad texture coord count for array");
-               break;
-            }
-         }
-
-         nir_instr_rewrite_src(&tex->instr,
-                               &tex->src[i].src,
-                               nir_src_for_ssa(projected));
-      }
-
-      /* Now move the later tex sources down the array so that the projector
-       * disappears.
-       */
-      nir_instr_rewrite_src(&tex->instr, &tex->src[proj_index].src,
-                            NIR_SRC_INIT);
-      for (unsigned i = proj_index + 1; i < tex->num_srcs; i++) {
-         tex->src[i-1].src_type = tex->src[i].src_type;
-         nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
-      }
-      tex->num_srcs--;
+      project_src(b, tex);
    }
 
    return true;
