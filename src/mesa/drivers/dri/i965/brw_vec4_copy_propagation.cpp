@@ -249,6 +249,18 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 }
 
 static bool
+can_change_source_types(vec4_instruction *inst)
+{
+   return inst->dst.type == inst->src[0].type &&
+      !inst->src[0].abs && !inst->src[0].negate && !inst->saturate &&
+      (inst->opcode == BRW_OPCODE_MOV ||
+       (inst->opcode == BRW_OPCODE_SEL &&
+        inst->dst.type == inst->src[1].type &&
+        inst->predicate != BRW_PREDICATE_NONE &&
+        !inst->src[1].abs && !inst->src[1].negate));
+}
+
+static bool
 try_copy_propagate(const struct brw_device_info *devinfo,
                    vec4_instruction *inst,
                    int arg, struct copy_entry *entry)
@@ -308,7 +320,9 @@ try_copy_propagate(const struct brw_device_info *devinfo,
         value.swizzle != BRW_SWIZZLE_XYZW) && !inst->can_do_source_mods(devinfo))
       return false;
 
-   if (has_source_modifiers && value.type != inst->src[arg].type)
+   if (has_source_modifiers &&
+       value.type != inst->src[arg].type &&
+       !can_change_source_types(inst))
       return false;
 
    if (has_source_modifiers &&
@@ -362,7 +376,19 @@ try_copy_propagate(const struct brw_device_info *devinfo,
       }
    }
 
-   value.type = inst->src[arg].type;
+   if (has_source_modifiers &&
+       value.type != inst->src[arg].type) {
+      /* We are propagating source modifiers from a MOV with a different
+       * type.  If we got here, then we can just change the source and
+       * destination types of the instruction and keep going.
+       */
+      assert(can_change_source_types(inst));
+      for (int i = 0; i < 3; i++) {
+         inst->src[i].type = value.type;
+      }
+      inst->dst.type = value.type;
+   } else
+      value.type = inst->src[arg].type;
    inst->src[arg] = value;
    return true;
 }
