@@ -146,8 +146,9 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
 {
    const struct brw_device_info *devinfo = p->devinfo;
 
-   if (dest.file != BRW_ARCHITECTURE_REGISTER_FILE &&
-       dest.file != BRW_MESSAGE_REGISTER_FILE)
+   if (dest.file == BRW_MESSAGE_REGISTER_FILE)
+      assert(dest.nr < BRW_MAX_MRF);
+   else if (dest.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(dest.nr < 128);
 
    gen7_convert_mrf_to_grf(p, &dest);
@@ -309,7 +310,9 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 {
    const struct brw_device_info *devinfo = p->devinfo;
 
-   if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
+   if (reg.file == BRW_MESSAGE_REGISTER_FILE)
+      assert(reg.nr < BRW_MAX_MRF);
+   else if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
 
    gen7_convert_mrf_to_grf(p, &reg);

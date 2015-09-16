@@ -46,6 +46,7 @@ vec4_instruction::get_dst(void)
       break;
 
    case MRF:
+      assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF);
       brw_reg = brw_message_reg(dst.reg + dst.reg_offset);
       brw_reg = retype(brw_reg, dst.type);
       brw_reg.dw1.bits.writemask = dst.writemask;
@@ -1134,6 +1135,7 @@ vec4_generator::generate_code(const cfg_t *cfg)
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
 
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF);
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       unsigned pre_emit_nr_insn = p->nr_insn;

@@ -344,10 +344,12 @@ brw_reg(unsigned file,
    struct brw_reg reg;
    if (file == BRW_GENERAL_REGISTER_FILE)
       assert(nr < BRW_MAX_GRF);
-   else if (file == BRW_MESSAGE_REGISTER_FILE)
-      assert((nr & ~(1 << 7)) < BRW_MAX_MRF);
    else if (file == BRW_ARCHITECTURE_REGISTER_FILE)
       assert(nr <= BRW_ARF_TIMESTAMP);
+   /* Asserting on the MRF register number requires to know the hardware gen
+    * (gen6 has 24 MRF registers), which we don't know here, so we assert
+    * for that in the generators and in brw_eu_emit.c
+    */
 
    reg.type = type;
    reg.file = file;
@@ -808,7 +810,6 @@ brw_mask_reg(unsigned subnr)
 static inline struct brw_reg
 brw_message_reg(unsigned nr)
 {
-   assert((nr & ~(1 << 7)) < BRW_MAX_MRF);
    return brw_vec8_reg(BRW_MESSAGE_REGISTER_FILE, nr, 0);
 }
 

@@ -53,8 +53,10 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg)
    struct brw_reg brw_reg;
 
    switch (reg->file) {
-   case GRF:
    case MRF:
+      assert((reg->reg & ~(1 << 7)) < BRW_MAX_MRF);
+      /* Fallthrough */
+   case GRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
       } else if (inst->exec_size < 8) {
@@ -1558,6 +1560,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF);
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       switch (inst->exec_size) {
