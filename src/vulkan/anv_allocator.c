@@ -359,11 +359,40 @@ fail:
    return 0;
 }
 
+static uint32_t
+anv_block_pool_alloc_new(struct anv_block_pool *pool,
+                         struct anv_block_state *pool_state)
+{
+   struct anv_block_state state, old, new;
+
+   while (1) {
+      state.u64 = __sync_fetch_and_add(&pool_state->u64, pool->block_size);
+      if (state.next < state.end) {
+         assert(pool->map);
+         return state.next;
+      } else if (state.next == state.end) {
+         /* We allocated the first block outside the pool, we have to grow it.
+          * pool->next_block acts a mutex: threads who try to allocate now will
+          * get block indexes above the current limit and hit futex_wait
+          * below. */
+         new.next = state.next + pool->block_size;
+         new.end = anv_block_pool_grow(pool, state.end);
+         assert(new.end > 0);
+         old.u64 = __sync_lock_test_and_set(&pool_state->u64, new.u64);
+         if (old.next != state.next)
+            futex_wake(&pool_state->end, INT_MAX);
+         return state.next;
+      } else {
+         futex_wait(&pool_state->end, state.end);
+         continue;
+      }
+   }
+}
+
 uint32_t
 anv_block_pool_alloc(struct anv_block_pool *pool)
 {
    int32_t offset;
-   struct anv_block_state state, old, new;
 
    /* Try free list first. */
    if (anv_free_list_pop(&pool->free_list, &pool->map, &offset)) {
@@ -372,27 +401,7 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
       return offset;
    }
 
- restart:
-   state.u64 = __sync_fetch_and_add(&pool->state.u64, pool->block_size);
-   if (state.next < state.end) {
-      assert(pool->map);
-      return state.next;
-   } else if (state.next == state.end) {
-      /* We allocated the first block outside the pool, we have to grow it.
-       * pool->next_block acts a mutex: threads who try to allocate now will
-       * get block indexes above the current limit and hit futex_wait
-       * below. */
-      new.next = state.next + pool->block_size;
-      new.end = anv_block_pool_grow(pool, state.end);
-      assert(new.end > 0);
-      old.u64 = __sync_lock_test_and_set(&pool->state.u64, new.u64);
-      if (old.next != state.next)
-         futex_wake(&pool->state.end, INT_MAX);
-      return state.next;
-   } else {
-      futex_wait(&pool->state.end, state.end);
-      goto restart;
-   }
+   return anv_block_pool_alloc_new(pool, &pool->state);
 }
 
 void
