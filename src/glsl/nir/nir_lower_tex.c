@@ -22,9 +22,13 @@
  */
 
 /*
- * This lowering pass converts the coordinate division for texture projection
- * to be done in ALU instructions instead of asking the texture operation to
- * do so.
+ * This lowering pass supports (as configured via nir_lower_tex_options)
+ * various texture related conversions:
+ *   + texture projector lowering: converts the coordinate division for
+ *     texture projection to be done in ALU instructions instead of
+ *     asking the texture operation to do so.
+ *   + lowering RECT: converts the un-normalized RECT texture coordinates
+ *     to normalized coordinates with txs plus ALU instructions
  */
 
 #include "nir.h"
@@ -111,6 +115,52 @@ project_src(nir_builder *b, nir_tex_instr *tex)
    tex->num_srcs--;
 }
 
+static nir_ssa_def *
+get_texture_size(nir_builder *b, nir_tex_instr *tex)
+{
+   b->cursor = nir_before_instr(&tex->instr);
+
+   /* RECT textures should not be array: */
+   assert(!tex->is_array);
+
+   nir_tex_instr *txs;
+
+   txs = nir_tex_instr_create(b->shader, 1);
+   txs->op = nir_texop_txs;
+   txs->sampler_dim = GLSL_SAMPLER_DIM_RECT;
+   txs->sampler_index = tex->sampler_index;
+
+   /* only single src, the lod: */
+   txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
+   txs->src[0].src_type = nir_tex_src_lod;
+
+   nir_ssa_dest_init(&txs->instr, &txs->dest, 2, NULL);
+   nir_builder_instr_insert(b, &txs->instr);
+
+   return nir_i2f(b, &txs->dest.ssa);
+}
+
+static void
+lower_rect(nir_builder *b, nir_tex_instr *tex)
+{
+   nir_ssa_def *txs = get_texture_size(b, tex);
+   nir_ssa_def *scale = nir_frcp(b, txs);
+
+   /* Walk through the sources normalizing the requested arguments. */
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      if (tex->src[i].src_type != nir_tex_src_coord)
+         continue;
+
+      nir_ssa_def *coords =
+         nir_ssa_for_src(b, tex->src[i].src, tex->coord_components);
+      nir_instr_rewrite_src(&tex->instr,
+                            &tex->src[i].src,
+                            nir_src_for_ssa(nir_fmul(b, coords, scale)));
+   }
+
+   tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
+}
+
 static bool
 nir_lower_tex_block(nir_block *block, void *void_state)
 {
@@ -127,6 +177,9 @@ nir_lower_tex_block(nir_block *block, void *void_state)
       if (lower_txp)
          project_src(b, tex);
 
+      if ((tex->sampler_dim == GLSL_SAMPLER_DIM_RECT) &&
+          state->options->lower_rect)
+         lower_rect(b, tex);
    }
 
    return true;

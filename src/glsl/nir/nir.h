@@ -1843,6 +1843,13 @@ typedef struct nir_lower_tex_options {
     * sampler types a texture projector is lowered.
     */
    unsigned lower_txp;
+
+   /**
+    * If true, lower rect textures to 2D, using txs to fetch the
+    * texture dimensions and dividing the texture coords by the
+    * texture dims to normalize.
+    */
+   bool lower_rect;
 } nir_lower_tex_options;
 
 void nir_lower_tex(nir_shader *shader,
