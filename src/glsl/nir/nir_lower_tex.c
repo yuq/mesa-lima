@@ -30,6 +30,11 @@
 #include "nir.h"
 #include "nir_builder.h"
 
+typedef struct {
+   nir_builder b;
+   const nir_lower_tex_options *options;
+} lower_tex_state;
+
 static void
 project_src(nir_builder *b, nir_tex_instr *tex)
 {
@@ -109,37 +114,42 @@ project_src(nir_builder *b, nir_tex_instr *tex)
 static bool
 nir_lower_tex_block(nir_block *block, void *void_state)
 {
-   nir_builder *b = void_state;
+   lower_tex_state *state = void_state;
+   nir_builder *b = &state->b;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_tex)
          continue;
 
       nir_tex_instr *tex = nir_instr_as_tex(instr);
+      bool lower_txp = !!(state->options->lower_txp & (1 << tex->sampler_dim));
 
-      project_src(b, tex);
+      if (lower_txp)
+         project_src(b, tex);
+
    }
 
    return true;
 }
 
 static void
-nir_lower_tex_impl(nir_function_impl *impl)
+nir_lower_tex_impl(nir_function_impl *impl, lower_tex_state *state)
 {
-   nir_builder b;
-   nir_builder_init(&b, impl);
+   nir_builder_init(&state->b, impl);
 
-   nir_foreach_block(impl, nir_lower_tex_block, &b);
+   nir_foreach_block(impl, nir_lower_tex_block, state);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
 }
 
 void
-nir_lower_tex(nir_shader *shader)
+nir_lower_tex(nir_shader *shader, const nir_lower_tex_options *options)
 {
+   lower_tex_state state;
+   state.options = options;
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_tex_impl(overload->impl);
+         nir_lower_tex_impl(overload->impl, &state);
    }
 }

@@ -80,6 +80,9 @@ brw_create_nir(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
+   static const nir_lower_tex_options tex_options = {
+      .lower_txp = ~0,
+   };
    struct gl_shader *shader = shader_prog ? shader_prog->_LinkedShaders[stage] : NULL;
    bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    nir_shader *nir;
@@ -96,7 +99,7 @@ brw_create_nir(struct brw_context *brw,
    nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
 
-   nir_lower_tex(nir);
+   nir_lower_tex(nir, &tex_options);
    nir_validate_shader(nir);
 
    nir_normalize_cubemap_coords(nir);

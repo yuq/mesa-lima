@@ -1836,7 +1836,18 @@ void nir_lower_samplers(nir_shader *shader,
                         const struct gl_shader_program *shader_program);
 
 void nir_lower_system_values(nir_shader *shader);
-void nir_lower_tex(nir_shader *shader);
+
+typedef struct nir_lower_tex_options {
+   /**
+    * bitmask of (1 << GLSL_SAMPLER_DIM_x) to control for which
+    * sampler types a texture projector is lowered.
+    */
+   unsigned lower_txp;
+} nir_lower_tex_options;
+
+void nir_lower_tex(nir_shader *shader,
+                   const nir_lower_tex_options *options);
+
 void nir_lower_idiv(nir_shader *shader);
 
 void nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables);
