@@ -265,6 +265,9 @@ try_copy_propagate(const struct brw_device_info *devinfo,
                    vec4_instruction *inst,
                    int arg, struct copy_entry *entry)
 {
+   /* Build up the value we are propagating as if it were the source of a
+    * single MOV
+    */
    /* For constant propagation, we only handle the same constant
     * across all 4 channels.  Some day, we should handle the 8-bit
     * float vector format, which would let us constant propagate
@@ -291,9 +294,9 @@ try_copy_propagate(const struct brw_device_info *devinfo,
    for (int i = 0; i < 4; i++) {
       s[i] = BRW_GET_SWZ(entry->value[i]->swizzle, i);
    }
-   value.swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
-                                       BRW_SWIZZLE4(s[0], s[1], s[2], s[3]));
+   value.swizzle = BRW_SWIZZLE4(s[0], s[1], s[2], s[3]);
 
+   /* Check that we can propagate that value */
    if (value.file != UNIFORM &&
        value.file != GRF &&
        value.file != ATTR)
@@ -303,13 +306,6 @@ try_copy_propagate(const struct brw_device_info *devinfo,
        is_logic_op(inst->opcode)) {
       return false;
    }
-
-   if (inst->src[arg].abs) {
-      value.negate = false;
-      value.abs = true;
-   }
-   if (inst->src[arg].negate)
-      value.negate = !value.negate;
 
    bool has_source_modifiers = value.negate || value.abs;
 
@@ -376,19 +372,27 @@ try_copy_propagate(const struct brw_device_info *devinfo,
       }
    }
 
+   /* Build the final value */
+   if (inst->src[arg].abs) {
+      value.negate = false;
+      value.abs = true;
+   }
+   if (inst->src[arg].negate)
+      value.negate = !value.negate;
+
+   value.swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
+                                       value.swizzle);
    if (has_source_modifiers &&
        value.type != inst->src[arg].type) {
-      /* We are propagating source modifiers from a MOV with a different
-       * type.  If we got here, then we can just change the source and
-       * destination types of the instruction and keep going.
-       */
       assert(can_change_source_types(inst));
       for (int i = 0; i < 3; i++) {
          inst->src[i].type = value.type;
       }
       inst->dst.type = value.type;
-   } else
+   } else {
       value.type = inst->src[arg].type;
+   }
+
    inst->src[arg] = value;
    return true;
 }
