@@ -82,7 +82,7 @@ static const unsigned int stype_bind[XA_LAST_SURFACE_TYPE] = { 0,
 };
 
 static struct xa_format_descriptor
-xa_get_pipe_format(enum xa_formats xa_format)
+xa_get_pipe_format(struct xa_tracker *xa, enum xa_formats xa_format)
 {
     struct xa_format_descriptor fdesc;
 
@@ -102,7 +102,13 @@ xa_get_pipe_format(enum xa_formats xa_format)
 	fdesc.format = PIPE_FORMAT_B5G5R5A1_UNORM;
 	break;
     case xa_format_a8:
-	fdesc.format = PIPE_FORMAT_L8_UNORM;
+        if (xa->screen->is_format_supported(xa->screen, PIPE_FORMAT_R8_UNORM,
+                                            PIPE_TEXTURE_2D, 0,
+                                            stype_bind[xa_type_a] |
+                                            PIPE_BIND_RENDER_TARGET))
+            fdesc.format = PIPE_FORMAT_R8_UNORM;
+        else
+            fdesc.format = PIPE_FORMAT_L8_UNORM;
 	break;
     case xa_format_z24:
 	fdesc.format = PIPE_FORMAT_Z24X8_UNORM;
@@ -126,7 +132,12 @@ xa_get_pipe_format(enum xa_formats xa_format)
 	fdesc.format = PIPE_FORMAT_S8_UINT_Z24_UNORM;
 	break;
     case xa_format_yuv8:
-	fdesc.format = PIPE_FORMAT_L8_UNORM;
+        if (xa->screen->is_format_supported(xa->screen, PIPE_FORMAT_R8_UNORM,
+                                            PIPE_TEXTURE_2D, 0,
+                                            stype_bind[xa_type_yuv_component]))
+            fdesc.format = PIPE_FORMAT_R8_UNORM;
+        else
+            fdesc.format = PIPE_FORMAT_L8_UNORM;
 	break;
     default:
 	fdesc.xa_format = xa_format_unknown;
@@ -184,7 +195,8 @@ xa_tracker_create(int drm_fd)
 	for (i = 0; i < num_preferred[stype]; ++i) {
 	    xa_format = preferred[stype][i];
 
-	    struct xa_format_descriptor fdesc = xa_get_pipe_format(xa_format);
+	    struct xa_format_descriptor fdesc =
+                xa_get_pipe_format(xa, xa_format);
 
 	    if (xa->screen->is_format_supported(xa->screen, fdesc.format,
 						PIPE_TEXTURE_2D, 0, bind)) {
@@ -259,7 +271,7 @@ xa_get_format_stype_depth(struct xa_tracker *xa,
     int found = 0;
 
     for (i = xa->format_map[stype][0]; i <= xa->format_map[stype][1]; ++i) {
-	fdesc = xa_get_pipe_format(xa->supported_formats[i]);
+	fdesc = xa_get_pipe_format(xa, xa->supported_formats[i]);
 	if (fdesc.xa_format != xa_format_unknown &&
 	    xa_format_depth(fdesc.xa_format) == depth) {
 	    found = 1;
@@ -277,7 +289,7 @@ XA_EXPORT int
 xa_format_check_supported(struct xa_tracker *xa,
 			  enum xa_formats xa_format, unsigned int flags)
 {
-    struct xa_format_descriptor fdesc = xa_get_pipe_format(xa_format);
+    struct xa_format_descriptor fdesc = xa_get_pipe_format(xa, xa_format);
     unsigned int bind;
 
     if (fdesc.xa_format == xa_format_unknown)
@@ -328,7 +340,7 @@ surface_create(struct xa_tracker *xa,
     if (xa_format == xa_format_unknown)
 	fdesc = xa_get_format_stype_depth(xa, stype, depth);
     else
-	fdesc = xa_get_pipe_format(xa_format);
+	fdesc = xa_get_pipe_format(xa, xa_format);
 
     if (fdesc.xa_format == xa_format_unknown)
 	return NULL;
@@ -440,7 +452,7 @@ xa_surface_redefine(struct xa_surface *srf,
     if (xa_format == xa_format_unknown)
 	fdesc = xa_get_format_stype_depth(xa, stype, depth);
     else
-	fdesc = xa_get_pipe_format(xa_format);
+	fdesc = xa_get_pipe_format(xa, xa_format);
 
     if (width == template->width0 && height == template->height0 &&
 	template->format == fdesc.format &&

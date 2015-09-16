@@ -78,26 +78,6 @@ static const struct xa_composite_blend xa_blends[] = {
       0, 0, PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ONE},
 };
 
-
-/*
- * The alpha value stored in a luminance texture is read by the
- * hardware as color.
- */
-static unsigned
-xa_convert_blend_for_luminance(unsigned factor)
-{
-    switch(factor) {
-    case PIPE_BLENDFACTOR_DST_ALPHA:
-	return PIPE_BLENDFACTOR_DST_COLOR;
-    case PIPE_BLENDFACTOR_INV_DST_ALPHA:
-	return PIPE_BLENDFACTOR_INV_DST_COLOR;
-    default:
-	break;
-    }
-    return factor;
-}
-
-
 static boolean
 blend_for_op(struct xa_composite_blend *blend,
 	     enum xa_composite_op op,
@@ -131,10 +111,16 @@ blend_for_op(struct xa_composite_blend *blend,
     if (!dst_pic->srf)
 	return supported;
 
-    if (dst_pic->srf->tex->format == PIPE_FORMAT_L8_UNORM) {
-	blend->rgb_src = xa_convert_blend_for_luminance(blend->rgb_src);
-	blend->rgb_dst = xa_convert_blend_for_luminance(blend->rgb_dst);
-    }
+    /*
+     * None of the hardware formats we might use for dst A8 are
+     * suitable for dst_alpha blending, since they present the
+     * alpha channel either in all color channels (L8_UNORM) or
+     * in the red channel only (R8_UNORM)
+     */
+    if ((dst_pic->srf->tex->format == PIPE_FORMAT_L8_UNORM ||
+         dst_pic->srf->tex->format == PIPE_FORMAT_R8_UNORM) &&
+        blend->alpha_dst)
+        return FALSE;
 
     /*
      * If there's no dst alpha channel, adjust the blend op so that we'll treat
@@ -298,7 +284,8 @@ picture_format_fixups(struct xa_picture *src_pic,
 	ret |= mask ? FS_MASK_SET_ALPHA : FS_SRC_SET_ALPHA;
 
     if (src_hw_format == src_pic_format) {
-	if (src->tex->format == PIPE_FORMAT_L8_UNORM)
+	if (src->tex->format == PIPE_FORMAT_L8_UNORM ||
+            src->tex->format == PIPE_FORMAT_R8_UNORM)
 	    return ((mask) ? FS_MASK_LUMINANCE : FS_SRC_LUMINANCE);
 
 	return ret;
@@ -372,7 +359,8 @@ bind_shaders(struct xa_context *ctx, const struct xa_composite *comp)
 	fs_traits |= picture_format_fixups(mask_pic, 1);
     }
 
-    if (ctx->srf->format == PIPE_FORMAT_L8_UNORM)
+    if (ctx->srf->format == PIPE_FORMAT_L8_UNORM ||
+        ctx->srf->format == PIPE_FORMAT_R8_UNORM)
 	fs_traits |= FS_DST_LUMINANCE;
 
     shader = xa_shaders_get(ctx->shaders, vs_traits, fs_traits);
