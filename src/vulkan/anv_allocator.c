@@ -241,7 +241,7 @@ anv_ptr_free_list_push(void **list, void *elem)
 }
 
 static uint32_t
-anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size);
+anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state);
 
 void
 anv_block_pool_init(struct anv_block_pool *pool,
@@ -252,8 +252,10 @@ anv_block_pool_init(struct anv_block_pool *pool,
    pool->device = device;
    pool->bo.gem_handle = 0;
    pool->bo.offset = 0;
+   pool->bo.size = 0;
    pool->block_size = block_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
+   pool->back_free_list = ANV_FREE_LIST_EMPTY;
 
    pool->fd = memfd_create("block pool", MFD_CLOEXEC);
    if (pool->fd == -1)
@@ -269,9 +271,13 @@ anv_block_pool_init(struct anv_block_pool *pool,
    anv_vector_init(&pool->mmap_cleanups,
                    round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
 
-   /* Immediately grow the pool so we'll have a backing bo. */
    pool->state.next = 0;
-   pool->state.end = anv_block_pool_grow(pool, 0);
+   pool->state.end = 0;
+   pool->back_state.next = 0;
+   pool->back_state.end = 0;
+
+   /* Immediately grow the pool so we'll have a backing bo. */
+   pool->state.end = anv_block_pool_grow(pool, &pool->state);
 }
 
 void
@@ -291,8 +297,34 @@ anv_block_pool_finish(struct anv_block_pool *pool)
    close(pool->fd);
 }
 
+#define PAGE_SIZE 4096
+
+/** Grows and re-centers the block pool.
+ *
+ * We grow the block pool in one or both directions in such a way that the
+ * following conditions are met:
+ *
+ *  1) The size of the entire pool is always a power of two.
+ *
+ *  2) The pool only grows on both ends.  Neither end can get
+ *     shortened.
+ *
+ *  3) At the end of the allocation, we have about twice as much space
+ *     allocated for each end as we have used.  This way the pool doesn't
+ *     grow too far in one direction or the other.
+ *
+ *  4) If the _alloc_back() has never been called, then the back portion of
+ *     the pool retains a size of zero.  (This makes it easier for users of
+ *     the block pool that only want a one-sided pool.)
+ *
+ *  5) We have enough space allocated for at least one more block in
+ *     whichever side `state` points to.
+ *
+ *  6) The center of the pool is always aligned to both the block_size of
+ *     the pool and a 4K CPU page.
+ */
 static uint32_t
-anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
+anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 {
    size_t size;
    void *map;
@@ -301,8 +333,39 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
 
    pthread_mutex_lock(&pool->device->mutex);
 
+   assert(state == &pool->state || state == &pool->back_state);
+
+   /* Gather a little usage information on the pool.  Since we may have
+    * threadsd waiting in queue to get some storage while we resize, it's
+    * actually possible that total_used will be larger than old_size.  In
+    * particular, block_pool_alloc() increments state->next prior to
+    * calling block_pool_grow, so this ensures that we get enough space for
+    * which ever side tries to grow the pool.
+    *
+    * We align to a page size because it makes it easier to do our
+    * calculations later in such a way that we state page-aigned.
+    */
+   uint32_t back_used = align_u32(pool->back_state.next, PAGE_SIZE);
+   uint32_t front_used = align_u32(pool->state.next, PAGE_SIZE);
+   uint32_t total_used = front_used + back_used;
+
+   assert(state == &pool->state || back_used > 0);
+
+   size_t old_size = pool->bo.size;
+
+   if (old_size != 0 &&
+       back_used * 2 <= pool->center_bo_offset &&
+       front_used * 2 <= (old_size - pool->center_bo_offset)) {
+      /* If we're in this case then this isn't the firsta allocation and we
+       * already have enough space on both sides to hold double what we
+       * have allocated.  There's nothing for us to do.
+       */
+      goto done;
+   }
+
    if (old_size == 0) {
-      size = 32 * pool->block_size;
+      /* This is the first allocation */
+      size = MAX2(32 * pool->block_size, PAGE_SIZE);
    } else {
       size = old_size * 2;
    }
@@ -313,6 +376,35 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
     */
    assert(size <= (1u << 31));
 
+   /* We compute a new center_bo_offset such that, when we double the size
+    * of the pool, we maintain the ratio of how much is used by each side.
+    * This way things should remain more-or-less balanced.
+    */
+   uint32_t center_bo_offset;
+   if (back_used == 0) {
+      /* If we're in this case then we have never called alloc_back().  In
+       * this case, we want keep the offset at 0 to make things as simple
+       * as possible for users that don't care about back allocations.
+       */
+      center_bo_offset = 0;
+   } else {
+      center_bo_offset = ((uint64_t)size * back_used) / total_used;
+
+      /* Align down to a multiple of both the block size and page size */
+      uint32_t granularity = MAX2(pool->block_size, PAGE_SIZE);
+      assert(util_is_power_of_two(granularity));
+      center_bo_offset &= ~(granularity - 1);
+
+      assert(center_bo_offset >= back_used);
+   }
+
+   assert(center_bo_offset % pool->block_size == 0);
+   assert(center_bo_offset % PAGE_SIZE == 0);
+
+   /* Assert that we only ever grow the pool */
+   assert(center_bo_offset >= pool->back_state.end);
+   assert(size - center_bo_offset >= pool->back_state.end);
+
    cleanup = anv_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
       goto fail;
@@ -320,7 +412,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
 
    /* First try to see if mremap can grow the map in place. */
    map = MAP_FAILED;
-   if (old_size > 0)
+   if (old_size > 0 && center_bo_offset == 0)
       map = mremap(pool->map, old_size, size, 0);
    if (map == MAP_FAILED) {
       /* Just leak the old map until we destroy the pool.  We can't munmap it
@@ -330,7 +422,8 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
        * should try to get some numbers.
        */
       map = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                 MAP_SHARED | MAP_POPULATE, pool->fd, 0);
+                 MAP_SHARED | MAP_POPULATE, pool->fd,
+                 BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
       cleanup->map = map;
       cleanup->size = size;
    }
@@ -344,18 +437,30 @@ anv_block_pool_grow(struct anv_block_pool *pool, uint32_t old_size)
 
    /* Now that we successfull allocated everything, we can write the new
     * values back into pool. */
-   pool->map = map;
+   pool->map = map + center_bo_offset;
+   pool->center_bo_offset = center_bo_offset;
    pool->bo.gem_handle = gem_handle;
    pool->bo.size = size;
    pool->bo.map = map;
    pool->bo.index = 0;
 
+done:
    pthread_mutex_unlock(&pool->device->mutex);
 
-   return size;
+   /* Return the appropreate new size.  This function never actually
+    * updates state->next.  Instead, we let the caller do that because it
+    * needs to do so in order to maintain its concurrency model.
+    */
+   if (state == &pool->state) {
+      return pool->bo.size - pool->center_bo_offset;
+   } else {
+      assert(pool->center_bo_offset > 0);
+      return pool->center_bo_offset;
+   }
 
 fail:
    pthread_mutex_unlock(&pool->device->mutex);
+
    return 0;
 }
 
@@ -372,12 +477,12 @@ anv_block_pool_alloc_new(struct anv_block_pool *pool,
          return state.next;
       } else if (state.next == state.end) {
          /* We allocated the first block outside the pool, we have to grow it.
-          * pool->next_block acts a mutex: threads who try to allocate now will
+          * pool_state->next acts a mutex: threads who try to allocate now will
           * get block indexes above the current limit and hit futex_wait
           * below. */
          new.next = state.next + pool->block_size;
-         new.end = anv_block_pool_grow(pool, state.end);
-         assert(new.end > 0);
+         new.end = anv_block_pool_grow(pool, pool_state);
+         assert(new.end >= new.next && new.end % pool->block_size == 0);
          old.u64 = __sync_lock_test_and_set(&pool_state->u64, new.u64);
          if (old.next != state.next)
             futex_wake(&pool_state->end, INT_MAX);
@@ -389,7 +494,7 @@ anv_block_pool_alloc_new(struct anv_block_pool *pool,
    }
 }
 
-uint32_t
+int32_t
 anv_block_pool_alloc(struct anv_block_pool *pool)
 {
    int32_t offset;
@@ -404,10 +509,46 @@ anv_block_pool_alloc(struct anv_block_pool *pool)
    return anv_block_pool_alloc_new(pool, &pool->state);
 }
 
-void
-anv_block_pool_free(struct anv_block_pool *pool, uint32_t offset)
+/* Allocates a block out of the back of the block pool.
+ *
+ * This will allocated a block earlier than the "start" of the block pool.
+ * The offsets returned from this function will be negative but will still
+ * be correct relative to the block pool's map pointer.
+ *
+ * If you ever use anv_block_pool_alloc_back, then you will have to do
+ * gymnastics with the block pool's BO when doing relocations.
+ */
+int32_t
+anv_block_pool_alloc_back(struct anv_block_pool *pool)
 {
-   anv_free_list_push(&pool->free_list, pool->map, offset);
+   int32_t offset;
+
+   /* Try free list first. */
+   if (anv_free_list_pop(&pool->back_free_list, &pool->map, &offset)) {
+      assert(offset < 0);
+      assert(pool->map);
+      return offset;
+   }
+
+   offset = anv_block_pool_alloc_new(pool, &pool->back_state);
+
+   /* The offset we get out of anv_block_pool_alloc_new() is actually the
+    * number of bytes downwards from the middle to the end of the block.
+    * We need to turn it into a (negative) offset from the middle to the
+    * start of the block.
+    */
+   assert(offset >= 0);
+   return -(offset + pool->block_size);
+}
+
+void
+anv_block_pool_free(struct anv_block_pool *pool, int32_t offset)
+{
+   if (offset < 0) {
+      anv_free_list_push(&pool->back_free_list, pool->map, offset);
+   } else {
+      anv_free_list_push(&pool->free_list, pool->map, offset);
+   }
 }
 
 static void

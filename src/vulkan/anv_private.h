@@ -253,6 +253,25 @@ struct anv_block_pool {
    struct anv_device *device;
 
    struct anv_bo bo;
+
+   /* Offset from the start of the memfd to the "center" of the block pool. */
+   uint32_t center_fd_offset;
+
+   /* The offset from the start of the bo to the "center" of the block
+    * pool.  Pointers to allocated blocks are given by
+    * bo.map + center_bo_offset + offsets.
+    */
+   uint32_t center_bo_offset;
+
+   /* Current memory map of the block pool.  This pointer may or may not
+    * point to the actual beginning of the block pool memory.  If
+    * anv_block_pool_alloc_back has ever been called, then this pointer
+    * will point to the "center" position of the buffer and all offsets
+    * (negative or positive) given out by the block pool alloc functions
+    * will be valid relative to this pointer.
+    *
+    * In particular, map == bo.map + center_offset
+    */
    void *map;
    int fd;
 
@@ -266,15 +285,23 @@ struct anv_block_pool {
 
    union anv_free_list free_list;
    struct anv_block_state state;
+
+   union anv_free_list back_free_list;
+   struct anv_block_state back_state;
 };
 
 /* Block pools are backed by a fixed-size 2GB memfd */
 #define BLOCK_POOL_MEMFD_SIZE (1ull << 32)
 
+/* The center of the block pool is also the middle of the memfd.  This may
+ * change in the future if we decide differently for some reason.
+ */
+#define BLOCK_POOL_MEMFD_CENTER (BLOCK_POOL_MEMFD_SIZE / 2)
+
 static inline uint32_t
 anv_block_pool_size(struct anv_block_pool *pool)
 {
-   return pool->state.end;
+   return pool->state.end + pool->back_state.end;
 }
 
 struct anv_state {
@@ -309,8 +336,9 @@ struct anv_state_stream {
 void anv_block_pool_init(struct anv_block_pool *pool,
                          struct anv_device *device, uint32_t block_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);
-uint32_t anv_block_pool_alloc(struct anv_block_pool *pool);
-void anv_block_pool_free(struct anv_block_pool *pool, uint32_t offset);
+int32_t anv_block_pool_alloc(struct anv_block_pool *pool);
+int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool);
+void anv_block_pool_free(struct anv_block_pool *pool, int32_t offset);
 void anv_state_pool_init(struct anv_state_pool *pool,
                          struct anv_block_pool *block_pool);
 void anv_state_pool_finish(struct anv_state_pool *pool);

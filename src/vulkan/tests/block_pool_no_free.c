@@ -34,14 +34,18 @@ struct job {
    unsigned id;
    struct anv_block_pool *pool;
    uint32_t blocks[BLOCKS_PER_THREAD];
+   uint32_t back_blocks[BLOCKS_PER_THREAD];
 } jobs[NUM_THREADS];
+
 
 static void *alloc_blocks(void *_job)
 {
    struct job *job = _job;
 
-   for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++)
+   for (unsigned i = 0; i < BLOCKS_PER_THREAD; i++) {
       job->blocks[i] = anv_block_pool_alloc(job->pool);
+      job->back_blocks[i] = -anv_block_pool_alloc_back(job->pool);
+   }
 
    return NULL;
 }
@@ -98,10 +102,15 @@ static void run_test()
    for (unsigned i = 0; i < NUM_THREADS; i++)
       pthread_join(jobs[i].thread, NULL);
 
+   /* Validate that the block allocations were monotonic */
    uint32_t *block_ptrs[NUM_THREADS];
    for (unsigned i = 0; i < NUM_THREADS; i++)
       block_ptrs[i] = jobs[i].blocks;
+   validate_monotonic(block_ptrs);
 
+   /* Validate that the back block allocations were monotonic */
+   for (unsigned i = 0; i < NUM_THREADS; i++)
+      block_ptrs[i] = jobs[i].back_blocks;
    validate_monotonic(block_ptrs);
 
    anv_block_pool_finish(&pool);
