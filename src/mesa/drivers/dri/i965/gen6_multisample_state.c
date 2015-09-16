@@ -48,6 +48,9 @@ gen6_get_sample_position(struct gl_context *ctx,
    case 8:
       bits = brw_multisample_positions_8x[index >> 2] >> (8 * (index & 3));
       break;
+   case 16:
+      bits = brw_multisample_positions_16x[index >> 2] >> (8 * (index & 3));
+      break;
    default:
       unreachable("Not implemented");
    }
