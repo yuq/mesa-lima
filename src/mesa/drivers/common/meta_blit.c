@@ -72,20 +72,25 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
    char *sample_map_expr = rzalloc_size(mem_ctx, 1);
    char *texel_fetch_macro = rzalloc_size(mem_ctx, 1);
    const char *sampler_array_suffix = "";
-   float y_scale;
+   float x_scale, y_scale;
    enum blit_msaa_shader shader_index;
 
    assert(src_rb);
    samples = MAX2(src_rb->NumSamples, 1);
-   y_scale = samples * 0.5;
+
+   if (samples == 16)
+      x_scale = 4.0;
+   else
+      x_scale = 2.0;
+   y_scale = samples / x_scale;
 
    /* We expect only power of 2 samples in source multisample buffer. */
    assert(samples > 0 && _mesa_is_pow_two(samples));
    while (samples >> (shader_offset + 1)) {
       shader_offset++;
    }
-   /* Update the assert if we plan to support more than 8X MSAA. */
-   assert(shader_offset > 0 && shader_offset < 4);
+   /* Update the assert if we plan to support more than 16X MSAA. */
+   assert(shader_offset > 0 && shader_offset <= 4);
 
    assert(target == GL_TEXTURE_2D_MULTISAMPLE ||
           target == GL_TEXTURE_2D_MULTISAMPLE_ARRAY);
@@ -128,6 +133,10 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
    case 8:
       sample_number =  "sample_map[int(2 * fract(coord.x) + 8 * fract(coord.y))]";
       sample_map = ctx->Const.SampleMap8x;
+      break;
+   case 16:
+      sample_number =  "sample_map[int(4 * fract(coord.x) + 16 * fract(coord.y))]";
+      sample_map = ctx->Const.SampleMap16x;
       break;
    default:
       sample_number = NULL;
@@ -184,9 +193,9 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
                                "{\n"
                                "%s"
                                "   vec2 interp;\n"
-                               "   const vec2 scale = vec2(2.0f, %ff);\n"
-                               "   const vec2 scale_inv = vec2(0.5f, %ff);\n"
-                               "   const vec2 s_0_offset = vec2(0.25f, %ff);\n"
+                               "   const vec2 scale = vec2(%ff, %ff);\n"
+                               "   const vec2 scale_inv = vec2(%ff, %ff);\n"
+                               "   const vec2 s_0_offset = vec2(%ff, %ff);\n"
                                "   vec2 s_0_coord, s_1_coord, s_2_coord, s_3_coord;\n"
                                "   vec4 s_0_color, s_1_color, s_2_color, s_3_color;\n"
                                "   vec4 x_0_color, x_1_color;\n"
@@ -219,9 +228,9 @@ setup_glsl_msaa_blit_scaled_shader(struct gl_context *ctx,
                                "}\n",
                                sampler_array_suffix,
                                sample_map_expr,
-                               y_scale,
-                               1.0f / y_scale,
-                               1.0f / samples,
+                               x_scale, y_scale,
+                               1.0f / x_scale, 1.0f / y_scale,
+                               0.5f / x_scale, 0.5f / y_scale,
                                texel_fetch_macro);
 
    _mesa_meta_compile_and_link_program(ctx, vs_source, fs_source, name,

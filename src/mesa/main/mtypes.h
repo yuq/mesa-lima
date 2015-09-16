@@ -3578,11 +3578,24 @@ struct gl_constants
     * below:
     *    SampleMap8x = {a, b, c, d, e, f, g, h};
     *
-    * Follow the logic for other sample counts.
+    * Follow the logic for sample counts 2-8.
+    *
+    * For 16x the sample indices layout as a 4x4 grid as follows:
+    *
+    *            -----------------
+    *            | 0 | 1 | 2 | 3 |
+    *            -----------------
+    *            | 4 | 5 | 6 | 7 |
+    *            -----------------
+    *            | 8 | 9 |10 |11 |
+    *            -----------------
+    *            |12 |13 |14 |15 |
+    *            -----------------
     */
    uint8_t SampleMap2x[2];
    uint8_t SampleMap4x[4];
    uint8_t SampleMap8x[8];
+   uint8_t SampleMap16x[16];
 
    /** GL_ARB_shader_atomic_counters */
    GLuint MaxAtomicBufferBindings;
