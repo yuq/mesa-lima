@@ -307,7 +307,8 @@ static const struct extension extension_table[] = {
    { "GL_OES_depth_texture_cube_map",              o(OES_depth_texture_cube_map),                         ES2, 2012 },
    { "GL_OES_draw_texture",                        o(OES_draw_texture),                             ES1,       2004 },
    { "GL_OES_EGL_sync",                            o(dummy_true),                                   ES1 | ES2, 2010 },
-   { "GL_OES_EGL_image",                           o(OES_EGL_image),                                ES1 | ES2, 2006 },
+   /*  FIXME: Mesa expects GL_OES_EGL_image to be available in OpenGL contexts. */
+   { "GL_OES_EGL_image",                           o(OES_EGL_image),                           GL | ES1 | ES2, 2006 },
    { "GL_OES_EGL_image_external",                  o(OES_EGL_image_external),                       ES1 | ES2, 2010 },
    { "GL_OES_element_index_uint",                  o(dummy_true),                                   ES1 | ES2, 2005 },
    { "GL_OES_fbo_render_mipmap",                   o(dummy_true),                                   ES1 | ES2, 2005 },
