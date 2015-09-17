@@ -1835,7 +1835,7 @@ void nir_lower_phis_to_scalar(nir_shader *shader);
 void nir_lower_samplers(nir_shader *shader,
                         const struct gl_shader_program *shader_program);
 
-void nir_lower_system_values(nir_shader *shader);
+bool nir_lower_system_values(nir_shader *shader);
 
 typedef struct nir_lower_tex_options {
    /**
