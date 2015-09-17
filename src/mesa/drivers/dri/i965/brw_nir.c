@@ -96,7 +96,7 @@ brw_create_nir(struct brw_context *brw,
    nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
 
-   nir_lower_tex_projector(nir);
+   nir_lower_tex(nir);
    nir_validate_shader(nir);
 
    nir_normalize_cubemap_coords(nir);

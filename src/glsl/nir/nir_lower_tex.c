@@ -31,7 +31,7 @@
 #include "nir_builder.h"
 
 static bool
-nir_lower_tex_projector_block(nir_block *block, void *void_state)
+nir_lower_tex_block(nir_block *block, void *void_state)
 {
    nir_builder *b = void_state;
 
@@ -116,22 +116,22 @@ nir_lower_tex_projector_block(nir_block *block, void *void_state)
 }
 
 static void
-nir_lower_tex_projector_impl(nir_function_impl *impl)
+nir_lower_tex_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
 
-   nir_foreach_block(impl, nir_lower_tex_projector_block, &b);
+   nir_foreach_block(impl, nir_lower_tex_block, &b);
 
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
 }
 
 void
-nir_lower_tex_projector(nir_shader *shader)
+nir_lower_tex(nir_shader *shader)
 {
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         nir_lower_tex_projector_impl(overload->impl);
+         nir_lower_tex_impl(overload->impl);
    }
 }
