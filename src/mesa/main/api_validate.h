@@ -109,5 +109,9 @@ extern GLboolean
 _mesa_validate_DispatchCompute(struct gl_context *ctx,
                                const GLuint *num_groups);
 
+extern GLboolean
+_mesa_validate_DispatchComputeIndirect(struct gl_context *ctx,
+                                       GLintptr indirect);
+
 
 #endif

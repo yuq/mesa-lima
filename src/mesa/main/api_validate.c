@@ -926,3 +926,67 @@ _mesa_validate_DispatchCompute(struct gl_context *ctx,
 
    return GL_TRUE;
 }
+
+static GLboolean
+valid_dispatch_indirect(struct gl_context *ctx,
+                        GLintptr indirect,
+                        GLsizei size, const char *name)
+{
+   GLintptr end = (GLintptr)indirect + size;
+
+   if (!check_valid_to_compute(ctx, name))
+      return GL_FALSE;
+
+   /* From the ARB_compute_shader specification:
+    *
+    * "An INVALID_OPERATION error is generated [...] if <indirect> is less
+    *  than zero or not a multiple of the size, in basic machine units, of
+    *  uint."
+    */
+   if ((GLintptr)indirect & (sizeof(GLuint) - 1)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(indirect is not aligned)", name);
+      return GL_FALSE;
+   }
+
+   if ((GLintptr)indirect < 0) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(indirect is less than zero)", name);
+      return GL_FALSE;
+   }
+
+   if (!_mesa_is_bufferobj(ctx->DispatchIndirectBuffer)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s: no buffer bound to DISPATCH_INDIRECT_BUFFER", name);
+      return GL_FALSE;
+   }
+
+   if (_mesa_check_disallowed_mapping(ctx->DispatchIndirectBuffer)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(DISPATCH_INDIRECT_BUFFER is mapped)", name);
+      return GL_FALSE;
+   }
+
+   /* From the ARB_compute_shader specification:
+    *
+    * "An INVALID_OPERATION error is generated if this command sources data
+    *  beyond the end of the buffer object [...]"
+    */
+   if (ctx->DispatchIndirectBuffer->Size < end) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(DISPATCH_INDIRECT_BUFFER too small)", name);
+      return GL_FALSE;
+   }
+
+   return GL_TRUE;
+}
+
+GLboolean
+_mesa_validate_DispatchComputeIndirect(struct gl_context *ctx,
+                                       GLintptr indirect)
+{
+   FLUSH_CURRENT(ctx, 0);
+
+   return valid_dispatch_indirect(ctx, indirect, 3 * sizeof(GLuint),
+                                  "glDispatchComputeIndirect");
+}

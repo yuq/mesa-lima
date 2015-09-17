@@ -45,10 +45,8 @@ _mesa_DispatchComputeIndirect(GLintptr indirect)
 {
    GET_CURRENT_CONTEXT(ctx);
 
-   if (ctx->Extensions.ARB_compute_shader) {
-      assert(!"TODO");
-   } else {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "unsupported function (glDispatchComputeIndirect) called");
-   }
+   if (!_mesa_validate_DispatchComputeIndirect(ctx, indirect))
+      return;
+
+   ctx->Driver.DispatchComputeIndirect(ctx, indirect);
 }

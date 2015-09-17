@@ -1021,6 +1021,7 @@ struct dd_function_table {
     */
    /*@{*/
    void (*DispatchCompute)(struct gl_context *ctx, const GLuint *num_groups);
+   void (*DispatchComputeIndirect)(struct gl_context *ctx, GLintptr indirect);
    /*@}*/
 };
 
