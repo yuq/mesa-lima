@@ -1219,10 +1219,12 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
 
-   if (copy->bufferRowLength != 0)
-      anv_finishme("bufferRowLength not supported in CopyBufferToImage");
-   if (copy->bufferImageHeight != 0)
-      anv_finishme("bufferImageHeight not supported in CopyBufferToImage");
+   VkExtent3D extent = copy->imageExtent;
+   if (copy->bufferRowLength)
+      extent.width = copy->bufferRowLength;
+   if (copy->bufferImageHeight)
+      extent.height = copy->bufferImageHeight;
+   extent.depth = 1;
 
    VkImage vk_image;
    VkResult result = anv_CreateImage(vk_device,
@@ -1230,11 +1232,7 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
          .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
          .imageType = VK_IMAGE_TYPE_2D,
          .format = format,
-         .extent = {
-            .width = copy->imageExtent.width,
-            .height = copy->imageExtent.height,
-            .depth = 1,
-         },
+         .extent = extent,
          .mipLevels = 1,
          .arraySize = 1,
          .samples = 1,
