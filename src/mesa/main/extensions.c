@@ -42,27 +42,6 @@ struct gl_extensions _mesa_extension_override_disables;
 static char *extra_extensions = NULL;
 static char *cant_disable_extensions = NULL;
 
-/**
- * \brief An element of the \c extension_table.
- */
-struct extension {
-   /** Name of extension, such as "GL_ARB_depth_clamp". */
-   const char *name;
-
-   /** Offset (in bytes) of the corresponding member in struct gl_extensions. */
-   size_t offset;
-
-   /** Minimum version the extension requires for the given API
-    * (see gl_api defined in mtypes.h). The value is equal to:
-    * 10 * major_version + minor_version
-    */
-   uint8_t version[API_OPENGL_LAST + 1];
-
-   /** Year the extension was proposed or approved.  Used to sort the 
-    * extension string chronologically. */
-   uint16_t year;
-};
-
 
 /**
  * Given a member \c x of struct gl_extensions, return offset of
@@ -74,7 +53,7 @@ struct extension {
 /**
  * \brief Table of supported OpenGL extensions for all API's.
  */
-static const struct extension extension_table[] = {
+const struct extension extension_table[] = {
 #define EXT(name_str, driver_cap, gll_ver, glc_ver, gles_ver, gles2_ver, yyyy) \
         { .name = "GL_" #name_str, .offset = o(driver_cap), \
           .version = { \
