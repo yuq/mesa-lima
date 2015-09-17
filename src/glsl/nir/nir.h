@@ -1455,13 +1455,13 @@ typedef struct nir_shader_compiler_options {
 } nir_shader_compiler_options;
 
 typedef struct nir_shader {
-   /** hash table of name -> uniform nir_variable */
+   /** list of uniforms (nir_variable) */
    struct exec_list uniforms;
 
-   /** hash table of name -> input nir_variable */
+   /** list of inputs (nir_variable) */
    struct exec_list inputs;
 
-   /** hash table of name -> output nir_variable */
+   /** list of outputs (nir_variable) */
    struct exec_list outputs;
 
    /** Set of driver-specific options for the shader.
@@ -1471,10 +1471,10 @@ typedef struct nir_shader {
     */
    const struct nir_shader_compiler_options *options;
 
-   /** list of global variables in the shader */
+   /** list of global variables in the shader (nir_variable) */
    struct exec_list globals;
 
-   /** list of system value variables in the shader */
+   /** list of system value variables in the shade (nir_variable) */
    struct exec_list system_values;
 
    struct exec_list functions; /** < list of nir_function */
