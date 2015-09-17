@@ -98,7 +98,8 @@ normalize_cubemap_coords_impl(nir_function_impl *impl)
 void
 nir_normalize_cubemap_coords(nir_shader *shader)
 {
-   nir_foreach_overload(shader, overload)
+   nir_foreach_overload(shader, overload) {
       if (overload->impl)
          normalize_cubemap_coords_impl(overload->impl);
+   }
 }
