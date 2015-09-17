@@ -265,25 +265,30 @@ VkResult anv_GetPhysicalDeviceFormatProperties(
    if (format->surface_format == UNSUPPORTED)
       goto unsupported;
 
-   info = &surface_formats[format->surface_format];
-   if (!info->exists)
-      goto unsupported;
-
    uint32_t linear = 0, tiled = 0;
-   if (info->sampling <= gen) {
-      linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-      tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-   }
-   if (info->render_target <= gen) {
-      linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-      tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-   }
-   if (info->alpha_blend <= gen) {
-      linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-      tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
-   }
-   if (info->input_vb <= gen) {
-      linear |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+   if (anv_format_is_depth_or_stencil(format)) {
+      tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+   } else {
+      /* The surface_formats table only contains color formats */
+      info = &surface_formats[format->surface_format];
+      if (!info->exists)
+         goto unsupported;
+
+      if (info->sampling <= gen) {
+         linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+         tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+      }
+      if (info->render_target <= gen) {
+         linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+         tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+      }
+      if (info->alpha_blend <= gen) {
+         linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+         tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
+      }
+      if (info->input_vb <= gen) {
+         linear |= VK_FORMAT_FEATURE_VERTEX_BUFFER_BIT;
+      }
    }
 
    pFormatProperties->linearTilingFeatures = linear;
