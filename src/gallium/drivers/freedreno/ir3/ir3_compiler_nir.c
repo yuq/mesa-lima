@@ -181,6 +181,8 @@ static struct nir_shader *to_nir(struct ir3_compile *ctx,
 		nir_lower_clip_fs(s, so->key.ucp_enables);
 	}
 	nir_lower_tex(s, &tex_options);
+	if (so->key.color_two_side)
+		nir_lower_two_sided_color(s);
 	nir_lower_idiv(s);
 	nir_lower_load_const_to_scalar(s);
 
@@ -212,26 +214,12 @@ static struct nir_shader *to_nir(struct ir3_compile *ctx,
 	return s;
 }
 
-/* TODO nir doesn't lower everything for us yet, but ideally it would: */
-static const struct tgsi_token *
-lower_tgsi(struct ir3_compile *ctx, const struct tgsi_token *tokens,
-		struct ir3_shader_variant *so)
-{
-	struct tgsi_shader_info info;
-	struct tgsi_lowering_config lconfig = {
-			.color_two_side = so->key.color_two_side,
-	};
-
-	return tgsi_transform_lowering(&lconfig, tokens, &info);
-}
-
 static struct ir3_compile *
 compile_init(struct ir3_compiler *compiler,
 		struct ir3_shader_variant *so,
 		const struct tgsi_token *tokens)
 {
 	struct ir3_compile *ctx = rzalloc(NULL, struct ir3_compile);
-	const struct tgsi_token *lowered_tokens;
 
 	if (compiler->gpu_id >= 400) {
 		/* need special handling for "flat" */
@@ -258,13 +246,7 @@ compile_init(struct ir3_compiler *compiler,
 	ctx->block_ht = _mesa_hash_table_create(ctx,
 			_mesa_hash_pointer, _mesa_key_pointer_equal);
 
-	lowered_tokens = lower_tgsi(ctx, tokens, so);
-	if (!lowered_tokens)
-		lowered_tokens = tokens;
-	ctx->s = to_nir(ctx, lowered_tokens, so);
-
-	if (lowered_tokens != tokens)
-		free((void *)lowered_tokens);
+	ctx->s = to_nir(ctx, tokens, so);
 
 	so->first_driver_param = so->first_immediate = ctx->s->num_uniforms;
 
