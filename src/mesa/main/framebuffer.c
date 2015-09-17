@@ -964,3 +964,22 @@ _mesa_print_framebuffer(const struct gl_framebuffer *fb)
       }
    }
 }
+
+bool
+_mesa_is_front_buffer_reading(const struct gl_framebuffer *fb)
+{
+   if (!fb || _mesa_is_user_fbo(fb))
+      return false;
+
+   return fb->_ColorReadBufferIndex == BUFFER_FRONT_LEFT;
+}
+
+bool
+_mesa_is_front_buffer_drawing(const struct gl_framebuffer *fb)
+{
+   if (!fb || _mesa_is_user_fbo(fb))
+      return false;
+
+   return (fb->_NumColorDrawBuffers >= 1 &&
+           fb->_ColorDrawBufferIndexes[0] == BUFFER_FRONT_LEFT);
+}

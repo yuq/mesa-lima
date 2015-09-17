@@ -41,6 +41,7 @@
 #include "main/version.h"
 #include "main/vtxfmt.h"
 #include "main/texobj.h"
+#include "main/framebuffer.h"
 
 #include "vbo/vbo_context.h"
 
@@ -1298,7 +1299,7 @@ intel_prepare_render(struct brw_context *brw)
     * that will happen next will probably dirty the front buffer.  So
     * mark it as dirty here.
     */
-   if (brw_is_front_buffer_drawing(ctx->DrawBuffer))
+   if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer))
       brw->front_buffer_dirty = true;
 }
 
@@ -1337,8 +1338,8 @@ intel_query_dri2_buffers(struct brw_context *brw,
    back_rb = intel_get_renderbuffer(fb, BUFFER_BACK_LEFT);
 
    memset(attachments, 0, sizeof(attachments));
-   if ((brw_is_front_buffer_drawing(fb) ||
-        brw_is_front_buffer_reading(fb) ||
+   if ((_mesa_is_front_buffer_drawing(fb) ||
+        _mesa_is_front_buffer_reading(fb) ||
         !back_rb) && front_rb) {
       /* If a fake front buffer is in use, then querying for
        * __DRI_BUFFER_FRONT_LEFT will cause the server to copy the image from
@@ -1452,7 +1453,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
                                             drawable->w, drawable->h,
                                             buffer->pitch);
 
-   if (brw_is_front_buffer_drawing(fb) &&
+   if (_mesa_is_front_buffer_drawing(fb) &&
        (buffer->attachment == __DRI_BUFFER_FRONT_LEFT ||
         buffer->attachment == __DRI_BUFFER_FAKE_FRONT_LEFT) &&
        rb->Base.Base.NumSamples > 1) {
@@ -1510,7 +1511,7 @@ intel_update_image_buffer(struct brw_context *intel,
                                             buffer->width, buffer->height,
                                             buffer->pitch);
 
-   if (brw_is_front_buffer_drawing(fb) &&
+   if (_mesa_is_front_buffer_drawing(fb) &&
        buffer_type == __DRI_IMAGE_BUFFER_FRONT &&
        rb->Base.Base.NumSamples > 1) {
       intel_renderbuffer_upsample(intel, rb);
@@ -1538,8 +1539,8 @@ intel_update_image_buffers(struct brw_context *brw, __DRIdrawable *drawable)
    else
       return;
 
-   if (front_rb && (brw_is_front_buffer_drawing(fb) ||
-                    brw_is_front_buffer_reading(fb) || !back_rb)) {
+   if (front_rb && (_mesa_is_front_buffer_drawing(fb) ||
+                    _mesa_is_front_buffer_reading(fb) || !back_rb)) {
       buffer_mask |= __DRI_IMAGE_BUFFER_FRONT;
    }
 

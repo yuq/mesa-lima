@@ -33,6 +33,7 @@
 #include "main/enums.h"
 #include "main/macros.h"
 #include "main/transformfeedback.h"
+#include "main/framebuffer.h"
 #include "tnl/tnl.h"
 #include "vbo/vbo_context.h"
 #include "swrast/swrast.h"
@@ -364,7 +365,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
    struct intel_renderbuffer *stencil_irb = intel_get_renderbuffer(fb, BUFFER_STENCIL);
    struct gl_renderbuffer_attachment *depth_att = &fb->Attachment[BUFFER_DEPTH];
 
-   if (brw_is_front_buffer_drawing(fb))
+   if (_mesa_is_front_buffer_drawing(fb))
       front_irb = intel_get_renderbuffer(fb, BUFFER_FRONT_LEFT);
 
    if (front_irb)
