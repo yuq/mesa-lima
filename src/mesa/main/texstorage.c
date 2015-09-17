@@ -202,7 +202,8 @@ update_fbo_texture(struct gl_context *ctx, struct gl_texture_object *texObj)
 
 
 GLboolean
-_mesa_is_legal_tex_storage_format(struct gl_context *ctx, GLenum internalformat)
+_mesa_is_legal_tex_storage_format(const struct gl_context *ctx,
+                                  GLenum internalformat)
 {
    /* check internal format - note that only sized formats are allowed */
    switch (internalformat) {
