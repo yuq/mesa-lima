@@ -31,13 +31,45 @@
 #include "brw_draw.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
+#include "intel_buffer_objects.h"
 #include "brw_defines.h"
 
 
 static void
-brw_emit_gpgpu_walker(struct brw_context *brw, const GLuint *num_groups)
+brw_emit_gpgpu_walker(struct brw_context *brw,
+                      const void *compute_param,
+                      bool indirect)
 {
    const struct brw_cs_prog_data *prog_data = brw->cs.prog_data;
+
+   const GLuint *num_groups;
+   uint32_t indirect_flag;
+
+   if (!indirect) {
+      num_groups = (const GLuint *)compute_param;
+      indirect_flag = 0;
+   } else {
+      GLintptr indirect_offset = (GLintptr)compute_param;
+      static const GLuint indirect_group_counts[3] = { 0, 0, 0 };
+      num_groups = indirect_group_counts;
+
+      struct gl_buffer_object *indirect_buffer = brw->ctx.DispatchIndirectBuffer;
+      drm_intel_bo *bo = intel_bufferobj_buffer(brw,
+            intel_buffer_object(indirect_buffer),
+            indirect_offset, 3 * sizeof(GLuint));
+
+      indirect_flag = GEN7_GPGPU_INDIRECT_PARAMETER_ENABLE;
+
+      brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMX, bo,
+                            I915_GEM_DOMAIN_VERTEX, 0,
+                            indirect_offset + 0);
+      brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMY, bo,
+                            I915_GEM_DOMAIN_VERTEX, 0,
+                            indirect_offset + 4);
+      brw_load_register_mem(brw, GEN7_GPGPU_DISPATCHDIMZ, bo,
+                            I915_GEM_DOMAIN_VERTEX, 0,
+                            indirect_offset + 8);
+   }
 
    const unsigned simd_size = prog_data->simd_size;
    unsigned group_size = prog_data->local_size[0] *
@@ -52,7 +84,7 @@ brw_emit_gpgpu_walker(struct brw_context *brw, const GLuint *num_groups)
 
    uint32_t dwords = brw->gen < 8 ? 11 : 15;
    BEGIN_BATCH(dwords);
-   OUT_BATCH(GPGPU_WALKER << 16 | (dwords - 2));
+   OUT_BATCH(GPGPU_WALKER << 16 | (dwords - 2) | indirect_flag);
    OUT_BATCH(0);
    if (brw->gen >= 8) {
       OUT_BATCH(0);                     /* Indirect Data Length */
@@ -83,7 +115,9 @@ brw_emit_gpgpu_walker(struct brw_context *brw, const GLuint *num_groups)
 
 
 static void
-brw_dispatch_compute(struct gl_context *ctx, const GLuint *num_groups)
+brw_dispatch_compute_common(struct gl_context *ctx,
+                            const void *compute_param,
+                            bool indirect)
 {
    struct brw_context *brw = brw_context(ctx);
    int estimated_buffer_space_needed;
@@ -117,7 +151,7 @@ brw_dispatch_compute(struct gl_context *ctx, const GLuint *num_groups)
    brw->no_batch_wrap = true;
    brw_upload_compute_state(brw);
 
-   brw_emit_gpgpu_walker(brw, num_groups);
+   brw_emit_gpgpu_walker(brw, compute_param, indirect);
 
    brw->no_batch_wrap = false;
 
@@ -155,9 +189,24 @@ brw_dispatch_compute(struct gl_context *ctx, const GLuint *num_groups)
     */
 }
 
+static void
+brw_dispatch_compute(struct gl_context *ctx, const GLuint *num_groups) {
+   brw_dispatch_compute_common(ctx,
+                               num_groups,
+                               false);
+}
+
+static void
+brw_dispatch_compute_indirect(struct gl_context *ctx, GLintptr indirect)
+{
+   brw_dispatch_compute_common(ctx,
+                               (void *)indirect,
+                               true);
+}
 
 void
 brw_init_compute_functions(struct dd_function_table *functions)
 {
    functions->DispatchCompute = brw_dispatch_compute;
+   functions->DispatchComputeIndirect = brw_dispatch_compute_indirect;
 }

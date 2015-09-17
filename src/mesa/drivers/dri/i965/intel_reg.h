@@ -173,6 +173,11 @@
 #define GEN7_3DPRIM_START_INSTANCE      0x243C
 #define GEN7_3DPRIM_BASE_VERTEX         0x2440
 
+/* Auto-Compute / Indirect Registers */
+#define GEN7_GPGPU_DISPATCHDIMX         0x2500
+#define GEN7_GPGPU_DISPATCHDIMY         0x2504
+#define GEN7_GPGPU_DISPATCHDIMZ         0x2508
+
 #define GEN7_CACHE_MODE_1               0x7004
 # define GEN8_HIZ_NP_PMA_FIX_ENABLE        (1 << 11)
 # define GEN8_HIZ_NP_EARLY_Z_FAILS_DISABLE (1 << 13)
