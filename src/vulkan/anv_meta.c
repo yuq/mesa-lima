@@ -39,13 +39,13 @@ anv_device_init_meta_clear_state(struct anv_device *device)
     * does not dead-code our inputs.
     */
    VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
-      in vec2 a_pos;
+      in vec3 a_pos;
       in vec4 a_color;
       flat out vec4 v_color;
       void main()
       {
          v_color = a_color;
-         gl_Position = vec4(a_pos, 0, 1);
+         gl_Position = vec4(a_pos, 1);
       }
    );
 
