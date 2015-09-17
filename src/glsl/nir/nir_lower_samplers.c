@@ -29,12 +29,10 @@
 #include "program/hash_table.h"
 #include "ir_uniform.h"
 
-extern "C" {
 #include "main/compiler.h"
 #include "main/mtypes.h"
 #include "program/prog_parameter.h"
 #include "program/program.h"
-}
 
 /* Calculate the sampler index based on array indicies and also
  * calculate the base uniform location for struct members.
@@ -78,7 +76,7 @@ calc_sampler_offsets(nir_deref *tail, nir_tex_instr *instr,
 
    case nir_deref_type_struct: {
       nir_deref_struct *deref_struct = nir_deref_as_struct(tail->child);
-      *location += tail->type->record_location_offset(deref_struct->index);
+      *location += glsl_get_record_location_offset(tail->type, deref_struct->index);
       calc_sampler_offsets(tail->child, instr, array_elements,
                            indirect, b, location);
       break;
@@ -179,7 +177,7 @@ lower_impl(nir_function_impl *impl, const struct gl_shader_program *shader_progr
    nir_foreach_block(impl, lower_block_cb, &state);
 }
 
-extern "C" void
+void
 nir_lower_samplers(nir_shader *shader,
                    const struct gl_shader_program *shader_program)
 {
