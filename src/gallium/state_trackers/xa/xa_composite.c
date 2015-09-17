@@ -78,6 +78,27 @@ static const struct xa_composite_blend xa_blends[] = {
       0, 0, PIPE_BLENDFACTOR_ONE, PIPE_BLENDFACTOR_ONE},
 };
 
+/*
+ * The alpha value stored in a L8 texture is read by the
+ * hardware as color, and R8 is read as red. The source alpha value
+ * at the end of the fragment shader is stored in all color channels,
+ * so the correct approach is to blend using DST_COLOR instead of
+ * DST_ALPHA and then output any color channel (L8) or the red channel (R8).
+ */
+static unsigned
+xa_convert_blend_for_luminance(unsigned factor)
+{
+    switch(factor) {
+    case PIPE_BLENDFACTOR_DST_ALPHA:
+	return PIPE_BLENDFACTOR_DST_COLOR;
+    case PIPE_BLENDFACTOR_INV_DST_ALPHA:
+	return PIPE_BLENDFACTOR_INV_DST_COLOR;
+    default:
+	break;
+    }
+    return factor;
+}
+
 static boolean
 blend_for_op(struct xa_composite_blend *blend,
 	     enum xa_composite_op op,
@@ -111,16 +132,11 @@ blend_for_op(struct xa_composite_blend *blend,
     if (!dst_pic->srf)
 	return supported;
 
-    /*
-     * None of the hardware formats we might use for dst A8 are
-     * suitable for dst_alpha blending, since they present the
-     * alpha channel either in all color channels (L8_UNORM) or
-     * in the red channel only (R8_UNORM)
-     */
     if ((dst_pic->srf->tex->format == PIPE_FORMAT_L8_UNORM ||
-         dst_pic->srf->tex->format == PIPE_FORMAT_R8_UNORM) &&
-        blend->alpha_dst)
-        return FALSE;
+         dst_pic->srf->tex->format == PIPE_FORMAT_R8_UNORM)) {
+        blend->rgb_src = xa_convert_blend_for_luminance(blend->rgb_src);
+        blend->rgb_dst = xa_convert_blend_for_luminance(blend->rgb_dst);
+    }
 
     /*
      * If there's no dst alpha channel, adjust the blend op so that we'll treat
