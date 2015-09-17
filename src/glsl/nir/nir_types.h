@@ -62,6 +62,8 @@ unsigned glsl_get_length(const struct glsl_type *type);
 const char *glsl_get_struct_elem_name(const struct glsl_type *type,
                                       unsigned index);
 
+unsigned glsl_get_record_location_offset(const struct glsl_type *type,
+                                         unsigned length);
 
 bool glsl_type_is_void(const struct glsl_type *type);
 bool glsl_type_is_vector(const struct glsl_type *type);
