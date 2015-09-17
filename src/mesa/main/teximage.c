@@ -130,7 +130,7 @@ adjust_for_oes_float_texture(GLenum format, GLenum type)
  * texture format and env mode determine the arithmetic used.
  */
 GLint
-_mesa_base_tex_format( struct gl_context *ctx, GLint internalFormat )
+_mesa_base_tex_format(const struct gl_context *ctx, GLint internalFormat)
 {
    switch (internalFormat) {
    case GL_ALPHA:

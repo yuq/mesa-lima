@@ -60,7 +60,7 @@ _mesa_is_zero_size_texture(const struct gl_texture_image *texImage)
 /*@{*/
 
 extern GLint
-_mesa_base_tex_format( struct gl_context *ctx, GLint internalFormat );
+_mesa_base_tex_format(const struct gl_context *ctx, GLint internalFormat);
 
 
 extern GLboolean
