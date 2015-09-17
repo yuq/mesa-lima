@@ -234,6 +234,8 @@ fd3_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			fd3_tex_swiz(cso->format, cso->swizzle_r, cso->swizzle_g,
 						cso->swizzle_b, cso->swizzle_a);
 
+	if (prsc->target == PIPE_BUFFER || util_format_is_pure_integer(cso->format))
+		so->texconst0 |= A3XX_TEX_CONST_0_NOCONVERT;
 	if (util_format_is_srgb(cso->format))
 		so->texconst0 |= A3XX_TEX_CONST_0_SRGB;
 
