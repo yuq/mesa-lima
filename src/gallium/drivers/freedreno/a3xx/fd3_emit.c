@@ -209,13 +209,19 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					fd3_pipe_sampler_view(tex->textures[i]) :
 					&dummy_view;
 			struct fd_resource *rsc = fd_resource(view->base.texture);
-			unsigned start = fd_sampler_first_level(&view->base);
-			unsigned end   = fd_sampler_last_level(&view->base);;
+			if (rsc && rsc->base.b.target == PIPE_BUFFER) {
+				OUT_RELOC(ring, rsc->bo, view->base.u.buf.first_element *
+						  util_format_get_blocksize(view->base.format), 0, 0);
+				j = 1;
+			} else {
+				unsigned start = fd_sampler_first_level(&view->base);
+				unsigned end   = fd_sampler_last_level(&view->base);;
 
-			for (j = 0; j < (end - start + 1); j++) {
-				struct fd_resource_slice *slice =
+				for (j = 0; j < (end - start + 1); j++) {
+					struct fd_resource_slice *slice =
 						fd_resource_slice(rsc, j + start);
-				OUT_RELOC(ring, rsc->bo, slice->offset, 0, 0);
+					OUT_RELOC(ring, rsc->bo, slice->offset, 0, 0);
+				}
 			}
 
 			/* pad the remaining entries w/ null: */
