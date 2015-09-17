@@ -110,6 +110,21 @@ static const VkAllocCallbacks default_alloc_callbacks = {
    .pfnFree = default_free
 };
 
+static const VkExtensionProperties global_extensions[] = {
+   {
+      .extName = "VK_WSI_swapchain",
+      .specVersion = 12
+   },
+};
+
+static const VkExtensionProperties device_extensions[] = {
+   {
+      .extName = "VK_WSI_device_swapchain",
+      .specVersion = 12
+   },
+};
+
+
 VkResult anv_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
     VkInstance*                                 pInstance)
@@ -119,6 +134,19 @@ VkResult anv_CreateInstance(
    void *user_data = NULL;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
+
+   for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+      bool found = false;
+      for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
+         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                    global_extensions[j].extName) == 0) {
+            found = true;
+            break;
+         }
+      }
+      if (!found)
+         return vk_error(VK_ERROR_INVALID_EXTENSION);
+   }
 
    if (pCreateInfo->pAllocCb) {
       alloc_callbacks = pCreateInfo->pAllocCb;
@@ -546,6 +574,19 @@ VkResult anv_CreateDevice(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO);
 
+   for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
+      bool found = false;
+      for (uint32_t j = 0; j < ARRAY_SIZE(device_extensions); j++) {
+         if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
+                    device_extensions[j].extName) == 0) {
+            found = true;
+            break;
+         }
+      }
+      if (!found)
+         return vk_error(VK_ERROR_INVALID_EXTENSION);
+   }
+
    anv_set_dispatch_gen(physical_device->info->gen);
 
    device = anv_instance_alloc(instance, sizeof(*device), 8,
@@ -636,13 +677,6 @@ VkResult anv_DestroyDevice(
    return VK_SUCCESS;
 }
 
-static const VkExtensionProperties global_extensions[] = {
-   {
-      .extName = "VK_WSI_swapchain",
-      .specVersion = 12
-   },
-};
-
 VkResult anv_GetGlobalExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
@@ -660,13 +694,6 @@ VkResult anv_GetGlobalExtensionProperties(
 
    return VK_SUCCESS;
 }
-
-static const VkExtensionProperties device_extensions[] = {
-   {
-      .extName = "VK_WSI_device_swapchain",
-      .specVersion = 12
-   },
-};
 
 VkResult anv_GetPhysicalDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
