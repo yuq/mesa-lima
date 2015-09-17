@@ -246,7 +246,7 @@ bufferobj_range_mapped(const struct gl_buffer_object *obj,
  */
 static bool
 buffer_object_subdata_range_good(struct gl_context *ctx,
-                                 struct gl_buffer_object *bufObj,
+                                 const struct gl_buffer_object *bufObj,
                                  GLintptr offset, GLsizeiptr size,
                                  bool mappedRange, const char *caller)
 {
