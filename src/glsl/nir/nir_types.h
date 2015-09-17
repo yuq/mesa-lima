@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 /* C wrapper around glsl_types.h */
 
 #include "../glsl_types.h"
@@ -36,8 +38,6 @@ extern "C" {
 #else
 struct glsl_type;
 #endif
-
-#include <stdio.h>
 
 void glsl_print_type(const struct glsl_type *type, FILE *fp);
 void glsl_print_struct(const struct glsl_type *type, FILE *fp);
