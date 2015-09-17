@@ -1071,7 +1071,22 @@ glsl_type::record_location_offset(unsigned length) const
          const glsl_type *wa = st->without_array();
          if (wa->is_record()) {
             unsigned r_offset = wa->record_location_offset(wa->length);
-            offset += st->is_array() ? st->length * r_offset : r_offset;
+            offset += st->is_array() ?
+               st->arrays_of_arrays_size() * r_offset : r_offset;
+         } else if (st->is_array() && st->fields.array->is_array()) {
+            unsigned outer_array_size = st->length;
+            const glsl_type *base_type = st->fields.array;
+
+            /* For arrays of arrays the outer arrays take up a uniform
+             * slot for each element. The innermost array elements share a
+             * single slot so we ignore the innermost array when calculating
+             * the offset.
+             */
+            while (base_type->fields.array->is_array()) {
+               outer_array_size = outer_array_size * base_type->length;
+               base_type = base_type->fields.array;
+            }
+            offset += outer_array_size;
          } else {
             /* We dont worry about arrays here because unless the array
              * contains a structure or another array it only takes up a single
