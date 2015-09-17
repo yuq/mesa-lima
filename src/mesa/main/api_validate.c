@@ -882,3 +882,47 @@ _mesa_validate_MultiDrawElementsIndirect(struct gl_context *ctx,
 
    return GL_TRUE;
 }
+
+static bool
+check_valid_to_compute(struct gl_context *ctx, const char *function)
+{
+   struct gl_shader_program *prog;
+
+   if (!_mesa_has_compute_shaders(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "unsupported function (%s) called",
+                  function);
+      return false;
+   }
+
+   prog = ctx->Shader.CurrentProgram[MESA_SHADER_COMPUTE];
+   if (prog == NULL || prog->_LinkedShaders[MESA_SHADER_COMPUTE] == NULL) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(no active compute shader)",
+                  function);
+      return false;
+   }
+
+   return true;
+}
+
+GLboolean
+_mesa_validate_DispatchCompute(struct gl_context *ctx,
+                               const GLuint *num_groups)
+{
+   int i;
+   FLUSH_CURRENT(ctx, 0);
+
+   if (!check_valid_to_compute(ctx, "glDispatchCompute"))
+      return GL_FALSE;
+
+   for (i = 0; i < 3; i++) {
+      if (num_groups[i] > ctx->Const.MaxComputeWorkGroupCount[i]) {
+         _mesa_error(ctx, GL_INVALID_VALUE,
+                     "glDispatchCompute(num_groups_%c)", 'x' + i);
+         return GL_FALSE;
+      }
+   }
+
+   return GL_TRUE;
+}
