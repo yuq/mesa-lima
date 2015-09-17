@@ -1804,7 +1804,7 @@ void nir_dump_dom_frontier(nir_shader *shader, FILE *fp);
 void nir_dump_cfg_impl(nir_function_impl *impl, FILE *fp);
 void nir_dump_cfg(nir_shader *shader, FILE *fp);
 
-void nir_split_var_copies(nir_shader *shader);
+bool nir_split_var_copies(nir_shader *shader);
 
 void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, void *mem_ctx);
 void nir_lower_var_copies(nir_shader *shader);
