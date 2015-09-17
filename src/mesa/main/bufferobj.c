@@ -93,6 +93,11 @@ get_buffer_target(struct gl_context *ctx, GLenum target)
          return &ctx->DrawIndirectBuffer;
       }
       break;
+   case GL_DISPATCH_INDIRECT_BUFFER:
+      if (_mesa_has_compute_shaders(ctx)) {
+         return &ctx->DispatchIndirectBuffer;
+      }
+      break;
    case GL_TRANSFORM_FEEDBACK_BUFFER:
       if (ctx->Extensions.EXT_transform_feedback) {
          return &ctx->TransformFeedback.CurrentBuffer;
@@ -844,6 +849,9 @@ _mesa_init_buffer_objects( struct gl_context *ctx )
    _mesa_reference_buffer_object(ctx, &ctx->DrawIndirectBuffer,
 				 ctx->Shared->NullBufferObj);
 
+   _mesa_reference_buffer_object(ctx, &ctx->DispatchIndirectBuffer,
+				 ctx->Shared->NullBufferObj);
+
    for (i = 0; i < MAX_COMBINED_UNIFORM_BUFFERS; i++) {
       _mesa_reference_buffer_object(ctx,
 				    &ctx->UniformBufferBindings[i].BufferObject,
@@ -887,6 +895,8 @@ _mesa_free_buffer_objects( struct gl_context *ctx )
    _mesa_reference_buffer_object(ctx, &ctx->AtomicBuffer, NULL);
 
    _mesa_reference_buffer_object(ctx, &ctx->DrawIndirectBuffer, NULL);
+
+   _mesa_reference_buffer_object(ctx, &ctx->DispatchIndirectBuffer, NULL);
 
    for (i = 0; i < MAX_COMBINED_UNIFORM_BUFFERS; i++) {
       _mesa_reference_buffer_object(ctx,
@@ -1231,6 +1241,11 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          /* unbind ARB_draw_indirect binding point */
          if (ctx->DrawIndirectBuffer == bufObj) {
             _mesa_BindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
+         }
+
+         /* unbind ARB_compute_shader binding point */
+         if (ctx->DispatchIndirectBuffer == bufObj) {
+            _mesa_BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
          }
 
          /* unbind ARB_copy_buffer binding points */

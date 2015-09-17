@@ -1036,6 +1036,10 @@ find_custom_value(struct gl_context *ctx, const struct value_desc *d, union valu
          v->value_int = 0;
       }
       break;
+   /* GL_ARB_compute_shader */
+   case GL_DISPATCH_INDIRECT_BUFFER_BINDING:
+      v->value_int = ctx->DispatchIndirectBuffer->Name;
+      break;
    }
 }
 
