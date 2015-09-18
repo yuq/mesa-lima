@@ -605,6 +605,8 @@ VkResult anv_CreateDevice(
    if (device->context_id == -1)
       goto fail_fd;
 
+   pthread_mutex_init(&device->mutex, NULL);
+
    anv_bo_pool_init(&device->batch_bo_pool, device, ANV_CMD_BUFFER_BATCH_SIZE);
 
    anv_block_pool_init(&device->dynamic_state_block_pool, device, 2048);
@@ -623,8 +625,6 @@ VkResult anv_CreateDevice(
    device->info = *physical_device->info;
 
    device->compiler = anv_compiler_create(device);
-
-   pthread_mutex_init(&device->mutex, NULL);
 
    anv_queue_init(device, &device->queue);
 
