@@ -551,31 +551,43 @@ remove_phi_src(nir_block *block, nir_block *pred)
 static void
 unlink_jump(nir_block *block, nir_jump_type type, bool add_normal_successors)
 {
+   nir_block *next = block->successors[0];
+
    if (block->successors[0])
       remove_phi_src(block->successors[0], block);
    if (block->successors[1])
       remove_phi_src(block->successors[1], block);
 
-   if (type == nir_jump_break) {
-      nir_block *next = block->successors[0];
-
-      if (next->predecessors->entries == 1) {
-         nir_loop *loop =
-            nir_cf_node_as_loop(nir_cf_node_prev(&next->cf_node));
-
-         /* insert fake link */
-         nir_cf_node *last = nir_loop_last_cf_node(loop);
-         assert(last->type == nir_cf_node_block);
-         nir_block *last_block = nir_cf_node_as_block(last);
-
-         last_block->successors[1] = next;
-         block_add_pred(next, last_block);
-      }
-   }
-
    unlink_block_successors(block);
    if (add_normal_successors)
       block_add_normal_succs(block);
+
+   /* If we've just removed a break, and the block we were jumping to (after
+    * the loop) now has zero predecessors, we've created a new infinite loop.
+    *
+    * NIR doesn't allow blocks (other than the start block) to have zero
+    * predecessors.  In particular, dominance assumes all blocks are reachable.
+    * So, we insert a "fake link" by making successors[1] point after the loop.
+    *
+    * Note that we have to do this after unlinking/recreating the block's
+    * successors.  If we removed a "break" at the end of the loop, then
+    * block == last_block, so block->successors[0] would already be "next",
+    * and adding a fake link would create two identical successors.  Doing
+    * this afterward works, as we'll have changed block->successors[0] to
+    * be the top of the loop.
+    */
+   if (type == nir_jump_break && next->predecessors->entries == 0) {
+      nir_loop *loop =
+         nir_cf_node_as_loop(nir_cf_node_prev(&next->cf_node));
+
+      /* insert fake link */
+      nir_cf_node *last = nir_loop_last_cf_node(loop);
+      assert(last->type == nir_cf_node_block);
+      nir_block *last_block = nir_cf_node_as_block(last);
+
+      last_block->successors[1] = next;
+      block_add_pred(next, last_block);
+   }
 }
 
 void
