@@ -173,6 +173,24 @@ nir_##op(nir_builder *build, nir_ssa_def *src0,                           \
 
 #include "nir_builder_opcodes.h"
 
+static inline nir_ssa_def *
+nir_vec(nir_builder *build, nir_ssa_def **comp, unsigned num_components)
+{
+   switch (num_components) {
+   case 4:
+      return nir_vec4(build, comp[0], comp[1], comp[2], comp[3]);
+   case 3:
+      return nir_vec3(build, comp[0], comp[1], comp[2]);
+   case 2:
+      return nir_vec2(build, comp[0], comp[1]);
+   case 1:
+      return comp[0];
+   default:
+      unreachable("bad component count");
+      return NULL;
+   }
+}
+
 /**
  * Similar to nir_fmov, but takes a nir_alu_src instead of a nir_ssa_def.
  */

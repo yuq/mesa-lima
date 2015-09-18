@@ -205,23 +205,7 @@ saturate_src(nir_builder *b, nir_tex_instr *tex, unsigned sat_mask)
       }
 
       /* and move the result back into a single vecN: */
-      switch (tex->coord_components) {
-      case 4:
-         src = nir_vec4(b, comp[0], comp[1], comp[2], comp[3]);
-         break;
-      case 3:
-         src = nir_vec3(b, comp[0], comp[1], comp[2]);
-         break;
-      case 2:
-         src = nir_vec2(b, comp[0], comp[1]);
-         break;
-      case 1:
-         src = comp[0];
-         break;
-      default:
-         unreachable("bad texture coord count");
-         break;
-      }
+      src = nir_vec(b, comp, tex->coord_components);
 
       nir_instr_rewrite_src(&tex->instr,
                             &tex->src[i].src,
