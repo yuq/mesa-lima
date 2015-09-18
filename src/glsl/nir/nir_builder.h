@@ -217,7 +217,7 @@ nir_swizzle(nir_builder *build, nir_ssa_def *src, unsigned swiz[4],
 }
 
 static inline nir_ssa_def *
-nir_channel(nir_builder *b, nir_ssa_def *def, int c)
+nir_channel(nir_builder *b, nir_ssa_def *def, unsigned c)
 {
    unsigned swizzle[4] = {c, c, c, c};
    return nir_swizzle(b, def, swizzle, 1, false);
