@@ -58,25 +58,24 @@ vec4_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
       unreachable("should be lowered by lower_vertex_id().");
 
    case nir_intrinsic_load_vertex_id_zero_base:
-      reg = &this->nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
+      reg = &nir_system_values[SYSTEM_VALUE_VERTEX_ID_ZERO_BASE];
       if (reg->file == BAD_FILE)
-         *reg =
-            *this->make_reg_for_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
-                                             glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
+                                           glsl_type::int_type);
       break;
 
    case nir_intrinsic_load_base_vertex:
-      reg = &this->nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
+      reg = &nir_system_values[SYSTEM_VALUE_BASE_VERTEX];
       if (reg->file == BAD_FILE)
-         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_BASE_VERTEX,
-                                                 glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_BASE_VERTEX,
+                                           glsl_type::int_type);
       break;
 
    case nir_intrinsic_load_instance_id:
-      reg = &this->nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
+      reg = &nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
       if (reg->file == BAD_FILE)
-         *reg = *this->make_reg_for_system_value(SYSTEM_VALUE_INSTANCE_ID,
-                                                 glsl_type::int_type);
+         *reg = *make_reg_for_system_value(SYSTEM_VALUE_INSTANCE_ID,
+                                           glsl_type::int_type);
       break;
 
    default:
@@ -142,7 +141,7 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
          }
 
          assert(uniforms < uniform_array_size);
-         this->uniform_size[uniforms] = type_size_vec4(var->type);
+         uniform_size[uniforms] = type_size_vec4(var->type);
 
          if (strncmp(var->name, "gl_", 3) == 0)
             nir_setup_builtin_uniform(var);
@@ -158,7 +157,7 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
              strcmp(var->name, "parameters") == 0);
 
       assert(uniforms < uniform_array_size);
-      this->uniform_size[uniforms] = type_size_vec4(var->type);
+      uniform_size[uniforms] = type_size_vec4(var->type);
 
       struct gl_program_parameter_list *plist = prog->Parameters;
       for (unsigned p = 0; p < plist->NumParameters; p++) {
@@ -243,10 +242,10 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
        * ParameterValues directly, since unlike brw_fs.cpp, we never
        * add new state references during compile.
        */
-      int index = _mesa_add_state_reference(this->prog->Parameters,
+      int index = _mesa_add_state_reference(prog->Parameters,
 					    (gl_state_index *)slots[i].tokens);
       gl_constant_value *values =
-         &this->prog->Parameters->ParameterValues[index][0];
+         &prog->Parameters->ParameterValues[index][0];
 
       assert(uniforms < uniform_array_size);
 
@@ -254,7 +253,7 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
          stage_prog_data->param[uniforms * 4 + j] =
             &values[GET_SWZ(slots[i].swizzle, j)];
 
-      this->uniform_vector_size[uniforms] =
+      uniform_vector_size[uniforms] =
          (var->type->is_scalar() || var->type->is_vector() ||
           var->type->is_matrix() ? var->type->vector_elements : 4);
 
@@ -344,7 +343,7 @@ vec4_visitor::nir_emit_block(nir_block *block)
 void
 vec4_visitor::nir_emit_instr(nir_instr *instr)
 {
-   this->base_ir = instr;
+   base_ir = instr;
 
    switch (instr->type) {
    case nir_instr_type_load_const:
