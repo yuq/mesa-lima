@@ -85,8 +85,8 @@ static void TAG(render_points_verts)(struct gl_context *ctx,
          currentsz = dmasz;
       }
    } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
+      unreachable("Cannot draw primitive; validate_render should have "
+                  "prevented this");
    }
 }
 
@@ -319,8 +319,8 @@ static void TAG(render_poly_verts)(struct gl_context *ctx,
    } else if (ctx->Light.ShadeModel == GL_SMOOTH) {
       TAG(render_tri_fan_verts)( ctx, start, count, flags );
    } else {
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
+      unreachable("Cannot draw primitive; validate_render should have "
+                  "prevented this");
    }
 }
 
@@ -331,14 +331,8 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
 {
    GLuint j, nr;
 
-   if (ctx->Light.ShadeModel == GL_FLAT &&
-       TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
-      /* Vertices won't fit in a single buffer or elts not available - should
-       * never happen.
-       */
-      fprintf(stderr, "%s - cannot draw primitive\n", __func__);
-      return;
-   } else {
+   if (ctx->Light.ShadeModel != GL_FLAT ||
+       !TNL_CONTEXT(ctx)->vb.AttribPtr[_TNL_ATTRIB_COLOR0]->stride) {
       LOCAL_VARS;
       const unsigned dmasz = GET_SUBSEQUENT_VB_MAX_VERTS() & ~1;
       unsigned currentsz;
@@ -364,6 +358,9 @@ static void TAG(render_quad_strip_verts)(struct gl_context *ctx,
       }
 
       FLUSH();
+   } else {
+      unreachable("Cannot draw primitive; validate_render should have "
+                  "prevented this");
    }
 }
 
