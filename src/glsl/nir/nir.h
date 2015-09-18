@@ -1474,7 +1474,7 @@ typedef struct nir_shader {
    /** list of global variables in the shader (nir_variable) */
    struct exec_list globals;
 
-   /** list of system value variables in the shade (nir_variable) */
+   /** list of system value variables in the shader (nir_variable) */
    struct exec_list system_values;
 
    struct exec_list functions; /** < list of nir_function */
