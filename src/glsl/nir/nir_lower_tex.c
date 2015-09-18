@@ -29,6 +29,10 @@
  *     asking the texture operation to do so.
  *   + lowering RECT: converts the un-normalized RECT texture coordinates
  *     to normalized coordinates with txs plus ALU instructions
+ *   + saturate s/t/r coords: to emulate certain texture clamp/wrap modes,
+ *     inserts instructions to clamp specified coordinates to [0.0, 1.0].
+ *     Note that this automatically triggers texture projector lowering if
+ *     needed, since clamping must happen after projector lowering.
  */
 
 #include "nir.h"
@@ -161,6 +165,70 @@ lower_rect(nir_builder *b, nir_tex_instr *tex)
    tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
 }
 
+static void
+saturate_src(nir_builder *b, nir_tex_instr *tex, unsigned sat_mask)
+{
+   b->cursor = nir_before_instr(&tex->instr);
+
+   /* Walk through the sources saturating the requested arguments. */
+   for (unsigned i = 0; i < tex->num_srcs; i++) {
+      if (tex->src[i].src_type != nir_tex_src_coord)
+         continue;
+
+      nir_ssa_def *src =
+         nir_ssa_for_src(b, tex->src[i].src, tex->coord_components);
+
+      /* split src into components: */
+      nir_ssa_def *comp[4];
+
+      for (unsigned j = 0; j < tex->coord_components; j++)
+         comp[j] = nir_channel(b, src, j);
+
+      /* clamp requested components, array index does not get clamped: */
+      unsigned ncomp = tex->coord_components;
+      if (tex->is_array)
+         ncomp--;
+
+      for (unsigned j = 0; j < ncomp; j++) {
+         if ((1 << j) & sat_mask) {
+            if (tex->sampler_dim == GLSL_SAMPLER_DIM_RECT) {
+               /* non-normalized texture coords, so clamp to texture
+                * size rather than [0.0, 1.0]
+                */
+               nir_ssa_def *txs = get_texture_size(b, tex);
+               comp[j] = nir_fmax(b, comp[j], nir_imm_float(b, 0.0));
+               comp[j] = nir_fmin(b, comp[j], nir_channel(b, txs, j));
+            } else {
+               comp[j] = nir_fsat(b, comp[j]);
+            }
+         }
+      }
+
+      /* and move the result back into a single vecN: */
+      switch (tex->coord_components) {
+      case 4:
+         src = nir_vec4(b, comp[0], comp[1], comp[2], comp[3]);
+         break;
+      case 3:
+         src = nir_vec3(b, comp[0], comp[1], comp[2]);
+         break;
+      case 2:
+         src = nir_vec2(b, comp[0], comp[1]);
+         break;
+      case 1:
+         src = comp[0];
+         break;
+      default:
+         unreachable("bad texture coord count");
+         break;
+      }
+
+      nir_instr_rewrite_src(&tex->instr,
+                            &tex->src[i].src,
+                            nir_src_for_ssa(src));
+   }
+}
+
 static bool
 nir_lower_tex_block(nir_block *block, void *void_state)
 {
@@ -174,12 +242,28 @@ nir_lower_tex_block(nir_block *block, void *void_state)
       nir_tex_instr *tex = nir_instr_as_tex(instr);
       bool lower_txp = !!(state->options->lower_txp & (1 << tex->sampler_dim));
 
-      if (lower_txp)
+      /* mask of src coords to saturate (clamp): */
+      unsigned sat_mask = 0;
+
+      if ((1 << tex->sampler_index) & state->options->saturate_r)
+         sat_mask |= (1 << 2);    /* .z */
+      if ((1 << tex->sampler_index) & state->options->saturate_t)
+         sat_mask |= (1 << 1);    /* .y */
+      if ((1 << tex->sampler_index) & state->options->saturate_s)
+         sat_mask |= (1 << 0);    /* .x */
+
+      /* If we are clamping any coords, we must lower projector first
+       * as clamping happens *after* projection:
+       */
+      if (lower_txp || sat_mask)
          project_src(b, tex);
 
       if ((tex->sampler_dim == GLSL_SAMPLER_DIM_RECT) &&
           state->options->lower_rect)
          lower_rect(b, tex);
+
+      if (sat_mask)
+         saturate_src(b, tex, sat_mask);
    }
 
    return true;

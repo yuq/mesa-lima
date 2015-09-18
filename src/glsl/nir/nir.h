@@ -1850,6 +1850,24 @@ typedef struct nir_lower_tex_options {
     * texture dims to normalize.
     */
    bool lower_rect;
+
+   /**
+    * To emulate certain texture wrap modes, this can be used
+    * to saturate the specified tex coord to [0.0, 1.0].  The
+    * bits are according to sampler #, ie. if, for example:
+    *
+    *   (conf->saturate_s & (1 << n))
+    *
+    * is true, then the s coord for sampler n is saturated.
+    *
+    * Note that clamping must happen *after* projector lowering
+    * so any projected texture sample instruction with a clamped
+    * coordinate gets automatically lowered, regardless of the
+    * 'lower_txp' setting.
+    */
+   unsigned saturate_s;
+   unsigned saturate_t;
+   unsigned saturate_r;
 } nir_lower_tex_options;
 
 void nir_lower_tex(nir_shader *shader,
