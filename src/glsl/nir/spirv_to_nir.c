@@ -760,7 +760,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       var->data.read_only = true;
       break;
    case SpvDecorationLocation:
-      var->data.explicit_location = true;
       var->data.location = dec->literals[0];
       break;
    case SpvDecorationComponent:
@@ -781,6 +780,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       nir_variable_mode mode;
       vtn_get_builtin_location(dec->literals[0], &var->data.location,
                                &mode);
+      var->data.explicit_location = true;
       var->data.mode = mode;
       if (mode == nir_var_shader_in || mode == nir_var_system_value)
          var->data.read_only = true;
@@ -830,6 +830,7 @@ get_builtin_variable(struct vtn_builder *b,
 
       nir_variable_mode mode;
       vtn_get_builtin_location(builtin, &var->data.location, &mode);
+      var->data.explicit_location = true;
       var->data.mode = mode;
       var->name = ralloc_strdup(var, "builtin");
 
@@ -1282,22 +1283,26 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       val->deref = nir_deref_var_create(b, var);
       val->deref_type = type;
 
-      if (b->execution_model == SpvExecutionModelFragment &&
-          var->data.mode == nir_var_shader_out) {
-         var->data.location += FRAG_RESULT_DATA0;
-      } else if (b->execution_model == SpvExecutionModelVertex &&
-                 var->data.mode == nir_var_shader_in) {
-         var->data.location += VERT_ATTRIB_GENERIC0;
-      } else if (var->data.mode == nir_var_shader_in ||
-                 var->data.mode == nir_var_shader_out) {
-         var->data.location += VARYING_SLOT_VAR0;
-      }
-
-      /* We handle decorations last because decorations might cause us to
-       * over-write other things such as the variable's location and we want
-       * those changes to stick.
+      /* We handle decorations first because decorations might give us
+       * location information.  We use the data.explicit_location field to
+       * note that the location provided is the "final" location.  If
+       * data.explicit_location == false, this means that it's relative to
+       * whatever the base location is.
        */
       vtn_foreach_decoration(b, val, var_decoration_cb, var);
+
+      if (!var->data.explicit_location) {
+         if (b->execution_model == SpvExecutionModelFragment &&
+             var->data.mode == nir_var_shader_out) {
+            var->data.location += FRAG_RESULT_DATA0;
+         } else if (b->execution_model == SpvExecutionModelVertex &&
+                    var->data.mode == nir_var_shader_in) {
+            var->data.location += VERT_ATTRIB_GENERIC0;
+         } else if (var->data.mode == nir_var_shader_in ||
+                    var->data.mode == nir_var_shader_out) {
+            var->data.location += VARYING_SLOT_VAR0;
+         }
+      }
 
       /* If this was a uniform block, then we're not going to actually use the
        * variable (we're only going to use it to compute offsets), so don't
