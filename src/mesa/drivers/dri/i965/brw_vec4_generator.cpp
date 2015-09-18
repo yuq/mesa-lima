@@ -1134,6 +1134,8 @@ vec4_generator::generate_code(const cfg_t *cfg)
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
 
+      assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
+
       unsigned pre_emit_nr_insn = p->nr_insn;
 
       if (dst.width == BRW_WIDTH_4) {

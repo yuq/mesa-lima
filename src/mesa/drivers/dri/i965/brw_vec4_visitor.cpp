@@ -3318,9 +3318,10 @@ vec4_visitor::emit_vertex()
                        prog_data->vue_map.slot_to_varying[slot]);
 
          /* If this was max_usable_mrf, we can't fit anything more into this
-          * URB WRITE.
+          * URB WRITE. Same thing if we reached the maximum length available.
           */
-         if (mrf > max_usable_mrf) {
+         if (mrf > max_usable_mrf ||
+             align_interleaved_urb_mlen(devinfo, mrf - base_mrf + 1) > BRW_MAX_MSG_LENGTH) {
             slot++;
             break;
          }

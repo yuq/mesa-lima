@@ -1558,6 +1558,8 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
+      assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
+
       switch (inst->exec_size) {
       case 1:
       case 2:
