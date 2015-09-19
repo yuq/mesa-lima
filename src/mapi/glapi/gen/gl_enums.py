@@ -55,7 +55,7 @@ class PrintGlEnums(gl_XML.gl_print_base):
         print '#include "main/mtypes.h"'
         print ''
         print 'typedef struct PACKED {'
-        print '   uint16_t offset;'
+        print '   uint32_t offset;'
         print '   int n;'
         print '} enum_elt;'
         print ''
@@ -86,8 +86,6 @@ static char token_tmp[20];
 const char *_mesa_enum_to_string( int nr )
 {
    enum_elt *elt;
-
-   STATIC_ASSERT(sizeof(enum_string_table) < (1 << 16));
 
    elt = bsearch(& nr, enum_string_table_offsets,
                  ARRAY_SIZE(enum_string_table_offsets),
