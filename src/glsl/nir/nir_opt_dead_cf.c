@@ -203,6 +203,10 @@ loop_is_dead(nir_loop *loop)
                                      NULL))
       return false;
 
+   nir_function_impl *impl = nir_cf_node_get_function(&loop->cf_node);
+   nir_metadata_require(impl, nir_metadata_live_variables |
+                              nir_metadata_dominance);
+
    for (nir_block *cur = after->imm_dom; cur != before; cur = cur->imm_dom) {
       nir_foreach_instr(cur, instr) {
          if (!nir_foreach_ssa_def(instr, def_not_live_out, after))
@@ -332,9 +336,6 @@ dead_cf_list(struct exec_list *list, bool *list_ends_in_jump)
 static bool
 opt_dead_cf_impl(nir_function_impl *impl)
 {
-   nir_metadata_require(impl, nir_metadata_live_variables |
-                              nir_metadata_dominance);
-
    bool dummy;
    bool progress = dead_cf_list(&impl->body, &dummy);
 

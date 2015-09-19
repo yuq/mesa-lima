@@ -756,6 +756,9 @@ nir_cf_extract(nir_cf_list *extracted, nir_cursor begin, nir_cursor end)
    extracted->impl = nir_cf_node_get_function(&block_begin->cf_node);
    exec_list_make_empty(&extracted->list);
 
+   /* Dominance and other block-related information is toast. */
+   nir_metadata_preserve(extracted->impl, nir_metadata_none);
+
    nir_cf_node *cf_node = &block_begin->cf_node;
    nir_cf_node *cf_node_end = &block_end->cf_node;
    while (true) {
