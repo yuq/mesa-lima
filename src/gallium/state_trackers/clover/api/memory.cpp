@@ -218,33 +218,11 @@ CLOVER_API cl_mem
 clCreateImage2D(cl_context d_ctx, cl_mem_flags d_flags,
                 const cl_image_format *format,
                 size_t width, size_t height, size_t row_pitch,
-                void *host_ptr, cl_int *r_errcode) try {
-   const cl_mem_flags flags = validate_flags(NULL, d_flags);
-   auto &ctx = obj(d_ctx);
+                void *host_ptr, cl_int *r_errcode) {
+   const cl_image_desc desc = { CL_MEM_OBJECT_IMAGE2D, width, height, 0, 0,
+                                row_pitch, 0, 0, 0, NULL };
 
-   if (!any_of(std::mem_fn(&device::image_support), ctx.devices()))
-      throw error(CL_INVALID_OPERATION);
-
-   if (!format)
-      throw error(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR);
-
-   if (width < 1 || height < 1)
-      throw error(CL_INVALID_IMAGE_SIZE);
-
-   if (bool(host_ptr) != bool(flags & (CL_MEM_USE_HOST_PTR |
-                                       CL_MEM_COPY_HOST_PTR)))
-      throw error(CL_INVALID_HOST_PTR);
-
-   if (!supported_formats(ctx, CL_MEM_OBJECT_IMAGE2D).count(*format))
-      throw error(CL_IMAGE_FORMAT_NOT_SUPPORTED);
-
-   ret_error(r_errcode, CL_SUCCESS);
-   return new image2d(ctx, flags, format, width, height,
-                      row_pitch, host_ptr);
-
-} catch (error &e) {
-   ret_error(r_errcode, e);
-   return NULL;
+   return clCreateImage(d_ctx, d_flags, format, &desc, host_ptr, r_errcode);
 }
 
 CLOVER_API cl_mem
@@ -252,33 +230,11 @@ clCreateImage3D(cl_context d_ctx, cl_mem_flags d_flags,
                 const cl_image_format *format,
                 size_t width, size_t height, size_t depth,
                 size_t row_pitch, size_t slice_pitch,
-                void *host_ptr, cl_int *r_errcode) try {
-   const cl_mem_flags flags = validate_flags(NULL, d_flags);
-   auto &ctx = obj(d_ctx);
+                void *host_ptr, cl_int *r_errcode) {
+   const cl_image_desc desc = { CL_MEM_OBJECT_IMAGE3D, width, height, depth, 0,
+                                row_pitch, slice_pitch, 0, 0, NULL };
 
-   if (!any_of(std::mem_fn(&device::image_support), ctx.devices()))
-      throw error(CL_INVALID_OPERATION);
-
-   if (!format)
-      throw error(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR);
-
-   if (width < 1 || height < 1 || depth < 2)
-      throw error(CL_INVALID_IMAGE_SIZE);
-
-   if (bool(host_ptr) != bool(flags & (CL_MEM_USE_HOST_PTR |
-                                       CL_MEM_COPY_HOST_PTR)))
-      throw error(CL_INVALID_HOST_PTR);
-
-   if (!supported_formats(ctx, CL_MEM_OBJECT_IMAGE3D).count(*format))
-      throw error(CL_IMAGE_FORMAT_NOT_SUPPORTED);
-
-   ret_error(r_errcode, CL_SUCCESS);
-   return new image3d(ctx, flags, format, width, height, depth,
-                      row_pitch, slice_pitch, host_ptr);
-
-} catch (error &e) {
-   ret_error(r_errcode, e);
-   return NULL;
+   return clCreateImage(d_ctx, d_flags, format, &desc, host_ptr, r_errcode);
 }
 
 CLOVER_API cl_int
