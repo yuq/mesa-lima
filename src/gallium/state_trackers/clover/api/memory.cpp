@@ -124,6 +124,97 @@ clCreateSubBuffer(cl_mem d_mem, cl_mem_flags d_flags,
 }
 
 CLOVER_API cl_mem
+clCreateImage(cl_context d_ctx, cl_mem_flags d_flags,
+              const cl_image_format *format,
+              const cl_image_desc *desc,
+              void *host_ptr, cl_int *r_errcode) try {
+   auto &ctx = obj(d_ctx);
+
+   if (!any_of(std::mem_fn(&device::image_support), ctx.devices()))
+      throw error(CL_INVALID_OPERATION);
+
+   if (!format)
+      throw error(CL_INVALID_IMAGE_FORMAT_DESCRIPTOR);
+
+   if (!desc)
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+
+   if (desc->image_array_size == 0 &&
+       (desc->image_type == CL_MEM_OBJECT_IMAGE1D_ARRAY ||
+        desc->image_type == CL_MEM_OBJECT_IMAGE2D_ARRAY))
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+
+   if (!host_ptr &&
+       (desc->image_row_pitch || desc->image_slice_pitch))
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+
+   if (desc->num_mip_levels || desc->num_samples)
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+
+   if (bool(desc->buffer) != (desc->image_type == CL_MEM_OBJECT_IMAGE1D_BUFFER))
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+
+   if (bool(host_ptr) != bool(d_flags & (CL_MEM_USE_HOST_PTR |
+                                         CL_MEM_COPY_HOST_PTR)))
+      throw error(CL_INVALID_HOST_PTR);
+
+   const cl_mem_flags flags = validate_flags(desc->buffer, d_flags);
+
+   if (!supported_formats(ctx, desc->image_type).count(*format))
+      throw error(CL_IMAGE_FORMAT_NOT_SUPPORTED);
+
+   ret_error(r_errcode, CL_SUCCESS);
+
+   switch (desc->image_type) {
+   case CL_MEM_OBJECT_IMAGE2D:
+      if (!desc->image_width || !desc->image_height)
+         throw error(CL_INVALID_IMAGE_SIZE);
+
+      if (all_of([=](const device &dev) {
+               const size_t max = 1 << dev.max_image_levels_2d();
+               return (desc->image_width > max ||
+                       desc->image_height > max);
+            }, ctx.devices()))
+         throw error(CL_INVALID_IMAGE_SIZE);
+
+      return new image2d(ctx, flags, format,
+                         desc->image_width, desc->image_height,
+                         desc->image_row_pitch, host_ptr);
+
+   case CL_MEM_OBJECT_IMAGE3D:
+      if (!desc->image_width || !desc->image_height || !desc->image_depth)
+         throw error(CL_INVALID_IMAGE_SIZE);
+
+      if (all_of([=](const device &dev) {
+               const size_t max = 1 << dev.max_image_levels_3d();
+               return (desc->image_width > max ||
+                       desc->image_height > max ||
+                       desc->image_depth > max);
+            }, ctx.devices()))
+         throw error(CL_INVALID_IMAGE_SIZE);
+
+      return new image3d(ctx, flags, format,
+                         desc->image_width, desc->image_height,
+                         desc->image_depth, desc->image_row_pitch,
+                         desc->image_slice_pitch, host_ptr);
+
+   case CL_MEM_OBJECT_IMAGE1D:
+   case CL_MEM_OBJECT_IMAGE1D_ARRAY:
+   case CL_MEM_OBJECT_IMAGE1D_BUFFER:
+   case CL_MEM_OBJECT_IMAGE2D_ARRAY:
+      // XXX - Not implemented.
+      throw error(CL_IMAGE_FORMAT_NOT_SUPPORTED);
+
+   default:
+      throw error(CL_INVALID_IMAGE_DESCRIPTOR);
+   }
+
+} catch (error &e) {
+   ret_error(r_errcode, e);
+   return NULL;
+}
+
+CLOVER_API cl_mem
 clCreateImage2D(cl_context d_ctx, cl_mem_flags d_flags,
                 const cl_image_format *format,
                 size_t width, size_t height, size_t row_pitch,
@@ -351,16 +442,6 @@ clSetMemObjectDestructorCallback(cl_mem d_mem,
 
 } catch (error &e) {
    return e.get();
-}
-
-CLOVER_API cl_mem
-clCreateImage(cl_context d_ctx, cl_mem_flags flags,
-              const cl_image_format *format,
-              const cl_image_desc *image_desc,
-              void *host_ptr, cl_int *r_errcode) {
-   CLOVER_NOT_SUPPORTED_UNTIL("1.2");
-   ret_error(r_errcode, CL_INVALID_OPERATION);
-   return NULL;
 }
 
 CLOVER_API cl_int
