@@ -68,10 +68,9 @@ const struct enum_info everything[] = {
    { 0x8062, "GL_REPLACE_EXT" },
 
    /* An extension that made it from vendor to _EXT, but we never expect to
-    * see go farther.  Disabled for the moment since Mesa doesn't have the XML
-    * for it yet.
+    * see go farther.
     */
-   /* { 0x80a1, "GL_1PASS_EXT" }, */
+   { 0x80a1, "GL_1PASS_EXT" },
 
    /* A vendor-only extension that we never expect to see show up in
     * EXT/ARB/core.
