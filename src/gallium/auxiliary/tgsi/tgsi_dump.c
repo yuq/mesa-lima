@@ -359,6 +359,11 @@ iter_declaration(
          TXT(", RAW");
    }
 
+   if (decl->Declaration.File == TGSI_FILE_BUFFER) {
+      if (decl->Declaration.Atomic)
+         TXT(", ATOMIC");
+   }
+
    if (decl->Declaration.File == TGSI_FILE_SAMPLER_VIEW) {
       TXT(", ");
       ENM(decl->SamplerView.Resource, tgsi_texture_names);

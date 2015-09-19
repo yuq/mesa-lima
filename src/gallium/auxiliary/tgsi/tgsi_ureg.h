@@ -334,6 +334,9 @@ ureg_DECL_image(struct ureg_program *ureg,
                 boolean wr,
                 boolean raw);
 
+struct ureg_src
+ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr, bool atomic);
+
 static inline struct ureg_src
 ureg_imm4f( struct ureg_program *ureg,
                        float a, float b,

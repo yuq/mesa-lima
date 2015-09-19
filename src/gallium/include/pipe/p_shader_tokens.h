@@ -78,6 +78,7 @@ enum tgsi_file_type {
    TGSI_FILE_SYSTEM_VALUE        =9,
    TGSI_FILE_IMAGE               =10,
    TGSI_FILE_SAMPLER_VIEW        =11,
+   TGSI_FILE_BUFFER              =12,
    TGSI_FILE_COUNT      /**< how many TGSI_FILE_ types */
 };
 
@@ -127,7 +128,8 @@ struct tgsi_declaration
    unsigned Invariant   : 1;  /**< invariant optimization? */
    unsigned Local       : 1;  /**< optimize as subroutine local variable? */
    unsigned Array       : 1;  /**< extra array info? */
-   unsigned Padding     : 6;
+   unsigned Atomic      : 1;  /**< atomic only? for TGSI_FILE_BUFFER */
+   unsigned Padding     : 5;
 };
 
 struct tgsi_declaration_range

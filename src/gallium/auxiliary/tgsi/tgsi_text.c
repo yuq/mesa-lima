@@ -1350,6 +1350,11 @@ static boolean parse_declaration( struct translate_ctx *ctx )
                decl.SamplerView.ReturnTypeX;
          }
          ctx->cur = cur;
+      } else if (file == TGSI_FILE_BUFFER) {
+         if (str_match_nocase_whole(&cur, "ATOMIC")) {
+            decl.Declaration.Atomic = 1;
+            ctx->cur = cur;
+         }
       } else {
          if (str_match_nocase_whole(&cur, "LOCAL")) {
             decl.Declaration.Local = 1;

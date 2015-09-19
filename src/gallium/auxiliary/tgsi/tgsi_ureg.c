@@ -164,6 +164,12 @@ struct ureg_program
    } image[PIPE_MAX_SHADER_IMAGES];
    unsigned nr_images;
 
+   struct {
+      unsigned index;
+      bool atomic;
+   } buffer[PIPE_MAX_SHADER_BUFFERS];
+   unsigned nr_buffers;
+
    struct util_bitmask *free_temps;
    struct util_bitmask *local_temps;
    struct util_bitmask *decl_temps;
@@ -690,6 +696,29 @@ ureg_DECL_image(struct ureg_program *ureg,
       ureg->image[i].raw = raw;
       ureg->image[i].format = format;
       ureg->nr_images++;
+      return reg;
+   }
+
+   assert(0);
+   return reg;
+}
+
+/* Allocate a new buffer.
+ */
+struct ureg_src ureg_DECL_buffer(struct ureg_program *ureg, unsigned nr,
+                                 bool atomic)
+{
+   struct ureg_src reg = ureg_src_register(TGSI_FILE_BUFFER, nr);
+   unsigned i;
+
+   for (i = 0; i < ureg->nr_buffers; i++)
+      if (ureg->buffer[i].index == nr)
+         return reg;
+
+   if (i < PIPE_MAX_SHADER_BUFFERS) {
+      ureg->buffer[i].index = nr;
+      ureg->buffer[i].atomic = atomic;
+      ureg->nr_buffers++;
       return reg;
    }
 
@@ -1554,6 +1583,25 @@ emit_decl_image(struct ureg_program *ureg,
 }
 
 static void
+emit_decl_buffer(struct ureg_program *ureg,
+                 unsigned index,
+                 bool atomic)
+{
+   union tgsi_any_token *out = get_tokens(ureg, DOMAIN_DECL, 2);
+
+   out[0].value = 0;
+   out[0].decl.Type = TGSI_TOKEN_TYPE_DECLARATION;
+   out[0].decl.NrTokens = 2;
+   out[0].decl.File = TGSI_FILE_BUFFER;
+   out[0].decl.UsageMask = 0xf;
+   out[0].decl.Atomic = atomic;
+
+   out[1].value = 0;
+   out[1].decl_range.First = index;
+   out[1].decl_range.Last = index;
+}
+
+static void
 emit_immediate( struct ureg_program *ureg,
                 const unsigned *v,
                 unsigned type )
@@ -1719,6 +1767,10 @@ static void emit_decls( struct ureg_program *ureg )
                       ureg->image[i].format,
                       ureg->image[i].wr,
                       ureg->image[i].raw);
+   }
+
+   for (i = 0; i < ureg->nr_buffers; i++) {
+      emit_decl_buffer(ureg, ureg->buffer[i].index, ureg->buffer[i].atomic);
    }
 
    if (ureg->const_decls.nr_constant_ranges) {
