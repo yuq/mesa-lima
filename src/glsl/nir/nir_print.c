@@ -296,7 +296,7 @@ print_var_decl(nir_variable *var, print_state *state)
 
    fprintf(fp, "\n");
 
-   if (state) {
+   if (state->syms) {
       _mesa_set_add(state->syms, name);
       _mesa_hash_table_insert(state->ht, var, name);
    }
