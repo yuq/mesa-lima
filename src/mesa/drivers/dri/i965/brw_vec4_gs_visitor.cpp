@@ -207,15 +207,6 @@ vec4_gs_visitor::emit_prolog()
    this->current_annotation = NULL;
 }
 
-
-void
-vec4_gs_visitor::emit_program_code()
-{
-   /* We don't support NV_geometry_program4. */
-   unreachable("Unreached");
-}
-
-
 void
 vec4_gs_visitor::emit_thread_end()
 {

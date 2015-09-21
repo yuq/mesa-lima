@@ -72,11 +72,6 @@ protected:
       unreachable("Not reached");
    }
 
-   virtual void emit_program_code()
-   {
-      unreachable("Not reached");
-   }
-
    virtual void emit_thread_end()
    {
       unreachable("Not reached");

@@ -383,7 +383,6 @@ protected:
    virtual void assign_binding_table_offsets();
    virtual void setup_payload() = 0;
    virtual void emit_prolog() = 0;
-   virtual void emit_program_code() = 0;
    virtual void emit_thread_end() = 0;
    virtual void emit_urb_write_header(int mrf) = 0;
    virtual vec4_instruction *emit_urb_write_opcode(bool complete) = 0;
