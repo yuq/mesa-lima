@@ -310,7 +310,7 @@ anv_block_pool_size(struct anv_block_pool *pool)
 }
 
 struct anv_state {
-   uint32_t offset;
+   int32_t offset;
    uint32_t alloc_size;
    void *map;
 };
