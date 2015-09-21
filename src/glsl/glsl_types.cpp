@@ -1351,7 +1351,7 @@ glsl_type::std140_size(bool row_major) const
     *     rounded up to the next multiple of the base alignment of the
     *     structure.
     */
-   if (this->is_record()) {
+   if (this->is_record() || this->is_interface()) {
       unsigned size = 0;
       unsigned max_align = 0;
 
@@ -1367,6 +1367,11 @@ glsl_type::std140_size(bool row_major) const
 
          const struct glsl_type *field_type = this->fields.structure[i].type;
          unsigned align = field_type->std140_base_alignment(field_row_major);
+
+         /* Ignore unsized arrays when calculating size */
+         if (field_type->is_unsized_array())
+            continue;
+
          size = glsl_align(size, align);
          size += field_type->std140_size(field_row_major);
 
