@@ -76,21 +76,36 @@ nir_build_imm(nir_builder *build, unsigned num_components, nir_const_value value
 static inline nir_ssa_def *
 nir_imm_float(nir_builder *build, float x)
 {
-   nir_const_value v = { { .f = {x, 0, 0, 0} } };
+   nir_const_value v;
+
+   memset(&v, 0, sizeof(v));
+   v.f[0] = x;
+
    return nir_build_imm(build, 1, v);
 }
 
 static inline nir_ssa_def *
 nir_imm_vec4(nir_builder *build, float x, float y, float z, float w)
 {
-   nir_const_value v = { { .f = {x, y, z, w} } };
+   nir_const_value v;
+
+   memset(&v, 0, sizeof(v));
+   v.f[0] = x;
+   v.f[1] = y;
+   v.f[2] = z;
+   v.f[3] = w;
+
    return nir_build_imm(build, 4, v);
 }
 
 static inline nir_ssa_def *
 nir_imm_int(nir_builder *build, int x)
 {
-   nir_const_value v = { { .i = {x, 0, 0, 0} } };
+   nir_const_value v;
+
+   memset(&v, 0, sizeof(v));
+   v.i[0] = x;
+
    return nir_build_imm(build, 1, v);
 }
 
