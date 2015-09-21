@@ -115,40 +115,34 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[i].EmitNoNoise = true;
       compiler->glsl_compiler_options[i].EmitNoMainReturn = true;
       compiler->glsl_compiler_options[i].EmitNoIndirectInput = true;
-      compiler->glsl_compiler_options[i].EmitNoIndirectOutput =
-	 (i == MESA_SHADER_FRAGMENT);
-      compiler->glsl_compiler_options[i].EmitNoIndirectTemp =
-	 (i == MESA_SHADER_FRAGMENT);
       compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
       compiler->glsl_compiler_options[i].LowerClipDistance = true;
+
+      bool is_scalar;
+      switch (i) {
+      case MESA_SHADER_FRAGMENT:
+      case MESA_SHADER_COMPUTE:
+         is_scalar = true;
+         break;
+      case MESA_SHADER_VERTEX:
+         is_scalar = compiler->scalar_vs;
+         break;
+      default:
+         is_scalar = false;
+         break;
+      }
+
+      compiler->glsl_compiler_options[i].EmitNoIndirectOutput = is_scalar;
+      compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;
+      compiler->glsl_compiler_options[i].OptimizeForAOS = !is_scalar;
 
       /* !ARB_gpu_shader5 */
       if (devinfo->gen < 7)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
+
+      if (is_scalar || brw_env_var_as_boolean("INTEL_USE_NIR", true))
+         compiler->glsl_compiler_options[i].NirOptions = nir_options;
    }
-
-   compiler->glsl_compiler_options[MESA_SHADER_VERTEX].OptimizeForAOS = true;
-   compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].OptimizeForAOS = true;
-
-   if (compiler->scalar_vs || brw_env_var_as_boolean("INTEL_USE_NIR", true)) {
-      if (compiler->scalar_vs) {
-         /* If we're using the scalar backend for vertex shaders, we need to
-          * configure these accordingly.
-          */
-         compiler->glsl_compiler_options[MESA_SHADER_VERTEX].EmitNoIndirectOutput = true;
-         compiler->glsl_compiler_options[MESA_SHADER_VERTEX].EmitNoIndirectTemp = true;
-         compiler->glsl_compiler_options[MESA_SHADER_VERTEX].OptimizeForAOS = false;
-      }
-
-      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions = nir_options;
-   }
-
-   if (brw_env_var_as_boolean("INTEL_USE_NIR", true)) {
-      compiler->glsl_compiler_options[MESA_SHADER_GEOMETRY].NirOptions = nir_options;
-   }
-
-   compiler->glsl_compiler_options[MESA_SHADER_FRAGMENT].NirOptions = nir_options;
-   compiler->glsl_compiler_options[MESA_SHADER_COMPUTE].NirOptions = nir_options;
 
    return compiler;
 }
