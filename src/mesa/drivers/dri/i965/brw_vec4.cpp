@@ -1786,9 +1786,6 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 bool
 vec4_visitor::run()
 {
-   bool use_vec4_nir =
-      compiler->glsl_compiler_options[stage].NirOptions != NULL;
-
    sanity_param_count = prog->Parameters->NumParameters;
 
    if (shader_time_index >= 0)
@@ -1798,19 +1795,10 @@ vec4_visitor::run()
 
    emit_prolog();
 
-   if (use_vec4_nir) {
-      assert(prog->nir != NULL);
-      emit_nir_code();
-      if (failed)
-         return false;
-   } else if (shader) {
-      /* Generate VS IR for main().  (the visitor only descends into
-       * functions called "main").
-       */
-      visit_instructions(shader->base.ir);
-   } else {
-      emit_program_code();
-   }
+   assert(prog->nir != NULL);
+   emit_nir_code();
+   if (failed)
+      return false;
    base_ir = NULL;
 
    emit_thread_end();
@@ -1823,18 +1811,9 @@ vec4_visitor::run()
     * that we have reladdr computations available for CSE, since we'll
     * often do repeated subexpressions for those.
     */
-   if (shader || use_vec4_nir) {
-      move_grf_array_access_to_scratch();
-      move_uniform_array_access_to_pull_constants();
-   } else {
-      /* The ARB_vertex_program frontend emits pull constant loads directly
-       * rather than using reladdr, so we don't need to walk through all the
-       * instructions looking for things to move.  There isn't anything.
-       *
-       * We do still need to split things to vec4 size.
-       */
-      split_uniform_registers();
-   }
+   move_grf_array_access_to_scratch();
+   move_uniform_array_access_to_pull_constants();
+
    pack_uniform_registers();
    move_push_constants_to_pull_constants();
    split_virtual_grfs();
@@ -1974,9 +1953,7 @@ brw_vs_emit(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &shader->base, &vp->Base);
 
-   if (!vp->Base.nir &&
-       (brw->intelScreen->compiler->scalar_vs ||
-        brw->intelScreen->compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions != NULL)) {
+   if (!vp->Base.nir) {
       /* Normally we generate NIR in LinkShader() or
        * ProgramStringNotify(), but Mesa's fixed-function vertex program
        * handling doesn't notify the driver at all.  Just do it here, at

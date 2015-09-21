@@ -142,8 +142,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       if (devinfo->gen < 7)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
-      if (is_scalar || brw_env_var_as_boolean("INTEL_USE_NIR", true))
-         compiler->glsl_compiler_options[i].NirOptions = nir_options;
+      compiler->glsl_compiler_options[i].NirOptions = nir_options;
    }
 
    return compiler;
@@ -271,8 +270,6 @@ process_glsl_ir(gl_shader_stage stage,
    brw_lower_texture_gradients(brw, shader->ir);
    do_vec_index_to_cond_assign(shader->ir);
    lower_vector_insert(shader->ir, true);
-   if (options->NirOptions == NULL)
-      brw_do_cubemap_normalize(shader->ir);
    lower_offset_arrays(shader->ir);
    brw_do_lower_unnormalized_offset(shader->ir);
    lower_noise(shader->ir);
@@ -341,9 +338,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_shader *shader = shProg->_LinkedShaders[stage];
-      const struct gl_shader_compiler_options *options =
-         &ctx->Const.ShaderCompilerOptions[stage];
-
       if (!shader)
 	 continue;
 
@@ -391,10 +385,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       brw_add_texrect_params(prog);
 
-      if (options->NirOptions) {
-         prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
-                                    is_scalar_shader_stage(compiler, stage));
-      }
+      prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
+                                 is_scalar_shader_stage(compiler, stage));
 
       _mesa_reference_program(ctx, &prog, NULL);
    }
