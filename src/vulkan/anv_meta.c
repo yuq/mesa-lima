@@ -39,9 +39,9 @@ anv_device_init_meta_clear_state(struct anv_device *device)
     * does not dead-code our inputs.
     */
    VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
-      in vec3 a_pos;
-      in vec4 a_color;
-      flat out vec4 v_color;
+      layout(location = 0) in vec3 a_pos;
+      layout(location = 1) in vec4 a_color;
+      layout(location = 0) flat out vec4 v_color;
       void main()
       {
          v_color = a_color;
@@ -50,8 +50,8 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    );
 
    VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      out vec4 f_color;
-      flat in vec4 v_color;
+      layout(location = 0) out vec4 f_color;
+      layout(location = 0) flat in vec4 v_color;
       void main()
       {
          f_color = v_color;
@@ -431,9 +431,9 @@ anv_device_init_meta_blit_state(struct anv_device *device)
     * does not dead-code our inputs.
     */
    VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
-      in vec2 a_pos;
-      in vec2 a_tex_coord;
-      out vec4 v_tex_coord;
+      layout(location = 0) in vec2 a_pos;
+      layout(location = 1) in vec2 a_tex_coord;
+      layout(location = 0) out vec4 v_tex_coord;
       void main()
       {
          v_tex_coord = vec4(a_tex_coord, 0, 1);
@@ -442,8 +442,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    );
 
    VkShaderModule fsm_2d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      out vec4 f_color;
-      in vec4 v_tex_coord;
+      layout(location = 0) out vec4 f_color;
+      layout(location = 0) in vec4 v_tex_coord;
       layout(set = 0, binding = 0) uniform sampler2D u_tex;
       void main()
       {
@@ -452,8 +452,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    );
 
    VkShaderModule fsm_3d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      out vec4 f_color;
-      in vec4 v_tex_coord;
+      layout(location = 0) out vec4 f_color;
+      layout(location = 0) in vec4 v_tex_coord;
       layout(set = 0, binding = 0) uniform sampler3D u_tex;
       void main()
       {
