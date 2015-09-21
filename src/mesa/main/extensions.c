@@ -42,15 +42,6 @@ struct gl_extensions _mesa_extension_override_disables;
 static char *extra_extensions = NULL;
 static char *cant_disable_extensions = NULL;
 
-enum {
-   DISABLE = 0,
-   GLL = 1 << API_OPENGL_COMPAT,       /* GL Legacy / Compatibility */
-   GLC = 1 << API_OPENGL_CORE,  /* GL Core */
-   GL  = (1 << API_OPENGL_COMPAT) | (1 << API_OPENGL_CORE),
-   ES1 = 1 << API_OPENGLES,
-   ES2 = 1 << API_OPENGLES2,
-};
-
 /**
  * \brief An element of the \c extension_table.
  */
@@ -60,9 +51,6 @@ struct extension {
 
    /** Offset (in bytes) of the corresponding member in struct gl_extensions. */
    size_t offset;
-
-   /** Set of API's in which the extension exists, as a bitset. */
-   uint8_t api_set;
 
    /** Minimum version the extension requires for the given API
     * (see gl_api defined in mtypes.h). The value is equal to:
@@ -87,8 +75,8 @@ struct extension {
  * \brief Table of supported OpenGL extensions for all API's.
  */
 static const struct extension extension_table[] = {
-#define EXT(name_str, driver_cap, api_flags, gll_ver, glc_ver, gles_ver, gles2_ver, yyyy) \
-        { .name = "GL_" #name_str, .offset = o(driver_cap), .api_set = api_flags, \
+#define EXT(name_str, driver_cap, gll_ver, glc_ver, gles_ver, gles2_ver, yyyy) \
+        { .name = "GL_" #name_str, .offset = o(driver_cap), \
           .version = { \
             [API_OPENGL_COMPAT] = gll_ver, \
             [API_OPENGL_CORE]   = glc_ver, \
@@ -434,11 +422,8 @@ _mesa_extension_supported(const struct gl_context *ctx, extension_index i)
 {
    const bool *base = (bool *) &ctx->Extensions;
    const struct extension *ext = extension_table + i;
-   const uint8_t api_bit = 1 << ctx->API;
 
-   return (ext->api_set & api_bit) &&
-          (ctx->Version >= ext->version[ctx->API]) &&
-          base[ext->offset];
+   return (ctx->Version >= ext->version[ctx->API]) && base[ext->offset];
 }
 
 /**
