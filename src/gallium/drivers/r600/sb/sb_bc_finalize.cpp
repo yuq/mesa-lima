@@ -303,7 +303,8 @@ void bc_finalizer::finalize_alu_group(alu_group_node* g, node *prev_node) {
 			assert(fdst.chan() == slot || slot == SLOT_TRANS);
 		}
 
-		n->bc.dst_gpr = fdst.sel();
+		if (!(n->bc.op_ptr->flags & AF_MOVA && ctx.is_cayman()))
+			n->bc.dst_gpr = fdst.sel();
 		n->bc.dst_chan = d ? fdst.chan() : slot < SLOT_TRANS ? slot : 0;
 
 

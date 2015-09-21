@@ -235,7 +235,7 @@ public:
 	void new_group();
 	bool is_empty();
 
-	alu_node* create_ar_load();
+	alu_node* create_ar_load(value *v, chan_select ar_channel);
 
 	void discard_current_group();
 
@@ -265,6 +265,9 @@ public:
 	virtual int run();
 	void run_on(container_node *n);
 	void schedule_bb(bb_node *bb);
+
+	void load_index_register(value *v, unsigned idx);
+	void process_fetch(container_node *c);
 
 	void process_alu(container_node *c);
 	void schedule_alu(container_node *c);

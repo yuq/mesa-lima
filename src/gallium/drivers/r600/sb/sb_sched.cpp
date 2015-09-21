@@ -36,6 +36,7 @@
 #include "sb_shader.h"
 #include "sb_pass.h"
 #include "sb_sched.h"
+#include "eg_sq.h" // V_SQ_CF_INDEX_NONE/0/1
 
 namespace r600_sb {
 
@@ -781,7 +782,14 @@ void post_scheduler::schedule_bb(bb_node* bb) {
 			sblog << "\n";
 		);
 
-		if (n->subtype == NST_ALU_CLAUSE) {
+		// May require emitting ALU ops to load index registers
+		if (n->is_fetch_clause()) {
+			n->remove();
+			process_fetch(static_cast<container_node *>(n));
+			continue;
+		}
+
+		if (n->is_alu_clause()) {
 			n->remove();
 			process_alu(static_cast<container_node*>(n));
 			continue;
@@ -821,6 +829,102 @@ void post_scheduler::init_regmap() {
 		assert(r);
 		regmap[r] = v;
 	}
+}
+
+static alu_node *create_set_idx(shader &sh, unsigned ar_idx) {
+	alu_node *a = sh.create_alu();
+
+	assert(ar_idx == V_SQ_CF_INDEX_0 || ar_idx == V_SQ_CF_INDEX_1);
+	if (ar_idx == V_SQ_CF_INDEX_0)
+		a->bc.set_op(ALU_OP0_SET_CF_IDX0);
+	else
+		a->bc.set_op(ALU_OP0_SET_CF_IDX1);
+	a->bc.slot = SLOT_X;
+	a->dst.resize(1); // Dummy needed for recolor
+
+	PSC_DUMP(
+		sblog << "created IDX load: "
+		dump::dump_op(a);
+		sblog << "\n";
+	);
+
+	return a;
+}
+
+void post_scheduler::load_index_register(value *v, unsigned ar_idx)
+{
+	alu.reset();
+
+	if (!sh.get_ctx().is_cayman()) {
+		// Evergreen has to first load address register, then use CF_SET_IDX0/1
+		alu_group_tracker &rt = alu.grp();
+		alu_node *set_idx = create_set_idx(sh, ar_idx);
+		if (!rt.try_reserve(set_idx)) {
+			sblog << "can't emit SET_CF_IDX";
+			dump::dump_op(set_idx);
+			sblog << "\n";
+		}
+		process_group();
+
+		if (!alu.check_clause_limits()) {
+			// Can't happen since clause only contains MOVA/CF_SET_IDX0/1
+		}
+		alu.emit_group();
+	}
+
+	alu_group_tracker &rt = alu.grp();
+	alu_node *a = alu.create_ar_load(v, ar_idx == V_SQ_CF_INDEX_1 ? SEL_Z : SEL_Y);
+
+	if (!rt.try_reserve(a)) {
+		sblog << "can't emit AR load : ";
+		dump::dump_op(a);
+		sblog << "\n";
+	}
+
+	process_group();
+
+	if (!alu.check_clause_limits()) {
+		// Can't happen since clause only contains MOVA/CF_SET_IDX0/1
+	}
+
+	alu.emit_group();
+	alu.emit_clause(cur_bb);
+}
+
+void post_scheduler::process_fetch(container_node *c) {
+	if (c->empty())
+		return;
+
+	for (node_iterator N, I = c->begin(), E = c->end(); I != E; I = N) {
+		N = I;
+		++N;
+
+		node *n = *I;
+
+		fetch_node *f = static_cast<fetch_node*>(n);
+
+		PSC_DUMP(
+			sblog << "process_tex ";
+			dump::dump_op(n);
+			sblog << "  ";
+		);
+
+		if (f->bc.sampler_index_mode != V_SQ_CF_INDEX_NONE) {
+			// Currently require prior opt passes to use one TEX per indexed op
+			assert(f->parent->count() == 1);
+
+			value *v = f->src.back(); // Last src is index offset
+
+			cur_bb->push_front(c);
+
+			load_index_register(v, f->bc.sampler_index_mode);
+			f->src.pop_back(); // Don't need index value any more
+
+			return;
+		}
+	}
+
+	cur_bb->push_front(c);
 }
 
 void post_scheduler::process_alu(container_node *c) {
@@ -1180,7 +1284,7 @@ void post_scheduler::emit_load_ar() {
 	alu.discard_current_group();
 
 	alu_group_tracker &rt = alu.grp();
-	alu_node *a = alu.create_ar_load();
+	alu_node *a = alu.create_ar_load(alu.current_ar, SEL_X);
 
 	if (!rt.try_reserve(a)) {
 		sblog << "can't emit AR load : ";
@@ -1936,10 +2040,8 @@ bool alu_kcache_tracker::update_kc() {
 	return true;
 }
 
-alu_node* alu_clause_tracker::create_ar_load() {
+alu_node* alu_clause_tracker::create_ar_load(value *v, chan_select ar_channel) {
 	alu_node *a = sh.create_alu();
-
-	// FIXME use MOVA_GPR on R6xx
 
 	if (sh.get_ctx().uses_mova_gpr) {
 		a->bc.set_op(ALU_OP1_MOVA_GPR_INT);
@@ -1948,9 +2050,13 @@ alu_node* alu_clause_tracker::create_ar_load() {
 		a->bc.set_op(ALU_OP1_MOVA_INT);
 		a->bc.slot = SLOT_X;
 	}
+	a->bc.dst_chan = ar_channel;
+	if (ar_channel != SEL_X && sh.get_ctx().is_cayman()) {
+		a->bc.dst_gpr = ar_channel == SEL_Y ? CM_V_SQ_MOVA_DST_CF_IDX0 : CM_V_SQ_MOVA_DST_CF_IDX1;
+	}
 
 	a->dst.resize(1);
-	a->src.push_back(current_ar);
+	a->src.push_back(v);
 
 	PSC_DUMP(
 		sblog << "created AR load: ";
