@@ -1021,6 +1021,28 @@ vec4_visitor::opt_register_coalesce()
 	  inst->src[0].abs || inst->src[0].negate || inst->src[0].reladdr)
 	 continue;
 
+      /* Remove no-op MOVs */
+      if (inst->dst.file == inst->src[0].file &&
+          inst->dst.reg == inst->src[0].reg &&
+          inst->dst.reg_offset == inst->src[0].reg_offset) {
+         bool is_nop_mov = true;
+
+         for (unsigned c = 0; c < 4; c++) {
+            if ((inst->dst.writemask & (1 << c)) == 0)
+               continue;
+
+            if (BRW_GET_SWZ(inst->src[0].swizzle, c) != c) {
+               is_nop_mov = false;
+               break;
+            }
+         }
+
+         if (is_nop_mov) {
+            inst->remove(block);
+            continue;
+         }
+      }
+
       bool to_mrf = (inst->dst.file == MRF);
 
       /* Can't coalesce this GRF if someone else was going to
