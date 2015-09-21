@@ -310,24 +310,6 @@ vec4_gs_visitor::emit_urb_write_opcode(bool complete)
 }
 
 
-int
-vec4_gs_visitor::compute_array_stride(ir_dereference_array *ir)
-{
-   /* Geometry shader inputs are arrays, but they use an unusual array layout:
-    * instead of all array elements for a given geometry shader input being
-    * stored consecutively, all geometry shader inputs are interleaved into
-    * one giant array.  At this stage of compilation, we assume that the
-    * stride of the array is BRW_VARYING_SLOT_COUNT.  Later,
-    * setup_attributes() will remap our accesses to the actual input array.
-    */
-   ir_dereference_variable *deref_var = ir->array->as_dereference_variable();
-   if (deref_var && deref_var->var->data.mode == ir_var_shader_in)
-      return BRW_VARYING_SLOT_COUNT;
-   else
-      return vec4_visitor::compute_array_stride(ir);
-}
-
-
 /**
  * Write out a batch of 32 control data bits from the control_data_bits
  * register to the URB.
@@ -576,27 +558,6 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
 }
 
 void
-vec4_gs_visitor::visit(ir_emit_vertex *ir)
-{
-   /* To ensure that we don't output more vertices than the shader specified
-    * using max_vertices, do the logic inside a conditional of the form "if
-    * (vertex_count < MAX)"
-    */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
-   emit(CMP(dst_null_d(), this->vertex_count,
-            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
-   emit(IF(BRW_PREDICATE_NORMAL));
-
-   gs_emit_vertex(ir->stream_id());
-
-   this->current_annotation = "emit vertex: increment vertex count";
-   emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
-            src_reg(1u)));
-
-   emit(BRW_OPCODE_ENDIF);
-}
-
-void
 vec4_gs_visitor::gs_end_primitive()
 {
    /* We can only do EndPrimitive() functionality when the control data
@@ -645,12 +606,6 @@ vec4_gs_visitor::gs_end_primitive()
     */
    emit(SHL(dst_reg(mask), one, prev_count));
    emit(OR(dst_reg(this->control_data_bits), this->control_data_bits, mask));
-}
-
-void
-vec4_gs_visitor::visit(ir_end_primitive *)
-{
-   gs_end_primitive();
 }
 
 static const unsigned *

@@ -87,9 +87,6 @@ protected:
    virtual void emit_thread_end();
    virtual void emit_urb_write_header(int mrf);
    virtual vec4_instruction *emit_urb_write_opcode(bool complete);
-   virtual int compute_array_stride(ir_dereference_array *ir);
-   virtual void visit(ir_emit_vertex *);
-   virtual void visit(ir_end_primitive *);
    virtual void gs_emit_vertex(int stream_id);
    virtual void gs_end_primitive();
    virtual void nir_emit_intrinsic(nir_intrinsic_instr *instr);

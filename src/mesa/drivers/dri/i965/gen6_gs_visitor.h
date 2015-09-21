@@ -49,8 +49,6 @@ protected:
    virtual void assign_binding_table_offsets();
    virtual void emit_prolog();
    virtual void emit_thread_end();
-   virtual void visit(ir_emit_vertex *);
-   virtual void visit(ir_end_primitive *);
    virtual void gs_emit_vertex(int stream_id);
    virtual void gs_end_primitive();
    virtual void emit_urb_write_header(int mrf);

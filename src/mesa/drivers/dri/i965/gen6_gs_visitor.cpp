@@ -147,27 +147,6 @@ gen6_gs_visitor::emit_prolog()
 }
 
 void
-gen6_gs_visitor::visit(ir_emit_vertex *ir)
-{
-   /* To ensure that we don't output more vertices than the shader specified
-    * using max_vertices, do the logic inside a conditional of the form "if
-    * (vertex_count < MAX)"
-    */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
-   emit(CMP(dst_null_d(), this->vertex_count,
-            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
-   emit(IF(BRW_PREDICATE_NORMAL));
-
-   gs_emit_vertex(ir->stream_id());
-
-   this->current_annotation = "emit vertex: increment vertex count";
-   emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
-            src_reg(1u)));
-
-   emit(BRW_OPCODE_ENDIF);
-}
-
-void
 gen6_gs_visitor::gs_emit_vertex(int stream_id)
 {
    this->current_annotation = "gen6 emit vertex";
@@ -228,12 +207,6 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
    }
    emit(ADD(dst_reg(this->vertex_output_offset),
             this->vertex_output_offset, 1u));
-}
-
-void
-gen6_gs_visitor::visit(ir_end_primitive *)
-{
-   gs_end_primitive();
 }
 
 void
@@ -356,9 +329,7 @@ gen6_gs_visitor::emit_thread_end()
    if (c->gp->program.OutputType != GL_POINTS) {
       emit(CMP(dst_null_d(), this->first_vertex, 0u, BRW_CONDITIONAL_Z));
       emit(IF(BRW_PREDICATE_NORMAL));
-      {
-         visit((ir_end_primitive *) NULL);
-      }
+      gs_end_primitive();
       emit(BRW_OPCODE_ENDIF);
    }
 

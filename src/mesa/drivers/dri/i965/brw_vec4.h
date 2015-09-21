@@ -65,7 +65,7 @@ class vec4_live_variables;
  * Translates either GLSL IR or Mesa IR (for ARB_vertex_program and
  * fixed-function) into VS IR.
  */
-class vec4_visitor : public backend_shader, public ir_visitor
+class vec4_visitor : public backend_shader
 {
 public:
    vec4_visitor(const struct brw_compiler *compiler,
@@ -116,43 +116,7 @@ public:
    brw::vec4_live_variables *live_intervals;
    dst_reg userplane[MAX_CLIP_PLANES];
 
-   dst_reg *variable_storage(ir_variable *var);
-
-   void reladdr_to_temp(ir_instruction *ir, src_reg *reg, int *num_reladdr);
-
    bool need_all_constants_in_pull_buffer;
-
-   /**
-    * \name Visit methods
-    *
-    * As typical for the visitor pattern, there must be one \c visit method for
-    * each concrete subclass of \c ir_instruction.  Virtual base classes within
-    * the hierarchy should not have \c visit methods.
-    */
-   /*@{*/
-   virtual void visit(ir_variable *);
-   virtual void visit(ir_loop *);
-   virtual void visit(ir_loop_jump *);
-   virtual void visit(ir_function_signature *);
-   virtual void visit(ir_function *);
-   virtual void visit(ir_expression *);
-   virtual void visit(ir_swizzle *);
-   virtual void visit(ir_dereference_variable  *);
-   virtual void visit(ir_dereference_array *);
-   virtual void visit(ir_dereference_record *);
-   virtual void visit(ir_assignment *);
-   virtual void visit(ir_constant *);
-   virtual void visit(ir_call *);
-   virtual void visit(ir_return *);
-   virtual void visit(ir_discard *);
-   virtual void visit(ir_texture *);
-   virtual void visit(ir_if *);
-   virtual void visit(ir_emit_vertex *);
-   virtual void visit(ir_end_primitive *);
-   virtual void visit(ir_barrier *);
-   /*@}*/
-
-   src_reg result;
 
    /* Regs for vertex results.  Generated at ir_variable visiting time
     * for the ir->location's used.
@@ -166,16 +130,12 @@ public:
 
    src_reg shader_start_time;
 
-   struct hash_table *variable_ht;
-
    bool run();
    void fail(const char *msg, ...);
 
    virtual void setup_vec4_uniform_value(unsigned param_offset,
                                          const gl_constant_value *values,
                                          unsigned n);
-   void setup_uniform_values(ir_variable *ir);
-   void setup_builtin_uniform_values(ir_variable *ir);
    int setup_uniforms(int payload_reg);
 
    bool reg_allocate_trivial();
@@ -271,20 +231,8 @@ public:
 
    int implied_mrf_writes(vec4_instruction *inst);
 
-   bool try_rewrite_rhs_to_dst(ir_assignment *ir,
-			       dst_reg dst,
-			       src_reg src,
-			       vec4_instruction *pre_rhs_inst,
-			       vec4_instruction *last_rhs_inst);
-
-   /** Walks an exec_list of ir_instruction and sends it through this visitor. */
-   void visit_instructions(const exec_list *list);
-
    void emit_vp_sop(enum brw_conditional_mod condmod, dst_reg dst,
                     src_reg src0, src_reg src1, src_reg one);
-
-   void emit_bool_to_cond_code(ir_rvalue *ir, enum brw_predicate *predicate);
-   void emit_if_gen6(ir_if *ir);
 
    vec4_instruction *emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                                  src_reg src0, src_reg src1);
@@ -298,21 +246,10 @@ public:
     */
    src_reg emit_uniformize(const src_reg &src);
 
-   void emit_block_move(dst_reg *dst, src_reg *src,
-                        const struct glsl_type *type, brw_predicate predicate);
-
-   void emit_constant_values(dst_reg *dst, ir_constant *value);
-
    /**
     * Emit the correct dot-product instruction for the type of arguments
     */
    void emit_dp(dst_reg dst, src_reg src0, src_reg src1, unsigned elements);
-
-   void emit_scalar(ir_instruction *ir, enum prog_opcode op,
-		    dst_reg dst, src_reg src0);
-
-   void emit_scalar(ir_instruction *ir, enum prog_opcode op,
-		    dst_reg dst, src_reg src0, src_reg src1);
 
    src_reg fix_3src_operand(const src_reg &src);
    src_reg resolve_source_modifiers(const src_reg &src);
@@ -389,19 +326,12 @@ public:
    src_reg emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
                                 vec4_instruction *inst, src_reg src);
 
-   bool try_emit_mad(ir_expression *ir);
-   bool try_emit_b2f_of_compare(ir_expression *ir);
    void resolve_ud_negate(src_reg *reg);
-   void resolve_bool_comparison(ir_rvalue *rvalue, src_reg *reg);
 
    src_reg get_timestamp();
 
-   bool process_move_condition(ir_rvalue *ir);
-
    void dump_instruction(backend_instruction *inst);
    void dump_instruction(backend_instruction *inst, FILE *file);
-
-   void visit_atomic_counter_intrinsic(ir_call *ir);
 
    bool is_high_sampler(src_reg sampler);
 
@@ -457,7 +387,6 @@ protected:
    virtual void emit_thread_end() = 0;
    virtual void emit_urb_write_header(int mrf) = 0;
    virtual vec4_instruction *emit_urb_write_opcode(bool complete) = 0;
-   virtual int compute_array_stride(ir_dereference_array *ir);
    virtual void gs_emit_vertex(int stream_id);
    virtual void gs_end_primitive();
 
