@@ -395,6 +395,15 @@ anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer)
    return &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->relocs;
 }
 
+struct anv_address
+anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
+{
+   return (struct anv_address) {
+      .bo = anv_cmd_buffer_current_surface_bo(cmd_buffer),
+      .offset = 0,
+   };
+}
+
 static void
 emit_batch_buffer_start(struct anv_batch *batch, struct anv_bo *bo, uint32_t offset)
 {

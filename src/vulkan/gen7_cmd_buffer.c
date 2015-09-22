@@ -48,7 +48,7 @@ gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
       .GeneralStateAccessUpperBound             = { scratch_bo, scratch_bo->size },
       .GeneralStateAccessUpperBoundModifyEnable = true,
 
-      .SurfaceStateBaseAddress                  = { anv_cmd_buffer_current_surface_bo(cmd_buffer), 0 },
+      .SurfaceStateBaseAddress                  = anv_cmd_buffer_surface_base_address(cmd_buffer),
       .SurfaceStateMemoryObjectControlState     = GEN7_MOCS,
       .SurfaceStateBaseAddressModifyEnable      = true,
 

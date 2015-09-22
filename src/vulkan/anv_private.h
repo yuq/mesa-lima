@@ -897,6 +897,8 @@ struct anv_bo *
 anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer);
 struct anv_reloc_list *
 anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer);
+struct anv_address
+anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer);
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);
