@@ -58,7 +58,8 @@ struct nine_ff_vs_key
             uint32_t color0in_one : 1;
             uint32_t color1in_one : 1;
             uint32_t fog : 1;
-            uint32_t pad1 : 7;
+            uint32_t specular_enable : 1;
+            uint32_t pad1 : 6;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -849,7 +850,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), vs->mtlA, ureg_src(tmp), vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W  ), vs->mtlA, vs->mtlE);
         }
-        ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+
+        if (key->specular_enable) {
+            /* add oCol[1] to oCol[0] */
+            ureg_MAD(ureg, tmp, ureg_src(rD), vs->mtlD, ureg_src(tmp));
+            ureg_MAD(ureg, oCol[0], ureg_src(rS), vs->mtlS, ureg_src(tmp));
+        } else {
+            ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+        }
         ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
     } else
     /* COLOR */
@@ -1501,6 +1509,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.fog_range = !key.position_t && state->rs[D3DRS_RANGEFOGENABLE];
 
     key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
+    key.specular_enable = !!state->rs[D3DRS_SPECULARENABLE];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE];
