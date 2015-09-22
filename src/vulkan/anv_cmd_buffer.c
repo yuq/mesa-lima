@@ -395,7 +395,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_layout *layout;
-   uint32_t attachments, bias, size;
+   uint32_t attachments, bias;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
       layout = cmd_buffer->state.compute_pipeline->layout;
@@ -418,8 +418,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (attachments + surface_count == 0)
       return VK_SUCCESS;
 
-   size = (bias + surface_count) * sizeof(uint32_t);
-   *bt_state = anv_cmd_buffer_alloc_surface_state(cmd_buffer, size, 32);
+   *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer,
+                                                  bias + surface_count);
    uint32_t *bt_map = bt_state->map;
 
    if (bt_state->map == NULL)
