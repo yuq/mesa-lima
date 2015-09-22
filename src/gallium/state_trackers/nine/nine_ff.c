@@ -1500,6 +1500,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
     if (key.fog_mode)
         key.fog_range = !key.position_t && state->rs[D3DRS_RANGEFOGENABLE];
 
+    key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
+
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE];
 
