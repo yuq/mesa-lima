@@ -467,6 +467,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, tmp, vs->aInd, ureg_imm1f(ureg, 4.0f), ureg_imm1f(ureg, 224.0f));
             ureg_ARL(ureg, AR, ureg_src(tmp));
         }
+
+        ureg_MOV(ureg, r[2], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
+        ureg_MOV(ureg, r[3], ureg_imm4f(ureg, 1.0f, 1.0f, 1.0f, 1.0f));
+
         for (i = 0; i < key->vertexblend; ++i) {
             for (c = 0; c < 4; ++c) {
                 cWM[c] = ureg_src_register(TGSI_FILE_CONSTANT, (224 + i * 4) * !key->vertexblend_indexed + c);
@@ -479,12 +483,17 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), cWM[2], ureg_src(tmp));
             ureg_MAD(ureg, tmp, _WWWW(vs->aVtx), cWM[3], ureg_src(tmp));
 
-            /* accumulate weighted position value */
-            if (i)
+            if (i < (key->vertexblend - 1)) {
+                /* accumulate weighted position value */
                 ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
-            else
-                ureg_MUL(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, 0));
+                /* subtract weighted position value for last value */
+                ureg_SUB(ureg, r[3], ureg_src(r[3]), ureg_scalar(vs->aWgt, i));
+            }
         }
+
+        /* the last weighted position is always 1 - sum_of_previous_weights */
+        ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(ureg_src(r[3]), key->vertexblend - 1), ureg_src(r[2]));
+
         /* multiply by VIEW_PROJ */
         ureg_MUL(ureg, tmp, _X(r[2]), _CONST(8));
         ureg_MAD(ureg, tmp, _Y(r[2]), _CONST(9),  ureg_src(tmp));
