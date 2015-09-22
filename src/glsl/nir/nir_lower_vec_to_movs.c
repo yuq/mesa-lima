@@ -89,7 +89,8 @@ has_replicated_dest(nir_alu_instr *alu)
 {
    return alu->op == nir_op_fdot_replicated2 ||
           alu->op == nir_op_fdot_replicated3 ||
-          alu->op == nir_op_fdot_replicated4;
+          alu->op == nir_op_fdot_replicated4 ||
+          alu->op == nir_op_fdph_replicated;
 }
 
 /* Attempts to coalesce the "move" from the given source of the vec to the
