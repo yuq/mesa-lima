@@ -621,7 +621,7 @@ VkResult anv_CreateDevice(
                        &device->dynamic_state_block_pool);
 
    anv_block_pool_init(&device->instruction_block_pool, device, 2048);
-   anv_block_pool_init(&device->surface_state_block_pool, device, 2048);
+   anv_block_pool_init(&device->surface_state_block_pool, device, 4096);
 
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
