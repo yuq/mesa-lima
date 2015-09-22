@@ -931,13 +931,9 @@ get_shader_source(struct gl_context *ctx, GLuint shader, GLsizei maxLength,
  * glShaderSource[ARB].
  */
 static void
-shader_source(struct gl_context *ctx, GLuint shader, const GLchar *source)
+shader_source(struct gl_shader *sh, const GLchar *source)
 {
-   struct gl_shader *sh;
-
-   sh = _mesa_lookup_shader_err(ctx, shader, "glShaderSource");
-   if (!sh)
-      return;
+   assert(sh);
 
    /* free old shader source string and install new one */
    free((void *)sh->Source);
@@ -1639,13 +1635,17 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
    GLint *offsets;
    GLsizei i, totalLength;
    GLcharARB *source;
+   struct gl_shader *sh;
 
 #if defined(HAVE_SHA1)
    GLcharARB *replacement;
-   struct gl_shader *sh;
 #endif /* HAVE_SHA1 */
 
-   if (!shaderObj || string == NULL) {
+   sh = _mesa_lookup_shader_err(ctx, shaderObj, "glShaderSourceARB");
+   if (!sh)
+      return;
+
+   if (string == NULL) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glShaderSourceARB");
       return;
    }
@@ -1697,8 +1697,6 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
    source[totalLength - 2] = '\0';
 
 #if defined(HAVE_SHA1)
-   sh = _mesa_lookup_shader(ctx, shaderObj);
-
    /* Dump original shader source to MESA_SHADER_DUMP_PATH and replace
     * if corresponding entry found from MESA_SHADER_READ_PATH.
     */
@@ -1711,7 +1709,7 @@ _mesa_ShaderSource(GLhandleARB shaderObj, GLsizei count,
    }
 #endif /* HAVE_SHA1 */
 
-   shader_source(ctx, shaderObj, source);
+   shader_source(sh, source);
 
    free(offsets);
 }
