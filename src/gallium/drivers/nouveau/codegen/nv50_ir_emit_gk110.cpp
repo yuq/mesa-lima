@@ -75,7 +75,7 @@ private:
    void emitLOAD(const Instruction *);
    void emitSTORE(const Instruction *);
    void emitMOV(const Instruction *);
-   void emitMEMBAR(const Instruction *);
+   void emitATOM(const Instruction *);
 
    void emitINTERP(const Instruction *);
    void emitAFETCH(const Instruction *);
@@ -123,6 +123,7 @@ private:
    void emitPIXLD(const Instruction *);
 
    void emitBAR(const Instruction *);
+   void emitMEMBAR(const Instruction *);
 
    void emitFlow(const Instruction *);
 
@@ -1272,6 +1273,14 @@ CodeEmitterGK110::emitBAR(const Instruction *i)
    srcId(i->src(1), 23);
 }
 
+void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
+{
+   code[0] = 0x00000002 | NV50_IR_SUBOP_MEMBAR_SCOPE(i->subOp) << 8;
+   code[1] = 0x7cc00000;
+
+   emitPredicate(i);
+}
+
 void
 CodeEmitterGK110::emitFlow(const Instruction *i)
 {
@@ -1644,7 +1653,13 @@ CodeEmitterGK110::emitLOAD(const Instruction *i)
    emitPredicate(i);
 
    defId(i->def(0), 2);
-   srcId(i->src(0).getIndirect(0), 10);
+   if (i->getIndirect(0, 0)) {
+      srcId(i->src(0).getIndirect(0), 10);
+      if (i->getIndirect(0, 0)->reg.size == 8)
+         code[1] |= 1 << 23;
+   } else {
+      code[0] |= 255 << 10;
+   }
 }
 
 uint8_t
@@ -1699,12 +1714,54 @@ CodeEmitterGK110::emitMOV(const Instruction *i)
    }
 }
 
-void CodeEmitterGK110::emitMEMBAR(const Instruction *i)
+void
+CodeEmitterGK110::emitATOM(const Instruction *i)
 {
-   code[0] = 0x00000002 | NV50_IR_SUBOP_MEMBAR_SCOPE(i->subOp) << 8;
-   code[1] = 0x7cc00000;
+   code[0] = 0x00000002;
+   if (i->subOp == NV50_IR_SUBOP_ATOM_CAS)
+      code[1] = 0x77800000;
+   else
+      code[1] = 0x68000000;
+
+   switch (i->subOp) {
+   case NV50_IR_SUBOP_ATOM_CAS: break;
+   case NV50_IR_SUBOP_ATOM_EXCH: code[1] |= 0x04000000; break;
+   default: code[1] |= i->subOp << 23; break;
+   }
+
+   switch (i->dType) {
+   case TYPE_U32: break;
+   case TYPE_S32: code[1] |= 0x00100000; break;
+   case TYPE_U64: code[1] |= 0x00200000; break;
+   case TYPE_F32: code[1] |= 0x00300000; break;
+   case TYPE_B128: code[1] |= 0x00400000; break; /* TODO: U128 */
+   case TYPE_S64: code[1] |= 0x00500000; break;
+   default: assert(!"unsupported type"); break;
+   }
 
    emitPredicate(i);
+
+   /* TODO: cas: check that src regs line up */
+   /* TODO: cas: flip bits if $r255 is used */
+   srcId(i->src(1), 23);
+
+   if (i->defExists(0))
+      defId(i->def(0), 2);
+   else
+      code[0] |= 255 << 2;
+
+   const int32_t offset = SDATA(i->src(0)).offset;
+   assert(offset < 0x80000 && offset >= -0x80000);
+   code[0] |= (offset & 1) << 31;
+   code[1] |= (offset & 0xffffe) >> 1;
+
+   if (i->getIndirect(0, 0)) {
+      srcId(i->getIndirect(0, 0), 10);
+      if (i->getIndirect(0, 0)->reg.size == 8)
+         code[1] |= 1 << 19;
+   } else {
+      code[0] |= 255 << 10;
+   }
 }
 
 bool
@@ -1940,6 +1997,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_MEMBAR:
       emitMEMBAR(insn);
+      break;
+   case OP_ATOM:
+      emitATOM(insn);
       break;
    case OP_PHI:
    case OP_UNION:
