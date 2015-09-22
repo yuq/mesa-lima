@@ -1268,6 +1268,11 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       inst->saturate = instr->dest.saturate;
       break;
 
+   case nir_op_fdph_replicated:
+      inst = emit(BRW_OPCODE_DPH, dst, op[0], op[1]);
+      inst->saturate = instr->dest.saturate;
+      break;
+
    case nir_op_bany2:
    case nir_op_bany3:
    case nir_op_bany4: {
