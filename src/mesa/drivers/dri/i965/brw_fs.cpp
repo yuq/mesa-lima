@@ -2678,7 +2678,7 @@ fs_visitor::emit_repclear_shader()
 bool
 fs_visitor::remove_duplicate_mrf_writes()
 {
-   fs_inst *last_mrf_move[16];
+   fs_inst *last_mrf_move[BRW_MAX_MRF(devinfo->gen)];
    bool progress = false;
 
    /* Need to update the MRF tracking for compressed instructions. */
