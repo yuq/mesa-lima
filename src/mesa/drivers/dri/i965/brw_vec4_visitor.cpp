@@ -27,6 +27,7 @@
 #include "program/sampler.h"
 
 #define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
+#define FIRST_PULL_LOAD_MRF(gen) (gen == 6 ? 16 : 13)
 
 namespace brw {
 
@@ -792,7 +793,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
                                            dst,
                                            surf_index,
                                            offset_reg);
-      pull->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
+      pull->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen) + 1;
       pull->mlen = 1;
    }
 

@@ -50,6 +50,8 @@
 #include "glsl/glsl_types.h"
 #include "program/sampler.h"
 
+#define FIRST_PULL_LOAD_MRF(gen) ((gen) == 6 ? 16 : 13)
+
 using namespace brw;
 
 void
@@ -210,7 +212,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    inst->regs_written = regs_written;
 
    if (devinfo->gen < 7) {
-      inst->base_mrf = 13;
+      inst->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen);
       inst->header_size = 1;
       if (devinfo->gen == 4)
          inst->mlen = 3;
@@ -2999,7 +3001,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
           * else does except for register spill/unspill, which generates and
           * uses its MRF within a single IR instruction.
           */
-         inst->base_mrf = 14;
+         inst->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen) + 1;
          inst->mlen = 1;
       }
    }
