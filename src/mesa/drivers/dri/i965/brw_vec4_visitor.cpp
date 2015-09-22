@@ -26,9 +26,6 @@
 #include "glsl/ir_uniform.h"
 #include "program/sampler.h"
 
-#define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
-#define FIRST_PULL_LOAD_MRF(gen) (gen == 6 ? 16 : 13)
-
 namespace brw {
 
 vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,

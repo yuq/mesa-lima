@@ -30,8 +30,6 @@
 #include "glsl/glsl_types.h"
 #include "glsl/ir_optimization.h"
 
-#define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
-
 using namespace brw;
 
 static void

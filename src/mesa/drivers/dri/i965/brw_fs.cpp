@@ -50,8 +50,6 @@
 #include "glsl/glsl_types.h"
 #include "program/sampler.h"
 
-#define FIRST_PULL_LOAD_MRF(gen) ((gen) == 6 ? 16 : 13)
-
 using namespace brw;
 
 void
