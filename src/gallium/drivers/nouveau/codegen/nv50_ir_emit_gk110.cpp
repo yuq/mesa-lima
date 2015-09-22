@@ -76,6 +76,7 @@ private:
    void emitSTORE(const Instruction *);
    void emitMOV(const Instruction *);
    void emitATOM(const Instruction *);
+   void emitCCTL(const Instruction *);
 
    void emitINTERP(const Instruction *);
    void emitAFETCH(const Instruction *);
@@ -1714,6 +1715,14 @@ CodeEmitterGK110::emitMOV(const Instruction *i)
    }
 }
 
+static inline bool
+uses64bitAddress(const Instruction *ldst)
+{
+   return ldst->src(0).getFile() == FILE_MEMORY_GLOBAL &&
+      ldst->src(0).isIndirect(0) &&
+      ldst->getIndirect(0, 0)->reg.size == 8;
+}
+
 void
 CodeEmitterGK110::emitATOM(const Instruction *i)
 {
@@ -1762,6 +1771,29 @@ CodeEmitterGK110::emitATOM(const Instruction *i)
    } else {
       code[0] |= 255 << 10;
    }
+}
+
+void
+CodeEmitterGK110::emitCCTL(const Instruction *i)
+{
+   int32_t offset = SDATA(i->src(0)).offset;
+
+   code[0] = 0x00000002 | (i->subOp << 2);
+
+   if (i->src(0).getFile() == FILE_MEMORY_GLOBAL) {
+      code[1] = 0x7b000000;
+   } else {
+      code[1] = 0x7c000000;
+      offset &= 0xffffff;
+   }
+   code[0] |= offset << 23;
+   code[1] |= offset >> 9;
+
+   if (uses64bitAddress(i))
+      code[1] |= 1 << 23;
+   srcId(i->src(0).getIndirect(0), 10);
+
+   emitPredicate(i);
 }
 
 bool
@@ -2000,6 +2032,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_ATOM:
       emitATOM(insn);
+      break;
+   case OP_CCTL:
+      emitCCTL(insn);
       break;
    case OP_PHI:
    case OP_UNION:
