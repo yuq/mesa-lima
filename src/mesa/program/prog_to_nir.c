@@ -527,8 +527,7 @@ ptn_dp4(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 static void
 ptn_dph(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   nir_ssa_def *dp3 = nir_fdot3(b, src[0], src[1]);
-   ptn_move_dest(b, dest, nir_fadd(b, dp3, ptn_channel(b, src[1], W)));
+   ptn_move_dest(b, dest, nir_fdph(b, src[0], src[1]));
 }
 
 static void
