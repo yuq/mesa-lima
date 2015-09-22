@@ -200,6 +200,21 @@ anv_vector_length(struct anv_vector *queue)
    return (queue->head - queue->tail) / queue->element_size;
 }
 
+static inline void *
+anv_vector_head(struct anv_vector *vector)
+{
+   assert(vector->tail < vector->head);
+   return (void *)((char *)vector->data +
+                   ((vector->head - vector->element_size) &
+                    (vector->size - 1)));
+}
+
+static inline void *
+anv_vector_tail(struct anv_vector *vector)
+{
+   return (void *)((char *)vector->data + (vector->tail & (vector->size - 1)));
+}
+
 static inline void
 anv_vector_finish(struct anv_vector *queue)
 {
