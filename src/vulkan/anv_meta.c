@@ -272,7 +272,7 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
    };
 
    size = sizeof(vertex_data) + num_instances * sizeof(*instance_data);
-   state = anv_state_stream_alloc(&cmd_buffer->surface_state_stream, size, 16);
+   state = anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, size, 16);
 
    /* Copy in the vertex and instance data */
    memcpy(state.map, vertex_data, sizeof(vertex_data));
@@ -282,7 +282,7 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
    struct anv_buffer vertex_buffer = {
       .device = cmd_buffer->device,
       .size = size,
-      .bo = &device->surface_state_block_pool.bo,
+      .bo = &device->dynamic_state_block_pool.bo,
       .offset = state.offset
    };
 
@@ -669,7 +669,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    unsigned vb_size = sizeof(struct vue_header) + 3 * sizeof(*vb_data);
 
    struct anv_state vb_state =
-      anv_state_stream_alloc(&cmd_buffer->surface_state_stream, vb_size, 16);
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, vb_size, 16);
    memset(vb_state.map, 0, sizeof(struct vue_header));
    vb_data = vb_state.map + sizeof(struct vue_header);
 
@@ -712,7 +712,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
    struct anv_buffer vertex_buffer = {
       .device = device,
       .size = vb_size,
-      .bo = &device->surface_state_block_pool.bo,
+      .bo = &device->dynamic_state_block_pool.bo,
       .offset = vb_state.offset,
    };
 
