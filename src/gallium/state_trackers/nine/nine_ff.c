@@ -747,12 +747,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         {
             /* hitDir = light.position - eyeVtx
              * d = length(hitDir)
-             * hitDir /= d
              */
             ureg_SUB(ureg, rHit, cLPos, ureg_src(rVtx));
             ureg_DP3(ureg, tmp_x, ureg_src(rHit), ureg_src(rHit));
             ureg_RSQ(ureg, tmp_y, _X(tmp));
-            ureg_MUL(ureg, rHit, ureg_src(rHit), _Y(tmp)); /* normalize */
             ureg_MUL(ureg, tmp_x, _X(tmp), _Y(tmp)); /* length */
 
             /* att = 1.0 / (light.att0 + (light.att1 + light.att2 * d) * d) */
@@ -765,6 +763,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         }
         ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
         ureg_ENDIF(ureg);
+
+        /* normalize hitDir */
+        ureg_normalize3(ureg, rHit, ureg_src(rHit), tmp);
 
         /* if (SPOT light) */
         ureg_SEQ(ureg, tmp_x, cLKind, ureg_imm1f(ureg, D3DLIGHT_SPOT));
