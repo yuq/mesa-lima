@@ -474,22 +474,22 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                     cWM[c] = ureg_src_indirect(cWM[c], ureg_scalar(ureg_src(AR), i));
             }
             /* multiply by WORLD(index) */
-            ureg_MUL(ureg, r[0], _XXXX(vs->aVtx), cWM[0]);
-            ureg_MAD(ureg, r[0], _YYYY(vs->aVtx), cWM[1], ureg_src(r[0]));
-            ureg_MAD(ureg, r[0], _ZZZZ(vs->aVtx), cWM[2], ureg_src(r[0]));
-            ureg_MAD(ureg, r[0], _WWWW(vs->aVtx), cWM[3], ureg_src(r[0]));
+            ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), cWM[0]);
+            ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), cWM[1], ureg_src(tmp));
+            ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), cWM[2], ureg_src(tmp));
+            ureg_MAD(ureg, tmp, _WWWW(vs->aVtx), cWM[3], ureg_src(tmp));
 
             /* accumulate weighted position value */
             if (i)
-                ureg_MAD(ureg, r[2], ureg_src(r[0]), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
+                ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
             else
-                ureg_MUL(ureg, r[2], ureg_src(r[0]), ureg_scalar(vs->aWgt, 0));
+                ureg_MUL(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, 0));
         }
         /* multiply by VIEW_PROJ */
-        ureg_MUL(ureg, r[0], _X(r[2]), _CONST(8));
-        ureg_MAD(ureg, r[0], _Y(r[2]), _CONST(9),  ureg_src(r[0]));
-        ureg_MAD(ureg, r[0], _Z(r[2]), _CONST(10), ureg_src(r[0]));
-        ureg_MAD(ureg, oPos, _W(r[2]), _CONST(11), ureg_src(r[0]));
+        ureg_MUL(ureg, tmp, _X(r[2]), _CONST(8));
+        ureg_MAD(ureg, tmp, _Y(r[2]), _CONST(9),  ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _Z(r[2]), _CONST(10), ureg_src(tmp));
+        ureg_MAD(ureg, oPos, _W(r[2]), _CONST(11), ureg_src(tmp));
 
         if (need_rVtx)
             vs->aVtx = ureg_src(r[2]);
@@ -516,10 +516,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_MOV(ureg, oPos, ureg_src(tmp));
     } else {
         /* position = vertex * WORLD_VIEW_PROJ */
-        ureg_MUL(ureg, r[0], _XXXX(vs->aVtx), _CONST(0));
-        ureg_MAD(ureg, r[0], _YYYY(vs->aVtx), _CONST(1), ureg_src(r[0]));
-        ureg_MAD(ureg, r[0], _ZZZZ(vs->aVtx), _CONST(2), ureg_src(r[0]));
-        ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(r[0]));
+        ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), _CONST(0));
+        ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), _CONST(1), ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), _CONST(2), ureg_src(tmp));
+        ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(tmp));
     }
 
     if (need_rVtx) {
