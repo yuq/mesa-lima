@@ -941,10 +941,18 @@ vec4_visitor::opt_set_dependency_control()
 }
 
 bool
-vec4_instruction::can_reswizzle(int dst_writemask,
+vec4_instruction::can_reswizzle(const struct brw_device_info *devinfo,
+                                int dst_writemask,
                                 int swizzle,
                                 int swizzle_mask)
 {
+   /* Gen6 MATH instructions can not execute in align16 mode, so swizzles
+    * or writemasking are not allowed.
+    */
+   if (devinfo->gen == 6 && is_math() &&
+       (swizzle != BRW_SWIZZLE_XYZW || dst_writemask != WRITEMASK_XYZW))
+      return false;
+
    /* If this instruction sets anything not referenced by swizzle, then we'd
     * totally break it when we reswizzle.
     */
@@ -1099,7 +1107,7 @@ vec4_visitor::opt_register_coalesce()
                break;
 
             /* If we can't handle the swizzle, bail. */
-            if (!scan_inst->can_reswizzle(inst->dst.writemask,
+            if (!scan_inst->can_reswizzle(devinfo, inst->dst.writemask,
                                           inst->src[0].swizzle,
                                           chans_needed)) {
                break;

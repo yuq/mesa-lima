@@ -175,7 +175,8 @@ public:
 
    bool is_send_from_grf();
    unsigned regs_read(unsigned arg) const;
-   bool can_reswizzle(int dst_writemask, int swizzle, int swizzle_mask);
+   bool can_reswizzle(const struct brw_device_info *devinfo, int dst_writemask,
+                      int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
    bool can_do_source_mods(const struct brw_device_info *devinfo);
 
