@@ -254,9 +254,6 @@ struct anv_block_pool {
 
    struct anv_bo bo;
 
-   /* Offset from the start of the memfd to the "center" of the block pool. */
-   uint32_t center_fd_offset;
-
    /* The offset from the start of the bo to the "center" of the block
     * pool.  Pointers to allocated blocks are given by
     * bo.map + center_bo_offset + offsets.
