@@ -43,23 +43,19 @@ static unsigned int
 tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
                                      const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf, *align_ys;
+   const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
-   unsigned ret_align, divisor;
+   unsigned ret_align, divisor, multiplier_ys;
 
-   /* Horizontal alignment tables for TRMODE_{YF,YS}. Value in below
-    * tables specifies the horizontal alignment requirement in elements
-    * for the surface. An element is defined as a pixel in uncompressed
-    * surface formats, and as a compression block in compressed surface
-    * formats. For MSFMT_DEPTH_STENCIL type multisampled surfaces, an
+   /* Values in below tables specifiy the horizontal alignment requirement
+    * in elements for TRMODE_YF surface. An element is defined as a pixel in
+    * uncompressed surface formats, and as a compression block in compressed
+    * surface formats. For MSFMT_DEPTH_STENCIL type multisampled surfaces, an
     * element is a sample.
     */
    const unsigned align_1d_yf[] = {4096, 2048, 1024, 512, 256};
-   const unsigned align_1d_ys[] = {65536, 32768, 16384, 8192, 4096};
    const unsigned align_2d_yf[] = {64, 64, 32, 32, 16};
-   const unsigned align_2d_ys[] = {256, 256, 128, 128, 64};
    const unsigned align_3d_yf[] = {16, 8, 8, 8, 4};
-   const unsigned align_3d_ys[] = {64, 32, 32, 32, 16};
    int i = 0;
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
@@ -69,7 +65,7 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
       align_yf = align_1d_yf;
-      align_ys = align_1d_ys;
+      multiplier_ys = 16;
       break;
    case GL_TEXTURE_2D:
    case GL_TEXTURE_RECTANGLE:
@@ -79,11 +75,11 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       align_yf = align_2d_yf;
-      align_ys = align_2d_ys;
+      multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
       align_yf = align_3d_yf;
-      align_ys = align_3d_ys;
+      multiplier_ys = 4;
       break;
    default:
       unreachable("not reached");
@@ -92,8 +88,10 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    /* Compute array index. */
    i = ffs(bpp/8) - 1;
 
-   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
-               align_yf[i] : align_ys[i];
+   ret_align = align_yf[i];
+
+   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
+      ret_align *= multiplier_ys;
 
    assert(_mesa_is_pow_two(mt->num_samples));
 
@@ -151,15 +149,13 @@ static unsigned int
 tr_mode_vertical_texture_alignment(const struct brw_context *brw,
                                    const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf, *align_ys;
+   const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
-   unsigned ret_align, divisor;
+   unsigned ret_align, divisor, multiplier_ys;
 
-   /* Vertical alignment tables for TRMODE_YF and TRMODE_YS. */
+   /* Vertical alignment tables for TRMODE_YF */
    const unsigned align_2d_yf[] = {64, 32, 32, 16, 16};
-   const unsigned align_2d_ys[] = {256, 128, 128, 64, 64};
    const unsigned align_3d_yf[] = {16, 16, 16, 8, 8};
-   const unsigned align_3d_ys[] = {32, 32, 32, 16, 16};
    int i = 0;
 
    assert(brw->gen >= 9);
@@ -176,11 +172,11 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
       align_yf = align_2d_yf;
-      align_ys = align_2d_ys;
+      multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
       align_yf = align_3d_yf;
-      align_ys = align_3d_ys;
+      multiplier_ys = 2;
       break;
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
@@ -191,8 +187,10 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    /* Compute array index. */
    i = ffs(bpp / 8) - 1;
 
-   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
-               align_yf[i] : align_ys[i];
+   ret_align = align_yf[i];
+
+   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
+      ret_align *= multiplier_ys;
 
    assert(_mesa_is_pow_two(mt->num_samples));
 
