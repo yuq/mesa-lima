@@ -388,6 +388,9 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
        */
       center_bo_offset = 0;
    } else {
+      /* Try to "center" the allocation based on how much is currently in
+       * use on each side of the center line.
+       */
       center_bo_offset = ((uint64_t)size * back_used) / total_used;
 
       /* Align down to a multiple of both the block size and page size */
@@ -396,6 +399,14 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       center_bo_offset &= ~(granularity - 1);
 
       assert(center_bo_offset >= back_used);
+
+      /* Make sure we don't shrink the back end of the pool */
+      if (center_bo_offset < pool->back_state.end)
+         center_bo_offset = pool->back_state.end;
+
+      /* Make sure that we don't shrink the front end of the pool */
+      if (size - center_bo_offset < pool->state.end)
+         center_bo_offset = size - pool->state.end;
    }
 
    assert(center_bo_offset % pool->block_size == 0);
@@ -403,7 +414,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
 
    /* Assert that we only ever grow the pool */
    assert(center_bo_offset >= pool->back_state.end);
-   assert(size - center_bo_offset >= pool->back_state.end);
+   assert(size - center_bo_offset >= pool->state.end);
 
    cleanup = anv_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
