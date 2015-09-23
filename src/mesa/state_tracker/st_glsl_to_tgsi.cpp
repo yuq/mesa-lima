@@ -4144,8 +4144,7 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
        */
       for (unsigned i = 0; i < ARRAY_SIZE(inst->dst); i++) {
          if (inst->dst[i].file == PROGRAM_TEMPORARY &&
-             !inst->dst[i].reladdr &&
-             !inst->saturate) {
+             !inst->dst[i].reladdr) {
             for (int c = 0; c < 4; c++) {
                if (inst->dst[i].writemask & (1 << c)) {
                   if (writes[4 * inst->dst[i].index + c]) {
