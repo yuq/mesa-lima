@@ -325,7 +325,11 @@ try_copy_propagate(const struct brw_device_info *devinfo,
        inst->opcode == SHADER_OPCODE_GEN4_SCRATCH_WRITE)
       return false;
 
-   if (inst->is_3src() && value.file == UNIFORM)
+   unsigned composed_swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
+                                                   value.swizzle);
+   if (inst->is_3src() &&
+       value.file == UNIFORM &&
+       !brw_is_single_value_swizzle(composed_swizzle))
       return false;
 
    if (inst->is_send_from_grf())
@@ -380,8 +384,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
    if (inst->src[arg].negate)
       value.negate = !value.negate;
 
-   value.swizzle = brw_compose_swizzle(inst->src[arg].swizzle,
-                                       value.swizzle);
+   value.swizzle = composed_swizzle;
    if (has_source_modifiers &&
        value.type != inst->src[arg].type) {
       assert(can_change_source_types(inst));
