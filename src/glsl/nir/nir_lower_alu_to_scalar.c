@@ -112,6 +112,24 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
        */
       return;
 
+   case nir_op_fdph: {
+      nir_ssa_def *sum[4];
+      for (unsigned i = 0; i < 3; i++) {
+         sum[i] = nir_fmul(b, nir_channel(b, instr->src[0].src.ssa,
+                                          instr->src[0].swizzle[i]),
+                              nir_channel(b, instr->src[1].src.ssa,
+                                          instr->src[1].swizzle[i]));
+      }
+      sum[3] = nir_channel(b, instr->src[1].src.ssa, instr->src[1].swizzle[3]);
+
+      nir_ssa_def *val = nir_fadd(b, nir_fadd(b, sum[0], sum[1]),
+                                     nir_fadd(b, sum[2], sum[3]));
+
+      nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(val));
+      nir_instr_remove(&instr->instr);
+      return;
+   }
+
       LOWER_REDUCTION(nir_op_fdot, nir_op_fmul, nir_op_fadd);
       LOWER_REDUCTION(nir_op_ball_fequal, nir_op_feq, nir_op_iand);
       LOWER_REDUCTION(nir_op_ball_iequal, nir_op_ieq, nir_op_iand);
