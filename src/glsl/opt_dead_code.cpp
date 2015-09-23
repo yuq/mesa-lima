@@ -119,11 +119,8 @@ do_dead_code(exec_list *instructions, bool uniform_locations_assigned)
              * layouts, do not eliminate it.
              */
             if (entry->var->is_in_buffer_block()) {
-               const glsl_type *const block_type =
-                  entry->var->is_interface_instance()
-                  ? entry->var->type : entry->var->get_interface_type();
-
-               if (block_type->interface_packing != GLSL_INTERFACE_PACKING_PACKED)
+               if (entry->var->get_interface_type()->interface_packing !=
+                   GLSL_INTERFACE_PACKING_PACKED)
                   continue;
             }
 

@@ -77,9 +77,6 @@ link_uniform_block_active_visitor::visit(ir_variable *var)
    if (!var->is_in_buffer_block())
       return visit_continue;
 
-   const glsl_type *const block_type = var->is_interface_instance()
-      ? var->type : var->get_interface_type();
-
    /* Section 2.11.6 (Uniform Variables) of the OpenGL ES 3.0.3 spec says:
     *
     *     "All members of a named uniform block declared with a shared or
@@ -88,7 +85,8 @@ link_uniform_block_active_visitor::visit(ir_variable *var)
     *     also considered active, even if no member of the block is
     *     referenced."
     */
-   if (block_type->interface_packing == GLSL_INTERFACE_PACKING_PACKED)
+   if (var->get_interface_type()->interface_packing ==
+       GLSL_INTERFACE_PACKING_PACKED)
       return visit_continue;
 
    /* Process the block.  Bail if there was an error.
