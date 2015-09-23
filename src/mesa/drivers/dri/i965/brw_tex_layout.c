@@ -40,8 +40,7 @@
 #define FILE_DEBUG_FLAG DEBUG_MIPTREE
 
 static unsigned int
-tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
-                                     const struct intel_mipmap_tree *mt)
+tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
 {
    const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
@@ -57,6 +56,8 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    const unsigned align_2d_yf[] = {64, 64, 32, 32, 16};
    const unsigned align_3d_yf[] = {16, 8, 8, 8, 4};
    int i = 0;
+
+   assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
    assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
@@ -146,8 +147,7 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 }
 
 static unsigned int
-tr_mode_vertical_texture_alignment(const struct brw_context *brw,
-                                   const struct intel_mipmap_tree *mt)
+tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
 {
    const unsigned *align_yf;
    const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
@@ -158,7 +158,7 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    const unsigned align_3d_yf[] = {16, 16, 16, 8, 8};
    int i = 0;
 
-   assert(brw->gen >= 9);
+   assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
    /* Alignment computations below assume bpp >= 8 and a power of 2. */
    assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
@@ -777,8 +777,8 @@ intel_miptree_set_alignment(struct brw_context *brw,
    } else if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
       /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32 or
        * vertical alignment < 64. */
-      mt->halign = MAX2(tr_mode_horizontal_texture_alignment(brw, mt), 32);
-      mt->valign = MAX2(tr_mode_vertical_texture_alignment(brw, mt), 64);
+      mt->halign = MAX2(tr_mode_horizontal_texture_alignment(mt), 32);
+      mt->valign = MAX2(tr_mode_vertical_texture_alignment(mt), 64);
    } else {
       mt->halign =
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);
