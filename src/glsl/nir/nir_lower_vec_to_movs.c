@@ -83,7 +83,25 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
       }
    }
 
-   nir_instr_insert_before(&vec->instr, &mov->instr);
+   /* In some situations (if the vecN is involved in a phi-web), we can end
+    * up with a mov from a register to itself.  Some of those channels may end
+    * up doing nothing and there's no reason to have them as part of the mov.
+    */
+   if (src_matches_dest_reg(&mov->dest.dest, &mov->src[0].src) &&
+       !mov->src[0].abs && !mov->src[0].negate) {
+      for (unsigned i = 0; i < 4; i++) {
+         if (mov->src[0].swizzle[i] == i) {
+            mov->dest.write_mask &= ~(1 << i);
+         }
+      }
+   }
+
+   /* Only emit the instruction if it actually does something */
+   if (mov->dest.write_mask) {
+      nir_instr_insert_before(&vec->instr, &mov->instr);
+   } else {
+      ralloc_free(mov);
+   }
 
    return mov->dest.write_mask;
 }
