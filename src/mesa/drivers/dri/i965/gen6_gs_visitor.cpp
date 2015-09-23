@@ -273,6 +273,18 @@ gen6_gs_visitor::emit_urb_write_header(int mrf)
    emit(GS_OPCODE_SET_DWORD_2, dst_reg(MRF, mrf), flags_data);
 }
 
+static int
+align_interleaved_urb_mlen(int mlen)
+{
+   /* URB data written (does not include the message header reg) must
+    * be a multiple of 256 bits, or 2 VS registers.  See vol5c.5,
+    * section 5.4.3.2.2: URB_INTERLEAVED.
+    */
+   if ((mlen % 2) != 1)
+      mlen++;
+   return mlen;
+}
+
 void
 gen6_gs_visitor::emit_urb_write_opcode(bool complete, int base_mrf,
                                        int last_mrf, int urb_offset)
@@ -299,14 +311,7 @@ gen6_gs_visitor::emit_urb_write_opcode(bool complete, int base_mrf,
    }
 
    inst->base_mrf = base_mrf;
-   /* URB data written (does not include the message header reg) must
-    * be a multiple of 256 bits, or 2 VS registers.  See vol5c.5,
-    * section 5.4.3.2.2: URB_INTERLEAVED.
-    */
-   int mlen = last_mrf - base_mrf;
-   if ((mlen % 2) != 1)
-      mlen++;
-   inst->mlen = mlen;
+   inst->mlen = align_interleaved_urb_mlen(last_mrf - base_mrf);
    inst->offset = urb_offset;
 }
 
@@ -339,9 +344,9 @@ gen6_gs_visitor::emit_thread_end()
 
    /* In the process of generating our URB write message contents, we
     * may need to unspill a register or load from an array.  Those
-    * reads would use MRFs 14-15.
+    * reads would use MRFs 21..23
     */
-   int max_usable_mrf = 13;
+   int max_usable_mrf = FIRST_SPILL_MRF(devinfo->gen);
 
    /* Issue the FF_SYNC message and obtain the initial VUE handle. */
    emit(CMP(dst_null_d(), this->vertex_count, 0u, BRW_CONDITIONAL_G));
@@ -416,9 +421,10 @@ gen6_gs_visitor::emit_thread_end()
                         this->vertex_output_offset, 1u));
 
                /* If this was max_usable_mrf, we can't fit anything more into
-                * this URB WRITE.
+                * this URB WRITE. Same if we reached the max. message length.
                 */
-               if (mrf > max_usable_mrf) {
+               if (mrf > max_usable_mrf ||
+                   align_interleaved_urb_mlen(mrf - base_mrf + 1) > BRW_MAX_MSG_LENGTH) {
                   slot++;
                   break;
                }
