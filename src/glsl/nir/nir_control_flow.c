@@ -548,8 +548,8 @@ remove_phi_src(nir_block *block, nir_block *pred)
  * infinite loops. Note that the jump to be eliminated may be free-floating.
  */
 
-static
-void unlink_jump(nir_block *block, nir_jump_type type)
+static void
+unlink_jump(nir_block *block, nir_jump_type type, bool add_normal_successors)
 {
    if (block->successors[0])
       remove_phi_src(block->successors[0], block);
@@ -574,14 +574,14 @@ void unlink_jump(nir_block *block, nir_jump_type type)
    }
 
    unlink_block_successors(block);
+   if (add_normal_successors)
+      block_add_normal_succs(block);
 }
 
 void
 nir_handle_remove_jump(nir_block *block, nir_jump_type type)
 {
-   unlink_jump(block, type);
-
-   block_add_normal_succs(block);
+   unlink_jump(block, type, true);
 
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
    nir_metadata_preserve(impl, nir_metadata_none);
@@ -689,7 +689,7 @@ cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
       nir_foreach_instr_safe(block, instr) {
          if (instr->type == nir_instr_type_jump) {
             nir_jump_type jump_type = nir_instr_as_jump(instr)->type;
-            unlink_jump(block, jump_type);
+            unlink_jump(block, jump_type, false);
          } else {
             nir_foreach_ssa_def(instr, replace_ssa_def_uses, impl);
             nir_instr_remove(instr);
