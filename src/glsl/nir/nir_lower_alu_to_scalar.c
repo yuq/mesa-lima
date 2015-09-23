@@ -86,7 +86,7 @@ lower_alu_instr_scalar(nir_alu_instr *instr, nir_builder *b)
    case name##3: \
    case name##4: \
       lower_reduction(instr, chan, merge, b); \
-      break;
+      return;
 
    switch (instr->op) {
    case nir_op_vec4:
