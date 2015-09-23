@@ -271,6 +271,11 @@ nir_visitor::visit(ir_variable *ir)
          /* For whatever reason, GLSL IR makes gl_FrontFacing an input */
          var->data.location = SYSTEM_VALUE_FRONT_FACE;
          var->data.mode = nir_var_system_value;
+      } else if (shader->stage == MESA_SHADER_GEOMETRY &&
+                 ir->data.location == VARYING_SLOT_PRIMITIVE_ID) {
+         /* For whatever reason, GLSL IR makes gl_PrimitiveIDIn an input */
+         var->data.location = SYSTEM_VALUE_PRIMITIVE_ID;
+         var->data.mode = nir_var_system_value;
       } else {
          var->data.mode = nir_var_shader_in;
       }
