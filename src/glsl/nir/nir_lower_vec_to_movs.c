@@ -68,12 +68,16 @@ insert_mov(nir_alu_instr *vec, unsigned start_idx, nir_shader *shader)
 
    mov->dest.write_mask = (1u << start_idx);
    mov->src[0].swizzle[start_idx] = vec->src[start_idx].swizzle[0];
+   mov->src[0].negate = vec->src[start_idx].negate;
+   mov->src[0].abs = vec->src[start_idx].abs;
 
    for (unsigned i = start_idx + 1; i < 4; i++) {
       if (!(vec->dest.write_mask & (1 << i)))
          continue;
 
-      if (nir_srcs_equal(vec->src[i].src, vec->src[start_idx].src)) {
+      if (nir_srcs_equal(vec->src[i].src, vec->src[start_idx].src) &&
+          vec->src[i].negate == vec->src[start_idx].negate &&
+          vec->src[i].abs == vec->src[start_idx].abs) {
          mov->dest.write_mask |= (1 << i);
          mov->src[0].swizzle[i] = vec->src[i].swizzle[0];
       }
