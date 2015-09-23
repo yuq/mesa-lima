@@ -421,23 +421,18 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
       goto fail;
    *cleanup = ANV_MMAP_CLEANUP_INIT;
 
-   /* First try to see if mremap can grow the map in place. */
-   map = MAP_FAILED;
-   if (old_size > 0 && center_bo_offset == 0)
-      map = mremap(pool->map, old_size, size, 0);
-   if (map == MAP_FAILED) {
-      /* Just leak the old map until we destroy the pool.  We can't munmap it
-       * without races or imposing locking on the block allocate fast path. On
-       * the whole the leaked maps adds up to less than the size of the
-       * current map.  MAP_POPULATE seems like the right thing to do, but we
-       * should try to get some numbers.
-       */
-      map = mmap(NULL, size, PROT_READ | PROT_WRITE,
-                 MAP_SHARED | MAP_POPULATE, pool->fd,
-                 BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
-      cleanup->map = map;
-      cleanup->size = size;
-   }
+   /* Just leak the old map until we destroy the pool.  We can't munmap it
+    * without races or imposing locking on the block allocate fast path. On
+    * the whole the leaked maps adds up to less than the size of the
+    * current map.  MAP_POPULATE seems like the right thing to do, but we
+    * should try to get some numbers.
+    */
+   map = mmap(NULL, size, PROT_READ | PROT_WRITE,
+              MAP_SHARED | MAP_POPULATE, pool->fd,
+              BLOCK_POOL_MEMFD_CENTER - center_bo_offset);
+   cleanup->map = map;
+   cleanup->size = size;
+
    if (map == MAP_FAILED)
       goto fail;
 
