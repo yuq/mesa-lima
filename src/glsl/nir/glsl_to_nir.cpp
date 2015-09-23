@@ -656,6 +656,7 @@ nir_visitor::visit(ir_call *ir)
       }
 
       nir_intrinsic_instr *instr = nir_intrinsic_instr_create(shader, op);
+      nir_dest *dest = &instr->dest;
 
       switch (op) {
       case nir_intrinsic_atomic_counter_read_var:
@@ -665,6 +666,7 @@ nir_visitor::visit(ir_call *ir)
             (ir_dereference *) ir->actual_parameters.get_head();
          instr->variables[0] = evaluate_deref(&instr->instr, param);
          nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       }
       case nir_intrinsic_image_load:
@@ -702,8 +704,10 @@ nir_visitor::visit(ir_call *ir)
          }
 
          if (op == nir_intrinsic_image_size ||
-             op == nir_intrinsic_image_samples)
+             op == nir_intrinsic_image_samples) {
+            nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
             break;
+         }
 
          /* Set the address argument, extending the coordinate vector to four
           * components.
@@ -745,9 +749,11 @@ nir_visitor::visit(ir_call *ir)
             instr->src[3] = evaluate_rvalue((ir_dereference *)param);
             param = param->get_next();
          }
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       }
       case nir_intrinsic_memory_barrier:
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
          exec_node *param = ir->actual_parameters.get_head();
@@ -771,6 +777,7 @@ nir_visitor::visit(ir_call *ir)
             instr = nir_intrinsic_instr_create(shader, op);
             instr->src[2] = evaluate_rvalue(offset);
             instr->const_index[0] = 0;
+            dest = &instr->dest;
          } else {
             instr->const_index[0] = const_offset->value.u[0];
          }
@@ -781,13 +788,12 @@ nir_visitor::visit(ir_call *ir)
          instr->num_components = val->type->vector_elements;
 
          instr->src[1] = evaluate_rvalue(block);
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       }
       default:
          unreachable("not reached");
       }
-
-      nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
 
       if (ir->return_deref) {
          nir_intrinsic_instr *store_instr =
@@ -796,7 +802,7 @@ nir_visitor::visit(ir_call *ir)
 
          store_instr->variables[0] =
             evaluate_deref(&store_instr->instr, ir->return_deref);
-         store_instr->src[0] = nir_src_for_ssa(&instr->dest.ssa);
+         store_instr->src[0] = nir_src_for_ssa(&dest->ssa);
 
          nir_instr_insert_after_cf_list(this->cf_node_list,
                                         &store_instr->instr);
