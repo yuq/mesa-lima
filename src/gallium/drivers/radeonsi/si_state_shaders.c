@@ -1246,6 +1246,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 	                                PIPE_USAGE_DEFAULT, scratch_needed_size);
 			if (!sctx->scratch_buffer)
 				return false;
+			sctx->emit_scratch_reloc = true;
 		}
 
 		/* Update the shaders, so they are using the latest scratch.  The
