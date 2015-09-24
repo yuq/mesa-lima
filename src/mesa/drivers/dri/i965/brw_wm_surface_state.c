@@ -1336,3 +1336,46 @@ gen4_init_vtable_surface_functions(struct brw_context *brw)
    brw->vtbl.emit_null_surface_state = brw_emit_null_surface_state;
    brw->vtbl.emit_buffer_surface_state = gen4_emit_buffer_surface_state;
 }
+
+static void
+brw_upload_cs_work_groups_surface(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* _NEW_PROGRAM */
+   struct gl_shader_program *prog =
+      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (prog && brw->cs.prog_data->uses_num_work_groups) {
+      const unsigned surf_idx =
+         brw->cs.prog_data->binding_table.work_groups_start;
+      uint32_t *surf_offset = &brw->cs.base.surf_offset[surf_idx];
+      drm_intel_bo *bo;
+      uint32_t bo_offset;
+
+      if (brw->compute.num_work_groups_bo == NULL) {
+         bo = NULL;
+         intel_upload_data(brw,
+                           (void *)brw->compute.num_work_groups,
+                           3 * sizeof(GLuint),
+                           sizeof(GLuint),
+                           &bo,
+                           &bo_offset);
+      } else {
+         bo = brw->compute.num_work_groups_bo;
+         bo_offset = brw->compute.num_work_groups_offset;
+      }
+
+      brw->vtbl.emit_buffer_surface_state(brw, surf_offset,
+                                          bo, bo_offset,
+                                          BRW_SURFACEFORMAT_RAW,
+                                          3 * sizeof(GLuint), 1, true);
+      brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
+   }
+}
+
+const struct brw_tracked_state brw_cs_work_groups_surface = {
+   .dirty = {
+      .brw = BRW_NEW_CS_WORK_GROUPS
+   },
+   .emit = brw_upload_cs_work_groups_surface,
+};

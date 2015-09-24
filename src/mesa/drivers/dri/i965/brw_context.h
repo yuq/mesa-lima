@@ -213,6 +213,7 @@ enum brw_state_id {
    BRW_STATE_SAMPLER_STATE_TABLE,
    BRW_STATE_VS_ATTRIB_WORKAROUNDS,
    BRW_STATE_COMPUTE_PROGRAM,
+   BRW_STATE_CS_WORK_GROUPS,
    BRW_NUM_STATE_BITS
 };
 
@@ -294,6 +295,7 @@ enum brw_state_id {
 #define BRW_NEW_SAMPLER_STATE_TABLE     (1ull << BRW_STATE_SAMPLER_STATE_TABLE)
 #define BRW_NEW_VS_ATTRIB_WORKAROUNDS   (1ull << BRW_STATE_VS_ATTRIB_WORKAROUNDS)
 #define BRW_NEW_COMPUTE_PROGRAM         (1ull << BRW_STATE_COMPUTE_PROGRAM)
+#define BRW_NEW_CS_WORK_GROUPS          (1ull << BRW_STATE_CS_WORK_GROUPS)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -497,6 +499,7 @@ struct brw_cs_prog_data {
    unsigned local_size[3];
    unsigned simd_size;
    bool uses_barrier;
+   bool uses_num_work_groups;
 
    struct {
       /** @{
@@ -1545,7 +1548,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[60];
-   const struct brw_tracked_state compute_atoms[6];
+   const struct brw_tracked_state compute_atoms[7];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
