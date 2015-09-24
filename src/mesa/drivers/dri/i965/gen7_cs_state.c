@@ -183,7 +183,8 @@ const struct brw_tracked_state brw_cs_state = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_CS_PROG_DATA |
-             BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+             BRW_NEW_PUSH_CONSTANT_ALLOCATION |
+             BRW_NEW_SURFACES,
    },
    .emit = brw_upload_cs_state
 };
