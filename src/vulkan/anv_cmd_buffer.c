@@ -109,6 +109,7 @@ VkResult anv_CreateCommandBuffer(
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   cmd_buffer->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    cmd_buffer->device = device;
 
    result = anv_cmd_buffer_init_batch_bo_chain(cmd_buffer);

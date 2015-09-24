@@ -45,6 +45,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (fd < 0)
       return vk_errorf(VK_ERROR_UNAVAILABLE, "failed to open %s: %m", path);
 
+   device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = instance;
    device->path = path;
    
@@ -159,6 +160,7 @@ VkResult anv_CreateInstance(
    if (!instance)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   instance->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    instance->pAllocUserData = alloc_callbacks->pUserData;
    instance->pfnAlloc = alloc_callbacks->pfnAlloc;
    instance->pfnFree = alloc_callbacks->pfnFree;
@@ -523,6 +525,7 @@ PFN_vkVoidFunction anv_GetDeviceProcAddr(
 static VkResult
 anv_queue_init(struct anv_device *device, struct anv_queue *queue)
 {
+   queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    queue->device = device;
    queue->pool = &device->surface_state_pool;
 
@@ -596,6 +599,7 @@ VkResult anv_CreateDevice(
    if (!device)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = physical_device->instance;
 
    /* XXX(chadv): Can we dup() physicalDevice->fd here? */

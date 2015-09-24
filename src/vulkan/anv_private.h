@@ -57,6 +57,13 @@
 extern "C" {
 #endif
 
+#define ICD_LOADER_MAGIC   0x01CDC0DE
+
+typedef union _VK_LOADER_DATA {
+  uintptr_t loaderMagic;
+  void *loaderData;
+} VK_LOADER_DATA;
+
 #define anv_noreturn __attribute__((__noreturn__))
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
@@ -381,6 +388,8 @@ extern struct anv_dispatch_table dtable;
 
 
 struct anv_physical_device {
+    VK_LOADER_DATA                              _loader_data;
+
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
     const char *                                path;
@@ -390,6 +399,8 @@ struct anv_physical_device {
 };
 
 struct anv_instance {
+    VK_LOADER_DATA                              _loader_data;
+
     void *                                      pAllocUserData;
     PFN_vkAllocFunction                         pfnAlloc;
     PFN_vkFreeFunction                          pfnFree;
@@ -427,6 +438,8 @@ struct anv_meta_state {
 };
 
 struct anv_queue {
+    VK_LOADER_DATA                              _loader_data;
+
     struct anv_device *                         device;
 
     struct anv_state_pool *                     pool;
@@ -447,6 +460,8 @@ struct anv_queue {
 };
 
 struct anv_device {
+    VK_LOADER_DATA                              _loader_data;
+
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;
     struct brw_device_info                      info;
@@ -832,6 +847,8 @@ enum anv_cmd_buffer_exec_mode {
 };
 
 struct anv_cmd_buffer {
+   VK_LOADER_DATA                               _loader_data;
+
    struct anv_device *                          device;
 
    struct list_head                             pool_link;
