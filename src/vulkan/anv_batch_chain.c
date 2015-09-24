@@ -895,21 +895,19 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
     */
    if (first_batch_bo->bo.index != cmd_buffer->execbuf2.bo_count - 1) {
       uint32_t idx = first_batch_bo->bo.index;
+      uint32_t last_idx = cmd_buffer->execbuf2.bo_count - 1;
 
       struct drm_i915_gem_exec_object2 tmp_obj =
          cmd_buffer->execbuf2.objects[idx];
       assert(cmd_buffer->execbuf2.bos[idx] == &first_batch_bo->bo);
 
-      cmd_buffer->execbuf2.objects[idx] =
-         cmd_buffer->execbuf2.objects[cmd_buffer->execbuf2.bo_count - 1];
-      cmd_buffer->execbuf2.bos[idx] =
-         cmd_buffer->execbuf2.bos[cmd_buffer->execbuf2.bo_count - 1];
+      cmd_buffer->execbuf2.objects[idx] = cmd_buffer->execbuf2.objects[last_idx];
+      cmd_buffer->execbuf2.bos[idx] = cmd_buffer->execbuf2.bos[last_idx];
       cmd_buffer->execbuf2.bos[idx]->index = idx;
 
-      cmd_buffer->execbuf2.objects[cmd_buffer->execbuf2.bo_count - 1] = tmp_obj;
-      cmd_buffer->execbuf2.bos[cmd_buffer->execbuf2.bo_count - 1] =
-         &first_batch_bo->bo;
-      first_batch_bo->bo.index = cmd_buffer->execbuf2.bo_count - 1;
+      cmd_buffer->execbuf2.objects[last_idx] = tmp_obj;
+      cmd_buffer->execbuf2.bos[last_idx] = &first_batch_bo->bo;
+      first_batch_bo->bo.index = last_idx;
    }
 
    /* Now we go through and fixup all of the relocation lists to point to
