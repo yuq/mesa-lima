@@ -366,6 +366,10 @@ void anv_bo_pool_finish(struct anv_bo_pool *pool);
 VkResult anv_bo_pool_alloc(struct anv_bo_pool *pool, struct anv_bo *bo);
 void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 
+
+void *anv_resolve_entrypoint(uint32_t index);
+
+
 struct anv_physical_device {
     struct anv_instance *                       instance;
     uint32_t                                    chipset_id;

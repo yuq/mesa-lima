@@ -201,8 +201,8 @@ anv_set_dispatch_gen(uint32_t gen)
    dispatch_gen = gen;   
 }
 
-static void * __attribute__ ((noinline))
-resolve_entrypoint(uint32_t index)
+void * __attribute__ ((noinline))
+anv_resolve_entrypoint(uint32_t index)
 {
    if (enable_validate && validate_layer.entrypoints[index])
       return validate_layer.entrypoints[index];
@@ -229,7 +229,7 @@ resolve_entrypoint(uint32_t index)
 # lets the resolver look it up in the table.
 
 for type, name, args, num, h in entrypoints:
-    print "static void *resolve_%s(void) { return resolve_entrypoint(%d); }" % (name, num)
+    print "static void *resolve_%s(void) { return anv_resolve_entrypoint(%d); }" % (name, num)
     print "%s vk%s%s\n   __attribute__ ((ifunc (\"resolve_%s\"), visibility (\"default\")));\n" % (type, name, args, name)
 
 
@@ -305,6 +305,6 @@ anv_lookup_entrypoint(const char *name)
    if (strcmp(name, strings + e->name) != 0)
       return NULL;
 
-   return resolve_entrypoint(i);
+   return anv_resolve_entrypoint(i);
 }
 """ % (prime_factor, prime_step, hash_mask)
