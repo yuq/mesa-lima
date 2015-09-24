@@ -31,6 +31,8 @@
 #include "mesa/main/git_sha1.h"
 #include "util/strtod.h"
 
+struct anv_dispatch_table dtable;
+
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
@@ -794,7 +796,7 @@ VkResult anv_QueueWaitIdle(
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
 
-   return vkDeviceWaitIdle(anv_device_to_handle(queue->device));
+   return ANV_CALL(DeviceWaitIdle)(anv_device_to_handle(queue->device));
 }
 
 VkResult anv_DeviceWaitIdle(

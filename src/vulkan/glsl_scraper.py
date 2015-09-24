@@ -240,11 +240,12 @@ with open_file(outfname, 'w') as outfile:
       #define _ANV_SPIRV_MODULE_INFO2(_line) _anv_glsl_helpers_shader ## _line ## _info
       #define _ANV_SPIRV_MODULE_INFO(_line) _ANV_SPIRV_MODULE_INFO2(_line)
 
-      #define GLSL_VK_SHADER_MODULE(device, stage, ...) ({                    \\
-         VkShaderModule __module;                                             \\
-         vkCreateShaderModule(anv_device_to_handle(device),                   \\
-                              &_ANV_SPIRV_MODULE_INFO(__LINE__), &__module);  \\
-         __module;                                                            \\
+      #define GLSL_VK_SHADER_MODULE(device, stage, ...) ({                 \\
+         VkShaderModule __module;                                          \\
+         ANV_CALL(CreateShaderModule)(anv_device_to_handle(device),        \\
+                                      &_ANV_SPIRV_MODULE_INFO(__LINE__),   \\
+                                      &__module);                          \\
+         __module;                                                         \\
       })
       """))
 

@@ -318,7 +318,8 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
       anv_CmdBindDynamicColorBlendState(anv_cmd_buffer_to_handle(cmd_buffer),
                                         device->meta_state.shared.cb_state);
 
-   vkCmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, num_instances);
+   ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer),
+                     0, 3, 0, num_instances);
 }
 
 void
@@ -802,7 +803,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .dependencyCount = 0,
       }, &pass);
 
-   vkCmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
+   ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
       &(VkRenderPassBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
          .renderPass = pass,
@@ -845,9 +846,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                              device->meta_state.blit.pipeline_layout, 0, 1,
                              &set, 0, NULL);
 
-   vkCmdDraw(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, 1);
+   ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, 1);
 
-   vkCmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
+   ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
 
    /* At the point where we emit the draw call, all data from the
     * descriptor sets, etc. has been used.  We are free to delete it.
@@ -1531,7 +1532,7 @@ void anv_CmdClearColorImage(
                   .dependencyCount = 0,
                }, &pass);
 
-            vkCmdBeginRenderPass(anv_cmd_buffer_to_handle(cmd_buffer),
+            ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
                &(VkRenderPassBeginInfo) {
                   .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                   .renderArea = {
@@ -1559,7 +1560,7 @@ void anv_CmdClearColorImage(
             meta_emit_clear(cmd_buffer, 1, &instance_data,
                             (VkClearDepthStencilValue) {0});
 
-            vkCmdEndRenderPass(anv_cmd_buffer_to_handle(cmd_buffer));
+            ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
          }
       }
    }
@@ -1621,19 +1622,19 @@ anv_device_init_meta(struct anv_device *device)
    anv_device_init_meta_clear_state(device);
    anv_device_init_meta_blit_state(device);
 
-   vkCreateDynamicRasterState(anv_device_to_handle(device),
+   ANV_CALL(CreateDynamicRasterState)(anv_device_to_handle(device),
       &(VkDynamicRasterStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO,
       },
       &device->meta_state.shared.rs_state);
 
-   vkCreateDynamicColorBlendState(anv_device_to_handle(device),
+   ANV_CALL(CreateDynamicColorBlendState)(anv_device_to_handle(device),
       &(VkDynamicColorBlendStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO
       },
       &device->meta_state.shared.cb_state);
 
-   vkCreateDynamicDepthStencilState(anv_device_to_handle(device),
+   ANV_CALL(CreateDynamicDepthStencilState)(anv_device_to_handle(device),
       &(VkDynamicDepthStencilStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO
       },

@@ -369,6 +369,16 @@ void anv_bo_pool_free(struct anv_bo_pool *pool, const struct anv_bo *bo);
 
 void *anv_resolve_entrypoint(uint32_t index);
 
+extern struct anv_dispatch_table dtable;
+
+#define ANV_CALL(func) ({ \
+   if (dtable.func == NULL) { \
+      size_t idx = offsetof(struct anv_dispatch_table, func) / sizeof(void *); \
+      dtable.entrypoints[idx] = anv_resolve_entrypoint(idx); \
+   } \
+   dtable.func; \
+})
+
 
 struct anv_physical_device {
     struct anv_instance *                       instance;
