@@ -26,6 +26,7 @@
 #include "radeon_llvm_emit.h"
 #include "radeon_elf_util.h"
 #include "c11/threads.h"
+#include "gallivm/lp_bld_misc.h"
 #include "util/u_memory.h"
 #include "pipe/p_shader_tokens.h"
 
@@ -87,6 +88,7 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 
 static void init_r600_target()
 {
+	gallivm_init_llvm_targets();
 #if HAVE_LLVM < 0x0307
 	LLVMInitializeR600TargetInfo();
 	LLVMInitializeR600Target();
