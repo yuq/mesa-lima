@@ -383,12 +383,6 @@ anv_cmd_buffer_current_surface_bbo(struct anv_cmd_buffer *cmd_buffer)
    return LIST_ENTRY(struct anv_batch_bo, cmd_buffer->surface_bos.prev, link);
 }
 
-struct anv_bo *
-anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer)
-{
-   return &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->bo;
-}
-
 struct anv_reloc_list *
 anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -399,7 +393,7 @@ struct anv_address
 anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    return (struct anv_address) {
-      .bo = anv_cmd_buffer_current_surface_bo(cmd_buffer),
+      .bo = &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->bo,
       .offset = 0,
    };
 }
@@ -478,7 +472,7 @@ anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment)
 {
    struct anv_bo *surface_bo =
-      anv_cmd_buffer_current_surface_bo(cmd_buffer);
+      &anv_cmd_buffer_current_surface_bbo(cmd_buffer)->bo;
    struct anv_state state;
 
    state.offset = align_u32(cmd_buffer->surface_next, alignment);

@@ -893,8 +893,6 @@ struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
-struct anv_bo *
-anv_cmd_buffer_current_surface_bo(struct anv_cmd_buffer *cmd_buffer);
 struct anv_reloc_list *
 anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer);
 struct anv_address
