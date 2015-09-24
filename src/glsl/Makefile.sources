@@ -33,6 +33,7 @@ NIR_FILES = \
 	nir/nir_gs_count_vertices.c \
 	nir/nir_intrinsics.c \
 	nir/nir_intrinsics.h \
+	nir/nir_instr_set.c \
 	nir/nir_live_variables.c \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
