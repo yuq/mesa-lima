@@ -497,6 +497,14 @@ struct brw_cs_prog_data {
    unsigned local_size[3];
    unsigned simd_size;
    bool uses_barrier;
+
+   struct {
+      /** @{
+       * surface indices the CS-specific surfaces
+       */
+      uint32_t work_groups_start;
+      /** @} */
+   } binding_table;
 };
 
 /**
@@ -758,7 +766,8 @@ struct brw_vs_prog_data {
                             12 + /* ubo */                              \
                             BRW_MAX_ABO +                               \
                             BRW_MAX_IMAGES +                            \
-                            2 /* shader time, pull constants */)
+                            2 + /* shader time, pull constants */       \
+                            1 /* cs num work groups */)
 
 #define SURF_INDEX_GEN6_SOL_BINDING(t) (t)
 

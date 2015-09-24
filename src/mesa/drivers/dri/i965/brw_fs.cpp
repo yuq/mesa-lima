@@ -4750,7 +4750,7 @@ fs_visitor::setup_cs_payload()
 }
 
 void
-fs_visitor::assign_binding_table_offsets()
+fs_visitor::assign_fs_binding_table_offsets()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
@@ -4762,6 +4762,20 @@ fs_visitor::assign_binding_table_offsets()
     */
    prog_data->binding_table.render_target_start = next_binding_table_offset;
    next_binding_table_offset += MAX2(key->nr_color_regions, 1);
+
+   assign_common_binding_table_offsets(next_binding_table_offset);
+}
+
+void
+fs_visitor::assign_cs_binding_table_offsets()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
+   uint32_t next_binding_table_offset = 0;
+
+   /* May not be used if the gl_NumWorkGroups variable is not accessed. */
+   prog_data->binding_table.work_groups_start = next_binding_table_offset;
+   next_binding_table_offset++;
 
    assign_common_binding_table_offsets(next_binding_table_offset);
 }
@@ -5020,7 +5034,7 @@ fs_visitor::run_fs(bool do_rep_send)
 
    sanity_param_count = prog->Parameters->NumParameters;
 
-   assign_binding_table_offsets();
+   assign_fs_binding_table_offsets();
 
    if (devinfo->gen >= 6)
       setup_payload_gen6();
@@ -5108,7 +5122,7 @@ fs_visitor::run_cs()
 
    sanity_param_count = prog->Parameters->NumParameters;
 
-   assign_common_binding_table_offsets(0);
+   assign_cs_binding_table_offsets();
 
    setup_cs_payload();
 
