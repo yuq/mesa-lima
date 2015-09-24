@@ -30,6 +30,7 @@
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
 #include "brw_fs_surface_builder.h"
+#include "brw_vec4_gs_visitor.h"
 
 using namespace brw;
 using namespace brw::surface_access;
@@ -1366,6 +1367,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
+
+   case nir_intrinsic_load_primitive_id:
+      assert(stage == MESA_SHADER_GEOMETRY);
+      assert(((struct brw_gs_prog_data *)prog_data)->include_primitive_id);
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD),
+              retype(fs_reg(brw_vec8_grf(2, 0)), BRW_REGISTER_TYPE_UD));
+      break;
 
    case nir_intrinsic_load_vertex_id_zero_base:
    case nir_intrinsic_load_base_vertex:
