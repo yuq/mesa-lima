@@ -311,8 +311,7 @@ nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
       }
 
       /* Don't support un-lowered sampler derefs currently. */
-      if (tex1->sampler || tex2->sampler)
-         return false;
+      assert(!tex1->sampler && !tex2->sampler);
 
       return true;
    }
