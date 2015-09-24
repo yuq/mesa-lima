@@ -36,27 +36,18 @@
 
 
 static void
-brw_emit_gpgpu_walker(struct brw_context *brw,
-                      const void *compute_param,
-                      bool indirect)
+brw_emit_gpgpu_walker(struct brw_context *brw)
 {
    const struct brw_cs_prog_data *prog_data = brw->cs.prog_data;
 
-   const GLuint *num_groups;
+   const GLuint *num_groups = brw->compute.num_work_groups;
    uint32_t indirect_flag;
 
-   if (!indirect) {
-      num_groups = (const GLuint *)compute_param;
+   if (brw->compute.num_work_groups_bo == NULL) {
       indirect_flag = 0;
    } else {
-      GLintptr indirect_offset = (GLintptr)compute_param;
-      static const GLuint indirect_group_counts[3] = { 0, 0, 0 };
-      num_groups = indirect_group_counts;
-
-      struct gl_buffer_object *indirect_buffer = brw->ctx.DispatchIndirectBuffer;
-      drm_intel_bo *bo = intel_bufferobj_buffer(brw,
-            intel_buffer_object(indirect_buffer),
-            indirect_offset, 3 * sizeof(GLuint));
+      GLintptr indirect_offset = brw->compute.num_work_groups_offset;
+      drm_intel_bo *bo = brw->compute.num_work_groups_bo;
 
       indirect_flag = GEN7_GPGPU_INDIRECT_PARAMETER_ENABLE;
 
@@ -115,9 +106,7 @@ brw_emit_gpgpu_walker(struct brw_context *brw,
 
 
 static void
-brw_dispatch_compute_common(struct gl_context *ctx,
-                            const void *compute_param,
-                            bool indirect)
+brw_dispatch_compute_common(struct gl_context *ctx)
 {
    struct brw_context *brw = brw_context(ctx);
    int estimated_buffer_space_needed;
@@ -151,7 +140,7 @@ brw_dispatch_compute_common(struct gl_context *ctx,
    brw->no_batch_wrap = true;
    brw_upload_compute_state(brw);
 
-   brw_emit_gpgpu_walker(brw, compute_param, indirect);
+   brw_emit_gpgpu_walker(brw);
 
    brw->no_batch_wrap = false;
 
@@ -191,17 +180,30 @@ brw_dispatch_compute_common(struct gl_context *ctx,
 
 static void
 brw_dispatch_compute(struct gl_context *ctx, const GLuint *num_groups) {
-   brw_dispatch_compute_common(ctx,
-                               num_groups,
-                               false);
+   struct brw_context *brw = brw_context(ctx);
+
+   brw->compute.num_work_groups_bo = NULL;
+   brw->compute.num_work_groups = num_groups;
+
+   brw_dispatch_compute_common(ctx);
 }
 
 static void
 brw_dispatch_compute_indirect(struct gl_context *ctx, GLintptr indirect)
 {
-   brw_dispatch_compute_common(ctx,
-                               (void *)indirect,
-                               true);
+   struct brw_context *brw = brw_context(ctx);
+   static const GLuint indirect_group_counts[3] = { 0, 0, 0 };
+   struct gl_buffer_object *indirect_buffer = ctx->DispatchIndirectBuffer;
+   drm_intel_bo *bo =
+      intel_bufferobj_buffer(brw,
+                             intel_buffer_object(indirect_buffer),
+                             indirect, 3 * sizeof(GLuint));
+
+   brw->compute.num_work_groups_bo = bo;
+   brw->compute.num_work_groups_offset = indirect;
+   brw->compute.num_work_groups = indirect_group_counts;
+
+   brw_dispatch_compute_common(ctx);
 }
 
 void

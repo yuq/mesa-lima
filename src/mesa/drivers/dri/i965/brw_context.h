@@ -1252,6 +1252,17 @@ struct brw_context
    } draw;
 
    struct {
+      /**
+       * For gl_NumWorkGroups: If num_work_groups_bo is non NULL, then it is
+       * an indirect call, and num_work_groups_offset is valid. Otherwise,
+       * num_work_groups is set based on glDispatchCompute.
+       */
+      drm_intel_bo *num_work_groups_bo;
+      GLintptr num_work_groups_offset;
+      const GLuint *num_work_groups;
+   } compute;
+
+   struct {
       struct brw_vertex_element inputs[VERT_ATTRIB_MAX];
       struct brw_vertex_buffer buffers[VERT_ATTRIB_MAX];
 
