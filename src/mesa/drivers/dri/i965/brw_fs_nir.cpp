@@ -1922,6 +1922,34 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_load_num_work_groups: {
+      assert(devinfo->gen >= 7);
+      assert(stage == MESA_SHADER_COMPUTE);
+
+      struct brw_cs_prog_data *cs_prog_data =
+         (struct brw_cs_prog_data *) prog_data;
+      const unsigned surface =
+         cs_prog_data->binding_table.work_groups_start;
+
+      cs_prog_data->uses_num_work_groups = true;
+
+      fs_reg surf_index = fs_reg(surface);
+      brw_mark_surface_used(prog_data, surface);
+
+      /* Read the 3 GLuint components of gl_NumWorkGroups */
+      for (unsigned i = 0; i < 3; i++) {
+         fs_reg read_result =
+            emit_untyped_read(bld, surf_index,
+                              fs_reg(i << 2),
+                              1 /* dims */, 1 /* size */,
+                              BRW_PREDICATE_NONE);
+         read_result.type = dest.type;
+         bld.MOV(dest, read_result);
+         dest = offset(dest, bld, 1);
+      }
+      break;
+   }
+
    default:
       unreachable("unknown intrinsic");
    }
