@@ -181,7 +181,8 @@ brw_upload_cs_state(struct brw_context *brw)
 const struct brw_tracked_state brw_cs_state = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
-      .brw = BRW_NEW_CS_PROG_DATA |
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA |
              BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
    .emit = brw_upload_cs_state
@@ -340,7 +341,8 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
 const struct brw_tracked_state gen7_cs_push_constants = {
    .dirty = {
       .mesa = _NEW_PROGRAM_CONSTANTS,
-      .brw = BRW_NEW_COMPUTE_PROGRAM |
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_COMPUTE_PROGRAM |
              BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
    .emit = gen7_upload_cs_push_constants,
