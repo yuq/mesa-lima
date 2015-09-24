@@ -34,6 +34,10 @@ _mesa_DispatchCompute(GLuint num_groups_x,
    GET_CURRENT_CONTEXT(ctx);
    const GLuint num_groups[3] = { num_groups_x, num_groups_y, num_groups_z };
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glDispatchCompute(%d, %d, %d)\n",
+                  num_groups_x, num_groups_y, num_groups_z);
+
    if (!_mesa_validate_DispatchCompute(ctx, num_groups))
       return;
 
@@ -44,6 +48,9 @@ extern void GLAPIENTRY
 _mesa_DispatchComputeIndirect(GLintptr indirect)
 {
    GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glDispatchComputeIndirect(%d)\n", indirect);
 
    if (!_mesa_validate_DispatchComputeIndirect(ctx, indirect))
       return;
