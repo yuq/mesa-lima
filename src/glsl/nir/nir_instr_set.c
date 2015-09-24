@@ -51,8 +51,8 @@ nir_srcs_equal(nir_src src1, nir_src src2)
 }
 
 static bool
-nir_alu_srcs_equal(nir_alu_instr *alu1, nir_alu_instr *alu2, unsigned src1,
-                   unsigned src2)
+nir_alu_srcs_equal(const nir_alu_instr *alu1, const nir_alu_instr *alu2,
+                   unsigned src1, unsigned src2)
 {
    if (alu1->src[src1].abs != alu2->src[src2].abs ||
        alu1->src[src1].negate != alu2->src[src2].negate)
@@ -67,7 +67,7 @@ nir_alu_srcs_equal(nir_alu_instr *alu1, nir_alu_instr *alu2, unsigned src1,
 }
 
 bool
-nir_instrs_equal(nir_instr *instr1, nir_instr *instr2)
+nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
 {
    if (instr1->type != instr2->type)
       return false;

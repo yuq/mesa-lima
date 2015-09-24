@@ -25,5 +25,5 @@
 
 #include "nir.h"
 
-bool nir_instrs_equal(nir_instr *instr1, nir_instr *instr2);
+bool nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2);
 
