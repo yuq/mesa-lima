@@ -2646,6 +2646,127 @@ _mesa_base_tex_format(const struct gl_context *ctx, GLint internalFormat)
 }
 
 /**
+ * Returns the effective internal format from a texture format and type.
+ * This is used by texture image operations internally for validation, when
+ * the specified internal format is a base (unsized) format.
+ *
+ * This method will only return a valid effective internal format if the
+ * combination of format, type and internal format in base form, is acceptable.
+ *
+ * If a single sized internal format is defined in the spec (OpenGL-ES 3.0.4) or
+ * in extensions, to unambiguously correspond to the given base format, then
+ * that internal format is returned as the effective. Otherwise, if the
+ * combination is accepted but a single effective format is not defined, the
+ * passed base format will be returned instead.
+ *
+ * \param format the texture format
+ * \param type the texture type
+ */
+static GLenum
+_mesa_es3_effective_internal_format_for_format_and_type(GLenum format,
+                                                        GLenum type)
+{
+   switch (type) {
+   case GL_UNSIGNED_BYTE:
+      switch (format) {
+      case GL_RGBA:
+         return GL_RGBA8;
+      case GL_RGB:
+         return GL_RGB8;
+      /* Although LUMINANCE_ALPHA, LUMINANCE and ALPHA appear in table 3.12,
+       * (section 3.8 Texturing, page 128 of the OpenGL-ES 3.0.4) as effective
+       * internal formats, they do not correspond to GL constants, so the base
+       * format is returned instead.
+       */
+      case GL_LUMINANCE_ALPHA:
+      case GL_LUMINANCE:
+      case GL_ALPHA:
+         return format;
+      }
+      break;
+
+   case GL_UNSIGNED_SHORT_4_4_4_4:
+      if (format == GL_RGBA)
+         return GL_RGBA4;
+      break;
+
+   case GL_UNSIGNED_SHORT_5_5_5_1:
+      if (format == GL_RGBA)
+         return GL_RGB5_A1;
+      break;
+
+   case GL_UNSIGNED_SHORT_5_6_5:
+      if (format == GL_RGB)
+         return GL_RGB565;
+      break;
+
+   /* OES_packed_depth_stencil */
+   case GL_UNSIGNED_INT_24_8:
+      if (format == GL_DEPTH_STENCIL)
+         return GL_DEPTH24_STENCIL8;
+      break;
+
+   case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:
+      if (format == GL_DEPTH_STENCIL)
+         return GL_DEPTH32F_STENCIL8;
+      break;
+
+   case GL_UNSIGNED_SHORT:
+      if (format == GL_DEPTH_COMPONENT)
+         return GL_DEPTH_COMPONENT16;
+      break;
+
+   case GL_UNSIGNED_INT:
+      /* It can be DEPTH_COMPONENT16 or DEPTH_COMPONENT24, so just return
+       * the format.
+       */
+      if (format == GL_DEPTH_COMPONENT)
+         return format;
+      break;
+
+   /* OES_texture_float and OES_texture_half_float */
+   case GL_FLOAT:
+      if (format == GL_DEPTH_COMPONENT)
+         return GL_DEPTH_COMPONENT32F;
+      /* fall through */
+   case GL_HALF_FLOAT_OES:
+      switch (format) {
+      case GL_RGBA:
+      case GL_RGB:
+      case GL_LUMINANCE_ALPHA:
+      case GL_LUMINANCE:
+      case GL_ALPHA:
+      case GL_RED:
+      case GL_RG:
+         return format;
+      }
+      break;
+   case GL_HALF_FLOAT:
+      switch (format) {
+      case GL_RG:
+      case GL_RED:
+         return format;
+      }
+      break;
+
+   /* GL_EXT_texture_type_2_10_10_10_REV */
+   case GL_UNSIGNED_INT_2_10_10_10_REV:
+      switch (format) {
+      case GL_RGBA:
+      case GL_RGB:
+         return format;
+      }
+      break;
+
+   default:
+      /* fall through and return NONE */
+      break;
+   }
+
+   return GL_NONE;
+}
+
+/**
  * Do error checking of format/type combinations for OpenGL ES 3
  * glTex[Sub]Image.
  * \return error code, or GL_NO_ERROR.
@@ -2655,6 +2776,36 @@ _mesa_es3_error_check_format_and_type(const struct gl_context *ctx,
                                       GLenum format, GLenum type,
                                       GLenum internalFormat)
 {
+   /* If internalFormat is an unsized format, then the effective internal
+    * format derived from format and type should be used instead. Page 127,
+    * section "3.8 Texturing" of the GLES 3.0.4 spec states:
+    *
+    *    "if internalformat is a base internal format, the effective
+    *     internal format is a sized internal format that is derived
+    *     from the format and type for internal use by the GL.
+    *     Table 3.12 specifies the mapping of format and type to effective
+    *     internal formats. The effective internal format is used by the GL
+    *     for purposes such as texture completeness or type checks for
+    *     CopyTex* commands. In these cases, the GL is required to operate
+    *     as if the effective internal format was used as the internalformat
+    *     when specifying the texture data."
+    */
+   if (_mesa_is_enum_format_unsized(internalFormat)) {
+      GLenum effectiveInternalFormat =
+         _mesa_es3_effective_internal_format_for_format_and_type(format, type);
+
+      if (effectiveInternalFormat == GL_NONE)
+         return GL_INVALID_OPERATION;
+
+      GLenum baseInternalFormat =
+         _mesa_base_tex_format(ctx, effectiveInternalFormat);
+
+      if (internalFormat != baseInternalFormat)
+         return GL_INVALID_OPERATION;
+
+      internalFormat = effectiveInternalFormat;
+   }
+
    switch (format) {
    case GL_RGBA:
       switch (type) {
