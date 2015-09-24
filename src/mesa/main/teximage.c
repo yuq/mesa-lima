@@ -2164,15 +2164,23 @@ texture_error_check( struct gl_context *ctx,
       return GL_TRUE;
    }
 
-   /* OpenGL ES 1.x and OpenGL ES 2.0 impose additional restrictions on the
-    * combinations of format, internalFormat, and type that can be used.
-    * Formats and types that require additional extensions (e.g., GL_FLOAT
-    * requires GL_OES_texture_float) are filtered elsewhere.
-    */
-   if (_mesa_is_gles(ctx) &&
-       texture_format_error_check_gles(ctx, format, type, internalFormat,
-                                       dimensions, "glTexImage%dD")) {
-     return GL_TRUE;
+   /* Check incoming image format and type */
+   err = _mesa_error_check_format_and_type(ctx, format, type);
+   if (err != GL_NO_ERROR) {
+      /* Prior to OpenGL-ES 2.0, an INVALID_VALUE is expected instead of
+       * INVALID_ENUM. From page 73 OpenGL ES 1.1 spec:
+       *
+       *     "Specifying a value for internalformat that is not one of the
+       *      above (acceptable) values generates the error INVALID VALUE."
+       */
+      if (err == GL_INVALID_ENUM && _mesa_is_gles(ctx) && ctx->Version < 20)
+         err = GL_INVALID_VALUE;
+
+      _mesa_error(ctx, err,
+                  "glTexImage%dD(incompatible format = %s, type = %s)",
+                  dimensions, _mesa_enum_to_string(format),
+                  _mesa_enum_to_string(type));
+      return GL_TRUE;
    }
 
    /* Check internalFormat */
@@ -2183,13 +2191,14 @@ texture_error_check( struct gl_context *ctx,
       return GL_TRUE;
    }
 
-   /* Check incoming image format and type */
-   err = _mesa_error_check_format_and_type(ctx, format, type);
-   if (err != GL_NO_ERROR) {
-      _mesa_error(ctx, err,
-                  "glTexImage%dD(incompatible format = %s, type = %s)",
-                  dimensions, _mesa_enum_to_string(format),
-                  _mesa_enum_to_string(type));
+   /* OpenGL ES 1.x and OpenGL ES 2.0 impose additional restrictions on the
+    * combinations of format, internalFormat, and type that can be used.
+    * Formats and types that require additional extensions (e.g., GL_FLOAT
+    * requires GL_OES_texture_float) are filtered elsewhere.
+    */
+   if (_mesa_is_gles(ctx) &&
+       texture_format_error_check_gles(ctx, format, type, internalFormat,
+                                       dimensions, "glTexImage%dD")) {
       return GL_TRUE;
    }
 
