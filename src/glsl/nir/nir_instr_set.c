@@ -247,7 +247,7 @@ nir_alu_srcs_equal(const nir_alu_instr *alu1, const nir_alu_instr *alu2,
  * the same hash for (ignoring collisions, of course).
  */
 
-bool
+static bool
 nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2)
 {
    if (instr1->type != instr2->type)

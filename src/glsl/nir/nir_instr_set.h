@@ -25,8 +25,6 @@
 
 #include "nir.h"
 
-bool nir_instrs_equal(const nir_instr *instr1, const nir_instr *instr2);
-
 /**
  * This file defines functions for creating, destroying, and manipulating an
  * "instruction set," which is an abstraction for finding duplicate
