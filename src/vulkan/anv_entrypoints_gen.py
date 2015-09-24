@@ -80,7 +80,7 @@ for line in fileinput.input():
 if opt_header:
     print "/* This file generated from vk_gen.py, don't edit directly. */\n"
 
-    print "struct anv_layer {"
+    print "struct anv_dispatch_table {"
     print "   union {"
     print "      void *entrypoints[%d];" % len(entrypoints)
     print "      struct {"
@@ -166,7 +166,7 @@ print "};\n"
 for layer in [ "anv", "validate", "gen7", "gen8" ]:
     for type, name, args, num, h in entrypoints:
         print "%s %s_%s%s __attribute__ ((weak));" % (type, layer, name, args)
-    print "\nconst struct anv_layer %s_layer = {" % layer
+    print "\nconst struct anv_dispatch_table %s_layer = {" % layer
     for type, name, args, num, h in entrypoints:
         print "   .%s = %s_%s," % (name, layer, name)
     print "};\n"
