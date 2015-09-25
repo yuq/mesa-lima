@@ -75,7 +75,7 @@ struct intel_texture_image;
 #define BRW_MAP_DIRECT_BIT	0x80000000
 
 struct intel_miptree_map {
-   /** Bitfield of GL_MAP_READ_BIT, GL_MAP_WRITE_BIT, GL_MAP_INVALIDATE_BIT */
+   /** Bitfield of GL_MAP_*_BIT and BRW_MAP_*_BIT. */
    GLbitfield mode;
    /** Region of interest for the map. */
    int x, y, w, h;
