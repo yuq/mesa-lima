@@ -135,6 +135,7 @@ VkResult __vk_errorf(VkResult error, const char *file, int line, const char *for
 #define vk_errorf(error, format, ...) __vk_errorf(error, __FILE__, __LINE__, format, ## __VA_ARGS__);
 #else
 #define vk_error(error) error
+#define vk_errorf(error, format, ...) error
 #endif
 
 void __anv_finishme(const char *file, int line, const char *format, ...)
