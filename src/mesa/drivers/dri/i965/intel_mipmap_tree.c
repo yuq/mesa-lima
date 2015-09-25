@@ -694,7 +694,7 @@ intel_miptree_create(struct brw_context *brw,
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
        intel_miptree_is_fast_clear_capable(brw, mt)) {
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
-      assert(brw->gen < 8 || mt->align_w == 16 || num_samples <= 1);
+      assert(brw->gen < 8 || mt->halign == 16 || num_samples <= 1);
    }
 
    return mt;

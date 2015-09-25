@@ -371,11 +371,21 @@ struct intel_mipmap_tree
    mesa_format etc_format;
 
    /**
-    * The X offset of each image in the miptree must be aligned to this.
-    * See the comments in brw_tex_layout.c.
+    * @name Surface Alignment
+    * @{
+    *
+    * This defines the alignment of the upperleft pixel of each 2D subimage
+    * contained in the surface. The alignment is in pixel coordinates relative
+    * to the surface's most upperleft pixel, which is the pixel at (x=0, y=0,
+    * layer=0, level=0).
+    *
+    * In the surface layout equations found in the hardware docs, the
+    * horizontal and vertical surface alignments often appear as variables 'i'
+    * and 'j'.
     */
-   unsigned int align_w;
-   unsigned int align_h; /**< \see align_w */
+   uint32_t halign; /**< RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
+   uint32_t valign; /**< RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
+   /** @} */
 
    GLuint first_level;
    GLuint last_level;
