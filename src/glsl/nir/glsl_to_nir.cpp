@@ -327,7 +327,7 @@ nir_visitor::visit(ir_variable *ir)
    }
 
    var->data.index = ir->data.index;
-   var->data.descriptor_set = ir->data.set;
+   var->data.descriptor_set = 0;
    var->data.binding = ir->data.binding;
    /* XXX Get rid of buffer_index */
    var->data.atomic.buffer_index = ir->data.binding;
@@ -1003,20 +1003,11 @@ nir_visitor::visit(ir_expression *ir)
          op = nir_intrinsic_load_ubo_indirect;
       }
 
-      ir_constant *const_block = ir->operands[0]->as_constant();
-      assert(const_block && "can't figure out descriptor set index");
-      unsigned index = const_block->value.u[0];
-      unsigned set = sh->UniformBlocks[index].Set;
-      unsigned binding = sh->UniformBlocks[index].Binding;
-
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(this->shader, op);
       load->num_components = ir->type->vector_elements;
-      load->const_index[0] = set;
-      load->const_index[1] = const_index ? const_index->value.u[0] : 0; /* base offset */
-      nir_load_const_instr *load_binding = nir_load_const_instr_create(shader, 1);
-      load_binding->value.u[0] = binding;
-      nir_instr_insert_after_cf_list(this->cf_node_list, &load_binding->instr);
-      load->src[0] = nir_src_for_ssa(&load_binding->def);
+      load->const_index[0] = const_index ? const_index->value.u[0] : 0; /* base offset */
+      load->const_index[1] = 1; /* number of vec4's */
+      load->src[0] = evaluate_rvalue(ir->operands[0]);
       if (!const_index)
          load->src[1] = evaluate_rvalue(ir->operands[1]);
       add_instr(&load->instr, ir->type->vector_elements);

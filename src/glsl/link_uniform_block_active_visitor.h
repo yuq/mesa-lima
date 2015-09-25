@@ -35,8 +35,6 @@ struct link_uniform_block_active {
    unsigned num_array_elements;
 
    unsigned binding;
-   unsigned set;
-   unsigned index;
 
    bool has_instance_name;
    bool has_binding;

@@ -527,9 +527,6 @@ struct ast_type_qualifier {
          unsigned explicit_stream:1; /**< stream value assigned explicitly by shader code */
          /** \} */
 
-         /** \name Vulkan qualifiers */
-         unsigned vk_set:1;
-
 	 /** \name Layout qualifiers for GL_ARB_tessellation_shader */
 	 /** \{ */
 	 /* tess eval input layout */
@@ -641,11 +638,6 @@ struct ast_type_qualifier {
     * This field is only valid if \c explicit_image_format is set.
     */
    glsl_base_type image_base_type;
-
-   /**
-    * Vulkan descriptor set
-    */
-   int set;
 
    /**
     * Return true if and only if an interpolation qualifier is present.

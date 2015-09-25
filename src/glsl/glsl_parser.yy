@@ -1468,14 +1468,12 @@ layout_qualifier_id:
          }
       }
 
-      if (match_layout_qualifier("binding", $1, state) == 0) {
+      if ((state->has_420pack() ||
+           state->has_atomic_counters() ||
+           state->has_shader_storage_buffer_objects()) &&
+          match_layout_qualifier("binding", $1, state) == 0) {
          $$.flags.q.explicit_binding = 1;
          $$.binding = $3;
-      }
-
-      if (match_layout_qualifier("set", $1, state) == 0) {
-         $$.flags.q.vk_set = 1;
-         $$.set = $3;
       }
 
       if (state->has_atomic_counters() &&

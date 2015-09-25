@@ -54,11 +54,6 @@ process_block(void *mem_ctx, struct hash_table *ht, ir_variable *var)
          b->binding = 0;
       }
 
-      if (var->data.vk_set) {
-         b->set = var->data.set;
-         b->index = var->data.index;
-      }
-
       _mesa_hash_table_insert(ht, var->get_interface_type()->name, (void *) b);
       return b;
    } else {
