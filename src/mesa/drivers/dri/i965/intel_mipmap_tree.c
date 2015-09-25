@@ -2168,16 +2168,18 @@ intel_miptree_map_blit(struct brw_context *brw,
 		       struct intel_miptree_map *map,
 		       unsigned int level, unsigned int slice)
 {
-   map->mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
-                                  0, 0,
-                                  map->w, map->h, 1,
-                                  0, MIPTREE_LAYOUT_TILING_NONE);
+   map->linear_mt = intel_miptree_create(brw, GL_TEXTURE_2D, mt->format,
+                                         /* first_level */ 0,
+                                         /* last_level */ 0,
+                                         map->w, map->h, 1,
+                                         /* samples */ 0,
+                                         MIPTREE_LAYOUT_TILING_NONE);
 
-   if (!map->mt) {
+   if (!map->linear_mt) {
       fprintf(stderr, "Failed to allocate blit temporary\n");
       goto fail;
    }
-   map->stride = map->mt->pitch;
+   map->stride = map->linear_mt->pitch;
 
    /* One of either READ_BIT or WRITE_BIT or both is set.  READ_BIT implies no
     * INVALIDATE_RANGE_BIT.  WRITE_BIT needs the original values read in unless
@@ -2188,7 +2190,7 @@ intel_miptree_map_blit(struct brw_context *brw,
       if (!intel_miptree_blit(brw,
                               mt, level, slice,
                               map->x, map->y, false,
-                              map->mt, 0, 0,
+                              map->linear_mt, 0, 0,
                               0, 0, false,
                               map->w, map->h, GL_COPY)) {
          fprintf(stderr, "Failed to blit\n");
@@ -2196,7 +2198,7 @@ intel_miptree_map_blit(struct brw_context *brw,
       }
    }
 
-   map->ptr = intel_miptree_map_raw(brw, map->mt);
+   map->ptr = intel_miptree_map_raw(brw, map->linear_mt);
 
    DBG("%s: %d,%d %dx%d from mt %p (%s) %d,%d = %p/%d\n", __func__,
        map->x, map->y, map->w, map->h,
@@ -2206,7 +2208,7 @@ intel_miptree_map_blit(struct brw_context *brw,
    return;
 
 fail:
-   intel_miptree_release(&map->mt);
+   intel_miptree_release(&map->linear_mt);
    map->ptr = NULL;
    map->stride = 0;
 }
@@ -2220,11 +2222,11 @@ intel_miptree_unmap_blit(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
 
-   intel_miptree_unmap_raw(map->mt);
+   intel_miptree_unmap_raw(map->linear_mt);
 
    if (map->mode & GL_MAP_WRITE_BIT) {
       bool ok = intel_miptree_blit(brw,
-                                   map->mt, 0, 0,
+                                   map->linear_mt, 0, 0,
                                    0, 0, false,
                                    mt, level, slice,
                                    map->x, map->y, false,
@@ -2232,7 +2234,7 @@ intel_miptree_unmap_blit(struct brw_context *brw,
       WARN_ONCE(!ok, "Failed to blit from linear temporary mapping");
    }
 
-   intel_miptree_release(&map->mt);
+   intel_miptree_release(&map->linear_mt);
 }
 
 /**
@@ -2756,7 +2758,7 @@ intel_miptree_unmap(struct brw_context *brw,
       intel_miptree_unmap_etc(brw, mt, map, level, slice);
    } else if (mt->stencil_mt && !(map->mode & BRW_MAP_DIRECT_BIT)) {
       intel_miptree_unmap_depthstencil(brw, mt, map, level, slice);
-   } else if (map->mt) {
+   } else if (map->linear_mt) {
       intel_miptree_unmap_blit(brw, mt, map, level, slice);
 #if defined(USE_SSE41)
    } else if (map->buffer && cpu_has_sse4_1) {
