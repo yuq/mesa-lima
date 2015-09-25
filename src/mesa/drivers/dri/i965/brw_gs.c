@@ -73,6 +73,11 @@ brw_codegen_gs_prog(struct brw_context *brw,
    c.prog_data.base.base.nr_params = param_count;
    c.prog_data.base.base.nr_image_params = gs->NumImages;
 
+   if (brw->gen >= 8) {
+      c.prog_data.static_vertex_count = !gp->program.Base.nir ? -1 :
+         nir_gs_count_vertices(gp->program.Base.nir);
+   }
+
    if (brw->gen >= 7) {
       if (gp->program.OutputType == GL_POINTS) {
          /* When the output type is points, the geometry shader may output data

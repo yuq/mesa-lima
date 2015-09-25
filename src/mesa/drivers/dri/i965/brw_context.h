@@ -792,6 +792,11 @@ struct brw_gs_prog_data
 
    bool include_primitive_id;
 
+   /**
+    * The number of vertices emitted, if constant - otherwise -1.
+    */
+   int static_vertex_count;
+
    int invocations;
 
    /**

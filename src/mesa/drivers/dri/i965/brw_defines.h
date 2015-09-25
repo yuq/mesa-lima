@@ -1964,6 +1964,11 @@ enum brw_message_target {
 # define GEN6_GS_SVBI_POSTINCREMENT_VALUE_MASK		INTEL_MASK(25, 16)
 # define GEN6_GS_ENABLE					(1 << 15)
 
+/* Gen8+ DW8 */
+# define GEN8_GS_STATIC_OUTPUT                          (1 << 30)
+# define GEN8_GS_STATIC_VERTEX_COUNT_SHIFT              16
+# define GEN8_GS_STATIC_VERTEX_COUNT_MASK               INTEL_MASK(26, 16)
+
 /* Gen8+ DW9 */
 # define GEN8_GS_URB_ENTRY_OUTPUT_OFFSET_SHIFT          21
 # define GEN8_GS_URB_OUTPUT_LENGTH_SHIFT                16
