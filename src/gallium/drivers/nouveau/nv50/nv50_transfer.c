@@ -365,9 +365,14 @@ nv50_miptree_transfer_unmap(struct pipe_context *pctx,
             tx->rect[0].base += mt->layer_stride;
          tx->rect[1].base += tx->nblocksy * tx->base.stride;
       }
+
+      /* Allow the copies above to finish executing before freeing the source */
+      nouveau_fence_work(nv50->screen->base.fence.current,
+                         nouveau_fence_unref_bo, tx->rect[1].bo);
+   } else {
+      nouveau_bo_ref(NULL, &tx->rect[1].bo);
    }
 
-   nouveau_bo_ref(NULL, &tx->rect[1].bo);
    pipe_resource_reference(&transfer->resource, NULL);
 
    FREE(tx);

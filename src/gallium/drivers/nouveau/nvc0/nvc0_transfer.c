@@ -495,11 +495,16 @@ nvc0_miptree_transfer_unmap(struct pipe_context *pctx,
          tx->rect[1].base += tx->nblocksy * tx->base.stride;
       }
       NOUVEAU_DRV_STAT(&nvc0->screen->base, tex_transfers_wr, 1);
+
+      /* Allow the copies above to finish executing before freeing the source */
+      nouveau_fence_work(nvc0->screen->base.fence.current,
+                         nouveau_fence_unref_bo, tx->rect[1].bo);
+   } else {
+      nouveau_bo_ref(NULL, &tx->rect[1].bo);
    }
    if (tx->base.usage & PIPE_TRANSFER_READ)
       NOUVEAU_DRV_STAT(&nvc0->screen->base, tex_transfers_rd, 1);
 
-   nouveau_bo_ref(NULL, &tx->rect[1].bo);
    pipe_resource_reference(&transfer->resource, NULL);
 
    FREE(tx);

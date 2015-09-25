@@ -231,3 +231,11 @@ nouveau_fence_next(struct nouveau_screen *screen)
 
    nouveau_fence_new(screen, &screen->fence.current, false);
 }
+
+void
+nouveau_fence_unref_bo(void *data)
+{
+   struct nouveau_bo *bo = data;
+
+   nouveau_bo_ref(NULL, &bo);
+}
