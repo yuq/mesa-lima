@@ -62,9 +62,11 @@ struct intel_resolve_map;
 struct intel_texture_image;
 
 /**
+ * This bit extends the set of GL_MAP_*_BIT enums.
+ *
  * When calling intel_miptree_map() on an ETC-transcoded-to-RGB miptree or a
  * depthstencil-split-to-separate-stencil miptree, we'll normally make a
- * tmeporary and recreate the kind of data requested by Mesa core, since we're
+ * temporary and recreate the kind of data requested by Mesa core, since we're
  * satisfying some glGetTexImage() request or something.
  *
  * However, occasionally you want to actually map the miptree's current data
