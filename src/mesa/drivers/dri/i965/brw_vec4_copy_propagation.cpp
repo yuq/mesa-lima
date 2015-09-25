@@ -202,6 +202,13 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 	 return true;
       }
       break;
+   case GS_OPCODE_SET_WRITE_OFFSET:
+      /* This is just a multiply by a constant with special strides.
+       * The generator will handle immediates in both arguments (generating
+       * a single MOV of the product).  So feel free to propagate in src0.
+       */
+      inst->src[arg] = value;
+      return true;
 
    case BRW_OPCODE_CMP:
       if (arg == 1) {

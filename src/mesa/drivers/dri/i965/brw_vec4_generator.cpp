@@ -541,8 +541,13 @@ vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
           src1.file == BRW_IMMEDIATE_VALUE &&
           src1.type == BRW_REGISTER_TYPE_UD &&
           src1.dw1.ud <= USHRT_MAX);
-   brw_MUL(p, suboffset(stride(dst, 2, 2, 1), 3), stride(src0, 8, 2, 4),
-           retype(src1, BRW_REGISTER_TYPE_UW));
+   if (src0.file == IMM) {
+      brw_MOV(p, suboffset(stride(dst, 2, 2, 1), 3),
+              brw_imm_ud(src0.dw1.ud * src1.dw1.ud));
+   } else {
+      brw_MUL(p, suboffset(stride(dst, 2, 2, 1), 3), stride(src0, 8, 2, 4),
+              retype(src1, BRW_REGISTER_TYPE_UW));
+   }
    brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
 }
