@@ -800,7 +800,6 @@ nir_visitor::visit(ir_call *ir)
             instr = nir_intrinsic_instr_create(shader, op);
             instr->src[2] = evaluate_rvalue(offset);
             instr->const_index[0] = 0;
-            dest = &instr->dest;
          } else {
             instr->const_index[0] = const_offset->value.u[0];
          }
