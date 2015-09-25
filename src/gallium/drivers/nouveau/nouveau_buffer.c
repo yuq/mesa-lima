@@ -80,7 +80,12 @@ release_allocation(struct nouveau_mm_allocation **mm,
 inline void
 nouveau_buffer_release_gpu_storage(struct nv04_resource *buf)
 {
-   nouveau_bo_ref(NULL, &buf->bo);
+   if (buf->fence && buf->fence->state < NOUVEAU_FENCE_STATE_FLUSHED) {
+      nouveau_fence_work(buf->fence, nouveau_fence_unref_bo, buf->bo);
+      buf->bo = NULL;
+   } else {
+      nouveau_bo_ref(NULL, &buf->bo);
+   }
 
    if (buf->mm)
       release_allocation(&buf->mm, buf->fence);
