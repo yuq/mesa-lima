@@ -3319,8 +3319,12 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage)
          switch (var->data.mode) {
          case ir_var_shader_in:
             iface = GL_PROGRAM_INPUT;
+            break;
          case ir_var_shader_out:
             iface = GL_PROGRAM_OUTPUT;
+            break;
+         default:
+            unreachable("unexpected type");
          }
          if (!add_program_resource(shProg, iface, var,
                                    build_stageref(shProg, var->name,
