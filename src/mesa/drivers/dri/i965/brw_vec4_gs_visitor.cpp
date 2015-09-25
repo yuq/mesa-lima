@@ -236,6 +236,21 @@ vec4_gs_visitor::emit_thread_end()
 
    bool static_vertex_count = c->prog_data.static_vertex_count != -1;
 
+   /* If the previous instruction was a URB write, we don't need to issue
+    * a second one - we can just set the EOT bit on the previous write.
+    *
+    * Skip this on Gen8+ unless there's a static vertex count, as we also
+    * need to write the vertex count out, and combining the two may not be
+    * possible (or at least not straightforward).
+    */
+   vec4_instruction *last = (vec4_instruction *) instructions.get_tail();
+   if (last && last->opcode == GS_OPCODE_URB_WRITE &&
+       !(INTEL_DEBUG & DEBUG_SHADER_TIME) &&
+       devinfo->gen >= 8 && static_vertex_count) {
+      last->urb_write_flags = BRW_URB_WRITE_EOT | last->urb_write_flags;
+      return;
+   }
+
    current_annotation = "thread end";
    dst_reg mrf_reg(MRF, base_mrf);
    src_reg r0(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
