@@ -142,6 +142,9 @@ struct intel_mipmap_level
        * \code
        *     x = mt->level[l].slice[s].x_offset
        *     y = mt->level[l].slice[s].y_offset
+       *
+       * On some hardware generations, we program these offsets into
+       * RENDER_SURFACE_STATE.XOffset and RENDER_SURFACE_STATE.YOffset.
        */
       GLuint x_offset;
       GLuint y_offset;
@@ -170,12 +173,16 @@ enum intel_msaa_layout
     * accommodated by scaling up the width and the height of the surface so
     * that all the samples corresponding to a pixel are located at nearby
     * memory locations.
+    *
+    * @see PRM section "Interleaved Multisampled Surfaces"
     */
    INTEL_MSAA_LAYOUT_IMS,
 
    /**
     * Uncompressed Multisample Surface.  The surface is stored as a 2D array,
     * with array slice n containing all pixel data for sample n.
+    *
+    * @see PRM section "Uncompressed Multisampled Surfaces"
     */
    INTEL_MSAA_LAYOUT_UMS,
 
@@ -187,6 +194,8 @@ enum intel_msaa_layout
     * the common case (where all samples constituting a pixel have the same
     * color value) to be stored efficiently by just using a single array
     * slice.
+    *
+    * @see PRM section "Compressed Multisampled Surfaces"
     */
    INTEL_MSAA_LAYOUT_CMS,
 };
@@ -320,14 +329,34 @@ enum miptree_array_layout {
  */
 struct intel_miptree_aux_buffer
 {
-   /** Buffer object containing the pixel data. */
+   /**
+    * Buffer object containing the pixel data.
+    *
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceBaseAddress
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.AuxiliarySurfaceBaseAddress
+    */
    drm_intel_bo *bo;
 
-   uint32_t pitch; /**< pitch in bytes. */
+   /**
+    * Pitch in bytes.
+    *
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfacePitch
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfacePitch
+    */
+   uint32_t pitch;
 
-   uint32_t qpitch; /**< The distance in rows between array slices. */
+   /**
+    * The distance in rows between array slices.
+    *
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceQPitch
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
+    */
+   uint32_t qpitch;
 
-   struct intel_mipmap_tree *mt; /**< hiz miptree used with Gen6 */
+   /**
+    * Hiz miptree. Used only by Gen6.
+    */
+   struct intel_mipmap_tree *mt;
 };
 
 /* Tile resource modes */
@@ -339,15 +368,49 @@ enum intel_miptree_tr_mode {
 
 struct intel_mipmap_tree
 {
-   /** Buffer object containing the pixel data. */
+   /**
+    * Buffer object containing the surface.
+    *
+    * @see intel_mipmap_tree::offset
+    * @see RENDER_SURFACE_STATE.SurfaceBaseAddress
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceBaseAddress
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_STENCIL_BUFFER.SurfaceBaseAddress
+    */
    drm_intel_bo *bo;
 
-   uint32_t pitch; /**< pitch in bytes. */
+   /**
+    * Pitch in bytes.
+    *
+    * @see RENDER_SURFACE_STATE.SurfacePitch
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfacePitch
+    * @see 3DSTATE_DEPTH_BUFFER.SurfacePitch
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfacePitch
+    * @see 3DSTATE_STENCIL_BUFFER.SurfacePitch
+    */
+   uint32_t pitch;
 
-   uint32_t tiling; /**< One of the I915_TILING_* flags */
+   /**
+    * One of the I915_TILING_* flags.
+    *
+    * @see RENDER_SURFACE_STATE.TileMode
+    * @see 3DSTATE_DEPTH_BUFFER.TileMode
+    */
+   uint32_t tiling;
+
+   /**
+    * @see RENDER_SURFACE_STATE.TiledResourceMode
+    * @see 3DSTATE_DEPTH_BUFFER.TiledResourceMode
+    */
    enum intel_miptree_tr_mode tr_mode;
 
-   /* Effectively the key:
+   /**
+    * @brief One of GL_TEXTURE_2D, GL_TEXTURE_2D_ARRAY, etc.
+    *
+    * @see RENDER_SURFACE_STATE.SurfaceType
+    * @see RENDER_SURFACE_STATE.SurfaceArray
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceType
     */
    GLenum target;
 
@@ -364,27 +427,42 @@ struct intel_mipmap_tree
     *
     * For ETC1/ETC2 textures, this is one of the uncompressed mesa texture
     * formats if the hardware lacks support for ETC1/ETC2. See @ref etc_format.
+    *
+    * @see RENDER_SURFACE_STATE.SurfaceFormat
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceFormat
     */
    mesa_format format;
 
-   /** This variable stores the value of ETC compressed texture format */
+   /**
+    * This variable stores the value of ETC compressed texture format
+    *
+    * @see RENDER_SURFACE_STATE.SurfaceFormat
+    */
    mesa_format etc_format;
 
    /**
     * @name Surface Alignment
     * @{
     *
-    * This defines the alignment of the upperleft pixel of each 2D subimage
-    * contained in the surface. The alignment is in pixel coordinates relative
-    * to the surface's most upperleft pixel, which is the pixel at (x=0, y=0,
-    * layer=0, level=0).
+    * This defines the alignment of the upperleft pixel of each "slice" in the
+    * surface. The alignment is in pixel coordinates relative to the surface's
+    * most upperleft pixel, which is the pixel at (x=0, y=0, layer=0,
+    * level=0).
+    *
+    * The hardware docs do not use the term "slice".  We use "slice" to mean
+    * the pixels at a given miplevel and layer. For 2D surfaces, the layer is
+    * the array slice; for 3D surfaces, the layer is the z offset.
     *
     * In the surface layout equations found in the hardware docs, the
     * horizontal and vertical surface alignments often appear as variables 'i'
     * and 'j'.
     */
-   uint32_t halign; /**< RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
-   uint32_t valign; /**< RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
+
+   /** @see RENDER_SURFACE_STATE.SurfaceHorizontalAlignment */
+   uint32_t halign;
+
+   /** @see RENDER_SURFACE_STATE.SurfaceVerticalAlignment */
+   uint32_t valign;
    /** @} */
 
    GLuint first_level;
@@ -400,19 +478,47 @@ struct intel_mipmap_tree
     */
    GLuint physical_width0, physical_height0, physical_depth0;
 
-   GLuint cpp; /**< bytes per pixel (or bytes per block if compressed) */
+   /** Bytes per pixel (or bytes per block if compressed) */
+   GLuint cpp;
+
+   /**
+    * @see RENDER_SURFACE_STATE.NumberOfMultisamples
+    * @see 3DSTATE_MULTISAMPLE.NumberOfMultisamples
+    */
    GLuint num_samples;
+
    bool compressed;
 
    /**
-    * Level zero image dimensions.  These dimensions correspond to the
+    * @name Level zero image dimensions
+    * @{
+    *
+    * These dimensions correspond to the
     * logical width, height, and depth of the texture as seen by client code.
     * Accordingly, they do not account for the extra width, height, and/or
     * depth that must be allocated in order to accommodate multisample
     * formats, nor do they account for the extra factor of 6 in depth that
     * must be allocated in order to accommodate cubemap textures.
     */
-   uint32_t logical_width0, logical_height0, logical_depth0;
+
+   /**
+    * @see RENDER_SURFACE_STATE.Width
+    * @see 3DSTATE_DEPTH_BUFFER.Width
+    */
+   uint32_t logical_width0;
+
+   /**
+    * @see RENDER_SURFACE_STATE.Height
+    * @see 3DSTATE_DEPTH_BUFFER.Height
+    */
+   uint32_t logical_height0;
+
+   /**
+    * @see RENDER_SURFACE_STATE.Depth
+    * @see 3DSTATE_DEPTH_BUFFER.Depth
+    */
+   uint32_t logical_depth0;
+   /** @} */
 
    /**
     * Indicates if we use the standard miptree layout (ALL_LOD_IN_EACH_SLICE),
@@ -429,11 +535,18 @@ struct intel_mipmap_tree
     * surfaces it is the number of blocks. For 1D array surfaces that have the
     * mipmap tree stored horizontally it is the number of pixels between each
     * slice.
+    *
+    * @see RENDER_SURFACE_STATE.SurfaceQPitch
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceQPitch
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
+    * @see 3DSTATE_STENCIL_BUFFER.SurfaceQPitch
     */
    uint32_t qpitch;
 
    /**
     * MSAA layout used by this buffer.
+    *
+    * @see RENDER_SURFACE_STATE.MultisampledSurfaceStorageFormat
     */
    enum intel_msaa_layout msaa_layout;
 
@@ -442,24 +555,34 @@ struct intel_mipmap_tree
    GLuint total_width;
    GLuint total_height;
 
-   /* The 3DSTATE_CLEAR_PARAMS value associated with the last depth clear to
-    * this depth mipmap tree, if any.
+   /**
+    * The depth value used during the most recent fast depth clear performed
+    * on the surface. This field is invalid only if surface has never
+    * underwent a fast depth clear.
+    *
+    * @see 3DSTATE_CLEAR_PARAMS.DepthClearValue
     */
    uint32_t depth_clear_value;
 
-   /* Includes image offset tables:
-    */
+   /* Includes image offset tables: */
    struct intel_mipmap_level level[MAX_TEXTURE_LEVELS];
 
-   /* Offset into bo where miptree starts:
+   /**
+    * Offset into bo where the surface starts.
+    *
+    * @see intel_mipmap_tree::bo
+    *
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceBaseAddress
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_STENCIL_BUFFER.SurfaceBaseAddress
     */
    uint32_t offset;
 
    /**
     * \brief HiZ aux buffer
     *
-    * The hiz miptree contains the miptree's hiz buffer. To allocate the hiz
-    * buffer, use intel_miptree_alloc_hiz().
+    * To allocate the hiz buffer, use intel_miptree_alloc_hiz().
     *
     * To determine if hiz is enabled, do not check this pointer. Instead, use
     * intel_miptree_slice_has_hiz().
@@ -484,6 +607,7 @@ struct intel_mipmap_tree
     * require separate stencil.  It always has the true copy of the stencil
     * bits, regardless of mt->format.
     *
+    * \see 3DSTATE_STENCIL_BUFFER
     * \see intel_miptree_map_depthstencil()
     * \see intel_miptree_unmap_depthstencil()
     */
@@ -511,6 +635,11 @@ struct intel_mipmap_tree
     *
     * This value will only ever contain ones in bits 28-31, so it is safe to
     * OR into dword 7 of SURFACE_STATE.
+    *
+    * @see RENDER_SURFACE_STATE.RedClearColor
+    * @see RENDER_SURFACE_STATE.GreenClearColor
+    * @see RENDER_SURFACE_STATE.BlueClearColor
+    * @see RENDER_SURFACE_STATE.AlphaClearColor
     */
    uint32_t fast_clear_color_value;
 
