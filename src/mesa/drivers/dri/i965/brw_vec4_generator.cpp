@@ -505,7 +505,7 @@ vec4_generator::generate_gs_thread_end(vec4_instruction *inst)
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_EOT | inst->urb_write_flags,
-                 devinfo->gen >= 8 ? 2 : 1,/* message len */
+                 inst->mlen,
                  0,              /* response len */
                  0,              /* urb destination offset */
                  BRW_URB_SWIZZLE_INTERLEAVE);

@@ -244,7 +244,7 @@ vec4_gs_visitor::emit_thread_end()
       emit_shader_time_end();
    inst = emit(GS_OPCODE_THREAD_END);
    inst->base_mrf = base_mrf;
-   inst->mlen = 1;
+   inst->mlen = devinfo->gen >= 8 ? 2 : 1;
 }
 
 
