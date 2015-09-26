@@ -392,6 +392,33 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 	fprintf(f, "\n");
 }
 
+static void si_dump_last_ib(struct si_context *sctx, FILE *f)
+{
+	int last_trace_id = -1;
+
+	if (!sctx->last_ib)
+		return;
+
+	if (sctx->last_trace_buf) {
+		/* We are expecting that the ddebug pipe has already
+		 * waited for the context, so this buffer should be idle.
+		 * If the GPU is hung, there is no point in waiting for it.
+		 */
+		uint32_t *map = sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
+						       NULL,
+						       PIPE_TRANSFER_UNSYNCHRONIZED |
+						       PIPE_TRANSFER_READ);
+		if (map)
+			last_trace_id = *map;
+	}
+
+	si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
+		    last_trace_id);
+	free(sctx->last_ib); /* dump only once */
+	sctx->last_ib = NULL;
+	r600_resource_reference(&sctx->last_trace_buf, NULL);
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -406,29 +433,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	si_dump_shader(sctx->gs_shader, "Geometry", f);
 	si_dump_shader(sctx->ps_shader, "Fragment", f);
 
-	if (sctx->last_ib) {
-		int last_trace_id = -1;
-
-		if (sctx->last_trace_buf) {
-			/* We are expecting that the ddebug pipe has already
-			 * waited for the context, so this buffer should be idle.
-			 * If the GPU is hung, there is no point in waiting for it.
-			 */
-			uint32_t *map =
-				sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
-						       NULL,
-						       PIPE_TRANSFER_UNSYNCHRONIZED |
-						       PIPE_TRANSFER_READ);
-			if (map)
-				last_trace_id = *map;
-		}
-
-		si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
-			    last_trace_id);
-		free(sctx->last_ib); /* dump only once */
-		sctx->last_ib = NULL;
-		r600_resource_reference(&sctx->last_trace_buf, NULL);
-	}
+	si_dump_last_ib(sctx, f);
 
 	fprintf(f, "Done.\n");
 }
