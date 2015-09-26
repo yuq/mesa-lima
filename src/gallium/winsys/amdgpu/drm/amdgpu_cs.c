@@ -416,6 +416,7 @@ static unsigned amdgpu_add_buffer(struct amdgpu_cs *cs,
 
    if (i >= 0) {
       buffer = &cs->buffers[i];
+      buffer->priority_usage |= 1llu << priority;
       buffer->usage |= usage;
       *added_domains = domains & ~buffer->domains;
       buffer->domains |= domains;
@@ -445,6 +446,7 @@ static unsigned amdgpu_add_buffer(struct amdgpu_cs *cs,
    p_atomic_inc(&bo->num_cs_references);
    buffer = &cs->buffers[cs->num_buffers];
    buffer->bo = bo;
+   buffer->priority_usage = 1llu << priority;
    buffer->usage = usage;
    buffer->domains = domains;
 
@@ -498,6 +500,22 @@ static boolean amdgpu_cs_memory_below_limit(struct radeon_winsys_cs *rcs, uint64
          (cs->used_vram + vram) < cs->ctx->ws->info.vram_size * 0.7;
 
    return status;
+}
+
+static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
+                                          struct radeon_bo_list_item *list)
+{
+    struct amdgpu_cs *cs = amdgpu_cs(rcs);
+    int i;
+
+    if (list) {
+        for (i = 0; i < cs->num_buffers; i++) {
+            pb_reference(&list[i].buf, &cs->buffers[i].bo->base);
+            list[i].vm_address = cs->buffers[i].bo->va;
+            list[i].priority_usage = cs->buffers[i].priority_usage;
+        }
+    }
+    return cs->num_buffers;
 }
 
 static void amdgpu_cs_do_submission(struct amdgpu_cs *cs,
@@ -686,6 +704,7 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_lookup_buffer = amdgpu_cs_lookup_buffer;
    ws->base.cs_validate = amdgpu_cs_validate;
    ws->base.cs_memory_below_limit = amdgpu_cs_memory_below_limit;
+   ws->base.cs_get_buffer_list = amdgpu_cs_get_buffer_list;
    ws->base.cs_flush = amdgpu_cs_flush;
    ws->base.cs_is_buffer_referenced = amdgpu_bo_is_referenced;
    ws->base.cs_sync_flush = amdgpu_cs_sync_flush;

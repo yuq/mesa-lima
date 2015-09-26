@@ -368,6 +368,12 @@ struct radeon_surf {
     uint32_t                    num_banks;
 };
 
+struct radeon_bo_list_item {
+    struct pb_buffer *buf;
+    uint64_t vm_address;
+    uint64_t priority_usage; /* mask of (1 << RADEON_PRIO_*) */
+};
+
 struct radeon_winsys {
     /**
      * The screen object this winsys was created for
@@ -640,6 +646,16 @@ struct radeon_winsys {
      * \param gtt       GTT memory size pending to be use
      */
     boolean (*cs_memory_below_limit)(struct radeon_winsys_cs *cs, uint64_t vram, uint64_t gtt);
+
+    /**
+     * Return the buffer list.
+     *
+     * \param cs    Command stream
+     * \param list  Returned buffer list. Set to NULL to query the count only.
+     * \return      The buffer count.
+     */
+    unsigned (*cs_get_buffer_list)(struct radeon_winsys_cs *cs,
+                                   struct radeon_bo_list_item *list);
 
     /**
      * Flush a command stream.
