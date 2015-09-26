@@ -29,6 +29,11 @@
 
 #include "radeon_drm_bo.h"
 
+struct radeon_bo_item {
+    struct radeon_bo    *bo;
+    uint64_t            priority_usage;
+};
+
 struct radeon_cs_context {
     uint32_t                    buf[16 * 1024];
 
@@ -44,8 +49,9 @@ struct radeon_cs_context {
     unsigned                    nrelocs;
     unsigned                    crelocs;
     unsigned                    validated_crelocs;
-    struct radeon_bo            **relocs_bo;
+    struct radeon_bo_item       *relocs_bo;
     struct drm_radeon_cs_reloc  *relocs;
+    uint64_t                    *priority_usage;
 
     int                         reloc_indices_hashlist[512];
 
