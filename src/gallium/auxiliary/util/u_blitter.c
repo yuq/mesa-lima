@@ -2065,7 +2065,7 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
    struct pipe_vertex_buffer vb = {0};
-   struct pipe_stream_output_target *so_target;
+   struct pipe_stream_output_target *so_target = NULL;
    unsigned offsets[PIPE_MAX_SO_BUFFERS] = {0};
 
    assert(num_channels >= 1);
