@@ -32,7 +32,7 @@ void si_need_cs_space(struct si_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
 
 	/* There are two memory usage counters in the winsys for all buffers
-	 * that have been added (cs_add_reloc) and two counters in the pipe
+	 * that have been added (cs_add_buffer) and two counters in the pipe
 	 * driver for those that haven't been added yet.
 	 */
 	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs,

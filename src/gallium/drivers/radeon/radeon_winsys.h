@@ -595,18 +595,17 @@ struct radeon_winsys {
     void (*cs_destroy)(struct radeon_winsys_cs *cs);
 
     /**
-     * Add a new buffer relocation. Every relocation must first be added
-     * before it can be written.
+     * Add a buffer. Each buffer used by a CS must be added using this function.
      *
-     * \param cs  A command stream to add buffer for validation against.
-     * \param buf A winsys buffer to validate.
+     * \param cs      Command stream
+     * \param buf     Buffer
      * \param usage   Whether the buffer is used for read and/or write.
      * \param domain  Bitmask of the RADEON_DOMAIN_* flags.
      * \param priority  A higher number means a greater chance of being
      *                  placed in the requested domain. 15 is the maximum.
-     * \return Relocation index.
+     * \return Buffer index.
      */
-    unsigned (*cs_add_reloc)(struct radeon_winsys_cs *cs,
+    unsigned (*cs_add_buffer)(struct radeon_winsys_cs *cs,
                              struct radeon_winsys_cs_handle *buf,
                              enum radeon_bo_usage usage,
                              enum radeon_bo_domain domain,
@@ -619,21 +618,21 @@ struct radeon_winsys {
      * \param buf       Buffer
      * \return          The buffer index, or -1 if the buffer has not been added.
      */
-    int (*cs_get_reloc)(struct radeon_winsys_cs *cs,
-                        struct radeon_winsys_cs_handle *buf);
+    int (*cs_lookup_buffer)(struct radeon_winsys_cs *cs,
+                            struct radeon_winsys_cs_handle *buf);
 
     /**
-     * Return TRUE if there is enough memory in VRAM and GTT for the relocs
-     * added so far. If the validation fails, all the relocations which have
+     * Return TRUE if there is enough memory in VRAM and GTT for the buffers
+     * added so far. If the validation fails, all buffers which have
      * been added since the last call of cs_validate will be removed and
-     * the CS will be flushed (provided there are still any relocations).
+     * the CS will be flushed (provided there are still any buffers).
      *
      * \param cs        A command stream to validate.
      */
     boolean (*cs_validate)(struct radeon_winsys_cs *cs);
 
     /**
-     * Return TRUE if there is enough memory in VRAM and GTT for the relocs
+     * Return TRUE if there is enough memory in VRAM and GTT for the buffers
      * added so far.
      *
      * \param cs        A command stream to validate.

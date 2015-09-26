@@ -370,7 +370,7 @@ amdgpu_cs_create(struct radeon_winsys_ctx *rwctx,
 
 #define OUT_CS(cs, value) (cs)->buf[(cs)->cdw++] = (value)
 
-int amdgpu_get_reloc(struct amdgpu_cs *cs, struct amdgpu_winsys_bo *bo)
+int amdgpu_lookup_buffer(struct amdgpu_cs *cs, struct amdgpu_winsys_bo *bo)
 {
    unsigned hash = bo->unique_id & (Elements(cs->buffer_indices_hashlist)-1);
    int i = cs->buffer_indices_hashlist[hash];
@@ -379,15 +379,15 @@ int amdgpu_get_reloc(struct amdgpu_cs *cs, struct amdgpu_winsys_bo *bo)
    if (i == -1 || cs->buffers[i].bo == bo)
       return i;
 
-   /* Hash collision, look for the BO in the list of relocs linearly. */
+   /* Hash collision, look for the BO in the list of buffers linearly. */
    for (i = cs->num_buffers - 1; i >= 0; i--) {
       if (cs->buffers[i].bo == bo) {
-         /* Put this reloc in the hash list.
+         /* Put this buffer in the hash list.
           * This will prevent additional hash collisions if there are
-          * several consecutive get_reloc calls for the same buffer.
+          * several consecutive lookup_buffer calls for the same buffer.
           *
           * Example: Assuming buffers A,B,C collide in the hash list,
-          * the following sequence of relocs:
+          * the following sequence of buffers:
           *         AAAAAAAAAAABBBBBBBBBBBBBBCCCCCCCC
           * will collide here: ^ and here:   ^,
           * meaning that we should get very few collisions in the end. */
@@ -398,32 +398,32 @@ int amdgpu_get_reloc(struct amdgpu_cs *cs, struct amdgpu_winsys_bo *bo)
    return -1;
 }
 
-static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
+static unsigned amdgpu_add_buffer(struct amdgpu_cs *cs,
                                  struct amdgpu_winsys_bo *bo,
                                  enum radeon_bo_usage usage,
                                  enum radeon_bo_domain domains,
                                  unsigned priority,
                                  enum radeon_bo_domain *added_domains)
 {
-   struct amdgpu_cs_buffer *reloc;
+   struct amdgpu_cs_buffer *buffer;
    unsigned hash = bo->unique_id & (Elements(cs->buffer_indices_hashlist)-1);
    int i = -1;
 
    assert(priority < 64);
    *added_domains = 0;
 
-   i = amdgpu_get_reloc(cs, bo);
+   i = amdgpu_lookup_buffer(cs, bo);
 
    if (i >= 0) {
-      reloc = &cs->buffers[i];
-      reloc->usage |= usage;
-      *added_domains = domains & ~reloc->domains;
-      reloc->domains |= domains;
+      buffer = &cs->buffers[i];
+      buffer->usage |= usage;
+      *added_domains = domains & ~buffer->domains;
+      buffer->domains |= domains;
       cs->flags[i] = MAX2(cs->flags[i], priority / 4);
       return i;
    }
 
-   /* New relocation, check if the backing array is large enough. */
+   /* New buffer, check if the backing array is large enough. */
    if (cs->num_buffers >= cs->max_num_buffers) {
       uint32_t size;
       cs->max_num_buffers += 10;
@@ -437,16 +437,16 @@ static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
       cs->flags = realloc(cs->flags, cs->max_num_buffers);
    }
 
-   /* Initialize the new relocation. */
+   /* Initialize the new buffer. */
    cs->buffers[cs->num_buffers].bo = NULL;
    amdgpu_winsys_bo_reference(&cs->buffers[cs->num_buffers].bo, bo);
    cs->handles[cs->num_buffers] = bo->bo;
    cs->flags[cs->num_buffers] = priority / 4;
    p_atomic_inc(&bo->num_cs_references);
-   reloc = &cs->buffers[cs->num_buffers];
-   reloc->bo = bo;
-   reloc->usage = usage;
-   reloc->domains = domains;
+   buffer = &cs->buffers[cs->num_buffers];
+   buffer->bo = bo;
+   buffer->usage = usage;
+   buffer->domains = domains;
 
    cs->buffer_indices_hashlist[hash] = cs->num_buffers;
 
@@ -454,7 +454,7 @@ static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
    return cs->num_buffers++;
 }
 
-static unsigned amdgpu_cs_add_reloc(struct radeon_winsys_cs *rcs,
+static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
                                     struct radeon_winsys_cs_handle *buf,
                                     enum radeon_bo_usage usage,
                                     enum radeon_bo_domain domains,
@@ -466,7 +466,7 @@ static unsigned amdgpu_cs_add_reloc(struct radeon_winsys_cs *rcs,
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
    enum radeon_bo_domain added_domains;
-   unsigned index = amdgpu_add_reloc(cs, bo, usage, bo->initial_domain,
+   unsigned index = amdgpu_add_buffer(cs, bo, usage, bo->initial_domain,
                                      priority, &added_domains);
 
    if (added_domains & RADEON_DOMAIN_GTT)
@@ -477,12 +477,12 @@ static unsigned amdgpu_cs_add_reloc(struct radeon_winsys_cs *rcs,
    return index;
 }
 
-static int amdgpu_cs_get_reloc(struct radeon_winsys_cs *rcs,
+static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
                                struct radeon_winsys_cs_handle *buf)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
 
-   return amdgpu_get_reloc(cs, (struct amdgpu_winsys_bo*)buf);
+   return amdgpu_lookup_buffer(cs, (struct amdgpu_winsys_bo*)buf);
 }
 
 static boolean amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
@@ -621,7 +621,7 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       fprintf(stderr, "amdgpu: command stream overflowed\n");
    }
 
-   amdgpu_cs_add_reloc(rcs, (void*)cs->big_ib_winsys_buffer,
+   amdgpu_cs_add_buffer(rcs, (void*)cs->big_ib_winsys_buffer,
 		       RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
 
    /* If the CS is not empty or overflowed.... */
@@ -682,8 +682,8 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.ctx_query_reset_status = amdgpu_ctx_query_reset_status;
    ws->base.cs_create = amdgpu_cs_create;
    ws->base.cs_destroy = amdgpu_cs_destroy;
-   ws->base.cs_add_reloc = amdgpu_cs_add_reloc;
-   ws->base.cs_get_reloc = amdgpu_cs_get_reloc;
+   ws->base.cs_add_buffer = amdgpu_cs_add_buffer;
+   ws->base.cs_lookup_buffer = amdgpu_cs_lookup_buffer;
    ws->base.cs_validate = amdgpu_cs_validate;
    ws->base.cs_memory_below_limit = amdgpu_cs_memory_below_limit;
    ws->base.cs_flush = amdgpu_cs_flush;

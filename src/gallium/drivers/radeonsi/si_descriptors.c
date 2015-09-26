@@ -143,7 +143,7 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 {
 	uint64_t mask = views->desc.enabled_mask;
 
-	/* Add relocations to the CS. */
+	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 		struct si_sampler_view *rview =
@@ -324,7 +324,7 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 {
 	uint64_t mask = buffers->desc.enabled_mask;
 
-	/* Add relocations to the CS. */
+	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 
