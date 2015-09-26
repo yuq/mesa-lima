@@ -1605,7 +1605,7 @@ static void r600_emit_db_state(struct r600_context *rctx, struct r600_atom *atom
 		radeon_set_context_reg(cs, R_028D24_DB_HTILE_SURFACE, a->rsurf->db_htile_surface);
 		radeon_set_context_reg(cs, R_028014_DB_HTILE_DATA_BASE, a->rsurf->db_htile_data_base);
 		reloc_idx = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rtex->htile_buffer,
-						  RADEON_USAGE_READWRITE, RADEON_PRIO_DEPTH_META);
+						  RADEON_USAGE_READWRITE, RADEON_PRIO_HTILE);
 		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 		cs->buf[cs->cdw++] = reloc_idx;
 	} else {
@@ -1720,7 +1720,7 @@ static void r600_emit_vertex_buffers(struct r600_context *rctx, struct r600_atom
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
-						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
+						      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER));
 	}
 }
 
@@ -1753,7 +1753,7 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
-						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
+						      RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER));
 
 		radeon_emit(cs, PKT3(PKT3_SET_RESOURCE, 7, 0));
 		radeon_emit(cs, (buffer_id_base + buffer_index) * 7);
@@ -1769,7 +1769,7 @@ static void r600_emit_constant_buffers(struct r600_context *rctx,
 
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
-						      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO));
+						      RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER));
 
 		dirty_mask &= ~(1 << buffer_index);
 	}
@@ -1821,9 +1821,7 @@ static void r600_emit_sampler_views(struct r600_context *rctx,
 
 		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rview->tex_resource,
 					      RADEON_USAGE_READ,
-					      rview->tex_resource->b.b.nr_samples > 1 ?
-						      RADEON_PRIO_SHADER_TEXTURE_MSAA :
-						      RADEON_PRIO_SHADER_TEXTURE_RO);
+					      r600_get_sampler_view_priority(rview->tex_resource));
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, reloc);
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
@@ -1945,7 +1943,8 @@ static void r600_emit_vertex_fetch_shader(struct r600_context *rctx, struct r600
 	radeon_set_context_reg(cs, R_028894_SQ_PGM_START_FS, shader->offset >> 8);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, shader->buffer,
-					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA));
+                                                  RADEON_USAGE_READ,
+                                                  RADEON_PRIO_INTERNAL_SHADER));
 }
 
 static void r600_emit_shader_stages(struct r600_context *rctx, struct r600_atom *a)
@@ -1999,7 +1998,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
-						      RADEON_PRIO_SHADER_RESOURCE_RW));
+						      RADEON_PRIO_RINGS_STREAMOUT));
 		radeon_set_config_reg(cs, R_008C44_SQ_ESGS_RING_SIZE,
 				state->esgs_ring.buffer_size >> 8);
 
@@ -2008,7 +2007,7 @@ static void r600_emit_gs_rings(struct r600_context *rctx, struct r600_atom *a)
 		radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 		radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rbuffer,
 						      RADEON_USAGE_READWRITE,
-						      RADEON_PRIO_SHADER_RESOURCE_RW));
+						      RADEON_PRIO_RINGS_STREAMOUT));
 		radeon_set_config_reg(cs, R_008C4C_SQ_GSVS_RING_SIZE,
 				state->gsvs_ring.buffer_size >> 8);
 	} else {
@@ -2914,9 +2913,9 @@ static boolean r600_dma_copy_tile(struct r600_context *rctx,
 		size = (cheight * pitch) / 4;
 		/* emit reloc before writing cs so that cs is always in consistent state */
 		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rsrc->resource, RADEON_USAGE_READ,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_SDMA_TEXTURE);
 		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, &rdst->resource, RADEON_USAGE_WRITE,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_SDMA_TEXTURE);
 		cs->buf[cs->cdw++] = DMA_PACKET(DMA_PACKET_COPY, 1, 0, size);
 		cs->buf[cs->cdw++] = base >> 8;
 		cs->buf[cs->cdw++] = (detile << 31) | (array_mode << 27) |

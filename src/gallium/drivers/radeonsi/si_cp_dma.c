@@ -160,7 +160,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		/* This must be done after need_cs_space. */
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)dst, RADEON_USAGE_WRITE,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_CP_DMA);
 
 		/* Flush the caches for the first copy only.
 		 * Also wait for the previous CP DMA operations. */
@@ -240,9 +240,9 @@ void si_copy_buffer(struct si_context *sctx,
 
 		/* This must be done after r600_need_cs_space. */
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)src,
-				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
+				      RADEON_USAGE_READ, RADEON_PRIO_CP_DMA);
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)dst,
-				      RADEON_USAGE_WRITE, RADEON_PRIO_MIN);
+				      RADEON_USAGE_WRITE, RADEON_PRIO_CP_DMA);
 
 		si_emit_cp_dma_copy_buffer(sctx, dst_offset, src_offset, byte_count, sync_flags);
 

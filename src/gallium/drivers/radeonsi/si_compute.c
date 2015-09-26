@@ -297,7 +297,7 @@ static void si_launch_grid(
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					  shader->scratch_bo,
 					  RADEON_USAGE_READWRITE,
-					  RADEON_PRIO_SHADER_RESOURCE_RW);
+					  RADEON_PRIO_SCRATCH_BUFFER);
 
 		scratch_buffer_va = shader->scratch_bo->gpu_address;
 	}
@@ -311,7 +311,7 @@ static void si_launch_grid(
 	kernel_args_va += kernel_args_offset;
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, input_buffer,
-				  RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+				  RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0, kernel_args_va);
 	si_pm4_set_reg(pm4, R_00B900_COMPUTE_USER_DATA_0 + 4, S_008F04_BASE_ADDRESS_HI (kernel_args_va >> 32) | S_008F04_STRIDE(0));
@@ -340,7 +340,7 @@ static void si_launch_grid(
 		}
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, buffer,
 					  RADEON_USAGE_READWRITE,
-					  RADEON_PRIO_SHADER_RESOURCE_RW);
+					  RADEON_PRIO_COMPUTE_GLOBAL);
 	}
 
 	/* This register has been moved to R_00CD20_COMPUTE_MAX_WAVE_ID
@@ -362,7 +362,7 @@ static void si_launch_grid(
 	shader_va += pc;
 #endif
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, shader->bo,
-				  RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+				  RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 	si_pm4_set_reg(pm4, R_00B830_COMPUTE_PGM_LO, shader_va >> 8);
 	si_pm4_set_reg(pm4, R_00B834_COMPUTE_PGM_HI, shader_va >> 40);
 

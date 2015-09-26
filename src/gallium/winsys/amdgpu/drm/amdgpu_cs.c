@@ -409,7 +409,7 @@ static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
    unsigned hash = bo->unique_id & (Elements(cs->buffer_indices_hashlist)-1);
    int i = -1;
 
-   priority = MIN2(priority, 15);
+   assert(priority < 64);
    *added_domains = 0;
 
    i = amdgpu_get_reloc(cs, bo);
@@ -419,7 +419,7 @@ static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
       reloc->usage |= usage;
       *added_domains = domains & ~reloc->domains;
       reloc->domains |= domains;
-      cs->flags[i] = MAX2(cs->flags[i], priority);
+      cs->flags[i] = MAX2(cs->flags[i], priority / 4);
       return i;
    }
 
@@ -441,7 +441,7 @@ static unsigned amdgpu_add_reloc(struct amdgpu_cs *cs,
    cs->buffers[cs->num_buffers].bo = NULL;
    amdgpu_winsys_bo_reference(&cs->buffers[cs->num_buffers].bo, bo);
    cs->handles[cs->num_buffers] = bo->bo;
-   cs->flags[cs->num_buffers] = priority;
+   cs->flags[cs->num_buffers] = priority / 4;
    p_atomic_inc(&bo->num_cs_references);
    reloc = &cs->buffers[cs->num_buffers];
    reloc->bo = bo;
@@ -622,7 +622,7 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    }
 
    amdgpu_cs_add_reloc(rcs, (void*)cs->big_ib_winsys_buffer,
-		       RADEON_USAGE_READ, 0, RADEON_PRIO_MIN);
+		       RADEON_USAGE_READ, 0, RADEON_PRIO_IB1);
 
    /* If the CS is not empty or overflowed.... */
    if (cs->base.cdw && cs->base.cdw <= cs->base.max_dw && !debug_get_option_noop()) {

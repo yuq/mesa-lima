@@ -263,14 +263,14 @@ static unsigned radeon_add_reloc(struct radeon_drm_cs *cs,
     enum radeon_bo_domain wd = usage & RADEON_USAGE_WRITE ? domains : 0;
     int i = -1;
 
-    priority = MIN2(priority, 15);
+    assert(priority < 64);
     *added_domains = 0;
 
     i = radeon_get_reloc(csc, bo);
 
     if (i >= 0) {
         reloc = &csc->relocs[i];
-        update_reloc(reloc, rd, wd, priority, added_domains);
+        update_reloc(reloc, rd, wd, priority / 4, added_domains);
 
         /* For async DMA, every add_reloc call must add a buffer to the list
          * no matter how many duplicates there are. This is due to the fact
@@ -309,7 +309,7 @@ static unsigned radeon_add_reloc(struct radeon_drm_cs *cs,
     reloc->handle = bo->handle;
     reloc->read_domains = rd;
     reloc->write_domain = wd;
-    reloc->flags = priority;
+    reloc->flags = priority / 4;
 
     csc->reloc_indices_hashlist[hash] = csc->crelocs;
 
@@ -328,7 +328,8 @@ static unsigned radeon_drm_cs_add_reloc(struct radeon_winsys_cs *rcs,
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_bo *bo = (struct radeon_bo*)buf;
     enum radeon_bo_domain added_domains;
-    unsigned index = radeon_add_reloc(cs, bo, usage, domains, priority, &added_domains);
+    unsigned index = radeon_add_reloc(cs, bo, usage, domains, priority,
+                                      &added_domains);
 
     if (added_domains & RADEON_DOMAIN_GTT)
         cs->csc->used_gart += bo->base.size;
@@ -633,7 +634,7 @@ radeon_cs_create_fence(struct radeon_winsys_cs *rcs)
     /* Add the fence as a dummy relocation. */
     cs->ws->base.cs_add_reloc(rcs, cs->ws->base.buffer_get_cs_handle(fence),
                               RADEON_USAGE_READWRITE, RADEON_DOMAIN_GTT,
-                              RADEON_PRIO_MIN);
+                              RADEON_PRIO_FENCE);
     return (struct pipe_fence_handle*)fence;
 }
 
