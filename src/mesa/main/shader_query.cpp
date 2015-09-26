@@ -995,6 +995,7 @@ program_resource_top_level_array_stride(struct gl_shader_program *shProg,
       }
    }
 found_top_level_array_size:
+   free(interface_name);
    free(var_name);
    return array_stride;
 }
