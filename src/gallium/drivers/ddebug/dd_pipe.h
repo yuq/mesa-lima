@@ -31,9 +31,7 @@
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 #include "pipe/p_screen.h"
-
-/* name of the directory in home */
-#define DD_DIR "ddebug_dumps"
+#include "dd_util.h"
 
 enum dd_mode {
    DD_DETECT_HANGS,
