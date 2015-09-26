@@ -28,6 +28,7 @@
 #include "si_shader.h"
 #include "sid.h"
 #include "sid_tables.h"
+#include "ddebug/dd_util.h"
 
 
 static void si_dump_shader(struct si_shader_selector *sel, const char *name,
@@ -438,7 +439,119 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	fprintf(f, "Done.\n");
 }
 
+static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
+{
+	char line[2000];
+	unsigned sec, usec;
+	int progress = 0;
+	uint64_t timestamp = 0;
+	bool fault = false;
+
+	FILE *p = popen("dmesg", "r");
+	if (!p)
+		return false;
+
+	while (fgets(line, sizeof(line), p)) {
+		char *msg, len;
+
+		/* Get the timestamp. */
+		if (sscanf(line, "[%u.%u]", &sec, &usec) != 2) {
+			assert(0);
+			continue;
+		}
+		timestamp = sec * 1000000llu + usec;
+
+		/* If just updating the timestamp. */
+		if (!out_addr)
+			continue;
+
+		/* Process messages only if the timestamp is newer. */
+		if (timestamp <= sctx->dmesg_timestamp)
+			continue;
+
+		/* Only process the first VM fault. */
+		if (fault)
+			continue;
+
+		/* Remove trailing \n */
+		len = strlen(line);
+		if (len && line[len-1] == '\n')
+			line[len-1] = 0;
+
+		/* Get the message part. */
+		msg = strchr(line, ']');
+		if (!msg) {
+			assert(0);
+			continue;
+		}
+		msg++;
+
+		switch (progress) {
+		case 0:
+			if (strstr(msg, "GPU fault detected:"))
+				progress = 1;
+			break;
+		case 1:
+			msg = strstr(msg, "VM_CONTEXT1_PROTECTION_FAULT_ADDR");
+			if (msg) {
+				msg = strstr(msg, "0x");
+				if (msg) {
+					msg += 2;
+					if (sscanf(msg, "%X", out_addr) == 1)
+						fault = true;
+				}
+			}
+			progress = 0;
+			break;
+		default:
+			progress = 0;
+		}
+	}
+	pclose(p);
+
+	if (timestamp > sctx->dmesg_timestamp)
+		sctx->dmesg_timestamp = timestamp;
+	return fault;
+}
+
+void si_check_vm_faults(struct si_context *sctx)
+{
+	struct pipe_screen *screen = sctx->b.b.screen;
+	FILE *f;
+	uint32_t addr;
+
+	/* Use conservative timeout 800ms, after which we won't wait any
+	 * longer and assume the GPU is hung.
+	 */
+	screen->fence_finish(screen, sctx->last_gfx_fence, 800*1000*1000);
+
+	if (!si_vm_fault_occured(sctx, &addr))
+		return;
+
+	f = dd_get_debug_file();
+	if (!f)
+		return;
+
+	fprintf(f, "VM fault report.\n\n");
+	fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
+	fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
+	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
+	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
+
+	si_dump_last_ib(sctx, f);
+	fclose(f);
+
+	fprintf(stderr, "Detected a VM fault, exiting...\n");
+	exit(0);
+}
+
 void si_init_debug_functions(struct si_context *sctx)
 {
 	sctx->b.b.dump_debug_state = si_dump_debug_state;
+
+	/* Set the initial dmesg timestamp for this context, so that
+	 * only new messages will be checked for VM faults.
+	 */
+	if (sctx->screen->b.debug_flags & DBG_CHECK_VM)
+		si_vm_fault_occured(sctx, NULL);
 }

@@ -103,6 +103,10 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);
 
+	/* Check VM faults if needed. */
+	if (ctx->screen->b.debug_flags & DBG_CHECK_VM)
+		si_check_vm_faults(ctx);
+
 	si_begin_new_cs(ctx);
 }
 

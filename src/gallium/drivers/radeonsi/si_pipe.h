@@ -276,6 +276,7 @@ struct si_context {
 	struct r600_resource	*last_trace_buf;
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
+	uint64_t		dmesg_timestamp;
 };
 
 /* cik_sdma.c */
@@ -310,6 +311,7 @@ void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
 void si_init_debug_functions(struct si_context *sctx);
+void si_check_vm_faults(struct si_context *sctx);
 
 /* si_dma.c */
 void si_dma_copy(struct pipe_context *ctx,
