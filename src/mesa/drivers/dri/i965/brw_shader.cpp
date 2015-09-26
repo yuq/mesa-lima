@@ -1307,13 +1307,15 @@ backend_shader::dump_instructions(const char *name)
    if (cfg) {
       int ip = 0;
       foreach_block_and_inst(block, backend_instruction, inst, cfg) {
-         fprintf(file, "%4d: ", ip++);
+         if (!unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER))
+            fprintf(file, "%4d: ", ip++);
          dump_instruction(inst, file);
       }
    } else {
       int ip = 0;
       foreach_in_list(backend_instruction, inst, &instructions) {
-         fprintf(file, "%4d: ", ip++);
+         if (!unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER))
+            fprintf(file, "%4d: ", ip++);
          dump_instruction(inst, file);
       }
    }
