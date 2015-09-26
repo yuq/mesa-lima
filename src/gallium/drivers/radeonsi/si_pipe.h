@@ -277,6 +277,8 @@ struct si_context {
 	struct r600_resource	*trace_buf;
 	unsigned		trace_id;
 	uint64_t		dmesg_timestamp;
+	unsigned		last_bo_count;
+	struct radeon_bo_list_item *last_bo_list;
 };
 
 /* cik_sdma.c */

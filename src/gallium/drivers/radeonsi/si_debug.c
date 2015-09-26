@@ -420,6 +420,114 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
 }
 
+static const char *priority_to_string(enum radeon_bo_priority priority)
+{
+#define ITEM(x) [RADEON_PRIO_##x] = #x
+	static const char *table[64] = {
+		ITEM(FENCE),
+	        ITEM(TRACE),
+	        ITEM(SO_FILLED_SIZE),
+	        ITEM(QUERY),
+	        ITEM(IB1),
+	        ITEM(IB2),
+	        ITEM(DRAW_INDIRECT),
+	        ITEM(INDEX_BUFFER),
+	        ITEM(CP_DMA),
+	        ITEM(VCE),
+	        ITEM(UVD),
+	        ITEM(SDMA_BUFFER),
+	        ITEM(SDMA_TEXTURE),
+	        ITEM(USER_SHADER),
+	        ITEM(INTERNAL_SHADER),
+	        ITEM(CONST_BUFFER),
+	        ITEM(DESCRIPTORS),
+	        ITEM(BORDER_COLORS),
+	        ITEM(SAMPLER_BUFFER),
+	        ITEM(VERTEX_BUFFER),
+	        ITEM(SHADER_RW_BUFFER),
+	        ITEM(RINGS_STREAMOUT),
+	        ITEM(SCRATCH_BUFFER),
+	        ITEM(COMPUTE_GLOBAL),
+	        ITEM(SAMPLER_TEXTURE),
+	        ITEM(SHADER_RW_IMAGE),
+	        ITEM(SAMPLER_TEXTURE_MSAA),
+	        ITEM(COLOR_BUFFER),
+	        ITEM(DEPTH_BUFFER),
+	        ITEM(COLOR_BUFFER_MSAA),
+	        ITEM(DEPTH_BUFFER_MSAA),
+	        ITEM(CMASK),
+	        ITEM(DCC),
+	        ITEM(HTILE),
+	};
+#undef ITEM
+
+	assert(priority < ARRAY_SIZE(table));
+	return table[priority];
+}
+
+static int bo_list_compare_va(const struct radeon_bo_list_item *a,
+				   const struct radeon_bo_list_item *b)
+{
+	return a->vm_address < b->vm_address ? -1 :
+	       a->vm_address > b->vm_address ? 1 : 0;
+}
+
+static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
+{
+	unsigned i,j;
+
+	if (!sctx->last_bo_list)
+		return;
+
+	/* Sort the list according to VM adddresses first. */
+	qsort(sctx->last_bo_list, sctx->last_bo_count,
+	      sizeof(sctx->last_bo_list[0]), (void*)bo_list_compare_va);
+
+	fprintf(f, "Buffer list (in units of pages = 4kB):\n"
+		COLOR_YELLOW "        Size    VM start page         "
+		"VM end page           Usage" COLOR_RESET "\n");
+
+	for (i = 0; i < sctx->last_bo_count; i++) {
+		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
+		const unsigned page_size = 4096;
+		uint64_t va = sctx->last_bo_list[i].vm_address;
+		uint64_t size = sctx->last_bo_list[i].buf->size;
+		bool hit = false;
+
+		/* If there's unused virtual memory between 2 buffers, print it. */
+		if (i) {
+			uint64_t previous_va_end = sctx->last_bo_list[i-1].vm_address +
+						   sctx->last_bo_list[i-1].buf->size;
+
+			if (va > previous_va_end) {
+				fprintf(f, "  %10"PRIu64"    -- hole --\n",
+					(va - previous_va_end) / page_size);
+			}
+		}
+
+		/* Print the buffer. */
+		fprintf(f, "  %10"PRIu64"    0x%013"PRIx64"       0x%013"PRIx64"       ",
+			size / page_size, va / page_size, (va + size) / page_size);
+
+		/* Print the usage. */
+		for (j = 0; j < 64; j++) {
+			if (!(sctx->last_bo_list[i].priority_usage & (1llu << j)))
+				continue;
+
+			fprintf(f, "%s%s", !hit ? "" : ", ", priority_to_string(j));
+			hit = true;
+		}
+		fprintf(f, "\n");
+	}
+	fprintf(f, "\nNote: The holes represent memory not used by the IB.\n"
+		   "      Other buffers can still be allocated there.\n\n");
+
+	for (i = 0; i < sctx->last_bo_count; i++)
+		pb_reference(&sctx->last_bo_list[i].buf, NULL);
+	free(sctx->last_bo_list);
+	sctx->last_bo_list = NULL;
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -434,6 +542,7 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	si_dump_shader(sctx->gs_shader, "Geometry", f);
 	si_dump_shader(sctx->ps_shader, "Fragment", f);
 
+	si_dump_last_bo_list(sctx, f);
 	si_dump_last_ib(sctx, f);
 
 	fprintf(f, "Done.\n");
@@ -538,6 +647,7 @@ void si_check_vm_faults(struct si_context *sctx)
 	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
 	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
 
+	si_dump_last_bo_list(sctx, f);
 	si_dump_last_ib(sctx, f);
 	fclose(f);
 

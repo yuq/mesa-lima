@@ -85,14 +85,27 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (ctx->trace_buf)
 		si_trace_emit(ctx);
 
-	/* Save the IB for debug contexts. */
 	if (ctx->is_debug) {
+		unsigned i;
+
+		/* Save the IB for debug contexts. */
 		free(ctx->last_ib);
 		ctx->last_ib_dw_size = cs->cdw;
 		ctx->last_ib = malloc(cs->cdw * 4);
 		memcpy(ctx->last_ib, cs->buf, cs->cdw * 4);
 		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
 		r600_resource_reference(&ctx->trace_buf, NULL);
+
+		/* Save the buffer list. */
+		if (ctx->last_bo_list) {
+			for (i = 0; i < ctx->last_bo_count; i++)
+				pb_reference(&ctx->last_bo_list[i].buf, NULL);
+			free(ctx->last_bo_list);
+		}
+		ctx->last_bo_count = ws->cs_get_buffer_list(cs, NULL);
+		ctx->last_bo_list = calloc(ctx->last_bo_count,
+					   sizeof(ctx->last_bo_list[0]));
+		ws->cs_get_buffer_list(cs, ctx->last_bo_list);
 	}
 
 	/* Flush the CS. */
