@@ -175,8 +175,6 @@ void vbo_loopback_vertex_list( struct gl_context *ctx,
 
 /* Callbacks:
  */
-void vbo_save_EndCallList( struct gl_context *ctx );
-
 void vbo_save_playback_vertex_list( struct gl_context *ctx, void *data );
 
 void vbo_save_api_init( struct vbo_save_context *save );

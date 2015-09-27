@@ -798,13 +798,6 @@ struct dd_function_table {
     */
    void (*LightingSpaceChange)( struct gl_context *ctx );
 
-   /**
-    * Called by glEndCallList().
-    *
-    * \sa dd_function_table::BeginCallList.
-    */
-   void (*EndCallList)( struct gl_context *ctx );
-
    /**@}*/
 
    /**

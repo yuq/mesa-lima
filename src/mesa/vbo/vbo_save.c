@@ -33,13 +33,6 @@
 #include "vbo_context.h"
 
 
-static void vbo_save_callback_init( struct gl_context *ctx )
-{
-   ctx->Driver.EndCallList = vbo_save_EndCallList;
-}
-
-
-
 /**
  * Called at context creation time.
  */
@@ -51,7 +44,6 @@ void vbo_save_init( struct gl_context *ctx )
    save->ctx = ctx;
 
    vbo_save_api_init( save );
-   vbo_save_callback_init(ctx);
 
    {
       struct gl_client_array *arrays = save->arrays;

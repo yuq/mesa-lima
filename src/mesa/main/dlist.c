@@ -8898,8 +8898,7 @@ execute_list(struct gl_context *ctx, GLuint list)
       }
    }
 
-   if (ctx->Driver.EndCallList)
-      ctx->Driver.EndCallList(ctx);
+   vbo_save_EndCallList(ctx);
 
    ctx->ListState.CallDepth--;
 }
