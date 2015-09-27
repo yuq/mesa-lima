@@ -619,7 +619,9 @@ st_translate_fragment_program(struct st_context *st,
          else
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTER;
 
-         if (key->persample_shading)
+         if (stfp->Base.Base.SystemValuesRead & (SYSTEM_BIT_SAMPLE_ID |
+                                                 SYSTEM_BIT_SAMPLE_POS) ||
+             key->persample_shading)
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_SAMPLE;
 
          switch (attr) {
