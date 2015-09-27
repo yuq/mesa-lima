@@ -389,6 +389,10 @@ to be 0.
   of iterations that loops are allowed to have to be unrolled. It is only
   a hint to state trackers. Whether any loops will be unrolled is not
   guaranteed.
+* ``PIPE_SHADER_CAP_MAX_SHADER_BUFFERS``: Maximum number of memory buffers
+  (also used to implement atomic counters). Having this be non-0 also
+  implies support for the ``LOAD``, ``STORE``, and ``ATOM*`` TGSI
+  opcodes.
 
 
 .. _pipe_compute_cap:
