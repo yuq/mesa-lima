@@ -516,15 +516,10 @@ struct dd_function_table {
    /** Set the blend equation */
    void (*BlendEquationSeparate)(struct gl_context *ctx,
                                  GLenum modeRGB, GLenum modeA);
-   void (*BlendEquationSeparatei)(struct gl_context *ctx, GLuint buffer,
-                                  GLenum modeRGB, GLenum modeA);
    /** Specify pixel arithmetic */
    void (*BlendFuncSeparate)(struct gl_context *ctx,
                              GLenum sfactorRGB, GLenum dfactorRGB,
                              GLenum sfactorA, GLenum dfactorA);
-   void (*BlendFuncSeparatei)(struct gl_context *ctx, GLuint buffer,
-                              GLenum sfactorRGB, GLenum dfactorRGB,
-                              GLenum sfactorA, GLenum dfactorA);
    /** Specify a plane against which all geometry is clipped */
    void (*ClipPlane)(struct gl_context *ctx, GLenum plane, const GLfloat *eq);
    /** Enable and disable writing of frame buffer color components */

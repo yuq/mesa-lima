@@ -303,11 +303,6 @@ _mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
    ctx->Color.Blend[buf].DstA = dfactorA;
    update_uses_dual_src(ctx, buf);
    ctx->Color._BlendFuncPerBuffer = GL_TRUE;
-
-   if (ctx->Driver.BlendFuncSeparatei) {
-      ctx->Driver.BlendFuncSeparatei(ctx, buf, sfactorRGB, dfactorRGB,
-                                     sfactorA, dfactorA);
-   }
 }
 
 
@@ -406,9 +401,6 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
    ctx->Color.Blend[buf].EquationRGB = mode;
    ctx->Color.Blend[buf].EquationA = mode;
    ctx->Color._BlendEquationPerBuffer = GL_TRUE;
-
-   if (ctx->Driver.BlendEquationSeparatei)
-      ctx->Driver.BlendEquationSeparatei(ctx, buf, mode, mode);
 }
 
 
@@ -503,9 +495,6 @@ _mesa_BlendEquationSeparateiARB(GLuint buf, GLenum modeRGB, GLenum modeA)
    ctx->Color.Blend[buf].EquationRGB = modeRGB;
    ctx->Color.Blend[buf].EquationA = modeA;
    ctx->Color._BlendEquationPerBuffer = GL_TRUE;
-
-   if (ctx->Driver.BlendEquationSeparatei)
-      ctx->Driver.BlendEquationSeparatei(ctx, buf, modeRGB, modeA);
 }
 
 
