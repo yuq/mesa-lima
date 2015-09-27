@@ -5465,7 +5465,7 @@ save_Begin(GLenum mode)
       /* Give the driver an opportunity to hook in an optimized
        * display list compiler.
        */
-      if (ctx->Driver.NotifySaveBegin(ctx, mode))
+      if (vbo_save_NotifyBegin(ctx, mode))
          return;
 
       SAVE_FLUSH_VERTICES(ctx);

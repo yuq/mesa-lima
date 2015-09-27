@@ -793,13 +793,6 @@ struct dd_function_table {
    GLboolean SaveNeedFlush;
 
    /**
-    * Give the driver the opportunity to hook in its own vtxfmt for
-    * compiling optimized display lists.  This is called on each valid
-    * glBegin() during list compilation.
-    */
-   GLboolean (*NotifySaveBegin)( struct gl_context *ctx, GLenum mode );
-
-   /**
     * Notify driver that the special derived value _NeedEyeCoords has
     * changed.
     */

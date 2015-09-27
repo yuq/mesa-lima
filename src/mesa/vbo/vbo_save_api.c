@@ -970,8 +970,7 @@ _save_CallLists(GLsizei n, GLenum type, const GLvoid * v)
 
 
 /**
- * Called via ctx->Driver.NotifySaveBegin() when a glBegin is getting
- * compiled into a display list.
+ * Called when a glBegin is getting compiled into a display list.
  * Updating of ctx->Driver.CurrentSavePrimitive is already taken care of.
  */
 GLboolean
@@ -1603,8 +1602,6 @@ vbo_save_api_init(struct vbo_save_context *save)
                                vbo_save_playback_vertex_list,
                                vbo_destroy_vertex_list,
                                vbo_print_vertex_list);
-
-   ctx->Driver.NotifySaveBegin = vbo_save_NotifyBegin;
 
    _save_vtxfmt_init(ctx);
    _save_current_init(ctx);

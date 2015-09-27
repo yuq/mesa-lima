@@ -39,7 +39,6 @@ static void vbo_save_callback_init( struct gl_context *ctx )
    ctx->Driver.EndList = vbo_save_EndList;
    ctx->Driver.BeginCallList = vbo_save_BeginCallList;
    ctx->Driver.EndCallList = vbo_save_EndCallList;
-   ctx->Driver.NotifySaveBegin = vbo_save_NotifyBegin;
 }
 
 
