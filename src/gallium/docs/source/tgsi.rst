@@ -2264,11 +2264,11 @@ after lookup.
 Resource Access Opcodes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-.. opcode:: LOAD - Fetch data from a shader resource
+.. opcode:: LOAD - Fetch data from a shader buffer or image
 
                Syntax: ``LOAD dst, resource, address``
 
-               Example: ``LOAD TEMP[0], RES[0], TEMP[1]``
+               Example: ``LOAD TEMP[0], BUFFER[0], TEMP[1]``
 
                Using the provided integer address, LOAD fetches data
                from the specified buffer or texture without any
@@ -2292,7 +2292,7 @@ Resource Access Opcodes
 
                Syntax: ``STORE resource, address, src``
 
-               Example: ``STORE RES[0], TEMP[0], TEMP[1]``
+               Example: ``STORE BUFFER[0], TEMP[0], TEMP[1]``
 
                Using the provided integer address, STORE writes data
                to the specified buffer or texture.
@@ -2370,158 +2370,159 @@ These opcodes provide atomic variants of some common arithmetic and
 logical operations.  In this context atomicity means that another
 concurrent memory access operation that affects the same memory
 location is guaranteed to be performed strictly before or after the
-entire execution of the atomic operation.
-
-For the moment they're only valid in compute programs.
+entire execution of the atomic operation. The resource may be a buffer
+or an image. In the case of an image, the offset works the same as for
+``LOAD`` and ``STORE``, specified above. These atomic operations may
+only be used with 32-bit integer image formats.
 
 .. opcode:: ATOMUADD - Atomic integer addition
 
   Syntax: ``ATOMUADD dst, resource, offset, src``
 
-  Example: ``ATOMUADD TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMUADD TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = dst_i + src_i
+  resource[offset] = dst_x + src_x
 
 
 .. opcode:: ATOMXCHG - Atomic exchange
 
   Syntax: ``ATOMXCHG dst, resource, offset, src``
 
-  Example: ``ATOMXCHG TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMXCHG TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = src_i
+  resource[offset] = src_x
 
 
 .. opcode:: ATOMCAS - Atomic compare-and-exchange
 
   Syntax: ``ATOMCAS dst, resource, offset, cmp, src``
 
-  Example: ``ATOMCAS TEMP[0], RES[0], TEMP[1], TEMP[2], TEMP[3]``
+  Example: ``ATOMCAS TEMP[0], BUFFER[0], TEMP[1], TEMP[2], TEMP[3]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = (dst_i == cmp_i ? src_i : dst_i)
+  resource[offset] = (dst_x == cmp_x ? src_x : dst_x)
 
 
 .. opcode:: ATOMAND - Atomic bitwise And
 
   Syntax: ``ATOMAND dst, resource, offset, src``
 
-  Example: ``ATOMAND TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMAND TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = dst_i \& src_i
+  resource[offset] = dst_x \& src_x
 
 
 .. opcode:: ATOMOR - Atomic bitwise Or
 
   Syntax: ``ATOMOR dst, resource, offset, src``
 
-  Example: ``ATOMOR TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMOR TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = dst_i | src_i
+  resource[offset] = dst_x | src_x
 
 
 .. opcode:: ATOMXOR - Atomic bitwise Xor
 
   Syntax: ``ATOMXOR dst, resource, offset, src``
 
-  Example: ``ATOMXOR TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMXOR TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = dst_i \oplus src_i
+  resource[offset] = dst_x \oplus src_x
 
 
 .. opcode:: ATOMUMIN - Atomic unsigned minimum
 
   Syntax: ``ATOMUMIN dst, resource, offset, src``
 
-  Example: ``ATOMUMIN TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMUMIN TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = (dst_i < src_i ? dst_i : src_i)
+  resource[offset] = (dst_x < src_x ? dst_x : src_x)
 
 
 .. opcode:: ATOMUMAX - Atomic unsigned maximum
 
   Syntax: ``ATOMUMAX dst, resource, offset, src``
 
-  Example: ``ATOMUMAX TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMUMAX TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = (dst_i > src_i ? dst_i : src_i)
+  resource[offset] = (dst_x > src_x ? dst_x : src_x)
 
 
 .. opcode:: ATOMIMIN - Atomic signed minimum
 
   Syntax: ``ATOMIMIN dst, resource, offset, src``
 
-  Example: ``ATOMIMIN TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMIMIN TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = (dst_i < src_i ? dst_i : src_i)
+  resource[offset] = (dst_x < src_x ? dst_x : src_x)
 
 
 .. opcode:: ATOMIMAX - Atomic signed maximum
 
   Syntax: ``ATOMIMAX dst, resource, offset, src``
 
-  Example: ``ATOMIMAX TEMP[0], RES[0], TEMP[1], TEMP[2]``
+  Example: ``ATOMIMAX TEMP[0], BUFFER[0], TEMP[1], TEMP[2]``
 
-  The following operation is performed atomically on each component:
+  The following operation is performed atomically:
 
 .. math::
 
-  dst_i = resource[offset]_i
+  dst_x = resource[offset]
 
-  resource[offset]_i = (dst_i > src_i ? dst_i : src_i)
+  resource[offset] = (dst_x > src_x ? dst_x : src_x)
 
 
 
