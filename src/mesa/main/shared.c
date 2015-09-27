@@ -224,7 +224,7 @@ delete_shader_cb(GLuint id, void *data, void *userData)
    else {
       struct gl_shader_program *shProg = (struct gl_shader_program *) data;
       assert(shProg->Type == GL_SHADER_PROGRAM_MESA);
-      ctx->Driver.DeleteShaderProgram(ctx, shProg);
+      _mesa_delete_shader_program(ctx, shProg);
    }
 }
 

@@ -785,8 +785,6 @@ struct dd_function_table {
    /*@{*/
    struct gl_shader *(*NewShader)(struct gl_context *ctx,
                                   GLuint name, GLenum type);
-   void (*DeleteShaderProgram)(struct gl_context *ctx,
-                               struct gl_shader_program *shProg);
    void (*UseProgram)(struct gl_context *ctx, struct gl_shader_program *shProg);
    /*@}*/
 

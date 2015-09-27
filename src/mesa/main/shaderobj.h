@@ -102,6 +102,9 @@ extern void
 _mesa_free_shader_program_data(struct gl_context *ctx,
                                struct gl_shader_program *shProg);
 
+extern void
+_mesa_delete_shader_program(struct gl_context *ctx,
+                            struct gl_shader_program *shProg);
 
 
 extern void
