@@ -111,12 +111,6 @@ struct dd_function_table {
    void (*Clear)( struct gl_context *ctx, GLbitfield buffers );
 
    /**
-    * Execute glAccum command.
-    */
-   void (*Accum)( struct gl_context *ctx, GLenum op, GLfloat value );
-
-
-   /**
     * Execute glRasterPos, updating the ctx->Current.Raster fields
     */
    void (*RasterPos)( struct gl_context *ctx, const GLfloat v[4] );

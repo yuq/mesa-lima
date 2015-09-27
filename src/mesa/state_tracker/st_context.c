@@ -410,8 +410,6 @@ void st_init_driver_functions(struct pipe_screen *screen,
    _mesa_init_shader_object_functions(functions);
    _mesa_init_sampler_object_functions(functions);
 
-   functions->Accum = _mesa_accum;
-
    st_init_blit_functions(functions);
    st_init_bufferobject_functions(functions);
    st_init_clear_functions(functions);
