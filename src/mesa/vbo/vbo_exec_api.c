@@ -1165,7 +1165,14 @@ void vbo_exec_BeginVertices( struct gl_context *ctx )
 
 
 /**
- * Called via ctx->Driver.FlushVertices()
+ * If inside glBegin()/glEnd(), it should assert(0).  Otherwise, if
+ * FLUSH_STORED_VERTICES bit in \p flags is set flushes any buffered
+ * vertices, if FLUSH_UPDATE_CURRENT bit is set updates
+ * __struct gl_contextRec::Current and gl_light_attrib::Material
+ *
+ * Note that the default T&L engine never clears the
+ * FLUSH_UPDATE_CURRENT bit, even after performing the update.
+ *
  * \param flags  bitmask of FLUSH_STORED_VERTICES, FLUSH_UPDATE_CURRENT
  */
 void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )

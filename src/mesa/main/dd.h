@@ -792,16 +792,6 @@ struct dd_function_table {
    /** Need to call SaveFlushVertices() upon state change? */
    GLboolean SaveNeedFlush;
 
-   /**
-    * If inside glBegin()/glEnd(), it should assert(0).  Otherwise, if
-    * FLUSH_STORED_VERTICES bit in \p flags is set flushes any buffered
-    * vertices, if FLUSH_UPDATE_CURRENT bit is set updates
-    * __struct gl_contextRec::Current and gl_light_attrib::Material
-    *
-    * Note that the default T&L engine never clears the
-    * FLUSH_UPDATE_CURRENT bit, even after performing the update.
-    */
-   void (*FlushVertices)( struct gl_context *ctx, GLuint flags );
    void (*SaveFlushVertices)( struct gl_context *ctx );
 
    /**
