@@ -7742,8 +7742,7 @@ execute_list(struct gl_context *ctx, GLuint list)
 
    ctx->ListState.CallDepth++;
 
-   if (ctx->Driver.BeginCallList)
-      ctx->Driver.BeginCallList(ctx, dlist);
+   vbo_save_BeginCallList(ctx, dlist);
 
    n = dlist->Head;
 
