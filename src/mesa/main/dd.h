@@ -799,13 +799,6 @@ struct dd_function_table {
    void (*LightingSpaceChange)( struct gl_context *ctx );
 
    /**
-    * Called by glEndList().
-    *
-    * \sa dd_function_table::NewList.
-    */
-   void (*EndList)( struct gl_context *ctx );
-
-   /**
     * Called by glCallList(s).
     *
     * Notify the T&L component before and after calling a display list.

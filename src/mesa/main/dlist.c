@@ -9062,7 +9062,7 @@ _mesa_EndList(void)
    /* Call before emitting END_OF_LIST, in case the driver wants to
     * emit opcodes itself.
     */
-   ctx->Driver.EndList(ctx);
+   vbo_save_EndList(ctx);
 
    (void) alloc_instruction(ctx, OPCODE_END_OF_LIST, 0);
 

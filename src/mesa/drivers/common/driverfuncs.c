@@ -190,7 +190,6 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->LightingSpaceChange = NULL;
 
    /* display list */
-   driver->EndList = NULL;
    driver->BeginCallList = NULL;
    driver->EndCallList = NULL;
 
