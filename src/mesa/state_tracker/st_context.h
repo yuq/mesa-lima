@@ -101,6 +101,13 @@ struct st_context
    boolean force_persample_in_shader;
    boolean has_shareable_shaders;
 
+   /**
+    * If a shader can be created when we get its source.
+    * This means it has only 1 variant, not counting glBitmap and
+    * glDrawPixels.
+    */
+   boolean shader_has_one_variant[MESA_SHADER_STAGES];
+
    boolean needs_texcoord_semantic;
    boolean apply_texture_swizzle_to_border_color;
 
