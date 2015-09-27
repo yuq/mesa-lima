@@ -1681,6 +1681,26 @@ st_precompile_shader_variant(struct st_context *st,
       break;
    }
 
+   case GL_TESS_CONTROL_PROGRAM_NV: {
+      struct st_tessctrl_program *p = (struct st_tessctrl_program *)prog;
+      struct st_tcp_variant_key key;
+
+      memset(&key, 0, sizeof(key));
+      key.st = st;
+      st_get_tcp_variant(st, p, &key);
+      break;
+   }
+
+   case GL_TESS_EVALUATION_PROGRAM_NV: {
+      struct st_tesseval_program *p = (struct st_tesseval_program *)prog;
+      struct st_tep_variant_key key;
+
+      memset(&key, 0, sizeof(key));
+      key.st = st;
+      st_get_tep_variant(st, p, &key);
+      break;
+   }
+
    case GL_GEOMETRY_PROGRAM_NV: {
       struct st_geometry_program *p = (struct st_geometry_program *)prog;
       struct st_gp_variant_key key;
