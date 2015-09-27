@@ -2132,7 +2132,7 @@ link_intrastage_shaders(void *mem_ctx,
 
 
    if (!ok) {
-      ctx->Driver.DeleteShader(ctx, linked);
+      _mesa_delete_shader(ctx, linked);
       return NULL;
    }
 
@@ -3732,7 +3732,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    for (unsigned int i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] != NULL)
-	 ctx->Driver.DeleteShader(ctx, prog->_LinkedShaders[i]);
+	 _mesa_delete_shader(ctx, prog->_LinkedShaders[i]);
 
       prog->_LinkedShaders[i] = NULL;
    }
@@ -3747,7 +3747,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
          if (!prog->LinkStatus) {
             if (sh)
-               ctx->Driver.DeleteShader(ctx, sh);
+               _mesa_delete_shader(ctx, sh);
             goto done;
          }
 
@@ -3770,7 +3770,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          }
          if (!prog->LinkStatus) {
             if (sh)
-               ctx->Driver.DeleteShader(ctx, sh);
+               _mesa_delete_shader(ctx, sh);
             goto done;
          }
 

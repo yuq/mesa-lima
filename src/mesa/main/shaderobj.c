@@ -74,7 +74,7 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
       if (deleteFlag) {
 	 if (old->Name != 0)
 	    _mesa_HashRemove(ctx->Shared->ShaderObjects, old->Name);
-         ctx->Driver.DeleteShader(ctx, old);
+         _mesa_delete_shader(ctx, old);
       }
 
       *ptr = NULL;
@@ -116,9 +116,8 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 
 /**
  * Delete a shader object.
- * Called via ctx->Driver.DeleteShader().
  */
-static void
+void
 _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
    free((void *)sh->Source);
@@ -362,7 +361,7 @@ _mesa_free_shader_program_data(struct gl_context *ctx,
 
    for (sh = 0; sh < MESA_SHADER_STAGES; sh++) {
       if (shProg->_LinkedShaders[sh] != NULL) {
-	 ctx->Driver.DeleteShader(ctx, shProg->_LinkedShaders[sh]);
+	 _mesa_delete_shader(ctx, shProg->_LinkedShaders[sh]);
 	 shProg->_LinkedShaders[sh] = NULL;
       }
    }
@@ -439,7 +438,6 @@ void
 _mesa_init_shader_object_functions(struct dd_function_table *driver)
 {
    driver->NewShader = _mesa_new_shader;
-   driver->DeleteShader = _mesa_delete_shader;
    driver->NewShaderProgram = _mesa_new_shader_program;
    driver->DeleteShaderProgram = _mesa_delete_shader_program;
    driver->LinkShader = _mesa_ir_link_shader;
