@@ -419,7 +419,7 @@ do {									\
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;		\
    int sz = (sizeof(C) / sizeof(GLfloat));                              \
    if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT)))	\
-      ctx->Driver.BeginVertices( ctx );					\
+      vbo_exec_BeginVertices(ctx);					\
                                                                         \
    if (unlikely(exec->vtx.active_sz[A] != N * sz) ||                    \
        unlikely(exec->vtx.attrtype[A] != T))                            \
@@ -1190,7 +1190,7 @@ void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )
    /* Flush (draw), and make sure VBO is left unmapped when done */
    vbo_exec_FlushVertices_internal(exec, GL_TRUE);
 
-   /* Need to do this to ensure BeginVertices gets called again:
+   /* Need to do this to ensure vbo_exec_BeginVertices gets called again:
     */
    ctx->Driver.NeedFlush &= ~(FLUSH_UPDATE_CURRENT | flags);
 

@@ -792,11 +792,6 @@ struct dd_function_table {
    /** Need to call SaveFlushVertices() upon state change? */
    GLboolean SaveNeedFlush;
 
-   /* Called prior to any of the GLvertexformat functions being
-    * called.  Paired with Driver.FlushVertices().
-    */
-   void (*BeginVertices)( struct gl_context *ctx );
-
    /**
     * If inside glBegin()/glEnd(), it should assert(0).  Otherwise, if
     * FLUSH_STORED_VERTICES bit in \p flags is set flushes any buffered
