@@ -72,6 +72,14 @@ lookup_samplerobj_locked(struct gl_context *ctx, GLuint name)
          _mesa_HashLookupLocked(ctx->Shared->SamplerObjects, name);
 }
 
+static void
+delete_sampler_object(struct gl_context *ctx,
+                      struct gl_sampler_object *sampObj)
+{
+   mtx_destroy(&sampObj->Mutex);
+   free(sampObj->Label);
+   free(sampObj);
+}
 
 /**
  * Handle reference counting.
@@ -94,10 +102,8 @@ _mesa_reference_sampler_object_(struct gl_context *ctx,
       deleteFlag = (oldSamp->RefCount == 0);
       mtx_unlock(&oldSamp->Mutex);
 
-      if (deleteFlag) {
-	 assert(ctx->Driver.DeleteSamplerObject);
-         ctx->Driver.DeleteSamplerObject(ctx, oldSamp);
-      }
+      if (deleteFlag)
+         delete_sampler_object(ctx, oldSamp);
 
       *ptr = NULL;
    }
@@ -160,19 +166,6 @@ _mesa_new_sampler_object(struct gl_context *ctx, GLuint name)
       _mesa_init_sampler_object(sampObj, name);
    }
    return sampObj;
-}
-
-
-/**
- * Fallback for ctx->Driver.DeleteSamplerObject();
- */
-static void
-_mesa_delete_sampler_object(struct gl_context *ctx,
-                            struct gl_sampler_object *sampObj)
-{
-   mtx_destroy(&sampObj->Mutex);
-   free(sampObj->Label);
-   free(sampObj);
 }
 
 static void
@@ -1626,5 +1619,4 @@ void
 _mesa_init_sampler_object_functions(struct dd_function_table *driver)
 {
    driver->NewSamplerObject = _mesa_new_sampler_object;
-   driver->DeleteSamplerObject = _mesa_delete_sampler_object;
 }

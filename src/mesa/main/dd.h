@@ -875,8 +875,6 @@ struct dd_function_table {
     */
    struct gl_sampler_object * (*NewSamplerObject)(struct gl_context *ctx,
                                                   GLuint name);
-   void (*DeleteSamplerObject)(struct gl_context *ctx,
-                               struct gl_sampler_object *samp);
 
    /**
     * \name Return a timestamp in nanoseconds as defined by GL_ARB_timer_query.
