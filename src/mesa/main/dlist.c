@@ -9028,7 +9028,7 @@ _mesa_NewList(GLuint name, GLenum mode)
    ctx->ListState.CurrentBlock = ctx->ListState.CurrentList->Head;
    ctx->ListState.CurrentPos = 0;
 
-   ctx->Driver.NewList(ctx, name, mode);
+   vbo_save_NewList(ctx, name, mode);
 
    ctx->CurrentDispatch = ctx->Save;
    _glapi_set_dispatch(ctx->CurrentDispatch);
