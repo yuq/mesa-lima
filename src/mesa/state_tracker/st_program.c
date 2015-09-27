@@ -1728,6 +1728,12 @@ destroy_program_variants_cb(GLuint key, void *data, void *userData)
 void
 st_destroy_program_variants(struct st_context *st)
 {
+   /* If shaders can be shared with other contexts, the last context will
+    * call DeleteProgram on all shaders, releasing everything.
+    */
+   if (st->has_shareable_shaders)
+      return;
+
    /* ARB vert/frag program */
    _mesa_HashWalk(st->ctx->Shared->Programs,
                   destroy_program_variants_cb, st);
@@ -1774,7 +1780,7 @@ st_precompile_shader_variant(struct st_context *st,
       struct st_vp_variant_key key;
 
       memset(&key, 0, sizeof(key));
-      key.st = st;
+      key.st = st->has_shareable_shaders ? NULL : st;
       st_get_vp_variant(st, p, &key);
       break;
    }
@@ -1784,7 +1790,7 @@ st_precompile_shader_variant(struct st_context *st,
       struct st_tcp_variant_key key;
 
       memset(&key, 0, sizeof(key));
-      key.st = st;
+      key.st = st->has_shareable_shaders ? NULL : st;
       st_get_tcp_variant(st, p, &key);
       break;
    }
@@ -1794,7 +1800,7 @@ st_precompile_shader_variant(struct st_context *st,
       struct st_tep_variant_key key;
 
       memset(&key, 0, sizeof(key));
-      key.st = st;
+      key.st = st->has_shareable_shaders ? NULL : st;
       st_get_tep_variant(st, p, &key);
       break;
    }
@@ -1804,7 +1810,7 @@ st_precompile_shader_variant(struct st_context *st,
       struct st_gp_variant_key key;
 
       memset(&key, 0, sizeof(key));
-      key.st = st;
+      key.st = st->has_shareable_shaders ? NULL : st;
       st_get_gp_variant(st, p, &key);
       break;
    }
@@ -1814,7 +1820,7 @@ st_precompile_shader_variant(struct st_context *st,
       struct st_fp_variant_key key;
 
       memset(&key, 0, sizeof(key));
-      key.st = st;
+      key.st = st->has_shareable_shaders ? NULL : st;
       st_get_fp_variant(st, p, &key);
       break;
    }

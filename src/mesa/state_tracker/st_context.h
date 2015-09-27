@@ -99,6 +99,7 @@ struct st_context
    boolean has_etc2;
    boolean prefer_blit_based_texture_transfer;
    boolean can_force_persample_interp;
+   boolean has_shareable_shaders;
 
    boolean needs_texcoord_semantic;
    boolean apply_texture_swizzle_to_border_color;
