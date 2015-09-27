@@ -276,6 +276,8 @@ The integer capabilities:
   GL4 hardware will likely need to emulate it with a shader variant, or by
   selecting the interpolation weights with a conditional assignment
   in the shader.
+* ``PIPE_CAP_SHAREABLE_SHADERS``: Whether shader CSOs can be used by any
+  pipe_context.
 
 
 
