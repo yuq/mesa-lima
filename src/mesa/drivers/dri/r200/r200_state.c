@@ -2389,7 +2389,6 @@ void r200InitStateFuncs( radeonContextPtr radeon, struct dd_function_table *func
    functions->Enable			= r200Enable;
    functions->Fogfv			= r200Fogfv;
    functions->FrontFace			= r200FrontFace;
-   functions->Hint			= NULL;
    functions->LightModelfv		= r200LightModelfv;
    functions->Lightfv			= r200Lightfv;
    functions->LineStipple		= r200LineStipple;

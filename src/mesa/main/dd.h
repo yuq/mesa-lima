@@ -545,8 +545,6 @@ struct dd_function_table {
    void (*Enable)(struct gl_context *ctx, GLenum cap, GLboolean state);
    /** Specify fog parameters */
    void (*Fogfv)(struct gl_context *ctx, GLenum pname, const GLfloat *params);
-   /** Specify implementation-specific hints */
-   void (*Hint)(struct gl_context *ctx, GLenum target, GLenum mode);
    /** Set light source parameters.
     * Note: for GL_POSITION and GL_SPOT_DIRECTION, params will have already
     * been transformed to eye-space.

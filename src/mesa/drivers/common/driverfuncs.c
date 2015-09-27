@@ -133,7 +133,6 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->DepthRange = NULL;
    driver->Enable = NULL;
    driver->Fogfv = NULL;
-   driver->Hint = NULL;
    driver->Lightfv = NULL;
    driver->LightModelfv = NULL;
    driver->LineStipple = NULL;
