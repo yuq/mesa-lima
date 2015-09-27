@@ -178,7 +178,6 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    _mesa_init_texture_barrier_functions(driver);
 
    /* APPLE_vertex_array_object */
-   driver->DeleteArrayObject = _mesa_delete_vao;
    driver->BindArrayObject = NULL;
 
    _mesa_init_shader_object_functions(driver);

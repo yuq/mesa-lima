@@ -202,10 +202,8 @@ _mesa_reference_vao_(struct gl_context *ctx,
       deleteFlag = (oldObj->RefCount == 0);
       mtx_unlock(&oldObj->Mutex);
 
-      if (deleteFlag) {
-	 assert(ctx->Driver.DeleteArrayObject);
-         ctx->Driver.DeleteArrayObject(ctx, oldObj);
-      }
+      if (deleteFlag)
+         _mesa_delete_vao(ctx, oldObj);
 
       *ptr = NULL;
    }
