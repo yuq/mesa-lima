@@ -917,12 +917,6 @@ struct dd_function_table {
     * \name GL_ARB_shader_image_load_store interface.
     */
    /** @{ */
-   void (*BindImageTexture)(struct gl_context *ctx,
-                            struct gl_image_unit *unit,
-                            struct gl_texture_object *texObj,
-                            GLint level, GLboolean layered, GLint layer,
-                            GLenum access, GLenum format);
-
    void (*MemoryBarrier)(struct gl_context *ctx, GLbitfield barriers);
    /** @} */
 
