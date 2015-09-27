@@ -32,6 +32,7 @@
 #include "main/core.h"
 #include "glsl_symbol_table.h"
 #include "ir.h"
+#include "shaderapi.h"
 #include "shaderobj.h"
 #include "program/hash_table.h"
 #include "../glsl/program.h"
@@ -39,9 +40,6 @@
 #include "main/enums.h"
 #include "util/strndup.h"
 
-extern "C" {
-#include "shaderapi.h"
-}
 
 static GLint
 program_resource_location(struct gl_shader_program *shProg,
