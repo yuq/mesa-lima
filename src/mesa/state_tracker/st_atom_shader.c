@@ -72,6 +72,7 @@ update_fp( struct st_context *st )
 
    /* Ignore sample qualifier while computing this flag. */
    key.persample_shading =
+      !st->can_force_persample_interp &&
       _mesa_get_min_invocations_per_fragment(st->ctx, &stfp->Base, true) > 1;
 
    st->fp_variant = st_get_fp_variant(st, stfp, &key);

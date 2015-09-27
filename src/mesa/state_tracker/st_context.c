@@ -237,6 +237,8 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
                                               PIPE_BIND_SAMPLER_VIEW);
    st->prefer_blit_based_texture_transfer = screen->get_param(screen,
                               PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER);
+   st->can_force_persample_interp = screen->get_param(screen,
+                                          PIPE_CAP_FORCE_PERSAMPLE_INTERP);
 
    st->needs_texcoord_semantic =
       screen->get_param(screen, PIPE_CAP_TGSI_TEXCOORD);
