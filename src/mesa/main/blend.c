@@ -734,9 +734,6 @@ _mesa_ColorMaski( GLuint buf, GLboolean red, GLboolean green,
 
    FLUSH_VERTICES(ctx, _NEW_COLOR);
    COPY_4UBV(ctx->Color.ColorMask[buf], tmp);
-
-   if (ctx->Driver.ColorMaskIndexed)
-      ctx->Driver.ColorMaskIndexed(ctx, buf, red, green, blue, alpha);
 }
 
 

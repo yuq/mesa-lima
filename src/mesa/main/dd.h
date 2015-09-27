@@ -525,8 +525,6 @@ struct dd_function_table {
    /** Enable and disable writing of frame buffer color components */
    void (*ColorMask)(struct gl_context *ctx, GLboolean rmask, GLboolean gmask,
                      GLboolean bmask, GLboolean amask );
-   void (*ColorMaskIndexed)(struct gl_context *ctx, GLuint buf, GLboolean rmask,
-                            GLboolean gmask, GLboolean bmask, GLboolean amask);
    /** Cause a material color to track the current color */
    void (*ColorMaterial)(struct gl_context *ctx, GLenum face, GLenum mode);
    /** Specify whether front- or back-facing facets can be culled */
