@@ -245,9 +245,8 @@ init_shader_program(struct gl_shader_program *prog)
 
 /**
  * Allocate a new gl_shader_program object, initialize it.
- * Called via ctx->Driver.NewShaderProgram()
  */
-static struct gl_shader_program *
+struct gl_shader_program *
 _mesa_new_shader_program(GLuint name)
 {
    struct gl_shader_program *shProg;
@@ -438,7 +437,6 @@ void
 _mesa_init_shader_object_functions(struct dd_function_table *driver)
 {
    driver->NewShader = _mesa_new_shader;
-   driver->NewShaderProgram = _mesa_new_shader_program;
    driver->DeleteShaderProgram = _mesa_delete_shader_program;
    driver->LinkShader = _mesa_ir_link_shader;
 }

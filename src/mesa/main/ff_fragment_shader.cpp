@@ -32,6 +32,7 @@
 #include "main/imports.h"
 #include "main/macros.h"
 #include "main/samplerobj.h"
+#include "main/shaderobj.h"
 #include "main/texenvprogram.h"
 #include "main/texobj.h"
 #include "main/uniforms.h"
@@ -1208,7 +1209,7 @@ create_new_program(struct gl_context *ctx, struct state_key *key)
    p.top_instructions = p.shader->ir;
    p.instructions = p.shader->ir;
    p.state = key;
-   p.shader_program = ctx->Driver.NewShaderProgram(0);
+   p.shader_program = _mesa_new_shader_program(0);
 
    /* Tell the linker to ignore the fact that we're building a
     * separate shader, in case we're in a GLES2 context that would
