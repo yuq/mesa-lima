@@ -37,6 +37,7 @@
  */
 
 
+#include <stdbool.h>
 #include "main/glheader.h"
 #include "main/context.h"
 #include "main/dispatch.h"
@@ -48,17 +49,16 @@
 #include "main/shaderobj.h"
 #include "main/transformfeedback.h"
 #include "main/uniforms.h"
+#include "glsl/glsl_parser_extras.h"
+#include "glsl/ir.h"
+#include "glsl/ir_uniform.h"
+#include "glsl/program.h"
 #include "program/program.h"
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
 #include "util/ralloc.h"
 #include "util/hash_table.h"
 #include "util/mesa-sha1.h"
-#include <stdbool.h>
-#include "../glsl/glsl_parser_extras.h"
-#include "../glsl/ir.h"
-#include "../glsl/ir_uniform.h"
-#include "../glsl/program.h"
 
 
 /**
