@@ -94,13 +94,6 @@ struct dd_function_table {
    void (*UpdateState)( struct gl_context *ctx, GLbitfield new_state );
 
    /**
-    * Resize the given framebuffer to the given size.
-    * XXX OBSOLETE: this function will be removed in the future.
-    */
-   void (*ResizeBuffers)( struct gl_context *ctx, struct gl_framebuffer *fb,
-                          GLuint width, GLuint height);
-
-   /**
     * This is called whenever glFinish() is called.
     */
    void (*Finish)( struct gl_context *ctx );
