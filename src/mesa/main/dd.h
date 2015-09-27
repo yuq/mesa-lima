@@ -752,7 +752,6 @@ struct dd_function_table {
     * \name Vertex Array objects
     */
    /*@{*/
-   struct gl_vertex_array_object * (*NewArrayObject)(struct gl_context *ctx, GLuint id);
    void (*DeleteArrayObject)(struct gl_context *ctx, struct gl_vertex_array_object *);
    void (*BindArrayObject)(struct gl_context *ctx, struct gl_vertex_array_object *);
    /*@}*/
