@@ -30,14 +30,14 @@
 
 #include "main/context.h"
 #include "main/core.h"
-#include "glsl_symbol_table.h"
-#include "ir.h"
-#include "shaderapi.h"
-#include "shaderobj.h"
-#include "program/hash_table.h"
-#include "../glsl/program.h"
-#include "uniforms.h"
 #include "main/enums.h"
+#include "main/shaderapi.h"
+#include "main/shaderobj.h"
+#include "main/uniforms.h"
+#include "glsl/glsl_symbol_table.h"
+#include "glsl/ir.h"
+#include "glsl/program.h"
+#include "program/hash_table.h"
 #include "util/strndup.h"
 
 
