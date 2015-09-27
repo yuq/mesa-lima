@@ -89,6 +89,7 @@ vbo_initialize_save_dispatch(const struct gl_context *ctx,
                              struct _glapi_table *exec);
 
 void vbo_exec_FlushVertices(struct gl_context *ctx, GLuint flags);
+void vbo_save_SaveFlushVertices(struct gl_context *ctx);
 
 
 

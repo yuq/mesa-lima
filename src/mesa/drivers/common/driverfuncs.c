@@ -187,7 +187,6 @@ _mesa_init_driver_functions(struct dd_function_table *driver)
    driver->SaveNeedFlush = 0;
 
    driver->ProgramStringNotify = _tnl_program_string;
-   driver->SaveFlushVertices = NULL;
    driver->NotifySaveBegin = NULL;
    driver->LightingSpaceChange = NULL;
 

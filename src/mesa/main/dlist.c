@@ -105,13 +105,12 @@ struct gl_list_extensions
  * \param ctx GL context.
  *
  * Checks if dd_function_table::SaveNeedFlush is marked to flush
- * stored (save) vertices, and calls
- * dd_function_table::SaveFlushVertices if so.
+ * stored (save) vertices, and calls vbo_save_SaveFlushVertices if so.
  */
 #define SAVE_FLUSH_VERTICES(ctx)		\
 do {						\
    if (ctx->Driver.SaveNeedFlush)		\
-      ctx->Driver.SaveFlushVertices(ctx);	\
+      vbo_save_SaveFlushVertices(ctx);               \
 } while (0)
 
 

@@ -789,10 +789,8 @@ struct dd_function_table {
     */
    GLbitfield NeedFlush;
 
-   /** Need to call SaveFlushVertices() upon state change? */
+   /** Need to call vbo_save_SaveFlushVertices() upon state change? */
    GLboolean SaveNeedFlush;
-
-   void (*SaveFlushVertices)( struct gl_context *ctx );
 
    /**
     * Give the driver the opportunity to hook in its own vtxfmt for

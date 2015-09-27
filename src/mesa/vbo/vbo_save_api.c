@@ -1001,7 +1001,7 @@ vbo_save_NotifyBegin(struct gl_context *ctx, GLenum mode)
       _mesa_install_save_vtxfmt(ctx, &save->vtxfmt);
    }
 
-   /* We need to call SaveFlushVertices() if there's state change */
+   /* We need to call vbo_save_SaveFlushVertices() if there's state change */
    ctx->Driver.SaveNeedFlush = GL_TRUE;
 
    /* GL_TRUE means we've handled this glBegin here; don't compile a BEGIN
