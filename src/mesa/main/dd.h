@@ -747,14 +747,6 @@ struct dd_function_table {
                                 GLint *bytesWritten);
    /*@}*/
 
-
-   /**
-    * \name Vertex Array objects
-    */
-   /*@{*/
-   void (*BindArrayObject)(struct gl_context *ctx, struct gl_vertex_array_object *);
-   /*@}*/
-
    /**
     * \name GLSL-related functions (ARB extensions and OpenGL 2.x)
     */

@@ -443,10 +443,6 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, GLboolean genRequired)
 
    ctx->NewState |= _NEW_ARRAY;
    _mesa_reference_vao(ctx, &ctx->Array.VAO, newObj);
-
-   /* Pass BindVertexArray call to device driver */
-   if (ctx->Driver.BindArrayObject && newObj)
-      ctx->Driver.BindArrayObject(ctx, newObj);
 }
 
 
