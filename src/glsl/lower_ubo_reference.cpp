@@ -1099,13 +1099,11 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
 
    const glsl_type *type = deref->type->base_type == GLSL_TYPE_INT ?
       glsl_type::int_type : glsl_type::uint_type;
-   param = param->get_next();
    sig_param = new(mem_ctx)
          ir_variable(type, "data1", ir_var_function_in);
    sig_params.push_tail(sig_param);
 
    if (param_count == 3) {
-      param = param->get_next();
       sig_param = new(mem_ctx)
             ir_variable(type, "data2", ir_var_function_in);
       sig_params.push_tail(sig_param);
