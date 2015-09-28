@@ -691,9 +691,21 @@ nir_visitor::visit(ir_call *ir)
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_xor_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_xor;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_min_internal") == 0) {
-         op = nir_intrinsic_ssbo_atomic_min;
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_ssbo_atomic_imin;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_ssbo_atomic_umin;
+         else
+            unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_max_internal") == 0) {
-         op = nir_intrinsic_ssbo_atomic_max;
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_ssbo_atomic_imax;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_ssbo_atomic_umax;
+         else
+            unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_exchange_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
@@ -902,8 +914,10 @@ nir_visitor::visit(ir_call *ir)
          break;
       }
       case nir_intrinsic_ssbo_atomic_add:
-      case nir_intrinsic_ssbo_atomic_min:
-      case nir_intrinsic_ssbo_atomic_max:
+      case nir_intrinsic_ssbo_atomic_imin:
+      case nir_intrinsic_ssbo_atomic_umin:
+      case nir_intrinsic_ssbo_atomic_imax:
+      case nir_intrinsic_ssbo_atomic_umax:
       case nir_intrinsic_ssbo_atomic_and:
       case nir_intrinsic_ssbo_atomic_or:
       case nir_intrinsic_ssbo_atomic_xor:

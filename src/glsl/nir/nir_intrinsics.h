@@ -174,8 +174,10 @@ INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0,
  * 3: For CompSwap only: the second data parameter.
  */
 INTRINSIC(ssbo_atomic_add, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_min, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
-INTRINSIC(ssbo_atomic_max, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_imin, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_umin, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_imax, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_umax, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
 INTRINSIC(ssbo_atomic_and, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
 INTRINSIC(ssbo_atomic_or, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
 INTRINSIC(ssbo_atomic_xor, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)

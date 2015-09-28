@@ -645,17 +645,17 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_ssbo_atomic_add:
       nir_emit_ssbo_atomic(BRW_AOP_ADD, instr);
       break;
-   case nir_intrinsic_ssbo_atomic_min:
-      if (dest.type == BRW_REGISTER_TYPE_D)
-         nir_emit_ssbo_atomic(BRW_AOP_IMIN, instr);
-      else
-         nir_emit_ssbo_atomic(BRW_AOP_UMIN, instr);
+   case nir_intrinsic_ssbo_atomic_imin:
+      nir_emit_ssbo_atomic(BRW_AOP_IMIN, instr);
       break;
-   case nir_intrinsic_ssbo_atomic_max:
-      if (dest.type == BRW_REGISTER_TYPE_D)
-         nir_emit_ssbo_atomic(BRW_AOP_IMAX, instr);
-      else
-         nir_emit_ssbo_atomic(BRW_AOP_UMAX, instr);
+   case nir_intrinsic_ssbo_atomic_umin:
+      nir_emit_ssbo_atomic(BRW_AOP_UMIN, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_imax:
+      nir_emit_ssbo_atomic(BRW_AOP_IMAX, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_umax:
+      nir_emit_ssbo_atomic(BRW_AOP_UMAX, instr);
       break;
    case nir_intrinsic_ssbo_atomic_and:
       nir_emit_ssbo_atomic(BRW_AOP_AND, instr);
