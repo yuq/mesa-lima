@@ -371,22 +371,20 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
          info->name = "MP counters";
          info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
 
+         /* Because we can't expose the number of hardware counters needed for
+          * each different query, we don't want to allow more than one active
+          * query simultaneously to avoid failure when the maximum number of
+          * counters is reached. Note that these groups of GPU counters are
+          * currently only used by AMD_performance_monitor.
+          */
+         info->max_active_queries = 1;
+
          if (screen->base.class_3d == NVE4_3D_CLASS) {
             info->num_queries = NVE4_HW_SM_QUERY_COUNT;
-
-             /* On NVE4+, each multiprocessor have 8 hardware counters separated
-              * in two distinct domains, but we allow only one active query
-              * simultaneously because some of them use more than one hardware
-              * counter and this will result in an undefined behaviour. */
-             info->max_active_queries = 1; /* TODO: handle multiple hw counters */
-             return 1;
+            return 1;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
             info->num_queries = NVC0_HW_SM_QUERY_COUNT;
-
-            /* On NVC0:NVE4, each multiprocessor have 8 hardware counters
-             * in a single domain. */
-            info->max_active_queries = 8;
             return 1;
          }
       }
