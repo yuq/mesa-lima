@@ -245,18 +245,16 @@ VkResult anv_validate_GetPhysicalDeviceFormatProperties(
    return anv_GetPhysicalDeviceFormatProperties(physicalDevice, _format, pFormatProperties);
 }
 
-VkResult anv_GetPhysicalDeviceFormatProperties(
-    VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    _format,
-    VkFormatProperties*                         pFormatProperties)
+static VkResult
+anv_physical_device_get_format_properties(struct anv_physical_device *physical_device,
+                                          const struct anv_format *format,
+                                          VkFormatProperties *out_properties)
 {
-   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    const struct surface_format_info *info;
    int gen;
 
-   const struct anv_format *format = anv_format_for_vk_format(_format);
    if (format == NULL)
-      return vk_error(VK_ERROR_INVALID_VALUE);
+      return VK_ERROR_INVALID_VALUE;
 
    gen = physical_device->info->gen * 10;
    if (physical_device->info->is_haswell)
@@ -292,14 +290,33 @@ VkResult anv_GetPhysicalDeviceFormatProperties(
       }
    }
 
-   pFormatProperties->linearTilingFeatures = linear;
-   pFormatProperties->optimalTilingFeatures = tiled;
+   out_properties->linearTilingFeatures = linear;
+   out_properties->optimalTilingFeatures = tiled;
 
    return VK_SUCCESS;
 
  unsupported:
-   pFormatProperties->linearTilingFeatures = 0;
-   pFormatProperties->optimalTilingFeatures = 0;
+   out_properties->linearTilingFeatures = 0;
+   out_properties->optimalTilingFeatures = 0;
+
+   return VK_SUCCESS;
+}
+
+
+VkResult anv_GetPhysicalDeviceFormatProperties(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkFormatProperties*                         pFormatProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   VkResult result;
+
+   result = anv_physical_device_get_format_properties(
+               physical_device,
+               anv_format_for_vk_format(format),
+               pFormatProperties);
+   if (result != VK_SUCCESS)
+      return vk_error(result);
 
    return VK_SUCCESS;
 }
