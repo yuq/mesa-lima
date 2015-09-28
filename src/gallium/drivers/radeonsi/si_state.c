@@ -686,6 +686,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 
 	rs->two_side = state->light_twoside;
 	rs->multisample_enable = state->multisample;
+	rs->force_persample_interp = state->force_persample_interp;
 	rs->clip_plane_enable = state->clip_plane_enable;
 	rs->line_stipple_enable = state->line_stipple_enable;
 	rs->poly_stipple_enable = state->poly_stipple_enable;

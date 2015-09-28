@@ -50,6 +50,7 @@ struct si_state_rasterizer {
 	bool			flatshade;
 	bool			two_side;
 	bool			multisample_enable;
+	bool			force_persample_interp;
 	bool			line_stipple_enable;
 	unsigned		sprite_coord_enable;
 	unsigned		pa_sc_line_stipple;

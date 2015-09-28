@@ -1067,6 +1067,36 @@ static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom
 	    G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
 	    G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
 
+	if (sctx->force_persample_interp) {
+		unsigned num_persp = G_0286CC_PERSP_SAMPLE_ENA(input_ena) +
+				     G_0286CC_PERSP_CENTER_ENA(input_ena) +
+				     G_0286CC_PERSP_CENTROID_ENA(input_ena);
+		unsigned num_linear = G_0286CC_LINEAR_SAMPLE_ENA(input_ena) +
+				      G_0286CC_LINEAR_CENTER_ENA(input_ena) +
+				      G_0286CC_LINEAR_CENTROID_ENA(input_ena);
+
+		/* If only one set of (i,j) coordinates is used, we can disable
+		 * CENTER/CENTROID, enable SAMPLE and it will load SAMPLE coordinates
+		 * where CENTER/CENTROID are expected, effectively forcing per-sample
+		 * interpolation.
+		 */
+		if (num_persp == 1) {
+			input_ena &= C_0286CC_PERSP_CENTER_ENA;
+			input_ena &= C_0286CC_PERSP_CENTROID_ENA;
+			input_ena |= G_0286CC_PERSP_SAMPLE_ENA(1);
+		}
+		if (num_linear == 1) {
+			input_ena &= C_0286CC_LINEAR_CENTER_ENA;
+			input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
+			input_ena |= G_0286CC_LINEAR_SAMPLE_ENA(1);
+		}
+
+		/* If at least 2 sets of coordinates are used, we can't use this
+		 * trick and have to select SAMPLE using a conditional assignment
+		 * in the shader with "force_persample_interp" being a shader constant.
+		 */
+	}
+
 	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
 	radeon_emit(cs, input_ena);
 	radeon_emit(cs, input_ena);
@@ -1543,8 +1573,11 @@ bool si_update_shaders(struct si_context *sctx)
 		si_mark_atom_dirty(sctx, &sctx->spi_map);
 	}
 
-	if (si_pm4_state_changed(sctx, ps))
+	if (si_pm4_state_changed(sctx, ps) ||
+	    sctx->force_persample_interp != rs->force_persample_interp) {
+		sctx->force_persample_interp = rs->force_persample_interp;
 		si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
+	}
 
 	if (si_pm4_state_changed(sctx, ls) ||
 	    si_pm4_state_changed(sctx, hs) ||
