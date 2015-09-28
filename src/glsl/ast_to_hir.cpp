@@ -5732,17 +5732,16 @@ ast_process_structure_or_interface_block(exec_list *instructions,
           * is_interface case, will have resulted in compilation having
           * already halted due to a syntax error.
           */
-         const struct glsl_type *field_type =
-            decl_type != NULL ? decl_type : glsl_type::error_type;
+         assert(decl_type);
 
-         if (is_interface && field_type->contains_opaque()) {
+         if (is_interface && decl_type->contains_opaque()) {
             YYLTYPE loc = decl_list->get_location();
             _mesa_glsl_error(&loc, state,
                              "uniform/buffer in non-default interface block contains "
                              "opaque variable");
          }
 
-         if (field_type->contains_atomic()) {
+         if (decl_type->contains_atomic()) {
             /* From section 4.1.7.3 of the GLSL 4.40 spec:
              *
              *    "Members of structures cannot be declared as atomic counter
@@ -5753,7 +5752,7 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                              "shader storage block or uniform block");
          }
 
-         if (field_type->contains_image()) {
+         if (decl_type->contains_image()) {
             /* FINISHME: Same problem as with atomic counters.
              * FINISHME: Request clarification from Khronos and add
              * FINISHME: spec quotation here.
@@ -5784,8 +5783,8 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                              "to struct or interface block members");
          }
 
-         field_type = process_array_type(&loc, decl_type,
-                                         decl->array_specifier, state);
+         const struct glsl_type *field_type =
+            process_array_type(&loc, decl_type, decl->array_specifier, state);
          fields[i].type = field_type;
          fields[i].name = decl->identifier;
          fields[i].location = -1;
