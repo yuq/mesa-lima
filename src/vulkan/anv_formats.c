@@ -325,5 +325,8 @@ VkResult anv_GetPhysicalDeviceSparseImageFormatProperties(
     uint32_t*                                   pNumProperties,
     VkSparseImageFormatProperties*              pProperties)
 {
-   stub_return(VK_UNSUPPORTED);
+   /* Sparse images are not yet supported. */
+   *pNumProperties = 0;
+
+   return VK_SUCCESS;
 }
