@@ -516,13 +516,16 @@ wsi_wl_queue_present(struct anv_swap_chain *anv_chain,
    assert(image_index < chain->image_count);
    wl_surface_attach(chain->surface, chain->images[image_index].buffer, 0, 0);
    wl_surface_damage(chain->surface, 0, 0, INT32_MAX, INT32_MAX);
-   wl_surface_commit(chain->surface);
 
    if (chain->present_mode == VK_PRESENT_MODE_FIFO_WSI) {
       struct wl_callback *frame = wl_surface_frame(chain->surface);
       wl_proxy_set_queue((struct wl_proxy *)frame, chain->queue);
       wl_callback_add_listener(frame, &frame_listener, chain);
+      chain->fifo_ready = false;
    }
+
+   wl_surface_commit(chain->surface);
+   wl_display_flush(chain->display->display);
 
    return VK_SUCCESS;
 }
