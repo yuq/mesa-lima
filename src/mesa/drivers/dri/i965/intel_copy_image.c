@@ -235,7 +235,7 @@ intel_copy_image_sub_data(struct gl_context *ctx,
    } else {
       assert(dst_renderbuffer);
       dst_mt = intel_renderbuffer(dst_renderbuffer)->mt;
-      src_image = src_renderbuffer->TexImage;
+      dst_image = dst_renderbuffer->TexImage;
    }
 
    if (src_mt->num_samples > 0 || dst_mt->num_samples > 0) {
