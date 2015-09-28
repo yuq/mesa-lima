@@ -267,6 +267,7 @@ VkResult anv_GetPhysicalDeviceFormatProperties(
 
    uint32_t linear = 0, tiled = 0;
    if (anv_format_is_depth_or_stencil(format)) {
+      tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
    } else {
       /* The surface_formats table only contains color formats */
