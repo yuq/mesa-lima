@@ -323,14 +323,105 @@ VkResult anv_GetPhysicalDeviceFormatProperties(
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
-    VkFormat                                    format,
+    VkFormat                                    _format,
     VkImageType                                 type,
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
-   /* TODO: We should do something here. Chad? */
-   stub_return(VK_UNSUPPORTED);
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   const struct anv_format *format = anv_format_for_vk_format(_format);
+   VkFormatProperties format_props;
+   VkFormatFeatureFlags format_feature_flags;
+   VkResult result;
+
+   result = anv_physical_device_get_format_properties(physical_device, format,
+                                                      &format_props);
+   if (result != VK_SUCCESS)
+      return vk_error(result);
+
+   /* Extract the VkFormatFeatureFlags that are relevant for the queried
+    * tiling.
+    */
+   if (tiling == VK_IMAGE_TILING_LINEAR) {
+      format_feature_flags = format_props.linearTilingFeatures;
+   } else if (tiling == VK_IMAGE_TILING_OPTIMAL) {
+      format_feature_flags = format_props.optimalTilingFeatures;
+   } else {
+      unreachable("bad VkImageTiling");
+   }
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+      /* Meta implements transfers by sampling from the source image. */
+      if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+      if (format->has_stencil) {
+         /* Not yet implemented because copying to a W-tiled surface is crazy
+          * hard.
+          */
+         anv_finishme("support VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT for "
+                      "stencil format");
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+      if (!(format_feature_flags & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+      if (!(format_feature_flags & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+      if (!(format_feature_flags & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+      if (!(format_feature_flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+         goto unsupported;
+      }
+   }
+
+   if (usage & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT) {
+      /* Nothing to check. */
+   }
+
+   if (usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
+      /* Ignore this flag because it was removed from the
+       * provisional_I_20150910 header.
+       */
+   }
+
+   *pImageFormatProperties = (VkImageFormatProperties) {
+      /* FINISHME: Support multisampling */
+      .maxSamples = 1,
+
+      /* FINISHME: Accurately calculate
+       * VkImageFormatProperties::maxResourceSize.
+       */
+      .maxResourceSize = UINT32_MAX,
+   };
+
+    return VK_SUCCESS;
+
+unsupported:
+   *pImageFormatProperties = (VkImageFormatProperties) {
+      .maxSamples = 0,
+      .maxResourceSize = 0,
+   };
+
+   return VK_SUCCESS;
 }
 
 VkResult anv_GetPhysicalDeviceSparseImageFormatProperties(
