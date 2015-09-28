@@ -572,6 +572,9 @@ struct anv_batch_bo {
    /* Bytes actually consumed in this batch BO */
    size_t                                       length;
 
+   /* Last seen surface state block pool bo offset */
+   uint32_t                                     last_ss_pool_bo_offset;
+
    struct anv_reloc_list                        relocs;
 };
 
@@ -876,8 +879,6 @@ struct anv_cmd_buffer {
     * These fields are initialized by anv_cmd_buffer_init_batch_bo_chain().
     */
    struct list_head                             batch_bos;
-   struct list_head                             surface_bos;
-   uint32_t                                     surface_next;
    enum anv_cmd_buffer_exec_mode                exec_mode;
 
    /* A vector of anv_batch_bo pointers for every batch or surface buffer
@@ -886,6 +887,14 @@ struct anv_cmd_buffer {
     * initialized by anv_cmd_buffer_init_batch_bo_chain()
     */
    struct anv_vector                            seen_bbos;
+
+   /* A vector of int32_t's for every block of binding tables.
+    *
+    * initialized by anv_cmd_buffer_init_batch_bo_chain()
+    */
+   struct anv_vector                            bt_blocks;
+   uint32_t                                     bt_next;
+   struct anv_reloc_list                        surface_relocs;
 
    /* Information needed for execbuf
     *
@@ -940,21 +949,17 @@ struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
                                   struct anv_subpass *subpass);
 
-struct anv_reloc_list *
-anv_cmd_buffer_current_surface_relocs(struct anv_cmd_buffer *cmd_buffer);
 struct anv_address
 anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer);
 struct anv_state
-anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                                   uint32_t size, uint32_t alignment);
-struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
-                                   uint32_t entries);
+                                   uint32_t entries, uint32_t *state_offset);
 struct anv_state
 anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);
 
-VkResult anv_cmd_buffer_new_surface_state_bo(struct anv_cmd_buffer *cmd_buffer);
+VkResult
+anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 
 void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);

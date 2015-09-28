@@ -383,9 +383,8 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 
    const uint32_t dword = cmd_buffer->device->info.gen < 8 ? 1 : 8;
 
-   *(uint32_t *)(state.map + dword * 4) =
-      anv_reloc_list_add(anv_cmd_buffer_current_surface_relocs(cmd_buffer),
-                         cmd_buffer->device, state.offset + dword * 4, bo, offset);
+   anv_reloc_list_add(&cmd_buffer->surface_relocs, cmd_buffer->device,
+                      state.offset + dword * 4, bo, offset);
 }
 
 VkResult
@@ -395,7 +394,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline_layout *layout;
-   uint32_t attachments, bias;
+   uint32_t attachments, bias, state_offset;
 
    if (stage == VK_SHADER_STAGE_COMPUTE)
       layout = cmd_buffer->state.compute_pipeline->layout;
@@ -419,7 +418,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       return VK_SUCCESS;
 
    *bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer,
-                                                  bias + surface_count);
+                                                  bias + surface_count,
+                                                  &state_offset);
    uint32_t *bt_map = bt_state->map;
 
    if (bt_state->map == NULL)
@@ -439,17 +439,9 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       const struct anv_color_attachment_view *view =
          (const struct anv_color_attachment_view *)attachment;
 
-      struct anv_state state =
-         anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
-
-      if (state.map == NULL)
-         return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-
-      memcpy(state.map, view->view.surface_state.map, 64);
-
-      add_surface_state_reloc(cmd_buffer, state, view->view.bo, view->view.offset);
-
-      bt_map[a] = state.offset;
+      bt_map[a] = view->view.surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, view->view.surface_state,
+                              view->view.bo, view->view.offset);
    }
 
    if (layout == NULL)
@@ -470,16 +462,9 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          if (!view)
             continue;
 
-         struct anv_state state =
-            anv_cmd_buffer_alloc_surface_state(cmd_buffer, 64, 64);
-
-         if (state.map == NULL)
-            return VK_ERROR_OUT_OF_DEVICE_MEMORY;
-
-         memcpy(state.map, view->surface_state.map, 64);
-         add_surface_state_reloc(cmd_buffer, state, view->bo, view->offset);
-
-         bt_map[start + b] = state.offset;
+         bt_map[start + b] = view->surface_state.offset + state_offset;
+         add_surface_state_reloc(cmd_buffer, view->surface_state,
+                                 view->bo, view->offset);
       }
    }
 
@@ -595,7 +580,7 @@ anv_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
    if (result != VK_SUCCESS) {
       assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
 
-      result = anv_cmd_buffer_new_surface_state_bo(cmd_buffer);
+      result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
       assert(result == VK_SUCCESS);
 
       /* Re-emit state base addresses so we get the new surface state base
