@@ -1511,6 +1511,7 @@ glsl_type::std430_base_alignment(bool row_major) const
          base_alignment = MAX2(base_alignment,
                                field_type->std430_base_alignment(field_row_major));
       }
+      assert(base_alignment > 0);
       return base_alignment;
    }
    assert(!"not reached");
