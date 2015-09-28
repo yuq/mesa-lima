@@ -922,12 +922,14 @@ lower_ubo_reference_visitor::calculate_unsized_array_stride(ir_dereference *dere
    case ir_type_dereference_record:
    {
       ir_dereference_record *deref_record = (ir_dereference_record *) deref;
-      const struct glsl_type *deref_record_type =
-         deref_record->record->as_dereference()->type;
-      unsigned record_length = deref_record_type->length;
+      ir_dereference *interface_deref =
+         deref_record->record->as_dereference();
+      assert(interface_deref != NULL);
+      const struct glsl_type *interface_type = interface_deref->type;
+      unsigned record_length = interface_type->length;
       /* Unsized array is always the last element of the interface */
       const struct glsl_type *unsized_array_type =
-         deref_record_type->fields.structure[record_length - 1].type->fields.array;
+         interface_type->fields.structure[record_length - 1].type->fields.array;
 
       const bool array_row_major =
          is_dereferenced_thing_row_major(deref_record);
