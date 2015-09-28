@@ -37,6 +37,7 @@
 #include "../glsl/program.h"
 #include "uniforms.h"
 #include "main/enums.h"
+#include "util/strndup.h"
 
 extern "C" {
 #include "shaderapi.h"
