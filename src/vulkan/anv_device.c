@@ -201,8 +201,8 @@ anv_instance_alloc(struct anv_instance *instance, size_t size,
    void *mem = instance->pfnAlloc(instance->pAllocUserData,
                                   size, alignment, allocType);
    if (mem) {
-      VALGRIND_MEMPOOL_ALLOC(instance, mem, size);
-      VALGRIND_MAKE_MEM_UNDEFINED(mem, size);
+      VG(VALGRIND_MEMPOOL_ALLOC(instance, mem, size));
+      VG(VALGRIND_MAKE_MEM_UNDEFINED(mem, size));
    }
    return mem;
 }
@@ -213,7 +213,7 @@ anv_instance_free(struct anv_instance *instance, void *mem)
    if (mem == NULL)
       return;
 
-   VALGRIND_MEMPOOL_FREE(instance, mem);
+   VG(VALGRIND_MEMPOOL_FREE(instance, mem));
 
    instance->pfnFree(instance->pAllocUserData, mem);
 }
