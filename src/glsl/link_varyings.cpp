@@ -964,7 +964,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
          }
          slots *= type->matrix_columns;
       } else {
-         slots = var->type->matrix_columns;
+         slots = type->matrix_columns;
       }
       this->matches[this->num_matches].num_components = 4 * slots;
    } else {
