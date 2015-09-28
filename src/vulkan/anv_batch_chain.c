@@ -880,6 +880,68 @@ anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+static void
+adjust_relocations_from_block_pool(struct anv_block_pool *pool,
+                                   struct anv_reloc_list *relocs)
+{
+   for (size_t i = 0; i < relocs->num_relocs; i++) {
+      /* In general, we don't know how stale the relocated value is.  It
+       * may have been used last time or it may not.  Since we don't want
+       * to stomp it while the GPU may be accessing it, we haven't updated
+       * it anywhere else in the code.  Instead, we just set the presumed
+       * offset to what it is now based on the delta and the data in the
+       * block pool.  Then the kernel will update it for us if needed.
+       */
+      uint32_t *reloc_data = pool->map + relocs->relocs[i].offset;
+      relocs->relocs[i].presumed_offset = *reloc_data - relocs->relocs[i].delta;
+
+      /* All of the relocations from this block pool to other BO's should
+       * have been emitted relative to the surface block pool center.  We
+       * need to add the center offset to make them relative to the
+       * beginning of the actual GEM bo.
+       */
+      relocs->relocs[i].offset += pool->center_bo_offset;
+   }
+}
+
+static void
+adjust_relocations_to_block_pool(struct anv_block_pool *pool,
+                                 struct anv_bo *from_bo,
+                                 struct anv_reloc_list *relocs,
+                                 uint32_t *last_pool_center_bo_offset)
+{
+   assert(*last_pool_center_bo_offset <= pool->center_bo_offset);
+   uint32_t delta = pool->center_bo_offset - *last_pool_center_bo_offset;
+
+   /* When we initially emit relocations into a block pool, we don't
+    * actually know what the final center_bo_offset will be so we just emit
+    * it as if center_bo_offset == 0.  Now that we know what the center
+    * offset is, we need to walk the list of relocations and adjust any
+    * relocations that point to the pool bo with the correct offset.
+    */
+   for (size_t i = 0; i < relocs->num_relocs; i++) {
+      if (relocs->reloc_bos[i] == &pool->bo) {
+         /* Adjust the delta value in the relocation to correctly
+          * correspond to the new delta.  Initially, this value may have
+          * been negative (if treated as unsigned), but we trust in
+          * uint32_t roll-over to fix that for us at this point.
+          */
+         relocs->relocs[i].delta += delta;
+
+         /* Since the delta has changed, we need to update the actual
+          * relocated value with the new presumed value.  This function
+          * should only be called on batch buffers, so we know it isn't in
+          * use by the GPU at the moment.
+          */
+         uint32_t *reloc_data = from_bo->map + relocs->relocs[i].offset;
+         *reloc_data = relocs->relocs[i].presumed_offset +
+                       relocs->relocs[i].delta;
+      }
+   }
+
+   *last_pool_center_bo_offset = pool->center_bo_offset;
+}
+
 void
 anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
 {
