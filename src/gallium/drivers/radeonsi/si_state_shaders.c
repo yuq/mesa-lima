@@ -400,7 +400,7 @@ static void si_shader_ps(struct si_shader *shader)
 	struct si_pm4_state *pm4;
 	unsigned i, spi_ps_in_control;
 	unsigned num_sgprs, num_user_sgprs;
-	unsigned spi_baryc_cntl = 0, spi_ps_input_ena;
+	unsigned spi_baryc_cntl = 0;
 	uint64_t va;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
@@ -437,19 +437,6 @@ static void si_shader_ps(struct si_shader *shader)
 		S_0286D8_BC_OPTIMIZE_DISABLE(1);
 
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
-	spi_ps_input_ena = shader->spi_ps_input_ena;
-	/* we need to enable at least one of them, otherwise we hang the GPU */
-	assert(G_0286CC_PERSP_SAMPLE_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_CENTER_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_CENTROID_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_PULL_MODEL_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_SAMPLE_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_CENTER_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_CENTROID_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINE_STIPPLE_TEX_ENA(spi_ps_input_ena));
-
-	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, spi_ps_input_ena);
-	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR, spi_ps_input_ena);
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT, shader->spi_shader_z_format);
@@ -1064,6 +1051,27 @@ bcolor:
 	assert(ps->nparam == num_written);
 }
 
+static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct si_shader *ps = sctx->ps_shader->current;
+	unsigned input_ena = ps->spi_ps_input_ena;
+
+	/* we need to enable at least one of them, otherwise we hang the GPU */
+	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
+	    G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	    G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
+	    G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
+	    G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
+	    G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
+	    G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
+	    G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
+
+	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
+	radeon_emit(cs, input_ena);
+	radeon_emit(cs, input_ena);
+}
+
 /* Initialize state related to ESGS / GSVS ring buffers */
 static void si_init_gs_rings(struct si_context *sctx)
 {
@@ -1535,6 +1543,9 @@ bool si_update_shaders(struct si_context *sctx)
 		si_mark_atom_dirty(sctx, &sctx->spi_map);
 	}
 
+	if (si_pm4_state_changed(sctx, ps))
+		si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
+
 	if (si_pm4_state_changed(sctx, ls) ||
 	    si_pm4_state_changed(sctx, hs) ||
 	    si_pm4_state_changed(sctx, es) ||
@@ -1563,6 +1574,7 @@ bool si_update_shaders(struct si_context *sctx)
 void si_init_shader_functions(struct si_context *sctx)
 {
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
+	si_init_atom(sctx, &sctx->spi_ps_input, &sctx->atoms.s.spi_ps_input, si_emit_spi_ps_input);
 
 	sctx->b.b.create_vs_state = si_create_vs_state;
 	sctx->b.b.create_tcs_state = si_create_tcs_state;
