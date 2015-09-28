@@ -800,9 +800,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             /* midVec = normalize(hitDir + eyeDir) */
             if (key->localviewer) {
                 ureg_normalize3(ureg, rMid, ureg_src(rVtx), tmp);
-                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_negate(ureg_src(rMid)));
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
             } else {
-                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
             }
             ureg_normalize3(ureg, rMid, ureg_src(rMid), tmp);
             ureg_DP3(ureg, ureg_saturate(tmp_y), ureg_src(rNrm), ureg_src(rMid));
