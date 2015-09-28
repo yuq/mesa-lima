@@ -817,6 +817,16 @@ gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.scratch_size > 0)
       scratch_bo = &device->scratch_block_pool.bo;
 
+   /* Emit a render target cache flush.
+    *
+    * This isn't documented anywhere in the PRM.  However, it seems to be
+    * necessary prior to changing the surface state base adress.  Without
+    * this, we get GPU hangs when using multi-level command buffers which
+    * clear depth, reset state base address, and then go render stuff.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GEN8_PIPE_CONTROL,
+                  .RenderTargetCacheFlushEnable = true);
+
    anv_batch_emit(&cmd_buffer->batch, GEN8_STATE_BASE_ADDRESS,
                   .GeneralStateBaseAddress = { scratch_bo, 0 },
                   .GeneralStateMemoryObjectControlState = GEN8_MOCS,
