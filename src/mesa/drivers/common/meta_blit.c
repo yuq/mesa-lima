@@ -357,10 +357,16 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
        shader_index == BLIT_MSAA_SHADER_2D_MULTISAMPLE_ARRAY_DEPTH_COPY ||
        shader_index == BLIT_MSAA_SHADER_2D_MULTISAMPLE_DEPTH_COPY) {
       char *sample_index;
+      const char *tex_coords = "texCoords";
 
       if (dst_is_msaa) {
          sample_index = "gl_SampleID";
          name = "depth MSAA copy";
+
+         if (ctx->Extensions.ARB_gpu_shader5 && samples >= 16) {
+            /* See comment below for the color copy */
+            tex_coords = "interpolateAtOffset(texCoords, vec2(0.0))";
+         }
       } else {
          /* From the GL 4.3 spec:
           *
@@ -392,17 +398,19 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
                                   "#version 130\n"
                                   "#extension GL_ARB_texture_multisample : enable\n"
                                   "#extension GL_ARB_sample_shading : enable\n"
+                                  "#extension GL_ARB_gpu_shader5 : enable\n"
                                   "uniform sampler2DMS%s texSampler;\n"
                                   "in %s texCoords;\n"
                                   "out vec4 out_color;\n"
                                   "\n"
                                   "void main()\n"
                                   "{\n"
-                                  "   gl_FragDepth = texelFetch(texSampler, i%s(texCoords), %s).r;\n"
+                                  "   gl_FragDepth = texelFetch(texSampler, i%s(%s), %s).r;\n"
                                   "}\n",
                                   sampler_array_suffix,
                                   texcoord_type,
                                   texcoord_type,
+                                  tex_coords,
                                   sample_index);
    } else {
       /* You can create 2D_MULTISAMPLE textures with 0 sample count (meaning 1
@@ -415,7 +423,33 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
                              dst_is_msaa ? "copy" : "resolve");
 
       if (dst_is_msaa) {
-         sample_resolve = ralloc_asprintf(mem_ctx, "   out_color = texelFetch(texSampler, i%s(texCoords), gl_SampleID);", texcoord_type);
+         const char *tex_coords;
+
+         if (ctx->Extensions.ARB_gpu_shader5 && samples >= 16) {
+            /* If interpolateAtOffset is available then it will be used to
+             * force the interpolation to the center. This is required at
+             * least on Intel hardware because it is possible to have a sample
+             * position on the 0 x or y axis which means it will lie exactly
+             * on the pixel boundary. If we let the hardware interpolate the
+             * coordinates at one of these positions then it is possible for
+             * it to jump to a neighboring texel when converting to ints due
+             * to rounding errors. This is only done for >= 16x MSAA because
+             * it probably has some overhead. It is more likely that some
+             * hardware will use one of these problematic positions at 16x
+             * MSAA because in that case in D3D they are defined to be at
+             * these positions.
+             */
+            tex_coords = "interpolateAtOffset(texCoords, vec2(0.0))";
+         } else {
+            tex_coords = "texCoords";
+         }
+
+         sample_resolve =
+            ralloc_asprintf(mem_ctx,
+                            "   out_color = texelFetch(texSampler, "
+                            "i%s(%s), gl_SampleID);",
+                            texcoord_type, tex_coords);
+
          merge_function = "";
       } else {
          int i;
@@ -486,6 +520,7 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
                                   "#version 130\n"
                                   "#extension GL_ARB_texture_multisample : enable\n"
                                   "#extension GL_ARB_sample_shading : enable\n"
+                                  "#extension GL_ARB_gpu_shader5 : enable\n"
                                   "#define gvec4 %svec4\n"
                                   "uniform %ssampler2DMS%s texSampler;\n"
                                   "in %s texCoords;\n"
