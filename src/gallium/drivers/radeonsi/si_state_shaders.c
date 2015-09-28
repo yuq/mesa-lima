@@ -667,6 +667,34 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	tgsi_scan_shader(state->tokens, &sel->info);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
+	/* First set which opcode uses which (i,j) pair. */
+	if (sel->info.uses_persp_opcode_interp_centroid)
+		sel->info.uses_persp_centroid = true;
+
+	if (sel->info.uses_linear_opcode_interp_centroid)
+		sel->info.uses_linear_centroid = true;
+
+	if (sel->info.uses_persp_opcode_interp_offset ||
+	    sel->info.uses_persp_opcode_interp_sample)
+		sel->info.uses_persp_center = true;
+
+	if (sel->info.uses_linear_opcode_interp_offset ||
+	    sel->info.uses_linear_opcode_interp_sample)
+		sel->info.uses_linear_center = true;
+
+	/* Determine if the shader has to use a conditional assignment when
+	 * emulating force_persample_interp.
+	 */
+	sel->forces_persample_interp_for_persp =
+		sel->info.uses_persp_center +
+		sel->info.uses_persp_centroid +
+		sel->info.uses_persp_sample >= 2;
+
+	sel->forces_persample_interp_for_linear =
+		sel->info.uses_linear_center +
+		sel->info.uses_linear_centroid +
+		sel->info.uses_linear_sample >= 2;
+
 	switch (pipe_shader_type) {
 	case PIPE_SHADER_GEOMETRY:
 		sel->gs_output_prim =
@@ -1100,6 +1128,12 @@ static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom
 	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
 	radeon_emit(cs, input_ena);
 	radeon_emit(cs, input_ena);
+
+	if (ps->selector->forces_persample_interp_for_persp ||
+	    ps->selector->forces_persample_interp_for_linear)
+		radeon_set_sh_reg(cs, R_00B030_SPI_SHADER_USER_DATA_PS_0 +
+				      SI_SGPR_PS_STATE_BITS * 4,
+				  sctx->force_persample_interp);
 }
 
 /* Initialize state related to ESGS / GSVS ring buffers */

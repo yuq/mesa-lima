@@ -855,6 +855,56 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 	}
 }
 
+/* This shouldn't be used by explicit INTERP opcodes. */
+static LLVMValueRef get_interp_param(struct si_shader_context *si_shader_ctx,
+				     unsigned param)
+{
+	struct gallivm_state *gallivm = &si_shader_ctx->radeon_bld.gallivm;
+	unsigned sample_param = 0;
+	LLVMValueRef default_ij, sample_ij, force_sample;
+
+	default_ij = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, param);
+
+	/* If the shader doesn't use center/centroid, just return the parameter.
+	 *
+	 * If the shader only uses one set of (i,j), "si_emit_spi_ps_input" can
+	 * switch between center/centroid and sample without shader changes.
+	 */
+	switch (param) {
+	case SI_PARAM_PERSP_CENTROID:
+	case SI_PARAM_PERSP_CENTER:
+		if (!si_shader_ctx->shader->selector->forces_persample_interp_for_persp)
+			return default_ij;
+
+		sample_param = SI_PARAM_PERSP_SAMPLE;
+		break;
+
+	case SI_PARAM_LINEAR_CENTROID:
+	case SI_PARAM_LINEAR_CENTER:
+		if (!si_shader_ctx->shader->selector->forces_persample_interp_for_linear)
+			return default_ij;
+
+		sample_param = SI_PARAM_LINEAR_SAMPLE;
+		break;
+
+	default:
+		return default_ij;
+	}
+
+	/* Otherwise, we have to select (i,j) based on a user data SGPR. */
+	sample_ij = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn, sample_param);
+
+	/* TODO: this can be done more efficiently by switching between
+	 * 2 prologs.
+	 */
+	force_sample = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+				    SI_PARAM_PS_STATE_BITS);
+	force_sample = LLVMBuildTrunc(gallivm->builder, force_sample,
+				      LLVMInt1TypeInContext(gallivm->context), "");
+	return LLVMBuildSelect(gallivm->builder, force_sample,
+			       sample_ij, default_ij, "");
+}
+
 static void declare_input_fs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
@@ -925,7 +975,7 @@ static void declare_input_fs(
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx)
-		interp_param = LLVMGetParam(main_fn, interp_param_idx);
+		interp_param = get_interp_param(si_shader_ctx, interp_param_idx);
 
 	/* fs.constant returns the param from the middle vertex, so it's not
 	 * really useful for flat shading. It's meant to be used for custom
@@ -3458,6 +3508,7 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 
 	case TGSI_PROCESSOR_FRAGMENT:
 		params[SI_PARAM_ALPHA_REF] = f32;
+		params[SI_PARAM_PS_STATE_BITS] = i32;
 		params[SI_PARAM_PRIM_MASK] = i32;
 		last_sgpr = SI_PARAM_PRIM_MASK;
 		params[SI_PARAM_PERSP_SAMPLE] = v2i32;
