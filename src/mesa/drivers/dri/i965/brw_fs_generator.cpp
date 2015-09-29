@@ -355,6 +355,28 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 }
 
 void
+fs_generator::generate_urb_read(fs_inst *inst,
+                                struct brw_reg dst,
+                                struct brw_reg header)
+{
+   assert(header.file == BRW_GENERAL_REGISTER_FILE);
+   assert(header.type == BRW_REGISTER_TYPE_UD);
+
+   brw_inst *send = brw_next_insn(p, BRW_OPCODE_SEND);
+   brw_set_dest(p, send, dst);
+   brw_set_src0(p, send, header);
+   brw_set_src1(p, send, brw_imm_ud(0u));
+
+   brw_inst_set_sfid(p->devinfo, send, BRW_SFID_URB);
+   brw_inst_set_urb_opcode(p->devinfo, send, GEN8_URB_OPCODE_SIMD8_READ);
+
+   brw_inst_set_mlen(p->devinfo, send, inst->mlen);
+   brw_inst_set_rlen(p->devinfo, send, inst->regs_written);
+   brw_inst_set_header_present(p->devinfo, send, true);
+   brw_inst_set_urb_global_offset(p->devinfo, send, inst->offset);
+}
+
+void
 fs_generator::generate_urb_write(fs_inst *inst, struct brw_reg payload)
 {
    brw_inst *insn;
@@ -2008,6 +2030,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 	 generate_scratch_read_gen7(inst, dst);
          fill_count++;
 	 break;
+
+      case SHADER_OPCODE_URB_READ_SIMD8:
+         generate_urb_read(inst, dst, src[0]);
+         break;
 
       case SHADER_OPCODE_URB_WRITE_SIMD8:
       case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
