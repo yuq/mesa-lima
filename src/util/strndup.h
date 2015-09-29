@@ -27,6 +27,14 @@
 
 #if defined(_WIN32)
 
-extern char *strndup(const char *str, size_t max);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+char *strndup(const char *str, size_t max);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

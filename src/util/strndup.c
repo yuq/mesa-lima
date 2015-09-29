@@ -23,6 +23,7 @@
 
 #if defined(_WIN32)
 #include <stdlib.h>
+#include <string.h>
 #include "strndup.h"
 
 char *
