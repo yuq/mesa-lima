@@ -225,11 +225,13 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
     */
    assert(anv_is_aligned(qpitch, j));
 
-   uint32_t stride = align_u32(mt_width * format->bs, tile_info->width);
+   uint32_t stride = align_u32(mt_width * format->bs / format->bw,
+                               tile_info->width);
    if (create_info->stride > 0)
       stride = create_info->stride;
 
-   const uint32_t size = stride * align_u32(mt_height, tile_info->height);
+   const uint32_t size = stride * align_u32(mt_height / format->bh,
+                                            tile_info->height);
    const uint32_t offset = align_u32(*inout_image_size,
                                      tile_info->surface_alignment);
 
