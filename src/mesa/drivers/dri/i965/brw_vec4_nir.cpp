@@ -153,33 +153,10 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
             nir_setup_uniform(var);
       }
    } else {
-      /* For ARB_vertex_program, only a single "parameters" variable is
-       * generated to support uniform data.
-       */
-      nir_variable *var = (nir_variable *) shader->uniforms.get_head();
-      assert(shader->uniforms.length() == 1 &&
-             strcmp(var->name, "parameters") == 0);
+      brw_nir_setup_arb_uniforms(shader, prog, stage_prog_data);
 
-      assert(var->data.driver_location == 0);
-      uniform_size[0] = type_size_vec4(var->type);
-
-      struct gl_program_parameter_list *plist = prog->Parameters;
-      for (unsigned p = 0; p < plist->NumParameters; p++) {
-         /* Parameters should be either vec4 uniforms or single component
-          * constants; matrices and other larger types should have been broken
-          * down earlier.
-          */
-         assert(plist->Parameters[p].Size <= 4);
-
-         unsigned i;
-         for (i = 0; i < plist->Parameters[p].Size; i++) {
-            stage_prog_data->param[p * 4 + i] = &plist->ParameterValues[p][i];
-         }
-         for (; i < 4; i++) {
-            static const gl_constant_value zero = { 0.0 };
-            stage_prog_data->param[p * 4 + i] = &zero;
-         }
-      }
+      if(prog->Parameters->NumParameters > 0)
+         uniform_size[0] = prog->Parameters->NumParameters;
    }
 }
 

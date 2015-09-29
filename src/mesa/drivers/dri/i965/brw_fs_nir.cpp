@@ -196,14 +196,8 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
             param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
    } else {
-      /* prog_to_nir only creates a single giant uniform variable so we can
-       * just set param up directly. */
-      for (unsigned p = 0; p < prog->Parameters->NumParameters; p++) {
-         for (unsigned int i = 0; i < 4; i++) {
-            stage_prog_data->param[4 * p + i] =
-               &prog->Parameters->ParameterValues[p][i];
-         }
-      }
+      brw_nir_setup_arb_uniforms(shader, prog, stage_prog_data);
+
       if(prog->Parameters->NumParameters > 0)
          param_size[0] = prog->Parameters->NumParameters * 4;
    }

@@ -85,6 +85,9 @@ enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
 
 enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
 
+void brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
+                                struct brw_stage_prog_data *stage_prog_data);
+
 #ifdef __cplusplus
 }
 #endif
