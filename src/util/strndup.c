@@ -35,10 +35,7 @@ strndup(const char *str, size_t max)
    if (!str)
       return NULL;
 
-   n = strlen(str);
-   if (n > max)
-      n = max;
-
+   n = strnlen(str, max);
    ptr = (char *) calloc(n + 1, sizeof(char));
    if (!ptr)
       return NULL;
