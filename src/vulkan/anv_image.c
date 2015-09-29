@@ -225,7 +225,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
     */
    assert(anv_is_aligned(qpitch, j));
 
-   uint32_t stride = align_u32(mt_width * format->cpp, tile_info->width);
+   uint32_t stride = align_u32(mt_width * format->bs, tile_info->width);
    if (create_info->stride > 0)
       stride = create_info->stride;
 
@@ -490,14 +490,14 @@ anv_validate_CreateImageView(VkDevice _device,
       assert(!image->format->has_stencil);
       assert(!view_format_info->depth_format);
       assert(!view_format_info->has_stencil);
-      assert(view_format_info->cpp == image->format->cpp);
+      assert(view_format_info->bs == image->format->bs);
    } else if (subresource->aspectMask & ds_flags) {
       assert((subresource->aspectMask & ~ds_flags) == 0);
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
          assert(image->format->depth_format);
          assert(view_format_info->depth_format);
-         assert(view_format_info->cpp == image->format->cpp);
+         assert(view_format_info->bs == image->format->bs);
       }
 
       if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL) {

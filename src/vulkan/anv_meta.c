@@ -630,9 +630,9 @@ meta_finish_blit(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static VkFormat
-vk_format_for_cpp(int cpp)
+vk_format_for_size(int bs)
 {
-   switch (cpp) {
+   switch (bs) {
    case 1: return VK_FORMAT_R8_UINT;
    case 2: return VK_FORMAT_R8G8_UINT;
    case 3: return VK_FORMAT_R8G8B8_UINT;
@@ -642,7 +642,7 @@ vk_format_for_cpp(int cpp)
    case 12: return VK_FORMAT_R32G32B32_UINT;
    case 16: return VK_FORMAT_R32G32B32A32_UINT;
    default:
-      unreachable("Invalid format cpp");
+      unreachable("Invalid format block size");
    }
 }
 
@@ -770,30 +770,30 @@ void anv_CmdCopyBuffer(
       /* First, we compute the biggest format that can be used with the
        * given offsets and size.
        */
-      int cpp = 16;
+      int bs = 16;
 
       int fs = ffs(src_offset) - 1;
       if (fs != -1)
-         cpp = MIN2(cpp, 1 << fs);
-      assert(src_offset % cpp == 0);
+         bs = MIN2(bs, 1 << fs);
+      assert(src_offset % bs == 0);
 
       fs = ffs(dest_offset) - 1;
       if (fs != -1)
-         cpp = MIN2(cpp, 1 << fs);
-      assert(dest_offset % cpp == 0);
+         bs = MIN2(bs, 1 << fs);
+      assert(dest_offset % bs == 0);
 
       fs = ffs(pRegions[r].copySize) - 1;
       if (fs != -1)
-         cpp = MIN2(cpp, 1 << fs);
-      assert(pRegions[r].copySize % cpp == 0);
+         bs = MIN2(bs, 1 << fs);
+      assert(pRegions[r].copySize % bs == 0);
 
-      VkFormat copy_format = vk_format_for_cpp(cpp);
+      VkFormat copy_format = vk_format_for_size(bs);
 
       /* This is maximum possible width/height our HW can handle */
       uint64_t max_surface_dim = 1 << 14;
 
       /* First, we make a bunch of max-sized copies */
-      uint64_t max_copy_size = max_surface_dim * max_surface_dim * cpp;
+      uint64_t max_copy_size = max_surface_dim * max_surface_dim * bs;
       while (copy_size > max_copy_size) {
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
@@ -803,10 +803,10 @@ void anv_CmdCopyBuffer(
          dest_offset += max_copy_size;
       }
 
-      uint64_t height = copy_size / (max_surface_dim * cpp);
+      uint64_t height = copy_size / (max_surface_dim * bs);
       assert(height < max_surface_dim);
       if (height != 0) {
-         uint64_t rect_copy_size = height * max_surface_dim * cpp;
+         uint64_t rect_copy_size = height * max_surface_dim * bs;
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
                         max_surface_dim, height, copy_format);
@@ -818,7 +818,7 @@ void anv_CmdCopyBuffer(
       if (copy_size != 0) {
          do_buffer_copy(cmd_buffer, src_buffer->bo, src_offset,
                         dest_buffer->bo, dest_offset,
-                        copy_size / cpp, 1, copy_format);
+                        copy_size / bs, 1, copy_format);
       }
    }
 

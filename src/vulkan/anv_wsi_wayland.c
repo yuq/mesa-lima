@@ -60,7 +60,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
          return;
 
    /* Don't add formats which aren't supported by the driver */
-   if (anv_format_for_vk_format(format)->cpp == 0)
+   if (anv_format_for_vk_format(format)->bs == 0)
       return;
 
    f = anv_vector_add(&display->formats);
