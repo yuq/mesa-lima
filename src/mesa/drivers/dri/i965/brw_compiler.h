@@ -485,6 +485,9 @@ struct brw_vue_prog_data {
    struct brw_stage_prog_data base;
    struct brw_vue_map vue_map;
 
+   /** Should the hardware deliver input VUE handles for URB pull loads? */
+   bool include_vue_handles;
+
    GLuint urb_read_length;
    GLuint total_grf;
 
