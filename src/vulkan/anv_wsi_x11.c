@@ -73,8 +73,18 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
       xcb_window_t win = (xcb_window_t)(uintptr_t)vk_window->pPlatformWindow;
 
       xcb_get_geometry_cookie_t cookie = xcb_get_geometry(conn, win);
+      xcb_generic_error_t *err;
       xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, cookie,
-                                                              NULL);
+                                                              &err);
+      if (!geom) {
+         if (err->error_code == XCB_DRAWABLE) {
+            return vk_error(VK_ERROR_INVALID_HANDLE);
+         } else {
+            return vk_error(VK_ERROR_UNKNOWN);
+         }
+         free(err);
+      }
+
       VkExtent2D extent = { geom->width, geom->height };
       free(geom);
 
