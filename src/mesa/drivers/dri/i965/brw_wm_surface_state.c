@@ -1001,6 +1001,32 @@ const struct brw_tracked_state brw_wm_ubo_surfaces = {
    .emit = brw_upload_wm_ubo_surfaces,
 };
 
+static void
+brw_upload_cs_ubo_surfaces(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* _NEW_PROGRAM */
+   struct gl_shader_program *prog =
+      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (!prog)
+      return;
+
+   /* BRW_NEW_CS_PROG_DATA */
+   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+                           &brw->cs.base, &brw->cs.prog_data->base, true);
+}
+
+const struct brw_tracked_state brw_cs_ubo_surfaces = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_UNIFORM_BUFFER,
+   },
+   .emit = brw_upload_cs_ubo_surfaces,
+};
+
 void
 brw_upload_abo_surfaces(struct brw_context *brw,
 			struct gl_shader_program *prog,

@@ -87,6 +87,7 @@ extern const struct brw_tracked_state brw_vs_binding_table;
 extern const struct brw_tracked_state brw_wm_ubo_surfaces;
 extern const struct brw_tracked_state brw_wm_abo_surfaces;
 extern const struct brw_tracked_state brw_wm_image_surfaces;
+extern const struct brw_tracked_state brw_cs_ubo_surfaces;
 extern const struct brw_tracked_state brw_cs_abo_surfaces;
 extern const struct brw_tracked_state brw_cs_image_surfaces;
 extern const struct brw_tracked_state brw_wm_unit;
