@@ -195,6 +195,8 @@ enum brw_state_id {
    BRW_STATE_BATCH,
    BRW_STATE_INDEX_BUFFER,
    BRW_STATE_VS_CONSTBUF,
+   BRW_STATE_TCS_CONSTBUF,
+   BRW_STATE_TES_CONSTBUF,
    BRW_STATE_GS_CONSTBUF,
    BRW_STATE_PROGRAM_CACHE,
    BRW_STATE_STATE_BASE_ADDRESS,
@@ -281,6 +283,8 @@ enum brw_state_id {
 /** \see brw.state.depth_region */
 #define BRW_NEW_INDEX_BUFFER            (1ull << BRW_STATE_INDEX_BUFFER)
 #define BRW_NEW_VS_CONSTBUF             (1ull << BRW_STATE_VS_CONSTBUF)
+#define BRW_NEW_TCS_CONSTBUF            (1ull << BRW_STATE_TCS_CONSTBUF)
+#define BRW_NEW_TES_CONSTBUF            (1ull << BRW_STATE_TES_CONSTBUF)
 #define BRW_NEW_GS_CONSTBUF             (1ull << BRW_STATE_GS_CONSTBUF)
 #define BRW_NEW_PROGRAM_CACHE           (1ull << BRW_STATE_PROGRAM_CACHE)
 #define BRW_NEW_STATE_BASE_ADDRESS      (1ull << BRW_STATE_STATE_BASE_ADDRESS)
@@ -1232,7 +1236,7 @@ struct brw_context
    } perfmon;
 
    int num_atoms[BRW_NUM_PIPELINES];
-   const struct brw_tracked_state render_atoms[62];
+   const struct brw_tracked_state render_atoms[72];
    const struct brw_tracked_state compute_atoms[10];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */

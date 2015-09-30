@@ -50,11 +50,6 @@ gen8_upload_ds_state(struct brw_context *brw)
    for (int i = 0; i < ds_pkt_len - 1; i++)
       OUT_BATCH(0);
    ADVANCE_BATCH();
-
-   BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_DS << 16 | (2 - 2));
-   OUT_BATCH(brw->hw_bt_pool.next_offset);
-   ADVANCE_BATCH();
 }
 
 const struct brw_tracked_state gen8_ds_state = {

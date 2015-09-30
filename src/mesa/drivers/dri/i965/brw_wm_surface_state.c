@@ -862,6 +862,12 @@ brw_update_texture_surfaces(struct brw_context *brw)
    /* BRW_NEW_VERTEX_PROGRAM */
    struct gl_program *vs = (struct gl_program *) brw->vertex_program;
 
+   /* BRW_NEW_TESS_CTRL_PROGRAM */
+   struct gl_program *tcs = (struct gl_program *) brw->tess_ctrl_program;
+
+   /* BRW_NEW_TESS_EVAL_PROGRAM */
+   struct gl_program *tes = (struct gl_program *) brw->tess_eval_program;
+
    /* BRW_NEW_GEOMETRY_PROGRAM */
    struct gl_program *gs = (struct gl_program *) brw->geometry_program;
 
@@ -873,6 +879,8 @@ brw_update_texture_surfaces(struct brw_context *brw)
 
    /* _NEW_TEXTURE */
    update_stage_texture_surfaces(brw, vs, &brw->vs.base, false);
+   update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, false);
+   update_stage_texture_surfaces(brw, tes, &brw->tes.base, false);
    update_stage_texture_surfaces(brw, gs, &brw->gs.base, false);
    update_stage_texture_surfaces(brw, fs, &brw->wm.base, false);
    update_stage_texture_surfaces(brw, cs, &brw->cs.base, false);
@@ -883,6 +891,10 @@ brw_update_texture_surfaces(struct brw_context *brw)
    if (brw->gen < 8) {
       if (vs && vs->UsesGather)
          update_stage_texture_surfaces(brw, vs, &brw->vs.base, true);
+      if (tcs && tcs->UsesGather)
+         update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true);
+      if (tes && tes->UsesGather)
+         update_stage_texture_surfaces(brw, tes, &brw->tes.base, true);
       if (gs && gs->UsesGather)
          update_stage_texture_surfaces(brw, gs, &brw->gs.base, true);
       if (fs && fs->UsesGather)
@@ -903,6 +915,10 @@ const struct brw_tracked_state brw_texture_surfaces = {
              BRW_NEW_FS_PROG_DATA |
              BRW_NEW_GEOMETRY_PROGRAM |
              BRW_NEW_GS_PROG_DATA |
+             BRW_NEW_TESS_CTRL_PROGRAM |
+             BRW_NEW_TESS_EVAL_PROGRAM |
+             BRW_NEW_TCS_PROG_DATA |
+             BRW_NEW_TES_PROG_DATA |
              BRW_NEW_TEXTURE_BUFFER |
              BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_VS_PROG_DATA,
