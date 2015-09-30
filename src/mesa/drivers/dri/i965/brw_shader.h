@@ -273,11 +273,14 @@ public:
    virtual void setup_vec4_uniform_value(unsigned param_offset,
                                          const gl_constant_value *values,
                                          unsigned n) = 0;
-   void setup_image_uniform_values(unsigned param_offset,
-                                   const gl_uniform_storage *storage);
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);
+
+void brw_setup_image_uniform_values(gl_shader_stage stage,
+                                    struct brw_stage_prog_data *stage_prog_data,
+                                    unsigned param_start_index,
+                                    const gl_uniform_storage *storage);
 
 #endif /* __cplusplus */
 

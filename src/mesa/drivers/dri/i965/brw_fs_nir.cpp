@@ -236,7 +236,8 @@ fs_visitor::nir_setup_uniform(nir_variable *var)
       }
 
       if (storage->type->is_image()) {
-         setup_image_uniform_values(index, storage);
+         brw_setup_image_uniform_values(stage, stage_prog_data,
+                                        index, storage);
       } else {
          unsigned slots = storage->type->component_slots();
          if (storage->array_elements)
