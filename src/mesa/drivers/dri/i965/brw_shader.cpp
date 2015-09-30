@@ -72,6 +72,20 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    va_end(args);
 }
 
+static bool
+is_scalar_shader_stage(const struct brw_compiler *compiler, int stage)
+{
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+   case MESA_SHADER_COMPUTE:
+      return true;
+   case MESA_SHADER_VERTEX:
+      return compiler->scalar_vs;
+   default:
+      return false;
+   }
+}
+
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 {
@@ -118,19 +132,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
       compiler->glsl_compiler_options[i].LowerClipDistance = true;
 
-      bool is_scalar;
-      switch (i) {
-      case MESA_SHADER_FRAGMENT:
-      case MESA_SHADER_COMPUTE:
-         is_scalar = true;
-         break;
-      case MESA_SHADER_VERTEX:
-         is_scalar = compiler->scalar_vs;
-         break;
-      default:
-         is_scalar = false;
-         break;
-      }
+      bool is_scalar = is_scalar_shader_stage(compiler, i);
 
       compiler->glsl_compiler_options[i].EmitNoIndirectOutput = is_scalar;
       compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;
@@ -192,20 +194,6 @@ brw_shader_precompile(struct gl_context *ctx,
    return true;
 }
 
-static inline bool
-is_scalar_shader_stage(struct brw_context *brw, int stage)
-{
-   switch (stage) {
-   case MESA_SHADER_FRAGMENT:
-   case MESA_SHADER_COMPUTE:
-      return true;
-   case MESA_SHADER_VERTEX:
-      return brw->intelScreen->compiler->scalar_vs;
-   default:
-      return false;
-   }
-}
-
 static void
 brw_lower_packing_builtins(struct brw_context *brw,
                            gl_shader_stage shader_type,
@@ -216,7 +204,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
            | LOWER_PACK_UNORM_2x16
            | LOWER_UNPACK_UNORM_2x16;
 
-   if (is_scalar_shader_stage(brw, shader_type)) {
+   if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
       ops |= LOWER_UNPACK_UNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
            | LOWER_PACK_UNORM_4x8
@@ -229,7 +217,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
        * lowering is needed. For SOA code, the Half2x16 ops must be
        * scalarized.
        */
-      if (is_scalar_shader_stage(brw, shader_type)) {
+      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
          ops |= LOWER_PACK_HALF_2x16_TO_SPLIT
              |  LOWER_UNPACK_HALF_2x16_TO_SPLIT;
       }
@@ -310,7 +298,7 @@ process_glsl_ir(gl_shader_stage stage,
    do {
       progress = false;
 
-      if (is_scalar_shader_stage(brw, shader->Stage)) {
+      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader->Stage)) {
          brw_do_channel_expressions(shader->ir);
          brw_do_vector_splitting(shader->ir);
       }
@@ -348,6 +336,7 @@ GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
    unsigned int stage;
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
@@ -404,7 +393,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       if (options->NirOptions) {
          prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
-                                    is_scalar_shader_stage(brw, stage));
+                                    is_scalar_shader_stage(compiler, stage));
       }
 
       _mesa_reference_program(ctx, &prog, NULL);
