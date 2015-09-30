@@ -36,8 +36,6 @@ struct brw_cs_prog_key {
 extern "C" {
 #endif
 
-bool brw_cs_prog_data_compare(const void *a, const void *b);
-
 void
 brw_upload_cs_prog(struct brw_context *brw);
 

@@ -131,25 +131,6 @@ computed_depth_mode(struct gl_fragment_program *fp)
    return BRW_PSCDEPTH_OFF;
 }
 
-bool
-brw_wm_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_wm_prog_data *a = in_a;
-   const struct brw_wm_prog_data *b = in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base, &b->base))
-      return false;
-
-   /* Compare the rest of the structure. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_wm_prog_data) - offset))
-      return false;
-
-   return true;
-}
-
 /**
  * All Mesa program -> GPU code generation goes through this function.
  * Depending on the instructions used (i.e. flow control instructions)

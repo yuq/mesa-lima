@@ -169,10 +169,6 @@ void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
                       unsigned surf_index);
 
-bool
-brw_stage_prog_data_compare(const struct brw_stage_prog_data *a,
-                            const struct brw_stage_prog_data *b);
-
 void
 brw_stage_prog_data_free(const void *prog_data);
 

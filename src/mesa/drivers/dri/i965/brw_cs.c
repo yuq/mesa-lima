@@ -31,27 +31,6 @@
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
 
-bool
-brw_cs_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_cs_prog_data *a =
-      (const struct brw_cs_prog_data *)in_a;
-   const struct brw_cs_prog_data *b =
-      (const struct brw_cs_prog_data *)in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base, &b->base))
-      return false;
-
-   /* Compare the rest of the structure. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_cs_prog_data) - offset))
-      return false;
-
-   return true;
-}
-
 static bool
 brw_codegen_cs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,

@@ -394,24 +394,3 @@ brw_gs_precompile(struct gl_context *ctx,
 
    return success;
 }
-
-
-bool
-brw_gs_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_gs_prog_data *a = in_a;
-   const struct brw_gs_prog_data *b = in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base.base, &b->base.base))
-      return false;
-
-   /* Compare the rest of the struct. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_gs_prog_data) - offset)) {
-      return false;
-   }
-
-   return true;
-}
