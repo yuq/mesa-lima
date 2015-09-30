@@ -714,6 +714,9 @@ struct brw_vs_prog_data {
 /** Max number of SSBOs in a shader */
 #define BRW_MAX_SSBO 12
 
+/** Max number of combined UBOs and SSBOs in a shader */
+#define BRW_MAX_COMBINED_UBO_SSBO (BRW_MAX_UBO + BRW_MAX_SSBO)
+
 /** Max number of atomic counter buffer objects in a shader */
 #define BRW_MAX_ABO 16
 
