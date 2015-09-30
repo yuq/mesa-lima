@@ -37,6 +37,7 @@
 #include "brw_state.h"
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
+#include "brw_nir.h"
 
 #include "util/ralloc.h"
 
@@ -80,6 +81,18 @@ brw_codegen_vs_prog(struct brw_context *brw,
    struct brw_shader *vs = NULL;
    bool start_busy = false;
    double start_time = 0;
+
+   if (!vp->program.Base.nir) {
+      /* Normally we generate NIR in LinkShader() or
+       * ProgramStringNotify(), but Mesa's fixed-function vertex program
+       * handling doesn't notify the driver at all.  Just do it here, at
+       * the last minute, even though it's lame.
+       */
+      assert(vp->program.Base.Id == 0 && prog == NULL);
+      vp->program.Base.nir =
+         brw_create_nir(brw, NULL, &vp->program.Base, MESA_SHADER_VERTEX,
+                        brw->intelScreen->compiler->scalar_vs);
+   }
 
    if (prog)
       vs = (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
