@@ -42,6 +42,8 @@
 #include "main/macros.h"
 #include "main/varray.h"
 
+#include "glsl/ir_uniform.h"
+
 #include "vbo/vbo.h"
 
 #include "st_context.h"
@@ -61,8 +63,6 @@
 #include "util/u_upload_mgr.h"
 #include "draw/draw_context.h"
 #include "cso_cache/cso_context.h"
-
-#include "../glsl/ir_uniform.h"
 
 
 /**
