@@ -2352,11 +2352,12 @@ add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
 	 struct gl_uniform_storage *storage =
 	    &this->shader_program->UniformStorage[location];
 
-         assert(storage->sampler[shader_type].active);
+         assert(storage->type->is_sampler() &&
+                storage->opaque[shader_type].active);
 
 	 for (unsigned int j = 0; j < size / 4; j++)
             params->ParameterValues[index + j][0].f =
-               storage->sampler[shader_type].index + j;
+               storage->opaque[shader_type].index + j;
       }
    }
 

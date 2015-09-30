@@ -119,7 +119,7 @@ _mesa_get_sampler_uniform_value(class ir_dereference *sampler,
       return 0;
    }
 
-   if (!shader_program->UniformStorage[location].sampler[shader].active) {
+   if (!shader_program->UniformStorage[location].opaque[shader].active) {
       assert(0 && "cannot return a sampler");
       linker_error(shader_program,
 		   "cannot return a sampler named %s, because it is not "
@@ -128,7 +128,7 @@ _mesa_get_sampler_uniform_value(class ir_dereference *sampler,
       return 0;
    }
 
-   return shader_program->UniformStorage[location].sampler[shader].index +
+   return shader_program->UniformStorage[location].opaque[shader].index +
           getname.offset;
 }
 

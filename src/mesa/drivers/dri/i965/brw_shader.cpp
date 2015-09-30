@@ -1436,7 +1436,7 @@ brw_setup_image_uniform_values(gl_shader_stage stage,
       &stage_prog_data->param[param_start_index];
 
    for (unsigned i = 0; i < MAX2(storage->array_elements, 1); i++) {
-      const unsigned image_idx = storage->image[stage].index + i;
+      const unsigned image_idx = storage->opaque[stage].index + i;
       const brw_image_param *image_param =
          &stage_prog_data->image_param[image_idx];
 

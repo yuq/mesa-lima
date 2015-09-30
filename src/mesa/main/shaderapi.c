@@ -2597,7 +2597,7 @@ _mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
 
    {
       struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[location];
-      int offset = location - uni->subroutine[stage].index;
+      int offset = location - uni->opaque[stage].index;
       memcpy(params, &uni->storage[offset],
 	     sizeof(GLuint));
    }
