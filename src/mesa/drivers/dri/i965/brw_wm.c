@@ -35,6 +35,7 @@
 #include "program/prog_parameter.h"
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
+#include "glsl/nir/nir.h"
 
 #include "util/ralloc.h"
 
@@ -173,14 +174,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count;
-   if (fs) {
-      param_count = fs->base.num_uniform_components +
-                    fs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = fp->program.Base.nir->num_uniforms;
+   if (fs)
       prog_data.base.nr_image_params = fs->base.NumImages;
-   } else {
-      param_count = fp->program.Base.Parameters->NumParameters * 4;
-   }
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
    prog_data.base.param =

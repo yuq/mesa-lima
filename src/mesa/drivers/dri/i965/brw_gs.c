@@ -32,6 +32,7 @@
 #include "brw_vec4_gs_visitor.h"
 #include "brw_state.h"
 #include "brw_ff_gs.h"
+#include "glsl/nir/nir.h"
 
 
 bool
@@ -60,9 +61,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * every uniform is a float which gets padded to the size of a vec4.
     */
    struct gl_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-   int param_count = gs->num_uniform_components * 4;
-
-   param_count += gs->NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = gp->program.Base.nir->num_uniforms * 4;
 
    c.prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);

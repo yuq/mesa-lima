@@ -109,18 +109,13 @@ brw_codegen_vs_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count;
-   if (vs) {
-      /* We add padding around uniform values below vec4 size, with the worst
-       * case being a float value that gets blown up to a vec4, so be
-       * conservative here.
-       */
-      param_count = vs->base.num_uniform_components * 4 +
-                    vs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
-      stage_prog_data->nr_image_params = vs->base.NumImages;
-   } else {
-      param_count = vp->program.Base.Parameters->NumParameters * 4;
-   }
+   int param_count = vp->program.Base.nir->num_uniforms;
+   if (!brw->intelScreen->compiler->scalar_vs)
+      param_count *= 4;
+
+   if (vs)
+      prog_data.base.base.nr_image_params = vs->base.NumImages;
+
    /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
     * planes as uniforms.
     */

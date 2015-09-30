@@ -30,6 +30,7 @@
 #include "intel_mipmap_tree.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
+#include "glsl/nir/nir.h"
 
 static bool
 brw_codegen_cs_prog(struct brw_context *brw,
@@ -55,8 +56,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = cs->base.num_uniform_components +
-                     cs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = cp->program.Base.nir->num_uniforms;
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
