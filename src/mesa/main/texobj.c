@@ -1816,7 +1816,8 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
       return;
    }
    if (texObj->Target == 0) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "glBindTextureUnit(target)");
+      /* Texture object was gen'd but never bound so the target is not set */
+      _mesa_error(ctx, GL_INVALID_OPERATION, "glBindTextureUnit(target)");
       return;
    }
    assert(valid_texture_object(texObj));
