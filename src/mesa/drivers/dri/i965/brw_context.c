@@ -326,7 +326,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxUniformBlockSize = 65536;
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_program_constants *prog = &ctx->Const.Program[i];
-      prog->MaxUniformBlocks = 12;
+      prog->MaxUniformBlocks = BRW_MAX_UBO;
       prog->MaxCombinedUniformComponents =
          prog->MaxUniformComponents +
          ctx->Const.MaxUniformBlockSize / 4 * prog->MaxUniformBlocks;
@@ -346,7 +346,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = 0;
    if (_mesa_extension_override_enables.ARB_compute_shader) {
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = BRW_MAX_TEX_UNIT;
-      ctx->Const.MaxUniformBufferBindings += 12;
+      ctx->Const.MaxUniformBufferBindings += BRW_MAX_UBO;
    } else {
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 0;
    }

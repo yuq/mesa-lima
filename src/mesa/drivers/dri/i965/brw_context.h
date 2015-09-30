@@ -708,6 +708,9 @@ struct brw_vs_prog_data {
 /** Max number of render targets in a shader */
 #define BRW_MAX_DRAW_BUFFERS 8
 
+/** Max number of UBOs in a shader */
+#define BRW_MAX_UBO 12
+
 /** Max number of atomic counter buffer objects in a shader */
 #define BRW_MAX_ABO 16
 
@@ -744,7 +747,7 @@ struct brw_vs_prog_data {
 
 #define BRW_MAX_SURFACES   (BRW_MAX_DRAW_BUFFERS +                      \
                             BRW_MAX_TEX_UNIT * 2 + /* normal, gather */ \
-                            12 + /* ubo */                              \
+                            BRW_MAX_UBO +                               \
                             BRW_MAX_ABO +                               \
                             BRW_MAX_IMAGES +                            \
                             2 + /* shader time, pull constants */       \
