@@ -134,7 +134,7 @@ vec4_visitor::nir_setup_inputs(nir_shader *shader)
 void
 vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 {
-   uniforms = 0;
+   uniforms = shader->num_uniforms;
 
    if (shader_prog) {
       foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
@@ -145,8 +145,7 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
             continue;
          }
 
-         assert(uniforms < uniform_array_size);
-         uniform_size[uniforms] = type_size_vec4(var->type);
+         uniform_size[var->data.driver_location] = type_size_vec4(var->type);
 
          if (strncmp(var->name, "gl_", 3) == 0)
             nir_setup_builtin_uniform(var);
@@ -161,8 +160,8 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
       assert(shader->uniforms.length() == 1 &&
              strcmp(var->name, "parameters") == 0);
 
-      assert(uniforms < uniform_array_size);
-      uniform_size[uniforms] = type_size_vec4(var->type);
+      assert(var->data.driver_location == 0);
+      uniform_size[0] = type_size_vec4(var->type);
 
       struct gl_program_parameter_list *plist = prog->Parameters;
       for (unsigned p = 0; p < plist->NumParameters; p++) {
@@ -174,14 +173,12 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 
          unsigned i;
          for (i = 0; i < plist->Parameters[p].Size; i++) {
-            stage_prog_data->param[uniforms * 4 + i] = &plist->ParameterValues[p][i];
+            stage_prog_data->param[p * 4 + i] = &plist->ParameterValues[p][i];
          }
          for (; i < 4; i++) {
             static const gl_constant_value zero = { 0.0 };
-            stage_prog_data->param[uniforms * 4 + i] = &zero;
+            stage_prog_data->param[p * 4 + i] = &zero;
          }
-
-         uniforms++;
       }
    }
 }
@@ -197,6 +194,7 @@ vec4_visitor::nir_setup_uniform(nir_variable *var)
     * order we'd walk the type, so walk the list of storage and find anything
     * with our name, or the prefix of a component that starts with our name.
     */
+    unsigned index = var->data.driver_location * 4;
     for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
        struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
 
@@ -215,19 +213,14 @@ vec4_visitor::nir_setup_uniform(nir_variable *var)
                                 storage->type->matrix_columns);
 
        for (unsigned s = 0; s < vector_count; s++) {
-          assert(uniforms < uniform_array_size);
-
           int i;
           for (i = 0; i < storage->type->vector_elements; i++) {
-             stage_prog_data->param[uniforms * 4 + i] = components;
-             components++;
+             stage_prog_data->param[index++] = components++;
           }
           for (; i < 4; i++) {
              static const gl_constant_value zero = { 0.0 };
-             stage_prog_data->param[uniforms * 4 + i] = &zero;
+             stage_prog_data->param[index++] = &zero;
           }
-
-          uniforms++;
        }
     }
 }
@@ -238,6 +231,7 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
    const nir_state_slot *const slots = var->state_slots;
    assert(var->state_slots != NULL);
 
+   unsigned uniform_index = var->data.driver_location * 4;
    for (unsigned int i = 0; i < var->num_state_slots; i++) {
       /* This state reference has already been setup by ir_to_mesa,
        * but we'll get the same index back here.  We can reference
@@ -249,13 +243,9 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
       gl_constant_value *values =
          &prog->Parameters->ParameterValues[index][0];
 
-      assert(uniforms < uniform_array_size);
-
       for (unsigned j = 0; j < 4; j++)
-         stage_prog_data->param[uniforms * 4 + j] =
+         stage_prog_data->param[uniform_index++] =
             &values[GET_SWZ(slots[i].swizzle, j)];
-
-      uniforms++;
    }
 }
 
