@@ -948,20 +948,6 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->param_size = v->param_size;
 }
 
-void
-fs_visitor::setup_vec4_uniform_value(unsigned param_offset,
-                                     const gl_constant_value *values,
-                                     unsigned n)
-{
-   static const gl_constant_value zero = { 0 };
-
-   for (unsigned i = 0; i < n; ++i)
-      stage_prog_data->param[param_offset + i] = &values[i];
-
-   for (unsigned i = n; i < 4; ++i)
-      stage_prog_data->param[param_offset + i] = &zero;
-}
-
 fs_reg *
 fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
                                          bool origin_upper_left)

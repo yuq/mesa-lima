@@ -294,10 +294,6 @@ public:
 
    struct brw_reg interp_reg(int location, int channel);
 
-   virtual void setup_vec4_uniform_value(unsigned param_offset,
-                                         const gl_constant_value *values,
-                                         unsigned n);
-
    int implied_mrf_writes(fs_inst *inst);
 
    virtual void dump_instructions();

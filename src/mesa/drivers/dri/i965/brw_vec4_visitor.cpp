@@ -688,22 +688,6 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    this->type = brw_type_for_base_type(type);
 }
 
-void
-vec4_visitor::setup_vec4_uniform_value(unsigned param_offset,
-                                       const gl_constant_value *values,
-                                       unsigned n)
-{
-   static const gl_constant_value zero = { 0 };
-
-   assert(param_offset % 4 == 0);
-
-   for (unsigned i = 0; i < n; ++i)
-      stage_prog_data->param[param_offset + i] = &values[i];
-
-   for (unsigned i = n; i < 4; ++i)
-      stage_prog_data->param[param_offset + i] = &zero;
-}
-
 vec4_instruction *
 vec4_visitor::emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                           src_reg src0, src_reg src1)

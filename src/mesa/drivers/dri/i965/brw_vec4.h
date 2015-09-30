@@ -132,9 +132,6 @@ public:
    bool run();
    void fail(const char *msg, ...);
 
-   virtual void setup_vec4_uniform_value(unsigned param_offset,
-                                         const gl_constant_value *values,
-                                         unsigned n);
    int setup_uniforms(int payload_reg);
 
    bool reg_allocate_trivial();

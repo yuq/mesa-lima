@@ -269,10 +269,6 @@ public:
    void assign_common_binding_table_offsets(uint32_t next_binding_table_offset);
 
    virtual void invalidate_live_intervals() = 0;
-
-   virtual void setup_vec4_uniform_value(unsigned param_offset,
-                                         const gl_constant_value *values,
-                                         unsigned n) = 0;
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);
