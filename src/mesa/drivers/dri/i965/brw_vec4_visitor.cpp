@@ -702,8 +702,6 @@ vec4_visitor::setup_vec4_uniform_value(unsigned param_offset,
 
    for (unsigned i = n; i < 4; ++i)
       stage_prog_data->param[param_offset + i] = &zero;
-
-   uniform_vector_size[param_offset / 4] = n;
 }
 
 vec4_instruction *
@@ -1886,7 +1884,6 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
    }
 
    this->uniform_size = rzalloc_array(mem_ctx, int, this->uniform_array_size);
-   this->uniform_vector_size = rzalloc_array(mem_ctx, int, this->uniform_array_size);
 }
 
 vec4_visitor::~vec4_visitor()

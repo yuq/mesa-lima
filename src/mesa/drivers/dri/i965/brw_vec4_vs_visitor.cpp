@@ -262,7 +262,6 @@ vec4_vs_visitor::setup_uniform_clipplane_values()
 {
    for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
       assert(this->uniforms < uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 4;
       this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
       this->userplane[i].type = BRW_REGISTER_TYPE_F;
       for (int j = 0; j < 4; ++j) {

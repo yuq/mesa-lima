@@ -1666,7 +1666,6 @@ vec4_visitor::setup_uniforms(int reg)
     */
    if (devinfo->gen < 6 && this->uniforms == 0) {
       assert(this->uniforms < this->uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 1;
 
       stage_prog_data->param =
          reralloc(NULL, stage_prog_data->param, const gl_constant_value *, 4);

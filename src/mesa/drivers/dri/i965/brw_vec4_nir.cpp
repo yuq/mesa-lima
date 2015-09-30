@@ -166,16 +166,14 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 
       struct gl_program_parameter_list *plist = prog->Parameters;
       for (unsigned p = 0; p < plist->NumParameters; p++) {
-         uniform_vector_size[uniforms] = plist->Parameters[p].Size;
-
          /* Parameters should be either vec4 uniforms or single component
           * constants; matrices and other larger types should have been broken
           * down earlier.
           */
-         assert(uniform_vector_size[uniforms] <= 4);
+         assert(plist->Parameters[p].Size <= 4);
 
-         int i;
-         for (i = 0; i < uniform_vector_size[uniforms]; i++) {
+         unsigned i;
+         for (i = 0; i < plist->Parameters[p].Size; i++) {
             stage_prog_data->param[uniforms * 4 + i] = &plist->ParameterValues[p][i];
          }
          for (; i < 4; i++) {
@@ -218,10 +216,9 @@ vec4_visitor::nir_setup_uniform(nir_variable *var)
 
        for (unsigned s = 0; s < vector_count; s++) {
           assert(uniforms < uniform_array_size);
-          uniform_vector_size[uniforms] = storage->type->vector_elements;
 
           int i;
-          for (i = 0; i < uniform_vector_size[uniforms]; i++) {
+          for (i = 0; i < storage->type->vector_elements; i++) {
              stage_prog_data->param[uniforms * 4 + i] = components;
              components++;
           }
@@ -257,10 +254,6 @@ vec4_visitor::nir_setup_builtin_uniform(nir_variable *var)
       for (unsigned j = 0; j < 4; j++)
          stage_prog_data->param[uniforms * 4 + j] =
             &values[GET_SWZ(slots[i].swizzle, j)];
-
-      uniform_vector_size[uniforms] =
-         (var->type->is_scalar() || var->type->is_vector() ||
-          var->type->is_matrix() ? var->type->vector_elements : 4);
 
       uniforms++;
    }
