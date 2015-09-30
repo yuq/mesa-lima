@@ -1192,18 +1192,18 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
 struct gl_texture_object *
 _mesa_create_nameless_texture(struct gl_context *ctx, GLenum target)
 {
-      struct gl_texture_object *texObj = NULL;
-      GLint targetIndex;
+   struct gl_texture_object *texObj = NULL;
+   GLint targetIndex;
 
-      if (target == 0)
-         return texObj;
-
-      texObj = ctx->Driver.NewTextureObject(ctx, 0, target);
-      targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
-      assert(targetIndex < NUM_TEXTURE_TARGETS);
-      texObj->TargetIndex = targetIndex;
-
+   if (target == 0)
       return texObj;
+
+   texObj = ctx->Driver.NewTextureObject(ctx, 0, target);
+   targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
+   assert(targetIndex < NUM_TEXTURE_TARGETS);
+   texObj->TargetIndex = targetIndex;
+
+   return texObj;
 }
 
 /**
