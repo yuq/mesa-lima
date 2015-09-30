@@ -582,17 +582,17 @@ brw_initialize_context_constants(struct brw_context *brw)
    /* FIXME: Tessellation stages are not yet supported in i965, so
     * MaxCombinedShaderStorageBlocks doesn't take them into account.
     */
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = 12;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = 12;
+   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = BRW_MAX_SSBO;
    ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks = 0;
    ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks = 0;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = 12;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = 12;
-   ctx->Const.MaxCombinedShaderStorageBlocks = 12 * 3;
-   ctx->Const.MaxShaderStorageBufferBindings = 36;
+   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.MaxCombinedShaderStorageBlocks = BRW_MAX_SSBO * 3;
+   ctx->Const.MaxShaderStorageBufferBindings = BRW_MAX_SSBO * 3;
 
    if (_mesa_extension_override_enables.ARB_compute_shader)
-      ctx->Const.MaxShaderStorageBufferBindings += 12;
+      ctx->Const.MaxShaderStorageBufferBindings += BRW_MAX_SSBO;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;
