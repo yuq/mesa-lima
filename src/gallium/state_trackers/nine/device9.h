@@ -139,6 +139,8 @@ struct NineDevice9
     struct pipe_resource *dummy_vbo;
     BOOL device_needs_reset;
     int minor_version_num;
+    long long available_texture_mem;
+    long long available_texture_limit;
 };
 static inline struct NineDevice9 *
 NineDevice9( void *data )

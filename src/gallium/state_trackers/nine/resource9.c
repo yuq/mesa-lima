@@ -29,6 +29,7 @@
 
 #include "util/u_hash_table.h"
 #include "util/u_inlines.h"
+#include "util/u_resource.h"
 
 #include "nine_pdata.h"
 
@@ -61,6 +62,33 @@ NineResource9_ctor( struct NineResource9 *This,
 
     if (Allocate) {
         assert(!initResource);
+
+        /* On Windows it is possible allocation fails when
+         * IDirect3DDevice9::GetAvailableTextureMem() still reports
+         * enough free space.
+         *
+         * Some games allocate surfaces
+         * in a loop until they receive D3DERR_OUTOFVIDEOMEMORY to measure
+         * the available texture memory size.
+         *
+         * We are not using the drivers VRAM statistics because:
+         *  * This would add overhead to each resource allocation.
+         *  * Freeing memory is lazy and takes some time, but applications
+         *    expects the memory counter to change immediately after allocating
+         *    or freeing memory.
+         *
+         * Vertexbuffers and indexbuffers are not accounted !
+         */
+        if (This->info.target != PIPE_BUFFER) {
+            This->size = util_resource_size(&This->info);
+
+            This->base.device->available_texture_mem -= This->size;
+            if (This->base.device->available_texture_mem <=
+                    This->base.device->available_texture_limit) {
+                return D3DERR_OUTOFVIDEOMEMORY;
+            }
+        }
+
         DBG("(%p) Creating pipe_resource.\n", This);
         This->resource = screen->resource_create(screen, &This->info);
         if (!This->resource)
@@ -90,6 +118,10 @@ NineResource9_dtor( struct NineResource9 *This )
     /* NOTE: We do have to use refcounting, the driver might
      * still hold a reference. */
     pipe_resource_reference(&This->resource, NULL);
+
+    /* NOTE: size is 0, unless something has actually been allocated */
+    if (This->base.device)
+        This->base.device->available_texture_mem += This->size;
 
     NineUnknown_dtor(&This->base);
 }

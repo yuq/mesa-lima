@@ -175,6 +175,19 @@ NineDevice9_ctor( struct NineDevice9 *This,
     /* Create first, it messes up our state. */
     This->hud = hud_create(This->pipe, This->cso); /* NULL result is fine */
 
+    /* Available memory counter. Updated only for allocations with this device
+     * instance. This is the Win 7 behavior.
+     * Win XP shares this counter across multiple devices. */
+    This->available_texture_mem = This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
+    if (This->available_texture_mem < 4096)
+        This->available_texture_mem <<= 20;
+    else
+        This->available_texture_mem = UINT_MAX;
+    /* We cap texture memory usage to 80% of what is reported free initially
+     * This helps get closer Win behaviour. For example VertexBuffer allocation
+     * still succeeds when texture allocation fails. */
+    This->available_texture_limit = This->available_texture_mem * 20LL / 100LL;
+
     /* create implicit swapchains */
     This->nswapchains = ID3DPresentGroup_GetMultiheadCount(This->present);
     This->swapchains = CALLOC(This->nswapchains,
@@ -540,11 +553,7 @@ NineDevice9_TestCooperativeLevel( struct NineDevice9 *This )
 UINT WINAPI
 NineDevice9_GetAvailableTextureMem( struct NineDevice9 *This )
 {
-   const unsigned mem = This->screen->get_param(This->screen, PIPE_CAP_VIDEO_MEMORY);
-   if (mem < 4096)
-      return mem << 20;
-   else
-      return UINT_MAX;
+    return This->available_texture_mem;
 }
 
 HRESULT WINAPI
