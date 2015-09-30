@@ -869,7 +869,6 @@ struct brw_cache_item {
 };
 
 
-typedef bool (*cache_aux_compare_func)(const void *a, const void *b);
 typedef void (*cache_aux_free_func)(const void *aux);
 
 struct brw_cache {
@@ -882,12 +881,6 @@ struct brw_cache {
    uint32_t next_offset;
    bool bo_used_by_gpu;
 
-   /**
-    * Optional functions used in determining whether the prog_data for a new
-    * cache item matches an existing cache item (in case there's relevant data
-    * outside of the prog_data).  If NULL, a plain memcmp is done.
-    */
-   cache_aux_compare_func aux_compare[BRW_MAX_CACHE];
    /** Optional functions for freeing other pointers attached to a prog_data. */
    cache_aux_free_func aux_free[BRW_MAX_CACHE];
 };
