@@ -65,8 +65,8 @@ static void r600_blitter_begin(struct pipe_context *ctx, enum r600_blitter_op op
 	util_blitter_save_rasterizer(rctx->blitter, rctx->rasterizer_state.cso);
 
 	if (op & R600_SAVE_FRAGMENT_STATE) {
-		util_blitter_save_viewport(rctx->blitter, &rctx->viewport[0].state);
-		util_blitter_save_scissor(rctx->blitter, &rctx->scissor[0].scissor);
+		util_blitter_save_viewport(rctx->blitter, &rctx->viewport.state[0]);
+		util_blitter_save_scissor(rctx->blitter, &rctx->scissor.scissor[0]);
 		util_blitter_save_fragment_shader(rctx->blitter, rctx->ps_shader);
 		util_blitter_save_blend(rctx->blitter, rctx->blend_state.cso);
 		util_blitter_save_depth_stencil_alpha(rctx->blitter, rctx->dsa_state.cso);
@@ -395,7 +395,7 @@ static void r600_clear(struct pipe_context *ctx, unsigned buffers,
 
 	if (buffers & PIPE_CLEAR_COLOR && rctx->b.chip_class >= EVERGREEN) {
 		evergreen_do_fast_color_clear(&rctx->b, fb, &rctx->framebuffer.atom,
-					      &buffers, color);
+					      &buffers, NULL, color);
 		if (!buffers)
 			return; /* all buffers have been fast cleared */
 	}

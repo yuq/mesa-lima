@@ -614,7 +614,8 @@ _mesa_GetProgramPipelineiv(GLuint pipeline, GLenum pname, GLint *params)
       *params = pipe->InfoLog ? strlen(pipe->InfoLog) + 1 : 0;
       return;
    case GL_VALIDATE_STATUS:
-      *params = pipe->Validated;
+      /* If pipeline is not bound, return initial value 0. */
+      *params = (ctx->_Shader->Name != pipe->Name) ? 0 : pipe->Validated;
       return;
    case GL_VERTEX_SHADER:
       *params = pipe->CurrentProgram[MESA_SHADER_VERTEX]

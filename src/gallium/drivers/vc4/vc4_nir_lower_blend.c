@@ -400,10 +400,11 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
                         }
                 }
                 assert(output_var);
-                unsigned semantic_name = output_var->data.location;
 
-                if (semantic_name != TGSI_SEMANTIC_COLOR)
+                if (output_var->data.location != FRAG_RESULT_COLOR &&
+                    output_var->data.location != FRAG_RESULT_DATA0) {
                         continue;
+                }
 
                 nir_function_impl *impl =
                         nir_cf_node_get_function(&block->cf_node);

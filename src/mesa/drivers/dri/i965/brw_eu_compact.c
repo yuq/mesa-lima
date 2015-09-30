@@ -802,7 +802,7 @@ set_3src_control_index(const struct brw_device_info *devinfo,
    if (devinfo->gen >= 9 || devinfo->is_cherryview)
       uncompacted |= brw_inst_bits(src, 36, 35) << 24; /* 2b */
 
-   for (int i = 0; i < ARRAY_SIZE(gen8_3src_control_index_table); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(gen8_3src_control_index_table); i++) {
       if (gen8_3src_control_index_table[i] == uncompacted) {
          brw_compact_inst_set_3src_control_index(dst, i);
 	 return true;
@@ -836,7 +836,7 @@ set_3src_source_index(const struct brw_device_info *devinfo,
          (brw_inst_bits(src, 104, 104) << 44);  /* 1b */
    }
 
-   for (int i = 0; i < ARRAY_SIZE(gen8_3src_source_index_table); i++) {
+   for (unsigned i = 0; i < ARRAY_SIZE(gen8_3src_source_index_table); i++) {
       if (gen8_3src_source_index_table[i] == uncompacted) {
          brw_compact_inst_set_3src_source_index(dst, i);
 	 return true;

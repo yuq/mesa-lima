@@ -623,27 +623,19 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
       dri2_dpy->own_device = 1;
       gbm = gbm_create_device(fd);
       if (gbm == NULL)
-         return EGL_FALSE;
+         goto cleanup;
+   } else {
+      fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
+      if (fd < 0)
+         goto cleanup;
    }
 
-   if (strcmp(gbm_device_get_backend_name(gbm), "drm") != 0) {
-      free(dri2_dpy);
-      return EGL_FALSE;
-   }
+   if (strcmp(gbm_device_get_backend_name(gbm), "drm") != 0)
+      goto cleanup;
 
    dri2_dpy->gbm_dri = gbm_dri_device(gbm);
-   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI) {
-      free(dri2_dpy);
-      return EGL_FALSE;
-   }
-
-   if (fd < 0) {
-      fd = fcntl(gbm_device_get_fd(gbm), F_DUPFD_CLOEXEC, 3);
-      if (fd < 0) {
-         free(dri2_dpy);
-         return EGL_FALSE;
-      }
-   }
+   if (dri2_dpy->gbm_dri->base.type != GBM_DRM_DRIVER_TYPE_DRI)
+      goto cleanup;
 
    dri2_dpy->fd = fd;
    dri2_dpy->device_name = loader_get_device_name_for_fd(dri2_dpy->fd);
@@ -727,4 +719,11 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->vtbl = &dri2_drm_display_vtbl;
 
    return EGL_TRUE;
+
+cleanup:
+   if (fd >= 0)
+      close(fd);
+
+   free(dri2_dpy);
+   return EGL_FALSE;
 }

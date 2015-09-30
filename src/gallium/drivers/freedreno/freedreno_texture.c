@@ -162,3 +162,69 @@ fd_texture_init(struct pipe_context *pctx)
 
 	pctx->sampler_view_destroy = fd_sampler_view_destroy;
 }
+
+/* helper for setting up border-color buffer for a3xx/a4xx: */
+void
+fd_setup_border_colors(struct fd_texture_stateobj *tex, void *ptr,
+		unsigned offset)
+{
+	unsigned i, j;
+
+	for (i = 0; i < tex->num_samplers; i++) {
+		struct pipe_sampler_state *sampler = tex->samplers[i];
+		uint16_t *bcolor = (uint16_t *)((uint8_t *)ptr +
+				(BORDERCOLOR_SIZE * offset) +
+				(BORDERCOLOR_SIZE * i));
+		uint32_t *bcolor32 = (uint32_t *)&bcolor[16];
+
+		if (!sampler)
+			continue;
+
+		/*
+		 * XXX HACK ALERT XXX
+		 *
+		 * The border colors need to be swizzled in a particular
+		 * format-dependent order. Even though samplers don't know about
+		 * formats, we can assume that with a GL state tracker, there's a
+		 * 1:1 correspondence between sampler and texture. Take advantage
+		 * of that knowledge.
+		 */
+		if (i < tex->num_textures && tex->textures[i]) {
+			const struct util_format_description *desc =
+					util_format_description(tex->textures[i]->format);
+			for (j = 0; j < 4; j++) {
+				if (desc->swizzle[j] >= 4)
+					continue;
+
+				const struct util_format_channel_description *chan =
+						&desc->channel[desc->swizzle[j]];
+				int size = chan->size;
+
+				/* The Z16 texture format we use seems to look in the
+				 * 32-bit border color slots
+				 */
+				if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
+					size = 32;
+
+				/* Formats like R11G11B10 or RGB9_E5 don't specify
+				 * per-channel sizes properly.
+				 */
+				if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
+					size = 16;
+
+				if (chan->pure_integer && size > 16)
+					bcolor32[desc->swizzle[j] + 4] =
+							sampler->border_color.i[j];
+				else if (size > 16)
+					bcolor32[desc->swizzle[j]] =
+							fui(sampler->border_color.f[j]);
+				else if (chan->pure_integer)
+					bcolor[desc->swizzle[j] + 8] =
+							sampler->border_color.i[j];
+				else
+					bcolor[desc->swizzle[j]] =
+							util_float_to_half(sampler->border_color.f[j]);
+			}
+		}
+	}
+}

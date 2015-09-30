@@ -30,31 +30,37 @@ NIR_FILES = \
 	nir/nir_control_flow_private.h \
 	nir/nir_dominance.c \
 	nir/nir_from_ssa.c \
+	nir/nir_gs_count_vertices.c \
 	nir/nir_intrinsics.c \
 	nir/nir_intrinsics.h \
 	nir/nir_live_variables.c \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
+	nir/nir_lower_clip.c \
 	nir/nir_lower_global_vars_to_local.c \
+	nir/nir_lower_gs_intrinsics.c \
 	nir/nir_lower_load_const_to_scalar.c \
 	nir/nir_lower_locals_to_regs.c \
 	nir/nir_lower_idiv.c \
 	nir/nir_lower_io.c \
 	nir/nir_lower_outputs_to_temporaries.c \
 	nir/nir_lower_phis_to_scalar.c \
-	nir/nir_lower_samplers.cpp \
+	nir/nir_lower_samplers.c \
 	nir/nir_lower_system_values.c \
-	nir/nir_lower_tex_projector.c \
+	nir/nir_lower_tex.c \
 	nir/nir_lower_to_source_mods.c \
+	nir/nir_lower_two_sided_color.c \
 	nir/nir_lower_vars_to_ssa.c \
 	nir/nir_lower_var_copies.c \
 	nir/nir_lower_vec_to_movs.c \
 	nir/nir_metadata.c \
+	nir/nir_move_vec_src_uses_to_dest.c \
 	nir/nir_normalize_cubemap_coords.c \
 	nir/nir_opt_constant_folding.c \
 	nir/nir_opt_copy_propagate.c \
 	nir/nir_opt_cse.c \
 	nir/nir_opt_dce.c \
+	nir/nir_opt_dead_cf.c \
 	nir/nir_opt_gcm.c \
 	nir/nir_opt_global_to_local.c \
 	nir/nir_opt_peephole_ffma.c \
@@ -76,8 +82,7 @@ NIR_FILES = \
 	nir/nir_worklist.h \
 	nir/nir_types.cpp \
 	nir/spirv_to_nir.c \
-	nir/spirv_glsl450_to_nir.c \
-	$(NIR_GENERATED_FILES)
+	nir/spirv_glsl450_to_nir.c
 
 # libglsl
 

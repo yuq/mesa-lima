@@ -95,7 +95,7 @@ brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
                         enum brw_reg_type type, unsigned file)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
-      const static int imm_hw_types[] = {
+      static const int imm_hw_types[] = {
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
          [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
          [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,
@@ -117,7 +117,7 @@ brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
       return imm_hw_types[type];
    } else {
       /* Non-immediate registers */
-      const static int hw_types[] = {
+      static const int hw_types[] = {
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
          [BRW_REGISTER_TYPE_D]  = BRW_HW_REG_TYPE_D,
          [BRW_REGISTER_TYPE_UW] = BRW_HW_REG_TYPE_UW,
@@ -146,8 +146,9 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
 {
    const struct brw_device_info *devinfo = p->devinfo;
 
-   if (dest.file != BRW_ARCHITECTURE_REGISTER_FILE &&
-       dest.file != BRW_MESSAGE_REGISTER_FILE)
+   if (dest.file == BRW_MESSAGE_REGISTER_FILE)
+      assert((dest.nr & ~(1 << 7)) < BRW_MAX_MRF(devinfo->gen));
+   else if (dest.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(dest.nr < 128);
 
    gen7_convert_mrf_to_grf(p, &dest);
@@ -235,6 +236,15 @@ validate_reg(const struct brw_device_info *devinfo,
        reg.file == BRW_ARF_NULL)
       return;
 
+   /* From the IVB PRM Vol. 4, Pt. 3, Section 3.3.3.5:
+    *
+    *    "Swizzling is not allowed when an accumulator is used as an implicit
+    *    source or an explicit source in an instruction."
+    */
+   if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
+       reg.nr == BRW_ARF_ACCUMULATOR)
+      assert(reg.dw1.bits.swizzle == BRW_SWIZZLE_XYZW);
+
    assert(reg.hstride >= 0 && reg.hstride < ARRAY_SIZE(hstride_for_reg));
    hstride = hstride_for_reg[reg.hstride];
 
@@ -300,7 +310,9 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 {
    const struct brw_device_info *devinfo = p->devinfo;
 
-   if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
+   if (reg.file == BRW_MESSAGE_REGISTER_FILE)
+      assert((reg.nr & ~(1 << 7)) < BRW_MAX_MRF(devinfo->gen));
+   else if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
 
    gen7_convert_mrf_to_grf(p, &reg);
@@ -442,6 +454,14 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 
    if (reg.file != BRW_ARCHITECTURE_REGISTER_FILE)
       assert(reg.nr < 128);
+
+   /* From the IVB PRM Vol. 4, Pt. 3, Section 3.3.3.5:
+    *
+    *    "Accumulator registers may be accessed explicitly as src0
+    *    operands only."
+    */
+   assert(reg.file != BRW_ARCHITECTURE_REGISTER_FILE ||
+          reg.nr != BRW_ARF_ACCUMULATOR);
 
    gen7_convert_mrf_to_grf(p, &reg);
    assert(reg.file != BRW_MESSAGE_REGISTER_FILE);
@@ -2465,7 +2485,7 @@ void brw_urb_WRITE(struct brw_codegen *p,
 
    insn = next_insn(p, BRW_OPCODE_SEND);
 
-   assert(msg_length < BRW_MAX_MRF);
+   assert(msg_length < BRW_MAX_MRF(devinfo->gen));
 
    brw_set_dest(p, insn, dest);
    brw_set_src0(p, insn, src0);

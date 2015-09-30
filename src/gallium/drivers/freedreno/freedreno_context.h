@@ -335,6 +335,7 @@ struct fd_context {
 		FD_DIRTY_SCISSOR     = (1 << 17),
 		FD_DIRTY_STREAMOUT   = (1 << 18),
 		FD_DIRTY_UCP         = (1 << 19),
+		FD_DIRTY_BLEND_DUAL  = (1 << 20),
 	} dirty;
 
 	struct pipe_blend_state *blend;

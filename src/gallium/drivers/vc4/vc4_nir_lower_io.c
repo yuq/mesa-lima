@@ -22,7 +22,6 @@
  */
 
 #include "vc4_qir.h"
-#include "tgsi/tgsi_info.h"
 #include "glsl/nir/nir_builder.h"
 
 /**
@@ -47,8 +46,7 @@ replace_intrinsic_with_vec4(nir_builder *b, nir_intrinsic_instr *intr,
         /* Replace the old intrinsic with a reference to our reconstructed
          * vec4.
          */
-        nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(vec),
-                                 ralloc_parent(b->impl));
+        nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(vec));
         nir_instr_remove(&intr->instr);
 }
 
@@ -72,8 +70,6 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                 }
         }
         assert(input_var);
-        int semantic_name = input_var->data.location;
-        int semantic_index = input_var->data.index;
 
         /* All TGSI-to-NIR inputs are vec4. */
         assert(intr->num_components == 4);
@@ -93,8 +89,7 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
 
         switch (c->stage) {
         case QSTAGE_FRAG:
-                switch (semantic_name) {
-                case TGSI_SEMANTIC_FACE:
+                if (input_var->data.location == VARYING_SLOT_FACE) {
                         dests[0] = nir_fsub(b,
                                             nir_imm_float(b, 1.0),
                                             nir_fmul(b,
@@ -103,10 +98,10 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                         dests[1] = nir_imm_float(b, 0.0);
                         dests[2] = nir_imm_float(b, 0.0);
                         dests[3] = nir_imm_float(b, 1.0);
-                        break;
-                case TGSI_SEMANTIC_GENERIC:
+                } else if (input_var->data.location >= VARYING_SLOT_VAR0) {
                         if (c->fs_key->point_sprite_mask &
-                            (1 << semantic_index)) {
+                            (1 << (input_var->data.location -
+                                   VARYING_SLOT_VAR0))) {
                                 if (!c->fs_key->is_points) {
                                         dests[0] = nir_imm_float(b, 0.0);
                                         dests[1] = nir_imm_float(b, 0.0);
@@ -119,7 +114,6 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
                                 dests[2] = nir_imm_float(b, 0.0);
                                 dests[3] = nir_imm_float(b, 1.0);
                         }
-                        break;
                 }
                 break;
         case QSTAGE_COORD:
@@ -142,17 +136,18 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
                 }
         }
         assert(output_var);
-        unsigned semantic_name = output_var->data.location;
 
         if (c->stage == QSTAGE_COORD &&
-            (semantic_name != TGSI_SEMANTIC_POSITION &&
-             semantic_name != TGSI_SEMANTIC_PSIZE)) {
+            output_var->data.location != VARYING_SLOT_POS &&
+            output_var->data.location != VARYING_SLOT_PSIZ) {
                 nir_instr_remove(&intr->instr);
                 return;
         }
 
         /* Color output is lowered by vc4_nir_lower_blend(). */
-        if (c->stage == QSTAGE_FRAG && semantic_name == TGSI_SEMANTIC_COLOR) {
+        if (c->stage == QSTAGE_FRAG &&
+            (output_var->data.location == FRAG_RESULT_COLOR ||
+             output_var->data.location == FRAG_RESULT_DATA0)) {
                 intr->const_index[0] *= 4;
                 return;
         }

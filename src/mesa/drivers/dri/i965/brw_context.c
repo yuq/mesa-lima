@@ -323,6 +323,15 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    ctx->Const.StripTextureBorder = true;
 
+   ctx->Const.MaxUniformBlockSize = 65536;
+   for (int i = 0; i < MESA_SHADER_STAGES; i++) {
+      struct gl_program_constants *prog = &ctx->Const.Program[i];
+      prog->MaxUniformBlocks = 12;
+      prog->MaxCombinedUniformComponents =
+         prog->MaxUniformComponents +
+         ctx->Const.MaxUniformBlockSize / 4 * prog->MaxUniformBlocks;
+   }
+
    ctx->Const.MaxDualSourceDrawBuffers = 1;
    ctx->Const.MaxDrawBuffers = BRW_MAX_DRAW_BUFFERS;
    ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits = max_samplers;
@@ -558,8 +567,32 @@ brw_initialize_context_constants(struct brw_context *brw)
     * However, unaligned accesses are slower, so enforce buffer alignment.
     */
    ctx->Const.UniformBufferOffsetAlignment = 16;
+
+   /* ShaderStorageBufferOffsetAlignment should be a cacheline (64 bytes) so
+    * that we can safely have the CPU and GPU writing the same SSBO on
+    * non-cachecoherent systems (our Atom CPUs). With UBOs, the GPU never
+    * writes, so there's no problem. For an SSBO, the GPU and the CPU can
+    * be updating disjoint regions of the buffer simultaneously and that will
+    * break if the regions overlap the same cacheline.
+    */
+   ctx->Const.ShaderStorageBufferOffsetAlignment = 64;
    ctx->Const.TextureBufferOffsetAlignment = 16;
    ctx->Const.MaxTextureBufferSize = 128 * 1024 * 1024;
+
+   /* FIXME: Tessellation stages are not yet supported in i965, so
+    * MaxCombinedShaderStorageBlocks doesn't take them into account.
+    */
+   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = 12;
+   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = 12;
+   ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks = 0;
+   ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks = 0;
+   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = 12;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = 12;
+   ctx->Const.MaxCombinedShaderStorageBlocks = 12 * 3;
+   ctx->Const.MaxShaderStorageBufferBindings = 36;
+
+   if (_mesa_extension_override_enables.ARB_compute_shader)
+      ctx->Const.MaxShaderStorageBufferBindings += 12;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;

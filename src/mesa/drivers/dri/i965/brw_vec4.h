@@ -52,11 +52,6 @@ extern "C" {
 extern "C" {
 #endif
 
-void
-brw_vue_setup_prog_key_for_precompile(struct gl_context *ctx,
-                                      struct brw_vue_prog_key *key,
-                                      GLuint id, struct gl_program *prog);
-
 #ifdef __cplusplus
 } /* extern "C" */
 
@@ -76,7 +71,7 @@ public:
    vec4_visitor(const struct brw_compiler *compiler,
                 void *log_data,
                 struct gl_program *prog,
-                const struct brw_vue_prog_key *key,
+                const struct brw_sampler_prog_key_data *key,
                 struct brw_vue_prog_data *prog_data,
 		struct gl_shader_program *shader_prog,
                 gl_shader_stage stage,
@@ -100,7 +95,7 @@ public:
       return dst_reg(retype(brw_null_reg(), BRW_REGISTER_TYPE_UD));
    }
 
-   const struct brw_vue_prog_key * const key;
+   const struct brw_sampler_prog_key_data * const key_tex;
    struct brw_vue_prog_data * const prog_data;
    unsigned int sanity_param_count;
 
@@ -173,10 +168,9 @@ public:
 
    struct hash_table *variable_ht;
 
-   bool run(gl_clip_plane *clip_planes);
+   bool run();
    void fail(const char *msg, ...);
 
-   void setup_uniform_clipplane_values(gl_clip_plane *clip_planes);
    virtual void setup_vec4_uniform_value(unsigned param_offset,
                                          const gl_constant_value *values,
                                          unsigned n);
@@ -359,9 +353,8 @@ public:
 
    void emit_ndc_computation();
    void emit_psiz_and_flags(dst_reg reg);
-   void emit_clip_distances(dst_reg reg, int offset);
    vec4_instruction *emit_generic_urb_slot(dst_reg reg, int varying);
-   void emit_urb_slot(dst_reg reg, int varying);
+   virtual void emit_urb_slot(dst_reg reg, int varying);
 
    void emit_shader_time_begin();
    void emit_shader_time_end();
@@ -430,6 +423,8 @@ public:
    virtual void nir_emit_alu(nir_alu_instr *instr);
    virtual void nir_emit_jump(nir_jump_instr *instr);
    virtual void nir_emit_texture(nir_tex_instr *instr);
+   virtual void nir_emit_undef(nir_ssa_undef_instr *instr);
+   virtual void nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr);
 
    dst_reg get_nir_dest(nir_dest dest, enum brw_reg_type type);
    dst_reg get_nir_dest(nir_dest dest, nir_alu_type type);
@@ -566,6 +561,12 @@ private:
                                          struct brw_reg offset);
    void generate_set_simd4x2_header_gen9(vec4_instruction *inst,
                                          struct brw_reg dst);
+
+   void generate_get_buffer_size(vec4_instruction *inst,
+                                 struct brw_reg dst,
+                                 struct brw_reg src,
+                                 struct brw_reg index);
+
    void generate_unpack_flags(struct brw_reg dst);
 
    const struct brw_compiler *compiler;

@@ -523,7 +523,8 @@ read_rgba_pixels( struct gl_context *ctx,
        * convert to, then we can convert directly into the dst buffer and avoid
        * the final conversion/copy from the rgba buffer to the dst buffer.
        */
-      if (dst_format == rgba_format) {
+      if (dst_format == rgba_format &&
+          dst_stride == rgba_stride) {
          need_convert = false;
          rgba = dst;
       } else {
@@ -613,15 +614,8 @@ read_rgba_pixels( struct gl_context *ctx,
 done_swap:
    /* Handle byte swapping if required */
    if (packing->SwapBytes) {
-      GLint swapSize = _mesa_sizeof_packed_type(type);
-      if (swapSize == 2 || swapSize == 4) {
-         int swapsPerPixel = _mesa_bytes_per_pixel(format, type) / swapSize;
-         assert(_mesa_bytes_per_pixel(format, type) % swapSize == 0);
-         if (swapSize == 2)
-            _mesa_swap2((GLushort *) dst, width * height * swapsPerPixel);
-         else if (swapSize == 4)
-            _mesa_swap4((GLuint *) dst, width * height * swapsPerPixel);
-      }
+      _mesa_swap_bytes_2d_image(format, type, packing,
+                                width, height, dst, dst);
    }
 
 done_unmap:
@@ -969,6 +963,7 @@ read_pixels_es3_error_check(GLenum format, GLenum type,
             return GL_NO_ERROR;
          break;
       case GL_UNSIGNED_SHORT:
+      case GL_UNSIGNED_INT:
       case GL_UNSIGNED_INT_24_8:
          if (!is_float_depth)
             return GL_NO_ERROR;

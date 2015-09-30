@@ -46,8 +46,8 @@ glsl_type::init_ralloc_type_ctx(void)
 }
 
 glsl_type::glsl_type(GLenum gl_type,
-		     glsl_base_type base_type, unsigned vector_elements,
-		     unsigned matrix_columns, const char *name) :
+                     glsl_base_type base_type, unsigned vector_elements,
+                     unsigned matrix_columns, const char *name) :
    gl_type(gl_type),
    base_type(base_type),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
@@ -70,8 +70,8 @@ glsl_type::glsl_type(GLenum gl_type,
 }
 
 glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
-		     enum glsl_sampler_dim dim, bool shadow, bool array,
-		     unsigned type, const char *name) :
+                     enum glsl_sampler_dim dim, bool shadow, bool array,
+                     unsigned type, const char *name) :
    gl_type(gl_type),
    base_type(base_type),
    sampler_dimensionality(dim), sampler_shadow(shadow),
@@ -97,7 +97,7 @@ glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
 }
 
 glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
-		     const char *name) :
+                     const char *name) :
    gl_type(0),
    base_type(GLSL_TYPE_STRUCT),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
@@ -113,25 +113,30 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    assert(name != NULL);
    this->name = ralloc_strdup(this->mem_ctx, name);
    this->fields.structure = ralloc_array(this->mem_ctx,
-					 glsl_struct_field, length);
+                                         glsl_struct_field, length);
 
    for (i = 0; i < length; i++) {
       this->fields.structure[i].type = fields[i].type;
       this->fields.structure[i].name = ralloc_strdup(this->fields.structure,
-						     fields[i].name);
+                                                     fields[i].name);
       this->fields.structure[i].location = fields[i].location;
       this->fields.structure[i].interpolation = fields[i].interpolation;
       this->fields.structure[i].centroid = fields[i].centroid;
       this->fields.structure[i].sample = fields[i].sample;
       this->fields.structure[i].matrix_layout = fields[i].matrix_layout;
       this->fields.structure[i].patch = fields[i].patch;
+      this->fields.structure[i].image_read_only = fields[i].image_read_only;
+      this->fields.structure[i].image_write_only = fields[i].image_write_only;
+      this->fields.structure[i].image_coherent = fields[i].image_coherent;
+      this->fields.structure[i].image_volatile = fields[i].image_volatile;
+      this->fields.structure[i].image_restrict = fields[i].image_restrict;
    }
 
    mtx_unlock(&glsl_type::mutex);
 }
 
 glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
-		     enum glsl_interface_packing packing, const char *name) :
+                     enum glsl_interface_packing packing, const char *name) :
    gl_type(0),
    base_type(GLSL_TYPE_INTERFACE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
@@ -147,11 +152,11 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    assert(name != NULL);
    this->name = ralloc_strdup(this->mem_ctx, name);
    this->fields.structure = ralloc_array(this->mem_ctx,
-					 glsl_struct_field, length);
+                                         glsl_struct_field, length);
    for (i = 0; i < length; i++) {
       this->fields.structure[i].type = fields[i].type;
       this->fields.structure[i].name = ralloc_strdup(this->fields.structure,
-						     fields[i].name);
+                                                     fields[i].name);
       this->fields.structure[i].location = fields[i].location;
       this->fields.structure[i].interpolation = fields[i].interpolation;
       this->fields.structure[i].centroid = fields[i].centroid;
@@ -220,8 +225,8 @@ glsl_type::contains_sampler() const
       return this->fields.array->contains_sampler();
    } else if (this->is_record()) {
       for (unsigned int i = 0; i < this->length; i++) {
-	 if (this->fields.structure[i].type->contains_sampler())
-	    return true;
+         if (this->fields.structure[i].type->contains_sampler())
+            return true;
       }
       return false;
    } else {
@@ -237,8 +242,8 @@ glsl_type::contains_integer() const
       return this->fields.array->contains_integer();
    } else if (this->is_record()) {
       for (unsigned int i = 0; i < this->length; i++) {
-	 if (this->fields.structure[i].type->contains_integer())
-	    return true;
+         if (this->fields.structure[i].type->contains_integer())
+            return true;
       }
       return false;
    } else {
@@ -253,8 +258,8 @@ glsl_type::contains_double() const
       return this->fields.array->contains_double();
    } else if (this->is_record()) {
       for (unsigned int i = 0; i < this->length; i++) {
-	 if (this->fields.structure[i].type->contains_double())
-	    return true;
+         if (this->fields.structure[i].type->contains_double())
+            return true;
       }
       return false;
    } else {
@@ -289,8 +294,8 @@ glsl_type::contains_subroutine() const
       return this->fields.array->contains_subroutine();
    } else if (this->is_record()) {
       for (unsigned int i = 0; i < this->length; i++) {
-	 if (this->fields.structure[i].type->contains_subroutine())
-	    return true;
+         if (this->fields.structure[i].type->contains_subroutine())
+            return true;
       }
       return false;
    } else {
@@ -335,8 +340,8 @@ glsl_type::contains_image() const
       return this->fields.array->contains_image();
    } else if (this->is_record()) {
       for (unsigned int i = 0; i < this->length; i++) {
-	 if (this->fields.structure[i].type->contains_image())
-	    return true;
+         if (this->fields.structure[i].type->contains_image())
+            return true;
       }
       return false;
    } else {
@@ -536,21 +541,21 @@ glsl_type::get_instance(unsigned base_type, unsigned rows, unsigned columns)
    if (columns == 1) {
       switch (base_type) {
       case GLSL_TYPE_UINT:
-	 return uvec(rows);
+         return uvec(rows);
       case GLSL_TYPE_INT:
-	 return ivec(rows);
+         return ivec(rows);
       case GLSL_TYPE_FLOAT:
-	 return vec(rows);
+         return vec(rows);
       case GLSL_TYPE_DOUBLE:
-	 return dvec(rows);
+         return dvec(rows);
       case GLSL_TYPE_BOOL:
-	 return bvec(rows);
+         return bvec(rows);
       default:
-	 return error_type;
+         return error_type;
       }
    } else {
       if ((base_type != GLSL_TYPE_FLOAT && base_type != GLSL_TYPE_DOUBLE) || (rows == 1))
-	 return error_type;
+         return error_type;
 
       /* GLSL matrix types are named mat{COLUMNS}x{ROWS}.  Only the following
        * combinations are valid:
@@ -772,10 +777,10 @@ glsl_type::record_compare(const glsl_type *b) const
 
    for (unsigned i = 0; i < this->length; i++) {
       if (this->fields.structure[i].type != b->fields.structure[i].type)
-	 return false;
+         return false;
       if (strcmp(this->fields.structure[i].name,
-		 b->fields.structure[i].name) != 0)
-	 return false;
+                 b->fields.structure[i].name) != 0)
+         return false;
       if (this->fields.structure[i].matrix_layout
          != b->fields.structure[i].matrix_layout)
         return false;
@@ -793,6 +798,21 @@ glsl_type::record_compare(const glsl_type *b) const
          return false;
       if (this->fields.structure[i].patch
           != b->fields.structure[i].patch)
+         return false;
+      if (this->fields.structure[i].image_read_only
+          != b->fields.structure[i].image_read_only)
+         return false;
+      if (this->fields.structure[i].image_write_only
+          != b->fields.structure[i].image_write_only)
+         return false;
+      if (this->fields.structure[i].image_coherent
+          != b->fields.structure[i].image_coherent)
+         return false;
+      if (this->fields.structure[i].image_volatile
+          != b->fields.structure[i].image_volatile)
+         return false;
+      if (this->fields.structure[i].image_restrict
+          != b->fields.structure[i].image_restrict)
          return false;
    }
 
@@ -836,8 +856,8 @@ glsl_type::record_key_hash(const void *a)
 
 const glsl_type *
 glsl_type::get_record_instance(const glsl_struct_field *fields,
-			       unsigned num_fields,
-			       const char *name)
+                               unsigned num_fields,
+                               const char *name)
 {
    const glsl_type key(fields, num_fields, name);
 
@@ -870,9 +890,9 @@ glsl_type::get_record_instance(const glsl_struct_field *fields,
 
 const glsl_type *
 glsl_type::get_interface_instance(const glsl_struct_field *fields,
-				  unsigned num_fields,
-				  enum glsl_interface_packing packing,
-				  const char *block_name)
+                                  unsigned num_fields,
+                                  enum glsl_interface_packing packing,
+                                  const char *block_name)
 {
    const glsl_type key(fields, num_fields, packing, block_name);
 
@@ -1078,7 +1098,7 @@ glsl_type::field_type(const char *name) const
 
    for (unsigned i = 0; i < this->length; i++) {
       if (strcmp(name, this->fields.structure[i].name) == 0)
-	 return this->fields.structure[i].type;
+         return this->fields.structure[i].type;
    }
 
    return error_type;
@@ -1094,7 +1114,7 @@ glsl_type::field_index(const char *name) const
 
    for (unsigned i = 0; i < this->length; i++) {
       if (strcmp(name, this->fields.structure[i].name) == 0)
-	 return i;
+         return i;
    }
 
    return -1;
@@ -1119,7 +1139,7 @@ glsl_type::component_slots() const
       unsigned size = 0;
 
       for (unsigned i = 0; i < this->length; i++)
-	 size += this->fields.structure[i].type->component_slots();
+         size += this->fields.structure[i].type->component_slots();
 
       return size;
    }
@@ -1141,6 +1161,32 @@ glsl_type::component_slots() const
    }
 
    return 0;
+}
+
+unsigned
+glsl_type::record_location_offset(unsigned length) const
+{
+   unsigned offset = 0;
+   const glsl_type *t = this->without_array();
+   if (t->is_record()) {
+      assert(length <= t->length);
+
+      for (unsigned i = 0; i < length; i++) {
+         const glsl_type *st = t->fields.structure[i].type;
+         const glsl_type *wa = st->without_array();
+         if (wa->is_record()) {
+            unsigned r_offset = wa->record_location_offset(wa->length);
+            offset += st->is_array() ? st->length * r_offset : r_offset;
+         } else {
+            /* We dont worry about arrays here because unless the array
+             * contains a structure or another array it only takes up a single
+             * uniform slot.
+             */
+            offset += 1;
+         }
+      }
+   }
+   return offset;
 }
 
 unsigned
@@ -1231,12 +1277,12 @@ glsl_type::std140_base_alignment(bool row_major) const
    if (this->is_scalar() || this->is_vector()) {
       switch (this->vector_elements) {
       case 1:
-	 return N;
+         return N;
       case 2:
-	 return 2 * N;
+         return 2 * N;
       case 3:
       case 4:
-	 return 4 * N;
+         return 4 * N;
       }
    }
 
@@ -1261,13 +1307,13 @@ glsl_type::std140_base_alignment(bool row_major) const
     */
    if (this->is_array()) {
       if (this->fields.array->is_scalar() ||
-	  this->fields.array->is_vector() ||
-	  this->fields.array->is_matrix()) {
-	 return MAX2(this->fields.array->std140_base_alignment(row_major), 16);
+          this->fields.array->is_vector() ||
+          this->fields.array->is_matrix()) {
+         return MAX2(this->fields.array->std140_base_alignment(row_major), 16);
       } else {
-	 assert(this->fields.array->is_record() ||
+         assert(this->fields.array->is_record() ||
                 this->fields.array->is_array());
-	 return this->fields.array->std140_base_alignment(row_major);
+         return this->fields.array->std140_base_alignment(row_major);
       }
    }
 
@@ -1286,11 +1332,11 @@ glsl_type::std140_base_alignment(bool row_major) const
       int r = this->vector_elements;
 
       if (row_major) {
-	 vec_type = get_instance(base_type, c, 1);
-	 array_type = glsl_type::get_array_instance(vec_type, r);
+         vec_type = get_instance(base_type, c, 1);
+         array_type = glsl_type::get_array_instance(vec_type, r);
       } else {
-	 vec_type = get_instance(base_type, r, 1);
-	 array_type = glsl_type::get_array_instance(vec_type, c);
+         vec_type = get_instance(base_type, r, 1);
+         array_type = glsl_type::get_array_instance(vec_type, c);
       }
 
       return array_type->std140_base_alignment(false);
@@ -1320,9 +1366,9 @@ glsl_type::std140_base_alignment(bool row_major) const
             field_row_major = false;
          }
 
-	 const struct glsl_type *field_type = this->fields.structure[i].type;
-	 base_alignment = MAX2(base_alignment,
-			       field_type->std140_base_alignment(field_row_major));
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         base_alignment = MAX2(base_alignment,
+                               field_type->std140_base_alignment(field_row_major));
       }
       return base_alignment;
    }
@@ -1374,25 +1420,25 @@ glsl_type::std140_size(bool row_major) const
       unsigned int array_len;
 
       if (this->is_array()) {
-	 element_type = this->fields.array;
-	 array_len = this->length;
+         element_type = this->fields.array;
+         array_len = this->length;
       } else {
-	 element_type = this;
-	 array_len = 1;
+         element_type = this;
+         array_len = 1;
       }
 
       if (row_major) {
          vec_type = get_instance(element_type->base_type,
                                  element_type->matrix_columns, 1);
 
-	 array_len *= element_type->vector_elements;
+         array_len *= element_type->vector_elements;
       } else {
-	 vec_type = get_instance(element_type->base_type,
-				 element_type->vector_elements, 1);
-	 array_len *= element_type->matrix_columns;
+         vec_type = get_instance(element_type->base_type,
+                                 element_type->vector_elements, 1);
+         array_len *= element_type->matrix_columns;
       }
       const glsl_type *array_type = glsl_type::get_array_instance(vec_type,
-								  array_len);
+                                                                  array_len);
 
       return array_type->std140_size(false);
    }
@@ -1409,11 +1455,11 @@ glsl_type::std140_size(bool row_major) const
     */
    if (this->is_array()) {
       if (this->fields.array->is_record()) {
-	 return this->length * this->fields.array->std140_size(row_major);
+         return this->length * this->fields.array->std140_size(row_major);
       } else {
-	 unsigned element_base_align =
-	    this->fields.array->std140_base_alignment(row_major);
-	 return this->length * MAX2(element_base_align, 16);
+         unsigned element_base_align =
+            this->fields.array->std140_base_alignment(row_major);
+         return this->length * MAX2(element_base_align, 16);
       }
    }
 
@@ -1429,7 +1475,7 @@ glsl_type::std140_size(bool row_major) const
     *     rounded up to the next multiple of the base alignment of the
     *     structure.
     */
-   if (this->is_record()) {
+   if (this->is_record() || this->is_interface()) {
       unsigned size = 0;
       unsigned max_align = 0;
 
@@ -1443,10 +1489,15 @@ glsl_type::std140_size(bool row_major) const
             field_row_major = false;
          }
 
-	 const struct glsl_type *field_type = this->fields.structure[i].type;
-	 unsigned align = field_type->std140_base_alignment(field_row_major);
-	 size = glsl_align(size, align);
-	 size += field_type->std140_size(field_row_major);
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         unsigned align = field_type->std140_base_alignment(field_row_major);
+
+         /* Ignore unsized arrays when calculating size */
+         if (field_type->is_unsized_array())
+            continue;
+
+         size = glsl_align(size, align);
+         size += field_type->std140_size(field_row_major);
 
          max_align = MAX2(align, max_align);
 
@@ -1461,6 +1512,213 @@ glsl_type::std140_size(bool row_major) const
    return -1;
 }
 
+unsigned
+glsl_type::std430_base_alignment(bool row_major) const
+{
+
+   unsigned N = is_double() ? 8 : 4;
+
+   /* (1) If the member is a scalar consuming <N> basic machine units, the
+    *     base alignment is <N>.
+    *
+    * (2) If the member is a two- or four-component vector with components
+    *     consuming <N> basic machine units, the base alignment is 2<N> or
+    *     4<N>, respectively.
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_scalar() || this->is_vector()) {
+      switch (this->vector_elements) {
+      case 1:
+         return N;
+      case 2:
+         return 2 * N;
+      case 3:
+      case 4:
+         return 4 * N;
+      }
+   }
+
+   /* OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout":
+    *
+    * "When using the std430 storage layout, shader storage blocks will be
+    * laid out in buffer storage identically to uniform and shader storage
+    * blocks using the std140 layout, except that the base alignment and
+    * stride of arrays of scalars and vectors in rule 4 and of structures
+    * in rule 9 are not rounded up a multiple of the base alignment of a vec4.
+    */
+
+   /* (1) If the member is a scalar consuming <N> basic machine units, the
+    *     base alignment is <N>.
+    *
+    * (2) If the member is a two- or four-component vector with components
+    *     consuming <N> basic machine units, the base alignment is 2<N> or
+    *     4<N>, respectively.
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_array())
+      return this->fields.array->std430_base_alignment(row_major);
+
+   /* (5) If the member is a column-major matrix with <C> columns and
+    *     <R> rows, the matrix is stored identically to an array of
+    *     <C> column vectors with <R> components each, according to
+    *     rule (4).
+    *
+    * (7) If the member is a row-major matrix with <C> columns and <R>
+    *     rows, the matrix is stored identically to an array of <R>
+    *     row vectors with <C> components each, according to rule (4).
+    */
+   if (this->is_matrix()) {
+      const struct glsl_type *vec_type, *array_type;
+      int c = this->matrix_columns;
+      int r = this->vector_elements;
+
+      if (row_major) {
+         vec_type = get_instance(base_type, c, 1);
+         array_type = glsl_type::get_array_instance(vec_type, r);
+      } else {
+         vec_type = get_instance(base_type, r, 1);
+         array_type = glsl_type::get_array_instance(vec_type, c);
+      }
+
+      return array_type->std430_base_alignment(false);
+   }
+
+      /* (9) If the member is a structure, the base alignment of the
+    *     structure is <N>, where <N> is the largest base alignment
+    *     value of any of its members, and rounded up to the base
+    *     alignment of a vec4. The individual members of this
+    *     sub-structure are then assigned offsets by applying this set
+    *     of rules recursively, where the base offset of the first
+    *     member of the sub-structure is equal to the aligned offset
+    *     of the structure. The structure may have padding at the end;
+    *     the base offset of the member following the sub-structure is
+    *     rounded up to the next multiple of the base alignment of the
+    *     structure.
+    */
+   if (this->is_record()) {
+      unsigned base_alignment = 0;
+      for (unsigned i = 0; i < this->length; i++) {
+         bool field_row_major = row_major;
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(this->fields.structure[i].matrix_layout);
+         if (matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR) {
+            field_row_major = true;
+         } else if (matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR) {
+            field_row_major = false;
+         }
+
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         base_alignment = MAX2(base_alignment,
+                               field_type->std430_base_alignment(field_row_major));
+      }
+      return base_alignment;
+   }
+   assert(!"not reached");
+   return -1;
+}
+
+unsigned
+glsl_type::std430_array_stride(bool row_major) const
+{
+   unsigned N = is_double() ? 8 : 4;
+
+   /* Notice that the array stride of a vec3 is not 3 * N but 4 * N.
+    * See OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout"
+    *
+    * (3) If the member is a three-component vector with components consuming
+    *     <N> basic machine units, the base alignment is 4<N>.
+    */
+   if (this->is_vector() && this->vector_elements == 3)
+      return 4 * N;
+
+   /* By default use std430_size(row_major) */
+   return this->std430_size(row_major);
+}
+
+unsigned
+glsl_type::std430_size(bool row_major) const
+{
+   unsigned N = is_double() ? 8 : 4;
+
+   /* OpenGL 4.30 spec, section 7.6.2.2 "Standard Uniform Block Layout":
+    *
+    * "When using the std430 storage layout, shader storage blocks will be
+    * laid out in buffer storage identically to uniform and shader storage
+    * blocks using the std140 layout, except that the base alignment and
+    * stride of arrays of scalars and vectors in rule 4 and of structures
+    * in rule 9 are not rounded up a multiple of the base alignment of a vec4.
+    */
+   if (this->is_scalar() || this->is_vector())
+         return this->vector_elements * N;
+
+   if (this->without_array()->is_matrix()) {
+      const struct glsl_type *element_type;
+      const struct glsl_type *vec_type;
+      unsigned int array_len;
+
+      if (this->is_array()) {
+         element_type = this->fields.array;
+         array_len = this->length;
+      } else {
+         element_type = this;
+         array_len = 1;
+      }
+
+      if (row_major) {
+         vec_type = get_instance(element_type->base_type,
+                                 element_type->matrix_columns, 1);
+
+         array_len *= element_type->vector_elements;
+      } else {
+         vec_type = get_instance(element_type->base_type,
+                                 element_type->vector_elements, 1);
+         array_len *= element_type->matrix_columns;
+      }
+      const glsl_type *array_type = glsl_type::get_array_instance(vec_type,
+                                                                  array_len);
+
+      return array_type->std430_size(false);
+   }
+
+   if (this->is_array()) {
+      if (this->fields.array->is_record())
+         return this->length * this->fields.array->std430_size(row_major);
+      else
+         return this->length * this->fields.array->std430_base_alignment(row_major);
+   }
+
+   if (this->is_record() || this->is_interface()) {
+      unsigned size = 0;
+      unsigned max_align = 0;
+
+      for (unsigned i = 0; i < this->length; i++) {
+         bool field_row_major = row_major;
+         const enum glsl_matrix_layout matrix_layout =
+            glsl_matrix_layout(this->fields.structure[i].matrix_layout);
+         if (matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR) {
+            field_row_major = true;
+         } else if (matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR) {
+            field_row_major = false;
+         }
+
+         const struct glsl_type *field_type = this->fields.structure[i].type;
+         unsigned align = field_type->std430_base_alignment(field_row_major);
+         size = glsl_align(size, align);
+         size += field_type->std430_size(field_row_major);
+
+         max_align = MAX2(align, max_align);
+      }
+      size = glsl_align(size, max_align);
+      return size;
+   }
+
+   assert(!"not reached");
+   return -1;
+}
 
 unsigned
 glsl_type::count_attribute_slots() const

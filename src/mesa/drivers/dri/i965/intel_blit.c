@@ -1,5 +1,4 @@
-/**************************************************************************
- *
+/*
  * Copyright 2003 VMware, Inc.
  * All Rights Reserved.
  *
@@ -7,7 +6,7 @@
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sub license, and/or sell copies of the Software, and to
+ * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
@@ -17,14 +16,12 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  * IN NO EVENT SHALL VMWARE AND/OR ITS SUPPLIERS BE LIABLE FOR
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- **************************************************************************/
-
+ */
 
 #include "main/mtypes.h"
 #include "main/blit.h"
@@ -330,10 +327,6 @@ intel_miptree_blit(struct brw_context *brw,
    if (dst_flip)
       dst_y = minify(dst_mt->physical_height0, dst_level - dst_mt->first_level) - dst_y - height;
 
-   int src_pitch = src_mt->pitch;
-   if (src_flip != dst_flip)
-      src_pitch = -src_pitch;
-
    uint32_t src_image_x, src_image_y, dst_image_x, dst_image_y;
    intel_miptree_get_image_offset(src_mt, src_level, src_slice,
                                   &src_image_x, &src_image_y);
@@ -356,7 +349,7 @@ intel_miptree_blit(struct brw_context *brw,
 
    if (!intelEmitCopyBlit(brw,
                           src_mt->cpp,
-                          src_pitch,
+                          src_flip == dst_flip ? src_mt->pitch : -src_mt->pitch,
                           src_mt->bo, src_mt->offset,
                           src_mt->tiling,
                           src_mt->tr_mode,
@@ -427,6 +420,10 @@ can_fast_copy_blit(struct brw_context *brw,
        dst_tr_mode == INTEL_MIPTREE_TRMODE_NONE)
       return false;
 
+   /* The start pixel for Fast Copy blit should be on an OWord boundary. */
+   if ((dst_x * cpp | src_x * cpp) & 15)
+      return false;
+
    /* For all surface types buffers must be cacheline-aligned. */
    if ((dst_offset | src_offset) & 63)
       return false;
@@ -444,14 +441,6 @@ can_fast_copy_blit(struct brw_context *brw,
    /* For Linear surfaces, the pitch has to be an OWord (16byte) multiple. */
    if ((src_tiling_none && src_pitch % 16 != 0) ||
        (dst_tiling_none && dst_pitch % 16 != 0))
-      return false;
-
-   /* For Tiled surfaces, the pitch has to be a multiple of the Tile width
-    * (X direction width of the Tile). This means the pitch value will
-    * always be Cache Line aligned (64byte multiple).
-    */
-   if ((!dst_tiling_none && dst_pitch % 64 != 0) ||
-       (!src_tiling_none && src_pitch % 64 != 0))
       return false;
 
    return true;
@@ -529,6 +518,8 @@ intelEmitCopyBlit(struct brw_context *brw,
    bool dst_y_tiled = dst_tiling == I915_TILING_Y;
    bool src_y_tiled = src_tiling == I915_TILING_Y;
    bool use_fast_copy_blit = false;
+   uint32_t src_tile_w, src_tile_h;
+   uint32_t dst_tile_w, dst_tile_h;
 
    if ((dst_y_tiled || src_y_tiled) && brw->gen < 6)
       return false;
@@ -556,6 +547,16 @@ intelEmitCopyBlit(struct brw_context *brw,
        __func__,
        src_buffer, src_pitch, src_offset, src_x, src_y,
        dst_buffer, dst_pitch, dst_offset, dst_x, dst_y, w, h);
+
+   intel_get_tile_dims(src_tiling, src_tr_mode, cpp, &src_tile_w, &src_tile_h);
+   intel_get_tile_dims(dst_tiling, dst_tr_mode, cpp, &dst_tile_w, &dst_tile_h);
+
+   /* For Tiled surfaces, the pitch has to be a multiple of the Tile width
+    * (X direction width of the Tile). This is ensured while allocating the
+    * buffer object.
+    */
+   assert(src_tiling == I915_TILING_NONE || (src_pitch % src_tile_w) == 0);
+   assert(dst_tiling == I915_TILING_NONE || (dst_pitch % dst_tile_w) == 0);
 
    use_fast_copy_blit = can_fast_copy_blit(brw,
                                            src_buffer,
@@ -594,19 +595,7 @@ intelEmitCopyBlit(struct brw_context *brw,
                         dst_tiling, dst_tr_mode,
                         cpp, use_fast_copy_blit);
 
-      /* For tiled source and destination, pitch value should be specified
-       * as a number of Dwords.
-       */
-      if (dst_tiling != I915_TILING_NONE)
-         dst_pitch /= 4;
-
-      if (src_tiling != I915_TILING_NONE)
-         src_pitch /= 4;
-
    } else {
-      assert(!dst_y_tiled || (dst_pitch % 128) == 0);
-      assert(!src_y_tiled || (src_pitch % 128) == 0);
-
       /* For big formats (such as floating point), do the copy using 16 or
        * 32bpp and multiply the coordinates.
        */
@@ -643,17 +632,19 @@ intelEmitCopyBlit(struct brw_context *brw,
       CMD = xy_blit_cmd(src_tiling, src_tr_mode,
                         dst_tiling, dst_tr_mode,
                         cpp, use_fast_copy_blit);
-
-      if (dst_tiling != I915_TILING_NONE)
-         dst_pitch /= 4;
-
-      if (src_tiling != I915_TILING_NONE)
-         src_pitch /= 4;
    }
 
-   if (dst_y2 <= dst_y || dst_x2 <= dst_x) {
+   /* For tiled source and destination, pitch value should be specified
+    * as a number of Dwords.
+    */
+   if (dst_tiling != I915_TILING_NONE)
+      dst_pitch /= 4;
+
+   if (src_tiling != I915_TILING_NONE)
+      src_pitch /= 4;
+
+   if (dst_y2 <= dst_y || dst_x2 <= dst_x)
       return true;
-   }
 
    assert(dst_x < dst_x2);
    assert(dst_y < dst_y2);
@@ -796,47 +787,43 @@ intel_emit_linear_blit(struct brw_context *brw,
    int16_t src_x, dst_x;
    bool ok;
 
-   /* The pitch given to the GPU must be DWORD aligned, and
-    * we want width to match pitch. Max width is (1 << 15 - 1),
-    * rounding that down to the nearest DWORD is 1 << 15 - 4
-    */
-   pitch = ROUND_DOWN_TO(MIN2(size, (1 << 15) - 1), 4);
-   height = (pitch == 0) ? 1 : size / pitch;
-   src_x = src_offset % 64;
-   dst_x = dst_offset % 64;
-   ok = intelEmitCopyBlit(brw, 1,
-			  pitch, src_bo, src_offset - src_x, I915_TILING_NONE,
-                          INTEL_MIPTREE_TRMODE_NONE,
-			  pitch, dst_bo, dst_offset - dst_x, I915_TILING_NONE,
-                          INTEL_MIPTREE_TRMODE_NONE,
-			  src_x, 0, /* src x/y */
-			  dst_x, 0, /* dst x/y */
-			  pitch, height, /* w, h */
-			  GL_COPY);
-   if (!ok)
-      _mesa_problem(ctx, "Failed to linear blit %dx%d\n", pitch, height);
+   do {
+      /* The pitch given to the GPU must be DWORD aligned, and
+       * we want width to match pitch. Max width is (1 << 15 - 1),
+       * rounding that down to the nearest DWORD is 1 << 15 - 4
+       */
+      pitch = ROUND_DOWN_TO(MIN2(size, (1 << 15) - 64), 4);
+      height = (size < pitch || pitch == 0) ? 1 : size / pitch;
 
-   src_offset += pitch * height;
-   dst_offset += pitch * height;
-   src_x = src_offset % 64;
-   dst_x = dst_offset % 64;
-   size -= pitch * height;
-   assert (size < (1 << 15));
-   pitch = ALIGN(size, 4);
+      src_x = src_offset % 64;
+      dst_x = dst_offset % 64;
+      pitch = ALIGN(MIN2(size, (1 << 15) - 64), 4);
+      assert(src_x + pitch < 1 << 15);
+      assert(dst_x + pitch < 1 << 15);
 
-   if (size != 0) {
       ok = intelEmitCopyBlit(brw, 1,
-			     pitch, src_bo, src_offset - src_x, I915_TILING_NONE,
+                             pitch, src_bo, src_offset - src_x, I915_TILING_NONE,
                              INTEL_MIPTREE_TRMODE_NONE,
-			     pitch, dst_bo, dst_offset - dst_x, I915_TILING_NONE,
+                             pitch, dst_bo, dst_offset - dst_x, I915_TILING_NONE,
                              INTEL_MIPTREE_TRMODE_NONE,
-			     src_x, 0, /* src x/y */
-			     dst_x, 0, /* dst x/y */
-			     size, 1, /* w, h */
-			     GL_COPY);
-      if (!ok)
-         _mesa_problem(ctx, "Failed to linear blit %dx%d\n", size, 1);
-   }
+                             src_x, 0, /* src x/y */
+                             dst_x, 0, /* dst x/y */
+                             MIN2(size, pitch), height, /* w, h */
+                             GL_COPY);
+      if (!ok) {
+         _mesa_problem(ctx, "Failed to linear blit %dx%d\n",
+                       MIN2(size, pitch), height);
+         return;
+      }
+
+      pitch *= height;
+      if (size <= pitch)
+         return;
+
+      src_offset += pitch;
+      dst_offset += pitch;
+      size -= pitch;
+   } while (1);
 }
 
 /**

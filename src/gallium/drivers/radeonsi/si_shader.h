@@ -185,11 +185,13 @@ struct si_shader_selector {
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;
 	unsigned	gs_num_invocations;
+	unsigned	gsvs_itemsize;
 
 	/* masks of "get_unique_index" bits */
 	uint64_t	inputs_read;
 	uint64_t	outputs_written;
 	uint32_t	patch_outputs_written;
+	uint32_t	ps_colors_written;
 };
 
 /* Valid shader configurations:
@@ -277,8 +279,10 @@ static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
 		return &sctx->gs_shader->info;
 	else if (sctx->tes_shader)
 		return &sctx->tes_shader->info;
-	else
+	else if (sctx->vs_shader)
 		return &sctx->vs_shader->info;
+	else
+		return NULL;
 }
 
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)

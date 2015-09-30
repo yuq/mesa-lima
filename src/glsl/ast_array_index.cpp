@@ -226,7 +226,8 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
              * by the linker.
              */
          }
-         else {
+         else if (array->variable_referenced()->data.mode !=
+                  ir_var_shader_storage) {
             _mesa_glsl_error(&loc, state, "unsized array index must be constant");
          }
       } else if (array->type->fields.array->is_interface()

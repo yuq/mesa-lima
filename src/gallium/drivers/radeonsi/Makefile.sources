@@ -1,13 +1,11 @@
 C_SOURCES := \
 	cik_sdma.c \
 	si_blit.c \
-	si_commands.c \
 	si_compute.c \
 	si_cp_dma.c \
 	si_debug.c \
 	si_descriptors.c \
 	sid.h \
-	sid_tables.h \
 	si_dma.c \
 	si_hw_context.c \
 	si_pipe.c \
@@ -22,3 +20,6 @@ C_SOURCES := \
 	si_state_shaders.c \
 	si_state.h \
 	si_uvd.c
+
+GENERATED_SOURCES := \
+	sid_tables.h

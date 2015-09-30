@@ -316,8 +316,7 @@ struct r600_common_screen {
 struct r600_atom {
 	void (*emit)(struct r600_common_context *ctx, struct r600_atom *state);
 	unsigned		num_dw;
-	unsigned short		id;	/* used by r600 only */
-	bool			dirty;
+	unsigned short		id;
 };
 
 struct r600_so_target {
@@ -562,7 +561,7 @@ unsigned r600_translate_colorswap(enum pipe_format format);
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
-				   unsigned *buffers,
+				   unsigned *buffers, unsigned *dirty_cbufs,
 				   const union pipe_color_union *color);
 void r600_init_screen_texture_functions(struct r600_common_screen *rscreen);
 void r600_init_context_texture_functions(struct r600_common_context *rctx);

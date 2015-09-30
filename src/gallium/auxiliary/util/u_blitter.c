@@ -1190,6 +1190,8 @@ static void blitter_draw(struct blitter_context_priv *ctx,
 
    u_upload_data(ctx->upload, 0, sizeof(ctx->vertices), ctx->vertices,
                  &vb.buffer_offset, &vb.buffer);
+   if (!vb.buffer)
+      return;
    u_upload_unmap(ctx->upload);
 
    pipe->set_vertex_buffers(pipe, ctx->base.vb_slot, 1, &vb);
@@ -2063,7 +2065,7 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
    struct blitter_context_priv *ctx = (struct blitter_context_priv*)blitter;
    struct pipe_context *pipe = ctx->base.pipe;
    struct pipe_vertex_buffer vb = {0};
-   struct pipe_stream_output_target *so_target;
+   struct pipe_stream_output_target *so_target = NULL;
    unsigned offsets[PIPE_MAX_SO_BUFFERS] = {0};
 
    assert(num_channels >= 1);
@@ -2089,6 +2091,9 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
 
    u_upload_data(ctx->upload, 0, num_channels*4, clear_value,
                  &vb.buffer_offset, &vb.buffer);
+   if (!vb.buffer)
+      goto out;
+
    vb.stride = 0;
 
    blitter_set_running_flag(ctx);
@@ -2112,6 +2117,7 @@ void util_blitter_clear_buffer(struct blitter_context *blitter,
 
    util_draw_arrays(pipe, PIPE_PRIM_POINTS, 0, size / 4);
 
+out:
    blitter_restore_vertex_states(ctx);
    blitter_restore_render_cond(ctx);
    blitter_unset_running_flag(ctx);

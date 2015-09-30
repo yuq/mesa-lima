@@ -43,13 +43,6 @@
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
 
-#define SI_TRACE_CS_DWORDS		7
-
-#define SI_MAX_DRAW_CS_DWORDS \
-	(/*scratch:*/ 3 + /*derived prim state:*/ 3 + \
-	 /*draw regs:*/ 18 + /*draw packets:*/ 31 +\
-	 /*derived tess state:*/ 19)
-
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
 /* Cache used by scalar memory (SMEM) instructions. They also use TC
@@ -85,10 +78,18 @@
 #define SI_IS_TRACE_POINT(x)		(((x) & 0xcafe0000) == 0xcafe0000)
 #define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
 
+#define SI_MAX_VIEWPORTS	16
+#define SI_MAX_BORDER_COLORS	4096
+
 struct si_compute;
 
 struct si_screen {
 	struct r600_common_screen	b;
+};
+
+struct si_blend_color {
+	struct r600_atom		atom;
+	struct pipe_blend_color		state;
 };
 
 struct si_sampler_view {
@@ -103,7 +104,6 @@ struct si_sampler_view {
 
 struct si_sampler_state {
 	uint32_t			val[4];
-	uint32_t			border_color[4];
 };
 
 struct si_cs_shader_state {
@@ -125,9 +125,31 @@ struct si_framebuffer {
 	unsigned			cb0_is_integer;
 	unsigned			compressed_cb_mask;
 	unsigned			export_16bpc;
+	unsigned			dirty_cbufs;
+	bool				dirty_zsbuf;
 };
 
-#define SI_NUM_ATOMS(sctx) (sizeof((sctx)->atoms)/sizeof((sctx)->atoms.array[0]))
+struct si_clip_state {
+	struct r600_atom		atom;
+	struct pipe_clip_state		state;
+};
+
+struct si_sample_mask {
+	struct r600_atom	atom;
+	uint16_t		sample_mask;
+};
+
+struct si_scissors {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_scissor_state	states[SI_MAX_VIEWPORTS];
+};
+
+struct si_viewports {
+	struct r600_atom		atom;
+	unsigned			dirty_mask;
+	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
+};
 
 struct si_context {
 	struct r600_common_context	b;
@@ -138,30 +160,41 @@ struct si_context {
 	void				*custom_blend_fastclear;
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
-	struct si_pm4_state		*init_config;
 	struct pipe_fence_handle	*last_gfx_fence;
 	struct si_shader_selector	*fixed_func_tcs_shader;
+	LLVMTargetMachineRef		tm;
 
-	union {
-		struct {
-			/* The order matters. */
-			struct r600_atom *cache_flush;
-			struct r600_atom *streamout_begin;
-			struct r600_atom *streamout_enable; /* must be after streamout_begin */
-			struct r600_atom *framebuffer;
-			struct r600_atom *msaa_sample_locs;
-			struct r600_atom *db_render_state;
-			struct r600_atom *msaa_config;
-			struct r600_atom *clip_regs;
-			struct r600_atom *shader_userdata;
-		} s;
-		struct r600_atom *array[0];
-	} atoms;
+	/* Atoms (direct states). */
+	union si_state_atoms		atoms;
+	unsigned			dirty_atoms; /* mask */
+	/* PM4 states (precomputed immutable states) */
+	union si_state			queued;
+	union si_state			emitted;
 
+	/* Atom declarations. */
+	struct r600_atom		cache_flush;
 	struct si_framebuffer		framebuffer;
-	struct si_vertex_element	*vertex_elements;
-	/* for saving when using blitter */
-	struct pipe_stencil_ref		stencil_ref;
+	struct r600_atom		msaa_sample_locs;
+	struct r600_atom		db_render_state;
+	struct r600_atom		msaa_config;
+	struct si_sample_mask		sample_mask;
+	struct r600_atom		cb_target_mask;
+	struct si_blend_color		blend_color;
+	struct r600_atom		clip_regs;
+	struct si_clip_state		clip_state;
+	struct si_shader_data		shader_userdata;
+	struct si_scissors		scissors;
+	struct si_viewports		viewports;
+	struct si_stencil_ref		stencil_ref;
+	struct r600_atom		spi_map;
+
+	/* Precomputed states. */
+	struct si_pm4_state		*init_config;
+	struct si_pm4_state		*vgt_shader_config[4];
+	/* With rasterizer discard, there doesn't have to be a pixel shader.
+	 * In that case, we bind this one: */
+	void				*dummy_pixel_shader;
+
 	/* shaders */
 	struct si_shader_selector	*ps_shader;
 	struct si_shader_selector	*gs_shader;
@@ -169,51 +202,38 @@ struct si_context {
 	struct si_shader_selector	*tcs_shader;
 	struct si_shader_selector	*tes_shader;
 	struct si_cs_shader_state	cs_shader_state;
-	struct si_shader_data		shader_userdata;
+
 	/* shader information */
+	struct si_vertex_element	*vertex_elements;
 	unsigned			sprite_coord_enable;
 	bool				flatshade;
+
+	/* shader descriptors */
 	struct si_descriptors		vertex_buffers;
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
 	struct si_buffer_resources	rw_buffers[SI_NUM_SHADERS];
 	struct si_textures_info		samplers[SI_NUM_SHADERS];
-	struct r600_resource		*scratch_buffer;
-	struct r600_resource		*border_color_table;
-	unsigned			border_color_offset;
 
-	struct r600_atom		clip_regs;
-	struct r600_atom		msaa_sample_locs;
-	struct r600_atom		msaa_config;
+	/* other shader resources */
+	struct pipe_constant_buffer	null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
+	struct pipe_resource		*esgs_ring;
+	struct pipe_resource		*gsvs_ring;
+	struct pipe_resource		*tf_ring;
+	union pipe_color_union		*border_color_table; /* in CPU memory, any endian */
+	struct r600_resource		*border_color_buffer;
+	union pipe_color_union		*border_color_map; /* in VRAM (slow access), little endian */
+	unsigned			border_color_count;
+
+	/* Vertex and index buffers. */
+	bool				vertex_buffers_dirty;
+	struct pipe_index_buffer	index_buffer;
+	struct pipe_vertex_buffer	vertex_buffer[SI_NUM_VERTEX_BUFFERS];
+
+	/* MSAA config state. */
 	int				ps_iter_samples;
 	bool				smoothing_enabled;
 
-	/* Vertex and index buffers. */
-	bool			vertex_buffers_dirty;
-	struct pipe_index_buffer index_buffer;
-	struct pipe_vertex_buffer vertex_buffer[SI_NUM_VERTEX_BUFFERS];
-
-	/* With rasterizer discard, there doesn't have to be a pixel shader.
-	 * In that case, we bind this one: */
-	void			*dummy_pixel_shader;
-	struct r600_atom	cache_flush;
-	struct pipe_constant_buffer null_const_buf; /* used for set_constant_buffer(NULL) on CIK */
-
-	/* VGT states. */
-	struct si_pm4_state	*vgt_shader_config[4];
-	struct si_pm4_state	*gs_rings;
-	struct pipe_resource	*esgs_ring;
-	struct pipe_resource	*gsvs_ring;
-	struct si_pm4_state	*tf_state;
-	struct pipe_resource	*tf_ring;
-
-	LLVMTargetMachineRef		tm;
-
-	/* SI state handling */
-	union si_state	queued;
-	union si_state	emitted;
-
 	/* DB render state. */
-	struct r600_atom	db_render_state;
 	bool			dbcb_depth_copy_enabled;
 	bool			dbcb_stencil_copy_enabled;
 	unsigned		dbcb_copy_sample;
@@ -235,8 +255,10 @@ struct si_context {
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
 	int			current_rast_prim; /* primitive type after TES, GS */
+	unsigned		last_gsvs_itemsize;
 
 	/* Scratch buffer */
+	struct r600_resource	*scratch_buffer;
 	boolean                 emit_scratch_reloc;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
@@ -302,7 +324,7 @@ void si_dma_copy(struct pipe_context *ctx,
 void si_context_gfx_flush(void *context, unsigned flags,
 			  struct pipe_fence_handle **fence);
 void si_begin_new_cs(struct si_context *ctx);
-void si_need_cs_space(struct si_context *ctx, unsigned num_dw, boolean count_draw_in);
+void si_need_cs_space(struct si_context *ctx);
 
 /* si_compute.c */
 void si_init_compute_functions(struct si_context *sctx);
@@ -339,7 +361,12 @@ static inline void
 si_set_atom_dirty(struct si_context *sctx,
 		  struct r600_atom *atom, bool dirty)
 {
-	atom->dirty = dirty;
+	unsigned bit = 1 << (atom->id - 1);
+
+	if (dirty)
+		sctx->dirty_atoms |= bit;
+	else
+		sctx->dirty_atoms &= ~bit;
 }
 
 static inline void

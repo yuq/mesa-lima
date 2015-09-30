@@ -99,6 +99,7 @@ extern const struct brw_tracked_state brw_indices;
 extern const struct brw_tracked_state brw_vertices;
 extern const struct brw_tracked_state brw_index_buffer;
 extern const struct brw_tracked_state brw_cs_state;
+extern const struct brw_tracked_state gen7_cs_push_constants;
 extern const struct brw_tracked_state gen6_binding_table_pointers;
 extern const struct brw_tracked_state gen6_blend_state;
 extern const struct brw_tracked_state gen6_cc_state_pointers;
@@ -157,6 +158,7 @@ extern const struct brw_tracked_state gen8_sf_clip_viewport;
 extern const struct brw_tracked_state gen8_vertices;
 extern const struct brw_tracked_state gen8_vf_topology;
 extern const struct brw_tracked_state gen8_vs_state;
+extern const struct brw_tracked_state brw_cs_work_groups_surface;
 
 static inline bool
 brw_state_dirty(struct brw_context *brw, GLuint mesa_flags, uint64_t brw_flags)
@@ -176,10 +178,6 @@ void brw_upload_binding_table(struct brw_context *brw,
 void brw_upload_invariant_state(struct brw_context *brw);
 uint32_t
 brw_depthbuffer_format(struct brw_context *brw);
-
-/* gen8_misc_state.c */
-void gen8_upload_state_base_address(struct brw_context *brw);
-
 
 /***********************************************************************
  * brw_state.c
@@ -315,7 +313,6 @@ void brw_emit_sampler_state(struct brw_context *brw,
                             unsigned min_lod,
                             unsigned max_lod,
                             int lod_bias,
-                            unsigned base_level,
                             unsigned shadow_function,
                             bool non_normalized_coordinates,
                             uint32_t border_color_offset);
@@ -355,7 +352,7 @@ void gen6_init_vtable_surface_functions(struct brw_context *brw);
 /* brw_vs_surface_state.c */
 void
 brw_upload_pull_constants(struct brw_context *brw,
-                          GLbitfield brw_new_constbuf,
+                          GLbitfield64 brw_new_constbuf,
                           const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
                           const struct brw_stage_prog_data *prog_data,
@@ -377,7 +374,6 @@ void gen7_update_binding_table_from_array(struct brw_context *brw,
                                           gl_shader_stage stage,
                                           const uint32_t* binding_table,
                                           int num_surfaces);
-void gen7_enable_hw_binding_tables(struct brw_context *brw);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 

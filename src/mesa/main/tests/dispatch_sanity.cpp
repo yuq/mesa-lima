@@ -844,7 +844,7 @@ const struct function common_desktop_functions_possible[] = {
    { "glGetProgramResourceiv", 43, -1 },
    { "glGetProgramResourceLocation", 43, -1 },
    { "glGetProgramResourceLocationIndex", 43, -1 },
-// { "glShaderStorageBlockBinding", 43, -1 },           // XXX: Add to xml
+   { "glShaderStorageBlockBinding", 43, -1 },
 // { "glTextureBufferRangeEXT", 43, -1 },               // XXX: Add to xml
    { "glTexStorage2DMultisample", 43, -1 },
    { "glTexStorage3DMultisample", 43, -1 },
@@ -2405,10 +2405,8 @@ const struct function gles31_functions_possible[] = {
    { "glDrawArraysIndirect", 31, -1 },
    { "glDrawElementsIndirect", 31, -1 },
 
-   // FINISHME: These two functions have not been implemented yet.  They come
-   // FINISHME: from the ARB_framebuffer_no_attachments extension.
-   // { "glFramebufferParameteri", 31, -1 },
-   // { "glGetFramebufferParameteriv", 31, -1 },
+   { "glFramebufferParameteri", 31, -1 },
+   { "glGetFramebufferParameteriv", 31, -1 },
 
    { "glGetProgramInterfaceiv", 31, -1 },
    { "glGetProgramResourceIndex", 31, -1 },

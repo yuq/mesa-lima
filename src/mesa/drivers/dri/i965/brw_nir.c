@@ -61,6 +61,8 @@ nir_optimize(nir_shader *nir, bool is_scalar)
       nir_validate_shader(nir);
       progress |= nir_opt_constant_folding(nir);
       nir_validate_shader(nir);
+      progress |= nir_opt_dead_cf(nir);
+      nir_validate_shader(nir);
       progress |= nir_opt_remove_phis(nir);
       nir_validate_shader(nir);
       progress |= nir_opt_undef(nir);
@@ -110,11 +112,19 @@ brw_process_nir(nir_shader *nir,
                 gl_shader_stage stage, bool is_scalar)
 {
    bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
+   static const nir_lower_tex_options tex_options = {
+      .lower_txp = ~0,
+   };
+
+   if (stage == MESA_SHADER_GEOMETRY) {
+      nir_lower_gs_intrinsics(nir);
+      nir_validate_shader(nir);
+   }
 
    nir_lower_global_vars_to_local(nir);
    nir_validate_shader(nir);
 
-   nir_lower_tex_projector(nir);
+   nir_lower_tex(nir, &tex_options);
    nir_validate_shader(nir);
 
    nir_normalize_cubemap_coords(nir);
@@ -203,10 +213,13 @@ brw_process_nir(nir_shader *nir,
       nir_print_shader(nir, stderr);
    }
 
-   nir_convert_from_ssa(nir, is_scalar);
+   nir_convert_from_ssa(nir, true);
    nir_validate_shader(nir);
 
    if (!is_scalar) {
+      nir_move_vec_src_uses_to_dest(nir);
+      nir_validate_shader(nir);
+
       nir_lower_vec_to_movs(nir);
       nir_validate_shader(nir);
    }

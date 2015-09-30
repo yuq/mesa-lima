@@ -53,7 +53,7 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 
 	util_blitter_save_blend(sctx->blitter, sctx->queued.named.blend);
 	util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
-	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref);
+	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
 	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
 	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader);
 	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader);
@@ -61,16 +61,9 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader);
 	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader);
 	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
-	if (sctx->queued.named.sample_mask) {
-		util_blitter_save_sample_mask(sctx->blitter,
-					      sctx->queued.named.sample_mask->sample_mask);
-	}
-	if (sctx->queued.named.viewport[0]) {
-		util_blitter_save_viewport(sctx->blitter, &sctx->queued.named.viewport[0]->viewport);
-	}
-	if (sctx->queued.named.scissor[0]) {
-		util_blitter_save_scissor(sctx->blitter, &sctx->queued.named.scissor[0]->scissor);
-	}
+	util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
+	util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);
+	util_blitter_save_scissor(sctx->blitter, &sctx->scissors.states[0]);
 	util_blitter_save_vertex_buffer_slot(sctx->blitter, sctx->vertex_buffer);
 	util_blitter_save_so_targets(sctx->blitter, sctx->b.streamout.num_targets,
 				     (struct pipe_stream_output_target**)sctx->b.streamout.targets);
@@ -340,8 +333,10 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		zsbuf ? (struct r600_texture*)zsbuf->texture : NULL;
 
 	if (buffers & PIPE_CLEAR_COLOR) {
-		evergreen_do_fast_color_clear(&sctx->b, fb, &sctx->framebuffer.atom,
-					      &buffers, color);
+		evergreen_do_fast_color_clear(&sctx->b, fb,
+					      &sctx->framebuffer.atom, &buffers,
+					      &sctx->framebuffer.dirty_cbufs,
+					      color);
 		if (!buffers)
 			return; /* all buffers have been fast cleared */
 	}
@@ -378,6 +373,7 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 		}
 
 		zstex->depth_clear_value = depth;
+		sctx->framebuffer.dirty_zsbuf = true;
 		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom); /* updates DB_DEPTH_CLEAR */
 		sctx->db_depth_clear = true;
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);

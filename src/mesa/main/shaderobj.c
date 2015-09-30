@@ -69,8 +69,6 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
 
       assert(old->RefCount > 0);
       old->RefCount--;
-      /*printf("SHADER DECR %p (%d) to %d\n",
-        (void*) old, old->Name, old->RefCount);*/
       deleteFlag = (old->RefCount == 0);
 
       if (deleteFlag) {
@@ -86,8 +84,6 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
    if (sh) {
       /* reference new */
       sh->RefCount++;
-      /*printf("SHADER INCR %p (%d) to %d\n",
-        (void*) sh, sh->Name, sh->RefCount);*/
       *ptr = sh;
    }
 }
@@ -209,10 +205,6 @@ _mesa_reference_shader_program_(struct gl_context *ctx,
 
       assert(old->RefCount > 0);
       old->RefCount--;
-#if 0
-      printf("ShaderProgram %p ID=%u  RefCount-- to %d\n",
-             (void *) old, old->Name, old->RefCount);
-#endif
       deleteFlag = (old->RefCount == 0);
 
       if (deleteFlag) {
@@ -227,10 +219,6 @@ _mesa_reference_shader_program_(struct gl_context *ctx,
 
    if (shProg) {
       shProg->RefCount++;
-#if 0
-      printf("ShaderProgram %p ID=%u  RefCount++ to %d\n",
-             (void *) shProg, shProg->Name, shProg->RefCount);
-#endif
       *ptr = shProg;
    }
 }
@@ -306,7 +294,7 @@ _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
 
    ralloc_free(shProg->UniformBlocks);
    shProg->UniformBlocks = NULL;
-   shProg->NumUniformBlocks = 0;
+   shProg->NumBufferInterfaceBlocks = 0;
    for (i = 0; i < MESA_SHADER_STAGES; i++) {
       ralloc_free(shProg->UniformBlockStageIndex[i]);
       shProg->UniformBlockStageIndex[i] = NULL;

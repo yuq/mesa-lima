@@ -163,7 +163,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_MULTISAMPLE:
 	case PIPE_CAP_TEXTURE_BARRIER:
 	case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
-	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
 	case PIPE_CAP_START_INSTANCE:
 	case PIPE_CAP_COMPUTE:
 		return 0;
@@ -235,6 +234,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
+	case PIPE_CAP_TGSI_TXQS:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:
@@ -277,6 +277,8 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	/* Render targets. */
 	case PIPE_CAP_MAX_RENDER_TARGETS:
 		return screen->max_rts;
+	case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
+		return is_a3xx(screen) ? 1 : 0;
 
 	/* Queries. */
 	case PIPE_CAP_QUERY_TIME_ELAPSED:
@@ -482,6 +484,7 @@ fd_screen_create(struct fd_device *dev)
 	pscreen = &screen->base;
 
 	screen->dev = dev;
+	screen->refcnt = 1;
 
 	// maybe this should be in context?
 	screen->pipe = fd_pipe_new(screen->dev, FD_PIPE_3D);

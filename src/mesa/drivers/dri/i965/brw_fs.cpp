@@ -42,6 +42,7 @@
 #include "brw_eu.h"
 #include "brw_wm.h"
 #include "brw_fs.h"
+#include "brw_cs.h"
 #include "brw_cfg.h"
 #include "brw_dead_control_flow.h"
 #include "main/uniforms.h"
@@ -797,6 +798,7 @@ fs_inst::regs_read(int arg) const
       break;
 
    case CS_OPCODE_CS_TERMINATE:
+   case SHADER_OPCODE_BARRIER:
       return 1;
 
    default:
@@ -878,9 +880,11 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    case SHADER_OPCODE_TXL:
    case SHADER_OPCODE_TXS:
    case SHADER_OPCODE_LOD:
+   case SHADER_OPCODE_SAMPLEINFO:
       return 1;
    case FS_OPCODE_FB_WRITE:
       return 2;
+   case FS_OPCODE_GET_BUFFER_SIZE:
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
    case SHADER_OPCODE_GEN4_SCRATCH_READ:
       return 1;
@@ -1394,6 +1398,9 @@ fs_visitor::assign_curb_setup()
 	 }
       }
    }
+
+   /* This may be updated in assign_urb_setup or assign_vs_urb_setup. */
+   this->first_non_payload_grf = payload.num_regs + prog_data->curb_read_length;
 }
 
 void
@@ -1434,7 +1441,8 @@ fs_visitor::calculate_urb_setup()
           */
          struct brw_vue_map prev_stage_vue_map;
          brw_compute_vue_map(devinfo, &prev_stage_vue_map,
-                             key->input_slots_valid);
+                             key->input_slots_valid,
+                             shader_prog->SeparateShader);
          int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
          assert(prev_stage_vue_map.num_slots <= first_slot + 32);
          for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
@@ -1508,8 +1516,7 @@ fs_visitor::assign_urb_setup()
    }
 
    /* Each attribute is 4 setup channels, each of which is half a reg. */
-   this->first_non_payload_grf =
-      urb_start + prog_data->num_varying_inputs * 2;
+   this->first_non_payload_grf += prog_data->num_varying_inputs * 2;
 }
 
 void
@@ -1524,8 +1531,7 @@ fs_visitor::assign_vs_urb_setup()
       count++;
 
    /* Each attribute is 4 regs. */
-   this->first_non_payload_grf =
-      payload.num_regs + prog_data->curb_read_length + count * 4;
+   this->first_non_payload_grf += count * 4;
 
    unsigned vue_entries =
       MAX2(count, vs_prog_data->base.vue_map.num_slots);
@@ -1565,7 +1571,10 @@ fs_visitor::assign_vs_urb_setup()
 
             inst->src[i].file = HW_REG;
             inst->src[i].fixed_hw_reg =
-               retype(brw_vec8_grf(grf, 0), inst->src[i].type);
+               stride(byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
+                                  inst->src[i].subreg_offset),
+                      inst->exec_size * inst->src[i].stride,
+                      inst->exec_size, inst->src[i].stride);
          }
       }
    }
@@ -2811,7 +2820,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
 {
    int write_len = inst->regs_written;
    int first_write_grf = inst->dst.reg;
-   bool needs_dep[BRW_MAX_MRF];
+   bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
    memset(needs_dep, false, sizeof(needs_dep));
@@ -2882,7 +2891,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
 {
    int write_len = inst->regs_written;
    int first_write_grf = inst->dst.reg;
-   bool needs_dep[BRW_MAX_MRF];
+   bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
    memset(needs_dep, false, sizeof(needs_dep));
@@ -3212,7 +3221,8 @@ fs_visitor::lower_integer_multiplication()
              * schedule multi-component multiplications much better.
              */
 
-            if (inst->conditional_mod && inst->dst.is_null()) {
+            fs_reg orig_dst = inst->dst;
+            if (orig_dst.is_null() || orig_dst.file == MRF) {
                inst->dst = fs_reg(GRF, alloc.allocate(dispatch_width / 8),
                                   inst->dst.type);
             }
@@ -3278,10 +3288,9 @@ fs_visitor::lower_integer_multiplication()
 
             ibld.ADD(dst, low, high);
 
-            if (inst->conditional_mod) {
-               fs_reg null(retype(ibld.null_reg_f(), inst->dst.type));
+            if (inst->conditional_mod || orig_dst.file == MRF) {
                set_condmod(inst->conditional_mod,
-                           ibld.MOV(null, inst->dst));
+                           ibld.MOV(orig_dst, inst->dst));
             }
          }
 
@@ -4749,10 +4758,19 @@ fs_visitor::setup_cs_payload()
    assert(devinfo->gen >= 7);
 
    payload.num_regs = 1;
+
+   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
+      const unsigned local_id_dwords =
+         brw_cs_prog_local_id_payload_dwords(prog, dispatch_width);
+      assert((local_id_dwords & 0x7) == 0);
+      const unsigned local_id_regs = local_id_dwords / 8;
+      payload.local_invocation_id_reg = payload.num_regs;
+      payload.num_regs += local_id_regs;
+   }
 }
 
 void
-fs_visitor::assign_binding_table_offsets()
+fs_visitor::assign_fs_binding_table_offsets()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
@@ -4764,6 +4782,20 @@ fs_visitor::assign_binding_table_offsets()
     */
    prog_data->binding_table.render_target_start = next_binding_table_offset;
    next_binding_table_offset += MAX2(key->nr_color_regions, 1);
+
+   assign_common_binding_table_offsets(next_binding_table_offset);
+}
+
+void
+fs_visitor::assign_cs_binding_table_offsets()
+{
+   assert(stage == MESA_SHADER_COMPUTE);
+   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
+   uint32_t next_binding_table_offset = 0;
+
+   /* May not be used if the gl_NumWorkGroups variable is not accessed. */
+   prog_data->binding_table.work_groups_start = next_binding_table_offset;
+   next_binding_table_offset++;
 
    assign_common_binding_table_offsets(next_binding_table_offset);
 }
@@ -4789,6 +4821,9 @@ fs_visitor::calculate_register_pressure()
 void
 fs_visitor::optimize()
 {
+   /* Start by validating the shader we currently have. */
+   validate();
+
    /* bld is the common builder object pointing at the end of the program we
     * used to translate it into i965 IR.  For the optimization and lowering
     * passes coming next, any code added after the end of the program without
@@ -4805,7 +4840,10 @@ fs_visitor::optimize()
    assign_constant_locations();
    demote_pull_constants();
 
+   validate();
+
    split_virtual_grfs();
+   validate();
 
 #define OPT(pass, args...) ({                                           \
       pass_num++;                                                       \
@@ -4818,6 +4856,8 @@ fs_visitor::optimize()
                                                                         \
          backend_shader::dump_instructions(filename);                   \
       }                                                                 \
+                                                                        \
+      validate();                                                       \
                                                                         \
       progress = progress || this_progress;                             \
       this_progress;                                                    \
@@ -4880,6 +4920,8 @@ fs_visitor::optimize()
    OPT(lower_integer_multiplication);
 
    lower_uniform_pull_constant_loads();
+
+   validate();
 }
 
 /**
@@ -5011,8 +5053,10 @@ fs_visitor::run_fs(bool do_rep_send)
 
    assert(stage == MESA_SHADER_FRAGMENT);
 
+   sanity_param_count = prog->Parameters->NumParameters;
+
    if (prog_data->map_entries == NULL)
-      assign_binding_table_offsets();
+      assign_fs_binding_table_offsets();
 
    if (devinfo->gen >= 6)
       setup_payload_gen6();
@@ -5093,7 +5137,7 @@ fs_visitor::run_cs()
 
    sanity_param_count = prog->Parameters->NumParameters;
 
-   assign_common_binding_table_offsets(0);
+   assign_cs_binding_table_offsets();
 
    setup_cs_payload();
 
@@ -5141,15 +5185,6 @@ brw_wm_fs_emit(struct brw_context *brw,
                struct gl_shader_program *prog,
                unsigned *final_assembly_size)
 {
-   bool start_busy = false;
-   double start_time = 0;
-
-   if (unlikely(brw->perf_debug)) {
-      start_busy = (brw->batch.last_bo &&
-                    drm_intel_bo_busy(brw->batch.last_bo));
-      start_time = get_time();
-   }
-
    struct brw_shader *shader = NULL;
    if (prog)
       shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
@@ -5227,93 +5262,127 @@ brw_wm_fs_emit(struct brw_context *brw,
    if (simd16_cfg)
       prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
-   if (unlikely(brw->perf_debug) && shader) {
-      if (shader->compiled_once)
-         brw_wm_debug_recompile(brw, prog, key);
-      shader->compiled_once = true;
-
-      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
-         perf_debug("FS compile took %.03f ms and stalled the GPU\n",
-                    (get_time() - start_time) * 1000);
-      }
-   }
-
    return g.get_assembly(final_assembly_size);
 }
 
-extern "C" bool
-brw_fs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
+fs_reg *
+fs_visitor::emit_cs_local_invocation_id_setup()
 {
-   struct brw_context *brw = brw_context(ctx);
-   struct brw_wm_prog_key key;
+   assert(stage == MESA_SHADER_COMPUTE);
 
-   struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
-   struct brw_fragment_program *bfp = brw_fragment_program(fp);
-   bool program_uses_dfdy = fp->UsesDFdy;
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
 
-   memset(&key, 0, sizeof(key));
+   struct brw_reg src =
+      brw_vec8_grf(payload.local_invocation_id_reg, 0);
+   src = retype(src, BRW_REGISTER_TYPE_UD);
+   bld.MOV(*reg, src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 1), src);
+   src.nr += dispatch_width / 8;
+   bld.MOV(offset(*reg, bld, 2), src);
 
-   if (brw->gen < 6) {
-      if (fp->UsesKill)
-         key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
-
-      if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
-         key.iz_lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
-
-      /* Just assume depth testing. */
-      key.iz_lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
-      key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
-   }
-
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.InputsRead &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16)
-      key.input_slots_valid = fp->Base.InputsRead | VARYING_BIT_POS;
-
-   brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
-
-   if (fp->Base.InputsRead & VARYING_BIT_POS) {
-      key.drawable_height = ctx->DrawBuffer->Height;
-   }
-
-   key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
-         ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
-         BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
-
-   if ((fp->Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
-      key.render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer) ||
-                          key.nr_color_regions > 1;
-   }
-
-   key.program_string_id = bfp->id;
-
-   uint32_t old_prog_offset = brw->wm.base.prog_offset;
-   struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
-
-   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key);
-
-   brw->wm.base.prog_offset = old_prog_offset;
-   brw->wm.prog_data = old_prog_data;
-
-   return success;
+   return reg;
 }
 
-void
-brw_setup_tex_for_precompile(struct brw_context *brw,
-                             struct brw_sampler_prog_key_data *tex,
-                             struct gl_program *prog)
+fs_reg *
+fs_visitor::emit_cs_work_group_id_setup()
 {
-   const bool has_shader_channel_select = brw->is_haswell || brw->gen >= 8;
-   unsigned sampler_count = _mesa_fls(prog->SamplersUsed);
-   for (unsigned i = 0; i < sampler_count; i++) {
-      if (!has_shader_channel_select && (prog->ShadowSamplers & (1 << i))) {
-         /* Assume DEPTH_TEXTURE_MODE is the default: X, X, X, 1 */
-         tex->swizzles[i] =
-            MAKE_SWIZZLE4(SWIZZLE_X, SWIZZLE_X, SWIZZLE_X, SWIZZLE_ONE);
+   assert(stage == MESA_SHADER_COMPUTE);
+
+   fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::uvec3_type));
+
+   struct brw_reg r0_1(retype(brw_vec1_grf(0, 1), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_6(retype(brw_vec1_grf(0, 6), BRW_REGISTER_TYPE_UD));
+   struct brw_reg r0_7(retype(brw_vec1_grf(0, 7), BRW_REGISTER_TYPE_UD));
+
+   bld.MOV(*reg, r0_1);
+   bld.MOV(offset(*reg, bld, 1), r0_6);
+   bld.MOV(offset(*reg, bld, 2), r0_7);
+
+   return reg;
+}
+
+const unsigned *
+brw_cs_emit(struct brw_context *brw,
+            void *mem_ctx,
+            const struct brw_cs_prog_key *key,
+            struct brw_cs_prog_data *prog_data,
+            struct gl_compute_program *cp,
+            struct gl_shader_program *prog,
+            unsigned *final_assembly_size)
+{
+   struct brw_shader *shader =
+      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
+
+   if (unlikely(INTEL_DEBUG & DEBUG_CS))
+      brw_dump_ir("compute", prog, &shader->base, &cp->Base);
+
+   prog_data->local_size[0] = cp->LocalSize[0];
+   prog_data->local_size[1] = cp->LocalSize[1];
+   prog_data->local_size[2] = cp->LocalSize[2];
+   unsigned local_workgroup_size =
+      cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
+
+   cfg_t *cfg = NULL;
+   const char *fail_msg = NULL;
+
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
+
+   /* Now the main event: Visit the shader IR and generate our CS IR for it.
+    */
+   fs_visitor v8(brw->intelScreen->compiler, brw,
+                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                 &cp->Base, 8, st_index);
+   if (!v8.run_cs()) {
+      fail_msg = v8.fail_msg;
+   } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
+      cfg = v8.cfg;
+      prog_data->simd_size = 8;
+   }
+
+   fs_visitor v16(brw->intelScreen->compiler, brw,
+                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
+                  &cp->Base, 16, st_index);
+   if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
+       !fail_msg && !v8.simd16_unsupported &&
+       local_workgroup_size <= 16 * brw->max_cs_threads) {
+      /* Try a SIMD16 compile */
+      v16.import_uniforms(&v8);
+      if (!v16.run_cs()) {
+         perf_debug("SIMD16 shader failed to compile: %s", v16.fail_msg);
+         if (!cfg) {
+            fail_msg =
+               "Couldn't generate SIMD16 program and not "
+               "enough threads for SIMD8";
+         }
       } else {
-         /* Color sampler: assume no swizzling. */
-         tex->swizzles[i] = SWIZZLE_XYZW;
+         cfg = v16.cfg;
+         prog_data->simd_size = 16;
       }
    }
+
+   if (unlikely(cfg == NULL)) {
+      assert(fail_msg);
+      prog->LinkStatus = false;
+      ralloc_strcat(&prog->InfoLog, fail_msg);
+      _mesa_problem(NULL, "Failed to compile compute shader: %s\n",
+                    fail_msg);
+      return NULL;
+   }
+
+   fs_generator g(brw->intelScreen->compiler, brw,
+                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
+                  v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
+   if (INTEL_DEBUG & DEBUG_CS) {
+      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
+                                   prog->Label ? prog->Label : "unnamed",
+                                   prog->Name);
+      g.enable_debug(name);
+   }
+
+   g.generate_code(cfg, prog_data->simd_size);
+
+   return g.get_assembly(final_assembly_size);
 }

@@ -449,6 +449,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_point_sprite),                 PIPE_CAP_POINT_SPRITE                     },
       { o(ARB_seamless_cube_map),            PIPE_CAP_SEAMLESS_CUBE_MAP                },
       { o(ARB_shader_stencil_export),        PIPE_CAP_SHADER_STENCIL_EXPORT            },
+      { o(ARB_shader_texture_image_samples), PIPE_CAP_TGSI_TXQS                        },
       { o(ARB_shader_texture_lod),           PIPE_CAP_SM3                              },
       { o(ARB_shadow),                       PIPE_CAP_TEXTURE_SHADOW_MAP               },
       { o(ARB_texture_buffer_object),        PIPE_CAP_TEXTURE_BUFFER_OBJECTS           },
@@ -873,8 +874,13 @@ void st_init_extensions(struct pipe_screen *screen,
 
    consts->MaxViewports = screen->get_param(screen, PIPE_CAP_MAX_VIEWPORTS);
    if (consts->MaxViewports >= 16) {
-      consts->ViewportBounds.Min = -16384.0;
-      consts->ViewportBounds.Max = 16384.0;
+      if (glsl_feature_level >= 400) {
+         consts->ViewportBounds.Min = -32768.0;
+         consts->ViewportBounds.Max = 32767.0;
+      } else {
+         consts->ViewportBounds.Min = -16384.0;
+         consts->ViewportBounds.Max = 16383.0;
+      }
       extensions->ARB_viewport_array = GL_TRUE;
       extensions->ARB_fragment_layer_viewport = GL_TRUE;
       if (extensions->AMD_vertex_shader_layer)

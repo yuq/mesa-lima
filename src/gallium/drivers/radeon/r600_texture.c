@@ -989,6 +989,11 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 
 			if (usage & PIPE_TRANSFER_READ) {
 				struct pipe_resource *temp = ctx->screen->resource_create(ctx->screen, &resource);
+				if (!temp) {
+					R600_ERR("failed to create a temporary depth texture\n");
+					FREE(trans);
+					return NULL;
+				}
 
 				r600_copy_region_with_blit(ctx, temp, 0, 0, 0, 0, texture, level, box);
 				rctx->blit_decompress_depth(ctx, (struct r600_texture*)temp, staging_depth,
@@ -1092,7 +1097,7 @@ static const struct u_resource_vtbl r600_texture_vtbl =
 	NULL,				/* get_handle */
 	r600_texture_destroy,		/* resource_destroy */
 	r600_texture_transfer_map,	/* transfer_map */
-	NULL,				/* transfer_flush_region */
+	u_default_transfer_flush_region, /* transfer_flush_region */
 	r600_texture_transfer_unmap,	/* transfer_unmap */
 	NULL				/* transfer_inline_write */
 };
@@ -1217,7 +1222,7 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   struct pipe_framebuffer_state *fb,
 				   struct r600_atom *fb_state,
-				   unsigned *buffers,
+				   unsigned *buffers, unsigned *dirty_cbufs,
 				   const union pipe_color_union *color)
 {
 	int i;
@@ -1279,6 +1284,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				   tex->cmask.offset, tex->cmask.size, 0, true);
 
 		tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
+		if (dirty_cbufs)
+			*dirty_cbufs |= 1 << i;
 		rctx->set_atom_dirty(rctx, fb_state, true);
 		*buffers &= ~clear_bit;
 	}

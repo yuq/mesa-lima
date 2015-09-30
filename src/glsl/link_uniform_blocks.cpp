@@ -68,14 +68,18 @@ private:
    }
 
    virtual void enter_record(const glsl_type *type, const char *,
-                             bool row_major) {
+                             bool row_major, const unsigned packing) {
       assert(type->is_record());
-      this->offset = glsl_align(
+      if (packing == GLSL_INTERFACE_PACKING_STD430)
+         this->offset = glsl_align(
+            this->offset, type->std430_base_alignment(row_major));
+      else
+         this->offset = glsl_align(
             this->offset, type->std140_base_alignment(row_major));
    }
 
    virtual void leave_record(const glsl_type *type, const char *,
-                             bool row_major) {
+                             bool row_major, const unsigned packing) {
       assert(type->is_record());
 
       /* If this is the last field of a structure, apply rule #9.  The
@@ -85,12 +89,17 @@ private:
        *     the member following the sub-structure is rounded up to the next
        *     multiple of the base alignment of the structure."
        */
-      this->offset = glsl_align(
+      if (packing == GLSL_INTERFACE_PACKING_STD430)
+         this->offset = glsl_align(
+            this->offset, type->std430_base_alignment(row_major));
+      else
+         this->offset = glsl_align(
             this->offset, type->std140_base_alignment(row_major));
    }
 
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *,
+                            const unsigned packing,
                             bool /* last_field */)
    {
       assert(this->index < this->num_variables);
@@ -119,8 +128,16 @@ private:
          v->IndexName = v->Name;
       }
 
-      const unsigned alignment = type->std140_base_alignment(v->RowMajor);
-      unsigned size = type->std140_size(v->RowMajor);
+      unsigned alignment = 0;
+      unsigned size = 0;
+
+      if (packing == GLSL_INTERFACE_PACKING_STD430) {
+         alignment = type->std430_base_alignment(v->RowMajor);
+         size = type->std430_size(v->RowMajor);
+      } else {
+         alignment = type->std140_base_alignment(v->RowMajor);
+         size = type->std140_size(v->RowMajor);
+      }
 
       this->offset = glsl_align(this->offset, alignment);
       v->Offset = this->offset;
@@ -170,6 +187,7 @@ struct block {
 
 unsigned
 link_uniform_blocks(void *mem_ctx,
+                    struct gl_context *ctx,
                     struct gl_shader_program *prog,
                     struct gl_shader **shader_list,
                     unsigned num_shaders,
@@ -255,7 +273,8 @@ link_uniform_blocks(void *mem_ctx,
                  == unsigned(ubo_packing_shared));
    STATIC_ASSERT(unsigned(GLSL_INTERFACE_PACKING_PACKED)
                  == unsigned(ubo_packing_packed));
-
+   STATIC_ASSERT(unsigned(GLSL_INTERFACE_PACKING_STD430)
+                 == unsigned(ubo_packing_std430));
 
    hash_table_foreach (block_hash, entry) {
       const struct link_uniform_block_active *const b =
@@ -290,6 +309,15 @@ link_uniform_blocks(void *mem_ctx,
 
             blocks[i].UniformBufferSize = parcel.buffer_size;
 
+            /* Check SSBO size is lower than maximum supported size for SSBO */
+            if (b->is_shader_storage &&
+                parcel.buffer_size > ctx->Const.MaxShaderStorageBlockSize) {
+               linker_error(prog, "shader storage block `%s' has size %d, "
+                            "which is larger than than the maximum allowed (%d)",
+                            block_type->name,
+                            parcel.buffer_size,
+                            ctx->Const.MaxShaderStorageBlockSize);
+            }
             blocks[i].NumUniforms =
                (unsigned)(ptrdiff_t)(&variables[parcel.index] - blocks[i].Uniforms);
 
@@ -310,6 +338,15 @@ link_uniform_blocks(void *mem_ctx,
 
          blocks[i].UniformBufferSize = parcel.buffer_size;
 
+         /* Check SSBO size is lower than maximum supported size for SSBO */
+         if (b->is_shader_storage &&
+             parcel.buffer_size > ctx->Const.MaxShaderStorageBlockSize) {
+            linker_error(prog, "shader storage block `%s' has size %d, "
+                         "which is larger than than the maximum allowed (%d)",
+                         block_type->name,
+                         parcel.buffer_size,
+                         ctx->Const.MaxShaderStorageBlockSize);
+         }
          blocks[i].NumUniforms =
             (unsigned)(ptrdiff_t)(&variables[parcel.index] - blocks[i].Uniforms);
 

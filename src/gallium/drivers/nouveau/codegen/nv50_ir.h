@@ -824,8 +824,8 @@ private:
 
 enum TexQuery
 {
-   TXQ_DIMS,
-   TXQ_TYPE,
+   TXQ_DIMS, /* x, y, z, levels */
+   TXQ_TYPE, /* ?, ?, samples, ? */
    TXQ_SAMPLE_POSITION,
    TXQ_FILTER,
    TXQ_LOD,

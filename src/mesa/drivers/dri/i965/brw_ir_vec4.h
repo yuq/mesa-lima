@@ -161,7 +161,7 @@ public:
                     const src_reg &src1 = src_reg(),
                     const src_reg &src2 = src_reg());
 
-   struct brw_reg get_dst(void);
+   struct brw_reg get_dst(unsigned gen);
    struct brw_reg get_src(const struct brw_vue_prog_data *prog_data, int i);
 
    dst_reg dst;
@@ -175,7 +175,8 @@ public:
 
    bool is_send_from_grf();
    unsigned regs_read(unsigned arg) const;
-   bool can_reswizzle(int dst_writemask, int swizzle, int swizzle_mask);
+   bool can_reswizzle(const struct brw_device_info *devinfo, int dst_writemask,
+                      int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
    bool can_do_source_mods(const struct brw_device_info *devinfo);
 

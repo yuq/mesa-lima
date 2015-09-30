@@ -60,6 +60,16 @@ block_add_pred(nir_block *block, nir_block *pred)
    _mesa_set_add(block->predecessors, pred);
 }
 
+static inline void
+block_remove_pred(nir_block *block, nir_block *pred)
+{
+   struct set_entry *entry = _mesa_set_search(block->predecessors, pred);
+
+   assert(entry);
+
+   _mesa_set_remove(block->predecessors, entry);
+}
+
 static void
 link_blocks(nir_block *pred, nir_block *succ1, nir_block *succ2)
 {
@@ -83,20 +93,16 @@ unlink_blocks(nir_block *pred, nir_block *succ)
       pred->successors[1] = NULL;
    }
 
-   struct set_entry *entry = _mesa_set_search(succ->predecessors, pred);
-
-   assert(entry);
-
-   _mesa_set_remove(succ->predecessors, entry);
+   block_remove_pred(succ, pred);
 }
 
 static void
 unlink_block_successors(nir_block *block)
 {
-   if (block->successors[0] != NULL)
-      unlink_blocks(block, block->successors[0]);
    if (block->successors[1] != NULL)
       unlink_blocks(block, block->successors[1]);
+   if (block->successors[0] != NULL)
+      unlink_blocks(block, block->successors[0]);
 }
 
 static void
@@ -194,6 +200,23 @@ link_block_to_non_block(nir_block *block, nir_cf_node *node)
 }
 
 /**
+ * Replace a block's successor with a different one.
+ */
+static void
+replace_successor(nir_block *block, nir_block *old_succ, nir_block *new_succ)
+{
+   if (block->successors[0] == old_succ) {
+      block->successors[0] = new_succ;
+   } else {
+      assert(block->successors[1] == old_succ);
+      block->successors[1] = new_succ;
+   }
+
+   block_remove_pred(old_succ, block);
+   block_add_pred(new_succ, block);
+}
+
+/**
  * Takes a basic block and inserts a new empty basic block before it, making its
  * predecessors point to the new block. This essentially splits the block into
  * an empty header and a body so that another non-block CF node can be inserted
@@ -211,9 +234,7 @@ split_block_beginning(nir_block *block)
    struct set_entry *entry;
    set_foreach(block->predecessors, entry) {
       nir_block *pred = (nir_block *) entry->key;
-
-      unlink_blocks(pred, block);
-      link_blocks(pred, new_block, NULL);
+      replace_successor(pred, block, new_block);
    }
 
    /* Any phi nodes must stay part of the new block, or else their
@@ -527,40 +548,52 @@ remove_phi_src(nir_block *block, nir_block *pred)
  * infinite loops. Note that the jump to be eliminated may be free-floating.
  */
 
-static
-void unlink_jump(nir_block *block, nir_jump_type type)
+static void
+unlink_jump(nir_block *block, nir_jump_type type, bool add_normal_successors)
 {
+   nir_block *next = block->successors[0];
+
    if (block->successors[0])
       remove_phi_src(block->successors[0], block);
    if (block->successors[1])
       remove_phi_src(block->successors[1], block);
 
-   if (type == nir_jump_break) {
-      nir_block *next = block->successors[0];
-
-      if (next->predecessors->entries == 1) {
-         nir_loop *loop =
-            nir_cf_node_as_loop(nir_cf_node_prev(&next->cf_node));
-
-         /* insert fake link */
-         nir_cf_node *last = nir_loop_last_cf_node(loop);
-         assert(last->type == nir_cf_node_block);
-         nir_block *last_block = nir_cf_node_as_block(last);
-
-         last_block->successors[1] = next;
-         block_add_pred(next, last_block);
-      }
-   }
-
    unlink_block_successors(block);
+   if (add_normal_successors)
+      block_add_normal_succs(block);
+
+   /* If we've just removed a break, and the block we were jumping to (after
+    * the loop) now has zero predecessors, we've created a new infinite loop.
+    *
+    * NIR doesn't allow blocks (other than the start block) to have zero
+    * predecessors.  In particular, dominance assumes all blocks are reachable.
+    * So, we insert a "fake link" by making successors[1] point after the loop.
+    *
+    * Note that we have to do this after unlinking/recreating the block's
+    * successors.  If we removed a "break" at the end of the loop, then
+    * block == last_block, so block->successors[0] would already be "next",
+    * and adding a fake link would create two identical successors.  Doing
+    * this afterward works, as we'll have changed block->successors[0] to
+    * be the top of the loop.
+    */
+   if (type == nir_jump_break && next->predecessors->entries == 0) {
+      nir_loop *loop =
+         nir_cf_node_as_loop(nir_cf_node_prev(&next->cf_node));
+
+      /* insert fake link */
+      nir_cf_node *last = nir_loop_last_cf_node(loop);
+      assert(last->type == nir_cf_node_block);
+      nir_block *last_block = nir_cf_node_as_block(last);
+
+      last_block->successors[1] = next;
+      block_add_pred(next, last_block);
+   }
 }
 
 void
 nir_handle_remove_jump(nir_block *block, nir_jump_type type)
 {
-   unlink_jump(block, type);
-
-   block_add_normal_succs(block);
+   unlink_jump(block, type, true);
 
    nir_function_impl *impl = nir_cf_node_get_function(&block->cf_node);
    nir_metadata_preserve(impl, nir_metadata_none);
@@ -654,7 +687,7 @@ replace_ssa_def_uses(nir_ssa_def *def, void *void_impl)
    nir_ssa_undef_instr *undef =
       nir_ssa_undef_instr_create(mem_ctx, def->num_components);
    nir_instr_insert_before_cf_list(&impl->body, &undef->instr);
-   nir_ssa_def_rewrite_uses(def, nir_src_for_ssa(&undef->def), mem_ctx);
+   nir_ssa_def_rewrite_uses(def, nir_src_for_ssa(&undef->def));
    return true;
 }
 
@@ -668,7 +701,7 @@ cleanup_cf_node(nir_cf_node *node, nir_function_impl *impl)
       nir_foreach_instr_safe(block, instr) {
          if (instr->type == nir_instr_type_jump) {
             nir_jump_type jump_type = nir_instr_as_jump(instr)->type;
-            unlink_jump(block, jump_type);
+            unlink_jump(block, jump_type, false);
          } else {
             nir_foreach_ssa_def(instr, replace_ssa_def_uses, impl);
             nir_instr_remove(instr);
@@ -722,6 +755,9 @@ nir_cf_extract(nir_cf_list *extracted, nir_cursor begin, nir_cursor end)
 
    extracted->impl = nir_cf_node_get_function(&block_begin->cf_node);
    exec_list_make_empty(&extracted->list);
+
+   /* Dominance and other block-related information is toast. */
+   nir_metadata_preserve(extracted->impl, nir_metadata_none);
 
    nir_cf_node *cf_node = &block_begin->cf_node;
    nir_cf_node *cf_node_end = &block_end->cf_node;

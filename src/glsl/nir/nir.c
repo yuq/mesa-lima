@@ -54,6 +54,9 @@ nir_shader_create(void *mem_ctx,
 
    shader->stage = stage;
 
+   shader->gs.vertices_out = 0;
+   shader->gs.invocations = 0;
+
    return shader;
 }
 
@@ -150,7 +153,7 @@ void nir_src_copy(nir_src *dest, const nir_src *src, void *mem_ctx)
    }
 }
 
-void nir_dest_copy(nir_dest *dest, const nir_dest *src, void *mem_ctx)
+void nir_dest_copy(nir_dest *dest, const nir_dest *src, nir_instr *instr)
 {
    /* Copying an SSA definition makes no sense whatsoever. */
    assert(!src->is_ssa);
@@ -160,17 +163,18 @@ void nir_dest_copy(nir_dest *dest, const nir_dest *src, void *mem_ctx)
    dest->reg.base_offset = src->reg.base_offset;
    dest->reg.reg = src->reg.reg;
    if (src->reg.indirect) {
-      dest->reg.indirect = ralloc(mem_ctx, nir_src);
-      nir_src_copy(dest->reg.indirect, src->reg.indirect, mem_ctx);
+      dest->reg.indirect = ralloc(instr, nir_src);
+      nir_src_copy(dest->reg.indirect, src->reg.indirect, instr);
    } else {
       dest->reg.indirect = NULL;
    }
 }
 
 void
-nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx)
+nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src,
+                 nir_alu_instr *instr)
 {
-   nir_src_copy(&dest->src, &src->src, mem_ctx);
+   nir_src_copy(&dest->src, &src->src, &instr->instr);
    dest->abs = src->abs;
    dest->negate = src->negate;
    for (unsigned i = 0; i < 4; i++)
@@ -178,9 +182,10 @@ nir_alu_src_copy(nir_alu_src *dest, const nir_alu_src *src, void *mem_ctx)
 }
 
 void
-nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src, void *mem_ctx)
+nir_alu_dest_copy(nir_alu_dest *dest, const nir_alu_dest *src,
+                  nir_alu_instr *instr)
 {
-   nir_dest_copy(&dest->dest, &src->dest, mem_ctx);
+   nir_dest_copy(&dest->dest, &src->dest, &instr->instr);
    dest->write_mask = src->write_mask;
    dest->saturate = src->saturate;
 }
@@ -712,9 +717,16 @@ nir_instr_insert(nir_cursor cursor, nir_instr *instr)
 }
 
 static bool
+src_is_valid(const nir_src *src)
+{
+   return src->is_ssa ? (src->ssa != NULL) : (src->reg.reg != NULL);
+}
+
+static bool
 remove_use_cb(nir_src *src, void *state)
 {
-   list_del(&src->use_link);
+   if (src_is_valid(src))
+      list_del(&src->use_link);
 
    return true;
 }
@@ -1097,12 +1109,6 @@ nir_srcs_equal(nir_src src1, nir_src src2)
    }
 }
 
-static bool
-src_is_valid(const nir_src *src)
-{
-   return src->is_ssa ? (src->ssa != NULL) : (src->reg.reg != NULL);
-}
-
 static void
 src_remove_all_uses(nir_src *src)
 {
@@ -1172,6 +1178,30 @@ nir_if_rewrite_condition(nir_if *if_stmt, nir_src new_src)
 }
 
 void
+nir_instr_rewrite_dest(nir_instr *instr, nir_dest *dest, nir_dest new_dest)
+{
+   if (dest->is_ssa) {
+      /* We can only overwrite an SSA destination if it has no uses. */
+      assert(list_empty(&dest->ssa.uses) && list_empty(&dest->ssa.if_uses));
+   } else {
+      list_del(&dest->reg.def_link);
+      if (dest->reg.indirect)
+         src_remove_all_uses(dest->reg.indirect);
+   }
+
+   /* We can't re-write with an SSA def */
+   assert(!new_dest.is_ssa);
+
+   nir_dest_copy(dest, &new_dest, instr);
+
+   dest->reg.parent_instr = instr;
+   list_addtail(&dest->reg.def_link, &new_dest.reg.reg->defs);
+
+   if (dest->reg.indirect)
+      src_add_all_uses(dest->reg.indirect, instr, NULL);
+}
+
+void
 nir_ssa_def_init(nir_instr *instr, nir_ssa_def *def,
                  unsigned num_components, const char *name)
 {
@@ -1200,21 +1230,21 @@ nir_ssa_dest_init(nir_instr *instr, nir_dest *dest,
 }
 
 void
-nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src, void *mem_ctx)
+nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src)
 {
    assert(!new_src.is_ssa || def != new_src.ssa);
 
    nir_foreach_use_safe(def, use_src) {
       nir_instr *src_parent_instr = use_src->parent_instr;
       list_del(&use_src->use_link);
-      nir_src_copy(use_src, &new_src, mem_ctx);
+      nir_src_copy(use_src, &new_src, src_parent_instr);
       src_add_all_uses(use_src, src_parent_instr, NULL);
    }
 
    nir_foreach_if_use_safe(def, use_src) {
       nir_if *src_parent_if = use_src->parent_if;
       list_del(&use_src->use_link);
-      nir_src_copy(use_src, &new_src, mem_ctx);
+      nir_src_copy(use_src, &new_src, src_parent_if);
       src_add_all_uses(use_src, NULL, src_parent_if);
    }
 }
@@ -1293,6 +1323,13 @@ foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
 }
 
 bool
+nir_foreach_block_in_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
+                             void *state)
+{
+   return foreach_cf_node(node, cb, false, state);
+}
+
+bool
 nir_foreach_block(nir_function_impl *impl, nir_foreach_block_cb cb, void *state)
 {
    foreach_list_typed_safe(nir_cf_node, node, node, &impl->body) {
@@ -1335,6 +1372,22 @@ nir_block_get_following_if(nir_block *block)
    return nir_cf_node_as_if(next_node);
 }
 
+nir_loop *
+nir_block_get_following_loop(nir_block *block)
+{
+   if (exec_node_is_tail_sentinel(&block->cf_node.node))
+      return NULL;
+
+   if (nir_cf_node_is_last(&block->cf_node))
+      return NULL;
+
+   nir_cf_node *next_node = nir_cf_node_next(&block->cf_node);
+
+   if (next_node->type != nir_cf_node_loop)
+      return NULL;
+
+   return nir_cf_node_as_loop(next_node);
+}
 static bool
 index_block(nir_block *block, void *state)
 {
@@ -1374,10 +1427,116 @@ index_ssa_block(nir_block *block, void *state)
    return true;
 }
 
+/**
+ * The indices are applied top-to-bottom which has the very nice property
+ * that, if A dominates B, then A->index <= B->index.
+ */
 void
 nir_index_ssa_defs(nir_function_impl *impl)
 {
    unsigned index = 0;
    nir_foreach_block(impl, index_ssa_block, &index);
    impl->ssa_alloc = index;
+}
+
+static bool
+index_instrs_block(nir_block *block, void *state)
+{
+   unsigned *index = state;
+   nir_foreach_instr(block, instr)
+      instr->index = (*index)++;
+
+   return true;
+}
+
+/**
+ * The indices are applied top-to-bottom which has the very nice property
+ * that, if A dominates B, then A->index <= B->index.
+ */
+unsigned
+nir_index_instrs(nir_function_impl *impl)
+{
+   unsigned index = 0;
+   nir_foreach_block(impl, index_instrs_block, &index);
+   return index;
+}
+
+nir_intrinsic_op
+nir_intrinsic_from_system_value(gl_system_value val)
+{
+   switch (val) {
+   case SYSTEM_VALUE_VERTEX_ID:
+      return nir_intrinsic_load_vertex_id;
+   case SYSTEM_VALUE_INSTANCE_ID:
+      return nir_intrinsic_load_instance_id;
+   case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+      return nir_intrinsic_load_vertex_id_zero_base;
+   case SYSTEM_VALUE_BASE_VERTEX:
+      return nir_intrinsic_load_base_vertex;
+   case SYSTEM_VALUE_INVOCATION_ID:
+      return nir_intrinsic_load_invocation_id;
+   case SYSTEM_VALUE_FRONT_FACE:
+      return nir_intrinsic_load_front_face;
+   case SYSTEM_VALUE_SAMPLE_ID:
+      return nir_intrinsic_load_sample_id;
+   case SYSTEM_VALUE_SAMPLE_POS:
+      return nir_intrinsic_load_sample_pos;
+   case SYSTEM_VALUE_SAMPLE_MASK_IN:
+      return nir_intrinsic_load_sample_mask_in;
+   case SYSTEM_VALUE_LOCAL_INVOCATION_ID:
+      return nir_intrinsic_load_local_invocation_id;
+   case SYSTEM_VALUE_WORK_GROUP_ID:
+      return nir_intrinsic_load_work_group_id;
+   case SYSTEM_VALUE_NUM_WORK_GROUPS:
+      return nir_intrinsic_load_num_work_groups;
+   /* FINISHME: Add tessellation intrinsics.
+   case SYSTEM_VALUE_TESS_COORD:
+   case SYSTEM_VALUE_VERTICES_IN:
+   case SYSTEM_VALUE_PRIMITIVE_ID:
+   case SYSTEM_VALUE_TESS_LEVEL_OUTER:
+   case SYSTEM_VALUE_TESS_LEVEL_INNER:
+    */
+   default:
+      unreachable("system value does not directly correspond to intrinsic");
+   }
+}
+
+gl_system_value
+nir_system_value_from_intrinsic(nir_intrinsic_op intrin)
+{
+   switch (intrin) {
+   case nir_intrinsic_load_vertex_id:
+      return SYSTEM_VALUE_VERTEX_ID;
+   case nir_intrinsic_load_instance_id:
+      return SYSTEM_VALUE_INSTANCE_ID;
+   case nir_intrinsic_load_vertex_id_zero_base:
+      return SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
+   case nir_intrinsic_load_base_vertex:
+      return SYSTEM_VALUE_BASE_VERTEX;
+   case nir_intrinsic_load_invocation_id:
+      return SYSTEM_VALUE_INVOCATION_ID;
+   case nir_intrinsic_load_front_face:
+      return SYSTEM_VALUE_FRONT_FACE;
+   case nir_intrinsic_load_sample_id:
+      return SYSTEM_VALUE_SAMPLE_ID;
+   case nir_intrinsic_load_sample_pos:
+      return SYSTEM_VALUE_SAMPLE_POS;
+   case nir_intrinsic_load_sample_mask_in:
+      return SYSTEM_VALUE_SAMPLE_MASK_IN;
+   case nir_intrinsic_load_local_invocation_id:
+      return SYSTEM_VALUE_LOCAL_INVOCATION_ID;
+   case nir_intrinsic_load_num_work_groups:
+      return SYSTEM_VALUE_NUM_WORK_GROUPS;
+   case nir_intrinsic_load_work_group_id:
+      return SYSTEM_VALUE_WORK_GROUP_ID;
+   /* FINISHME: Add tessellation intrinsics.
+      return SYSTEM_VALUE_TESS_COORD;
+      return SYSTEM_VALUE_VERTICES_IN;
+      return SYSTEM_VALUE_PRIMITIVE_ID;
+      return SYSTEM_VALUE_TESS_LEVEL_OUTER;
+      return SYSTEM_VALUE_TESS_LEVEL_INNER;
+    */
+   default:
+      unreachable("intrinsic doesn't produce a system value");
+   }
 }

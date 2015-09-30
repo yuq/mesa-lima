@@ -94,7 +94,7 @@
 #define PKT3_DRAW_INDEX_IMMD                   0x2E /* not on CIK */
 #define PKT3_NUM_INSTANCES                     0x2F
 #define PKT3_DRAW_INDEX_MULTI_AUTO             0x30
-#define PKT3_INDIRECT_BUFFER                   0x32
+#define PKT3_INDIRECT_BUFFER_SI                0x32 /* not on CIK */
 #define PKT3_STRMOUT_BUFFER_UPDATE             0x34
 #define PKT3_DRAW_INDEX_OFFSET_2               0x35
 #define PKT3_DRAW_PREAMBLE                     0x36 /* new on CIK, required on GFX7.2 and later */
@@ -122,6 +122,7 @@
 #define PKT3_WAIT_REG_MEM                      0x3C
 #define		WAIT_REG_MEM_EQUAL		3
 #define PKT3_MEM_WRITE                         0x3D /* not on CIK */
+#define PKT3_INDIRECT_BUFFER_CIK               0x3F /* new on CIK */
 #define PKT3_COPY_DATA			       0x40
 #define		COPY_DATA_SRC_SEL(x)		((x) & 0xf)
 #define			COPY_DATA_REG		0

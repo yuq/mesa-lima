@@ -165,9 +165,9 @@ static void r600_flush_vgt_streamout(struct r600_common_context *rctx)
 	}
 
 	if (rctx->chip_class >= CIK) {
-		cik_write_uconfig_reg(cs, reg_strmout_cntl, 0);
+		radeon_set_uconfig_reg(cs, reg_strmout_cntl, 0);
 	} else {
-		r600_write_config_reg(cs, reg_strmout_cntl, 0);
+		radeon_set_config_reg(cs, reg_strmout_cntl, 0);
 	}
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
@@ -201,7 +201,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 			/* SI binds streamout buffers as shader resources.
 			 * VGT only counts primitives and tells the shader
 			 * through SGPRs what to do. */
-			r600_write_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 2);
+			radeon_set_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 2);
 			radeon_emit(cs, (t[i]->b.buffer_offset +
 					 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
 			radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
@@ -210,7 +210,7 @@ static void r600_emit_streamout_begin(struct r600_common_context *rctx, struct r
 
 			update_flags |= SURFACE_BASE_UPDATE_STRMOUT(i);
 
-			r600_write_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 3);
+			radeon_set_context_reg_seq(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 3);
 			radeon_emit(cs, (t[i]->b.buffer_offset +
 					 t[i]->b.buffer_size) >> 2);	/* BUFFER_SIZE (in DW) */
 			radeon_emit(cs, stride_in_dw[i]);		/* VTX_STRIDE (in DW) */
@@ -295,7 +295,7 @@ void r600_emit_streamout_end(struct r600_common_context *rctx)
 		 * primitives emitted) may be enabled even if there is not
 		 * buffer bound. This ensures that the primitives-emitted query
 		 * won't increment. */
-		r600_write_context_reg(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 0);
+		radeon_set_context_reg(cs, R_028AD0_VGT_STRMOUT_BUFFER_SIZE_0 + 16*i, 0);
 
 		t[i]->buf_filled_size_valid = true;
 	}
@@ -336,8 +336,8 @@ static void r600_emit_streamout_enable(struct r600_common_context *rctx,
 			S_028B94_STREAMOUT_2_EN(r600_get_strmout_en(rctx)) |
 			S_028B94_STREAMOUT_3_EN(r600_get_strmout_en(rctx));
 	}
-	r600_write_context_reg(rctx->rings.gfx.cs, strmout_buffer_reg, strmout_buffer_val);
-	r600_write_context_reg(rctx->rings.gfx.cs, strmout_config_reg, strmout_config_val);
+	radeon_set_context_reg(rctx->rings.gfx.cs, strmout_buffer_reg, strmout_buffer_val);
+	radeon_set_context_reg(rctx->rings.gfx.cs, strmout_config_reg, strmout_config_val);
 }
 
 static void r600_set_streamout_enable(struct r600_common_context *rctx, bool enable)

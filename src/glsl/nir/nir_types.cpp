@@ -138,6 +138,13 @@ glsl_get_sampler_result_type(const struct glsl_type *type)
    return (glsl_base_type)type->sampler_type;
 }
 
+unsigned
+glsl_get_record_location_offset(const struct glsl_type *type,
+                                unsigned length)
+{
+   return type->record_location_offset(length);
+}
+
 bool
 glsl_type_is_void(const glsl_type *type)
 {

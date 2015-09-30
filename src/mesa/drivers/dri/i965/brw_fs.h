@@ -128,7 +128,8 @@ public:
    bool run_cs();
    void optimize();
    void allocate_registers();
-   void assign_binding_table_offsets();
+   void assign_fs_binding_table_offsets();
+   void assign_cs_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();
@@ -151,6 +152,7 @@ public:
    void invalidate_live_intervals();
    void calculate_live_intervals();
    void calculate_register_pressure();
+   void validate();
    bool opt_algebraic();
    bool opt_redundant_discard_jumps();
    bool opt_cse();
@@ -255,6 +257,8 @@ public:
                        nir_ssa_undef_instr *instr);
    void nir_emit_intrinsic(const brw::fs_builder &bld,
                            nir_intrinsic_instr *instr);
+   void nir_emit_ssbo_atomic(const brw::fs_builder &bld,
+                             int op, nir_intrinsic_instr *instr);
    void nir_emit_texture(const brw::fs_builder &bld,
                          nir_tex_instr *instr);
    void nir_emit_jump(const brw::fs_builder &bld,
@@ -275,6 +279,8 @@ public:
    void emit_fb_writes();
    void emit_urb_writes();
    void emit_cs_terminate();
+   fs_reg *emit_cs_local_invocation_id_setup();
+   fs_reg *emit_cs_work_group_id_setup();
 
    void emit_barrier();
 
@@ -364,6 +370,7 @@ public:
       uint8_t sample_pos_reg;
       uint8_t sample_mask_in_reg;
       uint8_t barycentric_coord_reg[BRW_WM_BARYCENTRIC_INTERP_MODE_COUNT];
+      uint8_t local_invocation_id_reg;
 
       /** The number of thread payload registers the hardware will supply. */
       uint8_t num_regs;
@@ -427,6 +434,9 @@ private:
 			 struct brw_reg *src);
    void generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
                      struct brw_reg sampler_index);
+   void generate_get_buffer_size(fs_inst *inst, struct brw_reg dst,
+                                 struct brw_reg src,
+                                 struct brw_reg surf_index);
    void generate_math_gen6(fs_inst *inst,
                            struct brw_reg dst,
                            struct brw_reg src0,
@@ -514,6 +524,3 @@ private:
 
 bool brw_do_channel_expressions(struct exec_list *instructions);
 bool brw_do_vector_splitting(struct exec_list *instructions);
-void brw_setup_tex_for_precompile(struct brw_context *brw,
-                                  struct brw_sampler_prog_key_data *tex,
-                                  struct gl_program *prog);

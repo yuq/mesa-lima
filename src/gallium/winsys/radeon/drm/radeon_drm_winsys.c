@@ -469,6 +469,13 @@ static boolean do_winsys_init(struct radeon_drm_winsys *ws)
         ws->info.cik_macrotile_mode_array_valid = TRUE;
     }
 
+    /* Hawaii with old firmware needs type2 nop packet.
+     * accel_working2 with value 3 indicates the new firmware.
+     */
+    ws->info.gfx_ib_pad_with_type2 = ws->info.chip_class <= SI ||
+				     (ws->info.family == CHIP_HAWAII &&
+				      ws->accel_working2 < 3);
+
     return TRUE;
 }
 

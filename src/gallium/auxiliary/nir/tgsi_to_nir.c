@@ -94,6 +94,128 @@ struct ttn_compile {
 #define ttn_channel(b, src, swiz) \
    nir_swizzle(b, src, SWIZ(swiz, swiz, swiz, swiz), 1, false)
 
+static gl_varying_slot
+tgsi_varying_semantic_to_slot(unsigned semantic, unsigned index)
+{
+   switch (semantic) {
+   case TGSI_SEMANTIC_POSITION:
+      return VARYING_SLOT_POS;
+   case TGSI_SEMANTIC_COLOR:
+      if (index == 0)
+         return VARYING_SLOT_COL0;
+      else
+         return VARYING_SLOT_COL1;
+   case TGSI_SEMANTIC_BCOLOR:
+      if (index == 0)
+         return VARYING_SLOT_BFC0;
+      else
+         return VARYING_SLOT_BFC1;
+   case TGSI_SEMANTIC_FOG:
+      return VARYING_SLOT_FOGC;
+   case TGSI_SEMANTIC_PSIZE:
+      return VARYING_SLOT_PSIZ;
+   case TGSI_SEMANTIC_GENERIC:
+      return VARYING_SLOT_VAR0 + index;
+   case TGSI_SEMANTIC_FACE:
+      return VARYING_SLOT_FACE;
+   case TGSI_SEMANTIC_EDGEFLAG:
+      return VARYING_SLOT_EDGE;
+   case TGSI_SEMANTIC_PRIMID:
+      return VARYING_SLOT_PRIMITIVE_ID;
+   case TGSI_SEMANTIC_CLIPDIST:
+      if (index == 0)
+         return VARYING_SLOT_CLIP_DIST0;
+      else
+         return VARYING_SLOT_CLIP_DIST1;
+   case TGSI_SEMANTIC_CLIPVERTEX:
+      return VARYING_SLOT_CLIP_VERTEX;
+   case TGSI_SEMANTIC_TEXCOORD:
+      return VARYING_SLOT_TEX0 + index;
+   case TGSI_SEMANTIC_PCOORD:
+      return VARYING_SLOT_PNTC;
+   case TGSI_SEMANTIC_VIEWPORT_INDEX:
+      return VARYING_SLOT_VIEWPORT;
+   case TGSI_SEMANTIC_LAYER:
+      return VARYING_SLOT_LAYER;
+   default:
+      fprintf(stderr, "Bad TGSI semantic: %d/%d\n", semantic, index);
+      abort();
+   }
+}
+
+/* Temporary helper to remap back to TGSI style semantic name/index
+ * values, for use in drivers that haven't been converted to using
+ * VARYING_SLOT_
+ */
+void
+varying_slot_to_tgsi_semantic(gl_varying_slot slot,
+                              unsigned *semantic_name, unsigned *semantic_index)
+{
+   static const unsigned map[][2] = {
+      [VARYING_SLOT_POS] = { TGSI_SEMANTIC_POSITION, 0 },
+      [VARYING_SLOT_COL0] = { TGSI_SEMANTIC_COLOR, 0 },
+      [VARYING_SLOT_COL1] = { TGSI_SEMANTIC_COLOR, 1 },
+      [VARYING_SLOT_BFC0] = { TGSI_SEMANTIC_BCOLOR, 0 },
+      [VARYING_SLOT_BFC1] = { TGSI_SEMANTIC_BCOLOR, 1 },
+      [VARYING_SLOT_FOGC] = { TGSI_SEMANTIC_FOG, 0 },
+      [VARYING_SLOT_PSIZ] = { TGSI_SEMANTIC_PSIZE, 0 },
+      [VARYING_SLOT_FACE] = { TGSI_SEMANTIC_FACE, 0 },
+      [VARYING_SLOT_EDGE] = { TGSI_SEMANTIC_EDGEFLAG, 0 },
+      [VARYING_SLOT_PRIMITIVE_ID] = { TGSI_SEMANTIC_PRIMID, 0 },
+      [VARYING_SLOT_CLIP_DIST0] = { TGSI_SEMANTIC_CLIPDIST, 0 },
+      [VARYING_SLOT_CLIP_DIST1] = { TGSI_SEMANTIC_CLIPDIST, 1 },
+      [VARYING_SLOT_CLIP_VERTEX] = { TGSI_SEMANTIC_CLIPVERTEX, 0 },
+      [VARYING_SLOT_PNTC] = { TGSI_SEMANTIC_PCOORD, 0 },
+      [VARYING_SLOT_VIEWPORT] = { TGSI_SEMANTIC_VIEWPORT_INDEX, 0 },
+      [VARYING_SLOT_LAYER] = { TGSI_SEMANTIC_LAYER, 0 },
+   };
+
+   if (slot >= VARYING_SLOT_VAR0) {
+      *semantic_name = TGSI_SEMANTIC_GENERIC;
+      *semantic_index = slot - VARYING_SLOT_VAR0;
+      return;
+   }
+
+   if (slot >= VARYING_SLOT_TEX0 && slot <= VARYING_SLOT_TEX7) {
+      *semantic_name = TGSI_SEMANTIC_TEXCOORD;
+      *semantic_index = slot - VARYING_SLOT_TEX0;
+      return;
+   }
+
+   if (slot >= ARRAY_SIZE(map)) {
+      fprintf(stderr, "Unknown varying slot %d\n", slot);
+      abort();
+   }
+
+   *semantic_name = map[slot][0];
+   *semantic_index = map[slot][1];
+}
+
+/* Temporary helper to remap back to TGSI style semantic name/index
+ * values, for use in drivers that haven't been converted to using
+ * FRAG_RESULT_
+ */
+void
+frag_result_to_tgsi_semantic(gl_frag_result slot,
+                             unsigned *semantic_name, unsigned *semantic_index)
+{
+   static const unsigned map[][2] = {
+      [FRAG_RESULT_DEPTH] = { TGSI_SEMANTIC_POSITION, 0 },
+      [FRAG_RESULT_COLOR] = { TGSI_SEMANTIC_COLOR, -1 },
+      [FRAG_RESULT_DATA0 + 0] = { TGSI_SEMANTIC_COLOR, 0 },
+      [FRAG_RESULT_DATA0 + 1] = { TGSI_SEMANTIC_COLOR, 1 },
+      [FRAG_RESULT_DATA0 + 2] = { TGSI_SEMANTIC_COLOR, 2 },
+      [FRAG_RESULT_DATA0 + 3] = { TGSI_SEMANTIC_COLOR, 3 },
+      [FRAG_RESULT_DATA0 + 4] = { TGSI_SEMANTIC_COLOR, 4 },
+      [FRAG_RESULT_DATA0 + 5] = { TGSI_SEMANTIC_COLOR, 5 },
+      [FRAG_RESULT_DATA0 + 6] = { TGSI_SEMANTIC_COLOR, 6 },
+      [FRAG_RESULT_DATA0 + 7] = { TGSI_SEMANTIC_COLOR, 7 },
+   };
+
+   *semantic_name = map[slot][0];
+   *semantic_index = map[slot][1];
+}
+
 static nir_ssa_def *
 ttn_src_for_dest(nir_builder *b, nir_alu_dest *dest)
 {
@@ -216,12 +338,15 @@ ttn_emit_declaration(struct ttn_compile *c)
             var->data.mode = nir_var_shader_in;
             var->name = ralloc_asprintf(var, "in_%d", idx);
 
-            /* We should probably translate to a VERT_ATTRIB_* or VARYING_SLOT_*
-             * instead, but nothing in NIR core is looking at the value
-             * currently, and this is less change to drivers.
-             */
-            var->data.location = decl->Semantic.Name;
-            var->data.index = decl->Semantic.Index;
+            if (c->scan->processor == TGSI_PROCESSOR_FRAGMENT) {
+               var->data.location =
+                  tgsi_varying_semantic_to_slot(decl->Semantic.Name,
+                                                decl->Semantic.Index);
+            } else {
+               assert(!decl->Declaration.Semantic);
+               var->data.location = VERT_ATTRIB_GENERIC0 + idx;
+            }
+            var->data.index = 0;
 
             /* We definitely need to translate the interpolation field, because
              * nir_print will decode it.
@@ -241,6 +366,8 @@ ttn_emit_declaration(struct ttn_compile *c)
             exec_list_push_tail(&b->shader->inputs, &var->node);
             break;
          case TGSI_FILE_OUTPUT: {
+            int semantic_name = decl->Semantic.Name;
+            int semantic_index = decl->Semantic.Index;
             /* Since we can't load from outputs in the IR, we make temporaries
              * for the outputs and emit stores to the real outputs at the end of
              * the shader.
@@ -252,14 +379,40 @@ ttn_emit_declaration(struct ttn_compile *c)
 
             var->data.mode = nir_var_shader_out;
             var->name = ralloc_asprintf(var, "out_%d", idx);
+            var->data.index = 0;
 
-            var->data.location = decl->Semantic.Name;
-            if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
-                decl->Semantic.Index == 0 &&
-                c->scan->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
-               var->data.index = -1;
-            else
-               var->data.index = decl->Semantic.Index;
+            if (c->scan->processor == TGSI_PROCESSOR_FRAGMENT) {
+               switch (semantic_name) {
+               case TGSI_SEMANTIC_COLOR: {
+                  /* TODO tgsi loses some information, so we cannot
+                   * actually differentiate here between DSB and MRT
+                   * at this point.  But so far no drivers using tgsi-
+                   * to-nir support dual source blend:
+                   */
+                  bool dual_src_blend = false;
+                  if (dual_src_blend && (semantic_index == 1)) {
+                     var->data.location = FRAG_RESULT_DATA0;
+                     var->data.index = 1;
+                  } else {
+                     if (c->scan->properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+                        var->data.location = FRAG_RESULT_COLOR;
+                     else
+                        var->data.location = FRAG_RESULT_DATA0 + semantic_index;
+                  }
+                  break;
+               }
+               case TGSI_SEMANTIC_POSITION:
+                  var->data.location = FRAG_RESULT_DEPTH;
+                  break;
+               default:
+                  fprintf(stderr, "Bad TGSI semantic: %d/%d\n",
+                          decl->Semantic.Name, decl->Semantic.Index);
+                  abort();
+               }
+            } else {
+               var->data.location =
+                  tgsi_varying_semantic_to_slot(semantic_name, semantic_index);
+            }
 
             if (is_array) {
                unsigned j;
@@ -921,10 +1074,6 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
 {
    nir_builder *b = &c->build;
 
-   /* Save the outside-of-the-if-statement node list. */
-   c->if_stack[c->if_stack_pos] = b->cursor;
-   c->if_stack_pos++;
-
    src = ttn_channel(b, src, X);
 
    nir_if *if_stmt = nir_if_create(b->shader);
@@ -934,6 +1083,9 @@ ttn_if(struct ttn_compile *c, nir_ssa_def *src, bool is_uint)
       if_stmt->condition = nir_src_for_ssa(nir_fne(b, src, nir_imm_int(b, 0)));
    }
    nir_builder_cf_insert(b, &if_stmt->cf_node);
+
+   c->if_stack[c->if_stack_pos] = nir_after_cf_node(&if_stmt->cf_node);
+   c->if_stack_pos++;
 
    b->cursor = nir_after_cf_list(&if_stmt->then_list);
 
@@ -963,12 +1115,11 @@ ttn_bgnloop(struct ttn_compile *c)
 {
    nir_builder *b = &c->build;
 
-   /* Save the outside-of-the-loop node list. */
-   c->loop_stack[c->loop_stack_pos] = b->cursor;
-   c->loop_stack_pos++;
-
    nir_loop *loop = nir_loop_create(b->shader);
    nir_builder_cf_insert(b, &loop->cf_node);
+
+   c->loop_stack[c->loop_stack_pos] = nir_after_cf_node(&loop->cf_node);
+   c->loop_stack_pos++;
 
    b->cursor = nir_after_cf_list(&loop->body);
 }

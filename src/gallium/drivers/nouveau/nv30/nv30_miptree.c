@@ -28,6 +28,7 @@
 #include "util/u_surface.h"
 
 #include "nv_m2mf.xml.h"
+#include "nv_object.xml.h"
 #include "nv30/nv30_screen.h"
 #include "nv30/nv30_context.h"
 #include "nv30/nv30_resource.h"
@@ -144,21 +145,54 @@ nv30_resource_copy_region(struct pipe_context *pipe,
    nv30_transfer_rect(nv30, NEAREST, &src, &dst);
 }
 
-void
-nv30_resource_resolve(struct pipe_context *pipe,
-                      const struct pipe_resolve_info *info)
+static void
+nv30_resource_resolve(struct nv30_context *nv30,
+                      const struct pipe_blit_info *info)
 {
-#if 0
-   struct nv30_context *nv30 = nv30_context(pipe);
+   struct nv30_miptree *src_mt = nv30_miptree(info->src.resource);
    struct nv30_rect src, dst;
+   unsigned x, x0, x1, y, y1, w, h;
 
-   define_rect(info->src.res, 0, 0, info->src.x0, info->src.y0,
-               info->src.x1 - info->src.x0, info->src.y1 - info->src.y0, &src);
-   define_rect(info->dst.res, info->dst.level, 0, info->dst.x0, info->dst.y0,
-               info->dst.x1 - info->dst.x0, info->dst.y1 - info->dst.y0, &dst);
+   define_rect(info->src.resource, 0, info->src.box.z, info->src.box.x,
+      info->src.box.y, info->src.box.width, info->src.box.height, &src);
+   define_rect(info->dst.resource, 0, info->dst.box.z, info->dst.box.x,
+      info->dst.box.y, info->dst.box.width, info->dst.box.height, &dst);
 
-   nv30_transfer_rect(nv30, BILINEAR, &src, &dst);
-#endif
+   x0 = src.x0;
+   x1 = src.x1;
+   y1 = src.y1;
+
+   /* On nv3x we must use sifm which is restricted to 1024x1024 tiles */
+   for (y = src.y0; y < y1; y += h) {
+      h = y1 - y;
+      if (h > 1024)
+         h = 1024;
+
+      src.y0 = 0;
+      src.y1 = h;
+      src.h = h;
+
+      dst.y1 = dst.y0 + (h >> src_mt->ms_y);
+      dst.h = h >> src_mt->ms_y;
+
+      for (x = x0; x < x1; x += w) {
+         w = x1 - x;
+         if (w > 1024)
+            w = 1024;
+
+         src.offset = y * src.pitch + x * src.cpp;
+         src.x0 = 0;
+         src.x1 = w;
+         src.w = w;
+
+         dst.offset = (y >> src_mt->ms_y) * dst.pitch +
+                      (x >> src_mt->ms_x) * dst.cpp;
+         dst.x1 = dst.x0 + (w >> src_mt->ms_x);
+         dst.w = w >> src_mt->ms_x;
+
+         nv30_transfer_rect(nv30, BILINEAR, &src, &dst);
+      }
+   }
 }
 
 void
@@ -172,7 +206,7 @@ nv30_blit(struct pipe_context *pipe,
        info.dst.resource->nr_samples <= 1 &&
        !util_format_is_depth_or_stencil(info.src.resource->format) &&
        !util_format_is_pure_integer(info.src.resource->format)) {
-      debug_printf("nv30: color resolve unimplemented\n");
+      nv30_resource_resolve(nv30, blit_info);
       return;
    }
 
@@ -305,10 +339,15 @@ nv30_miptree_transfer_unmap(struct pipe_context *pipe,
    struct nv30_context *nv30 = nv30_context(pipe);
    struct nv30_transfer *tx = nv30_transfer(ptx);
 
-   if (ptx->usage & PIPE_TRANSFER_WRITE)
+   if (ptx->usage & PIPE_TRANSFER_WRITE) {
       nv30_transfer_rect(nv30, NEAREST, &tx->tmp, &tx->img);
 
-   nouveau_bo_ref(NULL, &tx->tmp.bo);
+      /* Allow the copies above to finish executing before freeing the source */
+      nouveau_fence_work(nv30->screen->base.fence.current,
+                         nouveau_fence_unref_bo, tx->tmp.bo);
+   } else {
+      nouveau_bo_ref(NULL, &tx->tmp.bo);
+   }
    pipe_resource_reference(&ptx->resource, NULL);
    FREE(tx);
 }
@@ -362,6 +401,7 @@ nv30_miptree_create(struct pipe_screen *pscreen,
    blocksz = util_format_get_blocksize(pt->format);
 
    if ((pt->target == PIPE_TEXTURE_RECT) ||
+       (pt->bind & PIPE_BIND_SCANOUT) ||
        !util_is_power_of_two(pt->width0) ||
        !util_is_power_of_two(pt->height0) ||
        !util_is_power_of_two(pt->depth0) ||
@@ -369,6 +409,14 @@ nv30_miptree_create(struct pipe_screen *pscreen,
        util_format_is_float(pt->format) || mt->ms_mode) {
       mt->uniform_pitch = util_format_get_nblocksx(pt->format, w) * blocksz;
       mt->uniform_pitch = align(mt->uniform_pitch, 64);
+      if (pt->bind & PIPE_BIND_SCANOUT) {
+         struct nv30_screen *screen = nv30_screen(pscreen);
+         int pitch_align = MAX2(
+               screen->eng3d->oclass >= NV40_3D_CLASS ? 1024 : 256,
+               /* round_down_pow2(mt->uniform_pitch / 4) */
+               1 << (util_last_bit(mt->uniform_pitch / 4) - 1));
+         mt->uniform_pitch = align(mt->uniform_pitch, pitch_align);
+      }
    }
 
    if (!mt->uniform_pitch)

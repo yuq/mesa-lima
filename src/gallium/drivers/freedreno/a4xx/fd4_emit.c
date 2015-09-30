@@ -124,7 +124,20 @@ static void
 emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum adreno_state_block sb, struct fd_texture_stateobj *tex)
 {
-	unsigned i;
+	static const uint32_t bcolor_reg[] = {
+			[SB_VERT_TEX] = REG_A4XX_TPL1_TP_VS_BORDER_COLOR_BASE_ADDR,
+			[SB_FRAG_TEX] = REG_A4XX_TPL1_TP_FS_BORDER_COLOR_BASE_ADDR,
+	};
+	struct fd4_context *fd4_ctx = fd4_context(ctx);
+	unsigned i, off;
+	void *ptr;
+
+	u_upload_alloc(fd4_ctx->border_color_uploader,
+			0, 2 * PIPE_MAX_SAMPLERS * BORDERCOLOR_SIZE, &off,
+			&fd4_ctx->border_color_buf,
+			&ptr);
+
+	fd_setup_border_colors(tex, ptr, 0);
 
 	if (tex->num_samplers > 0) {
 		int num_samplers;
@@ -190,6 +203,11 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, 0x00000000);
 		}
 	}
+
+	OUT_PKT0(ring, bcolor_reg[sb], 1);
+	OUT_RELOC(ring, fd_resource(fd4_ctx->border_color_buf)->bo, off, 0, 0);
+
+	u_upload_unmap(fd4_ctx->border_color_uploader);
 }
 
 /* emit texture state for mem->gmem restore operation.. eventually it would
@@ -315,16 +333,29 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 	unsigned vtxcnt_regid = regid(63, 0);
 
 	for (i = 0; i < vp->inputs_count; i++) {
-		uint8_t semantic = sem2name(vp->inputs[i].semantic);
-		if (semantic == TGSI_SEMANTIC_VERTEXID_NOBASE)
-			vertex_regid = vp->inputs[i].regid;
-		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
-			instance_regid = vp->inputs[i].regid;
-		else if (semantic == IR3_SEMANTIC_VTXCNT)
-			vtxcnt_regid = vp->inputs[i].regid;
-		else if ((i < vtx->vtx->num_elements) && vp->inputs[i].compmask)
+		if (vp->inputs[i].sysval) {
+			switch(vp->inputs[i].slot) {
+			case SYSTEM_VALUE_BASE_VERTEX:
+				/* handled elsewhere */
+				break;
+			case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+				vertex_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_INSTANCE_ID:
+				instance_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_VERTEX_CNT:
+				vtxcnt_regid = vp->inputs[i].regid;
+				break;
+			default:
+				unreachable("invalid system value");
+				break;
+			}
+		} else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask) {
 			last = i;
+		}
 	}
+
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
 	if ((vtx->vtx->num_elements == 0) &&
@@ -334,7 +365,7 @@ fd4_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd4_emit *emit)
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
-		assert(sem2name(vp->inputs[i].semantic) == 0);
+		assert(!vp->inputs[i].sysval);
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
 			const struct pipe_vertex_buffer *vb =

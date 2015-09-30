@@ -2217,9 +2217,14 @@ glsl_to_tgsi_visitor::visit(ir_expression *ir)
    case ir_triop_vector_insert:
    case ir_binop_carry:
    case ir_binop_borrow:
+   case ir_unop_ssbo_unsized_array_length:
       /* This operation is not supported, or should have already been handled.
        */
       assert(!"Invalid ir opcode in glsl_to_tgsi_visitor::visit()");
+      break;
+
+   case ir_unop_get_buffer_size:
+      assert(!"Not implemented yet");
       break;
    }
 
@@ -3228,6 +3233,9 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    case ir_lod:
       opcode = TGSI_OPCODE_LODQ;
       break;
+   case ir_texture_samples:
+      opcode = TGSI_OPCODE_TXQS;
+      break;
    }
 
    if (ir->projector) {
@@ -3337,6 +3345,8 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
          emit_asm(ir, TGSI_OPCODE_MOV, result_dst, levels_src);
       } else
          inst = emit_asm(ir, opcode, result_dst, lod_info);
+   } else if (opcode == TGSI_OPCODE_TXQS) {
+      inst = emit_asm(ir, opcode, result_dst);
    } else if (opcode == TGSI_OPCODE_TXF) {
       inst = emit_asm(ir, opcode, result_dst, coord);
    } else if (opcode == TGSI_OPCODE_TXL2 || opcode == TGSI_OPCODE_TXB2) {
@@ -4139,8 +4149,7 @@ glsl_to_tgsi_visitor::eliminate_dead_code(void)
        */
       for (unsigned i = 0; i < ARRAY_SIZE(inst->dst); i++) {
          if (inst->dst[i].file == PROGRAM_TEMPORARY &&
-             !inst->dst[i].reladdr &&
-             !inst->saturate) {
+             !inst->dst[i].reladdr) {
             for (int c = 0; c < 4; c++) {
                if (inst->dst[i].writemask & (1 << c)) {
                   if (writes[4 * inst->dst[i].index + c]) {
@@ -5028,6 +5037,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_TXL:
    case TGSI_OPCODE_TXP:
    case TGSI_OPCODE_TXQ:
+   case TGSI_OPCODE_TXQS:
    case TGSI_OPCODE_TXF:
    case TGSI_OPCODE_TEX2:
    case TGSI_OPCODE_TXB2:

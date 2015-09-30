@@ -26,6 +26,7 @@
 #include "brw_context.h"
 #include "brw_wm.h"
 #include "brw_state.h"
+#include "brw_shader.h"
 #include "main/enums.h"
 #include "main/formats.h"
 #include "main/fbobject.h"
@@ -164,11 +165,13 @@ brw_codegen_wm_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data prog_data;
    const GLuint *program;
-   struct gl_shader *fs = NULL;
+   struct brw_shader *fs = NULL;
    GLuint program_size;
+   bool start_busy = false;
+   double start_time = 0;
 
    if (prog)
-      fs = prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
+      fs = (struct brw_shader *)prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    memset(&prog_data, 0, sizeof(prog_data));
    /* key->alpha_test_func means simulating alpha testing via discards,
@@ -179,7 +182,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
       fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    prog_data.computed_depth_mode = computed_depth_mode(&fp->program);
 
-   prog_data.early_fragment_tests = fs && fs->EarlyFragmentTests;
+   prog_data.early_fragment_tests = fs && fs->base.EarlyFragmentTests;
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
    if (!prog)
@@ -191,9 +194,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
     */
    int param_count;
    if (fs) {
-      param_count = fs->num_uniform_components +
-                    fs->NumImages * BRW_IMAGE_PARAM_SIZE;
-      prog_data.base.nr_image_params = fs->NumImages;
+      param_count = fs->base.num_uniform_components +
+                    fs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+      prog_data.base.nr_image_params = fs->base.NumImages;
    } else {
       param_count = fp->program.Base.Parameters->NumParameters * 4;
    }
@@ -213,11 +216,28 @@ brw_codegen_wm_prog(struct brw_context *brw,
                                            key->persample_shading,
                                            &fp->program);
 
+   if (unlikely(brw->perf_debug)) {
+      start_busy = (brw->batch.last_bo &&
+                    drm_intel_bo_busy(brw->batch.last_bo));
+      start_time = get_time();
+   }
+
    program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
                             &fp->program, prog, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
+   }
+
+   if (unlikely(brw->perf_debug) && fs) {
+      if (fs->compiled_once)
+         brw_wm_debug_recompile(brw, prog, key);
+      fs->compiled_once = true;
+
+      if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
+         perf_debug("FS compile took %.03f ms and stalled the GPU\n",
+                    (get_time() - start_time) * 1000);
+      }
    }
 
    if (prog_data.base.total_scratch) {
@@ -641,4 +661,62 @@ brw_upload_wm_prog(struct brw_context *brw)
       assert(success);
    }
    brw->wm.base.prog_data = &brw->wm.prog_data->base;
+}
+
+bool
+brw_fs_precompile(struct gl_context *ctx,
+                  struct gl_shader_program *shader_prog,
+                  struct gl_program *prog)
+{
+   struct brw_context *brw = brw_context(ctx);
+   struct brw_wm_prog_key key;
+
+   struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
+   struct brw_fragment_program *bfp = brw_fragment_program(fp);
+   bool program_uses_dfdy = fp->UsesDFdy;
+
+   memset(&key, 0, sizeof(key));
+
+   if (brw->gen < 6) {
+      if (fp->UsesKill)
+         key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
+
+      if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+         key.iz_lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
+
+      /* Just assume depth testing. */
+      key.iz_lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
+      key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
+   }
+
+   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.InputsRead &
+                                         BRW_FS_VARYING_INPUT_MASK) > 16)
+      key.input_slots_valid = fp->Base.InputsRead | VARYING_BIT_POS;
+
+   brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
+
+   if (fp->Base.InputsRead & VARYING_BIT_POS) {
+      key.drawable_height = ctx->DrawBuffer->Height;
+   }
+
+   key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
+         ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
+         BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
+
+   if ((fp->Base.InputsRead & VARYING_BIT_POS) || program_uses_dfdy) {
+      key.render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer) ||
+                          key.nr_color_regions > 1;
+   }
+
+   key.program_string_id = bfp->id;
+
+   uint32_t old_prog_offset = brw->wm.base.prog_offset;
+   struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
+
+   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key);
+
+   brw->wm.base.prog_offset = old_prog_offset;
+   brw->wm.prog_data = old_prog_data;
+
+   return success;
 }

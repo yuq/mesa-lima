@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 /* C wrapper around glsl_types.h */
 
 #include "../glsl_types.h"
@@ -36,8 +38,6 @@ extern "C" {
 #else
 struct glsl_type;
 #endif
-
-#include <stdio.h>
 
 void glsl_print_type(const struct glsl_type *type, FILE *fp);
 void glsl_print_struct(const struct glsl_type *type, FILE *fp);
@@ -70,6 +70,9 @@ const char *glsl_get_struct_elem_name(const struct glsl_type *type,
 
 enum glsl_sampler_dim glsl_get_sampler_dim(const struct glsl_type *type);
 enum glsl_base_type glsl_get_sampler_result_type(const struct glsl_type *type);
+
+unsigned glsl_get_record_location_offset(const struct glsl_type *type,
+                                         unsigned length);
 
 bool glsl_type_is_void(const struct glsl_type *type);
 bool glsl_type_is_vector(const struct glsl_type *type);

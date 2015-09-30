@@ -19,10 +19,6 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
- *
- * Authors:
- *    Jason Ekstrand (jason@jlekstrand.net)
- *
  */
 
 /*
@@ -37,47 +33,66 @@
 
 #include "nir.h"
 
+struct lower_outputs_state {
+   nir_shader *shader;
+   struct exec_list old_outputs;
+};
+
 static void
-emit_output_copies(nir_shader *shader, nir_variable *temp, nir_variable *output)
+emit_output_copies(nir_cursor cursor, struct lower_outputs_state *state)
 {
-   nir_foreach_overload(shader, overload) {
-      if (!overload->impl || strcmp(overload->function->name, "main"))
+   assert(exec_list_length(&state->shader->outputs) ==
+          exec_list_length(&state->old_outputs));
+
+   foreach_two_lists(out_node, &state->shader->outputs,
+                     temp_node, &state->old_outputs) {
+      nir_variable *output = exec_node_data(nir_variable, out_node, node);
+      nir_variable *temp = exec_node_data(nir_variable, temp_node, node);
+
+      nir_intrinsic_instr *copy =
+         nir_intrinsic_instr_create(state->shader, nir_intrinsic_copy_var);
+      copy->variables[0] = nir_deref_var_create(copy, output);
+      copy->variables[1] = nir_deref_var_create(copy, temp);
+
+      nir_instr_insert(cursor, &copy->instr);
+   }
+}
+
+static bool
+emit_output_copies_block(nir_block *block, void *state)
+{
+   nir_foreach_instr(block, instr) {
+      if (instr->type != nir_instr_type_intrinsic)
          continue;
 
-      struct set_entry *block_entry;
-      set_foreach(overload->impl->end_block->predecessors, block_entry) {
-         struct nir_block *block = (void *)block_entry->key;
-
-         nir_intrinsic_instr *copy =
-            nir_intrinsic_instr_create(shader, nir_intrinsic_copy_var);
-         copy->variables[0] = nir_deref_var_create(copy, output);
-         copy->variables[1] = nir_deref_var_create(copy, temp);
-
-         nir_instr_insert(nir_after_block_before_jump(block), &copy->instr);
-      }
+      nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+      if (intrin->intrinsic == nir_intrinsic_emit_vertex)
+         emit_output_copies(nir_before_instr(&intrin->instr), state);
    }
+
+   return true;
 }
 
 void
 nir_lower_outputs_to_temporaries(nir_shader *shader)
 {
-   struct exec_list old_outputs;
+   struct lower_outputs_state state;
 
-   exec_list_move_nodes_to(&shader->outputs, &old_outputs);
+   state.shader = shader;
+   exec_list_move_nodes_to(&shader->outputs, &state.old_outputs);
 
    /* Walk over all of the outputs turn each output into a temporary and
     * make a new variable for the actual output.
     */
-   foreach_list_typed(nir_variable, var, node, &old_outputs) {
+   foreach_list_typed(nir_variable, var, node, &state.old_outputs) {
       nir_variable *output = ralloc(shader, nir_variable);
       memcpy(output, var, sizeof *output);
 
       /* The orignal is now the temporary */
       nir_variable *temp = var;
 
-      /* Move the original name over to the new output */
-      if (output->name)
-         ralloc_steal(output, output->name);
+      /* Reparent the name to the new variable */
+      ralloc_steal(output, output->name);
 
       /* Give the output a new name with @out-temp appended */
       temp->name = ralloc_asprintf(var, "%s@out-temp", output->name);
@@ -85,9 +100,31 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
       temp->constant_initializer = NULL;
 
       exec_list_push_tail(&shader->outputs, &output->node);
-
-      emit_output_copies(shader, temp, output);
    }
 
-   exec_list_append(&shader->globals, &old_outputs);
+   nir_foreach_overload(shader, overload) {
+      if (overload->impl == NULL)
+         continue;
+
+      if (shader->stage == MESA_SHADER_GEOMETRY) {
+         /* For geometry shaders, we have to emit the output copies right
+          * before each EmitVertex call.
+          */
+         nir_foreach_block(overload->impl, emit_output_copies_block, &state);
+      } else if (strcmp(overload->function->name, "main") == 0) {
+         /* For all other shader types, we need to do the copies right before
+          * the jumps to the end block.
+          */
+         struct set_entry *block_entry;
+         set_foreach(overload->impl->end_block->predecessors, block_entry) {
+            struct nir_block *block = (void *)block_entry->key;
+            emit_output_copies(nir_after_block_before_jump(block), &state);
+         }
+      }
+
+      nir_metadata_preserve(overload->impl, nir_metadata_block_index |
+                                            nir_metadata_dominance);
+   }
+
+   exec_list_append(&shader->globals, &state.old_outputs);
 }

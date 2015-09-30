@@ -1389,8 +1389,16 @@ framebuffer_parameteri(struct gl_context *ctx, struct gl_framebuffer *fb,
          fb->DefaultGeometry.Height = param;
       break;
    case GL_FRAMEBUFFER_DEFAULT_LAYERS:
+     /*
+      * According to the OpenGL ES 3.1 specification section 9.2.1, the
+      * GL_FRAMEBUFFER_DEFAULT_LAYERS parameter name is not supported.
+      */
+      if (_mesa_is_gles31(ctx)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=0x%x)", func, pname);
+         break;
+      }
       if (param < 0 || param > ctx->Const.MaxFramebufferLayers)
-        _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
+         _mesa_error(ctx, GL_INVALID_VALUE, "%s", func);
       else
          fb->DefaultGeometry.Layers = param;
       break;
@@ -1451,6 +1459,14 @@ get_framebuffer_parameteriv(struct gl_context *ctx, struct gl_framebuffer *fb,
       *params = fb->DefaultGeometry.Height;
       break;
    case GL_FRAMEBUFFER_DEFAULT_LAYERS:
+      /*
+       * According to the OpenGL ES 3.1 specification section 9.2.3, the
+       * GL_FRAMEBUFFER_LAYERS parameter name is not supported.
+       */
+      if (_mesa_is_gles31(ctx)) {
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s(pname=0x%x)", func, pname);
+         break;
+      }
       *params = fb->DefaultGeometry.Layers;
       break;
    case GL_FRAMEBUFFER_DEFAULT_SAMPLES:
@@ -3595,7 +3611,16 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
 
    switch (pname) {
    case GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE_EXT:
-      *params = _mesa_is_winsys_fbo(buffer)
+      /* From the OpenGL spec, 9.2. Binding and Managing Framebuffer Objects:
+       *
+       * "If the value of FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE is NONE, then
+       *  either no framebuffer is bound to target; or the default framebuffer
+       *  is bound, attachment is DEPTH or STENCIL, and the number of depth or
+       *  stencil bits, respectively, is zero."
+       */
+      *params = (_mesa_is_winsys_fbo(buffer) &&
+                 ((attachment != GL_DEPTH && attachment != GL_STENCIL) ||
+                  (att->Type != GL_NONE)))
          ? GL_FRAMEBUFFER_DEFAULT : att->Type;
       return;
    case GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT:

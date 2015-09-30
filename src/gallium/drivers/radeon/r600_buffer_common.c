@@ -305,12 +305,11 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 				data += box->x % R600_MAP_BUFFER_ALIGNMENT;
 				return r600_buffer_get_transfer(ctx, resource, level, usage, box,
 								ptransfer, data, staging, offset);
-			} else {
-				return NULL; /* error, shouldn't occur though */
 			}
+		} else {
+			/* At this point, the buffer is always idle (we checked it above). */
+			usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 		}
-		/* At this point, the buffer is always idle (we checked it above). */
-		usage |= PIPE_TRANSFER_UNSYNCHRONIZED;
 	}
 	/* Using a staging buffer in GTT for larger reads is much faster. */
 	else if ((usage & PIPE_TRANSFER_READ) &&
@@ -346,37 +345,59 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 					ptransfer, data, NULL, 0);
 }
 
-static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
-				       struct pipe_transfer *transfer)
+static void r600_buffer_do_flush_region(struct pipe_context *ctx,
+					struct pipe_transfer *transfer,
+				        const struct pipe_box *box)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
 	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
 	struct r600_resource *rbuffer = r600_resource(transfer->resource);
 
 	if (rtransfer->staging) {
-		if (rtransfer->transfer.usage & PIPE_TRANSFER_WRITE) {
-			struct pipe_resource *dst, *src;
-			unsigned soffset, doffset, size;
-			struct pipe_box box;
+		struct pipe_resource *dst, *src;
+		unsigned soffset;
+		struct pipe_box dma_box;
 
-			dst = transfer->resource;
-			src = &rtransfer->staging->b.b;
-			size = transfer->box.width;
-			doffset = transfer->box.x;
-			soffset = rtransfer->offset + transfer->box.x % R600_MAP_BUFFER_ALIGNMENT;
+		dst = transfer->resource;
+		src = &rtransfer->staging->b.b;
+		soffset = rtransfer->offset + box->x % R600_MAP_BUFFER_ALIGNMENT;
 
-			u_box_1d(soffset, size, &box);
+		u_box_1d(soffset, box->width, &dma_box);
 
-			/* Copy the staging buffer into the original one. */
-			rctx->dma_copy(ctx, dst, 0, doffset, 0, 0, src, 0, &box);
-		}
+		/* Copy the staging buffer into the original one. */
+		rctx->dma_copy(ctx, dst, 0, box->x, 0, 0, src, 0, &dma_box);
+	}
+
+	util_range_add(&rbuffer->valid_buffer_range, box->x,
+		       box->x + box->width);
+}
+
+static void r600_buffer_flush_region(struct pipe_context *ctx,
+				     struct pipe_transfer *transfer,
+				     const struct pipe_box *rel_box)
+{
+	if (transfer->usage & (PIPE_TRANSFER_WRITE |
+			       PIPE_TRANSFER_FLUSH_EXPLICIT)) {
+		struct pipe_box box;
+
+		u_box_1d(transfer->box.x + rel_box->x, rel_box->width, &box);
+		r600_buffer_do_flush_region(ctx, transfer, &box);
+	}
+}
+
+static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
+				       struct pipe_transfer *transfer)
+{
+	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
+	struct r600_transfer *rtransfer = (struct r600_transfer*)transfer;
+
+	if (transfer->usage & PIPE_TRANSFER_WRITE &&
+	    !(transfer->usage & PIPE_TRANSFER_FLUSH_EXPLICIT))
+		r600_buffer_do_flush_region(ctx, transfer, &transfer->box);
+
+	if (rtransfer->staging)
 		pipe_resource_reference((struct pipe_resource**)&rtransfer->staging, NULL);
-	}
 
-	if (transfer->usage & PIPE_TRANSFER_WRITE) {
-		util_range_add(&rbuffer->valid_buffer_range, transfer->box.x,
-			       transfer->box.x + transfer->box.width);
-	}
 	util_slab_free(&rctx->pool_transfers, transfer);
 }
 
@@ -385,7 +406,7 @@ static const struct u_resource_vtbl r600_buffer_vtbl =
 	NULL,				/* get_handle */
 	r600_buffer_destroy,		/* resource_destroy */
 	r600_buffer_transfer_map,	/* transfer_map */
-	NULL,				/* transfer_flush_region */
+	r600_buffer_flush_region,	/* transfer_flush_region */
 	r600_buffer_transfer_unmap,	/* transfer_unmap */
 	NULL				/* transfer_inline_write */
 };

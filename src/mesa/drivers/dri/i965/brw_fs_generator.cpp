@@ -48,13 +48,15 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
 }
 
 static struct brw_reg
-brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg)
+brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 {
    struct brw_reg brw_reg;
 
    switch (reg->file) {
-   case GRF:
    case MRF:
+      assert((reg->reg & ~(1 << 7)) < BRW_MAX_MRF(gen));
+      /* Fallthrough */
+   case GRF:
       if (reg->stride == 0) {
          brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
       } else if (inst->exec_size < 8) {
@@ -418,7 +420,7 @@ fs_generator::generate_blorp_fb_write(fs_inst *inst)
    brw_fb_WRITE(p,
                 16 /* dispatch_width */,
                 brw_message_reg(inst->base_mrf),
-                brw_reg_from_fs_reg(inst, &inst->src[0]),
+                brw_reg_from_fs_reg(inst, &inst->src[0], devinfo->gen),
                 BRW_DATAPORT_RENDER_TARGET_WRITE_SIMD16_SINGLE_SOURCE,
                 inst->target,
                 inst->mlen,
@@ -542,6 +544,50 @@ fs_generator::generate_math_g45(fs_inst *inst,
 }
 
 void
+fs_generator::generate_get_buffer_size(fs_inst *inst,
+                                       struct brw_reg dst,
+                                       struct brw_reg src,
+                                       struct brw_reg surf_index)
+{
+   assert(devinfo->gen >= 7);
+   assert(surf_index.file == BRW_IMMEDIATE_VALUE);
+
+   uint32_t simd_mode;
+   int rlen = 4;
+
+   switch (inst->exec_size) {
+   case 8:
+      simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD8;
+      break;
+   case 16:
+      simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
+      break;
+   default:
+      unreachable("Invalid width for texture instruction");
+   }
+
+   if (simd_mode == BRW_SAMPLER_SIMD_MODE_SIMD16) {
+      rlen = 8;
+      dst = vec16(dst);
+   }
+
+   brw_SAMPLE(p,
+              retype(dst, BRW_REGISTER_TYPE_UW),
+              inst->base_mrf,
+              src,
+              surf_index.dw1.ud,
+              0,
+              GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO,
+              rlen, /* response length */
+              inst->mlen,
+              inst->header_size > 0,
+              simd_mode,
+              BRW_SAMPLER_RETURN_FORMAT_SINT32);
+
+   brw_mark_surface_used(prog_data, surf_index.dw1.ud);
+}
+
+void
 fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src,
                            struct brw_reg sampler_index)
 {
@@ -645,6 +691,9 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
          } else {
             msg_type = GEN7_SAMPLER_MESSAGE_SAMPLE_GATHER4_PO;
          }
+         break;
+      case SHADER_OPCODE_SAMPLEINFO:
+         msg_type = GEN6_SAMPLER_MESSAGE_SAMPLE_SAMPLEINFO;
          break;
       default:
 	 unreachable("not reached");
@@ -1533,7 +1582,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < inst->sources; i++) {
-	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i]);
+	 src[i] = brw_reg_from_fs_reg(inst, &inst->src[i], devinfo->gen);
 
 	 /* The accumulator result appears to get used for the
 	  * conditional modifier generation.  When negating a UD
@@ -1545,7 +1594,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
 		inst->src[i].type != BRW_REGISTER_TYPE_UD ||
 		!inst->src[i].negate);
       }
-      dst = brw_reg_from_fs_reg(inst, &inst->dst);
+      dst = brw_reg_from_fs_reg(inst, &inst->dst, devinfo->gen);
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
@@ -1554,6 +1603,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
       brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
+
+      assert(inst->base_mrf + inst->mlen <= BRW_MAX_MRF(devinfo->gen));
+      assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       switch (inst->exec_size) {
       case 1:
@@ -1908,6 +1960,9 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          src[0].subnr = 4 * type_sz(src[0].type);
          brw_MOV(p, dst, stride(src[0], 8, 4, 1));
          break;
+      case FS_OPCODE_GET_BUFFER_SIZE:
+         generate_get_buffer_size(inst, dst, src[0], src[1]);
+         break;
       case SHADER_OPCODE_TEX:
       case FS_OPCODE_TXB:
       case SHADER_OPCODE_TXD:
@@ -1920,6 +1975,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_LOD:
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
+      case SHADER_OPCODE_SAMPLEINFO:
 	 generate_tex(inst, dst, src[0], src[1]);
 	 break;
       case FS_OPCODE_DDX_COARSE:

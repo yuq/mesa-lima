@@ -66,6 +66,7 @@ AM_CPPFLAGS = \
 noinst_LTLIBRARIES = libglsl_util.la
 
 libglsl_util_la_SOURCES = \
+	glsl/shader_enums.c \
 	mesa/main/imports.c \
 	mesa/program/prog_hash_table.c \
 	mesa/program/symbol_table.c \

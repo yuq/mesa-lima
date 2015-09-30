@@ -402,6 +402,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_ENDLOOP             101
 #define TGSI_OPCODE_ENDSUB              102
 #define TGSI_OPCODE_TXQ_LZ              103 /* TXQ for mipmap level 0 */
+#define TGSI_OPCODE_TXQS                104
                                 /* gap */
 #define TGSI_OPCODE_NOP                 107
 

@@ -226,6 +226,7 @@ init_program_struct(struct gl_program *prog, GLenum target, GLuint id)
    assert(prog);
 
    memset(prog, 0, sizeof(*prog));
+   mtx_init(&prog->Mutex, mtx_plain);
    prog->Id = id;
    prog->Target = target;
    prog->RefCount = 1;
@@ -418,6 +419,7 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
       ralloc_free(prog->nir);
    }
 
+   mtx_destroy(&prog->Mutex);
    free(prog);
 }
 
@@ -463,24 +465,18 @@ _mesa_reference_program_(struct gl_context *ctx,
 
    if (*ptr) {
       GLboolean deleteFlag;
+      struct gl_program *oldProg = *ptr;
 
-      /*mtx_lock(&(*ptr)->Mutex);*/
-#if 0
-      printf("Program %p ID=%u Target=%s  Refcount-- to %d\n",
-             *ptr, (*ptr)->Id,
-             ((*ptr)->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              ((*ptr)->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
-             (*ptr)->RefCount - 1);
-#endif
-      assert((*ptr)->RefCount > 0);
-      (*ptr)->RefCount--;
+      mtx_lock(&oldProg->Mutex);
+      assert(oldProg->RefCount > 0);
+      oldProg->RefCount--;
 
-      deleteFlag = ((*ptr)->RefCount == 0);
-      /*mtx_lock(&(*ptr)->Mutex);*/
+      deleteFlag = (oldProg->RefCount == 0);
+      mtx_unlock(&oldProg->Mutex);
 
       if (deleteFlag) {
          assert(ctx);
-         ctx->Driver.DeleteProgram(ctx, *ptr);
+         ctx->Driver.DeleteProgram(ctx, oldProg);
       }
 
       *ptr = NULL;
@@ -488,16 +484,9 @@ _mesa_reference_program_(struct gl_context *ctx,
 
    assert(!*ptr);
    if (prog) {
-      /*mtx_lock(&prog->Mutex);*/
+      mtx_lock(&prog->Mutex);
       prog->RefCount++;
-#if 0
-      printf("Program %p ID=%u Target=%s  Refcount++ to %d\n",
-             prog, prog->Id,
-             (prog->Target == GL_VERTEX_PROGRAM_ARB ? "VP" :
-              (prog->Target == GL_GEOMETRY_PROGRAM_NV ? "GP" : "FP")),
-             prog->RefCount);
-#endif
-      /*mtx_unlock(&prog->Mutex);*/
+      mtx_unlock(&prog->Mutex);
    }
 
    *ptr = prog;

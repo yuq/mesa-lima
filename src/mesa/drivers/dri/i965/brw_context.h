@@ -194,7 +194,6 @@ enum brw_state_id {
    BRW_STATE_GS_CONSTBUF,
    BRW_STATE_PROGRAM_CACHE,
    BRW_STATE_STATE_BASE_ADDRESS,
-   BRW_STATE_VUE_MAP_VS,
    BRW_STATE_VUE_MAP_GEOM_OUT,
    BRW_STATE_TRANSFORM_FEEDBACK,
    BRW_STATE_RASTERIZER_DISCARD,
@@ -214,6 +213,7 @@ enum brw_state_id {
    BRW_STATE_SAMPLER_STATE_TABLE,
    BRW_STATE_VS_ATTRIB_WORKAROUNDS,
    BRW_STATE_COMPUTE_PROGRAM,
+   BRW_STATE_CS_WORK_GROUPS,
    BRW_NUM_STATE_BITS
 };
 
@@ -276,7 +276,6 @@ enum brw_state_id {
 #define BRW_NEW_GS_CONSTBUF             (1ull << BRW_STATE_GS_CONSTBUF)
 #define BRW_NEW_PROGRAM_CACHE           (1ull << BRW_STATE_PROGRAM_CACHE)
 #define BRW_NEW_STATE_BASE_ADDRESS      (1ull << BRW_STATE_STATE_BASE_ADDRESS)
-#define BRW_NEW_VUE_MAP_VS              (1ull << BRW_STATE_VUE_MAP_VS)
 #define BRW_NEW_VUE_MAP_GEOM_OUT        (1ull << BRW_STATE_VUE_MAP_GEOM_OUT)
 #define BRW_NEW_TRANSFORM_FEEDBACK      (1ull << BRW_STATE_TRANSFORM_FEEDBACK)
 #define BRW_NEW_RASTERIZER_DISCARD      (1ull << BRW_STATE_RASTERIZER_DISCARD)
@@ -296,6 +295,7 @@ enum brw_state_id {
 #define BRW_NEW_SAMPLER_STATE_TABLE     (1ull << BRW_STATE_SAMPLER_STATE_TABLE)
 #define BRW_NEW_VS_ATTRIB_WORKAROUNDS   (1ull << BRW_STATE_VS_ATTRIB_WORKAROUNDS)
 #define BRW_NEW_COMPUTE_PROGRAM         (1ull << BRW_STATE_COMPUTE_PROGRAM)
+#define BRW_NEW_CS_WORK_GROUPS          (1ull << BRW_STATE_CS_WORK_GROUPS)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
@@ -504,6 +504,16 @@ struct brw_cs_prog_data {
    GLuint dispatch_grf_start_reg_16;
    unsigned local_size[3];
    unsigned simd_size;
+   bool uses_barrier;
+   bool uses_num_work_groups;
+
+   struct {
+      /** @{
+       * surface indices the CS-specific surfaces
+       */
+      uint32_t work_groups_start;
+      /** @} */
+   } binding_table;
 };
 
 /**
@@ -544,6 +554,17 @@ struct brw_vue_map {
     * the additional varying slots defined in brw_varying_slot.
     */
    GLbitfield64 slots_valid;
+
+   /**
+    * Is this VUE map for a separate shader pipeline?
+    *
+    * Separable programs (GL_ARB_separate_shader_objects) can be mixed and matched
+    * without the linker having a chance to dead code eliminate unused varyings.
+    *
+    * This means that we have to use a fixed slot layout, based on the output's
+    * location field, rather than assigning slots in a compact contiguous block.
+    */
+   bool separate;
 
    /**
     * Map from gl_varying_slot value to VUE slot.  For gl_varying_slots that are
@@ -590,7 +611,8 @@ static inline GLuint brw_varying_to_offset(struct brw_vue_map *vue_map,
 
 void brw_compute_vue_map(const struct brw_device_info *devinfo,
                          struct brw_vue_map *vue_map,
-                         GLbitfield64 slots_valid);
+                         GLbitfield64 slots_valid,
+                         bool separate_shader);
 
 
 /**
@@ -753,7 +775,8 @@ struct brw_vs_prog_data {
                             12 + /* ubo */                              \
                             BRW_MAX_ABO +                               \
                             BRW_MAX_IMAGES +                            \
-                            2 /* shader time, pull constants */)
+                            2 + /* shader time, pull constants */       \
+                            1 /* cs num work groups */)
 
 #define SURF_INDEX_GEN6_SOL_BINDING(t) (t)
 
@@ -786,6 +809,11 @@ struct brw_gs_prog_data
    unsigned control_data_format;
 
    bool include_primitive_id;
+
+   /**
+    * The number of vertices emitted, if constant - otherwise -1.
+    */
+   int static_vertex_count;
 
    int invocations;
 
@@ -1242,6 +1270,17 @@ struct brw_context
    } draw;
 
    struct {
+      /**
+       * For gl_NumWorkGroups: If num_work_groups_bo is non NULL, then it is
+       * an indirect call, and num_work_groups_offset is valid. Otherwise,
+       * num_work_groups is set based on glDispatchCompute.
+       */
+      drm_intel_bo *num_work_groups_bo;
+      GLintptr num_work_groups_offset;
+      const GLuint *num_work_groups;
+   } compute;
+
+   struct {
       struct brw_vertex_element inputs[VERT_ATTRIB_MAX];
       struct brw_vertex_buffer buffers[VERT_ATTRIB_MAX];
 
@@ -1368,16 +1407,8 @@ struct brw_context
    } curbe;
 
    /**
-    * Layout of vertex data exiting the vertex shader.
-    *
-    * BRW_NEW_VUE_MAP_VS is flagged when this VUE map changes.
-    */
-   struct brw_vue_map vue_map_vs;
-
-   /**
     * Layout of vertex data exiting the geometry portion of the pipleine.
-    * This comes from the geometry shader if one exists, otherwise from the
-    * vertex shader.
+    * This comes from the last enabled shader stage (GS, DS, or VS).
     *
     * BRW_NEW_VUE_MAP_GEOM_OUT is flagged when the VUE map changes.
     */
@@ -1523,7 +1554,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[60];
-   const struct brw_tracked_state compute_atoms[4];
+   const struct brw_tracked_state compute_atoms[7];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {
@@ -1784,6 +1815,12 @@ void brw_create_constant_surface(struct brw_context *brw,
                                  uint32_t size,
                                  uint32_t *out_offset,
                                  bool dword_pitch);
+void brw_create_buffer_surface(struct brw_context *brw,
+                               drm_intel_bo *bo,
+                               uint32_t offset,
+                               uint32_t size,
+                               uint32_t *out_offset,
+                               bool dword_pitch);
 void brw_update_buffer_texture_surface(struct gl_context *ctx,
                                        unsigned unit,
                                        uint32_t *surf_offset);
@@ -2062,11 +2099,6 @@ void gen8_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                    unsigned int level, unsigned int layer, enum gen6_hiz_op op);
 
 uint32_t get_hw_prim_for_gl_prim(int mode);
-
-void
-brw_setup_vue_key_clip_info(struct brw_context *brw,
-                            struct brw_vue_prog_key *key,
-                            bool program_uses_clip_distance);
 
 void
 gen6_upload_push_constants(struct brw_context *brw,

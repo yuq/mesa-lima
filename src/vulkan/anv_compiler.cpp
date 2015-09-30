@@ -167,9 +167,7 @@ brw_vs_populate_key(struct brw_context *brw,
    /* Just upload the program verbatim for now.  Always send it all
     * the inputs it asks for, whether they are varying or not.
     */
-   key->base.program_string_id = vp->id;
-   brw_setup_vue_key_clip_info(brw, &key->base,
-                               vp->program.Base.UsesClipDistanceOut);
+   key->program_string_id = vp->id;
 
    /* _NEW_POLYGON */
    if (brw->gen < 6) {
@@ -193,7 +191,7 @@ brw_vs_populate_key(struct brw_context *brw,
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, brw->vs.base.sampler_count,
-                                      &key->base.tex);
+                                      &key->tex);
 }
 
 static bool
@@ -250,14 +248,15 @@ really_do_vs_prog(struct brw_context *brw,
     * distance varying slots whenever clipping is enabled, even if the vertex
     * shader doesn't write to gl_ClipDistance.
     */
-   if (key->base.userclip_active) {
+   if (key->nr_userclip_plane_consts) {
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
       outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
    }
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &prog_data->base.vue_map, outputs_written);
-\
+                       &prog_data->base.vue_map, outputs_written,
+                       prog ? prog->SeparateShader : false);
+
    set_binding_table_layout(&prog_data->base.base, pipeline,
                             VK_SHADER_STAGE_VERTEX);
 
@@ -558,18 +557,11 @@ brw_gs_populate_key(struct brw_context *brw,
 
    memset(key, 0, sizeof(*key));
 
-   key->base.program_string_id = gp->id;
-   brw_setup_vue_key_clip_info(brw, &key->base,
-                               gp->program.Base.UsesClipDistanceOut);
+   key->program_string_id = gp->id;
 
    /* _NEW_TEXTURE */
    brw_populate_sampler_prog_key_data(ctx, prog, stage_state->sampler_count,
-                                      &key->base.tex);
-
-   struct brw_vs_prog_data *prog_data = &pipeline->vs_prog_data;
-
-   /* BRW_NEW_VUE_MAP_VS */
-   key->input_varyings = prog_data->base.vue_map.slots_valid;
+                                      &key->tex);
 }
 
 static bool

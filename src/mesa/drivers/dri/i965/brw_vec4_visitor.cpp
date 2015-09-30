@@ -26,6 +26,8 @@
 #include "glsl/ir_uniform.h"
 #include "program/sampler.h"
 
+#define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
+
 namespace brw {
 
 vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
@@ -256,7 +258,7 @@ vec4_visitor::SCRATCH_READ(const dst_reg &dst, const src_reg &index)
 
    inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_GEN4_SCRATCH_READ,
 					dst, index);
-   inst->base_mrf = 14;
+   inst->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
    inst->mlen = 2;
 
    return inst;
@@ -270,7 +272,7 @@ vec4_visitor::SCRATCH_WRITE(const dst_reg &dst, const src_reg &src,
 
    inst = new(mem_ctx) vec4_instruction(SHADER_OPCODE_GEN4_SCRATCH_WRITE,
 					dst, src, index);
-   inst->base_mrf = 13;
+   inst->base_mrf = FIRST_SPILL_MRF(devinfo->gen);
    inst->mlen = 3;
 
    return inst;
@@ -756,22 +758,6 @@ vec4_visitor::setup_uniform_values(ir_variable *ir)
    }
 }
 
-void
-vec4_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
-{
-   for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
-      assert(this->uniforms < uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 4;
-      this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
-      this->userplane[i].type = BRW_REGISTER_TYPE_F;
-      for (int j = 0; j < 4; ++j) {
-         stage_prog_data->param[this->uniforms * 4 + j] =
-            (gl_constant_value *) &clip_planes[i][j];
-      }
-      ++this->uniforms;
-   }
-}
-
 /* Our support for builtin uniforms is even scarier than non-builtin.
  * It sits on top of the PROG_STATE_VAR parameters that are
  * automatically updated from GL context state.
@@ -1089,11 +1075,12 @@ vec4_visitor::visit(ir_variable *ir)
       break;
 
    case ir_var_uniform:
+   case ir_var_shader_storage:
       reg = new(this->mem_ctx) dst_reg(UNIFORM, this->uniforms);
 
       /* Thanks to the lower_ubo_reference pass, we will see only
-       * ir_binop_ubo_load expressions and not ir_dereference_variable for UBO
-       * variables, so no need for them to be in variable_ht.
+       * ir_binop_{ubo,ssbo}_load expressions and not ir_dereference_variable
+       * for UBO/SSBO variables, so no need for them to be in variable_ht.
        *
        * Some uniforms, such as samplers and atomic counters, have no actual
        * storage, so we should ignore them.
@@ -1401,7 +1388,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
                                            dst,
                                            surf_index,
                                            offset_reg);
-      pull->base_mrf = 14;
+      pull->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
       pull->mlen = 1;
    }
 
@@ -1597,6 +1584,10 @@ vec4_visitor::visit(ir_expression *ir)
 
    case ir_unop_subroutine_to_int:
       emit(MOV(result_dst, op[0]));
+      break;
+
+   case ir_unop_ssbo_unsized_array_length:
+      unreachable("not reached: should be handled by lower_ubo_reference");
       break;
 
    case ir_binop_add:
@@ -1805,6 +1796,10 @@ vec4_visitor::visit(ir_expression *ir)
       emit(RNDE(result_dst, op[0]));
       break;
 
+   case ir_unop_get_buffer_size:
+      unreachable("not reached: not implemented");
+      break;
+
    case ir_binop_min:
       emit_minmax(BRW_CONDITIONAL_L, result_dst, op[0], op[1]);
       break;
@@ -1878,7 +1873,7 @@ vec4_visitor::visit(ir_expression *ir)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               shader_prog->NumUniformBlocks - 1);
+                               shader_prog->NumBufferInterfaceBlocks - 1);
       }
 
       if (const_offset_ir) {
@@ -2567,6 +2562,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    case ir_tg4: opcode = offset_value.file != BAD_FILE
                          ? SHADER_OPCODE_TG4_OFFSET : SHADER_OPCODE_TG4; break;
    case ir_query_levels: opcode = SHADER_OPCODE_TXS; break;
+   case ir_texture_samples: opcode = SHADER_OPCODE_SAMPLEINFO; break;
    case ir_txb:
       unreachable("TXB is not valid for vertex shaders.");
    case ir_lod:
@@ -2586,13 +2582,15 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
     * - Texel offsets
     * - Gather channel selection
     * - Sampler indices too large to fit in a 4-bit value.
+    * - Sampleinfo message - takes no parameters, but mlen = 0 is illegal
     */
    inst->header_size =
       (devinfo->gen < 5 || devinfo->gen >= 9 ||
        inst->offset != 0 || op == ir_tg4 ||
+       op == ir_texture_samples ||
        is_high_sampler(sampler_reg)) ? 1 : 0;
    inst->base_mrf = 2;
-   inst->mlen = inst->header_size + 1; /* always at least one */
+   inst->mlen = inst->header_size;
    inst->dst.writemask = WRITEMASK_XYZW;
    inst->shadow_compare = shadow_comparitor.file != BAD_FILE;
 
@@ -2604,6 +2602,9 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    if (op == ir_txs || op == ir_query_levels) {
       int writemask = devinfo->gen == 4 ? WRITEMASK_W : WRITEMASK_X;
       emit(MOV(dst_reg(MRF, param_base, lod.type, writemask), lod));
+      inst->mlen++;
+   } else if (op == ir_texture_samples) {
+      inst->dst.writemask = WRITEMASK_X;
    } else {
       /* Load the coordinate */
       /* FINISHME: gl_clamp_mask and saturate */
@@ -2612,6 +2613,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 
       emit(MOV(dst_reg(MRF, param_base, coordinate.type, coord_mask),
                coordinate));
+      inst->mlen++;
 
       if (zero_mask != 0) {
          emit(MOV(dst_reg(MRF, param_base, coordinate.type, zero_mask),
@@ -2641,7 +2643,6 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 	    mrf = param_base;
 	    writemask = WRITEMASK_W;
 	 }
-         lod.swizzle = BRW_SWIZZLE_XXXX;
 	 emit(MOV(dst_reg(MRF, mrf, lod.type, writemask), lod));
       } else if (op == ir_txf) {
          emit(MOV(dst_reg(MRF, param_base, lod.type, WRITEMASK_W), lod));
@@ -2710,7 +2711,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    }
 
    if (devinfo->gen == 6 && op == ir_tg4) {
-      emit_gen6_gather_wa(key->tex.gen6_gather_wa[sampler], inst->dst);
+      emit_gen6_gather_wa(key_tex->gen6_gather_wa[sampler], inst->dst);
    }
 
    swizzle_result(op, dest,
@@ -2762,7 +2763,7 @@ vec4_visitor::visit(ir_texture *ir)
     */
    if (ir->op == ir_tg4) {
       ir_constant *chan = ir->lod_info.component->as_constant();
-      int swiz = GET_SWZ(key->tex.swizzles[sampler], chan->value.i[0]);
+      int swiz = GET_SWZ(key_tex->swizzles[sampler], chan->value.i[0]);
       if (swiz == SWIZZLE_ZERO || swiz == SWIZZLE_ONE) {
          dst_reg result(this, ir->type);
          this->result = src_reg(result);
@@ -2820,7 +2821,7 @@ vec4_visitor::visit(ir_texture *ir)
       ir->lod_info.sample_index->accept(this);
       sample_index = this->result;
 
-      if (devinfo->gen >= 7 && key->tex.compressed_multisample_layout_mask & (1<<sampler))
+      if (devinfo->gen >= 7 && key_tex->compressed_multisample_layout_mask & (1 << sampler))
          mcs = emit_mcs_fetch(ir->coordinate->type, coordinate, sampler_reg);
       else
          mcs = src_reg(0u);
@@ -2835,6 +2836,7 @@ vec4_visitor::visit(ir_texture *ir)
    case ir_txb:
    case ir_lod:
    case ir_tg4:
+   case ir_texture_samples:
       break;
    }
 
@@ -2898,14 +2900,14 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
 uint32_t
 vec4_visitor::gather_channel(unsigned gather_component, uint32_t sampler)
 {
-   int swiz = GET_SWZ(key->tex.swizzles[sampler], gather_component);
+   int swiz = GET_SWZ(key_tex->swizzles[sampler], gather_component);
    switch (swiz) {
       case SWIZZLE_X: return 0;
       case SWIZZLE_Y:
          /* gather4 sampler is broken for green channel on RG32F --
           * we must ask for blue instead.
           */
-         if (key->tex.gather_channel_quirk_mask & (1<<sampler))
+         if (key_tex->gather_channel_quirk_mask & (1 << sampler))
             return 2;
          return 1;
       case SWIZZLE_Z: return 2;
@@ -2920,7 +2922,7 @@ vec4_visitor::swizzle_result(ir_texture_opcode op, dst_reg dest,
                              src_reg orig_val, uint32_t sampler,
                              const glsl_type *dest_type)
 {
-   int s = key->tex.swizzles[sampler];
+   int s = key_tex->swizzles[sampler];
 
    dst_reg swizzled_result = dest;
 
@@ -3122,7 +3124,8 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
 {
    if (devinfo->gen < 6 &&
        ((prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) ||
-        key->userclip_active || devinfo->has_negative_rhw_bug)) {
+        output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE ||
+        devinfo->has_negative_rhw_bug)) {
       dst_reg header1 = dst_reg(this, glsl_type::uvec4_type);
       dst_reg header1_w = header1;
       header1_w.writemask = WRITEMASK_W;
@@ -3137,7 +3140,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
 	 emit(AND(header1_w, src_reg(header1_w), 0x7ff << 8));
       }
 
-      if (key->userclip_active) {
+      if (output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE) {
          current_annotation = "Clipping flags";
          dst_reg flags0 = dst_reg(this, glsl_type::uint_type);
          dst_reg flags1 = dst_reg(this, glsl_type::uint_type);
@@ -3203,35 +3206,6 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
    }
 }
 
-void
-vec4_visitor::emit_clip_distances(dst_reg reg, int offset)
-{
-   /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
-    *
-    *     "If a linked set of shaders forming the vertex stage contains no
-    *     static write to gl_ClipVertex or gl_ClipDistance, but the
-    *     application has requested clipping against user clip planes through
-    *     the API, then the coordinate written to gl_Position is used for
-    *     comparison against the user clip planes."
-    *
-    * This function is only called if the shader didn't write to
-    * gl_ClipDistance.  Accordingly, we use gl_ClipVertex to perform clipping
-    * if the user wrote to it; otherwise we use gl_Position.
-    */
-   gl_varying_slot clip_vertex = VARYING_SLOT_CLIP_VERTEX;
-   if (!(prog_data->vue_map.slots_valid & VARYING_BIT_CLIP_VERTEX)) {
-      clip_vertex = VARYING_SLOT_POS;
-   }
-
-   for (int i = 0; i + offset < key->nr_userclip_plane_consts && i < 4;
-        ++i) {
-      reg.writemask = 1 << i;
-      emit(DP4(reg,
-               src_reg(output_reg[clip_vertex]),
-               src_reg(this->userplane[i + offset])));
-   }
-}
-
 vec4_instruction *
 vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
 {
@@ -3278,21 +3252,6 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
    case BRW_VARYING_SLOT_PAD:
       /* No need to write to this slot */
       break;
-   case VARYING_SLOT_COL0:
-   case VARYING_SLOT_COL1:
-   case VARYING_SLOT_BFC0:
-   case VARYING_SLOT_BFC1: {
-      /* These built-in varyings are only supported in compatibility mode,
-       * and we only support GS in core profile.  So, this must be a vertex
-       * shader.
-       */
-      assert(stage == MESA_SHADER_VERTEX);
-      vec4_instruction *inst = emit_generic_urb_slot(reg, varying);
-      if (((struct brw_vs_prog_key *) key)->clamp_vertex_color)
-         inst->saturate = true;
-      break;
-   }
-
    default:
       emit_generic_urb_slot(reg, varying);
       break;
@@ -3337,7 +3296,7 @@ vec4_visitor::emit_vertex()
     * may need to unspill a register or load from an array.  Those
     * reads would use MRFs 14-15.
     */
-   int max_usable_mrf = 13;
+   int max_usable_mrf = FIRST_SPILL_MRF(devinfo->gen);
 
    /* The following assertion verifies that max_usable_mrf causes an
     * even-numbered amount of URB write data, which will meet gen6's
@@ -3352,17 +3311,6 @@ vec4_visitor::emit_vertex()
 
    if (devinfo->gen < 6) {
       emit_ndc_computation();
-   }
-
-   /* Lower legacy ff and ClipVertex clipping to clip distances */
-   if (key->userclip_active && !prog->UsesClipDistanceOut) {
-      current_annotation = "user clip distances";
-
-      output_reg[VARYING_SLOT_CLIP_DIST0] = dst_reg(this, glsl_type::vec4_type);
-      output_reg[VARYING_SLOT_CLIP_DIST1] = dst_reg(this, glsl_type::vec4_type);
-
-      emit_clip_distances(output_reg[VARYING_SLOT_CLIP_DIST0], 0);
-      emit_clip_distances(output_reg[VARYING_SLOT_CLIP_DIST1], 4);
    }
 
    /* We may need to split this up into several URB writes, so do them in a
@@ -3382,9 +3330,10 @@ vec4_visitor::emit_vertex()
                        prog_data->vue_map.slot_to_varying[slot]);
 
          /* If this was max_usable_mrf, we can't fit anything more into this
-          * URB WRITE.
+          * URB WRITE. Same thing if we reached the maximum length available.
           */
-         if (mrf > max_usable_mrf) {
+         if (mrf > max_usable_mrf ||
+             align_interleaved_urb_mlen(devinfo, mrf - base_mrf + 1) > BRW_MAX_MSG_LENGTH) {
             slot++;
             break;
          }
@@ -3763,7 +3712,7 @@ vec4_visitor::resolve_bool_comparison(ir_rvalue *rvalue, src_reg *reg)
 vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            void *log_data,
                            struct gl_program *prog,
-                           const struct brw_vue_prog_key *key,
+                           const struct brw_sampler_prog_key_data *key_tex,
                            struct brw_vue_prog_data *prog_data,
 			   struct gl_shader_program *shader_prog,
                            gl_shader_stage stage,
@@ -3772,7 +3721,7 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx,
                     shader_prog, prog, &prog_data->base, stage),
-     key(key),
+     key_tex(key_tex),
      prog_data(prog_data),
      sanity_param_count(0),
      fail_msg(NULL),

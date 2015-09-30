@@ -62,6 +62,13 @@ INTRINSIC(interp_var_at_offset, 1, ARR(2), true, 0, 1, 0,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
+ * Ask the driver for the size of a given buffer. It takes the buffer index
+ * as source.
+ */
+INTRINSIC(get_buffer_size, 1, ARR(1), true, 1, 0, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+
+/*
  * a barrier is an intrinsic with no inputs/outputs but which can't be moved
  * around/optimized in general
  */
@@ -79,8 +86,29 @@ BARRIER(memory_barrier)
 /** A conditional discard, with a single boolean source. */
 INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
 
+/**
+ * Basic Geometry Shader intrinsics.
+ *
+ * emit_vertex implements GLSL's EmitStreamVertex() built-in.  It takes a single
+ * index, which is the stream ID to write to.
+ *
+ * end_primitive implements GLSL's EndPrimitive() built-in.
+ */
 INTRINSIC(emit_vertex,   0, ARR(), false, 0, 0, 1, 0)
 INTRINSIC(end_primitive, 0, ARR(), false, 0, 0, 1, 0)
+
+/**
+ * Geometry Shader intrinsics with a vertex count.
+ *
+ * Alternatively, drivers may implement these intrinsics, and use
+ * nir_lower_gs_intrinsics() to convert from the basic intrinsics.
+ *
+ * These maintain a count of the number of vertices emitted, as an additional
+ * unsigned integer source.
+ */
+INTRINSIC(emit_vertex_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
+INTRINSIC(end_primitive_with_counter, 1, ARR(1), false, 0, 0, 1, 0)
+INTRINSIC(set_vertex_count, 1, ARR(1), false, 0, 0, 0, 0)
 
 /*
  * Atomic counters
@@ -125,20 +153,52 @@ INTRINSIC(image_atomic_exchange, 3, ARR(4, 1, 1), true, 1, 1, 0, 0)
 INTRINSIC(image_atomic_comp_swap, 4, ARR(4, 1, 1, 1), true, 1, 1, 0, 0)
 INTRINSIC(image_size, 0, ARR(), true, 4, 1, 0,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
-#define SYSTEM_VALUE(name, components) \
-   INTRINSIC(load_##name, 0, ARR(), true, components, 0, 0, \
+/*
+ * SSBO atomic intrinsics
+ *
+ * All of the SSBO atomic memory operations read a value from memory,
+ * compute a new value using one of the operations below, write the new
+ * value to memory, and return the original value read.
+ *
+ * All operations take 3 sources except CompSwap that takes 4. These
+ * sources represent:
+ *
+ * 0: The SSBO buffer index.
+ * 1: The offset into the SSBO buffer of the variable that the atomic
+ *    operation will operate on.
+ * 2: The data parameter to the atomic function (i.e. the value to add
+ *    in ssbo_atomic_add, etc).
+ * 3: For CompSwap only: the second data parameter.
+ */
+INTRINSIC(ssbo_atomic_add, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_min, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_max, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_and, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_or, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_xor, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_exchange, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+INTRINSIC(ssbo_atomic_comp_swap, 4, ARR(1, 1, 1, 1), true, 1, 0, 0, 0)
+
+#define SYSTEM_VALUE(name, components, num_indices) \
+   INTRINSIC(load_##name, 0, ARR(), true, components, 0, num_indices, \
    NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
-SYSTEM_VALUE(front_face, 1)
-SYSTEM_VALUE(vertex_id, 1)
-SYSTEM_VALUE(vertex_id_zero_base, 1)
-SYSTEM_VALUE(base_vertex, 1)
-SYSTEM_VALUE(instance_id, 1)
-SYSTEM_VALUE(sample_id, 1)
-SYSTEM_VALUE(sample_pos, 2)
-SYSTEM_VALUE(sample_mask_in, 1)
-SYSTEM_VALUE(invocation_id, 1)
+SYSTEM_VALUE(front_face, 1, 0)
+SYSTEM_VALUE(vertex_id, 1, 0)
+SYSTEM_VALUE(vertex_id_zero_base, 1, 0)
+SYSTEM_VALUE(base_vertex, 1, 0)
+SYSTEM_VALUE(instance_id, 1, 0)
+SYSTEM_VALUE(sample_id, 1, 0)
+SYSTEM_VALUE(sample_pos, 2, 0)
+SYSTEM_VALUE(sample_mask_in, 1, 0)
+SYSTEM_VALUE(invocation_id, 1, 0)
+SYSTEM_VALUE(local_invocation_id, 3, 0)
+SYSTEM_VALUE(work_group_id, 3, 0)
+SYSTEM_VALUE(user_clip_plane, 4, 1) /* const_index[0] is user_clip_plane[idx] */
+SYSTEM_VALUE(num_work_groups, 3, 0)
 
 /*
  * The format of the indices depends on the type of the load.  For uniforms,
@@ -168,20 +228,24 @@ SYSTEM_VALUE(invocation_id, 1)
 LOAD(uniform, 0, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(ubo, 1, 2, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 LOAD(input, 0, 1, NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
-/* LOAD(ssbo, 1, 0) */
+LOAD(ssbo, 1, 1, NIR_INTRINSIC_CAN_ELIMINATE)
 
 /*
  * Stores work the same way as loads, except now the first register input is
  * the value or array to store and the optional second input is the indirect
- * offset.
+ * offset. SSBO stores are similar, but they accept an extra source for the
+ * block index and an extra index with the writemask to use.
  */
 
-#define STORE(name, num_indices, flags) \
-   INTRINSIC(store_##name, 1, ARR(0), false, 0, 0, num_indices, flags) \
-   INTRINSIC(store_##name##_indirect, 2, ARR(0, 1), false, 0, 0, \
-             num_indices, flags) \
+#define STORE(name, extra_srcs, extra_srcs_size, extra_indices, flags) \
+   INTRINSIC(store_##name, 1 + extra_srcs, \
+             ARR(0, extra_srcs_size, extra_srcs_size, extra_srcs_size), \
+             false, 0, 0, 1 + extra_indices, flags) \
+   INTRINSIC(store_##name##_indirect, 2 + extra_srcs, \
+             ARR(0, 1, extra_srcs_size, extra_srcs_size), \
+             false, 0, 0, 1 + extra_indices, flags)
 
-STORE(output, 1, 0)
-/* STORE(ssbo, 2, 0) */
+STORE(output, 0, 0, 0, 0)
+STORE(ssbo, 1, 1, 1, 0)
 
-LAST_INTRINSIC(store_output_indirect)
+LAST_INTRINSIC(store_ssbo_indirect)

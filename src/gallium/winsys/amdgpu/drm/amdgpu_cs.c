@@ -200,17 +200,19 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
 
 static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
 {
-   /* The maximum size is 4MB - 1B, which is unaligned.
-    * Use aligned size 4MB - 16B. */
-   const unsigned max_ib_size = (1024 * 1024 - 16) * 4;
-   const unsigned min_ib_size = 24 * 1024 * 4;
+   /* Small IBs are better than big IBs, because the GPU goes idle quicker
+    * and there is less waiting for buffers and fences. Proof:
+    *   http://www.phoronix.com/scan.php?page=article&item=mesa-111-si&num=1
+    */
+   const unsigned buffer_size = 128 * 1024 * 4;
+   const unsigned ib_size = 20 * 1024 * 4;
 
    cs->base.cdw = 0;
    cs->base.buf = NULL;
 
    /* Allocate a new buffer for IBs if the current buffer is all used. */
    if (!cs->big_ib_buffer ||
-       cs->used_ib_space + min_ib_size > cs->big_ib_buffer->size) {
+       cs->used_ib_space + ib_size > cs->big_ib_buffer->size) {
       struct radeon_winsys *ws = &cs->ctx->ws->base;
       struct radeon_winsys_cs_handle *winsys_bo;
 
@@ -219,7 +221,7 @@ static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
       cs->ib_mapped = NULL;
       cs->used_ib_space = 0;
 
-      cs->big_ib_buffer = ws->buffer_create(ws, max_ib_size,
+      cs->big_ib_buffer = ws->buffer_create(ws, buffer_size,
                                             4096, true,
                                             RADEON_DOMAIN_GTT,
                                             RADEON_FLAG_CPU_ACCESS);
@@ -239,7 +241,7 @@ static bool amdgpu_get_new_ib(struct amdgpu_cs *cs)
 
    cs->ib.ib_mc_address = cs->big_ib_winsys_buffer->va + cs->used_ib_space;
    cs->base.buf = (uint32_t*)(cs->ib_mapped + cs->used_ib_space);
-   cs->base.max_dw = (cs->big_ib_buffer->size - cs->used_ib_space) / 4;
+   cs->base.max_dw = ib_size / 4;
    return true;
 }
 
@@ -599,25 +601,13 @@ static void amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    switch (cs->base.ring_type) {
    case RING_DMA:
       /* pad DMA ring to 8 DWs */
-      if (ws->info.chip_class <= SI) {
-         while (rcs->cdw & 7)
-            OUT_CS(&cs->base, 0xf0000000); /* NOP packet */
-      } else {
-         while (rcs->cdw & 7)
-            OUT_CS(&cs->base, 0x00000000); /* NOP packet */
-      }
+      while (rcs->cdw & 7)
+         OUT_CS(&cs->base, 0x00000000); /* NOP packet */
       break;
    case RING_GFX:
-      /* pad DMA ring to 8 DWs to meet CP fetch alignment requirements
-             * r6xx, requires at least 4 dw alignment to avoid a hw bug.
-             */
-      if (ws->info.chip_class <= SI) {
-         while (rcs->cdw & 7)
-            OUT_CS(&cs->base, 0x80000000); /* type2 nop packet */
-      } else {
-         while (rcs->cdw & 7)
-            OUT_CS(&cs->base, 0xffff1000); /* type3 nop packet */
-      }
+      /* pad GFX ring to 8 DWs to meet CP fetch alignment requirements */
+      while (rcs->cdw & 7)
+         OUT_CS(&cs->base, 0xffff1000); /* type3 nop packet */
       break;
    case RING_UVD:
       while (rcs->cdw & 15)

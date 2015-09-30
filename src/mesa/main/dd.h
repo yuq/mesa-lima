@@ -269,20 +269,25 @@ struct dd_function_table {
                            struct gl_renderbuffer *rb,
                            GLint x, GLint y,
                            GLsizei width, GLsizei height);
-
    /**
     * Called by glCopyImageSubData().
     *
-    * This function should copy one 2-D slice from srcTexImage to
-    * dstTexImage.  If one of the textures is 3-D or is a 1-D or 2-D array
+    * This function should copy one 2-D slice from src_teximage or
+    * src_renderbuffer to dst_teximage or dst_renderbuffer.  Either the
+    * teximage or renderbuffer pointer will be non-null to indicate which
+    * is the real src/dst.
+    *
+    * If one of the textures is 3-D or is a 1-D or 2-D array
     * texture, this function will be called multiple times: once for each
     * slice.  If one of the textures is a cube map, this function will be
     * called once for each face to be copied.
     */
    void (*CopyImageSubData)(struct gl_context *ctx,
-                            struct gl_texture_image *src_image,
+                            struct gl_texture_image *src_teximage,
+                            struct gl_renderbuffer *src_renderbuffer,
                             int src_x, int src_y, int src_z,
-                            struct gl_texture_image *dstTexImage,
+                            struct gl_texture_image *dst_teximage,
+                            struct gl_renderbuffer *dst_renderbuffer,
                             int dst_x, int dst_y, int dst_z,
                             int src_width, int src_height);
 
@@ -1016,6 +1021,7 @@ struct dd_function_table {
     */
    /*@{*/
    void (*DispatchCompute)(struct gl_context *ctx, const GLuint *num_groups);
+   void (*DispatchComputeIndirect)(struct gl_context *ctx, GLintptr indirect);
    /*@}*/
 };
 

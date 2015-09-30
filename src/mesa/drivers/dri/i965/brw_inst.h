@@ -39,6 +39,9 @@
 extern "C" {
 #endif
 
+/** Maximum SEND message length */
+#define BRW_MAX_MSG_LENGTH 15
+
 /* brw_context.h has a forward declaration of brw_inst, so name the struct. */
 typedef struct brw_inst {
    uint64_t data[2];

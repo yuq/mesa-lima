@@ -78,7 +78,8 @@ enum glsl_sampler_dim {
 enum glsl_interface_packing {
    GLSL_INTERFACE_PACKING_STD140,
    GLSL_INTERFACE_PACKING_SHARED,
-   GLSL_INTERFACE_PACKING_PACKED
+   GLSL_INTERFACE_PACKING_PACKED,
+   GLSL_INTERFACE_PACKING_STD430
 };
 
 enum glsl_matrix_layout {
@@ -300,6 +301,14 @@ struct glsl_type {
    unsigned component_slots() const;
 
    /**
+    * Calculate offset between the base location of the struct in
+    * uniform storage and a struct member.
+    * For the initial call, length is the index of the member to find the
+    * offset for.
+    */
+   unsigned record_location_offset(unsigned length) const;
+
+   /**
     * Calculate the number of unique values from glGetUniformLocation for the
     * elements of the type.
     *
@@ -332,6 +341,25 @@ struct glsl_type {
     * elements in the array)
     */
    unsigned std140_size(bool row_major) const;
+
+   /**
+    * Alignment in bytes of the start of this type in a std430 shader
+    * storage block.
+    */
+   unsigned std430_base_alignment(bool row_major) const;
+
+   /**
+    * Calculate array stride in bytes of this type in a std430 shader storage
+    * block.
+    */
+   unsigned std430_array_stride(bool row_major) const;
+
+   /**
+    * Size in bytes of this type in a std430 shader storage block.
+    *
+    * Note that this is not GL_BUFFER_SIZE
+    */
+   unsigned std430_size(bool row_major) const;
 
    /**
     * \brief Can this type be implicitly converted to another?
@@ -555,6 +583,25 @@ struct glsl_type {
          t = t->fields.array;
 
       return t;
+   }
+
+   /**
+    * Return the total number of elements in an array including the elements
+    * in arrays of arrays.
+    */
+   unsigned arrays_of_arrays_size() const
+   {
+      if (!is_array())
+         return 0;
+
+      unsigned size = length;
+      const glsl_type *base_type = fields.array;
+
+      while (base_type->is_array()) {
+         size = size * base_type->length;
+         base_type = base_type->fields.array;
+      }
+      return size;
    }
 
    /**
@@ -800,6 +847,16 @@ struct glsl_struct_field {
     * streams (as in ir_variable::stream). -1 otherwise.
     */
    int stream;
+
+   /**
+    * Image qualifiers, applicable to buffer variables defined in shader
+    * storage buffer objects (SSBOs)
+    */
+   unsigned image_read_only:1;
+   unsigned image_write_only:1;
+   unsigned image_coherent:1;
+   unsigned image_volatile:1;
+   unsigned image_restrict:1;
 
 #ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)

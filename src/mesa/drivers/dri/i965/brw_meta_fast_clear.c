@@ -204,7 +204,7 @@ brw_draw_rectlist(struct gl_context *ctx, struct rect *rect, int num_instances)
 }
 
 static void
-get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
+get_fast_clear_rect(struct gl_framebuffer *fb,
                     struct intel_renderbuffer *irb, struct rect *rect)
 {
    unsigned int x_align, y_align;
@@ -226,7 +226,7 @@ get_fast_clear_rect(struct brw_context *brw, struct gl_framebuffer *fb,
        * alignment size returned by intel_get_non_msrt_mcs_alignment(), but
        * with X alignment multiplied by 16 and Y alignment multiplied by 32.
        */
-      intel_get_non_msrt_mcs_alignment(brw, irb->mt, &x_align, &y_align);
+      intel_get_non_msrt_mcs_alignment(irb->mt, &x_align, &y_align);
       x_align *= 16;
       y_align *= 32;
 
@@ -516,7 +516,7 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
          irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
          irb->need_downsample = true;
          fast_clear_buffers |= 1 << index;
-         get_fast_clear_rect(brw, fb, irb, &fast_clear_rect);
+         get_fast_clear_rect(fb, irb, &fast_clear_rect);
          break;
 
       case REP_CLEAR:
@@ -653,7 +653,7 @@ get_resolve_rect(struct brw_context *brw,
     * by 8 and 16 and 8 and 8 for SKL.
     */
 
-   intel_get_non_msrt_mcs_alignment(brw, mt, &x_align, &y_align);
+   intel_get_non_msrt_mcs_alignment(mt, &x_align, &y_align);
    if (brw->gen >= 9) {
       x_scaledown = x_align * 8;
       y_scaledown = y_align * 8;

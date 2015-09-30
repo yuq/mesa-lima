@@ -95,7 +95,7 @@ struct tgsi_shader_info
    boolean writes_viewport_index;
    boolean writes_layer;
    boolean is_msaa_sampler[PIPE_MAX_SAMPLERS];
-
+   boolean uses_doubles; /**< uses any of the double instructions */
    unsigned clipdist_writemask;
    unsigned culldist_writemask;
    unsigned num_written_culldistance;
@@ -113,6 +113,11 @@ struct tgsi_shader_info
    unsigned indirect_files_written;
 
    unsigned properties[TGSI_PROPERTY_COUNT]; /* index with TGSI_PROPERTY_ */
+
+   /**
+    * Max nesting limit of loops/if's
+    */
+   unsigned max_depth;
 };
 
 extern void

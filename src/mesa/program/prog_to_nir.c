@@ -527,8 +527,7 @@ ptn_dp4(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 static void
 ptn_dph(nir_builder *b, nir_alu_dest dest, nir_ssa_def **src)
 {
-   nir_ssa_def *dp3 = nir_fdot3(b, src[0], src[1]);
-   ptn_move_dest(b, dest, nir_fadd(b, dp3, ptn_channel(b, src[1], W)));
+   ptn_move_dest(b, dest, nir_fdph(b, src[0], src[1]));
 }
 
 static void
@@ -1056,7 +1055,7 @@ setup_registers_and_variables(struct ptn_compile *c)
    c->temp_regs = rzalloc_array(c, nir_register *, c->prog->NumTemporaries);
 
    nir_register *reg;
-   for (int i = 0; i < c->prog->NumTemporaries; i++) {
+   for (unsigned i = 0; i < c->prog->NumTemporaries; i++) {
       reg = nir_local_reg_create(b->impl);
       if (!reg) {
          c->error = true;

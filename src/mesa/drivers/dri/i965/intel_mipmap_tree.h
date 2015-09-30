@@ -1,5 +1,4 @@
-/**************************************************************************
- *
+/*
  * Copyright 2006 VMware, Inc.
  * All Rights Reserved.
  *
@@ -7,7 +6,7 @@
  * copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
  * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sub license, and/or sell copies of the Software, and to
+ * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
  *
@@ -17,13 +16,12 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
  * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT.
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
  * IN NO EVENT SHALL VMWARE AND/OR ITS SUPPLIERS BE LIABLE FOR
  * ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- *
- **************************************************************************/
+ */
 
 /** @file intel_mipmap_tree.h
  *
@@ -517,8 +515,7 @@ struct intel_mipmap_tree
 };
 
 void
-intel_get_non_msrt_mcs_alignment(struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt,
+intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
                                  unsigned *width_px, unsigned *height);
 bool
 intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling);
@@ -597,6 +594,10 @@ intel_miptree_check_level_layer(struct intel_mipmap_tree *mt,
                                 uint32_t level,
                                 uint32_t layer)
 {
+   (void) mt;
+   (void) level;
+   (void) layer;
+
    assert(level >= mt->first_level);
    assert(level <= mt->last_level);
    assert(layer < mt->level[level].depth);
@@ -618,13 +619,17 @@ intel_miptree_get_image_offset(const struct intel_mipmap_tree *mt,
 			       GLuint *x, GLuint *y);
 
 void
-intel_miptree_get_dimensions_for_image(struct gl_texture_image *image,
-                                       int *width, int *height, int *depth);
+intel_get_image_dims(struct gl_texture_image *image,
+                     int *width, int *height, int *depth);
 
 void
-intel_miptree_get_tile_masks(const struct intel_mipmap_tree *mt,
-                             uint32_t *mask_x, uint32_t *mask_y,
-                             bool map_stencil_as_y_tiled);
+intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+                     bool map_stencil_as_y_tiled,
+                     uint32_t *mask_x, uint32_t *mask_y);
+
+void
+intel_get_tile_dims(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
+                    uint32_t *tile_w, uint32_t *tile_h);
 
 uint32_t
 intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
@@ -770,12 +775,6 @@ void
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
                    uint32_t layout_flags);
-
-void *intel_miptree_map_raw(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt);
-
-void intel_miptree_unmap_raw(struct brw_context *brw,
-                             struct intel_mipmap_tree *mt);
 
 void
 intel_miptree_map(struct brw_context *brw,

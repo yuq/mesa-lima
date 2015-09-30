@@ -586,6 +586,7 @@ validate_block(nir_block *block, validate_state *state)
    }
 
    assert(block->successors[0] != NULL);
+   assert(block->successors[0] != block->successors[1]);
 
    for (unsigned i = 0; i < 2; i++) {
       if (block->successors[i] != NULL) {

@@ -359,8 +359,7 @@ isolate_phi_nodes_block(nir_block *block, void *void_state)
       exec_list_push_tail(&block_pcopy->entries, &entry->node);
 
       nir_ssa_def_rewrite_uses(&phi->dest.ssa,
-                               nir_src_for_ssa(&entry->dest.ssa),
-                               state->mem_ctx);
+                               nir_src_for_ssa(&entry->dest.ssa));
 
       nir_instr_rewrite_src(&block_pcopy->instr, &entry->src,
                             nir_src_for_ssa(&phi->dest.ssa));
@@ -493,7 +492,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
       reg->num_array_elems = 0;
    }
 
-   nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg), state->mem_ctx);
+   nir_ssa_def_rewrite_uses(def, nir_src_for_reg(reg));
    assert(list_empty(&def->uses) && list_empty(&def->if_uses));
 
    if (def->parent_instr->type == nir_instr_type_ssa_undef) {
@@ -513,9 +512,7 @@ rewrite_ssa_def(nir_ssa_def *def, void *void_state)
     */
    nir_dest *dest = exec_node_data(nir_dest, def, ssa);
 
-   *dest = nir_dest_for_reg(reg);
-   dest->reg.parent_instr = state->instr;
-   list_addtail(&dest->reg.def_link, &reg->defs);
+   nir_instr_rewrite_dest(state->instr, dest, nir_dest_for_reg(reg));
 
    return true;
 }
@@ -556,7 +553,7 @@ emit_copy(nir_parallel_copy_instr *pcopy, nir_src src, nir_src dest_src,
       assert(src.reg.reg->num_components >= dest_src.reg.reg->num_components);
 
    nir_alu_instr *mov = nir_alu_instr_create(mem_ctx, nir_op_imov);
-   nir_src_copy(&mov->src[0].src, &src, mem_ctx);
+   nir_src_copy(&mov->src[0].src, &src, mov);
    mov->dest.dest = nir_dest_for_reg(dest_src.reg.reg);
    mov->dest.write_mask = (1 << dest_src.reg.reg->num_components) - 1;
 

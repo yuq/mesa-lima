@@ -61,15 +61,12 @@
 #define HAVE_LINE_STRIPS 1
 #define HAVE_TRIANGLES   1
 #define HAVE_TRI_STRIPS  1
-#define HAVE_TRI_STRIP_1 0      /* has it, template can't use it yet */
 #define HAVE_TRI_FANS    1
 #define HAVE_POLYGONS    1
-#define HAVE_QUADS       0
-#define HAVE_QUAD_STRIPS 0
 
 #define HAVE_ELTS        0
 
-static uint32_t hw_prim[GL_POLYGON + 1] = {
+static const uint32_t hw_prim[GL_POLYGON + 1] = {
    0,
    PRIM3D_LINELIST,
    PRIM3D_LINESTRIP,
@@ -251,7 +248,7 @@ intel_run_render(struct gl_context * ctx, struct tnl_pipeline_stage *stage)
          continue;
 
       intel_render_tab_verts[prim & PRIM_MODE_MASK] (ctx, start,
-                                                     start + length, prim);
+                                                     length, prim);
    }
 
    tnl->Driver.Render.Finish(ctx);

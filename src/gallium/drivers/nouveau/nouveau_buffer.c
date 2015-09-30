@@ -80,7 +80,12 @@ release_allocation(struct nouveau_mm_allocation **mm,
 inline void
 nouveau_buffer_release_gpu_storage(struct nv04_resource *buf)
 {
-   nouveau_bo_ref(NULL, &buf->bo);
+   if (buf->fence && buf->fence->state < NOUVEAU_FENCE_STATE_FLUSHED) {
+      nouveau_fence_work(buf->fence, nouveau_fence_unref_bo, buf->bo);
+      buf->bo = NULL;
+   } else {
+      nouveau_bo_ref(NULL, &buf->bo);
+   }
 
    if (buf->mm)
       release_allocation(&buf->mm, buf->fence);
@@ -206,8 +211,8 @@ nouveau_transfer_write(struct nouveau_context *nv, struct nouveau_transfer *tx,
       nv->copy_data(nv, buf->bo, buf->offset + base, buf->domain,
                     tx->bo, tx->offset + offset, NOUVEAU_BO_GART, size);
    else
-   if ((buf->base.bind & PIPE_BIND_CONSTANT_BUFFER) && nv->push_cb && can_cb)
-      nv->push_cb(nv, buf->bo, buf->domain, buf->offset, buf->base.width0,
+   if (nv->push_cb && can_cb)
+      nv->push_cb(nv, buf,
                   base, size / 4, (const uint32_t *)data);
    else
       nv->push_data(nv, buf->bo, buf->offset + base, buf->domain, size, data);
@@ -281,7 +286,8 @@ nouveau_buffer_transfer_del(struct nouveau_context *nv,
 {
    if (tx->map) {
       if (likely(tx->bo)) {
-         nouveau_bo_ref(NULL, &tx->bo);
+         nouveau_fence_work(nv->screen->fence.current,
+                            nouveau_fence_unref_bo, tx->bo);
          if (tx->mm)
             release_allocation(&tx->mm, nv->screen->fence.current);
       } else {
@@ -532,8 +538,13 @@ nouveau_buffer_transfer_unmap(struct pipe_context *pipe,
    struct nv04_resource *buf = nv04_resource(transfer->resource);
 
    if (tx->base.usage & PIPE_TRANSFER_WRITE) {
-      if (!(tx->base.usage & PIPE_TRANSFER_FLUSH_EXPLICIT) && tx->map)
-         nouveau_transfer_write(nv, tx, 0, tx->base.box.width);
+      if (!(tx->base.usage & PIPE_TRANSFER_FLUSH_EXPLICIT)) {
+         if (tx->map)
+            nouveau_transfer_write(nv, tx, 0, tx->base.box.width);
+
+         util_range_add(&buf->valid_buffer_range,
+                        tx->base.box.x, tx->base.box.x + tx->base.box.width);
+      }
 
       if (likely(buf->domain)) {
          const uint8_t bind = buf->base.bind;
@@ -541,9 +552,6 @@ nouveau_buffer_transfer_unmap(struct pipe_context *pipe,
          if (bind & (PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_INDEX_BUFFER))
             nv->vbo_dirty = true;
       }
-
-      util_range_add(&buf->valid_buffer_range,
-                     tx->base.box.x, tx->base.box.x + tx->base.box.width);
    }
 
    if (!tx->bo && (tx->base.usage & PIPE_TRANSFER_WRITE))
@@ -780,7 +788,7 @@ nouveau_buffer_migrate(struct nouveau_context *nv,
       nv->copy_data(nv, buf->bo, buf->offset, new_domain,
                     bo, offset, old_domain, buf->base.width0);
 
-      nouveau_bo_ref(NULL, &bo);
+      nouveau_fence_work(screen->fence.current, nouveau_fence_unref_bo, bo);
       if (mm)
          release_allocation(&mm, screen->fence.current);
    } else

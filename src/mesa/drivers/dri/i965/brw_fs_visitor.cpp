@@ -783,8 +783,8 @@ fs_visitor::emit_fb_writes()
 void
 fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
 {
-   const struct brw_vue_prog_key *key =
-      (const struct brw_vue_prog_key *) this->key;
+   const struct brw_vs_prog_key *key =
+      (const struct brw_vs_prog_key *) this->key;
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       this->userplane[i] = fs_reg(UNIFORM, uniforms);
@@ -806,11 +806,11 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
    struct brw_vue_prog_data *vue_prog_data =
       (struct brw_vue_prog_data *) prog_data;
-   const struct brw_vue_prog_key *key =
-      (const struct brw_vue_prog_key *) this->key;
+   const struct brw_vs_prog_key *key =
+      (const struct brw_vs_prog_key *) this->key;
 
    /* Bail unless some sort of legacy clipping is enabled */
-   if (!key->userclip_active || prog->UsesClipDistanceOut)
+   if (key->nr_userclip_plane_consts == 0)
       return;
 
    /* From the GLSL 1.30 spec, section 7.1 (Vertex Shader Special Variables):
@@ -840,7 +840,9 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
    const fs_builder abld = bld.annotate("user clip distances");
 
    this->outputs[VARYING_SLOT_CLIP_DIST0] = vgrf(glsl_type::vec4_type);
+   this->output_components[VARYING_SLOT_CLIP_DIST0] = 4;
    this->outputs[VARYING_SLOT_CLIP_DIST1] = vgrf(glsl_type::vec4_type);
+   this->output_components[VARYING_SLOT_CLIP_DIST1] = 4;
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       fs_reg u = userplane[i];
@@ -937,9 +939,6 @@ fs_visitor::emit_urb_writes()
          unreachable("unexpected scalar vs output");
          break;
 
-      case BRW_VARYING_SLOT_PAD:
-         break;
-
       default:
          /* gl_Position is always in the vue map, but isn't always written by
           * the shader.  Other varyings (clip distances) get added to the vue
@@ -949,7 +948,8 @@ fs_visitor::emit_urb_writes()
           * slot for writing we flush a mlen 5 urb write, otherwise we just
           * advance the urb_offset.
           */
-         if (this->outputs[varying].file == BAD_FILE) {
+         if (varying == BRW_VARYING_SLOT_PAD ||
+             this->outputs[varying].file == BAD_FILE) {
             if (length > 0)
                flush = true;
             else
@@ -972,8 +972,10 @@ fs_visitor::emit_urb_writes()
                sources[length++] = reg;
             }
          } else {
-            for (int i = 0; i < 4; i++)
+            for (unsigned i = 0; i < output_components[varying]; i++)
                sources[length++] = offset(this->outputs[varying], bld, i);
+            for (unsigned i = output_components[varying]; i < 4; i++)
+               sources[length++] = fs_reg(0);
          }
          break;
       }
@@ -1041,12 +1043,14 @@ fs_visitor::emit_barrier()
 
    fs_reg payload = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
 
+   const fs_builder pbld = bld.exec_all().group(8, 0);
+
    /* Clear the message payload */
-   bld.exec_all().MOV(payload, fs_reg(0u));
+   pbld.MOV(payload, fs_reg(0u));
 
    /* Copy bits 27:24 of r0.2 (barrier id) to the message payload reg.2 */
    fs_reg r0_2 = fs_reg(retype(brw_vec1_grf(0, 2), BRW_REGISTER_TYPE_UD));
-   bld.exec_all().AND(component(payload, 2), r0_2, fs_reg(0x0f000000u));
+   pbld.AND(component(payload, 2), r0_2, fs_reg(0x0f000000u));
 
    /* Emit a gateway "barrier" message using the payload we set up, followed
     * by a wait instruction.
@@ -1076,8 +1080,10 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
       key_tex = &((const brw_wm_prog_key *) key)->tex;
       break;
    case MESA_SHADER_VERTEX:
+      key_tex = &((const brw_vs_prog_key *) key)->tex;
+      break;
    case MESA_SHADER_GEOMETRY:
-      key_tex = &((const brw_vue_prog_key *) key)->tex;
+      key_tex = &((const brw_gs_prog_key *) key)->tex;
       break;
    case MESA_SHADER_COMPUTE:
       key_tex = &((const brw_cs_prog_key*) key)->tex;

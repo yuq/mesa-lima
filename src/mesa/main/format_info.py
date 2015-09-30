@@ -111,7 +111,7 @@ def get_channel_bits(fmat, chan_name):
             return 1 if fmat.has_channel('a') else 0
          else:
             return 0
-      elif fmat.layout == 'rgtc':
+      elif fmat.layout in ('rgtc', 'latc'):
          return 8 if fmat.has_channel(chan_name) else 0
       elif fmat.layout in ('etc1', 'etc2'):
          if fmat.name.endswith('_ALPHA1') and chan_name == 'a':

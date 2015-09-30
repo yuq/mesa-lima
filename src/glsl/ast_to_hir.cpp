@@ -67,6 +67,48 @@ static void
 remove_per_vertex_blocks(exec_list *instructions,
                          _mesa_glsl_parse_state *state, ir_variable_mode mode);
 
+/**
+ * Visitor class that finds the first instance of any write-only variable that
+ * is ever read, if any
+ */
+class read_from_write_only_variable_visitor : public ir_hierarchical_visitor
+{
+public:
+   read_from_write_only_variable_visitor() : found(NULL)
+   {
+   }
+
+   virtual ir_visitor_status visit(ir_dereference_variable *ir)
+   {
+      if (this->in_assignee)
+         return visit_continue;
+
+      ir_variable *var = ir->variable_referenced();
+      /* We can have image_write_only set on both images and buffer variables,
+       * but in the former there is a distinction between reads from
+       * the variable itself (write_only) and from the memory they point to
+       * (image_write_only), while in the case of buffer variables there is
+       * no such distinction, that is why this check here is limited to
+       * buffer variables alone.
+       */
+      if (!var || var->data.mode != ir_var_shader_storage)
+         return visit_continue;
+
+      if (var->data.image_write_only) {
+         found = var;
+         return visit_stop;
+      }
+
+      return visit_continue;
+   }
+
+   ir_variable *get_variable() {
+      return found;
+   }
+
+private:
+   ir_variable *found;
+};
 
 void
 _mesa_ast_to_hir(exec_list *instructions, struct _mesa_glsl_parse_state *state)
@@ -162,6 +204,20 @@ _mesa_ast_to_hir(exec_list *instructions, struct _mesa_glsl_parse_state *state)
     */
    remove_per_vertex_blocks(instructions, state, ir_var_shader_in);
    remove_per_vertex_blocks(instructions, state, ir_var_shader_out);
+
+   /* Check that we don't have reads from write-only variables */
+   read_from_write_only_variable_visitor v;
+   v.run(instructions);
+   ir_variable *error_var = v.get_variable();
+   if (error_var) {
+      /* It would be nice to have proper location information, but for that
+       * we would need to check this as we process each kind of AST node
+       */
+      YYLTYPE loc;
+      memset(&loc, 0, sizeof(loc));
+      _mesa_glsl_error(&loc, state, "Read from write-only variable `%s'",
+                       error_var->name);
+   }
 }
 
 
@@ -820,7 +876,16 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
                           "assignment to %s",
                           non_lvalue_description);
          error_emitted = true;
-      } else if (lhs_var != NULL && lhs_var->data.read_only) {
+      } else if (lhs_var != NULL && (lhs_var->data.read_only ||
+                 (lhs_var->data.mode == ir_var_shader_storage &&
+                  lhs_var->data.image_read_only))) {
+         /* We can have image_read_only set on both images and buffer variables,
+          * but in the former there is a distinction between assignments to
+          * the variable itself (read_only) and to the memory they point to
+          * (image_read_only), while in the case of buffer variables there is
+          * no such distinction, that is why this check here is limited to
+          * buffer variables alone.
+          */
          _mesa_glsl_error(&lhs_loc, state,
                           "assignment to read-only variable '%s'",
                           lhs_var->name);
@@ -2115,7 +2180,7 @@ validate_binding_qualifier(struct _mesa_glsl_parse_state *state,
    }
 
    const struct gl_context *const ctx = state->ctx;
-   unsigned elements = type->is_array() ? type->length : 1;
+   unsigned elements = type->is_array() ? type->arrays_of_arrays_size() : 1;
    unsigned max_index = qual->binding + elements - 1;
    const glsl_type *base_type = type->without_array();
 
@@ -2921,11 +2986,13 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
        var->data.depth_layout = ir_depth_layout_none;
 
    if (qual->flags.q.std140 ||
+       qual->flags.q.std430 ||
        qual->flags.q.packed ||
        qual->flags.q.shared) {
       _mesa_glsl_error(loc, state,
-                       "uniform block layout qualifiers std140, packed, and "
-                       "shared can only be applied to uniform blocks, not "
+                       "uniform and shader storage block layout qualifiers "
+                       "std140, std430, packed, and shared can only be "
+                       "applied to uniform or shader storage blocks, not "
                        "members");
    }
 
@@ -4579,7 +4646,7 @@ ast_function::hir(exec_list *instructions,
    if (state->es_shader && state->language_version >= 300) {
       /* Local shader has no exact candidates; check the built-ins. */
       _mesa_glsl_initialize_builtin_functions();
-      if (_mesa_glsl_find_builtin_function_by_name(state, name)) {
+      if (_mesa_glsl_find_builtin_function_by_name(name)) {
          YYLTYPE loc = this->get_location();
          _mesa_glsl_error(& loc, state,
                           "A shader cannot redefine or overload built-in "
@@ -5605,9 +5672,18 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                                          bool is_interface,
                                          enum glsl_matrix_layout matrix_layout,
                                          bool allow_reserved_names,
-                                         ir_variable_mode var_mode)
+                                         ir_variable_mode var_mode,
+                                         ast_type_qualifier *layout)
 {
    unsigned decl_count = 0;
+
+   /* For blocks that accept memory qualifiers (i.e. shader storage), verify
+    * that we don't have incompatible qualifiers
+    */
+   if (layout && layout->flags.q.read_only && layout->flags.q.write_only) {
+      _mesa_glsl_error(&loc, state,
+                       "Interface block sets both readonly and writeonly");
+   }
 
    /* Make an initial pass over the list of fields to determine how
     * many there are.  Each element in this list is an ast_declarator_list.
@@ -5657,17 +5733,16 @@ ast_process_structure_or_interface_block(exec_list *instructions,
           * is_interface case, will have resulted in compilation having
           * already halted due to a syntax error.
           */
-         const struct glsl_type *field_type =
-            decl_type != NULL ? decl_type : glsl_type::error_type;
+         assert(decl_type);
 
-         if (is_interface && field_type->contains_opaque()) {
+         if (is_interface && decl_type->contains_opaque()) {
             YYLTYPE loc = decl_list->get_location();
             _mesa_glsl_error(&loc, state,
                              "uniform/buffer in non-default interface block contains "
                              "opaque variable");
          }
 
-         if (field_type->contains_atomic()) {
+         if (decl_type->contains_atomic()) {
             /* From section 4.1.7.3 of the GLSL 4.40 spec:
              *
              *    "Members of structures cannot be declared as atomic counter
@@ -5678,7 +5753,7 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                              "shader storage block or uniform block");
          }
 
-         if (field_type->contains_image()) {
+         if (decl_type->contains_image()) {
             /* FINISHME: Same problem as with atomic counters.
              * FINISHME: Request clarification from Khronos and add
              * FINISHME: spec quotation here.
@@ -5692,12 +5767,14 @@ ast_process_structure_or_interface_block(exec_list *instructions,
          const struct ast_type_qualifier *const qual =
             & decl_list->type->qualifier;
          if (qual->flags.q.std140 ||
+             qual->flags.q.std430 ||
              qual->flags.q.packed ||
              qual->flags.q.shared) {
             _mesa_glsl_error(&loc, state,
                              "uniform/shader storage block layout qualifiers "
-                             "std140, packed, and shared can only be applied "
-                             "to uniform/shader storage blocks, not members");
+                             "std140, std430, packed, and shared can only be "
+                             "applied to uniform/shader storage blocks, not "
+                             "members");
          }
 
          if (qual->flags.q.constant) {
@@ -5707,8 +5784,8 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                              "to struct or interface block members");
          }
 
-         field_type = process_array_type(&loc, decl_type,
-                                         decl->array_specifier, state);
+         const struct glsl_type *field_type =
+            process_array_type(&loc, decl_type, decl->array_specifier, state);
          fields[i].type = field_type;
          fields[i].name = decl->identifier;
          fields[i].location = -1;
@@ -5768,6 +5845,44 @@ ast_process_structure_or_interface_block(exec_list *instructions,
                    || fields[i].matrix_layout == GLSL_MATRIX_LAYOUT_COLUMN_MAJOR);
          }
 
+         /* Image qualifiers are allowed on buffer variables, which can only
+          * be defined inside shader storage buffer objects
+          */
+         if (layout && var_mode == ir_var_shader_storage) {
+            if (qual->flags.q.read_only && qual->flags.q.write_only) {
+               _mesa_glsl_error(&loc, state,
+                                "buffer variable `%s' can't be "
+                                "readonly and writeonly.", fields[i].name);
+            }
+
+            /* For readonly and writeonly qualifiers the field definition,
+             * if set, overwrites the layout qualifier.
+             */
+            bool read_only = layout->flags.q.read_only;
+            bool write_only = layout->flags.q.write_only;
+
+            if (qual->flags.q.read_only) {
+               read_only = true;
+               write_only = false;
+            } else if (qual->flags.q.write_only) {
+               read_only = false;
+               write_only = true;
+            }
+
+            fields[i].image_read_only = read_only;
+            fields[i].image_write_only = write_only;
+
+            /* For other qualifiers, we set the flag if either the layout
+             * qualifier or the field qualifier are set
+             */
+            fields[i].image_coherent = qual->flags.q.coherent ||
+                                        layout->flags.q.coherent;
+            fields[i].image_volatile = qual->flags.q._volatile ||
+                                        layout->flags.q._volatile;
+            fields[i].image_restrict = qual->flags.q.restrict_flag ||
+                                        layout->flags.q.restrict_flag;
+         }
+
          i++;
       }
    }
@@ -5822,7 +5937,8 @@ ast_struct_specifier::hir(exec_list *instructions,
                                                false,
                                                GLSL_MATRIX_LAYOUT_INHERITED,
                                                false /* allow_reserved_names */,
-                                               ir_var_auto);
+                                               ir_var_auto,
+                                               NULL);
 
    validate_identifier(this->name, loc, state);
 
@@ -5881,6 +5997,19 @@ private:
    bool found;
 };
 
+static bool
+is_unsized_array_last_element(ir_variable *v)
+{
+   const glsl_type *interface_type = v->get_interface_type();
+   int length = interface_type->length;
+
+   assert(v->type->is_unsized_array());
+
+   /* Check if it is the last element of the interface */
+   if (strcmp(interface_type->fields.structure[length-1].name, v->name) == 0)
+      return true;
+   return false;
+}
 
 ir_rvalue *
 ast_interface_block::hir(exec_list *instructions,
@@ -5896,6 +6025,13 @@ ast_interface_block::hir(exec_list *instructions,
                        this->block_name);
    }
 
+   if (!this->layout.flags.q.buffer &&
+       this->layout.flags.q.std430) {
+      _mesa_glsl_error(&loc, state,
+                       "std430 storage block layout qualifier is supported "
+                       "only for shader storage blocks");
+   }
+
    /* The ast_interface_block has a list of ast_declarator_lists.  We
     * need to turn those into ir_variables with an association
     * with this uniform block.
@@ -5905,6 +6041,8 @@ ast_interface_block::hir(exec_list *instructions,
       packing = GLSL_INTERFACE_PACKING_SHARED;
    } else if (this->layout.flags.q.packed) {
       packing = GLSL_INTERFACE_PACKING_PACKED;
+   } else if (this->layout.flags.q.std430) {
+      packing = GLSL_INTERFACE_PACKING_STD430;
    } else {
       /* The default layout is std140.
        */
@@ -5955,7 +6093,8 @@ ast_interface_block::hir(exec_list *instructions,
                                                true,
                                                matrix_layout,
                                                redeclaring_per_vertex,
-                                               var_mode);
+                                               var_mode,
+                                               &this->layout);
 
    state->struct_specifier_depth--;
 
@@ -6253,6 +6392,33 @@ ast_interface_block::hir(exec_list *instructions,
       else if (state->stage == MESA_SHADER_TESS_CTRL && var_mode == ir_var_shader_out)
          handle_tess_ctrl_shader_output_decl(state, loc, var);
 
+      for (unsigned i = 0; i < num_variables; i++) {
+         if (fields[i].type->is_unsized_array()) {
+            if (var_mode == ir_var_shader_storage) {
+               if (i != (num_variables - 1)) {
+                  _mesa_glsl_error(&loc, state, "unsized array `%s' definition: "
+                                   "only last member of a shader storage block "
+                                   "can be defined as unsized array",
+                                   fields[i].name);
+               }
+            } else {
+               /* From GLSL ES 3.10 spec, section 4.1.9 "Arrays":
+               *
+               * "If an array is declared as the last member of a shader storage
+               * block and the size is not specified at compile-time, it is
+               * sized at run-time. In all other cases, arrays are sized only
+               * at compile-time."
+               */
+               if (state->es_shader) {
+                  _mesa_glsl_error(&loc, state, "unsized array `%s' definition: "
+                                 "only last member of a shader storage block "
+                                 "can be defined as unsized array",
+                                 fields[i].name);
+               }
+            }
+         }
+      }
+
       if (ir_variable *earlier =
           state->symbols->get_variable(this->instance_name)) {
          if (!redeclaring_per_vertex) {
@@ -6312,6 +6478,14 @@ ast_interface_block::hir(exec_list *instructions,
 
          var->data.stream = this->layout.stream;
 
+         if (var->data.mode == ir_var_shader_storage) {
+            var->data.image_read_only = fields[i].image_read_only;
+            var->data.image_write_only = fields[i].image_write_only;
+            var->data.image_coherent = fields[i].image_coherent;
+            var->data.image_volatile = fields[i].image_volatile;
+            var->data.image_restrict = fields[i].image_restrict;
+         }
+
          /* Examine var name here since var may get deleted in the next call */
          bool var_is_gl_id = is_gl_identifier(var->name);
 
@@ -6343,6 +6517,32 @@ ast_interface_block::hir(exec_list *instructions,
           */
          var->data.explicit_binding = this->layout.flags.q.explicit_binding;
          var->data.binding = this->layout.binding;
+
+         if (var->type->is_unsized_array()) {
+            if (var->is_in_shader_storage_block()) {
+               if (!is_unsized_array_last_element(var)) {
+                  _mesa_glsl_error(&loc, state, "unsized array `%s' definition: "
+                                   "only last member of a shader storage block "
+                                   "can be defined as unsized array",
+                                   var->name);
+               }
+               var->data.from_ssbo_unsized_array = true;
+            } else {
+               /* From GLSL ES 3.10 spec, section 4.1.9 "Arrays":
+               *
+               * "If an array is declared as the last member of a shader storage
+               * block and the size is not specified at compile-time, it is
+               * sized at run-time. In all other cases, arrays are sized only
+               * at compile-time."
+               */
+               if (state->es_shader) {
+                  _mesa_glsl_error(&loc, state, "unsized array `%s' definition: "
+                                 "only last member of a shader storage block "
+                                 "can be defined as unsized array",
+                                 var->name);
+               }
+            }
+         }
 
          state->symbols->add_variable(var);
          instructions->push_tail(var);

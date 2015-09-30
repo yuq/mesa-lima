@@ -61,9 +61,9 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 	ncopy = (size + CIK_SDMA_COPY_MAX_SIZE - 1) / CIK_SDMA_COPY_MAX_SIZE;
 	r600_need_dma_space(&ctx->b, ncopy * 7);
 
-	r600_context_bo_reloc(&ctx->b, &ctx->b.rings.dma, rsrc, RADEON_USAGE_READ,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rsrc, RADEON_USAGE_READ,
 			      RADEON_PRIO_MIN);
-	r600_context_bo_reloc(&ctx->b, &ctx->b.rings.dma, rdst, RADEON_USAGE_WRITE,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, rdst, RADEON_USAGE_WRITE,
 			      RADEON_PRIO_MIN);
 
 	for (i = 0; i < ncopy; i++) {
@@ -171,9 +171,9 @@ static void cik_sdma_copy_tile(struct si_context *ctx,
 	ncopy = (copy_height + cheight - 1) / cheight;
 	r600_need_dma_space(&ctx->b, ncopy * 12);
 
-	r600_context_bo_reloc(&ctx->b, &ctx->b.rings.dma, &rsrc->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rsrc->resource,
 			      RADEON_USAGE_READ, RADEON_PRIO_MIN);
-	r600_context_bo_reloc(&ctx->b, &ctx->b.rings.dma, &rdst->resource,
+	radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.dma, &rdst->resource,
 			      RADEON_USAGE_WRITE, RADEON_PRIO_MIN);
 
 	copy_height = size * 4 / pitch;

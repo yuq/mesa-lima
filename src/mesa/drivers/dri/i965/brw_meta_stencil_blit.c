@@ -202,7 +202,7 @@ setup_bounding_rect(GLuint prog, const struct blit_dims *dims)
 
 /**
  * Setup uniforms telling the destination width, height and the offset. These
- * are needed to unnoormalize the input coordinates and to correctly translate
+ * are needed to unnormalize the input coordinates and to correctly translate
  * between destination and source that may have differing offsets.
  */
 static void

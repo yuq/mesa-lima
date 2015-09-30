@@ -223,6 +223,7 @@ struct radeon_info {
     boolean                     has_uvd;
     uint32_t                    vce_fw_version;
     boolean                     has_userptr;
+    bool                        gfx_ib_pad_with_type2;
 
     uint32_t                    r300_num_gb_pipes;
     uint32_t                    r300_num_z_pipes;

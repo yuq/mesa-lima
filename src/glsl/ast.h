@@ -491,6 +491,7 @@ struct ast_type_qualifier {
 	 /** \name Layout qualifiers for GL_ARB_uniform_buffer_object */
 	 /** \{ */
          unsigned std140:1;
+         unsigned std430:1;
          unsigned shared:1;
          unsigned packed:1;
          unsigned column_major:1;
@@ -638,6 +639,9 @@ struct ast_type_qualifier {
     * This field is only valid if \c explicit_image_format is set.
     */
    glsl_base_type image_base_type;
+
+   /** Flag to know if this represents a default value for a qualifier */
+   bool is_default_qualifier;
 
    /**
     * Return true if and only if an interpolation qualifier is present.
@@ -1168,5 +1172,10 @@ emit_function(_mesa_glsl_parse_state *state, ir_function *f);
 extern void
 check_builtin_array_max_size(const char *name, unsigned size,
                              YYLTYPE loc, struct _mesa_glsl_parse_state *state);
+
+extern void _mesa_ast_process_interface_block(YYLTYPE *locp,
+                                              _mesa_glsl_parse_state *state,
+                                              ast_interface_block *const block,
+                                              const struct ast_type_qualifier q);
 
 #endif /* AST_H */

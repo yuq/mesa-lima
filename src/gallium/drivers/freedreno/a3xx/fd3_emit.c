@@ -149,6 +149,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			&fd3_ctx->border_color_buf,
 			&ptr);
 
+	fd_setup_border_colors(tex, ptr, tex_off[sb]);
+
 	if (tex->num_samplers > 0) {
 		/* output sampler state: */
 		OUT_PKT3(ring, CP_LOAD_STATE, 2 + (2 * tex->num_samplers));
@@ -163,57 +165,6 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			const struct fd3_sampler_stateobj *sampler = tex->samplers[i] ?
 					fd3_sampler_stateobj(tex->samplers[i]) :
 					&dummy_sampler;
-			uint16_t *bcolor = (uint16_t *)((uint8_t *)ptr +
-					(BORDERCOLOR_SIZE * tex_off[sb]) +
-					(BORDERCOLOR_SIZE * i));
-			uint32_t *bcolor32 = (uint32_t *)&bcolor[16];
-
-			/*
-			 * XXX HACK ALERT XXX
-			 *
-			 * The border colors need to be swizzled in a particular
-			 * format-dependent order. Even though samplers don't know about
-			 * formats, we can assume that with a GL state tracker, there's a
-			 * 1:1 correspondence between sampler and texture. Take advantage
-			 * of that knowledge.
-			 */
-			if (i < tex->num_textures && tex->textures[i]) {
-				const struct util_format_description *desc =
-					util_format_description(tex->textures[i]->format);
-				for (j = 0; j < 4; j++) {
-					if (desc->swizzle[j] >= 4)
-						continue;
-
-					const struct util_format_channel_description *chan =
-						&desc->channel[desc->swizzle[j]];
-					int size = chan->size;
-
-					/* The Z16 texture format we use seems to look in the
-					 * 32-bit border color slots
-					 */
-					if (desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS)
-						size = 32;
-
-					/* Formats like R11G11B10 or RGB9_E5 don't specify
-					 * per-channel sizes properly.
-					 */
-					if (desc->layout == UTIL_FORMAT_LAYOUT_OTHER)
-						size = 16;
-
-					if (chan->pure_integer && size > 16)
-						bcolor32[desc->swizzle[j] + 4] =
-							sampler->base.border_color.i[j];
-					else if (size > 16)
-						bcolor32[desc->swizzle[j]] =
-							fui(sampler->base.border_color.f[j]);
-					else if (chan->pure_integer)
-						bcolor[desc->swizzle[j] + 8] =
-							sampler->base.border_color.i[j];
-					else
-						bcolor[desc->swizzle[j]] =
-							util_float_to_half(sampler->base.border_color.f[j]);
-				}
-			}
 
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
@@ -400,15 +351,27 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 	unsigned vtxcnt_regid = regid(63, 0);
 
 	for (i = 0; i < vp->inputs_count; i++) {
-		uint8_t semantic = sem2name(vp->inputs[i].semantic);
-		if (semantic == TGSI_SEMANTIC_VERTEXID_NOBASE)
-			vertex_regid = vp->inputs[i].regid;
-		else if (semantic == TGSI_SEMANTIC_INSTANCEID)
-			instance_regid = vp->inputs[i].regid;
-		else if (semantic == IR3_SEMANTIC_VTXCNT)
-			vtxcnt_regid = vp->inputs[i].regid;
-		else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask)
+		if (vp->inputs[i].sysval) {
+			switch(vp->inputs[i].slot) {
+			case SYSTEM_VALUE_BASE_VERTEX:
+				/* handled elsewhere */
+				break;
+			case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
+				vertex_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_INSTANCE_ID:
+				instance_regid = vp->inputs[i].regid;
+				break;
+			case SYSTEM_VALUE_VERTEX_CNT:
+				vtxcnt_regid = vp->inputs[i].regid;
+				break;
+			default:
+				unreachable("invalid system value");
+				break;
+			}
+		} else if (i < vtx->vtx->num_elements && vp->inputs[i].compmask) {
 			last = i;
+		}
 	}
 
 	/* hw doesn't like to be configured for zero vbo's, it seems: */
@@ -419,7 +382,7 @@ fd3_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd3_emit *emit)
 		return;
 
 	for (i = 0, j = 0; i <= last; i++) {
-		assert(sem2name(vp->inputs[i].semantic) == 0);
+		assert(!vp->inputs[i].sysval);
 		if (vp->inputs[i].compmask) {
 			struct pipe_vertex_element *elem = &vtx->vtx->pipe[i];
 			const struct pipe_vertex_buffer *vb =
@@ -492,8 +455,10 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 				A3XX_RB_MSAA_CONTROL_SAMPLE_MASK(ctx->sample_mask));
 	}
 
-	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG)) && !emit->key.binning_pass) {
-		uint32_t val = fd3_zsa_stateobj(ctx->zsa)->rb_render_control;
+	if ((dirty & (FD_DIRTY_ZSA | FD_DIRTY_PROG | FD_DIRTY_BLEND_DUAL)) &&
+		!emit->key.binning_pass) {
+		uint32_t val = fd3_zsa_stateobj(ctx->zsa)->rb_render_control |
+			fd3_blend_stateobj(ctx->blend)->rb_render_control;
 
 		val |= COND(fp->frag_face, A3XX_RB_RENDER_CONTROL_FACENESS);
 		val |= COND(fp->frag_coord, A3XX_RB_RENDER_CONTROL_XCOORD |
@@ -564,7 +529,8 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		val |= COND(fp->frag_coord, A3XX_GRAS_CL_CLIP_CNTL_ZCOORD |
 				A3XX_GRAS_CL_CLIP_CNTL_WCOORD);
 		/* TODO only use if prog doesn't use clipvertex/clipdist */
-		val |= MIN2(util_bitcount(ctx->rasterizer->clip_plane_enable), 6) << 26;
+		val |= A3XX_GRAS_CL_CLIP_CNTL_NUM_USER_CLIP_PLANES(
+				MIN2(util_bitcount(ctx->rasterizer->clip_plane_enable), 6));
 		OUT_PKT0(ring, REG_A3XX_GRAS_CL_CLIP_CNTL, 1);
 		OUT_RING(ring, val);
 	}
@@ -639,9 +605,13 @@ fd3_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A3XX_GRAS_CL_VPORT_ZSCALE(ctx->viewport.scale[2]));
 	}
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
+	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER | FD_DIRTY_BLEND_DUAL)) {
 		struct pipe_framebuffer_state *pfb = &ctx->framebuffer;
-		fd3_program_emit(ring, emit, pfb->nr_cbufs, pfb->cbufs);
+		int nr_cbufs = pfb->nr_cbufs;
+		if (fd3_blend_stateobj(ctx->blend)->rb_render_control &
+			A3XX_RB_RENDER_CONTROL_DUAL_COLOR_IN_ENABLE)
+			nr_cbufs++;
+		fd3_program_emit(ring, emit, nr_cbufs, pfb->cbufs);
 	}
 
 	/* TODO we should not need this or fd_wfi() before emit_constants():

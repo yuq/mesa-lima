@@ -155,18 +155,17 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 		unsigned dma_flags = tc_l2_flag;
 
-		si_need_cs_space(sctx, 7 + (sctx->b.flags ? sctx->cache_flush.num_dw : 0),
-				 FALSE);
+		si_need_cs_space(sctx);
 
 		/* This must be done after need_cs_space. */
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)dst, RADEON_USAGE_WRITE,
 				      RADEON_PRIO_MIN);
 
 		/* Flush the caches for the first copy only.
 		 * Also wait for the previous CP DMA operations. */
 		if (sctx->b.flags) {
-			si_emit_cache_flush(&sctx->b, NULL);
+			si_emit_cache_flush(sctx, NULL);
 			dma_flags |= SI_CP_DMA_RAW_WAIT; /* same as WAIT_UNTIL=CP_DMA_IDLE */
 		}
 
@@ -226,11 +225,11 @@ void si_copy_buffer(struct si_context *sctx,
 		unsigned sync_flags = tc_l2_flag;
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 
-		si_need_cs_space(sctx, 7 + (sctx->b.flags ? sctx->cache_flush.num_dw : 0), FALSE);
+		si_need_cs_space(sctx);
 
 		/* Flush the caches for the first copy only. Also wait for old CP DMA packets to complete. */
 		if (sctx->b.flags) {
-			si_emit_cache_flush(&sctx->b, NULL);
+			si_emit_cache_flush(sctx, NULL);
 			sync_flags |= SI_CP_DMA_RAW_WAIT;
 		}
 
@@ -240,9 +239,9 @@ void si_copy_buffer(struct si_context *sctx,
 		}
 
 		/* This must be done after r600_need_cs_space. */
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)src,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)src,
 				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
-		r600_context_bo_reloc(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)dst,
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, (struct r600_resource*)dst,
 				      RADEON_USAGE_WRITE, RADEON_PRIO_MIN);
 
 		si_emit_cp_dma_copy_buffer(sctx, dst_offset, src_offset, byte_count, sync_flags);

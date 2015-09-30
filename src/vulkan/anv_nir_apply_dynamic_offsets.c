@@ -108,8 +108,7 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
       nir_builder_instr_insert(&state->builder, &new_load->instr);
 
       nir_ssa_def_rewrite_uses(&intrin->dest.ssa,
-                               nir_src_for_ssa(&new_load->dest.ssa),
-                               state->shader);
+                               nir_src_for_ssa(&new_load->dest.ssa));
 
       nir_instr_remove(&intrin->instr);
    }

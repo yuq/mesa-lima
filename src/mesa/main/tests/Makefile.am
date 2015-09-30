@@ -1,5 +1,4 @@
 AM_CFLAGS = \
-	$(X11_CFLAGS) \
 	$(PTHREAD_CFLAGS)
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gtest/include \

@@ -274,7 +274,8 @@ void ir_print_visitor::visit(ir_texture *ir)
    ir->sampler->accept(this);
    fprintf(f, " ");
 
-   if (ir->op != ir_txs && ir->op != ir_query_levels) {
+   if (ir->op != ir_txs && ir->op != ir_query_levels &&
+       ir->op != ir_texture_samples) {
       ir->coordinate->accept(this);
 
       fprintf(f, " ");
@@ -290,7 +291,7 @@ void ir_print_visitor::visit(ir_texture *ir)
 
    if (ir->op != ir_txf && ir->op != ir_txf_ms &&
        ir->op != ir_txs && ir->op != ir_tg4 &&
-       ir->op != ir_query_levels) {
+       ir->op != ir_query_levels && ir->op != ir_texture_samples) {
       if (ir->projector)
 	 ir->projector->accept(this);
       else
@@ -310,6 +311,7 @@ void ir_print_visitor::visit(ir_texture *ir)
    case ir_tex:
    case ir_lod:
    case ir_query_levels:
+   case ir_texture_samples:
       break;
    case ir_txb:
       ir->lod_info.bias->accept(this);
@@ -586,7 +588,7 @@ ir_print_visitor::visit(ir_end_primitive *ir)
 }
 
 void
-ir_print_visitor::visit(ir_barrier *ir)
+ir_print_visitor::visit(ir_barrier *)
 {
    fprintf(f, "(barrier)\n");
 }

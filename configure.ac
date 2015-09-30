@@ -74,7 +74,7 @@ LIBDRM_AMDGPU_REQUIRED=2.4.63
 LIBDRM_INTEL_REQUIRED=2.4.61
 LIBDRM_NVVIEUX_REQUIRED=2.4.33
 LIBDRM_NOUVEAU_REQUIRED=2.4.62
-LIBDRM_FREEDRENO_REQUIRED=2.4.64
+LIBDRM_FREEDRENO_REQUIRED=2.4.65
 DRI2PROTO_REQUIRED=2.6
 DRI3PROTO_REQUIRED=1.0
 PRESENTPROTO_REQUIRED=1.0
@@ -534,15 +534,32 @@ AM_CONDITIONAL(HAVE_COMPAT_SYMLINKS, test "x$HAVE_COMPAT_SYMLINKS" = xyes)
 dnl
 dnl library names
 dnl
+dnl Unfortunately we need to do a few things that libtool can't help us with,
+dnl so we need some knowledge of shared library filenames:
+dnl
+dnl LIB_EXT is the extension used when creating symlinks for alternate
+dnl filenames for a shared library which will be dynamically loaded
+dnl
+dnl IMP_LIB_EXT is the extension used when checking for the presence of a
+dnl the file for a shared library we wish to link with
+dnl
 case "$host_os" in
 darwin* )
-    LIB_EXT='dylib' ;;
+    LIB_EXT='dylib'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 cygwin* )
-    LIB_EXT='dll' ;;
+    LIB_EXT='dll'
+    IMP_LIB_EXT='dll.a'
+    ;;
 aix* )
-    LIB_EXT='a' ;;
+    LIB_EXT='a'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 * )
-    LIB_EXT='so' ;;
+    LIB_EXT='so'
+    IMP_LIB_EXT=$LIB_EXT
+    ;;
 esac
 
 AC_SUBST([LIB_EXT])
@@ -1111,6 +1128,11 @@ AC_MSG_RESULT([$with_sha1])
 AC_SUBST(SHA1_LIBS)
 AC_SUBST(SHA1_CFLAGS)
 
+# Enable a define for SHA1
+if test "x$with_sha1" != "x"; then
+	DEFINES="$DEFINES -DHAVE_SHA1"
+fi
+
 # Allow user to configure out the shader-cache feature
 AC_ARG_ENABLE([shader-cache],
     AS_HELP_STRING([--disable-shader-cache], [Disable binary shader cache]),
@@ -1289,6 +1311,16 @@ AC_SUBST(GLX_TLS, ${GLX_USE_TLS})
 
 AS_IF([test "x$GLX_USE_TLS" = xyes -a "x$ax_pthread_ok" = xyes],
       [DEFINES="${DEFINES} -DGLX_USE_TLS"])
+
+dnl Read-only text section on x86 hardened platforms
+AC_ARG_ENABLE([glx-read-only-text],
+    [AS_HELP_STRING([--enable-glx-read-only-text],
+        [Disable writable .text section on x86 (decreases performance) @<:@default=disabled@:>@])],
+    [enable_glx_read_only_text="$enableval"],
+    [enable_glx_read_only_text=no])
+if test "x$enable_glx_read_only_text" = xyes; then
+    DEFINES="$DEFINES -DGLX_X86_READONLY_TEXT"
+fi
 
 dnl
 dnl More DRI setup
@@ -2058,7 +2090,7 @@ radeon_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
-    llvm_check_version_for "3" "4" "2" $1 
+    llvm_check_version_for "3" "5" "0" $1
     if test true && $LLVM_CONFIG --targets-built | grep -iqvw $amdgpu_llvm_target_name ; then
         AC_MSG_ERROR([LLVM $amdgpu_llvm_target_name not enabled in your LLVM build.])
     fi
@@ -2146,11 +2178,8 @@ if test -n "$with_gallium_drivers"; then
             gallium_require_drm "vc4"
             gallium_require_drm_loader
 
-            case "$host_cpu" in
-                i?86 | x86_64 | amd64)
-                USE_VC4_SIMULATOR=yes
-                ;;
-            esac
+            PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
+                              [USE_VC4_SIMULATOR=yes], [USE_VC4_SIMULATOR=no])
             ;;
         *)
             AC_MSG_ERROR([Unknown Gallium driver: $driver])
@@ -2170,10 +2199,14 @@ if test "x$MESA_LLVM" != x0; then
 
     LLVM_LIBS="`$LLVM_CONFIG --libs ${LLVM_COMPONENTS}`"
 
+    dnl llvm-config may not give the right answer when llvm is a built as a
+    dnl single shared library, so we must work the library name out for
+    dnl ourselves.
+    dnl (See https://llvm.org/bugs/show_bug.cgi?id=6823)
     if test "x$enable_llvm_shared_libs" = xyes; then
         dnl We can't use $LLVM_VERSION because it has 'svn' stripped out,
         LLVM_SO_NAME=LLVM-`$LLVM_CONFIG --version`
-        AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.so"], [llvm_have_one_so=yes])
+        AS_IF([test -f "$LLVM_LIBDIR/lib$LLVM_SO_NAME.$IMP_LIB_EXT"], [llvm_have_one_so=yes])
 
         if test "x$llvm_have_one_so" = xyes; then
             dnl LLVM was built using auto*, so there is only one shared object.
@@ -2181,7 +2214,7 @@ if test "x$MESA_LLVM" != x0; then
         else
             dnl If LLVM was built with CMake, there will be one shared object per
             dnl component.
-            AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.so"],
+            AS_IF([test ! -f "$LLVM_LIBDIR/libLLVMTarget.$IMP_LIB_EXT"],
                     [AC_MSG_ERROR([Could not find llvm shared libraries:
 	Please make sure you have built llvm with the --enable-shared option
 	and that your llvm libraries are installed in $LLVM_LIBDIR

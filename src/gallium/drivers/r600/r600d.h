@@ -3783,4 +3783,15 @@
 #define DMA_PACKET_CONSTANT_FILL	0xd /* 7xx only */
 #define DMA_PACKET_NOP			0xf
 
+
+/* Resource IDs:
+ *   PS: 0   .. +160
+ *   VS: 160 .. +160
+ *   FS: 320 .. +16
+ *   GS: 336 .. +160
+ */
+#define R600_FETCH_CONSTANTS_OFFSET_PS 0
+#define R600_FETCH_CONSTANTS_OFFSET_VS 160
+#define R600_FETCH_CONSTANTS_OFFSET_FS 320
+#define R600_FETCH_CONSTANTS_OFFSET_GS 336
 #endif

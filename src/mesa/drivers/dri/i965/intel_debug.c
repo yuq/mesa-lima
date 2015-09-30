@@ -69,7 +69,8 @@ static const struct dri_debug_control debug_control[] = {
    { "ann",         DEBUG_ANNOTATION },
    { "no8",         DEBUG_NO8 },
    { "vec4",        DEBUG_VEC4VS },
-   { "spill",       DEBUG_SPILL },
+   { "spill_fs",    DEBUG_SPILL_FS },
+   { "spill_vec4",  DEBUG_SPILL_VEC4 },
    { "cs",          DEBUG_CS },
    { NULL,    0 }
 };
