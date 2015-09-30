@@ -25,6 +25,7 @@
  */
 #include "radeon_llvm_emit.h"
 #include "radeon_elf_util.h"
+#include "c11/threads.h"
 #include "util/u_memory.h"
 #include "pipe/p_shader_tokens.h"
 
@@ -86,30 +87,28 @@ void radeon_llvm_shader_type(LLVMValueRef F, unsigned type)
 
 static void init_r600_target()
 {
-	static unsigned initialized = 0;
-	if (!initialized) {
 #if HAVE_LLVM < 0x0307
-		LLVMInitializeR600TargetInfo();
-		LLVMInitializeR600Target();
-		LLVMInitializeR600TargetMC();
-		LLVMInitializeR600AsmPrinter();
+	LLVMInitializeR600TargetInfo();
+	LLVMInitializeR600Target();
+	LLVMInitializeR600TargetMC();
+	LLVMInitializeR600AsmPrinter();
 #else
-		LLVMInitializeAMDGPUTargetInfo();
-		LLVMInitializeAMDGPUTarget();
-		LLVMInitializeAMDGPUTargetMC();
-		LLVMInitializeAMDGPUAsmPrinter();
+	LLVMInitializeAMDGPUTargetInfo();
+	LLVMInitializeAMDGPUTarget();
+	LLVMInitializeAMDGPUTargetMC();
+	LLVMInitializeAMDGPUAsmPrinter();
 
 #endif
-		initialized = 1;
-	}
 }
+
+static once_flag init_r600_target_once_flag = ONCE_FLAG_INIT;
 
 LLVMTargetRef radeon_llvm_get_r600_target(const char *triple)
 {
 	LLVMTargetRef target = NULL;
 	char *err_message = NULL;
 
-	init_r600_target();
+	call_once(&init_r600_target_once_flag, init_r600_target);
 
 	if (LLVMGetTargetFromTriple(triple, &target, &err_message)) {
 		fprintf(stderr, "Cannot find target for triple %s ", triple);
