@@ -1,5 +1,5 @@
 /*
- * Copyright © 2011 Intel Corporation
+ * Copyright © 2014 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -17,8 +17,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
- * IN THE SOFTWARE.
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+ * DEALINGS IN THE SOFTWARE.
  */
 
 #include "brw_context.h"
@@ -27,26 +27,40 @@
 #include "intel_batchbuffer.h"
 
 static void
-disable_stages(struct brw_context *brw)
+gen8_upload_ds_state(struct brw_context *brw)
 {
-   BEGIN_BATCH(5);
-   OUT_BATCH(_3DSTATE_WM_HZ_OP << 16 | (5 - 2));
+   /* Disable the DS Unit */
+   BEGIN_BATCH(11);
+   OUT_BATCH(_3DSTATE_CONSTANT_DS << 16 | (11 - 2));
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
    OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   OUT_BATCH(0);
+   ADVANCE_BATCH();
+
+   int ds_pkt_len = brw->gen >= 9 ? 11 : 9;
+   BEGIN_BATCH(ds_pkt_len);
+   OUT_BATCH(_3DSTATE_DS << 16 | (ds_pkt_len - 2));
+   for (int i = 0; i < ds_pkt_len - 1; i++)
+      OUT_BATCH(0);
    ADVANCE_BATCH();
 
    BEGIN_BATCH(2);
-   OUT_BATCH(_3DSTATE_WM_CHROMAKEY << 16 | (2 - 2));
-   OUT_BATCH(0);
+   OUT_BATCH(_3DSTATE_BINDING_TABLE_POINTERS_DS << 16 | (2 - 2));
+   OUT_BATCH(brw->hw_bt_pool.next_offset);
    ADVANCE_BATCH();
 }
 
-const struct brw_tracked_state gen8_disable_stages = {
+const struct brw_tracked_state gen8_ds_state = {
    .dirty = {
       .mesa  = 0,
       .brw   = BRW_NEW_CONTEXT,
    },
-   .emit = disable_stages,
+   .emit = gen8_upload_ds_state,
 };
