@@ -23,13 +23,12 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include "ir.h"
-#include "glsl_types.h"
-#include "ir_visitor.h"
-#include "../glsl/program.h"
-#include "ir_uniform.h"
-
 #include "main/mtypes.h"
+#include "glsl/glsl_types.h"
+#include "glsl/ir.h"
+#include "glsl/ir_uniform.h"
+#include "glsl/ir_visitor.h"
+#include "glsl/program.h"
 #include "program/hash_table.h"
 #include "program/prog_parameter.h"
 #include "program/program.h"
