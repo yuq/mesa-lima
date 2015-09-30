@@ -518,11 +518,11 @@ vec4_visitor::split_uniform_registers()
 void
 vec4_visitor::pack_uniform_registers()
 {
-   bool uniform_used[this->uniforms];
+   uint8_t chans_used[this->uniforms];
    int new_loc[this->uniforms];
    int new_chan[this->uniforms];
 
-   memset(uniform_used, 0, sizeof(uniform_used));
+   memset(chans_used, 0, sizeof(chans_used));
    memset(new_loc, 0, sizeof(new_loc));
    memset(new_chan, 0, sizeof(new_chan));
 
@@ -531,11 +531,36 @@ vec4_visitor::pack_uniform_registers()
     * to pull constants, and from some GLSL code generators like wine.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      for (int i = 0 ; i < 3; i++) {
-	 if (inst->src[i].file != UNIFORM)
-	    continue;
+      unsigned readmask;
+      switch (inst->opcode) {
+      case VEC4_OPCODE_PACK_BYTES:
+      case BRW_OPCODE_DP4:
+      case BRW_OPCODE_DPH:
+         readmask = 0xf;
+         break;
+      case BRW_OPCODE_DP3:
+         readmask = 0x7;
+         break;
+      case BRW_OPCODE_DP2:
+         readmask = 0x3;
+         break;
+      default:
+         readmask = inst->dst.writemask;
+         break;
+      }
 
-	 uniform_used[inst->src[i].reg] = true;
+      for (int i = 0 ; i < 3; i++) {
+         if (inst->src[i].file != UNIFORM)
+            continue;
+
+         int reg = inst->src[i].reg;
+         for (int c = 0; c < 4; c++) {
+            if (!(readmask & (1 << c)))
+               continue;
+
+            chans_used[reg] = MAX2(chans_used[reg],
+                                   BRW_GET_SWZ(inst->src[i].swizzle, c) + 1);
+         }
       }
    }
 
@@ -546,17 +571,15 @@ vec4_visitor::pack_uniform_registers()
     */
    for (int src = 0; src < uniforms; src++) {
       assert(src < uniform_array_size);
-      int size = this->uniform_vector_size[src];
+      int size = chans_used[src];
 
-      if (!uniform_used[src]) {
-	 this->uniform_vector_size[src] = 0;
-	 continue;
-      }
+      if (size == 0)
+         continue;
 
       int dst;
       /* Find the lowest place we can slot this uniform in. */
       for (dst = 0; dst < src; dst++) {
-	 if (this->uniform_vector_size[dst] + size <= 4)
+	 if (chans_used[dst] + size <= 4)
 	    break;
       }
 
@@ -565,7 +588,7 @@ vec4_visitor::pack_uniform_registers()
 	 new_chan[src] = 0;
       } else {
 	 new_loc[src] = dst;
-	 new_chan[src] = this->uniform_vector_size[dst];
+	 new_chan[src] = chans_used[dst];
 
 	 /* Move the references to the data */
 	 for (int j = 0; j < size; j++) {
@@ -573,8 +596,8 @@ vec4_visitor::pack_uniform_registers()
 	       stage_prog_data->param[src * 4 + j];
 	 }
 
-	 this->uniform_vector_size[dst] += size;
-	 this->uniform_vector_size[src] = 0;
+	 chans_used[dst] += size;
+	 chans_used[src] = 0;
       }
 
       new_uniform_count = MAX2(new_uniform_count, dst + 1);
