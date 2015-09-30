@@ -1780,8 +1780,13 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
    struct gl_texture_object *texObj;
    struct gl_texture_unit *texUnit;
 
-   /* Get the texture unit (this is an array look-up) */
-   texUnit = _mesa_get_tex_unit_err(ctx, unit, "glBindTextureUnit");
+   if (unit >= _mesa_max_tex_unit(ctx)) {
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBindTextureUnit(unit=%u)", unit);
+      return;
+   }
+
+   texUnit = _mesa_get_tex_unit(ctx, unit);
+   assert(texUnit);
    if (!texUnit) {
       return;
    }
