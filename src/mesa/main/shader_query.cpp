@@ -1308,8 +1308,15 @@ _mesa_program_resource_prop(struct gl_shader_program *shProg,
       switch (res->Type) {
       case GL_UNIFORM:
       case GL_BUFFER_VARIABLE:
+         /* Test if a buffer variable is an array or an unsized array.
+          * Unsized arrays return zero as array size.
+          */
+         if (RESOURCE_UNI(res)->is_shader_storage &&
+             RESOURCE_UNI(res)->array_stride > 0)
+            *val = RESOURCE_UNI(res)->array_elements;
+         else
             *val = MAX2(RESOURCE_UNI(res)->array_elements, 1);
-            return 1;
+         return 1;
       case GL_PROGRAM_INPUT:
       case GL_PROGRAM_OUTPUT:
          *val = MAX2(_mesa_program_resource_array_size(res), 1);
