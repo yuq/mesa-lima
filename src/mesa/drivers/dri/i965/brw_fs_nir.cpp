@@ -1917,12 +1917,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    unsigned sampler = instr->sampler_index;
    fs_reg sampler_reg(sampler);
 
-   /* FINISHME: We're failing to recompile our programs when the sampler is
-    * updated.  This only matters for the texture rectangle scale parameters
-    * (pre-gen6, or gen6+ with GL_CLAMP).
-    */
-   int texunit = prog->SamplerUnits[sampler];
-
    int gather_component = instr->component;
 
    bool is_rect = instr->sampler_dim == GLSL_SAMPLER_DIM_RECT;
@@ -2063,7 +2057,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
                 tex_offset, mcs, gather_component,
-                is_cube_array, is_rect, sampler, sampler_reg, texunit);
+                is_cube_array, is_rect, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;

@@ -79,7 +79,7 @@ fs_visitor::emit_vs_system_value(int location)
 
 fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
-                             bool is_rect, uint32_t sampler, int texunit)
+                             bool is_rect, uint32_t sampler)
 {
    bool needs_gl_clamp = true;
    fs_reg scale_x, scale_y;
@@ -93,10 +93,16 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
         (devinfo->gen >= 6 && (key_tex->gl_clamp_mask[0] & (1 << sampler) ||
                                key_tex->gl_clamp_mask[1] & (1 << sampler))))) {
       struct gl_program_parameter_list *params = prog->Parameters;
+
+
+      /* FINISHME: We're failing to recompile our programs when the sampler is
+       * updated.  This only matters for the texture rectangle scale
+       * parameters (pre-gen6, or gen6+ with GL_CLAMP).
+       */
       int tokens[STATE_LENGTH] = {
 	 STATE_INTERNAL,
 	 STATE_TEXRECT_SCALE,
-	 texunit,
+	 prog->SamplerUnits[sampler],
 	 0,
 	 0
       };
@@ -221,7 +227,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          bool is_cube_array,
                          bool is_rect,
                          uint32_t sampler,
-                         fs_reg sampler_reg, int texunit)
+                         fs_reg sampler_reg)
 {
    fs_inst *inst = NULL;
 
@@ -256,7 +262,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
        * samplers.  This should only be a problem with GL_CLAMP on Gen7.
        */
       coordinate = rescale_texcoord(coordinate, coord_components, is_rect,
-                                    sampler, texunit);
+                                    sampler);
    }
 
    /* Writemasking doesn't eliminate channels on SIMD8 texture

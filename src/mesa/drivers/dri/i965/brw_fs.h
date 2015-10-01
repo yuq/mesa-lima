@@ -205,7 +205,7 @@ public:
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
    fs_reg rescale_texcoord(fs_reg coordinate, int coord_components,
-                           bool is_rect, uint32_t sampler, int texunit);
+                           bool is_rect, uint32_t sampler);
    void emit_texture(ir_texture_opcode op,
                      const glsl_type *dest_type,
                      fs_reg coordinate, int components,
@@ -218,8 +218,7 @@ public:
                      bool is_cube_array,
                      bool is_rect,
                      uint32_t sampler,
-                     fs_reg sampler_reg,
-                     int texunit);
+                     fs_reg sampler_reg);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                          const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
