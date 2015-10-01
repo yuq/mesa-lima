@@ -2284,12 +2284,34 @@ struct gl_shader
    unsigned num_combined_uniform_components;
 
    /**
-    * This shader's uniform block information.
+    * This shader's uniform/ssbo block information.
     *
     * These fields are only set post-linking.
+    *
+    * BufferInterfaceBlocks is a list containing both UBOs and SSBOs. This is
+    * useful during the linking process so that we don't have to handle SSBOs
+    * specifically.
+    *
+    * UniformBlocks is a list of UBOs. This is useful for backends that need
+    * or prefer to see separate index spaces for UBOS and SSBOs like the GL
+    * API specifies.
+    *
+    * ShaderStorageBlocks is a list of SSBOs. This is useful for backends that
+    * need or prefer to see separate index spaces for UBOS and SSBOs like the
+    * GL API specifies.
+    *
+    * UniformBlocks and ShaderStorageBlocks only have pointers into
+    * BufferInterfaceBlocks so the actual resource information is not
+    * duplicated.
     */
    unsigned NumBufferInterfaceBlocks;
    struct gl_uniform_block *BufferInterfaceBlocks;
+
+   unsigned NumUniformBlocks;
+   struct gl_uniform_block **UniformBlocks;
+
+   unsigned NumShaderStorageBlocks;
+   struct gl_uniform_block **ShaderStorageBlocks;
 
    struct exec_list *ir;
    struct exec_list *packed_varyings;
@@ -2687,8 +2709,33 @@ struct gl_shader_program
     */
    unsigned LastClipDistanceArraySize;
 
+   /**
+    * This shader's uniform/ssbo block information.
+    *
+    * BufferInterfaceBlocks is a list containing both UBOs and SSBOs. This is
+    * useful during the linking process so that we don't have to handle SSBOs
+    * specifically.
+    *
+    * UniformBlocks is a list of UBOs. This is useful for backends that need
+    * or prefer to see separate index spaces for UBOS and SSBOs like the GL
+    * API specifies.
+    *
+    * ShaderStorageBlocks is a list of SSBOs. This is useful for backends that
+    * need or prefer to see separate index spaces for UBOS and SSBOs like the
+    * GL API specifies.
+    *
+    * UniformBlocks and ShaderStorageBlocks only have pointers into
+    * BufferInterfaceBlocks so the actual resource information is not
+    * duplicated and are only set after linking.
+    */
    unsigned NumBufferInterfaceBlocks;
    struct gl_uniform_block *BufferInterfaceBlocks;
+
+   unsigned NumUniformBlocks;
+   struct gl_uniform_block **UniformBlocks;
+
+   unsigned NumShaderStorageBlocks;
+   struct gl_uniform_block **ShaderStorageBlocks;
 
    /**
     * Indices into the _LinkedShaders's UniformBlocks[] array for each stage

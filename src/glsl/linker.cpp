@@ -3599,6 +3599,42 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
    }
 }
 
+static void
+split_ubos_and_ssbos(void *mem_ctx,
+                     struct gl_uniform_block *blocks,
+                     unsigned num_blocks,
+                     struct gl_uniform_block ***ubos,
+                     unsigned *num_ubos,
+                     struct gl_uniform_block ***ssbos,
+                     unsigned *num_ssbos)
+{
+   unsigned num_ubo_blocks = 0;
+   unsigned num_ssbo_blocks = 0;
+
+   for (unsigned i = 0; i < num_blocks; i++) {
+      if (blocks[i].IsShaderStorage)
+         num_ssbo_blocks++;
+      else
+         num_ubo_blocks++;
+   }
+
+   *ubos = ralloc_array(mem_ctx, gl_uniform_block *, num_ubo_blocks);
+   *num_ubos = 0;
+
+   *ssbos = ralloc_array(mem_ctx, gl_uniform_block *, num_ssbo_blocks);
+   *num_ssbos = 0;
+
+   for (unsigned i = 0; i < num_blocks; i++) {
+      if (blocks[i].IsShaderStorage) {
+         (*ssbos)[(*num_ssbos)++] = &blocks[i];
+      } else {
+         (*ubos)[(*num_ubos)++] = &blocks[i];
+      }
+   }
+
+   assert(*num_ubos + *num_ssbos == num_blocks);
+}
+
 void
 link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 {
@@ -4109,6 +4145,31 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          }
       }
    }
+
+   /* Split BufferInterfaceBlocks into UniformBlocks and ShaderStorageBlocks
+    * for gl_shader_program and gl_shader, so that drivers that need separate
+    * index spaces for each set can have that.
+    */
+   for (unsigned i = MESA_SHADER_VERTEX; i <= MESA_SHADER_FRAGMENT; i++) {
+      if (prog->_LinkedShaders[i] != NULL) {
+         gl_shader *sh = prog->_LinkedShaders[i];
+         split_ubos_and_ssbos(sh,
+                              sh->BufferInterfaceBlocks,
+                              sh->NumBufferInterfaceBlocks,
+                              &sh->UniformBlocks,
+                              &sh->NumUniformBlocks,
+                              &sh->ShaderStorageBlocks,
+                              &sh->NumShaderStorageBlocks);
+      }
+   }
+
+   split_ubos_and_ssbos(prog,
+                        prog->BufferInterfaceBlocks,
+                        prog->NumBufferInterfaceBlocks,
+                        &prog->UniformBlocks,
+                        &prog->NumUniformBlocks,
+                        &prog->ShaderStorageBlocks,
+                        &prog->NumShaderStorageBlocks);
 
    /* FINISHME: Assign fragment shader output locations. */
 
