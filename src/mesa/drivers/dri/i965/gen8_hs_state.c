@@ -30,20 +30,6 @@ static void
 gen8_upload_hs_state(struct brw_context *brw)
 {
    /* Disable the HS Unit */
-   BEGIN_BATCH(11);
-   OUT_BATCH(_3DSTATE_CONSTANT_HS << 16 | (11 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    BEGIN_BATCH(9);
    OUT_BATCH(_3DSTATE_HS << 16 | (9 - 2));
    OUT_BATCH(0);

@@ -30,20 +30,6 @@ static void
 gen8_upload_ds_state(struct brw_context *brw)
 {
    /* Disable the DS Unit */
-   BEGIN_BATCH(11);
-   OUT_BATCH(_3DSTATE_CONSTANT_DS << 16 | (11 - 2));
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-
    int ds_pkt_len = brw->gen >= 9 ? 11 : 9;
    BEGIN_BATCH(ds_pkt_len);
    OUT_BATCH(_3DSTATE_DS << 16 | (ds_pkt_len - 2));

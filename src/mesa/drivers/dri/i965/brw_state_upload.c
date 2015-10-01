@@ -294,6 +294,8 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &brw_wm_image_surfaces, /* Before wm push/pull constants and binding table */
 
    &gen6_vs_push_constants, /* Before vs_state */
+   &gen7_tcs_push_constants,
+   &gen7_tes_push_constants,
    &gen6_gs_push_constants, /* Before gs_state */
    &gen6_wm_push_constants, /* Before wm_surfaces and constant_buffer */
 
