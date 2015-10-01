@@ -49,8 +49,7 @@ brw_cs_emit(struct brw_context *brw,
             unsigned *final_assembly_size);
 
 unsigned
-brw_cs_prog_local_id_payload_dwords(const struct gl_program *prog,
-                                    unsigned dispatch_width);
+brw_cs_prog_local_id_payload_dwords(unsigned dispatch_width);
 
 #ifdef __cplusplus
 }

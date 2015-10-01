@@ -4727,7 +4727,7 @@ fs_visitor::setup_cs_payload()
 
    if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
       const unsigned local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(prog, dispatch_width);
+         brw_cs_prog_local_id_payload_dwords(dispatch_width);
       assert((local_id_dwords & 0x7) == 0);
       const unsigned local_id_regs = local_id_dwords / 8;
       payload.local_invocation_id_reg = payload.num_regs;
