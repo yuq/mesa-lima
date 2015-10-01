@@ -929,17 +929,17 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    uint32_t *surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
-   for (int i = 0; i < shader->NumUniformBlocks; i++) {
+   for (int i = 0; i < shader->NumBufferInterfaceBlocks; i++) {
       struct intel_buffer_object *intel_bo;
 
       /* Because behavior for referencing outside of the binding's size in the
        * glBindBufferRange case is undefined, we can just bind the whole buffer
        * glBindBufferBase wants and be a correct implementation.
        */
-      if (!shader->UniformBlocks[i].IsShaderStorage) {
+      if (!shader->BufferInterfaceBlocks[i].IsShaderStorage) {
          struct gl_uniform_buffer_binding *binding;
          binding =
-            &ctx->UniformBufferBindings[shader->UniformBlocks[i].Binding];
+            &ctx->UniformBufferBindings[shader->BufferInterfaceBlocks[i].Binding];
          if (binding->BufferObject == ctx->Shared->NullBufferObj) {
             brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
          } else {
@@ -956,7 +956,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       } else {
          struct gl_shader_storage_buffer_binding *binding;
          binding =
-            &ctx->ShaderStorageBufferBindings[shader->UniformBlocks[i].Binding];
+            &ctx->ShaderStorageBufferBindings[shader->BufferInterfaceBlocks[i].Binding];
          if (binding->BufferObject == ctx->Shared->NullBufferObj) {
             brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
          } else {
@@ -973,7 +973,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       }
    }
 
-   if (shader->NumUniformBlocks)
+   if (shader->NumBufferInterfaceBlocks)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 

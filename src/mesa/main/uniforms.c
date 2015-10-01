@@ -1016,21 +1016,21 @@ _mesa_UniformBlockBinding(GLuint program,
       return;
    }
 
-   if (shProg->UniformBlocks[uniformBlockIndex].Binding !=
+   if (shProg->BufferInterfaceBlocks[uniformBlockIndex].Binding !=
        uniformBlockBinding) {
       int i;
 
       FLUSH_VERTICES(ctx, 0);
       ctx->NewDriverState |= ctx->DriverFlags.NewUniformBuffer;
 
-      shProg->UniformBlocks[uniformBlockIndex].Binding = uniformBlockBinding;
+      shProg->BufferInterfaceBlocks[uniformBlockIndex].Binding = uniformBlockBinding;
 
       for (i = 0; i < MESA_SHADER_STAGES; i++) {
 	 int stage_index = shProg->UniformBlockStageIndex[i][uniformBlockIndex];
 
 	 if (stage_index != -1) {
 	    struct gl_shader *sh = shProg->_LinkedShaders[i];
-	    sh->UniformBlocks[stage_index].Binding = uniformBlockBinding;
+	    sh->BufferInterfaceBlocks[stage_index].Binding = uniformBlockBinding;
 	 }
       }
    }
@@ -1069,21 +1069,21 @@ _mesa_ShaderStorageBlockBinding(GLuint program,
       return;
    }
 
-   if (shProg->UniformBlocks[shaderStorageBlockIndex].Binding !=
+   if (shProg->BufferInterfaceBlocks[shaderStorageBlockIndex].Binding !=
        shaderStorageBlockBinding) {
       int i;
 
       FLUSH_VERTICES(ctx, 0);
       ctx->NewDriverState |= ctx->DriverFlags.NewShaderStorageBuffer;
 
-      shProg->UniformBlocks[shaderStorageBlockIndex].Binding = shaderStorageBlockBinding;
+      shProg->BufferInterfaceBlocks[shaderStorageBlockIndex].Binding = shaderStorageBlockBinding;
 
       for (i = 0; i < MESA_SHADER_STAGES; i++) {
 	 int stage_index = shProg->UniformBlockStageIndex[i][shaderStorageBlockIndex];
 
 	 if (stage_index != -1) {
 	    struct gl_shader *sh = shProg->_LinkedShaders[i];
-	    sh->UniformBlocks[stage_index].Binding = shaderStorageBlockBinding;
+	    sh->BufferInterfaceBlocks[stage_index].Binding = shaderStorageBlockBinding;
 	 }
       }
    }

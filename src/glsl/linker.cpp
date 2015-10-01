@@ -1161,7 +1161,7 @@ cross_validate_uniforms(struct gl_shader_program *prog)
 }
 
 /**
- * Accumulates the array of prog->UniformBlocks and checks that all
+ * Accumulates the array of prog->BufferInterfaceBlocks and checks that all
  * definitons of blocks agree on their contents.
  */
 static bool
@@ -1170,7 +1170,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
    unsigned max_num_uniform_blocks = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i])
-	 max_num_uniform_blocks += prog->_LinkedShaders[i]->NumUniformBlocks;
+	 max_num_uniform_blocks += prog->_LinkedShaders[i]->NumBufferInterfaceBlocks;
    }
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -1184,15 +1184,15 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
       if (sh == NULL)
 	 continue;
 
-      for (unsigned int j = 0; j < sh->NumUniformBlocks; j++) {
+      for (unsigned int j = 0; j < sh->NumBufferInterfaceBlocks; j++) {
 	 int index = link_cross_validate_uniform_block(prog,
-						       &prog->UniformBlocks,
+						       &prog->BufferInterfaceBlocks,
 						       &prog->NumBufferInterfaceBlocks,
-						       &sh->UniformBlocks[j]);
+						       &sh->BufferInterfaceBlocks[j]);
 
 	 if (index == -1) {
 	    linker_error(prog, "uniform block `%s' has mismatching definitions\n",
-			 sh->UniformBlocks[j].Name);
+			 sh->BufferInterfaceBlocks[j].Name);
 	    return false;
 	 }
 
@@ -2064,9 +2064,9 @@ link_intrastage_shaders(void *mem_ctx,
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 
-   linked->UniformBlocks = uniform_blocks;
-   linked->NumUniformBlocks = num_uniform_blocks;
-   ralloc_steal(linked, linked->UniformBlocks);
+   linked->BufferInterfaceBlocks = uniform_blocks;
+   linked->NumBufferInterfaceBlocks = num_uniform_blocks;
+   ralloc_steal(linked, linked->BufferInterfaceBlocks);
 
    link_fs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, linked, shader_list, num_shaders);
@@ -2804,19 +2804,19 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
    for (unsigned i = 0; i < prog->NumBufferInterfaceBlocks; i++) {
       /* Don't check SSBOs for Uniform Block Size */
-      if (!prog->UniformBlocks[i].IsShaderStorage &&
-          prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
+      if (!prog->BufferInterfaceBlocks[i].IsShaderStorage &&
+          prog->BufferInterfaceBlocks[i].UniformBufferSize > ctx->Const.MaxUniformBlockSize) {
          linker_error(prog, "Uniform block %s too big (%d/%d)\n",
-                      prog->UniformBlocks[i].Name,
-                      prog->UniformBlocks[i].UniformBufferSize,
+                      prog->BufferInterfaceBlocks[i].Name,
+                      prog->BufferInterfaceBlocks[i].UniformBufferSize,
                       ctx->Const.MaxUniformBlockSize);
       }
 
-      if (prog->UniformBlocks[i].IsShaderStorage &&
-          prog->UniformBlocks[i].UniformBufferSize > ctx->Const.MaxShaderStorageBlockSize) {
+      if (prog->BufferInterfaceBlocks[i].IsShaderStorage &&
+          prog->BufferInterfaceBlocks[i].UniformBufferSize > ctx->Const.MaxShaderStorageBlockSize) {
          linker_error(prog, "Shader storage block %s too big (%d/%d)\n",
-                      prog->UniformBlocks[i].Name,
-                      prog->UniformBlocks[i].UniformBufferSize,
+                      prog->BufferInterfaceBlocks[i].Name,
+                      prog->BufferInterfaceBlocks[i].UniformBufferSize,
                       ctx->Const.MaxShaderStorageBlockSize);
       }
 
@@ -2824,7 +2824,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 	 if (prog->UniformBlockStageIndex[j][i] != -1) {
             struct gl_shader *sh = prog->_LinkedShaders[j];
             int stage_index = prog->UniformBlockStageIndex[j][i];
-            if (sh && sh->UniformBlocks[stage_index].IsShaderStorage) {
+            if (sh && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage) {
                shader_blocks[j]++;
                total_shader_storage_blocks++;
             } else {
@@ -2941,7 +2941,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
          for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
             int stage_index = prog->UniformBlockStageIndex[i][j];
-            if (stage_index != -1 && sh->UniformBlocks[stage_index].IsShaderStorage)
+            if (stage_index != -1 && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage)
                total_shader_storage_blocks++;
          }
 
@@ -3147,7 +3147,7 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
       return true;
 
    for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
-      block_name = shProg->UniformBlocks[i].Name;
+      block_name = shProg->BufferInterfaceBlocks[i].Name;
       if (strncmp(block_name, name, strlen(block_name)) == 0) {
          found_interface = true;
          break;
@@ -3480,10 +3480,10 @@ build_program_resource_list(struct gl_shader_program *shProg)
 
    /* Add program uniform blocks and shader storage blocks. */
    for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
-      bool is_shader_storage = shProg->UniformBlocks[i].IsShaderStorage;
+      bool is_shader_storage = shProg->BufferInterfaceBlocks[i].IsShaderStorage;
       GLenum type = is_shader_storage ? GL_SHADER_STORAGE_BLOCK : GL_UNIFORM_BLOCK;
       if (!add_program_resource(shProg, type,
-          &shProg->UniformBlocks[i], 0))
+          &shProg->BufferInterfaceBlocks[i], 0))
          return;
    }
 

@@ -927,7 +927,7 @@ program_resource_top_level_array_size(struct gl_shader_program *shProg,
    int array_size = -1;
    char *var_name = get_top_level_name(name);
    char *interface_name =
-      get_top_level_name(shProg->UniformBlocks[block_index].Name);
+      get_top_level_name(shProg->BufferInterfaceBlocks[block_index].Name);
 
    if (strcmp(var_name, interface_name) == 0) {
       /* Deal with instanced array of SSBOs */
@@ -997,7 +997,7 @@ program_resource_top_level_array_stride(struct gl_shader_program *shProg,
    int array_stride = -1;
    char *var_name = get_top_level_name(name);
    char *interface_name =
-      get_top_level_name(shProg->UniformBlocks[block_index].Name);
+      get_top_level_name(shProg->BufferInterfaceBlocks[block_index].Name);
 
    if (strcmp(var_name, interface_name) == 0) {
       /* Deal with instanced array of SSBOs */

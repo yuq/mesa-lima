@@ -2288,8 +2288,8 @@ struct gl_shader
     *
     * These fields are only set post-linking.
     */
-   unsigned NumUniformBlocks;
-   struct gl_uniform_block *UniformBlocks;
+   unsigned NumBufferInterfaceBlocks;
+   struct gl_uniform_block *BufferInterfaceBlocks;
 
    struct exec_list *ir;
    struct exec_list *packed_varyings;
@@ -2688,7 +2688,7 @@ struct gl_shader_program
    unsigned LastClipDistanceArraySize;
 
    unsigned NumBufferInterfaceBlocks;
-   struct gl_uniform_block *UniformBlocks;
+   struct gl_uniform_block *BufferInterfaceBlocks;
 
    /**
     * Indices into the _LinkedShaders's UniformBlocks[] array for each stage

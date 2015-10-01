@@ -49,7 +49,7 @@ get_uniform_block_index(const gl_shader_program *shProg,
                         const char *uniformBlockName)
 {
    for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
-      if (!strcmp(shProg->UniformBlocks[i].Name, uniformBlockName))
+      if (!strcmp(shProg->BufferInterfaceBlocks[i].Name, uniformBlockName))
 	 return i;
    }
 
@@ -169,7 +169,7 @@ set_block_binding(gl_shader_program *prog, const char *block_name, int binding)
 
          if (stage_index != -1) {
             struct gl_shader *sh = prog->_LinkedShaders[i];
-            sh->UniformBlocks[stage_index].Binding = binding;
+            sh->BufferInterfaceBlocks[stage_index].Binding = binding;
          }
       }
 }
