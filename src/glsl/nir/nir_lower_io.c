@@ -63,25 +63,12 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
    *size = location;
 }
 
-static bool
-deref_has_indirect(nir_deref_var *deref)
-{
-   for (nir_deref *tail = deref->deref.child; tail; tail = tail->child) {
-      if (tail->deref_type == nir_deref_type_array) {
-         nir_deref_array *arr = nir_deref_as_array(tail);
-         if (arr->deref_array_type == nir_deref_array_type_indirect)
-            return true;
-      }
-   }
-
-   return false;
-}
-
 static unsigned
-get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
+get_io_offset(nir_deref_var *deref, nir_instr *instr,
+              nir_ssa_def **out_indirect,
               struct lower_io_state *state)
 {
-   bool found_indirect = false;
+   nir_ssa_def *indirect = NULL;
    unsigned base_offset = 0;
 
    nir_builder *b = &state->builder;
@@ -103,14 +90,7 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
                nir_imul(b, nir_imm_int(b, size),
                         nir_ssa_for_src(b, deref_array->indirect, 1));
 
-            if (found_indirect) {
-               indirect->ssa =
-                  nir_iadd(b, nir_ssa_for_src(b, *indirect, 1), mul);
-            } else {
-               indirect->ssa = mul;
-            }
-            indirect->is_ssa = true;
-            found_indirect = true;
+            indirect = indirect ? nir_iadd(b, indirect, mul) : mul;
          }
       } else if (tail->deref_type == nir_deref_type_struct) {
          nir_deref_struct *deref_struct = nir_deref_as_struct(tail);
@@ -122,6 +102,7 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr, nir_src *indirect,
       }
    }
 
+   *out_indirect = indirect;
    return base_offset;
 }
 
@@ -169,16 +150,15 @@ nir_lower_io_block(nir_block *block, void *void_state)
          if (mode != nir_var_shader_in && mode != nir_var_uniform)
             continue;
 
-         bool has_indirect = deref_has_indirect(intrin->variables[0]);
+         nir_ssa_def *indirect;
+
+         unsigned offset = get_io_offset(intrin->variables[0], &intrin->instr,
+                                         &indirect, state);
 
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(state->mem_ctx,
-                                       load_op(mode, has_indirect));
+                                       load_op(mode, indirect));
          load->num_components = intrin->num_components;
-
-         nir_src indirect;
-         unsigned offset = get_io_offset(intrin->variables[0],
-                                         &intrin->instr, &indirect, state);
 
          unsigned location = intrin->variables[0]->var->data.driver_location;
          if (mode == nir_var_uniform) {
@@ -188,8 +168,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
             load->const_index[0] = location + offset;
          }
 
-         if (has_indirect)
-            load->src[0] = indirect;
+         if (indirect)
+            load->src[0] = nir_src_for_ssa(indirect);
 
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&load->instr, &load->dest,
@@ -209,10 +189,14 @@ nir_lower_io_block(nir_block *block, void *void_state)
          if (intrin->variables[0]->var->data.mode != nir_var_shader_out)
             continue;
 
-         bool has_indirect = deref_has_indirect(intrin->variables[0]);
+         nir_ssa_def *indirect;
+
+         unsigned offset = get_io_offset(intrin->variables[0], &intrin->instr,
+                                         &indirect, state);
+         offset += intrin->variables[0]->var->data.driver_location;
 
          nir_intrinsic_op store_op;
-         if (has_indirect) {
+         if (indirect) {
             store_op = nir_intrinsic_store_output_indirect;
          } else {
             store_op = nir_intrinsic_store_output;
@@ -221,18 +205,12 @@ nir_lower_io_block(nir_block *block, void *void_state)
          nir_intrinsic_instr *store = nir_intrinsic_instr_create(state->mem_ctx,
                                                                  store_op);
          store->num_components = intrin->num_components;
-
-         nir_src indirect;
-         unsigned offset = get_io_offset(intrin->variables[0],
-                                         &intrin->instr, &indirect, state);
-         offset += intrin->variables[0]->var->data.driver_location;
-
          store->const_index[0] = offset;
 
          nir_src_copy(&store->src[0], &intrin->src[0], store);
 
-         if (has_indirect)
-            store->src[1] = indirect;
+         if (indirect)
+            store->src[1] = nir_src_for_ssa(indirect);
 
          nir_instr_insert_before(&intrin->instr, &store->instr);
          nir_instr_remove(&intrin->instr);
