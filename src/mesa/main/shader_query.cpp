@@ -485,8 +485,14 @@ _mesa_program_resource_array_size(struct gl_program_resource *res)
    case GL_COMPUTE_SUBROUTINE_UNIFORM:
    case GL_TESS_CONTROL_SUBROUTINE_UNIFORM:
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
-   case GL_BUFFER_VARIABLE:
       return RESOURCE_UNI(res)->array_elements;
+   case GL_BUFFER_VARIABLE:
+      /* Unsized arrays */
+      if (RESOURCE_UNI(res)->array_stride > 0 &&
+          RESOURCE_UNI(res)->array_elements == 0)
+         return 1;
+      else
+         return RESOURCE_UNI(res)->array_elements;
    case GL_VERTEX_SUBROUTINE:
    case GL_GEOMETRY_SUBROUTINE:
    case GL_FRAGMENT_SUBROUTINE:
