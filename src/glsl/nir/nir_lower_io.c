@@ -68,10 +68,14 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
  * by a vertex number (such as geometry shader inputs).
  */
 static bool
-stage_uses_per_vertex_inputs(struct lower_io_state *state)
+is_per_vertex_input(struct lower_io_state *state, nir_variable *var)
 {
    gl_shader_stage stage = state->builder.shader->stage;
-   return stage == MESA_SHADER_GEOMETRY;
+
+   return var->data.mode == nir_var_shader_in && !var->data.patch &&
+          (stage == MESA_SHADER_TESS_CTRL ||
+           stage == MESA_SHADER_TESS_EVAL ||
+           stage == MESA_SHADER_GEOMETRY);
 }
 
 static unsigned
@@ -184,8 +188,8 @@ nir_lower_io_block(nir_block *block, void *void_state)
          if (mode != nir_var_shader_in && mode != nir_var_uniform)
             continue;
 
-         bool per_vertex = stage_uses_per_vertex_inputs(state) &&
-                           mode == nir_var_shader_in;
+         bool per_vertex =
+            is_per_vertex_input(state, intrin->variables[0]->var);
 
          nir_ssa_def *indirect;
          nir_ssa_def *vertex_index;
