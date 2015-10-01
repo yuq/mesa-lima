@@ -48,9 +48,8 @@ class register_coalesce_vec4_visitor : public vec4_visitor
 {
 public:
    register_coalesce_vec4_visitor(struct brw_compiler *compiler,
-                                  struct gl_shader_program *shader_prog)
-      : vec4_visitor(compiler, NULL, NULL, NULL, NULL, shader_prog,
-                     MESA_SHADER_VERTEX, NULL,
+                                  nir_shader *shader)
+      : vec4_visitor(compiler, NULL, NULL, NULL, shader, NULL,
                      false /* no_spills */, -1)
    {
    }
@@ -98,9 +97,9 @@ void register_coalesce_test::SetUp()
 
    vp = ralloc(NULL, struct brw_vertex_program);
 
-   shader_prog = ralloc(NULL, struct gl_shader_program);
+   nir_shader *shader = nir_shader_create(NULL, MESA_SHADER_VERTEX, NULL);
 
-   v = new register_coalesce_vec4_visitor(compiler, shader_prog);
+   v = new register_coalesce_vec4_visitor(compiler, shader);
 
    _mesa_init_vertex_program(ctx, &vp->program, GL_VERTEX_SHADER, 0);
 

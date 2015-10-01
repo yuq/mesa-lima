@@ -1824,16 +1824,13 @@ vec4_visitor::resolve_ud_negate(src_reg *reg)
 
 vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            void *log_data,
-                           struct gl_program *prog,
                            const struct brw_sampler_prog_key_data *key_tex,
                            struct brw_vue_prog_data *prog_data,
-			   struct gl_shader_program *shader_prog,
-                           gl_shader_stage stage,
+                           nir_shader *shader,
 			   void *mem_ctx,
                            bool no_spills,
                            int shader_time_index)
-   : backend_shader(compiler, log_data, mem_ctx,
-                    shader_prog, prog, &prog_data->base, stage),
+   : backend_shader(compiler, log_data, mem_ctx, shader, &prog_data->base),
      key_tex(key_tex),
      prog_data(prog_data),
      fail_msg(NULL),

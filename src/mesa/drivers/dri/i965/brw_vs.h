@@ -87,8 +87,7 @@ public:
                    void *log_data,
                    const struct brw_vs_prog_key *key,
                    struct brw_vs_prog_data *vs_prog_data,
-                   struct gl_vertex_program *vp,
-                   struct gl_shader_program *prog,
+                   nir_shader *shader,
                    gl_clip_plane *clip_planes,
                    void *mem_ctx,
                    int shader_time_index,
@@ -114,7 +113,6 @@ private:
 
    const struct brw_vs_prog_key *const key;
    struct brw_vs_prog_data * const vs_prog_data;
-   struct gl_vertex_program *const vp;
    src_reg *vp_temp_regs;
    src_reg vp_addr_reg;
 

@@ -425,8 +425,6 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
       unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
 
-      assert(shader->base.UniformBlocks[ubo_index].IsShaderStorage);
-
       src_reg surf_index = src_reg(prog_data->base.binding_table.ubo_start +
                                    ubo_index);
       dst_reg result_dst = get_nir_dest(instr->dest);

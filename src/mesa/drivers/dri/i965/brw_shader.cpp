@@ -895,22 +895,16 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
 backend_shader::backend_shader(const struct brw_compiler *compiler,
                                void *log_data,
                                void *mem_ctx,
-                               struct gl_shader_program *shader_prog,
-                               struct gl_program *prog,
-                               struct brw_stage_prog_data *stage_prog_data,
-                               gl_shader_stage stage)
+                               nir_shader *shader,
+                               struct brw_stage_prog_data *stage_prog_data)
    : compiler(compiler),
      log_data(log_data),
      devinfo(compiler->devinfo),
-     nir(prog->nir),
-     shader(shader_prog ?
-        (struct brw_shader *)shader_prog->_LinkedShaders[stage] : NULL),
-     shader_prog(shader_prog),
-     prog(prog),
+     nir(shader),
      stage_prog_data(stage_prog_data),
      mem_ctx(mem_ctx),
      cfg(NULL),
-     stage(stage)
+     stage(shader->stage)
 {
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);

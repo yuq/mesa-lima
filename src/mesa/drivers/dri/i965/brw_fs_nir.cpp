@@ -1813,8 +1813,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
       int reg_width = dispatch_width / 8;
 
-      assert(shader->base.UniformBlocks[ubo_index].IsShaderStorage);
-
       /* Set LOD = 0 */
       fs_reg source = fs_reg(0);
 

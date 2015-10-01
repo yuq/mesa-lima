@@ -38,13 +38,14 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
+                                 nir_shader *shader,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
-   : vec4_visitor(compiler, log_data,
-                  &c->gp->program.Base, &c->key.tex,
-                  &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
+   : vec4_visitor(compiler, log_data, &c->key.tex,
+                  &c->prog_data.base, shader,  mem_ctx,
                   no_spills, shader_time_index),
+     shader_prog(prog),
      c(c)
 {
 }
@@ -621,12 +622,10 @@ brw_gs_emit(struct brw_context *brw,
             void *mem_ctx,
             unsigned *final_assembly_size)
 {
-   if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
-      struct brw_shader *shader =
-         (brw_shader *) prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
-      brw_dump_ir("geometry", prog, &shader->base, NULL);
-   }
+   if (unlikely(INTEL_DEBUG & DEBUG_GS))
+      brw_dump_ir("geometry", prog, shader, NULL);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
@@ -642,7 +641,8 @@ brw_gs_emit(struct brw_context *brw,
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
          vec4_gs_visitor v(brw->intelScreen->compiler, brw,
-                           c, prog, mem_ctx, true /* no_spills */, st_index);
+                           c, prog, shader->Program->nir,
+                           mem_ctx, true /* no_spills */, st_index);
          if (v.run()) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
                                      &c->prog_data.base, mem_ctx, v.cfg,
@@ -684,11 +684,13 @@ brw_gs_emit(struct brw_context *brw,
 
    if (brw->gen >= 7)
       gs = new vec4_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, prog, mem_ctx, false /* no_spills */,
+                               c, prog, shader->Program->nir,
+                               mem_ctx, false /* no_spills */,
                                st_index);
    else
       gs = new gen6_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, prog, mem_ctx, false /* no_spills */,
+                               c, prog, shader->Program->nir,
+                               mem_ctx, false /* no_spills */,
                                st_index);
 
    if (!gs->run()) {

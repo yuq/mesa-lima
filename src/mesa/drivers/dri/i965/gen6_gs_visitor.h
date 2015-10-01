@@ -39,10 +39,11 @@ public:
                    void *log_data,
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
+                   nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
                    int shader_time_index) :
-      vec4_gs_visitor(comp, log_data, c, prog, mem_ctx, no_spills,
+      vec4_gs_visitor(comp, log_data, c, prog, shader, mem_ctx, no_spills,
                       shader_time_index) {}
 
 protected:

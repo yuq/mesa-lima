@@ -5060,7 +5060,6 @@ bool
 fs_visitor::run_cs()
 {
    assert(stage == MESA_SHADER_COMPUTE);
-   assert(shader);
 
    setup_cs_payload();
 
@@ -5116,9 +5115,8 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
-   fs_visitor v(brw->intelScreen->compiler, brw,
-                mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                prog, &fp->Base, 8, st_index8);
+   fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
+                &prog_data->base, &fp->Base, fp->Base.nir, 8, st_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
          prog->LinkStatus = false;
@@ -5132,9 +5130,8 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(brw->intelScreen->compiler, brw,
-                 mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                 prog, &fp->Base, 16, st_index16);
+   fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
+                 &prog_data->base, &fp->Base, fp->Base.nir, 16, st_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
@@ -5248,9 +5245,8 @@ brw_cs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw->intelScreen->compiler, brw,
-                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                 &cp->Base, 8, st_index);
+   fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
+                 &prog_data->base, &cp->Base, cp->Base.nir, 8, st_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
@@ -5258,9 +5254,8 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw->intelScreen->compiler, brw,
-                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                  &cp->Base, 16, st_index);
+   fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
+                  &prog_data->base, &cp->Base, cp->Base.nir, 16, st_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * brw->max_cs_threads) {
