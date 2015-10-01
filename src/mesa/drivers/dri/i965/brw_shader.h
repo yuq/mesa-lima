@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include "brw_reg.h"
 #include "brw_defines.h"
+#include "brw_context.h"
 #include "main/compiler.h"
 #include "glsl/ir.h"
 #include "program/prog_parameter.h"
@@ -266,8 +267,6 @@ public:
    void calculate_cfg();
    void invalidate_cfg();
 
-   void assign_common_binding_table_offsets(uint32_t next_binding_table_offset);
-
    virtual void invalidate_live_intervals() = 0;
 };
 
@@ -294,6 +293,14 @@ extern "C" {
 
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
+
+void
+brw_assign_common_binding_table_offsets(gl_shader_stage stage,
+                                        const struct brw_device_info *devinfo,
+                                        const struct gl_shader_program *shader_prog,
+                                        const struct gl_program *prog,
+                                        struct brw_stage_prog_data *stage_prog_data,
+                                        uint32_t next_binding_table_offset);
 
 bool brw_vs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,

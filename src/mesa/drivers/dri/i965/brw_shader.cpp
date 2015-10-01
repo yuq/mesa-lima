@@ -1352,16 +1352,25 @@ backend_shader::invalidate_cfg()
  * trigger some of our asserts that surface indices are < BRW_MAX_SURFACES.
  */
 void
-backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_offset)
+brw_assign_common_binding_table_offsets(gl_shader_stage stage,
+                                        const struct brw_device_info *devinfo,
+                                        const struct gl_shader_program *shader_prog,
+                                        const struct gl_program *prog,
+                                        struct brw_stage_prog_data *stage_prog_data,
+                                        uint32_t next_binding_table_offset)
 {
+   const struct gl_shader *shader = NULL;
    int num_textures = _mesa_fls(prog->SamplersUsed);
+
+   if (shader_prog)
+      shader = shader_prog->_LinkedShaders[stage];
 
    stage_prog_data->binding_table.texture_start = next_binding_table_offset;
    next_binding_table_offset += num_textures;
 
    if (shader) {
       stage_prog_data->binding_table.ubo_start = next_binding_table_offset;
-      next_binding_table_offset += shader->base.NumUniformBlocks;
+      next_binding_table_offset += shader->NumUniformBlocks;
    } else {
       stage_prog_data->binding_table.ubo_start = 0xd0d0d0d0;
    }
@@ -1392,9 +1401,9 @@ backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_
       stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }
 
-   if (shader && shader->base.NumImages) {
+   if (shader && shader->NumImages) {
       stage_prog_data->binding_table.image_start = next_binding_table_offset;
-      next_binding_table_offset += shader->base.NumImages;
+      next_binding_table_offset += shader->NumImages;
    } else {
       stage_prog_data->binding_table.image_start = 0xd0d0d0d0;
    }

@@ -1710,7 +1710,8 @@ vec4_vs_visitor::setup_payload(void)
 void
 vec4_visitor::assign_binding_table_offsets()
 {
-   assign_common_binding_table_offsets(0);
+   brw_assign_common_binding_table_offsets(stage, devinfo, shader_prog, prog,
+                                           stage_prog_data, 0);
 }
 
 src_reg

@@ -4749,7 +4749,9 @@ fs_visitor::assign_fs_binding_table_offsets()
    prog_data->binding_table.render_target_start = next_binding_table_offset;
    next_binding_table_offset += MAX2(key->nr_color_regions, 1);
 
-   assign_common_binding_table_offsets(next_binding_table_offset);
+   brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
+                                           shader_prog, prog, stage_prog_data,
+                                           next_binding_table_offset);
 }
 
 void
@@ -4763,7 +4765,9 @@ fs_visitor::assign_cs_binding_table_offsets()
    prog_data->binding_table.work_groups_start = next_binding_table_offset;
    next_binding_table_offset++;
 
-   assign_common_binding_table_offsets(next_binding_table_offset);
+   brw_assign_common_binding_table_offsets(MESA_SHADER_COMPUTE, devinfo,
+                                           shader_prog, prog, stage_prog_data,
+                                           next_binding_table_offset);
 }
 
 void
@@ -4979,7 +4983,9 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 {
    assert(stage == MESA_SHADER_VERTEX);
 
-   assign_common_binding_table_offsets(0);
+   brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX, devinfo,
+                                           shader_prog, prog, stage_prog_data,
+                                           0);
    setup_vs_payload();
 
    if (shader_time_index >= 0)

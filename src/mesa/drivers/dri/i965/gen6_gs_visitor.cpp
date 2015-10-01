@@ -41,7 +41,9 @@ gen6_gs_visitor::assign_binding_table_offsets()
    /* In gen6 we reserve the first BRW_MAX_SOL_BINDINGS entries for transform
     * feedback surfaces.
     */
-   assign_common_binding_table_offsets(BRW_MAX_SOL_BINDINGS);
+   brw_assign_common_binding_table_offsets(MESA_SHADER_GEOMETRY, devinfo,
+                                           shader_prog, prog, stage_prog_data,
+                                           BRW_MAX_SOL_BINDINGS);
 }
 
 void
