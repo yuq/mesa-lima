@@ -739,7 +739,7 @@ private:
       handle_subroutines(base_type, &this->uniforms[id]);
 
       /* For array of arrays or struct arrays the base location may have
-       * already been set so dont set it again.
+       * already been set so don't set it again.
        */
       if (ubo_block_index == -1 && current_var->data.location == -1) {
          current_var->data.location = id;
@@ -764,7 +764,7 @@ private:
                this->explicit_location + field_counter;
             field_counter += entries;
          } else {
-         this->uniforms[id].remap_location = this->explicit_location;
+            this->uniforms[id].remap_location = this->explicit_location;
          }
       } else {
          /* Initialize to to indicate that no location is set */
@@ -815,12 +815,13 @@ private:
 	 if (type->without_array()->is_matrix()) {
             const glsl_type *matrix = type->without_array();
             const unsigned N = matrix->base_type == GLSL_TYPE_DOUBLE ? 8 : 4;
-            const unsigned items = row_major ? matrix->matrix_columns : matrix->vector_elements;
+            const unsigned items =
+               row_major ? matrix->matrix_columns : matrix->vector_elements;
 
             assert(items <= 4);
             if (packing == GLSL_INTERFACE_PACKING_STD430)
                this->uniforms[id].matrix_stride = items < 3 ? items * N :
-                                                          glsl_align(items * N, 16);
+                                                    glsl_align(items * N, 16);
             else
                this->uniforms[id].matrix_stride = glsl_align(items * N, 16);
 	    this->uniforms[id].row_major = row_major;
@@ -1154,7 +1155,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
 	 ir_variable *const var = node->as_variable();
 
-	 if ((var == NULL) || (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage))
+         if ((var == NULL) || (var->data.mode != ir_var_uniform &&
+                               var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 parcel.set_and_process(prog, var);
@@ -1163,7 +1165,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
       prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
 
-      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) == sizeof(parcel.targets));
+      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
+                    sizeof(parcel.targets));
       memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
              sizeof(prog->_LinkedShaders[i]->SamplerTargets));
    }
