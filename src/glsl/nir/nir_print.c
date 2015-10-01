@@ -443,6 +443,8 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
       break;
    case nir_intrinsic_load_input:
    case nir_intrinsic_load_input_indirect:
+   case nir_intrinsic_load_per_vertex_input:
+   case nir_intrinsic_load_per_vertex_input_indirect:
       var_list = &state->shader->inputs;
       break;
    case nir_intrinsic_store_output:

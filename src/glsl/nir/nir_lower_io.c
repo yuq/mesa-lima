@@ -63,8 +63,20 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
    *size = location;
 }
 
+/**
+ * Returns true if we're processing a stage whose inputs are arrays indexed
+ * by a vertex number (such as geometry shader inputs).
+ */
+static bool
+stage_uses_per_vertex_inputs(struct lower_io_state *state)
+{
+   gl_shader_stage stage = state->builder.shader->stage;
+   return stage == MESA_SHADER_GEOMETRY;
+}
+
 static unsigned
 get_io_offset(nir_deref_var *deref, nir_instr *instr,
+              nir_ssa_def **vertex_index,
               nir_ssa_def **out_indirect,
               struct lower_io_state *state)
 {
@@ -75,6 +87,22 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr,
    b->cursor = nir_before_instr(instr);
 
    nir_deref *tail = &deref->deref;
+
+   /* For per-vertex input arrays (i.e. geometry shader inputs), keep the
+    * outermost array index separate.  Process the rest normally.
+    */
+   if (vertex_index != NULL) {
+      tail = tail->child;
+      assert(tail->deref_type == nir_deref_type_array);
+      nir_deref_array *deref_array = nir_deref_as_array(tail);
+
+      nir_ssa_def *vtx = nir_imm_int(b, deref_array->base_offset);
+      if (deref_array->deref_array_type == nir_deref_array_type_indirect) {
+         vtx = nir_iadd(b, vtx, nir_ssa_for_src(b, deref_array->indirect, 1));
+      }
+      *vertex_index = vtx;
+   }
+
    while (tail->child != NULL) {
       const struct glsl_type *parent_type = tail->type;
       tail = tail->child;
@@ -107,13 +135,19 @@ get_io_offset(nir_deref_var *deref, nir_instr *instr,
 }
 
 static nir_intrinsic_op
-load_op(nir_variable_mode mode, bool has_indirect)
+load_op(struct lower_io_state *state,
+        nir_variable_mode mode, bool per_vertex, bool has_indirect)
 {
    nir_intrinsic_op op;
    switch (mode) {
    case nir_var_shader_in:
-      op = has_indirect ? nir_intrinsic_load_input_indirect :
-                          nir_intrinsic_load_input;
+      if (per_vertex) {
+         op = has_indirect ? nir_intrinsic_load_per_vertex_input_indirect :
+                             nir_intrinsic_load_per_vertex_input;
+      } else {
+         op = has_indirect ? nir_intrinsic_load_input_indirect :
+                             nir_intrinsic_load_input;
+      }
       break;
    case nir_var_uniform:
       op = has_indirect ? nir_intrinsic_load_uniform_indirect :
@@ -150,14 +184,20 @@ nir_lower_io_block(nir_block *block, void *void_state)
          if (mode != nir_var_shader_in && mode != nir_var_uniform)
             continue;
 
+         bool per_vertex = stage_uses_per_vertex_inputs(state) &&
+                           mode == nir_var_shader_in;
+
          nir_ssa_def *indirect;
+         nir_ssa_def *vertex_index;
 
          unsigned offset = get_io_offset(intrin->variables[0], &intrin->instr,
+                                         per_vertex ? &vertex_index : NULL,
                                          &indirect, state);
 
          nir_intrinsic_instr *load =
             nir_intrinsic_instr_create(state->mem_ctx,
-                                       load_op(mode, indirect));
+                                       load_op(state, mode, per_vertex,
+                                               indirect));
          load->num_components = intrin->num_components;
 
          unsigned location = intrin->variables[0]->var->data.driver_location;
@@ -168,8 +208,11 @@ nir_lower_io_block(nir_block *block, void *void_state)
             load->const_index[0] = location + offset;
          }
 
+         if (per_vertex)
+            load->src[0] = nir_src_for_ssa(vertex_index);
+
          if (indirect)
-            load->src[0] = nir_src_for_ssa(indirect);
+            load->src[per_vertex ? 1 : 0] = nir_src_for_ssa(indirect);
 
          if (intrin->dest.is_ssa) {
             nir_ssa_dest_init(&load->instr, &load->dest,
@@ -192,7 +235,7 @@ nir_lower_io_block(nir_block *block, void *void_state)
          nir_ssa_def *indirect;
 
          unsigned offset = get_io_offset(intrin->variables[0], &intrin->instr,
-                                         &indirect, state);
+                                         NULL, &indirect, state);
          offset += intrin->variables[0]->var->data.driver_location;
 
          nir_intrinsic_op store_op;
