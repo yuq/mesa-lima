@@ -122,7 +122,7 @@ instruction(bblock_t *block, int num)
 static bool
 cmod_propagation(vec4_visitor *v)
 {
-   const bool print = false;
+   const bool print = getenv("TEST_DEBUG");
 
    if (print) {
       fprintf(stderr, "= Before =\n");
