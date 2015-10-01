@@ -744,7 +744,31 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
        * or 32 depending on the number of columns.
        */
       assert(matrix_columns <= 4);
-      unsigned matrix_stride = glsl_align(matrix_columns * N, 16);
+      unsigned matrix_stride = 0;
+      /* Matrix stride for std430 mat2xY matrices are not rounded up to
+       * vec4 size. From OpenGL 4.3 spec, section 7.6.2.2 "Standard Uniform
+       * Block Layout":
+       *
+       * "2. If the member is a two- or four-component vector with components
+       * consuming N basic machine units, the base alignment is 2N or 4N,
+       * respectively." [...]
+       * "4. If the member is an array of scalars or vectors, the base alignment
+       * and array stride are set to match the base alignment of a single array
+       * element, according to rules (1), (2), and (3), and rounded up to the
+       * base alignment of a vec4." [...]
+       * "7. If the member is a row-major matrix with C columns and R rows, the
+       * matrix is stored identically to an array of R row vectors with C
+       * components each, according to rule (4)." [...]
+       * "When using the std430 storage layout, shader storage blocks will be
+       * laid out in buffer storage identically to uniform and shader storage
+       * blocks using the std140 layout, except that the base alignment and
+       * stride of arrays of scalars and vectors in rule 4 and of structures in
+       * rule 9 are not rounded up a multiple of the base alignment of a vec4."
+       */
+      if (packing == GLSL_INTERFACE_PACKING_STD430 && matrix_columns == 2)
+         matrix_stride = 2 * N;
+      else
+         matrix_stride = glsl_align(matrix_columns * N, 16);
 
       const glsl_type *deref_type = deref->type->base_type == GLSL_TYPE_FLOAT ?
          glsl_type::float_type : glsl_type::double_type;
