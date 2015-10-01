@@ -160,7 +160,7 @@ intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
    }
 }
 
-bool
+static bool
 intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
@@ -193,7 +193,7 @@ intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
  *     - MCS buffer for non-MSRT is supported only for RT formats 32bpp,
  *       64bpp, and 128bpp.
  */
-bool
+static bool
 intel_miptree_is_fast_clear_capable(struct brw_context *brw,
                                     struct intel_mipmap_tree *mt)
 {
