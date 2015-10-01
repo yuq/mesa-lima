@@ -470,7 +470,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       /* Offset */
@@ -617,7 +617,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       src_reg offset_reg = src_reg(this, glsl_type::uint_type);
@@ -767,7 +767,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       unsigned const_offset = instr->const_index[0];
@@ -837,7 +837,7 @@ vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
        */
       brw_mark_surface_used(&prog_data->base,
                             prog_data->base.binding_table.ubo_start +
-                            shader_prog->NumBufferInterfaceBlocks - 1);
+                            nir->info.num_ssbos - 1);
    }
 
    src_reg offset = get_nir_src(instr->src[1], 1);
