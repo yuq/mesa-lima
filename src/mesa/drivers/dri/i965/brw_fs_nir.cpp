@@ -185,20 +185,17 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    if (shader_prog) {
       brw_nir_setup_glsl_uniforms(shader, shader_prog, prog,
                                   stage_prog_data, true);
-
-      foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
-         /* UBO's and atomics don't take up space in the uniform file */
-         if (var->interface_type != NULL || var->type->contains_atomic())
-            continue;
-
-         if(type_size_scalar(var->type) > 0)
-            param_size[var->data.driver_location] = type_size_scalar(var->type);
-      }
    } else {
       brw_nir_setup_arb_uniforms(shader, prog, stage_prog_data);
+   }
 
-      if(prog->Parameters->NumParameters > 0)
-         param_size[0] = prog->Parameters->NumParameters * 4;
+   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+      /* UBO's and atomics don't take up space in the uniform file */
+      if (var->interface_type != NULL || var->type->contains_atomic())
+         continue;
+
+      if (type_size_scalar(var->type) > 0)
+         param_size[var->data.driver_location] = type_size_scalar(var->type);
    }
 }
 

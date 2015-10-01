@@ -139,22 +139,17 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
    if (shader_prog) {
       brw_nir_setup_glsl_uniforms(shader, shader_prog, prog,
                                   stage_prog_data, false);
-
-      foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
-         /* UBO's, atomics and samplers don't take up space in the
-            uniform file */
-         if (var->interface_type != NULL || var->type->contains_atomic() ||
-             type_size_vec4(var->type) == 0) {
-            continue;
-         }
-
-         uniform_size[var->data.driver_location] = type_size_vec4(var->type);
-      }
    } else {
       brw_nir_setup_arb_uniforms(shader, prog, stage_prog_data);
+   }
 
-      if(prog->Parameters->NumParameters > 0)
-         uniform_size[0] = prog->Parameters->NumParameters;
+   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+      /* UBO's and atomics don't take up space in the uniform file */
+      if (var->interface_type != NULL || var->type->contains_atomic())
+         continue;
+
+      if (type_size_vec4(var->type) > 0)
+         uniform_size[var->data.driver_location] = type_size_vec4(var->type);
    }
 }
 
