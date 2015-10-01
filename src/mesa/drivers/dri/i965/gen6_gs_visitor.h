@@ -46,7 +46,6 @@ public:
                       shader_time_index) {}
 
 protected:
-   virtual void assign_binding_table_offsets();
    virtual void emit_prolog();
    virtual void emit_thread_end();
    virtual void gs_emit_vertex(int stream_id);

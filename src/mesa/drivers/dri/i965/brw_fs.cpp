@@ -4736,41 +4736,6 @@ fs_visitor::setup_cs_payload()
 }
 
 void
-fs_visitor::assign_fs_binding_table_offsets()
-{
-   assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   uint32_t next_binding_table_offset = 0;
-
-   /* If there are no color regions, we still perform an FB write to a null
-    * renderbuffer, which we place at surface index 0.
-    */
-   prog_data->binding_table.render_target_start = next_binding_table_offset;
-   next_binding_table_offset += MAX2(key->nr_color_regions, 1);
-
-   brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
-                                           shader_prog, prog, stage_prog_data,
-                                           next_binding_table_offset);
-}
-
-void
-fs_visitor::assign_cs_binding_table_offsets()
-{
-   assert(stage == MESA_SHADER_COMPUTE);
-   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
-   uint32_t next_binding_table_offset = 0;
-
-   /* May not be used if the gl_NumWorkGroups variable is not accessed. */
-   prog_data->binding_table.work_groups_start = next_binding_table_offset;
-   next_binding_table_offset++;
-
-   brw_assign_common_binding_table_offsets(MESA_SHADER_COMPUTE, devinfo,
-                                           shader_prog, prog, stage_prog_data,
-                                           next_binding_table_offset);
-}
-
-void
 fs_visitor::calculate_register_pressure()
 {
    invalidate_live_intervals();
@@ -4983,9 +4948,6 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 {
    assert(stage == MESA_SHADER_VERTEX);
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX, devinfo,
-                                           shader_prog, prog, stage_prog_data,
-                                           0);
    setup_vs_payload();
 
    if (shader_time_index >= 0)
@@ -5025,8 +4987,6 @@ fs_visitor::run_fs(bool do_rep_send)
    assert(stage == MESA_SHADER_FRAGMENT);
 
    sanity_param_count = prog->Parameters->NumParameters;
-
-   assign_fs_binding_table_offsets();
 
    if (devinfo->gen >= 6)
       setup_payload_gen6();
@@ -5113,8 +5073,6 @@ fs_visitor::run_cs()
    assert(shader);
 
    sanity_param_count = prog->Parameters->NumParameters;
-
-   assign_cs_binding_table_offsets();
 
    setup_cs_payload();
 

@@ -132,6 +132,26 @@ computed_depth_mode(struct gl_fragment_program *fp)
    return BRW_PSCDEPTH_OFF;
 }
 
+static void
+assign_fs_binding_table_offsets(const struct brw_device_info *devinfo,
+                                const struct gl_shader_program *shader_prog,
+                                const struct gl_program *prog,
+                                const struct brw_wm_prog_key *key,
+                                struct brw_wm_prog_data *prog_data)
+{
+   uint32_t next_binding_table_offset = 0;
+
+   /* If there are no color regions, we still perform an FB write to a null
+    * renderbuffer, which we place at surface index 0.
+    */
+   prog_data->binding_table.render_target_start = next_binding_table_offset;
+   next_binding_table_offset += MAX2(key->nr_color_regions, 1);
+
+   brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
+                                           shader_prog, prog, &prog_data->base,
+                                           next_binding_table_offset);
+}
+
 /**
  * All Mesa program -> GPU code generation goes through this function.
  * Depending on the instructions used (i.e. flow control instructions)
@@ -169,6 +189,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
    if (!prog)
       prog_data.base.use_alt_mode = true;
+
+   assign_fs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+                                   &fp->program.Base, key, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed

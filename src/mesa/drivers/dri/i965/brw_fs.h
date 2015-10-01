@@ -128,8 +128,6 @@ public:
    bool run_cs();
    void optimize();
    void allocate_registers();
-   void assign_fs_binding_table_offsets();
-   void assign_cs_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();

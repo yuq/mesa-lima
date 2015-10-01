@@ -374,7 +374,6 @@ protected:
                                     bool interleaved);
    void setup_payload_interference(struct ra_graph *g, int first_payload_node,
                                    int reg_node_count);
-   virtual void assign_binding_table_offsets();
    virtual void setup_payload() = 0;
    virtual void emit_prolog() = 0;
    virtual void emit_thread_end() = 0;

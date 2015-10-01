@@ -1707,13 +1707,6 @@ vec4_vs_visitor::setup_payload(void)
    this->first_non_payload_grf = reg;
 }
 
-void
-vec4_visitor::assign_binding_table_offsets()
-{
-   brw_assign_common_binding_table_offsets(stage, devinfo, shader_prog, prog,
-                                           stage_prog_data, 0);
-}
-
 src_reg
 vec4_visitor::get_timestamp()
 {
@@ -1813,8 +1806,6 @@ vec4_visitor::run()
 
    if (shader_time_index >= 0)
       emit_shader_time_begin();
-
-   assign_binding_table_offsets();
 
    emit_prolog();
 

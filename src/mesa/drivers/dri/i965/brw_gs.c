@@ -34,6 +34,22 @@
 #include "brw_ff_gs.h"
 #include "glsl/nir/nir.h"
 
+static void
+assign_gs_binding_table_offsets(const struct brw_device_info *devinfo,
+                                const struct gl_shader_program *shader_prog,
+                                const struct gl_program *prog,
+                                struct brw_gs_prog_data *prog_data)
+{
+   /* In gen6 we reserve the first BRW_MAX_SOL_BINDINGS entries for transform
+    * feedback surfaces.
+    */
+   uint32_t reserved = devinfo->gen == 6 ? BRW_MAX_SOL_BINDINGS : 0;
+
+   brw_assign_common_binding_table_offsets(MESA_SHADER_GEOMETRY, devinfo,
+                                           shader_prog, prog,
+                                           &prog_data->base.base,
+                                           reserved);
+}
 
 bool
 brw_codegen_gs_prog(struct brw_context *brw,
@@ -51,6 +67,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
       (gp->program.Base.InputsRead & VARYING_BIT_PRIMITIVE_ID) != 0;
 
    c.prog_data.invocations = gp->program.Invocations;
+
+   assign_gs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+                                   &gp->program.Base, &c.prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
