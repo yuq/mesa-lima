@@ -236,6 +236,7 @@ public:
    void *log_data; /* Passed to compiler->*_log functions */
 
    const struct brw_device_info * const devinfo;
+   nir_shader *nir;
    struct brw_shader * const shader;
    struct gl_shader_program * const shader_prog;
    struct gl_program * const prog;

@@ -236,10 +236,10 @@ public:
                    uint32_t spill_offset, int count);
 
    void emit_nir_code();
-   void nir_setup_inputs(nir_shader *shader);
-   void nir_setup_outputs(nir_shader *shader);
-   void nir_setup_uniforms(nir_shader *shader);
-   void nir_emit_system_values(nir_shader *shader);
+   void nir_setup_inputs();
+   void nir_setup_outputs();
+   void nir_setup_uniforms();
+   void nir_emit_system_values();
    void nir_emit_impl(nir_function_impl *impl);
    void nir_emit_cf_list(exec_list *list);
    void nir_emit_if(nir_if *if_stmt);

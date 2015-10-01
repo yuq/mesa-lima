@@ -902,6 +902,7 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    : compiler(compiler),
      log_data(log_data),
      devinfo(compiler->devinfo),
+     nir(prog->nir),
      shader(shader_prog ?
         (struct brw_shader *)shader_prog->_LinkedShaders[stage] : NULL),
      shader_prog(shader_prog),

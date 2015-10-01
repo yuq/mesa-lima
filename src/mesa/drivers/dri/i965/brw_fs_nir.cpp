@@ -37,15 +37,13 @@ using namespace brw::surface_access;
 void
 fs_visitor::emit_nir_code()
 {
-   nir_shader *nir = prog->nir;
-
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
     */
-   nir_setup_inputs(nir);
-   nir_setup_outputs(nir);
-   nir_setup_uniforms(nir);
-   nir_emit_system_values(nir);
+   nir_setup_inputs();
+   nir_setup_outputs();
+   nir_setup_uniforms();
+   nir_emit_system_values();
 
    /* get the main function and emit it */
    nir_foreach_overload(nir, overload) {
@@ -56,11 +54,11 @@ fs_visitor::emit_nir_code()
 }
 
 void
-fs_visitor::nir_setup_inputs(nir_shader *shader)
+fs_visitor::nir_setup_inputs()
 {
-   nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, shader->num_inputs);
+   nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
 
@@ -118,13 +116,13 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
 }
 
 void
-fs_visitor::nir_setup_outputs(nir_shader *shader)
+fs_visitor::nir_setup_outputs()
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, shader->num_outputs);
+   nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
       int vector_elements =
@@ -175,14 +173,14 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 }
 
 void
-fs_visitor::nir_setup_uniforms(nir_shader *shader)
+fs_visitor::nir_setup_uniforms()
 {
    if (dispatch_width != 8)
       return;
 
-   uniforms = shader->num_uniforms;
+   uniforms = nir->num_uniforms;
 
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+   foreach_list_typed(nir_variable, var, node, &nir->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())
          continue;
@@ -274,10 +272,10 @@ emit_system_values_block(nir_block *block, void *void_visitor)
 }
 
 void
-fs_visitor::nir_emit_system_values(nir_shader *shader)
+fs_visitor::nir_emit_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, fs_reg, SYSTEM_VALUE_MAX);
-   nir_foreach_overload(shader, overload) {
+   nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
       nir_foreach_block(overload->impl, emit_system_values_block, this);

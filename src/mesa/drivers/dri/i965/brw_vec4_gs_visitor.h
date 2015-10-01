@@ -75,7 +75,7 @@ public:
                    bool no_spills,
                    int shader_time_index);
 
-   virtual void nir_setup_inputs(nir_shader *shader);
+   virtual void nir_setup_inputs();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
 
 protected:

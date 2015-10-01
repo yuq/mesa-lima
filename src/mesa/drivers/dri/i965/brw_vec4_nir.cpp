@@ -35,15 +35,13 @@ namespace brw {
 void
 vec4_visitor::emit_nir_code()
 {
-   nir_shader *nir = prog->nir;
-
    if (nir->num_inputs > 0)
-      nir_setup_inputs(nir);
+      nir_setup_inputs();
 
    if (nir->num_uniforms > 0)
-      nir_setup_uniforms(nir);
+      nir_setup_uniforms();
 
-   nir_setup_system_values(nir);
+   nir_setup_system_values();
 
    /* get the main function and emit it */
    nir_foreach_overload(nir, overload) {
@@ -105,11 +103,11 @@ setup_system_values_block(nir_block *block, void *void_visitor)
 }
 
 void
-vec4_visitor::nir_setup_system_values(nir_shader *shader)
+vec4_visitor::nir_setup_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, dst_reg, SYSTEM_VALUE_MAX);
 
-   nir_foreach_overload(shader, overload) {
+   nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
       nir_foreach_block(overload->impl, setup_system_values_block, this);
@@ -117,11 +115,11 @@ vec4_visitor::nir_setup_system_values(nir_shader *shader)
 }
 
 void
-vec4_visitor::nir_setup_inputs(nir_shader *shader)
+vec4_visitor::nir_setup_inputs()
 {
-   nir_inputs = ralloc_array(mem_ctx, src_reg, shader->num_inputs);
+   nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       int offset = var->data.driver_location;
       unsigned size = type_size_vec4(var->type);
       for (unsigned i = 0; i < size; i++) {
@@ -132,11 +130,11 @@ vec4_visitor::nir_setup_inputs(nir_shader *shader)
 }
 
 void
-vec4_visitor::nir_setup_uniforms(nir_shader *shader)
+vec4_visitor::nir_setup_uniforms()
 {
-   uniforms = shader->num_uniforms;
+   uniforms = nir->num_uniforms;
 
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+   foreach_list_typed(nir_variable, var, node, &nir->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())
          continue;

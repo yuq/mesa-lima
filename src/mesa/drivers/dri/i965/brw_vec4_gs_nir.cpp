@@ -27,11 +27,11 @@
 namespace brw {
 
 void
-vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
+vec4_gs_visitor::nir_setup_inputs()
 {
-   nir_inputs = ralloc_array(mem_ctx, src_reg, shader->num_inputs);
+   nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       int offset = var->data.driver_location;
       if (var->type->base_type == GLSL_TYPE_ARRAY) {
          /* Geometry shader inputs are arrays, but they use an unusual array

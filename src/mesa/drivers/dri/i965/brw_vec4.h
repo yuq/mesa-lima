@@ -332,10 +332,10 @@ public:
    bool is_high_sampler(src_reg sampler);
 
    virtual void emit_nir_code();
-   virtual void nir_setup_inputs(nir_shader *shader);
-   virtual void nir_setup_uniforms(nir_shader *shader);
+   virtual void nir_setup_inputs();
+   virtual void nir_setup_uniforms();
    virtual void nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr);
-   virtual void nir_setup_system_values(nir_shader *shader);
+   virtual void nir_setup_system_values();
    virtual void nir_emit_impl(nir_function_impl *impl);
    virtual void nir_emit_cf_list(exec_list *list);
    virtual void nir_emit_if(nir_if *if_stmt);
