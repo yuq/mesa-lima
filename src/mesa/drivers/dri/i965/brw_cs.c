@@ -30,7 +30,7 @@
 #include "intel_mipmap_tree.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
-#include "glsl/nir/nir.h"
+#include "brw_nir.h"
 
 static void
 assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,
@@ -88,6 +88,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param, cs->base.NumImages);
    prog_data.base.nr_params = param_count;
    prog_data.base.nr_image_params = cs->base.NumImages;
+
+   brw_nir_setup_glsl_uniforms(cp->program.Base.nir, prog, &cp->program.Base,
+                               &prog_data.base, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&

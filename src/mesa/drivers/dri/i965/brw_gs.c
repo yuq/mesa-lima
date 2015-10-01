@@ -32,7 +32,7 @@
 #include "brw_vec4_gs_visitor.h"
 #include "brw_state.h"
 #include "brw_ff_gs.h"
-#include "glsl/nir/nir.h"
+#include "brw_nir.h"
 
 static void
 assign_gs_binding_table_offsets(const struct brw_device_info *devinfo,
@@ -90,6 +90,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param, gs->NumImages);
    c.prog_data.base.base.nr_params = param_count;
    c.prog_data.base.base.nr_image_params = gs->NumImages;
+
+   brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
+                               &c.prog_data.base.base, false);
 
    if (brw->gen >= 8) {
       c.prog_data.static_vertex_count = !gp->program.Base.nir ? -1 :

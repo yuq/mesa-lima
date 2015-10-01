@@ -35,7 +35,7 @@
 #include "program/prog_parameter.h"
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
-#include "glsl/nir/nir.h"
+#include "brw_nir.h"
 
 #include "util/ralloc.h"
 
@@ -210,6 +210,14 @@ brw_codegen_wm_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param,
                     prog_data.base.nr_image_params);
    prog_data.base.nr_params = param_count;
+
+   if (prog) {
+      brw_nir_setup_glsl_uniforms(fp->program.Base.nir, prog, &fp->program.Base,
+                                  &prog_data.base, true);
+   } else {
+      brw_nir_setup_arb_uniforms(fp->program.Base.nir, &fp->program.Base,
+                                 &prog_data.base);
+   }
 
    prog_data.barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw, key->flat_shade,

@@ -135,6 +135,15 @@ brw_codegen_vs_prog(struct brw_context *brw,
                     stage_prog_data->nr_image_params);
    stage_prog_data->nr_params = param_count;
 
+   if (prog) {
+      brw_nir_setup_glsl_uniforms(vp->program.Base.nir, prog, &vp->program.Base,
+                                  &prog_data.base.base,
+                                  brw->intelScreen->compiler->scalar_vs);
+   } else {
+      brw_nir_setup_arb_uniforms(vp->program.Base.nir, &vp->program.Base,
+                                 &prog_data.base.base);
+   }
+
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data.inputs_read = vp->program.Base.InputsRead;
 

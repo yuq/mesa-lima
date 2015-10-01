@@ -136,13 +136,6 @@ vec4_visitor::nir_setup_uniforms(nir_shader *shader)
 {
    uniforms = shader->num_uniforms;
 
-   if (shader_prog) {
-      brw_nir_setup_glsl_uniforms(shader, shader_prog, prog,
-                                  stage_prog_data, false);
-   } else {
-      brw_nir_setup_arb_uniforms(shader, prog, stage_prog_data);
-   }
-
    foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())
