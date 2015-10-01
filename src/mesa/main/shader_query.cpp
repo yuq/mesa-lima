@@ -872,6 +872,46 @@ get_var_name(const char *name)
    return strndup(first_dot+1, strlen(first_dot) - 1);
 }
 
+static bool
+is_top_level_shader_storage_block_member(const char* name,
+                                         const char* interface_name,
+                                         const char* field_name)
+{
+   bool result = false;
+
+   /* If the given variable is already a top-level shader storage
+    * block member, then return array_size = 1.
+    * We could have two possibilities: if we have an instanced
+    * shader storage block or not instanced.
+    *
+    * For the first, we check create a name as it was in top level and
+    * compare it with the real name. If they are the same, then
+    * the variable is already at top-level.
+    *
+    * Full instanced name is: interface name + '.' + var name +
+    *    NULL character
+    */
+   int name_length = strlen(interface_name) + 1 + strlen(field_name) + 1;
+   char *full_instanced_name = (char *) calloc(name_length, sizeof(char));
+   if (!full_instanced_name) {
+      fprintf(stderr, "%s: Cannot allocate space for name\n", __func__);
+      return false;
+   }
+
+   snprintf(full_instanced_name, name_length, "%s.%s",
+            interface_name, field_name);
+
+   /* Check if its top-level shader storage block member of an
+    * instanced interface block, or of a unnamed interface block.
+    */
+   if (strcmp(name, full_instanced_name) == 0 ||
+       strcmp(name, field_name) == 0)
+      result = true;
+
+   free(full_instanced_name);
+   return result;
+}
+
 static GLint
 program_resource_top_level_array_size(struct gl_shader_program *shProg,
                                       struct gl_program_resource *res,
@@ -921,12 +961,17 @@ program_resource_top_level_array_size(struct gl_shader_program *shProg,
              * the top-level block member is an array with no declared size,
              * the value zero is written to <params>.
              */
-            if (field->type->is_unsized_array())
+            if (is_top_level_shader_storage_block_member(name,
+                                                         interface_name,
+                                                         var_name))
+               array_size = 1;
+            else if (field->type->is_unsized_array())
                array_size = 0;
             else if (field->type->is_array())
                array_size = field->type->length;
             else
                array_size = 1;
+
             goto found_top_level_array_size;
          }
       }
@@ -995,6 +1040,12 @@ program_resource_top_level_array_stride(struct gl_shader_program *shProg,
                bool row_major = matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
                const glsl_type *array_type = field->type->fields.array;
 
+               if (is_top_level_shader_storage_block_member(name,
+                                                            interface_name,
+                                                            var_name)) {
+                  array_stride = 0;
+                  goto found_top_level_array_stride;
+               }
                if (interface->interface_packing != GLSL_INTERFACE_PACKING_STD430) {
                   if (array_type->is_record() || array_type->is_array()) {
                      array_stride = array_type->std140_size(row_major);
