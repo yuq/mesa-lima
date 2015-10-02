@@ -611,11 +611,10 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
       return GL_INVALID_INDEX;
 
    switch (res->Type) {
-   case GL_UNIFORM_BLOCK:
-   case GL_SHADER_STORAGE_BLOCK:
-      return RESOURCE_UBO(res)- shProg->UniformBlocks;
    case GL_ATOMIC_COUNTER_BUFFER:
       return RESOURCE_ATC(res) - shProg->AtomicBuffers;
+   case GL_UNIFORM_BLOCK:
+   case GL_SHADER_STORAGE_BLOCK:
    case GL_TRANSFORM_FEEDBACK_VARYING:
    default:
       return calc_resource_index(shProg, res);

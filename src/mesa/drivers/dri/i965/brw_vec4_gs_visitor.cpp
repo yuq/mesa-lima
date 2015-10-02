@@ -38,13 +38,14 @@ vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  struct brw_gs_compile *c,
                                  struct gl_shader_program *prog,
+                                 nir_shader *shader,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
-   : vec4_visitor(compiler, log_data,
-                  &c->gp->program.Base, &c->key.tex,
-                  &c->prog_data.base, prog, MESA_SHADER_GEOMETRY, mem_ctx,
+   : vec4_visitor(compiler, log_data, &c->key.tex,
+                  &c->prog_data.base, shader,  mem_ctx,
                   no_spills, shader_time_index),
+     shader_prog(prog),
      c(c)
 {
 }
@@ -207,15 +208,6 @@ vec4_gs_visitor::emit_prolog()
    this->current_annotation = NULL;
 }
 
-
-void
-vec4_gs_visitor::emit_program_code()
-{
-   /* We don't support NV_geometry_program4. */
-   unreachable("Unreached");
-}
-
-
 void
 vec4_gs_visitor::emit_thread_end()
 {
@@ -307,24 +299,6 @@ vec4_gs_visitor::emit_urb_write_opcode(bool complete)
 
    inst->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
    return inst;
-}
-
-
-int
-vec4_gs_visitor::compute_array_stride(ir_dereference_array *ir)
-{
-   /* Geometry shader inputs are arrays, but they use an unusual array layout:
-    * instead of all array elements for a given geometry shader input being
-    * stored consecutively, all geometry shader inputs are interleaved into
-    * one giant array.  At this stage of compilation, we assume that the
-    * stride of the array is BRW_VARYING_SLOT_COUNT.  Later,
-    * setup_attributes() will remap our accesses to the actual input array.
-    */
-   ir_dereference_variable *deref_var = ir->array->as_dereference_variable();
-   if (deref_var && deref_var->var->data.mode == ir_var_shader_in)
-      return BRW_VARYING_SLOT_COUNT;
-   else
-      return vec4_visitor::compute_array_stride(ir);
 }
 
 
@@ -576,27 +550,6 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
 }
 
 void
-vec4_gs_visitor::visit(ir_emit_vertex *ir)
-{
-   /* To ensure that we don't output more vertices than the shader specified
-    * using max_vertices, do the logic inside a conditional of the form "if
-    * (vertex_count < MAX)"
-    */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
-   emit(CMP(dst_null_d(), this->vertex_count,
-            src_reg(num_output_vertices), BRW_CONDITIONAL_L));
-   emit(IF(BRW_PREDICATE_NORMAL));
-
-   gs_emit_vertex(ir->stream_id());
-
-   this->current_annotation = "emit vertex: increment vertex count";
-   emit(ADD(dst_reg(this->vertex_count), this->vertex_count,
-            src_reg(1u)));
-
-   emit(BRW_OPCODE_ENDIF);
-}
-
-void
 vec4_gs_visitor::gs_end_primitive()
 {
    /* We can only do EndPrimitive() functionality when the control data
@@ -647,12 +600,6 @@ vec4_gs_visitor::gs_end_primitive()
    emit(OR(dst_reg(this->control_data_bits), this->control_data_bits, mask));
 }
 
-void
-vec4_gs_visitor::visit(ir_end_primitive *)
-{
-   gs_end_primitive();
-}
-
 static const unsigned *
 generate_assembly(struct brw_context *brw,
                   struct gl_shader_program *shader_prog,
@@ -675,12 +622,10 @@ brw_gs_emit(struct brw_context *brw,
             void *mem_ctx,
             unsigned *final_assembly_size)
 {
-   if (unlikely(INTEL_DEBUG & DEBUG_GS)) {
-      struct brw_shader *shader =
-         (brw_shader *) prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
-      brw_dump_ir("geometry", prog, &shader->base, NULL);
-   }
+   if (unlikely(INTEL_DEBUG & DEBUG_GS))
+      brw_dump_ir("geometry", prog, shader, NULL);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
@@ -696,7 +641,8 @@ brw_gs_emit(struct brw_context *brw,
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
          vec4_gs_visitor v(brw->intelScreen->compiler, brw,
-                           c, prog, mem_ctx, true /* no_spills */, st_index);
+                           c, prog, shader->Program->nir,
+                           mem_ctx, true /* no_spills */, st_index);
          if (v.run()) {
             return generate_assembly(brw, prog, &c->gp->program.Base,
                                      &c->prog_data.base, mem_ctx, v.cfg,
@@ -738,11 +684,13 @@ brw_gs_emit(struct brw_context *brw,
 
    if (brw->gen >= 7)
       gs = new vec4_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, prog, mem_ctx, false /* no_spills */,
+                               c, prog, shader->Program->nir,
+                               mem_ctx, false /* no_spills */,
                                st_index);
    else
       gs = new gen6_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, prog, mem_ctx, false /* no_spills */,
+                               c, prog, shader->Program->nir,
+                               mem_ctx, false /* no_spills */,
                                st_index);
 
    if (!gs->run()) {

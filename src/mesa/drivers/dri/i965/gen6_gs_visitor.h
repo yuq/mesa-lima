@@ -39,18 +39,16 @@ public:
                    void *log_data,
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
+                   nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
                    int shader_time_index) :
-      vec4_gs_visitor(comp, log_data, c, prog, mem_ctx, no_spills,
+      vec4_gs_visitor(comp, log_data, c, prog, shader, mem_ctx, no_spills,
                       shader_time_index) {}
 
 protected:
-   virtual void assign_binding_table_offsets();
    virtual void emit_prolog();
    virtual void emit_thread_end();
-   virtual void visit(ir_emit_vertex *);
-   virtual void visit(ir_end_primitive *);
    virtual void gs_emit_vertex(int stream_id);
    virtual void gs_end_primitive();
    virtual void emit_urb_write_header(int mrf);

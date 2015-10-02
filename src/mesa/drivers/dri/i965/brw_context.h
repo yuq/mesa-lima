@@ -340,9 +340,6 @@ struct brw_shader {
    bool compiled_once;
 };
 
-/* Note: If adding fields that need anything besides a normal memcmp() for
- * comparing them, be sure to go fix brw_stage_prog_data_compare().
- */
 struct brw_stage_prog_data {
    struct {
       /** size of our binding table. */
@@ -384,18 +381,11 @@ struct brw_stage_prog_data {
 
    /* Pointers to tracked values (only valid once
     * _mesa_load_state_parameters has been called at runtime).
-    *
-    * These must be the last fields of the struct (see
-    * brw_stage_prog_data_compare()).
     */
    const gl_constant_value **param;
    const gl_constant_value **pull_param;
 
-   /**
-    * Image metadata passed to the shader as uniforms.  This is deliberately
-    * ignored by brw_stage_prog_data_compare() because its contents don't have
-    * any influence on program compilation.
-    */
+   /** Image metadata passed to the shader as uniforms. */
    struct brw_image_param *image_param;
 };
 
@@ -449,9 +439,6 @@ struct brw_image_param {
  * there can be many of these, each in a different GL state
  * corresponding to a different brw_wm_prog_key struct, with different
  * compiled programs.
- *
- * Note: brw_wm_prog_data_compare() must be updated when adding fields to this
- * struct!
  */
 struct brw_wm_prog_data {
    struct brw_stage_prog_data base;
@@ -495,9 +482,6 @@ struct brw_wm_prog_data {
    int urb_setup[VARYING_SLOT_MAX];
 };
 
-/* Note: brw_cs_prog_data_compare() must be updated when adding fields to this
- * struct!
- */
 struct brw_cs_prog_data {
    struct brw_stage_prog_data base;
 
@@ -698,9 +682,6 @@ enum shader_dispatch_mode {
    DISPATCH_MODE_SIMD8 = 3,
 };
 
-/* Note: brw_vue_prog_data_compare() must be updated when adding fields to
- * this struct!
- */
 struct brw_vue_prog_data {
    struct brw_stage_prog_data base;
    struct brw_vue_map vue_map;
@@ -718,9 +699,6 @@ struct brw_vue_prog_data {
 };
 
 
-/* Note: brw_vs_prog_data_compare() must be updated when adding fields to this
- * struct!
- */
 struct brw_vs_prog_data {
    struct brw_vue_prog_data base;
 
@@ -780,9 +758,6 @@ struct brw_vs_prog_data {
 
 #define SURF_INDEX_GEN6_SOL_BINDING(t) (t)
 
-/* Note: brw_gs_prog_data_compare() must be updated when adding fields to
- * this struct!
- */
 struct brw_gs_prog_data
 {
    struct brw_vue_prog_data base;
@@ -875,7 +850,6 @@ struct brw_cache_item {
 };
 
 
-typedef bool (*cache_aux_compare_func)(const void *a, const void *b);
 typedef void (*cache_aux_free_func)(const void *aux);
 
 struct brw_cache {
@@ -888,12 +862,6 @@ struct brw_cache {
    uint32_t next_offset;
    bool bo_used_by_gpu;
 
-   /**
-    * Optional functions used in determining whether the prog_data for a new
-    * cache item matches an existing cache item (in case there's relevant data
-    * outside of the prog_data).  If NULL, a plain memcmp is done.
-    */
-   cache_aux_compare_func aux_compare[BRW_MAX_CACHE];
    /** Optional functions for freeing other pointers attached to a prog_data. */
    cache_aux_free_func aux_free[BRW_MAX_CACHE];
 };
@@ -1554,7 +1522,7 @@ struct brw_context
 
    int num_atoms[BRW_NUM_PIPELINES];
    const struct brw_tracked_state render_atoms[60];
-   const struct brw_tracked_state compute_atoms[7];
+   const struct brw_tracked_state compute_atoms[8];
 
    /* If (INTEL_DEBUG & DEBUG_BATCH) */
    struct {

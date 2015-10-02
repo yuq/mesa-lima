@@ -32,6 +32,24 @@
 #include "brw_vec4_gs_visitor.h"
 #include "brw_state.h"
 #include "brw_ff_gs.h"
+#include "brw_nir.h"
+
+static void
+assign_gs_binding_table_offsets(const struct brw_device_info *devinfo,
+                                const struct gl_shader_program *shader_prog,
+                                const struct gl_program *prog,
+                                struct brw_gs_prog_data *prog_data)
+{
+   /* In gen6 we reserve the first BRW_MAX_SOL_BINDINGS entries for transform
+    * feedback surfaces.
+    */
+   uint32_t reserved = devinfo->gen == 6 ? BRW_MAX_SOL_BINDINGS : 0;
+
+   brw_assign_common_binding_table_offsets(MESA_SHADER_GEOMETRY, devinfo,
+                                           shader_prog, prog,
+                                           &prog_data->base.base,
+                                           reserved);
+}
 
 bool
 brw_compile_gs_prog(struct brw_context *brw,
@@ -55,6 +73,9 @@ brw_compile_gs_prog(struct brw_context *brw,
 
    c.prog_data.invocations = gp->program.Invocations;
 
+   assign_gs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+                                   &gp->program.Base, &c.prog_data);
+
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
@@ -64,9 +85,7 @@ brw_compile_gs_prog(struct brw_context *brw,
     * every uniform is a float which gets padded to the size of a vec4.
     */
    struct gl_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-   int param_count = gs->num_uniform_components * 4;
-
-   param_count += gs->NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = gp->program.Base.nir->num_uniforms * 4;
 
    c.prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
@@ -76,6 +95,9 @@ brw_compile_gs_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param, gs->NumImages);
    c.prog_data.base.base.nr_params = param_count;
    c.prog_data.base.base.nr_image_params = gs->NumImages;
+
+   brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
+                               &c.prog_data.base.base, false);
 
    if (brw->gen >= 8) {
       c.prog_data.static_vertex_count = !gp->program.Base.nir ? -1 :
@@ -417,25 +439,4 @@ brw_gs_precompile(struct gl_context *ctx,
    brw->gs.prog_data = old_prog_data;
 
    return success;
-}
-
-
-bool
-brw_gs_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_gs_prog_data *a = in_a;
-   const struct brw_gs_prog_data *b = in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base.base, &b->base.base))
-      return false;
-
-   /* Compare the rest of the struct. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_gs_prog_data) - offset)) {
-      return false;
-   }
-
-   return true;
 }

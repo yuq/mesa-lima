@@ -35,6 +35,7 @@
 #include "program/prog_parameter.h"
 #include "program/program.h"
 #include "intel_mipmap_tree.h"
+#include "brw_nir.h"
 
 #include "util/ralloc.h"
 
@@ -131,23 +132,24 @@ computed_depth_mode(struct gl_fragment_program *fp)
    return BRW_PSCDEPTH_OFF;
 }
 
-bool
-brw_wm_prog_data_compare(const void *in_a, const void *in_b)
+static void
+assign_fs_binding_table_offsets(const struct brw_device_info *devinfo,
+                                const struct gl_shader_program *shader_prog,
+                                const struct gl_program *prog,
+                                const struct brw_wm_prog_key *key,
+                                struct brw_wm_prog_data *prog_data)
 {
-   const struct brw_wm_prog_data *a = in_a;
-   const struct brw_wm_prog_data *b = in_b;
+   uint32_t next_binding_table_offset = 0;
 
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base, &b->base))
-      return false;
+   /* If there are no color regions, we still perform an FB write to a null
+    * renderbuffer, which we place at surface index 0.
+    */
+   prog_data->binding_table.render_target_start = next_binding_table_offset;
+   next_binding_table_offset += MAX2(key->nr_color_regions, 1);
 
-   /* Compare the rest of the structure. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_wm_prog_data) - offset))
-      return false;
-
-   return true;
+   brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
+                                           shader_prog, prog, &prog_data->base,
+                                           next_binding_table_offset);
 }
 
 /**
@@ -188,18 +190,16 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!prog)
       prog_data.base.use_alt_mode = true;
 
+   assign_fs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+                                   &fp->program.Base, key, &prog_data);
+
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count;
-   if (fs) {
-      param_count = fs->base.num_uniform_components +
-                    fs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = fp->program.Base.nir->num_uniforms;
+   if (fs)
       prog_data.base.nr_image_params = fs->base.NumImages;
-   } else {
-      param_count = fp->program.Base.Parameters->NumParameters * 4;
-   }
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
    prog_data.base.param =
@@ -210,6 +210,14 @@ brw_codegen_wm_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param,
                     prog_data.base.nr_image_params);
    prog_data.base.nr_params = param_count;
+
+   if (prog) {
+      brw_nir_setup_glsl_uniforms(fp->program.Base.nir, prog, &fp->program.Base,
+                                  &prog_data.base, true);
+   } else {
+      brw_nir_setup_arb_uniforms(fp->program.Base.nir, &fp->program.Base,
+                                 &prog_data.base);
+   }
 
    prog_data.barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw, key->flat_shade,

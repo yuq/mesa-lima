@@ -79,7 +79,7 @@ fs_visitor::emit_vs_system_value(int location)
 
 fs_reg
 fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
-                             bool is_rect, uint32_t sampler, int texunit)
+                             bool is_rect, uint32_t sampler)
 {
    bool needs_gl_clamp = true;
    fs_reg scale_x, scale_y;
@@ -93,10 +93,16 @@ fs_visitor::rescale_texcoord(fs_reg coordinate, int coord_components,
         (devinfo->gen >= 6 && (key_tex->gl_clamp_mask[0] & (1 << sampler) ||
                                key_tex->gl_clamp_mask[1] & (1 << sampler))))) {
       struct gl_program_parameter_list *params = prog->Parameters;
+
+
+      /* FINISHME: We're failing to recompile our programs when the sampler is
+       * updated.  This only matters for the texture rectangle scale
+       * parameters (pre-gen6, or gen6+ with GL_CLAMP).
+       */
       int tokens[STATE_LENGTH] = {
 	 STATE_INTERNAL,
 	 STATE_TEXRECT_SCALE,
-	 texunit,
+	 prog->SamplerUnits[sampler],
 	 0,
 	 0
       };
@@ -221,7 +227,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
                          bool is_cube_array,
                          bool is_rect,
                          uint32_t sampler,
-                         fs_reg sampler_reg, int texunit)
+                         fs_reg sampler_reg)
 {
    fs_inst *inst = NULL;
 
@@ -256,7 +262,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
        * samplers.  This should only be a problem with GL_CLAMP on Gen7.
        */
       coordinate = rescale_texcoord(coordinate, coord_components, is_rect,
-                                    sampler, texunit);
+                                    sampler);
    }
 
    /* Writemasking doesn't eliminate channels on SIMD8 texture
@@ -692,7 +698,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    fs_reg src_depth;
 
    if (source_depth_to_render_target) {
-      if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+      if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
          src_depth = frag_depth;
       else
          src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
@@ -1060,16 +1066,14 @@ fs_visitor::emit_barrier()
 
 fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        void *mem_ctx,
-                       gl_shader_stage stage,
                        const void *key,
                        struct brw_stage_prog_data *prog_data,
-                       struct gl_shader_program *shader_prog,
                        struct gl_program *prog,
+                       nir_shader *shader,
                        unsigned dispatch_width,
                        int shader_time_index)
-   : backend_shader(compiler, log_data, mem_ctx,
-                    shader_prog, prog, prog_data, stage),
-     key(key), prog_data(prog_data),
+   : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),
+     key(key), prog_data(prog_data), prog(prog),
      dispatch_width(dispatch_width),
      shader_time_index(shader_time_index),
      promoted_constants(0),

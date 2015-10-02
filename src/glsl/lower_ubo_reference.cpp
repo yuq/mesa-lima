@@ -754,6 +754,12 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
             add(base_offset,
                 new(mem_ctx) ir_constant(deref_offset + i * matrix_stride));
          if (is_write) {
+            /* If the component is not in the writemask, then don't
+             * store any value.
+             */
+            if (!((1 << i) & write_mask))
+               continue;
+
             base_ir->insert_after(ssbo_store(swizzle(deref, i, 1), chan_offset, 1));
          } else {
             if (!this->is_shader_storage) {

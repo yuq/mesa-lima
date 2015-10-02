@@ -27,11 +27,11 @@
 namespace brw {
 
 void
-vec4_gs_visitor::nir_setup_inputs(nir_shader *shader)
+vec4_gs_visitor::nir_setup_inputs()
 {
-   nir_inputs = ralloc_array(mem_ctx, src_reg, shader->num_inputs);
+   nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       int offset = var->data.driver_location;
       if (var->type->base_type == GLSL_TYPE_ARRAY) {
          /* Geometry shader inputs are arrays, but they use an unusual array
@@ -72,6 +72,10 @@ vec4_gs_visitor::nir_setup_system_value_intrinsic(nir_intrinsic_instr *instr)
    dst_reg *reg;
 
    switch (instr->intrinsic) {
+   case nir_intrinsic_load_primitive_id:
+      /* We'll just read g1 directly; don't create a temporary. */
+      break;
+
    case nir_intrinsic_load_invocation_id:
       reg = &this->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
       if (reg->file == BAD_FILE)
@@ -109,6 +113,12 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    case nir_intrinsic_set_vertex_count:
       this->vertex_count =
          retype(get_nir_src(instr->src[0], 1), BRW_REGISTER_TYPE_UD);
+      break;
+
+   case nir_intrinsic_load_primitive_id:
+      assert(c->prog_data.include_primitive_id);
+      dest = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
+      emit(MOV(dest, retype(brw_vec4_grf(1, 0), BRW_REGISTER_TYPE_D)));
       break;
 
    case nir_intrinsic_load_invocation_id: {

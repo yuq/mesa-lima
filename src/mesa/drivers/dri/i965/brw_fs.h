@@ -93,11 +93,10 @@ class fs_visitor : public backend_shader
 public:
    fs_visitor(const struct brw_compiler *compiler, void *log_data,
               void *mem_ctx,
-              gl_shader_stage stage,
               const void *key,
               struct brw_stage_prog_data *prog_data,
-              struct gl_shader_program *shader_prog,
               struct gl_program *prog,
+              nir_shader *shader,
               unsigned dispatch_width,
               int shader_time_index);
 
@@ -128,8 +127,6 @@ public:
    bool run_cs();
    void optimize();
    void allocate_registers();
-   void assign_fs_binding_table_offsets();
-   void assign_cs_binding_table_offsets();
    void setup_payload_gen4();
    void setup_payload_gen6();
    void setup_vs_payload();
@@ -207,7 +204,7 @@ public:
    void emit_interpolation_setup_gen6();
    void compute_sample_position(fs_reg dst, fs_reg int_sample_pos);
    fs_reg rescale_texcoord(fs_reg coordinate, int coord_components,
-                           bool is_rect, uint32_t sampler, int texunit);
+                           bool is_rect, uint32_t sampler);
    void emit_texture(ir_texture_opcode op,
                      const glsl_type *dest_type,
                      fs_reg coordinate, int components,
@@ -220,8 +217,7 @@ public:
                      bool is_cube_array,
                      bool is_rect,
                      uint32_t sampler,
-                     fs_reg sampler_reg,
-                     int texunit);
+                     fs_reg sampler_reg);
    fs_reg emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
                          const fs_reg &sampler);
    void emit_gen6_gather_wa(uint8_t wa, fs_reg dst);
@@ -238,12 +234,10 @@ public:
                    uint32_t spill_offset, int count);
 
    void emit_nir_code();
-   void nir_setup_inputs(nir_shader *shader);
-   void nir_setup_outputs(nir_shader *shader);
-   void nir_setup_uniforms(nir_shader *shader);
-   void nir_setup_uniform(nir_variable *var);
-   void nir_setup_builtin_uniform(nir_variable *var);
-   void nir_emit_system_values(nir_shader *shader);
+   void nir_setup_inputs();
+   void nir_setup_outputs();
+   void nir_setup_uniforms();
+   void nir_emit_system_values();
    void nir_emit_impl(nir_function_impl *impl);
    void nir_emit_cf_list(exec_list *list);
    void nir_emit_if(nir_if *if_stmt);
@@ -294,10 +288,6 @@ public:
 
    struct brw_reg interp_reg(int location, int channel);
 
-   virtual void setup_vec4_uniform_value(unsigned param_offset,
-                                         const gl_constant_value *values,
-                                         unsigned n);
-
    int implied_mrf_writes(fs_inst *inst);
 
    virtual void dump_instructions();
@@ -309,7 +299,7 @@ public:
    const struct brw_sampler_prog_key_data *key_tex;
 
    struct brw_stage_prog_data *prog_data;
-   unsigned int sanity_param_count;
+   struct gl_program *prog;
 
    int *param_size;
 

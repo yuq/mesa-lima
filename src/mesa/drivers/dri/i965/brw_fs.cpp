@@ -949,20 +949,6 @@ fs_visitor::import_uniforms(fs_visitor *v)
    this->param_size = v->param_size;
 }
 
-void
-fs_visitor::setup_vec4_uniform_value(unsigned param_offset,
-                                     const gl_constant_value *values,
-                                     unsigned n)
-{
-   static const gl_constant_value zero = { 0 };
-
-   for (unsigned i = 0; i < n; ++i)
-      stage_prog_data->param[param_offset + i] = &values[i];
-
-   for (unsigned i = n; i < 4; ++i)
-      stage_prog_data->param[param_offset + i] = &zero;
-}
-
 fs_reg *
 fs_visitor::emit_fragcoord_interpolation(bool pixel_center_integer,
                                          bool origin_upper_left)
@@ -1416,7 +1402,7 @@ fs_visitor::calculate_urb_setup()
    int urb_next = 0;
    /* Figure out where each of the incoming setup attributes lands. */
    if (devinfo->gen >= 6) {
-      if (_mesa_bitcount_64(prog->InputsRead &
+      if (_mesa_bitcount_64(nir->info.inputs_read &
                             BRW_FS_VARYING_INPUT_MASK) <= 16) {
          /* The SF/SBE pipeline stage can do arbitrary rearrangement of the
           * first 16 varying inputs, so we can put them wherever we want.
@@ -1428,7 +1414,7 @@ fs_visitor::calculate_urb_setup()
           * a different vertex (or geometry) shader.
           */
          for (unsigned int i = 0; i < VARYING_SLOT_MAX; i++) {
-            if (prog->InputsRead & BRW_FS_VARYING_INPUT_MASK &
+            if (nir->info.inputs_read & BRW_FS_VARYING_INPUT_MASK &
                 BITFIELD64_BIT(i)) {
                prog_data->urb_setup[i] = urb_next++;
             }
@@ -1442,7 +1428,7 @@ fs_visitor::calculate_urb_setup()
          struct brw_vue_map prev_stage_vue_map;
          brw_compute_vue_map(devinfo, &prev_stage_vue_map,
                              key->input_slots_valid,
-                             shader_prog->SeparateShader);
+                             nir->info.separate_shader);
          int first_slot = 2 * BRW_SF_URB_ENTRY_READ_OFFSET;
          assert(prev_stage_vue_map.num_slots <= first_slot + 32);
          for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
@@ -1452,7 +1438,7 @@ fs_visitor::calculate_urb_setup()
              * unused.
              */
             if (varying != BRW_VARYING_SLOT_COUNT &&
-                (prog->InputsRead & BRW_FS_VARYING_INPUT_MASK &
+                (nir->info.inputs_read & BRW_FS_VARYING_INPUT_MASK &
                  BITFIELD64_BIT(varying))) {
                prog_data->urb_setup[varying] = slot - first_slot;
             }
@@ -1485,7 +1471,7 @@ fs_visitor::calculate_urb_setup()
        *
        * See compile_sf_prog() for more info.
        */
-      if (prog->InputsRead & BITFIELD64_BIT(VARYING_SLOT_PNTC))
+      if (nir->info.inputs_read & BITFIELD64_BIT(VARYING_SLOT_PNTC))
          prog_data->urb_setup[VARYING_SLOT_PNTC] = urb_next++;
    }
 
@@ -4537,7 +4523,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "***m%d***", inst->src[i].reg);
          break;
       case ATTR:
-         fprintf(file, "attr%d", inst->src[i].reg + inst->src[i].reg_offset);
+         fprintf(file, "attr%d+%d", inst->src[i].reg, inst->src[i].reg_offset);
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].reg + inst->src[i].reg_offset);
@@ -4668,7 +4654,7 @@ void
 fs_visitor::setup_payload_gen6()
 {
    bool uses_depth =
-      (prog->InputsRead & (1 << VARYING_SLOT_POS)) != 0;
+      (nir->info.inputs_read & (1 << VARYING_SLOT_POS)) != 0;
    unsigned barycentric_interp_modes =
       (stage == MESA_SHADER_FRAGMENT) ?
       ((brw_wm_prog_data*) this->prog_data)->barycentric_interp_modes : 0;
@@ -4727,7 +4713,7 @@ fs_visitor::setup_payload_gen6()
    }
 
    /* R32: MSAA input coverage mask */
-   if (prog->SystemValuesRead & SYSTEM_BIT_SAMPLE_MASK_IN) {
+   if (nir->info.system_values_read & SYSTEM_BIT_SAMPLE_MASK_IN) {
       assert(devinfo->gen >= 7);
       payload.sample_mask_in_reg = payload.num_regs;
       payload.num_regs++;
@@ -4740,7 +4726,7 @@ fs_visitor::setup_payload_gen6()
    /* R34-: bary for 32-pixel. */
    /* R58-59: interp W for 32-pixel. */
 
-   if (prog->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
+   if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
       source_depth_to_render_target = true;
    }
 }
@@ -4759,45 +4745,14 @@ fs_visitor::setup_cs_payload()
 
    payload.num_regs = 1;
 
-   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
+   if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
       const unsigned local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(prog, dispatch_width);
+         brw_cs_prog_local_id_payload_dwords(dispatch_width);
       assert((local_id_dwords & 0x7) == 0);
       const unsigned local_id_regs = local_id_dwords / 8;
       payload.local_invocation_id_reg = payload.num_regs;
       payload.num_regs += local_id_regs;
    }
-}
-
-void
-fs_visitor::assign_fs_binding_table_offsets()
-{
-   assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
-   brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
-   uint32_t next_binding_table_offset = 0;
-
-   /* If there are no color regions, we still perform an FB write to a null
-    * renderbuffer, which we place at surface index 0.
-    */
-   prog_data->binding_table.render_target_start = next_binding_table_offset;
-   next_binding_table_offset += MAX2(key->nr_color_regions, 1);
-
-   assign_common_binding_table_offsets(next_binding_table_offset);
-}
-
-void
-fs_visitor::assign_cs_binding_table_offsets()
-{
-   assert(stage == MESA_SHADER_COMPUTE);
-   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
-   uint32_t next_binding_table_offset = 0;
-
-   /* May not be used if the gl_NumWorkGroups variable is not accessed. */
-   prog_data->binding_table.work_groups_start = next_binding_table_offset;
-   next_binding_table_offset++;
-
-   assign_common_binding_table_offsets(next_binding_table_offset);
 }
 
 void
@@ -4851,8 +4806,8 @@ fs_visitor::optimize()
                                                                         \
       if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {   \
          char filename[64];                                             \
-         snprintf(filename, 64, "%s%d-%04d-%02d-%02d-" #pass,              \
-                  stage_abbrev, dispatch_width, shader_prog ? shader_prog->Name : 0, iteration, pass_num); \
+         snprintf(filename, 64, "%s%d-%s-%02d-%02d-" #pass,              \
+                  stage_abbrev, dispatch_width, nir->info.name, iteration, pass_num); \
                                                                         \
          backend_shader::dump_instructions(filename);                   \
       }                                                                 \
@@ -4865,9 +4820,8 @@ fs_visitor::optimize()
 
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
-      snprintf(filename, 64, "%s%d-%04d-00-start",
-               stage_abbrev, dispatch_width,
-               shader_prog ? shader_prog->Name : 0);
+      snprintf(filename, 64, "%s%d-%s-00-start",
+               stage_abbrev, dispatch_width, nir->info.name);
 
       backend_shader::dump_instructions(filename);
    }
@@ -5013,8 +4967,6 @@ fs_visitor::run_vs(gl_clip_plane *clip_planes)
 {
    assert(stage == MESA_SHADER_VERTEX);
 
-   if (prog_data->map_entries == NULL)
-      assign_common_binding_table_offsets(0);
    setup_vs_payload();
 
    if (shader_time_index >= 0)
@@ -5053,11 +5005,6 @@ fs_visitor::run_fs(bool do_rep_send)
 
    assert(stage == MESA_SHADER_FRAGMENT);
 
-   sanity_param_count = prog->Parameters->NumParameters;
-
-   if (prog_data->map_entries == NULL)
-      assign_fs_binding_table_offsets();
-
    if (devinfo->gen >= 6)
       setup_payload_gen6();
    else
@@ -5073,7 +5020,7 @@ fs_visitor::run_fs(bool do_rep_send)
          emit_shader_time_begin();
 
       calculate_urb_setup();
-      if (prog->InputsRead > 0) {
+      if (nir->info.inputs_read > 0) {
          if (devinfo->gen < 6)
             emit_interpolation_setup_gen4();
          else
@@ -5133,11 +5080,6 @@ bool
 fs_visitor::run_cs()
 {
    assert(stage == MESA_SHADER_COMPUTE);
-   assert(shader);
-
-   sanity_param_count = prog->Parameters->NumParameters;
-
-   assign_cs_binding_table_offsets();
 
    setup_cs_payload();
 
@@ -5166,13 +5108,6 @@ fs_visitor::run_cs()
    if (failed)
       return false;
 
-   /* If any state parameters were appended, then ParameterValues could have
-    * been realloced, in which case the driver uniform storage set up by
-    * _mesa_associate_uniform_storage() would point to freed memory.  Make
-    * sure that didn't happen.
-    */
-   assert(sanity_param_count == prog->Parameters->NumParameters);
-
    return !failed;
 }
 
@@ -5200,9 +5135,8 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
-   fs_visitor v(brw->intelScreen->compiler, brw,
-                mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                prog, &fp->Base, 8, st_index8);
+   fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
+                &prog_data->base, &fp->Base, fp->Base.nir, 8, st_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
          prog->LinkStatus = false;
@@ -5216,9 +5150,8 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(brw->intelScreen->compiler, brw,
-                 mem_ctx, MESA_SHADER_FRAGMENT, key, &prog_data->base,
-                 prog, &fp->Base, 16, st_index16);
+   fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
+                 &prog_data->base, &fp->Base, fp->Base.nir, 16, st_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
@@ -5332,9 +5265,8 @@ brw_cs_emit(struct brw_context *brw,
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw->intelScreen->compiler, brw,
-                 mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                 &cp->Base, 8, st_index);
+   fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
+                 &prog_data->base, &cp->Base, cp->Base.nir, 8, st_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
@@ -5342,9 +5274,8 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw->intelScreen->compiler, brw,
-                  mem_ctx, MESA_SHADER_COMPUTE, key, &prog_data->base, prog,
-                  &cp->Base, 16, st_index);
+   fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
+                  &prog_data->base, &cp->Base, cp->Base.nir, 16, st_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * brw->max_cs_threads) {

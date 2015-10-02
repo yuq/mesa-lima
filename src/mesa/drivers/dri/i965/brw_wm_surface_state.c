@@ -380,7 +380,7 @@ brw_update_texture_surface(struct gl_context *ctx,
    surf[4] = (brw_get_surface_num_multisamples(mt->num_samples) |
               SET_FIELD(tObj->BaseLevel - mt->first_level, BRW_SURFACE_MIN_LOD));
 
-   surf[5] = mt->align_h == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0;
+   surf[5] = mt->valign == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0;
 
    /* Emit relocation to surface contents */
    drm_intel_bo_emit_reloc(brw->batch.bo,
@@ -718,7 +718,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    assert(tile_y % 2 == 0);
    surf[5] = ((tile_x / 4) << BRW_SURFACE_X_OFFSET_SHIFT |
 	      (tile_y / 2) << BRW_SURFACE_Y_OFFSET_SHIFT |
-	      (mt->align_h == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0));
+	      (mt->valign == 4 ? BRW_SURFACE_VERTICAL_ALIGN_ENABLE : 0));
 
    if (brw->gen < 6) {
       /* _NEW_COLOR */
@@ -999,6 +999,32 @@ const struct brw_tracked_state brw_wm_ubo_surfaces = {
              BRW_NEW_UNIFORM_BUFFER,
    },
    .emit = brw_upload_wm_ubo_surfaces,
+};
+
+static void
+brw_upload_cs_ubo_surfaces(struct brw_context *brw)
+{
+   struct gl_context *ctx = &brw->ctx;
+   /* _NEW_PROGRAM */
+   struct gl_shader_program *prog =
+      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+
+   if (!prog)
+      return;
+
+   /* BRW_NEW_CS_PROG_DATA */
+   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+                           &brw->cs.base, &brw->cs.prog_data->base, true);
+}
+
+const struct brw_tracked_state brw_cs_ubo_surfaces = {
+   .dirty = {
+      .mesa = _NEW_PROGRAM,
+      .brw = BRW_NEW_BATCH |
+             BRW_NEW_CS_PROG_DATA |
+             BRW_NEW_UNIFORM_BUFFER,
+   },
+   .emit = brw_upload_cs_ubo_surfaces,
 };
 
 void

@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include "brw_reg.h"
 #include "brw_defines.h"
+#include "brw_context.h"
 #include "main/compiler.h"
 #include "glsl/ir.h"
 #include "program/prog_parameter.h"
@@ -224,10 +225,8 @@ protected:
    backend_shader(const struct brw_compiler *compiler,
                   void *log_data,
                   void *mem_ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog,
-                  struct brw_stage_prog_data *stage_prog_data,
-                  gl_shader_stage stage);
+                  nir_shader *shader,
+                  struct brw_stage_prog_data *stage_prog_data);
 
 public:
 
@@ -235,9 +234,7 @@ public:
    void *log_data; /* Passed to compiler->*_log functions */
 
    const struct brw_device_info * const devinfo;
-   struct brw_shader * const shader;
-   struct gl_shader_program * const shader_prog;
-   struct gl_program * const prog;
+   nir_shader *nir;
    struct brw_stage_prog_data * const stage_prog_data;
 
    /** ralloc context for temporary data used during compile */
@@ -266,18 +263,15 @@ public:
    void calculate_cfg();
    void invalidate_cfg();
 
-   void assign_common_binding_table_offsets(uint32_t next_binding_table_offset);
-
    virtual void invalidate_live_intervals() = 0;
-
-   virtual void setup_vec4_uniform_value(unsigned param_offset,
-                                         const gl_constant_value *values,
-                                         unsigned n) = 0;
-   void setup_image_uniform_values(unsigned param_offset,
-                                   const gl_uniform_storage *storage);
 };
 
 uint32_t brw_texture_offset(int *offsets, unsigned num_components);
+
+void brw_setup_image_uniform_values(gl_shader_stage stage,
+                                    struct brw_stage_prog_data *stage_prog_data,
+                                    unsigned param_start_index,
+                                    const gl_uniform_storage *storage);
 
 #endif /* __cplusplus */
 
@@ -295,6 +289,14 @@ extern "C" {
 
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
+
+void
+brw_assign_common_binding_table_offsets(gl_shader_stage stage,
+                                        const struct brw_device_info *devinfo,
+                                        const struct gl_shader_program *shader_prog,
+                                        const struct gl_program *prog,
+                                        struct brw_stage_prog_data *stage_prog_data,
+                                        uint32_t next_binding_table_offset);
 
 bool brw_vs_precompile(struct gl_context *ctx,
                        struct gl_shader_program *shader_prog,

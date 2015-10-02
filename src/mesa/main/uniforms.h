@@ -26,10 +26,10 @@
 #ifndef UNIFORMS_H
 #define UNIFORMS_H
 
-#include "glheader.h"
+#include "main/glheader.h"
+#include "glsl/glsl_types.h"
+#include "glsl/ir_uniform.h"
 #include "program/prog_parameter.h"
-#include "../glsl/glsl_types.h"
-#include "../glsl/ir_uniform.h"
 
 #ifdef __cplusplus
 extern "C" {

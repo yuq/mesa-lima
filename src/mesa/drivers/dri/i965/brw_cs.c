@@ -30,26 +30,23 @@
 #include "intel_mipmap_tree.h"
 #include "brw_state.h"
 #include "intel_batchbuffer.h"
+#include "brw_nir.h"
 
-bool
-brw_cs_prog_data_compare(const void *in_a, const void *in_b)
+static void
+assign_cs_binding_table_offsets(const struct brw_device_info *devinfo,
+                                const struct gl_shader_program *shader_prog,
+                                const struct gl_program *prog,
+                                struct brw_cs_prog_data *prog_data)
 {
-   const struct brw_cs_prog_data *a =
-      (const struct brw_cs_prog_data *)in_a;
-   const struct brw_cs_prog_data *b =
-      (const struct brw_cs_prog_data *)in_b;
+   uint32_t next_binding_table_offset = 0;
 
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base, &b->base))
-      return false;
+   /* May not be used if the gl_NumWorkGroups variable is not accessed. */
+   prog_data->binding_table.work_groups_start = next_binding_table_offset;
+   next_binding_table_offset++;
 
-   /* Compare the rest of the structure. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_cs_prog_data) - offset))
-      return false;
-
-   return true;
+   brw_assign_common_binding_table_offsets(MESA_SHADER_COMPUTE, devinfo,
+                                           shader_prog, prog, &prog_data->base,
+                                           next_binding_table_offset);
 }
 
 static bool
@@ -72,12 +69,14 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
+   assign_cs_binding_table_offsets(brw->intelScreen->devinfo, prog,
+                                   &cp->program.Base, &prog_data);
+
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = cs->base.num_uniform_components +
-                     cs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
+   int param_count = cp->program.Base.nir->num_uniforms;
 
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits;
@@ -89,6 +88,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param, cs->base.NumImages);
    prog_data.base.nr_params = param_count;
    prog_data.base.nr_image_params = cs->base.NumImages;
+
+   brw_nir_setup_glsl_uniforms(cp->program.Base.nir, prog, &cp->program.Base,
+                               &prog_data.base, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&

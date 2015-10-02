@@ -28,15 +28,14 @@
 
 #include "main/core.h"
 #include "main/context.h"
-#include "ir.h"
-#include "ir_uniform.h"
-#include "program/hash_table.h"
-#include "../glsl/program.h"
-#include "../glsl/ir_uniform.h"
-#include "../glsl/glsl_parser_extras.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
-#include "uniforms.h"
+#include "main/uniforms.h"
+#include "glsl/ir.h"
+#include "glsl/ir_uniform.h"
+#include "glsl/glsl_parser_extras.h"
+#include "glsl/program.h"
+#include "program/hash_table.h"
 
 
 extern "C" void GLAPIENTRY

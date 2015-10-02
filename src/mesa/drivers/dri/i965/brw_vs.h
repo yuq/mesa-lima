@@ -64,7 +64,6 @@ const unsigned *brw_vs_emit(struct brw_context *brw,
 void brw_vs_debug_recompile(struct brw_context *brw,
                             struct gl_shader_program *prog,
                             const struct brw_vs_prog_key *key);
-bool brw_vs_prog_data_compare(const void *a, const void *b);
 
 void
 brw_upload_vs_prog(struct brw_context *brw);
@@ -88,8 +87,7 @@ public:
                    void *log_data,
                    const struct brw_vs_prog_key *key,
                    struct brw_vs_prog_data *vs_prog_data,
-                   struct gl_vertex_program *vp,
-                   struct gl_shader_program *prog,
+                   nir_shader *shader,
                    gl_clip_plane *clip_planes,
                    void *mem_ctx,
                    int shader_time_index,
@@ -100,7 +98,6 @@ protected:
                                               const glsl_type *type);
    virtual void setup_payload();
    virtual void emit_prolog();
-   virtual void emit_program_code();
    virtual void emit_thread_end();
    virtual void emit_urb_write_header(int mrf);
    virtual void emit_urb_slot(dst_reg reg, int varying);
@@ -116,7 +113,6 @@ private:
 
    const struct brw_vs_prog_key *const key;
    struct brw_vs_prog_data * const vs_prog_data;
-   struct gl_vertex_program *const vp;
    src_reg *vp_temp_regs;
    src_reg vp_addr_reg;
 

@@ -72,7 +72,7 @@ brw_upload_cs_state(struct brw_context *brw)
 
    if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
       local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(prog, cs_prog_data->simd_size);
+         brw_cs_prog_local_id_payload_dwords(cs_prog_data->simd_size);
    }
 
    unsigned push_constant_data_size =
@@ -216,8 +216,7 @@ const struct brw_tracked_state brw_cs_state = {
  *
  */
 unsigned
-brw_cs_prog_local_id_payload_dwords(const struct gl_program *prog,
-                                    unsigned dispatch_width)
+brw_cs_prog_local_id_payload_dwords(unsigned dispatch_width)
 {
    return 3 * dispatch_width;
 }
@@ -272,7 +271,7 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 
    if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
       local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(prog, cs_prog_data->simd_size);
+         brw_cs_prog_local_id_payload_dwords(cs_prog_data->simd_size);
    }
 
    /* Updates the ParamaterValues[i] pointers for all parameters of the

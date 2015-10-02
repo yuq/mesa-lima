@@ -206,7 +206,7 @@ glsl_type::glsl_type(const char *subroutine_name) :
    base_type(GLSL_TYPE_SUBROUTINE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
    sampler_type(0), interface_packing(0),
-   vector_elements(0), matrix_columns(0),
+   vector_elements(1), matrix_columns(1),
    length(0)
 {
    mtx_lock(&glsl_type::mutex);
@@ -214,7 +214,6 @@ glsl_type::glsl_type(const char *subroutine_name) :
    init_ralloc_type_ctx();
    assert(subroutine_name != NULL);
    this->name = ralloc_strdup(this->mem_ctx, subroutine_name);
-   this->vector_elements = 1;
    mtx_unlock(&glsl_type::mutex);
 }
 
@@ -1615,6 +1614,7 @@ glsl_type::std430_base_alignment(bool row_major) const
          base_alignment = MAX2(base_alignment,
                                field_type->std430_base_alignment(field_row_major));
       }
+      assert(base_alignment > 0);
       return base_alignment;
    }
    assert(!"not reached");

@@ -1131,14 +1131,14 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    const unsigned num_data_slots = uniform_size.num_values;
    const unsigned hidden_uniforms = uniform_size.num_hidden_uniforms;
 
+   /* assign hidden uniforms a slot id */
+   hiddenUniforms->iterate(assign_hidden_uniform_slot_id, &uniform_size);
+   delete hiddenUniforms;
+
    /* On the outside chance that there were no uniforms, bail out.
     */
    if (num_uniforms == 0)
       return;
-
-   /* assign hidden uniforms a slot id */
-   hiddenUniforms->iterate(assign_hidden_uniform_slot_id, &uniform_size);
-   delete hiddenUniforms;
 
    struct gl_uniform_storage *uniforms =
       rzalloc_array(prog, struct gl_uniform_storage, num_uniforms);

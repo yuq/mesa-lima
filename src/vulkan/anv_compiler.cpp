@@ -883,6 +883,9 @@ setup_nir_io(struct gl_shader *mesa_shader,
       prog->OutputsWritten |= BITFIELD64_BIT(var->data.location);
    }
 
+   shader->info.inputs_read = prog->InputsRead;
+   shader->info.outputs_written = prog->OutputsWritten;
+
    mesa_shader->num_uniform_components = shader->num_uniforms;
 }
 

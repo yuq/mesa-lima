@@ -50,7 +50,7 @@ _mesa_DispatchComputeIndirect(GLintptr indirect)
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
-      _mesa_debug(ctx, "glDispatchComputeIndirect(%d)\n", indirect);
+      _mesa_debug(ctx, "glDispatchComputeIndirect(%ld)\n", (long) indirect);
 
    if (!_mesa_validate_DispatchComputeIndirect(ctx, indirect))
       return;

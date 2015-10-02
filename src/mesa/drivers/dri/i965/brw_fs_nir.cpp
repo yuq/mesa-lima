@@ -37,16 +37,13 @@ using namespace brw::surface_access;
 void
 fs_visitor::emit_nir_code()
 {
-   nir_shader *nir = prog->nir;
-
    /* emit the arrays used for inputs and outputs - load/store intrinsics will
     * be converted to reads/writes of these arrays
     */
-   nir_setup_inputs(nir);
-   nir_setup_outputs(nir);
-   uniforms = nir->num_uniforms;
-   //nir_setup_uniforms(nir);
-   nir_emit_system_values(nir);
+   nir_setup_inputs();
+   nir_setup_outputs();
+   nir_setup_uniforms();
+   nir_emit_system_values();
 
    /* get the main function and emit it */
    nir_foreach_overload(nir, overload) {
@@ -57,11 +54,11 @@ fs_visitor::emit_nir_code()
 }
 
 void
-fs_visitor::nir_setup_inputs(nir_shader *shader)
+fs_visitor::nir_setup_inputs()
 {
-   nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, shader->num_inputs);
+   nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
 
@@ -119,13 +116,13 @@ fs_visitor::nir_setup_inputs(nir_shader *shader)
 }
 
 void
-fs_visitor::nir_setup_outputs(nir_shader *shader)
+fs_visitor::nir_setup_outputs()
 {
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
-   nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, shader->num_outputs);
+   nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
 
-   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+   foreach_list_typed(nir_variable, var, node, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
       int vector_elements =
@@ -176,108 +173,20 @@ fs_visitor::nir_setup_outputs(nir_shader *shader)
 }
 
 void
-fs_visitor::nir_setup_uniforms(nir_shader *shader)
+fs_visitor::nir_setup_uniforms()
 {
    if (dispatch_width != 8)
       return;
 
-   uniforms = shader->num_uniforms;
+   uniforms = nir->num_uniforms;
 
-   if (shader_prog) {
-      foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
-         /* UBO's and atomics don't take up space in the uniform file */
-         if (var->interface_type != NULL || var->type->contains_atomic())
-            continue;
-
-         if (strncmp(var->name, "gl_", 3) == 0)
-            nir_setup_builtin_uniform(var);
-         else
-            nir_setup_uniform(var);
-         if(type_size_scalar(var->type) > 0)
-            param_size[var->data.driver_location] = type_size_scalar(var->type);
-      }
-   } else {
-      /* prog_to_nir only creates a single giant uniform variable so we can
-       * just set param up directly. */
-      for (unsigned p = 0; p < prog->Parameters->NumParameters; p++) {
-         for (unsigned int i = 0; i < 4; i++) {
-            stage_prog_data->param[4 * p + i] =
-               &prog->Parameters->ParameterValues[p][i];
-         }
-      }
-      if(prog->Parameters->NumParameters > 0)
-         param_size[0] = prog->Parameters->NumParameters * 4;
-   }
-}
-
-void
-fs_visitor::nir_setup_uniform(nir_variable *var)
-{
-   int namelen = strlen(var->name);
-
-   /* The data for our (non-builtin) uniforms is stored in a series of
-      * gl_uniform_driver_storage structs for each subcomponent that
-      * glGetUniformLocation() could name.  We know it's been set up in the
-      * same order we'd walk the type, so walk the list of storage and find
-      * anything with our name, or the prefix of a component that starts with
-      * our name.
-      */
-   unsigned index = var->data.driver_location;
-   for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
-      struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
-
-      if (storage->builtin)
-              continue;
-
-      if (strncmp(var->name, storage->name, namelen) != 0 ||
-         (storage->name[namelen] != 0 &&
-         storage->name[namelen] != '.' &&
-         storage->name[namelen] != '[')) {
+   foreach_list_typed(nir_variable, var, node, &nir->uniforms) {
+      /* UBO's and atomics don't take up space in the uniform file */
+      if (var->interface_type != NULL || var->type->contains_atomic())
          continue;
-      }
 
-      if (storage->type->is_image()) {
-         setup_image_uniform_values(index, storage);
-      } else {
-         unsigned slots = storage->type->component_slots();
-         if (storage->array_elements)
-            slots *= storage->array_elements;
-
-         for (unsigned i = 0; i < slots; i++) {
-            stage_prog_data->param[index++] = &storage->storage[i];
-         }
-      }
-   }
-}
-
-void
-fs_visitor::nir_setup_builtin_uniform(nir_variable *var)
-{
-   const nir_state_slot *const slots = var->state_slots;
-   assert(var->state_slots != NULL);
-
-   unsigned uniform_index = var->data.driver_location;
-   for (unsigned int i = 0; i < var->num_state_slots; i++) {
-      /* This state reference has already been setup by ir_to_mesa, but we'll
-       * get the same index back here.
-       */
-      int index = _mesa_add_state_reference(this->prog->Parameters,
-                                            (gl_state_index *)slots[i].tokens);
-
-      /* Add each of the unique swizzles of the element as a parameter.
-       * This'll end up matching the expected layout of the
-       * array/matrix/structure we're trying to fill in.
-       */
-      int last_swiz = -1;
-      for (unsigned int j = 0; j < 4; j++) {
-         int swiz = GET_SWZ(slots[i].swizzle, j);
-         if (swiz == last_swiz)
-            break;
-         last_swiz = swiz;
-
-         stage_prog_data->param[uniform_index++] =
-            &prog->Parameters->ParameterValues[index][swiz];
-      }
+      if (type_size_scalar(var->type) > 0)
+         param_size[var->data.driver_location] = type_size_scalar(var->type);
    }
 }
 
@@ -363,10 +272,10 @@ emit_system_values_block(nir_block *block, void *void_visitor)
 }
 
 void
-fs_visitor::nir_emit_system_values(nir_shader *shader)
+fs_visitor::nir_emit_system_values()
 {
    nir_system_values = ralloc_array(mem_ctx, fs_reg, SYSTEM_VALUE_MAX);
-   nir_foreach_overload(shader, overload) {
+   nir_foreach_overload(nir, overload) {
       assert(strcmp(overload->function->name, "main") == 0);
       assert(overload->impl);
       nir_foreach_block(overload->impl, emit_system_values_block, this);
@@ -1540,7 +1449,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           */
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       if (has_indirect) {
@@ -1603,7 +1512,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           */
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       /* Get the offset to read from */
@@ -1796,7 +1705,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               shader_prog->NumBufferInterfaceBlocks - 1);
+                               nir->info.num_ssbos - 1);
       }
 
       /* Offset */
@@ -1913,8 +1822,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
       int reg_width = dispatch_width / 8;
 
-      assert(shader->base.UniformBlocks[ubo_index].IsShaderStorage);
-
       /* Set LOD = 0 */
       fs_reg source = fs_reg(0);
 
@@ -1990,7 +1897,7 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
        */
       brw_mark_surface_used(prog_data,
                             stage_prog_data->binding_table.ubo_start +
-                            shader_prog->NumBufferInterfaceBlocks - 1);
+                            nir->info.num_ssbos - 1);
    }
 
    fs_reg offset = get_nir_src(instr->src[1]);
@@ -2022,12 +1929,6 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 
    unsigned sampler = stage_prog_data->bind_map[set].index[binding];
    fs_reg sampler_reg(sampler);
-
-   /* FINISHME: We're failing to recompile our programs when the sampler is
-    * updated.  This only matters for the texture rectangle scale parameters
-    * (pre-gen6, or gen6+ with GL_CLAMP).
-    */
-   int texunit = prog->SamplerUnits[sampler];
 
    int gather_component = instr->component;
 
@@ -2169,7 +2070,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    emit_texture(op, dest_type, coordinate, instr->coord_components,
                 shadow_comparitor, lod, lod2, lod_components, sample_index,
                 tex_offset, mcs, gather_component,
-                is_cube_array, is_rect, sampler, sampler_reg, texunit);
+                is_cube_array, is_rect, sampler, sampler_reg);
 
    fs_reg dest = get_nir_dest(instr->dest);
    dest.type = this->result.type;

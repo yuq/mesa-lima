@@ -231,15 +231,17 @@ _mesa_ast_array_index_to_hir(void *mem_ctx,
             _mesa_glsl_error(&loc, state, "unsized array index must be constant");
          }
       } else if (array->type->fields.array->is_interface()
-                 && array->variable_referenced()->data.mode == ir_var_uniform
+                 && (array->variable_referenced()->data.mode == ir_var_uniform ||
+                     array->variable_referenced()->data.mode == ir_var_shader_storage)
                  && !state->is_version(400, 0) && !state->ARB_gpu_shader5_enable) {
-	 /* Page 46 in section 4.3.7 of the OpenGL ES 3.00 spec says:
+	 /* Page 50 in section 4.3.9 of the OpenGL ES 3.10 spec says:
 	  *
-	  *     "All indexes used to index a uniform block array must be
-	  *     constant integral expressions."
+	  *     "All indices used to index a uniform or shader storage block
+	  *     array must be constant integral expressions."
 	  */
-	 _mesa_glsl_error(&loc, state,
-			  "uniform block array index must be constant");
+	 _mesa_glsl_error(&loc, state, "%s block array index must be constant",
+                          array->variable_referenced()->data.mode
+                          == ir_var_uniform ? "uniform" : "shader storage");
       } else {
 	 /* whole_variable_referenced can return NULL if the array is a
 	  * member of a structure.  In this case it is safe to not update

@@ -131,9 +131,13 @@ private:
 }; /* end of anonymous namespace */
 
 nir_shader *
-glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
+glsl_to_nir(const struct gl_shader_program *shader_prog,
+            gl_shader_stage stage,
+            const nir_shader_compiler_options *options)
 {
-   nir_shader *shader = nir_shader_create(NULL, sh->Stage, options);
+   struct gl_shader *sh = shader_prog->_LinkedShaders[stage];
+
+   nir_shader *shader = nir_shader_create(NULL, stage, options);
 
    nir_visitor v1(shader, sh);
    nir_function_visitor v2(&v1);
@@ -142,8 +146,26 @@ glsl_to_nir(struct gl_shader *sh, const nir_shader_compiler_options *options)
 
    nir_lower_outputs_to_temporaries(shader);
 
-   shader->gs.vertices_out = sh->Geom.VerticesOut;
-   shader->gs.invocations = sh->Geom.Invocations;
+   /* TODO: Use _mesa_fls instead */
+   unsigned num_textures = 0;
+   for (unsigned i = 0; i < 8 * sizeof(sh->Program->SamplersUsed); i++)
+      if (sh->Program->SamplersUsed & (1 << i))
+         num_textures = i;
+
+   shader->info.name = ralloc_asprintf(shader, "GLSL%d", sh->Name);
+   shader->info.num_textures = num_textures;
+   shader->info.num_ubos = sh->NumUniformBlocks;
+   shader->info.num_abos = shader_prog->NumAtomicBuffers;
+   shader->info.num_ssbos = shader_prog->NumBufferInterfaceBlocks;
+   shader->info.num_images = sh->NumImages;
+   shader->info.inputs_read = sh->Program->InputsRead;
+   shader->info.outputs_written = sh->Program->OutputsWritten;
+   shader->info.system_values_read = sh->Program->SystemValuesRead;
+   shader->info.uses_texture_gather = sh->Program->UsesGather;
+   shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
+   shader->info.separate_shader = shader_prog->SeparateShader;
+   shader->info.gs.vertices_out = sh->Geom.VerticesOut;
+   shader->info.gs.invocations = sh->Geom.Invocations;
 
    return shader;
 }
@@ -273,6 +295,11 @@ nir_visitor::visit(ir_variable *ir)
           ir->data.location == VARYING_SLOT_FACE) {
          /* For whatever reason, GLSL IR makes gl_FrontFacing an input */
          var->data.location = SYSTEM_VALUE_FRONT_FACE;
+         var->data.mode = nir_var_system_value;
+      } else if (shader->stage == MESA_SHADER_GEOMETRY &&
+                 ir->data.location == VARYING_SLOT_PRIMITIVE_ID) {
+         /* For whatever reason, GLSL IR makes gl_PrimitiveIDIn an input */
+         var->data.location = SYSTEM_VALUE_PRIMITIVE_ID;
          var->data.mode = nir_var_system_value;
       } else {
          var->data.mode = nir_var_shader_in;
@@ -799,7 +826,6 @@ nir_visitor::visit(ir_call *ir)
             instr = nir_intrinsic_instr_create(shader, op);
             instr->src[2] = evaluate_rvalue(offset);
             instr->const_index[0] = 0;
-            dest = &instr->dest;
          } else {
             instr->const_index[0] = const_offset->value.u[0];
          }

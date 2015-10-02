@@ -3134,6 +3134,60 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 }
 
 static bool
+should_add_buffer_variable(struct gl_shader_program *shProg,
+                           GLenum type, const char *name)
+{
+   bool found_interface = false;
+   const char *block_name = NULL;
+
+   /* These rules only apply to buffer variables. So we return
+    * true for the rest of types.
+    */
+   if (type != GL_BUFFER_VARIABLE)
+      return true;
+
+   for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
+      block_name = shProg->UniformBlocks[i].Name;
+      if (strncmp(block_name, name, strlen(block_name)) == 0) {
+         found_interface = true;
+         break;
+      }
+   }
+
+   /* We remove the interface name from the buffer variable name,
+    * including the dot that follows it.
+    */
+   if (found_interface)
+      name = name + strlen(block_name) + 1;
+
+   /* From: ARB_program_interface_query extension:
+    *
+    *  "For an active shader storage block member declared as an array, an
+    *   entry will be generated only for the first array element, regardless
+    *   of its type.  For arrays of aggregate types, the enumeration rules are
+    *   applied recursively for the single enumerated array element.
+    */
+   const char *first_dot = strchr(name, '.');
+   const char *first_square_bracket = strchr(name, '[');
+
+   /* The buffer variable is on top level and it is not an array */
+   if (!first_square_bracket) {
+      return true;
+   /* The shader storage block member is a struct, then generate the entry */
+   } else if (first_dot && first_dot < first_square_bracket) {
+      return true;
+   } else {
+      /* Shader storage block member is an array, only generate an entry for the
+       * first array element.
+       */
+      if (strncmp(first_square_bracket, "[0]", 3) == 0)
+         return true;
+   }
+
+   return false;
+}
+
+static bool
 add_program_resource(struct gl_shader_program *prog, GLenum type,
                      const void *data, uint8_t stages)
 {
@@ -3412,6 +3466,10 @@ build_program_resource_list(struct gl_shader_program *shProg)
 
       bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;
       GLenum type = is_shader_storage ? GL_BUFFER_VARIABLE : GL_UNIFORM;
+      if (!should_add_buffer_variable(shProg, type,
+                                      shProg->UniformStorage[i].name))
+         continue;
+
       if (!add_program_resource(shProg, type,
                                 &shProg->UniformStorage[i], stageref))
          return;

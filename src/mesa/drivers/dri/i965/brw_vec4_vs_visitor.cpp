@@ -262,7 +262,6 @@ vec4_vs_visitor::setup_uniform_clipplane_values()
 {
    for (int i = 0; i < key->nr_userclip_plane_consts; ++i) {
       assert(this->uniforms < uniform_array_size);
-      this->uniform_vector_size[this->uniforms] = 4;
       this->userplane[i] = dst_reg(UNIFORM, this->uniforms);
       this->userplane[i].type = BRW_REGISTER_TYPE_F;
       for (int j = 0; j < 4; ++j) {
@@ -302,20 +301,15 @@ vec4_vs_visitor::vec4_vs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  const struct brw_vs_prog_key *key,
                                  struct brw_vs_prog_data *vs_prog_data,
-                                 struct gl_vertex_program *vp,
-                                 struct gl_shader_program *prog,
+                                 nir_shader *shader,
                                  gl_clip_plane *clip_planes,
                                  void *mem_ctx,
                                  int shader_time_index,
                                  bool use_legacy_snorm_formula)
-   : vec4_visitor(compiler, log_data,
-                  &vp->Base, &key->tex, &vs_prog_data->base, prog,
-                  MESA_SHADER_VERTEX,
-                  mem_ctx, false /* no_spills */,
-                  shader_time_index),
+   : vec4_visitor(compiler, log_data, &key->tex, &vs_prog_data->base, shader,
+                  mem_ctx, false /* no_spills */, shader_time_index),
      key(key),
      vs_prog_data(vs_prog_data),
-     vp(vp),
      clip_planes(clip_planes),
      use_legacy_snorm_formula(use_legacy_snorm_formula)
 {

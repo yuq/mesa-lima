@@ -91,6 +91,15 @@ brw_process_nir(nir_shader *nir,
                 const struct gl_shader_program *shader_prog,
                 gl_shader_stage stage, bool is_scalar);
 
+void brw_nir_setup_glsl_uniforms(nir_shader *shader,
+                                 struct gl_shader_program *shader_prog,
+                                 const struct gl_program *prog,
+                                 struct brw_stage_prog_data *stage_prog_data,
+                                 bool is_scalar);
+
+void brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
+                                struct brw_stage_prog_data *stage_prog_data);
+
 #ifdef __cplusplus
 }
 #endif

@@ -142,9 +142,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       brw_add_texrect_params(prog);
 
-      if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_FRAGMENT].NirOptions) {
-         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
-      }
+      prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
 
       brw_fs_precompile(ctx, NULL, prog);
       break;
@@ -168,10 +166,8 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       brw_add_texrect_params(prog);
 
-      if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].NirOptions) {
-         prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
-                                    brw->intelScreen->compiler->scalar_vs);
-      }
+      prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
+                                 brw->intelScreen->compiler->scalar_vs);
 
       brw_vs_precompile(ctx, NULL, prog);
       break;
@@ -544,23 +540,6 @@ brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
       MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
 }
 
-bool
-brw_stage_prog_data_compare(const struct brw_stage_prog_data *a,
-                            const struct brw_stage_prog_data *b)
-{
-   /* Compare all the struct up to the pointers. */
-   if (memcmp(a, b, offsetof(struct brw_stage_prog_data, param)))
-      return false;
-
-   if (memcmp(a->param, b->param, a->nr_params * sizeof(void *)))
-      return false;
-
-   if (memcmp(a->pull_param, b->pull_param, a->nr_pull_params * sizeof(void *)))
-      return false;
-
-   return true;
-}
-
 void
 brw_stage_prog_data_free(const void *p)
 {
@@ -568,6 +547,7 @@ brw_stage_prog_data_free(const void *p)
 
    ralloc_free(prog_data->param);
    ralloc_free(prog_data->pull_param);
+   ralloc_free(prog_data->image_param);
 }
 
 void

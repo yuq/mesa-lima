@@ -86,6 +86,7 @@ i965_FILES = \
 	brw_nir.h \
 	brw_nir.c \
 	brw_nir_analyze_boolean_resolves.c \
+	brw_nir_uniforms.cpp \
 	brw_object_purgeable.c \
 	brw_packed_float.c \
 	brw_performance_monitor.c \
@@ -133,7 +134,6 @@ i965_FILES = \
 	brw_vec4_surface_builder.cpp \
 	brw_vec4_surface_builder.h \
 	brw_vec4_visitor.cpp \
-	brw_vec4_vp.cpp \
 	brw_vec4_vs_visitor.cpp \
 	brw_vs.c \
 	brw_vs.h \

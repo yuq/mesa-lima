@@ -28,6 +28,24 @@
 #include "program/prog_to_nir.h"
 
 static void
+brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
+{
+   nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
+                            is_scalar ? type_size_scalar : type_size_vec4);
+}
+
+static void
+brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
+{
+   if (is_scalar) {
+      nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
+   } else {
+      foreach_list_typed(nir_variable, var, node, &nir->outputs)
+         var->data.driver_location = var->data.location;
+   }
+}
+
+static void
 nir_optimize(nir_shader *nir, bool is_scalar)
 {
    bool progress;
@@ -80,12 +98,11 @@ brw_create_nir(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    const nir_shader_compiler_options *options =
       ctx->Const.ShaderCompilerOptions[stage].NirOptions;
-   struct gl_shader *shader = shader_prog ? shader_prog->_LinkedShaders[stage] : NULL;
    nir_shader *nir;
 
    /* First, lower the GLSL IR or Mesa IR to NIR */
    if (shader_prog) {
-      nir = glsl_to_nir(shader, options);
+      nir = glsl_to_nir(shader_prog, stage, options);
    } else {
       nir = prog_to_nir(prog, options);
       nir_convert_to_ssa(nir); /* turn registers into SSA */
@@ -142,26 +159,12 @@ brw_process_nir(nir_shader *nir,
    /* Get rid of split copies */
    nir_optimize(nir, is_scalar);
 
-   if (is_scalar) {
-      nir_assign_var_locations(&nir->uniforms,
-                               &nir->num_uniforms,
-                               type_size_scalar);
-      nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_scalar);
-      nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
-      nir_lower_io(nir, type_size_scalar);
-   } else {
-      nir_assign_var_locations(&nir->uniforms,
-                               &nir->num_uniforms,
-                               type_size_vec4);
-
-      nir_assign_var_locations(&nir->inputs, &nir->num_inputs, type_size_vec4);
-
-      foreach_list_typed(nir_variable, var, node, &nir->outputs)
-         var->data.driver_location = var->data.location;
-
-      nir_lower_io(nir, type_size_vec4);
-   }
-
+   brw_nir_lower_inputs(nir, is_scalar);
+   brw_nir_lower_outputs(nir, is_scalar);
+   nir_assign_var_locations(&nir->uniforms,
+                            &nir->num_uniforms,
+                            is_scalar ? type_size_scalar : type_size_vec4);
+   nir_lower_io(nir, -1, is_scalar ? type_size_scalar : type_size_vec4);
    nir_validate_shader(nir);
 
    nir_remove_dead_variables(nir);

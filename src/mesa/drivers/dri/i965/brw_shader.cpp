@@ -72,6 +72,20 @@ shader_perf_log_mesa(void *data, const char *fmt, ...)
    va_end(args);
 }
 
+static bool
+is_scalar_shader_stage(const struct brw_compiler *compiler, int stage)
+{
+   switch (stage) {
+   case MESA_SHADER_FRAGMENT:
+   case MESA_SHADER_COMPUTE:
+      return true;
+   case MESA_SHADER_VERTEX:
+      return compiler->scalar_vs;
+   default:
+      return false;
+   }
+}
+
 struct brw_compiler *
 brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 {
@@ -120,19 +134,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       compiler->glsl_compiler_options[i].EmitNoIndirectUniform = false;
       compiler->glsl_compiler_options[i].LowerClipDistance = true;
 
-      bool is_scalar;
-      switch (i) {
-      case MESA_SHADER_FRAGMENT:
-      case MESA_SHADER_COMPUTE:
-         is_scalar = true;
-         break;
-      case MESA_SHADER_VERTEX:
-         is_scalar = compiler->scalar_vs;
-         break;
-      default:
-         is_scalar = false;
-         break;
-      }
+      bool is_scalar = is_scalar_shader_stage(compiler, i);
 
       compiler->glsl_compiler_options[i].EmitNoIndirectOutput = is_scalar;
       compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;
@@ -142,8 +144,7 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
       if (devinfo->gen < 7)
          compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
 
-      if (is_scalar || brw_env_var_as_boolean("INTEL_USE_NIR", true))
-         compiler->glsl_compiler_options[i].NirOptions = nir_options;
+      compiler->glsl_compiler_options[i].NirOptions = nir_options;
    }
 
    return compiler;
@@ -194,20 +195,6 @@ brw_shader_precompile(struct gl_context *ctx,
    return true;
 }
 
-static inline bool
-is_scalar_shader_stage(struct brw_context *brw, int stage)
-{
-   switch (stage) {
-   case MESA_SHADER_FRAGMENT:
-   case MESA_SHADER_COMPUTE:
-      return true;
-   case MESA_SHADER_VERTEX:
-      return brw->intelScreen->compiler->scalar_vs;
-   default:
-      return false;
-   }
-}
-
 static void
 brw_lower_packing_builtins(struct brw_context *brw,
                            gl_shader_stage shader_type,
@@ -218,7 +205,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
            | LOWER_PACK_UNORM_2x16
            | LOWER_UNPACK_UNORM_2x16;
 
-   if (is_scalar_shader_stage(brw, shader_type)) {
+   if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
       ops |= LOWER_UNPACK_UNORM_4x8
            | LOWER_UNPACK_SNORM_4x8
            | LOWER_PACK_UNORM_4x8
@@ -231,7 +218,7 @@ brw_lower_packing_builtins(struct brw_context *brw,
        * lowering is needed. For SOA code, the Half2x16 ops must be
        * scalarized.
        */
-      if (is_scalar_shader_stage(brw, shader_type)) {
+      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader_type)) {
          ops |= LOWER_PACK_HALF_2x16_TO_SPLIT
              |  LOWER_UNPACK_HALF_2x16_TO_SPLIT;
       }
@@ -285,8 +272,6 @@ process_glsl_ir(gl_shader_stage stage,
    brw_lower_texture_gradients(brw, shader->ir);
    do_vec_index_to_cond_assign(shader->ir);
    lower_vector_insert(shader->ir, true);
-   if (options->NirOptions == NULL)
-      brw_do_cubemap_normalize(shader->ir);
    lower_offset_arrays(shader->ir);
    brw_do_lower_unnormalized_offset(shader->ir);
    lower_noise(shader->ir);
@@ -312,7 +297,7 @@ process_glsl_ir(gl_shader_stage stage,
    do {
       progress = false;
 
-      if (is_scalar_shader_stage(brw, shader->Stage)) {
+      if (is_scalar_shader_stage(brw->intelScreen->compiler, shader->Stage)) {
          brw_do_channel_expressions(shader->ir);
          brw_do_vector_splitting(shader->ir);
       }
@@ -350,13 +335,11 @@ GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    struct brw_context *brw = brw_context(ctx);
+   const struct brw_compiler *compiler = brw->intelScreen->compiler;
    unsigned int stage;
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_shader *shader = shProg->_LinkedShaders[stage];
-      const struct gl_shader_compiler_options *options =
-         &ctx->Const.ShaderCompilerOptions[stage];
-
       if (!shader)
 	 continue;
 
@@ -404,10 +387,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       brw_add_texrect_params(prog);
 
-      if (options->NirOptions) {
-         prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
-                                    is_scalar_shader_stage(brw, stage));
-      }
+      prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
+                                 is_scalar_shader_stage(compiler, stage));
 
       _mesa_reference_program(ctx, &prog, NULL);
    }
@@ -917,21 +898,16 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
 backend_shader::backend_shader(const struct brw_compiler *compiler,
                                void *log_data,
                                void *mem_ctx,
-                               struct gl_shader_program *shader_prog,
-                               struct gl_program *prog,
-                               struct brw_stage_prog_data *stage_prog_data,
-                               gl_shader_stage stage)
+                               nir_shader *shader,
+                               struct brw_stage_prog_data *stage_prog_data)
    : compiler(compiler),
      log_data(log_data),
      devinfo(compiler->devinfo),
-     shader(shader_prog ?
-        (struct brw_shader *)shader_prog->_LinkedShaders[stage] : NULL),
-     shader_prog(shader_prog),
-     prog(prog),
+     nir(shader),
      stage_prog_data(stage_prog_data),
      mem_ctx(mem_ctx),
      cfg(NULL),
-     stage(stage)
+     stage(shader->stage)
 {
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);
@@ -1374,16 +1350,25 @@ backend_shader::invalidate_cfg()
  * trigger some of our asserts that surface indices are < BRW_MAX_SURFACES.
  */
 void
-backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_offset)
+brw_assign_common_binding_table_offsets(gl_shader_stage stage,
+                                        const struct brw_device_info *devinfo,
+                                        const struct gl_shader_program *shader_prog,
+                                        const struct gl_program *prog,
+                                        struct brw_stage_prog_data *stage_prog_data,
+                                        uint32_t next_binding_table_offset)
 {
+   const struct gl_shader *shader = NULL;
    int num_textures = _mesa_fls(prog->SamplersUsed);
+
+   if (shader_prog)
+      shader = shader_prog->_LinkedShaders[stage];
 
    stage_prog_data->binding_table.texture_start = next_binding_table_offset;
    next_binding_table_offset += num_textures;
 
    if (shader) {
       stage_prog_data->binding_table.ubo_start = next_binding_table_offset;
-      next_binding_table_offset += shader->base.NumUniformBlocks;
+      next_binding_table_offset += shader->NumUniformBlocks;
    } else {
       stage_prog_data->binding_table.ubo_start = 0xd0d0d0d0;
    }
@@ -1414,9 +1399,9 @@ backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_
       stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }
 
-   if (shader && shader->base.NumImages) {
+   if (shader && shader->NumImages) {
       stage_prog_data->binding_table.image_start = next_binding_table_offset;
-      next_binding_table_offset += shader->base.NumImages;
+      next_binding_table_offset += shader->NumImages;
    } else {
       stage_prog_data->binding_table.image_start = 0xd0d0d0d0;
    }
@@ -1430,32 +1415,50 @@ backend_shader::assign_common_binding_table_offsets(uint32_t next_binding_table_
    /* prog_data->base.binding_table.size will be set by brw_mark_surface_used. */
 }
 
-void
-backend_shader::setup_image_uniform_values(unsigned param_offset,
-                                           const gl_uniform_storage *storage)
+static void
+setup_vec4_uniform_value(const gl_constant_value **params,
+                         const gl_constant_value *values,
+                         unsigned n)
 {
-   const unsigned stage = _mesa_program_enum_to_shader_stage(prog->Target);
+   static const gl_constant_value zero = { 0 };
+
+   for (unsigned i = 0; i < n; ++i)
+      params[i] = &values[i];
+
+   for (unsigned i = n; i < 4; ++i)
+      params[i] = &zero;
+}
+
+void
+brw_setup_image_uniform_values(gl_shader_stage stage,
+                               struct brw_stage_prog_data *stage_prog_data,
+                               unsigned param_start_index,
+                               const gl_uniform_storage *storage)
+{
+   const gl_constant_value **param =
+      &stage_prog_data->param[param_start_index];
 
    for (unsigned i = 0; i < MAX2(storage->array_elements, 1); i++) {
       const unsigned image_idx = storage->image[stage].index + i;
-      const brw_image_param *param = &stage_prog_data->image_param[image_idx];
+      const brw_image_param *image_param =
+         &stage_prog_data->image_param[image_idx];
 
       /* Upload the brw_image_param structure.  The order is expected to match
        * the BRW_IMAGE_PARAM_*_OFFSET defines.
        */
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
-         (const gl_constant_value *)&param->surface_idx, 1);
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_OFFSET_OFFSET,
-         (const gl_constant_value *)param->offset, 2);
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SIZE_OFFSET,
-         (const gl_constant_value *)param->size, 3);
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_STRIDE_OFFSET,
-         (const gl_constant_value *)param->stride, 4);
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_TILING_OFFSET,
-         (const gl_constant_value *)param->tiling, 3);
-      setup_vec4_uniform_value(param_offset + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
-         (const gl_constant_value *)param->swizzling, 2);
-      param_offset += BRW_IMAGE_PARAM_SIZE;
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
+         (const gl_constant_value *)&image_param->surface_idx, 1);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
+         (const gl_constant_value *)image_param->offset, 2);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SIZE_OFFSET,
+         (const gl_constant_value *)image_param->size, 3);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_STRIDE_OFFSET,
+         (const gl_constant_value *)image_param->stride, 4);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_TILING_OFFSET,
+         (const gl_constant_value *)image_param->tiling, 3);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
+         (const gl_constant_value *)image_param->swizzling, 2);
+      param += BRW_IMAGE_PARAM_SIZE;
 
       brw_mark_surface_used(
          stage_prog_data,

@@ -95,7 +95,7 @@ vertical_alignment(const struct brw_context *brw,
         surf_type == BRW_SURFACE_1D))
       return GEN8_SURFACE_VALIGN_4;
 
-   switch (mt->align_h) {
+   switch (mt->valign) {
    case 4:
       return GEN8_SURFACE_VALIGN_4;
    case 8:
@@ -120,7 +120,7 @@ horizontal_alignment(const struct brw_context *brw,
         gen9_use_linear_1d_layout(brw, mt)))
       return GEN8_SURFACE_HALIGN_4;
 
-   switch (mt->align_w) {
+   switch (mt->halign) {
    case 4:
       return GEN8_SURFACE_HALIGN_4;
    case 8:
@@ -221,8 +221,8 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
        * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
        *  16 must be used."
        */
-      assert(brw->gen < 9 || mt->align_w == 16);
-      assert(brw->gen < 8 || mt->num_samples > 1 || mt->align_w == 16);
+      assert(brw->gen < 9 || mt->halign == 16);
+      assert(brw->gen < 8 || mt->num_samples > 1 || mt->halign == 16);
    }
 
    const uint32_t surf_type = translate_tex_target(target);
@@ -470,8 +470,8 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
        * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
        *  16 must be used."
        */
-      assert(brw->gen < 9 || mt->align_w == 16);
-      assert(brw->gen < 8 || mt->num_samples > 1 || mt->align_w == 16);
+      assert(brw->gen < 9 || mt->halign == 16);
+      assert(brw->gen < 8 || mt->num_samples > 1 || mt->halign == 16);
    }
 
    uint32_t *surf = allocate_surface_state(brw, &offset, surf_index);

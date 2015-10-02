@@ -37,6 +37,7 @@
 #include "brw_state.h"
 #include "program/prog_print.h"
 #include "program/prog_parameter.h"
+#include "brw_nir.h"
 
 #include "util/ralloc.h"
 
@@ -65,27 +66,6 @@ gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx)
    }
 }
 
-
-bool
-brw_vs_prog_data_compare(const void *in_a, const void *in_b)
-{
-   const struct brw_vs_prog_data *a = in_a;
-   const struct brw_vs_prog_data *b = in_b;
-
-   /* Compare the base structure. */
-   if (!brw_stage_prog_data_compare(&a->base.base, &b->base.base))
-      return false;
-
-   /* Compare the rest of the struct. */
-   const unsigned offset = sizeof(struct brw_stage_prog_data);
-   if (memcmp(((char *) a) + offset, ((char *) b) + offset,
-              sizeof(struct brw_vs_prog_data) - offset)) {
-      return false;
-   }
-
-   return true;
-}
-
 bool
 brw_codegen_vs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
@@ -102,6 +82,18 @@ brw_codegen_vs_prog(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
 
+   if (!vp->program.Base.nir) {
+      /* Normally we generate NIR in LinkShader() or
+       * ProgramStringNotify(), but Mesa's fixed-function vertex program
+       * handling doesn't notify the driver at all.  Just do it here, at
+       * the last minute, even though it's lame.
+       */
+      assert(vp->program.Base.Id == 0 && prog == NULL);
+      vp->program.Base.nir =
+         brw_create_nir(brw, NULL, &vp->program.Base, MESA_SHADER_VERTEX,
+                        brw->intelScreen->compiler->scalar_vs);
+   }
+
    if (prog)
       vs = (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
 
@@ -113,22 +105,22 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    mem_ctx = ralloc_context(NULL);
 
+   brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX,
+                                           brw->intelScreen->devinfo,
+                                           prog, &vp->program.Base,
+                                           &prog_data.base.base, 0);
+
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count;
-   if (vs) {
-      /* We add padding around uniform values below vec4 size, with the worst
-       * case being a float value that gets blown up to a vec4, so be
-       * conservative here.
-       */
-      param_count = vs->base.num_uniform_components * 4 +
-                    vs->base.NumImages * BRW_IMAGE_PARAM_SIZE;
-      stage_prog_data->nr_image_params = vs->base.NumImages;
-   } else {
-      param_count = vp->program.Base.Parameters->NumParameters * 4;
-   }
+   int param_count = vp->program.Base.nir->num_uniforms;
+   if (!brw->intelScreen->compiler->scalar_vs)
+      param_count *= 4;
+
+   if (vs)
+      prog_data.base.base.nr_image_params = vs->base.NumImages;
+
    /* vec4_visitor::setup_uniform_clipplane_values() also uploads user clip
     * planes as uniforms.
     */
@@ -142,6 +134,15 @@ brw_codegen_vs_prog(struct brw_context *brw,
       rzalloc_array(NULL, struct brw_image_param,
                     stage_prog_data->nr_image_params);
    stage_prog_data->nr_params = param_count;
+
+   if (prog) {
+      brw_nir_setup_glsl_uniforms(vp->program.Base.nir, prog, &vp->program.Base,
+                                  &prog_data.base.base,
+                                  brw->intelScreen->compiler->scalar_vs);
+   } else {
+      brw_nir_setup_arb_uniforms(vp->program.Base.nir, &vp->program.Base,
+                                 &prog_data.base.base);
+   }
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data.inputs_read = vp->program.Base.InputsRead;
