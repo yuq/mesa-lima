@@ -192,9 +192,18 @@ x11_acquire_next_image(struct anv_swap_chain *anv_chain,
    struct x11_image *image = &chain->images[chain->next_image];
 
    if (image->busy) {
+      xcb_generic_error_t *err;
       xcb_get_geometry_reply_t *geom =
-         xcb_get_geometry_reply(chain->conn, image->geom_cookie, NULL);
-      image->busy = false;
+         xcb_get_geometry_reply(chain->conn, image->geom_cookie, &err);
+      if (!geom) {
+         if (err->error_code == XCB_DRAWABLE) {
+            /* Probably the best thing to do if our drawable goes away */
+            return vk_error(VK_ERROR_OUT_OF_DATE_WSI);
+         } else {
+            return vk_error(VK_ERROR_UNKNOWN);
+         }
+         free(err);
+      }
 
       if (geom->width != chain->extent.width ||
           geom->height != chain->extent.height) {
@@ -202,6 +211,8 @@ x11_acquire_next_image(struct anv_swap_chain *anv_chain,
          return vk_error(VK_ERROR_OUT_OF_DATE_WSI);
       }
       free(geom);
+
+      image->busy = false;
    }
 
    *image_index = chain->next_image;
