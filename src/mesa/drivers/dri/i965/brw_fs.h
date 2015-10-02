@@ -241,8 +241,6 @@ public:
    void nir_setup_inputs(nir_shader *shader);
    void nir_setup_outputs(nir_shader *shader);
    void nir_setup_uniforms(nir_shader *shader);
-   void nir_setup_uniform(nir_variable *var);
-   void nir_setup_builtin_uniform(nir_variable *var);
    void nir_emit_system_values(nir_shader *shader);
    void nir_emit_impl(nir_function_impl *impl);
    void nir_emit_cf_list(exec_list *list);

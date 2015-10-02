@@ -183,15 +183,14 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
    uniforms = shader->num_uniforms;
 
    if (shader_prog) {
+      brw_nir_setup_glsl_uniforms(shader, shader_prog, prog,
+                                  stage_prog_data, true);
+
       foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
          /* UBO's and atomics don't take up space in the uniform file */
          if (var->interface_type != NULL || var->type->contains_atomic())
             continue;
 
-         if (strncmp(var->name, "gl_", 3) == 0)
-            nir_setup_builtin_uniform(var);
-         else
-            nir_setup_uniform(var);
          if(type_size_scalar(var->type) > 0)
             param_size[var->data.driver_location] = type_size_scalar(var->type);
       }
@@ -200,78 +199,6 @@ fs_visitor::nir_setup_uniforms(nir_shader *shader)
 
       if(prog->Parameters->NumParameters > 0)
          param_size[0] = prog->Parameters->NumParameters * 4;
-   }
-}
-
-void
-fs_visitor::nir_setup_uniform(nir_variable *var)
-{
-   int namelen = strlen(var->name);
-
-   /* The data for our (non-builtin) uniforms is stored in a series of
-      * gl_uniform_driver_storage structs for each subcomponent that
-      * glGetUniformLocation() could name.  We know it's been set up in the
-      * same order we'd walk the type, so walk the list of storage and find
-      * anything with our name, or the prefix of a component that starts with
-      * our name.
-      */
-   unsigned index = var->data.driver_location;
-   for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
-      struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
-
-      if (storage->builtin)
-              continue;
-
-      if (strncmp(var->name, storage->name, namelen) != 0 ||
-         (storage->name[namelen] != 0 &&
-         storage->name[namelen] != '.' &&
-         storage->name[namelen] != '[')) {
-         continue;
-      }
-
-      if (storage->type->is_image()) {
-         brw_setup_image_uniform_values(stage, stage_prog_data,
-                                        index, storage);
-      } else {
-         unsigned slots = storage->type->component_slots();
-         if (storage->array_elements)
-            slots *= storage->array_elements;
-
-         for (unsigned i = 0; i < slots; i++) {
-            stage_prog_data->param[index++] = &storage->storage[i];
-         }
-      }
-   }
-}
-
-void
-fs_visitor::nir_setup_builtin_uniform(nir_variable *var)
-{
-   const nir_state_slot *const slots = var->state_slots;
-   assert(var->state_slots != NULL);
-
-   unsigned uniform_index = var->data.driver_location;
-   for (unsigned int i = 0; i < var->num_state_slots; i++) {
-      /* This state reference has already been setup by ir_to_mesa, but we'll
-       * get the same index back here.
-       */
-      int index = _mesa_add_state_reference(this->prog->Parameters,
-                                            (gl_state_index *)slots[i].tokens);
-
-      /* Add each of the unique swizzles of the element as a parameter.
-       * This'll end up matching the expected layout of the
-       * array/matrix/structure we're trying to fill in.
-       */
-      int last_swiz = -1;
-      for (unsigned int j = 0; j < 4; j++) {
-         int swiz = GET_SWZ(slots[i].swizzle, j);
-         if (swiz == last_swiz)
-            break;
-         last_swiz = swiz;
-
-         stage_prog_data->param[uniform_index++] =
-            &prog->Parameters->ParameterValues[index][swiz];
-      }
    }
 }
 
