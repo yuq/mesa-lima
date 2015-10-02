@@ -152,8 +152,10 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
 
-   const uint32_t i = 4; /* FINISHME: Stop hardcoding subimage alignment */
-   const uint32_t j = 4; /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t i = MAX(4, format->bw); /* FINISHME: Stop hardcoding subimage alignment */
+   const uint32_t j = MAX(4, format->bh); /* FINISHME: Stop hardcoding subimage alignment */
+   assert(i == 4 || i == 8 || i == 16);
+   assert(j == 4 || j == 8 || j == 16);
 
    uint16_t qpitch = min_qpitch;
    uint32_t mt_width = 0;
