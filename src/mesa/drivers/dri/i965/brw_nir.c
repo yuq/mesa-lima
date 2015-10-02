@@ -28,9 +28,7 @@
 #include "program/prog_to_nir.h"
 
 static void
-brw_nir_lower_inputs(nir_shader *nir,
-                     const struct gl_program *prog,
-                     bool is_scalar)
+brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
 {
    nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
                             is_scalar ? type_size_scalar : type_size_vec4);
@@ -141,7 +139,7 @@ brw_create_nir(struct brw_context *brw,
    /* Get rid of split copies */
    nir_optimize(nir, is_scalar);
 
-   brw_nir_lower_inputs(nir, prog, is_scalar);
+   brw_nir_lower_inputs(nir, is_scalar);
    brw_nir_lower_outputs(nir, is_scalar);
    nir_assign_var_locations(&nir->uniforms,
                             &nir->num_uniforms,
