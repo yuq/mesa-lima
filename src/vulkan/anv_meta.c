@@ -90,6 +90,59 @@ build_nir_clear_fragment_shader()
    return b.shader;
 }
 
+static nir_shader *
+build_nir_copy_fragment_shader(enum glsl_sampler_dim tex_dim)
+{
+   nir_builder b;
+
+   nir_builder_init_simple_shader(&b, MESA_SHADER_FRAGMENT);
+
+   const struct glsl_type *color_type = glsl_vec4_type();
+
+   nir_variable *tex_pos_in = nir_variable_create(b.shader, "v_attr",
+                                                  glsl_vec4_type(),
+                                                  nir_var_shader_in);
+   tex_pos_in->data.location = VARYING_SLOT_VAR0;
+
+   const struct glsl_type *sampler_type =
+      glsl_sampler_type(tex_dim, false, false, glsl_get_base_type(color_type));
+   nir_variable *sampler = nir_variable_create(b.shader, "s_tex", sampler_type,
+                                               nir_var_uniform);
+   sampler->data.descriptor_set = 0;
+   sampler->data.binding = 0;
+
+   nir_tex_instr *tex = nir_tex_instr_create(b.shader, 1);
+   tex->sampler_dim = tex_dim;
+   tex->op = nir_texop_tex;
+   tex->src[0].src_type = nir_tex_src_coord;
+   tex->src[0].src = nir_src_for_ssa(nir_load_var(&b, tex_pos_in));
+   tex->dest_type = nir_type_float; /* TODO */
+
+   switch (tex_dim) {
+   case GLSL_SAMPLER_DIM_2D:
+      tex->coord_components = 2;
+      break;
+   case GLSL_SAMPLER_DIM_3D:
+      tex->coord_components = 3;
+      break;
+   default:
+      assert(!"Unsupported texture dimension");
+   }
+
+   tex->sampler = nir_deref_var_create(tex, sampler);
+
+   nir_ssa_dest_init(&tex->instr, &tex->dest, 4, "tex");
+   nir_builder_instr_insert(&b, &tex->instr);
+
+   nir_variable *color_out = nir_variable_create(b.shader, "f_color",
+                                                 color_type,
+                                                 nir_var_shader_out);
+   color_out->data.location = FRAG_RESULT_DATA0;
+   nir_store_var(&b, color_out, &tex->dest.ssa);
+
+   return b.shader;
+}
+
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
@@ -474,42 +527,23 @@ anv_device_init_meta_blit_state(struct anv_device *device)
     * to provide GLSL source for the vertex shader so that the compiler
     * does not dead-code our inputs.
     */
-   VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
-      layout(location = 0) in vec2 a_pos;
-      layout(location = 1) in vec2 a_tex_coord;
-      layout(location = 0) out vec4 v_tex_coord;
-      void main()
-      {
-         v_tex_coord = vec4(a_tex_coord, 0, 1);
-         gl_Position = vec4(a_pos, 0, 1);
-      }
-   );
+   struct anv_shader_module vsm = {
+      .nir = build_nir_vertex_shader(false),
+   };
 
-   VkShaderModule fsm_2d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      layout(location = 0) out vec4 f_color;
-      layout(location = 0) in vec4 v_tex_coord;
-      layout(set = 0, binding = 0) uniform sampler2D u_tex;
-      void main()
-      {
-         f_color = texture(u_tex, v_tex_coord.xy);
-      }
-   );
+   struct anv_shader_module fsm_2d = {
+      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_2D),
+   };
 
-   VkShaderModule fsm_3d = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      layout(location = 0) out vec4 f_color;
-      layout(location = 0) in vec4 v_tex_coord;
-      layout(set = 0, binding = 0) uniform sampler3D u_tex;
-      void main()
-      {
-         f_color = texture(u_tex, v_tex_coord.xyz);
-      }
-   );
+   struct anv_shader_module fsm_3d = {
+      .nir = build_nir_copy_fragment_shader(GLSL_SAMPLER_DIM_3D),
+   };
 
    VkShader vs;
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = vsm,
+         .module = anv_shader_module_to_handle(&vsm),
          .pName = "main",
       }, &vs);
 
@@ -517,7 +551,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = fsm_2d,
+         .module = anv_shader_module_to_handle(&fsm_2d),
          .pName = "main",
       }, &fs_2d);
 
@@ -525,7 +559,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = fsm_3d,
+         .module = anv_shader_module_to_handle(&fsm_3d),
          .pName = "main",
       }, &fs_3d);
 
@@ -655,12 +689,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       &vk_pipeline_info, &anv_pipeline_info,
       &device->meta_state.blit.pipeline_3d_src);
 
-   anv_DestroyShaderModule(anv_device_to_handle(device), vsm);
    anv_DestroyShader(anv_device_to_handle(device), vs);
-   anv_DestroyShaderModule(anv_device_to_handle(device), fsm_2d);
    anv_DestroyShader(anv_device_to_handle(device), fs_2d);
-   anv_DestroyShaderModule(anv_device_to_handle(device), fsm_3d);
    anv_DestroyShader(anv_device_to_handle(device), fs_3d);
+   ralloc_free(vsm.nir);
+   ralloc_free(fsm_2d.nir);
+   ralloc_free(fsm_3d.nir);
 }
 
 static void
