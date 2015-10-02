@@ -116,9 +116,6 @@ anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN)cat $(vulkan_include_HEADERS) | $(PYTHON2) $< code > $@
 
-%_spirv_autogen.h: %.c glsl_scraper.py
-	$(AM_V_GEN) $(PYTHON3) $(srcdir)/glsl_scraper.py --with-glslc=$(GLSLC) -o $@ $<
-
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \

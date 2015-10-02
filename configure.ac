@@ -1552,10 +1552,6 @@ AC_SUBST([GBM_PC_LIB_PRIV])
 
 AM_CONDITIONAL(HAVE_VULKAN, true)
 
-AC_ARG_VAR([GLSLC], [Path to the glslc executable])
-AC_CHECK_PROGS([GLSLC], [glslc])
-AC_SUBST([GLSLC])
-
 dnl
 dnl EGL configuration
 dnl
