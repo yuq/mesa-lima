@@ -5765,6 +5765,10 @@ ast_process_structure_or_interface_block(exec_list *instructions,
 
          const struct ast_type_qualifier *const qual =
             & decl_list->type->qualifier;
+
+         if (qual->flags.q.explicit_binding)
+            validate_binding_qualifier(state, &loc, decl_type, qual);
+
          if (qual->flags.q.std140 ||
              qual->flags.q.std430 ||
              qual->flags.q.packed ||
