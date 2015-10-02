@@ -1010,11 +1010,11 @@ program_resource_top_level_array_stride(struct gl_shader_program *shProg,
             } else {
                array_stride = 0;
             }
-            goto found_top_level_array_size;
+            goto found_top_level_array_stride;
          }
       }
    }
-found_top_level_array_size:
+found_top_level_array_stride:
    free(interface_name);
    free(var_name);
    return array_stride;
