@@ -1487,6 +1487,9 @@ typedef struct nir_shader_info {
    /* Whether or not separate shader objects were used */
    bool separate_shader;
 
+   /** Was this shader linked with any transform feedback varyings? */
+   bool has_transform_feedback_varyings;
+
    struct {
       /** The maximum number of vertices the geometry shader might write. */
       unsigned vertices_out;
