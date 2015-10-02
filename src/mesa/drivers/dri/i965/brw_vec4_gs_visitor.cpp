@@ -473,7 +473,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
     * be recorded by transform feedback, we can simply discard all geometry
     * bound to these streams when transform feedback is disabled.
     */
-   if (stream_id > 0 && shader_prog->TransformFeedback.NumVarying == 0)
+   if (stream_id > 0 && !nir->info.has_transform_feedback_varyings)
       return;
 
    /* If we're outputting 32 control data bits or less, then we can wait
