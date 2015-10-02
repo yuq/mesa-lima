@@ -1802,8 +1802,6 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 bool
 vec4_visitor::run()
 {
-   sanity_param_count = prog->Parameters->NumParameters;
-
    if (shader_time_index >= 0)
       emit_shader_time_begin();
 
@@ -1925,13 +1923,6 @@ vec4_visitor::run()
       prog_data->base.total_scratch =
          brw_get_scratch_size(last_scratch * REG_SIZE);
    }
-
-   /* If any state parameters were appended, then ParameterValues could have
-    * been realloced, in which case the driver uniform storage set up by
-    * _mesa_associate_uniform_storage() would point to freed memory.  Make
-    * sure that didn't happen.
-    */
-   assert(sanity_param_count == prog->Parameters->NumParameters);
 
    return !failed;
 }

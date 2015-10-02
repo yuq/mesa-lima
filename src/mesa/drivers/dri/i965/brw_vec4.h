@@ -97,8 +97,6 @@ public:
 
    const struct brw_sampler_prog_key_data * const key_tex;
    struct brw_vue_prog_data * const prog_data;
-   unsigned int sanity_param_count;
-
    char *fail_msg;
    bool failed;
 

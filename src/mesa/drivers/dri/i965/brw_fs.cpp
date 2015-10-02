@@ -4985,8 +4985,6 @@ fs_visitor::run_fs(bool do_rep_send)
 
    assert(stage == MESA_SHADER_FRAGMENT);
 
-   sanity_param_count = prog->Parameters->NumParameters;
-
    if (devinfo->gen >= 6)
       setup_payload_gen6();
    else
@@ -5055,13 +5053,6 @@ fs_visitor::run_fs(bool do_rep_send)
    else
       wm_prog_data->reg_blocks_16 = brw_register_blocks(grf_used);
 
-   /* If any state parameters were appended, then ParameterValues could have
-    * been realloced, in which case the driver uniform storage set up by
-    * _mesa_associate_uniform_storage() would point to freed memory.  Make
-    * sure that didn't happen.
-    */
-   assert(sanity_param_count == prog->Parameters->NumParameters);
-
    return !failed;
 }
 
@@ -5070,8 +5061,6 @@ fs_visitor::run_cs()
 {
    assert(stage == MESA_SHADER_COMPUTE);
    assert(shader);
-
-   sanity_param_count = prog->Parameters->NumParameters;
 
    setup_cs_payload();
 
@@ -5099,13 +5088,6 @@ fs_visitor::run_cs()
 
    if (failed)
       return false;
-
-   /* If any state parameters were appended, then ParameterValues could have
-    * been realloced, in which case the driver uniform storage set up by
-    * _mesa_associate_uniform_storage() would point to freed memory.  Make
-    * sure that didn't happen.
-    */
-   assert(sanity_param_count == prog->Parameters->NumParameters);
 
    return !failed;
 }
