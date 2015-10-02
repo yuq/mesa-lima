@@ -697,6 +697,7 @@ anv_state_stream_finish(struct anv_state_stream *stream)
 
    block = stream->current_block;
    while (block != NULL_BLOCK) {
+      assert(block % stream->block_pool->block_size == 0);
       sb = stream->block_pool->map + block;
       next_block = VG_NOACCESS_READ(&sb->next);
       VG(VALGRIND_MEMPOOL_FREE(stream, VG_NOACCESS_READ(&sb->_vg_ptr)));
