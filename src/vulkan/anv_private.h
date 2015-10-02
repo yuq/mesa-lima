@@ -994,7 +994,11 @@ struct anv_fence {
    bool ready;
 };
 
+struct nir_shader;
+
 struct anv_shader_module {
+   struct nir_shader *                          nir;
+
    uint32_t                                     size;
    char                                         data[0];
 };

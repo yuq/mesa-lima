@@ -47,6 +47,7 @@ VkResult anv_CreateShaderModule(
    if (module == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   module->nir = NULL;
    module->size = pCreateInfo->codeSize;
    memcpy(module->data, pCreateInfo->pCode, module->size);
 
