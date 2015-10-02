@@ -74,7 +74,7 @@ convert_block(nir_block *block, void *state)
 static bool
 convert_impl(nir_function_impl *impl)
 {
-   bool progress;
+   bool progress = false;
 
    nir_foreach_block(impl, convert_block, &progress);
    nir_metadata_preserve(impl, nir_metadata_block_index |
