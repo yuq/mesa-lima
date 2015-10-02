@@ -70,7 +70,6 @@ public:
    vec4_gs_visitor(const struct brw_compiler *compiler,
                    void *log_data,
                    struct brw_gs_compile *c,
-                   struct gl_shader_program *prog,
                    nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
@@ -96,8 +95,6 @@ protected:
                             int attributes_per_reg);
    void emit_control_data_bits();
    void set_stream_control_data_bits(unsigned stream_id);
-
-   struct gl_shader_program *shader_prog;
 
    src_reg vertex_count;
    src_reg control_data_bits;
