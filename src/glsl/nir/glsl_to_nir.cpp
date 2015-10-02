@@ -303,6 +303,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.read_only = ir->data.read_only;
    var->data.centroid = ir->data.centroid;
    var->data.sample = ir->data.sample;
+   var->data.patch = ir->data.patch;
    var->data.invariant = ir->data.invariant;
    var->data.location = ir->data.location;
 
