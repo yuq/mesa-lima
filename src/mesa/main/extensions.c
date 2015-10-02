@@ -152,6 +152,7 @@ static const struct extension extension_table[] = {
    { "GL_ARB_separate_shader_objects",             o(dummy_true),                              GL,             2010 },
    { "GL_ARB_shader_atomic_counters",              o(ARB_shader_atomic_counters),              GL,             2011 },
    { "GL_ARB_shader_bit_encoding",                 o(ARB_shader_bit_encoding),                 GL,             2010 },
+   { "GL_ARB_shader_clock",                        o(ARB_shader_clock),                        GL,             2015 },
    { "GL_ARB_shader_image_load_store",             o(ARB_shader_image_load_store),             GL,             2011 },
    { "GL_ARB_shader_image_size",                   o(ARB_shader_image_size),                   GL,             2012 },
    { "GL_ARB_shader_objects",                      o(dummy_true),                              GL,             2002 },
