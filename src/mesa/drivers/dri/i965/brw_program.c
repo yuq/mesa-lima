@@ -551,6 +551,7 @@ brw_stage_prog_data_free(const void *p)
 
    ralloc_free(prog_data->param);
    ralloc_free(prog_data->pull_param);
+   ralloc_free(prog_data->image_param);
 }
 
 void
