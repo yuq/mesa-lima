@@ -192,6 +192,7 @@ struct si_context {
 
 	/* Precomputed states. */
 	struct si_pm4_state		*init_config;
+	bool				init_config_has_vgt_flush;
 	struct si_pm4_state		*vgt_shader_config[4];
 	/* With rasterizer discard, there doesn't have to be a pixel shader.
 	 * In that case, we bind this one: */

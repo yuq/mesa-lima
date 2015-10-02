@@ -1136,6 +1136,20 @@ static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom
 				  sctx->force_persample_interp);
 }
 
+/**
+ * Writing CONFIG or UCONFIG VGT registers requires VGT_FLUSH before that.
+ */
+static void si_init_config_add_vgt_flush(struct si_context *sctx)
+{
+	if (sctx->init_config_has_vgt_flush)
+		return;
+
+	si_pm4_cmd_begin(sctx->init_config, PKT3_EVENT_WRITE);
+	si_pm4_cmd_add(sctx->init_config, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
+	si_pm4_cmd_end(sctx->init_config, false);
+	sctx->init_config_has_vgt_flush = true;
+}
+
 /* Initialize state related to ESGS / GSVS ring buffers */
 static void si_init_gs_rings(struct si_context *sctx)
 {
@@ -1155,6 +1169,8 @@ static void si_init_gs_rings(struct si_context *sctx)
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
 		return;
 	}
+
+	si_init_config_add_vgt_flush(sctx);
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
@@ -1401,6 +1417,8 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 		return;
 
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
+
+	si_init_config_add_vgt_flush(sctx);
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
