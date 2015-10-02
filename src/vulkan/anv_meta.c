@@ -29,40 +29,83 @@
 
 #include "anv_private.h"
 #include "anv_meta_spirv_autogen.h"
+#include "anv_nir_builder.h"
+
+static nir_shader *
+build_nir_vertex_shader(bool attr_flat)
+{
+   nir_builder b;
+
+   const struct glsl_type *vertex_type = glsl_vec4_type();
+
+   nir_builder_init_simple_shader(&b, MESA_SHADER_VERTEX);
+
+   nir_variable *pos_in = nir_variable_create(b.shader, "a_pos",
+                                              vertex_type,
+                                              nir_var_shader_in);
+   pos_in->data.location = VERT_ATTRIB_GENERIC0;
+   nir_variable *pos_out = nir_variable_create(b.shader, "gl_Position",
+                                               vertex_type,
+                                               nir_var_shader_out);
+   pos_in->data.location = VARYING_SLOT_POS;
+   nir_copy_var(&b, pos_out, pos_in);
+
+   /* Add one more pass-through attribute.  For clear shaders, this is used
+    * to store the color and for blit shaders it's the texture coordinate.
+    */
+   const struct glsl_type *attr_type = glsl_vec4_type();
+   nir_variable *attr_in = nir_variable_create(b.shader, "a_attr", attr_type,
+                                               nir_var_shader_in);
+   attr_in->data.location = VERT_ATTRIB_GENERIC1;
+   nir_variable *attr_out = nir_variable_create(b.shader, "v_attr", attr_type,
+                                                nir_var_shader_out);
+   attr_out->data.location = VARYING_SLOT_VAR0;
+   attr_out->data.interpolation = attr_flat ? INTERP_QUALIFIER_FLAT :
+                                              INTERP_QUALIFIER_SMOOTH;
+   nir_copy_var(&b, attr_out, attr_in);
+
+   return b.shader;
+}
+
+static nir_shader *
+build_nir_clear_fragment_shader()
+{
+   nir_builder b;
+
+   const struct glsl_type *color_type = glsl_vec4_type();
+
+   nir_builder_init_simple_shader(&b, MESA_SHADER_FRAGMENT);
+
+   nir_variable *color_in = nir_variable_create(b.shader, "v_attr",
+                                                color_type,
+                                                nir_var_shader_in);
+   color_in->data.location = VARYING_SLOT_VAR0;
+   color_in->data.interpolation = INTERP_QUALIFIER_FLAT;
+   nir_variable *color_out = nir_variable_create(b.shader, "f_color",
+                                                 color_type,
+                                                 nir_var_shader_out);
+   color_out->data.location = FRAG_RESULT_DATA0;
+   nir_copy_var(&b, color_out, color_in);
+
+   return b.shader;
+}
 
 static void
 anv_device_init_meta_clear_state(struct anv_device *device)
 {
-   /* We don't use a vertex shader for clearing, but instead build and pass
-    * the VUEs directly to the rasterization backend.  However, we do need
-    * to provide GLSL source for the vertex shader so that the compiler
-    * does not dead-code our inputs.
-    */
-   VkShaderModule vsm = GLSL_VK_SHADER_MODULE(device, VERTEX,
-      layout(location = 0) in vec3 a_pos;
-      layout(location = 1) in vec4 a_color;
-      layout(location = 0) flat out vec4 v_color;
-      void main()
-      {
-         v_color = a_color;
-         gl_Position = vec4(a_pos, 1);
-      }
-   );
+   struct anv_shader_module vsm = {
+      .nir = build_nir_vertex_shader(true),
+   };
 
-   VkShaderModule fsm = GLSL_VK_SHADER_MODULE(device, FRAGMENT,
-      layout(location = 0) out vec4 f_color;
-      layout(location = 0) flat in vec4 v_color;
-      void main()
-      {
-         f_color = v_color;
-      }
-   );
+   struct anv_shader_module fsm = {
+      .nir = build_nir_clear_fragment_shader(),
+   };
 
    VkShader vs;
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = vsm,
+         .module = anv_shader_module_to_handle(&vsm),
          .pName = "main",
       }, &vs);
 
@@ -70,7 +113,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
    anv_CreateShader(anv_device_to_handle(device),
       &(VkShaderCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_SHADER_CREATE_INFO,
-         .module = fsm,
+         .module = anv_shader_module_to_handle(&fsm),
          .pName = "main",
       }, &fs);
 
@@ -187,10 +230,10 @@ anv_device_init_meta_clear_state(struct anv_device *device)
       },
       &device->meta_state.clear.pipeline);
 
-   anv_DestroyShaderModule(anv_device_to_handle(device), vsm);
-   anv_DestroyShaderModule(anv_device_to_handle(device), fsm);
    anv_DestroyShader(anv_device_to_handle(device), vs);
    anv_DestroyShader(anv_device_to_handle(device), fs);
+   ralloc_free(vsm.nir);
+   ralloc_free(fsm.nir);
 }
 
 #define NUM_VB_USED 2
