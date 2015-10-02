@@ -150,8 +150,6 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       if (sh->Program->SamplersUsed & (1 << i))
          num_textures = i;
 
-   shader->gs.vertices_out = sh->Geom.VerticesOut;
-   shader->gs.invocations = sh->Geom.Invocations;
    shader->info.name = ralloc_asprintf(shader, "GLSL%d", sh->Name);
    shader->info.num_textures = num_textures;
    shader->info.num_ubos = sh->NumUniformBlocks;
@@ -164,6 +162,8 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info.uses_texture_gather = sh->Program->UsesGather;
    shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
    shader->info.separate_shader = shader_prog->SeparateShader;
+   shader->info.gs.vertices_out = sh->Geom.VerticesOut;
+   shader->info.gs.invocations = sh->Geom.Invocations;
 
    return shader;
 }

@@ -55,9 +55,6 @@ nir_shader_create(void *mem_ctx,
 
    shader->stage = stage;
 
-   shader->gs.vertices_out = 0;
-   shader->gs.invocations = 0;
-
    return shader;
 }
 

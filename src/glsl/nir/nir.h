@@ -1483,6 +1483,14 @@ typedef struct nir_shader_info {
 
    /* Whether or not separate shader objects were used */
    bool separate_shader;
+
+   struct {
+      /** The maximum number of vertices the geometry shader might write. */
+      unsigned vertices_out;
+
+      /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
+      unsigned invocations;
+   } gs;
 } nir_shader_info;
 
 typedef struct nir_shader {
@@ -1527,14 +1535,6 @@ typedef struct nir_shader {
 
    /** The shader stage, such as MESA_SHADER_VERTEX. */
    gl_shader_stage stage;
-
-   struct {
-      /** The maximum number of vertices the geometry shader might write. */
-      unsigned vertices_out;
-
-      /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
-      unsigned invocations;
-   } gs;
 } nir_shader;
 
 #define nir_foreach_overload(shader, overload)                        \
