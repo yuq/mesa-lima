@@ -404,9 +404,7 @@ st_translate_vertex_program(struct st_context *st,
                                    stvp->result_to_output,
                                    output_slot_to_attr,
                                    output_semantic_name,
-                                   output_semantic_index,
-                                   false,
-                                   false);
+                                   output_semantic_index);
    else
       error = st_translate_mesa_program(st->ctx,
                                         TGSI_PROCESSOR_VERTEX,
@@ -422,9 +420,7 @@ st_translate_vertex_program(struct st_context *st,
                                         num_outputs,
                                         stvp->result_to_output,
                                         output_semantic_name,
-                                        output_semantic_index,
-                                        false,
-                                        false);
+                                        output_semantic_index);
 
    if (error)
       goto fail;
@@ -859,8 +855,7 @@ st_translate_fragment_program(struct st_context *st,
                            outputMapping,
                            NULL,
                            fs_output_semantic_name,
-                           fs_output_semantic_index, FALSE,
-                           false);
+                           fs_output_semantic_index);
    else
       st_translate_mesa_program(st->ctx,
                                 TGSI_PROCESSOR_FRAGMENT,
@@ -876,8 +871,7 @@ st_translate_fragment_program(struct st_context *st,
                                 fs_num_outputs,
                                 outputMapping,
                                 fs_output_semantic_name,
-                                fs_output_semantic_index, FALSE,
-                                false);
+                                fs_output_semantic_index);
 
    variant->tgsi.tokens = ureg_get_tokens(ureg, NULL);
    ureg_destroy(ureg);
@@ -1206,9 +1200,7 @@ st_translate_program_common(struct st_context *st,
                         outputMapping,
                         outputSlotToAttr,
                         output_semantic_name,
-                        output_semantic_index,
-                        FALSE,
-                        FALSE);
+                        output_semantic_index);
 
    out_state->tokens = ureg_get_tokens(ureg, NULL);
    ureg_destroy(ureg);
