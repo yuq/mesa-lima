@@ -66,16 +66,16 @@ fs_visitor::opt_peephole_predicated_break()
       /* BREAK and CONTINUE instructions, by definition, can only be found at
        * the ends of basic blocks.
        */
-      fs_inst *jump_inst = (fs_inst *)block->end();
+      backend_instruction *jump_inst = block->end();
       if (jump_inst->opcode != BRW_OPCODE_BREAK &&
           jump_inst->opcode != BRW_OPCODE_CONTINUE)
          continue;
 
-      fs_inst *if_inst = (fs_inst *)block->prev()->end();
+      backend_instruction *if_inst = block->prev()->end();
       if (if_inst->opcode != BRW_OPCODE_IF)
          continue;
 
-      fs_inst *endif_inst = (fs_inst *)block->next()->start();
+      backend_instruction *endif_inst = block->next()->start();
       if (endif_inst->opcode != BRW_OPCODE_ENDIF)
          continue;
 
@@ -120,7 +120,7 @@ fs_visitor::opt_peephole_predicated_break()
        * the two basic blocks.
        */
       bblock_t *while_block = earlier_block->next();
-      fs_inst *while_inst = (fs_inst *)while_block->start();
+      backend_instruction *while_inst = while_block->start();
 
       if (jump_inst->opcode == BRW_OPCODE_BREAK &&
           while_inst->opcode == BRW_OPCODE_WHILE &&
