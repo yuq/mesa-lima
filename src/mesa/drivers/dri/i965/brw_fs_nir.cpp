@@ -58,7 +58,7 @@ fs_visitor::nir_setup_inputs()
 {
    nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+   nir_foreach_variable(var, &nir->inputs) {
       enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
 
@@ -122,7 +122,7 @@ fs_visitor::nir_setup_outputs()
 
    nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
 
-   foreach_list_typed(nir_variable, var, node, &nir->outputs) {
+   nir_foreach_variable(var, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
       int vector_elements =
@@ -180,7 +180,7 @@ fs_visitor::nir_setup_uniforms()
 
    uniforms = nir->num_uniforms;
 
-   foreach_list_typed(nir_variable, var, node, &nir->uniforms) {
+   nir_foreach_variable(var, &nir->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())
          continue;

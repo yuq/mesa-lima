@@ -129,7 +129,7 @@ brw_nir_setup_glsl_uniforms(nir_shader *shader,
 {
    unsigned comps_per_unit = is_scalar ? 1 : 4;
 
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+   nir_foreach_variable(var, &shader->uniforms) {
       /* UBO's, atomics and samplers don't take up space in the
          uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())

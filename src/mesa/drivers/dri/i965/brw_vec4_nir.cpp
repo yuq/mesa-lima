@@ -119,7 +119,7 @@ vec4_visitor::nir_setup_inputs()
 {
    nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
 
-   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+   nir_foreach_variable(var, &nir->inputs) {
       int offset = var->data.driver_location;
       unsigned size = type_size_vec4(var->type);
       for (unsigned i = 0; i < size; i++) {
@@ -134,7 +134,7 @@ vec4_visitor::nir_setup_uniforms()
 {
    uniforms = nir->num_uniforms;
 
-   foreach_list_typed(nir_variable, var, node, &nir->uniforms) {
+   nir_foreach_variable(var, &nir->uniforms) {
       /* UBO's and atomics don't take up space in the uniform file */
       if (var->interface_type != NULL || var->type->contains_atomic())
          continue;

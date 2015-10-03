@@ -40,7 +40,7 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    if (is_scalar) {
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
    } else {
-      foreach_list_typed(nir_variable, var, node, &nir->outputs)
+      nir_foreach_variable(var, &nir->outputs)
          var->data.driver_location = var->data.location;
    }
 }
