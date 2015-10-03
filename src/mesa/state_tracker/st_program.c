@@ -43,6 +43,8 @@
 #include "pipe/p_shader_tokens.h"
 #include "draw/draw_context.h"
 #include "tgsi/tgsi_dump.h"
+#include "tgsi/tgsi_emulate.h"
+#include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
 
 #include "st_debug.h"
@@ -377,12 +379,6 @@ st_translate_vertex_program(struct st_context *st,
 
    vpv->key = *key;
 
-   vpv->num_inputs = stvp->num_inputs;
-   if (key->passthrough_edgeflags) {
-      vpv->num_inputs++;
-      num_outputs++;
-   }
-
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stvp->Base.Base);
       _mesa_print_program_parameters(st->ctx, &stvp->Base.Base);
@@ -396,7 +392,7 @@ st_translate_vertex_program(struct st_context *st,
                                    stvp->glsl_to_tgsi,
                                    &stvp->Base.Base,
                                    /* inputs */
-                                   vpv->num_inputs,
+                                   stvp->num_inputs,
                                    input_to_index,
                                    NULL, /* inputSlotToAttr */
                                    NULL, /* input semantic name */
@@ -409,15 +405,15 @@ st_translate_vertex_program(struct st_context *st,
                                    output_slot_to_attr,
                                    output_semantic_name,
                                    output_semantic_index,
-                                   key->passthrough_edgeflags,
-                                   key->clamp_color);
+                                   false,
+                                   false);
    else
       error = st_translate_mesa_program(st->ctx,
                                         TGSI_PROCESSOR_VERTEX,
                                         ureg,
                                         &stvp->Base.Base,
                                         /* inputs */
-                                        vpv->num_inputs,
+                                        stvp->num_inputs,
                                         input_to_index,
                                         NULL, /* input semantic name */
                                         NULL, /* input semantic index */
@@ -427,8 +423,8 @@ st_translate_vertex_program(struct st_context *st,
                                         stvp->result_to_output,
                                         output_semantic_name,
                                         output_semantic_index,
-                                        key->passthrough_edgeflags,
-                                        key->clamp_color);
+                                        false,
+                                        false);
 
    if (error)
       goto fail;
@@ -443,6 +439,27 @@ st_translate_vertex_program(struct st_context *st,
       st_translate_stream_output_info(stvp->glsl_to_tgsi,
                                       stvp->result_to_output,
                                       &vpv->tgsi.stream_output);
+   }
+
+   vpv->num_inputs = stvp->num_inputs;
+
+   /* Emulate features. */
+   if (key->clamp_color || key->passthrough_edgeflags) {
+      const struct tgsi_token *tokens;
+      unsigned flags =
+         (key->clamp_color ? TGSI_EMU_CLAMP_COLOR_OUTPUTS : 0) |
+         (key->passthrough_edgeflags ? TGSI_EMU_PASSTHROUGH_EDGEFLAG : 0);
+
+      tokens = tgsi_emulate(vpv->tgsi.tokens, flags);
+
+      if (tokens) {
+         tgsi_free_tokens(vpv->tgsi.tokens);
+         vpv->tgsi.tokens = tokens;
+
+         if (key->passthrough_edgeflags)
+            vpv->num_inputs++;
+      } else
+         fprintf(stderr, "mesa: cannot emulate deprecated features\n");
    }
 
    if (ST_DEBUG & DEBUG_TGSI) {
