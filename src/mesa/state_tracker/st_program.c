@@ -228,24 +228,25 @@ st_release_tep_variants(struct st_context *st, struct st_tesseval_program *sttep
 
 
 /**
- * Translate a Mesa vertex shader into a TGSI shader.
- * \param outputMapping  to map vertex program output registers (VARYING_SLOT_x)
- *       to TGSI output slots
- * \param tokensOut  destination for TGSI tokens
- * \return  pointer to cached pipe_shader object.
+ * Translate a vertex program to create a new variant.
  */
-void
-st_prepare_vertex_program(struct gl_context *ctx,
-                            struct st_vertex_program *stvp)
+static struct st_vp_variant *
+st_translate_vertex_program(struct st_context *st,
+                            struct st_vertex_program *stvp,
+                            const struct st_vp_variant_key *key)
 {
-   struct st_context *st = st_context(ctx);
+   struct st_vp_variant *vpv = CALLOC_STRUCT(st_vp_variant);
+   struct pipe_context *pipe = st->pipe;
+   struct ureg_program *ureg;
+   enum pipe_error error;
+   unsigned num_outputs;
    GLuint attr;
 
    stvp->num_inputs = 0;
    stvp->num_outputs = 0;
 
    if (stvp->Base.IsPositionInvariant)
-      _mesa_insert_mvp_code(ctx, &stvp->Base);
+      _mesa_insert_mvp_code(st->ctx, &stvp->Base);
 
    /*
     * Determine number of inputs, the mappings between VERT_ATTRIB_x
@@ -361,29 +362,9 @@ st_prepare_vertex_program(struct gl_context *ctx,
    stvp->result_to_output[VARYING_SLOT_EDGE] = stvp->num_outputs;
    stvp->output_semantic_name[stvp->num_outputs] = TGSI_SEMANTIC_EDGEFLAG;
    stvp->output_semantic_index[stvp->num_outputs] = 0;
-}
-
-
-/**
- * Translate a vertex program to create a new variant.
- */
-static struct st_vp_variant *
-st_translate_vertex_program(struct st_context *st,
-                            struct st_vertex_program *stvp,
-                            const struct st_vp_variant_key *key)
-{
-   struct st_vp_variant *vpv = CALLOC_STRUCT(st_vp_variant);
-   struct pipe_context *pipe = st->pipe;
-   struct ureg_program *ureg;
-   enum pipe_error error;
-   unsigned num_outputs;
-
-   st_prepare_vertex_program(st->ctx, stvp);
 
    if (!stvp->glsl_to_tgsi)
-   {
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
-   }
 
    ureg = ureg_create_with_screen(TGSI_PROCESSOR_VERTEX, st->pipe->screen);
    if (ureg == NULL) {

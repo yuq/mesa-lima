@@ -414,16 +414,6 @@ st_get_tep_variant(struct st_context *st,
                    struct st_tesseval_program *stgp,
                    const struct st_tep_variant_key *key);
 
-
-extern void
-st_prepare_vertex_program(struct gl_context *ctx,
-                          struct st_vertex_program *stvp);
-
-extern GLboolean
-st_prepare_fragment_program(struct gl_context *ctx,
-                            struct st_fragment_program *stfp);
-
-
 extern void
 st_release_vp_variants( struct st_context *st,
                         struct st_vertex_program *stvp );
