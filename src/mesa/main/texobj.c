@@ -1211,6 +1211,7 @@ _mesa_create_nameless_texture(struct gl_context *ctx, GLenum target)
  * glCreateTextures should throw errors if target = 0. This is not exposed to
  * the rest of Mesa to encourage Mesa internals to use nameless textures,
  * which do not require expensive hash lookups.
+ * \param target  either 0 or a a valid / error-checked texture target enum
  */
 static void
 create_textures(struct gl_context *ctx, GLenum target,
@@ -1219,6 +1220,7 @@ create_textures(struct gl_context *ctx, GLenum target,
    GLuint first;
    GLint i;
    const char *func = dsa ? "Create" : "Gen";
+   const GLint targetIndex = _mesa_tex_target_to_index(ctx, target);
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "gl%sTextures %d\n", func, n);
@@ -1241,7 +1243,6 @@ create_textures(struct gl_context *ctx, GLenum target,
    /* Allocate new, empty texture objects */
    for (i = 0; i < n; i++) {
       struct gl_texture_object *texObj;
-      GLint targetIndex;
       GLuint name = first + i;
       texObj = ctx->Driver.NewTextureObject(ctx, name, target);
       if (!texObj) {
@@ -1252,14 +1253,6 @@ create_textures(struct gl_context *ctx, GLenum target,
 
       /* Initialize the target index if target is non-zero. */
       if (target != 0) {
-         targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
-         if (targetIndex < 0) { /* Bad Target */
-            mtx_unlock(&ctx->Shared->Mutex);
-            _mesa_error(ctx, GL_INVALID_ENUM, "gl%sTextures(target = %s)",
-                        func, _mesa_enum_to_string(texObj->Target));
-            return;
-         }
-         assert(targetIndex < NUM_TEXTURE_TARGETS);
          texObj->TargetIndex = targetIndex;
       }
 
