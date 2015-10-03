@@ -83,18 +83,8 @@ fs_visitor::opt_peephole_predicated_break()
       bblock_t *if_block = jump_block->prev();
       bblock_t *endif_block = jump_block->next();
 
-      /* For Sandybridge with IF with embedded comparison we need to emit an
-       * instruction to set the flag register.
-       */
-      if (devinfo->gen == 6 && if_inst->conditional_mod) {
-         const fs_builder ibld(this, if_block, if_inst);
-         ibld.CMP(ibld.null_reg_d(), if_inst->src[0], if_inst->src[1],
-                  if_inst->conditional_mod);
-         jump_inst->predicate = BRW_PREDICATE_NORMAL;
-      } else {
-         jump_inst->predicate = if_inst->predicate;
-         jump_inst->predicate_inverse = if_inst->predicate_inverse;
-      }
+      jump_inst->predicate = if_inst->predicate;
+      jump_inst->predicate_inverse = if_inst->predicate_inverse;
 
       bblock_t *earlier_block = if_block;
       if (if_block->start_ip == if_block->end_ip) {
