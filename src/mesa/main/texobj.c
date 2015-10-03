@@ -1185,26 +1185,6 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
    return t;
 }
 
-/**
- * Wrapper for the driver function. Need this because _mesa_new_texture_object
- * permits a target of 0 and does not initialize targetIndex.
- */
-struct gl_texture_object *
-_mesa_create_nameless_texture(struct gl_context *ctx, GLenum target)
-{
-   struct gl_texture_object *texObj = NULL;
-   GLint targetIndex;
-
-   if (target == 0)
-      return texObj;
-
-   texObj = ctx->Driver.NewTextureObject(ctx, 0, target);
-   targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
-   assert(targetIndex < NUM_TEXTURE_TARGETS);
-   texObj->TargetIndex = targetIndex;
-
-   return texObj;
-}
 
 /**
  * Helper function for glCreateTextures and glGenTextures. Need this because
