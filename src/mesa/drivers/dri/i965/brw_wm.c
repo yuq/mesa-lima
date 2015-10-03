@@ -44,33 +44,23 @@
  * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
  */
 static unsigned
-brw_compute_barycentric_interp_modes(struct brw_context *brw,
+brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
                                      bool shade_model_flat,
                                      bool persample_shading,
-                                     const struct gl_fragment_program *fprog)
+                                     nir_shader *shader)
 {
    unsigned barycentric_interp_modes = 0;
-   int attr;
 
-   /* Loop through all fragment shader inputs to figure out what interpolation
-    * modes are in use, and set the appropriate bits in
-    * barycentric_interp_modes.
-    */
-   for (attr = 0; attr < VARYING_SLOT_MAX; ++attr) {
-      enum glsl_interp_qualifier interp_qualifier =
-         fprog->InterpQualifier[attr];
-      bool is_centroid = (fprog->IsCentroid & BITFIELD64_BIT(attr)) &&
-         !persample_shading;
-      bool is_sample = (fprog->IsSample & BITFIELD64_BIT(attr)) ||
-         persample_shading;
-      bool is_gl_Color = attr == VARYING_SLOT_COL0 || attr == VARYING_SLOT_COL1;
-
-      /* Ignore unused inputs. */
-      if (!(fprog->Base.InputsRead & BITFIELD64_BIT(attr)))
-         continue;
+   nir_foreach_variable(var, &shader->inputs) {
+      enum glsl_interp_qualifier interp_qualifier = var->data.interpolation;
+      bool is_centroid = var->data.centroid && !persample_shading;
+      bool is_sample = var->data.sample || persample_shading;
+      bool is_gl_Color = (var->data.location == VARYING_SLOT_COL0) ||
+                         (var->data.location == VARYING_SLOT_COL1);
 
       /* Ignore WPOS and FACE, because they don't require interpolation. */
-      if (attr == VARYING_SLOT_POS || attr == VARYING_SLOT_FACE)
+      if (var->data.location == VARYING_SLOT_POS ||
+          var->data.location == VARYING_SLOT_FACE)
          continue;
 
       /* Determine the set (or sets) of barycentric coordinates needed to
@@ -88,7 +78,7 @@ brw_compute_barycentric_interp_modes(struct brw_context *brw,
                1 << BRW_WM_NONPERSPECTIVE_SAMPLE_BARYCENTRIC;
          }
          if ((!is_centroid && !is_sample) ||
-             brw->needs_unlit_centroid_workaround) {
+             devinfo->needs_unlit_centroid_workaround) {
             barycentric_interp_modes |=
                1 << BRW_WM_NONPERSPECTIVE_PIXEL_BARYCENTRIC;
          }
@@ -103,7 +93,7 @@ brw_compute_barycentric_interp_modes(struct brw_context *brw,
                1 << BRW_WM_PERSPECTIVE_SAMPLE_BARYCENTRIC;
          }
          if ((!is_centroid && !is_sample) ||
-             brw->needs_unlit_centroid_workaround) {
+             devinfo->needs_unlit_centroid_workaround) {
             barycentric_interp_modes |=
                1 << BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
          }
@@ -220,9 +210,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
    }
 
    prog_data.barycentric_interp_modes =
-      brw_compute_barycentric_interp_modes(brw, key->flat_shade,
+      brw_compute_barycentric_interp_modes(brw->intelScreen->devinfo,
+                                           key->flat_shade,
                                            key->persample_shading,
-                                           &fp->program);
+                                           fp->program.Base.nir);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
