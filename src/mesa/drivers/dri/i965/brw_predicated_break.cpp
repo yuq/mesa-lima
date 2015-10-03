@@ -21,12 +21,11 @@
  * IN THE SOFTWARE.
  */
 
-#include "brw_fs.h"
 #include "brw_cfg.h"
 
 using namespace brw;
 
-/** @file brw_fs_peephole_predicated_break.cpp
+/** @file brw_predicated_break.cpp
  *
  * Loops are often structured as
  *
@@ -55,11 +54,11 @@ using namespace brw;
  */
 
 bool
-fs_visitor::opt_peephole_predicated_break()
+opt_predicated_break(backend_shader *s)
 {
    bool progress = false;
 
-   foreach_block (block, cfg) {
+   foreach_block (block, s->cfg) {
       if (block->start_ip != block->end_ip)
          continue;
 
@@ -101,13 +100,13 @@ fs_visitor::opt_peephole_predicated_break()
 
       if (!earlier_block->ends_with_control_flow()) {
          earlier_block->children.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, jump_block);
+         earlier_block->add_successor(s->cfg->mem_ctx, jump_block);
       }
 
       if (!later_block->starts_with_control_flow()) {
          later_block->parents.make_empty();
       }
-      jump_block->add_successor(cfg->mem_ctx, later_block);
+      jump_block->add_successor(s->cfg->mem_ctx, later_block);
 
       if (earlier_block->can_combine_with(jump_block)) {
          earlier_block->combine_with(jump_block);
@@ -130,20 +129,20 @@ fs_visitor::opt_peephole_predicated_break()
          while_inst->predicate_inverse = !jump_inst->predicate_inverse;
 
          earlier_block->children.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, while_block);
+         earlier_block->add_successor(s->cfg->mem_ctx, while_block);
 
          assert(earlier_block->can_combine_with(while_block));
          earlier_block->combine_with(while_block);
 
          earlier_block->next()->parents.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, earlier_block->next());
+         earlier_block->add_successor(s->cfg->mem_ctx, earlier_block->next());
       }
 
       progress = true;
    }
 
    if (progress)
-      invalidate_live_intervals();
+      s->invalidate_live_intervals();
 
    return progress;
 }

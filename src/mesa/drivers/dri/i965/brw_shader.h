@@ -219,7 +219,7 @@ enum instruction_scheduler_mode {
    SCHEDULE_POST,
 };
 
-class backend_shader {
+struct backend_shader {
 protected:
 
    backend_shader(const struct brw_compiler *compiler,
@@ -273,6 +273,8 @@ void brw_setup_image_uniform_values(gl_shader_stage stage,
                                     unsigned param_start_index,
                                     const gl_uniform_storage *storage);
 
+#else
+struct backend_shader;
 #endif /* __cplusplus */
 
 enum brw_reg_type brw_type_for_base_type(const struct glsl_type *type);
@@ -282,6 +284,8 @@ const char *brw_instruction_name(enum opcode op);
 bool brw_saturate_immediate(enum brw_reg_type type, struct brw_reg *reg);
 bool brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg);
 bool brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg);
+
+bool opt_predicated_break(struct backend_shader *s);
 
 #ifdef __cplusplus
 extern "C" {

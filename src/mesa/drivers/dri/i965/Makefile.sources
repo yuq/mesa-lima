@@ -55,7 +55,6 @@ i965_FILES = \
 	brw_fs_live_variables.cpp \
 	brw_fs_live_variables.h \
 	brw_fs_nir.cpp \
-	brw_fs_peephole_predicated_break.cpp \
 	brw_fs_reg_allocate.cpp \
 	brw_fs_register_coalesce.cpp \
 	brw_fs_saturate_propagation.cpp \
@@ -91,6 +90,7 @@ i965_FILES = \
 	brw_packed_float.c \
 	brw_performance_monitor.c \
 	brw_pipe_control.c \
+	brw_predicated_break.cpp \
 	brw_primitive_restart.c \
 	brw_program.c \
 	brw_program.h \

@@ -4823,7 +4823,7 @@ fs_visitor::optimize()
       OPT(opt_algebraic);
       OPT(opt_cse);
       OPT(opt_copy_propagate);
-      OPT(opt_peephole_predicated_break);
+      OPT(opt_predicated_break, this);
       OPT(opt_cmod_propagation);
       OPT(dead_code_eliminate);
       OPT(opt_peephole_sel);
