@@ -239,11 +239,14 @@ st_translate_vertex_program(struct st_context *st,
    struct pipe_context *pipe = st->pipe;
    struct ureg_program *ureg;
    enum pipe_error error;
-   unsigned num_outputs;
-   GLuint attr;
+   unsigned num_outputs = 0;
+   unsigned attr;
+   unsigned input_to_index[VERT_ATTRIB_MAX] = {0};
+   unsigned output_slot_to_attr[VARYING_SLOT_MAX] = {0};
+   ubyte output_semantic_name[VARYING_SLOT_MAX] = {0};
+   ubyte output_semantic_index[VARYING_SLOT_MAX] = {0};
 
    stvp->num_inputs = 0;
-   stvp->num_outputs = 0;
 
    if (stvp->Base.IsPositionInvariant)
       _mesa_insert_mvp_code(st->ctx, &stvp->Base);
@@ -254,7 +257,7 @@ st_translate_vertex_program(struct st_context *st,
     */
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
       if ((stvp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
-         stvp->input_to_index[attr] = stvp->num_inputs;
+         input_to_index[attr] = stvp->num_inputs;
          stvp->index_to_input[stvp->num_inputs] = attr;
          stvp->num_inputs++;
          if ((stvp->Base.Base.DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {
@@ -265,7 +268,7 @@ st_translate_vertex_program(struct st_context *st,
       }
    }
    /* bit of a hack, presetup potentially unused edgeflag input */
-   stvp->input_to_index[VERT_ATTRIB_EDGEFLAG] = stvp->num_inputs;
+   input_to_index[VERT_ATTRIB_EDGEFLAG] = stvp->num_inputs;
    stvp->index_to_input[stvp->num_inputs] = VERT_ATTRIB_EDGEFLAG;
 
    /* Compute mapping of vertex program outputs to slots.
@@ -275,62 +278,62 @@ st_translate_vertex_program(struct st_context *st,
          stvp->result_to_output[attr] = ~0;
       }
       else {
-         unsigned slot = stvp->num_outputs++;
+         unsigned slot = num_outputs++;
 
          stvp->result_to_output[attr] = slot;
-         stvp->output_slot_to_attr[slot] = attr;
+         output_slot_to_attr[slot] = attr;
 
          switch (attr) {
          case VARYING_SLOT_POS:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_POSITION;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_POSITION;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_COL0:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_COL1:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
-            stvp->output_semantic_index[slot] = 1;
+            output_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
+            output_semantic_index[slot] = 1;
             break;
          case VARYING_SLOT_BFC0:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_BFC1:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
-            stvp->output_semantic_index[slot] = 1;
+            output_semantic_name[slot] = TGSI_SEMANTIC_BCOLOR;
+            output_semantic_index[slot] = 1;
             break;
          case VARYING_SLOT_FOGC:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_FOG;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_FOG;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_PSIZ:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_PSIZE;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_CLIP_DIST0:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_CLIP_DIST1:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
-            stvp->output_semantic_index[slot] = 1;
+            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPDIST;
+            output_semantic_index[slot] = 1;
             break;
          case VARYING_SLOT_EDGE:
             assert(0);
             break;
          case VARYING_SLOT_CLIP_VERTEX:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_CLIPVERTEX;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_CLIPVERTEX;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_LAYER:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_LAYER;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_LAYER;
+            output_semantic_index[slot] = 0;
             break;
          case VARYING_SLOT_VIEWPORT:
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_VIEWPORT_INDEX;
-            stvp->output_semantic_index[slot] = 0;
+            output_semantic_name[slot] = TGSI_SEMANTIC_VIEWPORT_INDEX;
+            output_semantic_index[slot] = 0;
             break;
 
          case VARYING_SLOT_TEX0:
@@ -342,8 +345,8 @@ st_translate_vertex_program(struct st_context *st,
          case VARYING_SLOT_TEX6:
          case VARYING_SLOT_TEX7:
             if (st->needs_texcoord_semantic) {
-               stvp->output_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
-               stvp->output_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
+               output_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
+               output_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
                break;
             }
             /* fall through */
@@ -351,17 +354,17 @@ st_translate_vertex_program(struct st_context *st,
          default:
             assert(attr >= VARYING_SLOT_VAR0 ||
                    (attr >= VARYING_SLOT_TEX0 && attr <= VARYING_SLOT_TEX7));
-            stvp->output_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
-            stvp->output_semantic_index[slot] =
+            output_semantic_name[slot] = TGSI_SEMANTIC_GENERIC;
+            output_semantic_index[slot] =
                st_get_generic_varying_index(st, attr);
             break;
          }
       }
    }
    /* similar hack to above, presetup potentially unused edgeflag output */
-   stvp->result_to_output[VARYING_SLOT_EDGE] = stvp->num_outputs;
-   stvp->output_semantic_name[stvp->num_outputs] = TGSI_SEMANTIC_EDGEFLAG;
-   stvp->output_semantic_index[stvp->num_outputs] = 0;
+   stvp->result_to_output[VARYING_SLOT_EDGE] = num_outputs;
+   output_semantic_name[num_outputs] = TGSI_SEMANTIC_EDGEFLAG;
+   output_semantic_index[num_outputs] = 0;
 
    if (!stvp->glsl_to_tgsi)
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
@@ -375,7 +378,6 @@ st_translate_vertex_program(struct st_context *st,
    vpv->key = *key;
 
    vpv->num_inputs = stvp->num_inputs;
-   num_outputs = stvp->num_outputs;
    if (key->passthrough_edgeflags) {
       vpv->num_inputs++;
       num_outputs++;
@@ -395,7 +397,7 @@ st_translate_vertex_program(struct st_context *st,
                                    &stvp->Base.Base,
                                    /* inputs */
                                    vpv->num_inputs,
-                                   stvp->input_to_index,
+                                   input_to_index,
                                    NULL, /* inputSlotToAttr */
                                    NULL, /* input semantic name */
                                    NULL, /* input semantic index */
@@ -404,9 +406,9 @@ st_translate_vertex_program(struct st_context *st,
                                    /* outputs */
                                    num_outputs,
                                    stvp->result_to_output,
-                                   stvp->output_slot_to_attr,
-                                   stvp->output_semantic_name,
-                                   stvp->output_semantic_index,
+                                   output_slot_to_attr,
+                                   output_semantic_name,
+                                   output_semantic_index,
                                    key->passthrough_edgeflags,
                                    key->clamp_color);
    else
@@ -416,15 +418,15 @@ st_translate_vertex_program(struct st_context *st,
                                         &stvp->Base.Base,
                                         /* inputs */
                                         vpv->num_inputs,
-                                        stvp->input_to_index,
+                                        input_to_index,
                                         NULL, /* input semantic name */
                                         NULL, /* input semantic index */
                                         NULL,
                                         /* outputs */
                                         num_outputs,
                                         stvp->result_to_output,
-                                        stvp->output_semantic_name,
-                                        stvp->output_semantic_index,
+                                        output_semantic_name,
+                                        output_semantic_index,
                                         key->passthrough_edgeflags,
                                         key->clamp_color);
 

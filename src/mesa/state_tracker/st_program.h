@@ -156,17 +156,12 @@ struct st_vertex_program
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    /** maps a Mesa VERT_ATTRIB_x to a packed TGSI input index */
-   GLuint input_to_index[VERT_ATTRIB_MAX];
    /** maps a TGSI input index back to a Mesa VERT_ATTRIB_x */
    GLuint index_to_input[PIPE_MAX_SHADER_INPUTS];
    GLuint num_inputs;
 
    /** Maps VARYING_SLOT_x to slot */
    GLuint result_to_output[VARYING_SLOT_MAX];
-   GLuint output_slot_to_attr[VARYING_SLOT_MAX];
-   ubyte output_semantic_name[VARYING_SLOT_MAX];
-   ubyte output_semantic_index[VARYING_SLOT_MAX];
-   GLuint num_outputs;
 
    /** List of translated variants of this vertex program.
     */
