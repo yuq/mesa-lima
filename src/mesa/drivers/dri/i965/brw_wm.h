@@ -89,11 +89,13 @@ void brw_wm_debug_recompile(struct brw_context *brw,
 void
 brw_upload_wm_prog(struct brw_context *brw);
 
+struct nir_shader;
+
 unsigned
-brw_compute_barycentric_interp_modes(struct brw_context *brw,
+brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
                                      bool shade_model_flat,
                                      bool persample_shading,
-                                     const struct gl_fragment_program *fprog);
+                                     struct nir_shader *shader);
 
 #ifdef __cplusplus
 } // extern "C"

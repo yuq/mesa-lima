@@ -218,7 +218,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
       return;
 
    /* find clipvertex/position outputs: */
-   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+   nir_foreach_variable(var, &shader->outputs) {
       int loc = var->data.driver_location;
 
       /* keep track of last used driver-location.. we'll be
@@ -310,7 +310,7 @@ nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables)
    if (!ucp_enables)
       return;
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   nir_foreach_variable(var, &shader->inputs) {
       int loc = var->data.driver_location;
 
       /* keep track of last used driver-location.. we'll be

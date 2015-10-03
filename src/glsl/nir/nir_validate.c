@@ -934,7 +934,7 @@ validate_function_impl(nir_function_impl *impl, validate_state *state)
    state->parent_node = &impl->cf_node;
 
    exec_list_validate(&impl->locals);
-   foreach_list_typed(nir_variable, var, node, &impl->locals) {
+   nir_foreach_variable(var, &impl->locals) {
       validate_var_decl(var, false, state);
    }
 
@@ -1016,27 +1016,27 @@ nir_validate_shader(nir_shader *shader)
    state.shader = shader;
 
    exec_list_validate(&shader->uniforms);
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+   nir_foreach_variable(var, &shader->uniforms) {
       validate_var_decl(var, true, &state);
    }
 
    exec_list_validate(&shader->inputs);
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   nir_foreach_variable(var, &shader->inputs) {
      validate_var_decl(var, true, &state);
    }
 
    exec_list_validate(&shader->outputs);
-   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+   nir_foreach_variable(var, &shader->outputs) {
      validate_var_decl(var, true, &state);
    }
 
    exec_list_validate(&shader->globals);
-   foreach_list_typed(nir_variable, var, node, &shader->globals) {
+   nir_foreach_variable(var, &shader->globals) {
      validate_var_decl(var, true, &state);
    }
 
    exec_list_validate(&shader->system_values);
-   foreach_list_typed(nir_variable, var, node, &shader->system_values) {
+   nir_foreach_variable(var, &shader->system_values) {
      validate_var_decl(var, true, &state);
    }
 

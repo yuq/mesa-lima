@@ -509,9 +509,10 @@ really_do_wm_prog(struct brw_context *brw,
    anv_nir_apply_dynamic_offsets(pipeline, fs->Program->nir, &prog_data->base);
 
    prog_data->barycentric_interp_modes =
-      brw_compute_barycentric_interp_modes(brw, key->flat_shade,
+      brw_compute_barycentric_interp_modes(brw->intelScreen->devinfo,
+                                           key->flat_shade,
                                            key->persample_shading,
-                                           &fp->program);
+                                           fp->program.Base.nir);
 
    set_binding_table_layout(&prog_data->base, pipeline,
                             VK_SHADER_STAGE_FRAGMENT);

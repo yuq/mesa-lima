@@ -370,6 +370,9 @@ typedef struct {
    const struct glsl_type *interface_type;
 } nir_variable;
 
+#define nir_foreach_variable(var, var_list) \
+   foreach_list_typed(nir_variable, var, node, var_list)
+
 typedef struct {
    struct exec_node node;
 

@@ -47,7 +47,7 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
 {
    unsigned location = 0;
 
-   foreach_list_typed(nir_variable, var, node, var_list) {
+   nir_foreach_variable(var, var_list) {
       /*
        * UBO's have their own address spaces, so don't count them towards the
        * number of global uniforms
