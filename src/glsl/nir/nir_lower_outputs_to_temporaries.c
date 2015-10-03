@@ -84,7 +84,7 @@ nir_lower_outputs_to_temporaries(nir_shader *shader)
    /* Walk over all of the outputs turn each output into a temporary and
     * make a new variable for the actual output.
     */
-   foreach_list_typed(nir_variable, var, node, &state.old_outputs) {
+   nir_foreach_variable(var, &state.old_outputs) {
       nir_variable *output = ralloc(shader, nir_variable);
       memcpy(output, var, sizeof *output);
 

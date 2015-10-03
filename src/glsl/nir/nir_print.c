@@ -453,7 +453,7 @@ print_intrinsic_instr(nir_intrinsic_instr *instr, print_state *state)
       return;
    }
 
-   foreach_list_typed(nir_variable, var, node, var_list) {
+   nir_foreach_variable(var, var_list) {
       if ((var->data.driver_location == instr->const_index[0]) &&
           var->name) {
          fprintf(fp, "\t/* %s */", var->name);
@@ -872,7 +872,7 @@ print_function_impl(nir_function_impl *impl, print_state *state)
 
    fprintf(fp, "{\n");
 
-   foreach_list_typed(nir_variable, var, node, &impl->locals) {
+   nir_foreach_variable(var, &impl->locals) {
       fprintf(fp, "\t");
       print_var_decl(var, state);
    }
@@ -970,23 +970,23 @@ nir_print_shader(nir_shader *shader, FILE *fp)
 
    fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
 
-   foreach_list_typed(nir_variable, var, node, &shader->uniforms) {
+   nir_foreach_variable(var, &shader->uniforms) {
       print_var_decl(var, &state);
    }
 
-   foreach_list_typed(nir_variable, var, node, &shader->inputs) {
+   nir_foreach_variable(var, &shader->inputs) {
       print_var_decl(var, &state);
    }
 
-   foreach_list_typed(nir_variable, var, node, &shader->outputs) {
+   nir_foreach_variable(var, &shader->outputs) {
       print_var_decl(var, &state);
    }
 
-   foreach_list_typed(nir_variable, var, node, &shader->globals) {
+   nir_foreach_variable(var, &shader->globals) {
       print_var_decl(var, &state);
    }
 
-   foreach_list_typed(nir_variable, var, node, &shader->system_values) {
+   nir_foreach_variable(var, &shader->system_values) {
       print_var_decl(var, &state);
    }
 
