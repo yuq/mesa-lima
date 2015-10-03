@@ -278,16 +278,6 @@ vec4_visitor::SCRATCH_WRITE(const dst_reg &dst, const src_reg &src,
    return inst;
 }
 
-void
-vec4_visitor::emit_dp(dst_reg dst, src_reg src0, src_reg src1, unsigned elements)
-{
-   static enum opcode dot_opcodes[] = {
-      BRW_OPCODE_DP2, BRW_OPCODE_DP3, BRW_OPCODE_DP4
-   };
-
-   emit(dot_opcodes[elements - 2], dst, src0, src1);
-}
-
 src_reg
 vec4_visitor::fix_3src_operand(const src_reg &src)
 {
