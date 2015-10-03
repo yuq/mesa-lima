@@ -620,8 +620,7 @@ st_translate_fragment_program(struct st_context *st,
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTER;
 
          if (stfp->Base.Base.SystemValuesRead & (SYSTEM_BIT_SAMPLE_ID |
-                                                 SYSTEM_BIT_SAMPLE_POS) ||
-             key->persample_shading)
+                                                 SYSTEM_BIT_SAMPLE_POS))
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_SAMPLE;
 
          switch (attr) {
@@ -861,7 +860,7 @@ st_translate_fragment_program(struct st_context *st,
                            NULL,
                            fs_output_semantic_name,
                            fs_output_semantic_index, FALSE,
-                           key->clamp_color );
+                           false);
    else
       st_translate_mesa_program(st->ctx,
                                 TGSI_PROCESSOR_FRAGMENT,
@@ -878,10 +877,26 @@ st_translate_fragment_program(struct st_context *st,
                                 outputMapping,
                                 fs_output_semantic_name,
                                 fs_output_semantic_index, FALSE,
-                                key->clamp_color);
+                                false);
 
-   variant->tgsi.tokens = ureg_get_tokens( ureg, NULL );
-   ureg_destroy( ureg );
+   variant->tgsi.tokens = ureg_get_tokens(ureg, NULL);
+   ureg_destroy(ureg);
+
+   /* Emulate features. */
+   if (key->clamp_color || key->persample_shading) {
+      const struct tgsi_token *tokens;
+      unsigned flags =
+         (key->clamp_color ? TGSI_EMU_CLAMP_COLOR_OUTPUTS : 0) |
+         (key->persample_shading ? TGSI_EMU_FORCE_PERSAMPLE_INTERP : 0);
+
+      tokens = tgsi_emulate(variant->tgsi.tokens, flags);
+
+      if (tokens) {
+         tgsi_free_tokens(variant->tgsi.tokens);
+         variant->tgsi.tokens = tokens;
+      } else
+         fprintf(stderr, "mesa: cannot emulate deprecated features\n");
+   }
 
    if (ST_DEBUG & DEBUG_TGSI) {
       tgsi_dump(variant->tgsi.tokens, 0/*TGSI_DUMP_VERBOSE*/);
