@@ -254,7 +254,7 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             .depthTestEnable = true,
             .depthWriteEnable = true,
             .depthCompareOp = VK_COMPARE_OP_ALWAYS,
-            .depthBoundsEnable = false,
+            .depthBoundsTestEnable = false,
             .stencilTestEnable = true,
             .front = (VkStencilOpState) {
                .stencilPassOp = VK_STENCIL_OP_REPLACE,

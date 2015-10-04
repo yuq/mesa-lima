@@ -269,7 +269,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
-   /* VkBool32 depthBoundsEnable;          // optional (depth_bounds_test) */
+   /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
 
    struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
       .DepthTestEnable = info->depthTestEnable,

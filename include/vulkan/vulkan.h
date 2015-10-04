@@ -1652,7 +1652,7 @@ typedef struct {
     VkBool32                                    depthTestEnable;
     VkBool32                                    depthWriteEnable;
     VkCompareOp                                 depthCompareOp;
-    VkBool32                                    depthBoundsEnable;
+    VkBool32                                    depthBoundsTestEnable;
     VkBool32                                    stencilTestEnable;
     VkStencilOpState                            front;
     VkStencilOpState                            back;
