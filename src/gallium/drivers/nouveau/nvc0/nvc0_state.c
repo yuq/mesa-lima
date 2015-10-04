@@ -29,6 +29,7 @@
 
 #include "nvc0/nvc0_stateobj.h"
 #include "nvc0/nvc0_context.h"
+#include "nvc0/nvc0_query_hw.h"
 
 #include "nvc0/nvc0_3d.xml.h"
 #include "nv50/nv50_texture.xml.h"
@@ -1070,7 +1071,7 @@ nvc0_so_target_create(struct pipe_context *pipe,
    if (!targ)
       return NULL;
 
-   targ->pq = pipe->create_query(pipe, NVC0_QUERY_TFB_BUFFER_OFFSET, 0);
+   targ->pq = pipe->create_query(pipe, NVC0_HW_QUERY_TFB_BUFFER_OFFSET, 0);
    if (!targ->pq) {
       FREE(targ);
       return NULL;
