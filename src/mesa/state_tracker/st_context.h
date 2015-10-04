@@ -162,15 +162,8 @@ struct st_context
    struct gl_texture_object *default_texture;
 
    struct {
-      struct gl_program_cache *cache;
-      struct st_fragment_program *program;  /**< cur pixel transfer prog */
-      GLuint xfer_prog_sn;  /**< pixel xfer program serial no. */
-      GLuint user_prog_sn;  /**< user fragment program serial no. */
-      struct st_fragment_program *combined_prog;
-      GLuint combined_prog_sn;
       struct pipe_resource *pixelmap_texture;
       struct pipe_sampler_view *pixelmap_sampler_view;
-      boolean pixelmap_enabled;  /**< use the pixelmap texture? */
    } pixel_xfer;
 
    /** for glBitmap */

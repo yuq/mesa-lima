@@ -55,9 +55,6 @@ enum pipe_error st_translate_program(
    const ubyte outputSemanticIndex[]);
 
 void free_glsl_to_tgsi_visitor(struct glsl_to_tgsi_visitor *v);
-void get_pixel_transfer_visitor(struct st_fragment_program *fp,
-                                struct glsl_to_tgsi_visitor *original,
-                                int scale_and_bias, int pixel_maps);
 
 GLboolean st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 

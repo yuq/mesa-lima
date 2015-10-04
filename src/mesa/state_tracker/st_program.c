@@ -540,8 +540,6 @@ st_translate_fragment_program(struct st_context *st,
 {
    struct pipe_context *pipe = st->pipe;
    struct st_fp_variant *variant = CALLOC_STRUCT(st_fp_variant);
-   GLboolean deleteFP = GL_FALSE;
-
    GLuint outputMapping[FRAG_RESULT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
@@ -566,16 +564,6 @@ st_translate_fragment_program(struct st_context *st,
 
    assert(!(key->bitmap && key->drawpixels));
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
-
-   if (key->drawpixels) {
-      /* glDrawPixels color drawing */
-      struct gl_fragment_program *fp; /* we free this temp program below */
-
-      st_make_drawpix_fragment_program(st, &stfp->Base, &fp);
-      variant->parameters = _mesa_clone_parameter_list(fp->Base.Parameters);
-      deleteFP = GL_TRUE;
-      stfp = st_fragment_program(fp);
-   }
 
    if (!stfp->glsl_to_tgsi)
       _mesa_remove_output_reads(&stfp->Base.Base, PROGRAM_OUTPUT);
@@ -895,6 +883,38 @@ st_translate_fragment_program(struct st_context *st,
          fprintf(stderr, "mesa: cannot create a shader for glBitmap\n");
    }
 
+   /* glDrawPixels (color only) */
+   if (key->drawpixels) {
+      const struct tgsi_token *tokens;
+      unsigned scale_const = 0, bias_const = 0;
+
+      variant->parameters =
+         _mesa_clone_parameter_list(stfp->Base.Base.Parameters);
+
+      if (key->scaleAndBias) {
+         static const gl_state_index scale_state[STATE_LENGTH] =
+            { STATE_INTERNAL, STATE_PT_SCALE };
+         static const gl_state_index bias_state[STATE_LENGTH] =
+            { STATE_INTERNAL, STATE_PT_BIAS };
+
+         scale_const = _mesa_add_state_reference(variant->parameters,
+                                                 scale_state);
+         bias_const = _mesa_add_state_reference(variant->parameters,
+                                                bias_state);
+      }
+
+      tokens = st_get_drawpix_shader(variant->tgsi.tokens,
+                                     st->needs_texcoord_semantic,
+                                     key->scaleAndBias, scale_const,
+                                     bias_const, key->pixelMaps);
+
+      if (tokens) {
+         tgsi_free_tokens(variant->tgsi.tokens);
+         variant->tgsi.tokens = tokens;
+      } else
+         fprintf(stderr, "mesa: cannot create a shader for glDrawPixels\n");
+   }
+
    if (ST_DEBUG & DEBUG_TGSI) {
       tgsi_dump(variant->tgsi.tokens, 0/*TGSI_DUMP_VERBOSE*/);
       debug_printf("\n");
@@ -903,13 +923,6 @@ st_translate_fragment_program(struct st_context *st,
    /* fill in variant */
    variant->driver_shader = pipe->create_fs_state(pipe, &variant->tgsi);
    variant->key = *key;
-
-   if (deleteFP) {
-      /* Free the temporary program made above */
-      struct gl_fragment_program *fp = &stfp->Base;
-      _mesa_reference_fragprog(st->ctx, &fp, NULL);
-   }
-
    return variant;
 }
 

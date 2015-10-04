@@ -72,119 +72,6 @@
 
 
 /**
- * Check if the given program is:
- * 0: MOVE result.color, fragment.color;
- * 1: END;
- */
-static GLboolean
-is_passthrough_program(const struct gl_fragment_program *prog)
-{
-   if (prog->Base.NumInstructions == 2) {
-      const struct prog_instruction *inst = prog->Base.Instructions;
-      if (inst[0].Opcode == OPCODE_MOV &&
-          inst[1].Opcode == OPCODE_END &&
-          inst[0].DstReg.File == PROGRAM_OUTPUT &&
-          inst[0].DstReg.Index == FRAG_RESULT_COLOR &&
-          inst[0].DstReg.WriteMask == WRITEMASK_XYZW &&
-          inst[0].SrcReg[0].File == PROGRAM_INPUT &&
-          inst[0].SrcReg[0].Index == VARYING_SLOT_COL0 &&
-          inst[0].SrcReg[0].Swizzle == SWIZZLE_XYZW) {
-         return GL_TRUE;
-      }
-   }
-   return GL_FALSE;
-}
-
-
-/**
- * Returns a fragment program which implements the current pixel transfer ops.
- */
-static struct gl_fragment_program *
-get_glsl_pixel_transfer_program(struct st_context *st,
-                                struct st_fragment_program *orig)
-{
-   int pixelMaps = 0, scaleAndBias = 0;
-   struct gl_context *ctx = st->ctx;
-   struct st_fragment_program *fp = (struct st_fragment_program *)
-      ctx->Driver.NewProgram(ctx, GL_FRAGMENT_PROGRAM_ARB, 0);
-
-   if (!fp)
-      return NULL;
-
-   if (ctx->Pixel.RedBias != 0.0 || ctx->Pixel.RedScale != 1.0 ||
-       ctx->Pixel.GreenBias != 0.0 || ctx->Pixel.GreenScale != 1.0 ||
-       ctx->Pixel.BlueBias != 0.0 || ctx->Pixel.BlueScale != 1.0 ||
-       ctx->Pixel.AlphaBias != 0.0 || ctx->Pixel.AlphaScale != 1.0) {
-      scaleAndBias = 1;
-   }
-
-   pixelMaps = ctx->Pixel.MapColorFlag;
-
-   if (pixelMaps) {
-      /* create the colormap/texture now if not already done */
-      if (!st->pixel_xfer.pixelmap_texture) {
-         st->pixel_xfer.pixelmap_texture = st_create_color_map_texture(ctx);
-         st->pixel_xfer.pixelmap_sampler_view =
-            st_create_texture_sampler_view(st->pipe,
-                                           st->pixel_xfer.pixelmap_texture);
-      }
-   }
-
-   get_pixel_transfer_visitor(fp, orig->glsl_to_tgsi,
-                              scaleAndBias, pixelMaps);
-
-   return &fp->Base;
-}
-
-
-/**
- * Make fragment shader for glDraw/CopyPixels.  This shader is made
- * by combining the pixel transfer shader with the user-defined shader.
- * \param fpIn  the current/incoming fragment program
- * \param fpOut  returns the combined fragment program
- */
-void
-st_make_drawpix_fragment_program(struct st_context *st,
-                                 struct gl_fragment_program *fpIn,
-                                 struct gl_fragment_program **fpOut)
-{
-   struct gl_program *newProg;
-   struct st_fragment_program *stfp = (struct st_fragment_program *) fpIn;
-
-   if (is_passthrough_program(fpIn)) {
-      newProg = (struct gl_program *) _mesa_clone_fragment_program(st->ctx,
-                                             &st->pixel_xfer.program->Base);
-   }
-   else if (stfp->glsl_to_tgsi != NULL) {
-      newProg = (struct gl_program *) get_glsl_pixel_transfer_program(st, stfp);
-   }
-   else {
-#if 0
-      /* debug */
-      printf("Base program:\n");
-      _mesa_print_program(&fpIn->Base);
-      printf("DrawPix program:\n");
-      _mesa_print_program(&st->pixel_xfer.program->Base.Base);
-#endif
-      newProg = _mesa_combine_programs(st->ctx,
-                                       &st->pixel_xfer.program->Base.Base,
-                                       &fpIn->Base);
-   }
-
-#if 0
-   /* debug */
-   printf("Combined DrawPixels program:\n");
-   _mesa_print_program(newProg);
-   printf("InputsRead: 0x%x\n", newProg->InputsRead);
-   printf("OutputsWritten: 0x%x\n", newProg->OutputsWritten);
-   _mesa_print_parameter_list(newProg->Parameters);
-#endif
-
-   *fpOut = (struct gl_fragment_program *) newProg;
-}
-
-
-/**
  * Create fragment program that does a TEX() instruction to get a Z and/or
  * stencil value value, then writes to FRAG_RESULT_DEPTH/FRAG_RESULT_STENCIL.
  * Used for glDrawPixels(GL_DEPTH_COMPONENT / GL_STENCIL_INDEX).
@@ -1101,7 +988,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
 
       color = NULL;
-      if (st->pixel_xfer.pixelmap_enabled) {
+      if (ctx->Pixel.MapColorFlag) {
          pipe_sampler_view_reference(&sv[1],
                                      st->pixel_xfer.pixelmap_sampler_view);
          num_sampler_view++;
@@ -1439,7 +1326,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
       driver_fp = fpv->driver_shader;
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
 
-      if (st->pixel_xfer.pixelmap_enabled) {
+      if (ctx->Pixel.MapColorFlag) {
          pipe_sampler_view_reference(&sv[1],
                                      st->pixel_xfer.pixelmap_sampler_view);
          num_sampler_view++;
@@ -1610,7 +1497,6 @@ st_destroy_drawpix(struct st_context *st)
                                     st->drawpix.zs_shaders[i]);
    }
 
-   st_reference_fragprog(st, &st->pixel_xfer.combined_prog, NULL);
    if (st->drawpix.vert_shaders[0])
       cso_delete_vertex_shader(st->cso_context, st->drawpix.vert_shaders[0]);
    if (st->drawpix.vert_shaders[1])

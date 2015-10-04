@@ -224,8 +224,6 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    st->ctx->VertexProgram._MaintainTnlProgram = GL_TRUE;
 
-   st->pixel_xfer.cache = _mesa_new_program_cache();
-
    st->has_stencil_export =
       screen->get_param(screen, PIPE_CAP_SHADER_STENCIL_EXPORT);
    st->has_shader_model3 = screen->get_param(screen, PIPE_CAP_SM3);
@@ -386,8 +384,8 @@ void st_destroy_context( struct st_context *st )
       pipe_surface_reference(&st->state.framebuffer.cbufs[i], NULL);
    }
    pipe_surface_reference(&st->state.framebuffer.zsbuf, NULL);
-
-   _mesa_delete_program_cache(st->ctx, st->pixel_xfer.cache);
+   pipe_sampler_view_reference(&st->pixel_xfer.pixelmap_sampler_view, NULL);
+   pipe_resource_reference(&st->pixel_xfer.pixelmap_texture, NULL);
 
    _vbo_DestroyContext(st->ctx);
 
