@@ -1636,7 +1636,7 @@ typedef struct {
     uint32_t                                    rasterSamples;
     VkBool32                                    sampleShadingEnable;
     float                                       minSampleShading;
-    VkSampleMask                                sampleMask;
+    const VkSampleMask*                         pSampleMask;
 } VkPipelineMultisampleStateCreateInfo;
 
 typedef struct {
