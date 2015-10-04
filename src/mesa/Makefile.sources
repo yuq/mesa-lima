@@ -415,6 +415,7 @@ STATETRACKER_FILES = \
 	state_tracker/st_cache.h \
 	state_tracker/st_cb_bitmap.c \
 	state_tracker/st_cb_bitmap.h \
+	state_tracker/st_cb_bitmap_shader.c \
 	state_tracker/st_cb_blit.c \
 	state_tracker/st_cb_blit.h \
 	state_tracker/st_cb_bufferobjects.c \

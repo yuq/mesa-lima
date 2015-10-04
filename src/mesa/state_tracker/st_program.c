@@ -567,18 +567,7 @@ st_translate_fragment_program(struct st_context *st,
    assert(!(key->bitmap && key->drawpixels));
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
-   if (key->bitmap) {
-      /* glBitmap drawing */
-      struct gl_fragment_program *fp; /* we free this temp program below */
-
-      st_make_bitmap_fragment_program(st, &stfp->Base,
-                                      &fp, &variant->bitmap_sampler);
-
-      variant->parameters = _mesa_clone_parameter_list(fp->Base.Parameters);
-      stfp = st_fragment_program(fp);
-      deleteFP = GL_TRUE;
-   }
-   else if (key->drawpixels) {
+   if (key->drawpixels) {
       /* glDrawPixels drawing */
       struct gl_fragment_program *fp; /* we free this temp program below */
 
@@ -890,6 +879,27 @@ st_translate_fragment_program(struct st_context *st,
          variant->tgsi.tokens = tokens;
       } else
          fprintf(stderr, "mesa: cannot emulate deprecated features\n");
+   }
+
+   /* glBitmap */
+   if (key->bitmap) {
+      const struct tgsi_token *tokens;
+
+      variant->bitmap_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
+
+      tokens = st_get_bitmap_shader(variant->tgsi.tokens,
+                                    variant->bitmap_sampler,
+                                    st->needs_texcoord_semantic,
+                                    st->bitmap.tex_format ==
+                                    PIPE_FORMAT_L8_UNORM);
+
+      if (tokens) {
+         tgsi_free_tokens(variant->tgsi.tokens);
+         variant->tgsi.tokens = tokens;
+         variant->parameters =
+            _mesa_clone_parameter_list(stfp->Base.Base.Parameters);
+      } else
+         fprintf(stderr, "mesa: cannot create a shader for glBitmap\n");
    }
 
    if (ST_DEBUG & DEBUG_TGSI) {
