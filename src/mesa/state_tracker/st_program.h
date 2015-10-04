@@ -85,6 +85,10 @@ struct st_fp_variant
    struct gl_program_parameter_list *parameters;
    uint bitmap_sampler;
 
+   /** For glDrawPixels variants */
+   unsigned drawpix_sampler;
+   unsigned pixelmap_sampler;
+
    /** next in linked list */
    struct st_fp_variant *next;
 };

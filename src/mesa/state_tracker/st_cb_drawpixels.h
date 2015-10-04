@@ -44,6 +44,8 @@ st_destroy_drawpix(struct st_context *st);
 extern const struct tgsi_token *
 st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
                       bool scale_and_bias, unsigned scale_const,
-                      unsigned bias_const, bool pixel_maps);
+                      unsigned bias_const, bool pixel_maps,
+                      unsigned drawpix_sampler, unsigned pixelmap_sampler,
+                      unsigned texcoord_const);
 
 #endif /* ST_CB_DRAWPIXELS_H */

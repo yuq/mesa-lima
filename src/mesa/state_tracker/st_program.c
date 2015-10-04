@@ -886,7 +886,17 @@ st_translate_fragment_program(struct st_context *st,
    /* glDrawPixels (color only) */
    if (key->drawpixels) {
       const struct tgsi_token *tokens;
-      unsigned scale_const = 0, bias_const = 0;
+      unsigned scale_const = 0, bias_const = 0, texcoord_const = 0;
+
+      /* Find the first unused slot. */
+      variant->drawpix_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
+
+      if (key->pixelMaps) {
+         unsigned samplers_used = stfp->Base.Base.SamplersUsed |
+                                  (1 << variant->drawpix_sampler);
+
+         variant->pixelmap_sampler = ffs(~samplers_used) - 1;
+      }
 
       variant->parameters =
          _mesa_clone_parameter_list(stfp->Base.Base.Parameters);
@@ -903,10 +913,21 @@ st_translate_fragment_program(struct st_context *st,
                                                 bias_state);
       }
 
+      {
+         static const gl_state_index state[STATE_LENGTH] =
+            { STATE_INTERNAL, STATE_CURRENT_ATTRIB, VERT_ATTRIB_TEX0 };
+
+         texcoord_const = _mesa_add_state_reference(variant->parameters,
+                                                    state);
+      }
+
       tokens = st_get_drawpix_shader(variant->tgsi.tokens,
                                      st->needs_texcoord_semantic,
                                      key->scaleAndBias, scale_const,
-                                     bias_const, key->pixelMaps);
+                                     bias_const, key->pixelMaps,
+                                     variant->drawpix_sampler,
+                                     variant->pixelmap_sampler,
+                                     texcoord_const);
 
       if (tokens) {
          tgsi_free_tokens(variant->tgsi.tokens);

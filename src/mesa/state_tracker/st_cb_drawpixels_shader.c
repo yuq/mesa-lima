@@ -40,6 +40,9 @@ struct tgsi_drawpix_transform {
    unsigned scale_const;
    unsigned bias_const;
    unsigned color_temp;
+   unsigned drawpix_sampler;
+   unsigned pixelmap_sampler;
+   unsigned texcoord_const;
 };
 
 static inline struct tgsi_drawpix_transform *
@@ -71,7 +74,8 @@ transform_instr(struct tgsi_transform_context *tctx,
    struct tgsi_drawpix_transform *ctx = tgsi_drawpix_transform(tctx);
    struct tgsi_full_declaration decl;
    struct tgsi_full_instruction inst;
-   unsigned i, semantic;
+   unsigned i, sem_texcoord = ctx->use_texcoord ? TGSI_SEMANTIC_TEXCOORD :
+                                                  TGSI_SEMANTIC_GENERIC;
    int texcoord_index = -1;
 
    if (ctx->first_instruction_emitted)
@@ -96,6 +100,13 @@ transform_instr(struct tgsi_transform_context *tctx,
       }
    }
 
+   if (ctx->info.const_file_max[0] < (int)ctx->texcoord_const) {
+      decl = tgsi_default_full_declaration();
+      decl.Declaration.File = TGSI_FILE_CONSTANT;
+      decl.Range.First = decl.Range.Last = ctx->texcoord_const;
+      tctx->emit_declaration(tctx, &decl);
+   }
+
    /* Add a new temp. */
    ctx->color_temp = ctx->info.file_max[TGSI_FILE_TEMPORARY] + 1;
    decl = tgsi_default_full_declaration();
@@ -103,11 +114,9 @@ transform_instr(struct tgsi_transform_context *tctx,
    decl.Range.First = decl.Range.Last = ctx->color_temp;
    tctx->emit_declaration(tctx, &decl);
 
-   /* Add TEXCOORD[0] if it's missing. */
-   semantic = ctx->use_texcoord ? TGSI_SEMANTIC_TEXCOORD :
-                                  TGSI_SEMANTIC_GENERIC;
+   /* Add TEXCOORD[texcoord_slot] if it's missing. */
    for (i = 0; i < ctx->info.num_inputs; i++) {
-      if (ctx->info.input_semantic_name[i] == semantic &&
+      if (ctx->info.input_semantic_name[i] == sem_texcoord &&
           ctx->info.input_semantic_index[i] == 0) {
          texcoord_index = i;
          break;
@@ -118,7 +127,7 @@ transform_instr(struct tgsi_transform_context *tctx,
       decl = tgsi_default_full_declaration();
       decl.Declaration.File = TGSI_FILE_INPUT;
       decl.Declaration.Semantic = 1;
-      decl.Semantic.Name = semantic;
+      decl.Semantic.Name = sem_texcoord;
       decl.Declaration.Interpolate = 1;
       decl.Interp.Interpolate = TGSI_INTERPOLATE_PERSPECTIVE;
       decl.Range.First = decl.Range.Last = ctx->info.num_inputs;
@@ -127,17 +136,19 @@ transform_instr(struct tgsi_transform_context *tctx,
    }
 
    /* Declare the drawpix sampler if it's missing. */
-   if (ctx->info.file_max[TGSI_FILE_SAMPLER] == -1) {
+   if (!(ctx->info.samplers_declared & (1 << ctx->drawpix_sampler))) {
       decl = tgsi_default_full_declaration();
       decl.Declaration.File = TGSI_FILE_SAMPLER;
+      decl.Range.First = decl.Range.Last = ctx->drawpix_sampler;
       tctx->emit_declaration(tctx, &decl);
    }
 
    /* Declare the pixel map sampler if it's missing. */
-   if (ctx->info.file_max[TGSI_FILE_SAMPLER] <= 0) {
+   if (ctx->pixel_maps &&
+       !(ctx->info.samplers_declared & (1 << ctx->pixelmap_sampler))) {
       decl = tgsi_default_full_declaration();
       decl.Declaration.File = TGSI_FILE_SAMPLER;
-      decl.Range.First = decl.Range.Last = 1;
+      decl.Range.First = decl.Range.Last = ctx->pixelmap_sampler;
       tctx->emit_declaration(tctx, &decl);
    }
 
@@ -157,7 +168,7 @@ transform_instr(struct tgsi_transform_context *tctx,
    inst.Instruction.NumSrcRegs = 2;
    SET_SRC(&inst, 0, TGSI_FILE_INPUT, texcoord_index, X, Y, Z, W);
    inst.Src[1].Register.File  = TGSI_FILE_SAMPLER;
-   inst.Src[1].Register.Index = 0;
+   inst.Src[1].Register.Index = ctx->drawpix_sampler;
 
    tctx->emit_instruction(tctx, &inst);
 
@@ -197,7 +208,7 @@ transform_instr(struct tgsi_transform_context *tctx,
       inst.Instruction.NumSrcRegs = 2;
       SET_SRC(&inst, 0, TGSI_FILE_TEMPORARY, ctx->color_temp, X, Y, Y, Y);
       inst.Src[1].Register.File  = TGSI_FILE_SAMPLER;
-      inst.Src[1].Register.Index = 1;
+      inst.Src[1].Register.Index = ctx->pixelmap_sampler;
 
       tctx->emit_instruction(tctx, &inst);
 
@@ -207,7 +218,9 @@ transform_instr(struct tgsi_transform_context *tctx,
       tctx->emit_instruction(tctx, &inst);
    }
 
-   /* Now, "color_temp" should be used in place of IN:COLOR0 */
+   /* Now, "color_temp" should be used in place of IN:COLOR0,
+    * and CONST[texcoord_slot] should be used in place of IN:TEXCOORD0.
+    */
 
 transform_inst:
 
@@ -215,12 +228,17 @@ transform_inst:
       struct tgsi_full_src_register *src = &current_inst->Src[i];
       unsigned reg = src->Register.Index;
 
-      if (src->Register.File == TGSI_FILE_INPUT &&
-          !src->Register.Indirect &&
-          ctx->info.input_semantic_name[reg] == TGSI_SEMANTIC_COLOR &&
+      if (src->Register.File != TGSI_FILE_INPUT || src->Register.Indirect)
+         continue;
+
+      if (ctx->info.input_semantic_name[reg] == TGSI_SEMANTIC_COLOR &&
           ctx->info.input_semantic_index[reg] == 0) {
          src->Register.File = TGSI_FILE_TEMPORARY;
          src->Register.Index = ctx->color_temp;
+      } else if (ctx->info.input_semantic_name[reg] == sem_texcoord &&
+                 ctx->info.input_semantic_index[reg] == 0) {
+         src->Register.File = TGSI_FILE_CONSTANT;
+         src->Register.Index = ctx->texcoord_const;
       }
    }
 
@@ -230,7 +248,9 @@ transform_inst:
 const struct tgsi_token *
 st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
                       bool scale_and_bias, unsigned scale_const,
-                      unsigned bias_const, bool pixel_maps)
+                      unsigned bias_const, bool pixel_maps,
+                      unsigned drawpix_sampler, unsigned pixelmap_sampler,
+                      unsigned texcoord_const)
 {
    struct tgsi_drawpix_transform ctx;
    struct tgsi_token *newtoks;
@@ -243,6 +263,9 @@ st_get_drawpix_shader(const struct tgsi_token *tokens, bool use_texcoord,
    ctx.scale_const = scale_const;
    ctx.bias_const = bias_const;
    ctx.pixel_maps = pixel_maps;
+   ctx.drawpix_sampler = drawpix_sampler;
+   ctx.pixelmap_sampler = pixelmap_sampler;
+   ctx.texcoord_const = texcoord_const;
    tgsi_scan_shader(tokens, &ctx.info);
 
    newlen = tgsi_num_tokens(tokens) + 30;

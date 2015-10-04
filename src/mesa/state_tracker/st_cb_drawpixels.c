@@ -525,6 +525,7 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
                    int num_sampler_view,
                    void *driver_vp,
                    void *driver_fp,
+                   struct st_fp_variant *fpv,
                    const GLfloat *color,
                    GLboolean invertTex,
                    GLboolean write_depth, GLboolean write_stencil)
@@ -612,10 +613,9 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    cso_set_tesseval_shader_handle(cso, NULL);
    cso_set_geometry_shader_handle(cso, NULL);
 
-   /* texture sampling state: */
+   /* user samplers, plus the drawpix samplers */
    {
       struct pipe_sampler_state sampler;
-      const struct pipe_sampler_state *states[2] = {&sampler, &sampler};
 
       memset(&sampler, 0, sizeof(sampler));
       sampler.wrap_s = PIPE_TEX_WRAP_CLAMP;
@@ -626,8 +626,25 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
       sampler.mag_img_filter = PIPE_TEX_FILTER_NEAREST;
       sampler.normalized_coords = normalized;
 
-      cso_set_samplers(cso, PIPE_SHADER_FRAGMENT,
-                       num_sampler_view > 1 ? 2 : 1, states);
+      if (fpv) {
+         const struct pipe_sampler_state *samplers[PIPE_MAX_SAMPLERS];
+         uint num = MAX2(MAX2(fpv->drawpix_sampler, fpv->pixelmap_sampler) + 1,
+                         st->state.num_samplers[PIPE_SHADER_FRAGMENT]);
+         uint i;
+
+         for (i = 0; i < st->state.num_samplers[PIPE_SHADER_FRAGMENT]; i++)
+            samplers[i] = &st->state.samplers[PIPE_SHADER_FRAGMENT][i];
+
+         samplers[fpv->drawpix_sampler] = &sampler;
+         if (sv[1])
+            samplers[fpv->pixelmap_sampler] = &sampler;
+
+         cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, num, samplers);
+      } else {
+         const struct pipe_sampler_state *samplers[2] = {&sampler, &sampler};
+
+         cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, samplers);
+      }
    }
 
    /* viewport state: viewport matching window dims */
@@ -647,8 +664,21 @@ draw_textured_quad(struct gl_context *ctx, GLint x, GLint y, GLfloat z,
    cso_set_vertex_elements(cso, 3, st->velems_util_draw);
    cso_set_stream_outputs(st->cso_context, 0, NULL, NULL);
 
-   /* texture state: */
-   cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, sv);
+   /* user textures, plus the drawpix textures */
+   if (fpv) {
+      struct pipe_sampler_view *sampler_views[PIPE_MAX_SAMPLERS];
+      uint num = MAX2(MAX2(fpv->drawpix_sampler, fpv->pixelmap_sampler) + 1,
+                      st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);
+
+      memcpy(sampler_views, st->state.sampler_views[PIPE_SHADER_FRAGMENT],
+             sizeof(sampler_views));
+
+      sampler_views[fpv->drawpix_sampler] = sv[0];
+      if (sv[1])
+         sampler_views[fpv->pixelmap_sampler] = sv[1];
+      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num, sampler_views);
+   } else
+      cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, num_sampler_view, sv);
 
    /* Compute Gallium window coords (y=0=top) with pixel zoom.
     * Recall that these coords are transformed by the current
@@ -943,6 +973,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    struct pipe_sampler_view *sv[2] = { NULL };
    int num_sampler_view = 1;
    struct gl_pixelstore_attrib clippedUnpack;
+   struct st_fp_variant *fpv = NULL;
 
    /* Mesa state should be up to date by now */
    assert(ctx->NewState == 0x0);
@@ -982,7 +1013,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
       color = ctx->Current.RasterColor;
    }
    else {
-      struct st_fp_variant *fpv = get_color_fp_variant(st);
+      fpv = get_color_fp_variant(st);
 
       driver_fp = fpv->driver_shader;
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
@@ -1025,7 +1056,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
                                sv,
                                num_sampler_view,
                                driver_vp,
-                               driver_fp,
+                               driver_fp, fpv,
                                color, GL_FALSE, write_depth, write_stencil);
             pipe_sampler_view_reference(&sv[0], NULL);
             if (num_sampler_view > 1)
@@ -1280,6 +1311,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    void *driver_vp, *driver_fp;
    struct pipe_resource *pt;
    struct pipe_sampler_view *sv[2] = { NULL };
+   struct st_fp_variant *fpv = NULL;
    int num_sampler_view = 1;
    GLfloat *color;
    enum pipe_format srcFormat;
@@ -1318,7 +1350,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
     * Get vertex/fragment shaders
     */
    if (type == GL_COLOR) {
-      struct st_fp_variant *fpv = get_color_fp_variant(st);
+      fpv = get_color_fp_variant(st);
 
       rbRead = st_get_color_read_renderbuffer(ctx);
       color = NULL;
@@ -1470,7 +1502,7 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
                       sv,
                       num_sampler_view,
                       driver_vp, 
-                      driver_fp,
+                      driver_fp, fpv,
                       color, invertTex, GL_FALSE, GL_FALSE);
 
    pipe_resource_reference(&pt, NULL);
