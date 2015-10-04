@@ -9,8 +9,18 @@
 #define NVC0_QUERY_TFB_BUFFER_OFFSET (PIPE_QUERY_TYPES + 0)
 
 struct nvc0_context;
+struct nvc0_query;
+
+struct nvc0_query_funcs {
+   void (*destroy_query)(struct nvc0_context *, struct nvc0_query *);
+   boolean (*begin_query)(struct nvc0_context *, struct nvc0_query *);
+   void (*end_query)(struct nvc0_context *, struct nvc0_query *);
+   boolean (*get_query_result)(struct nvc0_context *, struct nvc0_query *,
+                               boolean, union pipe_query_result *);
+};
 
 struct nvc0_query {
+   const struct nvc0_query_funcs *funcs;
    uint32_t *data;
    uint16_t type;
    uint16_t index;
@@ -23,10 +33,7 @@ struct nvc0_query {
    boolean is64bit;
    uint8_t rotate;
    int nesting; /* only used for occlusion queries */
-   union {
-      struct nouveau_mm_allocation *mm;
-      uint64_t value;
-   } u;
+   struct nouveau_mm_allocation *mm;
    struct nouveau_fence *fence;
 };
 
@@ -40,7 +47,7 @@ nvc0_query(struct pipe_query *pipe)
  * Driver queries groups:
  */
 #define NVC0_QUERY_MP_COUNTER_GROUP 0
-#define NVC0_QUERY_DRV_STAT_GROUP   1
+#define NVC0_SW_QUERY_DRV_STAT_GROUP 1
 
 /*
  * Performance counter queries:
@@ -137,47 +144,6 @@ enum nvc0_pm_queries
    NVC0_HW_SM_QUERY_TH_INST_EXECUTED_3,
    NVC0_HW_SM_QUERY_WARPS_LAUNCHED,
    NVC0_HW_SM_QUERY_COUNT
-};
-
-/*
- * Driver statistics queries:
- */
-#define NVC0_QUERY_DRV_STAT(i)    (PIPE_QUERY_DRIVER_SPECIFIC + 1024 + (i))
-#define NVC0_QUERY_DRV_STAT_LAST   NVC0_QUERY_DRV_STAT(NVC0_QUERY_DRV_STAT_COUNT - 1)
-enum nvc0_drv_stats_queries
-{
-#ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-   NVC0_QUERY_DRV_STAT_TEX_OBJECT_CURRENT_COUNT = 0,
-   NVC0_QUERY_DRV_STAT_TEX_OBJECT_CURRENT_BYTES,
-   NVC0_QUERY_DRV_STAT_BUF_OBJECT_CURRENT_COUNT,
-   NVC0_QUERY_DRV_STAT_BUF_OBJECT_CURRENT_BYTES_VID,
-   NVC0_QUERY_DRV_STAT_BUF_OBJECT_CURRENT_BYTES_SYS,
-   NVC0_QUERY_DRV_STAT_TEX_TRANSFERS_READ,
-   NVC0_QUERY_DRV_STAT_TEX_TRANSFERS_WRITE,
-   NVC0_QUERY_DRV_STAT_TEX_COPY_COUNT,
-   NVC0_QUERY_DRV_STAT_TEX_BLIT_COUNT,
-   NVC0_QUERY_DRV_STAT_TEX_CACHE_FLUSH_COUNT,
-   NVC0_QUERY_DRV_STAT_BUF_TRANSFERS_READ,
-   NVC0_QUERY_DRV_STAT_BUF_TRANSFERS_WRITE,
-   NVC0_QUERY_DRV_STAT_BUF_READ_BYTES_STAGING_VID,
-   NVC0_QUERY_DRV_STAT_BUF_WRITE_BYTES_DIRECT,
-   NVC0_QUERY_DRV_STAT_BUF_WRITE_BYTES_STAGING_VID,
-   NVC0_QUERY_DRV_STAT_BUF_WRITE_BYTES_STAGING_SYS,
-   NVC0_QUERY_DRV_STAT_BUF_COPY_BYTES,
-   NVC0_QUERY_DRV_STAT_BUF_NON_KERNEL_FENCE_SYNC_COUNT,
-   NVC0_QUERY_DRV_STAT_ANY_NON_KERNEL_FENCE_SYNC_COUNT,
-   NVC0_QUERY_DRV_STAT_QUERY_SYNC_COUNT,
-   NVC0_QUERY_DRV_STAT_GPU_SERIALIZE_COUNT,
-   NVC0_QUERY_DRV_STAT_DRAW_CALLS_ARRAY,
-   NVC0_QUERY_DRV_STAT_DRAW_CALLS_INDEXED,
-   NVC0_QUERY_DRV_STAT_DRAW_CALLS_FALLBACK_COUNT,
-   NVC0_QUERY_DRV_STAT_USER_BUFFER_UPLOAD_BYTES,
-   NVC0_QUERY_DRV_STAT_CONSTBUF_UPLOAD_COUNT,
-   NVC0_QUERY_DRV_STAT_CONSTBUF_UPLOAD_BYTES,
-   NVC0_QUERY_DRV_STAT_PUSHBUF_COUNT,
-   NVC0_QUERY_DRV_STAT_RESOURCE_VALIDATE_COUNT,
-#endif
-   NVC0_QUERY_DRV_STAT_COUNT
 };
 
 void nvc0_init_query_functions(struct nvc0_context *);

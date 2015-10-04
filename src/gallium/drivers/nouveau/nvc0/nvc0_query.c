@@ -26,6 +26,7 @@
 
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_query.h"
+#include "nvc0/nvc0_query_sw.h"
 
 #include "nv_object.xml.h"
 #include "nvc0/nve4_compute.xml.h"
@@ -52,16 +53,16 @@ nvc0_query_allocate(struct nvc0_context *nvc0, struct nvc0_query *q, int size)
 
    if (q->bo) {
       nouveau_bo_ref(NULL, &q->bo);
-      if (q->u.mm) {
+      if (q->mm) {
          if (q->state == NVC0_QUERY_STATE_READY)
-            nouveau_mm_free(q->u.mm);
+            nouveau_mm_free(q->mm);
          else
             nouveau_fence_work(screen->base.fence.current,
-                               nouveau_mm_free_work, q->u.mm);
+                               nouveau_mm_free_work, q->mm);
       }
    }
    if (size) {
-      q->u.mm = nouveau_mm_allocate(screen->base.mm_GART, size, &q->bo, &q->base);
+      q->mm = nouveau_mm_allocate(screen->base.mm_GART, size, &q->bo, &q->base);
       if (!q->bo)
          return false;
       q->offset = q->base;
@@ -90,6 +91,10 @@ nvc0_query_create(struct pipe_context *pipe, unsigned type, unsigned index)
    struct nvc0_context *nvc0 = nvc0_context(pipe);
    struct nvc0_query *q;
    unsigned space = NVC0_QUERY_ALLOC_SPACE;
+
+   q = nvc0_sw_create_query(nvc0, type, index);
+   if (q)
+      return (struct pipe_query *)q;
 
    q = CALLOC_STRUCT(nvc0_query);
    if (!q)
@@ -126,14 +131,6 @@ nvc0_query_create(struct pipe_context *pipe, unsigned type, unsigned index)
       space = 16;
       break;
    default:
-#ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-      if (type >= NVC0_QUERY_DRV_STAT(0) && type <= NVC0_QUERY_DRV_STAT_LAST) {
-         space = 0;
-         q->is64bit = true;
-         q->index = type - NVC0_QUERY_DRV_STAT(0);
-         break;
-      } else
-#endif
       if (nvc0->screen->base.device->drm_version >= 0x01000101) {
          if (type >= NVE4_HW_SM_QUERY(0) && type <= NVE4_HW_SM_QUERY_LAST) {
             /* for each MP:
@@ -295,12 +292,9 @@ nvc0_query_begin(struct pipe_context *pipe, struct pipe_query *pq)
       break;
    default:
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-      if (q->type >= NVC0_QUERY_DRV_STAT(0) &&
-          q->type <= NVC0_QUERY_DRV_STAT_LAST) {
-         if (q->index >= 5)
-            q->u.value = nvc0->screen->base.stats.v[q->index];
-         else
-            q->u.value = 0;
+      if (q->type >= NVC0_SW_QUERY_DRV_STAT(0) &&
+          q->type <= NVC0_SW_QUERY_DRV_STAT_LAST) {
+         return q->funcs->begin_query(nvc0, q);
       } else
 #endif
       if ((q->type >= NVE4_HW_SM_QUERY(0) && q->type <= NVE4_HW_SM_QUERY_LAST) ||
@@ -382,9 +376,9 @@ nvc0_query_end(struct pipe_context *pipe, struct pipe_query *pq)
       break;
    default:
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-      if (q->type >= NVC0_QUERY_DRV_STAT(0) &&
-          q->type <= NVC0_QUERY_DRV_STAT_LAST) {
-         q->u.value = nvc0->screen->base.stats.v[q->index] - q->u.value;
+      if (q->type >= NVC0_SW_QUERY_DRV_STAT(0) &&
+          q->type <= NVC0_SW_QUERY_DRV_STAT_LAST) {
+         q->funcs->end_query(nvc0, q);
          return;
       } else
 #endif
@@ -423,10 +417,9 @@ nvc0_query_result(struct pipe_context *pipe, struct pipe_query *pq,
    unsigned i;
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-   if (q->type >= NVC0_QUERY_DRV_STAT(0) &&
-       q->type <= NVC0_QUERY_DRV_STAT_LAST) {
-      res64[0] = q->u.value;
-      return true;
+   if (q->type >= NVC0_SW_QUERY_DRV_STAT(0) &&
+       q->type <= NVC0_SW_QUERY_DRV_STAT_LAST) {
+      return q->funcs->get_query_result(nvc0, q, wait, result);
    } else
 #endif
    if ((q->type >= NVE4_HW_SM_QUERY(0) && q->type <= NVE4_HW_SM_QUERY_LAST) ||
@@ -600,7 +593,7 @@ nvc0_query_pushbuf_submit(struct nouveau_pushbuf *push,
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
 
-static const char *nvc0_drv_stat_names[] =
+static const char *nvc0_sw_query_drv_stat_names[] =
 {
    "drv-tex_obj_current_count",
    "drv-tex_obj_current_bytes",
@@ -1357,7 +1350,7 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    struct nvc0_screen *screen = nvc0_screen(pscreen);
    int count = 0;
 
-   count += NVC0_QUERY_DRV_STAT_COUNT;
+   count += NVC0_SW_QUERY_DRV_STAT_COUNT;
 
    if (screen->base.device->drm_version >= 0x01000101) {
       if (screen->compute) {
@@ -1382,29 +1375,29 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    info->group_id = -1;
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-   if (id < NVC0_QUERY_DRV_STAT_COUNT) {
-      info->name = nvc0_drv_stat_names[id];
-      info->query_type = NVC0_QUERY_DRV_STAT(id);
+   if (id < NVC0_SW_QUERY_DRV_STAT_COUNT) {
+      info->name = nvc0_sw_query_drv_stat_names[id];
+      info->query_type = NVC0_SW_QUERY_DRV_STAT(id);
       info->max_value.u64 = 0;
       if (strstr(info->name, "bytes"))
          info->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
-      info->group_id = NVC0_QUERY_DRV_STAT_GROUP;
+      info->group_id = NVC0_SW_QUERY_DRV_STAT_GROUP;
       return 1;
    } else
 #endif
    if (id < count) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
-            info->name = nve4_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
-            info->query_type = NVE4_HW_SM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
+            info->name = nve4_pm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
+            info->query_type = NVE4_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
             info->max_value.u64 =
                (id < NVE4_HW_SM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
             info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
             return 1;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
-            info->name = nvc0_pm_query_names[id - NVC0_QUERY_DRV_STAT_COUNT];
-            info->query_type = NVC0_HW_SM_QUERY(id - NVC0_QUERY_DRV_STAT_COUNT);
+            info->name = nvc0_pm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
+            info->query_type = NVC0_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
             info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
             return 1;
          }
@@ -1466,11 +1459,11 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
       }
    }
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-   else if (id == NVC0_QUERY_DRV_STAT_GROUP) {
+   else if (id == NVC0_SW_QUERY_DRV_STAT_GROUP) {
       info->name = "Driver statistics";
       info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_CPU;
-      info->max_active_queries = NVC0_QUERY_DRV_STAT_COUNT;
-      info->num_queries = NVC0_QUERY_DRV_STAT_COUNT;
+      info->max_active_queries = NVC0_SW_QUERY_DRV_STAT_COUNT;
+      info->num_queries = NVC0_SW_QUERY_DRV_STAT_COUNT;
       return 1;
    }
 #endif
