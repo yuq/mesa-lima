@@ -428,6 +428,9 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
    if (pass->has_stencil_clear_attachment)
       anv_finishme("stencil clear");
 
+   /* FINISHME: Rethink how we count clear attachments in light of
+    * 0.138.2 -> 0.170.2 diff.
+    */
    if (pass->num_color_clear_attachments == 0 &&
        !pass->has_depth_clear_attachment)
       return;
@@ -889,8 +892,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .offset = { dest_offset.x, dest_offset.y },
             .extent = { dest_extent.width, dest_extent.height },
          },
-         .attachmentCount = 1,
-         .pAttachmentClearValues = NULL,
+         .clearValueCount = 0,
+         .pClearValues = NULL,
       }, VK_RENDER_PASS_CONTENTS_INLINE);
 
    VkPipeline pipeline;
@@ -1621,8 +1624,8 @@ void anv_CmdClearColorImage(
                   },
                   .renderPass = pass,
                   .framebuffer = fb,
-                  .attachmentCount = 1,
-                  .pAttachmentClearValues = NULL,
+                  .clearValueCount = 1,
+                  .pClearValues = NULL,
                }, VK_RENDER_PASS_CONTENTS_INLINE);
 
             struct clear_instance_data instance_data = {

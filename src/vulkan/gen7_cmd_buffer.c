@@ -641,7 +641,7 @@ begin_render_pass(struct anv_cmd_buffer *cmd_buffer,
                   .DrawingRectangleOriginX = 0);
 
    anv_cmd_buffer_clear_attachments(cmd_buffer, pass,
-                                    pRenderPassBegin->pAttachmentClearValues);
+                                    pRenderPassBegin->pClearValues);
 }
 
 void gen7_CmdBeginRenderPass(

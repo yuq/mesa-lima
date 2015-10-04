@@ -2020,8 +2020,8 @@ typedef struct {
     VkRenderPass                                renderPass;
     VkFramebuffer                               framebuffer;
     VkRect2D                                    renderArea;
-    uint32_t                                    attachmentCount;
-    const VkClearValue*                         pAttachmentClearValues;
+    uint32_t                                    clearValueCount;
+    const VkClearValue*                         pClearValues;
 } VkRenderPassBeginInfo;
 
 typedef struct {
