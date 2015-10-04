@@ -1091,6 +1091,25 @@ nvc0_so_target_create(struct pipe_context *pipe,
 }
 
 static void
+nvc0_so_target_save_offset(struct pipe_context *pipe,
+                           struct pipe_stream_output_target *ptarg,
+                           unsigned index, bool *serialize)
+{
+   struct nvc0_so_target *targ = nvc0_so_target(ptarg);
+
+   if (*serialize) {
+      *serialize = false;
+      PUSH_SPACE(nvc0_context(pipe)->base.pushbuf, 1);
+      IMMED_NVC0(nvc0_context(pipe)->base.pushbuf, NVC0_3D(SERIALIZE), 0);
+
+      NOUVEAU_DRV_STAT(nouveau_screen(pipe->screen), gpu_serialize_count, 1);
+   }
+
+   nvc0_query(targ->pq)->index = index;
+   pipe->end_query(pipe, targ->pq);
+}
+
+static void
 nvc0_so_target_destroy(struct pipe_context *pipe,
                        struct pipe_stream_output_target *ptarg)
 {

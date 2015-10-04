@@ -596,27 +596,6 @@ nvc0_query_pushbuf_submit(struct nouveau_pushbuf *push,
                         NVC0_IB_ENTRY_1_NO_PREFETCH);
 }
 
-void
-nvc0_so_target_save_offset(struct pipe_context *pipe,
-                           struct pipe_stream_output_target *ptarg,
-                           unsigned index, bool *serialize)
-{
-   struct nvc0_so_target *targ = nvc0_so_target(ptarg);
-
-   if (*serialize) {
-      *serialize = false;
-      PUSH_SPACE(nvc0_context(pipe)->base.pushbuf, 1);
-      IMMED_NVC0(nvc0_context(pipe)->base.pushbuf, NVC0_3D(SERIALIZE), 0);
-
-      NOUVEAU_DRV_STAT(nouveau_screen(pipe->screen), gpu_serialize_count, 1);
-   }
-
-   nvc0_query(targ->pq)->index = index;
-
-   nvc0_query_end(pipe, targ->pq);
-}
-
-
 /* === DRIVER STATISTICS === */
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS

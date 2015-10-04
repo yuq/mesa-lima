@@ -184,8 +184,5 @@ void nvc0_init_query_functions(struct nvc0_context *);
 void nvc0_query_pushbuf_submit(struct nouveau_pushbuf *, struct nvc0_query *,
                                unsigned);
 void nvc0_query_fifo_wait(struct nouveau_pushbuf *, struct nvc0_query *);
-void nvc0_so_target_save_offset(struct pipe_context *,
-                                struct pipe_stream_output_target *, unsigned,
-                                bool *);
 
 #endif
