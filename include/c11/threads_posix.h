@@ -136,8 +136,14 @@ cnd_timedwait(cnd_t *cond, mtx_t *mtx, const xtime *xt)
 {
     struct timespec abs_time;
     int rt;
+
     assert(mtx != NULL);
     assert(cond != NULL);
+    assert(xt != NULL);
+
+    abs_time.tv_sec = xt->sec;
+    abs_time.tv_nsec = xt->nsec;
+
     rt = pthread_cond_timedwait(cond, mtx, &abs_time);
     if (rt == ETIMEDOUT)
         return thrd_busy;
