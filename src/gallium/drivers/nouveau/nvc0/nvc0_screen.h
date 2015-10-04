@@ -94,7 +94,7 @@ struct nvc0_screen {
 
    struct {
       struct nvc0_program *prog; /* compute state object to read MP counters */
-      struct pipe_query *mp_counter[8]; /* counter to query allocation */
+      struct nvc0_hw_sm_query *mp_counter[8]; /* counter to query allocation */
       uint8_t num_hw_sm_active[2];
       bool mp_counters_enabled;
    } pm;

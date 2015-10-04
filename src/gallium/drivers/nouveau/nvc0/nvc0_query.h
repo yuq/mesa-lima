@@ -31,7 +31,7 @@ nvc0_query(struct pipe_query *pipe)
 /*
  * Driver queries groups:
  */
-#define NVC0_QUERY_MP_COUNTER_GROUP 0
+#define NVC0_HW_SM_QUERY_GROUP       0
 #define NVC0_SW_QUERY_DRV_STAT_GROUP 1
 
 void nvc0_init_query_functions(struct nvc0_context *);

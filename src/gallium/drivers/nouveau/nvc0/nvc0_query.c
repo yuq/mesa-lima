@@ -28,6 +28,7 @@
 #include "nvc0/nvc0_query.h"
 #include "nvc0/nvc0_query_sw.h"
 #include "nvc0/nvc0_query_hw.h"
+#include "nvc0/nvc0_query_hw_sm.h"
 
 static struct pipe_query *
 nvc0_create_query(struct pipe_context *pipe, unsigned type, unsigned index)
@@ -182,7 +183,7 @@ static const char *nvc0_sw_query_drv_stat_names[] =
 /* === PERFORMANCE MONITORING COUNTERS for NVE4+ === */
 
 /* NOTE: intentionally using the same names as NV */
-static const char *nve4_pm_query_names[] =
+static const char *nve4_hw_sm_query_names[] =
 {
    /* MP counters */
    "active_cycles",
@@ -238,7 +239,7 @@ static const char *nve4_pm_query_names[] =
 };
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
-static const char *nvc0_pm_query_names[] =
+static const char *nvc0_hw_sm_query_names[] =
 {
    /* MP counters */
    "active_cycles",
@@ -320,17 +321,17 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    if (id < count) {
       if (screen->compute) {
          if (screen->base.class_3d == NVE4_3D_CLASS) {
-            info->name = nve4_pm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
+            info->name = nve4_hw_sm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
             info->query_type = NVE4_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
             info->max_value.u64 =
                (id < NVE4_HW_SM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
-            info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
+            info->group_id = NVC0_HW_SM_QUERY_GROUP;
             return 1;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
-            info->name = nvc0_pm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
+            info->name = nvc0_hw_sm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
             info->query_type = NVC0_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
-            info->group_id = NVC0_QUERY_MP_COUNTER_GROUP;
+            info->group_id = NVC0_HW_SM_QUERY_GROUP;
             return 1;
          }
       }
@@ -365,7 +366,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    if (!info)
       return count;
 
-   if (id == NVC0_QUERY_MP_COUNTER_GROUP) {
+   if (id == NVC0_HW_SM_QUERY_GROUP) {
       if (screen->compute) {
          info->name = "MP counters";
          info->type = PIPE_DRIVER_QUERY_GROUP_TYPE_GPU;
