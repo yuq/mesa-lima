@@ -189,100 +189,70 @@ st_make_drawpix_fragment_program(struct st_context *st,
  * stencil value value, then writes to FRAG_RESULT_DEPTH/FRAG_RESULT_STENCIL.
  * Used for glDrawPixels(GL_DEPTH_COMPONENT / GL_STENCIL_INDEX).
  * Pass fragment color through as-is.
- * \return pointer to the gl_fragment program
+ *
+ * \return CSO of the fragment shader.
  */
-struct gl_fragment_program *
-st_make_drawpix_z_stencil_program(struct st_context *st,
-                                  GLboolean write_depth,
-                                  GLboolean write_stencil)
+static void *
+get_drawpix_z_stencil_program(struct st_context *st,
+                              GLboolean write_depth,
+                              GLboolean write_stencil)
 {
-   struct gl_context *ctx = st->ctx;
-   struct gl_program *p;
-   struct gl_fragment_program *fp;
-   GLuint ic = 0;
+   struct ureg_program *ureg;
+   struct ureg_src depth_sampler, stencil_sampler;
+   struct ureg_src texcoord, color;
+   struct ureg_dst out_color, out_depth, out_stencil;
    const GLuint shaderIndex = write_depth * 2 + write_stencil;
+   void *cso;
 
-   assert(shaderIndex < ARRAY_SIZE(st->drawpix.shaders));
+   assert(shaderIndex < ARRAY_SIZE(st->drawpix.zs_shaders));
 
-   if (st->drawpix.shaders[shaderIndex]) {
+   if (st->drawpix.zs_shaders[shaderIndex]) {
       /* already have the proper shader */
-      return st->drawpix.shaders[shaderIndex];
+      return st->drawpix.zs_shaders[shaderIndex];
    }
 
-   /*
-    * Create shader now
-    */
-   p = ctx->Driver.NewProgram(ctx, GL_FRAGMENT_PROGRAM_ARB, 0);
-   if (!p)
+   ureg = ureg_create(TGSI_PROCESSOR_FRAGMENT);
+   if (ureg == NULL)
       return NULL;
 
-   p->NumInstructions = write_depth ? 3 : 1;
-   p->NumInstructions += write_stencil ? 1 : 0;
-
-   p->Instructions = _mesa_alloc_instructions(p->NumInstructions);
-   if (!p->Instructions) {
-      ctx->Driver.DeleteProgram(ctx, p);
-      return NULL;
-   }
-   _mesa_init_instructions(p->Instructions, p->NumInstructions);
+   ureg_property(ureg, TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS, TRUE);
 
    if (write_depth) {
-      /* TEX result.depth, fragment.texcoord[0], texture[0], 2D; */
-      p->Instructions[ic].Opcode = OPCODE_TEX;
-      p->Instructions[ic].DstReg.File = PROGRAM_OUTPUT;
-      p->Instructions[ic].DstReg.Index = FRAG_RESULT_DEPTH;
-      p->Instructions[ic].DstReg.WriteMask = WRITEMASK_Z;
-      p->Instructions[ic].SrcReg[0].File = PROGRAM_INPUT;
-      p->Instructions[ic].SrcReg[0].Index = VARYING_SLOT_TEX0;
-      p->Instructions[ic].TexSrcUnit = 0;
-      p->Instructions[ic].TexSrcTarget = TEXTURE_2D_INDEX;
-      ic++;
-      /* MOV result.color, fragment.color; */
-      p->Instructions[ic].Opcode = OPCODE_MOV;
-      p->Instructions[ic].DstReg.File = PROGRAM_OUTPUT;
-      p->Instructions[ic].DstReg.Index = FRAG_RESULT_COLOR;
-      p->Instructions[ic].SrcReg[0].File = PROGRAM_INPUT;
-      p->Instructions[ic].SrcReg[0].Index = VARYING_SLOT_COL0;
-      ic++;
+      color = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 0,
+                                 TGSI_INTERPOLATE_COLOR);
+      out_color = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
+
+      depth_sampler = ureg_DECL_sampler(ureg, 0);
+      out_depth = ureg_DECL_output(ureg, TGSI_SEMANTIC_POSITION, 0);
    }
 
    if (write_stencil) {
-      /* TEX result.stencil, fragment.texcoord[0], texture[0], 2D; */
-      p->Instructions[ic].Opcode = OPCODE_TEX;
-      p->Instructions[ic].DstReg.File = PROGRAM_OUTPUT;
-      p->Instructions[ic].DstReg.Index = FRAG_RESULT_STENCIL;
-      p->Instructions[ic].DstReg.WriteMask = WRITEMASK_Y;
-      p->Instructions[ic].SrcReg[0].File = PROGRAM_INPUT;
-      p->Instructions[ic].SrcReg[0].Index = VARYING_SLOT_TEX0;
-      p->Instructions[ic].TexSrcUnit = 1;
-      p->Instructions[ic].TexSrcTarget = TEXTURE_2D_INDEX;
-      ic++;
+      stencil_sampler = ureg_DECL_sampler(ureg, 1);
+      out_stencil = ureg_DECL_output(ureg, TGSI_SEMANTIC_STENCIL, 0);
    }
 
-   /* END; */
-   p->Instructions[ic++].Opcode = OPCODE_END;
+   texcoord = ureg_DECL_fs_input(ureg,
+                                 st->needs_texcoord_semantic ?
+                                    TGSI_SEMANTIC_TEXCOORD :
+                                    TGSI_SEMANTIC_GENERIC,
+                                 0, TGSI_INTERPOLATE_LINEAR);
 
-   assert(ic == p->NumInstructions);
-
-   p->InputsRead = VARYING_BIT_TEX0 | VARYING_BIT_COL0;
-   p->OutputsWritten = 0;
    if (write_depth) {
-      p->OutputsWritten |= BITFIELD64_BIT(FRAG_RESULT_DEPTH);
-      p->OutputsWritten |= BITFIELD64_BIT(FRAG_RESULT_COLOR);
+      ureg_TEX(ureg, ureg_writemask(out_depth, TGSI_WRITEMASK_Z),
+               TGSI_TEXTURE_2D, texcoord, depth_sampler);
+      ureg_MOV(ureg, out_color, color);
    }
-   if (write_stencil)
-      p->OutputsWritten |= BITFIELD64_BIT(FRAG_RESULT_STENCIL);
 
-   p->SamplersUsed =  0x1;  /* sampler 0 (bit 0) is used */
    if (write_stencil)
-      p->SamplersUsed |= 1 << 1;
+      ureg_TEX(ureg, ureg_writemask(out_stencil, TGSI_WRITEMASK_Y),
+               TGSI_TEXTURE_2D, texcoord, stencil_sampler);
 
-   fp = (struct gl_fragment_program *) p;
+   ureg_END(ureg);
+   cso = ureg_create_shader_and_destroy(ureg, st->pipe);
 
    /* save the new shader */
-   st->drawpix.shaders[shaderIndex] = fp;
-
-   return fp;
+   st->drawpix.zs_shaders[shaderIndex] = cso;
+   return cso;
 }
 
 
@@ -1048,30 +1018,6 @@ get_color_fp_variant(struct st_context *st)
 
 
 /**
- * Get fragment program variant for a glDrawPixels or glCopyPixels
- * command for depth/stencil data.
- */
-static struct st_fp_variant *
-get_depth_stencil_fp_variant(struct st_context *st, GLboolean write_depth,
-                             GLboolean write_stencil)
-{
-   struct st_fp_variant_key key;
-   struct st_fp_variant *fpv;
-
-   memset(&key, 0, sizeof(key));
-
-   key.st = st;
-   key.drawpixels = 1;
-   key.drawpixels_z = write_depth;
-   key.drawpixels_stencil = write_stencil;
-
-   fpv = st_get_fp_variant(st, st->fp, &key);
-
-   return fpv;
-}
-
-
-/**
  * Clamp glDrawPixels width and height to the maximum texture size.
  */
 static void
@@ -1109,7 +1055,6 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    GLboolean write_stencil = GL_FALSE, write_depth = GL_FALSE;
    struct pipe_sampler_view *sv[2] = { NULL };
    int num_sampler_view = 1;
-   struct st_fp_variant *fpv;
    struct gl_pixelstore_attrib clippedUnpack;
 
    /* Mesa state should be up to date by now */
@@ -1144,19 +1089,15 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
     * Get vertex/fragment shaders
     */
    if (write_depth || write_stencil) {
-      fpv = get_depth_stencil_fp_variant(st, write_depth, write_stencil);
-
-      driver_fp = fpv->driver_shader;
-
+      driver_fp = get_drawpix_z_stencil_program(st, write_depth,
+                                                write_stencil);
       driver_vp = make_passthrough_vertex_shader(st, GL_TRUE);
-
       color = ctx->Current.RasterColor;
    }
    else {
-      fpv = get_color_fp_variant(st);
+      struct st_fp_variant *fpv = get_color_fp_variant(st);
 
       driver_fp = fpv->driver_shader;
-
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
 
       color = NULL;
@@ -1165,10 +1106,10 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
                                      st->pixel_xfer.pixelmap_sampler_view);
          num_sampler_view++;
       }
-   }
 
-   /* update fragment program constants */
-   st_upload_constants(st, fpv->parameters, PIPE_SHADER_FRAGMENT);
+      /* update fragment program constants */
+      st_upload_constants(st, fpv->parameters, PIPE_SHADER_FRAGMENT);
+   }
 
    /* draw with textured quad */
    {
@@ -1459,7 +1400,6 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
    GLboolean invertTex = GL_FALSE;
    GLint readX, readY, readW, readH;
    struct gl_pixelstore_attrib pack = ctx->DefaultPacking;
-   struct st_fp_variant *fpv;
 
    st_validate_state(st);
 
@@ -1491,12 +1431,12 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
     * Get vertex/fragment shaders
     */
    if (type == GL_COLOR) {
+      struct st_fp_variant *fpv = get_color_fp_variant(st);
+
       rbRead = st_get_color_read_renderbuffer(ctx);
       color = NULL;
 
-      fpv = get_color_fp_variant(st);
       driver_fp = fpv->driver_shader;
-
       driver_vp = make_passthrough_vertex_shader(st, GL_FALSE);
 
       if (st->pixel_xfer.pixelmap_enabled) {
@@ -1504,6 +1444,9 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
                                      st->pixel_xfer.pixelmap_sampler_view);
          num_sampler_view++;
       }
+
+      /* update fragment program constants */
+      st_upload_constants(st, fpv->parameters, PIPE_SHADER_FRAGMENT);
    }
    else {
       assert(type == GL_DEPTH);
@@ -1511,14 +1454,9 @@ st_CopyPixels(struct gl_context *ctx, GLint srcx, GLint srcy,
                                Attachment[BUFFER_DEPTH].Renderbuffer);
       color = ctx->Current.Attrib[VERT_ATTRIB_COLOR0];
 
-      fpv = get_depth_stencil_fp_variant(st, GL_TRUE, GL_FALSE);
-      driver_fp = fpv->driver_shader;
-
+      driver_fp = get_drawpix_z_stencil_program(st, GL_TRUE, GL_FALSE);
       driver_vp = make_passthrough_vertex_shader(st, GL_TRUE);
    }
-
-   /* update fragment program constants */
-   st_upload_constants(st, fpv->parameters, PIPE_SHADER_FRAGMENT);
 
    /* Choose the format for the temporary texture. */
    srcFormat = rbRead->texture->format;
@@ -1666,9 +1604,10 @@ st_destroy_drawpix(struct st_context *st)
 {
    GLuint i;
 
-   for (i = 0; i < ARRAY_SIZE(st->drawpix.shaders); i++) {
-      if (st->drawpix.shaders[i])
-         _mesa_reference_fragprog(st->ctx, &st->drawpix.shaders[i], NULL);
+   for (i = 0; i < ARRAY_SIZE(st->drawpix.zs_shaders); i++) {
+      if (st->drawpix.zs_shaders[i])
+         cso_delete_fragment_shader(st->cso_context,
+                                    st->drawpix.zs_shaders[i]);
    }
 
    st_reference_fragprog(st, &st->pixel_xfer.combined_prog, NULL);

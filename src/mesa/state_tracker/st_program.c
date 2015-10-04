@@ -568,19 +568,12 @@ st_translate_fragment_program(struct st_context *st,
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
    if (key->drawpixels) {
-      /* glDrawPixels drawing */
+      /* glDrawPixels color drawing */
       struct gl_fragment_program *fp; /* we free this temp program below */
 
-      if (key->drawpixels_z || key->drawpixels_stencil) {
-         fp = st_make_drawpix_z_stencil_program(st, key->drawpixels_z,
-                                                key->drawpixels_stencil);
-      }
-      else {
-         /* RGBA */
-         st_make_drawpix_fragment_program(st, &stfp->Base, &fp);
-         variant->parameters = _mesa_clone_parameter_list(fp->Base.Parameters);
-         deleteFP = GL_TRUE;
-      }
+      st_make_drawpix_fragment_program(st, &stfp->Base, &fp);
+      variant->parameters = _mesa_clone_parameter_list(fp->Base.Parameters);
+      deleteFP = GL_TRUE;
       stfp = st_fragment_program(fp);
    }
 
