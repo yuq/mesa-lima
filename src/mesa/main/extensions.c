@@ -111,6 +111,7 @@ static const struct extension extension_table[] = {
    { "GL_ARB_draw_elements_base_vertex",           o(ARB_draw_elements_base_vertex),           GL,             2009 },
    { "GL_ARB_draw_indirect",                       o(ARB_draw_indirect),                       GLC,            2010 },
    { "GL_ARB_draw_instanced",                      o(ARB_draw_instanced),                      GL,             2008 },
+   { "GL_ARB_enhanced_layouts",                    o(ARB_enhanced_layouts),                    GLC,            2013 },
    { "GL_ARB_explicit_attrib_location",            o(ARB_explicit_attrib_location),            GL,             2009 },
    { "GL_ARB_explicit_uniform_location",           o(ARB_explicit_uniform_location),           GL,             2012 },
    { "GL_ARB_fragment_coord_conventions",          o(ARB_fragment_coord_conventions),          GL,             2009 },
