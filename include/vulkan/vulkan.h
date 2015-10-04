@@ -1469,7 +1469,6 @@ typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkBuffer                                    buffer;
-    VkBufferViewType                            viewType;
     VkFormat                                    format;
     VkDeviceSize                                offset;
     VkDeviceSize                                range;
