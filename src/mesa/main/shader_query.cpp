@@ -1190,7 +1190,8 @@ get_buffer_property(struct gl_shader_program *shProg,
             (*val)++;
          }
          return 1;
-      case GL_ACTIVE_VARIABLES:
+      case GL_ACTIVE_VARIABLES: {
+         unsigned num_values = 0;
          for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
             const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
             struct gl_program_resource *uni =
@@ -1200,8 +1201,10 @@ get_buffer_property(struct gl_shader_program *shProg,
                continue;
             *val++ =
                _mesa_program_resource_index(shProg, uni);
+            num_values++;
          }
-         return RESOURCE_UBO(res)->NumUniforms;
+         return num_values;
+      }
       }
    } else if (res->Type == GL_SHADER_STORAGE_BLOCK) {
       switch (prop) {
@@ -1223,7 +1226,8 @@ get_buffer_property(struct gl_shader_program *shProg,
             (*val)++;
          }
          return 1;
-      case GL_ACTIVE_VARIABLES:
+      case GL_ACTIVE_VARIABLES: {
+         unsigned num_values = 0;
          for (unsigned i = 0; i < RESOURCE_UBO(res)->NumUniforms; i++) {
             const char *iname = RESOURCE_UBO(res)->Uniforms[i].IndexName;
             struct gl_program_resource *uni =
@@ -1233,8 +1237,10 @@ get_buffer_property(struct gl_shader_program *shProg,
                continue;
             *val++ =
                _mesa_program_resource_index(shProg, uni);
+            num_values++;
          }
-         return RESOURCE_UBO(res)->NumUniforms;
+         return num_values;
+      }
       }
    } else if (res->Type == GL_ATOMIC_COUNTER_BUFFER) {
       switch (prop) {
