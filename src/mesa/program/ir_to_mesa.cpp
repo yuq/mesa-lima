@@ -31,6 +31,7 @@
 
 #include <stdio.h>
 #include "main/compiler.h"
+#include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
@@ -3007,6 +3008,7 @@ _mesa_ir_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       _mesa_reference_program(ctx, &linked_prog, NULL);
    }
 
+   build_program_resource_list(prog);
    return prog->LinkStatus;
 }
 
@@ -3035,8 +3037,6 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
    if (prog->LinkStatus) {
       if (!ctx->Driver.LinkShader(ctx, prog)) {
 	 prog->LinkStatus = GL_FALSE;
-      } else {
-         build_program_resource_list(prog);
       }
    }
 

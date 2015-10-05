@@ -27,6 +27,7 @@
 #include "brw_nir.h"
 #include "brw_program.h"
 #include "compiler/glsl/ir_optimization.h"
+#include "compiler/glsl/program.h"
 #include "program/program.h"
 #include "main/shaderapi.h"
 #include "main/uniforms.h"
@@ -259,5 +260,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
    if (brw->precompile && !brw_shader_precompile(ctx, shProg))
       return false;
 
+   build_program_resource_list(shProg);
    return true;
 }
