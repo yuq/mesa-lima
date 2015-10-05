@@ -662,6 +662,22 @@ ir_expression::get_operator(const char *str)
    return (ir_expression_operation) -1;
 }
 
+ir_variable *
+ir_expression::variable_referenced() const
+{
+   switch (operation) {
+      case ir_binop_vector_extract:
+      case ir_triop_vector_insert:
+         /* We get these for things like a[0] where a is a vector type. In these
+          * cases we want variable_referenced() to return the actual vector
+          * variable this is wrapping.
+          */
+         return operands[0]->variable_referenced();
+      default:
+         return ir_rvalue::variable_referenced();
+   }
+}
+
 ir_constant::ir_constant()
    : ir_rvalue(ir_type_constant)
 {

@@ -1731,6 +1731,8 @@ public:
 
    virtual ir_visitor_status accept(ir_hierarchical_visitor *);
 
+   virtual ir_variable *variable_referenced() const;
+
    ir_expression_operation operation;
    ir_rvalue *operands[4];
 };
