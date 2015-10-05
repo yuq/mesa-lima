@@ -729,15 +729,17 @@ struct blit_region {
 static void
 meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                struct anv_image *src_image,
-               struct anv_image_view *src_view,
+               struct anv_image_view *src_iview,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
                struct anv_image *dest_image,
-               struct anv_color_attachment_view *dest_view,
+               struct anv_color_attachment_view *dest_cview,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
 {
    struct anv_device *device = cmd_buffer->device;
+   struct anv_attachment_view *dest_aview = &dest_cview->attachment_view;
+   struct anv_surface_view *dest_sview = &dest_cview->surface_view;
    VkDescriptorPool dummy_desc_pool = { .handle = 1 };
 
    struct blit_vb_data {
@@ -758,9 +760,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)(src_offset.x + src_extent.width) / (float)src_view->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
-         (float)(src_offset.z + src_extent.depth) / (float)src_view->extent.depth,
+         (float)(src_offset.x + src_extent.width) / (float)src_iview->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src_iview->extent.height,
+         (float)(src_offset.z + src_extent.depth) / (float)src_iview->extent.depth,
       },
    };
 
@@ -770,9 +772,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y + dest_extent.height,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src_view->extent.width,
-         (float)(src_offset.y + src_extent.height) / (float)src_view->extent.height,
-         (float)(src_offset.z + src_extent.depth) / (float)src_view->extent.depth,
+         (float)src_offset.x / (float)src_iview->extent.width,
+         (float)(src_offset.y + src_extent.height) / (float)src_iview->extent.height,
+         (float)(src_offset.z + src_extent.depth) / (float)src_iview->extent.depth,
       },
    };
 
@@ -782,9 +784,9 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          dest_offset.y,
       },
       .tex_coord = {
-         (float)src_offset.x / (float)src_view->extent.width,
-         (float)src_offset.y / (float)src_view->extent.height,
-         (float)src_offset.z / (float)src_view->extent.depth,
+         (float)src_offset.x / (float)src_iview->extent.width,
+         (float)src_offset.y / (float)src_iview->extent.height,
+         (float)src_offset.z / (float)src_iview->extent.depth,
       },
    };
 
@@ -822,7 +824,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             .pDescriptors = (VkDescriptorInfo[]) {
                {
-                  .imageView = anv_image_view_to_handle(src_view),
+                  .imageView = anv_image_view_to_handle(src_iview),
                   .imageLayout = VK_IMAGE_LAYOUT_GENERAL
                },
             }
@@ -836,12 +838,12 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = (VkAttachmentBindInfo[]) {
             {
-               .view = anv_attachment_view_to_handle(&dest_view->base),
+               .view = anv_attachment_view_to_handle(dest_aview),
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
-         .width = dest_view->base.extent.width,
-         .height = dest_view->base.extent.height,
+         .width = dest_aview->extent.width,
+         .height = dest_aview->extent.height,
          .layers = 1
       }, &fb);
 
@@ -852,7 +854,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = &(VkAttachmentDescription) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .format = dest_view->view.format->vk_format,
+            .format = dest_sview->format->vk_format,
             .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -998,8 +1000,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
    anv_image_from_handle(dest_image)->bo = dest;
    anv_image_from_handle(dest_image)->offset = dest_offset;
 
-   struct anv_image_view src_view;
-   anv_image_view_init(&src_view, cmd_buffer->device,
+   struct anv_image_view src_iview;
+   anv_image_view_init(&src_iview, cmd_buffer->device,
       &(VkImageViewCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
          .image = src_image,
@@ -1021,8 +1023,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       },
       cmd_buffer);
 
-   struct anv_color_attachment_view dest_view;
-   anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+   struct anv_color_attachment_view dest_cview;
+   anv_color_attachment_view_init(&dest_cview, cmd_buffer->device,
       &(VkAttachmentViewCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
          .image = dest_image,
@@ -1035,11 +1037,11 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
 
    meta_emit_blit(cmd_buffer,
                   anv_image_from_handle(src_image),
-                  &src_view,
+                  &src_iview,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
                   anv_image_from_handle(dest_image),
-                  &dest_view,
+                  &dest_cview,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 });
 
@@ -1138,7 +1140,7 @@ void anv_CmdCopyImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
-   const VkImageViewType src_view_type =
+   const VkImageViewType src_iview_type =
       meta_blit_get_src_image_view_type(src_image);
 
    struct anv_saved_state saved_state;
@@ -1146,12 +1148,12 @@ void anv_CmdCopyImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      struct anv_image_view src_view;
-      anv_image_view_init(&src_view, cmd_buffer->device,
+      struct anv_image_view src_iview;
+      anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_view_type,
+            .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -1183,8 +1185,8 @@ void anv_CmdCopyImage(
       if (pRegions[r].extent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_color_attachment_view dest_view;
-      anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+      struct anv_color_attachment_view dest_cview;
+      anv_color_attachment_view_init(&dest_cview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1196,10 +1198,10 @@ void anv_CmdCopyImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     src_image, &src_view,
+                     src_image, &src_iview,
                      pRegions[r].srcOffset,
                      pRegions[r].extent,
-                     dest_image, &dest_view,
+                     dest_image, &dest_cview,
                      dest_offset,
                      pRegions[r].extent);
    }
@@ -1222,7 +1224,7 @@ void anv_CmdBlitImage(
    ANV_FROM_HANDLE(anv_image, src_image, srcImage);
    ANV_FROM_HANDLE(anv_image, dest_image, destImage);
 
-   const VkImageViewType src_view_type =
+   const VkImageViewType src_iview_type =
       meta_blit_get_src_image_view_type(src_image);
 
    struct anv_saved_state saved_state;
@@ -1232,12 +1234,12 @@ void anv_CmdBlitImage(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
-      struct anv_image_view src_view;
-      anv_image_view_init(&src_view, cmd_buffer->device,
+      struct anv_image_view src_iview;
+      anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_view_type,
+            .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -1269,8 +1271,8 @@ void anv_CmdBlitImage(
       if (pRegions[r].destExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_color_attachment_view dest_view;
-      anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+      struct anv_color_attachment_view dest_cview;
+      anv_color_attachment_view_init(&dest_cview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1282,10 +1284,10 @@ void anv_CmdBlitImage(
          cmd_buffer);
 
       meta_emit_blit(cmd_buffer,
-                     src_image, &src_view,
+                     src_image, &src_iview,
                      pRegions[r].srcOffset,
                      pRegions[r].srcExtent,
-                     dest_image, &dest_view,
+                     dest_image, &dest_cview,
                      dest_offset,
                      pRegions[r].destExtent);
    }
@@ -1362,8 +1364,8 @@ void anv_CmdCopyBufferToImage(
                                                proxy_format,
                                                &pRegions[r]);
 
-      struct anv_image_view src_view;
-      anv_image_view_init(&src_view, cmd_buffer->device,
+      struct anv_image_view src_iview;
+      anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
@@ -1399,8 +1401,8 @@ void anv_CmdCopyBufferToImage(
       if (pRegions[r].imageExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_color_attachment_view dest_view;
-      anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+      struct anv_color_attachment_view dest_cview;
+      anv_color_attachment_view_init(&dest_cview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
@@ -1413,11 +1415,11 @@ void anv_CmdCopyBufferToImage(
 
       meta_emit_blit(cmd_buffer,
                      anv_image_from_handle(srcImage),
-                     &src_view,
+                     &src_iview,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent,
                      dest_image,
-                     &dest_view,
+                     &dest_cview,
                      dest_offset,
                      pRegions[r].imageExtent);
 
@@ -1440,7 +1442,7 @@ void anv_CmdCopyImageToBuffer(
    VkDevice vk_device = anv_device_to_handle(cmd_buffer->device);
    struct anv_saved_state saved_state;
 
-   const VkImageViewType src_view_type =
+   const VkImageViewType src_iview_type =
       meta_blit_get_src_image_view_type(src_image);
 
    meta_prepare_blit(cmd_buffer, &saved_state);
@@ -1449,12 +1451,12 @@ void anv_CmdCopyImageToBuffer(
       if (pRegions[r].imageExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_image_view src_view;
-      anv_image_view_init(&src_view, cmd_buffer->device,
+      struct anv_image_view src_iview;
+      anv_image_view_init(&src_iview, cmd_buffer->device,
          &(VkImageViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = srcImage,
-            .viewType = src_view_type,
+            .viewType = src_iview_type,
             .format = src_image->format->vk_format,
             .channels = {
                VK_CHANNEL_SWIZZLE_R,
@@ -1481,8 +1483,8 @@ void anv_CmdCopyImageToBuffer(
                                                 dest_format,
                                                 &pRegions[r]);
 
-      struct anv_color_attachment_view dest_view;
-      anv_color_attachment_view_init(&dest_view, cmd_buffer->device,
+      struct anv_color_attachment_view dest_cview;
+      anv_color_attachment_view_init(&dest_cview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1495,11 +1497,11 @@ void anv_CmdCopyImageToBuffer(
 
       meta_emit_blit(cmd_buffer,
                      anv_image_from_handle(srcImage),
-                     &src_view,
+                     &src_iview,
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
                      anv_image_from_handle(destImage),
-                     &dest_view,
+                     &dest_cview,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
 
@@ -1546,8 +1548,8 @@ void anv_CmdClearColorImage(
    for (uint32_t r = 0; r < rangeCount; r++) {
       for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
          for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
-            struct anv_color_attachment_view view;
-            anv_color_attachment_view_init(&view, cmd_buffer->device,
+            struct anv_color_attachment_view cview;
+            anv_color_attachment_view_init(&cview, cmd_buffer->device,
                &(VkAttachmentViewCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                   .image = _image,
@@ -1558,6 +1560,9 @@ void anv_CmdClearColorImage(
                },
                cmd_buffer);
 
+            struct anv_attachment_view *aview = &cview.attachment_view;
+            struct anv_surface_view *sview = &cview.surface_view;
+
             VkFramebuffer fb;
             anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
                &(VkFramebufferCreateInfo) {
@@ -1565,12 +1570,12 @@ void anv_CmdClearColorImage(
                   .attachmentCount = 1,
                   .pAttachments = (VkAttachmentBindInfo[]) {
                      {
-                        .view = anv_attachment_view_to_handle(&view.base),
+                        .view = anv_attachment_view_to_handle(aview),
                         .layout = VK_IMAGE_LAYOUT_GENERAL
                      }
                   },
-                  .width = view.base.extent.width,
-                  .height = view.base.extent.height,
+                  .width = aview->extent.width,
+                  .height = aview->extent.height,
                   .layers = 1
                }, &fb);
 
@@ -1581,7 +1586,7 @@ void anv_CmdClearColorImage(
                   .attachmentCount = 1,
                   .pAttachments = &(VkAttachmentDescription) {
                      .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-                     .format = view.view.format->vk_format,
+                     .format = sview->format->vk_format,
                      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                      .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -1617,8 +1622,8 @@ void anv_CmdClearColorImage(
                   .renderArea = {
                      .offset = { 0, 0, },
                      .extent = {
-                        .width = view.base.extent.width,
-                        .height = view.base.extent.height,
+                        .width = aview->extent.width,
+                        .height = aview->extent.height,
                      },
                   },
                   .renderPass = pass,

@@ -432,16 +432,19 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
     * put the color attachments into the binding table.
     */
    for (uint32_t a = 0; a < attachments; a++) {
-      const struct anv_attachment_view *attachment =
+      const struct anv_attachment_view *aview =
          fb->attachments[subpass->color_attachments[a]];
 
-      assert(attachment->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR);
-      const struct anv_color_attachment_view *view =
-         (const struct anv_color_attachment_view *)attachment;
+      assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR);
 
-      bt_map[a] = view->view.surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, view->view.surface_state,
-                              view->view.bo, view->view.offset);
+      const struct anv_color_attachment_view *cview =
+         (const struct anv_color_attachment_view *) aview;
+
+      const struct anv_surface_view *sview = &cview->surface_view;
+
+      bt_map[a] = sview->surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, sview->surface_state,
+                              sview->bo, sview->offset);
    }
 
    if (layout == NULL)
@@ -462,11 +465,11 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          if (desc->type != ANV_DESCRIPTOR_TYPE_SURFACE_VIEW)
             continue;
 
-         struct anv_surface_view *view = desc->surface_view;
+         const struct anv_surface_view *sview = desc->surface_view;
 
-         bt_map[start + b] = view->surface_state.offset + state_offset;
-         add_surface_state_reloc(cmd_buffer, view->surface_state,
-                                 view->bo, view->offset);
+         bt_map[start + b] = sview->surface_state.offset + state_offset;
+         add_surface_state_reloc(cmd_buffer, sview->surface_state,
+                                 sview->bo, sview->offset);
       }
    }
 

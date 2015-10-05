@@ -529,20 +529,20 @@ static void
 gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   const struct anv_depth_stencil_view *view =
+   const struct anv_depth_stencil_view *ds_view =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-   const struct anv_image *image = view ? view->image : NULL;
-   const bool has_depth = view && view->format->depth_format;
-   const bool has_stencil = view && view->format->has_stencil;
+   const struct anv_image *image = ds_view ? ds_view->image : NULL;
+   const bool has_depth = ds_view && ds_view->format->depth_format;
+   const bool has_stencil = ds_view && ds_view->format->has_stencil;
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
       anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_BUFFER,
          .SurfaceType = SURFTYPE_2D,
-         .DepthWriteEnable = view->format->depth_format,
+         .DepthWriteEnable = ds_view->format->depth_format,
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = view->format->depth_format,
+         .SurfaceFormat = ds_view->format->depth_format,
          .SurfacePitch = image->depth_surface.stride - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,

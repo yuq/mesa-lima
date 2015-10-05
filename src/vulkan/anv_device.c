@@ -1396,19 +1396,19 @@ VkResult
 anv_buffer_view_create(
    struct anv_device *                          device,
    const VkBufferViewCreateInfo*                pCreateInfo,
-   struct anv_buffer_view **                    view_out)
+   struct anv_buffer_view **                    bview_out)
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
-   struct anv_buffer_view *view;
+   struct anv_buffer_view *bview;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
 
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
+   bview = anv_device_alloc(device, sizeof(*bview), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (bview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->view = (struct anv_surface_view) {
+   bview->surface_view = (struct anv_surface_view) {
       .bo = buffer->bo,
       .offset = buffer->offset + pCreateInfo->offset,
       .surface_state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64),
@@ -1416,7 +1416,7 @@ anv_buffer_view_create(
       .range = pCreateInfo->range,
    };
 
-   *view_out = view;
+   *bview_out = bview;
 
    return VK_SUCCESS;
 }
@@ -1428,7 +1428,7 @@ VkResult anv_DestroyBufferView(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer_view, bview, _bview);
 
-   anv_surface_view_fini(device, &bview->view);
+   anv_surface_view_fini(device, &bview->surface_view);
    anv_device_free(device, bview);
 
    return VK_SUCCESS;
@@ -1755,7 +1755,7 @@ VkResult anv_UpdateDescriptorSets(
 
             set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
                .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
-               .surface_view = &iview->view,
+               .surface_view = &iview->surface_view,
             };
          }
          break;
@@ -1779,7 +1779,7 @@ VkResult anv_UpdateDescriptorSets(
 
             set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
                .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
-               .surface_view = &bview->view,
+               .surface_view = &bview->surface_view,
             };
          }
 
@@ -2001,10 +2001,10 @@ VkResult anv_CreateFramebuffer(
 
    framebuffer->attachment_count = pCreateInfo->attachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      ANV_FROM_HANDLE(anv_attachment_view, view,
+      ANV_FROM_HANDLE(anv_attachment_view, aview,
                       pCreateInfo->pAttachments[i].view);
 
-      framebuffer->attachments[i] = view;
+      framebuffer->attachments[i] = aview;
    }
 
    framebuffer->width = pCreateInfo->width;

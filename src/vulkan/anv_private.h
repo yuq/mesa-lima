@@ -1242,11 +1242,11 @@ struct anv_surface_view {
 };
 
 struct anv_buffer_view {
-   struct anv_surface_view view;
+   struct anv_surface_view surface_view;
 };
 
 struct anv_image_view {
-   struct anv_surface_view view;
+   struct anv_surface_view surface_view;
    VkExtent3D extent;
 };
 
@@ -1261,12 +1261,12 @@ struct anv_attachment_view {
 };
 
 struct anv_color_attachment_view {
-   struct anv_attachment_view base;
-   struct anv_surface_view view;
+   struct anv_attachment_view attachment_view;
+   struct anv_surface_view surface_view;
 };
 
 struct anv_depth_stencil_view {
-   struct anv_attachment_view base;
+   struct anv_attachment_view attachment_view;
    const struct anv_image *image; /**< VkAttachmentViewCreateInfo::image */
    const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
 };
@@ -1306,24 +1306,24 @@ gen8_image_view_init(struct anv_image_view *iview,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
 
-void anv_color_attachment_view_init(struct anv_color_attachment_view *view,
+void anv_color_attachment_view_init(struct anv_color_attachment_view *cview,
                                     struct anv_device *device,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
 
-void gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
+void gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);
 
-void gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
+void gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);
 
 VkResult anv_buffer_view_create(struct anv_device *device,
                                 const VkBufferViewCreateInfo *pCreateInfo,
-                                struct anv_buffer_view **view_out);
+                                struct anv_buffer_view **bview_out);
 
 void anv_fill_buffer_surface_state(struct anv_device *device, void *state,
                                    const struct anv_format *format,
@@ -1335,7 +1335,7 @@ void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format
                                     uint32_t offset, uint32_t range);
 
 void anv_surface_view_fini(struct anv_device *device,
-                           struct anv_surface_view *view);
+                           struct anv_surface_view *sview);
 
 struct anv_sampler {
    uint32_t state[4];

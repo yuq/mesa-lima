@@ -109,20 +109,21 @@ VkResult gen8_CreateBufferView(
     VkBufferView*                               pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_buffer_view *view;
+   struct anv_buffer_view *bview;
    VkResult result;
 
-   result = anv_buffer_view_create(device, pCreateInfo, &view);
+   result = anv_buffer_view_create(device, pCreateInfo, &bview);
    if (result != VK_SUCCESS)
       return result;
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   gen8_fill_buffer_surface_state(view->view.surface_state.map, format,
-                                  view->view.offset, pCreateInfo->range);
+   gen8_fill_buffer_surface_state(bview->surface_view.surface_state.map,
+                                  format, bview->surface_view.offset,
+                                  pCreateInfo->range);
 
-   *pView = anv_buffer_view_to_handle(view);
+   *pView = anv_buffer_view_to_handle(bview);
 
    return VK_SUCCESS;
 }
@@ -148,7 +149,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   struct anv_surface_view *view = &iview->view;
+   struct anv_surface_view *sview = &iview->surface_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
@@ -161,9 +162,9 @@ gen8_image_view_init(struct anv_image_view *iview,
    const struct anv_image_view_info view_type_info =
       anv_image_view_info_for_vk_image_view_type(pCreateInfo->viewType);
 
-   view->bo = image->bo;
-   view->offset = image->offset + surface->offset;
-   view->format = format_info;
+   sview->bo = image->bo;
+   sview->offset = image->offset + surface->offset;
+   sview->format = format_info;
 
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
@@ -266,28 +267,30 @@ gen8_image_view_init(struct anv_image_view *iview,
       .ShaderChannelSelectBlue = vk_to_gen_swizzle[pCreateInfo->channels.b],
       .ShaderChannelSelectAlpha = vk_to_gen_swizzle[pCreateInfo->channels.a],
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, view->offset },
+      .SurfaceBaseAddress = { NULL, sview->offset },
    };
 
    if (cmd_buffer) {
-      view->surface_state =
+      sview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      view->surface_state =
+      sview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+                                  &surface_state);
 }
 
 void
-gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
+gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
                                 struct anv_device *device,
                                 const VkAttachmentViewCreateInfo* pCreateInfo,
                                 struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_surface_view *view = &aview->view;
+   struct anv_attachment_view *aview = &cview->attachment_view;
+   struct anv_surface_view *sview = &cview->surface_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
    const struct anv_format *format_info =
@@ -296,17 +299,17 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
    uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
 
-   aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
+   aview->attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
 
-   view->bo = image->bo;
-   view->offset = image->offset + surface->offset;
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
+   sview->bo = image->bo;
+   sview->offset = image->offset + surface->offset;
+   sview->format = anv_format_for_vk_format(pCreateInfo->format);
 
-   aview->base.extent = (VkExtent3D) {
+   aview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
       .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
@@ -345,17 +348,17 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
        *    indicates the extent of the accessible 'R' coordinates minus 1 on
        *    the LOD currently being rendered to.
        */
-      rt_view_extent = aview->base.extent.depth;
+      rt_view_extent = aview->extent.depth;
       break;
    default:
       unreachable(!"bad VkImageType");
    }
 
    if (cmd_buffer) {
-      view->surface_state =
+      sview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      view->surface_state =
+      sview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
@@ -408,10 +411,11 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *aview,
       .ShaderChannelSelectBlue = SCS_BLUE,
       .ShaderChannelSelectAlpha = SCS_ALPHA,
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, view->offset },
+      .SurfaceBaseAddress = { NULL, sview->offset },
    };
 
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
+   GEN8_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+                                  &surface_state);
 }
 
 VkResult gen8_CreateSampler(

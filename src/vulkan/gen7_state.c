@@ -65,20 +65,21 @@ VkResult gen7_CreateBufferView(
     VkBufferView*                               pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_buffer_view *view;
+   struct anv_buffer_view *bview;
    VkResult result;
 
-   result = anv_buffer_view_create(device, pCreateInfo, &view);
+   result = anv_buffer_view_create(device, pCreateInfo, &bview);
    if (result != VK_SUCCESS)
       return result;
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   gen7_fill_buffer_surface_state(view->view.surface_state.map, format,
-                                  view->view.offset, pCreateInfo->range);
+   gen7_fill_buffer_surface_state(bview->surface_view.surface_state.map,
+                                  format, bview->surface_view.offset,
+                                  pCreateInfo->range);
 
-   *pView = anv_buffer_view_to_handle(view);
+   *pView = anv_buffer_view_to_handle(bview);
 
    return VK_SUCCESS;
 }
@@ -272,7 +273,7 @@ gen7_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   struct anv_surface_view *view = &iview->view;
+   struct anv_surface_view *sview = &iview->surface_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
@@ -285,9 +286,9 @@ gen7_image_view_init(struct anv_image_view *iview,
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
 
-   view->bo = image->bo;
-   view->offset = image->offset + surface->offset;
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
+   sview->bo = image->bo;
+   sview->offset = image->offset + surface->offset;
+   sview->format = anv_format_for_vk_format(pCreateInfo->format);
 
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
@@ -345,42 +346,44 @@ gen7_image_view_init(struct anv_image_view *iview,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, view->offset },
+      .SurfaceBaseAddress = { NULL, sview->offset },
    };
 
    if (cmd_buffer) {
-      view->surface_state =
+      sview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      view->surface_state =
+      sview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
+   GEN7_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+                                  &surface_state);
 }
 
 void
-gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
+gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
                                 struct anv_device *device,
                                 const VkAttachmentViewCreateInfo* pCreateInfo,
                                 struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_surface_view *view = &aview->view;
+   struct anv_attachment_view *aview = &cview->attachment_view;
+   struct anv_surface_view *sview = &cview->surface_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
 
-   aview->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
+   aview->attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
 
-   view->bo = image->bo;
-   view->offset = image->offset + surface->offset;
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
+   sview->bo = image->bo;
+   sview->offset = image->offset + surface->offset;
+   sview->format = anv_format_for_vk_format(pCreateInfo->format);
 
-   aview->base.extent = (VkExtent3D) {
+   aview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
       .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
@@ -394,17 +397,17 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
    }
 
    if (cmd_buffer) {
-      view->surface_state =
+      sview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      view->surface_state =
+      sview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
    struct GEN7_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = view->format->surface_format,
+      .SurfaceFormat = sview->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
 
@@ -444,9 +447,10 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *aview,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, view->offset },
+      .SurfaceBaseAddress = { NULL, sview->offset },
 
    };
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, view->surface_state.map, &surface_state);
+   GEN7_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+                                  &surface_state);
 }
