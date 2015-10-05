@@ -173,49 +173,6 @@ _mesa_set_program_error(struct gl_context *ctx, GLint pos, const char *string)
 
 
 /**
- * Find the line number and column for 'pos' within 'string'.
- * Return a copy of the line which contains 'pos'.  Free the line with
- * free().
- * \param string  the program string
- * \param pos     the position within the string
- * \param line    returns the line number corresponding to 'pos'.
- * \param col     returns the column number corresponding to 'pos'.
- * \return copy of the line containing 'pos'.
- */
-const GLubyte *
-_mesa_find_line_column(const GLubyte *string, const GLubyte *pos,
-                       GLint *line, GLint *col)
-{
-   const GLubyte *lineStart = string;
-   const GLubyte *p = string;
-   GLubyte *s;
-   int len;
-
-   *line = 1;
-
-   while (p != pos) {
-      if (*p == (GLubyte) '\n') {
-         (*line)++;
-         lineStart = p + 1;
-      }
-      p++;
-   }
-
-   *col = (pos - lineStart) + 1;
-
-   /* return copy of this line */
-   while (*p != 0 && *p != '\n')
-      p++;
-   len = p - lineStart;
-   s = malloc(len + 1);
-   memcpy(s, lineStart, len);
-   s[len] = 0;
-
-   return s;
-}
-
-
-/**
  * Initialize a new gl_program object.
  */
 static void

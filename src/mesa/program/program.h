@@ -63,11 +63,6 @@ _mesa_update_default_objects_program(struct gl_context *ctx);
 extern void
 _mesa_set_program_error(struct gl_context *ctx, GLint pos, const char *string);
 
-extern const GLubyte *
-_mesa_find_line_column(const GLubyte *string, const GLubyte *pos,
-                       GLint *line, GLint *col);
-
-
 extern struct gl_program *
 _mesa_init_vertex_program(struct gl_context *ctx,
                           struct gl_vertex_program *prog,
