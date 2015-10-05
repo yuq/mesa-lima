@@ -996,7 +996,7 @@ program_resource_top_level_array_stride(struct gl_shader_program *shProg,
                const glsl_type *array_type = field->type->fields.array;
 
                if (interface->interface_packing != GLSL_INTERFACE_PACKING_STD430) {
-                  if (array_type->is_record()) {
+                  if (array_type->is_record() || array_type->is_array()) {
                      array_stride = array_type->std140_size(row_major);
                      array_stride = glsl_align(array_stride, 16);
                   } else {
