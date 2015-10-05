@@ -1205,9 +1205,9 @@ r200NewProgram(struct gl_context *ctx, GLenum target, GLuint id)
    switch(target){
    case GL_VERTEX_PROGRAM_ARB:
       vp = CALLOC_STRUCT(r200_vertex_program);
-      return _mesa_init_vertex_program(ctx, &vp->mesa_program, target, id);
+      return _mesa_init_gl_program(&vp->mesa_program, target, id);
    case GL_FRAGMENT_PROGRAM_ARB:
-      return _mesa_init_fragment_program( ctx, CALLOC_STRUCT(gl_fragment_program), target, id );
+      return _mesa_init_gl_program(CALLOC_STRUCT(gl_fragment_program), target, id);
    default:
       _mesa_problem(ctx, "Bad target in r200NewProgram");
    }

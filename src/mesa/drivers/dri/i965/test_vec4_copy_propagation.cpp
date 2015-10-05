@@ -98,7 +98,7 @@ void copy_propagation_test::SetUp()
 
    v = new copy_propagation_vec4_visitor(compiler, shader);
 
-   _mesa_init_vertex_program(ctx, &vp->program, GL_VERTEX_SHADER, 0);
+   _mesa_init_gl_program(&vp->program, GL_VERTEX_SHADER, 0);
 
    devinfo->gen = 4;
 }

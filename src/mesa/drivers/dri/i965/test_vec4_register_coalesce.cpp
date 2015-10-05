@@ -101,7 +101,7 @@ void register_coalesce_test::SetUp()
 
    v = new register_coalesce_vec4_visitor(compiler, shader);
 
-   _mesa_init_vertex_program(ctx, &vp->program, GL_VERTEX_SHADER, 0);
+   _mesa_init_gl_program(&vp->program, GL_VERTEX_SHADER, 0);
 
    devinfo->gen = 4;
 }

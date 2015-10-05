@@ -66,7 +66,7 @@ void cmod_propagation_test::SetUp()
 
    v = new cmod_propagation_fs_visitor(compiler, prog_data, shader);
 
-   _mesa_init_fragment_program(ctx, &fp->program, GL_FRAGMENT_SHADER, 0);
+   _mesa_init_gl_program(&fp->program, GL_FRAGMENT_SHADER, 0);
 
    devinfo->gen = 4;
 }

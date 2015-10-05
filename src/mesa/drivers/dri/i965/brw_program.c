@@ -69,8 +69,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
 	 prog->id = get_new_program_id(brw->intelScreen);
 
-	 return _mesa_init_vertex_program( ctx, &prog->program,
-					     target, id );
+	 return _mesa_init_gl_program(&prog->program, target, id);
       }
       else
 	 return NULL;
@@ -81,8 +80,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
 	 prog->id = get_new_program_id(brw->intelScreen);
 
-	 return _mesa_init_fragment_program( ctx, &prog->program,
-					     target, id );
+	 return _mesa_init_gl_program(&prog->program, target, id);
       }
       else
 	 return NULL;
@@ -93,7 +91,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
          prog->id = get_new_program_id(brw->intelScreen);
 
-         return _mesa_init_geometry_program(ctx, &prog->program, target, id);
+         return _mesa_init_gl_program(&prog->program, target, id);
       } else {
          return NULL;
       }
@@ -104,7 +102,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
          prog->id = get_new_program_id(brw->intelScreen);
 
-         return _mesa_init_compute_program(ctx, &prog->program, target, id);
+         return _mesa_init_gl_program(&prog->program, target, id);
       } else {
          return NULL;
       }
