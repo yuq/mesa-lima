@@ -195,6 +195,9 @@ brw_codegen_vs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
+   if (unlikely(INTEL_DEBUG & DEBUG_VS))
+      brw_dump_ir("vertex", prog, &vs->base, &vp->program.Base);
+
    /* Emit GEN4 code.
     */
    program = brw_vs_emit(brw, mem_ctx, key, &prog_data,

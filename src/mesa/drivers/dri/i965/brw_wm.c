@@ -221,6 +221,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
+   if (unlikely(INTEL_DEBUG & DEBUG_WM))
+      brw_dump_ir("fragment", prog, &fs->base, &fp->program.Base);
+
    program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
                             &fp->program, prog, &program_size);
    if (program == NULL) {

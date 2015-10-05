@@ -98,6 +98,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
+   if (unlikely(INTEL_DEBUG & DEBUG_CS))
+      brw_dump_ir("compute", prog, &cs->base, &cp->program.Base);
+
    program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
                          &cp->program, prog, &program_size);
    if (program == NULL) {

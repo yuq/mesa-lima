@@ -1947,16 +1947,9 @@ brw_vs_emit(struct brw_context *brw,
 {
    const unsigned *assembly = NULL;
 
-   struct brw_shader *shader = NULL;
-   if (prog)
-      shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
-
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       st_index = brw_get_shader_time_index(brw, prog, &vp->Base, ST_VS);
-
-   if (unlikely(INTEL_DEBUG & DEBUG_VS))
-      brw_dump_ir("vertex", prog, &shader->base, &vp->Base);
 
    if (brw->intelScreen->compiler->scalar_vs) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;

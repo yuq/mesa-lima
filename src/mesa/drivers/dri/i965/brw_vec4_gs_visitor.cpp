@@ -622,9 +622,6 @@ brw_gs_emit(struct brw_context *brw,
 {
    struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
 
-   if (unlikely(INTEL_DEBUG & DEBUG_GS))
-      brw_dump_ir("geometry", prog, shader, NULL);
-
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       st_index = brw_get_shader_time_index(brw, prog, NULL, ST_GS);

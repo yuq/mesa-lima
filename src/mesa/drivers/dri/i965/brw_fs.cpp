@@ -5100,13 +5100,6 @@ brw_wm_fs_emit(struct brw_context *brw,
                struct gl_shader_program *prog,
                unsigned *final_assembly_size)
 {
-   struct brw_shader *shader = NULL;
-   if (prog)
-      shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
-
-   if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir("fragment", prog, &shader->base, &fp->Base);
-
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
       st_index8 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS8);
@@ -5224,12 +5217,6 @@ brw_cs_emit(struct brw_context *brw,
             struct gl_shader_program *prog,
             unsigned *final_assembly_size)
 {
-   struct brw_shader *shader =
-      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
-
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      brw_dump_ir("compute", prog, &shader->base, &cp->Base);
-
    prog_data->local_size[0] = cp->LocalSize[0];
    prog_data->local_size[1] = cp->LocalSize[1];
    prog_data->local_size[2] = cp->LocalSize[2];

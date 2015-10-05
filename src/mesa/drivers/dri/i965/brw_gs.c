@@ -291,6 +291,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
     */
    c.prog_data.base.urb_read_length = (c.input_vue_map.num_slots + 1) / 2;
 
+   if (unlikely(INTEL_DEBUG & DEBUG_GS))
+      brw_dump_ir("geometry", prog, gs, NULL);
+
    void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    const unsigned *program =
