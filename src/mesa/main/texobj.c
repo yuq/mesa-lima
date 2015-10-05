@@ -286,6 +286,12 @@ _mesa_initialize_texture_object( struct gl_context *ctx,
    obj->RefCount = 1;
    obj->Name = name;
    obj->Target = target;
+   if (target != 0) {
+      obj->TargetIndex = _mesa_tex_target_to_index(ctx, target);
+   }
+   else {
+      obj->TargetIndex = NUM_TEXTURE_TARGETS; /* invalid/error value */
+   }
    obj->Priority = 1.0F;
    obj->BaseLevel = 0;
    obj->MaxLevel = 1000;
@@ -339,6 +345,10 @@ finish_texture_init(struct gl_context *ctx, GLenum target,
 {
    GLenum filter = GL_LINEAR;
    assert(obj->Target == 0);
+
+   obj->Target = target;
+   obj->TargetIndex = _mesa_tex_target_to_index(ctx, target);
+   assert(obj->TargetIndex < NUM_TEXTURE_TARGETS);
 
    switch (target) {
       case GL_TEXTURE_2D_MULTISAMPLE:
@@ -1200,7 +1210,6 @@ create_textures(struct gl_context *ctx, GLenum target,
    GLuint first;
    GLint i;
    const char *func = dsa ? "Create" : "Gen";
-   const GLint targetIndex = _mesa_tex_target_to_index(ctx, target);
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
       _mesa_debug(ctx, "gl%sTextures %d\n", func, n);
@@ -1229,11 +1238,6 @@ create_textures(struct gl_context *ctx, GLenum target,
          mtx_unlock(&ctx->Shared->Mutex);
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", func);
          return;
-      }
-
-      /* Initialize the target index if target is non-zero. */
-      if (target != 0) {
-         texObj->TargetIndex = targetIndex;
       }
 
       /* insert into hash table */
@@ -1356,8 +1360,12 @@ unbind_texobj_from_texunits(struct gl_context *ctx,
    const gl_texture_index index = texObj->TargetIndex;
    GLuint u;
 
-   if (texObj->Target == 0)
+   if (texObj->Target == 0) {
+      /* texture was never bound */
       return;
+   }
+
+   assert(index < NUM_TEXTURE_TARGETS);
 
    for (u = 0; u < ctx->Texture.NumCurrentTexUsed; u++) {
       struct gl_texture_unit *unit = &ctx->Texture.Unit[u];
@@ -1725,9 +1733,10 @@ _mesa_BindTexture( GLenum target, GLuint texName )
          _mesa_HashInsert(ctx->Shared->TexObjects, texName, newTexObj);
          mtx_unlock(&ctx->Shared->Mutex);
       }
-      newTexObj->Target = target;
-      newTexObj->TargetIndex = targetIndex;
    }
+
+   assert(newTexObj->Target == target);
+   assert(newTexObj->TargetIndex == targetIndex);
 
    bind_texture(ctx, ctx->Texture.CurrentUnit, newTexObj);
 }

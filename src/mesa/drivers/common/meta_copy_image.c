@@ -108,7 +108,11 @@ make_view(struct gl_context *ctx, struct gl_texture_image *tex_image,
       return false;
    }
 
+   assert(tex_obj->Target != 0);
+   assert(tex_obj->TargetIndex < NUM_TEXTURE_TARGETS);
+
    view_tex_obj->Target = tex_obj->Target;
+   view_tex_obj->TargetIndex = tex_obj->TargetIndex;
 
    *view_tex_image = _mesa_get_tex_image(ctx, view_tex_obj, tex_obj->Target, 0);
 
@@ -129,7 +133,6 @@ make_view(struct gl_context *ctx, struct gl_texture_image *tex_image,
    view_tex_obj->NumLayers = tex_obj->NumLayers;
    view_tex_obj->Immutable = tex_obj->Immutable;
    view_tex_obj->ImmutableLevels = tex_obj->ImmutableLevels;
-   view_tex_obj->Target = tex_obj->Target;
 
    if (ctx->Driver.TextureView != NULL &&
        !ctx->Driver.TextureView(ctx, view_tex_obj, tex_obj)) {
