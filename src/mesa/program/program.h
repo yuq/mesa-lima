@@ -171,55 +171,11 @@ _mesa_reference_tesseprog(struct gl_context *ctx,
                            (struct gl_program *) prog);
 }
 
-extern struct gl_program *
-_mesa_clone_program(struct gl_context *ctx, const struct gl_program *prog);
-
-static inline struct gl_vertex_program *
-_mesa_clone_vertex_program(struct gl_context *ctx,
-                           const struct gl_vertex_program *prog)
-{
-   return (struct gl_vertex_program *) _mesa_clone_program(ctx, &prog->Base);
-}
-
-static inline struct gl_tess_ctrl_program *
-_mesa_clone_tess_ctrl_program(struct gl_context *ctx,
-                             const struct gl_tess_ctrl_program *prog)
-{
-   return (struct gl_tess_ctrl_program *) _mesa_clone_program(ctx, &prog->Base);
-}
-
-static inline struct gl_tess_eval_program *
-_mesa_clone_tess_eval_program(struct gl_context *ctx,
-                             const struct gl_tess_eval_program *prog)
-{
-   return (struct gl_tess_eval_program *) _mesa_clone_program(ctx, &prog->Base);
-}
-
-static inline struct gl_geometry_program *
-_mesa_clone_geometry_program(struct gl_context *ctx,
-                             const struct gl_geometry_program *prog)
-{
-   return (struct gl_geometry_program *) _mesa_clone_program(ctx, &prog->Base);
-}
-
-static inline struct gl_fragment_program *
-_mesa_clone_fragment_program(struct gl_context *ctx,
-                             const struct gl_fragment_program *prog)
-{
-   return (struct gl_fragment_program *) _mesa_clone_program(ctx, &prog->Base);
-}
-
-
 extern  GLboolean
 _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count);
 
 extern  GLboolean
 _mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count);
-
-extern struct gl_program *
-_mesa_combine_programs(struct gl_context *ctx,
-                       const struct gl_program *progA,
-                       const struct gl_program *progB);
 
 extern void
 _mesa_find_used_registers(const struct gl_program *prog,
