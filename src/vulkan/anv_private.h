@@ -728,9 +728,19 @@ struct anv_descriptor_set_layout {
    struct anv_descriptor_slot entries[0];
 };
 
+enum anv_descriptor_type {
+   ANV_DESCRIPTOR_TYPE_EMPTY = 0,
+   ANV_DESCRIPTOR_TYPE_SAMPLER,
+   ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
+};
+
 struct anv_descriptor {
-   struct anv_sampler *sampler;
-   struct anv_surface_view *view;
+   union {
+      struct anv_sampler *sampler;
+      struct anv_surface_view *surface_view;
+   };
+
+   enum anv_descriptor_type type;
 };
 
 struct anv_descriptor_set {

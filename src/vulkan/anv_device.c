@@ -1733,8 +1733,13 @@ VkResult anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for (uint32_t j = 0; j < write->count; j++) {
-            set->descriptors[write->destBinding + j].sampler =
-               anv_sampler_from_handle(write->pDescriptors[j].sampler);
+            ANV_FROM_HANDLE(anv_sampler, sampler,
+                            write->pDescriptors[j].sampler);
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_SAMPLER,
+               .sampler = sampler,
+            };
          }
 
          if (write->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
@@ -1747,7 +1752,11 @@ VkResult anv_UpdateDescriptorSets(
          for (uint32_t j = 0; j < write->count; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
                             write->pDescriptors[j].imageView);
-            set->descriptors[write->destBinding + j].view = &iview->view;
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
+               .surface_view = &iview->view,
+            };
          }
          break;
 
@@ -1767,7 +1776,11 @@ VkResult anv_UpdateDescriptorSets(
          for (uint32_t j = 0; j < write->count; j++) {
             ANV_FROM_HANDLE(anv_buffer_view, bview,
                             write->pDescriptors[j].bufferView);
-            set->descriptors[write->destBinding + j].view = &bview->view;
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
+               .surface_view = &bview->view,
+            };
          }
 
       default:

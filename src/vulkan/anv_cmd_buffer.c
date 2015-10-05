@@ -456,11 +456,13 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       uint32_t start = bias + layout->set[set].stage[stage].surface_start;
 
       for (uint32_t b = 0; b < set_layout->stage[stage].surface_count; b++) {
-         struct anv_surface_view *view =
-            d->set->descriptors[surface_slots[b].index].view;
+         struct anv_descriptor *desc =
+            &d->set->descriptors[surface_slots[b].index];
 
-         if (!view)
+         if (desc->type != ANV_DESCRIPTOR_TYPE_SURFACE_VIEW)
             continue;
+
+         struct anv_surface_view *view = desc->surface_view;
 
          bt_map[start + b] = view->surface_state.offset + state_offset;
          add_surface_state_reloc(cmd_buffer, view->surface_state,
@@ -502,11 +504,13 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       uint32_t start = layout->set[set].stage[stage].sampler_start;
 
       for (uint32_t b = 0; b < set_layout->stage[stage].sampler_count; b++) {
-         struct anv_sampler *sampler =
-            d->set->descriptors[sampler_slots[b].index].sampler;
+         struct anv_descriptor *desc =
+            &d->set->descriptors[sampler_slots[b].index];
 
-         if (!sampler)
+         if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER)
             continue;
+
+         struct anv_sampler *sampler = desc->sampler;
 
          memcpy(state->map + (start + b) * 16,
                 sampler->state, sizeof(sampler->state));
