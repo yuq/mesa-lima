@@ -76,7 +76,7 @@ public:
 		void *mem_ctx,
                 bool no_spills,
                 int shader_time_index);
-   ~vec4_visitor();
+   virtual ~vec4_visitor();
 
    dst_reg dst_null_f()
    {
