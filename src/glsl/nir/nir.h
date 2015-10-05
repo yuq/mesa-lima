@@ -1460,6 +1460,9 @@ typedef struct nir_shader_compiler_options {
 typedef struct nir_shader_info {
    const char *name;
 
+   /* Descriptive name provided by the client; may be NULL */
+   const char *label;
+
    /* Number of textures used by this shader */
    unsigned num_textures;
    /* Number of uniform buffers used by this shader */
