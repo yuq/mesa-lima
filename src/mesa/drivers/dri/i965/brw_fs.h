@@ -400,7 +400,6 @@ public:
                 void *mem_ctx,
                 const void *key,
                 struct brw_stage_prog_data *prog_data,
-                struct gl_program *fp,
                 unsigned promoted_constants,
                 bool runtime_check_aads_emit,
                 const char *stage_abbrev);
@@ -498,8 +497,6 @@ private:
    struct brw_codegen *p;
    const void * const key;
    struct brw_stage_prog_data * const prog_data;
-
-   const struct gl_program *prog;
 
    unsigned dispatch_width; /**< 8 or 16 */
 

@@ -131,7 +131,6 @@ fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
                            void *mem_ctx,
                            const void *key,
                            struct brw_stage_prog_data *prog_data,
-                           struct gl_program *prog,
                            unsigned promoted_constants,
                            bool runtime_check_aads_emit,
                            const char *stage_abbrev)
@@ -139,7 +138,7 @@ fs_generator::fs_generator(const struct brw_compiler *compiler, void *log_data,
    : compiler(compiler), log_data(log_data),
      devinfo(compiler->devinfo), key(key),
      prog_data(prog_data),
-     prog(prog), promoted_constants(promoted_constants),
+     promoted_constants(promoted_constants),
      runtime_check_aads_emit(runtime_check_aads_emit), debug_flag(false),
      stage_abbrev(stage_abbrev), mem_ctx(mem_ctx)
 {
