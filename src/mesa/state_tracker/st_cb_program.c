@@ -244,6 +244,8 @@ st_program_string_notify( struct gl_context *ctx,
       struct st_geometry_program *stgp = (struct st_geometry_program *) prog;
 
       st_release_gp_variants(st, stgp);
+      if (!st_translate_geometry_program(st, stgp))
+         return false;
 
       if (st->gp == stgp)
 	 st->dirty.st |= ST_NEW_GEOMETRY_PROGRAM;

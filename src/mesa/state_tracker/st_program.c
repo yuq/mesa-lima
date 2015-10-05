@@ -170,6 +170,11 @@ st_release_gp_variants(struct st_context *st, struct st_geometry_program *stgp)
    }
 
    stgp->variants = NULL;
+
+   if (stgp->tgsi.tokens) {
+      ureg_free_tokens(stgp->tgsi.tokens);
+      stgp->tgsi.tokens = NULL;
+   }
 }
 
 
@@ -1276,19 +1281,15 @@ st_translate_program_common(struct st_context *st,
 /**
  * Translate a geometry program to create a new variant.
  */
-static struct st_gp_variant *
+bool
 st_translate_geometry_program(struct st_context *st,
-                              struct st_geometry_program *stgp,
-                              const struct st_gp_variant_key *key)
+                              struct st_geometry_program *stgp)
 {
-   struct pipe_context *pipe = st->pipe;
    struct ureg_program *ureg;
-   struct st_gp_variant *gpv;
-   struct pipe_shader_state state;
 
    ureg = ureg_create_with_screen(TGSI_PROCESSOR_GEOMETRY, st->pipe->screen);
    if (ureg == NULL)
-      return NULL;
+      return false;
 
    ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, stgp->Base.InputType);
    ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, stgp->Base.OutputType);
@@ -1297,19 +1298,26 @@ st_translate_geometry_program(struct st_context *st,
    ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS, stgp->Base.Invocations);
 
    st_translate_program_common(st, &stgp->Base.Base, stgp->glsl_to_tgsi, ureg,
-                               TGSI_PROCESSOR_GEOMETRY, &state);
+                               TGSI_PROCESSOR_GEOMETRY, &stgp->tgsi);
+   return true;
+}
+
+
+static struct st_gp_variant *
+st_create_gp_variant(struct st_context *st,
+                     struct st_geometry_program *stgp,
+                     const struct st_gp_variant_key *key)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct st_gp_variant *gpv;
 
    gpv = CALLOC_STRUCT(st_gp_variant);
-   if (!gpv) {
-      ureg_free_tokens(state.tokens);
+   if (!gpv)
       return NULL;
-   }
 
    /* fill in new variant */
-   gpv->driver_shader = pipe->create_gs_state(pipe, &state);
+   gpv->driver_shader = pipe->create_gs_state(pipe, &stgp->tgsi);
    gpv->key = *key;
-
-   ureg_free_tokens(state.tokens);
    return gpv;
 }
 
@@ -1333,7 +1341,7 @@ st_get_gp_variant(struct st_context *st,
 
    if (!gpv) {
       /* create new */
-      gpv = st_translate_geometry_program(st, stgp, key);
+      gpv = st_create_gp_variant(st, stgp, key);
       if (gpv) {
          /* insert into list */
          gpv->next = stgp->variants;

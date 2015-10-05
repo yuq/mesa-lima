@@ -200,6 +200,7 @@ struct st_gp_variant
 struct st_geometry_program
 {
    struct gl_geometry_program Base;  /**< The Mesa geometry program */
+   struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    struct st_gp_variant *variants;
@@ -441,6 +442,10 @@ st_translate_vertex_program(struct st_context *st,
 extern bool
 st_translate_fragment_program(struct st_context *st,
                               struct st_fragment_program *stfp);
+
+extern bool
+st_translate_geometry_program(struct st_context *st,
+                              struct st_geometry_program *stgp);
 
 extern void
 st_print_current_vertex_program(void);
