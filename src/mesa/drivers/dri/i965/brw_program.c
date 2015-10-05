@@ -242,18 +242,6 @@ brw_add_texrect_params(struct gl_program *prog)
    }
 }
 
-/* Per-thread scratch space is a power-of-two multiple of 1KB. */
-int
-brw_get_scratch_size(int size)
-{
-   int i;
-
-   for (i = 1024; i < size; i *= 2)
-      ;
-
-   return i;
-}
-
 void
 brw_get_scratch_bo(struct brw_context *brw,
 		   drm_intel_bo **scratch_bo, int size)

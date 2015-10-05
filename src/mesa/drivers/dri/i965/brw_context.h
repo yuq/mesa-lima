@@ -1723,7 +1723,12 @@ void brw_validate_textures( struct brw_context *brw );
  */
 void brwInitFragProgFuncs( struct dd_function_table *functions );
 
-int brw_get_scratch_size(int size);
+/* Per-thread scratch space is a power-of-two multiple of 1KB. */
+static inline int
+brw_get_scratch_size(int size)
+{
+   return util_next_power_of_two(size | 1023);
+}
 void brw_get_scratch_bo(struct brw_context *brw,
 			drm_intel_bo **scratch_bo, int size);
 void brw_init_shader_time(struct brw_context *brw);
