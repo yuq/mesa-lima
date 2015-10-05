@@ -249,7 +249,9 @@ st_program_string_notify( struct gl_context *ctx,
    else if (target == GL_VERTEX_PROGRAM_ARB) {
       struct st_vertex_program *stvp = (struct st_vertex_program *) prog;
 
-      st_release_vp_variants( st, stvp );
+      st_release_vp_variants(st, stvp);
+      if (!st_translate_vertex_program(st, stvp))
+         return false;
 
       if (st->vp == stvp)
 	 st->dirty.st |= ST_NEW_VERTEX_PROGRAM;

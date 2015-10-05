@@ -94,6 +94,11 @@ st_release_vp_variants( struct st_context *st,
    }
 
    stvp->variants = NULL;
+
+   if (stvp->tgsi.tokens) {
+      tgsi_free_tokens(stvp->tgsi.tokens);
+      stvp->tgsi.tokens = NULL;
+   }
 }
 
 
@@ -230,15 +235,12 @@ st_release_tep_variants(struct st_context *st, struct st_tesseval_program *sttep
 
 
 /**
- * Translate a vertex program to create a new variant.
+ * Translate a vertex program.
  */
-static struct st_vp_variant *
+bool
 st_translate_vertex_program(struct st_context *st,
-                            struct st_vertex_program *stvp,
-                            const struct st_vp_variant_key *key)
+                            struct st_vertex_program *stvp)
 {
-   struct st_vp_variant *vpv = CALLOC_STRUCT(st_vp_variant);
-   struct pipe_context *pipe = st->pipe;
    struct ureg_program *ureg;
    enum pipe_error error;
    unsigned num_outputs = 0;
@@ -372,12 +374,8 @@ st_translate_vertex_program(struct st_context *st,
       _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
 
    ureg = ureg_create_with_screen(TGSI_PROCESSOR_VERTEX, st->pipe->screen);
-   if (ureg == NULL) {
-      free(vpv);
-      return NULL;
-   }
-
-   vpv->key = *key;
+   if (ureg == NULL)
+      return false;
 
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stvp->Base.Base);
@@ -385,7 +383,7 @@ st_translate_vertex_program(struct st_context *st,
       debug_printf("\n");
    }
 
-   if (stvp->glsl_to_tgsi)
+   if (stvp->glsl_to_tgsi) {
       error = st_translate_program(st->ctx,
                                    TGSI_PROCESSOR_VERTEX,
                                    ureg,
@@ -405,7 +403,11 @@ st_translate_vertex_program(struct st_context *st,
                                    output_slot_to_attr,
                                    output_semantic_name,
                                    output_semantic_index);
-   else
+
+      st_translate_stream_output_info(stvp->glsl_to_tgsi,
+                                      stvp->result_to_output,
+                                      &stvp->tgsi.stream_output);
+   } else
       error = st_translate_mesa_program(st->ctx,
                                         TGSI_PROCESSOR_VERTEX,
                                         ureg,
@@ -422,21 +424,29 @@ st_translate_vertex_program(struct st_context *st,
                                         output_semantic_name,
                                         output_semantic_index);
 
-   if (error)
-      goto fail;
-
-   vpv->tgsi.tokens = ureg_get_tokens( ureg, NULL );
-   if (!vpv->tgsi.tokens)
-      goto fail;
-
-   ureg_destroy( ureg );
-
-   if (stvp->glsl_to_tgsi) {
-      st_translate_stream_output_info(stvp->glsl_to_tgsi,
-                                      stvp->result_to_output,
-                                      &vpv->tgsi.stream_output);
+   if (error) {
+      debug_printf("%s: failed to translate Mesa program:\n", __func__);
+      _mesa_print_program(&stvp->Base.Base);
+      debug_assert(0);
+      return false;
    }
 
+   stvp->tgsi.tokens = ureg_get_tokens(ureg, NULL);
+   ureg_destroy(ureg);
+   return stvp->tgsi.tokens != NULL;
+}
+
+static struct st_vp_variant *
+st_create_vp_variant(struct st_context *st,
+                     struct st_vertex_program *stvp,
+                     const struct st_vp_variant_key *key)
+{
+   struct st_vp_variant *vpv = CALLOC_STRUCT(st_vp_variant);
+   struct pipe_context *pipe = st->pipe;
+
+   vpv->key = *key;
+   vpv->tgsi.tokens = tgsi_dup_tokens(stvp->tgsi.tokens);
+   vpv->tgsi.stream_output = stvp->tgsi.stream_output;
    vpv->num_inputs = stvp->num_inputs;
 
    /* Emulate features. */
@@ -465,14 +475,6 @@ st_translate_vertex_program(struct st_context *st,
 
    vpv->driver_shader = pipe->create_vs_state(pipe, &vpv->tgsi);
    return vpv;
-
-fail:
-   debug_printf("%s: failed to translate Mesa program:\n", __func__);
-   _mesa_print_program(&stvp->Base.Base);
-   debug_assert(0);
-
-   ureg_destroy( ureg );
-   return NULL;
 }
 
 
@@ -495,7 +497,7 @@ st_get_vp_variant(struct st_context *st,
 
    if (!vpv) {
       /* create now */
-      vpv = st_translate_vertex_program(st, stvp, key);
+      vpv = st_create_vp_variant(st, stvp, key);
       if (vpv) {
          /* insert into list */
          vpv->next = stvp->variants;

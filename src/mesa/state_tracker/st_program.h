@@ -155,6 +155,7 @@ struct st_vp_variant
 struct st_vertex_program
 {
    struct gl_vertex_program Base;  /**< The Mesa vertex program */
+   struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    /** maps a Mesa VERT_ATTRIB_x to a packed TGSI input index */
@@ -434,6 +435,9 @@ st_release_tep_variants(struct st_context *st,
 extern void
 st_destroy_program_variants(struct st_context *st);
 
+extern bool
+st_translate_vertex_program(struct st_context *st,
+                            struct st_vertex_program *stvp);
 
 extern void
 st_print_current_vertex_program(void);
