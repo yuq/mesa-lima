@@ -33,10 +33,11 @@
 #include "intel_debug.h"
 #include "utils.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
+#include "util/debug.h"
 
 uint64_t INTEL_DEBUG = 0;
 
-static const struct dri_debug_control debug_control[] = {
+static const struct debug_control debug_control[] = {
    { "tex",         DEBUG_TEXTURE},
    { "state",       DEBUG_STATE},
    { "blit",        DEBUG_BLIT},
@@ -93,7 +94,7 @@ intel_debug_flag_for_shader_stage(gl_shader_stage stage)
 void
 brw_process_intel_debug_variable(struct intel_screen *screen)
 {
-   uint64_t intel_debug = driParseDebugString(getenv("INTEL_DEBUG"), debug_control);
+   uint64_t intel_debug = parse_debug_string(getenv("INTEL_DEBUG"), debug_control);
    (void) p_atomic_cmpxchg(&INTEL_DEBUG, 0, intel_debug);
 
    if (INTEL_DEBUG & DEBUG_BUFMGR)

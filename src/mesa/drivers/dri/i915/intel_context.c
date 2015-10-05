@@ -56,6 +56,7 @@
 #include "intel_mipmap_tree.h"
 
 #include "utils.h"
+#include "util/debug.h"
 #include "util/ralloc.h"
 
 int INTEL_DEBUG = (0);
@@ -290,7 +291,7 @@ intel_viewport(struct gl_context *ctx)
     intelCalcViewport(ctx);
 }
 
-static const struct dri_debug_control debug_control[] = {
+static const struct debug_control debug_control[] = {
    { "tex",   DEBUG_TEXTURE},
    { "state", DEBUG_STATE},
    { "blit",  DEBUG_BLIT},
@@ -512,7 +513,7 @@ intelInitContext(struct intel_context *intel,
 
    intelInitExtensions(ctx);
 
-   INTEL_DEBUG = driParseDebugString(getenv("INTEL_DEBUG"), debug_control);
+   INTEL_DEBUG = parse_debug_string(getenv("INTEL_DEBUG"), debug_control);
    if (INTEL_DEBUG & DEBUG_BUFMGR)
       dri_bufmgr_set_debug(intel->bufmgr, true);
    if (INTEL_DEBUG & DEBUG_PERF)

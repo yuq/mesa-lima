@@ -1,5 +1,7 @@
 MESA_UTIL_FILES :=	\
 	bitset.h \
+	debug.c \
+	debug.h \
 	format_srgb.h \
 	hash_table.c	\
 	hash_table.h \
