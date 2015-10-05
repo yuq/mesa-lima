@@ -32,8 +32,6 @@
 static void
 gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
 {
-   uint32_t stage;
-
    static const uint32_t push_constant_opcodes[] = {
       [VK_SHADER_STAGE_VERTEX]                  = 21,
       [VK_SHADER_STAGE_TESS_CONTROL]            = 25, /* HS */
@@ -43,7 +41,8 @@ gen8_cmd_buffer_flush_push_constants(struct anv_cmd_buffer *cmd_buffer)
       [VK_SHADER_STAGE_COMPUTE]                 = 0,
    };
 
-   uint32_t flushed = 0;
+   VkShaderStage stage;
+   VkShaderStageFlags flushed = 0;
 
    for_each_bit(stage, cmd_buffer->state.push_constants_dirty) {
       struct anv_state state = anv_cmd_buffer_push_constants(cmd_buffer, stage);

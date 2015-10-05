@@ -1462,7 +1462,7 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
    uint32_t num_dynamic_buffers = 0;
    uint32_t count = 0;
-   uint32_t stages = 0;
+   VkShaderStageFlags stages = 0;
    uint32_t s;
 
    for (uint32_t i = 0; i < pCreateInfo->count; i++) {

@@ -333,7 +333,7 @@ void anv_CmdBindDescriptorSets(
       }
 
       if (set_layout->num_dynamic_buffers > 0) {
-         uint32_t s;
+         VkShaderStage s;
          for_each_bit(s, set_layout->shader_stages) {
             anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s,
                                                       dynamic_offsets);
@@ -389,7 +389,7 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult
 anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
-                                  unsigned stage, struct anv_state *bt_state)
+                                  VkShaderStage stage, struct anv_state *bt_state)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
@@ -473,7 +473,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult
 anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
-                             unsigned stage, struct anv_state *state)
+                             VkShaderStage stage, struct anv_state *state)
 {
    struct anv_pipeline_layout *layout;
    uint32_t sampler_count;
@@ -517,7 +517,7 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
 }
 
 static VkResult
-flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, uint32_t stage)
+flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, VkShaderStage stage)
 {
    struct anv_state surfaces = { 0, }, samplers = { 0, };
    VkResult result;
@@ -567,8 +567,9 @@ flush_descriptor_set(struct anv_cmd_buffer *cmd_buffer, uint32_t stage)
 void
 anv_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer)
 {
-   uint32_t s, dirty = cmd_buffer->state.descriptors_dirty &
-                       cmd_buffer->state.pipeline->active_stages;
+   VkShaderStage s;
+   VkShaderStageFlags dirty = cmd_buffer->state.descriptors_dirty &
+                              cmd_buffer->state.pipeline->active_stages;
 
    VkResult result = VK_SUCCESS;
    for_each_bit(s, dirty) {
@@ -715,7 +716,7 @@ void anv_CmdPushConstants(
     const void*                                 values)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   uint32_t stage;
+   VkShaderStage stage;
 
    for_each_bit(stage, stageFlags) {
       anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, client_data);

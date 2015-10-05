@@ -724,7 +724,7 @@ struct anv_descriptor_set_layout {
 
    uint32_t count;
    uint32_t num_dynamic_buffers;
-   uint32_t shader_stages;
+   VkShaderStageFlags shader_stages;
    struct anv_descriptor_slot entries[0];
 };
 
@@ -828,8 +828,8 @@ struct anv_cmd_state {
    uint32_t                                     vb_dirty;
    uint32_t                                     dirty;
    uint32_t                                     compute_dirty;
-   uint32_t                                     descriptors_dirty;
-   uint32_t                                     push_constants_dirty;
+   VkShaderStageFlags                           descriptors_dirty;
+   VkShaderStageFlags                           push_constants_dirty;
    uint32_t                                     scratch_size;
    struct anv_pipeline *                        pipeline;
    struct anv_pipeline *                        compute_pipeline;
@@ -1034,7 +1034,7 @@ struct anv_pipeline {
       uint32_t                                  nr_gs_entries;
    } urb;
 
-   uint32_t                                     active_stages;
+   VkShaderStageFlags                           active_stages;
    struct anv_state_stream                      program_stream;
    struct anv_state                             blend_state;
    uint32_t                                     vs_simd8;
