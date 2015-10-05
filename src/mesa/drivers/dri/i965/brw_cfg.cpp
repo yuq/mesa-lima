@@ -426,7 +426,11 @@ cfg_t::dump(backend_shader *s)
       calculate_idom();
 
    foreach_block (block, this) {
-      fprintf(stderr, "START B%d IDOM(B%d)", block->num, block->idom->num);
+      if (block->idom)
+         fprintf(stderr, "START B%d IDOM(B%d)", block->num, block->idom->num);
+      else
+         fprintf(stderr, "START B%d IDOM(none)", block->num);
+
       foreach_list_typed(bblock_link, link, link, &block->parents) {
          fprintf(stderr, " <-B%d",
                  link->block->num);
