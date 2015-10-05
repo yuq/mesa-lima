@@ -76,8 +76,6 @@ struct st_fp_variant
    /** Parameters which generated this version of fragment program */
    struct st_fp_variant_key key;
 
-   struct pipe_shader_state tgsi;
-
    /** Driver's compiled shader */
    void *driver_shader;
 
@@ -100,6 +98,7 @@ struct st_fp_variant
 struct st_fragment_program
 {
    struct gl_fragment_program Base;
+   struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    struct st_fp_variant *variants;
@@ -438,6 +437,10 @@ st_destroy_program_variants(struct st_context *st);
 extern bool
 st_translate_vertex_program(struct st_context *st,
                             struct st_vertex_program *stvp);
+
+extern bool
+st_translate_fragment_program(struct st_context *st,
+                              struct st_fragment_program *stfp);
 
 extern void
 st_print_current_vertex_program(void);

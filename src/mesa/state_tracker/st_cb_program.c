@@ -234,6 +234,8 @@ st_program_string_notify( struct gl_context *ctx,
       struct st_fragment_program *stfp = (struct st_fragment_program *) prog;
 
       st_release_fp_variants(st, stfp);
+      if (!st_translate_fragment_program(st, stfp))
+         return false;
 
       if (st->fp == stfp)
 	 st->dirty.st |= ST_NEW_FRAGMENT_PROGRAM;

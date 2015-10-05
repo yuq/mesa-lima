@@ -114,8 +114,6 @@ delete_fp_variant(struct st_context *st, struct st_fp_variant *fpv)
       cso_delete_fragment_shader(st->cso_context, fpv->driver_shader);
    if (fpv->parameters)
       _mesa_free_parameter_list(fpv->parameters);
-   if (fpv->tgsi.tokens)
-      ureg_free_tokens(fpv->tgsi.tokens);
    free(fpv);
 }
 
@@ -135,6 +133,11 @@ st_release_fp_variants(struct st_context *st, struct st_fragment_program *stfp)
    }
 
    stfp->variants = NULL;
+
+   if (stfp->tgsi.tokens) {
+      ureg_free_tokens(stfp->tgsi.tokens);
+      stfp->tgsi.tokens = NULL;
+   }
 }
 
 
@@ -531,17 +534,12 @@ st_translate_interp(enum glsl_interp_qualifier glsl_qual, bool is_color)
 
 
 /**
- * Translate a Mesa fragment shader into a TGSI shader using extra info in
- * the key.
- * \return  new fragment program variant
+ * Translate a Mesa fragment shader into a TGSI shader.
  */
-static struct st_fp_variant *
+bool
 st_translate_fragment_program(struct st_context *st,
-                              struct st_fragment_program *stfp,
-                              const struct st_fp_variant_key *key)
+                              struct st_fragment_program *stfp)
 {
-   struct pipe_context *pipe = st->pipe;
-   struct st_fp_variant *variant = CALLOC_STRUCT(st_fp_variant);
    GLuint outputMapping[FRAG_RESULT_MAX];
    GLuint inputMapping[VARYING_SLOT_MAX];
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
@@ -561,10 +559,6 @@ st_translate_fragment_program(struct st_context *st,
    ubyte fs_output_semantic_index[PIPE_MAX_SHADER_OUTPUTS];
    uint fs_num_outputs = 0;
 
-   if (!variant)
-      return NULL;
-
-   assert(!(key->bitmap && key->drawpixels));
    memset(inputSlotToAttr, ~0, sizeof(inputSlotToAttr));
 
    if (!stfp->glsl_to_tgsi)
@@ -772,10 +766,8 @@ st_translate_fragment_program(struct st_context *st,
    }
 
    ureg = ureg_create_with_screen(TGSI_PROCESSOR_FRAGMENT, st->pipe->screen);
-   if (ureg == NULL) {
-      free(variant);
-      return NULL;
-   }
+   if (ureg == NULL)
+      return false;
 
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stfp->Base.Base);
@@ -845,8 +837,26 @@ st_translate_fragment_program(struct st_context *st,
                                 fs_output_semantic_name,
                                 fs_output_semantic_index);
 
-   variant->tgsi.tokens = ureg_get_tokens(ureg, NULL);
+   stfp->tgsi.tokens = ureg_get_tokens(ureg, NULL);
    ureg_destroy(ureg);
+   return stfp->tgsi.tokens != NULL;
+}
+
+static struct st_fp_variant *
+st_create_fp_variant(struct st_context *st,
+                     struct st_fragment_program *stfp,
+                     const struct st_fp_variant_key *key)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct st_fp_variant *variant = CALLOC_STRUCT(st_fp_variant);
+   struct pipe_shader_state tgsi = {0};
+
+   if (!variant)
+      return NULL;
+
+   tgsi.tokens = stfp->tgsi.tokens;
+
+   assert(!(key->bitmap && key->drawpixels));
 
    /* Emulate features. */
    if (key->clamp_color || key->persample_shading) {
@@ -855,12 +865,11 @@ st_translate_fragment_program(struct st_context *st,
          (key->clamp_color ? TGSI_EMU_CLAMP_COLOR_OUTPUTS : 0) |
          (key->persample_shading ? TGSI_EMU_FORCE_PERSAMPLE_INTERP : 0);
 
-      tokens = tgsi_emulate(variant->tgsi.tokens, flags);
+      tokens = tgsi_emulate(tgsi.tokens, flags);
 
-      if (tokens) {
-         tgsi_free_tokens(variant->tgsi.tokens);
-         variant->tgsi.tokens = tokens;
-      } else
+      if (tokens)
+         tgsi.tokens = tokens;
+      else
          fprintf(stderr, "mesa: cannot emulate deprecated features\n");
    }
 
@@ -870,15 +879,16 @@ st_translate_fragment_program(struct st_context *st,
 
       variant->bitmap_sampler = ffs(~stfp->Base.Base.SamplersUsed) - 1;
 
-      tokens = st_get_bitmap_shader(variant->tgsi.tokens,
+      tokens = st_get_bitmap_shader(tgsi.tokens,
                                     variant->bitmap_sampler,
                                     st->needs_texcoord_semantic,
                                     st->bitmap.tex_format ==
                                     PIPE_FORMAT_L8_UNORM);
 
       if (tokens) {
-         tgsi_free_tokens(variant->tgsi.tokens);
-         variant->tgsi.tokens = tokens;
+         if (tgsi.tokens != stfp->tgsi.tokens)
+            tgsi_free_tokens(tgsi.tokens);
+         tgsi.tokens = tokens;
          variant->parameters =
             _mesa_clone_parameter_list(stfp->Base.Base.Parameters);
       } else
@@ -923,7 +933,7 @@ st_translate_fragment_program(struct st_context *st,
                                                     state);
       }
 
-      tokens = st_get_drawpix_shader(variant->tgsi.tokens,
+      tokens = st_get_drawpix_shader(tgsi.tokens,
                                      st->needs_texcoord_semantic,
                                      key->scaleAndBias, scale_const,
                                      bias_const, key->pixelMaps,
@@ -932,23 +942,26 @@ st_translate_fragment_program(struct st_context *st,
                                      texcoord_const);
 
       if (tokens) {
-         tgsi_free_tokens(variant->tgsi.tokens);
-         variant->tgsi.tokens = tokens;
+         if (tgsi.tokens != stfp->tgsi.tokens)
+            tgsi_free_tokens(tgsi.tokens);
+         tgsi.tokens = tokens;
       } else
          fprintf(stderr, "mesa: cannot create a shader for glDrawPixels\n");
    }
 
    if (ST_DEBUG & DEBUG_TGSI) {
-      tgsi_dump(variant->tgsi.tokens, 0/*TGSI_DUMP_VERBOSE*/);
+      tgsi_dump(tgsi.tokens, 0);
       debug_printf("\n");
    }
 
    /* fill in variant */
-   variant->driver_shader = pipe->create_fs_state(pipe, &variant->tgsi);
+   variant->driver_shader = pipe->create_fs_state(pipe, &tgsi);
    variant->key = *key;
+
+   if (tgsi.tokens != stfp->tgsi.tokens)
+      tgsi_free_tokens(tgsi.tokens);
    return variant;
 }
-
 
 /**
  * Translate fragment program if needed.
@@ -969,7 +982,7 @@ st_get_fp_variant(struct st_context *st,
 
    if (!fpv) {
       /* create new */
-      fpv = st_translate_fragment_program(st, stfp, key);
+      fpv = st_create_fp_variant(st, stfp, key);
       if (fpv) {
          /* insert into list */
          fpv->next = stfp->variants;
