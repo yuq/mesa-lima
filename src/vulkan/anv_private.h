@@ -1258,7 +1258,6 @@ enum anv_attachment_view_type {
 
 struct anv_attachment_view {
    enum anv_attachment_view_type attachment_type;
-   VkExtent3D extent;
 };
 
 struct anv_color_attachment_view {

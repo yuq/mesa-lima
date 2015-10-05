@@ -381,7 +381,7 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
    iview->offset = image->offset + surface->offset;
    iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
-   aview->extent = (VkExtent3D) {
+   iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
       .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),

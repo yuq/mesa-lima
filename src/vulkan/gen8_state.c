@@ -307,7 +307,7 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
    iview->offset = image->offset + surface->offset;
    iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
-   aview->extent = (VkExtent3D) {
+   iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
       .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
       .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
@@ -346,7 +346,7 @@ gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
        *    indicates the extent of the accessible 'R' coordinates minus 1 on
        *    the LOD currently being rendered to.
        */
-      rt_view_extent = aview->extent.depth;
+      rt_view_extent = iview->extent.depth;
       break;
    default:
       unreachable(!"bad VkImageType");

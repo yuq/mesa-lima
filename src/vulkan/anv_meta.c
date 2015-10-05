@@ -842,8 +842,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
-         .width = dest_aview->extent.width,
-         .height = dest_aview->extent.height,
+         .width = dest_iview->extent.width,
+         .height = dest_iview->extent.height,
          .layers = 1
       }, &fb);
 
@@ -1574,8 +1574,8 @@ void anv_CmdClearColorImage(
                         .layout = VK_IMAGE_LAYOUT_GENERAL
                      }
                   },
-                  .width = aview->extent.width,
-                  .height = aview->extent.height,
+                  .width = iview->extent.width,
+                  .height = iview->extent.height,
                   .layers = 1
                }, &fb);
 
@@ -1622,8 +1622,8 @@ void anv_CmdClearColorImage(
                   .renderArea = {
                      .offset = { 0, 0, },
                      .extent = {
-                        .width = aview->extent.width,
-                        .height = aview->extent.height,
+                        .width = iview->extent.width,
+                        .height = iview->extent.height,
                      },
                   },
                   .renderPass = pass,
