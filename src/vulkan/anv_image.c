@@ -546,9 +546,11 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
       anv_finishme("stencil image views");
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-      /* FINISHME: Support combined depthstencil aspect. Does the Vulkan spec
-       * allow is to reject it? Until we support it, filter out the stencil
-       * aspect and use only the depth aspect.
+      /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
+       * depth stencil formats. Specifically, it states:
+       *
+       *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
+       *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
        */
       anv_finishme("combined depthstencil aspect");
       assert(image->format->depth_format);
