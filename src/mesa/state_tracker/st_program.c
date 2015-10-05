@@ -425,6 +425,9 @@ st_translate_vertex_program(struct st_context *st,
       st_translate_stream_output_info(stvp->glsl_to_tgsi,
                                       stvp->result_to_output,
                                       &stvp->tgsi.stream_output);
+
+      free_glsl_to_tgsi_visitor(stvp->glsl_to_tgsi);
+      stvp->glsl_to_tgsi = NULL;
    } else
       error = st_translate_mesa_program(st->ctx,
                                         TGSI_PROCESSOR_VERTEX,
@@ -815,7 +818,7 @@ st_translate_fragment_program(struct st_context *st,
       }
    }
 
-   if (stfp->glsl_to_tgsi)
+   if (stfp->glsl_to_tgsi) {
       st_translate_program(st->ctx,
                            TGSI_PROCESSOR_FRAGMENT,
                            ureg,
@@ -835,7 +838,10 @@ st_translate_fragment_program(struct st_context *st,
                            NULL,
                            fs_output_semantic_name,
                            fs_output_semantic_index);
-   else
+
+      free_glsl_to_tgsi_visitor(stfp->glsl_to_tgsi);
+      stfp->glsl_to_tgsi = NULL;
+   } else
       st_translate_mesa_program(st->ctx,
                                 TGSI_PROCESSOR_FRAGMENT,
                                 ureg,
@@ -1309,6 +1315,9 @@ st_translate_geometry_program(struct st_context *st,
 
    st_translate_program_common(st, &stgp->Base.Base, stgp->glsl_to_tgsi, ureg,
                                TGSI_PROCESSOR_GEOMETRY, &stgp->tgsi);
+
+   free_glsl_to_tgsi_visitor(stgp->glsl_to_tgsi);
+   stgp->glsl_to_tgsi = NULL;
    return true;
 }
 
@@ -1381,6 +1390,9 @@ st_translate_tessctrl_program(struct st_context *st,
 
    st_translate_program_common(st, &sttcp->Base.Base, sttcp->glsl_to_tgsi,
                                ureg, TGSI_PROCESSOR_TESS_CTRL, &sttcp->tgsi);
+
+   free_glsl_to_tgsi_visitor(sttcp->glsl_to_tgsi);
+   sttcp->glsl_to_tgsi = NULL;
    return true;
 }
 
@@ -1475,6 +1487,9 @@ st_translate_tesseval_program(struct st_context *st,
 
    st_translate_program_common(st, &sttep->Base.Base, sttep->glsl_to_tgsi,
                                ureg, TGSI_PROCESSOR_TESS_EVAL, &sttep->tgsi);
+
+   free_glsl_to_tgsi_visitor(sttep->glsl_to_tgsi);
+   sttep->glsl_to_tgsi = NULL;
    return true;
 }
 
