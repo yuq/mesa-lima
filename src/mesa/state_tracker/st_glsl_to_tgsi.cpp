@@ -6149,6 +6149,10 @@ get_mesa_program(struct gl_context *ctx,
                              prog->OutputsWritten, 0ULL, prog->PatchOutputsWritten);
    count_resources(v, prog);
 
+   /* The GLSL IR won't be needed anymore. */
+   ralloc_free(shader->ir);
+   shader->ir = NULL;
+
    /* This must be done before the uniform storage is associated. */
    if (shader->Type == GL_FRAGMENT_SHADER &&
        (prog->InputsRead & VARYING_BIT_POS ||
