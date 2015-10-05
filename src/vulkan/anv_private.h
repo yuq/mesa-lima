@@ -1154,7 +1154,7 @@ struct anv_image_view_info {
    bool is_cube:1; /**< RENDER_SURFACE_STATE.CubeFaceEnable* */
 };
 
-const struct anv_image_view_info *
+struct anv_image_view_info
 anv_image_view_info_for_vk_image_view_type(VkImageViewType type);
 
 /**

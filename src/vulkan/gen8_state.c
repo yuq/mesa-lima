@@ -158,7 +158,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   const struct anv_image_view_info *view_type_info =
+   const struct anv_image_view_info view_type_info =
       anv_image_view_info_for_vk_image_view_type(pCreateInfo->viewType);
 
    view->bo = image->bo;
@@ -220,7 +220,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    };
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = view_type_info->surface_type,
+      .SurfaceType = view_type_info.surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],

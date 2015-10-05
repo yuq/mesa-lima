@@ -61,10 +61,10 @@ anv_image_view_info_table[] = {
    #undef INFO
 };
 
-const struct anv_image_view_info *
+struct anv_image_view_info
 anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
 {
-   return &anv_image_view_info_table[type];
+   return anv_image_view_info_table[type];
 }
 
 static const struct anv_surf_type_limits {
