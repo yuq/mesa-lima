@@ -1273,7 +1273,8 @@ VkResult anv_image_create(VkDevice _device,
                           VkImage *pImage);
 
 struct anv_surface *
-anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect);
+anv_image_get_surface_for_aspect_mask(struct anv_image *image,
+                                      VkImageAspectFlags aspect_mask);
 
 struct anv_surface *
 anv_image_get_surface_for_color_attachment(struct anv_image *image);

@@ -150,7 +150,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
    struct anv_surface_view *view = &iview->view;
    struct anv_surface *surface =
-      anv_image_get_surface_for_aspect(image, range->aspect);
+      anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
    uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */

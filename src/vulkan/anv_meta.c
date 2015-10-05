@@ -1013,7 +1013,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
             VK_CHANNEL_SWIZZLE_A
          },
          .subresourceRange = {
-            .aspect = VK_IMAGE_ASPECT_COLOR,
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
             .mipLevels = 1,
             .baseArraySlice = 0,
@@ -1161,7 +1161,7 @@ void anv_CmdCopyImage(
                VK_CHANNEL_SWIZZLE_A
             },
             .subresourceRange = {
-               .aspect = pRegions[r].srcSubresource.aspect,
+               .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
                .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
@@ -1247,7 +1247,7 @@ void anv_CmdBlitImage(
                VK_CHANNEL_SWIZZLE_A
             },
             .subresourceRange = {
-               .aspect = pRegions[r].srcSubresource.aspect,
+               .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
                .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
@@ -1377,7 +1377,7 @@ void anv_CmdCopyBufferToImage(
                VK_CHANNEL_SWIZZLE_A
             },
             .subresourceRange = {
-               .aspect = proxy_aspect,
+               .aspectMask = 1 << proxy_aspect,
                .baseMipLevel = 0,
                .mipLevels = 1,
                .baseArraySlice = 0,
@@ -1464,7 +1464,7 @@ void anv_CmdCopyImageToBuffer(
                VK_CHANNEL_SWIZZLE_A
             },
             .subresourceRange = {
-               .aspect = pRegions[r].imageSubresource.aspect,
+               .aspectMask = 1 << pRegions[r].imageSubresource.aspect,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .mipLevels = 1,
                .baseArraySlice = pRegions[r].imageSubresource.arraySlice,

@@ -415,8 +415,7 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(pCreateInfo->channels.a <= VK_CHANNEL_SWIZZLE_END_RANGE);
 
    /* Validate subresource. */
-   assert(subresource->aspect >= VK_IMAGE_ASPECT_BEGIN_RANGE);
-   assert(subresource->aspect <= VK_IMAGE_ASPECT_END_RANGE);
+   assert(subresource->aspectMask != 0);
    assert(subresource->mipLevels > 0);
    assert(subresource->arraySize > 0);
    assert(subresource->baseMipLevel < image->levels);
@@ -430,28 +429,33 @@ anv_validate_CreateImageView(VkDevice _device,
       assert(subresource->arraySize % 6 == 0);
    }
 
+   const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
+                                     | VK_IMAGE_ASPECT_STENCIL_BIT;
+
    /* Validate format. */
-   switch (subresource->aspect) {
-   case VK_IMAGE_ASPECT_COLOR:
+   if (subresource->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+      assert(subresource->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
       assert(!image->format->depth_format);
       assert(!image->format->has_stencil);
       assert(!view_format_info->depth_format);
       assert(!view_format_info->has_stencil);
       assert(view_format_info->cpp == image->format->cpp);
-      break;
-   case VK_IMAGE_ASPECT_DEPTH:
-      assert(image->format->depth_format);
-      assert(view_format_info->depth_format);
-      assert(view_format_info->cpp == image->format->cpp);
-      break;
-   case VK_IMAGE_ASPECT_STENCIL:
-      /* FINISHME: Is it legal to have an R8 view of S8? */
-      assert(image->format->has_stencil);
-      assert(view_format_info->has_stencil);
-      break;
-   default:
-      assert(!"bad VkImageAspect");
-      break;
+   } else if (subresource->aspectMask & ds_flags) {
+      assert((subresource->aspectMask & ~ds_flags) == 0);
+
+      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+         assert(image->format->depth_format);
+         assert(view_format_info->depth_format);
+         assert(view_format_info->cpp == image->format->cpp);
+      }
+
+      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL) {
+         /* FINISHME: Is it legal to have an R8 view of S8? */
+         assert(image->format->has_stencil);
+         assert(view_format_info->has_stencil);
+      }
+   } else {
+      assert(!"bad VkImageSubresourceRange::aspectFlags");
    }
 
    return anv_CreateImageView(_device, pCreateInfo, pView);
@@ -528,19 +532,27 @@ anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
 }
 
 struct anv_surface *
-anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect)
+anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlags aspect_mask)
 {
-   switch (aspect) {
-   case VK_IMAGE_ASPECT_COLOR:
+   switch (aspect_mask) {
+   case VK_IMAGE_ASPECT_COLOR_BIT:
       assert(anv_format_is_color(image->format));
       return &image->color_surface;
-   case VK_IMAGE_ASPECT_DEPTH:
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
       assert(image->format->depth_format);
       return &image->depth_surface;
-   case VK_IMAGE_ASPECT_STENCIL:
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(image->format->has_stencil);
       anv_finishme("stencil image views");
       return &image->stencil_surface;
+   case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
+      /* FINISHME: Support combined depthstencil aspect. Does the Vulkan spec
+       * allow is to reject it? Until we support it, filter out the stencil
+       * aspect and use only the depth aspect.
+       */
+      anv_finishme("combined depthstencil aspect");
+      assert(image->format->depth_format);
+      return &image->depth_surface;
     default:
        unreachable("image does not have aspect");
        return NULL;

@@ -274,7 +274,7 @@ gen7_image_view_init(struct anv_image_view *iview,
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
    struct anv_surface_view *view = &iview->view;
    struct anv_surface *surface =
-      anv_image_get_surface_for_aspect(image, range->aspect);
+      anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
