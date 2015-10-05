@@ -119,7 +119,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
             if (fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_CENTROID ||
                 fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
                 fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
-               struct tgsi_full_src_register *src0 = &fullinst->Src[0];
+               const struct tgsi_full_src_register *src0 = &fullinst->Src[0];
                unsigned input;
 
                if (src0->Register.Indirect && src0->Indirect.ArrayID)
