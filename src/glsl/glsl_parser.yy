@@ -2786,6 +2786,17 @@ layout_defaults:
       if (!state->default_shader_storage_qualifier->merge_qualifier(& @1, state, $1)) {
          YYERROR;
       }
+
+      /* From the GLSL 4.50 spec, section 4.4.5:
+       *
+       *     "It is a compile-time error to specify the binding identifier for
+       *     the global scope or for block member declarations."
+       */
+      if (state->default_shader_storage_qualifier->flags.q.explicit_binding) {
+         _mesa_glsl_error(& @1, state,
+                          "binding qualifier cannot be set for default layout");
+      }
+
       $$ = NULL;
    }
 
