@@ -265,6 +265,8 @@ st_program_string_notify( struct gl_context *ctx,
          (struct st_tessctrl_program *) prog;
 
       st_release_tcp_variants(st, sttcp);
+      if (!st_translate_tessctrl_program(st, sttcp))
+         return false;
 
       if (st->tcp == sttcp)
          st->dirty.st |= ST_NEW_TESSCTRL_PROGRAM;
@@ -274,6 +276,8 @@ st_program_string_notify( struct gl_context *ctx,
          (struct st_tesseval_program *) prog;
 
       st_release_tep_variants(st, sttep);
+      if (!st_translate_tesseval_program(st, sttep))
+         return false;
 
       if (st->tep == sttep)
          st->dirty.st |= ST_NEW_TESSEVAL_PROGRAM;

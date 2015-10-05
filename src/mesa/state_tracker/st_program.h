@@ -236,6 +236,7 @@ struct st_tcp_variant
 struct st_tessctrl_program
 {
    struct gl_tess_ctrl_program Base;  /**< The Mesa tess ctrl program */
+   struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    struct st_tcp_variant *variants;
@@ -271,6 +272,7 @@ struct st_tep_variant
 struct st_tesseval_program
 {
    struct gl_tess_eval_program Base;  /**< The Mesa tess eval program */
+   struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
 
    struct st_tep_variant *variants;
@@ -446,6 +448,14 @@ st_translate_fragment_program(struct st_context *st,
 extern bool
 st_translate_geometry_program(struct st_context *st,
                               struct st_geometry_program *stgp);
+
+extern bool
+st_translate_tessctrl_program(struct st_context *st,
+                              struct st_tessctrl_program *sttcp);
+
+extern bool
+st_translate_tesseval_program(struct st_context *st,
+                              struct st_tesseval_program *sttep);
 
 extern void
 st_print_current_vertex_program(void);

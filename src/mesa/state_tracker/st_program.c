@@ -207,6 +207,11 @@ st_release_tcp_variants(struct st_context *st, struct st_tessctrl_program *sttcp
    }
 
    sttcp->variants = NULL;
+
+   if (sttcp->tgsi.tokens) {
+      ureg_free_tokens(sttcp->tgsi.tokens);
+      sttcp->tgsi.tokens = NULL;
+   }
 }
 
 
@@ -239,6 +244,11 @@ st_release_tep_variants(struct st_context *st, struct st_tesseval_program *sttep
    }
 
    sttep->variants = NULL;
+
+   if (sttep->tgsi.tokens) {
+      ureg_free_tokens(sttep->tgsi.tokens);
+      sttep->tgsi.tokens = NULL;
+   }
 }
 
 
@@ -1356,38 +1366,40 @@ st_get_gp_variant(struct st_context *st,
 /**
  * Translate a tessellation control program to create a new variant.
  */
-static struct st_tcp_variant *
+bool
 st_translate_tessctrl_program(struct st_context *st,
-                              struct st_tessctrl_program *sttcp,
-                              const struct st_tcp_variant_key *key)
+                              struct st_tessctrl_program *sttcp)
 {
-   struct pipe_context *pipe = st->pipe;
    struct ureg_program *ureg;
-   struct st_tcp_variant *tcpv;
-   struct pipe_shader_state state;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_CTRL, pipe->screen);
-   if (ureg == NULL) {
-      return NULL;
-   }
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_CTRL, st->pipe->screen);
+   if (ureg == NULL)
+      return false;
 
    ureg_property(ureg, TGSI_PROPERTY_TCS_VERTICES_OUT,
                  sttcp->Base.VerticesOut);
 
    st_translate_program_common(st, &sttcp->Base.Base, sttcp->glsl_to_tgsi,
-                               ureg, TGSI_PROCESSOR_TESS_CTRL, &state);
+                               ureg, TGSI_PROCESSOR_TESS_CTRL, &sttcp->tgsi);
+   return true;
+}
+
+
+static struct st_tcp_variant *
+st_create_tcp_variant(struct st_context *st,
+                      struct st_tessctrl_program *sttcp,
+                      const struct st_tcp_variant_key *key)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct st_tcp_variant *tcpv;
 
    tcpv = CALLOC_STRUCT(st_tcp_variant);
-   if (!tcpv) {
-      ureg_free_tokens(state.tokens);
+   if (!tcpv)
       return NULL;
-   }
 
    /* fill in new variant */
-   tcpv->driver_shader = pipe->create_tcs_state(pipe, &state);
+   tcpv->driver_shader = pipe->create_tcs_state(pipe, &sttcp->tgsi);
    tcpv->key = *key;
-
-   ureg_free_tokens(state.tokens);
    return tcpv;
 }
 
@@ -1411,7 +1423,7 @@ st_get_tcp_variant(struct st_context *st,
 
    if (!tcpv) {
       /* create new */
-      tcpv = st_translate_tessctrl_program(st, sttcp, key);
+      tcpv = st_create_tcp_variant(st, sttcp, key);
       if (tcpv) {
          /* insert into list */
          tcpv->next = sttcp->variants;
@@ -1426,20 +1438,15 @@ st_get_tcp_variant(struct st_context *st,
 /**
  * Translate a tessellation evaluation program to create a new variant.
  */
-static struct st_tep_variant *
+bool
 st_translate_tesseval_program(struct st_context *st,
-                              struct st_tesseval_program *sttep,
-                              const struct st_tep_variant_key *key)
+                              struct st_tesseval_program *sttep)
 {
-   struct pipe_context *pipe = st->pipe;
    struct ureg_program *ureg;
-   struct st_tep_variant *tepv;
-   struct pipe_shader_state state;
 
-   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_EVAL, pipe->screen);
-   if (ureg == NULL) {
-      return NULL;
-   }
+   ureg = ureg_create_with_screen(TGSI_PROCESSOR_TESS_EVAL, st->pipe->screen);
+   if (ureg == NULL)
+      return false;
 
    if (sttep->Base.PrimitiveMode == GL_ISOLINES)
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE, GL_LINES);
@@ -1467,19 +1474,26 @@ st_translate_tesseval_program(struct st_context *st,
    ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE, sttep->Base.PointMode);
 
    st_translate_program_common(st, &sttep->Base.Base, sttep->glsl_to_tgsi,
-                               ureg, TGSI_PROCESSOR_TESS_EVAL, &state);
+                               ureg, TGSI_PROCESSOR_TESS_EVAL, &sttep->tgsi);
+   return true;
+}
+
+
+static struct st_tep_variant *
+st_create_tep_variant(struct st_context *st,
+                      struct st_tesseval_program *sttep,
+                      const struct st_tep_variant_key *key)
+{
+   struct pipe_context *pipe = st->pipe;
+   struct st_tep_variant *tepv;
 
    tepv = CALLOC_STRUCT(st_tep_variant);
-   if (!tepv) {
-      ureg_free_tokens(state.tokens);
+   if (!tepv)
       return NULL;
-   }
 
    /* fill in new variant */
-   tepv->driver_shader = pipe->create_tes_state(pipe, &state);
+   tepv->driver_shader = pipe->create_tes_state(pipe, &sttep->tgsi);
    tepv->key = *key;
-
-   ureg_free_tokens(state.tokens);
    return tepv;
 }
 
@@ -1503,7 +1517,7 @@ st_get_tep_variant(struct st_context *st,
 
    if (!tepv) {
       /* create new */
-      tepv = st_translate_tesseval_program(st, sttep, key);
+      tepv = st_create_tep_variant(st, sttep, key);
       if (tepv) {
          /* insert into list */
          tepv->next = sttep->variants;
