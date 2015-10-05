@@ -2187,7 +2187,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
               100.0f * (before_size - after_size) / before_size);
 
       dump_assembly(p->store, annotation.ann_count, annotation.ann,
-                    p->devinfo, prog);
+                    p->devinfo);
       ralloc_free(annotation.ann);
    }
 

@@ -33,8 +33,7 @@
 
 void
 dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
-              const struct brw_device_info *devinfo,
-              const struct gl_program *prog)
+              const struct brw_device_info *devinfo)
 {
    const char *last_annotation_string = NULL;
    const void *last_annotation_ir = NULL;
@@ -57,19 +56,7 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
          last_annotation_ir = annotation[i].ir;
          if (last_annotation_ir) {
             fprintf(stderr, "   ");
-            if (prog->nir)
-               nir_print_instr(annotation[i].ir, stderr);
-            else if (!prog->Instructions)
-               fprint_ir(stderr, annotation[i].ir);
-            else {
-               const struct prog_instruction *pi =
-                  (const struct prog_instruction *)annotation[i].ir;
-               fprintf(stderr, "%d: ",
-                       (int)(pi - prog->Instructions));
-               _mesa_fprint_instruction_opt(stderr,
-                                            pi,
-                                            0, PROG_PRINT_DEBUG, NULL);
-            }
+            nir_print_instr(annotation[i].ir, stderr);
             fprintf(stderr, "\n");
          }
       }
