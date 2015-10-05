@@ -347,7 +347,9 @@ nv30_screen_fence_emit(struct pipe_screen *pscreen, uint32_t *sequence)
 
    *sequence = ++screen->base.fence.sequence;
 
-   BEGIN_NV04(push, NV30_3D(FENCE_OFFSET), 2);
+   assert(PUSH_AVAIL(push) >= 3);
+   PUSH_DATA (push, NV30_3D_FENCE_OFFSET |
+              (2 /* size */ << 18) | (7 /* subchan */ << 13));
    PUSH_DATA (push, 0);
    PUSH_DATA (push, *sequence);
 }
