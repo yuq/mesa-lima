@@ -847,7 +847,7 @@ struct anv_cmd_state {
 
    struct {
       struct anv_buffer *                       index_buffer;
-      uint32_t                                  index_type;
+      uint32_t                                  index_type; /**< 3DSTATE_INDEX_BUFFER.IndexFormat */
       uint32_t                                  index_offset;
    } gen7;
 };
