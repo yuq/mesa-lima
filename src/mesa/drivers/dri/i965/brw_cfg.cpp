@@ -305,6 +305,10 @@ cfg_t::cfg_t(exec_list *instructions)
 
          assert(cur_do != NULL && cur_while != NULL);
 	 cur->add_successor(mem_ctx, cur_do);
+
+         if (inst->predicate)
+            cur->add_successor(mem_ctx, cur_while);
+
 	 set_next_block(&cur, cur_while, ip);
 
 	 /* Pop the stack so we're in the previous loop */
