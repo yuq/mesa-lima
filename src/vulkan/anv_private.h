@@ -730,14 +730,16 @@ struct anv_descriptor_set_layout {
 
 enum anv_descriptor_type {
    ANV_DESCRIPTOR_TYPE_EMPTY = 0,
+   ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
+   ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
    ANV_DESCRIPTOR_TYPE_SAMPLER,
-   ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
 };
 
 struct anv_descriptor {
    union {
+      struct anv_buffer_view *buffer_view;
+      struct anv_image_view *image_view;
       struct anv_sampler *sampler;
-      struct anv_surface_view *surface_view;
    };
 
    enum anv_descriptor_type type;
@@ -1233,20 +1235,19 @@ struct anv_image {
    };
 };
 
-struct anv_surface_view {
+struct anv_buffer_view {
    struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
    struct anv_bo *bo;
-   uint32_t offset; /**< VkBufferCreateInfo::offset */
-   uint32_t range; /**< VkBufferCreateInfo::range */
-   const struct anv_format *format; /**< VkBufferCreateInfo::format */
-};
-
-struct anv_buffer_view {
-   struct anv_surface_view surface_view;
+   uint32_t offset; /**< Offset into bo. */
+   uint32_t range; /**< VkBufferViewCreateInfo::range */
+   const struct anv_format *format; /**< VkBufferViewCreateInfo::format */
 };
 
 struct anv_image_view {
-   struct anv_surface_view surface_view;
+   struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
+   struct anv_bo *bo;
+   uint32_t offset; /**< Offset into bo. */
+   const struct anv_format *format; /**< VkImageViewCreateInfo::format */
    VkExtent3D extent;
 };
 
@@ -1262,7 +1263,7 @@ struct anv_attachment_view {
 
 struct anv_color_attachment_view {
    struct anv_attachment_view attachment_view;
-   struct anv_surface_view surface_view;
+   struct anv_image_view image_view;
 };
 
 struct anv_depth_stencil_view {
@@ -1333,9 +1334,6 @@ void gen7_fill_buffer_surface_state(void *state, const struct anv_format *format
                                     uint32_t offset, uint32_t range);
 void gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                     uint32_t offset, uint32_t range);
-
-void anv_surface_view_fini(struct anv_device *device,
-                           struct anv_surface_view *sview);
 
 struct anv_sampler {
    uint32_t state[4];

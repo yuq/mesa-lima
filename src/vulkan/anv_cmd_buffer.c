@@ -440,11 +440,11 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       const struct anv_color_attachment_view *cview =
          (const struct anv_color_attachment_view *) aview;
 
-      const struct anv_surface_view *sview = &cview->surface_view;
+      const struct anv_image_view *iview = &cview->image_view;
 
-      bt_map[a] = sview->surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, sview->surface_state,
-                              sview->bo, sview->offset);
+      bt_map[a] = iview->surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, iview->surface_state,
+                              iview->bo, iview->offset);
    }
 
    if (layout == NULL)
@@ -462,14 +462,28 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          struct anv_descriptor *desc =
             &d->set->descriptors[surface_slots[b].index];
 
-         if (desc->type != ANV_DESCRIPTOR_TYPE_SURFACE_VIEW)
+         const struct anv_state *surface_state;
+         struct anv_bo *bo;
+         uint32_t bo_offset;
+
+         switch (desc->type) {
+         case ANV_DESCRIPTOR_TYPE_EMPTY:
+         case ANV_DESCRIPTOR_TYPE_SAMPLER:
             continue;
+         case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
+            surface_state = &desc->buffer_view->surface_state;
+            bo = desc->buffer_view->bo;
+            bo_offset = desc->buffer_view->offset;
+            break;
+         case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
+            surface_state = &desc->image_view->surface_state;
+            bo = desc->image_view->bo;
+            bo_offset = desc->image_view->offset;
+            break;
+         }
 
-         const struct anv_surface_view *sview = desc->surface_view;
-
-         bt_map[start + b] = sview->surface_state.offset + state_offset;
-         add_surface_state_reloc(cmd_buffer, sview->surface_state,
-                                 sview->bo, sview->offset);
+         bt_map[start + b] = surface_state->offset + state_offset;
+         add_surface_state_reloc(cmd_buffer, *surface_state, bo, bo_offset);
       }
    }
 

@@ -1408,7 +1408,7 @@ anv_buffer_view_create(
    if (bview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   bview->surface_view = (struct anv_surface_view) {
+   *bview = (struct anv_buffer_view) {
       .bo = buffer->bo,
       .offset = buffer->offset + pCreateInfo->offset,
       .surface_state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64),
@@ -1428,7 +1428,7 @@ VkResult anv_DestroyBufferView(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer_view, bview, _bview);
 
-   anv_surface_view_fini(device, &bview->surface_view);
+   anv_state_pool_free(&device->surface_state_pool, bview->surface_state);
    anv_device_free(device, bview);
 
    return VK_SUCCESS;
@@ -1754,8 +1754,8 @@ VkResult anv_UpdateDescriptorSets(
                             write->pDescriptors[j].imageView);
 
             set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
-               .surface_view = &iview->surface_view,
+               .type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
+               .image_view = iview,
             };
          }
          break;
@@ -1778,8 +1778,8 @@ VkResult anv_UpdateDescriptorSets(
                             write->pDescriptors[j].bufferView);
 
             set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_SURFACE_VIEW,
-               .surface_view = &bview->surface_view,
+               .type = ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
+               .buffer_view = bview,
             };
          }
 

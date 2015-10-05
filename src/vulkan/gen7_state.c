@@ -75,9 +75,8 @@ VkResult gen7_CreateBufferView(
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   gen7_fill_buffer_surface_state(bview->surface_view.surface_state.map,
-                                  format, bview->surface_view.offset,
-                                  pCreateInfo->range);
+   gen7_fill_buffer_surface_state(bview->surface_state.map, format,
+                                  bview->offset, pCreateInfo->range);
 
    *pView = anv_buffer_view_to_handle(bview);
 
@@ -273,7 +272,6 @@ gen7_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
-   struct anv_surface_view *sview = &iview->surface_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
@@ -286,9 +284,9 @@ gen7_image_view_init(struct anv_image_view *iview,
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
 
-   sview->bo = image->bo;
-   sview->offset = image->offset + surface->offset;
-   sview->format = anv_format_for_vk_format(pCreateInfo->format);
+   iview->bo = image->bo;
+   iview->offset = image->offset + surface->offset;
+   iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
    iview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, range->baseMipLevel),
@@ -346,18 +344,18 @@ gen7_image_view_init(struct anv_image_view *iview,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, sview->offset },
+      .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
    if (cmd_buffer) {
-      sview->surface_state =
+      iview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      sview->surface_state =
+      iview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+   GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
                                   &surface_state);
 }
 
@@ -369,7 +367,7 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    struct anv_attachment_view *aview = &cview->attachment_view;
-   struct anv_surface_view *sview = &cview->surface_view;
+   struct anv_image_view *iview = &cview->image_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
 
@@ -379,9 +377,9 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
 
-   sview->bo = image->bo;
-   sview->offset = image->offset + surface->offset;
-   sview->format = anv_format_for_vk_format(pCreateInfo->format);
+   iview->bo = image->bo;
+   iview->offset = image->offset + surface->offset;
+   iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
    aview->extent = (VkExtent3D) {
       .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
@@ -397,17 +395,17 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
    }
 
    if (cmd_buffer) {
-      sview->surface_state =
+      iview->surface_state =
          anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
    } else {
-      sview->surface_state =
+      iview->surface_state =
          anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
    }
 
    struct GEN7_RENDER_SURFACE_STATE surface_state = {
       .SurfaceType = SURFTYPE_2D,
       .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = sview->format->surface_format,
+      .SurfaceFormat = iview->format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
       .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
 
@@ -447,10 +445,10 @@ gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
       .BlueClearColor = 0,
       .AlphaClearColor = 0,
       .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, sview->offset },
+      .SurfaceBaseAddress = { NULL, iview->offset },
 
    };
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, sview->surface_state.map,
+   GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
                                   &surface_state);
 }

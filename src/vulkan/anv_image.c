@@ -372,13 +372,6 @@ VkResult anv_GetImageSubresourceLayout(
    stub_return(VK_UNSUPPORTED);
 }
 
-void
-anv_surface_view_fini(struct anv_device *device,
-                      struct anv_surface_view *sview)
-{
-   anv_state_pool_free(&device->surface_state_pool, sview->surface_state);
-}
-
 VkResult
 anv_validate_CreateImageView(VkDevice _device,
                              const VkImageViewCreateInfo *pCreateInfo,
@@ -499,13 +492,20 @@ anv_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
+static void
+anv_image_view_fini(struct anv_device *device,
+                    struct anv_image_view *iview)
+{
+   anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
+}
+
 VkResult
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   anv_surface_view_fini(device, &iview->surface_view);
+   anv_image_view_fini(device, iview);
    anv_device_free(device, iview);
 
    return VK_SUCCESS;
@@ -643,7 +643,7 @@ anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
       struct anv_color_attachment_view *cview =
          (struct anv_color_attachment_view *) aview;
 
-      anv_surface_view_fini(device, &cview->surface_view);
+      anv_image_view_fini(device, &cview->image_view);
    }
 
    anv_device_free(device, aview);
