@@ -865,17 +865,17 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .inputCount = 0,
             .colorCount = 1,
-            .colorAttachments = &(VkAttachmentReference) {
+            .pColorAttachments = &(VkAttachmentReference) {
                .attachment = 0,
                .layout = VK_IMAGE_LAYOUT_GENERAL,
             },
-            .resolveAttachments = NULL,
+            .pResolveAttachments = NULL,
             .depthStencilAttachment = (VkAttachmentReference) {
                .attachment = VK_ATTACHMENT_UNUSED,
                .layout = VK_IMAGE_LAYOUT_GENERAL,
             },
             .preserveCount = 1,
-            .preserveAttachments = &(VkAttachmentReference) {
+            .pPreserveAttachments = &(VkAttachmentReference) {
                .attachment = 0,
                .layout = VK_IMAGE_LAYOUT_GENERAL,
             },
@@ -1596,17 +1596,17 @@ void anv_CmdClearColorImage(
                      .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
                      .inputCount = 0,
                      .colorCount = 1,
-                     .colorAttachments = &(VkAttachmentReference) {
+                     .pColorAttachments = &(VkAttachmentReference) {
                         .attachment = 0,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },
-                     .resolveAttachments = NULL,
+                     .pResolveAttachments = NULL,
                      .depthStencilAttachment = (VkAttachmentReference) {
                         .attachment = VK_ATTACHMENT_UNUSED,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },
                      .preserveCount = 1,
-                     .preserveAttachments = &(VkAttachmentReference) {
+                     .pPreserveAttachments = &(VkAttachmentReference) {
                         .attachment = 0,
                         .layout = VK_IMAGE_LAYOUT_GENERAL,
                      },

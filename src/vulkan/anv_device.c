@@ -2117,7 +2117,7 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->inputCount; j++) {
             subpass->input_attachments[j]
-               = desc->inputAttachments[j].attachment;
+               = desc->pInputAttachments[j].attachment;
          }
       }
 
@@ -2128,18 +2128,18 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->colorCount; j++) {
             subpass->color_attachments[j]
-               = desc->colorAttachments[j].attachment;
+               = desc->pColorAttachments[j].attachment;
          }
       }
 
-      if (desc->resolveAttachments) {
+      if (desc->pResolveAttachments) {
          subpass->resolve_attachments =
             anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
 
          for (uint32_t j = 0; j < desc->colorCount; j++) {
             subpass->resolve_attachments[j]
-               = desc->resolveAttachments[j].attachment;
+               = desc->pResolveAttachments[j].attachment;
          }
       }
 
