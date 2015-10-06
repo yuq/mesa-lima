@@ -1018,7 +1018,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = 0,
             .mipLevels = 1,
-            .baseArraySlice = 0,
+            .baseArrayLayer = 0,
             .arraySize = 1
          },
       },
@@ -1166,7 +1166,7 @@ void anv_CmdCopyImage(
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].srcSubresource.arrayLayer,
+               .baseArrayLayer = pRegions[r].srcSubresource.arrayLayer,
                .arraySize = 1
             },
          },
@@ -1255,7 +1255,7 @@ void anv_CmdBlitImage(
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].srcSubresource.arrayLayer,
+               .baseArrayLayer = pRegions[r].srcSubresource.arrayLayer,
                .arraySize = 1
             },
          },
@@ -1388,7 +1388,7 @@ void anv_CmdCopyBufferToImage(
                .aspectMask = 1 << proxy_aspect,
                .baseMipLevel = 0,
                .mipLevels = 1,
-               .baseArraySlice = 0,
+               .baseArrayLayer = 0,
                .arraySize = 1
             },
          },
@@ -1478,7 +1478,7 @@ void anv_CmdCopyImageToBuffer(
                .aspectMask = 1 << pRegions[r].imageSubresource.aspect,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].imageSubresource.arrayLayer,
+               .baseArrayLayer = pRegions[r].imageSubresource.arrayLayer,
                .arraySize = 1
             },
          },
@@ -1565,7 +1565,7 @@ void anv_CmdClearColorImage(
                   .image = _image,
                   .format = image->format->vk_format,
                   .mipLevel = pRanges[r].baseMipLevel + l,
-                  .baseArraySlice = pRanges[r].baseArraySlice + s,
+                  .baseArraySlice = pRanges[r].baseArrayLayer + s,
                   .arraySize = 1,
                },
                cmd_buffer);

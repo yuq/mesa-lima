@@ -1397,7 +1397,7 @@ typedef struct {
 typedef struct {
     VkImageAspect                               aspect;
     uint32_t                                    mipLevel;
-    uint32_t                                    arraySlice;
+    uint32_t                                    arrayLayer;
 } VkImageSubresource;
 
 typedef struct {
@@ -1496,7 +1496,7 @@ typedef struct {
     VkImageAspectFlags                          aspectMask;
     uint32_t                                    baseMipLevel;
     uint32_t                                    mipLevels;
-    uint32_t                                    baseArraySlice;
+    uint32_t                                    baseArrayLayer;
     uint32_t                                    arraySize;
 } VkImageSubresourceRange;
 

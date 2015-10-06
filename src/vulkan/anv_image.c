@@ -411,12 +411,12 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(subresource->arraySize > 0);
    assert(subresource->baseMipLevel < image->levels);
    assert(subresource->baseMipLevel + subresource->mipLevels <= image->levels);
-   assert(subresource->baseArraySlice < image->array_size);
-   assert(subresource->baseArraySlice + subresource->arraySize <= image->array_size);
+   assert(subresource->baseArrayLayer < image->array_size);
+   assert(subresource->baseArrayLayer + subresource->arraySize <= image->array_size);
    assert(pView);
 
    if (view_info->is_cube) {
-      assert(subresource->baseArraySlice % 6 == 0);
+      assert(subresource->baseArrayLayer % 6 == 0);
       assert(subresource->arraySize % 6 == 0);
    }
 
