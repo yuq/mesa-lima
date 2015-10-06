@@ -1244,12 +1244,12 @@ struct anv_buffer_view {
 };
 
 struct anv_image_view {
-   const struct anv_image *image; /**< VkAttachmentViewCreateInfo::image */
-   const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
+   const struct anv_image *image; /**< VkImageViewCreateInfo::image */
+   const struct anv_format *format; /**< VkImageViewCreateInfo::format */
    struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
-   VkExtent3D extent;
+   VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 };
 
 enum anv_attachment_view_type {
