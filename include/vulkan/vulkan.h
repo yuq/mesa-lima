@@ -878,11 +878,6 @@ typedef enum {
     VK_MEMORY_HEAP_HOST_LOCAL = 0x00000001,
 } VkMemoryHeapFlagBits;
 typedef VkFlags VkMemoryHeapFlags;
-
-typedef enum {
-    VK_DEVICE_CREATE_VALIDATION_BIT = 0x00000001,
-} VkDeviceCreateFlagBits;
-typedef VkFlags VkDeviceCreateFlags;
 typedef VkFlags VkMemoryMapFlags;
 
 typedef enum {
@@ -1080,16 +1075,6 @@ typedef enum {
 } VkQueryControlFlagBits;
 typedef VkFlags VkQueryControlFlags;
 
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-    const char*                                 pAppName;
-    uint32_t                                    appVersion;
-    const char*                                 pEngineName;
-    uint32_t                                    engineVersion;
-    uint32_t                                    apiVersion;
-} VkApplicationInfo;
-
 typedef void* (VKAPI *PFN_vkAllocFunction)(
     void*                           pUserData,
     size_t                          size,
@@ -1099,6 +1084,18 @@ typedef void* (VKAPI *PFN_vkAllocFunction)(
 typedef void (VKAPI *PFN_vkFreeFunction)(
     void*                           pUserData,
     void*                           pMem);
+
+typedef void (VKAPI *PFN_vkVoidFunction)(void);
+
+typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
+    const char*                                 pAppName;
+    uint32_t                                    appVersion;
+    const char*                                 pEngineName;
+    uint32_t                                    engineVersion;
+    uint32_t                                    apiVersion;
+} VkApplicationInfo;
 
 typedef struct {
     void*                                       pUserData;
@@ -1316,8 +1313,9 @@ typedef struct {
     VkMemoryHeap                                memoryHeaps[VK_MAX_MEMORY_HEAPS];
 } VkPhysicalDeviceMemoryProperties;
 
-typedef void (VKAPI *PFN_vkVoidFunction)(void);
 typedef struct {
+    VkStructureType                             sType;
+    const void*                                 pNext;
     uint32_t                                    queueFamilyIndex;
     uint32_t                                    queueCount;
 } VkDeviceQueueCreateInfo;
@@ -1332,7 +1330,6 @@ typedef struct {
     uint32_t                                    extensionCount;
     const char*const*                           ppEnabledExtensionNames;
     const VkPhysicalDeviceFeatures*             pEnabledFeatures;
-    VkDeviceCreateFlags                         flags;
 } VkDeviceCreateInfo;
 
 typedef struct {
