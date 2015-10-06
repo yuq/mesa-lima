@@ -1949,18 +1949,25 @@ typedef struct {
 } VkBufferCopy;
 
 typedef struct {
-    VkImageSubresource                          srcSubresource;
+    VkImageAspect                               aspect;
+    uint32_t                                    mipLevel;
+    uint32_t                                    arrayLayer;
+    uint32_t                                    arraySize;
+} VkImageSubresourceCopy;
+
+typedef struct {
+    VkImageSubresourceCopy                      srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresource                          destSubresource;
+    VkImageSubresourceCopy                      destSubresource;
     VkOffset3D                                  destOffset;
     VkExtent3D                                  extent;
 } VkImageCopy;
 
 typedef struct {
-    VkImageSubresource                          srcSubresource;
+    VkImageSubresourceCopy                      srcSubresource;
     VkOffset3D                                  srcOffset;
     VkExtent3D                                  srcExtent;
-    VkImageSubresource                          destSubresource;
+    VkImageSubresourceCopy                      destSubresource;
     VkOffset3D                                  destOffset;
     VkExtent3D                                  destExtent;
 } VkImageBlit;
@@ -1969,7 +1976,7 @@ typedef struct {
     VkDeviceSize                                bufferOffset;
     uint32_t                                    bufferRowLength;
     uint32_t                                    bufferImageHeight;
-    VkImageSubresource                          imageSubresource;
+    VkImageSubresourceCopy                      imageSubresource;
     VkOffset3D                                  imageOffset;
     VkExtent3D                                  imageExtent;
 } VkBufferImageCopy;

@@ -502,13 +502,13 @@ meta_blit_get_src_image_view_type(const struct anv_image *src_image)
 
 static uint32_t
 meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
-                                         const VkImageSubresource *dest_subresource,
+                                         const VkImageSubresourceCopy *dest_subresource,
                                          const VkOffset3D *dest_offset)
 {
    switch (dest_image->type) {
    case VK_IMAGE_TYPE_1D:
    case VK_IMAGE_TYPE_2D:
-      return dest_subresource->arraySlice;
+      return dest_subresource->arrayLayer;
    case VK_IMAGE_TYPE_3D:
       /* HACK: Vulkan does not allow attaching a 3D image to a framebuffer,
        * but meta does it anyway. When doing so, we translate the
@@ -1163,7 +1163,7 @@ void anv_CmdCopyImage(
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
+               .baseArraySlice = pRegions[r].srcSubresource.arrayLayer,
                .arraySize = 1
             },
          },
@@ -1179,6 +1179,9 @@ void anv_CmdCopyImage(
          meta_blit_get_dest_view_base_array_slice(dest_image,
                                                   &pRegions[r].destSubresource,
                                                   &pRegions[r].destOffset);
+
+      if (pRegions[r].srcSubresource.arraySize > 1)
+         anv_finishme("FINISHME: copy multiple array layers");
 
       if (pRegions[r].extent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
@@ -1249,7 +1252,7 @@ void anv_CmdBlitImage(
                .aspectMask = 1 << pRegions[r].srcSubresource.aspect,
                .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].srcSubresource.arraySlice,
+               .baseArraySlice = pRegions[r].srcSubresource.arrayLayer,
                .arraySize = 1
             },
          },
@@ -1265,6 +1268,9 @@ void anv_CmdBlitImage(
          meta_blit_get_dest_view_base_array_slice(dest_image,
                                                   &pRegions[r].destSubresource,
                                                   &pRegions[r].destOffset);
+
+      if (pRegions[r].srcSubresource.arraySize > 1)
+         anv_finishme("FINISHME: copy multiple array layers");
 
       if (pRegions[r].destExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
@@ -1446,6 +1452,9 @@ void anv_CmdCopyImageToBuffer(
    meta_prepare_blit(cmd_buffer, &saved_state);
 
    for (unsigned r = 0; r < regionCount; r++) {
+      if (pRegions[r].imageSubresource.arraySize > 1)
+         anv_finishme("FINISHME: copy multiple array layers");
+
       if (pRegions[r].imageExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
@@ -1466,7 +1475,7 @@ void anv_CmdCopyImageToBuffer(
                .aspectMask = 1 << pRegions[r].imageSubresource.aspect,
                .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
                .mipLevels = 1,
-               .baseArraySlice = pRegions[r].imageSubresource.arraySlice,
+               .baseArraySlice = pRegions[r].imageSubresource.arrayLayer,
                .arraySize = 1
             },
          },
