@@ -185,7 +185,8 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
           * Views >> Common Surface Formats >> Surface Layout >> 2D Surfaces >>
           * Surface Arrays >> For All Surface Other Than Separate Stencil Buffer:
           */
-         qpitch = h0 + h1 + 11 * j;
+         assert(format->bh == 1 || format->bh == 4);
+         qpitch = (h0 + h1 + 11 * j) / format->bh;
          mt_width = MAX(w0, w1 + w2);
          mt_height = array_size * qpitch;
       }
@@ -230,8 +231,12 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    if (create_info->stride > 0)
       stride = create_info->stride;
 
-   const uint32_t size = stride * align_u32(mt_height / format->bh,
-                                            tile_info->height);
+  /* The padding requirement is found in the Broadwell PRM >> Volume 5: Memory
+   * Views >> Common Surface Formats >> Surface Padding Requirements >>
+   * Sampling Engine Surfaces >> Buffer Padding Requirements:
+   */
+   const uint32_t mem_rows = align_u32(mt_height / format->bh, 2 * format->bh);
+   const uint32_t size = stride * align_u32(mem_rows, tile_info->height);
    const uint32_t offset = align_u32(*inout_image_size,
                                      tile_info->surface_alignment);
 
