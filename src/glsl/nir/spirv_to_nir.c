@@ -1508,7 +1508,7 @@ static nir_tex_src
 vtn_tex_src(struct vtn_builder *b, unsigned index, nir_tex_src_type type)
 {
    nir_tex_src src;
-   src.src = nir_src_for_ssa(vtn_value(b, index, vtn_value_type_ssa)->ssa->def);
+   src.src = nir_src_for_ssa(vtn_ssa_value(b, index)->def);
    src.src_type = type;
    return src;
 }
@@ -1568,14 +1568,17 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    nir_texop texop;
    switch (opcode) {
    case SpvOpImageSampleImplicitLod:
-   case SpvOpImageSampleExplicitLod:
    case SpvOpImageSampleDrefImplicitLod:
-   case SpvOpImageSampleDrefExplicitLod:
    case SpvOpImageSampleProjImplicitLod:
-   case SpvOpImageSampleProjExplicitLod:
    case SpvOpImageSampleProjDrefImplicitLod:
-   case SpvOpImageSampleProjDrefExplicitLod:
       texop = nir_texop_tex;
+      break;
+
+   case SpvOpImageSampleExplicitLod:
+   case SpvOpImageSampleDrefExplicitLod:
+   case SpvOpImageSampleProjExplicitLod:
+   case SpvOpImageSampleProjDrefExplicitLod:
+      texop = nir_texop_txl;
       break;
 
    case SpvOpImageFetch:
@@ -1616,8 +1619,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
       }
 
       if (operands & SpvImageOperandsLodMask) {
-         assert(texop == nir_texop_tex);
-         texop = nir_texop_txl;
+         assert(texop == nir_texop_txl || texop == nir_texop_txf ||
+                texop == nir_texop_txs);
          (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_lod);
       }
 
