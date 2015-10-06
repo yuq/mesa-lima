@@ -451,23 +451,18 @@ VkResult anv_GetPhysicalDeviceProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceQueueCount(
+VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount)
+    uint32_t*                                   pCount,
+    VkQueueFamilyProperties*                    pQueueFamilyProperties)
 {
-   *pCount = 1;
+   if (pQueueFamilyProperties == NULL) {
+      *pCount = 1;
+   }
 
-   return VK_SUCCESS;
-}
+   assert(*pCount >= 1);
 
-VkResult anv_GetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    count,
-    VkPhysicalDeviceQueueProperties*            pQueueProperties)
-{
-   assert(count == 1);
-
-   *pQueueProperties = (VkPhysicalDeviceQueueProperties) {
+   *pQueueFamilyProperties = (VkQueueFamilyProperties) {
       .queueFlags = VK_QUEUE_GRAPHICS_BIT |
                     VK_QUEUE_COMPUTE_BIT |
                     VK_QUEUE_DMA_BIT,
