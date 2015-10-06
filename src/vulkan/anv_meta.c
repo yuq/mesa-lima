@@ -733,12 +733,15 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                VkOffset3D src_offset,
                VkExtent3D src_extent,
                struct anv_image *dest_image,
-               struct anv_attachment_view *dest_aview,
+               struct anv_image_view *dest_iview,
                VkOffset3D dest_offset,
                VkExtent3D dest_extent)
 {
    struct anv_device *device = cmd_buffer->device;
-   struct anv_image_view *dest_iview = &dest_aview->image_view;
+
+   VkImageView dest_iview_h = anv_image_view_to_handle(dest_iview);
+   VkAttachmentView dest_aview_h = { .handle = dest_iview_h.handle };
+
    VkDescriptorPool dummy_desc_pool = { .handle = 1 };
 
    struct blit_vb_data {
@@ -836,7 +839,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .attachmentCount = 1,
          .pAttachments = (VkAttachmentBindInfo[]) {
             {
-               .view = anv_attachment_view_to_handle(dest_aview),
+               .view = dest_aview_h,
                .layout = VK_IMAGE_LAYOUT_GENERAL
             }
          },
@@ -1021,8 +1024,8 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       },
       cmd_buffer);
 
-   struct anv_attachment_view dest_aview;
-   anv_color_attachment_view_init(&dest_aview, cmd_buffer->device,
+   struct anv_image_view dest_iview;
+   anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
       &(VkAttachmentViewCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
          .image = dest_image,
@@ -1039,7 +1042,7 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 },
                   anv_image_from_handle(dest_image),
-                  &dest_aview,
+                  &dest_iview,
                   (VkOffset3D) { 0, 0, 0 },
                   (VkExtent3D) { width, height, 1 });
 
@@ -1186,8 +1189,8 @@ void anv_CmdCopyImage(
       if (pRegions[r].extent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_attachment_view dest_aview;
-      anv_color_attachment_view_init(&dest_aview, cmd_buffer->device,
+      struct anv_image_view dest_iview;
+      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1202,7 +1205,7 @@ void anv_CmdCopyImage(
                      src_image, &src_iview,
                      pRegions[r].srcOffset,
                      pRegions[r].extent,
-                     dest_image, &dest_aview,
+                     dest_image, &dest_iview,
                      dest_offset,
                      pRegions[r].extent);
    }
@@ -1275,8 +1278,8 @@ void anv_CmdBlitImage(
       if (pRegions[r].destExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_attachment_view dest_aview;
-      anv_color_attachment_view_init(&dest_aview, cmd_buffer->device,
+      struct anv_image_view dest_iview;
+      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1291,7 +1294,7 @@ void anv_CmdBlitImage(
                      src_image, &src_iview,
                      pRegions[r].srcOffset,
                      pRegions[r].srcExtent,
-                     dest_image, &dest_aview,
+                     dest_image, &dest_iview,
                      dest_offset,
                      pRegions[r].destExtent);
    }
@@ -1405,8 +1408,8 @@ void anv_CmdCopyBufferToImage(
       if (pRegions[r].imageExtent.depth > 1)
          anv_finishme("FINISHME: copy multiple depth layers");
 
-      struct anv_attachment_view dest_aview;
-      anv_color_attachment_view_init(&dest_aview, cmd_buffer->device,
+      struct anv_image_view dest_iview;
+      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
@@ -1423,7 +1426,7 @@ void anv_CmdCopyBufferToImage(
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent,
                      dest_image,
-                     &dest_aview,
+                     &dest_iview,
                      dest_offset,
                      pRegions[r].imageExtent);
 
@@ -1490,8 +1493,8 @@ void anv_CmdCopyImageToBuffer(
                                                 dest_format,
                                                 &pRegions[r]);
 
-      struct anv_attachment_view dest_aview;
-      anv_color_attachment_view_init(&dest_aview, cmd_buffer->device,
+      struct anv_image_view dest_iview;
+      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
          &(VkAttachmentViewCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
             .image = destImage,
@@ -1508,7 +1511,7 @@ void anv_CmdCopyImageToBuffer(
                      pRegions[r].imageOffset,
                      pRegions[r].imageExtent,
                      anv_image_from_handle(destImage),
-                     &dest_aview,
+                     &dest_iview,
                      (VkOffset3D) { 0, 0, 0 },
                      pRegions[r].imageExtent);
 
@@ -1555,8 +1558,8 @@ void anv_CmdClearColorImage(
    for (uint32_t r = 0; r < rangeCount; r++) {
       for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
          for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
-            struct anv_attachment_view aview;
-            anv_color_attachment_view_init(&aview, cmd_buffer->device,
+            struct anv_image_view iview;
+            anv_color_attachment_view_init(&iview, cmd_buffer->device,
                &(VkAttachmentViewCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
                   .image = _image,
@@ -1567,7 +1570,8 @@ void anv_CmdClearColorImage(
                },
                cmd_buffer);
 
-            struct anv_image_view *iview = &aview.image_view;
+            VkImageView iview_h = anv_image_view_to_handle(&iview);
+            VkAttachmentView aview_h = { .handle = iview_h.handle };
 
             VkFramebuffer fb;
             anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
@@ -1576,12 +1580,12 @@ void anv_CmdClearColorImage(
                   .attachmentCount = 1,
                   .pAttachments = (VkAttachmentBindInfo[]) {
                      {
-                        .view = anv_attachment_view_to_handle(&aview),
+                        .view = aview_h,
                         .layout = VK_IMAGE_LAYOUT_GENERAL
                      }
                   },
-                  .width = iview->extent.width,
-                  .height = iview->extent.height,
+                  .width = iview.extent.width,
+                  .height = iview.extent.height,
                   .layers = 1
                }, &fb);
 
@@ -1592,7 +1596,7 @@ void anv_CmdClearColorImage(
                   .attachmentCount = 1,
                   .pAttachments = &(VkAttachmentDescription) {
                      .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-                     .format = iview->format->vk_format,
+                     .format = iview.format->vk_format,
                      .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                      .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                      .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
@@ -1628,8 +1632,8 @@ void anv_CmdClearColorImage(
                   .renderArea = {
                      .offset = { 0, 0, },
                      .extent = {
-                        .width = iview->extent.width,
-                        .height = iview->extent.height,
+                        .width = iview.extent.width,
+                        .height = iview.extent.height,
                      },
                   },
                   .renderPass = pass,

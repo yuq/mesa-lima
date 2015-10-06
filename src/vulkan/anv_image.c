@@ -490,41 +490,32 @@ anv_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
-static void
-anv_image_view_fini(struct anv_device *device,
-                    struct anv_image_view *iview)
-{
-   anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
-}
-
 void
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   anv_image_view_fini(device, iview);
+   anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
    anv_device_free(device, iview);
 }
 
 static void
-anv_depth_stencil_view_init(struct anv_attachment_view *aview,
+anv_depth_stencil_view_init(struct anv_image_view *iview,
                             const VkAttachmentViewCreateInfo *pCreateInfo)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   aview->attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
 
    /* XXX: We don't handle any of these */
    anv_assert(pCreateInfo->mipLevel == 0);
    anv_assert(pCreateInfo->baseArraySlice == 0);
    anv_assert(pCreateInfo->arraySize == 1);
 
-   aview->image_view.image = image;
-   aview->image_view.format = anv_format_for_vk_format(pCreateInfo->format);
+   iview->image = image;
+   iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
    assert(anv_format_is_depth_or_stencil(image->format));
-   assert(anv_format_is_depth_or_stencil(aview->image_view.format));
+   assert(anv_format_is_depth_or_stencil(iview->format));
 }
 
 struct anv_surface *
@@ -574,17 +565,17 @@ anv_image_get_surface_for_color_attachment(struct anv_image *image)
 }
 
 void
-anv_color_attachment_view_init(struct anv_attachment_view *aview,
+anv_color_attachment_view_init(struct anv_image_view *iview,
                                struct anv_device *device,
                                const VkAttachmentViewCreateInfo* pCreateInfo,
                                struct anv_cmd_buffer *cmd_buffer)
 {
    switch (device->info.gen) {
    case 7:
-      gen7_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
+      gen7_color_attachment_view_init(iview, device, pCreateInfo, cmd_buffer);
       break;
    case 8:
-      gen8_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
+      gen8_color_attachment_view_init(iview, device, pCreateInfo, cmd_buffer);
       break;
    default:
       unreachable("unsupported gen\n");
@@ -597,25 +588,25 @@ anv_CreateAttachmentView(VkDevice _device,
                          VkAttachmentView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_attachment_view *aview;
+   struct anv_image_view *iview;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
 
-   aview = anv_device_alloc(device, sizeof(*aview), 8,
+   iview = anv_device_alloc(device, sizeof(*iview), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (aview == NULL)
+   if (iview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
    if (anv_format_is_depth_or_stencil(format)) {
-      anv_depth_stencil_view_init(aview, pCreateInfo);
+      anv_depth_stencil_view_init(iview, pCreateInfo);
    } else {
-      anv_color_attachment_view_init(aview, device, pCreateInfo, NULL);
+      anv_color_attachment_view_init(iview, device, pCreateInfo, NULL);
    }
 
-   *pView = anv_attachment_view_to_handle(aview);
+   pView->handle = anv_image_view_to_handle(iview).handle;
 
    return VK_SUCCESS;
 }
@@ -624,11 +615,15 @@ void
 anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_attachment_view, aview, _aview);
+   VkImageView _iview = { .handle = _aview.handle };
+   ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   if (aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR) {
-      anv_image_view_fini(device, &aview->image_view);
+   /* Depth and stencil render targets have no RENDER_SURFACE_STATE.  Instead,
+    * they use 3DSTATE_DEPTH_BUFFER and 3DSTATE_STENCIL_BUFFER.
+    */
+   if (!anv_format_is_depth_or_stencil(iview->format)) {
+      anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
    }
 
-   anv_device_free(device, aview);
+   anv_device_free(device, iview);
 }

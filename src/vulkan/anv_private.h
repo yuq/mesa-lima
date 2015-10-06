@@ -994,7 +994,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_render_pass *pass,
                                       const VkClearValue *clear_values);
-const struct anv_attachment_view *
+const struct anv_image_view *
 anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
@@ -1252,16 +1252,6 @@ struct anv_image_view {
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 };
 
-enum anv_attachment_view_type {
-   ANV_ATTACHMENT_VIEW_TYPE_COLOR,
-   ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL,
-};
-
-struct anv_attachment_view {
-   enum anv_attachment_view_type attachment_type;
-   struct anv_image_view image_view;
-};
-
 struct anv_image_create_info {
    const VkImageCreateInfo *vk_info;
    bool force_tile_mode;
@@ -1297,17 +1287,17 @@ gen8_image_view_init(struct anv_image_view *iview,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
 
-void anv_color_attachment_view_init(struct anv_attachment_view *aview,
+void anv_color_attachment_view_init(struct anv_image_view *iview,
                                     struct anv_device *device,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
 
-void gen7_color_attachment_view_init(struct anv_attachment_view *aview,
+void gen7_color_attachment_view_init(struct anv_image_view *iview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);
 
-void gen8_color_attachment_view_init(struct anv_attachment_view *aview,
+void gen8_color_attachment_view_init(struct anv_image_view *iview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);
@@ -1338,7 +1328,7 @@ struct anv_framebuffer {
    VkDynamicViewportState                       vp_state;
 
    uint32_t                                     attachment_count;
-   const struct anv_attachment_view *           attachments[0];
+   const struct anv_image_view *           attachments[0];
 };
 
 struct anv_subpass {
@@ -1424,7 +1414,6 @@ ANV_DEFINE_HANDLE_CASTS(anv_physical_device, VkPhysicalDevice)
 ANV_DEFINE_HANDLE_CASTS(anv_queue, VkQueue)
 
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_cmd_pool, VkCmdPool)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_attachment_view, VkAttachmentView)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer, VkBuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView);
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)

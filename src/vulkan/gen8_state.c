@@ -281,13 +281,12 @@ gen8_image_view_init(struct anv_image_view *iview,
 }
 
 void
-gen8_color_attachment_view_init(struct anv_attachment_view *aview,
+gen8_color_attachment_view_init(struct anv_image_view *iview,
                                 struct anv_device *device,
                                 const VkAttachmentViewCreateInfo* pCreateInfo,
                                 struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_image_view *iview = &aview->image_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
    const struct anv_format *format_info =
@@ -295,8 +294,6 @@ gen8_color_attachment_view_init(struct anv_attachment_view *aview,
 
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
    uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
-
-   aview->attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);

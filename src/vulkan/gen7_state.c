@@ -360,17 +360,14 @@ gen7_image_view_init(struct anv_image_view *iview,
 }
 
 void
-gen7_color_attachment_view_init(struct anv_attachment_view *aview,
+gen7_color_attachment_view_init(struct anv_image_view *iview,
                                 struct anv_device *device,
                                 const VkAttachmentViewCreateInfo* pCreateInfo,
                                 struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_image_view *iview = &aview->image_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
-
-   aview->attachment_type = ANV_ATTACHMENT_VIEW_TYPE_COLOR;
 
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);

@@ -1960,7 +1960,7 @@ VkResult anv_CreateFramebuffer(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
 
    size_t size = sizeof(*framebuffer) +
-                 sizeof(struct anv_attachment_view *) * pCreateInfo->attachmentCount;
+                 sizeof(struct anv_image_view *) * pCreateInfo->attachmentCount;
    framebuffer = anv_device_alloc(device, size, 8,
                                   VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (framebuffer == NULL)
@@ -1968,10 +1968,9 @@ VkResult anv_CreateFramebuffer(
 
    framebuffer->attachment_count = pCreateInfo->attachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      ANV_FROM_HANDLE(anv_attachment_view, aview,
-                      pCreateInfo->pAttachments[i].view);
-
-      framebuffer->attachments[i] = aview;
+      VkAttachmentView _aview = pCreateInfo->pAttachments[i].view;
+      VkImageView _iview = { _aview.handle };
+      framebuffer->attachments[i] = anv_image_view_from_handle(_iview);
    }
 
    framebuffer->width = pCreateInfo->width;

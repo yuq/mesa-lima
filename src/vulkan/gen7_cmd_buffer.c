@@ -529,9 +529,8 @@ static void
 gen7_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   const struct anv_attachment_view *aview =
+   const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-   const struct anv_image_view *iview = aview ? &aview->image_view : NULL;
    const struct anv_image *image = iview ? iview->image : NULL;
    const bool has_depth = iview && iview->format->depth_format;
    const bool has_stencil = iview && iview->format->has_stencil;
