@@ -41,9 +41,11 @@ AM_CFLAGS = \
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
-noinst_LTLIBRARIES = libi965_dri.la
+noinst_LTLIBRARIES = libi965_dri.la libi965_compiler.la
 libi965_dri_la_SOURCES = $(i965_FILES)
-libi965_dri_la_LIBADD = $(INTEL_LIBS)
+libi965_dri_la_LIBADD = libi965_compiler.la $(INTEL_LIBS)
+
+libi965_compiler_la_SOURCES = $(i965_compiler_FILES)
 
 TEST_LIBS = \
 	libi965_dri.la \
