@@ -21,6 +21,7 @@
  */
 
 #include <ctype.h>
+#include "glsl/glsl_parser_extras.h"
 #include "brw_vec4.h"
 #include "brw_cfg.h"
 
@@ -137,15 +138,13 @@ vec4_instruction::get_src(const struct brw_vue_prog_data *prog_data, int i)
 
 vec4_generator::vec4_generator(const struct brw_compiler *compiler,
                                void *log_data,
-                               struct gl_shader_program *shader_prog,
-                               struct gl_program *prog,
                                struct brw_vue_prog_data *prog_data,
                                void *mem_ctx,
                                bool debug_flag,
                                const char *stage_name,
                                const char *stage_abbrev)
    : compiler(compiler), log_data(log_data), devinfo(compiler->devinfo),
-     shader_prog(shader_prog), prog(prog), prog_data(prog_data),
+     prog_data(prog_data),
      mem_ctx(mem_ctx), stage_name(stage_name), stage_abbrev(stage_abbrev),
      debug_flag(debug_flag)
 {
@@ -1142,7 +1141,7 @@ vec4_generator::generate_set_simd4x2_header_gen9(vec4_instruction *inst,
 }
 
 void
-vec4_generator::generate_code(const cfg_t *cfg)
+vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
 {
    struct annotation_info annotation;
    memset(&annotation, 0, sizeof(annotation));
@@ -1648,14 +1647,10 @@ vec4_generator::generate_code(const cfg_t *cfg)
    int after_size = p->next_insn_offset;
 
    if (unlikely(debug_flag)) {
-      if (shader_prog) {
-         fprintf(stderr, "Native code for %s %s shader %d:\n",
-                 shader_prog->Label ? shader_prog->Label : "unnamed",
-                 stage_name, shader_prog->Name);
-      } else {
-         fprintf(stderr, "Native code for %s program %d:\n", stage_name,
-                 prog->Id);
-      }
+      fprintf(stderr, "Native code for %s %s shader %s:\n",
+              nir->info.label ? nir->info.label : "unnamed",
+              _mesa_shader_stage_to_string(nir->stage), nir->info.name);
+
       fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. Compacted %d to %d"
                       " bytes (%.0f%%)\n",
               stage_abbrev,
@@ -1676,10 +1671,11 @@ vec4_generator::generate_code(const cfg_t *cfg)
 
 const unsigned *
 vec4_generator::generate_assembly(const cfg_t *cfg,
-                                  unsigned *assembly_size)
+                                  unsigned *assembly_size,
+                                  const nir_shader *nir)
 {
    brw_set_default_access_mode(p, BRW_ALIGN_16);
-   generate_code(cfg);
+   generate_code(cfg, nir);
 
    return brw_get_program(p, assembly_size);
 }

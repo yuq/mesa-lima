@@ -598,17 +598,16 @@ vec4_gs_visitor::gs_end_primitive()
 
 static const unsigned *
 generate_assembly(struct brw_context *brw,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog,
+                  const nir_shader *nir,
                   struct brw_vue_prog_data *prog_data,
                   void *mem_ctx,
                   const cfg_t *cfg,
                   unsigned *final_assembly_size)
 {
    vec4_generator g(brw->intelScreen->compiler, brw,
-                    shader_prog, prog, prog_data, mem_ctx,
+                    prog_data, mem_ctx,
                     INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
-   return g.generate_assembly(cfg, final_assembly_size);
+   return g.generate_assembly(cfg, final_assembly_size, nir);
 }
 
 extern "C" const unsigned *
@@ -634,7 +633,7 @@ brw_gs_emit(struct brw_context *brw,
                            c, shader->Program->nir,
                            mem_ctx, true /* no_spills */, shader_time_index);
          if (v.run()) {
-            return generate_assembly(brw, prog, &c->gp->program.Base,
+            return generate_assembly(brw, shader->Program->nir,
                                      &c->prog_data.base, mem_ctx, v.cfg,
                                      final_assembly_size);
          }
@@ -687,7 +686,7 @@ brw_gs_emit(struct brw_context *brw,
       prog->LinkStatus = false;
       ralloc_strcat(&prog->InfoLog, gs->fail_msg);
    } else {
-      ret = generate_assembly(brw, prog, &c->gp->program.Base,
+      ret = generate_assembly(brw, shader->Program->nir,
                               &c->prog_data.base, mem_ctx, gs->cfg,
                               final_assembly_size);
    }

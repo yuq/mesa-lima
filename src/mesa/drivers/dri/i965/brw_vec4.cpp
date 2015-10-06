@@ -1990,9 +1990,9 @@ brw_vs_emit(struct brw_context *brw,
       }
 
       vec4_generator g(brw->intelScreen->compiler, brw,
-                       prog, &vp->Base, &prog_data->base,
+                       &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
-      assembly = g.generate_assembly(v.cfg, final_assembly_size);
+      assembly = g.generate_assembly(v.cfg, final_assembly_size, vp->Base.nir);
    }
 
    return assembly;
