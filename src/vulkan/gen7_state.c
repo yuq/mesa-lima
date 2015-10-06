@@ -95,11 +95,11 @@ static const uint32_t vk_to_gen_mipmap_mode[] = {
 };
 
 static const uint32_t vk_to_gen_tex_address[] = {
-   [VK_TEX_ADDRESS_WRAP]                        = TCM_WRAP,
-   [VK_TEX_ADDRESS_MIRROR]                      = TCM_MIRROR,
-   [VK_TEX_ADDRESS_CLAMP]                       = TCM_CLAMP,
-   [VK_TEX_ADDRESS_MIRROR_ONCE]                 = TCM_MIRROR_ONCE,
-   [VK_TEX_ADDRESS_CLAMP_BORDER]                = TCM_CLAMP_BORDER,
+   [VK_TEX_ADDRESS_MODE_WRAP]                   = TCM_WRAP,
+   [VK_TEX_ADDRESS_MODE_MIRROR]                 = TCM_MIRROR,
+   [VK_TEX_ADDRESS_MODE_CLAMP]                  = TCM_CLAMP,
+   [VK_TEX_ADDRESS_MODE_MIRROR_ONCE]            = TCM_MIRROR_ONCE,
+   [VK_TEX_ADDRESS_MODE_CLAMP_BORDER]           = TCM_CLAMP_BORDER,
 };
 
 static const uint32_t vk_to_gen_compare_op[] = {
@@ -169,9 +169,9 @@ VkResult gen7_CreateSampler(
       .UAddressMagFilterRoundingEnable = 0,
       .TrilinearFilterQuality = 0,
       .NonnormalizedCoordinateEnable = 0,
-      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressU],
-      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressV],
-      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressW],
+      .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeU],
+      .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeV],
+      .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
    };
 
    GEN7_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
