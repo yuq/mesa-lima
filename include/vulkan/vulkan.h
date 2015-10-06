@@ -76,20 +76,6 @@ extern "C" {
         
 
 
-#define VK_LOD_CLAMP_NONE                 MAX_FLOAT
-#define VK_LAST_MIP_LEVEL                 UINT32_MAX
-#define VK_LAST_ARRAY_SLICE               UINT32_MAX
-#define VK_WHOLE_SIZE                     UINT64_MAX
-#define VK_ATTACHMENT_UNUSED              UINT32_MAX
-#define VK_TRUE                           1
-#define VK_FALSE                          0
-#define VK_NULL_HANDLE                    0
-#define VK_MAX_PHYSICAL_DEVICE_NAME       256
-#define VK_UUID_LENGTH                    16
-#define VK_MAX_MEMORY_TYPES               32
-#define VK_MAX_MEMORY_HEAPS               16
-#define VK_MAX_EXTENSION_NAME             256
-#define VK_MAX_DESCRIPTION                256
 
 VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
@@ -122,6 +108,21 @@ VK_DEFINE_NONDISP_HANDLE(VkDynamicColorBlendState)
 VK_DEFINE_NONDISP_HANDLE(VkDynamicDepthStencilState)
 VK_DEFINE_NONDISP_HANDLE(VkFramebuffer)
 VK_DEFINE_NONDISP_HANDLE(VkCmdPool)
+
+#define VK_LOD_CLAMP_NONE                 MAX_FLOAT
+#define VK_LAST_MIP_LEVEL                 UINT32_MAX
+#define VK_LAST_ARRAY_SLICE               UINT32_MAX
+#define VK_WHOLE_SIZE                     UINT64_MAX
+#define VK_ATTACHMENT_UNUSED              UINT32_MAX
+#define VK_TRUE                           1
+#define VK_FALSE                          0
+#define VK_NULL_HANDLE                    0
+#define VK_MAX_PHYSICAL_DEVICE_NAME       256
+#define VK_UUID_LENGTH                    16
+#define VK_MAX_MEMORY_TYPES               32
+#define VK_MAX_MEMORY_HEAPS               16
+#define VK_MAX_EXTENSION_NAME             256
+#define VK_MAX_DESCRIPTION                256
 
 
 typedef enum {
@@ -481,6 +482,21 @@ typedef enum {
 } VkSharingMode;
 
 typedef enum {
+    VK_IMAGE_LAYOUT_UNDEFINED = 0,
+    VK_IMAGE_LAYOUT_GENERAL = 1,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL = 2,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL = 3,
+    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL = 4,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL = 5,
+    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL = 6,
+    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL = 7,
+    VK_IMAGE_LAYOUT_BEGIN_RANGE = VK_IMAGE_LAYOUT_UNDEFINED,
+    VK_IMAGE_LAYOUT_END_RANGE = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
+    VK_IMAGE_LAYOUT_NUM = (VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL - VK_IMAGE_LAYOUT_UNDEFINED + 1),
+    VK_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF
+} VkImageLayout;
+
+typedef enum {
     VK_IMAGE_VIEW_TYPE_1D = 0,
     VK_IMAGE_VIEW_TYPE_2D = 1,
     VK_IMAGE_VIEW_TYPE_3D = 2,
@@ -749,21 +765,6 @@ typedef enum {
 } VkDescriptorSetUsage;
 
 typedef enum {
-    VK_IMAGE_LAYOUT_UNDEFINED = 0,
-    VK_IMAGE_LAYOUT_GENERAL = 1,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL = 2,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL = 3,
-    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL = 4,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL = 5,
-    VK_IMAGE_LAYOUT_TRANSFER_SOURCE_OPTIMAL = 6,
-    VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL = 7,
-    VK_IMAGE_LAYOUT_BEGIN_RANGE = VK_IMAGE_LAYOUT_UNDEFINED,
-    VK_IMAGE_LAYOUT_END_RANGE = VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL,
-    VK_IMAGE_LAYOUT_NUM = (VK_IMAGE_LAYOUT_TRANSFER_DESTINATION_OPTIMAL - VK_IMAGE_LAYOUT_UNDEFINED + 1),
-    VK_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF
-} VkImageLayout;
-
-typedef enum {
     VK_ATTACHMENT_LOAD_OP_LOAD = 0,
     VK_ATTACHMENT_LOAD_OP_CLEAR = 1,
     VK_ATTACHMENT_LOAD_OP_DONT_CARE = 2,
@@ -856,6 +857,16 @@ typedef enum {
 typedef VkFlags VkImageUsageFlags;
 
 typedef enum {
+    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000001,
+    VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
+    VK_IMAGE_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
+    VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000008,
+    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
+    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
+} VkImageCreateFlagBits;
+typedef VkFlags VkImageCreateFlags;
+
+typedef enum {
     VK_QUEUE_GRAPHICS_BIT = 0x00000001,
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
     VK_QUEUE_DMA_BIT = 0x00000004,
@@ -944,14 +955,12 @@ typedef enum {
 typedef VkFlags VkBufferCreateFlags;
 
 typedef enum {
-    VK_IMAGE_CREATE_SPARSE_BIT = 0x00000001,
-    VK_IMAGE_CREATE_SPARSE_RESIDENCY_BIT = 0x00000002,
-    VK_IMAGE_CREATE_SPARSE_ALIASED_BIT = 0x00000004,
-    VK_IMAGE_CREATE_INVARIANT_DATA_BIT = 0x00000008,
-    VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT = 0x00000010,
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT = 0x00000020,
-} VkImageCreateFlagBits;
-typedef VkFlags VkImageCreateFlags;
+    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
+    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
+    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
+    VK_IMAGE_ASPECT_METADATA_BIT = 0x00000008,
+} VkImageAspectFlagBits;
+typedef VkFlags VkImageAspectFlags;
 
 typedef enum {
     VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
@@ -1063,14 +1072,6 @@ typedef enum {
 typedef VkFlags VkCmdBufferResetFlags;
 
 typedef enum {
-    VK_IMAGE_ASPECT_COLOR_BIT = 0x00000001,
-    VK_IMAGE_ASPECT_DEPTH_BIT = 0x00000002,
-    VK_IMAGE_ASPECT_STENCIL_BIT = 0x00000004,
-    VK_IMAGE_ASPECT_METADATA_BIT = 0x00000008,
-} VkImageAspectFlagBits;
-typedef VkFlags VkImageAspectFlags;
-
-typedef enum {
     VK_QUERY_CONTROL_CONSERVATIVE_BIT = 0x00000001,
 } VkQueryControlFlagBits;
 typedef VkFlags VkQueryControlFlags;
@@ -1179,6 +1180,12 @@ typedef struct {
     VkFormatFeatureFlags                        linearTilingFeatures;
     VkFormatFeatureFlags                        optimalTilingFeatures;
 } VkFormatProperties;
+
+typedef struct {
+    int32_t                                     width;
+    int32_t                                     height;
+    int32_t                                     depth;
+} VkExtent3D;
 
 typedef struct {
     uint64_t                                    maxResourceSize;
@@ -1364,12 +1371,6 @@ typedef struct {
     VkDeviceSize                                alignment;
     uint32_t                                    memoryTypeBits;
 } VkMemoryRequirements;
-
-typedef struct {
-    int32_t                                     width;
-    int32_t                                     height;
-    int32_t                                     depth;
-} VkExtent3D;
 
 typedef struct {
     VkImageAspect                               aspect;
@@ -1601,6 +1602,30 @@ typedef struct {
 } VkPipelineTessellationStateCreateInfo;
 
 typedef struct {
+    float                                       originX;
+    float                                       originY;
+    float                                       width;
+    float                                       height;
+    float                                       minDepth;
+    float                                       maxDepth;
+} VkViewport;
+
+typedef struct {
+    int32_t                                     x;
+    int32_t                                     y;
+} VkOffset2D;
+
+typedef struct {
+    int32_t                                     width;
+    int32_t                                     height;
+} VkExtent2D;
+
+typedef struct {
+    VkOffset2D                                  offset;
+    VkExtent2D                                  extent;
+} VkRect2D;
+
+typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    viewportCount;
@@ -1788,30 +1813,6 @@ typedef struct {
 } VkCopyDescriptorSet;
 
 typedef struct {
-    float                                       originX;
-    float                                       originY;
-    float                                       width;
-    float                                       height;
-    float                                       minDepth;
-    float                                       maxDepth;
-} VkViewport;
-
-typedef struct {
-    int32_t                                     x;
-    int32_t                                     y;
-} VkOffset2D;
-
-typedef struct {
-    int32_t                                     width;
-    int32_t                                     height;
-} VkExtent2D;
-
-typedef struct {
-    VkOffset2D                                  offset;
-    VkExtent2D                                  extent;
-} VkRect2D;
-
-typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     uint32_t                                    viewportAndScissorCount;
@@ -1980,6 +1981,11 @@ typedef union {
 } VkClearColorValue;
 
 typedef struct {
+    float                                       depth;
+    uint32_t                                    stencil;
+} VkClearDepthStencilValue;
+
+typedef struct {
     VkOffset3D                                  offset;
     VkExtent3D                                  extent;
 } VkRect3D;
@@ -1991,11 +1997,6 @@ typedef struct {
     VkOffset3D                                  destOffset;
     VkExtent3D                                  extent;
 } VkImageResolve;
-
-typedef struct {
-    float                                       depth;
-    uint32_t                                    stencil;
-} VkClearDepthStencilValue;
 
 typedef union {
     VkClearColorValue                           color;
