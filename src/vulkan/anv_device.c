@@ -674,7 +674,7 @@ void anv_DestroyDevice(
    anv_instance_free(device->instance, device);
 }
 
-VkResult anv_GetGlobalExtensionProperties(
+VkResult anv_EnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
@@ -692,7 +692,7 @@ VkResult anv_GetGlobalExtensionProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceExtensionProperties(
+VkResult anv_EnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
@@ -711,7 +711,7 @@ VkResult anv_GetPhysicalDeviceExtensionProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetGlobalLayerProperties(
+VkResult anv_EnumerateInstanceLayerProperties(
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
 {
@@ -724,7 +724,7 @@ VkResult anv_GetGlobalLayerProperties(
    return vk_error(VK_ERROR_INVALID_LAYER);
 }
 
-VkResult anv_GetPhysicalDeviceLayerProperties(
+VkResult anv_EnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
