@@ -1982,9 +1982,9 @@ typedef struct {
 } VkBufferImageCopy;
 
 typedef union {
-    float                                       f32[4];
-    int32_t                                     s32[4];
-    uint32_t                                    u32[4];
+    float                                       float32[4];
+    int32_t                                     int32[4];
+    uint32_t                                    uint32[4];
 } VkClearColorValue;
 
 typedef struct {
