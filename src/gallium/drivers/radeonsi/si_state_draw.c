@@ -109,11 +109,11 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 				       unsigned *num_patches)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	struct si_shader_selector *ls = sctx->vs_shader;
+	struct si_shader_ctx_state *ls = &sctx->vs_shader;
 	/* The TES pointer will only be used for sctx->last_tcs.
 	 * It would be wrong to think that TCS = TES. */
 	struct si_shader_selector *tcs =
-		sctx->tcs_shader ? sctx->tcs_shader : sctx->tes_shader;
+		sctx->tcs_shader.cso ? sctx->tcs_shader.cso : sctx->tes_shader.cso;
 	unsigned tes_sh_base = sctx->shader_userdata.sh_base[PIPE_SHADER_TESS_EVAL];
 	unsigned num_tcs_input_cp = info->vertices_per_patch;
 	unsigned num_tcs_output_cp, num_tcs_inputs, num_tcs_outputs;
@@ -138,9 +138,9 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
-	num_tcs_inputs = util_last_bit64(ls->outputs_written);
+	num_tcs_inputs = util_last_bit64(ls->cso->outputs_written);
 
-	if (sctx->tcs_shader) {
+	if (sctx->tcs_shader.cso) {
 		num_tcs_outputs = util_last_bit64(tcs->outputs_written);
 		num_tcs_output_cp = tcs->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT];
 		num_tcs_patch_outputs = util_last_bit64(tcs->patch_outputs_written);
@@ -159,7 +159,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	pervertex_output_patch_size = num_tcs_output_cp * output_vertex_size;
 	output_patch_size = pervertex_output_patch_size + num_tcs_patch_outputs * 16;
 
-	output_patch0_offset = sctx->tcs_shader ? input_patch_size * *num_patches : 0;
+	output_patch0_offset = sctx->tcs_shader.cso ? input_patch_size * *num_patches : 0;
 	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
 
 	lds_size = output_patch0_offset + output_patch_size * *num_patches;
@@ -231,13 +231,13 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	bool partial_vs_wave = false;
 	bool partial_es_wave = false;
 
-	if (sctx->gs_shader)
+	if (sctx->gs_shader.cso)
 		primgroup_size = 64; /* recommended with a GS */
 
-	if (sctx->tes_shader) {
+	if (sctx->tes_shader.cso) {
 		unsigned num_cp_out =
-			sctx->tcs_shader ?
-			sctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+			sctx->tcs_shader.cso ?
+			sctx->tcs_shader.cso->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
 			info->vertices_per_patch;
 		unsigned max_size = 256 / MAX2(info->vertices_per_patch, num_cp_out);
 
@@ -248,8 +248,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 
 		/* SWITCH_ON_EOI must be set if PrimID is used.
 		 * If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
-		if ((sctx->tcs_shader && sctx->tcs_shader->info.uses_primid) ||
-		    sctx->tes_shader->info.uses_primid) {
+		if ((sctx->tcs_shader.cso && sctx->tcs_shader.cso->info.uses_primid) ||
+		    sctx->tes_shader.cso->info.uses_primid) {
 			ia_switch_on_eoi = true;
 			partial_es_wave = true;
 		}
@@ -258,7 +258,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		if ((sctx->b.family == CHIP_TAHITI ||
 		     sctx->b.family == CHIP_PITCAIRN ||
 		     sctx->b.family == CHIP_BONAIRE) &&
-		    sctx->gs_shader)
+		    sctx->gs_shader.cso)
 			partial_vs_wave = true;
 	}
 
@@ -328,11 +328,11 @@ static unsigned si_get_ls_hs_config(struct si_context *sctx,
 {
 	unsigned num_output_cp;
 
-	if (!sctx->tes_shader)
+	if (!sctx->tes_shader.cso)
 		return 0;
 
-	num_output_cp = sctx->tcs_shader ?
-		sctx->tcs_shader->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
+	num_output_cp = sctx->tcs_shader.cso ?
+		sctx->tcs_shader.cso->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
 		info->vertices_per_patch;
 
 	return S_028B58_NUM_PATCHES(num_patches) |
@@ -395,7 +395,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
 	unsigned ia_multi_vgt_param, ls_hs_config, num_patches = 0;
 
-	if (sctx->tes_shader)
+	if (sctx->tes_shader.cso)
 		si_emit_derived_tess_state(sctx, info, &num_patches);
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
@@ -735,11 +735,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	    (info->indexed || !info->count_from_stream_output))
 		return;
 
-	if (!sctx->ps_shader || !sctx->vs_shader) {
+	if (!sctx->ps_shader.cso || !sctx->vs_shader.cso) {
 		assert(0);
 		return;
 	}
-	if (!!sctx->tes_shader != (info->mode == PIPE_PRIM_PATCHES)) {
+	if (!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES)) {
 		assert(0);
 		return;
 	}
@@ -751,11 +751,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 * This must be done after si_decompress_textures, which can call
 	 * draw_vbo recursively, and before si_update_shaders, which uses
 	 * current_rast_prim for this draw_vbo call. */
-	if (sctx->gs_shader)
-		sctx->current_rast_prim = sctx->gs_shader->gs_output_prim;
-	else if (sctx->tes_shader)
+	if (sctx->gs_shader.cso)
+		sctx->current_rast_prim = sctx->gs_shader.cso->gs_output_prim;
+	else if (sctx->tes_shader.cso)
 		sctx->current_rast_prim =
-			sctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 	else
 		sctx->current_rast_prim = info->mode;
 

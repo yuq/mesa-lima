@@ -523,26 +523,26 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				key->vs.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
 
-		if (sctx->tes_shader)
+		if (sctx->tes_shader.cso)
 			key->vs.as_ls = 1;
-		else if (sctx->gs_shader) {
+		else if (sctx->gs_shader.cso) {
 			key->vs.as_es = 1;
-			key->vs.es_enabled_outputs = sctx->gs_shader->inputs_read;
+			key->vs.es_enabled_outputs = sctx->gs_shader.cso->inputs_read;
 		}
 
-		if (!sctx->gs_shader && sctx->ps_shader &&
-		    sctx->ps_shader->info.uses_primid)
+		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
+		    sctx->ps_shader.cso->info.uses_primid)
 			key->vs.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		key->tcs.prim_mode =
-			sctx->tes_shader->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
+			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		break;
 	case PIPE_SHADER_TESS_EVAL:
-		if (sctx->gs_shader) {
+		if (sctx->gs_shader.cso) {
 			key->tes.as_es = 1;
-			key->tes.es_enabled_outputs = sctx->gs_shader->inputs_read;
-		} else if (sctx->ps_shader && sctx->ps_shader->info.uses_primid)
+			key->tes.es_enabled_outputs = sctx->gs_shader.cso->inputs_read;
+		} else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
 			key->tes.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
@@ -589,11 +589,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select(struct pipe_context *ctx,
-			    struct si_shader_selector *sel)
+			    struct si_shader_ctx_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_shader_selector *sel = state->cso;
+	struct si_shader *current = state->current;
 	union si_shader_key key;
-	struct si_shader * shader = NULL;
+	struct si_shader *iter, *shader = NULL;
 	int r;
 
 	si_shader_selector_key(ctx, sel, &key);
@@ -602,49 +604,51 @@ static int si_shader_select(struct pipe_context *ctx,
 	 * This path is also used for most shaders that don't need multiple
 	 * variants, it will cost just a computation of the key and this
 	 * test. */
-	if (likely(sel->current && memcmp(&sel->current->key, &key, sizeof(key)) == 0)) {
+	if (likely(current && memcmp(&current->key, &key, sizeof(key)) == 0))
 		return 0;
-	}
 
-	/* lookup if we have other variants in the list */
-	if (sel->num_shaders > 1) {
-		struct si_shader *p = sel->current, *c = p->next_variant;
+	pipe_mutex_lock(sel->mutex);
 
-		while (c && memcmp(&c->key, &key, sizeof(key)) != 0) {
-			p = c;
-			c = c->next_variant;
-		}
-
-		if (c) {
-			p->next_variant = c->next_variant;
-			shader = c;
+	/* Find the shader variant. */
+	for (iter = sel->first_variant; iter; iter = iter->next_variant) {
+		/* Don't check the "current" shader. We checked it above. */
+		if (current != iter &&
+		    memcmp(&iter->key, &key, sizeof(key)) == 0) {
+			state->current = iter;
+			pipe_mutex_unlock(sel->mutex);
+			return 0;
 		}
 	}
 
-	if (shader) {
-		shader->next_variant = sel->current;
-		sel->current = shader;
+	/* Build a new shader. */
+	shader = CALLOC_STRUCT(si_shader);
+	if (!shader) {
+		pipe_mutex_unlock(sel->mutex);
+		return -ENOMEM;
+	}
+	shader->selector = sel;
+	shader->key = key;
+
+	r = si_shader_create(sctx->screen, sctx->tm, shader);
+	if (unlikely(r)) {
+		R600_ERR("Failed to build shader variant (type=%u) %d\n",
+			 sel->type, r);
+		FREE(shader);
+		pipe_mutex_unlock(sel->mutex);
+		return r;
+	}
+	si_shader_init_pm4_state(shader);
+
+	if (!sel->last_variant) {
+		sel->first_variant = shader;
+		sel->last_variant = shader;
 	} else {
-		shader = CALLOC(1, sizeof(struct si_shader));
-		shader->selector = sel;
-		shader->key = key;
-
-		shader->next_variant = sel->current;
-		sel->current = shader;
-		r = si_shader_create((struct si_screen*)ctx->screen, sctx->tm,
-				     shader);
-		if (unlikely(r)) {
-			R600_ERR("Failed to build shader variant (type=%u) %d\n",
-				 sel->type, r);
-			sel->current = NULL;
-			FREE(shader);
-			return r;
-		}
-		si_shader_init_pm4_state(shader);
-		sel->num_shaders++;
-		p_atomic_inc(&sctx->screen->b.num_compilations);
+		sel->last_variant->next_variant = shader;
+		sel->last_variant = shader;
 	}
-
+	state->current = shader;
+	p_atomic_inc(&sctx->screen->b.num_compilations);
+	pipe_mutex_unlock(sel->mutex);
 	return 0;
 }
 
@@ -752,14 +756,18 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
-	if (sscreen->b.debug_flags & DBG_PRECOMPILE)
-		if (si_shader_select(ctx, sel)) {
+	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
+		struct si_shader_ctx_state state = {sel};
+
+		if (si_shader_select(ctx, &state)) {
 			fprintf(stderr, "radeonsi: can't create a shader\n");
 			tgsi_free_tokens(sel->tokens);
 			FREE(sel);
 			return NULL;
 		}
+	}
 
+	pipe_mutex_init(sel->mutex);
 	return sel;
 }
 
@@ -787,10 +795,11 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
 
-	if (sctx->vs_shader == sel || !sel)
+	if (sctx->vs_shader.cso == sel || !sel)
 		return;
 
-	sctx->vs_shader = sel;
+	sctx->vs_shader.cso = sel;
+	sctx->vs_shader.current = sel->first_variant;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	si_update_viewports_and_scissors(sctx);
 }
@@ -799,12 +808,13 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
-	bool enable_changed = !!sctx->gs_shader != !!sel;
+	bool enable_changed = !!sctx->gs_shader.cso != !!sel;
 
-	if (sctx->gs_shader == sel)
+	if (sctx->gs_shader.cso == sel)
 		return;
 
-	sctx->gs_shader = sel;
+	sctx->gs_shader.cso = sel;
+	sctx->gs_shader.current = sel ? sel->first_variant : NULL;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
@@ -817,12 +827,13 @@ static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
-	bool enable_changed = !!sctx->tcs_shader != !!sel;
+	bool enable_changed = !!sctx->tcs_shader.cso != !!sel;
 
-	if (sctx->tcs_shader == sel)
+	if (sctx->tcs_shader.cso == sel)
 		return;
 
-	sctx->tcs_shader = sel;
+	sctx->tcs_shader.cso = sel;
+	sctx->tcs_shader.current = sel ? sel->first_variant : NULL;
 
 	if (enable_changed)
 		sctx->last_tcs = NULL; /* invalidate derived tess state */
@@ -832,12 +843,13 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
-	bool enable_changed = !!sctx->tes_shader != !!sel;
+	bool enable_changed = !!sctx->tes_shader.cso != !!sel;
 
-	if (sctx->tes_shader == sel)
+	if (sctx->tes_shader.cso == sel)
 		return;
 
-	sctx->tes_shader = sel;
+	sctx->tes_shader.cso = sel;
+	sctx->tes_shader.current = sel ? sel->first_variant : NULL;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
 
@@ -864,7 +876,7 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	struct si_shader_selector *sel = state;
 
 	/* skip if supplied shader is one already in use */
-	if (sctx->ps_shader == sel)
+	if (sctx->ps_shader.cso == sel)
 		return;
 
 	/* use a dummy shader if binding a NULL shader */
@@ -873,7 +885,8 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 		sel = sctx->dummy_pixel_shader;
 	}
 
-	sctx->ps_shader = sel;
+	sctx->ps_shader.cso = sel;
+	sctx->ps_shader.current = sel->first_variant;
 	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 }
 
@@ -881,8 +894,8 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-	struct si_shader *p = sel->current, *c;
-	struct si_shader_selector **current_shader[SI_NUM_SHADERS] = {
+	struct si_shader *p = sel->first_variant, *c;
+	struct si_shader_ctx_state *current_shader[SI_NUM_SHADERS] = {
 		[PIPE_SHADER_VERTEX] = &sctx->vs_shader,
 		[PIPE_SHADER_TESS_CTRL] = &sctx->tcs_shader,
 		[PIPE_SHADER_TESS_EVAL] = &sctx->tes_shader,
@@ -890,8 +903,10 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		[PIPE_SHADER_FRAGMENT] = &sctx->ps_shader,
 	};
 
-	if (*current_shader[sel->type] == sel)
-		*current_shader[sel->type] = NULL;
+	if (current_shader[sel->type]->cso == sel) {
+		current_shader[sel->type]->cso = NULL;
+		current_shader[sel->type]->current = NULL;
+	}
 
 	while (p) {
 		c = p->next_variant;
@@ -927,6 +942,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 		p = c;
 	}
 
+	pipe_mutex_destroy(sel->mutex);
 	free(sel->tokens);
 	free(sel);
 }
@@ -934,7 +950,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	struct si_shader *ps = sctx->ps_shader->current;
+	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *psinfo = &ps->selector->info;
 	struct tgsi_shader_info *vsinfo = &vs->selector->info;
@@ -1004,7 +1020,7 @@ bcolor:
 static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
-	struct si_shader *ps = sctx->ps_shader->current;
+	struct si_shader *ps = sctx->ps_shader.current;
 	unsigned input_ena = ps->spi_ps_input_ena;
 
 	/* we need to enable at least one of them, otherwise we hang the GPU */
@@ -1133,7 +1149,7 @@ static void si_init_gs_rings(struct si_context *sctx)
 
 static void si_update_gs_rings(struct si_context *sctx)
 {
-	unsigned gsvs_itemsize = sctx->gs_shader->gsvs_itemsize;
+	unsigned gsvs_itemsize = sctx->gs_shader.cso->gsvs_itemsize;
 	uint64_t offset;
 
 	if (gsvs_itemsize == sctx->last_gsvs_itemsize)
@@ -1167,16 +1183,13 @@ static void si_update_gs_rings(struct si_context *sctx)
  *          < 0 if there was a failure
  */
 static int si_update_scratch_buffer(struct si_context *sctx,
-				    struct si_shader_selector *sel)
+				    struct si_shader *shader)
 {
-	struct si_shader *shader;
 	uint64_t scratch_va = sctx->scratch_buffer->gpu_address;
 	int r;
 
-	if (!sel)
+	if (!shader)
 		return 0;
-
-	shader = sel->current;
 
 	/* This shader doesn't need a scratch buffer */
 	if (shader->scratch_bytes_per_wave == 0)
@@ -1209,20 +1222,20 @@ static unsigned si_get_current_scratch_buffer_size(struct si_context *sctx)
 	return sctx->scratch_buffer ? sctx->scratch_buffer->b.b.width0 : 0;
 }
 
-static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_shader_selector *sel)
+static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_shader *shader)
 {
-	return sel ? sel->current->scratch_bytes_per_wave : 0;
+	return shader ? shader->scratch_bytes_per_wave : 0;
 }
 
 static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 {
 	unsigned bytes = 0;
 
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->ps_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->gs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->vs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tcs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tes_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->ps_shader.current));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->gs_shader.current));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->vs_shader.current));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tcs_shader.current));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tes_shader.current));
 	return bytes;
 }
 
@@ -1256,46 +1269,46 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 		 * last used, so we still need to try to update them, even if
 		 * they require scratch buffers smaller than the current size.
 		 */
-		r = si_update_scratch_buffer(sctx, sctx->ps_shader);
+		r = si_update_scratch_buffer(sctx, sctx->ps_shader.current);
 		if (r < 0)
 			return false;
 		if (r == 1)
-			si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
+			si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
 
-		r = si_update_scratch_buffer(sctx, sctx->gs_shader);
+		r = si_update_scratch_buffer(sctx, sctx->gs_shader.current);
 		if (r < 0)
 			return false;
 		if (r == 1)
-			si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
+			si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
 
-		r = si_update_scratch_buffer(sctx, sctx->tcs_shader);
+		r = si_update_scratch_buffer(sctx, sctx->tcs_shader.current);
 		if (r < 0)
 			return false;
 		if (r == 1)
-			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
+			si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
 
 		/* VS can be bound as LS, ES, or VS. */
-		r = si_update_scratch_buffer(sctx, sctx->vs_shader);
+		r = si_update_scratch_buffer(sctx, sctx->vs_shader.current);
 		if (r < 0)
 			return false;
 		if (r == 1) {
-			if (sctx->tes_shader)
-				si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
-			else if (sctx->gs_shader)
-				si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
+			if (sctx->tes_shader.current)
+				si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
+			else if (sctx->gs_shader.current)
+				si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
 			else
-				si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
+				si_pm4_bind_state(sctx, vs, sctx->vs_shader.current->pm4);
 		}
 
 		/* TES can be bound as ES or VS. */
-		r = si_update_scratch_buffer(sctx, sctx->tes_shader);
+		r = si_update_scratch_buffer(sctx, sctx->tes_shader.current);
 		if (r < 0)
 			return false;
 		if (r == 1) {
-			if (sctx->gs_shader)
-				si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
+			if (sctx->gs_shader.current)
+				si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
 			else
-				si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
+				si_pm4_bind_state(sctx, vs, sctx->tes_shader.current->pm4);
 		}
 	}
 
@@ -1361,7 +1374,7 @@ static void si_generate_fixed_func_tcs(struct si_context *sctx)
 	if (!ureg)
 		return; /* if we get here, we're screwed */
 
-	assert(!sctx->fixed_func_tcs_shader);
+	assert(!sctx->fixed_func_tcs_shader.cso);
 
 	ureg_DECL_constant2D(ureg, 0, 1, SI_DRIVER_STATE_CONST_BUF);
 	const0 = ureg_src_dimension(ureg_src_register(TGSI_FILE_CONSTANT, 0),
@@ -1376,7 +1389,7 @@ static void si_generate_fixed_func_tcs(struct si_context *sctx)
 	ureg_MOV(ureg, tessinner, const1);
 	ureg_END(ureg);
 
-	sctx->fixed_func_tcs_shader =
+	sctx->fixed_func_tcs_shader.cso =
 		ureg_create_shader_and_destroy(ureg, &sctx->b.b);
 }
 
@@ -1384,7 +1397,7 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 {
 	/* Calculate the index of the config.
 	 * 0 = VS, 1 = VS+GS, 2 = VS+Tess, 3 = VS+Tess+GS */
-	unsigned index = 2*!!sctx->tes_shader + !!sctx->gs_shader;
+	unsigned index = 2*!!sctx->tes_shader.cso + !!sctx->gs_shader.cso;
 	struct si_pm4_state **pm4 = &sctx->vgt_shader_config[index];
 
 	if (!*pm4) {
@@ -1392,17 +1405,17 @@ static void si_update_vgt_shader_config(struct si_context *sctx)
 
 		*pm4 = CALLOC_STRUCT(si_pm4_state);
 
-		if (sctx->tes_shader) {
+		if (sctx->tes_shader.cso) {
 			stages |= S_028B54_LS_EN(V_028B54_LS_STAGE_ON) |
 				  S_028B54_HS_EN(1);
 
-			if (sctx->gs_shader)
+			if (sctx->gs_shader.cso)
 				stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_DS) |
 					  S_028B54_GS_EN(1) |
 				          S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
 			else
 				stages |= S_028B54_VS_EN(V_028B54_VS_STAGE_DS);
-		} else if (sctx->gs_shader) {
+		} else if (sctx->gs_shader.cso) {
 			stages |= S_028B54_ES_EN(V_028B54_ES_STAGE_REAL) |
 				  S_028B54_GS_EN(1) |
 			          S_028B54_VS_EN(V_028B54_VS_STAGE_COPY_SHADER);
@@ -1432,7 +1445,7 @@ bool si_update_shaders(struct si_context *sctx)
 	int r;
 
 	/* Update stages before GS. */
-	if (sctx->tes_shader) {
+	if (sctx->tes_shader.cso) {
 		if (!sctx->tf_ring) {
 			si_init_tess_factor_ring(sctx);
 			if (!sctx->tf_ring)
@@ -1440,65 +1453,65 @@ bool si_update_shaders(struct si_context *sctx)
 		}
 
 		/* VS as LS */
-		r = si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, &sctx->vs_shader);
 		if (r)
 			return false;
-		si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
+		si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
 
-		if (sctx->tcs_shader) {
-			r = si_shader_select(ctx, sctx->tcs_shader);
+		if (sctx->tcs_shader.cso) {
+			r = si_shader_select(ctx, &sctx->tcs_shader);
 			if (r)
 				return false;
-			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
+			si_pm4_bind_state(sctx, hs, sctx->tcs_shader.current->pm4);
 		} else {
-			if (!sctx->fixed_func_tcs_shader) {
+			if (!sctx->fixed_func_tcs_shader.cso) {
 				si_generate_fixed_func_tcs(sctx);
-				if (!sctx->fixed_func_tcs_shader)
+				if (!sctx->fixed_func_tcs_shader.cso)
 					return false;
 			}
 
-			r = si_shader_select(ctx, sctx->fixed_func_tcs_shader);
+			r = si_shader_select(ctx, &sctx->fixed_func_tcs_shader);
 			if (r)
 				return false;
 			si_pm4_bind_state(sctx, hs,
-					  sctx->fixed_func_tcs_shader->current->pm4);
+					  sctx->fixed_func_tcs_shader.current->pm4);
 		}
 
-		r = si_shader_select(ctx, sctx->tes_shader);
+		r = si_shader_select(ctx, &sctx->tes_shader);
 		if (r)
 			return false;
 
-		if (sctx->gs_shader) {
+		if (sctx->gs_shader.cso) {
 			/* TES as ES */
-			si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
+			si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
 		} else {
 			/* TES as VS */
-			si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
-			si_update_so(sctx, sctx->tes_shader);
+			si_pm4_bind_state(sctx, vs, sctx->tes_shader.current->pm4);
+			si_update_so(sctx, sctx->tes_shader.cso);
 		}
-	} else if (sctx->gs_shader) {
+	} else if (sctx->gs_shader.cso) {
 		/* VS as ES */
-		r = si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, &sctx->vs_shader);
 		if (r)
 			return false;
-		si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
+		si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
 	} else {
 		/* VS as VS */
-		r = si_shader_select(ctx, sctx->vs_shader);
+		r = si_shader_select(ctx, &sctx->vs_shader);
 		if (r)
 			return false;
-		si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
-		si_update_so(sctx, sctx->vs_shader);
+		si_pm4_bind_state(sctx, vs, sctx->vs_shader.current->pm4);
+		si_update_so(sctx, sctx->vs_shader.cso);
 	}
 
 	/* Update GS. */
-	if (sctx->gs_shader) {
-		r = si_shader_select(ctx, sctx->gs_shader);
+	if (sctx->gs_shader.cso) {
+		r = si_shader_select(ctx, &sctx->gs_shader);
 		if (r)
 			return false;
-		si_pm4_bind_state(sctx, gs, sctx->gs_shader->current->pm4);
-		si_pm4_bind_state(sctx, vs, sctx->gs_shader->current->gs_copy_shader->pm4);
-		si_update_so(sctx, sctx->gs_shader);
+		si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
+		si_pm4_bind_state(sctx, vs, sctx->gs_shader.current->gs_copy_shader->pm4);
+		si_update_so(sctx, sctx->gs_shader.cso);
 
 		if (!sctx->gsvs_ring) {
 			si_init_gs_rings(sctx);
@@ -1514,10 +1527,10 @@ bool si_update_shaders(struct si_context *sctx)
 
 	si_update_vgt_shader_config(sctx);
 
-	r = si_shader_select(ctx, sctx->ps_shader);
+	r = si_shader_select(ctx, &sctx->ps_shader);
 	if (r)
 		return false;
-	si_pm4_bind_state(sctx, ps, sctx->ps_shader->current->pm4);
+	si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
 
 	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
 	    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
@@ -1543,13 +1556,13 @@ bool si_update_shaders(struct si_context *sctx)
 			return false;
 	}
 
-	if (sctx->ps_db_shader_control != sctx->ps_shader->current->db_shader_control) {
-		sctx->ps_db_shader_control = sctx->ps_shader->current->db_shader_control;
+	if (sctx->ps_db_shader_control != sctx->ps_shader.current->db_shader_control) {
+		sctx->ps_db_shader_control = sctx->ps_shader.current->db_shader_control;
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
 
-	if (sctx->smoothing_enabled != sctx->ps_shader->current->key.ps.poly_line_smoothing) {
-		sctx->smoothing_enabled = sctx->ps_shader->current->key.ps.poly_line_smoothing;
+	if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.poly_line_smoothing) {
+		sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.poly_line_smoothing;
 		si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 		if (sctx->b.chip_class == SI)

@@ -55,11 +55,11 @@ static void si_blitter_begin(struct pipe_context *ctx, enum si_blitter_op op)
 	util_blitter_save_depth_stencil_alpha(sctx->blitter, sctx->queued.named.dsa);
 	util_blitter_save_stencil_ref(sctx->blitter, &sctx->stencil_ref.state);
 	util_blitter_save_rasterizer(sctx->blitter, sctx->queued.named.rasterizer);
-	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader);
-	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader);
-	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader);
-	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader);
-	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader);
+	util_blitter_save_fragment_shader(sctx->blitter, sctx->ps_shader.cso);
+	util_blitter_save_geometry_shader(sctx->blitter, sctx->gs_shader.cso);
+	util_blitter_save_tessctrl_shader(sctx->blitter, sctx->tcs_shader.cso);
+	util_blitter_save_tesseval_shader(sctx->blitter, sctx->tes_shader.cso);
+	util_blitter_save_vertex_shader(sctx->blitter, sctx->vs_shader.cso);
 	util_blitter_save_vertex_elements(sctx->blitter, sctx->vertex_elements);
 	util_blitter_save_sample_mask(sctx->blitter, sctx->sample_mask.sample_mask);
 	util_blitter_save_viewport(sctx->blitter, &sctx->viewports.states[0]);

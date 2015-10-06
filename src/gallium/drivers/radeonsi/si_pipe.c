@@ -57,8 +57,8 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_sampler_state(&sctx->b.b, sctx->pstipple_sampler_state);
 	if (sctx->dummy_pixel_shader)
 		sctx->b.b.delete_fs_state(&sctx->b.b, sctx->dummy_pixel_shader);
-	if (sctx->fixed_func_tcs_shader)
-		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader);
+	if (sctx->fixed_func_tcs_shader.cso)
+		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader.cso);
 	if (sctx->custom_dsa_flush)
 		sctx->b.b.delete_depth_stencil_alpha_state(&sctx->b.b, sctx->custom_dsa_flush);
 	if (sctx->custom_blend_resolve)
@@ -293,6 +293,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
 	case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
 	case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
+	case PIPE_CAP_SHAREABLE_SHADERS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_TEXTURE_QUERY_LOD:
@@ -337,7 +338,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_FAKE_SW_MSAA:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
 	case PIPE_CAP_VERTEXID_NOBASE:
-	case PIPE_CAP_SHAREABLE_SHADERS:
 		return 0;
 
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:

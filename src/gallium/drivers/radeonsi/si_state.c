@@ -266,7 +266,7 @@ static void si_emit_cb_target_mask(struct si_context *sctx, struct r600_atom *at
 	 * Reproducible with Unigine Heaven 4.0 and drirc missing.
 	 */
 	if (blend->dual_src_blend &&
-	    (sctx->ps_shader->ps_colors_written & 0x3) != 0x3)
+	    (sctx->ps_shader.cso->ps_colors_written & 0x3) != 0x3)
 		mask = 0;
 
 	radeon_set_context_reg(cs, R_028238_CB_TARGET_MASK, mask);
