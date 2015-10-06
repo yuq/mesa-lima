@@ -1421,7 +1421,19 @@ __DRIconfig **intelInitScreen2(__DRIscreen *psp)
    if (!intelScreen->devinfo)
       return false;
 
-   brw_process_intel_debug_variable(intelScreen);
+   brw_process_intel_debug_variable();
+
+   if (INTEL_DEBUG & DEBUG_BUFMGR)
+      dri_bufmgr_set_debug(intelScreen->bufmgr, true);
+
+   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && intelScreen->devinfo->gen < 7) {
+      fprintf(stderr,
+              "shader_time debugging requires gen7 (Ivybridge) or better.\n");
+      INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
+   }
+
+   if (INTEL_DEBUG & DEBUG_AUB)
+      drm_intel_bufmgr_gem_set_aub_dump(intelScreen->bufmgr, true);
 
    intelScreen->hw_must_use_separate_stencil = intelScreen->devinfo->gen >= 7;
 

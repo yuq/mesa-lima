@@ -92,22 +92,10 @@ intel_debug_flag_for_shader_stage(gl_shader_stage stage)
 }
 
 void
-brw_process_intel_debug_variable(struct intel_screen *screen)
+brw_process_intel_debug_variable(void)
 {
    uint64_t intel_debug = parse_debug_string(getenv("INTEL_DEBUG"), debug_control);
    (void) p_atomic_cmpxchg(&INTEL_DEBUG, 0, intel_debug);
-
-   if (INTEL_DEBUG & DEBUG_BUFMGR)
-      dri_bufmgr_set_debug(screen->bufmgr, true);
-
-   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && screen->devinfo->gen < 7) {
-      fprintf(stderr,
-              "shader_time debugging requires gen7 (Ivybridge) or better.\n");
-      INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
-   }
-
-   if (INTEL_DEBUG & DEBUG_AUB)
-      drm_intel_bufmgr_gem_set_aub_dump(screen->bufmgr, true);
 }
 
 /**
