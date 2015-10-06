@@ -4718,20 +4718,43 @@ fs_visitor::setup_vs_payload()
    payload.num_regs = 2;
 }
 
+/**
+ * We are building the local ID push constant data using the simplest possible
+ * method. We simply push the local IDs directly as they should appear in the
+ * registers for the uvec3 gl_LocalInvocationID variable.
+ *
+ * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
+ * registers worth of push constant space.
+ *
+ * Note: Any updates to brw_cs_prog_local_id_payload_dwords,
+ * fill_local_id_payload or fs_visitor::emit_cs_local_invocation_id_setup need
+ * to coordinated.
+ *
+ * FINISHME: There are a few easy optimizations to consider.
+ *
+ * 1. If gl_WorkGroupSize x, y or z is 1, we can just use zero, and there is
+ *    no need for using push constant space for that dimension.
+ *
+ * 2. Since GL_MAX_COMPUTE_WORK_GROUP_SIZE is currently 1024 or less, we can
+ *    easily use 16-bit words rather than 32-bit dwords in the push constant
+ *    data.
+ *
+ * 3. If gl_WorkGroupSize x, y or z is small, then we can use bytes for
+ *    conveying the data, and thereby reduce push constant usage.
+ *
+ */
 void
 fs_visitor::setup_cs_payload()
 {
    assert(devinfo->gen >= 7);
+   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
 
    payload.num_regs = 1;
 
    if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
-      const unsigned local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(dispatch_width);
-      assert((local_id_dwords & 0x7) == 0);
-      const unsigned local_id_regs = local_id_dwords / 8;
+      prog_data->local_invocation_id_regs = dispatch_width * 3 / 8;
       payload.local_invocation_id_reg = payload.num_regs;
-      payload.num_regs += local_id_regs;
+      payload.num_regs += prog_data->local_invocation_id_regs;
    }
 }
 
@@ -5169,6 +5192,42 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->prog_offset_16 = g.generate_code(simd16_cfg, 16);
 
    return g.get_assembly(final_assembly_size);
+}
+
+void
+brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,
+                             void *buffer, uint32_t threads, uint32_t stride)
+{
+   if (prog_data->local_invocation_id_regs == 0)
+      return;
+
+   /* 'stride' should be an integer number of registers, that is, a multiple
+    * of 32 bytes.
+    */
+   assert(stride % 32 == 0);
+
+   unsigned x = 0, y = 0, z = 0;
+   for (unsigned t = 0; t < threads; t++) {
+      uint32_t *param = (uint32_t *) buffer + stride * t / 4;
+
+      for (unsigned i = 0; i < prog_data->simd_size; i++) {
+         param[0 * prog_data->simd_size + i] = x;
+         param[1 * prog_data->simd_size + i] = y;
+         param[2 * prog_data->simd_size + i] = z;
+
+         x++;
+         if (x == prog_data->local_size[0]) {
+            x = 0;
+            y++;
+            if (y == prog_data->local_size[1]) {
+               y = 0;
+               z++;
+               if (z == prog_data->local_size[2])
+                  z = 0;
+            }
+         }
+      }
+   }
 }
 
 fs_reg *

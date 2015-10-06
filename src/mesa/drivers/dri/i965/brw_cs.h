@@ -48,8 +48,9 @@ brw_cs_emit(struct brw_context *brw,
             struct gl_shader_program *prog,
             unsigned *final_assembly_size);
 
-unsigned
-brw_cs_prog_local_id_payload_dwords(unsigned dispatch_width);
+void
+brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
+                             void *buffer, uint32_t threads, uint32_t stride);
 
 #ifdef __cplusplus
 }

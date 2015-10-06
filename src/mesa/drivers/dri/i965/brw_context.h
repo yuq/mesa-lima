@@ -484,6 +484,7 @@ struct brw_cs_prog_data {
    unsigned simd_size;
    bool uses_barrier;
    bool uses_num_work_groups;
+   unsigned local_invocation_id_regs;
 
    struct {
       /** @{
