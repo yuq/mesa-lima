@@ -202,9 +202,10 @@ VkResult anv_BeginCommandBuffer(
       cmd_buffer->state.pass =
          anv_render_pass_from_handle(pBeginInfo->renderPass);
 
-      /* FIXME: We shouldn't be starting on the first subpass */
-      anv_cmd_buffer_begin_subpass(cmd_buffer,
-                                   &cmd_buffer->state.pass->subpasses[0]);
+      struct anv_subpass *subpass =
+         &cmd_buffer->state.pass->subpasses[pBeginInfo->subpass];
+
+      anv_cmd_buffer_begin_subpass(cmd_buffer, subpass);
    }
 
    anv_cmd_buffer_emit_state_base_address(cmd_buffer);

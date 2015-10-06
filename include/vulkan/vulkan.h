@@ -1937,6 +1937,7 @@ typedef struct {
     const void*                                 pNext;
     VkCmdBufferOptimizeFlags                    flags;
     VkRenderPass                                renderPass;
+    uint32_t                                    subpass;
     VkFramebuffer                               framebuffer;
 } VkCmdBufferBeginInfo;
 
