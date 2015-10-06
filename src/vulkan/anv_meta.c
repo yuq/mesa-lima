@@ -1654,8 +1654,7 @@ void anv_CmdClearDepthStencilImage(
     VkCmdBuffer                                 cmdBuffer,
     VkImage                                     image,
     VkImageLayout                               imageLayout,
-    float                                       depth,
-    uint32_t                                    stencil,
+    const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rangeCount,
     const VkImageSubresourceRange*              pRanges)
 {
@@ -1675,10 +1674,9 @@ void anv_CmdClearColorAttachment(
 
 void anv_CmdClearDepthStencilAttachment(
     VkCmdBuffer                                 cmdBuffer,
-    VkImageAspectFlags                          imageAspectMask,
+    VkImageAspectFlags                          aspectMask,
     VkImageLayout                               imageLayout,
-    float                                       depth,
-    uint32_t                                    stencil,
+    const VkClearDepthStencilValue*             pDepthStencil,
     uint32_t                                    rectCount,
     const VkRect3D*                             pRects)
 {
