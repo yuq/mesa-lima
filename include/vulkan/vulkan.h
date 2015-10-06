@@ -1998,9 +1998,9 @@ typedef struct {
 } VkRect3D;
 
 typedef struct {
-    VkImageSubresource                          srcSubresource;
+    VkImageSubresourceCopy                      srcSubresource;
     VkOffset3D                                  srcOffset;
-    VkImageSubresource                          destSubresource;
+    VkImageSubresourceCopy                      destSubresource;
     VkOffset3D                                  destOffset;
     VkExtent3D                                  extent;
 } VkImageResolve;
