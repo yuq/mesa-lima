@@ -1306,6 +1306,23 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	unsigned compressed = 0;
 	unsigned chan;
 
+	/* XXX: This controls which components of the output
+	 * registers actually get exported. (e.g bit 0 means export
+	 * X component, bit 1 means export Y component, etc.)  I'm
+	 * hard coding this to 0xf for now.  In the future, we might
+	 * want to do something else.
+	 */
+	args[0] = lp_build_const_int32(base->gallivm, 0xf);
+
+	/* Specify whether the EXEC mask represents the valid mask */
+	args[1] = uint->zero;
+
+	/* Specify whether this is the last export */
+	args[2] = uint->zero;
+
+	/* Specify the target we are exporting */
+	args[3] = lp_build_const_int32(base->gallivm, target);
+
 	if (si_shader_ctx->type == TGSI_PROCESSOR_FRAGMENT) {
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
@@ -1323,55 +1340,31 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
+	/* Set COMPR flag */
+	args[4] = compressed ? uint->one : uint->zero;
+
 	if (compressed) {
 		/* Pixel shader needs to pack output values before export */
-		for (chan = 0; chan < 2; chan++ ) {
-			args[0] = values[2 * chan];
-			args[1] = values[2 * chan + 1];
-			args[chan + 5] =
-				lp_build_intrinsic(base->gallivm->builder,
-						"llvm.SI.packf16",
-						LLVMInt32TypeInContext(base->gallivm->context),
-						args, 2,
-						LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+		for (chan = 0; chan < 2; chan++) {
+			LLVMValueRef pack_args[2] = {
+				values[2 * chan],
+				values[2 * chan + 1]
+			};
+			LLVMValueRef packed;
+
+			packed = lp_build_intrinsic(base->gallivm->builder,
+						    "llvm.SI.packf16",
+						    LLVMInt32TypeInContext(base->gallivm->context),
+						    pack_args, 2,
+						    LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
 			args[chan + 7] = args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
-						 args[chan + 5],
+						 packed,
 						 LLVMFloatTypeInContext(base->gallivm->context),
 						 "");
 		}
-
-		/* Set COMPR flag */
-		args[4] = uint->one;
-	} else {
-		for (chan = 0; chan < 4; chan++ )
-			/* +5 because the first output value will be
-			 * the 6th argument to the intrinsic. */
-			args[chan + 5] = values[chan];
-
-		/* Clear COMPR flag */
-		args[4] = uint->zero;
-	}
-
-	/* XXX: This controls which components of the output
-	 * registers actually get exported. (e.g bit 0 means export
-	 * X component, bit 1 means export Y component, etc.)  I'm
-	 * hard coding this to 0xf for now.  In the future, we might
-	 * want to do something else. */
-	args[0] = lp_build_const_int32(base->gallivm, 0xf);
-
-	/* Specify whether the EXEC mask represents the valid mask */
-	args[1] = uint->zero;
-
-	/* Specify whether this is the last export */
-	args[2] = uint->zero;
-
-	/* Specify the target we are exporting */
-	args[3] = lp_build_const_int32(base->gallivm, target);
-
-	/* XXX: We probably need to keep track of the output
-	 * values, so we know what we are passing to the next
-	 * stage. */
+	} else
+		memcpy(&args[5], values, sizeof(values[0]) * 4);
 }
 
 /* Load from output pointers and initialize arguments for the shader export intrinsic */
