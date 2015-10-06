@@ -5093,40 +5093,39 @@ fs_visitor::run_cs()
 }
 
 const unsigned *
-brw_wm_fs_emit(struct brw_context *brw,
+brw_wm_fs_emit(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_wm_prog_key *key,
                struct brw_wm_prog_data *prog_data,
-               struct gl_fragment_program *fp,
-               struct gl_shader_program *prog,
+               const nir_shader *shader,
+               struct gl_program *prog,
                int shader_time_index8, int shader_time_index16,
-               unsigned *final_assembly_size)
+               bool use_rep_send,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
-   /* Now the main event: Visit the shader IR and generate our FS IR for it.
-    */
-   fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
-                &prog_data->base, &fp->Base, fp->Base.nir, 8, shader_time_index8);
+   fs_visitor v(compiler, log_data, mem_ctx, key,
+                &prog_data->base, prog, shader, 8,
+                shader_time_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
-      if (prog) {
-         prog->LinkStatus = false;
-         ralloc_strcat(&prog->InfoLog, v.fail_msg);
-      }
-
-      _mesa_problem(NULL, "Failed to compile fragment shader: %s\n",
-                    v.fail_msg);
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
       return NULL;
    }
 
    cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &fp->Base, fp->Base.nir, 16, shader_time_index16);
-   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
+   fs_visitor v2(compiler, log_data, mem_ctx, key,
+                 &prog_data->base, prog, shader, 16,
+                 shader_time_index16);
+   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
-         if (!v2.run_fs(brw->use_rep_send)) {
-            perf_debug("SIMD16 shader failed to compile: %s", v2.fail_msg);
+         if (!v2.run_fs(use_rep_send)) {
+            compiler->shader_perf_log(log_data,
+                                      "SIMD16 shader failed to compile: %s",
+                                      v2.fail_msg);
          } else {
             simd16_cfg = v2.cfg;
          }
@@ -5134,8 +5133,8 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    cfg_t *simd8_cfg;
-   int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || brw->no_simd8;
-   if ((no_simd8 || brw->gen < 5) && simd16_cfg) {
+   int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || use_rep_send;
+   if ((no_simd8 || compiler->devinfo->gen < 5) && simd16_cfg) {
       simd8_cfg = NULL;
       prog_data->no_8 = true;
    } else {
@@ -5143,20 +5142,14 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   fs_generator g(brw->intelScreen->compiler, brw,
-                  mem_ctx, (void *) key, &prog_data->base,
+   fs_generator g(compiler, log_data, mem_ctx, (void *) key, &prog_data->base,
                   v.promoted_constants, v.runtime_check_aads_emit, "FS");
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
-      char *name;
-      if (prog)
-         name = ralloc_asprintf(mem_ctx, "%s fragment shader %d",
-                                prog->Label ? prog->Label : "unnamed",
-                                prog->Name);
-      else
-         name = ralloc_asprintf(mem_ctx, "fragment program %d", fp->Base.Id);
-
-      g.enable_debug(name);
+      g.enable_debug(ralloc_asprintf(mem_ctx, "%s fragment shader %s",
+                                     shader->info.label ? shader->info.label :
+                                                          "unnamed",
+                                     shader->info.name));
    }
 
    if (simd8_cfg)

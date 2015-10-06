@@ -230,9 +230,19 @@ brw_codegen_wm_prog(struct brw_context *brw,
       st_index16 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS16);
    }
 
-   program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
-                            &fp->program, prog, st_index8, st_index16, &program_size);
+   char *error_str = NULL;
+   program = brw_wm_fs_emit(brw->intelScreen->compiler, brw, mem_ctx,
+                            key, &prog_data, fp->program.Base.nir,
+                            &fp->program.Base, st_index8, st_index16,
+                            brw->use_rep_send, &program_size, &error_str);
    if (program == NULL) {
+      if (prog) {
+         prog->LinkStatus = false;
+         ralloc_strcat(&prog->InfoLog, error_str);
+      }
+
+      _mesa_problem(NULL, "Failed to compile fragment shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }
