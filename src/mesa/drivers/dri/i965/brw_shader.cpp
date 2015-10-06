@@ -657,7 +657,7 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
 backend_shader::backend_shader(const struct brw_compiler *compiler,
                                void *log_data,
                                void *mem_ctx,
-                               nir_shader *shader,
+                               const nir_shader *shader,
                                struct brw_stage_prog_data *stage_prog_data)
    : compiler(compiler),
      log_data(log_data),

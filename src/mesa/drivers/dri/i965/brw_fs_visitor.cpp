@@ -1070,7 +1070,7 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        const void *key,
                        struct brw_stage_prog_data *prog_data,
                        struct gl_program *prog,
-                       nir_shader *shader,
+                       const nir_shader *shader,
                        unsigned dispatch_width,
                        int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),

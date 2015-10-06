@@ -225,7 +225,7 @@ protected:
    backend_shader(const struct brw_compiler *compiler,
                   void *log_data,
                   void *mem_ctx,
-                  nir_shader *shader,
+                  const nir_shader *shader,
                   struct brw_stage_prog_data *stage_prog_data);
 
 public:
@@ -234,7 +234,7 @@ public:
    void *log_data; /* Passed to compiler->*_log functions */
 
    const struct brw_device_info * const devinfo;
-   nir_shader *nir;
+   const nir_shader *nir;
    struct brw_stage_prog_data * const stage_prog_data;
 
    /** ralloc context for temporary data used during compile */

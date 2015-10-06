@@ -96,7 +96,7 @@ public:
               const void *key,
               struct brw_stage_prog_data *prog_data,
               struct gl_program *prog,
-              nir_shader *shader,
+              const nir_shader *shader,
               unsigned dispatch_width,
               int shader_time_index);
 

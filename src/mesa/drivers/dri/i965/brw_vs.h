@@ -88,7 +88,7 @@ public:
                    void *log_data,
                    const struct brw_vs_prog_key *key,
                    struct brw_vs_prog_data *vs_prog_data,
-                   nir_shader *shader,
+                   const nir_shader *shader,
                    gl_clip_plane *clip_planes,
                    void *mem_ctx,
                    int shader_time_index,

@@ -35,7 +35,7 @@ namespace brw {
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  struct brw_gs_compile *c,
-                                 nir_shader *shader,
+                                 const nir_shader *shader,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
