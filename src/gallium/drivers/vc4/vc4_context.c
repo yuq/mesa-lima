@@ -188,6 +188,9 @@ vc4_context_destroy(struct pipe_context *pctx)
         pipe_surface_reference(&vc4->framebuffer.cbufs[0], NULL);
         pipe_surface_reference(&vc4->framebuffer.zsbuf, NULL);
 
+        pipe_surface_reference(&vc4->color_write, NULL);
+        pipe_surface_reference(&vc4->color_read, NULL);
+
         vc4_program_fini(pctx);
 
         ralloc_free(vc4);
