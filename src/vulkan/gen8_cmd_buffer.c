@@ -935,8 +935,7 @@ void gen8_CmdPipelineBarrier(
 
    if (anv_clear_mask(&srcStageMask,
                       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT |
-                      VK_PIPELINE_STAGE_TRANSFER_BIT |
-                      VK_PIPELINE_STAGE_TRANSITION_BIT)) {
+                      VK_PIPELINE_STAGE_TRANSFER_BIT)) {
       cmd.CommandStreamerStallEnable = true;
    }
 

@@ -495,7 +495,7 @@ VkResult anv_GetPhysicalDeviceMemoryProperties(
    pMemoryProperties->memoryHeapCount = 1;
    pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
       .size = heap_size,
-      .flags = VK_MEMORY_HEAP_HOST_LOCAL,
+      .flags = VK_MEMORY_HEAP_HOST_LOCAL_BIT,
    };
 
    return VK_SUCCESS;
