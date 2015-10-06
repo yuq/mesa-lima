@@ -178,7 +178,7 @@ VkResult anv_CreateInstance(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyInstance(
+void anv_DestroyInstance(
     VkInstance                                  _instance)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
@@ -190,8 +190,6 @@ VkResult anv_DestroyInstance(
    _mesa_locale_fini();
 
    instance->pfnFree(instance->pAllocUserData, instance);
-
-   return VK_SUCCESS;
 }
 
 void *
@@ -650,7 +648,7 @@ VkResult anv_CreateDevice(
    return vk_error(VK_ERROR_UNAVAILABLE);
 }
 
-VkResult anv_DestroyDevice(
+void anv_DestroyDevice(
     VkDevice                                    _device)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -679,8 +677,6 @@ VkResult anv_DestroyDevice(
    close(device->fd);
 
    anv_instance_free(device->instance, device);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetGlobalExtensionProperties(
@@ -937,7 +933,7 @@ VkResult anv_AllocMemory(
    return result;
 }
 
-VkResult anv_FreeMemory(
+void anv_FreeMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
@@ -951,8 +947,6 @@ VkResult anv_FreeMemory(
       anv_gem_close(device, mem->bo.gem_handle);
 
    anv_device_free(device, mem);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_MapMemory(
@@ -980,15 +974,13 @@ VkResult anv_MapMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_UnmapMemory(
+void anv_UnmapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
    ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
    anv_gem_munmap(mem->map, mem->map_size);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_FlushMappedMemoryRanges(
@@ -1195,7 +1187,7 @@ VkResult anv_CreateFence(
    return result;
 }
 
-VkResult anv_DestroyFence(
+void anv_DestroyFence(
     VkDevice                                    _device,
     VkFence                                     _fence)
 {
@@ -1205,8 +1197,6 @@ VkResult anv_DestroyFence(
    anv_gem_munmap(fence->bo.map, fence->bo.size);
    anv_gem_close(device, fence->bo.gem_handle);
    anv_device_free(device, fence);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetFences(
@@ -1278,11 +1268,11 @@ VkResult anv_CreateSemaphore(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroySemaphore(
+void anv_DestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub();
 }
 
 VkResult anv_QueueSignalSemaphore(
@@ -1309,11 +1299,11 @@ VkResult anv_CreateEvent(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroyEvent(
+void anv_DestroyEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub();
 }
 
 VkResult anv_GetEventStatus(
@@ -1363,7 +1353,7 @@ VkResult anv_CreateBuffer(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyBuffer(
+void anv_DestroyBuffer(
     VkDevice                                    _device,
     VkBuffer                                    _buffer)
 {
@@ -1371,8 +1361,6 @@ VkResult anv_DestroyBuffer(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    anv_device_free(device, buffer);
-
-   return VK_SUCCESS;
 }
 
 void
@@ -1421,7 +1409,7 @@ anv_buffer_view_create(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyBufferView(
+void anv_DestroyBufferView(
     VkDevice                                    _device,
     VkBufferView                                _bview)
 {
@@ -1430,11 +1418,9 @@ VkResult anv_DestroyBufferView(
 
    anv_state_pool_free(&device->surface_state_pool, bview->surface_state);
    anv_device_free(device, bview);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_DestroySampler(
+void anv_DestroySampler(
     VkDevice                                    _device,
     VkSampler                                   _sampler)
 {
@@ -1442,8 +1428,6 @@ VkResult anv_DestroySampler(
    ANV_FROM_HANDLE(anv_sampler, sampler, _sampler);
 
    anv_device_free(device, sampler);
-
-   return VK_SUCCESS;
 }
 
 // Descriptor set functions
@@ -1601,7 +1585,7 @@ VkResult anv_CreateDescriptorSetLayout(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDescriptorSetLayout(
+void anv_DestroyDescriptorSetLayout(
     VkDevice                                    _device,
     VkDescriptorSetLayout                       _set_layout)
 {
@@ -1609,8 +1593,6 @@ VkResult anv_DestroyDescriptorSetLayout(
    ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout, _set_layout);
 
    anv_device_free(device, set_layout);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateDescriptorPool(
@@ -1625,12 +1607,11 @@ VkResult anv_CreateDescriptorPool(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDescriptorPool(
+void anv_DestroyDescriptorPool(
     VkDevice                                    _device,
     VkDescriptorPool                            _pool)
 {
    anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetDescriptorPool(
@@ -1901,7 +1882,7 @@ VkResult anv_CreateDynamicViewportState(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDynamicViewportState(
+void anv_DestroyDynamicViewportState(
     VkDevice                                    _device,
     VkDynamicViewportState                      _vp_state)
 {
@@ -1913,11 +1894,9 @@ VkResult anv_DestroyDynamicViewportState(
    anv_state_pool_free(&device->dynamic_state_pool, vp_state->scissor);
 
    anv_device_free(device, vp_state);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDynamicRasterState(
+void anv_DestroyDynamicRasterState(
     VkDevice                                    _device,
     VkDynamicRasterState                        _rs_state)
 {
@@ -1925,8 +1904,6 @@ VkResult anv_DestroyDynamicRasterState(
    ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, _rs_state);
 
    anv_device_free(device, rs_state);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateDynamicColorBlendState(
@@ -1958,7 +1935,7 @@ VkResult anv_CreateDynamicColorBlendState(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDynamicColorBlendState(
+void anv_DestroyDynamicColorBlendState(
     VkDevice                                    _device,
     VkDynamicColorBlendState                    _cb_state)
 {
@@ -1966,11 +1943,9 @@ VkResult anv_DestroyDynamicColorBlendState(
    ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, _cb_state);
 
    anv_device_free(device, cb_state);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDynamicDepthStencilState(
+void anv_DestroyDynamicDepthStencilState(
     VkDevice                                    _device,
     VkDynamicDepthStencilState                  _ds_state)
 {
@@ -1978,8 +1953,6 @@ VkResult anv_DestroyDynamicDepthStencilState(
    ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, _ds_state);
 
    anv_device_free(device, ds_state);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateFramebuffer(
@@ -2037,7 +2010,7 @@ VkResult anv_CreateFramebuffer(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyFramebuffer(
+void anv_DestroyFramebuffer(
     VkDevice                                    _device,
     VkFramebuffer                               _fb)
 {
@@ -2047,8 +2020,6 @@ VkResult anv_DestroyFramebuffer(
    anv_DestroyDynamicViewportState(anv_device_to_handle(device),
                                    fb->vp_state);
    anv_device_free(device, fb);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateRenderPass(
@@ -2151,7 +2122,7 @@ VkResult anv_CreateRenderPass(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyRenderPass(
+void anv_DestroyRenderPass(
     VkDevice                                    _device,
     VkRenderPass                                _pass)
 {
@@ -2170,8 +2141,6 @@ VkResult anv_DestroyRenderPass(
    }
 
    anv_device_free(device, pass);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetRenderAreaGranularity(

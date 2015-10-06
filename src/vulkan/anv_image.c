@@ -353,14 +353,12 @@ anv_CreateImage(VkDevice device,
       pImage);
 }
 
-VkResult
+void
 anv_DestroyImage(VkDevice _device, VkImage _image)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    anv_device_free(device, anv_image_from_handle(_image));
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetImageSubresourceLayout(
@@ -499,7 +497,7 @@ anv_image_view_fini(struct anv_device *device,
    anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
 }
 
-VkResult
+void
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -507,8 +505,6 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 
    anv_image_view_fini(device, iview);
    anv_device_free(device, iview);
-
-   return VK_SUCCESS;
 }
 
 static void
@@ -624,7 +620,7 @@ anv_CreateAttachmentView(VkDevice _device,
    return VK_SUCCESS;
 }
 
-VkResult
+void
 anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -635,6 +631,4 @@ anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
    }
 
    anv_device_free(device, aview);
-
-   return VK_SUCCESS;
 }

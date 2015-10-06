@@ -56,7 +56,7 @@ VkResult anv_CreateShaderModule(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyShaderModule(
+void anv_DestroyShaderModule(
     VkDevice                                    _device,
     VkShaderModule                              _module)
 {
@@ -64,8 +64,6 @@ VkResult anv_DestroyShaderModule(
    ANV_FROM_HANDLE(anv_shader_module, module, _module);
 
    anv_device_free(device, module);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateShader(
@@ -100,7 +98,7 @@ VkResult anv_CreateShader(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyShader(
+void anv_DestroyShader(
     VkDevice                                    _device,
     VkShader                                    _shader)
 {
@@ -108,8 +106,6 @@ VkResult anv_DestroyShader(
    ANV_FROM_HANDLE(anv_shader, shader, _shader);
 
    anv_device_free(device, shader);
-
-   return VK_SUCCESS;
 }
 
 
@@ -123,12 +119,10 @@ VkResult anv_CreatePipelineCache(
    stub_return(VK_SUCCESS);
 }
 
-VkResult anv_DestroyPipelineCache(
+void anv_DestroyPipelineCache(
     VkDevice                                    _device,
     VkPipelineCache                             _cache)
 {
-   /* VkPipelineCache is a dummy object. */
-   return VK_SUCCESS;
 }
 
 size_t anv_GetPipelineCacheSize(
@@ -155,7 +149,7 @@ VkResult anv_MergePipelineCaches(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroyPipeline(
+void anv_DestroyPipeline(
     VkDevice                                    _device,
     VkPipeline                                  _pipeline)
 {
@@ -167,8 +161,6 @@ VkResult anv_DestroyPipeline(
    anv_state_stream_finish(&pipeline->program_stream);
    anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_device_free(pipeline->device, pipeline);
-
-   return VK_SUCCESS;
 }
 
 static const uint32_t vk_to_gen_primitive_type[] = {
@@ -418,7 +410,7 @@ VkResult anv_CreatePipelineLayout(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyPipelineLayout(
+void anv_DestroyPipelineLayout(
     VkDevice                                    _device,
     VkPipelineLayout                            _pipelineLayout)
 {
@@ -426,6 +418,4 @@ VkResult anv_DestroyPipelineLayout(
    ANV_FROM_HANDLE(anv_pipeline_layout, pipeline_layout, _pipelineLayout);
 
    anv_device_free(device, pipeline_layout);
-
-   return VK_SUCCESS;
 }

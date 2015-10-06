@@ -72,7 +72,7 @@ VkResult anv_CreateQueryPool(
    return result;
 }
 
-VkResult anv_DestroyQueryPool(
+void anv_DestroyQueryPool(
     VkDevice                                    _device,
     VkQueryPool                                 _pool)
 {
@@ -82,8 +82,6 @@ VkResult anv_DestroyQueryPool(
    anv_gem_munmap(pool->bo.map, pool->bo.size);
    anv_gem_close(device, pool->bo.gem_handle);
    anv_device_free(device, pool);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetQueryPoolResults(

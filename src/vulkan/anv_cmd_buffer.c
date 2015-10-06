@@ -144,7 +144,7 @@ VkResult anv_CreateCommandBuffer(
    return result;
 }
 
-VkResult anv_DestroyCommandBuffer(
+void anv_DestroyCommandBuffer(
     VkDevice                                    _device,
     VkCmdBuffer                                 _cmd_buffer)
 {
@@ -158,8 +158,6 @@ VkResult anv_DestroyCommandBuffer(
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
    anv_device_free(device, cmd_buffer);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetCommandBuffer(
@@ -786,7 +784,7 @@ VkResult anv_CreateCommandPool(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyCommandPool(
+void anv_DestroyCommandPool(
     VkDevice                                    _device,
     VkCmdPool                                   cmdPool)
 {
@@ -796,8 +794,6 @@ VkResult anv_DestroyCommandPool(
    anv_ResetCommandPool(_device, cmdPool, 0);
 
    anv_device_free(device, pool);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetCommandPool(
