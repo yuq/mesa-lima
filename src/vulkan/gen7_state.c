@@ -168,7 +168,7 @@ VkResult gen7_CreateSampler(
       .UAddressMinFilterRoundingEnable = 0,
       .UAddressMagFilterRoundingEnable = 0,
       .TrilinearFilterQuality = 0,
-      .NonnormalizedCoordinateEnable = 0,
+      .NonnormalizedCoordinateEnable = pCreateInfo->unnormalizedCoordinates,
       .TCXAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeU],
       .TCYAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeV],
       .TCZAddressControlMode = vk_to_gen_tex_address[pCreateInfo->addressModeW],
