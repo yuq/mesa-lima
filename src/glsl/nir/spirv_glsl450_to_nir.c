@@ -86,7 +86,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450Modf:        op = nir_op_fmod;       break;
    case GLSLstd450FMin:        op = nir_op_fmin;       break;
    case GLSLstd450FMax:        op = nir_op_fmax;       break;
-   case GLSLstd450Mix:         op = nir_op_flrp;       break;
+   case GLSLstd450FMix:        op = nir_op_flrp;       break;
    case GLSLstd450Step:
       val->ssa->def = nir_sge(&b->nb, src[1], src[0]);
       return;
@@ -116,9 +116,6 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
       val->ssa->def = nir_fdiv(&b->nb, src[0], build_length(&b->nb, src[0]));
       return;
 
-   case GLSLstd450AddCarry:         op = nir_op_uadd_carry;          break;
-   case GLSLstd450SubBorrow:        op = nir_op_usub_borrow;         break;
-
    case GLSLstd450Exp:
    case GLSLstd450Log:
    case GLSLstd450FClamp:
@@ -142,7 +139,7 @@ handle_glsl450_alu(struct vtn_builder *b, enum GLSLstd450 entrypoint,
    case GLSLstd450FaceForward:
    case GLSLstd450Reflect:
    case GLSLstd450Refract:
-   case GLSLstd450MulExtended:
+   case GLSLstd450IMix:
    default:
       unreachable("Unhandled opcode");
    }

@@ -340,7 +340,7 @@ struct_member_decoration_cb(struct vtn_builder *b,
    case SpvDecorationSmooth:
       ctx->fields[member].interpolation = INTERP_QUALIFIER_SMOOTH;
       break;
-   case SpvDecorationNoperspective:
+   case SpvDecorationNoPerspective:
       ctx->fields[member].interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
       break;
    case SpvDecorationFlat:
@@ -740,7 +740,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationSmooth:
       var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
       break;
-   case SpvDecorationNoperspective:
+   case SpvDecorationNoPerspective:
       var->data.interpolation = INTERP_QUALIFIER_NOPERSPECTIVE;
       break;
    case SpvDecorationFlat:
@@ -759,7 +759,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       assert(var->constant_initializer != NULL);
       var->data.read_only = true;
       break;
-   case SpvDecorationNonwritable:
+   case SpvDecorationNonWritable:
       var->data.read_only = true;
       break;
    case SpvDecorationLocation:
@@ -790,9 +790,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       b->builtins[dec->literals[0]] = var;
       break;
    }
-   case SpvDecorationNoStaticUse:
-      /* This can safely be ignored */
-      break;
    case SpvDecorationRowMajor:
    case SpvDecorationColMajor:
    case SpvDecorationGLSLShared:
@@ -801,7 +798,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationAliased:
    case SpvDecorationVolatile:
    case SpvDecorationCoherent:
-   case SpvDecorationNonreadable:
+   case SpvDecorationNonReadable:
    case SpvDecorationUniform:
       /* This is really nice but we have no use for it right now. */
    case SpvDecorationCPacked:
