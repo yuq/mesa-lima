@@ -1714,7 +1714,7 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkPipelineShaderStageCreateInfo             cs;
+    VkPipelineShaderStageCreateInfo             stage;
     VkPipelineCreateFlags                       flags;
     VkPipelineLayout                            layout;
     VkPipeline                                  basePipelineHandle;
