@@ -60,6 +60,7 @@ struct si_state_rasterizer {
 	bool			line_smooth;
 	bool			poly_smooth;
 	bool			uses_poly_offset;
+	bool			clamp_fragment_color;
 };
 
 struct si_dsa_stencil_ref_part {

@@ -572,6 +572,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->ps.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
 						       (is_line && rs->line_smooth)) &&
 						      sctx->framebuffer.nr_samples <= 1;
+			key->ps.clamp_color = rs->clamp_fragment_color;
 		}
 
 		key->ps.alpha_func = PIPE_FUNC_ALWAYS;

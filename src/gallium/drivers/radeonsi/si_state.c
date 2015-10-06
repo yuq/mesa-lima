@@ -694,7 +694,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	rs->poly_smooth = state->poly_smooth;
 	rs->uses_poly_offset = state->offset_point || state->offset_line ||
 			       state->offset_tri;
-
+	rs->clamp_fragment_color = state->clamp_fragment_color;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->pa_sc_line_stipple = state->line_stipple_enable ?

@@ -2110,6 +2110,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 	struct lp_build_context * base = &bld_base->base;
 	struct lp_build_context * uint = &bld_base->uint_bld;
 	struct tgsi_shader_info *info = &shader->selector->info;
+	LLVMBuilderRef builder = base->gallivm->builder;
 	LLVMValueRef args[9];
 	LLVMValueRef last_args[9] = { 0 };
 	int depth_index = -1, stencil_index = -1, samplemask_index = -1;
@@ -2136,6 +2137,16 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 			target = V_008DFC_SQ_EXP_MRT + semantic_index;
 			alpha_ptr = si_shader_ctx->radeon_bld.soa.outputs[i][3];
 
+			if (si_shader_ctx->shader->key.ps.clamp_color) {
+				for (int j = 0; j < 4; j++) {
+					LLVMValueRef ptr = si_shader_ctx->radeon_bld.soa.outputs[i][j];
+					LLVMValueRef result = LLVMBuildLoad(builder, ptr, "");
+
+					result = radeon_llvm_saturate(bld_base, result);
+					LLVMBuildStore(builder, result, ptr);
+				}
+			}
+
 			if (si_shader_ctx->shader->key.ps.alpha_to_one)
 				LLVMBuildStore(base->gallivm->builder,
 					       base->one, alpha_ptr);
@@ -2146,6 +2157,7 @@ static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context * bld_base)
 
 			if (si_shader_ctx->shader->key.ps.poly_line_smoothing)
 				si_scale_alpha_by_sample_mask(bld_base, alpha_ptr);
+
 			break;
 		default:
 			target = 0;
@@ -4000,6 +4012,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		fprintf(f, "  alpha_func = %u\n", key->ps.alpha_func);
 		fprintf(f, "  alpha_to_one = %u\n", key->ps.alpha_to_one);
 		fprintf(f, "  poly_stipple = %u\n", key->ps.poly_stipple);
+		fprintf(f, "  clamp_color = %u\n", key->ps.clamp_color);
 		break;
 
 	default:
