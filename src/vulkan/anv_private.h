@@ -994,7 +994,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
 void anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_render_pass *pass,
                                       const VkClearValue *clear_values);
-const struct anv_depth_stencil_view *
+const struct anv_attachment_view *
 anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer);
 
 void anv_cmd_buffer_dump(struct anv_cmd_buffer *cmd_buffer);
@@ -1244,10 +1244,11 @@ struct anv_buffer_view {
 };
 
 struct anv_image_view {
+   const struct anv_image *image; /**< VkAttachmentViewCreateInfo::image */
+   const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
    struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
-   const struct anv_format *format; /**< VkImageViewCreateInfo::format */
    VkExtent3D extent;
 };
 
@@ -1258,17 +1259,7 @@ enum anv_attachment_view_type {
 
 struct anv_attachment_view {
    enum anv_attachment_view_type attachment_type;
-};
-
-struct anv_color_attachment_view {
-   struct anv_attachment_view attachment_view;
    struct anv_image_view image_view;
-};
-
-struct anv_depth_stencil_view {
-   struct anv_attachment_view attachment_view;
-   const struct anv_image *image; /**< VkAttachmentViewCreateInfo::image */
-   const struct anv_format *format; /**< VkAttachmentViewCreateInfo::format */
 };
 
 struct anv_image_create_info {
@@ -1306,17 +1297,17 @@ gen8_image_view_init(struct anv_image_view *iview,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
 
-void anv_color_attachment_view_init(struct anv_color_attachment_view *cview,
+void anv_color_attachment_view_init(struct anv_attachment_view *aview,
                                     struct anv_device *device,
                                     const VkAttachmentViewCreateInfo* pCreateInfo,
                                     struct anv_cmd_buffer *cmd_buffer);
 
-void gen7_color_attachment_view_init(struct anv_color_attachment_view *cview,
+void gen7_color_attachment_view_init(struct anv_attachment_view *aview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);
 
-void gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
+void gen8_color_attachment_view_init(struct anv_attachment_view *aview,
                                      struct anv_device *device,
                                      const VkAttachmentViewCreateInfo* pCreateInfo,
                                      struct anv_cmd_buffer *cmd_buffer);

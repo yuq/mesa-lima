@@ -281,14 +281,13 @@ gen8_image_view_init(struct anv_image_view *iview,
 }
 
 void
-gen8_color_attachment_view_init(struct anv_color_attachment_view *cview,
+gen8_color_attachment_view_init(struct anv_attachment_view *aview,
                                 struct anv_device *device,
                                 const VkAttachmentViewCreateInfo* pCreateInfo,
                                 struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_attachment_view *aview = &cview->attachment_view;
-   struct anv_image_view *iview = &cview->image_view;
+   struct anv_image_view *iview = &aview->image_view;
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
    const struct anv_format *format_info =

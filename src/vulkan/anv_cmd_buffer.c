@@ -434,13 +434,9 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t a = 0; a < attachments; a++) {
       const struct anv_attachment_view *aview =
          fb->attachments[subpass->color_attachments[a]];
+      const struct anv_image_view *iview = &aview->image_view;
 
       assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR);
-
-      const struct anv_color_attachment_view *cview =
-         (const struct anv_color_attachment_view *) aview;
-
-      const struct anv_image_view *iview = &cview->image_view;
 
       bt_map[a] = iview->surface_state.offset + state_offset;
       add_surface_state_reloc(cmd_buffer, iview->surface_state,
@@ -821,7 +817,7 @@ VkResult anv_ResetCommandPool(
 /**
  * Return NULL if the current subpass has no depthstencil attachment.
  */
-const struct anv_depth_stencil_view *
+const struct anv_attachment_view *
 anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
@@ -835,5 +831,5 @@ anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
 
    assert(aview->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL);
 
-   return (const struct anv_depth_stencil_view *) aview;
+   return aview;
 }

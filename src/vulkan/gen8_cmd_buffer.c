@@ -458,11 +458,12 @@ static void
 gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-   const struct anv_depth_stencil_view *ds_view =
+   const struct anv_attachment_view *aview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-   const struct anv_image *image = ds_view ? ds_view->image : NULL;
-   const bool has_depth = ds_view && ds_view->format->depth_format;
-   const bool has_stencil = ds_view && ds_view->format->has_stencil;
+   const struct anv_image_view *iview = aview ? &aview->image_view : NULL;
+   const struct anv_image *image = iview ? iview->image : NULL;
+   const bool has_depth = iview && iview->format->depth_format;
+   const bool has_stencil = iview && iview->format->has_stencil;
 
    /* FIXME: Implement the PMA stall W/A */
    /* FIXME: Width and Height are wrong */
@@ -471,10 +472,10 @@ gen8_cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (has_depth) {
       anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_DEPTH_BUFFER,
          .SurfaceType = SURFTYPE_2D,
-         .DepthWriteEnable = ds_view->format->depth_format,
+         .DepthWriteEnable = iview->format->depth_format,
          .StencilWriteEnable = has_stencil,
          .HierarchicalDepthBufferEnable = false,
-         .SurfaceFormat = ds_view->format->depth_format,
+         .SurfaceFormat = iview->format->depth_format,
          .SurfacePitch = image->depth_surface.stride - 1,
          .SurfaceBaseAddress = {
             .bo = image->bo,
