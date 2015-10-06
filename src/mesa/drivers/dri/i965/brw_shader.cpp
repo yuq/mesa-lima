@@ -164,6 +164,16 @@ brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type)
    return &shader->base;
 }
 
+void
+brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
+                      unsigned surf_index)
+{
+   assert(surf_index < BRW_MAX_SURFACES);
+
+   prog_data->binding_table.size_bytes =
+      MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
+}
+
 enum brw_reg_type
 brw_type_for_base_type(const struct glsl_type *type)
 {

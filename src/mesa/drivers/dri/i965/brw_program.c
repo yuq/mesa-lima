@@ -531,16 +531,6 @@ brw_destroy_shader_time(struct brw_context *brw)
 }
 
 void
-brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
-                      unsigned surf_index)
-{
-   assert(surf_index < BRW_MAX_SURFACES);
-
-   prog_data->binding_table.size_bytes =
-      MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
-}
-
-void
 brw_stage_prog_data_free(const void *p)
 {
    struct brw_stage_prog_data *prog_data = (struct brw_stage_prog_data *)p;
