@@ -704,6 +704,24 @@ emit_consts_vgpu10(struct svga_context *svga, unsigned shader)
          assert(size == 0);
       }
 
+      if (size % 16 != 0) {
+         /* GL's buffer range sizes can be any number of bytes but the
+          * SVGA3D device requires a multiple of 16 bytes.
+          */
+         const unsigned total_size = buffer->b.b.width0;
+
+         if (offset + align(size, 16) <= total_size) {
+            /* round up size to multiple of 16 */
+            size = align(size, 16);
+         }
+         else {
+            /* round down to mulitple of 16 (this may cause rendering problems
+             * but should avoid a device error).
+             */
+            size &= ~16;
+         }
+      }
+
       assert(size % 16 == 0);
       ret = SVGA3D_vgpu10_SetSingleConstantBuffer(svga->swc,
                                                   index,
