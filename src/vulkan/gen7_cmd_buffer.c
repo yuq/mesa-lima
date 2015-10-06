@@ -332,10 +332,10 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
 
 void gen7_CmdDraw(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    firstVertex,
     uint32_t                                    vertexCount,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount)
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstVertex,
+    uint32_t                                    firstInstance)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
@@ -354,11 +354,11 @@ void gen7_CmdDraw(
 
 void gen7_CmdDrawIndexed(
     VkCmdBuffer                                 cmdBuffer,
-    uint32_t                                    firstIndex,
     uint32_t                                    indexCount,
+    uint32_t                                    instanceCount,
+    uint32_t                                    firstIndex,
     int32_t                                     vertexOffset,
-    uint32_t                                    firstInstance,
-    uint32_t                                    instanceCount)
+    uint32_t                                    firstInstance)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;

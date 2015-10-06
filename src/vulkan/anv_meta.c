@@ -414,7 +414,7 @@ meta_emit_clear(struct anv_cmd_buffer *cmd_buffer,
                                         device->meta_state.shared.cb_state);
 
    ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer),
-                     0, 3, 0, num_instances);
+                     3, num_instances, 0, 0);
 }
 
 void
@@ -926,7 +926,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                              device->meta_state.blit.pipeline_layout, 0, 1,
                              &set, 0, NULL);
 
-   ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 0, 3, 0, 1);
+   ANV_CALL(CmdDraw)(anv_cmd_buffer_to_handle(cmd_buffer), 3, 1, 0, 0);
 
    ANV_CALL(CmdEndRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer));
 
