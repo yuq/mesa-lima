@@ -85,8 +85,7 @@ VULKAN_SOURCES =                                        \
 
 BUILT_SOURCES =                                         \
 	anv_entrypoints.h                               \
-	anv_entrypoints.c                               \
-	anv_meta_spirv_autogen.h
+	anv_entrypoints.c
 
 if HAVE_EGL_PLATFORM_WAYLAND
 BUILT_SOURCES += \

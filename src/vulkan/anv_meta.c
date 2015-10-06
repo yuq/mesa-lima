@@ -28,7 +28,6 @@
 #include <fcntl.h>
 
 #include "anv_private.h"
-#include "anv_meta_spirv_autogen.h"
 #include "anv_nir_builder.h"
 
 static nir_shader *
