@@ -621,8 +621,12 @@ static GLuint
 set_sampler_compare_mode(struct gl_context *ctx,
                          struct gl_sampler_object *samp, GLint param)
 {
+    /* If GL_ARB_shadow is not supported, don't report an error.  The
+     * sampler object extension spec isn't clear on this extension interaction.
+     * Silences errors with Wine on older GPUs such as R200.
+     */
    if (!ctx->Extensions.ARB_shadow)
-      return INVALID_PNAME;
+      return GL_FALSE;
 
    if (samp->CompareMode == param)
       return GL_FALSE;
@@ -642,8 +646,12 @@ static GLuint
 set_sampler_compare_func(struct gl_context *ctx,
                          struct gl_sampler_object *samp, GLint param)
 {
+    /* If GL_ARB_shadow is not supported, don't report an error.  The
+     * sampler object extension spec isn't clear on this extension interaction.
+     * Silences errors with Wine on older GPUs such as R200.
+     */
    if (!ctx->Extensions.ARB_shadow)
-      return INVALID_PNAME;
+      return GL_FALSE;
 
    if (samp->CompareFunc == param)
       return GL_FALSE;
@@ -1329,13 +1337,9 @@ _mesa_GetSamplerParameteriv(GLuint sampler, GLenum pname, GLint *params)
       *params = IROUND(sampObj->LodBias);
       break;
    case GL_TEXTURE_COMPARE_MODE:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareMode;
       break;
    case GL_TEXTURE_COMPARE_FUNC:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareFunc;
       break;
    case GL_TEXTURE_MAX_ANISOTROPY_EXT:
@@ -1418,13 +1422,9 @@ _mesa_GetSamplerParameterfv(GLuint sampler, GLenum pname, GLfloat *params)
       *params = sampObj->LodBias;
       break;
    case GL_TEXTURE_COMPARE_MODE:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = (GLfloat) sampObj->CompareMode;
       break;
    case GL_TEXTURE_COMPARE_FUNC:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = (GLfloat) sampObj->CompareFunc;
       break;
    case GL_TEXTURE_MAX_ANISOTROPY_EXT:
@@ -1497,13 +1497,9 @@ _mesa_GetSamplerParameterIiv(GLuint sampler, GLenum pname, GLint *params)
       *params = (GLint) sampObj->LodBias;
       break;
    case GL_TEXTURE_COMPARE_MODE:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareMode;
       break;
    case GL_TEXTURE_COMPARE_FUNC:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareFunc;
       break;
    case GL_TEXTURE_MAX_ANISOTROPY_EXT:
@@ -1576,13 +1572,9 @@ _mesa_GetSamplerParameterIuiv(GLuint sampler, GLenum pname, GLuint *params)
       *params = (GLuint) sampObj->LodBias;
       break;
    case GL_TEXTURE_COMPARE_MODE:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareMode;
       break;
    case GL_TEXTURE_COMPARE_FUNC:
-      if (!ctx->Extensions.ARB_shadow)
-         goto invalid_pname;
       *params = sampObj->CompareFunc;
       break;
    case GL_TEXTURE_MAX_ANISOTROPY_EXT:
