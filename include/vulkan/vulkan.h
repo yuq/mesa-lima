@@ -1999,7 +1999,7 @@ typedef struct {
 
 typedef union {
     VkClearColorValue                           color;
-    VkClearDepthStencilValue                    ds;
+    VkClearDepthStencilValue                    depthStencil;
 } VkClearValue;
 
 typedef struct {

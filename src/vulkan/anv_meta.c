@@ -458,7 +458,7 @@ anv_cmd_buffer_clear_attachments(struct anv_cmd_buffer *cmd_buffer,
          } else if (att->format->depth_format) {
             assert(ds_attachment == VK_ATTACHMENT_UNUSED);
             ds_attachment = i;
-            ds_clear_value= clear_values[ds_attachment].ds;
+            ds_clear_value = clear_values[ds_attachment].depthStencil;
          }
       } else if (att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
          assert(att->format->has_stencil);
