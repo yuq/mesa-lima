@@ -1652,29 +1652,28 @@ VkResult anv_AllocDescriptorSets(
     VkDescriptorSetUsage                        setUsage,
     uint32_t                                    count,
     const VkDescriptorSetLayout*                pSetLayouts,
-    VkDescriptorSet*                            pDescriptorSets,
-    uint32_t*                                   pCount)
+    VkDescriptorSet*                            pDescriptorSets)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
-   VkResult result;
+   VkResult result = VK_SUCCESS;
    struct anv_descriptor_set *set;
+   uint32_t i;
 
-   for (uint32_t i = 0; i < count; i++) {
+   for (i = 0; i < count; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, layout, pSetLayouts[i]);
 
       result = anv_descriptor_set_create(device, layout, &set);
-      if (result != VK_SUCCESS) {
-         *pCount = i;
-         return result;
-      }
+      if (result != VK_SUCCESS)
+         break;
 
       pDescriptorSets[i] = anv_descriptor_set_to_handle(set);
    }
 
-   *pCount = count;
+   if (result != VK_SUCCESS)
+      anv_FreeDescriptorSets(_device, descriptorPool, i, pDescriptorSets);
 
-   return VK_SUCCESS;
+   return result;
 }
 
 VkResult anv_FreeDescriptorSets(

@@ -806,11 +806,10 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          sizeof(struct vue_header),
       });
 
-   uint32_t count;
    VkDescriptorSet set;
    anv_AllocDescriptorSets(anv_device_to_handle(device), dummy_desc_pool,
                            VK_DESCRIPTOR_SET_USAGE_ONE_SHOT,
-                           1, &device->meta_state.blit.ds_layout, &set, &count);
+                           1, &device->meta_state.blit.ds_layout, &set);
    anv_UpdateDescriptorSets(anv_device_to_handle(device),
       1, /* writeCount */
       (VkWriteDescriptorSet[]) {
