@@ -30,8 +30,6 @@
 #include "drm.h"
 #include "brw_context.h"
 
-struct intel_framebuffer;
-
 extern void intelInitBufferFuncs(struct dd_function_table *functions);
 
 bool brw_is_front_buffer_reading(struct gl_framebuffer *fb);
