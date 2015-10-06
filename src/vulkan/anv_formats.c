@@ -327,6 +327,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkImageType                                 type,
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
+    VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
