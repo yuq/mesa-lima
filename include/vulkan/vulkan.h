@@ -1535,6 +1535,7 @@ typedef struct {
     VkShaderModule                              module;
     const char*                                 pName;
     VkShaderCreateFlags                         flags;
+    VkShaderStage                               stage;
 } VkShaderCreateInfo;
 
 typedef struct {
