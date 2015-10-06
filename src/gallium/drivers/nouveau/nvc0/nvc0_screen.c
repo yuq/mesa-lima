@@ -914,6 +914,7 @@ nvc0_screen_create(struct nouveau_device *dev)
       else
          value = (16 << 8) | 4;
    }
+   screen->gpc_count = value & 0x000000ff;
    screen->mp_count = value >> 8;
    screen->mp_count_compute = screen->mp_count;
 
