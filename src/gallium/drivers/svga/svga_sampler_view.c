@@ -48,8 +48,10 @@ svga_debug_describe_sampler_view(char *buf, const struct svga_sampler_view *sv)
 {
    char res[128];
    debug_describe_resource(res, sv->texture);
-   util_sprintf(buf, "svga_sampler_view<%s,[%u,%u]>", res, sv->min_lod, sv->max_lod);
+   util_sprintf(buf, "svga_sampler_view<%s,[%u,%u]>",
+                res, sv->min_lod, sv->max_lod);
 }
+
 
 struct svga_sampler_view *
 svga_get_tex_sampler_view(struct pipe_context *pipe,
@@ -58,10 +60,11 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
 {
    struct svga_context *svga = svga_context(pipe);
    struct svga_screen *ss = svga_screen(pipe->screen);
-   struct svga_texture *tex = svga_texture(pt); 
+   struct svga_texture *tex = svga_texture(pt);
    struct svga_sampler_view *sv = NULL;
    SVGA3dSurfaceFlags flags = SVGA3D_SURFACE_HINT_TEXTURE;
-   SVGA3dSurfaceFormat format = svga_translate_format(ss, pt->format, PIPE_BIND_SAMPLER_VIEW);
+   SVGA3dSurfaceFormat format = svga_translate_format(ss, pt->format,
+                                                      PIPE_BIND_SAMPLER_VIEW);
    boolean view = TRUE;
 
    assert(pt);
@@ -155,7 +158,8 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
       sv->key.cachable = 0;
       sv->handle = tex->handle;
       debug_reference(&sv->reference,
-                      (debug_reference_descriptor)svga_debug_describe_sampler_view, 0);
+                      (debug_reference_descriptor)
+                      svga_debug_describe_sampler_view, 0);
       return sv;
    }
 
@@ -164,13 +168,16 @@ svga_get_tex_sampler_view(struct pipe_context *pipe,
    pipe_mutex_unlock(ss->tex_mutex);
 
    debug_reference(&sv->reference,
-                   (debug_reference_descriptor)svga_debug_describe_sampler_view, 0);
+                   (debug_reference_descriptor)
+                   svga_debug_describe_sampler_view, 0);
 
    return sv;
 }
 
+
 void
-svga_validate_sampler_view(struct svga_context *svga, struct svga_sampler_view *v)
+svga_validate_sampler_view(struct svga_context *svga,
+                           struct svga_sampler_view *v)
 {
    struct svga_texture *tex = svga_texture(v->texture);
    unsigned numFaces;
@@ -186,7 +193,7 @@ svga_validate_sampler_view(struct svga_context *svga, struct svga_sampler_view *
 
    age = tex->age;
 
-   if(tex->b.b.target == PIPE_TEXTURE_CUBE)
+   if (tex->b.b.target == PIPE_TEXTURE_CUBE)
       numFaces = 6;
    else
       numFaces = 1;
@@ -207,12 +214,13 @@ svga_validate_sampler_view(struct svga_context *svga, struct svga_sampler_view *
    v->age = age;
 }
 
+
 void
 svga_destroy_sampler_view_priv(struct svga_sampler_view *v)
 {
    struct svga_texture *tex = svga_texture(v->texture);
 
-   if(v->handle != tex->handle) {
+   if (v->handle != tex->handle) {
       struct svga_screen *ss = svga_screen(v->texture->screen);
       SVGA_DBG(DEBUG_DMA, "unref sid %p (sampler view)\n", v->handle);
       svga_screen_surface_destroy(ss, &v->key, &v->handle);
