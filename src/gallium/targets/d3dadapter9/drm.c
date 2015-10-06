@@ -30,7 +30,7 @@
 #include "pipe/p_state.h"
 
 #include "target-helpers/inline_drm_helper.h"
-#include "target-helpers/inline_sw_helper.h"
+#include "target-helpers/inline_wrapper_sw_helper.h"
 #include "state_tracker/drm_driver.h"
 
 #include "d3dadapter/d3dadapter9.h"
@@ -309,7 +309,7 @@ drm_create_adapter( int fd,
     driDestroyOptionInfo(&defaultInitOptions);
 
 #if GALLIUM_STATIC_TARGETS
-    ctx->base.ref = ninesw_create_screen(ctx->base.hal);
+    ctx->base.ref = sw_screen_wrap(ctx->base.hal);
 #else
     /* wrap it to create a software screen that can share resources */
     if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal)) {
