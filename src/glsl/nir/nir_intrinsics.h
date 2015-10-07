@@ -83,6 +83,14 @@ BARRIER(discard)
  */
 BARRIER(memory_barrier)
 
+/*
+ * Shader clock intrinsic with semantics analogous to the clock2x32ARB()
+ * GLSL intrinsic.
+ * The latter can be used as code motion barrier, which is currently not
+ * feasible with NIR.
+ */
+INTRINSIC(shader_clock, 0, ARR(), true, 1, 0, 0, NIR_INTRINSIC_CAN_ELIMINATE)
+
 /** A conditional discard, with a single boolean source. */
 INTRINSIC(discard_if, 1, ARR(1), false, 0, 0, 0, 0)
 

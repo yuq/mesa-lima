@@ -717,6 +717,8 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_ssbo_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_comp_swap;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_shader_clock") == 0) {
+         op = nir_intrinsic_shader_clock;
       } else {
          unreachable("not reached");
       }
@@ -819,6 +821,10 @@ nir_visitor::visit(ir_call *ir)
          break;
       }
       case nir_intrinsic_memory_barrier:
+         nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
+         break;
+      case nir_intrinsic_shader_clock:
+         nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
          nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       case nir_intrinsic_store_ssbo: {
