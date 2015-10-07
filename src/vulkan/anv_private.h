@@ -1202,7 +1202,7 @@ struct anv_image {
    VkExtent3D extent;
    uint32_t levels;
    uint32_t array_size;
-   VkImageUsageFlags usage; /**< VkImageCreateInfo::usage */
+   VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
 
    VkDeviceSize size;
    uint32_t alignment;
@@ -1211,8 +1211,10 @@ struct anv_image {
    struct anv_bo *bo;
    VkDeviceSize offset;
 
-   /** RENDER_SURFACE_STATE.SurfaceType */
-   uint8_t surf_type;
+   uint8_t surface_type; /**< RENDER_SURFACE_STATE.SurfaceType */
+
+   bool needs_nonrt_surface_state:1;
+   bool needs_color_rt_surface_state:1;
 
    /**
     * Image subsurfaces
@@ -1247,10 +1249,15 @@ struct anv_buffer_view {
 struct anv_image_view {
    const struct anv_image *image; /**< VkImageViewCreateInfo::image */
    const struct anv_format *format; /**< VkImageViewCreateInfo::format */
-   struct anv_state surface_state; /**< RENDER_SURFACE_STATE */
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
+
+   /** RENDER_SURFACE_STATE when using image as a color render target. */
+   struct anv_state color_rt_surface_state;
+
+   /** RENDER_SURFACE_STATE when using image as a non render target. */
+   struct anv_state nonrt_surface_state;
 };
 
 struct anv_image_create_info {
@@ -1268,9 +1275,6 @@ struct anv_surface *
 anv_image_get_surface_for_aspect_mask(struct anv_image *image,
                                       VkImageAspectFlags aspect_mask);
 
-struct anv_surface *
-anv_image_get_surface_for_color_attachment(struct anv_image *image);
-
 void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,
                          const VkImageViewCreateInfo* pCreateInfo,
@@ -1287,21 +1291,6 @@ gen8_image_view_init(struct anv_image_view *iview,
                      struct anv_device *device,
                      const VkImageViewCreateInfo* pCreateInfo,
                      struct anv_cmd_buffer *cmd_buffer);
-
-void anv_color_attachment_view_init(struct anv_image_view *iview,
-                                    struct anv_device *device,
-                                    const VkAttachmentViewCreateInfo* pCreateInfo,
-                                    struct anv_cmd_buffer *cmd_buffer);
-
-void gen7_color_attachment_view_init(struct anv_image_view *iview,
-                                     struct anv_device *device,
-                                     const VkAttachmentViewCreateInfo* pCreateInfo,
-                                     struct anv_cmd_buffer *cmd_buffer);
-
-void gen8_color_attachment_view_init(struct anv_image_view *iview,
-                                     struct anv_device *device,
-                                     const VkAttachmentViewCreateInfo* pCreateInfo,
-                                     struct anv_cmd_buffer *cmd_buffer);
 
 VkResult anv_buffer_view_create(struct anv_device *device,
                                 const VkBufferViewCreateInfo *pCreateInfo,

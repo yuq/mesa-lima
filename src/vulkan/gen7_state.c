@@ -113,6 +113,18 @@ static const uint32_t vk_to_gen_compare_op[] = {
    [VK_COMPARE_OP_ALWAYS]                       = PREFILTEROPALWAYS,
 };
 
+static struct anv_state
+gen7_alloc_surface_state(struct anv_device *device,
+                         struct anv_cmd_buffer *cmd_buffer)
+{
+      if (cmd_buffer) {
+         return anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
+                                      64, 64);
+      } else {
+         return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+      }
+}
+
 VkResult gen7_CreateSampler(
     VkDevice                                    _device,
     const VkSamplerCreateInfo*                  pCreateInfo,
@@ -272,18 +284,17 @@ gen7_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
    const struct anv_format *format =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   const struct anv_image_view_info view_type_info =
-      anv_image_view_info_for_vk_image_view_type(pCreateInfo->viewType);
-
    if (pCreateInfo->viewType != VK_IMAGE_VIEW_TYPE_2D)
       anv_finishme("non-2D image views");
 
+   iview->image = image;
    iview->bo = image->bo;
    iview->offset = image->offset + surface->offset;
    iview->format = anv_format_for_vk_format(pCreateInfo->format);
@@ -302,7 +313,7 @@ gen7_image_view_init(struct anv_image_view *iview,
    }
 
    struct GEN7_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = view_type_info.surface_type,
+      .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
@@ -316,7 +327,8 @@ gen7_image_view_init(struct anv_image_view *iview,
 
       .VerticalLineStride = 0,
       .VerticalLineStrideOffset = 0,
-      .RenderCacheReadWriteMode = false,
+
+      .RenderCacheReadWriteMode = 0, /* TEMPLATE */
 
       .Height = image->extent.height - 1,
       .Width = image->extent.width - 1,
@@ -329,14 +341,8 @@ gen7_image_view_init(struct anv_image_view *iview,
 
       .SurfaceObjectControlState = GEN7_MOCS,
 
-      /* For render target surfaces, the hardware interprets field MIPCount/LOD as
-       * LOD. The Broadwell PRM says:
-       *
-       *    MIPCountLOD defines the LOD that will be rendered into.
-       *    SurfaceMinLOD is ignored.
-       */
-      .MIPCountLOD = range->mipLevels - 1,
-      .SurfaceMinLOD = range->baseMipLevel,
+      .MIPCountLOD = 0, /* TEMPLATE */
+      .SurfaceMinLOD = 0, /* TEMPLATE */
 
       .MCSEnable = false,
       .RedClearColor = 0,
@@ -347,85 +353,28 @@ gen7_image_view_init(struct anv_image_view *iview,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
-   if (cmd_buffer) {
-      iview->surface_state =
-         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   } else {
-      iview->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   }
+   if (image->needs_nonrt_surface_state) {
+      iview->nonrt_surface_state =
+         gen7_alloc_surface_state(device, cmd_buffer);
 
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
-                                  &surface_state);
-}
+      surface_state.RenderCacheReadWriteMode = false;
 
-void
-gen7_color_attachment_view_init(struct anv_image_view *iview,
-                                struct anv_device *device,
-                                const VkAttachmentViewCreateInfo* pCreateInfo,
-                                struct anv_cmd_buffer *cmd_buffer)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_surface *surface =
-      anv_image_get_surface_for_color_attachment(image);
-
-   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-   anv_assert(pCreateInfo->arraySize > 0);
-   anv_assert(pCreateInfo->mipLevel < image->levels);
-   anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
-
-   iview->bo = image->bo;
-   iview->offset = image->offset + surface->offset;
-   iview->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
-      .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
-      .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
-   };
-
-   uint32_t depth = 1;
-   if (pCreateInfo->arraySize > 1) {
-      depth = pCreateInfo->arraySize;
-   } else if (image->extent.depth > 1) {
-      depth = image->extent.depth;
-   }
-
-   if (cmd_buffer) {
-      iview->surface_state =
-         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   } else {
-      iview->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   }
-
-   struct GEN7_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = SURFTYPE_2D,
-      .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = iview->format->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
-
-      /* From bspec (DevSNB, DevIVB): "Set Tile Walk to TILEWALK_XMAJOR if
-       * Tiled Surface is False."
+      /* For non render target surfaces, the hardware interprets field
+       * MIPCount/LOD as MIPCount.  The range of levels accessible by the
+       * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
        */
-      .TiledSurface = surface->tile_mode > LINEAR,
-      .TileWalk = surface->tile_mode == YMAJOR ? TILEWALK_YMAJOR : TILEWALK_XMAJOR,
+      surface_state.SurfaceMinLOD = range->baseMipLevel;
+      surface_state.MIPCountLOD = range->mipLevels - 1;
 
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
-      .RenderCacheReadWriteMode = WriteOnlyCache,
+      GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->nonrt_surface_state.map,
+                                     &surface_state);
+   }
 
-      .Height = image->extent.height - 1,
-      .Width = image->extent.width - 1,
-      .Depth = depth - 1,
-      .SurfacePitch = surface->stride - 1,
-      .MinimumArrayElement = pCreateInfo->baseArraySlice,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
-      .XOffset = 0,
-      .YOffset = 0,
+   if (image->needs_color_rt_surface_state) {
+      iview->color_rt_surface_state =
+         gen7_alloc_surface_state(device, cmd_buffer);
 
-      .SurfaceObjectControlState = GEN7_MOCS,
+      surface_state.RenderCacheReadWriteMode = WriteOnlyCache;
 
       /* For render target surfaces, the hardware interprets field MIPCount/LOD as
        * LOD. The Broadwell PRM says:
@@ -433,19 +382,10 @@ gen7_color_attachment_view_init(struct anv_image_view *iview,
        *    MIPCountLOD defines the LOD that will be rendered into.
        *    SurfaceMinLOD is ignored.
        */
-      .SurfaceMinLOD = 0,
-      .MIPCountLOD = pCreateInfo->mipLevel,
+      surface_state.MIPCountLOD = range->baseMipLevel;
+      surface_state.SurfaceMinLOD = 0;
 
-      .MCSEnable = false,
-      .RedClearColor = 0,
-      .GreenClearColor = 0,
-      .BlueClearColor = 0,
-      .AlphaClearColor = 0,
-      .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, iview->offset },
-
-   };
-
-   GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
-                                  &surface_state);
+      GEN7_RENDER_SURFACE_STATE_pack(NULL, iview->color_rt_surface_state.map,
+                                     &surface_state);
+   }
 }

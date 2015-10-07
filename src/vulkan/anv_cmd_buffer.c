@@ -434,8 +434,8 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       const struct anv_image_view *iview =
          fb->attachments[subpass->color_attachments[a]];
 
-      bt_map[a] = iview->surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, iview->surface_state,
+      bt_map[a] = iview->color_rt_surface_state.offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
                               iview->bo, iview->offset);
    }
 
@@ -468,7 +468,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
             bo_offset = desc->buffer_view->offset;
             break;
          case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
-            surface_state = &desc->image_view->surface_state;
+            surface_state = &desc->image_view->nonrt_surface_state;
             bo = desc->image_view->bo;
             bo_offset = desc->image_view->offset;
             break;

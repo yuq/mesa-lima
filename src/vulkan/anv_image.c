@@ -45,7 +45,6 @@ static const uint8_t anv_surf_type_from_image_type[] = {
    [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
    [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
    [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
-
 };
 
 static const struct anv_image_view_info
@@ -259,6 +258,26 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    return VK_SUCCESS;
 }
 
+static VkImageUsageFlags
+anv_image_get_full_usage(const VkImageCreateInfo *info)
+{
+   VkImageUsageFlags usage = info->usage;
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+      /* Meta will transfer from the image by binding it as a texture. */
+      usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+   }
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+      /* Meta will transfer to the image by binding it as a color attachment,
+       * even if the image format is not a color format.
+       */
+      usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+   }
+
+   return usage;
+}
+
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -304,19 +323,16 @@ anv_image_create(VkDevice _device,
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arraySize;
-   image->usage = pCreateInfo->usage;
-   image->surf_type = surf_type;
+   image->usage = anv_image_get_full_usage(pCreateInfo);
+   image->surface_type = surf_type;
 
-   if (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
-      /* Meta will transfer from the image by binding it as a texture. */
-      image->usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+   if (image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                       VK_IMAGE_USAGE_STORAGE_BIT)) {
+      image->needs_nonrt_surface_state = true;
    }
 
-   if (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
-      /* Meta will transfer to the image by binding it as a color attachment,
-       * even if the image format is not a color format.
-       */
-      image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+      image->needs_color_rt_surface_state = true;
    }
 
    if (likely(anv_format_is_color(image->format))) {
@@ -472,9 +488,27 @@ anv_image_view_init(struct anv_image_view *iview,
                     struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+   const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
 
+   assert(range->arraySize > 0);
+   assert(range->baseMipLevel < image->levels);
    assert(image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
-                          VK_IMAGE_USAGE_STORAGE_BIT));
+                          VK_IMAGE_USAGE_STORAGE_BIT |
+                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                          VK_IMAGE_USAGE_DEPTH_STENCIL_BIT));
+
+   switch (image->type) {
+   default:
+      unreachable("bad VkImageType");
+   case VK_IMAGE_TYPE_1D:
+   case VK_IMAGE_TYPE_2D:
+      assert(range->baseArrayLayer + range->arraySize - 1 <= image->array_size);
+      break;
+   case VK_IMAGE_TYPE_3D:
+      assert(range->baseArrayLayer + range->arraySize - 1
+             <= anv_minify(image->extent.depth, range->baseMipLevel));
+      break;
+   }
 
    switch (device->info.gen) {
    case 7:
@@ -508,29 +542,30 @@ anv_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
+static void
+anv_image_view_destroy(struct anv_device *device,
+                       struct anv_image_view *iview)
+{
+   if (iview->image->needs_color_rt_surface_state) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->color_rt_surface_state);
+   }
+
+   if (iview->image->needs_nonrt_surface_state) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->nonrt_surface_state);
+   }
+
+   anv_device_free(device, iview);
+}
+
 void
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
-   anv_device_free(device, iview);
-}
-
-static void
-anv_depth_stencil_view_init(struct anv_image_view *iview,
-                            const VkAttachmentViewCreateInfo *pCreateInfo)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   assert(image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT);
-
-   iview->image = image;
-   iview->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   assert(anv_format_is_depth_or_stencil(image->format));
-   assert(anv_format_is_depth_or_stencil(iview->format));
+   anv_image_view_destroy(device, iview);
 }
 
 struct anv_surface *
@@ -538,8 +573,22 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
 {
    switch (aspect_mask) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
-      assert(anv_format_is_color(image->format));
-      return &image->color_surface;
+      /* Dragons will eat you.
+       *
+       * Meta attaches all destination surfaces as color render targets. Guess
+       * what surface the Meta Dragons really want.
+       */
+      if (image->format->depth_format && image->format->has_stencil) {
+         anv_finishme("combined depth stencil formats");
+         return &image->depth_surface;
+      } else if (image->format->depth_format) {
+         return &image->depth_surface;
+      } else if (image->format->has_stencil) {
+         return &image->stencil_surface;
+      } else {
+         return &image->color_surface;
+      }
+      break;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
       assert(image->format->depth_format);
       return &image->depth_surface;
@@ -562,67 +611,52 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
    }
 }
 
-/** The attachment may be a color view into a non-color image.  */
-struct anv_surface *
-anv_image_get_surface_for_color_attachment(struct anv_image *image)
-{
-   if (anv_format_is_color(image->format)) {
-      return &image->color_surface;
-   } else if (image->format->depth_format) {
-      return &image->depth_surface;
-   } else if (image->format->has_stencil) {
-      return &image->stencil_surface;
-   } else {
-      unreachable("image has bad format");
-      return NULL;
-   }
-}
-
-void
-anv_color_attachment_view_init(struct anv_image_view *iview,
-                               struct anv_device *device,
-                               const VkAttachmentViewCreateInfo* pCreateInfo,
-                               struct anv_cmd_buffer *cmd_buffer)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
-   switch (device->info.gen) {
-   case 7:
-      gen7_color_attachment_view_init(iview, device, pCreateInfo, cmd_buffer);
-      break;
-   case 8:
-      gen8_color_attachment_view_init(iview, device, pCreateInfo, cmd_buffer);
-      break;
-   default:
-      unreachable("unsupported gen\n");
-   }
-}
-
 VkResult
 anv_CreateAttachmentView(VkDevice _device,
-                         const VkAttachmentViewCreateInfo *pCreateInfo,
+                         const VkAttachmentViewCreateInfo *info,
                          VkAttachmentView *pView)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_image_view *iview;
 
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
+   assert(info->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
 
    iview = anv_device_alloc(device, sizeof(*iview), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (iview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
+   const struct anv_format *format = anv_format_for_vk_format(info->format);
 
-   if (anv_format_is_depth_or_stencil(format)) {
-      anv_depth_stencil_view_init(iview, pCreateInfo);
-   } else {
-      anv_color_attachment_view_init(iview, device, pCreateInfo, NULL);
-   }
+   VkImageAspectFlags aspect_mask = 0;
+   if (format->depth_format)
+      aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+   if (format->has_stencil)
+      aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+   if (!aspect_mask)
+      aspect_mask |= VK_IMAGE_ASPECT_COLOR_BIT;
+
+   anv_image_view_init(iview, device,
+      &(VkImageViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = info->image,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = info->format,
+         .channels = {
+            .r = VK_CHANNEL_SWIZZLE_R,
+            .g = VK_CHANNEL_SWIZZLE_G,
+            .b = VK_CHANNEL_SWIZZLE_B,
+            .a = VK_CHANNEL_SWIZZLE_A,
+         },
+         .subresourceRange = {
+            .aspectMask = aspect_mask,
+            .baseMipLevel = info->mipLevel,
+            .mipLevels = 1,
+            .baseArrayLayer = info->baseArraySlice,
+            .arraySize = info->arraySize,
+         },
+      },
+      NULL);
 
    pView->handle = anv_image_view_to_handle(iview).handle;
 
@@ -636,12 +670,5 @@ anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
    VkImageView _iview = { .handle = _aview.handle };
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   /* Depth and stencil render targets have no RENDER_SURFACE_STATE.  Instead,
-    * they use 3DSTATE_DEPTH_BUFFER and 3DSTATE_STENCIL_BUFFER.
-    */
-   if (!anv_format_is_depth_or_stencil(iview->format)) {
-      anv_state_pool_free(&device->surface_state_pool, iview->surface_state);
-   }
-
-   anv_device_free(device, iview);
+   anv_image_view_destroy(device, iview);
 }

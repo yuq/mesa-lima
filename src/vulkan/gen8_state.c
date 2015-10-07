@@ -139,6 +139,18 @@ static const uint8_t anv_valign[] = {
     [16] = VALIGN16,
 };
 
+static struct anv_state
+gen8_alloc_surface_state(struct anv_device *device,
+                         struct anv_cmd_buffer *cmd_buffer)
+{
+      if (cmd_buffer) {
+         return anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
+                                      64, 64);
+      } else {
+         return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+      }
+}
+
 void
 gen8_image_view_init(struct anv_image_view *iview,
                      struct anv_device *device,
@@ -148,6 +160,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+
    struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
@@ -157,9 +170,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    const struct anv_format *format_info =
       anv_format_for_vk_format(pCreateInfo->format);
 
-   const struct anv_image_view_info view_type_info =
-      anv_image_view_info_for_vk_image_view_type(pCreateInfo->viewType);
-
+   iview->image = image;
    iview->bo = image->bo;
    iview->offset = image->offset + surface->offset;
    iview->format = format_info;
@@ -219,7 +230,7 @@ gen8_image_view_init(struct anv_image_view *iview,
    };
 
    struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = view_type_info.surface_type,
+      .SurfaceType = image->surface_type,
       .SurfaceArray = image->array_size > 1,
       .SurfaceFormat = format_info->surface_format,
       .SurfaceVerticalAlignment = anv_valign[surface->v_align],
@@ -248,12 +259,8 @@ gen8_image_view_init(struct anv_image_view *iview,
       .XOffset = 0,
       .YOffset = 0,
 
-      /* For sampler surfaces, the hardware interprets field MIPCount/LOD as
-       * MIPCount.  The range of levels accessible by the sampler engine is
-       * [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
-       */
-      .MIPCountLOD = range->mipLevels - 1,
-      .SurfaceMinLOD = range->baseMipLevel,
+      .MIPCountLOD = 0, /* TEMPLATE */
+      .SurfaceMinLOD = 0, /* TEMPLATE */
 
       .AuxiliarySurfaceMode = AUX_NONE,
       .RedClearColor = 0,
@@ -268,149 +275,37 @@ gen8_image_view_init(struct anv_image_view *iview,
       .SurfaceBaseAddress = { NULL, iview->offset },
    };
 
-   if (cmd_buffer) {
-      iview->surface_state =
-         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   } else {
-      iview->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
+   if (image->needs_nonrt_surface_state) {
+      iview->nonrt_surface_state =
+         gen8_alloc_surface_state(device, cmd_buffer);
+
+      /* For non render target surfaces, the hardware interprets field
+       * MIPCount/LOD as MIPCount.  The range of levels accessible by the
+       * sampler engine is [SurfaceMinLOD, SurfaceMinLOD + MIPCountLOD].
+       */
+      surface_state.SurfaceMinLOD = range->baseMipLevel;
+      surface_state.MIPCountLOD = range->mipLevels - 1;
+
+      GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->nonrt_surface_state.map,
+                                     &surface_state);
    }
 
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
-                                  &surface_state);
-}
+   if (image->needs_color_rt_surface_state) {
+      iview->color_rt_surface_state =
+         gen8_alloc_surface_state(device, cmd_buffer);
 
-void
-gen8_color_attachment_view_init(struct anv_image_view *iview,
-                                struct anv_device *device,
-                                const VkAttachmentViewCreateInfo* pCreateInfo,
-                                struct anv_cmd_buffer *cmd_buffer)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-   struct anv_surface *surface =
-      anv_image_get_surface_for_color_attachment(image);
-   const struct anv_format *format_info =
-      anv_format_for_vk_format(pCreateInfo->format);
-
-   uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
-   uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
-
-   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-   anv_assert(pCreateInfo->arraySize > 0);
-   anv_assert(pCreateInfo->mipLevel < image->levels);
-   anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
-
-   iview->bo = image->bo;
-   iview->offset = image->offset + surface->offset;
-   iview->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   iview->extent = (VkExtent3D) {
-      .width = anv_minify(image->extent.width, pCreateInfo->mipLevel),
-      .height = anv_minify(image->extent.height, pCreateInfo->mipLevel),
-      .depth = anv_minify(image->extent.depth, pCreateInfo->mipLevel),
-   };
-
-   switch (image->type) {
-   case VK_IMAGE_TYPE_1D:
-   case VK_IMAGE_TYPE_2D:
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
-       *
-       *    For SURFTYPE_1D, 2D, and CUBE: The range of this field is reduced
-       *    by one for each increase from zero of Minimum Array Element. For
-       *    example, if Minimum Array Element is set to 1024 on a 2D surface,
-       *    the range of this field is reduced to [0,1023].
-       */
-      depth = pCreateInfo->arraySize;
-
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
-       *
-       *    For Render Target and Typed Dataport 1D and 2D Surfaces:
-       *    This field must be set to the same value as the Depth field.
-       */
-      rt_view_extent = depth;
-      break;
-   case VK_IMAGE_TYPE_3D:
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
-       *
-       *    If the volume texture is MIP-mapped, this field specifies the
-       *    depth of the base MIP level.
-       */
-      depth = image->extent.depth;
-
-      /* From the Broadwell PRM >> RENDER_SURFACE_STATE::RenderTargetViewExtent:
-       *
-       *    For Render Target and Typed Dataport 3D Surfaces: This field
-       *    indicates the extent of the accessible 'R' coordinates minus 1 on
-       *    the LOD currently being rendered to.
-       */
-      rt_view_extent = iview->extent.depth;
-      break;
-   default:
-      unreachable(!"bad VkImageType");
-   }
-
-   if (cmd_buffer) {
-      iview->surface_state =
-         anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
-   } else {
-      iview->surface_state =
-         anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-   }
-
-   struct GEN8_RENDER_SURFACE_STATE surface_state = {
-      .SurfaceType = image->type,
-      .SurfaceArray = image->array_size > 1,
-      .SurfaceFormat = format_info->surface_format,
-      .SurfaceVerticalAlignment = anv_valign[surface->v_align],
-      .SurfaceHorizontalAlignment = anv_halign[surface->h_align],
-      .TileMode = surface->tile_mode,
-      .VerticalLineStride = 0,
-      .VerticalLineStrideOffset = 0,
-      .SamplerL2BypassModeDisable = true,
-      .RenderCacheReadWriteMode = WriteOnlyCache,
-      .MemoryObjectControlState = GEN8_MOCS,
-
-      /* The driver sets BaseMipLevel in SAMPLER_STATE, not here in
-       * RENDER_SURFACE_STATE. The Broadwell PRM says "it is illegal to have
-       * both Base Mip Level fields nonzero".
-       */
-      .BaseMipLevel = 0.0,
-
-      .SurfaceQPitch = surface->qpitch >> 2,
-      .Height = image->extent.height - 1,
-      .Width = image->extent.width - 1,
-      .Depth = depth - 1,
-      .SurfacePitch = surface->stride - 1,
-      .RenderTargetViewExtent = rt_view_extent - 1,
-      .MinimumArrayElement = pCreateInfo->baseArraySlice,
-      .NumberofMultisamples = MULTISAMPLECOUNT_1,
-      .XOffset = 0,
-      .YOffset = 0,
-
-      /* For render target surfaces, the hardware interprets field MIPCount/LOD as
-       * LOD. The Broadwell PRM says:
+      /* For render target surfaces, the hardware interprets field
+       * MIPCount/LOD as LOD. The Broadwell PRM says:
        *
        *    MIPCountLOD defines the LOD that will be rendered into.
        *    SurfaceMinLOD is ignored.
        */
-      .SurfaceMinLOD = 0,
-      .MIPCountLOD = pCreateInfo->mipLevel,
+      surface_state.MIPCountLOD = range->baseMipLevel;
+      surface_state.SurfaceMinLOD = 0;
 
-      .AuxiliarySurfaceMode = AUX_NONE,
-      .RedClearColor = 0,
-      .GreenClearColor = 0,
-      .BlueClearColor = 0,
-      .AlphaClearColor = 0,
-      .ShaderChannelSelectRed = SCS_RED,
-      .ShaderChannelSelectGreen = SCS_GREEN,
-      .ShaderChannelSelectBlue = SCS_BLUE,
-      .ShaderChannelSelectAlpha = SCS_ALPHA,
-      .ResourceMinLOD = 0.0,
-      .SurfaceBaseAddress = { NULL, iview->offset },
-   };
-
-   GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->surface_state.map,
-                                  &surface_state);
+      GEN8_RENDER_SURFACE_STATE_pack(NULL, iview->color_rt_surface_state.map,
+                                     &surface_state);
+   }
 }
 
 VkResult gen8_CreateSampler(

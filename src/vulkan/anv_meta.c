@@ -1029,14 +1029,25 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer);
 
    struct anv_image_view dest_iview;
-   anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
-      &(VkAttachmentViewCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+   anv_image_view_init(&dest_iview, cmd_buffer->device,
+      &(VkImageViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
          .image = dest_image,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
          .format = copy_format,
-         .mipLevel = 0,
-         .baseArraySlice = 0,
-         .arraySize = 1,
+         .channels = {
+            .r = VK_CHANNEL_SWIZZLE_R,
+            .g = VK_CHANNEL_SWIZZLE_G,
+            .b = VK_CHANNEL_SWIZZLE_B,
+            .a = VK_CHANNEL_SWIZZLE_A,
+         },
+         .subresourceRange = {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .mipLevels = 1,
+            .baseArrayLayer = 0,
+            .arraySize = 1,
+         },
       },
       cmd_buffer);
 
@@ -1194,14 +1205,25 @@ void anv_CmdCopyImage(
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
-      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
-         &(VkAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+      anv_image_view_init(&dest_iview, cmd_buffer->device,
+         &(VkImageViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = destImage,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = dest_image->format->vk_format,
-            .mipLevel = pRegions[r].destSubresource.mipLevel,
-            .baseArraySlice = dest_array_slice,
-            .arraySize = 1,
+            .channels = {
+               VK_CHANNEL_SWIZZLE_R,
+               VK_CHANNEL_SWIZZLE_G,
+               VK_CHANNEL_SWIZZLE_B,
+               VK_CHANNEL_SWIZZLE_A
+            },
+            .subresourceRange = {
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+               .baseMipLevel = pRegions[r].destSubresource.mipLevel,
+               .mipLevels = 1,
+               .baseArrayLayer = dest_array_slice,
+               .arraySize = 1
+            },
          },
          cmd_buffer);
 
@@ -1283,14 +1305,25 @@ void anv_CmdBlitImage(
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
-      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
-         &(VkAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+      anv_image_view_init(&dest_iview, cmd_buffer->device,
+         &(VkImageViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = destImage,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = dest_image->format->vk_format,
-            .mipLevel = pRegions[r].destSubresource.mipLevel,
-            .baseArraySlice = dest_array_slice,
-            .arraySize = 1,
+            .channels = {
+               VK_CHANNEL_SWIZZLE_R,
+               VK_CHANNEL_SWIZZLE_G,
+               VK_CHANNEL_SWIZZLE_B,
+               VK_CHANNEL_SWIZZLE_A
+            },
+            .subresourceRange = {
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+               .baseMipLevel = pRegions[r].destSubresource.mipLevel,
+               .mipLevels = 1,
+               .baseArrayLayer = dest_array_slice,
+               .arraySize = 1
+            },
          },
          cmd_buffer);
 
@@ -1413,14 +1446,25 @@ void anv_CmdCopyBufferToImage(
          anv_finishme("FINISHME: copy multiple depth layers");
 
       struct anv_image_view dest_iview;
-      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
-         &(VkAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+      anv_image_view_init(&dest_iview, cmd_buffer->device,
+         &(VkImageViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = anv_image_to_handle(dest_image),
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = proxy_format,
-            .mipLevel = pRegions[r].imageSubresource.mipLevel,
-            .baseArraySlice = dest_array_slice,
-            .arraySize = 1,
+            .channels = {
+               VK_CHANNEL_SWIZZLE_R,
+               VK_CHANNEL_SWIZZLE_G,
+               VK_CHANNEL_SWIZZLE_B,
+               VK_CHANNEL_SWIZZLE_A
+            },
+            .subresourceRange = {
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+               .baseMipLevel = pRegions[r].imageSubresource.mipLevel,
+               .mipLevels = 1,
+               .baseArrayLayer = dest_array_slice,
+               .arraySize = 1
+            },
          },
          cmd_buffer);
 
@@ -1497,14 +1541,25 @@ void anv_CmdCopyImageToBuffer(
             dest_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &pRegions[r]);
 
       struct anv_image_view dest_iview;
-      anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
-         &(VkAttachmentViewCreateInfo) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+      anv_image_view_init(&dest_iview, cmd_buffer->device,
+         &(VkImageViewCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = destImage,
+            .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = dest_format,
-            .mipLevel = 0,
-            .baseArraySlice = 0,
-            .arraySize = 1,
+            .channels = {
+               VK_CHANNEL_SWIZZLE_R,
+               VK_CHANNEL_SWIZZLE_G,
+               VK_CHANNEL_SWIZZLE_B,
+               VK_CHANNEL_SWIZZLE_A
+            },
+            .subresourceRange = {
+               .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+               .baseMipLevel = 0,
+               .mipLevels = 1,
+               .baseArrayLayer = 0,
+               .arraySize = 1
+            },
          },
          cmd_buffer);
 
@@ -1562,14 +1617,25 @@ void anv_CmdClearColorImage(
       for (uint32_t l = 0; l < pRanges[r].mipLevels; l++) {
          for (uint32_t s = 0; s < pRanges[r].arraySize; s++) {
             struct anv_image_view iview;
-            anv_color_attachment_view_init(&iview, cmd_buffer->device,
-               &(VkAttachmentViewCreateInfo) {
-                  .sType = VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO,
+            anv_image_view_init(&iview, cmd_buffer->device,
+               &(VkImageViewCreateInfo) {
+                  .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                   .image = _image,
+                  .viewType = VK_IMAGE_VIEW_TYPE_2D,
                   .format = image->format->vk_format,
-                  .mipLevel = pRanges[r].baseMipLevel + l,
-                  .baseArraySlice = pRanges[r].baseArrayLayer + s,
-                  .arraySize = 1,
+                  .channels = {
+                     VK_CHANNEL_SWIZZLE_R,
+                     VK_CHANNEL_SWIZZLE_G,
+                     VK_CHANNEL_SWIZZLE_B,
+                     VK_CHANNEL_SWIZZLE_A
+                  },
+                  .subresourceRange = {
+                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                     .baseMipLevel = pRanges[r].baseMipLevel + l,
+                     .mipLevels = 1,
+                     .baseArrayLayer = pRanges[r].baseArrayLayer + s,
+                     .arraySize = 1
+                  },
                },
                cmd_buffer);
 
