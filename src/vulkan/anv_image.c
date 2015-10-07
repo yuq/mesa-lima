@@ -102,10 +102,7 @@ static const struct anv_tile_info {
    [WMAJOR] = { 128, 32, 4096 },
 };
 
-/**
- * Return -1 on failure.
- */
-static int8_t
+static uint8_t
 anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 {
    if (anv_info->force_tile_mode)
@@ -117,11 +114,8 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 
    switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
-      if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
-         return -1;
-      } else {
-         return LINEAR;
-      }
+      assert(anv_info->vk_info->format != VK_FORMAT_S8_UINT);
+      return LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
       if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
          return WMAJOR;
@@ -153,10 +147,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const VkExtent3D *restrict extent = &create_info->vk_info->extent;
    const uint32_t levels = create_info->vk_info->mipLevels;
    const uint32_t array_size = create_info->vk_info->arraySize;
-
-   const int8_t tile_mode = anv_image_choose_tile_mode(create_info);
-   if (tile_mode == -1)
-      return vk_error(VK_ERROR_INVALID_IMAGE);
+   const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
@@ -305,12 +296,10 @@ anv_image_create(VkDevice _device,
    const struct anv_surf_type_limits *limits =
       &anv_surf_type_limits[surf_type];
 
-   if (extent->width > limits->width ||
-       extent->height > limits->height ||
-       extent->depth > limits->depth) {
-      /* TODO(chadv): What is the correct error? */
-      return vk_errorf(VK_ERROR_INVALID_MEMORY_SIZE, "image extent is too large");
-   }
+   /* Errors should be caught by VkImageFormatProperties. */
+   assert(extent->width <= limits->width);
+   assert(extent->height <= limits->height);
+   assert(extent->depth <= limits->depth);
 
    image = anv_device_alloc(device, sizeof(*image), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);

@@ -43,42 +43,49 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
-      return vk_errorf(VK_ERROR_UNAVAILABLE, "failed to open %s: %m", path);
+      return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                       "failed to open %s: %m", path);
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = instance;
    device->path = path;
-   
+
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get chipset id: %m");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get chipset id: %m");
       goto fail;
    }
 
    device->name = brw_get_device_name(device->chipset_id);
    device->info = brw_get_device_info(device->chipset_id, -1);
    if (!device->info) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get device info");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get device info");
       goto fail;
    }
    
    if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get aperture size: %m");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get aperture size: %m");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing gem wait");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "kernel missing gem wait");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing execbuf2");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "kernel missing execbuf2");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "non-llc gpu");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "non-llc gpu");
       goto fail;
    }
    
@@ -148,7 +155,7 @@ VkResult anv_CreateInstance(
          }
       }
       if (!found)
-         return vk_error(VK_ERROR_INVALID_EXTENSION);
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
    if (pCreateInfo->pAllocCb) {
@@ -581,7 +588,7 @@ VkResult anv_CreateDevice(
          }
       }
       if (!found)
-         return vk_error(VK_ERROR_INVALID_EXTENSION);
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
    anv_set_dispatch_gen(physical_device->info->gen);
@@ -639,7 +646,7 @@ VkResult anv_CreateDevice(
  fail_device:
    anv_device_free(device, device);
 
-   return vk_error(VK_ERROR_UNAVAILABLE);
+   return vk_error(VK_ERROR_INITIALIZATION_FAILED);
 }
 
 void anv_DestroyDevice(
@@ -720,7 +727,7 @@ VkResult anv_EnumerateInstanceLayerProperties(
    }
 
    /* None supported at this time */
-   return vk_error(VK_ERROR_INVALID_LAYER);
+   return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
 VkResult anv_EnumerateDeviceLayerProperties(
@@ -734,7 +741,7 @@ VkResult anv_EnumerateDeviceLayerProperties(
    }
 
    /* None supported at this time */
-   return vk_error(VK_ERROR_INVALID_LAYER);
+   return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
 VkResult anv_GetDeviceQueue(
@@ -769,13 +776,19 @@ VkResult anv_QueueSubmit(
       assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
 
       ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
-      if (ret != 0)
-         return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      if (ret != 0) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "execbuf2 failed: %m");
+      }
 
       if (fence) {
          ret = anv_gem_execbuffer(device, &fence->execbuf);
-         if (ret != 0)
-            return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+         if (ret != 0) {
+            /* We don't know the real error. */
+            return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                             "execbuf2 failed: %m");
+         }
       }
 
       for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
@@ -838,14 +851,16 @@ VkResult anv_DeviceWaitIdle(
 
    ret = anv_gem_execbuffer(device, &execbuf);
    if (ret != 0) {
-      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
       goto fail;
    }
 
    timeout = INT64_MAX;
    ret = anv_gem_wait(device, bo->gem_handle, &timeout);
    if (ret != 0) {
-      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
       goto fail;
    }
 
@@ -901,10 +916,8 @@ VkResult anv_AllocMemory(
 
    assert(pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
 
-   if (pAllocInfo->memoryTypeIndex != 0) {
-      /* We support exactly one memory heap. */
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   /* We support exactly one memory heap. */
+   assert(pAllocInfo->memoryTypeIndex == 0);
 
    /* FINISHME: Fail if allocation request exceeds heap size. */
 
@@ -1243,10 +1256,13 @@ VkResult anv_WaitForFences(
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
       ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
-      if (ret == -1 && errno == ETIME)
+      if (ret == -1 && errno == ETIME) {
          return VK_TIMEOUT;
-      else if (ret == -1)
-         return vk_errorf(VK_ERROR_UNKNOWN, "gem wait failed: %m");
+      } else if (ret == -1) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "gem wait failed: %m");
+      }
    }
 
    return VK_SUCCESS;

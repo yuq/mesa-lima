@@ -254,8 +254,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    int gen;
    VkFormatFeatureFlags flags;
 
-   if (format == NULL)
-      return VK_ERROR_INVALID_VALUE;
+   assert(format != NULL);
 
    gen = physical_device->info->gen * 10;
    if (physical_device->info->is_haswell)
