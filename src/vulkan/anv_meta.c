@@ -67,7 +67,7 @@ build_nir_vertex_shader(bool attr_flat)
 }
 
 static nir_shader *
-build_nir_clear_fragment_shader()
+build_nir_clear_fragment_shader(void)
 {
    nir_builder b;
 
