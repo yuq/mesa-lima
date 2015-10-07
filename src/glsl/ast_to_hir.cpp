@@ -3322,8 +3322,49 @@ process_initializer(ir_variable *var, ast_declaration *decl,
       if (new_rhs != NULL) {
          rhs = new_rhs;
 
+         /* Section 4.3.3 (Constant Expressions) of the GLSL ES 3.00.4 spec
+          * says:
+          *
+          *     "A constant expression is one of
+          *
+          *        ...
+          *
+          *        - an expression formed by an operator on operands that are
+          *          all constant expressions, including getting an element of
+          *          a constant array, or a field of a constant structure, or
+          *          components of a constant vector.  However, the sequence
+          *          operator ( , ) and the assignment operators ( =, +=, ...)
+          *          are not included in the operators that can create a
+          *          constant expression."
+          *
+          * Section 12.43 (Sequence operator and constant expressions) says:
+          *
+          *     "Should the following construct be allowed?
+          *
+          *         float a[2,3];
+          *
+          *     The expression within the brackets uses the sequence operator
+          *     (',') and returns the integer 3 so the construct is declaring
+          *     a single-dimensional array of size 3.  In some languages, the
+          *     construct declares a two-dimensional array.  It would be
+          *     preferable to make this construct illegal to avoid confusion.
+          *
+          *     One possibility is to change the definition of the sequence
+          *     operator so that it does not return a constant-expression and
+          *     hence cannot be used to declare an array size.
+          *
+          *     RESOLUTION: The result of a sequence operator is not a
+          *     constant-expression."
+          *
+          * Section 4.3.3 (Constant Expressions) of the GLSL 4.30.9 spec
+          * contains language almost identical to the section 4.3.3 in the
+          * GLSL ES 3.00.4 spec.  This is a new limitation for these GLSL
+          * versions.
+          */
          ir_constant *constant_value = rhs->constant_expression_value();
-         if (!constant_value) {
+         if (!constant_value ||
+             (state->is_version(430, 300) &&
+              decl->initializer->has_sequence_subexpression())) {
             const char *const variable_mode =
                (type->qualifier.flags.q.constant)
                ? "const"
