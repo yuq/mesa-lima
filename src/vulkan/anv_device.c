@@ -1693,7 +1693,7 @@ VkResult anv_FreeDescriptorSets(
    return VK_SUCCESS;
 }
 
-VkResult anv_UpdateDescriptorSets(
+void anv_UpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
@@ -1772,8 +1772,6 @@ VkResult anv_UpdateDescriptorSets(
             src->descriptors[copy->srcBinding + j];
       }
    }
-
-   return VK_SUCCESS;
 }
 
 // State object functions
