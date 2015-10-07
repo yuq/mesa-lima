@@ -1332,6 +1332,15 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_shader_clock: {
+      /* We cannot do anything if there is an event, so ignore it for now */
+      fs_reg shader_clock = get_timestamp(bld);
+      const fs_reg srcs[] = { shader_clock.set_smear(0), shader_clock.set_smear(1) };
+
+      bld.LOAD_PAYLOAD(dest, srcs, ARRAY_SIZE(srcs), 0);
+      break;
+   }
+
    case nir_intrinsic_image_size: {
       /* Get the referenced image variable and type. */
       const nir_variable *var = instr->variables[0]->var;

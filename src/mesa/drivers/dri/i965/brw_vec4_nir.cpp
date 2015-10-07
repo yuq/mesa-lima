@@ -808,6 +808,16 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
    }
 
+   case nir_intrinsic_shader_clock: {
+      /* We cannot do anything if there is an event, so ignore it for now */
+      const src_reg shader_clock = get_timestamp();
+      const enum brw_reg_type type = brw_type_for_base_type(glsl_type::uvec2_type);
+
+      dest = get_nir_dest(instr->dest, type);
+      emit(MOV(dest, shader_clock));
+      break;
+   }
+
    default:
       unreachable("Unknown intrinsic");
    }
