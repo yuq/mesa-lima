@@ -389,7 +389,7 @@ VkResult anv_GetPhysicalDeviceLimits(
       .primitiveRestartForPatches               = UINT32_MAX,
       .maxSamplerLodBias                        = 16,
       .maxSamplerAnisotropy                     = 16,
-      .maxViewports                             = 16,
+      .maxViewports                             = MAX_VIEWPORTS,
       .maxDynamicViewportStates                 = UINT32_MAX,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
       .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
@@ -1778,6 +1778,8 @@ VkResult anv_UpdateDescriptorSets(
 
 // State object functions
 
+#if 0
+
 static inline int64_t
 clamp_int64(int64_t x, int64_t min, int64_t max)
 {
@@ -1949,6 +1951,8 @@ void anv_DestroyDynamicDepthStencilState(
    anv_device_free(device, ds_state);
 }
 
+#endif
+
 VkResult anv_CreateFramebuffer(
     VkDevice                                    _device,
     const VkFramebufferCreateInfo*              pCreateInfo,
@@ -1976,27 +1980,6 @@ VkResult anv_CreateFramebuffer(
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
 
-   anv_CreateDynamicViewportState(anv_device_to_handle(device),
-      &(VkDynamicViewportStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO,
-         .viewportAndScissorCount = 1,
-         .pViewports = (VkViewport[]) {
-            {
-               .originX = 0,
-               .originY = 0,
-               .width = pCreateInfo->width,
-               .height = pCreateInfo->height,
-               .minDepth = 0,
-               .maxDepth = 1
-            },
-         },
-         .pScissors = (VkRect2D[]) {
-            { {  0,  0 },
-              { pCreateInfo->width, pCreateInfo->height } },
-         }
-      },
-      &framebuffer->vp_state);
-
    *pFramebuffer = anv_framebuffer_to_handle(framebuffer);
 
    return VK_SUCCESS;
@@ -2009,8 +1992,6 @@ void anv_DestroyFramebuffer(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_framebuffer, fb, _fb);
 
-   anv_DestroyDynamicViewportState(anv_device_to_handle(device),
-                                   fb->vp_state);
    anv_device_free(device, fb);
 }
 

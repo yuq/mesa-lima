@@ -450,12 +450,6 @@ struct anv_meta_state {
       VkPipelineLayout                          pipeline_layout;
       VkDescriptorSetLayout                     ds_layout;
    } blit;
-
-   struct {
-      VkDynamicRasterState                      rs_state;
-      VkDynamicColorBlendState                  cb_state;
-      VkDynamicDepthStencilState                ds_state;
-   } shared;
 };
 
 struct anv_queue {
@@ -680,40 +674,6 @@ struct anv_device_memory {
    void *                                       map;
 };
 
-struct anv_dynamic_vp_state {
-   struct anv_state sf_clip_vp;
-   struct anv_state cc_vp;
-   struct anv_state scissor;
-};
-
-struct anv_dynamic_rs_state {
-   struct {
-      uint32_t sf[GEN7_3DSTATE_SF_length];
-   } gen7;
-
-   struct {
-      uint32_t sf[GEN8_3DSTATE_SF_length];
-      uint32_t raster[GEN8_3DSTATE_RASTER_length];
-   } gen8;
-};
-
-struct anv_dynamic_ds_state {
-   struct {
-      uint32_t depth_stencil_state[GEN7_DEPTH_STENCIL_STATE_length];
-      uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
-   } gen7;
-
-   struct {
-      uint32_t wm_depth_stencil[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
-      uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
-   } gen8;
-};
-
-struct anv_dynamic_cb_state {
-   uint32_t color_calc_state[GEN8_COLOR_CALC_STATE_length];
-
-};
-
 struct anv_descriptor_slot {
    int8_t dynamic_slot;
    uint8_t index;
@@ -800,12 +760,18 @@ struct anv_buffer {
    VkDeviceSize                                 offset;   
 };
 
-#define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 0)
-#define ANV_CMD_BUFFER_RS_DIRTY                 (1 << 2)
-#define ANV_CMD_BUFFER_DS_DIRTY                 (1 << 3)
-#define ANV_CMD_BUFFER_CB_DIRTY                 (1 << 4)
-#define ANV_CMD_BUFFER_VP_DIRTY                 (1 << 5)
-#define ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY       (1 << 6)
+/* The first 9 correspond to 1 << VK_DYNAMIC_STATE_FOO */
+#define ANV_DYNAMIC_VIEWPORT_DIRTY              (1 << 0)
+#define ANV_DYNAMIC_SCISSOR_DIRTY               (1 << 1)
+#define ANV_DYNAMIC_LINE_WIDTH_DIRTY            (1 << 2)
+#define ANV_DYNAMIC_DEPTH_BIAS_DIRTY            (1 << 3)
+#define ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY       (1 << 4)
+#define ANV_DYNAMIC_DEPTH_BOUNDS_DIRTY          (1 << 5)
+#define ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY  (1 << 6)
+#define ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY    (1 << 7)
+#define ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY     (1 << 8)
+#define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 9)
+#define ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY       (1 << 10)
 
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
@@ -903,14 +869,11 @@ struct anv_cmd_state {
    struct anv_framebuffer *                     framebuffer;
    struct anv_render_pass *                     pass;
    struct anv_subpass *                         subpass;
-   struct anv_dynamic_rs_state *                rs_state;
-   struct anv_dynamic_ds_state *                ds_state;
-   struct anv_dynamic_vp_state *                vp_state;
-   struct anv_dynamic_cb_state *                cb_state;
    uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
    struct anv_descriptor_set_binding            descriptors[MAX_SETS];
    struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
+   struct anv_dynamic_state                     dynamic;
 
    struct {
       struct anv_buffer *                       index_buffer;
@@ -1027,6 +990,9 @@ anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
 
 VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
+
+void anv_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer);
+void anv_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
 void gen7_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
 void gen8_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
@@ -1369,9 +1335,6 @@ struct anv_framebuffer {
    uint32_t                                     height;
    uint32_t                                     layers;
 
-   /* Viewport for clears */
-   VkDynamicViewportState                       vp_state;
-
    uint32_t                                     attachment_count;
    const struct anv_image_view *           attachments[0];
 };
@@ -1464,10 +1427,6 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView);
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_dynamic_cb_state, VkDynamicColorBlendState)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_dynamic_ds_state, VkDynamicDepthStencilState)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_dynamic_rs_state, VkDynamicRasterState)
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_dynamic_vp_state, VkDynamicViewportState)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_fence, VkFence)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_framebuffer, VkFramebuffer)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_image, VkImage)

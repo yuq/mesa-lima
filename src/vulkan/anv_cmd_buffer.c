@@ -113,22 +113,16 @@ anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 static void
 anv_cmd_state_init(struct anv_cmd_state *state)
 {
-   state->rs_state = NULL;
-   state->vp_state = NULL;
-   state->cb_state = NULL;
-   state->ds_state = NULL;
    memset(&state->state_vf, 0, sizeof(state->state_vf));
    memset(&state->descriptors, 0, sizeof(state->descriptors));
    memset(&state->push_constants, 0, sizeof(state->push_constants));
 
-   state->dirty = 0;
+   state->dirty = ~0;
    state->vb_dirty = 0;
    state->descriptors_dirty = 0;
    state->push_constants_dirty = 0;
    state->pipeline = NULL;
-   state->vp_state = NULL;
-   state->rs_state = NULL;
-   state->ds_state = NULL;
+   state->dynamic = default_dynamic_state;
 
    state->gen7.index_buffer = NULL;
 }
@@ -333,48 +327,128 @@ void anv_CmdBindPipeline(
    }
 }
 
-void anv_CmdBindDynamicViewportState(
+void anv_CmdSetViewport(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicViewportState                      dynamicViewportState)
+    uint32_t                                    viewportCount,
+    const VkViewport*                           pViewports)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_dynamic_vp_state, vp_state, dynamicViewportState);
 
-   cmd_buffer->state.vp_state = vp_state;
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_VP_DIRTY;
+   cmd_buffer->state.dynamic.viewport.count = viewportCount;
+   memcpy(cmd_buffer->state.dynamic.viewport.viewports,
+          pViewports, viewportCount * sizeof(*pViewports));
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_VIEWPORT_DIRTY;
 }
 
-void anv_CmdBindDynamicRasterState(
+void anv_CmdSetScissor(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicRasterState                        dynamicRasterState)
+    uint32_t                                    scissorCount,
+    const VkRect2D*                             pScissors)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, dynamicRasterState);
 
-   cmd_buffer->state.rs_state = rs_state;
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_RS_DIRTY;
+   cmd_buffer->state.dynamic.scissor.count = scissorCount;
+   memcpy(cmd_buffer->state.dynamic.scissor.scissors,
+          pScissors, scissorCount * sizeof(*pScissors));
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_SCISSOR_DIRTY;
 }
 
-void anv_CmdBindDynamicColorBlendState(
+void anv_CmdSetLineWidth(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicColorBlendState                    dynamicColorBlendState)
+    float                                       lineWidth)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, dynamicColorBlendState);
 
-   cmd_buffer->state.cb_state = cb_state;
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_CB_DIRTY;
+   cmd_buffer->state.dynamic.line_width = lineWidth;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_LINE_WIDTH_DIRTY;
 }
 
-void anv_CmdBindDynamicDepthStencilState(
+void anv_CmdSetDepthBias(
     VkCmdBuffer                                 cmdBuffer,
-    VkDynamicDepthStencilState                  dynamicDepthStencilState)
+    float                                       depthBias,
+    float                                       depthBiasClamp,
+    float                                       slopeScaledDepthBias)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
-   ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, dynamicDepthStencilState);
 
-   cmd_buffer->state.ds_state = ds_state;
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_DS_DIRTY;
+   cmd_buffer->state.dynamic.depth_bias.bias = depthBias;
+   cmd_buffer->state.dynamic.depth_bias.clamp = depthBiasClamp;
+   cmd_buffer->state.dynamic.depth_bias.slope_scaled = slopeScaledDepthBias;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_DEPTH_BIAS_DIRTY;
+}
+
+void anv_CmdSetBlendConstants(
+    VkCmdBuffer                                 cmdBuffer,
+    const float                                 blendConst[4])
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   memcpy(cmd_buffer->state.dynamic.blend_constants,
+          blendConst, sizeof(float) * 4);
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY;
+}
+
+void anv_CmdSetDepthBounds(
+    VkCmdBuffer                                 cmdBuffer,
+    float                                       minDepthBounds,
+    float                                       maxDepthBounds)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   cmd_buffer->state.dynamic.depth_bounds.min = minDepthBounds;
+   cmd_buffer->state.dynamic.depth_bounds.max = maxDepthBounds;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_DEPTH_BOUNDS_DIRTY;
+}
+
+void anv_CmdSetStencilCompareMask(
+    VkCmdBuffer                                 cmdBuffer,
+    VkStencilFaceFlags                          faceMask,
+    uint32_t                                    stencilCompareMask)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
+      cmd_buffer->state.dynamic.stencil_compare_mask.front = stencilCompareMask;
+   if (faceMask & VK_STENCIL_FACE_BACK_BIT)
+      cmd_buffer->state.dynamic.stencil_compare_mask.back = stencilCompareMask;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY;
+}
+
+void anv_CmdSetStencilWriteMask(
+    VkCmdBuffer                                 cmdBuffer,
+    VkStencilFaceFlags                          faceMask,
+    uint32_t                                    stencilWriteMask)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
+      cmd_buffer->state.dynamic.stencil_write_mask.front = stencilWriteMask;
+   if (faceMask & VK_STENCIL_FACE_BACK_BIT)
+      cmd_buffer->state.dynamic.stencil_write_mask.back = stencilWriteMask;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY;
+}
+
+void anv_CmdSetStencilReference(
+    VkCmdBuffer                                 cmdBuffer,
+    VkStencilFaceFlags                          faceMask,
+    uint32_t                                    stencilReference)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
+
+   if (faceMask & VK_STENCIL_FACE_FRONT_BIT)
+      cmd_buffer->state.dynamic.stencil_reference.front = stencilReference;
+   if (faceMask & VK_STENCIL_FACE_BACK_BIT)
+      cmd_buffer->state.dynamic.stencil_reference.back = stencilReference;
+
+   cmd_buffer->state.dirty |= ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY;
 }
 
 void anv_CmdBindDescriptorSets(
@@ -733,6 +807,148 @@ anv_cmd_buffer_begin_subpass(struct anv_cmd_buffer *cmd_buffer,
       break;
    default:
       unreachable("unsupported gen\n");
+   }
+}
+
+static void
+emit_viewport_state(struct anv_cmd_buffer *cmd_buffer,
+                    uint32_t count, const VkViewport *viewports)
+{
+   struct anv_state sf_clip_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 64, 64);
+   struct anv_state cc_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 8, 32);
+
+   for (uint32_t i = 0; i < count; i++) {
+      const VkViewport *vp = &viewports[i];
+
+      /* The gen7 state struct has just the matrix and guardband fields, the
+       * gen8 struct adds the min/max viewport fields. */
+      struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
+         .ViewportMatrixElementm00 = vp->width / 2,
+         .ViewportMatrixElementm11 = vp->height / 2,
+         .ViewportMatrixElementm22 = (vp->maxDepth - vp->minDepth) / 2,
+         .ViewportMatrixElementm30 = vp->originX + vp->width / 2,
+         .ViewportMatrixElementm31 = vp->originY + vp->height / 2,
+         .ViewportMatrixElementm32 = (vp->maxDepth + vp->minDepth) / 2,
+         .XMinClipGuardband = -1.0f,
+         .XMaxClipGuardband = 1.0f,
+         .YMinClipGuardband = -1.0f,
+         .YMaxClipGuardband = 1.0f,
+         .XMinViewPort = vp->originX,
+         .XMaxViewPort = vp->originX + vp->width - 1,
+         .YMinViewPort = vp->originY,
+         .YMaxViewPort = vp->originY + vp->height - 1,
+      };
+
+      struct GEN7_CC_VIEWPORT cc_viewport = {
+         .MinimumDepth = vp->minDepth,
+         .MaximumDepth = vp->maxDepth
+      };
+
+      GEN8_SF_CLIP_VIEWPORT_pack(NULL, sf_clip_state.map + i * 64,
+                                 &sf_clip_viewport);
+      GEN7_CC_VIEWPORT_pack(NULL, cc_state.map + i * 32, &cc_viewport);
+   }
+
+   anv_batch_emit(&cmd_buffer->batch,
+                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
+                  .CCViewportPointer = cc_state.offset);
+   anv_batch_emit(&cmd_buffer->batch,
+                  GEN8_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
+                  .SFClipViewportPointer = sf_clip_state.offset);
+}
+
+void
+anv_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.dynamic.viewport.count > 0) {
+      emit_viewport_state(cmd_buffer, cmd_buffer->state.dynamic.viewport.count,
+                          cmd_buffer->state.dynamic.viewport.viewports);
+   } else {
+      /* If viewport count is 0, this is taken to mean "use the default" */
+      emit_viewport_state(cmd_buffer, 1,
+                          &(VkViewport) {
+                             .originX = 0.0f,
+                             .originY = 0.0f,
+                             .width = cmd_buffer->state.framebuffer->width,
+                             .height = cmd_buffer->state.framebuffer->height,
+                             .minDepth = 0.0f,
+                             .maxDepth = 1.0f,
+                          });
+   }
+}
+
+static inline int64_t
+clamp_int64(int64_t x, int64_t min, int64_t max)
+{
+   if (x < min)
+      return min;
+   else if (x < max)
+      return x;
+   else
+      return max;
+}
+
+static void
+emit_scissor_state(struct anv_cmd_buffer *cmd_buffer,
+                   uint32_t count, const VkRect2D *scissors)
+{
+   struct anv_state scissor_state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, count * 32, 32);
+
+   for (uint32_t i = 0; i < count; i++) {
+      const VkRect2D *s = &scissors[i];
+
+      /* Since xmax and ymax are inclusive, we have to have xmax < xmin or
+       * ymax < ymin for empty clips.  In case clip x, y, width height are all
+       * 0, the clamps below produce 0 for xmin, ymin, xmax, ymax, which isn't
+       * what we want. Just special case empty clips and produce a canonical
+       * empty clip. */
+      static const struct GEN7_SCISSOR_RECT empty_scissor = {
+         .ScissorRectangleYMin = 1,
+         .ScissorRectangleXMin = 1,
+         .ScissorRectangleYMax = 0,
+         .ScissorRectangleXMax = 0
+      };
+
+      const int max = 0xffff;
+      struct GEN7_SCISSOR_RECT scissor = {
+         /* Do this math using int64_t so overflow gets clamped correctly. */
+         .ScissorRectangleYMin = clamp_int64(s->offset.y, 0, max),
+         .ScissorRectangleXMin = clamp_int64(s->offset.x, 0, max),
+         .ScissorRectangleYMax = clamp_int64((uint64_t) s->offset.y + s->extent.height - 1, 0, max),
+         .ScissorRectangleXMax = clamp_int64((uint64_t) s->offset.x + s->extent.width - 1, 0, max)
+      };
+
+      if (s->extent.width <= 0 || s->extent.height <= 0) {
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32,
+                                &empty_scissor);
+      } else {
+         GEN7_SCISSOR_RECT_pack(NULL, scissor_state.map + i * 32, &scissor);
+      }
+   }
+
+   anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_SCISSOR_STATE_POINTERS,
+                  .ScissorRectPointer = scissor_state.offset);
+}
+
+void
+anv_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (cmd_buffer->state.dynamic.scissor.count > 0) {
+      emit_scissor_state(cmd_buffer, cmd_buffer->state.dynamic.scissor.count,
+                         cmd_buffer->state.dynamic.scissor.scissors);
+   } else {
+      /* Emit a default scissor based on the currently bound framebuffer */
+      emit_scissor_state(cmd_buffer, 1,
+                         &(VkRect2D) {
+                            .offset = { .x = 0, .y = 0, },
+                            .extent = {
+                               .width = cmd_buffer->state.framebuffer->width,
+                               .height = cmd_buffer->state.framebuffer->height,
+                            },
+                         });
    }
 }
 

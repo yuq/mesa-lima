@@ -29,46 +29,6 @@
 
 #include "anv_private.h"
 
-VkResult gen8_CreateDynamicRasterState(
-    VkDevice                                    _device,
-    const VkDynamicRasterStateCreateInfo*       pCreateInfo,
-    VkDynamicRasterState*                       pState)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_rs_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_RASTER_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   struct GEN8_3DSTATE_SF sf = {
-      GEN8_3DSTATE_SF_header,
-      .LineWidth = pCreateInfo->lineWidth,
-   };
-
-   GEN8_3DSTATE_SF_pack(NULL, state->gen8.sf, &sf);
-
-   bool enable_bias = pCreateInfo->depthBias != 0.0f ||
-      pCreateInfo->slopeScaledDepthBias != 0.0f;
-   struct GEN8_3DSTATE_RASTER raster = {
-      .GlobalDepthOffsetEnableSolid = enable_bias,
-      .GlobalDepthOffsetEnableWireframe = enable_bias,
-      .GlobalDepthOffsetEnablePoint = enable_bias,
-      .GlobalDepthOffsetConstant = pCreateInfo->depthBias,
-      .GlobalDepthOffsetScale = pCreateInfo->slopeScaledDepthBias,
-      .GlobalDepthOffsetClamp = pCreateInfo->depthBiasClamp
-   };
-
-   GEN8_3DSTATE_RASTER_pack(NULL, state->gen8.raster, &raster);
-
-   *pState = anv_dynamic_rs_state_to_handle(state);
-
-   return VK_SUCCESS;
-}
-
 void
 gen8_fill_buffer_surface_state(void *state, const struct anv_format *format,
                                uint32_t offset, uint32_t range)
@@ -404,49 +364,6 @@ VkResult gen8_CreateSampler(
    GEN8_SAMPLER_STATE_pack(NULL, sampler->state, &sampler_state);
 
    *pSampler = anv_sampler_to_handle(sampler);
-
-   return VK_SUCCESS;
-}
-
-VkResult gen8_CreateDynamicDepthStencilState(
-    VkDevice                                    _device,
-    const VkDynamicDepthStencilStateCreateInfo* pCreateInfo,
-    VkDynamicDepthStencilState*                 pState)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_ds_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_DEPTH_STENCIL_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
-      GEN8_3DSTATE_WM_DEPTH_STENCIL_header,
-
-      /* Is this what we need to do? */
-      .StencilBufferWriteEnable = pCreateInfo->stencilWriteMask != 0,
-
-      .StencilTestMask = pCreateInfo->stencilReadMask & 0xff,
-      .StencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
-
-      .BackfaceStencilTestMask = pCreateInfo->stencilReadMask & 0xff,
-      .BackfaceStencilWriteMask = pCreateInfo->stencilWriteMask & 0xff,
-   };
-
-   GEN8_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, state->gen8.wm_depth_stencil,
-                                      &wm_depth_stencil);
-
-   struct GEN8_COLOR_CALC_STATE color_calc_state = {
-      .StencilReferenceValue = pCreateInfo->stencilFrontRef,
-      .BackFaceStencilReferenceValue = pCreateInfo->stencilBackRef
-   };
-
-   GEN8_COLOR_CALC_STATE_pack(NULL, state->gen8.color_calc_state, &color_calc_state);
-
-   *pState = anv_dynamic_ds_state_to_handle(state);
 
    return VK_SUCCESS;
 }

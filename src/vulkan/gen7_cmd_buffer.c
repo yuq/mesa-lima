@@ -256,60 +256,87 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.descriptors_dirty)
       anv_flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_VP_DIRTY) {
-      struct anv_dynamic_vp_state *vp_state = cmd_buffer->state.vp_state;
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_SCISSOR_STATE_POINTERS,
-                     .ScissorRectPointer = vp_state->scissor.offset);
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_CC,
-                     .CCViewportPointer = vp_state->cc_vp.offset);
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP,
-                     .SFClipViewportPointer = vp_state->sf_clip_vp.offset);
+   if (cmd_buffer->state.dirty & ANV_DYNAMIC_VIEWPORT_DIRTY)
+      anv_cmd_buffer_emit_viewport(cmd_buffer);
+
+   if (cmd_buffer->state.dirty & ANV_DYNAMIC_SCISSOR_DIRTY)
+      anv_cmd_buffer_emit_scissor(cmd_buffer);
+
+   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                                  ANV_DYNAMIC_LINE_WIDTH_DIRTY |
+                                  ANV_DYNAMIC_DEPTH_BIAS_DIRTY)) {
+
+      bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
+         cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
+
+      uint32_t sf_dw[GEN8_3DSTATE_SF_length];
+      struct GEN7_3DSTATE_SF sf = {
+         GEN7_3DSTATE_SF_header,
+         .LineWidth = cmd_buffer->state.dynamic.line_width,
+         .GlobalDepthOffsetEnableSolid = enable_bias,
+         .GlobalDepthOffsetEnableWireframe = enable_bias,
+         .GlobalDepthOffsetEnablePoint = enable_bias,
+         .GlobalDepthOffsetConstant = cmd_buffer->state.dynamic.depth_bias.bias,
+         .GlobalDepthOffsetScale = cmd_buffer->state.dynamic.depth_bias.slope_scaled,
+         .GlobalDepthOffsetClamp = cmd_buffer->state.dynamic.depth_bias.clamp
+      };
+      GEN7_3DSTATE_SF_pack(NULL, sf_dw, &sf);
+
+      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen7.sf);
    }
 
-   if (cmd_buffer->state.dirty &
-       (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_RS_DIRTY)) {
-      anv_batch_emit_merge(&cmd_buffer->batch,
-                           cmd_buffer->state.rs_state->gen7.sf,
-                           pipeline->gen7.sf);
-   }
-
-   if (cmd_buffer->state.dirty &
-       (ANV_CMD_BUFFER_PIPELINE_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)) {
-      struct anv_state state;
-
-      if (cmd_buffer->state.ds_state == NULL)
-         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             pipeline->gen7.depth_stencil_state,
-                                             GEN7_COLOR_CALC_STATE_length, 64);
-      else
-         state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
-                                              cmd_buffer->state.ds_state->gen7.depth_stencil_state,
-                                              pipeline->gen7.depth_stencil_state,
-                                              GEN7_DEPTH_STENCIL_STATE_length, 64);
-      anv_batch_emit(&cmd_buffer->batch, GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
-                     .PointertoDEPTH_STENCIL_STATE = state.offset);
-   }
-
-   if (cmd_buffer->state.dirty &
-       (ANV_CMD_BUFFER_CB_DIRTY | ANV_CMD_BUFFER_DS_DIRTY)) {
-      struct anv_state state;
-      if (cmd_buffer->state.ds_state == NULL)
-         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->state.cb_state->color_calc_state,
-                                             GEN7_COLOR_CALC_STATE_length, 64);
-      else if (cmd_buffer->state.cb_state == NULL)
-         state = anv_cmd_buffer_emit_dynamic(cmd_buffer,
-                                             cmd_buffer->state.ds_state->gen7.color_calc_state,
-                                             GEN7_COLOR_CALC_STATE_length, 64);
-      else
-         state = anv_cmd_buffer_merge_dynamic(cmd_buffer,
-                                              cmd_buffer->state.ds_state->gen7.color_calc_state,
-                                              cmd_buffer->state.cb_state->color_calc_state,
-                                              GEN7_COLOR_CALC_STATE_length, 64);
+   if (cmd_buffer->state.dirty & (ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY |
+                                  ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY)) {
+      struct anv_state cc_state =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
+                                            GEN7_COLOR_CALC_STATE_length, 64);
+      struct GEN7_COLOR_CALC_STATE cc = {
+         .BlendConstantColorRed = cmd_buffer->state.dynamic.blend_constants[0],
+         .BlendConstantColorGreen = cmd_buffer->state.dynamic.blend_constants[1],
+         .BlendConstantColorBlue = cmd_buffer->state.dynamic.blend_constants[2],
+         .BlendConstantColorAlpha = cmd_buffer->state.dynamic.blend_constants[3],
+         .StencilReferenceValue =
+            cmd_buffer->state.dynamic.stencil_reference.front,
+         .BackFaceStencilReferenceValue =
+            cmd_buffer->state.dynamic.stencil_reference.back,
+      };
+      GEN7_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
 
       anv_batch_emit(&cmd_buffer->batch,
                      GEN7_3DSTATE_CC_STATE_POINTERS,
-                     .ColorCalcStatePointer = state.offset);
+                     .ColorCalcStatePointer = cc_state.offset);
+   }
+
+   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
+                                  ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY |
+                                  ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY)) {
+      uint32_t depth_stencil_dw[GEN7_DEPTH_STENCIL_STATE_length];
+
+      struct GEN7_DEPTH_STENCIL_STATE depth_stencil = {
+         /* Is this what we need to do? */
+         .StencilBufferWriteEnable =
+            cmd_buffer->state.dynamic.stencil_write_mask.front != 0,
+
+         .StencilTestMask =
+            cmd_buffer->state.dynamic.stencil_compare_mask.front & 0xff,
+         .StencilWriteMask =
+            cmd_buffer->state.dynamic.stencil_write_mask.front & 0xff,
+
+         .BackfaceStencilTestMask =
+            cmd_buffer->state.dynamic.stencil_compare_mask.back & 0xff,
+         .BackfaceStencilWriteMask =
+            cmd_buffer->state.dynamic.stencil_write_mask.back & 0xff,
+      };
+      GEN7_DEPTH_STENCIL_STATE_pack(NULL, depth_stencil_dw, &depth_stencil);
+
+      struct anv_state ds_state =
+         anv_cmd_buffer_merge_dynamic(cmd_buffer, depth_stencil_dw,
+                                      pipeline->gen7.depth_stencil_state,
+                                      GEN7_DEPTH_STENCIL_STATE_length, 64);
+
+      anv_batch_emit(&cmd_buffer->batch,
+                     GEN7_3DSTATE_DEPTH_STENCIL_STATE_POINTERS,
+                     .PointertoDEPTH_STENCIL_STATE = ds_state.offset);
    }
 
    if (cmd_buffer->state.gen7.index_buffer &&
