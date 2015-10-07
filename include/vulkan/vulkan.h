@@ -1210,8 +1210,11 @@ typedef struct {
 } VkExtent3D;
 
 typedef struct {
-    uint64_t                                    maxResourceSize;
-    uint32_t                                    maxSamples;
+    VkExtent3D                                  maxExtent;
+    uint32_t                                    maxMipLevels;
+    uint32_t                                    maxArraySize;
+    VkSampleCountFlags                          sampleCounts;
+    VkDeviceSize                                maxResourceSize;
 } VkImageFormatProperties;
 
 typedef struct {

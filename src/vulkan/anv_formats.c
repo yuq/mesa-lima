@@ -344,6 +344,9 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    const struct anv_format *format = anv_format_for_vk_format(_format);
    VkFormatProperties format_props;
    VkFormatFeatureFlags format_feature_flags;
+   VkExtent3D maxExtent;
+   uint32_t maxMipLevels;
+   uint32_t maxArraySize;
    VkResult result;
 
    result = anv_physical_device_get_format_properties(physical_device, format,
@@ -360,6 +363,35 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       format_feature_flags = format_props.optimalTilingFeatures;
    } else {
       unreachable("bad VkImageTiling");
+   }
+
+   switch (type) {
+   default:
+      unreachable("bad VkImageType");
+   case VK_IMAGE_TYPE_1D:
+      maxExtent.width = 16384;
+      maxExtent.height = 1;
+      maxExtent.depth = 1;
+      maxMipLevels = 15; /* log2(maxWidth) + 1 */
+      maxArraySize = 2048;
+      break;
+   case VK_IMAGE_TYPE_2D:
+      /* FINISHME: Does this really differ for cube maps? The documentation
+       * for RENDER_SURFACE_STATE suggests so.
+       */
+      maxExtent.width = 16384;
+      maxExtent.height = 16384;
+      maxExtent.depth = 1;
+      maxMipLevels = 15; /* log2(maxWidth) + 1 */
+      maxArraySize = 2048;
+      break;
+   case VK_IMAGE_TYPE_3D:
+      maxExtent.width = 2048;
+      maxExtent.height = 2048;
+      maxExtent.depth = 2048;
+      maxMipLevels = 12; /* log2(maxWidth) + 1 */
+      maxArraySize = 1;
+      break;
    }
 
    if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
@@ -415,8 +447,12 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    }
 
    *pImageFormatProperties = (VkImageFormatProperties) {
+      .maxExtent = maxExtent,
+      .maxMipLevels = maxMipLevels,
+      .maxArraySize = maxArraySize,
+
       /* FINISHME: Support multisampling */
-      .maxSamples = 1,
+      .sampleCounts = VK_SAMPLE_COUNT_1_BIT,
 
       /* FINISHME: Accurately calculate
        * VkImageFormatProperties::maxResourceSize.
@@ -428,7 +464,10 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
 
 unsupported:
    *pImageFormatProperties = (VkImageFormatProperties) {
-      .maxSamples = 0,
+      .maxExtent = { 0, 0, 0 },
+      .maxMipLevels = 0,
+      .maxArraySize = 0,
+      .sampleCounts = 0,
       .maxResourceSize = 0,
    };
 
