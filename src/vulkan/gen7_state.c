@@ -369,6 +369,7 @@ gen7_color_attachment_view_init(struct anv_image_view *iview,
    struct anv_surface *surface =
       anv_image_get_surface_for_color_attachment(image);
 
+   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);

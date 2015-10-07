@@ -304,7 +304,20 @@ anv_image_create(VkDevice _device,
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arraySize;
+   image->usage = pCreateInfo->usage;
    image->surf_type = surf_type;
+
+   if (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+      /* Meta will transfer from the image by binding it as a texture. */
+      image->usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+   }
+
+   if (pCreateInfo->usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+      /* Meta will transfer to the image by binding it as a color attachment,
+       * even if the image format is not a color format.
+       */
+      image->usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+   }
 
    if (likely(anv_format_is_color(image->format))) {
       r = anv_image_make_surface(create_info, image->format,
@@ -458,6 +471,11 @@ anv_image_view_init(struct anv_image_view *iview,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer)
 {
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+
+   assert(image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                          VK_IMAGE_USAGE_STORAGE_BIT));
+
    switch (device->info.gen) {
    case 7:
       gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
@@ -505,6 +523,8 @@ anv_depth_stencil_view_init(struct anv_image_view *iview,
                             const VkAttachmentViewCreateInfo *pCreateInfo)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+
+   assert(image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT);
 
    iview->image = image;
    iview->format = anv_format_for_vk_format(pCreateInfo->format);
@@ -565,6 +585,10 @@ anv_color_attachment_view_init(struct anv_image_view *iview,
                                const VkAttachmentViewCreateInfo* pCreateInfo,
                                struct anv_cmd_buffer *cmd_buffer)
 {
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+
+   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+
    switch (device->info.gen) {
    case 7:
       gen7_color_attachment_view_init(iview, device, pCreateInfo, cmd_buffer);

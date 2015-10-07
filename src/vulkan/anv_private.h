@@ -1202,6 +1202,7 @@ struct anv_image {
    VkExtent3D extent;
    uint32_t levels;
    uint32_t array_size;
+   VkImageUsageFlags usage; /**< VkImageCreateInfo::usage */
 
    VkDeviceSize size;
    uint32_t alignment;

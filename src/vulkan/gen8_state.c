@@ -295,6 +295,7 @@ gen8_color_attachment_view_init(struct anv_image_view *iview,
    uint32_t depth = 1; /* RENDER_SURFACE_STATE::Depth */
    uint32_t rt_view_extent = 1; /* RENDER_SURFACE_STATE::RenderTargetViewExtent */
 
+   assert(image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
    anv_assert(pCreateInfo->arraySize > 0);
    anv_assert(pCreateInfo->mipLevel < image->levels);
    anv_assert(pCreateInfo->baseArraySlice + pCreateInfo->arraySize <= image->array_size);
