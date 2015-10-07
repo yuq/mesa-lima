@@ -122,15 +122,15 @@ static const VkAllocCallbacks default_alloc_callbacks = {
 
 static const VkExtensionProperties global_extensions[] = {
    {
-      .extName = "VK_WSI_swapchain",
-      .specVersion = 12
+      .extName = VK_EXT_KHR_SWAPCHAIN_EXTENSION_NAME,
+      .specVersion = 17,
    },
 };
 
 static const VkExtensionProperties device_extensions[] = {
    {
-      .extName = "VK_WSI_device_swapchain",
-      .specVersion = 12
+      .extName = VK_EXT_KHR_DEVICE_SWAPCHAIN_EXTENSION_NAME,
+      .specVersion = 53,
    },
 };
 

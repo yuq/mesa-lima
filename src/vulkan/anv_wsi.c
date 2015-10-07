@@ -55,18 +55,18 @@ anv_finish_wsi(struct anv_instance *instance)
 }
 
 VkResult
-anv_GetPhysicalDeviceSurfaceSupportWSI(
+anv_GetPhysicalDeviceSurfaceSupportKHR(
     VkPhysicalDevice                        physicalDevice,
     uint32_t                                queueFamilyIndex,
-    const VkSurfaceDescriptionWSI*          pSurfaceDescription,
+    const VkSurfaceDescriptionKHR*          pSurfaceDescription,
     VkBool32*                               pSupported)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
 
    assert(pSurfaceDescription->sType ==
-          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI);
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
 
-   VkSurfaceDescriptionWindowWSI *window = (void *)pSurfaceDescription;
+   VkSurfaceDescriptionWindowKHR *window = (void *)pSurfaceDescription;
 
    struct anv_wsi_implementation *impl =
       physical_device->instance->wsi_impl[window->platform];
@@ -81,116 +81,135 @@ anv_GetPhysicalDeviceSurfaceSupportWSI(
 }
 
 VkResult
-anv_GetSurfaceInfoWSI(
+anv_GetSurfacePropertiesKHR(
     VkDevice                                 _device,
-    const VkSurfaceDescriptionWSI*           pSurfaceDescription,
-    VkSurfaceInfoTypeWSI                     infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData)
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
+    VkSurfacePropertiesKHR*                  pSurfaceProperties)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    assert(pSurfaceDescription->sType ==
-          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI);
-   VkSurfaceDescriptionWindowWSI *window =
-      (VkSurfaceDescriptionWindowWSI *)pSurfaceDescription;
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
+   VkSurfaceDescriptionWindowKHR *window =
+      (VkSurfaceDescriptionWindowKHR *)pSurfaceDescription;
 
    struct anv_wsi_implementation *impl =
       device->instance->wsi_impl[window->platform];
 
    assert(impl);
 
-   return impl->get_surface_info(impl, device, window, infoType,
-                                 pDataSize, pData);
+   return impl->get_surface_properties(impl, device, window,
+                                       pSurfaceProperties);
 }
 
 VkResult
-anv_CreateSwapChainWSI(
+anv_GetSurfaceFormatsKHR(
     VkDevice                                 _device,
-    const VkSwapChainCreateInfoWSI*          pCreateInfo,
-    VkSwapChainWSI*                          pSwapChain)
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkSurfaceFormatKHR*                      pSurfaceFormats)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_swap_chain *swap_chain;
-   VkResult result;
 
-   assert(pCreateInfo->pSurfaceDescription->sType ==
-          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_WSI);
-   VkSurfaceDescriptionWindowWSI *window =
-      (VkSurfaceDescriptionWindowWSI *)pCreateInfo->pSurfaceDescription;
+   assert(pSurfaceDescription->sType ==
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
+   VkSurfaceDescriptionWindowKHR *window =
+      (VkSurfaceDescriptionWindowKHR *)pSurfaceDescription;
 
    struct anv_wsi_implementation *impl =
       device->instance->wsi_impl[window->platform];
 
    assert(impl);
 
-   result = impl->create_swap_chain(impl, device, pCreateInfo, &swap_chain);
+   return impl->get_surface_formats(impl, device, window,
+                                    pCount, pSurfaceFormats);
+}
+
+VkResult
+anv_CreateSwapchainKHR(
+    VkDevice                                 _device,
+    const VkSwapchainCreateInfoKHR*          pCreateInfo,
+    VkSwapchainKHR*                          pSwapchain)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_swapchain *swapchain;
+   VkResult result;
+
+   assert(pCreateInfo->pSurfaceDescription->sType ==
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
+   VkSurfaceDescriptionWindowKHR *window =
+      (VkSurfaceDescriptionWindowKHR *)pCreateInfo->pSurfaceDescription;
+
+   struct anv_wsi_implementation *impl =
+      device->instance->wsi_impl[window->platform];
+
+   assert(impl);
+
+   result = impl->create_swapchain(impl, device, pCreateInfo, &swapchain);
 
    if (result == VK_SUCCESS)
-      *pSwapChain = anv_swap_chain_to_handle(swap_chain);
+      *pSwapchain = anv_swapchain_to_handle(swapchain);
 
    return result;
 }
 
 VkResult
-anv_DestroySwapChainWSI(
+anv_DestroySwapchainKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain)
+    VkSwapchainKHR                           swapChain)
 {
-   ANV_FROM_HANDLE(anv_swap_chain, swap_chain, swapChain);
+   ANV_FROM_HANDLE(anv_swapchain, swapchain, swapChain);
 
-   assert(swap_chain->device == anv_device_from_handle(device));
+   assert(swapchain->device == anv_device_from_handle(device));
 
-   return swap_chain->destroy(swap_chain);
+   return swapchain->destroy(swapchain);
 }
 
 VkResult
-anv_GetSwapChainInfoWSI(
+anv_GetSwapchainImagesKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain,
-    VkSwapChainInfoTypeWSI                   infoType,
-    size_t*                                  pDataSize,
-    void*                                    pData)
+    VkSwapchainKHR                           _swapchain,
+    uint32_t*                                pCount,
+    VkImage*                                 pSwapchainImages)
 {
-   ANV_FROM_HANDLE(anv_swap_chain, swap_chain, swapChain);
+   ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
 
-   assert(swap_chain->device == anv_device_from_handle(device));
+   assert(swapchain->device == anv_device_from_handle(device));
 
-   return swap_chain->get_swap_chain_info(swap_chain, infoType,
-                                          pDataSize, pData);
+   return swapchain->get_images(swapchain, pCount, pSwapchainImages);
 }
 
 VkResult
-anv_AcquireNextImageWSI(
+anv_AcquireNextImageKHR(
     VkDevice                                 device,
-    VkSwapChainWSI                           swapChain,
+    VkSwapchainKHR                           _swapchain,
     uint64_t                                 timeout,
     VkSemaphore                              semaphore,
     uint32_t*                                pImageIndex)
 {
-   ANV_FROM_HANDLE(anv_swap_chain, swap_chain, swapChain);
+   ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
 
-   assert(swap_chain->device == anv_device_from_handle(device));
+   assert(swapchain->device == anv_device_from_handle(device));
 
-   return swap_chain->acquire_next_image(swap_chain,
-                                         timeout, semaphore, pImageIndex);
+   return swapchain->acquire_next_image(swapchain,
+                                        timeout, semaphore, pImageIndex);
 }
 
 VkResult
-anv_QueuePresentWSI(
+anv_QueuePresentKHR(
     VkQueue                                  _queue,
-    VkPresentInfoWSI*                        pPresentInfo)
+    VkPresentInfoKHR*                        pPresentInfo)
 {
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
    VkResult result;
 
-   for (uint32_t i = 0; i < pPresentInfo->swapChainCount; i++) {
-      ANV_FROM_HANDLE(anv_swap_chain, swap_chain, pPresentInfo->swapChains[i]);
+   for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
+      ANV_FROM_HANDLE(anv_swapchain, swapchain, pPresentInfo->swapchains[i]);
 
-      assert(swap_chain->device == queue->device);
+      assert(swapchain->device == queue->device);
 
-      result = swap_chain->queue_present(swap_chain, queue,
-                                         pPresentInfo->imageIndices[i]);
+      result = swapchain->queue_present(swapchain, queue,
+                                        pPresentInfo->imageIndices[i]);
       /* TODO: What if one of them returns OUT_OF_DATE? */
       if (result != VK_SUCCESS)
          return result;

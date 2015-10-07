@@ -104,7 +104,7 @@ __vk_errorf(VkResult error, const char *file, int line, const char *format, ...)
    ERROR_CASE(VK_ERROR_INCOMPATIBLE_DRIVER)
 
    /* Extension errors */
-   ERROR_CASE(VK_ERROR_OUT_OF_DATE_WSI)
+   ERROR_CASE(VK_ERROR_OUT_OF_DATE_KHR)
 
    default:
       assert(!"Unknown error");

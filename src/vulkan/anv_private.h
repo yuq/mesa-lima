@@ -46,8 +46,8 @@
 #define VK_PROTOTYPES
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
-#include <vulkan/vk_wsi_swapchain.h>
-#include <vulkan/vk_wsi_device_swapchain.h>
+#include <vulkan/vk_ext_khr_swapchain.h>
+#include <vulkan/vk_ext_khr_device_swapchain.h>
 
 #include "anv_entrypoints.h"
 
@@ -429,7 +429,7 @@ struct anv_instance {
     uint32_t                                    physicalDeviceCount;
     struct anv_physical_device                  physicalDevice;
 
-    struct anv_wsi_implementation *             wsi_impl[VK_PLATFORM_NUM_WSI];
+    struct anv_wsi_implementation *             wsi_impl[VK_PLATFORM_NUM_KHR];
 };
 
 VkResult anv_init_wsi(struct anv_instance *instance);

@@ -25,37 +25,45 @@
 
 #include "anv_private.h"
 
-struct anv_swap_chain {
+struct anv_swapchain {
    struct anv_device *                          device;
 
-   VkResult (*destroy)(struct anv_swap_chain *swap_chain);
-   VkResult (*get_swap_chain_info)(struct anv_swap_chain *swap_chain,
-                                   VkSwapChainInfoTypeWSI infoType,
-                                   size_t *pDataSize, void *pData);
-   VkResult (*acquire_next_image)(struct anv_swap_chain *swap_chain,
+   VkResult (*destroy)(struct anv_swapchain *swapchain);
+   VkResult (*get_images)(struct anv_swapchain *swapchain,
+                          uint32_t *pCount, VkImage *pSwapchainImages);
+   VkResult (*acquire_next_image)(struct anv_swapchain *swap_chain,
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
-   VkResult (*queue_present)(struct anv_swap_chain *swap_chain,
+   VkResult (*queue_present)(struct anv_swapchain *swap_chain,
                              struct anv_queue *queue,
                              uint32_t image_index);
 };
 
-ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swap_chain, VkSwapChainWSI)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
 
 struct anv_wsi_implementation {
    VkResult (*get_window_supported)(struct anv_wsi_implementation *impl,
                                     struct anv_physical_device *physical_device,
-                                    const VkSurfaceDescriptionWindowWSI *window,
+                                    const VkSurfaceDescriptionWindowKHR *window,
                                     VkBool32 *pSupported);
-   VkResult (*get_surface_info)(struct anv_wsi_implementation *impl,
+   VkResult (*get_surface_properties)(struct anv_wsi_implementation *impl,
+                                      struct anv_device *device,
+                                      const VkSurfaceDescriptionWindowKHR *window,
+                                      VkSurfacePropertiesKHR *properties);
+   VkResult (*get_surface_formats)(struct anv_wsi_implementation *impl,
+                                   struct anv_device *device,
+                                   const VkSurfaceDescriptionWindowKHR *window,
+                                   uint32_t *pCount,
+                                   VkSurfaceFormatKHR *pSurfaceFormats);
+   VkResult (*get_surface_present_modes)(struct anv_wsi_implementation *impl,
+                                         struct anv_device *device,
+                                         const VkSurfaceDescriptionWindowKHR *window,
+                                         uint32_t *pCount,
+                                         VkPresentModeKHR *pPresentModes);
+   VkResult (*create_swapchain)(struct anv_wsi_implementation *impl,
                                 struct anv_device *device,
-                                VkSurfaceDescriptionWindowWSI *window,
-                                VkSurfaceInfoTypeWSI infoType,
-                                size_t* pDataSize, void* pData);
-   VkResult (*create_swap_chain)(struct anv_wsi_implementation *impl,
-                                 struct anv_device *device,
-                                 const VkSwapChainCreateInfoWSI *pCreateInfo,
-                                 struct anv_swap_chain **swap_chain);
+                                const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                struct anv_swapchain **swapchain);
 };
 
 VkResult anv_x11_init_wsi(struct anv_instance *instance);
