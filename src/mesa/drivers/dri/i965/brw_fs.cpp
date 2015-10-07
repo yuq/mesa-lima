@@ -5277,6 +5277,7 @@ brw_cs_emit(struct brw_context *brw,
    prog_data->local_size[2] = cp->LocalSize[2];
    unsigned local_workgroup_size =
       cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
+   unsigned max_cs_threads = brw->intelScreen->compiler->devinfo->max_cs_threads;
 
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
@@ -5287,7 +5288,7 @@ brw_cs_emit(struct brw_context *brw,
                  &prog_data->base, &cp->Base, cp->Base.nir, 8, shader_time_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
-   } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
+   } else if (local_workgroup_size <= 8 * max_cs_threads) {
       cfg = v8.cfg;
       prog_data->simd_size = 8;
    }
@@ -5296,7 +5297,7 @@ brw_cs_emit(struct brw_context *brw,
                   &prog_data->base, &cp->Base, cp->Base.nir, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
-       local_workgroup_size <= 16 * brw->max_cs_threads) {
+       local_workgroup_size <= 16 * max_cs_threads) {
       /* Try a SIMD16 compile */
       v16.import_uniforms(&v8);
       if (!v16.run_cs()) {
