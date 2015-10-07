@@ -985,12 +985,16 @@ do_buffer_copy(struct anv_cmd_buffer *cmd_buffer,
       .arraySize = 1,
       .samples = 1,
       .tiling = VK_IMAGE_TILING_LINEAR,
-      .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+      .usage = 0,
       .flags = 0,
    };
 
-   VkImage src_image, dest_image;
+   VkImage src_image;
+   image_info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
    anv_CreateImage(vk_device, &image_info, &src_image);
+
+   VkImage dest_image;
+   image_info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
    anv_CreateImage(vk_device, &image_info, &dest_image);
 
    /* We could use a vk call to bind memory, but that would require

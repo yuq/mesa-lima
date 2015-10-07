@@ -545,7 +545,6 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
       return &image->depth_surface;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(image->format->has_stencil);
-      anv_finishme("stencil image views");
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
       /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
