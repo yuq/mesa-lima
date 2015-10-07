@@ -3170,7 +3170,8 @@ process_initializer(ir_variable *var, ast_declaration *decl,
     */
    if (var->data.mode == ir_var_uniform) {
       state->check_version(120, 0, &initializer_loc,
-                           "cannot initialize uniforms");
+                           "cannot initialize uniform %s",
+                           var->name);
    }
 
    /* Section 4.3.7 "Buffer Variables" of the GLSL 4.30 spec:
@@ -3178,8 +3179,9 @@ process_initializer(ir_variable *var, ast_declaration *decl,
     *    "Buffer variables cannot have initializers."
     */
    if (var->data.mode == ir_var_shader_storage) {
-      _mesa_glsl_error(& initializer_loc, state,
-                       "SSBO variables cannot have initializers");
+      _mesa_glsl_error(&initializer_loc, state,
+                       "cannot initialize buffer variable %s",
+                       var->name);
    }
 
    /* From section 4.1.7 of the GLSL 4.40 spec:
@@ -3189,22 +3191,25 @@ process_initializer(ir_variable *var, ast_declaration *decl,
     *     shader."
     */
    if (var->type->contains_opaque()) {
-      _mesa_glsl_error(& initializer_loc, state,
-                       "cannot initialize opaque variable");
+      _mesa_glsl_error(&initializer_loc, state,
+                       "cannot initialize opaque variable %s",
+                       var->name);
    }
 
    if ((var->data.mode == ir_var_shader_in) && (state->current_function == NULL)) {
-      _mesa_glsl_error(& initializer_loc, state,
-		       "cannot initialize %s shader input / %s",
-		       _mesa_shader_stage_to_string(state->stage),
-		       (state->stage == MESA_SHADER_VERTEX)
-		       ? "attribute" : "varying");
+      _mesa_glsl_error(&initializer_loc, state,
+                       "cannot initialize %s shader input / %s %s",
+                       _mesa_shader_stage_to_string(state->stage),
+                       (state->stage == MESA_SHADER_VERTEX)
+                       ? "attribute" : "varying",
+                       var->name);
    }
 
    if (var->data.mode == ir_var_shader_out && state->current_function == NULL) {
       _mesa_glsl_error(&initializer_loc, state,
-                       "cannot initialize %s shader output",
-                       _mesa_shader_stage_to_string(state->stage));
+                       "cannot initialize %s shader output %s",
+                       _mesa_shader_stage_to_string(state->stage),
+                       var->name);
    }
 
    /* If the initializer is an ast_aggregate_initializer, recursively store
