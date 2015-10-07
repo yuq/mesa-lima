@@ -1152,7 +1152,7 @@ typedef struct {
     VkBool32                                    sampleRateShading;
     VkBool32                                    dualSourceBlend;
     VkBool32                                    logicOp;
-    VkBool32                                    instancedDrawIndirect;
+    VkBool32                                    multiDrawIndirect;
     VkBool32                                    depthClip;
     VkBool32                                    depthBiasClamp;
     VkBool32                                    fillModeNonSolid;
@@ -1162,6 +1162,7 @@ typedef struct {
     VkBool32                                    textureCompressionETC2;
     VkBool32                                    textureCompressionASTC_LDR;
     VkBool32                                    textureCompressionBC;
+    VkBool32                                    occlusionQueryNonConservative;
     VkBool32                                    pipelineStatisticsQuery;
     VkBool32                                    vertexSideEffects;
     VkBool32                                    tessellationSideEffects;
@@ -1169,11 +1170,9 @@ typedef struct {
     VkBool32                                    fragmentSideEffects;
     VkBool32                                    shaderTessellationPointSize;
     VkBool32                                    shaderGeometryPointSize;
-    VkBool32                                    shaderTextureGatherExtended;
+    VkBool32                                    shaderImageGatherExtended;
     VkBool32                                    shaderStorageImageExtendedFormats;
     VkBool32                                    shaderStorageImageMultisample;
-    VkBool32                                    shaderStorageBufferArrayConstantIndexing;
-    VkBool32                                    shaderStorageImageArrayConstantIndexing;
     VkBool32                                    shaderUniformBufferArrayDynamicIndexing;
     VkBool32                                    shaderSampledImageArrayDynamicIndexing;
     VkBool32                                    shaderStorageBufferArrayDynamicIndexing;
@@ -1182,11 +1181,11 @@ typedef struct {
     VkBool32                                    shaderCullDistance;
     VkBool32                                    shaderFloat64;
     VkBool32                                    shaderInt64;
-    VkBool32                                    shaderFloat16;
     VkBool32                                    shaderInt16;
     VkBool32                                    shaderResourceResidency;
     VkBool32                                    shaderResourceMinLOD;
-    VkBool32                                    sparse;
+    VkBool32                                    alphaToOne;
+    VkBool32                                    sparseBinding;
     VkBool32                                    sparseResidencyBuffer;
     VkBool32                                    sparseResidencyImage2D;
     VkBool32                                    sparseResidencyImage3D;
@@ -1194,12 +1193,6 @@ typedef struct {
     VkBool32                                    sparseResidency4Samples;
     VkBool32                                    sparseResidency8Samples;
     VkBool32                                    sparseResidency16Samples;
-    VkBool32                                    sparseResidencyStandard2DBlockShape;
-    VkBool32                                    sparseResidencyStandard2DMSBlockShape;
-    VkBool32                                    sparseResidencyStandard3DBlockShape;
-    VkBool32                                    sparseResidencyAlignedMipSize;
-    VkBool32                                    sparseResidencyNonResident;
-    VkBool32                                    sparseResidencyNonResidentStrict;
     VkBool32                                    sparseResidencyAliased;
 } VkPhysicalDeviceFeatures;
 

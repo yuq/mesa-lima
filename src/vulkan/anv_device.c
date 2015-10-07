@@ -278,7 +278,7 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .sampleRateShading                        = false,
       .dualSourceBlend                          = true,
       .logicOp                                  = true,
-      .instancedDrawIndirect                    = true,
+      .multiDrawIndirect                        = true,
       .depthClip                                = false,
       .depthBiasClamp                           = false,
       .fillModeNonSolid                         = true,
@@ -288,6 +288,7 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .textureCompressionETC2                   = true,
       .textureCompressionASTC_LDR               = true,
       .textureCompressionBC                     = true,
+      .occlusionQueryNonConservative            = false, /* FINISHME */
       .pipelineStatisticsQuery                  = true,
       .vertexSideEffects                        = false,
       .tessellationSideEffects                  = false,
@@ -295,11 +296,9 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .fragmentSideEffects                      = false,
       .shaderTessellationPointSize              = false,
       .shaderGeometryPointSize                  = true,
-      .shaderTextureGatherExtended              = true,
+      .shaderImageGatherExtended                = true,
       .shaderStorageImageExtendedFormats        = false,
       .shaderStorageImageMultisample            = false,
-      .shaderStorageBufferArrayConstantIndexing = false,
-      .shaderStorageImageArrayConstantIndexing  = false,
       .shaderUniformBufferArrayDynamicIndexing  = true,
       .shaderSampledImageArrayDynamicIndexing   = false,
       .shaderStorageBufferArrayDynamicIndexing  = false,
@@ -308,8 +307,8 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .shaderCullDistance                       = false,
       .shaderFloat64                            = false,
       .shaderInt64                              = false,
-      .shaderFloat16                            = false,
       .shaderInt16                              = false,
+      .alphaToOne                               = true,
    };
 
    return VK_SUCCESS;
