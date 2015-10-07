@@ -1788,7 +1788,7 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
    emit(MOV(offset, src_reg(index * SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
-   emit(MOV(time, src_reg(value)));
+   emit(MOV(time, value));
 
    vec4_instruction *inst =
       emit(SHADER_OPCODE_SHADER_TIME_ADD, dst_reg(), src_reg(dst));
