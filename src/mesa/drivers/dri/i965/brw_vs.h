@@ -60,6 +60,7 @@ const unsigned *brw_vs_emit(struct brw_context *brw,
                             struct brw_vs_prog_data *prog_data,
                             struct gl_vertex_program *vp,
                             struct gl_shader_program *shader_prog,
+                            int shader_time_index,
                             unsigned *program_size);
 void brw_vs_debug_recompile(struct brw_context *brw,
                             struct gl_shader_program *prog,

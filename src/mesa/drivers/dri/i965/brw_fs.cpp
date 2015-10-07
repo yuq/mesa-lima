@@ -5121,18 +5121,13 @@ brw_wm_fs_emit(struct brw_context *brw,
                struct brw_wm_prog_data *prog_data,
                struct gl_fragment_program *fp,
                struct gl_shader_program *prog,
+               int shader_time_index8, int shader_time_index16,
                unsigned *final_assembly_size)
 {
-   int st_index8 = -1, st_index16 = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      st_index8 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS8);
-      st_index16 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS16);
-   }
-
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
    fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
-                &prog_data->base, &fp->Base, fp->Base.nir, 8, st_index8);
+                &prog_data->base, &fp->Base, fp->Base.nir, 8, shader_time_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
          prog->LinkStatus = false;
@@ -5147,7 +5142,7 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    cfg_t *simd16_cfg = NULL;
    fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &fp->Base, fp->Base.nir, 16, st_index16);
+                 &prog_data->base, &fp->Base, fp->Base.nir, 16, shader_time_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
@@ -5274,6 +5269,7 @@ brw_cs_emit(struct brw_context *brw,
             struct brw_cs_prog_data *prog_data,
             struct gl_compute_program *cp,
             struct gl_shader_program *prog,
+            int shader_time_index,
             unsigned *final_assembly_size)
 {
    prog_data->local_size[0] = cp->LocalSize[0];
@@ -5285,14 +5281,10 @@ brw_cs_emit(struct brw_context *brw,
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
 
-   int st_index = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
-
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
    fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &cp->Base, cp->Base.nir, 8, st_index);
+                 &prog_data->base, &cp->Base, cp->Base.nir, 8, shader_time_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
@@ -5301,7 +5293,7 @@ brw_cs_emit(struct brw_context *brw,
    }
 
    fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
-                  &prog_data->base, &cp->Base, cp->Base.nir, 16, st_index);
+                  &prog_data->base, &cp->Base, cp->Base.nir, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * brw->max_cs_threads) {

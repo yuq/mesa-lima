@@ -72,6 +72,8 @@ const unsigned *brw_wm_fs_emit(struct brw_context *brw,
                                struct brw_wm_prog_data *prog_data,
                                struct gl_fragment_program *fp,
                                struct gl_shader_program *prog,
+                               int shader_time_index8,
+                               int shader_time_index16,
                                unsigned *final_assembly_size);
 
 GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);

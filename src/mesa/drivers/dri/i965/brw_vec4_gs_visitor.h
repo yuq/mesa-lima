@@ -55,6 +55,7 @@ const unsigned *brw_gs_emit(struct brw_context *brw,
                             struct gl_shader_program *prog,
                             struct brw_gs_compile *c,
                             void *mem_ctx,
+                            int shader_time_index,
                             unsigned *final_assembly_size);
 
 #ifdef __cplusplus

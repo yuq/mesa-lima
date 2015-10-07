@@ -173,10 +173,14 @@ brw_codegen_vs_prog(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
       brw_dump_ir("vertex", prog, &vs->base, &vp->program.Base);
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, &vp->program.Base, ST_VS);
+
    /* Emit GEN4 code.
     */
    program = brw_vs_emit(brw, mem_ctx, key, &prog_data,
-                         &vp->program, prog, &program_size);
+                         &vp->program, prog, st_index, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;

@@ -1943,13 +1943,10 @@ brw_vs_emit(struct brw_context *brw,
             struct brw_vs_prog_data *prog_data,
             struct gl_vertex_program *vp,
             struct gl_shader_program *prog,
+            int shader_time_index,
             unsigned *final_assembly_size)
 {
    const unsigned *assembly = NULL;
-
-   int st_index = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &vp->Base, ST_VS);
 
    if (brw->intelScreen->compiler->scalar_vs) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
@@ -1957,7 +1954,7 @@ brw_vs_emit(struct brw_context *brw,
       fs_visitor v(brw->intelScreen->compiler, brw,
                    mem_ctx, key, &prog_data->base.base,
                    NULL, /* prog; Only used for TEXTURE_RECTANGLE on gen < 8 */
-                   vp->Base.nir, 8, st_index);
+                   vp->Base.nir, 8, shader_time_index);
       if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
          if (prog) {
             prog->LinkStatus = false;
@@ -1995,7 +1992,7 @@ brw_vs_emit(struct brw_context *brw,
 
       vec4_vs_visitor v(brw->intelScreen->compiler, brw, key, prog_data,
                         vp->Base.nir, brw_select_clip_planes(&brw->ctx),
-                        mem_ctx, st_index,
+                        mem_ctx, shader_time_index,
                         !_mesa_is_gles3(&brw->ctx));
       if (!v.run()) {
          if (prog) {

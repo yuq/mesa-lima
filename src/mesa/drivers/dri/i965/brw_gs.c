@@ -294,10 +294,14 @@ brw_codegen_gs_prog(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_GS))
       brw_dump_ir("geometry", prog, gs, NULL);
 
+   int st_index = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
+      st_index = brw_get_shader_time_index(brw, prog, NULL, ST_GS);
+
    void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    const unsigned *program =
-      brw_gs_emit(brw, prog, &c, mem_ctx, &program_size);
+      brw_gs_emit(brw, prog, &c, mem_ctx, st_index, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;

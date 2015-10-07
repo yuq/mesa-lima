@@ -46,6 +46,7 @@ brw_cs_emit(struct brw_context *brw,
             struct brw_cs_prog_data *prog_data,
             struct gl_compute_program *cp,
             struct gl_shader_program *prog,
+            int shader_time_index,
             unsigned *final_assembly_size);
 
 void
