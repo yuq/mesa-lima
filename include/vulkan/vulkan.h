@@ -1549,6 +1549,7 @@ typedef struct {
     VkFormat                                    format;
     VkChannelMapping                            channels;
     VkImageSubresourceRange                     subresourceRange;
+    VkImageViewCreateFlags                      flags;
 } VkImageViewCreateInfo;
 
 typedef struct {
