@@ -41,31 +41,6 @@
 
 #include "util/ralloc.h"
 
-/**
- * Decide which set of clip planes should be used when clipping via
- * gl_Position or gl_ClipVertex.
- */
-gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx)
-{
-   if (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]) {
-      /* There is currently a GLSL vertex shader, so clip according to GLSL
-       * rules, which means compare gl_ClipVertex (or gl_Position, if
-       * gl_ClipVertex wasn't assigned) against the eye-coordinate clip planes
-       * that were stored in EyeUserPlane at the time the clip planes were
-       * specified.
-       */
-      return ctx->Transform.EyeUserPlane;
-   } else {
-      /* Either we are using fixed function or an ARB vertex program.  In
-       * either case the clip planes are going to be compared against
-       * gl_Position (which is in clip coordinates) so we have to clip using
-       * _ClipUserPlane, which was transformed into clip coordinates by Mesa
-       * core.
-       */
-      return ctx->Transform._ClipUserPlane;
-   }
-}
-
 bool
 brw_codegen_vs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
