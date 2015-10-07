@@ -738,10 +738,6 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
                VkExtent3D dest_extent)
 {
    struct anv_device *device = cmd_buffer->device;
-
-   VkImageView dest_iview_h = anv_image_view_to_handle(dest_iview);
-   VkAttachmentView dest_aview_h = { .handle = dest_iview_h.handle };
-
    VkDescriptorPool dummy_desc_pool = { .handle = 1 };
 
    struct blit_vb_data {
@@ -837,11 +833,8 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       &(VkFramebufferCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
          .attachmentCount = 1,
-         .pAttachments = (VkAttachmentBindInfo[]) {
-            {
-               .view = dest_aview_h,
-               .layout = VK_IMAGE_LAYOUT_GENERAL
-            }
+         .pAttachments = (VkImageView[]) {
+            anv_image_view_to_handle(dest_iview),
          },
          .width = dest_iview->extent.width,
          .height = dest_iview->extent.height,
@@ -1639,19 +1632,13 @@ void anv_CmdClearColorImage(
                },
                cmd_buffer);
 
-            VkImageView iview_h = anv_image_view_to_handle(&iview);
-            VkAttachmentView aview_h = { .handle = iview_h.handle };
-
             VkFramebuffer fb;
             anv_CreateFramebuffer(anv_device_to_handle(cmd_buffer->device),
                &(VkFramebufferCreateInfo) {
                   .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                   .attachmentCount = 1,
-                  .pAttachments = (VkAttachmentBindInfo[]) {
-                     {
-                        .view = aview_h,
-                        .layout = VK_IMAGE_LAYOUT_GENERAL
-                     }
+                  .pAttachments = (VkImageView[]) {
+                     anv_image_view_to_handle(&iview),
                   },
                   .width = iview.extent.width,
                   .height = iview.extent.height,

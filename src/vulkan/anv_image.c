@@ -617,23 +617,7 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
    }
 }
 
-VkResult
-anv_CreateAttachmentView(VkDevice _device,
-                         const VkAttachmentViewCreateInfo *info,
-                         VkAttachmentView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_image_view *iview;
-
-   assert(info->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
-
-   iview = anv_device_alloc(device, sizeof(*iview), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (iview == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   const struct anv_format *format = anv_format_for_vk_format(info->format);
-
+#if 0
    VkImageAspectFlags aspect_mask = 0;
    if (format->depth_format)
       aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -663,18 +647,4 @@ anv_CreateAttachmentView(VkDevice _device,
          },
       },
       NULL);
-
-   pView->handle = anv_image_view_to_handle(iview).handle;
-
-   return VK_SUCCESS;
-}
-
-void
-anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _aview)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   VkImageView _iview = { .handle = _aview.handle };
-   ANV_FROM_HANDLE(anv_image_view, iview, _iview);
-
-   anv_image_view_destroy(device, iview);
-}
+#endif

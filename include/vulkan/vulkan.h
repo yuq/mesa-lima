@@ -91,7 +91,6 @@ VK_DEFINE_NONDISP_HANDLE(VkEvent)
 VK_DEFINE_NONDISP_HANDLE(VkQueryPool)
 VK_DEFINE_NONDISP_HANDLE(VkBufferView)
 VK_DEFINE_NONDISP_HANDLE(VkImageView)
-VK_DEFINE_NONDISP_HANDLE(VkAttachmentView)
 VK_DEFINE_NONDISP_HANDLE(VkShaderModule)
 VK_DEFINE_NONDISP_HANDLE(VkShader)
 VK_DEFINE_NONDISP_HANDLE(VkPipelineCache)
@@ -962,10 +961,10 @@ typedef enum {
 typedef VkFlags VkImageAspectFlags;
 
 typedef enum {
-    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
-    VK_ATTACHMENT_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
-} VkAttachmentViewCreateFlagBits;
-typedef VkFlags VkAttachmentViewCreateFlags;
+    VK_IMAGE_VIEW_CREATE_READ_ONLY_DEPTH_BIT = 0x00000001,
+    VK_IMAGE_VIEW_CREATE_READ_ONLY_STENCIL_BIT = 0x00000002,
+} VkImageViewCreateFlagBits;
+typedef VkFlags VkImageViewCreateFlags;
 typedef VkFlags VkShaderModuleCreateFlags;
 typedef VkFlags VkShaderCreateFlags;
 
@@ -1511,17 +1510,6 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
-    VkImage                                     image;
-    VkFormat                                    format;
-    uint32_t                                    mipLevel;
-    uint32_t                                    baseArraySlice;
-    uint32_t                                    arraySize;
-    VkAttachmentViewCreateFlags                 flags;
-} VkAttachmentViewCreateInfo;
-
-typedef struct {
-    VkStructureType                             sType;
-    const void*                                 pNext;
     size_t                                      codeSize;
     const void*                                 pCode;
     VkShaderModuleCreateFlags                   flags;
@@ -1784,7 +1772,6 @@ typedef struct {
     VkBufferView                                bufferView;
     VkSampler                                   sampler;
     VkImageView                                 imageView;
-    VkAttachmentView                            attachmentView;
     VkImageLayout                               imageLayout;
 } VkDescriptorInfo;
 
@@ -1846,16 +1833,11 @@ typedef struct {
 } VkDynamicDepthStencilStateCreateInfo;
 
 typedef struct {
-    VkAttachmentView                            view;
-    VkImageLayout                               layout;
-} VkAttachmentBindInfo;
-
-typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
     VkRenderPass                                renderPass;
     uint32_t                                    attachmentCount;
-    const VkAttachmentBindInfo*                 pAttachments;
+    const VkImageView*                          pAttachments;
     uint32_t                                    width;
     uint32_t                                    height;
     uint32_t                                    layers;
@@ -2137,8 +2119,6 @@ typedef void (VKAPI *PFN_vkDestroyImage)(VkDevice device, VkImage image);
 typedef VkResult (VKAPI *PFN_vkGetImageSubresourceLayout)(VkDevice device, VkImage image, const VkImageSubresource* pSubresource, VkSubresourceLayout* pLayout);
 typedef VkResult (VKAPI *PFN_vkCreateImageView)(VkDevice device, const VkImageViewCreateInfo* pCreateInfo, VkImageView* pView);
 typedef void (VKAPI *PFN_vkDestroyImageView)(VkDevice device, VkImageView imageView);
-typedef VkResult (VKAPI *PFN_vkCreateAttachmentView)(VkDevice device, const VkAttachmentViewCreateInfo* pCreateInfo, VkAttachmentView* pView);
-typedef void (VKAPI *PFN_vkDestroyAttachmentView)(VkDevice device, VkAttachmentView attachmentView);
 typedef VkResult (VKAPI *PFN_vkCreateShaderModule)(VkDevice device, const VkShaderModuleCreateInfo* pCreateInfo, VkShaderModule* pShaderModule);
 typedef void (VKAPI *PFN_vkDestroyShaderModule)(VkDevice device, VkShaderModule shaderModule);
 typedef VkResult (VKAPI *PFN_vkCreateShader)(VkDevice device, const VkShaderCreateInfo* pCreateInfo, VkShader* pShader);
@@ -2541,15 +2521,6 @@ VkResult VKAPI vkCreateImageView(
 void VKAPI vkDestroyImageView(
     VkDevice                                    device,
     VkImageView                                 imageView);
-
-VkResult VKAPI vkCreateAttachmentView(
-    VkDevice                                    device,
-    const VkAttachmentViewCreateInfo*           pCreateInfo,
-    VkAttachmentView*                           pView);
-
-void VKAPI vkDestroyAttachmentView(
-    VkDevice                                    device,
-    VkAttachmentView                            attachmentView);
 
 VkResult VKAPI vkCreateShaderModule(
     VkDevice                                    device,

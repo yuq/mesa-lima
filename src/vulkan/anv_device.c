@@ -1968,8 +1968,7 @@ VkResult anv_CreateFramebuffer(
 
    framebuffer->attachment_count = pCreateInfo->attachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      VkAttachmentView _aview = pCreateInfo->pAttachments[i].view;
-      VkImageView _iview = { _aview.handle };
+      VkImageView _iview = pCreateInfo->pAttachments[i];
       framebuffer->attachments[i] = anv_image_view_from_handle(_iview);
    }
 
