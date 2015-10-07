@@ -1837,6 +1837,8 @@ typedef struct {
 typedef struct {
     VkStructureType                             sType;
     const void*                                 pNext;
+    VkDescriptorPoolUsage                       poolUsage;
+    uint32_t                                    maxSets;
     uint32_t                                    count;
     const VkDescriptorTypeCount*                pTypeCount;
 } VkDescriptorPoolCreateInfo;
@@ -2176,7 +2178,7 @@ typedef VkResult (VKAPI *PFN_vkCreateSampler)(VkDevice device, const VkSamplerCr
 typedef void (VKAPI *PFN_vkDestroySampler)(VkDevice device, VkSampler sampler);
 typedef VkResult (VKAPI *PFN_vkCreateDescriptorSetLayout)(VkDevice device, const VkDescriptorSetLayoutCreateInfo* pCreateInfo, VkDescriptorSetLayout* pSetLayout);
 typedef void (VKAPI *PFN_vkDestroyDescriptorSetLayout)(VkDevice device, VkDescriptorSetLayout descriptorSetLayout);
-typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, VkDescriptorPoolUsage poolUsage, uint32_t maxSets, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
+typedef VkResult (VKAPI *PFN_vkCreateDescriptorPool)(VkDevice device, const VkDescriptorPoolCreateInfo* pCreateInfo, VkDescriptorPool* pDescriptorPool);
 typedef void (VKAPI *PFN_vkDestroyDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkResetDescriptorPool)(VkDevice device, VkDescriptorPool descriptorPool);
 typedef VkResult (VKAPI *PFN_vkAllocDescriptorSets)(VkDevice device, VkDescriptorPool descriptorPool, VkDescriptorSetUsage setUsage, uint32_t count, const VkDescriptorSetLayout* pSetLayouts, VkDescriptorSet* pDescriptorSets);
@@ -2643,8 +2645,6 @@ void VKAPI vkDestroyDescriptorSetLayout(
 
 VkResult VKAPI vkCreateDescriptorPool(
     VkDevice                                    device,
-    VkDescriptorPoolUsage                       poolUsage,
-    uint32_t                                    maxSets,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool);
 

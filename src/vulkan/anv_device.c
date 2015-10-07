@@ -1591,8 +1591,6 @@ void anv_DestroyDescriptorSetLayout(
 
 VkResult anv_CreateDescriptorPool(
     VkDevice                                    device,
-    VkDescriptorPoolUsage                       poolUsage,
-    uint32_t                                    maxSets,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool)
 {
