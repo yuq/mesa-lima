@@ -83,6 +83,7 @@ struct radeon_shader_reloc;
 #define SI_SGPR_VERTEX_BUFFER	8  /* VS only */
 #define SI_SGPR_BASE_VERTEX	10 /* VS only */
 #define SI_SGPR_START_INSTANCE	11 /* VS only */
+#define SI_SGPR_VS_STATE_BITS	12 /* VS(VS) only */
 #define SI_SGPR_LS_OUT_LAYOUT	12 /* VS(LS) only */
 #define SI_SGPR_TCS_OUT_OFFSETS	8  /* TCS & TES only */
 #define SI_SGPR_TCS_OUT_LAYOUT	9  /* TCS & TES only */
@@ -90,8 +91,9 @@ struct radeon_shader_reloc;
 #define SI_SGPR_ALPHA_REF	8  /* PS only */
 #define SI_SGPR_PS_STATE_BITS	9  /* PS only */
 
-#define SI_VS_NUM_USER_SGPR	12
-#define SI_LS_NUM_USER_SGPR	13
+#define SI_VS_NUM_USER_SGPR	13 /* API VS */
+#define SI_ES_NUM_USER_SGPR	12 /* API VS */
+#define SI_LS_NUM_USER_SGPR	13 /* API VS */
 #define SI_TCS_NUM_USER_SGPR	11
 #define SI_TES_NUM_USER_SGPR	10
 #define SI_GS_NUM_USER_SGPR	8
@@ -108,6 +110,8 @@ struct radeon_shader_reloc;
 #define SI_PARAM_VERTEX_BUFFER	4
 #define SI_PARAM_BASE_VERTEX	5
 #define SI_PARAM_START_INSTANCE	6
+/* [0] = clamp vertex color */
+#define SI_PARAM_VS_STATE_BITS	7
 /* the other VS parameters are assigned dynamically */
 
 /* Offsets where TCS outputs and TCS patch outputs live in LDS:

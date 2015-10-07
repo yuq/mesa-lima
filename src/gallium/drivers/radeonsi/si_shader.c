@@ -2076,6 +2076,45 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context * bld_base)
 
 	outputs = MALLOC((info->num_outputs + 1) * sizeof(outputs[0]));
 
+	/* Vertex color clamping.
+	 *
+	 * This uses a state constant loaded in a user data SGPR and
+	 * an IF statement is added that clamps all colors if the constant
+	 * is true.
+	 */
+	if (si_shader_ctx->type == TGSI_PROCESSOR_VERTEX &&
+	    !si_shader_ctx->shader->is_gs_copy_shader) {
+		struct lp_build_if_state if_ctx;
+		LLVMValueRef cond = NULL;
+		LLVMValueRef addr, val;
+
+		for (i = 0; i < info->num_outputs; i++) {
+			if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR &&
+			    info->output_semantic_name[i] != TGSI_SEMANTIC_BCOLOR)
+				continue;
+
+			/* We've found a color. */
+			if (!cond) {
+				/* The state is in the first bit of the user SGPR. */
+				cond = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
+						    SI_PARAM_VS_STATE_BITS);
+				cond = LLVMBuildTrunc(gallivm->builder, cond,
+						      LLVMInt1TypeInContext(gallivm->context), "");
+				lp_build_if(&if_ctx, gallivm, cond);
+			}
+
+			for (j = 0; j < 4; j++) {
+				addr = si_shader_ctx->radeon_bld.soa.outputs[i][j];
+				val = LLVMBuildLoad(gallivm->builder, addr, "");
+				val = radeon_llvm_saturate(bld_base, val);
+				LLVMBuildStore(gallivm->builder, val, addr);
+			}
+		}
+
+		if (cond)
+			lp_build_endif(&if_ctx);
+	}
+
 	for (i = 0; i < info->num_outputs; i++) {
 		outputs[i].name = info->output_semantic_name[i];
 		outputs[i].sid = info->output_semantic_index[i];
@@ -3445,6 +3484,9 @@ static void create_function(struct si_shader_context *si_shader_ctx)
 			if (shader->is_gs_copy_shader) {
 				last_array_pointer = SI_PARAM_CONST;
 				num_params = SI_PARAM_CONST+1;
+			} else {
+				params[SI_PARAM_VS_STATE_BITS] = i32;
+				num_params = SI_PARAM_VS_STATE_BITS+1;
 			}
 
 			/* The locations of the other parameters are assigned dynamically. */
