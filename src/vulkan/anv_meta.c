@@ -1304,6 +1304,7 @@ void anv_CmdBlitImage(
 
 static VkImage
 make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
+                      VkImageUsageFlags usage,
                       const VkBufferImageCopy *copy)
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, vk_buffer);
@@ -1326,7 +1327,7 @@ make_image_for_buffer(VkDevice vk_device, VkBuffer vk_buffer, VkFormat format,
          .arraySize = 1,
          .samples = 1,
          .tiling = VK_IMAGE_TILING_LINEAR,
-         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+         .usage = usage,
          .flags = 0,
       }, &vk_image);
    assert(result == VK_SUCCESS);
@@ -1368,8 +1369,7 @@ void anv_CmdCopyBufferToImage(
       }
 
       VkImage srcImage = make_image_for_buffer(vk_device, srcBuffer,
-                                               proxy_format,
-                                               &pRegions[r]);
+            proxy_format, VK_IMAGE_USAGE_SAMPLED_BIT, &pRegions[r]);
 
       struct anv_image_view src_iview;
       anv_image_view_init(&src_iview, cmd_buffer->device,
@@ -1490,8 +1490,7 @@ void anv_CmdCopyImageToBuffer(
       }
 
       VkImage destImage = make_image_for_buffer(vk_device, destBuffer,
-                                                dest_format,
-                                                &pRegions[r]);
+            dest_format, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, &pRegions[r]);
 
       struct anv_image_view dest_iview;
       anv_color_attachment_view_init(&dest_iview, cmd_buffer->device,
