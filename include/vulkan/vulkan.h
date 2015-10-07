@@ -1516,6 +1516,7 @@ typedef struct {
     VkSharingMode                               sharingMode;
     uint32_t                                    queueFamilyCount;
     const uint32_t*                             pQueueFamilyIndices;
+    VkImageLayout                               initialLayout;
 } VkImageCreateInfo;
 
 typedef struct {
