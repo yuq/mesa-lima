@@ -1010,10 +1010,10 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
        * doubleBufferMode check in
        * src/mesa/main/context.c:check_compatible()
        */
-      if (dri2_config->dri_double_config)
-         dri_config = dri2_config->dri_double_config;
+      if (dri2_config->dri_double_config[0])
+         dri_config = dri2_config->dri_double_config[0];
       else
-         dri_config = dri2_config->dri_single_config;
+         dri_config = dri2_config->dri_single_config[0];
 
       /* EGL_WINDOW_BIT is set only when there is a dri_double_config.  This
        * makes sure the back buffer will always be used.
