@@ -1046,6 +1046,9 @@ struct anv_pipeline {
    struct anv_batch                             batch;
    uint32_t                                     batch_data[256];
    struct anv_reloc_list                        batch_relocs;
+   uint32_t                                     dynamic_state_mask;
+   struct anv_dynamic_state                     dynamic_state;
+
    struct anv_shader *                          shaders[VK_SHADER_STAGE_NUM];
    struct anv_pipeline_layout *                 layout;
    bool                                         use_repclear;

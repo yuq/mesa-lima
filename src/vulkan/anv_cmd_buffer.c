@@ -319,6 +319,12 @@ void anv_CmdBindPipeline(
       cmd_buffer->state.vb_dirty |= pipeline->vb_used;
       cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
       cmd_buffer->state.push_constants_dirty |= pipeline->active_stages;
+
+      /* Apply the dynamic state from the pipeline */
+      cmd_buffer->state.dirty |= pipeline->dynamic_state_mask;
+      anv_dynamic_state_copy(&cmd_buffer->state.dynamic,
+                             &pipeline->dynamic_state,
+                             pipeline->dynamic_state_mask);
       break;
 
    default:

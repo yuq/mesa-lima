@@ -177,6 +177,98 @@ static const uint32_t vk_to_gen_primitive_type[] = {
    [VK_PRIMITIVE_TOPOLOGY_PATCH]                = _3DPRIM_PATCHLIST_1
 };
 
+static void
+anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
+                                const VkGraphicsPipelineCreateInfo *pCreateInfo)
+{
+   pipeline->dynamic_state_mask = 0;
+
+   if (pCreateInfo->pDynamicState == NULL)
+      return;
+
+   uint32_t count = pCreateInfo->pDynamicState->dynamicStateCount;
+   struct anv_dynamic_state *dynamic = &pipeline->dynamic_state;
+
+   for (uint32_t s = 0; s < count; s++) {
+      VkDynamicState state = pCreateInfo->pDynamicState->pDynamicStates[s];
+
+      assert(state < 32);
+      pipeline->dynamic_state_mask |= (1u << state);
+
+      switch (state) {
+      case VK_DYNAMIC_STATE_VIEWPORT:
+         assert(pCreateInfo->pViewportState);
+         dynamic->viewport.count = pCreateInfo->pViewportState->viewportCount;
+         typed_memcpy(dynamic->viewport.viewports,
+                      pCreateInfo->pViewportState->pViewports,
+                      pCreateInfo->pViewportState->viewportCount);
+         break;
+
+      case VK_DYNAMIC_STATE_SCISSOR:
+         assert(pCreateInfo->pViewportState);
+         dynamic->scissor.count = pCreateInfo->pViewportState->scissorCount;
+         typed_memcpy(dynamic->scissor.scissors,
+                      pCreateInfo->pViewportState->pScissors,
+                      pCreateInfo->pViewportState->scissorCount);
+         break;
+
+      case VK_DYNAMIC_STATE_LINE_WIDTH:
+         assert(pCreateInfo->pRasterState);
+         dynamic->line_width = pCreateInfo->pRasterState->lineWidth;
+         break;
+
+      case VK_DYNAMIC_STATE_DEPTH_BIAS:
+         assert(pCreateInfo->pRasterState);
+         dynamic->depth_bias.bias = pCreateInfo->pRasterState->depthBias;
+         dynamic->depth_bias.clamp = pCreateInfo->pRasterState->depthBiasClamp;
+         dynamic->depth_bias.slope_scaled =
+            pCreateInfo->pRasterState->slopeScaledDepthBias;
+         break;
+
+      case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
+         assert(pCreateInfo->pColorBlendState);
+         typed_memcpy(dynamic->blend_constants,
+                      pCreateInfo->pColorBlendState->blendConst, 4);
+         break;
+
+      case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->depth_bounds.min =
+            pCreateInfo->pDepthStencilState->minDepthBounds;
+         dynamic->depth_bounds.max =
+            pCreateInfo->pDepthStencilState->maxDepthBounds;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_compare_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilCompareMask;
+         dynamic->stencil_compare_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilCompareMask;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_write_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilWriteMask;
+         dynamic->stencil_write_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilWriteMask;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_reference.front =
+            pCreateInfo->pDepthStencilState->front.stencilReference;
+         dynamic->stencil_reference.back =
+            pCreateInfo->pDepthStencilState->back.stencilReference;
+         break;
+
+      default:
+         assert(!"Invalid dynamic state");
+      }
+   }
+}
+
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
@@ -204,6 +296,8 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
       pipeline->shaders[pCreateInfo->pStages[i].stage] =
          anv_shader_from_handle(pCreateInfo->pStages[i].shader);
    }
+
+   anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
 
    if (pCreateInfo->pTessellationState)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
