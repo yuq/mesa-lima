@@ -314,16 +314,16 @@ VkResult anv_GetPhysicalDeviceFeatures(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceLimits(
+VkResult anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceLimits*                     pLimits)
+    VkPhysicalDeviceProperties*                 pProperties)
 {
-   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   const struct brw_device_info *devinfo = physical_device->info;
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+   const struct brw_device_info *devinfo = pdevice->info;
 
-   anv_finishme("Get correct values for PhysicalDeviceLimits");
+   anv_finishme("Get correct values for VkPhysicalDeviceLimits");
 
-   *pLimits = (VkPhysicalDeviceLimits) {
+   VkPhysicalDeviceLimits limits = {
       .maxImageDimension1D                      = (1 << 14),
       .maxImageDimension2D                      = (1 << 14),
       .maxImageDimension3D                      = (1 << 10),
@@ -433,21 +433,14 @@ VkResult anv_GetPhysicalDeviceLimits(
       .lineWidthGranularity                     = (1.0 / 128.0),
    };
 
-   return VK_SUCCESS;
-}
-
-VkResult anv_GetPhysicalDeviceProperties(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceProperties*                 pProperties)
-{
-   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
-
    *pProperties = (VkPhysicalDeviceProperties) {
       .apiVersion = VK_MAKE_VERSION(0, 138, 1),
       .driverVersion = 1,
       .vendorId = 0x8086,
       .deviceId = pdevice->chipset_id,
       .deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+      .limits = limits,
+      .sparseProperties = {0}, /* Broadwell doesn't do sparse. */
    };
 
    strcpy(pProperties->deviceName, pdevice->name);

@@ -1317,6 +1317,15 @@ typedef struct {
 } VkPhysicalDeviceLimits;
 
 typedef struct {
+    VkBool32                                    residencyStandard2DBlockShape;
+    VkBool32                                    residencyStandard2DMSBlockShape;
+    VkBool32                                    residencyStandard3DBlockShape;
+    VkBool32                                    residencyAlignedMipSize;
+    VkBool32                                    residencyNonResident;
+    VkBool32                                    residencyNonResidentStrict;
+} VkPhysicalDeviceSparseProperties;
+
+typedef struct {
     uint32_t                                    apiVersion;
     uint32_t                                    driverVersion;
     uint32_t                                    vendorId;
@@ -1324,6 +1333,8 @@ typedef struct {
     VkPhysicalDeviceType                        deviceType;
     char                                        deviceName[VK_MAX_PHYSICAL_DEVICE_NAME];
     uint8_t                                     pipelineCacheUUID[VK_UUID_LENGTH];
+    VkPhysicalDeviceLimits                      limits;
+    VkPhysicalDeviceSparseProperties            sparseProperties;
 } VkPhysicalDeviceProperties;
 
 typedef struct {
@@ -2082,7 +2093,6 @@ typedef VkResult (VKAPI *PFN_vkEnumeratePhysicalDevices)(VkInstance instance, ui
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFeatures)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceFeatures* pFeatures);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatProperties* pFormatProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceImageFormatProperties)(VkPhysicalDevice physicalDevice, VkFormat format, VkImageType type, VkImageTiling tiling, VkImageUsageFlags usage, VkImageCreateFlags flags, VkImageFormatProperties* pImageFormatProperties);
-typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceLimits)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceLimits* pLimits);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties* pProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceQueueFamilyProperties)(VkPhysicalDevice physicalDevice, uint32_t* pCount, VkQueueFamilyProperties* pQueueFamilyProperties);
 typedef VkResult (VKAPI *PFN_vkGetPhysicalDeviceMemoryProperties)(VkPhysicalDevice physicalDevice, VkPhysicalDeviceMemoryProperties* pMemoryProperties);
@@ -2253,10 +2263,6 @@ VkResult VKAPI vkGetPhysicalDeviceImageFormatProperties(
     VkImageUsageFlags                           usage,
     VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties);
-
-VkResult VKAPI vkGetPhysicalDeviceLimits(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceLimits*                     pLimits);
 
 VkResult VKAPI vkGetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
