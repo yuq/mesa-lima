@@ -2273,11 +2273,6 @@ AM_CONDITIONAL(HAVE_GALLIUM_VIRGL, test "x$HAVE_GALLIUM_VIRGL" = xyes)
 
 AM_CONDITIONAL(HAVE_GALLIUM_STATIC_TARGETS, test "x$enable_shared_pipe_drivers" = xno)
 
-# NOTE: anything using xcb or other client side libs ends up in separate
-#       _CLIENT variables.  The pipe loader is built in two variants,
-#       one that is standalone and does not link any x client libs (for
-#       use by XA tracker in particular, but could be used in any case
-#       where communication with xserver is not desired).
 if test "x$enable_gallium_loader" = xyes; then
     if test "x$enable_dri" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRI"
