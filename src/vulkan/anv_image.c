@@ -506,11 +506,6 @@ anv_depth_stencil_view_init(struct anv_image_view *iview,
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
 
-   /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->mipLevel == 0);
-   anv_assert(pCreateInfo->baseArraySlice == 0);
-   anv_assert(pCreateInfo->arraySize == 1);
-
    iview->image = image;
    iview->format = anv_format_for_vk_format(pCreateInfo->format);
 
