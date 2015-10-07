@@ -501,8 +501,6 @@ struct brw_cache_item {
 };
 
 
-typedef void (*cache_aux_free_func)(const void *aux);
-
 struct brw_cache {
    struct brw_context *brw;
 
@@ -512,9 +510,6 @@ struct brw_cache {
 
    uint32_t next_offset;
    bool bo_used_by_gpu;
-
-   /** Optional functions for freeing other pointers attached to a prog_data. */
-   cache_aux_free_func aux_free[BRW_MAX_CACHE];
 };
 
 

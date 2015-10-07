@@ -349,11 +349,6 @@ brw_init_caches(struct brw_context *brw)
 				  4096, 64);
    if (brw->has_llc)
       drm_intel_gem_bo_map_unsynchronized(cache->bo);
-
-   cache->aux_free[BRW_CACHE_VS_PROG] = brw_stage_prog_data_free;
-   cache->aux_free[BRW_CACHE_GS_PROG] = brw_stage_prog_data_free;
-   cache->aux_free[BRW_CACHE_FS_PROG] = brw_stage_prog_data_free;
-   cache->aux_free[BRW_CACHE_CS_PROG] = brw_stage_prog_data_free;
 }
 
 static void
@@ -367,9 +362,12 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
    for (i = 0; i < cache->size; i++) {
       for (c = cache->items[i]; c; c = next) {
 	 next = c->next;
-         if (cache->aux_free[c->cache_id]) {
+         if (c->cache_id == BRW_CACHE_VS_PROG ||
+             c->cache_id == BRW_CACHE_GS_PROG ||
+             c->cache_id == BRW_CACHE_FS_PROG ||
+             c->cache_id == BRW_CACHE_CS_PROG) {
             const void *item_aux = c->key + c->key_size;
-            cache->aux_free[c->cache_id](item_aux);
+            brw_stage_prog_data_free(item_aux);
          }
 	 free((void *)c->key);
 	 free(c);
