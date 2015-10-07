@@ -3421,10 +3421,13 @@ build_program_resource_list(struct gl_shader_program *shProg)
    if (input_stage == MESA_SHADER_STAGES && output_stage == 0)
       return;
 
-   if (!add_packed_varyings(shProg, input_stage))
-      return;
-   if (!add_packed_varyings(shProg, output_stage))
-      return;
+   /* Program interface needs to expose varyings in case of SSO. */
+   if (shProg->SeparateShader) {
+      if (!add_packed_varyings(shProg, input_stage))
+         return;
+      if (!add_packed_varyings(shProg, output_stage))
+         return;
+   }
 
    /* Add inputs and outputs to the resource list. */
    if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage]->ir,
