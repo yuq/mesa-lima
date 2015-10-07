@@ -55,7 +55,7 @@ extern "C" {
 
 
 #if defined(__cplusplus)
-    #if (_MSC_VER >= 1800 || __cplusplus >= 201103L)
+    #if ((defined(_MSC_VER) && _MSC_VER >= 1800) || __cplusplus >= 201103L)
         // The bool operator only works if there are no implicit conversions from an obj to
         // a bool-compatible type, which can then be used to unintentionally violate type safety.
         // C++11 and above supports the "explicit" keyword on conversion operators to stop this
@@ -63,13 +63,18 @@ extern "C" {
         // the object handle as a bool in expressions like:
         //     if (obj) vkDestroy(obj);
         #define VK_NONDISP_HANDLE_OPERATOR_BOOL() explicit operator bool() const { return handle != 0; }
+        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
+            explicit obj(uint64_t x) : handle(x) { } \
+            obj(decltype(nullptr)) : handle(0) { }
     #else
         #define VK_NONDISP_HANDLE_OPERATOR_BOOL()
+        #define VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
+            obj(uint64_t x) : handle(x) { }
     #endif
     #define VK_DEFINE_NONDISP_HANDLE(obj) \
         struct obj { \
             obj() : handle(0) { } \
-            obj(uint64_t x) : handle(x) { } \
+            VK_NONDISP_HANDLE_CONSTRUCTOR_FROM_UINT64(obj) \
             obj& operator =(uint64_t x) { handle = x; return *this; } \
             bool operator==(const obj& other) const { return handle == other.handle; } \
             bool operator!=(const obj& other) const { return handle != other.handle; } \
@@ -83,6 +88,10 @@ extern "C" {
         
 
 
+typedef uint32_t VkBool32;
+typedef uint32_t VkFlags;
+typedef uint64_t VkDeviceSize;
+typedef uint32_t VkSampleMask;
 
 VK_DEFINE_HANDLE(VkInstance)
 VK_DEFINE_HANDLE(VkPhysicalDevice)
