@@ -301,7 +301,6 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
       if (conf == NULL)
          return NULL;
 
-      memcpy(&conf->base, &base, sizeof base);
       if (double_buffer) {
          if (srgb)
             conf->dri_srgb_double_config = dri_config;
@@ -314,6 +313,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
             conf->dri_single_config = dri_config;
       }
 
+      memcpy(&conf->base, &base, sizeof base);
       conf->base.SurfaceType = 0;
       conf->base.ConfigID = config_id;
 
