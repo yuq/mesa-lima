@@ -1004,6 +1004,12 @@ ast_node::hir(exec_list *instructions, struct _mesa_glsl_parse_state *state)
    return NULL;
 }
 
+bool
+ast_node::has_sequence_subexpression() const
+{
+   return false;
+}
+
 void
 ast_function_expression::hir_no_rvalue(exec_list *instructions,
                                        struct _mesa_glsl_parse_state *state)
@@ -1915,6 +1921,80 @@ ast_expression::do_hir(exec_list *instructions,
    return result;
 }
 
+bool
+ast_expression::has_sequence_subexpression() const
+{
+   switch (this->oper) {
+   case ast_plus:
+   case ast_neg:
+   case ast_bit_not:
+   case ast_logic_not:
+   case ast_pre_inc:
+   case ast_pre_dec:
+   case ast_post_inc:
+   case ast_post_dec:
+      return this->subexpressions[0]->has_sequence_subexpression();
+
+   case ast_assign:
+   case ast_add:
+   case ast_sub:
+   case ast_mul:
+   case ast_div:
+   case ast_mod:
+   case ast_lshift:
+   case ast_rshift:
+   case ast_less:
+   case ast_greater:
+   case ast_lequal:
+   case ast_gequal:
+   case ast_nequal:
+   case ast_equal:
+   case ast_bit_and:
+   case ast_bit_xor:
+   case ast_bit_or:
+   case ast_logic_and:
+   case ast_logic_or:
+   case ast_logic_xor:
+   case ast_array_index:
+   case ast_mul_assign:
+   case ast_div_assign:
+   case ast_add_assign:
+   case ast_sub_assign:
+   case ast_mod_assign:
+   case ast_ls_assign:
+   case ast_rs_assign:
+   case ast_and_assign:
+   case ast_xor_assign:
+   case ast_or_assign:
+      return this->subexpressions[0]->has_sequence_subexpression() ||
+             this->subexpressions[1]->has_sequence_subexpression();
+
+   case ast_conditional:
+      return this->subexpressions[0]->has_sequence_subexpression() ||
+             this->subexpressions[1]->has_sequence_subexpression() ||
+             this->subexpressions[2]->has_sequence_subexpression();
+
+   case ast_sequence:
+      return true;
+
+   case ast_field_selection:
+   case ast_identifier:
+   case ast_int_constant:
+   case ast_uint_constant:
+   case ast_float_constant:
+   case ast_bool_constant:
+   case ast_double_constant:
+      return false;
+
+   case ast_aggregate:
+      unreachable("ast_aggregate: Should never get here.");
+
+   case ast_function_call:
+      unreachable("should be handled by ast_function_expression::hir");
+   }
+
+   return false;
+}
 
 ir_rvalue *
 ast_expression_statement::hir(exec_list *instructions,

@@ -1999,6 +1999,17 @@ ast_function_expression::hir(exec_list *instructions,
    unreachable("not reached");
 }
 
+bool
+ast_function_expression::has_sequence_subexpression() const
+{
+   foreach_list_typed(const ast_node, ast, link, &this->expressions) {
+      if (ast->has_sequence_subexpression())
+         return true;
+   }
+
+   return false;
+}
+
 ir_rvalue *
 ast_aggregate_initializer::hir(exec_list *instructions,
                                struct _mesa_glsl_parse_state *state)
