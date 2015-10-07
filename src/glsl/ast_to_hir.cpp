@@ -3249,17 +3249,20 @@ process_initializer(ir_variable *var, ast_declaration *decl,
                                 decl->identifier);
                if (var->type->is_numeric()) {
                   /* Reduce cascading errors. */
-                  var->constant_value = ir_constant::zero(state, var->type);
+                  var->constant_value = type->qualifier.flags.q.constant
+                     ? ir_constant::zero(state, var->type) : NULL;
                }
             }
          } else {
             rhs = constant_value;
-            var->constant_value = constant_value;
+            var->constant_value = type->qualifier.flags.q.constant
+               ? constant_value : NULL;
          }
       } else {
          if (var->type->is_numeric()) {
             /* Reduce cascading errors. */
-            var->constant_value = ir_constant::zero(state, var->type);
+            var->constant_value = type->qualifier.flags.q.constant
+               ? ir_constant::zero(state, var->type) : NULL;
          }
       }
    }
