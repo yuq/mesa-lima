@@ -252,6 +252,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 {
    const struct surface_format_info *info;
    int gen;
+   VkFormatFeatureFlags flags;
 
    if (format == NULL)
       return VK_ERROR_INVALID_VALUE;
@@ -267,6 +268,10 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (anv_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+      tiled |= VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+      if (format->depth_format) {
+         tiled |= VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+      }
    } else {
       /* The surface_formats table only contains color formats */
       info = &surface_formats[format->surface_format];
@@ -274,12 +279,16 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          goto unsupported;
 
       if (info->sampling <= gen) {
-         linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-         tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+         flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+                 VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+         linear |= flags;
+         tiled |= flags;
       }
       if (info->render_target <= gen) {
-         linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-         tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+         flags = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+                 VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+         linear |= flags;
+         tiled |= flags;
       }
       if (info->alpha_blend <= gen) {
          linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
@@ -292,6 +301,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 
    out_properties->linearTilingFeatures = linear;
    out_properties->optimalTilingFeatures = tiled;
+   out_properties->bufferFeatures = 0; /* FINISHME */
 
    return VK_SUCCESS;
 

@@ -851,7 +851,8 @@ typedef enum {
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT = 0x00000080,
     VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT = 0x00000100,
     VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x00000200,
-    VK_FORMAT_FEATURE_CONVERSION_BIT = 0x00000400,
+    VK_FORMAT_FEATURE_BLIT_SOURCE_BIT = 0x00000400,
+    VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT = 0x00000800,
 } VkFormatFeatureFlagBits;
 typedef VkFlags VkFormatFeatureFlags;
 
@@ -1199,6 +1200,7 @@ typedef struct {
 typedef struct {
     VkFormatFeatureFlags                        linearTilingFeatures;
     VkFormatFeatureFlags                        optimalTilingFeatures;
+    VkFormatFeatureFlags                        bufferFeatures;
 } VkFormatProperties;
 
 typedef struct {
