@@ -1701,6 +1701,16 @@ void anv_UpdateDescriptorSets(
       const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
       ANV_FROM_HANDLE(anv_descriptor_set, set, write->destSet);
 
+      for (uint32_t j = 0; j < write->count; ++j) {
+         const VkDescriptorBufferInfo *binfo
+            = &write->pDescriptors[j].bufferInfo;
+
+         if (binfo->buffer.handle || binfo->offset || binfo->range) {
+            anv_finishme("VkWriteDesciptorSet::bufferInfo");
+            break;
+         }
+      }
+
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
