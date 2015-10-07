@@ -843,7 +843,7 @@ static alu_node *create_set_idx(shader &sh, unsigned ar_idx) {
 	a->dst.resize(1); // Dummy needed for recolor
 
 	PSC_DUMP(
-		sblog << "created IDX load: "
+		sblog << "created IDX load: ";
 		dump::dump_op(a);
 		sblog << "\n";
 	);
@@ -909,15 +909,21 @@ void post_scheduler::process_fetch(container_node *c) {
 			sblog << "  ";
 		);
 
-		if (f->bc.sampler_index_mode != V_SQ_CF_INDEX_NONE) {
+		// TODO: If same values used can avoid reloading index register
+		if (f->bc.sampler_index_mode != V_SQ_CF_INDEX_NONE ||
+			f->bc.resource_index_mode != V_SQ_CF_INDEX_NONE) {
+			unsigned index_mode = f->bc.sampler_index_mode != V_SQ_CF_INDEX_NONE ?
+				f->bc.sampler_index_mode : f->bc.resource_index_mode;
+
 			// Currently require prior opt passes to use one TEX per indexed op
 			assert(f->parent->count() == 1);
 
 			value *v = f->src.back(); // Last src is index offset
+			assert(v);
 
 			cur_bb->push_front(c);
 
-			load_index_register(v, f->bc.sampler_index_mode);
+			load_index_register(v, index_mode);
 			f->src.pop_back(); // Don't need index value any more
 
 			return;
@@ -959,6 +965,7 @@ void post_scheduler::process_alu(container_node *c) {
 
 		if (uc) {
 			n->remove();
+
 			pending.push_back(n);
 			PSC_DUMP( sblog << "pending\n"; );
 		} else {
@@ -1101,6 +1108,18 @@ void post_scheduler::init_globals(val_set &s, bool prealloc) {
 	}
 }
 
+void post_scheduler::emit_index_registers() {
+	for (unsigned i = 0; i < 2; i++) {
+		if (alu.current_idx[i]) {
+			regmap = prev_regmap;
+			alu.discard_current_group();
+
+			load_index_register(alu.current_idx[i], KC_INDEX_0 + i);
+			alu.current_idx[i] = NULL;
+		}
+	}
+}
+
 void post_scheduler::emit_clause() {
 
 	if (alu.current_ar) {
@@ -1109,7 +1128,11 @@ void post_scheduler::emit_clause() {
 		alu.emit_group();
 	}
 
-	alu.emit_clause(cur_bb);
+	if (!alu.is_empty()) {
+		alu.emit_clause(cur_bb);
+	}
+
+	emit_index_registers();
 }
 
 void post_scheduler::schedule_alu(container_node *c) {
@@ -1121,6 +1144,14 @@ void post_scheduler::schedule_alu(container_node *c) {
 		prev_regmap = regmap;
 
 		if (!prepare_alu_group()) {
+			if (alu.current_idx[0] || alu.current_idx[1]) {
+				regmap = prev_regmap;
+				emit_clause();
+				init_globals(live, false);
+
+				continue;
+			}
+
 			if (alu.current_ar) {
 				emit_load_ar();
 				continue;
@@ -1132,6 +1163,7 @@ void post_scheduler::schedule_alu(container_node *c) {
 			regmap = prev_regmap;
 			emit_clause();
 			init_globals(live, false);
+
 			continue;
 		}
 
@@ -1391,6 +1423,42 @@ bool post_scheduler::map_src_val(value *v) {
 }
 
 bool post_scheduler::map_src_vec(vvec &vv, bool src) {
+	if (src) {
+		// Handle possible UBO indexing
+		bool ubo_indexing[2] = { false, false };
+		for (vvec::iterator I = vv.begin(), E = vv.end(); I != E; ++I) {
+			value *v = *I;
+			if (!v)
+				continue;
+
+			if (v->is_kcache()) {
+				unsigned index_mode = v->select.kcache_index_mode();
+				if (index_mode == KC_INDEX_0 || index_mode == KC_INDEX_1) {
+					ubo_indexing[index_mode - KC_INDEX_0] = true;
+				}
+			}
+		}
+
+		// idx values stored at end of src vec, see bc_parser::prepare_alu_group
+		for (unsigned i = 2; i != 0; i--) {
+			if (ubo_indexing[i-1]) {
+				// TODO: skip adding value to kcache reservation somehow, causes
+				// unnecessary group breaks and cache line locks
+				value *v = vv.back();
+				if (alu.current_idx[i-1] && alu.current_idx[i-1] != v) {
+					PSC_DUMP(
+						sblog << "IDX" << i-1 << " already set to " <<
+						*alu.current_idx[i-1] << ", trying to set " << *v << "\n";
+					);
+					return false;
+				}
+
+				alu.current_idx[i-1] = v;
+				PSC_DUMP(sblog << "IDX" << i-1 << " set to " << *v << "\n";);
+			}
+		}
+	}
+
 	for (vvec::iterator I = vv.begin(), E = vv.end(); I != E; ++I) {
 		value *v = *I;
 		if (!v)
@@ -1456,6 +1524,10 @@ void post_scheduler::dump_regmap() {
 		sblog << "    current_AR: " << *alu.current_ar << "\n";
 	if (alu.current_pr)
 		sblog << "    current_PR: " << *alu.current_pr << "\n";
+	if (alu.current_idx[0])
+		sblog << "    current IDX0: " << *alu.current_idx[0] << "\n";
+	if (alu.current_idx[1])
+		sblog << "    current IDX1: " << *alu.current_idx[1] << "\n";
 }
 
 void post_scheduler::recolor_locals() {
@@ -1544,6 +1616,13 @@ unsigned post_scheduler::try_add_instruction(node *n) {
 	alu_group_tracker &rt = alu.grp();
 
 	unsigned avail_slots = rt.avail_slots();
+
+	// Cannot schedule in same clause as instructions using this index value
+	if (!n->dst.empty() && n->dst[0] &&
+		(n->dst[0] == alu.current_idx[0] || n->dst[0] == alu.current_idx[1])) {
+		PSC_DUMP(sblog << "   CF_IDX source: " << *n->dst[0] << "\n";);
+		return 0;
+	}
 
 	if (n->is_alu_packed()) {
 		alu_packed_node *p = static_cast<alu_packed_node*>(n);
@@ -1874,7 +1953,7 @@ alu_clause_tracker::alu_clause_tracker(shader &sh)
 	  grp0(sh), grp1(sh),
 	  group(), clause(),
 	  push_exec_mask(),
-	  current_ar(), current_pr() {}
+	  current_ar(), current_pr(), current_idx() {}
 
 void alu_clause_tracker::emit_group() {
 
@@ -1931,6 +2010,8 @@ bool alu_clause_tracker::check_clause_limits() {
 
 	// reserving slots to load AR and PR values
 	unsigned reserve_slots = (current_ar ? 1 : 0) + (current_pr ? 1 : 0);
+	// ...and index registers
+	reserve_slots += (current_idx[0] != NULL) + (current_idx[1] != NULL);
 
 	if (slot_count + slots > MAX_ALU_SLOTS - reserve_slots)
 		return false;
@@ -1996,13 +2077,15 @@ unsigned rp_kcache_tracker::get_lines(kc_lines& lines) {
 	unsigned cnt = 0;
 
 	for (unsigned i = 0; i < sel_count; ++i) {
-		unsigned line = rp[i];
+		unsigned line = rp[i] & 0x1fffffffu;
+		unsigned index_mode = rp[i] >> 29;
 
 		if (!line)
 			return cnt;
 
 		--line;
 		line = (sel_count == 2) ? line >> 5 : line >> 6;
+		line |= index_mode << 29;
 
 		if (lines.insert(line).second)
 			++cnt;
@@ -2017,14 +2100,18 @@ bool alu_kcache_tracker::update_kc() {
 	memcpy(old_kc, kc, sizeof(kc));
 
 	for (kc_lines::iterator I = lines.begin(), E = lines.end(); I != E; ++I) {
-		unsigned line = *I;
+		unsigned index_mode = *I >> 29;
+		unsigned line = *I & 0x1fffffffu;
 		unsigned bank = line >> 8;
 
+		assert(index_mode <= KC_INDEX_INVALID);
 		line &= 0xFF;
 
-		if (c && (bank == kc[c-1].bank) && (kc[c-1].addr + 1 == line))
-			++kc[c-1].mode;
-		else {
+		if (c && (bank == kc[c-1].bank) && (kc[c-1].addr + 1 == line) &&
+			kc[c-1].index_mode == index_mode)
+		{
+			kc[c-1].mode = KC_LOCK_2;
+		} else {
 			if (c == max_kcs) {
 				memcpy(kc, old_kc, sizeof(kc));
 				return false;
@@ -2034,6 +2121,7 @@ bool alu_kcache_tracker::update_kc() {
 
 			kc[c].bank = bank;
 			kc[c].addr = line;
+			kc[c].index_mode = index_mode;
 			++c;
 		}
 	}

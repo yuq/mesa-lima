@@ -478,7 +478,9 @@ struct bc_cf {
 
 	bool is_alu_extended() {
 		assert(op_ptr->flags & CF_ALU);
-		return kc[2].mode != KC_LOCK_NONE || kc[3].mode != KC_LOCK_NONE;
+		return kc[2].mode != KC_LOCK_NONE || kc[3].mode != KC_LOCK_NONE ||
+			kc[0].index_mode != KC_INDEX_NONE || kc[1].index_mode != KC_INDEX_NONE ||
+			kc[2].index_mode != KC_INDEX_NONE || kc[3].index_mode != KC_INDEX_NONE;
 	}
 
 };

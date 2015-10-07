@@ -75,8 +75,6 @@ struct r600_shader {
 	boolean			has_txq_cube_array_z_comp;
 	boolean			uses_tex_buffers;
 	boolean                 gs_prim_id_input;
-	/* Temporarily workaround SB not handling ubo indexing */
-	boolean			uses_ubo_indexing;
 
 	/* Size in bytes of a data item in the ring(s) (single vertex data).
 	   Stages with only one ring items 123 will be set to 0. */

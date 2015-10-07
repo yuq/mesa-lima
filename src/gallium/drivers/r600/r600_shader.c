@@ -166,8 +166,6 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
     if (rctx->b.chip_class <= R700) {
 	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
     }
-	/* disable SB for shaders using ubo array indexing as it doesn't handle those currently */
-	use_sb &= !shader->shader.uses_ubo_indexing;
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
@@ -1250,9 +1248,6 @@ static int tgsi_split_constant(struct r600_shader_ctx *ctx)
 			continue;
 		}
 
-		if (ctx->src[i].kc_rel)
-			ctx->shader->uses_ubo_indexing = true;
-
 		if (ctx->src[i].rel) {
 			int chan = inst->Src[i].Indirect.Swizzle;
 			int treg = r600_get_temp(ctx);
@@ -1936,7 +1931,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.gs_next_vertex = 0;
 	ctx.gs_stream_output_info = &so;
 
-	shader->uses_ubo_indexing = false;
 	ctx.face_gpr = -1;
 	ctx.fixed_pt_position_gpr = -1;
 	ctx.fragcoord_input = -1;

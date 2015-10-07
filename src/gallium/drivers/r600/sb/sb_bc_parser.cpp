@@ -338,6 +338,7 @@ void bc_parser::save_set_cf_index(value *val, unsigned idx)
 value *bc_parser::get_cf_index_value(unsigned idx)
 {
 	assert(idx <= 1);
+	assert(cf_index_value[idx]);
 	return cf_index_value[idx];
 }
 void bc_parser::save_mova(alu_node *mova)
@@ -361,6 +362,7 @@ int bc_parser::prepare_alu_group(cf_node* cf, alu_group_node *g) {
 	for (node_iterator I = g->begin(), E = g->end();
 			I != E; ++I) {
 		n = static_cast<alu_node*>(*I);
+		bool ubo_indexing[2] = {};
 
 		if (!sh->assign_slot(n, slots[cgroup])) {
 			assert(!"alu slot assignment failed");
@@ -460,7 +462,12 @@ int bc_parser::prepare_alu_group(cf_node* cf, alu_group_node *g) {
 
 				bc_kcache &kc = cf->bc.kc[kc_set];
 				kc_addr = (kc.addr << 4) + (sel & 0x1F);
-				n->src[s] = sh->get_kcache_value(kc.bank, kc_addr, src.chan);
+				n->src[s] = sh->get_kcache_value(kc.bank, kc_addr, src.chan, (alu_kcache_index_mode)kc.index_mode);
+
+				if (kc.index_mode != KC_INDEX_NONE) {
+					assert(kc.index_mode != KC_LOCK_LOOP);
+					ubo_indexing[kc.index_mode - KC_INDEX_0] = true;
+				}
 			} else if (src.sel < MAX_GPR) {
 				value *v = sh->get_gpr_value(true, src.sel, src.chan, src.rel);
 
@@ -497,6 +504,15 @@ int bc_parser::prepare_alu_group(cf_node* cf, alu_group_node *g) {
 				}
 			}
 		}
+
+		// add UBO index values if any as dependencies
+		if (ubo_indexing[0]) {
+			n->src.push_back(get_cf_index_value(0));
+		}
+		if (ubo_indexing[1]) {
+			n->src.push_back(get_cf_index_value(1));
+		}
+
 		if ((n->bc.dst_gpr == CM_V_SQ_MOVA_DST_CF_IDX0 || n->bc.dst_gpr == CM_V_SQ_MOVA_DST_CF_IDX1) &&
 		    ctx.is_cayman())
 			// Move CF_IDX value into tex instruction operands, scheduler will later re-emit setting of CF_IDX
@@ -643,6 +659,9 @@ int bc_parser::prepare_fetch_clause(cf_node *cf) {
 			// Scheduler will emit the appropriate instructions to set CF_IDX0/1
 			if (n->bc.sampler_index_mode != V_SQ_CF_INDEX_NONE) {
 				n->src.push_back(get_cf_index_value(n->bc.sampler_index_mode == V_SQ_CF_INDEX_1));
+			}
+			if (n->bc.resource_index_mode != V_SQ_CF_INDEX_NONE) {
+				n->src.push_back(get_cf_index_value(n->bc.resource_index_mode == V_SQ_CF_INDEX_1));
 			}
 		}
 	}

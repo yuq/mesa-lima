@@ -66,6 +66,7 @@ public:
 class literal_tracker {
 	literal lt[4];
 	unsigned uc[4];
+
 public:
 	literal_tracker() : lt(), uc() {}
 
@@ -219,6 +220,8 @@ public:
 	// bottom-up)
 	value *current_ar;
 	value *current_pr;
+	// current values of CF_IDX registers that need preloading
+	value *current_idx[2];
 
 	alu_clause_tracker(shader &sh);
 
@@ -256,6 +259,7 @@ class post_scheduler : public pass {
 
 	val_set cleared_interf;
 
+	void emit_index_registers();
 public:
 
 	post_scheduler(shader &sh) : pass(sh),
