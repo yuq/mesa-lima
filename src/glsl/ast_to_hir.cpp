@@ -3224,9 +3224,19 @@ process_initializer(ir_variable *var, ast_declaration *decl,
 
    /* Calculate the constant value if this is a const or uniform
     * declaration.
+    *
+    * Section 4.3 (Storage Qualifiers) of the GLSL ES 1.00.17 spec says:
+    *
+    *     "Declarations of globals without a storage qualifier, or with
+    *     just the const qualifier, may include initializers, in which case
+    *     they will be initialized before the first line of main() is
+    *     executed.  Such initializers must be a constant expression."
+    *
+    * The same section of the GLSL ES 3.00.4 spec has similar language.
     */
    if (type->qualifier.flags.q.constant
-       || type->qualifier.flags.q.uniform) {
+       || type->qualifier.flags.q.uniform
+       || (state->es_shader && state->current_function == NULL)) {
       ir_rvalue *new_rhs = validate_assignment(state, initializer_loc,
                                                lhs, rhs, true);
       if (new_rhs != NULL) {
@@ -3234,6 +3244,11 @@ process_initializer(ir_variable *var, ast_declaration *decl,
 
          ir_constant *constant_value = rhs->constant_expression_value();
          if (!constant_value) {
+            const char *const variable_mode =
+               (type->qualifier.flags.q.constant)
+               ? "const"
+               : ((type->qualifier.flags.q.uniform) ? "uniform" : "global");
+
             /* If ARB_shading_language_420pack is enabled, initializers of
              * const-qualified local variables do not have to be constant
              * expressions. Const-qualified global variables must still be
@@ -3244,8 +3259,7 @@ process_initializer(ir_variable *var, ast_declaration *decl,
                _mesa_glsl_error(& initializer_loc, state,
                                 "initializer of %s variable `%s' must be a "
                                 "constant expression",
-                                (type->qualifier.flags.q.constant)
-                                ? "const" : "uniform",
+                                variable_mode,
                                 decl->identifier);
                if (var->type->is_numeric()) {
                   /* Reduce cascading errors. */
