@@ -48,13 +48,9 @@ libi965_dri_la_LIBADD = libi965_compiler.la $(INTEL_LIBS)
 libi965_compiler_la_SOURCES = $(i965_compiler_FILES)
 
 TEST_LIBS = \
-	libi965_dri.la \
-	../common/libdricommon.la \
-	../common/libxmlconfig.la \
-	../common/libmegadriver_stub.la \
+	libi965_compiler.la \
         ../../../libmesa.la \
-	$(DRI_LIB_DEPS) \
-        $(CLOCK_LIB) \
+	-lpthread -ldl \
 	../common/libdri_test_stubs.la
 
 TESTS = \
