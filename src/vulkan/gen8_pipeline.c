@@ -269,7 +269,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
-   /* VkBool32 depthBoundsEnable;          // optional (depth_bounds_test) */
+   /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
 
    struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
       .DepthTestEnable = info->depthTestEnable,
@@ -571,7 +571,7 @@ VkResult gen8_compute_pipeline_create(
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
 
    pipeline->shaders[VK_SHADER_STAGE_COMPUTE] =
-      anv_shader_from_handle(pCreateInfo->cs.shader);
+      anv_shader_from_handle(pCreateInfo->stage.shader);
 
    pipeline->use_repclear = false;
 

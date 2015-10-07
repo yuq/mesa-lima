@@ -567,6 +567,5 @@ VkResult gen7_compute_pipeline_create(
     VkPipeline*                                 pPipeline)
 {
    anv_finishme("primitive_id needs sbe swizzling setup");
-
-   return vk_error(VK_ERROR_UNAVAILABLE);
+   abort();
 }

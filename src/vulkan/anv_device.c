@@ -43,42 +43,49 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    fd = open(path, O_RDWR | O_CLOEXEC);
    if (fd < 0)
-      return vk_errorf(VK_ERROR_UNAVAILABLE, "failed to open %s: %m", path);
+      return vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                       "failed to open %s: %m", path);
 
    device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    device->instance = instance;
    device->path = path;
-   
+
    device->chipset_id = anv_gem_get_param(fd, I915_PARAM_CHIPSET_ID);
    if (!device->chipset_id) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get chipset id: %m");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get chipset id: %m");
       goto fail;
    }
 
    device->name = brw_get_device_name(device->chipset_id);
    device->info = brw_get_device_info(device->chipset_id, -1);
    if (!device->info) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get device info");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get device info");
       goto fail;
    }
    
    if (anv_gem_get_aperture(fd, &device->aperture_size) == -1) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "failed to get aperture size: %m");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "failed to get aperture size: %m");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_WAIT_TIMEOUT)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing gem wait");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "kernel missing gem wait");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_EXECBUF2)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "kernel missing execbuf2");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "kernel missing execbuf2");
       goto fail;
    }
 
    if (!anv_gem_get_param(fd, I915_PARAM_HAS_LLC)) {
-      result = vk_errorf(VK_ERROR_UNAVAILABLE, "non-llc gpu");
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "non-llc gpu");
       goto fail;
    }
    
@@ -148,7 +155,7 @@ VkResult anv_CreateInstance(
          }
       }
       if (!found)
-         return vk_error(VK_ERROR_INVALID_EXTENSION);
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
    if (pCreateInfo->pAllocCb) {
@@ -178,7 +185,7 @@ VkResult anv_CreateInstance(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyInstance(
+void anv_DestroyInstance(
     VkInstance                                  _instance)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
@@ -190,8 +197,6 @@ VkResult anv_DestroyInstance(
    _mesa_locale_fini();
 
    instance->pfnFree(instance->pAllocUserData, instance);
-
-   return VK_SUCCESS;
 }
 
 void *
@@ -280,7 +285,7 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .sampleRateShading                        = false,
       .dualSourceBlend                          = true,
       .logicOp                                  = true,
-      .instancedDrawIndirect                    = true,
+      .multiDrawIndirect                        = true,
       .depthClip                                = false,
       .depthBiasClamp                           = false,
       .fillModeNonSolid                         = true,
@@ -290,6 +295,7 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .textureCompressionETC2                   = true,
       .textureCompressionASTC_LDR               = true,
       .textureCompressionBC                     = true,
+      .occlusionQueryNonConservative            = false, /* FINISHME */
       .pipelineStatisticsQuery                  = true,
       .vertexSideEffects                        = false,
       .tessellationSideEffects                  = false,
@@ -297,11 +303,9 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .fragmentSideEffects                      = false,
       .shaderTessellationPointSize              = false,
       .shaderGeometryPointSize                  = true,
-      .shaderTextureGatherExtended              = true,
+      .shaderImageGatherExtended                = true,
       .shaderStorageImageExtendedFormats        = false,
       .shaderStorageImageMultisample            = false,
-      .shaderStorageBufferArrayConstantIndexing = false,
-      .shaderStorageImageArrayConstantIndexing  = false,
       .shaderUniformBufferArrayDynamicIndexing  = true,
       .shaderSampledImageArrayDynamicIndexing   = false,
       .shaderStorageBufferArrayDynamicIndexing  = false,
@@ -310,34 +314,39 @@ VkResult anv_GetPhysicalDeviceFeatures(
       .shaderCullDistance                       = false,
       .shaderFloat64                            = false,
       .shaderInt64                              = false,
-      .shaderFloat16                            = false,
       .shaderInt16                              = false,
+      .alphaToOne                               = true,
    };
 
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceLimits(
+VkResult anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceLimits*                     pLimits)
+    VkPhysicalDeviceProperties*                 pProperties)
 {
-   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
-   const struct brw_device_info *devinfo = physical_device->info;
+   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
+   const struct brw_device_info *devinfo = pdevice->info;
 
-   anv_finishme("Get correct values for PhysicalDeviceLimits");
+   anv_finishme("Get correct values for VkPhysicalDeviceLimits");
 
-   *pLimits = (VkPhysicalDeviceLimits) {
+   VkPhysicalDeviceLimits limits = {
       .maxImageDimension1D                      = (1 << 14),
       .maxImageDimension2D                      = (1 << 14),
       .maxImageDimension3D                      = (1 << 10),
       .maxImageDimensionCube                    = (1 << 14),
       .maxImageArrayLayers                      = (1 << 10),
+
+      /* Broadwell supports 1, 2, 4, and 8 samples. */
+      .sampleCounts                             = 4,
+
       .maxTexelBufferSize                       = (1 << 14),
       .maxUniformBufferSize                     = UINT32_MAX,
       .maxStorageBufferSize                     = UINT32_MAX,
       .maxPushConstantsSize                     = MAX_PUSH_CONSTANTS_SIZE,
       .maxMemoryAllocationCount                 = UINT32_MAX,
       .bufferImageGranularity                   = 64, /* A cache line */
+      .sparseAddressSpaceSize                   = 0,
       .maxBoundDescriptorSets                   = MAX_SETS,
       .maxDescriptorSets                        = UINT32_MAX,
       .maxPerStageDescriptorSamplers            = 64,
@@ -347,10 +356,13 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxPerStageDescriptorStorageImages       = 64,
       .maxDescriptorSetSamplers                 = 256,
       .maxDescriptorSetUniformBuffers           = 256,
+      .maxDescriptorSetUniformBuffersDynamic    = 256,
       .maxDescriptorSetStorageBuffers           = 256,
+      .maxDescriptorSetStorageBuffersDynamic    = 256,
       .maxDescriptorSetSampledImages            = 256,
       .maxDescriptorSetStorageImages            = 256,
       .maxVertexInputAttributes                 = 32,
+      .maxVertexInputBindings                   = 32,
       .maxVertexInputAttributeOffset            = 256,
       .maxVertexInputBindingStride              = 256,
       .maxVertexOutputComponents                = 32,
@@ -391,8 +403,7 @@ VkResult anv_GetPhysicalDeviceLimits(
       .primitiveRestartForPatches               = UINT32_MAX,
       .maxSamplerLodBias                        = 16,
       .maxSamplerAnisotropy                     = 16,
-      .maxViewports                             = 16,
-      .maxDynamicViewportStates                 = UINT32_MAX,
+      .maxViewports                             = MAX_VIEWPORTS,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
       .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
       .viewportSubPixelBits                     = 13, /* We take a float? */
@@ -429,21 +440,14 @@ VkResult anv_GetPhysicalDeviceLimits(
       .lineWidthGranularity                     = (1.0 / 128.0),
    };
 
-   return VK_SUCCESS;
-}
-
-VkResult anv_GetPhysicalDeviceProperties(
-    VkPhysicalDevice                            physicalDevice,
-    VkPhysicalDeviceProperties*                 pProperties)
-{
-   ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
-
    *pProperties = (VkPhysicalDeviceProperties) {
       .apiVersion = VK_MAKE_VERSION(0, 138, 1),
       .driverVersion = 1,
       .vendorId = 0x8086,
       .deviceId = pdevice->chipset_id,
       .deviceType = VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU,
+      .limits = limits,
+      .sparseProperties = {0}, /* Broadwell doesn't do sparse. */
    };
 
    strcpy(pProperties->deviceName, pdevice->name);
@@ -453,23 +457,18 @@ VkResult anv_GetPhysicalDeviceProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceQueueCount(
+VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
-    uint32_t*                                   pCount)
+    uint32_t*                                   pCount,
+    VkQueueFamilyProperties*                    pQueueFamilyProperties)
 {
-   *pCount = 1;
+   if (pQueueFamilyProperties == NULL) {
+      *pCount = 1;
+   }
 
-   return VK_SUCCESS;
-}
+   assert(*pCount >= 1);
 
-VkResult anv_GetPhysicalDeviceQueueProperties(
-    VkPhysicalDevice                            physicalDevice,
-    uint32_t                                    count,
-    VkPhysicalDeviceQueueProperties*            pQueueProperties)
-{
-   assert(count == 1);
-
-   *pQueueProperties = (VkPhysicalDeviceQueueProperties) {
+   *pQueueFamilyProperties = (VkQueueFamilyProperties) {
       .queueFlags = VK_QUEUE_GRAPHICS_BIT |
                     VK_QUEUE_COMPUTE_BIT |
                     VK_QUEUE_DMA_BIT,
@@ -502,7 +501,7 @@ VkResult anv_GetPhysicalDeviceMemoryProperties(
    pMemoryProperties->memoryHeapCount = 1;
    pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
       .size = heap_size,
-      .flags = VK_MEMORY_HEAP_HOST_LOCAL,
+      .flags = VK_MEMORY_HEAP_HOST_LOCAL_BIT,
    };
 
    return VK_SUCCESS;
@@ -554,12 +553,12 @@ static void
 anv_device_init_border_colors(struct anv_device *device)
 {
    static const VkClearColorValue border_colors[] = {
-      [VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK] =  { .f32 = { 0.0, 0.0, 0.0, 0.0 } },
-      [VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK] =       { .f32 = { 0.0, 0.0, 0.0, 1.0 } },
-      [VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE] =       { .f32 = { 1.0, 1.0, 1.0, 1.0 } },
-      [VK_BORDER_COLOR_INT_TRANSPARENT_BLACK] =    { .u32 = { 0, 0, 0, 0 } },
-      [VK_BORDER_COLOR_INT_OPAQUE_BLACK] =         { .u32 = { 0, 0, 0, 1 } },
-      [VK_BORDER_COLOR_INT_OPAQUE_WHITE] =         { .u32 = { 1, 1, 1, 1 } },
+      [VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK] =  { .float32 = { 0.0, 0.0, 0.0, 0.0 } },
+      [VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK] =       { .float32 = { 0.0, 0.0, 0.0, 1.0 } },
+      [VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE] =       { .float32 = { 1.0, 1.0, 1.0, 1.0 } },
+      [VK_BORDER_COLOR_INT_TRANSPARENT_BLACK] =    { .uint32 = { 0, 0, 0, 0 } },
+      [VK_BORDER_COLOR_INT_OPAQUE_BLACK] =         { .uint32 = { 0, 0, 0, 1 } },
+      [VK_BORDER_COLOR_INT_OPAQUE_WHITE] =         { .uint32 = { 1, 1, 1, 1 } },
    };
 
    device->border_colors =
@@ -589,7 +588,7 @@ VkResult anv_CreateDevice(
          }
       }
       if (!found)
-         return vk_error(VK_ERROR_INVALID_EXTENSION);
+         return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
    anv_set_dispatch_gen(physical_device->info->gen);
@@ -647,10 +646,10 @@ VkResult anv_CreateDevice(
  fail_device:
    anv_device_free(device, device);
 
-   return vk_error(VK_ERROR_UNAVAILABLE);
+   return vk_error(VK_ERROR_INITIALIZATION_FAILED);
 }
 
-VkResult anv_DestroyDevice(
+void anv_DestroyDevice(
     VkDevice                                    _device)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
@@ -679,11 +678,9 @@ VkResult anv_DestroyDevice(
    close(device->fd);
 
    anv_instance_free(device->instance, device);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_GetGlobalExtensionProperties(
+VkResult anv_EnumerateInstanceExtensionProperties(
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
     VkExtensionProperties*                      pProperties)
@@ -701,7 +698,7 @@ VkResult anv_GetGlobalExtensionProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetPhysicalDeviceExtensionProperties(
+VkResult anv_EnumerateDeviceExtensionProperties(
     VkPhysicalDevice                            physicalDevice,
     const char*                                 pLayerName,
     uint32_t*                                   pCount,
@@ -720,7 +717,7 @@ VkResult anv_GetPhysicalDeviceExtensionProperties(
    return VK_SUCCESS;
 }
 
-VkResult anv_GetGlobalLayerProperties(
+VkResult anv_EnumerateInstanceLayerProperties(
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
 {
@@ -730,10 +727,10 @@ VkResult anv_GetGlobalLayerProperties(
    }
 
    /* None supported at this time */
-   return vk_error(VK_ERROR_INVALID_LAYER);
+   return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
-VkResult anv_GetPhysicalDeviceLayerProperties(
+VkResult anv_EnumerateDeviceLayerProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkLayerProperties*                          pProperties)
@@ -744,7 +741,7 @@ VkResult anv_GetPhysicalDeviceLayerProperties(
    }
 
    /* None supported at this time */
-   return vk_error(VK_ERROR_INVALID_LAYER);
+   return vk_error(VK_ERROR_LAYER_NOT_PRESENT);
 }
 
 VkResult anv_GetDeviceQueue(
@@ -779,13 +776,19 @@ VkResult anv_QueueSubmit(
       assert(cmd_buffer->level == VK_CMD_BUFFER_LEVEL_PRIMARY);
 
       ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
-      if (ret != 0)
-         return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      if (ret != 0) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "execbuf2 failed: %m");
+      }
 
       if (fence) {
          ret = anv_gem_execbuffer(device, &fence->execbuf);
-         if (ret != 0)
-            return vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+         if (ret != 0) {
+            /* We don't know the real error. */
+            return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                             "execbuf2 failed: %m");
+         }
       }
 
       for (uint32_t i = 0; i < cmd_buffer->execbuf2.bo_count; i++)
@@ -848,14 +851,16 @@ VkResult anv_DeviceWaitIdle(
 
    ret = anv_gem_execbuffer(device, &execbuf);
    if (ret != 0) {
-      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
       goto fail;
    }
 
    timeout = INT64_MAX;
    ret = anv_gem_wait(device, bo->gem_handle, &timeout);
    if (ret != 0) {
-      result = vk_errorf(VK_ERROR_UNKNOWN, "execbuf2 failed: %m");
+      /* We don't know the real error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
       goto fail;
    }
 
@@ -911,10 +916,8 @@ VkResult anv_AllocMemory(
 
    assert(pAllocInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOC_INFO);
 
-   if (pAllocInfo->memoryTypeIndex != 0) {
-      /* We support exactly one memory heap. */
-      return vk_error(VK_ERROR_INVALID_VALUE);
-   }
+   /* We support exactly one memory heap. */
+   assert(pAllocInfo->memoryTypeIndex == 0);
 
    /* FINISHME: Fail if allocation request exceeds heap size. */
 
@@ -937,7 +940,7 @@ VkResult anv_AllocMemory(
    return result;
 }
 
-VkResult anv_FreeMemory(
+void anv_FreeMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
@@ -951,8 +954,6 @@ VkResult anv_FreeMemory(
       anv_gem_close(device, mem->bo.gem_handle);
 
    anv_device_free(device, mem);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_MapMemory(
@@ -980,15 +981,13 @@ VkResult anv_MapMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_UnmapMemory(
+void anv_UnmapMemory(
     VkDevice                                    _device,
     VkDeviceMemory                              _mem)
 {
    ANV_FROM_HANDLE(anv_device_memory, mem, _mem);
 
    anv_gem_munmap(mem->map, mem->map_size);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_FlushMappedMemoryRanges(
@@ -1195,7 +1194,7 @@ VkResult anv_CreateFence(
    return result;
 }
 
-VkResult anv_DestroyFence(
+void anv_DestroyFence(
     VkDevice                                    _device,
     VkFence                                     _fence)
 {
@@ -1205,8 +1204,6 @@ VkResult anv_DestroyFence(
    anv_gem_munmap(fence->bo.map, fence->bo.size);
    anv_gem_close(device, fence->bo.gem_handle);
    anv_device_free(device, fence);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetFences(
@@ -1259,10 +1256,13 @@ VkResult anv_WaitForFences(
    for (uint32_t i = 0; i < fenceCount; i++) {
       ANV_FROM_HANDLE(anv_fence, fence, pFences[i]);
       ret = anv_gem_wait(device, fence->bo.gem_handle, &t);
-      if (ret == -1 && errno == ETIME)
+      if (ret == -1 && errno == ETIME) {
          return VK_TIMEOUT;
-      else if (ret == -1)
-         return vk_errorf(VK_ERROR_UNKNOWN, "gem wait failed: %m");
+      } else if (ret == -1) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "gem wait failed: %m");
+      }
    }
 
    return VK_SUCCESS;
@@ -1278,11 +1278,11 @@ VkResult anv_CreateSemaphore(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroySemaphore(
+void anv_DestroySemaphore(
     VkDevice                                    device,
     VkSemaphore                                 semaphore)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub();
 }
 
 VkResult anv_QueueSignalSemaphore(
@@ -1309,11 +1309,11 @@ VkResult anv_CreateEvent(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroyEvent(
+void anv_DestroyEvent(
     VkDevice                                    device,
     VkEvent                                     event)
 {
-   stub_return(VK_UNSUPPORTED);
+   stub();
 }
 
 VkResult anv_GetEventStatus(
@@ -1363,7 +1363,7 @@ VkResult anv_CreateBuffer(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyBuffer(
+void anv_DestroyBuffer(
     VkDevice                                    _device,
     VkBuffer                                    _buffer)
 {
@@ -1371,8 +1371,6 @@ VkResult anv_DestroyBuffer(
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
    anv_device_free(device, buffer);
-
-   return VK_SUCCESS;
 }
 
 void
@@ -1396,19 +1394,19 @@ VkResult
 anv_buffer_view_create(
    struct anv_device *                          device,
    const VkBufferViewCreateInfo*                pCreateInfo,
-   struct anv_buffer_view **                    view_out)
+   struct anv_buffer_view **                    bview_out)
 {
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
-   struct anv_buffer_view *view;
+   struct anv_buffer_view *bview;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
 
-   view = anv_device_alloc(device, sizeof(*view), 8,
-                           VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (view == NULL)
+   bview = anv_device_alloc(device, sizeof(*bview), 8,
+                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   if (bview == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   view->view = (struct anv_surface_view) {
+   *bview = (struct anv_buffer_view) {
       .bo = buffer->bo,
       .offset = buffer->offset + pCreateInfo->offset,
       .surface_state = anv_state_pool_alloc(&device->surface_state_pool, 64, 64),
@@ -1416,25 +1414,23 @@ anv_buffer_view_create(
       .range = pCreateInfo->range,
    };
 
-   *view_out = view;
+   *bview_out = bview;
 
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyBufferView(
+void anv_DestroyBufferView(
     VkDevice                                    _device,
     VkBufferView                                _bview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer_view, bview, _bview);
 
-   anv_surface_view_fini(device, &bview->view);
+   anv_state_pool_free(&device->surface_state_pool, bview->surface_state);
    anv_device_free(device, bview);
-
-   return VK_SUCCESS;
 }
 
-VkResult anv_DestroySampler(
+void anv_DestroySampler(
     VkDevice                                    _device,
     VkSampler                                   _sampler)
 {
@@ -1442,8 +1438,6 @@ VkResult anv_DestroySampler(
    ANV_FROM_HANDLE(anv_sampler, sampler, _sampler);
 
    anv_device_free(device, sampler);
-
-   return VK_SUCCESS;
 }
 
 // Descriptor set functions
@@ -1462,7 +1456,7 @@ VkResult anv_CreateDescriptorSetLayout(
    uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
    uint32_t num_dynamic_buffers = 0;
    uint32_t count = 0;
-   uint32_t stages = 0;
+   VkShaderStageFlags stages = 0;
    uint32_t s;
 
    for (uint32_t i = 0; i < pCreateInfo->count; i++) {
@@ -1601,7 +1595,7 @@ VkResult anv_CreateDescriptorSetLayout(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDescriptorSetLayout(
+void anv_DestroyDescriptorSetLayout(
     VkDevice                                    _device,
     VkDescriptorSetLayout                       _set_layout)
 {
@@ -1609,14 +1603,10 @@ VkResult anv_DestroyDescriptorSetLayout(
    ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout, _set_layout);
 
    anv_device_free(device, set_layout);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateDescriptorPool(
     VkDevice                                    device,
-    VkDescriptorPoolUsage                       poolUsage,
-    uint32_t                                    maxSets,
     const VkDescriptorPoolCreateInfo*           pCreateInfo,
     VkDescriptorPool*                           pDescriptorPool)
 {
@@ -1625,12 +1615,11 @@ VkResult anv_CreateDescriptorPool(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyDescriptorPool(
+void anv_DestroyDescriptorPool(
     VkDevice                                    _device,
     VkDescriptorPool                            _pool)
 {
    anv_finishme("VkDescriptorPool is a stub: free the pool's descriptor sets");
-   return VK_SUCCESS;
 }
 
 VkResult anv_ResetDescriptorPool(
@@ -1676,29 +1665,28 @@ VkResult anv_AllocDescriptorSets(
     VkDescriptorSetUsage                        setUsage,
     uint32_t                                    count,
     const VkDescriptorSetLayout*                pSetLayouts,
-    VkDescriptorSet*                            pDescriptorSets,
-    uint32_t*                                   pCount)
+    VkDescriptorSet*                            pDescriptorSets)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
-   VkResult result;
+   VkResult result = VK_SUCCESS;
    struct anv_descriptor_set *set;
+   uint32_t i;
 
-   for (uint32_t i = 0; i < count; i++) {
+   for (i = 0; i < count; i++) {
       ANV_FROM_HANDLE(anv_descriptor_set_layout, layout, pSetLayouts[i]);
 
       result = anv_descriptor_set_create(device, layout, &set);
-      if (result != VK_SUCCESS) {
-         *pCount = i;
-         return result;
-      }
+      if (result != VK_SUCCESS)
+         break;
 
       pDescriptorSets[i] = anv_descriptor_set_to_handle(set);
    }
 
-   *pCount = count;
+   if (result != VK_SUCCESS)
+      anv_FreeDescriptorSets(_device, descriptorPool, i, pDescriptorSets);
 
-   return VK_SUCCESS;
+   return result;
 }
 
 VkResult anv_FreeDescriptorSets(
@@ -1718,7 +1706,7 @@ VkResult anv_FreeDescriptorSets(
    return VK_SUCCESS;
 }
 
-VkResult anv_UpdateDescriptorSets(
+void anv_UpdateDescriptorSets(
     VkDevice                                    device,
     uint32_t                                    writeCount,
     const VkWriteDescriptorSet*                 pDescriptorWrites,
@@ -1729,12 +1717,27 @@ VkResult anv_UpdateDescriptorSets(
       const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
       ANV_FROM_HANDLE(anv_descriptor_set, set, write->destSet);
 
+      for (uint32_t j = 0; j < write->count; ++j) {
+         const VkDescriptorBufferInfo *binfo
+            = &write->pDescriptors[j].bufferInfo;
+
+         if (binfo->buffer.handle || binfo->offset || binfo->range) {
+            anv_finishme("VkWriteDesciptorSet::bufferInfo");
+            break;
+         }
+      }
+
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for (uint32_t j = 0; j < write->count; j++) {
-            set->descriptors[write->destBinding + j].sampler =
-               anv_sampler_from_handle(write->pDescriptors[j].sampler);
+            ANV_FROM_HANDLE(anv_sampler, sampler,
+                            write->pDescriptors[j].sampler);
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_SAMPLER,
+               .sampler = sampler,
+            };
          }
 
          if (write->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
@@ -1747,7 +1750,11 @@ VkResult anv_UpdateDescriptorSets(
          for (uint32_t j = 0; j < write->count; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
                             write->pDescriptors[j].imageView);
-            set->descriptors[write->destBinding + j].view = &iview->view;
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
+               .image_view = iview,
+            };
          }
          break;
 
@@ -1767,7 +1774,11 @@ VkResult anv_UpdateDescriptorSets(
          for (uint32_t j = 0; j < write->count; j++) {
             ANV_FROM_HANDLE(anv_buffer_view, bview,
                             write->pDescriptors[j].bufferView);
-            set->descriptors[write->destBinding + j].view = &bview->view;
+
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
+               .buffer_view = bview,
+            };
          }
 
       default:
@@ -1784,189 +1795,6 @@ VkResult anv_UpdateDescriptorSets(
             src->descriptors[copy->srcBinding + j];
       }
    }
-
-   return VK_SUCCESS;
-}
-
-// State object functions
-
-static inline int64_t
-clamp_int64(int64_t x, int64_t min, int64_t max)
-{
-   if (x < min)
-      return min;
-   else if (x < max)
-      return x;
-   else
-      return max;
-}
-
-VkResult anv_CreateDynamicViewportState(
-    VkDevice                                    _device,
-    const VkDynamicViewportStateCreateInfo*     pCreateInfo,
-    VkDynamicViewportState*                     pState)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_vp_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   unsigned count = pCreateInfo->viewportAndScissorCount;
-   state->sf_clip_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
-                                            count * 64, 64);
-   state->cc_vp = anv_state_pool_alloc(&device->dynamic_state_pool,
-                                       count * 8, 32);
-   state->scissor = anv_state_pool_alloc(&device->dynamic_state_pool,
-                                         count * 32, 32);
-
-   for (uint32_t i = 0; i < pCreateInfo->viewportAndScissorCount; i++) {
-      const VkViewport *vp = &pCreateInfo->pViewports[i];
-      const VkRect2D *s = &pCreateInfo->pScissors[i];
-
-      /* The gen7 state struct has just the matrix and guardband fields, the
-       * gen8 struct adds the min/max viewport fields. */
-      struct GEN8_SF_CLIP_VIEWPORT sf_clip_viewport = {
-         .ViewportMatrixElementm00 = vp->width / 2,
-         .ViewportMatrixElementm11 = vp->height / 2,
-         .ViewportMatrixElementm22 = (vp->maxDepth - vp->minDepth) / 2,
-         .ViewportMatrixElementm30 = vp->originX + vp->width / 2,
-         .ViewportMatrixElementm31 = vp->originY + vp->height / 2,
-         .ViewportMatrixElementm32 = (vp->maxDepth + vp->minDepth) / 2,
-         .XMinClipGuardband = -1.0f,
-         .XMaxClipGuardband = 1.0f,
-         .YMinClipGuardband = -1.0f,
-         .YMaxClipGuardband = 1.0f,
-         .XMinViewPort = vp->originX,
-         .XMaxViewPort = vp->originX + vp->width - 1,
-         .YMinViewPort = vp->originY,
-         .YMaxViewPort = vp->originY + vp->height - 1,
-      };
-
-      struct GEN7_CC_VIEWPORT cc_viewport = {
-         .MinimumDepth = vp->minDepth,
-         .MaximumDepth = vp->maxDepth
-      };
-
-      /* Since xmax and ymax are inclusive, we have to have xmax < xmin or
-       * ymax < ymin for empty clips.  In case clip x, y, width height are all
-       * 0, the clamps below produce 0 for xmin, ymin, xmax, ymax, which isn't
-       * what we want. Just special case empty clips and produce a canonical
-       * empty clip. */
-      static const struct GEN7_SCISSOR_RECT empty_scissor = {
-         .ScissorRectangleYMin = 1,
-         .ScissorRectangleXMin = 1,
-         .ScissorRectangleYMax = 0,
-         .ScissorRectangleXMax = 0
-      };
-
-      const int max = 0xffff;
-      struct GEN7_SCISSOR_RECT scissor = {
-         /* Do this math using int64_t so overflow gets clamped correctly. */
-         .ScissorRectangleYMin = clamp_int64(s->offset.y, 0, max),
-         .ScissorRectangleXMin = clamp_int64(s->offset.x, 0, max),
-         .ScissorRectangleYMax = clamp_int64((uint64_t) s->offset.y + s->extent.height - 1, 0, max),
-         .ScissorRectangleXMax = clamp_int64((uint64_t) s->offset.x + s->extent.width - 1, 0, max)
-      };
-
-      GEN8_SF_CLIP_VIEWPORT_pack(NULL, state->sf_clip_vp.map + i * 64, &sf_clip_viewport);
-      GEN7_CC_VIEWPORT_pack(NULL, state->cc_vp.map + i * 32, &cc_viewport);
-
-      if (s->extent.width <= 0 || s->extent.height <= 0) {
-         GEN7_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &empty_scissor);
-      } else {
-         GEN7_SCISSOR_RECT_pack(NULL, state->scissor.map + i * 32, &scissor);
-      }
-   }
-
-   *pState = anv_dynamic_vp_state_to_handle(state);
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_DestroyDynamicViewportState(
-    VkDevice                                    _device,
-    VkDynamicViewportState                      _vp_state)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_dynamic_vp_state, vp_state, _vp_state);
-
-   anv_state_pool_free(&device->dynamic_state_pool, vp_state->sf_clip_vp);
-   anv_state_pool_free(&device->dynamic_state_pool, vp_state->cc_vp);
-   anv_state_pool_free(&device->dynamic_state_pool, vp_state->scissor);
-
-   anv_device_free(device, vp_state);
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_DestroyDynamicRasterState(
-    VkDevice                                    _device,
-    VkDynamicRasterState                        _rs_state)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_dynamic_rs_state, rs_state, _rs_state);
-
-   anv_device_free(device, rs_state);
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_CreateDynamicColorBlendState(
-    VkDevice                                    _device,
-    const VkDynamicColorBlendStateCreateInfo*   pCreateInfo,
-    VkDynamicColorBlendState*                   pState)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_dynamic_cb_state *state;
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DYNAMIC_COLOR_BLEND_STATE_CREATE_INFO);
-
-   state = anv_device_alloc(device, sizeof(*state), 8,
-                            VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-   if (state == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   struct GEN7_COLOR_CALC_STATE color_calc_state = {
-      .BlendConstantColorRed = pCreateInfo->blendConst[0],
-      .BlendConstantColorGreen = pCreateInfo->blendConst[1],
-      .BlendConstantColorBlue = pCreateInfo->blendConst[2],
-      .BlendConstantColorAlpha = pCreateInfo->blendConst[3]
-   };
-
-   GEN7_COLOR_CALC_STATE_pack(NULL, state->color_calc_state, &color_calc_state);
-
-   *pState = anv_dynamic_cb_state_to_handle(state);
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_DestroyDynamicColorBlendState(
-    VkDevice                                    _device,
-    VkDynamicColorBlendState                    _cb_state)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_dynamic_cb_state, cb_state, _cb_state);
-
-   anv_device_free(device, cb_state);
-
-   return VK_SUCCESS;
-}
-
-VkResult anv_DestroyDynamicDepthStencilState(
-    VkDevice                                    _device,
-    VkDynamicDepthStencilState                  _ds_state)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_dynamic_ds_state, ds_state, _ds_state);
-
-   anv_device_free(device, ds_state);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateFramebuffer(
@@ -1980,7 +1808,7 @@ VkResult anv_CreateFramebuffer(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
 
    size_t size = sizeof(*framebuffer) +
-                 sizeof(struct anv_attachment_view *) * pCreateInfo->attachmentCount;
+                 sizeof(struct anv_image_view *) * pCreateInfo->attachmentCount;
    framebuffer = anv_device_alloc(device, size, 8,
                                   VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (framebuffer == NULL)
@@ -1988,54 +1816,27 @@ VkResult anv_CreateFramebuffer(
 
    framebuffer->attachment_count = pCreateInfo->attachmentCount;
    for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
-      ANV_FROM_HANDLE(anv_attachment_view, view,
-                      pCreateInfo->pAttachments[i].view);
-
-      framebuffer->attachments[i] = view;
+      VkImageView _iview = pCreateInfo->pAttachments[i];
+      framebuffer->attachments[i] = anv_image_view_from_handle(_iview);
    }
 
    framebuffer->width = pCreateInfo->width;
    framebuffer->height = pCreateInfo->height;
    framebuffer->layers = pCreateInfo->layers;
 
-   anv_CreateDynamicViewportState(anv_device_to_handle(device),
-      &(VkDynamicViewportStateCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_DYNAMIC_VIEWPORT_STATE_CREATE_INFO,
-         .viewportAndScissorCount = 1,
-         .pViewports = (VkViewport[]) {
-            {
-               .originX = 0,
-               .originY = 0,
-               .width = pCreateInfo->width,
-               .height = pCreateInfo->height,
-               .minDepth = 0,
-               .maxDepth = 1
-            },
-         },
-         .pScissors = (VkRect2D[]) {
-            { {  0,  0 },
-              { pCreateInfo->width, pCreateInfo->height } },
-         }
-      },
-      &framebuffer->vp_state);
-
    *pFramebuffer = anv_framebuffer_to_handle(framebuffer);
 
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyFramebuffer(
+void anv_DestroyFramebuffer(
     VkDevice                                    _device,
     VkFramebuffer                               _fb)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_framebuffer, fb, _fb);
 
-   anv_DestroyDynamicViewportState(anv_device_to_handle(device),
-                                   fb->vp_state);
    anv_device_free(device, fb);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateRenderPass(
@@ -2104,7 +1905,7 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->inputCount; j++) {
             subpass->input_attachments[j]
-               = desc->inputAttachments[j].attachment;
+               = desc->pInputAttachments[j].attachment;
          }
       }
 
@@ -2115,18 +1916,18 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->colorCount; j++) {
             subpass->color_attachments[j]
-               = desc->colorAttachments[j].attachment;
+               = desc->pColorAttachments[j].attachment;
          }
       }
 
-      if (desc->resolveAttachments) {
+      if (desc->pResolveAttachments) {
          subpass->resolve_attachments =
             anv_device_alloc(device, desc->colorCount * sizeof(uint32_t),
                              8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
 
          for (uint32_t j = 0; j < desc->colorCount; j++) {
             subpass->resolve_attachments[j]
-               = desc->resolveAttachments[j].attachment;
+               = desc->pResolveAttachments[j].attachment;
          }
       }
 
@@ -2138,7 +1939,7 @@ VkResult anv_CreateRenderPass(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyRenderPass(
+void anv_DestroyRenderPass(
     VkDevice                                    _device,
     VkRenderPass                                _pass)
 {
@@ -2157,8 +1958,6 @@ VkResult anv_DestroyRenderPass(
    }
 
    anv_device_free(device, pass);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetRenderAreaGranularity(

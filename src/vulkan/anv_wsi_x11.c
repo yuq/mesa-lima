@@ -54,10 +54,11 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
                      VkSurfaceInfoTypeWSI infoType,
                      size_t* pDataSize, void* pData)
 {
-   if (pDataSize == NULL)
-      return vk_error(VK_ERROR_INVALID_POINTER);
+   assert(pDataSize != NULL);
 
    switch (infoType) {
+   default:
+      unreachable("bad VkSurfaceInfoTypeWSI");
    case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI: {
       VkSurfacePropertiesWSI *props = pData;
 
@@ -77,12 +78,9 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
       xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, cookie,
                                                               &err);
       if (!geom) {
-         if (err->error_code == XCB_DRAWABLE) {
-            return vk_error(VK_ERROR_INVALID_HANDLE);
-         } else {
-            return vk_error(VK_ERROR_UNKNOWN);
-         }
+         /* FINISHME: Choose a more accurate error. */
          free(err);
+         return VK_ERROR_OUT_OF_DATE_WSI;
       }
 
       VkExtent2D extent = { geom->width, geom->height };
@@ -122,10 +120,7 @@ x11_get_surface_info(struct anv_wsi_implementation *impl,
 
       assert(*pDataSize >= sizeof(present_modes));
       memcpy(pData, present_modes, *pDataSize);
-
       return VK_SUCCESS;
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
@@ -158,6 +153,8 @@ x11_get_swap_chain_info(struct anv_swap_chain *anv_chain,
    size_t size;
 
    switch (infoType) {
+   default:
+      unreachable("bad VkSwapChainInfoType");
    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI: {
       VkSwapChainImagePropertiesWSI *images = pData;
 
@@ -173,12 +170,8 @@ x11_get_swap_chain_info(struct anv_swap_chain *anv_chain,
          images[i].image = anv_image_to_handle(chain->images[i].image);
 
       *pDataSize = size;
-
       return VK_SUCCESS;
    }
-
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
@@ -196,13 +189,9 @@ x11_acquire_next_image(struct anv_swap_chain *anv_chain,
       xcb_get_geometry_reply_t *geom =
          xcb_get_geometry_reply(chain->conn, image->geom_cookie, &err);
       if (!geom) {
-         if (err->error_code == XCB_DRAWABLE) {
-            /* Probably the best thing to do if our drawable goes away */
-            return vk_error(VK_ERROR_OUT_OF_DATE_WSI);
-         } else {
-            return vk_error(VK_ERROR_UNKNOWN);
-         }
+         /* Probably the best thing to do if our drawable goes away */
          free(err);
+         return vk_error(VK_ERROR_OUT_OF_DATE_WSI);
       }
 
       if (geom->width != chain->extent.width ||
@@ -366,13 +355,17 @@ x11_create_swap_chain(struct anv_wsi_implementation *impl,
       int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
                                    surface->stride, I915_TILING_X);
       if (ret) {
-         result = vk_errorf(VK_ERROR_UNKNOWN, "set_tiling failed: %m");
+         /* FINISHME: Choose a better error. */
+         result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                            "set_tiling failed: %m");
          goto fail;
       }
 
       int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
       if (fd == -1) {
-         result = vk_errorf(VK_ERROR_UNKNOWN, "handle_to_fd failed: %m");
+         /* FINISHME: Choose a better error. */
+         result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                            "handle_to_fd failed: %m");
          goto fail;
       }
 
@@ -400,7 +393,8 @@ x11_create_swap_chain(struct anv_wsi_implementation *impl,
 
    chain->gc = xcb_generate_id(chain->conn);
    if (!chain->gc) {
-      result = vk_error(VK_ERROR_UNKNOWN);
+      /* FINISHME: Choose a better error. */
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;
    }
 

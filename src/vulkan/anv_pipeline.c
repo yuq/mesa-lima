@@ -56,7 +56,7 @@ VkResult anv_CreateShaderModule(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyShaderModule(
+void anv_DestroyShaderModule(
     VkDevice                                    _device,
     VkShaderModule                              _module)
 {
@@ -64,8 +64,6 @@ VkResult anv_DestroyShaderModule(
    ANV_FROM_HANDLE(anv_shader_module, module, _module);
 
    anv_device_free(device, module);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_CreateShader(
@@ -100,7 +98,7 @@ VkResult anv_CreateShader(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyShader(
+void anv_DestroyShader(
     VkDevice                                    _device,
     VkShader                                    _shader)
 {
@@ -108,8 +106,6 @@ VkResult anv_DestroyShader(
    ANV_FROM_HANDLE(anv_shader, shader, _shader);
 
    anv_device_free(device, shader);
-
-   return VK_SUCCESS;
 }
 
 
@@ -123,12 +119,10 @@ VkResult anv_CreatePipelineCache(
    stub_return(VK_SUCCESS);
 }
 
-VkResult anv_DestroyPipelineCache(
+void anv_DestroyPipelineCache(
     VkDevice                                    _device,
     VkPipelineCache                             _cache)
 {
-   /* VkPipelineCache is a dummy object. */
-   return VK_SUCCESS;
 }
 
 size_t anv_GetPipelineCacheSize(
@@ -155,7 +149,7 @@ VkResult anv_MergePipelineCaches(
    stub_return(VK_UNSUPPORTED);
 }
 
-VkResult anv_DestroyPipeline(
+void anv_DestroyPipeline(
     VkDevice                                    _device,
     VkPipeline                                  _pipeline)
 {
@@ -167,8 +161,6 @@ VkResult anv_DestroyPipeline(
    anv_state_stream_finish(&pipeline->program_stream);
    anv_state_pool_free(&device->dynamic_state_pool, pipeline->blend_state);
    anv_device_free(pipeline->device, pipeline);
-
-   return VK_SUCCESS;
 }
 
 static const uint32_t vk_to_gen_primitive_type[] = {
@@ -184,6 +176,98 @@ static const uint32_t vk_to_gen_primitive_type[] = {
    [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_ADJ]   = _3DPRIM_TRISTRIP_ADJ,
    [VK_PRIMITIVE_TOPOLOGY_PATCH]                = _3DPRIM_PATCHLIST_1
 };
+
+static void
+anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
+                                const VkGraphicsPipelineCreateInfo *pCreateInfo)
+{
+   pipeline->dynamic_state_mask = 0;
+
+   if (pCreateInfo->pDynamicState == NULL)
+      return;
+
+   uint32_t count = pCreateInfo->pDynamicState->dynamicStateCount;
+   struct anv_dynamic_state *dynamic = &pipeline->dynamic_state;
+
+   for (uint32_t s = 0; s < count; s++) {
+      VkDynamicState state = pCreateInfo->pDynamicState->pDynamicStates[s];
+
+      assert(state < 32);
+      pipeline->dynamic_state_mask |= (1u << state);
+
+      switch (state) {
+      case VK_DYNAMIC_STATE_VIEWPORT:
+         assert(pCreateInfo->pViewportState);
+         dynamic->viewport.count = pCreateInfo->pViewportState->viewportCount;
+         typed_memcpy(dynamic->viewport.viewports,
+                      pCreateInfo->pViewportState->pViewports,
+                      pCreateInfo->pViewportState->viewportCount);
+         break;
+
+      case VK_DYNAMIC_STATE_SCISSOR:
+         assert(pCreateInfo->pViewportState);
+         dynamic->scissor.count = pCreateInfo->pViewportState->scissorCount;
+         typed_memcpy(dynamic->scissor.scissors,
+                      pCreateInfo->pViewportState->pScissors,
+                      pCreateInfo->pViewportState->scissorCount);
+         break;
+
+      case VK_DYNAMIC_STATE_LINE_WIDTH:
+         assert(pCreateInfo->pRasterState);
+         dynamic->line_width = pCreateInfo->pRasterState->lineWidth;
+         break;
+
+      case VK_DYNAMIC_STATE_DEPTH_BIAS:
+         assert(pCreateInfo->pRasterState);
+         dynamic->depth_bias.bias = pCreateInfo->pRasterState->depthBias;
+         dynamic->depth_bias.clamp = pCreateInfo->pRasterState->depthBiasClamp;
+         dynamic->depth_bias.slope_scaled =
+            pCreateInfo->pRasterState->slopeScaledDepthBias;
+         break;
+
+      case VK_DYNAMIC_STATE_BLEND_CONSTANTS:
+         assert(pCreateInfo->pColorBlendState);
+         typed_memcpy(dynamic->blend_constants,
+                      pCreateInfo->pColorBlendState->blendConst, 4);
+         break;
+
+      case VK_DYNAMIC_STATE_DEPTH_BOUNDS:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->depth_bounds.min =
+            pCreateInfo->pDepthStencilState->minDepthBounds;
+         dynamic->depth_bounds.max =
+            pCreateInfo->pDepthStencilState->maxDepthBounds;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_compare_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilCompareMask;
+         dynamic->stencil_compare_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilCompareMask;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_WRITE_MASK:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_write_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilWriteMask;
+         dynamic->stencil_write_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilWriteMask;
+         break;
+
+      case VK_DYNAMIC_STATE_STENCIL_REFERENCE:
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_reference.front =
+            pCreateInfo->pDepthStencilState->front.stencilReference;
+         dynamic->stencil_reference.back =
+            pCreateInfo->pDepthStencilState->back.stencilReference;
+         break;
+
+      default:
+         assert(!"Invalid dynamic state");
+      }
+   }
+}
 
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
@@ -213,11 +297,14 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
          anv_shader_from_handle(pCreateInfo->pStages[i].shader);
    }
 
+   anv_pipeline_init_dynamic_state(pipeline, pCreateInfo);
+
    if (pCreateInfo->pTessellationState)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO");
    if (pCreateInfo->pViewportState)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO");
-   if (pCreateInfo->pMultisampleState)
+   if (pCreateInfo->pMultisampleState &&
+       pCreateInfo->pMultisampleState->rasterSamples > 1)
       anv_finishme("VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO");
 
    pipeline->use_repclear = extra && extra->use_repclear;
@@ -418,7 +505,7 @@ VkResult anv_CreatePipelineLayout(
    return VK_SUCCESS;
 }
 
-VkResult anv_DestroyPipelineLayout(
+void anv_DestroyPipelineLayout(
     VkDevice                                    _device,
     VkPipelineLayout                            _pipelineLayout)
 {
@@ -426,6 +513,4 @@ VkResult anv_DestroyPipelineLayout(
    ANV_FROM_HANDLE(anv_pipeline_layout, pipeline_layout, _pipelineLayout);
 
    anv_device_free(device, pipeline_layout);
-
-   return VK_SUCCESS;
 }

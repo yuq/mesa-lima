@@ -51,11 +51,11 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/vulkan
 
 libvulkan_la_CFLAGS =							\
-	-Wall -Wextra -Wno-unused-parameter -fvisibility=hidden -O0 -g	\
+	-Wall -Wno-unused-parameter -fvisibility=hidden -O0 -g		\
 	-Wstrict-prototypes -Wmissing-prototypes -Wno-override-init
 
 libvulkan_la_CXXFLAGS =							\
-	-Wall -Wextra -Wno-unused-parameter -fvisibility=hidden -O0 -g
+	-Wall -Wno-unused-parameter -fvisibility=hidden -O0 -g
 
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \

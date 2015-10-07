@@ -120,7 +120,7 @@ static const struct anv_format anv_formats[] = {
    fmt(VK_FORMAT_R9G9B9E5_UFLOAT,         R9G9B9E5_SHAREDEXP,     .cpp = 4,   .num_channels = 3),
 
    fmt(VK_FORMAT_D16_UNORM,               R16_UNORM,              .cpp = 2,   .num_channels = 1, .depth_format = D16_UNORM),
-   fmt(VK_FORMAT_D24_UNORM,               R24_UNORM_X8_TYPELESS,  .cpp = 4,   .num_channels = 1, .depth_format = D24_UNORM_X8_UINT),
+   fmt(VK_FORMAT_D24_UNORM_X8,            R24_UNORM_X8_TYPELESS,  .cpp = 4,   .num_channels = 1, .depth_format = D24_UNORM_X8_UINT),
    fmt(VK_FORMAT_D32_SFLOAT,              R32_FLOAT,              .cpp = 4,   .num_channels = 1, .depth_format = D32_FLOAT),
    fmt(VK_FORMAT_S8_UINT,                 R8_UINT,                .cpp = 1,   .num_channels = 1,                                       .has_stencil = true),
    fmt(VK_FORMAT_D16_UNORM_S8_UINT,       R16_UNORM,              .cpp = 2,   .num_channels = 2, .depth_format = D16_UNORM,            .has_stencil = true),
@@ -252,9 +252,9 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 {
    const struct surface_format_info *info;
    int gen;
+   VkFormatFeatureFlags flags;
 
-   if (format == NULL)
-      return VK_ERROR_INVALID_VALUE;
+   assert(format != NULL);
 
    gen = physical_device->info->gen * 10;
    if (physical_device->info->is_haswell)
@@ -267,6 +267,10 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
    if (anv_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+      tiled |= VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+      if (format->depth_format) {
+         tiled |= VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+      }
    } else {
       /* The surface_formats table only contains color formats */
       info = &surface_formats[format->surface_format];
@@ -274,12 +278,16 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          goto unsupported;
 
       if (info->sampling <= gen) {
-         linear |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-         tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+         flags = VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
+                 VK_FORMAT_FEATURE_BLIT_SOURCE_BIT;
+         linear |= flags;
+         tiled |= flags;
       }
       if (info->render_target <= gen) {
-         linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
-         tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT;
+         flags = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT |
+                 VK_FORMAT_FEATURE_BLIT_DESTINATION_BIT;
+         linear |= flags;
+         tiled |= flags;
       }
       if (info->alpha_blend <= gen) {
          linear |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
@@ -292,6 +300,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
 
    out_properties->linearTilingFeatures = linear;
    out_properties->optimalTilingFeatures = tiled;
+   out_properties->bufferFeatures = 0; /* FINISHME */
 
    return VK_SUCCESS;
 
@@ -327,12 +336,16 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
     VkImageType                                 type,
     VkImageTiling                               tiling,
     VkImageUsageFlags                           usage,
+    VkImageCreateFlags                          flags,
     VkImageFormatProperties*                    pImageFormatProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
    const struct anv_format *format = anv_format_for_vk_format(_format);
    VkFormatProperties format_props;
    VkFormatFeatureFlags format_feature_flags;
+   VkExtent3D maxExtent;
+   uint32_t maxMipLevels;
+   uint32_t maxArraySize;
    VkResult result;
 
    result = anv_physical_device_get_format_properties(physical_device, format,
@@ -349,6 +362,35 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       format_feature_flags = format_props.optimalTilingFeatures;
    } else {
       unreachable("bad VkImageTiling");
+   }
+
+   switch (type) {
+   default:
+      unreachable("bad VkImageType");
+   case VK_IMAGE_TYPE_1D:
+      maxExtent.width = 16384;
+      maxExtent.height = 1;
+      maxExtent.depth = 1;
+      maxMipLevels = 15; /* log2(maxWidth) + 1 */
+      maxArraySize = 2048;
+      break;
+   case VK_IMAGE_TYPE_2D:
+      /* FINISHME: Does this really differ for cube maps? The documentation
+       * for RENDER_SURFACE_STATE suggests so.
+       */
+      maxExtent.width = 16384;
+      maxExtent.height = 16384;
+      maxExtent.depth = 1;
+      maxMipLevels = 15; /* log2(maxWidth) + 1 */
+      maxArraySize = 2048;
+      break;
+   case VK_IMAGE_TYPE_3D:
+      maxExtent.width = 2048;
+      maxExtent.height = 2048;
+      maxExtent.depth = 2048;
+      maxMipLevels = 12; /* log2(maxWidth) + 1 */
+      maxArraySize = 1;
+      break;
    }
 
    if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
@@ -387,7 +429,7 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       }
    }
 
-   if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_BIT) {
+   if (usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
       if (!(format_feature_flags & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
          goto unsupported;
       }
@@ -404,8 +446,12 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    }
 
    *pImageFormatProperties = (VkImageFormatProperties) {
+      .maxExtent = maxExtent,
+      .maxMipLevels = maxMipLevels,
+      .maxArraySize = maxArraySize,
+
       /* FINISHME: Support multisampling */
-      .maxSamples = 1,
+      .sampleCounts = VK_SAMPLE_COUNT_1_BIT,
 
       /* FINISHME: Accurately calculate
        * VkImageFormatProperties::maxResourceSize.
@@ -417,7 +463,10 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
 
 unsupported:
    *pImageFormatProperties = (VkImageFormatProperties) {
-      .maxSamples = 0,
+      .maxExtent = { 0, 0, 0 },
+      .maxMipLevels = 0,
+      .maxArraySize = 0,
+      .sampleCounts = 0,
       .maxResourceSize = 0,
    };
 

@@ -322,10 +322,11 @@ wsi_wl_get_surface_info(struct anv_wsi_implementation *impl,
 {
    struct wsi_wayland *wsi = (struct wsi_wayland *)impl;
 
-   if (pDataSize == NULL)
-      return vk_error(VK_ERROR_INVALID_POINTER);
+   assert(pDataSize != NULL);
 
    switch (infoType) {
+   default:
+      unreachable("bad VkSurfaceInfoTypeWSI");
    case VK_SURFACE_INFO_TYPE_PROPERTIES_WSI: {
       VkSurfacePropertiesWSI *props = pData;
 
@@ -384,8 +385,6 @@ wsi_wl_get_surface_info(struct anv_wsi_implementation *impl,
       memcpy(pData, present_modes, *pDataSize);
 
       return VK_SUCCESS;
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
@@ -423,6 +422,8 @@ wsi_wl_get_swap_chain_info(struct anv_swap_chain *anv_chain,
    size_t size;
 
    switch (infoType) {
+   default:
+      unreachable("bad VkSwapChainInfoTypeWSI");
    case VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI: {
       VkSwapChainImagePropertiesWSI *images = pData;
 
@@ -441,9 +442,6 @@ wsi_wl_get_swap_chain_info(struct anv_swap_chain *anv_chain,
 
       return VK_SUCCESS;
    }
-
-   default:
-      return vk_error(VK_ERROR_INVALID_VALUE);
    }
 }
 
@@ -615,14 +613,16 @@ wsi_wl_image_init(struct wsi_wl_swap_chain *chain, struct wsi_wl_image *image)
                                 image->memory->bo.gem_handle,
                                 surface->stride, I915_TILING_X);
    if (ret) {
-      result = vk_error(VK_ERROR_UNKNOWN);
+      /* FINISHME: Choose a better error. */
+      result = vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
       goto fail_mem;
    }
 
    int fd = anv_gem_handle_to_fd(chain->base.device,
                                  image->memory->bo.gem_handle);
    if (fd == -1) {
-      result = vk_error(VK_ERROR_UNKNOWN);
+      /* FINISHME: Choose a better error. */
+      result = vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
       goto fail_mem;
    }
 
@@ -769,8 +769,13 @@ anv_wl_init_wsi(struct anv_instance *instance)
 
    int ret = pthread_mutex_init(&wsi->mutex, NULL);
    if (ret != 0) {
-      result = (ret == ENOMEM) ? VK_ERROR_OUT_OF_HOST_MEMORY :
-                                 VK_ERROR_UNKNOWN;
+      if (ret == ENOMEM) {
+         result = VK_ERROR_OUT_OF_HOST_MEMORY;
+      } else {
+         /* FINISHME: Choose a better error. */
+         result = VK_ERROR_OUT_OF_HOST_MEMORY;
+      }
+
       goto fail_alloc;
    }
 

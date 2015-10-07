@@ -45,7 +45,6 @@ static const uint8_t anv_surf_type_from_image_type[] = {
    [VK_IMAGE_TYPE_1D] = SURFTYPE_1D,
    [VK_IMAGE_TYPE_2D] = SURFTYPE_2D,
    [VK_IMAGE_TYPE_3D] = SURFTYPE_3D,
-
 };
 
 static const struct anv_image_view_info
@@ -61,10 +60,10 @@ anv_image_view_info_table[] = {
    #undef INFO
 };
 
-const struct anv_image_view_info *
+struct anv_image_view_info
 anv_image_view_info_for_vk_image_view_type(VkImageViewType type)
 {
-   return &anv_image_view_info_table[type];
+   return anv_image_view_info_table[type];
 }
 
 static const struct anv_surf_type_limits {
@@ -103,10 +102,7 @@ static const struct anv_tile_info {
    [WMAJOR] = { 128, 32, 4096 },
 };
 
-/**
- * Return -1 on failure.
- */
-static int8_t
+static uint8_t
 anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 {
    if (anv_info->force_tile_mode)
@@ -118,11 +114,8 @@ anv_image_choose_tile_mode(const struct anv_image_create_info *anv_info)
 
    switch (anv_info->vk_info->tiling) {
    case VK_IMAGE_TILING_LINEAR:
-      if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
-         return -1;
-      } else {
-         return LINEAR;
-      }
+      assert(anv_info->vk_info->format != VK_FORMAT_S8_UINT);
+      return LINEAR;
    case VK_IMAGE_TILING_OPTIMAL:
       if (unlikely(anv_info->vk_info->format == VK_FORMAT_S8_UINT)) {
          return WMAJOR;
@@ -154,10 +147,7 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    const VkExtent3D *restrict extent = &create_info->vk_info->extent;
    const uint32_t levels = create_info->vk_info->mipLevels;
    const uint32_t array_size = create_info->vk_info->arraySize;
-
-   const int8_t tile_mode = anv_image_choose_tile_mode(create_info);
-   if (tile_mode == -1)
-      return vk_error(VK_ERROR_INVALID_IMAGE);
+   const uint8_t tile_mode = anv_image_choose_tile_mode(create_info);
 
    const struct anv_tile_info *tile_info =
        &anv_tile_info_table[tile_mode];
@@ -259,6 +249,26 @@ anv_image_make_surface(const struct anv_image_create_info *create_info,
    return VK_SUCCESS;
 }
 
+static VkImageUsageFlags
+anv_image_get_full_usage(const VkImageCreateInfo *info)
+{
+   VkImageUsageFlags usage = info->usage;
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_SOURCE_BIT) {
+      /* Meta will transfer from the image by binding it as a texture. */
+      usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+   }
+
+   if (usage & VK_IMAGE_USAGE_TRANSFER_DESTINATION_BIT) {
+      /* Meta will transfer to the image by binding it as a color attachment,
+       * even if the image format is not a color format.
+       */
+      usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+   }
+
+   return usage;
+}
+
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -286,12 +296,10 @@ anv_image_create(VkDevice _device,
    const struct anv_surf_type_limits *limits =
       &anv_surf_type_limits[surf_type];
 
-   if (extent->width > limits->width ||
-       extent->height > limits->height ||
-       extent->depth > limits->depth) {
-      /* TODO(chadv): What is the correct error? */
-      return vk_errorf(VK_ERROR_INVALID_MEMORY_SIZE, "image extent is too large");
-   }
+   /* Errors should be caught by VkImageFormatProperties. */
+   assert(extent->width <= limits->width);
+   assert(extent->height <= limits->height);
+   assert(extent->depth <= limits->depth);
 
    image = anv_device_alloc(device, sizeof(*image), 8,
                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
@@ -304,7 +312,17 @@ anv_image_create(VkDevice _device,
    image->format = anv_format_for_vk_format(pCreateInfo->format);
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arraySize;
-   image->surf_type = surf_type;
+   image->usage = anv_image_get_full_usage(pCreateInfo);
+   image->surface_type = surf_type;
+
+   if (image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                       VK_IMAGE_USAGE_STORAGE_BIT)) {
+      image->needs_nonrt_surface_state = true;
+   }
+
+   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+      image->needs_color_rt_surface_state = true;
+   }
 
    if (likely(anv_format_is_color(image->format))) {
       r = anv_image_make_surface(create_info, image->format,
@@ -353,14 +371,12 @@ anv_CreateImage(VkDevice device,
       pImage);
 }
 
-VkResult
+void
 anv_DestroyImage(VkDevice _device, VkImage _image)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
    anv_device_free(device, anv_image_from_handle(_image));
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetImageSubresourceLayout(
@@ -370,13 +386,6 @@ VkResult anv_GetImageSubresourceLayout(
     VkSubresourceLayout*                        pLayout)
 {
    stub_return(VK_UNSUPPORTED);
-}
-
-void
-anv_surface_view_fini(struct anv_device *device,
-                      struct anv_surface_view *view)
-{
-   anv_state_pool_free(&device->surface_state_pool, view->surface_state);
 }
 
 VkResult
@@ -415,43 +424,47 @@ anv_validate_CreateImageView(VkDevice _device,
    assert(pCreateInfo->channels.a <= VK_CHANNEL_SWIZZLE_END_RANGE);
 
    /* Validate subresource. */
-   assert(subresource->aspect >= VK_IMAGE_ASPECT_BEGIN_RANGE);
-   assert(subresource->aspect <= VK_IMAGE_ASPECT_END_RANGE);
+   assert(subresource->aspectMask != 0);
    assert(subresource->mipLevels > 0);
    assert(subresource->arraySize > 0);
    assert(subresource->baseMipLevel < image->levels);
    assert(subresource->baseMipLevel + subresource->mipLevels <= image->levels);
-   assert(subresource->baseArraySlice < image->array_size);
-   assert(subresource->baseArraySlice + subresource->arraySize <= image->array_size);
+   assert(subresource->baseArrayLayer < image->array_size);
+   assert(subresource->baseArrayLayer + subresource->arraySize <= image->array_size);
    assert(pView);
 
    if (view_info->is_cube) {
-      assert(subresource->baseArraySlice % 6 == 0);
+      assert(subresource->baseArrayLayer % 6 == 0);
       assert(subresource->arraySize % 6 == 0);
    }
 
+   const VkImageAspectFlags ds_flags = VK_IMAGE_ASPECT_DEPTH_BIT
+                                     | VK_IMAGE_ASPECT_STENCIL_BIT;
+
    /* Validate format. */
-   switch (subresource->aspect) {
-   case VK_IMAGE_ASPECT_COLOR:
+   if (subresource->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
+      assert(subresource->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
       assert(!image->format->depth_format);
       assert(!image->format->has_stencil);
       assert(!view_format_info->depth_format);
       assert(!view_format_info->has_stencil);
       assert(view_format_info->cpp == image->format->cpp);
-      break;
-   case VK_IMAGE_ASPECT_DEPTH:
-      assert(image->format->depth_format);
-      assert(view_format_info->depth_format);
-      assert(view_format_info->cpp == image->format->cpp);
-      break;
-   case VK_IMAGE_ASPECT_STENCIL:
-      /* FINISHME: Is it legal to have an R8 view of S8? */
-      assert(image->format->has_stencil);
-      assert(view_format_info->has_stencil);
-      break;
-   default:
-      assert(!"bad VkImageAspect");
-      break;
+   } else if (subresource->aspectMask & ds_flags) {
+      assert((subresource->aspectMask & ~ds_flags) == 0);
+
+      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT) {
+         assert(image->format->depth_format);
+         assert(view_format_info->depth_format);
+         assert(view_format_info->cpp == image->format->cpp);
+      }
+
+      if (subresource->aspectMask & VK_IMAGE_ASPECT_STENCIL) {
+         /* FINISHME: Is it legal to have an R8 view of S8? */
+         assert(image->format->has_stencil);
+         assert(view_format_info->has_stencil);
+      }
+   } else {
+      assert(!"bad VkImageSubresourceRange::aspectFlags");
    }
 
    return anv_CreateImageView(_device, pCreateInfo, pView);
@@ -463,6 +476,29 @@ anv_image_view_init(struct anv_image_view *iview,
                     const VkImageViewCreateInfo* pCreateInfo,
                     struct anv_cmd_buffer *cmd_buffer)
 {
+   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+   const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
+
+   assert(range->arraySize > 0);
+   assert(range->baseMipLevel < image->levels);
+   assert(image->usage & (VK_IMAGE_USAGE_SAMPLED_BIT |
+                          VK_IMAGE_USAGE_STORAGE_BIT |
+                          VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+                          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
+
+   switch (image->type) {
+   default:
+      unreachable("bad VkImageType");
+   case VK_IMAGE_TYPE_1D:
+   case VK_IMAGE_TYPE_2D:
+      assert(range->baseArrayLayer + range->arraySize - 1 <= image->array_size);
+      break;
+   case VK_IMAGE_TYPE_3D:
+      assert(range->baseArrayLayer + range->arraySize - 1
+             <= anv_minify(image->extent.depth, range->baseMipLevel));
+      break;
+   }
+
    switch (device->info.gen) {
    case 7:
       gen7_image_view_init(iview, device, pCreateInfo, cmd_buffer);
@@ -495,143 +531,109 @@ anv_CreateImageView(VkDevice _device,
    return VK_SUCCESS;
 }
 
-VkResult
+static void
+anv_image_view_destroy(struct anv_device *device,
+                       struct anv_image_view *iview)
+{
+   if (iview->image->needs_color_rt_surface_state) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->color_rt_surface_state);
+   }
+
+   if (iview->image->needs_nonrt_surface_state) {
+      anv_state_pool_free(&device->surface_state_pool,
+                          iview->nonrt_surface_state);
+   }
+
+   anv_device_free(device, iview);
+}
+
+void
 anv_DestroyImageView(VkDevice _device, VkImageView _iview)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
 
-   anv_surface_view_fini(device, &iview->view);
-   anv_device_free(device, iview);
-
-   return VK_SUCCESS;
-}
-
-static void
-anv_depth_stencil_view_init(struct anv_depth_stencil_view *view,
-                            const VkAttachmentViewCreateInfo *pCreateInfo)
-{
-   ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
-
-   view->base.attachment_type = ANV_ATTACHMENT_VIEW_TYPE_DEPTH_STENCIL;
-
-   /* XXX: We don't handle any of these */
-   anv_assert(pCreateInfo->mipLevel == 0);
-   anv_assert(pCreateInfo->baseArraySlice == 0);
-   anv_assert(pCreateInfo->arraySize == 1);
-
-   view->image = image;
-   view->format = anv_format_for_vk_format(pCreateInfo->format);
-
-   assert(anv_format_is_depth_or_stencil(image->format));
-   assert(anv_format_is_depth_or_stencil(view->format));
+   anv_image_view_destroy(device, iview);
 }
 
 struct anv_surface *
-anv_image_get_surface_for_aspect(struct anv_image *image, VkImageAspect aspect)
+anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlags aspect_mask)
 {
-   switch (aspect) {
-   case VK_IMAGE_ASPECT_COLOR:
-      assert(anv_format_is_color(image->format));
-      return &image->color_surface;
-   case VK_IMAGE_ASPECT_DEPTH:
+   switch (aspect_mask) {
+   case VK_IMAGE_ASPECT_COLOR_BIT:
+      /* Dragons will eat you.
+       *
+       * Meta attaches all destination surfaces as color render targets. Guess
+       * what surface the Meta Dragons really want.
+       */
+      if (image->format->depth_format && image->format->has_stencil) {
+         anv_finishme("combined depth stencil formats");
+         return &image->depth_surface;
+      } else if (image->format->depth_format) {
+         return &image->depth_surface;
+      } else if (image->format->has_stencil) {
+         return &image->stencil_surface;
+      } else {
+         return &image->color_surface;
+      }
+      break;
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
       assert(image->format->depth_format);
       return &image->depth_surface;
-   case VK_IMAGE_ASPECT_STENCIL:
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
       assert(image->format->has_stencil);
-      anv_finishme("stencil image views");
       return &image->stencil_surface;
+   case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
+      if (image->format->depth_format && image->format->has_stencil) {
+         /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
+          * depth stencil formats. Specifically, it states:
+          *
+          *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
+          *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
+          */
+         anv_finishme("combined depthstencil aspect");
+         return &image->depth_surface;
+      } else if (image->format->depth_format) {
+         return &image->depth_surface;
+      } else if (image->format->has_stencil) {
+         return &image->stencil_surface;
+      }
+      /* fallthrough */
     default:
        unreachable("image does not have aspect");
        return NULL;
    }
 }
 
-/** The attachment may be a color view into a non-color image.  */
-struct anv_surface *
-anv_image_get_surface_for_color_attachment(struct anv_image *image)
-{
-   if (anv_format_is_color(image->format)) {
-      return &image->color_surface;
-   } else if (image->format->depth_format) {
-      return &image->depth_surface;
-   } else if (image->format->has_stencil) {
-      return &image->stencil_surface;
-   } else {
-      unreachable("image has bad format");
-      return NULL;
-   }
-}
+#if 0
+   VkImageAspectFlags aspect_mask = 0;
+   if (format->depth_format)
+      aspect_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+   if (format->has_stencil)
+      aspect_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+   if (!aspect_mask)
+      aspect_mask |= VK_IMAGE_ASPECT_COLOR_BIT;
 
-void
-anv_color_attachment_view_init(struct anv_color_attachment_view *aview,
-                               struct anv_device *device,
-                               const VkAttachmentViewCreateInfo* pCreateInfo,
-                               struct anv_cmd_buffer *cmd_buffer)
-{
-   switch (device->info.gen) {
-   case 7:
-      gen7_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
-      break;
-   case 8:
-      gen8_color_attachment_view_init(aview, device, pCreateInfo, cmd_buffer);
-      break;
-   default:
-      unreachable("unsupported gen\n");
-   }
-}
-
-VkResult
-anv_CreateAttachmentView(VkDevice _device,
-                         const VkAttachmentViewCreateInfo *pCreateInfo,
-                         VkAttachmentView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_ATTACHMENT_VIEW_CREATE_INFO);
-
-   const struct anv_format *format =
-      anv_format_for_vk_format(pCreateInfo->format);
-
-   if (anv_format_is_depth_or_stencil(format)) {
-      struct anv_depth_stencil_view *view =
-         anv_device_alloc(device, sizeof(*view), 8,
-                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-      if (view == NULL)
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-      anv_depth_stencil_view_init(view, pCreateInfo);
-
-      *pView = anv_attachment_view_to_handle(&view->base);
-   } else {
-      struct anv_color_attachment_view *view =
-         anv_device_alloc(device, sizeof(*view), 8,
-                          VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
-      if (view == NULL)
-         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-      anv_color_attachment_view_init(view, device, pCreateInfo, NULL);
-
-      *pView = anv_attachment_view_to_handle(&view->base);
-   }
-
-   return VK_SUCCESS;
-}
-
-VkResult
-anv_DestroyAttachmentView(VkDevice _device, VkAttachmentView _view)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_attachment_view, view, _view);
-
-   if (view->attachment_type == ANV_ATTACHMENT_VIEW_TYPE_COLOR) {
-      struct anv_color_attachment_view *aview =
-         (struct anv_color_attachment_view *)view;
-
-      anv_surface_view_fini(device, &aview->view);
-   }
-
-   anv_device_free(device, view);
-
-   return VK_SUCCESS;
-}
+   anv_image_view_init(iview, device,
+      &(VkImageViewCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+         .image = info->image,
+         .viewType = VK_IMAGE_VIEW_TYPE_2D,
+         .format = info->format,
+         .channels = {
+            .r = VK_CHANNEL_SWIZZLE_R,
+            .g = VK_CHANNEL_SWIZZLE_G,
+            .b = VK_CHANNEL_SWIZZLE_B,
+            .a = VK_CHANNEL_SWIZZLE_A,
+         },
+         .subresourceRange = {
+            .aspectMask = aspect_mask,
+            .baseMipLevel = info->mipLevel,
+            .mipLevels = 1,
+            .baseArrayLayer = info->baseArraySlice,
+            .arraySize = info->arraySize,
+         },
+      },
+      NULL);
+#endif

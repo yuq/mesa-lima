@@ -72,7 +72,7 @@ VkResult anv_CreateQueryPool(
    return result;
 }
 
-VkResult anv_DestroyQueryPool(
+void anv_DestroyQueryPool(
     VkDevice                                    _device,
     VkQueryPool                                 _pool)
 {
@@ -82,8 +82,6 @@ VkResult anv_DestroyQueryPool(
    anv_gem_munmap(pool->bo.map, pool->bo.size);
    anv_gem_close(device, pool->bo.gem_handle);
    anv_device_free(device, pool);
-
-   return VK_SUCCESS;
 }
 
 VkResult anv_GetQueryPoolResults(
@@ -122,8 +120,11 @@ VkResult anv_GetQueryPoolResults(
 
    if (flags & VK_QUERY_RESULT_WAIT_BIT) {
       ret = anv_gem_wait(device, pool->bo.gem_handle, &timeout);
-      if (ret == -1)
-         return vk_errorf(VK_ERROR_UNKNOWN, "gem_wait failed %m");
+      if (ret == -1) {
+         /* We don't know the real error. */
+         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                          "gem_wait failed %m");
+      }
    }
 
    for (uint32_t i = 0; i < queryCount; i++) {
