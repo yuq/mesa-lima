@@ -763,9 +763,11 @@ void
 anv_descriptor_set_destroy(struct anv_device *device,
                            struct anv_descriptor_set *set);
 
-#define MAX_VBS   32
-#define MAX_SETS   8
-#define MAX_RTS    8
+#define MAX_VBS         32
+#define MAX_SETS         8
+#define MAX_RTS          8
+#define MAX_VIEWPORTS   16
+#define MAX_SCISSORS    16
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
@@ -838,6 +840,54 @@ struct anv_push_constants {
    /* Image data for image_load_store on pre-SKL */
    struct brw_image_param images[MAX_IMAGES];
 };
+
+struct anv_dynamic_state {
+   struct {
+      uint32_t                                  count;
+      VkViewport                                viewports[MAX_VIEWPORTS];
+   } viewport;
+
+   struct {
+      uint32_t                                  count;
+      VkRect2D                                  scissors[MAX_SCISSORS];
+   } scissor;
+
+   float                                        line_width;
+
+   struct {
+      float                                     bias;
+      float                                     clamp;
+      float                                     slope_scaled;
+   } depth_bias;
+
+   float                                        blend_constants[4];
+
+   struct {
+      float                                     min;
+      float                                     max;
+   } depth_bounds;
+
+   struct {
+      uint32_t                                  front;
+      uint32_t                                  back;
+   } stencil_compare_mask;
+
+   struct {
+      uint32_t                                  front;
+      uint32_t                                  back;
+   } stencil_write_mask;
+
+   struct {
+      uint32_t                                  front;
+      uint32_t                                  back;
+   } stencil_reference;
+};
+
+extern const struct anv_dynamic_state default_dynamic_state;
+
+void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
+                            const struct anv_dynamic_state *src,
+                            uint32_t copy_mask);
 
 /** State required while building cmd buffer */
 struct anv_cmd_state {

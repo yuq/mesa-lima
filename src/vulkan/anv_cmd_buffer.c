@@ -38,6 +38,78 @@
  * is concerned, most of anv_cmd_buffer is magic.
  */
 
+/* TODO: These are taken from GLES.  We should check the Vulkan spec */
+const struct anv_dynamic_state default_dynamic_state = {
+   .viewport = {
+      .count = 0,
+   },
+   .scissor = {
+      .count = 0,
+   },
+   .line_width = 1.0f,
+   .depth_bias = {
+      .bias = 0.0f,
+      .clamp = 0.0f,
+      .slope_scaled = 0.0f,
+   },
+   .blend_constants = { 0.0f, 0.0f, 0.0f, 0.0f },
+   .depth_bounds = {
+      .min = 0.0f,
+      .max = 1.0f,
+   },
+   .stencil_compare_mask = {
+      .front = ~0u,
+      .back = ~0u,
+   },
+   .stencil_write_mask = {
+      .front = ~0u,
+      .back = ~0u,
+   },
+   .stencil_reference = {
+      .front = 0u,
+      .back = 0u,
+   },
+};
+
+void
+anv_dynamic_state_copy(struct anv_dynamic_state *dest,
+                       const struct anv_dynamic_state *src,
+                       uint32_t copy_mask)
+{
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_VIEWPORT)) {
+      dest->viewport.count = src->viewport.count;
+      typed_memcpy(dest->viewport.viewports, src->viewport.viewports,
+                   src->viewport.count);
+   }
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_SCISSOR)) {
+      dest->scissor.count = src->scissor.count;
+      typed_memcpy(dest->scissor.scissors, src->scissor.scissors,
+                   src->scissor.count);
+   }
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_LINE_WIDTH))
+      dest->line_width = src->line_width;
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BIAS))
+      dest->depth_bias = src->depth_bias;
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_BLEND_CONSTANTS))
+      typed_memcpy(dest->blend_constants, src->blend_constants, 4);
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS))
+      dest->depth_bounds = src->depth_bounds;
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK))
+      dest->stencil_compare_mask = src->stencil_compare_mask;
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK))
+      dest->stencil_write_mask = src->stencil_write_mask;
+
+   if (copy_mask & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE))
+      dest->stencil_reference = src->stencil_reference;
+}
+
 static void
 anv_cmd_state_init(struct anv_cmd_state *state)
 {
