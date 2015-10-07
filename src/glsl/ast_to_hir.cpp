@@ -3201,6 +3201,12 @@ process_initializer(ir_variable *var, ast_declaration *decl,
 		       ? "attribute" : "varying");
    }
 
+   if (var->data.mode == ir_var_shader_out && state->current_function == NULL) {
+      _mesa_glsl_error(&initializer_loc, state,
+                       "cannot initialize %s shader output",
+                       _mesa_shader_stage_to_string(state->stage));
+   }
+
    /* If the initializer is an ast_aggregate_initializer, recursively store
     * type information from the LHS into it, so that its hir() function can do
     * type checking.
