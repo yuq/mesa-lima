@@ -72,14 +72,6 @@ static char* driver_name = NULL;
 #if defined(DRI_TARGET)
 #if defined(HAVE_LIBDRM)
 
-const __DRIextension **__driDriverGetExtensions_kms_swrast(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_kms_swrast(void)
-{
-   globalDriverAPI = &dri_kms_driver_api;
-   return galliumdrm_driver_extensions;
-}
-
 struct pipe_screen *
 kms_swrast_create_screen(int fd)
 {
@@ -98,16 +90,6 @@ kms_swrast_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_I915)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_i915(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_i915(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_i915_create_screen(int fd)
@@ -125,16 +107,6 @@ pipe_i915_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_ILO)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_i965(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_i965(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_ilo_create_screen(int fd)
@@ -152,16 +124,6 @@ pipe_ilo_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_NOUVEAU)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_nouveau(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_nouveau(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_nouveau_create_screen(int fd)
@@ -174,16 +136,6 @@ pipe_nouveau_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_R300)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_r300(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_r300(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_r300_create_screen(int fd)
@@ -196,16 +148,6 @@ pipe_r300_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_R600)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_r600(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_r600(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_r600_create_screen(int fd)
@@ -218,16 +160,6 @@ pipe_r600_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_RADEONSI)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_radeonsi(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_radeonsi(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_radeonsi_create_screen(int fd)
@@ -245,16 +177,6 @@ pipe_radeonsi_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_VMWGFX)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_vmwgfx(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_vmwgfx(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_vmwgfx_create_screen(int fd)
@@ -272,24 +194,6 @@ pipe_vmwgfx_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_FREEDRENO)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_msm(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_msm(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-
-const __DRIextension **__driDriverGetExtensions_kgsl(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_kgsl(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_freedreno_create_screen(int fd)
@@ -302,16 +206,6 @@ pipe_freedreno_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_VIRGL)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_virtio_gpu(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_virtio_gpu(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
 
 static struct pipe_screen *
 pipe_virgl_create_screen(int fd)
@@ -329,36 +223,6 @@ pipe_virgl_create_screen(int fd)
 #endif
 
 #if defined(GALLIUM_VC4)
-#if defined(DRI_TARGET)
-
-const __DRIextension **__driDriverGetExtensions_vc4(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_vc4(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-
-#if defined(USE_VC4_SIMULATOR)
-const __DRIextension **__driDriverGetExtensions_i965(void);
-
-/**
- * When building using the simulator (on x86), we advertise ourselves as the
- * i965 driver so that you can just make a directory with a link from
- * i965_dri.so to the built vc4_dri.so, and point LIBGL_DRIVERS_PATH to that
- * on your i965-using host to run the driver under simulation.
- *
- * This is, of course, incompatible with building with the ilo driver, but you
- * shouldn't be building that anyway.
- */
-PUBLIC const __DRIextension **__driDriverGetExtensions_i965(void)
-{
-   globalDriverAPI = &galliumdrm_driver_api;
-   return galliumdrm_driver_extensions;
-}
-#endif
-
-#endif
 
 static struct pipe_screen *
 pipe_vc4_create_screen(int fd)

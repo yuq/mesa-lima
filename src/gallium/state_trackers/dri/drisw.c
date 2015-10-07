@@ -34,6 +34,9 @@
  * for createImage/destroyImage similar to DRI2 getBuffers.
  */
 
+/* XXX: Temporary hack, until we get rid of drisw_create_screen() */
+#define DRI_TARGET
+
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"

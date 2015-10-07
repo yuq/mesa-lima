@@ -35,7 +35,7 @@ endif
 
 LOCAL_SRC_FILES := target.c
 
-LOCAL_CFLAGS := -DDRI_TARGET
+LOCAL_CFLAGS :=
 
 LOCAL_SHARED_LIBRARIES := \
 	libdl \

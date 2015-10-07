@@ -73,15 +73,6 @@ sw_screen_create(struct sw_winsys *winsys)
 #if defined(DRI_TARGET)
 #include "target-helpers/inline_debug_helper.h"
 #include "sw/dri/dri_sw_winsys.h"
-#include "dri_screen.h"
-
-const __DRIextension **__driDriverGetExtensions_swrast(void);
-
-PUBLIC const __DRIextension **__driDriverGetExtensions_swrast(void)
-{
-   globalDriverAPI = &galliumsw_driver_api;
-   return galliumsw_driver_extensions;
-}
 
 inline struct pipe_screen *
 drisw_create_screen(struct drisw_loader_funcs *lf)
@@ -103,7 +94,6 @@ drisw_create_screen(struct drisw_loader_funcs *lf)
    return screen;
 }
 #endif // DRI_TARGET
-
 #endif // GALLIUM_SOFTPIPE
 
 
