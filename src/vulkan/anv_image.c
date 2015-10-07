@@ -596,15 +596,21 @@ anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlag
       assert(image->format->has_stencil);
       return &image->stencil_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT:
-      /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
-       * depth stencil formats. Specifically, it states:
-       *
-       *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
-       *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
-       */
-      anv_finishme("combined depthstencil aspect");
-      assert(image->format->depth_format);
-      return &image->depth_surface;
+      if (image->format->depth_format && image->format->has_stencil) {
+         /* FINISHME: The Vulkan spec (git a511ba2) requires support for combined
+          * depth stencil formats. Specifically, it states:
+          *
+          *    At least one of ename:VK_FORMAT_D24_UNORM_S8_UINT or
+          *    ename:VK_FORMAT_D32_SFLOAT_S8_UINT must be supported.
+          */
+         anv_finishme("combined depthstencil aspect");
+         return &image->depth_surface;
+      } else if (image->format->depth_format) {
+         return &image->depth_surface;
+      } else if (image->format->has_stencil) {
+         return &image->stencil_surface;
+      }
+      /* fallthrough */
     default:
        unreachable("image does not have aspect");
        return NULL;
