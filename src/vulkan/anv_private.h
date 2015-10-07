@@ -115,6 +115,11 @@ anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
         __dword &= ~(1 << (b)))
 
+#define typed_memcpy(dest, src, count) ({ \
+   static_assert(sizeof(*src) == sizeof(*dest), ""); \
+   memcpy((dest), (src), (count) * sizeof(*(src))); \
+})
+
 /* Define no kernel as 1, since that's an illegal offset for a kernel */
 #define NO_KERNEL 1
 
