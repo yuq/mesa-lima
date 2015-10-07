@@ -877,6 +877,17 @@ typedef enum {
 typedef VkFlags VkImageCreateFlags;
 
 typedef enum {
+    VK_SAMPLE_COUNT_1_BIT = 0x00000001,
+    VK_SAMPLE_COUNT_2_BIT = 0x00000002,
+    VK_SAMPLE_COUNT_4_BIT = 0x00000004,
+    VK_SAMPLE_COUNT_8_BIT = 0x00000008,
+    VK_SAMPLE_COUNT_16_BIT = 0x00000010,
+    VK_SAMPLE_COUNT_32_BIT = 0x00000020,
+    VK_SAMPLE_COUNT_64_BIT = 0x00000040,
+} VkSampleCountFlagBits;
+typedef VkFlags VkSampleCountFlags;
+
+typedef enum {
     VK_QUEUE_GRAPHICS_BIT = 0x00000001,
     VK_QUEUE_COMPUTE_BIT = 0x00000002,
     VK_QUEUE_DMA_BIT = 0x00000004,
@@ -1214,12 +1225,14 @@ typedef struct {
     uint32_t                                    maxImageDimension3D;
     uint32_t                                    maxImageDimensionCube;
     uint32_t                                    maxImageArrayLayers;
+    VkSampleCountFlags                          sampleCounts;
     uint32_t                                    maxTexelBufferSize;
     uint32_t                                    maxUniformBufferSize;
     uint32_t                                    maxStorageBufferSize;
     uint32_t                                    maxPushConstantsSize;
     uint32_t                                    maxMemoryAllocationCount;
     VkDeviceSize                                bufferImageGranularity;
+    VkDeviceSize                                sparseAddressSpaceSize;
     uint32_t                                    maxBoundDescriptorSets;
     uint32_t                                    maxDescriptorSets;
     uint32_t                                    maxPerStageDescriptorSamplers;
@@ -1229,10 +1242,13 @@ typedef struct {
     uint32_t                                    maxPerStageDescriptorStorageImages;
     uint32_t                                    maxDescriptorSetSamplers;
     uint32_t                                    maxDescriptorSetUniformBuffers;
+    uint32_t                                    maxDescriptorSetUniformBuffersDynamic;
     uint32_t                                    maxDescriptorSetStorageBuffers;
+    uint32_t                                    maxDescriptorSetStorageBuffersDynamic;
     uint32_t                                    maxDescriptorSetSampledImages;
     uint32_t                                    maxDescriptorSetStorageImages;
     uint32_t                                    maxVertexInputAttributes;
+    uint32_t                                    maxVertexInputBindings;
     uint32_t                                    maxVertexInputAttributeOffset;
     uint32_t                                    maxVertexInputBindingStride;
     uint32_t                                    maxVertexOutputComponents;
@@ -1266,7 +1282,6 @@ typedef struct {
     float                                       maxSamplerLodBias;
     float                                       maxSamplerAnisotropy;
     uint32_t                                    maxViewports;
-    uint32_t                                    maxDynamicViewportStates;
     uint32_t                                    maxViewportDimensions[2];
     float                                       viewportBoundsRange[2];
     uint32_t                                    viewportSubPixelBits;

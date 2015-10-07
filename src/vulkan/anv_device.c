@@ -330,12 +330,17 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxImageDimension3D                      = (1 << 10),
       .maxImageDimensionCube                    = (1 << 14),
       .maxImageArrayLayers                      = (1 << 10),
+
+      /* Broadwell supports 1, 2, 4, and 8 samples. */
+      .sampleCounts                             = 4,
+
       .maxTexelBufferSize                       = (1 << 14),
       .maxUniformBufferSize                     = UINT32_MAX,
       .maxStorageBufferSize                     = UINT32_MAX,
       .maxPushConstantsSize                     = MAX_PUSH_CONSTANTS_SIZE,
       .maxMemoryAllocationCount                 = UINT32_MAX,
       .bufferImageGranularity                   = 64, /* A cache line */
+      .sparseAddressSpaceSize                   = 0,
       .maxBoundDescriptorSets                   = MAX_SETS,
       .maxDescriptorSets                        = UINT32_MAX,
       .maxPerStageDescriptorSamplers            = 64,
@@ -345,10 +350,13 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxPerStageDescriptorStorageImages       = 64,
       .maxDescriptorSetSamplers                 = 256,
       .maxDescriptorSetUniformBuffers           = 256,
+      .maxDescriptorSetUniformBuffersDynamic    = 256,
       .maxDescriptorSetStorageBuffers           = 256,
+      .maxDescriptorSetStorageBuffersDynamic    = 256,
       .maxDescriptorSetSampledImages            = 256,
       .maxDescriptorSetStorageImages            = 256,
       .maxVertexInputAttributes                 = 32,
+      .maxVertexInputBindings                   = 32,
       .maxVertexInputAttributeOffset            = 256,
       .maxVertexInputBindingStride              = 256,
       .maxVertexOutputComponents                = 32,
@@ -390,7 +398,6 @@ VkResult anv_GetPhysicalDeviceLimits(
       .maxSamplerLodBias                        = 16,
       .maxSamplerAnisotropy                     = 16,
       .maxViewports                             = MAX_VIEWPORTS,
-      .maxDynamicViewportStates                 = UINT32_MAX,
       .maxViewportDimensions                    = { (1 << 14), (1 << 14) },
       .viewportBoundsRange                      = { -1.0, 1.0 }, /* FIXME */
       .viewportSubPixelBits                     = 13, /* We take a float? */
