@@ -313,6 +313,8 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
          else
             conf->dri_single_config = dri_config;
       }
+
+      conf->base.SurfaceType = 0;
       conf->base.ConfigID = config_id;
 
       _eglLinkConfig(&conf->base);
