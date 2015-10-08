@@ -647,9 +647,8 @@ static int si_shader_select(struct pipe_context *ctx,
 	return 0;
 }
 
-static void *si_create_shader_state(struct pipe_context *ctx,
-				    const struct pipe_shader_state *state,
-				    unsigned pipe_shader_type)
+static void *si_create_shader_selector(struct pipe_context *ctx,
+				       const struct pipe_shader_state *state)
 {
 	struct si_screen *sscreen = (struct si_screen *)ctx->screen;
 	struct si_shader_selector *sel = CALLOC_STRUCT(si_shader_selector);
@@ -658,7 +657,6 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	if (!sel)
 		return NULL;
 
-	sel->type = pipe_shader_type;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	if (!sel->tokens) {
 		FREE(sel);
@@ -667,6 +665,7 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 
 	sel->so = state->stream_output;
 	tgsi_scan_shader(state->tokens, &sel->info);
+	sel->type = util_pipe_shader_from_tgsi_processor(sel->info.processor);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
 	/* First set which opcode uses which (i,j) pair. */
@@ -697,7 +696,7 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 		sel->info.uses_linear_centroid +
 		sel->info.uses_linear_sample >= 2;
 
-	switch (pipe_shader_type) {
+	switch (sel->type) {
 	case PIPE_SHADER_GEOMETRY:
 		sel->gs_output_prim =
 			sel->info.properties[TGSI_PROPERTY_GS_OUTPUT_PRIM];
@@ -761,36 +760,6 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 		}
 
 	return sel;
-}
-
-static void *si_create_fs_state(struct pipe_context *ctx,
-				const struct pipe_shader_state *state)
-{
-	return si_create_shader_state(ctx, state, PIPE_SHADER_FRAGMENT);
-}
-
-static void *si_create_gs_state(struct pipe_context *ctx,
-				const struct pipe_shader_state *state)
-{
-	return si_create_shader_state(ctx, state, PIPE_SHADER_GEOMETRY);
-}
-
-static void *si_create_vs_state(struct pipe_context *ctx,
-				const struct pipe_shader_state *state)
-{
-	return si_create_shader_state(ctx, state, PIPE_SHADER_VERTEX);
-}
-
-static void *si_create_tcs_state(struct pipe_context *ctx,
-				 const struct pipe_shader_state *state)
-{
-	return si_create_shader_state(ctx, state, PIPE_SHADER_TESS_CTRL);
-}
-
-static void *si_create_tes_state(struct pipe_context *ctx,
-				 const struct pipe_shader_state *state)
-{
-	return si_create_shader_state(ctx, state, PIPE_SHADER_TESS_EVAL);
 }
 
 /**
@@ -1613,11 +1582,11 @@ void si_init_shader_functions(struct si_context *sctx)
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
 	si_init_atom(sctx, &sctx->spi_ps_input, &sctx->atoms.s.spi_ps_input, si_emit_spi_ps_input);
 
-	sctx->b.b.create_vs_state = si_create_vs_state;
-	sctx->b.b.create_tcs_state = si_create_tcs_state;
-	sctx->b.b.create_tes_state = si_create_tes_state;
-	sctx->b.b.create_gs_state = si_create_gs_state;
-	sctx->b.b.create_fs_state = si_create_fs_state;
+	sctx->b.b.create_vs_state = si_create_shader_selector;
+	sctx->b.b.create_tcs_state = si_create_shader_selector;
+	sctx->b.b.create_tes_state = si_create_shader_selector;
+	sctx->b.b.create_gs_state = si_create_shader_selector;
+	sctx->b.b.create_fs_state = si_create_shader_selector;
 
 	sctx->b.b.bind_vs_state = si_bind_vs_shader;
 	sctx->b.b.bind_tcs_state = si_bind_tcs_shader;
