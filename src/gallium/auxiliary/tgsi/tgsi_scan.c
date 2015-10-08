@@ -116,6 +116,53 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                break;
             }
 
+            if (fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_CENTROID ||
+                fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_OFFSET ||
+                fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
+               const struct tgsi_full_src_register *src0 = &fullinst->Src[0];
+               unsigned input;
+
+               if (src0->Register.Indirect && src0->Indirect.ArrayID)
+                  input = info->input_array_first[src0->Indirect.ArrayID];
+               else
+                  input = src0->Register.Index;
+
+               /* For the INTERP opcodes, the interpolation is always
+                * PERSPECTIVE unless LINEAR is specified.
+                */
+               switch (info->input_interpolate[input]) {
+               case TGSI_INTERPOLATE_COLOR:
+               case TGSI_INTERPOLATE_CONSTANT:
+               case TGSI_INTERPOLATE_PERSPECTIVE:
+                  switch (fullinst->Instruction.Opcode) {
+                  case TGSI_OPCODE_INTERP_CENTROID:
+                     info->uses_persp_opcode_interp_centroid = true;
+                     break;
+                  case TGSI_OPCODE_INTERP_OFFSET:
+                     info->uses_persp_opcode_interp_offset = true;
+                     break;
+                  case TGSI_OPCODE_INTERP_SAMPLE:
+                     info->uses_persp_opcode_interp_sample = true;
+                     break;
+                  }
+                  break;
+
+               case TGSI_INTERPOLATE_LINEAR:
+                  switch (fullinst->Instruction.Opcode) {
+                  case TGSI_OPCODE_INTERP_CENTROID:
+                     info->uses_linear_opcode_interp_centroid = true;
+                     break;
+                  case TGSI_OPCODE_INTERP_OFFSET:
+                     info->uses_linear_opcode_interp_offset = true;
+                     break;
+                  case TGSI_OPCODE_INTERP_SAMPLE:
+                     info->uses_linear_opcode_interp_sample = true;
+                     break;
+                  }
+                  break;
+               }
+            }
+
             if (fullinst->Instruction.Opcode >= TGSI_OPCODE_F2D &&
                 fullinst->Instruction.Opcode <= TGSI_OPCODE_DSSG)
                info->uses_doubles = true;
@@ -236,8 +283,48 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                   info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
                   info->num_inputs++;
 
-                  if (fulldecl->Interp.Location == TGSI_INTERPOLATE_LOC_CENTROID)
-                     info->uses_centroid = TRUE;
+                  /* Only interpolated varyings. Don't include POSITION.
+                   * Don't include integer varyings, because they are not
+                   * interpolated.
+                   */
+                  if (semName == TGSI_SEMANTIC_GENERIC ||
+                      semName == TGSI_SEMANTIC_TEXCOORD ||
+                      semName == TGSI_SEMANTIC_COLOR ||
+                      semName == TGSI_SEMANTIC_BCOLOR ||
+                      semName == TGSI_SEMANTIC_FOG ||
+                      semName == TGSI_SEMANTIC_CLIPDIST ||
+                      semName == TGSI_SEMANTIC_CULLDIST) {
+                     switch (fulldecl->Interp.Interpolate) {
+                     case TGSI_INTERPOLATE_COLOR:
+                     case TGSI_INTERPOLATE_PERSPECTIVE:
+                        switch (fulldecl->Interp.Location) {
+                        case TGSI_INTERPOLATE_LOC_CENTER:
+                           info->uses_persp_center = true;
+                           break;
+                        case TGSI_INTERPOLATE_LOC_CENTROID:
+                           info->uses_persp_centroid = true;
+                           break;
+                        case TGSI_INTERPOLATE_LOC_SAMPLE:
+                           info->uses_persp_sample = true;
+                           break;
+                        }
+                        break;
+                     case TGSI_INTERPOLATE_LINEAR:
+                        switch (fulldecl->Interp.Location) {
+                        case TGSI_INTERPOLATE_LOC_CENTER:
+                           info->uses_linear_center = true;
+                           break;
+                        case TGSI_INTERPOLATE_LOC_CENTROID:
+                           info->uses_linear_centroid = true;
+                           break;
+                        case TGSI_INTERPOLATE_LOC_SAMPLE:
+                           info->uses_linear_sample = true;
+                           break;
+                        }
+                        break;
+                     /* TGSI_INTERPOLATE_CONSTANT doesn't do any interpolation. */
+                     }
+                  }
 
                   if (semName == TGSI_SEMANTIC_PRIMID)
                      info->uses_primid = TRUE;

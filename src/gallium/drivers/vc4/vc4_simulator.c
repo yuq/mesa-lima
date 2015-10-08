@@ -106,10 +106,15 @@ vc4_simulator_unpin_bos(struct vc4_exec_info *exec)
 {
         for (int i = 0; i < exec->bo_count; i++) {
                 struct drm_gem_cma_object *obj = exec->bo[i];
-                struct vc4_bo *bo = to_vc4_bo(&obj->base)->bo;
+                struct drm_vc4_bo *drm_bo = to_vc4_bo(&obj->base);
+                struct vc4_bo *bo = drm_bo->bo;
 
                 memcpy(bo->map, obj->vaddr, bo->size);
 
+                if (drm_bo->validated_shader) {
+                        free(drm_bo->validated_shader->texture_samples);
+                        free(drm_bo->validated_shader);
+                }
                 free(obj);
         }
 

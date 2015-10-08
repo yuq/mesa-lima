@@ -566,7 +566,7 @@ private:
                         struct gl_uniform_storage *uniform, const char *name)
    {
       if (base_type->is_sampler()) {
-         uniform->sampler[shader_type].active = true;
+         uniform->opaque[shader_type].active = true;
 
          /* Handle multiple samplers inside struct arrays */
          if (this->record_array_count > 1) {
@@ -586,8 +586,8 @@ private:
                /* In this case, we've already seen this uniform so we just use
                 * the next sampler index recorded the last time we visited.
                 */
-               uniform->sampler[shader_type].index = index;
-               index = inner_array_size + uniform->sampler[shader_type].index;
+               uniform->opaque[shader_type].index = index;
+               index = inner_array_size + uniform->opaque[shader_type].index;
                this->record_next_sampler->put(index, name_copy);
 
                ralloc_free(name_copy);
@@ -605,13 +605,13 @@ private:
                 * structs. This allows the offset to be easily calculated for
                 * indirect indexing.
                 */
-               uniform->sampler[shader_type].index = this->next_sampler;
+               uniform->opaque[shader_type].index = this->next_sampler;
                this->next_sampler +=
                   inner_array_size * this->record_array_count;
 
                /* Store the next index for future passes over the struct array
                 */
-               index = uniform->sampler[shader_type].index + inner_array_size;
+               index = uniform->opaque[shader_type].index + inner_array_size;
                this->record_next_sampler->put(index, name_copy);
                ralloc_free(name_copy);
             }
@@ -619,22 +619,19 @@ private:
             /* Increment the sampler by 1 for non-arrays and by the number of
              * array elements for arrays.
              */
-            uniform->sampler[shader_type].index = this->next_sampler;
+            uniform->opaque[shader_type].index = this->next_sampler;
             this->next_sampler += MAX2(1, uniform->array_elements);
          }
 
          const gl_texture_index target = base_type->sampler_index();
          const unsigned shadow = base_type->sampler_shadow;
-         for (unsigned i = uniform->sampler[shader_type].index;
+         for (unsigned i = uniform->opaque[shader_type].index;
               i < MIN2(this->next_sampler, MAX_SAMPLERS);
               i++) {
             this->targets[i] = target;
             this->shader_samplers_used |= 1U << i;
             this->shader_shadow_samplers |= shadow << i;
          }
-      } else {
-         uniform->sampler[shader_type].index = ~0;
-         uniform->sampler[shader_type].active = false;
       }
    }
 
@@ -642,17 +639,14 @@ private:
                       struct gl_uniform_storage *uniform)
    {
       if (base_type->is_image()) {
-         uniform->image[shader_type].index = this->next_image;
-         uniform->image[shader_type].active = true;
+         uniform->opaque[shader_type].index = this->next_image;
+         uniform->opaque[shader_type].active = true;
 
          /* Increment the image index by 1 for non-arrays and by the
           * number of array elements for arrays.
           */
          this->next_image += MAX2(1, uniform->array_elements);
 
-      } else {
-         uniform->image[shader_type].index = ~0;
-         uniform->image[shader_type].active = false;
       }
    }
 
@@ -660,17 +654,14 @@ private:
                            struct gl_uniform_storage *uniform)
    {
       if (base_type->is_subroutine()) {
-         uniform->subroutine[shader_type].index = this->next_subroutine;
-         uniform->subroutine[shader_type].active = true;
+         uniform->opaque[shader_type].index = this->next_subroutine;
+         uniform->opaque[shader_type].active = true;
 
          /* Increment the subroutine index by 1 for non-arrays and by the
           * number of array elements for arrays.
           */
          this->next_subroutine += MAX2(1, uniform->array_elements);
 
-      } else {
-         uniform->subroutine[shader_type].index = ~0;
-         uniform->subroutine[shader_type].active = false;
       }
    }
 
@@ -738,13 +729,17 @@ private:
 	 base_type = type;
       }
 
+      /* Initialise opaque data */
+      this->uniforms[id].opaque[shader_type].index = ~0;
+      this->uniforms[id].opaque[shader_type].active = false;
+
       /* This assigns uniform indices to sampler and image uniforms. */
       handle_samplers(base_type, &this->uniforms[id], name);
       handle_images(base_type, &this->uniforms[id]);
       handle_subroutines(base_type, &this->uniforms[id]);
 
       /* For array of arrays or struct arrays the base location may have
-       * already been set so dont set it again.
+       * already been set so don't set it again.
        */
       if (ubo_block_index == -1 && current_var->data.location == -1) {
          current_var->data.location = id;
@@ -769,7 +764,7 @@ private:
                this->explicit_location + field_counter;
             field_counter += entries;
          } else {
-         this->uniforms[id].remap_location = this->explicit_location;
+            this->uniforms[id].remap_location = this->explicit_location;
          }
       } else {
          /* Initialize to to indicate that no location is set */
@@ -820,12 +815,13 @@ private:
 	 if (type->without_array()->is_matrix()) {
             const glsl_type *matrix = type->without_array();
             const unsigned N = matrix->base_type == GLSL_TYPE_DOUBLE ? 8 : 4;
-            const unsigned items = row_major ? matrix->matrix_columns : matrix->vector_elements;
+            const unsigned items =
+               row_major ? matrix->matrix_columns : matrix->vector_elements;
 
             assert(items <= 4);
             if (packing == GLSL_INTERFACE_PACKING_STD430)
                this->uniforms[id].matrix_stride = items < 3 ? items * N :
-                                                          glsl_align(items * N, 16);
+                                                    glsl_align(items * N, 16);
             else
                this->uniforms[id].matrix_stride = glsl_align(items * N, 16);
 	    this->uniforms[id].row_major = row_major;
@@ -1029,7 +1025,7 @@ link_set_image_access_qualifiers(struct gl_shader_program *prog)
             assert(found);
             (void) found;
             const gl_uniform_storage *storage = &prog->UniformStorage[id];
-            const unsigned index = storage->image[i].index;
+            const unsigned index = storage->opaque[i].index;
             const GLenum access = (var->data.image_read_only ? GL_READ_ONLY :
                                    var->data.image_write_only ? GL_WRITE_ONLY :
                                    GL_READ_WRITE);
@@ -1159,7 +1155,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
 	 ir_variable *const var = node->as_variable();
 
-	 if ((var == NULL) || (var->data.mode != ir_var_uniform && var->data.mode != ir_var_shader_storage))
+         if ((var == NULL) || (var->data.mode != ir_var_uniform &&
+                               var->data.mode != ir_var_shader_storage))
 	    continue;
 
 	 parcel.set_and_process(prog, var);
@@ -1168,7 +1165,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
       prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
 
-      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) == sizeof(parcel.targets));
+      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
+                    sizeof(parcel.targets));
       memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
              sizeof(prog->_LinkedShaders[i]->SamplerTargets));
    }
@@ -1238,7 +1236,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
          if (!sh)
             continue;
 
-         if (!uniforms[i].subroutine[j].active)
+         if (!uniforms[i].opaque[j].active)
             continue;
 
          /* How many new entries for this uniform? */
@@ -1268,7 +1266,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
          if (!sh)
             continue;
 
-         if (!uniforms[i].subroutine[j].active)
+         if (!uniforms[i].opaque[j].active)
             continue;
 
          sh->SubroutineUniformRemapTable =

@@ -65,9 +65,9 @@ void evergreen_dma_copy_buffer(struct r600_context *rctx,
 		csize = size < EG_DMA_COPY_MAX_SIZE ? size : EG_DMA_COPY_MAX_SIZE;
 		/* emit reloc before writing cs so that cs is always in consistent state */
 		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, rsrc, RADEON_USAGE_READ,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_SDMA_BUFFER);
 		radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.dma, rdst, RADEON_USAGE_WRITE,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_SDMA_BUFFER);
 		cs->buf[cs->cdw++] = DMA_PACKET(DMA_PACKET_COPY, sub_cmd, csize);
 		cs->buf[cs->cdw++] = dst_offset & 0xffffffff;
 		cs->buf[cs->cdw++] = src_offset & 0xffffffff;
@@ -131,7 +131,7 @@ void evergreen_cp_dma_clear_buffer(struct r600_context *rctx,
 		/* This must be done after r600_need_cs_space. */
 		reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 					      (struct r600_resource*)dst, RADEON_USAGE_WRITE,
-					      RADEON_PRIO_MIN);
+					      RADEON_PRIO_CP_DMA);
 
 		radeon_emit(cs, PKT3(PKT3_CP_DMA, 4, 0));
 		radeon_emit(cs, clear_value);	/* DATA [31:0] */

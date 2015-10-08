@@ -170,6 +170,7 @@ nv30_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
    case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
    case PIPE_CAP_TGSI_TXQS:
+   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -346,7 +347,9 @@ nv30_screen_fence_emit(struct pipe_screen *pscreen, uint32_t *sequence)
 
    *sequence = ++screen->base.fence.sequence;
 
-   BEGIN_NV04(push, NV30_3D(FENCE_OFFSET), 2);
+   assert(PUSH_AVAIL(push) >= 3);
+   PUSH_DATA (push, NV30_3D_FENCE_OFFSET |
+              (2 /* size */ << 18) | (7 /* subchan */ << 13));
    PUSH_DATA (push, 0);
    PUSH_DATA (push, *sequence);
 }

@@ -109,7 +109,8 @@ struct r600_db_misc_state {
 	struct r600_atom		atom;
 	bool				occlusion_query_enabled;
 	bool				flush_depthstencil_through_cb;
-	bool				flush_depthstencil_in_place;
+	bool				flush_depth_inplace;
+	bool				flush_stencil_inplace;
 	bool				copy_depth, copy_stencil;
 	unsigned			copy_sample;
 	unsigned			log_samples;
@@ -253,6 +254,7 @@ struct r600_pipe_sampler_view {
 	struct r600_resource		*tex_resource;
 	uint32_t			tex_resource_words[8];
 	bool				skip_mip_address_reloc;
+	bool				is_stencil_sampler;
 };
 
 struct r600_rasterizer_state {

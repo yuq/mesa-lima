@@ -118,7 +118,10 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 CLEANFILES = $(BUILT_SOURCES)
 
 libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
-	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la
+	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
+	../mesa/libmesa.la \
+	../mesa/drivers/dri/common/libdri_test_stubs.la \
+	-lpthread -ldl
 
 # Libvulkan with dummy gem. Used for unit tests.
 

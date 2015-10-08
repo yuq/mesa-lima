@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Intel Corporation
+ * Copyright © 2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -17,44 +17,37 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
  */
 
+#include <string.h>
+#include "main/macros.h"
+#include "debug.h"
 
-#ifndef BRW_CS_H
-#define BRW_CS_H
+uint64_t
+parse_debug_string(const char *debug,
+                   const struct debug_control *control)
+{
+   uint64_t flag = 0;
 
-#include "brw_program.h"
+   if (debug != NULL) {
+      for (; control->string != NULL; control++) {
+         if (!strcmp(debug, "all")) {
+            flag |= control->flag;
 
-struct brw_cs_prog_key {
-   uint32_t program_string_id;
-   struct brw_sampler_prog_key_data tex;
-};
+         } else {
+            const char *s = debug;
+            unsigned n;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+            for (; n = strcspn(s, ", "), *s; s += MAX2(1, n)) {
+               if (strlen(control->string) == n &&
+                   !strncmp(control->string, s, n))
+                  flag |= control->flag;
+            }
+         }
+      }
+   }
 
-void
-brw_upload_cs_prog(struct brw_context *brw);
-
-const unsigned *
-brw_cs_emit(struct brw_context *brw,
-            void *mem_ctx,
-            const struct brw_cs_prog_key *key,
-            struct brw_cs_prog_data *prog_data,
-            struct gl_compute_program *cp,
-            struct gl_shader_program *prog,
-            int shader_time_index,
-            unsigned *final_assembly_size);
-
-void
-brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
-                             void *buffer, uint32_t threads, uint32_t stride);
-
-#ifdef __cplusplus
+   return flag;
 }
-#endif
-
-#endif /* BRW_CS_H */

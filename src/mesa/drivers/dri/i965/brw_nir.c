@@ -30,8 +30,17 @@
 static void
 brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
 {
-   nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
-                            is_scalar ? type_size_scalar : type_size_vec4);
+   switch (nir->stage) {
+   case MESA_SHADER_GEOMETRY:
+      foreach_list_typed(nir_variable, var, node, &nir->inputs) {
+         var->data.driver_location = var->data.location;
+      }
+      break;
+   default:
+      nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
+                               is_scalar ? type_size_scalar : type_size_vec4);
+      break;
+   }
 }
 
 static void

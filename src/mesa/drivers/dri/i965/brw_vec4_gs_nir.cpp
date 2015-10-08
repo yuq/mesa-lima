@@ -29,41 +29,6 @@ namespace brw {
 void
 vec4_gs_visitor::nir_setup_inputs()
 {
-   nir_inputs = ralloc_array(mem_ctx, src_reg, nir->num_inputs);
-
-   foreach_list_typed(nir_variable, var, node, &nir->inputs) {
-      int offset = var->data.driver_location;
-      if (var->type->base_type == GLSL_TYPE_ARRAY) {
-         /* Geometry shader inputs are arrays, but they use an unusual array
-          * layout: instead of all array elements for a given geometry shader
-          * input being stored consecutively, all geometry shader inputs are
-          * interleaved into one giant array. At this stage of compilation, we
-          * assume that the stride of the array is BRW_VARYING_SLOT_COUNT.
-          * Later, setup_attributes() will remap our accesses to the actual
-          * input array.
-          */
-         assert(var->type->length > 0);
-         int length = var->type->length;
-         int size = type_size_vec4(var->type) / length;
-         for (int i = 0; i < length; i++) {
-            int location = var->data.location + i * BRW_VARYING_SLOT_COUNT;
-            for (int j = 0; j < size; j++) {
-               src_reg src = src_reg(ATTR, location + j, var->type);
-               src = retype(src, brw_type_for_base_type(var->type));
-               nir_inputs[offset] = src;
-               offset++;
-            }
-         }
-      } else {
-         int size = type_size_vec4(var->type);
-         for (int i = 0; i < size; i++) {
-            src_reg src = src_reg(ATTR, var->data.location + i, var->type);
-            src = retype(src, brw_type_for_base_type(var->type));
-            nir_inputs[offset] = src;
-            offset++;
-         }
-      }
-   }
 }
 
 void
@@ -96,6 +61,29 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
    src_reg src;
 
    switch (instr->intrinsic) {
+   case nir_intrinsic_load_per_vertex_input_indirect:
+      assert(!"EmitNoIndirectInput should prevent this.");
+   case nir_intrinsic_load_per_vertex_input: {
+      /* The EmitNoIndirectInput flag guarantees our vertex index will
+       * be constant.  We should handle indirects someday.
+       */
+      nir_const_value *vertex = nir_src_as_const_value(instr->src[0]);
+
+      /* Make up a type...we have no way of knowing... */
+      const glsl_type *const type = glsl_type::ivec(instr->num_components);
+
+      src = src_reg(ATTR, BRW_VARYING_SLOT_COUNT * vertex->u[0] +
+                          instr->const_index[0], type);
+      dest = get_nir_dest(instr->dest, src.type);
+      dest.writemask = brw_writemask_for_size(instr->num_components);
+      emit(MOV(dest, src));
+      break;
+   }
+
+   case nir_intrinsic_load_input:
+   case nir_intrinsic_load_input_indirect:
+      unreachable("nir_lower_io should have produced per_vertex intrinsics");
+
    case nir_intrinsic_emit_vertex_with_counter: {
       this->vertex_count =
          retype(get_nir_src(instr->src[0], 1), BRW_REGISTER_TYPE_UD);

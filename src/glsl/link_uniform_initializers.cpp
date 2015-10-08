@@ -135,16 +135,16 @@ set_opaque_binding(gl_shader_program *prog, const char *name, int binding)
 
       if (shader) {
          if (storage->type->base_type == GLSL_TYPE_SAMPLER &&
-             storage->sampler[sh].active) {
+             storage->opaque[sh].active) {
             for (unsigned i = 0; i < elements; i++) {
-               const unsigned index = storage->sampler[sh].index + i;
+               const unsigned index = storage->opaque[sh].index + i;
                shader->SamplerUnits[index] = storage->storage[i].i;
             }
 
          } else if (storage->type->base_type == GLSL_TYPE_IMAGE &&
-                    storage->image[sh].active) {
+                    storage->opaque[sh].active) {
             for (unsigned i = 0; i < elements; i++) {
-               const unsigned index = storage->image[sh].index + i;
+               const unsigned index = storage->opaque[sh].index + i;
                shader->ImageUnits[index] = storage->storage[i].i;
             }
          }
@@ -244,8 +244,8 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
          for (int sh = 0; sh < MESA_SHADER_STAGES; sh++) {
             gl_shader *shader = prog->_LinkedShaders[sh];
 
-            if (shader && storage->sampler[sh].active) {
-               unsigned index = storage->sampler[sh].index;
+            if (shader && storage->opaque[sh].active) {
+               unsigned index = storage->opaque[sh].index;
 
                shader->SamplerUnits[index] = storage->storage[0].i;
             }

@@ -178,7 +178,13 @@ GL 4.4, GLSL 4.40:
   GL_MAX_VERTEX_ATTRIB_STRIDE                          DONE (all drivers)
   GL_ARB_buffer_storage                                DONE (i965, nv50, nvc0, r600, radeonsi)
   GL_ARB_clear_texture                                 DONE (i965) (gallium - in progress, VMware)
-  GL_ARB_enhanced_layouts                              not started
+  GL_ARB_enhanced_layouts                              in progress (Timothy)
+  - compile-time constant expressions                  in progress
+  - explicit byte offsets for blocks                   in progress
+  - forced alignment within blocks                     in progress
+  - specified vec4-slot component numbers              in progress
+  - specified transform/feedback layout                in progress
+  - input/output block locations                       in progress
   GL_ARB_multi_bind                                    DONE (all drivers)
   GL_ARB_query_buffer_object                           not started
   GL_ARB_texture_mirror_clamp_to_edge                  DONE (i965, nv50, nvc0, r600, radeonsi, llvmpipe, softpipe)

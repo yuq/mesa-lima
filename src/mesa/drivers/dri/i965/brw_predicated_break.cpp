@@ -21,12 +21,11 @@
  * IN THE SOFTWARE.
  */
 
-#include "brw_fs.h"
 #include "brw_cfg.h"
 
 using namespace brw;
 
-/** @file brw_fs_peephole_predicated_break.cpp
+/** @file brw_predicated_break.cpp
  *
  * Loops are often structured as
  *
@@ -55,27 +54,27 @@ using namespace brw;
  */
 
 bool
-fs_visitor::opt_peephole_predicated_break()
+opt_predicated_break(backend_shader *s)
 {
    bool progress = false;
 
-   foreach_block (block, cfg) {
+   foreach_block (block, s->cfg) {
       if (block->start_ip != block->end_ip)
          continue;
 
       /* BREAK and CONTINUE instructions, by definition, can only be found at
        * the ends of basic blocks.
        */
-      fs_inst *jump_inst = (fs_inst *)block->end();
+      backend_instruction *jump_inst = block->end();
       if (jump_inst->opcode != BRW_OPCODE_BREAK &&
           jump_inst->opcode != BRW_OPCODE_CONTINUE)
          continue;
 
-      fs_inst *if_inst = (fs_inst *)block->prev()->end();
+      backend_instruction *if_inst = block->prev()->end();
       if (if_inst->opcode != BRW_OPCODE_IF)
          continue;
 
-      fs_inst *endif_inst = (fs_inst *)block->next()->start();
+      backend_instruction *endif_inst = block->next()->start();
       if (endif_inst->opcode != BRW_OPCODE_ENDIF)
          continue;
 
@@ -83,18 +82,8 @@ fs_visitor::opt_peephole_predicated_break()
       bblock_t *if_block = jump_block->prev();
       bblock_t *endif_block = jump_block->next();
 
-      /* For Sandybridge with IF with embedded comparison we need to emit an
-       * instruction to set the flag register.
-       */
-      if (devinfo->gen == 6 && if_inst->conditional_mod) {
-         const fs_builder ibld(this, if_block, if_inst);
-         ibld.CMP(ibld.null_reg_d(), if_inst->src[0], if_inst->src[1],
-                  if_inst->conditional_mod);
-         jump_inst->predicate = BRW_PREDICATE_NORMAL;
-      } else {
-         jump_inst->predicate = if_inst->predicate;
-         jump_inst->predicate_inverse = if_inst->predicate_inverse;
-      }
+      jump_inst->predicate = if_inst->predicate;
+      jump_inst->predicate_inverse = if_inst->predicate_inverse;
 
       bblock_t *earlier_block = if_block;
       if (if_block->start_ip == if_block->end_ip) {
@@ -111,13 +100,13 @@ fs_visitor::opt_peephole_predicated_break()
 
       if (!earlier_block->ends_with_control_flow()) {
          earlier_block->children.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, jump_block);
+         earlier_block->add_successor(s->cfg->mem_ctx, jump_block);
       }
 
       if (!later_block->starts_with_control_flow()) {
          later_block->parents.make_empty();
       }
-      jump_block->add_successor(cfg->mem_ctx, later_block);
+      jump_block->add_successor(s->cfg->mem_ctx, later_block);
 
       if (earlier_block->can_combine_with(jump_block)) {
          earlier_block->combine_with(jump_block);
@@ -130,7 +119,7 @@ fs_visitor::opt_peephole_predicated_break()
        * the two basic blocks.
        */
       bblock_t *while_block = earlier_block->next();
-      fs_inst *while_inst = (fs_inst *)while_block->start();
+      backend_instruction *while_inst = while_block->start();
 
       if (jump_inst->opcode == BRW_OPCODE_BREAK &&
           while_inst->opcode == BRW_OPCODE_WHILE &&
@@ -140,20 +129,20 @@ fs_visitor::opt_peephole_predicated_break()
          while_inst->predicate_inverse = !jump_inst->predicate_inverse;
 
          earlier_block->children.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, while_block);
+         earlier_block->add_successor(s->cfg->mem_ctx, while_block);
 
          assert(earlier_block->can_combine_with(while_block));
          earlier_block->combine_with(while_block);
 
          earlier_block->next()->parents.make_empty();
-         earlier_block->add_successor(cfg->mem_ctx, earlier_block->next());
+         earlier_block->add_successor(s->cfg->mem_ctx, earlier_block->next());
       }
 
       progress = true;
    }
 
    if (progress)
-      invalidate_live_intervals();
+      s->invalidate_live_intervals();
 
    return progress;
 }

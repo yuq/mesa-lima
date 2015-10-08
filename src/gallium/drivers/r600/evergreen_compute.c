@@ -442,7 +442,7 @@ static void compute_emit_cs(struct r600_context *ctx, const uint *block_layout,
 		unsigned reloc = radeon_add_to_buffer_list(&ctx->b, &ctx->b.rings.gfx,
 						       (struct r600_resource*)cb->base.texture,
 						       RADEON_USAGE_READWRITE,
-						       RADEON_PRIO_SHADER_RESOURCE_RW);
+						       RADEON_PRIO_SHADER_RW_BUFFER);
 
 		radeon_compute_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C, 7);
 		radeon_emit(cs, cb->cb_color_base);	/* R_028C60_CB_COLOR0_BASE */
@@ -566,7 +566,7 @@ void evergreen_emit_cs_shader(
 	radeon_emit(cs, PKT3C(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 					      code_bo, RADEON_USAGE_READ,
-					      RADEON_PRIO_SHADER_DATA));
+					      RADEON_PRIO_USER_SHADER));
 }
 
 static void evergreen_launch_grid(

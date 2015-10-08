@@ -43,7 +43,6 @@
 
 
 #include "glheader.h"
-#include "colormac.h"
 #include "enums.h"
 #include "image.h"
 #include "imports.h"
@@ -1124,7 +1123,8 @@ _mesa_pack_depth_span( struct gl_context *ctx, GLuint n, GLvoid *dest,
       }
       break;
    default:
-      _mesa_problem(ctx, "bad type in _mesa_pack_depth_span");
+      _mesa_problem(ctx, "bad type in _mesa_pack_depth_span (%s)",
+                    _mesa_enum_to_string(dstType));
    }
 
    free(depthCopy);

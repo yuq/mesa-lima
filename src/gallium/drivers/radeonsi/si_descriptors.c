@@ -118,7 +118,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, desc->buffer,
-			      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+			      RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 
 	desc->list_dirty = false;
 	desc->pointer_dirty = true;
@@ -138,23 +138,12 @@ static void si_release_sampler_views(struct si_sampler_views *views)
 	si_release_descriptors(&views->desc);
 }
 
-static enum radeon_bo_priority si_get_resource_ro_priority(struct r600_resource *res)
-{
-	if (res->b.b.target == PIPE_BUFFER)
-		return RADEON_PRIO_SHADER_BUFFER_RO;
-
-	if (res->b.b.nr_samples > 1)
-		return RADEON_PRIO_SHADER_TEXTURE_MSAA;
-
-	return RADEON_PRIO_SHADER_TEXTURE_RO;
-}
-
 static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 					  struct si_sampler_views *views)
 {
 	uint64_t mask = views->desc.enabled_mask;
 
-	/* Add relocations to the CS. */
+	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 		struct si_sampler_view *rview =
@@ -165,13 +154,13 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      rview->resource, RADEON_USAGE_READ,
-				      si_get_resource_ro_priority(rview->resource));
+				      r600_get_sampler_view_priority(rview->resource));
 	}
 
 	if (!views->desc.buffer)
 		return;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, views->desc.buffer,
-			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
+			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
 }
 
 static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
@@ -190,7 +179,7 @@ static void si_set_sampler_view(struct si_context *sctx, unsigned shader,
 		if (rview->resource)
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				rview->resource, RADEON_USAGE_READ,
-				si_get_resource_ro_priority(rview->resource));
+				r600_get_sampler_view_priority(rview->resource));
 
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(views->desc.list + slot*8, view_desc, 8*4);
@@ -270,7 +259,7 @@ static void si_sampler_states_begin_new_cs(struct si_context *sctx,
 	if (!states->desc.buffer)
 		return;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, states->desc.buffer,
-			      RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_DATA);
+			      RADEON_USAGE_READWRITE, RADEON_PRIO_DESCRIPTORS);
 }
 
 static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
@@ -335,7 +324,7 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 {
 	uint64_t mask = buffers->desc.enabled_mask;
 
-	/* Add relocations to the CS. */
+	/* Add buffers to the CS. */
 	while (mask) {
 		int i = u_bit_scan64(&mask);
 
@@ -348,7 +337,7 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 		return;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      buffers->desc.buffer, RADEON_USAGE_READWRITE,
-			      RADEON_PRIO_SHADER_DATA);
+			      RADEON_PRIO_DESCRIPTORS);
 }
 
 /* VERTEX BUFFERS */
@@ -369,14 +358,14 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource*)sctx->vertex_buffer[vb].buffer,
-				      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
+				      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 	}
 
 	if (!desc->buffer)
 		return;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
-			      RADEON_PRIO_SHADER_DATA);
+			      RADEON_PRIO_DESCRIPTORS);
 }
 
 static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
@@ -403,7 +392,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 			      desc->buffer, RADEON_USAGE_READ,
-			      RADEON_PRIO_SHADER_DATA);
+			      RADEON_PRIO_DESCRIPTORS);
 
 	assert(count <= SI_NUM_VERTEX_BUFFERS);
 
@@ -447,7 +436,7 @@ static bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		if (!bound[ve->vertex_buffer_index]) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					      (struct r600_resource*)vb->buffer,
-					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
+					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
 			bound[ve->vertex_buffer_index] = true;
 		}
 	}
@@ -870,7 +859,7 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 
 				radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 						      rbuffer, RADEON_USAGE_READ,
-						      RADEON_PRIO_SHADER_BUFFER_RO);
+						      RADEON_PRIO_SAMPLER_BUFFER);
 			}
 		}
 	}
@@ -1017,10 +1006,10 @@ void si_init_all_descriptors(struct si_context *sctx)
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
 		si_init_buffer_resources(&sctx->const_buffers[i],
 					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST,
-					 RADEON_USAGE_READ, RADEON_PRIO_SHADER_BUFFER_RO);
+					 RADEON_USAGE_READ, RADEON_PRIO_CONST_BUFFER);
 		si_init_buffer_resources(&sctx->rw_buffers[i],
 					 SI_NUM_RW_BUFFERS, SI_SGPR_RW_BUFFERS,
-					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RESOURCE_RW);
+					 RADEON_USAGE_READWRITE, RADEON_PRIO_RINGS_STREAMOUT);
 
 		si_init_descriptors(&sctx->samplers[i].views.desc,
 				    SI_SGPR_RESOURCE, 8, SI_NUM_SAMPLER_VIEWS);

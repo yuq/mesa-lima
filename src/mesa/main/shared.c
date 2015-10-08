@@ -219,12 +219,12 @@ delete_shader_cb(GLuint id, void *data, void *userData)
    struct gl_context *ctx = (struct gl_context *) userData;
    struct gl_shader *sh = (struct gl_shader *) data;
    if (_mesa_validate_shader_target(ctx, sh->Type)) {
-      ctx->Driver.DeleteShader(ctx, sh);
+      _mesa_delete_shader(ctx, sh);
    }
    else {
       struct gl_shader_program *shProg = (struct gl_shader_program *) data;
       assert(shProg->Type == GL_SHADER_PROGRAM_MESA);
-      ctx->Driver.DeleteShaderProgram(ctx, shProg);
+      _mesa_delete_shader_program(ctx, shProg);
    }
 }
 

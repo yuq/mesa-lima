@@ -131,12 +131,10 @@ const __DRIconfig *
 dri2_get_dri_config(struct dri2_egl_config *conf, EGLint surface_type,
                     EGLenum colorspace)
 {
-   if (colorspace == EGL_GL_COLORSPACE_SRGB_KHR)
-      return surface_type == EGL_WINDOW_BIT ? conf->dri_srgb_double_config :
-                                              conf->dri_srgb_single_config;
-   else
-      return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config :
-                                              conf->dri_single_config;
+   const bool srgb = colorspace == EGL_GL_COLORSPACE_SRGB_KHR;
+
+   return surface_type == EGL_WINDOW_BIT ? conf->dri_double_config[srgb] :
+                                           conf->dri_single_config[srgb];
 }
 
 static EGLBoolean
@@ -284,14 +282,10 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    if (num_configs == 1) {
       conf = (struct dri2_egl_config *) matching_config;
 
-      if (double_buffer && srgb && !conf->dri_srgb_double_config)
-         conf->dri_srgb_double_config = dri_config;
-      else if (double_buffer && !srgb && !conf->dri_double_config)
-         conf->dri_double_config = dri_config;
-      else if (!double_buffer && srgb && !conf->dri_srgb_single_config)
-         conf->dri_srgb_single_config = dri_config;
-      else if (!double_buffer && !srgb && !conf->dri_single_config)
-         conf->dri_single_config = dri_config;
+      if (double_buffer && !conf->dri_double_config[srgb])
+         conf->dri_double_config[srgb] = dri_config;
+      else if (!double_buffer && !conf->dri_single_config[srgb])
+         conf->dri_single_config[srgb] = dri_config;
       else
          /* a similar config type is already added (unlikely) => discard */
          return NULL;
@@ -301,18 +295,13 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
       if (conf == NULL)
          return NULL;
 
+      if (double_buffer)
+         conf->dri_double_config[srgb] = dri_config;
+      else
+         conf->dri_single_config[srgb] = dri_config;
+
       memcpy(&conf->base, &base, sizeof base);
-      if (double_buffer) {
-         if (srgb)
-            conf->dri_srgb_double_config = dri_config;
-         else
-            conf->dri_double_config = dri_config;
-      } else {
-         if (srgb)
-            conf->dri_srgb_single_config = dri_config;
-         else
-            conf->dri_single_config = dri_config;
-      }
+      conf->base.SurfaceType = 0;
       conf->base.ConfigID = config_id;
 
       _eglLinkConfig(&conf->base);
@@ -1021,10 +1010,10 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
        * doubleBufferMode check in
        * src/mesa/main/context.c:check_compatible()
        */
-      if (dri2_config->dri_double_config)
-         dri_config = dri2_config->dri_double_config;
+      if (dri2_config->dri_double_config[0])
+         dri_config = dri2_config->dri_double_config[0];
       else
-         dri_config = dri2_config->dri_single_config;
+         dri_config = dri2_config->dri_single_config[0];
 
       /* EGL_WINDOW_BIT is set only when there is a dri_double_config.  This
        * makes sure the back buffer will always be used.
@@ -2424,13 +2413,18 @@ dri2_client_wait_sync(_EGLDriver *drv, _EGLDisplay *dpy, _EGLSync *sync,
    unsigned wait_flags = 0;
    EGLint ret = EGL_CONDITION_SATISFIED_KHR;
 
-   if (flags & EGL_SYNC_FLUSH_COMMANDS_BIT_KHR)
+   /* The EGL_KHR_fence_sync spec states:
+    *
+    *    "If no context is current for the bound API,
+    *     the EGL_SYNC_FLUSH_COMMANDS_BIT_KHR bit is ignored.
+    */
+   if (dri2_ctx && flags & EGL_SYNC_FLUSH_COMMANDS_BIT_KHR)
       wait_flags |= __DRI2_FENCE_FLAG_FLUSH_COMMANDS;
 
    /* the sync object should take a reference while waiting */
    dri2_egl_ref_sync(dri2_sync);
 
-   if (dri2_dpy->fence->client_wait_sync(dri2_ctx->dri_context,
+   if (dri2_dpy->fence->client_wait_sync(dri2_ctx ? dri2_ctx->dri_context : NULL,
                                          dri2_sync->fence, wait_flags,
                                          timeout))
       dri2_sync->base.SyncStatus = EGL_SIGNALED_KHR;

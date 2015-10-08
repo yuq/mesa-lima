@@ -1683,7 +1683,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
 		cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 							   (struct r600_resource*)info.indirect,
-							   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+							   RADEON_USAGE_READ,
+                                                           RADEON_PRIO_DRAW_INDIRECT);
 	}
 
 	if (info.indexed) {
@@ -1712,7 +1713,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
 				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 									   (struct r600_resource*)ib.buffer,
-									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+									   RADEON_USAGE_READ,
+                                                                           RADEON_PRIO_INDEX_BUFFER);
 			}
 			else {
 				uint32_t max_size = (ib.buffer->width0 - ib.offset) / ib.index_size;
@@ -1724,7 +1726,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, rctx->b.predicate_drawing);
 				cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 									   (struct r600_resource*)ib.buffer,
-									   RADEON_USAGE_READ, RADEON_PRIO_MIN);
+									   RADEON_USAGE_READ,
+                                                                           RADEON_PRIO_INDEX_BUFFER);
 
 				cs->buf[cs->cdw++] = PKT3(EG_PKT3_INDEX_BUFFER_SIZE, 0, rctx->b.predicate_drawing);
 				cs->buf[cs->cdw++] = max_size;
@@ -1751,7 +1754,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 			cs->buf[cs->cdw++] = PKT3(PKT3_NOP, 0, 0);
 			cs->buf[cs->cdw++] = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx,
 								   t->buf_filled_size, RADEON_USAGE_READ,
-								   RADEON_PRIO_MIN);
+								   RADEON_PRIO_SO_FILLED_SIZE);
 		}
 
 		if (likely(!info.indirect)) {
@@ -1776,6 +1779,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		struct r600_texture *rtex = (struct r600_texture *)surf->texture;
 
 		rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
 	}
 	if (rctx->framebuffer.compressed_cb_mask) {
 		struct pipe_surface *surf;
@@ -1941,7 +1947,7 @@ void r600_emit_shader(struct r600_context *rctx, struct r600_atom *a)
 	r600_emit_command_buffer(cs, &shader->command_buffer);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
 	radeon_emit(cs, radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, shader->bo,
-					      RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA));
+					      RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER));
 }
 
 unsigned r600_get_swizzle_combined(const unsigned char *swizzle_format,
@@ -2669,7 +2675,7 @@ void r600_trace_emit(struct r600_context *rctx)
 
 	va = rscreen->b.trace_bo->gpu_address;
 	reloc = radeon_add_to_buffer_list(&rctx->b, &rctx->b.rings.gfx, rscreen->b.trace_bo,
-				      RADEON_USAGE_READWRITE, RADEON_PRIO_MIN);
+				      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
 	radeon_emit(cs, PKT3(PKT3_MEM_WRITE, 3, 0));
 	radeon_emit(cs, va & 0xFFFFFFFFUL);
 	radeon_emit(cs, (va >> 32UL) & 0xFFUL);

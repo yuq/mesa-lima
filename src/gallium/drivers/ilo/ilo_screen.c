@@ -470,6 +470,7 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
    case PIPE_CAP_DEPTH_BOUNDS_TEST:
    case PIPE_CAP_TGSI_TXQS:
+   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:

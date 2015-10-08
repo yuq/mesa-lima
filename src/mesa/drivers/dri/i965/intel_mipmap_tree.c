@@ -160,7 +160,7 @@ intel_get_non_msrt_mcs_alignment(struct intel_mipmap_tree *mt,
    }
 }
 
-bool
+static bool
 intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
 {
    /* From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render
@@ -193,15 +193,19 @@ intel_tiling_supports_non_msrt_mcs(struct brw_context *brw, unsigned tiling)
  *     - MCS buffer for non-MSRT is supported only for RT formats 32bpp,
  *       64bpp, and 128bpp.
  */
-bool
-intel_miptree_is_fast_clear_capable(struct brw_context *brw,
-                                    struct intel_mipmap_tree *mt)
+static bool
+intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
+                                           struct intel_mipmap_tree *mt)
 {
    /* MCS support does not exist prior to Gen7 */
    if (brw->gen < 7)
       return false;
 
    if (mt->disable_aux_buffers)
+      return false;
+
+   /* This function applies only to non-multisampled render targets. */
+   if (mt->num_samples > 1)
       return false;
 
    /* MCS is only supported for color buffers */
@@ -222,7 +226,16 @@ intel_miptree_is_fast_clear_capable(struct brw_context *brw,
 
       return false;
    }
+
+   /* Check for layered surfaces. */
    if (mt->physical_depth0 != 1) {
+       /* Multisample surfaces with the CMS layout are not layered surfaces,
+        * yet still have physical_depth0 > 1. Assert that we don't
+        * accidentally reject a multisampled surface here. We should have
+        * rejected it earlier by explicitly checking the sample count.
+        */
+      assert(mt->num_samples <= 1);
+
       if (brw->gen >= 8) {
          perf_debug("Layered fast clear - giving up. (%dx%d%d)\n",
                     mt->logical_width0, mt->logical_height0,
@@ -494,7 +507,7 @@ intel_miptree_create_layout(struct brw_context *brw,
     *  7   |      ?         |        ?
     *  6   |      ?         |        ?
     */
-   if (intel_miptree_is_fast_clear_capable(brw, mt)) {
+   if (intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
       if (brw->gen >= 9 || (brw->gen == 8 && num_samples <= 1))
          layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
    } else if (brw->gen >= 9 && num_samples > 1) {
@@ -692,7 +705,7 @@ intel_miptree_create(struct brw_context *brw,
     * clear actually occurs.
     */
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
-       intel_miptree_is_fast_clear_capable(brw, mt)) {
+       intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
       assert(brw->gen < 8 || mt->halign == 16 || num_samples <= 1);
    }
@@ -800,8 +813,9 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
     * clear actually occurs.
     */
    if (intel_tiling_supports_non_msrt_mcs(intel, singlesample_mt->tiling) &&
-       intel_miptree_is_fast_clear_capable(intel, singlesample_mt))
+       intel_miptree_supports_non_msrt_fast_clear(intel, singlesample_mt)) {
       singlesample_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
+   }
 
    if (num_samples == 0) {
       intel_miptree_release(&irb->mt);

@@ -1,5 +1,5 @@
 /*
- * Copyright © 2014 Intel Corporation
+ * Copyright © 2015 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -17,44 +17,30 @@
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
  * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
  */
 
+#ifndef _DEBUG_H
+#define _DEBUG_H
 
-#ifndef BRW_CS_H
-#define BRW_CS_H
-
-#include "brw_program.h"
-
-struct brw_cs_prog_key {
-   uint32_t program_string_id;
-   struct brw_sampler_prog_key_data tex;
-};
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void
-brw_upload_cs_prog(struct brw_context *brw);
+struct debug_control {
+    const char * string;
+    uint64_t     flag;
+};
 
-const unsigned *
-brw_cs_emit(struct brw_context *brw,
-            void *mem_ctx,
-            const struct brw_cs_prog_key *key,
-            struct brw_cs_prog_data *prog_data,
-            struct gl_compute_program *cp,
-            struct gl_shader_program *prog,
-            int shader_time_index,
-            unsigned *final_assembly_size);
-
-void
-brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
-                             void *buffer, uint32_t threads, uint32_t stride);
+uint64_t
+parse_debug_string(const char *debug,
+                   const struct debug_control *control);
 
 #ifdef __cplusplus
-}
+} /* extern C */
 #endif
 
-#endif /* BRW_CS_H */
+#endif /* _DEBUG_H */

@@ -88,6 +88,7 @@ struct radeon_shader_reloc;
 #define SI_SGPR_TCS_OUT_LAYOUT	9  /* TCS & TES only */
 #define SI_SGPR_TCS_IN_LAYOUT	10 /* TCS only */
 #define SI_SGPR_ALPHA_REF	8  /* PS only */
+#define SI_SGPR_PS_STATE_BITS	9  /* PS only */
 
 #define SI_VS_NUM_USER_SGPR	12
 #define SI_LS_NUM_USER_SGPR	13
@@ -95,7 +96,7 @@ struct radeon_shader_reloc;
 #define SI_TES_NUM_USER_SGPR	10
 #define SI_GS_NUM_USER_SGPR	8
 #define SI_GSCOPY_NUM_USER_SGPR	4
-#define SI_PS_NUM_USER_SGPR	9
+#define SI_PS_NUM_USER_SGPR	10
 
 /* LLVM function parameter indices */
 #define SI_PARAM_RW_BUFFERS	0
@@ -148,23 +149,27 @@ struct radeon_shader_reloc;
 
 /* PS only parameters */
 #define SI_PARAM_ALPHA_REF		4
-#define SI_PARAM_PRIM_MASK		5
-#define SI_PARAM_PERSP_SAMPLE		6
-#define SI_PARAM_PERSP_CENTER		7
-#define SI_PARAM_PERSP_CENTROID		8
-#define SI_PARAM_PERSP_PULL_MODEL	9
-#define SI_PARAM_LINEAR_SAMPLE		10
-#define SI_PARAM_LINEAR_CENTER		11
-#define SI_PARAM_LINEAR_CENTROID	12
-#define SI_PARAM_LINE_STIPPLE_TEX	13
-#define SI_PARAM_POS_X_FLOAT		14
-#define SI_PARAM_POS_Y_FLOAT		15
-#define SI_PARAM_POS_Z_FLOAT		16
-#define SI_PARAM_POS_W_FLOAT		17
-#define SI_PARAM_FRONT_FACE		18
-#define SI_PARAM_ANCILLARY		19
-#define SI_PARAM_SAMPLE_COVERAGE	20
-#define SI_PARAM_POS_FIXED_PT		21
+/* Bits:
+ * 0: force_persample_interp
+ */
+#define SI_PARAM_PS_STATE_BITS		5
+#define SI_PARAM_PRIM_MASK		6
+#define SI_PARAM_PERSP_SAMPLE		7
+#define SI_PARAM_PERSP_CENTER		8
+#define SI_PARAM_PERSP_CENTROID		9
+#define SI_PARAM_PERSP_PULL_MODEL	10
+#define SI_PARAM_LINEAR_SAMPLE		11
+#define SI_PARAM_LINEAR_CENTER		12
+#define SI_PARAM_LINEAR_CENTROID	13
+#define SI_PARAM_LINE_STIPPLE_TEX	14
+#define SI_PARAM_POS_X_FLOAT		15
+#define SI_PARAM_POS_Y_FLOAT		16
+#define SI_PARAM_POS_Z_FLOAT		17
+#define SI_PARAM_POS_W_FLOAT		18
+#define SI_PARAM_FRONT_FACE		19
+#define SI_PARAM_ANCILLARY		20
+#define SI_PARAM_SAMPLE_COVERAGE	21
+#define SI_PARAM_POS_FIXED_PT		22
 
 #define SI_NUM_PARAMS (SI_PARAM_POS_FIXED_PT + 1)
 
@@ -181,6 +186,14 @@ struct si_shader_selector {
 
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
+
+	/* Whether the shader has to use a conditional assignment to
+	 * choose between weights when emulating
+	 * pipe_rasterizer_state::force_persample_interp.
+	 * If false, "si_emit_spi_ps_input" will take care of it instead.
+	 */
+	bool		forces_persample_interp_for_persp;
+	bool		forces_persample_interp_for_linear;
 
 	unsigned	gs_output_prim;
 	unsigned	gs_max_out_vertices;

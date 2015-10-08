@@ -686,6 +686,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 
 	rs->two_side = state->light_twoside;
 	rs->multisample_enable = state->multisample;
+	rs->force_persample_interp = state->force_persample_interp;
 	rs->clip_plane_enable = state->clip_plane_enable;
 	rs->line_stipple_enable = state->line_stipple_enable;
 	rs->poly_stipple_enable = state->poly_stipple_enable;
@@ -998,10 +999,10 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 			    S_028000_STENCIL_COPY(sctx->dbcb_stencil_copy_enabled) |
 			    S_028000_COPY_CENTROID(1) |
 			    S_028000_COPY_SAMPLE(sctx->dbcb_copy_sample));
-	} else if (sctx->db_inplace_flush_enabled) {
+	} else if (sctx->db_flush_depth_inplace || sctx->db_flush_stencil_inplace) {
 		radeon_emit(cs,
-			    S_028000_DEPTH_COMPRESS_DISABLE(1) |
-			    S_028000_STENCIL_COMPRESS_DISABLE(1));
+			    S_028000_DEPTH_COMPRESS_DISABLE(sctx->db_flush_depth_inplace) |
+			    S_028000_STENCIL_COMPRESS_DISABLE(sctx->db_flush_stencil_inplace));
 	} else if (sctx->db_depth_clear) {
 		radeon_emit(cs, S_028000_DEPTH_CLEAR_ENABLE(1));
 	} else {
@@ -2238,7 +2239,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		if (tex->cmask_buffer && tex->cmask_buffer != &tex->resource) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				tex->cmask_buffer, RADEON_USAGE_READWRITE,
-				RADEON_PRIO_COLOR_META);
+				RADEON_PRIO_CMASK);
 		}
 
 		radeon_set_context_reg_seq(cs, R_028C60_CB_COLOR0_BASE + i * 0x3C,
@@ -2285,7 +2286,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		if (zb->db_htile_data_base) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 					      rtex->htile_buffer, RADEON_USAGE_READWRITE,
-					      RADEON_PRIO_DEPTH_META);
+					      RADEON_PRIO_HTILE);
 		}
 
 		radeon_set_context_reg(cs, R_028008_DB_DEPTH_VIEW, zb->db_depth_view);
@@ -2410,6 +2411,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 
 	pipe_resource_reference(&view->base.texture, texture);
 	view->resource = &tmp->resource;
+
+	if (state->format == PIPE_FORMAT_X24S8_UINT ||
+	    state->format == PIPE_FORMAT_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_X32_S8X24_UINT ||
+	    state->format == PIPE_FORMAT_S8_UINT)
+		view->is_stencil_sampler = true;
 
 	/* Buffer resource. */
 	if (texture->target == PIPE_BUFFER) {
@@ -3391,7 +3398,7 @@ static void si_init_config(struct si_context *sctx)
 	if (sctx->b.chip_class >= CIK)
 		si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, border_color_va >> 40);
 	si_pm4_add_bo(pm4, sctx->border_color_buffer, RADEON_USAGE_READ,
-		      RADEON_PRIO_SHADER_DATA);
+		      RADEON_PRIO_BORDER_COLORS);
 
 	si_pm4_upload_indirect_buffer(sctx, pm4);
 	sctx->init_config = pm4;

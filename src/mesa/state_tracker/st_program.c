@@ -619,7 +619,9 @@ st_translate_fragment_program(struct st_context *st,
          else
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTER;
 
-         if (key->persample_shading)
+         if (stfp->Base.Base.SystemValuesRead & (SYSTEM_BIT_SAMPLE_ID |
+                                                 SYSTEM_BIT_SAMPLE_POS) ||
+             key->persample_shading)
             interpLocation[slot] = TGSI_INTERPOLATE_LOC_SAMPLE;
 
          switch (attr) {
@@ -1678,6 +1680,26 @@ st_precompile_shader_variant(struct st_context *st,
       memset(&key, 0, sizeof(key));
       key.st = st;
       st_get_vp_variant(st, p, &key);
+      break;
+   }
+
+   case GL_TESS_CONTROL_PROGRAM_NV: {
+      struct st_tessctrl_program *p = (struct st_tessctrl_program *)prog;
+      struct st_tcp_variant_key key;
+
+      memset(&key, 0, sizeof(key));
+      key.st = st;
+      st_get_tcp_variant(st, p, &key);
+      break;
+   }
+
+   case GL_TESS_EVALUATION_PROGRAM_NV: {
+      struct st_tesseval_program *p = (struct st_tesseval_program *)prog;
+      struct st_tep_variant_key key;
+
+      memset(&key, 0, sizeof(key));
+      key.st = st;
+      st_get_tep_variant(st, p, &key);
       break;
    }
 

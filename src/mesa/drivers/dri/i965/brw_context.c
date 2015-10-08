@@ -41,6 +41,7 @@
 #include "main/version.h"
 #include "main/vtxfmt.h"
 #include "main/texobj.h"
+#include "main/framebuffer.h"
 
 #include "vbo/vbo_context.h"
 
@@ -326,7 +327,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxUniformBlockSize = 65536;
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_program_constants *prog = &ctx->Const.Program[i];
-      prog->MaxUniformBlocks = 12;
+      prog->MaxUniformBlocks = BRW_MAX_UBO;
       prog->MaxCombinedUniformComponents =
          prog->MaxUniformComponents +
          ctx->Const.MaxUniformBlockSize / 4 * prog->MaxUniformBlocks;
@@ -346,7 +347,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits = 0;
    if (_mesa_extension_override_enables.ARB_compute_shader) {
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = BRW_MAX_TEX_UNIT;
-      ctx->Const.MaxUniformBufferBindings += 12;
+      ctx->Const.MaxUniformBufferBindings += BRW_MAX_UBO;
    } else {
       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits = 0;
    }
@@ -582,17 +583,17 @@ brw_initialize_context_constants(struct brw_context *brw)
    /* FIXME: Tessellation stages are not yet supported in i965, so
     * MaxCombinedShaderStorageBlocks doesn't take them into account.
     */
-   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = 12;
-   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = 12;
+   ctx->Const.Program[MESA_SHADER_VERTEX].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxShaderStorageBlocks = BRW_MAX_SSBO;
    ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxShaderStorageBlocks = 0;
    ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxShaderStorageBlocks = 0;
-   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = 12;
-   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = 12;
-   ctx->Const.MaxCombinedShaderStorageBlocks = 12 * 3;
-   ctx->Const.MaxShaderStorageBufferBindings = 36;
+   ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.Program[MESA_SHADER_COMPUTE].MaxShaderStorageBlocks = BRW_MAX_SSBO;
+   ctx->Const.MaxCombinedShaderStorageBlocks = BRW_MAX_SSBO * 3;
+   ctx->Const.MaxShaderStorageBufferBindings = BRW_MAX_SSBO * 3;
 
    if (_mesa_extension_override_enables.ARB_compute_shader)
-      ctx->Const.MaxShaderStorageBufferBindings += 12;
+      ctx->Const.MaxShaderStorageBufferBindings += BRW_MAX_SSBO;
 
    if (brw->gen >= 6) {
       ctx->Const.MaxVarying = 32;
@@ -1298,7 +1299,7 @@ intel_prepare_render(struct brw_context *brw)
     * that will happen next will probably dirty the front buffer.  So
     * mark it as dirty here.
     */
-   if (brw_is_front_buffer_drawing(ctx->DrawBuffer))
+   if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer))
       brw->front_buffer_dirty = true;
 }
 
@@ -1337,8 +1338,8 @@ intel_query_dri2_buffers(struct brw_context *brw,
    back_rb = intel_get_renderbuffer(fb, BUFFER_BACK_LEFT);
 
    memset(attachments, 0, sizeof(attachments));
-   if ((brw_is_front_buffer_drawing(fb) ||
-        brw_is_front_buffer_reading(fb) ||
+   if ((_mesa_is_front_buffer_drawing(fb) ||
+        _mesa_is_front_buffer_reading(fb) ||
         !back_rb) && front_rb) {
       /* If a fake front buffer is in use, then querying for
        * __DRI_BUFFER_FRONT_LEFT will cause the server to copy the image from
@@ -1452,7 +1453,7 @@ intel_process_dri2_buffer(struct brw_context *brw,
                                             drawable->w, drawable->h,
                                             buffer->pitch);
 
-   if (brw_is_front_buffer_drawing(fb) &&
+   if (_mesa_is_front_buffer_drawing(fb) &&
        (buffer->attachment == __DRI_BUFFER_FRONT_LEFT ||
         buffer->attachment == __DRI_BUFFER_FAKE_FRONT_LEFT) &&
        rb->Base.Base.NumSamples > 1) {
@@ -1510,7 +1511,7 @@ intel_update_image_buffer(struct brw_context *intel,
                                             buffer->width, buffer->height,
                                             buffer->pitch);
 
-   if (brw_is_front_buffer_drawing(fb) &&
+   if (_mesa_is_front_buffer_drawing(fb) &&
        buffer_type == __DRI_IMAGE_BUFFER_FRONT &&
        rb->Base.Base.NumSamples > 1) {
       intel_renderbuffer_upsample(intel, rb);
@@ -1538,8 +1539,8 @@ intel_update_image_buffers(struct brw_context *brw, __DRIdrawable *drawable)
    else
       return;
 
-   if (front_rb && (brw_is_front_buffer_drawing(fb) ||
-                    brw_is_front_buffer_reading(fb) || !back_rb)) {
+   if (front_rb && (_mesa_is_front_buffer_drawing(fb) ||
+                    _mesa_is_front_buffer_reading(fb) || !back_rb)) {
       buffer_mask |= __DRI_IMAGE_BUFFER_FRONT;
    }
 

@@ -92,6 +92,14 @@ _mesa_new_shader(struct gl_context *ctx, GLuint name, GLenum type)
 }
 
 void
+_mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
+{
+   free((void *)sh->Source);
+   free(sh->Label);
+   ralloc_free(sh);
+}
+
+void
 _mesa_clear_shader_program_data(struct gl_shader_program *shProg)
 {
    unsigned i;

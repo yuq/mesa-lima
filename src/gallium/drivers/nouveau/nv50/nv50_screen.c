@@ -215,6 +215,7 @@ nv50_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
    case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
    case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
+   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -387,6 +388,7 @@ nv50_screen_fence_emit(struct pipe_screen *pscreen, u32 *sequence)
    /* we need to do it after possible flush in MARK_RING */
    *sequence = ++screen->base.fence.sequence;
 
+   assert(PUSH_AVAIL(push) >= 5);
    PUSH_DATA (push, NV50_FIFO_PKHDR(NV50_3D(QUERY_ADDRESS_HIGH), 4));
    PUSH_DATAh(push, screen->fence.bo->offset);
    PUSH_DATA (push, screen->fence.bo->offset);

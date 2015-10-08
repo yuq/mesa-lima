@@ -76,7 +76,7 @@ public:
 		void *mem_ctx,
                 bool no_spills,
                 int shader_time_index);
-   ~vec4_visitor();
+   virtual ~vec4_visitor();
 
    dst_reg dst_null_f()
    {
@@ -223,9 +223,6 @@ public:
 
    int implied_mrf_writes(vec4_instruction *inst);
 
-   void emit_vp_sop(enum brw_conditional_mod condmod, dst_reg dst,
-                    src_reg src0, src_reg src1, src_reg one);
-
    vec4_instruction *emit_minmax(enum brw_conditional_mod conditionalmod, dst_reg dst,
                                  src_reg src0, src_reg src1);
 
@@ -237,11 +234,6 @@ public:
     * result.
     */
    src_reg emit_uniformize(const src_reg &src);
-
-   /**
-    * Emit the correct dot-product instruction for the type of arguments
-    */
-   void emit_dp(dst_reg dst, src_reg src0, src_reg src1, unsigned elements);
 
    src_reg fix_3src_operand(const src_reg &src);
    src_reg resolve_source_modifiers(const src_reg &src);

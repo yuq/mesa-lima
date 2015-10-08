@@ -2132,7 +2132,7 @@ link_intrastage_shaders(void *mem_ctx,
 
 
    if (!ok) {
-      ctx->Driver.DeleteShader(ctx, linked);
+      _mesa_delete_shader(ctx, linked);
       return NULL;
    }
 
@@ -3421,10 +3421,13 @@ build_program_resource_list(struct gl_shader_program *shProg)
    if (input_stage == MESA_SHADER_STAGES && output_stage == 0)
       return;
 
-   if (!add_packed_varyings(shProg, input_stage))
-      return;
-   if (!add_packed_varyings(shProg, output_stage))
-      return;
+   /* Program interface needs to expose varyings in case of SSO. */
+   if (shProg->SeparateShader) {
+      if (!add_packed_varyings(shProg, input_stage))
+         return;
+      if (!add_packed_varyings(shProg, output_stage))
+         return;
+   }
 
    /* Add inputs and outputs to the resource list. */
    if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage]->ir,
@@ -3497,7 +3500,7 @@ build_program_resource_list(struct gl_shader_program *shProg)
          continue;
 
       for (int j = MESA_SHADER_VERTEX; j < MESA_SHADER_STAGES; j++) {
-         if (!shProg->UniformStorage[i].subroutine[j].active)
+         if (!shProg->UniformStorage[i].opaque[j].active)
             continue;
 
          type = _mesa_shader_stage_to_subroutine_uniform((gl_shader_stage)j);
@@ -3732,7 +3735,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    for (unsigned int i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] != NULL)
-	 ctx->Driver.DeleteShader(ctx, prog->_LinkedShaders[i]);
+	 _mesa_delete_shader(ctx, prog->_LinkedShaders[i]);
 
       prog->_LinkedShaders[i] = NULL;
    }
@@ -3747,7 +3750,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
          if (!prog->LinkStatus) {
             if (sh)
-               ctx->Driver.DeleteShader(ctx, sh);
+               _mesa_delete_shader(ctx, sh);
             goto done;
          }
 
@@ -3770,7 +3773,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          }
          if (!prog->LinkStatus) {
             if (sh)
-               ctx->Driver.DeleteShader(ctx, sh);
+               _mesa_delete_shader(ctx, sh);
             goto done;
          }
 

@@ -187,7 +187,6 @@ LIBGLSL_FILES = \
 	opt_constant_variable.cpp \
 	opt_copy_propagation.cpp \
 	opt_copy_propagation_elements.cpp \
-	opt_cse.cpp \
 	opt_dead_builtin_variables.cpp \
 	opt_dead_builtin_varyings.cpp \
 	opt_dead_code.cpp \

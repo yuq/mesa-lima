@@ -353,7 +353,7 @@ static void si_emit_scratch_reloc(struct si_context *sctx)
 	if (sctx->scratch_buffer) {
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
-				      RADEON_PRIO_SHADER_RESOURCE_RW);
+				      RADEON_PRIO_SCRATCH_BUFFER);
 
 	}
 	sctx->emit_scratch_reloc = false;
@@ -467,7 +467,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      t->buf_filled_size, RADEON_USAGE_READ,
-				      RADEON_PRIO_MIN);
+				      RADEON_PRIO_SO_FILLED_SIZE);
 	}
 
 	/* draw packet */
@@ -521,7 +521,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource *)info->indirect,
-				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
+				      RADEON_USAGE_READ, RADEON_PRIO_DRAW_INDIRECT);
 	}
 
 	if (info->indexed) {
@@ -531,7 +531,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx,
 				      (struct r600_resource *)ib->buffer,
-				      RADEON_USAGE_READ, RADEON_PRIO_MIN);
+				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
 
 		if (info->indirect) {
 			uint64_t indirect_va = r600_resource(info->indirect)->gpu_address;
@@ -813,9 +813,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		}
 	}
 
-	/* TODO: VI should read index buffers through TC, so this shouldn't be
-	 * needed on VI. */
-	if (info->indexed && r600_resource(ib.buffer)->TC_L2_dirty) {
+	/* VI reads index buffers through TC L2. */
+	if (info->indexed && sctx->b.chip_class <= CIK &&
+	    r600_resource(ib.buffer)->TC_L2_dirty) {
 		sctx->b.flags |= SI_CONTEXT_INV_TC_L2;
 		r600_resource(ib.buffer)->TC_L2_dirty = false;
 	}
@@ -858,6 +858,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		struct r600_texture *rtex = (struct r600_texture *)surf->texture;
 
 		rtex->dirty_level_mask |= 1 << surf->u.tex.level;
+
+		if (rtex->surface.flags & RADEON_SURF_SBUFFER)
+			rtex->stencil_dirty_level_mask |= 1 << surf->u.tex.level;
 	}
 	if (sctx->framebuffer.compressed_cb_mask) {
 		struct pipe_surface *surf;
@@ -883,7 +886,7 @@ void si_trace_emit(struct si_context *sctx)
 
 	sctx->trace_id++;
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, sctx->trace_buf,
-			      RADEON_USAGE_READWRITE, RADEON_PRIO_MIN);
+			      RADEON_USAGE_READWRITE, RADEON_PRIO_TRACE);
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
 	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
 		    S_370_WR_CONFIRM(1) |

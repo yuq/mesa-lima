@@ -50,6 +50,7 @@ struct si_state_rasterizer {
 	bool			flatshade;
 	bool			two_side;
 	bool			multisample_enable;
+	bool			force_persample_interp;
 	bool			line_stipple_enable;
 	unsigned		sprite_coord_enable;
 	unsigned		pa_sc_line_stipple;
@@ -123,6 +124,7 @@ union si_state_atoms {
 		struct r600_atom *viewports;
 		struct r600_atom *stencil_ref;
 		struct r600_atom *spi_map;
+		struct r600_atom *spi_ps_input;
 	} s;
 	struct r600_atom *array[0];
 };

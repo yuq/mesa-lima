@@ -201,6 +201,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_VERTEXID_NOBASE:
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
    case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
+   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
@@ -536,7 +537,8 @@ nvc0_screen_fence_emit(struct pipe_screen *pscreen, u32 *sequence)
    /* we need to do it after possible flush in MARK_RING */
    *sequence = ++screen->base.fence.sequence;
 
-   BEGIN_NVC0(push, NVC0_3D(QUERY_ADDRESS_HIGH), 4);
+   assert(PUSH_AVAIL(push) >= 5);
+   PUSH_DATA (push, NVC0_FIFO_PKHDR_SQ(NVC0_3D(QUERY_ADDRESS_HIGH), 4));
    PUSH_DATAh(push, screen->fence.bo->offset);
    PUSH_DATA (push, screen->fence.bo->offset);
    PUSH_DATA (push, *sequence);

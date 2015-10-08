@@ -210,7 +210,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    inst->regs_written = regs_written;
 
    if (devinfo->gen < 7) {
-      inst->base_mrf = 13;
+      inst->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen);
       inst->header_size = 1;
       if (devinfo->gen == 4)
          inst->mlen = 3;
@@ -2698,7 +2698,7 @@ fs_visitor::emit_repclear_shader()
 bool
 fs_visitor::remove_duplicate_mrf_writes()
 {
-   fs_inst *last_mrf_move[16];
+   fs_inst *last_mrf_move[BRW_MAX_MRF(devinfo->gen)];
    bool progress = false;
 
    /* Need to update the MRF tracking for compressed instructions. */
@@ -3019,7 +3019,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
           * else does except for register spill/unspill, which generates and
           * uses its MRF within a single IR instruction.
           */
-         inst->base_mrf = 14;
+         inst->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen) + 1;
          inst->mlen = 1;
       }
    }
@@ -4738,20 +4738,43 @@ fs_visitor::setup_vs_payload()
    payload.num_regs = 2;
 }
 
+/**
+ * We are building the local ID push constant data using the simplest possible
+ * method. We simply push the local IDs directly as they should appear in the
+ * registers for the uvec3 gl_LocalInvocationID variable.
+ *
+ * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
+ * registers worth of push constant space.
+ *
+ * Note: Any updates to brw_cs_prog_local_id_payload_dwords,
+ * fill_local_id_payload or fs_visitor::emit_cs_local_invocation_id_setup need
+ * to coordinated.
+ *
+ * FINISHME: There are a few easy optimizations to consider.
+ *
+ * 1. If gl_WorkGroupSize x, y or z is 1, we can just use zero, and there is
+ *    no need for using push constant space for that dimension.
+ *
+ * 2. Since GL_MAX_COMPUTE_WORK_GROUP_SIZE is currently 1024 or less, we can
+ *    easily use 16-bit words rather than 32-bit dwords in the push constant
+ *    data.
+ *
+ * 3. If gl_WorkGroupSize x, y or z is small, then we can use bytes for
+ *    conveying the data, and thereby reduce push constant usage.
+ *
+ */
 void
 fs_visitor::setup_cs_payload()
 {
    assert(devinfo->gen >= 7);
+   brw_cs_prog_data *prog_data = (brw_cs_prog_data*) this->prog_data;
 
    payload.num_regs = 1;
 
    if (nir->info.system_values_read & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
-      const unsigned local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(dispatch_width);
-      assert((local_id_dwords & 0x7) == 0);
-      const unsigned local_id_regs = local_id_dwords / 8;
+      prog_data->local_invocation_id_regs = dispatch_width * 3 / 8;
       payload.local_invocation_id_reg = payload.num_regs;
-      payload.num_regs += local_id_regs;
+      payload.num_regs += prog_data->local_invocation_id_regs;
    }
 }
 
@@ -4843,7 +4866,7 @@ fs_visitor::optimize()
       OPT(opt_algebraic);
       OPT(opt_cse);
       OPT(opt_copy_propagate);
-      OPT(opt_peephole_predicated_break);
+      OPT(opt_predicated_break, this);
       OPT(opt_cmod_propagation);
       OPT(dead_code_eliminate);
       OPT(opt_peephole_sel);
@@ -5118,25 +5141,13 @@ brw_wm_fs_emit(struct brw_context *brw,
                struct brw_wm_prog_data *prog_data,
                struct gl_fragment_program *fp,
                struct gl_shader_program *prog,
+               int shader_time_index8, int shader_time_index16,
                unsigned *final_assembly_size)
 {
-   struct brw_shader *shader = NULL;
-   if (prog)
-      shader = (brw_shader *) prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
-
-   if (unlikely(INTEL_DEBUG & DEBUG_WM) && shader->base.ir)
-      brw_dump_ir("fragment", prog, &shader->base, &fp->Base);
-
-   int st_index8 = -1, st_index16 = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      st_index8 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS8);
-      st_index16 = brw_get_shader_time_index(brw, prog, &fp->Base, ST_FS16);
-   }
-
    /* Now the main event: Visit the shader IR and generate our FS IR for it.
     */
    fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
-                &prog_data->base, &fp->Base, fp->Base.nir, 8, st_index8);
+                &prog_data->base, &fp->Base, fp->Base.nir, 8, shader_time_index8);
    if (!v.run_fs(false /* do_rep_send */)) {
       if (prog) {
          prog->LinkStatus = false;
@@ -5151,7 +5162,7 @@ brw_wm_fs_emit(struct brw_context *brw,
 
    cfg_t *simd16_cfg = NULL;
    fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &fp->Base, fp->Base.nir, 16, st_index16);
+                 &prog_data->base, &fp->Base, fp->Base.nir, 16, shader_time_index16);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
@@ -5198,6 +5209,42 @@ brw_wm_fs_emit(struct brw_context *brw,
    return g.get_assembly(final_assembly_size);
 }
 
+void
+brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *prog_data,
+                             void *buffer, uint32_t threads, uint32_t stride)
+{
+   if (prog_data->local_invocation_id_regs == 0)
+      return;
+
+   /* 'stride' should be an integer number of registers, that is, a multiple
+    * of 32 bytes.
+    */
+   assert(stride % 32 == 0);
+
+   unsigned x = 0, y = 0, z = 0;
+   for (unsigned t = 0; t < threads; t++) {
+      uint32_t *param = (uint32_t *) buffer + stride * t / 4;
+
+      for (unsigned i = 0; i < prog_data->simd_size; i++) {
+         param[0 * prog_data->simd_size + i] = x;
+         param[1 * prog_data->simd_size + i] = y;
+         param[2 * prog_data->simd_size + i] = z;
+
+         x++;
+         if (x == prog_data->local_size[0]) {
+            x = 0;
+            y++;
+            if (y == prog_data->local_size[1]) {
+               y = 0;
+               z++;
+               if (z == prog_data->local_size[2])
+                  z = 0;
+            }
+         }
+      }
+   }
+}
+
 fs_reg *
 fs_visitor::emit_cs_local_invocation_id_setup()
 {
@@ -5242,43 +5289,35 @@ brw_cs_emit(struct brw_context *brw,
             struct brw_cs_prog_data *prog_data,
             struct gl_compute_program *cp,
             struct gl_shader_program *prog,
+            int shader_time_index,
             unsigned *final_assembly_size)
 {
-   struct brw_shader *shader =
-      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
-
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      brw_dump_ir("compute", prog, &shader->base, &cp->Base);
-
    prog_data->local_size[0] = cp->LocalSize[0];
    prog_data->local_size[1] = cp->LocalSize[1];
    prog_data->local_size[2] = cp->LocalSize[2];
    unsigned local_workgroup_size =
       cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
+   unsigned max_cs_threads = brw->intelScreen->compiler->devinfo->max_cs_threads;
 
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
 
-   int st_index = -1;
-   if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &cp->Base, ST_CS);
-
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
    fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &cp->Base, cp->Base.nir, 8, st_index);
+                 &prog_data->base, &cp->Base, cp->Base.nir, 8, shader_time_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
-   } else if (local_workgroup_size <= 8 * brw->max_cs_threads) {
+   } else if (local_workgroup_size <= 8 * max_cs_threads) {
       cfg = v8.cfg;
       prog_data->simd_size = 8;
    }
 
    fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
-                  &prog_data->base, &cp->Base, cp->Base.nir, 16, st_index);
+                  &prog_data->base, &cp->Base, cp->Base.nir, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
-       local_workgroup_size <= 16 * brw->max_cs_threads) {
+       local_workgroup_size <= 16 * max_cs_threads) {
       /* Try a SIMD16 compile */
       v16.import_uniforms(&v8);
       if (!v16.run_cs()) {

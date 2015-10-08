@@ -1661,8 +1661,8 @@ glsl_type::std430_size(bool row_major) const
       unsigned int array_len;
 
       if (this->is_array()) {
-         element_type = this->fields.array;
-         array_len = this->length;
+         element_type = this->without_array();
+         array_len = this->arrays_of_arrays_size();
       } else {
          element_type = this;
          array_len = 1;
@@ -1685,10 +1685,12 @@ glsl_type::std430_size(bool row_major) const
    }
 
    if (this->is_array()) {
-      if (this->fields.array->is_record())
-         return this->length * this->fields.array->std430_size(row_major);
+      if (this->without_array()->is_record())
+         return this->arrays_of_arrays_size() *
+            this->without_array()->std430_size(row_major);
       else
-         return this->length * this->fields.array->std430_base_alignment(row_major);
+         return this->arrays_of_arrays_size() *
+            this->without_array()->std430_base_alignment(row_major);
    }
 
    if (this->is_record() || this->is_interface()) {

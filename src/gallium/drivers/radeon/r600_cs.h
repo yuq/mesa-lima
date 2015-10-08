@@ -65,7 +65,7 @@ static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rct
 			rctx->rings.gfx.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
 		}
 	}
-	return rctx->ws->cs_add_reloc(ring->cs, rbo->cs_buf, usage,
+	return rctx->ws->cs_add_buffer(ring->cs, rbo->cs_buf, usage,
 				      rbo->domains, priority) * 4;
 }
 

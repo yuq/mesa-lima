@@ -28,6 +28,7 @@
 #include "si_shader.h"
 #include "sid.h"
 #include "sid_tables.h"
+#include "ddebug/dd_util.h"
 
 
 static void si_dump_shader(struct si_shader_selector *sel, const char *name,
@@ -392,6 +393,141 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 	fprintf(f, "\n");
 }
 
+static void si_dump_last_ib(struct si_context *sctx, FILE *f)
+{
+	int last_trace_id = -1;
+
+	if (!sctx->last_ib)
+		return;
+
+	if (sctx->last_trace_buf) {
+		/* We are expecting that the ddebug pipe has already
+		 * waited for the context, so this buffer should be idle.
+		 * If the GPU is hung, there is no point in waiting for it.
+		 */
+		uint32_t *map = sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
+						       NULL,
+						       PIPE_TRANSFER_UNSYNCHRONIZED |
+						       PIPE_TRANSFER_READ);
+		if (map)
+			last_trace_id = *map;
+	}
+
+	si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
+		    last_trace_id);
+	free(sctx->last_ib); /* dump only once */
+	sctx->last_ib = NULL;
+	r600_resource_reference(&sctx->last_trace_buf, NULL);
+}
+
+static const char *priority_to_string(enum radeon_bo_priority priority)
+{
+#define ITEM(x) [RADEON_PRIO_##x] = #x
+	static const char *table[64] = {
+		ITEM(FENCE),
+	        ITEM(TRACE),
+	        ITEM(SO_FILLED_SIZE),
+	        ITEM(QUERY),
+	        ITEM(IB1),
+	        ITEM(IB2),
+	        ITEM(DRAW_INDIRECT),
+	        ITEM(INDEX_BUFFER),
+	        ITEM(CP_DMA),
+	        ITEM(VCE),
+	        ITEM(UVD),
+	        ITEM(SDMA_BUFFER),
+	        ITEM(SDMA_TEXTURE),
+	        ITEM(USER_SHADER),
+	        ITEM(INTERNAL_SHADER),
+	        ITEM(CONST_BUFFER),
+	        ITEM(DESCRIPTORS),
+	        ITEM(BORDER_COLORS),
+	        ITEM(SAMPLER_BUFFER),
+	        ITEM(VERTEX_BUFFER),
+	        ITEM(SHADER_RW_BUFFER),
+	        ITEM(RINGS_STREAMOUT),
+	        ITEM(SCRATCH_BUFFER),
+	        ITEM(COMPUTE_GLOBAL),
+	        ITEM(SAMPLER_TEXTURE),
+	        ITEM(SHADER_RW_IMAGE),
+	        ITEM(SAMPLER_TEXTURE_MSAA),
+	        ITEM(COLOR_BUFFER),
+	        ITEM(DEPTH_BUFFER),
+	        ITEM(COLOR_BUFFER_MSAA),
+	        ITEM(DEPTH_BUFFER_MSAA),
+	        ITEM(CMASK),
+	        ITEM(DCC),
+	        ITEM(HTILE),
+	};
+#undef ITEM
+
+	assert(priority < ARRAY_SIZE(table));
+	return table[priority];
+}
+
+static int bo_list_compare_va(const struct radeon_bo_list_item *a,
+				   const struct radeon_bo_list_item *b)
+{
+	return a->vm_address < b->vm_address ? -1 :
+	       a->vm_address > b->vm_address ? 1 : 0;
+}
+
+static void si_dump_last_bo_list(struct si_context *sctx, FILE *f)
+{
+	unsigned i,j;
+
+	if (!sctx->last_bo_list)
+		return;
+
+	/* Sort the list according to VM adddresses first. */
+	qsort(sctx->last_bo_list, sctx->last_bo_count,
+	      sizeof(sctx->last_bo_list[0]), (void*)bo_list_compare_va);
+
+	fprintf(f, "Buffer list (in units of pages = 4kB):\n"
+		COLOR_YELLOW "        Size    VM start page         "
+		"VM end page           Usage" COLOR_RESET "\n");
+
+	for (i = 0; i < sctx->last_bo_count; i++) {
+		/* Note: Buffer sizes are expected to be aligned to 4k by the winsys. */
+		const unsigned page_size = 4096;
+		uint64_t va = sctx->last_bo_list[i].vm_address;
+		uint64_t size = sctx->last_bo_list[i].buf->size;
+		bool hit = false;
+
+		/* If there's unused virtual memory between 2 buffers, print it. */
+		if (i) {
+			uint64_t previous_va_end = sctx->last_bo_list[i-1].vm_address +
+						   sctx->last_bo_list[i-1].buf->size;
+
+			if (va > previous_va_end) {
+				fprintf(f, "  %10"PRIu64"    -- hole --\n",
+					(va - previous_va_end) / page_size);
+			}
+		}
+
+		/* Print the buffer. */
+		fprintf(f, "  %10"PRIu64"    0x%013"PRIx64"       0x%013"PRIx64"       ",
+			size / page_size, va / page_size, (va + size) / page_size);
+
+		/* Print the usage. */
+		for (j = 0; j < 64; j++) {
+			if (!(sctx->last_bo_list[i].priority_usage & (1llu << j)))
+				continue;
+
+			fprintf(f, "%s%s", !hit ? "" : ", ", priority_to_string(j));
+			hit = true;
+		}
+		fprintf(f, "\n");
+	}
+	fprintf(f, "\nNote: The holes represent memory not used by the IB.\n"
+		   "      Other buffers can still be allocated there.\n\n");
+
+	for (i = 0; i < sctx->last_bo_count; i++)
+		pb_reference(&sctx->last_bo_list[i].buf, NULL);
+	free(sctx->last_bo_list);
+	sctx->last_bo_list = NULL;
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -406,34 +542,126 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	si_dump_shader(sctx->gs_shader, "Geometry", f);
 	si_dump_shader(sctx->ps_shader, "Fragment", f);
 
-	if (sctx->last_ib) {
-		int last_trace_id = -1;
-
-		if (sctx->last_trace_buf) {
-			/* We are expecting that the ddebug pipe has already
-			 * waited for the context, so this buffer should be idle.
-			 * If the GPU is hung, there is no point in waiting for it.
-			 */
-			uint32_t *map =
-				sctx->b.ws->buffer_map(sctx->last_trace_buf->cs_buf,
-						       NULL,
-						       PIPE_TRANSFER_UNSYNCHRONIZED |
-						       PIPE_TRANSFER_READ);
-			if (map)
-				last_trace_id = *map;
-		}
-
-		si_parse_ib(f, sctx->last_ib, sctx->last_ib_dw_size,
-			    last_trace_id);
-		free(sctx->last_ib); /* dump only once */
-		sctx->last_ib = NULL;
-		r600_resource_reference(&sctx->last_trace_buf, NULL);
-	}
+	si_dump_last_bo_list(sctx, f);
+	si_dump_last_ib(sctx, f);
 
 	fprintf(f, "Done.\n");
+}
+
+static bool si_vm_fault_occured(struct si_context *sctx, uint32_t *out_addr)
+{
+	char line[2000];
+	unsigned sec, usec;
+	int progress = 0;
+	uint64_t timestamp = 0;
+	bool fault = false;
+
+	FILE *p = popen("dmesg", "r");
+	if (!p)
+		return false;
+
+	while (fgets(line, sizeof(line), p)) {
+		char *msg, len;
+
+		/* Get the timestamp. */
+		if (sscanf(line, "[%u.%u]", &sec, &usec) != 2) {
+			assert(0);
+			continue;
+		}
+		timestamp = sec * 1000000llu + usec;
+
+		/* If just updating the timestamp. */
+		if (!out_addr)
+			continue;
+
+		/* Process messages only if the timestamp is newer. */
+		if (timestamp <= sctx->dmesg_timestamp)
+			continue;
+
+		/* Only process the first VM fault. */
+		if (fault)
+			continue;
+
+		/* Remove trailing \n */
+		len = strlen(line);
+		if (len && line[len-1] == '\n')
+			line[len-1] = 0;
+
+		/* Get the message part. */
+		msg = strchr(line, ']');
+		if (!msg) {
+			assert(0);
+			continue;
+		}
+		msg++;
+
+		switch (progress) {
+		case 0:
+			if (strstr(msg, "GPU fault detected:"))
+				progress = 1;
+			break;
+		case 1:
+			msg = strstr(msg, "VM_CONTEXT1_PROTECTION_FAULT_ADDR");
+			if (msg) {
+				msg = strstr(msg, "0x");
+				if (msg) {
+					msg += 2;
+					if (sscanf(msg, "%X", out_addr) == 1)
+						fault = true;
+				}
+			}
+			progress = 0;
+			break;
+		default:
+			progress = 0;
+		}
+	}
+	pclose(p);
+
+	if (timestamp > sctx->dmesg_timestamp)
+		sctx->dmesg_timestamp = timestamp;
+	return fault;
+}
+
+void si_check_vm_faults(struct si_context *sctx)
+{
+	struct pipe_screen *screen = sctx->b.b.screen;
+	FILE *f;
+	uint32_t addr;
+
+	/* Use conservative timeout 800ms, after which we won't wait any
+	 * longer and assume the GPU is hung.
+	 */
+	screen->fence_finish(screen, sctx->last_gfx_fence, 800*1000*1000);
+
+	if (!si_vm_fault_occured(sctx, &addr))
+		return;
+
+	f = dd_get_debug_file();
+	if (!f)
+		return;
+
+	fprintf(f, "VM fault report.\n\n");
+	fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
+	fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));
+	fprintf(f, "Device name: %s\n\n", screen->get_name(screen));
+	fprintf(f, "Failing VM page: 0x%08x\n\n", addr);
+
+	si_dump_last_bo_list(sctx, f);
+	si_dump_last_ib(sctx, f);
+	fclose(f);
+
+	fprintf(stderr, "Detected a VM fault, exiting...\n");
+	exit(0);
 }
 
 void si_init_debug_functions(struct si_context *sctx)
 {
 	sctx->b.b.dump_debug_state = si_dump_debug_state;
+
+	/* Set the initial dmesg timestamp for this context, so that
+	 * only new messages will be checked for VM faults.
+	 */
+	if (sctx->screen->b.debug_flags & DBG_CHECK_VM)
+		si_vm_fault_occured(sctx, NULL);
 }

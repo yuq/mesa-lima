@@ -2354,7 +2354,7 @@ _mesa_print_arrays(struct gl_context *ctx)
 void
 _mesa_init_varray(struct gl_context *ctx)
 {
-   ctx->Array.DefaultVAO = ctx->Driver.NewArrayObject(ctx, 0);
+   ctx->Array.DefaultVAO = _mesa_new_vao(ctx, 0);
    _mesa_reference_vao(ctx, &ctx->Array.VAO, ctx->Array.DefaultVAO);
    ctx->Array.ActiveTexture = 0;   /* GL_ARB_multitexture */
 

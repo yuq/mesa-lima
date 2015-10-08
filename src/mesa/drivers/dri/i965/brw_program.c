@@ -242,18 +242,6 @@ brw_add_texrect_params(struct gl_program *prog)
    }
 }
 
-/* Per-thread scratch space is a power-of-two multiple of 1KB. */
-int
-brw_get_scratch_size(int size)
-{
-   int i;
-
-   for (i = 1024; i < size; i *= 2)
-      ;
-
-   return i;
-}
-
 void
 brw_get_scratch_bo(struct brw_context *brw,
 		   drm_intel_bo **scratch_bo, int size)
@@ -528,16 +516,6 @@ brw_destroy_shader_time(struct brw_context *brw)
 {
    drm_intel_bo_unreference(brw->shader_time.bo);
    brw->shader_time.bo = NULL;
-}
-
-void
-brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
-                      unsigned surf_index)
-{
-   assert(surf_index < BRW_MAX_SURFACES);
-
-   prog_data->binding_table.size_bytes =
-      MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
 }
 
 void

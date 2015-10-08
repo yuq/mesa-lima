@@ -26,8 +26,6 @@
 #include "glsl/ir_uniform.h"
 #include "program/sampler.h"
 
-#define FIRST_SPILL_MRF(gen) (gen == 6 ? 21 : 13)
-
 namespace brw {
 
 vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
@@ -276,16 +274,6 @@ vec4_visitor::SCRATCH_WRITE(const dst_reg &dst, const src_reg &src,
    inst->mlen = 3;
 
    return inst;
-}
-
-void
-vec4_visitor::emit_dp(dst_reg dst, src_reg src0, src_reg src1, unsigned elements)
-{
-   static enum opcode dot_opcodes[] = {
-      BRW_OPCODE_DP2, BRW_OPCODE_DP3, BRW_OPCODE_DP4
-   };
-
-   emit(dot_opcodes[elements - 2], dst, src0, src1);
 }
 
 src_reg
@@ -803,7 +791,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
                                            dst,
                                            surf_index,
                                            offset_reg);
-      pull->base_mrf = FIRST_SPILL_MRF(devinfo->gen) + 1;
+      pull->base_mrf = FIRST_PULL_LOAD_MRF(devinfo->gen) + 1;
       pull->mlen = 1;
    }
 

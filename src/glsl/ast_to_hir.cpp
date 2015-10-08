@@ -6358,7 +6358,7 @@ ast_interface_block::hir(exec_list *instructions,
          const glsl_type *block_array_type =
             process_array_type(&loc, block_type, this->array_specifier, state);
 
-          /* From section 4.3.9 (Interface Blocks) of the GLSL ES 3.10 spec:
+         /* From section 4.3.9 (Interface Blocks) of the GLSL ES 3.10 spec:
           *
           *     * Arrays of arrays of blocks are not allowed
           */

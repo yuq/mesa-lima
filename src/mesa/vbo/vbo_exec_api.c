@@ -419,7 +419,7 @@ do {									\
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;		\
    int sz = (sizeof(C) / sizeof(GLfloat));                              \
    if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT)))	\
-      ctx->Driver.BeginVertices( ctx );					\
+      vbo_exec_BeginVertices(ctx);					\
                                                                         \
    if (unlikely(exec->vtx.active_sz[A] != N * sz) ||                    \
        unlikely(exec->vtx.attrtype[A] != T))                            \
@@ -1165,7 +1165,14 @@ void vbo_exec_BeginVertices( struct gl_context *ctx )
 
 
 /**
- * Called via ctx->Driver.FlushVertices()
+ * If inside glBegin()/glEnd(), it should assert(0).  Otherwise, if
+ * FLUSH_STORED_VERTICES bit in \p flags is set flushes any buffered
+ * vertices, if FLUSH_UPDATE_CURRENT bit is set updates
+ * __struct gl_contextRec::Current and gl_light_attrib::Material
+ *
+ * Note that the default T&L engine never clears the
+ * FLUSH_UPDATE_CURRENT bit, even after performing the update.
+ *
  * \param flags  bitmask of FLUSH_STORED_VERTICES, FLUSH_UPDATE_CURRENT
  */
 void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )
@@ -1190,7 +1197,7 @@ void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )
    /* Flush (draw), and make sure VBO is left unmapped when done */
    vbo_exec_FlushVertices_internal(exec, GL_TRUE);
 
-   /* Need to do this to ensure BeginVertices gets called again:
+   /* Need to do this to ensure vbo_exec_BeginVertices gets called again:
     */
    ctx->Driver.NeedFlush &= ~(FLUSH_UPDATE_CURRENT | flags);
 

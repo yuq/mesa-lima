@@ -1,6 +1,7 @@
 C_SOURCES := \
-	dd_pipe.h \
-	dd_public.h \
 	dd_context.c \
 	dd_draw.c \
-	dd_screen.c
+	dd_pipe.h \
+	dd_public.h \
+	dd_screen.c \
+	dd_util.h

@@ -70,10 +70,8 @@ brw_upload_cs_state(struct brw_context *brw)
 
    unsigned local_id_dwords = 0;
 
-   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
-      local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(cs_prog_data->simd_size);
-   }
+   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID)
+      local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
 
    unsigned push_constant_data_size =
       (prog_data->nr_params + local_id_dwords) * sizeof(gl_constant_value);
@@ -191,63 +189,6 @@ const struct brw_tracked_state brw_cs_state = {
 
 
 /**
- * We are building the local ID push constant data using the simplest possible
- * method. We simply push the local IDs directly as they should appear in the
- * registers for the uvec3 gl_LocalInvocationID variable.
- *
- * Therefore, for SIMD8, we use 3 full registers, and for SIMD16 we use 6
- * registers worth of push constant space.
- *
- * Note: Any updates to brw_cs_prog_local_id_payload_dwords,
- * fill_local_id_payload or fs_visitor::emit_cs_local_invocation_id_setup need
- * to coordinated.
- *
- * FINISHME: There are a few easy optimizations to consider.
- *
- * 1. If gl_WorkGroupSize x, y or z is 1, we can just use zero, and there is
- *    no need for using push constant space for that dimension.
- *
- * 2. Since GL_MAX_COMPUTE_WORK_GROUP_SIZE is currently 1024 or less, we can
- *    easily use 16-bit words rather than 32-bit dwords in the push constant
- *    data.
- *
- * 3. If gl_WorkGroupSize x, y or z is small, then we can use bytes for
- *    conveying the data, and thereby reduce push constant usage.
- *
- */
-unsigned
-brw_cs_prog_local_id_payload_dwords(unsigned dispatch_width)
-{
-   return 3 * dispatch_width;
-}
-
-
-static void
-fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,
-                      void *buffer, unsigned *x, unsigned *y, unsigned *z)
-{
-   uint32_t *param = (uint32_t *)buffer;
-   for (unsigned i = 0; i < cs_prog_data->simd_size; i++) {
-      param[0 * cs_prog_data->simd_size + i] = *x;
-      param[1 * cs_prog_data->simd_size + i] = *y;
-      param[2 * cs_prog_data->simd_size + i] = *z;
-
-      (*x)++;
-      if (*x == cs_prog_data->local_size[0]) {
-         *x = 0;
-         (*y)++;
-         if (*y == cs_prog_data->local_size[1]) {
-            *y = 0;
-            (*z)++;
-            if (*z == cs_prog_data->local_size[2])
-               *z = 0;
-         }
-      }
-   }
-}
-
-
-/**
  * Creates a region containing the push constants for the CS on gen7+.
  *
  * Push constants are constant values (such as GLSL uniforms) that are
@@ -269,10 +210,8 @@ brw_upload_cs_push_constants(struct brw_context *brw,
       (struct brw_stage_prog_data*) cs_prog_data;
    unsigned local_id_dwords = 0;
 
-   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID) {
-      local_id_dwords =
-         brw_cs_prog_local_id_payload_dwords(cs_prog_data->simd_size);
-   }
+   if (prog->SystemValuesRead & SYSTEM_BIT_LOCAL_INVOCATION_ID)
+      local_id_dwords = cs_prog_data->local_invocation_id_regs * 8;
 
    /* Updates the ParamaterValues[i] pointers for all parameters of the
     * basic type of PROGRAM_STATE_VAR.
@@ -302,14 +241,13 @@ brw_upload_cs_push_constants(struct brw_context *brw,
 
       STATIC_ASSERT(sizeof(gl_constant_value) == sizeof(float));
 
+      brw_cs_fill_local_id_payload(cs_prog_data, param, threads,
+                                   reg_aligned_constant_size);
+
       /* _NEW_PROGRAM_CONSTANTS */
-      unsigned x = 0, y = 0, z = 0;
       for (t = 0; t < threads; t++) {
-         gl_constant_value *next_param = &param[t * param_aligned_count];
-         if (local_id_dwords > 0) {
-            fill_local_id_payload(cs_prog_data, (void*)next_param, &x, &y, &z);
-            next_param += local_id_dwords;
-         }
+         gl_constant_value *next_param =
+            &param[t * param_aligned_count + local_id_dwords];
          for (i = 0; i < prog_data->nr_params; i++) {
             next_param[i] = *prog_data->param[i];
          }

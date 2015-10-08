@@ -32,7 +32,7 @@ void si_need_cs_space(struct si_context *ctx)
 	struct radeon_winsys_cs *cs = ctx->b.rings.gfx.cs;
 
 	/* There are two memory usage counters in the winsys for all buffers
-	 * that have been added (cs_add_reloc) and two counters in the pipe
+	 * that have been added (cs_add_buffer) and two counters in the pipe
 	 * driver for those that haven't been added yet.
 	 */
 	if (unlikely(!ctx->b.ws->cs_memory_below_limit(ctx->b.rings.gfx.cs,
@@ -85,14 +85,27 @@ void si_context_gfx_flush(void *context, unsigned flags,
 	if (ctx->trace_buf)
 		si_trace_emit(ctx);
 
-	/* Save the IB for debug contexts. */
 	if (ctx->is_debug) {
+		unsigned i;
+
+		/* Save the IB for debug contexts. */
 		free(ctx->last_ib);
 		ctx->last_ib_dw_size = cs->cdw;
 		ctx->last_ib = malloc(cs->cdw * 4);
 		memcpy(ctx->last_ib, cs->buf, cs->cdw * 4);
 		r600_resource_reference(&ctx->last_trace_buf, ctx->trace_buf);
 		r600_resource_reference(&ctx->trace_buf, NULL);
+
+		/* Save the buffer list. */
+		if (ctx->last_bo_list) {
+			for (i = 0; i < ctx->last_bo_count; i++)
+				pb_reference(&ctx->last_bo_list[i].buf, NULL);
+			free(ctx->last_bo_list);
+		}
+		ctx->last_bo_count = ws->cs_get_buffer_list(cs, NULL);
+		ctx->last_bo_list = calloc(ctx->last_bo_count,
+					   sizeof(ctx->last_bo_list[0]));
+		ws->cs_get_buffer_list(cs, ctx->last_bo_list);
 	}
 
 	/* Flush the CS. */
@@ -102,6 +115,10 @@ void si_context_gfx_flush(void *context, unsigned flags,
 
 	if (fence)
 		ws->fence_reference(fence, ctx->last_gfx_fence);
+
+	/* Check VM faults if needed. */
+	if (ctx->screen->b.debug_flags & DBG_CHECK_VM)
+		si_check_vm_faults(ctx);
 
 	si_begin_new_cs(ctx);
 }
@@ -154,6 +171,7 @@ void si_begin_new_cs(struct si_context *ctx)
 	si_mark_atom_dirty(ctx, &ctx->db_render_state);
 	si_mark_atom_dirty(ctx, &ctx->stencil_ref.atom);
 	si_mark_atom_dirty(ctx, &ctx->spi_map);
+	si_mark_atom_dirty(ctx, &ctx->spi_ps_input);
 	si_mark_atom_dirty(ctx, &ctx->b.streamout.enable_atom);
 	si_all_descriptors_begin_new_cs(ctx);
 

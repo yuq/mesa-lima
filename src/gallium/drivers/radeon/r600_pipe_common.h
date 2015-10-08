@@ -98,6 +98,7 @@
 #define DBG_PRECOMPILE		(1llu << 39)
 #define DBG_INFO		(1llu << 40)
 #define DBG_NO_WC		(1llu << 41)
+#define DBG_CHECK_VM		(1llu << 42)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 
@@ -204,6 +205,7 @@ struct r600_texture {
 	unsigned			pitch_override;
 	bool				is_depth;
 	unsigned			dirty_level_mask; /* each bit says if that mipmap is compressed */
+	unsigned			stencil_dirty_level_mask; /* each bit says if that mipmap is compressed */
 	struct r600_texture		*flushed_depth_texture;
 	boolean				is_flushing_texture;
 	struct radeon_surf		surface;
@@ -620,6 +622,18 @@ static inline unsigned r600_wavefront_size(enum radeon_family family)
 	default:
 		return 64;
 	}
+}
+
+static inline enum radeon_bo_priority
+r600_get_sampler_view_priority(struct r600_resource *res)
+{
+	if (res->b.b.target == PIPE_BUFFER)
+		return RADEON_PRIO_SAMPLER_BUFFER;
+
+	if (res->b.b.nr_samples > 1)
+		return RADEON_PRIO_SAMPLER_TEXTURE_MSAA;
+
+	return RADEON_PRIO_SAMPLER_TEXTURE;
 }
 
 #define COMPUTE_DBG(rscreen, fmt, args...) \

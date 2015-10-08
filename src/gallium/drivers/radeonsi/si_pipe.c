@@ -81,6 +81,11 @@ static void si_destroy_context(struct pipe_context *context)
 	r600_resource_reference(&sctx->trace_buf, NULL);
 	r600_resource_reference(&sctx->last_trace_buf, NULL);
 	free(sctx->last_ib);
+	if (sctx->last_bo_list) {
+		for (i = 0; i < sctx->last_bo_count; i++)
+			pb_reference(&sctx->last_bo_list[i].buf, NULL);
+		free(sctx->last_bo_list);
+	}
 	FREE(sctx);
 }
 
@@ -106,6 +111,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	if (sctx == NULL)
 		return NULL;
+
+	if (sscreen->b.debug_flags & DBG_CHECK_VM)
+		flags |= PIPE_CONTEXT_DEBUG;
 
 	sctx->b.b.screen = screen; /* this must be set first */
 	sctx->b.b.priv = priv;
@@ -287,6 +295,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_QUERY_LOD:
 	case PIPE_CAP_TEXTURE_GATHER_SM5:
 	case PIPE_CAP_TGSI_TXQS:
+	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:

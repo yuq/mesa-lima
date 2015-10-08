@@ -235,6 +235,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
 	case PIPE_CAP_TGSI_TXQS:
+	case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
 		return 0;
 
 	case PIPE_CAP_MAX_VIEWPORTS:

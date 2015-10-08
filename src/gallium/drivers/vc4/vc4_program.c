@@ -1738,27 +1738,6 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         }
 
         const struct tgsi_token *tokens = key->shader_state->base.tokens;
-        if (c->fs_key && c->fs_key->light_twoside) {
-                if (!key->shader_state->twoside_tokens) {
-                        const struct tgsi_lowering_config lowering_config = {
-                                .color_two_side = true,
-                        };
-                        struct tgsi_shader_info info;
-                        key->shader_state->twoside_tokens =
-                                tgsi_transform_lowering(&lowering_config,
-                                                        key->shader_state->base.tokens,
-                                                        &info);
-
-                        /* If no transformation occurred, then NULL is
-                         * returned and we just use our original tokens.
-                         */
-                        if (!key->shader_state->twoside_tokens) {
-                                key->shader_state->twoside_tokens =
-                                        key->shader_state->base.tokens;
-                        }
-                }
-                tokens = key->shader_state->twoside_tokens;
-        }
 
         if (vc4_debug & VC4_DEBUG_TGSI) {
                 fprintf(stderr, "%s prog %d/%d TGSI:\n",
@@ -1772,6 +1751,8 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         nir_convert_to_ssa(c->s);
         if (stage == QSTAGE_FRAG)
                 vc4_nir_lower_blend(c);
+        if (c->fs_key && c->fs_key->light_twoside)
+                nir_lower_two_sided_color(c->s);
         vc4_nir_lower_io(c);
         nir_lower_idiv(c->s);
         nir_lower_load_const_to_scalar(c->s);
@@ -2190,8 +2171,6 @@ vc4_shader_state_delete(struct pipe_context *pctx, void *hwcso)
         hash_table_foreach(vc4->vs_cache, entry)
                 delete_from_cache_if_matches(vc4->vs_cache, entry, so);
 
-        if (so->twoside_tokens != so->base.tokens)
-                free((void *)so->twoside_tokens);
         free((void *)so->base.tokens);
         free(so);
 }

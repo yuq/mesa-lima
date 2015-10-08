@@ -155,13 +155,13 @@ lower_sampler(nir_tex_instr *instr, const struct gl_shader_program *shader_progr
    }
 
    if (location > shader_program->NumUniformStorage - 1 ||
-       !shader_program->UniformStorage[location].sampler[stage].active) {
+       !shader_program->UniformStorage[location].opaque[stage].active) {
       assert(!"cannot return a sampler");
       return;
    }
 
    instr->sampler_index +=
-      shader_program->UniformStorage[location].sampler[stage].index;
+      shader_program->UniformStorage[location].opaque[stage].index;
 
    instr->sampler = NULL;
 }

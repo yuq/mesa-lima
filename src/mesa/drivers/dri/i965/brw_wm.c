@@ -43,7 +43,7 @@
  * Return a bitfield where bit n is set if barycentric interpolation mode n
  * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
  */
-unsigned
+static unsigned
 brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
                                      bool shade_model_flat,
                                      bool persample_shading,
@@ -221,8 +221,17 @@ brw_codegen_wm_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
+   if (unlikely(INTEL_DEBUG & DEBUG_WM))
+      brw_dump_ir("fragment", prog, &fs->base, &fp->program.Base);
+
+   int st_index8 = -1, st_index16 = -1;
+   if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
+      st_index8 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS8);
+      st_index16 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS16);
+   }
+
    program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
-                            &fp->program, prog, &program_size);
+                            &fp->program, prog, st_index8, st_index16, &program_size);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;

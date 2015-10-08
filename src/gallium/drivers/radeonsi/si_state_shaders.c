@@ -103,7 +103,7 @@ static void si_shader_ls(struct si_shader *shader)
 		return;
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	/* We need at least 2 components for LS.
 	 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
@@ -138,7 +138,7 @@ static void si_shader_hs(struct si_shader *shader)
 		return;
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	num_user_sgprs = SI_TCS_NUM_USER_SGPR;
 	num_sgprs = shader->num_sgprs;
@@ -173,7 +173,7 @@ static void si_shader_es(struct si_shader *shader)
 		return;
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	if (shader->selector->type == PIPE_SHADER_VERTEX) {
 		vgpr_comp_cnt = shader->uses_instanceid ? 3 : 0;
@@ -279,7 +279,7 @@ static void si_shader_gs(struct si_shader *shader)
 		       S_028B90_ENABLE(gs_num_invocations > 0));
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 	si_pm4_set_reg(pm4, R_00B220_SPI_SHADER_PGM_LO_GS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B224_SPI_SHADER_PGM_HI_GS, va >> 40);
 
@@ -327,7 +327,7 @@ static void si_shader_vs(struct si_shader *shader)
 		si_pm4_set_reg(pm4, R_028A84_VGT_PRIMITIVEID_EN, 0);
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 
 	if (shader->is_gs_copy_shader) {
 		vgpr_comp_cnt = 0; /* only VertexID is needed for GS-COPY. */
@@ -400,7 +400,7 @@ static void si_shader_ps(struct si_shader *shader)
 	struct si_pm4_state *pm4;
 	unsigned i, spi_ps_in_control;
 	unsigned num_sgprs, num_user_sgprs;
-	unsigned spi_baryc_cntl = 0, spi_ps_input_ena;
+	unsigned spi_baryc_cntl = 0;
 	uint64_t va;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
@@ -437,19 +437,6 @@ static void si_shader_ps(struct si_shader *shader)
 		S_0286D8_BC_OPTIMIZE_DISABLE(1);
 
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
-	spi_ps_input_ena = shader->spi_ps_input_ena;
-	/* we need to enable at least one of them, otherwise we hang the GPU */
-	assert(G_0286CC_PERSP_SAMPLE_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_CENTER_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_CENTROID_ENA(spi_ps_input_ena) ||
-	    G_0286CC_PERSP_PULL_MODEL_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_SAMPLE_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_CENTER_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINEAR_CENTROID_ENA(spi_ps_input_ena) ||
-	    G_0286CC_LINE_STIPPLE_TEX_ENA(spi_ps_input_ena));
-
-	si_pm4_set_reg(pm4, R_0286CC_SPI_PS_INPUT_ENA, spi_ps_input_ena);
-	si_pm4_set_reg(pm4, R_0286D0_SPI_PS_INPUT_ADDR, spi_ps_input_ena);
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT, shader->spi_shader_z_format);
@@ -458,7 +445,7 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_02823C_CB_SHADER_MASK, shader->cb_shader_mask);
 
 	va = shader->bo->gpu_address;
-	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_DATA);
+	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_USER_SHADER);
 	si_pm4_set_reg(pm4, R_00B020_SPI_SHADER_PGM_LO_PS, va >> 8);
 	si_pm4_set_reg(pm4, R_00B024_SPI_SHADER_PGM_HI_PS, va >> 40);
 
@@ -679,6 +666,34 @@ static void *si_create_shader_state(struct pipe_context *ctx,
 	sel->so = state->stream_output;
 	tgsi_scan_shader(state->tokens, &sel->info);
 	p_atomic_inc(&sscreen->b.num_shaders_created);
+
+	/* First set which opcode uses which (i,j) pair. */
+	if (sel->info.uses_persp_opcode_interp_centroid)
+		sel->info.uses_persp_centroid = true;
+
+	if (sel->info.uses_linear_opcode_interp_centroid)
+		sel->info.uses_linear_centroid = true;
+
+	if (sel->info.uses_persp_opcode_interp_offset ||
+	    sel->info.uses_persp_opcode_interp_sample)
+		sel->info.uses_persp_center = true;
+
+	if (sel->info.uses_linear_opcode_interp_offset ||
+	    sel->info.uses_linear_opcode_interp_sample)
+		sel->info.uses_linear_center = true;
+
+	/* Determine if the shader has to use a conditional assignment when
+	 * emulating force_persample_interp.
+	 */
+	sel->forces_persample_interp_for_persp =
+		sel->info.uses_persp_center +
+		sel->info.uses_persp_centroid +
+		sel->info.uses_persp_sample >= 2;
+
+	sel->forces_persample_interp_for_linear =
+		sel->info.uses_linear_center +
+		sel->info.uses_linear_centroid +
+		sel->info.uses_linear_sample >= 2;
 
 	switch (pipe_shader_type) {
 	case PIPE_SHADER_GEOMETRY:
@@ -1064,6 +1079,77 @@ bcolor:
 	assert(ps->nparam == num_written);
 }
 
+static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
+	struct si_shader *ps = sctx->ps_shader->current;
+	unsigned input_ena = ps->spi_ps_input_ena;
+
+	/* we need to enable at least one of them, otherwise we hang the GPU */
+	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
+	    G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	    G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
+	    G_0286CC_PERSP_PULL_MODEL_ENA(input_ena) ||
+	    G_0286CC_LINEAR_SAMPLE_ENA(input_ena) ||
+	    G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
+	    G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
+	    G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
+
+	if (sctx->force_persample_interp) {
+		unsigned num_persp = G_0286CC_PERSP_SAMPLE_ENA(input_ena) +
+				     G_0286CC_PERSP_CENTER_ENA(input_ena) +
+				     G_0286CC_PERSP_CENTROID_ENA(input_ena);
+		unsigned num_linear = G_0286CC_LINEAR_SAMPLE_ENA(input_ena) +
+				      G_0286CC_LINEAR_CENTER_ENA(input_ena) +
+				      G_0286CC_LINEAR_CENTROID_ENA(input_ena);
+
+		/* If only one set of (i,j) coordinates is used, we can disable
+		 * CENTER/CENTROID, enable SAMPLE and it will load SAMPLE coordinates
+		 * where CENTER/CENTROID are expected, effectively forcing per-sample
+		 * interpolation.
+		 */
+		if (num_persp == 1) {
+			input_ena &= C_0286CC_PERSP_CENTER_ENA;
+			input_ena &= C_0286CC_PERSP_CENTROID_ENA;
+			input_ena |= G_0286CC_PERSP_SAMPLE_ENA(1);
+		}
+		if (num_linear == 1) {
+			input_ena &= C_0286CC_LINEAR_CENTER_ENA;
+			input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
+			input_ena |= G_0286CC_LINEAR_SAMPLE_ENA(1);
+		}
+
+		/* If at least 2 sets of coordinates are used, we can't use this
+		 * trick and have to select SAMPLE using a conditional assignment
+		 * in the shader with "force_persample_interp" being a shader constant.
+		 */
+	}
+
+	radeon_set_context_reg_seq(cs, R_0286CC_SPI_PS_INPUT_ENA, 2);
+	radeon_emit(cs, input_ena);
+	radeon_emit(cs, input_ena);
+
+	if (ps->selector->forces_persample_interp_for_persp ||
+	    ps->selector->forces_persample_interp_for_linear)
+		radeon_set_sh_reg(cs, R_00B030_SPI_SHADER_USER_DATA_PS_0 +
+				      SI_SGPR_PS_STATE_BITS * 4,
+				  sctx->force_persample_interp);
+}
+
+/**
+ * Writing CONFIG or UCONFIG VGT registers requires VGT_FLUSH before that.
+ */
+static void si_init_config_add_vgt_flush(struct si_context *sctx)
+{
+	if (sctx->init_config_has_vgt_flush)
+		return;
+
+	si_pm4_cmd_begin(sctx->init_config, PKT3_EVENT_WRITE);
+	si_pm4_cmd_add(sctx->init_config, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
+	si_pm4_cmd_end(sctx->init_config, false);
+	sctx->init_config_has_vgt_flush = true;
+}
+
 /* Initialize state related to ESGS / GSVS ring buffers */
 static void si_init_gs_rings(struct si_context *sctx)
 {
@@ -1083,6 +1169,8 @@ static void si_init_gs_rings(struct si_context *sctx)
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
 		return;
 	}
+
+	si_init_config_add_vgt_flush(sctx);
 
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
@@ -1330,6 +1418,8 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
+	si_init_config_add_vgt_flush(sctx);
+
 	/* Append these registers to the init config state. */
 	if (sctx->b.chip_class >= CIK) {
 		si_pm4_set_reg(sctx->init_config, R_030938_VGT_TF_RING_SIZE,
@@ -1535,6 +1625,12 @@ bool si_update_shaders(struct si_context *sctx)
 		si_mark_atom_dirty(sctx, &sctx->spi_map);
 	}
 
+	if (si_pm4_state_changed(sctx, ps) ||
+	    sctx->force_persample_interp != rs->force_persample_interp) {
+		sctx->force_persample_interp = rs->force_persample_interp;
+		si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
+	}
+
 	if (si_pm4_state_changed(sctx, ls) ||
 	    si_pm4_state_changed(sctx, hs) ||
 	    si_pm4_state_changed(sctx, es) ||
@@ -1563,6 +1659,7 @@ bool si_update_shaders(struct si_context *sctx)
 void si_init_shader_functions(struct si_context *sctx)
 {
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
+	si_init_atom(sctx, &sctx->spi_ps_input, &sctx->atoms.s.spi_ps_input, si_emit_spi_ps_input);
 
 	sctx->b.b.create_vs_state = si_create_vs_state;
 	sctx->b.b.create_tcs_state = si_create_tcs_state;

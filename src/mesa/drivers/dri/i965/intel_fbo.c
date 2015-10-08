@@ -52,19 +52,6 @@
 
 #define FILE_DEBUG_FLAG DEBUG_FBO
 
-/**
- * Create a new framebuffer object.
- */
-static struct gl_framebuffer *
-intel_new_framebuffer(struct gl_context * ctx, GLuint name)
-{
-   /* Only drawable state in intel_framebuffer at this time, just use Mesa's
-    * class
-    */
-   return _mesa_new_framebuffer(ctx, name);
-}
-
-
 /** Called by gl_renderbuffer::Delete() */
 static void
 intel_delete_renderbuffer(struct gl_context *ctx, struct gl_renderbuffer *rb)
@@ -1093,7 +1080,6 @@ void
 intel_fbo_init(struct brw_context *brw)
 {
    struct dd_function_table *dd = &brw->ctx.Driver;
-   dd->NewFramebuffer = intel_new_framebuffer;
    dd->NewRenderbuffer = intel_new_renderbuffer;
    dd->MapRenderbuffer = intel_map_renderbuffer;
    dd->UnmapRenderbuffer = intel_unmap_renderbuffer;

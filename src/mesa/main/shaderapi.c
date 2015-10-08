@@ -320,7 +320,7 @@ create_shader_program(struct gl_context *ctx)
 
    name = _mesa_HashFindFreeKeyBlock(ctx->Shared->ShaderObjects, 1);
 
-   shProg = ctx->Driver.NewShaderProgram(name);
+   shProg = _mesa_new_shader_program(name);
 
    _mesa_HashInsert(ctx->Shared->ShaderObjects, name, shProg);
 
@@ -2597,7 +2597,7 @@ _mesa_GetUniformSubroutineuiv(GLenum shadertype, GLint location,
 
    {
       struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[location];
-      int offset = location - uni->subroutine[stage].index;
+      int offset = location - uni->opaque[stage].index;
       memcpy(params, &uni->storage[offset],
 	     sizeof(GLuint));
    }

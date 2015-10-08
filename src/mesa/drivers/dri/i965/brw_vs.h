@@ -60,6 +60,7 @@ const unsigned *brw_vs_emit(struct brw_context *brw,
                             struct brw_vs_prog_data *prog_data,
                             struct gl_vertex_program *vp,
                             struct gl_shader_program *shader_prog,
+                            int shader_time_index,
                             unsigned *program_size);
 void brw_vs_debug_recompile(struct brw_context *brw,
                             struct gl_shader_program *prog,
@@ -105,16 +106,11 @@ protected:
 
 private:
    int setup_attributes(int payload_reg);
-   void setup_vp_regs();
    void setup_uniform_clipplane_values();
    void emit_clip_distances(dst_reg reg, int offset);
-   dst_reg get_vp_dst_reg(const prog_dst_register &dst);
-   src_reg get_vp_src_reg(const prog_src_register &src);
 
    const struct brw_vs_prog_key *const key;
    struct brw_vs_prog_data * const vs_prog_data;
-   src_reg *vp_temp_regs;
-   src_reg vp_addr_reg;
 
    gl_clip_plane *clip_planes;
 

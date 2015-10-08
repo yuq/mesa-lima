@@ -268,6 +268,15 @@ The integer capabilities:
   bounds_max states of pipe_depth_stencil_alpha_state behave according
   to the GL_EXT_depth_bounds_test specification.
 * ``PIPE_CAP_TGSI_TXQS``: Whether the `TXQS` opcode is supported
+* ``PIPE_CAP_FORCE_PERSAMPLE_INTERP``: If the driver can force per-sample
+  interpolation for all fragment shader inputs if
+  pipe_rasterizer_state::force_persample_interp is set. This is only used
+  by GL3-level sample shading (ARB_sample_shading). GL4-level sample shading
+  (ARB_gpu_shader5) doesn't use this. While GL3 hardware has a state for it,
+  GL4 hardware will likely need to emulate it with a shader variant, or by
+  selecting the interpolation weights with a conditional assignment
+  in the shader.
+
 
 
 .. _pipe_capf:

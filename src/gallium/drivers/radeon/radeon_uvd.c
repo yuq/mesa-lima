@@ -110,8 +110,8 @@ static void send_cmd(struct ruvd_decoder *dec, unsigned cmd,
 {
 	int reloc_idx;
 
-	reloc_idx = dec->ws->cs_add_reloc(dec->cs, cs_buf, usage, domain,
-					  RADEON_PRIO_MIN);
+	reloc_idx = dec->ws->cs_add_buffer(dec->cs, cs_buf, usage, domain,
+					  RADEON_PRIO_UVD);
 	if (!dec->use_legacy) {
 		uint64_t addr;
 		addr = dec->ws->buffer_get_virtual_address(cs_buf);

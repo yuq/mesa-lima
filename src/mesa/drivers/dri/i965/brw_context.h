@@ -490,6 +490,7 @@ struct brw_cs_prog_data {
    unsigned simd_size;
    bool uses_barrier;
    bool uses_num_work_groups;
+   unsigned local_invocation_id_regs;
 
    struct {
       /** @{
@@ -714,6 +715,15 @@ struct brw_vs_prog_data {
 /** Max number of render targets in a shader */
 #define BRW_MAX_DRAW_BUFFERS 8
 
+/** Max number of UBOs in a shader */
+#define BRW_MAX_UBO 12
+
+/** Max number of SSBOs in a shader */
+#define BRW_MAX_SSBO 12
+
+/** Max number of combined UBOs and SSBOs in a shader */
+#define BRW_MAX_COMBINED_UBO_SSBO (BRW_MAX_UBO + BRW_MAX_SSBO)
+
 /** Max number of atomic counter buffer objects in a shader */
 #define BRW_MAX_ABO 16
 
@@ -750,7 +760,8 @@ struct brw_vs_prog_data {
 
 #define BRW_MAX_SURFACES   (BRW_MAX_DRAW_BUFFERS +                      \
                             BRW_MAX_TEX_UNIT * 2 + /* normal, gather */ \
-                            12 + /* ubo */                              \
+                            BRW_MAX_UBO +                               \
+                            BRW_MAX_SSBO +                              \
                             BRW_MAX_ABO +                               \
                             BRW_MAX_IMAGES +                            \
                             2 + /* shader time, pull constants */       \
@@ -1453,6 +1464,8 @@ struct brw_context
        */
       drm_intel_bo *multisampled_null_render_target_bo;
       uint32_t fast_clear_op;
+
+      float offset_clamp;
    } wm;
 
    struct {
@@ -1716,7 +1729,12 @@ void brw_validate_textures( struct brw_context *brw );
  */
 void brwInitFragProgFuncs( struct dd_function_table *functions );
 
-int brw_get_scratch_size(int size);
+/* Per-thread scratch space is a power-of-two multiple of 1KB. */
+static inline int
+brw_get_scratch_size(int size)
+{
+   return util_next_power_of_two(size | 1023);
+}
 void brw_get_scratch_bo(struct brw_context *brw,
 			drm_intel_bo **scratch_bo, int size);
 void brw_init_shader_time(struct brw_context *brw);

@@ -101,6 +101,7 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
    struct dri2_egl_surface *dri2_surf;
    struct gbm_surface *window = native_window;
    struct gbm_dri_surface *surf;
+   const __DRIconfig *config;
 
    (void) drv;
 
@@ -130,21 +131,20 @@ dri2_drm_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       goto cleanup_surf;
    }
 
-   if (dri2_dpy->dri2) {
-      const __DRIconfig *config =
-         dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
-                             dri2_surf->base.GLColorspace);
+   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
+                                dri2_surf->base.GLColorspace);
 
+   if (dri2_dpy->dri2) {
       dri2_surf->dri_drawable =
          (*dri2_dpy->dri2->createNewDrawable)(dri2_dpy->dri_screen, config,
                                               dri2_surf->gbm_surf);
 
    } else {
       assert(dri2_dpy->swrast != NULL);
+
       dri2_surf->dri_drawable =
-         (*dri2_dpy->swrast->createNewDrawable) (dri2_dpy->dri_screen,
-                                                 dri2_conf->dri_double_config,
-                                                 dri2_surf->gbm_surf);
+         (*dri2_dpy->swrast->createNewDrawable)(dri2_dpy->dri_screen, config,
+                                                dri2_surf->gbm_surf);
 
    }
    if (dri2_surf->dri_drawable == NULL) {

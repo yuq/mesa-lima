@@ -27,7 +27,6 @@
 #include "main/blit.h"
 #include "main/context.h"
 #include "main/enums.h"
-#include "main/colormac.h"
 #include "main/fbobject.h"
 
 #include "brw_context.h"

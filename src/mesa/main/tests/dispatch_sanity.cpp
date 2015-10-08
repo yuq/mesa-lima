@@ -2039,6 +2039,19 @@ const struct function gles11_functions_possible[] = {
    { "glUnmapBufferOES", 11, -1 },
    { "glVertexPointer", 11, _gloffset_VertexPointer },
    { "glViewport", 11, _gloffset_Viewport },
+
+   /* GL_KHR_debug */
+   { "glPushDebugGroupKHR", 11, -1 },
+   { "glPopDebugGroupKHR", 11, -1 },
+   { "glDebugMessageCallbackKHR", 11, -1 },
+   { "glDebugMessageControlKHR", 11, -1 },
+   { "glDebugMessageInsertKHR", 11, -1 },
+   { "glGetDebugMessageLogKHR", 11, -1 },
+   { "glGetObjectLabelKHR", 11, -1 },
+   { "glGetObjectPtrLabelKHR", 11, -1 },
+   { "glObjectLabelKHR", 11, -1 },
+   { "glObjectPtrLabelKHR", 11, -1 },
+
    { NULL, 0, -1 }
 };
 
@@ -2261,6 +2274,18 @@ const struct function gles2_functions_possible[] = {
    { "glBeginPerfQueryINTEL", 20, -1 },
    { "glEndPerfQueryINTEL", 20, -1 },
    { "glGetPerfQueryDataINTEL", 20, -1 },
+
+   /* GL_KHR_debug */
+   { "glPushDebugGroupKHR", 20, -1 },
+   { "glPopDebugGroupKHR", 20, -1 },
+   { "glDebugMessageCallbackKHR", 20, -1 },
+   { "glDebugMessageControlKHR", 20, -1 },
+   { "glDebugMessageInsertKHR", 20, -1 },
+   { "glGetDebugMessageLogKHR", 20, -1 },
+   { "glGetObjectLabelKHR", 20, -1 },
+   { "glGetObjectPtrLabelKHR", 20, -1 },
+   { "glObjectLabelKHR", 20, -1 },
+   { "glObjectPtrLabelKHR", 20, -1 },
 
    { NULL, 0, -1 }
 };

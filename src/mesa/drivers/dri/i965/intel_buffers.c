@@ -32,30 +32,10 @@
 #include "main/framebuffer.h"
 #include "main/renderbuffer.h"
 
-
-bool
-brw_is_front_buffer_reading(struct gl_framebuffer *fb)
-{
-   if (!fb || _mesa_is_user_fbo(fb))
-      return false;
-
-   return fb->_ColorReadBufferIndex == BUFFER_FRONT_LEFT;
-}
-
-bool
-brw_is_front_buffer_drawing(struct gl_framebuffer *fb)
-{
-   if (!fb || _mesa_is_user_fbo(fb))
-      return false;
-
-   return (fb->_NumColorDrawBuffers >= 1 &&
-           fb->_ColorDrawBufferIndexes[0] == BUFFER_FRONT_LEFT);
-}
-
 static void
 intelDrawBuffer(struct gl_context * ctx, GLenum mode)
 {
-   if (brw_is_front_buffer_drawing(ctx->DrawBuffer)) {
+   if (_mesa_is_front_buffer_drawing(ctx->DrawBuffer)) {
       struct brw_context *const brw = brw_context(ctx);
 
       /* If we might be front-buffer rendering on this buffer for the first
@@ -71,7 +51,7 @@ intelDrawBuffer(struct gl_context * ctx, GLenum mode)
 static void
 intelReadBuffer(struct gl_context * ctx, GLenum mode)
 {
-   if (brw_is_front_buffer_reading(ctx->ReadBuffer)) {
+   if (_mesa_is_front_buffer_reading(ctx->ReadBuffer)) {
       struct brw_context *const brw = brw_context(ctx);
 
       /* If we might be front-buffer reading on this buffer for the first

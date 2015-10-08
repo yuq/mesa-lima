@@ -36,7 +36,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "main/imports.h"
 #include "main/mtypes.h"
 #include "main/enums.h"
-#include "main/colormac.h"
 #include "main/light.h"
 #include "main/state.h"
 

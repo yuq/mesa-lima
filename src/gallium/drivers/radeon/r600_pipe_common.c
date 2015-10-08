@@ -359,6 +359,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "forcedma", DBG_FORCE_DMA, "Use asynchronous DMA for all operations when possible." },
 	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
 	{ "nowc", DBG_NO_WC, "Disable GTT write combining" },
+	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };

@@ -140,7 +140,8 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 		struct r600_resource *ib = state->indirect_buffer;
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.rings.gfx, ib,
-					  RADEON_USAGE_READ, RADEON_PRIO_MIN);
+					  RADEON_USAGE_READ,
+                                          RADEON_PRIO_IB2);
 
 		radeon_emit(cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
 		radeon_emit(cs, ib->gpu_address);

@@ -151,7 +151,6 @@ unbind_array_object_vbos(struct gl_context *ctx, struct gl_vertex_array_object *
  * Allocate and initialize a new vertex array object.
  *
  * This function is intended to be called via
- * \c dd_function_table::NewArrayObject.
  */
 struct gl_vertex_array_object *
 _mesa_new_vao(struct gl_context *ctx, GLuint name)
@@ -203,10 +202,8 @@ _mesa_reference_vao_(struct gl_context *ctx,
       deleteFlag = (oldObj->RefCount == 0);
       mtx_unlock(&oldObj->Mutex);
 
-      if (deleteFlag) {
-	 assert(ctx->Driver.DeleteArrayObject);
-         ctx->Driver.DeleteArrayObject(ctx, oldObj);
-      }
+      if (deleteFlag)
+         _mesa_delete_vao(ctx, oldObj);
 
       *ptr = NULL;
    }
@@ -408,7 +405,7 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, GLboolean genRequired)
          }
 
          /* For APPLE version, generate a new array object now */
-	 newObj = (*ctx->Driver.NewArrayObject)(ctx, id);
+	 newObj = _mesa_new_vao(ctx, id);
          if (!newObj) {
             _mesa_error(ctx, GL_OUT_OF_MEMORY, "glBindVertexArrayAPPLE");
             return;
@@ -446,10 +443,6 @@ bind_vertex_array(struct gl_context *ctx, GLuint id, GLboolean genRequired)
 
    ctx->NewState |= _NEW_ARRAY;
    _mesa_reference_vao(ctx, &ctx->Array.VAO, newObj);
-
-   /* Pass BindVertexArray call to device driver */
-   if (ctx->Driver.BindArrayObject && newObj)
-      ctx->Driver.BindArrayObject(ctx, newObj);
 }
 
 
@@ -565,7 +558,7 @@ gen_vertex_arrays(struct gl_context *ctx, GLsizei n, GLuint *arrays,
       struct gl_vertex_array_object *obj;
       GLuint name = first + i;
 
-      obj = (*ctx->Driver.NewArrayObject)( ctx, name );
+      obj = _mesa_new_vao(ctx, name);
       if (!obj) {
          _mesa_error(ctx, GL_OUT_OF_MEMORY, "%s", func);
          return;

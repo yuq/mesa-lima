@@ -30,9 +30,6 @@
 #include "util/u_dump.h"
 #include "util/u_format.h"
 #include "tgsi/tgsi_scan.h"
-#include "os/os_process.h"
-#include <errno.h>
-#include <sys/stat.h>
 
 
 enum call_type
@@ -88,33 +85,13 @@ struct dd_call
    } info;
 };
 
-
 static FILE *
 dd_get_file_stream(struct dd_context *dctx)
 {
    struct pipe_screen *screen = dctx->pipe->screen;
-   static unsigned index;
-   char proc_name[128], dir[256], name[512];
-   FILE *f;
-
-   if (!os_get_process_name(proc_name, sizeof(proc_name))) {
-      fprintf(stderr, "dd: can't get the process name\n");
+   FILE *f = dd_get_debug_file();
+   if (!f)
       return NULL;
-   }
-
-   snprintf(dir, sizeof(dir), "%s/"DD_DIR, debug_get_option("HOME", "."));
-
-   if (mkdir(dir, 0774) && errno != EEXIST) {
-      fprintf(stderr, "dd: can't create a directory (%i)\n", errno);
-      return NULL;
-   }
-
-   snprintf(name, sizeof(name), "%s/%s_%u_%08u", dir, proc_name, getpid(), index++);
-   f = fopen(name, "w");
-   if (!f) {
-      fprintf(stderr, "dd: can't open file %s\n", name);
-      return NULL;
-   }
 
    fprintf(f, "Driver vendor: %s\n", screen->get_vendor(screen));
    fprintf(f, "Device vendor: %s\n", screen->get_device_vendor(screen));

@@ -43,8 +43,11 @@ public:
                    void *mem_ctx,
                    bool no_spills,
                    int shader_time_index) :
-      vec4_gs_visitor(comp, log_data, c, prog, shader, mem_ctx, no_spills,
-                      shader_time_index) {}
+      vec4_gs_visitor(comp, log_data, c, shader, mem_ctx, no_spills,
+                      shader_time_index),
+      shader_prog(prog)
+      {
+      }
 
 protected:
    virtual void emit_prolog();
@@ -63,6 +66,8 @@ private:
    void xfb_program(unsigned vertex, unsigned num_verts);
    void xfb_setup();
    int get_vertex_output_offset_for_varying(int vertex, int varying);
+
+   const struct gl_shader_program *shader_prog;
 
    src_reg vertex_output;
    src_reg vertex_output_offset;

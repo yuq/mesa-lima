@@ -103,7 +103,6 @@ struct vc4_uncompiled_shader {
         /** How many variants of this program were compiled, for shader-db. */
         uint32_t compiled_variant_count;
         struct pipe_shader_state base;
-        const struct tgsi_token *twoside_tokens;
 };
 
 struct vc4_ubo_range {
