@@ -596,31 +596,17 @@ vec4_gs_visitor::gs_end_primitive()
    emit(OR(dst_reg(this->control_data_bits), this->control_data_bits, mask));
 }
 
-static const unsigned *
-generate_assembly(struct brw_context *brw,
-                  const nir_shader *nir,
-                  struct brw_vue_prog_data *prog_data,
-                  void *mem_ctx,
-                  const cfg_t *cfg,
-                  unsigned *final_assembly_size)
-{
-   vec4_generator g(brw->intelScreen->compiler, brw,
-                    prog_data, mem_ctx,
-                    INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
-   return g.generate_assembly(cfg, final_assembly_size, nir);
-}
-
 extern "C" const unsigned *
-brw_gs_emit(struct brw_context *brw,
-            struct gl_shader_program *prog,
+brw_gs_emit(const struct brw_compiler *compiler, void *log_data,
             struct brw_gs_compile *c,
+            const nir_shader *shader,
+            struct gl_shader_program *shader_prog,
             void *mem_ctx,
             int shader_time_index,
-            unsigned *final_assembly_size)
+            unsigned *final_assembly_size,
+            char **error_str)
 {
-   struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-
-   if (brw->gen >= 7) {
+   if (compiler->devinfo->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do
        * so without spilling. If the GS invocations count > 1, then we can't use
        * dual object mode.
@@ -629,13 +615,12 @@ brw_gs_emit(struct brw_context *brw,
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
          c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(brw->intelScreen->compiler, brw,
-                           c, shader->Program->nir,
+         vec4_gs_visitor v(compiler, log_data, c, shader,
                            mem_ctx, true /* no_spills */, shader_time_index);
          if (v.run()) {
-            return generate_assembly(brw, shader->Program->nir,
-                                     &c->prog_data.base, mem_ctx, v.cfg,
-                                     final_assembly_size);
+            vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+                             INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
+            return g.generate_assembly(v.cfg, final_assembly_size, shader);
          }
       }
    }
@@ -663,7 +648,7 @@ brw_gs_emit(struct brw_context *brw,
     * mode is more performant when invocations > 1. Gen6 only supports
     * SINGLE mode.
     */
-   if (c->prog_data.invocations <= 1 || brw->gen < 7)
+   if (c->prog_data.invocations <= 1 || compiler->devinfo->gen < 7)
       c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
    else
       c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
@@ -671,24 +656,22 @@ brw_gs_emit(struct brw_context *brw,
    vec4_gs_visitor *gs = NULL;
    const unsigned *ret = NULL;
 
-   if (brw->gen >= 7)
-      gs = new vec4_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, shader->Program->nir,
+   if (compiler->devinfo->gen >= 7)
+      gs = new vec4_gs_visitor(compiler, log_data, c, shader,
                                mem_ctx, false /* no_spills */,
                                shader_time_index);
    else
-      gs = new gen6_gs_visitor(brw->intelScreen->compiler, brw,
-                               c, prog, shader->Program->nir,
+      gs = new gen6_gs_visitor(compiler, log_data, c, shader_prog, shader,
                                mem_ctx, false /* no_spills */,
                                shader_time_index);
 
    if (!gs->run()) {
-      prog->LinkStatus = false;
-      ralloc_strcat(&prog->InfoLog, gs->fail_msg);
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, gs->fail_msg);
    } else {
-      ret = generate_assembly(brw, shader->Program->nir,
-                              &c->prog_data.base, mem_ctx, gs->cfg,
-                              final_assembly_size);
+      vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+                       INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
+      ret = g.generate_assembly(gs->cfg, final_assembly_size, shader);
    }
 
    delete gs;
