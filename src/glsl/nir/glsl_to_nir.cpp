@@ -164,10 +164,18 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info.uses_texture_gather = sh->Program->UsesGather;
    shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
    shader->info.separate_shader = shader_prog->SeparateShader;
-   shader->info.gs.vertices_out = sh->Geom.VerticesOut;
-   shader->info.gs.invocations = sh->Geom.Invocations;
    shader->info.has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;
+
+   switch (stage) {
+   case MESA_SHADER_GEOMETRY:
+      shader->info.gs.vertices_out = sh->Geom.VerticesOut;
+      shader->info.gs.invocations = sh->Geom.Invocations;
+      break;
+
+   default:
+      break; /* No stage-specific info */
+   }
 
    return shader;
 }

@@ -1493,13 +1493,15 @@ typedef struct nir_shader_info {
    /** Was this shader linked with any transform feedback varyings? */
    bool has_transform_feedback_varyings;
 
-   struct {
-      /** The maximum number of vertices the geometry shader might write. */
-      unsigned vertices_out;
+   union {
+      struct {
+         /** The maximum number of vertices the geometry shader might write. */
+         unsigned vertices_out;
 
-      /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
-      unsigned invocations;
-   } gs;
+         /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
+         unsigned invocations;
+      } gs;
+   };
 } nir_shader_info;
 
 typedef struct nir_shader {
