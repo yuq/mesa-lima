@@ -907,11 +907,21 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 }
 
-static void si_delete_shader_selector(struct pipe_context *ctx,
-				      struct si_shader_selector *sel)
+static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_shader_selector *sel = (struct si_shader_selector *)state;
 	struct si_shader *p = sel->current, *c;
+	struct si_shader_selector **current_shader[SI_NUM_SHADERS] = {
+		[PIPE_SHADER_VERTEX] = &sctx->vs_shader,
+		[PIPE_SHADER_TESS_CTRL] = &sctx->tcs_shader,
+		[PIPE_SHADER_TESS_EVAL] = &sctx->tes_shader,
+		[PIPE_SHADER_GEOMETRY] = &sctx->gs_shader,
+		[PIPE_SHADER_FRAGMENT] = &sctx->ps_shader,
+	};
+
+	if (*current_shader[sel->type] == sel)
+		*current_shader[sel->type] = NULL;
 
 	while (p) {
 		c = p->next_variant;
@@ -949,66 +959,6 @@ static void si_delete_shader_selector(struct pipe_context *ctx,
 
 	free(sel->tokens);
 	free(sel);
-}
-
-static void si_delete_vs_shader(struct pipe_context *ctx, void *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-
-	if (sctx->vs_shader == sel) {
-		sctx->vs_shader = NULL;
-	}
-
-	si_delete_shader_selector(ctx, sel);
-}
-
-static void si_delete_gs_shader(struct pipe_context *ctx, void *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-
-	if (sctx->gs_shader == sel) {
-		sctx->gs_shader = NULL;
-	}
-
-	si_delete_shader_selector(ctx, sel);
-}
-
-static void si_delete_ps_shader(struct pipe_context *ctx, void *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-
-	if (sctx->ps_shader == sel) {
-		sctx->ps_shader = NULL;
-	}
-
-	si_delete_shader_selector(ctx, sel);
-}
-
-static void si_delete_tcs_shader(struct pipe_context *ctx, void *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-
-	if (sctx->tcs_shader == sel) {
-		sctx->tcs_shader = NULL;
-	}
-
-	si_delete_shader_selector(ctx, sel);
-}
-
-static void si_delete_tes_shader(struct pipe_context *ctx, void *state)
-{
-	struct si_context *sctx = (struct si_context *)ctx;
-	struct si_shader_selector *sel = (struct si_shader_selector *)state;
-
-	if (sctx->tes_shader == sel) {
-		sctx->tes_shader = NULL;
-	}
-
-	si_delete_shader_selector(ctx, sel);
 }
 
 static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
@@ -1675,9 +1625,9 @@ void si_init_shader_functions(struct si_context *sctx)
 	sctx->b.b.bind_gs_state = si_bind_gs_shader;
 	sctx->b.b.bind_fs_state = si_bind_ps_shader;
 
-	sctx->b.b.delete_vs_state = si_delete_vs_shader;
-	sctx->b.b.delete_tcs_state = si_delete_tcs_shader;
-	sctx->b.b.delete_tes_state = si_delete_tes_shader;
-	sctx->b.b.delete_gs_state = si_delete_gs_shader;
-	sctx->b.b.delete_fs_state = si_delete_ps_shader;
+	sctx->b.b.delete_vs_state = si_delete_shader_selector;
+	sctx->b.b.delete_tcs_state = si_delete_shader_selector;
+	sctx->b.b.delete_tes_state = si_delete_shader_selector;
+	sctx->b.b.delete_gs_state = si_delete_shader_selector;
+	sctx->b.b.delete_fs_state = si_delete_shader_selector;
 }
