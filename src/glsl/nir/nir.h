@@ -1501,6 +1501,10 @@ typedef struct nir_shader_info {
          /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
          unsigned invocations;
       } gs;
+
+      struct {
+         unsigned local_size[3];
+      } cs;
    };
 } nir_shader_info;
 

@@ -173,6 +173,14 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       shader->info.gs.invocations = sh->Geom.Invocations;
       break;
 
+   case MESA_SHADER_COMPUTE: {
+      struct gl_compute_program *cp = (struct gl_compute_program *)sh->Program;
+      shader->info.cs.local_size[0] = cp->LocalSize[0];
+      shader->info.cs.local_size[1] = cp->LocalSize[1];
+      shader->info.cs.local_size[2] = cp->LocalSize[2];
+      break;
+   }
+
    default:
       break; /* No stage-specific info */
    }
