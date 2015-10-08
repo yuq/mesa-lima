@@ -5234,29 +5234,32 @@ fs_visitor::emit_cs_work_group_id_setup()
 }
 
 const unsigned *
-brw_cs_emit(struct brw_context *brw,
+brw_cs_emit(const struct brw_compiler *compiler, void *log_data,
             void *mem_ctx,
             const struct brw_cs_prog_key *key,
             struct brw_cs_prog_data *prog_data,
-            struct gl_compute_program *cp,
-            struct gl_shader_program *prog,
+            const nir_shader *shader,
             int shader_time_index,
-            unsigned *final_assembly_size)
+            unsigned *final_assembly_size,
+            char **error_str)
 {
-   prog_data->local_size[0] = cp->LocalSize[0];
-   prog_data->local_size[1] = cp->LocalSize[1];
-   prog_data->local_size[2] = cp->LocalSize[2];
+   prog_data->local_size[0] = shader->info.cs.local_size[0];
+   prog_data->local_size[1] = shader->info.cs.local_size[1];
+   prog_data->local_size[2] = shader->info.cs.local_size[2];
    unsigned local_workgroup_size =
-      cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
-   unsigned max_cs_threads = brw->intelScreen->compiler->devinfo->max_cs_threads;
+      shader->info.cs.local_size[0] * shader->info.cs.local_size[1] *
+      shader->info.cs.local_size[2];
+
+   unsigned max_cs_threads = compiler->devinfo->max_cs_threads;
 
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &cp->Base, cp->Base.nir, 8, shader_time_index);
+   fs_visitor v8(compiler, log_data, mem_ctx, key, &prog_data->base,
+                 NULL, /* Never used in core profile */
+                 shader, 8, shader_time_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * max_cs_threads) {
@@ -5264,15 +5267,18 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
-                  &prog_data->base, &cp->Base, cp->Base.nir, 16, shader_time_index);
+   fs_visitor v16(compiler, log_data, mem_ctx, key, &prog_data->base,
+                 NULL, /* Never used in core profile */
+                 shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * max_cs_threads) {
       /* Try a SIMD16 compile */
       v16.import_uniforms(&v8);
       if (!v16.run_cs()) {
-         perf_debug("SIMD16 shader failed to compile: %s", v16.fail_msg);
+         compiler->shader_perf_log(log_data,
+                                   "SIMD16 shader failed to compile: %s",
+                                   v16.fail_msg);
          if (!cfg) {
             fail_msg =
                "Couldn't generate SIMD16 program and not "
@@ -5286,20 +5292,19 @@ brw_cs_emit(struct brw_context *brw,
 
    if (unlikely(cfg == NULL)) {
       assert(fail_msg);
-      prog->LinkStatus = false;
-      ralloc_strcat(&prog->InfoLog, fail_msg);
-      _mesa_problem(NULL, "Failed to compile compute shader: %s\n",
-                    fail_msg);
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, fail_msg);
+
       return NULL;
    }
 
-   fs_generator g(brw->intelScreen->compiler, brw,
-                  mem_ctx, (void*) key, &prog_data->base,
+   fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
                   v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
    if (INTEL_DEBUG & DEBUG_CS) {
-      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
-                                   prog->Label ? prog->Label : "unnamed",
-                                   prog->Name);
+      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",
+                                   shader->info.label ? shader->info.label :
+                                                        "unnamed",
+                                   shader->info.name);
       g.enable_debug(name);
    }
 

@@ -105,9 +105,15 @@ brw_codegen_cs_prog(struct brw_context *brw,
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       st_index = brw_get_shader_time_index(brw, prog, &cp->program.Base, ST_CS);
 
-   program = brw_cs_emit(brw, mem_ctx, key, &prog_data,
-                         &cp->program, prog, st_index, &program_size);
+   char *error_str;
+   program = brw_cs_emit(brw->intelScreen->compiler, brw, mem_ctx,
+                         key, &prog_data, cp->program.Base.nir,
+                         st_index, &program_size, &error_str);
    if (program == NULL) {
+      prog->LinkStatus = false;
+      ralloc_strcat(&prog->InfoLog, error_str);
+      _mesa_problem(NULL, "Failed to compile compute shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }
