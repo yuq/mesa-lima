@@ -1205,17 +1205,16 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
  */
 static void
 create_textures(struct gl_context *ctx, GLenum target,
-                GLsizei n, GLuint *textures, bool dsa)
+                GLsizei n, GLuint *textures, const char *caller)
 {
    GLuint first;
    GLint i;
-   const char *func = dsa ? "Create" : "Gen";
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "gl%sTextures %d\n", func, n);
+      _mesa_debug(ctx, "%s %d\n", caller, n);
 
    if (n < 0) {
-      _mesa_error( ctx, GL_INVALID_VALUE, "gl%sTextures(n < 0)", func );
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", caller);
       return;
    }
 
@@ -1236,7 +1235,7 @@ create_textures(struct gl_context *ctx, GLenum target,
       texObj = ctx->Driver.NewTextureObject(ctx, name, target);
       if (!texObj) {
          mtx_unlock(&ctx->Shared->Mutex);
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", func);
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", caller);
          return;
       }
 
@@ -1273,7 +1272,7 @@ void GLAPIENTRY
 _mesa_GenTextures(GLsizei n, GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_textures(ctx, 0, n, textures, false);
+   create_textures(ctx, 0, n, textures, "glGenTextures");
 }
 
 /**
@@ -1306,7 +1305,7 @@ _mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures)
       return;
    }
 
-   create_textures(ctx, target, n, textures, true);
+   create_textures(ctx, target, n, textures, "glCreateTextures");
 }
 
 /**
