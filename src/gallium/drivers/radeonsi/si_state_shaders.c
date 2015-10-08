@@ -942,7 +942,7 @@ static void si_delete_shader_selector(struct pipe_context *ctx,
 			break;
 		}
 
-		si_shader_destroy(ctx, p);
+		si_shader_destroy(p);
 		free(p);
 		p = c;
 	}

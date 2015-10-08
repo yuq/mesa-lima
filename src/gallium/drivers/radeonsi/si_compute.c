@@ -469,7 +469,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	if (program->kernels) {
 		for (int i = 0; i < program->num_kernels; i++){
 			if (program->kernels[i].bo){
-				si_shader_destroy(ctx, &program->kernels[i]);
+				si_shader_destroy(&program->kernels[i]);
 			}
 		}
 		FREE(program->kernels);
@@ -482,7 +482,7 @@ static void si_delete_compute_state(struct pipe_context *ctx, void* state){
 	FREE(program->shader.binary.config);
 	FREE(program->shader.binary.rodata);
 	FREE(program->shader.binary.global_symbol_offsets);
-	si_shader_destroy(ctx, &program->shader);
+	si_shader_destroy(&program->shader);
 #endif
 
 	pipe_resource_reference(
