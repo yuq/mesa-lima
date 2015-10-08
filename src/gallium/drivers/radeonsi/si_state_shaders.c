@@ -122,7 +122,8 @@ static void si_shader_ls(struct si_shader *shader)
 
 	shader->ls_rsrc1 = S_00B528_VGPRS((shader->num_vgprs - 1) / 4) |
 			   S_00B528_SGPRS((num_sgprs - 1) / 8) |
-		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt);
+		           S_00B528_VGPR_COMP_CNT(vgpr_comp_cnt) |
+			   S_00B528_DX10_CLAMP(shader->dx10_clamp_mode);
 	shader->ls_rsrc2 = S_00B52C_USER_SGPR(num_user_sgprs) |
 			   S_00B52C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0);
 }
@@ -154,7 +155,8 @@ static void si_shader_hs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
 	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
 		       S_00B428_VGPRS((shader->num_vgprs - 1) / 4) |
-		       S_00B428_SGPRS((num_sgprs - 1) / 8));
+		       S_00B428_SGPRS((num_sgprs - 1) / 8) |
+		       S_00B428_DX10_CLAMP(shader->dx10_clamp_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
 		       S_00B42C_USER_SGPR(num_user_sgprs) |
 		       S_00B42C_SCRATCH_EN(shader->scratch_bytes_per_wave > 0));
