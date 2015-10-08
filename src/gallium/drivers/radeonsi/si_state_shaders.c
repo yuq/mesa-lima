@@ -1243,7 +1243,6 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 	int r;
 
 	if (scratch_needed_size > 0) {
-
 		if (scratch_needed_size > current_scratch_buffer_size) {
 			/* Create a bigger scratch buffer */
 			pipe_resource_reference(
@@ -1282,38 +1281,26 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			si_pm4_bind_state(sctx, hs, sctx->tcs_shader->current->pm4);
 
 		/* VS can be bound as LS, ES, or VS. */
-		if (sctx->tes_shader) {
-			r = si_update_scratch_buffer(sctx, sctx->vs_shader);
-			if (r < 0)
-				return false;
-			if (r == 1)
+		r = si_update_scratch_buffer(sctx, sctx->vs_shader);
+		if (r < 0)
+			return false;
+		if (r == 1) {
+			if (sctx->tes_shader)
 				si_pm4_bind_state(sctx, ls, sctx->vs_shader->current->pm4);
-		} else if (sctx->gs_shader) {
-			r = si_update_scratch_buffer(sctx, sctx->vs_shader);
-			if (r < 0)
-				return false;
-			if (r == 1)
+			else if (sctx->gs_shader)
 				si_pm4_bind_state(sctx, es, sctx->vs_shader->current->pm4);
-		} else {
-			r = si_update_scratch_buffer(sctx, sctx->vs_shader);
-			if (r < 0)
-				return false;
-			if (r == 1)
+			else
 				si_pm4_bind_state(sctx, vs, sctx->vs_shader->current->pm4);
 		}
 
 		/* TES can be bound as ES or VS. */
-		if (sctx->gs_shader) {
-			r = si_update_scratch_buffer(sctx, sctx->tes_shader);
-			if (r < 0)
-				return false;
-			if (r == 1)
+		r = si_update_scratch_buffer(sctx, sctx->tes_shader);
+		if (r < 0)
+			return false;
+		if (r == 1) {
+			if (sctx->gs_shader)
 				si_pm4_bind_state(sctx, es, sctx->tes_shader->current->pm4);
-		} else {
-			r = si_update_scratch_buffer(sctx, sctx->tes_shader);
-			if (r < 0)
-				return false;
-			if (r == 1)
+			else
 				si_pm4_bind_state(sctx, vs, sctx->tes_shader->current->pm4);
 		}
 	}
