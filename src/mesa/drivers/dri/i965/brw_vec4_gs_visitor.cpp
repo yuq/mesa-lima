@@ -597,14 +597,14 @@ vec4_gs_visitor::gs_end_primitive()
 }
 
 extern "C" const unsigned *
-brw_gs_emit(const struct brw_compiler *compiler, void *log_data,
-            struct brw_gs_compile *c,
-            const nir_shader *shader,
-            struct gl_shader_program *shader_prog,
-            void *mem_ctx,
-            int shader_time_index,
-            unsigned *final_assembly_size,
-            char **error_str)
+brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
+               struct brw_gs_compile *c,
+               const nir_shader *shader,
+               struct gl_shader_program *shader_prog,
+               void *mem_ctx,
+               int shader_time_index,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
    if (compiler->devinfo->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do

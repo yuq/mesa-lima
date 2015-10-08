@@ -106,9 +106,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
       st_index = brw_get_shader_time_index(brw, prog, &cp->program.Base, ST_CS);
 
    char *error_str;
-   program = brw_cs_emit(brw->intelScreen->compiler, brw, mem_ctx,
-                         key, &prog_data, cp->program.Base.nir,
-                         st_index, &program_size, &error_str);
+   program = brw_compile_cs(brw->intelScreen->compiler, brw, mem_ctx,
+                            key, &prog_data, cp->program.Base.nir,
+                            st_index, &program_size, &error_str);
    if (program == NULL) {
       prog->LinkStatus = false;
       ralloc_strcat(&prog->InfoLog, error_str);

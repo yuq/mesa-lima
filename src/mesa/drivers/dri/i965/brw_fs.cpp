@@ -5177,7 +5177,7 @@ computed_depth_mode(const nir_shader *shader)
 }
 
 const unsigned *
-brw_wm_fs_emit(const struct brw_compiler *compiler, void *log_data,
+brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_wm_prog_key *key,
                struct brw_wm_prog_data *prog_data,
@@ -5334,14 +5334,14 @@ fs_visitor::emit_cs_work_group_id_setup()
 }
 
 const unsigned *
-brw_cs_emit(const struct brw_compiler *compiler, void *log_data,
-            void *mem_ctx,
-            const struct brw_cs_prog_key *key,
-            struct brw_cs_prog_data *prog_data,
-            const nir_shader *shader,
-            int shader_time_index,
-            unsigned *final_assembly_size,
-            char **error_str)
+brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
+               void *mem_ctx,
+               const struct brw_cs_prog_key *key,
+               struct brw_cs_prog_data *prog_data,
+               const nir_shader *shader,
+               int shader_time_index,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
    prog_data->local_size[0] = shader->info.cs.local_size[0];
    prog_data->local_size[1] = shader->info.cs.local_size[1];

@@ -68,7 +68,7 @@ struct nir_shader;
  *
  * Returns the final assembly and the program's size.
  */
-const unsigned *brw_wm_fs_emit(const struct brw_compiler *compiler,
+const unsigned *brw_compile_fs(const struct brw_compiler *compiler,
                                void *log_data,
                                void *mem_ctx,
                                const struct brw_wm_prog_key *key,

@@ -303,9 +303,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
    unsigned program_size;
    char *error_str;
    const unsigned *program =
-      brw_gs_emit(brw->intelScreen->compiler, brw, &c,
-                  shader->Program->nir, prog,
-                  mem_ctx, st_index, &program_size, &error_str);
+      brw_compile_gs(brw->intelScreen->compiler, brw, &c,
+                     shader->Program->nir, prog,
+                     mem_ctx, st_index, &program_size, &error_str);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;

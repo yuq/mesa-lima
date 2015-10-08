@@ -1920,16 +1920,16 @@ extern "C" {
  * Returns the final assembly and the program's size.
  */
 const unsigned *
-brw_vs_emit(const struct brw_compiler *compiler, void *log_data,
-            void *mem_ctx,
-            const struct brw_vs_prog_key *key,
-            struct brw_vs_prog_data *prog_data,
-            const nir_shader *shader,
-            gl_clip_plane *clip_planes,
-            bool use_legacy_snorm_formula,
-            int shader_time_index,
-            unsigned *final_assembly_size,
-            char **error_str)
+brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
+               void *mem_ctx,
+               const struct brw_vs_prog_key *key,
+               struct brw_vs_prog_data *prog_data,
+               const nir_shader *shader,
+               gl_clip_plane *clip_planes,
+               bool use_legacy_snorm_formula,
+               int shader_time_index,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
    const unsigned *assembly = NULL;
 
