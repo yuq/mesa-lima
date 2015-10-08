@@ -112,6 +112,24 @@ void annotate(const struct brw_device_info *devinfo,
       ann->block_start = cfg->blocks[annotation->cur_block];
    }
 
+   if (bblock_end(cfg->blocks[annotation->cur_block]) == inst) {
+      ann->block_end = cfg->blocks[annotation->cur_block];
+      annotation->cur_block++;
+   }
+
+   /* Merge this annotation with the previous if possible. */
+   struct annotation *prev = annotation->ann_count > 1 ?
+         &annotation->ann[annotation->ann_count - 2] : NULL;
+   if (prev != NULL &&
+       ann->ir == prev->ir &&
+       ann->annotation == prev->annotation &&
+       ann->block_start == NULL &&
+       prev->block_end == NULL) {
+      if (ann->block_end == NULL)
+         annotation->ann_count--;
+      return;
+   }
+
    /* There is no hardware DO instruction on Gen6+, so since DO always
     * starts a basic block, we need to set the .block_start of the next
     * instruction's annotation with a pointer to the bblock started by
@@ -122,11 +140,6 @@ void annotate(const struct brw_device_info *devinfo,
     */
    if (devinfo->gen >= 6 && inst->opcode == BRW_OPCODE_DO) {
       annotation->ann_count--;
-   }
-
-   if (bblock_end(cfg->blocks[annotation->cur_block]) == inst) {
-      ann->block_end = cfg->blocks[annotation->cur_block];
-      annotation->cur_block++;
    }
 }
 
