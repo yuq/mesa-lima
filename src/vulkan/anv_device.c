@@ -528,25 +528,12 @@ anv_queue_init(struct anv_device *device, struct anv_queue *queue)
    queue->device = device;
    queue->pool = &device->surface_state_pool;
 
-   queue->completed_serial = anv_state_pool_alloc(queue->pool, 4, 4);
-   if (queue->completed_serial.map == NULL)
-      return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-
-   *(uint32_t *)queue->completed_serial.map = 0;
-   queue->next_serial = 1;
-
    return VK_SUCCESS;
 }
 
 static void
 anv_queue_finish(struct anv_queue *queue)
 {
-#ifdef HAVE_VALGRIND
-   /* This gets torn down with the device so we only need to do this if
-    * valgrind is present.
-    */
-   anv_state_pool_free(queue->pool, queue->completed_serial);
-#endif
 }
 
 static void
