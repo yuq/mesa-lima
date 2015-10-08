@@ -1205,30 +1205,23 @@ static int si_update_scratch_buffer(struct si_context *sctx,
 
 static unsigned si_get_current_scratch_buffer_size(struct si_context *sctx)
 {
-	if (!sctx->scratch_buffer)
-		return 0;
-
-	return sctx->scratch_buffer->b.b.width0;
+	return sctx->scratch_buffer ? sctx->scratch_buffer->b.b.width0 : 0;
 }
 
-static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_context *sctx,
-					struct si_shader_selector *sel)
+static unsigned si_get_scratch_buffer_bytes_per_wave(struct si_shader_selector *sel)
 {
-	if (!sel)
-		return 0;
-
-	return sel->current->scratch_bytes_per_wave;
+	return sel ? sel->current->scratch_bytes_per_wave : 0;
 }
 
 static unsigned si_get_max_scratch_bytes_per_wave(struct si_context *sctx)
 {
 	unsigned bytes = 0;
 
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->ps_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->gs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->vs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->tcs_shader));
-	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx, sctx->tes_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->ps_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->gs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->vs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tcs_shader));
+	bytes = MAX2(bytes, si_get_scratch_buffer_bytes_per_wave(sctx->tes_shader));
 	return bytes;
 }
 
