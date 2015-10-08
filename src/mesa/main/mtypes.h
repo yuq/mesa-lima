@@ -42,7 +42,7 @@
 #include "main/config.h"
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
-#include "glsl/shader_enums.h"
+#include "glsl/nir/shader_enums.h"
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 
 

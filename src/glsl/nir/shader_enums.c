@@ -26,7 +26,7 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#include "glsl/shader_enums.h"
+#include "shader_enums.h"
 #include "util/macros.h"
 
 #define ENUM(x) [x] = #x

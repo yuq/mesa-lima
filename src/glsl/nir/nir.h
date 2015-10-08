@@ -35,7 +35,7 @@
 #include "util/set.h"
 #include "util/bitset.h"
 #include "nir_types.h"
-#include "glsl/shader_enums.h"
+#include "shader_enums.h"
 #include <stdio.h>
 
 #include "nir_opcodes.h"

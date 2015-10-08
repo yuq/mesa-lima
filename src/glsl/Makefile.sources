@@ -80,7 +80,9 @@ NIR_FILES = \
 	nir/nir_vla.h \
 	nir/nir_worklist.c \
 	nir/nir_worklist.h \
-	nir/nir_types.cpp
+	nir/nir_types.cpp \
+	nir/shader_enums.h \
+	nir/shader_enums.c
 
 # libglsl
 
@@ -204,8 +206,7 @@ LIBGLSL_FILES = \
 	opt_vectorize.cpp \
 	program.h \
 	s_expression.cpp \
-	s_expression.h \
-	shader_enums.h
+	s_expression.h
 
 # glsl_compiler
 
