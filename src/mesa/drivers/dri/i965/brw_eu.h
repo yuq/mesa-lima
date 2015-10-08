@@ -533,6 +533,12 @@ next_offset(const struct brw_device_info *devinfo, void *store, int offset)
       return offset + 16;
 }
 
+static inline bool
+is_3src(enum opcode opcode)
+{
+   return opcode_descs[opcode].nsrc == 3;
+}
+
 #ifdef __cplusplus
 }
 #endif

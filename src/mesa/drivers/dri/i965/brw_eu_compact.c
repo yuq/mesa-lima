@@ -954,13 +954,6 @@ is_compactable_immediate(unsigned imm)
    return imm == 0 || imm == 0xfffff000;
 }
 
-/* Returns whether an opcode takes three sources. */
-static bool
-is_3src(uint32_t op)
-{
-   return opcode_descs[op].nsrc == 3;
-}
-
 /**
  * Tries to compact instruction src into dst.
  *

@@ -782,7 +782,7 @@ backend_instruction::is_commutative() const
 bool
 backend_instruction::is_3src() const
 {
-   return opcode < ARRAY_SIZE(opcode_descs) && opcode_descs[opcode].nsrc == 3;
+   return ::is_3src(opcode);
 }
 
 bool
