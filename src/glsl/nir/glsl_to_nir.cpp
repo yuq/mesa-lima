@@ -173,6 +173,16 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       shader->info.gs.invocations = sh->Geom.Invocations;
       break;
 
+   case MESA_SHADER_FRAGMENT: {
+      struct gl_fragment_program *fp =
+         (struct gl_fragment_program *)sh->Program;
+
+      shader->info.fs.uses_discard = fp->UsesKill;
+      shader->info.fs.early_fragment_tests = sh->EarlyFragmentTests;
+      shader->info.fs.depth_layout = fp->FragDepthLayout;
+      break;
+   }
+
    case MESA_SHADER_COMPUTE: {
       struct gl_compute_program *cp = (struct gl_compute_program *)sh->Program;
       shader->info.cs.local_size[0] = cp->LocalSize[0];

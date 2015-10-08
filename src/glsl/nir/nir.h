@@ -1503,6 +1503,19 @@ typedef struct nir_shader_info {
       } gs;
 
       struct {
+         bool uses_discard;
+
+         /**
+          * Whether early fragment tests are enabled as defined by
+          * ARB_shader_image_load_store.
+          */
+         bool early_fragment_tests;
+
+         /** gl_FragDepth layout for ARB_conservative_depth. */
+         enum gl_frag_depth_layout depth_layout;
+      } fs;
+
+      struct {
          unsigned local_size[3];
       } cs;
    };
