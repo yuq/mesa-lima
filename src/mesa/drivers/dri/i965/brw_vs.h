@@ -54,14 +54,18 @@
 extern "C" {
 #endif
 
-const unsigned *brw_vs_emit(struct brw_context *brw,
+struct nir_shader;
+
+const unsigned *brw_vs_emit(const struct brw_compiler *compiler, void *log_data,
                             void *mem_ctx,
                             const struct brw_vs_prog_key *key,
                             struct brw_vs_prog_data *prog_data,
-                            struct gl_vertex_program *vp,
-                            struct gl_shader_program *shader_prog,
+                            const struct nir_shader *shader,
+                            gl_clip_plane *clip_planes,
+                            bool use_legacy_snorm_formula,
                             int shader_time_index,
-                            unsigned *program_size);
+                            unsigned *final_assembly_size,
+                            char **error_str);
 void brw_vs_debug_recompile(struct brw_context *brw,
                             struct gl_shader_program *prog,
                             const struct brw_vs_prog_key *key);

@@ -31,6 +31,7 @@
 
 
 #include "main/compiler.h"
+#include "main/context.h"
 #include "brw_context.h"
 #include "brw_vs.h"
 #include "brw_util.h"
@@ -201,9 +202,20 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    /* Emit GEN4 code.
     */
-   program = brw_vs_emit(brw, mem_ctx, key, &prog_data,
-                         &vp->program, prog, st_index, &program_size);
+   char *error_str;
+   program = brw_vs_emit(brw->intelScreen->compiler, brw, mem_ctx, key,
+                         &prog_data, vp->program.Base.nir,
+                         brw_select_clip_planes(&brw->ctx),
+                         !_mesa_is_gles3(&brw->ctx),
+                         st_index, &program_size, &error_str);
    if (program == NULL) {
+      if (prog) {
+         prog->LinkStatus = false;
+         ralloc_strcat(&prog->InfoLog, error_str);
+      }
+
+      _mesa_problem(NULL, "Failed to compile vertex shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }

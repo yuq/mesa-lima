@@ -1920,51 +1920,42 @@ extern "C" {
  * Returns the final assembly and the program's size.
  */
 const unsigned *
-brw_vs_emit(struct brw_context *brw,
+brw_vs_emit(const struct brw_compiler *compiler, void *log_data,
             void *mem_ctx,
             const struct brw_vs_prog_key *key,
             struct brw_vs_prog_data *prog_data,
-            struct gl_vertex_program *vp,
-            struct gl_shader_program *prog,
+            const nir_shader *shader,
+            gl_clip_plane *clip_planes,
+            bool use_legacy_snorm_formula,
             int shader_time_index,
-            unsigned *final_assembly_size)
+            unsigned *final_assembly_size,
+            char **error_str)
 {
    const unsigned *assembly = NULL;
 
-   if (brw->intelScreen->compiler->scalar_vs) {
+   if (compiler->scalar_vs) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
-      fs_visitor v(brw->intelScreen->compiler, brw,
-                   mem_ctx, key, &prog_data->base.base,
+      fs_visitor v(compiler, log_data, mem_ctx, key, &prog_data->base.base,
                    NULL, /* prog; Only used for TEXTURE_RECTANGLE on gen < 8 */
-                   vp->Base.nir, 8, shader_time_index);
-      if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
-         if (prog) {
-            prog->LinkStatus = false;
-            ralloc_strcat(&prog->InfoLog, v.fail_msg);
-         }
-
-         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
-                       v.fail_msg);
+                   shader, 8, shader_time_index);
+      if (!v.run_vs(clip_planes)) {
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
          return NULL;
       }
 
-      fs_generator g(brw->intelScreen->compiler, brw,
-                     mem_ctx, (void *) key, &prog_data->base.base,
-                     v.promoted_constants,
+      fs_generator g(compiler, log_data, mem_ctx, (void *) key,
+                     &prog_data->base.base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
-         char *name;
-         if (prog) {
-            name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
-                                   prog->Label ? prog->Label : "unnamed",
-                                   prog->Name);
-         } else {
-            name = ralloc_asprintf(mem_ctx, "vertex program %d",
-                                   vp->Base.Id);
-         }
-         g.enable_debug(name);
+         const char *debug_name =
+            ralloc_asprintf(mem_ctx, "%s vertex shader %s",
+                            shader->info.label ? shader->info.label : "unnamed",
+                            shader->info.name);
+
+         g.enable_debug(debug_name);
       }
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
@@ -1973,26 +1964,19 @@ brw_vs_emit(struct brw_context *brw,
    if (!assembly) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-      vec4_vs_visitor v(brw->intelScreen->compiler, brw, key, prog_data,
-                        vp->Base.nir, brw_select_clip_planes(&brw->ctx),
-                        mem_ctx, shader_time_index,
-                        !_mesa_is_gles3(&brw->ctx));
+      vec4_vs_visitor v(compiler, log_data, key, prog_data,
+                        shader, clip_planes, mem_ctx,
+                        shader_time_index, use_legacy_snorm_formula);
       if (!v.run()) {
-         if (prog) {
-            prog->LinkStatus = false;
-            ralloc_strcat(&prog->InfoLog, v.fail_msg);
-         }
-
-         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
-                       v.fail_msg);
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
          return NULL;
       }
 
-      vec4_generator g(brw->intelScreen->compiler, brw,
-                       &prog_data->base,
+      vec4_generator g(compiler, log_data, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
-      assembly = g.generate_assembly(v.cfg, final_assembly_size, vp->Base.nir);
+      assembly = g.generate_assembly(v.cfg, final_assembly_size, shader);
    }
 
    return assembly;
