@@ -3975,6 +3975,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 				key->vs.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->vs.as_es);
 		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
+		fprintf(f, "  export_prim_id = %u\n", key->vs.export_prim_id);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
@@ -3986,6 +3987,7 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
 				key->tes.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->tes.as_es);
+		fprintf(f, "  export_prim_id = %u\n", key->tes.export_prim_id);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
