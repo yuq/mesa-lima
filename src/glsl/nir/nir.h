@@ -1490,6 +1490,11 @@ typedef struct nir_shader_info {
    /* Which system values are actually read */
    uint64_t system_values_read;
 
+   /* Which patch inputs are actually read */
+   uint32_t patch_inputs_read;
+   /* Which patch outputs are actually written */
+   uint32_t patch_outputs_written;
+
    /* Whether or not this shader ever uses textureGather() */
    bool uses_texture_gather;
 

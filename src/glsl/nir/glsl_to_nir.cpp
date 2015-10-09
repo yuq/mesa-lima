@@ -160,6 +160,8 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info.num_images = sh->NumImages;
    shader->info.inputs_read = sh->Program->InputsRead;
    shader->info.outputs_written = sh->Program->OutputsWritten;
+   shader->info.patch_inputs_read = sh->Program->PatchInputsRead;
+   shader->info.patch_outputs_written = sh->Program->PatchOutputsWritten;
    shader->info.system_values_read = sh->Program->SystemValuesRead;
    shader->info.uses_texture_gather = sh->Program->UsesGather;
    shader->info.uses_clip_distance_out =
