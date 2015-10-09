@@ -1680,6 +1680,7 @@ struct opcode_desc {
 
 extern const struct opcode_desc opcode_descs[128];
 extern const char * const conditional_modifier[16];
+extern const char *const pred_ctrl_align16[16];
 
 void
 brw_emit_depthbuffer(struct brw_context *brw);

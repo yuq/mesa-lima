@@ -252,7 +252,7 @@ static const char *const pred_inv[2] = {
    [1] = "-"
 };
 
-static const char *const pred_ctrl_align16[16] = {
+const char *const pred_ctrl_align16[16] = {
    [1] = "",
    [2] = ".x",
    [3] = ".y",

@@ -1370,9 +1370,10 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    vec4_instruction *inst = (vec4_instruction *)be_inst;
 
    if (inst->predicate) {
-      fprintf(file, "(%cf0.%d) ",
+      fprintf(file, "(%cf0.%d%s) ",
               inst->predicate_inverse ? '-' : '+',
-              inst->flag_subreg);
+              inst->flag_subreg,
+              pred_ctrl_align16[inst->predicate]);
    }
 
    fprintf(file, "%s", brw_instruction_name(inst->opcode));
