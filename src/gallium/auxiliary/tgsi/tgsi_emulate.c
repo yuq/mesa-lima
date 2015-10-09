@@ -102,7 +102,7 @@ passthrough_edgeflag(struct tgsi_transform_context *tctx)
 
 static void
 transform_instr(struct tgsi_transform_context *tctx,
-		struct tgsi_full_instruction *inst)
+                struct tgsi_full_instruction *inst)
 {
    struct tgsi_emulation_context *ctx = tgsi_emulation_context(tctx);
 
@@ -116,7 +116,8 @@ transform_instr(struct tgsi_transform_context *tctx,
 
    /* Clamp color outputs. */
    if (ctx->flags & TGSI_EMU_CLAMP_COLOR_OUTPUTS) {
-      for (int i = 0; i < inst->Instruction.NumDstRegs; i++) {
+      int i;
+      for (i = 0; i < inst->Instruction.NumDstRegs; i++) {
          unsigned semantic;
 
          if (inst->Dst[i].Register.File != TGSI_FILE_OUTPUT ||
