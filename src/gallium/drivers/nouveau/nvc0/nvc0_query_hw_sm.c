@@ -247,7 +247,7 @@ static const uint64_t nvc0_read_hw_sm_counters_code[] =
     * mov b32 $r11 c0[0x4]
     * ext u32 $r8 $r9 0x414
     * (not $p0) exit
-    * mul $r8 u32 $r8 u32 36
+    * mul $r8 u32 $r8 u32 48
     * add b32 $r10 $c $r10 $r8
     * add b32 $r11 $r11 0x0 $c
     * mov b32 $r8 c0[0x8]
@@ -270,7 +270,7 @@ static const uint64_t nvc0_read_hw_sm_counters_code[] =
    0x280040001002dde4ULL,
    0x7000c01050921c03ULL,
    0x80000000000021e7ULL,
-   0x1000000090821c02ULL,
+   0x10000000c0821c02ULL,
    0x4801000020a29c03ULL,
    0x0800000000b2dc42ULL,
    0x2800400020021de4ULL,
@@ -473,7 +473,7 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 
    /* set sequence field to 0 (used to check if result is available) */
    for (i = 0; i < screen->mp_count; ++i) {
-      const unsigned b = (0x24 / 4) * i;
+      const unsigned b = (0x30 / 4) * i;
       hq->data[b + 8] = 0;
    }
    hq->sequence++;
@@ -617,7 +617,7 @@ nvc0_hw_sm_query_read_data(uint32_t count[32][8],
    unsigned p, c;
 
    for (p = 0; p < mp_count; ++p) {
-      const unsigned b = (0x24 / 4) * p;
+      const unsigned b = (0x30 / 4) * p;
 
       for (c = 0; c < cfg->num_counters; ++c) {
          if (hq->data[b + 8] != hq->sequence) {
@@ -815,7 +815,10 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
         */
        space = (4 * 4 + 4 + 4) * nvc0->screen->mp_count * sizeof(uint32_t);
    } else {
-      /* for each MP:
+      /*
+       * Note that padding is used to align memory access to 128 bits.
+       *
+       * for each MP:
        * [00] = MP.C0
        * [04] = MP.C1
        * [08] = MP.C2
@@ -825,8 +828,11 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
        * [18] = MP.C6
        * [1c] = MP.C7
        * [20] = MP.sequence
+       * [24] = padding
+       * [28] = padding
+       * [2c] = padding
        */
-      space = (8 + 1) * nvc0->screen->mp_count * sizeof(uint32_t);
+      space = (8 + 1 + 3) * nvc0->screen->mp_count * sizeof(uint32_t);
    }
 
    if (!nvc0_hw_query_allocate(nvc0, &hq->base, space)) {
