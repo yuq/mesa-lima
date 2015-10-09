@@ -203,55 +203,113 @@ static const char *
 interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
                      ir_rvalue **nonconst_block_index)
 {
-   ir_rvalue *previous_index = NULL;
    *nonconst_block_index = NULL;
+   char *name_copy = NULL;
+   size_t base_length = 0;
+
+   /* Loop back through the IR until we find the uniform block */
+   ir_rvalue *ir = d;
+   while (ir != NULL) {
+      switch (ir->ir_type) {
+      case ir_type_dereference_variable: {
+         /* Exit loop */
+         ir = NULL;
+         break;
+      }
+
+      case ir_type_dereference_record: {
+         ir_dereference_record *r = (ir_dereference_record *) ir;
+         ir = r->record->as_dereference();
+
+         /* If we got here it means any previous array subscripts belong to
+          * block members and not the block itself so skip over them in the
+          * next pass.
+          */
+         d = ir;
+         break;
+      }
+
+      case ir_type_dereference_array: {
+         ir_dereference_array *a = (ir_dereference_array *) ir;
+         ir = a->array->as_dereference();
+         break;
+      }
+
+      case ir_type_swizzle: {
+         ir_swizzle *s = (ir_swizzle *) ir;
+         ir = s->val->as_dereference();
+         break;
+      }
+
+      default:
+         assert(!"Should not get here.");
+         break;
+      }
+   }
 
    while (d != NULL) {
       switch (d->ir_type) {
       case ir_type_dereference_variable: {
          ir_dereference_variable *v = (ir_dereference_variable *) d;
-         if (previous_index
-             && v->var->is_interface_instance()
-             && v->var->type->is_array()) {
-
-            ir_constant *const_index = previous_index->as_constant();
-            if (!const_index) {
-               *nonconst_block_index = previous_index;
-               return ralloc_asprintf(mem_ctx, "%s[0]", base_name);
-            } else {
-               return ralloc_asprintf(mem_ctx,
-                                      "%s[%d]",
-                                      base_name,
-                                      const_index->get_uint_component(0));
-            }
+         if (name_copy != NULL &&
+             v->var->is_interface_instance() &&
+             v->var->type->is_array()) {
+            return name_copy;
          } else {
+            *nonconst_block_index = NULL;
             return base_name;
          }
 
          break;
       }
 
-      case ir_type_dereference_record: {
-         ir_dereference_record *r = (ir_dereference_record *) d;
-
-         d = r->record->as_dereference();
-         break;
-      }
-
       case ir_type_dereference_array: {
          ir_dereference_array *a = (ir_dereference_array *) d;
+         size_t new_length;
+
+         if (name_copy == NULL) {
+            name_copy = ralloc_strdup(mem_ctx, base_name);
+            base_length = strlen(name_copy);
+         }
+
+         /* For arrays of arrays we start at the innermost array and work our
+          * way out so we need to insert the subscript at the base of the
+          * name string rather than just attaching it to the end.
+          */
+         new_length = base_length;
+         ir_constant *const_index = a->array_index->as_constant();
+         char *end = ralloc_strdup(NULL, &name_copy[new_length]);
+         if (!const_index) {
+            ir_rvalue *array_index = a->array_index;
+            if (array_index->type != glsl_type::uint_type)
+               array_index = i2u(array_index);
+
+            if (a->array->type->fields.array->is_array()) {
+               ir_constant *base_size = new(mem_ctx)
+                  ir_constant(a->array->type->fields.array->arrays_of_arrays_size());
+               array_index = mul(array_index, base_size);
+            }
+
+            if (*nonconst_block_index) {
+               *nonconst_block_index = add(*nonconst_block_index, array_index);
+            } else {
+               *nonconst_block_index = array_index;
+            }
+
+            ralloc_asprintf_rewrite_tail(&name_copy, &new_length, "[0]%s",
+                                         end);
+         } else {
+            ralloc_asprintf_rewrite_tail(&name_copy, &new_length, "[%d]%s",
+                                         const_index->get_uint_component(0),
+                                         end);
+         }
+         ralloc_free(end);
 
          d = a->array->as_dereference();
-         previous_index = a->array_index;
 
          break;
       }
-      case ir_type_swizzle: {
-         ir_swizzle *s = (ir_swizzle *) d;
 
-         d = s->val->as_dereference();
-         break;
-      }
       default:
          assert(!"Should not get here.");
          break;
@@ -295,8 +353,6 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
          ir_constant *index = new(mem_ctx) ir_constant(i);
 
          if (nonconst_block_index) {
-            if (nonconst_block_index->type != glsl_type::uint_type)
-               nonconst_block_index = i2u(nonconst_block_index);
             this->uniform_block = add(nonconst_block_index, index);
          } else {
             this->uniform_block = index;
