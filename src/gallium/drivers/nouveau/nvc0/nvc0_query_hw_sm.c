@@ -131,7 +131,7 @@ struct nvc0_hw_sm_counter_cfg
    uint32_t num_src : 3;  /* number of sources (1 - 6, only for NVC0:NVE4) */
    uint32_t sig_dom : 1;  /* if 0, MP_PM_A (per warp-sched), if 1, MP_PM_B */
    uint32_t sig_sel : 8;  /* signal group */
-   uint64_t src_sel;      /* signal selection for up to 6 sources (48 bit) */
+   uint32_t src_sel;      /* signal selection for up to 4 sources */
 };
 
 #define NVC0_COUNTER_OPn_SUM            0
@@ -280,44 +280,82 @@ static const uint64_t nvc0_read_hw_sm_counters_code[] =
    0x8000000000001de7ULL
 };
 
-#define _Q(n, f, m, g, c, s0, s1, s2, s3, s4, s5) [NVC0_HW_SM_QUERY_##n] = { { { f, NVC0_COMPUTE_MP_PM_OP_MODE_##m, c, 0, g, s0|(s1 << 8)|(s2 << 16)|(s3 << 24)|(s4##ULL << 32)|(s5##ULL << 40) }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { 1, 1 } }
+#define _C(f, o, g, s) { f, NVC0_COMPUTE_MP_PM_OP_MODE_##o, 0, 0, g, s }
+#define _Q(n, c, ...) [NVC0_HW_SM_QUERY_##n] = {                              \
+   { __VA_ARGS__ }, c, NVC0_COUNTER_OPn_SUM, { 1, 1 },                        \
+}
 
 static const struct nvc0_hw_sm_query_cfg nvc0_hw_sm_queries[] =
 {
-   _Q(ACTIVE_CYCLES,       0xaaaa, LOGOP, 0x11, 1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(ACTIVE_WARPS,        0xaaaa, LOGOP, 0x24, 6, 0x10, 0x21, 0x32, 0x43, 0x54, 0x65),
-   _Q(ATOM_COUNT,          0xaaaa, LOGOP, 0x63, 1, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(BRANCH,              0xaaaa, LOGOP, 0x1a, 2, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00),
-   _Q(DIVERGENT_BRANCH,    0xaaaa, LOGOP, 0x19, 2, 0x20, 0x31, 0x00, 0x00, 0x00, 0x00),
-   _Q(GLD_REQUEST,         0xaaaa, LOGOP, 0x64, 1, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(GRED_COUNT,          0xaaaa, LOGOP, 0x63, 1, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(GST_REQUEST,         0xaaaa, LOGOP, 0x64, 1, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(INST_EXECUTED,       0xaaaa, LOGOP, 0x2d, 3, 0x00, 0x11, 0x22, 0x00, 0x00, 0x00),
-   _Q(INST_ISSUED1_0,      0xaaaa, LOGOP, 0x7e, 1, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(INST_ISSUED1_1,      0xaaaa, LOGOP, 0x7e, 1, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(INST_ISSUED2_0,      0xaaaa, LOGOP, 0x7e, 1, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(INST_ISSUED2_1,      0xaaaa, LOGOP, 0x7e, 1, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(LOCAL_LD,            0xaaaa, LOGOP, 0x64, 1, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(LOCAL_ST,            0xaaaa, LOGOP, 0x64, 1, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_0,      0xaaaa, LOGOP, 0x01, 1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_1,      0xaaaa, LOGOP, 0x01, 1, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_2,      0xaaaa, LOGOP, 0x01, 1, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_3,      0xaaaa, LOGOP, 0x01, 1, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_4,      0xaaaa, LOGOP, 0x01, 1, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_5,      0xaaaa, LOGOP, 0x01, 1, 0x50, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_6,      0xaaaa, LOGOP, 0x01, 1, 0x60, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(PROF_TRIGGER_7,      0xaaaa, LOGOP, 0x01, 1, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(SHARED_LD,           0xaaaa, LOGOP, 0x64, 1, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(SHARED_ST,           0xaaaa, LOGOP, 0x64, 1, 0x40, 0x00, 0x00, 0x00, 0x00, 0x00),
-   _Q(THREADS_LAUNCHED,    0xaaaa, LOGOP, 0x26, 6, 0x10, 0x21, 0x32, 0x43, 0x54, 0x65),
-   _Q(TH_INST_EXECUTED_0,  0xaaaa, LOGOP, 0xa3, 6, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55),
-   _Q(TH_INST_EXECUTED_1,  0xaaaa, LOGOP, 0xa5, 6, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55),
-   _Q(TH_INST_EXECUTED_2,  0xaaaa, LOGOP, 0xa4, 6, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55),
-   _Q(TH_INST_EXECUTED_3,  0xaaaa, LOGOP, 0xa6, 6, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55),
-   _Q(WARPS_LAUNCHED,      0xaaaa, LOGOP, 0x26, 1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00),
+   _Q(ACTIVE_CYCLES,       1, _C(0xaaaa, LOGOP, 0x11, 0x00000000)),
+   _Q(ACTIVE_WARPS,        6, _C(0xaaaa, LOGOP, 0x24, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0x24, 0x00000021),
+                              _C(0xaaaa, LOGOP, 0x24, 0x00000032),
+                              _C(0xaaaa, LOGOP, 0x24, 0x00000043),
+                              _C(0xaaaa, LOGOP, 0x24, 0x00000054),
+                              _C(0xaaaa, LOGOP, 0x24, 0x00000065)),
+   _Q(ATOM_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x00000030)),
+   _Q(BRANCH,              2, _C(0xaaaa, LOGOP, 0x1a, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0x1a, 0x00000011)),
+   _Q(DIVERGENT_BRANCH,    2, _C(0xaaaa, LOGOP, 0x19, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0x19, 0x00000031)),
+   _Q(GLD_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x00000030)),
+   _Q(GRED_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x00000040)),
+   _Q(GST_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x00000060)),
+   _Q(INST_EXECUTED,       3, _C(0xaaaa, LOGOP, 0x2d, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0x2d, 0x00000011),
+                              _C(0xaaaa, LOGOP, 0x2d, 0x00000022)),
+   _Q(INST_ISSUED1_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000010)),
+   _Q(INST_ISSUED1_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000040)),
+   _Q(INST_ISSUED2_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000020)),
+   _Q(INST_ISSUED2_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000050)),
+   _Q(LOCAL_LD,            1, _C(0xaaaa, LOGOP, 0x64, 0x00000020)),
+   _Q(LOCAL_ST,            1, _C(0xaaaa, LOGOP, 0x64, 0x00000050)),
+   _Q(PROF_TRIGGER_0,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000000)),
+   _Q(PROF_TRIGGER_1,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000010)),
+   _Q(PROF_TRIGGER_2,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000020)),
+   _Q(PROF_TRIGGER_3,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000030)),
+   _Q(PROF_TRIGGER_4,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000040)),
+   _Q(PROF_TRIGGER_5,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000050)),
+   _Q(PROF_TRIGGER_6,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000060)),
+   _Q(PROF_TRIGGER_7,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000070)),
+   _Q(SHARED_LD,           1, _C(0xaaaa, LOGOP, 0x64, 0x00000010)),
+   _Q(SHARED_ST,           1, _C(0xaaaa, LOGOP, 0x64, 0x00000040)),
+   _Q(THREADS_LAUNCHED,    6, _C(0xaaaa, LOGOP, 0x26, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0x26, 0x00000021),
+                              _C(0xaaaa, LOGOP, 0x26, 0x00000032),
+                              _C(0xaaaa, LOGOP, 0x26, 0x00000043),
+                              _C(0xaaaa, LOGOP, 0x26, 0x00000054),
+                              _C(0xaaaa, LOGOP, 0x26, 0x00000065)),
+   _Q(TH_INST_EXECUTED_0,  6, _C(0xaaaa, LOGOP, 0xa3, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x00000011),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x00000022),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x00000033),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x00000044),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x00000055)),
+   _Q(TH_INST_EXECUTED_1,  6, _C(0xaaaa, LOGOP, 0xa5, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x00000011),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x00000022),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x00000033),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x00000044),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x00000055)),
+   _Q(TH_INST_EXECUTED_2,  6, _C(0xaaaa, LOGOP, 0xa4, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x00000011),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x00000022),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x00000033),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x00000044),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x00000055)),
+   _Q(TH_INST_EXECUTED_3,  6, _C(0xaaaa, LOGOP, 0xa6, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x00000011),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x00000022),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x00000033),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x00000044),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x00000055)),
+   _Q(WARPS_LAUNCHED,      1, _C(0xaaaa, LOGOP, 0x26, 0x00000000)),
 };
 
 #undef _Q
+#undef _C
 
 static const struct nvc0_hw_sm_query_cfg *
 nvc0_hw_sm_query_get_cfg(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
@@ -431,7 +469,7 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    }
 
    assert(cfg->num_counters <= 8);
-   PUSH_SPACE(push, 4 * 8 * 6 + 2);
+   PUSH_SPACE(push, 8 * 8 + 2);
 
    /* set sequence field to 0 (used to check if result is available) */
    for (i = 0; i < screen->mp_count; ++i) {
@@ -441,8 +479,6 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    hq->sequence++;
 
    for (i = 0; i < cfg->num_counters; ++i) {
-      unsigned s;
-
       if (!screen->pm.num_hw_sm_active[0]) {
          BEGIN_NVC0(push, SUBC_SW(0x0600), 1);
          PUSH_DATA (push, 0x80000000);
@@ -458,16 +494,14 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       }
 
       /* configure and reset the counter(s) */
-      for (s = 0; s < cfg->ctr[i].num_src; s++) {
-         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(s)), 1);
-         PUSH_DATA (push, cfg->ctr[i].sig_sel);
-         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(s)), 1);
-         PUSH_DATA (push, (cfg->ctr[i].src_sel >> (s * 8)) & 0xff);
-         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(s)), 1);
-         PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
-         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(s)), 1);
-         PUSH_DATA (push, 0);
-      }
+      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(c)), 1);
+      PUSH_DATA (push, cfg->ctr[i].sig_sel);
+      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(c)), 1);
+      PUSH_DATA (push, cfg->ctr[i].src_sel);
+      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(c)), 1);
+      PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
+      BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(c)), 1);
+      PUSH_DATA (push, 0);
    }
    return true;
 }
@@ -581,7 +615,7 @@ nvc0_hw_sm_query_read_data(uint32_t count[32][8],
             if (nouveau_bo_wait(hq->bo, NOUVEAU_BO_RD, nvc0->base.client))
                return false;
          }
-         count[p][c] = hq->data[b + hsq->ctr[c]];
+         count[p][c] = hq->data[b + hsq->ctr[c]] * (1 << c);
       }
    }
    return true;
