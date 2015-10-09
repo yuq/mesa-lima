@@ -193,7 +193,9 @@ vec4_visitor::nir_emit_if(nir_if *if_stmt)
    vec4_instruction *inst = emit(MOV(dst_null_d(), condition));
    inst->conditional_mod = BRW_CONDITIONAL_NZ;
 
-   emit(IF(BRW_PREDICATE_NORMAL));
+   /* We can just predicate based on the X channel, as the condition only
+    * goes on its own line */
+   emit(IF(BRW_PREDICATE_ALIGN16_REPLICATE_X));
 
    nir_emit_cf_list(&if_stmt->then_list);
 
