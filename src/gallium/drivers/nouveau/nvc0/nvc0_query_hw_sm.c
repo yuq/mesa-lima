@@ -338,11 +338,10 @@ nvc0_hw_sm_destroy_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 }
 
 static boolean
-nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
+nve4_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 {
    struct nvc0_screen *screen = nvc0->screen;
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   const bool is_nve4 = screen->base.class_3d >= NVE4_3D_CLASS;
    struct nvc0_hw_sm_query *hsq = nvc0_hw_sm_query(hq);
    const struct nvc0_hw_sm_query_cfg *cfg;
    unsigned i, c;
@@ -361,7 +360,7 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    }
 
    assert(cfg->num_counters <= 4);
-   PUSH_SPACE(push, 4 * 8 * (is_nve4 ? 1 : 6) + 6);
+   PUSH_SPACE(push, 4 * 8 * + 6);
 
    if (!screen->pm.mp_counters_enabled) {
       screen->pm.mp_counters_enabled = true;
@@ -396,31 +395,92 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       assert(c <= (d * 4 + 3)); /* must succeed, already checked for space */
 
       /* configure and reset the counter(s) */
-      if (is_nve4) {
-         if (d == 0)
-            BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_A_SIGSEL(c & 3)), 1);
-         else
-            BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_B_SIGSEL(c & 3)), 1);
-         PUSH_DATA (push, cfg->ctr[i].sig_sel);
-         BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SRCSEL(c)), 1);
-         PUSH_DATA (push, cfg->ctr[i].src_sel + 0x2108421 * (c & 3));
-         BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_FUNC(c)), 1);
-         PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
-         BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SET(c)), 1);
-         PUSH_DATA (push, 0);
-      } else {
-         unsigned s;
+     if (d == 0)
+        BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_A_SIGSEL(c & 3)), 1);
+     else
+        BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_B_SIGSEL(c & 3)), 1);
+     PUSH_DATA (push, cfg->ctr[i].sig_sel);
+     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SRCSEL(c)), 1);
+     PUSH_DATA (push, cfg->ctr[i].src_sel + 0x2108421 * (c & 3));
+     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_FUNC(c)), 1);
+     PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
+     BEGIN_NVC0(push, NVE4_COMPUTE(MP_PM_SET(c)), 1);
+     PUSH_DATA (push, 0);
+   }
+   return true;
+}
 
-         for (s = 0; s < cfg->ctr[i].num_src; s++) {
-            BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(s)), 1);
-            PUSH_DATA (push, cfg->ctr[i].sig_sel);
-            BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(s)), 1);
-            PUSH_DATA (push, (cfg->ctr[i].src_sel >> (s * 8)) & 0xff);
-            BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(s)), 1);
-            PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
-            BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(s)), 1);
-            PUSH_DATA (push, 0);
+static boolean
+nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
+{
+   struct nvc0_screen *screen = nvc0->screen;
+   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
+   struct nvc0_hw_sm_query *hsq = nvc0_hw_sm_query(hq);
+   const struct nvc0_hw_sm_query_cfg *cfg;
+   unsigned i, c;
+   unsigned num_ab[2] = { 0, 0 };
+
+   if (screen->base.class_3d >= NVE4_3D_CLASS)
+      return nve4_hw_sm_begin_query(nvc0, hq);
+
+   cfg = nvc0_hw_sm_query_get_cfg(nvc0, hq);
+
+   /* check if we have enough free counter slots */
+   for (i = 0; i < cfg->num_counters; ++i)
+      num_ab[cfg->ctr[i].sig_dom]++;
+
+   if (screen->pm.num_hw_sm_active[0] + num_ab[0] > 4 ||
+       screen->pm.num_hw_sm_active[1] + num_ab[1] > 4) {
+      NOUVEAU_ERR("Not enough free MP counter slots !\n");
+      return false;
+   }
+
+   assert(cfg->num_counters <= 4);
+   PUSH_SPACE(push, 4 * 8 * 6 + 6);
+
+   if (!screen->pm.mp_counters_enabled) {
+      screen->pm.mp_counters_enabled = true;
+      BEGIN_NVC0(push, SUBC_SW(0x06ac), 1);
+      PUSH_DATA (push, 0x1fcb);
+   }
+
+   /* set sequence field to 0 (used to check if result is available) */
+   for (i = 0; i < screen->mp_count; ++i)
+      hq->data[i * 10 + 10] = 0;
+   hq->sequence++;
+
+   for (i = 0; i < cfg->num_counters; ++i) {
+      const unsigned d = cfg->ctr[i].sig_dom;
+      unsigned s;
+
+      if (!screen->pm.num_hw_sm_active[d]) {
+         uint32_t m = (1 << 22) | (1 << (7 + (8 * !d)));
+         if (screen->pm.num_hw_sm_active[!d])
+            m |= 1 << (7 + (8 * d));
+         BEGIN_NVC0(push, SUBC_SW(0x0600), 1);
+         PUSH_DATA (push, m);
+      }
+      screen->pm.num_hw_sm_active[d]++;
+
+      for (c = d * 4; c < (d * 4 + 4); ++c) {
+         if (!screen->pm.mp_counter[c]) {
+            hsq->ctr[i] = c;
+            screen->pm.mp_counter[c] = hsq;
+            break;
          }
+      }
+      assert(c <= (d * 4 + 3)); /* must succeed, already checked for space */
+
+      /* configure and reset the counter(s) */
+      for (s = 0; s < cfg->ctr[i].num_src; s++) {
+         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(s)), 1);
+         PUSH_DATA (push, cfg->ctr[i].sig_sel);
+         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(s)), 1);
+         PUSH_DATA (push, (cfg->ctr[i].src_sel >> (s * 8)) & 0xff);
+         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(s)), 1);
+         PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
+         BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(s)), 1);
+         PUSH_DATA (push, 0);
       }
    }
    return true;
