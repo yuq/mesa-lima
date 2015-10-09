@@ -439,9 +439,6 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    const uint block[3] = { 32, is_nve4 ? 4 : 1, 1 };
    const uint grid[3] = { screen->mp_count, 1, 1 };
    unsigned c;
-   const struct nvc0_hw_sm_query_cfg *cfg;
-
-   cfg = nvc0_hw_sm_query_get_cfg(nvc0, hq);
 
    if (unlikely(!screen->pm.prog)) {
       struct nvc0_program *prog = CALLOC_STRUCT(nvc0_program);
@@ -495,6 +492,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    PUSH_SPACE(push, 16);
    mask = 0;
    for (c = 0; c < 8; ++c) {
+      const struct nvc0_hw_sm_query_cfg *cfg;
       unsigned i;
 
       hsq = screen->pm.mp_counter[c];
