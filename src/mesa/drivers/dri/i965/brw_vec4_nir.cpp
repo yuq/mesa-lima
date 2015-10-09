@@ -1237,14 +1237,8 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
 
    case nir_op_b2i:
-      emit(AND(dst, op[0], src_reg(1)));
-      break;
-
    case nir_op_b2f:
-      op[0].type = BRW_REGISTER_TYPE_D;
-      dst.type = BRW_REGISTER_TYPE_D;
-      emit(AND(dst, op[0], src_reg(0x3f800000u)));
-      dst.type = BRW_REGISTER_TYPE_F;
+      emit(MOV(dst, negate(op[0])));
       break;
 
    case nir_op_f2b:
