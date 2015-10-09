@@ -436,13 +436,7 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    }
 
    assert(cfg->num_counters <= 4);
-   PUSH_SPACE(push, 4 * 8 * 6 + 6);
-
-   if (!screen->pm.mp_counters_enabled) {
-      screen->pm.mp_counters_enabled = true;
-      BEGIN_NVC0(push, SUBC_SW(0x06ac), 1);
-      PUSH_DATA (push, 0x1fcb);
-   }
+   PUSH_SPACE(push, 4 * 8 * 6 + 4);
 
    /* set sequence field to 0 (used to check if result is available) */
    for (i = 0; i < screen->mp_count; ++i)
