@@ -397,7 +397,7 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
             if (deref_array->array->type->is_double())
                array_stride *= 2;
             *matrix_columns = deref_array->array->type->matrix_columns;
-         } else if (deref_array->type->is_interface()) {
+         } else if (deref_array->type->without_array()->is_interface()) {
             /* We're processing an array dereference of an interface instance
              * array. The thing being dereferenced *must* be a variable
              * dereference because interfaces cannot be embedded in other
@@ -406,7 +406,6 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
              * interface instance array will have the same offsets relative to
              * the base of the block that backs them.
              */
-            assert(deref_array->array->as_dereference_variable());
             deref = deref_array->array->as_dereference();
             break;
          } else {
