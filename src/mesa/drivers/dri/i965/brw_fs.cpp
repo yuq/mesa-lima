@@ -537,18 +537,6 @@ fs_visitor::get_timestamp(const fs_builder &bld)
     */
    bld.group(4, 0).exec_all().MOV(dst, ts);
 
-   /* The caller wants the low 32 bits of the timestamp.  Since it's running
-    * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
-    * which is plenty of time for our purposes.  It is identical across the
-    * EUs, but since it's tracking GPU core speed it will increment at a
-    * varying rate as render P-states change.
-    *
-    * The caller could also check if render P-states have changed (or anything
-    * else that might disrupt timing) by setting smear to 2 and checking if
-    * that field is != 0.
-    */
-   dst.set_smear(0);
-
    return dst;
 }
 
@@ -556,6 +544,14 @@ void
 fs_visitor::emit_shader_time_begin()
 {
    shader_start_time = get_timestamp(bld.annotate("shader time start"));
+
+   /* We want only the low 32 bits of the timestamp.  Since it's running
+    * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
+    * which is plenty of time for our purposes.  It is identical across the
+    * EUs, but since it's tracking GPU core speed it will increment at a
+    * varying rate as render P-states change.
+    */
+   shader_start_time.set_smear(0);
 }
 
 void
@@ -568,6 +564,15 @@ fs_visitor::emit_shader_time_end()
                               .exec_all().at(NULL, end);
 
    fs_reg shader_end_time = get_timestamp(ibld);
+
+   /* We only use the low 32 bits of the timestamp - see
+    * emit_shader_time_begin()).
+    *
+    * We could also check if render P-states have changed (or anything
+    * else that might disrupt timing) by setting smear to 2 and checking if
+    * that field is != 0.
+    */
+   shader_end_time.set_smear(0);
 
    /* Check that there weren't any timestamp reset events (assuming these
     * were the only two timestamp reads that happened).
