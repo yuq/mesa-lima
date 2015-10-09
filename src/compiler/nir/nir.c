@@ -1476,6 +1476,31 @@ nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
       nir_if_rewrite_condition(use_src->parent_if, new_src);
 }
 
+uint8_t
+nir_ssa_def_components_read(nir_ssa_def *def)
+{
+   uint8_t read_mask = 0;
+   nir_foreach_use(def, use) {
+      if (use->parent_instr->type == nir_instr_type_alu) {
+         nir_alu_instr *alu = nir_instr_as_alu(use->parent_instr);
+         nir_alu_src *alu_src = exec_node_data(nir_alu_src, use, src);
+         int src_idx = alu_src - &alu->src[0];
+         assert(src_idx >= 0 && src_idx < nir_op_infos[alu->op].num_inputs);
+
+         for (unsigned c = 0; c < 4; c++) {
+            if (!nir_alu_instr_channel_used(alu, src_idx, c))
+               continue;
+
+            read_mask |= (1 << alu_src->swizzle[c]);
+         }
+      } else {
+         return (1 << def->num_components) - 1;
+      }
+   }
+
+   return read_mask;
+}
+
 static bool foreach_cf_node(nir_cf_node *node, nir_foreach_block_cb cb,
                             bool reverse, void *state);
 

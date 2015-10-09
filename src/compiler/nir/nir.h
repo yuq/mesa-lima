@@ -2119,6 +2119,8 @@ void nir_ssa_def_rewrite_uses(nir_ssa_def *def, nir_src new_src);
 void nir_ssa_def_rewrite_uses_after(nir_ssa_def *def, nir_src new_src,
                                     nir_instr *after_me);
 
+uint8_t nir_ssa_def_components_read(nir_ssa_def *def);
+
 /* visits basic blocks in source-code order */
 typedef bool (*nir_foreach_block_cb)(nir_block *block, void *state);
 bool nir_foreach_block_call(nir_function_impl *impl, nir_foreach_block_cb cb,
