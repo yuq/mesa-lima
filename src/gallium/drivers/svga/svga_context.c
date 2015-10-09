@@ -312,6 +312,8 @@ void svga_context_flush( struct svga_context *svga,
     */
    svga->swc->flush(svga->swc, &fence);
 
+   svga->hud.num_flushes++;
+
    svga_screen_cache_flush(svgascreen, fence);
 
    /* To force the re-emission of rendertargets and texture sampler bindings on

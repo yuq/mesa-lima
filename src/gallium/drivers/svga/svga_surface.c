@@ -317,6 +317,8 @@ svga_create_surface_view(struct pipe_context *pipe,
       s->real_level = surf_tmpl->u.tex.level;
    }
 
+   svga->hud.num_surface_views++;
+
    return &s->base;
 }
 
@@ -509,6 +511,8 @@ svga_surface_destroy(struct pipe_context *pipe,
 
    pipe_resource_reference(&surf->texture, NULL);
    FREE(surf);
+
+   svga->hud.num_surface_views--;
 }
 
 

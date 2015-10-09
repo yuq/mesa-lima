@@ -352,6 +352,8 @@ svga_create_rasterizer_state(struct pipe_context *pipe,
       define_rasterizer_object(svga, rast);
    }
 
+   svga->hud.num_state_objects++;
+
    return rast;
 }
 
@@ -392,6 +394,7 @@ svga_delete_rasterizer_state(struct pipe_context *pipe, void *state)
    }
 
    FREE(state);
+   svga->hud.num_state_objects--;
 }
 
 

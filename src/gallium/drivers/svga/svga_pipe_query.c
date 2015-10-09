@@ -720,9 +720,17 @@ svga_create_query(struct pipe_context *pipe,
       define_query_vgpu10(svga, sq,
                           sizeof(SVGADXTimestampQueryResult));
       break;
-   case SVGA_QUERY_DRAW_CALLS:
-   case SVGA_QUERY_FALLBACKS:
+   case SVGA_QUERY_NUM_DRAW_CALLS:
+   case SVGA_QUERY_NUM_FALLBACKS:
+   case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_MEMORY_USED:
+   case SVGA_QUERY_NUM_SHADERS:
+   case SVGA_QUERY_NUM_RESOURCES:
+   case SVGA_QUERY_NUM_STATE_OBJECTS:
+   case SVGA_QUERY_NUM_VALIDATIONS:
+   case SVGA_QUERY_MAP_BUFFER_TIME:
+   case SVGA_QUERY_NUM_SURFACE_VIEWS:
+   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
       break;
    default:
       assert(!"unexpected query type in svga_create_query()");
@@ -778,9 +786,17 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
       destroy_query_vgpu10(svga, sq);
       sws->fence_reference(sws, &sq->fence, NULL);
       break;
-   case SVGA_QUERY_DRAW_CALLS:
-   case SVGA_QUERY_FALLBACKS:
+   case SVGA_QUERY_NUM_DRAW_CALLS:
+   case SVGA_QUERY_NUM_FALLBACKS:
+   case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_MEMORY_USED:
+   case SVGA_QUERY_NUM_SHADERS:
+   case SVGA_QUERY_NUM_RESOURCES:
+   case SVGA_QUERY_NUM_STATE_OBJECTS:
+   case SVGA_QUERY_NUM_VALIDATIONS:
+   case SVGA_QUERY_MAP_BUFFER_TIME:
+   case SVGA_QUERY_NUM_SURFACE_VIEWS:
+   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
       /* nothing */
       break;
    default:
@@ -842,13 +858,29 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
       ret = begin_query_vgpu10(svga, sq);
       assert(ret == PIPE_OK);
       break;
-   case SVGA_QUERY_DRAW_CALLS:
-      sq->begin_count = svga->num_draw_calls;
+   case SVGA_QUERY_NUM_DRAW_CALLS:
+      sq->begin_count = svga->hud.num_draw_calls;
       break;
-   case SVGA_QUERY_FALLBACKS:
-      sq->begin_count = svga->num_fallbacks;
+   case SVGA_QUERY_NUM_FALLBACKS:
+      sq->begin_count = svga->hud.num_fallbacks;
+      break;
+   case SVGA_QUERY_NUM_FLUSHES:
+      sq->begin_count = svga->hud.num_flushes;
+      break;
+   case SVGA_QUERY_NUM_VALIDATIONS:
+      sq->begin_count = svga->hud.num_validations;
+      break;
+   case SVGA_QUERY_MAP_BUFFER_TIME:
+      sq->begin_count = svga->hud.map_buffer_time;
+      break;
+   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+      sq->begin_count = svga->hud.num_resources_mapped;
       break;
    case SVGA_QUERY_MEMORY_USED:
+   case SVGA_QUERY_NUM_SHADERS:
+   case SVGA_QUERY_NUM_RESOURCES:
+   case SVGA_QUERY_NUM_STATE_OBJECTS:
+   case SVGA_QUERY_NUM_SURFACE_VIEWS:
       /* nothing */
       break;
    default:
@@ -916,13 +948,29 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
       ret = end_query_vgpu10(svga, sq);
       assert(ret == PIPE_OK);
       break;
-   case SVGA_QUERY_DRAW_CALLS:
-      sq->end_count = svga->num_draw_calls;
+   case SVGA_QUERY_NUM_DRAW_CALLS:
+      sq->end_count = svga->hud.num_draw_calls;
       break;
-   case SVGA_QUERY_FALLBACKS:
-      sq->end_count = svga->num_fallbacks;
+   case SVGA_QUERY_NUM_FALLBACKS:
+      sq->end_count = svga->hud.num_fallbacks;
+      break;
+   case SVGA_QUERY_NUM_FLUSHES:
+      sq->end_count = svga->hud.num_flushes;
+      break;
+   case SVGA_QUERY_NUM_VALIDATIONS:
+      sq->end_count = svga->hud.num_validations;
+      break;
+   case SVGA_QUERY_MAP_BUFFER_TIME:
+      sq->end_count = svga->hud.map_buffer_time;
+      break;
+   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+      sq->end_count = svga->hud.num_resources_mapped;
       break;
    case SVGA_QUERY_MEMORY_USED:
+   case SVGA_QUERY_NUM_SHADERS:
+   case SVGA_QUERY_NUM_RESOURCES:
+   case SVGA_QUERY_NUM_STATE_OBJECTS:
+   case SVGA_QUERY_NUM_SURFACE_VIEWS:
       /* nothing */
       break;
    default:
@@ -1007,13 +1055,30 @@ svga_get_query_result(struct pipe_context *pipe,
       *result = (uint64_t)sResult.numPrimitivesWritten;
       break;
    }
-   case SVGA_QUERY_DRAW_CALLS:
-      /* fall-through */
-   case SVGA_QUERY_FALLBACKS:
+   /* These are per-frame counters */
+   case SVGA_QUERY_NUM_DRAW_CALLS:
+   case SVGA_QUERY_NUM_FALLBACKS:
+   case SVGA_QUERY_NUM_FLUSHES:
+   case SVGA_QUERY_NUM_VALIDATIONS:
+   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_MAP_BUFFER_TIME:
       vresult->u64 = sq->end_count - sq->begin_count;
       break;
+   /* These are running total counters */
    case SVGA_QUERY_MEMORY_USED:
-      vresult->u64 = svgascreen->total_resource_bytes;
+      vresult->u64 = svgascreen->hud.total_resource_bytes;
+      break;
+   case SVGA_QUERY_NUM_SHADERS:
+      vresult->u64 = svga->hud.num_shaders;
+      break;
+   case SVGA_QUERY_NUM_RESOURCES:
+      vresult->u64 = svgascreen->hud.num_resources;
+      break;
+   case SVGA_QUERY_NUM_STATE_OBJECTS:
+      vresult->u64 = svga->hud.num_state_objects;
+      break;
+   case SVGA_QUERY_NUM_SURFACE_VIEWS:
+      vresult->u64 = svga->hud.num_surface_views;
       break;
    default:
       assert(!"unexpected query type in svga_get_query_result");

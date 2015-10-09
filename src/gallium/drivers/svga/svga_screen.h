@@ -80,8 +80,12 @@ struct svga_screen
 
    struct svga_host_surface_cache cache;
 
-   /** Memory used by all resources (buffers and surfaces) */
-   uint64_t total_resource_bytes;
+   /** HUD counters */
+   struct {
+      /** Memory used by all resources (buffers and surfaces) */
+      uint64_t total_resource_bytes;
+      uint64_t num_resources;
+   } hud;
 };
 
 #ifndef DEBUG
