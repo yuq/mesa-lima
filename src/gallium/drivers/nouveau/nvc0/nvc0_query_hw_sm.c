@@ -528,7 +528,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    uint32_t mask;
    uint32_t input[3];
    const uint block[3] = { 32, is_nve4 ? 4 : 1, 1 };
-   const uint grid[3] = { screen->mp_count, 1, 1 };
+   const uint grid[3] = { screen->mp_count, screen->gpc_count, 1 };
    unsigned c;
 
    if (unlikely(!screen->pm.prog)) {
