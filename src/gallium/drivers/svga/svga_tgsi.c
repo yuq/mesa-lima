@@ -228,7 +228,7 @@ svga_tgsi_vgpu9_translate(struct svga_context *svga,
       goto fail;
    }
 
-   variant = CALLOC_STRUCT(svga_shader_variant);
+   variant = svga_new_shader_variant(svga);
    if (variant == NULL)
       goto fail;
 

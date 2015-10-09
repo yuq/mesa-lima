@@ -414,6 +414,13 @@ svga_set_shader(struct svga_context *svga,
 }
 
 
+struct svga_shader_variant *
+svga_new_shader_variant(struct svga_context *svga)
+{
+   return CALLOC_STRUCT(svga_shader_variant);
+}
+
+
 enum pipe_error
 svga_destroy_shader_variant(struct svga_context *svga,
                             SVGA3dShaderType type,
