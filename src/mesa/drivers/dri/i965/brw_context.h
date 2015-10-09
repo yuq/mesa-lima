@@ -352,6 +352,7 @@ struct brw_stage_prog_data {
       uint32_t texture_start;
       uint32_t gather_texture_start;
       uint32_t ubo_start;
+      uint32_t ssbo_start;
       uint32_t abo_start;
       uint32_t image_start;
       uint32_t shader_time_start;
@@ -716,9 +717,6 @@ struct brw_vs_prog_data {
 
 /** Max number of SSBOs in a shader */
 #define BRW_MAX_SSBO 12
-
-/** Max number of combined UBOs and SSBOs in a shader */
-#define BRW_MAX_COMBINED_UBO_SSBO (BRW_MAX_UBO + BRW_MAX_SSBO)
 
 /** Max number of atomic counter buffer objects in a shader */
 #define BRW_MAX_ABO 16

@@ -423,10 +423,10 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
    case nir_intrinsic_get_buffer_size: {
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
-      unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
+      unsigned ssbo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
 
-      src_reg surf_index = src_reg(prog_data->base.binding_table.ubo_start +
-                                   ubo_index);
+      src_reg surf_index = src_reg(prog_data->base.binding_table.ssbo_start +
+                                   ssbo_index);
       dst_reg result_dst = get_nir_dest(instr->dest);
       vec4_instruction *inst = new(mem_ctx)
          vec4_instruction(VS_OPCODE_GET_BUFFER_SIZE, result_dst);
@@ -456,18 +456,18 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       nir_const_value *const_uniform_block =
          nir_src_as_const_value(instr->src[1]);
       if (const_uniform_block) {
-         unsigned index = prog_data->base.binding_table.ubo_start +
+         unsigned index = prog_data->base.binding_table.ssbo_start +
                           const_uniform_block->u[0];
          surf_index = src_reg(index);
          brw_mark_surface_used(&prog_data->base, index);
       } else {
          surf_index = src_reg(this, glsl_type::uint_type);
          emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[1], 1),
-                  src_reg(prog_data->base.binding_table.ubo_start)));
+                  src_reg(prog_data->base.binding_table.ssbo_start)));
          surf_index = emit_uniformize(surf_index);
 
          brw_mark_surface_used(&prog_data->base,
-                               prog_data->base.binding_table.ubo_start +
+                               prog_data->base.binding_table.ssbo_start +
                                nir->info.num_ssbos - 1);
       }
 
@@ -599,7 +599,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       src_reg surf_index;
       if (const_uniform_block) {
-         unsigned index = prog_data->base.binding_table.ubo_start +
+         unsigned index = prog_data->base.binding_table.ssbo_start +
                           const_uniform_block->u[0];
          surf_index = src_reg(index);
 
@@ -607,14 +607,14 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       } else {
          surf_index = src_reg(this, glsl_type::uint_type);
          emit(ADD(dst_reg(surf_index), get_nir_src(instr->src[0], 1),
-                  src_reg(prog_data->base.binding_table.ubo_start)));
+                  src_reg(prog_data->base.binding_table.ssbo_start)));
          surf_index = emit_uniformize(surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
           */
          brw_mark_surface_used(&prog_data->base,
-                               prog_data->base.binding_table.ubo_start +
+                               prog_data->base.binding_table.ssbo_start +
                                nir->info.num_ssbos - 1);
       }
 
@@ -821,20 +821,20 @@ vec4_visitor::nir_emit_ssbo_atomic(int op, nir_intrinsic_instr *instr)
    src_reg surface;
    nir_const_value *const_surface = nir_src_as_const_value(instr->src[0]);
    if (const_surface) {
-      unsigned surf_index = prog_data->base.binding_table.ubo_start +
+      unsigned surf_index = prog_data->base.binding_table.ssbo_start +
                             const_surface->u[0];
       surface = src_reg(surf_index);
       brw_mark_surface_used(&prog_data->base, surf_index);
    } else {
       surface = src_reg(this, glsl_type::uint_type);
       emit(ADD(dst_reg(surface), get_nir_src(instr->src[0]),
-               src_reg(prog_data->base.binding_table.ubo_start)));
+               src_reg(prog_data->base.binding_table.ssbo_start)));
 
       /* Assume this may touch any UBO. This is the same we do for other
        * UBO/SSBO accesses with non-constant surface.
        */
       brw_mark_surface_used(&prog_data->base,
-                            prog_data->base.binding_table.ubo_start +
+                            prog_data->base.binding_table.ssbo_start +
                             nir->info.num_ssbos - 1);
    }
 

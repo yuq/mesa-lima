@@ -926,50 +926,49 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    if (!shader)
       return;
 
-   uint32_t *surf_offsets =
+   uint32_t *ubo_surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
-   for (int i = 0; i < shader->NumBufferInterfaceBlocks; i++) {
-      struct intel_buffer_object *intel_bo;
+   for (int i = 0; i < shader->NumUniformBlocks; i++) {
+      struct gl_uniform_buffer_binding *binding =
+         &ctx->UniformBufferBindings[shader->UniformBlocks[i]->Binding];
 
-      /* Because behavior for referencing outside of the binding's size in the
-       * glBindBufferRange case is undefined, we can just bind the whole buffer
-       * glBindBufferBase wants and be a correct implementation.
-       */
-      if (!shader->BufferInterfaceBlocks[i].IsShaderStorage) {
-         struct gl_uniform_buffer_binding *binding;
-         binding =
-            &ctx->UniformBufferBindings[shader->BufferInterfaceBlocks[i].Binding];
-         if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-            brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
-         } else {
-            intel_bo = intel_buffer_object(binding->BufferObject);
-            drm_intel_bo *bo =
-               intel_bufferobj_buffer(brw, intel_bo,
-                                      binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset);
-            brw_create_constant_surface(brw, bo, binding->Offset,
-                                        binding->BufferObject->Size - binding->Offset,
-                                        &surf_offsets[i],
-                                        dword_pitch);
-         }
+      if (binding->BufferObject == ctx->Shared->NullBufferObj) {
+         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
       } else {
-         struct gl_shader_storage_buffer_binding *binding;
-         binding =
-            &ctx->ShaderStorageBufferBindings[shader->BufferInterfaceBlocks[i].Binding];
-         if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-            brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
-         } else {
-            intel_bo = intel_buffer_object(binding->BufferObject);
-            drm_intel_bo *bo =
-               intel_bufferobj_buffer(brw, intel_bo,
-                                      binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset);
-            brw_create_buffer_surface(brw, bo, binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset,
-                                      &surf_offsets[i],
-                                      dword_pitch);
-         }
+         struct intel_buffer_object *intel_bo =
+            intel_buffer_object(binding->BufferObject);
+         drm_intel_bo *bo =
+            intel_bufferobj_buffer(brw, intel_bo,
+                                   binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset);
+         brw_create_constant_surface(brw, bo, binding->Offset,
+                                     binding->BufferObject->Size - binding->Offset,
+                                     &ubo_surf_offsets[i],
+                                     dword_pitch);
+      }
+   }
+
+   uint32_t *ssbo_surf_offsets =
+      &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
+
+   for (int i = 0; i < shader->NumShaderStorageBlocks; i++) {
+      struct gl_shader_storage_buffer_binding *binding =
+         &ctx->ShaderStorageBufferBindings[shader->ShaderStorageBlocks[i]->Binding];
+
+      if (binding->BufferObject == ctx->Shared->NullBufferObj) {
+         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
+      } else {
+         struct intel_buffer_object *intel_bo =
+            intel_buffer_object(binding->BufferObject);
+         drm_intel_bo *bo =
+            intel_bufferobj_buffer(brw, intel_bo,
+                                   binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset);
+         brw_create_buffer_surface(brw, bo, binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset,
+                                   &ssbo_surf_offsets[i],
+                                   dword_pitch);
       }
    }
 
