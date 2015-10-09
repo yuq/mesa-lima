@@ -222,7 +222,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir("fragment", prog, &fs->base, &fp->program.Base);
+      brw_dump_ir("fragment", prog, fs ? &fs->base : NULL, &fp->program.Base);
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {

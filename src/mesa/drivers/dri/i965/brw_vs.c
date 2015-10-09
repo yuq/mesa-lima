@@ -205,7 +205,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
-      brw_dump_ir("vertex", prog, &vs->base, &vp->program.Base);
+      brw_dump_ir("vertex", prog, vs ? &vs->base : NULL, &vp->program.Base);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
