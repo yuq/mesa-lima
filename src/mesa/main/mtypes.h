@@ -94,11 +94,6 @@ struct vbo_context;
 #define PRIM_OUTSIDE_BEGIN_END   (PRIM_MAX + 1)
 #define PRIM_UNKNOWN             (PRIM_MAX + 2)
 
-#define VARYING_SLOT_MAX	(VARYING_SLOT_VAR0 + MAX_VARYING)
-#define VARYING_SLOT_PATCH0	(VARYING_SLOT_MAX)
-#define VARYING_SLOT_TESS_MAX	(VARYING_SLOT_PATCH0 + MAX_VARYING)
-#define FRAG_RESULT_MAX		(FRAG_RESULT_DATA0 + MAX_DRAW_BUFFERS)
-
 /**
  * Determine if the given gl_varying_slot appears in the fragment shader.
  */

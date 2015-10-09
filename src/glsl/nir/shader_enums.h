@@ -233,6 +233,11 @@ typedef enum
    VARYING_SLOT_VAR31,
 } gl_varying_slot;
 
+
+#define VARYING_SLOT_MAX	(VARYING_SLOT_VAR0 + MAX_VARYING)
+#define VARYING_SLOT_PATCH0	(VARYING_SLOT_MAX)
+#define VARYING_SLOT_TESS_MAX	(VARYING_SLOT_PATCH0 + MAX_VARYING)
+
 const char * gl_varying_slot_name(gl_varying_slot slot);
 
 /**
@@ -472,5 +477,7 @@ typedef enum
 } gl_frag_result;
 
 const char * gl_frag_result_name(gl_frag_result result);
+
+#define FRAG_RESULT_MAX		(FRAG_RESULT_DATA0 + MAX_DRAW_BUFFERS)
 
 #endif /* SHADER_ENUMS_H */
