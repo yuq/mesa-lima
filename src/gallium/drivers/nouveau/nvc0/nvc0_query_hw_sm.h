@@ -5,7 +5,7 @@
 
 struct nvc0_hw_sm_query {
    struct nvc0_hw_query base;
-   int8_t ctr[4];
+   uint8_t ctr[8];
 };
 
 static inline struct nvc0_hw_sm_query *

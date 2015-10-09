@@ -144,7 +144,7 @@ struct nvc0_hw_sm_counter_cfg
 
 struct nvc0_hw_sm_query_cfg
 {
-   struct nvc0_hw_sm_counter_cfg ctr[4];
+   struct nvc0_hw_sm_counter_cfg ctr[8];
    uint8_t num_counters;
    uint8_t op;
    uint8_t norm[2]; /* normalization num,denom */
@@ -418,7 +418,6 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    struct nvc0_hw_sm_query *hsq = nvc0_hw_sm_query(hq);
    const struct nvc0_hw_sm_query_cfg *cfg;
    unsigned i, c;
-   unsigned num_ab[2] = { 0, 0 };
 
    if (screen->base.class_3d >= NVE4_3D_CLASS)
       return nve4_hw_sm_begin_query(nvc0, hq);
@@ -426,17 +425,13 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    cfg = nvc0_hw_sm_query_get_cfg(nvc0, hq);
 
    /* check if we have enough free counter slots */
-   for (i = 0; i < cfg->num_counters; ++i)
-      num_ab[cfg->ctr[i].sig_dom]++;
-
-   if (screen->pm.num_hw_sm_active[0] + num_ab[0] > 4 ||
-       screen->pm.num_hw_sm_active[1] + num_ab[1] > 4) {
+   if (screen->pm.num_hw_sm_active[0] + cfg->num_counters > 8) {
       NOUVEAU_ERR("Not enough free MP counter slots !\n");
       return false;
    }
 
-   assert(cfg->num_counters <= 4);
-   PUSH_SPACE(push, 4 * 8 * 6 + 4);
+   assert(cfg->num_counters <= 8);
+   PUSH_SPACE(push, 4 * 8 * 6 + 2);
 
    /* set sequence field to 0 (used to check if result is available) */
    for (i = 0; i < screen->mp_count; ++i) {
@@ -446,23 +441,21 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    hq->sequence++;
 
    for (i = 0; i < cfg->num_counters; ++i) {
-      const unsigned d = cfg->ctr[i].sig_dom;
       unsigned s;
 
-      if (!screen->pm.num_hw_sm_active[d]) {
+      if (!screen->pm.num_hw_sm_active[0]) {
          BEGIN_NVC0(push, SUBC_SW(0x0600), 1);
          PUSH_DATA (push, 0x80000000);
       }
-      screen->pm.num_hw_sm_active[d]++;
+      screen->pm.num_hw_sm_active[0]++;
 
-      for (c = d * 4; c < (d * 4 + 4); ++c) {
+      for (c = 0; c < 8; ++c) {
          if (!screen->pm.mp_counter[c]) {
             hsq->ctr[i] = c;
             screen->pm.mp_counter[c] = hsq;
             break;
          }
       }
-      assert(c <= (d * 4 + 3)); /* must succeed, already checked for space */
 
       /* configure and reset the counter(s) */
       for (s = 0; s < cfg->ctr[i].num_src; s++) {
@@ -522,7 +515,8 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    /* release counters for this query */
    for (c = 0; c < 8; ++c) {
       if (screen->pm.mp_counter[c] == hsq) {
-         screen->pm.num_hw_sm_active[c / 4]--;
+         uint8_t d = is_nve4 ? c / 4 : 0; /* only one domain for NVC0:NVE4 */
+         screen->pm.num_hw_sm_active[d]--;
          screen->pm.mp_counter[c] = NULL;
       }
    }
@@ -568,7 +562,7 @@ nvc0_hw_sm_end_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
 }
 
 static inline bool
-nvc0_hw_sm_query_read_data(uint32_t count[32][4],
+nvc0_hw_sm_query_read_data(uint32_t count[32][8],
                            struct nvc0_context *nvc0, bool wait,
                            struct nvc0_hw_query *hq,
                            const struct nvc0_hw_sm_query_cfg *cfg,
@@ -594,7 +588,7 @@ nvc0_hw_sm_query_read_data(uint32_t count[32][4],
 }
 
 static inline bool
-nve4_hw_sm_query_read_data(uint32_t count[32][4],
+nve4_hw_sm_query_read_data(uint32_t count[32][8],
                            struct nvc0_context *nvc0, bool wait,
                            struct nvc0_hw_query *hq,
                            const struct nvc0_hw_sm_query_cfg *cfg,
@@ -640,7 +634,7 @@ static boolean
 nvc0_hw_sm_get_query_result(struct nvc0_context *nvc0, struct nvc0_hw_query *hq,
                             boolean wait, union pipe_query_result *result)
 {
-   uint32_t count[32][4];
+   uint32_t count[32][8];
    uint64_t value = 0;
    unsigned mp_count = MIN2(nvc0->screen->mp_count_compute, 32);
    unsigned p, c;
