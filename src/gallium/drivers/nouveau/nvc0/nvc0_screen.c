@@ -561,12 +561,7 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    switch (screen->base.device->chipset & ~0xf) {
    case 0xc0:
    case 0xd0:
-      /* Using COMPUTE has weird effects on 3D state, we need to
-       * investigate this further before enabling it by default.
-       */
-      if (debug_get_bool_option("NVC0_COMPUTE", false))
-         return nvc0_screen_compute_setup(screen, screen->base.pushbuf);
-      return 0;
+      return nvc0_screen_compute_setup(screen, screen->base.pushbuf);
    case 0xe0:
       return nve4_screen_compute_setup(screen, screen->base.pushbuf);
    case 0xf0:

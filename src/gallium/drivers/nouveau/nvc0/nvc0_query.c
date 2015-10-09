@@ -291,7 +291,6 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
             count += NVE4_HW_SM_QUERY_COUNT;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
-            /* NVC0_COMPUTE is not always enabled */
             count += NVC0_HW_SM_QUERY_COUNT;
          }
       }
@@ -358,7 +357,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
             count++;
          } else
          if (screen->base.class_3d < NVE4_3D_CLASS) {
-            count++; /* NVC0_COMPUTE is not always enabled */
+            count++;
          }
       }
    }
