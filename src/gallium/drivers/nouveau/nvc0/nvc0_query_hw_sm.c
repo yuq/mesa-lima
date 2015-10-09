@@ -128,9 +128,9 @@ struct nvc0_hw_sm_counter_cfg
 {
    uint32_t func    : 16; /* mask or 4-bit logic op (depending on mode) */
    uint32_t mode    : 4;  /* LOGOP,B6,LOGOP_B6(_PULSE) */
-   uint32_t num_src : 3;  /* number of sources (1 - 6, only for NVC0:NVE4) */
    uint32_t sig_dom : 1;  /* if 0, MP_PM_A (per warp-sched), if 1, MP_PM_B */
    uint32_t sig_sel : 8;  /* signal group */
+   uint32_t src_mask;     /* mask for signal selection (only for NVC0:NVE4) */
    uint32_t src_sel;      /* signal selection for up to 4 sources */
 };
 
@@ -150,19 +150,19 @@ struct nvc0_hw_sm_query_cfg
    uint8_t norm[2]; /* normalization num,denom */
 };
 
-#define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
-#define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
+#define _Q1A(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
+#define _Q1B(n, f, m, g, s, nu, dn) [NVE4_HW_SM_QUERY_##n] = { { { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }, {}, {}, {} }, 1, NVC0_COUNTER_OPn_SUM, { nu, dn } }
 #define _M2A(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g1, s1 }, \
+   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, 0, s0 }, \
+   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g1, 0, s1 }, \
    {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
 #define _M2B(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, s1 }, \
+   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g0, 0, s0 }, \
+   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, 0, s1 }, \
    {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
 #define _M2AB(n, f0, m0, g0, s0, f1, m1, g1, s1, o, nu, dn) [NVE4_HW_SM_QUERY_METRIC_##n] = { { \
-   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, s0 }, \
-   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 0, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, s1 }, \
+   { f0, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m0, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g0, 0, s0 }, \
+   { f1, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m1, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g1, 0, s1 }, \
    {}, {}, }, 2, NVC0_COUNTER_OP2_##o, { nu, dn } }
 
 /* NOTES:
@@ -280,78 +280,78 @@ static const uint64_t nvc0_read_hw_sm_counters_code[] =
    0x8000000000001de7ULL
 };
 
-#define _C(f, o, g, s) { f, NVC0_COMPUTE_MP_PM_OP_MODE_##o, 0, 0, g, s }
+#define _C(f, o, g, m, s) { f, NVC0_COMPUTE_MP_PM_OP_MODE_##o, 0, g, m, s }
 #define _Q(n, c, ...) [NVC0_HW_SM_QUERY_##n] = {                              \
    { __VA_ARGS__ }, c, NVC0_COUNTER_OPn_SUM, { 1, 1 },                        \
 }
 
 static const struct nvc0_hw_sm_query_cfg nvc0_hw_sm_queries[] =
 {
-   _Q(ACTIVE_CYCLES,       1, _C(0xaaaa, LOGOP, 0x11, 0x00000000)),
-   _Q(ACTIVE_WARPS,        6, _C(0xaaaa, LOGOP, 0x24, 0x00000010),
-                              _C(0xaaaa, LOGOP, 0x24, 0x00000021),
-                              _C(0xaaaa, LOGOP, 0x24, 0x00000032),
-                              _C(0xaaaa, LOGOP, 0x24, 0x00000043),
-                              _C(0xaaaa, LOGOP, 0x24, 0x00000054),
-                              _C(0xaaaa, LOGOP, 0x24, 0x00000065)),
-   _Q(ATOM_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x00000030)),
-   _Q(BRANCH,              2, _C(0xaaaa, LOGOP, 0x1a, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0x1a, 0x00000011)),
-   _Q(DIVERGENT_BRANCH,    2, _C(0xaaaa, LOGOP, 0x19, 0x00000020),
-                              _C(0xaaaa, LOGOP, 0x19, 0x00000031)),
-   _Q(GLD_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x00000030)),
-   _Q(GRED_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x00000040)),
-   _Q(GST_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x00000060)),
-   _Q(INST_EXECUTED,       3, _C(0xaaaa, LOGOP, 0x2d, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0x2d, 0x00000011),
-                              _C(0xaaaa, LOGOP, 0x2d, 0x00000022)),
-   _Q(INST_ISSUED1_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000010)),
-   _Q(INST_ISSUED1_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000040)),
-   _Q(INST_ISSUED2_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000020)),
-   _Q(INST_ISSUED2_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x00000050)),
-   _Q(LOCAL_LD,            1, _C(0xaaaa, LOGOP, 0x64, 0x00000020)),
-   _Q(LOCAL_ST,            1, _C(0xaaaa, LOGOP, 0x64, 0x00000050)),
-   _Q(PROF_TRIGGER_0,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000000)),
-   _Q(PROF_TRIGGER_1,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000010)),
-   _Q(PROF_TRIGGER_2,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000020)),
-   _Q(PROF_TRIGGER_3,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000030)),
-   _Q(PROF_TRIGGER_4,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000040)),
-   _Q(PROF_TRIGGER_5,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000050)),
-   _Q(PROF_TRIGGER_6,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000060)),
-   _Q(PROF_TRIGGER_7,      1, _C(0xaaaa, LOGOP, 0x01, 0x00000070)),
-   _Q(SHARED_LD,           1, _C(0xaaaa, LOGOP, 0x64, 0x00000010)),
-   _Q(SHARED_ST,           1, _C(0xaaaa, LOGOP, 0x64, 0x00000040)),
-   _Q(THREADS_LAUNCHED,    6, _C(0xaaaa, LOGOP, 0x26, 0x00000010),
-                              _C(0xaaaa, LOGOP, 0x26, 0x00000021),
-                              _C(0xaaaa, LOGOP, 0x26, 0x00000032),
-                              _C(0xaaaa, LOGOP, 0x26, 0x00000043),
-                              _C(0xaaaa, LOGOP, 0x26, 0x00000054),
-                              _C(0xaaaa, LOGOP, 0x26, 0x00000065)),
-   _Q(TH_INST_EXECUTED_0,  6, _C(0xaaaa, LOGOP, 0xa3, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0xa3, 0x00000011),
-                              _C(0xaaaa, LOGOP, 0xa3, 0x00000022),
-                              _C(0xaaaa, LOGOP, 0xa3, 0x00000033),
-                              _C(0xaaaa, LOGOP, 0xa3, 0x00000044),
-                              _C(0xaaaa, LOGOP, 0xa3, 0x00000055)),
-   _Q(TH_INST_EXECUTED_1,  6, _C(0xaaaa, LOGOP, 0xa5, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0xa5, 0x00000011),
-                              _C(0xaaaa, LOGOP, 0xa5, 0x00000022),
-                              _C(0xaaaa, LOGOP, 0xa5, 0x00000033),
-                              _C(0xaaaa, LOGOP, 0xa5, 0x00000044),
-                              _C(0xaaaa, LOGOP, 0xa5, 0x00000055)),
-   _Q(TH_INST_EXECUTED_2,  6, _C(0xaaaa, LOGOP, 0xa4, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0xa4, 0x00000011),
-                              _C(0xaaaa, LOGOP, 0xa4, 0x00000022),
-                              _C(0xaaaa, LOGOP, 0xa4, 0x00000033),
-                              _C(0xaaaa, LOGOP, 0xa4, 0x00000044),
-                              _C(0xaaaa, LOGOP, 0xa4, 0x00000055)),
-   _Q(TH_INST_EXECUTED_3,  6, _C(0xaaaa, LOGOP, 0xa6, 0x00000000),
-                              _C(0xaaaa, LOGOP, 0xa6, 0x00000011),
-                              _C(0xaaaa, LOGOP, 0xa6, 0x00000022),
-                              _C(0xaaaa, LOGOP, 0xa6, 0x00000033),
-                              _C(0xaaaa, LOGOP, 0xa6, 0x00000044),
-                              _C(0xaaaa, LOGOP, 0xa6, 0x00000055)),
-   _Q(WARPS_LAUNCHED,      1, _C(0xaaaa, LOGOP, 0x26, 0x00000000)),
+   _Q(ACTIVE_CYCLES,       1, _C(0xaaaa, LOGOP, 0x11, 0x000000ff, 0x00000000)),
+   _Q(ACTIVE_WARPS,        6, _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000050),
+                              _C(0xaaaa, LOGOP, 0x24, 0x000000ff, 0x00000060)),
+   _Q(ATOM_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000030)),
+   _Q(BRANCH,              2, _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0x1a, 0x000000ff, 0x00000010)),
+   _Q(DIVERGENT_BRANCH,    2, _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0x19, 0x000000ff, 0x00000030)),
+   _Q(GLD_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000030)),
+   _Q(GRED_COUNT,          1, _C(0xaaaa, LOGOP, 0x63, 0x000000ff, 0x00000040)),
+   _Q(GST_REQUEST,         1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000060)),
+   _Q(INST_EXECUTED,       3, _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0x2d, 0x000000ff, 0x00000020)),
+   _Q(INST_ISSUED1_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000010)),
+   _Q(INST_ISSUED1_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000040)),
+   _Q(INST_ISSUED2_0,      1, _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000020)),
+   _Q(INST_ISSUED2_1,      1, _C(0xaaaa, LOGOP, 0x7e, 0x000000ff, 0x00000050)),
+   _Q(LOCAL_LD,            1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000020)),
+   _Q(LOCAL_ST,            1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000050)),
+   _Q(PROF_TRIGGER_0,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000000)),
+   _Q(PROF_TRIGGER_1,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000010)),
+   _Q(PROF_TRIGGER_2,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000020)),
+   _Q(PROF_TRIGGER_3,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000030)),
+   _Q(PROF_TRIGGER_4,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000040)),
+   _Q(PROF_TRIGGER_5,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000050)),
+   _Q(PROF_TRIGGER_6,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000060)),
+   _Q(PROF_TRIGGER_7,      1, _C(0xaaaa, LOGOP, 0x01, 0x000000ff, 0x00000070)),
+   _Q(SHARED_LD,           1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000010)),
+   _Q(SHARED_ST,           1, _C(0xaaaa, LOGOP, 0x64, 0x000000ff, 0x00000040)),
+   _Q(THREADS_LAUNCHED,    6, _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000050),
+                              _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000060)),
+   _Q(TH_INST_EXECUTED_0,  6, _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0xa3, 0x000000ff, 0x00000050)),
+   _Q(TH_INST_EXECUTED_1,  6, _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0xa5, 0x000000ff, 0x00000050)),
+   _Q(TH_INST_EXECUTED_2,  6, _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0xa4, 0x000000ff, 0x00000050)),
+   _Q(TH_INST_EXECUTED_3,  6, _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000000),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000010),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000020),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000030),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000040),
+                              _C(0xaaaa, LOGOP, 0xa6, 0x000000ff, 0x00000050)),
+   _Q(WARPS_LAUNCHED,      1, _C(0xaaaa, LOGOP, 0x26, 0x000000ff, 0x00000000)),
 };
 
 #undef _Q
@@ -479,6 +479,8 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    hq->sequence++;
 
    for (i = 0; i < cfg->num_counters; ++i) {
+      uint32_t mask_sel = 0x00000000;
+
       if (!screen->pm.num_hw_sm_active[0]) {
          BEGIN_NVC0(push, SUBC_SW(0x0600), 1);
          PUSH_DATA (push, 0x80000000);
@@ -493,11 +495,20 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
          }
       }
 
+      /* Oddly-enough, the signal id depends on the slot selected on Fermi but
+       * not on Kepler. Fortunately, the signal ids are just offseted by the
+       * slot id! */
+      mask_sel |= c;
+      mask_sel |= (c << 8);
+      mask_sel |= (c << 16);
+      mask_sel |= (c << 24);
+      mask_sel &= cfg->ctr[i].src_mask;
+
       /* configure and reset the counter(s) */
       BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SIGSEL(c)), 1);
       PUSH_DATA (push, cfg->ctr[i].sig_sel);
       BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SRCSEL(c)), 1);
-      PUSH_DATA (push, cfg->ctr[i].src_sel);
+      PUSH_DATA (push, cfg->ctr[i].src_sel | mask_sel);
       BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_OP(c)), 1);
       PUSH_DATA (push, (cfg->ctr[i].func << 4) | cfg->ctr[i].mode);
       BEGIN_NVC0(push, NVC0_COMPUTE(MP_PM_SET(c)), 1);
