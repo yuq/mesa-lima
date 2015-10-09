@@ -27,29 +27,12 @@
 
 #include "brw_program.h"
 
-struct brw_cs_prog_key {
-   uint32_t program_string_id;
-   struct brw_sampler_prog_key_data tex;
-};
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 void
 brw_upload_cs_prog(struct brw_context *brw);
-
-struct nir_shader;
-
-const unsigned *
-brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
-               void *mem_ctx,
-               const struct brw_cs_prog_key *key,
-               struct brw_cs_prog_data *prog_data,
-               const struct nir_shader *shader,
-               int shader_time_index,
-               unsigned *final_assembly_size,
-               char **error_str);
 
 void
 brw_cs_fill_local_id_payload(const struct brw_cs_prog_data *cs_prog_data,

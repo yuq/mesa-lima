@@ -61,26 +61,6 @@
 extern "C" {
 #endif
 
-struct nir_shader;
-
-/**
- * Compile a fragment shader.
- *
- * Returns the final assembly and the program's size.
- */
-const unsigned *brw_compile_fs(const struct brw_compiler *compiler,
-                               void *log_data,
-                               void *mem_ctx,
-                               const struct brw_wm_prog_key *key,
-                               struct brw_wm_prog_data *prog_data,
-                               const struct nir_shader *shader,
-                               struct gl_program *prog,
-                               int shader_time_index8,
-                               int shader_time_index16,
-                               bool use_rep_send,
-                               unsigned *final_assembly_size,
-                               char **error_str);
-
 GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 struct gl_shader *brw_new_shader(struct gl_context *ctx, GLuint name, GLuint type);
 
