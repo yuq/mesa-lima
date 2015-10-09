@@ -53,13 +53,9 @@ translate_geometry_program(struct svga_context *svga,
                            const struct svga_geometry_shader *gs,
                            const struct svga_compile_key *key)
 {
-   if (svga_have_vgpu10(svga)) {
-      return svga_tgsi_vgpu10_translate(svga, &gs->base, key,
-                                        PIPE_SHADER_GEOMETRY);
-   }
-   else {
-      return svga_tgsi_vgpu9_translate(&gs->base, key, PIPE_SHADER_GEOMETRY);
-   }
+   assert(svga_have_vgpu10(svga));
+   return svga_tgsi_vgpu10_translate(svga, &gs->base, key,
+                                     PIPE_SHADER_GEOMETRY);
 }
 
 
