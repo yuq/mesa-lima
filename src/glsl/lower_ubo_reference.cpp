@@ -277,10 +277,20 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
       interface_field_name(mem_ctx, (char *) var->get_interface_type()->name,
                            deref, &nonconst_block_index);
 
-   /* Locate the ubo block by interface name */
+   /* Locate the block by interface name */
+   this->is_shader_storage = var->is_in_shader_storage_block();
+   unsigned num_blocks;
+   struct gl_uniform_block **blocks;
+   if (this->is_shader_storage) {
+      num_blocks = shader->NumShaderStorageBlocks;
+      blocks = shader->ShaderStorageBlocks;
+   } else {
+      num_blocks = shader->NumUniformBlocks;
+      blocks = shader->UniformBlocks;
+   }
    this->uniform_block = NULL;
-   for (unsigned i = 0; i < shader->NumBufferInterfaceBlocks; i++) {
-      if (strcmp(field_name, shader->BufferInterfaceBlocks[i].Name) == 0) {
+   for (unsigned i = 0; i < num_blocks; i++) {
+      if (strcmp(field_name, blocks[i]->Name) == 0) {
 
          ir_constant *index = new(mem_ctx) ir_constant(i);
 
@@ -292,12 +302,8 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
             this->uniform_block = index;
          }
 
-         this->is_shader_storage = shader->BufferInterfaceBlocks[i].IsShaderStorage;
-
-         struct gl_uniform_block *block = &shader->BufferInterfaceBlocks[i];
-
          this->ubo_var = var->is_interface_instance()
-            ? &block->Uniforms[0] : &block->Uniforms[var->data.location];
+            ? &blocks[i]->Uniforms[0] : &blocks[i]->Uniforms[var->data.location];
 
          break;
       }
