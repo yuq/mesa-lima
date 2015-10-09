@@ -687,15 +687,15 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_store_ssbo;
       } else if (strcmp(ir->callee_name(), "__intrinsic_load_ssbo") == 0) {
          op = nir_intrinsic_load_ssbo;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_add_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_add_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_add;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_and_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_and_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_and;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_or_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_or_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_or;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_xor_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_xor_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_xor;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_min_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_min_ssbo") == 0) {
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_ssbo_atomic_imin;
@@ -703,7 +703,7 @@ nir_visitor::visit(ir_call *ir)
             op = nir_intrinsic_ssbo_atomic_umin;
          else
             unreachable("Invalid type");
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_max_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_max_ssbo") == 0) {
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_ssbo_atomic_imax;
@@ -711,9 +711,9 @@ nir_visitor::visit(ir_call *ir)
             op = nir_intrinsic_ssbo_atomic_umax;
          else
             unreachable("Invalid type");
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_exchange_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_exchange_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_exchange;
-      } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_comp_swap_ssbo") == 0) {
          op = nir_intrinsic_ssbo_atomic_comp_swap;
       } else if (strcmp(ir->callee_name(), "__intrinsic_shader_clock") == 0) {
          op = nir_intrinsic_shader_clock;

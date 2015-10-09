@@ -955,7 +955,7 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    sig->is_intrinsic = true;
 
    char func_name[64];
-   sprintf(func_name, "%s_internal", ir->callee_name());
+   sprintf(func_name, "%s_ssbo", ir->callee_name());
    ir_function *f = new(mem_ctx) ir_function(func_name);
    f->add_signature(sig);
 
@@ -980,14 +980,14 @@ ir_call *
 lower_ubo_reference_visitor::check_for_ssbo_atomic_intrinsic(ir_call *ir)
 {
    const char *callee = ir->callee_name();
-   if (!strcmp("__intrinsic_ssbo_atomic_add", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_min", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_max", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_and", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_or", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_xor", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_exchange", callee) ||
-       !strcmp("__intrinsic_ssbo_atomic_comp_swap", callee)) {
+   if (!strcmp("__intrinsic_atomic_add", callee) ||
+       !strcmp("__intrinsic_atomic_min", callee) ||
+       !strcmp("__intrinsic_atomic_max", callee) ||
+       !strcmp("__intrinsic_atomic_and", callee) ||
+       !strcmp("__intrinsic_atomic_or", callee) ||
+       !strcmp("__intrinsic_atomic_xor", callee) ||
+       !strcmp("__intrinsic_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap", callee)) {
       return lower_ssbo_atomic_intrinsic(ir);
    }
 
