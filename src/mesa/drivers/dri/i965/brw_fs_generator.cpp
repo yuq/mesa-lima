@@ -731,7 +731,6 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                            struct brw_reg sampler_index)
 {
    int msg_type = -1;
-   int rlen = 4;
    uint32_t simd_mode;
    uint32_t return_format;
    bool is_combined_send = inst->eot;
@@ -920,13 +919,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
    assert(msg_type != -1);
 
    if (simd_mode == BRW_SAMPLER_SIMD_MODE_SIMD16) {
-      rlen = 8;
       dst = vec16(dst);
-   }
-
-   if (is_combined_send) {
-      assert(devinfo->gen >= 9 || devinfo->is_cherryview);
-      rlen = 0;
    }
 
    assert(devinfo->gen < 7 || inst->header_size == 0 ||
@@ -995,7 +988,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                  surface + base_binding_table_index,
                  sampler % 16,
                  msg_type,
-                 rlen,
+                 inst->regs_written,
                  inst->mlen,
                  inst->header_size != 0,
                  simd_mode,
@@ -1032,7 +1025,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                               0 /* surface */,
                               0 /* sampler */,
                               msg_type,
-                              rlen,
+                              inst->regs_written,
                               inst->mlen /* mlen */,
                               inst->header_size != 0 /* header */,
                               simd_mode,

@@ -2534,6 +2534,7 @@ fs_visitor::opt_sampler_eot()
    tex_inst->offset |= fb_write->target << 24;
    tex_inst->eot = true;
    tex_inst->dst = ibld.null_reg_ud();
+   tex_inst->regs_written = 0;
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
    /* If a header is present, marking the eot is sufficient. Otherwise, we need
