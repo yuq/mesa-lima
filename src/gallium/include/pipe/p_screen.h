@@ -169,6 +169,10 @@ struct pipe_screen {
    struct pipe_resource * (*resource_create)(struct pipe_screen *,
 					     const struct pipe_resource *templat);
 
+   struct pipe_resource * (*resource_create_front)(struct pipe_screen *,
+                                                   const struct pipe_resource *templat,
+                                                   const void *map_front_private);
+
    /**
     * Create a texture from a winsys_handle. The handle is often created in
     * another process by first creating a pipe texture and then calling
