@@ -448,11 +448,8 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
       unsigned s;
 
       if (!screen->pm.num_hw_sm_active[d]) {
-         uint32_t m = (1 << 22) | (1 << (7 + (8 * !d)));
-         if (screen->pm.num_hw_sm_active[!d])
-            m |= 1 << (7 + (8 * d));
          BEGIN_NVC0(push, SUBC_SW(0x0600), 1);
-         PUSH_DATA (push, m);
+         PUSH_DATA (push, 0x80000000);
       }
       screen->pm.num_hw_sm_active[d]++;
 
