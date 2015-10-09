@@ -439,8 +439,10 @@ nvc0_hw_sm_begin_query(struct nvc0_context *nvc0, struct nvc0_hw_query *hq)
    PUSH_SPACE(push, 4 * 8 * 6 + 4);
 
    /* set sequence field to 0 (used to check if result is available) */
-   for (i = 0; i < screen->mp_count; ++i)
-      hq->data[i * 10 + 10] = 0;
+   for (i = 0; i < screen->mp_count; ++i) {
+      const unsigned b = (0x24 / 4) * i;
+      hq->data[b + 8] = 0;
+   }
    hq->sequence++;
 
    for (i = 0; i < cfg->num_counters; ++i) {
