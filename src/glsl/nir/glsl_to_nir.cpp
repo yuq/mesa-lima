@@ -389,35 +389,10 @@ nir_visitor::visit(ir_variable *ir)
 
    var->interface_type = ir->get_interface_type();
 
-   switch (var->data.mode) {
-   case nir_var_local:
-      exec_list_push_tail(&impl->locals, &var->node);
-      break;
-
-   case nir_var_global:
-      exec_list_push_tail(&shader->globals, &var->node);
-      break;
-
-   case nir_var_shader_in:
-      exec_list_push_tail(&shader->inputs, &var->node);
-      break;
-
-   case nir_var_shader_out:
-      exec_list_push_tail(&shader->outputs, &var->node);
-      break;
-
-   case nir_var_uniform:
-   case nir_var_shader_storage:
-      exec_list_push_tail(&shader->uniforms, &var->node);
-      break;
-
-   case nir_var_system_value:
-      exec_list_push_tail(&shader->system_values, &var->node);
-      break;
-
-   default:
-      unreachable("not reached");
-   }
+   if (var->data.mode == nir_var_local)
+      nir_function_impl_add_variable(impl, var);
+   else
+      nir_shader_add_variable(shader, var);
 
    _mesa_hash_table_insert(var_table, ir, var);
    this->var = var;
@@ -2074,13 +2049,10 @@ nir_visitor::visit(ir_constant *ir)
     * constant initializer and return a dereference.
     */
 
-   nir_variable *var = ralloc(this->shader, nir_variable);
-   var->name = ralloc_strdup(var, "const_temp");
-   var->type = ir->type;
-   var->data.mode = nir_var_local;
+   nir_variable *var =
+      nir_local_variable_create(this->impl, ir->type, "const_temp");
    var->data.read_only = true;
    var->constant_initializer = constant_copy(ir, var);
-   exec_list_push_tail(&this->impl->locals, &var->node);
 
    this->deref_head = nir_deref_var_create(this->shader, var);
    this->deref_tail = &this->deref_head->deref;

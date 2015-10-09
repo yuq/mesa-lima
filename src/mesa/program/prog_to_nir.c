@@ -958,11 +958,10 @@ setup_registers_and_variables(struct ptn_compile *c)
    for (int i = 0; i < num_inputs; i++) {
       if (!(c->prog->InputsRead & BITFIELD64_BIT(i)))
          continue;
-      nir_variable *var = rzalloc(shader, nir_variable);
-      var->type = glsl_vec4_type();
-      var->data.read_only = true;
-      var->data.mode = nir_var_shader_in;
-      var->name = ralloc_asprintf(var, "in_%d", i);
+
+      nir_variable *var =
+         nir_variable_create(shader, nir_var_shader_in, glsl_vec4_type(),
+                             ralloc_asprintf(shader, "in_%d", i));
       var->data.location = i;
       var->data.index = 0;
 
@@ -992,12 +991,9 @@ setup_registers_and_variables(struct ptn_compile *c)
             nir_ssa_def *f001 = nir_vec4(b, &load_x->dest.ssa, nir_imm_float(b, 0.0),
                                          nir_imm_float(b, 0.0), nir_imm_float(b, 1.0));
 
-            nir_variable *fullvar = rzalloc(shader, nir_variable);
-            fullvar->type = glsl_vec4_type();
-            fullvar->data.mode = nir_var_local;
-            fullvar->name = "fogcoord_tmp";
-            exec_list_push_tail(&b->impl->locals, &fullvar->node);
-
+            nir_variable *fullvar =
+               nir_local_variable_create(b->impl, glsl_vec4_type(),
+                                         "fogcoord_tmp");
             nir_intrinsic_instr *store =
                nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
             store->num_components = 4;
@@ -1015,7 +1011,6 @@ setup_registers_and_variables(struct ptn_compile *c)
          }
       }
 
-      exec_list_push_tail(&shader->inputs, &var->node);
       c->input_vars[i] = var;
    }
 

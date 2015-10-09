@@ -103,6 +103,72 @@ nir_reg_remove(nir_register *reg)
    exec_node_remove(&reg->node);
 }
 
+void
+nir_shader_add_variable(nir_shader *shader, nir_variable *var)
+{
+   switch (var->data.mode) {
+   case nir_var_local:
+      assert(!"nir_shader_add_variable cannot be used for local variables");
+      break;
+
+   case nir_var_global:
+      exec_list_push_tail(&shader->globals, &var->node);
+      break;
+
+   case nir_var_shader_in:
+      exec_list_push_tail(&shader->inputs, &var->node);
+      break;
+
+   case nir_var_shader_out:
+      exec_list_push_tail(&shader->outputs, &var->node);
+      break;
+
+   case nir_var_uniform:
+   case nir_var_shader_storage:
+      exec_list_push_tail(&shader->uniforms, &var->node);
+      break;
+
+   case nir_var_system_value:
+      exec_list_push_tail(&shader->system_values, &var->node);
+      break;
+   }
+}
+
+nir_variable *
+nir_variable_create(nir_shader *shader, nir_variable_mode mode,
+                    const struct glsl_type *type, const char *name)
+{
+   nir_variable *var = rzalloc(shader, nir_variable);
+   var->name = ralloc_strdup(var, name);
+   var->type = type;
+   var->data.mode = mode;
+
+   if ((mode == nir_var_shader_in && shader->stage != MESA_SHADER_VERTEX) ||
+       (mode == nir_var_shader_out && shader->stage != MESA_SHADER_FRAGMENT))
+      var->data.interpolation = INTERP_QUALIFIER_SMOOTH;
+
+   if (mode == nir_var_shader_in || mode == nir_var_uniform)
+      var->data.read_only = true;
+
+   nir_shader_add_variable(shader, var);
+
+   return var;
+}
+
+nir_variable *
+nir_local_variable_create(nir_function_impl *impl,
+                          const struct glsl_type *type, const char *name)
+{
+   nir_variable *var = rzalloc(impl->overload->function->shader, nir_variable);
+   var->name = ralloc_strdup(var, name);
+   var->type = type;
+   var->data.mode = nir_var_local;
+
+   nir_function_impl_add_variable(impl, var);
+
+   return var;
+}
+
 nir_function *
 nir_function_create(nir_shader *shader, const char *name)
 {

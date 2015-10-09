@@ -1559,6 +1559,26 @@ nir_register *nir_local_reg_create(nir_function_impl *impl);
 
 void nir_reg_remove(nir_register *reg);
 
+/** Adds a variable to the appropreate list in nir_shader */
+void nir_shader_add_variable(nir_shader *shader, nir_variable *var);
+
+static inline void
+nir_function_impl_add_variable(nir_function_impl *impl, nir_variable *var)
+{
+   assert(var->data.mode == nir_var_local);
+   exec_list_push_tail(&impl->locals, &var->node);
+}
+
+/** creates a variable, sets a few defaults, and adds it to the list */
+nir_variable *nir_variable_create(nir_shader *shader,
+                                  nir_variable_mode mode,
+                                  const struct glsl_type *type,
+                                  const char *name);
+/** creates a local variable and adds it to the list */
+nir_variable *nir_local_variable_create(nir_function_impl *impl,
+                                        const struct glsl_type *type,
+                                        const char *name);
+
 /** creates a function and adds it to the shader's list of functions */
 nir_function *nir_function_create(nir_shader *shader, const char *name);
 
