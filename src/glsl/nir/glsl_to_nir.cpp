@@ -719,6 +719,16 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_ssbo_atomic_comp_swap;
       } else if (strcmp(ir->callee_name(), "__intrinsic_shader_clock") == 0) {
          op = nir_intrinsic_shader_clock;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_group_memory_barrier") == 0) {
+         op = nir_intrinsic_group_memory_barrier;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_atomic_counter") == 0) {
+         op = nir_intrinsic_memory_barrier_atomic_counter;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_buffer") == 0) {
+         op = nir_intrinsic_memory_barrier_buffer;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_image") == 0) {
+         op = nir_intrinsic_memory_barrier_image;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_shared") == 0) {
+         op = nir_intrinsic_memory_barrier_shared;
       } else {
          unreachable("not reached");
       }
@@ -821,6 +831,11 @@ nir_visitor::visit(ir_call *ir)
          break;
       }
       case nir_intrinsic_memory_barrier:
+      case nir_intrinsic_group_memory_barrier:
+      case nir_intrinsic_memory_barrier_atomic_counter:
+      case nir_intrinsic_memory_barrier_buffer:
+      case nir_intrinsic_memory_barrier_image:
+      case nir_intrinsic_memory_barrier_shared:
          nir_instr_insert_after_cf_list(this->cf_node_list, &instr->instr);
          break;
       case nir_intrinsic_shader_clock:
