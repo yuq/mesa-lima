@@ -919,7 +919,21 @@ static void emit_ucmp(
 		LLVMBuildSelect(builder, v, emit_data->args[1], emit_data->args[2], "");
 }
 
-static void emit_cmp(
+static void emit_cmp(const struct lp_build_tgsi_action *action,
+		     struct lp_build_tgsi_context *bld_base,
+		     struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMValueRef cond, *args = emit_data->args;
+
+	cond = LLVMBuildFCmp(builder, LLVMRealOLT, args[0],
+			     bld_base->base.zero, "");
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildSelect(builder, cond, args[1], args[2], "");
+}
+
+static void emit_set_cond(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context * bld_base,
 		struct lp_build_emit_data * emit_data)
@@ -1503,8 +1517,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_CEIL].intr_name = "llvm.ceil.f32";
 	bld_base->op_actions[TGSI_OPCODE_CLAMP].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_CLAMP].intr_name = "llvm.AMDIL.clamp.";
-	bld_base->op_actions[TGSI_OPCODE_CMP].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_CMP].intr_name = "llvm.AMDGPU.cndlt";
+	bld_base->op_actions[TGSI_OPCODE_CMP].emit = emit_cmp;
 	bld_base->op_actions[TGSI_OPCODE_CONT].emit = cont_emit;
 	bld_base->op_actions[TGSI_OPCODE_COS].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_COS].intr_name = "llvm.cos.f32";
@@ -1573,13 +1586,13 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_ROUND].intr_name = "llvm.rint.f32";
 	bld_base->op_actions[TGSI_OPCODE_RSQ].intr_name = "llvm.AMDGPU.rsq.clamped.f32";
 	bld_base->op_actions[TGSI_OPCODE_RSQ].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_SGE].emit = emit_cmp;
-	bld_base->op_actions[TGSI_OPCODE_SEQ].emit = emit_cmp;
+	bld_base->op_actions[TGSI_OPCODE_SGE].emit = emit_set_cond;
+	bld_base->op_actions[TGSI_OPCODE_SEQ].emit = emit_set_cond;
 	bld_base->op_actions[TGSI_OPCODE_SHL].emit = emit_shl;
-	bld_base->op_actions[TGSI_OPCODE_SLE].emit = emit_cmp;
-	bld_base->op_actions[TGSI_OPCODE_SLT].emit = emit_cmp;
-	bld_base->op_actions[TGSI_OPCODE_SNE].emit = emit_cmp;
-	bld_base->op_actions[TGSI_OPCODE_SGT].emit = emit_cmp;
+	bld_base->op_actions[TGSI_OPCODE_SLE].emit = emit_set_cond;
+	bld_base->op_actions[TGSI_OPCODE_SLT].emit = emit_set_cond;
+	bld_base->op_actions[TGSI_OPCODE_SNE].emit = emit_set_cond;
+	bld_base->op_actions[TGSI_OPCODE_SGT].emit = emit_set_cond;
 	bld_base->op_actions[TGSI_OPCODE_SIN].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_SIN].intr_name = "llvm.sin.f32";
 	bld_base->op_actions[TGSI_OPCODE_SQRT].emit = build_tgsi_intrinsic_nomem;
