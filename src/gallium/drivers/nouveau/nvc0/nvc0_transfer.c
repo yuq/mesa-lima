@@ -188,14 +188,10 @@ nvc0_m2mf_push_linear(struct nouveau_context *nv,
    nouveau_pushbuf_validate(push);
 
    while (count) {
-      unsigned nr;
+      unsigned nr = MIN2(count, NV04_PFIFO_MAX_PACKET_LEN);
 
-      if (!PUSH_SPACE(push, 16))
+      if (!PUSH_SPACE(push, nr + 9))
          break;
-      nr = PUSH_AVAIL(push);
-      assert(nr >= 16);
-      nr = MIN2(count, nr - 9);
-      nr = MIN2(nr, NV04_PFIFO_MAX_PACKET_LEN);
 
       BEGIN_NVC0(push, NVC0_M2MF(OFFSET_OUT_HIGH), 2);
       PUSH_DATAh(push, dst->offset + offset);
@@ -234,14 +230,10 @@ nve4_p2mf_push_linear(struct nouveau_context *nv,
    nouveau_pushbuf_validate(push);
 
    while (count) {
-      unsigned nr;
+      unsigned nr = MIN2(count, (NV04_PFIFO_MAX_PACKET_LEN - 1));
 
-      if (!PUSH_SPACE(push, 16))
+      if (!PUSH_SPACE(push, nr + 10))
          break;
-      nr = PUSH_AVAIL(push);
-      assert(nr >= 16);
-      nr = MIN2(count, nr - 8);
-      nr = MIN2(nr, (NV04_PFIFO_MAX_PACKET_LEN - 1));
 
       BEGIN_NVC0(push, NVE4_P2MF(UPLOAD_DST_ADDRESS_HIGH), 2);
       PUSH_DATAh(push, dst->offset + offset);
@@ -571,9 +563,7 @@ nvc0_cb_bo_push(struct nouveau_context *nv,
    PUSH_DATA (push, bo->offset + base);
 
    while (words) {
-      unsigned nr = PUSH_AVAIL(push);
-      nr = MIN2(nr, words);
-      nr = MIN2(nr, NV04_PFIFO_MAX_PACKET_LEN - 1);
+      unsigned nr = MIN2(words, NV04_PFIFO_MAX_PACKET_LEN - 1);
 
       PUSH_SPACE(push, nr + 2);
       PUSH_REFN (push, bo, NOUVEAU_BO_WR | domain);
