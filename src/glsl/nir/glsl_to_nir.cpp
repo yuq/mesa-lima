@@ -731,6 +731,34 @@ nir_visitor::visit(ir_call *ir)
          op = nir_intrinsic_load_shared;
       } else if (strcmp(ir->callee_name(), "__intrinsic_store_shared") == 0) {
          op = nir_intrinsic_store_shared;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_add_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_add;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_and_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_and;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_or_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_or;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_xor_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_xor;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_min_shared") == 0) {
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_shared_atomic_imin;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_shared_atomic_umin;
+         else
+            unreachable("Invalid type");
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_max_shared") == 0) {
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_shared_atomic_imax;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_shared_atomic_umax;
+         else
+            unreachable("Invalid type");
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_exchange_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_exchange;
+      } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_comp_swap_shared") == 0) {
+         op = nir_intrinsic_shared_atomic_comp_swap;
       } else {
          unreachable("not reached");
       }
@@ -1033,6 +1061,45 @@ nir_visitor::visit(ir_call *ir)
          instr->src[0] = nir_src_for_ssa(evaluate_rvalue(val));
          instr->num_components = val->type->vector_elements;
 
+         nir_builder_instr_insert(&b, &instr->instr);
+         break;
+      }
+      case nir_intrinsic_shared_atomic_add:
+      case nir_intrinsic_shared_atomic_imin:
+      case nir_intrinsic_shared_atomic_umin:
+      case nir_intrinsic_shared_atomic_imax:
+      case nir_intrinsic_shared_atomic_umax:
+      case nir_intrinsic_shared_atomic_and:
+      case nir_intrinsic_shared_atomic_or:
+      case nir_intrinsic_shared_atomic_xor:
+      case nir_intrinsic_shared_atomic_exchange:
+      case nir_intrinsic_shared_atomic_comp_swap: {
+         int param_count = ir->actual_parameters.length();
+         assert(param_count == 2 || param_count == 3);
+
+         /* Offset */
+         exec_node *param = ir->actual_parameters.get_head();
+         ir_instruction *inst = (ir_instruction *) param;
+         instr->src[0] = nir_src_for_ssa(evaluate_rvalue(inst->as_rvalue()));
+
+         /* data1 parameter (this is always present) */
+         param = param->get_next();
+         inst = (ir_instruction *) param;
+         instr->src[1] = nir_src_for_ssa(evaluate_rvalue(inst->as_rvalue()));
+
+         /* data2 parameter (only with atomic_comp_swap) */
+         if (param_count == 3) {
+            assert(op == nir_intrinsic_shared_atomic_comp_swap);
+            param = param->get_next();
+            inst = (ir_instruction *) param;
+            instr->src[2] =
+               nir_src_for_ssa(evaluate_rvalue(inst->as_rvalue()));
+         }
+
+         /* Atomic result */
+         assert(ir->return_deref);
+         nir_ssa_dest_init(&instr->instr, &instr->dest,
+                           ir->return_deref->type->vector_elements, NULL);
          nir_builder_instr_insert(&b, &instr->instr);
          break;
       }

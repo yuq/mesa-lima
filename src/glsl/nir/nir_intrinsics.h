@@ -203,6 +203,33 @@ INTRINSIC(ssbo_atomic_xor, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
 INTRINSIC(ssbo_atomic_exchange, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
 INTRINSIC(ssbo_atomic_comp_swap, 4, ARR(1, 1, 1, 1), true, 1, 0, 0, 0)
 
+/*
+ * CS shared variable atomic intrinsics
+ *
+ * All of the shared variable atomic memory operations read a value from
+ * memory, compute a new value using one of the operations below, write the
+ * new value to memory, and return the original value read.
+ *
+ * All operations take 2 sources except CompSwap that takes 3. These
+ * sources represent:
+ *
+ * 0: The offset into the shared variable storage region that the atomic
+ *    operation will operate on.
+ * 1: The data parameter to the atomic function (i.e. the value to add
+ *    in shared_atomic_add, etc).
+ * 2: For CompSwap only: the second data parameter.
+ */
+INTRINSIC(shared_atomic_add, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_imin, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_umin, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_imax, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_umax, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_and, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_or, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_xor, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_exchange, 2, ARR(1, 1), true, 1, 0, 0, 0)
+INTRINSIC(shared_atomic_comp_swap, 3, ARR(1, 1, 1), true, 1, 0, 0, 0)
+
 #define SYSTEM_VALUE(name, components, num_indices) \
    INTRINSIC(load_##name, 0, ARR(), true, components, 0, num_indices, \
    NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
