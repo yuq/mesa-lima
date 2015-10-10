@@ -44,6 +44,7 @@
 
 #include "main/macros.h"
 #include "main/samplerobj.h"
+#include "util/half_float.h"
 
 /**
  * Emit a 3DSTATE_SAMPLER_STATE_POINTERS_{VS,HS,GS,DS,PS} packet.

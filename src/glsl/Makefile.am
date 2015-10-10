@@ -160,6 +160,7 @@ glsl_compiler_SOURCES = \
 glsl_compiler_LDADD =					\
 	libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
+	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)
 
 glsl_test_SOURCES = \

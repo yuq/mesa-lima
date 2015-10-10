@@ -396,13 +396,6 @@ _mesa_flsll(uint64_t n)
 #endif
 }
 
-
-extern GLhalfARB
-_mesa_float_to_half(float f);
-
-extern float
-_mesa_half_to_float(GLhalfARB h);
-
 static inline bool
 _mesa_half_is_negative(GLhalfARB h)
 {
