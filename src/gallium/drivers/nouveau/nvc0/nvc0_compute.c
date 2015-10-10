@@ -37,12 +37,9 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
 
    switch (dev->chipset & ~0xf) {
    case 0xc0:
-      if (dev->chipset == 0xc8)
-         obj_class = NVC8_COMPUTE_CLASS;
-      else
-         obj_class = NVC0_COMPUTE_CLASS;
-      break;
    case 0xd0:
+      /* In theory, GF110+ should also support NVC8_COMPUTE_CLASS but,
+       * in practice, a ILLEGAL_CLASS dmesg fail appears when using it. */
       obj_class = NVC0_COMPUTE_CLASS;
       break;
    default:
