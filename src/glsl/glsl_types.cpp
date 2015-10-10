@@ -1729,3 +1729,17 @@ glsl_type::coordinate_components() const
 
    return size;
 }
+
+/**
+ * Declarations of type flyweights (glsl_type::_foo_type) and
+ * convenience pointers (glsl_type::foo_type).
+ * @{
+ */
+#define DECL_TYPE(NAME, ...)                                    \
+   const glsl_type glsl_type::_##NAME##_type = glsl_type(__VA_ARGS__, #NAME); \
+   const glsl_type *const glsl_type::NAME##_type = &glsl_type::_##NAME##_type;
+
+#define STRUCT_TYPE(NAME)
+
+#include "builtin_type_macros.h"
+/** @} */
