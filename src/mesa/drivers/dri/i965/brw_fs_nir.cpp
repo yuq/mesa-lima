@@ -2093,6 +2093,37 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_shared_atomic_add:
+      nir_emit_shared_atomic(bld, BRW_AOP_ADD, instr);
+      break;
+   case nir_intrinsic_shared_atomic_imin:
+      nir_emit_shared_atomic(bld, BRW_AOP_IMIN, instr);
+      break;
+   case nir_intrinsic_shared_atomic_umin:
+      nir_emit_shared_atomic(bld, BRW_AOP_UMIN, instr);
+      break;
+   case nir_intrinsic_shared_atomic_imax:
+      nir_emit_shared_atomic(bld, BRW_AOP_IMAX, instr);
+      break;
+   case nir_intrinsic_shared_atomic_umax:
+      nir_emit_shared_atomic(bld, BRW_AOP_UMAX, instr);
+      break;
+   case nir_intrinsic_shared_atomic_and:
+      nir_emit_shared_atomic(bld, BRW_AOP_AND, instr);
+      break;
+   case nir_intrinsic_shared_atomic_or:
+      nir_emit_shared_atomic(bld, BRW_AOP_OR, instr);
+      break;
+   case nir_intrinsic_shared_atomic_xor:
+      nir_emit_shared_atomic(bld, BRW_AOP_XOR, instr);
+      break;
+   case nir_intrinsic_shared_atomic_exchange:
+      nir_emit_shared_atomic(bld, BRW_AOP_MOV, instr);
+      break;
+   case nir_intrinsic_shared_atomic_comp_swap:
+      nir_emit_shared_atomic(bld, BRW_AOP_CMPWR, instr);
+      break;
+
    default:
       nir_emit_intrinsic(bld, instr);
       break;
@@ -2708,6 +2739,33 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
    fs_reg data2;
    if (op == BRW_AOP_CMPWR)
       data2 = get_nir_src(instr->src[3]);
+
+   /* Emit the actual atomic operation operation */
+
+   fs_reg atomic_result =
+      surface_access::emit_untyped_atomic(bld, surface, offset,
+                                          data1, data2,
+                                          1 /* dims */, 1 /* rsize */,
+                                          op,
+                                          BRW_PREDICATE_NONE);
+   dest.type = atomic_result.type;
+   bld.MOV(dest, atomic_result);
+}
+
+void
+fs_visitor::nir_emit_shared_atomic(const fs_builder &bld,
+                                   int op, nir_intrinsic_instr *instr)
+{
+   fs_reg dest;
+   if (nir_intrinsic_infos[instr->intrinsic].has_dest)
+      dest = get_nir_dest(instr->dest);
+
+   fs_reg surface = brw_imm_ud(GEN7_BTI_SLM);
+   fs_reg offset = get_nir_src(instr->src[0]);
+   fs_reg data1 = get_nir_src(instr->src[1]);
+   fs_reg data2;
+   if (op == BRW_AOP_CMPWR)
+      data2 = get_nir_src(instr->src[2]);
 
    /* Emit the actual atomic operation operation */
 
