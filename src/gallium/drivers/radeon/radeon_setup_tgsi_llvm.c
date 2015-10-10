@@ -272,6 +272,15 @@ static LLVMValueRef fetch_system_value(
 	return bitcast(bld_base, type, cval);
 }
 
+static LLVMValueRef si_build_alloca_undef(struct gallivm_state *gallivm,
+					  LLVMTypeRef type,
+					  const char *name)
+{
+	LLVMValueRef ptr = lp_build_alloca(gallivm, type, name);
+	LLVMBuildStore(gallivm->builder, LLVMGetUndef(type), ptr);
+	return ptr;
+}
+
 static void emit_declaration(
 	struct lp_build_tgsi_context * bld_base,
 	const struct tgsi_full_declaration *decl)
@@ -285,7 +294,7 @@ static void emit_declaration(
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				 ctx->soa.addr[idx][chan] = lp_build_alloca(
+				 ctx->soa.addr[idx][chan] = si_build_alloca_undef(
 					&ctx->gallivm,
 					ctx->soa.bld_base.uint_bld.elem_type, "");
 			}
@@ -315,8 +324,9 @@ static void emit_declaration(
 		for (idx = first; idx <= last; idx++) {
 			for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
 				ctx->temps[idx * TGSI_NUM_CHANNELS + i] =
-					lp_build_alloca(bld_base->base.gallivm, bld_base->base.vec_type,
-						"temp");
+					si_build_alloca_undef(bld_base->base.gallivm,
+							      bld_base->base.vec_type,
+							      "temp");
 			}
 		}
 		break;
@@ -347,7 +357,8 @@ static void emit_declaration(
 			unsigned chan;
 			assert(idx < RADEON_LLVM_MAX_OUTPUTS);
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				ctx->soa.outputs[idx][chan] = lp_build_alloca(&ctx->gallivm,
+				ctx->soa.outputs[idx][chan] = si_build_alloca_undef(
+					&ctx->gallivm,
 					ctx->soa.bld_base.base.elem_type, "");
 			}
 		}
