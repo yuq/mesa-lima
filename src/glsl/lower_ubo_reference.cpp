@@ -979,6 +979,20 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
 ir_call *
 lower_ubo_reference_visitor::check_for_ssbo_atomic_intrinsic(ir_call *ir)
 {
+   exec_list& params = ir->actual_parameters;
+
+   if (params.length() < 2 || params.length() > 3)
+      return ir;
+
+   ir_rvalue *rvalue =
+      ((ir_instruction *) params.get_head())->as_rvalue();
+   if (!rvalue)
+      return ir;
+
+   ir_variable *var = rvalue->variable_referenced();
+   if (!var || !var->is_in_shader_storage_block())
+      return ir;
+
    const char *callee = ir->callee_name();
    if (!strcmp("__intrinsic_atomic_add", callee) ||
        !strcmp("__intrinsic_atomic_min", callee) ||
