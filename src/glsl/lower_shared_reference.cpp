@@ -76,6 +76,10 @@ public:
    ir_visitor_status visit_enter(ir_assignment *ir);
    void handle_assignment(ir_assignment *ir);
 
+   ir_call *lower_shared_atomic_intrinsic(ir_call *ir);
+   ir_call *check_for_shared_atomic_intrinsic(ir_call *ir);
+   ir_visitor_status visit_enter(ir_call *ir);
+
    unsigned get_shared_offset(const ir_variable *);
 
    ir_call *shared_load(void *mem_ctx, const struct glsl_type *type,
@@ -322,6 +326,150 @@ lower_shared_reference_visitor::shared_load(void *mem_ctx,
    call_params.push_tail(offset->clone(mem_ctx, NULL));
 
    return new(mem_ctx) ir_call(sig, deref_result, &call_params);
+}
+
+/* Lowers the intrinsic call to a new internal intrinsic that swaps the access
+ * to the shared variable in the first parameter by an offset. This involves
+ * creating the new internal intrinsic (i.e. the new function signature).
+ */
+ir_call *
+lower_shared_reference_visitor::lower_shared_atomic_intrinsic(ir_call *ir)
+{
+   /* Shared atomics usually have 2 parameters, the shared variable and an
+    * integer argument. The exception is CompSwap, that has an additional
+    * integer parameter.
+    */
+   int param_count = ir->actual_parameters.length();
+   assert(param_count == 2 || param_count == 3);
+
+   /* First argument must be a scalar integer shared variable */
+   exec_node *param = ir->actual_parameters.get_head();
+   ir_instruction *inst = (ir_instruction *) param;
+   assert(inst->ir_type == ir_type_dereference_variable ||
+          inst->ir_type == ir_type_dereference_array ||
+          inst->ir_type == ir_type_dereference_record ||
+          inst->ir_type == ir_type_swizzle);
+
+   ir_rvalue *deref = (ir_rvalue *) inst;
+   assert(deref->type->is_scalar() && deref->type->is_integer());
+
+   ir_variable *var = deref->variable_referenced();
+   assert(var);
+
+   /* Compute the offset to the start if the dereference
+    */
+   void *mem_ctx = ralloc_parent(shader->ir);
+
+   ir_rvalue *offset = NULL;
+   unsigned const_offset = get_shared_offset(var);
+   bool row_major;
+   int matrix_columns;
+   assert(var->get_interface_type() == NULL);
+   const unsigned packing = GLSL_INTERFACE_PACKING_STD430;
+   buffer_access_type = shared_atomic_access;
+
+   setup_buffer_access(mem_ctx, var, deref,
+                       &offset, &const_offset,
+                       &row_major, &matrix_columns, packing);
+
+   assert(offset);
+   assert(!row_major);
+   assert(matrix_columns == 1);
+
+   ir_rvalue *deref_offset =
+      add(offset, new(mem_ctx) ir_constant(const_offset));
+
+   /* Create the new internal function signature that will take an offset
+    * instead of a shared variable
+    */
+   exec_list sig_params;
+   ir_variable *sig_param = new(mem_ctx)
+      ir_variable(glsl_type::uint_type, "offset" , ir_var_function_in);
+   sig_params.push_tail(sig_param);
+
+   const glsl_type *type = deref->type->base_type == GLSL_TYPE_INT ?
+      glsl_type::int_type : glsl_type::uint_type;
+   sig_param = new(mem_ctx)
+         ir_variable(type, "data1", ir_var_function_in);
+   sig_params.push_tail(sig_param);
+
+   if (param_count == 3) {
+      sig_param = new(mem_ctx)
+            ir_variable(type, "data2", ir_var_function_in);
+      sig_params.push_tail(sig_param);
+   }
+
+   ir_function_signature *sig =
+      new(mem_ctx) ir_function_signature(deref->type,
+                                         compute_shader_enabled);
+   assert(sig);
+   sig->replace_parameters(&sig_params);
+   sig->is_intrinsic = true;
+
+   char func_name[64];
+   sprintf(func_name, "%s_shared", ir->callee_name());
+   ir_function *f = new(mem_ctx) ir_function(func_name);
+   f->add_signature(sig);
+
+   /* Now, create the call to the internal intrinsic */
+   exec_list call_params;
+   call_params.push_tail(deref_offset);
+   param = ir->actual_parameters.get_head()->get_next();
+   ir_rvalue *param_as_rvalue = ((ir_instruction *) param)->as_rvalue();
+   call_params.push_tail(param_as_rvalue->clone(mem_ctx, NULL));
+   if (param_count == 3) {
+      param = param->get_next();
+      param_as_rvalue = ((ir_instruction *) param)->as_rvalue();
+      call_params.push_tail(param_as_rvalue->clone(mem_ctx, NULL));
+   }
+   ir_dereference_variable *return_deref =
+      ir->return_deref->clone(mem_ctx, NULL);
+   return new(mem_ctx) ir_call(sig, return_deref, &call_params);
+}
+
+ir_call *
+lower_shared_reference_visitor::check_for_shared_atomic_intrinsic(ir_call *ir)
+{
+   exec_list& params = ir->actual_parameters;
+
+   if (params.length() < 2 || params.length() > 3)
+      return ir;
+
+   ir_rvalue *rvalue =
+      ((ir_instruction *) params.get_head())->as_rvalue();
+   if (!rvalue)
+      return ir;
+
+   ir_variable *var = rvalue->variable_referenced();
+   if (!var || var->data.mode != ir_var_shader_shared)
+      return ir;
+
+   const char *callee = ir->callee_name();
+   if (!strcmp("__intrinsic_atomic_add", callee) ||
+       !strcmp("__intrinsic_atomic_min", callee) ||
+       !strcmp("__intrinsic_atomic_max", callee) ||
+       !strcmp("__intrinsic_atomic_and", callee) ||
+       !strcmp("__intrinsic_atomic_or", callee) ||
+       !strcmp("__intrinsic_atomic_xor", callee) ||
+       !strcmp("__intrinsic_atomic_exchange", callee) ||
+       !strcmp("__intrinsic_atomic_comp_swap", callee)) {
+      return lower_shared_atomic_intrinsic(ir);
+   }
+
+   return ir;
+}
+
+ir_visitor_status
+lower_shared_reference_visitor::visit_enter(ir_call *ir)
+{
+   ir_call *new_ir = check_for_shared_atomic_intrinsic(ir);
+   if (new_ir != ir) {
+      progress = true;
+      base_ir->replace_with(new_ir);
+      return visit_continue_with_parent;
+   }
+
+   return rvalue_visit(ir);
 }
 
 } /* unnamed namespace */
