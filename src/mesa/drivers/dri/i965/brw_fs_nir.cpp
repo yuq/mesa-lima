@@ -1697,12 +1697,19 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       break;
    }
 
+   case nir_intrinsic_memory_barrier_atomic_counter:
+   case nir_intrinsic_memory_barrier_buffer:
+   case nir_intrinsic_memory_barrier_image:
    case nir_intrinsic_memory_barrier: {
       const fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_UD, 16 / dispatch_width);
       bld.emit(SHADER_OPCODE_MEMORY_FENCE, tmp)
          ->regs_written = 2;
       break;
    }
+
+   case nir_intrinsic_group_memory_barrier:
+   case nir_intrinsic_memory_barrier_shared:
+      break;
 
    case nir_intrinsic_shader_clock: {
       /* We cannot do anything if there is an event, so ignore it for now */
