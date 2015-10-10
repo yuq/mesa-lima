@@ -96,7 +96,6 @@ tests_general_ir_test_CFLAGS =				\
 tests_general_ir_test_LDADD =				\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 tests_uniform_initializer_test_SOURCES =		\
@@ -109,7 +108,6 @@ tests_uniform_initializer_test_CFLAGS =			\
 tests_uniform_initializer_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 tests_sampler_types_test_SOURCES =			\
@@ -119,7 +117,6 @@ tests_sampler_types_test_CFLAGS =			\
 tests_sampler_types_test_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libglsl.la		\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 libglcpp_la_LIBADD =					\
@@ -134,7 +131,6 @@ glcpp_glcpp_SOURCES =					\
 	glcpp/glcpp.c
 glcpp_glcpp_LDADD =					\
 	libglcpp.la					\
-	$(top_builddir)/src/libglsl_util.la		\
 	-lm
 
 libglsl_la_LIBADD = libglcpp.la
@@ -168,7 +164,6 @@ glsl_test_SOURCES = \
 
 glsl_test_LDADD =					\
 	libglsl.la					\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(PTHREAD_LIBS)
 
 # We write our own rules for yacc and lex below. We'd rather use automake,
@@ -272,6 +267,5 @@ nir_tests_control_flow_tests_CFLAGS =			\
 nir_tests_control_flow_tests_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libnir.la		\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)

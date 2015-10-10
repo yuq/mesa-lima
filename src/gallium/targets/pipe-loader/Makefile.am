@@ -53,7 +53,6 @@ endif
 PIPE_LIBS += \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/glsl/libnir.la \
-	$(top_builddir)/src/libglsl_util.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/gallium/drivers/rbug/librbug.la \
 	$(top_builddir)/src/gallium/drivers/trace/libtrace.la \
