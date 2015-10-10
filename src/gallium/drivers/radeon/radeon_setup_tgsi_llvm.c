@@ -1393,6 +1393,51 @@ static void emit_imsb(const struct lp_build_tgsi_action * action,
 		LLVMBuildSelect(builder, cond, all_ones, msb, "");
 }
 
+static void emit_iabs(const struct lp_build_tgsi_action *action,
+		      struct lp_build_tgsi_context *bld_base,
+		      struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+
+	emit_data->output[emit_data->chan] =
+		lp_build_emit_llvm_binary(bld_base, TGSI_OPCODE_IMAX,
+					  emit_data->args[0],
+					  LLVMBuildNeg(builder,
+						       emit_data->args[0], ""));
+}
+
+static void emit_minmax_int(const struct lp_build_tgsi_action *action,
+			    struct lp_build_tgsi_context *bld_base,
+			    struct lp_build_emit_data *emit_data)
+{
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMIntPredicate op;
+
+	switch (emit_data->info->opcode) {
+	default:
+		assert(0);
+	case TGSI_OPCODE_IMAX:
+		op = LLVMIntSGT;
+		break;
+	case TGSI_OPCODE_IMIN:
+		op = LLVMIntSLT;
+		break;
+	case TGSI_OPCODE_UMAX:
+		op = LLVMIntUGT;
+		break;
+	case TGSI_OPCODE_UMIN:
+		op = LLVMIntULT;
+		break;
+	}
+
+	emit_data->output[emit_data->chan] =
+		LLVMBuildSelect(builder,
+				LLVMBuildICmp(builder, op, emit_data->args[0],
+					      emit_data->args[1], ""),
+				emit_data->args[0],
+				emit_data->args[1], "");
+}
+
 void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 {
 	struct lp_type type;
@@ -1493,17 +1538,14 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_FSGE].emit = emit_fcmp;
 	bld_base->op_actions[TGSI_OPCODE_FSLT].emit = emit_fcmp;
 	bld_base->op_actions[TGSI_OPCODE_FSNE].emit = emit_fcmp;
-	bld_base->op_actions[TGSI_OPCODE_IABS].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_IABS].intr_name = "llvm.AMDIL.abs.";
+	bld_base->op_actions[TGSI_OPCODE_IABS].emit = emit_iabs;
 	bld_base->op_actions[TGSI_OPCODE_IBFE].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_IBFE].intr_name = "llvm.AMDGPU.bfe.i32";
 	bld_base->op_actions[TGSI_OPCODE_IDIV].emit = emit_idiv;
 	bld_base->op_actions[TGSI_OPCODE_IF].emit = if_emit;
 	bld_base->op_actions[TGSI_OPCODE_UIF].emit = uif_emit;
-	bld_base->op_actions[TGSI_OPCODE_IMAX].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_IMAX].intr_name = "llvm.AMDGPU.imax";
-	bld_base->op_actions[TGSI_OPCODE_IMIN].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_IMIN].intr_name = "llvm.AMDGPU.imin";
+	bld_base->op_actions[TGSI_OPCODE_IMAX].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_IMIN].emit = emit_minmax_int;
 	bld_base->op_actions[TGSI_OPCODE_IMSB].emit = emit_imsb;
 	bld_base->op_actions[TGSI_OPCODE_INEG].emit = emit_ineg;
 	bld_base->op_actions[TGSI_OPCODE_ISHR].emit = emit_ishr;
@@ -1551,10 +1593,8 @@ void radeon_llvm_context_init(struct radeon_llvm_context * ctx)
 	bld_base->op_actions[TGSI_OPCODE_UBFE].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_UBFE].intr_name = "llvm.AMDGPU.bfe.u32";
 	bld_base->op_actions[TGSI_OPCODE_UDIV].emit = emit_udiv;
-	bld_base->op_actions[TGSI_OPCODE_UMAX].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_UMAX].intr_name = "llvm.AMDGPU.umax";
-	bld_base->op_actions[TGSI_OPCODE_UMIN].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_UMIN].intr_name = "llvm.AMDGPU.umin";
+	bld_base->op_actions[TGSI_OPCODE_UMAX].emit = emit_minmax_int;
+	bld_base->op_actions[TGSI_OPCODE_UMIN].emit = emit_minmax_int;
 	bld_base->op_actions[TGSI_OPCODE_UMOD].emit = emit_umod;
 	bld_base->op_actions[TGSI_OPCODE_USEQ].emit = emit_icmp;
 	bld_base->op_actions[TGSI_OPCODE_USGE].emit = emit_icmp;
