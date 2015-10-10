@@ -31,7 +31,7 @@
 
 /* C wrapper around glsl_types.h */
 
-#include "../glsl_types.h"
+#include "glsl_types.h"
 
 #ifdef __cplusplus
 extern "C" {

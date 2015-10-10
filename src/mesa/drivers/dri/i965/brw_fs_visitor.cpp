@@ -43,7 +43,7 @@
 #include "brw_vec4.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/ir_optimization.h"
 #include "program/sampler.h"
 

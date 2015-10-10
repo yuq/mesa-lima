@@ -40,7 +40,7 @@
 #include "glsl/ir_optimization.h"
 #include "glsl/glsl_parser_extras.h"
 #include "glsl/glsl_symbol_table.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "program/ir_to_mesa.h"
 #include "program/program.h"
 #include "program/programopt.h"

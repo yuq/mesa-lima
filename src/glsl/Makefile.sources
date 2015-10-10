@@ -20,6 +20,8 @@ NIR_GENERATED_FILES = \
 NIR_FILES = \
 	nir/glsl_to_nir.cpp \
 	nir/glsl_to_nir.h \
+	nir/glsl_types.cpp \
+	nir/glsl_types.h \
 	nir/nir.c \
 	nir/nir.h \
 	nir/nir_array.h \
@@ -104,8 +106,6 @@ LIBGLSL_FILES = \
 	glsl_parser_extras.h \
 	glsl_symbol_table.cpp \
 	glsl_symbol_table.h \
-	glsl_types.cpp \
-	glsl_types.h \
 	hir_field_selection.cpp \
 	ir_basic_block.cpp \
 	ir_basic_block.h \

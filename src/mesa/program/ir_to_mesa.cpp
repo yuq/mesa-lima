@@ -42,7 +42,7 @@
 #include "glsl/ir_optimization.h"
 #include "glsl/ir_uniform.h"
 #include "glsl/glsl_parser_extras.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/linker.h"
 #include "glsl/program.h"
 #include "program/hash_table.h"

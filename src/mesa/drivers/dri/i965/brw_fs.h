@@ -48,7 +48,7 @@ extern "C" {
 #include "brw_wm.h"
 #include "intel_asm_annotation.h"
 }
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/ir.h"
 #include "glsl/nir/nir.h"
 #include "program/sampler.h"

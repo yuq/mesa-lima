@@ -148,9 +148,6 @@ libglsl_la_SOURCES =					\
 
 
 libnir_la_SOURCES =					\
-	glsl_types.cpp					\
-	builtin_types.cpp				\
-	glsl_symbol_table.cpp				\
 	$(NIR_FILES)					\
 	$(NIR_GENERATED_FILES)
 
