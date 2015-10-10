@@ -464,6 +464,7 @@ VkResult anv_GetPhysicalDeviceQueueFamilyProperties(
 {
    if (pQueueFamilyProperties == NULL) {
       *pCount = 1;
+      return VK_SUCCESS;
    }
 
    assert(*pCount >= 1);
