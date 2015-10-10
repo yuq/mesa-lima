@@ -325,6 +325,8 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
 
    &brw_fs_samplers,
    &brw_vs_samplers,
+   &brw_tcs_samplers,
+   &brw_tes_samplers,
    &brw_gs_samplers,
    &gen8_multisample_state,
 
