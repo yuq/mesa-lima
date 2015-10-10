@@ -479,6 +479,12 @@ compute_shader(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+buffer_atomics_supported(const _mesa_glsl_parse_state *state)
+{
+   return compute_shader(state) || shader_storage_buffer_object(state);
+}
+
+static bool
 barrier_supported(const _mesa_glsl_parse_state *state)
 {
    return compute_shader(state) ||
@@ -931,51 +937,51 @@ builtin_builder::create_intrinsics()
                 NULL);
 
    add_function("__intrinsic_atomic_add",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_min",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_max",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_and",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_or",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_xor",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_exchange",
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic2(shader_storage_buffer_object,
+                _atomic_intrinsic2(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
    add_function("__intrinsic_atomic_comp_swap",
-                _atomic_intrinsic3(shader_storage_buffer_object,
+                _atomic_intrinsic3(buffer_atomics_supported,
                                    glsl_type::uint_type),
-                _atomic_intrinsic3(shader_storage_buffer_object,
+                _atomic_intrinsic3(buffer_atomics_supported,
                                    glsl_type::int_type),
                 NULL);
 
@@ -2683,66 +2689,66 @@ builtin_builder::create_builtins()
 
    add_function("atomicAdd",
                 _atomic_op2("__intrinsic_atomic_add",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_add",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicMin",
                 _atomic_op2("__intrinsic_atomic_min",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_min",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicMax",
                 _atomic_op2("__intrinsic_atomic_max",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_max",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicAnd",
                 _atomic_op2("__intrinsic_atomic_and",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_and",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicOr",
                 _atomic_op2("__intrinsic_atomic_or",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_or",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicXor",
                 _atomic_op2("__intrinsic_atomic_xor",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_xor",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicExchange",
                 _atomic_op2("__intrinsic_atomic_exchange",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op2("__intrinsic_atomic_exchange",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
    add_function("atomicCompSwap",
                 _atomic_op3("__intrinsic_atomic_comp_swap",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::uint_type),
                 _atomic_op3("__intrinsic_atomic_comp_swap",
-                            shader_storage_buffer_object,
+                            buffer_atomics_supported,
                             glsl_type::int_type),
                 NULL);
 
