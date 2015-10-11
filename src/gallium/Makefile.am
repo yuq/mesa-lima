@@ -98,7 +98,7 @@ if HAVE_DRISW
 SUBDIRS += winsys/sw/dri
 endif
 
-if HAVE_DRI2
+if HAVE_DRISW_KMS
 SUBDIRS += winsys/sw/kms-dri
 endif
 
