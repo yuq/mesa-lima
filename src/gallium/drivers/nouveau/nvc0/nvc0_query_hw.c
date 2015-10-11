@@ -25,6 +25,7 @@
 
 #include "nvc0/nvc0_context.h"
 #include "nvc0/nvc0_query_hw.h"
+#include "nvc0/nvc0_query_hw_metric.h"
 #include "nvc0/nvc0_query_hw_sm.h"
 
 #define NVC0_HW_QUERY_STATE_READY   0
@@ -371,6 +372,12 @@ nvc0_hw_create_query(struct nvc0_context *nvc0, unsigned type, unsigned index)
       return (struct nvc0_query *)hq;
    }
 
+   hq = nvc0_hw_metric_create_query(nvc0, type);
+   if (hq) {
+      hq->base.funcs = &hw_query_funcs;
+      return (struct nvc0_query *)hq;
+   }
+
    hq = CALLOC_STRUCT(nvc0_hw_query);
    if (!hq)
       return NULL;
@@ -435,14 +442,20 @@ int
 nvc0_hw_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
                               struct pipe_driver_query_info *info)
 {
-   int num_hw_sm_queries = 0;
+   int num_hw_sm_queries = 0, num_hw_metric_queries = 0;
 
    num_hw_sm_queries = nvc0_hw_sm_get_driver_query_info(screen, 0, NULL);
+   num_hw_metric_queries =
+      nvc0_hw_metric_get_driver_query_info(screen, 0, NULL);
 
    if (!info)
-      return num_hw_sm_queries;
+      return num_hw_sm_queries + num_hw_metric_queries;
 
-   return nvc0_hw_sm_get_driver_query_info(screen, id, info);
+   if (id < num_hw_sm_queries)
+      return nvc0_hw_sm_get_driver_query_info(screen, id, info);
+
+   return nvc0_hw_metric_get_driver_query_info(screen,
+                                               id - num_hw_sm_queries, info);
 }
 
 void
