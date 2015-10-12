@@ -1543,7 +1543,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
       node->vertex_store->bufferobj : NULL;
    (void) ctx;
 
-   fprintf(f, "VBO-VERTEX-LIST, %u vertices %d primitives, %d vertsize "
+   fprintf(f, "VBO-VERTEX-LIST, %u vertices, %d primitives, %d vertsize, "
            "buffer %p\n",
            node->count, node->prim_count, node->vertex_size,
            buffer);
