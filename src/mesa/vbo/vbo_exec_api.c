@@ -375,13 +375,16 @@ vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
  * This is when a vertex attribute transitions to a different size.
  * For example, we saw a bunch of glTexCoord2f() calls and now we got a
  * glTexCoord4f() call.  We promote the array from size=2 to size=4.
+ * \param newSize  size of new vertex (number of 32-bit words).
  */
 static void
-vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint newSize, GLenum newType)
+vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr,
+                      GLuint newSize, GLenum newType)
 {
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;
 
-   if (newSize > exec->vtx.attrsz[attr] || newType != exec->vtx.attrtype[attr]) {
+   if (newSize > exec->vtx.attrsz[attr] ||
+       newType != exec->vtx.attrtype[attr]) {
       /* New size is larger.  Need to flush existing vertices and get
        * an enlarged vertex format.
        */
