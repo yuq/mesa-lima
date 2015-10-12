@@ -131,7 +131,8 @@ public:
       if (this->lowered_builtin_array_variable)
          return this->size;
       else
-         return this->vector_elements * this->matrix_columns * this->size;
+         return this->vector_elements * this->matrix_columns * this->size *
+            (this->is_double() ? 2 : 1);
    }
 
    unsigned get_location() const {
@@ -139,6 +140,29 @@ public:
    }
 
 private:
+
+   bool is_double() const
+   {
+      switch (this->type) {
+      case GL_DOUBLE:
+      case GL_DOUBLE_VEC2:
+      case GL_DOUBLE_VEC3:
+      case GL_DOUBLE_VEC4:
+      case GL_DOUBLE_MAT2:
+      case GL_DOUBLE_MAT2x3:
+      case GL_DOUBLE_MAT2x4:
+      case GL_DOUBLE_MAT3:
+      case GL_DOUBLE_MAT3x2:
+      case GL_DOUBLE_MAT3x4:
+      case GL_DOUBLE_MAT4:
+      case GL_DOUBLE_MAT4x2:
+      case GL_DOUBLE_MAT4x3:
+         return true;
+      default:
+         return false;
+      }
+   }
+
    /**
     * The name that was supplied to glTransformFeedbackVaryings.  Used for
     * error reporting and glGetTransformFeedbackVarying().
