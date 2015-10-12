@@ -192,7 +192,11 @@ nouveau_fence_wait(struct nouveau_fence *fence)
 
    if (fence->state < NOUVEAU_FENCE_STATE_EMITTED) {
       PUSH_SPACE(screen->pushbuf, 8);
-      nouveau_fence_emit(fence);
+      /* The space allocation might trigger a flush, which could emit the
+       * current fence. So check again.
+       */
+      if (fence->state < NOUVEAU_FENCE_STATE_EMITTED)
+         nouveau_fence_emit(fence);
    }
 
    if (fence->state < NOUVEAU_FENCE_STATE_FLUSHED)
