@@ -115,8 +115,11 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          else
             prog->InputsRead |= bitfield;
 
-         if (var->type->without_array()->is_dual_slot_double())
+         /* double inputs read is only for vertex inputs */
+         if (stage == MESA_SHADER_VERTEX &&
+             var->type->without_array()->is_dual_slot_double())
             prog->DoubleInputsRead |= bitfield;
+
          if (stage == MESA_SHADER_FRAGMENT) {
             gl_fragment_program *fprog = (gl_fragment_program *) prog;
             fprog->InterpQualifier[idx] =
