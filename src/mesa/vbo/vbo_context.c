@@ -33,7 +33,6 @@
 #include "vbo.h"
 #include "vbo_context.h"
 
-#define NR_MAT_ATTRIBS 12
 
 static GLuint check_size( const GLfloat *attr )
 {
@@ -108,14 +107,12 @@ static void init_mat_currval(struct gl_context *ctx)
       &vbo->currval[VBO_ATTRIB_MAT_FRONT_AMBIENT];
    GLuint i;
 
-   assert(NR_MAT_ATTRIBS == MAT_ATTRIB_MAX);
-
-   memset(arrays, 0, sizeof(*arrays) * NR_MAT_ATTRIBS);
+   memset(arrays, 0, sizeof(*arrays) * MAT_ATTRIB_MAX);
 
    /* Set up a constant (StrideB == 0) array for each current
     * attribute:
     */
-   for (i = 0; i < NR_MAT_ATTRIBS; i++) {
+   for (i = 0; i < MAT_ATTRIB_MAX; i++) {
       struct gl_client_array *cl = &arrays[i];
 
       /* Size is fixed for the material attributes, for others will
@@ -175,7 +172,7 @@ GLboolean _vbo_CreateContext( struct gl_context *ctx )
       for (i = 0; i < ARRAY_SIZE(vbo->map_vp_none); i++) 
 	 vbo->map_vp_none[i] = i;
       /* map material attribs to generic slots */
-      for (i = 0; i < NR_MAT_ATTRIBS; i++) 
+      for (i = 0; i < MAT_ATTRIB_MAX; i++)
 	 vbo->map_vp_none[VERT_ATTRIB_GENERIC(i)]
             = VBO_ATTRIB_MAT_FRONT_AMBIENT + i;
 
