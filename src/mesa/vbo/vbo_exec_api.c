@@ -413,18 +413,27 @@ vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint newSize, GLenu
 /**
  * This macro is used to implement all the glVertex, glColor, glTexCoord,
  * glVertexAttrib, etc functions.
+ * \param A  attribute index
+ * \param N  attribute size (1..4)
+ * \param T  type (GL_FLOAT, GL_DOUBLE, GL_INT, GL_UNSIGNED_INT)
+ * \param C  cast type (fi_type or double)
+ * \param V0, V1, v2, V3  attribute value
  */
 #define ATTR_UNION( A, N, T, C, V0, V1, V2, V3 )                        \
 do {									\
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;		\
    int sz = (sizeof(C) / sizeof(GLfloat));                              \
-   if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT)))	\
+   if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT))) {     \
       vbo_exec_BeginVertices(ctx);					\
+   }									\
                                                                         \
+   /* check if attribute size or type is changing */                    \
    if (unlikely(exec->vtx.active_sz[A] != N * sz) ||                    \
-       unlikely(exec->vtx.attrtype[A] != T))                            \
+       unlikely(exec->vtx.attrtype[A] != T)) {                          \
       vbo_exec_fixup_vertex(ctx, A, N * sz, T);                         \
+   }									\
                                                                         \
+   /* store vertex attribute in vertex buffer */                        \
    {									\
       C *dest = (C *)exec->vtx.attrptr[A];                              \
       if (N>0) dest[0] = V0;						\
@@ -438,6 +447,7 @@ do {									\
       /* This is a glVertex call */					\
       GLuint i;								\
 									\
+      /* copy 32-bit words */                                           \
       for (i = 0; i < exec->vtx.vertex_size; i++)			\
 	 exec->vtx.buffer_ptr[i] = exec->vtx.vertex[i];			\
 									\
