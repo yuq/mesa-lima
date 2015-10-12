@@ -132,7 +132,7 @@ struct vbo_exec_context
       GLboolean recalculate_inputs;
    } array;
 
-   /* Which flags to set in vbo_exec_BeginVertices() */
+   /* Which flags to set in vbo_exec_begin_vertices() */
    GLbitfield begin_vertices_flags;
 
 #ifdef DEBUG
@@ -147,8 +147,6 @@ struct vbo_exec_context
 void vbo_exec_init( struct gl_context *ctx );
 void vbo_exec_destroy( struct gl_context *ctx );
 void vbo_exec_invalidate_state( struct gl_context *ctx, GLuint new_state );
-
-void vbo_exec_BeginVertices( struct gl_context *ctx );
 
 
 /* Internal functions:

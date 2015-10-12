@@ -414,6 +414,23 @@ vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr,
 
 
 /**
+ * Called upon first glVertex, glColor, glTexCoord, etc.
+ */
+static void
+vbo_exec_begin_vertices(struct gl_context *ctx)
+{
+   struct vbo_exec_context *exec = &vbo_context(ctx)->exec;
+
+   vbo_exec_vtx_map( exec );
+
+   assert((ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT) == 0);
+   assert(exec->begin_vertices_flags);
+
+   ctx->Driver.NeedFlush |= exec->begin_vertices_flags;
+}
+
+
+/**
  * This macro is used to implement all the glVertex, glColor, glTexCoord,
  * glVertexAttrib, etc functions.
  * \param A  attribute index
@@ -430,7 +447,7 @@ do {									\
    assert(sz == 1 || sz == 2);                                          \
                                                                         \
    if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT))) {     \
-      vbo_exec_BeginVertices(ctx);					\
+      vbo_exec_begin_vertices(ctx);					\
    }									\
                                                                         \
    /* check if attribute size or type is changing */                    \
@@ -1165,22 +1182,6 @@ void vbo_exec_vtx_destroy( struct vbo_exec_context *exec )
 
 
 /**
- * Called upon first glVertex, glColor, glTexCoord, etc.
- */
-void vbo_exec_BeginVertices( struct gl_context *ctx )
-{
-   struct vbo_exec_context *exec = &vbo_context(ctx)->exec;
-
-   vbo_exec_vtx_map( exec );
-
-   assert((ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT) == 0);
-   assert(exec->begin_vertices_flags);
-
-   ctx->Driver.NeedFlush |= exec->begin_vertices_flags;
-}
-
-
-/**
  * If inside glBegin()/glEnd(), it should assert(0).  Otherwise, if
  * FLUSH_STORED_VERTICES bit in \p flags is set flushes any buffered
  * vertices, if FLUSH_UPDATE_CURRENT bit is set updates
@@ -1213,7 +1214,7 @@ void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )
    /* Flush (draw), and make sure VBO is left unmapped when done */
    vbo_exec_FlushVertices_internal(exec, GL_TRUE);
 
-   /* Need to do this to ensure vbo_exec_BeginVertices gets called again:
+   /* Need to do this to ensure vbo_exec_begin_vertices gets called again:
     */
    ctx->Driver.NeedFlush &= ~(FLUSH_UPDATE_CURRENT | flags);
 
