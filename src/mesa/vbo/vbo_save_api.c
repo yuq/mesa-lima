@@ -648,7 +648,8 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
 
    /* Recalculate all the attrptr[] values:
     */
-   for (i = 0, tmp = save->vertex; i < VBO_ATTRIB_MAX; i++) {
+   tmp = save->vertex;
+   for (i = 0; i < VBO_ATTRIB_MAX; i++) {
       if (save->attrsz[i]) {
          save->attrptr[i] = tmp;
          tmp += save->attrsz[i];
