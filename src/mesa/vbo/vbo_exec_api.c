@@ -423,6 +423,9 @@ vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr, GLuint newSize, GLenu
 do {									\
    struct vbo_exec_context *exec = &vbo_context(ctx)->exec;		\
    int sz = (sizeof(C) / sizeof(GLfloat));                              \
+                                                                        \
+   assert(sz == 1 || sz == 2);                                          \
+                                                                        \
    if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT))) {     \
       vbo_exec_BeginVertices(ctx);					\
    }									\
