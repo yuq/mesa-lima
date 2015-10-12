@@ -301,6 +301,13 @@ ir_set_program_inouts_visitor::try_mark_partial_variable(ir_variable *var,
       return false;
    }
 
+   /* double element width for double types that takes two slots */
+   if (this->shader_stage != MESA_SHADER_VERTEX ||
+       var->data.mode != ir_var_shader_in) {
+      if (type->without_array()->is_dual_slot_double())
+	 elem_width *= 2;
+   }
+
    mark(this->prog, var, index_as_constant->value.u[0] * elem_width,
         elem_width, this->shader_stage);
    return true;
