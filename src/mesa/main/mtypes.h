@@ -487,26 +487,24 @@ struct gl_colorbuffer_attrib
 struct gl_current_attrib
 {
    /**
-    * \name Current vertex attributes.
+    * \name Current vertex attributes (color, texcoords, etc).
     * \note Values are valid only after FLUSH_VERTICES has been called.
     * \note Index and Edgeflag current values are stored as floats in the 
     * SIX and SEVEN attribute slots.
+    * \note We need double storage for 64-bit vertex attributes
     */
-   /* we need double storage for this for vertex attrib 64bit */
-   GLfloat Attrib[VERT_ATTRIB_MAX][4*2];	/**< Position, color, texcoords, etc */
+   GLfloat Attrib[VERT_ATTRIB_MAX][4*2];
 
    /**
-    * \name Current raster position attributes (always valid).
-    * \note This set of attributes is very similar to the SWvertex struct.
+    * \name Current raster position attributes (always up to date after a
+    * glRasterPos call).
     */
-   /*@{*/
    GLfloat RasterPos[4];
    GLfloat RasterDistance;
    GLfloat RasterColor[4];
    GLfloat RasterSecondaryColor[4];
    GLfloat RasterTexCoords[MAX_TEXTURE_COORD_UNITS][4];
    GLboolean RasterPosValid;
-   /*@}*/
 };
 
 
