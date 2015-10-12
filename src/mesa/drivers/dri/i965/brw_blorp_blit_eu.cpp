@@ -96,6 +96,7 @@ brw_blorp_eu_emitter::emit_texture_lookup(const struct brw_reg &dst,
    inst->base_mrf = base_mrf;
    inst->mlen = msg_length;
    inst->header_size = 0;
+   inst->regs_written = 8;
 
    insts.push_tail(inst);
 }
