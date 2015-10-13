@@ -32,6 +32,5 @@
 
 #include "util/u_debug.h"
 #include "util/u_math.h"
-#include "util/u_memory.h"
 
 #endif /* ILO_CORE_H */
