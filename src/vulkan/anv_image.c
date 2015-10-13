@@ -379,13 +379,55 @@ anv_DestroyImage(VkDevice _device, VkImage _image)
    anv_device_free(device, anv_image_from_handle(_image));
 }
 
+static void
+anv_surface_get_subresource_layout(struct anv_image *image,
+                                   struct anv_surface *surface,
+                                   const VkImageSubresource *subresource,
+                                   VkSubresourceLayout *layout)
+{
+   /* If we are on a non-zero mip level or array slice, we need to
+    * calculate a real offset.
+    */
+   anv_assert(subresource->mipLevel == 0);
+   anv_assert(subresource->arrayLayer == 0);
+
+   layout->offset = surface->offset;
+   layout->rowPitch = surface->stride;
+   layout->depthPitch = surface->qpitch;
+
+   /* FINISHME: We really shouldn't be doing this calculation here */
+   if (image->array_size > 1)
+      layout->size = surface->qpitch * image->array_size;
+   else
+      layout->size = surface->stride * image->extent.height;
+}
+
 VkResult anv_GetImageSubresourceLayout(
     VkDevice                                    device,
-    VkImage                                     image,
+    VkImage                                     _image,
     const VkImageSubresource*                   pSubresource,
     VkSubresourceLayout*                        pLayout)
 {
-   stub_return(VK_UNSUPPORTED);
+   ANV_FROM_HANDLE(anv_image, image, _image);
+
+   switch (pSubresource->aspect) {
+   case VK_IMAGE_ASPECT_COLOR:
+      anv_surface_get_subresource_layout(image, &image->color_surface,
+                                         pSubresource, pLayout);
+      break;
+   case VK_IMAGE_ASPECT_DEPTH:
+      anv_surface_get_subresource_layout(image, &image->depth_surface,
+                                         pSubresource, pLayout);
+      break;
+   case VK_IMAGE_ASPECT_STENCIL:
+      anv_surface_get_subresource_layout(image, &image->stencil_surface,
+                                         pSubresource, pLayout);
+      break;
+   default:
+      return vk_error(VK_UNSUPPORTED);
+   }
+
+   return VK_SUCCESS;
 }
 
 VkResult
