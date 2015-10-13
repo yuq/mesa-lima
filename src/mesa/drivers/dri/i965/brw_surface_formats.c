@@ -27,20 +27,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_wm.h"
-
-struct surface_format_info {
-   bool exists;
-   int sampling;
-   int filtering;
-   int shadow_compare;
-   int chroma_key;
-   int render_target;
-   int alpha_blend;
-   int input_vb;
-   int streamed_output_vb;
-   int color_processing;
-   const char *name;
-};
+#include "brw_surface_formats.h"
 
 /* This macro allows us to write the table almost as it appears in the PRM,
  * while restructuring it to turn it into the C code we want.
@@ -85,7 +72,7 @@ struct surface_format_info {
  * - VOL4_Part1 section 2.12.2.1.2 Sampler Output Channel Mapping.
  * - VOL4_Part1 section 3.9.11 Render Target Write.
  */
-const struct surface_format_info surface_formats[] = {
+const struct brw_surface_format_info surface_formats[] = {
 /* smpl filt shad CK  RT  AB  VB  SO  color */
    SF( Y, 50,  x,  x,  Y,  Y,  Y,  Y,  x, R32G32B32A32_FLOAT)
    SF( Y,  x,  x,  x,  Y,  x,  Y,  Y,  x, R32G32B32A32_SINT)
@@ -616,7 +603,7 @@ brw_init_surface_formats(struct brw_context *brw)
 
    for (format = MESA_FORMAT_NONE + 1; format < MESA_FORMAT_COUNT; format++) {
       uint32_t texture, render;
-      const struct surface_format_info *rinfo, *tinfo;
+      const struct brw_surface_format_info *rinfo, *tinfo;
       bool is_integer = _mesa_is_format_integer_color(format);
 
       render = texture = brw_format_for_mesa_format(format);

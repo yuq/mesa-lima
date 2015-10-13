@@ -53,6 +53,7 @@ i965_compiler_FILES = \
 	brw_shader.cpp \
 	brw_shader.h \
 	brw_surface_formats.c \
+	brw_surface_formats.h \
 	brw_util.c \
 	brw_util.h \
 	brw_vec4_builder.h \
