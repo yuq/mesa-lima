@@ -247,7 +247,6 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    }
 
    svga->hud.map_buffer_time += (os_time_get() - begin);
-   svga->hud.num_resources_mapped++;
 
    return map;
 }
