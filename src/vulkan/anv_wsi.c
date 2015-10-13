@@ -126,6 +126,30 @@ anv_GetSurfaceFormatsKHR(
 }
 
 VkResult
+anv_GetSurfacePresentModesKHR(
+    VkDevice                                 _device,
+    const VkSurfaceDescriptionKHR*           pSurfaceDescription,
+    uint32_t*                                pCount,
+    VkPresentModeKHR*                        pPresentModes)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+
+   assert(pSurfaceDescription->sType ==
+          VK_STRUCTURE_TYPE_SURFACE_DESCRIPTION_WINDOW_KHR);
+   VkSurfaceDescriptionWindowKHR *window =
+      (VkSurfaceDescriptionWindowKHR *)pSurfaceDescription;
+
+   struct anv_wsi_implementation *impl =
+      device->instance->wsi_impl[window->platform];
+
+   assert(impl);
+
+   return impl->get_surface_present_modes(impl, device, window,
+                                          pCount, pPresentModes);
+}
+
+
+VkResult
 anv_CreateSwapchainKHR(
     VkDevice                                 _device,
     const VkSwapchainCreateInfoKHR*          pCreateInfo,
