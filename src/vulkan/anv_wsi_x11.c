@@ -61,19 +61,25 @@ x11_get_surface_properties(struct anv_wsi_implementation *impl,
    xcb_generic_error_t *err;
    xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(conn, cookie,
                                                            &err);
-   if (!geom) {
+   if (geom) {
       free(err);
-      return vk_error(VK_ERROR_OUT_OF_DATE_KHR);
+      VkExtent2D extent = { geom->width, geom->height };
+      props->currentExtent = extent;
+      props->minImageExtent = extent;
+      props->maxImageExtent = extent;
+   } else {
+      /* This can happen if the client didn't wait for the configure event
+       * to come back from the compositor.  In that case, we don't know the
+       * size of the window so we just return valid "I don't know" stuff.
+       */
+      free(geom);
+      props->currentExtent = (VkExtent2D) { -1, -1 };
+      props->minImageExtent = (VkExtent2D) { 1, 1 };
+      props->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
    }
-
-   VkExtent2D extent = { geom->width, geom->height };
-   free(geom);
 
    props->minImageCount = 2;
    props->maxImageCount = 4;
-   props->currentExtent = extent;
-   props->minImageExtent = extent;
-   props->maxImageExtent = extent;
    props->supportedTransforms = VK_SURFACE_TRANSFORM_NONE_BIT_KHR;
    props->currentTransform = VK_SURFACE_TRANSFORM_NONE_KHR;
    props->maxImageArraySize = 1;
