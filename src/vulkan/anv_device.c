@@ -145,6 +145,9 @@ VkResult anv_CreateInstance(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO);
 
+   if (pCreateInfo->pAppInfo->apiVersion != VK_MAKE_VERSION(0, 170, 2))
+      return vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
+
    for (uint32_t i = 0; i < pCreateInfo->extensionCount; i++) {
       bool found = false;
       for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
@@ -441,7 +444,7 @@ VkResult anv_GetPhysicalDeviceProperties(
    };
 
    *pProperties = (VkPhysicalDeviceProperties) {
-      .apiVersion = VK_MAKE_VERSION(0, 138, 1),
+      .apiVersion = VK_MAKE_VERSION(0, 170, 2),
       .driverVersion = 1,
       .vendorId = 0x8086,
       .deviceId = pdevice->chipset_id,
