@@ -176,9 +176,8 @@ _mesa_set_program_error(struct gl_context *ctx, GLint pos, const char *string)
  * Initialize a new gl_program object.
  */
 struct gl_program *
-_mesa_init_gl_program(void *_prog, GLenum target, GLuint id)
+_mesa_init_gl_program(struct gl_program *prog, GLenum target, GLuint id)
 {
-   struct gl_program *prog = (struct gl_program*)_prog;
    GLuint i;
 
    if (!prog)
@@ -214,38 +213,36 @@ _mesa_init_gl_program(void *_prog, GLenum target, GLuint id)
 struct gl_program *
 _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
 {
-   struct gl_program *prog;
    switch (target) {
-   case GL_VERTEX_PROGRAM_ARB: /* == GL_VERTEX_PROGRAM_NV */
-      prog = _mesa_init_gl_program(CALLOC_STRUCT(gl_vertex_program),
-                                   target, id);
-      break;
+   case GL_VERTEX_PROGRAM_ARB: { /* == GL_VERTEX_PROGRAM_NV */
+      struct gl_vertex_program *prog = CALLOC_STRUCT(gl_vertex_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
    case GL_FRAGMENT_PROGRAM_NV:
-   case GL_FRAGMENT_PROGRAM_ARB:
-      prog =_mesa_init_gl_program(CALLOC_STRUCT(gl_fragment_program),
-                                  target, id);
-      break;
-   case GL_GEOMETRY_PROGRAM_NV:
-      prog = _mesa_init_gl_program(CALLOC_STRUCT(gl_geometry_program),
-                                   target, id);
-      break;
-   case GL_TESS_CONTROL_PROGRAM_NV:
-      prog = _mesa_init_gl_program(CALLOC_STRUCT(gl_tess_ctrl_program),
-                                   target, id);
-      break;
-   case GL_TESS_EVALUATION_PROGRAM_NV:
-      prog = _mesa_init_gl_program(CALLOC_STRUCT(gl_tess_eval_program),
-                                   target, id);
-      break;
-   case GL_COMPUTE_PROGRAM_NV:
-      prog = _mesa_init_gl_program(CALLOC_STRUCT(gl_compute_program),
-                                   target, id);
-      break;
+   case GL_FRAGMENT_PROGRAM_ARB: {
+      struct gl_fragment_program *prog = CALLOC_STRUCT(gl_fragment_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
+   case GL_GEOMETRY_PROGRAM_NV: {
+      struct gl_geometry_program *prog = CALLOC_STRUCT(gl_geometry_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
+   case GL_TESS_CONTROL_PROGRAM_NV: {
+      struct gl_tess_ctrl_program *prog = CALLOC_STRUCT(gl_tess_ctrl_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
+   case GL_TESS_EVALUATION_PROGRAM_NV: {
+      struct gl_tess_eval_program *prog = CALLOC_STRUCT(gl_tess_eval_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
+   case GL_COMPUTE_PROGRAM_NV: {
+      struct gl_compute_program *prog = CALLOC_STRUCT(gl_compute_program);
+      return _mesa_init_gl_program(&prog->Base, target, id);
+   }
    default:
       _mesa_problem(ctx, "bad target in _mesa_new_program");
-      prog = NULL;
+      return NULL;
    }
-   return prog;
 }
 
 

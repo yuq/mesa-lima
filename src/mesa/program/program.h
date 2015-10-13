@@ -64,7 +64,7 @@ extern void
 _mesa_set_program_error(struct gl_context *ctx, GLint pos, const char *string);
 
 extern struct gl_program *
-_mesa_init_gl_program(void *prog, GLenum target, GLuint id);
+_mesa_init_gl_program(struct gl_program *prog, GLenum target, GLuint id);
 
 extern struct gl_program *
 _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id);
