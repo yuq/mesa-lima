@@ -22,6 +22,7 @@
  */
 
 #include "anv_private.h"
+#include "brw_surface_formats.h"
 
 #define UNSUPPORTED 0xffff
 
@@ -220,21 +221,6 @@ anv_format_for_vk_format(VkFormat format)
 
 // Format capabilities
 
-struct surface_format_info {
-   bool exists;
-   int sampling;
-   int filtering;
-   int shadow_compare;
-   int chroma_key;
-   int render_target;
-   int alpha_blend;
-   int input_vb;
-   int streamed_output_vb;
-   int color_processing;
-};
-
-extern const struct surface_format_info surface_formats[];
-
 VkResult anv_validate_GetPhysicalDeviceFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    _format,
@@ -250,7 +236,7 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                           const struct anv_format *format,
                                           VkFormatProperties *out_properties)
 {
-   const struct surface_format_info *info;
+   const struct brw_surface_format_info *info;
    int gen;
    VkFormatFeatureFlags flags;
 
