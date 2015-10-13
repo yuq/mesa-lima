@@ -960,20 +960,19 @@ valid_dispatch_indirect(struct gl_context *ctx,
    if (!check_valid_to_compute(ctx, name))
       return GL_FALSE;
 
-   /* From the ARB_compute_shader specification:
+   /* From the OpenGL 4.3 Core Specification, Chapter 19, Compute Shaders:
     *
-    * "An INVALID_OPERATION error is generated [...] if <indirect> is less
-    *  than zero or not a multiple of the size, in basic machine units, of
-    *  uint."
+    * "An INVALID_VALUE error is generated if indirect is negative or is not a
+    *  multiple of four."
     */
    if ((GLintptr)indirect & (sizeof(GLuint) - 1)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
+      _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(indirect is not aligned)", name);
       return GL_FALSE;
    }
 
    if ((GLintptr)indirect < 0) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
+      _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(indirect is less than zero)", name);
       return GL_FALSE;
    }
