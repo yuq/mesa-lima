@@ -291,15 +291,15 @@ vec4_visitor::calculate_live_intervals()
       struct block_data *bd = &live_intervals->block_data[block->num];
 
       for (int i = 0; i < live_intervals->num_vars; i++) {
-	 if (BITSET_TEST(bd->livein, i)) {
-	    start[i] = MIN2(start[i], block->start_ip);
-	    end[i] = MAX2(end[i], block->start_ip);
-	 }
+         if (BITSET_TEST(bd->livein, i)) {
+            start[i] = MIN2(start[i], block->start_ip);
+            end[i] = MAX2(end[i], block->start_ip);
+         }
 
-	 if (BITSET_TEST(bd->liveout, i)) {
-	    start[i] = MIN2(start[i], block->end_ip);
-	    end[i] = MAX2(end[i], block->end_ip);
-	 }
+         if (BITSET_TEST(bd->liveout, i)) {
+            start[i] = MIN2(start[i], block->end_ip);
+            end[i] = MAX2(end[i], block->end_ip);
+         }
       }
    }
 }
