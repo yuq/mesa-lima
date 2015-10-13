@@ -57,5 +57,8 @@ enum nvc0_sw_query_drv_stat
 
 struct nvc0_query *
 nvc0_sw_create_query(struct nvc0_context *, unsigned, unsigned);
+int
+nvc0_sw_get_driver_query_info(struct nvc0_screen *, unsigned,
+                              struct pipe_driver_query_info *);
 
 #endif

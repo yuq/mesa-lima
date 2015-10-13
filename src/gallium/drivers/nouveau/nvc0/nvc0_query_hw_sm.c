@@ -32,6 +32,62 @@
 
 /* === PERFORMANCE MONITORING COUNTERS for NVE4+ === */
 
+/* NOTE: intentionally using the same names as NV */
+static const char *nve4_hw_sm_query_names[] =
+{
+   /* MP counters */
+   "active_cycles",
+   "active_warps",
+   "atom_count",
+   "branch",
+   "divergent_branch",
+   "gld_request",
+   "global_ld_mem_divergence_replays",
+   "global_store_transaction",
+   "global_st_mem_divergence_replays",
+   "gred_count",
+   "gst_request",
+   "inst_executed",
+   "inst_issued",
+   "inst_issued1",
+   "inst_issued2",
+   "l1_global_load_hit",
+   "l1_global_load_miss",
+   "l1_local_load_hit",
+   "l1_local_load_miss",
+   "l1_local_store_hit",
+   "l1_local_store_miss",
+   "l1_shared_load_transactions",
+   "l1_shared_store_transactions",
+   "local_load",
+   "local_load_transactions",
+   "local_store",
+   "local_store_transactions",
+   "prof_trigger_00",
+   "prof_trigger_01",
+   "prof_trigger_02",
+   "prof_trigger_03",
+   "prof_trigger_04",
+   "prof_trigger_05",
+   "prof_trigger_06",
+   "prof_trigger_07",
+   "shared_load",
+   "shared_load_replay",
+   "shared_store",
+   "shared_store_replay",
+   "sm_cta_launched",
+   "threads_launched",
+   "uncached_global_load_transaction",
+   "warps_launched",
+   /* metrics, i.e. functions of the MP counters */
+   "metric-ipc",                   /* inst_executed, clock */
+   "metric-ipac",                  /* inst_executed, active_cycles */
+   "metric-ipec",                  /* inst_executed, (bool)inst_executed */
+   "metric-achieved_occupancy",    /* active_warps, active_cycles */
+   "metric-sm_efficiency",         /* active_cycles, clock */
+   "metric-inst_replay_overhead"   /* inst_issued, inst_executed */
+};
+
 /* Code to read out MP counters: They are accessible via mmio, too, but let's
  * just avoid mapping registers in userspace. We'd have to know which MPs are
  * enabled/present, too, and that information is not presently exposed.
@@ -230,6 +286,42 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
 #undef _M2B
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
+static const char *nvc0_hw_sm_query_names[] =
+{
+   /* MP counters */
+   "active_cycles",
+   "active_warps",
+   "atom_count",
+   "branch",
+   "divergent_branch",
+   "gld_request",
+   "gred_count",
+   "gst_request",
+   "inst_executed",
+   "inst_issued1_0",
+   "inst_issued1_1",
+   "inst_issued2_0",
+   "inst_issued2_1",
+   "local_load",
+   "local_store",
+   "prof_trigger_00",
+   "prof_trigger_01",
+   "prof_trigger_02",
+   "prof_trigger_03",
+   "prof_trigger_04",
+   "prof_trigger_05",
+   "prof_trigger_06",
+   "prof_trigger_07",
+   "shared_load",
+   "shared_store",
+   "threads_launched",
+   "thread_inst_executed_0",
+   "thread_inst_executed_1",
+   "thread_inst_executed_2",
+   "thread_inst_executed_3",
+   "warps_launched",
+};
+
 static const uint64_t nvc0_read_hw_sm_counters_code[] =
 {
    /* mov b32 $r8 $tidx
@@ -841,4 +933,45 @@ nvc0_hw_sm_create_query(struct nvc0_context *nvc0, unsigned type)
    }
 
    return hq;
+}
+
+int
+nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
+                                 struct pipe_driver_query_info *info)
+{
+   int count = 0;
+
+   if (screen->base.device->drm_version >= 0x01000101) {
+      if (screen->compute) {
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            count += NVE4_HW_SM_QUERY_COUNT;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            count += NVC0_HW_SM_QUERY_COUNT;
+         }
+      }
+   }
+
+   if (!info)
+      return count;
+
+   if (id < count) {
+      if (screen->compute) {
+         if (screen->base.class_3d == NVE4_3D_CLASS) {
+            info->name = nve4_hw_sm_query_names[id];
+            info->query_type = NVE4_HW_SM_QUERY(id);
+            info->max_value.u64 =
+               (id < NVE4_HW_SM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
+            info->group_id = NVC0_HW_SM_QUERY_GROUP;
+            return 1;
+         } else
+         if (screen->base.class_3d < NVE4_3D_CLASS) {
+            info->name = nvc0_hw_sm_query_names[id];
+            info->query_type = NVC0_HW_SM_QUERY(id);
+            info->group_id = NVC0_HW_SM_QUERY_GROUP;
+            return 1;
+         }
+      }
+   }
+   return 0;
 }

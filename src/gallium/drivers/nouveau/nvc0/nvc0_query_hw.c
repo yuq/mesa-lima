@@ -431,6 +431,20 @@ nvc0_hw_create_query(struct nvc0_context *nvc0, unsigned type, unsigned index)
    return q;
 }
 
+int
+nvc0_hw_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
+                              struct pipe_driver_query_info *info)
+{
+   int num_hw_sm_queries = 0;
+
+   num_hw_sm_queries = nvc0_hw_sm_get_driver_query_info(screen, 0, NULL);
+
+   if (!info)
+      return num_hw_sm_queries;
+
+   return nvc0_hw_sm_get_driver_query_info(screen, id, info);
+}
+
 void
 nvc0_hw_query_pushbuf_submit(struct nouveau_pushbuf *push,
                              struct nvc0_query *q, unsigned result_offset)

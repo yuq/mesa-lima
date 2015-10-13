@@ -141,163 +141,19 @@ nvc0_render_condition(struct pipe_context *pipe,
    PUSH_DATA (push, hq->bo->offset + hq->offset);
 }
 
-/* === DRIVER STATISTICS === */
-
-#ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-
-static const char *nvc0_sw_query_drv_stat_names[] =
-{
-   "drv-tex_obj_current_count",
-   "drv-tex_obj_current_bytes",
-   "drv-buf_obj_current_count",
-   "drv-buf_obj_current_bytes_vid",
-   "drv-buf_obj_current_bytes_sys",
-   "drv-tex_transfers_rd",
-   "drv-tex_transfers_wr",
-   "drv-tex_copy_count",
-   "drv-tex_blit_count",
-   "drv-tex_cache_flush_count",
-   "drv-buf_transfers_rd",
-   "drv-buf_transfers_wr",
-   "drv-buf_read_bytes_staging_vid",
-   "drv-buf_write_bytes_direct",
-   "drv-buf_write_bytes_staging_vid",
-   "drv-buf_write_bytes_staging_sys",
-   "drv-buf_copy_bytes",
-   "drv-buf_non_kernel_fence_sync_count",
-   "drv-any_non_kernel_fence_sync_count",
-   "drv-query_sync_count",
-   "drv-gpu_serialize_count",
-   "drv-draw_calls_array",
-   "drv-draw_calls_indexed",
-   "drv-draw_calls_fallback_count",
-   "drv-user_buffer_upload_bytes",
-   "drv-constbuf_upload_count",
-   "drv-constbuf_upload_bytes",
-   "drv-pushbuf_count",
-   "drv-resource_validate_count"
-};
-
-#endif /* NOUVEAU_ENABLE_DRIVER_STATISTICS */
-
-/* === PERFORMANCE MONITORING COUNTERS for NVE4+ === */
-
-/* NOTE: intentionally using the same names as NV */
-static const char *nve4_hw_sm_query_names[] =
-{
-   /* MP counters */
-   "active_cycles",
-   "active_warps",
-   "atom_count",
-   "branch",
-   "divergent_branch",
-   "gld_request",
-   "global_ld_mem_divergence_replays",
-   "global_store_transaction",
-   "global_st_mem_divergence_replays",
-   "gred_count",
-   "gst_request",
-   "inst_executed",
-   "inst_issued",
-   "inst_issued1",
-   "inst_issued2",
-   "l1_global_load_hit",
-   "l1_global_load_miss",
-   "l1_local_load_hit",
-   "l1_local_load_miss",
-   "l1_local_store_hit",
-   "l1_local_store_miss",
-   "l1_shared_load_transactions",
-   "l1_shared_store_transactions",
-   "local_load",
-   "local_load_transactions",
-   "local_store",
-   "local_store_transactions",
-   "prof_trigger_00",
-   "prof_trigger_01",
-   "prof_trigger_02",
-   "prof_trigger_03",
-   "prof_trigger_04",
-   "prof_trigger_05",
-   "prof_trigger_06",
-   "prof_trigger_07",
-   "shared_load",
-   "shared_load_replay",
-   "shared_store",
-   "shared_store_replay",
-   "sm_cta_launched",
-   "threads_launched",
-   "uncached_global_load_transaction",
-   "warps_launched",
-   /* metrics, i.e. functions of the MP counters */
-   "metric-ipc",                   /* inst_executed, clock */
-   "metric-ipac",                  /* inst_executed, active_cycles */
-   "metric-ipec",                  /* inst_executed, (bool)inst_executed */
-   "metric-achieved_occupancy",    /* active_warps, active_cycles */
-   "metric-sm_efficiency",         /* active_cycles, clock */
-   "metric-inst_replay_overhead"   /* inst_issued, inst_executed */
-};
-
-/* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
-static const char *nvc0_hw_sm_query_names[] =
-{
-   /* MP counters */
-   "active_cycles",
-   "active_warps",
-   "atom_count",
-   "branch",
-   "divergent_branch",
-   "gld_request",
-   "gred_count",
-   "gst_request",
-   "inst_executed",
-   "inst_issued1_0",
-   "inst_issued1_1",
-   "inst_issued2_0",
-   "inst_issued2_1",
-   "local_load",
-   "local_store",
-   "prof_trigger_00",
-   "prof_trigger_01",
-   "prof_trigger_02",
-   "prof_trigger_03",
-   "prof_trigger_04",
-   "prof_trigger_05",
-   "prof_trigger_06",
-   "prof_trigger_07",
-   "shared_load",
-   "shared_store",
-   "threads_launched",
-   "thread_inst_executed_0",
-   "thread_inst_executed_1",
-   "thread_inst_executed_2",
-   "thread_inst_executed_3",
-   "warps_launched",
-};
-
 int
 nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
                                   unsigned id,
                                   struct pipe_driver_query_info *info)
 {
    struct nvc0_screen *screen = nvc0_screen(pscreen);
-   int count = 0;
+   int num_sw_queries = 0, num_hw_queries = 0;
 
-   count += NVC0_SW_QUERY_DRV_STAT_COUNT;
-
-   if (screen->base.device->drm_version >= 0x01000101) {
-      if (screen->compute) {
-         if (screen->base.class_3d == NVE4_3D_CLASS) {
-            count += NVE4_HW_SM_QUERY_COUNT;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
-            count += NVC0_HW_SM_QUERY_COUNT;
-         }
-      }
-   }
+   num_sw_queries = nvc0_sw_get_driver_query_info(screen, 0, NULL);
+   num_hw_queries = nvc0_hw_get_driver_query_info(screen, 0, NULL);
 
    if (!info)
-      return count;
+      return num_sw_queries + num_hw_queries;
 
    /* Init default values. */
    info->name = "this_is_not_the_query_you_are_looking_for";
@@ -307,36 +163,11 @@ nvc0_screen_get_driver_query_info(struct pipe_screen *pscreen,
    info->group_id = -1;
 
 #ifdef NOUVEAU_ENABLE_DRIVER_STATISTICS
-   if (id < NVC0_SW_QUERY_DRV_STAT_COUNT) {
-      info->name = nvc0_sw_query_drv_stat_names[id];
-      info->query_type = NVC0_SW_QUERY_DRV_STAT(id);
-      info->max_value.u64 = 0;
-      if (strstr(info->name, "bytes"))
-         info->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
-      info->group_id = NVC0_SW_QUERY_DRV_STAT_GROUP;
-      return 1;
-   } else
+   if (id < num_sw_queries)
+      return nvc0_sw_get_driver_query_info(screen, id, info);
 #endif
-   if (id < count) {
-      if (screen->compute) {
-         if (screen->base.class_3d == NVE4_3D_CLASS) {
-            info->name = nve4_hw_sm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
-            info->query_type = NVE4_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
-            info->max_value.u64 =
-               (id < NVE4_HW_SM_QUERY_METRIC_MP_OCCUPANCY) ? 0 : 100;
-            info->group_id = NVC0_HW_SM_QUERY_GROUP;
-            return 1;
-         } else
-         if (screen->base.class_3d < NVE4_3D_CLASS) {
-            info->name = nvc0_hw_sm_query_names[id - NVC0_SW_QUERY_DRV_STAT_COUNT];
-            info->query_type = NVC0_HW_SM_QUERY(id - NVC0_SW_QUERY_DRV_STAT_COUNT);
-            info->group_id = NVC0_HW_SM_QUERY_GROUP;
-            return 1;
-         }
-      }
-   }
-   /* user asked for info about non-existing query */
-   return 0;
+
+   return nvc0_hw_get_driver_query_info(screen, id - num_sw_queries, info);
 }
 
 int

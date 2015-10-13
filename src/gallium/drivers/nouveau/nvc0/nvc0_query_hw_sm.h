@@ -113,5 +113,7 @@ enum nvc0_hw_sm_queries
 
 struct nvc0_hw_query *
 nvc0_hw_sm_create_query(struct nvc0_context *, unsigned);
-
+int
+nvc0_hw_sm_get_driver_query_info(struct nvc0_screen *, unsigned,
+                                 struct pipe_driver_query_info *);
 #endif

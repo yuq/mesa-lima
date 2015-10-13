@@ -42,6 +42,9 @@ nvc0_hw_query(struct nvc0_query *q)
 
 struct nvc0_query *
 nvc0_hw_create_query(struct nvc0_context *, unsigned, unsigned);
+int
+nvc0_hw_get_driver_query_info(struct nvc0_screen *, unsigned,
+                              struct pipe_driver_query_info *);
 bool
 nvc0_hw_query_allocate(struct nvc0_context *, struct nvc0_query *, int);
 void
