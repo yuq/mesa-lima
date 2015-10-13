@@ -32,7 +32,7 @@
 
 #define fsv_assert(cond) \
    if (!(cond)) { \
-      fprintf(stderr, "ASSERT: FS validation failed!\n"); \
+      fprintf(stderr, "ASSERT: Scalar %s validation failed!\n", stage_abbrev); \
       dump_instruction(inst, stderr); \
       fprintf(stderr, "%s:%d: %s\n", __FILE__, __LINE__, #cond); \
       abort(); \
