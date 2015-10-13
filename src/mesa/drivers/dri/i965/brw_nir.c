@@ -96,8 +96,9 @@ brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
       }
       break;
    case MESA_SHADER_FRAGMENT:
+      assert(is_scalar);
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
-                               is_scalar ? type_size_scalar : type_size_vec4);
+                               type_size_scalar);
       break;
    default:
       unreachable("unsupported shader stage");
