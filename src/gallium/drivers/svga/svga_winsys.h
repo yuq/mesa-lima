@@ -85,6 +85,8 @@ struct winsys_handle;
 #define SVGA_QUERY_FLAG_SET        (1 << 0)
 #define SVGA_QUERY_FLAG_REF        (1 << 1)
 
+#define SVGA_HINT_FLAG_DRAW_EMITTED (1 << 0)
+
 /** Opaque surface handle */
 struct svga_winsys_surface;
 
@@ -211,6 +213,11 @@ struct svga_winsys_context
     * global to the entire SVGA device.
     */
    uint32 cid;
+
+   /**
+    * Flags to hint the current context state
+    */
+   uint32 hints;
 
    /**
     ** BEGIN new functions for guest-backed surfaces.
