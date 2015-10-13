@@ -259,16 +259,15 @@ fs_live_variables::compute_start_end()
       struct block_data *bd = &block_data[block->num];
 
       for (int i = 0; i < num_vars; i++) {
-	 if (BITSET_TEST(bd->livein, i)) {
-	    start[i] = MIN2(start[i], block->start_ip);
-	    end[i] = MAX2(end[i], block->start_ip);
-	 }
+         if (BITSET_TEST(bd->livein, i)) {
+            start[i] = MIN2(start[i], block->start_ip);
+            end[i] = MAX2(end[i], block->start_ip);
+         }
 
-	 if (BITSET_TEST(bd->liveout, i)) {
-	    start[i] = MIN2(start[i], block->end_ip);
-	    end[i] = MAX2(end[i], block->end_ip);
-	 }
-
+         if (BITSET_TEST(bd->liveout, i)) {
+            start[i] = MIN2(start[i], block->end_ip);
+            end[i] = MAX2(end[i], block->end_ip);
+         }
       }
    }
 }
