@@ -150,7 +150,8 @@ brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
    case MESA_SHADER_GEOMETRY:
       if (is_scalar) {
          nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
-                                  type_size_scalar);
+                                  type_size_vec4_times_4);
+         nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
       } else {
          nir_foreach_variable(var, &nir->outputs)
             var->data.driver_location = var->data.location;

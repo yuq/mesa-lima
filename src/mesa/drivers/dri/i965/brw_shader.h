@@ -277,6 +277,7 @@ bool brw_cs_precompile(struct gl_context *ctx,
 
 int type_size_scalar(const struct glsl_type *type);
 int type_size_vec4(const struct glsl_type *type);
+int type_size_vec4_times_4(const struct glsl_type *type);
 
 bool is_scalar_shader_stage(const struct brw_compiler *compiler, int stage);
 

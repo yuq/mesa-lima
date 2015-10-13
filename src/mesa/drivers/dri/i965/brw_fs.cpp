@@ -514,6 +514,19 @@ type_size_scalar(const struct glsl_type *type)
 }
 
 /**
+ * Returns the number of scalar components needed to store type, assuming
+ * that vectors are padded out to vec4.
+ *
+ * This has the packing rules of type_size_vec4(), but counts components
+ * similar to type_size_scalar().
+ */
+extern "C" int
+type_size_vec4_times_4(const struct glsl_type *type)
+{
+   return 4 * type_size_vec4(type);
+}
+
+/**
  * Create a MOV to read the timestamp register.
  *
  * The caller is responsible for emitting the MOV.  The return value is
