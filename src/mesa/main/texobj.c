@@ -1786,7 +1786,7 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
    /* Error checking */
    if (!texObj) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-         "glBindTextureUnit(non-gen name)");
+                  "glBindTextureUnit(non-gen name)");
       return;
    }
    if (texObj->Target == 0) {
