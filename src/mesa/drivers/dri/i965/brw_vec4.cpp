@@ -280,6 +280,18 @@ vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
    return true;
 }
 
+bool
+vec4_instruction::can_change_types() const
+{
+   return dst.type == src[0].type &&
+          !src[0].abs && !src[0].negate && !saturate &&
+          (opcode == BRW_OPCODE_MOV ||
+           (opcode == BRW_OPCODE_SEL &&
+            dst.type == src[1].type &&
+            predicate != BRW_PREDICATE_NONE &&
+            !src[1].abs && !src[1].negate));
+}
+
 /**
  * Returns how many MRFs an opcode will write over.
  *

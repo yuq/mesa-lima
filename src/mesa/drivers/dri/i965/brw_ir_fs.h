@@ -204,6 +204,7 @@ public:
    unsigned components_read(unsigned i) const;
    int regs_read(int arg) const;
    bool can_do_source_mods(const struct brw_device_info *devinfo);
+   bool can_change_types() const;
    bool has_side_effects() const;
 
    bool reads_flag() const;

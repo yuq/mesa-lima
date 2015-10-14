@@ -338,6 +338,18 @@ fs_inst::can_do_source_mods(const struct brw_device_info *devinfo)
 }
 
 bool
+fs_inst::can_change_types() const
+{
+   return dst.type == src[0].type &&
+          !src[0].abs && !src[0].negate && !saturate &&
+          (opcode == BRW_OPCODE_MOV ||
+           (opcode == BRW_OPCODE_SEL &&
+            dst.type == src[1].type &&
+            predicate != BRW_PREDICATE_NONE &&
+            !src[1].abs && !src[1].negate));
+}
+
+bool
 fs_inst::has_side_effects() const
 {
    return this->eot || backend_instruction::has_side_effects();
