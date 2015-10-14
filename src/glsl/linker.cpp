@@ -65,6 +65,7 @@
  */
 
 #include <ctype.h>
+#include "util/strndup.h"
 #include "main/core.h"
 #include "glsl_symbol_table.h"
 #include "glsl_parser_extras.h"
