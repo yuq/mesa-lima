@@ -284,8 +284,6 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
                 SET_FIELD((aux_mt->pitch / tile_w) - 1,
                           GEN8_SURFACE_AUX_PITCH) |
                 aux_mode;
-   } else {
-      surf[6] = 0;
    }
 
    surf[7] = mt->fast_clear_color_value |
@@ -302,11 +300,7 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
                               aux_mt->bo, 0,
                               I915_GEM_DOMAIN_SAMPLER,
                               (rw ? I915_GEM_DOMAIN_SAMPLER : 0));
-   } else {
-      surf[10] = 0;
-      surf[11] = 0;
    }
-   surf[12] = 0;
 
    /* Emit relocation to surface contents */
    drm_intel_bo_emit_reloc(brw->batch.bo,
@@ -514,8 +508,6 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
                 SET_FIELD((aux_mt->pitch / tile_w) - 1,
                           GEN8_SURFACE_AUX_PITCH) |
                 aux_mode;
-   } else {
-      surf[6] = 0;
    }
 
    surf[7] = mt->fast_clear_color_value |
@@ -533,11 +525,7 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
                               offset + 10 * 4,
                               aux_mt->bo, 0,
                               I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER);
-   } else {
-      surf[10] = 0;
-      surf[11] = 0;
    }
-   surf[12] = 0;
 
    drm_intel_bo_emit_reloc(brw->batch.bo,
                            offset + 8 * 4,
