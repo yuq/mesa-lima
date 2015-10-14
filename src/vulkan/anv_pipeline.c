@@ -458,47 +458,100 @@ VkResult anv_CreatePipelineLayout(
     VkPipelineLayout*                           pPipelineLayout)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_pipeline_layout *layout;
+   struct anv_pipeline_layout l, *layout;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
 
-   layout = anv_device_alloc(device, sizeof(*layout), 8,
-                             VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
+   l.num_sets = pCreateInfo->descriptorSetCount;
+
+   unsigned dynamic_offset_count = 0;
+
+   memset(l.stage, 0, sizeof(l.stage));
+   for (uint32_t set = 0; set < pCreateInfo->descriptorSetCount; set++) {
+      ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
+                      pCreateInfo->pSetLayouts[set]);
+      l.set[set].layout = set_layout;
+
+      l.set[set].dynamic_offset_start = dynamic_offset_count;
+      for (uint32_t b = 0; b < set_layout->binding_count; b++) {
+         if (set_layout->binding[b].dynamic_offset_index >= 0)
+            dynamic_offset_count += set_layout->binding[b].array_size;
+      }
+
+      for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+         l.set[set].stage[s].surface_start = l.stage[s].surface_count;
+         l.set[set].stage[s].sampler_start = l.stage[s].sampler_count;
+
+         for (uint32_t b = 0; b < set_layout->binding_count; b++) {
+            unsigned array_size = set_layout->binding[b].array_size;
+
+            if (set_layout->binding[b].stage[s].surface_index >= 0) {
+               l.stage[s].surface_count += array_size;
+
+               if (set_layout->binding[b].dynamic_offset_index >= 0)
+                  l.stage[s].has_dynamic_offsets = true;
+            }
+
+            if (set_layout->binding[b].stage[s].sampler_index >= 0)
+               l.stage[s].sampler_count += array_size;
+         }
+      }
+   }
+
+   unsigned num_bindings = 0;
+   for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++)
+      num_bindings += l.stage[s].surface_count + l.stage[s].sampler_count;
+
+   size_t size = sizeof(*layout) + num_bindings * sizeof(layout->entries[0]);
+
+   layout = anv_device_alloc(device, size, 8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (layout == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   layout->num_sets = pCreateInfo->descriptorSetCount;
+   /* Now we can actually build our surface and sampler maps */
+   struct anv_pipeline_binding *entry = layout->entries;
+   for (VkShaderStage s = 0; s < VK_SHADER_STAGE_NUM; s++) {
+      l.stage[s].surface_to_descriptor = entry;
+      entry += l.stage[s].surface_count;
+      l.stage[s].sampler_to_descriptor = entry;
+      entry += l.stage[s].sampler_count;
 
-   uint32_t surface_start[VK_SHADER_STAGE_NUM] = { 0, };
-   uint32_t sampler_start[VK_SHADER_STAGE_NUM] = { 0, };
+      int surface = 0;
+      int sampler = 0;
+      for (uint32_t set = 0; set < pCreateInfo->descriptorSetCount; set++) {
+         struct anv_descriptor_set_layout *set_layout = l.set[set].layout;
 
-   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
-      layout->stage[s].has_dynamic_offsets = false;
-      layout->stage[s].surface_count = 0;
-      layout->stage[s].sampler_count = 0;
-   }
+         unsigned set_offset = 0;
+         for (uint32_t b = 0; b < set_layout->binding_count; b++) {
+            unsigned array_size = set_layout->binding[b].array_size;
 
-   uint32_t num_dynamic_offsets = 0;
-   for (uint32_t i = 0; i < pCreateInfo->descriptorSetCount; i++) {
-      ANV_FROM_HANDLE(anv_descriptor_set_layout, set_layout,
-                      pCreateInfo->pSetLayouts[i]);
+            if (set_layout->binding[b].stage[s].surface_index >= 0) {
+               assert(surface == l.set[set].stage[s].surface_start +
+                                 set_layout->binding[b].stage[s].surface_index);
+               for (unsigned i = 0; i < array_size; i++) {
+                  l.stage[s].surface_to_descriptor[surface + i].set = set;
+                  l.stage[s].surface_to_descriptor[surface + i].offset = set_offset + i;
+               }
+               surface += array_size;
+            }
 
-      layout->set[i].layout = set_layout;
-      layout->set[i].dynamic_offset_start = num_dynamic_offsets;
-      num_dynamic_offsets += set_layout->num_dynamic_buffers;
-      for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
-         if (set_layout->num_dynamic_buffers > 0)
-            layout->stage[s].has_dynamic_offsets = true;
+            if (set_layout->binding[b].stage[s].sampler_index >= 0) {
+               assert(sampler == l.set[set].stage[s].sampler_start +
+                                 set_layout->binding[b].stage[s].sampler_index);
+               for (unsigned i = 0; i < array_size; i++) {
+                  l.stage[s].sampler_to_descriptor[sampler + i].set = set;
+                  l.stage[s].sampler_to_descriptor[sampler + i].offset = set_offset + i;
+               }
+               sampler += array_size;
+            }
 
-         layout->set[i].stage[s].surface_start = surface_start[s];
-         surface_start[s] += set_layout->stage[s].surface_count;
-         layout->set[i].stage[s].sampler_start = sampler_start[s];
-         sampler_start[s] += set_layout->stage[s].sampler_count;
-
-         layout->stage[s].surface_count += set_layout->stage[s].surface_count;
-         layout->stage[s].sampler_count += set_layout->stage[s].sampler_count;
+            set_offset += array_size;
+         }
       }
    }
+
+   /* Finally, we're done setting it up, copy into the allocated version */
+   *layout = l;
 
    *pPipelineLayout = anv_pipeline_layout_to_handle(layout);
 

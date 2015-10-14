@@ -39,7 +39,6 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 {
    struct apply_dynamic_offsets_state *state = void_state;
    struct anv_descriptor_set_layout *set_layout;
-   const struct anv_descriptor_slot *slot;
 
    nir_foreach_instr_safe(block, instr) {
       if (instr->type != nir_instr_type_intrinsic)
@@ -69,19 +68,18 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
       }
 
       set_layout = state->layout->set[set].layout;
-      slot = &set_layout->stage[state->stage].surface_start[binding];
-      if (slot->dynamic_slot < 0)
+      if (set_layout->binding[binding].dynamic_offset_index < 0)
          continue;
 
-      uint32_t dynamic_index = state->layout->set[set].dynamic_offset_start +
-                               slot->dynamic_slot;
+      uint32_t index = state->layout->set[set].dynamic_offset_start +
+                       set_layout->binding[binding].dynamic_offset_index;
 
       state->builder.cursor = nir_before_instr(&intrin->instr);
 
       nir_intrinsic_instr *offset_load =
          nir_intrinsic_instr_create(state->shader, nir_intrinsic_load_uniform);
       offset_load->num_components = 1;
-      offset_load->const_index[0] = state->indices_start + dynamic_index;
+      offset_load->const_index[0] = state->indices_start + index;
       offset_load->const_index[1] = 0;
       nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 1, NULL);
       nir_builder_instr_insert(&state->builder, &offset_load->instr);

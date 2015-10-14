@@ -660,23 +660,37 @@ struct anv_device_memory {
    void *                                       map;
 };
 
-struct anv_descriptor_slot {
-   int8_t dynamic_slot;
-   uint8_t index;
+struct anv_descriptor_set_binding_layout {
+   /* Number of array elements in this binding */
+   uint16_t array_size;
+
+   /* Index into the dynamic state array for a dynamic buffer */
+   int16_t dynamic_offset_index;
+
+   struct {
+      /* Index into the binding table for the associated surface */
+      int16_t surface_index;
+
+      /* Index into the sampler table for the associated sampler */
+      int16_t sampler_index;
+   } stage[VK_SHADER_STAGE_NUM];
 };
 
 struct anv_descriptor_set_layout {
-   struct {
-      uint32_t surface_count;
-      struct anv_descriptor_slot *surface_start;
-      uint32_t sampler_count;
-      struct anv_descriptor_slot *sampler_start;
-   } stage[VK_SHADER_STAGE_NUM];
+   /* Number of bindings in this descriptor set */
+   uint16_t binding_count;
 
-   uint32_t count;
-   uint32_t num_dynamic_buffers;
-   VkShaderStageFlags shader_stages;
-   struct anv_descriptor_slot entries[0];
+   /* Total size of the descriptor set with room for all array entries */
+   uint16_t size;
+
+   /* Shader stages affected by this descriptor set */
+   uint16_t shader_stages;
+
+   /* Number of dynamic offsets used by this descriptor set */
+   uint16_t dynamic_offset_count;
+
+   /* Don't use this directly */
+   struct anv_descriptor_set_binding_layout binding[0];
 };
 
 enum anv_descriptor_type {
@@ -718,6 +732,14 @@ anv_descriptor_set_destroy(struct anv_device *device,
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
 
+struct anv_pipeline_binding {
+   /* The descriptor set this surface corresponds to */
+   uint16_t set;
+
+   /* Offset into the descriptor set */
+   uint16_t offset;
+};
+
 struct anv_pipeline_layout {
    struct {
       struct anv_descriptor_set_layout *layout;
@@ -733,8 +755,12 @@ struct anv_pipeline_layout {
    struct {
       bool has_dynamic_offsets;
       uint32_t surface_count;
+      struct anv_pipeline_binding *surface_to_descriptor;
       uint32_t sampler_count;
+      struct anv_pipeline_binding *sampler_to_descriptor;
    } stage[VK_SHADER_STAGE_NUM];
+
+   struct anv_pipeline_binding entries[0];
 };
 
 struct anv_buffer {

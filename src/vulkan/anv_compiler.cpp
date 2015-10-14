@@ -92,13 +92,20 @@ set_binding_table_layout(struct brw_stage_prog_data *prog_data,
 
    k = bias;
    map = prog_data->map_entries;
-   for (uint32_t i = 0; i < layout->num_sets; i++) {
-      prog_data->bind_map[i].index = map;
-      for (uint32_t j = 0; j < layout->set[i].layout->stage[stage].surface_count; j++)
-         *map++ = k++;
+   for (uint32_t set = 0; set < layout->num_sets; set++) {
+      prog_data->bind_map[set].index = map;
+      unsigned index_count = 0;
+      for (uint32_t b = 0; b < layout->set[set].layout->binding_count; b++) {
+         if (layout->set[set].layout->binding[b].stage[stage].surface_index < 0)
+            continue;
 
-      prog_data->bind_map[i].index_count =
-         layout->set[i].layout->stage[stage].surface_count;
+         unsigned array_size = layout->set[set].layout->binding[b].array_size;
+         for (uint32_t i = 0; i < array_size; i++)
+            *map++ = k++;
+         index_count += array_size;
+      }
+
+      prog_data->bind_map[set].index_count = index_count;
    }
 
    return VK_SUCCESS;

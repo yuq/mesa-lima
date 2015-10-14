@@ -483,7 +483,7 @@ void anv_CmdBindDescriptorSets(
          cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
       }
 
-      if (set_layout->num_dynamic_buffers > 0) {
+      if (set_layout->dynamic_offset_count > 0) {
          VkShaderStage s;
          for_each_bit(s, set_layout->shader_stages) {
             anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, s,
@@ -492,13 +492,13 @@ void anv_CmdBindDescriptorSets(
                cmd_buffer->state.push_constants[s]->dynamic_offsets +
                layout->set[firstSet + i].dynamic_offset_start;
 
-            memcpy(offsets, pDynamicOffsets + dynamic_slot,
-                   set_layout->num_dynamic_buffers * sizeof(*pDynamicOffsets));
+            typed_memcpy(offsets, pDynamicOffsets + dynamic_slot,
+                         set_layout->dynamic_offset_count);
 
          }
          cmd_buffer->state.push_constants_dirty |= set_layout->shader_stages;
 
-         dynamic_slot += set_layout->num_dynamic_buffers;
+         dynamic_slot += set_layout->dynamic_offset_count;
       }
    }
 }
@@ -594,41 +594,35 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    if (layout == NULL)
       return VK_SUCCESS;
 
-   for (uint32_t set = 0; set < layout->num_sets; set++) {
-      struct anv_descriptor_set_binding *d = &cmd_buffer->state.descriptors[set];
-      struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
-      struct anv_descriptor_slot *surface_slots =
-         set_layout->stage[stage].surface_start;
+   for (uint32_t s = 0; s < layout->stage[stage].surface_count; s++) {
+      struct anv_pipeline_binding *binding =
+         &layout->stage[stage].surface_to_descriptor[s];
+      struct anv_descriptor_set *set =
+         cmd_buffer->state.descriptors[binding->set].set;
+      struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
-      uint32_t start = bias + layout->set[set].stage[stage].surface_start;
+      const struct anv_state *surface_state;
+      struct anv_bo *bo;
+      uint32_t bo_offset;
 
-      for (uint32_t b = 0; b < set_layout->stage[stage].surface_count; b++) {
-         struct anv_descriptor *desc =
-            &d->set->descriptors[surface_slots[b].index];
-
-         const struct anv_state *surface_state;
-         struct anv_bo *bo;
-         uint32_t bo_offset;
-
-         switch (desc->type) {
-         case ANV_DESCRIPTOR_TYPE_EMPTY:
-         case ANV_DESCRIPTOR_TYPE_SAMPLER:
-            continue;
-         case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
-            surface_state = &desc->buffer_view->surface_state;
-            bo = desc->buffer_view->bo;
-            bo_offset = desc->buffer_view->offset;
-            break;
-         case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
-            surface_state = &desc->image_view->nonrt_surface_state;
-            bo = desc->image_view->bo;
-            bo_offset = desc->image_view->offset;
-            break;
-         }
-
-         bt_map[start + b] = surface_state->offset + state_offset;
-         add_surface_state_reloc(cmd_buffer, *surface_state, bo, bo_offset);
+      switch (desc->type) {
+      case ANV_DESCRIPTOR_TYPE_EMPTY:
+      case ANV_DESCRIPTOR_TYPE_SAMPLER:
+         continue;
+      case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
+         surface_state = &desc->buffer_view->surface_state;
+         bo = desc->buffer_view->bo;
+         bo_offset = desc->buffer_view->offset;
+         break;
+      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
+         surface_state = &desc->image_view->nonrt_surface_state;
+         bo = desc->image_view->bo;
+         bo_offset = desc->image_view->offset;
+         break;
       }
+
+      bt_map[bias + s] = surface_state->offset + state_offset;
+      add_surface_state_reloc(cmd_buffer, *surface_state, bo, bo_offset);
    }
 
    return VK_SUCCESS;
@@ -656,26 +650,20 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
    if (state->map == NULL)
       return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 
-   for (uint32_t set = 0; set < layout->num_sets; set++) {
-      struct anv_descriptor_set_binding *d = &cmd_buffer->state.descriptors[set];
-      struct anv_descriptor_set_layout *set_layout = layout->set[set].layout;
-      struct anv_descriptor_slot *sampler_slots =
-         set_layout->stage[stage].sampler_start;
+   for (uint32_t s = 0; s < layout->stage[stage].sampler_count; s++) {
+      struct anv_pipeline_binding *binding =
+         &layout->stage[stage].sampler_to_descriptor[s];
+      struct anv_descriptor_set *set =
+         cmd_buffer->state.descriptors[binding->set].set;
+      struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
-      uint32_t start = layout->set[set].stage[stage].sampler_start;
+      if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER)
+         continue;
 
-      for (uint32_t b = 0; b < set_layout->stage[stage].sampler_count; b++) {
-         struct anv_descriptor *desc =
-            &d->set->descriptors[sampler_slots[b].index];
+      struct anv_sampler *sampler = desc->sampler;
 
-         if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER)
-            continue;
-
-         struct anv_sampler *sampler = desc->sampler;
-
-         memcpy(state->map + (start + b) * 16,
-                sampler->state, sizeof(sampler->state));
-      }
+      memcpy(state->map + (s * 16),
+             sampler->state, sizeof(sampler->state));
    }
 
    return VK_SUCCESS;

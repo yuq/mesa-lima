@@ -1440,117 +1440,48 @@ VkResult anv_CreateDescriptorSetLayout(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_descriptor_set_layout *set_layout;
+   uint32_t s;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
-   uint32_t sampler_count[VK_SHADER_STAGE_NUM] = { 0, };
-   uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
-   uint32_t num_dynamic_buffers = 0;
-   uint32_t count = 0;
-   VkShaderStageFlags stages = 0;
-   uint32_t s;
+   size_t size = sizeof(struct anv_descriptor_set_layout) +
+                 pCreateInfo->count * sizeof(set_layout->binding[0]);
 
-   for (uint32_t i = 0; i < pCreateInfo->count; i++) {
-      switch (pCreateInfo->pBinding[i].descriptorType) {
-      case VK_DESCRIPTOR_TYPE_SAMPLER:
-      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            sampler_count[s] += pCreateInfo->pBinding[i].arraySize;
-         break;
-      default:
-         break;
-      }
-
-      switch (pCreateInfo->pBinding[i].descriptorType) {
-      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            surface_count[s] += pCreateInfo->pBinding[i].arraySize;
-         break;
-      default:
-         break;
-      }
-
-      switch (pCreateInfo->pBinding[i].descriptorType) {
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-         num_dynamic_buffers += pCreateInfo->pBinding[i].arraySize;
-         break;
-      default:
-         break;
-      }
-
-      stages |= pCreateInfo->pBinding[i].stageFlags;
-      count += pCreateInfo->pBinding[i].arraySize;
-   }
-
-   uint32_t sampler_total = 0;
-   uint32_t surface_total = 0;
-   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
-      sampler_total += sampler_count[s];
-      surface_total += surface_count[s];
-   }
-
-   size_t size = sizeof(*set_layout) +
-      (sampler_total + surface_total) * sizeof(set_layout->entries[0]);
    set_layout = anv_device_alloc(device, size, 8,
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (!set_layout)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   set_layout->num_dynamic_buffers = num_dynamic_buffers;
-   set_layout->count = count;
-   set_layout->shader_stages = stages;
+   set_layout->binding_count = pCreateInfo->count;
+   set_layout->shader_stages = 0;
+   set_layout->size = 0;
 
-   struct anv_descriptor_slot *p = set_layout->entries;
-   struct anv_descriptor_slot *sampler[VK_SHADER_STAGE_NUM];
-   struct anv_descriptor_slot *surface[VK_SHADER_STAGE_NUM];
-   for (uint32_t s = 0; s < VK_SHADER_STAGE_NUM; s++) {
-      set_layout->stage[s].surface_count = surface_count[s];
-      set_layout->stage[s].surface_start = surface[s] = p;
-      p += surface_count[s];
-      set_layout->stage[s].sampler_count = sampler_count[s];
-      set_layout->stage[s].sampler_start = sampler[s] = p;
-      p += sampler_count[s];
-   }
+   /* Initialize all binding_layout entries to -1 */
+   memset(set_layout->binding, -1,
+          pCreateInfo->count * sizeof(set_layout->binding[0]));
 
-   uint32_t descriptor = 0;
-   int8_t dynamic_slot = 0;
-   bool is_dynamic;
-   for (uint32_t i = 0; i < pCreateInfo->count; i++) {
-      switch (pCreateInfo->pBinding[i].descriptorType) {
+   uint32_t sampler_count[VK_SHADER_STAGE_NUM] = { 0, };
+   uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
+   uint32_t dynamic_offset_count = 0;
+
+   for (uint32_t b = 0; b < pCreateInfo->count; b++) {
+      uint32_t array_size = MAX2(1, pCreateInfo->pBinding[b].arraySize);
+      set_layout->binding[b].array_size = array_size;
+      set_layout->size += array_size;
+
+      switch (pCreateInfo->pBinding[b].descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
-               sampler[s]->index = descriptor + j;
-               sampler[s]->dynamic_slot = -1;
-               sampler[s]++;
-            }
+         for_each_bit(s, pCreateInfo->pBinding[b].stageFlags) {
+            set_layout->binding[b].stage[s].sampler_index = sampler_count[s];
+            sampler_count[s] += array_size;
+         }
          break;
       default:
          break;
       }
 
-      switch (pCreateInfo->pBinding[i].descriptorType) {
-      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-         is_dynamic = true;
-         break;
-      default:
-         is_dynamic = false;
-         break;
-      }
-
-      switch (pCreateInfo->pBinding[i].descriptorType) {
+      switch (pCreateInfo->pBinding[b].descriptorType) {
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
@@ -1561,25 +1492,29 @@ VkResult anv_CreateDescriptorSetLayout(
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         for_each_bit(s, pCreateInfo->pBinding[i].stageFlags)
-            for (uint32_t j = 0; j < pCreateInfo->pBinding[i].arraySize; j++) {
-               surface[s]->index = descriptor + j;
-               if (is_dynamic)
-                  surface[s]->dynamic_slot = dynamic_slot + j;
-               else
-                  surface[s]->dynamic_slot = -1;
-               surface[s]++;
-            }
+         for_each_bit(s, pCreateInfo->pBinding[b].stageFlags) {
+            set_layout->binding[b].stage[s].surface_index = surface_count[s];
+            surface_count[s] += array_size;
+         }
          break;
       default:
          break;
       }
 
-      if (is_dynamic)
-         dynamic_slot += pCreateInfo->pBinding[i].arraySize;
+      switch (pCreateInfo->pBinding[b].descriptorType) {
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         set_layout->binding[b].dynamic_offset_index = dynamic_offset_count;
+         dynamic_offset_count += array_size;
+         break;
+      default:
+         break;
+      }
 
-      descriptor += pCreateInfo->pBinding[i].arraySize;
+      set_layout->shader_stages |= pCreateInfo->pBinding[b].stageFlags;
    }
+
+   set_layout->dynamic_offset_count = dynamic_offset_count;
 
    *pSetLayout = anv_descriptor_set_layout_to_handle(set_layout);
 
@@ -1627,7 +1562,7 @@ anv_descriptor_set_create(struct anv_device *device,
                           struct anv_descriptor_set **out_set)
 {
    struct anv_descriptor_set *set;
-   size_t size = sizeof(*set) + layout->count * sizeof(set->descriptors[0]);
+   size_t size = sizeof(*set) + layout->size * sizeof(set->descriptors[0]);
 
    set = anv_device_alloc(device, size, 8, VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (!set)
