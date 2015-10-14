@@ -710,7 +710,7 @@ builtin_variable_generator::generate_constants()
       }
    }
 
-   if (state->is_version(430, 0) || state->ARB_compute_shader_enable) {
+   if (state->is_version(430, 310) || state->ARB_compute_shader_enable) {
       add_const("gl_MaxComputeAtomicCounterBuffers", MAX_COMPUTE_ATOMIC_COUNTER_BUFFERS);
       add_const("gl_MaxComputeAtomicCounters", MAX_COMPUTE_ATOMIC_COUNTERS);
       add_const("gl_MaxComputeImageUniforms", MAX_COMPUTE_IMAGE_UNIFORMS);
