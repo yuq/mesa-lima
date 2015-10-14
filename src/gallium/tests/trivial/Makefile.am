@@ -5,10 +5,6 @@ PIPE_SRC_DIR = $(top_builddir)/src/gallium/targets/pipe-loader
 AM_CFLAGS = \
 	$(GALLIUM_CFLAGS)
 
-AM_CPPFLAGS = \
-	-I$(top_srcdir)/src/gallium/drivers \
-	-I$(top_srcdir)/src/gallium/winsys
-
 LDADD = \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
