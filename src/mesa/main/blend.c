@@ -203,7 +203,7 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
                             GLenum sfactorA, GLenum dfactorA )
 {
    GLuint buf, numBuffers;
-   GLboolean changed;
+   bool changed = false;
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
@@ -213,27 +213,40 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
                   _mesa_enum_to_string(sfactorA),
                   _mesa_enum_to_string(dfactorA));
 
+   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
+      ? ctx->Const.MaxDrawBuffers : 1;
+
+   /* Check if we're really changing any state.  If not, return early. */
+   if (ctx->Color._BlendFuncPerBuffer) {
+      /* Check all per-buffer states */
+      for (buf = 0; buf < numBuffers; buf++) {
+         if (ctx->Color.Blend[buf].SrcRGB != sfactorRGB ||
+             ctx->Color.Blend[buf].DstRGB != dfactorRGB ||
+             ctx->Color.Blend[buf].SrcA != sfactorA ||
+             ctx->Color.Blend[buf].DstA != dfactorA) {
+            changed = true;
+            break;
+         }
+      }
+   }
+   else {
+      /* only need to check 0th per-buffer state */
+      if (ctx->Color.Blend[0].SrcRGB != sfactorRGB ||
+          ctx->Color.Blend[0].DstRGB != dfactorRGB ||
+          ctx->Color.Blend[0].SrcA != sfactorA ||
+          ctx->Color.Blend[0].DstA != dfactorA) {
+         changed = true;
+      }
+   }
+
+   if (!changed)
+      return;
+
    if (!validate_blend_factors(ctx, "glBlendFuncSeparate",
                                sfactorRGB, dfactorRGB,
                                sfactorA, dfactorA)) {
       return;
    }
-
-   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
-      ? ctx->Const.MaxDrawBuffers : 1;
-
-   changed = GL_FALSE;
-   for (buf = 0; buf < numBuffers; buf++) {
-      if (ctx->Color.Blend[buf].SrcRGB != sfactorRGB ||
-          ctx->Color.Blend[buf].DstRGB != dfactorRGB ||
-          ctx->Color.Blend[buf].SrcA != sfactorA ||
-          ctx->Color.Blend[buf].DstA != dfactorA) {
-         changed = GL_TRUE;
-         break;
-      }
-   }
-   if (!changed)
-      return;
 
    FLUSH_VERTICES(ctx, _NEW_COLOR);
 
