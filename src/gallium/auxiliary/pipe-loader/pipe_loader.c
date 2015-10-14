@@ -35,7 +35,7 @@
 #define MODULE_PREFIX "pipe_"
 
 static int (*backends[])(struct pipe_loader_device **, int) = {
-#ifdef HAVE_PIPE_LOADER_DRM
+#ifdef HAVE_LIBDRM
    &pipe_loader_drm_probe,
 #endif
    &pipe_loader_sw_probe

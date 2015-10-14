@@ -2077,10 +2077,6 @@ gallium_require_drm_loader() {
         if test "x$need_pci_id$have_pci_id" = xyesno; then
             AC_MSG_ERROR([Gallium drm loader requires libudev >= $LIBUDEV_REQUIRED or sysfs])
         fi
-        enable_gallium_drm_loader=yes
-    fi
-    if test "x$enable_va" = xyes && test "x$7" != x; then
-         GALLIUM_TARGET_DIRS="$GALLIUM_TARGET_DIRS $7"
     fi
 }
 
@@ -2287,10 +2283,6 @@ if test "x$enable_gallium_loader" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_KMS"
     fi
 
-    if test "x$enable_gallium_drm_loader" = xyes; then
-        GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRM"
-    fi
-
     AC_SUBST([GALLIUM_PIPE_LOADER_DEFINES])
 fi
 
@@ -2308,7 +2300,6 @@ AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$NEED_WINSYS_XLIB" = xyes)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(USE_R600_LLVM_COMPILER, test x$USE_R600_LLVM_COMPILER = xyes)
 AM_CONDITIONAL(HAVE_LOADER_GALLIUM, test x$enable_gallium_loader = xyes)
-AM_CONDITIONAL(HAVE_DRM_LOADER_GALLIUM, test x$enable_gallium_drm_loader = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
 AM_CONDITIONAL(HAVE_MESA_LLVM, test x$MESA_LLVM = x1)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
