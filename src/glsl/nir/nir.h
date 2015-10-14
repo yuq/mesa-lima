@@ -874,7 +874,7 @@ typedef struct {
     */
    uint8_t num_components;
 
-   int const_index[3];
+   int const_index[4];
 
    nir_deref_var *variables[2];
 
