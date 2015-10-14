@@ -215,14 +215,6 @@ drm_create_adapter( int fd,
     driOptionCache userInitOptions;
     int throttling_value_user = -2;
 
-#if !GALLIUM_STATIC_TARGETS
-    const char *paths[] = {
-        getenv("D3D9_DRIVERS_PATH"),
-        getenv("D3D9_DRIVERS_DIR"),
-        PIPE_SEARCH_DIR
-    };
-#endif
-
     if (!ctx) { return E_OUTOFMEMORY; }
 
     ctx->base.destroy = drm_destroy;
@@ -243,11 +235,7 @@ drm_create_adapter( int fd,
     }
 
     /* use pipe-loader to create a drm screen (hal) */
-    ctx->base.hal = NULL;
-    for (i = 0; !ctx->base.hal && i < Elements(paths); ++i) {
-        if (!paths[i]) { continue; }
-        ctx->base.hal = pipe_loader_create_screen(ctx->dev, paths[i]);
-    }
+    ctx->base.hal = pipe_loader_create_screen(ctx->dev, PIPE_SEARCH_DIR);
 #endif
     if (!ctx->base.hal) {
         ERR("Unable to load requested driver.\n");
@@ -313,11 +301,7 @@ drm_create_adapter( int fd,
 #else
     /* wrap it to create a software screen that can share resources */
     if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal)) {
-        ctx->base.ref = NULL;
-        for (i = 0; !ctx->base.ref && i < Elements(paths); ++i) {
-            if (!paths[i]) { continue; }
-            ctx->base.ref = pipe_loader_create_screen(ctx->swdev, paths[i]);
-        }
+        ctx->base.ref = pipe_loader_create_screen(ctx->swdev, PIPE_SEARCH_DIR);
     }
 #endif
     if (!ctx->base.ref) {
