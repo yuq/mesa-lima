@@ -52,11 +52,12 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
       ip--;
 
       if (inst->opcode != BRW_OPCODE_MOV ||
+          !inst->saturate ||
           inst->dst.file != GRF ||
+          inst->dst.type != inst->src[0].type ||
           inst->src[0].file != GRF ||
           inst->src[0].abs ||
-          inst->src[0].negate ||
-          !inst->saturate)
+          inst->src[0].negate)
          continue;
 
       int src_var = v->live_intervals->var_from_reg(inst->src[0]);
@@ -65,7 +66,9 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
       bool interfered = false;
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
          if (scan_inst->overwrites_reg(inst->src[0])) {
-            if (scan_inst->is_partial_write())
+            if (scan_inst->is_partial_write() ||
+                (scan_inst->dst.type != inst->dst.type &&
+                 !scan_inst->can_change_types()))
                break;
 
             if (scan_inst->saturate) {
@@ -73,6 +76,12 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
                progress = true;
             } else if (src_end_ip <= ip || inst->dst.equals(inst->src[0])) {
                if (scan_inst->can_do_saturate()) {
+                  if (scan_inst->dst.type != inst->dst.type) {
+                     scan_inst->dst.type = inst->dst.type;
+                     for (int i = 0; i < scan_inst->sources; i++) {
+                        scan_inst->src[i].type = inst->dst.type;
+                     }
+                  }
                   scan_inst->saturate = true;
                   inst->saturate = false;
                   progress = true;
