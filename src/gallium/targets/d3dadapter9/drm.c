@@ -20,6 +20,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
+/* XXX: header order is slightly screwy here */
 #include "loader.h"
 
 #include "adapter9.h"
