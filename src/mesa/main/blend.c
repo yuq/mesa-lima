@@ -296,17 +296,17 @@ _mesa_BlendFuncSeparateiARB(GLuint buf, GLenum sfactorRGB, GLenum dfactorRGB,
       return;
    }
 
-   if (!validate_blend_factors(ctx, "glBlendFuncSeparatei",
-                               sfactorRGB, dfactorRGB,
-                               sfactorA, dfactorA)) {
-      return;
-   }
-
    if (ctx->Color.Blend[buf].SrcRGB == sfactorRGB &&
        ctx->Color.Blend[buf].DstRGB == dfactorRGB &&
        ctx->Color.Blend[buf].SrcA == sfactorA &&
        ctx->Color.Blend[buf].DstA == dfactorA)
       return; /* no change */
+
+   if (!validate_blend_factors(ctx, "glBlendFuncSeparatei",
+                               sfactorRGB, dfactorRGB,
+                               sfactorA, dfactorA)) {
+      return;
+   }
 
    FLUSH_VERTICES(ctx, _NEW_COLOR);
 
