@@ -3389,6 +3389,242 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage)
    return true;
 }
 
+static char*
+get_top_level_name(const char *name)
+{
+   const char *first_dot = strchr(name, '.');
+   const char *first_square_bracket = strchr(name, '[');
+   int name_size = 0;
+   /* From ARB_program_interface_query spec:
+    *
+    * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer identifying the
+    *  number of active array elements of the top-level shader storage block
+    *  member containing to the active variable is written to <params>.  If the
+    *  top-level block member is not declared as an array, the value one is
+    *  written to <params>.  If the top-level block member is an array with no
+    *  declared size, the value zero is written to <params>.
+    */
+
+   /* The buffer variable is on top level.*/
+   if (!first_square_bracket && !first_dot)
+      name_size = strlen(name);
+   else if ((!first_square_bracket ||
+            (first_dot && first_dot < first_square_bracket)))
+      name_size = first_dot - name;
+   else
+      name_size = first_square_bracket - name;
+
+   return strndup(name, name_size);
+}
+
+static char*
+get_var_name(const char *name)
+{
+   const char *first_dot = strchr(name, '.');
+
+   if (!first_dot)
+      return strdup(name);
+
+   return strndup(first_dot+1, strlen(first_dot) - 1);
+}
+
+static bool
+is_top_level_shader_storage_block_member(const char* name,
+                                         const char* interface_name,
+                                         const char* field_name)
+{
+   bool result = false;
+
+   /* If the given variable is already a top-level shader storage
+    * block member, then return array_size = 1.
+    * We could have two possibilities: if we have an instanced
+    * shader storage block or not instanced.
+    *
+    * For the first, we check create a name as it was in top level and
+    * compare it with the real name. If they are the same, then
+    * the variable is already at top-level.
+    *
+    * Full instanced name is: interface name + '.' + var name +
+    *    NULL character
+    */
+   int name_length = strlen(interface_name) + 1 + strlen(field_name) + 1;
+   char *full_instanced_name = (char *) calloc(name_length, sizeof(char));
+   if (!full_instanced_name) {
+      fprintf(stderr, "%s: Cannot allocate space for name\n", __func__);
+      return false;
+   }
+
+   snprintf(full_instanced_name, name_length, "%s.%s",
+            interface_name, field_name);
+
+   /* Check if its top-level shader storage block member of an
+    * instanced interface block, or of a unnamed interface block.
+    */
+   if (strcmp(name, full_instanced_name) == 0 ||
+       strcmp(name, field_name) == 0)
+      result = true;
+
+   free(full_instanced_name);
+   return result;
+}
+
+static void
+calculate_array_size(struct gl_shader_program *shProg,
+                     struct gl_uniform_storage *uni)
+{
+   int block_index = uni->block_index;
+   int array_size = -1;
+   char *var_name = get_top_level_name(uni->name);
+   char *interface_name =
+      get_top_level_name(shProg->BufferInterfaceBlocks[block_index].Name);
+
+   if (strcmp(var_name, interface_name) == 0) {
+      /* Deal with instanced array of SSBOs */
+      char *temp_name = get_var_name(uni->name);
+      free(var_name);
+      var_name = get_top_level_name(temp_name);
+      free(temp_name);
+   }
+
+   for (unsigned i = 0; i < shProg->NumShaders; i++) {
+      if (shProg->Shaders[i] == NULL)
+         continue;
+
+      const gl_shader *stage = shProg->Shaders[i];
+      foreach_in_list(ir_instruction, node, stage->ir) {
+         ir_variable *var = node->as_variable();
+         if (!var || !var->get_interface_type() ||
+             var->data.mode != ir_var_shader_storage)
+            continue;
+
+         const glsl_type *interface = var->get_interface_type();
+
+         if (strcmp(interface_name, interface->name) != 0)
+            continue;
+
+         for (unsigned i = 0; i < interface->length; i++) {
+            const glsl_struct_field *field = &interface->fields.structure[i];
+            if (strcmp(field->name, var_name) != 0)
+               continue;
+            /* From GL_ARB_program_interface_query spec:
+             *
+             * "For the property TOP_LEVEL_ARRAY_SIZE, a single integer
+             * identifying the number of active array elements of the top-level
+             * shader storage block member containing to the active variable is
+             * written to <params>.  If the top-level block member is not
+             * declared as an array, the value one is written to <params>.  If
+             * the top-level block member is an array with no declared size,
+             * the value zero is written to <params>.
+             */
+            if (is_top_level_shader_storage_block_member(uni->name,
+                                                         interface_name,
+                                                         var_name))
+               array_size = 1;
+            else if (field->type->is_unsized_array())
+               array_size = 0;
+            else if (field->type->is_array())
+               array_size = field->type->length;
+            else
+               array_size = 1;
+
+            goto found_top_level_array_size;
+         }
+      }
+   }
+found_top_level_array_size:
+   free(interface_name);
+   free(var_name);
+   uni->top_level_array_size = array_size;
+}
+
+static void
+calculate_array_stride(struct gl_shader_program *shProg,
+                       struct gl_uniform_storage *uni)
+{
+   int block_index = uni->block_index;
+   int array_stride = -1;
+   char *var_name = get_top_level_name(uni->name);
+   char *interface_name =
+      get_top_level_name(shProg->BufferInterfaceBlocks[block_index].Name);
+
+   if (strcmp(var_name, interface_name) == 0) {
+      /* Deal with instanced array of SSBOs */
+      char *temp_name = get_var_name(uni->name);
+      free(var_name);
+      var_name = get_top_level_name(temp_name);
+      free(temp_name);
+   }
+
+   for (unsigned i = 0; i < shProg->NumShaders; i++) {
+      if (shProg->Shaders[i] == NULL)
+         continue;
+
+      const gl_shader *stage = shProg->Shaders[i];
+      foreach_in_list(ir_instruction, node, stage->ir) {
+         ir_variable *var = node->as_variable();
+         if (!var || !var->get_interface_type() ||
+             var->data.mode != ir_var_shader_storage)
+            continue;
+
+         const glsl_type *interface = var->get_interface_type();
+
+         if (strcmp(interface_name, interface->name) != 0) {
+            continue;
+         }
+
+         for (unsigned i = 0; i < interface->length; i++) {
+            const glsl_struct_field *field = &interface->fields.structure[i];
+            if (strcmp(field->name, var_name) != 0)
+               continue;
+            /* From GL_ARB_program_interface_query:
+             *
+             * "For the property TOP_LEVEL_ARRAY_STRIDE, a single integer
+             *  identifying the stride between array elements of the top-level
+             *  shader storage block member containing the active variable is
+             *  written to <params>.  For top-level block members declared as
+             *  arrays, the value written is the difference, in basic machine
+             *  units, between the offsets of the active variable for
+             *  consecutive elements in the top-level array.  For top-level
+             *  block members not declared as an array, zero is written to
+             *  <params>."
+             */
+            if (field->type->is_array()) {
+               const enum glsl_matrix_layout matrix_layout =
+                  glsl_matrix_layout(field->matrix_layout);
+               bool row_major = matrix_layout == GLSL_MATRIX_LAYOUT_ROW_MAJOR;
+               const glsl_type *array_type = field->type->fields.array;
+
+               if (is_top_level_shader_storage_block_member(uni->name,
+                                                            interface_name,
+                                                            var_name)) {
+                  array_stride = 0;
+                  goto found_top_level_array_stride;
+               }
+               if (interface->interface_packing != GLSL_INTERFACE_PACKING_STD430) {
+                  if (array_type->is_record() || array_type->is_array()) {
+                     array_stride = array_type->std140_size(row_major);
+                     array_stride = glsl_align(array_stride, 16);
+                  } else {
+                     unsigned element_base_align = 0;
+                     element_base_align = array_type->std140_base_alignment(row_major);
+                     array_stride = MAX2(element_base_align, 16);
+                  }
+               } else {
+                  array_stride = array_type->std430_array_stride(row_major);
+               }
+            } else {
+               array_stride = 0;
+            }
+            goto found_top_level_array_stride;
+         }
+      }
+   }
+found_top_level_array_stride:
+   free(interface_name);
+   free(var_name);
+   uni->top_level_array_stride = array_stride;
+}
+
 /**
  * Builds up a list of program resources that point to existing
  * resource data.
@@ -3472,6 +3708,11 @@ build_program_resource_list(struct gl_shader_program *shProg)
       if (!should_add_buffer_variable(shProg, type,
                                       shProg->UniformStorage[i].name))
          continue;
+
+      if (is_shader_storage) {
+         calculate_array_size(shProg, &shProg->UniformStorage[i]);
+         calculate_array_stride(shProg, &shProg->UniformStorage[i]);
+      }
 
       if (!add_program_resource(shProg, type,
                                 &shProg->UniformStorage[i], stageref))
