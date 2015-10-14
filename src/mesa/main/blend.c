@@ -255,8 +255,13 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
       ctx->Color.Blend[buf].DstRGB = dfactorRGB;
       ctx->Color.Blend[buf].SrcA = sfactorA;
       ctx->Color.Blend[buf].DstA = dfactorA;
-      update_uses_dual_src(ctx, buf);
    }
+
+   update_uses_dual_src(ctx, 0);
+   for (buf = 1; buf < numBuffers; buf++) {
+      ctx->Color.Blend[buf]._UsesDualSrc = ctx->Color.Blend[0]._UsesDualSrc;
+   }
+
    ctx->Color._BlendFuncPerBuffer = GL_FALSE;
 
    if (ctx->Driver.BlendFuncSeparate) {
