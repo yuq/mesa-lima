@@ -36,6 +36,7 @@
 #include <unistd.h>
 
 #include "loader.h"
+#include "target-helpers/drm_helper_public.h"
 #include "state_tracker/drm_driver.h"
 #include "pipe_loader_priv.h"
 
@@ -51,13 +52,118 @@
 struct pipe_loader_drm_device {
    struct pipe_loader_device base;
    const struct drm_driver_descriptor *dd;
+#ifndef GALLIUM_STATIC_TARGETS
    struct util_dl_library *lib;
+#endif
    int fd;
 };
 
 #define pipe_loader_drm_device(dev) ((struct pipe_loader_drm_device *)dev)
 
 static const struct pipe_loader_ops pipe_loader_drm_ops;
+
+#ifdef GALLIUM_STATIC_TARGETS
+static const struct drm_conf_ret throttle_ret = {
+   DRM_CONF_INT,
+   {2},
+};
+
+static const struct drm_conf_ret share_fd_ret = {
+   DRM_CONF_BOOL,
+   {true},
+};
+
+static inline const struct drm_conf_ret *
+configuration_query(enum drm_conf conf)
+{
+   switch (conf) {
+   case DRM_CONF_THROTTLE:
+      return &throttle_ret;
+   case DRM_CONF_SHARE_FD:
+      return &share_fd_ret;
+   default:
+      break;
+   }
+   return NULL;
+}
+
+static const struct drm_driver_descriptor driver_descriptors[] = {
+    {
+        .name = "i915",
+        .driver_name = "i915",
+        .create_screen = pipe_i915_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "i965",
+        .driver_name = "i915",
+        .create_screen = pipe_ilo_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "nouveau",
+        .driver_name = "nouveau",
+        .create_screen = pipe_nouveau_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "r300",
+        .driver_name = "radeon",
+        .create_screen = pipe_r300_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "r600",
+        .driver_name = "radeon",
+        .create_screen = pipe_r600_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "radeonsi",
+        .driver_name = "radeon",
+        .create_screen = pipe_radeonsi_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "vmwgfx",
+        .driver_name = "vmwgfx",
+        .create_screen = pipe_vmwgfx_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "kgsl",
+        .driver_name = "freedreno",
+        .create_screen = pipe_freedreno_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "msm",
+        .driver_name = "freedreno",
+        .create_screen = pipe_freedreno_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "virtio_gpu",
+        .driver_name = "virtio-gpu",
+        .create_screen = pipe_virgl_create_screen,
+        .configuration = configuration_query,
+    },
+    {
+        .name = "vc4",
+        .driver_name = "vc4",
+        .create_screen = pipe_vc4_create_screen,
+        .configuration = configuration_query,
+    },
+#ifdef USE_VC4_SIMULATOR
+    {
+        .name = "i965",
+        .driver_name = "vc4",
+        .create_screen = pipe_vc4_create_screen,
+        .configuration = configuration_query,
+    },
+#endif
+};
+#endif
 
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
@@ -82,23 +188,36 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
    if (!ddev->base.driver_name)
       goto fail;
 
-   ddev->lib = pipe_loader_find_module(dev, PIPE_SEARCH_DIR);
+#ifdef GALLIUM_STATIC_TARGETS
+   for (int i = 0; i < ARRAY_SIZE(driver_descriptors); i++) {
+      if (strcmp(driver_descriptors[i].name, ddev->base.driver_name) == 0) {
+         ddev->dd = &driver_descriptors[i];
+         break;
+      }
+   }
+   if (!ddev->dd)
+      goto fail;
+#else
+   ddev->lib = pipe_loader_find_module(&ddev->base, PIPE_SEARCH_DIR);
    if (!ddev->lib)
-      return fail;
+      goto fail;
 
    ddev->dd = (const struct drm_driver_descriptor *)
       util_dl_get_proc_address(ddev->lib, "driver_descriptor");
 
    /* sanity check on the name */
    if (!ddev->dd || strcmp(ddev->dd->name, ddev->base.driver_name) != 0)
-       goto fail;
+      goto fail;
+#endif
 
    *dev = &ddev->base;
    return true;
 
   fail:
+#ifndef GALLIUM_STATIC_TARGETS
    if (ddev->lib)
       util_dl_close(ddev->lib);
+#endif
    FREE(ddev);
    return false;
 }
@@ -146,8 +265,10 @@ pipe_loader_drm_release(struct pipe_loader_device **dev)
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(*dev);
 
+#ifndef GALLIUM_STATIC_TARGETS
    if (ddev->lib)
       util_dl_close(ddev->lib);
+#endif
 
    close(ddev->fd);
    FREE(ddev->base.driver_name);
