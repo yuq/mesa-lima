@@ -112,8 +112,6 @@ pipe_loader_configuration(struct pipe_loader_device *dev,
 void
 pipe_loader_release(struct pipe_loader_device **devs, int ndev);
 
-#ifdef HAVE_PIPE_LOADER_DRI
-
 /**
  * Initialize sw dri device give the drisw_loader_funcs.
  *
@@ -124,8 +122,6 @@ pipe_loader_release(struct pipe_loader_device **devs, int ndev);
 bool
 pipe_loader_sw_probe_dri(struct pipe_loader_device **devs,
                          struct drisw_loader_funcs *drisw_lf);
-
-#endif
 
 /**
  * Initialize a null sw device.
@@ -158,8 +154,6 @@ boolean
 pipe_loader_sw_probe_wrapped(struct pipe_loader_device **dev,
                              struct pipe_screen *screen);
 
-#ifdef HAVE_PIPE_LOADER_DRM
-
 /**
  * Get a list of known DRM devices.
  *
@@ -179,8 +173,6 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev);
  */
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd);
-
-#endif
 
 #ifdef __cplusplus
 }
