@@ -1457,7 +1457,7 @@ dri2_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (pipe_loader_drm_probe_fd(&screen->dev, screen->fd)) {
+   if (pipe_loader_drm_probe_fd(&screen->dev, dup(screen->fd))) {
       pscreen = pipe_loader_create_screen(screen->dev);
 
       throttle_ret = pipe_loader_configuration(screen->dev, DRM_CONF_THROTTLE);
@@ -1529,7 +1529,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (pipe_loader_sw_probe_kms(&screen->dev, screen->fd))
+   if (pipe_loader_sw_probe_kms(&screen->dev, dup(screen->fd)))
       pscreen = pipe_loader_create_screen(screen->dev);
 
    if (drmGetCap(sPriv->fd, DRM_CAP_PRIME, &cap) == 0 &&
