@@ -29,8 +29,7 @@
 #include "pipe/p_screen.h"
 #include "pipe/p_state.h"
 
-#include "target-helpers/inline_drm_helper.h"
-#include "target-helpers/inline_wrapper_sw_helper.h"
+#include "target-helpers/drm_helper.h"
 #include "state_tracker/drm_driver.h"
 
 #include "d3dadapter/d3dadapter9.h"
@@ -91,12 +90,10 @@ drm_destroy( struct d3dadapter9_context *ctx )
     else if (ctx->hal)
         ctx->hal->destroy(ctx->hal);
 
-#if !GALLIUM_STATIC_TARGETS
     if (drm->swdev)
         pipe_loader_release(&drm->swdev, 1);
     if (drm->dev)
         pipe_loader_release(&drm->dev, 1);
-#endif
 
     close(drm->fd);
     FREE(ctx);
@@ -223,10 +220,6 @@ drm_create_adapter( int fd,
     ctx->fd = fd;
     ctx->base.linear_framebuffer = !!different_device;
 
-#if GALLIUM_STATIC_TARGETS
-    ctx->base.hal = dd_create_screen(fd);
-#else
-    /* use pipe-loader to dlopen appropriate drm driver */
     if (!pipe_loader_drm_probe_fd(&ctx->dev, fd)) {
         ERR("Failed to probe drm fd %d.\n", fd);
         FREE(ctx);
@@ -234,22 +227,15 @@ drm_create_adapter( int fd,
         return D3DERR_DRIVERINTERNALERROR;
     }
 
-    /* use pipe-loader to create a drm screen (hal) */
     ctx->base.hal = pipe_loader_create_screen(ctx->dev);
-#endif
     if (!ctx->base.hal) {
         ERR("Unable to load requested driver.\n");
         drm_destroy(&ctx->base);
         return D3DERR_DRIVERINTERNALERROR;
     }
 
-#if GALLIUM_STATIC_TARGETS
-    dmabuf_ret = dd_configuration(DRM_CONF_SHARE_FD);
-    throttle_ret = dd_configuration(DRM_CONF_THROTTLE);
-#else
     dmabuf_ret = pipe_loader_configuration(ctx->dev, DRM_CONF_SHARE_FD);
     throttle_ret = pipe_loader_configuration(ctx->dev, DRM_CONF_THROTTLE);
-#endif // GALLIUM_STATIC_TARGETS
     if (!dmabuf_ret || !dmabuf_ret->val.val_bool) {
         ERR("The driver is not capable of dma-buf sharing."
             "Abandon to load nine state tracker\n");
@@ -296,14 +282,10 @@ drm_create_adapter( int fd,
     driDestroyOptionCache(&userInitOptions);
     driDestroyOptionInfo(&defaultInitOptions);
 
-#if GALLIUM_STATIC_TARGETS
-    ctx->base.ref = sw_screen_wrap(ctx->base.hal);
-#else
     /* wrap it to create a software screen that can share resources */
-    if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal)) {
+    if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal))
         ctx->base.ref = pipe_loader_create_screen(ctx->swdev);
-    }
-#endif
+
     if (!ctx->base.ref) {
         ERR("Couldn't wrap drm screen to swrast screen. Software devices "
             "will be unavailable.\n");
