@@ -1576,6 +1576,8 @@ fi
 AM_CONDITIONAL(HAVE_EGL, test "x$enable_egl" = xyes)
 AC_SUBST([EGL_LIB_DEPS])
 
+gallium_st="mesa"
+
 dnl
 dnl XA configuration
 dnl
@@ -1589,6 +1591,7 @@ if test "x$enable_xa" = xyes; then
           Example: ./configure --enable-xa --with-gallium-drivers=svga...])
     fi
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st xa"
 fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
 
@@ -1634,24 +1637,28 @@ AM_CONDITIONAL(NEED_GALLIUM_VL_WINSYS, test "x$need_gallium_vl_winsys" = xyes)
 if test "x$enable_xvmc" = xyes; then
     PKG_CHECK_MODULES([XVMC], [xvmc >= $XVMC_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st xvmc"
 fi
 AM_CONDITIONAL(HAVE_ST_XVMC, test "x$enable_xvmc" = xyes)
 
 if test "x$enable_vdpau" = xyes; then
     PKG_CHECK_MODULES([VDPAU], [vdpau >= $VDPAU_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st vdpau"
 fi
 AM_CONDITIONAL(HAVE_ST_VDPAU, test "x$enable_vdpau" = xyes)
 
 if test "x$enable_omx" = xyes; then
     PKG_CHECK_MODULES([OMX], [libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st omx"
 fi
 AM_CONDITIONAL(HAVE_ST_OMX, test "x$enable_omx" = xyes)
 
 if test "x$enable_va" = xyes; then
     PKG_CHECK_MODULES([VA], [libva >= $LIBVA_REQUIRED])
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st va"
 fi
 AM_CONDITIONAL(HAVE_ST_VA, test "x$enable_va" = xyes)
 
@@ -1674,6 +1681,7 @@ if test "x$enable_nine" = xyes; then
     fi
 
     enable_gallium_loader=$enable_shared_pipe_drivers
+    gallium_st="$gallium_st nine"
 fi
 AM_CONDITIONAL(HAVE_ST_NINE, test "x$enable_nine" = xyes)
 
@@ -1713,6 +1721,7 @@ if test "x$enable_opencl" = xyes; then
 
     # XXX: Use $enable_shared_pipe_drivers once converted to use static/shared pipe-drivers
     enable_gallium_loader=yes
+    gallium_st="$gallium_st clover"
 
     if test "x$enable_opencl_icd" = xyes; then
         OPENCL_LIBNAME="MesaOpenCL"
@@ -2513,7 +2522,8 @@ fi
 
 echo ""
 if test -n "$with_gallium_drivers"; then
-    echo "        Gallium:         yes"
+    echo "        Gallium drivers: $gallium_drivers"
+    echo "        Gallium st:      $gallium_st"
 else
     echo "        Gallium:         no"
 fi
