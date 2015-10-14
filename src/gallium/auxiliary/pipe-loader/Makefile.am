@@ -44,3 +44,5 @@ libpipe_loader_dynamic_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la
 
 endif
+
+EXTRA_DIST = SConscript
