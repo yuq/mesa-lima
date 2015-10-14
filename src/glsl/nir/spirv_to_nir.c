@@ -1019,7 +1019,7 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
 
 static struct vtn_ssa_value *
 _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
-                unsigned set, nir_ssa_def *binding,
+                unsigned set, unsigned binding, nir_ssa_def *index,
                 unsigned offset, nir_ssa_def *indirect,
                 struct vtn_type *type)
 {
@@ -1030,8 +1030,9 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, op);
       load->num_components = glsl_get_vector_elements(type->type);
       load->const_index[0] = set;
-      load->src[0] = nir_src_for_ssa(binding);
-      load->const_index[1] = offset;
+      load->const_index[1] = binding;
+      load->src[0] = nir_src_for_ssa(index);
+      load->const_index[2] = offset;
       if (indirect)
          load->src[1] = nir_src_for_ssa(indirect);
       nir_ssa_dest_init(&load->instr, &load->dest, load->num_components, NULL);
@@ -1042,13 +1043,13 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
       val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
       if (glsl_type_is_struct(type->type)) {
          for (unsigned i = 0; i < elems; i++) {
-            val->elems[i] = _vtn_block_load(b, op, set, binding,
+            val->elems[i] = _vtn_block_load(b, op, set, binding, index,
                                             offset + type->offsets[i],
                                             indirect, type->members[i]);
          }
       } else {
          for (unsigned i = 0; i < elems; i++) {
-            val->elems[i] = _vtn_block_load(b, op, set, binding,
+            val->elems[i] = _vtn_block_load(b, op, set, binding, index,
                                             offset + i * type->stride,
                                             indirect, type->array_element);
          }
@@ -1063,24 +1064,21 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
                struct vtn_type *type, nir_deref *src_tail)
 {
    unsigned set = src->var->data.descriptor_set;
+   unsigned binding = src->var->data.binding;
 
-   nir_ssa_def *binding = nir_imm_int(&b->nb, src->var->data.binding);
    nir_deref *deref = &src->deref;
 
-   /* The block variable may be an array, in which case the array index adds
-    * an offset to the binding. Figure out that index now.
-    */
-
+   nir_ssa_def *index;
    if (deref->child->deref_type == nir_deref_type_array) {
       deref = deref->child;
       type = type->array_element;
       nir_deref_array *deref_array = nir_deref_as_array(deref);
-      if (deref_array->deref_array_type == nir_deref_array_type_direct) {
-         binding = nir_imm_int(&b->nb, src->var->data.binding +
-                                       deref_array->base_offset);
-      } else {
-         binding = nir_iadd(&b->nb, binding, deref_array->indirect.ssa);
-      }
+      index = nir_imm_int(&b->nb, deref_array->base_offset);
+
+      if (deref_array->deref_array_type == nir_deref_array_type_indirect)
+         index = nir_iadd(&b->nb, index, deref_array->indirect.ssa);
+   } else {
+      index = nir_imm_int(&b->nb, 0);
    }
 
    unsigned offset = 0;
@@ -1114,10 +1112,10 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
    }
 
    /* TODO SSBO's */
-   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_indirect
-                                  : nir_intrinsic_load_ubo;
+   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_vk_indirect
+                                  : nir_intrinsic_load_ubo_vk;
 
-   return _vtn_block_load(b, op, set, binding, offset, indirect, type);
+   return _vtn_block_load(b, op, set, binding, index, offset, indirect, type);
 }
 
 /*
