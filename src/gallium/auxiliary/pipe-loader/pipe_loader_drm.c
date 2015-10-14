@@ -56,7 +56,7 @@ struct pipe_loader_drm_device {
 
 #define pipe_loader_drm_device(dev) ((struct pipe_loader_drm_device *)dev)
 
-static struct pipe_loader_ops pipe_loader_drm_ops;
+static const struct pipe_loader_ops pipe_loader_drm_ops;
 
 bool
 pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
@@ -185,7 +185,7 @@ pipe_loader_drm_create_screen(struct pipe_loader_device *dev)
    return dd->create_screen(ddev->fd);
 }
 
-static struct pipe_loader_ops pipe_loader_drm_ops = {
+static const struct pipe_loader_ops pipe_loader_drm_ops = {
    .create_screen = pipe_loader_drm_create_screen,
    .configuration = pipe_loader_drm_configuration,
    .release = pipe_loader_drm_release

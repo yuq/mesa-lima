@@ -46,7 +46,7 @@ struct pipe_loader_sw_device {
 
 #define pipe_loader_sw_device(dev) ((struct pipe_loader_sw_device *)dev)
 
-static struct pipe_loader_ops pipe_loader_sw_ops;
+static const struct pipe_loader_ops pipe_loader_sw_ops;
 
 static bool
 pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
@@ -249,7 +249,7 @@ pipe_loader_sw_create_screen(struct pipe_loader_device *dev)
    return screen;
 }
 
-static struct pipe_loader_ops pipe_loader_sw_ops = {
+static const struct pipe_loader_ops pipe_loader_sw_ops = {
    .create_screen = pipe_loader_sw_create_screen,
    .configuration = pipe_loader_sw_configuration,
    .release = pipe_loader_sw_release
