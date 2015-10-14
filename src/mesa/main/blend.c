@@ -190,6 +190,19 @@ update_uses_dual_src(struct gl_context *ctx, int buf)
        blend_factor_is_dual_src(ctx->Color.Blend[buf].DstA));
 }
 
+
+/**
+ * Return the number of per-buffer blend states to update in
+ * glBlendFunc, glBlendFuncSeparate, glBlendEquation, etc.
+ */
+static inline unsigned
+num_buffers(const struct gl_context *ctx)
+{
+   return ctx->Extensions.ARB_draw_buffers_blend
+      ? ctx->Const.MaxDrawBuffers : 1;
+}
+
+
 /**
  * Set the separate blend source/dest factors for all draw buffers.
  *
@@ -202,9 +215,10 @@ void GLAPIENTRY
 _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
                             GLenum sfactorA, GLenum dfactorA )
 {
-   GLuint buf, numBuffers;
-   bool changed = false;
    GET_CURRENT_CONTEXT(ctx);
+   const unsigned numBuffers = num_buffers(ctx);
+   unsigned buf;
+   bool changed = false;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glBlendFuncSeparate %s %s %s %s\n",
@@ -212,9 +226,6 @@ _mesa_BlendFuncSeparate( GLenum sfactorRGB, GLenum dfactorRGB,
                   _mesa_enum_to_string(dfactorRGB),
                   _mesa_enum_to_string(sfactorA),
                   _mesa_enum_to_string(dfactorA));
-
-   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
-      ? ctx->Const.MaxDrawBuffers : 1;
 
    /* Check if we're really changing any state.  If not, return early. */
    if (ctx->Color._BlendFuncPerBuffer) {
@@ -349,16 +360,14 @@ legal_blend_equation(const struct gl_context *ctx, GLenum mode)
 void GLAPIENTRY
 _mesa_BlendEquation( GLenum mode )
 {
-   GLuint buf, numBuffers;
-   bool changed = false;
    GET_CURRENT_CONTEXT(ctx);
+   const unsigned numBuffers = num_buffers(ctx);
+   unsigned buf;
+   bool changed = false;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glBlendEquation(%s)\n",
                   _mesa_enum_to_string(mode));
-
-   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
-      ? ctx->Const.MaxDrawBuffers : 1;
 
    if (ctx->Color._BlendEquationPerBuffer) {
       /* Check all per-buffer states */
@@ -436,17 +445,15 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
 void GLAPIENTRY
 _mesa_BlendEquationSeparate( GLenum modeRGB, GLenum modeA )
 {
-   GLuint buf, numBuffers;
-   bool changed = false;
    GET_CURRENT_CONTEXT(ctx);
+   const unsigned numBuffers = num_buffers(ctx);
+   unsigned buf;
+   bool changed = false;
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glBlendEquationSeparateEXT(%s %s)\n",
                   _mesa_enum_to_string(modeRGB),
                   _mesa_enum_to_string(modeA));
-
-   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
-      ? ctx->Const.MaxDrawBuffers : 1;
 
    if (ctx->Color._BlendEquationPerBuffer) {
       /* Check all per-buffer states */
