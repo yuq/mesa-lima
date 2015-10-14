@@ -2283,6 +2283,10 @@ if test "x$enable_gallium_loader" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRI"
     fi
 
+    if test "x$have_drisw_kms" = xyes; then
+        GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_KMS"
+    fi
+
     if test "x$enable_gallium_drm_loader" = xyes; then
         GALLIUM_PIPE_LOADER_DEFINES="$GALLIUM_PIPE_LOADER_DEFINES -DHAVE_PIPE_LOADER_DRM"
     fi

@@ -67,3 +67,8 @@ if HAVE_DRISW
 GALLIUM_PIPE_LOADER_WINSYS_LIBS += \
 	$(top_builddir)/src/gallium/winsys/sw/dri/libswdri.la
 endif
+
+if HAVE_DRISW_KMS
+GALLIUM_PIPE_LOADER_WINSYS_LIBS += \
+	$(top_builddir)/src/gallium/winsys/sw/kms-dri/libswkmsdri.la
+endif

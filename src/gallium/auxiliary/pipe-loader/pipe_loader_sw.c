@@ -30,6 +30,7 @@
 #include "util/u_memory.h"
 #include "util/u_dl.h"
 #include "sw/dri/dri_sw_winsys.h"
+#include "sw/kms-dri/kms_dri_sw_winsys.h"
 #include "sw/null/null_sw_winsys.h"
 #include "sw/wrapper/wrapper_sw_winsys.h"
 #include "target-helpers/inline_sw_helper.h"
@@ -62,6 +63,29 @@ pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_f
    sdev->base.driver_name = "swrast";
    sdev->base.ops = &pipe_loader_sw_ops;
    sdev->ws = dri_create_sw_winsys(drisw_lf);
+   if (!sdev->ws) {
+      FREE(sdev);
+      return false;
+   }
+   *devs = &sdev->base;
+
+   return true;
+}
+#endif
+
+#ifdef HAVE_PIPE_LOADER_KMS
+bool
+pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd)
+{
+   struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
+
+   if (!sdev)
+      return false;
+
+   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
+   sdev->base.driver_name = "swrast";
+   sdev->base.ops = &pipe_loader_sw_ops;
+   sdev->ws = kms_dri_create_winsys(fd);
    if (!sdev->ws) {
       FREE(sdev);
       return false;

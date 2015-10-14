@@ -124,6 +124,16 @@ pipe_loader_sw_probe_dri(struct pipe_loader_device **devs,
                          struct drisw_loader_funcs *drisw_lf);
 
 /**
+ * Initialize a kms backed sw device given an fd.
+ *
+ * This function is platform-specific.
+ *
+ * \sa pipe_loader_probe
+ */
+bool
+pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd);
+
+/**
  * Initialize a null sw device.
  *
  * This function is platform-specific.
