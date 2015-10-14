@@ -4392,7 +4392,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     * for gl_shader_program and gl_shader, so that drivers that need separate
     * index spaces for each set can have that.
     */
-   for (unsigned i = MESA_SHADER_VERTEX; i <= MESA_SHADER_FRAGMENT; i++) {
+   for (unsigned i = MESA_SHADER_VERTEX; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] != NULL) {
          gl_shader *sh = prog->_LinkedShaders[i];
          split_ubos_and_ssbos(sh,
