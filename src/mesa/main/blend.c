@@ -345,33 +345,44 @@ void GLAPIENTRY
 _mesa_BlendEquation( GLenum mode )
 {
    GLuint buf, numBuffers;
-   GLboolean changed;
+   bool changed = false;
    GET_CURRENT_CONTEXT(ctx);
 
    if (MESA_VERBOSE & VERBOSE_API)
       _mesa_debug(ctx, "glBlendEquation(%s)\n",
                   _mesa_enum_to_string(mode));
 
+   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
+      ? ctx->Const.MaxDrawBuffers : 1;
+
+   if (ctx->Color._BlendEquationPerBuffer) {
+      /* Check all per-buffer states */
+      for (buf = 0; buf < numBuffers; buf++) {
+         if (ctx->Color.Blend[buf].EquationRGB != mode ||
+             ctx->Color.Blend[buf].EquationA != mode) {
+            changed = true;
+            break;
+         }
+      }
+   }
+   else {
+      /* only need to check 0th per-buffer state */
+      if (ctx->Color.Blend[0].EquationRGB != mode ||
+          ctx->Color.Blend[0].EquationA != mode) {
+         changed = true;
+      }
+   }
+
+   if (!changed)
+      return;
+
    if (!legal_blend_equation(ctx, mode)) {
       _mesa_error(ctx, GL_INVALID_ENUM, "glBlendEquation");
       return;
    }
 
-   numBuffers = ctx->Extensions.ARB_draw_buffers_blend
-      ? ctx->Const.MaxDrawBuffers : 1;
-
-   changed = GL_FALSE;
-   for (buf = 0; buf < numBuffers; buf++) {
-      if (ctx->Color.Blend[buf].EquationRGB != mode ||
-          ctx->Color.Blend[buf].EquationA != mode) {
-         changed = GL_TRUE;
-         break;
-      }
-   }
-   if (!changed)
-      return;
-
    FLUSH_VERTICES(ctx, _NEW_COLOR);
+
    for (buf = 0; buf < numBuffers; buf++) {
       ctx->Color.Blend[buf].EquationRGB = mode;
       ctx->Color.Blend[buf].EquationA = mode;
