@@ -38,6 +38,7 @@ env.Prepend(LIBS = [
     svga,
     ws_dri,
     softpipe,
+    pipe_loader,
     libloader,
     mesautil,
     mesa,

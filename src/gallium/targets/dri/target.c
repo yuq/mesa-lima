@@ -1,5 +1,4 @@
-#include "target-helpers/inline_drm_helper.h"
-#include "target-helpers/inline_sw_helper.h"
+#include "target-helpers/drm_helper.h"
 
 #include "dri_screen.h"
 

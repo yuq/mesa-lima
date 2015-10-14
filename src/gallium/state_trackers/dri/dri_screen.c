@@ -390,9 +390,7 @@ dri_destroy_screen(__DRIscreen * sPriv)
 
    dri_destroy_screen_helper(screen);
 
-#if !GALLIUM_STATIC_TARGETS
    pipe_loader_release(&screen->dev, 1);
-#endif // !GALLIUM_STATIC_TARGETS
 
    free(screen);
    sPriv->driverPrivate = NULL;

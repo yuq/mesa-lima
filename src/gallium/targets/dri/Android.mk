@@ -108,6 +108,7 @@ LOCAL_STATIC_LIBRARIES := \
 	libmesa_dri_common \
 	libmesa_megadriver_stub \
 	libmesa_gallium \
+	libmesa_pipe_loader \
 	libmesa_util \
 	libmesa_loader \
 

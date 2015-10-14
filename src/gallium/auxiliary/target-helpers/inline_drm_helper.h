@@ -4,9 +4,6 @@
 #include "state_tracker/drm_driver.h"
 #include "target-helpers/inline_debug_helper.h"
 #include "loader.h"
-#if defined(DRI_TARGET)
-#include "dri_screen.h"
-#endif
 
 #if GALLIUM_SOFTPIPE
 #include "target-helpers/inline_sw_helper.h"
@@ -67,27 +64,6 @@
 static char* driver_name = NULL;
 
 /* XXX: We need to teardown the winsys if *screen_create() fails. */
-
-#if defined(GALLIUM_SOFTPIPE)
-#if defined(DRI_TARGET)
-#if defined(HAVE_LIBDRM)
-
-struct pipe_screen *
-kms_swrast_create_screen(int fd)
-{
-   struct sw_winsys *sws;
-   struct pipe_screen *screen;
-
-   sws = kms_dri_create_winsys(fd);
-   if (!sws)
-      return NULL;
-
-   screen = sw_screen_create(sws);
-   return screen ? debug_screen_wrap(screen) : NULL;
-}
-#endif
-#endif
-#endif
 
 #if defined(GALLIUM_I915)
 
