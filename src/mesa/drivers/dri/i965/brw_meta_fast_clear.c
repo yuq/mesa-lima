@@ -536,6 +536,8 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       }
    }
 
+   assert((fast_clear_buffers & rep_clear_buffers) == 0);
+
    if (!(fast_clear_buffers | rep_clear_buffers)) {
       if (plain_clear_buffers)
          /* If we only have plain clears, skip the meta save/restore. */
