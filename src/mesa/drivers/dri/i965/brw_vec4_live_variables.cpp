@@ -86,9 +86,10 @@ vec4_live_variables::setup_def_use()
                }
 	    }
 	 }
-         if (inst->reads_flag()) {
-            if (!BITSET_TEST(bd->flag_def, 0)) {
-               BITSET_SET(bd->flag_use, 0);
+         for (unsigned c = 0; c < 4; c++) {
+            if (inst->reads_flag(c) &&
+                !BITSET_TEST(bd->flag_def, c)) {
+               BITSET_SET(bd->flag_use, c);
             }
          }
 
@@ -110,8 +111,11 @@ vec4_live_variables::setup_def_use()
             }
          }
          if (inst->writes_flag()) {
-            if (!BITSET_TEST(bd->flag_use, 0)) {
-               BITSET_SET(bd->flag_def, 0);
+            for (unsigned c = 0; c < 4; c++) {
+               if ((inst->dst.writemask & (1 << c)) &&
+                   !BITSET_TEST(bd->flag_use, c)) {
+                  BITSET_SET(bd->flag_def, c);
+               }
             }
          }
 

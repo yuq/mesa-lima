@@ -186,6 +186,27 @@ public:
       return predicate || opcode == VS_OPCODE_UNPACK_FLAGS_SIMD4X2;
    }
 
+   bool reads_flag(unsigned c)
+   {
+      if (!reads_flag())
+         return false;
+
+      switch (predicate) {
+      case BRW_PREDICATE_NONE:
+         return false;
+      case BRW_PREDICATE_ALIGN16_REPLICATE_X:
+         return c == 0;
+      case BRW_PREDICATE_ALIGN16_REPLICATE_Y:
+         return c == 1;
+      case BRW_PREDICATE_ALIGN16_REPLICATE_Z:
+         return c == 2;
+      case BRW_PREDICATE_ALIGN16_REPLICATE_W:
+         return c == 3;
+      default:
+         return true;
+      }
+   }
+
    bool writes_flag()
    {
       return (conditional_mod && (opcode != BRW_OPCODE_SEL &&
