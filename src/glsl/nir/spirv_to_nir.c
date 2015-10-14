@@ -1381,10 +1381,10 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                deref_arr->base_offset = idx;
             } else {
                assert(idx_val->value_type == vtn_value_type_ssa);
+               assert(glsl_type_is_scalar(idx_val->ssa->type));
                deref_arr->deref_array_type = nir_deref_array_type_indirect;
                deref_arr->base_offset = 0;
-               deref_arr->indirect =
-                  nir_src_for_ssa(vtn_ssa_value(b, w[1])->def);
+               deref_arr->indirect = nir_src_for_ssa(idx_val->ssa->def);
             }
             tail->child = &deref_arr->deref;
             break;
