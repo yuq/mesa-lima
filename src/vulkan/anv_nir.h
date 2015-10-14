@@ -40,6 +40,8 @@ anv_vk_shader_stage_for_mesa_stage(gl_shader_stage stage)
 void anv_nir_apply_dynamic_offsets(struct anv_pipeline *pipeline,
                                    nir_shader *shader,
                                    struct brw_stage_prog_data *prog_data);
+bool anv_nir_apply_pipeline_layout(nir_shader *shader,
+                                   const struct anv_pipeline_layout *layout);
 
 #ifdef __cplusplus
 }

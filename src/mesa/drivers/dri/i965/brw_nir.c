@@ -181,10 +181,8 @@ brw_process_nir(nir_shader *nir,
 
    if (shader_prog) {
       nir_lower_samplers(nir, shader_prog);
-   } else {
-      nir_lower_samplers_for_vk(nir);
+      nir_validate_shader(nir);
    }
-   nir_validate_shader(nir);
 
    nir_lower_system_values(nir);
    nir_validate_shader(nir);

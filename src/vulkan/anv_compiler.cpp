@@ -285,6 +285,7 @@ really_do_vs_prog(struct brw_context *brw,
    create_params_array(pipeline, vs, &prog_data->base.base);
    anv_nir_apply_dynamic_offsets(pipeline, vs->Program->nir,
                                  &prog_data->base.base);
+   anv_nir_apply_pipeline_layout(vs->Program->nir, pipeline->layout);
 
    GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
@@ -571,6 +572,7 @@ really_do_wm_prog(struct brw_context *brw,
 
    create_params_array(pipeline, fs, &prog_data->base);
    anv_nir_apply_dynamic_offsets(pipeline, fs->Program->nir, &prog_data->base);
+   anv_nir_apply_pipeline_layout(fs->Program->nir, pipeline->layout);
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(brw->intelScreen->devinfo,
@@ -888,6 +890,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    create_params_array(pipeline, cs, &prog_data->base);
    anv_nir_apply_dynamic_offsets(pipeline, cs->Program->nir, &prog_data->base);
+   anv_nir_apply_pipeline_layout(cs->Program->nir, pipeline->layout);
 
    program = brw_cs_emit(brw, mem_ctx, key, prog_data,
                          &cp->program, prog, -1, &program_size);
