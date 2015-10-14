@@ -407,7 +407,7 @@ _mesa_BlendEquationiARB(GLuint buf, GLenum mode)
                   buf, _mesa_enum_to_string(mode));
 
    if (buf >= ctx->Const.MaxDrawBuffers) {
-      _mesa_error(ctx, GL_INVALID_VALUE, "glBlendFuncSeparatei(buffer=%u)",
+      _mesa_error(ctx, GL_INVALID_VALUE, "glBlendEquationi(buffer=%u)",
                   buf);
       return;
    }
