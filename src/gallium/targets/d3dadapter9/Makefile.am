@@ -42,8 +42,7 @@ AM_CPPFLAGS = \
 else
 
 AM_CPPFLAGS = \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\" \
-	$(GALLIUM_PIPE_LOADER_DEFINES)
+	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
 
 endif
 
