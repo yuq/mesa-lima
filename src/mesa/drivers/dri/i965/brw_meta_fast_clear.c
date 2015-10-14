@@ -359,8 +359,12 @@ is_color_fast_clear_compatible(struct brw_context *brw,
    }
 
    for (int i = 0; i < 4; i++) {
-      if (color->f[i] != 0.0f && color->f[i] != 1.0f &&
-          _mesa_format_has_color_component(format, i)) {
+      if (!_mesa_format_has_color_component(format, i)) {
+         continue;
+      }
+
+      if (brw->gen < 9 &&
+          color->f[i] != 0.0f && color->f[i] != 1.0f) {
          return false;
       }
    }
