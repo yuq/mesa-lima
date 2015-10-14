@@ -98,6 +98,13 @@ struct nv50_program {
       ubyte viewportid; /* hw value of viewport index output */
    } gp;
 
+   struct {
+      uint32_t lmem_size; /* local memory (TGSI PRIVATE resource) size */
+      uint32_t smem_size; /* shared memory (TGSI LOCAL resource) size */
+      void *syms;
+      unsigned num_syms;
+   } cp;
+
    void *fixups; /* relocation records */
    void *interps; /* interpolation records */
 

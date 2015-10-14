@@ -259,6 +259,8 @@ nv50_program_assign_varying_slots(struct nv50_ir_prog_info *info)
       return nv50_vertprog_assign_slots(info);
    case PIPE_SHADER_FRAGMENT:
       return nv50_fragprog_assign_slots(info);
+   case PIPE_SHADER_COMPUTE:
+      return 0;
    default:
       return -1;
    }
@@ -355,6 +357,9 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
    prog->gp.has_layer = 0;
    prog->gp.has_viewport = 0;
 
+   if (prog->type == PIPE_SHADER_COMPUTE)
+      info->prop.cp.inputOffset = 0x10;
+
    info->driverPriv = prog;
 
 #ifdef DEBUG
@@ -401,6 +406,10 @@ nv50_program_translate(struct nv50_program *prog, uint16_t chipset,
          break;
       }
       prog->gp.vert_count = info->prop.gp.maxVertices;
+   } else
+   if (prog->type == PIPE_SHADER_COMPUTE) {
+      prog->cp.syms = info->bin.syms;
+      prog->cp.num_syms = info->bin.numSyms;
    }
 
    if (prog->pipe.stream_output.num_outputs)
@@ -423,11 +432,13 @@ nv50_program_upload_code(struct nv50_context *nv50, struct nv50_program *prog)
    struct nouveau_heap *heap;
    int ret;
    uint32_t size = align(prog->code_size, 0x40);
+   uint8_t prog_type;
 
    switch (prog->type) {
    case PIPE_SHADER_VERTEX:   heap = nv50->screen->vp_code_heap; break;
    case PIPE_SHADER_GEOMETRY: heap = nv50->screen->gp_code_heap; break;
    case PIPE_SHADER_FRAGMENT: heap = nv50->screen->fp_code_heap; break;
+   case PIPE_SHADER_COMPUTE:  heap = nv50->screen->fp_code_heap; break;
    default:
       assert(!"invalid program type");
       return false;
@@ -450,7 +461,14 @@ nv50_program_upload_code(struct nv50_context *nv50, struct nv50_program *prog)
          return false;
       }
    }
-   prog->code_base = prog->mem->start;
+
+   if (prog->type == PIPE_SHADER_COMPUTE) {
+      /* CP code must be uploaded in FP code segment. */
+      prog_type = 1;
+   } else {
+      prog->code_base = prog->mem->start;
+      prog_type = prog->type;
+   }
 
    ret = nv50_tls_realloc(nv50->screen, prog->tls_space);
    if (ret < 0) {
@@ -468,7 +486,7 @@ nv50_program_upload_code(struct nv50_context *nv50, struct nv50_program *prog)
                             false /* flatshade */);
 
    nv50_sifc_linear_u8(&nv50->base, nv50->screen->code,
-                       (prog->type << NV50_CODE_BO_SIZE_LOG2) + prog->code_base,
+                       (prog_type << NV50_CODE_BO_SIZE_LOG2) + prog->code_base,
                        NOUVEAU_BO_VRAM, prog->code_size, prog->code);
 
    BEGIN_NV04(nv50->base.pushbuf, NV50_3D(CODE_CB_FLUSH), 1);

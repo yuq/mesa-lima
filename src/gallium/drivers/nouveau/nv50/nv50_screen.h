@@ -23,6 +23,10 @@ struct nv50_context;
 
 #define NV50_MAX_VIEWPORTS 16
 
+#define NV50_MAX_GLOBALS 16
+
+#define ONE_TEMP_SIZE (4/*vector*/ * sizeof(float))
+
 struct nv50_blitter;
 
 struct nv50_graph_state {
@@ -66,6 +70,7 @@ struct nv50_screen {
    unsigned MPsInTP;
    unsigned max_tls_space;
    unsigned cur_tls_space;
+   unsigned mp_count;
 
    struct nouveau_heap *vp_code_heap;
    struct nouveau_heap *gp_code_heap;
@@ -93,6 +98,7 @@ struct nv50_screen {
    struct nouveau_object *sync;
 
    struct nouveau_object *tesla;
+   struct nouveau_object *compute;
    struct nouveau_object *eng2d;
    struct nouveau_object *m2mf;
 };
@@ -108,6 +114,8 @@ void nv50_blitter_destroy(struct nv50_screen *);
 
 int nv50_screen_tic_alloc(struct nv50_screen *, void *);
 int nv50_screen_tsc_alloc(struct nv50_screen *, void *);
+
+int nv50_screen_compute_setup(struct nv50_screen *, struct nouveau_pushbuf *);
 
 static inline void
 nv50_resource_fence(struct nv04_resource *res, uint32_t flags)
