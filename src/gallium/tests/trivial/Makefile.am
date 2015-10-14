@@ -7,8 +7,7 @@ AM_CFLAGS = \
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/drivers \
-	-I$(top_srcdir)/src/gallium/winsys \
-	-DPIPE_SEARCH_DIR=\"$(PIPE_SRC_DIR)/.libs\"
+	-I$(top_srcdir)/src/gallium/winsys
 
 LDADD = \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \

@@ -406,7 +406,7 @@ vl_dri2_screen_create(Display *display, int screen)
    scrn->base.pscreen = dd_create_screen(fd);
 #else
    if (pipe_loader_drm_probe_fd(&scrn->base.dev, fd))
-      scrn->base.pscreen = pipe_loader_create_screen(scrn->base.dev, PIPE_SEARCH_DIR);
+      scrn->base.pscreen = pipe_loader_create_screen(scrn->base.dev);
 #endif // GALLIUM_STATIC_TARGETS
 
    if (!scrn->base.pscreen)

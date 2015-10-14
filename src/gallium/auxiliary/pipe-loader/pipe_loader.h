@@ -82,13 +82,9 @@ pipe_loader_probe(struct pipe_loader_device **devs, int ndev);
  * Create a pipe_screen for the specified device.
  *
  * \param dev Device the screen will be created for.
- * \param library_paths Colon-separated list of filesystem paths that
- *                      will be used to look for the pipe driver
- *                      module that handles this device.
  */
 struct pipe_screen *
-pipe_loader_create_screen(struct pipe_loader_device *dev,
-                          const char *library_paths);
+pipe_loader_create_screen(struct pipe_loader_device *dev);
 
 /**
  * Query the configuration parameters for the specified device.

@@ -180,14 +180,13 @@ pipe_loader_sw_configuration(struct pipe_loader_device *dev,
 }
 
 static struct pipe_screen *
-pipe_loader_sw_create_screen(struct pipe_loader_device *dev,
-                             const char *library_paths)
+pipe_loader_sw_create_screen(struct pipe_loader_device *dev)
 {
    struct pipe_loader_sw_device *sdev = pipe_loader_sw_device(dev);
    struct pipe_screen *(*init)(struct sw_winsys *);
 
    if (!sdev->lib)
-      sdev->lib = pipe_loader_find_module(dev, library_paths);
+      sdev->lib = pipe_loader_find_module(&sdev->base, PIPE_SEARCH_DIR);
    if (!sdev->lib)
       return NULL;
 

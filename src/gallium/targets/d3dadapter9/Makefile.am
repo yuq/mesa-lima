@@ -38,11 +38,6 @@ if HAVE_GALLIUM_STATIC_TARGETS
 AM_CPPFLAGS = \
 	-DGALLIUM_STATIC_TARGETS=1
 
-else
-
-AM_CPPFLAGS = \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\"
-
 endif
 
 ninedir = $(D3D_DRIVER_INSTALL_DIR)

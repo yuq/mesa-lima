@@ -1,7 +1,6 @@
 include Makefile.sources
 
 AM_CPPFLAGS = \
-	-DPIPE_SEARCH_DIR=\"$(libdir)/gallium-pipe\" \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/gallium/include \

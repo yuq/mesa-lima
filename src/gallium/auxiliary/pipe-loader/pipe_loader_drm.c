@@ -165,14 +165,13 @@ pipe_loader_drm_configuration(struct pipe_loader_device *dev,
 }
 
 static struct pipe_screen *
-pipe_loader_drm_create_screen(struct pipe_loader_device *dev,
-                              const char *library_paths)
+pipe_loader_drm_create_screen(struct pipe_loader_device *dev)
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
    const struct drm_driver_descriptor *dd;
 
    if (!ddev->lib)
-      ddev->lib = pipe_loader_find_module(dev, library_paths);
+      ddev->lib = pipe_loader_find_module(&ddev->base, PIPE_SEARCH_DIR);
    if (!ddev->lib)
       return NULL;
 

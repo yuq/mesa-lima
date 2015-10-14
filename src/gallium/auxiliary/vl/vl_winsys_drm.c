@@ -49,10 +49,8 @@ vl_drm_screen_create(int fd)
 #if GALLIUM_STATIC_TARGETS
    vscreen->pscreen = dd_create_screen(fd);
 #else
-   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd))) {
-      vscreen->pscreen =
-         pipe_loader_create_screen(vscreen->dev, PIPE_SEARCH_DIR);
-   }
+   if (pipe_loader_drm_probe_fd(&vscreen->dev, dup(fd)))
+      vscreen->pscreen = pipe_loader_create_screen(vscreen->dev);
 #endif
 
    if (!vscreen->pscreen)

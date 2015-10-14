@@ -235,7 +235,7 @@ drm_create_adapter( int fd,
     }
 
     /* use pipe-loader to create a drm screen (hal) */
-    ctx->base.hal = pipe_loader_create_screen(ctx->dev, PIPE_SEARCH_DIR);
+    ctx->base.hal = pipe_loader_create_screen(ctx->dev);
 #endif
     if (!ctx->base.hal) {
         ERR("Unable to load requested driver.\n");
@@ -301,7 +301,7 @@ drm_create_adapter( int fd,
 #else
     /* wrap it to create a software screen that can share resources */
     if (pipe_loader_sw_probe_wrapped(&ctx->swdev, ctx->base.hal)) {
-        ctx->base.ref = pipe_loader_create_screen(ctx->swdev, PIPE_SEARCH_DIR);
+        ctx->base.ref = pipe_loader_create_screen(ctx->swdev);
     }
 #endif
     if (!ctx->base.ref) {
