@@ -50,6 +50,19 @@ static struct sw_winsys *(*backends[])() = {
    null_sw_create
 };
 
+static bool
+pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
+{
+   if (!sdev->ws)
+      return false;
+
+   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
+   sdev->base.driver_name = "swrast";
+   sdev->base.ops = &pipe_loader_sw_ops;
+
+   return true;
+}
+
 #ifdef HAVE_PIPE_LOADER_DRI
 bool
 pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_funcs *drisw_lf)
@@ -59,11 +72,8 @@ pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_f
    if (!sdev)
       return false;
 
-   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
-   sdev->base.driver_name = "swrast";
-   sdev->base.ops = &pipe_loader_sw_ops;
    sdev->ws = dri_create_sw_winsys(drisw_lf);
-   if (!sdev->ws) {
+   if (!pipe_loader_sw_probe_init_common(sdev)) {
       FREE(sdev);
       return false;
    }
@@ -82,11 +92,8 @@ pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd)
    if (!sdev)
       return false;
 
-   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
-   sdev->base.driver_name = "swrast";
-   sdev->base.ops = &pipe_loader_sw_ops;
    sdev->ws = kms_dri_create_winsys(fd);
-   if (!sdev->ws) {
+   if (!pipe_loader_sw_probe_init_common(sdev)) {
       FREE(sdev);
       return false;
    }
@@ -104,11 +111,8 @@ pipe_loader_sw_probe_null(struct pipe_loader_device **devs)
    if (!sdev)
       return false;
 
-   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
-   sdev->base.driver_name = "swrast";
-   sdev->base.ops = &pipe_loader_sw_ops;
    sdev->ws = null_sw_create();
-   if (!sdev->ws) {
+   if (!pipe_loader_sw_probe_init_common(sdev)) {
       FREE(sdev);
       return false;
    }
@@ -127,10 +131,8 @@ pipe_loader_sw_probe(struct pipe_loader_device **devs, int ndev)
          struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
 	 /* TODO: handle CALLOC_STRUCT failure */
 
-         sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
-         sdev->base.driver_name = "swrast";
-         sdev->base.ops = &pipe_loader_sw_ops;
          sdev->ws = backends[i]();
+         pipe_loader_sw_probe_init_common(sdev);
          devs[i] = &sdev->base;
       }
    }
@@ -147,12 +149,8 @@ pipe_loader_sw_probe_wrapped(struct pipe_loader_device **dev,
    if (!sdev)
       return false;
 
-   sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
-   sdev->base.driver_name = "swrast";
-   sdev->base.ops = &pipe_loader_sw_ops;
    sdev->ws = wrapper_sw_winsys_wrap_pipe_screen(screen);
-
-   if (!sdev->ws) {
+   if (!pipe_loader_sw_probe_init_common(sdev)) {
       FREE(sdev);
       return false;
    }
