@@ -286,7 +286,8 @@ GLuint
 _mesa_get_compressed_formats(struct gl_context *ctx, GLint *formats)
 {
    GLuint n = 0;
-   if (ctx->Extensions.TDFX_texture_compression_FXT1) {
+   if (_mesa_is_desktop_gl(ctx) &&
+       ctx->Extensions.TDFX_texture_compression_FXT1) {
       if (formats) {
          formats[n++] = GL_COMPRESSED_RGB_FXT1_3DFX;
          formats[n++] = GL_COMPRESSED_RGBA_FXT1_3DFX;
