@@ -183,6 +183,14 @@ gen8_emit_buffer_surface_state(struct brw_context *brw,
 }
 
 static void
+gen8_emit_fast_clear_color(struct brw_context *brw,
+                           struct intel_mipmap_tree *mt,
+                           uint32_t *surf)
+{
+   surf[7] |= mt->fast_clear_color_value;
+}
+
+static void
 gen8_emit_texture_surface_state(struct brw_context *brw,
                                 struct intel_mipmap_tree *mt,
                                 GLenum target,
@@ -286,7 +294,8 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
                 aux_mode;
    }
 
-   surf[7] = mt->fast_clear_color_value |
+   gen8_emit_fast_clear_color(brw, mt, surf);
+   surf[7] |=
       SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 0)), GEN7_SURFACE_SCS_R) |
       SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 1)), GEN7_SURFACE_SCS_G) |
       SET_FIELD(swizzle_to_scs(GET_SWZ(swizzle, 2)), GEN7_SURFACE_SCS_B) |
@@ -510,11 +519,11 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
                 aux_mode;
    }
 
-   surf[7] = mt->fast_clear_color_value |
-             SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
-             SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
-             SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
-             SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A);
+   gen8_emit_fast_clear_color(brw, mt, surf);
+   surf[7] |= SET_FIELD(HSW_SCS_RED,   GEN7_SURFACE_SCS_R) |
+              SET_FIELD(HSW_SCS_GREEN, GEN7_SURFACE_SCS_G) |
+              SET_FIELD(HSW_SCS_BLUE,  GEN7_SURFACE_SCS_B) |
+              SET_FIELD(HSW_SCS_ALPHA, GEN7_SURFACE_SCS_A);
 
    assert(mt->offset % mt->cpp == 0);
    *((uint64_t *) &surf[8]) = mt->bo->offset64 + mt->offset; /* reloc */
