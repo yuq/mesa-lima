@@ -152,21 +152,13 @@ xa_tracker_create(int drm_fd)
     struct xa_tracker *xa = calloc(1, sizeof(struct xa_tracker));
     enum xa_surface_type stype;
     unsigned int num_formats;
-    int loader_fd;
 
     if (!xa)
 	return NULL;
 
-#if GALLIUM_STATIC_TARGETS
-    xa->screen = dd_create_screen(drm_fd);
-    (void) loader_fd; /* silence unused var warning */
-#else
-    loader_fd = dup(drm_fd);
-    if (loader_fd == -1)
-        return NULL;
-    if (pipe_loader_drm_probe_fd(&xa->dev, loader_fd))
+    if (pipe_loader_drm_probe_fd(&xa->dev, dup(drm_fd)))
 	xa->screen = pipe_loader_create_screen(xa->dev);
-#endif
+
     if (!xa->screen)
 	goto out_no_screen;
 
@@ -214,10 +206,8 @@ xa_tracker_create(int drm_fd)
  out_no_pipe:
     xa->screen->destroy(xa->screen);
  out_no_screen:
-#if !GALLIUM_STATIC_TARGETS
     if (xa->dev)
 	pipe_loader_release(&xa->dev, 1);
-#endif
     free(xa);
     return NULL;
 }
@@ -228,9 +218,7 @@ xa_tracker_destroy(struct xa_tracker *xa)
     free(xa->supported_formats);
     xa_context_destroy(xa->default_ctx);
     xa->screen->destroy(xa->screen);
-#if !GALLIUM_STATIC_TARGETS
     pipe_loader_release(&xa->dev, 1);
-#endif
     free(xa);
 }
 

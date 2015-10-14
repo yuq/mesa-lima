@@ -28,11 +28,6 @@ AM_CFLAGS = \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS)
 
-if HAVE_GALLIUM_STATIC_TARGETS
-AM_CPPFLAGS = \
-	-DGALLIUM_STATIC_TARGETS=1
-endif
-
 xa_includedir = $(includedir)
 xa_include_HEADERS = \
 	xa_composite.h \
