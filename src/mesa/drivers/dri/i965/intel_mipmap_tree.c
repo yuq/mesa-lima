@@ -208,14 +208,6 @@ intel_miptree_supports_non_msrt_fast_clear(struct brw_context *brw,
    if (brw->gen < 7)
       return false;
 
-   if (brw->gen >= 9) {
-      /* FINISHME: Enable singlesample fast MCS clears on SKL after all GPU
-       * FINISHME: hangs are resolved.
-       */
-      perf_debug("singlesample fast MCS clears disabled on gen9");
-      return false;
-   }
-
    if (mt->disable_aux_buffers)
       return false;
 
