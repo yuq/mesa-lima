@@ -46,10 +46,6 @@ struct pipe_loader_sw_device {
 
 static struct pipe_loader_ops pipe_loader_sw_ops;
 
-static struct sw_winsys *(*backends[])() = {
-   null_sw_create
-};
-
 static bool
 pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
 {
@@ -124,16 +120,11 @@ pipe_loader_sw_probe_null(struct pipe_loader_device **devs)
 int
 pipe_loader_sw_probe(struct pipe_loader_device **devs, int ndev)
 {
-   int i;
+   int i = 1;
 
-   for (i = 0; i < Elements(backends); i++) {
-      if (i < ndev) {
-         struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
-	 /* TODO: handle CALLOC_STRUCT failure */
-
-         sdev->ws = backends[i]();
-         pipe_loader_sw_probe_init_common(sdev);
-         devs[i] = &sdev->base;
+   if (i < ndev) {
+      if (!pipe_loader_sw_probe_null(devs)) {
+         i--;
       }
    }
 
