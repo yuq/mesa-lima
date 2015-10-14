@@ -238,8 +238,9 @@ pipe_loader_drm_probe(struct pipe_loader_device **devs, int ndev)
 
    for (i = DRM_RENDER_NODE_MIN_MINOR, j = 0;
         i <= DRM_RENDER_NODE_MAX_MINOR; i++) {
-      fd = open_drm_render_node_minor(i);
       struct pipe_loader_device *dev;
+
+      fd = open_drm_render_node_minor(i);
       if (fd < 0)
          continue;
 
