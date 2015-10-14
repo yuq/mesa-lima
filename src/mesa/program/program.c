@@ -450,57 +450,6 @@ _mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count)
 
 
 /**
- * Search instructions for registers that match (oldFile, oldIndex),
- * replacing them with (newFile, newIndex).
- */
-static void
-replace_registers(struct prog_instruction *inst, GLuint numInst,
-                  GLuint oldFile, GLuint oldIndex,
-                  GLuint newFile, GLuint newIndex)
-{
-   GLuint i, j;
-   for (i = 0; i < numInst; i++) {
-      /* src regs */
-      for (j = 0; j < _mesa_num_inst_src_regs(inst[i].Opcode); j++) {
-         if (inst[i].SrcReg[j].File == oldFile &&
-             inst[i].SrcReg[j].Index == oldIndex) {
-            inst[i].SrcReg[j].File = newFile;
-            inst[i].SrcReg[j].Index = newIndex;
-         }
-      }
-      /* dst reg */
-      if (inst[i].DstReg.File == oldFile && inst[i].DstReg.Index == oldIndex) {
-         inst[i].DstReg.File = newFile;
-         inst[i].DstReg.Index = newIndex;
-      }
-   }
-}
-
-
-/**
- * Search instructions for references to program parameters.  When found,
- * increment the parameter index by 'offset'.
- * Used when combining programs.
- */
-static void
-adjust_param_indexes(struct prog_instruction *inst, GLuint numInst,
-                     GLuint offset)
-{
-   GLuint i, j;
-   for (i = 0; i < numInst; i++) {
-      for (j = 0; j < _mesa_num_inst_src_regs(inst[i].Opcode); j++) {
-         GLuint f = inst[i].SrcReg[j].File;
-         if (f == PROGRAM_CONSTANT ||
-             f == PROGRAM_UNIFORM ||
-             f == PROGRAM_STATE_VAR) {
-            inst[i].SrcReg[j].Index += offset;
-         }
-      }
-   }
-}
-
-
-/**
  * Populate the 'used' array with flags indicating which registers (TEMPs,
  * INPUTs, OUTPUTs, etc, are used by the given program.
  * \param file  type of register to scan for
