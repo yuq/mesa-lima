@@ -1444,8 +1444,8 @@ dri2_init_screen(__DRIscreen * sPriv)
    const __DRIconfig **configs;
    struct dri_screen *screen;
    struct pipe_screen *pscreen = NULL;
-   const struct drm_conf_ret *throttle_ret = NULL;
-   const struct drm_conf_ret *dmabuf_ret = NULL;
+   const struct drm_conf_ret *throttle_ret;
+   const struct drm_conf_ret *dmabuf_ret;
 
    screen = CALLOC_STRUCT(dri_screen);
    if (!screen)
@@ -1457,12 +1457,14 @@ dri2_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (pipe_loader_drm_probe_fd(&screen->dev, dup(screen->fd))) {
+   if (pipe_loader_drm_probe_fd(&screen->dev, dup(screen->fd)))
       pscreen = pipe_loader_create_screen(screen->dev);
 
-      throttle_ret = pipe_loader_configuration(screen->dev, DRM_CONF_THROTTLE);
-      dmabuf_ret = pipe_loader_configuration(screen->dev, DRM_CONF_SHARE_FD);
-   }
+   if (!pscreen)
+       goto fail;
+
+   throttle_ret = pipe_loader_configuration(screen->dev, DRM_CONF_THROTTLE);
+   dmabuf_ret = pipe_loader_configuration(screen->dev, DRM_CONF_SHARE_FD);
 
    if (throttle_ret && throttle_ret->val.val_int != -1) {
       screen->throttling_enabled = TRUE;
@@ -1479,14 +1481,12 @@ dri2_init_screen(__DRIscreen * sPriv)
       }
    }
 
-   if (pscreen && pscreen->get_param(pscreen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY)) {
+   if (pscreen->get_param(pscreen, PIPE_CAP_DEVICE_RESET_STATUS_QUERY)) {
       sPriv->extensions = dri_robust_screen_extensions;
       screen->has_reset_status_query = true;
    }
    else
       sPriv->extensions = dri_screen_extensions;
-
-   /* dri_init_screen_helper checks pscreen for us */
 
    configs = dri_init_screen_helper(screen, pscreen, screen->dev->driver_name);
    if (!configs)
@@ -1532,6 +1532,9 @@ dri_kms_init_screen(__DRIscreen * sPriv)
    if (pipe_loader_sw_probe_kms(&screen->dev, dup(screen->fd)))
       pscreen = pipe_loader_create_screen(screen->dev);
 
+   if (!pscreen)
+       goto fail;
+
    if (drmGetCap(sPriv->fd, DRM_CAP_PRIME, &cap) == 0 &&
           (cap & DRM_PRIME_CAP_IMPORT)) {
       dri2ImageExtension.createImageFromFds = dri2_from_fds;
@@ -1540,7 +1543,6 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    sPriv->extensions = dri_screen_extensions;
 
-   /* dri_init_screen_helper checks pscreen for us */
    configs = dri_init_screen_helper(screen, pscreen, "swrast");
    if (!configs)
       goto fail;

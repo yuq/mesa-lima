@@ -400,7 +400,8 @@ drisw_init_screen(__DRIscreen * sPriv)
    if (pipe_loader_sw_probe_dri(&screen->dev, &drisw_lf))
       pscreen = pipe_loader_create_screen(screen->dev);
 
-   /* dri_init_screen_helper checks pscreen for us */
+   if (!pscreen)
+      goto fail;
 
    configs = dri_init_screen_helper(screen, pscreen, "swrast");
    if (!configs)
