@@ -100,6 +100,10 @@ brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
       nir_assign_var_locations(&nir->inputs, &nir->num_inputs,
                                type_size_scalar);
       break;
+   case MESA_SHADER_COMPUTE:
+      /* Compute shaders have no inputs. */
+      assert(exec_list_is_empty(&nir->inputs));
+      break;
    default:
       unreachable("unsupported shader stage");
    }
