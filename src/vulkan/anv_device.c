@@ -1646,7 +1646,6 @@ void anv_UpdateDescriptorSets(
 
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
-      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for (uint32_t j = 0; j < write->count; j++) {
             ANV_FROM_HANDLE(anv_sampler, sampler,
                             write->pDescriptors[j].sampler);
@@ -1656,11 +1655,22 @@ void anv_UpdateDescriptorSets(
                .sampler = sampler,
             };
          }
+         break;
 
-         if (write->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
-            break;
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+         for (uint32_t j = 0; j < write->count; j++) {
+            ANV_FROM_HANDLE(anv_image_view, iview,
+                            write->pDescriptors[j].imageView);
+            ANV_FROM_HANDLE(anv_sampler, sampler,
+                            write->pDescriptors[j].sampler);
 
-         /* fallthrough */
+            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
+               .type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER,
+               .image_view = iview,
+               .sampler = sampler,
+            };
+         }
+         break;
 
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:

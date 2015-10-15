@@ -608,6 +608,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       switch (desc->type) {
       case ANV_DESCRIPTOR_TYPE_EMPTY:
       case ANV_DESCRIPTOR_TYPE_SAMPLER:
+         /* Nothing for us to do here */
          continue;
       case ANV_DESCRIPTOR_TYPE_BUFFER_VIEW:
          surface_state = &desc->buffer_view->surface_state;
@@ -626,12 +627,10 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          break;
       }
       case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
+      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER:
          surface_state = &desc->image_view->nonrt_surface_state;
          bo = desc->image_view->bo;
          bo_offset = desc->image_view->offset;
-         break;
-      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER:
-         /* Nothing for us to do here */
          break;
       }
 
@@ -676,6 +675,10 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
          continue;
 
       struct anv_sampler *sampler = desc->sampler;
+
+      /* FIXME: We shouldn't have to do this */
+      if (sampler == NULL)
+         continue;
 
       memcpy(state->map + (s * 16),
              sampler->state, sizeof(sampler->state));
