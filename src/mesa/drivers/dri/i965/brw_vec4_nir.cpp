@@ -765,7 +765,7 @@ vec4_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
           */
          brw_mark_surface_used(&prog_data->base,
                                prog_data->base.binding_table.ubo_start +
-                               nir->info.num_ssbos - 1);
+                               nir->info.num_ubos - 1);
       }
 
       unsigned const_offset = instr->const_index[0];
