@@ -906,6 +906,8 @@ _mesa_texstore_memcpy(TEXSTORE_PARAMS)
                         srcAddr, srcPacking);
    return GL_TRUE;
 }
+
+
 /**
  * Store user data into texture memory.
  * Called via glTex[Sub]Image1/2/3D()
