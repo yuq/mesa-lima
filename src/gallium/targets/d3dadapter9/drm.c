@@ -100,42 +100,6 @@ drm_destroy( struct d3dadapter9_context *ctx )
     FREE(ctx);
 }
 
-/* read a DWORD in the form 0xnnnnnnnn, which is how sysfs pci id stuff is
- * formatted. */
-static inline DWORD
-read_file_dword( const char *name )
-{
-    char buf[32];
-    int fd, r;
-
-    fd = open(name, O_RDONLY);
-    if (fd < 0) {
-        DBG("Unable to get PCI information from `%s'\n", name);
-        return 0;
-    }
-
-    r = read(fd, buf, 32);
-    close(fd);
-
-    return (r > 0) ? (DWORD)strtol(buf, NULL, 0) : 0;
-}
-
-/* sysfs doesn't expose the revision as its own file, so this function grabs a
- * dword at an offset in the raw PCI header. The reason this isn't used for all
- * data is that the kernel will make corrections but not expose them in the raw
- * header bytes. */
-static inline DWORD
-read_config_dword( int fd,
-                   unsigned offset )
-{
-    DWORD r = 0;
-
-    if (lseek(fd, offset, SEEK_SET) != offset) { return 0; }
-    if (read(fd, &r, 4) != 4) { return 0; }
-
-    return r;
-}
-
 static inline void
 get_bus_info( int fd,
               DWORD *vendorid,
