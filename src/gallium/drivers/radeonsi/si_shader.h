@@ -211,7 +211,6 @@ struct si_shader_selector {
 	unsigned	max_gsvs_emit_size;
 
 	/* masks of "get_unique_index" bits */
-	uint64_t	inputs_read;
 	uint64_t	outputs_written;
 	uint32_t	patch_outputs_written;
 	uint32_t	ps_colors_written;

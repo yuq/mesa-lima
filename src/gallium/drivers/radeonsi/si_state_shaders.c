@@ -707,19 +707,6 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 
 		sel->gs_input_verts_per_prim =
 			u_vertices_per_prim(sel->info.properties[TGSI_PROPERTY_GS_INPUT_PRIM]);
-
-		for (i = 0; i < sel->info.num_inputs; i++) {
-			unsigned name = sel->info.input_semantic_name[i];
-			unsigned index = sel->info.input_semantic_index[i];
-
-			switch (name) {
-			case TGSI_SEMANTIC_PRIMID:
-				break;
-			default:
-				sel->inputs_read |=
-					1llu << si_shader_io_get_unique_index(name, index);
-			}
-		}
 		break;
 
 	case PIPE_SHADER_VERTEX:

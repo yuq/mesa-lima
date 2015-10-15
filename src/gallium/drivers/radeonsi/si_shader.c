@@ -164,49 +164,6 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 }
 
 /**
- * Given a semantic name and index of a parameter and a mask of used parameters
- * (inputs or outputs), return the index of the parameter in the list of all
- * used parameters.
- *
- * For example, assume this list of parameters:
- *   POSITION, PSIZE, GENERIC0, GENERIC2
- * which has the mask:
- *   11000000000101
- * Then:
- *   querying POSITION returns 0,
- *   querying PSIZE returns 1,
- *   querying GENERIC0 returns 2,
- *   querying GENERIC2 returns 3.
- *
- * Which can be used as an offset to a parameter buffer in units of vec4s.
- */
-static int get_param_index(unsigned semantic_name, unsigned index,
-			   uint64_t mask)
-{
-	unsigned unique_index = si_shader_io_get_unique_index(semantic_name, index);
-	int i, param_index = 0;
-
-	/* If not present... */
-	if (!((1llu << unique_index) & mask))
-		return -1;
-
-	for (i = 0; mask; i++) {
-		uint64_t bit = 1llu << i;
-
-		if (bit & mask) {
-			if (i == unique_index)
-				return param_index;
-
-			mask &= ~bit;
-			param_index++;
-		}
-	}
-
-	assert(!"unreachable");
-	return -1;
-}
-
-/**
  * Get the value of a shader input parameter and extract a bitfield.
  */
 static LLVMValueRef unpack_param(struct si_shader_context *si_shader_ctx,
