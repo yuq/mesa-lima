@@ -1933,6 +1933,40 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 {
    const unsigned *assembly = NULL;
 
+   unsigned nr_attributes = _mesa_bitcount_64(prog_data->inputs_read);
+
+   /* gl_VertexID and gl_InstanceID are system values, but arrive via an
+    * incoming vertex attribute.  So, add an extra slot.
+    */
+   if (shader->info.system_values_read &
+       (BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
+        BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID))) {
+      nr_attributes++;
+   }
+
+   /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
+    * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
+    * vec4 mode, the hardware appears to wedge unless we read something.
+    */
+   if (compiler->scalar_vs)
+      prog_data->base.urb_read_length = DIV_ROUND_UP(nr_attributes, 2);
+   else
+      prog_data->base.urb_read_length = DIV_ROUND_UP(MAX2(nr_attributes, 1), 2);
+
+   prog_data->nr_attributes = nr_attributes;
+
+   /* Since vertex shaders reuse the same VUE entry for inputs and outputs
+    * (overwriting the original contents), we need to make sure the size is
+    * the larger of the two.
+    */
+   const unsigned vue_entries =
+      MAX2(nr_attributes, (unsigned)prog_data->base.vue_map.num_slots);
+
+   if (compiler->devinfo->gen == 6)
+      prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 8);
+   else
+      prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 4);
+
    if (compiler->scalar_vs) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
