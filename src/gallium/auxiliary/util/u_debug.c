@@ -276,7 +276,7 @@ debug_get_flags_option(const char *name,
       for (; flags->name; ++flags)
          namealign = MAX2(namealign, strlen(flags->name));
       for (flags = orig; flags->name; ++flags)
-         _debug_printf("| %*s [0x%0*"PRIu64"]%s%s\n", namealign, flags->name,
+         _debug_printf("| %*s [0x%0*"PRIx64"]%s%s\n", namealign, flags->name,
                       (int)sizeof(uint64_t)*CHAR_BIT/4, flags->value,
                       flags->desc ? " " : "", flags->desc ? flags->desc : "");
    }
@@ -291,9 +291,9 @@ debug_get_flags_option(const char *name,
 
    if (debug_get_option_should_print()) {
       if (str) {
-         debug_printf("%s: %s = 0x%"PRIu64" (%s)\n", __FUNCTION__, name, result, str);
+         debug_printf("%s: %s = 0x%"PRIx64" (%s)\n", __FUNCTION__, name, result, str);
       } else {
-         debug_printf("%s: %s = 0x%"PRIu64"\n", __FUNCTION__, name, result);
+         debug_printf("%s: %s = 0x%"PRIx64"\n", __FUNCTION__, name, result);
       }
    }
 
