@@ -195,6 +195,8 @@ static void si_shader_es(struct si_shader *shader)
 	}
 	assert(num_sgprs <= 104);
 
+	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_00B320_SPI_SHADER_PGM_LO_ES, va >> 8);
 	si_pm4_set_reg(pm4, R_00B324_SPI_SHADER_PGM_HI_ES, va >> 40);
 	si_pm4_set_reg(pm4, R_00B328_SPI_SHADER_PGM_RSRC1_ES,
@@ -251,8 +253,6 @@ static void si_shader_gs(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, gsvs_itemsize * ((max_stream >= 2) ? 2 : 1));
 	si_pm4_set_reg(pm4, R_028A68_VGT_GSVS_RING_OFFSET_3, gsvs_itemsize * ((max_stream >= 3) ? 3 : 1));
 
-	si_pm4_set_reg(pm4, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
-		       shader->selector->esgs_itemsize / 4);
 	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, gsvs_itemsize * (max_stream + 1));
 
 	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, gs_max_vert_out);
@@ -515,10 +515,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (sctx->tes_shader.cso)
 			key->vs.as_ls = 1;
-		else if (sctx->gs_shader.cso) {
+		else if (sctx->gs_shader.cso)
 			key->vs.as_es = 1;
-			key->vs.es_enabled_outputs = sctx->gs_shader.cso->inputs_read;
-		}
 
 		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
 		    sctx->ps_shader.cso->info.uses_primid)
@@ -529,10 +527,9 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 		break;
 	case PIPE_SHADER_TESS_EVAL:
-		if (sctx->gs_shader.cso) {
+		if (sctx->gs_shader.cso)
 			key->tes.as_es = 1;
-			key->tes.es_enabled_outputs = sctx->gs_shader.cso->inputs_read;
-		} else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
+		else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
 			key->tes.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:

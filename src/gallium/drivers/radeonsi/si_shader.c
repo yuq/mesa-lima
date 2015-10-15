@@ -775,6 +775,7 @@ static LLVMValueRef fetch_input_gs(
 	struct tgsi_shader_info *info = &shader->selector->info;
 	unsigned semantic_name = info->input_semantic_name[reg->Register.Index];
 	unsigned semantic_index = info->input_semantic_index[reg->Register.Index];
+	unsigned param;
 
 	if (swizzle != ~0 && semantic_name == TGSI_SEMANTIC_PRIMID)
 		return get_primitive_id(bld_base, swizzle);
@@ -805,12 +806,10 @@ static LLVMValueRef fetch_input_gs(
 						   vtx_offset_param),
 				      4);
 
+	param = si_shader_io_get_unique_index(semantic_name, semantic_index);
 	args[0] = si_shader_ctx->esgs_ring;
 	args[1] = vtx_offset;
-	args[2] = lp_build_const_int32(gallivm,
-				       (get_param_index(semantic_name, semantic_index,
-							shader->selector->inputs_read) * 4 +
-					swizzle) * 256);
+	args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle) * 256);
 	args[3] = uint->zero;
 	args[4] = uint->one;  /* OFFEN */
 	args[5] = uint->zero; /* IDXEN */
@@ -2016,9 +2015,6 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 	LLVMTypeRef i32 = LLVMInt32TypeInContext(gallivm->context);
 	LLVMValueRef soffset = LLVMGetParam(si_shader_ctx->radeon_bld.main_fn,
 					    si_shader_ctx->param_es2gs_offset);
-	uint64_t enabled_outputs = si_shader_ctx->type == TGSI_PROCESSOR_TESS_EVAL ?
-					   es->key.tes.es_enabled_outputs :
-					   es->key.vs.es_enabled_outputs;
 	unsigned chan;
 	int i;
 
@@ -2031,11 +2027,8 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context * bld_base)
 		    info->output_semantic_name[i] == TGSI_SEMANTIC_LAYER)
 			continue;
 
-		param_index = get_param_index(info->output_semantic_name[i],
-					      info->output_semantic_index[i],
-					      enabled_outputs);
-		if (param_index < 0)
-			continue;
+		param_index = si_shader_io_get_unique_index(info->output_semantic_name[i],
+							    info->output_semantic_index[i]);
 
 		for (chan = 0; chan < 4; chan++) {
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
@@ -4023,10 +4016,6 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 			fprintf(f, !i ? "%u" : ", %u",
 				key->vs.instance_divisors[i]);
 		fprintf(f, "}\n");
-
-		if (key->vs.as_es)
-			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
-				key->vs.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->vs.as_es);
 		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
 		fprintf(f, "  export_prim_id = %u\n", key->vs.export_prim_id);
@@ -4037,9 +4026,6 @@ void si_dump_shader_key(unsigned shader, union si_shader_key *key, FILE *f)
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		if (key->tes.as_es)
-			fprintf(f, "  es_enabled_outputs = 0x%"PRIx64"\n",
-				key->tes.es_enabled_outputs);
 		fprintf(f, "  as_es = %u\n", key->tes.as_es);
 		fprintf(f, "  export_prim_id = %u\n", key->tes.export_prim_id);
 		break;
