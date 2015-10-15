@@ -614,10 +614,24 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          bo = desc->buffer_view->bo;
          bo_offset = desc->buffer_view->offset;
          break;
+      case ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET: {
+         struct anv_state state =
+            anv_cmd_buffer_alloc_surface_state(cmd_buffer);
+         anv_fill_buffer_surface_state(cmd_buffer->device, state.map,
+                                       anv_format_for_vk_format(VK_FORMAT_R32G32B32A32_SFLOAT),
+                                       desc->offset, desc->range);
+         surface_state = &state;
+         bo = desc->buffer_view->bo;
+         bo_offset = desc->buffer_view->offset;
+         break;
+      }
       case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW:
          surface_state = &desc->image_view->nonrt_surface_state;
          bo = desc->image_view->bo;
          bo_offset = desc->image_view->offset;
+         break;
+      case ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER:
+         /* Nothing for us to do here */
          break;
       }
 
@@ -657,7 +671,8 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
          cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
-      if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER)
+      if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER &&
+          desc->type != ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER)
          continue;
 
       struct anv_sampler *sampler = desc->sampler;

@@ -696,18 +696,30 @@ struct anv_descriptor_set_layout {
 enum anv_descriptor_type {
    ANV_DESCRIPTOR_TYPE_EMPTY = 0,
    ANV_DESCRIPTOR_TYPE_BUFFER_VIEW,
+   ANV_DESCRIPTOR_TYPE_BUFFER_AND_OFFSET,
    ANV_DESCRIPTOR_TYPE_IMAGE_VIEW,
    ANV_DESCRIPTOR_TYPE_SAMPLER,
+   ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER,
 };
 
 struct anv_descriptor {
-   union {
-      struct anv_buffer_view *buffer_view;
-      struct anv_image_view *image_view;
-      struct anv_sampler *sampler;
-   };
-
    enum anv_descriptor_type type;
+
+   union {
+      struct {
+         union {
+            struct anv_buffer_view *buffer_view;
+            struct anv_image_view *image_view;
+         };
+         struct anv_sampler *sampler;
+      };
+
+      struct {
+         struct anv_buffer *buffer;
+         uint64_t offset;
+         uint64_t range;
+      };
+   };
 };
 
 struct anv_descriptor_set {
