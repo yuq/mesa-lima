@@ -666,6 +666,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	enum pipe_format pipe_format = state->format;
 	struct radeon_surf_level *surflevel;
 	unsigned base_level, first_level, last_level;
+	unsigned dim, last_layer;
 	uint64_t va;
 
 	if (view == NULL)
@@ -679,7 +680,7 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	view->base.reference.count = 1;
 	view->base.context = ctx;
 
-	if (texture->target == PIPE_BUFFER)
+	if (state->target == PIPE_BUFFER)
 		return texture_buffer_sampler_view(rctx, view, width0, height0);
 
 	swizzle[0] = state->swizzle_r;
@@ -773,12 +774,12 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 	}
 	nbanks = eg_num_banks(rscreen->b.tiling_info.num_banks);
 
-	if (texture->target == PIPE_TEXTURE_1D_ARRAY) {
+	if (state->target == PIPE_TEXTURE_1D_ARRAY) {
 	        height = 1;
 		depth = texture->array_size;
-	} else if (texture->target == PIPE_TEXTURE_2D_ARRAY) {
+	} else if (state->target == PIPE_TEXTURE_2D_ARRAY) {
 		depth = texture->array_size;
-	} else if (texture->target == PIPE_TEXTURE_CUBE_ARRAY)
+	} else if (state->target == PIPE_TEXTURE_CUBE_ARRAY)
 		depth = texture->array_size / 6;
 
 	va = tmp->resource.gpu_address;
@@ -790,7 +791,13 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		view->is_stencil_sampler = true;
 
 	view->tex_resource = &tmp->resource;
-	view->tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(texture->target, texture->nr_samples)) |
+
+	/* array type views and views into array types need to use layer offset */
+	dim = state->target;
+	if (state->target != PIPE_TEXTURE_CUBE)
+		dim = MAX2(state->target, texture->target);
+
+	view->tex_resource_words[0] = (S_030000_DIM(r600_tex_dim(dim, texture->nr_samples)) |
 				       S_030000_PITCH((pitch / 8) - 1) |
 				       S_030000_TEX_WIDTH(width - 1));
 	if (rscreen->b.chip_class == CAYMAN)
@@ -818,10 +825,14 @@ evergreen_create_sampler_view_custom(struct pipe_context *ctx,
 		view->tex_resource_words[3] = (surflevel[base_level].offset + va) >> 8;
 	}
 
+	last_layer = state->u.tex.last_layer;
+	if (state->target != texture->target && depth == 1) {
+		last_layer = state->u.tex.first_layer;
+	}
 	view->tex_resource_words[4] = (word4 |
 				       S_030010_ENDIAN_SWAP(endian));
 	view->tex_resource_words[5] = S_030014_BASE_ARRAY(state->u.tex.first_layer) |
-				      S_030014_LAST_ARRAY(state->u.tex.last_layer);
+				      S_030014_LAST_ARRAY(last_layer);
 	view->tex_resource_words[6] = S_030018_TILE_SPLIT(tile_split);
 
 	if (texture->nr_samples > 1) {

@@ -323,6 +323,7 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TEXTURE_GATHER_SM5:
 	case PIPE_CAP_TEXTURE_QUERY_LOD:
 	case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
+	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 		return family >= CHIP_CEDAR ? 1 : 0;
 	case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
 		return family >= CHIP_CEDAR ? 4 : 0;
@@ -338,7 +339,6 @@ static int r600_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_COLOR_CLAMPED:
 	case PIPE_CAP_USER_VERTEX_BUFFERS:
 	case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
-	case PIPE_CAP_SAMPLER_VIEW_TARGET:
 	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
 	case PIPE_CAP_DEPTH_BOUNDS_TEST:
