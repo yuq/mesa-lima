@@ -161,6 +161,7 @@ program_resource_visitor::process(ir_variable *var)
                 false, record_array_count);
       ralloc_free(name);
    } else {
+      this->set_record_array_count(record_array_count);
       this->visit_field(t, var->name, row_major, NULL, packing, false);
    }
 }
