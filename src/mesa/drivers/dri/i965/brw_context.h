@@ -358,12 +358,6 @@ struct brw_stage_prog_data {
       /** @} */
    } binding_table;
 
-   uint32_t *map_entries;
-   struct {
-      uint32_t index_count;
-      uint32_t *index;
-   } bind_map[8]; /* MAX_SETS from vulkan/private.h */
-
    GLuint nr_params;       /**< number of float params/constants */
    GLuint nr_pull_params;
    unsigned nr_image_params;

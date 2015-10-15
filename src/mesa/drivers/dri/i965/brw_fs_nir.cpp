@@ -1419,22 +1419,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       has_indirect = true;
       /* fallthrough */
    case nir_intrinsic_load_ubo: {
-      uint32_t set = instr->const_index[0];
       nir_const_value *const_index = nir_src_as_const_value(instr->src[0]);
       fs_reg surf_index;
 
       if (const_index) {
-         uint32_t binding = const_index->u[0];
-
-         /* FIXME: We should probably assert here, but dota2 seems to hit
-          * it and we'd like to keep going.
-          */
-         if (binding >= stage_prog_data->bind_map[set].index_count)
-            binding = 0;
-
-         surf_index = fs_reg(stage_prog_data->bind_map[set].index[binding]);
+         surf_index = fs_reg(stage_prog_data->binding_table.ubo_start +
+                             const_index->u[0]);
       } else {
-         assert(0 && "need more info from the ir for this.");
          /* The block index is not a constant. Evaluate the index expression
           * per-channel and add the base UBO index; we have to select a value
           * from any live channel.
@@ -1459,7 +1450,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                      BRW_REGISTER_TYPE_D),
                  fs_reg(2));
 
-         unsigned vec4_offset = instr->const_index[1] / 4;
+         unsigned vec4_offset = instr->const_index[0] / 4;
          for (int i = 0; i < instr->num_components; i++)
             VARYING_PULL_CONSTANT_LOAD(bld, offset(dest, bld, i), surf_index,
                                        base_offset, vec4_offset + i);
@@ -1467,7 +1458,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
          fs_reg packed_consts = vgrf(glsl_type::float_type);
          packed_consts.type = dest.type;
 
-         fs_reg const_offset_reg((unsigned) instr->const_index[1] & ~15);
+         fs_reg const_offset_reg((unsigned) instr->const_index[0] & ~15);
          bld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD, packed_consts,
                   surf_index, const_offset_reg);
 
@@ -1921,13 +1912,7 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
 void
 fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
 {
-   uint32_t set = instr->sampler_set;
-   uint32_t binding = instr->sampler_index;
-
-   assert(binding < stage_prog_data->bind_map[set].index_count);
-   assert(stage_prog_data->bind_map[set].index[binding] < 1000);
-
-   unsigned sampler = stage_prog_data->bind_map[set].index[binding];
+   unsigned sampler = instr->sampler_index;
    fs_reg sampler_reg(sampler);
 
    int gather_component = instr->component;

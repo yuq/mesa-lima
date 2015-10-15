@@ -72,41 +72,16 @@ static VkResult
 set_binding_table_layout(struct brw_stage_prog_data *prog_data,
                          struct anv_pipeline *pipeline, uint32_t stage)
 {
-   uint32_t bias, count, k, *map;
-   struct anv_pipeline_layout *layout = pipeline->layout;
-
-   /* No layout is valid for shaders that don't bind any resources. */
-   if (pipeline->layout == NULL)
-      return VK_SUCCESS;
-
+   unsigned bias;
    if (stage == VK_SHADER_STAGE_FRAGMENT)
       bias = MAX_RTS;
    else
       bias = 0;
 
-   count = layout->stage[stage].surface_count;
-   prog_data->map_entries =
-      (uint32_t *) malloc(count * sizeof(prog_data->map_entries[0]));
-   if (prog_data->map_entries == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   k = bias;
-   map = prog_data->map_entries;
-   for (uint32_t set = 0; set < layout->num_sets; set++) {
-      prog_data->bind_map[set].index = map;
-      unsigned index_count = 0;
-      for (uint32_t b = 0; b < layout->set[set].layout->binding_count; b++) {
-         if (layout->set[set].layout->binding[b].stage[stage].surface_index < 0)
-            continue;
-
-         unsigned array_size = layout->set[set].layout->binding[b].array_size;
-         for (uint32_t i = 0; i < array_size; i++)
-            *map++ = k++;
-         index_count += array_size;
-      }
-
-      prog_data->bind_map[set].index_count = index_count;
-   }
+   prog_data->binding_table.size_bytes = 0;
+   prog_data->binding_table.texture_start = bias;
+   prog_data->binding_table.ubo_start = bias;
+   prog_data->binding_table.image_start = bias;
 
    return VK_SUCCESS;
 }
@@ -1400,7 +1375,6 @@ anv_compiler_free(struct anv_pipeline *pipeline)
 {
    for (uint32_t stage = 0; stage < VK_SHADER_STAGE_NUM; stage++) {
       if (pipeline->prog_data[stage]) {
-         free(pipeline->prog_data[stage]->map_entries);
          /* We only ever set up the params array because we don't do
           * non-UBO pull constants
           */
