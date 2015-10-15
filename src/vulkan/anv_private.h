@@ -790,11 +790,6 @@ struct anv_vertex_binding {
    VkDeviceSize                                 offset;
 };
 
-struct anv_descriptor_set_binding {
-   struct anv_descriptor_set *                  set;
-   uint32_t                                     dynamic_offsets[128];
-};
-
 struct anv_push_constants {
    /* Current allocated size of this push constants data structure.
     * Because a decent chunk of it may not be used (images on SKL, for
@@ -883,7 +878,7 @@ struct anv_cmd_state {
    struct anv_subpass *                         subpass;
    uint32_t                                     state_vf[GEN8_3DSTATE_VF_length];
    struct anv_vertex_binding                    vertex_bindings[MAX_VBS];
-   struct anv_descriptor_set_binding            descriptors[MAX_SETS];
+   struct anv_descriptor_set *                  descriptors[MAX_SETS];
    struct anv_push_constants *                  push_constants[VK_SHADER_STAGE_NUM];
    struct anv_dynamic_state                     dynamic;
 

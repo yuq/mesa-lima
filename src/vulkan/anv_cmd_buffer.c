@@ -478,8 +478,8 @@ void anv_CmdBindDescriptorSets(
       ANV_FROM_HANDLE(anv_descriptor_set, set, pDescriptorSets[i]);
       set_layout = layout->set[firstSet + i].layout;
 
-      if (cmd_buffer->state.descriptors[firstSet + i].set != set) {
-         cmd_buffer->state.descriptors[firstSet + i].set = set;
+      if (cmd_buffer->state.descriptors[firstSet + i] != set) {
+         cmd_buffer->state.descriptors[firstSet + i] = set;
          cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
       }
 
@@ -598,7 +598,7 @@ anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       struct anv_pipeline_binding *binding =
          &layout->stage[stage].surface_to_descriptor[s];
       struct anv_descriptor_set *set =
-         cmd_buffer->state.descriptors[binding->set].set;
+         cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
       const struct anv_state *surface_state;
@@ -654,7 +654,7 @@ anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
       struct anv_pipeline_binding *binding =
          &layout->stage[stage].sampler_to_descriptor[s];
       struct anv_descriptor_set *set =
-         cmd_buffer->state.descriptors[binding->set].set;
+         cmd_buffer->state.descriptors[binding->set];
       struct anv_descriptor *desc = &set->descriptors[binding->offset];
 
       if (desc->type != ANV_DESCRIPTOR_TYPE_SAMPLER)

@@ -303,7 +303,7 @@ anv_cmd_buffer_save(struct anv_cmd_buffer *cmd_buffer,
                     uint32_t dynamic_state)
 {
    state->old_pipeline = cmd_buffer->state.pipeline;
-   state->old_descriptor_set0 = cmd_buffer->state.descriptors[0].set;
+   state->old_descriptor_set0 = cmd_buffer->state.descriptors[0];
    memcpy(state->old_vertex_bindings, cmd_buffer->state.vertex_bindings,
           sizeof(state->old_vertex_bindings));
    state->dynamic_flags = dynamic_state;
@@ -316,7 +316,7 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
                        const struct anv_saved_state *state)
 {
    cmd_buffer->state.pipeline = state->old_pipeline;
-   cmd_buffer->state.descriptors[0].set = state->old_descriptor_set0;
+   cmd_buffer->state.descriptors[0] = state->old_descriptor_set0;
    memcpy(cmd_buffer->state.vertex_bindings, state->old_vertex_bindings,
           sizeof(state->old_vertex_bindings));
 
