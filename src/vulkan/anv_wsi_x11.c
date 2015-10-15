@@ -28,9 +28,7 @@
 #include "anv_wsi.h"
 
 static const VkSurfaceFormatKHR formats[] = {
-   { .format = VK_FORMAT_B5G6R5_UNORM, },
    { .format = VK_FORMAT_B8G8R8A8_UNORM, },
-   { .format = VK_FORMAT_B8G8R8A8_SRGB, },
 };
 
 static const VkPresentModeKHR present_modes[] = {
