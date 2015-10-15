@@ -975,6 +975,7 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
    int num_sampler_view = 1;
    struct gl_pixelstore_attrib clippedUnpack;
    struct st_fp_variant *fpv = NULL;
+   struct pipe_resource *pt;
 
    /* Mesa state should be up to date by now */
    assert(ctx->NewState == 0x0);
@@ -1030,42 +1031,53 @@ st_DrawPixels(struct gl_context *ctx, GLint x, GLint y,
       st_upload_constants(st, fpv->parameters, PIPE_SHADER_FRAGMENT);
    }
 
-   /* draw with textured quad */
-   {
-      struct pipe_resource *pt
-         = make_texture(st, width, height, format, type, unpack, pixels);
-      if (pt) {
-         sv[0] = st_create_texture_sampler_view(st->pipe, pt);
-
-         if (sv[0]) {
-            /* Create a second sampler view to read stencil.
-             * The stencil is written using the shader stencil export
-             * functionality. */
-            if (write_stencil) {
-               enum pipe_format stencil_format =
-                     util_format_stencil_only(pt->format);
-               /* we should not be doing pixel map/transfer (see above) */
-               assert(num_sampler_view == 1);
-               sv[1] = st_create_texture_sampler_view_format(st->pipe, pt,
-                                                             stencil_format);
-               num_sampler_view++;
-            }
-
-            draw_textured_quad(ctx, x, y, ctx->Current.RasterPos[2],
-                               width, height,
-                               ctx->Pixel.ZoomX, ctx->Pixel.ZoomY,
-                               sv,
-                               num_sampler_view,
-                               driver_vp,
-                               driver_fp, fpv,
-                               color, GL_FALSE, write_depth, write_stencil);
-            pipe_sampler_view_reference(&sv[0], NULL);
-            if (num_sampler_view > 1)
-               pipe_sampler_view_reference(&sv[1], NULL);
-         }
-         pipe_resource_reference(&pt, NULL);
-      }
+   /* Put glDrawPixels image into a texture */
+   pt = make_texture(st, width, height, format, type, unpack, pixels);
+   if (!pt) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glDrawPixels");
+      return;
    }
+
+   /* create sampler view for the image */
+   sv[0] = st_create_texture_sampler_view(st->pipe, pt);
+   if (!sv[0]) {
+      _mesa_error(ctx, GL_OUT_OF_MEMORY, "glDrawPixels");
+      pipe_resource_reference(&pt, NULL);
+      return;
+   }
+
+   /* Create a second sampler view to read stencil.  The stencil is
+    * written using the shader stencil export functionality.
+    */
+   if (write_stencil) {
+      enum pipe_format stencil_format =
+         util_format_stencil_only(pt->format);
+      /* we should not be doing pixel map/transfer (see above) */
+      assert(num_sampler_view == 1);
+      sv[1] = st_create_texture_sampler_view_format(st->pipe, pt,
+                                                    stencil_format);
+      if (!sv[1]) {
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "glDrawPixels");
+         pipe_resource_reference(&pt, NULL);
+         pipe_sampler_view_reference(&sv[0], NULL);
+         return;
+      }
+      num_sampler_view++;
+   }
+
+   draw_textured_quad(ctx, x, y, ctx->Current.RasterPos[2],
+                      width, height,
+                      ctx->Pixel.ZoomX, ctx->Pixel.ZoomY,
+                      sv,
+                      num_sampler_view,
+                      driver_vp,
+                      driver_fp, fpv,
+                      color, GL_FALSE, write_depth, write_stencil);
+   pipe_sampler_view_reference(&sv[0], NULL);
+   if (num_sampler_view > 1)
+      pipe_sampler_view_reference(&sv[1], NULL);
+
+   pipe_resource_reference(&pt, NULL);
 }
 
 
