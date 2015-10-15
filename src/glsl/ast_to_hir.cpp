@@ -782,8 +782,30 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
     * Note: Whole-array assignments are not permitted in GLSL 1.10, but this
     * is handled by ir_dereference::is_lvalue.
     */
-   if (lhs->type->is_unsized_array() && rhs->type->is_array()
-       && (lhs->type->fields.array == rhs->type->fields.array)) {
+   const glsl_type *lhs_t = lhs->type;
+   const glsl_type *rhs_t = rhs->type;
+   bool unsized_array = false;
+   while(lhs_t->is_array()) {
+      if (rhs_t == lhs_t)
+         break; /* the rest of the inner arrays match so break out early */
+      if (!rhs_t->is_array()) {
+         unsized_array = false;
+         break; /* number of dimensions mismatch */
+      }
+      if (lhs_t->length == rhs_t->length) {
+         lhs_t = lhs_t->fields.array;
+         rhs_t = rhs_t->fields.array;
+         continue;
+      } else if (lhs_t->is_unsized_array()) {
+         unsized_array = true;
+      } else {
+         unsized_array = false;
+         break; /* sized array mismatch */
+      }
+      lhs_t = lhs_t->fields.array;
+      rhs_t = rhs_t->fields.array;
+   }
+   if (unsized_array) {
       if (is_initializer) {
          return rhs;
       } else {
@@ -1810,6 +1832,10 @@ ast_expression::do_hir(exec_list *instructions,
       break;
    }
 
+   case ast_unsized_array_dim:
+      assert(!"ast_unsized_array_dim: Should never get here.");
+      break;
+
    case ast_function_call:
       /* Should *NEVER* get here.  ast_function_call should always be handled
        * by ast_function_expression::hir.
@@ -2047,6 +2073,14 @@ process_array_size(exec_node *node,
    exec_list dummy_instructions;
 
    ast_node *array_size = exec_node_data(ast_node, node, link);
+
+   /**
+    * Dimensions other than the outermost dimension can by unsized if they
+    * are immediately sized by a constructor or initializer.
+    */
+   if (((ast_expression*)array_size)->oper == ast_unsized_array_dim)
+      return 0;
+
    ir_rvalue *const ir = array_size->hir(& dummy_instructions, state);
    YYLTYPE loc = array_size->get_location();
 
@@ -2115,14 +2149,6 @@ process_array_type(YYLTYPE *loc, const glsl_type *base,
                              base->name);
             return glsl_type::error_type;
          }
-
-         if (base->length == 0) {
-            _mesa_glsl_error(loc, state,
-                             "only the outermost array dimension can "
-                             "be unsized",
-                             base->name);
-            return glsl_type::error_type;
-         }
       }
 
       for (exec_node *node = array_specifier->array_dimensions.tail_pred;
@@ -2130,9 +2156,6 @@ process_array_type(YYLTYPE *loc, const glsl_type *base,
          unsigned array_size = process_array_size(node, state);
          array_type = glsl_type::get_array_instance(array_type, array_size);
       }
-
-      if (array_specifier->is_unsized_array)
-         array_type = glsl_type::get_array_instance(array_type, 0);
    }
 
    return array_type;
@@ -6453,6 +6476,9 @@ ast_interface_block::hir(exec_list *instructions,
       ir_variable *var;
 
       if (this->array_specifier != NULL) {
+         const glsl_type *block_array_type =
+            process_array_type(&loc, block_type, this->array_specifier, state);
+
          /* Section 4.3.7 (Interface Blocks) of the GLSL 1.50 spec says:
           *
           *     For uniform blocks declared an array, each individual array
@@ -6476,7 +6502,7 @@ ast_interface_block::hir(exec_list *instructions,
           * tessellation control shader output, and tessellation evaluation
           * shader input.
           */
-         if (this->array_specifier->is_unsized_array) {
+         if (block_array_type->is_unsized_array()) {
             bool allow_inputs = state->stage == MESA_SHADER_GEOMETRY ||
                                 state->stage == MESA_SHADER_TESS_CTRL ||
                                 state->stage == MESA_SHADER_TESS_EVAL;
@@ -6502,9 +6528,6 @@ ast_interface_block::hir(exec_list *instructions,
                                 _mesa_shader_stage_to_string(state->stage));
             }
          }
-
-         const glsl_type *block_array_type =
-            process_array_type(&loc, block_type, this->array_specifier, state);
 
          /* From section 4.3.9 (Interface Blocks) of the GLSL ES 3.10 spec:
           *

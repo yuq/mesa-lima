@@ -991,6 +991,7 @@ process_array_constructor(exec_list *instructions,
    }
 
    bool all_parameters_are_constant = true;
+   const glsl_type *element_type = constructor_type->fields.array;
 
    /* Type cast each parameter and, if possible, fold constants. */
    foreach_in_list_safe(ir_rvalue, ir, &actual_parameters) {
@@ -1017,12 +1018,34 @@ process_array_constructor(exec_list *instructions,
 	 }
       }
 
-      if (result->type != constructor_type->fields.array) {
+      if (constructor_type->fields.array->is_unsized_array()) {
+         /* As the inner parameters of the constructor are created without
+          * knowledge of each other we need to check to make sure unsized
+          * parameters of unsized constructors all end up with the same size.
+          *
+          * e.g we make sure to fail for a constructor like this:
+          * vec4[][] a = vec4[][](vec4[](vec4(0.0), vec4(1.0)),
+          *                       vec4[](vec4(0.0), vec4(1.0), vec4(1.0)),
+          *                       vec4[](vec4(0.0), vec4(1.0)));
+          */
+         if (element_type->is_unsized_array()) {
+             /* This is the first parameter so just get the type */
+            element_type = result->type;
+         } else if (element_type != result->type) {
+            _mesa_glsl_error(loc, state, "type error in array constructor: "
+                             "expected: %s, found %s",
+                             element_type->name,
+                             result->type->name);
+            return ir_rvalue::error_value(ctx);
+         }
+      } else if (result->type != constructor_type->fields.array) {
 	 _mesa_glsl_error(loc, state, "type error in array constructor: "
 			  "expected: %s, found %s",
 			  constructor_type->fields.array->name,
 			  result->type->name);
          return ir_rvalue::error_value(ctx);
+      } else {
+         element_type = result->type;
       }
 
       /* Attempt to convert the parameter to a constant valued expression.
@@ -1037,6 +1060,14 @@ process_array_constructor(exec_list *instructions,
          all_parameters_are_constant = false;
 
       ir->replace_with(result);
+   }
+
+   if (constructor_type->fields.array->is_unsized_array()) {
+      constructor_type =
+	 glsl_type::get_array_instance(element_type,
+				       parameter_count);
+      assert(constructor_type != NULL);
+      assert(constructor_type->length == parameter_count);
    }
 
    if (all_parameters_are_constant)

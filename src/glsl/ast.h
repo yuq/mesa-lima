@@ -183,6 +183,7 @@ enum ast_operators {
    ast_post_dec,
    ast_field_selection,
    ast_array_index,
+   ast_unsized_array_dim,
 
    ast_function_call,
 
@@ -324,16 +325,7 @@ public:
 
 class ast_array_specifier : public ast_node {
 public:
-   /** Unsized array specifier ([]) */
-   explicit ast_array_specifier(const struct YYLTYPE &locp)
-     : is_unsized_array(true)
-   {
-      set_location(locp);
-   }
-
-   /** Sized array specifier ([dim]) */
    ast_array_specifier(const struct YYLTYPE &locp, ast_expression *dim)
-     : is_unsized_array(false)
    {
       set_location(locp);
       array_dimensions.push_tail(&dim->link);
@@ -346,11 +338,8 @@ public:
 
    virtual void print(void) const;
 
-   /* If true, this means that the array has an unsized outermost dimension. */
-   bool is_unsized_array;
-
    /* This list contains objects of type ast_node containing the
-    * sized dimensions only, in outermost-to-innermost order.
+    * array dimensions in outermost-to-innermost order.
     */
    exec_list array_dimensions;
 };
