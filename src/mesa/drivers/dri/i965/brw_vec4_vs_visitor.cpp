@@ -217,7 +217,7 @@ vec4_vs_visitor::emit_urb_slot(dst_reg reg, int varying)
        * shader.
        */
       vec4_instruction *inst = emit_generic_urb_slot(reg, varying);
-      if (key->clamp_vertex_color)
+      if (inst && key->clamp_vertex_color)
          inst->saturate = true;
       break;
    }
