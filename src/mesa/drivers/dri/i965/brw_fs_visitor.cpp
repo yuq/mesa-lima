@@ -904,12 +904,9 @@ fs_visitor::emit_urb_writes()
    urb_offset = 0;
    flush = false;
    for (slot = 0; slot < vue_map->num_slots; slot++) {
-      fs_reg reg, src, zero;
-
       int varying = vue_map->slot_to_varying[slot];
       switch (varying) {
-      case VARYING_SLOT_PSIZ:
-
+      case VARYING_SLOT_PSIZ: {
          /* The point size varying slot is the vue header and is always in the
           * vue map.  But often none of the special varyings that live there
           * are written and in that case we can skip writing to the vue
@@ -921,7 +918,7 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         zero = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+         fs_reg zero(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
          bld.MOV(zero, fs_reg(0u));
 
          sources[length++] = zero;
@@ -940,7 +937,7 @@ fs_visitor::emit_urb_writes()
          else
             sources[length++] = zero;
          break;
-
+      }
       case BRW_VARYING_SLOT_NDC:
       case VARYING_SLOT_EDGE:
          unreachable("unexpected scalar vs output");
@@ -973,8 +970,8 @@ fs_visitor::emit_urb_writes()
              * temp register and use that for the payload.
              */
             for (int i = 0; i < 4; i++) {
-               reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
-               src = offset(this->outputs[varying], bld, i);
+               fs_reg reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
+               fs_reg src = offset(this->outputs[varying], bld, i);
                set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
             }
