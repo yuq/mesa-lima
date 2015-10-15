@@ -992,6 +992,8 @@ struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t entries, uint32_t *state_offset);
 struct anv_state
+anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer);
+struct anv_state
 anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);
 

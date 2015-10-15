@@ -104,8 +104,7 @@ gen8_alloc_surface_state(struct anv_device *device,
                          struct anv_cmd_buffer *cmd_buffer)
 {
       if (cmd_buffer) {
-         return anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
-                                      64, 64);
+         return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
       } else {
          return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
       }
