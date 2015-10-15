@@ -55,7 +55,7 @@ x11_get_surface_properties(struct anv_wsi_implementation *impl,
 {
    VkPlatformHandleXcbKHR *vk_xcb_handle = vk_window->pPlatformHandle;
    xcb_connection_t *conn = vk_xcb_handle->connection;
-   xcb_window_t win = (xcb_window_t)(uintptr_t)vk_window->pPlatformWindow;
+   xcb_window_t win = *(xcb_window_t *)vk_window->pPlatformWindow;
 
    xcb_get_geometry_cookie_t cookie = xcb_get_geometry(conn, win);
    xcb_generic_error_t *err;
@@ -287,7 +287,7 @@ x11_create_swapchain(struct anv_wsi_implementation *impl,
    VkPlatformHandleXcbKHR *vk_xcb_handle = vk_window->pPlatformHandle;
 
    chain->conn = (xcb_connection_t *) vk_xcb_handle->connection;
-   chain->window = (xcb_window_t) (uintptr_t)vk_window->pPlatformWindow;
+   chain->window = *(xcb_window_t *)vk_window->pPlatformWindow;
    chain->extent = pCreateInfo->imageExtent;
    chain->image_count = num_images;
    chain->next_image = 0;
