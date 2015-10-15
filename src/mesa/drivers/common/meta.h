@@ -72,6 +72,7 @@ struct save_state
 
    /* Always saved/restored with meta. */
    gl_api API;
+   uint8_t ExtensionsVersion;
 
    /** MESA_META_CLEAR (and others?) */
    struct gl_query_object *CurrentOcclusionObject;

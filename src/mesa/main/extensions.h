@@ -91,7 +91,7 @@ enum {
 static inline bool \
 _mesa_has_##name_str(const struct gl_context *ctx) \
 { \
-   return ctx->Extensions.driver_cap && (ctx->Version >= \
+   return ctx->Extensions.driver_cap && (ctx->Extensions.Version >= \
           _mesa_extension_table[MESA_EXTENSION_##name_str].version[ctx->API]); \
 }
 #include "extensions_table.h"
