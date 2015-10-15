@@ -2694,6 +2694,25 @@ is_conflicting_fragcoord_redeclaration(struct _mesa_glsl_parse_state *state,
    return false;
 }
 
+static inline void
+validate_array_dimensions(const glsl_type *t,
+                          struct _mesa_glsl_parse_state *state,
+                          YYLTYPE *loc) {
+   if (t->is_array()) {
+      t = t->fields.array;
+      while (t->is_array()) {
+         if (t->is_unsized_array()) {
+            _mesa_glsl_error(loc, state,
+                             "only the outermost array dimension can "
+                             "be unsized",
+                             t->name);
+            break;
+         }
+         t = t->fields.array;
+      }
+   }
+}
+
 static void
 apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
                                  ir_variable *var,
@@ -4436,6 +4455,8 @@ ast_declarator_list::hir(exec_list *instructions,
          result = process_initializer((earlier == NULL) ? var : earlier,
                                       decl, this->type,
                                       &initializer_instructions, state);
+      } else {
+         validate_array_dimensions(var_type, state, &loc);
       }
 
       /* From page 23 (page 29 of the PDF) of the GLSL 1.10 spec:
@@ -5961,6 +5982,7 @@ ast_process_structure_or_interface_block(exec_list *instructions,
 
          const struct glsl_type *field_type =
             process_array_type(&loc, decl_type, decl->array_specifier, state);
+         validate_array_dimensions(field_type, state, &loc);
          fields[i].type = field_type;
          fields[i].name = decl->identifier;
          fields[i].location = -1;
