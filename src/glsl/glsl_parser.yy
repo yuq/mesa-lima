@@ -948,7 +948,8 @@ parameter_qualifier:
       if ($2.precision != ast_precision_none)
          _mesa_glsl_error(&@1, state, "duplicate precision qualifier");
 
-      if (!state->has_420pack() && $2.flags.i != 0)
+      if (!(state->has_420pack() || state->is_version(420, 310)) &&
+          $2.flags.i != 0)
          _mesa_glsl_error(&@1, state, "precision qualifiers must come last");
 
       $$ = $2;
@@ -1847,7 +1848,8 @@ type_qualifier:
       if ($2.precision != ast_precision_none)
          _mesa_glsl_error(&@1, state, "duplicate precision qualifier");
 
-      if (!state->has_420pack() && $2.flags.i != 0)
+      if (!(state->has_420pack() || state->is_version(420, 310)) &&
+          $2.flags.i != 0)
          _mesa_glsl_error(&@1, state, "precision qualifiers must come last");
 
       $$ = $2;
