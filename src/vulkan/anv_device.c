@@ -1266,7 +1266,8 @@ VkResult anv_CreateSemaphore(
     const VkSemaphoreCreateInfo*                pCreateInfo,
     VkSemaphore*                                pSemaphore)
 {
-   stub_return(VK_UNSUPPORTED);
+   pSemaphore->handle = 1;
+   stub_return(VK_SUCCESS);
 }
 
 void anv_DestroySemaphore(
