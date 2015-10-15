@@ -330,8 +330,7 @@ _save_reset_counters(struct gl_context *ctx)
  * previous prim.
  */
 static void
-merge_prims(struct gl_context *ctx,
-            struct _mesa_prim *prim_list,
+merge_prims(struct _mesa_prim *prim_list,
             GLuint *prim_count)
 {
    GLuint i;
@@ -442,7 +441,7 @@ _save_compile_vertex_list(struct gl_context *ctx)
     */
    save->copied.nr = _save_copy_vertices(ctx, node, save->buffer);
 
-   merge_prims(ctx, node->prim, &node->prim_count);
+   merge_prims(node->prim, &node->prim_count);
 
    /* Deal with GL_COMPILE_AND_EXECUTE:
     */
