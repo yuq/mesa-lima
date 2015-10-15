@@ -2017,6 +2017,9 @@ ast_expression::has_sequence_subexpression() const
 
    case ast_function_call:
       unreachable("should be handled by ast_function_expression::hir");
+
+   case ast_unsized_array_dim:
+      unreachable("ast_unsized_array_dim: Should never get here.");
    }
 
    return false;
