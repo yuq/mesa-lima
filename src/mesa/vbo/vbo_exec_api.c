@@ -446,10 +446,6 @@ do {									\
                                                                         \
    assert(sz == 1 || sz == 2);                                          \
                                                                         \
-   if (unlikely(!(ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT))) {     \
-      vbo_exec_begin_vertices(ctx);					\
-   }									\
-                                                                        \
    /* check if attribute size or type is changing */                    \
    if (unlikely(exec->vtx.active_sz[A] != N * sz) ||                    \
        unlikely(exec->vtx.attrtype[A] != T)) {                          \
@@ -470,6 +466,15 @@ do {									\
       /* This is a glVertex call */					\
       GLuint i;								\
 									\
+      if (unlikely((ctx->Driver.NeedFlush & FLUSH_UPDATE_CURRENT) == 0)) { \
+         vbo_exec_begin_vertices(ctx);                                  \
+      }                                                                 \
+                                                                        \
+      if (unlikely(!exec->vtx.buffer_ptr)) {                            \
+         vbo_exec_vtx_map(exec);                                        \
+      }                                                                 \
+      assert(exec->vtx.buffer_ptr);                                     \
+                                                                        \
       /* copy 32-bit words */                                           \
       for (i = 0; i < exec->vtx.vertex_size; i++)			\
 	 exec->vtx.buffer_ptr[i] = exec->vtx.vertex[i];			\
@@ -482,7 +487,10 @@ do {									\
 									\
       if (++exec->vtx.vert_count >= exec->vtx.max_vert)			\
 	 vbo_exec_vtx_wrap( exec );					\
-   }									\
+   } else {                                                             \
+      /* we now have accumulated per-vertex attributes */               \
+      ctx->Driver.NeedFlush |= FLUSH_UPDATE_CURRENT;                    \
+   }                                                                    \
 } while (0)
 
 #define ERROR(err) _mesa_error( ctx, err, __func__ )
