@@ -112,11 +112,27 @@ brw_nir_lower_inputs(nir_shader *nir, bool is_scalar)
 static void
 brw_nir_lower_outputs(nir_shader *nir, bool is_scalar)
 {
-   if (is_scalar) {
-      nir_assign_var_locations(&nir->outputs, &nir->num_outputs, type_size_scalar);
-   } else {
-      nir_foreach_variable(var, &nir->outputs)
-         var->data.driver_location = var->data.location;
+   switch (nir->stage) {
+   case MESA_SHADER_VERTEX:
+   case MESA_SHADER_GEOMETRY:
+      if (is_scalar) {
+         nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
+                                  type_size_scalar);
+      } else {
+         nir_foreach_variable(var, &nir->outputs)
+            var->data.driver_location = var->data.location;
+      }
+      break;
+   case MESA_SHADER_FRAGMENT:
+      nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
+                               type_size_scalar);
+      break;
+   case MESA_SHADER_COMPUTE:
+      /* Compute shaders have no outputs. */
+      assert(exec_list_is_empty(&nir->outputs));
+      break;
+   default:
+      unreachable("unsupported shader stage");
    }
 }
 
