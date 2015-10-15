@@ -1001,11 +1001,10 @@ setup_registers_and_variables(struct ptn_compile *c)
             store->src[0] = nir_src_for_ssa(f001);
             nir_builder_instr_insert(b, &store->instr);
 
-            /* Insert the real input into the list so the driver has real
-             * inputs, but set c->input_vars[i] to the temporary so we use
+            /* We inserted the real input into the list so the driver has real
+             * inputs, but we set c->input_vars[i] to the temporary so we use
              * the splatted value.
              */
-            exec_list_push_tail(&shader->inputs, &var->node);
             c->input_vars[i] = fullvar;
             continue;
          }
