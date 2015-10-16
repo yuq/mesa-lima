@@ -592,7 +592,12 @@ ps_set_gen8_3DSTATE_PS(struct ilo_state_ps *ps,
 
    ILO_DEV_ASSERT(dev, 8, 8);
 
-   dw3 = ff->sampler_count << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
+   /*
+    * Set VME here for correct computation of LODs and others.  Not sure why
+    * it is needed now.
+    */
+   dw3 = GEN6_THREADDISP_VME |
+         ff->sampler_count << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
          ff->surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
 
    if (false)
