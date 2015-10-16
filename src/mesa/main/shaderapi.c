@@ -713,10 +713,10 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_ubo)
          break;
 
-      for (i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
+      for (i = 0; i < shProg->NumUniformBlocks; i++) {
 	 /* Add one for the terminating NUL character.
 	  */
-	 const GLint len = strlen(shProg->BufferInterfaceBlocks[i].Name) + 1;
+	 const GLint len = strlen(shProg->UniformBlocks[i]->Name) + 1;
 
 	 if (len > max_len)
 	    max_len = len;
