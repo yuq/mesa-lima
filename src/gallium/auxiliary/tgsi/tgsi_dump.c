@@ -648,6 +648,7 @@ tgsi_dump_instruction(
    ctx.indent = 0;
    ctx.dump_printf = dump_ctx_printf;
    ctx.indentation = 0;
+   ctx.file = NULL;
 
    iter_instruction( &ctx.iter, (struct tgsi_full_instruction *)inst );
 }
