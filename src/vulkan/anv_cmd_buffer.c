@@ -258,6 +258,8 @@ VkResult anv_BeginCommandBuffer(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
 
+   anv_cmd_buffer_reset_batch_bo_chain(cmd_buffer);
+
    cmd_buffer->opt_flags = pBeginInfo->flags;
 
    if (cmd_buffer->level == VK_CMD_BUFFER_LEVEL_SECONDARY) {
