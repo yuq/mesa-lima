@@ -821,11 +821,10 @@ static void GLAPIENTRY vbo_exec_End( void )
 
    if (exec->vtx.prim_count > 0) {
       /* close off current primitive */
-      int idx = exec->vtx.vert_count;
-      int i = exec->vtx.prim_count - 1;
+      struct _mesa_prim *last_prim = &exec->vtx.prim[exec->vtx.prim_count - 1];
 
-      exec->vtx.prim[i].end = 1;
-      exec->vtx.prim[i].count = idx - exec->vtx.prim[i].start;
+      last_prim->end = 1;
+      last_prim->count = exec->vtx.vert_count - last_prim->start;
 
       try_vbo_merge(exec);
    }
