@@ -63,7 +63,7 @@ vc4_nir_lower_input(struct vc4_compile *c, nir_builder *b,
         }
 
         nir_variable *input_var = NULL;
-        foreach_list_typed(nir_variable, var, node, &c->s->inputs) {
+        nir_foreach_variable(var, &c->s->inputs) {
                 if (var->data.driver_location == intr->const_index[0]) {
                         input_var = var;
                         break;
@@ -129,7 +129,7 @@ vc4_nir_lower_output(struct vc4_compile *c, nir_builder *b,
                      nir_intrinsic_instr *intr)
 {
         nir_variable *output_var = NULL;
-        foreach_list_typed(nir_variable, var, node, &c->s->outputs) {
+        nir_foreach_variable(var, &c->s->outputs) {
                 if (var->data.driver_location == intr->const_index[0]) {
                         output_var = var;
                         break;

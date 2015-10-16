@@ -393,7 +393,7 @@ vc4_nir_lower_blend_block(nir_block *block, void *state)
                         continue;
 
                 nir_variable *output_var = NULL;
-                foreach_list_typed(nir_variable, var, node, &c->s->outputs) {
+                nir_foreach_variable(var, &c->s->outputs) {
                         if (var->data.driver_location == intr->const_index[0]) {
                                 output_var = var;
                                 break;

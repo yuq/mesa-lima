@@ -1383,13 +1383,13 @@ static void
 ntq_setup_inputs(struct vc4_compile *c)
 {
         unsigned num_entries = 0;
-        foreach_list_typed(nir_variable, var, node, &c->s->inputs)
+        nir_foreach_variable(var, &c->s->inputs)
                 num_entries++;
 
         nir_variable *vars[num_entries];
 
         unsigned i = 0;
-        foreach_list_typed(nir_variable, var, node, &c->s->inputs)
+        nir_foreach_variable(var, &c->s->inputs)
                 vars[i++] = var;
 
         /* Sort the variables so that we emit the input setup in
@@ -1432,7 +1432,7 @@ ntq_setup_inputs(struct vc4_compile *c)
 static void
 ntq_setup_outputs(struct vc4_compile *c)
 {
-        foreach_list_typed(nir_variable, var, node, &c->s->outputs) {
+        nir_foreach_variable(var, &c->s->outputs) {
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
                 unsigned loc = var->data.driver_location * 4;
 
@@ -1471,7 +1471,7 @@ ntq_setup_outputs(struct vc4_compile *c)
 static void
 ntq_setup_uniforms(struct vc4_compile *c)
 {
-        foreach_list_typed(nir_variable, var, node, &c->s->uniforms) {
+        nir_foreach_variable(var, &c->s->uniforms) {
                 unsigned array_len = MAX2(glsl_get_length(var->type), 1);
                 unsigned array_elem_size = 4 * sizeof(float);
 
