@@ -75,13 +75,12 @@ vbo_exec_debug_verts( struct vbo_exec_context *exec )
 static GLuint
 vbo_copy_vertices( struct vbo_exec_context *exec )
 {
-   GLuint nr = exec->vtx.prim[exec->vtx.prim_count-1].count;
+   struct _mesa_prim *last_prim = &exec->vtx.prim[exec->vtx.prim_count - 1];
+   const GLuint nr = last_prim->count;
    GLuint ovf, i;
-   GLuint sz = exec->vtx.vertex_size;
+   const GLuint sz = exec->vtx.vertex_size;
    fi_type *dst = exec->vtx.copied.buffer;
-   const fi_type *src = (exec->vtx.buffer_map +
-                         exec->vtx.prim[exec->vtx.prim_count-1].start * 
-                         exec->vtx.vertex_size);
+   const fi_type *src = exec->vtx.buffer_map + last_prim->start * sz;
 
    switch (exec->ctx->Driver.CurrentExecPrimitive) {
    case GL_POINTS:
@@ -127,7 +126,7 @@ vbo_copy_vertices( struct vbo_exec_context *exec )
    case GL_TRIANGLE_STRIP:
       /* no parity issue, but need to make sure the tri is not drawn twice */
       if (nr & 1) {
-	 exec->vtx.prim[exec->vtx.prim_count-1].count--;
+	 last_prim->count--;
       }
       /* fallthrough */
    case GL_QUAD_STRIP:
