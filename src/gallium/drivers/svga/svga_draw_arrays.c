@@ -218,6 +218,20 @@ svga_hwtnl_draw_arrays(struct svga_hwtnl *hwtnl,
        * the hardware wants.
        */
       api_pv = hwtnl->hw_pv;
+
+      if (hwtnl->api_fillmode == PIPE_POLYGON_MODE_FILL) {
+         /* Do some simple primitive conversions to avoid index buffer
+          * generation below.  Note that polygons and quads are not directly
+          * supported by the svga device.  Also note, we can only do this
+          * for flat/constant-colored rendering because of provoking vertex.
+          */
+         if (prim == PIPE_PRIM_POLYGON) {
+            prim = PIPE_PRIM_TRIANGLE_FAN;
+         }
+         else if (prim == PIPE_PRIM_QUADS && count == 4) {
+            prim = PIPE_PRIM_TRIANGLE_FAN;
+         }
+      }
    }
 
    if (hwtnl->api_fillmode != PIPE_POLYGON_MODE_FILL &&
