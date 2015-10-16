@@ -30,6 +30,7 @@
 
 #include "nv50/nv50_stateobj.h"
 #include "nv50/nv50_context.h"
+#include "nv50/nv50_query_hw.h"
 
 #include "nv50/nv50_3d.xml.h"
 #include "nv50/nv50_texture.xml.h"
@@ -1036,7 +1037,7 @@ nv50_so_target_create(struct pipe_context *pipe,
 
    if (nouveau_context(pipe)->screen->class_3d >= NVA0_3D_CLASS) {
       targ->pq = pipe->create_query(pipe,
-                                    NVA0_QUERY_STREAM_OUTPUT_BUFFER_OFFSET, 0);
+                                    NVA0_HW_QUERY_STREAM_OUTPUT_BUFFER_OFFSET, 0);
       if (!targ->pq) {
          FREE(targ);
          return NULL;

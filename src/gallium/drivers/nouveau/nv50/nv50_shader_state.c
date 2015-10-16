@@ -27,6 +27,7 @@
 #include "util/u_inlines.h"
 
 #include "nv50/nv50_context.h"
+#include "nv50/nv50_query_hw.h"
 
 void
 nv50_constbufs_validate(struct nv50_context *nv50)
@@ -641,7 +642,7 @@ nv50_stream_output_validate(struct nv50_context *nv50)
       const unsigned n = nv50->screen->base.class_3d >= NVA0_3D_CLASS ? 4 : 3;
 
       if (n == 4 && !targ->clean)
-         nv84_query_fifo_wait(push, nv50_query(targ->pq));
+         nv84_hw_query_fifo_wait(push, nv50_query(targ->pq));
       BEGIN_NV04(push, NV50_3D(STRMOUT_ADDRESS_HIGH(i)), n);
       PUSH_DATAh(push, buf->address + targ->pipe.buffer_offset);
       PUSH_DATA (push, buf->address + targ->pipe.buffer_offset);
@@ -650,8 +651,8 @@ nv50_stream_output_validate(struct nv50_context *nv50)
          PUSH_DATA(push, targ->pipe.buffer_size);
          if (!targ->clean) {
             assert(targ->pq);
-            nv50_query_pushbuf_submit(push, NVA0_3D_STRMOUT_OFFSET(i),
-                                      nv50_query(targ->pq), 0x4);
+            nv50_hw_query_pushbuf_submit(push, NVA0_3D_STRMOUT_OFFSET(i),
+                                         nv50_query(targ->pq), 0x4);
          } else {
             BEGIN_NV04(push, NVA0_3D(STRMOUT_OFFSET(i)), 1);
             PUSH_DATA(push, 0);

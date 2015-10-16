@@ -74,6 +74,8 @@ NV50_C_SOURCES := \
 	nv50/nv50_push.c \
 	nv50/nv50_query.c \
 	nv50/nv50_query.h \
+	nv50/nv50_query_hw.c \
+	nv50/nv50_query_hw.h \
 	nv50/nv50_resource.c \
 	nv50/nv50_resource.h \
 	nv50/nv50_screen.c \
