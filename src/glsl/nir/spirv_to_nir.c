@@ -912,6 +912,11 @@ _vtn_variable_load(struct vtn_builder *b,
    nir_deref *old_child = src_deref_tail->child;
 
    if (glsl_type_is_vector_or_scalar(val->type)) {
+      /* Terminate the deref chain in case there is one more link to pick
+       * off a component of the vector.
+       */
+      src_deref_tail->child = NULL;
+
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
       load->variables[0] =
@@ -979,6 +984,11 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
    nir_deref *old_child = dest_deref_tail->child;
 
    if (glsl_type_is_vector_or_scalar(src->type)) {
+      /* Terminate the deref chain in case there is one more link to pick
+       * off a component of the vector.
+       */
+      dest_deref_tail->child = NULL;
+
       nir_intrinsic_instr *store =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->variables[0] =
