@@ -853,6 +853,14 @@
 #define   S_02880C_DUAL_EXPORT_ENABLE(x)               (((x) & 0x1) << 9)
 #define   G_02880C_DUAL_EXPORT_ENABLE(x)               (((x) >> 9) & 0x1)
 #define   C_02880C_DUAL_EXPORT_ENABLE                  0xFFFFFDFF
+#define   S_02880C_CONSERVATIVE_Z_EXPORT(x)            (((x) & 0x03) << 13)
+#define   G_02880C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 13) & 0x03)
+#define   C_02880C_CONSERVATIVE_Z_EXPORT               0xFFFF9FFF
+#define     V_02880C_EXPORT_ANY_Z                      0
+#define     V_02880C_EXPORT_LESS_THAN_Z                1
+#define     V_02880C_EXPORT_GREATER_THAN_Z             2
+#define     V_02880C_EXPORT_RESERVED                   3
+
 #define R_028DF8_PA_SU_POLY_OFFSET_DB_FMT_CNTL       0x028DF8
 #define   S_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS(x)      (((x) & 0xFF) << 0)
 #define   G_028DF8_POLY_OFFSET_NEG_NUM_DB_BITS(x)      (((x) >> 0) & 0xFF)

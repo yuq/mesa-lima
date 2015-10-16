@@ -2533,6 +2533,21 @@ void r600_update_ps_state(struct pipe_context *ctx, struct r600_pipe_shader *sha
 	if (rshader->uses_kill)
 		db_shader_control |= S_02880C_KILL_ENABLE(1);
 
+	if (rctx->b.chip_class >= R700) {
+		switch (rshader->ps_conservative_z) {
+		default: /* fall through */
+		case TGSI_FS_DEPTH_LAYOUT_ANY:
+			db_shader_control |= S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_ANY_Z);
+			break;
+		case TGSI_FS_DEPTH_LAYOUT_GREATER:
+			db_shader_control |= S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_GREATER_THAN_Z);
+			break;
+		case TGSI_FS_DEPTH_LAYOUT_LESS:
+			db_shader_control |= S_02880C_CONSERVATIVE_Z_EXPORT(V_02880C_EXPORT_LESS_THAN_Z);
+			break;
+		}
+	}
+
 	exports_ps = 0;
 	for (i = 0; i < rshader->noutput; i++) {
 		if (rshader->output[i].name == TGSI_SEMANTIC_POSITION ||

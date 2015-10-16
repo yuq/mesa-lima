@@ -76,6 +76,8 @@ struct r600_shader {
 	boolean			uses_tex_buffers;
 	boolean                 gs_prim_id_input;
 
+	unsigned		ps_conservative_z;
+
 	/* Size in bytes of a data item in the ring(s) (single vertex data).
 	   Stages with only one ring items 123 will be set to 0. */
 	unsigned		ring_item_sizes[4];
