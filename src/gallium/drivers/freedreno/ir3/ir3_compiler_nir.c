@@ -2325,17 +2325,17 @@ emit_instructions(struct ir3_compile *ctx)
 	}
 
 	/* Setup inputs: */
-	foreach_list_typed(nir_variable, var, node, &ctx->s->inputs) {
+	nir_foreach_variable(var, &ctx->s->inputs) {
 		setup_input(ctx, var);
 	}
 
 	/* Setup outputs: */
-	foreach_list_typed(nir_variable, var, node, &ctx->s->outputs) {
+	nir_foreach_variable(var, &ctx->s->outputs) {
 		setup_output(ctx, var);
 	}
 
 	/* Setup variables (which should only be arrays): */
-	foreach_list_typed(nir_variable, var, node, &ctx->s->globals) {
+	nir_foreach_variable(var, &ctx->s->globals) {
 		declare_var(ctx, var);
 	}
 
