@@ -167,7 +167,6 @@ void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)
    ctx->Extensions.OES_standard_derivatives = true;
 
    ctx->Extensions.EXT_shader_integer_mix = true;
-   ctx->Extensions.EXT_texture3D = true;
    ctx->Extensions.EXT_texture_array = true;
 
    ctx->Extensions.NV_texture_rectangle = true;

@@ -383,7 +383,6 @@ _mesa_init_extensions(struct gl_extensions *extensions)
 
    /* Then, selectively turn default extensions on. */
    extensions->dummy_true = GL_TRUE;
-   extensions->EXT_texture3D = GL_TRUE;
 }
 
 
