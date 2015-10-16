@@ -61,7 +61,8 @@ static void reset_attrfv( struct vbo_exec_context *exec );
 
 /**
  * Close off the last primitive, execute the buffer, restart the
- * primitive.  
+ * primitive.  This is called when we fill a vertex buffer before
+ * hitting glEnd.
  */
 static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
 {
@@ -81,6 +82,22 @@ static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
 
       last_count = last_prim->count;
 
+      /* Special handling for wrapping GL_LINE_LOOP */
+      if (last_prim->mode == GL_LINE_LOOP &&
+          last_count > 0 &&
+          !last_prim->end) {
+         /* draw this section of the incomplete line loop as a line strip */
+         last_prim->mode = GL_LINE_STRIP;
+         if (!last_prim->begin) {
+            /* This is not the first section of the line loop, so don't
+             * draw the 0th vertex.  We're saving it until we draw the
+             * very last section of the loop.
+             */
+            last_prim->start++;
+            last_prim->count--;
+         }
+      }
+
       /* Execute the buffer and save copied vertices.
        */
       if (exec->vtx.vert_count)
@@ -96,6 +113,7 @@ static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
 
       if (_mesa_inside_begin_end(exec->ctx)) {
 	 exec->vtx.prim[0].mode = exec->ctx->Driver.CurrentExecPrimitive;
+	 exec->vtx.prim[0].begin = 0;
 	 exec->vtx.prim[0].start = 0;
 	 exec->vtx.prim[0].count = 0;
 	 exec->vtx.prim_count++;
@@ -824,6 +842,24 @@ static void GLAPIENTRY vbo_exec_End( void )
 
       last_prim->end = 1;
       last_prim->count = exec->vtx.vert_count - last_prim->start;
+
+      /* Special handling for GL_LINE_LOOP */
+      if (last_prim->mode == GL_LINE_LOOP && last_prim->begin == 0) {
+         /* We're finishing drawing a line loop.  Append 0th vertex onto
+          * end of vertex buffer so we can draw it as a line strip.
+          */
+         const fi_type *src = exec->vtx.buffer_map;
+         fi_type *dst = exec->vtx.buffer_map +
+            exec->vtx.vert_count * exec->vtx.vertex_size;
+
+         /* copy 0th vertex to end of buffer */
+         memcpy(dst, src, exec->vtx.vertex_size * sizeof(fi_type));
+
+         assert(last_prim->start == 0);
+         last_prim->start++;  /* skip vertex0 */
+         /* note that last_prim->count stays unchanged */
+         last_prim->mode = GL_LINE_STRIP;
+      }
 
       try_vbo_merge(exec);
    }

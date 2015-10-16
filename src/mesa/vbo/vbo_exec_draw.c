@@ -109,6 +109,17 @@ vbo_copy_vertices( struct vbo_exec_context *exec )
 	 return 1;
       }
    case GL_LINE_LOOP:
+      if (last_prim->begin == 0) {
+         /* We're dealing with the second or later section of a split/wrapped
+          * GL_LINE_LOOP.  Since we're converting line loops to line strips,
+          * we've already increment the last_prim->start counter by one to
+          * skip the 0th vertex in the loop.  We need to undo that (effectively
+          * subtract one from last_prim->start) so that we copy the 0th vertex
+          * to the next vertex buffer.
+          */
+         src -= sz;
+      }
+      /* fall-through */
    case GL_TRIANGLE_FAN:
    case GL_POLYGON:
       if (nr == 0) {
