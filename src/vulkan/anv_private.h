@@ -794,6 +794,7 @@ struct anv_buffer {
 #define ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY  (1 << 6)
 #define ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY    (1 << 7)
 #define ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY     (1 << 8)
+#define ANV_DYNAMIC_STATE_DIRTY_MASK            ((1 << 9) - 1)
 #define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 9)
 #define ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY       (1 << 10)
 

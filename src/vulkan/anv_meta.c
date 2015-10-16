@@ -240,6 +240,11 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
             .primitiveRestartEnable = false,
          },
+         .pViewportState = &(VkPipelineViewportStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+            .viewportCount = 1,
+            .scissorCount = 1,
+         },
          .pRasterState = &(VkPipelineRasterStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
             .depthClipEnable = true,
@@ -271,6 +276,21 @@ anv_device_init_meta_clear_state(struct anv_device *device)
                { .channelWriteMask = VK_CHANNEL_A_BIT |
                     VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
             }
+         },
+         .pDynamicState = &(VkPipelineDynamicStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+            .dynamicStateCount = 9,
+            .pDynamicStates = (VkDynamicState[]) {
+               VK_DYNAMIC_STATE_VIEWPORT,
+               VK_DYNAMIC_STATE_SCISSOR,
+               VK_DYNAMIC_STATE_LINE_WIDTH,
+               VK_DYNAMIC_STATE_DEPTH_BIAS,
+               VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+               VK_DYNAMIC_STATE_DEPTH_BOUNDS,
+               VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+               VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+               VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+            },
          },
          .flags = 0,
       },
@@ -634,6 +654,11 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
          .primitiveRestartEnable = false,
       },
+      .pViewportState = &(VkPipelineViewportStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+         .viewportCount = 1,
+         .scissorCount = 1,
+      },
       .pRasterState = &(VkPipelineRasterStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTER_STATE_CREATE_INFO,
          .depthClipEnable = true,
@@ -649,6 +674,21 @@ anv_device_init_meta_blit_state(struct anv_device *device)
             { .channelWriteMask = VK_CHANNEL_A_BIT |
                  VK_CHANNEL_R_BIT | VK_CHANNEL_G_BIT | VK_CHANNEL_B_BIT },
          }
+      },
+      .pDynamicState = &(VkPipelineDynamicStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+         .dynamicStateCount = 9,
+         .pDynamicStates = (VkDynamicState[]) {
+            VK_DYNAMIC_STATE_VIEWPORT,
+            VK_DYNAMIC_STATE_SCISSOR,
+            VK_DYNAMIC_STATE_LINE_WIDTH,
+            VK_DYNAMIC_STATE_DEPTH_BIAS,
+            VK_DYNAMIC_STATE_BLEND_CONSTANTS,
+            VK_DYNAMIC_STATE_DEPTH_BOUNDS,
+            VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK,
+            VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
+            VK_DYNAMIC_STATE_STENCIL_REFERENCE,
+         },
       },
       .flags = 0,
       .layout = device->meta_state.blit.pipeline_layout,
