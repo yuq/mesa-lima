@@ -151,6 +151,7 @@ _mesa_MatrixMode( GLenum mode )
 
    if (ctx->Transform.MatrixMode == mode && mode != GL_TEXTURE)
       return;
+   FLUSH_VERTICES(ctx, _NEW_TRANSFORM);
 
    switch (mode) {
    case GL_MODELVIEW:
