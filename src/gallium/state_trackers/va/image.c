@@ -240,9 +240,11 @@ vlVaGetImage(VADriverContextP ctx, VASurfaceID surface, int x, int y,
       return VA_STATUS_ERROR_OPERATION_FAILED;
 
    if (format != surf->buffer->buffer_format) {
-      /* support NV12 to YV12 conversion now only */
-      if (format == PIPE_FORMAT_YV12 &&
-          surf->buffer->buffer_format == PIPE_FORMAT_NV12)
+      /* support NV12 to YV12 and IYUV conversion now only */
+      if ((format == PIPE_FORMAT_YV12 &&
+          surf->buffer->buffer_format == PIPE_FORMAT_NV12) ||
+          (format == PIPE_FORMAT_IYUV &&
+          surf->buffer->buffer_format == PIPE_FORMAT_NV12))
          convert = true;
       else
          return VA_STATUS_ERROR_OPERATION_FAILED;
