@@ -113,7 +113,8 @@ static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
  * Deal with buffer wrapping where provoked by the vertex buffer
  * filling up, as opposed to upgrade_vertex().
  */
-void vbo_exec_vtx_wrap( struct vbo_exec_context *exec )
+static void
+vbo_exec_vtx_wrap(struct vbo_exec_context *exec)
 {
    fi_type *data = exec->vtx.copied.buffer;
    GLuint i;
