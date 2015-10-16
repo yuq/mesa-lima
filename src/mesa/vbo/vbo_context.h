@@ -196,6 +196,20 @@ vbo_get_default_vals_as_union(GLenum format)
    }
 }
 
+
+/**
+ * Compute the max number of vertices which can be stored in
+ * a vertex buffer, given the current vertex size, and the amount
+ * of space already used.
+ */
+static inline unsigned
+vbo_compute_max_verts(const struct vbo_exec_context *exec)
+{
+   return (VBO_VERT_BUFFER_SIZE - exec->vtx.buffer_used) /
+          (exec->vtx.vertex_size * sizeof(GLfloat));
+}
+
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

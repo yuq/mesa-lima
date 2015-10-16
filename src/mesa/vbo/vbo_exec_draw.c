@@ -435,8 +435,7 @@ vbo_exec_vtx_flush(struct vbo_exec_context *exec, GLboolean keepUnmapped)
    if (keepUnmapped || exec->vtx.vertex_size == 0)
       exec->vtx.max_vert = 0;
    else
-      exec->vtx.max_vert = ((VBO_VERT_BUFFER_SIZE - exec->vtx.buffer_used) /
-                            (exec->vtx.vertex_size * sizeof(GLfloat)));
+      exec->vtx.max_vert = vbo_compute_max_verts(exec);
 
    exec->vtx.buffer_ptr = exec->vtx.buffer_map;
    exec->vtx.prim_count = 0;

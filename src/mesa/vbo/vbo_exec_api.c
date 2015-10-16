@@ -291,8 +291,7 @@ vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
     */
    exec->vtx.attrsz[attr] = newSize;
    exec->vtx.vertex_size += newSize - oldSize;
-   exec->vtx.max_vert = ((VBO_VERT_BUFFER_SIZE - exec->vtx.buffer_used) / 
-                         (exec->vtx.vertex_size * sizeof(GLfloat)));
+   exec->vtx.max_vert = vbo_compute_max_verts(exec);
    exec->vtx.vert_count = 0;
    exec->vtx.buffer_ptr = exec->vtx.buffer_map;
 
