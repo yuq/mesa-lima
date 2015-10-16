@@ -71,17 +71,15 @@ static void vbo_exec_wrap_buffers( struct vbo_exec_context *exec )
       exec->vtx.buffer_ptr = exec->vtx.buffer_map;
    }
    else {
-      GLuint last_begin = exec->vtx.prim[exec->vtx.prim_count-1].begin;
+      struct _mesa_prim *last_prim = &exec->vtx.prim[exec->vtx.prim_count - 1];
+      const GLuint last_begin = last_prim->begin;
       GLuint last_count;
 
       if (_mesa_inside_begin_end(exec->ctx)) {
-	 GLint i = exec->vtx.prim_count - 1;
-	 assert(i >= 0);
-	 exec->vtx.prim[i].count = (exec->vtx.vert_count - 
-				    exec->vtx.prim[i].start);
+	 last_prim->count = exec->vtx.vert_count - last_prim->start;
       }
 
-      last_count = exec->vtx.prim[exec->vtx.prim_count-1].count;
+      last_count = last_prim->count;
 
       /* Execute the buffer and save copied vertices.
        */
