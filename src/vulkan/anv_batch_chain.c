@@ -830,8 +830,11 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
       obj->relocation_count = relocs->num_relocs;
       obj->relocs_ptr = (uintptr_t) relocs->relocs;
 
-      for (size_t i = 0; i < relocs->num_relocs; i++)
+      for (size_t i = 0; i < relocs->num_relocs; i++) {
+         /* A quick sanity check on relocations */
+         assert(relocs->relocs[i].offset < bo->size);
          anv_cmd_buffer_add_bo(cmd_buffer, relocs->reloc_bos[i], NULL);
+      }
    }
 
    return VK_SUCCESS;
@@ -872,6 +875,7 @@ adjust_relocations_from_block_pool(struct anv_block_pool *pool,
        * offset to what it is now based on the delta and the data in the
        * block pool.  Then the kernel will update it for us if needed.
        */
+      assert(relocs->relocs[i].offset < pool->state.end);
       uint32_t *reloc_data = pool->map + relocs->relocs[i].offset;
       relocs->relocs[i].presumed_offset = *reloc_data - relocs->relocs[i].delta;
 
@@ -913,6 +917,7 @@ adjust_relocations_to_block_pool(struct anv_block_pool *pool,
           * should only be called on batch buffers, so we know it isn't in
           * use by the GPU at the moment.
           */
+         assert(relocs->relocs[i].offset < from_bo->size);
          uint32_t *reloc_data = from_bo->map + relocs->relocs[i].offset;
          *reloc_data = relocs->relocs[i].presumed_offset +
                        relocs->relocs[i].delta;
