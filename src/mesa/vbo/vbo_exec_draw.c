@@ -64,9 +64,13 @@ vbo_exec_debug_verts( struct vbo_exec_context *exec )
 }
 
 
-/*
- * NOTE: Need to have calculated primitives by this point -- do it on the fly.
- * NOTE: Old 'parity' issue is gone.
+/**
+ * Copy zero, one or two vertices from the current vertex buffer into
+ * the temporary "copy" buffer.
+ * This is used when a single primitive overflows a vertex buffer and
+ * we need to continue the primitive in a new vertex buffer.
+ * The temporary "copy" buffer holds the vertices which need to get
+ * copied from the old buffer to the new one.
  */
 static GLuint
 vbo_copy_vertices( struct vbo_exec_context *exec )
