@@ -987,15 +987,6 @@ ilo_shader_destroy(struct ilo_shader_state *shader)
 }
 
 /**
- * Return the type (PIPE_SHADER_x) of the shader.
- */
-int
-ilo_shader_get_type(const struct ilo_shader_state *shader)
-{
-   return shader->info.type;
-}
-
-/**
  * Select a kernel for the given context.  This will compile a new kernel if
  * none of the existing kernels work with the context.
  *
