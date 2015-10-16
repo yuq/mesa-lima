@@ -403,7 +403,7 @@ shader_atomic_counters(const _mesa_glsl_parse_state *state)
 static bool
 shader_storage_buffer_object(const _mesa_glsl_parse_state *state)
 {
-   return state->ARB_shader_storage_buffer_object_enable;
+   return state->has_shader_storage_buffer_objects();
 }
 
 static bool
