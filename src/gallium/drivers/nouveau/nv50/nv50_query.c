@@ -25,6 +25,7 @@
 #define NV50_PUSH_EXPLICIT_SPACE_CHECKING
 
 #include "nv50/nv50_context.h"
+#include "nv50/nv50_query.h"
 #include "nv_object.xml.h"
 
 #define NV50_QUERY_STATE_READY   0
@@ -39,28 +40,7 @@
  * queries anyway.
  */
 
-struct nv50_query {
-   uint32_t *data;
-   uint16_t type;
-   uint16_t index;
-   uint32_t sequence;
-   struct nouveau_bo *bo;
-   uint32_t base;
-   uint32_t offset; /* base + i * 32 */
-   uint8_t state;
-   bool is64bit;
-   int nesting; /* only used for occlusion queries */
-   struct nouveau_mm_allocation *mm;
-   struct nouveau_fence *fence;
-};
-
 #define NV50_QUERY_ALLOC_SPACE 256
-
-static inline struct nv50_query *
-nv50_query(struct pipe_query *pipe)
-{
-   return (struct nv50_query *)pipe;
-}
 
 static bool
 nv50_query_allocate(struct nv50_context *nv50, struct nv50_query *q, int size)
@@ -363,9 +343,8 @@ nv50_query_result(struct pipe_context *pipe, struct pipe_query *pq,
 }
 
 void
-nv84_query_fifo_wait(struct nouveau_pushbuf *push, struct pipe_query *pq)
+nv84_query_fifo_wait(struct nouveau_pushbuf *push, struct nv50_query *q)
 {
-   struct nv50_query *q = nv50_query(pq);
    unsigned offset = q->offset;
 
    PUSH_SPACE(push, 5);
@@ -453,10 +432,8 @@ nv50_render_condition(struct pipe_context *pipe,
 
 void
 nv50_query_pushbuf_submit(struct nouveau_pushbuf *push, uint16_t method,
-                          struct pipe_query *pq, unsigned result_offset)
+                          struct nv50_query *q, unsigned result_offset)
 {
-   struct nv50_query *q = nv50_query(pq);
-
    nv50_query_update(q);
    if (q->state != NV50_QUERY_STATE_READY)
       nouveau_bo_wait(q->bo, NOUVEAU_BO_RD, push->client);
