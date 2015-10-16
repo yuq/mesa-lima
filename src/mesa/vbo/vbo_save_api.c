@@ -360,6 +360,51 @@ merge_prims(struct _mesa_prim *prim_list,
    *prim_count = prev_prim - prim_list + 1;
 }
 
+
+/**
+ * Convert GL_LINE_LOOP primitive into GL_LINE_STRIP so that drivers
+ * don't have to worry about handling the _mesa_prim::begin/end flags.
+ * See https://bugs.freedesktop.org/show_bug.cgi?id=81174
+ */
+static void
+convert_line_loop_to_strip(struct vbo_save_context *save,
+                           struct vbo_save_vertex_list *node)
+{
+   struct _mesa_prim *prim = &node->prim[node->prim_count - 1];
+
+   assert(prim->mode == GL_LINE_LOOP);
+
+   if (prim->end) {
+      /* Copy the 0th vertex to end of the buffer and extend the
+       * vertex count by one to finish the line loop.
+       */
+      const GLuint sz = save->vertex_size;
+      /* 0th vertex: */
+      const fi_type *src = save->buffer + prim->start * sz;
+      /* end of buffer: */
+      fi_type *dst = save->buffer + (prim->start + prim->count) * sz;
+
+      memcpy(dst, src, sz * sizeof(float));
+
+      prim->count++;
+      node->count++;
+      save->vert_count++;
+      save->buffer_ptr += sz;
+      save->vertex_store->used += sz;
+   }
+
+   if (!prim->begin) {
+      /* Drawing the second or later section of a long line loop.
+       * Skip the 0th vertex.
+       */
+      prim->start++;
+      prim->count--;
+   }
+
+   prim->mode = GL_LINE_STRIP;
+}
+
+
 /**
  * Insert the active immediate struct onto the display list currently
  * being built.
@@ -441,6 +486,10 @@ _save_compile_vertex_list(struct gl_context *ctx)
     */
    save->copied.nr = _save_copy_vertices(ctx, node, save->buffer);
 
+   if (node->prim[node->prim_count - 1].mode == GL_LINE_LOOP) {
+      convert_line_loop_to_strip(save, node);
+   }
+
    merge_prims(node->prim, &node->prim_count);
 
    /* Deal with GL_COMPILE_AND_EXECUTE:
@@ -481,6 +530,10 @@ _save_compile_vertex_list(struct gl_context *ctx)
       save->vertex_store = alloc_vertex_store(ctx);
       save->buffer_ptr = vbo_save_map_vertex_store(ctx, save->vertex_store);
       save->out_of_memory = save->buffer_ptr == NULL;
+   }
+   else {
+      /* update buffer_ptr for next vertex */
+      save->buffer_ptr = save->vertex_store->buffer + save->vertex_store->used;
    }
 
    if (save->prim_store->used > VBO_SAVE_PRIM_SIZE - 6) {
