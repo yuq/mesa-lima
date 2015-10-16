@@ -286,6 +286,11 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
 #undef _M2B
 
 /* === PERFORMANCE MONITORING COUNTERS for NVC0:NVE4 === */
+/* NOTES:
+ * - MP counters on GF100/GF110 (compute capability 2.0) are buggy
+ *   because there is a context-switch problem that we need to fix.
+ *   Results might be wrong sometimes, be careful!
+ */
 static const char *nvc0_hw_sm_query_names[] =
 {
    /* MP counters */
