@@ -63,6 +63,7 @@ VULKAN_SOURCES =                                        \
 	anv_batch_chain.c                               \
 	anv_compiler.cpp                                \
 	anv_device.c                                    \
+        anv_dump.c                                      \
 	anv_entrypoints.c                               \
 	anv_entrypoints.h                               \
 	anv_formats.c                                   \

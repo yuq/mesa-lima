@@ -1409,6 +1409,10 @@ void anv_device_finish_meta(struct anv_device *device);
 
 void *anv_lookup_entrypoint(const char *name);
 
+void anv_dump_image_to_ppm(struct anv_device *device,
+                           struct anv_image *image, unsigned miplevel,
+                           unsigned array_layer, const char *filename);
+
 #define ANV_DEFINE_HANDLE_CASTS(__anv_type, __VkType)                      \
                                                                            \
    static inline struct __anv_type *                                       \
