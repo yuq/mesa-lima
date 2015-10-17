@@ -10,19 +10,19 @@ AM_CFLAGS = \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS)
 
-noinst_LTLIBRARIES = libpipe_loader.la
+noinst_LTLIBRARIES = libpipe_loader_dynamic.la
 
-libpipe_loader_la_SOURCES = \
+libpipe_loader_dynamic_la_SOURCES = \
 	$(COMMON_SOURCES)
 
 if HAVE_LIBDRM
 AM_CFLAGS += \
 	$(LIBDRM_CFLAGS)
 
-libpipe_loader_la_SOURCES += \
+libpipe_loader_dynamic_la_SOURCES += \
 	$(DRM_SOURCES)
 
-libpipe_loader_la_LIBADD = \
+libpipe_loader_dynamic_la_LIBADD = \
 	$(top_builddir)/src/loader/libloader.la
 
 endif

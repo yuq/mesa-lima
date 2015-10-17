@@ -56,7 +56,7 @@ libomx_mesa_la_LIBADD += $(TARGET_LIB_DEPS) \
 else # HAVE_GALLIUM_STATIC_TARGETS
 
 libomx_mesa_la_LIBADD += \
-	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la
+	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader_dynamic.la
 
 endif # HAVE_GALLIUM_STATIC_TARGETS
 
