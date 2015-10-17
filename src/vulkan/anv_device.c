@@ -1445,13 +1445,24 @@ VkResult anv_CreateDescriptorSetLayout(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
 
+   uint32_t immutable_sampler_count = 0;
+   for (uint32_t b = 0; b < pCreateInfo->count; b++) {
+      if (pCreateInfo->pBinding[b].pImmutableSamplers)
+         immutable_sampler_count += pCreateInfo->pBinding[b].arraySize;
+   }
+
    size_t size = sizeof(struct anv_descriptor_set_layout) +
-                 pCreateInfo->count * sizeof(set_layout->binding[0]);
+                 pCreateInfo->count * sizeof(set_layout->binding[0]) +
+                 immutable_sampler_count * sizeof(struct anv_sampler *);
 
    set_layout = anv_device_alloc(device, size, 8,
                                  VK_SYSTEM_ALLOC_TYPE_API_OBJECT);
    if (!set_layout)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   /* We just allocate all the samplers at the end of the struct */
+   struct anv_sampler **samplers =
+      (struct anv_sampler **)&set_layout->binding[pCreateInfo->count];
 
    set_layout->binding_count = pCreateInfo->count;
    set_layout->shader_stages = 0;
@@ -1460,6 +1471,9 @@ VkResult anv_CreateDescriptorSetLayout(
    /* Initialize all binding_layout entries to -1 */
    memset(set_layout->binding, -1,
           pCreateInfo->count * sizeof(set_layout->binding[0]));
+
+   /* Initialize all samplers to 0 */
+   memset(samplers, 0, immutable_sampler_count * sizeof(*samplers));
 
    uint32_t sampler_count[VK_SHADER_STAGE_NUM] = { 0, };
    uint32_t surface_count[VK_SHADER_STAGE_NUM] = { 0, };
@@ -1510,6 +1524,17 @@ VkResult anv_CreateDescriptorSetLayout(
          break;
       default:
          break;
+      }
+
+      if (pCreateInfo->pBinding[b].pImmutableSamplers) {
+         set_layout->binding[b].immutable_samplers = samplers;
+         samplers += array_size;
+
+         for (uint32_t i = 0; i < array_size; i++)
+            set_layout->binding[b].immutable_samplers[i] =
+               anv_sampler_from_handle(pCreateInfo->pBinding[b].pImmutableSamplers[i]);
+      } else {
+         set_layout->binding[b].immutable_samplers = NULL;
       }
 
       set_layout->shader_stages |= pCreateInfo->pBinding[b].stageFlags;
@@ -1573,6 +1598,16 @@ anv_descriptor_set_create(struct anv_device *device,
     * later detect holes in it.
     */
    memset(set, 0, size);
+
+   /* Go through and fill out immutable samplers if we have any */
+   struct anv_descriptor *desc = set->descriptors;
+   for (uint32_t b = 0; b < layout->binding_count; b++) {
+      if (layout->binding[b].immutable_samplers) {
+         for (uint32_t i = 0; i < layout->binding[b].array_size; i++)
+            desc[i].sampler = layout->binding[b].immutable_samplers[i];
+      }
+      desc += layout->binding[b].array_size;
+   }
 
    *out_set = set;
 
@@ -1659,16 +1694,21 @@ void anv_UpdateDescriptorSets(
 
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
          for (uint32_t j = 0; j < write->count; j++) {
+            struct anv_descriptor *desc =
+               &set->descriptors[write->destBinding + j];
             ANV_FROM_HANDLE(anv_image_view, iview,
                             write->pDescriptors[j].imageView);
             ANV_FROM_HANDLE(anv_sampler, sampler,
                             write->pDescriptors[j].sampler);
 
-            set->descriptors[write->destBinding + j] = (struct anv_descriptor) {
-               .type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER,
-               .image_view = iview,
-               .sampler = sampler,
-            };
+            desc->type = ANV_DESCRIPTOR_TYPE_IMAGE_VIEW_AND_SAMPLER;
+            desc->image_view = iview;
+
+            /* If this descriptor has an immutable sampler, we don't want
+             * to stomp on it.
+             */
+            if (sampler)
+               desc->sampler = sampler;
          }
          break;
 

@@ -674,6 +674,9 @@ struct anv_descriptor_set_binding_layout {
       /* Index into the sampler table for the associated sampler */
       int16_t sampler_index;
    } stage[VK_SHADER_STAGE_NUM];
+
+   /* Immutable samplers (or NULL if no immutable samplers) */
+   struct anv_sampler **immutable_samplers;
 };
 
 struct anv_descriptor_set_layout {
@@ -689,7 +692,7 @@ struct anv_descriptor_set_layout {
    /* Number of dynamic offsets used by this descriptor set */
    uint16_t dynamic_offset_count;
 
-   /* Don't use this directly */
+   /* Bindings in this descriptor set */
    struct anv_descriptor_set_binding_layout binding[0];
 };
 
