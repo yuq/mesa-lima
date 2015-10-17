@@ -50,6 +50,7 @@
 
 struct pipe_loader_drm_device {
    struct pipe_loader_device base;
+   const struct drm_driver_descriptor *dd;
    struct util_dl_library *lib;
    int fd;
 };
@@ -81,10 +82,23 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
    if (!ddev->base.driver_name)
       goto fail;
 
+   ddev->lib = pipe_loader_find_module(dev, PIPE_SEARCH_DIR);
+   if (!ddev->lib)
+      return fail;
+
+   ddev->dd = (const struct drm_driver_descriptor *)
+      util_dl_get_proc_address(ddev->lib, "driver_descriptor");
+
+   /* sanity check on the name */
+   if (!ddev->dd || strcmp(ddev->dd->name, ddev->base.driver_name) != 0)
+       goto fail;
+
    *dev = &ddev->base;
    return true;
 
   fail:
+   if (ddev->lib)
+      util_dl_close(ddev->lib);
    FREE(ddev);
    return false;
 }
@@ -146,43 +160,19 @@ pipe_loader_drm_configuration(struct pipe_loader_device *dev,
                               enum drm_conf conf)
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
-   const struct drm_driver_descriptor *dd;
 
-   if (!ddev->lib)
+   if (!ddev->dd->configuration)
       return NULL;
 
-   dd = (const struct drm_driver_descriptor *)
-      util_dl_get_proc_address(ddev->lib, "driver_descriptor");
-
-   /* sanity check on the name */
-   if (!dd || strcmp(dd->name, ddev->base.driver_name) != 0)
-      return NULL;
-
-   if (!dd->configuration)
-      return NULL;
-
-   return dd->configuration(conf);
+   return ddev->dd->configuration(conf);
 }
 
 static struct pipe_screen *
 pipe_loader_drm_create_screen(struct pipe_loader_device *dev)
 {
    struct pipe_loader_drm_device *ddev = pipe_loader_drm_device(dev);
-   const struct drm_driver_descriptor *dd;
 
-   if (!ddev->lib)
-      ddev->lib = pipe_loader_find_module(&ddev->base, PIPE_SEARCH_DIR);
-   if (!ddev->lib)
-      return NULL;
-
-   dd = (const struct drm_driver_descriptor *)
-      util_dl_get_proc_address(ddev->lib, "driver_descriptor");
-
-   /* sanity check on the name */
-   if (!dd || strcmp(dd->name, ddev->base.driver_name) != 0)
-      return NULL;
-
-   return dd->create_screen(ddev->fd);
+   return ddev->dd->create_screen(ddev->fd);
 }
 
 static const struct pipe_loader_ops pipe_loader_drm_ops = {
