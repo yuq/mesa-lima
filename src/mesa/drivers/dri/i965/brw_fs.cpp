@@ -4070,7 +4070,7 @@ fs_visitor::lower_logical_sends()
       case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
          lower_surface_logical_send(ibld, inst,
                                     SHADER_OPCODE_UNTYPED_SURFACE_READ,
-                                    fs_reg(0xffff));
+                                    fs_reg());
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE_LOGICAL:

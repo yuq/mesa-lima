@@ -2906,11 +2906,10 @@ brw_untyped_surface_read(struct brw_codegen *p,
    const unsigned sfid = (devinfo->gen >= 8 || devinfo->is_haswell ?
                           HSW_SFID_DATAPORT_DATA_CACHE_1 :
                           GEN7_SFID_DATAPORT_DATA_CACHE);
-   const bool align1 = (brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1);
    struct brw_inst *insn = brw_send_indirect_surface_message(
       p, sfid, dst, payload, surface, msg_length,
       brw_surface_payload_size(p, num_channels, true, true),
-      align1);
+      false);
 
    brw_set_dp_untyped_surface_read_message(
       p, insn, num_channels);
