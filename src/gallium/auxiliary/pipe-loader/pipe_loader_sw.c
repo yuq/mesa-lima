@@ -35,9 +35,11 @@
 #include "sw/wrapper/wrapper_sw_winsys.h"
 #include "target-helpers/inline_sw_helper.h"
 #include "state_tracker/drisw_api.h"
+#include "state_tracker/sw_driver.h"
 
 struct pipe_loader_sw_device {
    struct pipe_loader_device base;
+   const struct sw_driver_descriptor *dd;
    struct util_dl_library *lib;
    struct sw_winsys *ws;
 };
@@ -49,14 +51,31 @@ static struct pipe_loader_ops pipe_loader_sw_ops;
 static bool
 pipe_loader_sw_probe_init_common(struct pipe_loader_sw_device *sdev)
 {
-   if (!sdev->ws)
-      return false;
-
    sdev->base.type = PIPE_LOADER_DEVICE_SOFTWARE;
    sdev->base.driver_name = "swrast";
    sdev->base.ops = &pipe_loader_sw_ops;
 
+   sdev->lib = pipe_loader_find_module(&sdev->base, PIPE_SEARCH_DIR);
+   if (!sdev->lib)
+      return false;
+
+   sdev->dd = (const struct sw_driver_descriptor *)
+      util_dl_get_proc_address(sdev->lib, "swrast_driver_descriptor");
+
+   if (!sdev->dd){
+      util_dl_close(sdev->lib);
+      sdev->lib = NULL;
+      return false;
+   }
+
    return true;
+}
+
+static void
+pipe_loader_sw_probe_teardown_common(struct pipe_loader_sw_device *sdev)
+{
+   if (sdev->lib)
+      util_dl_close(sdev->lib);
 }
 
 #ifdef HAVE_PIPE_LOADER_DRI
@@ -64,18 +83,30 @@ bool
 pipe_loader_sw_probe_dri(struct pipe_loader_device **devs, struct drisw_loader_funcs *drisw_lf)
 {
    struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
+   int i;
 
    if (!sdev)
       return false;
 
-   sdev->ws = dri_create_sw_winsys(drisw_lf);
-   if (!pipe_loader_sw_probe_init_common(sdev)) {
-      FREE(sdev);
-      return false;
-   }
-   *devs = &sdev->base;
+   if (!pipe_loader_sw_probe_init_common(sdev))
+      goto fail;
 
+   for (i = 0; sdev->dd->winsys; i++) {
+      if (strcmp(sdev->dd->winsys[i].name, "dri") == 0) {
+         sdev->ws = sdev->dd->winsys[i].create_winsys(drisw_lf);
+         break;
+      }
+   }
+   if (!sdev->ws)
+      goto fail;
+
+   *devs = &sdev->base;
    return true;
+
+fail:
+   pipe_loader_sw_probe_teardown_common(sdev);
+   FREE(sdev);
+   return false;
 }
 #endif
 
@@ -84,18 +115,30 @@ bool
 pipe_loader_sw_probe_kms(struct pipe_loader_device **devs, int fd)
 {
    struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
+   int i;
 
    if (!sdev)
       return false;
 
-   sdev->ws = kms_dri_create_winsys(fd);
-   if (!pipe_loader_sw_probe_init_common(sdev)) {
-      FREE(sdev);
-      return false;
-   }
-   *devs = &sdev->base;
+   if (!pipe_loader_sw_probe_init_common(sdev))
+      goto fail;
 
+   for (i = 0; sdev->dd->winsys; i++) {
+      if (strcmp(sdev->dd->winsys[i].name, "kms_dri") == 0) {
+         sdev->ws = sdev->dd->winsys[i].create_winsys(fd);
+         break;
+      }
+   }
+   if (!sdev->ws)
+      goto fail;
+
+   *devs = &sdev->base;
    return true;
+
+fail:
+   pipe_loader_sw_probe_teardown_common(sdev);
+   FREE(sdev);
+   return false;
 }
 #endif
 
@@ -103,18 +146,30 @@ bool
 pipe_loader_sw_probe_null(struct pipe_loader_device **devs)
 {
    struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
+   int i;
 
    if (!sdev)
       return false;
 
-   sdev->ws = null_sw_create();
-   if (!pipe_loader_sw_probe_init_common(sdev)) {
-      FREE(sdev);
-      return false;
-   }
-   *devs = &sdev->base;
+   if (!pipe_loader_sw_probe_init_common(sdev))
+      goto fail;
 
+   for (i = 0; sdev->dd->winsys; i++) {
+      if (strcmp(sdev->dd->winsys[i].name, "null") == 0) {
+         sdev->ws = sdev->dd->winsys[i].create_winsys();
+         break;
+      }
+   }
+   if (!sdev->ws)
+      goto fail;
+
+   *devs = &sdev->base;
    return true;
+
+fail:
+   pipe_loader_sw_probe_teardown_common(sdev);
+   FREE(sdev);
+   return false;
 }
 
 int
@@ -136,17 +191,30 @@ pipe_loader_sw_probe_wrapped(struct pipe_loader_device **dev,
                              struct pipe_screen *screen)
 {
    struct pipe_loader_sw_device *sdev = CALLOC_STRUCT(pipe_loader_sw_device);
+   int i;
 
    if (!sdev)
       return false;
 
-   sdev->ws = wrapper_sw_winsys_wrap_pipe_screen(screen);
-   if (!pipe_loader_sw_probe_init_common(sdev)) {
-      FREE(sdev);
-      return false;
+   if (!pipe_loader_sw_probe_init_common(sdev))
+      goto fail;
+
+   for (i = 0; sdev->dd->winsys; i++) {
+      if (strcmp(sdev->dd->winsys[i].name, "wrapped") == 0) {
+         sdev->ws = sdev->dd->winsys[i].create_winsys(screen);
+         break;
+      }
    }
+   if (!sdev->ws)
+      goto fail;
+
    *dev = &sdev->base;
    return true;
+
+fail:
+   pipe_loader_sw_probe_teardown_common(sdev);
+   FREE(sdev);
+   return false;
 }
 
 static void
@@ -172,21 +240,8 @@ static struct pipe_screen *
 pipe_loader_sw_create_screen(struct pipe_loader_device *dev)
 {
    struct pipe_loader_sw_device *sdev = pipe_loader_sw_device(dev);
-   struct pipe_screen *(*init)(struct sw_winsys *);
 
-   if (!sdev->lib)
-      sdev->lib = pipe_loader_find_module(&sdev->base, PIPE_SEARCH_DIR);
-   if (!sdev->lib)
-      return NULL;
-
-   init = (void *)util_dl_get_proc_address(sdev->lib, "swrast_create_screen");
-   if (!init){
-      util_dl_close(sdev->lib);
-      sdev->lib = NULL;
-      return NULL;
-   }
-
-   return init(sdev->ws);
+   return sdev->dd->create_screen(sdev->ws);
 }
 
 static struct pipe_loader_ops pipe_loader_sw_ops = {

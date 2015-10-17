@@ -110,8 +110,7 @@ d3dadapter9_la_LIBADD += $(TARGET_LIB_DEPS) \
 else # HAVE_GALLIUM_STATIC_TARGETS
 
 d3dadapter9_la_LIBADD += \
-	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \
-	$(GALLIUM_PIPE_LOADER_WINSYS_LIBS)
+	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la
 
 endif # HAVE_GALLIUM_STATIC_TARGETS
 

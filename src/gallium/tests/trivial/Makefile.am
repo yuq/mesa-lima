@@ -9,7 +9,6 @@ LDADD = \
 	$(top_builddir)/src/gallium/auxiliary/pipe-loader/libpipe_loader.la \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
 	$(top_builddir)/src/util/libmesautil.la \
-	$(GALLIUM_PIPE_LOADER_WINSYS_LIBS) \
 	$(GALLIUM_COMMON_LIB_DEPS)
 
 noinst_PROGRAMS = compute tri quad-tex
