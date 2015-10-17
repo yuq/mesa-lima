@@ -6293,6 +6293,18 @@ ast_interface_block::hir(exec_list *instructions,
 
    state->struct_specifier_depth--;
 
+   for (unsigned i = 0; i < num_variables; i++) {
+      if (fields[i].stream != -1 &&
+          (unsigned) fields[i].stream != this->layout.stream) {
+         _mesa_glsl_error(&loc, state,
+                          "stream layout qualifier on "
+                          "interface block member `%s' does not match "
+                          "the interface block (%d vs %d)",
+                          fields[i].name, fields[i].stream,
+                          this->layout.stream);
+      }
+   }
+
    if (!redeclaring_per_vertex) {
       validate_identifier(this->block_name, loc, state);
 
@@ -6633,6 +6645,8 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.explicit_binding = this->layout.flags.q.explicit_binding;
          var->data.binding = this->layout.binding;
 
+         var->data.stream = this->layout.stream;
+
          state->symbols->add_variable(var);
          instructions->push_tail(var);
       }
@@ -6651,6 +6665,7 @@ ast_interface_block::hir(exec_list *instructions,
          var->data.centroid = fields[i].centroid;
          var->data.sample = fields[i].sample;
          var->data.patch = fields[i].patch;
+         var->data.stream = this->layout.stream;
          var->init_interface_type(block_type);
 
          if (var_mode == ir_var_shader_in || var_mode == ir_var_uniform)
@@ -6662,17 +6677,6 @@ ast_interface_block::hir(exec_list *instructions,
          } else {
             var->data.matrix_layout = fields[i].matrix_layout;
          }
-
-         if (fields[i].stream != -1 &&
-             ((unsigned)fields[i].stream) != this->layout.stream) {
-            _mesa_glsl_error(&loc, state,
-                             "stream layout qualifier on "
-                             "interface block member `%s' does not match "
-                             "the interface block (%d vs %d)",
-                             var->name, fields[i].stream, this->layout.stream);
-         }
-
-         var->data.stream = this->layout.stream;
 
          if (var->data.mode == ir_var_shader_storage) {
             var->data.image_read_only = fields[i].image_read_only;
