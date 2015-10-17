@@ -395,6 +395,10 @@ st_translate_vertex_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
+   if (stvp->Base.Base.ClipDistanceArraySize)
+      ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
+                    stvp->Base.Base.ClipDistanceArraySize);
+
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stvp->Base.Base);
       _mesa_print_program_parameters(st->ctx, &stvp->Base.Base);
@@ -1048,6 +1052,10 @@ st_translate_program_common(struct st_context *st,
    memset(outputSlotToAttr, 0, sizeof(outputSlotToAttr));
    memset(outputMapping, 0, sizeof(outputMapping));
    memset(out_state, 0, sizeof(*out_state));
+
+   if (prog->ClipDistanceArraySize)
+      ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
+                    prog->ClipDistanceArraySize);
 
    /*
     * Convert Mesa program inputs to TGSI input register semantics.
