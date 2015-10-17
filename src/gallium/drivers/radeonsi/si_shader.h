@@ -244,7 +244,7 @@ union si_shader_key {
 		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
-		unsigned	export_prim_id; /* when PS needs it and GS is disabled */
+		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} vs;
 	struct {
 		unsigned	prim_mode:3;
@@ -255,7 +255,7 @@ union si_shader_key {
 		 * This describes how outputs are laid out in memory. */
 		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
-		unsigned	export_prim_id; /* when PS needs it and GS is disabled */
+		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} tes; /* tessellation evaluation shader */
 };
 
