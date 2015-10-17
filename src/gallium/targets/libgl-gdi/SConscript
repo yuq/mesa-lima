@@ -7,6 +7,10 @@ env = env.Clone()
 
 env.Append(CPPPATH = [
     '#src',
+    '#src/mesa',
+    '#src/mapi',
+    '#src/glsl',
+    '#src/glsl/nir',
     '#src/gallium/state_trackers/wgl',
     '#src/gallium/winsys/sw',
 ])
@@ -20,7 +24,11 @@ env.Append(LIBS = [
 
 env.Prepend(LIBS = [mesautil])
 
-sources = ['libgl_gdi.c']
+sources = [
+    'libgl_gdi.c',
+    'glsl_types_hack.cpp'
+]
+
 drivers = []
 
 if True:
