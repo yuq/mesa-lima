@@ -5,6 +5,7 @@ SUBDIRS =
 ##
 
 SUBDIRS += auxiliary
+SUBDIRS += auxiliary/pipe-loader
 
 ##
 ## Gallium pipe drivers and their respective winsys'
@@ -120,7 +121,8 @@ EXTRA_DIST = \
 ## Gallium state trackers and their users (targets)
 ##
 
-if HAVE_LOADER_GALLIUM
+## XXX: Rename the conditional once we have a config switch for static/dynamic pipe-drivers
+if HAVE_CLOVER
 SUBDIRS += targets/pipe-loader
 endif
 
