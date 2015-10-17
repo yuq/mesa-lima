@@ -3126,6 +3126,16 @@ TES_POINT_MODE
 If set to a non-zero value, this turns on point mode for the tessellator,
 which means that points will be generated instead of primitives.
 
+NUM_CLIPDIST_ENABLED
+""""""""""""""""
+
+How many clip distance scalar outputs are enabled.
+
+NUM_CULLDIST_ENABLED
+""""""""""""""""
+
+How many cull distance scalar outputs are enabled.
+
 
 Texture Sampling and Texture Formats
 ------------------------------------
