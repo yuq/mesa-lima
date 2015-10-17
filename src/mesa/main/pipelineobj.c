@@ -230,6 +230,10 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
    struct gl_shader_program *shProg = NULL;
    GLbitfield any_valid_stages;
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glUseProgramStages(%u, 0x%x, %u)\n",
+                  pipeline, stages, program);
+
    if (!pipe) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "glUseProgramStages(pipeline)");
       return;
@@ -345,6 +349,9 @@ _mesa_ActiveShaderProgram(GLuint pipeline, GLuint program)
    struct gl_shader_program *shProg = NULL;
    struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glActiveShaderProgram(%u, %u)\n", pipeline, program);
+
    if (program != 0) {
       shProg = _mesa_lookup_shader_program_err(ctx, program,
                                                "glActiveShaderProgram(program)");
@@ -379,6 +386,9 @@ _mesa_BindProgramPipeline(GLuint pipeline)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_pipeline_object *newObj = NULL;
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glBindProgramPipeline(%u)\n", pipeline);
 
    /* Rebinding the same pipeline object: no change.
     */
@@ -467,6 +477,9 @@ _mesa_DeleteProgramPipelines(GLsizei n, const GLuint *pipelines)
    GET_CURRENT_CONTEXT(ctx);
    GLsizei i;
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glDeleteProgramPipelines(%d, %p)\n", n, pipelines);
+
    if (n < 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glDeleteProgramPipelines(n<0)");
       return;
@@ -551,6 +564,9 @@ _mesa_GenProgramPipelines(GLsizei n, GLuint *pipelines)
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glGenProgramPipelines(%d, %p)\n", n, pipelines);
+
    create_program_pipelines(ctx, n, pipelines, false);
 }
 
@@ -558,6 +574,9 @@ void GLAPIENTRY
 _mesa_CreateProgramPipelines(GLsizei n, GLuint *pipelines)
 {
    GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glCreateProgramPipelines(%d, %p)\n", n, pipelines);
 
    create_program_pipelines(ctx, n, pipelines, true);
 }
@@ -574,6 +593,9 @@ _mesa_IsProgramPipeline(GLuint pipeline)
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glIsProgramPipeline(%u)\n", pipeline);
+
    struct gl_pipeline_object *obj = _mesa_lookup_pipeline_object(ctx, pipeline);
    if (obj == NULL)
       return GL_FALSE;
@@ -589,6 +611,10 @@ _mesa_GetProgramPipelineiv(GLuint pipeline, GLenum pname, GLint *params)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glGetProgramPipelineiv(%u, %d, %p)\n",
+                  pipeline, pname, params);
 
    /* Are geometry shaders available in this context?
     */
@@ -857,6 +883,9 @@ _mesa_ValidateProgramPipeline(GLuint pipeline)
 {
    GET_CURRENT_CONTEXT(ctx);
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glValidateProgramPipeline(%u)\n", pipeline);
+
    struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
 
    if (!pipe) {
@@ -874,6 +903,10 @@ _mesa_GetProgramPipelineInfoLog(GLuint pipeline, GLsizei bufSize,
                                 GLsizei *length, GLchar *infoLog)
 {
    GET_CURRENT_CONTEXT(ctx);
+
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glGetProgramPipelineInfoLog(%u, %d, %p, %p)\n",
+                  pipeline, bufSize, length, infoLog);
 
    struct gl_pipeline_object *pipe = _mesa_lookup_pipeline_object(ctx, pipeline);
 
