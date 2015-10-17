@@ -240,8 +240,13 @@ static struct pipe_screen *
 pipe_loader_sw_create_screen(struct pipe_loader_device *dev)
 {
    struct pipe_loader_sw_device *sdev = pipe_loader_sw_device(dev);
+   struct pipe_screen *screen;
 
-   return sdev->dd->create_screen(sdev->ws);
+   screen = sdev->dd->create_screen(sdev->ws);
+   if (!screen)
+      sdev->ws->destroy(sdev->ws);
+
+   return screen;
 }
 
 static struct pipe_loader_ops pipe_loader_sw_ops = {
