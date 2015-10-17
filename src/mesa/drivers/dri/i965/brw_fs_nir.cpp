@@ -1532,24 +1532,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       /* Read the vector */
-      for (int i = 0; i < instr->num_components; i++) {
-         fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
-                                                1 /* dims */, 1 /* size */,
-                                                BRW_PREDICATE_NONE);
-         read_result.type = dest.type;
-         bld.MOV(dest, read_result);
-         dest = offset(dest, bld, 1);
-
-         /* Vector components are stored contiguous in memory */
-         if (i < instr->num_components) {
-            if (!has_indirect) {
-               const_offset_bytes += 4;
-               bld.MOV(offset_reg, fs_reg(const_offset_bytes));
-            } else {
-               bld.ADD(offset_reg, offset_reg, brw_imm_ud(4));
-            }
-         }
-      }
+      fs_reg read_result = emit_untyped_read(bld, surf_index, offset_reg,
+                                             1 /* dims */,
+                                             instr->num_components,
+                                             BRW_PREDICATE_NONE);
+      read_result.type = dest.type;
+      for (int i = 0; i < instr->num_components; i++)
+         bld.MOV(offset(dest, bld, i), offset(read_result, bld, i));
 
       break;
    }
