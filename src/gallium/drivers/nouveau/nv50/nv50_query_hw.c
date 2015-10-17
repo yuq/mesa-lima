@@ -126,9 +126,9 @@ nv50_hw_begin_query(struct nv50_context *nv50, struct nv50_query *q)
     * query might set the initial render condition to false even *after* we re-
     * initialized it to true.
     */
-   if (q->type == PIPE_QUERY_OCCLUSION_COUNTER) {
-      hq->offset += 32;
-      hq->data += 32 / sizeof(*hq->data);
+   if (hq->rotate) {
+      hq->offset += hq->rotate;
+      hq->data += hq->rotate / sizeof(*hq->data);
       if (hq->offset - hq->base_offset == NV50_HW_QUERY_ALLOC_SPACE)
          nv50_hw_query_allocate(nv50, q, NV50_HW_QUERY_ALLOC_SPACE);
 
@@ -339,21 +339,38 @@ nv50_hw_create_query(struct nv50_context *nv50, unsigned type, unsigned index)
    q->funcs = &hw_query_funcs;
    q->type = type;
 
+   switch (q->type) {
+   case PIPE_QUERY_OCCLUSION_COUNTER:
+      hq->rotate = 32;
+      break;
+   case PIPE_QUERY_PRIMITIVES_GENERATED:
+   case PIPE_QUERY_PRIMITIVES_EMITTED:
+   case PIPE_QUERY_SO_STATISTICS:
+   case PIPE_QUERY_PIPELINE_STATISTICS:
+      hq->is64bit = true;
+      break;
+   case PIPE_QUERY_TIME_ELAPSED:
+   case PIPE_QUERY_TIMESTAMP:
+   case PIPE_QUERY_TIMESTAMP_DISJOINT:
+   case PIPE_QUERY_GPU_FINISHED:
+   case NVA0_HW_QUERY_STREAM_OUTPUT_BUFFER_OFFSET:
+      break;
+   default:
+      debug_printf("invalid query type: %u\n", type);
+      FREE(q);
+      return NULL;
+   }
+
    if (!nv50_hw_query_allocate(nv50, q, NV50_HW_QUERY_ALLOC_SPACE)) {
       FREE(hq);
       return NULL;
    }
 
-   if (q->type == PIPE_QUERY_OCCLUSION_COUNTER) {
+   if (hq->rotate) {
       /* we advance before query_begin ! */
-      hq->offset -= 32;
-      hq->data -= 32 / sizeof(*hq->data);
+      hq->offset -= hq->rotate;
+      hq->data -= hq->rotate / sizeof(*hq->data);
    }
-
-   hq->is64bit = (type == PIPE_QUERY_PRIMITIVES_GENERATED ||
-                 type == PIPE_QUERY_PRIMITIVES_EMITTED ||
-                 type == PIPE_QUERY_SO_STATISTICS ||
-                 type == PIPE_QUERY_PIPELINE_STATISTICS);
 
    return q;
 }

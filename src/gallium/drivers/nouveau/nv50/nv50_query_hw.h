@@ -14,9 +14,10 @@ struct nv50_hw_query {
    uint32_t sequence;
    struct nouveau_bo *bo;
    uint32_t base_offset;
-   uint32_t offset; /* base + i * 32 */
+   uint32_t offset; /* base + i * rotate */
    uint8_t state;
    bool is64bit;
+   uint8_t rotate;
    int nesting; /* only used for occlusion queries */
    struct nouveau_mm_allocation *mm;
    struct nouveau_fence *fence;
