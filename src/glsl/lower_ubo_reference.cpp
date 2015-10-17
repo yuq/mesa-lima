@@ -238,6 +238,8 @@ interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
       case ir_type_swizzle: {
          ir_swizzle *s = (ir_swizzle *) ir;
          ir = s->val->as_dereference();
+         /* Skip swizzle in the next pass */
+         d = ir;
          break;
       }
 
