@@ -121,12 +121,13 @@ void *util_make_layered_clear_vertex_shader(struct pipe_context *pipe)
          "MOV OUT[2], SV[0]\n"
          "END\n";
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
    return pipe->create_vs_state(pipe, &state);
 }
 
@@ -149,12 +150,13 @@ void *util_make_layered_clear_helper_vertex_shader(struct pipe_context *pipe)
          "MOV OUT[2].x, SV[0].xxxx\n"
          "END\n";
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
    return pipe->create_vs_state(pipe, &state);
 }
 
@@ -192,12 +194,13 @@ void *util_make_layered_clear_geometry_shader(struct pipe_context *pipe)
       "EMIT IMM[0].xxxx\n"
       "END\n";
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
    return pipe->create_gs_state(pipe, &state);
 }
 
@@ -471,7 +474,7 @@ util_make_fragment_passthrough_shader(struct pipe_context *pipe,
 
    char text[sizeof(shader_templ)+100];
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    sprintf(text, shader_templ,
            write_all_cbufs ? "PROPERTY FS_COLOR0_WRITES_ALL_CBUFS 1\n" : "",
@@ -482,6 +485,7 @@ util_make_fragment_passthrough_shader(struct pipe_context *pipe,
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
 #if 0
    tgsi_dump(state.tokens, 0);
 #endif
@@ -558,7 +562,7 @@ util_make_fs_blit_msaa_gen(struct pipe_context *pipe,
    const char *type = tgsi_texture_names[tgsi_tex];
    char text[sizeof(shader_templ)+100];
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    assert(tgsi_tex == TGSI_TEXTURE_2D_MSAA ||
           tgsi_tex == TGSI_TEXTURE_2D_ARRAY_MSAA);
@@ -571,6 +575,7 @@ util_make_fs_blit_msaa_gen(struct pipe_context *pipe,
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
 #if 0
    tgsi_dump(state.tokens, 0);
 #endif
@@ -659,7 +664,7 @@ util_make_fs_blit_msaa_depthstencil(struct pipe_context *pipe,
    const char *type = tgsi_texture_names[tgsi_tex];
    char text[sizeof(shader_templ)+100];
    struct tgsi_token tokens[1000];
-   struct pipe_shader_state state = {tokens};
+   struct pipe_shader_state state;
 
    assert(tgsi_tex == TGSI_TEXTURE_2D_MSAA ||
           tgsi_tex == TGSI_TEXTURE_2D_ARRAY_MSAA);
@@ -670,6 +675,7 @@ util_make_fs_blit_msaa_depthstencil(struct pipe_context *pipe,
       assert(0);
       return NULL;
    }
+   pipe_shader_state_from_tgsi(&state, tokens);
 #if 0
    tgsi_dump(state.tokens, 0);
 #endif

@@ -799,12 +799,20 @@ enum pipe_shader_cap
 
 /**
  * Shader intermediate representation.
+ *
+ * Note that if the driver requests something other than TGSI, it must
+ * always be prepared to receive TGSI in addition to its preferred IR.
+ * If the driver requests TGSI as its preferred IR, it will *always*
+ * get TGSI.
+ *
+ * Note that PIPE_SHADER_IR_TGSI should be zero for backwards compat with
+ * state trackers that only understand TGSI.
  */
 enum pipe_shader_ir
 {
-   PIPE_SHADER_IR_TGSI,
+   PIPE_SHADER_IR_TGSI = 0,
    PIPE_SHADER_IR_LLVM,
-   PIPE_SHADER_IR_NATIVE
+   PIPE_SHADER_IR_NATIVE,
 };
 
 /**

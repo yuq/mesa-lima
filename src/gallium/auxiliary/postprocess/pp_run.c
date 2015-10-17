@@ -255,8 +255,7 @@ pp_tgsi_to_state(struct pipe_context *pipe, const char *text, bool isvs,
       return NULL;
    }
 
-   state.tokens = tokens;
-   memset(&state.stream_output, 0, sizeof(state.stream_output));
+   pipe_shader_state_from_tgsi(&state, tokens);
 
    if (isvs) {
       ret_state = pipe->create_vs_state(pipe, &state);

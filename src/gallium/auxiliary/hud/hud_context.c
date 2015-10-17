@@ -1202,7 +1202,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       };
 
       struct tgsi_token tokens[1000];
-      struct pipe_shader_state state = {tokens};
+      struct pipe_shader_state state;
 
       if (!tgsi_text_translate(fragment_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
@@ -1211,7 +1211,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
          FREE(hud);
          return NULL;
       }
-
+      pipe_shader_state_from_tgsi(&state, tokens);
       hud->fs_text = pipe->create_fs_state(pipe, &state);
    }
 
@@ -1249,8 +1249,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       };
 
       struct tgsi_token tokens[1000];
-      struct pipe_shader_state state = {tokens};
-
+      struct pipe_shader_state state;
       if (!tgsi_text_translate(vertex_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
          pipe_resource_reference(&hud->font.texture, NULL);
@@ -1258,7 +1257,7 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
          FREE(hud);
          return NULL;
       }
-
+      pipe_shader_state_from_tgsi(&state, tokens);
       hud->vs = pipe->create_vs_state(pipe, &state);
    }
 
