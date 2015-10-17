@@ -1163,12 +1163,9 @@ _tx_dst_param(struct shader_translator *tx, const struct sm1_dst_param *param)
         assert(!param->rel);
         tx->info->rt_mask |= 1 << param->idx;
         if (ureg_dst_is_undef(tx->regs.oCol[param->idx])) {
-            /* ps < 3: oCol[0] will have fog blending afterward
-             * vs < 3: oD1.w (D3DPMISCCAPS_FOGANDSPECULARALPHA) set to 0 even if set */
+            /* ps < 3: oCol[0] will have fog blending afterward */
             if (!IS_VS && tx->version.major < 3 && param->idx == 0) {
                 tx->regs.oCol[0] = ureg_DECL_temporary(tx->ureg);
-            } else if (IS_VS && tx->version.major < 3 && param->idx == 1) {
-                tx->regs.oCol[1] = ureg_DECL_temporary(tx->ureg);
             } else {
                 tx->regs.oCol[param->idx] =
                     ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, param->idx);
@@ -3424,13 +3421,6 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     if (IS_VS && tx->version.major < 3 && ureg_dst_is_undef(tx->regs.oFog) && info->fog_enable) {
         tx->regs.oFog = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_FOG, 0);
         ureg_MOV(tx->ureg, ureg_writemask(tx->regs.oFog, TGSI_WRITEMASK_X), ureg_imm1f(tx->ureg, 0.0f));
-    }
-
-    /* vs < 3: oD1.w (D3DPMISCCAPS_FOGANDSPECULARALPHA) set to 0 even if set */
-    if (IS_VS && tx->version.major < 3 && !ureg_dst_is_undef(tx->regs.oCol[1])) {
-        struct ureg_dst dst = ureg_DECL_output(tx->ureg, TGSI_SEMANTIC_COLOR, 1);
-        ureg_MOV(tx->ureg, ureg_writemask(dst, TGSI_WRITEMASK_XYZ), ureg_src(tx->regs.oCol[1]));
-        ureg_MOV(tx->ureg, ureg_writemask(dst, TGSI_WRITEMASK_W), ureg_imm1f(tx->ureg, 0.0f));
     }
 
     if (info->position_t)

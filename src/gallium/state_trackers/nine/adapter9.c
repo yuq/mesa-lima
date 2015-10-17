@@ -563,7 +563,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
                                D3DPIPECAP(INDEP_BLEND_ENABLE, D3DPMISCCAPS_INDEPENDENTWRITEMASKS) |
                                /*D3DPMISCCAPS_PERSTAGECONSTANT |*/ /* TODO */
                                /*D3DPMISCCAPS_POSTBLENDSRGBCONVERT |*/ /* TODO */
-                               D3DPMISCCAPS_FOGANDSPECULARALPHA |
+                               D3DPMISCCAPS_FOGANDSPECULARALPHA | /* Note: documentation of the flag is wrong */
                                D3DPIPECAP(BLEND_EQUATION_SEPARATE, D3DPMISCCAPS_SEPARATEALPHABLEND) |
                                D3DPIPECAP(MIXED_COLORBUFFER_FORMATS, D3DPMISCCAPS_MRTINDEPENDENTBITDEPTHS) |
                                D3DPMISCCAPS_MRTPOSTPIXELSHADERBLENDING |
