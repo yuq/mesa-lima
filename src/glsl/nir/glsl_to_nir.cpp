@@ -162,7 +162,8 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info.outputs_written = sh->Program->OutputsWritten;
    shader->info.system_values_read = sh->Program->SystemValuesRead;
    shader->info.uses_texture_gather = sh->Program->UsesGather;
-   shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
+   shader->info.uses_clip_distance_out =
+      sh->Program->ClipDistanceArraySize != 0;
    shader->info.separate_shader = shader_prog->SeparateShader;
    shader->info.has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;

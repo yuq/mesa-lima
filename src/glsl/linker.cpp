@@ -651,7 +651,7 @@ link_invalidate_variable_locations(exec_list *ir)
 
 
 /**
- * Set UsesClipDistance and ClipDistanceArraySize based on the given shader.
+ * Set clip_distance_array_size based on the given shader.
  *
  * Also check for errors based on incorrect usage of gl_ClipVertex and
  * gl_ClipDistance.
@@ -660,10 +660,10 @@ link_invalidate_variable_locations(exec_list *ir)
  */
 static void
 analyze_clip_usage(struct gl_shader_program *prog,
-                   struct gl_shader *shader, GLboolean *UsesClipDistance,
-                   GLuint *ClipDistanceArraySize)
+                   struct gl_shader *shader,
+                   GLuint *clip_distance_array_size)
 {
-   *ClipDistanceArraySize = 0;
+   *clip_distance_array_size = 0;
 
    if (!prog->IsES && prog->Version >= 130) {
       /* From section 7.1 (Vertex Shader Special Variables) of the
@@ -686,13 +686,14 @@ analyze_clip_usage(struct gl_shader_program *prog,
                       _mesa_shader_stage_to_string(shader->Stage));
          return;
       }
-      *UsesClipDistance = clip_distance.variable_found();
-      ir_variable *clip_distance_var =
-         shader->symbols->get_variable("gl_ClipDistance");
-      if (clip_distance_var)
-         *ClipDistanceArraySize = clip_distance_var->type->length;
-   } else {
-      *UsesClipDistance = false;
+
+      if (clip_distance.variable_found()) {
+         ir_variable *clip_distance_var =
+               shader->symbols->get_variable("gl_ClipDistance");
+
+         assert(clip_distance_var);
+         *clip_distance_array_size = clip_distance_var->type->length;
+      }
    }
 }
 
@@ -700,8 +701,7 @@ analyze_clip_usage(struct gl_shader_program *prog,
 /**
  * Verify that a vertex shader executable meets all semantic requirements.
  *
- * Also sets prog->Vert.UsesClipDistance and prog->Vert.ClipDistanceArraySize
- * as a side effect.
+ * Also sets prog->Vert.ClipDistanceArraySize as a side effect.
  *
  * \param shader  Vertex shader executable to be verified
  */
@@ -754,8 +754,7 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
       }
    }
 
-   analyze_clip_usage(prog, shader, &prog->Vert.UsesClipDistance,
-                      &prog->Vert.ClipDistanceArraySize);
+   analyze_clip_usage(prog, shader, &prog->Vert.ClipDistanceArraySize);
 }
 
 void
@@ -765,8 +764,7 @@ validate_tess_eval_shader_executable(struct gl_shader_program *prog,
    if (shader == NULL)
       return;
 
-   analyze_clip_usage(prog, shader, &prog->TessEval.UsesClipDistance,
-                      &prog->TessEval.ClipDistanceArraySize);
+   analyze_clip_usage(prog, shader, &prog->TessEval.ClipDistanceArraySize);
 }
 
 
@@ -797,8 +795,8 @@ validate_fragment_shader_executable(struct gl_shader_program *prog,
 /**
  * Verify that a geometry shader executable meets all semantic requirements
  *
- * Also sets prog->Geom.VerticesIn, prog->Geom.UsesClipDistance, and
- * prog->Geom.ClipDistanceArraySize as a side effect.
+ * Also sets prog->Geom.VerticesIn, and prog->Geom.ClipDistanceArraySize as
+ * a side effect.
  *
  * \param shader Geometry shader executable to be verified
  */
@@ -812,8 +810,7 @@ validate_geometry_shader_executable(struct gl_shader_program *prog,
    unsigned num_vertices = vertices_per_prim(prog->Geom.InputType);
    prog->Geom.VerticesIn = num_vertices;
 
-   analyze_clip_usage(prog, shader, &prog->Geom.UsesClipDistance,
-                      &prog->Geom.ClipDistanceArraySize);
+   analyze_clip_usage(prog, shader, &prog->Geom.ClipDistanceArraySize);
 }
 
 /**
