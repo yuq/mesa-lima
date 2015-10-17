@@ -1628,6 +1628,21 @@ static void r600_emit_db_misc_state(struct r600_context *rctx, struct r600_atom 
 		S_028D10_FORCE_HIS_ENABLE0(V_028D10_FORCE_DISABLE) |
 		S_028D10_FORCE_HIS_ENABLE1(V_028D10_FORCE_DISABLE);
 
+	if (rctx->b.chip_class >= R700) {
+		switch (a->ps_conservative_z) {
+		default: /* fall through */
+		case TGSI_FS_DEPTH_LAYOUT_ANY:
+			db_render_control |= S_028D0C_CONSERVATIVE_Z_EXPORT(V_028D0C_EXPORT_ANY_Z);
+			break;
+		case TGSI_FS_DEPTH_LAYOUT_GREATER:
+			db_render_control |= S_028D0C_CONSERVATIVE_Z_EXPORT(V_028D0C_EXPORT_GREATER_THAN_Z);
+			break;
+		case TGSI_FS_DEPTH_LAYOUT_LESS:
+			db_render_control |= S_028D0C_CONSERVATIVE_Z_EXPORT(V_028D0C_EXPORT_LESS_THAN_Z);
+			break;
+		}
+	}
+
 	if (a->occlusion_query_enabled) {
 		if (rctx->b.chip_class >= R700) {
 			db_render_control |= S_028D0C_R700_PERFECT_ZPASS_COUNTS(1);
@@ -2787,6 +2802,7 @@ void r600_update_db_shader_control(struct r600_context * rctx)
 {
 	bool dual_export;
 	unsigned db_shader_control;
+	uint8_t ps_conservative_z;
 
 	if (!rctx->ps_shader) {
 		return;
@@ -2797,6 +2813,8 @@ void r600_update_db_shader_control(struct r600_context * rctx)
 
 	db_shader_control = rctx->ps_shader->current->db_shader_control |
 			    S_02880C_DUAL_EXPORT_ENABLE(dual_export);
+
+	ps_conservative_z = rctx->ps_shader->current->shader.ps_conservative_z;
 
 	/* When alpha test is enabled we can't trust the hw to make the proper
 	 * decision on the order in which ztest should be run related to fragment
@@ -2811,8 +2829,10 @@ void r600_update_db_shader_control(struct r600_context * rctx)
 		db_shader_control |= S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z);
 	}
 
-	if (db_shader_control != rctx->db_misc_state.db_shader_control) {
+	if (db_shader_control != rctx->db_misc_state.db_shader_control ||
+		ps_conservative_z != rctx->db_misc_state.ps_conservative_z) {
 		rctx->db_misc_state.db_shader_control = db_shader_control;
+		rctx->db_misc_state.ps_conservative_z = ps_conservative_z;
 		r600_mark_atom_dirty(rctx, &rctx->db_misc_state.atom);
 	}
 }

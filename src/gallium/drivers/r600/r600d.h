@@ -781,6 +781,14 @@
 #define   S_028D0C_COPY_CENTROID(x)                    (((x) & 0x1) << 7)
 #define   S_028D0C_COPY_SAMPLE(x)                      (((x) & 0x1) << 8)
 #define   S_028D0C_R700_PERFECT_ZPASS_COUNTS(x)        (((x) & 0x1) << 15)
+#define   S_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) & 0x03) << 13)
+#define   G_028D0C_CONSERVATIVE_Z_EXPORT(x)            (((x) >> 13) & 0x03)
+#define   C_028D0C_CONSERVATIVE_Z_EXPORT               0xFFFF9FFF
+#define     V_028D0C_EXPORT_ANY_Z                      0
+#define     V_028D0C_EXPORT_LESS_THAN_Z                1
+#define     V_028D0C_EXPORT_GREATER_THAN_Z             2
+#define     V_028D0C_EXPORT_RESERVED                   3
+
 #define R_028D10_DB_RENDER_OVERRIDE                  0x028D10
 #define   V_028D10_FORCE_OFF                         0
 #define   V_028D10_FORCE_ENABLE                      1

@@ -116,6 +116,7 @@ struct r600_db_misc_state {
 	unsigned			log_samples;
 	unsigned			db_shader_control;
 	bool				htile_clear;
+	uint8_t				ps_conservative_z;
 };
 
 struct r600_cb_misc_state {
