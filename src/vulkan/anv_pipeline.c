@@ -260,12 +260,61 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
    pipeline->dynamic_state_mask = states;
 }
 
+static void
+anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
+{
+   struct anv_render_pass *renderpass = NULL;
+   struct anv_subpass *subpass = NULL;
+
+   /* Assert that all required members of VkGraphicsPipelineCreateInfo are
+    * present, as explained by the Vulkan (20 Oct 2015, git-aa308cb), Section
+    * 4.2 Graphics Pipeline.
+    */
+   assert(info->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
+
+   renderpass = anv_render_pass_from_handle(info->renderPass);
+   assert(renderpass);
+
+   if (renderpass != &anv_meta_dummy_renderpass) {
+      assert(info->subpass < renderpass->subpass_count);
+      subpass = &renderpass->subpasses[info->subpass];
+   }
+
+   assert(info->stageCount >= 1);
+   assert(info->pVertexInputState);
+   assert(info->pInputAssemblyState);
+   assert(info->pViewportState);
+   assert(info->pRasterState);
+   assert(info->pMultisampleState);
+
+   if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
+      assert(info->pDepthStencilState);
+
+   if (subpass && subpass->color_count > 0)
+      assert(info->pColorBlendState);
+
+   for (uint32_t i = 0; i < info->stageCount; ++i) {
+      switch (info->pStages[i].stage) {
+      case VK_SHADER_STAGE_TESS_CONTROL:
+      case VK_SHADER_STAGE_TESS_EVALUATION:
+         assert(info->pTessellationState);
+         break;
+      default:
+         break;
+      }
+   }
+}
+
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
                   const struct anv_graphics_pipeline_create_info *extra)
 {
    VkResult result;
+
+   anv_validate {
+      anv_pipeline_validate_create_info(pCreateInfo);
+   }
 
    pipeline->device = device;
    pipeline->layout = anv_pipeline_layout_from_handle(pCreateInfo->layout);
