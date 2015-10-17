@@ -255,6 +255,8 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
    if (_mesa_has_tessellation(ctx))
       any_valid_stages |= GL_TESS_CONTROL_SHADER_BIT |
                           GL_TESS_EVALUATION_SHADER_BIT;
+   if (_mesa_has_compute_shaders(ctx))
+      any_valid_stages |= GL_COMPUTE_SHADER_BIT;
 
    if (stages != GL_ALL_SHADER_BITS && (stages & ~any_valid_stages) != 0) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glUseProgramStages(Stages)");
@@ -336,6 +338,9 @@ _mesa_UseProgramStages(GLuint pipeline, GLbitfield stages, GLuint program)
 
    if ((stages & GL_TESS_EVALUATION_SHADER_BIT) != 0)
       _mesa_use_shader_program(ctx, GL_TESS_EVALUATION_SHADER, shProg, pipe);
+
+   if ((stages & GL_COMPUTE_SHADER_BIT) != 0)
+      _mesa_use_shader_program(ctx, GL_COMPUTE_SHADER, shProg, pipe);
 }
 
 /**
@@ -668,6 +673,12 @@ _mesa_GetProgramPipelineiv(GLuint pipeline, GLenum pname, GLint *params)
    case GL_FRAGMENT_SHADER:
       *params = pipe->CurrentProgram[MESA_SHADER_FRAGMENT]
          ? pipe->CurrentProgram[MESA_SHADER_FRAGMENT]->Name : 0;
+      return;
+   case GL_COMPUTE_SHADER:
+      if (!_mesa_has_compute_shaders(ctx))
+         break;
+      *params = pipe->CurrentProgram[MESA_SHADER_COMPUTE]
+         ? pipe->CurrentProgram[MESA_SHADER_COMPUTE]->Name : 0;
       return;
    default:
       break;

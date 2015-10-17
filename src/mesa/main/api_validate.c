@@ -918,7 +918,7 @@ check_valid_to_compute(struct gl_context *ctx, const char *function)
       return false;
    }
 
-   prog = ctx->Shader.CurrentProgram[MESA_SHADER_COMPUTE];
+   prog = ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    if (prog == NULL || prog->_LinkedShaders[MESA_SHADER_COMPUTE] == NULL) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "%s(no active compute shader)",
