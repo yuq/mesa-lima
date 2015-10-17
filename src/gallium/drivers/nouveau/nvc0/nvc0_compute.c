@@ -105,14 +105,6 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    PUSH_DATAh(push, screen->text->offset);
    PUSH_DATA (push, screen->text->offset);
 
-   /* bind parameters buffer */
-   BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
-   PUSH_DATA (push, screen->parm->size);
-   PUSH_DATAh(push, screen->parm->offset);
-   PUSH_DATA (push, screen->parm->offset);
-   BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
-   PUSH_DATA (push, (0 << 8) | 1);
-
    /* TODO: textures & samplers */
 
    return 0;
