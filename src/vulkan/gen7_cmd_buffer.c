@@ -128,7 +128,7 @@ void gen7_CmdBindIndexBuffer(
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, cmdBuffer);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
    cmd_buffer->state.gen7.index_buffer = buffer;
    cmd_buffer->state.gen7.index_type = vk_to_gen_index_type[indexType];
    cmd_buffer->state.gen7.index_offset = offset;
@@ -185,11 +185,11 @@ gen7_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
       cmd_buffer->state.current_pipeline = GPGPU;
    }
 
-   if (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
+   if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
    if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
-       (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)) {
+       (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
       /* FIXME: figure out descriptors for gen7 */
       result = gen7_flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
@@ -242,7 +242,7 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY) {
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_PIPELINE) {
       /* If somebody compiled a pipeline after starting a command buffer the
        * scratch bo may have grown since we started this cmd buffer (and
        * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
@@ -256,15 +256,15 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.descriptors_dirty)
       anv_flush_descriptor_sets(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & ANV_DYNAMIC_VIEWPORT_DIRTY)
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       anv_cmd_buffer_emit_viewport(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & ANV_DYNAMIC_SCISSOR_DIRTY)
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
       anv_cmd_buffer_emit_scissor(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_DYNAMIC_LINE_WIDTH_DIRTY |
-                                  ANV_DYNAMIC_DEPTH_BIAS_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH |
+                                  ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)) {
 
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
          cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
@@ -285,8 +285,8 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen7.sf);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                             GEN7_COLOR_CALC_STATE_length, 64);
@@ -307,9 +307,9 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                      .ColorCalcStatePointer = cc_state.offset);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t depth_stencil_dw[GEN7_DEPTH_STENCIL_STATE_length];
 
       struct GEN7_DEPTH_STENCIL_STATE depth_stencil = {
@@ -340,8 +340,8 @@ gen7_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.gen7.index_buffer &&
-       cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
+       cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_INDEX_BUFFER)) {
       struct anv_buffer *buffer = cmd_buffer->state.gen7.index_buffer;
       uint32_t offset = cmd_buffer->state.gen7.index_offset;
 

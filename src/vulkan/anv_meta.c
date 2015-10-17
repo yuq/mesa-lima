@@ -345,7 +345,7 @@ anv_cmd_buffer_restore(struct anv_cmd_buffer *cmd_buffer,
           sizeof(state->old_vertex_bindings));
 
    cmd_buffer->state.vb_dirty |= (1 << NUM_VB_USED) - 1;
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_PIPELINE_DIRTY;
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_PIPELINE;
    cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_VERTEX_BIT;
 
    anv_dynamic_state_copy(&cmd_buffer->state.dynamic, &state->dynamic,

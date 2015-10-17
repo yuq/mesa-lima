@@ -797,19 +797,21 @@ struct anv_buffer {
    VkDeviceSize                                 offset;   
 };
 
-/* The first 9 correspond to 1 << VK_DYNAMIC_STATE_FOO */
-#define ANV_DYNAMIC_VIEWPORT_DIRTY              (1 << 0)
-#define ANV_DYNAMIC_SCISSOR_DIRTY               (1 << 1)
-#define ANV_DYNAMIC_LINE_WIDTH_DIRTY            (1 << 2)
-#define ANV_DYNAMIC_DEPTH_BIAS_DIRTY            (1 << 3)
-#define ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY       (1 << 4)
-#define ANV_DYNAMIC_DEPTH_BOUNDS_DIRTY          (1 << 5)
-#define ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY  (1 << 6)
-#define ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY    (1 << 7)
-#define ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY     (1 << 8)
-#define ANV_DYNAMIC_STATE_DIRTY_MASK            ((1 << 9) - 1)
-#define ANV_CMD_BUFFER_PIPELINE_DIRTY           (1 << 9)
-#define ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY       (1 << 10)
+enum anv_cmd_dirty_bits {
+   ANV_CMD_DIRTY_DYNAMIC_VIEWPORT                  = 1 << 0, /* VK_DYNAMIC_STATE_VIEWPORT */
+   ANV_CMD_DIRTY_DYNAMIC_SCISSOR                   = 1 << 1, /* VK_DYNAMIC_STATE_SCISSOR */
+   ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH                = 1 << 2, /* VK_DYNAMIC_STATE_LINE_WIDTH */
+   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS                = 1 << 3, /* VK_DYNAMIC_STATE_DEPTH_BIAS */
+   ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS           = 1 << 4, /* VK_DYNAMIC_STATE_BLEND_CONSTANTS */
+   ANV_CMD_DIRTY_DYNAMIC_DEPTH_BOUNDS              = 1 << 5, /* VK_DYNAMIC_STATE_DEPTH_BOUNDS */
+   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK      = 1 << 6, /* VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK */
+   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK        = 1 << 7, /* VK_DYNAMIC_STATE_STENCIL_WRITE_MASK */
+   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE         = 1 << 8, /* VK_DYNAMIC_STATE_STENCIL_REFERENCE */
+   ANV_CMD_DIRTY_DYNAMIC_ALL                       = (1 << 9) - 1,
+   ANV_CMD_DIRTY_PIPELINE                          = 1 << 9,
+   ANV_CMD_DIRTY_INDEX_BUFFER                      = 1 << 10,
+};
+typedef uint32_t anv_cmd_dirty_mask_t;
 
 struct anv_vertex_binding {
    struct anv_buffer *                          buffer;
@@ -892,8 +894,8 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 struct anv_cmd_state {
    uint32_t                                     current_pipeline;
    uint32_t                                     vb_dirty;
-   uint32_t                                     dirty;
-   uint32_t                                     compute_dirty;
+   anv_cmd_dirty_mask_t                         dirty;
+   anv_cmd_dirty_mask_t                         compute_dirty;
    VkShaderStageFlags                           descriptors_dirty;
    VkShaderStageFlags                           push_constants_dirty;
    uint32_t                                     scratch_size;

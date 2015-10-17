@@ -104,7 +104,7 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   if (cmd_buffer->state.dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY) {
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_PIPELINE) {
       /* If somebody compiled a pipeline after starting a command buffer the
        * scratch bo may have grown since we started this cmd buffer (and
        * emitted STATE_BASE_ADDRESS).  If we're binding that pipeline now,
@@ -121,14 +121,14 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
    if (cmd_buffer->state.push_constants_dirty)
       gen8_cmd_buffer_flush_push_constants(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & ANV_DYNAMIC_VIEWPORT_DIRTY)
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_VIEWPORT)
       anv_cmd_buffer_emit_viewport(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & ANV_DYNAMIC_SCISSOR_DIRTY)
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_DYNAMIC_SCISSOR)
       anv_cmd_buffer_emit_scissor(cmd_buffer);
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_DYNAMIC_LINE_WIDTH_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_LINE_WIDTH)) {
       uint32_t sf_dw[GEN8_3DSTATE_SF_length];
       struct GEN8_3DSTATE_SF sf = {
          GEN8_3DSTATE_SF_header,
@@ -138,8 +138,8 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_merge(&cmd_buffer->batch, sf_dw, pipeline->gen8.sf);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_DYNAMIC_DEPTH_BIAS_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_DEPTH_BIAS)){
       bool enable_bias = cmd_buffer->state.dynamic.depth_bias.bias != 0.0f ||
          cmd_buffer->state.dynamic.depth_bias.slope_scaled != 0.0f;
 
@@ -158,8 +158,8 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                            pipeline->gen8.raster);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_DYNAMIC_BLEND_CONSTANTS_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_REFERENCE_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_DYNAMIC_BLEND_CONSTANTS |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
       struct anv_state cc_state =
          anv_cmd_buffer_alloc_dynamic_state(cmd_buffer,
                                             GEN8_COLOR_CALC_STATE_length, 64);
@@ -181,9 +181,9 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                      .ColorCalcStatePointerValid = true);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_COMPARE_MASK_DIRTY |
-                                  ANV_DYNAMIC_STENCIL_WRITE_MASK_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
+                                  ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK)) {
       uint32_t wm_depth_stencil_dw[GEN8_3DSTATE_WM_DEPTH_STENCIL_length];
 
       struct GEN8_3DSTATE_WM_DEPTH_STENCIL wm_depth_stencil = {
@@ -210,8 +210,8 @@ gen8_cmd_buffer_flush_state(struct anv_cmd_buffer *cmd_buffer)
                            pipeline->gen8.wm_depth_stencil);
    }
 
-   if (cmd_buffer->state.dirty & (ANV_CMD_BUFFER_PIPELINE_DIRTY |
-                                  ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY)) {
+   if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_INDEX_BUFFER)) {
       anv_batch_emit_merge(&cmd_buffer->batch,
                            cmd_buffer->state.state_vf, pipeline->gen8.vf);
    }
@@ -331,7 +331,7 @@ void gen8_CmdBindIndexBuffer(
    };
    GEN8_3DSTATE_VF_pack(NULL, cmd_buffer->state.state_vf, &vf);
 
-   cmd_buffer->state.dirty |= ANV_CMD_BUFFER_INDEX_BUFFER_DIRTY;
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_INDEX_BUFFER;
 
    anv_batch_emit(&cmd_buffer->batch, GEN8_3DSTATE_INDEX_BUFFER,
                   .IndexFormat = vk_to_gen_index_type[indexType],
@@ -394,11 +394,11 @@ gen8_cmd_buffer_flush_compute_state(struct anv_cmd_buffer *cmd_buffer)
       cmd_buffer->state.current_pipeline = GPGPU;
    }
 
-   if (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)
+   if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
 
    if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
-       (cmd_buffer->state.compute_dirty & ANV_CMD_BUFFER_PIPELINE_DIRTY)) {
+       (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
       result = gen8_flush_compute_descriptor_set(cmd_buffer);
       assert(result == VK_SUCCESS);
       cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE;

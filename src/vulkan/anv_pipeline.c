@@ -181,7 +181,7 @@ static void
 anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
                                 const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
-   uint32_t states = ANV_DYNAMIC_STATE_DIRTY_MASK;
+   anv_cmd_dirty_mask_t states = ANV_CMD_DIRTY_DYNAMIC_ALL;
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
 
