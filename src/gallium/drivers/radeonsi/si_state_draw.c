@@ -276,7 +276,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    prim == PIPE_PRIM_LINE_LOOP ||
 		    prim == PIPE_PRIM_TRIANGLE_FAN ||
 		    prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
-		    info->primitive_restart)
+		    info->primitive_restart ||
+		    info->count_from_stream_output)
 			wd_switch_on_eop = true;
 
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
@@ -284,10 +285,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		 * always problematic. */
 		if (sctx->b.family == CHIP_HAWAII &&
 		    (info->indirect || info->instance_count > 1))
-			wd_switch_on_eop = true;
-
-		/* USE_OPAQUE doesn't work when WD_SWITCH_ON_EOP is 0. */
-		if (info->count_from_stream_output)
 			wd_switch_on_eop = true;
 
 		/* Required on CIK and later. */
