@@ -296,6 +296,11 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
 			ia_switch_on_eoi = true;
 
+		/* Instancing bug on Bonaire. */
+		if (sctx->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
+		    (info->indirect || info->instance_count > 1))
+			partial_vs_wave = true;
+
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
@@ -307,11 +312,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	     (info->instance_count > 1 &&
 	      u_prims_for_vertices(info->mode, info->count) <= 1)))
 		sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
-
-	/* Instancing bug on 2 SE chips. */
-	if (sctx->b.screen->info.max_se == 2 && ia_switch_on_eoi &&
-	    (info->indirect || info->instance_count > 1))
-		partial_vs_wave = true;
 
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
