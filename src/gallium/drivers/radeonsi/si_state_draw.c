@@ -292,6 +292,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		if (info->count_from_stream_output)
 			wd_switch_on_eop = true;
 
+		/* Required on CIK and later. */
+		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
+			ia_switch_on_eoi = true;
+
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
