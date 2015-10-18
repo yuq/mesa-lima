@@ -223,6 +223,7 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	unsigned prim = info->mode;
 	unsigned primgroup_size = 128; /* recommended without a GS */
+	unsigned max_primgroup_in_wave = 2;
 
 	/* SWITCH_ON_EOP(0) is always preferable. */
 	bool wd_switch_on_eop = false;
@@ -296,6 +297,13 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
 			ia_switch_on_eoi = true;
 
+		/* Required by Hawaii and, for some special cases, by VI. */
+		if (ia_switch_on_eoi &&
+		    (sctx->b.family == CHIP_HAWAII ||
+		     (sctx->b.chip_class == VI &&
+		      (sctx->gs_shader.cso || max_primgroup_in_wave != 2))))
+			partial_vs_wave = true;
+
 		/* Instancing bug on Bonaire. */
 		if (sctx->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
 		    (info->indirect || info->instance_count > 1))
@@ -319,7 +327,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
 		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ? 2 : 0);
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ?
+					     max_primgroup_in_wave : 0);
 }
 
 static unsigned si_get_ls_hs_config(struct si_context *sctx,
