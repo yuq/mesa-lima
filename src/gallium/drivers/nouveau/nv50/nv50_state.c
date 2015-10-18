@@ -1060,6 +1060,24 @@ nv50_so_target_create(struct pipe_context *pipe,
 }
 
 static void
+nva0_so_target_save_offset(struct pipe_context *pipe,
+                           struct pipe_stream_output_target *ptarg,
+                           unsigned index, bool serialize)
+{
+   struct nv50_so_target *targ = nv50_so_target(ptarg);
+
+   if (serialize) {
+      struct nouveau_pushbuf *push = nv50_context(pipe)->base.pushbuf;
+      PUSH_SPACE(push, 2);
+      BEGIN_NV04(push, SUBC_3D(NV50_GRAPH_SERIALIZE), 1);
+      PUSH_DATA (push, 0);
+   }
+
+   nv50_query(targ->pq)->index = index;
+   pipe->end_query(pipe, targ->pq);
+}
+
+static void
 nv50_so_target_destroy(struct pipe_context *pipe,
                        struct pipe_stream_output_target *ptarg)
 {

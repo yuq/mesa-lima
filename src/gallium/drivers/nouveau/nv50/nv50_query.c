@@ -444,24 +444,6 @@ nv50_query_pushbuf_submit(struct nouveau_pushbuf *push, uint16_t method,
 }
 
 void
-nva0_so_target_save_offset(struct pipe_context *pipe,
-                           struct pipe_stream_output_target *ptarg,
-                           unsigned index, bool serialize)
-{
-   struct nv50_so_target *targ = nv50_so_target(ptarg);
-
-   if (serialize) {
-      struct nouveau_pushbuf *push = nv50_context(pipe)->base.pushbuf;
-      PUSH_SPACE(push, 2);
-      BEGIN_NV04(push, SUBC_3D(NV50_GRAPH_SERIALIZE), 1);
-      PUSH_DATA (push, 0);
-   }
-
-   nv50_query(targ->pq)->index = index;
-   nv50_query_end(pipe, targ->pq);
-}
-
-void
 nv50_init_query_functions(struct nv50_context *nv50)
 {
    struct pipe_context *pipe = &nv50->base.pipe;

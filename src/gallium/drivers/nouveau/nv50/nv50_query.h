@@ -33,8 +33,5 @@ void nv50_init_query_functions(struct nv50_context *);
 void nv50_query_pushbuf_submit(struct nouveau_pushbuf *, uint16_t,
                                struct nv50_query *, unsigned result_offset);
 void nv84_query_fifo_wait(struct nouveau_pushbuf *, struct nv50_query *);
-void nva0_so_target_save_offset(struct pipe_context *,
-                                struct pipe_stream_output_target *,
-                                unsigned, bool);
 
 #endif
