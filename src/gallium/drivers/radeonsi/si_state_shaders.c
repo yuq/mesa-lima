@@ -404,6 +404,7 @@ static void si_shader_ps(struct si_shader *shader)
 	unsigned num_sgprs, num_user_sgprs;
 	unsigned spi_baryc_cntl = 0;
 	uint64_t va;
+	bool has_centroid;
 
 	pm4 = shader->pm4 = CALLOC_STRUCT(si_pm4_state);
 
@@ -435,8 +436,11 @@ static void si_shader_ps(struct si_shader *shader)
 		}
 	}
 
+	has_centroid = G_0286CC_PERSP_CENTROID_ENA(shader->spi_ps_input_ena) ||
+		       G_0286CC_LINEAR_CENTROID_ENA(shader->spi_ps_input_ena);
+
 	spi_ps_in_control = S_0286D8_NUM_INTERP(shader->nparam) |
-		S_0286D8_BC_OPTIMIZE_DISABLE(1);
+			    S_0286D8_BC_OPTIMIZE_DISABLE(has_centroid);
 
 	si_pm4_set_reg(pm4, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
