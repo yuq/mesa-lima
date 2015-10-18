@@ -247,13 +247,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		/* primgroup_size must be set to a multiple of NUM_PATCHES */
 		primgroup_size = (primgroup_size / num_patches) * num_patches;
 
-		/* SWITCH_ON_EOI must be set if PrimID is used.
-		 * If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
+		/* SWITCH_ON_EOI must be set if PrimID is used. */
 		if ((sctx->tcs_shader.cso && sctx->tcs_shader.cso->info.uses_primid) ||
-		    sctx->tes_shader.cso->info.uses_primid) {
+		    sctx->tes_shader.cso->info.uses_primid)
 			ia_switch_on_eoi = true;
-			partial_es_wave = true;
-		}
 
 		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
 		if ((sctx->b.family == CHIP_TAHITI ||
@@ -312,6 +309,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
+
+	/* If SWITCH_ON_EOI is set, PARTIAL_ES_WAVE must be set too. */
+	if (ia_switch_on_eoi)
+		partial_es_wave = true;
 
 	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
 	 * on multi-SE chips. */
