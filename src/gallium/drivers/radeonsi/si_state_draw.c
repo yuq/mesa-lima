@@ -269,10 +269,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		wd_switch_on_eop = true;
 	}
 
-	if (sctx->b.streamout.streamout_enabled ||
-	    sctx->b.streamout.prims_gen_query_enabled)
-		partial_vs_wave = true;
-
 	if (sctx->b.chip_class >= CIK) {
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
