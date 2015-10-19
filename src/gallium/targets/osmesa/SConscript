@@ -5,8 +5,6 @@ env = env.Clone()
 env.Prepend(CPPPATH = [
     '#src/mapi',
     '#src/mesa',
-    '#src/glsl',
-    '#src/glsl/nir',
     #Dir('../../../mapi'), # src/mapi build path for python-generated GL API files/headers
 ])
 
@@ -24,10 +22,7 @@ env.Prepend(LIBS = [
 
 env.Append(CPPDEFINES = ['GALLIUM_TRACE', 'GALLIUM_SOFTPIPE'])
 
-sources = [
-    'target.c',
-    'glsl_types_hack.cpp'
-]
+sources = ['target.c']
 
 if env['llvm']:
     env.Append(CPPDEFINES = 'GALLIUM_LLVMPIPE')

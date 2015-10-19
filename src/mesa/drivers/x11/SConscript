@@ -33,7 +33,6 @@ sources = [
 	'xm_dd.c',
 	'xm_line.c',
 	'xm_tri.c',
-	'../../../glsl/nir/glsl_types.cpp',
 ]
 
 # Disallow undefined symbols
