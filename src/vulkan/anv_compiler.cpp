@@ -198,44 +198,11 @@ really_do_vs_prog(struct brw_context *brw,
                                  &prog_data->base.base);
    anv_nir_apply_pipeline_layout(vs->Program->nir, pipeline->layout);
 
-   GLbitfield64 outputs_written = vp->program.Base.OutputsWritten;
    prog_data->inputs_read = vp->program.Base.InputsRead;
 
-   if (key->copy_edgeflag) {
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_EDGE);
-      prog_data->inputs_read |= VERT_BIT_EDGEFLAG;
-   }
-
-   if (brw->gen < 6) {
-      /* Put dummy slots into the VUE for the SF to put the replaced
-       * point sprite coords in.  We shouldn't need these dummy slots,
-       * which take up precious URB space, but it would mean that the SF
-       * doesn't get nice aligned pairs of input coords into output
-       * coords, which would be a pain to handle.
-       */
-      for (int i = 0; i < 8; i++) {
-         if (key->point_coord_replace & (1 << i))
-            outputs_written |= BITFIELD64_BIT(VARYING_SLOT_TEX0 + i);
-      }
-
-      /* if back colors are written, allocate slots for front colors too */
-      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC0))
-         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL0);
-      if (outputs_written & BITFIELD64_BIT(VARYING_SLOT_BFC1))
-         outputs_written |= BITFIELD64_BIT(VARYING_SLOT_COL1);
-   }
-
-   /* In order for legacy clipping to work, we need to populate the clip
-    * distance varying slots whenever clipping is enabled, even if the vertex
-    * shader doesn't write to gl_ClipDistance.
-    */
-   if (key->nr_userclip_plane_consts) {
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST0);
-      outputs_written |= BITFIELD64_BIT(VARYING_SLOT_CLIP_DIST1);
-   }
-
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &prog_data->base.vue_map, outputs_written,
+                       &prog_data->base.vue_map,
+                       vp->program.Base.OutputsWritten,
                        prog ? prog->SeparateShader : false);
 
    set_binding_table_layout(&prog_data->base.base, pipeline,
