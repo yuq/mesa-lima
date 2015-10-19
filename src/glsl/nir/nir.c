@@ -107,6 +107,10 @@ void
 nir_shader_add_variable(nir_shader *shader, nir_variable *var)
 {
    switch (var->data.mode) {
+   case nir_var_all:
+      assert(!"invalid mode");
+      break;
+
    case nir_var_local:
       assert(!"nir_shader_add_variable cannot be used for local variables");
       break;

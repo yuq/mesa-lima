@@ -82,6 +82,7 @@ typedef struct {
 } nir_state_slot;
 
 typedef enum {
+   nir_var_all = -1,
    nir_var_shader_in,
    nir_var_shader_out,
    nir_var_global,
