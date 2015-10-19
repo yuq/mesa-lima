@@ -718,7 +718,7 @@ emit_consts_vgpu10(struct svga_context *svga, unsigned shader)
             /* round down to mulitple of 16 (this may cause rendering problems
              * but should avoid a device error).
              */
-            size &= ~16;
+            size &= ~15;
          }
       }
 
