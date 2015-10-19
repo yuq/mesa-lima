@@ -1018,6 +1018,8 @@ brw_try_compact_instruction(const struct brw_device_info *devinfo,
 
    if (devinfo->gen >= 6) {
       compact(acc_wr_control);
+   } else {
+      compact(mask_control_ex);
    }
 
    compact(cond_modifier);
@@ -1229,6 +1231,8 @@ brw_uncompact_instruction(const struct brw_device_info *devinfo, brw_inst *dst,
 
    if (devinfo->gen >= 6) {
       uncompact(acc_wr_control);
+   } else {
+      uncompact(mask_control_ex);
    }
 
    uncompact(cond_modifier);
