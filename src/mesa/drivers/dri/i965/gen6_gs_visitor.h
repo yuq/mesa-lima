@@ -39,7 +39,7 @@ public:
                    void *log_data,
                    struct brw_gs_compile *c,
                    struct gl_shader_program *prog,
-                   nir_shader *shader,
+                   const nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
                    int shader_time_index) :

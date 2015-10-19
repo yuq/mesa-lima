@@ -64,6 +64,7 @@ struct tgsi_shader_info
    uint file_count[TGSI_FILE_COUNT];  /**< number of declared registers */
    int file_max[TGSI_FILE_COUNT];  /**< highest index of declared registers */
    int const_file_max[PIPE_MAX_CONSTANT_BUFFERS];
+   unsigned samplers_declared; /**< bitmask of declared samplers */
 
    ubyte input_array_first[PIPE_MAX_SHADER_INPUTS];
    ubyte input_array_last[PIPE_MAX_SHADER_INPUTS];

@@ -203,55 +203,114 @@ static const char *
 interface_field_name(void *mem_ctx, char *base_name, ir_rvalue *d,
                      ir_rvalue **nonconst_block_index)
 {
-   ir_rvalue *previous_index = NULL;
    *nonconst_block_index = NULL;
+   char *name_copy = NULL;
+   size_t base_length = 0;
+
+   /* Loop back through the IR until we find the uniform block */
+   ir_rvalue *ir = d;
+   while (ir != NULL) {
+      switch (ir->ir_type) {
+      case ir_type_dereference_variable: {
+         /* Exit loop */
+         ir = NULL;
+         break;
+      }
+
+      case ir_type_dereference_record: {
+         ir_dereference_record *r = (ir_dereference_record *) ir;
+         ir = r->record->as_dereference();
+
+         /* If we got here it means any previous array subscripts belong to
+          * block members and not the block itself so skip over them in the
+          * next pass.
+          */
+         d = ir;
+         break;
+      }
+
+      case ir_type_dereference_array: {
+         ir_dereference_array *a = (ir_dereference_array *) ir;
+         ir = a->array->as_dereference();
+         break;
+      }
+
+      case ir_type_swizzle: {
+         ir_swizzle *s = (ir_swizzle *) ir;
+         ir = s->val->as_dereference();
+         break;
+      }
+
+      default:
+         assert(!"Should not get here.");
+         break;
+      }
+   }
 
    while (d != NULL) {
       switch (d->ir_type) {
       case ir_type_dereference_variable: {
          ir_dereference_variable *v = (ir_dereference_variable *) d;
-         if (previous_index
-             && v->var->is_interface_instance()
-             && v->var->type->is_array()) {
-
-            ir_constant *const_index = previous_index->as_constant();
-            if (!const_index) {
-               *nonconst_block_index = previous_index;
-               return ralloc_asprintf(mem_ctx, "%s[0]", base_name);
-            } else {
-               return ralloc_asprintf(mem_ctx,
-                                      "%s[%d]",
-                                      base_name,
-                                      const_index->get_uint_component(0));
-            }
+         if (name_copy != NULL &&
+             v->var->is_interface_instance() &&
+             v->var->type->is_array()) {
+            return name_copy;
          } else {
+            *nonconst_block_index = NULL;
             return base_name;
          }
 
          break;
       }
 
-      case ir_type_dereference_record: {
-         ir_dereference_record *r = (ir_dereference_record *) d;
-
-         d = r->record->as_dereference();
-         break;
-      }
-
       case ir_type_dereference_array: {
          ir_dereference_array *a = (ir_dereference_array *) d;
+         size_t new_length;
+
+         if (name_copy == NULL) {
+            name_copy = ralloc_strdup(mem_ctx, base_name);
+            base_length = strlen(name_copy);
+         }
+
+         /* For arrays of arrays we start at the innermost array and work our
+          * way out so we need to insert the subscript at the base of the
+          * name string rather than just attaching it to the end.
+          */
+         new_length = base_length;
+         ir_constant *const_index = a->array_index->as_constant();
+         char *end = ralloc_strdup(NULL, &name_copy[new_length]);
+         if (!const_index) {
+            ir_rvalue *array_index = a->array_index;
+            if (array_index->type != glsl_type::uint_type)
+               array_index = i2u(array_index);
+
+            if (a->array->type->is_array() &&
+                a->array->type->fields.array->is_array()) {
+               ir_constant *base_size = new(mem_ctx)
+                  ir_constant(a->array->type->fields.array->arrays_of_arrays_size());
+               array_index = mul(array_index, base_size);
+            }
+
+            if (*nonconst_block_index) {
+               *nonconst_block_index = add(*nonconst_block_index, array_index);
+            } else {
+               *nonconst_block_index = array_index;
+            }
+
+            ralloc_asprintf_rewrite_tail(&name_copy, &new_length, "[0]%s",
+                                         end);
+         } else {
+            ralloc_asprintf_rewrite_tail(&name_copy, &new_length, "[%d]%s",
+                                         const_index->get_uint_component(0),
+                                         end);
+         }
+         ralloc_free(end);
 
          d = a->array->as_dereference();
-         previous_index = a->array_index;
 
          break;
       }
-      case ir_type_swizzle: {
-         ir_swizzle *s = (ir_swizzle *) d;
 
-         d = s->val->as_dereference();
-         break;
-      }
       default:
          assert(!"Should not get here.");
          break;
@@ -277,27 +336,31 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
       interface_field_name(mem_ctx, (char *) var->get_interface_type()->name,
                            deref, &nonconst_block_index);
 
-   /* Locate the ubo block by interface name */
+   /* Locate the block by interface name */
+   this->is_shader_storage = var->is_in_shader_storage_block();
+   unsigned num_blocks;
+   struct gl_uniform_block **blocks;
+   if (this->is_shader_storage) {
+      num_blocks = shader->NumShaderStorageBlocks;
+      blocks = shader->ShaderStorageBlocks;
+   } else {
+      num_blocks = shader->NumUniformBlocks;
+      blocks = shader->UniformBlocks;
+   }
    this->uniform_block = NULL;
-   for (unsigned i = 0; i < shader->NumUniformBlocks; i++) {
-      if (strcmp(field_name, shader->UniformBlocks[i].Name) == 0) {
+   for (unsigned i = 0; i < num_blocks; i++) {
+      if (strcmp(field_name, blocks[i]->Name) == 0) {
 
          ir_constant *index = new(mem_ctx) ir_constant(i);
 
          if (nonconst_block_index) {
-            if (nonconst_block_index->type != glsl_type::uint_type)
-               nonconst_block_index = i2u(nonconst_block_index);
             this->uniform_block = add(nonconst_block_index, index);
          } else {
             this->uniform_block = index;
          }
 
-         this->is_shader_storage = shader->UniformBlocks[i].IsShaderStorage;
-
-         struct gl_uniform_block *block = &shader->UniformBlocks[i];
-
          this->ubo_var = var->is_interface_instance()
-            ? &block->Uniforms[0] : &block->Uniforms[var->data.location];
+            ? &blocks[i]->Uniforms[0] : &blocks[i]->Uniforms[var->data.location];
 
          break;
       }
@@ -335,7 +398,7 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
             if (deref_array->array->type->is_double())
                array_stride *= 2;
             *matrix_columns = deref_array->array->type->matrix_columns;
-         } else if (deref_array->type->is_interface()) {
+         } else if (deref_array->type->without_array()->is_interface()) {
             /* We're processing an array dereference of an interface instance
              * array. The thing being dereferenced *must* be a variable
              * dereference because interfaces cannot be embedded in other
@@ -344,7 +407,6 @@ lower_ubo_reference_visitor::setup_for_load_or_store(ir_variable *var,
              * interface instance array will have the same offsets relative to
              * the base of the block that backs them.
              */
-            assert(deref_array->array->as_dereference_variable());
             deref = deref_array->array->as_dereference();
             break;
          } else {
@@ -744,7 +806,31 @@ lower_ubo_reference_visitor::emit_access(bool is_write,
        * or 32 depending on the number of columns.
        */
       assert(matrix_columns <= 4);
-      unsigned matrix_stride = glsl_align(matrix_columns * N, 16);
+      unsigned matrix_stride = 0;
+      /* Matrix stride for std430 mat2xY matrices are not rounded up to
+       * vec4 size. From OpenGL 4.3 spec, section 7.6.2.2 "Standard Uniform
+       * Block Layout":
+       *
+       * "2. If the member is a two- or four-component vector with components
+       * consuming N basic machine units, the base alignment is 2N or 4N,
+       * respectively." [...]
+       * "4. If the member is an array of scalars or vectors, the base alignment
+       * and array stride are set to match the base alignment of a single array
+       * element, according to rules (1), (2), and (3), and rounded up to the
+       * base alignment of a vec4." [...]
+       * "7. If the member is a row-major matrix with C columns and R rows, the
+       * matrix is stored identically to an array of R row vectors with C
+       * components each, according to rule (4)." [...]
+       * "When using the std430 storage layout, shader storage blocks will be
+       * laid out in buffer storage identically to uniform and shader storage
+       * blocks using the std140 layout, except that the base alignment and
+       * stride of arrays of scalars and vectors in rule 4 and of structures in
+       * rule 9 are not rounded up a multiple of the base alignment of a vec4."
+       */
+      if (packing == GLSL_INTERFACE_PACKING_STD430 && matrix_columns == 2)
+         matrix_stride = 2 * N;
+      else
+         matrix_stride = glsl_align(matrix_columns * N, 16);
 
       const glsl_type *deref_type = deref->type->base_type == GLSL_TYPE_FLOAT ?
          glsl_type::float_type : glsl_type::double_type;

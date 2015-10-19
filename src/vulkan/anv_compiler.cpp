@@ -36,6 +36,7 @@
 #include <brw_gs.h>
 #include <brw_cs.h>
 #include "brw_vec4_gs_visitor.h"
+#include <brw_compiler.h>
 
 #include <mesa/main/shaderobj.h>
 #include <mesa/main/fbobject.h>
@@ -307,8 +308,9 @@ really_do_vs_prog(struct brw_context *brw,
 
    /* Emit GEN4 code.
     */
-   program = brw_vs_emit(brw, mem_ctx, key, prog_data, &vp->program,
-                         prog, -1, &program_size);
+   program = brw_compile_vs(brw->intelScreen->compiler, brw, mem_ctx,
+                            key, prog_data, vs->Program->nir, NULL, false, -1,
+                            &program_size, NULL);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
@@ -562,8 +564,9 @@ really_do_wm_prog(struct brw_context *brw,
     */
    prog_data->binding_table.render_target_start = 0;
 
-   program = brw_wm_fs_emit(brw, mem_ctx, key, prog_data,
-                            &fp->program, prog, -1, -1, &program_size);
+   program = brw_compile_fs(brw->intelScreen->compiler, brw, mem_ctx, key,
+                            prog_data, fp->program.Base.nir, fs->Program,
+                            -1, -1, brw->use_rep_send, &program_size, NULL);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
@@ -831,7 +834,8 @@ anv_codegen_gs_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    const unsigned *program =
-      brw_gs_emit(brw, prog, &c, mem_ctx, -1, &program_size);
+      brw_compile_gs(brw->intelScreen->compiler, brw, &c, gp->program.Base.nir,
+                     prog, mem_ctx, -1, &program_size, NULL);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
@@ -867,8 +871,9 @@ brw_codegen_cs_prog(struct brw_context *brw,
    anv_nir_apply_dynamic_offsets(pipeline, cs->Program->nir, &prog_data->base);
    anv_nir_apply_pipeline_layout(cs->Program->nir, pipeline->layout);
 
-   program = brw_cs_emit(brw, mem_ctx, key, prog_data,
-                         &cp->program, prog, -1, &program_size);
+   program = brw_compile_cs(brw->intelScreen->compiler, brw, mem_ctx, key,
+                            prog_data, cs->Program->nir, -1,
+                            &program_size, NULL);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;
@@ -1142,10 +1147,13 @@ setup_nir_io(struct gl_shader *mesa_shader,
       prog->OutputsWritten |= BITFIELD64_BIT(var->data.location);
    }
 
+   shader->info.system_values_read = 0;
+   foreach_list_typed(nir_variable, var, node, &shader->system_values) {
+      shader->info.system_values_read |= BITFIELD64_BIT(var->data.location);
+   }
+
    shader->info.inputs_read = prog->InputsRead;
    shader->info.outputs_written = prog->OutputsWritten;
-
-   mesa_shader->num_uniform_components = shader->num_uniforms;
 }
 
 static void
@@ -1163,7 +1171,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
            "failed to create %s shader\n", stage_info[stage].name);
 
 #define CREATE_PROGRAM(stage) \
-   _mesa_init_##stage##_program(&brw->ctx, &ralloc(mesa_shader, struct brw_##stage##_program)->program, 0, 0)
+   &ralloc(mesa_shader, struct brw_##stage##_program)->program.Base
 
    bool is_scalar;
    struct gl_program *prog;
@@ -1187,6 +1195,7 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    default:
       unreachable("Unsupported shader stage");
    }
+   _mesa_init_gl_program(prog, 0, 0);
    _mesa_reference_program(&brw->ctx, &mesa_shader->Program, prog);
 
    mesa_shader->Program->Parameters =
@@ -1215,11 +1224,14 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    }
    nir_validate_shader(mesa_shader->Program->nir);
 
+   setup_nir_io(mesa_shader, mesa_shader->Program->nir);
+
    brw_process_nir(mesa_shader->Program->nir,
                    compiler->screen->devinfo,
                    NULL, mesa_shader->Stage, is_scalar);
 
-   setup_nir_io(mesa_shader, mesa_shader->Program->nir);
+   mesa_shader->num_uniform_components =
+      mesa_shader->Program->nir->num_uniforms;
 
    fail_if(mesa_shader->Program->nir == NULL,
            "failed to translate SPIR-V to NIR\n");

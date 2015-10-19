@@ -29,6 +29,7 @@
 #include "pipe/p_state.h"
 #include "pipe/p_defines.h"
 #include "os/os_thread.h"
+#include "os/os_time.h"
 #include "util/u_format.h"
 #include "util/u_inlines.h"
 #include "util/u_math.h"
@@ -229,11 +230,15 @@ svga_texture_destroy(struct pipe_screen *screen,
    SVGA_DBG(DEBUG_DMA, "unref sid %p (texture)\n", tex->handle);
    svga_screen_surface_destroy(ss, &tex->key, &tex->handle);
 
-   ss->total_resource_bytes -= tex->size;
+   ss->hud.total_resource_bytes -= tex->size;
 
    FREE(tex->defined);
    FREE(tex->rendered_to);
    FREE(tex);
+
+   assert(ss->hud.num_resources > 0);
+   if (ss->hud.num_resources > 0)
+      ss->hud.num_resources--;
 }
 
 
@@ -322,6 +327,8 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    boolean use_direct_map = svga_have_gb_objects(svga) &&
       !svga_have_gb_dma(svga);
    unsigned d;
+   void *returnVal;
+   int64_t begin = os_time_get();
 
    /* We can't map texture storage directly unless we have GB objects */
    if (usage & PIPE_TRANSFER_MAP_DIRECTLY) {
@@ -464,10 +471,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
     * Begin mapping code
     */
    if (st->swbuf) {
-      return st->swbuf;
+      returnVal = st->swbuf;
    }
    else if (!st->use_direct_map) {
-      return sws->buffer_map(sws, st->hwbuf, usage);
+      returnVal = sws->buffer_map(sws, st->hwbuf, usage);
    }
    else {
       SVGA3dSize baseLevelSize;
@@ -518,9 +525,13 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       offset += svga3dsurface_get_pixel_offset(tex->key.format,
                                                mip_width, mip_height,
                                                xoffset, yoffset, zoffset);
-
-      return (void *) (map + offset);
+      returnVal = (void *) (map + offset);
    }
+
+   svga->hud.map_buffer_time += (os_time_get() - begin);
+   svga->hud.num_resources_mapped++;
+
+   return returnVal;
 }
 
 
@@ -889,7 +900,8 @@ svga_texture_create(struct pipe_screen *screen,
                    (debug_reference_descriptor)debug_describe_resource, 0);
 
    tex->size = util_resource_size(template);
-   svgascreen->total_resource_bytes += tex->size;
+   svgascreen->hud.total_resource_bytes += tex->size;
+   svgascreen->hud.num_resources++;
 
    return &tex->b.b;
 }
@@ -901,6 +913,7 @@ svga_texture_from_handle(struct pipe_screen *screen,
 			 struct winsys_handle *whandle)
 {
    struct svga_winsys_screen *sws = svga_winsys_screen(screen);
+   struct svga_screen *ss = svga_screen(screen);
    struct svga_winsys_surface *srf;
    struct svga_texture *tex;
    enum SVGA3dSurfaceFormat format = 0;
@@ -969,6 +982,8 @@ svga_texture_from_handle(struct pipe_screen *screen,
 
    tex->rendered_to = CALLOC(1, sizeof(tex->rendered_to[0]));
    tex->imported = TRUE;
+
+   ss->hud.num_resources++;
 
    return &tex->b.b;
 }

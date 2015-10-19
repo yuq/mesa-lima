@@ -26,8 +26,9 @@
  *    Rob Clark <robclark@freedesktop.org>
  */
 
-#include "glsl/shader_enums.h"
+#include "shader_enums.h"
 #include "util/macros.h"
+#include "mesa/main/config.h"
 
 #define ENUM(x) [x] = #x
 #define NAME(val) ((((val) < ARRAY_SIZE(names)) && names[(val)]) ? names[(val)] : "UNKNOWN")
@@ -42,6 +43,7 @@ const char * gl_shader_stage_name(gl_shader_stage stage)
       ENUM(MESA_SHADER_FRAGMENT),
       ENUM(MESA_SHADER_COMPUTE),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == MESA_SHADER_STAGES);
    return NAME(stage);
 }
 
@@ -82,6 +84,7 @@ const char * gl_vert_attrib_name(gl_vert_attrib attrib)
       ENUM(VERT_ATTRIB_GENERIC14),
       ENUM(VERT_ATTRIB_GENERIC15),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == VERT_ATTRIB_MAX);
    return NAME(attrib);
 }
 
@@ -147,6 +150,7 @@ const char * gl_varying_slot_name(gl_varying_slot slot)
       ENUM(VARYING_SLOT_VAR30),
       ENUM(VARYING_SLOT_VAR31),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == VARYING_SLOT_MAX);
    return NAME(slot);
 }
 
@@ -169,8 +173,10 @@ const char * gl_system_value_name(gl_system_value sysval)
      ENUM(SYSTEM_VALUE_TESS_LEVEL_INNER),
      ENUM(SYSTEM_VALUE_LOCAL_INVOCATION_ID),
      ENUM(SYSTEM_VALUE_WORK_GROUP_ID),
+     ENUM(SYSTEM_VALUE_NUM_WORK_GROUPS),
      ENUM(SYSTEM_VALUE_VERTEX_CNT),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == SYSTEM_VALUE_MAX);
    return NAME(sysval);
 }
 
@@ -182,6 +188,7 @@ const char * glsl_interp_qualifier_name(enum glsl_interp_qualifier qual)
       ENUM(INTERP_QUALIFIER_FLAT),
       ENUM(INTERP_QUALIFIER_NOPERSPECTIVE),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == INTERP_QUALIFIER_COUNT);
    return NAME(qual);
 }
 
@@ -201,5 +208,6 @@ const char * gl_frag_result_name(gl_frag_result result)
       ENUM(FRAG_RESULT_DATA6),
       ENUM(FRAG_RESULT_DATA7),
    };
+   STATIC_ASSERT(ARRAY_SIZE(names) == FRAG_RESULT_MAX);
    return NAME(result);
 }

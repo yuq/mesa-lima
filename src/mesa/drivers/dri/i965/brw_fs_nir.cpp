@@ -56,61 +56,25 @@ fs_visitor::emit_nir_code()
 void
 fs_visitor::nir_setup_inputs()
 {
+   if (stage != MESA_SHADER_FRAGMENT)
+      return;
+
    nir_inputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_inputs);
 
    nir_foreach_variable(var, &nir->inputs) {
-      enum brw_reg_type type = brw_type_for_base_type(var->type);
       fs_reg input = offset(nir_inputs, bld, var->data.driver_location);
 
       fs_reg reg;
-      switch (stage) {
-      case MESA_SHADER_VERTEX: {
-         /* Our ATTR file is indexed by VERT_ATTRIB_*, which is the value
-          * stored in nir_variable::location.
-          *
-          * However, NIR's load_input intrinsics use a different index - an
-          * offset into a single contiguous array containing all inputs.
-          * This index corresponds to the nir_variable::driver_location field.
-          *
-          * So, we need to copy from fs_reg(ATTR, var->location) to
-          * offset(nir_inputs, var->data.driver_location).
-          */
-         const glsl_type *const t = var->type->without_array();
-         const unsigned components = t->components();
-         const unsigned cols = t->matrix_columns;
-         const unsigned elts = t->vector_elements;
-         unsigned array_length = var->type->is_array() ? var->type->length : 1;
-         for (unsigned i = 0; i < array_length; i++) {
-            for (unsigned j = 0; j < cols; j++) {
-               for (unsigned k = 0; k < elts; k++) {
-                  bld.MOV(offset(retype(input, type), bld,
-                                 components * i + elts * j + k),
-                          offset(fs_reg(ATTR, var->data.location + i, type),
-                                 bld, 4 * j + k));
-               }
-            }
-         }
-         break;
-      }
-      case MESA_SHADER_GEOMETRY:
-      case MESA_SHADER_COMPUTE:
-      case MESA_SHADER_TESS_CTRL:
-      case MESA_SHADER_TESS_EVAL:
-         unreachable("fs_visitor not used for these stages yet.");
-         break;
-      case MESA_SHADER_FRAGMENT:
-         if (var->data.location == VARYING_SLOT_POS) {
-            reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
-                                                var->data.origin_upper_left);
-            emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
-                                      input, reg), 0xF);
-         } else {
-            emit_general_interpolation(input, var->name, var->type,
-                                       (glsl_interp_qualifier) var->data.interpolation,
-                                       var->data.location, var->data.centroid,
-                                       var->data.sample);
-         }
-         break;
+      if (var->data.location == VARYING_SLOT_POS) {
+         reg = *emit_fragcoord_interpolation(var->data.pixel_center_integer,
+                                             var->data.origin_upper_left);
+         emit_percomp(bld, fs_inst(BRW_OPCODE_MOV, bld.dispatch_width(),
+                                   input, reg), 0xF);
+      } else {
+         emit_general_interpolation(input, var->name, var->type,
+                                    (glsl_interp_qualifier) var->data.interpolation,
+                                    var->data.location, var->data.centroid,
+                                    var->data.sample);
       }
    }
 }
@@ -125,9 +89,7 @@ fs_visitor::nir_setup_outputs()
    nir_foreach_variable(var, &nir->outputs) {
       fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
 
-      int vector_elements =
-         var->type->is_array() ? var->type->fields.array->vector_elements
-                               : var->type->vector_elements;
+      int vector_elements = var->type->without_array()->vector_elements;
 
       switch (stage) {
       case MESA_SHADER_VERTEX:
@@ -1180,6 +1142,36 @@ get_image_atomic_op(nir_intrinsic_op op, const glsl_type *type)
    }
 }
 
+static fs_inst *
+emit_pixel_interpolater_send(const fs_builder &bld,
+                             enum opcode opcode,
+                             const fs_reg &dst,
+                             const fs_reg &src,
+                             const fs_reg &desc,
+                             glsl_interp_qualifier interpolation)
+{
+   fs_inst *inst;
+   fs_reg payload;
+   int mlen;
+
+   if (src.file == BAD_FILE) {
+      /* Dummy payload */
+      payload = bld.vgrf(BRW_REGISTER_TYPE_F, 1);
+      mlen = 1;
+   } else {
+      payload = src;
+      mlen = 2 * bld.dispatch_width() / 8;
+   }
+
+   inst = bld.emit(opcode, dst, payload, desc);
+   inst->mlen = mlen;
+   /* 2 floats per slot returned */
+   inst->regs_written = 2 * bld.dispatch_width() / 8;
+   inst->pi_noperspective = interpolation == INTERP_QUALIFIER_NOPERSPECTIVE;
+
+   return inst;
+}
+
 void
 fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr)
 {
@@ -1440,7 +1432,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           */
          brw_mark_surface_used(prog_data,
                                stage_prog_data->binding_table.ubo_start +
-                               nir->info.num_ssbos - 1);
+                               nir->info.num_ubos - 1);
       }
 
       if (has_indirect) {
@@ -1488,21 +1480,21 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
       fs_reg surf_index;
       if (const_uniform_block) {
-         unsigned index = stage_prog_data->binding_table.ubo_start +
+         unsigned index = stage_prog_data->binding_table.ssbo_start +
                           const_uniform_block->u[0];
          surf_index = fs_reg(index);
          brw_mark_surface_used(prog_data, index);
       } else {
          surf_index = vgrf(glsl_type::uint_type);
          bld.ADD(surf_index, get_nir_src(instr->src[0]),
-                 fs_reg(stage_prog_data->binding_table.ubo_start));
+                 fs_reg(stage_prog_data->binding_table.ssbo_start));
          surf_index = bld.emit_uniformize(surf_index);
 
          /* Assume this may touch any UBO. It would be nice to provide
           * a tighter bound, but the array information is already lowered away.
           */
          brw_mark_surface_used(prog_data,
-                               stage_prog_data->binding_table.ubo_start +
+                               stage_prog_data->binding_table.ssbo_start +
                                nir->info.num_ssbos - 1);
       }
 
@@ -1545,8 +1537,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_load_input: {
       unsigned index = 0;
       for (unsigned j = 0; j < instr->num_components; j++) {
-         fs_reg src = offset(retype(nir_inputs, dest.type), bld,
-                             instr->const_index[0] + index);
+         fs_reg src;
+         if (stage == MESA_SHADER_VERTEX) {
+            src = offset(fs_reg(ATTR, instr->const_index[0], dest.type), bld, index);
+         } else {
+            src = offset(retype(nir_inputs, dest.type), bld,
+                         instr->const_index[0] + index);
+         }
          if (has_indirect)
             src.reladdr = new(mem_ctx) fs_reg(get_nir_src(instr->src[0]));
          index++;
@@ -1583,28 +1580,81 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       ((struct brw_wm_prog_data *) prog_data)->pulls_bary = true;
 
       fs_reg dst_xy = bld.vgrf(BRW_REGISTER_TYPE_F, 2);
-
-      /* For most messages, we need one reg of ignored data; the hardware
-       * requires mlen==1 even when there is no payload. in the per-slot
-       * offset case, we'll replace this with the proper source data.
-       */
-      fs_reg src = vgrf(glsl_type::float_type);
-      int mlen = 1;     /* one reg unless overriden */
-      fs_inst *inst;
+      const glsl_interp_qualifier interpolation =
+         (glsl_interp_qualifier) instr->variables[0]->var->data.interpolation;
 
       switch (instr->intrinsic) {
       case nir_intrinsic_interp_var_at_centroid:
-         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_CENTROID,
-                         dst_xy, src, fs_reg(0u));
+         emit_pixel_interpolater_send(bld,
+                                      FS_OPCODE_INTERPOLATE_AT_CENTROID,
+                                      dst_xy,
+                                      fs_reg(), /* src */
+                                      fs_reg(0u),
+                                      interpolation);
          break;
 
       case nir_intrinsic_interp_var_at_sample: {
-         /* XXX: We should probably handle non-constant sample id's */
          nir_const_value *const_sample = nir_src_as_const_value(instr->src[0]);
-         assert(const_sample);
-         unsigned msg_data = const_sample ? const_sample->i[0] << 4 : 0;
-         inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SAMPLE, dst_xy, src,
-                         fs_reg(msg_data));
+
+         if (const_sample) {
+            unsigned msg_data = const_sample->i[0] << 4;
+
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                         dst_xy,
+                                         fs_reg(), /* src */
+                                         fs_reg(msg_data),
+                                         interpolation);
+         } else {
+            const fs_reg sample_src = retype(get_nir_src(instr->src[0]),
+                                             BRW_REGISTER_TYPE_UD);
+
+            if (nir_src_is_dynamically_uniform(instr->src[0])) {
+               const fs_reg sample_id = bld.emit_uniformize(sample_src);
+               const fs_reg msg_data = vgrf(glsl_type::uint_type);
+               bld.exec_all().group(1, 0).SHL(msg_data, sample_id, fs_reg(4u));
+               emit_pixel_interpolater_send(bld,
+                                            FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                            dst_xy,
+                                            fs_reg(), /* src */
+                                            msg_data,
+                                            interpolation);
+            } else {
+               /* Make a loop that sends a message to the pixel interpolater
+                * for the sample number in each live channel. If there are
+                * multiple channels with the same sample number then these
+                * will be handled simultaneously with a single interation of
+                * the loop.
+                */
+               bld.emit(BRW_OPCODE_DO);
+
+               /* Get the next live sample number into sample_id_reg */
+               const fs_reg sample_id = bld.emit_uniformize(sample_src);
+
+               /* Set the flag register so that we can perform the send
+                * message on all channels that have the same sample number
+                */
+               bld.CMP(bld.null_reg_ud(),
+                       sample_src, sample_id,
+                       BRW_CONDITIONAL_EQ);
+               const fs_reg msg_data = vgrf(glsl_type::uint_type);
+               bld.exec_all().group(1, 0).SHL(msg_data, sample_id, fs_reg(4u));
+               fs_inst *inst =
+                  emit_pixel_interpolater_send(bld,
+                                               FS_OPCODE_INTERPOLATE_AT_SAMPLE,
+                                               dst_xy,
+                                               fs_reg(), /* src */
+                                               msg_data,
+                                               interpolation);
+               set_predicate(BRW_PREDICATE_NORMAL, inst);
+
+               /* Continue the loop if there are any live channels left */
+               set_predicate_inv(BRW_PREDICATE_NORMAL,
+                                 true, /* inverse */
+                                 bld.emit(BRW_OPCODE_WHILE));
+            }
+         }
+
          break;
       }
 
@@ -1615,10 +1665,14 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             unsigned off_x = MIN2((int)(const_offset->f[0] * 16), 7) & 0xf;
             unsigned off_y = MIN2((int)(const_offset->f[1] * 16), 7) & 0xf;
 
-            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET, dst_xy, src,
-                            fs_reg(off_x | (off_y << 4)));
+            emit_pixel_interpolater_send(bld,
+                                         FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET,
+                                         dst_xy,
+                                         fs_reg(), /* src */
+                                         fs_reg(off_x | (off_y << 4)),
+                                         interpolation);
          } else {
-            src = vgrf(glsl_type::ivec2_type);
+            fs_reg src = vgrf(glsl_type::ivec2_type);
             fs_reg offset_src = retype(get_nir_src(instr->src[0]),
                                        BRW_REGISTER_TYPE_F);
             for (int i = 0; i < 2; i++) {
@@ -1646,9 +1700,13 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                            bld.SEL(offset(src, bld, i), itemp, fs_reg(7)));
             }
 
-            mlen = 2 * dispatch_width / 8;
-            inst = bld.emit(FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET, dst_xy, src,
-                            fs_reg(0u));
+            const enum opcode opcode = FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET;
+            emit_pixel_interpolater_send(bld,
+                                         opcode,
+                                         dst_xy,
+                                         src,
+                                         fs_reg(0u),
+                                         interpolation);
          }
          break;
       }
@@ -1656,12 +1714,6 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       default:
          unreachable("Invalid intrinsic");
       }
-
-      inst->mlen = mlen;
-      /* 2 floats per slot returned */
-      inst->regs_written = 2 * dispatch_width / 8;
-      inst->pi_noperspective = instr->variables[0]->var->data.interpolation ==
-                               INTERP_QUALIFIER_NOPERSPECTIVE;
 
       for (unsigned j = 0; j < instr->num_components; j++) {
          fs_reg src = interp_reg(instr->variables[0]->var->data.location, j);
@@ -1684,18 +1736,18 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       nir_const_value *const_uniform_block =
          nir_src_as_const_value(instr->src[1]);
       if (const_uniform_block) {
-         unsigned index = stage_prog_data->binding_table.ubo_start +
+         unsigned index = stage_prog_data->binding_table.ssbo_start +
                           const_uniform_block->u[0];
          surf_index = fs_reg(index);
          brw_mark_surface_used(prog_data, index);
       } else {
          surf_index = vgrf(glsl_type::uint_type);
          bld.ADD(surf_index, get_nir_src(instr->src[1]),
-                  fs_reg(stage_prog_data->binding_table.ubo_start));
+                  fs_reg(stage_prog_data->binding_table.ssbo_start));
          surf_index = bld.emit_uniformize(surf_index);
 
          brw_mark_surface_used(prog_data,
-                               stage_prog_data->binding_table.ubo_start +
+                               stage_prog_data->binding_table.ssbo_start +
                                nir->info.num_ssbos - 1);
       }
 
@@ -1780,17 +1832,17 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_ssbo_atomic_add:
       nir_emit_ssbo_atomic(bld, BRW_AOP_ADD, instr);
       break;
-   case nir_intrinsic_ssbo_atomic_min:
-      if (dest.type == BRW_REGISTER_TYPE_D)
-         nir_emit_ssbo_atomic(bld, BRW_AOP_IMIN, instr);
-      else
-         nir_emit_ssbo_atomic(bld, BRW_AOP_UMIN, instr);
+   case nir_intrinsic_ssbo_atomic_imin:
+      nir_emit_ssbo_atomic(bld, BRW_AOP_IMIN, instr);
       break;
-   case nir_intrinsic_ssbo_atomic_max:
-      if (dest.type == BRW_REGISTER_TYPE_D)
-         nir_emit_ssbo_atomic(bld, BRW_AOP_IMAX, instr);
-      else
-         nir_emit_ssbo_atomic(bld, BRW_AOP_UMAX, instr);
+   case nir_intrinsic_ssbo_atomic_umin:
+      nir_emit_ssbo_atomic(bld, BRW_AOP_UMIN, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_imax:
+      nir_emit_ssbo_atomic(bld, BRW_AOP_IMAX, instr);
+      break;
+   case nir_intrinsic_ssbo_atomic_umax:
+      nir_emit_ssbo_atomic(bld, BRW_AOP_UMAX, instr);
       break;
    case nir_intrinsic_ssbo_atomic_and:
       nir_emit_ssbo_atomic(bld, BRW_AOP_AND, instr);
@@ -1810,7 +1862,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
    case nir_intrinsic_get_buffer_size: {
       nir_const_value *const_uniform_block = nir_src_as_const_value(instr->src[0]);
-      unsigned ubo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
+      unsigned ssbo_index = const_uniform_block ? const_uniform_block->u[0] : 0;
       int reg_width = dispatch_width / 8;
 
       /* Set LOD = 0 */
@@ -1821,7 +1873,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                   BRW_REGISTER_TYPE_UD);
       bld.LOAD_PAYLOAD(src_payload, &source, 1, 0);
 
-      fs_reg surf_index = fs_reg(prog_data->binding_table.ubo_start + ubo_index);
+      fs_reg surf_index = fs_reg(prog_data->binding_table.ssbo_start + ssbo_index);
       fs_inst *inst = bld.emit(FS_OPCODE_GET_BUFFER_SIZE, dest,
                                src_payload, surf_index);
       inst->header_size = 0;
@@ -1874,20 +1926,20 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
    fs_reg surface;
    nir_const_value *const_surface = nir_src_as_const_value(instr->src[0]);
    if (const_surface) {
-      unsigned surf_index = stage_prog_data->binding_table.ubo_start +
+      unsigned surf_index = stage_prog_data->binding_table.ssbo_start +
                             const_surface->u[0];
       surface = fs_reg(surf_index);
       brw_mark_surface_used(prog_data, surf_index);
    } else {
       surface = vgrf(glsl_type::uint_type);
       bld.ADD(surface, get_nir_src(instr->src[0]),
-              fs_reg(stage_prog_data->binding_table.ubo_start));
+              fs_reg(stage_prog_data->binding_table.ssbo_start));
 
-      /* Assume this may touch any UBO. This is the same we do for other
+      /* Assume this may touch any SSBO. This is the same we do for other
        * UBO/SSBO accesses with non-constant surface.
        */
       brw_mark_surface_used(prog_data,
-                            stage_prog_data->binding_table.ubo_start +
+                            stage_prog_data->binding_table.ssbo_start +
                             nir->info.num_ssbos - 1);
    }
 

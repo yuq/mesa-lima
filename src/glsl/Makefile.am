@@ -148,9 +148,6 @@ libglsl_la_SOURCES =					\
 
 
 libnir_la_SOURCES =					\
-	glsl_types.cpp					\
-	builtin_types.cpp				\
-	glsl_symbol_table.cpp				\
 	$(NIR_FILES)					\
 	$(NIR_GENERATED_FILES)
 
@@ -160,6 +157,7 @@ glsl_compiler_SOURCES = \
 glsl_compiler_LDADD =					\
 	libglsl.la					\
 	$(top_builddir)/src/libglsl_util.la		\
+	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)
 
 spirv2nir_SOURCES = \
@@ -284,6 +282,5 @@ nir_tests_control_flow_tests_CFLAGS =			\
 nir_tests_control_flow_tests_LDADD =			\
 	$(top_builddir)/src/gtest/libgtest.la		\
 	$(top_builddir)/src/glsl/libnir.la		\
-	$(top_builddir)/src/libglsl_util.la		\
 	$(top_builddir)/src/util/libmesautil.la		\
 	$(PTHREAD_LIBS)

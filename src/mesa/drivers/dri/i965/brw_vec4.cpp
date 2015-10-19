@@ -280,6 +280,18 @@ vec4_instruction::can_do_source_mods(const struct brw_device_info *devinfo)
    return true;
 }
 
+bool
+vec4_instruction::can_change_types() const
+{
+   return dst.type == src[0].type &&
+          !src[0].abs && !src[0].negate && !saturate &&
+          (opcode == BRW_OPCODE_MOV ||
+           (opcode == BRW_OPCODE_SEL &&
+            dst.type == src[1].type &&
+            predicate != BRW_PREDICATE_NONE &&
+            !src[1].abs && !src[1].negate));
+}
+
 /**
  * Returns how many MRFs an opcode will write over.
  *
@@ -1632,28 +1644,11 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
     */
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid) {
       attribute_map[VERT_ATTRIB_MAX] = payload_reg + nr_attributes;
-      nr_attributes++;
    }
 
    lower_attributes_to_hw_regs(attribute_map, false /* interleaved */);
 
-   /* The BSpec says we always have to read at least one thing from
-    * the VF, and it appears that the hardware wedges otherwise.
-    */
-   if (nr_attributes == 0)
-      nr_attributes = 1;
-
-   prog_data->urb_read_length = (nr_attributes + 1) / 2;
-
-   unsigned vue_entries =
-      MAX2(nr_attributes, prog_data->vue_map.num_slots);
-
-   if (devinfo->gen == 6)
-      prog_data->urb_entry_size = ALIGN(vue_entries, 8) / 8;
-   else
-      prog_data->urb_entry_size = ALIGN(vue_entries, 4) / 4;
-
-   return payload_reg + nr_attributes;
+   return payload_reg + vs_prog_data->nr_attributes;
 }
 
 int
@@ -1937,51 +1932,76 @@ extern "C" {
  * Returns the final assembly and the program's size.
  */
 const unsigned *
-brw_vs_emit(struct brw_context *brw,
-            void *mem_ctx,
-            const struct brw_vs_prog_key *key,
-            struct brw_vs_prog_data *prog_data,
-            struct gl_vertex_program *vp,
-            struct gl_shader_program *prog,
-            int shader_time_index,
-            unsigned *final_assembly_size)
+brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
+               void *mem_ctx,
+               const struct brw_vs_prog_key *key,
+               struct brw_vs_prog_data *prog_data,
+               const nir_shader *shader,
+               gl_clip_plane *clip_planes,
+               bool use_legacy_snorm_formula,
+               int shader_time_index,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
    const unsigned *assembly = NULL;
 
-   if (brw->intelScreen->compiler->scalar_vs) {
+   unsigned nr_attributes = _mesa_bitcount_64(prog_data->inputs_read);
+
+   /* gl_VertexID and gl_InstanceID are system values, but arrive via an
+    * incoming vertex attribute.  So, add an extra slot.
+    */
+   if (shader->info.system_values_read &
+       (BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
+        BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID))) {
+      nr_attributes++;
+   }
+
+   /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
+    * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
+    * vec4 mode, the hardware appears to wedge unless we read something.
+    */
+   if (compiler->scalar_vs)
+      prog_data->base.urb_read_length = DIV_ROUND_UP(nr_attributes, 2);
+   else
+      prog_data->base.urb_read_length = DIV_ROUND_UP(MAX2(nr_attributes, 1), 2);
+
+   prog_data->nr_attributes = nr_attributes;
+
+   /* Since vertex shaders reuse the same VUE entry for inputs and outputs
+    * (overwriting the original contents), we need to make sure the size is
+    * the larger of the two.
+    */
+   const unsigned vue_entries =
+      MAX2(nr_attributes, (unsigned)prog_data->base.vue_map.num_slots);
+
+   if (compiler->devinfo->gen == 6)
+      prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 8);
+   else
+      prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 4);
+
+   if (compiler->scalar_vs) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
-      fs_visitor v(brw->intelScreen->compiler, brw,
-                   mem_ctx, key, &prog_data->base.base,
+      fs_visitor v(compiler, log_data, mem_ctx, key, &prog_data->base.base,
                    NULL, /* prog; Only used for TEXTURE_RECTANGLE on gen < 8 */
-                   vp->Base.nir, 8, shader_time_index);
-      if (!v.run_vs(brw_select_clip_planes(&brw->ctx))) {
-         if (prog) {
-            prog->LinkStatus = false;
-            ralloc_strcat(&prog->InfoLog, v.fail_msg);
-         }
-
-         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
-                       v.fail_msg);
+                   shader, 8, shader_time_index);
+      if (!v.run_vs(clip_planes)) {
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
          return NULL;
       }
 
-      fs_generator g(brw->intelScreen->compiler, brw,
-                     mem_ctx, (void *) key, &prog_data->base.base,
-                     &vp->Base, v.promoted_constants,
+      fs_generator g(compiler, log_data, mem_ctx, (void *) key,
+                     &prog_data->base.base, v.promoted_constants,
                      v.runtime_check_aads_emit, "VS");
       if (INTEL_DEBUG & DEBUG_VS) {
-         char *name;
-         if (prog) {
-            name = ralloc_asprintf(mem_ctx, "%s vertex shader %d",
-                                   prog->Label ? prog->Label : "unnamed",
-                                   prog->Name);
-         } else {
-            name = ralloc_asprintf(mem_ctx, "vertex program %d",
-                                   vp->Base.Id);
-         }
-         g.enable_debug(name);
+         const char *debug_name =
+            ralloc_asprintf(mem_ctx, "%s vertex shader %s",
+                            shader->info.label ? shader->info.label : "unnamed",
+                            shader->info.name);
+
+         g.enable_debug(debug_name);
       }
       g.generate_code(v.cfg, 8);
       assembly = g.get_assembly(final_assembly_size);
@@ -1990,26 +2010,19 @@ brw_vs_emit(struct brw_context *brw,
    if (!assembly) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-      vec4_vs_visitor v(brw->intelScreen->compiler, brw, key, prog_data,
-                        vp->Base.nir, brw_select_clip_planes(&brw->ctx),
-                        mem_ctx, shader_time_index,
-                        !_mesa_is_gles3(&brw->ctx));
+      vec4_vs_visitor v(compiler, log_data, key, prog_data,
+                        shader, clip_planes, mem_ctx,
+                        shader_time_index, use_legacy_snorm_formula);
       if (!v.run()) {
-         if (prog) {
-            prog->LinkStatus = false;
-            ralloc_strcat(&prog->InfoLog, v.fail_msg);
-         }
-
-         _mesa_problem(NULL, "Failed to compile vertex shader: %s\n",
-                       v.fail_msg);
+         if (error_str)
+            *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
          return NULL;
       }
 
-      vec4_generator g(brw->intelScreen->compiler, brw,
-                       prog, &vp->Base, &prog_data->base,
+      vec4_generator g(compiler, log_data, &prog_data->base,
                        mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
-      assembly = g.generate_assembly(v.cfg, final_assembly_size);
+      assembly = g.generate_assembly(v.cfg, final_assembly_size, shader);
    }
 
    return assembly;

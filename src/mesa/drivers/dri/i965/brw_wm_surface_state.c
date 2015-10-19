@@ -34,6 +34,7 @@
 #include "main/blend.h"
 #include "main/mtypes.h"
 #include "main/samplerobj.h"
+#include "main/shaderimage.h"
 #include "program/prog_parameter.h"
 #include "main/framebuffer.h"
 
@@ -925,54 +926,53 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    if (!shader)
       return;
 
-   uint32_t *surf_offsets =
+   uint32_t *ubo_surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
    for (int i = 0; i < shader->NumUniformBlocks; i++) {
-      struct intel_buffer_object *intel_bo;
+      struct gl_uniform_buffer_binding *binding =
+         &ctx->UniformBufferBindings[shader->UniformBlocks[i]->Binding];
 
-      /* Because behavior for referencing outside of the binding's size in the
-       * glBindBufferRange case is undefined, we can just bind the whole buffer
-       * glBindBufferBase wants and be a correct implementation.
-       */
-      if (!shader->UniformBlocks[i].IsShaderStorage) {
-         struct gl_uniform_buffer_binding *binding;
-         binding =
-            &ctx->UniformBufferBindings[shader->UniformBlocks[i].Binding];
-         if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-            brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
-         } else {
-            intel_bo = intel_buffer_object(binding->BufferObject);
-            drm_intel_bo *bo =
-               intel_bufferobj_buffer(brw, intel_bo,
-                                      binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset);
-            brw_create_constant_surface(brw, bo, binding->Offset,
-                                        binding->BufferObject->Size - binding->Offset,
-                                        &surf_offsets[i],
-                                        dword_pitch);
-         }
+      if (binding->BufferObject == ctx->Shared->NullBufferObj) {
+         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
       } else {
-         struct gl_shader_storage_buffer_binding *binding;
-         binding =
-            &ctx->ShaderStorageBufferBindings[shader->UniformBlocks[i].Binding];
-         if (binding->BufferObject == ctx->Shared->NullBufferObj) {
-            brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &surf_offsets[i]);
-         } else {
-            intel_bo = intel_buffer_object(binding->BufferObject);
-            drm_intel_bo *bo =
-               intel_bufferobj_buffer(brw, intel_bo,
-                                      binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset);
-            brw_create_buffer_surface(brw, bo, binding->Offset,
-                                      binding->BufferObject->Size - binding->Offset,
-                                      &surf_offsets[i],
-                                      dword_pitch);
-         }
+         struct intel_buffer_object *intel_bo =
+            intel_buffer_object(binding->BufferObject);
+         drm_intel_bo *bo =
+            intel_bufferobj_buffer(brw, intel_bo,
+                                   binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset);
+         brw_create_constant_surface(brw, bo, binding->Offset,
+                                     binding->BufferObject->Size - binding->Offset,
+                                     &ubo_surf_offsets[i],
+                                     dword_pitch);
       }
    }
 
-   if (shader->NumUniformBlocks)
+   uint32_t *ssbo_surf_offsets =
+      &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
+
+   for (int i = 0; i < shader->NumShaderStorageBlocks; i++) {
+      struct gl_shader_storage_buffer_binding *binding =
+         &ctx->ShaderStorageBufferBindings[shader->ShaderStorageBlocks[i]->Binding];
+
+      if (binding->BufferObject == ctx->Shared->NullBufferObj) {
+         brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
+      } else {
+         struct intel_buffer_object *intel_bo =
+            intel_buffer_object(binding->BufferObject);
+         drm_intel_bo *bo =
+            intel_bufferobj_buffer(brw, intel_bo,
+                                   binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset);
+         brw_create_buffer_surface(brw, bo, binding->Offset,
+                                   binding->BufferObject->Size - binding->Offset,
+                                   &ssbo_surf_offsets[i],
+                                   dword_pitch);
+      }
+   }
+
+   if (shader->NumUniformBlocks || shader->NumShaderStorageBlocks)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
@@ -1112,7 +1112,7 @@ brw_upload_cs_image_surfaces(struct brw_context *brw)
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
 
    if (prog) {
-      /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS */
+      /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
                                 &brw->cs.base, &brw->cs.prog_data->base);
    }
@@ -1120,7 +1120,7 @@ brw_upload_cs_image_surfaces(struct brw_context *brw)
 
 const struct brw_tracked_state brw_cs_image_surfaces = {
    .dirty = {
-      .mesa = _NEW_PROGRAM,
+      .mesa = _NEW_TEXTURE | _NEW_PROGRAM,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_CS_PROG_DATA |
              BRW_NEW_IMAGE_UNITS
@@ -1253,7 +1253,7 @@ update_image_surface(struct brw_context *brw,
                      uint32_t *surf_offset,
                      struct brw_image_param *param)
 {
-   if (u->_Valid) {
+   if (_mesa_is_image_unit_valid(&brw->ctx, u)) {
       struct gl_texture_object *obj = u->TexObj;
       const unsigned format = get_image_format(brw, u->_ActualFormat, access);
 
@@ -1338,7 +1338,7 @@ brw_upload_wm_image_surfaces(struct brw_context *brw)
    struct gl_shader_program *prog = ctx->Shader._CurrentFragmentProgram;
 
    if (prog) {
-      /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS */
+      /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
                                 &brw->wm.base, &brw->wm.prog_data->base);
    }
@@ -1346,6 +1346,7 @@ brw_upload_wm_image_surfaces(struct brw_context *brw)
 
 const struct brw_tracked_state brw_wm_image_surfaces = {
    .dirty = {
+      .mesa = _NEW_TEXTURE,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_FRAGMENT_PROGRAM |
              BRW_NEW_FS_PROG_DATA |

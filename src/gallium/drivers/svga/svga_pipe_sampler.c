@@ -273,6 +273,8 @@ svga_create_sampler_state(struct pipe_context *pipe,
             cso->min_lod, cso->view_min_lod, cso->view_max_lod,
             cso->mipfilter == SVGA3D_TEX_FILTER_NONE ? "SVGA3D_TEX_FILTER_NONE" : "SOMETHING");
 
+   svga->hud.num_state_objects++;
+
    return cso;
 }
 
@@ -328,6 +330,7 @@ static void svga_delete_sampler_state(struct pipe_context *pipe,
    }
 
    FREE(sampler);
+   svga->hud.num_state_objects--;
 }
 
 

@@ -29,6 +29,7 @@
 #include "pipe/p_defines.h"
 #include "util/u_inlines.h"
 #include "os/os_thread.h"
+#include "os/os_time.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_resource.h"
@@ -77,6 +78,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    struct svga_buffer *sbuf = svga_buffer(resource);
    struct pipe_transfer *transfer;
    uint8_t *map;
+   int64_t begin = os_time_get();
 
    transfer = CALLOC_STRUCT(pipe_transfer);
    if (transfer == NULL) {
@@ -244,6 +246,8 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
       FREE(transfer);
    }
 
+   svga->hud.map_buffer_time += (os_time_get() - begin);
+
    return map;
 }
 
@@ -331,7 +335,10 @@ svga_buffer_destroy( struct pipe_screen *screen,
    if (sbuf->swbuf && !sbuf->user)
       align_free(sbuf->swbuf);
 
-   ss->total_resource_bytes -= sbuf->size;
+   ss->hud.total_resource_bytes -= sbuf->size;
+   assert(ss->hud.num_resources > 0);
+   if (ss->hud.num_resources > 0)
+      ss->hud.num_resources--;
 
    FREE(sbuf);
 }
@@ -409,7 +416,9 @@ svga_buffer_create(struct pipe_screen *screen,
                    (debug_reference_descriptor)debug_describe_resource, 0);
 
    sbuf->size = util_resource_size(&sbuf->b.b);
-   ss->total_resource_bytes += sbuf->size;
+   ss->hud.total_resource_bytes += sbuf->size;
+
+   ss->hud.num_resources++;
 
    return &sbuf->b.b;
 
@@ -427,6 +436,7 @@ svga_user_buffer_create(struct pipe_screen *screen,
 			unsigned bind)
 {
    struct svga_buffer *sbuf;
+   struct svga_screen *ss = svga_screen(screen);
 
    sbuf = CALLOC_STRUCT(svga_buffer);
    if (!sbuf)
@@ -449,6 +459,8 @@ svga_user_buffer_create(struct pipe_screen *screen,
 
    debug_reference(&sbuf->b.b.reference,
                    (debug_reference_descriptor)debug_describe_resource, 0);
+
+   ss->hud.num_resources++;
 
    return &sbuf->b.b;
 

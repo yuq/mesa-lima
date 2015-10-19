@@ -42,7 +42,7 @@
 #include "main/config.h"
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
-#include "glsl/shader_enums.h"
+#include "glsl/nir/shader_enums.h"
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 
 
@@ -93,11 +93,6 @@ struct vbo_context;
 #define PRIM_MAX                 GL_PATCHES
 #define PRIM_OUTSIDE_BEGIN_END   (PRIM_MAX + 1)
 #define PRIM_UNKNOWN             (PRIM_MAX + 2)
-
-#define VARYING_SLOT_MAX	(VARYING_SLOT_VAR0 + MAX_VARYING)
-#define VARYING_SLOT_PATCH0	(VARYING_SLOT_MAX)
-#define VARYING_SLOT_TESS_MAX	(VARYING_SLOT_PATCH0 + MAX_VARYING)
-#define FRAG_RESULT_MAX		(FRAG_RESULT_DATA0 + MAX_DRAW_BUFFERS)
 
 /**
  * Determine if the given gl_varying_slot appears in the fragment shader.
@@ -487,26 +482,24 @@ struct gl_colorbuffer_attrib
 struct gl_current_attrib
 {
    /**
-    * \name Current vertex attributes.
+    * \name Current vertex attributes (color, texcoords, etc).
     * \note Values are valid only after FLUSH_VERTICES has been called.
     * \note Index and Edgeflag current values are stored as floats in the 
     * SIX and SEVEN attribute slots.
+    * \note We need double storage for 64-bit vertex attributes
     */
-   /* we need double storage for this for vertex attrib 64bit */
-   GLfloat Attrib[VERT_ATTRIB_MAX][4*2];	/**< Position, color, texcoords, etc */
+   GLfloat Attrib[VERT_ATTRIB_MAX][4*2];
 
    /**
-    * \name Current raster position attributes (always valid).
-    * \note This set of attributes is very similar to the SWvertex struct.
+    * \name Current raster position attributes (always up to date after a
+    * glRasterPos call).
     */
-   /*@{*/
    GLfloat RasterPos[4];
    GLfloat RasterDistance;
    GLfloat RasterColor[4];
    GLfloat RasterSecondaryColor[4];
    GLfloat RasterTexCoords[MAX_TEXTURE_COORD_UNITS][4];
    GLboolean RasterPosValid;
-   /*@}*/
 };
 
 
@@ -1866,24 +1859,6 @@ typedef enum
 
 
 /**
- * \brief Layout qualifiers for gl_FragDepth.
- *
- * Extension AMD_conservative_depth allows gl_FragDepth to be redeclared with
- * a layout qualifier.
- *
- * \see enum ir_depth_layout
- */
-enum gl_frag_depth_layout
-{
-   FRAG_DEPTH_LAYOUT_NONE, /**< No layout is specified. */
-   FRAG_DEPTH_LAYOUT_ANY,
-   FRAG_DEPTH_LAYOUT_GREATER,
-   FRAG_DEPTH_LAYOUT_LESS,
-   FRAG_DEPTH_LAYOUT_UNCHANGED
-};
-
-
-/**
  * Base class for any kind of program object
  */
 struct gl_program
@@ -2286,12 +2261,34 @@ struct gl_shader
    unsigned num_combined_uniform_components;
 
    /**
-    * This shader's uniform block information.
+    * This shader's uniform/ssbo block information.
     *
     * These fields are only set post-linking.
+    *
+    * BufferInterfaceBlocks is a list containing both UBOs and SSBOs. This is
+    * useful during the linking process so that we don't have to handle SSBOs
+    * specifically.
+    *
+    * UniformBlocks is a list of UBOs. This is useful for backends that need
+    * or prefer to see separate index spaces for UBOS and SSBOs like the GL
+    * API specifies.
+    *
+    * ShaderStorageBlocks is a list of SSBOs. This is useful for backends that
+    * need or prefer to see separate index spaces for UBOS and SSBOs like the
+    * GL API specifies.
+    *
+    * UniformBlocks and ShaderStorageBlocks only have pointers into
+    * BufferInterfaceBlocks so the actual resource information is not
+    * duplicated.
     */
+   unsigned NumBufferInterfaceBlocks;
+   struct gl_uniform_block *BufferInterfaceBlocks;
+
    unsigned NumUniformBlocks;
-   struct gl_uniform_block *UniformBlocks;
+   struct gl_uniform_block **UniformBlocks;
+
+   unsigned NumShaderStorageBlocks;
+   struct gl_uniform_block **ShaderStorageBlocks;
 
    struct exec_list *ir;
    struct exec_list *packed_varyings;
@@ -2694,8 +2691,33 @@ struct gl_shader_program
     */
    unsigned LastClipDistanceArraySize;
 
+   /**
+    * This shader's uniform/ssbo block information.
+    *
+    * BufferInterfaceBlocks is a list containing both UBOs and SSBOs. This is
+    * useful during the linking process so that we don't have to handle SSBOs
+    * specifically.
+    *
+    * UniformBlocks is a list of UBOs. This is useful for backends that need
+    * or prefer to see separate index spaces for UBOS and SSBOs like the GL
+    * API specifies.
+    *
+    * ShaderStorageBlocks is a list of SSBOs. This is useful for backends that
+    * need or prefer to see separate index spaces for UBOS and SSBOs like the
+    * GL API specifies.
+    *
+    * UniformBlocks and ShaderStorageBlocks only have pointers into
+    * BufferInterfaceBlocks so the actual resource information is not
+    * duplicated and are only set after linking.
+    */
    unsigned NumBufferInterfaceBlocks;
-   struct gl_uniform_block *UniformBlocks;
+   struct gl_uniform_block *BufferInterfaceBlocks;
+
+   unsigned NumUniformBlocks;
+   struct gl_uniform_block **UniformBlocks;
+
+   unsigned NumShaderStorageBlocks;
+   struct gl_uniform_block **ShaderStorageBlocks;
 
    /**
     * Indices into the _LinkedShaders's UniformBlocks[] array for each stage
@@ -4074,13 +4096,6 @@ struct gl_image_unit
     * \sa Layer
     */
    GLboolean Layered;
-
-   /**
-    * GL_TRUE if the state of this image unit is valid and access from
-    * the shader is allowed.  Otherwise loads from this unit should
-    * return zero and stores should have no effect.
-    */
-   GLboolean _Valid;
 
    /**
     * Layer of the texture object bound to this unit as specified by the

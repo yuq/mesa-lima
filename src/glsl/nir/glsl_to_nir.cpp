@@ -152,11 +152,13 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       if (sh->Program->SamplersUsed & (1 << i))
          num_textures = i;
 
-   shader->info.name = ralloc_asprintf(shader, "GLSL%d", sh->Name);
+   shader->info.name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
+   if (shader_prog->Label)
+      shader->info.label = ralloc_strdup(shader, shader_prog->Label);
    shader->info.num_textures = num_textures;
    shader->info.num_ubos = sh->NumUniformBlocks;
    shader->info.num_abos = shader_prog->NumAtomicBuffers;
-   shader->info.num_ssbos = shader_prog->NumBufferInterfaceBlocks;
+   shader->info.num_ssbos = sh->NumShaderStorageBlocks;
    shader->info.num_images = sh->NumImages;
    shader->info.inputs_read = sh->Program->InputsRead;
    shader->info.outputs_written = sh->Program->OutputsWritten;
@@ -164,10 +166,36 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info.uses_texture_gather = sh->Program->UsesGather;
    shader->info.uses_clip_distance_out = sh->Program->UsesClipDistanceOut;
    shader->info.separate_shader = shader_prog->SeparateShader;
-   shader->info.gs.vertices_out = sh->Geom.VerticesOut;
-   shader->info.gs.invocations = sh->Geom.Invocations;
    shader->info.has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;
+
+   switch (stage) {
+   case MESA_SHADER_GEOMETRY:
+      shader->info.gs.vertices_out = sh->Geom.VerticesOut;
+      shader->info.gs.invocations = sh->Geom.Invocations;
+      break;
+
+   case MESA_SHADER_FRAGMENT: {
+      struct gl_fragment_program *fp =
+         (struct gl_fragment_program *)sh->Program;
+
+      shader->info.fs.uses_discard = fp->UsesKill;
+      shader->info.fs.early_fragment_tests = sh->EarlyFragmentTests;
+      shader->info.fs.depth_layout = fp->FragDepthLayout;
+      break;
+   }
+
+   case MESA_SHADER_COMPUTE: {
+      struct gl_compute_program *cp = (struct gl_compute_program *)sh->Program;
+      shader->info.cs.local_size[0] = cp->LocalSize[0];
+      shader->info.cs.local_size[1] = cp->LocalSize[1];
+      shader->info.cs.local_size[2] = cp->LocalSize[2];
+      break;
+   }
+
+   default:
+      break; /* No stage-specific info */
+   }
 
    return shader;
 }
@@ -393,35 +421,10 @@ nir_visitor::visit(ir_variable *ir)
 
    var->interface_type = ir->get_interface_type();
 
-   switch (var->data.mode) {
-   case nir_var_local:
-      exec_list_push_tail(&impl->locals, &var->node);
-      break;
-
-   case nir_var_global:
-      exec_list_push_tail(&shader->globals, &var->node);
-      break;
-
-   case nir_var_shader_in:
-      exec_list_push_tail(&shader->inputs, &var->node);
-      break;
-
-   case nir_var_shader_out:
-      exec_list_push_tail(&shader->outputs, &var->node);
-      break;
-
-   case nir_var_uniform:
-   case nir_var_shader_storage:
-      exec_list_push_tail(&shader->uniforms, &var->node);
-      break;
-
-   case nir_var_system_value:
-      exec_list_push_tail(&shader->system_values, &var->node);
-      break;
-
-   default:
-      unreachable("not reached");
-   }
+   if (var->data.mode == nir_var_local)
+      nir_function_impl_add_variable(impl, var);
+   else
+      nir_shader_add_variable(shader, var);
 
    _mesa_hash_table_insert(var_table, ir, var);
    this->var = var;
@@ -695,9 +698,21 @@ nir_visitor::visit(ir_call *ir)
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_xor_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_xor;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_min_internal") == 0) {
-         op = nir_intrinsic_ssbo_atomic_min;
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_ssbo_atomic_imin;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_ssbo_atomic_umin;
+         else
+            unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_max_internal") == 0) {
-         op = nir_intrinsic_ssbo_atomic_max;
+         assert(ir->return_deref);
+         if (ir->return_deref->type == glsl_type::int_type)
+            op = nir_intrinsic_ssbo_atomic_imax;
+         else if (ir->return_deref->type == glsl_type::uint_type)
+            op = nir_intrinsic_ssbo_atomic_umax;
+         else
+            unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_exchange_internal") == 0) {
          op = nir_intrinsic_ssbo_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_ssbo_atomic_comp_swap_internal") == 0) {
@@ -906,8 +921,10 @@ nir_visitor::visit(ir_call *ir)
          break;
       }
       case nir_intrinsic_ssbo_atomic_add:
-      case nir_intrinsic_ssbo_atomic_min:
-      case nir_intrinsic_ssbo_atomic_max:
+      case nir_intrinsic_ssbo_atomic_imin:
+      case nir_intrinsic_ssbo_atomic_umin:
+      case nir_intrinsic_ssbo_atomic_imax:
+      case nir_intrinsic_ssbo_atomic_umax:
       case nir_intrinsic_ssbo_atomic_and:
       case nir_intrinsic_ssbo_atomic_or:
       case nir_intrinsic_ssbo_atomic_xor:
@@ -2065,13 +2082,10 @@ nir_visitor::visit(ir_constant *ir)
     * constant initializer and return a dereference.
     */
 
-   nir_variable *var = ralloc(this->shader, nir_variable);
-   var->name = ralloc_strdup(var, "const_temp");
-   var->type = ir->type;
-   var->data.mode = nir_var_local;
+   nir_variable *var =
+      nir_local_variable_create(this->impl, ir->type, "const_temp");
    var->data.read_only = true;
    var->constant_initializer = constant_copy(ir, var);
-   exec_list_push_tail(&this->impl->locals, &var->node);
 
    this->deref_head = nir_deref_var_create(this->shader, var);
    this->deref_tail = &this->deref_head->deref;

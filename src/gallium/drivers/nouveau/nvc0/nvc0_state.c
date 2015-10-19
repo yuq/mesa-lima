@@ -29,6 +29,7 @@
 
 #include "nvc0/nvc0_stateobj.h"
 #include "nvc0/nvc0_context.h"
+#include "nvc0/nvc0_query_hw.h"
 
 #include "nvc0/nvc0_3d.xml.h"
 #include "nv50/nv50_texture.xml.h"
@@ -1070,7 +1071,7 @@ nvc0_so_target_create(struct pipe_context *pipe,
    if (!targ)
       return NULL;
 
-   targ->pq = pipe->create_query(pipe, NVC0_QUERY_TFB_BUFFER_OFFSET, 0);
+   targ->pq = pipe->create_query(pipe, NVC0_HW_QUERY_TFB_BUFFER_OFFSET, 0);
    if (!targ->pq) {
       FREE(targ);
       return NULL;
@@ -1088,6 +1089,25 @@ nvc0_so_target_create(struct pipe_context *pipe,
    util_range_add(&buf->valid_buffer_range, offset, offset + size);
 
    return &targ->pipe;
+}
+
+static void
+nvc0_so_target_save_offset(struct pipe_context *pipe,
+                           struct pipe_stream_output_target *ptarg,
+                           unsigned index, bool *serialize)
+{
+   struct nvc0_so_target *targ = nvc0_so_target(ptarg);
+
+   if (*serialize) {
+      *serialize = false;
+      PUSH_SPACE(nvc0_context(pipe)->base.pushbuf, 1);
+      IMMED_NVC0(nvc0_context(pipe)->base.pushbuf, NVC0_3D(SERIALIZE), 0);
+
+      NOUVEAU_DRV_STAT(nouveau_screen(pipe->screen), gpu_serialize_count, 1);
+   }
+
+   nvc0_query(targ->pq)->index = index;
+   pipe->end_query(pipe, targ->pq);
 }
 
 static void

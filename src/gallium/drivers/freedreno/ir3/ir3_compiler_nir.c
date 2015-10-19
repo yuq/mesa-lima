@@ -36,7 +36,6 @@
 #include "tgsi/tgsi_strings.h"
 
 #include "nir/tgsi_to_nir.h"
-#include "glsl/shader_enums.h"
 
 #include "freedreno_util.h"
 

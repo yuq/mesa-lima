@@ -38,64 +38,6 @@
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16
 
-struct brw_compiler {
-   const struct brw_device_info *devinfo;
-
-   struct {
-      struct ra_regs *regs;
-
-      /**
-       * Array of the ra classes for the unaligned contiguous register
-       * block sizes used.
-       */
-      int *classes;
-
-      /**
-       * Mapping for register-allocated objects in *regs to the first
-       * GRF for that object.
-       */
-      uint8_t *ra_reg_to_grf;
-   } vec4_reg_set;
-
-   struct {
-      struct ra_regs *regs;
-
-      /**
-       * Array of the ra classes for the unaligned contiguous register
-       * block sizes used, indexed by register size.
-       */
-      int classes[16];
-
-      /**
-       * Mapping from classes to ra_reg ranges.  Each of the per-size
-       * classes corresponds to a range of ra_reg nodes.  This array stores
-       * those ranges in the form of first ra_reg in each class and the
-       * total number of ra_reg elements in the last array element.  This
-       * way the range of the i'th class is given by:
-       * [ class_to_ra_reg_range[i], class_to_ra_reg_range[i+1] )
-       */
-      int class_to_ra_reg_range[17];
-
-      /**
-       * Mapping for register-allocated objects in *regs to the first
-       * GRF for that object.
-       */
-      uint8_t *ra_reg_to_grf;
-
-      /**
-       * ra class for the aligned pairs we use for PLN, which doesn't
-       * appear in *classes.
-       */
-      int aligned_pairs_class;
-   } fs_reg_sets[2];
-
-   void (*shader_debug_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
-   void (*shader_perf_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
-
-   bool scalar_vs;
-   struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
-};
-
 enum PACKED register_file {
    BAD_FILE,
    GRF,
@@ -225,7 +167,7 @@ protected:
    backend_shader(const struct brw_compiler *compiler,
                   void *log_data,
                   void *mem_ctx,
-                  nir_shader *shader,
+                  const nir_shader *shader,
                   struct brw_stage_prog_data *stage_prog_data);
 
 public:
@@ -234,7 +176,7 @@ public:
    void *log_data; /* Passed to compiler->*_log functions */
 
    const struct brw_device_info * const devinfo;
-   nir_shader *nir;
+   const nir_shader *nir;
    struct brw_stage_prog_data * const stage_prog_data;
 
    /** ralloc context for temporary data used during compile */

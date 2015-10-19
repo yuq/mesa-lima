@@ -225,6 +225,9 @@ svga_update_state(struct svga_context *svga, unsigned max_level)
       svga->state.dirty[i] |= svga->dirty;
 
    svga->dirty = 0;
+
+   svga->hud.num_validations++;
+
    return PIPE_OK;
 }
 

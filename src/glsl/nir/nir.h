@@ -35,7 +35,7 @@
 #include "util/set.h"
 #include "util/bitset.h"
 #include "nir_types.h"
-#include "glsl/shader_enums.h"
+#include "shader_enums.h"
 #include <stdio.h>
 
 #include "nir_opcodes.h"
@@ -738,7 +738,7 @@ nir_alu_instr_channel_used(nir_alu_instr *instr, unsigned src, unsigned channel)
  * used for a source
  */
 static inline unsigned
-nir_ssa_alu_instr_src_components(nir_alu_instr *instr, unsigned src)
+nir_ssa_alu_instr_src_components(const nir_alu_instr *instr, unsigned src)
 {
    assert(instr->dest.dest.is_ssa);
 
@@ -1486,6 +1486,9 @@ typedef struct nir_shader_compiler_options {
 typedef struct nir_shader_info {
    const char *name;
 
+   /* Descriptive name provided by the client; may be NULL */
+   const char *label;
+
    /* Number of textures used by this shader */
    unsigned num_textures;
    /* Number of uniform buffers used by this shader */
@@ -1516,13 +1519,32 @@ typedef struct nir_shader_info {
    /** Was this shader linked with any transform feedback varyings? */
    bool has_transform_feedback_varyings;
 
-   struct {
-      /** The maximum number of vertices the geometry shader might write. */
-      unsigned vertices_out;
+   union {
+      struct {
+         /** The maximum number of vertices the geometry shader might write. */
+         unsigned vertices_out;
 
-      /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
-      unsigned invocations;
-   } gs;
+         /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
+         unsigned invocations;
+      } gs;
+
+      struct {
+         bool uses_discard;
+
+         /**
+          * Whether early fragment tests are enabled as defined by
+          * ARB_shader_image_load_store.
+          */
+         bool early_fragment_tests;
+
+         /** gl_FragDepth layout for ARB_conservative_depth. */
+         enum gl_frag_depth_layout depth_layout;
+      } fs;
+
+      struct {
+         unsigned local_size[3];
+      } cs;
+   };
 } nir_shader_info;
 
 typedef struct nir_shader {
@@ -1584,6 +1606,26 @@ nir_register *nir_global_reg_create(nir_shader *shader);
 nir_register *nir_local_reg_create(nir_function_impl *impl);
 
 void nir_reg_remove(nir_register *reg);
+
+/** Adds a variable to the appropreate list in nir_shader */
+void nir_shader_add_variable(nir_shader *shader, nir_variable *var);
+
+static inline void
+nir_function_impl_add_variable(nir_function_impl *impl, nir_variable *var)
+{
+   assert(var->data.mode == nir_var_local);
+   exec_list_push_tail(&impl->locals, &var->node);
+}
+
+/** creates a variable, sets a few defaults, and adds it to the list */
+nir_variable *nir_variable_create(nir_shader *shader,
+                                  nir_variable_mode mode,
+                                  const struct glsl_type *type,
+                                  const char *name);
+/** creates a local variable and adds it to the list */
+nir_variable *nir_local_variable_create(nir_function_impl *impl,
+                                        const struct glsl_type *type,
+                                        const char *name);
 
 /** creates a function and adds it to the shader's list of functions */
 nir_function *nir_function_create(nir_shader *shader, const char *name);
@@ -1821,6 +1863,7 @@ bool nir_foreach_dest(nir_instr *instr, nir_foreach_dest_cb cb, void *state);
 bool nir_foreach_src(nir_instr *instr, nir_foreach_src_cb cb, void *state);
 
 nir_const_value *nir_src_as_const_value(nir_src src);
+bool nir_src_is_dynamically_uniform(nir_src src);
 bool nir_srcs_equal(nir_src src1, nir_src src2);
 void nir_instr_rewrite_src(nir_instr *instr, nir_src *src, nir_src new_src);
 void nir_instr_move_src(nir_instr *dest_instr, nir_src *dest, nir_src *src);

@@ -72,7 +72,7 @@ public:
                 void *log_data,
                 const struct brw_sampler_prog_key_data *key,
                 struct brw_vue_prog_data *prog_data,
-                nir_shader *shader,
+                const nir_shader *shader,
 		void *mem_ctx,
                 bool no_spills,
                 int shader_time_index);
@@ -391,8 +391,6 @@ class vec4_generator
 {
 public:
    vec4_generator(const struct brw_compiler *compiler, void *log_data,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog,
                   struct brw_vue_prog_data *prog_data,
                   void *mem_ctx,
                   bool debug_flag,
@@ -400,10 +398,11 @@ public:
                   const char *stage_abbrev);
    ~vec4_generator();
 
-   const unsigned *generate_assembly(const cfg_t *cfg, unsigned *asm_size);
+   const unsigned *generate_assembly(const cfg_t *cfg, unsigned *asm_size,
+                                     const nir_shader *nir);
 
 private:
-   void generate_code(const cfg_t *cfg);
+   void generate_code(const cfg_t *cfg, const nir_shader *nir);
 
    void generate_math1_gen4(vec4_instruction *inst,
 			    struct brw_reg dst,
@@ -484,9 +483,6 @@ private:
    const struct brw_device_info *devinfo;
 
    struct brw_codegen *p;
-
-   struct gl_shader_program *shader_prog;
-   const struct gl_program *prog;
 
    struct brw_vue_prog_data *prog_data;
 

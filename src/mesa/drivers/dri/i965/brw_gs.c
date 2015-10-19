@@ -57,6 +57,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     struct brw_geometry_program *gp,
                     struct brw_gs_prog_key *key)
 {
+   struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_compile c;
    memset(&c, 0, sizeof(c));
@@ -300,8 +301,11 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
+   char *error_str;
    const unsigned *program =
-      brw_gs_emit(brw, prog, &c, mem_ctx, st_index, &program_size);
+      brw_compile_gs(brw->intelScreen->compiler, brw, &c,
+                     shader->Program->nir, prog,
+                     mem_ctx, st_index, &program_size, &error_str);
    if (program == NULL) {
       ralloc_free(mem_ctx);
       return false;

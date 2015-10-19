@@ -1175,7 +1175,22 @@ glsl_type::record_location_offset(unsigned length) const
          const glsl_type *wa = st->without_array();
          if (wa->is_record()) {
             unsigned r_offset = wa->record_location_offset(wa->length);
-            offset += st->is_array() ? st->length * r_offset : r_offset;
+            offset += st->is_array() ?
+               st->arrays_of_arrays_size() * r_offset : r_offset;
+         } else if (st->is_array() && st->fields.array->is_array()) {
+            unsigned outer_array_size = st->length;
+            const glsl_type *base_type = st->fields.array;
+
+            /* For arrays of arrays the outer arrays take up a uniform
+             * slot for each element. The innermost array elements share a
+             * single slot so we ignore the innermost array when calculating
+             * the offset.
+             */
+            while (base_type->fields.array->is_array()) {
+               outer_array_size = outer_array_size * base_type->length;
+               base_type = base_type->fields.array;
+            }
+            offset += outer_array_size;
          } else {
             /* We dont worry about arrays here because unless the array
              * contains a structure or another array it only takes up a single
@@ -1419,8 +1434,8 @@ glsl_type::std140_size(bool row_major) const
       unsigned int array_len;
 
       if (this->is_array()) {
-         element_type = this->fields.array;
-         array_len = this->length;
+         element_type = this->without_array();
+         array_len = this->arrays_of_arrays_size();
       } else {
          element_type = this;
          array_len = 1;
@@ -1453,12 +1468,13 @@ glsl_type::std140_size(bool row_major) const
     *      the array are laid out in order, according to rule (9).
     */
    if (this->is_array()) {
-      if (this->fields.array->is_record()) {
-         return this->length * this->fields.array->std140_size(row_major);
+      if (this->without_array()->is_record()) {
+	 return this->arrays_of_arrays_size() *
+            this->without_array()->std140_size(row_major);
       } else {
-         unsigned element_base_align =
-            this->fields.array->std140_base_alignment(row_major);
-         return this->length * MAX2(element_base_align, 16);
+	 unsigned element_base_align =
+	    this->without_array()->std140_base_alignment(row_major);
+	 return this->arrays_of_arrays_size() * MAX2(element_base_align, 16);
       }
    }
 
@@ -1818,3 +1834,17 @@ glsl_type::coordinate_components() const
 
    return size;
 }
+
+/**
+ * Declarations of type flyweights (glsl_type::_foo_type) and
+ * convenience pointers (glsl_type::foo_type).
+ * @{
+ */
+#define DECL_TYPE(NAME, ...)                                    \
+   const glsl_type glsl_type::_##NAME##_type = glsl_type(__VA_ARGS__, #NAME); \
+   const glsl_type *const glsl_type::NAME##_type = &glsl_type::_##NAME##_type;
+
+#define STRUCT_TYPE(NAME)
+
+#include "builtin_type_macros.h"
+/** @} */

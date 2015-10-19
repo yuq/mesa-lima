@@ -221,8 +221,8 @@ gen8_emit_texture_surface_state(struct brw_context *brw,
        * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
        *  16 must be used."
        */
-      assert(brw->gen < 9 || mt->halign == 16);
-      assert(brw->gen < 8 || mt->num_samples > 1 || mt->halign == 16);
+      if (brw->gen >= 9 || mt->num_samples == 1)
+         assert(mt->halign == 16);
    }
 
    const uint32_t surf_type = translate_tex_target(target);
@@ -470,8 +470,8 @@ gen8_update_renderbuffer_surface(struct brw_context *brw,
        * "When Auxiliary Surface Mode is set to AUX_CCS_D or AUX_CCS_E, HALIGN
        *  16 must be used."
        */
-      assert(brw->gen < 9 || mt->halign == 16);
-      assert(brw->gen < 8 || mt->num_samples > 1 || mt->halign == 16);
+      if (brw->gen >= 9 || mt->num_samples == 1)
+         assert(mt->halign == 16);
    }
 
    uint32_t *surf = allocate_surface_state(brw, &offset, surf_index);

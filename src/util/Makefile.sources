@@ -3,6 +3,8 @@ MESA_UTIL_FILES :=	\
 	debug.c \
 	debug.h \
 	format_srgb.h \
+	half_float.c \
+	half_float.h \
 	hash_table.c	\
 	hash_table.h \
 	list.h \

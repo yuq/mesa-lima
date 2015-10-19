@@ -42,7 +42,7 @@
 #include "glsl/ir.h"
 #include "glsl/ir_visitor.h"
 #include "glsl/ir_rvalue_visitor.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "util/hash_table.h"
 
 static bool debug = false;

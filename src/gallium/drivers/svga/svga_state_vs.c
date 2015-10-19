@@ -81,7 +81,8 @@ translate_vertex_program(struct svga_context *svga,
                                         PIPE_SHADER_VERTEX);
    }
    else {
-      return svga_tgsi_vgpu9_translate(&vs->base, key, PIPE_SHADER_VERTEX);
+      return svga_tgsi_vgpu9_translate(svga, &vs->base, key,
+                                       PIPE_SHADER_VERTEX);
    }
 }
 

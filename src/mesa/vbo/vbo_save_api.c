@@ -648,7 +648,8 @@ _save_upgrade_vertex(struct gl_context *ctx, GLuint attr, GLuint newsz)
 
    /* Recalculate all the attrptr[] values:
     */
-   for (i = 0, tmp = save->vertex; i < VBO_ATTRIB_MAX; i++) {
+   tmp = save->vertex;
+   for (i = 0; i < VBO_ATTRIB_MAX; i++) {
       if (save->attrsz[i]) {
          save->attrptr[i] = tmp;
          tmp += save->attrsz[i];
@@ -1543,7 +1544,7 @@ vbo_print_vertex_list(struct gl_context *ctx, void *data, FILE *f)
       node->vertex_store->bufferobj : NULL;
    (void) ctx;
 
-   fprintf(f, "VBO-VERTEX-LIST, %u vertices %d primitives, %d vertsize "
+   fprintf(f, "VBO-VERTEX-LIST, %u vertices, %d primitives, %d vertsize, "
            "buffer %p\n",
            node->count, node->prim_count, node->vertex_size,
            buffer);

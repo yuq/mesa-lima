@@ -60,8 +60,7 @@ struct annotation_info {
 
 void
 dump_assembly(void *assembly, int num_annotations, struct annotation *annotation,
-              const struct brw_device_info *devinfo,
-              const struct gl_program *prog);
+              const struct brw_device_info *devinfo);
 
 void
 annotate(const struct brw_device_info *devinfo,

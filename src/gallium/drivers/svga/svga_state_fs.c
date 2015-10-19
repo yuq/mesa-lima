@@ -90,7 +90,8 @@ translate_fragment_program(struct svga_context *svga,
                                         PIPE_SHADER_FRAGMENT);
    }
    else {
-      return svga_tgsi_vgpu9_translate(&fs->base, key, PIPE_SHADER_FRAGMENT);
+      return svga_tgsi_vgpu9_translate(svga, &fs->base, key,
+                                       PIPE_SHADER_FRAGMENT);
    }
 }
 

@@ -923,7 +923,7 @@ ptn_add_output_stores(struct ptn_compile *c)
 {
    nir_builder *b = &c->build;
 
-   foreach_list_typed(nir_variable, var, node, &b->shader->outputs) {
+   nir_foreach_variable(var, &b->shader->outputs) {
       nir_intrinsic_instr *store =
          nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
       store->num_components = glsl_get_vector_elements(var->type);
@@ -958,11 +958,10 @@ setup_registers_and_variables(struct ptn_compile *c)
    for (int i = 0; i < num_inputs; i++) {
       if (!(c->prog->InputsRead & BITFIELD64_BIT(i)))
          continue;
-      nir_variable *var = rzalloc(shader, nir_variable);
-      var->type = glsl_vec4_type();
-      var->data.read_only = true;
-      var->data.mode = nir_var_shader_in;
-      var->name = ralloc_asprintf(var, "in_%d", i);
+
+      nir_variable *var =
+         nir_variable_create(shader, nir_var_shader_in, glsl_vec4_type(),
+                             ralloc_asprintf(shader, "in_%d", i));
       var->data.location = i;
       var->data.index = 0;
 
@@ -992,12 +991,9 @@ setup_registers_and_variables(struct ptn_compile *c)
             nir_ssa_def *f001 = nir_vec4(b, &load_x->dest.ssa, nir_imm_float(b, 0.0),
                                          nir_imm_float(b, 0.0), nir_imm_float(b, 1.0));
 
-            nir_variable *fullvar = rzalloc(shader, nir_variable);
-            fullvar->type = glsl_vec4_type();
-            fullvar->data.mode = nir_var_local;
-            fullvar->name = "fogcoord_tmp";
-            exec_list_push_tail(&b->impl->locals, &fullvar->node);
-
+            nir_variable *fullvar =
+               nir_local_variable_create(b->impl, glsl_vec4_type(),
+                                         "fogcoord_tmp");
             nir_intrinsic_instr *store =
                nir_intrinsic_instr_create(shader, nir_intrinsic_store_var);
             store->num_components = 4;
@@ -1005,17 +1001,15 @@ setup_registers_and_variables(struct ptn_compile *c)
             store->src[0] = nir_src_for_ssa(f001);
             nir_builder_instr_insert(b, &store->instr);
 
-            /* Insert the real input into the list so the driver has real
-             * inputs, but set c->input_vars[i] to the temporary so we use
+            /* We inserted the real input into the list so the driver has real
+             * inputs, but we set c->input_vars[i] to the temporary so we use
              * the splatted value.
              */
-            exec_list_push_tail(&shader->inputs, &var->node);
             c->input_vars[i] = fullvar;
             continue;
          }
       }
 
-      exec_list_push_tail(&shader->inputs, &var->node);
       c->input_vars[i] = var;
    }
 
@@ -1134,6 +1128,12 @@ prog_to_nir(const struct gl_program *prog,
    s->info.uses_texture_gather = false;
    s->info.uses_clip_distance_out = false;
    s->info.separate_shader = false;
+
+   if (stage == MESA_SHADER_FRAGMENT) {
+      struct gl_fragment_program *fp = (struct gl_fragment_program *)prog;
+
+      s->info.fs.uses_discard = fp->UsesKill;
+   }
 
 fail:
    if (c->error) {

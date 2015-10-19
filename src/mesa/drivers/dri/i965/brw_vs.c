@@ -31,6 +31,7 @@
 
 
 #include "main/compiler.h"
+#include "main/context.h"
 #include "brw_context.h"
 #include "brw_vs.h"
 #include "brw_util.h"
@@ -56,18 +57,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    struct brw_shader *vs = NULL;
    bool start_busy = false;
    double start_time = 0;
-
-   if (!vp->program.Base.nir) {
-      /* Normally we generate NIR in LinkShader() or
-       * ProgramStringNotify(), but Mesa's fixed-function vertex program
-       * handling doesn't notify the driver at all.  Just do it here, at
-       * the last minute, even though it's lame.
-       */
-      assert(vp->program.Base.Id == 0 && prog == NULL);
-      vp->program.Base.nir =
-         brw_create_nir(brw, NULL, &vp->program.Base, MESA_SHADER_VERTEX,
-                        brw->intelScreen->compiler->scalar_vs);
-   }
 
    if (prog)
       vs = (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_VERTEX];
@@ -171,7 +160,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_VS))
-      brw_dump_ir("vertex", prog, &vs->base, &vp->program.Base);
+      brw_dump_ir("vertex", prog, vs ? &vs->base : NULL, &vp->program.Base);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
@@ -179,9 +168,20 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    /* Emit GEN4 code.
     */
-   program = brw_vs_emit(brw, mem_ctx, key, &prog_data,
-                         &vp->program, prog, st_index, &program_size);
+   char *error_str;
+   program = brw_compile_vs(brw->intelScreen->compiler, brw, mem_ctx, key,
+                            &prog_data, vp->program.Base.nir,
+                            brw_select_clip_planes(&brw->ctx),
+                            !_mesa_is_gles3(&brw->ctx),
+                            st_index, &program_size, &error_str);
    if (program == NULL) {
+      if (prog) {
+         prog->LinkStatus = false;
+         ralloc_strcat(&prog->InfoLog, error_str);
+      }
+
+      _mesa_problem(NULL, "Failed to compile vertex shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }

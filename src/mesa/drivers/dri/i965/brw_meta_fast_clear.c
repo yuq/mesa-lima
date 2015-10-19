@@ -451,6 +451,11 @@ brw_meta_fast_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       if (irb->mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_NO_MCS)
          clear_type = REP_CLEAR;
 
+      if (brw->gen >= 9 && clear_type == FAST_CLEAR) {
+         perf_debug("fast MCS clears are disabled on gen9");
+         clear_type = REP_CLEAR;
+      }
+
       /* We can't do scissored fast clears because of the restrictions on the
        * fast clear rectangle size.
        */

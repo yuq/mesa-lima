@@ -409,6 +409,8 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                         info->writes_edgeflag = TRUE;
                      }
                   }
+               } else if (file == TGSI_FILE_SAMPLER) {
+                  info->samplers_declared |= 1 << reg;
                }
             }
          }

@@ -166,8 +166,6 @@ int r600_pipe_shader_create(struct pipe_context *ctx,
     if (rctx->b.chip_class <= R700) {
 	    use_sb &= (shader->shader.processor_type != TGSI_PROCESSOR_GEOMETRY);
     }
-	/* disable SB for shaders using CF_INDEX_0/1 (sampler/ubo array indexing) as it doesn't handle those currently */
-	use_sb &= !shader->shader.uses_index_registers;
 	/* disable SB for shaders using doubles */
 	use_sb &= !shader->shader.uses_doubles;
 
@@ -1250,9 +1248,6 @@ static int tgsi_split_constant(struct r600_shader_ctx *ctx)
 			continue;
 		}
 
-		if (ctx->src[i].kc_rel)
-			ctx->shader->uses_index_registers = true;
-
 		if (ctx->src[i].rel) {
 			int chan = inst->Src[i].Indirect.Swizzle;
 			int treg = r600_get_temp(ctx);
@@ -1912,7 +1907,7 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 
 	shader->uses_doubles = ctx.info.uses_doubles;
 
-	indirect_gprs = ctx.info.indirect_files & ~(1 << TGSI_FILE_CONSTANT);
+	indirect_gprs = ctx.info.indirect_files & ~((1 << TGSI_FILE_CONSTANT) | (1 << TGSI_FILE_SAMPLER));
 	tgsi_parse_init(&ctx.parse, tokens);
 	ctx.type = ctx.info.processor;
 	shader->processor_type = ctx.type;
@@ -1936,7 +1931,6 @@ static int r600_shader_from_tgsi(struct r600_context *rctx,
 	ctx.gs_next_vertex = 0;
 	ctx.gs_stream_output_info = &so;
 
-	shader->uses_index_registers = false;
 	ctx.face_gpr = -1;
 	ctx.fixed_pt_position_gpr = -1;
 	ctx.fragcoord_input = -1;
@@ -5703,8 +5697,6 @@ static int tgsi_tex(struct r600_shader_ctx *ctx)
 		sampler_src_reg = 3;
 
 	sampler_index_mode = inst->Src[sampler_src_reg].Indirect.Index == 2 ? 2 : 0; // CF_INDEX_1 : CF_INDEX_NONE
-	if (sampler_index_mode)
-		ctx->shader->uses_index_registers = true;
 
 	src_gpr = tgsi_tex_get_src_gpr(ctx, 0);
 

@@ -43,7 +43,7 @@
 #include "brw_vec4.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/ir_optimization.h"
 #include "program/sampler.h"
 
@@ -53,7 +53,8 @@ fs_reg *
 fs_visitor::emit_vs_system_value(int location)
 {
    fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, VERT_ATTRIB_MAX, BRW_REGISTER_TYPE_D);
+      fs_reg(ATTR, 4 * _mesa_bitcount_64(nir->info.inputs_read),
+             BRW_REGISTER_TYPE_D);
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
 
    switch (location) {
@@ -903,12 +904,9 @@ fs_visitor::emit_urb_writes()
    urb_offset = 0;
    flush = false;
    for (slot = 0; slot < vue_map->num_slots; slot++) {
-      fs_reg reg, src, zero;
-
       int varying = vue_map->slot_to_varying[slot];
       switch (varying) {
-      case VARYING_SLOT_PSIZ:
-
+      case VARYING_SLOT_PSIZ: {
          /* The point size varying slot is the vue header and is always in the
           * vue map.  But often none of the special varyings that live there
           * are written and in that case we can skip writing to the vue
@@ -920,7 +918,7 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         zero = fs_reg(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
+         fs_reg zero(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
          bld.MOV(zero, fs_reg(0u));
 
          sources[length++] = zero;
@@ -939,7 +937,7 @@ fs_visitor::emit_urb_writes()
          else
             sources[length++] = zero;
          break;
-
+      }
       case BRW_VARYING_SLOT_NDC:
       case VARYING_SLOT_EDGE:
          unreachable("unexpected scalar vs output");
@@ -972,8 +970,8 @@ fs_visitor::emit_urb_writes()
              * temp register and use that for the payload.
              */
             for (int i = 0; i < 4; i++) {
-               reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
-               src = offset(this->outputs[varying], bld, i);
+               fs_reg reg = fs_reg(GRF, alloc.allocate(1), outputs[varying].type);
+               fs_reg src = offset(this->outputs[varying], bld, i);
                set_saturate(true, bld.MOV(reg, src));
                sources[length++] = reg;
             }
@@ -1069,7 +1067,7 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        const void *key,
                        struct brw_stage_prog_data *prog_data,
                        struct gl_program *prog,
-                       nir_shader *shader,
+                       const nir_shader *shader,
                        unsigned dispatch_width,
                        int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),

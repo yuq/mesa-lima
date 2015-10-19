@@ -256,18 +256,6 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 }
 
 static bool
-can_change_source_types(vec4_instruction *inst)
-{
-   return inst->dst.type == inst->src[0].type &&
-      !inst->src[0].abs && !inst->src[0].negate && !inst->saturate &&
-      (inst->opcode == BRW_OPCODE_MOV ||
-       (inst->opcode == BRW_OPCODE_SEL &&
-        inst->dst.type == inst->src[1].type &&
-        inst->predicate != BRW_PREDICATE_NONE &&
-        !inst->src[1].abs && !inst->src[1].negate));
-}
-
-static bool
 try_copy_propagate(const struct brw_device_info *devinfo,
                    vec4_instruction *inst,
                    int arg, struct copy_entry *entry)
@@ -325,7 +313,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
 
    if (has_source_modifiers &&
        value.type != inst->src[arg].type &&
-       !can_change_source_types(inst))
+       !inst->can_change_types())
       return false;
 
    if (has_source_modifiers &&
@@ -394,7 +382,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
    value.swizzle = composed_swizzle;
    if (has_source_modifiers &&
        value.type != inst->src[arg].type) {
-      assert(can_change_source_types(inst));
+      assert(inst->can_change_types());
       for (int i = 0; i < 3; i++) {
          inst->src[i].type = value.type;
       }

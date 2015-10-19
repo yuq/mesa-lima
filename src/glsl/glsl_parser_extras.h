@@ -115,6 +115,20 @@ struct _mesa_glsl_parse_state {
                       unsigned required_glsl_es_version,
                       YYLTYPE *locp, const char *fmt, ...) PRINTFLIKE(5, 6);
 
+   bool check_arrays_of_arrays_allowed(YYLTYPE *locp)
+   {
+      if (!(ARB_arrays_of_arrays_enable || is_version(430, 310))) {
+         const char *const requirement = this->es_shader
+            ? "GLSL ES 3.10"
+            : "GL_ARB_arrays_of_arrays or GLSL 4.30";
+         _mesa_glsl_error(locp, this,
+                          "%s required for defining arrays of arrays.",
+                          requirement);
+         return false;
+      }
+      return true;
+   }
+
    bool check_precision_qualifiers_allowed(YYLTYPE *locp)
    {
       return check_version(130, 100, locp,

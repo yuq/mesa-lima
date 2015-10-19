@@ -39,89 +39,6 @@
 
 #include "util/ralloc.h"
 
-/**
- * Return a bitfield where bit n is set if barycentric interpolation mode n
- * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
- */
-static unsigned
-brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
-                                     bool shade_model_flat,
-                                     bool persample_shading,
-                                     nir_shader *shader)
-{
-   unsigned barycentric_interp_modes = 0;
-
-   nir_foreach_variable(var, &shader->inputs) {
-      enum glsl_interp_qualifier interp_qualifier = var->data.interpolation;
-      bool is_centroid = var->data.centroid && !persample_shading;
-      bool is_sample = var->data.sample || persample_shading;
-      bool is_gl_Color = (var->data.location == VARYING_SLOT_COL0) ||
-                         (var->data.location == VARYING_SLOT_COL1);
-
-      /* Ignore WPOS and FACE, because they don't require interpolation. */
-      if (var->data.location == VARYING_SLOT_POS ||
-          var->data.location == VARYING_SLOT_FACE)
-         continue;
-
-      /* Determine the set (or sets) of barycentric coordinates needed to
-       * interpolate this variable.  Note that when
-       * brw->needs_unlit_centroid_workaround is set, centroid interpolation
-       * uses PIXEL interpolation for unlit pixels and CENTROID interpolation
-       * for lit pixels, so we need both sets of barycentric coordinates.
-       */
-      if (interp_qualifier == INTERP_QUALIFIER_NOPERSPECTIVE) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_CENTROID_BARYCENTRIC;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_SAMPLE_BARYCENTRIC;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_PIXEL_BARYCENTRIC;
-         }
-      } else if (interp_qualifier == INTERP_QUALIFIER_SMOOTH ||
-                 (!(shade_model_flat && is_gl_Color) &&
-                  interp_qualifier == INTERP_QUALIFIER_NONE)) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_CENTROID_BARYCENTRIC;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_SAMPLE_BARYCENTRIC;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
-         }
-      }
-   }
-
-   return barycentric_interp_modes;
-}
-
-static uint8_t
-computed_depth_mode(struct gl_fragment_program *fp)
-{
-   if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-      switch (fp->FragDepthLayout) {
-      case FRAG_DEPTH_LAYOUT_NONE:
-      case FRAG_DEPTH_LAYOUT_ANY:
-         return BRW_PSCDEPTH_ON;
-      case FRAG_DEPTH_LAYOUT_GREATER:
-         return BRW_PSCDEPTH_ON_GE;
-      case FRAG_DEPTH_LAYOUT_LESS:
-         return BRW_PSCDEPTH_ON_LE;
-      case FRAG_DEPTH_LAYOUT_UNCHANGED:
-         return BRW_PSCDEPTH_OFF;
-      }
-   }
-   return BRW_PSCDEPTH_OFF;
-}
-
 static void
 assign_fs_binding_table_offsets(const struct brw_device_info *devinfo,
                                 const struct gl_shader_program *shader_prog,
@@ -166,15 +83,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
       fs = (struct brw_shader *)prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    memset(&prog_data, 0, sizeof(prog_data));
-   /* key->alpha_test_func means simulating alpha testing via discards,
-    * so the shader definitely kills pixels.
-    */
-   prog_data.uses_kill = fp->program.UsesKill || key->alpha_test_func;
-   prog_data.uses_omask =
-      fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
-   prog_data.computed_depth_mode = computed_depth_mode(&fp->program);
-
-   prog_data.early_fragment_tests = fs && fs->base.EarlyFragmentTests;
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
    if (!prog)
@@ -209,12 +117,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
                                  &prog_data.base);
    }
 
-   prog_data.barycentric_interp_modes =
-      brw_compute_barycentric_interp_modes(brw->intelScreen->devinfo,
-                                           key->flat_shade,
-                                           key->persample_shading,
-                                           fp->program.Base.nir);
-
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&
                     drm_intel_bo_busy(brw->batch.last_bo));
@@ -222,7 +124,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir("fragment", prog, &fs->base, &fp->program.Base);
+      brw_dump_ir("fragment", prog, fs ? &fs->base : NULL, &fp->program.Base);
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
@@ -230,9 +132,19 @@ brw_codegen_wm_prog(struct brw_context *brw,
       st_index16 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS16);
    }
 
-   program = brw_wm_fs_emit(brw, mem_ctx, key, &prog_data,
-                            &fp->program, prog, st_index8, st_index16, &program_size);
+   char *error_str = NULL;
+   program = brw_compile_fs(brw->intelScreen->compiler, brw, mem_ctx,
+                            key, &prog_data, fp->program.Base.nir,
+                            &fp->program.Base, st_index8, st_index16,
+                            brw->use_rep_send, &program_size, &error_str);
    if (program == NULL) {
+      if (prog) {
+         prog->LinkStatus = false;
+         ralloc_strcat(&prog->InfoLog, error_str);
+      }
+
+      _mesa_problem(NULL, "Failed to compile fragment shader: %s\n", error_str);
+
       ralloc_free(mem_ctx);
       return false;
    }

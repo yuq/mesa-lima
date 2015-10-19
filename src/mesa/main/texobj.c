@@ -286,6 +286,12 @@ _mesa_initialize_texture_object( struct gl_context *ctx,
    obj->RefCount = 1;
    obj->Name = name;
    obj->Target = target;
+   if (target != 0) {
+      obj->TargetIndex = _mesa_tex_target_to_index(ctx, target);
+   }
+   else {
+      obj->TargetIndex = NUM_TEXTURE_TARGETS; /* invalid/error value */
+   }
    obj->Priority = 1.0F;
    obj->BaseLevel = 0;
    obj->MaxLevel = 1000;
@@ -339,6 +345,10 @@ finish_texture_init(struct gl_context *ctx, GLenum target,
 {
    GLenum filter = GL_LINEAR;
    assert(obj->Target == 0);
+
+   obj->Target = target;
+   obj->TargetIndex = _mesa_tex_target_to_index(ctx, target);
+   assert(obj->TargetIndex < NUM_TEXTURE_TARGETS);
 
    switch (target) {
       case GL_TEXTURE_2D_MULTISAMPLE:
@@ -1185,46 +1195,26 @@ invalidate_tex_image_error_check(struct gl_context *ctx, GLuint texture,
    return t;
 }
 
-/**
- * Wrapper for the driver function. Need this because _mesa_new_texture_object
- * permits a target of 0 and does not initialize targetIndex.
- */
-struct gl_texture_object *
-_mesa_create_nameless_texture(struct gl_context *ctx, GLenum target)
-{
-   struct gl_texture_object *texObj = NULL;
-   GLint targetIndex;
-
-   if (target == 0)
-      return texObj;
-
-   texObj = ctx->Driver.NewTextureObject(ctx, 0, target);
-   targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
-   assert(targetIndex < NUM_TEXTURE_TARGETS);
-   texObj->TargetIndex = targetIndex;
-
-   return texObj;
-}
 
 /**
  * Helper function for glCreateTextures and glGenTextures. Need this because
  * glCreateTextures should throw errors if target = 0. This is not exposed to
  * the rest of Mesa to encourage Mesa internals to use nameless textures,
  * which do not require expensive hash lookups.
+ * \param target  either 0 or a a valid / error-checked texture target enum
  */
 static void
 create_textures(struct gl_context *ctx, GLenum target,
-                GLsizei n, GLuint *textures, bool dsa)
+                GLsizei n, GLuint *textures, const char *caller)
 {
    GLuint first;
    GLint i;
-   const char *func = dsa ? "Create" : "Gen";
 
    if (MESA_VERBOSE & (VERBOSE_API|VERBOSE_TEXTURE))
-      _mesa_debug(ctx, "gl%sTextures %d\n", func, n);
+      _mesa_debug(ctx, "%s %d\n", caller, n);
 
    if (n < 0) {
-      _mesa_error( ctx, GL_INVALID_VALUE, "gl%sTextures(n < 0)", func );
+      _mesa_error(ctx, GL_INVALID_VALUE, "%s(n < 0)", caller);
       return;
    }
 
@@ -1241,26 +1231,12 @@ create_textures(struct gl_context *ctx, GLenum target,
    /* Allocate new, empty texture objects */
    for (i = 0; i < n; i++) {
       struct gl_texture_object *texObj;
-      GLint targetIndex;
       GLuint name = first + i;
       texObj = ctx->Driver.NewTextureObject(ctx, name, target);
       if (!texObj) {
          mtx_unlock(&ctx->Shared->Mutex);
-         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", func);
+         _mesa_error(ctx, GL_OUT_OF_MEMORY, "gl%sTextures", caller);
          return;
-      }
-
-      /* Initialize the target index if target is non-zero. */
-      if (target != 0) {
-         targetIndex = _mesa_tex_target_to_index(ctx, texObj->Target);
-         if (targetIndex < 0) { /* Bad Target */
-            mtx_unlock(&ctx->Shared->Mutex);
-            _mesa_error(ctx, GL_INVALID_ENUM, "gl%sTextures(target = %s)",
-                        func, _mesa_enum_to_string(texObj->Target));
-            return;
-         }
-         assert(targetIndex < NUM_TEXTURE_TARGETS);
-         texObj->TargetIndex = targetIndex;
       }
 
       /* insert into hash table */
@@ -1296,7 +1272,7 @@ void GLAPIENTRY
 _mesa_GenTextures(GLsizei n, GLuint *textures)
 {
    GET_CURRENT_CONTEXT(ctx);
-   create_textures(ctx, 0, n, textures, false);
+   create_textures(ctx, 0, n, textures, "glGenTextures");
 }
 
 /**
@@ -1329,7 +1305,7 @@ _mesa_CreateTextures(GLenum target, GLsizei n, GLuint *textures)
       return;
    }
 
-   create_textures(ctx, target, n, textures, true);
+   create_textures(ctx, target, n, textures, "glCreateTextures");
 }
 
 /**
@@ -1383,8 +1359,12 @@ unbind_texobj_from_texunits(struct gl_context *ctx,
    const gl_texture_index index = texObj->TargetIndex;
    GLuint u;
 
-   if (texObj->Target == 0)
+   if (texObj->Target == 0) {
+      /* texture was never bound */
       return;
+   }
+
+   assert(index < NUM_TEXTURE_TARGETS);
 
    for (u = 0; u < ctx->Texture.NumCurrentTexUsed; u++) {
       struct gl_texture_unit *unit = &ctx->Texture.Unit[u];
@@ -1752,9 +1732,10 @@ _mesa_BindTexture( GLenum target, GLuint texName )
          _mesa_HashInsert(ctx->Shared->TexObjects, texName, newTexObj);
          mtx_unlock(&ctx->Shared->Mutex);
       }
-      newTexObj->Target = target;
-      newTexObj->TargetIndex = targetIndex;
    }
+
+   assert(newTexObj->Target == target);
+   assert(newTexObj->TargetIndex == targetIndex);
 
    bind_texture(ctx, ctx->Texture.CurrentUnit, newTexObj);
 }
@@ -1778,16 +1759,9 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
 {
    GET_CURRENT_CONTEXT(ctx);
    struct gl_texture_object *texObj;
-   struct gl_texture_unit *texUnit;
 
    if (unit >= _mesa_max_tex_unit(ctx)) {
       _mesa_error(ctx, GL_INVALID_VALUE, "glBindTextureUnit(unit=%u)", unit);
-      return;
-   }
-
-   texUnit = _mesa_get_tex_unit(ctx, unit);
-   assert(texUnit);
-   if (!texUnit) {
       return;
    }
 
@@ -1812,7 +1786,7 @@ _mesa_BindTextureUnit(GLuint unit, GLuint texture)
    /* Error checking */
    if (!texObj) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
-         "glBindTextureUnit(non-gen name)");
+                  "glBindTextureUnit(non-gen name)");
       return;
    }
    if (texObj->Target == 0) {

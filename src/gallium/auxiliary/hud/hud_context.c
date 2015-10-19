@@ -987,6 +987,9 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
       case ',':
          env++;
+         if (!pane)
+            break;
+
          y += height + hud->font.glyph_height * (pane->num_graphs + 2);
          height = 100;
 

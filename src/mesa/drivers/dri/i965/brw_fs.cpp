@@ -47,7 +47,7 @@
 #include "brw_dead_control_flow.h"
 #include "main/uniforms.h"
 #include "brw_fs_live_variables.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "program/sampler.h"
 
 using namespace brw;
@@ -335,6 +335,18 @@ fs_inst::can_do_source_mods(const struct brw_device_info *devinfo)
       return false;
 
    return true;
+}
+
+bool
+fs_inst::can_change_types() const
+{
+   return dst.type == src[0].type &&
+          !src[0].abs && !src[0].negate && !saturate &&
+          (opcode == BRW_OPCODE_MOV ||
+           (opcode == BRW_OPCODE_SEL &&
+            dst.type == src[1].type &&
+            predicate != BRW_PREDICATE_NONE &&
+            !src[1].abs && !src[1].negate));
 }
 
 bool
@@ -1049,11 +1061,11 @@ fs_visitor::emit_general_interpolation(fs_reg attr, const char *name,
    unsigned int array_elements;
 
    if (type->is_array()) {
-      array_elements = type->length;
+      array_elements = type->arrays_of_arrays_size();
       if (array_elements == 0) {
          fail("dereferenced array '%s' has length 0\n", name);
       }
-      type = type->fields.array;
+      type = type->without_array();
    } else {
       array_elements = 1;
    }
@@ -1509,25 +1521,14 @@ void
 fs_visitor::assign_vs_urb_setup()
 {
    brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
-   int grf, count, slot, channel, attr;
 
    assert(stage == MESA_SHADER_VERTEX);
-   count = _mesa_bitcount_64(vs_prog_data->inputs_read);
+   int count = _mesa_bitcount_64(vs_prog_data->inputs_read);
    if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid)
       count++;
 
    /* Each attribute is 4 regs. */
-   this->first_non_payload_grf += count * 4;
-
-   unsigned vue_entries =
-      MAX2(count, vs_prog_data->base.vue_map.num_slots);
-
-   /* URB entry size is counted in units of 64 bytes (for the 3DSTATE_URB_VS
-    * command).  Each attribute is 16 bytes (4 floats/dwords), so each unit
-    * fits four attributes.
-    */
-   vs_prog_data->base.urb_entry_size = ALIGN(vue_entries, 4) / 4;
-   vs_prog_data->base.urb_read_length = (count + 1) / 2;
+   this->first_non_payload_grf += 4 * vs_prog_data->nr_attributes;
 
    assert(vs_prog_data->base.urb_read_length <= 15);
 
@@ -1535,25 +1536,10 @@ fs_visitor::assign_vs_urb_setup()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == ATTR) {
-
-            if (inst->src[i].reg == VERT_ATTRIB_MAX) {
-               slot = count - 1;
-            } else {
-               /* Attributes come in in a contiguous block, ordered by their
-                * gl_vert_attrib value.  That means we can compute the slot
-                * number for an attribute by masking out the enabled
-                * attributes before it and counting the bits.
-                */
-               attr = inst->src[i].reg + inst->src[i].reg_offset / 4;
-               slot = _mesa_bitcount_64(vs_prog_data->inputs_read &
-                                        BITFIELD64_MASK(attr));
-            }
-
-            channel = inst->src[i].reg_offset & 3;
-
-            grf = payload.num_regs +
-               prog_data->curb_read_length +
-               slot * 4 + channel;
+            int grf = payload.num_regs +
+                      prog_data->curb_read_length +
+                      inst->src[i].reg +
+                      inst->src[i].reg_offset;
 
             inst->src[i].file = HW_REG;
             inst->src[i].fixed_hw_reg =
@@ -5134,41 +5120,140 @@ fs_visitor::run_cs()
    return !failed;
 }
 
+/**
+ * Return a bitfield where bit n is set if barycentric interpolation mode n
+ * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
+ */
+static unsigned
+brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
+                                     bool shade_model_flat,
+                                     bool persample_shading,
+                                     const nir_shader *shader)
+{
+   unsigned barycentric_interp_modes = 0;
+
+   nir_foreach_variable(var, &shader->inputs) {
+      enum glsl_interp_qualifier interp_qualifier =
+         (enum glsl_interp_qualifier)var->data.interpolation;
+      bool is_centroid = var->data.centroid && !persample_shading;
+      bool is_sample = var->data.sample || persample_shading;
+      bool is_gl_Color = (var->data.location == VARYING_SLOT_COL0) ||
+                         (var->data.location == VARYING_SLOT_COL1);
+
+      /* Ignore WPOS and FACE, because they don't require interpolation. */
+      if (var->data.location == VARYING_SLOT_POS ||
+          var->data.location == VARYING_SLOT_FACE)
+         continue;
+
+      /* Determine the set (or sets) of barycentric coordinates needed to
+       * interpolate this variable.  Note that when
+       * brw->needs_unlit_centroid_workaround is set, centroid interpolation
+       * uses PIXEL interpolation for unlit pixels and CENTROID interpolation
+       * for lit pixels, so we need both sets of barycentric coordinates.
+       */
+      if (interp_qualifier == INTERP_QUALIFIER_NOPERSPECTIVE) {
+         if (is_centroid) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_NONPERSPECTIVE_CENTROID_BARYCENTRIC;
+         } else if (is_sample) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_NONPERSPECTIVE_SAMPLE_BARYCENTRIC;
+         }
+         if ((!is_centroid && !is_sample) ||
+             devinfo->needs_unlit_centroid_workaround) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_NONPERSPECTIVE_PIXEL_BARYCENTRIC;
+         }
+      } else if (interp_qualifier == INTERP_QUALIFIER_SMOOTH ||
+                 (!(shade_model_flat && is_gl_Color) &&
+                  interp_qualifier == INTERP_QUALIFIER_NONE)) {
+         if (is_centroid) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_PERSPECTIVE_CENTROID_BARYCENTRIC;
+         } else if (is_sample) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_PERSPECTIVE_SAMPLE_BARYCENTRIC;
+         }
+         if ((!is_centroid && !is_sample) ||
+             devinfo->needs_unlit_centroid_workaround) {
+            barycentric_interp_modes |=
+               1 << BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
+         }
+      }
+   }
+
+   return barycentric_interp_modes;
+}
+
+static uint8_t
+computed_depth_mode(const nir_shader *shader)
+{
+   if (shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
+      switch (shader->info.fs.depth_layout) {
+      case FRAG_DEPTH_LAYOUT_NONE:
+      case FRAG_DEPTH_LAYOUT_ANY:
+         return BRW_PSCDEPTH_ON;
+      case FRAG_DEPTH_LAYOUT_GREATER:
+         return BRW_PSCDEPTH_ON_GE;
+      case FRAG_DEPTH_LAYOUT_LESS:
+         return BRW_PSCDEPTH_ON_LE;
+      case FRAG_DEPTH_LAYOUT_UNCHANGED:
+         return BRW_PSCDEPTH_OFF;
+      }
+   }
+   return BRW_PSCDEPTH_OFF;
+}
+
 const unsigned *
-brw_wm_fs_emit(struct brw_context *brw,
+brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                const struct brw_wm_prog_key *key,
                struct brw_wm_prog_data *prog_data,
-               struct gl_fragment_program *fp,
-               struct gl_shader_program *prog,
+               const nir_shader *shader,
+               struct gl_program *prog,
                int shader_time_index8, int shader_time_index16,
-               unsigned *final_assembly_size)
+               bool use_rep_send,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
-   /* Now the main event: Visit the shader IR and generate our FS IR for it.
+   /* key->alpha_test_func means simulating alpha testing via discards,
+    * so the shader definitely kills pixels.
     */
-   fs_visitor v(brw->intelScreen->compiler, brw, mem_ctx, key,
-                &prog_data->base, &fp->Base, fp->Base.nir, 8, shader_time_index8);
-   if (!v.run_fs(false /* do_rep_send */)) {
-      if (prog) {
-         prog->LinkStatus = false;
-         ralloc_strcat(&prog->InfoLog, v.fail_msg);
-      }
+   prog_data->uses_kill = shader->info.fs.uses_discard || key->alpha_test_func;
+   prog_data->uses_omask =
+      shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
+   prog_data->computed_depth_mode = computed_depth_mode(shader);
 
-      _mesa_problem(NULL, "Failed to compile fragment shader: %s\n",
-                    v.fail_msg);
+   prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
+
+   prog_data->barycentric_interp_modes =
+      brw_compute_barycentric_interp_modes(compiler->devinfo,
+                                           key->flat_shade,
+                                           key->persample_shading,
+                                           shader);
+
+   fs_visitor v(compiler, log_data, mem_ctx, key,
+                &prog_data->base, prog, shader, 8,
+                shader_time_index8);
+   if (!v.run_fs(false /* do_rep_send */)) {
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, v.fail_msg);
 
       return NULL;
    }
 
    cfg_t *simd16_cfg = NULL;
-   fs_visitor v2(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &fp->Base, fp->Base.nir, 16, shader_time_index16);
-   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || brw->use_rep_send)) {
+   fs_visitor v2(compiler, log_data, mem_ctx, key,
+                 &prog_data->base, prog, shader, 16,
+                 shader_time_index16);
+   if (likely(!(INTEL_DEBUG & DEBUG_NO16) || use_rep_send)) {
       if (!v.simd16_unsupported) {
          /* Try a SIMD16 compile */
          v2.import_uniforms(&v);
-         if (!v2.run_fs(brw->use_rep_send)) {
-            perf_debug("SIMD16 shader failed to compile: %s", v2.fail_msg);
+         if (!v2.run_fs(use_rep_send)) {
+            compiler->shader_perf_log(log_data,
+                                      "SIMD16 shader failed to compile: %s",
+                                      v2.fail_msg);
          } else {
             simd16_cfg = v2.cfg;
          }
@@ -5176,8 +5261,8 @@ brw_wm_fs_emit(struct brw_context *brw,
    }
 
    cfg_t *simd8_cfg;
-   int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || brw->no_simd8;
-   if ((no_simd8 || brw->gen < 5) && simd16_cfg) {
+   int no_simd8 = (INTEL_DEBUG & DEBUG_NO8) || use_rep_send;
+   if ((no_simd8 || compiler->devinfo->gen < 5) && simd16_cfg) {
       simd8_cfg = NULL;
       prog_data->no_8 = true;
    } else {
@@ -5185,20 +5270,14 @@ brw_wm_fs_emit(struct brw_context *brw,
       prog_data->no_8 = false;
    }
 
-   fs_generator g(brw->intelScreen->compiler, brw,
-                  mem_ctx, (void *) key, &prog_data->base,
-                  &fp->Base, v.promoted_constants, v.runtime_check_aads_emit, "FS");
+   fs_generator g(compiler, log_data, mem_ctx, (void *) key, &prog_data->base,
+                  v.promoted_constants, v.runtime_check_aads_emit, "FS");
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM)) {
-      char *name;
-      if (prog)
-         name = ralloc_asprintf(mem_ctx, "%s fragment shader %d",
-                                prog->Label ? prog->Label : "unnamed",
-                                prog->Name);
-      else
-         name = ralloc_asprintf(mem_ctx, "fragment program %d", fp->Base.Id);
-
-      g.enable_debug(name);
+      g.enable_debug(ralloc_asprintf(mem_ctx, "%s fragment shader %s",
+                                     shader->info.label ? shader->info.label :
+                                                          "unnamed",
+                                     shader->info.name));
    }
 
    if (simd8_cfg)
@@ -5283,29 +5362,32 @@ fs_visitor::emit_cs_work_group_id_setup()
 }
 
 const unsigned *
-brw_cs_emit(struct brw_context *brw,
-            void *mem_ctx,
-            const struct brw_cs_prog_key *key,
-            struct brw_cs_prog_data *prog_data,
-            struct gl_compute_program *cp,
-            struct gl_shader_program *prog,
-            int shader_time_index,
-            unsigned *final_assembly_size)
+brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
+               void *mem_ctx,
+               const struct brw_cs_prog_key *key,
+               struct brw_cs_prog_data *prog_data,
+               const nir_shader *shader,
+               int shader_time_index,
+               unsigned *final_assembly_size,
+               char **error_str)
 {
-   prog_data->local_size[0] = cp->LocalSize[0];
-   prog_data->local_size[1] = cp->LocalSize[1];
-   prog_data->local_size[2] = cp->LocalSize[2];
+   prog_data->local_size[0] = shader->info.cs.local_size[0];
+   prog_data->local_size[1] = shader->info.cs.local_size[1];
+   prog_data->local_size[2] = shader->info.cs.local_size[2];
    unsigned local_workgroup_size =
-      cp->LocalSize[0] * cp->LocalSize[1] * cp->LocalSize[2];
-   unsigned max_cs_threads = brw->intelScreen->compiler->devinfo->max_cs_threads;
+      shader->info.cs.local_size[0] * shader->info.cs.local_size[1] *
+      shader->info.cs.local_size[2];
+
+   unsigned max_cs_threads = compiler->devinfo->max_cs_threads;
 
    cfg_t *cfg = NULL;
    const char *fail_msg = NULL;
 
    /* Now the main event: Visit the shader IR and generate our CS IR for it.
     */
-   fs_visitor v8(brw->intelScreen->compiler, brw, mem_ctx, key,
-                 &prog_data->base, &cp->Base, cp->Base.nir, 8, shader_time_index);
+   fs_visitor v8(compiler, log_data, mem_ctx, key, &prog_data->base,
+                 NULL, /* Never used in core profile */
+                 shader, 8, shader_time_index);
    if (!v8.run_cs()) {
       fail_msg = v8.fail_msg;
    } else if (local_workgroup_size <= 8 * max_cs_threads) {
@@ -5313,15 +5395,18 @@ brw_cs_emit(struct brw_context *brw,
       prog_data->simd_size = 8;
    }
 
-   fs_visitor v16(brw->intelScreen->compiler, brw, mem_ctx, key,
-                  &prog_data->base, &cp->Base, cp->Base.nir, 16, shader_time_index);
+   fs_visitor v16(compiler, log_data, mem_ctx, key, &prog_data->base,
+                 NULL, /* Never used in core profile */
+                 shader, 16, shader_time_index);
    if (likely(!(INTEL_DEBUG & DEBUG_NO16)) &&
        !fail_msg && !v8.simd16_unsupported &&
        local_workgroup_size <= 16 * max_cs_threads) {
       /* Try a SIMD16 compile */
       v16.import_uniforms(&v8);
       if (!v16.run_cs()) {
-         perf_debug("SIMD16 shader failed to compile: %s", v16.fail_msg);
+         compiler->shader_perf_log(log_data,
+                                   "SIMD16 shader failed to compile: %s",
+                                   v16.fail_msg);
          if (!cfg) {
             fail_msg =
                "Couldn't generate SIMD16 program and not "
@@ -5335,20 +5420,19 @@ brw_cs_emit(struct brw_context *brw,
 
    if (unlikely(cfg == NULL)) {
       assert(fail_msg);
-      prog->LinkStatus = false;
-      ralloc_strcat(&prog->InfoLog, fail_msg);
-      _mesa_problem(NULL, "Failed to compile compute shader: %s\n",
-                    fail_msg);
+      if (error_str)
+         *error_str = ralloc_strdup(mem_ctx, fail_msg);
+
       return NULL;
    }
 
-   fs_generator g(brw->intelScreen->compiler, brw,
-                  mem_ctx, (void*) key, &prog_data->base, &cp->Base,
+   fs_generator g(compiler, log_data, mem_ctx, (void*) key, &prog_data->base,
                   v8.promoted_constants, v8.runtime_check_aads_emit, "CS");
    if (INTEL_DEBUG & DEBUG_CS) {
-      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %d",
-                                   prog->Label ? prog->Label : "unnamed",
-                                   prog->Name);
+      char *name = ralloc_asprintf(mem_ctx, "%s compute shader %s",
+                                   shader->info.label ? shader->info.label :
+                                                        "unnamed",
+                                   shader->info.name);
       g.enable_debug(name);
    }
 

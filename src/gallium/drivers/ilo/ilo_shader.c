@@ -987,15 +987,6 @@ ilo_shader_destroy(struct ilo_shader_state *shader)
 }
 
 /**
- * Return the type (PIPE_SHADER_x) of the shader.
- */
-int
-ilo_shader_get_type(const struct ilo_shader_state *shader)
-{
-   return shader->info.type;
-}
-
-/**
  * Select a kernel for the given context.  This will compile a new kernel if
  * none of the existing kernels work with the context.
  *
@@ -1257,9 +1248,6 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
    case ILO_KERNEL_SAMPLER_COUNT:
       val = shader->info.num_samplers;
       break;
-   case ILO_KERNEL_URB_DATA_START_REG:
-      val = kernel->in.start_grf;
-      break;
    case ILO_KERNEL_SKIP_CBUF0_UPLOAD:
       val = kernel->skip_cbuf0_upload;
       break;
@@ -1311,9 +1299,6 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
    case ILO_KERNEL_VS_GEN6_SO:
       val = kernel->stream_output;
       break;
-   case ILO_KERNEL_VS_GEN6_SO_START_REG:
-      val = kernel->gs_start_grf;
-      break;
    case ILO_KERNEL_VS_GEN6_SO_POINT_OFFSET:
       val = kernel->gs_offsets[0];
       break;
@@ -1340,16 +1325,6 @@ ilo_shader_get_kernel_param(const struct ilo_shader_state *shader,
       val = kernel->bt.gen6_so_count;
       break;
 
-   case ILO_KERNEL_FS_INPUT_Z:
-   case ILO_KERNEL_FS_INPUT_W:
-      val = kernel->in.has_pos;
-      break;
-   case ILO_KERNEL_FS_OUTPUT_Z:
-      val = kernel->out.has_pos;
-      break;
-   case ILO_KERNEL_FS_USE_KILL:
-      val = kernel->has_kill;
-      break;
    case ILO_KERNEL_FS_BARYCENTRIC_INTERPOLATIONS:
       val = kernel->in.barycentric_interpolation_mode;
       break;

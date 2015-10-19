@@ -175,7 +175,8 @@ svga_shader_emit_header(struct svga_shader_emitter *emit)
  * it is, it will be copied to a hardware buffer for upload.
  */
 struct svga_shader_variant *
-svga_tgsi_vgpu9_translate(const struct svga_shader *shader,
+svga_tgsi_vgpu9_translate(struct svga_context *svga,
+                          const struct svga_shader *shader,
                           const struct svga_compile_key *key, unsigned unit)
 {
    struct svga_shader_variant *variant = NULL;
@@ -227,7 +228,7 @@ svga_tgsi_vgpu9_translate(const struct svga_shader *shader,
       goto fail;
    }
 
-   variant = CALLOC_STRUCT(svga_shader_variant);
+   variant = svga_new_shader_variant(svga);
    if (variant == NULL)
       goto fail;
 

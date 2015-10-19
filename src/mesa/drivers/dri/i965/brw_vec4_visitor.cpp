@@ -1815,7 +1815,7 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
                            void *log_data,
                            const struct brw_sampler_prog_key_data *key_tex,
                            struct brw_vue_prog_data *prog_data,
-                           nir_shader *shader,
+                           const nir_shader *shader,
 			   void *mem_ctx,
                            bool no_spills,
                            int shader_time_index)

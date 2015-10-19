@@ -414,6 +414,14 @@ svga_set_shader(struct svga_context *svga,
 }
 
 
+struct svga_shader_variant *
+svga_new_shader_variant(struct svga_context *svga)
+{
+   svga->hud.num_shaders++;
+   return CALLOC_STRUCT(svga_shader_variant);
+}
+
+
 enum pipe_error
 svga_destroy_shader_variant(struct svga_context *svga,
                             SVGA3dShaderType type,
@@ -454,6 +462,8 @@ svga_destroy_shader_variant(struct svga_context *svga,
 
    FREE((unsigned *)variant->tokens);
    FREE(variant);
+
+   svga->hud.num_shaders--;
 
    return ret;
 }

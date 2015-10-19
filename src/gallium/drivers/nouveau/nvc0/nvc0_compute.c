@@ -37,12 +37,9 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
 
    switch (dev->chipset & ~0xf) {
    case 0xc0:
-      if (dev->chipset == 0xc8)
-         obj_class = NVC8_COMPUTE_CLASS;
-      else
-         obj_class = NVC0_COMPUTE_CLASS;
-      break;
    case 0xd0:
+      /* In theory, GF110+ should also support NVC8_COMPUTE_CLASS but,
+       * in practice, a ILLEGAL_CLASS dmesg fail appears when using it. */
       obj_class = NVC0_COMPUTE_CLASS;
       break;
    default:
@@ -107,14 +104,6 @@ nvc0_screen_compute_setup(struct nvc0_screen *screen,
    BEGIN_NVC0(push, NVC0_COMPUTE(CODE_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, screen->text->offset);
    PUSH_DATA (push, screen->text->offset);
-
-   /* bind parameters buffer */
-   BEGIN_NVC0(push, NVC0_COMPUTE(CB_SIZE), 3);
-   PUSH_DATA (push, screen->parm->size);
-   PUSH_DATAh(push, screen->parm->offset);
-   PUSH_DATA (push, screen->parm->offset);
-   BEGIN_NVC0(push, NVC0_COMPUTE(CB_BIND), 1);
-   PUSH_DATA (push, (0 << 8) | 1);
 
    /* TODO: textures & samplers */
 

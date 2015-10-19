@@ -275,17 +275,6 @@ is_logic_op(enum opcode opcode)
            opcode == BRW_OPCODE_NOT);
 }
 
-static bool
-can_change_source_types(fs_inst *inst)
-{
-   return !inst->src[0].abs && !inst->src[0].negate &&
-          inst->dst.type == inst->src[0].type &&
-          (inst->opcode == BRW_OPCODE_MOV ||
-           (inst->opcode == BRW_OPCODE_SEL &&
-            inst->predicate != BRW_PREDICATE_NONE &&
-            !inst->src[1].abs && !inst->src[1].negate));
-}
-
 bool
 fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 {
@@ -368,7 +357,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 
    if (has_source_modifiers &&
        entry->dst.type != inst->src[arg].type &&
-       !can_change_source_types(inst))
+       !inst->can_change_types())
       return false;
 
    if (devinfo->gen >= 8 && (entry->src.negate || entry->src.abs) &&
@@ -438,7 +427,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
           * type.  If we got here, then we can just change the source and
           * destination types of the instruction and keep going.
           */
-         assert(can_change_source_types(inst));
+         assert(inst->can_change_types());
          for (int i = 0; i < inst->sources; i++) {
             inst->src[i].type = entry->dst.type;
          }

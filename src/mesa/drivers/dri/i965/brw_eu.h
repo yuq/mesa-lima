@@ -461,7 +461,7 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
                              struct brw_reg mrf,
                              bool noperspective,
                              unsigned mode,
-                             unsigned data,
+                             struct brw_reg data,
                              unsigned msg_length,
                              unsigned response_length);
 

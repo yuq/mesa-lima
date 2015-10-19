@@ -137,6 +137,8 @@ C_SOURCES := \
 	tgsi/tgsi_dump.h \
 	tgsi/tgsi_exec.c \
 	tgsi/tgsi_exec.h \
+	tgsi/tgsi_emulate.c \
+	tgsi/tgsi_emulate.h \
 	tgsi/tgsi_info.c \
 	tgsi/tgsi_info.h \
 	tgsi/tgsi_iterate.c \

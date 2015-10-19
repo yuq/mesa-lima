@@ -32,36 +32,6 @@
 
 #include "brw_vec4.h"
 
-/**
- * Scratch data used when compiling a GLSL geometry shader.
- */
-struct brw_gs_compile
-{
-   struct brw_gs_prog_key key;
-   struct brw_gs_prog_data prog_data;
-   struct brw_vue_map input_vue_map;
-
-   struct brw_geometry_program *gp;
-
-   unsigned control_data_bits_per_vertex;
-   unsigned control_data_header_size_bits;
-};
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-const unsigned *brw_gs_emit(struct brw_context *brw,
-                            struct gl_shader_program *prog,
-                            struct brw_gs_compile *c,
-                            void *mem_ctx,
-                            int shader_time_index,
-                            unsigned *final_assembly_size);
-
-#ifdef __cplusplus
-} /* extern "C" */
-#endif
-
 #ifdef __cplusplus
 namespace brw {
 
@@ -71,7 +41,7 @@ public:
    vec4_gs_visitor(const struct brw_compiler *compiler,
                    void *log_data,
                    struct brw_gs_compile *c,
-                   nir_shader *shader,
+                   const nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
                    int shader_time_index);

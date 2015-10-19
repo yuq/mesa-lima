@@ -30,7 +30,7 @@
 #define IR3_SHADER_H_
 
 #include "pipe/p_state.h"
-#include "glsl/shader_enums.h"
+#include "glsl/nir/shader_enums.h"
 
 #include "ir3.h"
 #include "disasm.h"

@@ -107,6 +107,11 @@ _mesa_alloc_shared_state(struct gl_context *ctx)
       };
       STATIC_ASSERT(ARRAY_SIZE(targets) == NUM_TEXTURE_TARGETS);
       shared->DefaultTex[i] = ctx->Driver.NewTextureObject(ctx, 0, targets[i]);
+      /* Need to explicitly set/overwrite the TargetIndex field here since
+       * the call to _mesa_tex_target_to_index() in NewTextureObject() may
+       * fail if the texture target is not supported.
+       */
+      shared->DefaultTex[i]->TargetIndex = i;
    }
 
    /* sanity check */

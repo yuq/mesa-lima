@@ -151,6 +151,15 @@ NVC0_C_SOURCES := \
 	nvc0/nvc0_program.c \
 	nvc0/nvc0_program.h \
 	nvc0/nvc0_query.c \
+	nvc0/nvc0_query.h \
+	nvc0/nvc0_query_hw.c \
+	nvc0/nvc0_query_hw.h \
+	nvc0/nvc0_query_hw_metric.c \
+	nvc0/nvc0_query_hw_metric.h \
+	nvc0/nvc0_query_hw_sm.c \
+	nvc0/nvc0_query_hw_sm.h \
+	nvc0/nvc0_query_sw.c \
+	nvc0/nvc0_query_sw.h \
 	nvc0/nvc0_resource.c \
 	nvc0/nvc0_resource.h \
 	nvc0/nvc0_screen.c \

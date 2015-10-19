@@ -187,6 +187,9 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 	for (i = 0; i < ctx->streamout.num_targets; i++)
 		ctx->streamout.offsets[i] += prims;
 
+	if (fd_mesa_debug & FD_DBG_DDRAW)
+		ctx->dirty = 0xffffffff;
+
 	/* if an app (or, well, piglit test) does many thousands of draws
 	 * without flush (or anything which implicitly flushes, like
 	 * changing render targets), we can exceed the ringbuffer size.

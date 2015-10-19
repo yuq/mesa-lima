@@ -27,7 +27,7 @@
 #define UNIFORMS_H
 
 #include "main/glheader.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/ir_uniform.h"
 #include "program/prog_parameter.h"
 

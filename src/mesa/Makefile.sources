@@ -415,6 +415,7 @@ STATETRACKER_FILES = \
 	state_tracker/st_cache.h \
 	state_tracker/st_cb_bitmap.c \
 	state_tracker/st_cb_bitmap.h \
+	state_tracker/st_cb_bitmap_shader.c \
 	state_tracker/st_cb_blit.c \
 	state_tracker/st_cb_blit.h \
 	state_tracker/st_cb_bufferobjects.c \
@@ -425,6 +426,7 @@ STATETRACKER_FILES = \
 	state_tracker/st_cb_condrender.h \
 	state_tracker/st_cb_drawpixels.c \
 	state_tracker/st_cb_drawpixels.h \
+	state_tracker/st_cb_drawpixels_shader.c \
 	state_tracker/st_cb_drawtex.c \
 	state_tracker/st_cb_drawtex.h \
 	state_tracker/st_cb_eglimage.c \
@@ -525,9 +527,7 @@ PROGRAM_FILES = \
 	program/sampler.h \
 	program/string_to_uint_map.cpp \
 	program/symbol_table.c \
-	program/symbol_table.h \
-	../glsl/shader_enums.c \
-	../glsl/shader_enums.h
+	program/symbol_table.h
 
 PROGRAM_NIR_FILES = \
 	program/prog_to_nir.c \
@@ -620,6 +620,7 @@ INCLUDE_DIRS = \
 	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/glsl \
+	-I$(top_srcdir)/src/glsl/nir \
 	-I$(top_builddir)/src/glsl \
 	-I$(top_builddir)/src/glsl/nir \
 	-I$(top_srcdir)/src/glsl/glcpp \

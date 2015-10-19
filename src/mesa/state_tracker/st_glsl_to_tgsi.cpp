@@ -4334,216 +4334,6 @@ glsl_to_tgsi_visitor::renumber_registers(void)
    ralloc_free(first_reads);
 }
 
-/**
- * Returns a fragment program which implements the current pixel transfer ops.
- * Based on get_pixel_transfer_program in st_atom_pixeltransfer.c.
- */
-extern "C" void
-get_pixel_transfer_visitor(struct st_fragment_program *fp,
-                           glsl_to_tgsi_visitor *original,
-                           int scale_and_bias, int pixel_maps)
-{
-   glsl_to_tgsi_visitor *v = new glsl_to_tgsi_visitor();
-   struct st_context *st = st_context(original->ctx);
-   struct gl_program *prog = &fp->Base.Base;
-   struct gl_program_parameter_list *params = _mesa_new_parameter_list();
-   st_src_reg coord, src0;
-   st_dst_reg dst0;
-   glsl_to_tgsi_instruction *inst;
-
-   /* Copy attributes of the glsl_to_tgsi_visitor in the original shader. */
-   v->ctx = original->ctx;
-   v->prog = prog;
-   v->shader_program = NULL;
-   v->shader = NULL;
-   v->glsl_version = original->glsl_version;
-   v->native_integers = original->native_integers;
-   v->options = original->options;
-   v->next_temp = original->next_temp;
-   v->num_address_regs = original->num_address_regs;
-   v->samplers_used = prog->SamplersUsed = original->samplers_used;
-   v->indirect_addr_consts = original->indirect_addr_consts;
-   memcpy(&v->immediates, &original->immediates, sizeof(v->immediates));
-   v->num_immediates = original->num_immediates;
-
-   /*
-    * Get initial pixel color from the texture.
-    * TEX colorTemp, fragment.texcoord[0], texture[0], 2D;
-    */
-   coord = st_src_reg(PROGRAM_INPUT, VARYING_SLOT_TEX0, glsl_type::vec2_type);
-   src0 = v->get_temp(glsl_type::vec4_type);
-   dst0 = st_dst_reg(src0);
-   inst = v->emit_asm(NULL, TGSI_OPCODE_TEX, dst0, coord);
-   inst->sampler_array_size = 1;
-   inst->tex_target = TEXTURE_2D_INDEX;
-
-   prog->InputsRead |= VARYING_BIT_TEX0;
-   prog->SamplersUsed |= (1 << 0); /* mark sampler 0 as used */
-   v->samplers_used |= (1 << 0);
-
-   if (scale_and_bias) {
-      static const gl_state_index scale_state[STATE_LENGTH] =
-         { STATE_INTERNAL, STATE_PT_SCALE,
-           (gl_state_index) 0, (gl_state_index) 0, (gl_state_index) 0 };
-      static const gl_state_index bias_state[STATE_LENGTH] =
-         { STATE_INTERNAL, STATE_PT_BIAS,
-           (gl_state_index) 0, (gl_state_index) 0, (gl_state_index) 0 };
-      GLint scale_p, bias_p;
-      st_src_reg scale, bias;
-
-      scale_p = _mesa_add_state_reference(params, scale_state);
-      bias_p = _mesa_add_state_reference(params, bias_state);
-
-      /* MAD colorTemp, colorTemp, scale, bias; */
-      scale = st_src_reg(PROGRAM_STATE_VAR, scale_p, GLSL_TYPE_FLOAT);
-      bias = st_src_reg(PROGRAM_STATE_VAR, bias_p, GLSL_TYPE_FLOAT);
-      inst = v->emit_asm(NULL, TGSI_OPCODE_MAD, dst0, src0, scale, bias);
-   }
-
-   if (pixel_maps) {
-      st_src_reg temp = v->get_temp(glsl_type::vec4_type);
-      st_dst_reg temp_dst = st_dst_reg(temp);
-
-      assert(st->pixel_xfer.pixelmap_texture);
-      (void) st;
-
-      /* With a little effort, we can do four pixel map look-ups with
-       * two TEX instructions:
-       */
-
-      /* TEX temp.rg, colorTemp.rgba, texture[1], 2D; */
-      temp_dst.writemask = WRITEMASK_XY; /* write R,G */
-      inst = v->emit_asm(NULL, TGSI_OPCODE_TEX, temp_dst, src0);
-      inst->sampler.index = 1;
-      inst->sampler_array_size = 1;
-      inst->tex_target = TEXTURE_2D_INDEX;
-
-      /* TEX temp.ba, colorTemp.baba, texture[1], 2D; */
-      src0.swizzle = MAKE_SWIZZLE4(SWIZZLE_Z, SWIZZLE_W, SWIZZLE_Z, SWIZZLE_W);
-      temp_dst.writemask = WRITEMASK_ZW; /* write B,A */
-      inst = v->emit_asm(NULL, TGSI_OPCODE_TEX, temp_dst, src0);
-      inst->sampler.index = 1;
-      inst->sampler_array_size = 1;
-      inst->tex_target = TEXTURE_2D_INDEX;
-
-      prog->SamplersUsed |= (1 << 1); /* mark sampler 1 as used */
-      v->samplers_used |= (1 << 1);
-
-      /* MOV colorTemp, temp; */
-      inst = v->emit_asm(NULL, TGSI_OPCODE_MOV, dst0, temp);
-   }
-
-   /* Now copy the instructions from the original glsl_to_tgsi_visitor into the
-    * new visitor. */
-   foreach_in_list(glsl_to_tgsi_instruction, inst, &original->instructions) {
-      glsl_to_tgsi_instruction *newinst;
-      st_src_reg src_regs[4];
-
-      if (inst->dst[0].file == PROGRAM_OUTPUT)
-         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst[0].index);
-
-      for (int i = 0; i < 4; i++) {
-         src_regs[i] = inst->src[i];
-         if (src_regs[i].file == PROGRAM_INPUT &&
-             src_regs[i].index == VARYING_SLOT_COL0) {
-            src_regs[i].file = PROGRAM_TEMPORARY;
-            src_regs[i].index = src0.index;
-         }
-         else if (src_regs[i].file == PROGRAM_INPUT)
-            prog->InputsRead |= BITFIELD64_BIT(src_regs[i].index);
-      }
-
-      newinst = v->emit_asm(NULL, inst->op, inst->dst[0], src_regs[0], src_regs[1], src_regs[2], src_regs[3]);
-      newinst->tex_target = inst->tex_target;
-      newinst->sampler_array_size = inst->sampler_array_size;
-   }
-
-   /* Make modifications to fragment program info. */
-   prog->Parameters = _mesa_combine_parameter_lists(params,
-                                                    original->prog->Parameters);
-   _mesa_free_parameter_list(params);
-   count_resources(v, prog);
-   fp->glsl_to_tgsi = v;
-}
-
-/**
- * Make fragment program for glBitmap:
- *   Sample the texture and kill the fragment if the bit is 0.
- * This program will be combined with the user's fragment program.
- *
- * Based on make_bitmap_fragment_program in st_cb_bitmap.c.
- */
-extern "C" void
-get_bitmap_visitor(struct st_fragment_program *fp,
-                   glsl_to_tgsi_visitor *original, int samplerIndex)
-{
-   glsl_to_tgsi_visitor *v = new glsl_to_tgsi_visitor();
-   struct st_context *st = st_context(original->ctx);
-   struct gl_program *prog = &fp->Base.Base;
-   st_src_reg coord, src0;
-   st_dst_reg dst0;
-   glsl_to_tgsi_instruction *inst;
-
-   /* Copy attributes of the glsl_to_tgsi_visitor in the original shader. */
-   v->ctx = original->ctx;
-   v->prog = prog;
-   v->shader_program = NULL;
-   v->shader = NULL;
-   v->glsl_version = original->glsl_version;
-   v->native_integers = original->native_integers;
-   v->options = original->options;
-   v->next_temp = original->next_temp;
-   v->num_address_regs = original->num_address_regs;
-   v->samplers_used = prog->SamplersUsed = original->samplers_used;
-   v->indirect_addr_consts = original->indirect_addr_consts;
-   memcpy(&v->immediates, &original->immediates, sizeof(v->immediates));
-   v->num_immediates = original->num_immediates;
-
-   /* TEX tmp0, fragment.texcoord[0], texture[0], 2D; */
-   coord = st_src_reg(PROGRAM_INPUT, VARYING_SLOT_TEX0, glsl_type::vec2_type);
-   src0 = v->get_temp(glsl_type::vec4_type);
-   dst0 = st_dst_reg(src0);
-   inst = v->emit_asm(NULL, TGSI_OPCODE_TEX, dst0, coord);
-   inst->sampler.index = samplerIndex;
-   inst->sampler_array_size = 1;
-   inst->tex_target = TEXTURE_2D_INDEX;
-
-   prog->InputsRead |= VARYING_BIT_TEX0;
-   prog->SamplersUsed |= (1 << samplerIndex); /* mark sampler as used */
-   v->samplers_used |= (1 << samplerIndex);
-
-   /* KIL if -tmp0 < 0 # texel=0 -> keep / texel=0 -> discard */
-   src0.negate = NEGATE_XYZW;
-   if (st->bitmap.tex_format == PIPE_FORMAT_L8_UNORM)
-      src0.swizzle = SWIZZLE_XXXX;
-   inst = v->emit_asm(NULL, TGSI_OPCODE_KILL_IF, undef_dst, src0);
-
-   /* Now copy the instructions from the original glsl_to_tgsi_visitor into the
-    * new visitor. */
-   foreach_in_list(glsl_to_tgsi_instruction, inst, &original->instructions) {
-      glsl_to_tgsi_instruction *newinst;
-      st_src_reg src_regs[4];
-
-      if (inst->dst[0].file == PROGRAM_OUTPUT)
-         prog->OutputsWritten |= BITFIELD64_BIT(inst->dst[0].index);
-
-      for (int i = 0; i < 4; i++) {
-         src_regs[i] = inst->src[i];
-         if (src_regs[i].file == PROGRAM_INPUT)
-            prog->InputsRead |= BITFIELD64_BIT(src_regs[i].index);
-      }
-
-      newinst = v->emit_asm(NULL, inst->op, inst->dst[0], src_regs[0], src_regs[1], src_regs[2], src_regs[3]);
-      newinst->tex_target = inst->tex_target;
-      newinst->sampler_array_size = inst->sampler_array_size;
-   }
-
-   /* Make modifications to fragment program info. */
-   prog->Parameters = _mesa_clone_parameter_list(original->prog->Parameters);
-   count_resources(v, prog);
-   fp->glsl_to_tgsi = v;
-}
-
 /* ------------------------- TGSI conversion stuff -------------------------- */
 struct label {
    unsigned branch_target;
@@ -4852,7 +4642,7 @@ src_register(struct st_translate *t, const st_src_reg *reg)
 static struct ureg_dst
 translate_dst(struct st_translate *t,
               const st_dst_reg *dst_reg,
-              bool saturate, bool clamp_color)
+              bool saturate)
 {
    struct ureg_dst dst = dst_register(t, dst_reg->file, dst_reg->index,
                                       dst_reg->array_id);
@@ -4864,28 +4654,6 @@ translate_dst(struct st_translate *t,
 
    if (saturate)
       dst = ureg_saturate(dst);
-   else if (clamp_color && dst_reg->file == PROGRAM_OUTPUT) {
-      /* Clamp colors for ARB_color_buffer_float. */
-      switch (t->procType) {
-      case TGSI_PROCESSOR_VERTEX:
-         /* This can only occur with a compatibility profile, which doesn't
-          * support geometry shaders. */
-         if (dst_reg->index == VARYING_SLOT_COL0 ||
-             dst_reg->index == VARYING_SLOT_COL1 ||
-             dst_reg->index == VARYING_SLOT_BFC0 ||
-             dst_reg->index == VARYING_SLOT_BFC1) {
-            dst = ureg_saturate(dst);
-         }
-         break;
-
-      case TGSI_PROCESSOR_FRAGMENT:
-         if (dst_reg->index == FRAG_RESULT_COLOR ||
-             dst_reg->index >= FRAG_RESULT_DATA0) {
-            dst = ureg_saturate(dst);
-         }
-         break;
-      }
-   }
 
    if (dst_reg->reladdr != NULL) {
       assert(dst_reg->file != PROGRAM_TEMPORARY);
@@ -4991,8 +4759,7 @@ translate_tex_offset(struct st_translate *t,
 
 static void
 compile_tgsi_instruction(struct st_translate *t,
-                         const glsl_to_tgsi_instruction *inst,
-                         bool clamp_dst_color_output)
+                         const glsl_to_tgsi_instruction *inst)
 {
    struct ureg_program *ureg = t->ureg;
    GLuint i;
@@ -5010,8 +4777,7 @@ compile_tgsi_instruction(struct st_translate *t,
    for (i = 0; i < num_dst; i++)
       dst[i] = translate_dst(t,
                              &inst->dst[i],
-                             inst->saturate,
-                             clamp_dst_color_output);
+                             inst->saturate);
 
    for (i = 0; i < num_src; i++)
       src[i] = translate_src(t, &inst->src[i]);
@@ -5286,16 +5052,6 @@ emit_face_var(struct gl_context *ctx, struct st_translate *t)
    t->inputs[t->inputMapping[VARYING_SLOT_FACE]] = ureg_src(face_temp);
 }
 
-static void
-emit_edgeflags(struct st_translate *t)
-{
-   struct ureg_program *ureg = t->ureg;
-   struct ureg_dst edge_dst = t->outputs[t->outputMapping[VARYING_SLOT_EDGE]];
-   struct ureg_src edge_src = t->inputs[t->inputMapping[VERT_ATTRIB_EDGEFLAG]];
-
-   ureg_MOV(ureg, edge_dst, edge_src);
-}
-
 static bool
 find_array(unsigned attr, struct array_decl *arrays, unsigned count,
            unsigned *array_id, unsigned *array_size)
@@ -5353,9 +5109,7 @@ st_translate_program(
    const GLuint outputMapping[],
    const GLuint outputSlotToAttr[],
    const ubyte outputSemanticName[],
-   const ubyte outputSemanticIndex[],
-   boolean passthrough_edgeflags,
-   boolean clamp_color)
+   const ubyte outputSemanticIndex[])
 {
    struct st_translate *t;
    unsigned i;
@@ -5544,8 +5298,6 @@ st_translate_program(
             t->outputs[i] = ureg_writemask(t->outputs[i], TGSI_WRITEMASK_X);
          }
       }
-      if (passthrough_edgeflags)
-         emit_edgeflags(t);
    }
 
    /* Declare address register.
@@ -5639,7 +5391,7 @@ st_translate_program(
       unsigned num_ubos = program->shader->NumUniformBlocks;
 
       for (i = 0; i < num_ubos; i++) {
-         unsigned size = program->shader->UniformBlocks[i].UniformBufferSize;
+         unsigned size = program->shader->UniformBlocks[i]->UniformBufferSize;
          unsigned num_const_vecs = (size + 15) / 16;
          unsigned first, last;
          assert(num_const_vecs > 0);
@@ -5696,7 +5448,7 @@ st_translate_program(
     */
    foreach_in_list(glsl_to_tgsi_instruction, inst, &program->instructions) {
       set_insn_start(t, ureg_get_instruction_number(ureg));
-      compile_tgsi_instruction(t, inst, clamp_color);
+      compile_tgsi_instruction(t, inst);
    }
 
    /* Fix up all emitted labels:

@@ -29,7 +29,7 @@
 #include "brw_vec4.h"
 #include "brw_cfg.h"
 #include "brw_shader.h"
-#include "glsl/glsl_types.h"
+#include "glsl/nir/glsl_types.h"
 #include "glsl/ir_optimization.h"
 
 using namespace brw;

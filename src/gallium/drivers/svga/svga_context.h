@@ -44,10 +44,21 @@
 
 
 /** Non-GPU queries for gallium HUD */
-#define SVGA_QUERY_DRAW_CALLS   (PIPE_QUERY_DRIVER_SPECIFIC + 0)
-#define SVGA_QUERY_FALLBACKS    (PIPE_QUERY_DRIVER_SPECIFIC + 1)
-#define SVGA_QUERY_MEMORY_USED  (PIPE_QUERY_DRIVER_SPECIFIC + 2)
-#define SVGA_QUERY_MAX          (PIPE_QUERY_DRIVER_SPECIFIC + 3)
+/* per-frame counters */
+#define SVGA_QUERY_NUM_DRAW_CALLS          (PIPE_QUERY_DRIVER_SPECIFIC + 0)
+#define SVGA_QUERY_NUM_FALLBACKS           (PIPE_QUERY_DRIVER_SPECIFIC + 1)
+#define SVGA_QUERY_NUM_FLUSHES             (PIPE_QUERY_DRIVER_SPECIFIC + 2)
+#define SVGA_QUERY_NUM_VALIDATIONS         (PIPE_QUERY_DRIVER_SPECIFIC + 3)
+#define SVGA_QUERY_MAP_BUFFER_TIME         (PIPE_QUERY_DRIVER_SPECIFIC + 4)
+#define SVGA_QUERY_NUM_RESOURCES_MAPPED    (PIPE_QUERY_DRIVER_SPECIFIC + 5)
+/* running total counters */
+#define SVGA_QUERY_MEMORY_USED             (PIPE_QUERY_DRIVER_SPECIFIC + 6)
+#define SVGA_QUERY_NUM_SHADERS             (PIPE_QUERY_DRIVER_SPECIFIC + 7)
+#define SVGA_QUERY_NUM_RESOURCES           (PIPE_QUERY_DRIVER_SPECIFIC + 8)
+#define SVGA_QUERY_NUM_STATE_OBJECTS       (PIPE_QUERY_DRIVER_SPECIFIC + 9)
+#define SVGA_QUERY_NUM_SURFACE_VIEWS       (PIPE_QUERY_DRIVER_SPECIFIC + 10)
+/*SVGA_QUERY_MAX has to be last because it is size of an array*/
+#define SVGA_QUERY_MAX                     (PIPE_QUERY_DRIVER_SPECIFIC + 11)
 
 /**
  * Maximum supported number of constant buffers per shader
@@ -463,9 +474,18 @@ struct svga_context
    /** List of buffers with queued transfers */
    struct list_head dirty_buffers;
 
-   /** performance / info queries */
-   uint64_t num_draw_calls;  /**< SVGA_QUERY_DRAW_CALLS */
-   uint64_t num_fallbacks;   /**< SVGA_QUERY_FALLBACKS */
+   /** performance / info queries for HUD */
+   struct {
+      uint64_t num_draw_calls;       /**< SVGA_QUERY_DRAW_CALLS */
+      uint64_t num_fallbacks;        /**< SVGA_QUERY_NUM_FALLBACKS */
+      uint64_t num_flushes;          /**< SVGA_QUERY_NUM_FLUSHES */
+      uint64_t num_validations;      /**< SVGA_QUERY_NUM_VALIDATIONS */
+      uint64_t map_buffer_time;      /**< SVGA_QUERY_MAP_BUFFER_TIME */
+      uint64_t num_resources_mapped; /**< SVGA_QUERY_NUM_RESOURCES_MAPPED */
+      uint64_t num_shaders;          /**< SVGA_QUERY_NUM_SHADERS */
+      uint64_t num_state_objects;    /**< SVGA_QUERY_NUM_STATE_OBJECTS */
+      uint64_t num_surface_views;    /**< SVGA_QUERY_NUM_SURFACE_VIEWS */
+   } hud;
 
    /** The currently bound stream output targets */
    unsigned num_so_targets;
