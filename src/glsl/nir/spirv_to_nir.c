@@ -825,28 +825,14 @@ get_builtin_variable(struct vtn_builder *b,
    nir_variable *var = b->builtins[builtin];
 
    if (!var) {
-      var = ralloc(b->shader, nir_variable);
-      var->type = type;
-
+      int location;
       nir_variable_mode mode;
-      vtn_get_builtin_location(builtin, &var->data.location, &mode);
-      var->data.explicit_location = true;
-      var->data.mode = mode;
-      var->name = ralloc_strdup(var, "builtin");
+      vtn_get_builtin_location(builtin, &location, &mode);
 
-      switch (mode) {
-      case nir_var_shader_in:
-         exec_list_push_tail(&b->shader->inputs, &var->node);
-         break;
-      case nir_var_shader_out:
-         exec_list_push_tail(&b->shader->outputs, &var->node);
-         break;
-      case nir_var_system_value:
-         exec_list_push_tail(&b->shader->system_values, &var->node);
-         break;
-      default:
-         unreachable("bad builtin mode");
-      }
+      var = nir_variable_create(b->shader, mode, type, "builtin");
+
+      var->data.location = location;
+      var->data.explicit_location = true;
 
       b->builtins[builtin] = var;
    }
@@ -1277,26 +1263,12 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
       if (builtin_block)
          break;
 
-      switch (var->data.mode) {
-      case nir_var_shader_in:
-         exec_list_push_tail(&b->shader->inputs, &var->node);
-         break;
-      case nir_var_shader_out:
-         exec_list_push_tail(&b->shader->outputs, &var->node);
-         break;
-      case nir_var_global:
-         exec_list_push_tail(&b->shader->globals, &var->node);
-         break;
-      case nir_var_local:
-         exec_list_push_tail(&b->impl->locals, &var->node);
-         break;
-      case nir_var_uniform:
-         exec_list_push_tail(&b->shader->uniforms, &var->node);
-         break;
-      case nir_var_system_value:
-         exec_list_push_tail(&b->shader->system_values, &var->node);
-         break;
+      if (var->data.mode == nir_var_local) {
+         nir_function_impl_add_variable(b->impl, var);
+      } else {
+         nir_shader_add_variable(b->shader, var);
       }
+
       break;
    }
 
