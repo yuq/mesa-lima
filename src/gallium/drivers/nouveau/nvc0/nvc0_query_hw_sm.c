@@ -38,6 +38,7 @@ static const char *nve4_hw_sm_query_names[] =
    /* MP counters */
    "active_cycles",
    "active_warps",
+   "atom_cas_count",
    "atom_count",
    "branch",
    "divergent_branch",
@@ -53,6 +54,8 @@ static const char *nve4_hw_sm_query_names[] =
    "inst_issued2",
    "l1_global_load_hit",
    "l1_global_load_miss",
+   "__l1_global_load_transactions",
+   "__l1_global_store_transactions",
    "l1_local_load_hit",
    "l1_local_load_miss",
    "l1_local_store_hit",
@@ -231,6 +234,7 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
 {
    _Q1B(ACTIVE_CYCLES, 0x0001, B6, WARP, 0x00000000, 1, 1),
    _Q1B(ACTIVE_WARPS,  0x003f, B6, WARP, 0x31483104, 2, 1),
+   _Q1A(ATOM_CAS_COUNT, 0x0001, B6, BRANCH, 0x000000004, 1, 1),
    _Q1A(ATOM_COUNT, 0x0001, B6, BRANCH, 0x00000000, 1, 1),
    _Q1A(BRANCH,           0x0001, B6, BRANCH, 0x0000000c, 1, 1),
    _Q1A(DIVERGENT_BRANCH, 0x0001, B6, BRANCH, 0x00000010, 1, 1),
@@ -246,6 +250,8 @@ static const struct nvc0_hw_sm_query_cfg nve4_hw_sm_queries[] =
    _Q1A(INST_ISSUED2,  0x0001, B6, ISSUE, 0x00000008, 1, 1),
    _Q1B(L1_GLD_HIT,  0x0001, B6, L1, 0x00000010, 1, 1),
    _Q1B(L1_GLD_MISS, 0x0001, B6, L1, 0x00000014, 1, 1),
+   _Q1B(L1_GLD_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000000, 1, 1),
+   _Q1B(L1_GST_TRANSACTIONS,  0x0001, B6, UNK0F, 0x00000004, 1, 1),
    _Q1B(L1_LOCAL_LD_HIT,   0x0001, B6, L1, 0x00000000, 1, 1),
    _Q1B(L1_LOCAL_LD_MISS,  0x0001, B6, L1, 0x00000004, 1, 1),
    _Q1B(L1_LOCAL_ST_HIT,  0x0001, B6, L1, 0x00000008, 1, 1),
