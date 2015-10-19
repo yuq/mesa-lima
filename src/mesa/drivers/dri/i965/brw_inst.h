@@ -783,20 +783,20 @@ brw_compact_inst_##name(const struct brw_device_info *devinfo,     \
 /* A simple macro for fields which stay in the same place on all generations. */
 #define F(name, high, low) FC(name, high, low, true)
 
-F(src1_reg_nr,    63, 56)
-F(src0_reg_nr,    55, 48)
-F(dst_reg_nr,     47, 40)
-F(src1_index,     39, 35)
-F(src0_index,     34, 30)
-F(cmpt_control,   29, 29) /* Same location as brw_inst */
-F(flag_subreg_nr, 28, 28) /* <= Gen6 only */
-F(cond_modifier,  27, 24) /* Same location as brw_inst */
-F(acc_wr_control, 23, 23)
-F(subreg_index,   22, 18)
-F(datatype_index, 17, 13)
-F(control_index,  12,  8)
-F(debug_control,   7,  7)
-F(opcode,          6,  0) /* Same location as brw_inst */
+F(src1_reg_nr,      63, 56)
+F(src0_reg_nr,      55, 48)
+F(dst_reg_nr,       47, 40)
+F(src1_index,       39, 35)
+F(src0_index,       34, 30)
+F(cmpt_control,     29, 29) /* Same location as brw_inst */
+F(flag_subreg_nr,   28, 28) /* <= Gen6 only */
+F(cond_modifier,    27, 24) /* Same location as brw_inst */
+F(acc_wr_control,   23, 23)
+F(subreg_index,     22, 18)
+F(datatype_index,   17, 13)
+F(control_index,    12,  8)
+F(debug_control,     7,  7)
+F(opcode,            6,  0) /* Same location as brw_inst */
 
 /**
  * (Gen8+) Compacted three-source instructions:
