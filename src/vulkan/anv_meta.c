@@ -247,6 +247,12 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             .cullMode = VK_CULL_MODE_NONE,
             .frontFace = VK_FRONT_FACE_CCW
          },
+         .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+            .rasterSamples = 1,
+            .sampleShadingEnable = false,
+            .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
+         },
          .pDepthStencilState = &(VkPipelineDepthStencilStateCreateInfo) {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
             .depthTestEnable = true,
@@ -660,6 +666,12 @@ anv_device_init_meta_blit_state(struct anv_device *device)
          .fillMode = VK_FILL_MODE_SOLID,
          .cullMode = VK_CULL_MODE_NONE,
          .frontFace = VK_FRONT_FACE_CCW
+      },
+      .pMultisampleState = &(VkPipelineMultisampleStateCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+         .rasterSamples = 1,
+         .sampleShadingEnable = false,
+         .pSampleMask = (VkSampleMask[]) { UINT32_MAX },
       },
       .pColorBlendState = &(VkPipelineColorBlendStateCreateInfo) {
          .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
