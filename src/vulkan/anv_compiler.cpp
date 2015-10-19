@@ -137,71 +137,6 @@ create_params_array(struct anv_pipeline *pipeline,
          (const gl_constant_value *)&null_data->client_data[i * sizeof(float)];
 }
 
-/**
- * Return a bitfield where bit n is set if barycentric interpolation mode n
- * (see enum brw_wm_barycentric_interp_mode) is needed by the fragment shader.
- */
-unsigned
-brw_compute_barycentric_interp_modes(const struct brw_device_info *devinfo,
-                                     bool shade_model_flat,
-                                     bool persample_shading,
-                                     nir_shader *shader)
-{
-   unsigned barycentric_interp_modes = 0;
-
-   nir_foreach_variable(var, &shader->inputs) {
-      enum glsl_interp_qualifier interp_qualifier =
-         (enum glsl_interp_qualifier) var->data.interpolation;
-      bool is_centroid = var->data.centroid && !persample_shading;
-      bool is_sample = var->data.sample || persample_shading;
-      bool is_gl_Color = (var->data.location == VARYING_SLOT_COL0) ||
-                         (var->data.location == VARYING_SLOT_COL1);
-
-      /* Ignore WPOS and FACE, because they don't require interpolation. */
-      if (var->data.location == VARYING_SLOT_POS ||
-          var->data.location == VARYING_SLOT_FACE)
-         continue;
-
-      /* Determine the set (or sets) of barycentric coordinates needed to
-       * interpolate this variable.  Note that when
-       * brw->needs_unlit_centroid_workaround is set, centroid interpolation
-       * uses PIXEL interpolation for unlit pixels and CENTROID interpolation
-       * for lit pixels, so we need both sets of barycentric coordinates.
-       */
-      if (interp_qualifier == INTERP_QUALIFIER_NOPERSPECTIVE) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_CENTROID_BARYCENTRIC;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_SAMPLE_BARYCENTRIC;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_NONPERSPECTIVE_PIXEL_BARYCENTRIC;
-         }
-      } else if (interp_qualifier == INTERP_QUALIFIER_SMOOTH ||
-                 (!(shade_model_flat && is_gl_Color) &&
-                  interp_qualifier == INTERP_QUALIFIER_NONE)) {
-         if (is_centroid) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_CENTROID_BARYCENTRIC;
-         } else if (is_sample) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_SAMPLE_BARYCENTRIC;
-         }
-         if ((!is_centroid && !is_sample) ||
-             devinfo->needs_unlit_centroid_workaround) {
-            barycentric_interp_modes |=
-               1 << BRW_WM_PERSPECTIVE_PIXEL_BARYCENTRIC;
-         }
-      }
-   }
-
-   return barycentric_interp_modes;
-}
-
 static void
 brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vertex_program *vp,
@@ -504,25 +439,6 @@ void brw_wm_populate_key(struct brw_context *brw,
    ctx->DrawBuffer = NULL;
 }
 
-static uint8_t
-computed_depth_mode(struct gl_fragment_program *fp)
-{
-   if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-      switch (fp->FragDepthLayout) {
-      case FRAG_DEPTH_LAYOUT_NONE:
-      case FRAG_DEPTH_LAYOUT_ANY:
-         return BRW_PSCDEPTH_ON;
-      case FRAG_DEPTH_LAYOUT_GREATER:
-         return BRW_PSCDEPTH_ON_GE;
-      case FRAG_DEPTH_LAYOUT_LESS:
-         return BRW_PSCDEPTH_ON_LE;
-      case FRAG_DEPTH_LAYOUT_UNCHANGED:
-         return BRW_PSCDEPTH_OFF;
-      }
-   }
-   return BRW_PSCDEPTH_OFF;
-}
-
 static bool
 really_do_wm_prog(struct brw_context *brw,
                   struct gl_shader_program *prog,
@@ -540,22 +456,9 @@ really_do_wm_prog(struct brw_context *brw,
 
    memset(prog_data, 0, sizeof(*prog_data));
 
-   /* key->alpha_test_func means simulating alpha testing via discards,
-    * so the shader definitely kills pixels.
-    */
-   prog_data->uses_kill = fp->program.UsesKill || key->alpha_test_func;
-
-   prog_data->computed_depth_mode = computed_depth_mode(&fp->program);
-
    create_params_array(pipeline, fs, &prog_data->base);
    anv_nir_apply_dynamic_offsets(pipeline, fs->Program->nir, &prog_data->base);
    anv_nir_apply_pipeline_layout(fs->Program->nir, pipeline->layout);
-
-   prog_data->barycentric_interp_modes =
-      brw_compute_barycentric_interp_modes(brw->intelScreen->devinfo,
-                                           key->flat_shade,
-                                           key->persample_shading,
-                                           fp->program.Base.nir);
 
    set_binding_table_layout(&prog_data->base, pipeline,
                             VK_SHADER_STAGE_FRAGMENT);
