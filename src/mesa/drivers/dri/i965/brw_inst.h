@@ -762,18 +762,26 @@ brw_compact_inst_set_bits(brw_compact_inst *inst, unsigned high, unsigned low,
    inst->data = (inst->data & ~mask) | (value << low);
 }
 
-#define F(name, high, low)                                      \
-static inline void                                              \
-brw_compact_inst_set_##name(brw_compact_inst *inst, unsigned v) \
-{                                                               \
-   brw_compact_inst_set_bits(inst, high, low, v);               \
-}                                                               \
-                                                                \
-static inline unsigned                                          \
-brw_compact_inst_##name(brw_compact_inst *inst)                 \
-{                                                               \
-   return brw_compact_inst_bits(inst, high, low);               \
+#define FC(name, high, low, assertions)                            \
+static inline void                                                 \
+brw_compact_inst_set_##name(const struct brw_device_info *devinfo, \
+                            brw_compact_inst *inst, unsigned v)    \
+{                                                                  \
+   assert(assertions);                                             \
+   (void) devinfo;                                                 \
+   brw_compact_inst_set_bits(inst, high, low, v);                  \
+}                                                                  \
+static inline unsigned                                             \
+brw_compact_inst_##name(const struct brw_device_info *devinfo,     \
+                        brw_compact_inst *inst)                    \
+{                                                                  \
+   assert(assertions);                                             \
+   (void) devinfo;                                                 \
+   return brw_compact_inst_bits(inst, high, low);                  \
 }
+
+/* A simple macro for fields which stay in the same place on all generations. */
+#define F(name, high, low) FC(name, high, low, true)
 
 F(src1_reg_nr,    63, 56)
 F(src0_reg_nr,    55, 48)
