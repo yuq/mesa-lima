@@ -212,8 +212,6 @@ void brw_wm_populate_key(struct brw_context *brw,
                          struct brw_wm_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
-   GLuint lookup = 0;
-   GLuint line_aa;
    bool program_uses_dfdy = fp->program.UsesDFdy;
    struct gl_framebuffer draw_buffer;
    bool multisample_fbo;
@@ -237,71 +235,9 @@ void brw_wm_populate_key(struct brw_context *brw,
 
    multisample_fbo = ctx->DrawBuffer->Visual.samples > 1;
 
-   /* Build the index for table lookup
-    */
-   if (brw->gen < 6) {
-      /* _NEW_COLOR */
-      if (fp->program.UsesKill || ctx->Color.AlphaEnabled)
-         lookup |= IZ_PS_KILL_ALPHATEST_BIT;
-
-      if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
-         lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
-
-      /* _NEW_DEPTH */
-      if (ctx->Depth.Test)
-         lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
-
-      if (ctx->Depth.Test && ctx->Depth.Mask) /* ?? */
-         lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
-
-      /* _NEW_STENCIL | _NEW_BUFFERS */
-      if (ctx->Stencil._Enabled) {
-         lookup |= IZ_STENCIL_TEST_ENABLE_BIT;
-
-         if (ctx->Stencil.WriteMask[0] ||
-             ctx->Stencil.WriteMask[ctx->Stencil._BackFace])
-            lookup |= IZ_STENCIL_WRITE_ENABLE_BIT;
-      }
-      key->iz_lookup = lookup;
-   }
-
-   line_aa = AA_NEVER;
-
-   /* _NEW_LINE, _NEW_POLYGON, BRW_NEW_REDUCED_PRIMITIVE */
-   if (ctx->Line.SmoothFlag) {
-      if (brw->reduced_primitive == GL_LINES) {
-         line_aa = AA_ALWAYS;
-      }
-      else if (brw->reduced_primitive == GL_TRIANGLES) {
-         if (ctx->Polygon.FrontMode == GL_LINE) {
-            line_aa = AA_SOMETIMES;
-
-            if (ctx->Polygon.BackMode == GL_LINE ||
-                (ctx->Polygon.CullFlag &&
-                 ctx->Polygon.CullFaceMode == GL_BACK))
-               line_aa = AA_ALWAYS;
-         }
-         else if (ctx->Polygon.BackMode == GL_LINE) {
-            line_aa = AA_SOMETIMES;
-
-            if ((ctx->Polygon.CullFlag &&
-                 ctx->Polygon.CullFaceMode == GL_FRONT))
-               line_aa = AA_ALWAYS;
-         }
-      }
-   }
-
-   key->line_aa = line_aa;
-
    /* _NEW_HINT */
    key->high_quality_derivatives =
       ctx->Hint.FragmentShaderDerivative == GL_NICEST;
-
-   if (brw->gen < 6)
-      key->stats_wm = brw->stats_wm;
-
-   /* _NEW_LIGHT */
-   key->flat_shade = (ctx->Light.ShadeModel == GL_FLAT);
 
    /* _NEW_FRAG_CLAMP | _NEW_BUFFERS */
    key->clamp_fragment_color = ctx->Color._ClampFragmentColor;
