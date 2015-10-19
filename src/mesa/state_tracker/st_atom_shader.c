@@ -76,7 +76,7 @@ update_fp( struct st_context *st )
     * Ignore sample qualifier while computing this flag.
     */
    key.persample_shading =
-      !st->can_force_persample_interp &&
+      st->force_persample_in_shader &&
       !(stfp->Base.Base.SystemValuesRead & (SYSTEM_BIT_SAMPLE_ID |
                                             SYSTEM_BIT_SAMPLE_POS)) &&
       _mesa_get_min_invocations_per_fragment(st->ctx, &stfp->Base, true) > 1;
