@@ -142,36 +142,11 @@ brw_vs_populate_key(struct brw_context *brw,
                     struct brw_vertex_program *vp,
                     struct brw_vs_prog_key *key)
 {
-   struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_VERTEX_PROGRAM */
-   struct gl_program *prog = (struct gl_program *) vp;
-
    memset(key, 0, sizeof(*key));
 
-   /* Just upload the program verbatim for now.  Always send it all
-    * the inputs it asks for, whether they are varying or not.
-    */
-   key->program_string_id = vp->id;
+   /* XXX: Handle vertex input work-arounds */
 
-   /* _NEW_POLYGON */
-   if (brw->gen < 6) {
-      key->copy_edgeflag = (ctx->Polygon.FrontMode != GL_FILL ||
-                           ctx->Polygon.BackMode != GL_FILL);
-   }
-
-   if (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
-                               VARYING_BIT_BFC0 | VARYING_BIT_BFC1)) {
-      /* _NEW_LIGHT | _NEW_BUFFERS */
-      key->clamp_vertex_color = ctx->Light._ClampVertexColor;
-   }
-
-   /* _NEW_POINT */
-   if (brw->gen < 6 && ctx->Point.PointSprite) {
-      for (int i = 0; i < 8; i++) {
-         if (ctx->Point.CoordReplace[i])
-            key->point_coord_replace |= (1 << i);
-      }
-   }
+   /* XXX: Handle sampler_prog_key */
 }
 
 static bool
