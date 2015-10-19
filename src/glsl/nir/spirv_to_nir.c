@@ -854,44 +854,6 @@ get_builtin_variable(struct vtn_builder *b,
    return var;
 }
 
-static void
-vtn_builtin_load(struct vtn_builder *b,
-                 struct vtn_ssa_value *val,
-                 SpvBuiltIn builtin)
-{
-   assert(glsl_type_is_vector_or_scalar(val->type));
-
-   nir_variable *var = get_builtin_variable(b, val->type, builtin);
-
-   nir_intrinsic_instr *load =
-      nir_intrinsic_instr_create(b->shader, nir_intrinsic_load_var);
-   nir_ssa_dest_init(&load->instr, &load->dest,
-                     glsl_get_vector_elements(val->type), NULL);
-
-   load->variables[0] = nir_deref_var_create(load, var);
-   load->num_components = glsl_get_vector_elements(val->type);
-   nir_builder_instr_insert(&b->nb, &load->instr);
-   val->def = &load->dest.ssa;
-}
-
-static void
-vtn_builtin_store(struct vtn_builder *b,
-                  struct vtn_ssa_value *val,
-                  SpvBuiltIn builtin)
-{
-   assert(glsl_type_is_vector_or_scalar(val->type));
-
-   nir_variable *var = get_builtin_variable(b, val->type, builtin);
-
-   nir_intrinsic_instr *store =
-      nir_intrinsic_instr_create(b->shader, nir_intrinsic_store_var);
-
-   store->variables[0] = nir_deref_var_create(store, var);
-   store->num_components = glsl_get_vector_elements(val->type);
-   store->src[0] = nir_src_for_ssa(val->def);
-   nir_builder_instr_insert(&b->nb, &store->instr);
-}
-
 static struct vtn_ssa_value *
 _vtn_variable_load(struct vtn_builder *b,
                    nir_deref_var *src_deref, struct vtn_type *src_type,
@@ -899,11 +861,6 @@ _vtn_variable_load(struct vtn_builder *b,
 {
    struct vtn_ssa_value *val = rzalloc(b, struct vtn_ssa_value);
    val->type = src_deref_tail->type;
-
-   if (src_type->is_builtin) {
-      vtn_builtin_load(b, val, src_type->builtin);
-      return val;
-   }
 
    /* The deref tail may contain a deref to select a component of a vector (in
     * other words, it might not be an actual tail) so we have to save it away
@@ -976,11 +933,6 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
                     nir_deref_var *dest_deref, nir_deref *dest_deref_tail,
                     struct vtn_ssa_value *src)
 {
-   if (dest_type->is_builtin) {
-      vtn_builtin_store(b, src, dest_type->builtin);
-      return;
-   }
-
    nir_deref *old_child = dest_deref_tail->child;
 
    if (glsl_type_is_vector_or_scalar(src->type)) {
@@ -1410,7 +1362,18 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
          default:
             unreachable("Invalid type for deref");
          }
-         tail = tail->child;
+
+         if (deref_type->is_builtin) {
+            /* If we encounter a builtin, we throw away the ress of the
+             * access chain, jump to the builtin, and keep building.
+             */
+            nir_variable *builtin = get_builtin_variable(b, deref_type->type,
+                                                         deref_type->builtin);
+            val->deref = nir_deref_var_create(b, builtin);
+            tail = &val->deref->deref;
+         } else {
+            tail = tail->child;
+         }
       }
 
       /* For uniform blocks, we don't resolve the access chain until we
