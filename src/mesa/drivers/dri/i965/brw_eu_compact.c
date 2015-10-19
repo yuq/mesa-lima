@@ -1016,7 +1016,10 @@ brw_try_compact_instruction(const struct brw_device_info *devinfo,
    if (!set_subreg_index(devinfo, &temp, src, is_immediate))
       return false;
 
-   compact(acc_wr_control);
+   if (devinfo->gen >= 6) {
+      compact(acc_wr_control);
+   }
+
    compact(cond_modifier);
 
    if (devinfo->gen <= 6)
@@ -1224,7 +1227,10 @@ brw_uncompact_instruction(const struct brw_device_info *devinfo, brw_inst *dst,
 
    set_uncompacted_subreg(devinfo, dst, src);
 
-   uncompact(acc_wr_control);
+   if (devinfo->gen >= 6) {
+      uncompact(acc_wr_control);
+   }
+
    uncompact(cond_modifier);
 
    if (devinfo->gen <= 6)
