@@ -42,6 +42,7 @@
 #define SI_BASE_VERTEX_UNKNOWN INT_MIN
 #define SI_RESTART_INDEX_UNKNOWN INT_MIN
 #define SI_NUM_SMOOTH_AA_SAMPLES 8
+#define SI_GS_PER_ES 128
 
 /* Instruction cache. */
 #define SI_CONTEXT_INV_ICACHE		(R600_CONTEXT_PRIVATE_FLAG << 0)
@@ -85,6 +86,7 @@ struct si_compute;
 
 struct si_screen {
 	struct r600_common_screen	b;
+	unsigned			gs_table_depth;
 };
 
 struct si_blend_color {

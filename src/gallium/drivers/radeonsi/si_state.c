@@ -3264,7 +3264,7 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028A1C_VGT_HOS_MIN_TESS_LEVEL, fui(0));
 
 	/* FIXME calculate these values somehow ??? */
-	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, 0x80);
+	si_pm4_set_reg(pm4, R_028A54_VGT_GS_PER_ES, SI_GS_PER_ES);
 	si_pm4_set_reg(pm4, R_028A58_VGT_ES_PER_GS, 0x40);
 	si_pm4_set_reg(pm4, R_028A5C_VGT_GS_PER_VS, 0x2);
 

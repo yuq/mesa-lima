@@ -311,6 +311,10 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	if (ia_switch_on_eoi)
 		partial_es_wave = true;
 
+	/* GS requirement. */
+	if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
+		partial_es_wave = true;
+
 	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
 	 * on multi-SE chips. */
 	if (sctx->b.screen->info.max_se >= 2 && ia_switch_on_eoi &&

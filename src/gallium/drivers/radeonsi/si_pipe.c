@@ -576,6 +576,32 @@ static bool si_initialize_pipe_config(struct si_screen *sscreen)
 	return true;
 }
 
+static bool si_init_gs_info(struct si_screen *sscreen)
+{
+	switch (sscreen->b.family) {
+	case CHIP_OLAND:
+	case CHIP_HAINAN:
+	case CHIP_KAVERI:
+	case CHIP_KABINI:
+	case CHIP_MULLINS:
+	case CHIP_ICELAND:
+	case CHIP_CARRIZO:
+		sscreen->gs_table_depth = 16;
+		return true;
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+	case CHIP_VERDE:
+	case CHIP_BONAIRE:
+	case CHIP_HAWAII:
+	case CHIP_TONGA:
+	case CHIP_FIJI:
+		sscreen->gs_table_depth = 32;
+		return true;
+	default:
+		return false;
+	}
+}
+
 struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 {
 	struct si_screen *sscreen = CALLOC_STRUCT(si_screen);
@@ -593,7 +619,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->b.b.resource_create = r600_resource_create_common;
 
 	if (!r600_common_screen_init(&sscreen->b, ws) ||
-	    !si_initialize_pipe_config(sscreen)) {
+	    !si_initialize_pipe_config(sscreen) ||
+	    !si_init_gs_info(sscreen)) {
 		FREE(sscreen);
 		return NULL;
 	}
