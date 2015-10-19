@@ -30,6 +30,8 @@
 #include "anv_private.h"
 #include "anv_nir_builder.h"
 
+struct anv_render_pass anv_meta_dummy_renderpass = {0};
+
 static nir_shader *
 build_nir_vertex_shader(bool attr_flat)
 {
@@ -293,6 +295,8 @@ anv_device_init_meta_clear_state(struct anv_device *device)
             },
          },
          .flags = 0,
+         .renderPass = anv_render_pass_to_handle(&anv_meta_dummy_renderpass),
+         .subpass = 0,
       },
       &(struct anv_graphics_pipeline_create_info) {
          .use_repclear = true,
@@ -698,6 +702,8 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       .flags = 0,
       .layout = device->meta_state.blit.pipeline_layout,
+      .renderPass = anv_render_pass_to_handle(&anv_meta_dummy_renderpass),
+      .subpass = 0,
    };
 
    const struct anv_graphics_pipeline_create_info anv_pipeline_info = {

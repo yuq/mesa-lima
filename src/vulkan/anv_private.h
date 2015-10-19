@@ -1395,6 +1395,8 @@ struct anv_render_pass {
    struct anv_subpass                           subpasses[0];
 };
 
+extern struct anv_render_pass anv_meta_dummy_renderpass;
+
 struct anv_query_pool_slot {
    uint64_t begin;
    uint64_t end;
