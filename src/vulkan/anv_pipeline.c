@@ -182,6 +182,10 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
                                 const VkGraphicsPipelineCreateInfo *pCreateInfo)
 {
    uint32_t states = ANV_DYNAMIC_STATE_DIRTY_MASK;
+   ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
+   struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
+
+   pipeline->dynamic_state = default_dynamic_state;
 
    if (pCreateInfo->pDynamicState) {
       /* Remove all of the states that are marked as dynamic */
@@ -225,36 +229,49 @@ anv_pipeline_init_dynamic_state(struct anv_pipeline *pipeline,
                    pCreateInfo->pColorBlendState->blendConst, 4);
    }
 
-   if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
-      assert(pCreateInfo->pDepthStencilState);
-      dynamic->depth_bounds.min =
-         pCreateInfo->pDepthStencilState->minDepthBounds;
-      dynamic->depth_bounds.max =
-         pCreateInfo->pDepthStencilState->maxDepthBounds;
-   }
+   /* If there is no depthstencil attachment, then don't read
+    * pDepthStencilState. The Vulkan spec states that pDepthStencilState may
+    * be NULL in this case. Even if pDepthStencilState is non-NULL, there is
+    * no need to override the depthstencil defaults in
+    * anv_pipeline::dynamic_state when there is no depthstencil attachment.
+    *
+    * From the Vulkan spec (20 Oct 2015, git-aa308cb):
+    *
+    *    pDepthStencilState [...] may only be NULL if renderPass and subpass
+    *    specify a subpass that has no depth/stencil attachment.
+    */
+   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+      if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->depth_bounds.min =
+            pCreateInfo->pDepthStencilState->minDepthBounds;
+         dynamic->depth_bounds.max =
+            pCreateInfo->pDepthStencilState->maxDepthBounds;
+      }
 
-   if (states & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
-      assert(pCreateInfo->pDepthStencilState);
-      dynamic->stencil_compare_mask.front =
-         pCreateInfo->pDepthStencilState->front.stencilCompareMask;
-      dynamic->stencil_compare_mask.back =
-         pCreateInfo->pDepthStencilState->back.stencilCompareMask;
-   }
+      if (states & (1 << VK_DYNAMIC_STATE_STENCIL_COMPARE_MASK)) {
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_compare_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilCompareMask;
+         dynamic->stencil_compare_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilCompareMask;
+      }
 
-   if (states & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
-      assert(pCreateInfo->pDepthStencilState);
-      dynamic->stencil_write_mask.front =
-         pCreateInfo->pDepthStencilState->front.stencilWriteMask;
-      dynamic->stencil_write_mask.back =
-         pCreateInfo->pDepthStencilState->back.stencilWriteMask;
-   }
+      if (states & (1 << VK_DYNAMIC_STATE_STENCIL_WRITE_MASK)) {
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_write_mask.front =
+            pCreateInfo->pDepthStencilState->front.stencilWriteMask;
+         dynamic->stencil_write_mask.back =
+            pCreateInfo->pDepthStencilState->back.stencilWriteMask;
+      }
 
-   if (states & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
-      assert(pCreateInfo->pDepthStencilState);
-      dynamic->stencil_reference.front =
-         pCreateInfo->pDepthStencilState->front.stencilReference;
-      dynamic->stencil_reference.back =
-         pCreateInfo->pDepthStencilState->back.stencilReference;
+      if (states & (1 << VK_DYNAMIC_STATE_STENCIL_REFERENCE)) {
+         assert(pCreateInfo->pDepthStencilState);
+         dynamic->stencil_reference.front =
+            pCreateInfo->pDepthStencilState->front.stencilReference;
+         dynamic->stencil_reference.back =
+            pCreateInfo->pDepthStencilState->back.stencilReference;
+      }
    }
 
    pipeline->dynamic_state_mask = states;
