@@ -115,6 +115,12 @@ struct backend_instruction : public exec_node {
     * optimize these out unless you know what you are doing.
     */
    bool has_side_effects() const;
+
+   /**
+    * True if the instruction might be affected by side effects of other
+    * instructions.
+    */
+   bool is_volatile() const;
 #else
 struct backend_instruction {
    struct exec_node link;

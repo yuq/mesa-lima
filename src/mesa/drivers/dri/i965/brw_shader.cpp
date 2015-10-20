@@ -987,6 +987,20 @@ backend_instruction::has_side_effects() const
    }
 }
 
+bool
+backend_instruction::is_volatile() const
+{
+   switch (opcode) {
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+   case SHADER_OPCODE_UNTYPED_SURFACE_READ_LOGICAL:
+   case SHADER_OPCODE_TYPED_SURFACE_READ:
+   case SHADER_OPCODE_TYPED_SURFACE_READ_LOGICAL:
+      return true;
+   default:
+      return false;
+   }
+}
+
 #ifndef NDEBUG
 static bool
 inst_is_in_block(const bblock_t *block, const backend_instruction *inst)
