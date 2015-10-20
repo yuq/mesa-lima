@@ -98,6 +98,7 @@ struct si_sampler_view {
 	struct pipe_sampler_view	base;
 	struct list_head		list;
 	struct r600_resource		*resource;
+	struct r600_resource		*dcc_buffer;
         /* [0..7] = image descriptor
          * [4..7] = buffer descriptor */
 	uint32_t			state[8];

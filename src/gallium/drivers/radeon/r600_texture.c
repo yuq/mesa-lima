@@ -495,6 +495,8 @@ static void vi_texture_alloc_dcc_separate(struct r600_common_screen *rscreen,
 
 	r600_screen_clear_buffer(rscreen, &rtex->dcc_buffer->b.b, 0, rtex->surface.dcc_size,
 				 0xFFFFFFFF, true);
+
+	rtex->cb_color_info |= VI_S_028C70_DCC_ENABLE(1);
 }
 
 static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
