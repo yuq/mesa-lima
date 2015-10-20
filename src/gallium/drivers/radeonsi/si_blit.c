@@ -271,17 +271,28 @@ void si_flush_depth_textures(struct si_context *sctx,
 static void si_blit_decompress_color(struct pipe_context *ctx,
 		struct r600_texture *rtex,
 		unsigned first_level, unsigned last_level,
-		unsigned first_layer, unsigned last_layer)
+		unsigned first_layer, unsigned last_layer,
+		bool need_dcc_decompress)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned layer, level, checked_last_layer, max_layer;
 
-	if (!rtex->dirty_level_mask)
+	if (!rtex->dirty_level_mask && !need_dcc_decompress)
 		return;
 
 	for (level = first_level; level <= last_level; level++) {
-		if (!(rtex->dirty_level_mask & (1 << level)))
+		void* custom_blend;
+
+		if (!(rtex->dirty_level_mask & (1 << level)) && !need_dcc_decompress)
 			continue;
+
+		if (rtex->dcc_offset && need_dcc_decompress) {
+			custom_blend = sctx->custom_blend_dcc_decompress;
+		} else if (rtex->fmask.size) {
+			custom_blend = sctx->custom_blend_decompress;
+		} else {
+			custom_blend = sctx->custom_blend_fastclear;
+		}
 
 		/* The smaller the mipmap level, the less layers there are
 		 * as far as 3D textures are concerned. */
@@ -298,9 +309,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 			cbsurf = ctx->create_surface(ctx, &rtex->resource.b.b, &surf_tmpl);
 
 			si_blitter_begin(ctx, SI_DECOMPRESS);
-			util_blitter_custom_color(sctx->blitter, cbsurf,
-				rtex->fmask.size ? sctx->custom_blend_decompress :
-						   sctx->custom_blend_fastclear);
+			util_blitter_custom_color(sctx->blitter, cbsurf, custom_blend);
 			si_blitter_end(ctx);
 
 			pipe_surface_reference(&cbsurf, NULL);
@@ -334,7 +343,8 @@ void si_decompress_color_textures(struct si_context *sctx,
 
 		si_blit_decompress_color(&sctx->b.b, tex,
 					 view->u.tex.first_level, view->u.tex.last_level,
-					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level));
+					 0, util_max_layer(&tex->resource.b.b, view->u.tex.first_level),
+					 false);
 	}
 }
 
@@ -485,7 +495,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 							  first_layer, last_layer);
 	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_offset) {
 		si_blit_decompress_color(ctx, rtex, level, level,
-					 first_layer, last_layer);
+					 first_layer, last_layer, false);
 	}
 }
 
@@ -763,7 +773,7 @@ static void si_flush_resource(struct pipe_context *ctx,
 
 	if (!rtex->is_depth && (rtex->cmask.size || rtex->dcc_offset)) {
 		si_blit_decompress_color(ctx, rtex, 0, res->last_level,
-					 0, util_max_layer(res, 0));
+					 0, util_max_layer(res, 0), false);
 	}
 }
 

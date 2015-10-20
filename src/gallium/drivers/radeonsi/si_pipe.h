@@ -196,6 +196,7 @@ struct si_context {
 	void				*custom_blend_resolve;
 	void				*custom_blend_decompress;
 	void				*custom_blend_fastclear;
+	void				*custom_blend_dcc_decompress;
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
 	struct pipe_fence_handle	*last_gfx_fence;

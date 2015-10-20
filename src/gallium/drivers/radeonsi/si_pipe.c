@@ -68,6 +68,8 @@ static void si_destroy_context(struct pipe_context *context)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_decompress);
 	if (sctx->custom_blend_fastclear)
 		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_fastclear);
+	if (sctx->custom_blend_dcc_decompress)
+		sctx->b.b.delete_blend_state(&sctx->b.b, sctx->custom_blend_dcc_decompress);
 	util_unreference_framebuffer_state(&sctx->framebuffer.state);
 
 	if (sctx->blitter)
