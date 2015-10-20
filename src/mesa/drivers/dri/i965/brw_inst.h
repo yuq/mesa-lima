@@ -804,24 +804,24 @@ F(opcode,            6,  0) /* Same location as brw_inst */
  * (Gen8+) Compacted three-source instructions:
  *  @{
  */
-F(3src_src2_reg_nr,    63, 57)
-F(3src_src1_reg_nr,    56, 50)
-F(3src_src0_reg_nr,    49, 43)
-F(3src_src2_subreg_nr, 42, 40)
-F(3src_src1_subreg_nr, 39, 37)
-F(3src_src0_subreg_nr, 36, 34)
-F(3src_src2_rep_ctrl,  33, 33)
-F(3src_src1_rep_ctrl,  32, 32)
-F(3src_saturate,       31, 31)
-F(3src_debug_control,  30, 30)
-F(3src_cmpt_control,   29, 29)
-F(3src_src0_rep_ctrl,  28, 28)
+FC(3src_src2_reg_nr,    63, 57, devinfo->gen >= 8)
+FC(3src_src1_reg_nr,    56, 50, devinfo->gen >= 8)
+FC(3src_src0_reg_nr,    49, 43, devinfo->gen >= 8)
+FC(3src_src2_subreg_nr, 42, 40, devinfo->gen >= 8)
+FC(3src_src1_subreg_nr, 39, 37, devinfo->gen >= 8)
+FC(3src_src0_subreg_nr, 36, 34, devinfo->gen >= 8)
+FC(3src_src2_rep_ctrl,  33, 33, devinfo->gen >= 8)
+FC(3src_src1_rep_ctrl,  32, 32, devinfo->gen >= 8)
+FC(3src_saturate,       31, 31, devinfo->gen >= 8)
+FC(3src_debug_control,  30, 30, devinfo->gen >= 8)
+FC(3src_cmpt_control,   29, 29, devinfo->gen >= 8)
+FC(3src_src0_rep_ctrl,  28, 28, devinfo->gen >= 8)
 /* Reserved */
-F(3src_dst_reg_nr,     18, 12)
-F(3src_source_index,   11, 10)
-F(3src_control_index,   9,  8)
+FC(3src_dst_reg_nr,     18, 12, devinfo->gen >= 8)
+FC(3src_source_index,   11, 10, devinfo->gen >= 8)
+FC(3src_control_index,   9,  8, devinfo->gen >= 8)
 /* Bit 7 is Reserved (for future Opcode expansion) */
-F(3src_opcode,          6,  0)
+FC(3src_opcode,          6,  0, devinfo->gen >= 8)
 /** @} */
 
 #undef F
