@@ -763,7 +763,7 @@ private:
       /* Assign explicit locations. */
       if (current_var->data.explicit_location) {
          /* Set sequential locations for struct fields. */
-         if (record_type != NULL) {
+         if (current_var->type->without_array()->is_record()) {
             const unsigned entries = MAX2(1, this->uniforms[id].array_elements);
             this->uniforms[id].remap_location =
                this->explicit_location + field_counter;
