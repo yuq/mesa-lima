@@ -2383,7 +2383,7 @@ enum brw_pixel_shader_coverage_mask_mode {
 # define GEN8_PSX_ATTRIBUTE_ENABLE                      (1 << 8)
 # define GEN8_PSX_SHADER_DISABLES_ALPHA_TO_COVERAGE     (1 << 7)
 # define GEN8_PSX_SHADER_IS_PER_SAMPLE                  (1 << 6)
-# define GEN8_PSX_SHADER_COMPUTES_STENCIL               (1 << 5)
+# define GEN9_PSX_SHADER_COMPUTES_STENCIL               (1 << 5)
 # define GEN9_PSX_SHADER_PULLS_BARY                     (1 << 3)
 # define GEN8_PSX_SHADER_HAS_UAV                        (1 << 2)
 # define GEN8_PSX_SHADER_USES_INPUT_COVERAGE_MASK       (1 << 1)
