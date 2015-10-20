@@ -647,6 +647,17 @@ void si_emit_cache_flush(struct si_context *si_ctx, struct r600_atom *atom)
 			         S_0085F0_CB5_DEST_BASE_ENA(1) |
 			         S_0085F0_CB6_DEST_BASE_ENA(1) |
 			         S_0085F0_CB7_DEST_BASE_ENA(1);
+
+		/* Necessary for DCC */
+		if (sctx->chip_class >= VI) {
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0) | compute);
+			radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_DATA_TS) |
+			                EVENT_INDEX(5));
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+			radeon_emit(cs, 0);
+		}
 	}
 	if (sctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB) {
 		cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
