@@ -180,6 +180,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_DEPTH_BOUNDS_TEST:
    case PIPE_CAP_TGSI_TXQS:
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
+   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
       return 1;
    case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
       return (class_3d >= NVE4_3D_CLASS) ? 1 : 0;
@@ -202,7 +203,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_VERTEXID_NOBASE:
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
    case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
-   case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
    case PIPE_CAP_SHAREABLE_SHADERS:
       return 0;
 
@@ -828,6 +828,8 @@ nvc0_screen_create(struct nouveau_device *dev)
    PUSH_DATA (push, 1);
    BEGIN_NVC0(push, NVC0_3D(BLEND_ENABLE_COMMON), 1);
    PUSH_DATA (push, 0);
+   BEGIN_NVC0(push, NVC0_3D(SHADE_MODEL), 1);
+   PUSH_DATA (push, NVC0_3D_SHADE_MODEL_SMOOTH);
    if (screen->eng3d->oclass < NVE4_3D_CLASS) {
       BEGIN_NVC0(push, NVC0_3D(TEX_MISC), 1);
       PUSH_DATA (push, NVC0_3D_TEX_MISC_SEAMLESS_CUBE_MAP);

@@ -1618,6 +1618,29 @@ CodeEmitterNVC0::emitInterpMode(const Instruction *i)
    }
 }
 
+static void
+interpApply(const InterpEntry *entry, uint32_t *code,
+      bool force_persample_interp, bool flatshade)
+{
+   int ipa = entry->ipa;
+   int reg = entry->reg;
+   int loc = entry->loc;
+
+   if (flatshade &&
+       (ipa & NV50_IR_INTERP_MODE_MASK) == NV50_IR_INTERP_SC) {
+      ipa = NV50_IR_INTERP_FLAT;
+      reg = 0x3f;
+   } else if (force_persample_interp &&
+              (ipa & NV50_IR_INTERP_SAMPLE_MASK) == NV50_IR_INTERP_DEFAULT &&
+              (ipa & NV50_IR_INTERP_MODE_MASK) != NV50_IR_INTERP_FLAT) {
+      ipa |= NV50_IR_INTERP_CENTROID;
+   }
+   code[loc + 0] &= ~(0xf << 6);
+   code[loc + 0] |= ipa << 6;
+   code[loc + 0] &= ~(0x3f << 26);
+   code[loc + 0] |= reg << 26;
+}
+
 void
 CodeEmitterNVC0::emitINTERP(const Instruction *i)
 {
@@ -1630,10 +1653,13 @@ CodeEmitterNVC0::emitINTERP(const Instruction *i)
       if (i->saturate)
          code[0] |= 1 << 5;
 
-      if (i->op == OP_PINTERP)
+      if (i->op == OP_PINTERP) {
          srcId(i->src(1), 26);
-      else
+         addInterp(i->ipa, SDATA(i->src(1)).id, interpApply);
+      } else {
          code[0] |= 0x3f << 26;
+         addInterp(i->ipa, 0x3f, interpApply);
+      }
 
       srcId(i->src(0).getIndirect(0), 20);
    } else {

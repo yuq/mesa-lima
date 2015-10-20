@@ -424,6 +424,11 @@ nvc0_fp_gen_header(struct nvc0_program *fp, struct nv50_ir_prog_info *info)
 
    for (i = 0; i < info->numInputs; ++i) {
       m = nvc0_hdr_interp_mode(&info->in[i]);
+      if (info->in[i].sn == TGSI_SEMANTIC_COLOR) {
+         fp->fp.colors |= 1 << info->in[i].si;
+         if (info->in[i].sc)
+            fp->fp.color_interp[info->in[i].si] = m | (info->in[i].mask << 4);
+      }
       for (c = 0; c < 4; ++c) {
          if (!(info->in[i].mask & (1 << c)))
             continue;
@@ -531,7 +536,6 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
    info->io.genUserClip = prog->vp.num_ucps;
    info->io.ucpBase = 256;
    info->io.ucpCBSlot = 15;
-   info->io.sampleInterp = prog->fp.sample_interp;
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
       if (chipset >= NVISA_GK104_CHIPSET) {
@@ -575,6 +579,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset)
    prog->immd_data = info->immd.buf;
    prog->immd_size = info->immd.bufSize;
    prog->relocs = info->bin.relocData;
+   prog->interps = info->bin.interpData;
    prog->num_gprs = MAX2(4, (info->bin.maxGPR + 1));
    prog->num_barriers = info->numBarriers;
 
@@ -713,6 +718,23 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 
    if (prog->relocs)
       nv50_ir_relocate_code(prog->relocs, prog->code, code_pos, lib_pos, 0);
+   if (prog->interps) {
+      nv50_ir_change_interp(prog->interps, prog->code,
+                            prog->fp.force_persample_interp,
+                            prog->fp.flatshade);
+      for (int i = 0; i < 2; i++) {
+         unsigned mask = prog->fp.color_interp[i] >> 4;
+         unsigned interp = prog->fp.color_interp[i] & 3;
+         if (!mask)
+            continue;
+         prog->hdr[14] &= ~(0xff << (8 * i));
+         if (prog->fp.flatshade)
+            interp = NVC0_INTERP_FLAT;
+         for (int c = 0; c < 4; c++)
+            if (mask & (1 << c))
+               prog->hdr[14] |= interp << (2 * (4 * i + c));
+      }
+   }
 
 #ifdef DEBUG
    if (debug_get_bool_option("NV50_PROG_DEBUG", false))
@@ -773,6 +795,7 @@ nvc0_program_destroy(struct nvc0_context *nvc0, struct nvc0_program *prog)
    FREE(prog->code); /* may be 0 for hardcoded shaders */
    FREE(prog->immd_data);
    FREE(prog->relocs);
+   FREE(prog->interps);
    if (prog->type == PIPE_SHADER_COMPUTE && prog->cp.syms)
       FREE(prog->cp.syms);
    if (prog->tfb) {

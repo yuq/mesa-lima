@@ -1054,7 +1054,7 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
                default:
                   break;
                }
-               if (decl->Interp.Location || info->io.sampleInterp)
+               if (decl->Interp.Location)
                   info->in[i].centroid = 1;
             }
 
@@ -1118,6 +1118,10 @@ bool Source::scanDeclaration(const struct tgsi_full_declaration *decl)
          break;
       case TGSI_SEMANTIC_VERTEXID:
          info->io.vertexId = first;
+         break;
+      case TGSI_SEMANTIC_SAMPLEID:
+      case TGSI_SEMANTIC_SAMPLEPOS:
+         info->io.sampleInterp = 1;
          break;
       default:
          break;
@@ -1338,6 +1342,8 @@ private:
 
    void handleINTERP(Value *dst0[4]);
 
+   uint8_t translateInterpMode(const struct nv50_ir_varying *var,
+                               operation& op);
    Value *interpolate(tgsi::Instruction::SrcRegister, int c, Value *ptr);
 
    void insertConvergenceOps(BasicBlock *conv, BasicBlock *fork);
@@ -1451,8 +1457,8 @@ Converter::makeSym(uint tgsiFile, int fileIdx, int idx, int c, uint32_t address)
    return sym;
 }
 
-static inline uint8_t
-translateInterpMode(const struct nv50_ir_varying *var, operation& op)
+uint8_t
+Converter::translateInterpMode(const struct nv50_ir_varying *var, operation& op)
 {
    uint8_t mode = NV50_IR_INTERP_PERSPECTIVE;
 
@@ -1468,7 +1474,7 @@ translateInterpMode(const struct nv50_ir_varying *var, operation& op)
    op = (mode == NV50_IR_INTERP_PERSPECTIVE || mode == NV50_IR_INTERP_SC)
       ? OP_PINTERP : OP_LINTERP;
 
-   if (var->centroid)
+   if (var->centroid || info->io.sampleInterp)
       mode |= NV50_IR_INTERP_CENTROID;
 
    return mode;

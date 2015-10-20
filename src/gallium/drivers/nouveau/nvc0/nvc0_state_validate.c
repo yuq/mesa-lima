@@ -645,7 +645,7 @@ static struct state_validate {
     { nvc0_tevlprog_validate,      NVC0_NEW_TEVLPROG },
     { nvc0_validate_tess_state,    NVC0_NEW_TESSFACTOR },
     { nvc0_gmtyprog_validate,      NVC0_NEW_GMTYPROG },
-    { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG },
+    { nvc0_fragprog_validate,      NVC0_NEW_FRAGPROG | NVC0_NEW_RASTERIZER },
     { nvc0_validate_derived_1,     NVC0_NEW_FRAGPROG | NVC0_NEW_ZSA |
                                    NVC0_NEW_RASTERIZER },
     { nvc0_validate_derived_2,     NVC0_NEW_ZSA | NVC0_NEW_FRAMEBUFFER },

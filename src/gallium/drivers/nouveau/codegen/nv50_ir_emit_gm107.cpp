@@ -2217,6 +2217,30 @@ CodeEmitterGM107::emitAL2P()
    emitGPR  (0x00, insn->def(0));
 }
 
+static void
+interpApply(const InterpEntry *entry, uint32_t *code,
+      bool force_persample_interp, bool flatshade)
+{
+   int ipa = entry->ipa;
+   int reg = entry->reg;
+   int loc = entry->loc;
+
+   if (flatshade &&
+       (ipa & NV50_IR_INTERP_MODE_MASK) == NV50_IR_INTERP_SC) {
+      ipa = NV50_IR_INTERP_FLAT;
+      reg = 0xff;
+   } else if (force_persample_interp &&
+              (ipa & NV50_IR_INTERP_SAMPLE_MASK) == NV50_IR_INTERP_DEFAULT &&
+              (ipa & NV50_IR_INTERP_MODE_MASK) != NV50_IR_INTERP_FLAT) {
+      ipa |= NV50_IR_INTERP_CENTROID;
+   }
+   code[loc + 1] &= ~(0xf << 0x14);
+   code[loc + 1] |= (ipa & 0x3) << 0x16;
+   code[loc + 1] |= (ipa & 0xc) << (0x14 - 2);
+   code[loc + 0] &= ~(0xff << 0x14);
+   code[loc + 0] |= reg << 0x14;
+}
+
 void
 CodeEmitterGM107::emitIPA()
 {
@@ -2255,10 +2279,12 @@ CodeEmitterGM107::emitIPA()
       emitGPR(0x14, insn->src(1));
       if (insn->getSampleMode() == NV50_IR_INTERP_OFFSET)
          emitGPR(0x27, insn->src(2));
+      addInterp(insn->ipa, insn->getSrc(1)->reg.data.id, interpApply);
    } else {
       if (insn->getSampleMode() == NV50_IR_INTERP_OFFSET)
          emitGPR(0x27, insn->src(1));
       emitGPR(0x14);
+      addInterp(insn->ipa, 0xff, interpApply);
    }
 
    if (insn->getSampleMode() != NV50_IR_INTERP_OFFSET)
