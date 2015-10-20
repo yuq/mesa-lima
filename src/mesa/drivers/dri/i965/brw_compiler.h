@@ -93,6 +93,9 @@ struct brw_compiler {
    struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
 };
 
+struct brw_compiler *
+brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo);
+
 
 /**
  * Program key structures.
