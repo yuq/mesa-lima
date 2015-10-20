@@ -876,6 +876,40 @@ ntq_emit_pack_unorm_4x8(struct vc4_compile *c, nir_alu_instr *instr)
         *dest = result;
 }
 
+/** Handles sign-extended bitfield extracts for 16 bits. */
+static struct qreg
+ntq_emit_ibfe(struct vc4_compile *c, struct qreg base, struct qreg offset,
+              struct qreg bits)
+{
+        assert(bits.file == QFILE_UNIF &&
+               c->uniform_contents[bits.index] == QUNIFORM_CONSTANT &&
+               c->uniform_data[bits.index] == 16);
+
+        assert(offset.file == QFILE_UNIF &&
+               c->uniform_contents[offset.index] == QUNIFORM_CONSTANT);
+        int offset_bit = c->uniform_data[offset.index];
+        assert(offset_bit % 16 == 0);
+
+        return qir_UNPACK_16_I(c, base, offset_bit / 16);
+}
+
+/** Handles unsigned bitfield extracts for 8 bits. */
+static struct qreg
+ntq_emit_ubfe(struct vc4_compile *c, struct qreg base, struct qreg offset,
+              struct qreg bits)
+{
+        assert(bits.file == QFILE_UNIF &&
+               c->uniform_contents[bits.index] == QUNIFORM_CONSTANT &&
+               c->uniform_data[bits.index] == 8);
+
+        assert(offset.file == QFILE_UNIF &&
+               c->uniform_contents[offset.index] == QUNIFORM_CONSTANT);
+        int offset_bit = c->uniform_data[offset.index];
+        assert(offset_bit % 8 == 0);
+
+        return qir_UNPACK_8_I(c, base, offset_bit / 8);
+}
+
 static void
 ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
 {
@@ -1104,6 +1138,14 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_iabs:
                 *dest = qir_MAX(c, src[0],
                                 qir_SUB(c, qir_uniform_ui(c, 0), src[0]));
+                break;
+
+        case nir_op_ibitfield_extract:
+                *dest = ntq_emit_ibfe(c, src[0], src[1], src[2]);
+                break;
+
+        case nir_op_ubitfield_extract:
+                *dest = ntq_emit_ubfe(c, src[0], src[1], src[2]);
                 break;
 
         default:
