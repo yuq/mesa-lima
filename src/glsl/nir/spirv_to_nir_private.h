@@ -178,6 +178,7 @@ struct vtn_builder {
    struct vtn_value *values;
 
    SpvExecutionModel execution_model;
+   bool origin_upper_left;
    struct vtn_value *entry_point;
 
    struct vtn_function *func;

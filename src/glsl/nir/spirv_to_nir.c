@@ -780,13 +780,18 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       var->data.descriptor_set = dec->literals[0];
       break;
    case SpvDecorationBuiltIn: {
+      SpvBuiltIn builtin = dec->literals[0];
+
       nir_variable_mode mode;
-      vtn_get_builtin_location(dec->literals[0], &var->data.location,
-                               &mode);
+      vtn_get_builtin_location(builtin, &var->data.location, &mode);
       var->data.explicit_location = true;
       var->data.mode = mode;
       if (mode == nir_var_shader_in || mode == nir_var_system_value)
          var->data.read_only = true;
+
+      if (builtin == SpvBuiltInPosition || builtin == SpvBuiltInSamplePosition)
+         var->data.origin_upper_left = b->origin_upper_left;
+
       b->builtins[dec->literals[0]] = var;
       break;
    }
@@ -833,6 +838,9 @@ get_builtin_variable(struct vtn_builder *b,
 
       var->data.location = location;
       var->data.explicit_location = true;
+
+      if (builtin == SpvBuiltInPosition || builtin == SpvBuiltInSamplePosition)
+         var->data.origin_upper_left = b->origin_upper_left;
 
       b->builtins[builtin] = var;
    }
@@ -2403,7 +2411,79 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpExecutionMode:
-      /* TODO */
+      assert(b->entry_point == &b->values[w[1]]);
+
+      switch((SpvExecutionMode)w[2]) {
+      case SpvExecutionModeOriginUpperLeft:
+      case SpvExecutionModeOriginLowerLeft:
+         b->origin_upper_left = (w[2] == SpvExecutionModeOriginUpperLeft);
+         break;
+
+      case SpvExecutionModeEarlyFragmentTests:
+         b->shader->info.fs.early_fragment_tests = true;
+         break;
+
+      case SpvExecutionModeInvocations:
+         b->shader->info.gs.invocations = w[3];
+         break;
+
+      case SpvExecutionModeDepthReplacing:
+         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_ANY;
+         break;
+      case SpvExecutionModeDepthGreater:
+         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_GREATER;
+         break;
+      case SpvExecutionModeDepthLess:
+         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_LESS;
+         break;
+      case SpvExecutionModeDepthUnchanged:
+         b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_UNCHANGED;
+         break;
+
+      case SpvExecutionModeLocalSize:
+         b->shader->info.cs.local_size[0] = w[3];
+         b->shader->info.cs.local_size[1] = w[4];
+         b->shader->info.cs.local_size[2] = w[5];
+         break;
+      case SpvExecutionModeLocalSizeHint:
+         break; /* Nothing do do with this */
+
+      case SpvExecutionModeOutputVertices:
+         b->shader->info.gs.vertices_out = w[3];
+         break;
+
+      case SpvExecutionModeInputPoints:
+      case SpvExecutionModeInputLines:
+      case SpvExecutionModeInputLinesAdjacency:
+      case SpvExecutionModeInputTriangles:
+      case SpvExecutionModeInputTrianglesAdjacency:
+      case SpvExecutionModeInputQuads:
+      case SpvExecutionModeInputIsolines:
+      case SpvExecutionModeOutputPoints:
+      case SpvExecutionModeOutputLineStrip:
+      case SpvExecutionModeOutputTriangleStrip:
+         assert(!"TODO: Add geometry metadata");
+         break;
+
+      case SpvExecutionModeSpacingEqual:
+      case SpvExecutionModeSpacingFractionalEven:
+      case SpvExecutionModeSpacingFractionalOdd:
+      case SpvExecutionModeVertexOrderCw:
+      case SpvExecutionModeVertexOrderCcw:
+      case SpvExecutionModePointMode:
+         assert(!"TODO: Add tessellation metadata");
+         break;
+
+      case SpvExecutionModePixelCenterInteger:
+      case SpvExecutionModeXfb:
+         assert(!"Unhandled execution mode");
+         break;
+
+      case SpvExecutionModeVecTypeHint:
+      case SpvExecutionModeContractionOff:
+      case SpvExecutionModeIndependentForwardProgress:
+         break; /* OpenCL */
+      }
       break;
 
    case SpvOpString:
