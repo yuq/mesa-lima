@@ -312,7 +312,6 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
       /* We should probably pull this out of the shader, but it's fairly
        * harmless to compute it and then let dead-code take care of it.
        */
-      key->compute_sample_id = true;
       key->persample_shading = info->pMultisampleState->sampleShadingEnable;
       if (key->persample_shading)
          key->persample_2x = info->pMultisampleState->rasterSamples == 2;
