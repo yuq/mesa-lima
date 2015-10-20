@@ -295,6 +295,8 @@ brw_instruction_name(enum opcode op)
       return "fb_write";
    case FS_OPCODE_FB_WRITE_LOGICAL:
       return "fb_write_logical";
+   case FS_OPCODE_PACK_STENCIL_REF:
+      return "pack_stencil_ref";
    case FS_OPCODE_BLORP_FB_WRITE:
       return "blorp_fb_write";
    case FS_OPCODE_REP_FB_WRITE:

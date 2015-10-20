@@ -95,6 +95,11 @@ gen8_upload_ps_extra(struct brw_context *brw,
        !brw_color_buffer_write_enabled(brw))
       dw1 |= GEN8_PSX_SHADER_HAS_UAV;
 
+   if (prog_data->computed_stencil) {
+      assert(brw->gen >= 9);
+      dw1 |= GEN9_PSX_SHADER_COMPUTES_STENCIL;
+   }
+
    BEGIN_BATCH(2);
    OUT_BATCH(_3DSTATE_PS_EXTRA << 16 | (2 - 2));
    OUT_BATCH(dw1);

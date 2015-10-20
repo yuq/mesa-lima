@@ -114,6 +114,8 @@ fs_visitor::nir_setup_outputs()
             }
          } else if (var->data.location == FRAG_RESULT_DEPTH) {
             this->frag_depth = reg;
+         } else if (var->data.location == FRAG_RESULT_STENCIL) {
+            this->frag_stencil = reg;
          } else if (var->data.location == FRAG_RESULT_SAMPLE_MASK) {
             this->sample_mask = reg;
          } else {

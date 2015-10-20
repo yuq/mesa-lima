@@ -335,6 +335,7 @@ struct brw_wm_prog_data {
    } binding_table;
 
    uint8_t computed_depth_mode;
+   bool computed_stencil;
 
    bool early_fragment_tests;
    bool no_8;

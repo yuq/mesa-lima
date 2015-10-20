@@ -3357,6 +3357,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    const fs_reg &src0_alpha = inst->src[FB_WRITE_LOGICAL_SRC_SRC0_ALPHA];
    const fs_reg &src_depth = inst->src[FB_WRITE_LOGICAL_SRC_SRC_DEPTH];
    const fs_reg &dst_depth = inst->src[FB_WRITE_LOGICAL_SRC_DST_DEPTH];
+   const fs_reg &src_stencil = inst->src[FB_WRITE_LOGICAL_SRC_SRC_STENCIL];
    fs_reg sample_mask = inst->src[FB_WRITE_LOGICAL_SRC_OMASK];
    const unsigned components =
       inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
@@ -3446,6 +3447,17 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
 
    if (dst_depth.file != BAD_FILE) {
       sources[length] = dst_depth;
+      length++;
+   }
+
+   if (src_stencil.file != BAD_FILE) {
+      assert(devinfo->gen >= 9);
+      assert(bld.dispatch_width() != 16);
+
+      sources[length] = bld.vgrf(BRW_REGISTER_TYPE_UD);
+      bld.exec_all().annotate("FB write OS")
+         .emit(FS_OPCODE_PACK_STENCIL_REF, sources[length],
+               retype(src_stencil, BRW_REGISTER_TYPE_UB));
       length++;
    }
 
@@ -5223,6 +5235,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    prog_data->uses_omask =
       shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK);
    prog_data->computed_depth_mode = computed_depth_mode(shader);
+   prog_data->computed_stencil =
+      shader->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL);
 
    prog_data->early_fragment_tests = shader->info.fs.early_fragment_tests;
 

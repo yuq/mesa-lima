@@ -337,6 +337,7 @@ public:
    int *push_constant_loc;
 
    fs_reg frag_depth;
+   fs_reg frag_stencil;
    fs_reg sample_mask;
    fs_reg outputs[VARYING_SLOT_MAX];
    unsigned output_components[VARYING_SLOT_MAX];
@@ -427,6 +428,8 @@ private:
    void generate_urb_read(fs_inst *inst, struct brw_reg dst, struct brw_reg payload);
    void generate_urb_write(fs_inst *inst, struct brw_reg payload);
    void generate_cs_terminate(fs_inst *inst, struct brw_reg payload);
+   void generate_stencil_ref_packing(fs_inst *inst, struct brw_reg dst,
+                                     struct brw_reg src);
    void generate_barrier(fs_inst *inst, struct brw_reg src);
    void generate_blorp_fb_write(fs_inst *inst);
    void generate_linterp(fs_inst *inst, struct brw_reg dst,

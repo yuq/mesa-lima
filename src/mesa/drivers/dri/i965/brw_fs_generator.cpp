@@ -317,6 +317,14 @@ fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 		    brw_imm_ud(inst->target));
 	 }
 
+         /* Set computes stencil to render target */
+         if (prog_data->computed_stencil) {
+            brw_OR(p,
+                   vec1(retype(payload, BRW_REGISTER_TYPE_UD)),
+                   vec1(retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+                   brw_imm_ud(0x1 << 14));
+         }
+
 	 implied_header = brw_null_reg();
       } else {
 	 implied_header = retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UW);
@@ -434,6 +442,47 @@ fs_generator::generate_cs_terminate(fs_inst *inst, struct brw_reg payload)
    brw_inst_set_ts_resource_select(devinfo, insn, 1); /* Do not dereference URB */
 
    brw_inst_set_mask_control(devinfo, insn, BRW_MASK_DISABLE);
+}
+
+void
+fs_generator::generate_stencil_ref_packing(fs_inst *inst,
+                                           struct brw_reg dst,
+                                           struct brw_reg src)
+{
+   assert(dispatch_width == 8);
+   assert(devinfo->gen >= 9);
+
+   /* Stencil value updates are provided in 8 slots of 1 byte per slot.
+    * Presumably, in order to save memory bandwidth, the stencil reference
+    * values written from the FS need to be packed into 2 dwords (this makes
+    * sense because the stencil values are limited to 1 byte each and a SIMD8
+    * send, so stencil slots 0-3 in dw0, and 4-7 in dw1.)
+    *
+    * The spec is confusing here because in the payload definition of MDP_RTW_S8
+    * (Message Data Payload for Render Target Writes with Stencil 8b) the
+    * stencil value seems to be dw4.0-dw4.7. However, if you look at the type of
+    * dw4 it is type MDPR_STENCIL (Message Data Payload Register) which is the
+    * packed values specified above and diagrammed below:
+    *
+    *     31                             0
+    *     --------------------------------
+    * DW  |                              |
+    * 2-7 |            IGNORED           |
+    *     |                              |
+    *     --------------------------------
+    * DW1 | STC   | STC   | STC   | STC  |
+    *     | slot7 | slot6 | slot5 | slot4|
+    *     --------------------------------
+    * DW0 | STC   | STC   | STC   | STC  |
+    *     | slot3 | slot2 | slot1 | slot0|
+    *     --------------------------------
+    */
+
+   src.vstride = BRW_VERTICAL_STRIDE_4;
+   src.width = BRW_WIDTH_1;
+   src.hstride = BRW_HORIZONTAL_STRIDE_0;
+   assert(src.type == BRW_REGISTER_TYPE_UB);
+   brw_MOV(p, retype(dst, BRW_REGISTER_TYPE_UB), src);
 }
 
 void
@@ -2181,6 +2230,10 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       case SHADER_OPCODE_BARRIER:
 	 generate_barrier(inst, src[0]);
 	 break;
+
+      case FS_OPCODE_PACK_STENCIL_REF:
+         generate_stencil_ref_packing(inst, dst, src[0]);
+         break;
 
       default:
          unreachable("Unsupported opcode");
