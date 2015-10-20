@@ -508,6 +508,8 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
 		return 1;
+	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+		return 32;
 	}
 	return 0;
 }
