@@ -164,6 +164,16 @@ void anv_loge_v(const char *format, va_list va);
 #define anv_assert(x)
 #endif
 
+/**
+ * If a block of code is annotated with anv_validate, then the block runs only
+ * in debug builds.
+ */
+#ifdef DEBUG
+#define anv_validate if (1)
+#else
+#define anv_validate if (0)
+#endif
+
 void anv_abortf(const char *format, ...) anv_noreturn anv_printflike(1, 2);
 void anv_abortfv(const char *format, va_list va) anv_noreturn;
 
