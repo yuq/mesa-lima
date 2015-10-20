@@ -96,7 +96,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                                &c.prog_data.base.base, false);
 
    if (brw->gen >= 8) {
-      c.prog_data.static_vertex_count = !gp->program.Base.nir ? -1 :
+      c.prog_data.static_vertex_count =
          nir_gs_count_vertices(gp->program.Base.nir);
    }
 
