@@ -529,6 +529,42 @@ meta_blit_get_dest_view_base_array_slice(const struct anv_image *dest_image,
 static void
 anv_device_init_meta_blit_state(struct anv_device *device)
 {
+   anv_CreateRenderPass(anv_device_to_handle(device),
+      &(VkRenderPassCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+         .attachmentCount = 1,
+         .pAttachments = &(VkAttachmentDescription) {
+            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
+            .format = VK_FORMAT_UNDEFINED, /* Our shaders don't care */
+            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
+            .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
+         },
+         .subpassCount = 1,
+         .pSubpasses = &(VkSubpassDescription) {
+            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .inputCount = 0,
+            .colorCount = 1,
+            .pColorAttachments = &(VkAttachmentReference) {
+               .attachment = 0,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            .pResolveAttachments = NULL,
+            .depthStencilAttachment = (VkAttachmentReference) {
+               .attachment = VK_ATTACHMENT_UNUSED,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+            .preserveCount = 1,
+            .pPreserveAttachments = &(VkAttachmentReference) {
+               .attachment = 0,
+               .layout = VK_IMAGE_LAYOUT_GENERAL,
+            },
+         },
+         .dependencyCount = 0,
+      }, &device->meta_state.blit.render_pass);
+
    /* We don't use a vertex shader for clearing, but instead build and pass
     * the VUEs directly to the rasterization backend.  However, we do need
     * to provide GLSL source for the vertex shader so that the compiler
@@ -702,7 +738,7 @@ anv_device_init_meta_blit_state(struct anv_device *device)
       },
       .flags = 0,
       .layout = device->meta_state.blit.pipeline_layout,
-      .renderPass = anv_render_pass_to_handle(&anv_meta_dummy_renderpass),
+      .renderPass = device->meta_state.blit.render_pass,
       .subpass = 0,
    };
 
@@ -862,47 +898,10 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
          .layers = 1
       }, &fb);
 
-   VkRenderPass pass;
-   anv_CreateRenderPass(anv_device_to_handle(device),
-      &(VkRenderPassCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-         .attachmentCount = 1,
-         .pAttachments = &(VkAttachmentDescription) {
-            .sType = VK_STRUCTURE_TYPE_ATTACHMENT_DESCRIPTION,
-            .format = dest_iview->format->vk_format,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
-            .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
-         },
-         .subpassCount = 1,
-         .pSubpasses = &(VkSubpassDescription) {
-            .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION,
-            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .inputCount = 0,
-            .colorCount = 1,
-            .pColorAttachments = &(VkAttachmentReference) {
-               .attachment = 0,
-               .layout = VK_IMAGE_LAYOUT_GENERAL,
-            },
-            .pResolveAttachments = NULL,
-            .depthStencilAttachment = (VkAttachmentReference) {
-               .attachment = VK_ATTACHMENT_UNUSED,
-               .layout = VK_IMAGE_LAYOUT_GENERAL,
-            },
-            .preserveCount = 1,
-            .pPreserveAttachments = &(VkAttachmentReference) {
-               .attachment = 0,
-               .layout = VK_IMAGE_LAYOUT_GENERAL,
-            },
-         },
-         .dependencyCount = 0,
-      }, &pass);
-
    ANV_CALL(CmdBeginRenderPass)(anv_cmd_buffer_to_handle(cmd_buffer),
       &(VkRenderPassBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-         .renderPass = pass,
+         .renderPass = device->meta_state.blit.render_pass,
          .framebuffer = fb,
          .renderArea = {
             .offset = { dest_offset.x, dest_offset.y },
@@ -958,7 +957,6 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
     */
    anv_descriptor_set_destroy(device, anv_descriptor_set_from_handle(set));
    anv_DestroyFramebuffer(anv_device_to_handle(device), fb);
-   anv_DestroyRenderPass(anv_device_to_handle(device), pass);
 }
 
 static void
@@ -1809,6 +1807,8 @@ anv_device_finish_meta(struct anv_device *device)
                        device->meta_state.clear.pipeline);
 
    /* Blit */
+   anv_DestroyRenderPass(anv_device_to_handle(device),
+                         device->meta_state.blit.render_pass);
    anv_DestroyPipeline(anv_device_to_handle(device),
                        device->meta_state.blit.pipeline_2d_src);
    anv_DestroyPipeline(anv_device_to_handle(device),
