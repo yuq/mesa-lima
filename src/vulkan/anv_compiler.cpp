@@ -460,7 +460,7 @@ anv_compiler_create(struct anv_device *device)
 
    brw_process_intel_debug_variable();
 
-   compiler->screen->compiler = brw_compiler_create(compiler, &device->info);
+   compiler->screen->compiler = device->instance->physicalDevice.compiler;
 
    ctx = &compiler->brw->ctx;
    _mesa_init_shader_object_functions(&ctx->Driver);

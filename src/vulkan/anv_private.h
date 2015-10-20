@@ -427,6 +427,7 @@ struct anv_physical_device {
     const char *                                name;
     const struct brw_device_info *              info;
     uint64_t                                    aperture_size;
+    struct brw_compiler *                       compiler;
 };
 
 struct anv_instance {

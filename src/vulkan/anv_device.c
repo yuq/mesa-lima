@@ -91,11 +91,23 @@ anv_physical_device_init(struct anv_physical_device *device,
    
    close(fd);
 
+   device->compiler = brw_compiler_create(NULL, device->info);
+   if (device->compiler == NULL) {
+      result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+      goto fail;
+   }
+
    return VK_SUCCESS;
    
 fail:
    close(fd);
    return result;
+}
+
+static void
+anv_physical_device_finish(struct anv_physical_device *device)
+{
+   ralloc_free(device->compiler);
 }
 
 static void *default_alloc(
@@ -193,6 +205,7 @@ void anv_DestroyInstance(
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
+   anv_physical_device_finish(&instance->physicalDevice);
    anv_finish_wsi(instance);
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
