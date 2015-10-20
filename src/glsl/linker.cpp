@@ -3114,8 +3114,8 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
       foreach_in_list(ir_instruction, node, sh->ir) {
          ir_variable *var = node->as_variable();
-         if (var && (var->data.mode == ir_var_uniform || var->data.mode == ir_var_shader_storage) &&
-             var->data.explicit_location) {
+         if (var && (var->data.mode == ir_var_uniform &&
+                     var->data.explicit_location)) {
             bool ret;
             if (var->type->is_subroutine())
                ret = reserve_subroutine_explicit_locations(prog, sh, var);
