@@ -710,6 +710,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
       color0, color1, src0_alpha, src_depth, dst_depth, sample_mask,
       fs_reg(components)
    };
+   assert(ARRAY_SIZE(sources) - 1 == FB_WRITE_LOGICAL_SRC_COMPONENTS);
    fs_inst *write = bld.emit(FS_OPCODE_FB_WRITE_LOGICAL, fs_reg(),
                              sources, ARRAY_SIZE(sources));
 

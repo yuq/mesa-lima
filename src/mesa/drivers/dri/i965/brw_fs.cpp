@@ -699,10 +699,10 @@ fs_inst::components_read(unsigned i) const
       return 2;
 
    case FS_OPCODE_FB_WRITE_LOGICAL:
-      assert(src[6].file == IMM);
+      assert(src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
       /* First/second FB write color. */
       if (i < 2)
-         return src[6].fixed_hw_reg.dw1.ud;
+         return src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
       else
          return 1;
 
@@ -3350,15 +3350,16 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
                             const brw_wm_prog_key *key,
                             const fs_visitor::thread_payload &payload)
 {
-   assert(inst->src[6].file == IMM);
+   assert(inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
    const brw_device_info *devinfo = bld.shader->devinfo;
-   const fs_reg &color0 = inst->src[0];
-   const fs_reg &color1 = inst->src[1];
-   const fs_reg &src0_alpha = inst->src[2];
-   const fs_reg &src_depth = inst->src[3];
-   const fs_reg &dst_depth = inst->src[4];
-   fs_reg sample_mask = inst->src[5];
-   const unsigned components = inst->src[6].fixed_hw_reg.dw1.ud;
+   const fs_reg &color0 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR0];
+   const fs_reg &color1 = inst->src[FB_WRITE_LOGICAL_SRC_COLOR1];
+   const fs_reg &src0_alpha = inst->src[FB_WRITE_LOGICAL_SRC_SRC0_ALPHA];
+   const fs_reg &src_depth = inst->src[FB_WRITE_LOGICAL_SRC_SRC_DEPTH];
+   const fs_reg &dst_depth = inst->src[FB_WRITE_LOGICAL_SRC_DST_DEPTH];
+   fs_reg sample_mask = inst->src[FB_WRITE_LOGICAL_SRC_OMASK];
+   const unsigned components =
+      inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
 
    /* We can potentially have a message length of up to 15, so we have to set
     * base_mrf to either 0 or 1 in order to fit in m0..m15.
@@ -4186,10 +4187,12 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
       /* Gen6 doesn't support SIMD16 depth writes but we cannot handle them
        * here.
        */
-      assert(devinfo->gen != 6 || inst->src[3].file == BAD_FILE ||
+      assert(devinfo->gen != 6 ||
+             inst->src[FB_WRITE_LOGICAL_SRC_SRC_DEPTH].file == BAD_FILE ||
              inst->exec_size == 8);
       /* Dual-source FB writes are unsupported in SIMD16 mode. */
-      return (inst->src[1].file != BAD_FILE ? 8 : inst->exec_size);
+      return (inst->src[FB_WRITE_LOGICAL_SRC_COLOR1].file != BAD_FILE ?
+              8 : inst->exec_size);
 
    case SHADER_OPCODE_TXD_LOGICAL:
       /* TXD is unsupported in SIMD16 mode. */
