@@ -332,6 +332,7 @@ struct radeon_surf_level {
     uint32_t                    nblk_z;
     uint32_t                    pitch_bytes;
     uint32_t                    mode;
+    uint64_t                    dcc_offset;
 };
 
 struct radeon_surf {
@@ -367,6 +368,10 @@ struct radeon_surf {
     uint32_t                    stencil_tiling_index[RADEON_SURF_MAX_LEVEL];
     uint32_t                    pipe_config;
     uint32_t                    num_banks;
+
+    uint64_t                    dcc_size;
+    uint64_t                    dcc_alignment;
+    bool                        dcc_enabled;
 };
 
 struct radeon_bo_list_item {

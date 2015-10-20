@@ -443,6 +443,27 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 	return &rbuffer->b.b;
 }
 
+struct pipe_resource *r600_aligned_buffer_create(struct pipe_screen *screen,
+						 unsigned bind,
+						 unsigned usage,
+						 unsigned size,
+						 unsigned alignment)
+{
+	struct pipe_resource buffer;
+
+	memset(&buffer, 0, sizeof buffer);
+	buffer.target = PIPE_BUFFER;
+	buffer.format = PIPE_FORMAT_R8_UNORM;
+	buffer.bind = bind;
+	buffer.usage = usage;
+	buffer.flags = 0;
+	buffer.width0 = size;
+	buffer.height0 = 1;
+	buffer.depth0 = 1;
+	buffer.array_size = 1;
+	return r600_buffer_create(screen, &buffer, alignment);
+}
+
 struct pipe_resource *
 r600_buffer_from_user_memory(struct pipe_screen *screen,
 			     const struct pipe_resource *templ,

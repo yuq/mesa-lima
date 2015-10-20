@@ -214,6 +214,7 @@ struct r600_texture {
 	struct r600_fmask_info		fmask;
 	struct r600_cmask_info		cmask;
 	struct r600_resource		*cmask_buffer;
+	struct r600_resource		*dcc_buffer;
 	unsigned			cb_color_info; /* fast clear enable bit */
 	unsigned			color_clear_value[2];
 
@@ -489,6 +490,11 @@ bool r600_init_resource(struct r600_common_screen *rscreen,
 struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 					 const struct pipe_resource *templ,
 					 unsigned alignment);
+struct pipe_resource * r600_aligned_buffer_create(struct pipe_screen *screen,
+						  unsigned bind,
+						  unsigned usage,
+						  unsigned size,
+						  unsigned alignment);
 struct pipe_resource *
 r600_buffer_from_user_memory(struct pipe_screen *screen,
 			     const struct pipe_resource *templ,

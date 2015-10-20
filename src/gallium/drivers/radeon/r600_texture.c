@@ -268,6 +268,7 @@ static void r600_texture_destroy(struct pipe_screen *screen,
 	if (rtex->cmask_buffer != &rtex->resource) {
 	    pipe_resource_reference((struct pipe_resource**)&rtex->cmask_buffer, NULL);
 	}
+	pipe_resource_reference((struct pipe_resource**)&rtex->dcc_buffer, NULL);
 	pb_reference(&resource->buf, NULL);
 	FREE(rtex);
 }
@@ -482,6 +483,20 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 		rtex->cb_color_info |= EG_S_028C70_FAST_CLEAR(1);
 }
 
+static void vi_texture_alloc_dcc_separate(struct r600_common_screen *rscreen,
+					      struct r600_texture *rtex)
+{
+	rtex->dcc_buffer = (struct r600_resource *)
+		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
+				   PIPE_USAGE_DEFAULT, rtex->surface.dcc_size, rtex->surface.dcc_alignment);
+	if (rtex->dcc_buffer == NULL) {
+		return;
+	}
+
+	r600_screen_clear_buffer(rscreen, &rtex->dcc_buffer->b.b, 0, rtex->surface.dcc_size,
+				 0xFFFFFFFF, true);
+}
+
 static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 					    struct r600_texture *rtex)
 {
@@ -620,6 +635,9 @@ r600_texture_create_object(struct pipe_screen *screen,
 				FREE(rtex);
 				return NULL;
 			}
+		}
+		if (rtex->surface.dcc_enabled) {
+			vi_texture_alloc_dcc_separate(rscreen, rtex);
 		}
 	}
 
