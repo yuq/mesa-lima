@@ -1495,11 +1495,23 @@ typedef struct nir_shader_info {
 
    union {
       struct {
+         /** The number of vertices recieves per input primitive */
+         unsigned vertices_in;
+
+         /** The output primitive type (GL enum value) */
+         unsigned output_primitive;
+
          /** The maximum number of vertices the geometry shader might write. */
          unsigned vertices_out;
 
          /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
          unsigned invocations;
+
+         /** Whether or not this shader uses EndPrimitive */
+         bool uses_end_primitive;
+
+         /** Whether or not this shader uses non-zero streams */
+         bool uses_streams;
       } gs;
 
       struct {

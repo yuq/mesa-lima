@@ -170,8 +170,12 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
 
    switch (stage) {
    case MESA_SHADER_GEOMETRY:
+      shader->info.gs.vertices_in = shader_prog->Geom.VerticesIn;
+      shader->info.gs.output_primitive = sh->Geom.OutputType;
       shader->info.gs.vertices_out = sh->Geom.VerticesOut;
       shader->info.gs.invocations = sh->Geom.Invocations;
+      shader->info.gs.uses_end_primitive = shader_prog->Geom.UsesEndPrimitive;
+      shader->info.gs.uses_streams = shader_prog->Geom.UsesStreams;
       break;
 
    case MESA_SHADER_FRAGMENT: {
