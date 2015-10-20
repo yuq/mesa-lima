@@ -1180,7 +1180,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 
    /* Reserve all the explicit locations of the active uniforms. */
    for (unsigned i = 0; i < num_uniforms; i++) {
-      if (uniforms[i].type->is_subroutine())
+      if (uniforms[i].type->is_subroutine() ||
+          uniforms[i].is_shader_storage)
          continue;
 
       if (uniforms[i].remap_location != UNMAPPED_UNIFORM_LOC) {
@@ -1200,8 +1201,10 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    /* Reserve locations for rest of the uniforms. */
    for (unsigned i = 0; i < num_uniforms; i++) {
 
-      if (uniforms[i].type->is_subroutine())
+      if (uniforms[i].type->is_subroutine() ||
+          uniforms[i].is_shader_storage)
          continue;
+
       /* Built-in uniforms should not get any location. */
       if (uniforms[i].builtin)
          continue;
