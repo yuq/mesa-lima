@@ -299,9 +299,7 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   /* XXX: These are needed for flipping the coordinates.  Do we need to do
-    * this in Vulkan?
-    */
+   /* Vulkan always specifies upper-left coordinates */
    key->drawable_height = 0;
    key->render_to_fbo = false;
 
