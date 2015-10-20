@@ -739,7 +739,7 @@ typedef struct {
  * Bits indices range from 0..63.
  */
 static inline unsigned
-brw_compact_inst_bits(brw_compact_inst *inst, unsigned high, unsigned low)
+brw_compact_inst_bits(const brw_compact_inst *inst, unsigned high, unsigned low)
 {
    const uint64_t mask = (1ull << (high - low + 1)) - 1;
 
@@ -774,7 +774,7 @@ brw_compact_inst_set_##name(const struct brw_device_info *devinfo, \
 }                                                                  \
 static inline unsigned                                             \
 brw_compact_inst_##name(const struct brw_device_info *devinfo,     \
-                        brw_compact_inst *inst)                    \
+                        const brw_compact_inst *inst)              \
 {                                                                  \
    assert(assertions);                                             \
    (void) devinfo;                                                 \
