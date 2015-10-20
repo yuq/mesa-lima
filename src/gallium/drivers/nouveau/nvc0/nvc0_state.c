@@ -680,6 +680,9 @@ nvc0_sp_state_create(struct pipe_context *pipe,
    if (cso->stream_output.num_outputs)
       prog->pipe.stream_output = cso->stream_output;
 
+   prog->translated = nvc0_program_translate(
+      prog, nvc0_context(pipe)->screen->base.device->chipset);
+
    return (void *)prog;
 }
 

@@ -606,6 +606,9 @@ nvc0_switch_pipe_context(struct nvc0_context *ctx_to)
       ctx_to->constbuf_dirty[s] = (1 << NVC0_MAX_PIPE_CONSTBUFS) - 1;
    }
 
+   /* Reset tfb as the shader that owns it may have been deleted. */
+   ctx_to->state.tfb = NULL;
+
    if (!ctx_to->vertex)
       ctx_to->dirty &= ~(NVC0_NEW_VERTEX | NVC0_NEW_ARRAYS);
    if (!ctx_to->idxbuf.buffer)
