@@ -2238,13 +2238,15 @@ fs_visitor::opt_sampler_eot()
    if (unlikely(tex_inst->is_head_sentinel()) || !tex_inst->is_tex())
       return false;
 
-   /* This optimisation doesn't seem to work for textureGather for some
-    * reason. I can't find any documentation or known workarounds to indicate
-    * that this is expected, but considering that it is probably pretty
-    * unlikely that a shader would directly write out the results from
-    * textureGather we might as well just disable it.
+   /* 3D Sampler » Messages » Message Format
+    *
+    * “Response Length of zero is allowed on all SIMD8* and SIMD16* sampler
+    *  messages except sample+killpix, resinfo, sampleinfo, LOD, and gather4*”
     */
-   if (tex_inst->opcode == SHADER_OPCODE_TG4 ||
+   if (tex_inst->opcode == SHADER_OPCODE_TXS ||
+       tex_inst->opcode == SHADER_OPCODE_SAMPLEINFO ||
+       tex_inst->opcode == SHADER_OPCODE_LOD ||
+       tex_inst->opcode == SHADER_OPCODE_TG4 ||
        tex_inst->opcode == SHADER_OPCODE_TG4_OFFSET)
       return false;
 
