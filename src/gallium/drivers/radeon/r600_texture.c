@@ -1290,6 +1290,11 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
+		/* CMASK clear does not work for DCC compressed textures */
+		if (tex->surface.dcc_enabled) {
+			continue;
+		}
+
 		/* ensure CMASK is enabled */
 		r600_texture_alloc_cmask_separate(rctx->screen, tex);
 		if (tex->cmask.size == 0) {

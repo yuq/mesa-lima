@@ -248,7 +248,8 @@ void si_dma_copy(struct pipe_context *ctx,
 	if (src->format != dst->format || src_box->depth > 1 ||
 	    (rdst->dirty_level_mask | rdst->stencil_dirty_level_mask) & (1 << dst_level) ||
 	    rdst->cmask.size || rdst->fmask.size ||
-	    rsrc->cmask.size || rsrc->fmask.size) {
+	    rsrc->cmask.size || rsrc->fmask.size ||
+	    rdst->surface.dcc_enabled || rsrc->surface.dcc_enabled) {
 		goto fallback;
 	}
 

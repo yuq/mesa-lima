@@ -675,7 +675,8 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.depth == 1 &&
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
 	    !(dst->surface.flags & RADEON_SURF_SCANOUT) &&
-	    (!dst->cmask.size || !dst->dirty_level_mask) /* dst cannot be fast-cleared */) {
+	    (!dst->cmask.size || !dst->dirty_level_mask) && /* dst cannot be fast-cleared */
+	    !dst->surface.dcc_enabled) {
 		si_blitter_begin(ctx, SI_COLOR_RESOLVE |
 				 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
 		util_blitter_custom_resolve_color(sctx->blitter,
