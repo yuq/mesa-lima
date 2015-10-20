@@ -1407,7 +1407,23 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bcsel:
       emit(CMP(dst_null_d(), op[0], src_reg(0), BRW_CONDITIONAL_NZ));
       inst = emit(BRW_OPCODE_SEL, dst, op[1], op[2]);
-      inst->predicate = BRW_PREDICATE_NORMAL;
+      switch (dst.writemask) {
+      case WRITEMASK_X:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_X;
+         break;
+      case WRITEMASK_Y:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Y;
+         break;
+      case WRITEMASK_Z:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_Z;
+         break;
+      case WRITEMASK_W:
+         inst->predicate = BRW_PREDICATE_ALIGN16_REPLICATE_W;
+         break;
+      default:
+         inst->predicate = BRW_PREDICATE_NORMAL;
+         break;
+      }
       break;
 
    case nir_op_fdot_replicated2:
