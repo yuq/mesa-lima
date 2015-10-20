@@ -2456,7 +2456,7 @@ fs_visitor::compute_to_mrf()
       /* Found a move of a GRF to a MRF.  Let's see if we can go
        * rewrite the thing that made this GRF to write into the MRF.
        */
-      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
+      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
 	 if (scan_inst->dst.file == GRF &&
 	     scan_inst->dst.reg == inst->src[0].reg) {
 	    /* Found the last thing to write our reg we want to turn
@@ -2789,7 +2789,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
     * we assume that there are no outstanding dependencies on entry to the
     * program.
     */
-   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
+   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
       /* If we hit control flow, assume that there *are* outstanding
        * dependencies, and force their cleanup before our instruction.
        */
@@ -2855,7 +2855,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
    /* Walk forwards looking for writes to registers we're writing which aren't
     * read before being written.
     */
-   foreach_inst_in_block_starting_from(fs_inst, scan_inst, inst, block) {
+   foreach_inst_in_block_starting_from(fs_inst, scan_inst, inst) {
       /* If we hit control flow, force resolve all remaining dependencies. */
       if (block->end() == scan_inst) {
          for (int i = 0; i < write_len; i++) {

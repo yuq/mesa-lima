@@ -64,7 +64,7 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
       int src_end_ip = v->live_intervals->end[src_var];
 
       bool interfered = false;
-      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
+      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (scan_inst->overwrites_reg(inst->src[0])) {
             if (scan_inst->is_partial_write() ||
                 (scan_inst->dst.type != inst->dst.type &&
