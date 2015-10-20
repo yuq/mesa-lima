@@ -78,7 +78,7 @@ vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
     * so the total number of input slots that will be delivered to the GS (and
     * thus the stride of the input arrays) is urb_read_length * 2.
     */
-   const unsigned num_input_vertices = c->gp->program.VerticesIn;
+   const unsigned num_input_vertices = nir->info.gs.vertices_in;
    assert(num_input_vertices <= MAX_GS_INPUT_VERTICES);
    unsigned input_array_stride = c->prog_data.base.urb_read_length * 2;
 
@@ -182,9 +182,9 @@ vec4_gs_visitor::emit_prolog()
     * to account for the fact that the vertex shader stored it in the w
     * component of VARYING_SLOT_PSIZ.
     */
-   if (c->gp->program.Base.InputsRead & VARYING_BIT_PSIZ) {
+   if (nir->info.inputs_read & VARYING_BIT_PSIZ) {
       this->current_annotation = "swizzle gl_PointSize input";
-      for (int vertex = 0; vertex < c->gp->program.VerticesIn; vertex++) {
+      for (int vertex = 0; vertex < (int)nir->info.gs.vertices_in; vertex++) {
          dst_reg dst(ATTR,
                      BRW_VARYING_SLOT_COUNT * vertex + VARYING_SLOT_PSIZ);
          dst.type = BRW_REGISTER_TYPE_F;

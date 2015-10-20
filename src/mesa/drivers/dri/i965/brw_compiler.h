@@ -602,8 +602,6 @@ struct brw_gs_compile
    struct brw_gs_prog_data prog_data;
    struct brw_vue_map input_vue_map;
 
-   struct brw_geometry_program *gp;
-
    unsigned control_data_bits_per_vertex;
    unsigned control_data_header_size_bits;
 };

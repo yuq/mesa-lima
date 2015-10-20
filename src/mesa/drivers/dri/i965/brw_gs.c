@@ -62,7 +62,6 @@ brw_codegen_gs_prog(struct brw_context *brw,
    struct brw_gs_compile c;
    memset(&c, 0, sizeof(c));
    c.key = *key;
-   c.gp = gp;
 
    c.prog_data.include_primitive_id =
       (gp->program.Base.InputsRead & VARYING_BIT_PRIMITIVE_ID) != 0;
