@@ -303,7 +303,7 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
     * this in Vulkan?
     */
    key->drawable_height = 0;
-   key->render_to_fbo = true; /* XXX really? */
+   key->render_to_fbo = false;
 
    key->nr_color_regions = render_pass->subpasses[info->subpass].color_count;
 
