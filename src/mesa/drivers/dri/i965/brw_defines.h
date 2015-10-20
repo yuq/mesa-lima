@@ -916,8 +916,8 @@ enum opcode {
     * Source 0: [required] Color 0.
     * Source 1: [optional] Color 1 (for dual source blend messages).
     * Source 2: [optional] Src0 Alpha.
-    * Source 3: [optional] Source Depth (passthrough from the thread payload).
-    * Source 4: [optional] Destination Depth (gl_FragDepth).
+    * Source 3: [optional] Source Depth (gl_FragDepth)
+    * Source 4: [optional (gen4-5)] Destination Depth passthrough from thread
     * Source 5: [optional] Sample Mask (gl_SampleMask).
     * Source 6: [required] Number of color components (as a UD immediate).
     */
