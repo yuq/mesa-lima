@@ -568,19 +568,29 @@ VkResult gen8_compute_pipeline_create(
    anv_state_stream_init(&pipeline->program_stream,
                          &device->instruction_block_pool);
 
-   memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
+   /* When we free the pipeline, we detect stages based on the NULL status
+    * of various prog_data pointers.  Make them NULL by default.
+    */
+   memset(pipeline->prog_data, 0, sizeof(pipeline->prog_data));
+   memset(pipeline->scratch_start, 0, sizeof(pipeline->scratch_start));
 
-   pipeline->shaders[VK_SHADER_STAGE_COMPUTE] =
-      anv_shader_from_handle(pCreateInfo->stage.shader);
+   pipeline->vs_simd8 = NO_KERNEL;
+   pipeline->vs_vec4 = NO_KERNEL;
+   pipeline->gs_vec4 = NO_KERNEL;
+
+   pipeline->active_stages = 0;
+   pipeline->total_scratch = 0;
+
+   assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE);
+   ANV_FROM_HANDLE(anv_shader, shader,  pCreateInfo->stage.shader);
+   anv_pipeline_compile_cs(pipeline, pCreateInfo, shader);
 
    pipeline->use_repclear = false;
-
-   anv_compiler_run(device->compiler, pipeline);
 
    const struct brw_cs_prog_data *cs_prog_data = &pipeline->cs_prog_data;
 
    anv_batch_emit(&pipeline->batch, GEN8_MEDIA_VFE_STATE,
-                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_FRAGMENT],
+                  .ScratchSpaceBasePointer = pipeline->scratch_start[VK_SHADER_STAGE_COMPUTE],
                   .PerThreadScratchSpace = ffs(cs_prog_data->base.total_scratch / 2048),
                   .ScratchSpaceBasePointerHigh = 0,
                   .StackSize = 0,

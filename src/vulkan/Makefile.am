@@ -55,14 +55,10 @@ libvulkan_la_CFLAGS =							\
 	-Wall -Wno-unused-parameter -fvisibility=hidden -O0 -g		\
 	-Wstrict-prototypes -Wmissing-prototypes -Wno-override-init
 
-libvulkan_la_CXXFLAGS =							\
-	-Wall -Wno-unused-parameter -fvisibility=hidden -O0 -g
-
 VULKAN_SOURCES =                                        \
 	anv_allocator.c                                 \
 	anv_cmd_buffer.c                                \
 	anv_batch_chain.c                               \
-	anv_compiler.cpp                                \
 	anv_device.c                                    \
         anv_dump.c                                      \
 	anv_entrypoints.c                               \
@@ -124,7 +120,7 @@ libvulkan_la_LIBADD = $(WAYLAND_LIBS) -lxcb -lxcb-dri3 \
 	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
 	../mesa/libmesa.la \
 	../mesa/drivers/dri/common/libdri_test_stubs.la \
-	-lpthread -ldl
+	-lpthread -ldl -lstdc++
 
 # Libvulkan with dummy gem. Used for unit tests.
 
@@ -133,7 +129,6 @@ libvulkan_test_la_SOURCES =                             \
 	anv_gem_stubs.c
 
 libvulkan_test_la_CFLAGS = $(libvulkan_la_CFLAGS)
-libvulkan_test_la_CXXFLAGS = $(libvulkan_la_CXXFLAGS)
 libvulkan_test_la_LIBADD = $(libvulkan_la_LIBADD)
 
 include $(top_srcdir)/install-lib-links.mk

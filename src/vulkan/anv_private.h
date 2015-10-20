@@ -499,7 +499,6 @@ struct anv_device {
 
     struct anv_block_pool                       scratch_block_pool;
 
-    struct anv_compiler *                       compiler;
     pthread_mutex_t                             mutex;
 };
 
@@ -1089,7 +1088,6 @@ struct anv_pipeline {
    uint32_t                                     dynamic_state_mask;
    struct anv_dynamic_state                     dynamic_state;
 
-   struct anv_shader *                          shaders[VK_SHADER_STAGE_NUM];
    struct anv_pipeline_layout *                 layout;
    bool                                         use_repclear;
 
@@ -1161,6 +1159,11 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   const struct anv_graphics_pipeline_create_info *extra);
 
 VkResult
+anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
+                        const VkComputePipelineCreateInfo *info,
+                        struct anv_shader *shader);
+
+VkResult
 anv_graphics_pipeline_create(VkDevice device,
                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
                              const struct anv_graphics_pipeline_create_info *extra,
@@ -1186,11 +1189,6 @@ VkResult
 gen8_compute_pipeline_create(VkDevice _device,
                              const VkComputePipelineCreateInfo *pCreateInfo,
                              VkPipeline *pPipeline);
-
-struct anv_compiler *anv_compiler_create(struct anv_device *device);
-void anv_compiler_destroy(struct anv_compiler *compiler);
-int anv_compiler_run(struct anv_compiler *compiler, struct anv_pipeline *pipeline);
-void anv_compiler_free(struct anv_pipeline *pipeline);
 
 struct anv_format {
    const VkFormat vk_format;

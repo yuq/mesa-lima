@@ -33,6 +33,22 @@
 
 struct anv_dispatch_table dtable;
 
+static void
+compiler_debug_log(void *data, const char *fmt, ...)
+{ }
+
+static void
+compiler_perf_log(void *data, const char *fmt, ...)
+{
+   va_list args;
+   va_start(args, fmt);
+
+   if (unlikely(INTEL_DEBUG & DEBUG_PERF))
+      vfprintf(stderr, fmt, args);
+
+   va_end(args);
+}
+
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
@@ -91,11 +107,15 @@ anv_physical_device_init(struct anv_physical_device *device,
    
    close(fd);
 
+   brw_process_intel_debug_variable();
+
    device->compiler = brw_compiler_create(NULL, device->info);
    if (device->compiler == NULL) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;
    }
+   device->compiler->shader_debug_log = compiler_debug_log;
+   device->compiler->shader_perf_log = compiler_perf_log;
 
    return VK_SUCCESS;
    
@@ -145,7 +165,6 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 53,
    },
 };
-
 
 VkResult anv_CreateInstance(
     const VkInstanceCreateInfo*                 pCreateInfo,
@@ -633,8 +652,6 @@ VkResult anv_CreateDevice(
 
    device->info = *physical_device->info;
 
-   device->compiler = anv_compiler_create(device);
-
    anv_queue_init(device, &device->queue);
 
    anv_device_init_meta(device);
@@ -657,8 +674,6 @@ void anv_DestroyDevice(
     VkDevice                                    _device)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-
-   anv_compiler_destroy(device->compiler);
 
    anv_queue_finish(&device->queue);
 
