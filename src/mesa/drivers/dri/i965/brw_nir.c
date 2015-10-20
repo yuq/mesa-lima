@@ -200,7 +200,14 @@ brw_create_nir(struct brw_context *brw,
    }
    nir_validate_shader(nir);
 
-   brw_process_nir(nir, brw->intelScreen->devinfo, shader_prog, stage, is_scalar);
+   brw_preprocess_nir(nir, brw->intelScreen->devinfo, is_scalar);
+
+   if (shader_prog) {
+      nir_lower_samplers(nir, shader_prog);
+      nir_validate_shader(nir);
+   }
+
+   brw_postprocess_nir(nir, brw->intelScreen->devinfo, is_scalar);
 
    static GLuint msg_id = 0;
    _mesa_gl_debug(&brw->ctx, &msg_id,
@@ -208,23 +215,21 @@ brw_create_nir(struct brw_context *brw,
                   MESA_DEBUG_TYPE_OTHER,
                   MESA_DEBUG_SEVERITY_NOTIFICATION,
                   "%s NIR shader:\n",
-                  _mesa_shader_stage_to_abbrev(stage));
+                  _mesa_shader_stage_to_abbrev(nir->stage));
 
    return nir;
 }
 
 void
-brw_process_nir(nir_shader *nir,
-                const struct brw_device_info *devinfo,
-                const struct gl_shader_program *shader_prog,
-                gl_shader_stage stage, bool is_scalar)
+brw_preprocess_nir(nir_shader *nir,
+                   const struct brw_device_info *devinfo,
+                   bool is_scalar)
 {
-   bool debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    static const nir_lower_tex_options tex_options = {
       .lower_txp = ~0,
    };
 
-   if (stage == MESA_SHADER_GEOMETRY) {
+   if (nir->stage == MESA_SHADER_GEOMETRY) {
       nir_lower_gs_intrinsics(nir);
       nir_validate_shader(nir);
    }
@@ -249,6 +254,15 @@ brw_process_nir(nir_shader *nir,
 
    /* Get rid of split copies */
    nir_optimize(nir, is_scalar);
+}
+
+void
+brw_postprocess_nir(nir_shader *nir,
+                    const struct brw_device_info *devinfo,
+                    bool is_scalar)
+{
+   bool debug_enabled =
+      (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
 
    brw_nir_lower_inputs(nir, is_scalar);
    brw_nir_lower_outputs(nir, is_scalar);
@@ -260,11 +274,6 @@ brw_process_nir(nir_shader *nir,
 
    nir_remove_dead_variables(nir);
    nir_validate_shader(nir);
-
-   if (shader_prog) {
-      nir_lower_samplers(nir, shader_prog);
-      nir_validate_shader(nir);
-   }
 
    nir_lower_system_values(nir);
    nir_validate_shader(nir);
@@ -301,7 +310,7 @@ brw_process_nir(nir_shader *nir,
       }
 
       fprintf(stderr, "NIR (SSA form) for %s shader:\n",
-              _mesa_shader_stage_to_string(stage));
+              _mesa_shader_stage_to_string(nir->stage));
       nir_print_shader(nir, stderr);
    }
 
@@ -328,7 +337,7 @@ brw_process_nir(nir_shader *nir,
 
    if (unlikely(debug_enabled)) {
       fprintf(stderr, "NIR (final form) for %s shader:\n",
-              _mesa_shader_stage_to_string(stage));
+              _mesa_shader_stage_to_string(nir->stage));
       nir_print_shader(nir, stderr);
    }
 }

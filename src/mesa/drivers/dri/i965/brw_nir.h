@@ -86,10 +86,13 @@ enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
 enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
 
 void
-brw_process_nir(nir_shader *nir,
-                const struct brw_device_info *devinfo,
-                const struct gl_shader_program *shader_prog,
-                gl_shader_stage stage, bool is_scalar);
+brw_preprocess_nir(nir_shader *nir,
+                   const struct brw_device_info *devinfo,
+                   bool is_scalar);
+void
+brw_postprocess_nir(nir_shader *nir,
+                    const struct brw_device_info *devinfo,
+                    bool is_scalar);
 
 void brw_nir_setup_glsl_uniforms(nir_shader *shader,
                                  struct gl_shader_program *shader_prog,

@@ -729,11 +729,13 @@ anv_compile_shader_spirv(struct anv_compiler *compiler,
    }
    nir_validate_shader(mesa_shader->Program->nir);
 
+   brw_preprocess_nir(mesa_shader->Program->nir,
+                      compiler->screen->devinfo, is_scalar);
+
    setup_nir_io(mesa_shader, mesa_shader->Program->nir);
 
-   brw_process_nir(mesa_shader->Program->nir,
-                   compiler->screen->devinfo,
-                   NULL, mesa_shader->Stage, is_scalar);
+   brw_postprocess_nir(mesa_shader->Program->nir,
+                       compiler->screen->devinfo, is_scalar);
 
    mesa_shader->num_uniform_components =
       mesa_shader->Program->nir->num_uniforms;
