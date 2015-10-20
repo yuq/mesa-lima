@@ -789,7 +789,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       if (mode == nir_var_shader_in || mode == nir_var_system_value)
          var->data.read_only = true;
 
-      if (builtin == SpvBuiltInPosition || builtin == SpvBuiltInSamplePosition)
+      if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          var->data.origin_upper_left = b->origin_upper_left;
 
       b->builtins[dec->literals[0]] = var;
@@ -839,7 +839,7 @@ get_builtin_variable(struct vtn_builder *b,
       var->data.location = location;
       var->data.explicit_location = true;
 
-      if (builtin == SpvBuiltInPosition || builtin == SpvBuiltInSamplePosition)
+      if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          var->data.origin_upper_left = b->origin_upper_left;
 
       b->builtins[builtin] = var;
