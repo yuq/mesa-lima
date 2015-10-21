@@ -224,7 +224,12 @@ void anv_DestroyInstance(
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
-   anv_physical_device_finish(&instance->physicalDevice);
+   if (instance->physicalDeviceCount > 0) {
+      /* We support at most one physical device. */
+      assert(instance->physicalDeviceCount == 1);
+      anv_physical_device_finish(&instance->physicalDevice);
+   }
+
    anv_finish_wsi(instance);
 
    VG(VALGRIND_DESTROY_MEMPOOL(instance));
