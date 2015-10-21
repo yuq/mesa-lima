@@ -58,6 +58,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
 {
    struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
+   nir_shader *nir = gp->program.Base.nir;
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_data prog_data;
    struct brw_gs_compile c;
@@ -66,9 +67,9 @@ brw_codegen_gs_prog(struct brw_context *brw,
    c.key = *key;
 
    prog_data.include_primitive_id =
-      (gp->program.Base.InputsRead & VARYING_BIT_PRIMITIVE_ID) != 0;
+      (nir->info.inputs_read & VARYING_BIT_PRIMITIVE_ID) != 0;
 
-   prog_data.invocations = gp->program.Invocations;
+   prog_data.invocations = nir->info.gs.invocations;
 
    assign_gs_binding_table_offsets(brw->intelScreen->devinfo, prog,
                                    &gp->program.Base, &prog_data);
@@ -102,7 +103,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    }
 
    if (brw->gen >= 7) {
-      if (gp->program.OutputType == GL_POINTS) {
+      if (nir->info.gs.output_primitive == GL_POINTS) {
          /* When the output type is points, the geometry shader may output data
           * to multiple streams, and EndPrimitive() has no effect.  So we
           * configure the hardware to interpret the control data as stream ID.
@@ -110,7 +111,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
          prog_data.control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID;
 
          /* We only have to emit control bits if we are using streams */
-         if (prog->Geom.UsesStreams)
+         if (nir->info.gs.uses_streams)
             c.control_data_bits_per_vertex = 2;
          else
             c.control_data_bits_per_vertex = 0;
@@ -126,20 +127,21 @@ brw_codegen_gs_prog(struct brw_context *brw,
          /* We only need to output control data if the shader actually calls
           * EndPrimitive().
           */
-         c.control_data_bits_per_vertex = gp->program.UsesEndPrimitive ? 1 : 0;
+         c.control_data_bits_per_vertex =
+            nir->info.gs.uses_end_primitive ? 1 : 0;
       }
    } else {
       /* There are no control data bits in gen6. */
       c.control_data_bits_per_vertex = 0;
 
       /* If it is using transform feedback, enable it */
-      if (prog->TransformFeedback.NumVarying)
+      if (nir->info.has_transform_feedback_varyings)
          prog_data.gen6_xfb_enabled = true;
       else
          prog_data.gen6_xfb_enabled = false;
    }
    c.control_data_header_size_bits =
-      gp->program.VerticesOut * c.control_data_bits_per_vertex;
+      nir->info.gs.vertices_out * c.control_data_bits_per_vertex;
 
    /* 1 HWORD = 32 bytes = 256 bits */
    prog_data.control_data_header_size_hwords =
@@ -240,7 +242,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    unsigned output_size_bytes;
    if (brw->gen >= 7) {
       output_size_bytes =
-         prog_data.output_vertex_size_hwords * 32 * gp->program.VerticesOut;
+         prog_data.output_vertex_size_hwords * 32 * nir->info.gs.vertices_out;
       output_size_bytes += 32 * prog_data.control_data_header_size_hwords;
    } else {
       output_size_bytes = prog_data.output_vertex_size_hwords * 32;
@@ -269,7 +271,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       prog_data.base.urb_entry_size = ALIGN(output_size_bytes, 128) / 128;
 
    prog_data.output_topology =
-      get_hw_prim_for_gl_prim(gp->program.OutputType);
+      get_hw_prim_for_gl_prim(nir->info.gs.output_primitive);
 
    /* The GLSL linker will have already matched up GS inputs and the outputs
     * of prior stages.  The driver does extend VS outputs in some cases, but
@@ -283,10 +285,10 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * written by previous stages and shows up via payload magic.
     */
    GLbitfield64 inputs_read =
-      gp->program.Base.InputsRead & ~VARYING_BIT_PRIMITIVE_ID;
+      nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
    brw_compute_vue_map(brw->intelScreen->devinfo,
                        &c.input_vue_map, inputs_read,
-                       prog->SeparateShader);
+                       nir->info.separate_shader);
 
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
     * need to program a URB read length of ceiling(num_slots / 2).
