@@ -3137,7 +3137,8 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
                            GLenum type, const char *name)
 {
    bool found_interface = false;
-   const char *block_name = NULL;
+   unsigned block_name_len = 0;
+   const char *block_name_dot = strchr(name, '.');
 
    /* These rules only apply to buffer variables. So we return
     * true for the rest of types.
@@ -3146,8 +3147,28 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
       return true;
 
    for (unsigned i = 0; i < shProg->NumBufferInterfaceBlocks; i++) {
-      block_name = shProg->BufferInterfaceBlocks[i].Name;
-      if (strncmp(block_name, name, strlen(block_name)) == 0) {
+      const char *block_name = shProg->BufferInterfaceBlocks[i].Name;
+      block_name_len = strlen(block_name);
+
+      const char *block_square_bracket = strchr(block_name, '[');
+      if (block_square_bracket) {
+         /* The block is part of an array of named interfaces,
+          * for the name comparison we ignore the "[x]" part.
+          */
+         block_name_len -= strlen(block_square_bracket);
+      }
+
+      if (block_name_dot) {
+         /* Check if the variable name starts with the interface
+          * name. The interface name (if present) should have the
+          * length than the interface block name we are comparing to.
+          */
+         unsigned len = strlen(name) - strlen(block_name_dot);
+         if (len != block_name_len)
+            continue;
+      }
+
+      if (strncmp(block_name, name, block_name_len) == 0) {
          found_interface = true;
          break;
       }
@@ -3157,7 +3178,7 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
     * including the dot that follows it.
     */
    if (found_interface)
-      name = name + strlen(block_name) + 1;
+      name = name + block_name_len + 1;
 
    /* From: ARB_program_interface_query extension:
     *
@@ -3166,14 +3187,14 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
     *   of its type.  For arrays of aggregate types, the enumeration rules are
     *   applied recursively for the single enumerated array element.
     */
-   const char *first_dot = strchr(name, '.');
+   const char *struct_first_dot = strchr(name, '.');
    const char *first_square_bracket = strchr(name, '[');
 
    /* The buffer variable is on top level and it is not an array */
    if (!first_square_bracket) {
       return true;
    /* The shader storage block member is a struct, then generate the entry */
-   } else if (first_dot && first_dot < first_square_bracket) {
+   } else if (struct_first_dot && struct_first_dot < first_square_bracket) {
       return true;
    } else {
       /* Shader storage block member is an array, only generate an entry for the
