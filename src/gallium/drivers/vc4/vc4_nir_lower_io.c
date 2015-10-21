@@ -406,6 +406,7 @@ vc4_nir_lower_io_instr(struct vc4_compile *c, nir_builder *b,
 
         case nir_intrinsic_load_uniform:
         case nir_intrinsic_load_uniform_indirect:
+        case nir_intrinsic_load_user_clip_plane:
                 vc4_nir_lower_uniform(c, b, intr);
                 break;
 

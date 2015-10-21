@@ -385,7 +385,6 @@ qir_compile_init(void)
         list_inithead(&c->instructions);
 
         c->output_position_index = -1;
-        c->output_clipvertex_index = -1;
         c->output_color_index = -1;
         c->output_point_size_index = -1;
 

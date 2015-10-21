@@ -399,7 +399,6 @@ struct vc4_compile {
         uint32_t num_outputs;
         uint32_t num_texture_samples;
         uint32_t output_position_index;
-        uint32_t output_clipvertex_index;
         uint32_t output_color_index;
         uint32_t output_point_size_index;
 
