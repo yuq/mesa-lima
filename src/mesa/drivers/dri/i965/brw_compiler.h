@@ -594,18 +594,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                char **error_str);
 
 /**
- * Scratch data used when compiling a GLSL geometry shader.
- */
-struct brw_gs_compile
-{
-   struct brw_gs_prog_key key;
-   struct brw_vue_map input_vue_map;
-
-   unsigned control_data_bits_per_vertex;
-   unsigned control_data_header_size_bits;
-};
-
-/**
  * Compile a vertex shader.
  *
  * Returns the final assembly and the program's size.
@@ -613,7 +601,7 @@ struct brw_gs_compile
 const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
-               struct brw_gs_compile *c,
+               const struct brw_gs_prog_key *key,
                struct brw_gs_prog_data *prog_data,
                const struct nir_shader *shader,
                struct gl_shader_program *shader_prog,
