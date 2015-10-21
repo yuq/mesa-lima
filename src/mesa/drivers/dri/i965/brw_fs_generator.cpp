@@ -1505,7 +1505,7 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
           src0.type == BRW_REGISTER_TYPE_UD);
 
    struct brw_reg reg = stride(src1, 1, 4, 0);
-   if (dispatch_width == 8) {
+   if (devinfo->gen >= 8 || dispatch_width == 8) {
       brw_ADD(p, dst, src0, reg);
    } else if (dispatch_width == 16) {
       brw_push_insn_state(p);
