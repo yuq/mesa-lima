@@ -59,17 +59,19 @@ brw_codegen_gs_prog(struct brw_context *brw,
 {
    struct gl_shader *shader = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    struct brw_stage_state *stage_state = &brw->gs.base;
+   struct brw_gs_prog_data prog_data;
    struct brw_gs_compile c;
+   memset(&prog_data, 0, sizeof(prog_data));
    memset(&c, 0, sizeof(c));
    c.key = *key;
 
-   c.prog_data.include_primitive_id =
+   prog_data.include_primitive_id =
       (gp->program.Base.InputsRead & VARYING_BIT_PRIMITIVE_ID) != 0;
 
-   c.prog_data.invocations = gp->program.Invocations;
+   prog_data.invocations = gp->program.Invocations;
 
    assign_gs_binding_table_offsets(brw->intelScreen->devinfo, prog,
-                                   &gp->program.Base, &c.prog_data);
+                                   &gp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
@@ -82,20 +84,20 @@ brw_codegen_gs_prog(struct brw_context *brw,
    struct gl_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    int param_count = gp->program.Base.nir->num_uniforms * 4;
 
-   c.prog_data.base.base.param =
+   prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   c.prog_data.base.base.pull_param =
+   prog_data.base.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
-   c.prog_data.base.base.image_param =
+   prog_data.base.base.image_param =
       rzalloc_array(NULL, struct brw_image_param, gs->NumImages);
-   c.prog_data.base.base.nr_params = param_count;
-   c.prog_data.base.base.nr_image_params = gs->NumImages;
+   prog_data.base.base.nr_params = param_count;
+   prog_data.base.base.nr_image_params = gs->NumImages;
 
    brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
-                               &c.prog_data.base.base, false);
+                               &prog_data.base.base, false);
 
    if (brw->gen >= 8) {
-      c.prog_data.static_vertex_count =
+      prog_data.static_vertex_count =
          nir_gs_count_vertices(gp->program.Base.nir);
    }
 
@@ -105,7 +107,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
           * to multiple streams, and EndPrimitive() has no effect.  So we
           * configure the hardware to interpret the control data as stream ID.
           */
-         c.prog_data.control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID;
+         prog_data.control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID;
 
          /* We only have to emit control bits if we are using streams */
          if (prog->Geom.UsesStreams)
@@ -119,7 +121,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
           * streams is not supported.  So we configure the hardware to interpret
           * the control data as EndPrimitive information (a.k.a. "cut bits").
           */
-         c.prog_data.control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT;
+         prog_data.control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT;
 
          /* We only need to output control data if the shader actually calls
           * EndPrimitive().
@@ -132,21 +134,21 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
       /* If it is using transform feedback, enable it */
       if (prog->TransformFeedback.NumVarying)
-         c.prog_data.gen6_xfb_enabled = true;
+         prog_data.gen6_xfb_enabled = true;
       else
-         c.prog_data.gen6_xfb_enabled = false;
+         prog_data.gen6_xfb_enabled = false;
    }
    c.control_data_header_size_bits =
       gp->program.VerticesOut * c.control_data_bits_per_vertex;
 
    /* 1 HWORD = 32 bytes = 256 bits */
-   c.prog_data.control_data_header_size_hwords =
+   prog_data.control_data_header_size_hwords =
       ALIGN(c.control_data_header_size_bits, 256) / 256;
 
    GLbitfield64 outputs_written = gp->program.Base.OutputsWritten;
 
    brw_compute_vue_map(brw->intelScreen->devinfo,
-                       &c.prog_data.base.vue_map, outputs_written,
+                       &prog_data.base.vue_map, outputs_written,
                        prog ? prog->SeparateShader : false);
 
    /* Compute the output vertex size.
@@ -197,10 +199,10 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * per interpolation type, so this is plenty.
     *
     */
-   unsigned output_vertex_size_bytes = c.prog_data.base.vue_map.num_slots * 16;
+   unsigned output_vertex_size_bytes = prog_data.base.vue_map.num_slots * 16;
    assert(brw->gen == 6 ||
           output_vertex_size_bytes <= GEN7_MAX_GS_OUTPUT_VERTEX_SIZE_BYTES);
-   c.prog_data.output_vertex_size_hwords =
+   prog_data.output_vertex_size_hwords =
       ALIGN(output_vertex_size_bytes, 32) / 32;
 
    /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
@@ -238,10 +240,10 @@ brw_codegen_gs_prog(struct brw_context *brw,
    unsigned output_size_bytes;
    if (brw->gen >= 7) {
       output_size_bytes =
-         c.prog_data.output_vertex_size_hwords * 32 * gp->program.VerticesOut;
-      output_size_bytes += 32 * c.prog_data.control_data_header_size_hwords;
+         prog_data.output_vertex_size_hwords * 32 * gp->program.VerticesOut;
+      output_size_bytes += 32 * prog_data.control_data_header_size_hwords;
    } else {
-      output_size_bytes = c.prog_data.output_vertex_size_hwords * 32;
+      output_size_bytes = prog_data.output_vertex_size_hwords * 32;
    }
 
    /* Broadwell stores "Vertex Count" as a full 8 DWord (32 byte) URB output,
@@ -262,11 +264,11 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * a multiple of 128 bytes in gen6.
     */
    if (brw->gen >= 7)
-      c.prog_data.base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
+      prog_data.base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
    else
-      c.prog_data.base.urb_entry_size = ALIGN(output_size_bytes, 128) / 128;
+      prog_data.base.urb_entry_size = ALIGN(output_size_bytes, 128) / 128;
 
-   c.prog_data.output_topology =
+   prog_data.output_topology =
       get_hw_prim_for_gl_prim(gp->program.OutputType);
 
    /* The GLSL linker will have already matched up GS inputs and the outputs
@@ -289,7 +291,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
     * need to program a URB read length of ceiling(num_slots / 2).
     */
-   c.prog_data.base.urb_read_length = (c.input_vue_map.num_slots + 1) / 2;
+   prog_data.base.urb_read_length = (c.input_vue_map.num_slots + 1) / 2;
 
    if (unlikely(INTEL_DEBUG & DEBUG_GS))
       brw_dump_ir("geometry", prog, gs, NULL);
@@ -303,7 +305,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    char *error_str;
    const unsigned *program =
       brw_compile_gs(brw->intelScreen->compiler, brw, mem_ctx, &c,
-                     shader->Program->nir, prog,
+                     &prog_data, shader->Program->nir, prog,
                      st_index, &program_size, &error_str);
    if (program == NULL) {
       ralloc_free(mem_ctx);
@@ -311,16 +313,16 @@ brw_codegen_gs_prog(struct brw_context *brw,
    }
 
    /* Scratch space is used for register spilling */
-   if (c.prog_data.base.base.total_scratch) {
+   if (prog_data.base.base.total_scratch) {
       brw_get_scratch_bo(brw, &stage_state->scratch_bo,
-			 c.prog_data.base.base.total_scratch *
+			 prog_data.base.base.total_scratch *
                          brw->max_gs_threads);
    }
 
    brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
                     &c.key, sizeof(c.key),
                     program, program_size,
-                    &c.prog_data, sizeof(c.prog_data),
+                    &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->gs.prog_data);
    ralloc_free(mem_ctx);
 

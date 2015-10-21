@@ -35,14 +35,16 @@ namespace brw {
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  struct brw_gs_compile *c,
+                                 struct brw_gs_prog_data *prog_data,
                                  const nir_shader *shader,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
    : vec4_visitor(compiler, log_data, &c->key.tex,
-                  &c->prog_data.base, shader,  mem_ctx,
+                  &prog_data->base, shader,  mem_ctx,
                   no_spills, shader_time_index),
-     c(c)
+     c(c),
+     gs_prog_data(prog_data)
 {
 }
 
@@ -80,7 +82,7 @@ vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
     */
    const unsigned num_input_vertices = nir->info.gs.vertices_in;
    assert(num_input_vertices <= MAX_GS_INPUT_VERTICES);
-   unsigned input_array_stride = c->prog_data.base.urb_read_length * 2;
+   unsigned input_array_stride = prog_data->urb_read_length * 2;
 
    for (int slot = 0; slot < c->input_vue_map.num_slots; slot++) {
       int varying = c->input_vue_map.slot_to_varying[slot];
@@ -106,7 +108,7 @@ vec4_gs_visitor::setup_payload()
     * to be interleaved, so one register contains two attribute slots.
     */
    int attributes_per_reg =
-      c->prog_data.base.dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
+      prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
 
    /* If a geometry shader tries to read from an input that wasn't written by
     * the vertex shader, that produces undefined results, but it shouldn't
@@ -124,7 +126,7 @@ vec4_gs_visitor::setup_payload()
    reg++;
 
    /* If the shader uses gl_PrimitiveIDIn, that goes in r1. */
-   if (c->prog_data.include_primitive_id)
+   if (gs_prog_data->include_primitive_id)
       attribute_map[VARYING_SLOT_PRIMITIVE_ID] = attributes_per_reg * reg++;
 
    reg = setup_uniforms(reg);
@@ -222,7 +224,7 @@ vec4_gs_visitor::emit_thread_end()
     */
    int base_mrf = 1;
 
-   bool static_vertex_count = c->prog_data.static_vertex_count != -1;
+   bool static_vertex_count = gs_prog_data->static_vertex_count != -1;
 
    /* If the previous instruction was a URB write, we don't need to issue
     * a second one - we can just set the EOT bit on the previous write.
@@ -271,7 +273,7 @@ vec4_gs_visitor::emit_urb_write_header(int mrf)
    vec4_instruction *inst = emit(MOV(mrf_reg, r0));
    inst->force_writemask_all = true;
    emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, this->vertex_count,
-        (uint32_t) c->prog_data.output_vertex_size_hwords);
+        (uint32_t) gs_prog_data->output_vertex_size_hwords);
 }
 
 
@@ -285,12 +287,12 @@ vec4_gs_visitor::emit_urb_write_opcode(bool complete)
    (void) complete;
 
    vec4_instruction *inst = emit(GS_OPCODE_URB_WRITE);
-   inst->offset = c->prog_data.control_data_header_size_hwords;
+   inst->offset = gs_prog_data->control_data_header_size_hwords;
 
    /* We need to increment Global Offset by 1 to make room for Broadwell's
     * extra "Vertex Count" payload at the beginning of the URB entry.
     */
-   if (devinfo->gen >= 8 && c->prog_data.static_vertex_count == -1)
+   if (devinfo->gen >= 8 && gs_prog_data->static_vertex_count == -1)
       inst->offset++;
 
    inst->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
@@ -409,7 +411,7 @@ vec4_gs_visitor::emit_control_data_bits()
     * URB entry.  Since this is an OWord message, Global Offset is counted
     * in 128-bit units, so we must set it to 2.
     */
-   if (devinfo->gen >= 8 && c->prog_data.static_vertex_count == -1)
+   if (devinfo->gen >= 8 && gs_prog_data->static_vertex_count == -1)
       inst->offset = 2;
    inst->base_mrf = base_mrf;
    inst->mlen = 2;
@@ -536,7 +538,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
     * do for GL_POINTS outputs that don't use streams).
     */
    if (c->control_data_header_size_bits > 0 &&
-       c->prog_data.control_data_format ==
+       gs_prog_data->control_data_format ==
           GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID) {
        this->current_annotation = "emit vertex: Stream control data bits";
        set_stream_control_data_bits(stream_id);
@@ -552,7 +554,7 @@ vec4_gs_visitor::gs_end_primitive()
     * consists of cut bits.  Fortunately, the only time it isn't is when the
     * output type is points, in which case EndPrimitive() is a no-op.
     */
-   if (c->prog_data.control_data_format !=
+   if (gs_prog_data->control_data_format !=
        GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT) {
       return;
    }
@@ -600,6 +602,7 @@ extern "C" const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                struct brw_gs_compile *c,
+               struct brw_gs_prog_data *prog_data,
                const nir_shader *shader,
                struct gl_shader_program *shader_prog,
                int shader_time_index,
@@ -611,14 +614,14 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
        * so without spilling. If the GS invocations count > 1, then we can't use
        * dual object mode.
        */
-      if (c->prog_data.invocations <= 1 &&
+      if (prog_data->invocations <= 1 &&
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
-         c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
+         prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(compiler, log_data, c, shader,
+         vec4_gs_visitor v(compiler, log_data, c, prog_data, shader,
                            mem_ctx, true /* no_spills */, shader_time_index);
          if (v.run()) {
-            vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+            vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
                              INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
             return g.generate_assembly(v.cfg, final_assembly_size, shader);
          }
@@ -648,28 +651,28 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
     * mode is more performant when invocations > 1. Gen6 only supports
     * SINGLE mode.
     */
-   if (c->prog_data.invocations <= 1 || compiler->devinfo->gen < 7)
-      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
+   if (prog_data->invocations <= 1 || compiler->devinfo->gen < 7)
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
    else
-      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
 
    vec4_gs_visitor *gs = NULL;
    const unsigned *ret = NULL;
 
    if (compiler->devinfo->gen >= 7)
-      gs = new vec4_gs_visitor(compiler, log_data, c, shader,
-                               mem_ctx, false /* no_spills */,
+      gs = new vec4_gs_visitor(compiler, log_data, c, prog_data,
+                               shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
    else
-      gs = new gen6_gs_visitor(compiler, log_data, c, shader_prog, shader,
-                               mem_ctx, false /* no_spills */,
+      gs = new gen6_gs_visitor(compiler, log_data, c, prog_data, shader_prog,
+                               shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
 
    if (!gs->run()) {
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, gs->fail_msg);
    } else {
-      vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+      vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
                        INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
       ret = g.generate_assembly(gs->cfg, final_assembly_size, shader);
    }

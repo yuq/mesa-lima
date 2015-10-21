@@ -104,7 +104,7 @@ vec4_gs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       break;
 
    case nir_intrinsic_load_primitive_id:
-      assert(c->prog_data.include_primitive_id);
+      assert(gs_prog_data->include_primitive_id);
       dest = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       emit(MOV(dest, retype(brw_vec4_grf(1, 0), BRW_REGISTER_TYPE_D)));
       break;

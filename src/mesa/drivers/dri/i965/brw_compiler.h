@@ -599,7 +599,6 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 struct brw_gs_compile
 {
    struct brw_gs_prog_key key;
-   struct brw_gs_prog_data prog_data;
    struct brw_vue_map input_vue_map;
 
    unsigned control_data_bits_per_vertex;
@@ -615,6 +614,7 @@ const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
                struct brw_gs_compile *c,
+               struct brw_gs_prog_data *prog_data,
                const struct nir_shader *shader,
                struct gl_shader_program *shader_prog,
                int shader_time_index,
