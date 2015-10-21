@@ -612,6 +612,21 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          }
          break;
 
+      case SHADER_OPCODE_UNTYPED_ATOMIC:
+      case SHADER_OPCODE_UNTYPED_SURFACE_READ:
+      case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
+      case SHADER_OPCODE_TYPED_ATOMIC:
+      case SHADER_OPCODE_TYPED_SURFACE_READ:
+      case SHADER_OPCODE_TYPED_SURFACE_WRITE:
+         /* We only propagate into the surface argument of the
+          * instruction. Everything else goes through LOAD_PAYLOAD.
+          */
+         if (i == 1) {
+            inst->src[i] = val;
+            progress = true;
+         }
+         break;
+
       case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
       case SHADER_OPCODE_BROADCAST:
          inst->src[i] = val;
