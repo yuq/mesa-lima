@@ -3097,7 +3097,7 @@ emit_clip_distance_instructions(struct svga_shader_emitter_v10 *emit)
    unsigned i;
    unsigned clip_plane_enable = emit->key.clip_plane_enable;
    unsigned clip_dist_tmp_index = emit->clip_dist_tmp_index;
-   unsigned num_written_clipdist = emit->info.num_written_clipdistance;
+   int num_written_clipdist = emit->info.num_written_clipdistance;
 
    assert(emit->clip_dist_out_index != INVALID_INDEX);
    assert(emit->clip_dist_tmp_index != INVALID_INDEX);
@@ -3109,7 +3109,7 @@ emit_clip_distance_instructions(struct svga_shader_emitter_v10 *emit)
     */
    emit->clip_dist_tmp_index = INVALID_INDEX;
 
-   for (i = 0; i < 2 && num_written_clipdist; i++, num_written_clipdist-=4) {
+   for (i = 0; i < 2 && num_written_clipdist > 0; i++, num_written_clipdist-=4) {
 
       tmp_clip_dist_src = make_src_temp_reg(clip_dist_tmp_index + i);
 
