@@ -487,54 +487,54 @@ bit_logic_result_type(const struct glsl_type *type_a,
                       ast_operators op,
                       struct _mesa_glsl_parse_state *state, YYLTYPE *loc)
 {
-    if (!state->check_bitwise_operations_allowed(loc)) {
-       return glsl_type::error_type;
-    }
+   if (!state->check_bitwise_operations_allowed(loc)) {
+      return glsl_type::error_type;
+   }
 
-    /* From page 50 (page 56 of PDF) of GLSL 1.30 spec:
-     *
-     *     "The bitwise operators and (&), exclusive-or (^), and inclusive-or
-     *     (|). The operands must be of type signed or unsigned integers or
-     *     integer vectors."
-     */
-    if (!type_a->is_integer()) {
-       _mesa_glsl_error(loc, state, "LHS of `%s' must be an integer",
-                         ast_expression::operator_string(op));
-       return glsl_type::error_type;
-    }
-    if (!type_b->is_integer()) {
-       _mesa_glsl_error(loc, state, "RHS of `%s' must be an integer",
+   /* From page 50 (page 56 of PDF) of GLSL 1.30 spec:
+    *
+    *     "The bitwise operators and (&), exclusive-or (^), and inclusive-or
+    *     (|). The operands must be of type signed or unsigned integers or
+    *     integer vectors."
+    */
+   if (!type_a->is_integer()) {
+      _mesa_glsl_error(loc, state, "LHS of `%s' must be an integer",
                         ast_expression::operator_string(op));
-       return glsl_type::error_type;
-    }
+      return glsl_type::error_type;
+   }
+   if (!type_b->is_integer()) {
+      _mesa_glsl_error(loc, state, "RHS of `%s' must be an integer",
+                       ast_expression::operator_string(op));
+      return glsl_type::error_type;
+   }
 
-    /*     "The fundamental types of the operands (signed or unsigned) must
-     *     match,"
-     */
-    if (type_a->base_type != type_b->base_type) {
-       _mesa_glsl_error(loc, state, "operands of `%s' must have the same "
-                        "base type", ast_expression::operator_string(op));
-       return glsl_type::error_type;
-    }
+   /*     "The fundamental types of the operands (signed or unsigned) must
+    *     match,"
+    */
+   if (type_a->base_type != type_b->base_type) {
+      _mesa_glsl_error(loc, state, "operands of `%s' must have the same "
+                       "base type", ast_expression::operator_string(op));
+      return glsl_type::error_type;
+   }
 
-    /*     "The operands cannot be vectors of differing size." */
-    if (type_a->is_vector() &&
-        type_b->is_vector() &&
-        type_a->vector_elements != type_b->vector_elements) {
-       _mesa_glsl_error(loc, state, "operands of `%s' cannot be vectors of "
-                        "different sizes", ast_expression::operator_string(op));
-       return glsl_type::error_type;
-    }
+   /*     "The operands cannot be vectors of differing size." */
+   if (type_a->is_vector() &&
+       type_b->is_vector() &&
+       type_a->vector_elements != type_b->vector_elements) {
+      _mesa_glsl_error(loc, state, "operands of `%s' cannot be vectors of "
+                       "different sizes", ast_expression::operator_string(op));
+      return glsl_type::error_type;
+   }
 
-    /*     "If one operand is a scalar and the other a vector, the scalar is
-     *     applied component-wise to the vector, resulting in the same type as
-     *     the vector. The fundamental types of the operands [...] will be the
-     *     resulting fundamental type."
-     */
-    if (type_a->is_scalar())
-        return type_b;
-    else
-        return type_a;
+   /*     "If one operand is a scalar and the other a vector, the scalar is
+    *     applied component-wise to the vector, resulting in the same type as
+    *     the vector. The fundamental types of the operands [...] will be the
+    *     resulting fundamental type."
+    */
+   if (type_a->is_scalar())
+       return type_b;
+   else
+       return type_a;
 }
 
 static const struct glsl_type *
