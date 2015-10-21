@@ -1282,9 +1282,9 @@ fs_visitor::emit_sampleid_setup()
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
 
    if (key->compute_sample_id) {
-      fs_reg t1 = vgrf(glsl_type::int_type);
-      fs_reg t2 = vgrf(glsl_type::int_type);
-      t2.type = BRW_REGISTER_TYPE_W;
+      fs_reg t1(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_D);
+      t1.set_smear(0);
+      fs_reg t2(GRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N
@@ -1305,13 +1305,13 @@ fs_visitor::emit_sampleid_setup()
        * are sample 1 of subspan 0; the third group is sample 0 of
        * subspan 1, and finally sample 1 of subspan 1.
        */
-      abld.exec_all()
+      abld.exec_all().group(1, 0)
           .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
                fs_reg(0xc0));
-      abld.exec_all().SHR(t1, t1, fs_reg(5));
+      abld.exec_all().group(1, 0).SHR(t1, t1, fs_reg(5));
 
       /* This works for both SIMD8 and SIMD16 */
-      abld.exec_all()
+      abld.exec_all().group(4, 0)
           .MOV(t2, brw_imm_v(key->persample_2x ? 0x1010 : 0x3210));
 
       /* This special instruction takes care of setting vstride=1,
