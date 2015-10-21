@@ -601,8 +601,7 @@ static void
 _save_wrap_filled_vertex(struct gl_context *ctx)
 {
    struct vbo_save_context *save = &vbo_context(ctx)->save;
-   fi_type *data = save->copied.buffer;
-   GLuint i;
+   unsigned numComponents;
 
    /* Emit a glEnd to close off the last vertex list.
     */
@@ -612,12 +611,12 @@ _save_wrap_filled_vertex(struct gl_context *ctx)
     */
    assert(save->max_vert - save->vert_count > save->copied.nr);
 
-   for (i = 0; i < save->copied.nr; i++) {
-      memcpy(save->buffer_ptr, data, save->vertex_size * sizeof(GLfloat));
-      data += save->vertex_size;
-      save->buffer_ptr += save->vertex_size;
-      save->vert_count++;
-   }
+   numComponents = save->copied.nr * save->vertex_size;
+   memcpy(save->buffer_ptr,
+          save->copied.buffer,
+          numComponents * sizeof(fi_type));
+   save->buffer_ptr += numComponents;
+   save->vert_count += save->copied.nr;
 }
 
 
