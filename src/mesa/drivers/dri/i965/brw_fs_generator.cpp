@@ -1508,7 +1508,7 @@ fs_generator::generate_set_sample_id(fs_inst *inst,
    brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   struct brw_reg reg = retype(stride(src1, 1, 4, 0), BRW_REGISTER_TYPE_UW);
+   struct brw_reg reg = stride(src1, 1, 4, 0);
    if (dispatch_width == 8) {
       brw_ADD(p, dst, src0, reg);
    } else if (dispatch_width == 16) {

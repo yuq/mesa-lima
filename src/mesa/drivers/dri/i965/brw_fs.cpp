@@ -1284,7 +1284,7 @@ fs_visitor::emit_sampleid_setup()
    if (key->compute_sample_id) {
       fs_reg t1 = vgrf(glsl_type::int_type);
       fs_reg t2 = vgrf(glsl_type::int_type);
-      t2.type = BRW_REGISTER_TYPE_UW;
+      t2.type = BRW_REGISTER_TYPE_W;
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N
@@ -1306,7 +1306,7 @@ fs_visitor::emit_sampleid_setup()
        * subspan 1, and finally sample 1 of subspan 1.
        */
       abld.exec_all()
-          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD)),
+          .AND(t1, fs_reg(retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_D)),
                fs_reg(0xc0));
       abld.exec_all().SHR(t1, t1, fs_reg(5));
 
