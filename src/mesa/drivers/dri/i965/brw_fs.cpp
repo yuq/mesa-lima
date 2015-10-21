@@ -2614,7 +2614,7 @@ fs_visitor::eliminate_find_live_channel()
       case SHADER_OPCODE_FIND_LIVE_CHANNEL:
          if (depth == 0) {
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0] = fs_reg(0);
+            inst->src[0] = fs_reg(0u);
             inst->sources = 1;
             inst->force_writemask_all = true;
             progress = true;
