@@ -394,10 +394,10 @@ typedef struct {
     */
    bool is_packed;
 
-   /** set of nir_instr's where this register is used (read from) */
+   /** set of nir_src's where this register is used (read from) */
    struct list_head uses;
 
-   /** set of nir_instr's where this register is defined (written to) */
+   /** set of nir_dest's where this register is defined (written to) */
    struct list_head defs;
 
    /** set of nir_if's where this register is used as a condition */
@@ -1621,9 +1621,9 @@ nir_function_overload *nir_function_overload_create(nir_function *func);
 
 nir_function_impl *nir_function_impl_create(nir_function_overload *func);
 
-nir_block *nir_block_create(void *mem_ctx);
-nir_if *nir_if_create(void *mem_ctx);
-nir_loop *nir_loop_create(void *mem_ctx);
+nir_block *nir_block_create(nir_shader *shader);
+nir_if *nir_if_create(nir_shader *shader);
+nir_loop *nir_loop_create(nir_shader *shader);
 
 nir_function_impl *nir_cf_node_get_function(nir_cf_node *node);
 
