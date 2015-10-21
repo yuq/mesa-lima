@@ -69,6 +69,10 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
 
       brw_disassemble(devinfo, assembly, start_offset, end_offset, stderr);
 
+      if (annotation[i].error) {
+         fputs(annotation[i].error, stderr);
+      }
+
       if (annotation[i].block_end) {
          fprintf(stderr, "   END B%d", annotation[i].block_end->num);
          foreach_list_typed(struct bblock_link, successor_link, link,
@@ -82,6 +86,24 @@ dump_assembly(void *assembly, int num_annotations, struct annotation *annotation
    fprintf(stderr, "\n");
 }
 
+static bool
+annotation_array_ensure_space(struct annotation_info *annotation)
+{
+   if (annotation->ann_size <= annotation->ann_count) {
+      int old_size = annotation->ann_size;
+      annotation->ann_size = MAX2(1024, annotation->ann_size * 2);
+      annotation->ann = reralloc(annotation->mem_ctx, annotation->ann,
+                                 struct annotation, annotation->ann_size);
+      if (!annotation->ann)
+         return false;
+
+      memset(annotation->ann + old_size, 0,
+             (annotation->ann_size - old_size) * sizeof(struct annotation));
+   }
+
+   return true;
+}
+
 void annotate(const struct brw_device_info *devinfo,
               struct annotation_info *annotation, const struct cfg_t *cfg,
               struct backend_instruction *inst, unsigned offset)
@@ -89,17 +111,8 @@ void annotate(const struct brw_device_info *devinfo,
    if (annotation->mem_ctx == NULL)
       annotation->mem_ctx = ralloc_context(NULL);
 
-   if (annotation->ann_size <= annotation->ann_count) {
-      int old_size = annotation->ann_size;
-      annotation->ann_size = MAX2(1024, annotation->ann_size * 2);
-      annotation->ann = reralloc(annotation->mem_ctx, annotation->ann,
-                                 struct annotation, annotation->ann_size);
-      if (!annotation->ann)
-         return;
-
-      memset(annotation->ann + old_size, 0,
-             (annotation->ann_size - old_size) * sizeof(struct annotation));
-   }
+   if (!annotation_array_ensure_space(annotation))
+      return;
 
    struct annotation *ann = &annotation->ann[annotation->ann_count++];
    ann->offset = offset;
@@ -155,4 +168,48 @@ annotation_finalize(struct annotation_info *annotation,
                                  struct annotation, annotation->ann_size + 1);
    }
    annotation->ann[annotation->ann_count].offset = next_inst_offset;
+}
+
+void
+annotation_insert_error(struct annotation_info *annotation, unsigned offset,
+                        const char *error)
+{
+   struct annotation *ann;
+
+   if (!annotation->ann_count)
+      return;
+
+   /* We may have to split an annotation, so ensure we have enough space
+    * allocated for that case up front.
+    */
+   if (!annotation_array_ensure_space(annotation))
+      return;
+
+   for (int i = 0; i < annotation->ann_count; i++) {
+      struct annotation *cur = &annotation->ann[i];
+      struct annotation *next = &annotation->ann[i + 1];
+      ann = cur;
+
+      if (next->offset <= offset)
+         continue;
+
+      if (offset + sizeof(brw_inst) != next->offset) {
+         memmove(next, cur,
+                 (annotation->ann_count - i + 2) * sizeof(struct annotation));
+         cur->error = NULL;
+         cur->error_length = 0;
+         cur->block_end = NULL;
+         next->offset = offset + sizeof(brw_inst);
+         next->block_start = NULL;
+         annotation->ann_count++;
+      }
+      break;
+   }
+
+   assume(ann != NULL);
+
+   if (ann->error)
+      ralloc_strcat(&ann->error, error);
+   else
+      ann->error = ralloc_strdup(annotation->mem_ctx, error);
 }
