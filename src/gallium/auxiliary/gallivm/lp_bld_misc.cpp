@@ -497,7 +497,33 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 #endif
    }
 
-   llvm::SmallVector<std::string, 1> MAttrs;
+   llvm::SmallVector<std::string, 16> MAttrs;
+   if (util_cpu_caps.has_sse) {
+      MAttrs.push_back("+sse");
+   }
+   if (util_cpu_caps.has_sse2) {
+      MAttrs.push_back("+sse2");
+   }
+   if (util_cpu_caps.has_sse3) {
+      MAttrs.push_back("+sse3");
+   }
+   if (util_cpu_caps.has_ssse3) {
+      MAttrs.push_back("+ssse3");
+   }
+   if (util_cpu_caps.has_sse4_1) {
+#if HAVE_LLVM >= 0x0304
+      MAttrs.push_back("+sse4.1");
+#else
+      MAttrs.push_back("+sse41");
+#endif
+   }
+   if (util_cpu_caps.has_sse4_2) {
+#if HAVE_LLVM >= 0x0304
+      MAttrs.push_back("+sse4.2");
+#else
+      MAttrs.push_back("+sse42");
+#endif
+   }
    if (util_cpu_caps.has_avx) {
       /*
        * AVX feature is not automatically detected from CPUID by the X86 target
@@ -509,8 +535,14 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
       if (util_cpu_caps.has_f16c) {
          MAttrs.push_back("+f16c");
       }
-      builder.setMAttrs(MAttrs);
+      if (util_cpu_caps.has_avx2) {
+         MAttrs.push_back("+avx2");
+      }
    }
+   if (util_cpu_caps.has_altivec) {
+      MAttrs.push_back("+altivec");
+   }
+   builder.setMAttrs(MAttrs);
 
 #if HAVE_LLVM >= 0x0305
    StringRef MCPU = llvm::sys::getHostCPUName();
