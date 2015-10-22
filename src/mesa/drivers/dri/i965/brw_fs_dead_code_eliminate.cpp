@@ -105,7 +105,7 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->writes_flag()) {
+         if (inst->writes_flag() && !inst->predicate) {
             BITSET_CLEAR(flag_live, inst->flag_subreg);
          }
 
