@@ -2470,6 +2470,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       case SpvExecutionModeEarlyFragmentTests:
+         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
          b->shader->info.fs.early_fragment_tests = true;
          break;
 
@@ -2479,15 +2480,19 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       case SpvExecutionModeDepthReplacing:
+         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
          b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_ANY;
          break;
       case SpvExecutionModeDepthGreater:
+         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
          b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_GREATER;
          break;
       case SpvExecutionModeDepthLess:
+         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
          b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_LESS;
          break;
       case SpvExecutionModeDepthUnchanged:
+         assert(b->shader->stage == MESA_SHADER_FRAGMENT);
          b->shader->info.fs.depth_layout = FRAG_DEPTH_LAYOUT_UNCHANGED;
          break;
 
