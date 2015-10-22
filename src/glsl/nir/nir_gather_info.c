@@ -48,6 +48,12 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
       shader->info.system_values_read |=
          (1 << nir_system_value_from_intrinsic(instr->intrinsic));
       break;
+
+   case nir_intrinsic_end_primitive:
+      assert(shader->stage == MESA_SHADER_GEOMETRY);
+      shader->info.gs.uses_end_primitive = 1;
+      break;
+
    default:
       break;
    }
@@ -89,6 +95,7 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
    foreach_list_typed(nir_variable, var, node, &shader->inputs)
       shader->info.inputs_read |= (1ull << var->data.location);
 
+   /* TODO: Some day we may need to add stream support to NIR */
    shader->info.outputs_written = 0;
    foreach_list_typed(nir_variable, var, node, &shader->outputs)
       shader->info.outputs_written |= (1ull << var->data.location);
