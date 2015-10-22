@@ -197,6 +197,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_DEPTH_BOUNDS_TEST:
         case PIPE_CAP_TGSI_TXQS:
         case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
+        case PIPE_CAP_SHAREABLE_SHADERS:
             return 0;
 
         /* SWTCL-only features. */
@@ -302,6 +303,8 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
             return 0;
+        case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+            return 32;
         case PIPE_SHADER_CAP_PREFERRED_IR:
             return PIPE_SHADER_IR_TGSI;
         }
@@ -358,6 +361,8 @@ static int r300_get_shader_param(struct pipe_screen *pscreen, unsigned shader, e
         case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
         case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
             return 0;
+        case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+            return 32;
         case PIPE_SHADER_CAP_PREFERRED_IR:
             return PIPE_SHADER_IR_TGSI;
         }

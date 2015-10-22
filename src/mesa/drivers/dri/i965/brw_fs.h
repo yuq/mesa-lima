@@ -62,6 +62,8 @@ namespace brw {
    class fs_live_variables;
 }
 
+struct brw_gs_compile;
+
 static inline fs_reg
 offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
 {
@@ -99,7 +101,12 @@ public:
               const nir_shader *shader,
               unsigned dispatch_width,
               int shader_time_index);
-
+   fs_visitor(const struct brw_compiler *compiler, void *log_data,
+              void *mem_ctx,
+              struct brw_gs_compile *gs_compile,
+              struct brw_gs_prog_data *prog_data,
+              const nir_shader *shader);
+   void init();
    ~fs_visitor();
 
    fs_reg vgrf(const glsl_type *const type);
@@ -298,6 +305,8 @@ public:
    const void *const key;
    const struct brw_sampler_prog_key_data *key_tex;
 
+   struct brw_gs_compile *gs_compile;
+
    struct brw_stage_prog_data *prog_data;
    struct gl_program *prog;
 
@@ -415,6 +424,7 @@ private:
                       struct brw_reg implied_header,
                       GLuint nr);
    void generate_fb_write(fs_inst *inst, struct brw_reg payload);
+   void generate_urb_read(fs_inst *inst, struct brw_reg dst, struct brw_reg payload);
    void generate_urb_write(fs_inst *inst, struct brw_reg payload);
    void generate_cs_terminate(fs_inst *inst, struct brw_reg payload);
    void generate_barrier(fs_inst *inst, struct brw_reg src);

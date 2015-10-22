@@ -35,14 +35,16 @@ namespace brw {
 vec4_gs_visitor::vec4_gs_visitor(const struct brw_compiler *compiler,
                                  void *log_data,
                                  struct brw_gs_compile *c,
+                                 struct brw_gs_prog_data *prog_data,
                                  const nir_shader *shader,
                                  void *mem_ctx,
                                  bool no_spills,
                                  int shader_time_index)
    : vec4_visitor(compiler, log_data, &c->key.tex,
-                  &c->prog_data.base, shader,  mem_ctx,
+                  &prog_data->base, shader,  mem_ctx,
                   no_spills, shader_time_index),
-     c(c)
+     c(c),
+     gs_prog_data(prog_data)
 {
 }
 
@@ -78,9 +80,9 @@ vec4_gs_visitor::setup_varying_inputs(int payload_reg, int *attribute_map,
     * so the total number of input slots that will be delivered to the GS (and
     * thus the stride of the input arrays) is urb_read_length * 2.
     */
-   const unsigned num_input_vertices = c->gp->program.VerticesIn;
+   const unsigned num_input_vertices = nir->info.gs.vertices_in;
    assert(num_input_vertices <= MAX_GS_INPUT_VERTICES);
-   unsigned input_array_stride = c->prog_data.base.urb_read_length * 2;
+   unsigned input_array_stride = prog_data->urb_read_length * 2;
 
    for (int slot = 0; slot < c->input_vue_map.num_slots; slot++) {
       int varying = c->input_vue_map.slot_to_varying[slot];
@@ -106,7 +108,7 @@ vec4_gs_visitor::setup_payload()
     * to be interleaved, so one register contains two attribute slots.
     */
    int attributes_per_reg =
-      c->prog_data.base.dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
+      prog_data->dispatch_mode == DISPATCH_MODE_4X2_DUAL_OBJECT ? 1 : 2;
 
    /* If a geometry shader tries to read from an input that wasn't written by
     * the vertex shader, that produces undefined results, but it shouldn't
@@ -124,7 +126,7 @@ vec4_gs_visitor::setup_payload()
    reg++;
 
    /* If the shader uses gl_PrimitiveIDIn, that goes in r1. */
-   if (c->prog_data.include_primitive_id)
+   if (gs_prog_data->include_primitive_id)
       attribute_map[VARYING_SLOT_PRIMITIVE_ID] = attributes_per_reg * reg++;
 
    reg = setup_uniforms(reg);
@@ -182,9 +184,9 @@ vec4_gs_visitor::emit_prolog()
     * to account for the fact that the vertex shader stored it in the w
     * component of VARYING_SLOT_PSIZ.
     */
-   if (c->gp->program.Base.InputsRead & VARYING_BIT_PSIZ) {
+   if (nir->info.inputs_read & VARYING_BIT_PSIZ) {
       this->current_annotation = "swizzle gl_PointSize input";
-      for (int vertex = 0; vertex < c->gp->program.VerticesIn; vertex++) {
+      for (int vertex = 0; vertex < (int)nir->info.gs.vertices_in; vertex++) {
          dst_reg dst(ATTR,
                      BRW_VARYING_SLOT_COUNT * vertex + VARYING_SLOT_PSIZ);
          dst.type = BRW_REGISTER_TYPE_F;
@@ -222,7 +224,7 @@ vec4_gs_visitor::emit_thread_end()
     */
    int base_mrf = 1;
 
-   bool static_vertex_count = c->prog_data.static_vertex_count != -1;
+   bool static_vertex_count = gs_prog_data->static_vertex_count != -1;
 
    /* If the previous instruction was a URB write, we don't need to issue
     * a second one - we can just set the EOT bit on the previous write.
@@ -271,7 +273,7 @@ vec4_gs_visitor::emit_urb_write_header(int mrf)
    vec4_instruction *inst = emit(MOV(mrf_reg, r0));
    inst->force_writemask_all = true;
    emit(GS_OPCODE_SET_WRITE_OFFSET, mrf_reg, this->vertex_count,
-        (uint32_t) c->prog_data.output_vertex_size_hwords);
+        (uint32_t) gs_prog_data->output_vertex_size_hwords);
 }
 
 
@@ -285,12 +287,12 @@ vec4_gs_visitor::emit_urb_write_opcode(bool complete)
    (void) complete;
 
    vec4_instruction *inst = emit(GS_OPCODE_URB_WRITE);
-   inst->offset = c->prog_data.control_data_header_size_hwords;
+   inst->offset = gs_prog_data->control_data_header_size_hwords;
 
    /* We need to increment Global Offset by 1 to make room for Broadwell's
     * extra "Vertex Count" payload at the beginning of the URB entry.
     */
-   if (devinfo->gen >= 8 && c->prog_data.static_vertex_count == -1)
+   if (devinfo->gen >= 8 && gs_prog_data->static_vertex_count == -1)
       inst->offset++;
 
    inst->urb_write_flags = BRW_URB_WRITE_PER_SLOT_OFFSET;
@@ -409,7 +411,7 @@ vec4_gs_visitor::emit_control_data_bits()
     * URB entry.  Since this is an OWord message, Global Offset is counted
     * in 128-bit units, so we must set it to 2.
     */
-   if (devinfo->gen >= 8 && c->prog_data.static_vertex_count == -1)
+   if (devinfo->gen >= 8 && gs_prog_data->static_vertex_count == -1)
       inst->offset = 2;
    inst->base_mrf = base_mrf;
    inst->mlen = 2;
@@ -536,7 +538,7 @@ vec4_gs_visitor::gs_emit_vertex(int stream_id)
     * do for GL_POINTS outputs that don't use streams).
     */
    if (c->control_data_header_size_bits > 0 &&
-       c->prog_data.control_data_format ==
+       gs_prog_data->control_data_format ==
           GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID) {
        this->current_annotation = "emit vertex: Stream control data bits";
        set_stream_control_data_bits(stream_id);
@@ -552,7 +554,7 @@ vec4_gs_visitor::gs_end_primitive()
     * consists of cut bits.  Fortunately, the only time it isn't is when the
     * output type is points, in which case EndPrimitive() is a no-op.
     */
-   if (c->prog_data.control_data_format !=
+   if (gs_prog_data->control_data_format !=
        GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT) {
       return;
    }
@@ -598,27 +600,231 @@ vec4_gs_visitor::gs_end_primitive()
 
 extern "C" const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
-               struct brw_gs_compile *c,
+               void *mem_ctx,
+               const struct brw_gs_prog_key *key,
+               struct brw_gs_prog_data *prog_data,
                const nir_shader *shader,
                struct gl_shader_program *shader_prog,
-               void *mem_ctx,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   struct brw_gs_compile c;
+   memset(&c, 0, sizeof(c));
+   c.key = *key;
+
+   prog_data->include_primitive_id =
+      (shader->info.inputs_read & VARYING_BIT_PRIMITIVE_ID) != 0;
+
+   prog_data->invocations = shader->info.gs.invocations;
+
+   if (compiler->devinfo->gen >= 8)
+      prog_data->static_vertex_count = nir_gs_count_vertices(shader);
+
+   if (compiler->devinfo->gen >= 7) {
+      if (shader->info.gs.output_primitive == GL_POINTS) {
+         /* When the output type is points, the geometry shader may output data
+          * to multiple streams, and EndPrimitive() has no effect.  So we
+          * configure the hardware to interpret the control data as stream ID.
+          */
+         prog_data->control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID;
+
+         /* We only have to emit control bits if we are using streams */
+         if (shader_prog && shader_prog->Geom.UsesStreams)
+            c.control_data_bits_per_vertex = 2;
+         else
+            c.control_data_bits_per_vertex = 0;
+      } else {
+         /* When the output type is triangle_strip or line_strip, EndPrimitive()
+          * may be used to terminate the current strip and start a new one
+          * (similar to primitive restart), and outputting data to multiple
+          * streams is not supported.  So we configure the hardware to interpret
+          * the control data as EndPrimitive information (a.k.a. "cut bits").
+          */
+         prog_data->control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_CUT;
+
+         /* We only need to output control data if the shader actually calls
+          * EndPrimitive().
+          */
+         c.control_data_bits_per_vertex =
+            shader->info.gs.uses_end_primitive ? 1 : 0;
+      }
+   } else {
+      /* There are no control data bits in gen6. */
+      c.control_data_bits_per_vertex = 0;
+
+      /* If it is using transform feedback, enable it */
+      if (shader->info.has_transform_feedback_varyings)
+         prog_data->gen6_xfb_enabled = true;
+      else
+         prog_data->gen6_xfb_enabled = false;
+   }
+   c.control_data_header_size_bits =
+      shader->info.gs.vertices_out * c.control_data_bits_per_vertex;
+
+   /* 1 HWORD = 32 bytes = 256 bits */
+   prog_data->control_data_header_size_hwords =
+      ALIGN(c.control_data_header_size_bits, 256) / 256;
+
+   /* Compute the output vertex size.
+    *
+    * From the Ivy Bridge PRM, Vol2 Part1 7.2.1.1 STATE_GS - Output Vertex
+    * Size (p168):
+    *
+    *     [0,62] indicating [1,63] 16B units
+    *
+    *     Specifies the size of each vertex stored in the GS output entry
+    *     (following any Control Header data) as a number of 128-bit units
+    *     (minus one).
+    *
+    *     Programming Restrictions: The vertex size must be programmed as a
+    *     multiple of 32B units with the following exception: Rendering is
+    *     disabled (as per SOL stage state) and the vertex size output by the
+    *     GS thread is 16B.
+    *
+    *     If rendering is enabled (as per SOL state) the vertex size must be
+    *     programmed as a multiple of 32B units. In other words, the only time
+    *     software can program a vertex size with an odd number of 16B units
+    *     is when rendering is disabled.
+    *
+    * Note: B=bytes in the above text.
+    *
+    * It doesn't seem worth the extra trouble to optimize the case where the
+    * vertex size is 16B (especially since this would require special-casing
+    * the GEN assembly that writes to the URB).  So we just set the vertex
+    * size to a multiple of 32B (2 vec4's) in all cases.
+    *
+    * The maximum output vertex size is 62*16 = 992 bytes (31 hwords).  We
+    * budget that as follows:
+    *
+    *   512 bytes for varyings (a varying component is 4 bytes and
+    *             gl_MaxGeometryOutputComponents = 128)
+    *    16 bytes overhead for VARYING_SLOT_PSIZ (each varying slot is 16
+    *             bytes)
+    *    16 bytes overhead for gl_Position (we allocate it a slot in the VUE
+    *             even if it's not used)
+    *    32 bytes overhead for gl_ClipDistance (we allocate it 2 VUE slots
+    *             whenever clip planes are enabled, even if the shader doesn't
+    *             write to gl_ClipDistance)
+    *    16 bytes overhead since the VUE size must be a multiple of 32 bytes
+    *             (see below)--this causes up to 1 VUE slot to be wasted
+    *   400 bytes available for varying packing overhead
+    *
+    * Worst-case varying packing overhead is 3/4 of a varying slot (12 bytes)
+    * per interpolation type, so this is plenty.
+    *
+    */
+   unsigned output_vertex_size_bytes = prog_data->base.vue_map.num_slots * 16;
+   assert(compiler->devinfo->gen == 6 ||
+          output_vertex_size_bytes <= GEN7_MAX_GS_OUTPUT_VERTEX_SIZE_BYTES);
+   prog_data->output_vertex_size_hwords =
+      ALIGN(output_vertex_size_bytes, 32) / 32;
+
+   /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
+    * That divides up as follows:
+    *
+    *     64 bytes for the control data header (cut indices or StreamID bits)
+    *   4096 bytes for varyings (a varying component is 4 bytes and
+    *              gl_MaxGeometryTotalOutputComponents = 1024)
+    *   4096 bytes overhead for VARYING_SLOT_PSIZ (each varying slot is 16
+    *              bytes/vertex and gl_MaxGeometryOutputVertices is 256)
+    *   4096 bytes overhead for gl_Position (we allocate it a slot in the VUE
+    *              even if it's not used)
+    *   8192 bytes overhead for gl_ClipDistance (we allocate it 2 VUE slots
+    *              whenever clip planes are enabled, even if the shader doesn't
+    *              write to gl_ClipDistance)
+    *   4096 bytes overhead since the VUE size must be a multiple of 32
+    *              bytes (see above)--this causes up to 1 VUE slot to be wasted
+    *   8128 bytes available for varying packing overhead
+    *
+    * Worst-case varying packing overhead is 3/4 of a varying slot per
+    * interpolation type, which works out to 3072 bytes, so this would allow
+    * us to accommodate 2 interpolation types without any danger of running
+    * out of URB space.
+    *
+    * In practice, the risk of running out of URB space is very small, since
+    * the above figures are all worst-case, and most of them scale with the
+    * number of output vertices.  So we'll just calculate the amount of space
+    * we need, and if it's too large, fail to compile.
+    *
+    * The above is for gen7+ where we have a single URB entry that will hold
+    * all the output. In gen6, we will have to allocate URB entries for every
+    * vertex we emit, so our URB entries only need to be large enough to hold
+    * a single vertex. Also, gen6 does not have a control data header.
+    */
+   unsigned output_size_bytes;
+   if (compiler->devinfo->gen >= 7) {
+      output_size_bytes =
+         prog_data->output_vertex_size_hwords * 32 * shader->info.gs.vertices_out;
+      output_size_bytes += 32 * prog_data->control_data_header_size_hwords;
+   } else {
+      output_size_bytes = prog_data->output_vertex_size_hwords * 32;
+   }
+
+   /* Broadwell stores "Vertex Count" as a full 8 DWord (32 byte) URB output,
+    * which comes before the control header.
+    */
+   if (compiler->devinfo->gen >= 8)
+      output_size_bytes += 32;
+
+   assert(output_size_bytes >= 1);
+   int max_output_size_bytes = GEN7_MAX_GS_URB_ENTRY_SIZE_BYTES;
+   if (compiler->devinfo->gen == 6)
+      max_output_size_bytes = GEN6_MAX_GS_URB_ENTRY_SIZE_BYTES;
+   if (output_size_bytes > max_output_size_bytes)
+      return false;
+
+
+   /* URB entry sizes are stored as a multiple of 64 bytes in gen7+ and
+    * a multiple of 128 bytes in gen6.
+    */
+   if (compiler->devinfo->gen >= 7)
+      prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
+   else
+      prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 128) / 128;
+
+   prog_data->output_topology =
+      get_hw_prim_for_gl_prim(shader->info.gs.output_primitive);
+
+   /* The GLSL linker will have already matched up GS inputs and the outputs
+    * of prior stages.  The driver does extend VS outputs in some cases, but
+    * only for legacy OpenGL or Gen4-5 hardware, neither of which offer
+    * geometry shader support.  So we can safely ignore that.
+    *
+    * For SSO pipelines, we use a fixed VUE map layout based on variable
+    * locations, so we can rely on rendezvous-by-location making this work.
+    *
+    * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
+    * written by previous stages and shows up via payload magic.
+    */
+   GLbitfield64 inputs_read =
+      shader->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
+   brw_compute_vue_map(compiler->devinfo,
+                       &c.input_vue_map, inputs_read,
+                       shader->info.separate_shader);
+
+   /* GS inputs are read from the VUE 256 bits (2 vec4's) at a time, so we
+    * need to program a URB read length of ceiling(num_slots / 2).
+    */
+   prog_data->base.urb_read_length = (c.input_vue_map.num_slots + 1) / 2;
+
+   /* Now that prog_data setup is done, we are ready to actually compile the
+    * program.
+    */
+
    if (compiler->devinfo->gen >= 7) {
       /* Compile the geometry shader in DUAL_OBJECT dispatch mode, if we can do
        * so without spilling. If the GS invocations count > 1, then we can't use
        * dual object mode.
        */
-      if (c->prog_data.invocations <= 1 &&
+      if (prog_data->invocations <= 1 &&
           likely(!(INTEL_DEBUG & DEBUG_NO_DUAL_OBJECT_GS))) {
-         c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
+         prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_OBJECT;
 
-         vec4_gs_visitor v(compiler, log_data, c, shader,
+         vec4_gs_visitor v(compiler, log_data, &c, prog_data, shader,
                            mem_ctx, true /* no_spills */, shader_time_index);
          if (v.run()) {
-            vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+            vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
                              INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
             return g.generate_assembly(v.cfg, final_assembly_size, shader);
          }
@@ -648,28 +854,28 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
     * mode is more performant when invocations > 1. Gen6 only supports
     * SINGLE mode.
     */
-   if (c->prog_data.invocations <= 1 || compiler->devinfo->gen < 7)
-      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
+   if (prog_data->invocations <= 1 || compiler->devinfo->gen < 7)
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X1_SINGLE;
    else
-      c->prog_data.base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
+      prog_data->base.dispatch_mode = DISPATCH_MODE_4X2_DUAL_INSTANCE;
 
    vec4_gs_visitor *gs = NULL;
    const unsigned *ret = NULL;
 
    if (compiler->devinfo->gen >= 7)
-      gs = new vec4_gs_visitor(compiler, log_data, c, shader,
-                               mem_ctx, false /* no_spills */,
+      gs = new vec4_gs_visitor(compiler, log_data, &c, prog_data,
+                               shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
    else
-      gs = new gen6_gs_visitor(compiler, log_data, c, shader_prog, shader,
-                               mem_ctx, false /* no_spills */,
+      gs = new gen6_gs_visitor(compiler, log_data, &c, prog_data, shader_prog,
+                               shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
 
    if (!gs->run()) {
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, gs->fail_msg);
    } else {
-      vec4_generator g(compiler, log_data, &c->prog_data.base, mem_ctx,
+      vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
                        INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
       ret = g.generate_assembly(gs->cfg, final_assembly_size, shader);
    }

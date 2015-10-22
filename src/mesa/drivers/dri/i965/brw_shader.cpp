@@ -79,6 +79,8 @@ is_scalar_shader_stage(const struct brw_compiler *compiler, int stage)
    case MESA_SHADER_FRAGMENT:
    case MESA_SHADER_COMPUTE:
       return true;
+   case MESA_SHADER_GEOMETRY:
+      return compiler->scalar_gs;
    case MESA_SHADER_VERTEX:
       return compiler->scalar_vs;
    default:
@@ -100,6 +102,9 @@ brw_compiler_create(void *mem_ctx, const struct brw_device_info *devinfo)
 
    if (devinfo->gen >= 8 && !(INTEL_DEBUG & DEBUG_VEC4VS))
       compiler->scalar_vs = true;
+
+   if (devinfo->gen >= 8 && brw_env_var_as_boolean("INTEL_SCALAR_GS", false))
+      compiler->scalar_gs = true;
 
    nir_shader_compiler_options *nir_options =
       rzalloc(compiler, nir_shader_compiler_options);
@@ -411,6 +416,14 @@ brw_instruction_name(enum opcode op)
       return "gen7_scratch_read";
    case SHADER_OPCODE_URB_WRITE_SIMD8:
       return "gen8_urb_write_simd8";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+      return "gen8_urb_write_simd8_per_slot";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+      return "gen8_urb_write_simd8_masked";
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
+      return "gen8_urb_write_simd8_masked_per_slot";
+   case SHADER_OPCODE_URB_READ_SIMD8:
+      return "urb_read_simd8";
 
    case SHADER_OPCODE_FIND_LIVE_CHANNEL:
       return "find_live_channel";
@@ -964,6 +977,9 @@ backend_instruction::has_side_effects() const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE_LOGICAL:
    case SHADER_OPCODE_MEMORY_FENCE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_BARRIER:
       return true;

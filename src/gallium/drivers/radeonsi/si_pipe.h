@@ -152,6 +152,15 @@ struct si_viewports {
 	struct pipe_viewport_state	states[SI_MAX_VIEWPORTS];
 };
 
+/* A shader state consists of the shader selector, which is a constant state
+ * object shared by multiple contexts and shouldn't be modified, and
+ * the current shader variant selected for this context.
+ */
+struct si_shader_ctx_state {
+	struct si_shader_selector	*cso;
+	struct si_shader		*current;
+};
+
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -162,7 +171,7 @@ struct si_context {
 	void				*pstipple_sampler_state;
 	struct si_screen		*screen;
 	struct pipe_fence_handle	*last_gfx_fence;
-	struct si_shader_selector	*fixed_func_tcs_shader;
+	struct si_shader_ctx_state	fixed_func_tcs_shader;
 	LLVMTargetMachineRef		tm;
 
 	/* Atoms (direct states). */
@@ -199,11 +208,11 @@ struct si_context {
 	void				*dummy_pixel_shader;
 
 	/* shaders */
-	struct si_shader_selector	*ps_shader;
-	struct si_shader_selector	*gs_shader;
-	struct si_shader_selector	*vs_shader;
-	struct si_shader_selector	*tcs_shader;
-	struct si_shader_selector	*tes_shader;
+	struct si_shader_ctx_state	ps_shader;
+	struct si_shader_ctx_state	gs_shader;
+	struct si_shader_ctx_state	vs_shader;
+	struct si_shader_ctx_state	tcs_shader;
+	struct si_shader_ctx_state	tes_shader;
 	struct si_cs_shader_state	cs_shader_state;
 
 	/* shader information */

@@ -233,6 +233,18 @@ bool opt_predicated_break(struct backend_shader *s);
 extern "C" {
 #endif
 
+/**
+ * Scratch data used when compiling a GLSL geometry shader.
+ */
+struct brw_gs_compile
+{
+   struct brw_gs_prog_key key;
+   struct brw_vue_map input_vue_map;
+
+   unsigned control_data_bits_per_vertex;
+   unsigned control_data_header_size_bits;
+};
+
 void
 brw_assign_common_binding_table_offsets(gl_shader_stage stage,
                                         const struct brw_device_info *devinfo,

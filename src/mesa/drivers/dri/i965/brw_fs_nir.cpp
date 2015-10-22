@@ -30,6 +30,7 @@
 #include "brw_fs_surface_builder.h"
 #include "brw_nir.h"
 #include "brw_fs_surface_builder.h"
+#include "brw_vec4_gs_visitor.h"
 
 using namespace brw;
 using namespace brw::surface_access;
@@ -186,6 +187,18 @@ emit_system_values_block(nir_block *block, void *void_visitor)
          reg = &v->nir_system_values[SYSTEM_VALUE_INSTANCE_ID];
          if (reg->file == BAD_FILE)
             *reg = *v->emit_vs_system_value(SYSTEM_VALUE_INSTANCE_ID);
+         break;
+
+      case nir_intrinsic_load_invocation_id:
+         assert(v->stage == MESA_SHADER_GEOMETRY);
+         reg = &v->nir_system_values[SYSTEM_VALUE_INVOCATION_ID];
+         if (reg->file == BAD_FILE) {
+            const fs_builder abld = v->bld.annotate("gl_InvocationID", NULL);
+            fs_reg g1(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
+            fs_reg iid = abld.vgrf(BRW_REGISTER_TYPE_UD, 1);
+            abld.SHR(iid, g1, fs_reg(27u));
+            *reg = iid;
+         }
          break;
 
       case nir_intrinsic_load_sample_pos:
@@ -1367,9 +1380,17 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_load_vertex_id:
       unreachable("should be lowered by lower_vertex_id()");
 
+   case nir_intrinsic_load_primitive_id:
+      assert(stage == MESA_SHADER_GEOMETRY);
+      assert(((struct brw_gs_prog_data *)prog_data)->include_primitive_id);
+      bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD),
+              retype(fs_reg(brw_vec8_grf(2, 0)), BRW_REGISTER_TYPE_UD));
+      break;
+
    case nir_intrinsic_load_vertex_id_zero_base:
    case nir_intrinsic_load_base_vertex:
    case nir_intrinsic_load_instance_id:
+   case nir_intrinsic_load_invocation_id:
    case nir_intrinsic_load_sample_mask_in:
    case nir_intrinsic_load_sample_id: {
       gl_system_value sv = nir_system_value_from_intrinsic(instr->intrinsic);

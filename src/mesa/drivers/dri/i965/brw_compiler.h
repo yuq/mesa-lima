@@ -90,6 +90,7 @@ struct brw_compiler {
    void (*shader_perf_log)(void *, const char *str, ...) PRINTFLIKE(2, 3);
 
    bool scalar_vs;
+   bool scalar_gs;
    struct gl_shader_compiler_options glsl_compiler_options[MESA_SHADER_STAGES];
 };
 
@@ -488,6 +489,9 @@ struct brw_vue_prog_data {
    struct brw_stage_prog_data base;
    struct brw_vue_map vue_map;
 
+   /** Should the hardware deliver input VUE handles for URB pull loads? */
+   bool include_vue_handles;
+
    GLuint urb_read_length;
    GLuint total_grf;
 
@@ -597,31 +601,17 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
                char **error_str);
 
 /**
- * Scratch data used when compiling a GLSL geometry shader.
- */
-struct brw_gs_compile
-{
-   struct brw_gs_prog_key key;
-   struct brw_gs_prog_data prog_data;
-   struct brw_vue_map input_vue_map;
-
-   struct brw_geometry_program *gp;
-
-   unsigned control_data_bits_per_vertex;
-   unsigned control_data_header_size_bits;
-};
-
-/**
  * Compile a vertex shader.
  *
  * Returns the final assembly and the program's size.
  */
 const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
-               struct brw_gs_compile *c,
+               void *mem_ctx,
+               const struct brw_gs_prog_key *key,
+               struct brw_gs_prog_data *prog_data,
                const struct nir_shader *shader,
                struct gl_shader_program *shader_prog,
-               void *mem_ctx,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str);

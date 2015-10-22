@@ -1891,7 +1891,7 @@ struct gl_program
     * For vertex and geometry shaders, true if the program uses the
     * gl_ClipDistance output.  Ignored for fragment shaders.
     */
-   GLboolean UsesClipDistanceOut;
+   unsigned ClipDistanceArraySize;
 
 
    /** Named parameters, constants, etc. from program text */
@@ -2619,7 +2619,6 @@ struct gl_shader_program
        * True if gl_ClipDistance is written to.  Copied into
        * gl_tess_eval_program by _mesa_copy_linked_program_data().
        */
-      GLboolean UsesClipDistance;
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */
    } TessEval;
@@ -2642,7 +2641,6 @@ struct gl_shader_program
        * True if gl_ClipDistance is written to.  Copied into
        * gl_geometry_program by _mesa_copy_linked_program_data().
        */
-      GLboolean UsesClipDistance;
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */
       bool UsesEndPrimitive;
@@ -2655,7 +2653,6 @@ struct gl_shader_program
        * True if gl_ClipDistance is written to.  Copied into gl_vertex_program
        * by _mesa_copy_linked_program_data().
        */
-      GLboolean UsesClipDistance;
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */
    } Vert;

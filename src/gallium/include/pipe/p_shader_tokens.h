@@ -267,7 +267,9 @@ union tgsi_immediate_data
 #define TGSI_PROPERTY_TES_SPACING            12
 #define TGSI_PROPERTY_TES_VERTEX_ORDER_CW    13
 #define TGSI_PROPERTY_TES_POINT_MODE         14
-#define TGSI_PROPERTY_COUNT                  15
+#define TGSI_PROPERTY_NUM_CLIPDIST_ENABLED   15
+#define TGSI_PROPERTY_NUM_CULLDIST_ENABLED   16
+#define TGSI_PROPERTY_COUNT                  17
 
 struct tgsi_property {
    unsigned Type         : 4;  /**< TGSI_TOKEN_TYPE_PROPERTY */

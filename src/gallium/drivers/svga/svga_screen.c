@@ -381,6 +381,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_DEPTH_BOUNDS_TEST:
    case PIPE_CAP_TGSI_TXQS:
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
+   case PIPE_CAP_SHAREABLE_SHADERS:
       return 0;
    }
 
@@ -455,6 +456,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen, unsigned shader,
       case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
          return 0;
+      case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+         return 32;
       }
       /* If we get here, we failed to handle a cap above */
       debug_printf("Unexpected fragment shader query %u\n", param);
@@ -511,6 +514,8 @@ vgpu9_get_shader_param(struct pipe_screen *screen, unsigned shader,
       case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
       case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
          return 0;
+      case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+         return 32;
       }
       /* If we get here, we failed to handle a cap above */
       debug_printf("Unexpected vertex shader query %u\n", param);
@@ -600,6 +605,8 @@ vgpu10_get_shader_param(struct pipe_screen *screen, unsigned shader,
    case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
    case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
       return 0;
+   case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+      return 32;
    default:
       debug_printf("Unexpected vgpu10 shader query %u\n", param);
       return 0;

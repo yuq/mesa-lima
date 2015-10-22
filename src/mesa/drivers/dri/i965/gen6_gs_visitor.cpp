@@ -63,7 +63,7 @@ gen6_gs_visitor::emit_prolog()
    this->vertex_output = src_reg(this,
                                  glsl_type::uint_type,
                                  (prog_data->vue_map.num_slots + 1) *
-                                 c->gp->program.VerticesOut);
+                                 nir->info.gs.vertices_out);
    this->vertex_output_offset = src_reg(this, glsl_type::uint_type);
    emit(MOV(dst_reg(this->vertex_output_offset), src_reg(0u)));
 
@@ -95,7 +95,7 @@ gen6_gs_visitor::emit_prolog()
    this->prim_count = src_reg(this, glsl_type::uint_type);
    emit(MOV(dst_reg(this->prim_count), 0u));
 
-   if (c->prog_data.gen6_xfb_enabled) {
+   if (gs_prog_data->gen6_xfb_enabled) {
       /* Create a virtual register to hold destination indices in SOL */
       this->destination_indices = src_reg(this, glsl_type::uvec4_type);
       /* Create a virtual register to hold number of written primitives */
@@ -128,7 +128,7 @@ gen6_gs_visitor::emit_prolog()
     * in the 3DSTATE_GS state packet. That information can be obtained by other
     * means though, so we can safely use r1 for this purpose.
     */
-   if (c->prog_data.include_primitive_id) {
+   if (gs_prog_data->include_primitive_id) {
       this->primitive_id =
          src_reg(retype(brw_vec8_grf(1, 0), BRW_REGISTER_TYPE_UD));
       emit(GS_OPCODE_SET_PRIMITIVE_ID, dst_reg(this->primitive_id));
@@ -177,7 +177,7 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
    dst_reg dst(this->vertex_output);
    dst.reladdr = ralloc(mem_ctx, src_reg);
    memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-   if (c->gp->program.OutputType == GL_POINTS) {
+   if (nir->info.gs.output_primitive == GL_POINTS) {
       /* If we are outputting points, then every vertex has PrimStart and
        * PrimEnd set.
        */
@@ -191,7 +191,7 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
        * vertex.
        */
       emit(OR(dst, this->first_vertex,
-              (c->prog_data.output_topology << URB_WRITE_PRIM_TYPE_SHIFT)));
+              (gs_prog_data->output_topology << URB_WRITE_PRIM_TYPE_SHIFT)));
       emit(MOV(dst_reg(this->first_vertex), 0u));
    }
    emit(ADD(dst_reg(this->vertex_output_offset),
@@ -205,7 +205,7 @@ gen6_gs_visitor::gs_end_primitive()
    /* Calling EndPrimitive() is optional for point output. In this case we set
     * the PrimEnd flag when we process EmitVertex().
     */
-   if (c->gp->program.OutputType == GL_POINTS)
+   if (nir->info.gs.output_primitive == GL_POINTS)
       return;
 
    /* Otherwise we know that the last vertex we have processed was the last
@@ -217,7 +217,7 @@ gen6_gs_visitor::gs_end_primitive()
     * comparison below (hence the num_output_vertices + 1 in the comparison
     * below).
     */
-   unsigned num_output_vertices = c->gp->program.VerticesOut;
+   unsigned num_output_vertices = nir->info.gs.vertices_out;
    emit(CMP(dst_null_d(), this->vertex_count, src_reg(num_output_vertices + 1),
             BRW_CONDITIONAL_L));
    vec4_instruction *inst = emit(CMP(dst_null_d(),
@@ -320,7 +320,7 @@ gen6_gs_visitor::emit_thread_end()
     * first_vertex is not zero. This is only relevant for outputs other than
     * points because in the point case we set PrimEnd on all vertices.
     */
-   if (c->gp->program.OutputType != GL_POINTS) {
+   if (nir->info.gs.output_primitive != GL_POINTS) {
       emit(CMP(dst_null_d(), this->first_vertex, 0u, BRW_CONDITIONAL_Z));
       emit(IF(BRW_PREDICATE_NORMAL));
       gs_end_primitive();
@@ -353,7 +353,7 @@ gen6_gs_visitor::emit_thread_end()
       this->current_annotation = "gen6 thread end: ff_sync";
 
       vec4_instruction *inst;
-      if (c->prog_data.gen6_xfb_enabled) {
+      if (gs_prog_data->gen6_xfb_enabled) {
          src_reg sol_temp(this, glsl_type::uvec4_type);
          emit(GS_OPCODE_FF_SYNC_SET_PRIMITIVES,
               dst_reg(this->svbi),
@@ -443,7 +443,7 @@ gen6_gs_visitor::emit_thread_end()
       }
       emit(BRW_OPCODE_WHILE);
 
-      if (c->prog_data.gen6_xfb_enabled)
+      if (gs_prog_data->gen6_xfb_enabled)
          xfb_write();
    }
    emit(BRW_OPCODE_ENDIF);
@@ -465,7 +465,7 @@ gen6_gs_visitor::emit_thread_end()
     */
    this->current_annotation = "gen6 thread end: EOT";
 
-   if (c->prog_data.gen6_xfb_enabled) {
+   if (gs_prog_data->gen6_xfb_enabled) {
       /* When emitting EOT, set SONumPrimsWritten Increment Value. */
       src_reg data(this, glsl_type::uint_type);
       emit(AND(dst_reg(data), this->sol_prim_written, src_reg(0xffffu)));
@@ -507,7 +507,7 @@ gen6_gs_visitor::setup_payload()
     * information (and move the original value to a virtual register if
     * necessary).
     */
-   if (c->prog_data.include_primitive_id)
+   if (gs_prog_data->include_primitive_id)
       attribute_map[VARYING_SLOT_PRIMITIVE_ID] = attributes_per_reg * reg;
    reg++;
 
@@ -530,9 +530,6 @@ gen6_gs_visitor::xfb_setup()
       BRW_SWIZZLE4(3, 3, 3, 3)
    };
 
-   struct brw_gs_prog_data *prog_data =
-      (struct brw_gs_prog_data *) &c->prog_data;
-
    const struct gl_transform_feedback_info *linked_xfb_info =
       &this->shader_prog->LinkedTransformFeedback;
    int i;
@@ -548,11 +545,11 @@ gen6_gs_visitor::xfb_setup()
     */
    assert(linked_xfb_info->NumOutputs <= BRW_MAX_SOL_BINDINGS);
 
-   prog_data->num_transform_feedback_bindings = linked_xfb_info->NumOutputs;
-   for (i = 0; i < prog_data->num_transform_feedback_bindings; i++) {
-      prog_data->transform_feedback_bindings[i] =
+   gs_prog_data->num_transform_feedback_bindings = linked_xfb_info->NumOutputs;
+   for (i = 0; i < gs_prog_data->num_transform_feedback_bindings; i++) {
+      gs_prog_data->transform_feedback_bindings[i] =
          linked_xfb_info->Outputs[i].OutputRegister;
-      prog_data->transform_feedback_swizzles[i] =
+      gs_prog_data->transform_feedback_swizzles[i] =
          swizzle_for_offset[linked_xfb_info->Outputs[i].ComponentOffset];
    }
 }
@@ -561,13 +558,11 @@ void
 gen6_gs_visitor::xfb_write()
 {
    unsigned num_verts;
-   struct brw_gs_prog_data *prog_data =
-      (struct brw_gs_prog_data *) &c->prog_data;
 
-   if (!prog_data->num_transform_feedback_bindings)
+   if (!gs_prog_data->num_transform_feedback_bindings)
       return;
 
-   switch (c->prog_data.output_topology) {
+   switch (gs_prog_data->output_topology) {
    case _3DPRIM_POINTLIST:
       num_verts = 1;
       break;
@@ -627,7 +622,7 @@ gen6_gs_visitor::xfb_write()
    emit(BRW_OPCODE_ENDIF);
 
    /* Write transform feedback data for all processed vertices. */
-   for (int i = 0; i < c->gp->program.VerticesOut; i++) {
+   for (int i = 0; i < (int)nir->info.gs.vertices_out; i++) {
       emit(MOV(dst_reg(sol_temp), i));
       emit(CMP(dst_null_d(), sol_temp, this->vertex_count,
                BRW_CONDITIONAL_L));
@@ -642,10 +637,8 @@ gen6_gs_visitor::xfb_write()
 void
 gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
 {
-   struct brw_gs_prog_data *prog_data =
-      (struct brw_gs_prog_data *) &c->prog_data;
    unsigned binding;
-   unsigned num_bindings = prog_data->num_transform_feedback_bindings;
+   unsigned num_bindings = gs_prog_data->num_transform_feedback_bindings;
    src_reg sol_temp(this, glsl_type::uvec4_type);
 
    /* Check for buffer overflow: we need room to write the complete primitive
@@ -666,7 +659,7 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
        */
       for (binding = 0; binding < num_bindings; ++binding) {
          unsigned char varying =
-            prog_data->transform_feedback_bindings[binding];
+            gs_prog_data->transform_feedback_bindings[binding];
 
          /* Set up the correct destination index for this vertex */
          vec4_instruction *inst = emit(GS_OPCODE_SVB_SET_DST_INDEX,
@@ -704,7 +697,7 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
          else if (varying == VARYING_SLOT_VIEWPORT)
             data.swizzle = BRW_SWIZZLE_ZZZZ;
          else
-            data.swizzle = prog_data->transform_feedback_swizzles[binding];
+            data.swizzle = gs_prog_data->transform_feedback_swizzles[binding];
 
          /* Write data */
          inst = emit(GS_OPCODE_SVB_WRITE, mrf_reg, data, sol_temp);

@@ -31,15 +31,15 @@
 #include "ddebug/dd_util.h"
 
 
-static void si_dump_shader(struct si_shader_selector *sel, const char *name,
+static void si_dump_shader(struct si_shader_ctx_state *state, const char *name,
 			   FILE *f)
 {
-	if (!sel || !sel->current)
+	if (!state->cso || !state->current)
 		return;
 
 	fprintf(f, "%s shader disassembly:\n", name);
-	si_dump_shader_key(sel->type, &sel->current->key, f);
-	fprintf(f, "%s\n\n", sel->current->binary.disasm_string);
+	si_dump_shader_key(state->cso->type, &state->current->key, f);
+	fprintf(f, "%s\n\n", state->current->binary.disasm_string);
 }
 
 /* Parsed IBs are difficult to read without colors. Use "less -R file" to
@@ -536,11 +536,11 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 	if (flags & PIPE_DEBUG_DEVICE_IS_HUNG)
 		si_dump_debug_registers(sctx, f);
 
-	si_dump_shader(sctx->vs_shader, "Vertex", f);
-	si_dump_shader(sctx->tcs_shader, "Tessellation control", f);
-	si_dump_shader(sctx->tes_shader, "Tessellation evaluation", f);
-	si_dump_shader(sctx->gs_shader, "Geometry", f);
-	si_dump_shader(sctx->ps_shader, "Fragment", f);
+	si_dump_shader(&sctx->vs_shader, "Vertex", f);
+	si_dump_shader(&sctx->tcs_shader, "Tessellation control", f);
+	si_dump_shader(&sctx->tes_shader, "Tessellation evaluation", f);
+	si_dump_shader(&sctx->gs_shader, "Geometry", f);
+	si_dump_shader(&sctx->ps_shader, "Fragment", f);
 
 	si_dump_last_bo_list(sctx, f);
 	si_dump_last_ib(sctx, f);

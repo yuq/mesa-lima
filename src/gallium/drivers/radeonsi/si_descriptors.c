@@ -915,10 +915,10 @@ static void si_set_user_data_base(struct si_context *sctx,
 void si_shader_change_notify(struct si_context *sctx)
 {
 	/* VS can be bound as VS, ES, or LS. */
-	if (sctx->tes_shader)
+	if (sctx->tes_shader.cso)
 		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
 				      R_00B530_SPI_SHADER_USER_DATA_LS_0);
-	else if (sctx->gs_shader)
+	else if (sctx->gs_shader.cso)
 		si_set_user_data_base(sctx, PIPE_SHADER_VERTEX,
 				      R_00B330_SPI_SHADER_USER_DATA_ES_0);
 	else
@@ -926,8 +926,8 @@ void si_shader_change_notify(struct si_context *sctx)
 				      R_00B130_SPI_SHADER_USER_DATA_VS_0);
 
 	/* TES can be bound as ES, VS, or not bound. */
-	if (sctx->tes_shader) {
-		if (sctx->gs_shader)
+	if (sctx->tes_shader.cso) {
+		if (sctx->gs_shader.cso)
 			si_set_user_data_base(sctx, PIPE_SHADER_TESS_EVAL,
 					      R_00B330_SPI_SHADER_USER_DATA_ES_0);
 		else
@@ -964,7 +964,7 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 	unsigned i;
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
 
-	if (sctx->gs_shader) {
+	if (sctx->gs_shader.cso) {
 		/* The VS copy shader needs these for clipping, streamout, and rings. */
 		unsigned vs_base = R_00B130_SPI_SHADER_USER_DATA_VS_0;
 		unsigned i = PIPE_SHADER_VERTEX;
@@ -975,7 +975,7 @@ void si_emit_shader_userdata(struct si_context *sctx, struct r600_atom *atom)
 		/* The TESSEVAL shader needs this for the ESGS ring buffer. */
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers[i].desc,
 				       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
-	} else if (sctx->tes_shader) {
+	} else if (sctx->tes_shader.cso) {
 		/* The TESSEVAL shader needs this for streamout. */
 		si_emit_shader_pointer(sctx, &sctx->rw_buffers[PIPE_SHADER_VERTEX].desc,
 				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);

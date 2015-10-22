@@ -235,9 +235,11 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
                                               PIPE_BIND_SAMPLER_VIEW);
    st->prefer_blit_based_texture_transfer = screen->get_param(screen,
                               PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER);
-   st->can_force_persample_interp = screen->get_param(screen,
-                                          PIPE_CAP_FORCE_PERSAMPLE_INTERP);
-
+   st->force_persample_in_shader =
+      screen->get_param(screen, PIPE_CAP_SAMPLE_SHADING) &&
+      !screen->get_param(screen, PIPE_CAP_FORCE_PERSAMPLE_INTERP);
+   st->has_shareable_shaders = screen->get_param(screen,
+                                                 PIPE_CAP_SHAREABLE_SHADERS);
    st->needs_texcoord_semantic =
       screen->get_param(screen, PIPE_CAP_TGSI_TEXCOORD);
    st->apply_texture_swizzle_to_border_color =
@@ -291,6 +293,20 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
       for (i = 0; i < MESA_SHADER_STAGES; i++)
          ctx->Const.ShaderCompilerOptions[i].EmitNoIndirectSampler = true;
    }
+
+   /* Set which shader types can be compiled at link time. */
+   st->shader_has_one_variant[MESA_SHADER_VERTEX] =
+         st->has_shareable_shaders &&
+         !st->clamp_vert_color_in_shader;
+
+   st->shader_has_one_variant[MESA_SHADER_FRAGMENT] =
+         st->has_shareable_shaders &&
+         !st->clamp_frag_color_in_shader &&
+         !st->force_persample_in_shader;
+
+   st->shader_has_one_variant[MESA_SHADER_TESS_CTRL] = st->has_shareable_shaders;
+   st->shader_has_one_variant[MESA_SHADER_TESS_EVAL] = st->has_shareable_shaders;
+   st->shader_has_one_variant[MESA_SHADER_GEOMETRY] = st->has_shareable_shaders;
 
    _mesa_compute_version(ctx);
 

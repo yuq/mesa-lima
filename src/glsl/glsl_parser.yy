@@ -2609,17 +2609,6 @@ interface_block:
 
       block->layout.is_default_qualifier = false;
 
-      foreach_list_typed (ast_declarator_list, member, link, &block->declarations) {
-         ast_type_qualifier& qualifier = member->type->qualifier;
-         if (qualifier.flags.q.stream && qualifier.stream != block->layout.stream) {
-               _mesa_glsl_error(& @1, state,
-                             "stream layout qualifier on "
-                             "interface block member does not match "
-                             "the interface block (%d vs %d)",
-                             qualifier.stream, block->layout.stream);
-               YYERROR;
-         }
-      }
       $$ = block;
    }
    | memory_qualifier interface_block

@@ -87,8 +87,7 @@ opt_cmod_propagation_local(bblock_t *block)
          continue;
 
       bool read_flag = false;
-      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst,
-                                                  block) {
+      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (scan_inst->overwrites_reg(inst->src[0])) {
             if (scan_inst->is_partial_write() ||
                 scan_inst->dst.reg_offset != inst->src[0].reg_offset)

@@ -763,7 +763,8 @@ private:
       /* Assign explicit locations. */
       if (current_var->data.explicit_location) {
          /* Set sequential locations for struct fields. */
-         if (record_type != NULL) {
+         if (current_var->type->without_array()->is_record() ||
+             current_var->type->is_array_of_arrays()) {
             const unsigned entries = MAX2(1, this->uniforms[id].array_elements);
             this->uniforms[id].remap_location =
                this->explicit_location + field_counter;
@@ -1180,7 +1181,8 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 
    /* Reserve all the explicit locations of the active uniforms. */
    for (unsigned i = 0; i < num_uniforms; i++) {
-      if (uniforms[i].type->is_subroutine())
+      if (uniforms[i].type->is_subroutine() ||
+          uniforms[i].is_shader_storage)
          continue;
 
       if (uniforms[i].remap_location != UNMAPPED_UNIFORM_LOC) {
@@ -1200,8 +1202,10 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    /* Reserve locations for rest of the uniforms. */
    for (unsigned i = 0; i < num_uniforms; i++) {
 
-      if (uniforms[i].type->is_subroutine())
+      if (uniforms[i].type->is_subroutine() ||
+          uniforms[i].is_shader_storage)
          continue;
+
       /* Built-in uniforms should not get any location. */
       if (uniforms[i].builtin)
          continue;

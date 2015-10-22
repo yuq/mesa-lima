@@ -266,7 +266,7 @@ static void si_emit_cb_target_mask(struct si_context *sctx, struct r600_atom *at
 	 * Reproducible with Unigine Heaven 4.0 and drirc missing.
 	 */
 	if (blend->dual_src_blend &&
-	    (sctx->ps_shader->ps_colors_written & 0x3) != 0x3)
+	    (sctx->ps_shader.cso->ps_colors_written & 0x3) != 0x3)
 		mask = 0;
 
 	radeon_set_context_reg(cs, R_028238_CB_TARGET_MASK, mask);
@@ -1535,9 +1535,14 @@ static unsigned si_tex_compare(unsigned compare)
 	}
 }
 
-static unsigned si_tex_dim(unsigned dim, unsigned nr_samples)
+static unsigned si_tex_dim(unsigned res_target, unsigned view_target,
+			   unsigned nr_samples)
 {
-	switch (dim) {
+	if (view_target == PIPE_TEXTURE_CUBE ||
+	    view_target == PIPE_TEXTURE_CUBE_ARRAY)
+		res_target = view_target;
+
+	switch (res_target) {
 	default:
 	case PIPE_TEXTURE_1D:
 		return V_008F1C_SQ_RSRC_IMG_1D;
@@ -2391,6 +2396,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	struct radeon_surf_level *surflevel;
 	int first_non_void;
 	uint64_t va;
+	unsigned last_layer = state->u.tex.last_layer;
 
 	if (view == NULL)
 		return NULL;
@@ -2596,6 +2602,13 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	} else if (texture->target == PIPE_TEXTURE_CUBE_ARRAY)
 		depth = texture->array_size / 6;
 
+	/* This is not needed if state trackers set last_layer correctly. */
+	if (state->target == PIPE_TEXTURE_1D ||
+	    state->target == PIPE_TEXTURE_2D ||
+	    state->target == PIPE_TEXTURE_RECT ||
+	    state->target == PIPE_TEXTURE_CUBE)
+		last_layer = state->u.tex.first_layer;
+
 	va = tmp->resource.gpu_address + surflevel[base_level].offset;
 
 	view->state[0] = va >> 8;
@@ -2615,10 +2628,11 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 						      last_level) |
 			  S_008F1C_TILING_INDEX(si_tile_mode_index(tmp, base_level, false)) |
 			  S_008F1C_POW2_PAD(texture->last_level > 0) |
-			  S_008F1C_TYPE(si_tex_dim(texture->target, texture->nr_samples)));
+			  S_008F1C_TYPE(si_tex_dim(texture->target, state->target,
+						   texture->nr_samples)));
 	view->state[4] = (S_008F20_DEPTH(depth - 1) | S_008F20_PITCH(pitch - 1));
 	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
-			  S_008F24_LAST_ARRAY(state->u.tex.last_layer));
+			  S_008F24_LAST_ARRAY(last_layer));
 	view->state[6] = 0;
 	view->state[7] = 0;
 
@@ -2653,11 +2667,12 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 				       S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
 				       S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
 				       S_008F1C_TILING_INDEX(tmp->fmask.tile_mode_index) |
-				       S_008F1C_TYPE(si_tex_dim(texture->target, 0));
+				       S_008F1C_TYPE(si_tex_dim(texture->target,
+								state->target, 0));
 		view->fmask_state[4] = S_008F20_DEPTH(depth - 1) |
 				       S_008F20_PITCH(tmp->fmask.pitch - 1);
 		view->fmask_state[5] = S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
-				       S_008F24_LAST_ARRAY(state->u.tex.last_layer);
+				       S_008F24_LAST_ARRAY(last_layer);
 		view->fmask_state[6] = 0;
 		view->fmask_state[7] = 0;
 	}

@@ -369,19 +369,7 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
                       procType == TGSI_PROCESSOR_GEOMETRY ||
                       procType == TGSI_PROCESSOR_TESS_CTRL ||
                       procType == TGSI_PROCESSOR_TESS_EVAL) {
-                     if (semName == TGSI_SEMANTIC_CLIPDIST) {
-                        info->num_written_clipdistance +=
-                           util_bitcount(fulldecl->Declaration.UsageMask);
-                        info->clipdist_writemask |=
-                           fulldecl->Declaration.UsageMask << (semIndex*4);
-                     }
-                     else if (semName == TGSI_SEMANTIC_CULLDIST) {
-                        info->num_written_culldistance +=
-                           util_bitcount(fulldecl->Declaration.UsageMask);
-                        info->culldist_writemask |=
-                           fulldecl->Declaration.UsageMask << (semIndex*4);
-                     }
-                     else if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
+                     if (semName == TGSI_SEMANTIC_VIEWPORT_INDEX) {
                         info->writes_viewport_index = TRUE;
                      }
                      else if (semName == TGSI_SEMANTIC_LAYER) {
@@ -432,9 +420,21 @@ tgsi_scan_shader(const struct tgsi_token *tokens,
             const struct tgsi_full_property *fullprop
                = &parse.FullToken.FullProperty;
             unsigned name = fullprop->Property.PropertyName;
+            unsigned value = fullprop->u[0].Data;
 
             assert(name < Elements(info->properties));
-            info->properties[name] = fullprop->u[0].Data;
+            info->properties[name] = value;
+
+            switch (name) {
+            case TGSI_PROPERTY_NUM_CLIPDIST_ENABLED:
+               info->num_written_clipdistance = value;
+               info->clipdist_writemask |= (1 << value) - 1;
+               break;
+            case TGSI_PROPERTY_NUM_CULLDIST_ENABLED:
+               info->num_written_culldistance = value;
+               info->culldist_writemask |= (1 << value) - 1;
+               break;
+            }
          }
          break;
 

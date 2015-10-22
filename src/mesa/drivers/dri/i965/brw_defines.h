@@ -918,8 +918,8 @@ enum opcode {
     * Source 0: [required] Color 0.
     * Source 1: [optional] Color 1 (for dual source blend messages).
     * Source 2: [optional] Src0 Alpha.
-    * Source 3: [optional] Source Depth (passthrough from the thread payload).
-    * Source 4: [optional] Destination Depth (gl_FragDepth).
+    * Source 3: [optional] Source Depth (gl_FragDepth)
+    * Source 4: [optional (gen4-5)] Destination Depth passthrough from thread
     * Source 5: [optional] Sample Mask (gl_SampleMask).
     * Source 6: [required] Number of color components (as a UD immediate).
     */
@@ -1033,7 +1033,19 @@ enum opcode {
    SHADER_OPCODE_GEN4_SCRATCH_WRITE,
    SHADER_OPCODE_GEN7_SCRATCH_READ,
 
+   /**
+    * Gen8+ SIMD8 URB Read message.
+    *
+    * Source 0: The header register, containing URB handles (g1).
+    *
+    * Currently only supports constant offsets, in inst->offset.
+    */
+   SHADER_OPCODE_URB_READ_SIMD8,
+
    SHADER_OPCODE_URB_WRITE_SIMD8,
+   SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT,
+   SHADER_OPCODE_URB_WRITE_SIMD8_MASKED,
+   SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT,
 
    /**
     * Return the index of an arbitrary live channel (i.e. one of the channels
@@ -2385,7 +2397,7 @@ enum brw_pixel_shader_coverage_mask_mode {
 # define GEN8_PSX_ATTRIBUTE_ENABLE                      (1 << 8)
 # define GEN8_PSX_SHADER_DISABLES_ALPHA_TO_COVERAGE     (1 << 7)
 # define GEN8_PSX_SHADER_IS_PER_SAMPLE                  (1 << 6)
-# define GEN8_PSX_SHADER_COMPUTES_STENCIL               (1 << 5)
+# define GEN9_PSX_SHADER_COMPUTES_STENCIL               (1 << 5)
 # define GEN9_PSX_SHADER_PULLS_BARY                     (1 << 3)
 # define GEN8_PSX_SHADER_HAS_UAV                        (1 << 2)
 # define GEN8_PSX_SHADER_USES_INPUT_COVERAGE_MASK       (1 << 1)

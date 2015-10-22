@@ -40,36 +40,32 @@
 #define FILE_DEBUG_FLAG DEBUG_MIPTREE
 
 static unsigned int
-tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
-                                     const struct intel_mipmap_tree *mt)
+tr_mode_horizontal_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf, *align_ys;
-   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
-   unsigned ret_align, divisor;
+   unsigned ret_align, divisor, multiplier_ys;
 
-   /* Horizontal alignment tables for TRMODE_{YF,YS}. Value in below
-    * tables specifies the horizontal alignment requirement in elements
-    * for the surface. An element is defined as a pixel in uncompressed
-    * surface formats, and as a compression block in compressed surface
-    * formats. For MSFMT_DEPTH_STENCIL type multisampled surfaces, an
+   /* Values in below tables specifiy the horizontal alignment requirement
+    * in elements for TRMODE_YF surface. An element is defined as a pixel in
+    * uncompressed surface formats, and as a compression block in compressed
+    * surface formats. For MSFMT_DEPTH_STENCIL type multisampled surfaces, an
     * element is a sample.
     */
    const unsigned align_1d_yf[] = {4096, 2048, 1024, 512, 256};
-   const unsigned align_1d_ys[] = {65536, 32768, 16384, 8192, 4096};
    const unsigned align_2d_yf[] = {64, 64, 32, 32, 16};
-   const unsigned align_2d_ys[] = {256, 256, 128, 128, 64};
    const unsigned align_3d_yf[] = {16, 8, 8, 8, 4};
-   const unsigned align_3d_ys[] = {64, 32, 32, 32, 16};
-   int i = 0;
 
-   /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp));
+   assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
+
+   /* Alignment computations below assume a power of 2 cpp. */
+   assert (mt->cpp >= 1 && mt->cpp <= 16 && _mesa_is_pow_two(mt->cpp));
+   /* Compute array index. */
+   const int i = ffs(mt->cpp) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_1D:
    case GL_TEXTURE_1D_ARRAY:
-      align_yf = align_1d_yf;
-      align_ys = align_1d_ys;
+      ret_align = align_1d_yf[i];
+      multiplier_ys = 16;
       break;
    case GL_TEXTURE_2D:
    case GL_TEXTURE_RECTANGLE:
@@ -78,22 +74,19 @@ tr_mode_horizontal_texture_alignment(const struct brw_context *brw,
    case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-      align_yf = align_2d_yf;
-      align_ys = align_2d_ys;
+      ret_align = align_2d_yf[i];
+      multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
-      align_yf = align_3d_yf;
-      align_ys = align_3d_ys;
+      ret_align = align_3d_yf[i];
+      multiplier_ys = 4;
       break;
    default:
       unreachable("not reached");
    }
 
-   /* Compute array index. */
-   i = ffs(bpp/8) - 1;
-
-   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
-               align_yf[i] : align_ys[i];
+   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
+      ret_align *= multiplier_ys;
 
    assert(_mesa_is_pow_two(mt->num_samples));
 
@@ -148,26 +141,20 @@ intel_horizontal_texture_alignment_unit(struct brw_context *brw,
 }
 
 static unsigned int
-tr_mode_vertical_texture_alignment(const struct brw_context *brw,
-                                   const struct intel_mipmap_tree *mt)
+tr_mode_vertical_texture_alignment(const struct intel_mipmap_tree *mt)
 {
-   const unsigned *align_yf, *align_ys;
-   const unsigned bpp = _mesa_get_format_bytes(mt->format) * 8;
-   unsigned ret_align, divisor;
+   unsigned ret_align, divisor, multiplier_ys;
 
-   /* Vertical alignment tables for TRMODE_YF and TRMODE_YS. */
+   /* Vertical alignment tables for TRMODE_YF */
    const unsigned align_2d_yf[] = {64, 32, 32, 16, 16};
-   const unsigned align_2d_ys[] = {256, 128, 128, 64, 64};
    const unsigned align_3d_yf[] = {16, 16, 16, 8, 8};
-   const unsigned align_3d_ys[] = {32, 32, 32, 16, 16};
-   int i = 0;
 
-   assert(brw->gen >= 9 &&
-          mt->target != GL_TEXTURE_1D &&
-          mt->target != GL_TEXTURE_1D_ARRAY);
+   assert(mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE);
 
-   /* Alignment computations below assume bpp >= 8 and a power of 2. */
-   assert (bpp >= 8 && bpp <= 128 && _mesa_is_pow_two(bpp)) ;
+   /* Alignment computations below assume a power of 2 cpp. */
+   assert (mt->cpp >= 1 && mt->cpp <= 16 && _mesa_is_pow_two(mt->cpp)) ;
+   /* Compute array index. */
+   const int i = ffs(mt->cpp) - 1;
 
    switch(mt->target) {
    case GL_TEXTURE_2D:
@@ -177,22 +164,21 @@ tr_mode_vertical_texture_alignment(const struct brw_context *brw,
    case GL_TEXTURE_CUBE_MAP_ARRAY:
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
-      align_yf = align_2d_yf;
-      align_ys = align_2d_ys;
+      ret_align = align_2d_yf[i];
+      multiplier_ys = 4;
       break;
    case GL_TEXTURE_3D:
-      align_yf = align_3d_yf;
-      align_ys = align_3d_ys;
+      ret_align = align_3d_yf[i];
+      multiplier_ys = 2;
       break;
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
    default:
-      unreachable("not reached");
+      unreachable("Unexpected miptree target");
    }
 
-   /* Compute array index. */
-   i = ffs(bpp / 8) - 1;
-
-   ret_align = mt->tr_mode == INTEL_MIPTREE_TRMODE_YF ?
-               align_yf[i] : align_ys[i];
+   if (mt->tr_mode == INTEL_MIPTREE_TRMODE_YS)
+      ret_align *= multiplier_ys;
 
    assert(_mesa_is_pow_two(mt->num_samples));
 
@@ -779,8 +765,8 @@ intel_miptree_set_alignment(struct brw_context *brw,
    } else if (brw->gen >= 9 && mt->tr_mode != INTEL_MIPTREE_TRMODE_NONE) {
       /* XY_FAST_COPY_BLT doesn't support horizontal alignment < 32 or
        * vertical alignment < 64. */
-      mt->halign = MAX2(tr_mode_horizontal_texture_alignment(brw, mt), 32);
-      mt->valign = MAX2(tr_mode_vertical_texture_alignment(brw, mt), 64);
+      mt->halign = MAX2(tr_mode_horizontal_texture_alignment(mt), 32);
+      mt->valign = MAX2(tr_mode_vertical_texture_alignment(mt), 64);
    } else {
       mt->halign =
          intel_horizontal_texture_alignment_unit(brw, mt, layout_flags);

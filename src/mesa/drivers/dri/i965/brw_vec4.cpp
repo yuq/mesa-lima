@@ -1111,7 +1111,7 @@ vec4_visitor::opt_register_coalesce()
        */
       vec4_instruction *_scan_inst = (vec4_instruction *)inst->prev;
       foreach_inst_in_block_reverse_starting_from(vec4_instruction, scan_inst,
-                                                  inst, block) {
+                                                  inst) {
          _scan_inst = scan_inst;
 
          if (inst->src[0].in_range(scan_inst->dst, scan_inst->regs_written)) {

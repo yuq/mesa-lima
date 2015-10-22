@@ -137,6 +137,8 @@ const char *tgsi_property_names[TGSI_PROPERTY_COUNT] =
    "TES_SPACING",
    "TES_VERTEX_ORDER_CW",
    "TES_POINT_MODE",
+   "NUM_CLIPDIST_ENABLED",
+   "NUM_CULLDIST_ENABLED",
 };
 
 const char *tgsi_return_type_names[TGSI_RETURN_TYPE_COUNT] =

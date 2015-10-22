@@ -41,6 +41,7 @@ public:
    vec4_gs_visitor(const struct brw_compiler *compiler,
                    void *log_data,
                    struct brw_gs_compile *c,
+                   struct brw_gs_prog_data *prog_data,
                    const nir_shader *shader,
                    void *mem_ctx,
                    bool no_spills,
@@ -70,6 +71,7 @@ protected:
    src_reg vertex_count;
    src_reg control_data_bits;
    const struct brw_gs_compile * const c;
+   struct brw_gs_prog_data * const gs_prog_data;
 };
 
 } /* namespace brw */

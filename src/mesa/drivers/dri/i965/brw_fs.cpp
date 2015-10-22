@@ -281,6 +281,10 @@ fs_inst::is_send_from_grf() const
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
+   case SHADER_OPCODE_URB_READ_SIMD8:
       return true;
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD:
       return src[1].file == GRF;
@@ -782,6 +786,10 @@ fs_inst::regs_read(int arg) const
    switch (opcode) {
    case FS_OPCODE_FB_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
+   case SHADER_OPCODE_URB_READ_SIMD8:
    case SHADER_OPCODE_UNTYPED_ATOMIC:
    case SHADER_OPCODE_UNTYPED_SURFACE_READ:
    case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
@@ -911,6 +919,9 @@ fs_visitor::implied_mrf_writes(fs_inst *inst)
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case SHADER_OPCODE_URB_WRITE_SIMD8:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_PER_SLOT:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED:
+   case SHADER_OPCODE_URB_WRITE_SIMD8_MASKED_PER_SLOT:
    case FS_OPCODE_INTERPOLATE_AT_CENTROID:
    case FS_OPCODE_INTERPOLATE_AT_SAMPLE:
    case FS_OPCODE_INTERPOLATE_AT_SHARED_OFFSET:
@@ -2239,13 +2250,15 @@ fs_visitor::opt_sampler_eot()
    if (unlikely(tex_inst->is_head_sentinel()) || !tex_inst->is_tex())
       return false;
 
-   /* This optimisation doesn't seem to work for textureGather for some
-    * reason. I can't find any documentation or known workarounds to indicate
-    * that this is expected, but considering that it is probably pretty
-    * unlikely that a shader would directly write out the results from
-    * textureGather we might as well just disable it.
+   /* 3D Sampler » Messages » Message Format
+    *
+    * “Response Length of zero is allowed on all SIMD8* and SIMD16* sampler
+    *  messages except sample+killpix, resinfo, sampleinfo, LOD, and gather4*”
     */
-   if (tex_inst->opcode == SHADER_OPCODE_TG4 ||
+   if (tex_inst->opcode == SHADER_OPCODE_TXS ||
+       tex_inst->opcode == SHADER_OPCODE_SAMPLEINFO ||
+       tex_inst->opcode == SHADER_OPCODE_LOD ||
+       tex_inst->opcode == SHADER_OPCODE_TG4 ||
        tex_inst->opcode == SHADER_OPCODE_TG4_OFFSET)
       return false;
 
@@ -2457,7 +2470,7 @@ fs_visitor::compute_to_mrf()
       /* Found a move of a GRF to a MRF.  Let's see if we can go
        * rewrite the thing that made this GRF to write into the MRF.
        */
-      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
+      foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
 	 if (scan_inst->dst.file == GRF &&
 	     scan_inst->dst.reg == inst->src[0].reg) {
 	    /* Found the last thing to write our reg we want to turn
@@ -2805,7 +2818,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
     * we assume that there are no outstanding dependencies on entry to the
     * program.
     */
-   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst, block) {
+   foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
       /* If we hit control flow, assume that there *are* outstanding
        * dependencies, and force their cleanup before our instruction.
        */
@@ -2871,7 +2884,7 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
    /* Walk forwards looking for writes to registers we're writing which aren't
     * read before being written.
     */
-   foreach_inst_in_block_starting_from(fs_inst, scan_inst, inst, block) {
+   foreach_inst_in_block_starting_from(fs_inst, scan_inst, inst) {
       /* If we hit control flow, force resolve all remaining dependencies. */
       if (block->end() == scan_inst) {
          for (int i = 0; i < write_len; i++) {

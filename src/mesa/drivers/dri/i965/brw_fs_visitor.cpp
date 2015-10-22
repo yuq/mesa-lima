@@ -41,6 +41,7 @@
 #include "brw_wm.h"
 #include "brw_cs.h"
 #include "brw_vec4.h"
+#include "brw_vec4_gs_visitor.h"
 #include "brw_fs.h"
 #include "main/uniforms.h"
 #include "glsl/nir/glsl_types.h"
@@ -868,13 +869,14 @@ void
 fs_visitor::emit_urb_writes()
 {
    int slot, urb_offset, length;
-   struct brw_vs_prog_data *vs_prog_data =
-      (struct brw_vs_prog_data *) prog_data;
-   const struct brw_vs_prog_key *key =
+   int starting_urb_offset = 0;
+   const struct brw_vue_prog_data *vue_prog_data =
+      (const struct brw_vue_prog_data *) this->prog_data;
+   const struct brw_vs_prog_key *vs_key =
       (const struct brw_vs_prog_key *) this->key;
    const GLbitfield64 psiz_mask =
       VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT | VARYING_BIT_PSIZ;
-   const struct brw_vue_map *vue_map = &vs_prog_data->base.vue_map;
+   const struct brw_vue_map *vue_map = &vue_prog_data->vue_map;
    bool flush;
    fs_reg sources[8];
 
@@ -900,8 +902,21 @@ fs_visitor::emit_urb_writes()
       return;
    }
 
+   if (stage == MESA_SHADER_GEOMETRY) {
+      const struct brw_gs_prog_data *gs_prog_data =
+         (const struct brw_gs_prog_data *) prog_data;
+
+      /* We need to increment the Global Offset to skip over the control data
+       * header and the extra "Vertex Count" field (1 HWord) at the beginning
+       * of the VUE.  We're counting in OWords, so the units are doubled.
+       */
+      starting_urb_offset = 2 * gs_prog_data->control_data_header_size_hwords;
+      if (gs_prog_data->static_vertex_count == -1)
+         starting_urb_offset += 2;
+   }
+
    length = 0;
-   urb_offset = 0;
+   urb_offset = starting_urb_offset;
    flush = false;
    for (slot = 0; slot < vue_map->num_slots; slot++) {
       int varying = vue_map->slot_to_varying[slot];
@@ -961,11 +976,11 @@ fs_visitor::emit_urb_writes()
             break;
          }
 
-         if ((varying == VARYING_SLOT_COL0 ||
+         if (stage == MESA_SHADER_VERTEX && vs_key->clamp_vertex_color &&
+             (varying == VARYING_SLOT_COL0 ||
               varying == VARYING_SLOT_COL1 ||
               varying == VARYING_SLOT_BFC0 ||
-              varying == VARYING_SLOT_BFC1) &&
-             key->clamp_vertex_color) {
+              varying == VARYING_SLOT_BFC1)) {
             /* We need to clamp these guys, so do a saturating MOV into a
              * temp register and use that for the payload.
              */
@@ -1005,10 +1020,10 @@ fs_visitor::emit_urb_writes()
 
          fs_inst *inst =
             abld.emit(SHADER_OPCODE_URB_WRITE_SIMD8, reg_undef, payload);
-         inst->eot = last;
+         inst->eot = last && stage == MESA_SHADER_VERTEX;
          inst->mlen = length + 1;
          inst->offset = urb_offset;
-         urb_offset = slot + 1;
+         urb_offset = starting_urb_offset + slot + 1;
          length = 0;
          flush = false;
       }
@@ -1071,11 +1086,33 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
                        unsigned dispatch_width,
                        int shader_time_index)
    : backend_shader(compiler, log_data, mem_ctx, shader, prog_data),
-     key(key), prog_data(prog_data), prog(prog),
+     key(key), gs_compile(NULL), prog_data(prog_data), prog(prog),
      dispatch_width(dispatch_width),
      shader_time_index(shader_time_index),
-     promoted_constants(0),
      bld(fs_builder(this, dispatch_width).at_end())
+{
+   init();
+}
+
+fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
+                       void *mem_ctx,
+                       struct brw_gs_compile *c,
+                       struct brw_gs_prog_data *prog_data,
+                       const nir_shader *shader)
+   : backend_shader(compiler, log_data, mem_ctx, shader,
+                    &prog_data->base.base),
+     key(&c->key), gs_compile(c),
+     prog_data(&prog_data->base.base), prog(NULL),
+     dispatch_width(8),
+     shader_time_index(ST_GS),
+     bld(fs_builder(this, dispatch_width).at_end())
+{
+   init();
+}
+
+
+void
+fs_visitor::init()
 {
    switch (stage) {
    case MESA_SHADER_FRAGMENT:
@@ -1093,6 +1130,8 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    default:
       unreachable("unhandled shader stage");
    }
+
+   this->prog_data = this->stage_prog_data;
 
    this->failed = false;
    this->simd16_unsupported = false;
@@ -1118,6 +1157,8 @@ fs_visitor::fs_visitor(const struct brw_compiler *compiler, void *log_data,
    this->last_scratch = 0;
    this->pull_constant_loc = NULL;
    this->push_constant_loc = NULL;
+
+   this->promoted_constants = 0,
 
    this->spilled_any_registers = false;
    this->do_dual_src = false;

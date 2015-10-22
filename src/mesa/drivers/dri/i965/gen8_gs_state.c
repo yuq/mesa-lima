@@ -68,6 +68,8 @@ gen8_upload_gs_state(struct brw_context *brw)
                  GEN7_GS_OUTPUT_VERTEX_SIZE_SHIFT) |
                 (brw->gs.prog_data->output_topology <<
                  GEN7_GS_OUTPUT_TOPOLOGY_SHIFT) |
+                (prog_data->include_vue_handles ?
+                 GEN7_GS_INCLUDE_VERTEX_HANDLES : 0) |
                 (prog_data->urb_read_length <<
                  GEN6_GS_URB_READ_LENGTH_SHIFT) |
                 (0 << GEN6_GS_URB_ENTRY_READ_OFFSET_SHIFT) |

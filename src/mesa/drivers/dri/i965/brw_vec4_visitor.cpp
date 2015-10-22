@@ -1222,6 +1222,9 @@ vec4_visitor::emit_untyped_surface_read(unsigned surf_index, dst_reg dst,
 void
 vec4_visitor::emit_ndc_computation()
 {
+   if (output_reg[VARYING_SLOT_POS].file == BAD_FILE)
+      return;
+
    /* Get the position */
    src_reg pos = src_reg(output_reg[VARYING_SLOT_POS]);
 
@@ -1287,7 +1290,8 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
        * Later, clipping will detect ucp[6] and ensure the primitive is
        * clipped against all fixed planes.
        */
-      if (devinfo->has_negative_rhw_bug) {
+      if (devinfo->has_negative_rhw_bug &&
+          output_reg[BRW_VARYING_SLOT_NDC].file != BAD_FILE) {
          src_reg ndc_w = src_reg(output_reg[BRW_VARYING_SLOT_NDC]);
          ndc_w.swizzle = BRW_SWIZZLE_WWWW;
          emit(CMP(dst_null_f(), ndc_w, src_reg(0.0f), BRW_CONDITIONAL_L));
@@ -1335,8 +1339,10 @@ vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
    assert(varying < VARYING_SLOT_MAX);
    assert(output_reg[varying].type == reg.type);
    current_annotation = output_reg_annotation[varying];
-   /* Copy the register, saturating if necessary */
-   return emit(MOV(reg, src_reg(output_reg[varying])));
+   if (output_reg[varying].file != BAD_FILE)
+      return emit(MOV(reg, src_reg(output_reg[varying])));
+   else
+      return NULL;
 }
 
 void
@@ -1355,11 +1361,13 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
    }
    case BRW_VARYING_SLOT_NDC:
       current_annotation = "NDC";
-      emit(MOV(reg, src_reg(output_reg[BRW_VARYING_SLOT_NDC])));
+      if (output_reg[BRW_VARYING_SLOT_NDC].file != BAD_FILE)
+         emit(MOV(reg, src_reg(output_reg[BRW_VARYING_SLOT_NDC])));
       break;
    case VARYING_SLOT_POS:
       current_annotation = "gl_Position";
-      emit(MOV(reg, src_reg(output_reg[VARYING_SLOT_POS])));
+      if (output_reg[VARYING_SLOT_POS].file != BAD_FILE)
+         emit(MOV(reg, src_reg(output_reg[VARYING_SLOT_POS])));
       break;
    case VARYING_SLOT_EDGE:
       /* This is present when doing unfilled polygons.  We're supposed to copy

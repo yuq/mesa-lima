@@ -179,14 +179,17 @@ struct radeon_shader_reloc;
 
 struct si_shader;
 
+/* A shader selector is a gallium CSO and contains shader variants and
+ * binaries for one TGSI program. This can be shared by multiple contexts.
+ */
 struct si_shader_selector {
-	struct si_shader *current;
+	pipe_mutex		mutex;
+	struct si_shader	*first_variant; /* immutable after the first variant */
+	struct si_shader	*last_variant; /* mutable */
 
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
 	struct tgsi_shader_info		info;
-
-	unsigned	num_shaders;
 
 	/* PIPE_SHADER_[VERTEX|FRAGMENT|...] */
 	unsigned	type;
@@ -241,7 +244,7 @@ union si_shader_key {
 		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
-		unsigned	export_prim_id; /* when PS needs it and GS is disabled */
+		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} vs;
 	struct {
 		unsigned	prim_mode:3;
@@ -252,7 +255,7 @@ union si_shader_key {
 		 * This describes how outputs are laid out in memory. */
 		uint64_t	es_enabled_outputs;
 		unsigned	as_es:1; /* export shader */
-		unsigned	export_prim_id; /* when PS needs it and GS is disabled */
+		unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	} tes; /* tessellation evaluation shader */
 };
 
@@ -293,24 +296,24 @@ struct si_shader {
 
 static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
 {
-	if (sctx->gs_shader)
-		return &sctx->gs_shader->info;
-	else if (sctx->tes_shader)
-		return &sctx->tes_shader->info;
-	else if (sctx->vs_shader)
-		return &sctx->vs_shader->info;
+	if (sctx->gs_shader.cso)
+		return &sctx->gs_shader.cso->info;
+	else if (sctx->tes_shader.cso)
+		return &sctx->tes_shader.cso->info;
+	else if (sctx->vs_shader.cso)
+		return &sctx->vs_shader.cso->info;
 	else
 		return NULL;
 }
 
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 {
-	if (sctx->gs_shader)
-		return sctx->gs_shader->current->gs_copy_shader;
-	else if (sctx->tes_shader)
-		return sctx->tes_shader->current;
+	if (sctx->gs_shader.current)
+		return sctx->gs_shader.current->gs_copy_shader;
+	else if (sctx->tes_shader.current)
+		return sctx->tes_shader.current;
 	else
-		return sctx->vs_shader->current;
+		return sctx->vs_shader.current;
 }
 
 static inline bool si_vs_exports_prim_id(struct si_shader *shader)
