@@ -1926,8 +1926,9 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
-	if (sctx->b.chip_class >= VI) {
+	if (sctx->b.chip_class >= VI && rtex->surface.dcc_enabled) {
 		unsigned max_uncompressed_block_size = 2;
+		uint64_t dcc_offset = rtex->surface.level[level].dcc_offset;
 
 		if (rtex->surface.nsamples > 1) {
 			if (rtex->surface.bpe == 1)
@@ -1938,12 +1939,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 		surf->cb_dcc_control = S_028C78_MAX_UNCOMPRESSED_BLOCK_SIZE(max_uncompressed_block_size) |
 		                       S_028C78_INDEPENDENT_64B_BLOCKS(1);
-
-		if (rtex->surface.dcc_enabled) {
-			uint64_t dcc_offset = rtex->surface.level[level].dcc_offset;
-
-			surf->cb_dcc_base = (rtex->dcc_buffer->gpu_address + dcc_offset) >> 8;
-		}
+		surf->cb_dcc_base = (rtex->dcc_buffer->gpu_address + dcc_offset) >> 8;
 	}
 
 	if (rtex->fmask.size) {
