@@ -1759,45 +1759,40 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
                                nir->info.num_ssbos - 1);
       }
 
-      /* Offset */
-      fs_reg offset_reg = vgrf(glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
-      if (has_indirect) {
-         bld.MOV(offset_reg, get_nir_src(instr->src[2]));
-      } else {
-         const_offset_bytes = instr->const_index[0];
-         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
-      }
-
       /* Value */
       fs_reg val_reg = get_nir_src(instr->src[0]);
 
       /* Writemask */
       unsigned writemask = instr->const_index[1];
 
-      /* Write each component present in the writemask */
-      unsigned skipped_channels = 0;
-      for (int i = 0; i < instr->num_components; i++) {
-         int component_mask = 1 << i;
-         if (writemask & component_mask) {
-            if (skipped_channels) {
-               if (!has_indirect) {
-                  const_offset_bytes += 4 * skipped_channels;
-                  bld.MOV(offset_reg, fs_reg(const_offset_bytes));
-               } else {
-                  bld.ADD(offset_reg, offset_reg,
-                           brw_imm_ud(4 * skipped_channels));
-               }
-               skipped_channels = 0;
-            }
+      /* Combine groups of consecutive enabled channels in one write
+       * message. We use ffs to find the first enabled channel and then ffs on
+       * the bit-inverse, down-shifted writemask to determine the length of
+       * the block of enabled bits.
+       */
+      while (writemask) {
+         unsigned first_component = ffs(writemask) - 1;
+         unsigned length = ffs(~(writemask >> first_component)) - 1;
+         fs_reg offset_reg;
 
-            emit_untyped_write(bld, surf_index, offset_reg,
-                               offset(val_reg, bld, i),
-                               1 /* dims */, 1 /* size */,
-                               BRW_PREDICATE_NONE);
+         if (!has_indirect) {
+            offset_reg = fs_reg(instr->const_index[0] + 4 * first_component);
+         } else {
+            offset_reg = vgrf(glsl_type::uint_type);
+            bld.ADD(offset_reg,
+                    retype(get_nir_src(instr->src[2]), BRW_REGISTER_TYPE_UD),
+                    fs_reg(4 * first_component));
          }
 
-         skipped_channels++;
+         emit_untyped_write(bld, surf_index, offset_reg,
+                            offset(val_reg, bld, first_component),
+                            1 /* dims */, length,
+                            BRW_PREDICATE_NONE);
+
+         /* Clear the bits in the writemask that we just wrote, then try
+          * again to see if more channels are left.
+          */
+         writemask &= (15 << (first_component + length));
       }
       break;
    }
