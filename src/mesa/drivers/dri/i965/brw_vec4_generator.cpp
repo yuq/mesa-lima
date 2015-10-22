@@ -34,6 +34,116 @@ extern "C" {
 
 namespace brw {
 
+/**
+ * The vertex shader code generator.
+ *
+ * Translates VS IR to actual i965 assembly code.
+ */
+class vec4_generator
+{
+public:
+   vec4_generator(const struct brw_compiler *compiler, void *log_data,
+                  struct brw_vue_prog_data *prog_data,
+                  void *mem_ctx,
+                  bool debug_flag,
+                  const char *stage_name,
+                  const char *stage_abbrev);
+   ~vec4_generator();
+
+   const unsigned *generate_assembly(const cfg_t *cfg, unsigned *asm_size,
+                                     const nir_shader *nir);
+
+private:
+   void generate_code(const cfg_t *cfg, const nir_shader *nir);
+
+   void generate_math1_gen4(vec4_instruction *inst,
+			    struct brw_reg dst,
+			    struct brw_reg src);
+   void generate_math2_gen4(vec4_instruction *inst,
+			    struct brw_reg dst,
+			    struct brw_reg src0,
+			    struct brw_reg src1);
+   void generate_math_gen6(vec4_instruction *inst,
+                           struct brw_reg dst,
+                           struct brw_reg src0,
+                           struct brw_reg src1);
+
+   void generate_tex(vec4_instruction *inst,
+                     struct brw_reg dst,
+                     struct brw_reg src,
+                     struct brw_reg sampler_index);
+
+   void generate_vs_urb_write(vec4_instruction *inst);
+   void generate_gs_urb_write(vec4_instruction *inst);
+   void generate_gs_urb_write_allocate(vec4_instruction *inst);
+   void generate_gs_thread_end(vec4_instruction *inst);
+   void generate_gs_set_write_offset(struct brw_reg dst,
+                                     struct brw_reg src0,
+                                     struct brw_reg src1);
+   void generate_gs_set_vertex_count(struct brw_reg dst,
+                                     struct brw_reg src);
+   void generate_gs_svb_write(vec4_instruction *inst,
+                              struct brw_reg dst,
+                              struct brw_reg src0,
+                              struct brw_reg src1);
+   void generate_gs_svb_set_destination_index(vec4_instruction *inst,
+                                              struct brw_reg dst,
+                                              struct brw_reg src);
+   void generate_gs_set_dword_2(struct brw_reg dst, struct brw_reg src);
+   void generate_gs_prepare_channel_masks(struct brw_reg dst);
+   void generate_gs_set_channel_masks(struct brw_reg dst, struct brw_reg src);
+   void generate_gs_get_instance_id(struct brw_reg dst);
+   void generate_gs_ff_sync_set_primitives(struct brw_reg dst,
+                                           struct brw_reg src0,
+                                           struct brw_reg src1,
+                                           struct brw_reg src2);
+   void generate_gs_ff_sync(vec4_instruction *inst,
+                            struct brw_reg dst,
+                            struct brw_reg src0,
+                            struct brw_reg src1);
+   void generate_gs_set_primitive_id(struct brw_reg dst);
+   void generate_oword_dual_block_offsets(struct brw_reg m1,
+					  struct brw_reg index);
+   void generate_scratch_write(vec4_instruction *inst,
+			       struct brw_reg dst,
+			       struct brw_reg src,
+			       struct brw_reg index);
+   void generate_scratch_read(vec4_instruction *inst,
+			      struct brw_reg dst,
+			      struct brw_reg index);
+   void generate_pull_constant_load(vec4_instruction *inst,
+				    struct brw_reg dst,
+				    struct brw_reg index,
+				    struct brw_reg offset);
+   void generate_pull_constant_load_gen7(vec4_instruction *inst,
+                                         struct brw_reg dst,
+                                         struct brw_reg surf_index,
+                                         struct brw_reg offset);
+   void generate_set_simd4x2_header_gen9(vec4_instruction *inst,
+                                         struct brw_reg dst);
+
+   void generate_get_buffer_size(vec4_instruction *inst,
+                                 struct brw_reg dst,
+                                 struct brw_reg src,
+                                 struct brw_reg index);
+
+   void generate_unpack_flags(struct brw_reg dst);
+
+   const struct brw_compiler *compiler;
+   void *log_data; /* Passed to compiler->*_log functions */
+
+   const struct brw_device_info *devinfo;
+
+   struct brw_codegen *p;
+
+   struct brw_vue_prog_data *prog_data;
+
+   void *mem_ctx;
+   const char *stage_name;
+   const char *stage_abbrev;
+   const bool debug_flag;
+};
+
 vec4_generator::vec4_generator(const struct brw_compiler *compiler,
                                void *log_data,
                                struct brw_vue_prog_data *prog_data,
