@@ -956,12 +956,14 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
 	struct si_shader *vs = si_get_vs_state(sctx);
-	struct tgsi_shader_info *psinfo = &ps->selector->info;
+	struct tgsi_shader_info *psinfo;
 	struct tgsi_shader_info *vsinfo = &vs->selector->info;
 	unsigned i, j, tmp, num_written = 0;
 
-	if (!ps->nparam)
+	if (!ps || !ps->nparam)
 		return;
+
+	psinfo = &ps->selector->info;
 
 	radeon_set_context_reg_seq(cs, R_028644_SPI_PS_INPUT_CNTL_0, ps->nparam);
 
@@ -1025,7 +1027,12 @@ static void si_emit_spi_ps_input(struct si_context *sctx, struct r600_atom *atom
 {
 	struct radeon_winsys_cs *cs = sctx->b.rings.gfx.cs;
 	struct si_shader *ps = sctx->ps_shader.current;
-	unsigned input_ena = ps->spi_ps_input_ena;
+	unsigned input_ena;
+
+	if (!ps)
+		return;
+
+	input_ena = ps->spi_ps_input_ena;
 
 	/* we need to enable at least one of them, otherwise we hang the GPU */
 	assert(G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
@@ -1531,23 +1538,38 @@ bool si_update_shaders(struct si_context *sctx)
 
 	si_update_vgt_shader_config(sctx);
 
-	r = si_shader_select(ctx, &sctx->ps_shader);
-	if (r)
-		return false;
-	si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
+	if (sctx->ps_shader.cso) {
+		r = si_shader_select(ctx, &sctx->ps_shader);
+		if (r)
+			return false;
+		si_pm4_bind_state(sctx, ps, sctx->ps_shader.current->pm4);
 
-	if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
-	    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
-	    sctx->flatshade != rs->flatshade) {
-		sctx->sprite_coord_enable = rs->sprite_coord_enable;
-		sctx->flatshade = rs->flatshade;
-		si_mark_atom_dirty(sctx, &sctx->spi_map);
-	}
+		if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
+		    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
+		    sctx->flatshade != rs->flatshade) {
+			sctx->sprite_coord_enable = rs->sprite_coord_enable;
+			sctx->flatshade = rs->flatshade;
+			si_mark_atom_dirty(sctx, &sctx->spi_map);
+		}
 
-	if (si_pm4_state_changed(sctx, ps) ||
-	    sctx->force_persample_interp != rs->force_persample_interp) {
-		sctx->force_persample_interp = rs->force_persample_interp;
-		si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
+		if (si_pm4_state_changed(sctx, ps) ||
+		    sctx->force_persample_interp != rs->force_persample_interp) {
+			sctx->force_persample_interp = rs->force_persample_interp;
+			si_mark_atom_dirty(sctx, &sctx->spi_ps_input);
+		}
+
+		if (sctx->ps_db_shader_control != sctx->ps_shader.current->db_shader_control) {
+			sctx->ps_db_shader_control = sctx->ps_shader.current->db_shader_control;
+			si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		}
+
+		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.poly_line_smoothing) {
+			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.poly_line_smoothing;
+			si_mark_atom_dirty(sctx, &sctx->msaa_config);
+
+			if (sctx->b.chip_class == SI)
+				si_mark_atom_dirty(sctx, &sctx->db_render_state);
+		}
 	}
 
 	if (si_pm4_state_changed(sctx, ls) ||
@@ -1558,19 +1580,6 @@ bool si_update_shaders(struct si_context *sctx)
 	    si_pm4_state_changed(sctx, ps)) {
 		if (!si_update_spi_tmpring_size(sctx))
 			return false;
-	}
-
-	if (sctx->ps_db_shader_control != sctx->ps_shader.current->db_shader_control) {
-		sctx->ps_db_shader_control = sctx->ps_shader.current->db_shader_control;
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
-	}
-
-	if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.poly_line_smoothing) {
-		sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.poly_line_smoothing;
-		si_mark_atom_dirty(sctx, &sctx->msaa_config);
-
-		if (sctx->b.chip_class == SI)
-			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 	}
 	return true;
 }
