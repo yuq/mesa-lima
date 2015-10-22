@@ -283,6 +283,15 @@ populate_vs_prog_key(const struct brw_device_info *devinfo,
 }
 
 static void
+populate_gs_prog_key(const struct brw_device_info *devinfo,
+                     struct brw_gs_prog_key *key)
+{
+   memset(key, 0, sizeof(*key));
+
+   populate_sampler_prog_key(devinfo, &key->tex);
+}
+
+static void
 populate_wm_prog_key(const struct brw_device_info *devinfo,
                      const VkGraphicsPipelineCreateInfo *info,
                      struct brw_wm_prog_key *key)
@@ -504,6 +513,59 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    ralloc_free(mem_ctx);
 
    anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_VERTEX,
+                                   &prog_data->base.base);
+
+   return VK_SUCCESS;
+}
+
+static VkResult
+anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
+                        const VkGraphicsPipelineCreateInfo *info,
+                        struct anv_shader *shader)
+{
+   const struct brw_compiler *compiler =
+      pipeline->device->instance->physicalDevice.compiler;
+   struct brw_gs_prog_data *prog_data = &pipeline->gs_prog_data;
+   struct brw_gs_prog_key key;
+
+   populate_gs_prog_key(&pipeline->device->info, &key);
+
+   /* TODO: Look up shader in cache */
+
+   memset(prog_data, 0, sizeof(*prog_data));
+
+   nir_shader *nir = anv_pipeline_compile(pipeline, shader,
+                                          VK_SHADER_STAGE_GEOMETRY,
+                                          &prog_data->base.base);
+   if (nir == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   if (shader->module->nir == NULL)
+      ralloc_steal(mem_ctx, nir);
+
+   brw_compute_vue_map(&pipeline->device->info,
+                       &prog_data->base.vue_map,
+                       nir->info.outputs_written,
+                       false /* XXX: Do SSO? */);
+
+   unsigned code_size;
+   const unsigned *shader_code =
+      brw_compile_gs(compiler, NULL, mem_ctx, &key, prog_data, nir,
+                     NULL, -1, &code_size, NULL);
+   if (shader_code == NULL) {
+      ralloc_free(mem_ctx);
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   }
+
+   /* TODO: SIMD8 GS */
+   pipeline->gs_vec4 =
+      anv_pipeline_upload_kernel(pipeline, shader_code, code_size);
+
+   ralloc_free(mem_ctx);
+
+   anv_pipeline_add_compiled_stage(pipeline, VK_SHADER_STAGE_GEOMETRY,
                                    &prog_data->base.base);
 
    return VK_SUCCESS;
@@ -956,6 +1018,9 @@ anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
       switch (pCreateInfo->pStages[i].stage) {
       case VK_SHADER_STAGE_VERTEX:
          anv_pipeline_compile_vs(pipeline, pCreateInfo, shader);
+         break;
+      case VK_SHADER_STAGE_GEOMETRY:
+         anv_pipeline_compile_gs(pipeline, pCreateInfo, shader);
          break;
       case VK_SHADER_STAGE_FRAGMENT:
          anv_pipeline_compile_fs(pipeline, pCreateInfo, shader);
