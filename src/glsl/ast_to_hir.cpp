@@ -2422,21 +2422,6 @@ validate_explicit_location(const struct ast_type_qualifier *qual,
       const struct gl_context *const ctx = state->ctx;
       unsigned max_loc = qual->location + var->type->uniform_locations() - 1;
 
-      /* ARB_explicit_uniform_location specification states:
-       *
-       *     "The explicitly defined locations and the generated locations
-       *     must be in the range of 0 to MAX_UNIFORM_LOCATIONS minus one."
-       *
-       *     "Valid locations for default-block uniform variable locations
-       *     are in the range of 0 to the implementation-defined maximum
-       *     number of uniform locations."
-       */
-      if (qual->location < 0) {
-         _mesa_glsl_error(loc, state,
-                          "explicit location < 0 for uniform %s", var->name);
-         return;
-      }
-
       if (max_loc >= ctx->Const.MaxUserAssignableUniformLocations) {
          _mesa_glsl_error(loc, state, "location(s) consumed by uniform %s "
                           ">= MAX_UNIFORM_LOCATIONS (%u)", var->name,
@@ -2527,41 +2512,30 @@ validate_explicit_location(const struct ast_type_qualifier *qual,
    } else {
       var->data.explicit_location = true;
 
-      /* This bit of silliness is needed because invalid explicit locations
-       * are supposed to be flagged during linking.  Small negative values
-       * biased by VERT_ATTRIB_GENERIC0 or FRAG_RESULT_DATA0 could alias
-       * built-in values (e.g., -16+VERT_ATTRIB_GENERIC0 = VERT_ATTRIB_POS).
-       * The linker needs to be able to differentiate these cases.  This
-       * ensures that negative values stay negative.
-       */
-      if (qual->location >= 0) {
-         switch (state->stage) {
-         case MESA_SHADER_VERTEX:
-            var->data.location = (var->data.mode == ir_var_shader_in)
-               ? (qual->location + VERT_ATTRIB_GENERIC0)
-               : (qual->location + VARYING_SLOT_VAR0);
-            break;
+      switch (state->stage) {
+      case MESA_SHADER_VERTEX:
+         var->data.location = (var->data.mode == ir_var_shader_in)
+            ? (qual->location + VERT_ATTRIB_GENERIC0)
+            : (qual->location + VARYING_SLOT_VAR0);
+         break;
 
-         case MESA_SHADER_TESS_CTRL:
-         case MESA_SHADER_TESS_EVAL:
-         case MESA_SHADER_GEOMETRY:
-            if (var->data.patch)
-               var->data.location = qual->location + VARYING_SLOT_PATCH0;
-            else
-               var->data.location = qual->location + VARYING_SLOT_VAR0;
-            break;
+      case MESA_SHADER_TESS_CTRL:
+      case MESA_SHADER_TESS_EVAL:
+      case MESA_SHADER_GEOMETRY:
+         if (var->data.patch)
+            var->data.location = qual->location + VARYING_SLOT_PATCH0;
+         else
+            var->data.location = qual->location + VARYING_SLOT_VAR0;
+         break;
 
-         case MESA_SHADER_FRAGMENT:
-            var->data.location = (var->data.mode == ir_var_shader_out)
-               ? (qual->location + FRAG_RESULT_DATA0)
-               : (qual->location + VARYING_SLOT_VAR0);
-            break;
-         case MESA_SHADER_COMPUTE:
-            assert(!"Unexpected shader type");
-            break;
-         }
-      } else {
-         var->data.location = qual->location;
+      case MESA_SHADER_FRAGMENT:
+         var->data.location = (var->data.mode == ir_var_shader_out)
+            ? (qual->location + FRAG_RESULT_DATA0)
+            : (qual->location + VARYING_SLOT_VAR0);
+         break;
+      case MESA_SHADER_COMPUTE:
+         assert(!"Unexpected shader type");
+         break;
       }
 
       if (qual->flags.q.explicit_index) {
