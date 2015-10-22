@@ -768,7 +768,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
       output_size_bytes += 32;
 
    assert(output_size_bytes >= 1);
-   int max_output_size_bytes = GEN7_MAX_GS_URB_ENTRY_SIZE_BYTES;
+   unsigned max_output_size_bytes = GEN7_MAX_GS_URB_ENTRY_SIZE_BYTES;
    if (compiler->devinfo->gen == 6)
       max_output_size_bytes = GEN6_MAX_GS_URB_ENTRY_SIZE_BYTES;
    if (output_size_bytes > max_output_size_bytes)
