@@ -799,11 +799,11 @@ static void si_bind_vs_shader(struct pipe_context *ctx, void *state)
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_shader_selector *sel = state;
 
-	if (sctx->vs_shader.cso == sel || !sel)
+	if (sctx->vs_shader.cso == sel)
 		return;
 
 	sctx->vs_shader.cso = sel;
-	sctx->vs_shader.current = sel->first_variant;
+	sctx->vs_shader.current = sel ? sel->first_variant : NULL;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	si_update_viewports_and_scissors(sctx);
 }
