@@ -426,7 +426,7 @@ gen8_graphics_pipeline_create(
                      .DispatchGRFStartRegisterForURBData =
                         gs_prog_data->base.base.dispatch_grf_start_reg,
 
-                     .MaximumNumberofThreads = device->info.max_gs_threads,
+                     .MaximumNumberofThreads = device->info.max_gs_threads / 2 - 1,
                      .ControlDataHeaderSize = gs_prog_data->control_data_header_size_hwords,
                      //pipeline->gs_prog_data.dispatch_mode |
                      .StatisticsEnable = true,
