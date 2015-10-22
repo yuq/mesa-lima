@@ -34,108 +34,6 @@ extern "C" {
 
 namespace brw {
 
-struct brw_reg
-vec4_instruction::get_dst(unsigned gen)
-{
-   struct brw_reg brw_reg;
-
-   switch (dst.file) {
-   case GRF:
-      brw_reg = brw_vec8_grf(dst.reg + dst.reg_offset, 0);
-      brw_reg = retype(brw_reg, dst.type);
-      brw_reg.dw1.bits.writemask = dst.writemask;
-      break;
-
-   case MRF:
-      assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF(gen));
-      brw_reg = brw_message_reg(dst.reg + dst.reg_offset);
-      brw_reg = retype(brw_reg, dst.type);
-      brw_reg.dw1.bits.writemask = dst.writemask;
-      break;
-
-   case HW_REG:
-      assert(dst.type == dst.fixed_hw_reg.type);
-      brw_reg = dst.fixed_hw_reg;
-      break;
-
-   case BAD_FILE:
-      brw_reg = brw_null_reg();
-      break;
-
-   default:
-      unreachable("not reached");
-   }
-   return brw_reg;
-}
-
-struct brw_reg
-vec4_instruction::get_src(const struct brw_vue_prog_data *prog_data, int i)
-{
-   struct brw_reg brw_reg;
-
-   switch (src[i].file) {
-   case GRF:
-      brw_reg = brw_vec8_grf(src[i].reg + src[i].reg_offset, 0);
-      brw_reg = retype(brw_reg, src[i].type);
-      brw_reg.dw1.bits.swizzle = src[i].swizzle;
-      if (src[i].abs)
-	 brw_reg = brw_abs(brw_reg);
-      if (src[i].negate)
-	 brw_reg = negate(brw_reg);
-      break;
-
-   case IMM:
-      switch (src[i].type) {
-      case BRW_REGISTER_TYPE_F:
-	 brw_reg = brw_imm_f(src[i].fixed_hw_reg.dw1.f);
-	 break;
-      case BRW_REGISTER_TYPE_D:
-	 brw_reg = brw_imm_d(src[i].fixed_hw_reg.dw1.d);
-	 break;
-      case BRW_REGISTER_TYPE_UD:
-	 brw_reg = brw_imm_ud(src[i].fixed_hw_reg.dw1.ud);
-	 break;
-      case BRW_REGISTER_TYPE_VF:
-         brw_reg = brw_imm_vf(src[i].fixed_hw_reg.dw1.ud);
-         break;
-      default:
-	 unreachable("not reached");
-      }
-      break;
-
-   case UNIFORM:
-      brw_reg = stride(brw_vec4_grf(prog_data->base.dispatch_grf_start_reg +
-                                    (src[i].reg + src[i].reg_offset) / 2,
-				    ((src[i].reg + src[i].reg_offset) % 2) * 4),
-		       0, 4, 1);
-      brw_reg = retype(brw_reg, src[i].type);
-      brw_reg.dw1.bits.swizzle = src[i].swizzle;
-      if (src[i].abs)
-	 brw_reg = brw_abs(brw_reg);
-      if (src[i].negate)
-	 brw_reg = negate(brw_reg);
-
-      /* This should have been moved to pull constants. */
-      assert(!src[i].reladdr);
-      break;
-
-   case HW_REG:
-      assert(src[i].type == src[i].fixed_hw_reg.type);
-      brw_reg = src[i].fixed_hw_reg;
-      break;
-
-   case BAD_FILE:
-      /* Probably unused. */
-      brw_reg = brw_null_reg();
-      break;
-   case ATTR:
-   default:
-      unreachable("not reached");
-   }
-
-   return brw_reg;
-}
-
 vec4_generator::vec4_generator(const struct brw_compiler *compiler,
                                void *log_data,
                                struct brw_vue_prog_data *prog_data,
@@ -476,7 +374,7 @@ vec4_generator::generate_gs_urb_write_allocate(vec4_instruction *inst)
 
    /* We pass the temporary passed in src0 as the writeback register */
    brw_urb_WRITE(p,
-                 inst->get_src(this->prog_data, 0), /* dest */
+                 inst->src[0].fixed_hw_reg, /* dest */
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_ALLOCATE_COMPLETE,
@@ -489,8 +387,8 @@ vec4_generator::generate_gs_urb_write_allocate(vec4_instruction *inst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, get_element_ud(inst->get_dst(devinfo->gen), 0),
-           get_element_ud(inst->get_src(this->prog_data, 0), 0));
+   brw_MOV(p, get_element_ud(inst->dst.fixed_hw_reg, 0),
+           get_element_ud(inst->src[0].fixed_hw_reg, 0));
    brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
 }
@@ -1154,9 +1052,9 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
-	 src[i] = inst->get_src(this->prog_data, i);
+	 src[i] = inst->src[i].fixed_hw_reg;
       }
-      dst = inst->get_dst(devinfo->gen);
+      dst = inst->dst.fixed_hw_reg;
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
