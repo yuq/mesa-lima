@@ -133,6 +133,28 @@ get_mul_for_src(nir_alu_src *src, int num_components,
    return alu;
 }
 
+/**
+ * Given a list of (at least two) nir_alu_src's, tells if any of them is a
+ * constant value and is used only once.
+ */
+static bool
+any_alu_src_is_a_constant(nir_alu_src srcs[])
+{
+   for (unsigned i = 0; i < 2; i++) {
+      if (srcs[i].src.ssa->parent_instr->type == nir_instr_type_load_const) {
+         nir_load_const_instr *load_const =
+            nir_instr_as_load_const (srcs[i].src.ssa->parent_instr);
+
+         if (list_is_singular(&load_const->def.uses) &&
+             list_empty(&load_const->def.if_uses)) {
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
 static bool
 brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
 {
@@ -182,6 +204,15 @@ brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
       nir_ssa_def *mul_src[2];
       mul_src[0] = mul->src[0].src.ssa;
       mul_src[1] = mul->src[1].src.ssa;
+
+      /* If any of the operands of the fmul and any of the fadd is a constant,
+       * we bypass because it will be more efficient as the constants will be
+       * propagated as operands, potentially saving two load_const instructions.
+       */
+      if (any_alu_src_is_a_constant(mul->src) &&
+          any_alu_src_is_a_constant(add->src)) {
+         continue;
+      }
 
       if (abs) {
          for (unsigned i = 0; i < 2; i++) {
