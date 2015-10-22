@@ -708,18 +708,24 @@ vtn_get_builtin_location(SpvBuiltIn builtin, int *location,
       *location = FRAG_RESULT_DEPTH;
       *mode = nir_var_shader_out;
       break;
-   case SpvBuiltInHelperInvocation:
-      unreachable("unsupported builtin"); /* XXX */
-      break;
    case SpvBuiltInNumWorkgroups:
    case SpvBuiltInWorkgroupSize:
       /* these are constants, need to be handled specially */
       unreachable("unsupported builtin");
-   case SpvBuiltInWorkgroupId:
-   case SpvBuiltInLocalInvocationId:
+      break;
    case SpvBuiltInGlobalInvocationId:
    case SpvBuiltInLocalInvocationIndex:
-      unreachable("no compute shader support");
+      /* these are computed values, need to be handled specially */
+      unreachable("unsupported builtin");
+   case SpvBuiltInWorkgroupId:
+      *location = SYSTEM_VALUE_WORK_GROUP_ID;
+      *mode = nir_var_system_value;
+      break;
+   case SpvBuiltInLocalInvocationId:
+      *location = SYSTEM_VALUE_LOCAL_INVOCATION_ID;
+      *mode = nir_var_system_value;
+      break;
+   case SpvBuiltInHelperInvocation:
    default:
       unreachable("unsupported builtin");
    }
