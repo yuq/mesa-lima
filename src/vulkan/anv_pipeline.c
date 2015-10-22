@@ -354,7 +354,11 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
 
    bool have_push_constants = false;
    nir_foreach_variable(var, &nir->uniforms) {
-      if (!glsl_type_is_sampler(var->type)) {
+      const struct glsl_type *type = var->type;
+      if (glsl_type_is_array(type))
+         type = glsl_get_array_element(type);
+
+      if (!glsl_type_is_sampler(type)) {
          have_push_constants = true;
          break;
       }
