@@ -155,6 +155,9 @@ struct svga_shader_variant
                                 *  applied to any of the varyings.
                                 */
 
+   /** Is the color output just a constant value? (fragment shader only) */
+   boolean constant_color_output;
+
    /** For FS-based polygon stipple */
    unsigned pstipple_sampler_unit;
 

@@ -99,6 +99,7 @@ translate_dst_register( struct svga_shader_emitter *emit,
        * Need to lookup a table built at decl time:
        */
       dest = emit->output_map[reg->Register.Index];
+      emit->num_output_writes++;
       break;
 
    default:
@@ -2103,6 +2104,29 @@ emit_simple_instruction(struct svga_shader_emitter *emit,
 
 
 /**
+ * TGSI_OPCODE_MOVE is only special-cased here to detect the
+ * svga_fragment_shader::constant_color_output case.
+ */
+static boolean
+emit_mov(struct svga_shader_emitter *emit,
+         const struct tgsi_full_instruction *insn)
+{
+   const struct tgsi_full_src_register *src = &insn->Src[0];
+   const struct tgsi_full_dst_register *dst = &insn->Dst[0];
+
+   if (emit->unit == PIPE_SHADER_FRAGMENT &&
+       dst->Register.File == TGSI_FILE_OUTPUT &&
+       dst->Register.Index == 0 &&
+       src->Register.File == TGSI_FILE_CONSTANT &&
+       !src->Register.Indirect) {
+      emit->constant_color_output = TRUE;
+   }
+
+   return emit_simple_instruction(emit, SVGA3DOP_MOV, insn);
+}
+
+
+/**
  * Translate/emit TGSI DDX, DDY instructions.
  */
 static boolean
@@ -3044,6 +3068,9 @@ svga_emit_instruction(struct svga_shader_emitter *emit,
 
    case TGSI_OPCODE_SSG:
       return emit_ssg( emit, insn );
+
+   case TGSI_OPCODE_MOV:
+      return emit_mov( emit, insn );
 
    default:
       {
