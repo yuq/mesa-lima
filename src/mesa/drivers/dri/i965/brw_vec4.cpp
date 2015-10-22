@@ -2108,9 +2108,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
          return NULL;
       }
 
-      vec4_generator g(compiler, log_data, &prog_data->base,
-                       mem_ctx, INTEL_DEBUG & DEBUG_VS, "vertex", "VS");
-      assembly = g.generate_assembly(v.cfg, final_assembly_size, shader);
+      assembly = brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
+                                            shader, &prog_data->base, v.cfg,
+                                            final_assembly_size);
    }
 
    return assembly;

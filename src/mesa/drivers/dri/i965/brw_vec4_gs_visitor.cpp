@@ -824,9 +824,9 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
          vec4_gs_visitor v(compiler, log_data, &c, prog_data, shader,
                            mem_ctx, true /* no_spills */, shader_time_index);
          if (v.run()) {
-            vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
-                             INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
-            return g.generate_assembly(v.cfg, final_assembly_size, shader);
+            return brw_vec4_generate_assembly(compiler, log_data, mem_ctx,
+                                              shader, &prog_data->base, v.cfg,
+                                              final_assembly_size);
          }
       }
    }
@@ -875,9 +875,9 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
       if (error_str)
          *error_str = ralloc_strdup(mem_ctx, gs->fail_msg);
    } else {
-      vec4_generator g(compiler, log_data, &prog_data->base, mem_ctx,
-                       INTEL_DEBUG & DEBUG_GS, "geometry", "GS");
-      ret = g.generate_assembly(gs->cfg, final_assembly_size, shader);
+      ret = brw_vec4_generate_assembly(compiler, log_data, mem_ctx, shader,
+                                       &prog_data->base, gs->cfg,
+                                       final_assembly_size);
    }
 
    delete gs;

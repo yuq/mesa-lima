@@ -52,6 +52,15 @@ extern "C" {
 extern "C" {
 #endif
 
+const unsigned *
+brw_vec4_generate_assembly(const struct brw_compiler *compiler,
+                           void *log_data,
+                           void *mem_ctx,
+                           const nir_shader *nir,
+                           struct brw_vue_prog_data *prog_data,
+                           const struct cfg_t *cfg,
+                           unsigned *out_assembly_size);
+
 #ifdef __cplusplus
 } /* extern "C" */
 

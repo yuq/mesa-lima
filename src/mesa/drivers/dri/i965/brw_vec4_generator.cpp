@@ -1578,4 +1578,23 @@ vec4_generator::generate_assembly(const cfg_t *cfg,
    return brw_get_program(p, assembly_size);
 }
 
+extern "C" const unsigned *
+brw_vec4_generate_assembly(const struct brw_compiler *compiler,
+                           void *log_data,
+                           void *mem_ctx,
+                           const nir_shader *nir,
+                           struct brw_vue_prog_data *prog_data,
+                           const struct cfg_t *cfg,
+                           unsigned *out_assembly_size)
+{
+   const char *stage_name = _mesa_shader_stage_to_string(nir->stage);
+   const char *stage_abbrev = _mesa_shader_stage_to_abbrev(nir->stage);
+   bool debug_flag = INTEL_DEBUG &
+      intel_debug_flag_for_shader_stage(nir->stage);
+
+   vec4_generator g(compiler, log_data, prog_data, mem_ctx,
+                    debug_flag, stage_name, stage_abbrev);
+   return g.generate_assembly(cfg, out_assembly_size, nir);
+}
+
 } /* namespace brw */
