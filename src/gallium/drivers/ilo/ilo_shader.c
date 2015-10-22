@@ -37,6 +37,10 @@
 struct ilo_shader_cache {
    struct list_head shaders;
    struct list_head changed;
+
+   int max_vs_scratch_size;
+   int max_gs_scratch_size;
+   int max_fs_scratch_size;
 };
 
 /**
@@ -121,6 +125,8 @@ ilo_shader_cache_upload(struct ilo_shader_cache *shc,
       struct ilo_shader *sh;
 
       LIST_FOR_EACH_ENTRY(sh, &shader->variants, list) {
+         int scratch_size, *cur_max;
+
          if (sh->uploaded)
             continue;
 
@@ -128,6 +134,29 @@ ilo_shader_cache_upload(struct ilo_shader_cache *shc,
                sh->kernel_size, sh->kernel);
 
          sh->uploaded = true;
+
+         switch (shader->info.type) {
+         case PIPE_SHADER_VERTEX:
+            scratch_size = ilo_state_vs_get_scratch_size(&sh->cso.vs);
+            cur_max = &shc->max_vs_scratch_size;
+            break;
+         case PIPE_SHADER_GEOMETRY:
+            scratch_size = ilo_state_gs_get_scratch_size(&sh->cso.gs);
+            cur_max = &shc->max_gs_scratch_size;
+            break;
+         case PIPE_SHADER_FRAGMENT:
+            scratch_size = ilo_state_ps_get_scratch_size(&sh->cso.ps);
+            cur_max = &shc->max_fs_scratch_size;
+            break;
+         default:
+            assert(!"unknown shader type");
+            scratch_size = 0;
+            cur_max = &shc->max_vs_scratch_size;
+            break;
+         }
+
+         if (*cur_max < scratch_size)
+            *cur_max = scratch_size;
       }
 
       list_del(&shader->list);
@@ -155,6 +184,21 @@ ilo_shader_cache_invalidate(struct ilo_shader_cache *shc)
       LIST_FOR_EACH_ENTRY(sh, &shader->variants, list)
          sh->uploaded = false;
    }
+
+   shc->max_vs_scratch_size = 0;
+   shc->max_gs_scratch_size = 0;
+   shc->max_fs_scratch_size = 0;
+}
+
+void
+ilo_shader_cache_get_max_scratch_sizes(const struct ilo_shader_cache *shc,
+                                       int *vs_scratch_size,
+                                       int *gs_scratch_size,
+                                       int *fs_scratch_size)
+{
+   *vs_scratch_size = shc->max_vs_scratch_size;
+   *gs_scratch_size = shc->max_gs_scratch_size;
+   *fs_scratch_size = shc->max_fs_scratch_size;
 }
 
 /**
@@ -601,7 +645,7 @@ init_vs(struct ilo_shader *kernel,
    init_shader_urb(kernel, state, &info.urb);
    init_shader_kernel(kernel, state, &info.kernel);
    init_shader_resource(kernel, state, &info.resource);
-   info.per_thread_scratch_size = 0;
+   info.per_thread_scratch_size = kernel->per_thread_scratch_size;
    info.dispatch_enable = true;
    info.stats_enable = true;
 
@@ -640,7 +684,7 @@ init_gs(struct ilo_shader *kernel,
    init_shader_urb(kernel, state, &info.urb);
    init_shader_kernel(kernel, state, &info.kernel);
    init_shader_resource(kernel, state, &info.resource);
-   info.per_thread_scratch_size = 0;
+   info.per_thread_scratch_size = kernel->per_thread_scratch_size;
    info.dispatch_enable = true;
    info.stats_enable = true;
 
@@ -665,7 +709,7 @@ init_ps(struct ilo_shader *kernel,
    init_shader_kernel(kernel, state, &info.kernel_8);
    init_shader_resource(kernel, state, &info.resource);
 
-   info.per_thread_scratch_size = 0;
+   info.per_thread_scratch_size = kernel->per_thread_scratch_size;
    info.io.has_rt_write = true;
    info.io.posoffset = GEN6_POSOFFSET_NONE;
    info.io.attr_count = kernel->in.count;

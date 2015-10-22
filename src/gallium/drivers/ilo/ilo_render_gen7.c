@@ -318,10 +318,13 @@ gen7_draw_vs(struct ilo_render *r,
       const union ilo_shader_cso *cso = ilo_shader_get_kernel_cso(vec->vs);
       const uint32_t kernel_offset = ilo_shader_get_kernel_offset(vec->vs);
 
-      if (ilo_dev_gen(r->dev) >= ILO_GEN(8))
-         gen8_3DSTATE_VS(r->builder, &cso->vs, kernel_offset, NULL);
-      else
-         gen6_3DSTATE_VS(r->builder, &cso->vs, kernel_offset, NULL);
+      if (ilo_dev_gen(r->dev) >= ILO_GEN(8)) {
+         gen8_3DSTATE_VS(r->builder, &cso->vs,
+               kernel_offset, r->vs_scratch.bo);
+      } else {
+         gen6_3DSTATE_VS(r->builder, &cso->vs,
+               kernel_offset, r->vs_scratch.bo);
+      }
    }
 }
 
@@ -534,7 +537,7 @@ gen7_draw_wm(struct ilo_render *r,
       if (r->hw_ctx_changed)
          gen7_wa_pre_3dstate_ps_max_threads(r);
 
-      gen7_3DSTATE_PS(r->builder, &cso->ps, kernel_offset, NULL);
+      gen7_3DSTATE_PS(r->builder, &cso->ps, kernel_offset, r->fs_scratch.bo);
    }
 
    /* 3DSTATE_SCISSOR_STATE_POINTERS */

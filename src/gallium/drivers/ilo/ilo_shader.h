@@ -120,6 +120,12 @@ ilo_shader_cache_upload(struct ilo_shader_cache *shc,
 void
 ilo_shader_cache_invalidate(struct ilo_shader_cache *shc);
 
+void
+ilo_shader_cache_get_max_scratch_sizes(const struct ilo_shader_cache *shc,
+                                       int *vs_scratch_size,
+                                       int *gs_scratch_size,
+                                       int *fs_scratch_size);
+
 struct ilo_shader_state *
 ilo_shader_create_vs(const struct ilo_dev *dev,
                      const struct pipe_shader_state *state,
