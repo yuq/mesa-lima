@@ -2375,6 +2375,55 @@ vtn_handle_phi_second_pass(struct vtn_builder *b, SpvOp opcode,
    return true;
 }
 
+static unsigned
+gl_primitive_from_spv_execution_mode(SpvExecutionMode mode)
+{
+   switch (mode) {
+   case SpvExecutionModeInputPoints:
+   case SpvExecutionModeOutputPoints:
+      return 0; /* GL_POINTS */
+   case SpvExecutionModeInputLines:
+      return 1; /* GL_LINES */
+   case SpvExecutionModeInputLinesAdjacency:
+      return 0x000A; /* GL_LINE_STRIP_ADJACENCY_ARB */
+   case SpvExecutionModeInputTriangles:
+      return 4; /* GL_TRIANGLES */
+   case SpvExecutionModeInputTrianglesAdjacency:
+      return 0x000C; /* GL_TRIANGLES_ADJACENCY_ARB */
+   case SpvExecutionModeInputQuads:
+      return 7; /* GL_QUADS */
+   case SpvExecutionModeInputIsolines:
+      return 0x8E7A; /* GL_ISOLINES */
+   case SpvExecutionModeOutputLineStrip:
+      return 3; /* GL_LINE_STRIP */
+   case SpvExecutionModeOutputTriangleStrip:
+      return 5; /* GL_TRIANGLE_STRIP */
+   default:
+      assert(!"Invalid primitive type");
+      return 4;
+   }
+}
+
+static unsigned
+vertices_in_from_spv_execution_mode(SpvExecutionMode mode)
+{
+   switch (mode) {
+   case SpvExecutionModeInputPoints:
+      return 1;
+   case SpvExecutionModeInputLines:
+      return 2;
+   case SpvExecutionModeInputLinesAdjacency:
+      return 4;
+   case SpvExecutionModeInputTriangles:
+      return 3;
+   case SpvExecutionModeInputTrianglesAdjacency:
+      return 6;
+   default:
+      assert(!"Invalid GS input mode");
+      return 0;
+   }
+}
+
 static bool
 vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count)
@@ -2413,10 +2462,11 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
    case SpvOpExecutionMode:
       assert(b->entry_point == &b->values[w[1]]);
 
-      switch((SpvExecutionMode)w[2]) {
+      SpvExecutionMode mode = w[2];
+      switch(mode) {
       case SpvExecutionModeOriginUpperLeft:
       case SpvExecutionModeOriginLowerLeft:
-         b->origin_upper_left = (w[2] == SpvExecutionModeOriginUpperLeft);
+         b->origin_upper_left = (mode == SpvExecutionModeOriginUpperLeft);
          break;
 
       case SpvExecutionModeEarlyFragmentTests:
@@ -2424,6 +2474,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       case SpvExecutionModeInvocations:
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
          b->shader->info.gs.invocations = w[3];
          break;
 
@@ -2441,6 +2492,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       case SpvExecutionModeLocalSize:
+         assert(b->shader->stage == MESA_SHADER_COMPUTE);
          b->shader->info.cs.local_size[0] = w[3];
          b->shader->info.cs.local_size[1] = w[4];
          b->shader->info.cs.local_size[2] = w[5];
@@ -2449,6 +2501,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break; /* Nothing do do with this */
 
       case SpvExecutionModeOutputVertices:
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
          b->shader->info.gs.vertices_out = w[3];
          break;
 
@@ -2459,10 +2512,20 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvExecutionModeInputTrianglesAdjacency:
       case SpvExecutionModeInputQuads:
       case SpvExecutionModeInputIsolines:
+         if (b->shader->stage == MESA_SHADER_GEOMETRY) {
+            b->shader.info.gs.vertices_in =
+               vertices_in_from_spv_execution_mode(mode);
+         } else {
+            assert(!"Tesselation shaders not yet supported");
+         }
+         break;
+
       case SpvExecutionModeOutputPoints:
       case SpvExecutionModeOutputLineStrip:
       case SpvExecutionModeOutputTriangleStrip:
-         assert(!"TODO: Add geometry metadata");
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+         b->shader.info.gs.output_primitive =
+            gl_primitive_from_spv_execution_mode(mode);
          break;
 
       case SpvExecutionModeSpacingEqual:
