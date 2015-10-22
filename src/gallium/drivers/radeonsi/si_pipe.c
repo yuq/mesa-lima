@@ -55,8 +55,6 @@ static void si_destroy_context(struct pipe_context *context)
 
 	if (sctx->pstipple_sampler_state)
 		sctx->b.b.delete_sampler_state(&sctx->b.b, sctx->pstipple_sampler_state);
-	if (sctx->dummy_pixel_shader)
-		sctx->b.b.delete_fs_state(&sctx->b.b, sctx->dummy_pixel_shader);
 	if (sctx->fixed_func_tcs_shader.cso)
 		sctx->b.b.delete_tcs_state(&sctx->b.b, sctx->fixed_func_tcs_shader.cso);
 	if (sctx->custom_dsa_flush)

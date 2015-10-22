@@ -864,16 +864,6 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 	si_update_viewports_and_scissors(sctx);
 }
 
-static void si_make_dummy_ps(struct si_context *sctx)
-{
-	if (!sctx->dummy_pixel_shader) {
-		sctx->dummy_pixel_shader =
-			util_make_fragment_cloneinput_shader(&sctx->b.b, 0,
-							     TGSI_SEMANTIC_GENERIC,
-							     TGSI_INTERPOLATE_CONSTANT);
-	}
-}
-
 static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -883,14 +873,8 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 	if (sctx->ps_shader.cso == sel)
 		return;
 
-	/* use a dummy shader if binding a NULL shader */
-	if (!sel) {
-		si_make_dummy_ps(sctx);
-		sel = sctx->dummy_pixel_shader;
-	}
-
 	sctx->ps_shader.cso = sel;
-	sctx->ps_shader.current = sel->first_variant;
+	sctx->ps_shader.current = sel ? sel->first_variant : NULL;
 	si_mark_atom_dirty(sctx, &sctx->cb_target_mask);
 }
 
