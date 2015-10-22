@@ -710,6 +710,7 @@ NineDevice9_CreateAdditionalSwapChain( struct NineDevice9 *This,
         This, pPresentationParameters, pSwapChain);
 
     user_assert(pPresentationParameters, D3DERR_INVALIDCALL);
+    user_assert(tmplt->params.Windowed && pPresentationParameters->Windowed, D3DERR_INVALIDCALL);
 
     /* TODO: this deserves more tests */
     if (!pPresentationParameters->hDeviceWindow)
@@ -811,6 +812,8 @@ NineDevice9_GetBackBuffer( struct NineDevice9 *This,
                            IDirect3DSurface9 **ppBackBuffer )
 {
     user_assert(ppBackBuffer != NULL, D3DERR_INVALIDCALL);
+    /* return NULL on error */
+    *ppBackBuffer = NULL;
     user_assert(iSwapChain < This->nswapchains, D3DERR_INVALIDCALL);
 
     return NineSwapChain9_GetBackBuffer(This->swapchains[iSwapChain],
