@@ -2269,6 +2269,37 @@ vtn_handle_composite(struct vtn_builder *b, SpvOp opcode,
 }
 
 static void
+vtn_handle_barrier(struct vtn_builder *b, SpvOp opcode,
+                   const uint32_t *w, unsigned count)
+{
+   nir_intrinsic_op intrinsic_op;
+   switch (opcode) {
+   case SpvOpEmitVertex:
+   case SpvOpEmitStreamVertex:
+      intrinsic_op = nir_intrinsic_emit_vertex;
+      break;
+   case SpvOpEndPrimitive:
+   case SpvOpEndStreamPrimitive:
+      intrinsic_op = nir_intrinsic_end_primitive;
+      break;
+   case SpvOpMemoryBarrier:
+      intrinsic_op = nir_intrinsic_memory_barrier;
+      break;
+   case SpvOpControlBarrier:
+   default:
+      unreachable("unknown barrier instruction");
+   }
+
+   nir_intrinsic_instr *intrin =
+      nir_intrinsic_instr_create(b->shader, intrinsic_op);
+
+   if (opcode == SpvOpEmitStreamVertex || opcode == SpvOpEndStreamPrimitive)
+      intrin->const_index[0] = w[1];
+
+   nir_builder_instr_insert(&b->nb, &intrin->instr);
+}
+
+static void
 vtn_phi_node_init(struct vtn_builder *b, struct vtn_ssa_value *val)
 {
    if (glsl_type_is_vector_or_scalar(val->type)) {
@@ -2890,6 +2921,15 @@ vtn_handle_body_instruction(struct vtn_builder *b, SpvOp opcode,
 
    case SpvOpPhi:
       vtn_handle_phi_first_pass(b, w);
+      break;
+
+   case SpvOpEmitVertex:
+   case SpvOpEndPrimitive:
+   case SpvOpEmitStreamVertex:
+   case SpvOpEndStreamPrimitive:
+   case SpvOpControlBarrier:
+   case SpvOpMemoryBarrier:
+      vtn_handle_barrier(b, opcode, w, count);
       break;
 
    default:
