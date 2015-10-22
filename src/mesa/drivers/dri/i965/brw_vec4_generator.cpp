@@ -32,142 +32,13 @@ extern "C" {
 #include "program/prog_parameter.h"
 };
 
-namespace brw {
+using namespace brw;
 
-/**
- * The vertex shader code generator.
- *
- * Translates VS IR to actual i965 assembly code.
- */
-class vec4_generator
-{
-public:
-   vec4_generator(const struct brw_compiler *compiler, void *log_data,
-                  struct brw_vue_prog_data *prog_data,
-                  void *mem_ctx,
-                  bool debug_flag,
-                  const char *stage_name,
-                  const char *stage_abbrev);
-   ~vec4_generator();
-
-   const unsigned *generate_assembly(const cfg_t *cfg, unsigned *asm_size,
-                                     const nir_shader *nir);
-
-private:
-   void generate_code(const cfg_t *cfg, const nir_shader *nir);
-
-   void generate_math1_gen4(vec4_instruction *inst,
-			    struct brw_reg dst,
-			    struct brw_reg src);
-   void generate_math2_gen4(vec4_instruction *inst,
-			    struct brw_reg dst,
-			    struct brw_reg src0,
-			    struct brw_reg src1);
-   void generate_math_gen6(vec4_instruction *inst,
-                           struct brw_reg dst,
-                           struct brw_reg src0,
-                           struct brw_reg src1);
-
-   void generate_tex(vec4_instruction *inst,
-                     struct brw_reg dst,
-                     struct brw_reg src,
-                     struct brw_reg sampler_index);
-
-   void generate_vs_urb_write(vec4_instruction *inst);
-   void generate_gs_urb_write(vec4_instruction *inst);
-   void generate_gs_urb_write_allocate(vec4_instruction *inst);
-   void generate_gs_thread_end(vec4_instruction *inst);
-   void generate_gs_set_write_offset(struct brw_reg dst,
-                                     struct brw_reg src0,
-                                     struct brw_reg src1);
-   void generate_gs_set_vertex_count(struct brw_reg dst,
-                                     struct brw_reg src);
-   void generate_gs_svb_write(vec4_instruction *inst,
-                              struct brw_reg dst,
-                              struct brw_reg src0,
-                              struct brw_reg src1);
-   void generate_gs_svb_set_destination_index(vec4_instruction *inst,
-                                              struct brw_reg dst,
-                                              struct brw_reg src);
-   void generate_gs_set_dword_2(struct brw_reg dst, struct brw_reg src);
-   void generate_gs_prepare_channel_masks(struct brw_reg dst);
-   void generate_gs_set_channel_masks(struct brw_reg dst, struct brw_reg src);
-   void generate_gs_get_instance_id(struct brw_reg dst);
-   void generate_gs_ff_sync_set_primitives(struct brw_reg dst,
-                                           struct brw_reg src0,
-                                           struct brw_reg src1,
-                                           struct brw_reg src2);
-   void generate_gs_ff_sync(vec4_instruction *inst,
-                            struct brw_reg dst,
-                            struct brw_reg src0,
-                            struct brw_reg src1);
-   void generate_gs_set_primitive_id(struct brw_reg dst);
-   void generate_oword_dual_block_offsets(struct brw_reg m1,
-					  struct brw_reg index);
-   void generate_scratch_write(vec4_instruction *inst,
-			       struct brw_reg dst,
-			       struct brw_reg src,
-			       struct brw_reg index);
-   void generate_scratch_read(vec4_instruction *inst,
-			      struct brw_reg dst,
-			      struct brw_reg index);
-   void generate_pull_constant_load(vec4_instruction *inst,
-				    struct brw_reg dst,
-				    struct brw_reg index,
-				    struct brw_reg offset);
-   void generate_pull_constant_load_gen7(vec4_instruction *inst,
-                                         struct brw_reg dst,
-                                         struct brw_reg surf_index,
-                                         struct brw_reg offset);
-   void generate_set_simd4x2_header_gen9(vec4_instruction *inst,
-                                         struct brw_reg dst);
-
-   void generate_get_buffer_size(vec4_instruction *inst,
-                                 struct brw_reg dst,
-                                 struct brw_reg src,
-                                 struct brw_reg index);
-
-   void generate_unpack_flags(struct brw_reg dst);
-
-   const struct brw_compiler *compiler;
-   void *log_data; /* Passed to compiler->*_log functions */
-
-   const struct brw_device_info *devinfo;
-
-   struct brw_codegen *p;
-
-   struct brw_vue_prog_data *prog_data;
-
-   void *mem_ctx;
-   const char *stage_name;
-   const char *stage_abbrev;
-   const bool debug_flag;
-};
-
-vec4_generator::vec4_generator(const struct brw_compiler *compiler,
-                               void *log_data,
-                               struct brw_vue_prog_data *prog_data,
-                               void *mem_ctx,
-                               bool debug_flag,
-                               const char *stage_name,
-                               const char *stage_abbrev)
-   : compiler(compiler), log_data(log_data), devinfo(compiler->devinfo),
-     prog_data(prog_data),
-     mem_ctx(mem_ctx), stage_name(stage_name), stage_abbrev(stage_abbrev),
-     debug_flag(debug_flag)
-{
-   p = rzalloc(mem_ctx, struct brw_codegen);
-   brw_init_codegen(devinfo, p, mem_ctx);
-}
-
-vec4_generator::~vec4_generator()
-{
-}
-
-void
-vec4_generator::generate_math1_gen4(vec4_instruction *inst,
-                                    struct brw_reg dst,
-                                    struct brw_reg src)
+static void
+generate_math1_gen4(struct brw_codegen *p,
+                    vec4_instruction *inst,
+                    struct brw_reg dst,
+                    struct brw_reg src)
 {
    gen4_math(p,
 	     dst,
@@ -186,11 +57,12 @@ check_gen6_math_src_arg(struct brw_reg src)
    assert(src.dw1.bits.swizzle == BRW_SWIZZLE_XYZW);
 }
 
-void
-vec4_generator::generate_math_gen6(vec4_instruction *inst,
-                                   struct brw_reg dst,
-                                   struct brw_reg src0,
-                                   struct brw_reg src1)
+static void
+generate_math_gen6(struct brw_codegen *p,
+                   vec4_instruction *inst,
+                   struct brw_reg dst,
+                   struct brw_reg src0,
+                   struct brw_reg src1)
 {
    /* Can't do writemask because math can't be align16. */
    assert(dst.dw1.bits.writemask == WRITEMASK_XYZW);
@@ -204,11 +76,12 @@ vec4_generator::generate_math_gen6(vec4_instruction *inst,
    brw_set_default_access_mode(p, BRW_ALIGN_16);
 }
 
-void
-vec4_generator::generate_math2_gen4(vec4_instruction *inst,
-                                    struct brw_reg dst,
-                                    struct brw_reg src0,
-                                    struct brw_reg src1)
+static void
+generate_math2_gen4(struct brw_codegen *p,
+                    vec4_instruction *inst,
+                    struct brw_reg dst,
+                    struct brw_reg src0,
+                    struct brw_reg src1)
 {
    /* From the Ironlake PRM, Volume 4, Part 1, Section 6.1.13
     * "Message Payload":
@@ -237,12 +110,15 @@ vec4_generator::generate_math2_gen4(vec4_instruction *inst,
 	     BRW_MATH_PRECISION_FULL);
 }
 
-void
-vec4_generator::generate_tex(vec4_instruction *inst,
-                             struct brw_reg dst,
-                             struct brw_reg src,
-                             struct brw_reg sampler_index)
+static void
+generate_tex(struct brw_codegen *p,
+             struct brw_vue_prog_data *prog_data,
+             vec4_instruction *inst,
+             struct brw_reg dst,
+             struct brw_reg src,
+             struct brw_reg sampler_index)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
    int msg_type = -1;
 
    if (devinfo->gen >= 5) {
@@ -448,8 +324,8 @@ vec4_generator::generate_tex(vec4_instruction *inst,
    }
 }
 
-void
-vec4_generator::generate_vs_urb_write(vec4_instruction *inst)
+static void
+generate_vs_urb_write(struct brw_codegen *p, vec4_instruction *inst)
 {
    brw_urb_WRITE(p,
 		 brw_null_reg(), /* dest */
@@ -462,8 +338,8 @@ vec4_generator::generate_vs_urb_write(vec4_instruction *inst)
 		 BRW_URB_SWIZZLE_INTERLEAVE);
 }
 
-void
-vec4_generator::generate_gs_urb_write(vec4_instruction *inst)
+static void
+generate_gs_urb_write(struct brw_codegen *p, vec4_instruction *inst)
 {
    struct brw_reg src = brw_message_reg(inst->base_mrf);
    brw_urb_WRITE(p,
@@ -477,8 +353,8 @@ vec4_generator::generate_gs_urb_write(vec4_instruction *inst)
                  BRW_URB_SWIZZLE_INTERLEAVE);
 }
 
-void
-vec4_generator::generate_gs_urb_write_allocate(vec4_instruction *inst)
+static void
+generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
 {
    struct brw_reg src = brw_message_reg(inst->base_mrf);
 
@@ -503,8 +379,8 @@ vec4_generator::generate_gs_urb_write_allocate(vec4_instruction *inst)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_thread_end(vec4_instruction *inst)
+static void
+generate_gs_thread_end(struct brw_codegen *p, vec4_instruction *inst)
 {
    struct brw_reg src = brw_message_reg(inst->base_mrf);
    brw_urb_WRITE(p,
@@ -518,10 +394,11 @@ vec4_generator::generate_gs_thread_end(vec4_instruction *inst)
                  BRW_URB_SWIZZLE_INTERLEAVE);
 }
 
-void
-vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
-                                             struct brw_reg src0,
-                                             struct brw_reg src1)
+static void
+generate_gs_set_write_offset(struct brw_codegen *p,
+                             struct brw_reg dst,
+                             struct brw_reg src0,
+                             struct brw_reg src1)
 {
    /* From p22 of volume 4 part 2 of the Ivy Bridge PRM (2.4.3.1 Message
     * Header: M0.3):
@@ -544,7 +421,7 @@ vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   assert(devinfo->gen >= 7 &&
+   assert(p->devinfo->gen >= 7 &&
           src1.file == BRW_IMMEDIATE_VALUE &&
           src1.type == BRW_REGISTER_TYPE_UD &&
           src1.dw1.ud <= USHRT_MAX);
@@ -559,14 +436,15 @@ vec4_generator::generate_gs_set_write_offset(struct brw_reg dst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_set_vertex_count(struct brw_reg dst,
-                                             struct brw_reg src)
+static void
+generate_gs_set_vertex_count(struct brw_codegen *p,
+                             struct brw_reg dst,
+                             struct brw_reg src)
 {
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
-   if (devinfo->gen >= 8) {
+   if (p->devinfo->gen >= 8) {
       /* Move the vertex count into the second MRF for the EOT write. */
       brw_MOV(p, retype(brw_message_reg(dst.nr + 1), BRW_REGISTER_TYPE_UD),
               src);
@@ -593,11 +471,13 @@ vec4_generator::generate_gs_set_vertex_count(struct brw_reg dst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_svb_write(vec4_instruction *inst,
-                                      struct brw_reg dst,
-                                      struct brw_reg src0,
-                                      struct brw_reg src1)
+static void
+generate_gs_svb_write(struct brw_codegen *p,
+                      struct brw_vue_prog_data *prog_data,
+                      vec4_instruction *inst,
+                      struct brw_reg dst,
+                      struct brw_reg src0,
+                      struct brw_reg src1)
 {
    int binding = inst->sol_binding;
    bool final_write = inst->sol_final_write;
@@ -631,12 +511,12 @@ vec4_generator::generate_gs_svb_write(vec4_instruction *inst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_svb_set_destination_index(vec4_instruction *inst,
-                                                      struct brw_reg dst,
-                                                      struct brw_reg src)
+static void
+generate_gs_svb_set_destination_index(struct brw_codegen *p,
+                                      vec4_instruction *inst,
+                                      struct brw_reg dst,
+                                      struct brw_reg src)
 {
-
    int vertex = inst->sol_vertex;
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
@@ -645,8 +525,10 @@ vec4_generator::generate_gs_svb_set_destination_index(vec4_instruction *inst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_set_dword_2(struct brw_reg dst, struct brw_reg src)
+static void
+generate_gs_set_dword_2(struct brw_codegen *p,
+                        struct brw_reg dst,
+                        struct brw_reg src)
 {
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
@@ -655,8 +537,9 @@ vec4_generator::generate_gs_set_dword_2(struct brw_reg dst, struct brw_reg src)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_prepare_channel_masks(struct brw_reg dst)
+static void
+generate_gs_prepare_channel_masks(struct brw_codegen *p,
+                                  struct brw_reg dst)
 {
    /* We want to left shift just DWORD 4 (the x component belonging to the
     * second geometry shader invocation) by 4 bits.  So generate the
@@ -672,9 +555,10 @@ vec4_generator::generate_gs_prepare_channel_masks(struct brw_reg dst)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_set_channel_masks(struct brw_reg dst,
-                                              struct brw_reg src)
+static void
+generate_gs_set_channel_masks(struct brw_codegen *p,
+                              struct brw_reg dst,
+                              struct brw_reg src)
 {
    /* From p21 of volume 4 part 2 of the Ivy Bridge PRM (2.4.3.1 Message
     * Header: M0.5):
@@ -735,8 +619,9 @@ vec4_generator::generate_gs_set_channel_masks(struct brw_reg dst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_get_instance_id(struct brw_reg dst)
+static void
+generate_gs_get_instance_id(struct brw_codegen *p,
+                            struct brw_reg dst)
 {
    /* We want to right shift R0.0 & R0.1 by GEN7_GS_PAYLOAD_INSTANCE_ID_SHIFT
     * and store into dst.0 & dst.4. So generate the instruction:
@@ -752,11 +637,12 @@ vec4_generator::generate_gs_get_instance_id(struct brw_reg dst)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_ff_sync_set_primitives(struct brw_reg dst,
-                                                   struct brw_reg src0,
-                                                   struct brw_reg src1,
-                                                   struct brw_reg src2)
+static void
+generate_gs_ff_sync_set_primitives(struct brw_codegen *p,
+                                   struct brw_reg dst,
+                                   struct brw_reg src0,
+                                   struct brw_reg src1,
+                                   struct brw_reg src2)
 {
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
@@ -773,11 +659,12 @@ vec4_generator::generate_gs_ff_sync_set_primitives(struct brw_reg dst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_ff_sync(vec4_instruction *inst,
-                                    struct brw_reg dst,
-                                    struct brw_reg src0,
-                                    struct brw_reg src1)
+static void
+generate_gs_ff_sync(struct brw_codegen *p,
+                    vec4_instruction *inst,
+                    struct brw_reg dst,
+                    struct brw_reg src0,
+                    struct brw_reg src1)
 {
    /* This opcode uses an implied MRF register for:
     *  - the header of the ff_sync message. And as such it is expected to be
@@ -819,8 +706,8 @@ vec4_generator::generate_gs_ff_sync(vec4_instruction *inst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_gs_set_primitive_id(struct brw_reg dst)
+static void
+generate_gs_set_primitive_id(struct brw_codegen *p, struct brw_reg dst)
 {
    /* In gen6, PrimitiveID is delivered in R0.1 of the payload */
    struct brw_reg src = brw_vec8_grf(0, 0);
@@ -831,13 +718,14 @@ vec4_generator::generate_gs_set_primitive_id(struct brw_reg dst)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_oword_dual_block_offsets(struct brw_reg m1,
-                                                  struct brw_reg index)
+static void
+generate_oword_dual_block_offsets(struct brw_codegen *p,
+                                  struct brw_reg m1,
+                                  struct brw_reg index)
 {
    int second_vertex_offset;
 
-   if (devinfo->gen >= 6)
+   if (p->devinfo->gen >= 6)
       second_vertex_offset = 1;
    else
       second_vertex_offset = 16;
@@ -868,8 +756,9 @@ vec4_generator::generate_oword_dual_block_offsets(struct brw_reg m1,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_unpack_flags(struct brw_reg dst)
+static void
+generate_unpack_flags(struct brw_codegen *p,
+                      struct brw_reg dst)
 {
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
@@ -886,16 +775,18 @@ vec4_generator::generate_unpack_flags(struct brw_reg dst)
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_scratch_read(vec4_instruction *inst,
-                                      struct brw_reg dst,
-                                      struct brw_reg index)
+static void
+generate_scratch_read(struct brw_codegen *p,
+                      vec4_instruction *inst,
+                      struct brw_reg dst,
+                      struct brw_reg index)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
    struct brw_reg header = brw_vec8_grf(0, 0);
 
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
 
-   generate_oword_dual_block_offsets(brw_message_reg(inst->base_mrf + 1),
+   generate_oword_dual_block_offsets(p, brw_message_reg(inst->base_mrf + 1),
 				     index);
 
    uint32_t msg_type;
@@ -914,7 +805,7 @@ vec4_generator::generate_scratch_read(vec4_instruction *inst,
    brw_set_dest(p, send, dst);
    brw_set_src0(p, send, header);
    if (devinfo->gen < 6)
-      brw_inst_set_cond_modifier(p->devinfo, send, inst->base_mrf);
+      brw_inst_set_cond_modifier(devinfo, send, inst->base_mrf);
    brw_set_dp_read_message(p, send,
 			   255, /* binding table index: stateless access */
 			   BRW_DATAPORT_OWORD_DUAL_BLOCK_1OWORD,
@@ -925,12 +816,14 @@ vec4_generator::generate_scratch_read(vec4_instruction *inst,
 			   1 /* rlen */);
 }
 
-void
-vec4_generator::generate_scratch_write(vec4_instruction *inst,
-                                       struct brw_reg dst,
-                                       struct brw_reg src,
-                                       struct brw_reg index)
+static void
+generate_scratch_write(struct brw_codegen *p,
+                       vec4_instruction *inst,
+                       struct brw_reg dst,
+                       struct brw_reg src,
+                       struct brw_reg index)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
    struct brw_reg header = brw_vec8_grf(0, 0);
    bool write_commit;
 
@@ -941,7 +834,7 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
 
    gen6_resolve_implied_move(p, &header, inst->base_mrf);
 
-   generate_oword_dual_block_offsets(brw_message_reg(inst->base_mrf + 1),
+   generate_oword_dual_block_offsets(p, brw_message_reg(inst->base_mrf + 1),
 				     index);
 
    brw_MOV(p,
@@ -998,12 +891,15 @@ vec4_generator::generate_scratch_write(vec4_instruction *inst,
 			    write_commit);
 }
 
-void
-vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
-                                            struct brw_reg dst,
-                                            struct brw_reg index,
-                                            struct brw_reg offset)
+static void
+generate_pull_constant_load(struct brw_codegen *p,
+                            struct brw_vue_prog_data *prog_data,
+                            vec4_instruction *inst,
+                            struct brw_reg dst,
+                            struct brw_reg index,
+                            struct brw_reg offset)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
    assert(index.file == BRW_IMMEDIATE_VALUE &&
 	  index.type == BRW_REGISTER_TYPE_UD);
    uint32_t surf_index = index.dw1.ud;
@@ -1044,13 +940,15 @@ vec4_generator::generate_pull_constant_load(vec4_instruction *inst,
    brw_mark_surface_used(&prog_data->base, surf_index);
 }
 
-void
-vec4_generator::generate_get_buffer_size(vec4_instruction *inst,
-                                         struct brw_reg dst,
-                                         struct brw_reg src,
-                                         struct brw_reg surf_index)
+static void
+generate_get_buffer_size(struct brw_codegen *p,
+                         struct brw_vue_prog_data *prog_data,
+                         vec4_instruction *inst,
+                         struct brw_reg dst,
+                         struct brw_reg src,
+                         struct brw_reg surf_index)
 {
-   assert(devinfo->gen >= 7);
+   assert(p->devinfo->gen >= 7);
    assert(surf_index.type == BRW_REGISTER_TYPE_UD &&
           surf_index.file == BRW_IMMEDIATE_VALUE);
 
@@ -1070,11 +968,13 @@ vec4_generator::generate_get_buffer_size(vec4_instruction *inst,
    brw_mark_surface_used(&prog_data->base, surf_index.dw1.ud);
 }
 
-void
-vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
-                                                 struct brw_reg dst,
-                                                 struct brw_reg surf_index,
-                                                 struct brw_reg offset)
+static void
+generate_pull_constant_load_gen7(struct brw_codegen *p,
+                                 struct brw_vue_prog_data *prog_data,
+                                 vec4_instruction *inst,
+                                 struct brw_reg dst,
+                                 struct brw_reg surf_index,
+                                 struct brw_reg offset)
 {
    assert(surf_index.type == BRW_REGISTER_TYPE_UD);
 
@@ -1131,9 +1031,10 @@ vec4_generator::generate_pull_constant_load_gen7(vec4_instruction *inst,
    }
 }
 
-void
-vec4_generator::generate_set_simd4x2_header_gen9(vec4_instruction *inst,
-                                                 struct brw_reg dst)
+static void
+generate_set_simd4x2_header_gen9(struct brw_codegen *p,
+                                 vec4_instruction *inst,
+                                 struct brw_reg dst)
 {
    brw_push_insn_state(p);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
@@ -1148,9 +1049,18 @@ vec4_generator::generate_set_simd4x2_header_gen9(vec4_instruction *inst,
    brw_pop_insn_state(p);
 }
 
-void
-vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
+static void
+generate_code(struct brw_codegen *p,
+              const struct brw_compiler *compiler,
+              void *log_data,
+              const nir_shader *nir,
+              struct brw_vue_prog_data *prog_data,
+              const struct cfg_t *cfg)
 {
+   const struct brw_device_info *devinfo = p->devinfo;
+   const char *stage_abbrev = _mesa_shader_stage_to_abbrev(nir->stage);
+   bool debug_flag = INTEL_DEBUG &
+      intel_debug_flag_for_shader_stage(nir->stage);
    struct annotation_info annotation;
    memset(&annotation, 0, sizeof(annotation));
    int loop_count = 0;
@@ -1391,9 +1301,9 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0],
                       brw_null_reg());
          } else if (devinfo->gen == 6) {
-            generate_math_gen6(inst, dst, src[0], brw_null_reg());
+            generate_math_gen6(p, inst, dst, src[0], brw_null_reg());
          } else {
-            generate_math1_gen4(inst, dst, src[0]);
+            generate_math1_gen4(p, inst, dst, src[0]);
          }
          break;
 
@@ -1404,9 +1314,9 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
          if (devinfo->gen >= 7) {
             gen6_math(p, dst, brw_math_function(inst->opcode), src[0], src[1]);
          } else if (devinfo->gen == 6) {
-            generate_math_gen6(inst, dst, src[0], src[1]);
+            generate_math_gen6(p, inst, dst, src[0], src[1]);
          } else {
-            generate_math2_gen4(inst, dst, src[0], src[1]);
+            generate_math2_gen4(p, inst, dst, src[0], src[1]);
          }
          break;
 
@@ -1420,92 +1330,92 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
       case SHADER_OPCODE_TG4:
       case SHADER_OPCODE_TG4_OFFSET:
       case SHADER_OPCODE_SAMPLEINFO:
-         generate_tex(inst, dst, src[0], src[1]);
+         generate_tex(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case VS_OPCODE_URB_WRITE:
-         generate_vs_urb_write(inst);
+         generate_vs_urb_write(p, inst);
          break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_READ:
-         generate_scratch_read(inst, dst, src[0]);
+         generate_scratch_read(p, inst, dst, src[0]);
          break;
 
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
-         generate_scratch_write(inst, dst, src[0], src[1]);
+         generate_scratch_write(p, inst, dst, src[0], src[1]);
          break;
 
       case VS_OPCODE_PULL_CONSTANT_LOAD:
-         generate_pull_constant_load(inst, dst, src[0], src[1]);
+         generate_pull_constant_load(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
-         generate_pull_constant_load_gen7(inst, dst, src[0], src[1]);
+         generate_pull_constant_load_gen7(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case VS_OPCODE_SET_SIMD4X2_HEADER_GEN9:
-         generate_set_simd4x2_header_gen9(inst, dst);
+         generate_set_simd4x2_header_gen9(p, inst, dst);
          break;
 
 
       case VS_OPCODE_GET_BUFFER_SIZE:
-         generate_get_buffer_size(inst, dst, src[0], src[1]);
+         generate_get_buffer_size(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_URB_WRITE:
-         generate_gs_urb_write(inst);
+         generate_gs_urb_write(p, inst);
          break;
 
       case GS_OPCODE_URB_WRITE_ALLOCATE:
-         generate_gs_urb_write_allocate(inst);
+         generate_gs_urb_write_allocate(p, inst);
          break;
 
       case GS_OPCODE_SVB_WRITE:
-         generate_gs_svb_write(inst, dst, src[0], src[1]);
+         generate_gs_svb_write(p, prog_data, inst, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_SVB_SET_DST_INDEX:
-         generate_gs_svb_set_destination_index(inst, dst, src[0]);
+         generate_gs_svb_set_destination_index(p, inst, dst, src[0]);
          break;
 
       case GS_OPCODE_THREAD_END:
-         generate_gs_thread_end(inst);
+         generate_gs_thread_end(p, inst);
          break;
 
       case GS_OPCODE_SET_WRITE_OFFSET:
-         generate_gs_set_write_offset(dst, src[0], src[1]);
+         generate_gs_set_write_offset(p, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_SET_VERTEX_COUNT:
-         generate_gs_set_vertex_count(dst, src[0]);
+         generate_gs_set_vertex_count(p, dst, src[0]);
          break;
 
       case GS_OPCODE_FF_SYNC:
-         generate_gs_ff_sync(inst, dst, src[0], src[1]);
+         generate_gs_ff_sync(p, inst, dst, src[0], src[1]);
          break;
 
       case GS_OPCODE_FF_SYNC_SET_PRIMITIVES:
-         generate_gs_ff_sync_set_primitives(dst, src[0], src[1], src[2]);
+         generate_gs_ff_sync_set_primitives(p, dst, src[0], src[1], src[2]);
          break;
 
       case GS_OPCODE_SET_PRIMITIVE_ID:
-         generate_gs_set_primitive_id(dst);
+         generate_gs_set_primitive_id(p, dst);
          break;
 
       case GS_OPCODE_SET_DWORD_2:
-         generate_gs_set_dword_2(dst, src[0]);
+         generate_gs_set_dword_2(p, dst, src[0]);
          break;
 
       case GS_OPCODE_PREPARE_CHANNEL_MASKS:
-         generate_gs_prepare_channel_masks(dst);
+         generate_gs_prepare_channel_masks(p, dst);
          break;
 
       case GS_OPCODE_SET_CHANNEL_MASKS:
-         generate_gs_set_channel_masks(dst, src[0]);
+         generate_gs_set_channel_masks(p, dst, src[0]);
          break;
 
       case GS_OPCODE_GET_INSTANCE_ID:
-         generate_gs_get_instance_id(dst);
+         generate_gs_get_instance_id(p, dst);
          break;
 
       case SHADER_OPCODE_SHADER_TIME_ADD:
@@ -1564,7 +1474,7 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
          break;
 
       case VS_OPCODE_UNPACK_FLAGS_SIMD4X2:
-         generate_unpack_flags(dst);
+         generate_unpack_flags(p, dst);
          break;
 
       case VEC4_OPCODE_MOV_BYTES: {
@@ -1677,17 +1587,6 @@ vec4_generator::generate_code(const cfg_t *cfg, const nir_shader *nir)
                               before_size, after_size);
 }
 
-const unsigned *
-vec4_generator::generate_assembly(const cfg_t *cfg,
-                                  unsigned *assembly_size,
-                                  const nir_shader *nir)
-{
-   brw_set_default_access_mode(p, BRW_ALIGN_16);
-   generate_code(cfg, nir);
-
-   return brw_get_program(p, assembly_size);
-}
-
 extern "C" const unsigned *
 brw_vec4_generate_assembly(const struct brw_compiler *compiler,
                            void *log_data,
@@ -1697,14 +1596,11 @@ brw_vec4_generate_assembly(const struct brw_compiler *compiler,
                            const struct cfg_t *cfg,
                            unsigned *out_assembly_size)
 {
-   const char *stage_name = _mesa_shader_stage_to_string(nir->stage);
-   const char *stage_abbrev = _mesa_shader_stage_to_abbrev(nir->stage);
-   bool debug_flag = INTEL_DEBUG &
-      intel_debug_flag_for_shader_stage(nir->stage);
+   struct brw_codegen *p = rzalloc(mem_ctx, struct brw_codegen);
+   brw_init_codegen(compiler->devinfo, p, mem_ctx);
+   brw_set_default_access_mode(p, BRW_ALIGN_16);
 
-   vec4_generator g(compiler, log_data, prog_data, mem_ctx,
-                    debug_flag, stage_name, stage_abbrev);
-   return g.generate_assembly(cfg, out_assembly_size, nir);
+   generate_code(p, compiler, log_data, nir, prog_data, cfg);
+
+   return brw_get_program(p, out_assembly_size);
 }
-
-} /* namespace brw */
