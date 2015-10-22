@@ -1926,7 +1926,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	surf->cb_color_info = color_info;
 	surf->cb_color_attrib = color_attrib;
 
-	if (sctx->b.chip_class >= VI && rtex->surface.dcc_enabled) {
+	if (sctx->b.chip_class >= VI && rtex->dcc_buffer) {
 		unsigned max_uncompressed_block_size = 2;
 		uint64_t dcc_offset = rtex->surface.level[level].dcc_offset;
 
@@ -2655,7 +2655,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	view->state[5] = (S_008F24_BASE_ARRAY(state->u.tex.first_layer) |
 			  S_008F24_LAST_ARRAY(last_layer));
 
-	if (tmp->surface.dcc_enabled) {
+	if (tmp->dcc_buffer) {
 		uint64_t dcc_offset = surflevel[base_level].dcc_offset;
 		unsigned swap = r600_translate_colorswap(pipe_format);
 

@@ -326,7 +326,7 @@ void si_decompress_color_textures(struct si_context *sctx,
 		assert(view);
 
 		tex = (struct r600_texture *)view->texture;
-		assert(tex->cmask.size || tex->fmask.size || tex->surface.dcc_enabled);
+		assert(tex->cmask.size || tex->fmask.size || tex->dcc_buffer);
 
 		si_blit_decompress_color(&sctx->b.b, tex,
 					 view->u.tex.first_level, view->u.tex.last_level,
@@ -455,7 +455,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 			si_blit_decompress_depth_in_place(sctx, rtex, true,
 							  level, level,
 							  first_layer, last_layer);
-	} else if (rtex->fmask.size || rtex->cmask.size || rtex->surface.dcc_enabled) {
+	} else if (rtex->fmask.size || rtex->cmask.size || rtex->dcc_buffer) {
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer);
 	}
@@ -676,7 +676,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
 	    !(dst->surface.flags & RADEON_SURF_SCANOUT) &&
 	    (!dst->cmask.size || !dst->dirty_level_mask) && /* dst cannot be fast-cleared */
-	    !dst->surface.dcc_enabled) {
+	    !dst->dcc_buffer) {
 		si_blitter_begin(ctx, SI_COLOR_RESOLVE |
 				 (info->render_condition_enable ? 0 : SI_DISABLE_RENDER_COND));
 		util_blitter_custom_resolve_color(sctx->blitter,

@@ -1367,7 +1367,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 		}
 
-		if (tex->surface.dcc_enabled) {
+		if (tex->dcc_buffer) {
 			uint32_t reset_value;
 			bool clear_words_needed;
 
