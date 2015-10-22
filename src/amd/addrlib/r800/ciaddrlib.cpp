@@ -410,10 +410,12 @@ ChipFamily CiLib::HwlConvertChipFamily(
             m_settings.isPolaris10       = ASICREV_IS_POLARIS10_P(uChipRevision);
             m_settings.isPolaris11       = ASICREV_IS_POLARIS11_M(uChipRevision);
             m_settings.isPolaris12       = ASICREV_IS_POLARIS12_V(uChipRevision);
+            family = ADDR_CHIP_FAMILY_VI;
             break;
         case FAMILY_CZ:
             m_settings.isCarrizo         = 1;
             m_settings.isVolcanicIslands = 1;
+            family = ADDR_CHIP_FAMILY_VI;
             break;
         default:
             ADDR_ASSERT(!"This should be a unexpected Fusion");
