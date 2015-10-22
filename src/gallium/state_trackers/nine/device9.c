@@ -460,7 +460,8 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
-            NineUnknown_Unbind(NineUnknown(This->swapchains[i]));
+            if (This->swapchains[i])
+                NineUnknown_Unbind(NineUnknown(This->swapchains[i]));
         FREE(This->swapchains);
     }
 
