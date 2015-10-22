@@ -118,6 +118,14 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
 
     DBG("This=%p pParams=%p\n", This, pParams);
     user_assert(pParams != NULL, E_POINTER);
+    user_assert(pParams->SwapEffect, D3DERR_INVALIDCALL);
+    user_assert((pParams->SwapEffect != D3DSWAPEFFECT_COPY) ||
+                (pParams->BackBufferCount <= 1), D3DERR_INVALIDCALL);
+    user_assert(pDevice->ex || pParams->BackBufferCount <= 3, D3DERR_INVALIDCALL);
+    user_assert(pDevice->ex ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_FLIP) ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_COPY) ||
+                (pParams->SwapEffect == D3DSWAPEFFECT_DISCARD), D3DERR_INVALIDCALL);
 
     DBG("pParams(%p):\n"
         "BackBufferWidth: %u\n"
@@ -144,11 +152,6 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         nine_D3DPRESENTFLAG_to_str(pParams->Flags),
         pParams->FullScreen_RefreshRateInHz,
         pParams->PresentationInterval);
-
-    if (pParams->SwapEffect == D3DSWAPEFFECT_COPY &&
-        pParams->BackBufferCount > 1) {
-        pParams->BackBufferCount = 1;
-    }
 
     if (pParams->BackBufferCount > 3) {
         pParams->BackBufferCount = 3;
