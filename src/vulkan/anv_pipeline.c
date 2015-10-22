@@ -566,6 +566,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    /* TODO: SIMD8 GS */
    pipeline->gs_vec4 =
       anv_pipeline_upload_kernel(pipeline, shader_code, code_size);
+   pipeline->gs_vertex_count = nir->info.gs.vertices_in;
 
    ralloc_free(mem_ctx);
 
