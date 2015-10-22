@@ -357,7 +357,7 @@ NineSurface9_LockRect( struct NineSurface9 *This,
                 D3DERR_INVALIDCALL);
 
     if (pRect && This->desc.Pool == D3DPOOL_DEFAULT &&
-        compressed_format (This->desc.Format)) {
+        util_format_is_compressed(This->base.info.format)) {
         const unsigned w = util_format_get_blockwidth(This->base.info.format);
         const unsigned h = util_format_get_blockheight(This->base.info.format);
         user_assert((pRect->left == 0 && pRect->right == This->desc.Width &&
