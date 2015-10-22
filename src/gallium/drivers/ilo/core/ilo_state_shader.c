@@ -282,12 +282,14 @@ hs_set_gen7_3DSTATE_HS(struct ilo_state_hs *hs,
    dw1 = ff.sampler_count << GEN6_THREADDISP_SAMPLER_COUNT__SHIFT |
          ff.surface_count << GEN6_THREADDISP_BINDING_TABLE_SIZE__SHIFT;
 
-   if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
+   dw2 = 0 << GEN7_HS_DW2_INSTANCE_COUNT__SHIFT;
+
+   if (ilo_dev_gen(dev) >= ILO_GEN(8))
+      dw2 |= thread_count << GEN8_HS_DW2_MAX_THREADS__SHIFT;
+   else if (ilo_dev_gen(dev) >= ILO_GEN(7.5))
       dw1 |= thread_count << GEN75_HS_DW1_DISPATCH_MAX_THREADS__SHIFT;
    else
       dw1 |= thread_count << GEN7_HS_DW1_DISPATCH_MAX_THREADS__SHIFT;
-
-   dw2 = 0 << GEN7_HS_DW2_INSTANCE_COUNT__SHIFT;
 
    if (info->dispatch_enable)
       dw2 |= GEN7_HS_DW2_HS_ENABLE;
