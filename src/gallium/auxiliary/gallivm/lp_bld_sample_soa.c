@@ -405,16 +405,17 @@ lp_build_sample_wrap_linear(struct lp_build_sample_context *bld,
       break;
 
    case PIPE_TEX_WRAP_MIRROR_REPEAT:
+      if (offset) {
+         offset = lp_build_int_to_float(coord_bld, offset);
+         offset = lp_build_div(coord_bld, offset, length_f);
+         coord = lp_build_add(coord_bld, coord, offset);
+      }
       /* compute mirror function */
       coord = lp_build_coord_mirror(bld, coord);
 
       /* scale coord to length */
       coord = lp_build_mul(coord_bld, coord, length_f);
       coord = lp_build_sub(coord_bld, coord, half);
-      if (offset) {
-         offset = lp_build_int_to_float(coord_bld, offset);
-         coord = lp_build_add(coord_bld, coord, offset);
-      }
 
       /* convert to int, compute lerp weight */
       lp_build_ifloor_fract(coord_bld, coord, &coord0, &weight);
