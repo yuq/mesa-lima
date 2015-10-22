@@ -728,6 +728,7 @@ static void si_get_draw_start_count(struct si_context *sctx,
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
+	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_index_buffer ib = {};
 	unsigned mask;
 
@@ -735,7 +736,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	    (info->indexed || !info->count_from_stream_output))
 		return;
 
-	if (!sctx->ps_shader.cso || !sctx->vs_shader.cso) {
+	if (!sctx->vs_shader.cso) {
+		assert(0);
+		return;
+	}
+	if (!sctx->ps_shader.cso && (!rs || !rs->rasterizer_discard)) {
 		assert(0);
 		return;
 	}
