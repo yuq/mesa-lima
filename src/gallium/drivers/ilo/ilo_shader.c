@@ -578,7 +578,6 @@ init_shader_kernel(const struct ilo_shader *kernel,
    kern->grf_start = kernel->in.start_grf;
    kern->pcb_attr_count =
       (kernel->pcb.cbuf0_size + kernel->pcb.clip_state_size + 15) / 16;
-   kern->scratch_size = 0;
 }
 
 static void
@@ -602,6 +601,7 @@ init_vs(struct ilo_shader *kernel,
    init_shader_urb(kernel, state, &info.urb);
    init_shader_kernel(kernel, state, &info.kernel);
    init_shader_resource(kernel, state, &info.resource);
+   info.per_thread_scratch_size = 0;
    info.dispatch_enable = true;
    info.stats_enable = true;
 
@@ -640,6 +640,7 @@ init_gs(struct ilo_shader *kernel,
    init_shader_urb(kernel, state, &info.urb);
    init_shader_kernel(kernel, state, &info.kernel);
    init_shader_resource(kernel, state, &info.resource);
+   info.per_thread_scratch_size = 0;
    info.dispatch_enable = true;
    info.stats_enable = true;
 
@@ -664,6 +665,7 @@ init_ps(struct ilo_shader *kernel,
    init_shader_kernel(kernel, state, &info.kernel_8);
    init_shader_resource(kernel, state, &info.resource);
 
+   info.per_thread_scratch_size = 0;
    info.io.has_rt_write = true;
    info.io.posoffset = GEN6_POSOFFSET_NONE;
    info.io.attr_count = kernel->in.count;
