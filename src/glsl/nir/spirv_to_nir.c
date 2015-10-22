@@ -400,6 +400,10 @@ type_decoration_cb(struct vtn_builder *b,
       /* Ignore these, since we get explicit offsets anyways */
       break;
 
+   case SpvDecorationStream:
+      assert(dec->literals[0] == 0);
+      break;
+
    default:
       unreachable("Unhandled type decoration");
    }
@@ -2473,12 +2477,17 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpCapability:
-      /*
-       * TODO properly handle these and give a real error if asking for too
-       * much.
-       */
-      assert(w[1] == SpvCapabilityMatrix ||
-             w[1] == SpvCapabilityShader);
+      switch ((SpvCapability)w[1]) {
+      case SpvCapabilityMatrix:
+      case SpvCapabilityShader:
+         /* All shaders support these */
+         break;
+      case SpvCapabilityGeometry:
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+         break;
+      default:
+         assert(!"Unsupported capability");
+      }
       break;
 
    case SpvOpExtInstImport:
