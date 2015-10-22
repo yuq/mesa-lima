@@ -357,17 +357,11 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
        shader_index == BLIT_MSAA_SHADER_2D_MULTISAMPLE_ARRAY_DEPTH_COPY ||
        shader_index == BLIT_MSAA_SHADER_2D_MULTISAMPLE_DEPTH_COPY) {
       char *sample_index;
-      const char *arb_sample_shading_extension_string;
 
       if (dst_is_msaa) {
-         arb_sample_shading_extension_string = "#extension GL_ARB_sample_shading : enable";
          sample_index = "gl_SampleID";
          name = "depth MSAA copy";
       } else {
-         /* Don't need that extension, since we're drawing to a single-sampled
-          * destination.
-          */
-         arb_sample_shading_extension_string = "";
          /* From the GL 4.3 spec:
           *
           *     "If there is a multisample buffer (the value of SAMPLE_BUFFERS
@@ -397,7 +391,7 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
       fs_source = ralloc_asprintf(mem_ctx,
                                   "#version 130\n"
                                   "#extension GL_ARB_texture_multisample : enable\n"
-                                  "%s\n"
+                                  "#extension GL_ARB_sample_shading : enable\n"
                                   "uniform sampler2DMS%s texSampler;\n"
                                   "in %s texCoords;\n"
                                   "out vec4 out_color;\n"
@@ -406,7 +400,6 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
                                   "{\n"
                                   "   gl_FragDepth = texelFetch(texSampler, i%s(texCoords), %s).r;\n"
                                   "}\n",
-                                  arb_sample_shading_extension_string,
                                   sampler_array_suffix,
                                   texcoord_type,
                                   texcoord_type,
@@ -416,14 +409,12 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
        * sample).  Yes, this is ridiculous.
        */
       char *sample_resolve;
-      const char *arb_sample_shading_extension_string;
       const char *merge_function;
       name = ralloc_asprintf(mem_ctx, "%svec4 MSAA %s",
                              vec4_prefix,
                              dst_is_msaa ? "copy" : "resolve");
 
       if (dst_is_msaa) {
-         arb_sample_shading_extension_string = "#extension GL_ARB_sample_shading : enable";
          sample_resolve = ralloc_asprintf(mem_ctx, "   out_color = texelFetch(texSampler, i%s(texCoords), gl_SampleID);", texcoord_type);
          merge_function = "";
       } else {
@@ -438,8 +429,6 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
             merge_function =
                "vec4 merge(vec4 a, vec4 b) { return (a + b); }\n";
          }
-
-         arb_sample_shading_extension_string = "";
 
          /* We're assuming power of two samples for this resolution procedure.
           *
@@ -496,7 +485,7 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
       fs_source = ralloc_asprintf(mem_ctx,
                                   "#version 130\n"
                                   "#extension GL_ARB_texture_multisample : enable\n"
-                                  "%s\n"
+                                  "#extension GL_ARB_sample_shading : enable\n"
                                   "#define gvec4 %svec4\n"
                                   "uniform %ssampler2DMS%s texSampler;\n"
                                   "in %s texCoords;\n"
@@ -507,7 +496,6 @@ setup_glsl_msaa_blit_shader(struct gl_context *ctx,
                                   "{\n"
                                   "%s\n" /* sample_resolve */
                                   "}\n",
-                                  arb_sample_shading_extension_string,
                                   vec4_prefix,
                                   vec4_prefix,
                                   sampler_array_suffix,
