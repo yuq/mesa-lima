@@ -293,7 +293,7 @@ brw_create_nir(struct brw_context *brw,
 
    if (brw->gen >= 6) {
       /* Try and fuse multiply-adds */
-      nir_opt_peephole_ffma(nir);
+      brw_nir_opt_peephole_ffma(nir);
       nir_validate_shader(nir);
    }
 

@@ -94,6 +94,8 @@ void brw_nir_setup_glsl_uniforms(nir_shader *shader,
 void brw_nir_setup_arb_uniforms(nir_shader *shader, struct gl_program *prog,
                                 struct brw_stage_prog_data *stage_prog_data);
 
+bool brw_nir_opt_peephole_ffma(nir_shader *shader);
+
 #ifdef __cplusplus
 }
 #endif

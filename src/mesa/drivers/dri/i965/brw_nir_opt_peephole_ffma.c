@@ -25,7 +25,7 @@
  *
  */
 
-#include "nir.h"
+#include "brw_nir.h"
 
 /*
  * Implements a small peephole optimization that looks for a multiply that
@@ -134,7 +134,7 @@ get_mul_for_src(nir_alu_src *src, int num_components,
 }
 
 static bool
-nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
+brw_nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
 {
    struct peephole_ffma_state *state = void_state;
 
@@ -237,7 +237,7 @@ nir_opt_peephole_ffma_block(nir_block *block, void *void_state)
 }
 
 static bool
-nir_opt_peephole_ffma_impl(nir_function_impl *impl)
+brw_nir_opt_peephole_ffma_impl(nir_function_impl *impl)
 {
    struct peephole_ffma_state state;
 
@@ -245,7 +245,7 @@ nir_opt_peephole_ffma_impl(nir_function_impl *impl)
    state.impl = impl;
    state.progress = false;
 
-   nir_foreach_block(impl, nir_opt_peephole_ffma_block, &state);
+   nir_foreach_block(impl, brw_nir_opt_peephole_ffma_block, &state);
 
    if (state.progress)
       nir_metadata_preserve(impl, nir_metadata_block_index |
@@ -255,13 +255,13 @@ nir_opt_peephole_ffma_impl(nir_function_impl *impl)
 }
 
 bool
-nir_opt_peephole_ffma(nir_shader *shader)
+brw_nir_opt_peephole_ffma(nir_shader *shader)
 {
    bool progress = false;
 
    nir_foreach_overload(shader, overload) {
       if (overload->impl)
-         progress |= nir_opt_peephole_ffma_impl(overload->impl);
+         progress |= brw_nir_opt_peephole_ffma_impl(overload->impl);
    }
 
    return progress;
