@@ -860,8 +860,7 @@ get_builtin_variable(struct vtn_builder *b,
 
 static struct vtn_ssa_value *
 _vtn_variable_load(struct vtn_builder *b,
-                   nir_deref_var *src_deref, struct vtn_type *src_type,
-                   nir_deref *src_deref_tail)
+                   nir_deref_var *src_deref, nir_deref *src_deref_tail)
 {
    struct vtn_ssa_value *val = rzalloc(b, struct vtn_ssa_value);
    val->type = src_deref_tail->type;
@@ -907,9 +906,7 @@ _vtn_variable_load(struct vtn_builder *b,
       src_deref_tail->child = &deref->deref;
       for (unsigned i = 0; i < elems; i++) {
          deref->base_offset = i;
-         val->elems[i] = _vtn_variable_load(b, src_deref,
-                                            src_type->array_element,
-                                            &deref->deref);
+         val->elems[i] = _vtn_variable_load(b, src_deref, &deref->deref);
       }
    } else {
       assert(glsl_get_base_type(val->type) == GLSL_TYPE_STRUCT);
@@ -921,9 +918,7 @@ _vtn_variable_load(struct vtn_builder *b,
       for (unsigned i = 0; i < elems; i++) {
          deref->index = i;
          deref->deref.type = glsl_get_struct_field(val->type, i);
-         val->elems[i] = _vtn_variable_load(b, src_deref,
-                                            src_type->members[i],
-                                            &deref->deref);
+         val->elems[i] = _vtn_variable_load(b, src_deref, &deref->deref);
       }
    }
 
@@ -933,7 +928,7 @@ _vtn_variable_load(struct vtn_builder *b,
 }
 
 static void
-_vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
+_vtn_variable_store(struct vtn_builder *b,
                     nir_deref_var *dest_deref, nir_deref *dest_deref_tail,
                     struct vtn_ssa_value *src)
 {
@@ -963,8 +958,7 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
       dest_deref_tail->child = &deref->deref;
       for (unsigned i = 0; i < elems; i++) {
          deref->base_offset = i;
-         _vtn_variable_store(b, dest_type->array_element, dest_deref,
-                             &deref->deref, src->elems[i]);
+         _vtn_variable_store(b, dest_deref, &deref->deref, src->elems[i]);
       }
    } else {
       assert(glsl_get_base_type(src->type) == GLSL_TYPE_STRUCT);
@@ -975,8 +969,7 @@ _vtn_variable_store(struct vtn_builder *b, struct vtn_type *dest_type,
       for (unsigned i = 0; i < elems; i++) {
          deref->index = i;
          deref->deref.type = glsl_get_struct_field(src->type, i);
-         _vtn_variable_store(b, dest_type->members[i], dest_deref,
-                             &deref->deref, src->elems[i]);
+         _vtn_variable_store(b, dest_deref, &deref->deref, src->elems[i]);
       }
    }
 
@@ -1117,7 +1110,7 @@ vtn_variable_load(struct vtn_builder *b, nir_deref_var *src,
    if (src->var->interface_type && src->var->data.mode == nir_var_uniform)
       val = vtn_block_load(b, src, src_type, src_tail);
    else
-      val = _vtn_variable_load(b, src, src_type, src_tail);
+      val = _vtn_variable_load(b, src, src_tail);
 
    if (src_tail->child) {
       nir_deref_array *vec_deref = nir_deref_as_array(src_tail->child);
@@ -1147,8 +1140,7 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
 {
    nir_deref *dest_tail = get_deref_tail(dest);
    if (dest_tail->child) {
-      struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_type,
-                                                     dest_tail);
+      struct vtn_ssa_value *val = _vtn_variable_load(b, dest, dest_tail);
       nir_deref_array *deref = nir_deref_as_array(dest_tail->child);
       assert(deref->deref.child == NULL);
       if (deref->deref_array_type == nir_deref_array_type_direct)
@@ -1157,9 +1149,9 @@ vtn_variable_store(struct vtn_builder *b, struct vtn_ssa_value *src,
       else
          val->def = vtn_vector_insert_dynamic(b, val->def, src->def,
                                               deref->indirect.ssa);
-      _vtn_variable_store(b, dest_type, dest, dest_tail, val);
+      _vtn_variable_store(b, dest, dest_tail, val);
    } else {
-      _vtn_variable_store(b, dest_type, dest, dest_tail, src);
+      _vtn_variable_store(b, dest, dest_tail, src);
    }
 }
 
