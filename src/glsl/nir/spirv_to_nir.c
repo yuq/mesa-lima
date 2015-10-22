@@ -2518,7 +2518,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvExecutionModeInputQuads:
       case SpvExecutionModeInputIsolines:
          if (b->shader->stage == MESA_SHADER_GEOMETRY) {
-            b->shader.info.gs.vertices_in =
+            b->shader->info.gs.vertices_in =
                vertices_in_from_spv_execution_mode(mode);
          } else {
             assert(!"Tesselation shaders not yet supported");
@@ -2529,7 +2529,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvExecutionModeOutputLineStrip:
       case SpvExecutionModeOutputTriangleStrip:
          assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-         b->shader.info.gs.output_primitive =
+         b->shader->info.gs.output_primitive =
             gl_primitive_from_spv_execution_mode(mode);
          break;
 
