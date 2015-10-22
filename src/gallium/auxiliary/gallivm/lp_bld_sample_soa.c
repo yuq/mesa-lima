@@ -567,12 +567,13 @@ lp_build_sample_wrap_nearest(struct lp_build_sample_context *bld,
          coord = lp_build_mul(coord_bld, coord, length_f);
       }
 
+      if (offset) {
+         offset = lp_build_int_to_float(coord_bld, offset);
+         coord = lp_build_add(coord_bld, coord, offset);
+      }
       /* floor */
       /* use itrunc instead since we clamp to 0 anyway */
       icoord = lp_build_itrunc(coord_bld, coord);
-      if (offset) {
-         icoord = lp_build_add(int_coord_bld, icoord, offset);
-      }
 
       /* clamp to [0, length - 1]. */
       icoord = lp_build_clamp(int_coord_bld, icoord, int_coord_bld->zero,
@@ -2586,6 +2587,10 @@ lp_build_sample_soa_code(struct gallivm_state *gallivm,
       derived_sampler_state.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
       derived_sampler_state.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
    }
+   /*
+    * We could force CLAMP to CLAMP_TO_EDGE here if min/mag filter is nearest,
+    * so AoS path could be used. Not sure it's worth the trouble...
+    */
 
    min_img_filter = derived_sampler_state.min_img_filter;
    mag_img_filter = derived_sampler_state.mag_img_filter;
