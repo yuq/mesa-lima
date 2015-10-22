@@ -3160,6 +3160,12 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    b->values = rzalloc_array(b, struct vtn_value, value_id_bound);
    exec_list_make_empty(&b->functions);
 
+   /* XXX: We shouldn't need these defaults */
+   if (b->shader->stage == MESA_SHADER_GEOMETRY) {
+      b->shader->info.gs.vertices_in = 3;
+      b->shader->info.gs.output_primitive = 4; /* GL_TRIANGLES */
+   }
+
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
                                    vtn_handle_preamble_instruction);
