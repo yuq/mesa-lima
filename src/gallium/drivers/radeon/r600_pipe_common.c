@@ -360,6 +360,8 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "precompile", DBG_PRECOMPILE, "Compile one shader variant at shader creation." },
 	{ "nowc", DBG_NO_WC, "Disable GTT write combining" },
 	{ "check_vm", DBG_CHECK_VM, "Check VM faults and dump debug info." },
+	{ "nodcc", DBG_NO_DCC, "Disable DCC." },
+	{ "nodccclear", DBG_NO_DCC_CLEAR, "Disable DCC fast clear." },
 
 	DEBUG_NAMED_VALUE_END /* must be last */
 };

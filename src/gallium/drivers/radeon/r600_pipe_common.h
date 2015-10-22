@@ -99,6 +99,8 @@
 #define DBG_INFO		(1llu << 40)
 #define DBG_NO_WC		(1llu << 41)
 #define DBG_CHECK_VM		(1llu << 42)
+#define DBG_NO_DCC		(1llu << 43)
+#define DBG_NO_DCC_CLEAR	(1llu << 44)
 
 #define R600_MAP_BUFFER_ALIGNMENT 64
 

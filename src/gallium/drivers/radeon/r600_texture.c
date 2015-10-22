@@ -486,6 +486,9 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 static void vi_texture_alloc_dcc_separate(struct r600_common_screen *rscreen,
 					      struct r600_texture *rtex)
 {
+	if (rscreen->debug_flags & DBG_NO_DCC)
+		return;
+
 	rtex->dcc_buffer = (struct r600_resource *)
 		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
 				   PIPE_USAGE_DEFAULT, rtex->surface.dcc_size, rtex->surface.dcc_alignment);
@@ -1370,6 +1373,9 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		if (tex->dcc_buffer) {
 			uint32_t reset_value;
 			bool clear_words_needed;
+
+			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
+				continue;
 
 			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
 
