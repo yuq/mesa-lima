@@ -1521,13 +1521,11 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       }
 
       /* Get the offset to read from */
-      fs_reg offset_reg = vgrf(glsl_type::uint_type);
-      unsigned const_offset_bytes = 0;
+      fs_reg offset_reg;
       if (has_indirect) {
-         bld.MOV(offset_reg, get_nir_src(instr->src[1]));
+         offset_reg = get_nir_src(instr->src[1]);
       } else {
-         const_offset_bytes = instr->const_index[0];
-         bld.MOV(offset_reg, fs_reg(const_offset_bytes));
+         offset_reg = fs_reg(instr->const_index[0]);
       }
 
       /* Read the vector */
