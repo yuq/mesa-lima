@@ -1387,12 +1387,41 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             /* If we encounter a builtin, we throw away the ress of the
              * access chain, jump to the builtin, and keep building.
              */
+            const struct glsl_type *builtin_type = deref_type->type;
+
+            nir_deref_array *per_vertex_deref = NULL;
+            if (glsl_type_is_array(base->var->type)) {
+               /* This builtin is a per-vertex builtin */
+               assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+               assert(base->var->data.mode == nir_var_shader_in);
+               builtin_type = glsl_array_type(builtin_type,
+                                              b->shader->info.gs.vertices_in);
+
+               /* The first non-var deref should be an array deref. */
+               assert(val->deref->deref.child->deref_type ==
+                      nir_deref_type_array);
+               per_vertex_deref = nir_deref_as_array(val->deref->deref.child);
+            }
+
             nir_variable *builtin = get_builtin_variable(b,
                                                          base->var->data.mode,
-                                                         deref_type->type,
+                                                         builtin_type,
                                                          deref_type->builtin);
             val->deref = nir_deref_var_create(b, builtin);
-            tail = &val->deref->deref;
+
+            if (per_vertex_deref) {
+               /* Since deref chains start at the variable, we can just
+                * steal that link and use it.
+                */
+               val->deref->deref.child = &per_vertex_deref->deref;
+               per_vertex_deref->deref.child = NULL;
+               per_vertex_deref->deref.type =
+                  glsl_get_array_element(builtin_type);
+
+               tail = &per_vertex_deref->deref;
+            } else {
+               tail = &val->deref->deref;
+            }
          } else {
             tail = tail->child;
          }
