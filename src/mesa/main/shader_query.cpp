@@ -980,7 +980,7 @@ is_resource_referenced(struct gl_shader_program *shProg,
       return RESOURCE_ATC(res)->StageReferences[stage];
 
    if (res->Type == GL_UNIFORM_BLOCK || res->Type == GL_SHADER_STORAGE_BLOCK)
-      return shProg->UniformBlockStageIndex[stage][index] != -1;
+      return shProg->InterfaceBlockStageIndex[stage][index] != -1;
 
    return res->StageReferences & (1 << stage);
 }

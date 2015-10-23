@@ -1174,10 +1174,10 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       struct gl_shader *sh = prog->_LinkedShaders[i];
 
-      prog->UniformBlockStageIndex[i] = ralloc_array(prog, int,
-						     max_num_uniform_blocks);
+      prog->InterfaceBlockStageIndex[i] = ralloc_array(prog, int,
+                                                       max_num_uniform_blocks);
       for (unsigned int j = 0; j < max_num_uniform_blocks; j++)
-	 prog->UniformBlockStageIndex[i][j] = -1;
+	 prog->InterfaceBlockStageIndex[i][j] = -1;
 
       if (sh == NULL)
 	 continue;
@@ -1194,7 +1194,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog)
 	    return false;
 	 }
 
-	 prog->UniformBlockStageIndex[i][index] = j;
+	 prog->InterfaceBlockStageIndex[i][index] = j;
       }
    }
 
@@ -2836,9 +2836,9 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
       }
 
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-	 if (prog->UniformBlockStageIndex[j][i] != -1) {
+	 if (prog->InterfaceBlockStageIndex[j][i] != -1) {
             struct gl_shader *sh = prog->_LinkedShaders[j];
-            int stage_index = prog->UniformBlockStageIndex[j][i];
+            int stage_index = prog->InterfaceBlockStageIndex[j][i];
             if (sh && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage) {
                shader_blocks[j]++;
                total_shader_storage_blocks++;
@@ -2955,7 +2955,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
          total_image_units += sh->NumImages;
 
          for (unsigned j = 0; j < prog->NumBufferInterfaceBlocks; j++) {
-            int stage_index = prog->UniformBlockStageIndex[i][j];
+            int stage_index = prog->InterfaceBlockStageIndex[i][j];
             if (stage_index != -1 && sh->BufferInterfaceBlocks[stage_index].IsShaderStorage)
                total_shader_storage_blocks++;
          }
@@ -3734,7 +3734,7 @@ build_program_resource_list(struct gl_shader_program *shProg)
       int block_index = shProg->UniformStorage[i].block_index;
       if (block_index != -1) {
          for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
-             if (shProg->UniformBlockStageIndex[j][block_index] != -1)
+             if (shProg->InterfaceBlockStageIndex[j][block_index] != -1)
                 stageref |= (1 << j);
          }
       }

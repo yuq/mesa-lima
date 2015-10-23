@@ -2716,13 +2716,14 @@ struct gl_shader_program
    struct gl_uniform_block **ShaderStorageBlocks;
 
    /**
-    * Indices into the _LinkedShaders's UniformBlocks[] array for each stage
-    * they're used in, or -1.
+    * Indices into the BufferInterfaceBlocks[] array for each stage they're
+    * used in, or -1.
     *
-    * This is used to maintain the Binding values of the stage's UniformBlocks[]
-    * and to answer the GL_UNIFORM_BLOCK_REFERENCED_BY_*_SHADER queries.
+    * This is used to maintain the Binding values of the stage's
+    * BufferInterfaceBlocks[] and to answer the
+    * GL_UNIFORM_BLOCK_REFERENCED_BY_*_SHADER queries.
     */
-   int *UniformBlockStageIndex[MESA_SHADER_STAGES];
+   int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
 
    /**
     * Map of active uniform names to locations
