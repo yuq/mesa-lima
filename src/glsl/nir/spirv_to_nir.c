@@ -834,6 +834,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
 
 static nir_variable *
 get_builtin_variable(struct vtn_builder *b,
+                     nir_variable_mode mode,
                      const struct glsl_type *type,
                      SpvBuiltIn builtin)
 {
@@ -841,7 +842,6 @@ get_builtin_variable(struct vtn_builder *b,
 
    if (!var) {
       int location;
-      nir_variable_mode mode;
       vtn_get_builtin_location(builtin, &location, &mode);
 
       var = nir_variable_create(b->shader, mode, type, "builtin");
@@ -1349,7 +1349,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             /* If we encounter a builtin, we throw away the ress of the
              * access chain, jump to the builtin, and keep building.
              */
-            nir_variable *builtin = get_builtin_variable(b, deref_type->type,
+            nir_variable *builtin = get_builtin_variable(b,
+                                                         base->var->data.mode,
+                                                         deref_type->type,
                                                          deref_type->builtin);
             val->deref = nir_deref_var_create(b, builtin);
             tail = &val->deref->deref;
