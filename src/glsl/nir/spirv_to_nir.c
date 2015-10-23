@@ -830,7 +830,10 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          var->data.origin_upper_left = b->origin_upper_left;
 
-      b->builtins[dec->literals[0]] = var;
+      if (mode == nir_var_shader_out)
+         b->builtins[dec->literals[0]].out = var;
+      else
+         b->builtins[dec->literals[0]].in = var;
       break;
    }
    case SpvDecorationRowMajor:
@@ -866,7 +869,11 @@ get_builtin_variable(struct vtn_builder *b,
                      const struct glsl_type *type,
                      SpvBuiltIn builtin)
 {
-   nir_variable *var = b->builtins[builtin];
+   nir_variable *var;
+   if (mode == nir_var_shader_out)
+      var = b->builtins[builtin].out;
+   else
+      var = b->builtins[builtin].in;
 
    if (!var) {
       int location;
@@ -880,7 +887,10 @@ get_builtin_variable(struct vtn_builder *b,
       if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          var->data.origin_upper_left = b->origin_upper_left;
 
-      b->builtins[builtin] = var;
+      if (mode == nir_var_shader_out)
+         b->builtins[builtin].out = var;
+      else
+         b->builtins[builtin].in = var;
    }
 
    return var;

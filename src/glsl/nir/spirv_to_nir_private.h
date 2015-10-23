@@ -172,7 +172,10 @@ struct vtn_builder {
    /*
     * NIR variable for each SPIR-V builtin.
     */
-   nir_variable *builtins[42]; /* XXX need symbolic constant from SPIR-V header */
+   struct {
+      nir_variable *in;
+      nir_variable *out;
+   } builtins[42]; /* XXX need symbolic constant from SPIR-V header */
 
    unsigned value_id_bound;
    struct vtn_value *values;
