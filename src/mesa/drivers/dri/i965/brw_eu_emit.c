@@ -92,7 +92,7 @@ gen7_convert_mrf_to_grf(struct brw_codegen *p, struct brw_reg *reg)
  */
 unsigned
 brw_reg_type_to_hw_type(const struct brw_device_info *devinfo,
-                        enum brw_reg_type type, unsigned file)
+                        enum brw_reg_type type, enum brw_reg_file file)
 {
    if (file == BRW_IMMEDIATE_VALUE) {
       static const int imm_hw_types[] = {

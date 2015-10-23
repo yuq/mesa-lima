@@ -33,7 +33,8 @@
 #include "brw_fs.h"
 #include "brw_cfg.h"
 
-static uint32_t brw_file_from_reg(fs_reg *reg)
+static enum brw_reg_file
+brw_file_from_reg(fs_reg *reg)
 {
    switch (reg->file) {
    case GRF:
@@ -48,7 +49,7 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
    case UNIFORM:
       unreachable("not reached");
    }
-   return 0;
+   return BRW_ARCHITECTURE_REGISTER_FILE;
 }
 
 static struct brw_reg

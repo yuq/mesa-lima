@@ -1399,10 +1399,12 @@ enum PACKED brw_predicate {
    BRW_PREDICATE_ALIGN16_ALL4H       =  7,
 };
 
-#define BRW_ARCHITECTURE_REGISTER_FILE    0
-#define BRW_GENERAL_REGISTER_FILE         1
-#define BRW_MESSAGE_REGISTER_FILE         2
-#define BRW_IMMEDIATE_VALUE               3
+enum PACKED brw_reg_file {
+   BRW_ARCHITECTURE_REGISTER_FILE = 0,
+   BRW_GENERAL_REGISTER_FILE      = 1,
+   BRW_MESSAGE_REGISTER_FILE      = 2,
+   BRW_IMMEDIATE_VALUE            = 3,
+};
 
 #define BRW_HW_REG_TYPE_UD  0
 #define BRW_HW_REG_TYPE_D   1
