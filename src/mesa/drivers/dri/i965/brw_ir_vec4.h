@@ -188,8 +188,8 @@ public:
 
    bool reads_flag(unsigned c)
    {
-      if (!reads_flag())
-         return false;
+      if (opcode == VS_OPCODE_UNPACK_FLAGS_SIMD4X2)
+         return true;
 
       switch (predicate) {
       case BRW_PREDICATE_NONE:
