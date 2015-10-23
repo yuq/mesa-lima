@@ -170,6 +170,9 @@ anv_shader_compile_to_nir(struct anv_device *device,
    }
    nir_validate_shader(nir);
 
+   /* Vulkan uses the separate-shader linking model */
+   nir->info.separate_shader = true;
+
    /* Make sure the provided shader has exactly one entrypoint and that the
     * name matches the name that came in from the VkShader.
     */
