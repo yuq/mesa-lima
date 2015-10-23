@@ -100,7 +100,7 @@ vc4_start_draw(struct vc4_context *vc4)
                      VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES));
 
         vc4->needs_flush = true;
-        vc4->draw_call_queued = true;
+        vc4->draw_calls_queued++;
         vc4->draw_width = width;
         vc4->draw_height = height;
 
@@ -226,6 +226,38 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4, const struct pipe_draw_info *i
         vc4->max_index = max_index;
 }
 
+/**
+ * HW-2116 workaround: Flush the batch before triggering the hardware state
+ * counter wraparound behavior.
+ *
+ * State updates are tracked by a global counter which increments at the first
+ * state update after a draw or a START_BINNING.  Tiles can then have their
+ * state updated at draw time with a set of cheap checks for whether the
+ * state's copy of the global counter matches the global counter the last time
+ * that state was written to the tile.
+ *
+ * The state counters are relatively small and wrap around quickly, so you
+ * could get false negatives for needing to update a particular state in the
+ * tile.  To avoid this, the hardware attempts to write all of the state in
+ * the tile at wraparound time.  This apparently is broken, so we just flush
+ * everything before that behavior is triggered.  A batch flush is sufficient
+ * to get our current contents drawn and reset the counters to 0.
+ *
+ * Note that we can't just use VC4_PACKET_FLUSH_ALL, because that caps the
+ * tiles with VC4_PACKET_RETURN_FROM_LIST.
+ */
+static void
+vc4_hw_2116_workaround(struct pipe_context *pctx)
+{
+        struct vc4_context *vc4 = vc4_context(pctx);
+
+        if (vc4->draw_calls_queued == 0x1ef0) {
+                perf_debug("Flushing batch due to HW-2116 workaround "
+                           "(too many draw calls per scene\n");
+                vc4_flush(pctx);
+        }
+}
+
 static void
 vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
@@ -243,6 +275,8 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         /* Before setting up the draw, do any fixup blits necessary. */
         vc4_update_shadow_textures(pctx, &vc4->verttex);
         vc4_update_shadow_textures(pctx, &vc4->fragtex);
+
+        vc4_hw_2116_workaround(pctx);
 
         vc4_get_draw_cl_space(vc4);
 
@@ -343,7 +377,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         /* We can't flag new buffers for clearing once we've queued draws.  We
          * could avoid this by using the 3d engine to clear.
          */
-        if (vc4->draw_call_queued) {
+        if (vc4->draw_calls_queued) {
                 perf_debug("Flushing rendering to process new clear.\n");
                 vc4_flush(pctx);
         }
