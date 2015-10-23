@@ -1083,7 +1083,7 @@ struct anv_shader {
 struct anv_pipeline {
    struct anv_device *                          device;
    struct anv_batch                             batch;
-   uint32_t                                     batch_data[256];
+   uint32_t                                     batch_data[512];
    struct anv_reloc_list                        batch_relocs;
    uint32_t                                     dynamic_state_mask;
    struct anv_dynamic_state                     dynamic_state;
