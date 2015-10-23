@@ -344,7 +344,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
          * could avoid this by using the 3d engine to clear.
          */
         if (vc4->draw_call_queued) {
-                perf_debug("Flushing rendering to process new clear.");
+                perf_debug("Flushing rendering to process new clear.\n");
                 vc4_flush(pctx);
         }
 
