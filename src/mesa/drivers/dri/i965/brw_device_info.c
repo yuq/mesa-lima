@@ -359,7 +359,7 @@ static const struct brw_device_info brw_device_info_bxt = {
 };
 
 const struct brw_device_info *
-brw_get_device_info(int devid, int revision)
+brw_get_device_info(int devid)
 {
    const struct brw_device_info *devinfo;
    switch (devid) {
