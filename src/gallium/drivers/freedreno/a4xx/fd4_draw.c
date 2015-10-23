@@ -118,12 +118,12 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 		.key = {
 			/* do binning pass first: */
 			.binning_pass = true,
-			.color_two_side = ctx->rasterizer ? ctx->rasterizer->light_twoside : false,
-			.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
+			.color_two_side = ctx->rasterizer->light_twoside,
+			.rasterflat = ctx->rasterizer->flatshade,
 			// TODO set .half_precision based on render target format,
 			// ie. float16 and smaller use half, float32 use full..
 			.half_precision = !!(fd_mesa_debug & FD_DBG_FRAGHALF),
-			.ucp_enables = ctx->rasterizer ? ctx->rasterizer->clip_plane_enable : 0,
+			.ucp_enables = ctx->rasterizer->clip_plane_enable,
 			.has_per_samp = (fd4_ctx->fsaturate || fd4_ctx->vsaturate),
 			.vsaturate_s = fd4_ctx->vsaturate_s,
 			.vsaturate_t = fd4_ctx->vsaturate_t,
@@ -132,9 +132,9 @@ fd4_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 			.fsaturate_t = fd4_ctx->fsaturate_t,
 			.fsaturate_r = fd4_ctx->fsaturate_r,
 		},
-		.rasterflat = ctx->rasterizer && ctx->rasterizer->flatshade,
-		.sprite_coord_enable = ctx->rasterizer ? ctx->rasterizer->sprite_coord_enable : false,
-		.sprite_coord_mode = ctx->rasterizer ? ctx->rasterizer->sprite_coord_mode : false,
+		.rasterflat = ctx->rasterizer->flatshade,
+		.sprite_coord_enable = ctx->rasterizer->sprite_coord_enable,
+		.sprite_coord_mode = ctx->rasterizer->sprite_coord_mode,
 	};
 	unsigned dirty;
 
