@@ -493,7 +493,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    brw_compute_vue_map(&pipeline->device->info,
                        &prog_data->base.vue_map,
                        nir->info.outputs_written,
-                       false /* XXX: Do SSO? */);
+                       nir->info.separate_shader);
 
    unsigned code_size;
    const unsigned *shader_code =
@@ -552,7 +552,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
    brw_compute_vue_map(&pipeline->device->info,
                        &prog_data->base.vue_map,
                        nir->info.outputs_written,
-                       false /* XXX: Do SSO? */);
+                       nir->info.separate_shader);
 
    unsigned code_size;
    const unsigned *shader_code =
