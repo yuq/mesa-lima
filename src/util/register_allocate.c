@@ -539,6 +539,23 @@ ra_simplify(struct ra_graph *g)
    g->stack_optimistic_start = stack_optimistic_start;
 }
 
+static bool
+ra_any_neighbors_conflict(struct ra_graph *g, unsigned int n, unsigned int r)
+{
+   unsigned int i;
+
+   for (i = 0; i < g->nodes[n].adjacency_count; i++) {
+      unsigned int n2 = g->nodes[n].adjacency_list[i];
+
+      if (!g->nodes[n2].in_stack &&
+          BITSET_TEST(g->regs->regs[r].conflicts, g->nodes[n2].reg)) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 /**
  * Pops nodes from the stack back into the graph, coloring them with
  * registers as they go.
@@ -552,7 +569,6 @@ ra_select(struct ra_graph *g)
    int start_search_reg = 0;
 
    while (g->stack_count != 0) {
-      unsigned int i;
       unsigned int ri;
       unsigned int r = -1;
       int n = g->stack[g->stack_count - 1];
@@ -566,17 +582,8 @@ ra_select(struct ra_graph *g)
          if (!reg_belongs_to_class(r, c))
 	    continue;
 
-	 /* Check if any of our neighbors conflict with this register choice. */
-	 for (i = 0; i < g->nodes[n].adjacency_count; i++) {
-	    unsigned int n2 = g->nodes[n].adjacency_list[i];
-
-	    if (!g->nodes[n2].in_stack &&
-		BITSET_TEST(g->regs->regs[r].conflicts, g->nodes[n2].reg)) {
-	       break;
-	    }
-	 }
-	 if (i == g->nodes[n].adjacency_count)
-	    break;
+         if (!ra_any_neighbors_conflict(g, n, r))
+            break;
       }
 
       /* set this to false even if we return here so that
