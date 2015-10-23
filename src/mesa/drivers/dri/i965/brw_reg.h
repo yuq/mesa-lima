@@ -237,18 +237,18 @@ struct brw_reg {
    unsigned subnr:5;              /* :1 in align16 */
    unsigned negate:1;             /* source only */
    unsigned abs:1;                /* source only */
-   unsigned vstride:4;            /* source only */
-   unsigned width:3;              /* src only, align1 only */
-   unsigned hstride:2;            /* align1 only */
    unsigned address_mode:1;       /* relative addressing, hopefully! */
-   unsigned pad0:1;
+   unsigned pad0:10;
 
    union {
       struct {
          unsigned swizzle:8;      /* src only, align16 only */
          unsigned writemask:4;    /* dest only, align16 only */
          int  indirect_offset:10; /* relative addressing offset */
-         unsigned pad1:10;        /* two dwords total */
+         unsigned vstride:4;      /* source only */
+         unsigned width:3;        /* src only, align1 only */
+         unsigned hstride:2;      /* align1 only */
+         unsigned pad1:1;
       };
 
       float f;
@@ -357,9 +357,6 @@ brw_reg(unsigned file,
    reg.subnr = subnr * type_sz(type);
    reg.negate = negate;
    reg.abs = abs;
-   reg.vstride = vstride;
-   reg.width = width;
-   reg.hstride = hstride;
    reg.address_mode = BRW_ADDRESS_DIRECT;
    reg.pad0 = 0;
 
@@ -372,6 +369,9 @@ brw_reg(unsigned file,
    reg.swizzle = swizzle;
    reg.writemask = writemask;
    reg.indirect_offset = 0;
+   reg.vstride = vstride;
+   reg.width = width;
+   reg.hstride = hstride;
    reg.pad1 = 0;
    return reg;
 }
