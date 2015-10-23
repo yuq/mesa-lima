@@ -112,6 +112,8 @@ PipeToProfile(enum pipe_video_profile profile)
       return VAProfileH264High;
    case PIPE_VIDEO_PROFILE_MPEG4_AVC_EXTENDED:
        return VAProfileNone;
+   case PIPE_VIDEO_PROFILE_HEVC_MAIN:
+      return VAProfileHEVCMain;
    default:
       assert(0);
       return -1;
@@ -142,6 +144,8 @@ ProfileToPipe(VAProfile profile)
       return PIPE_VIDEO_PROFILE_MPEG4_AVC_MAIN;
    case VAProfileH264High:
       return PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH;
+   case VAProfileHEVCMain:
+      return PIPE_VIDEO_PROFILE_HEVC_MAIN;
    default:
       return PIPE_VIDEO_PROFILE_UNKNOWN;
    }
@@ -174,6 +178,7 @@ typedef struct {
       struct pipe_mpeg4_picture_desc mpeg4;
       struct pipe_vc1_picture_desc vc1;
       struct pipe_h264_picture_desc h264;
+      struct pipe_h265_picture_desc h265;
    } desc;
 
    struct {

@@ -194,6 +194,21 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
       }
    }
 
+   if (u_reduce_video_profile(context->decoder->profile) ==
+         PIPE_VIDEO_FORMAT_HEVC) {
+      context->desc.h265.pps = CALLOC_STRUCT(pipe_h265_pps);
+      if (!context->desc.h265.pps) {
+         FREE(context);
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      }
+      context->desc.h265.pps->sps = CALLOC_STRUCT(pipe_h265_sps);
+      if (!context->desc.h265.pps->sps) {
+         FREE(context->desc.h265.pps);
+         FREE(context);
+         return VA_STATUS_ERROR_ALLOCATION_FAILED;
+      }
+   }
+
    context->desc.base.profile = config_id;
    *context_id = handle_table_add(drv->htab, context);
 
@@ -215,6 +230,11 @@ vlVaDestroyContext(VADriverContextP ctx, VAContextID context_id)
          PIPE_VIDEO_FORMAT_MPEG4_AVC) {
       FREE(context->desc.h264.pps->sps);
       FREE(context->desc.h264.pps);
+   }
+   if (u_reduce_video_profile(context->decoder->profile) ==
+         PIPE_VIDEO_FORMAT_HEVC) {
+      FREE(context->desc.h265.pps->sps);
+      FREE(context->desc.h265.pps);
    }
    context->decoder->destroy(context->decoder);
    FREE(context);
