@@ -412,7 +412,7 @@ gen8_graphics_pipeline_create(
       anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_GS,
                      .SingleProgramFlow = false,
                      .KernelStartPointer = pipeline->gs_vec4,
-                     .VectorMaskEnable = Vmask,
+                     .VectorMaskEnable = Dmask,
                      .SamplerCount = 0,
                      .BindingTableEntryCount = 0,
                      .ExpectedVertexCount = pipeline->gs_vertex_count,
@@ -428,13 +428,18 @@ gen8_graphics_pipeline_create(
 
                      .MaximumNumberofThreads = device->info.max_gs_threads / 2 - 1,
                      .ControlDataHeaderSize = gs_prog_data->control_data_header_size_hwords,
-                     //pipeline->gs_prog_data.dispatch_mode |
+                     .DispatchMode = gs_prog_data->base.dispatch_mode,
                      .StatisticsEnable = true,
                      .IncludePrimitiveID = gs_prog_data->include_primitive_id,
                      .ReorderMode = TRAILING,
                      .Enable = true,
 
                      .ControlDataFormat = gs_prog_data->control_data_format,
+
+                     .StaticOutput = gs_prog_data->static_vertex_count >= 0,
+                     .StaticOutputVertexCount =
+                        gs_prog_data->static_vertex_count >= 0 ?
+                        gs_prog_data->static_vertex_count : 0,
 
                      /* FIXME: mesa sets this based on ctx->Transform.ClipPlanesEnabled:
                       * UserClipDistanceClipTestEnableBitmask_3DSTATE_GS(v)
