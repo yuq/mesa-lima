@@ -586,6 +586,7 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_MULLINS:
 	case CHIP_ICELAND:
 	case CHIP_CARRIZO:
+	case CHIP_STONEY:
 		sscreen->gs_table_depth = 16;
 		return true;
 	case CHIP_TAHITI:
