@@ -234,7 +234,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			} else {
 				samplers->depth_texture_mask &= ~(1 << slot);
 			}
-			if (rtex->cmask.size || rtex->fmask.size) {
+			if (rtex->cmask.size || rtex->fmask.size ||
+			    (rtex->dcc_buffer && rtex->dirty_level_mask)) {
 				samplers->compressed_colortex_mask |= 1 << slot;
 			} else {
 				samplers->compressed_colortex_mask &= ~(1 << slot);

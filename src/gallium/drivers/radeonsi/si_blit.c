@@ -326,7 +326,7 @@ void si_decompress_color_textures(struct si_context *sctx,
 		assert(view);
 
 		tex = (struct r600_texture *)view->texture;
-		assert(tex->cmask.size || tex->fmask.size);
+		assert(tex->cmask.size || tex->fmask.size || tex->surface.dcc_enabled);
 
 		si_blit_decompress_color(&sctx->b.b, tex,
 					 view->u.tex.first_level, view->u.tex.last_level,
@@ -455,7 +455,7 @@ static void si_decompress_subresource(struct pipe_context *ctx,
 			si_blit_decompress_depth_in_place(sctx, rtex, true,
 							  level, level,
 							  first_layer, last_layer);
-	} else if (rtex->fmask.size || rtex->cmask.size) {
+	} else if (rtex->fmask.size || rtex->cmask.size || rtex->surface.dcc_enabled) {
 		si_blit_decompress_color(ctx, rtex, level, level,
 					 first_layer, last_layer);
 	}
