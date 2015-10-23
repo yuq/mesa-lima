@@ -249,12 +249,12 @@ struct brw_reg {
          unsigned writemask:4;    /* dest only, align16 only */
          int  indirect_offset:10; /* relative addressing offset */
          unsigned pad1:10;        /* two dwords total */
-      } bits;
+      };
 
       float f;
       int   d;
       unsigned ud;
-   } dw1;
+   };
 };
 
 
@@ -369,10 +369,10 @@ brw_reg(unsigned file,
     * keep track of as you'd want it adjusted by suboffset(), etc.
     * Perhaps fix up when converting to align16?
     */
-   reg.dw1.bits.swizzle = swizzle;
-   reg.dw1.bits.writemask = writemask;
-   reg.dw1.bits.indirect_offset = 0;
-   reg.dw1.bits.pad1 = 0;
+   reg.swizzle = swizzle;
+   reg.writemask = writemask;
+   reg.indirect_offset = 0;
+   reg.pad1 = 0;
    return reg;
 }
 
@@ -569,7 +569,7 @@ static inline struct brw_reg
 brw_imm_f(float f)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_F);
-   imm.dw1.f = f;
+   imm.f = f;
    return imm;
 }
 
@@ -578,7 +578,7 @@ static inline struct brw_reg
 brw_imm_d(int d)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_D);
-   imm.dw1.d = d;
+   imm.d = d;
    return imm;
 }
 
@@ -587,7 +587,7 @@ static inline struct brw_reg
 brw_imm_ud(unsigned ud)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_UD);
-   imm.dw1.ud = ud;
+   imm.ud = ud;
    return imm;
 }
 
@@ -596,7 +596,7 @@ static inline struct brw_reg
 brw_imm_uw(uint16_t uw)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_UW);
-   imm.dw1.ud = uw | (uw << 16);
+   imm.ud = uw | (uw << 16);
    return imm;
 }
 
@@ -605,7 +605,7 @@ static inline struct brw_reg
 brw_imm_w(int16_t w)
 {
    struct brw_reg imm = brw_imm_reg(BRW_REGISTER_TYPE_W);
-   imm.dw1.d = w | (w << 16);
+   imm.d = w | (w << 16);
    return imm;
 }
 
@@ -621,7 +621,7 @@ brw_imm_v(unsigned v)
    imm.vstride = BRW_VERTICAL_STRIDE_0;
    imm.width = BRW_WIDTH_8;
    imm.hstride = BRW_HORIZONTAL_STRIDE_1;
-   imm.dw1.ud = v;
+   imm.ud = v;
    return imm;
 }
 
@@ -633,7 +633,7 @@ brw_imm_vf(unsigned v)
    imm.vstride = BRW_VERTICAL_STRIDE_0;
    imm.width = BRW_WIDTH_4;
    imm.hstride = BRW_HORIZONTAL_STRIDE_1;
-   imm.dw1.ud = v;
+   imm.ud = v;
    return imm;
 }
 
@@ -923,8 +923,8 @@ brw_swizzle(struct brw_reg reg, unsigned x, unsigned y, unsigned z, unsigned w)
 {
    assert(reg.file != BRW_IMMEDIATE_VALUE);
 
-   reg.dw1.bits.swizzle = brw_compose_swizzle(BRW_SWIZZLE4(x, y, z, w),
-                                              reg.dw1.bits.swizzle);
+   reg.swizzle = brw_compose_swizzle(BRW_SWIZZLE4(x, y, z, w),
+                                              reg.swizzle);
    return reg;
 }
 
@@ -939,7 +939,7 @@ static inline struct brw_reg
 brw_writemask(struct brw_reg reg, unsigned mask)
 {
    assert(reg.file != BRW_IMMEDIATE_VALUE);
-   reg.dw1.bits.writemask &= mask;
+   reg.writemask &= mask;
    return reg;
 }
 
@@ -947,7 +947,7 @@ static inline struct brw_reg
 brw_set_writemask(struct brw_reg reg, unsigned mask)
 {
    assert(reg.file != BRW_IMMEDIATE_VALUE);
-   reg.dw1.bits.writemask = mask;
+   reg.writemask = mask;
    return reg;
 }
 
@@ -980,7 +980,7 @@ brw_vec4_indirect(unsigned subnr, int offset)
    struct brw_reg reg =  brw_vec4_grf(0, 0);
    reg.subnr = subnr;
    reg.address_mode = BRW_ADDRESS_REGISTER_INDIRECT_REGISTER;
-   reg.dw1.bits.indirect_offset = offset;
+   reg.indirect_offset = offset;
    return reg;
 }
 
@@ -990,7 +990,7 @@ brw_vec1_indirect(unsigned subnr, int offset)
    struct brw_reg reg =  brw_vec1_grf(0, 0);
    reg.subnr = subnr;
    reg.address_mode = BRW_ADDRESS_REGISTER_INDIRECT_REGISTER;
-   reg.dw1.bits.indirect_offset = offset;
+   reg.indirect_offset = offset;
    return reg;
 }
 
@@ -1001,7 +1001,7 @@ brw_VxH_indirect(unsigned subnr, int offset)
    reg.vstride = BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL;
    reg.subnr = subnr;
    reg.address_mode = BRW_ADDRESS_REGISTER_INDIRECT_REGISTER;
-   reg.dw1.bits.indirect_offset = offset;
+   reg.indirect_offset = offset;
    return reg;
 }
 

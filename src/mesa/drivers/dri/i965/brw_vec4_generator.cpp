@@ -46,7 +46,7 @@ check_gen6_math_src_arg(struct brw_reg src)
    /* Source swizzles are ignored. */
    assert(!src.abs);
    assert(!src.negate);
-   assert(src.dw1.bits.swizzle == BRW_SWIZZLE_XYZW);
+   assert(src.swizzle == BRW_SWIZZLE_XYZW);
 }
 
 static void
@@ -57,7 +57,7 @@ generate_math_gen6(struct brw_codegen *p,
                    struct brw_reg src1)
 {
    /* Can't do writemask because math can't be align16. */
-   assert(dst.dw1.bits.writemask == WRITEMASK_XYZW);
+   assert(dst.writemask == WRITEMASK_XYZW);
    /* Source swizzles are ignored. */
    check_gen6_math_src_arg(src0);
    if (src1.file == BRW_GENERAL_REGISTER_FILE)
@@ -264,7 +264,7 @@ generate_tex(struct brw_codegen *p,
          : prog_data->base.binding_table.texture_start;
 
    if (sampler_index.file == BRW_IMMEDIATE_VALUE) {
-      uint32_t sampler = sampler_index.dw1.ud;
+      uint32_t sampler = sampler_index.ud;
 
       brw_SAMPLE(p,
                  dst,
@@ -419,10 +419,10 @@ generate_gs_set_write_offset(struct brw_codegen *p,
    assert(p->devinfo->gen >= 7 &&
           src1.file == BRW_IMMEDIATE_VALUE &&
           src1.type == BRW_REGISTER_TYPE_UD &&
-          src1.dw1.ud <= USHRT_MAX);
+          src1.ud <= USHRT_MAX);
    if (src0.file == BRW_IMMEDIATE_VALUE) {
       brw_MOV(p, suboffset(stride(dst, 2, 2, 1), 3),
-              brw_imm_ud(src0.dw1.ud * src1.dw1.ud));
+              brw_imm_ud(src0.ud * src1.ud));
    } else {
       brw_MUL(p, suboffset(stride(dst, 2, 2, 1), 3), stride(src0, 8, 2, 4),
               retype(src1, BRW_REGISTER_TYPE_UW));
@@ -740,7 +740,7 @@ generate_oword_dual_block_offsets(struct brw_codegen *p,
    brw_MOV(p, m1_0, index_0);
 
    if (index.file == BRW_IMMEDIATE_VALUE) {
-      index_4.dw1.ud += second_vertex_offset;
+      index_4.ud += second_vertex_offset;
       brw_MOV(p, m1_4, index_4);
    } else {
       brw_ADD(p, m1_4, index_4, brw_imm_d(second_vertex_offset));
@@ -895,7 +895,7 @@ generate_pull_constant_load(struct brw_codegen *p,
    const struct brw_device_info *devinfo = p->devinfo;
    assert(index.file == BRW_IMMEDIATE_VALUE &&
 	  index.type == BRW_REGISTER_TYPE_UD);
-   uint32_t surf_index = index.dw1.ud;
+   uint32_t surf_index = index.ud;
 
    struct brw_reg header = brw_vec8_grf(0, 0);
 
@@ -947,7 +947,7 @@ generate_get_buffer_size(struct brw_codegen *p,
               dst,
               inst->base_mrf,
               src,
-              surf_index.dw1.ud,
+              surf_index.ud,
               0,
               GEN5_SAMPLER_MESSAGE_SAMPLE_RESINFO,
               1, /* response length */
@@ -955,6 +955,8 @@ generate_get_buffer_size(struct brw_codegen *p,
               inst->header_size > 0,
               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
               BRW_SAMPLER_RETURN_FORMAT_SINT32);
+
+   brw_mark_surface_used(&prog_data->base, surf_index.ud);
 }
 
 static void
@@ -973,7 +975,7 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
       brw_set_dest(p, insn, dst);
       brw_set_src0(p, insn, offset);
       brw_set_sampler_message(p, insn,
-                              surf_index.dw1.ud,
+                              surf_index.ud,
                               0, /* LD message ignores sampler unit */
                               GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
                               1, /* rlen */
@@ -981,6 +983,9 @@ generate_pull_constant_load_gen7(struct brw_codegen *p,
                               inst->header_size != 0,
                               BRW_SAMPLER_SIMD_MODE_SIMD4X2,
                               0);
+
+      brw_mark_surface_used(&prog_data->base, surf_index.ud);
+
    } else {
 
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
@@ -1410,38 +1415,38 @@ generate_code(struct brw_codegen *p,
 
       case SHADER_OPCODE_UNTYPED_ATOMIC:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
-         brw_untyped_atomic(p, dst, src[0], src[1], src[2].dw1.ud, inst->mlen,
+         brw_untyped_atomic(p, dst, src[0], src[1], src[2].ud, inst->mlen,
                             !inst->dst.is_null());
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_READ:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_surface_read(p, dst, src[0], src[1], inst->mlen,
-                                  src[2].dw1.ud);
+                                  src[2].ud);
          break;
 
       case SHADER_OPCODE_UNTYPED_SURFACE_WRITE:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_untyped_surface_write(p, src[0], src[1], inst->mlen,
-                                   src[2].dw1.ud);
+                                   src[2].ud);
          break;
 
       case SHADER_OPCODE_TYPED_ATOMIC:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
-         brw_typed_atomic(p, dst, src[0], src[1], src[2].dw1.ud, inst->mlen,
+         brw_typed_atomic(p, dst, src[0], src[1], src[2].ud, inst->mlen,
                           !inst->dst.is_null());
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_READ:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_typed_surface_read(p, dst, src[0], src[1], inst->mlen,
-                                src[2].dw1.ud);
+                                src[2].ud);
          break;
 
       case SHADER_OPCODE_TYPED_SURFACE_WRITE:
          assert(src[2].file == BRW_IMMEDIATE_VALUE);
          brw_typed_surface_write(p, src[0], src[1], inst->mlen,
-                                 src[2].dw1.ud);
+                                 src[2].ud);
          break;
 
       case SHADER_OPCODE_MEMORY_FENCE:
@@ -1489,9 +1494,9 @@ generate_code(struct brw_codegen *p,
           *
           * where they pack the four bytes from the low and high four DW.
           */
-         assert(_mesa_is_pow_two(dst.dw1.bits.writemask) &&
-                dst.dw1.bits.writemask != 0);
-         unsigned offset = __builtin_ctz(dst.dw1.bits.writemask);
+         assert(_mesa_is_pow_two(dst.writemask) &&
+                dst.writemask != 0);
+         unsigned offset = __builtin_ctz(dst.writemask);
 
          dst.type = BRW_REGISTER_TYPE_UB;
 

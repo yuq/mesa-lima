@@ -379,7 +379,7 @@ fs_reg::fs_reg(float f)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_F;
    this->stride = 0;
-   this->fixed_hw_reg.dw1.f = f;
+   this->fixed_hw_reg.f = f;
 }
 
 /** Immediate value constructor. */
@@ -389,7 +389,7 @@ fs_reg::fs_reg(int32_t i)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_D;
    this->stride = 0;
-   this->fixed_hw_reg.dw1.d = i;
+   this->fixed_hw_reg.d = i;
 }
 
 /** Immediate value constructor. */
@@ -399,7 +399,7 @@ fs_reg::fs_reg(uint32_t u)
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_UD;
    this->stride = 0;
-   this->fixed_hw_reg.dw1.ud = u;
+   this->fixed_hw_reg.ud = u;
 }
 
 /** Vector float immediate value constructor. */
@@ -408,7 +408,7 @@ fs_reg::fs_reg(uint8_t vf[4])
    init();
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   memcpy(&this->fixed_hw_reg.dw1.ud, vf, sizeof(unsigned));
+   memcpy(&this->fixed_hw_reg.ud, vf, sizeof(unsigned));
 }
 
 /** Vector float immediate value constructor. */
@@ -417,7 +417,7 @@ fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
    init();
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   this->fixed_hw_reg.dw1.ud = (vf0 <<  0) |
+   this->fixed_hw_reg.ud = (vf0 <<  0) |
                                (vf1 <<  8) |
                                (vf2 << 16) |
                                (vf3 << 24);
@@ -719,7 +719,7 @@ fs_inst::components_read(unsigned i) const
       assert(src[FB_WRITE_LOGICAL_SRC_COMPONENTS].file == IMM);
       /* First/second FB write color. */
       if (i < 2)
-         return src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
+         return src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.ud;
       else
          return 1;
 
@@ -739,10 +739,10 @@ fs_inst::components_read(unsigned i) const
       assert(src[8].file == IMM && src[9].file == IMM);
       /* Texture coordinates. */
       if (i == 0)
-         return src[8].fixed_hw_reg.dw1.ud;
+         return src[8].fixed_hw_reg.ud;
       /* Texture derivatives. */
       else if ((i == 2 || i == 3) && opcode == SHADER_OPCODE_TXD_LOGICAL)
-         return src[9].fixed_hw_reg.dw1.ud;
+         return src[9].fixed_hw_reg.ud;
       /* Texture offset. */
       else if (i == 7)
          return 2;
@@ -757,7 +757,7 @@ fs_inst::components_read(unsigned i) const
       assert(src[3].file == IMM);
       /* Surface coordinates. */
       if (i == 0)
-         return src[3].fixed_hw_reg.dw1.ud;
+         return src[3].fixed_hw_reg.ud;
       /* Surface operation source (ignored for reads). */
       else if (i == 1)
          return 0;
@@ -770,10 +770,10 @@ fs_inst::components_read(unsigned i) const
              src[4].file == IMM);
       /* Surface coordinates. */
       if (i == 0)
-         return src[3].fixed_hw_reg.dw1.ud;
+         return src[3].fixed_hw_reg.ud;
       /* Surface operation source. */
       else if (i == 1)
-         return src[4].fixed_hw_reg.dw1.ud;
+         return src[4].fixed_hw_reg.ud;
       else
          return 1;
 
@@ -781,10 +781,10 @@ fs_inst::components_read(unsigned i) const
    case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL: {
       assert(src[3].file == IMM &&
              src[4].file == IMM);
-      const unsigned op = src[4].fixed_hw_reg.dw1.ud;
+      const unsigned op = src[4].fixed_hw_reg.ud;
       /* Surface coordinates. */
       if (i == 0)
-         return src[3].fixed_hw_reg.dw1.ud;
+         return src[3].fixed_hw_reg.ud;
       /* Surface operation source. */
       else if (i == 1 && op == BRW_AOP_CMPWR)
          return 2;
@@ -1666,11 +1666,11 @@ fs_visitor::assign_gs_urb_setup()
       if (inst->opcode == SHADER_OPCODE_URB_READ_SIMD8) {
          assert(inst->src[0].file == IMM);
          inst->src[0] = retype(brw_vec8_grf(first_icp_handle +
-                                            inst->src[0].fixed_hw_reg.dw1.ud,
+                                            inst->src[0].fixed_hw_reg.ud,
                                             0), BRW_REGISTER_TYPE_UD);
          /* for now, assume constant - we can do per-slot offsets later */
          assert(inst->src[1].file == IMM);
-         inst->offset = inst->src[1].fixed_hw_reg.dw1.ud;
+         inst->offset = inst->src[1].fixed_hw_reg.ud;
          inst->src[1] = fs_reg();
          inst->mlen = 1;
          inst->base_mrf = -1;
@@ -2112,7 +2112,7 @@ fs_visitor::opt_algebraic()
          if (inst->src[0].file == IMM) {
             assert(inst->src[0].type == BRW_REGISTER_TYPE_F);
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0].fixed_hw_reg.dw1.f *= inst->src[1].fixed_hw_reg.dw1.f;
+            inst->src[0].fixed_hw_reg.f *= inst->src[1].fixed_hw_reg.f;
             inst->src[1] = reg_undef;
             progress = true;
             break;
@@ -2133,7 +2133,7 @@ fs_visitor::opt_algebraic()
          if (inst->src[0].file == IMM) {
             assert(inst->src[0].type == BRW_REGISTER_TYPE_F);
             inst->opcode = BRW_OPCODE_MOV;
-            inst->src[0].fixed_hw_reg.dw1.f += inst->src[1].fixed_hw_reg.dw1.f;
+            inst->src[0].fixed_hw_reg.f += inst->src[1].fixed_hw_reg.f;
             inst->src[1] = reg_undef;
             progress = true;
             break;
@@ -2182,7 +2182,7 @@ fs_visitor::opt_algebraic()
             case BRW_CONDITIONAL_L:
                switch (inst->src[1].type) {
                case BRW_REGISTER_TYPE_F:
-                  if (inst->src[1].fixed_hw_reg.dw1.f >= 1.0f) {
+                  if (inst->src[1].fixed_hw_reg.f >= 1.0f) {
                      inst->opcode = BRW_OPCODE_MOV;
                      inst->src[1] = reg_undef;
                      inst->conditional_mod = BRW_CONDITIONAL_NONE;
@@ -2197,7 +2197,7 @@ fs_visitor::opt_algebraic()
             case BRW_CONDITIONAL_G:
                switch (inst->src[1].type) {
                case BRW_REGISTER_TYPE_F:
-                  if (inst->src[1].fixed_hw_reg.dw1.f <= 0.0f) {
+                  if (inst->src[1].fixed_hw_reg.f <= 0.0f) {
                      inst->opcode = BRW_OPCODE_MOV;
                      inst->src[1] = reg_undef;
                      inst->conditional_mod = BRW_CONDITIONAL_NONE;
@@ -2234,7 +2234,7 @@ fs_visitor::opt_algebraic()
             progress = true;
          } else if (inst->src[1].file == IMM && inst->src[2].file == IMM) {
             inst->opcode = BRW_OPCODE_ADD;
-            inst->src[1].fixed_hw_reg.dw1.f *= inst->src[2].fixed_hw_reg.dw1.f;
+            inst->src[1].fixed_hw_reg.f *= inst->src[2].fixed_hw_reg.f;
             inst->src[2] = reg_undef;
             progress = true;
          }
@@ -2259,7 +2259,7 @@ fs_visitor::opt_algebraic()
          } else if (inst->src[1].file == IMM) {
             inst->opcode = BRW_OPCODE_MOV;
             inst->src[0] = component(inst->src[0],
-                                     inst->src[1].fixed_hw_reg.dw1.ud);
+                                     inst->src[1].fixed_hw_reg.ud);
             inst->sources = 1;
             inst->force_writemask_all = true;
             progress = true;
@@ -3081,7 +3081,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
          fs_reg const_offset_reg = inst->src[1];
          assert(const_offset_reg.file == IMM &&
                 const_offset_reg.type == BRW_REGISTER_TYPE_UD);
-         const_offset_reg.fixed_hw_reg.dw1.ud /= 4;
+         const_offset_reg.fixed_hw_reg.ud /= 4;
 
          fs_reg payload, offset;
          if (devinfo->gen >= 9) {
@@ -3250,7 +3250,7 @@ fs_visitor::lower_integer_multiplication()
             continue;
 
          if (inst->src[1].file == IMM &&
-             inst->src[1].fixed_hw_reg.dw1.ud < (1 << 16)) {
+             inst->src[1].fixed_hw_reg.ud < (1 << 16)) {
             /* The MUL instruction isn't commutative. On Gen <= 6, only the low
              * 16-bits of src0 are read, and on Gen >= 7 only the low 16-bits of
              * src1 are used.
@@ -3326,8 +3326,8 @@ fs_visitor::lower_integer_multiplication()
                fs_reg src1_1_w = inst->src[1];
 
                if (inst->src[1].file == IMM) {
-                  src1_0_w.fixed_hw_reg.dw1.ud &= 0xffff;
-                  src1_1_w.fixed_hw_reg.dw1.ud >>= 16;
+                  src1_0_w.fixed_hw_reg.ud &= 0xffff;
+                  src1_1_w.fixed_hw_reg.ud >>= 16;
                } else {
                   src1_0_w.type = BRW_REGISTER_TYPE_UW;
                   if (src1_0_w.stride != 0) {
@@ -3482,7 +3482,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    const fs_reg &src_stencil = inst->src[FB_WRITE_LOGICAL_SRC_SRC_STENCIL];
    fs_reg sample_mask = inst->src[FB_WRITE_LOGICAL_SRC_OMASK];
    const unsigned components =
-      inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.dw1.ud;
+      inst->src[FB_WRITE_LOGICAL_SRC_COMPONENTS].fixed_hw_reg.ud;
 
    /* We can potentially have a message length of up to 15, so we have to set
     * base_mrf to either 0 or 1 in order to fit in m0..m15.
@@ -3822,7 +3822,7 @@ is_high_sampler(const struct brw_device_info *devinfo, const fs_reg &sampler)
    if (devinfo->gen < 8 && !devinfo->is_haswell)
       return false;
 
-   return sampler.file != IMM || sampler.fixed_hw_reg.dw1.ud >= 16;
+   return sampler.file != IMM || sampler.fixed_hw_reg.ud >= 16;
 }
 
 static void
@@ -4057,8 +4057,8 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    const fs_reg &sampler = inst->src[6];
    const fs_reg &offset_value = inst->src[7];
    assert(inst->src[8].file == IMM && inst->src[9].file == IMM);
-   const unsigned coord_components = inst->src[8].fixed_hw_reg.dw1.ud;
-   const unsigned grad_components = inst->src[9].fixed_hw_reg.dw1.ud;
+   const unsigned coord_components = inst->src[8].fixed_hw_reg.ud;
+   const unsigned grad_components = inst->src[9].fixed_hw_reg.ud;
 
    if (devinfo->gen >= 7) {
       lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
@@ -4384,7 +4384,7 @@ get_lowered_simd_width(const struct brw_device_info *devinfo,
        * circumstances it can end up with a message that is too long in SIMD16
        * mode.
        */
-      const unsigned coord_components = inst->src[8].fixed_hw_reg.dw1.ud;
+      const unsigned coord_components = inst->src[8].fixed_hw_reg.ud;
       /* First three arguments are the sample index and the two arguments for
        * the MCS data.
        */
@@ -4692,22 +4692,22 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case IMM:
          switch (inst->src[i].type) {
          case BRW_REGISTER_TYPE_F:
-            fprintf(file, "%ff", inst->src[i].fixed_hw_reg.dw1.f);
+            fprintf(file, "%ff", inst->src[i].fixed_hw_reg.f);
             break;
          case BRW_REGISTER_TYPE_W:
          case BRW_REGISTER_TYPE_D:
-            fprintf(file, "%dd", inst->src[i].fixed_hw_reg.dw1.d);
+            fprintf(file, "%dd", inst->src[i].fixed_hw_reg.d);
             break;
          case BRW_REGISTER_TYPE_UW:
          case BRW_REGISTER_TYPE_UD:
-            fprintf(file, "%uu", inst->src[i].fixed_hw_reg.dw1.ud);
+            fprintf(file, "%uu", inst->src[i].fixed_hw_reg.ud);
             break;
          case BRW_REGISTER_TYPE_VF:
             fprintf(file, "[%-gF, %-gF, %-gF, %-gF]",
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  0) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  8) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 16) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 24) & 0xff));
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  0) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  8) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 16) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 24) & 0xff));
             break;
          default:
             fprintf(file, "???");

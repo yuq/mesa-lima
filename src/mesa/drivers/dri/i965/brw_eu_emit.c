@@ -169,10 +169,10 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
          brw_inst_set_dst_hstride(devinfo, inst, dest.hstride);
       } else {
          brw_inst_set_dst_da16_subreg_nr(devinfo, inst, dest.subnr / 16);
-         brw_inst_set_da16_writemask(devinfo, inst, dest.dw1.bits.writemask);
+         brw_inst_set_da16_writemask(devinfo, inst, dest.writemask);
          if (dest.file == BRW_GENERAL_REGISTER_FILE ||
              dest.file == BRW_MESSAGE_REGISTER_FILE) {
-            assert(dest.dw1.bits.writemask != 0);
+            assert(dest.writemask != 0);
          }
 	 /* From the Ivybridge PRM, Vol 4, Part 3, Section 5.2.4.1:
 	  *    Although Dst.HorzStride is a don't care for Align16, HW needs
@@ -187,13 +187,13 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
        */
       if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
          brw_inst_set_dst_ia1_addr_imm(devinfo, inst,
-                                       dest.dw1.bits.indirect_offset);
+                                       dest.indirect_offset);
 	 if (dest.hstride == BRW_HORIZONTAL_STRIDE_0)
 	    dest.hstride = BRW_HORIZONTAL_STRIDE_1;
          brw_inst_set_dst_hstride(devinfo, inst, dest.hstride);
       } else {
          brw_inst_set_dst_ia16_addr_imm(devinfo, inst,
-                                        dest.dw1.bits.indirect_offset);
+                                        dest.indirect_offset);
 	 /* even ignored in da16, still need to set as '01' */
          brw_inst_set_dst_hstride(devinfo, inst, 1);
       }
@@ -243,7 +243,7 @@ validate_reg(const struct brw_device_info *devinfo,
     */
    if (reg.file == BRW_ARCHITECTURE_REGISTER_FILE &&
        reg.nr == BRW_ARF_ACCUMULATOR)
-      assert(reg.dw1.bits.swizzle == BRW_SWIZZLE_XYZW);
+      assert(reg.swizzle == BRW_SWIZZLE_XYZW);
 
    assert(reg.hstride >= 0 && reg.hstride < ARRAY_SIZE(hstride_for_reg));
    hstride = hstride_for_reg[reg.hstride];
@@ -338,7 +338,7 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    brw_inst_set_src0_address_mode(devinfo, inst, reg.address_mode);
 
    if (reg.file == BRW_IMMEDIATE_VALUE) {
-      brw_inst_set_imm_ud(devinfo, inst, reg.dw1.ud);
+      brw_inst_set_imm_ud(devinfo, inst, reg.ud);
 
       /* The Bspec's section titled "Non-present Operands" claims that if src0
        * is an immediate that src1's type must be the same as that of src0.
@@ -408,9 +408,9 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
          brw_inst_set_src0_ia_subreg_nr(devinfo, inst, reg.subnr);
 
          if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
-            brw_inst_set_src0_ia1_addr_imm(devinfo, inst, reg.dw1.bits.indirect_offset);
+            brw_inst_set_src0_ia1_addr_imm(devinfo, inst, reg.indirect_offset);
 	 } else {
-            brw_inst_set_src0_ia16_addr_imm(devinfo, inst, reg.dw1.bits.indirect_offset);
+            brw_inst_set_src0_ia16_addr_imm(devinfo, inst, reg.indirect_offset);
 	 }
       }
 
@@ -427,13 +427,13 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 	 }
       } else {
          brw_inst_set_src0_da16_swiz_x(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_X));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_X));
          brw_inst_set_src0_da16_swiz_y(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_Y));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_Y));
          brw_inst_set_src0_da16_swiz_z(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_Z));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_Z));
          brw_inst_set_src0_da16_swiz_w(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_W));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_W));
 
 	 /* This is an oddity of the fact we're using the same
 	  * descriptions for registers in align_16 as align_1:
@@ -479,7 +479,7 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
    assert(brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE);
 
    if (reg.file == BRW_IMMEDIATE_VALUE) {
-      brw_inst_set_imm_ud(devinfo, inst, reg.dw1.ud);
+      brw_inst_set_imm_ud(devinfo, inst, reg.ud);
    } else {
       /* This is a hardware restriction, which may or may not be lifted
        * in the future:
@@ -507,13 +507,13 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
 	 }
       } else {
          brw_inst_set_src1_da16_swiz_x(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_X));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_X));
          brw_inst_set_src1_da16_swiz_y(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_Y));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_Y));
          brw_inst_set_src1_da16_swiz_z(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_Z));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_Z));
          brw_inst_set_src1_da16_swiz_w(devinfo, inst,
-            BRW_GET_SWZ(reg.dw1.bits.swizzle, BRW_CHANNEL_W));
+            BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_W));
 
 	 /* This is an oddity of the fact we're using the same
 	  * descriptions for registers in align_16 as align_1:
@@ -848,8 +848,8 @@ static int
 get_3src_subreg_nr(struct brw_reg reg)
 {
    if (reg.vstride == BRW_VERTICAL_STRIDE_0) {
-      assert(brw_is_single_value_swizzle(reg.dw1.bits.swizzle));
-      return reg.subnr / 4 + BRW_GET_SWZ(reg.dw1.bits.swizzle, 0);
+      assert(brw_is_single_value_swizzle(reg.swizzle));
+      return reg.subnr / 4 + BRW_GET_SWZ(reg.swizzle, 0);
    } else {
       return reg.subnr / 4;
    }
@@ -879,12 +879,12 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
    }
    brw_inst_set_3src_dst_reg_nr(devinfo, inst, dest.nr);
    brw_inst_set_3src_dst_subreg_nr(devinfo, inst, dest.subnr / 16);
-   brw_inst_set_3src_dst_writemask(devinfo, inst, dest.dw1.bits.writemask);
+   brw_inst_set_3src_dst_writemask(devinfo, inst, dest.writemask);
 
    assert(src0.file == BRW_GENERAL_REGISTER_FILE);
    assert(src0.address_mode == BRW_ADDRESS_DIRECT);
    assert(src0.nr < 128);
-   brw_inst_set_3src_src0_swizzle(devinfo, inst, src0.dw1.bits.swizzle);
+   brw_inst_set_3src_src0_swizzle(devinfo, inst, src0.swizzle);
    brw_inst_set_3src_src0_subreg_nr(devinfo, inst, get_3src_subreg_nr(src0));
    brw_inst_set_3src_src0_reg_nr(devinfo, inst, src0.nr);
    brw_inst_set_3src_src0_abs(devinfo, inst, src0.abs);
@@ -895,7 +895,7 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
    assert(src1.file == BRW_GENERAL_REGISTER_FILE);
    assert(src1.address_mode == BRW_ADDRESS_DIRECT);
    assert(src1.nr < 128);
-   brw_inst_set_3src_src1_swizzle(devinfo, inst, src1.dw1.bits.swizzle);
+   brw_inst_set_3src_src1_swizzle(devinfo, inst, src1.swizzle);
    brw_inst_set_3src_src1_subreg_nr(devinfo, inst, get_3src_subreg_nr(src1));
    brw_inst_set_3src_src1_reg_nr(devinfo, inst, src1.nr);
    brw_inst_set_3src_src1_abs(devinfo, inst, src1.abs);
@@ -906,7 +906,7 @@ brw_alu3(struct brw_codegen *p, unsigned opcode, struct brw_reg dest,
    assert(src2.file == BRW_GENERAL_REGISTER_FILE);
    assert(src2.address_mode == BRW_ADDRESS_DIRECT);
    assert(src2.nr < 128);
-   brw_inst_set_3src_src2_swizzle(devinfo, inst, src2.dw1.bits.swizzle);
+   brw_inst_set_3src_src2_swizzle(devinfo, inst, src2.swizzle);
    brw_inst_set_3src_src2_subreg_nr(devinfo, inst, get_3src_subreg_nr(src2));
    brw_inst_set_3src_src2_reg_nr(devinfo, inst, src2.nr);
    brw_inst_set_3src_src2_abs(devinfo, inst, src2.abs);
@@ -2426,7 +2426,7 @@ void brw_adjust_sampler_state_pointer(struct brw_codegen *p,
 
    if (sampler_index.file == BRW_IMMEDIATE_VALUE) {
       const int sampler_state_size = 16; /* 16 bytes */
-      uint32_t sampler = sampler_index.dw1.ud;
+      uint32_t sampler = sampler_index.ud;
 
       if (sampler >= 16) {
          assert(devinfo->is_haswell || devinfo->gen >= 8);
@@ -2581,7 +2581,7 @@ brw_send_indirect_surface_message(struct brw_codegen *p,
        */
       insn = brw_AND(p, addr,
                      suboffset(vec1(retype(surface, BRW_REGISTER_TYPE_UD)),
-                               BRW_GET_SWZ(surface.dw1.bits.swizzle, 0)),
+                               BRW_GET_SWZ(surface.swizzle, 0)),
                      brw_imm_ud(0xff));
 
       brw_pop_insn_state(p);
@@ -3336,7 +3336,7 @@ brw_broadcast(struct brw_codegen *p,
        * We will typically not get here if the optimizer is doing its job, but
        * asserting would be mean.
        */
-      const unsigned i = idx.file == BRW_IMMEDIATE_VALUE ? idx.dw1.ud : 0;
+      const unsigned i = idx.file == BRW_IMMEDIATE_VALUE ? idx.ud : 0;
       brw_MOV(p, dst,
               (align1 ? stride(suboffset(src, i), 0, 1, 0) :
                stride(suboffset(src, 4 * i), 0, 4, 1)));

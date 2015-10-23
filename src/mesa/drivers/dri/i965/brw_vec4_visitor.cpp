@@ -863,7 +863,7 @@ vec4_visitor::is_high_sampler(src_reg sampler)
    if (devinfo->gen < 8 && !devinfo->is_haswell)
       return false;
 
-   return sampler.file != IMM || sampler.fixed_hw_reg.dw1.ud >= 16;
+   return sampler.file != IMM || sampler.fixed_hw_reg.ud >= 16;
 }
 
 void

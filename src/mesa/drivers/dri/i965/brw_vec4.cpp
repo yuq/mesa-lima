@@ -77,7 +77,7 @@ src_reg::src_reg(float f)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_F;
-   this->fixed_hw_reg.dw1.f = f;
+   this->fixed_hw_reg.f = f;
 }
 
 src_reg::src_reg(uint32_t u)
@@ -86,7 +86,7 @@ src_reg::src_reg(uint32_t u)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_UD;
-   this->fixed_hw_reg.dw1.ud = u;
+   this->fixed_hw_reg.ud = u;
 }
 
 src_reg::src_reg(int32_t i)
@@ -95,7 +95,7 @@ src_reg::src_reg(int32_t i)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_D;
-   this->fixed_hw_reg.dw1.d = i;
+   this->fixed_hw_reg.d = i;
 }
 
 src_reg::src_reg(uint8_t vf[4])
@@ -104,7 +104,7 @@ src_reg::src_reg(uint8_t vf[4])
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   memcpy(&this->fixed_hw_reg.dw1.ud, vf, sizeof(unsigned));
+   memcpy(&this->fixed_hw_reg.ud, vf, sizeof(unsigned));
 }
 
 src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
@@ -113,7 +113,7 @@ src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   this->fixed_hw_reg.dw1.ud = (vf0 <<  0) |
+   this->fixed_hw_reg.ud = (vf0 <<  0) |
                                (vf1 <<  8) |
                                (vf2 << 16) |
                                (vf3 << 24);
@@ -397,7 +397,7 @@ vec4_visitor::opt_vector_float()
           inst->src[0].file != IMM)
          continue;
 
-      int vf = brw_float_to_vf(inst->src[0].fixed_hw_reg.dw1.f);
+      int vf = brw_float_to_vf(inst->src[0].fixed_hw_reg.f);
       if (vf == -1)
          continue;
 
@@ -1467,20 +1467,20 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case IMM:
          switch (inst->src[i].type) {
          case BRW_REGISTER_TYPE_F:
-            fprintf(file, "%fF", inst->src[i].fixed_hw_reg.dw1.f);
+            fprintf(file, "%fF", inst->src[i].fixed_hw_reg.f);
             break;
          case BRW_REGISTER_TYPE_D:
-            fprintf(file, "%dD", inst->src[i].fixed_hw_reg.dw1.d);
+            fprintf(file, "%dD", inst->src[i].fixed_hw_reg.d);
             break;
          case BRW_REGISTER_TYPE_UD:
-            fprintf(file, "%uU", inst->src[i].fixed_hw_reg.dw1.ud);
+            fprintf(file, "%uU", inst->src[i].fixed_hw_reg.ud);
             break;
          case BRW_REGISTER_TYPE_VF:
             fprintf(file, "[%-gF, %-gF, %-gF, %-gF]",
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  0) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >>  8) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 16) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.dw1.ud >> 24) & 0xff));
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  0) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  8) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 16) & 0xff),
+                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 24) & 0xff));
             break;
          default:
             fprintf(file, "???");
@@ -1597,7 +1597,7 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
 
 	 struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
 	 reg.type = inst->dst.type;
-	 reg.dw1.bits.writemask = inst->dst.writemask;
+	 reg.writemask = inst->dst.writemask;
 
 	 inst->dst.file = HW_REG;
 	 inst->dst.fixed_hw_reg = reg;
@@ -1615,7 +1615,7 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
          assert(grf != 0);
 
 	 struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
-	 reg.dw1.bits.swizzle = inst->src[i].swizzle;
+	 reg.swizzle = inst->src[i].swizzle;
          reg.type = inst->src[i].type;
 	 if (inst->src[i].abs)
 	    reg = brw_abs(reg);
@@ -1810,14 +1810,14 @@ vec4_visitor::convert_to_hw_regs()
          case GRF:
             reg = brw_vec8_grf(src.reg + src.reg_offset, 0);
             reg.type = src.type;
-            reg.dw1.bits.swizzle = src.swizzle;
+            reg.swizzle = src.swizzle;
             reg.abs = src.abs;
             reg.negate = src.negate;
             break;
 
          case IMM:
             reg = brw_imm_reg(src.type);
-            reg.dw1.ud = src.fixed_hw_reg.dw1.ud;
+            reg.ud = src.fixed_hw_reg.ud;
             break;
 
          case UNIFORM:
@@ -1826,7 +1826,7 @@ vec4_visitor::convert_to_hw_regs()
                                       ((src.reg + src.reg_offset) % 2) * 4),
                          0, 4, 1);
             reg.type = src.type;
-            reg.dw1.bits.swizzle = src.swizzle;
+            reg.swizzle = src.swizzle;
             reg.abs = src.abs;
             reg.negate = src.negate;
 
@@ -1857,14 +1857,14 @@ vec4_visitor::convert_to_hw_regs()
       case GRF:
          reg = brw_vec8_grf(dst.reg + dst.reg_offset, 0);
          reg.type = dst.type;
-         reg.dw1.bits.writemask = dst.writemask;
+         reg.writemask = dst.writemask;
          break;
 
       case MRF:
          assert(((dst.reg + dst.reg_offset) & ~(1 << 7)) < BRW_MAX_MRF(devinfo->gen));
          reg = brw_message_reg(dst.reg + dst.reg_offset);
          reg.type = dst.type;
-         reg.dw1.bits.writemask = dst.writemask;
+         reg.writemask = dst.writemask;
          break;
 
       case HW_REG:

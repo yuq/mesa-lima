@@ -147,7 +147,7 @@ try_constant_propagate(const struct brw_device_info *devinfo,
    }
 
    if (value.type == BRW_REGISTER_TYPE_VF)
-      value.fixed_hw_reg.dw1.ud = swizzle_vf_imm(value.fixed_hw_reg.dw1.ud,
+      value.fixed_hw_reg.ud = swizzle_vf_imm(value.fixed_hw_reg.ud,
                                                  inst->src[arg].swizzle);
 
    switch (inst->opcode) {
@@ -359,8 +359,8 @@ try_copy_propagate(const struct brw_device_info *devinfo,
              inst->src[0].type != BRW_REGISTER_TYPE_F ||
              inst->src[1].file != IMM ||
              inst->src[1].type != BRW_REGISTER_TYPE_F ||
-             inst->src[1].fixed_hw_reg.dw1.f < 0.0 ||
-             inst->src[1].fixed_hw_reg.dw1.f > 1.0) {
+             inst->src[1].fixed_hw_reg.f < 0.0 ||
+             inst->src[1].fixed_hw_reg.f > 1.0) {
             return false;
          }
          if (!inst->saturate)
