@@ -367,7 +367,6 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
    brw_MOV(p, get_element_ud(inst->dst.fixed_hw_reg, 0),
            get_element_ud(inst->src[0].fixed_hw_reg, 0));
-   brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
 }
 
@@ -424,7 +423,6 @@ generate_gs_set_write_offset(struct brw_codegen *p,
       brw_MUL(p, suboffset(stride(dst, 2, 2, 1), 3), stride(src0, 8, 2, 4),
               retype(src1, BRW_REGISTER_TYPE_UW));
    }
-   brw_set_default_access_mode(p, BRW_ALIGN_16);
    brw_pop_insn_state(p);
 }
 
@@ -458,7 +456,6 @@ generate_gs_set_vertex_count(struct brw_codegen *p,
       brw_MOV(p,
               suboffset(stride(retype(dst, BRW_REGISTER_TYPE_UW), 2, 2, 1), 4),
               stride(retype(src, BRW_REGISTER_TYPE_UW), 8, 1, 0));
-      brw_set_default_access_mode(p, BRW_ALIGN_16);
    }
    brw_pop_insn_state(p);
 }
