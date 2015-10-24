@@ -72,7 +72,7 @@ public:
 static inline fs_reg
 negate(fs_reg reg)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    reg.negate = !reg.negate;
    return reg;
 }

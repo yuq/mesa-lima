@@ -82,9 +82,6 @@ struct backend_reg : public brw_reg
    uint16_t reg_offset;
 
    struct brw_reg fixed_hw_reg;
-
-   bool negate;
-   bool abs;
 };
 #endif
 

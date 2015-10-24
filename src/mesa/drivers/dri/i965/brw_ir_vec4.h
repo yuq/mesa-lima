@@ -90,7 +90,7 @@ swizzle(src_reg reg, unsigned swizzle)
 static inline src_reg
 negate(src_reg reg)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    reg.negate = !reg.negate;
    return reg;
 }
