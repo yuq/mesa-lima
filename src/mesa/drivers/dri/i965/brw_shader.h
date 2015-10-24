@@ -59,7 +59,6 @@ struct backend_reg : public brw_reg
    bool in_range(const backend_reg &r, unsigned n) const;
 
    enum register_file file; /**< Register file: GRF, MRF, IMM. */
-   enum brw_reg_type type;  /**< Register type: BRW_REGISTER_TYPE_* */
 
    /**
     * Register number.
