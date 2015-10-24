@@ -351,7 +351,6 @@ gen8_graphics_pipeline_create(
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_WM_CHROMAKEY,
                   .ChromaKeyKillEnable = false);
-   anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE_SWIZ);
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_AA_LINE_PARAMETERS);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_CLIP,
@@ -496,12 +495,50 @@ gen8_graphics_pipeline_create(
 
    const struct brw_wm_prog_data *wm_prog_data = &pipeline->wm_prog_data;
 
+   /* TODO: We should clean this up.  Among other things, this is mostly
+    * shared with other gens.
+    */
+   const struct brw_vue_map *fs_input_map;
+   if (pipeline->gs_vec4 == NO_KERNEL)
+      fs_input_map = &vue_prog_data->vue_map;
+   else
+      fs_input_map = &gs_prog_data->base.vue_map;
+
+   struct GEN8_3DSTATE_SBE_SWIZ swiz = {
+      GEN8_3DSTATE_SBE_SWIZ_header,
+   };
+
+   int max_source_attr = 0;
+   for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
+      int input_index = wm_prog_data->urb_setup[attr];
+
+      if (input_index < 0)
+	 continue;
+
+      /* We have to subtract two slots to accout for the URB entry output
+       * read offset in the VS and GS stages.
+       */
+      int source_attr = fs_input_map->varying_to_slot[attr] - 2;
+      max_source_attr = MAX2(max_source_attr, source_attr);
+
+      if (input_index >= 16)
+	 continue;
+
+      swiz.Attribute[input_index].SourceAttribute = source_attr;
+   }
+
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_SBE,
+                  .AttributeSwizzleEnable = true,
                   .ForceVertexURBEntryReadLength = false,
                   .ForceVertexURBEntryReadOffset = false,
+                  .VertexURBEntryReadLength = DIV_ROUND_UP(max_source_attr + 1, 2),
                   .PointSpriteTextureCoordinateOrigin = UPPERLEFT,
                   .NumberofSFOutputAttributes =
                      wm_prog_data->num_varying_inputs);
+
+   uint32_t *dw = anv_batch_emit_dwords(&pipeline->batch,
+                                        GEN8_3DSTATE_SBE_SWIZ_length);
+   GEN8_3DSTATE_SBE_SWIZ_pack(&pipeline->batch, dw, &swiz);
 
    anv_batch_emit(&pipeline->batch, GEN8_3DSTATE_PS,
                   .KernelStartPointer0 = pipeline->ps_ksp0,
