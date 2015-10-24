@@ -266,7 +266,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 switch (qinst->op) {
                 case QOP_MOV:
                         /* Skip emitting the MOV if it's a no-op. */
-                        if (dst.mux == QPU_MUX_A || dst.mux == QPU_MUX_B ||
+                        if (qir_is_raw_mov(qinst) ||
                             dst.mux != src[0].mux || dst.addr != src[0].addr) {
                                 queue(c, qpu_a_MOV(dst, src[0]));
                         }

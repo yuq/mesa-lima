@@ -190,6 +190,14 @@ qir_is_mul(struct qinst *inst)
 }
 
 bool
+qir_is_raw_mov(struct qinst *inst)
+{
+        return (inst->op == QOP_MOV &&
+                !inst->dst.pack &&
+                !inst->src[0].pack);
+}
+
+bool
 qir_is_tex(struct qinst *inst)
 {
         return inst->op >= QOP_TEX_S && inst->op <= QOP_TEX_DIRECT;
