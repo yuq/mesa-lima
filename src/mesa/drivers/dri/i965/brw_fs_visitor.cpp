@@ -322,7 +322,7 @@ fs_visitor::emit_texture(ir_texture_opcode op,
       inst->shadow_compare = true;
 
    if (offset_value.file == IMM)
-      inst->offset = offset_value.fixed_hw_reg.ud;
+      inst->offset = offset_value.ud;
 
    if (op == ir_tg4) {
       inst->offset |=
@@ -949,7 +949,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
       fs_reg offset;
       if (gs_vertex_count.file == IMM) {
          per_slot_offsets = fs_reg(output_vertex_size_owords *
-                                   gs_vertex_count.fixed_hw_reg.ud);
+                                   gs_vertex_count.ud);
       } else {
          per_slot_offsets = vgrf(glsl_type::int_type);
          bld.MUL(per_slot_offsets, gs_vertex_count,

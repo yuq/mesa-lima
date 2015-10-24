@@ -219,7 +219,7 @@ fs_visitor::opt_combine_constants()
              inst->src[i].type != BRW_REGISTER_TYPE_F)
             continue;
 
-         float val = fabsf(inst->src[i].fixed_hw_reg.f);
+         float val = fabsf(inst->src[i].f);
          struct imm *imm = find_imm(&table, val);
 
          if (imm) {
@@ -299,9 +299,9 @@ fs_visitor::opt_combine_constants()
          reg->reg = table.imm[i].reg;
          reg->subreg_offset = table.imm[i].subreg_offset;
          reg->stride = 0;
-         reg->negate = signbit(reg->fixed_hw_reg.f) !=
+         reg->negate = signbit(reg->f) !=
                                signbit(table.imm[i].val);
-         assert(fabsf(reg->fixed_hw_reg.f) == table.imm[i].val);
+         assert(fabsf(reg->f) == table.imm[i].val);
       }
    }
 

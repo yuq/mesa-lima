@@ -134,20 +134,20 @@ try_constant_propagate(const struct brw_device_info *devinfo,
 
    if (inst->src[arg].abs) {
       if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-          !brw_abs_immediate(value.type, &value.fixed_hw_reg)) {
+          !brw_abs_immediate(value.type, &value)) {
          return false;
       }
    }
 
    if (inst->src[arg].negate) {
       if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-          !brw_negate_immediate(value.type, &value.fixed_hw_reg)) {
+          !brw_negate_immediate(value.type, &value)) {
          return false;
       }
    }
 
    if (value.type == BRW_REGISTER_TYPE_VF)
-      value.fixed_hw_reg.ud = swizzle_vf_imm(value.fixed_hw_reg.ud,
+      value.ud = swizzle_vf_imm(value.ud,
                                                  inst->src[arg].swizzle);
 
    switch (inst->opcode) {
@@ -359,8 +359,8 @@ try_copy_propagate(const struct brw_device_info *devinfo,
              inst->src[0].type != BRW_REGISTER_TYPE_F ||
              inst->src[1].file != IMM ||
              inst->src[1].type != BRW_REGISTER_TYPE_F ||
-             inst->src[1].fixed_hw_reg.f < 0.0 ||
-             inst->src[1].fixed_hw_reg.f > 1.0) {
+             inst->src[1].f < 0.0 ||
+             inst->src[1].f > 1.0) {
             return false;
          }
          if (!inst->saturate)

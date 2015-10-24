@@ -110,20 +110,20 @@ operands_match(const fs_inst *a, const fs_inst *b, bool *negate)
               (xs[2].equals(ys[1]) && xs[1].equals(ys[2])));
    } else if (a->opcode == BRW_OPCODE_MUL && a->dst.type == BRW_REGISTER_TYPE_F) {
       bool xs0_negate = xs[0].negate;
-      bool xs1_negate = xs[1].file == IMM ? xs[1].fixed_hw_reg.f < 0.0f
+      bool xs1_negate = xs[1].file == IMM ? xs[1].f < 0.0f
                                           : xs[1].negate;
       bool ys0_negate = ys[0].negate;
-      bool ys1_negate = ys[1].file == IMM ? ys[1].fixed_hw_reg.f < 0.0f
+      bool ys1_negate = ys[1].file == IMM ? ys[1].f < 0.0f
                                           : ys[1].negate;
-      float xs1_imm = xs[1].fixed_hw_reg.f;
-      float ys1_imm = ys[1].fixed_hw_reg.f;
+      float xs1_imm = xs[1].f;
+      float ys1_imm = ys[1].f;
 
       xs[0].negate = false;
       xs[1].negate = false;
       ys[0].negate = false;
       ys[1].negate = false;
-      xs[1].fixed_hw_reg.f = fabsf(xs[1].fixed_hw_reg.f);
-      ys[1].fixed_hw_reg.f = fabsf(ys[1].fixed_hw_reg.f);
+      xs[1].f = fabsf(xs[1].f);
+      ys[1].f = fabsf(ys[1].f);
 
       bool ret = (xs[0].equals(ys[0]) && xs[1].equals(ys[1])) ||
                  (xs[1].equals(ys[0]) && xs[0].equals(ys[1]));
@@ -132,8 +132,8 @@ operands_match(const fs_inst *a, const fs_inst *b, bool *negate)
       xs[1].negate = xs[1].file == IMM ? false : xs1_negate;
       ys[0].negate = ys0_negate;
       ys[1].negate = ys[1].file == IMM ? false : ys1_negate;
-      xs[1].fixed_hw_reg.f = xs1_imm;
-      ys[1].fixed_hw_reg.f = ys1_imm;
+      xs[1].f = xs1_imm;
+      ys[1].f = ys1_imm;
 
       *negate = (xs0_negate != xs1_negate) != (ys0_negate != ys1_negate);
       return ret;

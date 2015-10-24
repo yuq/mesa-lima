@@ -369,8 +369,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
          if (inst->src[1].file != IMM ||
-             inst->src[1].fixed_hw_reg.f < 0.0 ||
-             inst->src[1].fixed_hw_reg.f > 1.0) {
+             inst->src[1].f < 0.0 ||
+             inst->src[1].f > 1.0) {
             return false;
          }
          break;
@@ -477,14 +477,14 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
 
       if (inst->src[i].abs) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_abs_immediate(val.type, &val.fixed_hw_reg)) {
+             !brw_abs_immediate(val.type, &val)) {
             continue;
          }
       }
 
       if (inst->src[i].negate) {
          if ((devinfo->gen >= 8 && is_logic_op(inst->opcode)) ||
-             !brw_negate_immediate(val.type, &val.fixed_hw_reg)) {
+             !brw_negate_immediate(val.type, &val)) {
             continue;
          }
       }
@@ -605,10 +605,10 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
           * anyway.
           */
          assert(i == 0);
-         if (inst->src[0].fixed_hw_reg.f != 0.0f) {
+         if (inst->src[0].f != 0.0f) {
             inst->opcode = BRW_OPCODE_MOV;
             inst->src[0] = val;
-            inst->src[0].fixed_hw_reg.f = 1.0f / inst->src[0].fixed_hw_reg.f;
+            inst->src[0].f = 1.0f / inst->src[0].f;
             progress = true;
          }
          break;

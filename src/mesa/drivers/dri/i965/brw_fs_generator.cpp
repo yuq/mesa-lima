@@ -92,22 +92,22 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 
       switch (reg->type) {
       case BRW_REGISTER_TYPE_F:
-	 brw_reg = brw_imm_f(reg->fixed_hw_reg.f);
+	 brw_reg = brw_imm_f(reg->f);
 	 break;
       case BRW_REGISTER_TYPE_D:
-	 brw_reg = brw_imm_d(reg->fixed_hw_reg.d);
+	 brw_reg = brw_imm_d(reg->d);
 	 break;
       case BRW_REGISTER_TYPE_UD:
-	 brw_reg = brw_imm_ud(reg->fixed_hw_reg.ud);
+	 brw_reg = brw_imm_ud(reg->ud);
 	 break;
       case BRW_REGISTER_TYPE_W:
-	 brw_reg = brw_imm_w(reg->fixed_hw_reg.d);
+	 brw_reg = brw_imm_w(reg->d);
 	 break;
       case BRW_REGISTER_TYPE_UW:
-	 brw_reg = brw_imm_uw(reg->fixed_hw_reg.ud);
+	 brw_reg = brw_imm_uw(reg->ud);
 	 break;
       case BRW_REGISTER_TYPE_VF:
-         brw_reg = brw_imm_vf(reg->fixed_hw_reg.ud);
+         brw_reg = brw_imm_vf(reg->ud);
          break;
       default:
 	 unreachable("not reached");

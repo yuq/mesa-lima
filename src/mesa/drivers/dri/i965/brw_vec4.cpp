@@ -77,7 +77,7 @@ src_reg::src_reg(float f)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_F;
-   this->fixed_hw_reg.f = f;
+   this->f = f;
 }
 
 src_reg::src_reg(uint32_t u)
@@ -86,7 +86,7 @@ src_reg::src_reg(uint32_t u)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_UD;
-   this->fixed_hw_reg.ud = u;
+   this->ud = u;
 }
 
 src_reg::src_reg(int32_t i)
@@ -95,7 +95,7 @@ src_reg::src_reg(int32_t i)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_D;
-   this->fixed_hw_reg.d = i;
+   this->d = i;
 }
 
 src_reg::src_reg(uint8_t vf[4])
@@ -104,7 +104,7 @@ src_reg::src_reg(uint8_t vf[4])
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   memcpy(&this->fixed_hw_reg.ud, vf, sizeof(unsigned));
+   memcpy(&this->ud, vf, sizeof(unsigned));
 }
 
 src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
@@ -113,7 +113,7 @@ src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   this->fixed_hw_reg.ud = (vf0 <<  0) |
+   this->ud = (vf0 <<  0) |
                                (vf1 <<  8) |
                                (vf2 << 16) |
                                (vf3 << 24);
@@ -218,7 +218,7 @@ dst_reg::equals(const dst_reg &r) const
            writemask == r.writemask &&
            (reladdr == r.reladdr ||
             (reladdr && r.reladdr && reladdr->equals(*r.reladdr))) &&
-           ((file != HW_REG && file != IMM) ||
+           (file != HW_REG ||
             memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
                    sizeof(fixed_hw_reg)) == 0));
 }
@@ -363,8 +363,10 @@ src_reg::equals(const src_reg &r) const
 	   abs == r.abs &&
 	   swizzle == r.swizzle &&
 	   !reladdr && !r.reladdr &&
-	   memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
-		  sizeof(fixed_hw_reg)) == 0);
+           (file != HW_REG ||
+            memcmp(&fixed_hw_reg, &r.fixed_hw_reg,
+                   sizeof(fixed_hw_reg)) == 0) &&
+           (file != IMM || d == r.d));
 }
 
 bool
@@ -397,7 +399,7 @@ vec4_visitor::opt_vector_float()
           inst->src[0].file != IMM)
          continue;
 
-      int vf = brw_float_to_vf(inst->src[0].fixed_hw_reg.f);
+      int vf = brw_float_to_vf(inst->src[0].f);
       if (vf == -1)
          continue;
 
@@ -660,8 +662,7 @@ vec4_visitor::opt_algebraic()
             if (inst->dst.type != inst->src[0].type)
                assert(!"unimplemented: saturate mixed types");
 
-            if (brw_saturate_immediate(inst->dst.type,
-                                       &inst->src[0].fixed_hw_reg)) {
+            if (brw_saturate_immediate(inst->dst.type, &inst->src[0])) {
                inst->saturate = false;
                progress = true;
             }
@@ -1467,20 +1468,20 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case IMM:
          switch (inst->src[i].type) {
          case BRW_REGISTER_TYPE_F:
-            fprintf(file, "%fF", inst->src[i].fixed_hw_reg.f);
+            fprintf(file, "%fF", inst->src[i].f);
             break;
          case BRW_REGISTER_TYPE_D:
-            fprintf(file, "%dD", inst->src[i].fixed_hw_reg.d);
+            fprintf(file, "%dD", inst->src[i].d);
             break;
          case BRW_REGISTER_TYPE_UD:
-            fprintf(file, "%uU", inst->src[i].fixed_hw_reg.ud);
+            fprintf(file, "%uU", inst->src[i].ud);
             break;
          case BRW_REGISTER_TYPE_VF:
             fprintf(file, "[%-gF, %-gF, %-gF, %-gF]",
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  0) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >>  8) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 16) & 0xff),
-                    brw_vf_to_float((inst->src[i].fixed_hw_reg.ud >> 24) & 0xff));
+                    brw_vf_to_float((inst->src[i].ud >>  0) & 0xff),
+                    brw_vf_to_float((inst->src[i].ud >>  8) & 0xff),
+                    brw_vf_to_float((inst->src[i].ud >> 16) & 0xff),
+                    brw_vf_to_float((inst->src[i].ud >> 24) & 0xff));
             break;
          default:
             fprintf(file, "???");
@@ -1817,7 +1818,7 @@ vec4_visitor::convert_to_hw_regs()
 
          case IMM:
             reg = brw_imm_reg(src.type);
-            reg.ud = src.fixed_hw_reg.ud;
+            reg.ud = src.ud;
             break;
 
          case UNIFORM:
