@@ -20,17 +20,9 @@
  * IN THE SOFTWARE.
  */
 
-#include <ctype.h>
 #include "glsl/glsl_parser_extras.h"
 #include "brw_vec4.h"
 #include "brw_cfg.h"
-
-extern "C" {
-#include "brw_eu.h"
-#include "main/macros.h"
-#include "program/prog_print.h"
-#include "program/prog_parameter.h"
-};
 
 using namespace brw;
 
