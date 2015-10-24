@@ -155,9 +155,8 @@ struct nv50_ir_prog_info
    uint8_t numBarriers;
 
    struct {
-      uint8_t clipDistance;      /* index of first clip distance output */
-      uint8_t clipDistanceMask;  /* mask of clip distances defined */
-      uint8_t cullDistanceMask;  /* clip distance mode (1 bit per output) */
+      uint8_t clipDistances;     /* number of clip distance outputs */
+      uint8_t cullDistances;     /* number of cull distance outputs */
       int8_t genUserClip;        /* request user clip planes for ClipVertex */
       uint16_t ucpBase;          /* base address for UCPs */
       uint8_t ucpCBSlot;         /* constant buffer index of UCP data */

@@ -252,10 +252,10 @@ nvc0_vtgp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
       }
    }
 
-   vp->vp.clip_enable = info->io.clipDistanceMask;
-   for (i = 0; i < 8; ++i)
-      if (info->io.cullDistanceMask & (1 << i))
-         vp->vp.clip_mode |= 1 << (i * 4);
+   vp->vp.clip_enable =
+      (1 << (info->io.clipDistances + info->io.cullDistances)) - 1;
+   for (i = 0; i < info->io.cullDistances; ++i)
+      vp->vp.clip_mode |= 1 << ((info->io.clipDistances + i) * 4);
 
    if (info->io.genUserClip < 0)
       vp->vp.num_ucps = PIPE_MAX_CLIP_PLANES + 1; /* prevent rebuilding */
@@ -268,8 +268,6 @@ nvc0_vp_gen_header(struct nvc0_program *vp, struct nv50_ir_prog_info *info)
 {
    vp->hdr[0] = 0x20061 | (1 << 10);
    vp->hdr[4] = 0xff000;
-
-   vp->hdr[18] = info->io.clipDistanceMask;
 
    return nvc0_vtgp_gen_header(vp, info);
 }
