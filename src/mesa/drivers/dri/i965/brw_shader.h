@@ -48,16 +48,15 @@ enum PACKED register_file {
    UNIFORM, /* prog_data->params[reg] */
 };
 
-struct backend_reg
-{
 #ifdef __cplusplus
+struct backend_reg : public brw_reg
+{
    bool is_zero() const;
    bool is_one() const;
    bool is_negative_one() const;
    bool is_null() const;
    bool is_accumulator() const;
    bool in_range(const backend_reg &r, unsigned n) const;
-#endif
 
    enum register_file file; /**< Register file: GRF, MRF, IMM. */
    enum brw_reg_type type;  /**< Register type: BRW_REGISTER_TYPE_* */
@@ -87,6 +86,7 @@ struct backend_reg
    bool negate;
    bool abs;
 };
+#endif
 
 struct cfg_t;
 struct bblock_t;
