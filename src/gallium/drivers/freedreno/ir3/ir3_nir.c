@@ -58,6 +58,14 @@ ir3_key_lowers_nir(const struct ir3_shader_key *key)
 			key->ucp_enables | key->color_two_side;
 }
 
+#define OPT(nir, pass, ...) ({                             \
+   bool this_progress = false;                             \
+   NIR_PASS(this_progress, nir, pass, ##__VA_ARGS__);      \
+   this_progress;                                          \
+})
+
+#define OPT_V(nir, pass, ...) NIR_PASS_V(nir, pass, ##__VA_ARGS__)
+
 struct nir_shader *
 ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 		const struct ir3_shader_key *key)
@@ -97,40 +105,41 @@ ir3_optimize_nir(struct ir3_shader *shader, nir_shader *s,
 		debug_printf("----------------------\n");
 	}
 
-	nir_opt_global_to_local(s);
-	nir_convert_to_ssa(s);
+	OPT_V(s, nir_opt_global_to_local);
+	OPT_V(s, nir_convert_to_ssa);
+
 	if (key) {
 		if (s->stage == MESA_SHADER_VERTEX) {
-			nir_lower_clip_vs(s, key->ucp_enables);
+			OPT_V(s, nir_lower_clip_vs, key->ucp_enables);
 		} else if (s->stage == MESA_SHADER_FRAGMENT) {
-			nir_lower_clip_fs(s, key->ucp_enables);
+			OPT_V(s, nir_lower_clip_fs, key->ucp_enables);
 		}
 		if (key->color_two_side) {
-			nir_lower_two_sided_color(s);
+			OPT_V(s, nir_lower_two_sided_color);
 		}
 	}
-	nir_lower_tex(s, &tex_options);
-	nir_lower_idiv(s);
-	nir_lower_load_const_to_scalar(s);
+
+	OPT_V(s, nir_lower_tex, &tex_options);
+	OPT_V(s, nir_lower_idiv);
+	OPT_V(s, nir_lower_load_const_to_scalar);
 
 	do {
 		progress = false;
 
-		nir_lower_vars_to_ssa(s);
-		nir_lower_alu_to_scalar(s);
-		nir_lower_phis_to_scalar(s);
+		OPT_V(s, nir_lower_vars_to_ssa);
+		OPT_V(s, nir_lower_alu_to_scalar);
+		OPT_V(s, nir_lower_phis_to_scalar);
 
-		progress |= nir_copy_prop(s);
-		progress |= nir_opt_dce(s);
-		progress |= nir_opt_cse(s);
-		progress |= ir3_nir_lower_if_else(s);
-		progress |= nir_opt_algebraic(s);
-		progress |= nir_opt_constant_folding(s);
+		progress |= OPT(s, nir_copy_prop);
+		progress |= OPT(s, nir_opt_dce);
+		progress |= OPT(s, nir_opt_cse);
+		progress |= OPT(s, ir3_nir_lower_if_else);
+		progress |= OPT(s, nir_opt_algebraic);
+		progress |= OPT(s, nir_opt_constant_folding);
 
 	} while (progress);
 
-	nir_remove_dead_variables(s);
-	nir_validate_shader(s);
+	OPT_V(s, nir_remove_dead_variables);
 
 	if (fd_mesa_debug & FD_DBG_DISASM) {
 		debug_printf("----------------------\n");
