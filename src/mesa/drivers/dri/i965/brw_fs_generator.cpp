@@ -84,6 +84,8 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 
       brw_reg = retype(brw_reg, reg->type);
       brw_reg = byte_offset(brw_reg, reg->subreg_offset);
+      brw_reg.abs = reg->abs;
+      brw_reg.negate = reg->negate;
       break;
    case IMM:
       assert(reg->stride == ((reg->type == BRW_REGISTER_TYPE_V ||
@@ -114,8 +116,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
       }
       break;
    case HW_REG:
-      assert(reg->type == reg->fixed_hw_reg.type);
-      brw_reg = reg->fixed_hw_reg;
+      brw_reg = *static_cast<struct brw_reg *>(reg);
       break;
    case BAD_FILE:
       /* Probably unused. */
@@ -125,10 +126,6 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
    case UNIFORM:
       unreachable("not reached");
    }
-   if (reg->abs)
-      brw_reg = brw_abs(brw_reg);
-   if (reg->negate)
-      brw_reg = negate(brw_reg);
 
    return brw_reg;
 }

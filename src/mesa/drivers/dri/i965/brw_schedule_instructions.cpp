@@ -586,12 +586,12 @@ fs_instruction_scheduler::count_reads_remaining(backend_instruction *be)
       if (inst->src[i].file == GRF) {
          reads_remaining[inst->src[i].reg]++;
       } else if (inst->src[i].file == HW_REG &&
-               inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
-         if (inst->src[i].fixed_hw_reg.nr >= hw_reg_count)
+                 inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
+         if (inst->src[i].nr >= hw_reg_count)
             continue;
 
          for (int j = 0; j < inst->regs_read(i); j++)
-            hw_reads_remaining[inst->src[i].fixed_hw_reg.nr + j]++;
+            hw_reads_remaining[inst->src[i].nr + j]++;
       }
    }
 }
@@ -671,10 +671,10 @@ fs_instruction_scheduler::update_register_pressure(backend_instruction *be)
       if (inst->src[i].file == GRF) {
          reads_remaining[inst->src[i].reg]--;
       } else if (inst->src[i].file == HW_REG &&
-                 inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE &&
-                 inst->src[i].fixed_hw_reg.nr < hw_reg_count) {
+                 inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE &&
+                 inst->src[i].nr < hw_reg_count) {
          for (int off = 0; off < inst->regs_read(i); off++)
-            hw_reads_remaining[inst->src[i].fixed_hw_reg.nr + off]--;
+            hw_reads_remaining[inst->src[i].nr + off]--;
       }
    }
 }
@@ -701,10 +701,10 @@ fs_instruction_scheduler::get_register_pressure_benefit(backend_instruction *be)
          benefit += v->alloc.sizes[inst->src[i].reg];
 
       if (inst->src[i].file == HW_REG &&
-          inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE &&
-          inst->src[i].fixed_hw_reg.nr < hw_reg_count) {
+          inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE &&
+          inst->src[i].nr < hw_reg_count) {
          for (int off = 0; off < inst->regs_read(i); off++) {
-            int reg = inst->src[i].fixed_hw_reg.nr + off;
+            int reg = inst->src[i].nr + off;
             if (!BITSET_TEST(hw_liveout[block_idx], reg) &&
                 hw_reads_remaining[reg] == 1) {
                benefit++;
@@ -960,11 +960,11 @@ fs_instruction_scheduler::calculate_deps()
                }
             }
          } else if (inst->src[i].file == HW_REG &&
-                    (inst->src[i].fixed_hw_reg.file ==
+                    (inst->src[i].brw_reg::file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             if (post_reg_alloc) {
                for (int r = 0; r < inst->regs_read(i); r++)
-                  add_dep(last_grf_write[inst->src[i].fixed_hw_reg.nr + r], n);
+                  add_dep(last_grf_write[inst->src[i].nr + r], n);
             } else {
                add_dep(last_fixed_grf_write, n);
             }
@@ -974,7 +974,7 @@ fs_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
+                     inst->src[i].brw_reg::file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(n);
          }
@@ -1025,10 +1025,10 @@ fs_instruction_scheduler::calculate_deps()
             last_mrf_write[reg] = n;
          }
       } else if (inst->dst.file == HW_REG &&
-                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+                 inst->dst.brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
          if (post_reg_alloc) {
             for (int r = 0; r < inst->regs_written; r++)
-               last_grf_write[inst->dst.fixed_hw_reg.nr + r] = n;
+               last_grf_write[inst->dst.nr + r] = n;
          } else {
             last_fixed_grf_write = n;
          }
@@ -1086,11 +1086,11 @@ fs_instruction_scheduler::calculate_deps()
                }
             }
          } else if (inst->src[i].file == HW_REG &&
-                    (inst->src[i].fixed_hw_reg.file ==
+                    (inst->src[i].brw_reg::file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             if (post_reg_alloc) {
                for (int r = 0; r < inst->regs_read(i); r++)
-                  add_dep(n, last_grf_write[inst->src[i].fixed_hw_reg.nr + r], 0);
+                  add_dep(n, last_grf_write[inst->src[i].nr + r], 0);
             } else {
                add_dep(n, last_fixed_grf_write, 0);
             }
@@ -1100,7 +1100,7 @@ fs_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
+                     inst->src[i].brw_reg::file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(n);
          }
@@ -1150,10 +1150,10 @@ fs_instruction_scheduler::calculate_deps()
             last_mrf_write[reg] = n;
          }
       } else if (inst->dst.file == HW_REG &&
-                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+                 inst->dst.brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
          if (post_reg_alloc) {
             for (int r = 0; r < inst->regs_written; r++)
-               last_grf_write[inst->dst.fixed_hw_reg.nr + r] = n;
+               last_grf_write[inst->dst.nr + r] = n;
          } else {
             last_fixed_grf_write = n;
          }
@@ -1219,7 +1219,7 @@ vec4_instruction_scheduler::calculate_deps()
             for (unsigned j = 0; j < inst->regs_read(i); ++j)
                add_dep(last_grf_write[inst->src[i].reg + j], n);
          } else if (inst->src[i].file == HW_REG &&
-                    (inst->src[i].fixed_hw_reg.file ==
+                    (inst->src[i].brw_reg::file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             add_dep(last_fixed_grf_write, n);
          } else if (inst->src[i].is_accumulator()) {
@@ -1229,7 +1229,7 @@ vec4_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
+                     inst->src[i].brw_reg::file != BRW_IMMEDIATE_VALUE)) {
             /* No reads from MRF, and ATTR is already translated away */
             assert(inst->src[i].file != MRF &&
                    inst->src[i].file != ATTR);
@@ -1267,7 +1267,7 @@ vec4_instruction_scheduler::calculate_deps()
          add_dep(last_mrf_write[inst->dst.reg], n);
          last_mrf_write[inst->dst.reg] = n;
      } else if (inst->dst.file == HW_REG &&
-                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+                 inst->dst.brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
          last_fixed_grf_write = n;
       } else if (inst->dst.is_accumulator()) {
          add_dep(last_accumulator_write, n);
@@ -1317,7 +1317,7 @@ vec4_instruction_scheduler::calculate_deps()
             for (unsigned j = 0; j < inst->regs_read(i); ++j)
                add_dep(n, last_grf_write[inst->src[i].reg + j]);
          } else if (inst->src[i].file == HW_REG &&
-                    (inst->src[i].fixed_hw_reg.file ==
+                    (inst->src[i].brw_reg::file ==
                      BRW_GENERAL_REGISTER_FILE)) {
             add_dep(n, last_fixed_grf_write);
          } else if (inst->src[i].is_accumulator()) {
@@ -1326,7 +1326,7 @@ vec4_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
+                     inst->src[i].brw_reg::file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF &&
                    inst->src[i].file != ATTR);
             add_barrier_deps(n);
@@ -1360,7 +1360,7 @@ vec4_instruction_scheduler::calculate_deps()
       } else if (inst->dst.file == MRF) {
          last_mrf_write[inst->dst.reg] = n;
       } else if (inst->dst.file == HW_REG &&
-                 inst->dst.fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
+                 inst->dst.brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
          last_fixed_grf_write = n;
       } else if (inst->dst.is_accumulator()) {
          last_accumulator_write = n;

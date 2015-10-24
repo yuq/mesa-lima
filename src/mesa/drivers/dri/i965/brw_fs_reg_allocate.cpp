@@ -372,8 +372,8 @@ void fs_visitor::calculate_payload_ranges(int payload_node_count,
        */
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == HW_REG &&
-             inst->src[i].fixed_hw_reg.file == BRW_GENERAL_REGISTER_FILE) {
-            int node_nr = inst->src[i].fixed_hw_reg.nr;
+             inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
+            int node_nr = inst->src[i].nr;
             if (node_nr >= payload_node_count)
                continue;
 

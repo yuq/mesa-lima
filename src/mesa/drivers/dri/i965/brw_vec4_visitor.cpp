@@ -237,8 +237,6 @@ vec4_visitor::CMP(dst_reg dst, src_reg src0, src_reg src1,
     * type to match src0 so we can compact the instruction.
     */
    dst.type = src0.type;
-   if (dst.file == HW_REG)
-      dst.fixed_hw_reg.type = dst.type;
 
    resolve_ud_negate(&src0);
    resolve_ud_negate(&src1);

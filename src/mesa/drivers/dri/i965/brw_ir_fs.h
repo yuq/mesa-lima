@@ -41,7 +41,7 @@ public:
    explicit fs_reg(uint32_t u);
    explicit fs_reg(uint8_t vf[4]);
    explicit fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3);
-   fs_reg(struct brw_reg fixed_hw_reg);
+   fs_reg(struct brw_reg reg);
    fs_reg(enum register_file file, int reg);
    fs_reg(enum register_file file, int reg, enum brw_reg_type type);
 
@@ -80,7 +80,7 @@ negate(fs_reg reg)
 static inline fs_reg
 retype(fs_reg reg, enum brw_reg_type type)
 {
-   reg.fixed_hw_reg.type = reg.type = type;
+   reg.type = type;
    return reg;
 }
 

@@ -51,6 +51,9 @@ enum PACKED register_file {
 #ifdef __cplusplus
 struct backend_reg : public brw_reg
 {
+   backend_reg() {}
+   backend_reg(struct brw_reg reg) : brw_reg(reg) {}
+
    bool is_zero() const;
    bool is_one() const;
    bool is_negative_one() const;
@@ -79,8 +82,6 @@ struct backend_reg : public brw_reg
     * For uniforms, this is in units of 1 float.
     */
    uint16_t reg_offset;
-
-   struct brw_reg fixed_hw_reg;
 };
 #endif
 

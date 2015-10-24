@@ -356,7 +356,7 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
 
    /* We pass the temporary passed in src0 as the writeback register */
    brw_urb_WRITE(p,
-                 inst->src[0].fixed_hw_reg, /* dest */
+                 inst->src[0], /* dest */
                  inst->base_mrf, /* starting mrf reg nr */
                  src,
                  BRW_URB_WRITE_ALLOCATE_COMPLETE,
@@ -369,8 +369,8 @@ generate_gs_urb_write_allocate(struct brw_codegen *p, vec4_instruction *inst)
    brw_push_insn_state(p);
    brw_set_default_access_mode(p, BRW_ALIGN_1);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-   brw_MOV(p, get_element_ud(inst->dst.fixed_hw_reg, 0),
-           get_element_ud(inst->src[0].fixed_hw_reg, 0));
+   brw_MOV(p, get_element_ud(inst->dst, 0),
+           get_element_ud(inst->src[0], 0));
    brw_pop_insn_state(p);
 }
 
@@ -1059,9 +1059,9 @@ generate_code(struct brw_codegen *p,
          annotate(p->devinfo, &annotation, cfg, inst, p->next_insn_offset);
 
       for (unsigned int i = 0; i < 3; i++) {
-	 src[i] = inst->src[i].fixed_hw_reg;
+         src[i] = inst->src[i];
       }
-      dst = inst->dst.fixed_hw_reg;
+      dst = inst->dst;
 
       brw_set_default_predicate_control(p, inst->predicate);
       brw_set_default_predicate_inverse(p, inst->predicate_inverse);
@@ -1241,7 +1241,7 @@ generate_code(struct brw_codegen *p,
          break;
 
       case BRW_OPCODE_IF:
-         if (inst->src[0].file != BAD_FILE) {
+         if (!inst->src[0].is_null()) {
             /* The instruction has an embedded compare (only allowed on gen6) */
             assert(devinfo->gen == 6);
             gen6_IF(p, inst->conditional_mod, src[0], src[1]);
