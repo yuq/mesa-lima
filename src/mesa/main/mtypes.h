@@ -2736,6 +2736,13 @@ struct gl_shader_program
    int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
 
    /**
+    * Indices into the BufferInterfaceBlocks[] array for Uniform Buffer
+    * Objects and Shader Storage Buffer Objects.
+    */
+   unsigned *UboInterfaceBlockIndex;
+   unsigned *SsboInterfaceBlockIndex;
+
+   /**
     * Map of active uniform names to locations
     *
     * Maps any active uniform that is not an array element to a location.

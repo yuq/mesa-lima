@@ -3921,8 +3921,10 @@ split_ubos_and_ssbos(void *mem_ctx,
                      unsigned num_blocks,
                      struct gl_uniform_block ***ubos,
                      unsigned *num_ubos,
+                     unsigned **ubo_interface_block_indices,
                      struct gl_uniform_block ***ssbos,
-                     unsigned *num_ssbos)
+                     unsigned *num_ssbos,
+                     unsigned **ssbo_interface_block_indices)
 {
    unsigned num_ubo_blocks = 0;
    unsigned num_ssbo_blocks = 0;
@@ -3940,11 +3942,25 @@ split_ubos_and_ssbos(void *mem_ctx,
    *ssbos = ralloc_array(mem_ctx, gl_uniform_block *, num_ssbo_blocks);
    *num_ssbos = 0;
 
+   if (ubo_interface_block_indices)
+      *ubo_interface_block_indices =
+         ralloc_array(mem_ctx, unsigned, num_ubo_blocks);
+
+   if (ssbo_interface_block_indices)
+      *ssbo_interface_block_indices =
+         ralloc_array(mem_ctx, unsigned, num_ssbo_blocks);
+
    for (unsigned i = 0; i < num_blocks; i++) {
       if (blocks[i].IsShaderStorage) {
-         (*ssbos)[(*num_ssbos)++] = &blocks[i];
+         (*ssbos)[*num_ssbos] = &blocks[i];
+         if (ssbo_interface_block_indices)
+            (*ssbo_interface_block_indices)[*num_ssbos] = i;
+         (*num_ssbos)++;
       } else {
-         (*ubos)[(*num_ubos)++] = &blocks[i];
+         (*ubos)[*num_ubos] = &blocks[i];
+         if (ubo_interface_block_indices)
+            (*ubo_interface_block_indices)[*num_ubos] = i;
+         (*num_ubos)++;
       }
    }
 
@@ -4536,8 +4552,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                               sh->NumBufferInterfaceBlocks,
                               &sh->UniformBlocks,
                               &sh->NumUniformBlocks,
+                              NULL,
                               &sh->ShaderStorageBlocks,
-                              &sh->NumShaderStorageBlocks);
+                              &sh->NumShaderStorageBlocks,
+                              NULL);
       }
    }
 
@@ -4546,8 +4564,10 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                         prog->NumBufferInterfaceBlocks,
                         &prog->UniformBlocks,
                         &prog->NumUniformBlocks,
+                        &prog->UboInterfaceBlockIndex,
                         &prog->ShaderStorageBlocks,
-                        &prog->NumShaderStorageBlocks);
+                        &prog->NumShaderStorageBlocks,
+                        &prog->SsboInterfaceBlockIndex);
 
    /* FINISHME: Assign fragment shader output locations. */
 
