@@ -305,6 +305,8 @@ populate_wm_prog_key(const struct brw_device_info *devinfo,
 
    populate_sampler_prog_key(devinfo, &key->tex);
 
+   /* TODO: Fill out key->input_slots_valid */
+
    /* Vulkan doesn't specify a default */
    key->high_quality_derivatives = false;
 
