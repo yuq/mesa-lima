@@ -45,14 +45,9 @@ qir_opt_copy_propagation(struct vc4_compile *c)
                         int index = inst->src[i].index;
                         if (inst->src[i].file == QFILE_TEMP &&
                             c->defs[index] &&
-                            c->defs[index]->op == QOP_MOV &&
+                            qir_is_raw_mov(c->defs[index]) &&
                             (c->defs[index]->src[0].file == QFILE_TEMP ||
                              c->defs[index]->src[0].file == QFILE_UNIF)) {
-                                /* If it has a pack, it shouldn't be an SSA
-                                 * def.
-                                 */
-                                assert(!c->defs[index]->dst.pack);
-
                                 if (debug) {
                                         fprintf(stderr, "Copy propagate: ");
                                         qir_dump_inst(c, inst);
