@@ -37,6 +37,7 @@
 #include "util/u_math.h"
 
 #include "vc4_screen.h"
+#include "vc4_qpu_defines.h"
 #include "pipe/p_state.h"
 
 struct nir_builder;
@@ -64,6 +65,7 @@ struct qreg {
 enum qop {
         QOP_UNDEF,
         QOP_MOV,
+        QOP_FMOV,
         QOP_FADD,
         QOP_FSUB,
         QOP_FMUL,
@@ -127,20 +129,6 @@ enum qop {
         QOP_FRAG_Z,
         QOP_FRAG_W,
         QOP_FRAG_REV_FLAG,
-
-        QOP_UNPACK_8A_F,
-        QOP_UNPACK_8B_F,
-        QOP_UNPACK_8C_F,
-        QOP_UNPACK_8D_F,
-        QOP_UNPACK_16A_F,
-        QOP_UNPACK_16B_F,
-
-        QOP_UNPACK_8A_I,
-        QOP_UNPACK_8B_I,
-        QOP_UNPACK_8C_I,
-        QOP_UNPACK_8D_I,
-        QOP_UNPACK_16A_I,
-        QOP_UNPACK_16B_I,
 
         /** Texture x coordinate parameter write */
         QOP_TEX_S,
@@ -468,7 +456,6 @@ bool qir_is_tex(struct qinst *inst);
 bool qir_is_float_input(struct qinst *inst);
 bool qir_depends_on_flags(struct qinst *inst);
 bool qir_writes_r4(struct qinst *inst);
-bool qir_src_needs_a_file(struct qinst *inst);
 struct qreg qir_follow_movs(struct vc4_compile *c, struct qreg reg);
 
 void qir_dump(struct vc4_compile *c);
@@ -569,6 +556,7 @@ qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
 }
 
 QIR_ALU1(MOV)
+QIR_ALU1(FMOV)
 QIR_ALU2(FADD)
 QIR_ALU2(FSUB)
 QIR_ALU2(FMUL)
@@ -635,32 +623,32 @@ QIR_NODST_1(TLB_STENCIL_SETUP)
 static inline struct qreg
 qir_UNPACK_8_F(struct vc4_compile *c, struct qreg src, int i)
 {
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_UNPACK_8A_F + i, t, src, c->undef));
+        struct qreg t = qir_FMOV(c, src);
+        c->defs[t.index]->src[0].pack = QPU_UNPACK_8A + i;
         return t;
 }
 
 static inline struct qreg
 qir_UNPACK_8_I(struct vc4_compile *c, struct qreg src, int i)
 {
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_UNPACK_8A_I + i, t, src, c->undef));
+        struct qreg t = qir_MOV(c, src);
+        c->defs[t.index]->src[0].pack = QPU_UNPACK_8A + i;
         return t;
 }
 
 static inline struct qreg
 qir_UNPACK_16_F(struct vc4_compile *c, struct qreg src, int i)
 {
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_UNPACK_16A_F + i, t, src, c->undef));
+        struct qreg t = qir_FMOV(c, src);
+        c->defs[t.index]->src[0].pack = QPU_UNPACK_16A + i;
         return t;
 }
 
 static inline struct qreg
 qir_UNPACK_16_I(struct vc4_compile *c, struct qreg src, int i)
 {
-        struct qreg t = qir_get_temp(c);
-        qir_emit(c, qir_inst(QOP_UNPACK_16A_I + i, t, src, c->undef));
+        struct qreg t = qir_MOV(c, src);
+        c->defs[t.index]->src[0].pack = QPU_UNPACK_16A + i;
         return t;
 }
 

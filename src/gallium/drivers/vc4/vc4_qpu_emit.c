@@ -134,15 +134,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
         uint32_t vpm_read_fifo_count = 0;
         uint32_t vpm_read_offset = 0;
         int last_vpm_read_index = -1;
-        /* Map from the QIR ops enum order to QPU unpack bits. */
-        static const uint32_t unpack_map[] = {
-                QPU_UNPACK_8A,
-                QPU_UNPACK_8B,
-                QPU_UNPACK_8C,
-                QPU_UNPACK_8D,
-                QPU_UNPACK_16A,
-                QPU_UNPACK_16B,
-        };
 
         list_inithead(&c->qpu_inst_list);
 
@@ -214,8 +205,10 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          * out the same as a MOV.
                          */
                         [QOP_MOV] = { QPU_A_OR },
+                        [QOP_FMOV] = { QPU_A_FMAX },
                 };
 
+                uint64_t unpack = 0;
                 struct qpu_reg src[4];
                 for (int i = 0; i < qir_get_op_nsrc(qinst->op); i++) {
                         int index = qinst->src[i].index;
@@ -225,6 +218,14 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 break;
                         case QFILE_TEMP:
                                 src[i] = temp_registers[index];
+                                if (qinst->src[i].pack) {
+                                        assert(!unpack ||
+                                               unpack == qinst->src[i].pack);
+                                        unpack = QPU_SET_FIELD(qinst->src[i].pack,
+                                                               QPU_UNPACK);
+                                        if (src[i].mux == QPU_MUX_R4)
+                                                unpack |= QPU_PM;
+                                }
                                 break;
                         case QFILE_UNIF:
                                 src[i] = qpu_unif();
@@ -424,44 +425,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                                     QPU_SIG_LOAD_TMU0);
                         if (dst.mux != QPU_MUX_R4)
                                 queue(c, qpu_a_MOV(dst, qpu_r4()));
-                        break;
-
-                case QOP_UNPACK_8A_F:
-                case QOP_UNPACK_8B_F:
-                case QOP_UNPACK_8C_F:
-                case QOP_UNPACK_8D_F:
-                case QOP_UNPACK_16A_F:
-                case QOP_UNPACK_16B_F:
-                        if (src[0].mux == QPU_MUX_R4) {
-                                queue(c, qpu_a_MOV(dst, src[0]));
-                                *last_inst(c) |= QPU_PM;
-                                *last_inst(c) |= QPU_SET_FIELD(QPU_UNPACK_8A +
-                                                               (qinst->op -
-                                                                QOP_UNPACK_8A_F),
-                                                               QPU_UNPACK);
-                        } else {
-                                assert(src[0].mux == QPU_MUX_A);
-
-                                queue(c, qpu_a_FMAX(dst, src[0], src[0]));
-                                *last_inst(c) |=
-                                        QPU_SET_FIELD(unpack_map[qinst->op -
-                                                                 QOP_UNPACK_8A_F],
-                                                      QPU_UNPACK);
-                        }
-                        break;
-
-                case QOP_UNPACK_8A_I:
-                case QOP_UNPACK_8B_I:
-                case QOP_UNPACK_8C_I:
-                case QOP_UNPACK_8D_I:
-                case QOP_UNPACK_16A_I:
-                case QOP_UNPACK_16B_I:
-                        assert(src[0].mux == QPU_MUX_A);
-
-                        queue(c, qpu_a_MOV(dst, src[0]));
-                        *last_inst(c) |= QPU_SET_FIELD(unpack_map[qinst->op -
-                                                                  QOP_UNPACK_8A_I],
-                                                       QPU_UNPACK);
                         break;
 
                 default:

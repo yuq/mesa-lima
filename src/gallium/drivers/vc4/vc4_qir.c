@@ -36,6 +36,7 @@ struct qir_op_info {
 
 static const struct qir_op_info qir_op_info[] = {
         [QOP_MOV] = { "mov", 1, 1 },
+        [QOP_FMOV] = { "fmov", 1, 1 },
         [QOP_FADD] = { "fadd", 1, 2 },
         [QOP_FSUB] = { "fsub", 1, 2 },
         [QOP_FMUL] = { "fmul", 1, 2 },
@@ -100,18 +101,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_B] = { "tex_b", 0, 2 },
         [QOP_TEX_DIRECT] = { "tex_direct", 0, 2 },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
-        [QOP_UNPACK_8A_F] = { "unpack_8a_f", 1, 1 },
-        [QOP_UNPACK_8B_F] = { "unpack_8b_f", 1, 1 },
-        [QOP_UNPACK_8C_F] = { "unpack_8c_f", 1, 1 },
-        [QOP_UNPACK_8D_F] = { "unpack_8d_f", 1, 1 },
-        [QOP_UNPACK_16A_F] = { "unpack_16a_f", 1, 1 },
-        [QOP_UNPACK_16B_F] = { "unpack_16b_f", 1, 1 },
-        [QOP_UNPACK_8A_I] = { "unpack_8a_i", 1, 1 },
-        [QOP_UNPACK_8B_I] = { "unpack_8b_i", 1, 1 },
-        [QOP_UNPACK_8C_I] = { "unpack_8c_i", 1, 1 },
-        [QOP_UNPACK_8D_I] = { "unpack_8d_i", 1, 1 },
-        [QOP_UNPACK_16A_I] = { "unpack_16a_i", 1, 1 },
-        [QOP_UNPACK_16B_I] = { "unpack_16b_i", 1, 1 },
 };
 
 static const char *
@@ -193,6 +182,7 @@ bool
 qir_is_float_input(struct qinst *inst)
 {
         switch (inst->op) {
+        case QOP_FMOV:
         case QOP_FMUL:
         case QOP_FADD:
         case QOP_FSUB:
@@ -201,12 +191,6 @@ qir_is_float_input(struct qinst *inst)
         case QOP_FMINABS:
         case QOP_FMAXABS:
         case QOP_FTOI:
-        case QOP_UNPACK_8A_F:
-        case QOP_UNPACK_8B_F:
-        case QOP_UNPACK_8C_F:
-        case QOP_UNPACK_8D_F:
-        case QOP_UNPACK_16A_F:
-        case QOP_UNPACK_16B_F:
                 return true;
         default:
                 return false;
@@ -216,7 +200,8 @@ qir_is_float_input(struct qinst *inst)
 bool
 qir_is_raw_mov(struct qinst *inst)
 {
-        return (inst->op == QOP_MOV &&
+        return ((inst->op == QOP_MOV ||
+                 inst->op == QOP_FMOV) &&
                 !inst->dst.pack &&
                 !inst->src[0].pack);
 }
@@ -239,28 +224,6 @@ qir_depends_on_flags(struct qinst *inst)
         case QOP_SEL_X_Y_NC:
         case QOP_SEL_X_Y_ZS:
         case QOP_SEL_X_Y_ZC:
-                return true;
-        default:
-                return false;
-        }
-}
-
-bool
-qir_src_needs_a_file(struct qinst *inst)
-{
-        switch (inst->op) {
-        case QOP_UNPACK_8A_F:
-        case QOP_UNPACK_8B_F:
-        case QOP_UNPACK_8C_F:
-        case QOP_UNPACK_8D_F:
-        case QOP_UNPACK_16A_F:
-        case QOP_UNPACK_16B_F:
-        case QOP_UNPACK_8A_I:
-        case QOP_UNPACK_8B_I:
-        case QOP_UNPACK_8C_I:
-        case QOP_UNPACK_8D_I:
-        case QOP_UNPACK_16A_I:
-        case QOP_UNPACK_16B_I:
                 return true;
         default:
                 return false;
