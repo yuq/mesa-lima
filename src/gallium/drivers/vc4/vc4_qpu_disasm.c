@@ -257,6 +257,13 @@ vc4_qpu_disasm_pack_a(FILE *out, uint32_t pack)
         fprintf(out, "%s", DESC(qpu_pack_a, pack));
 }
 
+void
+vc4_qpu_disasm_unpack(FILE *out, uint32_t unpack)
+{
+        if (unpack != QPU_UNPACK_NOP)
+                fprintf(out, ".%s", DESC(qpu_unpack, unpack));
+}
+
 static void
 print_alu_dst(uint64_t inst, bool is_mul)
 {
@@ -315,10 +322,9 @@ print_alu_src(uint64_t inst, uint32_t mux)
                         fprintf(stderr, "%s", DESC(special_read_b, raddr - 32));
         }
 
-        if (unpack != QPU_UNPACK_NOP &&
-            ((mux == QPU_MUX_A && !(inst & QPU_PM)) ||
+        if (((mux == QPU_MUX_A && !(inst & QPU_PM)) ||
              (mux == QPU_MUX_R4 && (inst & QPU_PM)))) {
-                fprintf(stderr, ".%s", DESC(qpu_unpack, unpack));
+                vc4_qpu_disasm_unpack(stderr, unpack);
         }
 }
 

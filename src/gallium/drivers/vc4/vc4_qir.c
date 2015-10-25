@@ -313,6 +313,7 @@ qir_dump_inst(struct vc4_compile *c, struct qinst *inst)
         for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
                 fprintf(stderr, ", ");
                 qir_print_reg(c, inst->src[i], false);
+                vc4_qpu_disasm_unpack(stderr, inst->src[i].pack);
         }
 }
 
