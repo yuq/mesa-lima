@@ -738,6 +738,20 @@ ntq_emit_pack_unorm_4x8(struct vc4_compile *c, nir_alu_instr *instr)
                 vec4 = nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
         }
 
+        /* If the pack is replicating the same channel 4 times, use the 8888
+         * pack flag.  This is common for blending using the alpha
+         * channel.
+         */
+        if (instr->src[0].swizzle[0] == instr->src[0].swizzle[1] &&
+            instr->src[0].swizzle[0] == instr->src[0].swizzle[2] &&
+            instr->src[0].swizzle[0] == instr->src[0].swizzle[3]) {
+                struct qreg *dest = ntq_get_dest(c, &instr->dest.dest);
+                *dest = qir_PACK_8888_F(c,
+                                        ntq_get_src(c, instr->src[0].src,
+                                                    instr->src[0].swizzle[0]));
+                return;
+        }
+
         for (int i = 0; i < 4; i++) {
                 int swiz = instr->src[0].swizzle[i];
                 struct qreg src;
