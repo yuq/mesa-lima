@@ -822,7 +822,7 @@ fs_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != IMM)) {
+                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(n);
          }
@@ -951,7 +951,7 @@ fs_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != IMM)) {
+                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF);
             add_barrier_deps(n);
          }
@@ -1080,7 +1080,7 @@ vec4_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != IMM)) {
+                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
             /* No reads from MRF, and ATTR is already translated away */
             assert(inst->src[i].file != MRF &&
                    inst->src[i].file != ATTR);
@@ -1177,7 +1177,7 @@ vec4_instruction_scheduler::calculate_deps()
                     inst->src[i].file != IMM &&
                     inst->src[i].file != UNIFORM &&
                     (inst->src[i].file != HW_REG ||
-                     inst->src[i].fixed_hw_reg.file != IMM)) {
+                     inst->src[i].fixed_hw_reg.file != BRW_IMMEDIATE_VALUE)) {
             assert(inst->src[i].file != MRF &&
                    inst->src[i].file != ATTR);
             add_barrier_deps(n);
