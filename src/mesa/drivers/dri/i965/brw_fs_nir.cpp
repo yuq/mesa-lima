@@ -906,12 +906,11 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
-
       bld.CMP(bld.null_reg_d(), result, fs_reg(-1), BRW_CONDITIONAL_NZ);
-      fs_reg neg_result(result);
-      neg_result.negate = true;
-      inst = bld.ADD(result, neg_result, fs_reg(31));
+
+      inst = bld.ADD(result, result, fs_reg(31));
       inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->src[0].negate = true;
       break;
    }
 
