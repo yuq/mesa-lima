@@ -429,7 +429,8 @@ qir_follow_movs(struct vc4_compile *c, struct qreg reg)
 {
         while (reg.file == QFILE_TEMP &&
                c->defs[reg.index] &&
-               c->defs[reg.index]->op == QOP_MOV) {
+               c->defs[reg.index]->op == QOP_MOV &&
+               !c->defs[reg.index]->dst.pack) {
                 reg = c->defs[reg.index]->src[0];
         }
 
