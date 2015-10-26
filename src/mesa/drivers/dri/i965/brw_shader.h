@@ -64,15 +64,6 @@ struct backend_reg : public brw_reg
    enum register_file file; /**< Register file: GRF, MRF, IMM. */
 
    /**
-    * Register number.
-    *
-    * For GRF, it's a virtual register number until register allocation.
-    *
-    * For MRF, it's the hardware register.
-    */
-   uint16_t reg;
-
-   /**
     * Offset within the virtual register.
     *
     * In the scalar backend, this is in units of a float per pixel for pre-

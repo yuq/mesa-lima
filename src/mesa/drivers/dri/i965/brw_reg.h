@@ -233,12 +233,12 @@ const char *brw_reg_type_letters(unsigned brw_reg_type);
 struct brw_reg {
    enum brw_reg_type type:4;
    enum brw_reg_file file:2;
-   unsigned nr:8;
-   unsigned subnr:5;              /* :1 in align16 */
    unsigned negate:1;             /* source only */
    unsigned abs:1;                /* source only */
    unsigned address_mode:1;       /* relative addressing, hopefully! */
-   unsigned pad0:10;
+   unsigned pad0:2;
+   unsigned subnr:5;              /* :1 in align16 */
+   unsigned nr:16;
 
    union {
       struct {
@@ -353,12 +353,12 @@ brw_reg(enum brw_reg_file file,
 
    reg.type = type;
    reg.file = file;
-   reg.nr = nr;
-   reg.subnr = subnr * type_sz(type);
    reg.negate = negate;
    reg.abs = abs;
    reg.address_mode = BRW_ADDRESS_DIRECT;
    reg.pad0 = 0;
+   reg.subnr = subnr * type_sz(type);
+   reg.nr = nr;
 
    /* Could do better: If the reg is r5.3<0;1,0>, we probably want to
     * set swizzle and writemask to W, as the lower bits of subnr will

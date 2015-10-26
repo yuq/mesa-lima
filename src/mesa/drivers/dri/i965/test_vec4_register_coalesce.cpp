@@ -213,7 +213,7 @@ TEST_F(register_coalesce_test, test_dp4_grf)
 
    register_coalesce(v);
 
-   EXPECT_EQ(dp4->dst.reg, to.reg);
+   EXPECT_EQ(dp4->dst.nr, to.nr);
    EXPECT_EQ(dp4->dst.writemask, WRITEMASK_Y);
 }
 
@@ -239,5 +239,5 @@ TEST_F(register_coalesce_test, test_channel_mul_grf)
 
    register_coalesce(v);
 
-   EXPECT_EQ(mul->dst.reg, to.reg);
+   EXPECT_EQ(mul->dst.nr, to.nr);
 }

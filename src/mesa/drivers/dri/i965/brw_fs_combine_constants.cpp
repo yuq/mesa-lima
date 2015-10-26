@@ -121,7 +121,7 @@ struct imm {
     * constant value.
     */
    uint8_t subreg_offset;
-   uint16_t reg;
+   uint16_t nr;
 
    /** The number of coissuable instructions using this immediate. */
    uint16_t uses_by_coissue;
@@ -280,12 +280,12 @@ fs_visitor::opt_combine_constants()
       const fs_builder ibld = bld.at(imm->block, n).exec_all().group(1, 0);
 
       ibld.MOV(reg, fs_reg(imm->val));
-      imm->reg = reg.reg;
+      imm->nr = reg.nr;
       imm->subreg_offset = reg.subreg_offset;
 
       reg.subreg_offset += sizeof(float);
       if ((unsigned)reg.subreg_offset == dispatch_width * sizeof(float)) {
-         reg.reg = alloc.allocate(dispatch_width / 8);
+         reg.nr = alloc.allocate(dispatch_width / 8);
          reg.subreg_offset = 0;
       }
    }
@@ -296,7 +296,7 @@ fs_visitor::opt_combine_constants()
       foreach_list_typed(reg_link, link, link, table.imm[i].uses) {
          fs_reg *reg = link->reg;
          reg->file = GRF;
-         reg->reg = table.imm[i].reg;
+         reg->nr = table.imm[i].nr;
          reg->subreg_offset = table.imm[i].subreg_offset;
          reg->stride = 0;
          reg->negate = signbit(reg->f) != signbit(table.imm[i].val);

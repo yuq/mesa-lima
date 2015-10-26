@@ -42,8 +42,8 @@ public:
    explicit fs_reg(uint8_t vf[4]);
    explicit fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3);
    fs_reg(struct brw_reg reg);
-   fs_reg(enum register_file file, int reg);
-   fs_reg(enum register_file file, int reg, enum brw_reg_type type);
+   fs_reg(enum register_file file, int nr);
+   fs_reg(enum register_file file, int nr, enum brw_reg_type type);
 
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;
@@ -95,7 +95,7 @@ byte_offset(fs_reg reg, unsigned delta)
       reg.reg_offset += delta / 32;
       break;
    case MRF:
-      reg.reg += delta / 32;
+      reg.nr += delta / 32;
       break;
    case IMM:
    case HW_REG:

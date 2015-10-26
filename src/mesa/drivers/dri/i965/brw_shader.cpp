@@ -751,7 +751,7 @@ bool
 backend_reg::in_range(const backend_reg &r, unsigned n) const
 {
    return (file == r.file &&
-           reg == r.reg &&
+           nr == r.nr &&
            reg_offset >= r.reg_offset &&
            reg_offset < r.reg_offset + n);
 }

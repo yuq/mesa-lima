@@ -876,7 +876,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 
       abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {
-         u.reg = userplane[i].reg + j;
+         u.nr = userplane[i].nr + j;
          abld.MAD(output, output, offset(outputs[clip_vertex], bld, j), u);
       }
    }

@@ -144,7 +144,7 @@ TEST_F(copy_propagation_test, test_swizzle_swizzle)
 
    copy_propagation(v);
 
-   EXPECT_EQ(test_mov->src[0].reg, a.reg);
+   EXPECT_EQ(test_mov->src[0].nr, a.nr);
    EXPECT_EQ(test_mov->src[0].swizzle, BRW_SWIZZLE4(SWIZZLE_Z,
                                                     SWIZZLE_W,
                                                     SWIZZLE_X,
@@ -174,7 +174,7 @@ TEST_F(copy_propagation_test, test_swizzle_writemask)
    copy_propagation(v);
 
    /* should not copy propagate */
-   EXPECT_EQ(test_mov->src[0].reg, b.reg);
+   EXPECT_EQ(test_mov->src[0].nr, b.nr);
    EXPECT_EQ(test_mov->src[0].swizzle, BRW_SWIZZLE4(SWIZZLE_W,
                                                     SWIZZLE_W,
                                                     SWIZZLE_W,

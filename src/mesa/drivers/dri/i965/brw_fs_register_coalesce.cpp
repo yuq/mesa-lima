@@ -79,8 +79,8 @@ is_coalesce_candidate(const fs_visitor *v, const fs_inst *inst)
       return false;
    }
 
-   if (v->alloc.sizes[inst->src[0].reg] >
-       v->alloc.sizes[inst->dst.reg])
+   if (v->alloc.sizes[inst->src[0].nr] >
+       v->alloc.sizes[inst->dst.nr])
       return false;
 
    if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
@@ -170,19 +170,19 @@ fs_visitor::register_coalesce()
          continue;
       }
 
-      if (src_reg != inst->src[0].reg) {
-         src_reg = inst->src[0].reg;
+      if (src_reg != inst->src[0].nr) {
+         src_reg = inst->src[0].nr;
 
-         src_size = alloc.sizes[inst->src[0].reg];
+         src_size = alloc.sizes[inst->src[0].nr];
          assert(src_size <= MAX_VGRF_SIZE);
 
          channels_remaining = src_size;
          memset(mov, 0, sizeof(mov));
 
-         dst_reg = inst->dst.reg;
+         dst_reg = inst->dst.nr;
       }
 
-      if (dst_reg != inst->dst.reg)
+      if (dst_reg != inst->dst.nr)
          continue;
 
       if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
@@ -251,16 +251,16 @@ fs_visitor::register_coalesce()
 
       foreach_block_and_inst(block, fs_inst, scan_inst, cfg) {
          if (scan_inst->dst.file == GRF &&
-             scan_inst->dst.reg == src_reg) {
-            scan_inst->dst.reg = dst_reg;
+             scan_inst->dst.nr == src_reg) {
+            scan_inst->dst.nr = dst_reg;
             scan_inst->dst.reg_offset =
                dst_reg_offset[scan_inst->dst.reg_offset];
          }
 
          for (int j = 0; j < scan_inst->sources; j++) {
             if (scan_inst->src[j].file == GRF &&
-                scan_inst->src[j].reg == src_reg) {
-               scan_inst->src[j].reg = dst_reg;
+                scan_inst->src[j].nr == src_reg) {
+               scan_inst->src[j].nr = dst_reg;
                scan_inst->src[j].reg_offset =
                   dst_reg_offset[scan_inst->src[j].reg_offset];
             }

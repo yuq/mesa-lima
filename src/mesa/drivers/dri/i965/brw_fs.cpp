@@ -307,7 +307,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
    if (reg.file != GRF || reg.reg_offset != 0 || reg.stride == 0)
       return false;
 
-   if (grf_alloc.sizes[reg.reg] != this->regs_written)
+   if (grf_alloc.sizes[reg.nr] != this->regs_written)
       return false;
 
    for (int i = 0; i < this->sources; i++) {
@@ -424,7 +424,6 @@ fs_reg::fs_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
    this->file = HW_REG;
-   this->reg = 0;
    this->reg_offset = 0;
    this->subreg_offset = 0;
    this->reladdr = NULL;
@@ -435,7 +434,7 @@ bool
 fs_reg::equals(const fs_reg &r) const
 {
    return (file == r.file &&
-           reg == r.reg &&
+           nr == r.nr &&
            reg_offset == r.reg_offset &&
            subreg_offset == r.subreg_offset &&
            type == r.type &&
@@ -959,20 +958,20 @@ fs_visitor::vgrf(const glsl_type *const type)
                  brw_type_for_base_type(type));
 }
 
-fs_reg::fs_reg(enum register_file file, int reg)
+fs_reg::fs_reg(enum register_file file, int nr)
 {
    init();
    this->file = file;
-   this->reg = reg;
+   this->nr = nr;
    this->type = BRW_REGISTER_TYPE_F;
    this->stride = (file == UNIFORM ? 0 : 1);
 }
 
-fs_reg::fs_reg(enum register_file file, int reg, enum brw_reg_type type)
+fs_reg::fs_reg(enum register_file file, int nr, enum brw_reg_type type)
 {
    init();
    this->file = file;
-   this->reg = reg;
+   this->nr = nr;
    this->type = type;
    this->stride = (file == UNIFORM ? 0 : 1);
 }
@@ -1456,7 +1455,7 @@ fs_visitor::assign_curb_setup()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == UNIFORM) {
-            int uniform_nr = inst->src[i].reg + inst->src[i].reg_offset;
+            int uniform_nr = inst->src[i].nr + inst->src[i].reg_offset;
             int constant_nr;
             if (uniform_nr >= 0 && uniform_nr < (int) uniforms) {
                constant_nr = push_constant_loc[uniform_nr];
@@ -1612,7 +1611,7 @@ fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
       if (inst->src[i].file == ATTR) {
          int grf = payload.num_regs +
                    prog_data->curb_read_length +
-                   inst->src[i].reg +
+                   inst->src[i].nr +
                    inst->src[i].reg_offset;
 
          struct brw_reg reg =
@@ -1726,15 +1725,15 @@ fs_visitor::split_virtual_grfs()
    /* Mark all used registers as fully splittable */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF) {
-         int reg = vgrf_to_reg[inst->dst.reg];
-         for (unsigned j = 1; j < this->alloc.sizes[inst->dst.reg]; j++)
+         int reg = vgrf_to_reg[inst->dst.nr];
+         for (unsigned j = 1; j < this->alloc.sizes[inst->dst.nr]; j++)
             split_points[reg + j] = true;
       }
 
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
-            int reg = vgrf_to_reg[inst->src[i].reg];
-            for (unsigned j = 1; j < this->alloc.sizes[inst->src[i].reg]; j++)
+            int reg = vgrf_to_reg[inst->src[i].nr];
+            for (unsigned j = 1; j < this->alloc.sizes[inst->src[i].nr]; j++)
                split_points[reg + j] = true;
          }
       }
@@ -1742,13 +1741,13 @@ fs_visitor::split_virtual_grfs()
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF) {
-         int reg = vgrf_to_reg[inst->dst.reg] + inst->dst.reg_offset;
+         int reg = vgrf_to_reg[inst->dst.nr] + inst->dst.reg_offset;
          for (int j = 1; j < inst->regs_written; j++)
             split_points[reg + j] = false;
       }
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF) {
-            int reg = vgrf_to_reg[inst->src[i].reg] + inst->src[i].reg_offset;
+            int reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].reg_offset;
             for (int j = 1; j < inst->regs_read(i); j++)
                split_points[reg + j] = false;
          }
@@ -1795,15 +1794,15 @@ fs_visitor::split_virtual_grfs()
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF) {
-         reg = vgrf_to_reg[inst->dst.reg] + inst->dst.reg_offset;
-         inst->dst.reg = new_virtual_grf[reg];
+         reg = vgrf_to_reg[inst->dst.nr] + inst->dst.reg_offset;
+         inst->dst.nr = new_virtual_grf[reg];
          inst->dst.reg_offset = new_reg_offset[reg];
          assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
       }
       for (int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == GRF) {
-            reg = vgrf_to_reg[inst->src[i].reg] + inst->src[i].reg_offset;
-            inst->src[i].reg = new_virtual_grf[reg];
+            reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].reg_offset;
+            inst->src[i].nr = new_virtual_grf[reg];
             inst->src[i].reg_offset = new_reg_offset[reg];
             assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
          }
@@ -1831,11 +1830,11 @@ fs_visitor::compact_virtual_grfs()
    /* Mark which virtual GRFs are used. */
    foreach_block_and_inst(block, const fs_inst, inst, cfg) {
       if (inst->dst.file == GRF)
-         remap_table[inst->dst.reg] = 0;
+         remap_table[inst->dst.nr] = 0;
 
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF)
-            remap_table[inst->src[i].reg] = 0;
+            remap_table[inst->src[i].nr] = 0;
       }
    }
 
@@ -1860,11 +1859,11 @@ fs_visitor::compact_virtual_grfs()
    /* Patch all the instructions to use the newly renumbered registers */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == GRF)
-         inst->dst.reg = remap_table[inst->dst.reg];
+         inst->dst.nr = remap_table[inst->dst.nr];
 
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF)
-            inst->src[i].reg = remap_table[inst->src[i].reg];
+            inst->src[i].nr = remap_table[inst->src[i].nr];
       }
    }
 
@@ -1874,8 +1873,8 @@ fs_visitor::compact_virtual_grfs()
     */
    for (unsigned i = 0; i < ARRAY_SIZE(delta_xy); i++) {
       if (delta_xy[i].file == GRF) {
-         if (remap_table[delta_xy[i].reg] != -1) {
-            delta_xy[i].reg = remap_table[delta_xy[i].reg];
+         if (remap_table[delta_xy[i].nr] != -1) {
+            delta_xy[i].nr = remap_table[delta_xy[i].nr];
          } else {
             delta_xy[i].file = BAD_FILE;
          }
@@ -1927,7 +1926,7 @@ fs_visitor::assign_constant_locations()
             continue;
 
          if (inst->src[i].reladdr) {
-            int uniform = inst->src[i].reg;
+            int uniform = inst->src[i].nr;
 
             /* If this array isn't already present in the pull constant buffer,
              * add it.
@@ -1939,7 +1938,7 @@ fs_visitor::assign_constant_locations()
             }
          } else {
             /* Mark the the one accessed uniform as live */
-            int constant_nr = inst->src[i].reg + inst->src[i].reg_offset;
+            int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
             if (constant_nr >= 0 && constant_nr < (int) uniforms)
                is_live[constant_nr] = true;
          }
@@ -2015,7 +2014,7 @@ fs_visitor::demote_pull_constants()
 	    continue;
 
          int pull_index;
-         unsigned location = inst->src[i].reg + inst->src[i].reg_offset;
+         unsigned location = inst->src[i].nr + inst->src[i].reg_offset;
          if (location >= uniforms) /* Out of bounds access */
             pull_index = -1;
          else
@@ -2050,7 +2049,7 @@ fs_visitor::demote_pull_constants()
 
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = GRF;
-         inst->src[i].reg = dst.reg;
+         inst->src[i].nr = dst.nr;
          inst->src[i].reg_offset = 0;
       }
    }
@@ -2461,30 +2460,30 @@ fs_visitor::opt_register_renaming()
       /* Rewrite instruction sources. */
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == GRF &&
-             remap[inst->src[i].reg] != -1 &&
-             remap[inst->src[i].reg] != inst->src[i].reg) {
-            inst->src[i].reg = remap[inst->src[i].reg];
+             remap[inst->src[i].nr] != -1 &&
+             remap[inst->src[i].nr] != inst->src[i].nr) {
+            inst->src[i].nr = remap[inst->src[i].nr];
             progress = true;
          }
       }
 
-      const int dst = inst->dst.reg;
+      const int dst = inst->dst.nr;
 
       if (depth == 0 &&
           inst->dst.file == GRF &&
-          alloc.sizes[inst->dst.reg] == inst->exec_size / 8 &&
+          alloc.sizes[inst->dst.nr] == inst->exec_size / 8 &&
           !inst->is_partial_write()) {
          if (remap[dst] == -1) {
             remap[dst] = dst;
          } else {
             remap[dst] = alloc.allocate(inst->exec_size / 8);
-            inst->dst.reg = remap[dst];
+            inst->dst.nr = remap[dst];
             progress = true;
          }
       } else if (inst->dst.file == GRF &&
                  remap[dst] != -1 &&
                  remap[dst] != dst) {
-         inst->dst.reg = remap[dst];
+         inst->dst.nr = remap[dst];
          progress = true;
       }
    }
@@ -2493,8 +2492,8 @@ fs_visitor::opt_register_renaming()
       invalidate_live_intervals();
 
       for (unsigned i = 0; i < ARRAY_SIZE(delta_xy); i++) {
-         if (delta_xy[i].file == GRF && remap[delta_xy[i].reg] != -1) {
-            delta_xy[i].reg = remap[delta_xy[i].reg];
+         if (delta_xy[i].file == GRF && remap[delta_xy[i].nr] != -1) {
+            delta_xy[i].nr = remap[delta_xy[i].nr];
          }
       }
    }
@@ -2571,9 +2570,9 @@ fs_visitor::compute_to_mrf()
       /* Work out which hardware MRF registers are written by this
        * instruction.
        */
-      int mrf_low = inst->dst.reg & ~BRW_MRF_COMPR4;
+      int mrf_low = inst->dst.nr & ~BRW_MRF_COMPR4;
       int mrf_high;
-      if (inst->dst.reg & BRW_MRF_COMPR4) {
+      if (inst->dst.nr & BRW_MRF_COMPR4) {
 	 mrf_high = mrf_low + 4;
       } else if (inst->exec_size == 16) {
 	 mrf_high = mrf_low + 1;
@@ -2584,7 +2583,7 @@ fs_visitor::compute_to_mrf()
       /* Can't compute-to-MRF this GRF if someone else was going to
        * read it later.
        */
-      if (this->virtual_grf_end[inst->src[0].reg] > ip)
+      if (this->virtual_grf_end[inst->src[0].nr] > ip)
 	 continue;
 
       /* Found a move of a GRF to a MRF.  Let's see if we can go
@@ -2592,7 +2591,7 @@ fs_visitor::compute_to_mrf()
        */
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
 	 if (scan_inst->dst.file == GRF &&
-	     scan_inst->dst.reg == inst->src[0].reg) {
+            scan_inst->dst.nr == inst->src[0].nr) {
 	    /* Found the last thing to write our reg we want to turn
 	     * into a compute-to-MRF.
 	     */
@@ -2627,7 +2626,7 @@ fs_visitor::compute_to_mrf()
 	    if (scan_inst->dst.reg_offset == inst->src[0].reg_offset) {
 	       /* Found the creator of our MRF's source value. */
 	       scan_inst->dst.file = MRF;
-	       scan_inst->dst.reg = inst->dst.reg;
+               scan_inst->dst.nr = inst->dst.nr;
 	       scan_inst->saturate |= inst->saturate;
 	       inst->remove(block);
 	       progress = true;
@@ -2648,7 +2647,7 @@ fs_visitor::compute_to_mrf()
 	 bool interfered = false;
 	 for (int i = 0; i < scan_inst->sources; i++) {
 	    if (scan_inst->src[i].file == GRF &&
-		scan_inst->src[i].reg == inst->src[0].reg &&
+                scan_inst->src[i].nr == inst->src[0].nr &&
 		scan_inst->src[i].reg_offset == inst->src[0].reg_offset) {
 	       interfered = true;
 	    }
@@ -2660,10 +2659,10 @@ fs_visitor::compute_to_mrf()
 	    /* If somebody else writes our MRF here, we can't
 	     * compute-to-MRF before that.
 	     */
-	    int scan_mrf_low = scan_inst->dst.reg & ~BRW_MRF_COMPR4;
+            int scan_mrf_low = scan_inst->dst.nr & ~BRW_MRF_COMPR4;
 	    int scan_mrf_high;
 
-	    if (scan_inst->dst.reg & BRW_MRF_COMPR4) {
+            if (scan_inst->dst.nr & BRW_MRF_COMPR4) {
 	       scan_mrf_high = scan_mrf_low + 4;
 	    } else if (scan_inst->exec_size == 16) {
 	       scan_mrf_high = scan_mrf_low + 1;
@@ -2819,7 +2818,7 @@ fs_visitor::remove_duplicate_mrf_writes()
 
       if (inst->opcode == BRW_OPCODE_MOV &&
 	  inst->dst.file == MRF) {
-	 fs_inst *prev_inst = last_mrf_move[inst->dst.reg];
+         fs_inst *prev_inst = last_mrf_move[inst->dst.nr];
 	 if (prev_inst && inst->equals(prev_inst)) {
 	    inst->remove(block);
 	    progress = true;
@@ -2829,7 +2828,7 @@ fs_visitor::remove_duplicate_mrf_writes()
 
       /* Clear out the last-write records for MRFs that were overwritten. */
       if (inst->dst.file == MRF) {
-	 last_mrf_move[inst->dst.reg] = NULL;
+         last_mrf_move[inst->dst.nr] = NULL;
       }
 
       if (inst->mlen > 0 && inst->base_mrf != -1) {
@@ -2845,7 +2844,7 @@ fs_visitor::remove_duplicate_mrf_writes()
       if (inst->dst.file == GRF) {
 	 for (unsigned int i = 0; i < ARRAY_SIZE(last_mrf_move); i++) {
 	    if (last_mrf_move[i] &&
-		last_mrf_move[i]->src[0].reg == inst->dst.reg) {
+                last_mrf_move[i]->src[0].nr == inst->dst.nr) {
 	       last_mrf_move[i] = NULL;
 	    }
 	 }
@@ -2855,7 +2854,7 @@ fs_visitor::remove_duplicate_mrf_writes()
 	  inst->dst.file == MRF &&
 	  inst->src[0].file == GRF &&
 	  !inst->is_partial_write()) {
-	 last_mrf_move[inst->dst.reg] = inst;
+         last_mrf_move[inst->dst.nr] = inst;
       }
    }
 
@@ -2872,7 +2871,7 @@ clear_deps_for_inst_src(fs_inst *inst, bool *deps, int first_grf, int grf_len)
    for (int i = 0; i < inst->sources; i++) {
       int grf;
       if (inst->src[i].file == GRF) {
-         grf = inst->src[i].reg;
+         grf = inst->src[i].nr;
       } else if (inst->src[i].file == HW_REG &&
                  inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
          grf = inst->src[i].nr;
@@ -2910,7 +2909,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
                                                         fs_inst *inst)
 {
    int write_len = inst->regs_written;
-   int first_write_grf = inst->dst.reg;
+   int first_write_grf = inst->dst.nr;
    bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
@@ -2943,7 +2942,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
        */
       if (scan_inst->dst.file == GRF) {
          for (int i = 0; i < scan_inst->regs_written; i++) {
-            int reg = scan_inst->dst.reg + i;
+            int reg = scan_inst->dst.nr + i;
 
             if (reg >= first_write_grf &&
                 reg < first_write_grf + write_len &&
@@ -2981,7 +2980,7 @@ void
 fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_inst *inst)
 {
    int write_len = inst->regs_written;
-   int first_write_grf = inst->dst.reg;
+   int first_write_grf = inst->dst.nr;
    bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
 
@@ -3008,12 +3007,12 @@ fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_ins
        * result of a SEND, which has massive latency.
        */
       if (scan_inst->dst.file == GRF &&
-          scan_inst->dst.reg >= first_write_grf &&
-          scan_inst->dst.reg < first_write_grf + write_len &&
-          needs_dep[scan_inst->dst.reg - first_write_grf]) {
+          scan_inst->dst.nr >= first_write_grf &&
+          scan_inst->dst.nr < first_write_grf + write_len &&
+          needs_dep[scan_inst->dst.nr - first_write_grf]) {
          DEP_RESOLVE_MOV(fs_builder(this, block, scan_inst),
-                         scan_inst->dst.reg);
-         needs_dep[scan_inst->dst.reg - first_write_grf] = false;
+                         scan_inst->dst.nr);
+         needs_dep[scan_inst->dst.nr - first_write_grf] = false;
       }
 
       /* Continue the loop only if we haven't resolved all the dependencies */
@@ -3145,7 +3144,7 @@ fs_visitor::lower_load_payload()
 
       /* Get rid of COMPR4.  We'll add it back in if we need it */
       if (dst.file == MRF)
-         dst.reg = dst.reg & ~BRW_MRF_COMPR4;
+         dst.nr = dst.nr & ~BRW_MRF_COMPR4;
 
       const fs_builder ibld(this, block, inst);
       const fs_builder hbld = ibld.exec_all().group(8, 0);
@@ -3159,7 +3158,7 @@ fs_visitor::lower_load_payload()
          dst = offset(dst, hbld, 1);
       }
 
-      if (inst->dst.file == MRF && (inst->dst.reg & BRW_MRF_COMPR4) &&
+      if (inst->dst.file == MRF && (inst->dst.nr & BRW_MRF_COMPR4) &&
           inst->exec_size > 8) {
          /* In this case, the payload portion of the LOAD_PAYLOAD isn't
           * a straightforward copy.  Instead, the result of the
@@ -3183,18 +3182,18 @@ fs_visitor::lower_load_payload()
             if (inst->src[i].file != BAD_FILE) {
                if (devinfo->has_compr4) {
                   fs_reg compr4_dst = retype(dst, inst->src[i].type);
-                  compr4_dst.reg |= BRW_MRF_COMPR4;
+                  compr4_dst.nr |= BRW_MRF_COMPR4;
                   ibld.MOV(compr4_dst, inst->src[i]);
                } else {
                   /* Platform doesn't have COMPR4.  We have to fake it */
                   fs_reg mov_dst = retype(dst, inst->src[i].type);
                   ibld.half(0).MOV(mov_dst, half(inst->src[i], 0));
-                  mov_dst.reg += 4;
+                  mov_dst.nr += 4;
                   ibld.half(1).MOV(mov_dst, half(inst->src[i], 1));
                }
             }
 
-            dst.reg++;
+            dst.nr++;
          }
 
          /* The loop above only ever incremented us through the first set
@@ -3202,7 +3201,7 @@ fs_visitor::lower_load_payload()
           * actually wrote to the first 8 registers, so we need to take
           * that into account now.
           */
-         dst.reg += 4;
+         dst.nr += 4;
 
          /* The COMPR4 code took care of the first 4 sources.  We'll let
           * the regular path handle any remaining sources.  Yes, we are
@@ -3588,7 +3587,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       /* Send from the GRF */
       fs_reg payload = fs_reg(GRF, -1, BRW_REGISTER_TYPE_F);
       load = bld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
-      payload.reg = bld.shader->alloc.allocate(load->regs_written);
+      payload.nr = bld.shader->alloc.allocate(load->regs_written);
       load->dst = payload;
 
       inst->src[0] = payload;
@@ -3603,7 +3602,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
        * will do this for us if we just give it a COMPR4 destination.
        */
       if (devinfo->gen < 6 && bld.dispatch_width() == 16)
-         load->dst.reg |= BRW_MRF_COMPR4;
+         load->dst.nr |= BRW_MRF_COMPR4;
 
       inst->resize_sources(0);
       inst->base_mrf = 1;
@@ -3713,8 +3712,8 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
    inst->src[0] = reg_undef;
    inst->src[1] = sampler;
    inst->resize_sources(2);
-   inst->base_mrf = msg_begin.reg;
-   inst->mlen = msg_end.reg - msg_begin.reg;
+   inst->base_mrf = msg_begin.nr;
+   inst->mlen = msg_end.nr - msg_begin.nr;
    inst->header_size = 1;
 }
 
@@ -3738,7 +3737,7 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
        * go headerless.
        */
       header_size = 1;
-      message.reg--;
+      message.nr--;
    }
 
    for (unsigned i = 0; i < coord_components; i++) {
@@ -3808,8 +3807,8 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
    inst->src[0] = reg_undef;
    inst->src[1] = sampler;
    inst->resize_sources(2);
-   inst->base_mrf = message.reg;
-   inst->mlen = msg_end.reg - message.reg;
+   inst->base_mrf = message.nr;
+   inst->mlen = msg_end.nr - message.nr;
    inst->header_size = header_size;
 
    /* Message length > MAX_SAMPLER_MESSAGE_SIZE disallowed by hardware. */
@@ -4608,23 +4607,23 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
 
    switch (inst->dst.file) {
    case GRF:
-      fprintf(file, "vgrf%d", inst->dst.reg);
-      if (alloc.sizes[inst->dst.reg] != inst->regs_written ||
+      fprintf(file, "vgrf%d", inst->dst.nr);
+      if (alloc.sizes[inst->dst.nr] != inst->regs_written ||
           inst->dst.subreg_offset)
          fprintf(file, "+%d.%d",
                  inst->dst.reg_offset, inst->dst.subreg_offset);
       break;
    case MRF:
-      fprintf(file, "m%d", inst->dst.reg);
+      fprintf(file, "m%d", inst->dst.nr);
       break;
    case BAD_FILE:
       fprintf(file, "(null)");
       break;
    case UNIFORM:
-      fprintf(file, "***u%d***", inst->dst.reg + inst->dst.reg_offset);
+      fprintf(file, "***u%d***", inst->dst.nr + inst->dst.reg_offset);
       break;
    case ATTR:
-      fprintf(file, "***attr%d***", inst->dst.reg + inst->dst.reg_offset);
+      fprintf(file, "***attr%d***", inst->dst.nr + inst->dst.reg_offset);
       break;
    case HW_REG:
       if (inst->dst.brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE) {
@@ -4665,20 +4664,20 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "|");
       switch (inst->src[i].file) {
       case GRF:
-         fprintf(file, "vgrf%d", inst->src[i].reg);
-         if (alloc.sizes[inst->src[i].reg] != (unsigned)inst->regs_read(i) ||
+         fprintf(file, "vgrf%d", inst->src[i].nr);
+         if (alloc.sizes[inst->src[i].nr] != (unsigned)inst->regs_read(i) ||
              inst->src[i].subreg_offset)
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);
          break;
       case MRF:
-         fprintf(file, "***m%d***", inst->src[i].reg);
+         fprintf(file, "***m%d***", inst->src[i].nr);
          break;
       case ATTR:
-         fprintf(file, "attr%d+%d", inst->src[i].reg, inst->src[i].reg_offset);
+         fprintf(file, "attr%d+%d", inst->src[i].nr, inst->src[i].reg_offset);
          break;
       case UNIFORM:
-         fprintf(file, "u%d", inst->src[i].reg + inst->src[i].reg_offset);
+         fprintf(file, "u%d", inst->src[i].nr + inst->src[i].reg_offset);
          if (inst->src[i].reladdr) {
             fprintf(file, "+reladdr");
          } else if (inst->src[i].subreg_offset) {

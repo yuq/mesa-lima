@@ -633,7 +633,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type));
+   this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->swizzle = BRW_SWIZZLE_NOOP;
@@ -651,7 +651,7 @@ src_reg::src_reg(class vec4_visitor *v, const struct glsl_type *type, int size)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type) * size);
+   this->nr = v->alloc.allocate(type_size_vec4(type) * size);
 
    this->swizzle = BRW_SWIZZLE_NOOP;
 
@@ -663,7 +663,7 @@ dst_reg::dst_reg(class vec4_visitor *v, const struct glsl_type *type)
    init();
 
    this->file = GRF;
-   this->reg = v->alloc.allocate(type_size_vec4(type));
+   this->nr = v->alloc.allocate(type_size_vec4(type));
 
    if (type->is_array() || type->is_record()) {
       this->writemask = WRITEMASK_XYZW;
@@ -1615,7 +1615,7 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
    inst->insert_after(block, write);
 
    inst->dst.file = temp.file;
-   inst->dst.reg = temp.reg;
+   inst->dst.nr = temp.nr;
    inst->dst.reg_offset = temp.reg_offset;
    inst->dst.reladdr = NULL;
 }
@@ -1642,10 +1642,10 @@ vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
                                           *src.reladdr);
 
    /* Now handle scratch access on src */
-   if (src.file == GRF && scratch_loc[src.reg] != -1) {
+   if (src.file == GRF && scratch_loc[src.nr] != -1) {
       dst_reg temp = dst_reg(this, glsl_type::vec4_type);
-      emit_scratch_read(block, inst, temp, src, scratch_loc[src.reg]);
-      src.reg = temp.reg;
+      emit_scratch_read(block, inst, temp, src, scratch_loc[src.nr]);
+      src.nr = temp.nr;
       src.reg_offset = temp.reg_offset;
       src.reladdr = NULL;
    }
@@ -1671,17 +1671,17 @@ vec4_visitor::move_grf_array_access_to_scratch()
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       if (inst->dst.file == GRF && inst->dst.reladdr) {
-         if (scratch_loc[inst->dst.reg] == -1) {
-            scratch_loc[inst->dst.reg] = last_scratch;
-            last_scratch += this->alloc.sizes[inst->dst.reg];
+         if (scratch_loc[inst->dst.nr] == -1) {
+            scratch_loc[inst->dst.nr] = last_scratch;
+            last_scratch += this->alloc.sizes[inst->dst.nr];
          }
 
          for (src_reg *iter = inst->dst.reladdr;
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = last_scratch;
-               last_scratch += this->alloc.sizes[iter->reg];
+            if (iter->file == GRF && scratch_loc[iter->nr] == -1) {
+               scratch_loc[iter->nr] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->nr];
             }
          }
       }
@@ -1690,9 +1690,9 @@ vec4_visitor::move_grf_array_access_to_scratch()
          for (src_reg *iter = &inst->src[i];
               iter->reladdr;
               iter = iter->reladdr) {
-            if (iter->file == GRF && scratch_loc[iter->reg] == -1) {
-               scratch_loc[iter->reg] = last_scratch;
-               last_scratch += this->alloc.sizes[iter->reg];
+            if (iter->file == GRF && scratch_loc[iter->nr] == -1) {
+               scratch_loc[iter->nr] = last_scratch;
+               last_scratch += this->alloc.sizes[iter->nr];
             }
          }
       }
@@ -1718,8 +1718,8 @@ vec4_visitor::move_grf_array_access_to_scratch()
       /* Now that we have handled any (possibly recursive) reladdr scratch
        * accesses for dst we can safely do the scratch write for dst itself
        */
-      if (inst->dst.file == GRF && scratch_loc[inst->dst.reg] != -1)
-         emit_scratch_write(block, inst, scratch_loc[inst->dst.reg]);
+      if (inst->dst.file == GRF && scratch_loc[inst->dst.nr] != -1)
+         emit_scratch_write(block, inst, scratch_loc[inst->dst.nr]);
 
       /* Now handle scratch access on any src. In this case, since inst->src[i]
        * already is a src_reg, we can just call emit_resolve_reladdr with
@@ -1788,7 +1788,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
             if (inst->src[i].file != UNIFORM || !inst->src[i].reladdr)
                continue;
 
-            int uniform = inst->src[i].reg;
+            int uniform = inst->src[i].nr;
 
             if (inst->src[i].reladdr->reladdr)
                nested_reladdr = true;  /* will need another pass */
@@ -1819,7 +1819,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
                                     pull_constant_loc[uniform]);
 
             inst->src[i].file = temp.file;
-            inst->src[i].reg = temp.reg;
+            inst->src[i].nr = temp.nr;
             inst->src[i].reg_offset = temp.reg_offset;
             inst->src[i].reladdr = NULL;
          }

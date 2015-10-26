@@ -291,7 +291,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
       return false;
 
    assert(entry->dst.file == GRF);
-   if (inst->src[arg].reg != entry->dst.reg)
+   if (inst->src[arg].nr != entry->dst.nr)
       return false;
 
    /* Bail if inst is reading a range that isn't contained in the range
@@ -380,7 +380,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    }
 
    inst->src[arg].file = entry->src.file;
-   inst->src[arg].reg = entry->src.reg;
+   inst->src[arg].nr = entry->src.nr;
    inst->src[arg].stride *= entry->src.stride;
    inst->saturate = inst->saturate || entry->saturate;
 
@@ -460,7 +460,7 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
          continue;
 
       assert(entry->dst.file == GRF);
-      if (inst->src[i].reg != entry->dst.reg)
+      if (inst->src[i].nr != entry->dst.nr)
          continue;
 
       /* Bail if inst is reading a range that isn't contained in the range
@@ -654,7 +654,7 @@ can_propagate_from(fs_inst *inst)
    return (inst->opcode == BRW_OPCODE_MOV &&
            inst->dst.file == GRF &&
            ((inst->src[0].file == GRF &&
-             (inst->src[0].reg != inst->dst.reg ||
+             (inst->src[0].nr != inst->dst.nr ||
               inst->src[0].reg_offset != inst->dst.reg_offset)) ||
             inst->src[0].file == ATTR ||
             inst->src[0].file == UNIFORM ||
@@ -678,7 +678,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          if (inst->src[i].file != GRF)
             continue;
 
-         foreach_in_list(acp_entry, entry, &acp[inst->src[i].reg % ACP_HASH_SIZE]) {
+         foreach_in_list(acp_entry, entry, &acp[inst->src[i].nr % ACP_HASH_SIZE]) {
             if (try_constant_propagate(inst, entry))
                progress = true;
 
@@ -689,7 +689,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
 
       /* kill the destination from the ACP */
       if (inst->dst.file == GRF) {
-	 foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.reg % ACP_HASH_SIZE]) {
+         foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.nr % ACP_HASH_SIZE]) {
 	    if (inst->overwrites_reg(entry->dst)) {
 	       entry->remove();
 	    }
@@ -716,7 +716,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          entry->regs_written = inst->regs_written;
          entry->opcode = inst->opcode;
          entry->saturate = inst->saturate;
-	 acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+         acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
       } else if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD &&
                  inst->dst.file == GRF) {
          int offset = 0;
@@ -731,7 +731,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                entry->regs_written = regs_written;
                entry->opcode = inst->opcode;
                if (!entry->dst.equals(inst->src[i])) {
-                  acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+                  acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
                } else {
                   ralloc_free(entry);
                }
@@ -774,7 +774,7 @@ fs_visitor::opt_copy_propagate()
       for (int i = 0; i < dataflow.num_acp; i++) {
          if (BITSET_TEST(dataflow.bd[block->num].livein, i)) {
             struct acp_entry *entry = dataflow.acp[i];
-            in_acp[entry->dst.reg % ACP_HASH_SIZE].push_tail(entry);
+            in_acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
          }
       }
 

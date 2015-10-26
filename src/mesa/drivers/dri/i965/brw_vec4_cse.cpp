@@ -233,7 +233,7 @@ vec4_visitor::opt_cse_local(bblock_t *block)
              * overwrote.
              */
             if (inst->dst.file == entry->generator->src[i].file &&
-                inst->dst.reg == entry->generator->src[i].reg) {
+                inst->dst.nr == entry->generator->src[i].nr) {
                entry->remove();
                ralloc_free(entry);
                break;

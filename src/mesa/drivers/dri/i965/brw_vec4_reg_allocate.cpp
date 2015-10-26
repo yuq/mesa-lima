@@ -35,7 +35,7 @@ static void
 assign(unsigned int *reg_hw_locations, backend_reg *reg)
 {
    if (reg->file == GRF) {
-      reg->reg = reg_hw_locations[reg->reg] + reg->reg_offset;
+      reg->nr = reg_hw_locations[reg->nr] + reg->reg_offset;
       reg->reg_offset = 0;
    }
 }
@@ -56,11 +56,11 @@ vec4_visitor::reg_allocate_trivial()
 
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       if (inst->dst.file == GRF)
-	 virtual_grf_used[inst->dst.reg] = true;
+         virtual_grf_used[inst->dst.nr] = true;
 
       for (unsigned i = 0; i < 3; i++) {
 	 if (inst->src[i].file == GRF)
-	    virtual_grf_used[inst->src[i].reg] = true;
+            virtual_grf_used[inst->src[i].nr] = true;
       }
    }
 
@@ -297,7 +297,7 @@ can_use_scratch_for_source(const vec4_instruction *inst, unsigned i,
 
    /* See if any previous source in the same instructions reads scratch_reg */
    for (unsigned n = 0; n < i; n++) {
-      if (inst->src[n].file == GRF && inst->src[n].reg == scratch_reg)
+      if (inst->src[n].file == GRF && inst->src[n].nr == scratch_reg)
          prev_inst_read_scratch_reg = true;
    }
 
@@ -310,7 +310,7 @@ can_use_scratch_for_source(const vec4_instruction *inst, unsigned i,
        * it if the write is not conditional and the channels we write are
        * compatible with our read mask
        */
-      if (prev_inst->dst.file == GRF && prev_inst->dst.reg == scratch_reg) {
+      if (prev_inst->dst.file == GRF && prev_inst->dst.nr == scratch_reg) {
          return (!prev_inst->predicate || prev_inst->opcode == BRW_OPCODE_SEL) &&
                 (brw_mask_for_swizzle(inst->src[i].swizzle) &
                  ~prev_inst->dst.writemask) == 0;
@@ -330,7 +330,7 @@ can_use_scratch_for_source(const vec4_instruction *inst, unsigned i,
       int n;
       for (n = 0; n < 3; n++) {
          if (prev_inst->src[n].file == GRF &&
-             prev_inst->src[n].reg == scratch_reg) {
+             prev_inst->src[n].nr == scratch_reg) {
             prev_inst_read_scratch_reg = true;
             break;
          }
@@ -379,18 +379,18 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
              * previous instruction, in which case we'll just reuse the scratch
              * reg for this instruction.
              */
-            if (!can_use_scratch_for_source(inst, i, inst->src[i].reg)) {
-               spill_costs[inst->src[i].reg] += loop_scale;
+            if (!can_use_scratch_for_source(inst, i, inst->src[i].nr)) {
+               spill_costs[inst->src[i].nr] += loop_scale;
                if (inst->src[i].reladdr)
-                  no_spill[inst->src[i].reg] = true;
+                  no_spill[inst->src[i].nr] = true;
             }
          }
       }
 
       if (inst->dst.file == GRF) {
-         spill_costs[inst->dst.reg] += loop_scale;
+         spill_costs[inst->dst.nr] += loop_scale;
          if (inst->dst.reladdr)
-            no_spill[inst->dst.reg] = true;
+            no_spill[inst->dst.nr] = true;
       }
 
       switch (inst->opcode) {
@@ -407,10 +407,10 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
       case SHADER_OPCODE_GEN4_SCRATCH_WRITE:
          for (int i = 0; i < 3; i++) {
             if (inst->src[i].file == GRF)
-               no_spill[inst->src[i].reg] = true;
+               no_spill[inst->src[i].nr] = true;
          }
          if (inst->dst.file == GRF)
-            no_spill[inst->dst.reg] = true;
+            no_spill[inst->dst.nr] = true;
          break;
 
       default:
@@ -445,7 +445,7 @@ vec4_visitor::spill_reg(int spill_reg_nr)
    int scratch_reg = -1;
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
-         if (inst->src[i].file == GRF && inst->src[i].reg == spill_reg_nr) {
+         if (inst->src[i].file == GRF && inst->src[i].nr == spill_reg_nr) {
             if (scratch_reg == -1 ||
                 !can_use_scratch_for_source(inst, i, scratch_reg)) {
                /* We need to unspill anyway so make sure we read the full vec4
@@ -455,19 +455,19 @@ vec4_visitor::spill_reg(int spill_reg_nr)
                 */
                scratch_reg = alloc.allocate(1);
                src_reg temp = inst->src[i];
-               temp.reg = scratch_reg;
+               temp.nr = scratch_reg;
                temp.swizzle = BRW_SWIZZLE_XYZW;
                emit_scratch_read(block, inst,
                                  dst_reg(temp), inst->src[i], spill_offset);
             }
             assert(scratch_reg != -1);
-            inst->src[i].reg = scratch_reg;
+            inst->src[i].nr = scratch_reg;
          }
       }
 
-      if (inst->dst.file == GRF && inst->dst.reg == spill_reg_nr) {
+      if (inst->dst.file == GRF && inst->dst.nr == spill_reg_nr) {
          emit_scratch_write(block, inst, spill_offset);
-         scratch_reg = inst->dst.reg;
+         scratch_reg = inst->dst.nr;
       }
    }
 

@@ -59,13 +59,13 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 
    switch (reg->file) {
    case MRF:
-      assert((reg->reg & ~(1 << 7)) < BRW_MAX_MRF(gen));
+      assert((reg->nr & ~(1 << 7)) < BRW_MAX_MRF(gen));
       /* Fallthrough */
    case GRF:
       if (reg->stride == 0) {
-         brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->reg, 0);
+         brw_reg = brw_vec1_reg(brw_file_from_reg(reg), reg->nr, 0);
       } else if (inst->exec_size < 8) {
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
+         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->nr, 0);
          brw_reg = stride(brw_reg, inst->exec_size * reg->stride,
                           inst->exec_size, reg->stride);
       } else {
@@ -78,7 +78,7 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
           * So, for registers with width > 8, we have to use a width of 8
           * and trust the compression state to sort out the exec size.
           */
-         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->reg, 0);
+         brw_reg = brw_vec8_reg(brw_file_from_reg(reg), reg->nr, 0);
          brw_reg = stride(brw_reg, 8 * reg->stride, 8, reg->stride);
       }
 

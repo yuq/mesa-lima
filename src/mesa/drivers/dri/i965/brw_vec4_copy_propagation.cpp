@@ -271,7 +271,7 @@ try_copy_propagate(const struct brw_device_info *devinfo,
    for (int i = 1; i < 4; i++) {
       /* This is equals() except we don't care about the swizzle. */
       if (value.file != entry->value[i]->file ||
-	  value.reg != entry->value[i]->reg ||
+          value.nr != entry->value[i]->nr ||
 	  value.reg_offset != entry->value[i]->reg_offset ||
 	  value.type != entry->value[i]->type ||
 	  value.negate != entry->value[i]->negate ||
@@ -431,7 +431,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
          if (inst->regs_read(i) != 1)
             continue;
 
-	 int reg = (alloc.offsets[inst->src[i].reg] +
+         int reg = (alloc.offsets[inst->src[i].nr] +
 		    inst->src[i].reg_offset);
 
 	 /* Find the regs that each swizzle component came from.
@@ -474,7 +474,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
       /* Track available source registers. */
       if (inst->dst.file == GRF) {
 	 const int reg =
-	    alloc.offsets[inst->dst.reg] + inst->dst.reg_offset;
+            alloc.offsets[inst->dst.nr] + inst->dst.reg_offset;
 
 	 /* Update our destination's current channel values.  For a direct copy,
 	  * the value is the newly propagated source.  Otherwise, we don't know
