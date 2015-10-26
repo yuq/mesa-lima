@@ -698,6 +698,18 @@ valid_draw_indirect(struct gl_context *ctx,
 {
    const GLsizeiptr end = (GLsizeiptr)indirect + size;
 
+   /* OpenGL ES 3.1 spec. section 10.5:
+    *
+    *      "DrawArraysIndirect requires that all data sourced for the
+    *      command, including the DrawArraysIndirectCommand
+    *      structure,  be in buffer objects,  and may not be called when
+    *      the default vertex array object is bound."
+    */
+   if (ctx->Array.VAO == ctx->Array.DefaultVAO) {
+      _mesa_error(ctx, GL_INVALID_OPERATION, "(no VAO bound)");
+      return GL_FALSE;
+   }
+
    if (!_mesa_valid_prim_mode(ctx, mode, name))
       return GL_FALSE;
 
