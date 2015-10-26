@@ -702,12 +702,14 @@ valid_draw_indirect(struct gl_context *ctx,
       return GL_FALSE;
 
 
-   /* From the ARB_draw_indirect specification:
-    * "An INVALID_OPERATION error is generated [...] if <indirect> is no
-    *  word aligned."
+   /* From OpenGL version 4.4. section 10.5
+    * and OpenGL ES 3.1, section 10.6:
+    *
+    *      "An INVALID_VALUE error is generated if indirect is not a
+    *       multiple of the size, in basic machine units, of uint."
     */
    if ((GLsizeiptr)indirect & (sizeof(GLuint) - 1)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
+      _mesa_error(ctx, GL_INVALID_VALUE,
                   "%s(indirect is not aligned)", name);
       return GL_FALSE;
    }
