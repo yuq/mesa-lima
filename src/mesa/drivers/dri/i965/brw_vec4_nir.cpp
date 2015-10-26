@@ -1156,26 +1156,10 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_ball_iequal3:
    case nir_op_ball_fequal4:
    case nir_op_ball_iequal4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      switch (instr->op) {
-      case nir_op_ball_fequal2:
-      case nir_op_ball_iequal2:
-         tmp.writemask = WRITEMASK_XY;
-         break;
-      case nir_op_ball_fequal3:
-      case nir_op_ball_iequal3:
-         tmp.writemask = WRITEMASK_XYZ;
-         break;
-      case nir_op_ball_fequal4:
-      case nir_op_ball_iequal4:
-         tmp.writemask = WRITEMASK_XYZW;
-         break;
-      default:
-         unreachable("not reached");
-      }
-
-      emit(CMP(tmp, op[0], op[1],
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), swizzle(op[1], swiz),
                brw_conditional_for_nir_comparison(instr->op)));
       emit(MOV(dst, src_reg(0)));
       inst = emit(MOV(dst, src_reg(~0)));
@@ -1189,26 +1173,10 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bany_inequal3:
    case nir_op_bany_fnequal4:
    case nir_op_bany_inequal4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      switch (instr->op) {
-      case nir_op_bany_fnequal2:
-      case nir_op_bany_inequal2:
-         tmp.writemask = WRITEMASK_XY;
-         break;
-      case nir_op_bany_fnequal3:
-      case nir_op_bany_inequal3:
-         tmp.writemask = WRITEMASK_XYZ;
-         break;
-      case nir_op_bany_fnequal4:
-      case nir_op_bany_inequal4:
-         tmp.writemask = WRITEMASK_XYZW;
-         break;
-      default:
-         unreachable("not reached");
-      }
-
-      emit(CMP(tmp, op[0], op[1],
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), swizzle(op[1], swiz),
                brw_conditional_for_nir_comparison(instr->op)));
 
       emit(MOV(dst, src_reg(0)));
@@ -1473,11 +1441,11 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
    case nir_op_bany2:
    case nir_op_bany3:
    case nir_op_bany4: {
-      dst_reg tmp = dst_reg(this, glsl_type::bool_type);
-      tmp.writemask = brw_writemask_for_size(nir_op_infos[instr->op].input_sizes[0]);
+      unsigned swiz =
+         brw_swizzle_for_size(nir_op_infos[instr->op].input_sizes[0]);
 
-      emit(CMP(tmp, op[0], src_reg(0), BRW_CONDITIONAL_NZ));
-
+      emit(CMP(dst_null_d(), swizzle(op[0], swiz), src_reg(0),
+               BRW_CONDITIONAL_NZ));
       emit(MOV(dst, src_reg(0)));
       inst = emit(MOV(dst, src_reg(~0)));
       inst->predicate = BRW_PREDICATE_ALIGN16_ANY4H;
