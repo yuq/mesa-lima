@@ -808,6 +808,14 @@ program_resource_location(struct gl_shader_program *shProg,
       if (RESOURCE_UNI(res)->builtin)
          return -1;
 
+     /* From page 79 of the OpenGL 4.2 spec:
+      *
+      *     "A valid name cannot be a structure, an array of structures, or any
+      *     portion of a single vector or a matrix."
+      */
+      if (RESOURCE_UNI(res)->type->without_array()->is_record())
+         return -1;
+
       /* From the GL_ARB_uniform_buffer_object spec:
        *
        *     "The value -1 will be returned if <name> does not correspond to an
