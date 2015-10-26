@@ -1456,10 +1456,7 @@ fs_visitor::calculate_urb_setup()
          for (int slot = first_slot; slot < prev_stage_vue_map.num_slots;
               slot++) {
             int varying = prev_stage_vue_map.slot_to_varying[slot];
-            /* Note that varying == BRW_VARYING_SLOT_COUNT when a slot is
-             * unused.
-             */
-            if (varying != BRW_VARYING_SLOT_COUNT &&
+            if (varying != BRW_VARYING_SLOT_PAD &&
                 (nir->info.inputs_read & BRW_FS_VARYING_INPUT_MASK &
                  BITFIELD64_BIT(varying))) {
                prog_data->urb_setup[varying] = slot - first_slot;
