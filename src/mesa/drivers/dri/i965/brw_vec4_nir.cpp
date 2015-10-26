@@ -1301,26 +1301,18 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
 
    case nir_op_ufind_msb:
    case nir_op_ifind_msb: {
-      src_reg temp = src_reg(this, glsl_type::uint_type);
-
-      inst = emit(FBH(dst_reg(temp), op[0]));
-      inst->dst.writemask = WRITEMASK_XYZW;
+      emit(FBH(retype(dst, BRW_REGISTER_TYPE_UD), op[0]));
 
       /* FBH counts from the MSB side, while GLSL's findMSB() wants the count
        * from the LSB side. If FBH didn't return an error (0xFFFFFFFF), then
        * subtract the result from 31 to convert the MSB count into an LSB count.
        */
+      src_reg src(dst);
+      emit(CMP(dst_null_d(), src, src_reg(-1), BRW_CONDITIONAL_NZ));
 
-      /* FBH only supports UD type for dst, so use a MOV to convert UD to D. */
-      temp.swizzle = BRW_SWIZZLE_NOOP;
-      emit(MOV(dst, temp));
-
-      src_reg src_tmp = src_reg(dst);
-      emit(CMP(dst_null_d(), src_tmp, src_reg(-1), BRW_CONDITIONAL_NZ));
-
-      src_tmp.negate = true;
-      inst = emit(ADD(dst, src_tmp, src_reg(31)));
+      inst = emit(ADD(dst, src, src_reg(31)));
       inst->predicate = BRW_PREDICATE_NORMAL;
+      inst->src[0].negate = true;
       break;
    }
 
