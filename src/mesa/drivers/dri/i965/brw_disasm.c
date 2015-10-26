@@ -726,7 +726,7 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
       switch (_reg_nr & 0xf0) {
       case BRW_ARF_NULL:
          string(file, "null");
-         return -1;
+         break;
       case BRW_ARF_ADDRESS:
          format(file, "a%d", _reg_nr & 0x0f);
          break;
