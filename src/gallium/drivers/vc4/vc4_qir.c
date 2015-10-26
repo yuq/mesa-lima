@@ -190,6 +190,30 @@ qir_is_mul(struct qinst *inst)
 }
 
 bool
+qir_is_float_input(struct qinst *inst)
+{
+        switch (inst->op) {
+        case QOP_FMUL:
+        case QOP_FADD:
+        case QOP_FSUB:
+        case QOP_FMIN:
+        case QOP_FMAX:
+        case QOP_FMINABS:
+        case QOP_FMAXABS:
+        case QOP_FTOI:
+        case QOP_UNPACK_8A_F:
+        case QOP_UNPACK_8B_F:
+        case QOP_UNPACK_8C_F:
+        case QOP_UNPACK_8D_F:
+        case QOP_UNPACK_16A_F:
+        case QOP_UNPACK_16B_F:
+                return true;
+        default:
+                return false;
+        }
+}
+
+bool
 qir_is_raw_mov(struct qinst *inst)
 {
         return (inst->op == QOP_MOV &&
