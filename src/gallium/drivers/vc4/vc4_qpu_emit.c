@@ -227,6 +227,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                          */
                         [QOP_MOV] = { QPU_A_OR },
                         [QOP_FMOV] = { QPU_A_FMAX },
+                        [QOP_MMOV] = { QPU_M_V8MIN },
                 };
 
                 uint64_t unpack = 0;
@@ -346,25 +347,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         if (dst.mux != QPU_MUX_R4)
                                 queue(c, qpu_a_MOV(dst, qpu_r4()));
 
-                        break;
-
-                case QOP_PACK_8888_F:
-                        queue(c, qpu_m_MOV(dst, src[0]));
-                        *last_inst(c) |= QPU_PM;
-                        *last_inst(c) |= QPU_SET_FIELD(QPU_PACK_MUL_8888,
-                                                       QPU_PACK);
-                        break;
-
-                case QOP_PACK_8A_F:
-                case QOP_PACK_8B_F:
-                case QOP_PACK_8C_F:
-                case QOP_PACK_8D_F:
-                        queue(c,
-                              qpu_m_MOV(dst, src[0]) |
-                              QPU_PM |
-                              QPU_SET_FIELD(QPU_PACK_MUL_8A +
-                                            qinst->op - QOP_PACK_8A_F,
-                                            QPU_PACK));
                         break;
 
                 case QOP_FRAG_X:

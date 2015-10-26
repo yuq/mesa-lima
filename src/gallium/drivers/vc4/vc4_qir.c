@@ -37,6 +37,7 @@ struct qir_op_info {
 static const struct qir_op_info qir_op_info[] = {
         [QOP_MOV] = { "mov", 1, 1 },
         [QOP_FMOV] = { "fmov", 1, 1 },
+        [QOP_MMOV] = { "mmov", 1, 1 },
         [QOP_FADD] = { "fadd", 1, 2 },
         [QOP_FSUB] = { "fsub", 1, 2 },
         [QOP_FMUL] = { "fmul", 1, 2 },
@@ -77,11 +78,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_RSQ] = { "rsq", 1, 1, false, true },
         [QOP_EXP2] = { "exp2", 1, 2, false, true },
         [QOP_LOG2] = { "log2", 1, 2, false, true },
-        [QOP_PACK_8888_F] = { "pack_8888_f", 1, 1 },
-        [QOP_PACK_8A_F] = { "pack_8a_f", 1, 1 },
-        [QOP_PACK_8B_F] = { "pack_8b_f", 1, 1 },
-        [QOP_PACK_8C_F] = { "pack_8c_f", 1, 1 },
-        [QOP_PACK_8D_F] = { "pack_8d_f", 1, 1 },
         [QOP_TLB_DISCARD_SETUP] = { "discard", 0, 1, true },
         [QOP_TLB_STENCIL_SETUP] = { "tlb_stencil_setup", 0, 1, true },
         [QOP_TLB_Z_WRITE] = { "tlb_z", 0, 1, true },
@@ -165,6 +161,7 @@ bool
 qir_is_mul(struct qinst *inst)
 {
         switch (inst->op) {
+        case QOP_MMOV:
         case QOP_FMUL:
         case QOP_MUL24:
         case QOP_V8MULD:
@@ -201,7 +198,8 @@ bool
 qir_is_raw_mov(struct qinst *inst)
 {
         return ((inst->op == QOP_MOV ||
-                 inst->op == QOP_FMOV) &&
+                 inst->op == QOP_FMOV ||
+                 inst->op == QOP_MMOV) &&
                 !inst->dst.pack &&
                 !inst->src[0].pack);
 }

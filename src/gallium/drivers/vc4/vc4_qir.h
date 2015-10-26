@@ -66,6 +66,7 @@ enum qop {
         QOP_UNDEF,
         QOP_MOV,
         QOP_FMOV,
+        QOP_MMOV,
         QOP_FADD,
         QOP_FSUB,
         QOP_FMUL,
@@ -112,11 +113,6 @@ enum qop {
         QOP_LOG2,
         QOP_VW_SETUP,
         QOP_VR_SETUP,
-        QOP_PACK_8888_F,
-        QOP_PACK_8A_F,
-        QOP_PACK_8B_F,
-        QOP_PACK_8C_F,
-        QOP_PACK_8D_F,
         QOP_TLB_DISCARD_SETUP,
         QOP_TLB_STENCIL_SETUP,
         QOP_TLB_Z_WRITE,
@@ -557,6 +553,7 @@ qir_##name(struct vc4_compile *c, struct qreg dest, struct qreg a)       \
 
 QIR_ALU1(MOV)
 QIR_ALU1(FMOV)
+QIR_ALU1(MMOV)
 QIR_ALU2(FADD)
 QIR_ALU2(FSUB)
 QIR_ALU2(FMUL)
@@ -597,11 +594,6 @@ QIR_ALU1(RCP)
 QIR_ALU1(RSQ)
 QIR_ALU1(EXP2)
 QIR_ALU1(LOG2)
-QIR_ALU1(PACK_8888_F)
-QIR_PACK(PACK_8A_F)
-QIR_PACK(PACK_8B_F)
-QIR_PACK(PACK_8C_F)
-QIR_PACK(PACK_8D_F)
 QIR_ALU1(VARY_ADD_C)
 QIR_NODST_2(TEX_S)
 QIR_NODST_2(TEX_T)
@@ -652,12 +644,21 @@ qir_UNPACK_16_I(struct vc4_compile *c, struct qreg src, int i)
         return t;
 }
 
-static inline struct qreg
+static inline void
 qir_PACK_8_F(struct vc4_compile *c, struct qreg dest, struct qreg val, int chan)
 {
-        qir_emit(c, qir_inst(QOP_PACK_8A_F + chan, dest, val, c->undef));
+        assert(!dest.pack);
+        dest.pack = QPU_PACK_MUL_8A + chan;
+        qir_emit(c, qir_inst(QOP_MMOV, dest, val, c->undef));
         if (dest.file == QFILE_TEMP)
                 c->defs[dest.index] = NULL;
+}
+
+static inline struct qreg
+qir_PACK_8888_F(struct vc4_compile *c, struct qreg val)
+{
+        struct qreg dest = qir_MMOV(c, val);
+        c->defs[dest.index]->dst.pack = QPU_PACK_MUL_8888;
         return dest;
 }
 
