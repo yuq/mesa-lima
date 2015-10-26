@@ -908,7 +908,6 @@ src_ia1(FILE *file,
         unsigned _addr_subreg_nr,
         unsigned _negate,
         unsigned __abs,
-        unsigned _addr_mode,
         unsigned _horiz_stride, unsigned _width, unsigned _vert_stride)
 {
    int err = 0;
@@ -1143,7 +1142,6 @@ src0(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
                         brw_inst_src0_ia_subreg_nr(devinfo, inst),
                         brw_inst_src0_negate(devinfo, inst),
                         brw_inst_src0_abs(devinfo, inst),
-                        brw_inst_src0_address_mode(devinfo, inst),
                         brw_inst_src0_hstride(devinfo, inst),
                         brw_inst_src0_width(devinfo, inst),
                         brw_inst_src0_vstride(devinfo, inst));
@@ -1200,7 +1198,6 @@ src1(FILE *file, const struct brw_device_info *devinfo, brw_inst *inst)
                         brw_inst_src1_ia_subreg_nr(devinfo, inst),
                         brw_inst_src1_negate(devinfo, inst),
                         brw_inst_src1_abs(devinfo, inst),
-                        brw_inst_src1_address_mode(devinfo, inst),
                         brw_inst_src1_hstride(devinfo, inst),
                         brw_inst_src1_width(devinfo, inst),
                         brw_inst_src1_vstride(devinfo, inst));
