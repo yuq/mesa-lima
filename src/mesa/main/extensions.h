@@ -59,7 +59,7 @@ _mesa_get_enabled_extension(struct gl_context *ctx, GLuint index);
 /**
  * \brief An element of the \c extension_table.
  */
-struct extension {
+struct mesa_extension {
    /** Name of extension, such as "GL_ARB_depth_clamp". */
    const char *name;
 
@@ -75,7 +75,7 @@ struct extension {
    /** Year the extension was proposed or approved.  Used to sort the 
     * extension string chronologically. */
    uint16_t year;
-} extern const extension_table[];
+} extern const _mesa_extension_table[];
 
 
 /* Generate enums for the functions below */
@@ -92,7 +92,7 @@ static inline bool \
 _mesa_has_##name_str(const struct gl_context *ctx) \
 { \
    return ctx->Extensions.driver_cap && (ctx->Version >= \
-          extension_table[MESA_EXTENSION_##name_str].version[ctx->API]); \
+          _mesa_extension_table[MESA_EXTENSION_##name_str].version[ctx->API]); \
 }
 #include "extensions_table.h"
 #undef EXT
