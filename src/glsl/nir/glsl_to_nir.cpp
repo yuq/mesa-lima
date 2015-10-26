@@ -392,8 +392,6 @@ nir_visitor::visit(ir_variable *ir)
 
    var->data.index = ir->data.index;
    var->data.binding = ir->data.binding;
-   /* XXX Get rid of buffer_index */
-   var->data.atomic.buffer_index = ir->data.binding;
    var->data.atomic.offset = ir->data.atomic.offset;
    var->data.image.read_only = ir->data.image_read_only;
    var->data.image.write_only = ir->data.image_write_only;

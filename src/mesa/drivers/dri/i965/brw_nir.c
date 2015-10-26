@@ -249,8 +249,10 @@ brw_create_nir(struct brw_context *brw,
    nir_lower_system_values(nir);
    nir_validate_shader(nir);
 
-   nir_lower_atomics(nir);
-   nir_validate_shader(nir);
+   if (shader_prog) {
+      nir_lower_atomics(nir, shader_prog);
+      nir_validate_shader(nir);
+   }
 
    nir_optimize(nir, is_scalar);
 

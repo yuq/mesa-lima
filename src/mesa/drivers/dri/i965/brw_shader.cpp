@@ -1191,9 +1191,9 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
       stage_prog_data->binding_table.gather_texture_start = 0xd0d0d0d0;
    }
 
-   if (shader_prog && shader_prog->NumAtomicBuffers) {
+   if (shader && shader->NumAtomicBuffers) {
       stage_prog_data->binding_table.abo_start = next_binding_table_offset;
-      next_binding_table_offset += shader_prog->NumAtomicBuffers;
+      next_binding_table_offset += shader->NumAtomicBuffers;
    } else {
       stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }

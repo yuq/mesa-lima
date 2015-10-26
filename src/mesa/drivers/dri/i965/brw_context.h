@@ -1463,7 +1463,7 @@ void brw_upload_ubo_surfaces(struct brw_context *brw,
                              struct brw_stage_prog_data *prog_data,
                              bool dword_pitch);
 void brw_upload_abo_surfaces(struct brw_context *brw,
-                             struct gl_shader_program *prog,
+                             struct gl_shader *shader,
                              struct brw_stage_state *stage_state,
                              struct brw_stage_prog_data *prog_data);
 void brw_upload_image_surfaces(struct brw_context *brw,

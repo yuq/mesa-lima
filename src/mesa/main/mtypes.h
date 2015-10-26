@@ -2389,6 +2389,9 @@ struct gl_shader
     */
    GLuint NumImages;
 
+   struct gl_active_atomic_buffer **AtomicBuffers;
+   unsigned NumAtomicBuffers;
+
    /**
     * Whether early fragment tests are enabled as defined by
     * ARB_shader_image_load_store.
@@ -4496,7 +4499,7 @@ static inline bool
 _mesa_active_fragment_shader_has_atomic_ops(const struct gl_context *ctx)
 {
    return ctx->Shader._CurrentFragmentProgram != NULL &&
-      ctx->Shader._CurrentFragmentProgram->NumAtomicBuffers > 0;
+      ctx->Shader._CurrentFragmentProgram->_LinkedShaders[MESA_SHADER_FRAGMENT]->NumAtomicBuffers > 0;
 }
 
 #ifdef __cplusplus
