@@ -209,6 +209,11 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         M(V8ADDS),
                         M(V8SUBS),
                         M(MUL24),
+
+                        /* If we replicate src[0] out to src[1], this works
+                         * out the same as a MOV.
+                         */
+                        [QOP_MOV] = { QPU_A_OR },
                 };
 
                 struct qpu_reg src[4];
@@ -264,14 +269,6 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 }
 
                 switch (qinst->op) {
-                case QOP_MOV:
-                        /* Skip emitting the MOV if it's a no-op. */
-                        if (qir_is_raw_mov(qinst) ||
-                            dst.mux != src[0].mux || dst.addr != src[0].addr) {
-                                queue(c, qpu_a_MOV(dst, src[0]));
-                        }
-                        break;
-
                 case QOP_SEL_X_0_ZS:
                 case QOP_SEL_X_0_ZC:
                 case QOP_SEL_X_0_NS:
@@ -489,6 +486,12 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 default:
                         assert(qinst->op < ARRAY_SIZE(translate));
                         assert(translate[qinst->op].op != 0); /* NOPs */
+
+                        /* Skip emitting the MOV if it's a no-op. */
+                        if (qir_is_raw_mov(qinst) &&
+                            dst.mux == src[0].mux && dst.addr == src[0].addr) {
+                                break;
+                        }
 
                         /* If we have only one source, put it in the second
                          * argument slot as well so that we don't take up
