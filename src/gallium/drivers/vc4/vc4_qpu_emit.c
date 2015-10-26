@@ -125,6 +125,27 @@ fixup_raddr_conflict(struct vc4_compile *c,
         }
 }
 
+static void
+set_last_dst_pack(struct vc4_compile *c, struct qinst *inst)
+{
+        bool had_pm = *last_inst(c) & QPU_PM;
+        bool had_ws = *last_inst(c) & QPU_WS;
+        uint32_t unpack = QPU_GET_FIELD(*last_inst(c), QPU_UNPACK);
+
+        if (!inst->dst.pack)
+                return;
+
+        *last_inst(c) |= QPU_SET_FIELD(inst->dst.pack, QPU_PACK);
+
+        if (qir_is_mul(inst)) {
+                assert(!unpack || had_pm);
+                *last_inst(c) |= QPU_PM;
+        } else {
+                assert(!unpack || !had_pm);
+                assert(!had_ws); /* dst must be a-file to pack. */
+        }
+}
+
 void
 vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 {
@@ -450,21 +471,12 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                                 queue(c, qpu_m_alu2(translate[qinst->op].op,
                                                     dst,
                                                     src[0], src[1]));
-                                if (qinst->dst.pack) {
-                                        *last_inst(c) |= QPU_PM;
-                                        *last_inst(c) |= QPU_SET_FIELD(qinst->dst.pack,
-                                                                       QPU_PACK);
-                                }
                         } else {
                                 queue(c, qpu_a_alu2(translate[qinst->op].op,
                                                     dst,
                                                     src[0], src[1]));
-                                if (qinst->dst.pack) {
-                                        assert(dst.mux == QPU_MUX_A);
-                                        *last_inst(c) |= QPU_SET_FIELD(qinst->dst.pack,
-                                                                       QPU_PACK);
-                                }
                         }
+                        set_last_dst_pack(c, qinst);
 
                         break;
                 }
