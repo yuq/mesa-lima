@@ -441,9 +441,7 @@ struct brw_vue_map {
     * directly correspond to a gl_varying_slot, the value comes from
     * brw_varying_slot.
     *
-    * For slots that are not in use, the value is BRW_VARYING_SLOT_COUNT (this
-    * simplifies code that uses the value stored in slot_to_varying to
-    * create a bit mask).
+    * For slots that are not in use, the value is BRW_VARYING_SLOT_PAD.
     */
    signed char slot_to_varying[BRW_VARYING_SLOT_COUNT];
 
