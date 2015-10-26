@@ -431,7 +431,7 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_UNPACK_8C_F:
                 case QOP_UNPACK_8D_F:
                 case QOP_UNPACK_16A_F:
-                case QOP_UNPACK_16B_F: {
+                case QOP_UNPACK_16B_F:
                         if (src[0].mux == QPU_MUX_R4) {
                                 queue(c, qpu_a_MOV(dst, src[0]));
                                 *last_inst(c) |= QPU_PM;
@@ -442,22 +442,12 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                         } else {
                                 assert(src[0].mux == QPU_MUX_A);
 
-                                /* Since we're setting the pack bits, if the
-                                 * destination is in A it would get re-packed.
-                                 */
-                                queue(c, qpu_a_FMAX((dst.mux == QPU_MUX_A ?
-                                                     qpu_rb(31) : dst),
-                                                    src[0], src[0]));
+                                queue(c, qpu_a_FMAX(dst, src[0], src[0]));
                                 *last_inst(c) |=
                                         QPU_SET_FIELD(unpack_map[qinst->op -
                                                                  QOP_UNPACK_8A_F],
                                                       QPU_UNPACK);
-
-                                if (dst.mux == QPU_MUX_A) {
-                                        queue(c, qpu_a_MOV(dst, qpu_rb(31)));
-                                }
                         }
-                }
                         break;
 
                 case QOP_UNPACK_8A_I:
@@ -465,22 +455,13 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
                 case QOP_UNPACK_8C_I:
                 case QOP_UNPACK_8D_I:
                 case QOP_UNPACK_16A_I:
-                case QOP_UNPACK_16B_I: {
+                case QOP_UNPACK_16B_I:
                         assert(src[0].mux == QPU_MUX_A);
 
-                        /* Since we're setting the pack bits, if the
-                         * destination is in A it would get re-packed.
-                         */
-                        queue(c, qpu_a_MOV((dst.mux == QPU_MUX_A ?
-                                            qpu_rb(31) : dst), src[0]));
+                        queue(c, qpu_a_MOV(dst, src[0]));
                         *last_inst(c) |= QPU_SET_FIELD(unpack_map[qinst->op -
                                                                   QOP_UNPACK_8A_I],
                                                        QPU_UNPACK);
-
-                        if (dst.mux == QPU_MUX_A) {
-                                queue(c, qpu_a_MOV(dst, qpu_rb(31)));
-                        }
-                }
                         break;
 
                 default:
