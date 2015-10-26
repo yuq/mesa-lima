@@ -701,6 +701,15 @@ valid_draw_indirect(struct gl_context *ctx,
    if (!_mesa_valid_prim_mode(ctx, mode, name))
       return GL_FALSE;
 
+   /* OpenGL ES 3.1 specification, section 10.5:
+    *
+    *      "An INVALID_OPERATION error is generated if
+    *      transform feedback is active and not paused."
+    */
+   if (_mesa_is_gles31(ctx) && _mesa_is_xfb_active_and_unpaused(ctx)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(TransformFeedback is active and not paused)", name);
+   }
 
    /* From OpenGL version 4.4. section 10.5
     * and OpenGL ES 3.1, section 10.6:
