@@ -20,6 +20,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CPPFLAGS = \
@@ -31,13 +32,4 @@ AM_CPPFLAGS = \
 
 noinst_LTLIBRARIES = libvirgl.la
 
-libvirgl_la_SOURCES = \
-	virgl_screen.c \
-	virgl_resource.c \
-	virgl_buffer.c \
-	virgl_texture.c \
-	virgl_context.c \
-	virgl_encode.c \
-	virgl_query.c \
-	virgl_streamout.c \
-	virgl_tgsi.c
+libvirgl_la_SOURCES = $(C_SOURCES)
