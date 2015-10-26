@@ -159,13 +159,15 @@ calculate_attr_overrides(const struct brw_context *brw,
                          uint16_t *attr_overrides,
                          uint32_t *point_sprite_enables,
                          uint32_t *flat_enables,
-                         uint32_t *urb_entry_read_length)
+                         uint32_t *urb_entry_read_length,
+                         uint32_t *urb_entry_read_offset)
 {
-   const int urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
    uint32_t max_source_attr = 0;
 
    *point_sprite_enables = 0;
    *flat_enables = 0;
+
+   *urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
 
    /* _NEW_LIGHT */
    bool shade_model_flat = brw->ctx.Light.ShadeModel == GL_FLAT;
@@ -228,7 +230,7 @@ calculate_attr_overrides(const struct brw_context *brw,
       /* BRW_NEW_VUE_MAP_GEOM_OUT | _NEW_LIGHT | _NEW_PROGRAM */
       uint16_t attr_override = point_sprite ? 0 :
          get_attr_override(&brw->vue_map_geom_out,
-			   urb_entry_read_offset, attr,
+			   *urb_entry_read_offset, attr,
                            brw->ctx.VertexProgram._TwoSideEnabled,
                            &max_source_attr);
 
@@ -276,7 +278,6 @@ upload_sf_state(struct brw_context *brw)
    bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
    const bool multisampled_fbo = _mesa_geometric_samples(ctx->DrawBuffer) > 1;
 
-   const int urb_entry_read_offset = BRW_SF_URB_ENTRY_READ_OFFSET;
    float point_size;
    uint16_t attr_overrides[16];
    uint32_t point_sprite_origin;
@@ -411,8 +412,10 @@ upload_sf_state(struct brw_context *brw)
     * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
     */
    uint32_t urb_entry_read_length;
+   uint32_t urb_entry_read_offset;
    calculate_attr_overrides(brw, attr_overrides, &point_sprite_enables,
-                            &flat_enables, &urb_entry_read_length);
+                            &flat_enables, &urb_entry_read_length,
+                            &urb_entry_read_offset);
    dw1 |= (urb_entry_read_length << GEN6_SF_URB_ENTRY_READ_LENGTH_SHIFT |
            urb_entry_read_offset << GEN6_SF_URB_ENTRY_READ_OFFSET_SHIFT);
 
