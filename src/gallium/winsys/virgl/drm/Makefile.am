@@ -24,9 +24,9 @@ include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	-I$(top_srcdir)/include \
 	-I$(top_srcdir)/src/gallium/drivers \
-	$(GALLIUM_CFLAGS) \
+	-I$(top_srcdir)/src/gallium/winsys \
+	$(GALLIUM_WINSYS_CFLAGS) \
 	$(LIBDRM_CFLAGS)
 
 noinst_LTLIBRARIES = libvirgldrm.la

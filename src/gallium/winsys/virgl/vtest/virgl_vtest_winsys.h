@@ -28,7 +28,7 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
 #include "state_tracker/sw_winsys.h"
-#include "../drm/virgl_hw.h"
+#include "virgl/drm/virgl_hw.h"
 #include "virgl/virgl_winsys.h"
 #include "util/list.h"
 #include "os/os_thread.h"
