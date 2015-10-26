@@ -113,10 +113,7 @@ src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 
    this->file = IMM;
    this->type = BRW_REGISTER_TYPE_VF;
-   this->ud = (vf0 <<  0) |
-                               (vf1 <<  8) |
-                               (vf2 << 16) |
-                               (vf3 << 24);
+   this->ud = (vf0 <<  0) | (vf1 <<  8) | (vf2 << 16) | (vf3 << 24);
 }
 
 src_reg::src_reg(struct brw_reg reg) :

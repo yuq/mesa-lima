@@ -147,8 +147,7 @@ try_constant_propagate(const struct brw_device_info *devinfo,
    }
 
    if (value.type == BRW_REGISTER_TYPE_VF)
-      value.ud = swizzle_vf_imm(value.ud,
-                                                 inst->src[arg].swizzle);
+      value.ud = swizzle_vf_imm(value.ud, inst->src[arg].swizzle);
 
    switch (inst->opcode) {
    case BRW_OPCODE_MOV:
