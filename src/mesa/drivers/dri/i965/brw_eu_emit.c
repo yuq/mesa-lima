@@ -410,7 +410,7 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
          if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
             brw_inst_set_src0_ia1_addr_imm(devinfo, inst, reg.dw1.bits.indirect_offset);
 	 } else {
-            brw_inst_set_src0_ia_subreg_nr(devinfo, inst, reg.dw1.bits.indirect_offset);
+            brw_inst_set_src0_ia16_addr_imm(devinfo, inst, reg.dw1.bits.indirect_offset);
 	 }
       }
 
