@@ -42,9 +42,13 @@ static uint32_t brw_file_from_reg(fs_reg *reg)
       return BRW_MESSAGE_REGISTER_FILE;
    case IMM:
       return BRW_IMMEDIATE_VALUE;
-   default:
+   case BAD_FILE:
+   case HW_REG:
+   case ATTR:
+   case UNIFORM:
       unreachable("not reached");
    }
+   return 0;
 }
 
 static struct brw_reg
@@ -116,7 +120,8 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
       /* Probably unused. */
       brw_reg = brw_null_reg();
       break;
-   default:
+   case ATTR:
+   case UNIFORM:
       unreachable("not reached");
    }
    if (reg->abs)

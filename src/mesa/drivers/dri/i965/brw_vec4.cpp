@@ -1427,9 +1427,10 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case BAD_FILE:
       fprintf(file, "(null)");
       break;
-   default:
-      fprintf(file, "???");
-      break;
+   case IMM:
+   case ATTR:
+   case UNIFORM:
+      unreachable("not reached");
    }
    if (inst->dst.writemask != WRITEMASK_XYZW) {
       fprintf(file, ".");
@@ -1521,9 +1522,8 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case BAD_FILE:
          fprintf(file, "(null)");
          break;
-      default:
-         fprintf(file, "???");
-         break;
+      case MRF:
+         unreachable("not reached");
       }
 
       /* Don't print .0; and only VGRFs have reg_offsets and sizes */
@@ -1839,7 +1839,8 @@ vec4_visitor::convert_to_hw_regs()
             reg = brw_null_reg();
             break;
 
-         default:
+         case MRF:
+         case ATTR:
             unreachable("not reached");
          }
          src.fixed_hw_reg = reg;
@@ -1871,7 +1872,9 @@ vec4_visitor::convert_to_hw_regs()
          reg = brw_null_reg();
          break;
 
-      default:
+      case IMM:
+      case ATTR:
+      case UNIFORM:
          unreachable("not reached");
       }
 

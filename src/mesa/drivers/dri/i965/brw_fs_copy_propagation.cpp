@@ -416,9 +416,10 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
          inst->src[arg].subreg_offset = offset % 32;
       }
       break;
-   default:
-      unreachable("Invalid register file");
-      break;
+
+   case MRF:
+   case IMM:
+      unreachable("not reached");
    }
 
    if (has_source_modifiers) {

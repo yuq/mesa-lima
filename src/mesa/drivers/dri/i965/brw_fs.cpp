@@ -88,8 +88,6 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    case IMM:
    case UNIFORM:
       unreachable("Invalid destination register file");
-   default:
-      unreachable("Invalid register file");
    }
 
    this->writes_accumulator = false;
@@ -845,9 +843,8 @@ fs_inst::regs_read(int arg) const
                           REG_SIZE);
    case MRF:
       unreachable("MRF registers are not allowed as sources");
-   default:
-      unreachable("Invalid register file");
    }
+   return 0;
 }
 
 bool
@@ -4506,9 +4503,8 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       if (inst->dst.fixed_hw_reg.subnr)
          fprintf(file, "+%d", inst->dst.fixed_hw_reg.subnr);
       break;
-   default:
-      fprintf(file, "???");
-      break;
+   case IMM:
+      unreachable("not reached");
    }
    fprintf(file, ":%s, ", brw_reg_type_letters(inst->dst.type));
 
@@ -4600,9 +4596,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             fprintf(file, "+%d", inst->src[i].fixed_hw_reg.subnr);
          if (inst->src[i].fixed_hw_reg.abs)
             fprintf(file, "|");
-         break;
-      default:
-         fprintf(file, "???");
          break;
       }
       if (inst->src[i].abs)

@@ -97,7 +97,9 @@ byte_offset(fs_reg reg, unsigned delta)
    case MRF:
       reg.reg += delta / 32;
       break;
-   default:
+   case IMM:
+   case HW_REG:
+   case UNIFORM:
       assert(delta == 0);
    }
    reg.subreg_offset += delta % 32;
@@ -119,7 +121,7 @@ horiz_offset(fs_reg reg, unsigned delta)
    case MRF:
    case ATTR:
       return byte_offset(reg, delta * reg.stride * type_sz(reg.type));
-   default:
+   case HW_REG:
       assert(delta == 0);
    }
    return reg;
@@ -163,7 +165,6 @@ half(fs_reg reg, unsigned idx)
 
    case ATTR:
    case HW_REG:
-   default:
       unreachable("Cannot take half of this register type");
    }
    return reg;
