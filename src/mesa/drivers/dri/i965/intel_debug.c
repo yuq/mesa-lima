@@ -73,6 +73,7 @@ static const struct debug_control debug_control[] = {
    { "spill_fs",    DEBUG_SPILL_FS },
    { "spill_vec4",  DEBUG_SPILL_VEC4 },
    { "cs",          DEBUG_CS },
+   { "hex",         DEBUG_HEX },
    { NULL,    0 }
 };
 
