@@ -371,7 +371,6 @@ struct radeon_surf {
 
     uint64_t                    dcc_size;
     uint64_t                    dcc_alignment;
-    bool                        dcc_enabled;
 };
 
 struct radeon_bo_list_item {

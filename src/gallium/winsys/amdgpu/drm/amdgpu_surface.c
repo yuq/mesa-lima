@@ -251,7 +251,7 @@ static int compute_level(struct amdgpu_winsys *ws,
 
    surf->bo_size = surf_level->offset + AddrSurfInfoOut->surfSize;
 
-   if (surf->dcc_enabled) {
+   if (AddrSurfInfoIn->flags.dccCompatible) {
       AddrDccIn->colorSurfSize = AddrSurfInfoOut->surfSize;
       AddrDccIn->tileMode = AddrSurfInfoOut->tileMode;
       AddrDccIn->tileInfo = *AddrSurfInfoOut->pTileInfo;
@@ -267,10 +267,11 @@ static int compute_level(struct amdgpu_winsys *ws,
          surf->dcc_size = surf_level->dcc_offset + AddrDccOut->dccRamSize;
          surf->dcc_alignment = MAX2(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
       } else {
-         surf->dcc_enabled = false;
+         surf->dcc_size = 0;
          surf_level->dcc_offset = 0;
       }
    } else {
+      surf->dcc_size = 0;
       surf_level->dcc_offset = 0;
    }
 
@@ -354,10 +355,6 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrDccIn.numSamples = AddrSurfInfoIn.numSamples = surf->nsamples;
    AddrSurfInfoIn.tileIndex = -1;
 
-   surf->dcc_enabled =  !(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
-                        !(surf->flags & RADEON_SURF_SCANOUT) &&
-                        !compressed && AddrDccIn.numSamples <= 1;
-
    /* Set the micro tile type. */
    if (surf->flags & RADEON_SURF_SCANOUT)
       AddrSurfInfoIn.tileType = ADDR_DISPLAYABLE;
@@ -373,7 +370,9 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.flags.display = (surf->flags & RADEON_SURF_SCANOUT) != 0;
    AddrSurfInfoIn.flags.pow2Pad = surf->last_level > 0;
    AddrSurfInfoIn.flags.degrade4Space = 1;
-   AddrSurfInfoIn.flags.dccCompatible = surf->dcc_enabled;
+   AddrSurfInfoIn.flags.dccCompatible = !(surf->flags & RADEON_SURF_Z_OR_SBUFFER) &&
+                                        !(surf->flags & RADEON_SURF_SCANOUT) &&
+                                        !compressed && AddrDccIn.numSamples <= 1;
 
    /* This disables incorrect calculations (hacks) in addrlib. */
    AddrSurfInfoIn.flags.noStencil = 1;

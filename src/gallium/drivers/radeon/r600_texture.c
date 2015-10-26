@@ -641,9 +641,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 				return NULL;
 			}
 		}
-		if (rtex->surface.dcc_enabled) {
+		if (rtex->surface.dcc_size)
 			vi_texture_alloc_dcc_separate(rscreen, rtex);
-		}
 	}
 
 	/* Now create the backing buffer. */
