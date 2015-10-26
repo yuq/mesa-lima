@@ -2098,6 +2098,8 @@ emit_stream_out(struct ir3_compile *ctx)
 static void
 emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 {
+	nir_metadata_require(impl, nir_metadata_block_index);
+
 	emit_cf_list(ctx, &impl->body);
 	emit_block(ctx, impl->end_block);
 
