@@ -125,7 +125,6 @@ src_reg::src_reg(struct brw_reg reg) :
    this->file = HW_REG;
    this->reg = 0;
    this->reg_offset = 0;
-   this->swizzle = BRW_SWIZZLE_XXXX;
    this->reladdr = NULL;
 }
 
@@ -188,7 +187,6 @@ dst_reg::dst_reg(struct brw_reg reg) :
    this->file = HW_REG;
    this->reg = 0;
    this->reg_offset = 0;
-   this->writemask = WRITEMASK_XYZW;
    this->reladdr = NULL;
 }
 

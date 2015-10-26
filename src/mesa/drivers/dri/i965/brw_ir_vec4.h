@@ -55,8 +55,6 @@ public:
 
    explicit src_reg(const dst_reg &reg);
 
-   unsigned swizzle; /**< BRW_SWIZZLE_XYZW macros from brw_reg.h. */
-
    src_reg *reladdr;
 };
 
@@ -82,7 +80,6 @@ offset(src_reg reg, unsigned delta)
 static inline src_reg
 swizzle(src_reg reg, unsigned swizzle)
 {
-   assert(reg.file != HW_REG);
    reg.swizzle = brw_compose_swizzle(swizzle, reg.swizzle);
    return reg;
 }
@@ -122,8 +119,6 @@ public:
 
    bool equals(const dst_reg &r) const;
 
-   unsigned writemask; /**< Bitfield of WRITEMASK_[XYZW] */
-
    src_reg *reladdr;
 };
 
@@ -145,7 +140,7 @@ offset(dst_reg reg, unsigned delta)
 static inline dst_reg
 writemask(dst_reg reg, unsigned mask)
 {
-   assert(reg.file != HW_REG && reg.file != IMM);
+   assert(reg.file != IMM);
    assert((reg.writemask & mask) != 0);
    reg.writemask &= mask;
    return reg;
