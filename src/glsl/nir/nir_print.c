@@ -977,6 +977,12 @@ nir_print_shader(nir_shader *shader, FILE *fp)
 
    fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
 
+   if (shader->info.name)
+      fprintf(fp, "name: %s\n", shader->info.name);
+
+   if (shader->info.label)
+      fprintf(fp, "label: %s\n", shader->info.label);
+
    nir_foreach_variable(var, &shader->uniforms) {
       print_var_decl(var, &state);
    }
