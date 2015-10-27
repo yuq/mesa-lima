@@ -3386,6 +3386,12 @@ add_interface_variables(struct gl_shader_program *shProg,
       if (strncmp(var->name, "packed:", 7) == 0)
          continue;
 
+      /* Skip fragdata arrays, these are handled separately
+       * by add_fragdata_arrays.
+       */
+      if (strncmp(var->name, "gl_out_FragData", 15) == 0)
+         continue;
+
       if (!add_program_resource(shProg, programInterface, var,
                                 build_stageref(shProg, var->name,
                                                var->data.mode) | mask))
@@ -3419,6 +3425,26 @@ add_packed_varyings(struct gl_shader_program *shProg, int stage)
          if (!add_program_resource(shProg, iface, var,
                                    build_stageref(shProg, var->name,
                                                   var->data.mode)))
+            return false;
+      }
+   }
+   return true;
+}
+
+static bool
+add_fragdata_arrays(struct gl_shader_program *shProg)
+{
+   struct gl_shader *sh = shProg->_LinkedShaders[MESA_SHADER_FRAGMENT];
+
+   if (!sh || !sh->fragdata_arrays)
+      return true;
+
+   foreach_in_list(ir_instruction, node, sh->fragdata_arrays) {
+      ir_variable *var = node->as_variable();
+      if (var) {
+         assert(var->data.mode == ir_var_shader_out);
+         if (!add_program_resource(shProg, GL_PROGRAM_OUTPUT, var,
+                                   1 << MESA_SHADER_FRAGMENT))
             return false;
       }
    }
@@ -3700,6 +3726,9 @@ build_program_resource_list(struct gl_shader_program *shProg)
       if (!add_packed_varyings(shProg, output_stage))
          return;
    }
+
+   if (!add_fragdata_arrays(shProg))
+      return;
 
    /* Add inputs and outputs to the resource list. */
    if (!add_interface_variables(shProg, shProg->_LinkedShaders[input_stage]->ir,
