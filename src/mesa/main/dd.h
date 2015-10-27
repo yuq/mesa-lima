@@ -202,6 +202,26 @@ struct dd_function_table {
                                    int samples[16]);
 
    /**
+    * Queries different driver parameters for a particular target and format.
+    * Since ARB_internalformat_query2 introduced several new query parameters
+    * over ARB_internalformat_query, having one driver hook for each parameter
+    * is no longer feasible. So this is the generic entry-point for calls
+    * to glGetInternalFormativ and glGetInternalFormati64v, after Mesa has
+    * checked errors and default values.
+    *
+    * \param ctx            GL context
+    * \param target         GL target enum
+    * \param internalFormat GL format enum
+    * \param pname          GL enum that specifies the info to query.
+    * \param params         Buffer to hold the result of the query.
+    */
+   void (*QueryInternalFormat)(struct gl_context *ctx,
+                               GLenum target,
+                               GLenum internalFormat,
+                               GLenum pname,
+                               GLint *params);
+
+   /**
     * Called by glTexImage[123]D() and glCopyTexImage[12]D()
     * Allocate texture memory and copy the user's image to the buffer.
     * The gl_texture_image fields, etc. will be fully initialized.
