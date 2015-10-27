@@ -424,7 +424,6 @@ fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 fs_reg::fs_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->subreg_offset = 0;
    this->reladdr = NULL;
@@ -959,7 +958,7 @@ fs_visitor::vgrf(const glsl_type *const type)
                  brw_type_for_base_type(type));
 }
 
-fs_reg::fs_reg(enum register_file file, int nr)
+fs_reg::fs_reg(enum brw_reg_file file, int nr)
 {
    init();
    this->file = file;
@@ -968,7 +967,7 @@ fs_reg::fs_reg(enum register_file file, int nr)
    this->stride = (file == UNIFORM ? 0 : 1);
 }
 
-fs_reg::fs_reg(enum register_file file, int nr, enum brw_reg_type type)
+fs_reg::fs_reg(enum brw_reg_file file, int nr, enum brw_reg_type type)
 {
    init();
    this->file = file;

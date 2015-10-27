@@ -51,7 +51,7 @@ src_reg::init()
    this->file = BAD_FILE;
 }
 
-src_reg::src_reg(register_file file, int nr, const glsl_type *type)
+src_reg::src_reg(enum brw_reg_file file, int nr, const glsl_type *type)
 {
    init();
 
@@ -119,7 +119,6 @@ src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 src_reg::src_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->reladdr = NULL;
 }
@@ -127,7 +126,6 @@ src_reg::src_reg(struct brw_reg reg) :
 src_reg::src_reg(const dst_reg &reg) :
    backend_reg(static_cast<struct brw_reg>(reg))
 {
-   this->file = (enum register_file)reg.file;
    this->reg_offset = reg.reg_offset;
    this->reladdr = reg.reladdr;
    this->swizzle = brw_swizzle_for_mask(reg.writemask);
@@ -146,7 +144,7 @@ dst_reg::dst_reg()
    init();
 }
 
-dst_reg::dst_reg(register_file file, int nr)
+dst_reg::dst_reg(enum brw_reg_file file, int nr)
 {
    init();
 
@@ -154,18 +152,18 @@ dst_reg::dst_reg(register_file file, int nr)
    this->nr = nr;
 }
 
-dst_reg::dst_reg(register_file file, int nr, const glsl_type *type,
+dst_reg::dst_reg(enum brw_reg_file file, int nr, const glsl_type *type,
                  unsigned writemask)
 {
    init();
 
-   this->file = (enum register_file)file;
+   this->file = file;
    this->nr = nr;
    this->type = brw_type_for_base_type(type);
    this->writemask = writemask;
 }
 
-dst_reg::dst_reg(register_file file, int nr, brw_reg_type type,
+dst_reg::dst_reg(enum brw_reg_file file, int nr, brw_reg_type type,
                  unsigned writemask)
 {
    init();
@@ -179,7 +177,6 @@ dst_reg::dst_reg(register_file file, int nr, brw_reg_type type,
 dst_reg::dst_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->reladdr = NULL;
 }
@@ -187,7 +184,6 @@ dst_reg::dst_reg(struct brw_reg reg) :
 dst_reg::dst_reg(const src_reg &reg) :
    backend_reg(static_cast<struct brw_reg>(reg))
 {
-   this->file = reg.file;
    this->reg_offset = reg.reg_offset;
    this->writemask = brw_mask_for_swizzle(reg.swizzle);
    this->reladdr = reg.reladdr;
@@ -345,7 +341,7 @@ vec4_visitor::opt_vector_float()
    bool progress = false;
 
    int last_reg = -1, last_reg_offset = -1;
-   enum register_file last_reg_file = BAD_FILE;
+   enum brw_reg_file last_reg_file = BAD_FILE;
 
    int remaining_channels = 0;
    uint8_t imm[4];

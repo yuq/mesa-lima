@@ -1404,6 +1404,17 @@ enum PACKED brw_reg_file {
    BRW_GENERAL_REGISTER_FILE      = 1,
    BRW_MESSAGE_REGISTER_FILE      = 2,
    BRW_IMMEDIATE_VALUE            = 3,
+
+   ARF = BRW_ARCHITECTURE_REGISTER_FILE,
+   FIXED_GRF = BRW_GENERAL_REGISTER_FILE,
+   MRF = BRW_MESSAGE_REGISTER_FILE,
+   IMM = BRW_IMMEDIATE_VALUE,
+
+   /* These are not hardware values */
+   VGRF,
+   ATTR,
+   UNIFORM, /* prog_data->params[reg] */
+   BAD_FILE,
 };
 
 #define BRW_HW_REG_TYPE_UD  0

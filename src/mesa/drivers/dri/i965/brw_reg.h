@@ -232,11 +232,11 @@ const char *brw_reg_type_letters(unsigned brw_reg_type);
  */
 struct brw_reg {
    enum brw_reg_type type:4;
-   enum brw_reg_file file:2;
+   enum brw_reg_file file:3;      /* :2 hardware format */
    unsigned negate:1;             /* source only */
    unsigned abs:1;                /* source only */
    unsigned address_mode:1;       /* relative addressing, hopefully! */
-   unsigned pad0:2;
+   unsigned pad0:1;
    unsigned subnr:5;              /* :1 in align16 */
    unsigned nr:16;
 

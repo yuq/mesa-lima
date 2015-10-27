@@ -42,8 +42,8 @@ public:
    explicit fs_reg(uint8_t vf[4]);
    explicit fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3);
    fs_reg(struct brw_reg reg);
-   fs_reg(enum register_file file, int nr);
-   fs_reg(enum register_file file, int nr, enum brw_reg_type type);
+   fs_reg(enum brw_reg_file file, int nr);
+   fs_reg(enum brw_reg_file file, int nr, enum brw_reg_type type);
 
    bool equals(const fs_reg &r) const;
    bool is_contiguous() const;

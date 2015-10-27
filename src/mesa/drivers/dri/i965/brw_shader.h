@@ -38,17 +38,6 @@
 #define MAX_SAMPLER_MESSAGE_SIZE 11
 #define MAX_VGRF_SIZE 16
 
-enum PACKED register_file {
-   ARF,
-   FIXED_GRF,
-   MRF,
-   IMM,
-   VGRF,
-   ATTR,
-   UNIFORM, /* prog_data->params[reg] */
-   BAD_FILE,
-};
-
 #ifdef __cplusplus
 struct backend_reg : public brw_reg
 {
@@ -61,8 +50,6 @@ struct backend_reg : public brw_reg
    bool is_null() const;
    bool is_accumulator() const;
    bool in_range(const backend_reg &r, unsigned n) const;
-
-   enum register_file file; /**< Register file: VGRF, MRF, IMM. */
 
    /**
     * Offset within the virtual register.
