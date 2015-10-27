@@ -93,16 +93,16 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
 {
    shader->info.inputs_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->inputs)
-      shader->info.inputs_read |= (1ull << var->data.location);
+      shader->info.inputs_read |= nir_variable_get_io_mask(var, shader->stage);
 
    /* TODO: Some day we may need to add stream support to NIR */
    shader->info.outputs_written = 0;
    foreach_list_typed(nir_variable, var, node, &shader->outputs)
-      shader->info.outputs_written |= (1ull << var->data.location);
+      shader->info.outputs_written |= nir_variable_get_io_mask(var, shader->stage);
 
    shader->info.system_values_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->system_values)
-      shader->info.system_values_read |= (1ull << var->data.location);
+      shader->info.system_values_read |= nir_variable_get_io_mask(var, shader->stage);
 
    nir_foreach_block(entrypoint, gather_info_block, shader);
 }
