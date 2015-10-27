@@ -184,6 +184,21 @@ dump_VC4_PACKET_GL_INDEXED_PRIMITIVE(void *cl, uint32_t offset, uint32_t hw_offs
 }
 
 static void
+dump_VC4_PACKET_GL_ARRAY_PRIMITIVE(void *cl, uint32_t offset, uint32_t hw_offset)
+{
+        uint8_t *b = cl + offset;
+        uint32_t *count = cl + offset + 1;
+        uint32_t *start = cl + offset + 5;
+
+        fprintf(stderr, "0x%08x 0x%08x:      0x%02x %s\n",
+                offset, hw_offset, b[0], u_prim_name(b[0] & 0x7));
+        fprintf(stderr, "0x%08x 0x%08x:      %d verts\n",
+                offset + 1, hw_offset + 1, *count);
+        fprintf(stderr, "0x%08x 0x%08x:      0x%08x start\n",
+                offset + 5, hw_offset + 5, *start);
+}
+
+static void
 dump_VC4_PACKET_FLAT_SHADE_FLAGS(void *cl, uint32_t offset, uint32_t hw_offset)
 {
         uint32_t *bits = cl + offset;
@@ -380,7 +395,7 @@ static const struct packet_info {
         PACKET_DUMP(VC4_PACKET_LOAD_TILE_BUFFER_GENERAL),
 
         PACKET_DUMP(VC4_PACKET_GL_INDEXED_PRIMITIVE),
-        PACKET(VC4_PACKET_GL_ARRAY_PRIMITIVE),
+        PACKET_DUMP(VC4_PACKET_GL_ARRAY_PRIMITIVE),
 
         PACKET(VC4_PACKET_COMPRESSED_PRIMITIVE),
         PACKET(VC4_PACKET_CLIPPED_COMPRESSED_PRIMITIVE),
