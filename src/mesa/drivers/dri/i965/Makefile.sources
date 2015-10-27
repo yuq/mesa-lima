@@ -123,6 +123,7 @@ i965_FILES = \
 	brw_ff_gs.h \
 	brw_fs_channel_expressions.cpp \
 	brw_fs_vector_splitting.cpp \
+	brw_formatquery.c \
 	brw_gs.c \
 	brw_gs.h \
 	brw_gs_state.c \

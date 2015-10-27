@@ -380,6 +380,7 @@ brw_init_driver_functions(struct brw_context *brw,
       brw_init_conditional_render_functions(functions);
 
    functions->QuerySamplesForFormat = brw_query_samples_for_format;
+   functions->QueryInternalFormat = brw_query_internal_format;
 
    functions->NewTransformFeedback = brw_new_transform_feedback;
    functions->DeleteTransformFeedback = brw_delete_transform_feedback;

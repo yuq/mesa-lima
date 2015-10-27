@@ -1875,6 +1875,11 @@ void brw_emit_depth_stall_flushes(struct brw_context *brw);
 void gen7_emit_vs_workaround_flush(struct brw_context *brw);
 void gen7_emit_cs_stall_flush(struct brw_context *brw);
 
+/* brw_queryformat.c */
+void brw_query_internal_format(struct gl_context *ctx, GLenum target,
+                               GLenum internalFormat, GLenum pname,
+                               GLint *params);
+
 #ifdef __cplusplus
 }
 #endif
