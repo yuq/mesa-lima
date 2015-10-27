@@ -590,7 +590,8 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
          case GL_UNIFORM_BLOCK:
          case GL_SHADER_STORAGE_BLOCK:
             /* Basename match, check if array or struct. */
-            if (name[baselen] == '\0' ||
+            if (rname_has_array_index_zero ||
+                name[baselen] == '\0' ||
                 name[baselen] == '[' ||
                 name[baselen] == '.') {
                return res;
