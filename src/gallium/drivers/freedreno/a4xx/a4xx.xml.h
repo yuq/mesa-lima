@@ -8,13 +8,14 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    364 bytes, from 2015-05-20 20:03:07)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    398 bytes, from 2015-09-24 17:25:31)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1453 bytes, from 2015-05-20 20:03:07)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  10755 bytes, from 2015-09-14 20:46:55)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  14968 bytes, from 2015-05-20 20:12:27)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  67771 bytes, from 2015-09-14 20:46:55)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63970 bytes, from 2015-09-14 20:50:12)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          (  63914 bytes, from 2015-10-27 17:13:16)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2015 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
@@ -489,8 +490,8 @@ static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR(enum adreno_r
 	return ((val) << A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR__SHIFT) & A4XX_RB_MRT_BLEND_CONTROL_ALPHA_DEST_FACTOR__MASK;
 }
 
-#define REG_A4XX_RB_BLEND_RED					0x000020f3
-#define A4XX_RB_BLEND_RED_UINT__MASK				0x00007fff
+#define REG_A4XX_RB_BLEND_RED					0x000020f0
+#define A4XX_RB_BLEND_RED_UINT__MASK				0x0000ffff
 #define A4XX_RB_BLEND_RED_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_RED_UINT(uint32_t val)
 {
@@ -503,8 +504,16 @@ static inline uint32_t A4XX_RB_BLEND_RED_FLOAT(float val)
 	return ((util_float_to_half(val)) << A4XX_RB_BLEND_RED_FLOAT__SHIFT) & A4XX_RB_BLEND_RED_FLOAT__MASK;
 }
 
-#define REG_A4XX_RB_BLEND_GREEN					0x000020f4
-#define A4XX_RB_BLEND_GREEN_UINT__MASK				0x00007fff
+#define REG_A4XX_RB_BLEND_RED_F32				0x000020f1
+#define A4XX_RB_BLEND_RED_F32__MASK				0xffffffff
+#define A4XX_RB_BLEND_RED_F32__SHIFT				0
+static inline uint32_t A4XX_RB_BLEND_RED_F32(float val)
+{
+	return ((fui(val)) << A4XX_RB_BLEND_RED_F32__SHIFT) & A4XX_RB_BLEND_RED_F32__MASK;
+}
+
+#define REG_A4XX_RB_BLEND_GREEN					0x000020f2
+#define A4XX_RB_BLEND_GREEN_UINT__MASK				0x0000ffff
 #define A4XX_RB_BLEND_GREEN_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_GREEN_UINT(uint32_t val)
 {
@@ -517,8 +526,16 @@ static inline uint32_t A4XX_RB_BLEND_GREEN_FLOAT(float val)
 	return ((util_float_to_half(val)) << A4XX_RB_BLEND_GREEN_FLOAT__SHIFT) & A4XX_RB_BLEND_GREEN_FLOAT__MASK;
 }
 
-#define REG_A4XX_RB_BLEND_BLUE					0x000020f5
-#define A4XX_RB_BLEND_BLUE_UINT__MASK				0x00007fff
+#define REG_A4XX_RB_BLEND_GREEN_F32				0x000020f3
+#define A4XX_RB_BLEND_GREEN_F32__MASK				0xffffffff
+#define A4XX_RB_BLEND_GREEN_F32__SHIFT				0
+static inline uint32_t A4XX_RB_BLEND_GREEN_F32(float val)
+{
+	return ((fui(val)) << A4XX_RB_BLEND_GREEN_F32__SHIFT) & A4XX_RB_BLEND_GREEN_F32__MASK;
+}
+
+#define REG_A4XX_RB_BLEND_BLUE					0x000020f4
+#define A4XX_RB_BLEND_BLUE_UINT__MASK				0x0000ffff
 #define A4XX_RB_BLEND_BLUE_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_BLUE_UINT(uint32_t val)
 {
@@ -531,8 +548,16 @@ static inline uint32_t A4XX_RB_BLEND_BLUE_FLOAT(float val)
 	return ((util_float_to_half(val)) << A4XX_RB_BLEND_BLUE_FLOAT__SHIFT) & A4XX_RB_BLEND_BLUE_FLOAT__MASK;
 }
 
+#define REG_A4XX_RB_BLEND_BLUE_F32				0x000020f5
+#define A4XX_RB_BLEND_BLUE_F32__MASK				0xffffffff
+#define A4XX_RB_BLEND_BLUE_F32__SHIFT				0
+static inline uint32_t A4XX_RB_BLEND_BLUE_F32(float val)
+{
+	return ((fui(val)) << A4XX_RB_BLEND_BLUE_F32__SHIFT) & A4XX_RB_BLEND_BLUE_F32__MASK;
+}
+
 #define REG_A4XX_RB_BLEND_ALPHA					0x000020f6
-#define A4XX_RB_BLEND_ALPHA_UINT__MASK				0x00007fff
+#define A4XX_RB_BLEND_ALPHA_UINT__MASK				0x0000ffff
 #define A4XX_RB_BLEND_ALPHA_UINT__SHIFT				0
 static inline uint32_t A4XX_RB_BLEND_ALPHA_UINT(uint32_t val)
 {
@@ -543,6 +568,14 @@ static inline uint32_t A4XX_RB_BLEND_ALPHA_UINT(uint32_t val)
 static inline uint32_t A4XX_RB_BLEND_ALPHA_FLOAT(float val)
 {
 	return ((util_float_to_half(val)) << A4XX_RB_BLEND_ALPHA_FLOAT__SHIFT) & A4XX_RB_BLEND_ALPHA_FLOAT__MASK;
+}
+
+#define REG_A4XX_RB_BLEND_ALPHA_F32				0x000020f7
+#define A4XX_RB_BLEND_ALPHA_F32__MASK				0xffffffff
+#define A4XX_RB_BLEND_ALPHA_F32__SHIFT				0
+static inline uint32_t A4XX_RB_BLEND_ALPHA_F32(float val)
+{
+	return ((fui(val)) << A4XX_RB_BLEND_ALPHA_F32__SHIFT) & A4XX_RB_BLEND_ALPHA_F32__MASK;
 }
 
 #define REG_A4XX_RB_ALPHA_CONTROL				0x000020f8
@@ -2644,20 +2677,6 @@ static inline uint32_t A4XX_PC_HS_PARAM_PRIMTYPE(enum adreno_pa_su_sc_draw val)
 #define REG_A4XX_UNKNOWN_209B					0x0000209b
 
 #define REG_A4XX_UNKNOWN_20EF					0x000020ef
-
-#define REG_A4XX_UNKNOWN_20F0					0x000020f0
-
-#define REG_A4XX_UNKNOWN_20F1					0x000020f1
-
-#define REG_A4XX_UNKNOWN_20F2					0x000020f2
-
-#define REG_A4XX_UNKNOWN_20F7					0x000020f7
-#define A4XX_UNKNOWN_20F7__MASK					0xffffffff
-#define A4XX_UNKNOWN_20F7__SHIFT				0
-static inline uint32_t A4XX_UNKNOWN_20F7(float val)
-{
-	return ((fui(val)) << A4XX_UNKNOWN_20F7__SHIFT) & A4XX_UNKNOWN_20F7__MASK;
-}
 
 #define REG_A4XX_UNKNOWN_2152					0x00002152
 
