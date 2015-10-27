@@ -1014,22 +1014,43 @@ _vtn_variable_store(struct vtn_builder *b,
    dest_deref_tail->child = old_child;
 }
 
+static nir_ssa_def *
+nir_vulkan_resource_index(nir_builder *b, unsigned set, unsigned binding,
+                          nir_variable_mode mode, nir_ssa_def *array_index)
+{
+   if (array_index == NULL)
+      array_index = nir_imm_int(b, 0);
+
+   nir_intrinsic_instr *instr =
+      nir_intrinsic_instr_create(b->shader,
+                                 nir_intrinsic_vulkan_resource_index);
+   instr->src[0] = nir_src_for_ssa(array_index);
+   instr->const_index[0] = set;
+   instr->const_index[1] = binding;
+   instr->const_index[2] = mode;
+
+   nir_ssa_dest_init(&instr->instr, &instr->dest, 1, NULL);
+   nir_builder_instr_insert(b, &instr->instr);
+
+   return &instr->dest.ssa;
+}
+
 static struct vtn_ssa_value *
 _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
-                unsigned set, unsigned binding, nir_ssa_def *index,
-                unsigned offset, nir_ssa_def *indirect,
+                unsigned set, unsigned binding, nir_variable_mode mode,
+                nir_ssa_def *index, unsigned offset, nir_ssa_def *indirect,
                 struct vtn_type *type)
 {
    struct vtn_ssa_value *val = ralloc(b, struct vtn_ssa_value);
    val->type = type->type;
    val->transposed = NULL;
    if (glsl_type_is_vector_or_scalar(type->type)) {
+      nir_ssa_def *res_index = nir_vulkan_resource_index(&b->nb, set, binding,
+                                                         mode, index);
       nir_intrinsic_instr *load = nir_intrinsic_instr_create(b->shader, op);
       load->num_components = glsl_get_vector_elements(type->type);
-      load->const_index[0] = set;
-      load->const_index[1] = binding;
-      load->src[0] = nir_src_for_ssa(index);
-      load->const_index[2] = offset;
+      load->src[0] = nir_src_for_ssa(res_index);
+      load->const_index[0] = offset;
       if (indirect)
          load->src[1] = nir_src_for_ssa(indirect);
       nir_ssa_dest_init(&load->instr, &load->dest, load->num_components, NULL);
@@ -1040,13 +1061,13 @@ _vtn_block_load(struct vtn_builder *b, nir_intrinsic_op op,
       val->elems = ralloc_array(b, struct vtn_ssa_value *, elems);
       if (glsl_type_is_struct(type->type)) {
          for (unsigned i = 0; i < elems; i++) {
-            val->elems[i] = _vtn_block_load(b, op, set, binding, index,
+            val->elems[i] = _vtn_block_load(b, op, set, binding, mode, index,
                                             offset + type->offsets[i],
                                             indirect, type->members[i]);
          }
       } else {
          for (unsigned i = 0; i < elems; i++) {
-            val->elems[i] = _vtn_block_load(b, op, set, binding, index,
+            val->elems[i] = _vtn_block_load(b, op, set, binding, mode, index,
                                             offset + i * type->stride,
                                             indirect, type->array_element);
          }
@@ -1062,6 +1083,7 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
 {
    unsigned set = src->var->data.descriptor_set;
    unsigned binding = src->var->data.binding;
+   nir_variable_mode mode = src->var->data.mode;
 
    nir_deref *deref = &src->deref;
 
@@ -1109,10 +1131,11 @@ vtn_block_load(struct vtn_builder *b, nir_deref_var *src,
    }
 
    /* TODO SSBO's */
-   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_vk_indirect
-                                  : nir_intrinsic_load_ubo_vk;
+   nir_intrinsic_op op = indirect ? nir_intrinsic_load_ubo_indirect
+                                  : nir_intrinsic_load_ubo;
 
-   return _vtn_block_load(b, op, set, binding, index, offset, indirect, type);
+   return _vtn_block_load(b, op, set, binding, mode, index,
+                          offset, indirect, type);
 }
 
 /*
