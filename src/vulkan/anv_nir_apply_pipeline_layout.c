@@ -34,27 +34,6 @@ struct apply_pipeline_layout_state {
    bool progress;
 };
 
-static nir_intrinsic_op
-lowered_op(nir_intrinsic_op op)
-{
-   switch (op) {
-   case nir_intrinsic_load_ubo_vk:
-      return nir_intrinsic_load_ubo;
-   case nir_intrinsic_load_ubo_vk_indirect:
-      return nir_intrinsic_load_ubo_indirect;
-   case nir_intrinsic_load_ssbo_vk:
-      return nir_intrinsic_load_ssbo;
-   case nir_intrinsic_load_ssbo_vk_indirect:
-      return nir_intrinsic_load_ssbo_indirect;
-   case nir_intrinsic_store_ssbo_vk:
-      return nir_intrinsic_store_ssbo;
-   case nir_intrinsic_store_ssbo_vk_indirect:
-      return nir_intrinsic_store_ssbo_indirect;
-   default:
-      unreachable("Invalid intrinsic for lowering");
-   }
-}
-
 static uint32_t
 get_surface_index(unsigned set, unsigned binding,
                   struct apply_pipeline_layout_state *state)
@@ -76,27 +55,11 @@ get_surface_index(unsigned set, unsigned binding,
    return surface_index;
 }
 
-static bool
-try_lower_intrinsic(nir_intrinsic_instr *intrin,
-                    struct apply_pipeline_layout_state *state)
+static void
+lower_res_index_intrinsic(nir_intrinsic_instr *intrin,
+                          struct apply_pipeline_layout_state *state)
 {
    nir_builder *b = &state->builder;
-
-   int block_idx_src;
-   switch (intrin->intrinsic) {
-   case nir_intrinsic_load_ubo_vk:
-   case nir_intrinsic_load_ubo_vk_indirect:
-   case nir_intrinsic_load_ssbo_vk:
-   case nir_intrinsic_load_ssbo_vk_indirect:
-      block_idx_src = 0;
-      break;
-   case nir_intrinsic_store_ssbo_vk:
-   case nir_intrinsic_store_ssbo_vk_indirect:
-      block_idx_src = 1;
-      break;
-   default:
-      return false;
-   }
 
    b->cursor = nir_before_instr(&intrin->instr);
 
@@ -106,25 +69,19 @@ try_lower_intrinsic(nir_intrinsic_instr *intrin,
    uint32_t surface_index = get_surface_index(set, binding, state);
 
    nir_const_value *const_block_idx =
-      nir_src_as_const_value(intrin->src[block_idx_src]);
+      nir_src_as_const_value(intrin->src[0]);
 
    nir_ssa_def *block_index;
    if (const_block_idx) {
       block_index = nir_imm_int(b, surface_index + const_block_idx->u[0]);
    } else {
       block_index = nir_iadd(b, nir_imm_int(b, surface_index),
-                             nir_ssa_for_src(b, intrin->src[block_idx_src], 1));
+                             nir_ssa_for_src(b, intrin->src[0], 1));
    }
 
-   nir_instr_rewrite_src(&intrin->instr, &intrin->src[block_idx_src],
-                         nir_src_for_ssa(block_index));
-
-   intrin->intrinsic = lowered_op(intrin->intrinsic);
-   /* Shift the offset indices down */
-   intrin->const_index[0] = intrin->const_index[2];
-   intrin->const_index[1] = intrin->const_index[3];
-
-   return true;
+   assert(intrin->dest.is_ssa);
+   nir_ssa_def_rewrite_uses(&intrin->dest.ssa, nir_src_for_ssa(block_index));
+   nir_instr_remove(&intrin->instr);
 }
 
 static void
@@ -177,10 +134,14 @@ apply_pipeline_layout_block(nir_block *block, void *void_state)
 
    nir_foreach_instr_safe(block, instr) {
       switch (instr->type) {
-      case nir_instr_type_intrinsic:
-         if (try_lower_intrinsic(nir_instr_as_intrinsic(instr), state))
+      case nir_instr_type_intrinsic: {
+         nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+         if (intrin->intrinsic == nir_intrinsic_vulkan_resource_index) {
+            lower_res_index_intrinsic(intrin, state);
             state->progress = true;
+         }
          break;
+      }
       case nir_instr_type_tex:
          lower_tex(nir_instr_as_tex(instr), state);
          /* All texture instructions need lowering */

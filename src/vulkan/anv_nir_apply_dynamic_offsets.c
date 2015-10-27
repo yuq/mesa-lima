@@ -50,22 +50,27 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 
       unsigned block_idx_src;
       switch (intrin->intrinsic) {
-      case nir_intrinsic_load_ubo_vk:
-      case nir_intrinsic_load_ubo_vk_indirect:
-      case nir_intrinsic_load_ssbo_vk:
-      case nir_intrinsic_load_ssbo_vk_indirect:
+      case nir_intrinsic_load_ubo:
+      case nir_intrinsic_load_ubo_indirect:
+      case nir_intrinsic_load_ssbo:
+      case nir_intrinsic_load_ssbo_indirect:
          block_idx_src = 0;
          break;
-      case nir_intrinsic_store_ssbo_vk:
-      case nir_intrinsic_store_ssbo_vk_indirect:
+      case nir_intrinsic_store_ssbo:
+      case nir_intrinsic_store_ssbo_indirect:
          block_idx_src = 1;
          break;
       default:
          continue; /* the loop */
       }
 
-      unsigned set = intrin->const_index[0];
-      unsigned binding = intrin->const_index[1];
+      nir_instr *res_instr = intrin->src[block_idx_src].ssa->parent_instr;
+      assert(res_instr->type == nir_instr_type_intrinsic);
+      nir_intrinsic_instr *res_intrin = nir_instr_as_intrinsic(res_instr);
+      assert(res_intrin->intrinsic == nir_intrinsic_vulkan_resource_index);
+
+      unsigned set = res_intrin->const_index[0];
+      unsigned binding = res_intrin->const_index[1];
 
       set_layout = state->layout->set[set].layout;
       if (set_layout->binding[binding].dynamic_offset_index < 0)
@@ -75,11 +80,11 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 
       int indirect_src;
       switch (intrin->intrinsic) {
-      case nir_intrinsic_load_ubo_vk_indirect:
-      case nir_intrinsic_load_ssbo_vk_indirect:
+      case nir_intrinsic_load_ubo_indirect:
+      case nir_intrinsic_load_ssbo_indirect:
          indirect_src = 1;
          break;
-      case nir_intrinsic_store_ssbo_vk_indirect:
+      case nir_intrinsic_store_ssbo_indirect:
          indirect_src = 2;
          break;
       default:
@@ -92,7 +97,7 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
                        set_layout->binding[binding].dynamic_offset_index;
 
       nir_const_value *const_arr_idx =
-         nir_src_as_const_value(intrin->src[block_idx_src]);
+         nir_src_as_const_value(res_intrin->src[0]);
 
       nir_intrinsic_op offset_load_op;
       if (const_arr_idx)
@@ -109,7 +114,8 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
          offset_load->const_index[1] = const_arr_idx->u[0];
       } else {
          offset_load->const_index[1] = 0;
-         nir_src_copy(&offset_load->src[0], &intrin->src[0], &intrin->instr);
+         nir_src_copy(&offset_load->src[0], &res_intrin->src[0],
+                      &intrin->instr);
       }
 
       nir_ssa_dest_init(&offset_load->instr, &offset_load->dest, 1, NULL);
@@ -130,14 +136,14 @@ apply_dynamic_offsets_block(nir_block *block, void *void_state)
 
          nir_intrinsic_op indirect_op;
          switch (intrin->intrinsic) {
-         case nir_intrinsic_load_ubo_vk:
-            indirect_op = nir_intrinsic_load_ubo_vk_indirect;
+         case nir_intrinsic_load_ubo:
+            indirect_op = nir_intrinsic_load_ubo_indirect;
             break;
-         case nir_intrinsic_load_ssbo_vk:
-            indirect_op = nir_intrinsic_load_ssbo_vk_indirect;
+         case nir_intrinsic_load_ssbo:
+            indirect_op = nir_intrinsic_load_ssbo_indirect;
             break;
-         case nir_intrinsic_store_ssbo_vk:
-            indirect_op = nir_intrinsic_store_ssbo_vk_indirect;
+         case nir_intrinsic_store_ssbo:
+            indirect_op = nir_intrinsic_store_ssbo_indirect;
             break;
          default:
             unreachable("Invalid direct load/store intrinsic");
