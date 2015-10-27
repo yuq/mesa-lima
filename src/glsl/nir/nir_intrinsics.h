@@ -157,6 +157,25 @@ INTRINSIC(image_samples, 0, ARR(), true, 1, 1, 0,
           NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
 
 /*
+ * Vulkan descriptor set intrinsic
+ *
+ * The Vulkan API uses a different binding model from GL.  In the Vulkan
+ * API, all external resources are represented by a tripple:
+ *
+ * (descriptor set, binding, array index)
+ *
+ * where the array index is the only thing allowed to be indirect.  The
+ * vulkan_surface_index intrinsic takes the descriptor set and binding as
+ * its first two indices and the array index as its source.  The third
+ * index is a nir_variable_mode in case that's useful to the backend.
+ *
+ * The intended usage is that the shader will call vulkan_surface_index to
+ * get an index and then pass that as the buffer index ubo/ssbo calls.
+ */
+INTRINSIC(vulkan_resource_index, 1, ARR(1), true, 1, 0, 3,
+          NIR_INTRINSIC_CAN_ELIMINATE | NIR_INTRINSIC_CAN_REORDER)
+
+/*
  * SSBO atomic intrinsics
  *
  * All of the SSBO atomic memory operations read a value from memory,
