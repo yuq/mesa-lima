@@ -119,7 +119,7 @@ src_reg::src_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 src_reg::src_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = HW_REG;
+   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->reladdr = NULL;
 }
@@ -127,7 +127,7 @@ src_reg::src_reg(struct brw_reg reg) :
 src_reg::src_reg(const dst_reg &reg) :
    backend_reg(static_cast<struct brw_reg>(reg))
 {
-   this->file = reg.file;
+   this->file = (enum register_file)reg.file;
    this->reg_offset = reg.reg_offset;
    this->reladdr = reg.reladdr;
    this->swizzle = brw_swizzle_for_mask(reg.writemask);
@@ -159,7 +159,7 @@ dst_reg::dst_reg(register_file file, int nr, const glsl_type *type,
 {
    init();
 
-   this->file = file;
+   this->file = (enum register_file)file;
    this->nr = nr;
    this->type = brw_type_for_base_type(type);
    this->writemask = writemask;
@@ -179,7 +179,7 @@ dst_reg::dst_reg(register_file file, int nr, brw_reg_type type,
 dst_reg::dst_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = HW_REG;
+   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->reladdr = NULL;
 }
@@ -196,17 +196,10 @@ dst_reg::dst_reg(const src_reg &reg) :
 bool
 dst_reg::equals(const dst_reg &r) const
 {
-   return (file == r.file &&
-           nr == r.nr &&
+   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
            reg_offset == r.reg_offset &&
-           type == r.type &&
-           negate == r.negate &&
-           abs == r.abs &&
-           writemask == r.writemask &&
            (reladdr == r.reladdr ||
-            (reladdr && r.reladdr && reladdr->equals(*r.reladdr))) &&
-           (file != HW_REG ||
-            memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0));
+            (reladdr && r.reladdr && reladdr->equals(*r.reladdr))));
 }
 
 bool
@@ -341,17 +334,9 @@ vec4_visitor::implied_mrf_writes(vec4_instruction *inst)
 bool
 src_reg::equals(const src_reg &r) const
 {
-   return (file == r.file &&
-           nr == r.nr &&
+   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
 	   reg_offset == r.reg_offset &&
-	   type == r.type &&
-	   negate == r.negate &&
-	   abs == r.abs &&
-	   swizzle == r.swizzle &&
-	   !reladdr && !r.reladdr &&
-           (file != HW_REG ||
-            memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0) &&
-           (file != IMM || d == r.d));
+	   !reladdr && !r.reladdr);
 }
 
 bool
@@ -439,7 +424,9 @@ vec4_visitor::opt_reduce_swizzle()
    bool progress = false;
 
    foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == BAD_FILE || inst->dst.file == HW_REG ||
+      if (inst->dst.file == BAD_FILE ||
+          inst->dst.file == ARF ||
+          inst->dst.file == FIXED_GRF ||
           inst->is_send_from_grf())
          continue;
 
@@ -914,7 +901,7 @@ vec4_visitor::opt_set_dependency_control()
             int reg = inst->src[i].nr + inst->src[i].reg_offset;
             if (inst->src[i].file == VGRF) {
                last_grf_write[reg] = NULL;
-            } else if (inst->src[i].file == HW_REG) {
+            } else if (inst->src[i].file == FIXED_GRF) {
                memset(last_grf_write, 0, sizeof(last_grf_write));
                break;
             }
@@ -931,7 +918,7 @@ vec4_visitor::opt_set_dependency_control()
           * against a previous one writing to its destination.
           */
          int reg = inst->dst.nr + inst->dst.reg_offset;
-         if (inst->dst.file == VGRF) {
+         if (inst->dst.file == VGRF || inst->dst.file == FIXED_GRF) {
             if (last_grf_write[reg] &&
                 !(inst->dst.writemask & grf_channels_written[reg])) {
                last_grf_write[reg]->no_dd_clear = true;
@@ -953,11 +940,6 @@ vec4_visitor::opt_set_dependency_control()
 
             last_mrf_write[reg] = inst;
             mrf_channels_written[reg] |= inst->dst.writemask;
-         } else if (inst->dst.nr == HW_REG) {
-            if (inst->dst.brw_reg::file == BRW_GENERAL_REGISTER_FILE)
-               memset(last_grf_write, 0, sizeof(last_grf_write));
-            if (inst->dst.brw_reg::file == BRW_MESSAGE_REGISTER_FILE)
-               memset(last_mrf_write, 0, sizeof(last_mrf_write));
          }
       }
    }
@@ -985,11 +967,8 @@ vec4_instruction::can_reswizzle(const struct brw_device_info *devinfo,
    if (mlen > 0)
       return false;
 
-   /* We can't use swizzles on the accumulator and that's really the only
-    * HW_REG we would care to reswizzle so just disallow them all.
-    */
    for (int i = 0; i < 3; i++) {
-      if (src[i].file == HW_REG)
+      if (src[i].is_accumulator())
          return false;
    }
 
@@ -1381,32 +1360,29 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case VGRF:
       fprintf(file, "vgrf%d.%d", inst->dst.nr, inst->dst.reg_offset);
       break;
+   case FIXED_GRF:
+      fprintf(file, "g%d", inst->dst.nr);
+      break;
    case MRF:
       fprintf(file, "m%d", inst->dst.nr);
       break;
-   case HW_REG:
-      if (inst->dst.brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE) {
-         switch (inst->dst.nr) {
-         case BRW_ARF_NULL:
-            fprintf(file, "null");
-            break;
-         case BRW_ARF_ADDRESS:
-            fprintf(file, "a0.%d", inst->dst.subnr);
-            break;
-         case BRW_ARF_ACCUMULATOR:
-            fprintf(file, "acc%d", inst->dst.subnr);
-            break;
-         case BRW_ARF_FLAG:
-            fprintf(file, "f%d.%d", inst->dst.nr & 0xf,
-                             inst->dst.subnr);
-            break;
-         default:
-            fprintf(file, "arf%d.%d", inst->dst.nr & 0xf,
-                               inst->dst.subnr);
-            break;
-         }
-      } else {
-         fprintf(file, "hw_reg%d", inst->dst.nr);
+   case ARF:
+      switch (inst->dst.nr) {
+      case BRW_ARF_NULL:
+         fprintf(file, "null");
+         break;
+      case BRW_ARF_ADDRESS:
+         fprintf(file, "a0.%d", inst->dst.subnr);
+         break;
+      case BRW_ARF_ACCUMULATOR:
+         fprintf(file, "acc%d", inst->dst.subnr);
+         break;
+      case BRW_ARF_FLAG:
+         fprintf(file, "f%d.%d", inst->dst.nr & 0xf, inst->dst.subnr);
+         break;
+      default:
+         fprintf(file, "arf%d.%d", inst->dst.nr & 0xf, inst->dst.subnr);
+         break;
       }
       if (inst->dst.subnr)
          fprintf(file, "+%d", inst->dst.subnr);
@@ -1444,6 +1420,9 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case VGRF:
          fprintf(file, "vgrf%d", inst->src[i].nr);
          break;
+      case FIXED_GRF:
+         fprintf(file, "g%d", inst->src[i].nr);
+         break;
       case ATTR:
          fprintf(file, "attr%d", inst->src[i].nr);
          break;
@@ -1473,29 +1452,23 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             break;
          }
          break;
-      case HW_REG:
-         if (inst->src[i].brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE) {
-            switch (inst->src[i].nr) {
-            case BRW_ARF_NULL:
-               fprintf(file, "null");
-               break;
-            case BRW_ARF_ADDRESS:
-               fprintf(file, "a0.%d", inst->src[i].subnr);
-               break;
-            case BRW_ARF_ACCUMULATOR:
-               fprintf(file, "acc%d", inst->src[i].subnr);
-               break;
-            case BRW_ARF_FLAG:
-               fprintf(file, "f%d.%d", inst->src[i].nr & 0xf,
-                                inst->src[i].subnr);
-               break;
-            default:
-               fprintf(file, "arf%d.%d", inst->src[i].nr & 0xf,
-                                  inst->src[i].subnr);
-               break;
-            }
-         } else {
-            fprintf(file, "hw_reg%d", inst->src[i].nr);
+      case ARF:
+         switch (inst->src[i].nr) {
+         case BRW_ARF_NULL:
+            fprintf(file, "null");
+            break;
+         case BRW_ARF_ADDRESS:
+            fprintf(file, "a0.%d", inst->src[i].subnr);
+            break;
+         case BRW_ARF_ACCUMULATOR:
+            fprintf(file, "acc%d", inst->src[i].subnr);
+            break;
+         case BRW_ARF_FLAG:
+            fprintf(file, "f%d.%d", inst->src[i].nr & 0xf, inst->src[i].subnr);
+            break;
+         default:
+            fprintf(file, "arf%d.%d", inst->src[i].nr & 0xf, inst->src[i].subnr);
+            break;
          }
          if (inst->src[i].subnr)
             fprintf(file, "+%d", inst->src[i].subnr);
@@ -1812,7 +1785,8 @@ vec4_visitor::convert_to_hw_regs()
             assert(!src.reladdr);
             break;
 
-         case HW_REG:
+         case ARF:
+         case FIXED_GRF:
             continue;
 
          case BAD_FILE:
@@ -1844,7 +1818,8 @@ vec4_visitor::convert_to_hw_regs()
          reg.writemask = dst.writemask;
          break;
 
-      case HW_REG:
+      case ARF:
+      case FIXED_GRF:
          reg = dst;
          break;
 

@@ -387,7 +387,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    switch (entry->src.file) {
    case UNIFORM:
    case BAD_FILE:
-   case HW_REG:
+   case ARF:
+   case FIXED_GRF:
       inst->src[arg].reg_offset = entry->src.reg_offset;
       inst->src[arg].subreg_offset = entry->src.subreg_offset;
       break;

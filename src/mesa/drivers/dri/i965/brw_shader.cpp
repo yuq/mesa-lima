@@ -733,18 +733,14 @@ backend_reg::is_negative_one() const
 bool
 backend_reg::is_null() const
 {
-   return file == HW_REG &&
-          brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE &&
-          nr == BRW_ARF_NULL;
+   return file == ARF && nr == BRW_ARF_NULL;
 }
 
 
 bool
 backend_reg::is_accumulator() const
 {
-   return file == HW_REG &&
-          brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE &&
-          nr == BRW_ARF_ACCUMULATOR;
+   return file == ARF && nr == BRW_ARF_ACCUMULATOR;
 }
 
 bool

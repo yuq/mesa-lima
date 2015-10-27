@@ -77,7 +77,8 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    /* This will be the case for almost all instructions. */
    switch (dst.file) {
    case VGRF:
-   case HW_REG:
+   case ARF:
+   case FIXED_GRF:
    case MRF:
    case ATTR:
       this->regs_written = DIV_ROUND_UP(dst.component_size(exec_size),
@@ -423,7 +424,7 @@ fs_reg::fs_reg(uint8_t vf0, uint8_t vf1, uint8_t vf2, uint8_t vf3)
 fs_reg::fs_reg(struct brw_reg reg) :
    backend_reg(reg)
 {
-   this->file = HW_REG;
+   this->file = (enum register_file)reg.file;
    this->reg_offset = 0;
    this->subreg_offset = 0;
    this->reladdr = NULL;
@@ -439,24 +440,17 @@ fs_reg::fs_reg(struct brw_reg reg) :
 bool
 fs_reg::equals(const fs_reg &r) const
 {
-   return (file == r.file &&
-           nr == r.nr &&
+   return (memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0 &&
            reg_offset == r.reg_offset &&
            subreg_offset == r.subreg_offset &&
-           type == r.type &&
-           negate == r.negate &&
-           abs == r.abs &&
            !reladdr && !r.reladdr &&
-           (file != HW_REG ||
-            memcmp((brw_reg *)this, (brw_reg *)&r, sizeof(brw_reg)) == 0) &&
-           (file != IMM || d == r.d) &&
            stride == r.stride);
 }
 
 fs_reg &
 fs_reg::set_smear(unsigned subreg)
 {
-   assert(file != HW_REG && file != IMM);
+   assert(file != ARF && file != FIXED_GRF && file != IMM);
    subreg_offset = subreg * type_sz(type);
    stride = 0;
    return *this;
@@ -471,7 +465,7 @@ fs_reg::is_contiguous() const
 unsigned
 fs_reg::component_size(unsigned width) const
 {
-   const unsigned stride = (file != HW_REG ? this->stride :
+   const unsigned stride = ((file != ARF && file != FIXED_GRF) ? this->stride :
                             hstride == 0 ? 0 :
                             1 << (hstride - 1));
    return MAX2(width * stride, 1) * type_sz(type);
@@ -857,9 +851,10 @@ fs_inst::regs_read(int arg) const
    case UNIFORM:
    case IMM:
       return 1;
+   case ARF:
+   case FIXED_GRF:
    case VGRF:
    case ATTR:
-   case HW_REG:
       return DIV_ROUND_UP(components_read(arg) *
                           src[arg].component_size(exec_size),
                           REG_SIZE);
@@ -1596,12 +1591,12 @@ fs_visitor::assign_urb_setup()
     */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->opcode == FS_OPCODE_LINTERP) {
-	 assert(inst->src[1].file == HW_REG);
+	 assert(inst->src[1].file == FIXED_GRF);
          inst->src[1].nr += urb_start;
       }
 
       if (inst->opcode == FS_OPCODE_CINTERP) {
-	 assert(inst->src[0].file == HW_REG);
+	 assert(inst->src[0].file == FIXED_GRF);
          inst->src[0].nr += urb_start;
       }
    }
@@ -1682,7 +1677,7 @@ fs_visitor::assign_gs_urb_setup()
          inst->base_mrf = -1;
       }
 
-      /* Rewrite all ATTR file references to HW_REGs. */
+      /* Rewrite all ATTR file references to GRFs. */
       convert_attr_sources_to_hw_regs(inst);
    }
 }
@@ -2797,7 +2792,7 @@ fs_visitor::emit_repclear_shader()
    assign_curb_setup();
 
    /* Now that we have the uniform assigned, go ahead and force it to a vec4. */
-   assert(mov->src[0].file == HW_REG);
+   assert(mov->src[0].file == FIXED_GRF);
    mov->src[0] = brw_vec4_grf(mov->src[0].nr, 0);
 }
 
@@ -2876,10 +2871,7 @@ clear_deps_for_inst_src(fs_inst *inst, bool *deps, int first_grf, int grf_len)
    /* Clear the flag for registers that actually got read (as expected). */
    for (int i = 0; i < inst->sources; i++) {
       int grf;
-      if (inst->src[i].file == VGRF) {
-         grf = inst->src[i].nr;
-      } else if (inst->src[i].file == HW_REG &&
-                 inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
+      if (inst->src[i].file == VGRF || inst->src[i].file == FIXED_GRF) {
          grf = inst->src[i].nr;
       } else {
          continue;
@@ -4619,6 +4611,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "+%d.%d",
                  inst->dst.reg_offset, inst->dst.subreg_offset);
       break;
+   case FIXED_GRF:
+      fprintf(file, "g%d", inst->dst.nr);
+      break;
    case MRF:
       fprintf(file, "m%d", inst->dst.nr);
       break;
@@ -4631,29 +4626,23 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case ATTR:
       fprintf(file, "***attr%d***", inst->dst.nr + inst->dst.reg_offset);
       break;
-   case HW_REG:
-      if (inst->dst.brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE) {
-         switch (inst->dst.nr) {
-         case BRW_ARF_NULL:
-            fprintf(file, "null");
-            break;
-         case BRW_ARF_ADDRESS:
-            fprintf(file, "a0.%d", inst->dst.subnr);
-            break;
-         case BRW_ARF_ACCUMULATOR:
-            fprintf(file, "acc%d", inst->dst.subnr);
-            break;
-         case BRW_ARF_FLAG:
-            fprintf(file, "f%d.%d", inst->dst.nr & 0xf,
-                             inst->dst.subnr);
-            break;
-         default:
-            fprintf(file, "arf%d.%d", inst->dst.nr & 0xf,
-                               inst->dst.subnr);
-            break;
-         }
-      } else {
-         fprintf(file, "hw_reg%d", inst->dst.nr);
+   case ARF:
+      switch (inst->dst.nr) {
+      case BRW_ARF_NULL:
+         fprintf(file, "null");
+         break;
+      case BRW_ARF_ADDRESS:
+         fprintf(file, "a0.%d", inst->dst.subnr);
+         break;
+      case BRW_ARF_ACCUMULATOR:
+         fprintf(file, "acc%d", inst->dst.subnr);
+         break;
+      case BRW_ARF_FLAG:
+         fprintf(file, "f%d.%d", inst->dst.nr & 0xf, inst->dst.subnr);
+         break;
+      default:
+         fprintf(file, "arf%d.%d", inst->dst.nr & 0xf, inst->dst.subnr);
+         break;
       }
       if (inst->dst.subnr)
          fprintf(file, "+%d", inst->dst.subnr);
@@ -4675,6 +4664,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
              inst->src[i].subreg_offset)
             fprintf(file, "+%d.%d", inst->src[i].reg_offset,
                     inst->src[i].subreg_offset);
+         break;
+      case FIXED_GRF:
+         fprintf(file, "g%d", inst->src[i].nr);
          break;
       case MRF:
          fprintf(file, "***m%d***", inst->src[i].nr);
@@ -4719,29 +4711,23 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             break;
          }
          break;
-      case HW_REG:
-         if (inst->src[i].brw_reg::file == BRW_ARCHITECTURE_REGISTER_FILE) {
-            switch (inst->src[i].nr) {
-            case BRW_ARF_NULL:
-               fprintf(file, "null");
-               break;
-            case BRW_ARF_ADDRESS:
-               fprintf(file, "a0.%d", inst->src[i].subnr);
-               break;
-            case BRW_ARF_ACCUMULATOR:
-               fprintf(file, "acc%d", inst->src[i].subnr);
-               break;
-            case BRW_ARF_FLAG:
-               fprintf(file, "f%d.%d", inst->src[i].nr & 0xf,
-                                inst->src[i].subnr);
-               break;
-            default:
-               fprintf(file, "arf%d.%d", inst->src[i].nr & 0xf,
-                                  inst->src[i].subnr);
-               break;
-            }
-         } else {
-            fprintf(file, "hw_reg%d", inst->src[i].nr);
+      case ARF:
+         switch (inst->src[i].nr) {
+         case BRW_ARF_NULL:
+            fprintf(file, "null");
+            break;
+         case BRW_ARF_ADDRESS:
+            fprintf(file, "a0.%d", inst->src[i].subnr);
+            break;
+         case BRW_ARF_ACCUMULATOR:
+            fprintf(file, "acc%d", inst->src[i].subnr);
+            break;
+         case BRW_ARF_FLAG:
+            fprintf(file, "f%d.%d", inst->src[i].nr & 0xf, inst->src[i].subnr);
+            break;
+         default:
+            fprintf(file, "arf%d.%d", inst->src[i].nr & 0xf, inst->src[i].subnr);
+            break;
          }
          if (inst->src[i].subnr)
             fprintf(file, "+%d", inst->src[i].subnr);

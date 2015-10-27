@@ -226,7 +226,8 @@ fs_visitor::opt_cse_local(bblock_t *block)
    foreach_inst_in_block(fs_inst, inst, block) {
       /* Skip some cases. */
       if (is_expression(this, inst) && !inst->is_partial_write() &&
-          (inst->dst.file != HW_REG || inst->dst.is_null()))
+          ((inst->dst.file != ARF && inst->dst.file != FIXED_GRF) ||
+           inst->dst.is_null()))
       {
          bool found = false;
          bool negate = false;

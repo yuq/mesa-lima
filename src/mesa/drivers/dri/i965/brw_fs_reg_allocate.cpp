@@ -366,13 +366,12 @@ void fs_visitor::calculate_payload_ranges(int payload_node_count,
       else
          use_ip = ip;
 
-      /* Note that UNIFORM args have been turned into FIXED_HW_REG by
+      /* Note that UNIFORM args have been turned into FIXED_GRF by
        * assign_curbe_setup(), and interpolation uses fixed hardware regs from
        * the start (see interp_reg()).
        */
       for (int i = 0; i < inst->sources; i++) {
-         if (inst->src[i].file == HW_REG &&
-             inst->src[i].brw_reg::file == BRW_GENERAL_REGISTER_FILE) {
+         if (inst->src[i].file == FIXED_GRF) {
             int node_nr = inst->src[i].nr;
             if (node_nr >= payload_node_count)
                continue;

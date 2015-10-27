@@ -70,9 +70,10 @@ offset(fs_reg reg, const brw::fs_builder& bld, unsigned delta)
    switch (reg.file) {
    case BAD_FILE:
       break;
-   case VGRF:
+   case ARF:
+   case FIXED_GRF:
    case MRF:
-   case HW_REG:
+   case VGRF:
    case ATTR:
       return byte_offset(reg,
                          delta * reg.component_size(bld.dispatch_width()));

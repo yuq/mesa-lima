@@ -143,7 +143,8 @@ vec4_visitor::opt_cse_local(bblock_t *block)
    foreach_inst_in_block (vec4_instruction, inst, block) {
       /* Skip some cases. */
       if (is_expression(inst) && !inst->predicate && inst->mlen == 0 &&
-          (inst->dst.file != HW_REG || inst->dst.is_null()))
+          ((inst->dst.file != ARF && inst->dst.file != FIXED_GRF) ||
+           inst->dst.is_null()))
       {
          bool found = false;
 

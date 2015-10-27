@@ -37,6 +37,9 @@ static enum brw_reg_file
 brw_file_from_reg(fs_reg *reg)
 {
    switch (reg->file) {
+   case ARF:
+      return BRW_ARCHITECTURE_REGISTER_FILE;
+   case FIXED_GRF:
    case VGRF:
       return BRW_GENERAL_REGISTER_FILE;
    case MRF:
@@ -44,7 +47,6 @@ brw_file_from_reg(fs_reg *reg)
    case IMM:
       return BRW_IMMEDIATE_VALUE;
    case BAD_FILE:
-   case HW_REG:
    case ATTR:
    case UNIFORM:
       unreachable("not reached");
@@ -118,7 +120,8 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen)
 	 unreachable("not reached");
       }
       break;
-   case HW_REG:
+   case ARF:
+   case FIXED_GRF:
       brw_reg = *static_cast<struct brw_reg *>(reg);
       break;
    case BAD_FILE:

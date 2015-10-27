@@ -68,7 +68,8 @@ retype(src_reg reg, enum brw_reg_type type)
 static inline src_reg
 offset(src_reg reg, unsigned delta)
 {
-   assert(delta == 0 || (reg.file != HW_REG && reg.file != IMM));
+   assert(delta == 0 ||
+          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
    reg.reg_offset += delta;
    return reg;
 }
@@ -132,7 +133,8 @@ retype(dst_reg reg, enum brw_reg_type type)
 static inline dst_reg
 offset(dst_reg reg, unsigned delta)
 {
-   assert(delta == 0 || (reg.file != HW_REG && reg.file != IMM));
+   assert(delta == 0 ||
+          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
    reg.reg_offset += delta;
    return reg;
 }
